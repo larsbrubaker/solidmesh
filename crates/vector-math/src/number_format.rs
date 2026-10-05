@@ -123,7 +123,8 @@ pub fn parse_f64(text: &str) -> f64 {
 /// .NET `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v)`:
 /// `None` where TryParse returns false. Accepts surrounding white space
 /// (U+0009–U+000D, U+0020), a leading sign, a decimal point, an exponent, and the invariant
-/// symbols "NaN", "Infinity", "-Infinity" (case-insensitive) and "∞". No thousands separators
+/// symbols "NaN", "Infinity", "-Infinity" (case-insensitive; not the "∞" sign, which .NET 10's
+/// invariant culture rejects). No thousands separators
 /// (`NumberStyles.Float` has no `AllowThousands`), so "12,5" is `None`.
 pub fn try_parse_f64(text: &str) -> Option<f64> {
     let trimmed = text.trim_matches(|c: char| ('\u{9}'..='\u{d}').contains(&c) || c == ' ');
@@ -133,7 +134,7 @@ pub fn try_parse_f64(text: &str) -> Option<f64> {
         _ => (false, trimmed),
     };
     let lower = body.to_ascii_lowercase();
-    let magnitude = if lower == "infinity" || body == "∞" {
+    let magnitude = if lower == "infinity" {
         f64::INFINITY
     } else if lower == "nan" {
         f64::NAN

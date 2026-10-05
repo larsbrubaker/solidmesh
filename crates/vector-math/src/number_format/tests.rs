@@ -64,6 +64,15 @@ fn rust_only_try_parse_f64_reports_failure() {
     assert_eq!(try_parse_f64(""), None);
 }
 
+/// .NET 10's invariant `double.TryParse` rejects the "∞" sign (its symbol is "Infinity").
+#[test]
+fn rust_only_try_parse_f64_rejects_the_infinity_sign() {
+    for text in ["∞", "-∞", "+∞", " ∞ "] {
+        assert_eq!(try_parse_f64(text), None, "{text:?}");
+    }
+    assert_eq!(try_parse_f64(" -INFINITY "), Some(f64::NEG_INFINITY));
+}
+
 #[test]
 fn rust_only_format_round_trip_ties_round_half_to_even() {
     // A value whose shortest digits sit exactly halfway between two
