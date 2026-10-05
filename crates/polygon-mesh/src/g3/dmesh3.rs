@@ -1,24 +1,81 @@
-//! The part of geometry3Sharp's `DMesh3` (`mesh/DMesh3.cs`) the signed distance grid reaches:
-//! appending vertices and triangles with g3's refusals, triangle corners, centroids and bounds,
-//! and the cached bounds, and the `AxisAlignedBox3d` arithmetic the implicits and marching
-//! cubes use. Plus agg-sharp's `MeshExtensions.ToDMesh3` and `ToMesh`, which convert to and from
-//! a [`Mesh`], and g3's point-triangle distance (`MeshQueries.TriDistanceSqr` and
-//! `DistPoint3Triangle3.DistanceSqr`, which are the same computation).
+//! geometry3Sharp's `DMesh3` (`mesh/DMesh3.cs`): the dynamic, edge-based triangle mesh the
+//! signed distance grids and the mesh repair (`mesh_auto_repair`) work on. This file holds the
+//! storage - vertices, triangles, edges, each behind a [`RefCountVector`] so freed ids are
+//! reused in C#'s order, and the per-vertex edge lists in a [`SmallListSet`] - with appending,
+//! the per-element getters, `IsClosed`, the compact copy, and agg-sharp's
+//! `MeshExtensions.ToDMesh3` / `ToMesh`. The one-ring and boundary queries are in
+//! `dmesh3_queries`, the topology edits (remove, reverse, split, flip, collapse, merge, poke) in
+//! `dmesh3_edge_ops`, and the `AxisAlignedBox3d` subset and g3's point-triangle distance here
+//! and in `tri_distance`.
 //!
-//! Nothing is ever removed, so triangle ids are dense (0..count in append order) and every
-//! vertex stays live, as in a g3 mesh that has only been appended to.
+//! g3's per-vertex normals, colors and UVs are not stored: nothing that reaches a [`Mesh`] reads
+//! them (`ToMesh` copies positions only), so `MeshNormals.QuickCompute` at the end of a repair
+//! has no observable output.
 
-use std::collections::HashMap;
+// The topology API is consumed by the mesh repair (geometry3Sharp `MeshAutoRepair`), which lands
+// in the next slice; until then only the tests reach some of it.
+#![allow(dead_code)]
 
 use crate::Mesh;
 
-/// g3 `DMesh3`, append-only: positions as doubles, triangles as vertex-id triples.
+use super::ref_count_vector::RefCountVector;
+use super::small_list_set::SmallListSet;
+pub(crate) use super::tri_distance::tri_distance_sqr;
+
+/// C# `DMesh3.InvalidID`.
+pub(crate) const INVALID_ID: i32 = -1;
+/// C# `DMesh3.NonManifoldID`.
+pub(crate) const NON_MANIFOLD_ID: i32 = -2;
+
+/// g3 `MeshResult`, the subset the edits return.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MeshResult {
+    Ok,
+    FailedNotAVertex,
+    FailedNotATriangle,
+    FailedNotAnEdge,
+    FailedBrokenTopology,
+    FailedHitValenceLimit,
+    FailedIsBoundaryEdge,
+    FailedFlippedEdgeExists,
+    FailedFoundDuplicateTriangle,
+    FailedInvalidNeighbourhood,
+    FailedCollapseTetrahedron,
+    FailedCollapseTriangle,
+    FailedNotABoundaryEdge,
+    FailedSameOrientation,
+    FailedWouldCreateBowtie,
+}
+
+/// An exception g3 throws from inside an edit (`FlipEdge`'s broken-topology checks,
+/// `RemoveVertex` on a still-referenced vertex). It unwinds to the nearest C# `catch`, which in
+/// the repair is `repair_cracks`'; the mesh keeps whatever the edit had already changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct G3Exception(pub(crate) &'static str);
+
+/// g3 `DMesh3`.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DMesh3 {
-    vertices: Vec<[f64; 3]>,
-    triangles: Vec<[i32; 3]>,
-    /// Triangles on each undirected edge, for g3's non-manifold refusal.
-    edge_triangles: HashMap<(i32, i32), u8>,
+    pub(super) vertices: Vec<[f64; 3]>,
+    pub(super) vertices_refcount: RefCountVector,
+    pub(super) vertex_edges: SmallListSet,
+    pub(super) triangles: Vec<[i32; 3]>,
+    pub(super) triangle_edges: Vec<[i32; 3]>,
+    pub(super) triangles_refcount: RefCountVector,
+    pub(super) triangle_groups: Option<Vec<i32>>,
+    pub(super) max_group_id: i32,
+    /// `[a, b, t0, t1]` with `a < b`; `t1` is [`INVALID_ID`] on a boundary edge.
+    pub(super) edges: Vec<[i32; 4]>,
+    pub(super) edges_refcount: RefCountVector,
+}
+
+/// C# `DVector.insert(value, index)`: sets slot `index`, growing the vector to reach it.
+pub(super) fn insert_at<T: Copy + Default>(v: &mut Vec<T>, index: i32, value: T) {
+    let index = index as usize;
+    if index >= v.len() {
+        v.resize(index + 1, T::default());
+    }
+    v[index] = value;
 }
 
 /// g3 `AxisAlignedBox3d`, the subset used here.
@@ -101,56 +158,259 @@ impl AxisAlignedBox3d {
     }
 }
 
+/// g3's min/max scan: seeded with the first point, each axis tested `<` then `else if >`.
+fn bounds_of(mut points: impl Iterator<Item = [f64; 3]>) -> AxisAlignedBox3d {
+    let first = points.next().unwrap_or([0.0; 3]);
+    let (mut min, mut max) = (first, first);
+    for p in points {
+        for a in 0..3 {
+            if p[a] < min[a] {
+                min[a] = p[a];
+            } else if p[a] > max[a] {
+                max[a] = p[a];
+            }
+        }
+    }
+    AxisAlignedBox3d { min, max }
+}
+
 impl DMesh3 {
-    /// C# `AppendVertex`.
-    pub(crate) fn append_vertex(&mut self, v: [f64; 3]) -> i32 {
-        self.vertices.push(v);
-        (self.vertices.len() - 1) as i32
+    /// C# `new DMesh3(bWantTriGroups: true)` (`EnableTriangleGroups`).
+    pub(crate) fn enable_triangle_groups(&mut self, initial_group: i32) {
+        if self.triangle_groups.is_some() {
+            return;
+        }
+        let groups = vec![initial_group; self.triangles.len()];
+        self.triangle_groups = Some(groups);
+        self.max_group_id = 0;
     }
 
-    /// C# `AppendTriangle(v0, v1, v2)`: refuses (returns -1, g3's `InvalidID`, or -2,
-    /// `NonManifoldID`) a triangle with a missing or repeated vertex, or one that would put a
+    /// C# `AppendVertex`.
+    pub(crate) fn append_vertex(&mut self, v: [f64; 3]) -> i32 {
+        let vid = self.vertices_refcount.allocate();
+        insert_at(&mut self.vertices, vid, v);
+        // C# `allocate_edges_list`.
+        self.vertex_edges.allocate_at(vid);
+        vid
+    }
+
+    /// C# `AppendTriangle(v0, v1, v2, gid)`: refuses (returns [`INVALID_ID`] or
+    /// [`NON_MANIFOLD_ID`]) a triangle with a missing or repeated vertex, or one that would put a
     /// third triangle on an edge.
     pub(crate) fn append_triangle(&mut self, v0: i32, v1: i32, v2: i32) -> i32 {
-        let vertex_count = self.vertices.len() as i32;
-        let is_vertex = |v: i32| v >= 0 && v < vertex_count;
-        if !is_vertex(v0) || !is_vertex(v1) || !is_vertex(v2) {
-            return -1;
+        self.append_triangle_g(v0, v1, v2, -1)
+    }
+
+    /// C# `AppendTriangle(Index3i, gid)`.
+    pub(crate) fn append_triangle_g(&mut self, v0: i32, v1: i32, v2: i32, gid: i32) -> i32 {
+        if !self.is_vertex(v0) || !self.is_vertex(v1) || !self.is_vertex(v2) {
+            return INVALID_ID;
         }
         if v0 == v1 || v0 == v2 || v1 == v2 {
-            return -1;
+            return INVALID_ID;
         }
-        let edges = [edge_key(v0, v1), edge_key(v1, v2), edge_key(v2, v0)];
-        if edges.iter().any(|edge| {
-            self.edge_triangles
-                .get(edge)
-                .is_some_and(|&count| count >= 2)
-        }) {
-            return -2;
+
+        // look up edges. if any already have two triangles, this would
+        // create non-manifold geometry and so we do not allow it
+        let e0 = self.find_edge(v0, v1);
+        let e1 = self.find_edge(v1, v2);
+        let e2 = self.find_edge(v2, v0);
+        if (e0 != INVALID_ID && !self.is_boundary_edge(e0))
+            || (e1 != INVALID_ID && !self.is_boundary_edge(e1))
+            || (e2 != INVALID_ID && !self.is_boundary_edge(e2))
+        {
+            return NON_MANIFOLD_ID;
         }
-        for edge in edges {
-            *self.edge_triangles.entry(edge).or_insert(0) += 1;
+
+        // now safe to insert triangle
+        let tid = self.triangles_refcount.allocate();
+        insert_at(&mut self.triangles, tid, [v0, v1, v2]);
+        insert_at(&mut self.triangle_edges, tid, [INVALID_ID; 3]);
+        if let Some(groups) = &mut self.triangle_groups {
+            insert_at(groups, tid, gid);
+            self.max_group_id = self.max_group_id.max(gid + 1);
         }
-        self.triangles.push([v0, v1, v2]);
-        (self.triangles.len() - 1) as i32
+
+        // increment ref counts and update/create edges
+        self.vertices_refcount.increment(v0, 1);
+        self.vertices_refcount.increment(v1, 1);
+        self.vertices_refcount.increment(v2, 1);
+
+        self.add_tri_edge(tid, v0, v1, 0, e0);
+        self.add_tri_edge(tid, v1, v2, 1, e1);
+        self.add_tri_edge(tid, v2, v0, 2, e2);
+        tid
+    }
+
+    /// C# `add_tri_edge`.
+    fn add_tri_edge(&mut self, tid: i32, v0: i32, v1: i32, j: usize, eid: i32) {
+        if eid != INVALID_ID {
+            self.edges[eid as usize][3] = tid;
+            self.triangle_edges[tid as usize][j] = eid;
+        } else {
+            let eid = self.add_edge(v0, v1, tid, INVALID_ID);
+            self.triangle_edges[tid as usize][j] = eid;
+        }
+    }
+
+    /// C# `add_edge`.
+    pub(super) fn add_edge(&mut self, va: i32, vb: i32, ta: i32, tb: i32) -> i32 {
+        let (va, vb) = if vb < va { (vb, va) } else { (va, vb) };
+        let eid = self.edges_refcount.allocate();
+        insert_at(&mut self.edges, eid, [va, vb, ta, tb]);
+        self.vertex_edges.insert(va, eid);
+        self.vertex_edges.insert(vb, eid);
+        eid
+    }
+
+    /// C# `add_triangle_only`.
+    pub(super) fn add_triangle_only(&mut self, t: [i32; 3], te: [i32; 3]) -> i32 {
+        let tid = self.triangles_refcount.allocate();
+        insert_at(&mut self.triangles, tid, t);
+        insert_at(&mut self.triangle_edges, tid, te);
+        tid
+    }
+
+    /// C# `IsVertex`.
+    pub(crate) fn is_vertex(&self, vid: i32) -> bool {
+        self.vertices_refcount.is_valid(vid)
+    }
+
+    /// C# `IsTriangle`.
+    pub(crate) fn is_triangle(&self, tid: i32) -> bool {
+        self.triangles_refcount.is_valid(tid)
+    }
+
+    /// C# `IsEdge`.
+    pub(crate) fn is_edge(&self, eid: i32) -> bool {
+        self.edges_refcount.is_valid(eid)
     }
 
     /// C# `TriangleCount`.
     pub(crate) fn triangle_count(&self) -> usize {
-        self.triangles.len()
+        self.triangles_refcount.count()
     }
 
     /// C# `VertexCount`.
     pub(crate) fn vertex_count(&self) -> usize {
-        self.vertices.len()
+        self.vertices_refcount.count()
+    }
+
+    /// C# `EdgeCount`.
+    pub(crate) fn edge_count(&self) -> usize {
+        self.edges_refcount.count()
+    }
+
+    /// C# `MaxVertexID`.
+    pub(crate) fn max_vertex_id(&self) -> i32 {
+        self.vertices_refcount.max_index() as i32
+    }
+
+    /// C# `MaxTriangleID`.
+    pub(crate) fn max_triangle_id(&self) -> i32 {
+        self.triangles_refcount.max_index() as i32
+    }
+
+    /// C# `MaxEdgeID`.
+    pub(crate) fn max_edge_id(&self) -> i32 {
+        self.edges_refcount.max_index() as i32
+    }
+
+    /// C# `IsCompact`.
+    pub(crate) fn is_compact(&self) -> bool {
+        self.vertices_refcount.is_dense()
+            && self.edges_refcount.is_dense()
+            && self.triangles_refcount.is_dense()
+    }
+
+    /// C# `VertexIndices`.
+    pub(crate) fn vertex_indices(&self) -> impl Iterator<Item = i32> + '_ {
+        self.vertices_refcount.indices()
+    }
+
+    /// C# `TriangleIndices`.
+    pub(crate) fn triangle_indices(&self) -> impl Iterator<Item = i32> + '_ {
+        self.triangles_refcount.indices()
+    }
+
+    /// C# `EdgeIndices`.
+    pub(crate) fn edge_indices(&self) -> impl Iterator<Item = i32> + '_ {
+        self.edges_refcount.indices()
+    }
+
+    /// C# `BoundaryEdgeIndices`.
+    pub(crate) fn boundary_edge_indices(&self) -> impl Iterator<Item = i32> + '_ {
+        self.edges_refcount
+            .indices()
+            .filter(|&eid| self.edges[eid as usize][3] == INVALID_ID)
     }
 
     /// C# `GetVertex`.
+    pub(crate) fn vertex(&self, vid: i32) -> [f64; 3] {
+        self.vertices[vid as usize]
+    }
+
+    /// C# `GetVertex`, by the index the distance grids iterate with.
     pub(crate) fn get_vertex(&self, vid: usize) -> [f64; 3] {
         self.vertices[vid]
     }
 
-    /// C# `GetTriVertices`.
+    /// C# `SetVertex`.
+    pub(crate) fn set_vertex(&mut self, vid: i32, v: [f64; 3]) {
+        self.vertices[vid as usize] = v;
+    }
+
+    /// C# `GetTriangle`.
+    pub(crate) fn get_triangle(&self, tid: i32) -> [i32; 3] {
+        self.triangles[tid as usize]
+    }
+
+    /// C# `GetTriEdges`.
+    pub(crate) fn get_tri_edges(&self, tid: i32) -> [i32; 3] {
+        self.triangle_edges[tid as usize]
+    }
+
+    /// C# `GetEdge`: `[a, b, t0, t1]`.
+    pub(crate) fn get_edge(&self, eid: i32) -> [i32; 4] {
+        self.edges[eid as usize]
+    }
+
+    /// C# `GetEdgeV`.
+    pub(crate) fn get_edge_v(&self, eid: i32) -> [i32; 2] {
+        let e = self.edges[eid as usize];
+        [e[0], e[1]]
+    }
+
+    /// C# `GetEdgeT`.
+    pub(crate) fn get_edge_t(&self, eid: i32) -> [i32; 2] {
+        let e = self.edges[eid as usize];
+        [e[2], e[3]]
+    }
+
+    /// C# `GetTriangleGroup`.
+    pub(crate) fn get_triangle_group(&self, tid: i32) -> i32 {
+        match &self.triangle_groups {
+            None => -1,
+            Some(groups) if self.is_triangle(tid) => groups[tid as usize],
+            Some(_) => 0,
+        }
+    }
+
+    /// C# `SetTriangleGroup`.
+    pub(crate) fn set_triangle_group(&mut self, tid: i32, group_id: i32) {
+        if let Some(groups) = &mut self.triangle_groups {
+            groups[tid as usize] = group_id;
+            self.max_group_id = self.max_group_id.max(group_id + 1);
+        }
+    }
+
+    /// C# `AllocateTriangleGroup`.
+    pub(crate) fn allocate_triangle_group(&mut self) -> i32 {
+        self.max_group_id += 1;
+        self.max_group_id
+    }
+
+    /// C# `GetTriVertices`, by the index the distance grids iterate with.
     pub(crate) fn get_tri_vertices(&self, tid: usize) -> [[f64; 3]; 3] {
         let [a, b, c] = self.triangles[tid];
         [
@@ -177,39 +437,55 @@ impl DMesh3 {
         bounds_of(corners.iter().copied())
     }
 
-    /// C# `CachedBounds` (`GetBounds`): the box of every vertex, zero when there are none.
+    /// C# `CachedBounds` (`GetBounds`): the box of every live vertex, zero when there are none.
     pub(crate) fn cached_bounds(&self) -> AxisAlignedBox3d {
-        if self.vertices.is_empty() {
+        if self.vertex_count() == 0 {
             return AxisAlignedBox3d {
                 min: [0.0; 3],
                 max: [0.0; 3],
             };
         }
-        bounds_of(self.vertices.iter().copied())
+        bounds_of(self.vertex_indices().map(|vid| self.vertices[vid as usize]))
     }
-}
 
-/// g3's min/max scan: seeded with the first point, each axis tested `<` then `else if >`.
-fn bounds_of(mut points: impl Iterator<Item = [f64; 3]>) -> AxisAlignedBox3d {
-    let first = points.next().unwrap_or([0.0; 3]);
-    let (mut min, mut max) = (first, first);
-    for p in points {
-        for a in 0..3 {
-            if p[a] < min[a] {
-                min[a] = p[a];
-            } else if p[a] > max[a] {
-                max[a] = p[a];
-            }
+    /// C# `IsClosed`: has triangles and no boundary edge.
+    pub(crate) fn is_closed(&self) -> bool {
+        if self.triangle_count() == 0 {
+            return false;
         }
+        self.boundary_edge_indices().next().is_none()
     }
-    AxisAlignedBox3d { min, max }
-}
 
-fn edge_key(a: i32, b: i32) -> (i32, i32) {
-    if a < b {
-        (a, b)
-    } else {
-        (b, a)
+    /// C# `new DMesh3(copy, bCompact: true)` (`CompactCopy`): live vertices re-appended in id
+    /// order, then live triangles; a mesh that is already compact is copied as is.
+    pub(crate) fn compact_copy(&self) -> DMesh3 {
+        if self.is_compact() {
+            return self.clone();
+        }
+        let mut out = DMesh3::default();
+        if self.triangle_groups.is_some() {
+            out.triangle_groups = Some(Vec::new());
+        }
+        let mut map_v = vec![0; self.max_vertex_id() as usize];
+        for vid in self.vertex_indices() {
+            map_v[vid as usize] = out.append_vertex(self.vertices[vid as usize]);
+        }
+        for tid in self.triangle_indices() {
+            let t = self.get_triangle(tid);
+            let g = if self.triangle_groups.is_some() {
+                self.get_triangle_group(tid)
+            } else {
+                INVALID_ID
+            };
+            out.append_triangle_g(
+                map_v[t[0] as usize],
+                map_v[t[1] as usize],
+                map_v[t[2] as usize],
+                g,
+            );
+            out.max_group_id = out.max_group_id.max(g + 1);
+        }
+        out
     }
 }
 
@@ -229,162 +505,26 @@ impl Mesh {
 }
 
 impl DMesh3 {
-    /// agg-sharp `MeshExtensions.ToMesh(DMesh3)`: every vertex, then every triangle, in id
-    /// order (ids are dense here, so the vertex map is the identity).
+    /// agg-sharp `MeshExtensions.ToMesh(DMesh3)`: live vertices, then live triangles, in id
+    /// order, with the vertex ids compacted.
     pub(crate) fn to_mesh(&self) -> Mesh {
         let mut out = Mesh::new();
-        for v in &self.vertices {
+        let mut map_v = vec![0; self.max_vertex_id() as usize];
+        for (accum, vid) in self.vertex_indices().enumerate() {
+            map_v[vid as usize] = accum as i32;
+            let v = self.vertices[vid as usize];
             out.vertices
                 .push(vector_math::Vector3Float::new(v[0], v[1], v[2]));
         }
-        for t in &self.triangles {
-            out.faces.add(t[0], t[1], t[2], &out.vertices);
+        for tid in self.triangle_indices() {
+            let t = self.get_triangle(tid);
+            out.faces.add(
+                map_v[t[0] as usize],
+                map_v[t[1] as usize],
+                map_v[t[2] as usize],
+                &out.vertices,
+            );
         }
         out
-    }
-}
-
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-/// g3 `MeshQueries.TriDistanceSqr` / `DistPoint3Triangle3.DistanceSqr` (Eberly's region walk):
-/// the squared distance from `point` to the triangle `v`.
-pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
-    let diff = sub(v[0], point);
-    let edge0 = sub(v[1], v[0]);
-    let edge1 = sub(v[2], v[0]);
-    let a00 = dot(edge0, edge0);
-    let a01 = dot(edge0, edge1);
-    let a11 = dot(edge1, edge1);
-    let b0 = dot(diff, edge0);
-    let b1 = dot(diff, edge1);
-    let c = dot(diff, diff);
-    let det = (a00 * a11 - a01 * a01).abs();
-    let mut s = a01 * b1 - a11 * b0;
-    let mut t = a01 * b0 - a00 * b1;
-    let sqr_distance;
-
-    if s + t <= det {
-        if s < 0.0 {
-            if t < 0.0 {
-                // region 4
-                if b0 < 0.0 {
-                    if -b0 >= a00 {
-                        sqr_distance = a00 + 2.0 * b0 + c;
-                    } else {
-                        s = -b0 / a00;
-                        sqr_distance = b0 * s + c;
-                    }
-                } else if b1 >= 0.0 {
-                    sqr_distance = c;
-                } else if -b1 >= a11 {
-                    sqr_distance = a11 + 2.0 * b1 + c;
-                } else {
-                    t = -b1 / a11;
-                    sqr_distance = b1 * t + c;
-                }
-            } else {
-                // region 3
-                if b1 >= 0.0 {
-                    sqr_distance = c;
-                } else if -b1 >= a11 {
-                    sqr_distance = a11 + 2.0 * b1 + c;
-                } else {
-                    t = -b1 / a11;
-                    sqr_distance = b1 * t + c;
-                }
-            }
-        } else if t < 0.0 {
-            // region 5
-            if b0 >= 0.0 {
-                sqr_distance = c;
-            } else if -b0 >= a00 {
-                sqr_distance = a00 + 2.0 * b0 + c;
-            } else {
-                s = -b0 / a00;
-                sqr_distance = b0 * s + c;
-            }
-        } else {
-            // region 0: minimum at an interior point
-            let inv_det = 1.0 / det;
-            s *= inv_det;
-            t *= inv_det;
-            sqr_distance =
-                s * (a00 * s + a01 * t + 2.0 * b0) + t * (a01 * s + a11 * t + 2.0 * b1) + c;
-        }
-    } else if s < 0.0 {
-        // region 2
-        let tmp0 = a01 + b0;
-        let tmp1 = a11 + b1;
-        if tmp1 > tmp0 {
-            let numer = tmp1 - tmp0;
-            let denom = a00 - 2.0 * a01 + a11;
-            if numer >= denom {
-                sqr_distance = a00 + 2.0 * b0 + c;
-            } else {
-                s = numer / denom;
-                t = 1.0 - s;
-                sqr_distance =
-                    s * (a00 * s + a01 * t + 2.0 * b0) + t * (a01 * s + a11 * t + 2.0 * b1) + c;
-            }
-        } else if tmp1 <= 0.0 {
-            sqr_distance = a11 + 2.0 * b1 + c;
-        } else if b1 >= 0.0 {
-            sqr_distance = c;
-        } else {
-            t = -b1 / a11;
-            sqr_distance = b1 * t + c;
-        }
-    } else if t < 0.0 {
-        // region 6
-        let tmp0 = a01 + b1;
-        let tmp1 = a00 + b0;
-        if tmp1 > tmp0 {
-            let numer = tmp1 - tmp0;
-            let denom = a00 - 2.0 * a01 + a11;
-            if numer >= denom {
-                sqr_distance = a11 + 2.0 * b1 + c;
-            } else {
-                t = numer / denom;
-                s = 1.0 - t;
-                sqr_distance =
-                    s * (a00 * s + a01 * t + 2.0 * b0) + t * (a01 * s + a11 * t + 2.0 * b1) + c;
-            }
-        } else if tmp1 <= 0.0 {
-            sqr_distance = a00 + 2.0 * b0 + c;
-        } else if b0 >= 0.0 {
-            sqr_distance = c;
-        } else {
-            s = -b0 / a00;
-            sqr_distance = b0 * s + c;
-        }
-    } else {
-        // region 1
-        let numer = a11 + b1 - a01 - b0;
-        if numer <= 0.0 {
-            sqr_distance = a11 + 2.0 * b1 + c;
-        } else {
-            let denom = a00 - 2.0 * a01 + a11;
-            if numer >= denom {
-                sqr_distance = a00 + 2.0 * b0 + c;
-            } else {
-                s = numer / denom;
-                t = 1.0 - s;
-                sqr_distance =
-                    s * (a00 * s + a01 * t + 2.0 * b0) + t * (a01 * s + a11 * t + 2.0 * b1) + c;
-            }
-        }
-    }
-
-    // C# `if (sqrDistance < 0) sqrDistance = 0` (NaN passes through, as in C#).
-    if sqr_distance < 0.0 {
-        0.0
-    } else {
-        sqr_distance
     }
 }
