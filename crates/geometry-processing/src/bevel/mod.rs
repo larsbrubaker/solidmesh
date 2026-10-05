@@ -27,7 +27,9 @@
 //! of a side's fan at a chain vertex ([`sections`]); and the ninth: what one end of a run can
 //! afford ([`bevel_chain_end_budget`]), what each group did on a rebuild ([`BevelGroupResult`],
 //! [`BevelRebuildResults`], [`bevel_group_failures`]) and the clip, run-off readings and planless
-//! loop of the surface construction ([`surface`]). C# `internal static class` helpers are
+//! loop of the surface construction ([`surface`]); and the tenth: the mixed corner's blend tool
+//! mesh ([`bevel_mixed_blend_tool`]) and how far a tube runs to reach its partner's axis at a pair
+//! corner ([`bevel_pair_corner_reach`]). C# `internal static class` helpers are
 //! modules of free functions here.
 
 mod bevel_advisory;
@@ -45,8 +47,10 @@ pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
 mod bevel_group_result;
 mod bevel_mixed_blend;
+pub mod bevel_mixed_blend_tool;
 mod bevel_mixed_corner_ends;
 pub mod bevel_pair_corner_crease;
+pub mod bevel_pair_corner_reach;
 mod bevel_partner_tube;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
