@@ -1,17 +1,33 @@
 //! Port of `Agg.PolygonMesh/MeshTests.cs`: STL parsing, face cut lines, face splitting, the
-//! face BSP tree, slicing and stitching on clipper polygons. The rest (SDF, dual contouring)
-//! wait for their Phase 2 slices and are listed in `docs/PORTING_PLAN.md`.
+//! face BSP tree, slicing and stitching on clipper polygons, and the dual contouring signed
+//! distance functions. `CreateDualContouringCube` waits on the DualContouring octree (listed in
+//! `docs/PORTING_PLAN.md`).
 
 use agg_path::clipper_library::{
     create_from_string, ClipperError, Intersection, PolygonExtensions,
 };
 use clipper2_rust::Point64;
 use polygon_mesh::csg::{path_stitcher, slice_layer};
+use polygon_mesh::dual_contouring::{Cylinder, Sdf};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::{CancelToken, Face, Mesh};
 use vector_math::math_helper::TAU;
-use vector_math::{Matrix4X4, Plane, Vector2, Vector3, Vector3Float};
+use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector2, Vector3, Vector3Float};
+
+#[test]
+fn sdf_density_functions() {
+    let cylinder = Cylinder::new(2.0, 0.5);
+
+    assert!(cylinder.bounds().equals_within(
+        &AxisAlignedBoundingBox::from_coordinates(-0.5, -0.5, -1.0, 0.5, 0.5, 1.0),
+        0.001
+    ));
+    assert_eq!(cylinder.sdf(Vector3::new(0.0, 0.0, 2.0)), 1.0);
+    assert_eq!(cylinder.sdf(Vector3::new(0.0, 0.0, -2.0)), 1.0);
+    assert_eq!(cylinder.sdf(Vector3::new(0.0, 1.0, 1.0)), 0.5);
+    assert_eq!(cylinder.sdf(Vector3::new(1.0, 0.0, 1.0)), 0.5);
+}
 
 #[test]
 fn ascii_stl_open_scad_format_parses_to_faces() {

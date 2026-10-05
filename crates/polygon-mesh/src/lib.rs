@@ -15,7 +15,8 @@
 //! builder, and the shapes MatterCAD picks with.
 //!
 //! Phase 2e, the implicit surfaces (`sdf`): marching cubes over a sampled field and `MeshSdfGrid`,
-//! the offset preview, on the geometry3Sharp pieces it reaches (`g3`).
+//! the offset preview, on the geometry3Sharp pieces it reaches (`g3`); the signed distance
+//! functions of `dual_contouring`.
 //!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
@@ -24,6 +25,7 @@
 pub mod cancel;
 pub mod csg;
 pub mod data_converters_2d;
+pub mod dual_contouring;
 mod face;
 mod face_split;
 mod g3;

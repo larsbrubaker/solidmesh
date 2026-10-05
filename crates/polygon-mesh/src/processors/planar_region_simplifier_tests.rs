@@ -1,15 +1,207 @@
-//! Rust-only tests for `planar_region_simplifier` (unit tests, for the crate-private work
-//! counter). The ported `PlanarRegionSimplifierTests` build their parts with `MeshSdfGrid` and
-//! `VertexStorage.Extrude` (Phase 2e) and are listed as pending in `docs/PORTING_PLAN.md`; these
-//! check the same properties (closed, same volume, fewer faces, linear work) on hand-built meshes.
+//! Port of `Agg.PolygonMesh/PlanarRegionSimplifierTests.cs` (unit tests, for the crate-private
+//! work counter and g3 nearest-triangle query): the distance-field Dilate / Erode surface of a
+//! mechanical part is mostly grid-sized triangles on flat walls; merging them must shed most
+//! triangles and leave the surface, its closure and its volume exactly as they were.
+//! `ReleaseTimings` is `[Explicit]` (a manual timing run over a local file) and is not ported.
+//!
+//! The `rust_only_*` tests check the same properties on hand-built meshes.
 
 use std::collections::HashMap;
 
-use vector_math::Vector3Float;
+use agg_path::vertex_storage::VertexStorage;
+use vector_math::{Vector2, Vector3Float};
 
 use super::{simplify, simplify_counting_work};
+use crate::g3::dmesh3::tri_distance_sqr;
+use crate::g3::DMeshAABBTree3;
+use crate::processors::vertex_source_to_mesh::extrude;
+use crate::sdf::MeshSdfGrid;
 use crate::solids::platonic_solids::{create_cube, create_icosahedron};
-use crate::Mesh;
+use crate::{CancelToken, Mesh};
+
+fn block_with_hole_and_notch(iso: f64) {
+    let mut outline = VertexStorage::new();
+    outline.move_to(0.0, 0.0);
+    outline.line_to(12.0, 0.0);
+    outline.line_to(12.0, 5.0);
+    outline.line_to(18.0, 5.0);
+    outline.line_to(18.0, 0.0);
+    outline.line_to(30.0, 0.0);
+    outline.line_to(30.0, 20.0);
+    outline.line_to(0.0, 20.0);
+    outline.close_polygon();
+    add_circle(&mut outline, Vector2::new(8.0, 11.0), 4.0, 48);
+    assert_simplifies(
+        &format!("block {iso}"),
+        extrude_part(&outline, 10.0),
+        iso,
+        4,
+    );
+}
+
+#[test]
+fn block_with_hole_and_notch_1() {
+    block_with_hole_and_notch(1.0);
+}
+
+#[test]
+fn block_with_hole_and_notch_minus_1() {
+    block_with_hole_and_notch(-1.0);
+}
+
+#[test]
+fn gear_like_extrusion() {
+    let mut outline = VertexStorage::new();
+    const TEETH: i32 = 12;
+    for i in 0..TEETH * 4 {
+        let angle = i as f64 * std::f64::consts::PI * 2.0 / (TEETH * 4) as f64;
+        let radius = if (i % 4) < 2 { 15.0 } else { 12.0 };
+        let p = Vector2::new(angle.cos() * radius, angle.sin() * radius);
+        if i == 0 {
+            outline.move_to_vector(p);
+        } else {
+            outline.line_to_vector(p);
+        }
+    }
+
+    outline.close_polygon();
+    add_circle(&mut outline, Vector2::new(0.0, 0.0), 4.0, 32);
+    assert_simplifies("gear", extrude_part(&outline, 6.0), 1.0, 2);
+}
+
+#[test]
+fn l_bracket() {
+    let mut outline = VertexStorage::new();
+    outline.move_to(0.0, 0.0);
+    outline.line_to(40.0, 0.0);
+    outline.line_to(40.0, 5.0);
+    outline.line_to(5.0, 5.0);
+    outline.line_to(5.0, 30.0);
+    outline.line_to(0.0, 30.0);
+    outline.close_polygon();
+    assert_simplifies("L bracket", extrude_part(&outline, 20.0), 1.0, 4);
+}
+
+#[test]
+fn round_part_is_left_almost_as_it_was() {
+    // A near-point dilated far is a ball: no flat wall to merge.
+    let sdf = MeshSdfGrid::new(create_cube(0.01, 0.01, 0.01), 5.0, 64).expect("valid grid");
+    let source = sdf.extract(5.0, &CancelToken::new()).expect("extracts");
+    let simplified = simplify(&source);
+    println!(
+        "sphere: {} -> {}",
+        source.faces.len(),
+        simplified.faces.len()
+    );
+    assert_same_solid_on_surface(&source, &simplified);
+    assert!(simplified.faces.len() > source.faces.len() * 9 / 10);
+}
+
+#[test]
+fn work_grows_linearly_with_the_mesh() {
+    let mut outline = VertexStorage::new();
+    outline.move_to(0.0, 0.0);
+    outline.line_to(30.0, 0.0);
+    outline.line_to(30.0, 20.0);
+    outline.line_to(0.0, 20.0);
+    outline.close_polygon();
+    add_circle(&mut outline, Vector2::new(8.0, 11.0), 4.0, 48);
+    let single = MeshSdfGrid::new(extrude_part(&outline, 10.0), 1.0, 64)
+        .expect("valid grid")
+        .extract(1.0, &CancelToken::new())
+        .expect("extracts");
+
+    // Two copies with their own vertices: every region, boundary and edge twice over. They
+    // share their place, so the bounds and the float rounding are the same as the single's.
+    let doubled = doubled_in_place(&single);
+
+    let (simplified_single, single_work) = simplify_counting_work(&single, 1e-4, 1e-7);
+    let (simplified_doubled, doubled_work) = simplify_counting_work(&doubled, 1e-4, 1e-7);
+    println!("work {single_work} -> {doubled_work}");
+    assert_eq!(
+        simplified_doubled.faces.len(),
+        2 * simplified_single.faces.len()
+    );
+    assert!(doubled_work as f64 <= 2.5 * single_work as f64);
+}
+
+fn extrude_part(outline: &VertexStorage, height: f64) -> Mesh {
+    extrude(outline, height).expect("the outline extrudes")
+}
+
+/// Two copies of `single`, each with its own vertices, in the same place.
+fn doubled_in_place(single: &Mesh) -> Mesh {
+    let mut doubled = Mesh::new();
+    doubled.vertices.extend_from_slice(&single.vertices);
+    doubled.vertices.extend_from_slice(&single.vertices);
+    let offset = single.vertices.len() as i32;
+    for face in single.faces.iter() {
+        doubled
+            .faces
+            .add(face.v0, face.v1, face.v2, &doubled.vertices);
+    }
+    for face in single.faces.iter() {
+        doubled.faces.add(
+            face.v0 + offset,
+            face.v1 + offset,
+            face.v2 + offset,
+            &doubled.vertices,
+        );
+    }
+    doubled
+}
+
+fn add_circle(outline: &mut VertexStorage, center: Vector2, radius: f64, sides: i32) {
+    for i in 0..sides {
+        let angle = i as f64 * std::f64::consts::PI * 2.0 / sides as f64;
+        let p = center + Vector2::new(angle.cos() * radius, angle.sin() * radius);
+        if i == 0 {
+            outline.move_to_vector(p);
+        } else {
+            outline.line_to_vector(p);
+        }
+    }
+
+    outline.close_polygon();
+}
+
+fn assert_simplifies(name: &str, part: Mesh, iso: f64, minimum_reduction: usize) {
+    let source = MeshSdfGrid::new(part, iso.abs(), MeshSdfGrid::DEFAULT_RESOLUTION)
+        .expect("valid grid")
+        .extract(iso, &CancelToken::new())
+        .expect("extracts");
+    let simplified = simplify(&source);
+    println!(
+        "{name}: {} -> {}",
+        source.faces.len(),
+        simplified.faces.len()
+    );
+    assert_same_solid_on_surface(&source, &simplified);
+    assert!(simplified.faces.len() * minimum_reduction < source.faces.len());
+}
+
+/// C# `AssertSameSolid`: closed, manifold, same volume, and every source vertex (kept or
+/// dropped) still lies on the simplified surface.
+fn assert_same_solid_on_surface(source: &Mesh, simplified: &Mesh) {
+    assert!(simplified.is_manifold());
+    assert_eq!(closed_edge_errors(simplified), 0);
+    let volume = source.get_volume();
+    assert!((simplified.get_volume() - volume).abs() <= 1e-6 * volume.abs());
+
+    // The kept vertices are the source's own; every dropped one must still lie on the surface.
+    let target = simplified.to_dmesh3();
+    let tree = DMeshAABBTree3::new(&target);
+    let mut worst = 0.0f64;
+    for vertex in &source.vertices {
+        let point = [vertex.x as f64, vertex.y as f64, vertex.z as f64];
+        let triangle = tree.find_nearest_triangle(point, f64::MAX);
+        let corners = target.get_tri_vertices(triangle as usize);
+        worst = worst.max(tri_distance_sqr(&corners, point).sqrt());
+    }
+
+    println!("  worst dropped-vertex distance {worst:.2e}");
+    assert!(worst <= 1e-5);
+}
 
 /// A welded `size` cube whose every side is tiled with `n` x `n` grid squares, two triangles each,
 /// wound outwards: the shape of a distance-field wall.
@@ -152,23 +344,7 @@ fn rust_only_work_grows_linearly_with_the_mesh() {
     // C# `WorkGrowsLinearlyWithTheMesh` on a tiled box: two copies with their own vertices, in
     // the same place, so the bounds and the rounding are the same as the single's.
     let single = tiled_box(10.0, 8);
-    let mut doubled = Mesh::new();
-    doubled.vertices.extend_from_slice(&single.vertices);
-    doubled.vertices.extend_from_slice(&single.vertices);
-    let offset = single.vertices.len() as i32;
-    for face in single.faces.iter() {
-        doubled
-            .faces
-            .add(face.v0, face.v1, face.v2, &doubled.vertices);
-    }
-    for face in single.faces.iter() {
-        doubled.faces.add(
-            face.v0 + offset,
-            face.v1 + offset,
-            face.v2 + offset,
-            &doubled.vertices,
-        );
-    }
+    let doubled = doubled_in_place(&single);
 
     let (simplified_single, single_work) = simplify_counting_work(&single, 1e-4, 1e-7);
     let (simplified_doubled, doubled_work) = simplify_counting_work(&doubled, 1e-4, 1e-7);
