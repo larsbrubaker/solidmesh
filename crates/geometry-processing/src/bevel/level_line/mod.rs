@@ -60,7 +60,9 @@ mod chain_field;
 mod chain_field_end_clip;
 mod chain_field_end_ray;
 mod chain_field_mitre;
+mod chain_field_nearest;
 mod chain_field_queries;
+mod chain_field_smooth_joint_spans;
 pub mod chain_on_the_mesh;
 pub mod chain_setback;
 mod chain_side_loops;
@@ -147,6 +149,7 @@ pub use chain_field::{ChainField, ChainFieldEndPlaneReader, ChainFieldSmoothJoin
 pub use chain_field_end_clip::ChainFieldEndClip;
 pub use chain_field_end_ray::EndRayBound;
 pub use chain_field_mitre::ChainFieldExtension;
+pub use chain_field_nearest::ChainFieldNearest;
 pub use chain_field_queries::{ChainFieldMeshPiece, ClosestOnPiece};
 pub use chain_side_loops::ChainSideLoops;
 pub use corner_cap::CornerCapLastRow;

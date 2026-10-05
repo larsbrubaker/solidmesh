@@ -1,6 +1,7 @@
 //! A segment's line carried past a sharp vertex ([`ChainFieldExtension`]), from
-//! `Bevel/LevelLine/ChainField.Mitre.cs`. Finding the mitres, the ray's reading and the other
-//! `ChainField` methods of that partial land with their method package.
+//! `Bevel/LevelLine/ChainField.Mitre.cs`; its constructor and reading, and the rays offered to a
+//! point query, are in `chain_field_nearest.rs`. Finding the mitres and the other `ChainField`
+//! methods of that partial land with their method package.
 
 use vector_math::Vector3;
 

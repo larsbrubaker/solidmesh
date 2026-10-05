@@ -264,3 +264,125 @@ fn rust_only_an_ear_cut_tiles_a_rim_by_its_highest_ears() {
         .expect("no budget");
     assert!(refused.is_none());
 }
+
+/// A field over an open polyline with the given setbacks, built field by field (the chain field's
+/// own constructor lands with a later package).
+fn polyline_field(
+    points: Vec<Vector3>,
+    setbacks: Vec<f64>,
+    smooth: Option<std::collections::HashSet<i32>>,
+) -> geometry_processing::bevel::level_line::ChainField {
+    use geometry_processing::bevel::level_line::{segment_box_tree, ChainField};
+    let mut parameter_at_point = vec![0.0];
+    for pair in points.windows(2) {
+        let last = *parameter_at_point.last().unwrap_or(&0.0);
+        parameter_at_point.push(last + (pair[1] - pair[0]).length());
+    }
+    let length = *parameter_at_point.last().unwrap_or(&0.0);
+    let segment_count = points.len() as i32 - 1;
+    ChainField {
+        nodes: segment_box_tree::build(&points, &setbacks, segment_count, None),
+        min_setback: setbacks.iter().copied().fold(f64::INFINITY, f64::min),
+        max_setback: setbacks.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+        points,
+        setbacks,
+        parameter_at_point,
+        smooth_joints: smooth,
+        sharp_turn_degrees: f64::INFINITY,
+        end_rays: (false, false),
+        end_ray_bounds: (None, None),
+        is_closed: false,
+        length,
+        extensions: None,
+        end_clips: None,
+        end_plane_reader: Default::default(),
+        sharp_joints: Default::default(),
+    }
+}
+
+#[test]
+fn rust_only_the_nearest_walk_reads_the_union_of_balls() {
+    use geometry_processing::bevel::level_line::ChainFieldExtension;
+    let field = polyline_field(
+        vec![v(0.0, 0.0, 0.0), v(4.0, 0.0, 0.0), v(4.0, 4.0, 0.0)],
+        vec![1.0, 1.0, 1.0],
+        None,
+    );
+    assert_eq!(field.unclipped_value_at(v(1.0, 3.0, 0.0)).ok(), Some(2.0));
+    assert_eq!(
+        field.unclipped_parameter_at(v(1.0, 3.0, 0.0)).ok(),
+        Some(1.0)
+    );
+    assert_eq!(
+        field.value_in_the_end_plane(v(6.0, 2.0, 0.0)).ok(),
+        Some(1.0)
+    );
+    assert_eq!(
+        field.unclipped_parameter_at(v(6.0, 2.0, 0.0)).ok(),
+        Some(6.0)
+    );
+
+    // A setback growing along the segment: the least stands past the foot, toward the bigger ball.
+    let growing = polyline_field(
+        vec![v(0.0, 0.0, 0.0), v(10.0, 0.0, 0.0)],
+        vec![0.0, 2.0],
+        None,
+    );
+    let (value, u, _, _) = growing.least_over_segment_from_point(0, v(5.0, 3.0, 0.0));
+    let direct = |u: f64| (v(5.0, 3.0, 0.0) - v(10.0 * u, 0.0, 0.0)).length() - (2.0 * u);
+    assert!(u > 0.5 && (value - direct(u)).abs() < 1e-12);
+    for i in 0..=100 {
+        assert!(value <= direct(i as f64 / 100.0) + 1e-12);
+    }
+
+    let ray = ChainFieldExtension::new(
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        2.0,
+        0.5,
+        3.0,
+        0.0,
+    );
+    assert_eq!(ray.end(), v(2.0, 0.0, 0.0));
+    assert_eq!(ray.value_at(v(5.0, 4.0, 0.0)), (4.5, v(2.0, 0.0, 0.0), 5.0));
+    assert_eq!(ray.value_at(v(-1.0, 0.0, 0.0)).0, f64::INFINITY);
+}
+
+#[test]
+fn rust_only_a_smooth_joint_span_carries_the_parameter_across_the_joint() {
+    let field = polyline_field(
+        vec![v(0.0, 0.0, 0.0), v(2.0, 0.0, 0.0), v(4.0, 0.0, 0.0)],
+        vec![1.0, 1.0, 1.0],
+        Some(std::collections::HashSet::from([1])),
+    );
+    assert!(field.has_span(1) && !field.has_span(0));
+    assert_eq!(field.span_of(1), (2.0, 1.0, 1.0));
+    // Before the span nothing moves; inside it the half-segments are squeezed toward the joint.
+    assert_eq!(field.across_smooth_joints(0.5, v(0.5, 1.0, 0.0)), 0.5);
+    assert_eq!(field.across_smooth_joints(1.5, v(1.5, 1.0, 0.0)), 1.25);
+    assert_eq!(field.across_smooth_joints(2.5, v(2.5, 1.0, 0.0)), 2.75);
+    // And back: the squeezed stretch maps out again, the middle of the span is the joint.
+    assert_eq!(field.on_the_chain_from_spans(1.25), 1.5);
+    assert_eq!(field.on_the_chain_from_spans(2.0), 2.0);
+    assert_eq!(field.on_the_chain_from_spans(2.75), 2.5);
+}
+
+#[test]
+fn rust_only_a_dying_crease_run_walks_the_loop_its_own_way() {
+    use geometry_processing::bevel::level_line::{dying_crease_fill, GapLoop};
+    let closed = GapLoop::new(
+        2,
+        true,
+        vec![10, 11, 12, 13],
+        vec![0.0, 1.0, 2.0, 3.0],
+        4,
+        false,
+        None,
+    );
+    let run = dying_crease_fill::run(&closed, 3, 1).expect("no budget");
+    assert_eq!(run.vertices, vec![13, 10, 11]);
+    assert_eq!(run.parameters, vec![3.0, 0.0, 1.0]);
+    assert!(!run.is_closed);
+    assert_eq!((run.side, run.chain), (2, 4));
+}
