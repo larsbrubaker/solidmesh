@@ -18,8 +18,9 @@ pub type DistanceToChain = Rc<dyn Fn(Vector3) -> f64>;
 /// Whether a triangle tag is one of a chain's own sides (C# `Func<int, bool>`).
 pub type IsOwnSide = Rc<dyn Fn(i32) -> bool>;
 
-/// Per walked crease piece, the edges that bound the room past it, as (low, high) edges.
-pub type CreaseBounds = HashMap<(i32, i32), Vec<(i32, i32)>>;
+/// Per walked crease piece, the edges that bound the room past it, as (low, high) edges - `None`
+/// where the piece bounds nothing (C# caches its null too).
+pub type CreaseBounds = HashMap<(i32, i32), Option<Vec<(i32, i32)>>>;
 
 /// C# `GrowingCreaseRuns`: the room past a GROWING neighbour C (flow rung 2), in closed form. An
 /// opposite-sense crease does not bound the room where the band first reaches it: the rows run on

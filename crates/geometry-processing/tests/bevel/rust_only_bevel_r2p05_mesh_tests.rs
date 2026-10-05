@@ -632,3 +632,66 @@ fn rust_only_a_knife_prisms_foot_corner_has_a_pair_corner_end_face() {
     )
     .is_none());
 }
+
+#[test]
+fn rust_only_a_chain_is_split_where_its_setback_steps_at_a_sharp_turn() {
+    // Chain 0 -> 1 -> 4 turns square at 1. Edge 0-1 is a square fold (fillet setback 1); edge
+    // 1-4 a 60 degree one (setback tan 30): a step of far more than 5%.
+    let positions = [
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(1.0, 1.0, 0.0),
+        v(0.0, 0.0, -1.0),
+        v(1.0, 1.0, 0.0),
+        v(2.0, 0.0, -(3f64.sqrt())),
+    ];
+    let indices = [(0, 1, 4), (1, 0, 3), (4, 1, 5)];
+    let chains = vec![vec![0, 1, 4]];
+
+    let (split, closed) = chain_on_the_mesh::split_at_setback_steps(
+        &positions,
+        &indices,
+        &chains,
+        &[false],
+        BandProfile::Fillet,
+        45.0,
+        None,
+    )
+    .unwrap();
+    assert_eq!(split, vec![vec![0, 1], vec![1, 4]]);
+    assert_eq!(closed, vec![false, false]);
+
+    // A chamfer never steps; nor does a chain read with no turn threshold, or a turn gentler
+    // than the threshold.
+    for (profile, degrees) in [
+        (BandProfile::Chamfer, 45.0),
+        (BandProfile::Fillet, f64::INFINITY),
+        (BandProfile::Fillet, 120.0),
+    ] {
+        let (same, _) = chain_on_the_mesh::split_at_setback_steps(
+            &positions,
+            &indices,
+            &chains,
+            &[false],
+            profile,
+            degrees,
+            None,
+        )
+        .unwrap();
+        assert_eq!(same, chains);
+    }
+
+    // No unpicked crease runs into vertex 1: no step.
+    let none = |_: i32, _: i32| false;
+    let (kept, _) = chain_on_the_mesh::split_at_setback_steps(
+        &positions,
+        &indices,
+        &chains,
+        &[false],
+        BandProfile::Fillet,
+        45.0,
+        Some(&none),
+    )
+    .unwrap();
+    assert_eq!(kept, chains);
+}

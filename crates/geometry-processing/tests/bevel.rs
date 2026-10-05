@@ -125,6 +125,8 @@ mod rust_only_bevel_r2p04_flow_tests;
 mod rust_only_bevel_r2p04_tests;
 #[path = "bevel/rust_only_bevel_r2p05_counter_tests.rs"]
 mod rust_only_bevel_r2p05_counter_tests;
+#[path = "bevel/rust_only_bevel_r2p05_crease_tests.rs"]
+mod rust_only_bevel_r2p05_crease_tests;
 #[path = "bevel/rust_only_bevel_r2p05_from_polyline_tests.rs"]
 mod rust_only_bevel_r2p05_from_polyline_tests;
 #[path = "bevel/rust_only_bevel_r2p05_mesh_tests.rs"]

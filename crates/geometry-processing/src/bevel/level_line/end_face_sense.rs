@@ -557,3 +557,111 @@ pub fn is_opposite_sense(
 
     Ok(creases > 0)
 }
+
+/// C# `EndFaceSense.GrowingCreaseStretch`: at each growing end of the chain (`first_grows`,
+/// `last_grows`), the side-to-end-face creases running from it along the end face's one plane -
+/// the stretch a growing crease runs along. A crease is an edge between one of the chain's own
+/// sides and an end face, with a real fold between them; `own_side` says which tags are the
+/// chain's own sides (`None` reads the one-chain tagging: sides 1 and 2, the end face untagged).
+pub fn growing_crease_stretch(
+    mesh: &super::LevelLineMesh,
+    chain_edges: &[(i32, i32)],
+    first_grows: bool,
+    last_grows: bool,
+    own_side: Option<&dyn Fn(i32) -> bool>,
+) -> std::collections::HashSet<(i32, i32)> {
+    use std::collections::{HashMap, HashSet};
+
+    let mut stretch = HashSet::new();
+    if !first_grows && !last_grows {
+        return stretch;
+    }
+
+    let normal_of = |triangle: i32| {
+        let t = mesh.triangles[triangle as usize];
+        let a = mesh.position(t.a);
+        (mesh.position(t.b) - a)
+            .cross(mesh.position(t.c) - a)
+            .get_normal()
+    };
+
+    // Every side-to-end CREASE: one picked side, one end-face triangle, and a real fold.
+    let mut end_face_normal: HashMap<(i32, i32), Vector3> = HashMap::new();
+    let mut creases_at: HashMap<i32, Vec<(i32, i32)>> = HashMap::new();
+    for edge in mesh.edges() {
+        let standing = mesh.triangles_on(edge.0, edge.1);
+        if standing.len() != 2 {
+            continue;
+        }
+
+        let first = mesh.triangles[standing[0] as usize].tag;
+        let second = mesh.triangles[standing[1] as usize].tag;
+        let first_is_the_end_face = match own_side {
+            None => {
+                if (first == 0) == (second == 0)
+                    || (first != 0 && first > 2)
+                    || (second != 0 && second > 2)
+                {
+                    continue;
+                }
+                first == 0
+            }
+            Some(own_side) => {
+                // Several chains: the end face may be untagged or ANOTHER chain's side.
+                let first_own = first != 0 && own_side(first);
+                let second_own = second != 0 && own_side(second);
+                if first_own == second_own {
+                    continue;
+                }
+                !first_own
+            }
+        };
+
+        let (end_t, side_t) = if first_is_the_end_face {
+            (standing[0], standing[1])
+        } else {
+            (standing[1], standing[0])
+        };
+        let end = normal_of(end_t);
+        if 1.0 - end.dot(normal_of(side_t)) <= COPLANAR_TOLERANCE {
+            continue;
+        }
+
+        end_face_normal.insert(edge, end);
+        for v in [edge.0, edge.1] {
+            creases_at.entry(v).or_default().push(edge);
+        }
+    }
+
+    let mut ends = Vec::new();
+    if first_grows {
+        ends.push(chain_edges[0].0);
+    }
+    if last_grows {
+        ends.push(chain_edges[chain_edges.len() - 1].1);
+    }
+
+    for end_vertex in ends {
+        let Some(at_end) = creases_at.get(&end_vertex) else {
+            continue;
+        };
+
+        for &start in at_end {
+            let plane = end_face_normal[&start];
+            let mut walking = vec![start];
+            while let Some(edge) = walking.pop() {
+                if 1.0 - end_face_normal[&edge].dot(plane) > COPLANAR_TOLERANCE
+                    || !stretch.insert(edge)
+                {
+                    continue;
+                }
+
+                for v in [edge.0, edge.1] {
+                    walking.extend(creases_at[&v].iter().copied());
+                }
+            }
+        }
+    }
+
+    stretch
+}

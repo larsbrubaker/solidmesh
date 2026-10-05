@@ -127,3 +127,110 @@ pub fn unit_setbacks(
 
     Ok(setbacks)
 }
+
+/// C# `ChainOnTheMesh.SplitAtSetbackSteps`: each chain cut into pieces at its STEPS - sharp
+/// turns (past `sharp_turn_degrees`) where the unit setback jumps by more than
+/// [`SETBACK_STEP_FRACTION`] and an unpicked crease runs into the vertex (always, without an
+/// `is_feature_edge`). A closed chain needs two steps to be cut, and its pieces wrap past its
+/// start. A chamfer, or no threshold, never steps; nothing cut hands the chains back as they are.
+#[allow(clippy::too_many_arguments)]
+pub fn split_at_setback_steps(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    profile: super::BandProfile,
+    sharp_turn_degrees: f64,
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+) -> Result<(Vec<Vec<i32>>, Vec<bool>), ChainEdgeNotOnTwoTriangles> {
+    if profile == super::BandProfile::Chamfer || !sharp_turn_degrees.is_finite() {
+        // A chamfer's setback is its size on every edge: there is never a step.
+        return Ok((chains.to_vec(), closed.to_vec()));
+    }
+
+    // An unpicked feature edge at vertex v, other than the chain's own edges to a and b.
+    let a_crease_runs_in = |a: i32, v: i32, b: i32| {
+        let Some(is_feature_edge) = is_feature_edge else {
+            return true;
+        };
+
+        indices.iter().any(|&(x, y, z)| {
+            [(x, y), (y, z), (z, x)].into_iter().any(|(u, w)| {
+                let other = if u == v {
+                    w
+                } else if w == v {
+                    u
+                } else {
+                    -1
+                };
+                other >= 0 && other != a && other != b && is_feature_edge(v, other)
+            })
+        })
+    };
+
+    let mut split: Option<(Vec<Vec<i32>>, Vec<bool>)> = None;
+    for (k, chain) in chains.iter().enumerate() {
+        let edges = chain_edges(chain, closed[k]);
+        let per_edge = per_edge_unit_setbacks(positions, indices, &edges, profile)?;
+        let cos_sharp = (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
+        let steps_at = |before: usize, after: usize| {
+            // Edge i runs from chain[i]; the vertex between edges before and after is chain[after].
+            let d_in = positions[edges[before].1 as usize] - positions[edges[before].0 as usize];
+            let d_out = positions[edges[after].1 as usize] - positions[edges[after].0 as usize];
+            let sharp = d_in.length_squared() > 0.0
+                && d_out.length_squared() > 0.0
+                && d_in.get_normal().dot(d_out.get_normal()) < cos_sharp;
+            sharp
+                && (per_edge[before] - per_edge[after]).abs()
+                    > SETBACK_STEP_FRACTION
+                        * vector_math::cs_math::max_f64(per_edge[before], per_edge[after])
+                && a_crease_runs_in(edges[before].0, edges[after].0, edges[after].1)
+        };
+
+        // The chain positions a step stands at: vertex i sits between edge i - 1 and edge i.
+        let (first, end) = if closed[k] {
+            (0, chain.len())
+        } else {
+            (1, chain.len().saturating_sub(1))
+        };
+        let steps: Vec<usize> = (first..end)
+            .filter(|&i| steps_at((i + edges.len() - 1) % edges.len(), i))
+            .collect();
+
+        if steps.is_empty() || (closed[k] && steps.len() < 2) {
+            if let Some((split_chains, split_closed)) = split.as_mut() {
+                split_chains.push(chain.clone());
+                split_closed.push(closed[k]);
+            }
+            continue;
+        }
+
+        let (split_chains, split_closed) =
+            split.get_or_insert_with(|| (chains[..k].to_vec(), closed[..k].to_vec()));
+
+        if closed[k] {
+            // Each piece runs from one step round to the next, wrapping past the chain's start.
+            for s in 0..steps.len() {
+                let from = steps[s];
+                let to = steps[(s + 1) % steps.len()];
+                let length = ((to + chain.len() - from - 1) % chain.len()) + 1;
+                split_chains.push(
+                    (0..=length)
+                        .map(|j| chain[(from + j) % chain.len()])
+                        .collect(),
+                );
+                split_closed.push(false);
+            }
+        } else {
+            let mut bounds = vec![0];
+            bounds.extend(&steps);
+            bounds.push(chain.len() - 1);
+            for s in 0..bounds.len() - 1 {
+                split_chains.push(chain[bounds[s]..=bounds[s + 1]].to_vec());
+                split_closed.push(false);
+            }
+        }
+    }
+
+    Ok(split.unwrap_or_else(|| (chains.to_vec(), closed.to_vec())))
+}

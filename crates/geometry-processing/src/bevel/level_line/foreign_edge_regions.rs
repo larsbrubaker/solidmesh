@@ -203,3 +203,71 @@ pub fn chain_ends(chain_keys: &HashSet<(i32, i32)>) -> HashSet<i32> {
         .map(|(v, _)| v)
         .collect()
 }
+
+impl ForeignEdgeRegionsChainGrowth {
+    /// C# `ChainGrowth.ReadEndRegions`: every crease of an end-face triangle (`end_tags` per
+    /// triangle) to a triangle off the end face - set aside where it is the pick's own side
+    /// (`seeds`), a bound otherwise unless it is a knife.
+    pub fn read_end_regions(
+        &mut self,
+        mesh: &LevelLineMesh,
+        end_tags: &[i32],
+        chain_keys: &HashSet<(i32, i32)>,
+        seeds: &dyn Fn(i32) -> bool,
+    ) {
+        use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
+
+        let is_end =
+            |triangle: i32| matches!(end_tags[triangle as usize], FIRST_END_TAG | SECOND_END_TAG);
+        for i in 0..end_tags.len() as i32 {
+            if !is_end(i) {
+                continue;
+            }
+
+            let face = mesh.triangles[i as usize];
+            for (p, q) in super::triangle_edges::corners((face.a, face.b, face.c)) {
+                let edge = super::triangle_edges::key(p, q);
+                let standing = mesh.triangles_on(edge.0, edge.1);
+                if chain_keys.contains(&edge) || standing.len() != 2 {
+                    continue;
+                }
+
+                let across = if standing[0] == i {
+                    standing[1]
+                } else {
+                    standing[0]
+                };
+                if is_end(across) {
+                    continue;
+                }
+
+                let across_tag = mesh.triangles[across as usize].tag;
+                if across_tag != 0 && seeds(across_tag) {
+                    self.set_aside.insert(edge);
+                } else if !super::foreign_edge_room::is_a_knife_edge(mesh, edge) {
+                    self.bounding.push(edge);
+                }
+            }
+        }
+    }
+
+    /// C# `ChainGrowth.Read`: one foreign crease - set aside where it is on the end face's
+    /// stretch or bounds a growing run (whose far creases then bound), unless already set aside.
+    pub fn read(&mut self, edge: (i32, i32)) -> Result<(), super::WorkError> {
+        if self.set_aside.contains(&edge) {
+            return Ok(());
+        }
+
+        if self.stretch.contains(&edge) {
+            self.set_aside.insert(edge);
+            return Ok(());
+        }
+
+        if let Some(bounds) = self.runs.bounds_of(edge, &self.ends)? {
+            self.set_aside.insert(edge);
+            self.bounding.extend(bounds);
+        }
+
+        Ok(())
+    }
+}

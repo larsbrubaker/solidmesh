@@ -290,3 +290,32 @@ impl ForeignEdgeIndex {
         )
     }
 }
+
+impl ForeignEdgeIndex {
+    /// C# `ForeignEdgeIndex.Over`: the index over `edges` of `mesh` - the box tree built once, and
+    /// the edges and their ends sorted into tree order so a node's run is contiguous.
+    pub fn over(mesh: &super::LevelLineMesh, edges: &[(i32, i32)]) -> ForeignEdgeIndex {
+        let mut ends = Vec::with_capacity(edges.len() * 2);
+        for &(low, high) in edges {
+            ends.push(mesh.position(low));
+            ends.push(mesh.position(high));
+        }
+
+        let mut order: Vec<i32> = (0..edges.len() as i32).collect();
+        let mut built = Vec::new();
+        if !edges.is_empty() {
+            ForeignEdgeIndex::add(&mut built, &ends, &mut order, 0, edges.len() as i32);
+        }
+
+        let mut sorted_edges = Vec::with_capacity(edges.len());
+        let mut sorted_ends = Vec::with_capacity(ends.len());
+        for &i in &order {
+            let i = i as usize;
+            sorted_edges.push(edges[i]);
+            sorted_ends.push(ends[i * 2]);
+            sorted_ends.push(ends[(i * 2) + 1]);
+        }
+
+        ForeignEdgeIndex::new(sorted_edges, sorted_ends, built)
+    }
+}
