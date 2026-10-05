@@ -6,7 +6,13 @@
 //! and the end cap plane ([`BevelEndCap`]); and the second: the cross-section ear clip
 //! ([`bevel_profile_polygon`]), the selected ends at a corner ([`BevelMixedCornerEnds`]), the
 //! crease between two runs ([`bevel_pair_corner_crease`]), the partner's ball tube
-//! ([`BevelPartnerTube`]) and the analytic round ([`BevelRoundDescriptor`]). C# `internal static
+//! ([`BevelPartnerTube`]) and the analytic round ([`BevelRoundDescriptor`]); and the third: the
+//! shared seam ring ([`bevel_seam_ring`]), one-edge-one-tool ([`bevel_shared_edges`]), the
+//! per-tolerance surface labels ([`BevelSurfaceLabels`]), the straight surface walk
+//! ([`BevelSurfaceWalk`]), the float grid step ([`float_grid`]) and the level line's leaf records
+//! ([`level_line`]); and the fourth: more level-line leaves (field bounds and samples, the field
+//! traits, the segment box tree, gap loops and fill refusals), the section point pool
+//! ([`sections`]) and the surface construction's leaf records ([`surface`]). C# `internal static
 //! class` helpers are modules of free functions here.
 
 mod bevel_advisory;
@@ -22,6 +28,14 @@ pub mod bevel_pair_corner_crease;
 mod bevel_partner_tube;
 pub mod bevel_profile_polygon;
 mod bevel_round_descriptor;
+pub mod bevel_seam_ring;
+pub mod bevel_shared_edges;
+mod bevel_surface_labels;
+mod bevel_surface_walk;
+pub mod float_grid;
+pub mod level_line;
+pub mod sections;
+pub mod surface;
 
 pub use bevel_advisory::{BevelAdvisory, BevelAdvisoryArg};
 pub use bevel_advisory_code::BevelAdvisoryCode;
@@ -32,3 +46,5 @@ pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;
 pub use bevel_pair_corner_crease::PairFaces;
 pub use bevel_partner_tube::BevelPartnerTube;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
+pub use bevel_surface_labels::BevelSurfaceLabels;
+pub use bevel_surface_walk::{BevelSurfaceWalk, SurfaceWalkStop};

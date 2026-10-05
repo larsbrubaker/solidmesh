@@ -93,7 +93,7 @@ impl BevelEdgeGroupResolution {
         }
     }
 
-    fn succeeded(
+    pub(crate) fn succeeded(
         group: BevelEdgeGroup,
         features: Arc<FeatureEdgeSet>,
         seed_edge_index: i32,
