@@ -1,11 +1,15 @@
 //! Clipping a cutter whose run ended on a cap plane the sweep could not carry
 //! (`Bevel/BevelCapClip.cs`, a C# `internal static class`, so a module here): one cap a boolean
 //! owes ([`ClippedCap`]), one cutter with the caps to take off it ([`Candidate`]) and a cutter
-//! that could not be clipped and was withdrawn ([`Withdrawal`]). The demotions a capped run is
-//! retried with ([`attempts_for`]) land here; the clip itself lands with later packages.
+//! that could not be clipped and was withdrawn ([`Withdrawal`]). The sweep with its cap-clip
+//! fallback ([`try_create`]) and the demotions it retries with ([`attempts_for`]) land here; the
+//! clip itself lands with later packages.
 
 use vector_math::Vector3;
 
+use polygon_mesh::Mesh;
+
+use super::bevel_chain_sweep::{self, BevelSweptSection};
 use super::{BevelAdvisory, BevelChainEnds, BevelEndCap};
 use crate::topology::ChainEdge;
 
@@ -110,4 +114,57 @@ pub fn attempts_for(
     }
 
     attempts
+}
+
+/// The run's tool, swept with its own `ends`; where that fails on an open run capped at either
+/// end, swept again with each capped end in turn demoted to an overshoot ([`attempts_for`]),
+/// returning the caps the boolean then owes as clips. The first refusal stands where every retry
+/// fails too.
+#[allow(clippy::too_many_arguments)]
+pub fn try_create(
+    run: &[ChainEdge],
+    is_closed: bool,
+    ends: Option<&BevelChainEnds>,
+    size: f64,
+    segments: i32,
+    round_profile: bool,
+    warnings: Option<&mut Vec<BevelAdvisory>>,
+    back_depth: f64,
+) -> Result<(Mesh, Vec<ClippedCap>), BevelAdvisory> {
+    let sweep = |ends: Option<&BevelChainEnds>, warnings: Option<&mut Vec<BevelAdvisory>>| {
+        bevel_chain_sweep::try_create(
+            run,
+            is_closed,
+            ends,
+            size,
+            segments,
+            round_profile,
+            BevelSweptSection::Tool,
+            0.0,
+            0.0,
+            warnings,
+            back_depth,
+            None,
+        )
+    };
+
+    let failure = match sweep(ends, warnings) {
+        Ok(tool) => return Ok((tool, Vec::new())),
+        Err(failure) => failure,
+    };
+
+    let Some(ends) = ends else {
+        return Err(failure);
+    };
+    if is_closed || run.is_empty() || !(ends.start.is_capped() || ends.end.is_capped()) {
+        return Err(failure);
+    }
+
+    for (attempt_ends, clips) in attempts_for(ends, run) {
+        if let Ok(retried) = sweep(Some(&attempt_ends), None) {
+            return Ok((retried, clips));
+        }
+    }
+
+    Err(failure)
 }

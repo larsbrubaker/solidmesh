@@ -3,8 +3,12 @@
 
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
+#[path = "bevel/bevel_bead_batch_tests.rs"]
+mod bevel_bead_batch_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
+#[path = "bevel/bevel_mitre_split_tests.rs"]
+mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]

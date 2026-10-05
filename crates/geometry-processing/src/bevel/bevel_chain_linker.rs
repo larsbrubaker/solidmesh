@@ -1,13 +1,16 @@
 //! Linking a group's selected edges into the runs a single swept tool is built along
 //! (`Bevel/BevelChainLinker.cs`): one such run ([`BevelSweptChain`]) and the linking - walking
 //! the selected edges into runs ([`link`], [`link_resolution`]), and splitting a run where its
-//! convexity turns over ([`split_by_convexity`]). The split where a mitre cannot fit lands with
-//! the sweep it reads.
+//! convexity turns over ([`split_by_convexity`]) or where one mitred sweep cannot carry it
+//! ([`split_where_the_mitre_cannot_fit`]).
 
 use std::collections::HashMap;
 
 use vector_math::cs_math;
 
+use super::bevel_chain_sweep::BevelSweptSection;
+use super::bevel_chain_sweep_sections::try_build_segments;
+use super::{bevel_mitre_fit, bevel_sweep_back_depth};
 use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge};
 
 /// C# `BevelSweptChain`: one run of edges a single swept tool is built along - the edges head to
@@ -229,4 +232,93 @@ pub fn add_incidence(at_vertex: &mut HashMap<i32, Vec<i32>>, vertex: i32, edge_i
         .entry(vertex)
         .or_insert_with(|| Vec::with_capacity(2))
         .push(edge_index);
+}
+
+/// `chain` split where a single mitred sweep cannot carry it - or kept whole at a shallower back
+/// depth where that alone lets every joint fit - and that back depth (zero where none was needed).
+/// C#'s two overloads; the short one is [`split_where_the_mitre_cannot_fit`].
+pub fn split_where_the_mitre_cannot_fit_with_depth(
+    chain: BevelSweptChain,
+    size: f64,
+    segments: i32,
+    round_profile: bool,
+) -> (Vec<BevelSweptChain>, f64) {
+    let Some(cannot_fit) = bevel_mitre_fit::joints_the_mitre_cannot_fit(
+        &chain.edges,
+        chain.is_closed,
+        size,
+        segments,
+        round_profile,
+        0.0,
+    ) else {
+        return (vec![chain], 0.0);
+    };
+
+    if let Ok(swept) = try_build_segments(
+        &chain.edges,
+        size,
+        segments,
+        round_profile,
+        BevelSweptSection::Tool,
+        0.0,
+        None,
+    ) {
+        let shallower = bevel_sweep_back_depth::retry_depth(
+            &chain.edges,
+            chain.is_closed,
+            size,
+            bevel_sweep_back_depth::measure_back_reach(&swept),
+            f64::INFINITY,
+        );
+
+        if shallower > 0.0
+            && bevel_mitre_fit::joints_the_mitre_cannot_fit(
+                &chain.edges,
+                chain.is_closed,
+                size,
+                segments,
+                round_profile,
+                shallower,
+            )
+            .is_none()
+        {
+            return (vec![chain], shallower);
+        }
+    }
+
+    let edges = &chain.edges;
+    let mut start = 0;
+
+    if chain.is_closed {
+        if let Some(joint) = cannot_fit.iter().position(|&c| c) {
+            start = joint;
+        }
+    }
+
+    let mut runs = Vec::new();
+    let mut current: Vec<ChainEdge> = Vec::new();
+
+    for step in 0..edges.len() {
+        let index = (start + step) % edges.len();
+
+        if !current.is_empty() && cannot_fit[index] {
+            runs.push(BevelSweptChain::new(std::mem::take(&mut current), false));
+        }
+
+        current.push(edges[index]);
+    }
+
+    runs.push(BevelSweptChain::new(current, false));
+
+    (runs, 0.0)
+}
+
+/// [`split_where_the_mitre_cannot_fit_with_depth`] without the back depth.
+pub fn split_where_the_mitre_cannot_fit(
+    chain: BevelSweptChain,
+    size: f64,
+    segments: i32,
+    round_profile: bool,
+) -> Vec<BevelSweptChain> {
+    split_where_the_mitre_cannot_fit_with_depth(chain, size, segments, round_profile).0
 }
