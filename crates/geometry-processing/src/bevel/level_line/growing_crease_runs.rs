@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::triangle_edges;
 use super::{LevelLineMesh, LevelLineTriangle};
 
 /// The distance from a point to the chain (C# `Func<Vector3, double>`).
@@ -32,7 +33,7 @@ pub type CreaseBounds = HashMap<(i32, i32), Vec<(i32, i32)>>;
 /// reader), so the caches are interior-mutable here and the runs are shared through `Rc`.
 pub struct GrowingCreaseRuns {
     /// The working mesh the runs are walked on.
-    pub mesh: Rc<LevelLineMesh>,
+    pub mesh: Rc<RefCell<LevelLineMesh>>,
     /// The chain edge the one-edge readings stand on, as (from, to).
     pub chain_edge: (i32, i32),
     /// Every edge of the chain, in order. A ridge's round is read against the edge its start stands
@@ -76,8 +77,39 @@ impl std::fmt::Debug for GrowingCreaseRuns {
 impl GrowingCreaseRuns {
     /// The unit normal of a working-mesh triangle.
     pub fn normal(&self, t: LevelLineTriangle) -> Vector3 {
-        (self.mesh.position(t.b) - self.mesh.position(t.a))
-            .cross(self.mesh.position(t.c) - self.mesh.position(t.a))
+        let mesh = self.mesh.borrow();
+        (mesh.position(t.b) - mesh.position(t.a))
+            .cross(mesh.position(t.c) - mesh.position(t.a))
             .get_normal()
+    }
+
+    /// The chain edge nearest `point` - the first of a tie.
+    pub fn nearest_chain_edge(&self, point: Vector3) -> (i32, i32) {
+        let mesh = self.mesh.borrow();
+        let mut best = self.chain_edges[0];
+        let mut best_distance = f64::INFINITY;
+        for &edge in &self.chain_edges {
+            let a = mesh.position(edge.0);
+            let ab = mesh.position(edge.1) - a;
+            let t = if ab.length_squared() > 0.0 {
+                ((point - a).dot(ab) / ab.length_squared()).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let distance = (point - (a + (ab * t))).length();
+            if distance < best_distance {
+                best_distance = distance;
+                best = edge;
+            }
+        }
+
+        best
+    }
+
+    /// True when `edge` is one of the far bounds the growing creases' room was set by.
+    pub fn is_a_far_bound(&self, edge: (i32, i32)) -> bool {
+        self.bound_edges
+            .borrow()
+            .contains(&triangle_edges::key(edge.0, edge.1))
     }
 }

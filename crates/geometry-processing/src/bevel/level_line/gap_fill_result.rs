@@ -2,6 +2,7 @@
 //! `Bevel/LevelLine/GapFillResult.cs`; its derived reading (`filled`) lands with the gap-fill
 //! method package.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{GapFillRefusal, LevelLineMesh, LevelLineWorkPhase};
@@ -22,7 +23,7 @@ pub struct GapFillResult {
     /// between; (-1, -1) otherwise.
     pub open_edge: (i32, i32),
     /// The gap's mesh, now with the fill laid into it - the same object the gap carried.
-    pub mesh: Option<Rc<LevelLineMesh>>,
+    pub mesh: Option<Rc<RefCell<LevelLineMesh>>>,
     /// The triangles the fill added, in the order it added them.
     pub added_triangles: Vec<i32>,
     /// The vertices the fill added - a fillet's interior arc points; none for a chamfer.

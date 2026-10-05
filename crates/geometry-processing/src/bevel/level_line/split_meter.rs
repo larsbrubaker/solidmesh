@@ -2,7 +2,8 @@
 //! of one already there. Ports the nested types of `Bevel/LevelLine/SplitMeter.cs` (a C# static
 //! class): what added a vertex ([`SplitMeterSplitKind`]) and the record kept of it
 //! ([`SplitMeterSplitRecord`]), and the meter's state, switch, report and vertex grid
-//! ([`SplitMeter`]). The hooks that note a vertex and the descriptions land with later packages.
+//! ([`SplitMeter`]) with the record it makes of an added vertex. The hooks that note a vertex and
+//! the record's text land with later packages.
 //!
 //! Costs one static bool read per vertex added when it is off: [`SplitMeter::on`] is false until a
 //! caller calls [`SplitMeter::begin`] AND the field counters' meter is on. It changes nothing the
@@ -16,6 +17,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use vector_math::Vector3;
 
+use super::refinement_splits;
 use super::stopwatch::{e3, n0};
 use super::{FieldCounters, LevelLineMesh, LevelLineRule, PointPlace};
 
@@ -217,6 +219,82 @@ impl SplitMeter {
             lines.extend(s.duplicates.iter().cloned());
             lines.join("\n")
         })
+    }
+
+    /// The record of a vertex added at `point`: the context triangle's corners, how far the point
+    /// stood off each of its edges, and the production routine's OWN three-way answer, asked of the
+    /// same triangle and point - not a copy of its arithmetic, so the meter cannot disagree with
+    /// the code that took the decision. Asked by the field rules' length, since that is the one
+    /// the counters are filed by. A `triangle` not in the mesh records no context.
+    #[allow(clippy::too_many_arguments)] // C#'s signature: one reading per argument.
+    pub fn describe(
+        mesh: &LevelLineMesh,
+        vertex: i32,
+        point: Vector3,
+        kind: SplitMeterSplitKind,
+        triangle: i32,
+        from: i32,
+        to: i32,
+        triangles_on_the_edge: i32,
+    ) -> SplitMeterSplitRecord {
+        let rule = FieldCounters::with(|t| t.current_rule);
+        if triangle < 0 || triangle >= mesh.triangle_count() {
+            return SplitMeterSplitRecord::new(
+                vertex,
+                point,
+                kind,
+                rule,
+                triangle,
+                -1,
+                -1,
+                -1,
+                from,
+                to,
+                triangles_on_the_edge,
+                f64::NAN,
+                f64::NAN,
+                f64::NAN,
+                f64::NAN,
+                PointPlace::Interior,
+                -1,
+                -1,
+            );
+        }
+
+        let t = mesh.triangles()[triangle as usize];
+        let size = refinement_splits::longest_edge_length(mesh, t);
+        let mut off = [0.0; 3];
+        for (corner, distance) in off.iter_mut().enumerate() {
+            let corner = corner as i32;
+            *distance = Self::off_the_edge(
+                mesh.position(t.corner(corner)),
+                mesh.position(t.corner((corner + 1) % 3)),
+                point,
+            );
+        }
+
+        let (place, judged_from, judged_to) =
+            refinement_splits::where_the_point_stands(mesh, t, point, None);
+        SplitMeterSplitRecord::new(
+            vertex,
+            point,
+            kind,
+            rule,
+            triangle,
+            t.a,
+            t.b,
+            t.c,
+            from,
+            to,
+            triangles_on_the_edge,
+            off[0],
+            off[1],
+            off[2],
+            1e-6 * size,
+            place,
+            judged_from,
+            judged_to,
+        )
     }
 
     /// How far `point` stands off the segment `a b`.

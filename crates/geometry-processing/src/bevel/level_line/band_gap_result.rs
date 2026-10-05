@@ -2,6 +2,7 @@
 //! cut to, and the gap's boundaries. Ports the type of `Bevel/LevelLine/BandGapResult.cs`; its
 //! derived readings (`built`, `chain`) land with the band-gap method package.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use indexmap::IndexMap;
@@ -38,7 +39,7 @@ pub struct BandGapResult {
     /// WorkBudgetExceeded included, where it is the mesh as it stood when the work ran out - so a
     /// refusal can be read for what the build did. It is a result only when the build succeeded:
     /// decide by that, never by whether this is `None`.
-    pub mesh: Option<Rc<LevelLineMesh>>,
+    pub mesh: Option<Rc<RefCell<LevelLineMesh>>>,
     /// The pick's chains as fields, in the order they were given: the setbacks, the parameters and
     /// the distances the gap was cut to. A pick of one chain holds exactly one.
     pub chains: Vec<Rc<ChainField>>,

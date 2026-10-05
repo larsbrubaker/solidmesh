@@ -1,7 +1,8 @@
 //! The pick's candidate foreign edges, filed by the pair of region tags they stand between
 //! ([`ForeignEdgeRegions`]), with one open chain's growing creases on a pick of several
 //! ([`ForeignEdgeRegionsChainGrowth`]). Ports the types of `Bevel/LevelLine/ForeignEdgeRegions.cs`;
-//! the filing and the per-chain queries land with the room-reading method package.
+//! here too the distance to a chain ([`distance_to_chain`]); the filing and the per-chain queries
+//! land with the room-reading method package.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -9,7 +10,9 @@ use std::rc::Rc;
 
 use indexmap::IndexMap;
 
-use super::{ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh};
+use vector_math::Vector3;
+
+use super::{ChainField, ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh};
 
 /// C# `ForeignEdgeRegions`: the pick's candidate foreign edges, read off the mesh ONCE and filed by
 /// the pair of region tags they stand between, so a reading of many chains builds the geometry
@@ -25,7 +28,7 @@ use super::{ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh};
 #[derive(Debug)]
 pub struct ForeignEdgeRegions {
     /// The working mesh the edges are on.
-    pub mesh: Rc<LevelLineMesh>,
+    pub mesh: Rc<RefCell<LevelLineMesh>>,
     /// The filed edges, by (low, high) tag pair, in filing order.
     pub by_tag_pair: IndexMap<(i32, i32), Vec<(i32, i32)>>,
     /// The box tree over each tag pair's edges, built on first ask.
@@ -61,4 +64,26 @@ pub struct ForeignEdgeRegionsChainGrowth {
     pub bounding: Vec<(i32, i32)>,
     /// The box tree over [`ForeignEdgeRegionsChainGrowth::bounding`], built on first ask.
     pub index: RefCell<Option<Rc<ForeignEdgeIndex>>>,
+}
+
+/// The distance from `point` to the nearest of the chain's edges (given by their keys). A NaN
+/// distance wins, as C#'s `Enumerable.Min` lets it; panics on no edges, where C# throws.
+pub fn distance_to_chain(
+    mesh: &LevelLineMesh,
+    chain_keys: &HashSet<(i32, i32)>,
+    point: Vector3,
+) -> f64 {
+    let mut distances = chain_keys.iter().map(|&(a, b)| {
+        (point - ChainField::closest_on_segment(point, mesh.position(a), mesh.position(b))).length()
+    });
+    let first = distances.next().expect("a chain has at least one edge");
+    distances.fold(first, |least, d| {
+        if least.is_nan() || d.is_nan() {
+            f64::NAN
+        } else if d < least {
+            d
+        } else {
+            least
+        }
+    })
 }

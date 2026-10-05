@@ -32,7 +32,7 @@ pub enum VertexSide {
 /// interior-mutable here.
 pub struct VertexFieldReading {
     /// The working mesh whose vertices are read.
-    pub mesh: Rc<LevelLineMesh>,
+    pub mesh: Rc<RefCell<LevelLineMesh>>,
     /// The field being read - the refinement asks a chain distance field for more than a value at
     /// a point.
     pub field: Rc<dyn ScalarField>,

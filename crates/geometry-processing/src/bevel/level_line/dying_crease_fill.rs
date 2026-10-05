@@ -1,0 +1,49 @@
+//! The fill where a growing crease dies out under the band. Ports
+//! `Bevel/LevelLine/DyingCreaseFill.cs` (a C# static class): so far the extreme rail vertex
+//! ([`extreme`]); the fill lands with later packages.
+
+use vector_math::{cs_math, Vector3};
+
+use super::open_gap_fill;
+use super::{GapLoop, LevelLineMesh};
+
+/// The loop vertex at the greatest (or least) extended parameter: among the ties - within the open
+/// fill's parameter tie of the chain's `length` - the ones nearest `end_vertex`, and of those the
+/// middle one.
+pub fn extreme(
+    mesh: &LevelLineMesh,
+    gap_loop: &GapLoop,
+    extended: &[f64],
+    length: f64,
+    end_vertex: Vector3,
+    greatest: bool,
+) -> i32 {
+    let tie = open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let mut best = extended[0];
+    for &value in &extended[1..] {
+        best = if greatest {
+            cs_math::max_f64(best, value)
+        } else {
+            cs_math::min_f64(best, value)
+        };
+    }
+
+    let tied: Vec<usize> = (0..extended.len())
+        .filter(|&i| (extended[i] - best).abs() <= tie)
+        .collect();
+
+    let reach_of = |i: usize| (mesh.position(gap_loop.vertices[i]) - end_vertex).length_squared();
+    let mut reach = reach_of(tied[0]);
+    let mut equals = vec![tied[0]];
+    for &i in &tied[1..] {
+        let d = reach_of(i);
+        if d < reach * (1.0 - 1e-12) {
+            reach = d;
+            equals = vec![i];
+        } else if d <= reach * (1.0 + 1e-12) {
+            equals.push(i);
+        }
+    }
+
+    equals[equals.len() / 2] as i32
+}

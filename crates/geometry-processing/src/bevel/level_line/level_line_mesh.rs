@@ -2,13 +2,16 @@
 //! ([`LevelLineTriangle`]). Ports the types of `Bevel/LevelLine/LevelLineMesh.cs` with the fields
 //! of every partial (`LevelLineMesh.InputStrips.cs`, `.InsertPolyline.cs`, `.Needles.cs`), with
 //! the triangle's corner indexer and the mesh's read accessors (triangles, edges, positions,
-//! lengths, the same-place backstop); the splits, needle repair and polyline insertion land with
-//! their method packages.
+//! lengths, the same-place backstop, a triangle's apex, the needles left standing); the splits,
+//! needle repair and polyline insertion land with their method packages. Its holders keep it as
+//! `Rc<RefCell<LevelLineMesh>>` (one `RefCell` round the whole mesh), since the build mutates it.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use vector_math::Vector3;
+
+use super::FieldCounters;
 
 /// Says of a vertex pair whether it is an edge of the pick (C# `Func<int, int, bool>`).
 pub type IsChainEdge = Rc<dyn Fn(i32, i32) -> bool>;
@@ -228,5 +231,42 @@ impl LevelLineMesh {
     /// The length of an edge, or of any vertex pair.
     pub fn length(&self, a: i32, b: i32) -> f64 {
         (self.vertices[a as usize] - self.vertices[b as usize]).length()
+    }
+}
+
+impl LevelLineMesh {
+    /// The corner opposite a triangle's longest side - the first of a tie (C#
+    /// `LevelLineMesh.InputStrips.ApexOf`).
+    pub fn apex_of(&self, t: LevelLineTriangle) -> i32 {
+        let mut corner = 0;
+        let mut longest = -1.0;
+        for k in 0..3 {
+            let length = self.length(t.corner(k), t.corner((k + 1) % 3));
+            if length > longest {
+                longest = length;
+                corner = k;
+            }
+        }
+
+        t.corner((corner + 2) % 3)
+    }
+
+    /// Records a needle the repair leaves standing, counted once however often it is looked at
+    /// (C# `LevelLineMesh.Needles.LeaveTheNeedle`).
+    pub fn leave_the_needle(&mut self, needle: i32) {
+        if self.left_alone.insert(needle) {
+            FieldCounters::note_needle(false);
+        }
+    }
+
+    /// Records a needle left standing because its long edge is a chain edge (C#
+    /// `LevelLineMesh.Needles.LeaveTheNeedleOnItsChain`).
+    pub fn leave_the_needle_on_its_chain(&mut self, needle: i32) {
+        if !self.left_alone.insert(needle) {
+            return;
+        }
+
+        self.needles_left_on_a_chain_edge += 1;
+        FieldCounters::note_needle_on_a_chain_edge();
     }
 }
