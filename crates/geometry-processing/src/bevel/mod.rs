@@ -29,23 +29,40 @@
 //! [`BevelRebuildResults`], [`bevel_group_failures`]) and the clip, run-off readings and planless
 //! loop of the surface construction ([`surface`]); and the tenth: the mixed corner's blend tool
 //! mesh ([`bevel_mixed_blend_tool`]) and how far a tube runs to reach its partner's axis at a pair
-//! corner ([`bevel_pair_corner_reach`]). C# `internal static class` helpers are
-//! modules of free functions here.
+//! corner ([`bevel_pair_corner_reach`]). The cyclic core's type definitions land ahead of its
+//! methods: the bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]), the cap clip
+//! ([`bevel_cap_clip`]), a run's end treatment ([`BevelChainEnds`]), the sweep's chains, sections
+//! and segments ([`BevelSweptChain`], [`BevelSweptSection`], [`bevel_chain_sweep_mesh`]), the
+//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]), the run-out bound
+//! ([`BevelRunOutBound`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
+//! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
+//! ([`bevel_t_vertex_slivers`]) and the working mesh's verdict cache ([`bevel_working_mesh`]).
+//! C# `internal static class` helpers are modules of free functions here.
 
 mod bevel_advisory;
 mod bevel_advisory_code;
 pub mod bevel_advisory_codes;
 pub mod bevel_arc_chording;
+pub mod bevel_bead_batch;
+pub mod bevel_bead_clip;
 pub mod bevel_blend_seam;
+pub mod bevel_cap_clip;
 pub mod bevel_chain_end_budget;
+pub mod bevel_chain_end_cap;
+pub mod bevel_chain_linker;
+pub mod bevel_chain_sweep;
+pub mod bevel_chain_sweep_mesh;
 mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
 pub mod bevel_corner_handover;
+pub mod bevel_corner_patch;
 pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
+pub mod bevel_face_run_out;
 mod bevel_group_result;
+pub mod bevel_interrupted_crease;
 mod bevel_mixed_blend;
 pub mod bevel_mixed_blend_tool;
 mod bevel_mixed_corner_ends;
@@ -58,11 +75,14 @@ mod bevel_round_descriptor;
 pub mod bevel_round_entry;
 mod bevel_round_faces;
 pub mod bevel_seam_ring;
+pub mod bevel_shadow_clip;
 pub mod bevel_shared_edges;
 pub mod bevel_source_rounds;
 mod bevel_source_rounds_fit;
 mod bevel_surface_labels;
 mod bevel_surface_walk;
+pub mod bevel_t_vertex_slivers;
+pub mod bevel_working_mesh;
 pub mod float_grid;
 pub mod level_line;
 pub mod sections;
@@ -70,9 +90,15 @@ pub mod surface;
 
 pub use bevel_advisory::{BevelAdvisory, BevelAdvisoryArg};
 pub use bevel_advisory_code::BevelAdvisoryCode;
+pub use bevel_bead_batch::BevelBeadBatch;
+pub use bevel_chain_end_cap::BevelChainEnds;
+pub use bevel_chain_linker::BevelSweptChain;
+pub use bevel_chain_sweep::BevelSweptSection;
 pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
+pub use bevel_corner_patch::{BevelCornerPatch, BevelCornerPatchSet};
 pub use bevel_end_cap::BevelEndCap;
+pub use bevel_face_run_out::BevelRunOutBound;
 pub use bevel_group_result::{
     bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
 };

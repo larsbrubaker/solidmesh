@@ -1,8 +1,24 @@
 //! `MatterCAD.GeometryProcessing/Bevel/Sections`: the section construction. Ported so far: its
 //! append-only point pool ([`SectionPool`]) and the walk of a side's fan at a chain vertex
-//! ([`section_fan_walk`]). The construction itself lands with the cyclic bevel core.
+//! ([`section_fan_walk`]), and the type definitions of the construction: the section at a chain
+//! vertex ([`BevelSection`]) and at a junction ([`JunctionSection`]), the absorbed split points
+//! ([`SectionAbsorbedSplits`]), the room cache ([`SectionRoomCache`]) and the surface walk's
+//! result ([`SurfaceWalkResult`]). The construction itself lands with the cyclic bevel core.
 
+pub mod bevel_section;
+pub mod section_absorbed_splits;
+pub mod section_builder_walked_side;
+pub mod section_end;
 pub mod section_fan_walk;
+pub mod section_junction;
 mod section_pool;
+pub mod section_room;
+pub mod section_split_blend;
+pub mod section_surface_walk;
 
+pub use bevel_section::{BevelSection, SectionKind, SectionSide};
+pub use section_absorbed_splits::SectionAbsorbedSplits;
+pub use section_junction::{JunctionPiece, JunctionSection};
 pub use section_pool::{NanSectionPoint, SectionPool};
+pub use section_room::SectionRoomCache;
+pub use section_surface_walk::{SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult};
