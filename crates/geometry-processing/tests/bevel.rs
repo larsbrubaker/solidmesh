@@ -5,5 +5,7 @@
 mod bevel_arc_chording_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
+#[path = "bevel/rust_only_bevel_slice2_tests.rs"]
+mod rust_only_bevel_slice2_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
