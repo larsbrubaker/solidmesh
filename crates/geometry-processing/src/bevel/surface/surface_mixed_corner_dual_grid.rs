@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceMixedCornerDualCanal, SurfaceMixedCornerRows};
+use super::{SurfaceMixedCorner, SurfaceMixedCornerDualCanal, SurfaceMixedCornerRows};
 
 /// C# `SurfaceMixedCornerDualGrid` (a sealed class): the grid a LEANING one-crease mixed corner's
 /// patch is sewn over - read, not emitted. Two end rings and a canal that runs past both of them:
@@ -39,4 +39,36 @@ pub struct SurfaceMixedCornerDualGrid {
     /// The BEAD's square end ring, from its contact on the wall out to its contact on the cut's
     /// tube.
     pub bead_ring: Vec<Vector3>,
+}
+
+impl SurfaceMixedCornerDualGrid {
+    /// The CUT's ring read the way the grid's STATIONS run - from its rail on the face the two
+    /// edges share round to its rail on the cap - whichever way the strip's own rails go.
+    ///
+    /// Rail zero of a strip lies on the LEFT of its walk, so which end of the ring stands on the
+    /// shared face is the plan's own left and right. Read that way rather than taken from the order
+    /// the stations came out in, because the ring and its stations are turned over TOGETHER: a ring
+    /// reversed against its stations would sew the patch to the cut backwards.
+    pub fn from_the_shared_face<T: Clone>(corner: &SurfaceMixedCorner, ring: &[T]) -> Vec<T> {
+        if corner.cut.left_region_key() == corner.shared_region_key {
+            ring.to_vec()
+        } else {
+            Self::reversed(ring)
+        }
+    }
+
+    /// The BEAD's end ring read the way every ROW runs - the wall's contact first, the cut's tube
+    /// last.
+    pub fn from_the_wall<T: Clone>(corner: &SurfaceMixedCorner, ring: &[T]) -> Vec<T> {
+        if corner.bead.left_region_key() == corner.shared_region_key {
+            Self::reversed(ring)
+        } else {
+            ring.to_vec()
+        }
+    }
+
+    /// `of` back to front, as a new array.
+    pub fn reversed<T: Clone>(of: &[T]) -> Vec<T> {
+        of.iter().rev().cloned().collect()
+    }
 }

@@ -7,7 +7,10 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceMixedCornerDualFrame, SurfaceMixedCornerRows};
+use super::{
+    SurfaceMixedCornerDualFrame, SurfaceMixedCornerRows, SurfaceMixedJunction,
+    SurfaceMixedJunctionArm,
+};
 
 /// C# `SurfaceTwoCreaseJunctionRings` (a sealed class): the three end rings a two-crease
 /// junction's patch is sewn to, and the grid between them - read, not emitted. What the patch has
@@ -42,4 +45,37 @@ pub struct SurfaceTwoCreaseJunctionRings {
     pub first_bead_ring: Vec<Vector3>,
     /// The SECOND arm's, the same way about - the column the grid closes on.
     pub last_bead_ring: Vec<Vector3>,
+}
+
+impl SurfaceTwoCreaseJunctionRings {
+    /// The cut's ring read from the FIRST arm's tangency round to the second's, whichever way the
+    /// strip's own rails go. Rail zero of a strip lies on the LEFT of its walk, so which end of the
+    /// ring stands on which arm's shared face is the plan's own left and right - read that way
+    /// because the ring and its stations have to be turned over TOGETHER.
+    pub fn from_the_first_arms_tangency<T: Clone>(
+        junction: &SurfaceMixedJunction,
+        ring: &[T],
+    ) -> Vec<T> {
+        if junction.first.mixed.cut.left_region_key() == junction.first.mixed.shared_region_key {
+            ring.to_vec()
+        } else {
+            Self::reversed(ring)
+        }
+    }
+
+    /// One bead's end ring read the way every ROW of the grid runs - the wall's contact first, the
+    /// cut's tube last. The mirror of `SurfaceMixedCornerPatch`'s `from_the_handover`, which reads
+    /// the other way about because a one-crease patch's rows run from the handover to the wall.
+    pub fn from_the_wall<T: Clone>(arm: &SurfaceMixedJunctionArm, ring: &[T]) -> Vec<T> {
+        if arm.mixed.bead.left_region_key() == arm.mixed.shared_region_key {
+            Self::reversed(ring)
+        } else {
+            ring.to_vec()
+        }
+    }
+
+    /// `of` back to front, as a new array.
+    pub fn reversed<T: Clone>(of: &[T]) -> Vec<T> {
+        of.iter().rev().cloned().collect()
+    }
 }

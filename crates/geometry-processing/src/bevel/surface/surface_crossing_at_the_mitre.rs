@@ -7,6 +7,8 @@ use std::cell::{Cell, RefCell};
 
 use vector_math::Vector3;
 
+use super::SurfaceMixedCorner;
+
 /// C# `SurfaceCrossingAtTheMitre`: where a run-out that crosses BOTH bands of one mitred corner
 /// hands over from the one to the other.
 ///
@@ -110,5 +112,56 @@ impl Default for SurfaceCrossingAtTheMitre {
             along_the_chord: RefCell::new(None),
             the_chord_starts_at: Cell::new(-1),
         }
+    }
+}
+
+impl SurfaceCrossingAtTheMitre {
+    /// How far `at` stands above the arc the cap-riding blend draws across the corner wedge at its
+    /// turn, measured square to the cap face - negative under it, `f64::INFINITY` where the point
+    /// is not over the corner wedge at all (turned short of the bead's own turn or past `clears`,
+    /// out past the touch row, or inside the bead's own barrel). Standing clear is reported as
+    /// infinity rather than as a distance, because the callers ask only for the SIGN and a signed
+    /// distance to an arc the point is nowhere near would read as a near miss and invite a
+    /// tolerance.
+    pub fn above_the_arc(corner: &SurfaceMixedCorner, at: Vector3, clears: f64) -> f64 {
+        let turn = Self::turn_of(corner, at);
+
+        if turn < corner.turn_radians() || turn > clears {
+            return f64::INFINITY;
+        }
+
+        let out_of_the_axis = corner.axis().distance_to(at);
+        let from_the_touch_row = out_of_the_axis - (2.0 * corner.size);
+
+        if from_the_touch_row > 0.0 || out_of_the_axis < corner.size {
+            return f64::INFINITY;
+        }
+
+        // Height above the cap face, whose plane passes through the bead's own axis centre: the
+        // touch row stands on it by construction, so this is zero there and a radius at the bead.
+        let above = (at - corner.outer_rail_centre).dot(-corner.out_of_the_cap_face);
+
+        above
+            - (corner.size
+                - f64::max(
+                    0.0,
+                    (corner.size * corner.size) - (from_the_touch_row * from_the_touch_row),
+                )
+                .sqrt())
+    }
+
+    /// A point's own turn about the bead's axis, measured the way the corner measures turns.
+    pub fn turn_of(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
+        let out_of = at - corner.axis().closest_point_to(at);
+
+        f64::atan2(
+            out_of.dot(corner.out_of_the_axis(std::f64::consts::PI / 2.0)),
+            out_of.dot(corner.out_of_the_axis(0.0)),
+        )
+    }
+
+    /// The same, as a turn PAST the bead's own.
+    pub fn turn_past_of(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
+        Self::turn_of(corner, at) - corner.turn_radians()
     }
 }

@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use super::SurfaceBevelPlan;
 use crate::topology::FaceRegionCache;
 
 /// C# `SurfaceChainEndReading`: whether a chain's end corner is one where the crease carries on.
@@ -53,4 +54,45 @@ pub struct SurfaceChainEndReadingMemos {
     /// The graph edges standing at each vertex, indexed on the first ask; `None` until then, since
     /// a chain that never asks - every closed one - never pays for the scan. Looked up only.
     pub edges_at_vertex: Option<HashMap<i32, Vec<i32>>>,
+}
+
+impl SurfaceChainEndReading {
+    /// The two surfaces an edge lies between, as their region keys in a fixed order (low, high),
+    /// or `None` where either face has no region or where both are one surface - which is no
+    /// crease to carry on. Called with the memos locked (C# under `readingLock`).
+    pub fn try_surface_pair(
+        &self,
+        memos: &mut SurfaceChainEndReadingMemos,
+        face0: i32,
+        face1: i32,
+    ) -> Option<(i32, i32)> {
+        let low = self.try_surface_of(memos, face0)?;
+        let high = self.try_surface_of(memos, face1)?;
+        if low == high {
+            return None;
+        }
+
+        Some((low.min(high), low.max(high)))
+    }
+
+    /// Which surface a face belongs to, flooding at most once per surface rather than once per
+    /// face.
+    pub fn try_surface_of(
+        &self,
+        memos: &mut SurfaceChainEndReadingMemos,
+        face_index: i32,
+    ) -> Option<i32> {
+        if let Some(&key) = memos.surface_of_face.get(&face_index) {
+            return Some(key);
+        }
+
+        let region = self.curve_regions.region(face_index)?;
+        let key = SurfaceBevelPlan::key_of(&region);
+
+        for &face in region.faces() {
+            memos.surface_of_face.insert(face, key);
+        }
+
+        Some(key)
+    }
 }

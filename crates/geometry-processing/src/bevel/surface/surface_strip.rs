@@ -1,8 +1,13 @@
-//! The bevel surface over ONE chain edge, as the lines it is ruled by ([`SurfaceStrip`]). Ports the
-//! fields of `Bevel/Surface/SurfaceStrip.cs`; its construction from a plan and its rail readings
-//! (`PointOn`, `ParamOf`, `TryCross`) land with the strip's package as further `impl` blocks.
+//! The bevel surface over ONE chain edge, as the lines it is ruled by ([`SurfaceStrip`]). Ports
+//! `Bevel/Surface/SurfaceStrip.cs`: its fields and its construction from a plan
+//! ([`SurfaceStrip::try_create`]); its rail readings (`PointOn`, `ParamOf`, `TryCross`) land with
+//! another package as further `impl` blocks.
 
-use vector_math::Vector3;
+use vector_math::{math_helper, Vector3};
+
+use super::{SurfaceBevelPlan, SurfaceEdgePlan};
+use crate::bevel::{bevel_arc_chording, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use crate::topology::EdgeConvexity;
 
 /// C# `SurfaceStrip`: the bevel surface over ONE chain edge, as the lines it is ruled by - one rail
 /// per profile sample, each a line parallel to the edge, the first lying on the left tangent line
@@ -60,4 +65,169 @@ pub struct SurfaceStrip {
     /// The direction any triangle of this strip must face, to within a right angle: the bisector of
     /// the two face normals.
     pub outward_reference: Vector3,
+}
+
+impl SurfaceStrip {
+    /// C#'s private constructor.
+    fn new(
+        origin: Vector3,
+        along: Vector3,
+        rail_points: Vec<Vector3>,
+        outward_reference: Vector3,
+        rail_step_degrees: f64,
+    ) -> Self {
+        SurfaceStrip {
+            origin,
+            along,
+            rail_points,
+            rail_step_degrees,
+            outward_reference,
+        }
+    }
+
+    /// Draws the strip's rails across `edge`'s profile: the two feet for a chamfer, and one rail
+    /// per arc sample from the left tangent line round the centre line to the right for a round,
+    /// chorded at `segments_per_quarter` per quarter turn of arc ([`bevel_arc_chording`]) so that
+    /// an edge's chording is decided by how much arc it actually sweeps. Fails on a wedge too sharp
+    /// or too flat for the plan's one floor ([`SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES`]), or a
+    /// profile with no radius.
+    // The negated comparisons are C#'s `!(x > y)`, which refuse a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_create(
+        edge: &SurfaceEdgePlan,
+        segments_per_quarter: i32,
+    ) -> Result<SurfaceStrip, BevelAdvisory> {
+        let origin = edge.from();
+        let along = edge.edge.direction();
+        let left_foot = edge.left_tangent_line.closest_point_to(origin);
+        let right_foot = edge.right_tangent_line.closest_point_to(origin);
+        let outward = edge.edge.left_normal() + edge.edge.right_normal();
+
+        // The two normals are (180 - wedge) apart, so their sum is 2 sin(wedge / 2) long: a knife
+        // edge has no outside to face, and a wedge below the plan's own floor has one that no
+        // float can tell from a knife edge's. One angle, cited rather than restated - see
+        // SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES.
+        let knife = 2.0
+            * (math_helper::degrees_to_radians(SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES)
+                / 2.0)
+                .sin();
+        if !(outward.length() > knife) {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::FaceAngleTooSharp,
+                vec![BevelAdvisoryArg::Double(0.0)],
+            ));
+        }
+
+        // The profile's own wedge, read outward: the two inward directions bisect it, pointing
+        // into the material on a convex edge and into the void on a concave one, so one sign turns
+        // either into the way the strip faces. It follows the roll, which the face normals do not.
+        // A bisector of no length is a wedge at the plan's flat end, where the sweep guard below
+        // has the better complaint, so the normals' answer stands in until it fires.
+        let to_the_wedge = edge.left_inward + edge.right_inward;
+        let mut facing = if edge.convexity() == EdgeConvexity::Concave {
+            to_the_wedge
+        } else {
+            -to_the_wedge
+        };
+
+        if !(facing.length_squared() > 0.0) {
+            facing = outward;
+        }
+
+        if !edge.has_center_line {
+            return Ok(SurfaceStrip::new(
+                origin,
+                along,
+                vec![left_foot, right_foot],
+                facing.get_normal(),
+                0.0,
+            ));
+        }
+
+        let center = edge.center_line.closest_point_to(origin);
+        let from_center = left_foot - center;
+        let to_center = right_foot - center;
+        let radius = from_center.length();
+
+        if !(radius > 0.0) || !(to_center.length_squared() > 0.0) {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::BevelDoesNotFitCorner,
+                Vec::new(),
+            ));
+        }
+
+        // The sweep is the turn from one foot to the other, which is 180 less the wedge; taken
+        // from the vectors themselves rather than from the wedge so that the last sample lands ON
+        // the right tangent line to the bit, which is what the strip has to sew to.
+        let cosine = from_center.dot(to_center) / (from_center.length() * to_center.length());
+        // C#'s Math.Min(1, Math.Max(-1, x)), which passes a NaN through.
+        let sweep = (if cosine.is_nan() {
+            cosine
+        } else {
+            cosine.clamp(-1.0, 1.0)
+        })
+        .acos();
+
+        // And it is bounded from below by the same one angle: a wedge at the plan's flat end
+        // leaves an arc of nothing to swing, and an arc of nothing between two feet a rounding
+        // apart is not a profile.
+        if !(math_helper::radians_to_degrees(sweep)
+            > 180.0 - SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES)
+        {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::FaceAngleTooFlat,
+                vec![BevelAdvisoryArg::Double(
+                    180.0 - math_helper::radians_to_degrees(sweep),
+                )],
+            ));
+        }
+        let turning = if from_center.cross(to_center).dot(along) < 0.0 {
+            -1.0
+        } else {
+            1.0
+        };
+        let samples = i32::max(
+            1,
+            bevel_arc_chording::segments_for(
+                math_helper::radians_to_degrees(sweep),
+                segments_per_quarter,
+            ),
+        );
+
+        let mut rails = Vec::with_capacity(samples as usize + 1);
+
+        for i in 0..=samples {
+            rails.push(
+                center
+                    + Self::turn(
+                        from_center,
+                        along,
+                        turning * sweep * f64::from(i) / f64::from(samples),
+                    ),
+            );
+        }
+
+        // The ends are the feet themselves rather than the last turn of the arc: the walkback's
+        // own vertices stand on those two lines, and a rail that misses one by a rounding is a
+        // crack.
+        rails[0] = left_foot;
+        rails[samples as usize] = right_foot;
+
+        Ok(SurfaceStrip::new(
+            origin,
+            along,
+            rails,
+            facing.get_normal(),
+            math_helper::radians_to_degrees(sweep) / f64::from(samples),
+        ))
+    }
+
+    /// `vector` turned `radians` about `axis` - Rodrigues, written out rather than built into a
+    /// matrix because it is called once per arc sample.
+    pub fn turn(vector: Vector3, axis: Vector3, radians: f64) -> Vector3 {
+        let cos = radians.cos();
+        let sin = radians.sin();
+
+        (vector * cos) + (axis.cross(vector) * sin) + (axis * axis.dot(vector) * (1.0 - cos))
+    }
 }

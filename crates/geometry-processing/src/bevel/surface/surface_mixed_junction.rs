@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
+use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
 
 /// C# `SurfaceJunctionKind`: which shape of junction a [`SurfaceMixedJunction`] is - which of the
 /// three picked edges at the vertex are the creases.
@@ -111,4 +111,26 @@ pub struct SurfaceMixedJunction {
     /// where there is no such face. A TWO-crease junction has none: its one cut's two faces are
     /// each SHARED with a crease, so each arm's cap is the other arm's shared face.
     pub cap_region_key: i32,
+}
+
+impl SurfaceMixedJunction {
+    /// The bead's rolling-ball axis, the one line both arms turn about.
+    pub fn axis(&self) -> SurfaceLine {
+        self.first.mixed.axis()
+    }
+
+    /// How far the ball rolls from the first cut's centre line round to the second's.
+    pub fn turn_radians(&self) -> f64 {
+        self.first.mixed.turn_radians()
+    }
+
+    /// The face the cut comes down from, which is its side that is NOT the one it shares with the
+    /// bead.
+    pub fn cap_key_of(mixed: &SurfaceMixedCorner) -> i32 {
+        if mixed.cut.left_region_key() == mixed.shared_region_key {
+            mixed.cut.right_region_key()
+        } else {
+            mixed.cut.left_region_key()
+        }
+    }
 }

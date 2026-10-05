@@ -13,7 +13,7 @@ use indexmap::IndexMap;
 use super::{
     SurfaceBandEnd, SurfaceEdgePlan, SurfaceEdgeRoles, SurfaceMixedCorner, SurfacePlanRecipe,
 };
-use crate::topology::FaceRegionCache;
+use crate::topology::{FaceGroup, FaceRegionCache};
 
 /// C# `SurfaceBevelPlan` (a sealed class): per chain edge, the two face regions, the wedge they
 /// open, the setback into each of them, the two tangent lines the faces are walked back to, and a
@@ -65,4 +65,82 @@ pub struct SurfaceBevelPlan {
     pub start_trim: Option<SurfaceBandEnd>,
     /// The same at the corner the chain's last edge ends at.
     pub end_trim: Option<SurfaceBandEnd>,
+}
+
+impl SurfaceBevelPlan {
+    /// The narrowest wedge a bevel is planned in: ONE DEGREE, and a real angle rather than a floor
+    /// put there to keep a divide from overflowing. A wedge thinner than this is not a corner
+    /// anybody meant: the setback is `size / tan(wedge / 2)`, which at a degree is already 115
+    /// times the size, so the tangent lines land off the part. Every later guard in the surface
+    /// construction cites this angle rather than writing a tolerance of its own.
+    pub const MINIMUM_WEDGE_ANGLE_DEGREES: f64 = 1.0;
+
+    /// The flattest wedge, the same floor read from the other end: a wedge this near 180 degrees
+    /// is a flat edge dressed up, with no corner to set back from.
+    pub const MAXIMUM_WEDGE_ANGLE_DEGREES: f64 = 180.0 - Self::MINIMUM_WEDGE_ANGLE_DEGREES;
+
+    /// The plane the band a cut takes off stops at, at the chain's start: square to the edge
+    /// through that corner, with the chain's own side named as the side the band is on.
+    /// Meaningless where that end does not run out.
+    pub fn start_band_end(&self) -> SurfaceBandEnd {
+        SurfaceBandEnd::new(self.edges[0].from(), self.edges[0].edge.direction())
+    }
+
+    /// The same at the end of the chain, where the band is on the near side.
+    pub fn end_band_end(&self) -> SurfaceBandEnd {
+        let last = &self.edges[self.edges.len() - 1];
+        SurfaceBandEnd::new(last.to(), -last.edge.direction())
+    }
+
+    /// The corner between the edge at `edge_index` and the one the chain leaves on, where that
+    /// corner turns the convexity over; `None` where it does not.
+    pub fn try_mixed_corner_after(&self, edge_index: i32) -> Option<Rc<SurfaceMixedCorner>> {
+        self.mixed_corners.borrow().get(&edge_index).cloned()
+    }
+
+    /// The widest setback this plan asks of the region `face_index` belongs to - how far back
+    /// that region has to give way for the bevel to land. Zero for a region the chain does not
+    /// touch, and (as for a face with no region) where the plan was read against no regions.
+    pub fn required_setback(&self, face_index: i32) -> f64 {
+        let Some(region) = self.regions.as_ref().and_then(|r| r.region(face_index)) else {
+            return 0.0;
+        };
+
+        self.setback_by_region
+            .get(&Self::key_of(&region))
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    /// Records `setback` against `region`'s key where it is wider than what is there already.
+    pub fn record_setback(
+        setback_by_region: &mut HashMap<i32, f64>,
+        region: &FaceGroup,
+        setback: f64,
+    ) {
+        let key = Self::key_of(region);
+
+        if setback_by_region
+            .get(&key)
+            .is_none_or(|&already| setback > already)
+        {
+            setback_by_region.insert(key, setback);
+        }
+    }
+
+    /// What names a region here, and everywhere else in the surface construction. Not its seed
+    /// face: the cache floods once per face asked for, so the same region reached from two of its
+    /// faces comes back as two groups with two different seeds. Its lowest face index is the same
+    /// number whichever face it was flooded from.
+    pub fn key_of(region: &FaceGroup) -> i32 {
+        let mut lowest = i32::MAX;
+
+        for &face in region.faces() {
+            if face < lowest {
+                lowest = face;
+            }
+        }
+
+        lowest
+    }
 }

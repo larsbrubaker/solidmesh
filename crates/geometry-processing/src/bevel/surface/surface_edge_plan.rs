@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceLine, SurfaceWallSection};
-use crate::topology::{ChainEdge, FaceGroup};
+use super::{SurfaceBevelPlan, SurfaceLine, SurfaceWallSection};
+use crate::topology::{ChainEdge, EdgeConvexity, FaceGroup};
 
 /// C# `SurfaceEdgePlan` (a readonly struct): which two face regions meet at one chain edge, how
 /// far back into each of them the bevel reaches, the two lines it reaches back TO, and - for a
@@ -103,4 +103,32 @@ pub struct SurfaceEdgePlan {
     /// curves ([`SurfaceWallSection`]). Which side is the wall is the band's own answer: it is the
     /// side [`SurfaceEdgePlan::left_band`] or [`SurfaceEdgePlan::right_band`] is not `None` on.
     pub wall_section: Option<Rc<SurfaceWallSection>>,
+}
+
+impl SurfaceEdgePlan {
+    /// Which way the solid folds here. Recorded, not branched on: the construction is the same
+    /// either way and only the side the strip bulges differs.
+    pub fn convexity(&self) -> EdgeConvexity {
+        self.edge.edge.convexity
+    }
+
+    /// What names the left face's region, whichever of its faces it was flooded from.
+    pub fn left_region_key(&self) -> i32 {
+        SurfaceBevelPlan::key_of(&self.left_region)
+    }
+
+    /// The same for the right face's region.
+    pub fn right_region_key(&self) -> i32 {
+        SurfaceBevelPlan::key_of(&self.right_region)
+    }
+
+    /// Where the chain enters this edge.
+    pub fn from(&self) -> Vector3 {
+        self.edge.from()
+    }
+
+    /// Where the chain leaves it.
+    pub fn to(&self) -> Vector3 {
+        self.edge.to()
+    }
 }
