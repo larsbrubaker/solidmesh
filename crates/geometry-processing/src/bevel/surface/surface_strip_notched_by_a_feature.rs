@@ -122,3 +122,27 @@ impl SurfaceStripNotchedByAFeature {
         foot
     }
 }
+
+/// The notch's rail questions (C# `IsOneFaced`, `Notches`).
+impl SurfaceStripNotchedByAFeature {
+    /// C# `IsOneFaced`: whether the band undercut ONE face of the feature only. Then the notch has no
+    /// ridge exit: it is bounded by that one plane's crossings on one side and by the crease's own
+    /// crossing of the strip on the other, and it has one Q rather than two.
+    pub fn is_one_faced(&self) -> bool {
+        self.the_crease_rail >= 0
+    }
+
+    /// C# `Notches`: whether `rail` is cut back by the feature rather than by the end.
+    pub fn notches(&self, rail: i32) -> bool {
+        self.rail_of.contains(&rail)
+    }
+}
+
+impl SurfaceStripNotchedByAFeatureBetween {
+    /// C# `Between.Stands`: whether this is a point standing BETWEEN two rails at all - which is what
+    /// the notch's low and high Qs are. Not to be asked of a one-faced notch's exit, which stands ON
+    /// a rail and carries `below` of -1 by design.
+    pub fn stands(&self) -> bool {
+        self.face.is_some() && self.vertex >= 0 && self.below >= 0
+    }
+}

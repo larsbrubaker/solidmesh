@@ -1,8 +1,8 @@
 //! One standing feature the walkback held BACK rather than carrying over
 //! ([`SurfaceStandingFeatureWithheld`]) and its withheld faces
-//! ([`SurfaceStandingFeatureWithheldFace`]). Ports the fields of
-//! `Bevel/Surface/SurfaceStandingFeatureWithheld.cs`; the ridge and crease readings land with the
-//! standing-feature package as further `impl` blocks.
+//! ([`SurfaceStandingFeatureWithheldFace`]). Ports
+//! `Bevel/Surface/SurfaceStandingFeatureWithheld.cs`: its fields and its ridge, crease and wedge
+//! readings.
 //!
 //! The walkback builds these and then keeps filling them in through shared handles - the merge of
 //! two bands that reached one feature appends to its reaches and its faces' creases, and the
@@ -14,6 +14,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use vector_math::Vector3;
+
+use super::{SurfaceStrip, SurfaceVertexPool};
 
 /// C# `SurfaceStandingFeatureWithheld`: one standing feature the walkback held BACK rather than
 /// carrying over - its own FACES (whole coplanar regions, not single triangles), the creases they
@@ -86,4 +88,154 @@ pub struct SurfaceStandingFeatureWithheldFace {
     pub plane_point: Vector3,
     /// The face's outward normal, which the extension is fanned to face along.
     pub plane_normal: Vector3,
+}
+
+/// How far from parallel two of the feature's planes have to be to meet along a ridge at all, as
+/// the sine of the angle between them - about a hundredth of a degree.
+const THEY_MEET: f64 = 1e-4;
+
+/// The feature's ridge, crease and wedge readings (C# `TryTheRidge`, `TryTheEndsOfTheCrease`,
+/// `CrossingsOnTheWedge`, `OffTheLine`, `Coplanar`, `<cinit>`).
+impl SurfaceStandingFeatureWithheld {
+    /// C# `TryTheRidge`: the line the feature's two face planes meet along, as a point on it and its
+    /// unit direction - the ridge one face runs on past the other.
+    ///
+    /// Read off the two PLANES and not off the mesh. The ridge is where the two faces meet, and that
+    /// is a property of the faces, not of how they happen to be cut into triangles: a face fanned
+    /// from a point inside itself - which is what a BOOLEAN leaves, and what "15mm Bevel Top
+    /// Edge.mcx" carries - has its facet across the crease sharing nothing with the other face but a
+    /// single corner.
+    ///
+    /// `None` where the feature does not have two distinct planes to meet along - one plane, or more
+    /// than two - and where the two are PARALLEL, which is two faces that never meet at all.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_the_ridge(&self) -> Option<(Vector3, Vector3)> {
+        let mut first: Option<&SurfaceStandingFeatureWithheldFace> = None;
+        let mut second: Option<&SurfaceStandingFeatureWithheldFace> = None;
+
+        for face in &self.faces {
+            if first.is_none_or(|first| coplanar(first, face)) {
+                first.get_or_insert(face);
+                continue;
+            }
+
+            if second.is_none_or(|second| coplanar(second, face)) {
+                second.get_or_insert(face);
+                continue;
+            }
+
+            // A third plane is a third wall, and three walls meet at a POINT rather than along a line.
+            return None;
+        }
+
+        let (first, second) = (first?, second?);
+
+        let along = first.plane_normal.cross(second.plane_normal);
+
+        if !(along.length_squared() > THEY_MEET * THEY_MEET) {
+            return None;
+        }
+
+        let first_d = first.plane_normal.dot(first.plane_point);
+        let second_d = second.plane_normal.dot(second.plane_point);
+
+        // The point of the line nearest the origin, which is as good a point on it as any: the line
+        // is carried by its direction from here on.
+        let point = ((second.plane_normal.cross(along) * first_d)
+            + (along.cross(first.plane_normal) * second_d))
+            / along.length_squared();
+
+        Some((point, along.get_normal()))
+    }
+
+    /// C# `TryTheEndsOfTheCrease`: which end of one face's crease (the one at `reach`) stands ON the
+    /// ridge, and which stands in the band's end plane, as `(on_the_ridge, on_the_end)`.
+    ///
+    /// The crease runs from the feature's own ridge down to where it dies, so one of its two ends is
+    /// on the ridge line and the other is not - measured against the line rather than matched
+    /// against an edge, for the same reason the line itself is read off the planes. Both ends on
+    /// it, or neither, is a crease this reading cannot tell which way round, and the caller names
+    /// it.
+    pub fn try_the_ends_of_the_crease(
+        &self,
+        pool: &SurfaceVertexPool,
+        face: &SurfaceStandingFeatureWithheldFace,
+        reach: i32,
+    ) -> Option<(i32, i32)> {
+        let (point, along) = self.try_the_ridge()?;
+
+        let (crease_from, crease_to) = face.creases.borrow()[reach as usize];
+        let near = SurfaceVertexPool::near_enough_for(pool.vertices());
+        let from = off_the_line(pool.position_of(crease_from), point, along) < near;
+        let to = off_the_line(pool.position_of(crease_to), point, along) < near;
+
+        if from == to {
+            return None;
+        }
+
+        Some(if from {
+            (crease_from, crease_to)
+        } else {
+            (crease_to, crease_from)
+        })
+    }
+
+    /// C# `CrossingsOnTheWedge`: where this feature's WEDGE cuts one rail of a strip - every crossing
+    /// of one of its face planes that really stands on the feature, in face order, written into
+    /// `found` (cleared first).
+    ///
+    /// A crossing is on the feature when it stands inside every OTHER face's half space, since the
+    /// feature is the wedge those half spaces cut out. Which face a rail is cut by is therefore asked
+    /// of WHERE the crossing lands and never of the rail's number. A face running ALONG the rail cuts
+    /// it nowhere and is passed over.
+    ///
+    /// **One reading, two answers.** A rail with ONE crossing is cut back by that face, which is the
+    /// end notch's reading (`SurfaceStripNotchedByAFeature`); a rail with TWO is a rail the wedge
+    /// passes clean through, which is the bite's (`SurfaceStripBittenByAFeature`).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn crossings_on_the_wedge(
+        &self,
+        strip: &SurfaceStrip,
+        rail: i32,
+        snap: f64,
+        found: &mut Vec<(Rc<SurfaceStandingFeatureWithheldFace>, f64)>,
+    ) {
+        found.clear();
+
+        for candidate in &self.faces {
+            let Some(at) = strip.try_cross(rail, candidate.plane_point, candidate.plane_normal)
+            else {
+                continue;
+            };
+
+            let point = strip.point_on(rail, at);
+
+            let on_the_wedge = self.faces.iter().all(|other| {
+                // `!(.. > snap)` keeps C#'s reading of a NaN as on the wedge.
+                Rc::ptr_eq(other, candidate)
+                    || !(other.plane_normal.dot(point - other.plane_point) > snap)
+            });
+
+            if on_the_wedge {
+                found.push((candidate.clone(), at));
+            }
+        }
+    }
+}
+
+/// C# `OffTheLine`: how far one point stands off the line through `point` along a unit direction.
+fn off_the_line(at: Vector3, point: Vector3, along: Vector3) -> f64 {
+    let across = at - point;
+
+    (across - (along * across.dot(along))).length()
+}
+
+/// C# `Coplanar`: whether two of the feature's faces lie in ONE plane, which is what a face cut
+/// into several triangles leaves. The bound is the same hundredth of a degree the plan's own
+/// flat-angle reading works to.
+fn coplanar(
+    first: &SurfaceStandingFeatureWithheldFace,
+    second: &SurfaceStandingFeatureWithheldFace,
+) -> bool {
+    first.plane_normal.dot(second.plane_normal) > 1.0 - THEY_MEET
 }

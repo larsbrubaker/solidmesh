@@ -14,7 +14,7 @@ use crate::topology_test_meshes::create_isosceles_prism;
 /// A square convex edge along +x through the origin, the material in y > 0, z < 0: the left face
 /// is the top (normal +z, inward +y) and the right face the front (normal -y, inward -z). Planned
 /// at `size` as a chamfer, or as a round when `round`.
-fn square_edge_plan(size: f64, round: bool) -> SurfaceEdgePlan {
+pub fn square_edge_plan(size: f64, round: bool) -> SurfaceEdgePlan {
     let feature = FeatureEdge {
         start: Vector3::new(0.0, 0.0, 0.0),
         end: Vector3::new(10.0, 0.0, 0.0),

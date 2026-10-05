@@ -2,16 +2,25 @@
 //! yet: the strip's rail readings (`SurfaceStrip`), the strip station (`SurfaceStripStation`),
 //! the chamfer mitre's rail-end pairing (`SurfaceCornerMitre.RailEndsPairUp`), a band's trim at a
 //! run-out's crossing (`SurfaceStripTrimmedAtTheCrossing`) and the mitre hand-over's staircases
-//! (`SurfaceCrossingAtTheMitre.TryTheStaircases`). Each pins the C# rule on a hand-built case.
+//! (`SurfaceCrossingAtTheMitre.TryTheStaircases`), and the two corner closings (`SurfaceCornerMitre.TryClose`,
+//! `SurfaceCornerPatch.TryCutTheEnd`) on the square edge plan R1.P06's tests build, the standing
+//! feature's ridge, crease and wedge readings (`SurfaceStandingFeatureWithheld`) and the end cap's walk
+//! round a notch (`SurfaceEndCapAroundAFeature.TryWalkAround`). Each pins the C# rule on a hand-built case.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use geometry_processing::bevel::surface::{
-    surface_corner_mitre, SurfaceCrossingAtTheMitre, SurfaceStrip, SurfaceStripStation,
+    surface_corner_mitre, surface_corner_patch, surface_end_cap_around_a_feature,
+    SurfaceCornerPatchArrival, SurfaceCrossingAtTheMitre, SurfaceEndCapAroundAFeatureMeeting,
+    SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
+    SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween, SurfaceStripStation,
     SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
 };
+use geometry_processing::bevel::BevelAdvisoryCode;
 use vector_math::Vector3;
+
+use crate::rust_only_bevel_r1p06_tests::square_edge_plan;
 
 /// A strip's rails run along its edge from their own feet; a point's parameter is read from the
 /// strip's origin; a plane the rails run along is no crossing.
@@ -186,4 +195,235 @@ fn rust_only_the_mitre_hands_over_on_two_staircases() {
     assert!(crossing
         .try_the_staircases(&mut pool, None, Some(&cap))
         .is_err());
+}
+
+/// A chamfer strip along `along` from the origin, ruled by two feet.
+fn chamfer(along: Vector3, left: Vector3, right: Vector3) -> Rc<SurfaceStrip> {
+    Rc::new(SurfaceStrip {
+        origin: Vector3::ZERO,
+        along,
+        rail_points: vec![left, right],
+        rail_step_degrees: 0.0,
+        outward_reference: (left + right).get_normal() * -1.0,
+    })
+}
+
+/// Three equal chamfers at a cube corner close on the one point their planes share, each strip
+/// ending on its two walkback vertices with that point between them; a pinched set of ends is
+/// refused.
+#[test]
+fn rust_only_three_chamfers_mitre_at_a_cube_corner() {
+    let size = 1.0;
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let on_x = pool.add(Vector3::new(-size, 0.0, 0.0));
+    let on_y = pool.add(Vector3::new(0.0, -size, 0.0));
+    let on_z = pool.add(Vector3::new(0.0, 0.0, -size));
+    let plan = square_edge_plan(size, false);
+
+    let arrival = |strip: Rc<SurfaceStrip>, left: i32, right: i32| SurfaceCornerPatchArrival {
+        strip,
+        edge: plan.clone(),
+        on_the_left: left,
+        on_the_right: right,
+    };
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let y = Vector3::new(0.0, 1.0, 0.0);
+    let z = Vector3::new(0.0, 0.0, 1.0);
+    let arrivals = vec![
+        arrival(chamfer(-x, -y * size, -z * size), on_y, on_z),
+        arrival(chamfer(-y, -z * size, -x * size), on_z, on_x),
+        arrival(chamfer(-z, -x * size, -y * size), on_x, on_y),
+    ];
+
+    let stations = surface_corner_mitre::try_close(&mut pool, &arrivals, Vector3::ZERO)
+        .expect("three equal chamfers meet in one point");
+    let meeting = pool.add(Vector3::new(-0.5, -0.5, -0.5) * size);
+    assert_eq!(stations.len(), 3);
+    for (station, arrival) in stations.iter().zip(&arrivals) {
+        assert_eq!(
+            station.rail,
+            vec![arrival.on_the_left, arrival.on_the_right]
+        );
+        assert!(station.param.iter().all(|param| param.abs() < 1e-12));
+        assert_eq!(station.between, vec![vec![meeting]]);
+    }
+
+    let mut pinched = arrivals.clone();
+    pinched[0].on_the_right = pinched[0].on_the_left;
+    assert_eq!(
+        surface_corner_mitre::try_close(&mut pool, &pinched, Vector3::ZERO)
+            .unwrap_err()
+            .code(),
+        BevelAdvisoryCode::SurfaceCornerNotSupported
+    );
+}
+
+/// A round strip cut at the ball's plane lands its outer rails on the walkback's touch points and
+/// mints the inner ones; outer rails that miss those points are refused.
+#[test]
+fn rust_only_a_round_strip_is_cut_at_the_balls_plane() {
+    let plan = square_edge_plan(1.0, true);
+    let strip = Rc::new(SurfaceStrip::try_create(&plan, 4).expect("a quarter round"));
+    let rails = strip.rail_count();
+    let centre = Vector3::new(5.0, 1.0, -1.0);
+
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let left = pool.add(strip.point_on(0, 5.0));
+    let right = pool.add(strip.point_on(rails - 1, 5.0));
+    let arrival = SurfaceCornerPatchArrival {
+        strip: strip.clone(),
+        edge: plan.clone(),
+        on_the_left: left,
+        on_the_right: right,
+    };
+
+    let (ring, meets_at) =
+        surface_corner_patch::try_cut_the_end(&mut pool, &arrival, centre, Vector3::ZERO)
+            .expect("the outer rails land on the touch points");
+    assert_eq!(ring.len() as i32, rails);
+    assert_eq!((ring[0], ring[ring.len() - 1]), (left, right));
+    assert!(meets_at.iter().all(|param| (param - 5.0).abs() < 1e-12));
+    for (rail, &vertex) in ring.iter().enumerate() {
+        assert!((pool.position_of(vertex) - strip.point_on(rail as i32, 5.0)).length() < 1e-5);
+    }
+
+    let missed = SurfaceCornerPatchArrival {
+        on_the_left: pool.add(Vector3::new(9.0, 9.0, 9.0)),
+        ..arrival
+    };
+    assert_eq!(
+        surface_corner_patch::try_cut_the_end(&mut pool, &missed, centre, Vector3::ZERO)
+            .unwrap_err()
+            .code(),
+        BevelAdvisoryCode::SurfaceStripSeamDidNotMeet
+    );
+}
+
+/// A two-faced feature: the floor z = 0 and the wall x = 0, its one crease running from the ridge
+/// at (0, 5, 0) out to (3, 5, 0) on the floor.
+fn two_faced_feature(
+    pool: &mut SurfaceVertexPool,
+) -> (Rc<SurfaceStandingFeatureWithheld>, i32, i32) {
+    let on_the_ridge = pool.add(Vector3::new(0.0, 5.0, 0.0));
+    let on_the_end = pool.add(Vector3::new(3.0, 5.0, 0.0));
+    let face = |normal: Vector3| {
+        Rc::new(SurfaceStandingFeatureWithheldFace {
+            creases: RefCell::new(vec![(on_the_end, on_the_ridge)]),
+            plane_point: Vector3::ZERO,
+            plane_normal: normal,
+            ..Default::default()
+        })
+    };
+    let feature = SurfaceStandingFeatureWithheld {
+        faces: vec![
+            face(Vector3::new(0.0, 0.0, 1.0)),
+            face(Vector3::new(0.0, 0.0, 1.0)),
+            face(Vector3::new(1.0, 0.0, 0.0)),
+        ],
+        ..Default::default()
+    };
+    (Rc::new(feature), on_the_ridge, on_the_end)
+}
+
+/// The ridge is where the two planes meet, the crease's ends are told apart by it, and a strip's
+/// rail is cut by the face whose crossing stands inside the other's half space.
+#[test]
+fn rust_only_a_standing_feature_reads_its_ridge_and_wedge() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let (feature, on_the_ridge, on_the_end) = two_faced_feature(&mut pool);
+
+    let (point, along) = feature.try_the_ridge().expect("two planes meet in a line");
+    assert!(point.length() < 1e-12);
+    assert!((along - Vector3::new(0.0, 1.0, 0.0)).length() < 1e-12);
+    assert_eq!(
+        feature.try_the_ends_of_the_crease(&pool, &feature.faces[0], 0),
+        Some((on_the_ridge, on_the_end))
+    );
+
+    let one_plane = SurfaceStandingFeatureWithheld {
+        faces: feature.faces[..2].to_vec(),
+        ..Default::default()
+    };
+    assert!(one_plane.try_the_ridge().is_none());
+
+    // A rail running down -z at x = -1: it crosses the floor (both of the floor's facets) inside the
+    // wall's half space x <= 0, and runs parallel to the wall, which therefore cuts it nowhere.
+    let strip = SurfaceStrip {
+        origin: Vector3::ZERO,
+        along: Vector3::new(0.0, 0.0, -1.0),
+        rail_points: vec![Vector3::new(-1.0, 2.0, 1.0)],
+        rail_step_degrees: 0.0,
+        outward_reference: Vector3::new(0.0, 1.0, 0.0),
+    };
+    let mut found = Vec::new();
+    feature.crossings_on_the_wedge(&strip, 0, 1e-9, &mut found);
+    assert_eq!(found.len(), 2);
+    assert!(found
+        .iter()
+        .all(|(face, at)| face.plane_normal.z == 1.0 && (*at - 1.0).abs() < 1e-12));
+}
+
+/// The walk round a section's rim breaks at the notch: the rails before it are the head, the
+/// rails after it the tail, and each meets the feature at the Q standing on the chord it crossed.
+#[test]
+fn rust_only_the_end_cap_walks_round_the_notch() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let (feature, _, on_the_end) = two_faced_feature(&mut pool);
+    let q = |vertex: i32, below: i32| SurfaceStripNotchedByAFeatureBetween {
+        vertex,
+        below,
+        param: 0.0,
+        face: Some(feature.faces[0].clone()),
+    };
+    let notch = SurfaceStripNotchedByAFeature {
+        strip: 0,
+        at_the_start: false,
+        feature: feature.clone(),
+        reach: 0,
+        rail_of: vec![1, 2],
+        param_of: vec![0.0, 0.0],
+        face_of: vec![],
+        end_param: 0.0,
+        exit: SurfaceStripNotchedByAFeatureBetween {
+            vertex: -1,
+            below: -1,
+            ..Default::default()
+        },
+        at_the_low_rail: q(20, 0),
+        at_the_high_rail: q(21, 2),
+        the_crease_rail: -1,
+    };
+    assert!(!notch.is_one_faced() && notch.notches(2) && !notch.notches(3));
+    assert!(!notch.exit.stands() && notch.at_the_low_rail.stands());
+
+    let (head, head_step, tail, at_the_head, at_the_tail) =
+        surface_end_cap_around_a_feature::try_walk_around(
+            &pool,
+            &[0, 1, 2, 3],
+            -1,
+            &notch,
+            &[10, 11, 12, 13],
+            Vector3::ZERO,
+        )
+        .expect("one notch in the middle of the walk");
+    assert_eq!((head, head_step, tail), (vec![10], vec![0], vec![13]));
+    assert_eq!(
+        at_the_head,
+        SurfaceEndCapAroundAFeatureMeeting::new(20, on_the_end)
+    );
+    assert_eq!(
+        at_the_tail,
+        SurfaceEndCapAroundAFeatureMeeting::new(21, on_the_end)
+    );
+
+    // A notch on the first rail of the walk leaves no chord for a Q.
+    assert!(surface_end_cap_around_a_feature::try_walk_around(
+        &pool,
+        &[1, 2, 3],
+        -1,
+        &notch,
+        &[10, 11, 12, 13],
+        Vector3::ZERO
+    )
+    .is_err());
 }
