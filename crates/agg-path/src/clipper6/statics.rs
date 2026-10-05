@@ -5,7 +5,9 @@
 
 use super::engine::Clipper;
 use super::poly_tree::PolyTree;
-use super::types::{ip, ClipType, ClipperError, IntPoint, IntRect, Path, Paths, PolyFillType, PolyType};
+use super::types::{
+    ip, ClipType, ClipperError, IntPoint, IntRect, Path, Paths, PolyFillType, PolyType,
+};
 
 /// C# `Clipper.Area`: the signed area, positive when the polygon is counter-clockwise (y up).
 /// Fewer than three points is 0.

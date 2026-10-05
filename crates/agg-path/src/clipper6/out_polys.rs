@@ -4,7 +4,9 @@
 //! `FixupOutPolyline`) and the results (`BuildResult` into paths, `BuildResult2` into a
 //! [`PolyTree`]). The order the points are read back here is what fixes each ring's start.
 
-use super::clipper_base::{is_horizontal, pt2_is_between_pt1_and_pt3, slopes_equal3, slopes_equal4};
+use super::clipper_base::{
+    is_horizontal, pt2_is_between_pt1_and_pt3, slopes_equal3, slopes_equal4,
+};
 use super::engine::{top_x, Clipper};
 use super::poly_tree::PolyTree;
 use super::types::{ip, EdgeSide, IntPoint, OutPt, OutRec, Paths, HORIZONTAL, UNASSIGNED};
@@ -119,7 +121,9 @@ impl Clipper {
         } else {
             let out_rec = self.edges[e].out_idx as usize;
             //OutRec.Pts is the 'Left-most' point & OutRec.Pts.Prev is the 'Right-most'
-            let op = self.poly_outs[out_rec].pts.expect("a contributing edge's ring has points");
+            let op = self.poly_outs[out_rec]
+                .pts
+                .expect("a contributing edge's ring has points");
             let to_front = self.edges[e].side == EdgeSide::Left;
             let op_prev = self.out_pts[op].prev;
             if to_front && pt == self.out_pts[op].pt {
@@ -255,9 +259,7 @@ impl Clipper {
             out_rec2
         } else if p1.x < p2.x {
             out_rec1
-        } else if p1.x > p2.x {
-            out_rec2
-        } else if self.out_pts[b_pt1].next == b_pt1 {
+        } else if p1.x > p2.x || self.out_pts[b_pt1].next == b_pt1 {
             out_rec2
         } else if self.out_pts[b_pt2].next == b_pt2 || self.first_is_bottom_pt(b_pt1, b_pt2) {
             out_rec1
@@ -301,9 +303,13 @@ impl Clipper {
 
         //get the start and ends of both output polygons and
         //join E2 poly onto E1 poly and delete pointers to E2 ...
-        let p1_lft = self.poly_outs[out_rec1].pts.expect("a live ring has points");
+        let p1_lft = self.poly_outs[out_rec1]
+            .pts
+            .expect("a live ring has points");
         let p1_rt = self.out_pts[p1_lft].prev;
-        let p2_lft = self.poly_outs[out_rec2].pts.expect("a live ring has points");
+        let p2_lft = self.poly_outs[out_rec2]
+            .pts
+            .expect("a live ring has points");
         let p2_rt = self.out_pts[p2_lft].prev;
 
         //join e2 poly onto e1 poly and delete pointers to e2 ...
@@ -525,8 +531,11 @@ impl Clipper {
                 return;
             }
             //test for duplicate points and collinear edges ...
-            let (pt_prev, pt, pt_next) =
-                (self.out_pts[prev].pt, self.out_pts[pp].pt, self.out_pts[next].pt);
+            let (pt_prev, pt, pt_next) = (
+                self.out_pts[prev].pt,
+                self.out_pts[pp].pt,
+                self.out_pts[next].pt,
+            );
             if pt == pt_next
                 || pt == pt_prev
                 || (slopes_equal3(pt_prev, pt, pt_next, self.use_full_range)

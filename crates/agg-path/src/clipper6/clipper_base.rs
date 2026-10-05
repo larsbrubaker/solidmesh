@@ -4,8 +4,8 @@
 
 use super::engine::Clipper;
 use super::types::{
-    int128_mul, ClipperError, EdgeSide, IntPoint, LocalMinima, PolyType, Scanbeam, TEdge,
-    HI_RANGE, HORIZONTAL, LO_RANGE, SKIP, UNASSIGNED,
+    int128_mul, ClipperError, EdgeSide, IntPoint, LocalMinima, PolyType, Scanbeam, TEdge, HI_RANGE,
+    HORIZONTAL, LO_RANGE, SKIP, UNASSIGNED,
 };
 
 /// C# `IsHorizontal`.
@@ -507,9 +507,7 @@ impl Clipper {
                 }
                 let horz_next = self.edges[horz].next;
                 let result_prev_top_x = self.edges[self.edges[result].prev].top.x;
-                if self.edges[horz_next].top.x == result_prev_top_x
-                    || self.edges[horz_next].top.x > result_prev_top_x
-                {
+                if self.edges[horz_next].top.x >= result_prev_top_x {
                     result = horz_next;
                 }
             }
@@ -595,7 +593,10 @@ impl Clipper {
         while let Some(index) = lm {
             let minima = self.minima[index];
             self.insert_scanbeam(minima.y);
-            for bound in [minima.left_bound, minima.right_bound].into_iter().flatten() {
+            for bound in [minima.left_bound, minima.right_bound]
+                .into_iter()
+                .flatten()
+            {
                 self.edges[bound].curr = self.edges[bound].bot;
                 self.edges[bound].out_idx = UNASSIGNED;
             }

@@ -8,12 +8,13 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use agg_path::clipper_library::JoinType;
 use agg_path::clipper_library::PolygonsExtensions;
 use agg_path::data_converters_2d::{
     create_vertex_storage, get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
 use agg_path::vertex_source::VertexSource;
-use clipper2_rust::{JoinType, Path64, Paths64};
+use clipper2_rust::{Path64, Paths64};
 use tess2_rust::{ElementType, TessOption, Tessellator, WindingRule};
 use vector_math::{Vector2, Vector3};
 

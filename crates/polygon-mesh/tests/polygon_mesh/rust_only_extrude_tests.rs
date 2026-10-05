@@ -2,8 +2,8 @@
 //! square and bevelled paths make closed, outward-wound solids of the expected size, including
 //! the bevel bands tess2 triangulates where C# uses TriangleNet (docs/CSHARP_DIVERGENCES.md 290).
 
+use agg_path::clipper_library::JoinType;
 use agg_path::VertexStorage;
-use clipper2_rust::JoinType;
 use polygon_mesh::processors::vertex_source_to_mesh::{extrude, extrude_bevelled};
 
 fn square(side: f64) -> VertexStorage {

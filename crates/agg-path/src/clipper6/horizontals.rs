@@ -444,7 +444,13 @@ impl Clipper {
             && other.curr.y == cur.bot.y
             && other.out_idx >= 0
             && other.curr.y > other.top.y
-            && slopes_equal4(cur.curr, cur.top, other.curr, other.top, self.use_full_range)
+            && slopes_equal4(
+                cur.curr,
+                cur.top,
+                other.curr,
+                other.top,
+                self.use_full_range,
+            )
             && cur.wind_delta != 0
             && other.wind_delta != 0
     }

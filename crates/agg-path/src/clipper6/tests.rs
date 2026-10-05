@@ -52,7 +52,12 @@ fn rust_only_intersection_and_difference_areas() {
 fn rust_only_collinear_points_are_dropped() {
     let mut subject = square(0, 0, 10);
     subject.insert(1, IntPoint::new(5, 0));
-    let result = run(ClipType::Union, &vec![subject], &Paths::new(), PolyFillType::EvenOdd);
+    let result = run(
+        ClipType::Union,
+        &vec![subject],
+        &Paths::new(),
+        PolyFillType::EvenOdd,
+    );
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].len(), 4);
 }
@@ -62,7 +67,7 @@ fn rust_only_frame_tree_has_outline_and_hole() {
     let mut hole = square(2, 2, 6);
     hole.reverse();
     let mut c = Clipper::new();
-    c.add_paths(&vec![square(0, 0, 10), hole], PolyType::Subject, true)
+    c.add_paths(&[square(0, 0, 10), hole], PolyType::Subject, true)
         .unwrap();
     let mut tree = PolyTree::new();
     c.execute_tree(

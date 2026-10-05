@@ -141,7 +141,13 @@ impl PolygonsExtensions for Paths64 {
         join_type: JoinType,
         arc_tolerance: f64,
     ) -> Paths64 {
-        offset_closed_polygons(self, distance, join_type, DEFAULT_MITER_LIMIT, arc_tolerance)
+        offset_closed_polygons(
+            self,
+            distance,
+            join_type,
+            DEFAULT_MITER_LIMIT,
+            arc_tolerance,
+        )
     }
 
     fn rotate(&self, radians: f64) -> Paths64 {

@@ -403,10 +403,8 @@ impl ClipperOffset {
                 return;
             }
             //else angle ==> 180 degrees
-        } else if self.sin_a > 1.0 {
-            self.sin_a = 1.0;
-        } else if self.sin_a < -1.0 {
-            self.sin_a = -1.0;
+        } else {
+            self.sin_a = self.sin_a.clamp(-1.0, 1.0);
         }
 
         if self.sin_a * self.delta < 0.0 {

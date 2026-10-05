@@ -50,7 +50,9 @@ fn new_clipper(subjects: &Paths64, clips: &Paths64) -> Option<clipper6::Clipper>
     clipper
         .add_paths(subjects, clipper6::PolyType::Subject, true)
         .ok()?;
-    clipper.add_paths(clips, clipper6::PolyType::Clip, true).ok()?;
+    clipper
+        .add_paths(clips, clipper6::PolyType::Clip, true)
+        .ok()?;
     Some(clipper)
 }
 
@@ -68,7 +70,10 @@ pub fn execute(
     };
     if let Some(mut clipper) = new_clipper(subjects, clips) {
         let fill = poly_fill_type(fill_rule);
-        if clipper.execute(clip_type, &mut solution, fill, fill).is_err() {
+        if clipper
+            .execute(clip_type, &mut solution, fill, fill)
+            .is_err()
+        {
             solution.clear();
         }
     }
@@ -88,7 +93,10 @@ pub fn execute_tree(
         (clipper6_clip_type(clip_type), new_clipper(subjects, clips))
     {
         let fill = poly_fill_type(fill_rule);
-        if clipper.execute_tree(clip_type, &mut tree, fill, fill).is_err() {
+        if clipper
+            .execute_tree(clip_type, &mut tree, fill, fill)
+            .is_err()
+        {
             tree.clear();
         }
     }

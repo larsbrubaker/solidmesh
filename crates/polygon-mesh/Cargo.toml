@@ -27,7 +27,7 @@ agg-path = { path = "../agg-path" }
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
 manifold-rust = { path = "../../../manifold-rust" }
 # C#'s ClipperLib integer polygons (`List<IntPoint>`) for slicing: Clipper2's `Path64`/`Paths64`
-# and its union, from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
+# (the union itself runs on agg-path's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust" }
 # agg-sharp's Tesselate (the SGI GLU tessellator) for `CachedTesselator`: tess2-rust is the same
 # SGI algorithm, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
