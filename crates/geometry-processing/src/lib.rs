@@ -7,7 +7,8 @@
 //! Ported so far: `Topology/` (feature edges, chains, face groups, the region cache, edge
 //! picking, the bevel edge/corner group records, the edge and corner group resolvers, path
 //! corners and the readings of a pick or stored group); `Path/` (the path bevel and segment
-//! runs); `Bevel/` advisories. The rest of `Bevel/` lands in later Phase 5C slices.
+//! runs); `Bevel/` advisories and the first leaf cluster of the bevel core. The rest of `Bevel/`
+//! lands in later Phase 5C slices.
 
 pub mod bevel;
 pub mod path;
