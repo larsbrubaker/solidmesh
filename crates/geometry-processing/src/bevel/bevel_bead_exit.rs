@@ -1,10 +1,15 @@
 //! Where a BEAD's run leaves its end vertex through a face of the part it does not own
 //! (`Bevel/BevelBeadExit.cs`, a static class: free functions here): the exit planes a bead is
 //! clipped to so it adds no material past them. Reading the exits off the faces at the end vertex
-//! and gathering a run's two ends' exits land here; the clip (`Inside`) lands with the cap clip.
+//! and gathering a run's two ends' exits land here, with the half-space inside an exit plane
+//! ([`inside`]).
 
 use vector_math::{math_helper, Vector3};
 
+use polygon_mesh::Mesh;
+use vector_math::AxisAlignedBoundingBox;
+
+use super::bevel_cap_clip;
 use super::{BevelChainEnds, BevelEndCap};
 use crate::topology::FeatureEdgeSet;
 
@@ -89,4 +94,12 @@ pub fn of(ends: Option<&BevelChainEnds>) -> Option<Vec<BevelEndCap>> {
             Some(both)
         }
     }
+}
+
+/// The half-space INSIDE an exit plane - the cap clip's box for the plane turned round.
+pub fn inside(plane: &BevelEndCap, bounds: &AxisAlignedBoundingBox) -> Mesh {
+    bevel_cap_clip::half_space(
+        &BevelEndCap::new(-plane.plane_normal, -plane.plane_distance),
+        bounds,
+    )
 }

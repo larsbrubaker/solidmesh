@@ -2,15 +2,18 @@
 //! (`Bevel/BevelCapClip.cs`, a C# `internal static class`, so a module here): one cap a boolean
 //! owes ([`ClippedCap`]), one cutter with the caps to take off it ([`Candidate`]) and a cutter
 //! that could not be clipped and was withdrawn ([`Withdrawal`]). The sweep with its cap-clip
-//! fallback ([`try_create`]) and the demotions it retries with ([`attempts_for`]) land here; the
-//! clip itself lands with later packages.
+//! fallback ([`try_create`]), the demotions it retries with ([`attempts_for`]), the half-space
+//! box a cap plane is clipped by ([`half_space`]) and the clip itself ([`apply`]) land here.
 
-use vector_math::Vector3;
-
+use polygon_mesh::csg::{BooleanError, CsgModes};
+use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
+use vector_math::{cs_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
+use super::bevel_bead_clip::CombineMeshes;
 use super::bevel_chain_sweep::{self, BevelSweptSection};
-use super::{BevelAdvisory, BevelChainEnds, BevelEndCap};
+use super::bevel_working_mesh;
+use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelChainEnds, BevelEndCap};
 use crate::topology::ChainEdge;
 
 /// C# `BevelCapClip.ClippedCap`: one cap the boolean owes - the plane to subtract, and the
@@ -167,4 +170,111 @@ pub fn try_create(
     }
 
     Err(failure)
+}
+
+/// How far the half-space box reaches from the plane, in diagonals of the cutter's own bounding
+/// box. Two would already cover a cutter whose every point lies within one diagonal of the plane;
+/// four is that with room to spare, and the box costs the kernel nothing for being large.
+pub const SPAN_IN_DIAGONALS: f64 = 4.0;
+
+impl Withdrawal {
+    /// C#'s constructor.
+    pub fn new(group_index: i32, reason: BevelAdvisory) -> Self {
+        Self {
+            group_index,
+            reason,
+        }
+    }
+}
+
+/// A box standing on the cap plane's far side - the half-space it removes - sized from `bounds`:
+/// [`SPAN_IN_DIAGONALS`] of their diagonal on a side, its near face on the plane where the
+/// bounds' centre drops onto it.
+pub fn half_space(cap: &BevelEndCap, bounds: &AxisAlignedBoundingBox) -> Mesh {
+    // A degenerate box would be an operand the kernel refuses rather than a clip that does
+    // nothing, so the span has a floor under it however small the cutter turns out to be.
+    let diagonal = cs_math::max_f64(bounds.size().length(), 1e-6);
+    let span = SPAN_IN_DIAGONALS * diagonal;
+
+    // The cutter's centre dropped onto the plane, which is where the box's near face is put.
+    // Taking the plane's own closest point to the ORIGIN instead would sit the box wherever the
+    // part happens to be modelled.
+    let centre = bounds.center();
+    let on_plane =
+        centre - (cap.plane_normal * (cap.plane_normal.dot(centre) - cap.plane_distance));
+
+    let mut cube = platonic_solids::create_cube(span, span, span);
+    cube.transform(
+        Matrix4X4::create_rotation_between(Vector3::new(0.0, 0.0, 1.0), cap.plane_normal)
+            * Matrix4X4::create_translation_vector(on_plane + (cap.plane_normal * (span / 2.0))),
+    );
+    cube
+}
+
+/// Takes the clipped caps off the cutters they belong to, and withdraws any cutter whose clip the
+/// kernel would not run. `cutters` is the builder's list, in the source item's own space: clipped
+/// entries are replaced in place and withdrawn ones REMOVED, so this runs once every index written
+/// while the tools were built has been read. Returns the groups whose cutter was withdrawn, for the
+/// caller to fail on their own rows; a cancel of the boolean passes up as an error (C# lets
+/// `OperationCanceledException` through), any other refusal withdraws the cutter.
+pub fn apply(
+    cutters: &mut Vec<Mesh>,
+    candidates: &[Candidate],
+    combine: &CombineMeshes<'_>,
+) -> Result<Vec<Withdrawal>, BooleanError> {
+    let mut withdrawals = Vec::new();
+    // Marked rather than removed while the loop runs: it is still reading candidates by index, and
+    // closing a gap now would renumber the ones it has not reached.
+    let mut withdrawn = vec![false; cutters.len()];
+
+    for candidate in candidates {
+        let index = candidate.cutter_index as usize;
+        let cutter = &cutters[index];
+        let bounds = cutter.get_axis_aligned_bounding_box();
+        let mut operands = Vec::with_capacity(candidate.clips.len() + 1);
+        operands.push((cutter.clone(), Matrix4X4::IDENTITY));
+        for clip in &candidate.clips {
+            operands.push((half_space(&clip.plane, &bounds), Matrix4X4::IDENTITY));
+        }
+
+        // The kernel took some operands and not others, or refused one outright: either way the
+        // plane this was asked to stop the tool on is not the plane it stopped it on, which is
+        // treated exactly like a refusal rather than as a partial success worth keeping. Letting
+        // the error out instead would fail the whole rebuild over a cap.
+        let clipped = match combine(&operands, CsgModes::Subtract) {
+            Ok(mesh) => Some(mesh),
+            Err(BooleanError::Cancelled) => return Err(BooleanError::Cancelled),
+            Err(_) => None,
+        };
+
+        if let Some(clipped) =
+            clipped.filter(|mesh| bevel_working_mesh::is_usable_operand(Some(mesh), None))
+        {
+            cutters[index] = clipped;
+            continue;
+        }
+
+        withdrawn[index] = true;
+        withdrawals.push(Withdrawal::new(
+            candidate.group_index,
+            BevelAdvisory::new(
+                BevelAdvisoryCode::CapClipCouldNotCut,
+                vec![
+                    BevelAdvisoryArg::Vector3(candidate.clips[0].at),
+                    BevelAdvisoryArg::Double(candidate.size),
+                ],
+            ),
+        ));
+    }
+
+    if !withdrawals.is_empty() {
+        let mut index = 0;
+        cutters.retain(|_| {
+            let keep = !withdrawn[index];
+            index += 1;
+            keep
+        });
+    }
+
+    Ok(withdrawals)
 }

@@ -4,9 +4,18 @@
 //! ([`Clippable`]). The trims themselves land with the core's bead-clip packages as free
 //! functions in this module; `BevelBeadBatch` is what gathers the [`Clippable`]s.
 
+use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::Mesh;
+use vector_math::Matrix4X4;
 
 use super::BevelEndCap;
+
+/// The rebuild's batched boolean the bead and cap clips run through (C#'s injected
+/// `Func<List<(Mesh, Matrix4X4)>, CsgModes, Task<Mesh>> combineAsync`): synchronous, inside the
+/// bevel's compute job, per the bevel-core decision; cancellation comes back as
+/// [`BooleanError::Cancelled`].
+pub type CombineMeshes<'a> =
+    dyn Fn(&[(Mesh, Matrix4X4)], CsgModes) -> Result<Mesh, BooleanError> + 'a;
 
 /// C# `BevelBeadClip.Tally`: which chain's bead was actually trimmed to over one rebuild - the
 /// corner's, its own wedge's, or none at all.
@@ -81,4 +90,9 @@ impl Clippable {
             exit_planes,
         }
     }
+}
+
+/// Whether a keep set is worth booleaning with: present, not empty, and manifold.
+pub fn is_usable_keep_set(keep: Option<&Mesh>) -> bool {
+    keep.is_some_and(|keep| !keep.vertices.is_empty() && keep.is_manifold())
 }

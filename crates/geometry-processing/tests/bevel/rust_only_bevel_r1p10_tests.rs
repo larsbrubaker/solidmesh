@@ -42,3 +42,63 @@ fn rust_only_a_folded_flap_is_dropped_in_pairs() {
     assert_eq!(cube.faces.len(), before - 2);
     assert_eq!(open_edge_count(&cube.faces), 0);
 }
+
+#[test]
+fn rust_only_a_cap_plane_half_space_stands_past_the_plane_and_clips_or_withdraws() {
+    use geometry_processing::bevel::bevel_bead_clip::is_usable_keep_set;
+    use geometry_processing::bevel::bevel_cap_clip::{apply, half_space, Candidate, ClippedCap};
+    use geometry_processing::bevel::BevelEndCap;
+    use polygon_mesh::csg::{BooleanError, CsgModes};
+    use polygon_mesh::Mesh;
+    use vector_math::Matrix4X4;
+
+    let cutter = platonic_solids::create_cube(2.0, 2.0, 2.0);
+    let bounds = cutter.get_axis_aligned_bounding_box();
+    let cap = BevelEndCap::new(Vector3::new(1.0, 0.0, 0.0), 0.5);
+    let box_bounds = half_space(&cap, &bounds).get_axis_aligned_bounding_box();
+    // The box's near face is on the plane x = 0.5 and it reaches out along +x.
+    assert!((box_bounds.min_xyz.x - 0.5).abs() < 1e-6);
+    assert!(box_bounds.max_xyz.x > 10.0);
+    assert!(is_usable_keep_set(Some(&cutter)));
+    assert!(!is_usable_keep_set(None));
+
+    let candidates = vec![Candidate::new(
+        0,
+        7,
+        1.5,
+        vec![ClippedCap::new(cap.clone(), Vector3::new(1.0, 2.0, 3.0))],
+    )];
+
+    // A kernel that clips: the cutter is replaced.
+    let clips = |operands: &[(Mesh, Matrix4X4)], mode: CsgModes| -> Result<Mesh, BooleanError> {
+        assert_eq!(mode, CsgModes::Subtract);
+        assert_eq!(operands.len(), 2);
+        Ok(platonic_solids::create_cube(1.0, 1.0, 1.0))
+    };
+    let mut cutters = vec![cutter.clone()];
+    let withdrawals = apply(&mut cutters, &candidates, &clips).expect("not cancelled");
+    assert!(withdrawals.is_empty());
+    assert_eq!(cutters.len(), 1);
+
+    // A kernel that refuses: the cutter is withdrawn and its group named.
+    let refuses = |_: &[(Mesh, Matrix4X4)], _: CsgModes| -> Result<Mesh, BooleanError> {
+        Err(BooleanError::Kernel {
+            message: "no".into(),
+        })
+    };
+    let mut cutters = vec![cutter.clone()];
+    let withdrawals = apply(&mut cutters, &candidates, &refuses).expect("not cancelled");
+    assert_eq!(withdrawals.len(), 1);
+    assert_eq!(withdrawals[0].group_index, 7);
+    assert!(cutters.is_empty());
+
+    // A cancel passes up.
+    let cancels = |_: &[(Mesh, Matrix4X4)], _: CsgModes| -> Result<Mesh, BooleanError> {
+        Err(BooleanError::Cancelled)
+    };
+    let mut cutters = vec![cutter];
+    assert!(matches!(
+        apply(&mut cutters, &candidates, &cancels),
+        Err(BooleanError::Cancelled)
+    ));
+}
