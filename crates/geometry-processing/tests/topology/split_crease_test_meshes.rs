@@ -1,8 +1,7 @@
 //! Fixture builders ported from `GeometryProcessingTests/Fixtures/SplitCreaseTestMeshes.cs`:
 //! meshes whose straight crease is CUT INTO SEVERAL mesh edges by vertices that are not corners
 //! of the shape - what a boolean, or one solid stood against another, leaves behind. The
-//! fixtures for the collinear run. `CreateUnsplitCreaseBar`, `CreateCubeWithAPostPunchedThrough`
-//! and `CreateBarWithAWallMissing` join with the test classes that use them.
+//! fixtures for the collinear run and the face rim readings of a pick.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -67,6 +66,25 @@ pub fn create_split_crease_bar() -> Mesh {
     mesh
 }
 
+/// The same 30 x 10 x 10 bar as one box: the same SOLID as [`create_split_crease_bar`] with none
+/// of the splits. The pair is how a test asks whether a selection survives a retriangulation
+/// that changes no geometry at all.
+pub fn create_unsplit_crease_bar() -> Mesh {
+    let mut mesh = Mesh::new();
+
+    add_brick(
+        &mut mesh,
+        Vector3::ZERO,
+        Vector3::new(30.0, 10.0, 10.0),
+        Vector3::ZERO,
+        0.0,
+    );
+
+    mesh.clean_and_merge();
+
+    mesh
+}
+
 /// A 10 mm cube with further bricks stood against its right face, each FLUSH with the cube's
 /// top and front planes so the cube's top front crease carries straight on into the brick's.
 /// The bricks meet the cube at the single vertex `(10, 0, 10)`, which carries six feature edges
@@ -124,6 +142,77 @@ pub fn create_booleaned_flush_bricks() -> Mesh {
         &BooleanOptions::default(),
     )
     .expect("the union of two overlapping boxes succeeds")
+}
+
+/// A 10 mm cube with a 3 mm square post punched THROUGH it by a real boolean, so its top face is
+/// a plane with a hole in it. The rim of that face is both boundaries, the outside and the
+/// hole, and its perimeter is 52 mm: 40 round the outside, 12 round the hole. Punched through
+/// rather than blind so that the hole's wall is not part of the top region at any tolerance.
+/// C# passes `ProcessingModes.Polygons` and `ProcessingResolution._64`, which `do_array` does
+/// not take yet (as [`create_booleaned_flush_bricks`]).
+pub fn create_cube_with_a_post_punched_through() -> Mesh {
+    let mut cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    cube.transform(Matrix4X4::create_translation(5.0, 5.0, 5.0));
+
+    // taller than the cube in both directions, so the cut is a through hole and leaves no lid
+    let mut post = platonic_solids::create_cube(3.0, 3.0, 30.0);
+    post.transform(Matrix4X4::create_translation(5.0, 5.0, 5.0));
+
+    do_array(
+        &[(&cube, Matrix4X4::IDENTITY), (&post, Matrix4X4::IDENTITY)],
+        CsgModes::Subtract,
+        &CancelToken::new(),
+        &BooleanOptions::default(),
+    )
+    .expect("punching a post through a cube succeeds")
+}
+
+/// The 30 x 10 x 10 bar with its front wall missing: an OPEN shell, so the top face's rim runs
+/// along three sides that have a second face to bevel against and one side that does not.
+pub fn create_bar_with_a_wall_missing() -> Mesh {
+    let mut mesh = Mesh::new();
+    let v = Vector3::new;
+
+    for i in 0..3 {
+        let x0 = f64::from(i) * 10.0;
+        let x1 = x0 + 10.0;
+
+        mesh.create_face(&[
+            v(x0, 0.0, 10.0),
+            v(x1, 0.0, 10.0),
+            v(x1, 10.0, 10.0),
+            v(x0, 10.0, 10.0),
+        ]);
+        mesh.create_face(&[
+            v(x0, 10.0, 0.0),
+            v(x1, 10.0, 0.0),
+            v(x1, 0.0, 0.0),
+            v(x0, 0.0, 0.0),
+        ]);
+        mesh.create_face(&[
+            v(x0, 10.0, 0.0),
+            v(x0, 10.0, 10.0),
+            v(x1, 10.0, 10.0),
+            v(x1, 10.0, 0.0),
+        ]);
+    }
+
+    mesh.create_face(&[
+        v(0.0, 0.0, 10.0),
+        v(0.0, 10.0, 10.0),
+        v(0.0, 10.0, 0.0),
+        v(0.0, 0.0, 0.0),
+    ]);
+    mesh.create_face(&[
+        v(30.0, 0.0, 0.0),
+        v(30.0, 10.0, 0.0),
+        v(30.0, 10.0, 10.0),
+        v(30.0, 0.0, 10.0),
+    ]);
+
+    mesh.clean_and_merge();
+
+    mesh
 }
 
 /// One axis aligned box, optionally turned about a vertical axis through `pivot`, with every

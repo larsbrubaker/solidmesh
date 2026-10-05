@@ -1,6 +1,6 @@
 //! The errors the topology module reports where C# throws: `ArgumentOutOfRangeException` for an
 //! index that does not belong to the mesh or set it was given, and `ArgumentException` for a
-//! non-finite pick. Each keeps the C# message text.
+//! non-finite pick or an empty tolerance ladder. Each keeps the C# message text.
 
 use std::fmt;
 
@@ -36,6 +36,17 @@ pub enum TopologyError {
         /// C#'s message.
         message: String,
     },
+    /// A tolerance ladder with no rungs (C# `ArgumentException` from
+    /// `BevelEdgeReadings.ForGroup`), so there is no angle to read a group at.
+    EmptyLadder,
+    /// An index that is not into the list of readings it was given (C#
+    /// `ArgumentOutOfRangeException` from `BevelEdgeReadings.Label`).
+    ReadingIndexOutOfRange {
+        /// The index given.
+        index: i32,
+        /// How many readings the list has.
+        reading_count: usize,
+    },
 }
 
 impl fmt::Display for TopologyError {
@@ -61,6 +72,14 @@ impl fmt::Display for TopologyError {
             TopologyError::EdgeDoesNotBoundFaceGroup { message } => {
                 write!(f, "{message} (Parameter 'boundaryEdge')")
             }
+            TopologyError::EmptyLadder => write!(
+                f,
+                "The tolerance ladder has no rungs, so there is no angle to read this group at. (Parameter 'ladder')"
+            ),
+            TopologyError::ReadingIndexOutOfRange { .. } => write!(
+                f,
+                "Specified argument was out of the range of valid values. (Parameter 'index')"
+            ),
         }
     }
 }

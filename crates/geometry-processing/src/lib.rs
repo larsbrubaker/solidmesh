@@ -4,9 +4,10 @@
 //! scene, the UI or the app (C# `KernelBoundaryTests` guards the same split; here the crate's
 //! `Cargo.toml` dependency list is that guard).
 //!
-//! Ported so far: `Topology/` feature edges, chains, face groups, the region cache and edge
-//! picking. The rest of `Topology/` (the bevel group records and their resolvers, pick
-//! interpretations, path corners), `Path/` and `Bevel/` land in later Phase 5C slices.
+//! Ported so far: `Topology/` feature edges, chains, face groups, the region cache, edge
+//! picking, the bevel edge/corner group records, the edge group resolver and the readings of a
+//! pick or stored group; `Bevel/` advisories. Topology's path corners and corner group resolver,
+//! `Path/` and the rest of `Bevel/` land in later Phase 5C slices.
 
 pub mod bevel;
 pub mod topology;
