@@ -386,3 +386,132 @@ fn rust_only_a_dying_crease_run_walks_the_loop_its_own_way() {
     assert!(!run.is_closed);
     assert_eq!((run.side, run.chain), (2, 4));
 }
+
+#[test]
+fn rust_only_end_clips_read_the_greatest_plane_or_the_nearer_of_one() {
+    use geometry_processing::bevel::level_line::{ChainFieldEndClip, FieldSample};
+    let mut field = polyline_field(
+        vec![v(0.0, 0.0, 0.0), v(4.0, 0.0, 0.0)],
+        vec![1.0, 1.0],
+        None,
+    );
+    assert_eq!(field.end_plane_at(v(9.0, 0.0, 0.0)), f64::NEG_INFINITY);
+    assert!(field.end_plane_reader().is_none());
+
+    let first = ChainFieldEndClip {
+        vertex: v(0.0, 0.0, 0.0),
+        normal: v(-1.0, 0.0, 0.0),
+        parameter: 0.0,
+    };
+    let last = ChainFieldEndClip {
+        vertex: v(4.0, 0.0, 0.0),
+        normal: v(1.0, 0.0, 0.0),
+        parameter: 4.0,
+    };
+    field.end_clips = Some(vec![first, last]);
+    assert_eq!(field.clip_at(v(6.0, 1.0, 0.0)), (2.0, last));
+    assert_eq!(field.clip_at(v(-3.0, 1.0, 0.0)), (3.0, first));
+    let reader = field.end_plane_reader().expect("clipped");
+    assert_eq!(reader(0, v(6.0, 1.0, 0.0)), 2.0);
+
+    // Past the last end's plane the plane reads above the chain: the sample takes the end.
+    let sample = FieldSample {
+        distance: 2.0,
+        parameter: 4.0,
+        value: 1.0,
+        nearest: v(4.0, 0.0, 0.0),
+        chain: 3,
+        clipped: false,
+    };
+    let clipped = field.clipped(v(6.0, 0.0, 0.0), sample);
+    assert!(
+        clipped.clipped && clipped.value == 2.0 && clipped.parameter == 4.0 && clipped.chain == 3
+    );
+    // Inside both planes it does not.
+    let inside = FieldSample {
+        value: 0.5,
+        ..sample
+    };
+    assert_eq!(field.clipped(v(2.0, 1.5, 0.0), inside), inside);
+
+    // Two ends on ONE plane read the nearer end, and a point on the plane reads as on it.
+    let a = ChainFieldEndClip {
+        vertex: v(0.0, 0.0, 0.0),
+        normal: v(0.0, 0.0, 1.0),
+        parameter: 0.0,
+    };
+    let b = ChainFieldEndClip {
+        vertex: v(5.0, 0.0, 0.0),
+        normal: v(0.0, 0.0, 1.0),
+        parameter: 5.0,
+    };
+    field.end_clips = Some(vec![a, b]);
+    assert_eq!(field.clip_at(v(4.0, 0.0, 2.0)), (2.0, b));
+    assert_eq!(field.clip_at(v(1.0, 0.0, 0.0)).0, -1e-10);
+}
+
+#[test]
+fn rust_only_a_sharp_vertex_gets_mitre_rays_and_open_ends_get_end_rays() {
+    use geometry_processing::bevel::level_line::ChainField;
+    let points = [v(0.0, 0.0, 0.0), v(2.0, 0.0, 0.0), v(2.0, 2.0, 0.0)];
+    let setbacks = [1.0, 1.0, 1.0];
+    let parameters = [0.0, 2.0, 4.0];
+    let mitres = ChainField::find_mitres(&points, false, &setbacks, &parameters, 45.0, &|_| false)
+        .expect("a right angle is sharp past 45 degrees");
+    let into = mitres[0].as_ref().expect("the segment into the corner");
+    let out_of = mitres[1].as_ref().expect("the segment out of it");
+    assert_eq!((into.len(), out_of.len()), (1, 1));
+    assert_eq!(into[0].direction, v(1.0, 0.0, 0.0));
+    assert_eq!(out_of[0].direction, v(0.0, -1.0, 0.0));
+    assert_eq!(into[0].parameter, 2.0);
+    assert!(
+        ChainField::find_mitres(&points, false, &setbacks, &parameters, 120.0, &|_| false)
+            .is_none()
+    );
+    assert!(
+        ChainField::find_mitres(&points, false, &setbacks, &parameters, 45.0, &|j| j == 1)
+            .is_none()
+    );
+
+    let rays = ChainField::with_end_rays(
+        None,
+        &points,
+        &setbacks,
+        &parameters,
+        (true, true),
+        (None, None),
+    )
+    .expect("both ends ray");
+    let first = rays[0].as_ref().expect("end 0")[0];
+    assert_eq!(
+        (first.direction, first.parameter_slope, first.parameter),
+        (v(-1.0, 0.0, 0.0), -1.0, 0.0)
+    );
+    let last = rays[1].as_ref().expect("end 1")[0];
+    assert_eq!(
+        (last.direction, last.parameter_slope, last.parameter),
+        (v(0.0, 1.0, 0.0), 1.0, 4.0)
+    );
+    // Unbounded: the box diagonal plus four setbacks.
+    assert!((last.reach - (8f64.sqrt() + 4.0)).abs() < 1e-12);
+}
+
+#[test]
+fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
+    use geometry_processing::bevel::level_line::ChainField;
+    let points = [v(0.0, 0.0, 0.0), v(-0.0, 1.0, 0.0), v(2.0, 2.0, 0.0)];
+    assert!(ChainField::smooth_joints_in(&points).is_none());
+    {
+        let _scope = ChainField::smooth_joints_while([v(0.0, 1.0, 0.0)]);
+        assert_eq!(
+            ChainField::smooth_joints_in(&points),
+            Some(std::collections::HashSet::from([1]))
+        );
+        {
+            let _inner = ChainField::smooth_joints_while([v(9.0, 9.0, 9.0)]);
+            assert!(ChainField::smooth_joints_in(&points).is_none());
+        }
+        assert!(ChainField::smooth_joints_in(&points).is_some());
+    }
+    assert!(ChainField::smooth_joints_in(&points).is_none());
+}

@@ -1,6 +1,7 @@
 //! One bounded end's clipping plane ([`ChainFieldEndClip`]), from
-//! `Bevel/LevelLine/ChainField.EndClip.cs`. The `ChainField` methods of that partial - the clipped
-//! readings and the end-plane reader - land with their method package.
+//! `Bevel/LevelLine/ChainField.EndClip.cs`. The clip readings, the clipped sample, the end-plane
+//! reader and the clipped term's searches are in `chain_field_clip.rs`; the clipped least over a
+//! piece and the known-cut reading land with their method package.
 
 use vector_math::Vector3;
 

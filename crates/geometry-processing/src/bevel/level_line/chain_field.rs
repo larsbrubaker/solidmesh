@@ -225,3 +225,71 @@ impl ChainField {
         joints
     }
 }
+
+thread_local! {
+    /// C# `ChainField.SmoothJointsInScope` (an `AsyncLocal`): the joint positions fields built now
+    /// read as smooth, as component bits with -0.0 read as 0.0; `None` outside any scope. The
+    /// bevel runs on one thread, so the build's flow is the thread.
+    static SMOOTH_JOINTS_IN_SCOPE: std::cell::RefCell<Option<HashSet<[u64; 3]>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// A position's key in the smooth-joint set: C# `Vector3` equality, so -0.0 and 0.0 are one.
+fn joint_key(p: Vector3) -> [u64; 3] {
+    let bits = |v: f64| {
+        if v == 0.0 {
+            0.0f64.to_bits()
+        } else {
+            v.to_bits()
+        }
+    };
+    [bits(p.x), bits(p.y), bits(p.z)]
+}
+
+impl ChainField {
+    /// Reads the chain vertices at `at` as smooth joints in every field built until the returned
+    /// scope drops, whatever their turn; the threshold stays as it is for every other joint. A
+    /// scope rather than a parameter, because the field is built in a dozen places under the build
+    /// (the cut, the room readings, the pinch ladder, the swallow), all of which must read the same
+    /// joints.
+    pub fn smooth_joints_while(
+        at: impl IntoIterator<Item = Vector3>,
+    ) -> ChainFieldSmoothJointsScope {
+        let joints: HashSet<[u64; 3]> = at.into_iter().map(joint_key).collect();
+        let previous = SMOOTH_JOINTS_IN_SCOPE.with(|slot| slot.replace(Some(joints)));
+        ChainFieldSmoothJointsScope { previous }
+    }
+
+    /// The indices of `points` the scope in force names as smooth joints; `None` outside a scope
+    /// or where it names none of them.
+    pub fn smooth_joints_in(points: &[Vector3]) -> Option<HashSet<i32>> {
+        SMOOTH_JOINTS_IN_SCOPE.with(|slot| {
+            let in_scope = slot.borrow();
+            let in_scope = in_scope.as_ref()?;
+            let found: HashSet<i32> = (0..points.len())
+                .filter(|&k| in_scope.contains(&joint_key(points[k])))
+                .map(|k| k as i32)
+                .collect();
+            if found.is_empty() {
+                None
+            } else {
+                Some(found)
+            }
+        })
+    }
+}
+
+impl ChainFieldSmoothJointsScope {
+    /// C#'s constructor: the joints in scope before this one began.
+    pub fn new(previous: Option<HashSet<[u64; 3]>>) -> Self {
+        Self { previous }
+    }
+}
+
+impl Drop for ChainFieldSmoothJointsScope {
+    /// C# `Dispose`: puts back the joints that were in scope before.
+    fn drop(&mut self) {
+        let previous = self.previous.take();
+        SMOOTH_JOINTS_IN_SCOPE.with(|slot| *slot.borrow_mut() = previous);
+    }
+}
