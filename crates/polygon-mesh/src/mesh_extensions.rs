@@ -3,8 +3,8 @@
 //! methods: copying, planes, coplanar faces, edges and manifoldness, unused-vertex and
 //! degenerate-face removal.
 //!
-//! Not yet ported (later Phase 2 slices): `Face.Split`/`GetCutLine`, `SplitOnPlanes`,
-//! `RepairTJunctions`, and the texture helpers (`GetMaxPlaneProjection`, `PlaceTexture*`,
+//! `Face.Split`/`GetCutLine` live in `face_split.rs`, `SplitOnPlanes` in `mesh_editing.rs` and
+//! `RepairTJunctions` in `t_junctions.rs`. Not yet ported: the texture helpers (`GetMaxPlaneProjection`, `PlaceTexture*`,
 //! `CopyFaces`, `AddFaceCopy`, `RemoveTexture`, `TexturedPlane`), which need agg `ImageBuffer`.
 
 use std::collections::HashSet;

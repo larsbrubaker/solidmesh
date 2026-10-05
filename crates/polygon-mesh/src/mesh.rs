@@ -3,10 +3,11 @@
 //! change tracking, transforms, bounds and face creation). The free extension methods of the
 //! same file live in `mesh_extensions.rs`; measurements in `mesh_measure.rs`.
 //!
+//! `MergeVertices`, `GetVertexBvhTree`, `SplitFace` and `Split` are in `mesh_editing.rs`.
+//!
 //! Not yet ported (later Phase 2 slices, they need code that is not here yet): `FaceTextures`
-//! and `FaceColors` with `RemapFaceData` (agg `ImageBuffer`/`Color`), `MergeVertices` and
-//! `GetVertexBvhTree` (BVH), `SplitFace`/`Split` (face splitting), the transformed-bounds cache
-//! (convex hull), `FaceBspTree`, `PropertyBag` and the `Changed` event.
+//! and `FaceColors` with `RemapFaceData` (agg `ImageBuffer`/`Color`), the transformed-bounds
+//! cache (convex hull), `PropertyBag` and the `Changed` event.
 
 use std::collections::HashMap;
 use std::fmt;
