@@ -95,6 +95,7 @@ pub mod end_face_flow;
 pub mod end_face_sense;
 mod end_face_sense_oblique;
 pub mod end_plane_trim;
+pub mod end_plane_trim_carry;
 pub mod field_bounds;
 pub mod field_counters;
 mod field_sample;

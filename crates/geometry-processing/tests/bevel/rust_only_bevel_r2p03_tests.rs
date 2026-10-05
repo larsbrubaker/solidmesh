@@ -119,3 +119,154 @@ fn rust_only_the_fill_lays_skip_degenerate_triangles() {
         Err(LevelLineMeshError::RepeatsAVertex(_))
     ));
 }
+
+/// A mesh with the given free vertices and no faces.
+fn points(at: &[Vector3]) -> LevelLineMesh {
+    LevelLineMesh::from_triangles(at, &[], None).expect("free vertices build")
+}
+
+#[test]
+fn rust_only_the_gap_fill_cells_lay_rows_of_quads() {
+    use geometry_processing::bevel::level_line::gap_fill;
+
+    let at: Vec<Vector3> = (0..6)
+        .map(|i| v(f64::from(i % 3), f64::from(i / 3), 0.0))
+        .collect();
+    let mut mesh = points(&at);
+    let mut added = Vec::new();
+    gap_fill::quads(&mut mesh, &[0, 1, 2], &[3, 4, 5], &mut added).expect("laid");
+    assert_eq!(added.len(), 4);
+
+    // Arcs sharing their far end collapse to one triangle there; a base run fans the base.
+    let mut mesh = points(&at);
+    let mut added = Vec::new();
+    gap_fill::strip(&mut mesh, &[0, 1, 2], &[3, 4, 2], &mut added, None).expect("laid");
+    assert_eq!(added.len(), 3);
+    let mut added = Vec::new();
+    gap_fill::strip(&mut mesh, &[0, 2], &[3, 2], &mut added, Some(&[3, 5, 0])).expect("laid");
+    assert_eq!(added.len(), 2);
+}
+
+#[test]
+fn rust_only_the_end_holes_close_flat_and_zip_about_the_axis() {
+    use geometry_processing::bevel::level_line::{corner_cap, corner_cap_flat_ends};
+
+    // A flat square hole: the row 0-1-2 and the run back 0-3-2 close with two triangles.
+    let mut mesh = points(&[
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(1.0, 1.0, 0.0),
+        v(0.0, 1.0, 0.0),
+    ]);
+    let mut added = Vec::new();
+    assert!(
+        corner_cap_flat_ends::closes_flat(&mut mesh, &[0, 1, 2], &[0, 3, 2], &mut added)
+            .expect("closed")
+    );
+    assert_eq!(added.len(), 2);
+
+    // A third of a round as the row and a run up its cylinder and back: zipped, every corner on
+    // the round.
+    let (c, s) = (0.5, 0.75f64.sqrt());
+    let mut mesh = points(&[
+        v(1.0, 0.0, 0.0),
+        v(c, s, 0.0),
+        v(-c, s, 0.0),
+        v(1.0, 0.0, 1.0),
+        v(-c, s, 1.0),
+    ]);
+    let mut added = Vec::new();
+    assert!(
+        corner_cap::zips_about_the_rows_axis(&mut mesh, &[0, 1, 2], &[0, 3, 4, 2], &mut added)
+            .expect("zipped")
+    );
+    // Five steps; the two that end on the run's shared ends repeat a vertex and lay nothing.
+    assert_eq!(added.len(), 3);
+
+    // A run off the cylinder is not the round's to close.
+    let mut mesh = points(&[
+        v(1.0, 0.0, 0.0),
+        v(c, s, 0.0),
+        v(-c, s, 0.0),
+        v(0.0, 0.0, 0.0),
+    ]);
+    let mut added = Vec::new();
+    assert!(
+        !corner_cap::zips_about_the_rows_axis(&mut mesh, &[0, 1, 2], &[0, 3, 2], &mut added)
+            .expect("refused")
+    );
+    assert!(added.is_empty());
+}
+
+#[test]
+fn rust_only_the_hull_cap_ear_clips_a_planar_outline() {
+    use geometry_processing::bevel::level_line::hull_clip;
+    use std::collections::HashSet;
+
+    // An L-shaped outline in z = 0, counter-clockwise about +z: four ears' worth of triangles.
+    let mut mesh = points(&[
+        v(0.0, 0.0, 0.0),
+        v(2.0, 0.0, 0.0),
+        v(2.0, 1.0, 0.0),
+        v(1.0, 1.0, 0.0),
+        v(1.0, 2.0, 0.0),
+        v(0.0, 2.0, 0.0),
+    ]);
+    let mut strip = HashSet::new();
+    assert!(
+        hull_clip::ear_clip(&mut mesh, &[0, 1, 2, 3, 4, 5], v(0.0, 0.0, 1.0), &mut strip)
+            .expect("clipped")
+    );
+    assert_eq!(strip.len(), 4);
+
+    // Every face turns the outline's way.
+    for &t in &strip {
+        let face = mesh.triangles()[t as usize];
+        let (a, b, c) = (
+            mesh.position(face.a),
+            mesh.position(face.b),
+            mesh.position(face.c),
+        );
+        assert!((b - a).cross(c - a).z > 0.0);
+    }
+}
+
+#[test]
+fn rust_only_the_valley_cap_fans_from_a_corner_that_sees_the_whole_polygon() {
+    use geometry_processing::bevel::level_line::strip_clip_valley;
+    use std::collections::HashSet;
+
+    // The L outline: corner 0, the first tried, sees the whole polygon (the reflex corner 3 too).
+    let mut mesh = points(&[
+        v(0.0, 0.0, 0.0),
+        v(2.0, 0.0, 0.0),
+        v(2.0, 1.0, 0.0),
+        v(1.0, 1.0, 0.0),
+        v(1.0, 2.0, 0.0),
+        v(0.0, 2.0, 0.0),
+    ]);
+    let mut strip = HashSet::new();
+    assert!(strip_clip_valley::fan_facing(
+        &mut mesh,
+        &mut strip,
+        &[0, 1, 2, 3, 4, 5],
+        v(0.0, 0.0, 1.0)
+    )
+    .expect("fanned"));
+    assert_eq!(strip.len(), 4);
+    for &t in &strip {
+        let face = mesh.triangles()[t as usize];
+        assert_eq!(face.a, 0);
+    }
+
+    // Facing the other way, no corner's fan faces along the normal.
+    let mut strip = HashSet::new();
+    assert!(!strip_clip_valley::fan_facing(
+        &mut mesh,
+        &mut strip,
+        &[0, 1, 2, 3, 4, 5],
+        v(0.0, 0.0, -1.0)
+    )
+    .expect("refused"));
+    assert!(strip.is_empty());
+}

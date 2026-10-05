@@ -10,16 +10,23 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 
-use indexmap::IndexSet;
-use vector_math::{cs_math, Vector3};
+use indexmap::{IndexMap, IndexSet};
+use vector_math::{cs_math, Vector2, Vector3};
 
-use super::{FieldCounters, LevelLineMesh, LevelLineTriangle};
+use super::{FieldCounters, LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
 
 thread_local! {
     /// Where the last hull end on this thread stopped - "done" or the stage that refused - for a
     /// test to name (C# `[ThreadStatic] LastOutcome`). Written only while the meter is on.
     static LAST_OUTCOME: RefCell<Option<String>> = const { RefCell::new(None) };
+
+    /// C# `[ThreadStatic] HullClip.WatchCapHole`: a read-only observer of each plane's cap
+    /// outline (its directed edges) before it is closed. Per thread; `None` by default.
+    pub static WATCH_CAP_HOLE: RefCell<Option<WatchCapHole>> = const { RefCell::new(None) };
 }
+
+/// A watcher of each plane's cap outline, as directed edges.
+pub type WatchCapHole = std::rc::Rc<dyn Fn(&[(i32, i32)])>;
 
 /// Records the hull end's outcome, made only when the meter is on.
 pub fn note(outcome: impl FnOnce() -> String) {
@@ -159,4 +166,368 @@ pub fn crossed_supporting_planes(mesh: &LevelLineMesh, strip: &HashSet<i32>) -> 
     }
 
     planes
+}
+
+/// C# `HullClip.EarClip`: closes one planar outline, traversed the way its cap runs, by ear
+/// clipping in the plane's own frame. An ear is a corner turning the outline's own way with no
+/// other outline vertex in or on it; a zero-area corner is no ear. The faces laid join `strip`;
+/// false where no ear is left.
+pub fn ear_clip(
+    mesh: &mut LevelLineMesh,
+    loop_: &[i32],
+    normal: Vector3,
+    strip: &mut HashSet<i32>,
+) -> Result<bool, LevelLineMeshError> {
+    let seed = if normal.x.abs() < 0.9 {
+        Vector3::new(1.0, 0.0, 0.0)
+    } else {
+        Vector3::new(0.0, 1.0, 0.0)
+    };
+    let u = seed.cross(normal).get_normal();
+    let v = normal.cross(u);
+    let origin = mesh.position(loop_[0]);
+    let at = |mesh: &LevelLineMesh, vertex: i32| {
+        let d = mesh.position(vertex) - origin;
+        Vector2::new(d.dot(u), d.dot(v))
+    };
+    let turn = |a: Vector2, b: Vector2, c: Vector2| {
+        ((b.x - a.x) * (c.y - a.y)) - ((b.y - a.y) * (c.x - a.x))
+    };
+
+    let mut polygon = loop_.to_vec();
+    let mut area = 0.0;
+    for i in 0..polygon.len() {
+        let (p, q) = (
+            at(mesh, polygon[i]),
+            at(mesh, polygon[(i + 1) % polygon.len()]),
+        );
+        area += (p.x * q.y) - (q.x * p.y);
+    }
+
+    // Math.Sign throws on NaN.
+    assert!(
+        !area.is_nan(),
+        "Function does not accept floating point Not-a-Number values."
+    );
+    let sense = if area > 0.0 {
+        1.0
+    } else if area < 0.0 {
+        -1.0
+    } else {
+        0.0
+    };
+    // LINQ's Max: NaN reads as the smallest.
+    let mut scale: Option<f64> = None;
+    for &p in &polygon {
+        let x = at(mesh, p).length();
+        scale = Some(match scale {
+            Some(value) if !(x > value || value.is_nan()) => value,
+            _ => x,
+        });
+    }
+    let scale = scale.expect("an outline has vertices") + 1.0;
+    let tiny = 1e-12 * scale * scale;
+    while polygon.len() > 3 {
+        let mut clipped = false;
+        let mut i = 0;
+        while i < polygon.len() && !clipped {
+            let count = polygon.len();
+            let (ia, ib, ic) = (
+                polygon[(i + count - 1) % count],
+                polygon[i],
+                polygon[(i + 1) % count],
+            );
+            let (a, b, c) = (at(mesh, ia), at(mesh, ib), at(mesh, ic));
+            if turn(a, b, c) * sense <= tiny {
+                i += 1;
+                continue;
+            }
+
+            let blocked = polygon
+                .iter()
+                .filter(|&&p| p != ia && p != ib && p != ic)
+                .map(|&p| at(mesh, p))
+                .any(|p| {
+                    turn(a, b, p) * sense >= 0.0
+                        && turn(b, c, p) * sense >= 0.0
+                        && turn(c, a, p) * sense >= 0.0
+                });
+            if blocked {
+                i += 1;
+                continue;
+            }
+
+            strip.insert(mesh.add_face(ia, ib, ic, 0)?);
+            polygon.remove(i);
+            clipped = true;
+            i += 1;
+        }
+
+        if !clipped {
+            return Ok(false);
+        }
+    }
+
+    if polygon.len() == 3 {
+        strip.insert(mesh.add_face(polygon[0], polygon[1], polygon[2], 0)?);
+    }
+
+    Ok(true)
+}
+
+/// C# `HullClip.Cap`: caps the open boundary lying in the hull planes, one plane at a time - each
+/// plane's outline (its clip curve, the part's edges round the mouth, and the part's edge it shares
+/// with the next plane's cap) closed on its own by [`ear_clip`]. The kept edges of the outline
+/// become the end's closing run in `kept`.
+pub fn cap(
+    mesh: &mut LevelLineMesh,
+    strip: &mut HashSet<i32>,
+    planes: &[HullClipPlane],
+    kept: &mut Vec<(i32, i32)>,
+) -> Result<bool, LevelLineMeshError> {
+    {
+        let mesh = &*mesh;
+        let strip = &*strip;
+        kept.retain(|&(a, b)| mesh.triangles_on(a, b).iter().any(|t| !strip.contains(t)));
+    }
+
+    let mut per_plane: Vec<IndexMap<i32, i32>> = planes.iter().map(|_| IndexMap::new()).collect();
+    for (low, high) in mesh.edges() {
+        let standing = mesh.triangles_on(low, high);
+        if standing.len() != 1 {
+            continue;
+        }
+
+        // An edge of the part's own on two planes is capped in the plane its kept triangle is NOT
+        // in; an edge of a kept face in ONE plane is that plane's.
+        let standing0 = standing[0];
+        let standing_face = mesh.triangles()[standing0 as usize];
+        let holding: Vec<usize> = (0..planes.len())
+            .filter(|&f| planes[f].on.contains(&low) && planes[f].on.contains(&high))
+            .collect();
+        let mut on: Vec<usize> = holding
+            .iter()
+            .copied()
+            .filter(|&f| {
+                !(planes[f].on.contains(&standing_face.a)
+                    && planes[f].on.contains(&standing_face.b)
+                    && planes[f].on.contains(&standing_face.c))
+            })
+            .collect();
+        if on.is_empty() {
+            on = holding;
+        }
+
+        if on.is_empty() {
+            continue;
+        }
+
+        if on.len() > 1 {
+            note(|| {
+                format!(
+                    "open edge {}-{} on {} planes",
+                    mesh.position(low),
+                    mesh.position(high),
+                    on.len()
+                )
+            });
+            return Ok(false);
+        }
+
+        let (a, b) = directed(standing_face, low, high);
+        if !strip.contains(&standing0) {
+            kept.push((a, b));
+        }
+
+        let next = &mut per_plane[on[0]];
+        if next.contains_key(&b) {
+            note(|| format!("outline branches at {}", mesh.position(b)));
+            return Ok(false);
+        }
+
+        next.insert(b, a);
+    }
+
+    for f in 0..planes.len() {
+        let mut next = std::mem::take(&mut per_plane[f]);
+        let outline = |mesh: &LevelLineMesh, strip: &HashSet<i32>| {
+            mesh.edges()
+                .into_iter()
+                .filter(|&(low, high)| mesh.triangles_on(low, high).len() == 1)
+                .map(|(low, high)| {
+                    let planes_on: Vec<String> = (0..planes.len())
+                        .filter(|&g| planes[g].on.contains(&low) && planes[g].on.contains(&high))
+                        .map(|g| g.to_string())
+                        .collect();
+                    let side = if strip.contains(&mesh.triangles_on(low, high)[0]) {
+                        "s"
+                    } else {
+                        "k"
+                    };
+                    format!(
+                        "{}-{}[{}]{}",
+                        mesh.position(low),
+                        mesh.position(high),
+                        planes_on.join(","),
+                        side
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+
+        // Two caps meeting along the part's own edge between their planes: each plane's outline
+        // runs open from one vertex on that line to another, joined here, E back to S.
+        let starts: Vec<i32> = next
+            .keys()
+            .copied()
+            .filter(|k| !next.values().any(|v| v == k))
+            .collect();
+        let ends: Vec<i32> = next
+            .values()
+            .copied()
+            .filter(|v| !next.contains_key(v))
+            .collect();
+        if starts.len() == 1
+            && ends.len() == 1
+            && (0..planes.len()).any(|g| {
+                g != f && planes[g].on.contains(&starts[0]) && planes[g].on.contains(&ends[0])
+            })
+        {
+            next.insert(ends[0], starts[0]);
+        }
+
+        let watch = WATCH_CAP_HOLE.with(|w| w.borrow().clone());
+        if let Some(watch) = watch {
+            let edges: Vec<(i32, i32)> = next.iter().map(|(&k, &v)| (k, v)).collect();
+            watch(&edges);
+        }
+
+        while !next.is_empty() {
+            let mut loop_ = Vec::new();
+            let mut at = *next.keys().min().expect("not empty");
+            while let Some(to) = next.shift_remove(&at) {
+                loop_.push(at);
+                at = to;
+            }
+
+            let closed = at == loop_[0];
+            if !closed || !ear_clip(mesh, &loop_, planes[f].normal, strip)? {
+                let mesh = &*mesh;
+                let strip = &*strip;
+                note(|| {
+                    let points: Vec<String> = loop_
+                        .iter()
+                        .map(|&i| mesh.position(i).to_string())
+                        .collect();
+                    format!(
+                        "plane {}: loop {} {}; outline {}",
+                        planes[f].normal,
+                        if !closed { "open" } else { "no ear" },
+                        points.join(" "),
+                        outline(mesh, strip)
+                    )
+                });
+                return Ok(false);
+            }
+        }
+    }
+
+    Ok(true)
+}
+
+/// The signed distance of a vertex from a plane, by index (C#'s `Func<int, int, double>` over
+/// `Clip`'s locals): handed the mesh and planes it reads, since [`split_along`] changes both.
+pub type PlaneDistance<'a> = &'a dyn Fn(&LevelLineMesh, &[HullClipPlane], i32, i32) -> f64;
+
+/// C# `HullClip.SplitAlong`: splits the strip's edges crossing plane `f` where the crossing lies
+/// inside every other plane, until none is left; the count made, or -1 where a kept edge crosses
+/// or a corner already stands at the crossing.
+pub fn split_along(
+    mesh: &mut LevelLineMesh,
+    strip: &mut HashSet<i32>,
+    f: usize,
+    planes: &mut [HullClipPlane],
+    distance: PlaneDistance,
+) -> Result<i32, LevelLineMeshError> {
+    let mut made = 0;
+    loop {
+        let mut found: Option<(i32, i32, Vector3)> = None;
+        let mut ordered: Vec<i32> = strip.iter().copied().collect();
+        ordered.sort_unstable();
+        for t in ordered {
+            let face = mesh.triangles()[t as usize];
+            let mut corner = 0;
+            while corner < 3 && found.is_none() {
+                let (a, b) = (face.corner(corner), face.corner((corner + 1) % 3));
+                corner += 1;
+                let (da, db) = (
+                    distance(mesh, planes, f as i32, a),
+                    distance(mesh, planes, f as i32, b),
+                );
+                if !((da < 0.0 && db > 0.0) || (da > 0.0 && db < 0.0)) {
+                    continue;
+                }
+
+                let s = da / (da - db);
+                let inside = (0..planes.len()).filter(|&h| h != f).all(|h| {
+                    let h = h as i32;
+                    distance(mesh, planes, h, a)
+                        + ((distance(mesh, planes, h, b) - distance(mesh, planes, h, a)) * s)
+                        <= 0.0
+                });
+                if inside {
+                    found = Some((
+                        a,
+                        b,
+                        mesh.position(a) + ((mesh.position(b) - mesh.position(a)) * s),
+                    ));
+                }
+            }
+
+            if found.is_some() {
+                break;
+            }
+        }
+
+        let Some((ea, eb, point)) = found else {
+            return Ok(made);
+        };
+
+        if mesh.triangles_on(ea, eb).iter().any(|t| !strip.contains(t)) {
+            note(|| {
+                format!(
+                    "kept edge {}-{} crosses plane {} at {}",
+                    mesh.position(ea),
+                    mesh.position(eb),
+                    planes[f].normal,
+                    point
+                )
+            });
+            return Ok(-1);
+        }
+
+        let before = mesh.triangle_count();
+        let vertices = mesh.vertex_count();
+        // Exact only: a clip needs a real vertex ON its plane, not a neighbour a float step off it.
+        let vertex = mesh.split_edge(ea, eb, point, false)?;
+        if vertex < vertices && vertex != ea && vertex != eb {
+            // A corner already stands at the crossing: refused by name.
+            note(|| format!("corner {} at the crossing {}", mesh.position(vertex), point));
+            return Ok(-1);
+        }
+
+        made += 1;
+        for child in before..mesh.triangle_count() {
+            strip.insert(child);
+        }
+
+        for plane in planes.iter_mut() {
+            if plane.on.contains(&ea) && plane.on.contains(&eb) {
+                plane.on.insert(vertex);
+            }
+        }
+
+        planes[f].on.insert(vertex);
+    }
 }

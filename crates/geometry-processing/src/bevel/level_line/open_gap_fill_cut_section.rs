@@ -9,8 +9,9 @@ use std::collections::HashSet;
 use vector_math::cs_math;
 
 use super::flat_hole_fill;
-use super::open_gap_fill::is_straight_row;
-use super::{ChainField, HoleFillTriangle, LevelLineMesh, OpenGapFillOpenRail};
+use super::gap_fill;
+use super::open_gap_fill::{backwards, is_straight_row};
+use super::{ChainField, HoleFillTriangle, LevelLineMesh, LevelLineMeshError, OpenGapFillOpenRail};
 
 /// C# `OpenGapFill.FlatRunOutRegion`: a run-out's flat region - its loop of mesh vertices, the
 /// triangles closing it (loop indices), and the last cut row.
@@ -88,4 +89,48 @@ pub fn fans_from_a_rail_run_out(
     l > 0
         && right.parameters[r as usize] > left.parameters[l as usize] + tie
         && spokes.iter().filter(|spoke| spoke.0 == l).count() > 1
+}
+
+/// C# `OpenGapFill.LayBesideACutRow`: the cell between two rows on one left vertex `a` where either
+/// starts on the face `a` ran out onto (a cut row), read from their right ends as the
+/// right-advancing strip reads them, with the rows' first edge laid too. Beside an in-plane row (a
+/// straight row onto its far end B) the cut row fans onto B. Where no flat region takes the face's
+/// piece, each cut row's crossing is fanned onto `a`.
+#[allow(clippy::too_many_arguments)]
+pub fn lay_beside_a_cut_row(
+    mesh: &mut LevelLineMesh,
+    before: &[i32],
+    after: &[i32],
+    before_cut: bool,
+    after_cut: bool,
+    a: i32,
+    flat_region: bool,
+    laid: &mut Vec<i32>,
+) -> Result<(), LevelLineMeshError> {
+    let u = backwards(before);
+    let v = backwards(after);
+    let last = u.len() - 1;
+    if before_cut && !after_cut && is_straight_row(after) {
+        let b = after[after.len() - 1];
+        for r in 0..last {
+            gap_fill::lay(mesh, u[r], b, u[r + 1], laid)?;
+        }
+
+        if !flat_region {
+            gap_fill::lay(mesh, u[last], b, a, laid)?;
+        }
+
+        return Ok(());
+    }
+
+    for r in 0..last {
+        gap_fill::lay(mesh, u[r], v[r], v[r + 1], laid)?;
+        gap_fill::lay(mesh, u[r], v[r + 1], u[r + 1], laid)?;
+    }
+
+    if !flat_region && before_cut && after_cut {
+        gap_fill::lay(mesh, u[last], v[last], a, laid)?;
+    }
+
+    Ok(())
 }

@@ -6,18 +6,48 @@
 //! the rows leave along ([`bulging_fill_vertex`]), the cross-tangent laid into the crease faces
 //! ([`leaves_through_convex_crease`], [`inside_the_creases`], [`faded`], [`out_of_the_planes`]),
 //! an edge's direction on a triangle ([`runs_forward`]) and the patch placed on the rolling ball
-//! ([`on_the_ball`], [`covers_the_ball_once`]); the fill itself lands with later packages. Its
-//! switch is in `corner_cap_hole_fill_switch.rs`.
+//! ([`on_the_ball`], [`covers_the_ball_once`]), and one corner hole closed by the filler
+//! ([`fill_one`], with [`convex_creases_at_the_arc_ends`] and [`in_face_cross_tangent`]) with its
+//! watchers ([`WATCH_CORNER_HOLES`], the build's `WorkBudget::watch_hole_fills`) and its last
+//! failure ([`last_hole_fill_failure`]). Its switch is in `corner_cap_hole_fill_switch.rs`.
 
 use indexmap::IndexMap;
-use std::collections::HashSet;
+use std::cell::Cell;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 
 use vector_math::{cs_math, Vector3};
 
 use super::{
-    ChainField, CornerCapLastRow, HoleFillResult, HoleFillTriangle, LevelLineMesh,
-    LevelLineTriangle,
+    corner_fill, corner_mitre_patch, hole_fill, ChainField, CornerCapLastRow, GapFillRefusal,
+    HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineMesh, LevelLineMeshError,
+    LevelLineTriangle, LevelLineWork,
 };
+
+/// A watcher of every corner hole [`fill_one`] reads: its loop's points, the strip ends on it and
+/// its corner vertex.
+pub type WatchCornerHoles =
+    Arc<dyn Fn(&LevelLineMesh, &[Vector3], &[CornerCapLastRow], Vector3) + Send + Sync>;
+
+/// C# `CornerCap.WatchCornerHoles` (a plain static): the test hook handed every hole
+/// [`fill_one`] reads BEFORE any refusal. Process-wide, as the C#'s is; `None` (the default) costs
+/// nothing.
+pub static WATCH_CORNER_HOLES: Mutex<Option<WatchCornerHoles>> = Mutex::new(None);
+
+thread_local! {
+    /// C# `[ThreadStatic] CornerCap.LastHoleFillFailure`.
+    static LAST_HOLE_FILL_FAILURE: Cell<HoleFillFailure> = const { Cell::new(HoleFillFailure::None) };
+}
+
+/// C# `CornerCap.LastHoleFillFailure`: the filler's own failure behind the last
+/// [`GapFillRefusal::HoleFillFailed`] on this thread - `None` where no cross-tangent could be read.
+pub fn last_hole_fill_failure() -> HoleFillFailure {
+    LAST_HOLE_FILL_FAILURE.with(|f| f.get())
+}
+
+fn set_last_hole_fill_failure(failure: HoleFillFailure) {
+    LAST_HOLE_FILL_FAILURE.with(|f| f.set(failure));
+}
 
 /// The unit cross-tangent of a row's arc at its end `p`, turned toward `v`: a skew row's axis (its
 /// fillet's ruling), else its plane's normal; zero for an arc with no plane.
@@ -493,4 +523,263 @@ pub fn covers_the_ball_once(
     }
 
     true
+}
+
+/// C# `CornerCap.FillOne`: one corner hole closed by the hole filler. The cycle is walked the way
+/// the cap lays each edge, which is the order the filler winds from. Each loop vertex's
+/// cross-tangent is the sum of its rows' arc cross-tangents (laid inside their convex creases) and
+/// the in-face cross-tangents of its loop edges that are not arc steps; its edge length is the
+/// mean of its two loop edges. Returns the refusal (`None` when laid) and the offending vertex
+/// (-1 when laid).
+pub fn fill_one(
+    mesh: &mut LevelLineMesh,
+    cycle: &[i32],
+    corners: &[Vector3],
+    last_rows: Option<&[CornerCapLastRow]>,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+) -> Result<(GapFillRefusal, i32), LevelLineMeshError> {
+    let n = cycle.len();
+    let points: Vec<Vector3> = cycle.iter().map(|&i| mesh.position(i)).collect();
+    let mut sum = Vector3::ZERO;
+    for &p in &points {
+        sum += p;
+    }
+    let mean = sum / n as f64;
+    if corners.is_empty() {
+        return Ok((GapFillRefusal::FillWouldNotClose, cycle[0]));
+    }
+
+    // OrderBy(...).First(): the first of the least, NaN least.
+    let mut v = corners[0];
+    for &c in &corners[1..] {
+        if cs_compare((c - mean).length_squared(), (v - mean).length_squared())
+            == std::cmp::Ordering::Less
+        {
+            v = c;
+        }
+    }
+
+    let on_cycle: HashSet<i32> = cycle.iter().copied().collect();
+    let rows: Vec<CornerCapLastRow> = last_rows
+        .unwrap_or(&[])
+        .iter()
+        .filter(|r| r.arc.iter().all(|i| on_cycle.contains(i)))
+        .cloned()
+        .collect();
+    let mut arc_steps = HashSet::new();
+    let mut rows_at: HashMap<i32, Vec<usize>> = HashMap::new();
+    for (r, row) in rows.iter().enumerate() {
+        for i in 0..row.arc.len() {
+            rows_at.entry(row.arc[i]).or_default().push(r);
+            if i + 1 < row.arc.len() {
+                arc_steps.insert((row.arc[i], row.arc[i + 1]));
+                arc_steps.insert((row.arc[i + 1], row.arc[i]));
+            }
+        }
+    }
+
+    let watch = WATCH_CORNER_HOLES.lock().map(|w| w.clone()).unwrap_or(None);
+    if let Some(watch) = watch {
+        watch(mesh, &points, &rows, v);
+    }
+
+    let removed_on = removed_triangles_on_the_loop(mesh, cycle);
+    let creases_at: Vec<(Vec<Vector3>, Vec<Vector3>)> = rows
+        .iter()
+        .map(|row| convex_creases_at_the_arc_ends(mesh, row, cycle, &arc_steps, mean, v))
+        .collect();
+    let mut tangents = vec![Vector3::ZERO; n];
+    let mut lengths = vec![0.0; n];
+    for i in 0..n {
+        let previous = cycle[(i + n - 1) % n];
+        let here = cycle[i];
+        let next = cycle[(i + 1) % n];
+        let mut sum = Vector3::ZERO;
+        if let Some(mine) = rows_at.get(&here) {
+            for &r in mine {
+                let row = &rows[r];
+                let (at_first, at_last) = &creases_at[r];
+                let index = row
+                    .arc
+                    .iter()
+                    .position(|&a| a == here)
+                    .map_or(-1, |k| k as i32);
+                sum += inside_the_creases(
+                    arc_cross_tangent(mesh, row, points[i], v),
+                    index,
+                    row.arc.len() as i32,
+                    at_first,
+                    at_last,
+                );
+            }
+        }
+
+        if !arc_steps.contains(&(previous, here)) {
+            sum += in_face_cross_tangent(mesh, previous, here, &removed_on);
+        }
+
+        if !arc_steps.contains(&(here, next)) {
+            sum += in_face_cross_tangent(mesh, here, next, &removed_on);
+        }
+
+        if sum.length_squared() < 1e-24 {
+            set_last_hole_fill_failure(HoleFillFailure::None);
+            return Ok((GapFillRefusal::HoleFillFailed, here));
+        }
+
+        tangents[i] = sum.get_normal();
+        lengths[i] = (mesh.length(previous, here) + mesh.length(here, next)) / 2.0;
+    }
+
+    LevelLineWork::charge(1)?;
+    let filled = hole_fill::fill(&points, &tangents, &lengths)?;
+    if filled.failure != HoleFillFailure::None {
+        set_last_hole_fill_failure(filled.failure);
+        return Ok((GapFillRefusal::HoleFillFailed, cycle[0]));
+    }
+
+    // Kept strict at a pair corner whose rows turn back on each other.
+    if bulging_fill_vertex(mesh, &filled.vertices, n as i32, &rows, &points) >= 0 {
+        return Ok((GapFillRefusal::FillLeavesThePart, cycle[0]));
+    }
+
+    // After the bulge check, so a patch the filler folded or bulged is refused as before.
+    let filled = on_the_ball(filled, &points, &rows);
+    let filled = corner_mitre_patch::on_the_mitre(filled, &points, &rows);
+
+    let mut index = vec![0; filled.vertices.len()];
+    for i in 0..filled.vertices.len() {
+        if i < n {
+            index[i] = cycle[i];
+            continue;
+        }
+
+        index[i] = mesh.add_vertex(filled.vertices[i]);
+        added_vertices.push(index[i]);
+    }
+
+    for triangle in &filled.triangles {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(
+            mesh,
+            index[triangle.a as usize],
+            index[triangle.b as usize],
+            index[triangle.c as usize],
+            added,
+        )?;
+    }
+
+    let watch =
+        LevelLineWork::current().and_then(|budget| budget.watch_hole_fills.borrow().clone());
+    if let Some(watch) = watch {
+        watch(mesh, &filled.vertices, n as i32, &filled.triangles, &rows);
+    }
+
+    Ok((GapFillRefusal::None, -1))
+}
+
+/// C# `CornerCap.ConvexCreasesAtTheArcEnds`: at each end of `row`'s arc, the outward normals of
+/// the live faces on its non-arc loop edges that the row's cross-tangent leaves through by more than
+/// [`CREASE_DEGREES`] (signed toward the hole by the loop's `centroid`). Empty where the row meets
+/// its faces smoothly.
+pub fn convex_creases_at_the_arc_ends(
+    mesh: &LevelLineMesh,
+    row: &CornerCapLastRow,
+    cycle: &[i32],
+    arc_steps: &HashSet<(i32, i32)>,
+    centroid: Vector3,
+    v: Vector3,
+) -> (Vec<Vector3>, Vec<Vector3>) {
+    let n = cycle.len();
+    let at_end = |end: i32| {
+        let mut creases = Vec::new();
+        let at = cycle.iter().position(|&i| i == end);
+        let p = mesh.position(end);
+        let along = arc_cross_tangent(mesh, row, p, v);
+        let Some(at) = at else {
+            return creases;
+        };
+        if along.length_squared() == 0.0 {
+            return creases;
+        }
+
+        for other in [cycle[(at + n - 1) % n], cycle[(at + 1) % n]] {
+            if arc_steps.contains(&(end, other)) {
+                continue;
+            }
+
+            let on: Vec<i32> = mesh
+                .triangles_on(end, other)
+                .iter()
+                .copied()
+                .filter(|&t| !mesh.is_removed(t))
+                .collect();
+            if on.len() != 1 {
+                continue;
+            }
+
+            let outward = triangle_normal(mesh, mesh.triangles()[on[0] as usize]);
+            if leaves_through_convex_crease(along, centroid - p, outward) {
+                creases.push(outward);
+            }
+        }
+
+        creases
+    };
+
+    (at_end(row.arc[0]), at_end(row.arc[row.arc.len() - 1]))
+}
+
+/// C# `CornerCap.InFaceCrossTangent`: the cross-tangent of the loop edge `a` to `b` - in the plane
+/// of the one live triangle standing on it, square to the edge, away from its third corner (into
+/// the hole); at a convex crease against a removed triangle running the edge the other way, in
+/// that removed triangle's plane instead. Zero where not exactly one live triangle stands.
+pub fn in_face_cross_tangent(
+    mesh: &LevelLineMesh,
+    a: i32,
+    b: i32,
+    removed_on: &IndexMap<(i32, i32), Vec<i32>>,
+) -> Vector3 {
+    let on: Vec<i32> = mesh
+        .triangles_on(a, b)
+        .iter()
+        .copied()
+        .filter(|&t| !mesh.is_removed(t))
+        .collect();
+    if on.len() != 1 {
+        return Vector3::ZERO;
+    }
+
+    let live = mesh.triangles()[on[0] as usize];
+    let away = away_from_third_corner(mesh, live, a, b);
+    let removed = removed_on.get(&(a.min(b), a.max(b)));
+    let Some(removed) = removed.filter(|_| away.length_squared() != 0.0) else {
+        return away;
+    };
+
+    let live_normal = triangle_normal(mesh, live);
+    let live_runs_a_to_b = runs_forward(live, a, b);
+    for &t in removed {
+        let across = mesh.triangles()[t as usize];
+        let across_normal = triangle_normal(mesh, across);
+        if runs_forward(across, a, b) == live_runs_a_to_b
+            || across_normal.length_squared() == 0.0
+            || live_normal.length_squared() == 0.0
+        {
+            continue;
+        }
+
+        if live_normal.dot(across_normal) < (CREASE_DEGREES * std::f64::consts::PI / 180.0).cos() {
+            // only a convex crease: the removed face turns behind the live one, into the material
+            let toward = away_from_third_corner(mesh, across, a, b) * -1.0;
+            return if toward.length_squared() == 0.0 || toward.dot(live_normal) >= 0.0 {
+                away
+            } else {
+                toward
+            };
+        }
+    }
+
+    away
 }

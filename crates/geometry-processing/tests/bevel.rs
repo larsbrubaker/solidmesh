@@ -31,6 +31,8 @@ mod bevel_sweep_back_depth_tests;
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/chain_field_fixtures.rs"]
 mod chain_field_fixtures;
+#[path = "bevel/end_plane_trim_corner_tests.rs"]
+mod end_plane_trim_corner_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
@@ -39,6 +41,8 @@ mod fillet_arc_seam_row_tests;
 mod flat_hole_fill_tests;
 #[path = "bevel/hole_fill_tests.rs"]
 mod hole_fill_tests;
+#[path = "bevel/hole_fill_validity_tests.rs"]
+mod hole_fill_validity_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]

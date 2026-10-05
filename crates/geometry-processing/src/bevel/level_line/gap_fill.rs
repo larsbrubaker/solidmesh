@@ -161,6 +161,65 @@ pub fn arc_point(p: Vector3, c: Vector3, q: Vector3, t: f64) -> Vector3 {
     ((p * wp) + (c * wc) + (q * wq)) / (wp + wc + wq)
 }
 
+/// C# `GapFill.Strip`: the cell between two arcs that share their far end - rows of quads,
+/// collapsing to one triangle at the shared vertex. `u` starts at the cell's first boundary vertex
+/// and `v` at its second; `base_run`, where it has more than two vertices, is the rail's stretch
+/// from `v[0]` to `u[0]` that the base triangle fans over.
+pub fn strip(
+    mesh: &mut LevelLineMesh,
+    u: &[i32],
+    v: &[i32],
+    added: &mut Vec<i32>,
+    base_run: Option<&[i32]>,
+) -> Result<(), LevelLineMeshError> {
+    let last = u.len() as i32 - 1;
+    let fans = base_run.filter(|run| run.len() > 2);
+    for r in 0..(last - 1).max(0) as usize {
+        if r == 0 {
+            if let Some(run) = fans {
+                for k in 0..run.len() - 1 {
+                    lay(mesh, run[k + 1], run[k], v[1], added)?;
+                }
+
+                lay(mesh, u[r], v[r + 1], u[r + 1], added)?;
+                continue;
+            }
+        }
+
+        lay(mesh, u[r], v[r], v[r + 1], added)?;
+        lay(mesh, u[r], v[r + 1], u[r + 1], added)?;
+    }
+
+    let last = last as usize;
+    if last == 1 {
+        if let Some(run) = fans {
+            for k in 0..run.len() - 1 {
+                lay(mesh, run[k + 1], run[k], u[last], added)?;
+            }
+
+            return Ok(());
+        }
+    }
+
+    lay(mesh, u[last - 1], v[last - 1], u[last], added)
+}
+
+/// C# `GapFill.Quads`: the cell between two arcs of one station count whose ends both differ, as a
+/// row of quads wound as [`strip`] winds them.
+pub fn quads(
+    mesh: &mut LevelLineMesh,
+    u: &[i32],
+    v: &[i32],
+    added: &mut Vec<i32>,
+) -> Result<(), LevelLineMeshError> {
+    for r in 0..u.len().saturating_sub(1) {
+        lay(mesh, u[r], v[r], v[r + 1], added)?;
+        lay(mesh, u[r], v[r + 1], u[r + 1], added)?;
+    }
+
+    Ok(())
+}
+
 /// Lays one fill triangle `(a, b, c)` into `mesh`, tagged as fill, and records it in `added`. A
 /// triangle with exactly one repeated pair is skipped; one whose three corners are all the same
 /// vertex still reaches [`LevelLineMesh::add_face`], which refuses it (as the C# does).

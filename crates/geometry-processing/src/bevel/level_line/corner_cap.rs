@@ -6,10 +6,10 @@
 //! the corner's axis ([`axis`]), the angle between two directions ([`angle`]) and the turn from one
 //! to the other ([`toward`]). The caps' other functions land with later packages.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::gap_fill::FILL_TAG;
-use super::{corner_fill, LevelLineMesh};
+use super::{corner_fill, LevelLineMesh, LevelLineMeshError, LevelLineWork};
 
 /// C# `CornerCap.LastRow`: a strip's end spoke as a fillet lays it - the arc's vertices, and the
 /// circle it is drawn on, its radius the mean of the two legs.
@@ -132,6 +132,237 @@ pub fn axis(mesh: &LevelLineMesh, v: Vector3) -> Vector3 {
     } else {
         sum.get_normal()
     }
+}
+
+/// A watcher of the end holes with the mesh and the chain's end vertex V: the (row, run) pair.
+pub type WatchEndHoleAt = std::rc::Rc<dyn Fn(&LevelLineMesh, &[i32], &[i32], Vector3)>;
+
+thread_local! {
+    /// C# `[ThreadStatic] CornerCap.WatchEndHoleAt`: a read-only observer of the end holes, with
+    /// the mesh and the chain's end vertex, so a measuring test can read the hole's shape. Per
+    /// thread; `None` by default.
+    pub static WATCH_END_HOLE_AT: std::cell::RefCell<Option<WatchEndHoleAt>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// C# `CornerCap.AxisAngleNoise`: the angle by which a run may step back about the row's axis and
+/// still be read as rising (float noise in the angles).
+const AXIS_ANGLE_NOISE: f64 = 1e-6;
+
+/// C# `CornerCap.OnTheRound`: how near the row's radius, as a fraction of it, a run vertex must
+/// stand from the row's axis to be read as on the round.
+const ON_THE_ROUND: f64 = 1e-4;
+
+/// C# `Math.IEEERemainder`, as .NET computes it.
+fn ieee_remainder(x: f64, y: f64) -> f64 {
+    if x.is_nan() {
+        return x;
+    }
+    if y.is_nan() {
+        return y;
+    }
+
+    let regular_mod = x % y;
+    if regular_mod.is_nan() {
+        return f64::NAN;
+    }
+    if regular_mod == 0.0 && x.is_sign_negative() {
+        return -0.0;
+    }
+
+    let sign = if x > 0.0 {
+        1.0
+    } else if x < 0.0 {
+        -1.0
+    } else {
+        0.0
+    };
+    let alternative = regular_mod - (y.abs() * sign);
+    if alternative.abs() == regular_mod.abs() {
+        let division = x / y;
+        let rounded = division.round_ties_even();
+        return if rounded.abs() > division.abs() {
+            alternative
+        } else {
+            regular_mod
+        };
+    }
+
+    if alternative.abs() < regular_mod.abs() {
+        alternative
+    } else {
+        regular_mod
+    }
+}
+
+/// C# `CornerCap.ZipsAboutTheRowsAxis`: a fillet's end hole zipped by angle about the row's own
+/// axis - the line through the last row's circle centre normal to its plane - rather than about the
+/// end vertex. True (and laid) when the row has an arc to read a centre from, the run lies on the
+/// round's cylinder and rises from the row's start to its end about that axis; false (nothing laid)
+/// otherwise.
+pub fn zips_about_the_rows_axis(
+    mesh: &mut LevelLineMesh,
+    row: &[i32],
+    run: &[i32],
+    added: &mut Vec<i32>,
+) -> Result<bool, LevelLineMeshError> {
+    if row.len() < 3 || row[0] != run[0] || row[row.len() - 1] != run[run.len() - 1] {
+        return Ok(false);
+    }
+
+    // The circle through the row's ends and its middle vertex.
+    let p = mesh.position(row[0]);
+    let q = mesh.position(row[row.len() / 2]);
+    let r = mesh.position(row[row.len() - 1]);
+    let pq = q - p;
+    let pr = r - p;
+    let normal = pq.cross(pr);
+    let twice = 2.0 * normal.length_squared();
+    if twice <= 1e-24 {
+        return Ok(false);
+    }
+
+    let centre = p
+        + (((normal.cross(pq) * pr.length_squared()) + (pr.cross(normal) * pq.length_squared()))
+            / twice);
+    let n = (p - centre).cross(r - centre);
+    if n.length_squared() <= 1e-24 {
+        return Ok(false);
+    }
+
+    let n = n.get_normal();
+
+    // Only a hole whose whole boundary lies ON the round's cylinder is a patch of that round; a
+    // run vertex may stand inside the round by as much as the row's widest chord sags.
+    let radius = (p - centre).length();
+    let from_the_axis = |point: Vector3| {
+        let d = point - centre;
+        (d - (n * d.dot(n))).length()
+    };
+
+    let mut sag = 0.0;
+    for i in 0..row.len() - 1 {
+        let mid = (mesh.position(row[i]) + mesh.position(row[i + 1])) / 2.0;
+        sag = cs_math::max_f64(sag, radius - from_the_axis(mid));
+    }
+
+    for &vertex in run {
+        let off = from_the_axis(mesh.position(vertex)) - radius;
+        if off > ON_THE_ROUND * radius || off < -(sag + (ON_THE_ROUND * radius)) {
+            return Ok(false);
+        }
+    }
+
+    let u = (p - centre).get_normal();
+    let w = n.cross(u);
+    let angle_of = |mesh: &LevelLineMesh, vertex: i32| {
+        let d = mesh.position(vertex) - centre;
+        d.dot(w).atan2(d.dot(u))
+    };
+
+    let a: Vec<f64> = row.iter().map(|&i| angle_of(mesh, i)).collect();
+    let b: Vec<f64> = run.iter().map(|&i| angle_of(mesh, i)).collect();
+    for i in 0..a.len() - 1 {
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        let falls = !(a[i + 1] > a[i]);
+        if falls {
+            return Ok(false);
+        }
+    }
+
+    for i in 0..b.len().saturating_sub(1) {
+        if b[i + 1] < b[i] - AXIS_ANGLE_NOISE {
+            return Ok(false);
+        }
+    }
+
+    let (mut x, mut y) = (0, 0);
+    while x < row.len() - 1 || y < run.len() - 1 {
+        LevelLineWork::charge(1)?;
+        let advances_row =
+            y >= run.len() - 1 || (x < row.len() - 1 && a[x + 1] <= b[y + 1] + AXIS_ANGLE_NOISE);
+        if advances_row {
+            corner_fill::lay(mesh, row[x], row[x + 1], run[y], added)?;
+            x += 1;
+        } else {
+            corner_fill::lay(mesh, run[y + 1], run[y], row[x], added)?;
+            y += 1;
+        }
+    }
+
+    Ok(true)
+}
+
+/// C# `CornerCap.FansAboutTheEnd`: the end face that wraps the end vertex `v` - the hole surrounds
+/// `v`, star-shaped about it - fanned to a new vertex at `v` when the row (angles `a`) rises
+/// strictly, the run (angles `b`) falls strictly to the row's end angle less one full turn, and
+/// both lie in the end face's plane (`normal`). False (nothing laid) otherwise.
+#[allow(clippy::too_many_arguments)]
+pub fn fans_about_the_end(
+    mesh: &mut LevelLineMesh,
+    row: &[i32],
+    run: &[i32],
+    a: &[f64],
+    b: &[f64],
+    v: Vector3,
+    normal: Vector3,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+) -> Result<bool, LevelLineMeshError> {
+    // A fan to V is flat only if its boundary is (relative 1e-6: walls are flat to float noise).
+    // LINQ's Max: NaN reads as the smallest; an empty boundary throws (as the C# does).
+    let mut reach: Option<f64> = None;
+    for &i in row.iter().chain(run) {
+        let x = (mesh.position(i) - v).length();
+        reach = Some(match reach {
+            Some(value) if !(x > value || value.is_nan()) => value,
+            _ => x,
+        });
+    }
+    let reach = reach.expect("the end hole has a boundary");
+    if row
+        .iter()
+        .chain(run)
+        .any(|&i| (mesh.position(i) - v).dot(normal).abs() > 1e-6 * reach)
+    {
+        return Ok(false);
+    }
+
+    let tie = 1e-12;
+    for i in 0..a.len().saturating_sub(1) {
+        if a[i + 1] <= a[i] + tie {
+            return Ok(false);
+        }
+    }
+
+    // The run is unwrapped by continuity: every step is read as the turn in (-pi, pi] it makes.
+    let mut unwrapped = b[0];
+    for i in 0..b.len() - 1 {
+        let step = ieee_remainder(b[i + 1] - b[i], 2.0 * std::f64::consts::PI);
+        if step >= -tie {
+            return Ok(false);
+        }
+
+        unwrapped += step;
+    }
+
+    if (unwrapped - (a[a.len() - 1] - (2.0 * std::f64::consts::PI))).abs() > 1e-9 {
+        return Ok(false);
+    }
+
+    let centre = mesh.add_vertex(v);
+    added_vertices.push(centre);
+    for x in 0..row.len().saturating_sub(1) {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(mesh, row[x], row[x + 1], centre, added)?;
+    }
+
+    for y in 0..run.len().saturating_sub(1) {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(mesh, run[y + 1], run[y], centre, added)?;
+    }
+
+    Ok(true)
 }
 
 /// C# `CornerCap.Angle`: the angle between two directions, by atan2 of their cross and dot.
