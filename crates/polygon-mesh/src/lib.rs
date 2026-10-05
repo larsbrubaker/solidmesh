@@ -10,6 +10,9 @@
 //! meshes by planes (`face_split`, `mesh_editing`), T-junction repair (`t_junctions`) and the
 //! face BSP tree (`processors::face_bsp_tree`).
 //!
+//! Phase 2d, the ray tracer's trace path (`ray_tracer`): traceables, hits, the BVH and its default
+//! builder, and the shapes MatterCAD picks with.
+//!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
@@ -24,6 +27,7 @@ mod mesh_editing;
 mod mesh_extensions;
 mod mesh_measure;
 pub mod processors;
+pub mod ray_tracer;
 pub mod solids;
 mod t_junctions;
 pub mod vector3_list;
