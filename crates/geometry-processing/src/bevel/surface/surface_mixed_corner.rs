@@ -9,8 +9,11 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use crate::bevel::BevelAdvisory;
+
 use super::{
-    SurfaceBandEnd, SurfaceEdgePlan, SurfaceLine, SurfaceMixedCornerSpine, SurfaceWallSection,
+    SurfaceBandEnd, SurfaceEdgePlan, SurfaceLine, SurfaceMixedCornerDualFrame,
+    SurfaceMixedCornerSpine, SurfaceWallSection,
 };
 
 /// C# `SurfaceMixedCorner` (a sealed class): the frame of the surface a ball rolling from inside
@@ -201,6 +204,14 @@ impl SurfaceMixedCorner {
         // C#'s `!(cosine > 1 - SquareEnough)`, which a NaN cosine also passes.
         let cosine = self.out_of_the_cap_face.dot(self.axis().direction).abs();
         cosine <= 1.0 - Self::SQUARE_ENOUGH || cosine.is_nan()
+    }
+
+    /// Reads this corner's OTHER canal - the bead's void ball rolling on the wall, pressed against
+    /// the cut's tube - and with it the plane the cut's end ring would lie in. On REQUEST: a
+    /// two-crease junction asks for it (it IS this canal), and nothing else does, so a corner
+    /// nobody asks keeps the cap-riding canal's numbers unchanged to the bit.
+    pub fn try_read_the_dual_canal(&self) -> Result<SurfaceMixedCornerDualFrame, BevelAdvisory> {
+        SurfaceMixedCornerDualFrame::try_read_the_dual(self, Self::SQUARE_ENOUGH)
     }
 
     /// The way out of the bead's axis at `turn`: towards the shared face at zero and towards the

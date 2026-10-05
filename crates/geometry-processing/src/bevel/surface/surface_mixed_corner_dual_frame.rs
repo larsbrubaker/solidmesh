@@ -1,11 +1,12 @@
 //! The mixed corner's OTHER canal ([`SurfaceMixedCornerDualFrame`]): the bead's VOID ball,
 //! rolling along the wall and pressed against the cut's tube. Ports the record of
-//! `Bevel/Surface/SurfaceMixedCornerDualFrame.cs`; its reading and its rail accessors land with
-//! the mixed-corner package's methods.
+//! `Bevel/Surface/SurfaceMixedCornerDualFrame.cs` with its reading ([`SurfaceMixedCornerDualFrame::try_read_the_dual`]);
+//! its rail accessors land with another package.
 
 use vector_math::Vector3;
 
-use super::{SurfaceLine, SurfaceMixedCornerSpine};
+use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedCornerDualFrame` (a sealed class): the mixed corner's OTHER canal, read - the
 /// bead's VOID ball, rolling along the wall and pressed against the cut's tube, where the reading
@@ -42,4 +43,107 @@ pub struct SurfaceMixedCornerDualFrame {
     pub turn_radians: f64,
     /// The spine itself - where the void ball's centre runs, and what it touches.
     pub spine: SurfaceMixedCornerSpine,
+}
+
+impl SurfaceMixedCornerDualFrame {
+    /// C#'s private constructor.
+    fn new(
+        axis: SurfaceLine,
+        rail_centre: Vector3,
+        out_of_the_wall: Vector3,
+        along_the_cut_out_of_the_wall: f64,
+        turn_radians: f64,
+        spine: SurfaceMixedCornerSpine,
+    ) -> Self {
+        SurfaceMixedCornerDualFrame {
+            axis,
+            rail_centre,
+            out_of_the_wall,
+            along_the_cut_out_of_the_wall,
+            turn_radians,
+            spine,
+        }
+    }
+
+    /// Reads the dual of `corner` (already read the ordinary way), or says why it has none.
+    /// `square_enough` is how far from lying IN the wall the cut must stand, as a cosine - the
+    /// same dimensionless floor the reading proper keeps its own angles at.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    pub fn try_read_the_dual(
+        corner: &SurfaceMixedCorner,
+        square_enough: f64,
+    ) -> Result<SurfaceMixedCornerDualFrame, BevelAdvisory> {
+        let at_the_corner = || vec![BevelAdvisoryArg::Vector3(corner.corner)];
+        let axis = corner.cut_center_line();
+        let out_of_the_wall = corner.out_of_the_wall;
+        let along_the_cut_out_of_the_wall = axis.direction.dot(out_of_the_wall);
+
+        // Asked BEFORE anything divides by it. A cut lying IN the wall meets the plane a radius
+        // outside that wall in two straight lines or in nothing at all: there is no ellipse to
+        // roll a ball on, and the slide would be an infinity rather than a number. Dimensionless,
+        // so the fixed floor and not the part's own ruler.
+        if !(along_the_cut_out_of_the_wall.abs() > square_enough) {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceMixedCornerCutLiesInTheWall,
+                at_the_corner(),
+            ));
+        }
+
+        // Where the cut's centre line crosses the wall's own plane, which the corner vertex lies
+        // in. The dual's rail centre, in the place the cap-riding reading's outer rail centre
+        // stands.
+        let rail_centre = axis.point
+            + (axis.direction
+                * ((corner.corner - axis.point).dot(out_of_the_wall)
+                    / along_the_cut_out_of_the_wall));
+
+        // Turn zero is the way out of the cut towards the SHARED face, and the turn ends on the
+        // way out towards the cap - so the dual turns the cut strip's own sweep, where the
+        // cap-riding reading turns the bead's.
+        let towards_the_shared_face = corner.out_of_the_shared_face();
+        let towards_the_cap = corner.out_of_the_cap_face;
+        let square = towards_the_cap
+            - (towards_the_shared_face * towards_the_cap.dot(towards_the_shared_face));
+
+        if !(square.length_squared() > 0.0) {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                at_the_corner(),
+            ));
+        }
+
+        // Math.Clamp passes a NaN through, as f64::clamp does.
+        let turn_radians = towards_the_shared_face
+            .dot(towards_the_cap)
+            .clamp(-1.0, 1.0)
+            .acos();
+
+        let Some(spine) = SurfaceMixedCornerSpine::try_create(
+            axis,
+            rail_centre,
+            out_of_the_wall,
+            along_the_cut_out_of_the_wall,
+            true,
+            towards_the_shared_face,
+            square.get_normal(),
+            corner.size,
+            turn_radians,
+            SurfaceMixedCorner::away_from_the_corner(&corner.cut, corner.corner),
+            square_enough,
+        ) else {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceMixedCornerBeadRingCrossesNoRail,
+                at_the_corner(),
+            ));
+        };
+
+        Ok(SurfaceMixedCornerDualFrame::new(
+            axis,
+            rail_centre,
+            out_of_the_wall,
+            along_the_cut_out_of_the_wall,
+            turn_radians,
+            spine,
+        ))
+    }
 }

@@ -77,3 +77,10 @@ pub struct SurfaceRunAcrossRegionMaps {
     /// Whether the region is manifold within itself, so that a walk across it means anything.
     pub usable: bool,
 }
+
+impl SurfaceRunAcrossSectionStep {
+    /// How far the section runs inside this facet.
+    pub fn crossed(&self) -> f64 {
+        (self.to - self.from).length()
+    }
+}

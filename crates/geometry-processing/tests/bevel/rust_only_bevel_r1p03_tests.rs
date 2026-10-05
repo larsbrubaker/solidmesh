@@ -111,3 +111,28 @@ fn rust_only_offset_to_segment_reads_the_nearest_clipped_end() {
     );
     assert!(past_the_end.is_infinite());
 }
+
+#[test]
+fn rust_only_the_first_root_is_the_one_the_turn_reaches() {
+    use geometry_processing::bevel::surface::SurfaceMixedCornerWall;
+    use std::f64::consts::PI;
+
+    // cos t = 1/2 has roots at +-pi/3; from zero the turn reaches pi/3 first.
+    let root = SurfaceMixedCornerWall::try_the_first_root(1.0, 0.0, 0.5, 0.0).unwrap();
+    assert!((root - PI / 3.0).abs() < 1e-12);
+
+    // Past pi/3 the next one reached is -pi/3 carried a whole turn on.
+    let root = SurfaceMixedCornerWall::try_the_first_root(1.0, 0.0, 0.5, 1.5).unwrap();
+    assert!((root - 5.0 * PI / 3.0).abs() < 1e-12);
+
+    // A tangency is a double root, not a miss; a plane the curve never reaches is.
+    assert!(SurfaceMixedCornerWall::try_the_first_root(1.0, 0.0, 1.0 + 1e-12, 0.0).is_some());
+    assert!(SurfaceMixedCornerWall::try_the_first_root(1.0, 0.0, 1.1, 0.0).is_none());
+}
+
+#[test]
+fn rust_only_a_missing_wall_section_has_no_sagitta() {
+    use geometry_processing::bevel::surface::surface_mixed_corner_cut_edge::sagitta_of_the_walls_chords;
+
+    assert_eq!(sagitta_of_the_walls_chords(None), 0.0);
+}

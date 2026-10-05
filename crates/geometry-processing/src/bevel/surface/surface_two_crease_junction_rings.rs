@@ -8,8 +8,8 @@ use std::rc::Rc;
 use vector_math::Vector3;
 
 use super::{
-    SurfaceMixedCornerDualFrame, SurfaceMixedCornerRows, SurfaceMixedJunction,
-    SurfaceMixedJunctionArm,
+    surface_mixed_corner_patch, SurfaceMixedCornerDualFrame, SurfaceMixedCornerRows,
+    SurfaceMixedJunction, SurfaceMixedJunctionArm, SurfaceVertexPool,
 };
 
 /// C# `SurfaceTwoCreaseJunctionRings` (a sealed class): the three end rings a two-crease
@@ -72,6 +72,17 @@ impl SurfaceTwoCreaseJunctionRings {
         } else {
             ring.to_vec()
         }
+    }
+
+    /// How far off the canal the CLOSING column may stand: the shared faces' own chord sagitta,
+    /// the same slack a one-crease junction's closing ring is allowed, read for both arms and the
+    /// wider taken. The closing column is a ring the BEAD's strip already minted, and that strip
+    /// stands on whatever chording the faces it was rolled along have.
+    pub fn closing_slack(junction: &SurfaceMixedJunction, pool: &SurfaceVertexPool) -> f64 {
+        f64::max(
+            surface_mixed_corner_patch::the_shared_faces_own_sagitta(&junction.first.mixed, pool),
+            surface_mixed_corner_patch::the_shared_faces_own_sagitta(&junction.second.mixed, pool),
+        )
     }
 
     /// `of` back to front, as a new array.
