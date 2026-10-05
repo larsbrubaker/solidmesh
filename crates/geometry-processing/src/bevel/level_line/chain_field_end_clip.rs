@@ -2,13 +2,14 @@
 //! `Bevel/LevelLine/ChainField.EndClip.cs`. The clip readings, the clipped sample, the end-plane
 //! reader and the clipped term's searches are in `chain_field_clip.rs`. Here too the clips a
 //! chain's end-ray bounds give ([`ChainField::find_end_clips`]) and whether an edge lies in a
-//! knife end's plane ([`ChainField::lies_in_an_end_plane`]); the clipped least over a piece and
-//! the known-cut reading land with their method package.
+//! knife end's plane ([`ChainField::lies_in_an_end_plane`]) and the known-cut reading
+//! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece lands with its
+//! method package.
 
 use vector_math::Vector3;
 
 use super::super::float_grid;
-use super::{ChainField, EndRayBound};
+use super::{ChainField, EndRayBound, ScalarField, WorkError};
 
 /// C# `ChainField.EndClip`: one bounded end's plane - through its vertex, unit normal faced on past
 /// the end.
@@ -94,5 +95,31 @@ impl ChainField {
         }
 
         false
+    }
+}
+
+impl ChainField {
+    /// C# `ChainField.ValueAcrossTheKnownCut`: the reading that treats every bounded end's plane as
+    /// a KNOWN CUT (flat ends): strictly past a plane the plane's reading (outside by construction),
+    /// otherwise the chain's own unclipped value. Only the band's classification of a triangle
+    /// lying wholly on the line asks this - never the refinement or a root search, which need the
+    /// continuous clipped field (a jump at the plane cannot be settled).
+    ///
+    /// On the plane, and a float's width in from it, the clipped field reads 0 wherever the chain
+    /// is within its setback, so a side sliver along the side-to-end crease whose corners all sit
+    /// on the line was kept or removed by its centroid's rounding. The plane is the band's boundary
+    /// there, so the side of it a point stands on decides, and on the band side the chain's value
+    /// says whether it is in the band.
+    pub fn value_across_the_known_cut(&self, point: Vector3) -> Result<f64, WorkError> {
+        if self.end_clips.is_none() {
+            return self.value_at(point);
+        }
+
+        let (plane, _) = self.clip_at(point);
+        if plane > 0.0 {
+            return Ok(plane);
+        }
+
+        self.unclipped_value_at(point)
     }
 }

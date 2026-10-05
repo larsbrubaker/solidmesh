@@ -3,20 +3,284 @@
 //! `Bevel/LevelLine/BoundedMaximum.cs` (a C# static class): the further cell bound a search may be
 //! handed ([`BoundedMaximumCellBound`]) and the tolerant best-so-far
 //! ([`BoundedMaximumCanonicalMaximum`], with its tolerant offer), the depth that ends a search and
-//! the tie-tolerant longest-edge test ([`not_shorter`]). The searches themselves land with a later
-//! package.
+//! the tie-tolerant longest-edge test ([`not_shorter`]), and the searches: over a segment
+//! ([`over_segment`]), over a triangle ([`over_triangle`]), the island rule's peak
+//! ([`island_peak`]) and the bound a cell is judged by ([`sharpen`]).
+//!
+//! The search evaluates corners and bounds above: from a corner p any point q of the piece has
+//! `value(q) <= value(p) + |q - p|`, and the farthest point of a segment or triangle from p is one
+//! of its corners. A piece whose bound cannot beat the best found so far by more than the tolerance
+//! is discarded; otherwise it is halved and both halves recurse. Nothing is sampled, so a bump as
+//! narrow as the tolerance is still found, and the same piece always gives the same answer. The
+//! Lipschitz bound is joined by the convex cell bound (`convex_cell_bound.rs`); both are SOUND and
+//! the lesser is taken. Turning this into an EXISTENCE search was tried twice in C# and got the
+//! wrong answer both times on a peak that barely clears the threshold; the one early-out that
+//! holds is `stop_above`, which stops on a value already FOUND, never on a bound.
 
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::FieldSample;
+use super::convex_cell_bound::{self, EndPlaneAt};
+use super::{FieldCounters, FieldMaximum, FieldSample, LevelLineWork, WorkError};
+
+/// A point query a search runs over (C# `Func<Vector3, FieldSample>`); it may charge the budget.
+pub type Evaluate<'a> = &'a dyn Fn(Vector3) -> Result<FieldSample, WorkError>;
+
+/// A further cell bound as the searches take it (C#'s `CellBound` delegate, by reference).
+pub type CellBound<'a> = &'a dyn Fn(
+    &FieldSample,
+    &FieldSample,
+    &FieldSample,
+    Vector3,
+    Vector3,
+    Vector3,
+) -> Result<f64, WorkError>;
+
+/// C#'s `ArgumentOutOfRangeException` for a non-positive tolerance: a search with no tolerance
+/// would never retire a cell and halve to `MAX_DEPTH` everywhere, so it is a caller's bug, not an
+/// input to refuse.
+fn require_positive(tolerance: f64) {
+    assert!(
+        tolerance > 0.0,
+        "A bounded search needs a positive tolerance."
+    );
+}
+
+/// C# `BoundedMaximum.OverSegment`: the greatest value along the segment ab, to within
+/// `tolerance`, pruning from its first step against a value `at_least` the answer must beat to be
+/// of any use - a search nothing beats returns `at_least` itself at a MEANINGLESS point (`a`).
+pub fn over_segment(
+    evaluate: Evaluate,
+    a: Vector3,
+    b: Vector3,
+    tolerance: f64,
+    at_least: f64,
+    end_plane_at: Option<EndPlaneAt>,
+) -> Result<FieldMaximum, WorkError> {
+    require_positive(tolerance);
+
+    // A segment lying ALONG a ridge attains its greatest value at every point of it, so which
+    // maximiser is returned is settled by the search's own canonical order, not by float noise.
+    let mut found = BoundedMaximumCanonicalMaximum::new(at_least, a);
+    let mut stack = vec![(a, b, 0)];
+    while let Some((p, q, depth)) = stack.pop() {
+        LevelLineWork::charge(1)?;
+        LevelLineWork::poll_cancel()?;
+
+        let at_p = evaluate(p)?;
+        let at_q = evaluate(q)?;
+        let span = (q - p).length();
+        found.offer(at_p.value, p);
+        found.offer(at_q.value, q);
+
+        // The field itself is 1-Lipschitz, so a sample's own VALUE plus the reach to the farthest
+        // point of the piece bounds it - no setback term of any kind.
+        let mut bound = cs_math::min_f64(at_p.value, at_q.value) + span;
+        bound = sharpen(
+            bound,
+            convex_cell_bound::over_segment(&at_p, &at_q, p, q, end_plane_at),
+            found.best + tolerance,
+            depth,
+        )?;
+        FieldCounters::note_step(depth);
+        if depth >= MAX_DEPTH || bound <= found.best + tolerance {
+            continue;
+        }
+
+        let m = (p + q) * 0.5;
+        stack.push((p, m, depth + 1));
+        stack.push((m, q, depth + 1));
+    }
+
+    Ok(FieldMaximum::new(found.best, found.best_point))
+}
+
+/// C# `BoundedMaximum.OverTriangle`: the greatest value over the triangle abc, interior included,
+/// to within `tolerance`, giving up once it is known to stand above `stop_above` and pruning from
+/// its first step against a value `at_least` already attained elsewhere.
+#[allow(clippy::too_many_arguments)]
+pub fn over_triangle(
+    evaluate: Evaluate,
+    a: Vector3,
+    b: Vector3,
+    c: Vector3,
+    tolerance: f64,
+    stop_above: f64,
+    at_least: f64,
+    extra_bound: Option<CellBound>,
+    end_plane_at: Option<EndPlaneAt>,
+) -> Result<FieldMaximum, WorkError> {
+    require_positive(tolerance);
+
+    // A plateau or a ridge has a whole LINE - or a region - of equally greatest value, so "the
+    // first maximiser the search reaches" must not be decided by the last bit of a float. The
+    // search's own choices are made canonical instead (longest edge by a relative tie, fixed child
+    // order, a tolerant update), so the first maximiser reached is the same in every placement.
+    let mut found = BoundedMaximumCanonicalMaximum::new(at_least, a);
+    let mut stack = vec![(a, b, c, 0)];
+    while let Some((p, q, r, depth)) = stack.pop() {
+        LevelLineWork::charge(1)?;
+        LevelLineWork::poll_cancel()?;
+
+        let samples = [evaluate(p)?, evaluate(q)?, evaluate(r)?];
+        let corners = [p, q, r];
+        let mut bound = f64::INFINITY;
+        for i in 0..3 {
+            found.offer(samples[i].value, corners[i]);
+
+            let mut farthest = 0.0;
+            for corner in corners {
+                farthest = cs_math::max_f64(farthest, (corner - corners[i]).length());
+            }
+
+            bound = cs_math::min_f64(bound, samples[i].value + farthest);
+        }
+
+        if found.best > stop_above {
+            // Known to stand above the threshold, and the caller asked for nothing finer.
+            break;
+        }
+
+        let convex = convex_cell_bound::over_triangle(
+            &samples[0],
+            &samples[1],
+            &samples[2],
+            p,
+            q,
+            r,
+            end_plane_at,
+        );
+        bound = sharpen(bound, convex, found.best + tolerance, depth)?;
+        if let Some(extra_bound) = extra_bound {
+            bound = cs_math::min_f64(
+                bound,
+                extra_bound(&samples[0], &samples[1], &samples[2], p, q, r)?,
+            );
+        }
+
+        FieldCounters::note_step(depth);
+        if depth == 0 && FieldCounters::meter_on() {
+            // The "no search needed" question, asked of the WHOLE triangle: three corners reading
+            // one chain, and a convex bound that cannot rise above the corners, would together say
+            // the greatest value stands at a corner and this search need never have been made.
+            let corner_max = cs_math::max_f64(
+                samples[0].value,
+                cs_math::max_f64(samples[1].value, samples[2].value),
+            );
+            FieldCounters::note_root_cell(
+                samples[0].chain == samples[1].chain && samples[1].chain == samples[2].chain,
+                convex <= corner_max,
+                bound <= found.best + tolerance,
+            );
+        }
+
+        if depth >= MAX_DEPTH || bound <= found.best + tolerance {
+            continue;
+        }
+
+        // Split at the longest edge's midpoint - the halves shrink in every direction, so the
+        // bound closes on the value however thin the triangle starts. Lengths within a relative
+        // 1e-12 count EQUAL and the tie goes to the first in the piece's own corner order, which
+        // comes from vertex indices, so two placements split the same edge.
+        let ab = (q - p).length();
+        let bc = (r - q).length();
+        let ca = (p - r).length();
+        if not_shorter(ab, bc) && not_shorter(ab, ca) {
+            let m = (p + q) * 0.5;
+            stack.push((p, m, r, depth + 1));
+            stack.push((m, q, r, depth + 1));
+        } else if not_shorter(bc, ca) {
+            let m = (q + r) * 0.5;
+            stack.push((q, m, p, depth + 1));
+            stack.push((m, r, p, depth + 1));
+        } else {
+            let m = (r + p) * 0.5;
+            stack.push((r, m, q, depth + 1));
+            stack.push((m, p, q, depth + 1));
+        }
+    }
+
+    Ok(FieldMaximum::new(found.best, found.best_point))
+}
+
+/// C# `BoundedMaximum.IslandPeak`: the island rule's question and answer over the triangle abc:
+/// does the field rise above `snap` anywhere inside it, and if so, where the split vertex goes.
+///
+/// The answer is a peak only to within the tolerance, and WHICH sample within it the search holds
+/// as its best depends on which cells it retired on the way: a sharper sound bound retires cells
+/// sooner and the best moves (by 0.0077 at a tolerance of 0.01 in `IslandSplitOrderTests`), and a
+/// vertex moved by less than the tolerance was measured to flip a rim fill from closed into a
+/// pinch. So the placement is taken from ONE fixed search - the plain one - and `extra_bound` is
+/// only a cheaper way to say NO: when the pruned search says yes, the plain search is run to place
+/// the vertex and its answer is the rule's, decision included.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn island_peak(
+    evaluate: Evaluate,
+    a: Vector3,
+    b: Vector3,
+    c: Vector3,
+    tolerance: f64,
+    snap: f64,
+    extra_bound: Option<CellBound>,
+    end_plane_at: Option<EndPlaneAt>,
+) -> Result<FieldMaximum, WorkError> {
+    let decision = over_triangle(
+        evaluate,
+        a,
+        b,
+        c,
+        tolerance,
+        f64::INFINITY,
+        snap - tolerance,
+        extra_bound,
+        end_plane_at,
+    )?;
+    if extra_bound.is_none() || !(decision.value > snap) {
+        return Ok(decision);
+    }
+
+    over_triangle(
+        evaluate,
+        a,
+        b,
+        c,
+        tolerance,
+        f64::INFINITY,
+        snap - tolerance,
+        None,
+        end_plane_at,
+    )
+}
+
+/// C# `BoundedMaximum.Sharpen`: the bound this cell is judged by - the LESSER of the Lipschitz
+/// reach bound and the convex union-of-balls bound, with the measurement of what the sharper one
+/// buys taken on the way past. Both are upper bounds, so taking the lesser keeps the search sound.
+/// The convex bound is charged one work unit - the same charge one `Evaluate` takes for a walk of
+/// the whole segment tree, and so a conservative one.
+pub fn sharpen(lipschitz: f64, convex: f64, retire_at: f64, depth: i32) -> Result<f64, WorkError> {
+    if FieldCounters::meter_on() {
+        FieldCounters::note_convex_bound(lipschitz > retire_at && convex <= retire_at, depth);
+    }
+
+    LevelLineWork::charge(1)?;
+    Ok(cs_math::min_f64(lipschitz, convex))
+}
 
 /// C# `BoundedMaximum.CellBound`: a further SOUND upper bound on a triangle cell's greatest value,
 /// read from the cell's three corner samples and corners - taken with the search's own bounds by
 /// the lesser, so it can only retire cells sooner.
-pub type BoundedMaximumCellBound =
-    Rc<dyn Fn(&FieldSample, &FieldSample, &FieldSample, Vector3, Vector3, Vector3) -> f64>;
+/// The bound may charge the work budget (a chain's segment bound does), so it answers a `Result`.
+pub type BoundedMaximumCellBound = Rc<
+    dyn Fn(
+        &FieldSample,
+        &FieldSample,
+        &FieldSample,
+        Vector3,
+        Vector3,
+        Vector3,
+    ) -> Result<f64, WorkError>,
+>;
 
 /// C# `BoundedMaximum.CanonicalMaximum`: the greatest value a bounded search has found, kept by a
 /// TOLERANT update so that a tie is settled by the search's canonical order rather than by the last

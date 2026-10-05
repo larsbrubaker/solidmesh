@@ -4,8 +4,10 @@
 //! (`ChainField.EndClip.cs`, `.EndRay.cs`, `.Mitre.cs`, `.Queries.cs`, `.SmoothJointSpans.cs`,
 //! `.Swallow.cs`); the nested records live in the Rust files of the partials that declare them.
 //! Here too: the closest-point closed forms on a segment and a triangle, the smooth-joint test and
-//! the sharp-joint finder. Construction, the queries and the `ChainDistanceField` impl land with
-//! their method packages.
+//! the sharp-joint finder, and the readings along the chain - where a parameter stands
+//! ([`ChainField::locate_on_chain`]), the point and setback there, the sharp joints found once -
+//! and the exact point query ([`ChainField::evaluate`]). Construction, the other queries and the
+//! `ChainDistanceField` impl land with their method packages.
 
 use std::cell::OnceCell;
 use std::collections::HashSet;
@@ -13,7 +15,11 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{ChainFieldEndClip, ChainFieldExtension, EndRayBound, SegmentNode};
+use super::chain_field_nearest::ChainFieldNearest;
+use super::{
+    ChainFieldEndClip, ChainFieldExtension, EndRayBound, FieldCounters, FieldSample, LevelLineWork,
+    SegmentNode, WorkError,
+};
 
 /// The greatest end plane's reading at a point, as the convex cell bound takes it (C#
 /// `Func<int, Vector3, double>`: chain index, point).
@@ -301,5 +307,87 @@ impl Drop for ChainFieldSmoothJointsScope {
     fn drop(&mut self) {
         let previous = self.previous.take();
         SMOOTH_JOINTS_IN_SCOPE.with(|slot| *slot.borrow_mut() = previous);
+    }
+}
+
+impl ChainField {
+    /// C# `ChainField.SetbackAt`: the setback asked at a chain parameter - linear along each chain
+    /// segment between the setbacks of its two points, so it is continuous everywhere, including
+    /// round a closed chain's wrap.
+    pub fn setback_at(&self, parameter: f64) -> f64 {
+        let (segment, t) = self.locate_on_chain(parameter);
+        let from = self.setbacks[segment];
+        let to = self.setbacks[(segment + 1) % self.points.len()];
+        from + ((to - from) * t)
+    }
+
+    /// C# `ChainField.PointAt`: the point of the chain at a chain parameter.
+    pub fn point_at(&self, parameter: f64) -> Vector3 {
+        let (segment, t) = self.locate_on_chain(parameter);
+        let from = self.points[segment];
+        let to = self.points[(segment + 1) % self.points.len()];
+        from + ((to - from) * t)
+    }
+
+    /// C# `ChainField.Evaluate`: the exact nearest point of the chain to `point`, over every
+    /// segment, with ties broken by the lower parameter (see the type's remarks for why that rule
+    /// is a rule), clipped by the chain's bounded end planes. Charges one unit of work.
+    #[track_caller]
+    pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
+        FieldCounters::with(|t| t.evaluate += 1);
+        FieldCounters::note_evaluate();
+        LevelLineWork::charge(1)?;
+        if FieldCounters::count_by_site() {
+            FieldCounters::note_site();
+        }
+
+        let mut found = ChainFieldNearest::start(self.points[0]);
+        self.visit_nearest(0, point, &mut found);
+
+        let sample = FieldSample {
+            distance: found.distance,
+            parameter: self.across_smooth_joints(found.parameter, point),
+            value: found.best,
+            nearest: found.nearest,
+            ..FieldSample::default()
+        };
+        Ok(self.clipped(point, sample))
+    }
+
+    /// C# `ChainField.SharpJoints`: the chain's joints sharper than its bend threshold, each as
+    /// its parameter and the setback asked there, in parameter order; found once.
+    pub fn sharp_joints(&self) -> &[(f64, f64)] {
+        self.sharp_joints.get_or_init(|| self.find_sharp_joints())
+    }
+
+    /// C# `ChainField.LocateOnChain`: the segment a chain parameter falls on and how far along it
+    /// (0..1). A closed chain wraps the parameter round its loop; an open one is held to its ends.
+    /// The parameter is first read back from the smooth-joint spans onto the chain.
+    pub fn locate_on_chain(&self, parameter: f64) -> (usize, f64) {
+        let mut parameter = self.on_the_chain_from_spans(parameter);
+        let segment_count = self.segment_count();
+
+        if self.is_closed {
+            parameter -= (parameter / self.length).floor() * self.length;
+        } else if parameter <= 0.0 {
+            return (0, 0.0);
+        } else if parameter >= self.length {
+            return ((segment_count - 1) as usize, 1.0);
+        }
+
+        // Tens of segments: a walk reads more plainly than a binary search and costs no more.
+        for i in (0..segment_count as usize).rev() {
+            if parameter >= self.parameter_at_point[i] {
+                let segment_length = self.parameter_at_point[i + 1] - self.parameter_at_point[i];
+                let t = if segment_length > 0.0 {
+                    (parameter - self.parameter_at_point[i]) / segment_length
+                } else {
+                    0.0
+                };
+                return (i, t);
+            }
+        }
+
+        (0, 0.0)
     }
 }

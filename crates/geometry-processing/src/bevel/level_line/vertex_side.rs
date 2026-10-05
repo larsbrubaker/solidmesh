@@ -1,7 +1,8 @@
 //! Which side of the level line a mesh vertex stands on ([`VertexSide`]) and the per-vertex reading
 //! cache the construction shares ([`VertexFieldReading`]). Ports the types of
 //! `Bevel/LevelLine/VertexSide.cs` with the reading's constructor, its field, the side a value
-//! reads ([`VertexFieldReading::side_for`]) and the known cuts of a chain's or pick's bounded ends
+//! reads ([`VertexFieldReading::side_for`]), a point's value ([`VertexFieldReading::value_at_point`])
+//! and the known cuts of a chain's or pick's bounded ends
 //! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]); the
 //! reading's queries land with the refinement's method package.
 
@@ -146,6 +147,12 @@ impl VertexFieldReading {
         } else {
             false
         }
+    }
+
+    /// C# `VertexFieldReading.ValueAtPoint`: the field value at an arbitrary point - the same field
+    /// the vertices are read from.
+    pub fn value_at_point(&self, point: Vector3) -> Result<f64, super::WorkError> {
+        self.field.value_at(point)
     }
 
     /// C# `VertexFieldReading.SideFor`: the side that a raw field value and a snap band say, with

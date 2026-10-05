@@ -2,7 +2,9 @@
 //! `Bevel/LevelLine/PickField.cs` with its construction ([`PickField::new`], refusing bad
 //! arguments with [`PickFieldArgumentError`] where C# throws), its member read-throughs and its
 //! end-plane reader ([`PickField::end_plane_reader`]) and whether an edge lies in a member's end
-//! plane ([`PickField::lies_in_an_end_plane`]); the queries and the `ChainDistanceField`
+//! plane ([`PickField::lies_in_an_end_plane`]), the point query ([`PickField::evaluate`]) and its
+//! readings, the bounded maximum queries and the field seam ([`ScalarField`], saying it is a
+//! pick's field); the least queries and the `ChainDistanceField`
 //! impl land with their method packages.
 
 use std::cell::OnceCell;
@@ -10,7 +12,12 @@ use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::{ChainField, ChainFieldEndPlaneReader};
+use super::bounded_maximum;
+use super::stopwatch;
+use super::{
+    ChainField, ChainFieldEndPlaneReader, FieldCounters, FieldKind, FieldMaximum, FieldSample,
+    LevelLineWork, ScalarField, WorkError,
+};
 
 /// C# `PickField`: one field over a GROUP of chains - the least value any of the group's chains
 /// reads, so a band that several picked loops share is cut once, in one pass, whatever order the
@@ -200,5 +207,242 @@ impl PickField {
         self.members
             .iter()
             .any(|&k| self.chains[k as usize].lies_in_an_end_plane(a, b))
+    }
+}
+
+/// C#'s `Enumerable.Min` over doubles: NaN where any value is NaN (an empty pick has none).
+fn linq_min(values: impl Iterator<Item = Result<f64, WorkError>>) -> Result<f64, WorkError> {
+    let mut least: Option<f64> = None;
+    for value in values {
+        let value = value?;
+        if value.is_nan() {
+            return Ok(f64::NAN);
+        }
+
+        if least.is_none_or(|l| value < l) {
+            least = Some(value);
+        }
+    }
+
+    // C# throws on an empty sequence; a pick always holds a member (`PickField::new` refuses none).
+    Ok(least.unwrap_or(f64::NAN))
+}
+
+impl PickField {
+    /// C# `PickField.Evaluate`: the least member reading at a point, named by the member chain
+    /// that gave it (see [`PickField::evaluate_members`]); timed under the meter.
+    pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
+        FieldCounters::with(|t| t.pick_evaluate += 1);
+        if FieldCounters::meter_on() {
+            // Timed around the reading rather than inside it so the meter-off path stays one bool
+            // read.
+            let reads_before = FieldCounters::with(|t| t.evaluate);
+            let started_at = stopwatch::get_timestamp();
+            let timed = self.evaluate_members(point)?;
+            let ticks = stopwatch::get_timestamp() - started_at;
+            FieldCounters::with(|t| {
+                t.pick_evaluate_ticks += ticks;
+                t.pick_member_reads += t.evaluate - reads_before;
+            });
+            return Ok(timed);
+        }
+
+        self.evaluate_members(point)
+    }
+
+    /// C# `PickField.EvaluateMembers`: the least reading over the members, a member that cannot
+    /// reach below the best so far skipped unread, and a later member taking over only by beating
+    /// the best by more than a relative tie - so a tie goes to the lower member index.
+    pub fn evaluate_members(&self, point: Vector3) -> Result<FieldSample, WorkError> {
+        let mut best = FieldSample::default();
+        let mut have = false;
+        for &k in &self.members {
+            let chain = &self.chains[k as usize];
+            if have && chain.nothing_reaches_below(point, point, best.value) {
+                continue;
+            }
+
+            let sample = chain.evaluate(point)?;
+            if !have || sample.value < best.value - (Self::TIE_RELATIVE * (1.0 + best.value.abs()))
+            {
+                best = FieldSample { chain: k, ..sample };
+                have = true;
+            }
+        }
+
+        Ok(best)
+    }
+
+    /// C# `PickField.ValueAcrossTheKnownCut`: the least of the members'
+    /// [`ChainField::value_across_the_known_cut`] readings.
+    pub fn value_across_the_known_cut(&self, point: Vector3) -> Result<f64, WorkError> {
+        linq_min(
+            self.members
+                .iter()
+                .map(|&k| self.chains[k as usize].value_across_the_known_cut(point)),
+        )
+    }
+
+    /// C# `PickField.ValueInTheEndPlane`: the least member reading along an edge a-b lying in an
+    /// end plane: unclipped for a member whose end plane the edge lies in, across the known cut for
+    /// the rest.
+    pub fn value_in_the_end_plane(
+        &self,
+        point: Vector3,
+        a: Vector3,
+        b: Vector3,
+    ) -> Result<f64, WorkError> {
+        linq_min(self.members.iter().map(|&k| {
+            let chain = &self.chains[k as usize];
+            if chain.lies_in_an_end_plane(a, b) {
+                chain.value_in_the_end_plane(point)
+            } else {
+                chain.value_across_the_known_cut(point)
+            }
+        }))
+    }
+
+    /// C# `PickField.SetbackOf`: the setback the sample's own chain asks at its parameter.
+    pub fn setback_of(&self, sample: &FieldSample) -> f64 {
+        self.chains[sample.chain as usize].setback_at(sample.parameter)
+    }
+
+    /// C# `PickField.MaxAlongSegment(a, b, tolerance)`: the greatest pick value along a segment.
+    pub fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.max_along_segment_at_least(a, b, tolerance, f64::NEG_INFINITY)
+    }
+
+    /// C# `PickField.MaxAlongSegment(a, b, tolerance, atLeast)`: as the chain's, over the pick.
+    pub fn max_along_segment_at_least(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        FieldCounters::with(|t| t.max_along += 1);
+        LevelLineWork::charge(1)?;
+        let reader = self.end_plane_reader();
+        bounded_maximum::over_segment(
+            &|p| self.evaluate(p),
+            a,
+            b,
+            tolerance,
+            at_least,
+            reader.as_deref(),
+        )
+    }
+
+    /// C# `PickField.MaxOverTriangle(a, b, c, tolerance)`: the greatest pick value over a triangle.
+    pub fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.max_over_triangle_bounded(a, b, c, tolerance, f64::INFINITY, f64::NEG_INFINITY)
+    }
+
+    /// C# `PickField.MaxOverTriangle(a, b, c, tolerance, stopAbove, atLeast)`: as the chain's, over
+    /// the pick.
+    pub fn max_over_triangle_bounded(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        FieldCounters::with(|t| t.max_tri += 1);
+        LevelLineWork::charge(1)?;
+        let reader = self.end_plane_reader();
+        bounded_maximum::over_triangle(
+            &|p| self.evaluate(p),
+            a,
+            b,
+            c,
+            tolerance,
+            stop_above,
+            at_least,
+            None,
+            reader.as_deref(),
+        )
+    }
+
+    /// C# `PickField.IslandPeak`: the island rule's search over the pick, sharpened by the member
+    /// chains' segment cell bounds ([`PickField::segment_cell_bound`]).
+    pub fn island_peak(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        snap: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        FieldCounters::with(|t| t.max_tri += 1);
+        LevelLineWork::charge(1)?;
+        let reader = self.end_plane_reader();
+        bounded_maximum::island_peak(
+            &|p| self.evaluate(p),
+            a,
+            b,
+            c,
+            tolerance,
+            snap,
+            Some(&|s0, s1, s2, v0, v1, v2| self.segment_cell_bound(s0, s1, s2, v0, v1, v2)),
+            reader.as_deref(),
+        )
+    }
+
+    /// C# `PickField.SegmentCellBound`: the least of the segment cell bounds of the (distinct)
+    /// chains the three corner samples name, each read from that chain's own samples.
+    pub fn segment_cell_bound(
+        &self,
+        s0: &FieldSample,
+        s1: &FieldSample,
+        s2: &FieldSample,
+        v0: Vector3,
+        v1: Vector3,
+        v2: Vector3,
+    ) -> Result<f64, WorkError> {
+        let chain = |k: i32| &self.chains[k as usize];
+        let mut bound = chain(s0.chain).segment_cell_bound(s0.chain, s0, s1, s2, v0, v1, v2)?;
+        if s1.chain != s0.chain {
+            bound = cs_math::min_f64(
+                bound,
+                chain(s1.chain).segment_cell_bound(s1.chain, s0, s1, s2, v0, v1, v2)?,
+            );
+        }
+
+        if s2.chain != s0.chain && s2.chain != s1.chain {
+            bound = cs_math::min_f64(
+                bound,
+                chain(s2.chain).segment_cell_bound(s2.chain, s0, s1, s2, v0, v1, v2)?,
+            );
+        }
+
+        Ok(bound)
+    }
+}
+
+impl ScalarField for PickField {
+    /// C# `PickField.ValueAt`: [`PickField::evaluate`]'s value.
+    fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
+        Ok(self.evaluate(point)?.value)
+    }
+
+    fn kind(&self) -> FieldKind {
+        FieldKind::PickField
+    }
+
+    fn as_pick_field(&self) -> Option<&PickField> {
+        Some(self)
     }
 }

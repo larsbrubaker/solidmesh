@@ -29,6 +29,8 @@ mod fillet_arc_seam_row_tests;
 mod flat_hole_fill_tests;
 #[path = "bevel/hole_fill_tests.rs"]
 mod hole_fill_tests;
+#[path = "bevel/island_split_order_tests.rs"]
+mod island_split_order_tests;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
@@ -77,6 +79,10 @@ mod rust_only_bevel_r1p14_roll_tests;
 mod rust_only_bevel_r1p14_tests;
 #[path = "bevel/rust_only_bevel_r1p15_tests.rs"]
 mod rust_only_bevel_r1p15_tests;
+#[path = "bevel/rust_only_bevel_r2p02_field_tests.rs"]
+mod rust_only_bevel_r2p02_field_tests;
+#[path = "bevel/rust_only_bevel_r2p02_tests.rs"]
+mod rust_only_bevel_r2p02_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]

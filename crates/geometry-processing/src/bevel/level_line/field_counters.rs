@@ -1,9 +1,11 @@
 //! How many of each query a level-line build asked, by the refinement rule that asked it. Ports
 //! `Bevel/LevelLine/FieldCounters.cs`: the rules ([`LevelLineRule`]), the per-thread tally
 //! ([`FieldCounterTally`], C#'s `[ThreadStatic]` fields in one `thread_local!`), the two
-//! process-wide switches and the counting methods of the static class ([`FieldCounters`]). The
-//! rule, bucket and reach reports, the rule tallies the refinement charges (`Fired`, `NoteStep`,
-//! `AskedBy`, ...) and `Reset` land with later packages as further `impl` blocks.
+//! process-wide switches and the counting methods of the static class ([`FieldCounters`]), with the
+//! bounded searches' step and root-cell tallies ([`FieldCounters::note_step`],
+//! [`FieldCounters::note_root_cell`]). The rule, bucket and reach reports, the rule tallies the
+//! refinement charges (`Fired`, `AskedBy`, ...) and `Reset` land with later packages as further
+//! `impl` blocks.
 //!
 //! Counted PER THREAD. The kernel never forks a build, so a thread's tally is exactly one caller's
 //! build - where one process-wide tally would count whatever build is running BESIDE it, which is
@@ -238,6 +240,63 @@ impl FieldCounters {
         Self::with(|t| {
             t.needles_left_alone += 1;
             t.needles_on_a_chain_edge += 1;
+        });
+    }
+
+    /// C# `FieldCounters.NoteStep`: one subdivision step of a bounded search, at the depth it
+    /// stands - charged to the running rule, its span bucket and its two reach bands.
+    pub fn note_step(depth: i32) {
+        if !Self::meter_on() {
+            return;
+        }
+
+        Self::with(|t| {
+            let rule = t.current_rule as usize;
+            rows(&mut t.steps)[rule] += 1;
+            let deep = rows(&mut t.deepest);
+            if depth > deep[rule] {
+                deep[rule] = depth;
+            }
+
+            let reaches = Self::reaches() as usize;
+            reach(&mut t.near_steps)[(rule * reaches) + t.near_reach as usize] += 1;
+            reach(&mut t.far_steps)[(rule * reaches) + t.far_reach as usize] += 1;
+
+            let cell = (rule * Self::buckets() as usize) + t.current_bucket as usize;
+            cells(&mut t.bucket_steps)[cell] += 1;
+            let deepest = cells(&mut t.bucket_deepest);
+            if depth > deepest[cell] {
+                deepest[cell] = depth;
+            }
+        });
+    }
+
+    /// C# `FieldCounters.NoteRootCell`: the root cell of one bounded triangle search, read for the
+    /// "no search needed" question: whether the three corners all take their value from the SAME
+    /// chain, whether the convex bound alone proves the greatest value over the triangle stands at
+    /// a corner, and whether the search's own first step retired the triangle anyway - which is
+    /// what says how much a skip could still save.
+    pub fn note_root_cell(same_chain: bool, corner_max_proven: bool, retired_at_the_root: bool) {
+        Self::with(|t| {
+            let rule = t.current_rule as usize;
+            rows(&mut t.root_cells)[rule] += 1;
+            if same_chain {
+                rows(&mut t.root_same_chain)[rule] += 1;
+            }
+
+            if corner_max_proven {
+                rows(&mut t.root_corner_max)[rule] += 1;
+                if same_chain {
+                    rows(&mut t.root_both)[rule] += 1;
+                    if !retired_at_the_root {
+                        rows(&mut t.root_both_and_searched)[rule] += 1;
+                    }
+                }
+            }
+
+            if retired_at_the_root {
+                rows(&mut t.root_retired)[rule] += 1;
+            }
         });
     }
 

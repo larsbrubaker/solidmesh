@@ -1,12 +1,15 @@
 //! The one field a room reading asks ([`RoomField`]): a single chain's, or a side group's
 //! [`PickField`] over several. Ports the type of `Bevel/LevelLine/RoomField.cs` with its
-//! constructors, setback readings and the conversion from a chain's field; its field readings land
-//! with the room-reading method package.
+//! constructors, setback readings, the conversion from a chain's field and its field readings
+//! ([`RoomField::evaluate`], [`RoomField::setback_of`], [`RoomField::max_over_triangle`]); the
+//! swallow scale lands with its method package.
 
 use std::rc::Rc;
 
+use vector_math::Vector3;
+
 use super::chain_setback;
-use super::{ChainField, PickField};
+use super::{ChainField, FieldMaximum, FieldSample, PickField, WorkError};
 
 /// C# `RoomField`: the one field a room reading asks - a single chain's, or a side group's
 /// [`PickField`] over several. Only what the self-room reading needs, so a group's side is read by
@@ -53,6 +56,52 @@ impl RoomField {
             (Some(one), _) => one.max_setback,
             (None, Some(several)) => several.max_setback,
             (None, None) => panic!("a room field holds a chain's or a group's field"),
+        }
+    }
+
+    /// The chain's or the group's field, whichever this holds. Panics on an empty room field, as
+    /// [`RoomField::min_setback`] does.
+    fn either(&self) -> Result<&Rc<ChainField>, &Rc<PickField>> {
+        match (&self.one, &self.several) {
+            (Some(one), _) => Ok(one),
+            (None, Some(several)) => Err(several),
+            (None, None) => panic!("a room field holds a chain's or a group's field"),
+        }
+    }
+
+    /// C# `RoomField.Evaluate`: the point query of whichever field this holds.
+    pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
+        match self.either() {
+            Ok(one) => one.evaluate(point),
+            Err(several) => several.evaluate(point),
+        }
+    }
+
+    /// C# `RoomField.SetbackOf`: the setback a sample stands at - the MINIMISING chain's, where
+    /// several are read.
+    pub fn setback_of(&self, sample: &FieldSample) -> f64 {
+        match self.either() {
+            Ok(one) => one.setback_at(sample.parameter),
+            Err(several) => several.setback_of(sample),
+        }
+    }
+
+    /// C# `RoomField.MaxOverTriangle`: the bounded maximum over a triangle of whichever field this
+    /// holds.
+    pub fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        match self.either() {
+            Ok(one) => one.max_over_triangle_bounded(a, b, c, tolerance, stop_above, at_least),
+            Err(several) => {
+                several.max_over_triangle_bounded(a, b, c, tolerance, stop_above, at_least)
+            }
         }
     }
 

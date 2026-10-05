@@ -1,6 +1,7 @@
 //! The END RAY's bound ([`EndRayBound`]), from `Bevel/LevelLine/ChainField.EndRay.cs`: an open
 //! chain's line carried on past an end whose end face is oblique to the chain. The ray's reading
-//! and the `ChainField` methods of that partial land with their method package.
+//! and the other `ChainField` methods of that partial land with their method package; the point
+//! carried on along the ray is here ([`super::ChainField::point_on_the_ray`]).
 //!
 //! The plain field clamps its parameter at an open chain's end, and the clamp is the end vertex's
 //! ball, so a rail that runs past the end vertex curls round it on its side face - the rounded
@@ -50,5 +51,30 @@ impl Default for EndRayBound {
             same_sense: false,
             crease_room: f64::INFINITY,
         }
+    }
+}
+
+impl super::ChainField {
+    /// C# `ChainField.PointOnTheRay`: the chain's point at `parameter`, carried on along the END
+    /// RAY past an end that has one; clamped to the chain as [`super::ChainField::point_at`] is
+    /// past an end that has none. Returns the parameter the point stands at (the clamped one where
+    /// there is no ray) and the point.
+    pub fn point_on_the_ray(&self, parameter: f64) -> (f64, Vector3) {
+        let n = self.points.len();
+        if parameter < 0.0 && self.end_rays.0 {
+            let point =
+                self.points[0] + ((self.points[0] - self.points[1]).get_normal() * -parameter);
+            return (parameter, point);
+        }
+
+        if parameter > self.length && self.end_rays.1 {
+            let point = self.points[n - 1]
+                + ((self.points[n - 1] - self.points[n - 2]).get_normal()
+                    * (parameter - self.length));
+            return (parameter, point);
+        }
+
+        let clamped = parameter.clamp(0.0, self.length);
+        (clamped, self.point_at(clamped))
     }
 }
