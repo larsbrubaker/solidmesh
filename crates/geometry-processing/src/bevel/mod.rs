@@ -33,8 +33,9 @@
 //! methods: the bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]), the cap clip
 //! ([`bevel_cap_clip`]), a run's end treatment ([`BevelChainEnds`]), the sweep's chains, sections
 //! and segments ([`BevelSweptChain`], [`BevelSweptSection`], [`bevel_chain_sweep_mesh`]), the
-//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]), the run-out bound
-//! ([`BevelRunOutBound`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
+//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]), the face-width check
+//! ([`BevelFaceFit`]), the run-out and its bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the
+//! partnered bead's run, ends and stations ([`bevel_partnered_bead`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
 //! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
 //! ([`bevel_t_vertex_slivers`]) and the working mesh's verdict cache ([`bevel_working_mesh`]).
 //! C# `internal static class` helpers are modules of free functions here.
@@ -60,6 +61,7 @@ pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
+pub mod bevel_face_fit;
 pub mod bevel_face_run_out;
 mod bevel_group_result;
 pub mod bevel_interrupted_crease;
@@ -69,6 +71,7 @@ mod bevel_mixed_corner_ends;
 pub mod bevel_pair_corner_crease;
 pub mod bevel_pair_corner_reach;
 mod bevel_partner_tube;
+pub mod bevel_partnered_bead;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
@@ -98,7 +101,8 @@ pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_corner_patch::{BevelCornerPatch, BevelCornerPatchSet};
 pub use bevel_end_cap::BevelEndCap;
-pub use bevel_face_run_out::BevelRunOutBound;
+pub use bevel_face_fit::{BevelFaceFit, BevelFaceFitEndCaps};
+pub use bevel_face_run_out::{BevelFaceRunOut, BevelRunOutBound};
 pub use bevel_group_result::{
     bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
 };

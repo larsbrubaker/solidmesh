@@ -38,12 +38,14 @@
 //! corner ([`SurfaceCornerPatchArrival`], [`SurfaceMixedJunctionPatchArrival`],
 //! [`SurfaceTwoCreaseJunctionPatchEndRing`], [`SurfaceTwoCreaseJunctionWallCrossing`]); and the
 //! bite's shared sides ([`SurfaceBiteSharedSides`]) and the splits along a stretch
-//! ([`SurfaceSplitsOnASegment`]). These land as type definitions; their methods, and the
+//! ([`SurfaceSplitsOnASegment`]); and the chain's plan itself ([`SurfaceBevelPlan`]) with what it
+//! was drawn from ([`SurfacePlanRecipe`]). These land as type definitions; their methods, and the
 //! construction itself, land in later slices.
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
 pub mod surface_band_runs_off_the_face_beyond;
+mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
@@ -70,6 +72,7 @@ mod surface_mixed_corner_spine;
 mod surface_mixed_corner_wall;
 mod surface_mixed_junction;
 mod surface_mixed_junction_patch;
+mod surface_plan_recipe;
 mod surface_region_face_grid;
 pub mod surface_ring;
 mod surface_roll_across_the_wall;
@@ -99,6 +102,7 @@ mod surface_wall_section;
 
 pub use surface_band_end::SurfaceBandEnd;
 pub use surface_band_runs_off_over_a_stretch::SurfaceBandRunsOffOverAStretch;
+pub use surface_bevel_plan::SurfaceBevelPlan;
 pub use surface_bevel_planless_loop::SurfaceBevelPlanlessLoop;
 pub use surface_bite_shared_sides::SurfaceBiteSharedSides;
 pub use surface_chain_end_reading::{SurfaceChainEndReading, SurfaceChainEndReadingMemos};
@@ -125,6 +129,7 @@ pub use surface_mixed_junction::{
     SurfaceMixedJunctionChainEnd,
 };
 pub use surface_mixed_junction_patch::SurfaceMixedJunctionPatchArrival;
+pub use surface_plan_recipe::SurfacePlanRecipe;
 pub use surface_region_face_grid::{nearest_on_the_triangle, SurfaceRegionFaceGrid};
 pub use surface_roll_across_the_wall::{
     SurfaceRollAcrossTheWallLanding, SurfaceRollAcrossTheWallSides, SurfaceRollReading,

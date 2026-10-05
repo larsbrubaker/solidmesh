@@ -13,6 +13,8 @@ use geometry_processing::topology::{BevelSelectionKind, FaceGroup, FeatureEdgeSe
 use indexmap::IndexSet;
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
+use std::rc::Rc;
+use std::sync::Arc;
 use vector_math::Vector3;
 
 fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
@@ -183,11 +185,11 @@ fn rust_only_a_cube_labels_six_surfaces_once_per_tolerance() {
 
 #[test]
 fn rust_only_a_walk_across_a_cube_face_stops_at_the_opposite_crease() {
-    let cube = platonic_solids::create_cube(20.0, 20.0, 20.0);
-    let graph = cube.get_mesh_edge_graph();
+    let cube = Arc::new(platonic_solids::create_cube(20.0, 20.0, 20.0));
+    let graph = Rc::new(cube.get_mesh_edge_graph());
     let features = FeatureEdgeSet::create(&cube);
     let surface_edges: IndexSet<i32> = features.edges().iter().map(|e| e.mesh_edge_index).collect();
-    let walk = BevelSurfaceWalk::new(&cube, &graph, &surface_edges);
+    let walk = BevelSurfaceWalk::new(cube.clone(), graph.clone(), Rc::new(surface_edges));
 
     // A top edge running along x at y = -10.
     let edge = *features

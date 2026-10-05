@@ -8,6 +8,8 @@
 //! still one surface" is a reading the caller takes at its own tolerance.
 
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use indexmap::IndexSet;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -38,14 +40,17 @@ pub struct SurfaceWalkStop {
     pub stopped_in_face: i32,
 }
 
-/// C# `BevelSurfaceWalk`.
-pub struct BevelSurfaceWalk<'a> {
-    mesh: &'a Mesh,
-    graph: &'a MeshEdgeGraph,
+/// C# `BevelSurfaceWalk`. Holds its mesh, graph and stopping edges through shared handles so a
+/// type can own its walk as the C# does (`BevelFaceFit`, `BevelFaceRunOut`); the walk only reads
+/// them.
+#[derive(Debug)]
+pub struct BevelSurfaceWalk {
+    mesh: Arc<Mesh>,
+    graph: Rc<MeshEdgeGraph>,
     // Which mesh edges end a face, by mesh edge index, at the caller's own tolerance. An ordered
     // set: C# hands in a `HashSet<int>` whose iteration (insertion) order decides ties in
     // `try_blocking_edge_at` through `surface_edges_at_vertex`.
-    surface_edges: &'a IndexSet<i32>,
+    surface_edges: Rc<IndexSet<i32>>,
     // The vertex pair a triangle side is, to the edge index the graph knows it by. The walk
     // crosses sides and has to ask the graph what is on the other one. Only looked up.
     edges_by_vertex_pair: HashMap<(i32, i32), i32>,
@@ -55,9 +60,13 @@ pub struct BevelSurfaceWalk<'a> {
     surface_edges_at_vertex: HashMap<i32, Vec<i32>>,
 }
 
-impl<'a> BevelSurfaceWalk<'a> {
+impl BevelSurfaceWalk {
     /// A walker over `mesh` (with its own edge graph) that stops at `surface_edges`.
-    pub fn new(mesh: &'a Mesh, graph: &'a MeshEdgeGraph, surface_edges: &'a IndexSet<i32>) -> Self {
+    pub fn new(
+        mesh: Arc<Mesh>,
+        graph: Rc<MeshEdgeGraph>,
+        surface_edges: Rc<IndexSet<i32>>,
+    ) -> Self {
         let mut edges_by_vertex_pair = HashMap::with_capacity(graph.edge_count().max(0) as usize);
 
         for edge_index in 0..graph.edge_count() {
@@ -69,7 +78,7 @@ impl<'a> BevelSurfaceWalk<'a> {
 
         let mut surface_edges_at_vertex: HashMap<i32, Vec<i32>> = HashMap::new();
 
-        for &edge_index in surface_edges {
+        for &edge_index in surface_edges.iter() {
             for vertex in [graph.get_vertex0(edge_index), graph.get_vertex1(edge_index)] {
                 surface_edges_at_vertex
                     .entry(vertex)
