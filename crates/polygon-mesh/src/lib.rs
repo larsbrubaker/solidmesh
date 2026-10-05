@@ -3,13 +3,15 @@
 //! Phase 2a, the Mesh core: [`Mesh`] (f32 vertices, indexed [`Face`]s with normals; welding,
 //! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`],
 //! [`MeshEdge`], [`VertexFaceList`]), volume and area (`mesh_measure`), the vertex sorters,
-//! the Platonic solids and STL read/write (`processors`).
+//! the Platonic solids and STL read/write (`processors`). Phase 2b adds the booleans (`csg`),
+//! which run on manifold-rust.
 //!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
 
 pub mod cancel;
+pub mod csg;
 mod face;
 mod mesh;
 mod mesh_edge_graph;
