@@ -5,12 +5,15 @@
 //! Polygon mode runs on manifold-rust, the one and only boolean kernel (`manifold_kernel`).
 //! There is no second engine behind it: an input the kernel cannot take is an error the caller
 //! sees, not geometry built by different rules. The implicit-surface processing modes
-//! (`ProcessingModes.Marching_Cubes`/`Dual_Contouring`, which resample the operands through g3
-//! implicits) come with the Sdf/DualContouring slice; every call here is polygon mode.
+//! ([`super::ProcessingModes`], chosen in [`BooleanOptions`]) resample the operands as implicit
+//! surfaces instead (`implicit_boolean`); they never fail.
 
 use vector_math::Matrix4X4;
 
-use super::{manifold_import, manifold_kernel, BooleanError, BooleanOptions, CsgModes};
+use super::{
+    implicit_boolean, manifold_import, manifold_kernel, BooleanError, BooleanOptions, CsgModes,
+    ProcessingModes,
+};
 use crate::{CancelToken, Mesh};
 
 /// What the kernel makes of a mesh offered to it as a boolean operand (C#
@@ -33,13 +36,24 @@ pub fn do_array(
     cancel: &CancelToken,
     options: &BooleanOptions,
 ) -> Result<Mesh, BooleanError> {
+    if options.processing_mode != ProcessingModes::Polygons {
+        return Ok(implicit_boolean::as_implicit_meshes(
+            items,
+            operation,
+            options.processing_mode,
+            options.input_resolution,
+            options.output_resolution,
+        ));
+    }
     // Every input goes to the kernel, and whatever it says is the answer: no manifold pre-gate
     // (the robust import plus the Auto engine handle closed non-manifold geometry) and no
     // fallback (a mesh the kernel refused is better reported than silently replaced).
     manifold_kernel::run_boolean(items, operation, cancel, options)
 }
 
-/// The two-operand spelling of [`do_array`].
+/// The two-operand spelling of [`do_array`]. In an implicit mode it meshes with plain marching
+/// cubes whichever implicit mode is asked for, as C# `Do` does, and an operand with fewer than
+/// four faces gives back the other operand.
 pub fn do_boolean(
     mesh_a: &Mesh,
     matrix_a: Matrix4X4,
@@ -49,6 +63,17 @@ pub fn do_boolean(
     cancel: &CancelToken,
     options: &BooleanOptions,
 ) -> Result<Mesh, BooleanError> {
+    if options.processing_mode != ProcessingModes::Polygons {
+        return Ok(implicit_boolean::two_operand_implicit(
+            mesh_a,
+            matrix_a,
+            mesh_b,
+            matrix_b,
+            operation,
+            options.input_resolution,
+            options.output_resolution,
+        ));
+    }
     do_array(
         &[(mesh_a, matrix_a), (mesh_b, matrix_b)],
         operation,

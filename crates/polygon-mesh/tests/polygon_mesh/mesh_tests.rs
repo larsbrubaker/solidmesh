@@ -1,14 +1,13 @@
 //! Port of `Agg.PolygonMesh/MeshTests.cs`: STL parsing, face cut lines, face splitting, the
 //! face BSP tree, slicing and stitching on clipper polygons, and the dual contouring signed
-//! distance functions. `CreateDualContouringCube` waits on the DualContouring octree (listed in
-//! `docs/PORTING_PLAN.md`).
+//! distance functions and dual contouring a box (`CreateDualContouringCube`).
 
 use agg_path::clipper_library::{
     create_from_string, ClipperError, Intersection, PolygonExtensions,
 };
 use clipper2_rust::Point64;
 use polygon_mesh::csg::{path_stitcher, slice_layer};
-use polygon_mesh::dual_contouring::{Cylinder, Sdf};
+use polygon_mesh::dual_contouring::{build_octree, generate_mesh_from_octree, Cylinder, Sdf};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::{CancelToken, Face, Mesh};
@@ -400,4 +399,47 @@ fn get_slice_loop() -> Result<(), ClipperError> {
         assert_eq!(union.len(), 1);
     }
     Ok(())
+}
+
+#[test]
+fn create_dual_contouring_cube() {
+    for size in [1.0, 15.0, 200.0] {
+        for iterations in [2, 3, 4, 5, 6, 7] {
+            // Apply dual contouring to a box shape and validate that the generated mesh is a cube.
+            let shape = polygon_mesh::dual_contouring::Box::new(Vector3::new(size, size, size));
+
+            let mut bounds = shape.bounds();
+            bounds.expand(0.1);
+
+            let sdf = |p: Vector3| shape.sdf(p);
+            let octree = build_octree(&sdf, bounds.min_xyz, bounds.size(), iterations, 0.001);
+            let mesh = generate_mesh_from_octree(&octree);
+
+            assert_eq!(mesh.faces.len(), 12, "size {size} iterations {iterations}");
+            assert_eq!(
+                mesh.vertices.len(),
+                8,
+                "size {size} iterations {iterations}"
+            );
+
+            // C# orders by X, then Y, then Z (a stable sort).
+            let sorted = |mut v: Vec<Vector3Float>| {
+                v.sort_by(|a, b| {
+                    a.x.partial_cmp(&b.x)
+                        .unwrap()
+                        .then(a.y.partial_cmp(&b.y).unwrap())
+                        .then(a.z.partial_cmp(&b.z).unwrap())
+                });
+                v
+            };
+            let expected = sorted(platonic_solids::create_cube(size, size, size).vertices);
+            let actual = sorted(mesh.vertices.clone());
+            for (expected, actual) in expected.iter().zip(actual.iter()) {
+                assert!(
+                    (*expected - *actual).length() < 1e-6,
+                    "size {size} iterations {iterations}: {expected:?} vs {actual:?}"
+                );
+            }
+        }
+    }
 }

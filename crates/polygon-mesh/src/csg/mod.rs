@@ -10,8 +10,10 @@
 //! window. This module holds the types they share: the operation, the failures and the
 //! progress callback.
 //!
-//! Not yet here: the implicit-surface processing modes (`Marching_Cubes`, `Dual_Contouring`,
-//! g3 implicits, Phase 2e), face-colour tracking through the run data (Phase 2f), the async
+//! The implicit-surface processing modes ([`ProcessingModes::MarchingCubes`],
+//! [`ProcessingModes::DualContouring`]) resample the operands instead (`implicit_boolean`).
+//!
+//! Not yet here: face-colour tracking through the run data (Phase 2f), the async
 //! yielding entry points and the Minkowski runs (`minkowski_processing` has only the shell
 //! orientation and the ball so far). [`slice_layer`] cuts a mesh into integer polygons and
 //! [`path_stitcher`] walls polygon loops back into a mesh.
@@ -20,6 +22,7 @@ pub mod boolean_processing;
 mod boolean_progress_adapter;
 mod consistent_winding;
 pub mod csg_operations;
+mod implicit_boolean;
 mod manifold_cancellable_boolean;
 mod manifold_import;
 mod manifold_kernel;
@@ -48,6 +51,43 @@ pub enum CsgModes {
     Intersect,
 }
 
+/// C# `ProcessingModes`: how a boolean is computed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum ProcessingModes {
+    /// "Default CSG processing": the exact polygon kernel (manifold-rust).
+    #[default]
+    Polygons,
+    /// "Experimental Marching Cubes": the operands resampled as signed distance grids and the
+    /// result meshed with marching cubes.
+    MarchingCubes,
+    /// "Experimental Dual Contouring": the operands resampled as signed distance grids and the
+    /// result meshed with octree dual contouring.
+    DualContouring,
+}
+
+/// C# `ProcessingResolution`: the grid resolution of the implicit modes. The value is the
+/// exponent (`_64 = 6`); the cell count across the largest dimension is `1 << value`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum ProcessingResolution {
+    #[default]
+    R64 = 6,
+    R128 = 7,
+    R256 = 8,
+    R512 = 9,
+}
+
+impl ProcessingResolution {
+    /// C# `(int)resolution`: the exponent.
+    pub fn exponent(self) -> i32 {
+        self as i32
+    }
+
+    /// C# `1 << (int)resolution`: the cell count.
+    pub fn cells(self) -> i32 {
+        1 << self.exponent()
+    }
+}
+
 /// A progress sink: ratio done (0..1) and a status message (C# `Action<double, string>`).
 ///
 /// Shared and thread-safe because the kernel reports from inside the boolean, possibly from a
@@ -70,6 +110,13 @@ pub struct BooleanOptions {
     /// Rewind each operand's inside-out shells before combining - the alternative to
     /// `Nonzero`, fixing the data once instead of redefining "solid".
     pub repair_orientation: bool,
+    /// C# `processingMode`: polygons (the kernel) unless an implicit mode is asked for. The
+    /// implicit modes ignore the reporter, the cancel token, the winding rule and the repair.
+    pub processing_mode: ProcessingModes,
+    /// C# `inputResolution`: how finely the implicit modes sample each operand.
+    pub input_resolution: ProcessingResolution,
+    /// C# `outputResolution`: how finely the implicit modes mesh the result.
+    pub output_resolution: ProcessingResolution,
 }
 
 impl Default for BooleanOptions {
@@ -80,6 +127,9 @@ impl Default for BooleanOptions {
             ratio_completed: 0.0,
             winding_rule: WindingRule::Positive,
             repair_orientation: false,
+            processing_mode: ProcessingModes::Polygons,
+            input_resolution: ProcessingResolution::R64,
+            output_resolution: ProcessingResolution::R64,
         }
     }
 }
@@ -92,6 +142,9 @@ impl fmt::Debug for BooleanOptions {
             .field("ratio_completed", &self.ratio_completed)
             .field("winding_rule", &self.winding_rule)
             .field("repair_orientation", &self.repair_orientation)
+            .field("processing_mode", &self.processing_mode)
+            .field("input_resolution", &self.input_resolution)
+            .field("output_resolution", &self.output_resolution)
             .finish()
     }
 }

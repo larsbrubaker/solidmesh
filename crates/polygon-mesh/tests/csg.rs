@@ -4,5 +4,7 @@
 
 #[path = "csg/csg_tests.rs"]
 mod csg_tests;
+#[path = "csg/implicit_boolean_tests.rs"]
+mod implicit_boolean_tests;
 #[path = "csg/manifold_rust_backend_tests.rs"]
 mod manifold_rust_backend_tests;

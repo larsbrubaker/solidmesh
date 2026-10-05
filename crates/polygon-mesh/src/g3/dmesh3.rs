@@ -1,7 +1,8 @@
 //! The part of geometry3Sharp's `DMesh3` (`mesh/DMesh3.cs`) the signed distance grid reaches:
 //! appending vertices and triangles with g3's refusals, triangle corners, centroids and bounds,
-//! and the cached bounds. Plus agg-sharp's `MeshExtensions.ToDMesh3`, which builds one from a
-//! [`Mesh`], and g3's point-triangle distance (`MeshQueries.TriDistanceSqr` and
+//! and the cached bounds, and the `AxisAlignedBox3d` arithmetic the implicits and marching
+//! cubes use. Plus agg-sharp's `MeshExtensions.ToDMesh3` and `ToMesh`, which convert to and from
+//! a [`Mesh`], and g3's point-triangle distance (`MeshQueries.TriDistanceSqr` and
 //! `DistPoint3Triangle3.DistanceSqr`, which are the same computation).
 //!
 //! Nothing is ever removed, so triangle ids are dense (0..count in append order) and every
@@ -41,6 +42,62 @@ impl AxisAlignedBox3d {
         };
         let (dx, dy, dz) = (axis(0), axis(1), axis(2));
         dx * dx + dy * dy + dz * dz
+    }
+
+    /// C# `AxisAlignedBox3d.Empty`: inverted to the extremes, so any point grows it.
+    pub(crate) const EMPTY: AxisAlignedBox3d = AxisAlignedBox3d {
+        min: [f64::MAX; 3],
+        max: [f64::MIN; 3],
+    };
+
+    /// C# `Width` (never negative).
+    pub(crate) fn width(&self) -> f64 {
+        (self.max[0] - self.min[0]).max(0.0)
+    }
+
+    /// C# `Height` (never negative).
+    pub(crate) fn height(&self) -> f64 {
+        (self.max[1] - self.min[1]).max(0.0)
+    }
+
+    /// C# `Depth` (never negative).
+    pub(crate) fn depth(&self) -> f64 {
+        (self.max[2] - self.min[2]).max(0.0)
+    }
+
+    /// C# `MaxDim`.
+    pub(crate) fn max_dim(&self) -> f64 {
+        self.width().max(self.height().max(self.depth()))
+    }
+
+    /// C# `Expand(double)`: grows every side by `radius`.
+    pub(crate) fn expand(&mut self, radius: f64) {
+        for a in 0..3 {
+            self.min[a] -= radius;
+            self.max[a] += radius;
+        }
+    }
+
+    /// C# `Contain(AxisAlignedBox3d)`: grows to cover `other`.
+    pub(crate) fn contain(&mut self, other: &AxisAlignedBox3d) {
+        for a in 0..3 {
+            self.min[a] = self.min[a].min(other.min[a]);
+            self.max[a] = self.max[a].max(other.max[a]);
+        }
+    }
+
+    /// C# `Intersect(AxisAlignedBox3d)`: the overlap, or [`AxisAlignedBox3d::EMPTY`] when it
+    /// has no volume.
+    pub(crate) fn intersect(&self, other: &AxisAlignedBox3d) -> AxisAlignedBox3d {
+        let overlap = AxisAlignedBox3d {
+            min: std::array::from_fn(|a| self.min[a].max(other.min[a])),
+            max: std::array::from_fn(|a| self.max[a].min(other.max[a])),
+        };
+        if overlap.height() <= 0.0 || overlap.width() <= 0.0 || overlap.depth() <= 0.0 {
+            AxisAlignedBox3d::EMPTY
+        } else {
+            overlap
+        }
     }
 }
 
@@ -166,6 +223,22 @@ impl Mesh {
         }
         for face in self.faces.iter() {
             out.append_triangle(face.v0, face.v1, face.v2);
+        }
+        out
+    }
+}
+
+impl DMesh3 {
+    /// agg-sharp `MeshExtensions.ToMesh(DMesh3)`: every vertex, then every triangle, in id
+    /// order (ids are dense here, so the vertex map is the identity).
+    pub(crate) fn to_mesh(&self) -> Mesh {
+        let mut out = Mesh::new();
+        for v in &self.vertices {
+            out.vertices
+                .push(vector_math::Vector3Float::new(v[0], v[1], v[2]));
+        }
+        for t in &self.triangles {
+            out.faces.add(t[0], t[1], t[2], &out.vertices);
         }
         out
     }

@@ -3,7 +3,7 @@
 //! narrow-band signed distance field and the offset surfaces pulled from it.
 
 pub mod grid_marching_cubes;
-mod marching_cubes_tables;
+pub(crate) mod marching_cubes_tables;
 pub mod mesh_sdf_grid;
 
 pub use grid_marching_cubes::{extract, DenseGrid3f};
