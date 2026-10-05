@@ -57,6 +57,7 @@ mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
 pub mod surface_convex_bite;
 mod surface_corner_patch;
+pub mod surface_corner_patch_rows;
 mod surface_crossing_at_the_mitre;
 pub mod surface_cut_clip;
 mod surface_edge_plan;

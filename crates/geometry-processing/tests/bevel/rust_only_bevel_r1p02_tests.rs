@@ -5,18 +5,24 @@
 //! (`SurfaceSplitsOnASegment`), the rim sewing of a section given up
 //! (`SurfaceEndGivesUpTheSection.SewTheRim`) and the bite's side readings (`SurfaceBiteSharedSides`,
 //! `SurfaceConvexBite.WithTheVerticesStandingOnIt`) and the corner fans (`SurfaceMixedCornerDualWall`,
-//! `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`, `SurfaceMixedCornerRunOutStrip.Draw`). Each pins the C# rule on a hand-built case.
+//! `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`, `SurfaceMixedCornerRunOutStrip.Draw`), the patch
+//! refinement (`BevelPatchRefinement`), the corner rows (`SurfaceCornerPatchRows`) and the corner
+//! patch's two solids (`BevelCornerPatchMesher`). Each pins the C# rule on a hand-built case.
 
 use std::collections::HashMap;
 
+use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::bevel::surface::{
-    surface_convex_bite, surface_end_cut, surface_end_follows_the_walked_chords,
-    surface_end_gives_up_the_section, surface_mixed_corner_dual_wall,
-    surface_mixed_corner_run_out_strip, surface_row_zip, surface_split_sewing,
-    surface_two_crease_junction_wall, SurfaceBiteSharedSides, SurfaceMixedCornerDualWallCrossing,
-    SurfaceSplitsOnASegment, SurfaceTwoCreaseJunctionWallCrossing, SurfaceVertexPool,
+    surface_convex_bite, surface_corner_patch_rows, surface_end_cut,
+    surface_end_follows_the_walked_chords, surface_end_gives_up_the_section,
+    surface_mixed_corner_dual_wall, surface_mixed_corner_run_out_strip, surface_row_zip,
+    surface_split_sewing, surface_two_crease_junction_wall, SurfaceBiteSharedSides,
+    SurfaceMixedCornerDualWallCrossing, SurfaceSplitsOnASegment,
+    SurfaceTwoCreaseJunctionWallCrossing, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
+use geometry_processing::bevel::{
+    bevel_corner_patch_mesher, bevel_patch_refinement, BevelAdvisoryCode,
+};
 use indexmap::IndexSet;
 use vector_math::Vector3;
 
@@ -396,4 +402,139 @@ fn rust_only_the_corner_fans_sweep_one_way_or_refuse() {
     assert!(drawn.is_empty());
     surface_mixed_corner_run_out_strip::draw(&pool, &mut drawn, apex, rail[1], rail[0], out);
     assert_eq!(drawn, vec![(apex, rail[0], rail[1])]);
+}
+
+/// One level of refinement splits every interior edge once on the sphere and leaves the seam's
+/// edges whole: four children for a free triangle, three for one carrying a seam edge.
+#[test]
+fn rust_only_the_patch_refinement_keeps_the_seam() {
+    let mut directions = vec![
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    ];
+    let free = bevel_patch_refinement::refine(&mut directions.clone(), &[(0, 1, 2)], None);
+    assert_eq!(free.len(), 4);
+
+    let seam = vec![vec![2, 0]];
+    let refined = bevel_patch_refinement::refine(&mut directions, &[(0, 1, 2)], Some(&seam));
+    assert_eq!(refined.len(), 3);
+    assert_eq!(directions.len(), 5);
+    for direction in &directions {
+        assert!((direction.length() - 1.0).abs() < 1e-12);
+    }
+    // The seam edge 2-0 is still an edge of exactly one child.
+    let carrying = refined
+        .iter()
+        .filter(|&&(a, b, c)| {
+            [(a, b), (b, c), (c, a)]
+                .iter()
+                .any(|&(x, y)| (x, y) == (2, 0) || (x, y) == (0, 2))
+        })
+        .count();
+    assert_eq!(carrying, 1);
+}
+
+/// A square octant corner of n chords a side is `4n^2 - 3n` faces over `2n^2 + 1` points, every
+/// one on the ball and facing out of it; the pocket corner is the same faces wound the other way.
+#[test]
+fn rust_only_the_corner_rows_lid_the_octant() {
+    let chords = 4;
+    for material_outside_the_ball in [false, true] {
+        let mut pool = SurfaceVertexPool::new(&[]);
+        let axes = [
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+        ];
+        let size = 5.0;
+        let sides: Vec<Vec<i32>> = (0..3)
+            .map(|side| {
+                (0..=chords)
+                    .map(|step| {
+                        let angle = step as f64 / chords as f64 * std::f64::consts::FRAC_PI_2;
+                        let at = axes[side] * angle.cos() + axes[(side + 1) % 3] * angle.sin();
+                        pool.add(at * size)
+                    })
+                    .collect()
+            })
+            .collect();
+        let mut faces = Vec::new();
+
+        assert!(surface_corner_patch_rows::try_emit(
+            &mut pool,
+            &mut faces,
+            &sides,
+            Vector3::ZERO,
+            size,
+            material_outside_the_ball
+        ));
+
+        assert_eq!(faces.len() as i32, 4 * chords * chords - 3 * chords);
+        assert_eq!(pool.count(), 2 * chords * chords + 1);
+        for &(a, b, c) in &faces {
+            let from = pool.position_of(a);
+            let normal = (pool.position_of(b) - from).cross(pool.position_of(c) - from);
+            let middle = (from + pool.position_of(b) + pool.position_of(c)) / 3.0;
+            let sign = if material_outside_the_ball { -1.0 } else { 1.0 };
+            assert!(normal.dot(middle) * sign > 0.0);
+        }
+        for vertex in 0..pool.count() {
+            assert!((pool.position_of(vertex).length() - size).abs() < 1e-5);
+        }
+    }
+
+    // A rim off the ball is refused.
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let off: Vec<Vec<i32>> = (0..3)
+        .map(|side| {
+            vec![
+                pool.add(Vector3::new(side as f64, 0.0, 0.0)),
+                pool.add(Vector3::new(0.0, 9.0, 0.0)),
+            ]
+        })
+        .collect();
+    assert!(!surface_corner_patch_rows::try_emit(
+        &mut pool,
+        &mut Vec::new(),
+        &off,
+        Vector3::ZERO,
+        5.0,
+        false
+    ));
+}
+
+/// A cube corner's shell is a closed solid whose seam rings run between the face normals at the
+/// inner radius, and its void cone builds as a clean closed operand; a flat corner has no cone.
+#[test]
+fn rust_only_the_corner_mesher_builds_closed_solids() {
+    let normals = [
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    ];
+    let centre = Vector3::new(2.0, 3.0, 4.0);
+
+    let (shell, seams) = bevel_corner_patch_mesher::build_shell(centre, &normals, 2.0, 3.0, 4)
+        .expect("three square faces have a middle");
+    assert!(surface_mesh_closure::is_closed(&shell).0);
+    assert_eq!(seams.len(), 3);
+    for (sector, seam) in seams.iter().enumerate() {
+        assert_eq!(seam.len(), 5);
+        assert!((seam[0] - (centre + normals[sector] * 2.0)).length() < 1e-9);
+        assert!((seam[4] - (centre + normals[(sector + 1) % 3] * 2.0)).length() < 1e-9);
+    }
+
+    for clear in [false, true] {
+        let cone = bevel_corner_patch_mesher::try_build_void_cone(centre, &normals, 5.0, 4, clear)
+            .expect("a cube corner's void is a convex cone");
+        assert!(surface_mesh_closure::is_closed(&cone).0);
+    }
+
+    let flat = [
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 0.0),
+    ];
+    assert!(bevel_corner_patch_mesher::try_build_void_cone(centre, &flat, 5.0, 4, false).is_none());
 }

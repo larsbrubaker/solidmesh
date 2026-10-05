@@ -33,7 +33,8 @@
 //! methods: the bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]), the cap clip
 //! ([`bevel_cap_clip`]), a run's end treatment ([`BevelChainEnds`]), the sweep's chains, sections
 //! and segments ([`BevelSweptChain`], [`BevelSweptSection`], [`bevel_chain_sweep_mesh`]), the
-//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]), the face-width check
+//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]) with their shell and void cone
+//! ([`bevel_corner_patch_mesher`]) and interior refinement ([`bevel_patch_refinement`]), the face-width check
 //! ([`BevelFaceFit`]), the run-out and its bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the
 //! partnered bead's run, ends and stations ([`bevel_partnered_bead`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
 //! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
@@ -57,6 +58,7 @@ mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
 pub mod bevel_corner_handover;
 pub mod bevel_corner_patch;
+pub mod bevel_corner_patch_mesher;
 pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
@@ -72,6 +74,7 @@ pub mod bevel_pair_corner_crease;
 pub mod bevel_pair_corner_reach;
 mod bevel_partner_tube;
 pub mod bevel_partnered_bead;
+pub mod bevel_patch_refinement;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
