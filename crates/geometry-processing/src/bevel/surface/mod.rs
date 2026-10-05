@@ -74,6 +74,8 @@ pub mod surface_fan;
 mod surface_line;
 pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;
+pub mod surface_mitre_on_a_chorded_run;
+pub mod surface_mitre_seam;
 mod surface_mixed_corner;
 pub mod surface_mixed_corner_cut_edge;
 mod surface_mixed_corner_dual_canal;

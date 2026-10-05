@@ -106,3 +106,32 @@ fn rust_only_the_canal_bisects_to_the_sign_change() {
         SurfaceMixedCornerRows::sweep_at(Vector3::new(0.0, 0.0, 1.0), Vector3::new(-1.0, 0.0, 0.0));
     assert!((sweep - std::f64::consts::FRAC_PI_2).abs() < 1e-15);
 }
+
+#[test]
+fn rust_only_a_chained_run_wraps_only_when_closed() {
+    use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
+        try_the_next, try_the_previous,
+    };
+
+    let edges = vec![square_edge_plan(1.0, false), square_edge_plan(1.0, false)];
+
+    assert_eq!(try_the_next(&edges, false, 0), Some(1));
+    assert_eq!(try_the_next(&edges, false, 1), None);
+    assert_eq!(try_the_next(&edges, true, 1), Some(0));
+    assert_eq!(try_the_previous(&edges, false, 0), None);
+    assert_eq!(try_the_previous(&edges, true, 0), Some(1));
+
+    // A lone edge never wraps onto itself.
+    assert_eq!(try_the_next(&edges[..1], true, 0), None);
+}
+
+#[test]
+fn rust_only_two_pieces_of_one_crease_are_one_line() {
+    use geometry_processing::bevel::surface::surface_mitre_seam;
+
+    // The same plan twice shares both faces and lies on the same two lines: one line, and no
+    // crossing to read off parallel lines.
+    let plan = square_edge_plan(1.0, false);
+    assert!(surface_mitre_seam::the_lines_are_one(&plan, &plan, 1e-9));
+    assert!(surface_mitre_seam::try_the_point(&plan, &plan, 1e-9).is_none());
+}

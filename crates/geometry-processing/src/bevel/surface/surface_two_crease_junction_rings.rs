@@ -1,15 +1,18 @@
 //! The three end rings a TWO-crease junction's patch is sewn to, and the grid between them
 //! ([`SurfaceTwoCreaseJunctionRings`]). Ports the record of
-//! `Bevel/Surface/SurfaceTwoCreaseJunctionRings.cs`; its reading and its grid accessors land with
-//! the mixed-corner package's methods.
+//! `Bevel/Surface/SurfaceTwoCreaseJunctionRings.cs`, its reading from the three rings and its grid
+//! accessors; the reading from the three strips (`TryRead(.., SurfaceStrip, ..)`) lands with a
+//! later package.
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+
 use super::{
-    surface_mixed_corner_patch, SurfaceMixedCornerDualFrame, SurfaceMixedCornerRows,
-    SurfaceMixedJunction, SurfaceMixedJunctionArm, SurfaceVertexPool,
+    surface_mixed_corner_patch, SurfaceJunctionKind, SurfaceMixedCornerDualFrame,
+    SurfaceMixedCornerRows, SurfaceMixedJunction, SurfaceMixedJunctionArm, SurfaceVertexPool,
 };
 
 /// C# `SurfaceTwoCreaseJunctionRings` (a sealed class): the three end rings a two-crease
@@ -88,5 +91,169 @@ impl SurfaceTwoCreaseJunctionRings {
     /// `of` back to front, as a new array.
     pub fn reversed<T: Clone>(of: &[T]) -> Vec<T> {
         of.iter().rev().cloned().collect()
+    }
+}
+
+impl SurfaceTwoCreaseJunctionRings {
+    /// How near a read station has to come to the end of the turn it belongs at - an angle, so
+    /// fixed.
+    pub const ONE_STATION: f64 = 1e-5;
+
+    /// C#'s private constructor.
+    fn new(
+        canal: Rc<SurfaceMixedCornerDualFrame>,
+        cut_ring: Vec<Vector3>,
+        stations: Vec<f64>,
+        first_bead_ring: Vec<Vector3>,
+        last_bead_ring: Vec<Vector3>,
+        rows: SurfaceMixedCornerRows,
+    ) -> Self {
+        SurfaceTwoCreaseJunctionRings {
+            rows,
+            canal,
+            cut_ring,
+            stations,
+            first_bead_ring,
+            last_bead_ring,
+        }
+    }
+
+    /// How many rails each row carries - the first bead's end ring's.
+    pub fn rails_per_row(&self) -> usize {
+        self.first_bead_ring.len()
+    }
+
+    /// How many stations the grid has - one per rail of the cut's ring.
+    pub fn station_count(&self) -> usize {
+        self.cut_ring.len()
+    }
+
+    /// Rail `rail` of the row at `station`.
+    pub fn at(&self, rail: usize, station: usize) -> Vector3 {
+        self.rows.at(rail, self.stations[station])
+    }
+
+    /// The grid of a TWO-crease `junction` from the cut's ring (read from the first arm's
+    /// tangency) and the two beads' end rings (read from the wall). The rows ride the WALL, so the
+    /// way from the ball's centre to the face it rides is INTO that wall - a void ball stands
+    /// outside the material it is cutting.
+    pub fn try_read(
+        junction: &SurfaceMixedJunction,
+        cut_ring: Vec<Vector3>,
+        first_bead_ring: Vec<Vector3>,
+        last_bead_ring: Vec<Vector3>,
+    ) -> Result<SurfaceTwoCreaseJunctionRings, BevelAdvisory> {
+        let not_supported = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![junction.corner.into()],
+            )
+        };
+
+        if junction.kind != SurfaceJunctionKind::TwoCreases {
+            return Err(not_supported());
+        }
+
+        // A two-crease junction's arms always carry their dual (C# reads it unguarded); an arm
+        // without one is no two-crease junction, refused in the same words.
+        let Some(canal) = junction.first.dual.clone() else {
+            return Err(not_supported());
+        };
+
+        let stations = Self::try_the_stations_of(junction, &canal, &cut_ring)?;
+
+        if first_bead_ring.len() != last_bead_ring.len() {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceJunctionBeadsSampledDifferently,
+                vec![junction.corner.into()],
+            ));
+        }
+
+        let rows = SurfaceMixedCornerRows::try_read(
+            canal.spine.clone(),
+            -canal.out_of_the_wall,
+            &first_bead_ring,
+            junction.corner,
+            None,
+        )?;
+
+        Ok(SurfaceTwoCreaseJunctionRings::new(
+            canal,
+            cut_ring,
+            stations,
+            first_bead_ring,
+            last_bead_ring,
+            rows,
+        ))
+    }
+
+    /// Whether the CLOSING column - the last bead's own ring - really stands where the canal puts
+    /// the last station, rail for rail, within `slack`. Returns the verdict, the rail that stands
+    /// off furthest (the default point where none does) and by how much.
+    pub fn the_closing_column_stands(&self, slack: f64) -> (bool, Vector3, f64) {
+        let mut stands_off = Vector3::default();
+        let mut by = 0.0;
+
+        for rail in 0..self.rails_per_row() {
+            let apart =
+                (self.last_bead_ring[rail] - self.at(rail, self.station_count() - 1)).length();
+
+            if apart > by {
+                by = apart;
+                stands_off = self.last_bead_ring[rail];
+            }
+        }
+
+        (by <= slack, stands_off, by)
+    }
+
+    /// The turn every station stands at: each rail of the cut's ring read round the canal's axis.
+    /// They have to march ONE way and span the WHOLE turn: a ring that doubled back would fold the
+    /// grid over itself, and one that stopped short would leave the patch's own edge standing off
+    /// the bead it hands over to.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    pub fn try_the_stations_of(
+        junction: &SurfaceMixedJunction,
+        canal: &SurfaceMixedCornerDualFrame,
+        cut_ring: &[Vector3],
+    ) -> Result<Vec<f64>, BevelAdvisory> {
+        let not_supported = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![junction.corner.into()],
+            )
+        };
+
+        let axis = canal.axis;
+        let spine = &canal.spine;
+        let stations: Vec<f64> = cut_ring
+            .iter()
+            .map(|&rail| {
+                let out_of_the_axis = rail - axis.closest_point_to(rail);
+
+                f64::atan2(
+                    out_of_the_axis.dot(spine.towards_the_wall_square()),
+                    out_of_the_axis.dot(spine.towards_the_shared_face()),
+                )
+            })
+            .collect();
+
+        for rail in 1..stations.len() {
+            if !(stations[rail] > stations[rail - 1]) {
+                return Err(not_supported());
+            }
+        }
+
+        // C# indexes the ends unguarded; an empty ring reads as a ring that found no ends.
+        let (Some(&first), Some(&last)) = (stations.first(), stations.last()) else {
+            return Err(not_supported());
+        };
+
+        if first.abs() > Self::ONE_STATION || (last - canal.turn_radians).abs() > Self::ONE_STATION
+        {
+            return Err(not_supported());
+        }
+
+        Ok(stations)
     }
 }
