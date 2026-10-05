@@ -68,6 +68,7 @@ pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
 pub mod bevel_face_fit;
+pub mod bevel_face_fit_exemptions;
 pub mod bevel_face_run_out;
 mod bevel_group_result;
 pub mod bevel_interrupted_crease;

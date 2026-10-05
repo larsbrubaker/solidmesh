@@ -73,6 +73,8 @@ mod rust_only_bevel_r1p13_switch_tests;
 mod rust_only_bevel_r1p13_tests;
 #[path = "bevel/rust_only_bevel_r1p14_roll_tests.rs"]
 mod rust_only_bevel_r1p14_roll_tests;
+#[path = "bevel/rust_only_bevel_r1p14_tests.rs"]
+mod rust_only_bevel_r1p14_tests;
 #[path = "bevel/rust_only_bevel_r1p15_tests.rs"]
 mod rust_only_bevel_r1p15_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
@@ -115,5 +117,7 @@ mod surface_ring_ears_bridged_ring_tests;
 mod surface_room_crossing_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
 mod surface_run_out_column_top_tests;
+#[path = "bevel/surface_splits_on_a_segment_tests.rs"]
+mod surface_splits_on_a_segment_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
