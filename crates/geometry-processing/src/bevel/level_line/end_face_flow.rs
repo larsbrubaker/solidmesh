@@ -1,10 +1,12 @@
 //! How the band flows over a chain's end face. Ports `Bevel/LevelLine/EndFaceFlow.cs` (a C# static
 //! class): so far its constants, the facet normal ([`normal_of`]), the side-turn test
-//! ([`turns_along_a_side`]) and the end-face bend ([`bends`]); the flows land with later packages.
+//! ([`turns_along_a_side`]), the end-face bend ([`bends`]) and whether the end region's flood
+//! crosses a soft bend ([`crosses_a_soft_bend`]); the flows land with later packages.
 
 use vector_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
+use super::{ChainField, WorkError};
 
 /// How many FULL facets past the end vertex's own one, each between two soft joins, make a round.
 pub const ROUND_RUN_JOINS: i32 = 3;
@@ -89,4 +91,37 @@ pub fn bends(
     }
 
     first.dot(second) < end_face_bend_cosine() * lengths
+}
+
+/// C# `EndFaceFlow.CrossesASoftBend`: whether an end region's flood carries on across the soft bend
+/// `a`-`b`. A round from the end on carries on while the band at this size reaches it (to within
+/// `margin`, the model-scale join margin) - or, size-free, until it comes round to face away from or
+/// with a side; past the end it carries on only while the band reaches it, or size-free until it
+/// faces WITH a side. `end_face_reach` `None` is the size-free reading.
+#[allow(clippy::too_many_arguments)]
+pub fn crosses_a_soft_bend(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    a: i32,
+    b: i32,
+    past_the_end: bool,
+    rounds_from_the_end: bool,
+    end_face_reach: Option<&ChainField>,
+    margin: f64,
+    side_normals: &[Vector3],
+) -> Result<bool, WorkError> {
+    let (pa, pb) = (positions[a as usize], positions[b as usize]);
+    if rounds_from_the_end {
+        return Ok(match end_face_reach {
+            Some(reach) => reach.min_along_segment(pa, pb)?.value < margin,
+            None => !turns_along_a_side(positions, indices, standing, a, b, side_normals, true),
+        });
+    }
+
+    Ok(past_the_end
+        && match end_face_reach {
+            Some(reach) => reach.min_along_segment(pa, pb)?.value < 0.0,
+            None => !turns_along_a_side(positions, indices, standing, a, b, side_normals, false),
+        })
 }

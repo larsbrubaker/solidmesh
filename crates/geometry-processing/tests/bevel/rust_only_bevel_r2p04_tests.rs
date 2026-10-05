@@ -283,3 +283,259 @@ fn rust_only_the_foreign_edge_tree_finds_the_nearest_edge_first() {
         ForeignEdgeIndex::least_approach(&[index], &chain, 1.0, Some(&skip_it)).expect("no budget");
     assert!((next.least - 2.0).abs() <= 1e-12);
 }
+
+#[test]
+fn rust_only_a_clipped_chains_least_is_lifted_to_its_end_plane() {
+    use geometry_processing::bevel::level_line::EndRayBound;
+    // The chain along x from 0 to 4, its last end bounded by the plane x = 4.
+    let bound = EndRayBound {
+        plane_normal: Vector3::new(1.0, 0.0, 0.0),
+        ..EndRayBound::default()
+    };
+    let clipped = ChainField::from_polyline_bounded(
+        &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        false,
+        &[1.0, 1.0],
+        f64::INFINITY,
+        (false, true),
+        (None, Some(bound)),
+    )
+    .expect("a chain");
+    // Past the plane the field is the plane's reading wherever the chain's own is lower: across
+    // x = 5 the least is 1, not the chain's 0 at (5, 0).
+    let past = clipped
+        .min_along_segment(Vector3::new(5.0, -0.5, 0.0), Vector3::new(5.0, 0.5, 0.0))
+        .expect("no budget");
+    assert!((past.value - 1.0).abs() <= 1e-9);
+    let unclipped = x_leg()
+        .min_along_segment(Vector3::new(5.0, -0.5, 0.0), Vector3::new(5.0, 0.5, 0.0))
+        .expect("no budget");
+    assert!((unclipped.value - 0.0).abs() <= 1e-12);
+    // Inside the plane the chain's own least stands.
+    let inside = clipped
+        .min_along_segment(Vector3::new(3.0, -0.5, 0.0), Vector3::new(3.0, 0.5, 0.0))
+        .expect("no budget");
+    assert!((inside.value - -1.0).abs() <= 1e-12);
+    // Over a triangle straddling the plane the clipped field max(|y| - 1, x - 4) is least on its
+    // left side x = 3.75 + 0.75 y, where the two readings meet: y = -3/7, value -4/7.
+    let over = clipped
+        .min_over_triangle(
+            Vector3::new(3.0, -1.0, 0.0),
+            Vector3::new(6.0, -1.0, 0.0),
+            Vector3::new(4.5, 1.0, 0.0),
+        )
+        .expect("no budget");
+    assert!((over.value - -4.0 / 7.0).abs() <= 1e-6);
+    assert!((over.point.y - -3.0 / 7.0).abs() <= 1e-4);
+}
+
+#[test]
+fn rust_only_the_foreign_room_is_bisected_to_where_the_band_reaches_an_edge() {
+    use geometry_processing::bevel::level_line::foreign_edge_room_readings::{
+        bisect, every_value_is_above_zero, where_the_room_is_set,
+    };
+    use geometry_processing::bevel::level_line::LevelLineMesh;
+    let mut mesh = LevelLineMesh::new();
+    mesh.vertices = vec![Vector3::new(1.0, 3.0, 0.0), Vector3::new(3.0, 3.0, 0.0)];
+    let field_at = |size: f64| {
+        ChainField::from_polyline(
+            &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+            false,
+            &[size, size],
+        )
+        .expect("a chain")
+    };
+    // An edge three off the chain: the band reaches it at size 3.
+    let edges = [(0, 1, 0.0)];
+    assert!(every_value_is_above_zero(&mesh, &edges, &field_at, 2.0).expect("no budget"));
+    assert!(!every_value_is_above_zero(&mesh, &edges, &field_at, 4.0).expect("no budget"));
+    let room = bisect(&mesh, &edges, &field_at, 0.0, 10.0).expect("no budget");
+    assert!((room - 3.0).abs() <= 1e-9);
+    // The other chain's own half setback taken off too: 3 = 1.5 s.
+    let shared = [(0, 1, 0.5)];
+    assert!((bisect(&mesh, &shared, &field_at, 0.0, 10.0).expect("no budget") - 2.0).abs() <= 1e-9);
+    let at = where_the_room_is_set(&mesh, &edges, &field_at, &[1.0, 1.0], room).expect("no budget");
+    assert!((at.y - 3.0).abs() <= 1e-12);
+}
+
+#[test]
+fn rust_only_a_flood_stops_at_chain_and_feature_edges() {
+    use std::collections::HashSet;
+
+    use geometry_processing::bevel::level_line::band_side_tagging::{connected_regions, flood};
+    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    // A strip of three triangles: 0 | 1 | 2 across the edges 1-2 and 2-3.
+    let indices = vec![(0, 1, 2), (1, 3, 2), (2, 3, 4)];
+    let standing = standing_map(&indices);
+    let no_features = |_: i32, _: i32| false;
+    let none: HashSet<(i32, i32)> = HashSet::new();
+    assert_eq!(
+        connected_regions(&indices, &standing, &none, &no_features).expect("no budget"),
+        vec![1, 1, 1]
+    );
+    // The chain along 1-2 parts triangle 0 from the rest.
+    let chain: HashSet<(i32, i32)> = [(1, 2)].into_iter().collect();
+    assert_eq!(
+        connected_regions(&indices, &standing, &chain, &no_features).expect("no budget"),
+        vec![1, 2, 2]
+    );
+    // A feature edge 2-3 parts triangle 2 as well.
+    let feature = |a: i32, b: i32| (a.min(b), a.max(b)) == (2, 3);
+    assert_eq!(
+        connected_regions(&indices, &standing, &chain, &feature).expect("no budget"),
+        vec![1, 2, 3]
+    );
+    // A flood from triangle 2 that may not enter triangle 1 tags only itself.
+    let mut tags = vec![0; 3];
+    let not_one = |t: i32| t != 1;
+    flood(
+        &indices,
+        &standing,
+        &none,
+        &no_features,
+        &[2],
+        7,
+        &mut tags,
+        Some(&not_one),
+    )
+    .expect("no budget");
+    assert_eq!(tags, vec![0, 0, 7]);
+}
+
+#[test]
+fn rust_only_chains_read_their_fold_and_a_knife_tips_end_face() {
+    use std::collections::HashSet;
+
+    use geometry_processing::bevel::level_line::band_gap_rounds_first::{
+        chain_senses, plane_of, takes_rounds_first, the_tips_end_face,
+    };
+    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    // The cube's top-front edge (convex) and a floor-wall corner (concave), each on two triangles.
+    let convex_at = vec![
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(0.5, 0.5, 1.0),
+        Vector3::new(0.5, 0.0, 0.0),
+    ];
+    let concave_at = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.5, 1.0, 0.0),
+        Vector3::new(0.5, 0.0, 1.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3)];
+    let chain = vec![vec![0, 1]];
+    assert_eq!(
+        chain_senses(&convex_at, &indices, &chain, None),
+        vec![Some(true)]
+    );
+    assert_eq!(
+        chain_senses(&concave_at, &indices, &chain, None),
+        vec![Some(false)]
+    );
+    // An edge on one triangle has no fold.
+    assert_eq!(
+        chain_senses(&convex_at, &indices[..1], &chain, None),
+        vec![None]
+    );
+    // One chain alone is never built rounds first.
+    assert!(!takes_rounds_first(&convex_at, &indices, &chain, None));
+
+    // The end face of a chain ending at 1: of the two triangles on its last edge, the one on no
+    // convex chain edge - here the front, since the top stands on the convex edge 1-2.
+    let standing = standing_map(&indices);
+    let convex_edges: HashSet<(i32, i32)> = [(1, 2)].into_iter().collect();
+    let face = the_tips_end_face(
+        &convex_at,
+        &indices,
+        &standing,
+        &convex_edges,
+        1,
+        &[vec![0, 1]],
+    );
+    assert_eq!(face, Some(plane_of(&convex_at, indices[1])));
+    assert!(the_tips_end_face(
+        &convex_at,
+        &indices,
+        &standing,
+        &HashSet::new(),
+        1,
+        &[vec![0, 1]]
+    )
+    .is_none());
+}
+
+#[test]
+fn rust_only_a_side_flows_only_onto_a_gentle_convex_neighbour_it_reaches() {
+    use geometry_processing::bevel::level_line::side_flow::flows_onto_a_gentle_neighbour;
+    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    let mut positions = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.5, 1.0, 0.0),
+        Vector3::new(0.5, -1.0, -0.5),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3)];
+    let standing = standing_map(&indices);
+    let reaching = ChainField::from_polyline(&[positions[0], positions[1]], false, &[1.0, 1.0])
+        .expect("a chain");
+    // The face across turns down by about 27 degrees: gentle and convex.
+    assert!(
+        flows_onto_a_gentle_neighbour(&positions, &indices, &standing, &reaching, 0, 1)
+            .expect("no budget")
+    );
+    // A band that does not reach the crease does not flow.
+    let far = ChainField::from_polyline(
+        &[Vector3::new(0.0, 5.0, 0.0), Vector3::new(1.0, 5.0, 0.0)],
+        false,
+        &[1.0, 1.0],
+    )
+    .expect("a chain");
+    assert!(
+        !flows_onto_a_gentle_neighbour(&positions, &indices, &standing, &far, 0, 1)
+            .expect("no budget")
+    );
+    // Folded back past a right angle it is a knife; turned up it is concave: neither flows.
+    positions[3] = Vector3::new(0.5, 1.0, -0.1);
+    assert!(
+        !flows_onto_a_gentle_neighbour(&positions, &indices, &standing, &reaching, 0, 1)
+            .expect("no budget")
+    );
+    positions[3] = Vector3::new(0.5, -1.0, 0.5);
+    assert!(
+        !flows_onto_a_gentle_neighbour(&positions, &indices, &standing, &reaching, 0, 1)
+            .expect("no budget")
+    );
+}
+
+#[test]
+fn rust_only_an_end_regions_flood_crosses_a_soft_bend_while_the_band_reaches_it() {
+    use geometry_processing::bevel::level_line::end_face_flow::crosses_a_soft_bend;
+    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.5, 1.0, 0.0),
+        Vector3::new(0.5, -1.0, 0.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3)];
+    let standing = standing_map(&indices);
+    let reach = ChainField::from_polyline(&[positions[0], positions[1]], false, &[1.0, 1.0])
+        .expect("a chain");
+    let up = [Vector3::new(0.0, 0.0, 1.0)];
+    let sideways = [Vector3::new(1.0, 0.0, 0.0)];
+    let crosses = |past: bool, rounds: bool, reach: Option<&ChainField>, sides: &[Vector3]| {
+        crosses_a_soft_bend(
+            &positions, &indices, &standing, 0, 1, past, rounds, reach, 0.0, sides,
+        )
+        .expect("no budget")
+    };
+    // At a size, the band's reach decides; neither flow, nothing crosses.
+    assert!(crosses(false, true, Some(&reach), &up));
+    assert!(crosses(true, false, Some(&reach), &up));
+    assert!(!crosses(false, false, Some(&reach), &up));
+    // Size-free, it crosses until the run comes round to lie alongside a side.
+    assert!(!crosses(false, true, None, &up));
+    assert!(crosses(false, true, None, &sideways));
+    assert!(crosses(true, false, None, &sideways));
+}

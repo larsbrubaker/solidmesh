@@ -108,6 +108,7 @@ pub mod flat_hole_fill;
 mod foreign_edge_index;
 pub mod foreign_edge_regions;
 pub mod foreign_edge_room;
+pub mod foreign_edge_room_readings;
 pub mod foreign_room_counters;
 pub mod gap_fill;
 mod gap_fill_refusal;

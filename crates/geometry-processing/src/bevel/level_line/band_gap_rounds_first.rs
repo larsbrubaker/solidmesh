@@ -1,14 +1,19 @@
 //! The band built rounds first. Ports `Bevel/LevelLine/BandGap.RoundsFirst.cs` (a partial of the C#
 //! static class `BandGap`): so far the kept triangles as index triples ([`kept`]), the concave
 //! chain's surviving piece ([`surviving_piece`]), the crease walk on the end face
-//! ([`crease_on_the_end_face`]) and a triangle's oriented plane ([`plane_of`], [`same_plane`]); the
-//! build lands with later packages.
+//! ([`crease_on_the_end_face`]), a triangle's oriented plane ([`plane_of`], [`same_plane`]), the
+//! chains' senses ([`chain_senses`]), the knife tips that make a pick build rounds first
+//! ([`rounds_first_tips`], [`takes_rounds_first`]) and the face they end on ([`the_tips_end_face`]);
+//! the build lands with later packages.
 
 use std::collections::{HashMap, HashSet};
 
+use indexmap::IndexMap;
+
 use vector_math::{cs_math, Vector3};
 
-use super::end_face_sense::COPLANAR_TOLERANCE;
+use super::end_face_sense::{self, COPLANAR_TOLERANCE};
+use super::triangle_edges::{self, StandingMap};
 use super::LevelLineMesh;
 
 /// The mesh's live triangles as index triples, in triangle order.
@@ -137,4 +142,184 @@ pub fn plane_of(at: &[Vector3], t: (i32, i32, i32)) -> OrientedPlane {
 pub fn same_plane(p: OrientedPlane, q: OrientedPlane) -> bool {
     1.0 - p.0.dot(q.0) < COPLANAR_TOLERANCE
         && (p.0.dot(q.2) - p.1).abs() <= COPLANAR_TOLERANCE * cs_math::max_f64(1.0, p.1.abs())
+}
+
+/// C# `BandGap.ChainSenses`: each chain's fold, read edge by edge off the two triangles standing on
+/// it: `Some(true)` convex, `Some(false)` concave, `None` where the chain's edges fold both ways or an
+/// edge does not stand on exactly two triangles. `closed` `None` reads every chain open.
+pub fn chain_senses(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: Option<&[bool]>,
+) -> Vec<Option<bool>> {
+    let standing = triangle_edges::standing_map(indices);
+    let mut senses = Vec::with_capacity(chains.len());
+    for (k, chain) in chains.iter().enumerate() {
+        let count = if closed.is_some_and(|c| c[k]) {
+            chain.len()
+        } else {
+            chain.len() - 1
+        };
+        let mut sense: Option<bool> = None;
+        for i in 0..count {
+            let a = chain[i];
+            let b = chain[(i + 1) % chain.len()];
+            let Some(on) = standing
+                .get(&triangle_edges::key(a, b))
+                .filter(|on| on.len() == 2)
+            else {
+                sense = None;
+                break;
+            };
+
+            let convex = end_face_sense::is_convex(
+                positions,
+                indices[on[0] as usize],
+                indices[on[1] as usize],
+                a,
+            );
+            if i > 0 && sense != Some(convex) {
+                sense = None;
+                break;
+            }
+
+            sense = Some(convex);
+        }
+
+        senses.push(sense);
+    }
+
+    senses
+}
+
+/// C# `BandGap.TakesRoundsFirst`: true where the pick is built rounds first: some vertex is an end
+/// of an open convex chain and of at least one open concave chain. A chain that folds both ways
+/// takes no part (it is neither).
+pub fn takes_rounds_first(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: Option<&[bool]>,
+) -> bool {
+    !rounds_first_tips(positions, indices, chains, closed).is_empty()
+}
+
+/// C# `BandGap.RoundsFirstTips`: the knife tips - each vertex that ends an open convex chain and at
+/// least one open concave chain - with the concave chains ending there, in the order met. Only what
+/// the rounds-first creases can read: every tip has exactly two concave chains, and they end on one
+/// face; otherwise none.
+#[allow(clippy::needless_range_loop)]
+pub fn rounds_first_tips(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: Option<&[bool]>,
+) -> IndexMap<i32, Vec<i32>> {
+    let mut tips: IndexMap<i32, Vec<i32>> = IndexMap::new();
+    if chains.len() < 2 {
+        return tips;
+    }
+
+    let senses = chain_senses(positions, indices, chains, closed);
+    let is_open = |k: usize| !closed.is_some_and(|c| c[k]) && chains[k].len() > 1;
+    let ends = |k: usize| [chains[k][0], chains[k][chains[k].len() - 1]];
+    let convex_ends: HashSet<i32> = (0..chains.len())
+        .filter(|&k| is_open(k) && senses[k] == Some(true))
+        .flat_map(ends)
+        .collect();
+    for k in 0..chains.len() {
+        if !is_open(k) || senses[k] != Some(false) {
+            continue;
+        }
+
+        let [first, last] = ends(k);
+        let distinct = if first == last {
+            vec![first]
+        } else {
+            vec![first, last]
+        };
+        for end in distinct {
+            if convex_ends.contains(&end) {
+                tips.entry(end).or_default().push(k as i32);
+            }
+        }
+    }
+
+    let input_standing = triangle_edges::standing_map(indices);
+    let convex_edges: HashSet<(i32, i32)> = (0..chains.len())
+        .filter(|&k| senses[k] == Some(true))
+        .flat_map(|k| {
+            chains[k]
+                .windows(2)
+                .map(|w| triangle_edges::key(w[0], w[1]))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (&tip, concave) in &tips {
+        let to_tip: Vec<Vec<i32>> = concave
+            .iter()
+            .map(|&k| {
+                let chain = &chains[k as usize];
+                if chain[chain.len() - 1] == tip {
+                    chain.clone()
+                } else {
+                    chain.iter().rev().copied().collect()
+                }
+            })
+            .collect();
+        if concave.len() != 2
+            || the_tips_end_face(
+                positions,
+                indices,
+                &input_standing,
+                &convex_edges,
+                tip,
+                &to_tip,
+            )
+            .is_none()
+        {
+            return IndexMap::new();
+        }
+    }
+
+    tips
+}
+
+/// C# `BandGap.TheTipsEndFace`: the face a knife tip's concave chains end on: of the two triangles
+/// on each chain's end edge, the one standing on no convex chain edge. `None` where a chain has not
+/// exactly one such, or the chains disagree.
+pub fn the_tips_end_face(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    input_standing: &StandingMap,
+    convex_edges: &HashSet<(i32, i32)>,
+    tip: i32,
+    to_tip: &[Vec<i32>],
+) -> Option<OrientedPlane> {
+    let mut end_face: Option<OrientedPlane> = None;
+    for chain in to_tip {
+        let on = input_standing.get(&triangle_edges::key(chain[chain.len() - 2], tip))?;
+        let far: Vec<i32> = on
+            .iter()
+            .copied()
+            .filter(|&t| {
+                !triangle_edges::corners(indices[t as usize])
+                    .iter()
+                    .any(|e| convex_edges.contains(&triangle_edges::key(e.0, e.1)))
+            })
+            .collect();
+        if far.len() != 1 {
+            return None;
+        }
+
+        let plane = plane_of(positions, indices[far[0] as usize]);
+        if end_face.is_some_and(|face| !same_plane(face, plane)) {
+            return None;
+        }
+
+        end_face = Some(plane);
+    }
+
+    end_face
 }
