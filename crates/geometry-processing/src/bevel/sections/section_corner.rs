@@ -8,7 +8,11 @@
 
 use vector_math::{cs_math, math_helper, Vector3};
 
+use polygon_mesh::{Mesh, MeshEdgeGraph};
+
+use super::section_fan_walk::EdgeAtPair;
 use super::{section_builder, SectionSide};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup, FeatureEdge};
 
 /// C# `SameToWithin`: how nearly two wedges, two slide distances or two directions must agree to be
@@ -201,4 +205,116 @@ pub fn slid_profile(
             swept - (along * ((swept - station).dot(bisector) / lean))
         })
         .collect()
+}
+
+/// C# `TryTheFold`: the one crease the WALL side's fan crosses at a corner - the fold the wall
+/// boundary slides down - checked to lean out along both edges' walls by the same slide distance
+/// (within [`SAME_WEDGE_TO_WITHIN`] of the setback). No fold, several, or a fold the two edges would
+/// slide down different distances is refused.
+#[allow(clippy::too_many_arguments)]
+pub fn try_the_fold(
+    vertex: i32,
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    wall_on_the_left: bool,
+    cosine: f64,
+    setback: f64,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    station: Vector3,
+) -> Result<i32, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        )
+    };
+
+    let creases = section_builder::try_creases_in_the_fan(
+        vertex,
+        arriving,
+        leaving,
+        wall_on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+    )?;
+
+    if creases.len() != 1 {
+        // No fold at all, or several: the wall boundary has no one edge to ride and the corner would
+        // have to fan.
+        return Err(not_supported());
+    }
+
+    let fold = creases[0];
+
+    let other = if graph.get_vertex0(fold) == vertex {
+        graph.get_vertex1(fold)
+    } else {
+        graph.get_vertex0(fold)
+    };
+    let down = (Vector3::from_vector3_float(mesh.vertices[other as usize]) - station).get_normal();
+
+    let arriving_lean = down.dot(away_in_the_wall(arriving, wall_on_the_left, cosine));
+    let leaving_lean = down.dot(away_in_the_wall(leaving, wall_on_the_left, cosine));
+
+    if arriving_lean < SAME_TO_WITHIN
+        || leaving_lean < SAME_TO_WITHIN
+        || ((setback / arriving_lean) - (setback / leaving_lean)).abs()
+            > SAME_WEDGE_TO_WITHIN * cs_math::max_f64(1.0, setback)
+    {
+        return Err(not_supported());
+    }
+
+    Ok(fold)
+}
+
+/// C# `TryTheSharedSide`: the shared FLAT side's fan at a corner - no crease (an offset), or one
+/// SMOOTH fold of a tessellated surface to slide along - as the shared fold or -1. Several creases, or
+/// one that is a real feature, are refused.
+#[allow(clippy::too_many_arguments)]
+pub fn try_the_shared_side(
+    vertex: i32,
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    flat_on_the_left: bool,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    station: Vector3,
+) -> Result<i32, BevelAdvisory> {
+    let creases = section_builder::try_creases_in_the_fan(
+        vertex,
+        arriving,
+        leaving,
+        flat_on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+    )?;
+
+    if creases.len() > 1 || (creases.len() == 1 && !is_a_smooth_fold(mesh, graph, creases[0])) {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        ));
+    }
+
+    Ok(creases.first().copied().unwrap_or(-1))
+}
+
+/// C# `IsASmoothFold`: whether a manifold edge's two faces line up within the curve tolerance - one
+/// smooth surface folded by its tessellation rather than a feature of the part.
+pub fn is_a_smooth_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
+    if graph.get_face_count(edge) != 2 {
+        return false;
+    }
+
+    let one = Vector3::from_vector3_float(mesh.faces[graph.get_face(edge, 0) as usize].normal)
+        .get_normal();
+    let other = Vector3::from_vector3_float(mesh.faces[graph.get_face(edge, 1) as usize].normal)
+        .get_normal();
+
+    one.dot(other) > smooth_surface_dot()
 }

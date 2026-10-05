@@ -75,6 +75,8 @@ mod rust_only_bevel_r1p08_walk_tests;
 mod rust_only_bevel_r1p09_tests;
 #[path = "bevel/rust_only_bevel_r1p10_tests.rs"]
 mod rust_only_bevel_r1p10_tests;
+#[path = "bevel/rust_only_bevel_r1p11_junction_tests.rs"]
+mod rust_only_bevel_r1p11_junction_tests;
 #[path = "bevel/rust_only_bevel_r1p11_tests.rs"]
 mod rust_only_bevel_r1p11_tests;
 #[path = "bevel/rust_only_bevel_r1p12_tests.rs"]
