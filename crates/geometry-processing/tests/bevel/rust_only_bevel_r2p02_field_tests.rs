@@ -275,3 +275,166 @@ fn rust_only_a_pick_and_a_room_read_their_members() {
     );
     assert_eq!(reading.pick().kind(), FieldKind::ChainField);
 }
+
+#[test]
+fn rust_only_a_group_with_run_outs_reads_the_least_and_marks_it_clipped() {
+    use geometry_processing::bevel::level_line::{
+        corner_cap_flat_ends, BandGroupFieldsWithRunOuts, ChainDistanceField, PointField,
+    };
+    let chain = Rc::new(open_chain(
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        vec![1.0, 1.0],
+    ));
+    // A run-out ball at (2, 4) of radius 1.
+    let run_out: Rc<dyn ChainDistanceField> =
+        Rc::new(PointField::sphere(Vector3::new(2.0, 4.0, 0.0), 1.0));
+    let pick_chain = chain.clone();
+    let wrapped = Rc::new(BandGroupFieldsWithRunOuts::new(
+        Rc::new(PointField::sphere(Vector3::new(9.0, 9.0, 9.0), 1.0)),
+        Rc::new(move |p| pick_chain.evaluate(p)),
+        None,
+        vec![run_out],
+    ));
+    // Near the chain the pick's own reading stands.
+    let near_chain = wrapped
+        .evaluate(Vector3::new(2.0, 1.0, 0.0))
+        .expect("no budget");
+    assert_eq!((near_chain.value, near_chain.clipped), (0.0, false));
+    // Near the ball the run-out wins, keeping the pick's chain point and marked clipped.
+    let near_ball = wrapped
+        .evaluate(Vector3::new(2.0, 3.5, 0.0))
+        .expect("no budget");
+    assert!((near_ball.value - -0.5).abs() <= 1e-12 && near_ball.clipped);
+    assert_eq!(near_ball.nearest, Vector3::new(2.0, 0.0, 0.0));
+    assert_eq!(
+        wrapped.value_at(Vector3::new(2.0, 3.5, 0.0)).ok(),
+        Some(-0.5)
+    );
+    assert_eq!(
+        wrapped.run_out_value_at(Vector3::new(2.0, 1.0, 0.0)).ok(),
+        Some(2.0)
+    );
+    assert_eq!(wrapped.kind(), FieldKind::WithRunOuts);
+    // Between the chain and the ball the wrapped field peaks where the two meet, y = 2.
+    let peak = wrapped
+        .max_along_segment(
+            Vector3::new(2.0, 0.0, 0.0),
+            Vector3::new(2.0, 4.0, 0.0),
+            1e-6,
+        )
+        .expect("no budget");
+    assert!((peak.value - 1.0).abs() <= 1e-6);
+    let over = wrapped
+        .max_over_triangle(
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(3.0, 0.0, 0.0),
+            Vector3::new(2.0, 4.0, 0.0),
+            1e-6,
+        )
+        .expect("no budget");
+    // Over the triangle the ridge between them (y = 2 + (x - 2)^2 / 8) rises away from x = 2, so
+    // the greatest is where it meets the side from (1, 0) to (2, 4): t = 17 - sqrt(272) along it.
+    let t = 17.0 - 272f64.sqrt();
+    assert!((over.value - (4.0 * t - 1.0)).abs() <= 1e-5);
+
+    // A vertex reading over the wrapper reads across the known cut: the least of the pick's
+    // value across it and the run-outs'.
+    let field: Rc<dyn ScalarField> = wrapped;
+    let mesh = Rc::new(std::cell::RefCell::new(LevelLineMesh::new()));
+    let reading = VertexFieldReading::new(mesh, field, 0.0).expect("a length");
+    corner_cap_flat_ends::set_use_flat_ends_override(Some(true));
+    let across = reading.known_cut_value_at(Vector3::new(2.0, 3.5, 0.0));
+    let in_plane =
+        reading.value_in_the_end_plane(Vector3::new(2.0, 1.0, 0.0), Vector3::ZERO, Vector3::UNIT_X);
+    corner_cap_flat_ends::set_use_flat_ends_override(Some(false));
+    let plain = reading.known_cut_value_at(Vector3::new(2.0, 1.0, 0.0));
+    corner_cap_flat_ends::set_use_flat_ends_override(None);
+    // The wrapper's inner pick here is a point field, neither a chain's nor a pick's: the plain
+    // field answers.
+    assert_eq!(across.ok(), Some(-0.5));
+    assert_eq!(in_plane.ok(), Some(0.0));
+    assert_eq!(plain.ok(), Some(0.0));
+}
+
+#[test]
+fn rust_only_a_vertex_reading_of_a_chain_reads_across_its_known_cut() {
+    use geometry_processing::bevel::level_line::corner_cap_flat_ends;
+    let chain = Rc::new(open_chain(
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        vec![1.0, 1.0],
+    ));
+    let field: Rc<dyn ScalarField> = chain;
+    let mesh = Rc::new(std::cell::RefCell::new(LevelLineMesh::new()));
+    let reading = VertexFieldReading::new(mesh, field, 0.0).expect("a length");
+    corner_cap_flat_ends::set_use_flat_ends_override(Some(true));
+    let across = reading.known_cut_value_at(Vector3::new(2.0, 3.0, 0.0));
+    let in_plane =
+        reading.value_in_the_end_plane(Vector3::new(2.0, 3.0, 0.0), Vector3::ZERO, Vector3::UNIT_X);
+    corner_cap_flat_ends::set_use_flat_ends_override(None);
+    // Unclipped, the chain's value across the cut and in its plane is its own: 3 less 1.
+    assert_eq!(across.ok(), Some(2.0));
+    assert_eq!(in_plane.ok(), Some(2.0));
+}
+
+#[test]
+fn rust_only_a_rail_is_recut_at_a_jump_nearest_the_other_start() {
+    use geometry_processing::bevel::level_line::gap_fill::within_excursion;
+    use geometry_processing::bevel::level_line::ZipRail;
+    let mut mesh = LevelLineMesh::new();
+    mesh.vertices = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+    ];
+    let rail = ZipRail {
+        vertices: vec![0, 1, 2, 3],
+        parameters: vec![0.0, 1.0, 6.0, 7.0],
+        reversed: false,
+    };
+    // From 1 to 6 of chain parameter across one unit edge: a jump; the steps either side are not.
+    assert!(ZipRail::is_a_jump(&mesh, &rail, 1, 8.0));
+    assert!(!ZipRail::is_a_jump(&mesh, &rail, 0, 8.0));
+    assert!(!ZipRail::is_a_jump(&mesh, &rail, 3, 8.0));
+    let spans: Vec<(f64, f64)> = rail.parameters.iter().map(|&p| (p, p)).collect();
+    let recut = ZipRail::start_nearest(&mesh, &rail, &spans, 6.0, 8.0, 0.5);
+    assert_eq!(recut.vertices, vec![2, 3, 0, 1]);
+    assert_eq!(recut.parameters, vec![-2.0, -1.0, 0.0, 1.0]);
+    // Within the margin the rail is left as it was.
+    assert_eq!(
+        ZipRail::start_nearest(&mesh, &rail, &spans, 6.0, 8.0, 3.0),
+        rail
+    );
+
+    let chain = l_chain();
+    // At parameter 4 the setback is 2, so three setbacks past the slack is 6.
+    assert!(within_excursion(4.0, -1.9, &chain, 0.1));
+    assert!(!within_excursion(4.0, -2.2, &chain, 0.1));
+}
+
+#[test]
+fn rust_only_a_sharp_joints_inside_corner_and_carry_weight() {
+    use geometry_processing::bevel::level_line::sharp_joint_corners::the_inside_corner;
+    let chain = ChainField {
+        sharp_turn_degrees: 45.0,
+        ..l_chain()
+    };
+    assert_eq!(chain.sharp_joints(), &[(4.0, 2.0)]);
+    let (corner, plane) = the_inside_corner(&chain, 4.0, 1.0).expect("the L turns");
+    assert!((corner - Vector3::new(3.0, 1.0, 0.0)).length() <= 1e-9);
+    assert_eq!(plane, Vector3::new(0.0, 0.0, -1.0));
+    assert!(the_inside_corner(&chain, 2.0, 1.0).is_none());
+
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    // 3.5 from the joint of setback 2: smooth_step(0.75).
+    assert!((fillet_arc::carry_weight(&chain, 0.0, 0.5, x, x) - 0.84375).abs() <= 1e-15);
+    // Over the joint, none.
+    assert_eq!(fillet_arc::carry_weight(&chain, 3.9, 4.1, x, x), 0.0);
+    // A row turning by the whole threshold carries none; by half of it, all that the joint allows.
+    let turned = Vector3::new(1.0, 1.0, 0.0).get_normal();
+    assert!(fillet_arc::carry_weight(&chain, 0.0, 0.5, x, turned).abs() <= 1e-9);
+    let half = Vector3::new(1.0, 22.5f64.to_radians().tan(), 0.0).get_normal();
+    assert!((fillet_arc::carry_weight(&chain, 0.0, 0.5, x, half) - 0.84375).abs() <= 1e-9);
+    // No joints: the gentle weight alone.
+    assert_eq!(fillet_arc::carry_weight(&l_chain(), 0.0, 0.5, x, x), 1.0);
+}

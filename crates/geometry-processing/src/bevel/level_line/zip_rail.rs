@@ -1,7 +1,11 @@
 //! A loop re-read as a cycle running in increasing chain parameter ([`ZipRail`]). Ports the type of
 //! `Bevel/LevelLine/ZipRail.cs` with its count, its canonical reading at tie vertices and its
-//! reading past the wrap; how the merge reads it across jumps and from its start lands with later
-//! packages.
+//! reading past the wrap, whether a step is a jump ([`ZipRail::is_a_jump`]) and the rail re-cut to
+//! start nearest the other's start ([`ZipRail::start_nearest`]).
+
+use vector_math::cs_math;
+
+use super::{gap_fill, LevelLineMesh};
 
 /// C# `ZipRail`: a loop re-read as a cycle running in increasing chain parameter - one of the two
 /// rails `GapFill`'s per-chain zip merges. Its init-only properties are public fields here.
@@ -41,6 +45,101 @@ impl ZipRail {
             rail.parameters[advance as usize] + offset
         } else {
             rail.parameters[0] + offset + length
+        }
+    }
+}
+
+impl ZipRail {
+    /// C# `ZipRail.IsAJump`: whether the rail's step from vertex `at` to the next climbs more chain
+    /// parameter than twice its own length (plus a tie): a jump is the inside of a concave turn, or a
+    /// small region between legs - Around Center's inner diamond is four rail vertices each reading
+    /// a different leg. Across a jump the merge takes the shorter of the two spokes it could make.
+    pub fn is_a_jump(mesh: &LevelLineMesh, rail: &ZipRail, at: i32, length: f64) -> bool {
+        let from = rail.vertices[at as usize];
+        let to = rail.vertices[((at + 1) % rail.count()) as usize];
+        let climb =
+            Self::unwrapped(rail, at + 1, length, 0.0) - Self::unwrapped(rail, at, length, 0.0);
+        climb
+            > 2.0 * (mesh.position(to) - mesh.position(from)).length()
+                + (gap_fill::PARAMETER_TIE_RELATIVE * length)
+    }
+
+    /// C# `ZipRail.StartNearest`: the rail rotated to begin at its vertex nearest `other_start` in
+    /// chain parameter (round the wrap), when its own start is further than `margin` beyond that -
+    /// else the rail as it was, so a rail that begins beside the other is never re-cut. Each vertex
+    /// is measured by the whole span it stands for (`spans`), as the merge's jump rule is, and the
+    /// rail is re-cut only at a jump, read canonically and on either side of the new start.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn start_nearest(
+        mesh: &LevelLineMesh,
+        rail: &ZipRail,
+        spans: &[(f64, f64)],
+        other_start: f64,
+        length: f64,
+        margin: f64,
+    ) -> ZipRail {
+        let apart = |p: f64| {
+            let d = (p - other_start).abs() % length;
+            cs_math::min_f64(d, length - d)
+        };
+        let span_apart = |i: usize| {
+            let (low, high) = spans[i];
+            if high - low >= length {
+                return 0.0;
+            }
+
+            // The other start inside the span, a lap either way, is no distance at all.
+            let mut lapped = other_start + (((low - other_start) / length).floor() * length);
+            if lapped < low {
+                lapped += length;
+            }
+
+            if lapped <= high {
+                0.0
+            } else {
+                cs_math::min_f64(apart(low), apart(high))
+            }
+        };
+
+        let count = rail.count();
+        let mut best = 0usize;
+        for i in 1..count as usize {
+            if span_apart(i) < span_apart(best) {
+                best = i;
+            }
+        }
+
+        // The rail is re-cut only at a jump, read canonically and on either side of the new start,
+        // so a tie vertex whose noisy reading named the other leg is judged the same either way.
+        let read = Self::canonical(rail, spans);
+        let best_i = best as i32;
+        if best == 0
+            || span_apart(0) - span_apart(best) <= margin
+            || !(Self::is_a_jump(mesh, &read, (best_i + count - 1) % count, length)
+                || Self::is_a_jump(mesh, &read, best_i, length))
+        {
+            return rail.clone();
+        }
+
+        // The vertices before the new start move to the end; read in one climbing frame, the new
+        // start's stretch is a lap earlier.
+        let n = count as usize;
+        let mut vertices = Vec::with_capacity(n);
+        let mut parameters = Vec::with_capacity(n);
+        for i in 0..n {
+            let from = (best + i) % n;
+            vertices.push(rail.vertices[from]);
+            parameters.push(if from >= best {
+                rail.parameters[from] - length
+            } else {
+                rail.parameters[from]
+            });
+        }
+
+        ZipRail {
+            vertices,
+            parameters,
+            reversed: rail.reversed,
         }
     }
 }

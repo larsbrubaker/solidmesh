@@ -1,7 +1,8 @@
 //! A fillet's arc across the band. Ports `Bevel/LevelLine/FilletArc.cs` (a C# static class): so far
 //! its collinear angle, the whole-leg test ([`on_a_whole_leg`]), a sharp joint's seam row
 //! ([`seam_row`]) and its tolerance, the carried skew arc ([`carried`]) with its rigid turn
-//! ([`turn`]), the smooth step, the bend threshold's cosine and the joint search; the arcs that
+//! ([`turn`]), the smooth step, the bend threshold's cosine, the joint search and the carry's
+//! weight ([`carry_weight`]); the arcs that
 //! read the level-line mesh land with later packages. The arc point itself is
 //! [`super::gap_fill::arc_point`].
 
@@ -195,4 +196,68 @@ pub fn turn(from: Vector3, to: Vector3, vector: Vector3) -> Vector3 {
 
     axis /= sin;
     (vector * cos) + (axis.cross(vector) * sin) + (axis * (axis.dot(vector) * (1.0 - cos)))
+}
+
+/// C# `FilletArc.CarryWeight`: how much of the carried drawing a row takes: 1 well inside a gentle
+/// run, falling smoothly to 0 within one setback of a sharp joint - that joint's own setback, so one
+/// steep spot does not widen every window - measured from the span `low` to `high` (unwrapped
+/// parameters), and falling from half the bend threshold to 0 at it as the turn between the row's
+/// end directions grows.
+pub fn carry_weight(
+    chain: &ChainField,
+    low: f64,
+    high: f64,
+    from_tangent: Vector3,
+    to_tangent: Vector3,
+) -> f64 {
+    let turn_degrees =
+        from_tangent.dot(to_tangent).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI;
+    let gentle = smooth_step(2.0 * (1.0 - (turn_degrees / chain.sharp_turn_degrees)));
+    let joints = chain.sharp_joints();
+    if gentle <= 0.0 || joints.is_empty() {
+        return gentle;
+    }
+
+    // Only a joint within two of the largest setbacks can pull the weight under 1: visit just
+    // those, by binary search, on every lap a closed chain's unwrapped span can reach.
+    let reach = 2.0 * chain.max_setback;
+    let length = chain.length;
+    let mut away_from_joints: f64 = 1.0;
+    // C#'s (int)Math.Floor: the laps are small counts.
+    let first_lap = if chain.is_closed {
+        ((low - reach) / length).floor() as i32
+    } else {
+        0
+    };
+    let last_lap = if chain.is_closed {
+        ((high + reach) / length).floor() as i32
+    } else {
+        0
+    };
+    for lap in first_lap..=last_lap {
+        let offset = lap as f64 * length;
+        let mut k = first_joint_at_or_past(joints, low - reach - offset);
+        while k < joints.len() && joints[k].0 + offset <= high + reach {
+            let at = joints[k].0 + offset;
+            let distance = if at < low {
+                low - at
+            } else if at > high {
+                at - high
+            } else {
+                0.0
+            };
+            let setback = joints[k].1;
+            let weight = if setback > 0.0 {
+                smooth_step((distance - setback) / setback)
+            } else if distance > 0.0 {
+                1.0
+            } else {
+                0.0
+            };
+            away_from_joints = vector_math::cs_math::min_f64(away_from_joints, weight);
+            k += 1;
+        }
+    }
+
+    gentle * away_from_joints
 }

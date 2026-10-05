@@ -4,7 +4,7 @@
 //! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
 //! wrap ([`largest_backward_step`]) and the chains' independence check
 //! ([`no_two_chains_share_a_vertex`]), the rail senses' constructor and their pairing
-//! ([`try_pair`]). The fill's
+//! ([`try_pair`]) and the excursion rule ([`within_excursion`]). The fill's
 //! other functions land with later packages.
 
 use std::collections::HashMap;
@@ -211,4 +211,13 @@ pub fn no_two_chains_share_a_vertex(loops: &[GapLoop]) {
             owner.insert(vertex, gap_loop.chain);
         }
     }
+}
+
+/// C# `GapFill.WithinExcursion`: the one rule that says whether a backward reading may be flattened
+/// onto the envelope or the rail refused: an excursion a concave turn can explain, and no deeper
+/// ([`MONOTONE_EXCURSION_OF_SETBACK`] setbacks past the slack). Open mode asks THIS one too -
+/// flattening without a bound would crush a crossing rail monotone, still closed by construction,
+/// and ship a self-intersecting strip.
+pub fn within_excursion(envelope: f64, reading: f64, chain: &ChainField, slack: f64) -> bool {
+    envelope - reading <= slack + (MONOTONE_EXCURSION_OF_SETBACK * chain.setback_at(envelope))
 }

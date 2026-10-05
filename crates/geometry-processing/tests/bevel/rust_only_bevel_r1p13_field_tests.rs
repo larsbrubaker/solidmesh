@@ -523,8 +523,8 @@ fn rust_only_a_run_out_wrapper_is_read_through_to_its_pick() {
     assert!(point.as_chain_field().is_none() && point.as_pick_field().is_none());
     let wrapper = BandGroupFieldsWithRunOuts::new(
         point.clone(),
-        Rc::new(|_| FieldSample::default()),
-        Rc::new(|_, _| 0.0),
+        Rc::new(|_| Ok(FieldSample::default())),
+        Some(Rc::new(|_, _| 0.0)),
         Vec::new(),
     );
     let wrapped: Rc<dyn ChainDistanceField> = Rc::new(Wrapped(wrapper));

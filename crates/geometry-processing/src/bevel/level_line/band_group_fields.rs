@@ -4,7 +4,8 @@
 //! `Bevel/LevelLine/BandGroupFields.cs` (a C# static class): the run-out gate ([`run_outs_on`],
 //! [`turn_run_outs_on`] and its scope [`BandGroupFieldsRunOutsScope`], kept on the build's
 //! [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the wrapped field
-//! ([`BandGroupFieldsWithRunOuts`], with its constructor and inner field) and the pick under it
+//! ([`BandGroupFieldsWithRunOuts`], with its constructor, inner field, point query, bounded maxima
+//! and field seam) and the pick under it
 //! ([`unwrapped`]). The static class's other functions and the wrapped field's
 //! queries land with later packages.
 
@@ -12,7 +13,11 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{ChainDistanceField, FieldSample, LevelLineWork};
+use super::bounded_maximum;
+use super::{
+    ChainDistanceField, FieldCounters, FieldKind, FieldMaximum, FieldSample, LevelLineWork,
+    ScalarField, WorkError,
+};
 
 /// C# `BandGroupFields.RunOutsOn`: whether the side groups read their crease run-outs' fields for
 /// the build in force (off wherever no budget is, as C#'s flow default is).
@@ -84,9 +89,10 @@ pub struct BandGroupFieldsWithRunOuts {
     /// The pick field the run-outs are read beside (C# `Inner`).
     pub pick: Rc<dyn ChainDistanceField>,
     /// The pick field's sampler.
-    pub pick_sample: Rc<dyn Fn(Vector3) -> FieldSample>,
-    /// The pick's end planes: the signed reading of a chain's end plane at a point.
-    pub end_planes: Rc<dyn Fn(i32, Vector3) -> f64>,
+    pub pick_sample: Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>,
+    /// The pick's end planes: the signed reading of a chain's end plane at a point; `None` where no
+    /// member is clipped (C#'s null reader).
+    pub end_planes: Option<Rc<dyn Fn(i32, Vector3) -> f64>>,
     /// The run-out fields read beside the pick.
     pub run_outs: Vec<Rc<dyn ChainDistanceField>>,
 }
@@ -95,8 +101,8 @@ impl BandGroupFieldsWithRunOuts {
     /// C#'s constructor.
     pub fn new(
         pick: Rc<dyn ChainDistanceField>,
-        pick_sample: Rc<dyn Fn(Vector3) -> FieldSample>,
-        end_planes: Rc<dyn Fn(i32, Vector3) -> f64>,
+        pick_sample: Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>,
+        end_planes: Option<Rc<dyn Fn(i32, Vector3) -> f64>>,
         run_outs: Vec<Rc<dyn ChainDistanceField>>,
     ) -> Self {
         BandGroupFieldsWithRunOuts {
@@ -120,5 +126,131 @@ impl BandGroupFieldsWithRunOuts {
                 .run_outs
                 .iter()
                 .all(|run_out| run_out.nothing_reaches_below(min, max, margin))
+    }
+}
+
+impl BandGroupFieldsWithRunOuts {
+    /// C# `WithRunOuts.RunOutValueAt`: the least of the run-outs alone at `point` (NaN where any
+    /// reads NaN, as C#'s `Enumerable.Min`).
+    pub fn run_out_value_at(&self, point: Vector3) -> Result<f64, WorkError> {
+        let mut least: Option<f64> = None;
+        for run_out in &self.run_outs {
+            let value = run_out.value_at(point)?;
+            if value.is_nan() {
+                return Ok(f64::NAN);
+            }
+
+            if least.is_none_or(|l| value < l) {
+                least = Some(value);
+            }
+        }
+
+        // C# throws on no run-outs; a wrapper is made only with some (`BandGroupFields.Of`).
+        Ok(least.unwrap_or(f64::NAN))
+    }
+
+    /// C# `WithRunOuts.Evaluate`: the pick's sample, lowered to any run-out that reads below it -
+    /// keeping the pick's chain and parameter and marked clipped (see the type's remarks); a
+    /// run-out that cannot reach below the sample is skipped unread.
+    pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
+        let mut sample = (self.pick_sample)(point)?;
+        for run_out in &self.run_outs {
+            if run_out.nothing_reaches_below(point, point, sample.value) {
+                continue;
+            }
+
+            let value = run_out.value_at(point)?;
+            if value < sample.value {
+                sample = FieldSample {
+                    value,
+                    clipped: true,
+                    ..sample
+                };
+            }
+        }
+
+        Ok(sample)
+    }
+
+    /// C# `WithRunOuts.MaxAlongSegment(a, b, tolerance)`.
+    pub fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.max_along_segment_at_least(a, b, tolerance, f64::NEG_INFINITY)
+    }
+
+    /// C# `WithRunOuts.MaxAlongSegment(a, b, tolerance, atLeast)`: the bounded search over the
+    /// wrapped field, clipped by the pick's end planes.
+    pub fn max_along_segment_at_least(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        FieldCounters::with(|t| t.max_along += 1);
+        LevelLineWork::charge(1)?;
+        bounded_maximum::over_segment(
+            &|p| self.evaluate(p),
+            a,
+            b,
+            tolerance,
+            at_least,
+            self.end_planes.as_deref(),
+        )
+    }
+
+    /// C# `WithRunOuts.MaxOverTriangle(a, b, c, tolerance)`.
+    pub fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.max_over_triangle_bounded(a, b, c, tolerance, f64::INFINITY, f64::NEG_INFINITY)
+    }
+
+    /// C# `WithRunOuts.MaxOverTriangle(a, b, c, tolerance, stopAbove, atLeast)`.
+    pub fn max_over_triangle_bounded(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        FieldCounters::with(|t| t.max_tri += 1);
+        LevelLineWork::charge(1)?;
+        bounded_maximum::over_triangle(
+            &|p| self.evaluate(p),
+            a,
+            b,
+            c,
+            tolerance,
+            stop_above,
+            at_least,
+            None,
+            self.end_planes.as_deref(),
+        )
+    }
+}
+
+impl ScalarField for BandGroupFieldsWithRunOuts {
+    /// C# `WithRunOuts.ValueAt`: [`BandGroupFieldsWithRunOuts::evaluate`]'s value.
+    fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
+        Ok(self.evaluate(point)?.value)
+    }
+
+    fn kind(&self) -> FieldKind {
+        FieldKind::WithRunOuts
+    }
+
+    fn as_with_run_outs(&self) -> Option<&BandGroupFieldsWithRunOuts> {
+        Some(self)
     }
 }

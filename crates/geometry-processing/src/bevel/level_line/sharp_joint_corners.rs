@@ -1,8 +1,8 @@
 //! The inside corner of one chain's own SHARP JOINT, made a mesh vertex before the refinement
 //! runs: on a face holding both of the joint's legs, the point standing the joint's setback from
 //! each leg - where the level line turns. Ports `Bevel/LevelLine/SharpJointCorners.cs` (a C#
-//! static class, so a module of functions); the insertion and the corner itself land with their
-//! method packages.
+//! static class, so a module of functions): the corner itself ([`the_inside_corner`]) and its
+//! tests; the insertion lands with its method package.
 //!
 //! Without it the cut meets that corner only when the face's own edges pass through it: on the
 //! knife-edge prism the cut chorded a corner off, the rail had no vertex standing for the joint's
@@ -11,7 +11,7 @@
 
 use vector_math::{cs_math, Vector3};
 
-use super::LevelLineMesh;
+use super::{ChainField, LevelLineMesh};
 
 /// The noise allowance a corner is read against at `at`, on a face of size `scale`.
 pub fn off_the_line(at: Vector3, scale: f64) -> f64 {
@@ -57,4 +57,27 @@ pub fn holds(mesh: &LevelLineMesh, triangle: i32, point: Vector3, legs_plane: Ve
     let clear = off_the_line(point, scale);
     let side = |p: Vector3, q: Vector3| (q - p).cross(point - p).dot(normal) / (q - p).length();
     side(a, b) > clear && side(b, c) > clear && side(c, a) > clear
+}
+
+/// C# `SharpJointCorners.TheInsideCorner`: the point on the bisector of the joint's inside angle,
+/// in the plane of its two legs, standing `setback` from each leg's line, with that plane's unit
+/// normal; `None` where the legs do not turn or reverse.
+pub fn the_inside_corner(chain: &ChainField, at: f64, setback: f64) -> Option<(Vector3, Vector3)> {
+    let step = 1e-3 * cs_math::max_f64(setback, 1e-9);
+    let apex = chain.point_at(at);
+    let back = (chain.point_at(chain.wrapped(at - step)) - apex).get_normal();
+    let ahead = (chain.point_at(chain.wrapped(at + step)) - apex).get_normal();
+    let cos = back.dot(ahead);
+    if cos <= -1.0 + 1e-9 || cos >= 1.0 - 1e-9 {
+        return None;
+    }
+
+    // Between the two legs as they leave the apex: sin of half the inside angle is the setback
+    // over the corner's distance from the apex.
+    let bisector = (back + ahead).get_normal();
+    let sin_half = ((1.0 - cos) / 2.0).sqrt();
+    Some((
+        apex + (bisector * (setback / sin_half)),
+        back.cross(ahead).get_normal(),
+    ))
 }

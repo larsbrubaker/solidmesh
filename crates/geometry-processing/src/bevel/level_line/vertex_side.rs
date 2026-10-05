@@ -2,7 +2,8 @@
 //! cache the construction shares ([`VertexFieldReading`]). Ports the types of
 //! `Bevel/LevelLine/VertexSide.cs` with the reading's constructor, its field, the side a value
 //! reads ([`VertexFieldReading::side_for`]), a point's value ([`VertexFieldReading::value_at_point`])
-//! and the known cuts of a chain's or pick's bounded ends
+//! the readings across the known cuts ([`VertexFieldReading::known_cut_value_at`],
+//! [`VertexFieldReading::value_in_the_end_plane`]) and the known cuts' test of a chain's or pick's bounded ends
 //! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]); the
 //! reading's queries land with the refinement's method package.
 
@@ -10,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::{FieldKind, LevelLineMesh, ScalarField};
@@ -152,6 +153,68 @@ impl VertexFieldReading {
     /// C# `VertexFieldReading.ValueAtPoint`: the field value at an arbitrary point - the same field
     /// the vertices are read from.
     pub fn value_at_point(&self, point: Vector3) -> Result<f64, super::WorkError> {
+        self.field.value_at(point)
+    }
+
+    /// The run-outs' least at `point` where the field is a group read with its run-outs; +infinity
+    /// otherwise.
+    fn run_out_value_at(&self, point: Vector3) -> Result<f64, super::WorkError> {
+        match self.field.as_with_run_outs() {
+            Some(wrapped) => wrapped.run_out_value_at(point),
+            None => Ok(f64::INFINITY),
+        }
+    }
+
+    /// C# `VertexFieldReading.ValueInTheEndPlane`: the field along an edge a-b lying in a bounded
+    /// end's plane ([`VertexFieldReading::edge_lies_in_a_known_cut`]): the chain's own value,
+    /// whose zero is the band's boundary there - the clipped field reads 0 all along the plane
+    /// inside the band. A run-out is read as [`VertexFieldReading::known_cut_value_at`] reads it.
+    pub fn value_in_the_end_plane(
+        &self,
+        point: Vector3,
+        a: Vector3,
+        b: Vector3,
+    ) -> Result<f64, super::WorkError> {
+        let run_out = self.run_out_value_at(point)?;
+        let pick = self.pick();
+        if let Some(chain) = pick.as_chain_field() {
+            Ok(cs_math::min_f64(
+                chain.value_in_the_end_plane(point)?,
+                run_out,
+            ))
+        } else if let Some(pick) = pick.as_pick_field() {
+            Ok(cs_math::min_f64(
+                pick.value_in_the_end_plane(point, a, b)?,
+                run_out,
+            ))
+        } else {
+            self.field.value_at(point)
+        }
+    }
+
+    /// C# `VertexFieldReading.KnownCutValueAt`: the field read with every bounded end's plane as a
+    /// KNOWN CUT (see [`super::ChainField::value_across_the_known_cut`]) when flat ends are on; the
+    /// plain field otherwise. Only side decisions ask it - never the refinement. A run-out is read
+    /// as it is on either side of a known cut: the least of it and the pick's value across the cut.
+    pub fn known_cut_value_at(&self, point: Vector3) -> Result<f64, super::WorkError> {
+        if use_flat_ends() {
+            let run_out = self.run_out_value_at(point)?;
+            let pick = self.pick();
+            if let Some(chain) = pick.as_chain_field() {
+                return Ok(cs_math::min_f64(
+                    chain.value_across_the_known_cut(point)?,
+                    run_out,
+                ));
+            }
+
+            if let Some(pick) = pick.as_pick_field() {
+                return Ok(cs_math::min_f64(
+                    pick.value_across_the_known_cut(point)?,
+                    run_out,
+                ));
+            }
+        }
+
         self.field.value_at(point)
     }
 
