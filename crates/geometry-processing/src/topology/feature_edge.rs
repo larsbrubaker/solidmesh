@@ -90,7 +90,6 @@ impl FeatureEdge {
     /// index - no vertex of the mesh stands at the cut, so there is nothing truer to name -
     /// which is why anything that needs one edge per mesh edge must not be handed a subdivided
     /// chain. Crate-internal for that reason (C# `internal`): the bevel is the one caller.
-    #[allow(dead_code)] // its caller, BevelRoundEntry, lands with the Bevel slices
     pub(crate) fn over_part_of_its_length(&self, start: Vector3, end: Vector3) -> FeatureEdge {
         FeatureEdge {
             start,

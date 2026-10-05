@@ -21,8 +21,10 @@
 //! region face grid ([`surface`]); and the seventh: the profile and frame an edge's tool is drawn
 //! in ([`bevel_edge_tool_builder`]), the corner handover a run's end reads first
 //! ([`bevel_corner_handover`]), the mixed corner's blend records ([`BevelMixedBlend`],
-//! [`BevelMixedBlendSet`]) and the ring tidying after a clip ([`surface`]); and of the eighth, what a rebuild has to
-//! say about itself ([`BevelRebuildAdvisories`]). C# `internal static class` helpers are modules of free
+//! [`BevelMixedBlendSet`]) and the ring tidying after a clip ([`surface`]); and the eighth: what a rebuild has to
+//! say about itself ([`BevelRebuildAdvisories`]), the cut where a crease's ball enters a round
+//! ([`bevel_round_entry`]), the rounds a part arrives with ([`bevel_source_rounds`]) and the walk
+//! of a side's fan at a chain vertex ([`sections`]). C# `internal static class` helpers are modules of free
 //! functions here.
 
 mod bevel_advisory;
@@ -44,9 +46,12 @@ mod bevel_partner_tube;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
+pub mod bevel_round_entry;
 mod bevel_round_faces;
 pub mod bevel_seam_ring;
 pub mod bevel_shared_edges;
+pub mod bevel_source_rounds;
+mod bevel_source_rounds_fit;
 mod bevel_surface_labels;
 mod bevel_surface_walk;
 pub mod float_grid;
