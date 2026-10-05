@@ -7,11 +7,16 @@
 //! the reading of a feature standing on a region ([`surface_room_standing_feature`]), the rolling
 //! ball's spine round a mixed corner ([`SurfaceMixedCornerSpine`]) and the per-region face grid
 //! the wall-clearance questions are asked of ([`SurfaceRegionFaceGrid`]), and the tidying of
-//! the rings a clip leaves ([`surface_ring`]). The construction itself
-//! lands in later slices.
+//! the rings a clip leaves ([`surface_ring`]); and the half-space clip every cut is drawn with
+//! ([`surface_cut_clip`]), the whole-span and partial readings of a band running off the face it
+//! lands on ([`surface_band_runs_off_the_face_beyond`]) and the closed loop the planner left
+//! without a plan ([`SurfaceBevelPlanlessLoop`]). The construction itself lands in later slices.
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
+pub mod surface_band_runs_off_the_face_beyond;
+mod surface_bevel_planless_loop;
+pub mod surface_cut_clip;
 mod surface_edge_roles;
 mod surface_line;
 pub mod surface_mesh_closure;
@@ -24,6 +29,7 @@ mod surface_vertex_pool;
 
 pub use surface_band_end::SurfaceBandEnd;
 pub use surface_band_runs_off_over_a_stretch::SurfaceBandRunsOffOverAStretch;
+pub use surface_bevel_planless_loop::SurfaceBevelPlanlessLoop;
 pub use surface_edge_roles::SurfaceEdgeRoles;
 pub use surface_line::SurfaceLine;
 pub use surface_mixed_corner_spine::{ContactArms, SurfaceMixedCornerSpine};

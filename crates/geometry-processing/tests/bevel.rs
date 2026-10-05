@@ -29,8 +29,12 @@ mod rust_only_bevel_slice6_tests;
 mod rust_only_bevel_slice7_tests;
 #[path = "bevel/rust_only_bevel_slice8_tests.rs"]
 mod rust_only_bevel_slice8_tests;
+#[path = "bevel/rust_only_bevel_slice9_tests.rs"]
+mod rust_only_bevel_slice9_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
+#[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
+mod surface_facet_cut_own_ends_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
 #[path = "bevel/topology_test_meshes.rs"]

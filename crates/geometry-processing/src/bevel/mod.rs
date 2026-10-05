@@ -24,14 +24,18 @@
 //! [`BevelMixedBlendSet`]) and the ring tidying after a clip ([`surface`]); and the eighth: what a rebuild has to
 //! say about itself ([`BevelRebuildAdvisories`]), the cut where a crease's ball enters a round
 //! ([`bevel_round_entry`]), the rounds a part arrives with ([`bevel_source_rounds`]) and the walk
-//! of a side's fan at a chain vertex ([`sections`]). C# `internal static class` helpers are modules of free
-//! functions here.
+//! of a side's fan at a chain vertex ([`sections`]); and the ninth: what one end of a run can
+//! afford ([`bevel_chain_end_budget`]), what each group did on a rebuild ([`BevelGroupResult`],
+//! [`BevelRebuildResults`], [`bevel_group_failures`]) and the clip, run-off readings and planless
+//! loop of the surface construction ([`surface`]). C# `internal static class` helpers are
+//! modules of free functions here.
 
 mod bevel_advisory;
 mod bevel_advisory_code;
 pub mod bevel_advisory_codes;
 pub mod bevel_arc_chording;
 pub mod bevel_blend_seam;
+pub mod bevel_chain_end_budget;
 mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
 pub mod bevel_corner_handover;
@@ -39,6 +43,7 @@ pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
+mod bevel_group_result;
 mod bevel_mixed_blend;
 mod bevel_mixed_corner_ends;
 pub mod bevel_pair_corner_crease;
@@ -64,6 +69,9 @@ pub use bevel_advisory_code::BevelAdvisoryCode;
 pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_end_cap::BevelEndCap;
+pub use bevel_group_result::{
+    bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
+};
 pub use bevel_mixed_blend::{BevelMixedBlend, BevelMixedBlendSet};
 pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;
 pub use bevel_pair_corner_crease::PairFaces;
