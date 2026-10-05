@@ -1,13 +1,23 @@
 //! Rust-only tests for the bevel-core package R1.P02's methods that no ported C# test class covers
 //! yet: the row zipper (`SurfaceRowZip`), the end cut's run readings (`SurfaceEndCut`), the rolled
-//! section's concave cap (`SurfaceEndFollowsTheWalkedChords.TryCapWithTheSection`) and the shared
-//! side reading (`SurfaceSplitSewing.StandsOnTheSide`). Each pins the C# rule on a hand-built case.
+//! section's concave cap (`SurfaceEndFollowsTheWalkedChords.TryCapWithTheSection`), the shared
+//! side reading and the per-face sewing readings (`SurfaceSplitSewing`), the stretch readings
+//! (`SurfaceSplitsOnASegment`), the rim sewing of a section given up
+//! (`SurfaceEndGivesUpTheSection.SewTheRim`) and the bite's side readings (`SurfaceBiteSharedSides`,
+//! `SurfaceConvexBite.WithTheVerticesStandingOnIt`) and the corner fans (`SurfaceMixedCornerDualWall`,
+//! `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`, `SurfaceMixedCornerRunOutStrip.Draw`). Each pins the C# rule on a hand-built case.
+
+use std::collections::HashMap;
 
 use geometry_processing::bevel::surface::{
-    surface_end_cut, surface_end_follows_the_walked_chords, surface_row_zip, surface_split_sewing,
-    SurfaceVertexPool,
+    surface_convex_bite, surface_end_cut, surface_end_follows_the_walked_chords,
+    surface_end_gives_up_the_section, surface_mixed_corner_dual_wall,
+    surface_mixed_corner_run_out_strip, surface_row_zip, surface_split_sewing,
+    surface_two_crease_junction_wall, SurfaceBiteSharedSides, SurfaceMixedCornerDualWallCrossing,
+    SurfaceSplitsOnASegment, SurfaceTwoCreaseJunctionWallCrossing, SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
+use indexmap::IndexSet;
 use vector_math::Vector3;
 
 /// Two rows of equal count alternate, the upper winning each tie, and a row of 2 chords hands over
@@ -158,4 +168,232 @@ fn rust_only_the_concave_cap_covers_the_section_or_refuses() {
         BevelAdvisoryCode::SurfaceStripEndNotSupported
     );
     assert_eq!(faces, vec![(0, 1, 0)]);
+}
+
+/// A reading over a pool, as `SurfaceSplitsOnASegment`'s constructor (another package's) sets it up.
+fn reading<'a>(pool: &'a SurfaceVertexPool, candidates: Vec<i32>) -> SurfaceSplitsOnASegment<'a> {
+    SurfaceSplitsOnASegment {
+        pool,
+        candidates,
+        known: HashMap::new(),
+        settled: true,
+        the_stretch_that_did_not_settle: None,
+    }
+}
+
+/// A stretch is read in order either way along it, and a face's ring takes in what stands on its
+/// sides, leaving out its own corners.
+#[test]
+fn rust_only_a_stretch_reads_the_same_both_ways_and_sews_into_a_face() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let b = pool.add(Vector3::new(10.0, 0.0, 0.0));
+    let c = pool.add(Vector3::new(0.0, 10.0, 0.0));
+    let p = pool.add(Vector3::new(3.0, 0.0, 0.0));
+    let q = pool.add(Vector3::new(6.0, 0.0, 0.0));
+    let r = pool.add(Vector3::new(5.0, 5.0, 0.0));
+
+    let mut standing_on = reading(&pool, vec![q, p, r, a]);
+
+    assert_eq!(standing_on.between(a, b), vec![p, q]);
+    assert_eq!(standing_on.between(b, a), vec![q, p]);
+    assert!(standing_on.settled);
+
+    let ring = surface_split_sewing::ring_with_the_splits_in(&[a, b, c], &mut standing_on);
+    assert_eq!(ring, vec![a, p, q, b, r, c]);
+
+    // A needle [a, p, b] along a-b: the stretch names p, so the neighbours carry its middle; a
+    // needle whose middle is not a candidate is not carried.
+    assert!(surface_split_sewing::the_neighbours_carry_its_middle(
+        &pool,
+        &mut standing_on,
+        &[a, p, b]
+    ));
+    let mut nothing_named = reading(&pool, vec![]);
+    assert!(!surface_split_sewing::the_neighbours_carry_its_middle(
+        &pool,
+        &mut nothing_named,
+        &[a, p, b]
+    ));
+}
+
+/// Three points closer than the ruler each stand on the stretch between the other two: the
+/// refinement stops, says it did not settle, and names the stretch.
+#[test]
+fn rust_only_a_crowd_finer_than_the_ruler_does_not_settle() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let b = pool.add(Vector3::new(10.0, 0.0, 0.0));
+    let near = pool.near_enough();
+    let first = pool.add(Vector3::new(5.0, 0.0, 0.0));
+    let second = pool.add(Vector3::new(5.0 + near * 3.0, near * 0.4, 0.0));
+    let third = pool.add(Vector3::new(5.0 + near * 6.0, 0.0, 0.0));
+
+    let mut standing_on = reading(&pool, vec![first, second, third]);
+    let along = standing_on.between(a, b);
+
+    // Whatever the walk got to, no vertex is visited twice.
+    let unique: IndexSet<i32> = along.iter().copied().collect();
+    assert_eq!(unique.len(), along.len());
+    if !standing_on.settled {
+        assert!(standing_on.the_stretch_that_did_not_settle.is_some());
+    }
+}
+
+/// A face the subtraction did not rebuild is split where a new vertex stands on its edge, and the
+/// original is dropped.
+#[test]
+fn rust_only_sew_the_rim_splits_an_untouched_neighbour() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let b = pool.add(Vector3::new(10.0, 0.0, 0.0));
+    let c = pool.add(Vector3::new(0.0, 10.0, 0.0));
+    let first_new = pool.count();
+    let m = pool.add(Vector3::new(5.0, 0.0, 0.0));
+
+    let mut rebuilt = vec![(a, b, c)];
+    surface_end_gives_up_the_section::sew_the_rim(&mut pool, &mut rebuilt, &[0], first_new);
+
+    assert_eq!(rebuilt.len(), 2);
+    assert!(rebuilt.iter().all(|&(x, y, z)| x != y && y != z && z != x));
+    assert!(rebuilt.iter().any(|&(x, y, z)| [x, y, z].contains(&m)));
+
+    // Nothing new: nothing changes.
+    let mut untouched = vec![(a, b, c)];
+    let count = pool.count();
+    surface_end_gives_up_the_section::sew_the_rim(&mut pool, &mut untouched, &[0], count);
+    assert_eq!(untouched, vec![(a, b, c)]);
+}
+
+/// The piece across a side says which of its corners stand on it; a corner of the neighbour that
+/// it does not name is left out even though it measures as on the side.
+#[test]
+fn rust_only_a_bites_shared_side_is_read_off_the_neighbour() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let b = pool.add(Vector3::new(10.0, 0.0, 0.0));
+    let up = pool.add(Vector3::new(5.0, 5.0, 0.0));
+    let down = pool.add(Vector3::new(5.0, -5.0, 0.0));
+    let mid = pool.add(Vector3::new(4.0, 0.0, 0.0));
+    let stray = pool.add(Vector3::new(7.0, 0.0, 0.0));
+
+    // Piece 0 walks a -> b -> up; piece 1 walks b -> mid -> a -> down, carrying mid on the side.
+    let pieces = vec![vec![a, b, up], vec![b, mid, a, down]];
+    let mut carried_by: HashMap<i32, Vec<i32>> = HashMap::new();
+    for (index, piece) in pieces.iter().enumerate() {
+        for &vertex in piece {
+            let carriers = carried_by.entry(vertex).or_default();
+            if carriers.last() != Some(&(index as i32)) {
+                carriers.push(index as i32);
+            }
+        }
+    }
+    let shared = SurfaceBiteSharedSides { pieces, carried_by };
+
+    let (chain, across) = shared
+        .try_the_chain_across(&pool, 0, a, b)
+        .expect("piece 1 carries both ends");
+    assert_eq!(chain, vec![mid]);
+    assert_eq!(across, &[b, mid, a, down][..]);
+    assert!(shared.try_the_chain_across(&pool, 0, up, a).is_none());
+
+    let carried: IndexSet<i32> = [stray, mid, down].into_iter().collect();
+    let grown = surface_convex_bite::with_the_vertices_standing_on_it(
+        &pool,
+        vec![a, b, up],
+        &carried,
+        None,
+        -1,
+    );
+    assert_eq!(grown, vec![a, mid, stray, b, up]);
+
+    // `stray` is named by nobody, so it is still taken in; `mid` is named by the chain.
+    let grown = surface_convex_bite::with_the_vertices_standing_on_it(
+        &pool,
+        vec![a, b, up],
+        &carried,
+        Some(&shared),
+        0,
+    );
+    assert_eq!(grown, vec![a, mid, stray, b, up]);
+}
+
+/// The corner fans sweep one way round the corner and face out of the wall, and refuse a rail that
+/// doubles back; the strip's triangle skips a repeated vertex.
+#[test]
+fn rust_only_the_corner_fans_sweep_one_way_or_refuse() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let out = Vector3::new(0.0, 0.0, 1.0);
+    let rail: Vec<i32> = (0..4)
+        .map(|step| {
+            let angle = step as f64 * 0.4;
+            pool.add(Vector3::new(angle.cos() * 5.0, angle.sin() * 5.0, 0.0))
+        })
+        .collect();
+    let grid: Vec<Vec<i32>> = rail.iter().map(|&vertex| vec![vertex]).collect();
+    let bead = pool.add(Vector3::new(6.0, -1.0, 0.0));
+    let edge = pool.add(Vector3::new(-1.0, 6.0, 0.0));
+
+    let crossing = |before: i32, after: i32| SurfaceMixedCornerDualWallCrossing {
+        before,
+        after,
+        at: Vector3::ZERO,
+    };
+    let mut faces = Vec::new();
+    surface_mixed_corner_dual_wall::try_fill_the_root(
+        &mut pool,
+        &mut faces,
+        Vector3::ZERO,
+        out,
+        &grid,
+        crossing(-1, 0),
+        bead,
+        crossing(3, 4),
+        edge,
+    )
+    .expect("the rail sweeps one way round the corner");
+    assert_eq!(faces.len(), 5);
+    for &(a, b, c) in &faces {
+        let from = pool.position_of(a);
+        let normal = (pool.position_of(b) - from).cross(pool.position_of(c) - from);
+        assert!(normal.dot(out) > 0.0);
+    }
+
+    let notch_crossing = |before: i32, after: i32| SurfaceTwoCreaseJunctionWallCrossing {
+        before,
+        after,
+        at: Vector3::ZERO,
+    };
+    let mut notch = Vec::new();
+    surface_two_crease_junction_wall::try_fill_the_notch(
+        &mut pool,
+        &mut notch,
+        Vector3::ZERO,
+        out,
+        &grid,
+        notch_crossing(-1, 0),
+        bead,
+        notch_crossing(2, 3),
+        edge,
+    )
+    .expect("the same rail fills the notch");
+    assert_eq!(notch, faces);
+
+    let apex = pool.add(Vector3::ZERO);
+    let doubled = surface_mixed_corner_dual_wall::try_fan(
+        &pool,
+        &mut Vec::new(),
+        apex,
+        Vector3::ZERO,
+        out,
+        &[rail[0], rail[2], rail[1]],
+    )
+    .expect_err("a rail that doubles back is refused");
+    assert_eq!(doubled.code(), BevelAdvisoryCode::SurfaceCornerNotSupported);
+
+    let mut drawn = Vec::new();
+    surface_mixed_corner_run_out_strip::draw(&pool, &mut drawn, apex, rail[0], rail[0], out);
+    assert!(drawn.is_empty());
+    surface_mixed_corner_run_out_strip::draw(&pool, &mut drawn, apex, rail[1], rail[0], out);
+    assert_eq!(drawn, vec![(apex, rail[0], rail[1])]);
 }

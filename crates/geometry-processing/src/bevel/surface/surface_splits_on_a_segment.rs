@@ -1,12 +1,14 @@
 //! Which of a cut's new vertices stand along a stretch of a mesh ([`SurfaceSplitsOnASegment`]) -
 //! asked of the stretch's two END VERTICES and of nothing else, so that every face meeting along
 //! one stretch is told the same thing about it. Ports the fields of
-//! `Bevel/Surface/SurfaceSplitsOnASegment.cs`; its constructor and refinement land with the split
-//! sewing package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceSplitsOnASegment.cs` and its stretch readings (`between`, refined to a
+//! standstill); its constructor lands with a later package as a further `impl` block.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use super::SurfaceVertexPool;
+use vector_math::Vector3;
+
+use super::{surface_split_sewing, SurfaceVertexPool};
 
 /// C# `SurfaceSplitsOnASegment`: the splits standing along each stretch, refined to a standstill
 /// and remembered by the stretch's two end vertices.
@@ -45,4 +47,158 @@ pub struct SurfaceSplitsOnASegment<'a> {
     pub settled: bool,
     /// The ends of the first stretch whose refinement did not settle, for the advisory to point at.
     pub the_stretch_that_did_not_settle: Option<(i32, i32)>,
+}
+
+/// The stretch readings (C# `Between`, `Refine`, `StandingOn`).
+///
+/// C# keeps each stretch's list in `known` BY REFERENCE while its refinement runs, so a piece read
+/// part way through sees what the stretch carries so far. Here the refinement works on its own
+/// copy and writes it back into `known` after every change, which hands a nested reading of the
+/// same key the same contents at the same moment.
+impl SurfaceSplitsOnASegment<'_> {
+    /// C# `Between`: the candidates standing along the stretch from `from` to `to`, in order from
+    /// one to the other, neither end included.
+    pub fn between(&mut self, from: i32, to: i32) -> Vec<i32> {
+        let key = (from.min(to), from.max(to));
+
+        let along = match self.known.get(&key) {
+            Some(along) => along.clone(),
+            None => {
+                // Written down BEFORE the refinement runs, and empty: a piece of a stretch cannot be a
+                // piece of itself, but two points nearer than the ruler can each read as standing on
+                // the other's stretch, and an empty answer breaks that walk rather than following it
+                // round.
+                self.known.insert(key, Vec::new());
+
+                self.refine(key.0, key.1);
+
+                self.known.get(&key).cloned().unwrap_or_default()
+            }
+        };
+
+        if from == key.0 {
+            return along;
+        }
+
+        let mut back = along;
+
+        back.reverse();
+
+        back
+    }
+
+    /// C# `Refine`: the stretch read to a standstill - what stands on it directly, then what stands
+    /// on each piece between two neighbours, until no piece gains a point.
+    ///
+    /// It stops BY CONSTRUCTION: every take-in puts on the stretch at least one candidate the
+    /// stretch was not already carrying, and there are only so many candidates, so the loop runs at
+    /// most that many times. Without that floor it does not stop at all - THREE points in a cluster
+    /// finer than the ruler each stand on the line between the other two, so the piece from the
+    /// first to the second hands back the third, which the stretch already carries, and the walk
+    /// goes round that triangle splicing the same points in again and again
+    /// (`SurfaceSplitsOnASegmentTests`).
+    ///
+    /// A crowd like that has no answer to give: there IS no order of those three along the stretch,
+    /// and any of the three orders leaves a point of the cluster off some face's side. So the
+    /// refinement stops where it stands and the reading says it did not settle, for the caller to
+    /// refuse by name - never a panic, and never a stretch that visits one vertex twice.
+    fn refine(&mut self, from: i32, to: i32) {
+        let key = (from, to);
+        let mut along = Vec::new();
+
+        self.standing_on(
+            self.pool.position_of(from),
+            self.pool.position_of(to),
+            from,
+            to,
+            &mut along,
+        );
+        self.known.insert(key, along.clone());
+
+        let mut carried: HashSet<i32> = along.iter().copied().collect();
+
+        let mut taking_in = true;
+
+        while taking_in {
+            taking_in = false;
+
+            let mut walk = Vec::with_capacity(along.len() + 2);
+            walk.push(from);
+            walk.extend(along.iter().copied());
+            walk.push(to);
+
+            let mut step = 0;
+            while step + 1 < walk.len() {
+                // The piece's own answer, by its own key - so a piece that is somebody else's whole
+                // stretch is read once and remembered.
+                let inside = self.between(walk[step], walk[step + 1]);
+
+                if inside.is_empty() {
+                    step += 1;
+                    continue;
+                }
+
+                for &point in &inside {
+                    // Already on the stretch, or an end of it: the piece is handing back what it was
+                    // cut out of, which is the crowd closing on itself rather than a finer reading.
+                    if point == from || point == to || !carried.insert(point) {
+                        self.settled = false;
+                        if self.the_stretch_that_did_not_settle.is_none() {
+                            self.the_stretch_that_did_not_settle = Some((from, to));
+                        }
+
+                        return;
+                    }
+                }
+
+                // C# `along.IndexOf(walk[step]) + 1`: IndexOf is -1 for `from`, which is not in
+                // `along`, so the piece goes in at the front.
+                let at = along
+                    .iter()
+                    .position(|&vertex| vertex == walk[step])
+                    .map_or(0, |index| index + 1);
+                along.splice(at..at, inside);
+                self.known.insert(key, along.clone());
+                taking_in = true;
+                break;
+            }
+        }
+    }
+
+    /// C# `StandingOn`: the candidates standing within the ruler of the straight stretch between two
+    /// points, strictly between its ends, appended in order along it. C#'s `List.Sort` is unstable;
+    /// this sort is stable, so candidates at one place keep the candidates' order (two welded
+    /// vertices are never two candidates at one place, so the tie does not arise).
+    fn standing_on(
+        &self,
+        from: Vector3,
+        to: Vector3,
+        from_vertex: i32,
+        to_vertex: i32,
+        along: &mut Vec<i32>,
+    ) {
+        let mut found: Vec<(f64, i32)> = Vec::new();
+
+        for &candidate in &self.candidates {
+            if candidate == from_vertex || candidate == to_vertex {
+                continue;
+            }
+
+            let (on, where_) = surface_split_sewing::stands_on_the_side(
+                self.pool,
+                from,
+                to,
+                self.pool.position_of(candidate),
+            );
+
+            if on {
+                found.push((where_, candidate));
+            }
+        }
+
+        // Every find is strictly inside (0, 1), so no NaN reaches the comparison.
+        found.sort_by(|first, second| first.0.total_cmp(&second.0));
+
+        along.extend(found.into_iter().map(|(_, vertex)| vertex));
+    }
 }

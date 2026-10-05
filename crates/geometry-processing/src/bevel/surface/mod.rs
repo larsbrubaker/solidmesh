@@ -42,9 +42,11 @@
 //! was drawn from ([`SurfacePlanRecipe`]). And the triangulators every stage emits through: the fan
 //! ([`surface_fan`]), the ear clipper for rings no apex sees whole ([`surface_ring_ears`]), the
 //! zipper between two rows ([`surface_row_zip`]) and the side reading the sewing shares with them
-//! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]) and the rolled
-//! section's concave cap ([`surface_end_follows_the_walked_chords`]). The types land as type
-//! definitions; their methods, and the construction itself, land in later slices.
+//! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]), the rolled
+//! section's concave cap ([`surface_end_follows_the_walked_chords`]), the rim sewing of a section
+//! given up ([`surface_end_gives_up_the_section`]) and the convex bite's side reading
+//! ([`surface_convex_bite`]). The types land as type definitions; their methods, and the
+//! construction itself, land in later slices.
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
@@ -53,6 +55,7 @@ mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
+pub mod surface_convex_bite;
 mod surface_corner_patch;
 mod surface_crossing_at_the_mitre;
 pub mod surface_cut_clip;
@@ -62,6 +65,7 @@ mod surface_end_cap_around_a_feature;
 pub mod surface_end_cut;
 pub mod surface_end_follows_the_walked_chords;
 mod surface_end_gains_the_section;
+pub mod surface_end_gives_up_the_section;
 mod surface_face_carries_on;
 mod surface_facet_cut;
 pub mod surface_fan;
@@ -80,6 +84,7 @@ pub mod surface_mixed_corner_patch;
 pub mod surface_mixed_corner_read_off_the_edge_plans;
 pub mod surface_mixed_corner_ring_schedule;
 mod surface_mixed_corner_rows;
+pub mod surface_mixed_corner_run_out_strip;
 mod surface_mixed_corner_spine;
 mod surface_mixed_corner_wall;
 mod surface_mixed_junction;
@@ -114,7 +119,7 @@ mod surface_strip_trimmed_by_the_face_beyond;
 pub mod surface_two_crease_junction;
 mod surface_two_crease_junction_patch;
 mod surface_two_crease_junction_rings;
-mod surface_two_crease_junction_wall;
+pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
 mod surface_wall_section;
 
