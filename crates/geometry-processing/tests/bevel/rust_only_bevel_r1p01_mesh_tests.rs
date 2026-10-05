@@ -99,3 +99,56 @@ fn rust_only_small_fill_tests_read_as_csharp() {
         v(1.0 + 1e-6, 0.0, 0.0)
     ));
 }
+
+#[test]
+fn rust_only_bridges_are_the_edges_no_cycle_holds() {
+    use geometry_processing::bevel::level_line::pair_corner_end_face_field::bridges;
+    use std::collections::{HashMap, HashSet};
+    // A triangle 0-1-2 with a tail 2-3-4: the tail's two edges are the bridges.
+    let mut neighbours: HashMap<i32, Vec<i32>> = HashMap::new();
+    for (a, b) in [(0, 1), (1, 2), (2, 0), (2, 3), (3, 4)] {
+        neighbours.entry(a).or_default().push(b);
+        neighbours.entry(b).or_default().push(a);
+    }
+    assert_eq!(bridges(&neighbours), HashSet::from([(2, 3), (3, 4)]));
+}
+
+#[test]
+fn rust_only_pick_corners_are_where_chains_turn_into_each_other() {
+    use geometry_processing::bevel::level_line::pick_validation::corners_of;
+    // Two open chains meeting end to end at 2, turning (three distinct edges at 2 with a third
+    // chain ending there too).
+    let chains = vec![vec![0, 1, 2], vec![2, 3], vec![2, 4]];
+    let closed = [false, false, false];
+    let corners = corners_of(&chains, &closed, false);
+    assert_eq!(corners.len(), 1);
+    assert_eq!(corners[0].vertex, 2);
+    assert_eq!(corners[0].chains, vec![0, 1, 2]);
+    // Two chains only: two edges, a corner only when setback steps count.
+    let two = vec![vec![0, 1, 2], vec![2, 3]];
+    assert!(corners_of(&two, &[false, false], false).is_empty());
+    assert_eq!(corners_of(&two, &[false, false], true).len(), 1);
+}
+
+#[test]
+fn rust_only_a_walk_runs_along_a_split_edge() {
+    use geometry_processing::bevel::level_line::band_gap_in_turn::walk_along;
+    use std::collections::HashMap;
+    let positions = [
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(2.0, 0.0, 0.0),
+        v(1.0, 1.0, 0.0),
+    ];
+    let standing = triangle_edges::standing_map(&[(0, 1, 3), (1, 2, 3)]);
+    let neighbours: HashMap<i32, Vec<i32>> =
+        HashMap::from([(0, vec![1, 3]), (1, vec![0, 2, 3]), (2, vec![1, 3])]);
+    assert_eq!(
+        walk_along(0, 2, &positions, &standing, &neighbours),
+        Some(vec![1, 2])
+    );
+    assert_eq!(
+        walk_along(0, 1, &positions, &standing, &neighbours),
+        Some(vec![1])
+    );
+}

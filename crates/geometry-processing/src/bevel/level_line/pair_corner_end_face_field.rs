@@ -1,10 +1,14 @@
 //! The part of a picked edge's round that runs out through its END FACE at a mitred pair corner
 //! ([`PairCornerEndFaceField`]), and the scope that turns it off for a flow
 //! ([`PairCornerEndFaceFieldScope`]). Ports the types of
-//! `Bevel/LevelLine/PairCornerEndFaceField.cs`; the finder, the field queries and the per-flow gate
-//! land with later packages.
+//! `Bevel/LevelLine/PairCornerEndFaceField.cs`, with the bridges of a vertex graph ([`bridges`]); the
+//! finder, the field queries and the per-flow gate land with later packages.
+
+use std::collections::{HashMap, HashSet};
 
 use vector_math::Vector3;
+
+use super::triangle_edges;
 
 /// C# `PairCornerEndFaceField`: the part of a picked edge's round that runs out through its END
 /// FACE at a mitred pair corner - negative in the prism the round's cylinder leaves in front of it
@@ -44,4 +48,59 @@ pub struct PairCornerEndFaceField {
 pub struct PairCornerEndFaceFieldScope {
     /// Whether the field was off when the scope was opened - restored when it closes.
     pub was: bool,
+}
+
+/// The bridges of an undirected vertex graph (each vertex's neighbours listed both ways round),
+/// as (low, high) keys: the edges whose removal disconnects their component. An iterative
+/// Tarjan walk; the set is a property of the graph, so the order the roots are taken in does not
+/// reach it.
+pub fn bridges(neighbours: &HashMap<i32, Vec<i32>>) -> HashSet<(i32, i32)> {
+    let mut bridges = HashSet::new();
+    let mut order: HashMap<i32, i32> = HashMap::new();
+    let mut low: HashMap<i32, i32> = HashMap::new();
+    let mut counter = 0;
+    for &root in neighbours.keys() {
+        if order.contains_key(&root) {
+            continue;
+        }
+
+        // (vertex, parent, next neighbour index)
+        let mut stack: Vec<(i32, i32, usize)> = Vec::new();
+        order.insert(root, counter);
+        low.insert(root, counter);
+        counter += 1;
+        stack.push((root, -1, 0));
+        while let Some((at, parent, next)) = stack.pop() {
+            let list = &neighbours[&at];
+            if next < list.len() {
+                stack.push((at, parent, next + 1));
+                let to = list[next];
+                if to == parent {
+                    continue;
+                }
+
+                if let Some(&seen) = order.get(&to) {
+                    let here = low[&at].min(seen);
+                    low.insert(at, here);
+                } else {
+                    order.insert(to, counter);
+                    low.insert(to, counter);
+                    counter += 1;
+                    stack.push((to, at, 0));
+                }
+
+                continue;
+            }
+
+            if parent >= 0 {
+                let here = low[&parent].min(low[&at]);
+                low.insert(parent, here);
+                if low[&at] > order[&parent] {
+                    bridges.insert(triangle_edges::key(parent, at));
+                }
+            }
+        }
+    }
+
+    bridges
 }

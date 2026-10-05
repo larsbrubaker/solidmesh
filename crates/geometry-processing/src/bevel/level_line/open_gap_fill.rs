@@ -1,7 +1,38 @@
 //! The gap fill for an OPEN run. Ports the nested type of `Bevel/LevelLine/OpenGapFill.cs` (the
 //! primary file of the C# static partial class `OpenGapFill`): one open run read as a rail
-//! ([`OpenGapFillOpenRail`]), the class's constants and the straight-row test ([`is_straight_row`]). The fill's functions land with later
+//! ([`OpenGapFillOpenRail`]), the class's constants, the thread's refusal site ([`ends_site`]) and
+//! the straight-row test ([`is_straight_row`]). The fill's functions land with later
 //! packages.
+
+use std::cell::RefCell;
+
+thread_local! {
+    /// C# `[ThreadStatic] OpenGapFill.EndsSite`: which open-end site last refused the open-chain
+    /// ends - or, for a refused growing-neighbour clip, which strip-clip stage - on this thread, for
+    /// the route the app reports; set just before each such refusal.
+    static ENDS_SITE: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// This thread's last open-end refusal site; `None` before any.
+pub fn ends_site() -> Option<String> {
+    ENDS_SITE.with(|site| site.borrow().clone())
+}
+
+/// Sets (or, with `None`, clears) this thread's open-end refusal site.
+pub fn set_ends_site(site: Option<String>) {
+    ENDS_SITE.with(|cell| *cell.borrow_mut() = site);
+}
+
+/// Appends to this thread's open-end refusal site (C# `EndsSite += ...`, where a null site reads
+/// as empty).
+pub fn append_ends_site(more: &str) {
+    ENDS_SITE.with(|cell| {
+        let mut site = cell.borrow_mut();
+        let mut text = site.take().unwrap_or_default();
+        text.push_str(more);
+        *site = Some(text);
+    });
+}
 
 /// How close two extended parameters must be, relative to the chain's length, to count as one.
 pub const PARAMETER_TIE_RELATIVE: f64 = 1e-9;
