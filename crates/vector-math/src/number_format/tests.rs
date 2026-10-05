@@ -86,3 +86,31 @@ fn rust_only_format_round_trip_ties_round_half_to_even() {
     assert_eq!(format_f64(-8.847000122070312), "-8.847000122070312");
     assert_eq!(format_f64(9.583999633789062), "9.583999633789062");
 }
+
+/// Expected text read from .NET 10's `double.ToString("G17", InvariantCulture)`.
+#[test]
+fn rust_only_format_f64_g17_matches_dotnet() {
+    let cases = [
+        (0.1, "0.10000000000000001"),
+        (1.0, "1"),
+        (20.0, "20"),
+        (35.4, "35.399999999999999"),
+        (1e17, "1E+17"),
+        (1.5e17, "1.5E+17"),
+        (1e16, "10000000000000000"),
+        (123456789012345678.0, "1.2345678901234568E+17"),
+        (0.0001, "0.0001"),
+        (0.00001, "1.0000000000000001E-05"),
+        (1.0 / 3.0, "0.33333333333333331"),
+        (-0.0, "-0"),
+        (-2.5, "-2.5"),
+        (1e-300, "1E-300"),
+        (f64::MAX, "1.7976931348623157E+308"),
+        (f64::INFINITY, "Infinity"),
+        (f64::NAN, "NaN"),
+        (100.0, "100"),
+    ];
+    for (value, expected) in cases {
+        assert_eq!(format_f64_g17(value), expected, "{value}");
+    }
+}

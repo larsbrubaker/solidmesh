@@ -1,6 +1,6 @@
 //! C#-compatible number text for the vector types' `ToString`/`Parse` (CLAUDE.md "Strings and
 //! formatting"): .NET's default `double.ToString()`/`float.ToString()` (shortest round-trip,
-//! "G" layout), the custom `"0.####"` layout `Vector3.ToString` uses, and
+//! "G" layout), "G17" (object-reference literals), the custom `"0.####"` layout `Vector3.ToString` uses, and
 //! `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture)`.
 //!
 //! All formatting is InvariantCulture: "NaN", "Infinity", "-Infinity", '.' as the decimal point.
@@ -26,6 +26,19 @@ pub fn format_f64(value: f64) -> String {
         shortest
     };
     general_layout(&digits, value.is_sign_negative(), 15)
+}
+
+/// .NET `double.ToString("G17", InvariantCulture)`: 17 significant digits, correctly rounded,
+/// trailing zeros dropped, fixed-point unless the decimal exponent is >= 17 or < -4.
+pub fn format_f64_g17(value: f64) -> String {
+    if let Some(special) = special_text(value.is_nan(), value.is_infinite(), value < 0.0) {
+        return special;
+    }
+    general_layout(
+        &format!("{:.16e}", value.abs()),
+        value.is_sign_negative(),
+        17,
+    )
 }
 
 /// .NET `float.ToString()` (InvariantCulture): as [`format_f64`] with the shortest `f32`
