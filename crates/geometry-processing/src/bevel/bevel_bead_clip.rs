@@ -1,8 +1,12 @@
 //! Trimming a concave run's bead to the part plus the voids it may fill (`Bevel/BevelBeadClip.cs`,
 //! a C# `internal static class`, so a module here): the per-rebuild count of which route each
 //! chain's trim took ([`Tally`]) and one chain's bead with everything it may occupy
-//! ([`Clippable`]). The trims themselves land with the core's bead-clip packages as free
-//! functions in this module; `BevelBeadBatch` is what gathers the [`Clippable`]s.
+//! ([`Clippable`]), the trims, and the whole clip ([`apply_all`]); `BevelBeadBatch` is what
+//! gathers the [`Clippable`]s.
+//!
+//! C# asks whether a bead is already going on whole by REFERENCE (`AlreadyGoingOnWhole`); the
+//! beads here are owned values, so the driver keeps the index of each clippable it sent on whole in
+//! the first pass and asks that instead ([`already_going_on_whole`]).
 
 use std::rc::Rc;
 
@@ -11,7 +15,10 @@ use polygon_mesh::Mesh;
 use vector_math::Matrix4X4;
 
 use super::level_line::LevelLineWork;
-use super::{bevel_bead_exit, bevel_source_hull, bevel_working_mesh, BevelEndCap};
+use super::{
+    bevel_bead_corner_pieces, bevel_bead_exit, bevel_source_hull, bevel_working_mesh, BevelEndCap,
+    BevelRebuildAdvisories,
+};
 
 /// The rebuild's batched boolean the bead and cap clips run through (C#'s injected
 /// `Func<List<(Mesh, Matrix4X4)>, CsgModes, Task<Mesh>> combineAsync`): synchronous, inside the
@@ -269,4 +276,242 @@ pub fn cap_to_the_hull(
     }
 
     Ok(())
+}
+
+/// C# `ApplyAllAsync`: every clippable bead trimmed (corners first, then each bead to its corners,
+/// its own corner pieces or its wedge, and the batch joined - or, where the batch will not join,
+/// every bead again without its corners), then every bead going on whole capped to the part's
+/// padded hull. Returns the clipped meshes and the tally. A cancel passes up.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_all(
+    working_mesh: &Mesh,
+    item_matrix: Matrix4X4,
+    clippable_beads: &[Clippable],
+    beads_going_on_whole: &mut Vec<Mesh>,
+    advisories: &mut BevelRebuildAdvisories,
+    combine: &CombineMeshes<'_>,
+) -> Result<(Vec<Mesh>, Tally), BooleanError> {
+    // Once per rebuild: every keep set is a void solid that can run out past the end of the part,
+    // and this is the one bound that cannot.
+    let source_hull = bevel_source_hull::build(Some(working_mesh));
+
+    let applied = apply_each(
+        working_mesh,
+        item_matrix,
+        source_hull.as_ref(),
+        clippable_beads,
+        beads_going_on_whole,
+        advisories,
+        combine,
+    )?;
+
+    // And the beads that ended up going on WITH NO TRIM are capped to it too.
+    cap_to_the_hull(
+        item_matrix,
+        source_hull.as_ref(),
+        beads_going_on_whole,
+        combine,
+    )?;
+
+    Ok(applied)
+}
+
+/// C# `ApplyEachAsync`: the corners' shared pieces first, then each bead trimmed to its corners
+/// (where it kept them), to its own corner pieces, or to its wedge - and where none of those go,
+/// sent on whole (and advised once); the batch joined into one solid where any corner was kept, or
+/// every bead trimmed again without corners where the batch will not join.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_each(
+    working_mesh: &Mesh,
+    item_matrix: Matrix4X4,
+    source_hull: Option<&Mesh>,
+    clippable_beads: &[Clippable],
+    beads_going_on_whole: &mut Vec<Mesh>,
+    advisories: &mut BevelRebuildAdvisories,
+    combine: &CombineMeshes<'_>,
+) -> Result<(Vec<Mesh>, Tally), BooleanError> {
+    let mut clipped = Vec::with_capacity(clippable_beads.len());
+
+    // The corners first: whether a corner's piece could be built decides each bead's wedge.
+    let refused_corners = bevel_bead_corner_pieces::apply_corners(
+        working_mesh,
+        item_matrix,
+        source_hull,
+        clippable_beads,
+        &mut clipped,
+        combine,
+    )?;
+    let corner_pieces = clipped.len();
+
+    let mut to_the_corner = 0;
+    let mut to_the_wedge = 0;
+    let mut unclipped = 0;
+    let mut went_on_whole = vec![false; clippable_beads.len()];
+
+    for (index, clippable) in clippable_beads.iter().enumerate() {
+        LevelLineWork::poll_cancel().map_err(|_| BooleanError::Cancelled)?;
+
+        let exit_planes = clippable.exit_planes.as_deref();
+        let has_corners = clippable
+            .corner_voids
+            .as_ref()
+            .is_some_and(|voids| !voids.is_empty());
+        let mut kept_its_corners =
+            has_corners && !bevel_bead_corner_pieces::lost_a_corner(clippable, &refused_corners);
+
+        let mut trimmed = if kept_its_corners {
+            clip_to_bounded(
+                working_mesh,
+                item_matrix,
+                source_hull,
+                &clippable.bead,
+                std::slice::from_ref(&clippable.wedge),
+                combine,
+                exit_planes,
+            )?
+        } else {
+            None
+        };
+
+        if !kept_its_corners && has_corners {
+            // Its corners are ones no shared piece could be made of: it takes copies of its own.
+            let pieces = bevel_bead_corner_pieces::own_corner_pieces(
+                working_mesh,
+                item_matrix,
+                source_hull,
+                clippable,
+                combine,
+            )?;
+            trimmed = match pieces {
+                None => None,
+                Some(pieces) => join(pieces, combine)?,
+            };
+            kept_its_corners = trimmed.is_some();
+        }
+
+        if trimmed.is_none() {
+            // Trimmed to the wedge it WOULD have swept rather than the one squared off at the vertex.
+            let wedge = if has_corners {
+                clippable
+                    .fallback_wedge
+                    .as_ref()
+                    .unwrap_or(&clippable.wedge)
+            } else {
+                &clippable.wedge
+            };
+            trimmed = clip_to_bounded(
+                working_mesh,
+                item_matrix,
+                source_hull,
+                &clippable.bead,
+                std::slice::from_ref(wedge),
+                combine,
+                exit_planes,
+            )?;
+            kept_its_corners = false;
+        }
+
+        if let Some(trimmed) = trimmed {
+            clipped.push(trimmed);
+            if kept_its_corners {
+                to_the_corner += 1;
+            } else {
+                to_the_wedge += 1;
+            }
+            continue;
+        }
+
+        // The clip is a trim and not the feature: this chain's bead goes on as it did before.
+        beads_going_on_whole.push(clippable.bead.clone());
+        went_on_whole[index] = true;
+        advisories.bead_went_on_unclipped();
+        unclipped += 1;
+    }
+
+    if corner_pieces == 0 && to_the_corner == 0 {
+        // Nothing in this batch is doing anything the clip did not do before the corner void.
+        return Ok((clipped, Tally::new(to_the_corner, to_the_wedge, unclipped)));
+    }
+
+    if let Some(joined) = join(clipped, combine)? {
+        return Ok((
+            vec![joined],
+            Tally::new(to_the_corner, to_the_wedge, unclipped),
+        ));
+    }
+
+    // The net: the corner is given up and every bead that took one is trimmed again to the wedge
+    // that shipped before it existed.
+    let (second, gave_up) = without_corners(
+        working_mesh,
+        item_matrix,
+        source_hull,
+        clippable_beads,
+        &went_on_whole,
+        beads_going_on_whole,
+        advisories,
+        combine,
+    )?;
+
+    let count = second.len() as i32;
+    Ok((second, Tally::new(0, count, unclipped + gave_up)))
+}
+
+/// C# `WithoutCornersAsync`: every bead not already going on whole trimmed to its fallback wedge
+/// (or its wedge) alone; one the kernel will not trim goes on whole (and is advised once). Returns
+/// the trimmed beads and how many gave up. `went_on_whole` names, by index, the clippables the
+/// first pass already sent on whole (C#'s `AlreadyGoingOnWhole` by reference).
+#[allow(clippy::too_many_arguments)]
+pub fn without_corners(
+    working_mesh: &Mesh,
+    item_matrix: Matrix4X4,
+    source_hull: Option<&Mesh>,
+    clippable_beads: &[Clippable],
+    went_on_whole: &[bool],
+    beads_going_on_whole: &mut Vec<Mesh>,
+    advisories: &mut BevelRebuildAdvisories,
+    combine: &CombineMeshes<'_>,
+) -> Result<(Vec<Mesh>, i32), BooleanError> {
+    let mut clipped = Vec::with_capacity(clippable_beads.len());
+    let mut gave_up = 0;
+
+    for (index, clippable) in clippable_beads.iter().enumerate() {
+        LevelLineWork::poll_cancel().map_err(|_| BooleanError::Cancelled)?;
+
+        if already_going_on_whole(went_on_whole, index) {
+            // Already given up on in the first pass and already advised about.
+            continue;
+        }
+
+        let wedge = clippable
+            .fallback_wedge
+            .as_ref()
+            .unwrap_or(&clippable.wedge);
+        let trimmed = clip_to_bounded(
+            working_mesh,
+            item_matrix,
+            source_hull,
+            &clippable.bead,
+            std::slice::from_ref(wedge),
+            combine,
+            clippable.exit_planes.as_deref(),
+        )?;
+
+        if let Some(trimmed) = trimmed {
+            clipped.push(trimmed);
+            continue;
+        }
+
+        beads_going_on_whole.push(clippable.bead.clone());
+        advisories.bead_went_on_unclipped();
+        gave_up += 1;
+    }
+
+    Ok((clipped, gave_up))
+}
+
+/// C# `AlreadyGoingOnWhole`: whether clippable `index`'s bead is already in the beads going on
+/// whole - read off the indices the first pass sent there, where C# compares references.
+pub fn already_going_on_whole(went_on_whole: &[bool], index: usize) -> bool {
+    went_on_whole.get(index).copied().unwrap_or(false)
 }

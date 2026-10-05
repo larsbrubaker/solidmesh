@@ -3,8 +3,8 @@
 //! ([`Boundary`]), a region of the surface as one flood read it ([`Region`]), and everything a room
 //! reading knows about the PART rather than about a chain ([`SectionRoomCache`]). Here are the
 //! region and crease readings (the flood, its rim and planarity, the reach across a face and the
-//! length of a crease); the rest of the room lands with later packages as free functions and
-//! `impl` blocks in this module.
+//! length of a crease) and the room itself ([`try_fit`], [`try_fit_with`], [`try_fit_edges`],
+//! with each vertex's two sides read by [`try_read_vertex`] and [`try_side`]).
 
 use std::collections::HashSet;
 
@@ -12,10 +12,13 @@ use indexmap::{IndexMap, IndexSet};
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{cs_math, Vector3};
 
+use super::section_builder;
 use super::section_fan_walk::{self, EdgeAtPair};
+use super::section_room_smooth_side;
 use super::section_split_blend;
 use crate::bevel::bevel_split_chords;
-use crate::topology::FeatureEdge;
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeChain};
 
 /// C# `SectionRoom.Boundary`: where one side's boundary goes per unit of radius,
 /// `V + r * reach * along`, with [`Boundary::largest_that_fits`] the radius at which it runs out
@@ -509,4 +512,388 @@ impl SectionRoomCache {
             coplanar_regions_by_face: IndexMap::new(),
         }
     }
+}
+
+/// What a room reading answers (C#'s `bool` with `out largestThatFits` and `out failure`): whether
+/// `radius` fits, the largest radius that does (read even where the asked one does not), and why
+/// not.
+pub type SectionRoomFit = (bool, f64, Option<BevelAdvisory>);
+
+/// C# `TryFit(mesh, graph, chain, radius, ..)`: the room of a closed chain, counting creases by
+/// coplanarity.
+pub fn try_fit(
+    mesh: Option<&Mesh>,
+    graph: Option<&MeshEdgeGraph>,
+    chain: Option<&FeatureEdgeChain>,
+    radius: f64,
+) -> SectionRoomFit {
+    try_fit_with(mesh, graph, chain, radius, None)
+}
+
+/// C# `TryFit(mesh, graph, chain, radius, isAFeatureEdge, ..)`: the same, with the operation's own
+/// feature reading deciding which crossed edges are creases.
+pub fn try_fit_with(
+    mesh: Option<&Mesh>,
+    graph: Option<&MeshEdgeGraph>,
+    chain: Option<&FeatureEdgeChain>,
+    radius: f64,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> SectionRoomFit {
+    try_fit_edges(
+        mesh,
+        graph,
+        chain.map(|c| c.edges()),
+        chain.is_some_and(|c| c.is_closed()),
+        radius,
+        None,
+        is_a_feature_edge,
+    )
+}
+
+/// C# `TryFit(mesh, graph, edges, isClosed, radius, cache, isAFeatureEdge, ..)`: the largest radius
+/// a closed chain's sections have room for - each station's two sides' own limits (a station the
+/// chord carries is stepped over), and along the chain each side's boundary keeping its edge's
+/// direction - and whether `radius` is within it. `cache` (C#'s nullable `SectionRoomCache`) is
+/// built here when not handed in.
+pub fn try_fit_edges(
+    mesh: Option<&Mesh>,
+    graph: Option<&MeshEdgeGraph>,
+    edges: Option<&[ChainEdge]>,
+    is_closed: bool,
+    radius: f64,
+    cache: Option<&mut SectionRoomCache>,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> SectionRoomFit {
+    let (Some(mesh), Some(graph), Some(edges)) = (mesh, graph, edges) else {
+        return (
+            false,
+            0.0,
+            Some(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceConstructionNotBuilt,
+                Vec::new(),
+            )),
+        );
+    };
+    if !is_closed || edges.len() < 3 {
+        return (
+            false,
+            0.0,
+            Some(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceConstructionNotBuilt,
+                Vec::new(),
+            )),
+        );
+    }
+
+    let mut built;
+    let readings: &mut SectionRoomCache = match cache {
+        Some(cache) => cache,
+        None => {
+            built = SectionRoomCache::new(mesh, graph);
+            &mut built
+        }
+    };
+    let lattice = readings.lattice;
+    let span = readings.span;
+    let chord_lattice = readings.chord_lattice;
+    let edge_at_pair = &readings.edge_at_pair;
+    let edges_at_vertex = &readings.edges_at_vertex;
+    let regions_by_face = if is_a_feature_edge.is_none() {
+        &mut readings.coplanar_regions_by_face
+    } else {
+        &mut readings.feature_regions_by_face
+    };
+
+    let count = edges.len();
+    let mut stations = vec![Vector3::ZERO; count];
+    let mut left = vec![Boundary::default(); count];
+    let mut right = vec![Boundary::default(); count];
+
+    let mut least = f64::MAX;
+    let mut limiting_at = Vector3::ZERO;
+    let mut limiting_code = BevelAdvisoryCode::SizeExceedsFaceWidth;
+    let mut take = |limit: f64, at: Vector3, code: BevelAdvisoryCode| {
+        if limit < least {
+            least = limit;
+            limiting_at = at;
+            limiting_code = code;
+        }
+    };
+
+    for i in 0..count {
+        let leaving = &edges[i];
+        let arriving = &edges[(i + count - 1) % count];
+
+        if arriving.to_vertex() != leaving.from_vertex() {
+            return (
+                false,
+                0.0,
+                Some(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceConstructionNotBuilt,
+                    vec![leaving.from_vertex().into()],
+                )),
+            );
+        }
+
+        match try_read_vertex(
+            mesh,
+            graph,
+            edge_at_pair,
+            arriving,
+            leaving,
+            lattice,
+            regions_by_face,
+            edges_at_vertex,
+            is_a_feature_edge,
+            span,
+        ) {
+            Ok((station, l, r)) => {
+                stations[i] = station;
+                left[i] = l;
+                right[i] = r;
+            }
+            Err(failure) => return (false, 0.0, Some(failure)),
+        }
+    }
+
+    // Which stations the construction does not place on their own.
+    let carried: Vec<bool> = (0..count)
+        .map(|i| the_chord_carries_its_room(&stations, &left, &right, i, chord_lattice))
+        .collect();
+    let placed_on_its_own = carried.iter().filter(|&&c| !c).count();
+
+    // Each side's own limit, at the stations that have one.
+    for i in 0..count {
+        if carried[i] {
+            continue;
+        }
+
+        take(
+            left[i].largest_that_fits,
+            stations[i],
+            BevelAdvisoryCode::SizeExceedsFaceWidth,
+        );
+        take(
+            right[i].largest_that_fits,
+            stations[i],
+            BevelAdvisoryCode::SizeExceedsFaceWidth,
+        );
+    }
+
+    // Along the chain: each side's boundary segment keeps its edge's own direction, a carried
+    // station stepped over.
+    if placed_on_its_own > 1 {
+        for i in 0..count {
+            if carried[i] {
+                continue;
+            }
+
+            let mut next = (i + 1) % count;
+            while carried[next] {
+                next = (next + 1) % count;
+            }
+
+            let direction = edges[i].direction().get_normal();
+            let span = stations[next] - stations[i];
+
+            take(
+                keeps_its_direction(span, direction, left[i], left[next]),
+                stations[i],
+                BevelAdvisoryCode::SizeCollidesAcrossFace,
+            );
+            take(
+                keeps_its_direction(span, direction, right[i], right[next]),
+                stations[i],
+                BevelAdvisoryCode::SizeCollidesAcrossFace,
+            );
+        }
+    }
+
+    let largest_that_fits = cs_math::max_f64(least, 0.0);
+
+    if radius > largest_that_fits {
+        let failure = BevelAdvisory::new(
+            limiting_code,
+            vec![radius.into(), limiting_at.into(), largest_that_fits.into()],
+        );
+        return (false, largest_that_fits, Some(failure));
+    }
+
+    (true, largest_that_fits, None)
+}
+
+/// C# `TryReadVertex`: the station at `leaving`'s start and its two sides' boundaries, read
+/// across the wedge the two chain edges' averaged face normals make there; refused where the faces
+/// are coplanar or fold back.
+#[allow(clippy::too_many_arguments)]
+pub fn try_read_vertex(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    lattice: f64,
+    regions_by_face: &mut IndexMap<i32, Region>,
+    edges_at_vertex: &IndexMap<i32, Vec<i32>>,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+    asked_reach: f64,
+) -> Result<(Vector3, Boundary, Boundary), BevelAdvisory> {
+    let station = leaving.from();
+    let left_normal = (arriving.left_normal() + leaving.left_normal()).get_normal();
+    let right_normal = (arriving.right_normal() + leaving.right_normal()).get_normal();
+
+    let cosine = left_normal.dot(right_normal);
+    if cosine > FeatureEdge::COPLANAR_FACE_DOT || cosine < SMALLEST_WEDGE_COSINE {
+        let code = if cosine > 0.0 {
+            BevelAdvisoryCode::FacesCoplanar
+        } else {
+            BevelAdvisoryCode::FacesFoldBack
+        };
+        return Err(BevelAdvisory::new(code, vec![leaving.from_vertex().into()]));
+    }
+
+    let wedge = cosine.clamp(-1.0, 1.0).acos();
+    let setback = (wedge / 2.0).tan();
+
+    let across = cs_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
+    let left_away = ((left_normal * cosine) - right_normal) / across;
+    let right_away = ((right_normal * cosine) - left_normal) / across;
+
+    let left = try_side(
+        mesh,
+        graph,
+        edge_at_pair,
+        arriving,
+        leaving,
+        true,
+        left_away,
+        setback,
+        lattice,
+        regions_by_face,
+        edges_at_vertex,
+        is_a_feature_edge,
+        asked_reach,
+    )?;
+    let right = try_side(
+        mesh,
+        graph,
+        edge_at_pair,
+        arriving,
+        leaving,
+        false,
+        right_away,
+        setback,
+        lattice,
+        regions_by_face,
+        edges_at_vertex,
+        is_a_feature_edge,
+        asked_reach,
+    )?;
+
+    Ok((station, left, right))
+}
+
+/// C# `TrySide`: one side's boundary at a station - an OFFSET where the fan crosses no crease (the
+/// limit where the reach leaves the part), a SLIDE down the one crease it crosses (the limit where
+/// that crease ends); refused at a corner of more than one crease, or a crease that does not lean
+/// away.
+#[allow(clippy::too_many_arguments)]
+pub fn try_side(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    on_the_left: bool,
+    away: Vector3,
+    setback: f64,
+    lattice: f64,
+    regions_by_face: &mut IndexMap<i32, Region>,
+    edges_at_vertex: &IndexMap<i32, Vec<i32>>,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+    asked_reach: f64,
+) -> Result<Boundary, BevelAdvisory> {
+    let vertex = leaving.from_vertex();
+    let station = leaving.from();
+
+    // THE ROOM COUNTS ITS CREASES THE WAY THE BUILD DOES - the same call.
+    let (creases, faces) = section_builder::try_creases_in_the_fan_reading(
+        vertex,
+        arriving,
+        leaving,
+        on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+        is_a_feature_edge,
+    )?;
+
+    if creases.len() > 1 {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        ));
+    }
+
+    if creases.is_empty() {
+        // OFFSET: the limit is where the reach leaves the part.
+        let reach = section_room_smooth_side::reach_of_an_offset_side(
+            mesh,
+            graph,
+            edge_at_pair,
+            regions_by_face,
+            &faces,
+            vertex,
+            station,
+            away,
+            is_a_feature_edge,
+            asked_reach,
+        );
+
+        return Ok(Boundary::new(
+            away,
+            setback,
+            cs_math::max_f64(reach - lattice, 0.0) / setback,
+            true,
+        ));
+    }
+
+    let fold = creases[0];
+    let other = if graph.get_vertex0(fold) == vertex {
+        graph.get_vertex1(fold)
+    } else {
+        graph.get_vertex0(fold)
+    };
+    let to_the_end = Vector3::from_vector3_float(mesh.vertices[other as usize]) - station;
+    let fold_length = to_the_end.length();
+    let along = to_the_end / fold_length;
+    let lean = along.dot(away);
+
+    let fold_length = length_of_the_crease(
+        mesh,
+        graph,
+        edges_at_vertex,
+        fold,
+        other,
+        station,
+        along,
+        lattice,
+        is_a_feature_edge,
+    );
+
+    if lean < 1e-9 {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        ));
+    }
+
+    // SLIDE: the boundary stands setback / cos(beta) down the fold, and the fold ends at its far
+    // vertex.
+    Ok(Boundary::new(
+        along,
+        setback / lean,
+        cs_math::max_f64(fold_length - lattice, 0.0) * lean / setback,
+        false,
+    ))
 }

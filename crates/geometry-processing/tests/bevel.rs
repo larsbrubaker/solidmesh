@@ -23,12 +23,16 @@ mod bevel_rebuild_advisories_tests;
 mod bevel_run_partners_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]
 mod bevel_seam_ring_tests;
+#[path = "bevel/bevel_source_hull_tests.rs"]
+mod bevel_source_hull_tests;
 #[path = "bevel/bevel_source_round_tests.rs"]
 mod bevel_source_round_tests;
 #[path = "bevel/bevel_sweep_back_depth_tests.rs"]
 mod bevel_sweep_back_depth_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
+#[path = "bevel/bore_test_meshes.rs"]
+mod bore_test_meshes;
 #[path = "bevel/chain_field_fixtures.rs"]
 mod chain_field_fixtures;
 #[path = "bevel/crease_run_out_tests.rs"]
@@ -149,6 +153,8 @@ mod rust_only_bevel_slice7_tests;
 mod rust_only_bevel_slice8_tests;
 #[path = "bevel/rust_only_bevel_slice9_tests.rs"]
 mod rust_only_bevel_slice9_tests;
+#[path = "bevel/section_room_split_crease_tests.rs"]
+mod section_room_split_crease_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
@@ -177,6 +183,8 @@ mod surface_ring_ears_bridged_ring_tests;
 mod surface_room_crossing_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
 mod surface_run_out_column_top_tests;
+#[path = "bevel/surface_run_out_strip_top_rim_tests.rs"]
+mod surface_run_out_strip_top_rim_tests;
 #[path = "bevel/surface_sewing_bowed_side_tests.rs"]
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]

@@ -209,3 +209,63 @@ pub fn corner_piece(
 
     Ok(bevel_working_mesh::is_usable_operand(Some(&piece), None).then_some(piece))
 }
+
+/// C# `LostACorner`: whether any of the bead's corner voids is one whose shared piece the kernel
+/// refused - by identity (`Rc::ptr_eq`), as C#'s `HashSet<Mesh>` of references reads it.
+pub fn lost_a_corner(clippable: &Clippable, refused_corners: &[Rc<Mesh>]) -> bool {
+    clippable.corner_voids.as_ref().is_some_and(|voids| {
+        voids.iter().any(|corner| {
+            refused_corners
+                .iter()
+                .any(|refused| Rc::ptr_eq(refused, corner))
+        })
+    })
+}
+
+/// C# `OwnCornerPiecesAsync`: the bead's own pieces - over the part (to its wedge) and over each
+/// of its corner voids - for a bead whose corners no shared piece could be made of; `None` where
+/// the kernel refuses any of them. A cancel passes up.
+pub fn own_corner_pieces(
+    working_mesh: &Mesh,
+    item_matrix: Matrix4X4,
+    source_hull: Option<&Mesh>,
+    clippable: &Clippable,
+    combine: &CombineMeshes<'_>,
+) -> Result<Option<Vec<Mesh>>, BooleanError> {
+    let exit_planes = clippable.exit_planes.as_deref();
+    let Some(over_the_part) = piece(
+        &clippable.bead,
+        item_matrix,
+        source_hull,
+        working_mesh,
+        &clippable.wedge,
+        combine,
+        exit_planes,
+    )?
+    else {
+        return Ok(None);
+    };
+
+    let voids = clippable.corner_voids.as_deref().unwrap_or(&[]);
+    let mut pieces = Vec::with_capacity(1 + voids.len());
+    pieces.push(over_the_part);
+
+    for corner in voids {
+        let Some(over_the_corner) = piece(
+            &clippable.bead,
+            item_matrix,
+            source_hull,
+            &clippable.wedge,
+            corner,
+            combine,
+            exit_planes,
+        )?
+        else {
+            return Ok(None);
+        };
+
+        pieces.push(over_the_corner);
+    }
+
+    Ok(Some(pieces))
+}
