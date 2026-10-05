@@ -91,6 +91,7 @@ fn rust_only_field_counters_file_spans_and_reaches_into_bands() {
 
 #[test]
 fn rust_only_needle_meter_counts_a_cascade_only_while_begun_and_metered() {
+    let _meter = crate::meter_lock::meter_lock();
     FieldCounters::set_meter_on(true);
     NeedleMeter::begin(2, 10.0);
     assert!(NeedleMeter::on());

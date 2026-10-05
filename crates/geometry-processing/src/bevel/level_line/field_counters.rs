@@ -826,7 +826,7 @@ impl FieldCounters {
         Self::with(|t| *t = FieldCounterTally::default());
     }
 
-    /// C# `SiteReport`: every counted site, most-counted first (ties by site, descending).
+    /// C# `SiteReport`: every counted site, most-counted first (ties where C#'s introsort leaves them).
     pub fn site_report() -> String {
         Self::with(|t| {
             let mut lines: Vec<(i64, String)> = t
@@ -834,8 +834,11 @@ impl FieldCounters {
                 .iter()
                 .map(|(site, &count)| (count, format!("{count:>10}  {site}")))
                 .collect();
-            lines.sort_by(|a, b| b.1.cmp(&a.1));
-            lines.sort_by_key(|line| std::cmp::Reverse(line.0));
+            // C#'s two `List.Sort`s, both introsort: by line descending (ordinal), then by count
+            // descending - unstable, so ties among equal counts fall where C#'s introsort puts
+            // them, which is what `introspective_sort` reproduces.
+            vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.1.cmp(&a.1));
+            vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.0.cmp(&a.0));
             lines
                 .into_iter()
                 .map(|(_, line)| line)

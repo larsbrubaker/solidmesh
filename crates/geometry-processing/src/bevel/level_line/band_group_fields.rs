@@ -435,3 +435,68 @@ pub fn of(
 
     Ok((group_fields, samples))
 }
+
+/// Per group tag, the extra chain-distance fields its band reads (C#'s
+/// `Dictionary<int, List<IChainDistanceField>>`, in the order the tags were first met).
+pub type BandGroupExtraFields = indexmap::IndexMap<i32, Vec<Rc<dyn ChainDistanceField>>>;
+
+/// C# `BandGroupFields.RunOuts`: every crease run-out at the picks' corners as a field, filed
+/// under each group a triangle of its crease belongs to - or `None` with run-outs off or none
+/// found. `standing` is the input's standing map where the caller already has one.
+#[allow(clippy::too_many_arguments)]
+pub fn run_outs(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    size: f64,
+    tags: &[i32],
+    standing: Option<&super::triangle_edges::StandingMap>,
+) -> Option<BandGroupExtraFields> {
+    if !run_outs_on() {
+        return None;
+    }
+
+    let found = super::CreaseRunOut::find(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge,
+        size,
+        16,
+    );
+    if found.is_empty() {
+        return None;
+    }
+
+    let built;
+    let standing = match standing {
+        Some(standing) => standing,
+        None => {
+            built = super::triangle_edges::standing_map(indices);
+            &built
+        }
+    };
+
+    let mut by_tag = BandGroupExtraFields::new();
+    for run_out in &found {
+        let field: Rc<dyn ChainDistanceField> = Rc::new(super::RunOutField::of(run_out));
+
+        // Both crease faces normally land in ONE group; should they not, each group that holds
+        // one reads the wedge.
+        let mut seen = Vec::new();
+        for &t in &standing[&super::triangle_edges::key(run_out.corner, run_out.crease_end)] {
+            let tag = tags[t as usize];
+            if seen.contains(&tag) {
+                continue;
+            }
+
+            seen.push(tag);
+            by_tag.entry(tag).or_default().push(field.clone());
+        }
+    }
+
+    Some(by_tag)
+}

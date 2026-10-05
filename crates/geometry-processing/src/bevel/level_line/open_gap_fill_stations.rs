@@ -134,3 +134,73 @@ pub fn on_the_edge(
     };
     Ok((read_from, read_to))
 }
+
+/// C# `OpenGapFill.Spokes`: the pairs of rail stations the fill's rows join, from both rails'
+/// starts to both ends - a station both rails carry advancing both at once (when `together`),
+/// otherwise the rail whose next edge's MIDDLE comes first between the chain's ends (the same
+/// order read from either end), or whose next station comes first past them. Each step charged.
+pub fn spokes(
+    left: &OpenGapFillOpenRail,
+    right: &OpenGapFillOpenRail,
+    length: f64,
+    together: bool,
+) -> Result<Vec<(i32, i32)>, WorkError> {
+    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let mut steps = Vec::new();
+    let (mut a, mut b) = (0usize, 0usize);
+    let left_last = left.count() as usize - 1;
+    let right_last = right.count() as usize - 1;
+    steps.push((0, 0));
+
+    while a < left_last || b < right_last {
+        super::LevelLineWork::charge(1)?;
+
+        // A station both rails carry is one spoke: both advance together.
+        if together
+            && a < left_last
+            && b < right_last
+            && (left.parameters[a + 1] - right.parameters[b + 1]).abs() <= tie
+        {
+            a += 1;
+            b += 1;
+            steps.push((a as i32, b as i32));
+            continue;
+        }
+
+        // Merged by the MIDDLE of each rail's next edge, so the rows come out the same whichever
+        // way the chain was walked - only between the chain's ends; past them the far end rules.
+        let can_left = a < left_last;
+        let can_right = b < right_last;
+        let left_middle = if can_left {
+            left.parameters[a] + left.parameters[a + 1]
+        } else {
+            f64::INFINITY
+        };
+        let right_middle = if can_right {
+            right.parameters[b] + right.parameters[b + 1]
+        } else {
+            f64::INFINITY
+        };
+        let inside = can_left
+            && can_right
+            && left.parameters[a] >= -tie
+            && left.parameters[a + 1] <= length + tie
+            && right.parameters[b] >= -tie
+            && right.parameters[b + 1] <= length + tie;
+        let advances_left = if inside {
+            left_middle <= right_middle + (2.0 * tie)
+        } else {
+            b >= right_last || (can_left && left.parameters[a + 1] <= right.parameters[b + 1] + tie)
+        };
+
+        if advances_left {
+            a += 1;
+        } else {
+            b += 1;
+        }
+
+        steps.push((a as i32, b as i32));
+    }
+
+    Ok(steps)
+}

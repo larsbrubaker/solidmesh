@@ -407,3 +407,228 @@ fn rust_only_every_chain_side_leaves_one_owned_loop() {
         (false, false)
     );
 }
+
+#[test]
+fn rust_only_spokes_merge_two_rails_by_their_edges_middles() {
+    use geometry_processing::bevel::level_line::{open_gap_fill_stations, OpenGapFillOpenRail};
+
+    let rail = |parameters: Vec<f64>| OpenGapFillOpenRail {
+        vertices: (0..parameters.len() as i32).collect(),
+        parameters,
+    };
+
+    // A station both rails carry is one spoke when read together.
+    let even = open_gap_fill_stations::spokes(
+        &rail(vec![0.0, 1.0, 2.0]),
+        &rail(vec![0.0, 1.0, 2.0]),
+        2.0,
+        true,
+    )
+    .unwrap();
+    assert_eq!(even, vec![(0, 0), (1, 1), (2, 2)]);
+
+    // By middles: the right rail's first edge (middle 0.5) comes before the left's (middle 1).
+    let merged = open_gap_fill_stations::spokes(
+        &rail(vec![0.0, 2.0]),
+        &rail(vec![0.0, 1.0, 2.0]),
+        2.0,
+        false,
+    )
+    .unwrap();
+    assert_eq!(merged, vec![(0, 0), (0, 1), (1, 1), (1, 2)]);
+
+    // Not together, the shared station is two spokes.
+    let apart = open_gap_fill_stations::spokes(
+        &rail(vec![0.0, 1.0, 2.0]),
+        &rail(vec![0.0, 1.0, 2.0]),
+        2.0,
+        false,
+    )
+    .unwrap();
+    assert_eq!(apart.len(), 5);
+    assert_eq!(apart[apart.len() - 1], (2, 2));
+
+    // Past the chain's end the far ends rule: the left's next station at 2.5 is before the
+    // right's at 3.
+    let past =
+        open_gap_fill_stations::spokes(&rail(vec![0.0, 2.5]), &rail(vec![0.0, 3.0]), 2.0, false)
+            .unwrap();
+    assert_eq!(past, vec![(0, 0), (1, 0), (1, 1)]);
+}
+
+#[test]
+fn rust_only_run_outs_are_filed_under_their_creases_groups_when_on() {
+    use std::rc::Rc;
+
+    use geometry_processing::bevel::level_line::{
+        band_group_run_outs, turn_run_outs_on, LevelLineWork, WorkBudget,
+    };
+
+    use crate::level_line_fixture::LevelLineFixture;
+
+    let fixture = LevelLineFixture::load("top-center-face-nose-r1");
+    let tags: Vec<i32> = (0..fixture.indices.len() as i32)
+        .map(|t| 1 + (t % 2))
+        .collect();
+    let read = || {
+        band_group_run_outs(
+            &fixture.positions,
+            &fixture.indices,
+            &fixture.chains,
+            &fixture.closed,
+            &|a, b| fixture.is_feature_edge(a, b),
+            fixture.size,
+            &tags,
+            None,
+        )
+    };
+
+    // Off - no budget in force, so C#'s flow default.
+    assert!(read().is_none());
+
+    let budget = Rc::new(WorkBudget::new(1_000_000_000).unwrap());
+    let _work = LevelLineWork::begin(Some(budget));
+    let _on = turn_run_outs_on();
+    let by_tag = read().expect("two run-outs on the nose");
+    let filed: usize = by_tag.values().map(Vec::len).sum();
+    // Each crease's two triangles are filed once per distinct tag they carry.
+    assert!((2..=4).contains(&filed), "{filed}");
+    assert!(by_tag.keys().all(|tag| *tag == 1 || *tag == 2));
+}
+
+#[test]
+fn rust_only_a_square_corner_has_no_pair_corner_end_face_and_gathers_nothing() {
+    use geometry_processing::bevel::level_line::band_gap_extra_fields;
+    use geometry_processing::bevel::level_line::PairCornerEndFaceField;
+    use polygon_mesh::solids::platonic_solids::create_cube;
+
+    let mut cube = create_cube(2.0, 2.0, 2.0);
+    cube.clean_and_merge();
+    let positions: Vec<Vector3> = cube
+        .vertices
+        .iter()
+        .map(|&p| Vector3::from_vector3_float(p))
+        .collect();
+    let indices: Vec<(i32, i32, i32)> = cube.faces.iter().map(|f| (f.v0, f.v1, f.v2)).collect();
+    let find = |p: Vector3| {
+        positions
+            .iter()
+            .position(|&q| (q - p).length() < 1e-6)
+            .unwrap() as i32
+    };
+    // Two top edges meeting at a corner, sharing the top face: their own faces are square to it,
+    // so neither round runs out through the other's face.
+    let corner = find(v(1.0, 1.0, 1.0));
+    let chain = vec![find(v(-1.0, 1.0, 1.0)), corner, find(v(1.0, -1.0, 1.0))];
+    let tags = vec![1; indices.len()];
+    let all = |_: i32, _: i32| true;
+
+    assert!(PairCornerEndFaceField::find(
+        &positions,
+        &indices,
+        std::slice::from_ref(&chain),
+        &[false],
+        &all,
+        0.5,
+        &tags,
+        None
+    )
+    .is_none());
+    assert!(band_gap_extra_fields::gather(
+        &positions,
+        &indices,
+        &[chain],
+        &[false],
+        &all,
+        0.5,
+        &tags,
+        None
+    )
+    .is_none());
+}
+
+#[test]
+fn rust_only_a_knife_prisms_foot_corner_has_a_pair_corner_end_face() {
+    use geometry_processing::bevel::level_line::band_gap_extra_fields;
+    use geometry_processing::bevel::level_line::PairCornerEndFaceField;
+    use polygon_mesh::Mesh;
+
+    // A prism along x whose section is a tall thin triangle: its sides lean at 14 degrees off
+    // vertical, so the floor and a side meet sharper than square.
+    let (a, b, c) = (v(0.0, -1.0, 0.0), v(0.0, 1.0, 0.0), v(0.0, 0.0, 4.0));
+    let along = v(6.0, 0.0, 0.0);
+    let mut mesh = Mesh::new();
+    mesh.create_face(&[a, c, b]);
+    mesh.create_face(&[a + along, b + along, c + along]);
+    mesh.create_face(&[a, b, b + along, a + along]);
+    mesh.create_face(&[b, c, c + along, b + along]);
+    mesh.create_face(&[c, a, a + along, c + along]);
+    mesh.clean_and_merge();
+
+    let positions: Vec<Vector3> = mesh
+        .vertices
+        .iter()
+        .map(|&p| Vector3::from_vector3_float(p))
+        .collect();
+    let indices: Vec<(i32, i32, i32)> = mesh.faces.iter().map(|f| (f.v0, f.v1, f.v2)).collect();
+    let find = |p: Vector3| {
+        positions
+            .iter()
+            .position(|&q| (q - p).length() < 1e-6)
+            .unwrap() as i32
+    };
+
+    // The floor's x edge and the end cap's floor edge, meeting at the foot corner a.
+    let chain = vec![find(a + along), find(a), find(b)];
+    let tags = vec![1; indices.len()];
+    let all = |_: i32, _: i32| true;
+
+    let found = PairCornerEndFaceField::find(
+        &positions,
+        &indices,
+        std::slice::from_ref(&chain),
+        &[false],
+        &all,
+        0.5,
+        &tags,
+        None,
+    )
+    .expect("the x edge's round runs out through the end cap");
+    assert_eq!(found.len(), 1);
+    assert_eq!(
+        found[&1].len(),
+        1,
+        "only the edge whose own face leans past the floor"
+    );
+
+    let gathered = band_gap_extra_fields::gather(
+        &positions,
+        &indices,
+        std::slice::from_ref(&chain),
+        &[false],
+        &all,
+        0.5,
+        &tags,
+        None,
+    )
+    .expect("gathered");
+    assert_eq!(gathered[&1].len(), 1);
+
+    // Off for the build in force: nothing.
+    let budget = std::rc::Rc::new(
+        geometry_processing::bevel::level_line::WorkBudget::new(1_000_000).unwrap(),
+    );
+    let _work = geometry_processing::bevel::level_line::LevelLineWork::begin(Some(budget));
+    let _off = PairCornerEndFaceField::turn_off();
+    assert!(PairCornerEndFaceField::find(
+        &positions,
+        &indices,
+        &[chain],
+        &[false],
+        &all,
+        0.5,
+        &tags,
+        None
+    )
+    .is_none());
+}

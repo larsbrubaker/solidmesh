@@ -51,6 +51,8 @@ mod island_split_order_tests;
 mod level_line_fixture;
 #[path = "bevel/lobed_prism_meshes.rs"]
 mod lobed_prism_meshes;
+#[path = "bevel/meter_lock.rs"]
+mod meter_lock;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
 #[path = "bevel/opposite_sense_crease_tests.rs"]

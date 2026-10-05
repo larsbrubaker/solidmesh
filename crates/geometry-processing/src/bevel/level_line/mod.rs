@@ -44,6 +44,7 @@
 
 pub mod band_cut;
 pub mod band_gap;
+pub mod band_gap_extra_fields;
 pub mod band_gap_in_turn;
 pub mod band_gap_reading;
 mod band_gap_refusal;
@@ -174,6 +175,7 @@ pub use band_gap_result::BandGapResult;
 pub use band_group::BandGroup;
 pub use band_group_fields::unwrapped as band_group_fields_unwrapped;
 pub use band_group_fields::{of as band_group_fields_of, GroupSampler};
+pub use band_group_fields::{run_outs as band_group_run_outs, BandGroupExtraFields};
 pub use band_group_fields::{run_outs_on, turn_run_outs_on};
 pub use band_group_fields::{BandGroupFieldsRunOutsScope, BandGroupFieldsWithRunOuts};
 pub use band_profile::BandProfile;

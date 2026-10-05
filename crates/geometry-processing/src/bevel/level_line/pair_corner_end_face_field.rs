@@ -162,3 +162,218 @@ impl PairCornerEndFaceField {
             .map(|(t, _)| t)
     }
 }
+
+impl PairCornerEndFaceField {
+    /// C# `PairCornerEndFaceField.Find`: at every corner where exactly two picked chain edges meet
+    /// on a bridge of the pick graph, share one face and turn CONVEX across an unpicked feature
+    /// crease between their own faces, the end-face field of each edge whose round runs out
+    /// through the other's face - filed under every group a triangle of that end face at the
+    /// corner belongs to. `None` with the field off or nothing found. `standing` is the input's
+    /// standing map where the caller already has one.
+    #[allow(clippy::too_many_arguments)]
+    pub fn find(
+        positions: &[Vector3],
+        indices: &[(i32, i32, i32)],
+        chains: &[Vec<i32>],
+        closed: &[bool],
+        is_feature_edge: &dyn Fn(i32, i32) -> bool,
+        size: f64,
+        tags: &[i32],
+        standing: Option<&triangle_edges::StandingMap>,
+    ) -> Option<super::BandGroupExtraFields> {
+        if !Self::on() {
+            return None;
+        }
+
+        let mut chain_edges = HashSet::new();
+        let mut neighbours: indexmap::IndexMap<i32, Vec<i32>> = indexmap::IndexMap::new();
+        let mut add = |at: i32, to: i32| {
+            let list = neighbours.entry(at).or_default();
+            if !list.contains(&to) {
+                list.push(to);
+            }
+        };
+
+        for (k, chain) in chains.iter().enumerate() {
+            let count = if closed[k] && chain.len() > 2 {
+                chain.len()
+            } else {
+                chain.len() - 1
+            };
+            for i in 0..count {
+                let next = chain[(i + 1) % chain.len()];
+                chain_edges.insert(triangle_edges::key(chain[i], next));
+                add(chain[i], next);
+                add(next, chain[i]);
+            }
+        }
+
+        let mut candidates: Vec<i32> = neighbours
+            .iter()
+            .filter(|(_, n)| n.len() == 2)
+            .map(|(&k, _)| k)
+            .collect();
+        if candidates.is_empty() {
+            return None;
+        }
+
+        let graph: HashMap<i32, Vec<i32>> =
+            neighbours.iter().map(|(&k, v)| (k, v.clone())).collect();
+        let bridges = bridges(&graph);
+        candidates.retain(|&corner| {
+            bridges.contains(&triangle_edges::key(corner, neighbours[&corner][0]))
+        });
+        if candidates.is_empty() {
+            return None;
+        }
+
+        let built;
+        let standing = match standing {
+            Some(standing) => standing,
+            None => {
+                built = triangle_edges::standing_map(indices);
+                &built
+            }
+        };
+
+        let candidate_set: HashSet<i32> = candidates.iter().copied().collect();
+        let mut edges_at: HashMap<i32, Vec<(i32, i32)>> = HashMap::new();
+        for &edge in standing.keys() {
+            for end in [edge.0, edge.1] {
+                if candidate_set.contains(&end) {
+                    edges_at.entry(end).or_default().push(edge);
+                }
+            }
+        }
+
+        let normal = |t: i32| {
+            let (a, b, c) = indices[t as usize];
+            let pa = positions[a as usize];
+            (positions[b as usize] - pa)
+                .cross(positions[c as usize] - pa)
+                .get_normal()
+        };
+        let same = |n: Vector3, m: Vector3| n.dot(m) > 0.9999;
+        let faces_on = |a: i32, b: i32| -> Vec<Vector3> {
+            standing
+                .get(&triangle_edges::key(a, b))
+                .map_or_else(Vec::new, |ts| ts.iter().map(|&t| normal(t)).collect())
+        };
+        let triangles_at = |corner: i32| -> Vec<i32> {
+            let mut seen = Vec::new();
+            if let Some(edges) = edges_at.get(&corner) {
+                for edge in edges {
+                    for &t in &standing[edge] {
+                        if !seen.contains(&t) {
+                            seen.push(t);
+                        }
+                    }
+                }
+            }
+            seen
+        };
+
+        let mut found: Option<super::BandGroupExtraFields> = None;
+        for &corner in &candidates {
+            let near = &neighbours[&corner];
+            let faces0 = faces_on(corner, near[0]);
+            let faces1 = faces_on(corner, near[1]);
+            if faces0.len() != 2 || faces1.len() != 2 {
+                continue;
+            }
+
+            let shared_pairs: Vec<Vector3> = faces0
+                .iter()
+                .flat_map(|&f0| {
+                    faces1
+                        .iter()
+                        .filter(move |&&f1| same(f0, f1))
+                        .map(move |_| f0)
+                })
+                .collect();
+            if shared_pairs.len() != 1 {
+                continue;
+            }
+
+            let shared = shared_pairs[0];
+            let own0 = *faces0
+                .iter()
+                .find(|&&f| !same(f, shared))
+                .expect("two faces");
+            let own1 = *faces1
+                .iter()
+                .find(|&&f| !same(f, shared))
+                .expect("two faces");
+            if same(own0, own1) {
+                continue;
+            }
+
+            let crease = edges_at.get(&corner).and_then(|edges| {
+                edges
+                    .iter()
+                    .copied()
+                    .filter(|e| !chain_edges.contains(e) && is_feature_edge(e.0, e.1))
+                    .find(|e| {
+                        let normals: Vec<Vector3> =
+                            standing[e].iter().map(|&t| normal(t)).collect();
+                        normals.len() == 2
+                            && ((same(normals[0], own0) && same(normals[1], own1))
+                                || (same(normals[0], own1) && same(normals[1], own0)))
+                    })
+            });
+            let Some(crease) = crease else {
+                continue;
+            };
+
+            let other = if crease.0 == corner {
+                crease.1
+            } else {
+                crease.0
+            };
+            let crease_mid = (positions[corner as usize] + positions[other as usize]) / 2.0;
+            let convex = (positions[near[0] as usize] - crease_mid).dot(own1) < 0.0
+                && (positions[near[1] as usize] - crease_mid).dot(own0) < 0.0;
+            if !convex {
+                continue;
+            }
+
+            for member in 0..2 {
+                let own = if member == 0 { own0 } else { own1 };
+                let end_face = if member == 0 { own1 } else { own0 };
+                if shared.dot(own) > -0.05 {
+                    continue;
+                }
+
+                let field: std::rc::Rc<dyn super::ChainDistanceField> =
+                    std::rc::Rc::new(PairCornerEndFaceField::of(
+                        positions[corner as usize],
+                        positions[near[member] as usize] - positions[corner as usize],
+                        shared,
+                        own,
+                        end_face,
+                        size,
+                    ));
+                let mut tags_here = Vec::new();
+                for t in triangles_at(corner) {
+                    if !same(normal(t), end_face) {
+                        continue;
+                    }
+                    let tag = tags[t as usize];
+                    if !tags_here.contains(&tag) {
+                        tags_here.push(tag);
+                    }
+                }
+
+                for tag in tags_here {
+                    found
+                        .get_or_insert_with(Default::default)
+                        .entry(tag)
+                        .or_default()
+                        .push(field.clone());
+                }
+            }
+        }
+
+        found
+    }
+}

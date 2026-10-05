@@ -1,11 +1,12 @@
 //! Rust-only checks of R2.P05's `FieldCounters` methods: firing, asking by span and reach, steps,
 //! the refinement notes, the reports and the reset. The meter is a process-wide switch, so this
-//! is the one test that turns it on; the tally itself is per thread.
+//! is held through `meter_lock` while it is switched on; the tally itself is per thread.
 
 use geometry_processing::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
 
 #[test]
 fn rust_only_the_meter_counts_and_reports_the_rules() {
+    let _meter = crate::meter_lock::meter_lock();
     FieldCounters::reset();
     let was_on = FieldCounters::meter_on();
     FieldCounters::set_meter_on(true);
@@ -95,7 +96,10 @@ fn rust_only_the_site_report_puts_the_busiest_site_first() {
     let report = FieldCounters::site_report();
     let lines: Vec<&str> = report.lines().collect();
     assert_eq!(lines[0], "         7  b.rs:9");
-    assert_eq!(lines[1], "         2  c.rs:3", "ties by site, descending");
+    assert_eq!(
+        lines[1], "         2  c.rs:3",
+        "tied counts keep the first sort's order (C#'s introsort is an insertion sort this small)"
+    );
     assert_eq!(lines[2], "         2  a.rs:1");
     FieldCounters::reset();
 }
@@ -106,6 +110,7 @@ fn rust_only_entering_a_phase_resets_what_the_phase_owns() {
 
     use geometry_processing::bevel::level_line::{LevelLineWork, LevelLineWorkPhase, WorkBudget};
 
+    let _meter = crate::meter_lock::meter_lock();
     let budget = Rc::new(WorkBudget::new(1_000_000).unwrap());
     let _scope = LevelLineWork::begin(Some(budget.clone()));
 
