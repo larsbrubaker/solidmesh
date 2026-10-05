@@ -32,6 +32,7 @@ pub mod processors;
 pub mod ray_tracer;
 pub mod solids;
 mod t_junctions;
+pub mod transformed_aabb_cache;
 pub mod vector3_list;
 pub mod vertex_sorters;
 
@@ -42,3 +43,4 @@ pub use mesh::Mesh;
 pub use mesh_edge_graph::{MeshEdge, MeshEdgeGraph, VertexFaceList};
 pub use mesh_editing::{ProgressReporter, UnionFind};
 pub use mesh_extensions::PositionNormal;
+pub use transformed_aabb_cache::TransformedAabbCache;

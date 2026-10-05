@@ -6,8 +6,9 @@
 //! `MergeVertices`, `GetVertexBvhTree`, `SplitFace` and `Split` are in `mesh_editing.rs`.
 //!
 //! Not yet ported (later Phase 2 slices, they need code that is not here yet): `FaceTextures`
-//! and `FaceColors` with `RemapFaceData` (agg `ImageBuffer`/`Color`), the transformed-bounds
-//! cache (convex hull), `PropertyBag` and the `Changed` event.
+//! and `FaceColors` with `RemapFaceData` (agg `ImageBuffer`/`Color`), `PropertyBag` and the
+//! `Changed` event. The convex hull and transformed-bounds caches live in
+//! `processors::mesh_convex_hull` and `transformed_aabb_cache`; they key on `changed_count`.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -19,6 +20,8 @@ use vector_math::{
 };
 
 use crate::face::FaceList;
+use crate::processors::mesh_convex_hull::ConvexHullCache;
+use crate::transformed_aabb_cache::TransformedAabbCache;
 use crate::vector3_list;
 
 /// The id counter behind [`Mesh::get_id`].
@@ -32,6 +35,8 @@ pub struct Mesh {
     changed_count: i32,
     cached_aabb: OnceLock<AxisAlignedBoundingBox>,
     long_hash_before_clean: OnceLock<u64>,
+    transformed_aabb_cache: TransformedAabbCache,
+    pub(crate) convex_hull_cache: ConvexHullCache,
 }
 
 /// C# `int.GetLongHashCode(hash)`: FNV-1a over the int's 4 little-endian bytes.
@@ -231,6 +236,7 @@ impl Mesh {
 
     /// Invalidates the cached bounds and bumps [`Mesh::changed_count`].
     pub fn mark_as_changed(&mut self) {
+        self.transformed_aabb_cache.changed();
         self.cached_aabb.take();
         // unchecked in C#: rolls over rather than throwing.
         self.changed_count = self.changed_count.wrapping_add(1);
@@ -287,6 +293,17 @@ impl Mesh {
         *self
             .cached_aabb
             .get_or_init(|| vector3_list::bounds_f32(&self.vertices))
+    }
+
+    /// The bounds of the mesh under `transform`, from its convex hull where it has one (cached
+    /// per transform until the next [`Mesh::mark_as_changed`]; C#
+    /// `GetAxisAlignedBoundingBox(Matrix4X4)`).
+    pub fn get_axis_aligned_bounding_box_transformed(
+        &self,
+        transform: Matrix4X4,
+    ) -> AxisAlignedBoundingBox {
+        self.transformed_aabb_cache
+            .get_axis_aligned_bounding_box(self, transform)
     }
 
     /// Adds the distinct positions as new vertices and fans faces across them (C#
