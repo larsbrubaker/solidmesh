@@ -8,10 +8,6 @@
 //! added in triangle order (divergence 791). Progress reporting is not ported: the repair's
 //! reporter has no consumer in the combine.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer and lands in a later
-// slice; until then only the tests reach this.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, INVALID_ID};

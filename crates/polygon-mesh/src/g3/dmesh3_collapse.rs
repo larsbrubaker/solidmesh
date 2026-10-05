@@ -3,10 +3,6 @@
 //! cleanup rest on. Split from `dmesh3_edge_ops` for size; same rules - C#'s order of list and
 //! refcount updates, and C#'s DEBUG-only `debug_fail` checks dropped.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these edits and lands in
-// the next slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, MeshResult, INVALID_ID};
 use super::dmesh3_edge_ops::{EdgeCollapseInfo, MergeEdgesInfo};
 use super::dmesh3_queries::{find_tri_other_vtx, orient_tri_edge};

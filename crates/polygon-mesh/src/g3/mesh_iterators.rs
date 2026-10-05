@@ -2,12 +2,9 @@
 //! boundary and interior vertices and edges, the vertices of boundary edges, and bowtie
 //! vertices. Each walks ids `0..Max*ID` in order, as C# does.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these and lands in a
-// later slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::DMesh3;
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MeshIterators.BoundaryVertices`.
 pub(crate) fn boundary_vertices(mesh: &DMesh3) -> Vec<i32> {
     (0..mesh.max_vertex_id())
@@ -43,6 +40,7 @@ pub(crate) fn boundary_edges(mesh: &DMesh3) -> Vec<i32> {
         .collect()
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MeshIterators.InteriorEdges`.
 pub(crate) fn interior_edges(mesh: &DMesh3) -> Vec<i32> {
     (0..mesh.max_edge_id())

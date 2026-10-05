@@ -3,12 +3,9 @@
 //! `mesh_refiner_base`, `remesher*`) and `MinimalHoleFill`'s quality metrics (`Area`,
 //! `AspectRatio`) use, each with C#'s operation order.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 /// C# `MathUtil.Epsilon`.
 pub(crate) const EPSILON: f64 = f64::EPSILON; // 2.2204460492503131e-016
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MathUtil.ZeroTolerance`.
 pub(crate) const ZERO_TOLERANCE: f64 = 1e-08;
 /// C# `MathUtil.ZeroTolerancef` (a `float` constant widened to `double`).
@@ -119,6 +116,7 @@ pub(crate) fn fast_normal_direction(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) ->
     cross(edge1, edge2)
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MathUtil.Area(v1, v2, v3)`: half the length of the edge cross product.
 pub(crate) fn area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> f64 {
     0.5 * length(cross(sub(v2, v1), sub(v3, v1)))

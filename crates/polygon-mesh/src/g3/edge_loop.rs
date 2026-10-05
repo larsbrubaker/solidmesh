@@ -3,10 +3,6 @@
 //! and the conversions between them - plus `MeshValidation.IsBoundaryLoop`
 //! (`queries/MeshValidation.cs`). The geometric helpers of those classes are not reached.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these and lands in a
-// later slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, INVALID_ID};
 
 /// g3 `EdgeLoop`: a closed chain of vertices with the edge after each.
@@ -98,6 +94,7 @@ impl EdgeSpan {
     }
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// g3 `ValidationStatus`, the values `IsBoundaryLoop` returns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ValidationStatus {
@@ -108,6 +105,7 @@ pub(crate) enum ValidationStatus {
     IncorrectLoopOrientation,
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MeshValidation.IsBoundaryLoop`: every vertex on the boundary, and each consecutive pair
 /// a boundary edge running in the loop's direction.
 pub(crate) fn is_boundary_loop(mesh: &DMesh3, lp: &EdgeLoop) -> ValidationStatus {

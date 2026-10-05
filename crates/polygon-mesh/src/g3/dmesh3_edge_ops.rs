@@ -5,10 +5,6 @@
 //! later one-ring walk sees. C#'s `debug_fail` checks are DEBUG-only and do nothing in the
 //! builds MatterCAD ships, so they have no counterpart.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these edits and lands in
-// the next slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, G3Exception, MeshResult, INVALID_ID};
 use super::dmesh3_queries::{
     find_edge_index_in_tri, find_tri_index, find_tri_other_vtx, orient_tri_edge_and_find_other_vtx,
@@ -61,6 +57,7 @@ pub(crate) struct MergeEdgesInfo {
     pub(crate) e_kept_extra: [i32; 2],
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `DMesh3.PokeTriangleInfo`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct PokeTriangleInfo {
@@ -96,6 +93,7 @@ impl DMesh3 {
         self.triangle_edges[tid as usize] = [te[0], te[2], te[1]];
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `ReverseOrientation` (there are no normals to flip here).
     pub(crate) fn reverse_orientation(&mut self) {
         let tids: Vec<i32> = self.triangle_indices().collect();
@@ -448,6 +446,7 @@ impl DMesh3 {
         Ok((MeshResult::Ok, flip))
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `PokeTriangle(tid, baryCoordinates, out result)`: a new vertex at the barycentric
     /// point, joined to the three corners.
     pub(crate) fn poke_triangle(

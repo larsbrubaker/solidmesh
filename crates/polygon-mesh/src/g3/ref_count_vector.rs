@@ -25,6 +25,7 @@ impl RefCountVector {
         self.ref_counts.len()
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `is_dense`: nothing has ever been freed (or every free id was reused).
     pub(crate) fn is_dense(&self) -> bool {
         self.free_indices.is_empty()

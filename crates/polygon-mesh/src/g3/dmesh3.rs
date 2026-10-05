@@ -12,10 +12,6 @@
 //! them (`ToMesh` copies positions only), so `MeshNormals.QuickCompute` at the end of a repair
 //! has no observable output.
 
-// The topology API is consumed by the mesh repair (geometry3Sharp `MeshAutoRepair`), which lands
-// in the next slice; until then only the tests reach some of it.
-#![allow(dead_code)]
-
 use crate::Mesh;
 
 use super::ref_count_vector::RefCountVector;
@@ -316,6 +312,7 @@ impl DMesh3 {
         self.edges_refcount.max_index() as i32
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `IsCompact`.
     pub(crate) fn is_compact(&self) -> bool {
         self.vertices_refcount.is_dense()
@@ -396,6 +393,7 @@ impl DMesh3 {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `SetTriangleGroup`.
     pub(crate) fn set_triangle_group(&mut self, tid: i32, group_id: i32) {
         if let Some(groups) = &mut self.triangle_groups {
@@ -456,6 +454,7 @@ impl DMesh3 {
         self.boundary_edge_indices().next().is_none()
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `new DMesh3(copy, bCompact: true)` (`CompactCopy`): live vertices re-appended in id
     /// order, then live triangles; a mesh that is already compact is copied as is.
     pub(crate) fn compact_copy(&self) -> DMesh3 {

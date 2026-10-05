@@ -2,10 +2,6 @@
 //! it has three vertices, else with a fan around a new vertex at the loop's centroid, backing
 //! the vertex out again if the fan is refused.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer and lands in a later
-// slice; until then only the tests reach this.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, G3Exception, INVALID_ID};
 use super::edge_loop::{is_boundary_loop, EdgeLoop, ValidationStatus};
 use super::mesh_editor::add_triangle_fan_ordered_vertex_loop;
@@ -30,6 +26,7 @@ impl<'l> SimpleHoleFiller<'l> {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `Validate`.
     pub(crate) fn validate(&self, mesh: &DMesh3) -> ValidationStatus {
         is_boundary_loop(mesh, self.lp)

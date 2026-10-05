@@ -5,10 +5,6 @@
 //! `EdgeFilterF` - which is how the mesh repair and hole fillers construct it; with those, none
 //! of C#'s throwing branches can be reached.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these and lands in a
-// later slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::DMesh3;
 use super::edge_loop::{EdgeLoop, EdgeSpan};
 

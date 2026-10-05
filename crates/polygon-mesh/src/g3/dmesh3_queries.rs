@@ -3,10 +3,6 @@
 //! vertex one-rings in the order the vertex's edge list holds them, and the boundary, bowtie and
 //! neighbour tests the repair asks. Split from `dmesh3`, which holds the storage.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these edits and lands in
-// the next slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, INVALID_ID};
 
 /// C# `IndexUtil.same_pair_unordered`.
@@ -107,6 +103,7 @@ impl DMesh3 {
         self.find_edge_from_tri(va, vb, tid)
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `FindTriangle`: the triangle made of any permutation of `[a, b, c]`.
     pub(crate) fn find_triangle(&self, a: i32, b: i32, c: i32) -> i32 {
         let eid = self.find_edge(a, b);
@@ -147,6 +144,7 @@ impl DMesh3 {
             .any(|e| self.edges[e as usize][3] == INVALID_ID)
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `IsBoundaryTriangle`.
     pub(crate) fn is_boundary_triangle(&self, tid: i32) -> bool {
         self.triangle_edges[tid as usize]

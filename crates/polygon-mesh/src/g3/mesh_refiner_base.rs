@@ -3,10 +3,6 @@
 //! (`remesher.rs`) runs per edge. g3's `Progress`/`Cancelled()` is not ported: nothing that
 //! reaches the remesher sets a `ProgressCancel`, so `Cancelled()` is always false.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, INVALID_ID};
 use super::dmesh3_queries::orient_tri_edge;
 use super::mesh_constraints::{same_target, MeshConstraints, VertexConstraint};
@@ -33,16 +29,19 @@ impl<'a> MeshRefinerBase<'a> {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `EdgeFlipTolerance` getter: a normal-pair dot below this counts as a flip.
     pub(crate) fn edge_flip_tolerance(&self) -> f64 {
         self.edge_flip_tol
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `EdgeFlipTolerance` setter, clamped to [-1, 1].
     pub(crate) fn set_edge_flip_tolerance(&mut self, value: f64) {
         self.edge_flip_tol = clamp(value, -1.0, 1.0);
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `SetExternalConstraints`.
     pub(crate) fn set_external_constraints(&mut self, cons: MeshConstraints) {
         self.constraints = Some(cons);
@@ -235,6 +234,7 @@ impl<'a> MeshRefinerBase<'a> {
         (false, -1)
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `vertex_is_fixed`.
     pub(crate) fn vertex_is_fixed(&self, vid: i32) -> bool {
         self.constraints
@@ -253,6 +253,7 @@ impl<'a> MeshRefinerBase<'a> {
         false
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `get_vertex_constraint(vid)`.
     pub(crate) fn get_vertex_constraint(&self, vid: i32) -> VertexConstraint {
         match &self.constraints {

@@ -11,10 +11,6 @@
 //! debug checks (`ENABLE_DEBUG_CHECKS`, `DebugEdges`) and cancellation are not ported. Passes
 //! run on one thread; see divergence 795.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, G3Exception, MeshResult, INVALID_ID};
 use super::dmesh3_edge_ops::EdgeSplitInfo;
 use super::mesh_constraints::{same_target, EdgeConstraint, TargetRef, VertexConstraint};
@@ -27,6 +23,7 @@ pub(crate) mod vertex_control {
     pub(crate) const ALLOW_ALL: u32 = 0;
     pub(crate) const NO_SMOOTH: u32 = 1;
     pub(crate) const NO_PROJECT: u32 = 2;
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     pub(crate) const NO_MOVEMENT: u32 = NO_SMOOTH | NO_PROJECT;
 }
 use vertex_control as vc_flags;
@@ -123,6 +120,7 @@ impl<'a> Remesher<'a> {
         &self.target
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `SetProjectionTarget`.
     pub(crate) fn set_projection_target(&mut self, target: TargetRef) {
         self.target = target;
@@ -140,6 +138,7 @@ impl<'a> Remesher<'a> {
         self.max_edge_length = f_length * 1.33;
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `Precompute`: records whether the mesh is closed so the flip valence tests can skip
     /// the boundary checks. Re-run after editing the mesh externally.
     pub(crate) fn precompute(&mut self) {

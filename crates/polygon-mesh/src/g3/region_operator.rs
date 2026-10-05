@@ -7,10 +7,6 @@
 //! (computed by `BackPropropagate`, read by nothing ported) are not kept, and the duplicate
 //! behavior is C#'s default `AssertContinue`.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach it.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, G3Exception, INVALID_ID};

@@ -3,10 +3,6 @@
 //! `EdgeLengthStatsFromEdges` (a given edge list). The point-triangle distance from the same
 //! C# file is in `tri_distance`.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach it.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, G3Exception};
 use super::vector3d::distance;
 

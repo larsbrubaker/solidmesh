@@ -11,7 +11,8 @@
 //! The remesher `MinimalHoleFill` runs (`remesher`, `remesher_pro`, with `mesh_constraints`,
 //! `mesh_refiner_base`, `mesh_util` and `vector3d`) edits that `DMesh3`, on a submesh copy of
 //! the fill that `region_operator` / `dsubmesh3` extract and splice back, sized with
-//! `mesh_queries`' edge-length statistics.
+//! `mesh_queries`' edge-length statistics. `mesh_auto_repair` (g3 `MeshAutoRepair`, the Repair
+//! tool's default pass, exposed as `Mesh::auto_repaired`) drives all of it.
 
 pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
@@ -26,6 +27,7 @@ pub(crate) mod implicit3d;
 pub(crate) mod marching_cubes;
 pub(crate) mod marching_cubes_pro;
 pub(crate) mod merge_coincident_edges;
+pub(crate) mod mesh_auto_repair;
 pub(crate) mod mesh_boundary_loops;
 pub(crate) mod mesh_constraints;
 pub(crate) mod mesh_editor;
@@ -36,6 +38,7 @@ pub(crate) mod mesh_refiner_base;
 pub(crate) mod mesh_repair_orientation;
 pub(crate) mod mesh_signed_distance_grid;
 pub(crate) mod mesh_util;
+pub(crate) mod minimal_hole_fill;
 pub(crate) mod point_set_hashtable;
 pub(crate) mod ray_intersection;
 pub(crate) mod ref_count_vector;
@@ -54,9 +57,13 @@ pub(crate) use dmesh_aabb_tree3::DMeshAABBTree3;
 #[cfg(test)]
 mod dmesh3_tests;
 #[cfg(test)]
+mod mesh_auto_repair_tests;
+#[cfg(test)]
 mod mesh_repair_ops_tests;
 #[cfg(test)]
 mod mesh_topology_tests;
+#[cfg(test)]
+mod minimal_hole_fill_tests;
 #[cfg(test)]
 mod region_operator_tests;
 #[cfg(test)]

@@ -4,10 +4,6 @@
 //! only, enumerates in insertion order; that is the order `MeshEditor.RemoveTriangles` then
 //! removes them in, so it is kept here.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these and lands in a
-// later slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, INVALID_ID};
@@ -31,6 +27,7 @@ impl MeshFaceSelection {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `Select(int tid)`: only live triangles.
     pub(crate) fn select(&mut self, mesh: &DMesh3, tid: i32) {
         if mesh.is_triangle(tid) {
@@ -47,11 +44,13 @@ impl MeshFaceSelection {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `IsSelected`.
     pub(crate) fn is_selected(&self, tid: i32) -> bool {
         self.selected.contains(&tid)
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `Count`.
     pub(crate) fn count(&self) -> usize {
         self.order.len()

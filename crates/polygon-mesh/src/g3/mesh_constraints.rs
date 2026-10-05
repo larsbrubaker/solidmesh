@@ -8,10 +8,6 @@
 //! `HashMap` cannot leak an order. `FindConstrainedEdgesBySetID` and `VertexConstraintsItr`,
 //! which do iterate, are not reached and are not ported.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -42,6 +38,7 @@ pub(crate) mod edge_refine_flags {
     pub(crate) const NO_SPLIT: u32 = 2;
     pub(crate) const NO_COLLAPSE: u32 = 4;
     pub(crate) const FULLY_CONSTRAINED: u32 = NO_FLIP | NO_SPLIT | NO_COLLAPSE;
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// Avoid 'losing' this edge when a neighbour collapses (the edge itself may collapse).
     pub(crate) const PRESERVE_TOPOLOGY: u32 = 8;
 }
@@ -54,6 +51,7 @@ pub(crate) struct EdgeConstraint {
     /// The edge is associated with this target. Only information: edges are not projected
     /// (a `VertexConstraint` must also be set).
     pub(crate) target: TargetRef,
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// Not a constraint: lets descendants of a constrained input edge be found.
     pub(crate) tracking_set_id: i32,
 }
@@ -68,6 +66,7 @@ impl EdgeConstraint {
         }
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `new EdgeConstraint(rflags, target)`.
     pub(crate) fn with_target(refine_flags: u32, target: TargetRef) -> Self {
         Self {
@@ -82,6 +81,7 @@ impl EdgeConstraint {
         Self::new(erf::NO_CONSTRAINT)
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `EdgeConstraint.NoFlips`.
     pub(crate) fn no_flips() -> Self {
         Self::new(erf::NO_FLIP)
@@ -166,10 +166,12 @@ impl VertexConstraint {
 pub(crate) struct MeshConstraints {
     edges: HashMap<i32, EdgeConstraint>,
     vertices: HashMap<i32, VertexConstraint>,
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     set_id_counter: i32,
 }
 
 impl MeshConstraints {
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `AllocateSetID`.
     pub(crate) fn allocate_set_id(&mut self) -> i32 {
         let id = self.set_id_counter;
@@ -200,6 +202,7 @@ impl MeshConstraints {
         self.edges.remove(&eid);
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `HasVertexConstraint`.
     pub(crate) fn has_vertex_constraint(&self, vid: i32) -> bool {
         self.vertices.contains_key(&vid)
@@ -229,6 +232,7 @@ impl MeshConstraints {
         self.vertices.remove(&vid);
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `HasConstraints`.
     pub(crate) fn has_constraints(&self) -> bool {
         !self.edges.is_empty() || !self.vertices.is_empty()

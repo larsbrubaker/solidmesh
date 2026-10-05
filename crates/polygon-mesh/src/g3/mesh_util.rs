@@ -4,10 +4,6 @@
 //! `DMesh3` per-element measures they need (`GetTriInternalAngleR`, `VtxOneRingCentroid` from
 //! `mesh/DMesh3.cs`). Vector arithmetic is in `vector3d`.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 use super::dmesh3::DMesh3;
 use super::dmesh3_queries::{find_tri_index, orient_tri_edge};
 use super::vector3d::{
@@ -65,6 +61,7 @@ pub(crate) fn uniform_smooth(mesh: &DMesh3, vid: i32, t: f64) -> [f64; 3] {
     v
 }
 
+#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MeshUtil.DiscreteGaussCurvature`: the sum of the interior angles around `vid`, minus
 /// 2 pi; zero on flat areas.
 pub(crate) fn discrete_gauss_curvature(mesh: &DMesh3, vid: i32) -> f64 {

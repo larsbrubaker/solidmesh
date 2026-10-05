@@ -4,10 +4,6 @@
 //! [`DynamicPriorityQueue`]. Progress reporting is not ported: the repair's reporter has no
 //! consumer in the combine.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer and lands in a later
-// slice; until then only the tests reach this.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, G3Exception, MeshResult};
 use super::dynamic_priority_queue::DynamicPriorityQueue;
 use super::point_set_hashtable::{get_edge_point, BoundaryEdgeMidpointHashtable};

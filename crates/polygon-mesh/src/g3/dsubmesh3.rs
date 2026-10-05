@@ -9,10 +9,6 @@
 //! C#'s dense `IndexMap` / `IndexFlagSet` are `Vec`s (the sparse `IndexMap` variant returns the
 //! same values for every index that is read), its `DVector<int>` a `Vec<i32>`.
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach it.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, G3Exception, INVALID_ID};
@@ -98,6 +94,7 @@ impl DSubmesh3 {
         Ok(())
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// C# `MapVertexToSubmesh`.
     pub(crate) fn map_vertex_to_submesh(&self, base_vid: i32) -> i32 {
         self.base_to_sub_v[base_vid as usize]

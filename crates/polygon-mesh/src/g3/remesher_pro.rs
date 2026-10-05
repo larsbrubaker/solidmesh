@@ -9,10 +9,6 @@
 //! `IOrientedProjectionTarget` and `Frame3f`) are not ported; nothing that reaches the
 //! remesher turns face-aligned projection on. Passes run on one thread (divergence 795).
 
-// Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
-// tests reach some of it.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, G3Exception};
@@ -41,6 +37,7 @@ impl EdgeQueue {
         self.seen.clear();
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     fn len(&self) -> usize {
         self.order.len()
     }
@@ -338,6 +335,7 @@ impl<'a> RemesherPro<'a> {
         r.projection_mode = s.projection_mode;
     }
 
+    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
     /// The number of queued edges (for tests and convergence checks).
     pub(crate) fn queued_edge_count(&self) -> usize {
         self.modified_edges.as_ref().map_or(0, EdgeQueue::len)

@@ -3,10 +3,6 @@
 //! `VtxBoundaryEdges` / `VtxAllBoundaryEdges` (`mesh/DMesh3.cs`) - the pieces `MeshEditor`'s
 //! bowtie split and `MeshBoundaryLoops` reach. Split from `dmesh3_edge_ops` for size.
 
-// The mesh repair (geometry3Sharp `MeshAutoRepair`) is the consumer of these and lands in a
-// later slice; until then only the tests reach some of them.
-#![allow(dead_code)]
-
 use super::dmesh3::{DMesh3, MeshResult, INVALID_ID};
 use super::dmesh3_queries::find_edge_index_in_tri;
 
