@@ -3,9 +3,17 @@
 //! `SurfaceTwoCreaseJunction` reads it, `SurfaceTwoCreaseJunctionRings` lays its grid). ONE sweep,
 //! not two half patches: its columns run from the upper bead's end ring round to the lower's, the
 //! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Only
-//! its nested record (with its constructor) and the ring positions ([`positions_of`]) land here,
-//! one strip's end ring ([`SurfaceTwoCreaseJunctionPatchEndRing`]);
-//! the patch lands with the two-crease junction package.
+//! its nested record (with its constructor), the ring positions ([`positions_of`]) and the three
+//! end rings won from the pool ([`try_the_end_rings`]) land here, one strip's end ring being a
+//! [`SurfaceTwoCreaseJunctionPatchEndRing`]; the patch lands with the two-crease junction package.
+
+use super::surface_mitre_joint_step::SideSeams;
+use super::surface_mixed_corner_patch;
+use super::{
+    SurfaceMixedJunction, SurfaceMixedJunctionPatchArrival, SurfaceTwoCreaseJunctionRings,
+    SurfaceVertexPool,
+};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceTwoCreaseJunctionPatch.EndRing` (a private readonly struct): one strip's end ring at
 /// the corner, in BOTH of the orders it is wanted in.
@@ -42,4 +50,81 @@ impl SurfaceTwoCreaseJunctionPatchEndRing {
 /// The pool positions of a ring of vertex indices.
 pub fn positions_of(pool: &super::SurfaceVertexPool, ring: &[i32]) -> Vec<vector_math::Vector3> {
     ring.iter().map(|&index| pool.position_of(index)).collect()
+}
+
+/// C# `TryTheEndRings`: the three end rings - the cut's, the first arm's bead's and the second's -
+/// WON FROM THE POOL: every rail a vertex the build already has, and the two outer rails of each the
+/// very vertices the walkback's own tangent runs end at. As `(cut, first, last)`.
+///
+/// The CUT's ring is cut on the canal's leaning plane rather than on a band's stop plane, because a
+/// two-crease junction's cut is bounded on NEITHER face. Each BEAD's is its own square section. All
+/// three are then turned the way the grid runs, so that nothing below has to ask which way round a
+/// strip's own rails went. `arriving` is the cut's strip then the two beads' (C# reads the three
+/// unguarded, and the arm's dual as well; fewer, or no dual, is no two-crease junction and is
+/// refused by name).
+pub fn try_the_end_rings(
+    pool: &mut SurfaceVertexPool,
+    junction: &SurfaceMixedJunction,
+    arriving: &[SurfaceMixedJunctionPatchArrival],
+    seams: &[SideSeams],
+) -> Result<
+    (
+        SurfaceTwoCreaseJunctionPatchEndRing,
+        SurfaceTwoCreaseJunctionPatchEndRing,
+        SurfaceTwoCreaseJunctionPatchEndRing,
+    ),
+    BevelAdvisory,
+> {
+    let (Some(canal), [cut, first, last, ..]) = (junction.first.dual.as_ref(), arriving) else {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![junction.corner.into()],
+        ));
+    };
+
+    // A negative edge index finds no seam and is refused as the seam not meeting.
+    let edge = |arrival: &SurfaceMixedJunctionPatchArrival| {
+        usize::try_from(arrival.edge_index).unwrap_or(usize::MAX)
+    };
+
+    let (cut_ring, cut_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        &junction.first.mixed,
+        &cut.strip,
+        true,
+        seams,
+        edge(cut),
+        cut.ends_here,
+        Some(canal.cut_ring_plane()),
+    )?;
+    let (first_ring, first_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        &junction.first.mixed,
+        &first.strip,
+        false,
+        seams,
+        edge(first),
+        first.ends_here,
+        None,
+    )?;
+    let (last_ring, last_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        &junction.second.mixed,
+        &last.strip,
+        false,
+        seams,
+        edge(last),
+        last.ends_here,
+        None,
+    )?;
+
+    let cut_grid = SurfaceTwoCreaseJunctionRings::from_the_first_arms_tangency(junction, &cut_ring);
+    let first_grid = SurfaceTwoCreaseJunctionRings::from_the_wall(&junction.first, &first_ring);
+    let last_grid = SurfaceTwoCreaseJunctionRings::from_the_wall(&junction.second, &last_ring);
+
+    Ok((
+        SurfaceTwoCreaseJunctionPatchEndRing::new(cut_ring, cut_meets_at, cut_grid),
+        SurfaceTwoCreaseJunctionPatchEndRing::new(first_ring, first_meets_at, first_grid),
+        SurfaceTwoCreaseJunctionPatchEndRing::new(last_ring, last_meets_at, last_grid),
+    ))
 }

@@ -1,8 +1,8 @@
 //! The three end rings a TWO-crease junction's patch is sewn to, and the grid between them
 //! ([`SurfaceTwoCreaseJunctionRings`]). Ports the record of
 //! `Bevel/Surface/SurfaceTwoCreaseJunctionRings.cs`, its reading from the three rings and its grid
-//! accessors; the reading from the three strips (`TryRead(.., SurfaceStrip, ..)`) lands with a
-//! later package.
+//! accessors, and the reading from the three strips
+//! ([`SurfaceTwoCreaseJunctionRings::try_read_strips`]).
 
 use std::rc::Rc;
 
@@ -12,7 +12,8 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 use super::{
     surface_mixed_corner_patch, SurfaceJunctionKind, SurfaceMixedCornerDualFrame,
-    SurfaceMixedCornerRows, SurfaceMixedJunction, SurfaceMixedJunctionArm, SurfaceVertexPool,
+    SurfaceMixedCornerRows, SurfaceMixedJunction, SurfaceMixedJunctionArm, SurfaceStrip,
+    SurfaceVertexPool,
 };
 
 /// C# `SurfaceTwoCreaseJunctionRings` (a sealed class): the three end rings a two-crease
@@ -131,6 +132,61 @@ impl SurfaceTwoCreaseJunctionRings {
     /// Rail `rail` of the row at `station`.
     pub fn at(&self, rail: usize, station: usize) -> Vector3 {
         self.rows.at(rail, self.stations[station])
+    }
+
+    /// C# `TryRead(SurfaceMixedJunction, SurfaceStrip, SurfaceStrip, SurfaceStrip, ..)`: reads the
+    /// rings and the grid from the one cut's strip and the two arms' beads' strips. The CUT's ring is
+    /// cut on the canal's own plane - both of its ends stand on a tangency, one per arm, because both
+    /// of the cut's faces are shared here - and each bead's on its own square section.
+    pub fn try_read_strips(
+        junction: &SurfaceMixedJunction,
+        cut: &SurfaceStrip,
+        first_bead: &SurfaceStrip,
+        last_bead: &SurfaceStrip,
+    ) -> Result<SurfaceTwoCreaseJunctionRings, BevelAdvisory> {
+        let not_supported = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![junction.corner.into()],
+            )
+        };
+
+        if junction.kind != SurfaceJunctionKind::TwoCreases {
+            // The grid turns about the CUT's centre line, which is only the corner's own canal where
+            // there are two beads to end it on.
+            return Err(not_supported());
+        }
+
+        // As in `try_read`: a two-crease junction's arms always carry their dual.
+        let Some(canal) = junction.first.dual.as_ref() else {
+            return Err(not_supported());
+        };
+
+        let (_, cut_ring) = surface_mixed_corner_patch::try_cut_the_ring(
+            &junction.first.mixed,
+            cut,
+            true,
+            Some(canal.cut_ring_plane()),
+        )?;
+        let (_, first_ring) = surface_mixed_corner_patch::try_cut_the_ring(
+            &junction.first.mixed,
+            first_bead,
+            false,
+            None,
+        )?;
+        let (_, last_ring) = surface_mixed_corner_patch::try_cut_the_ring(
+            &junction.second.mixed,
+            last_bead,
+            false,
+            None,
+        )?;
+
+        Self::try_read(
+            junction,
+            Self::from_the_first_arms_tangency(junction, &cut_ring),
+            Self::from_the_wall(&junction.first, &first_ring),
+            Self::from_the_wall(&junction.second, &last_ring),
+        )
     }
 
     /// The grid of a TWO-crease `junction` from the cut's ring (read from the first arm's

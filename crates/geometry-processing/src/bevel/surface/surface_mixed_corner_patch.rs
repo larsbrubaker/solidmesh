@@ -1,10 +1,15 @@
 //! The patch that closes a mixed corner between the cut's end ring and the bead's
 //! (`Bevel/Surface/SurfaceMixedCornerPatch.cs`, a static class: free functions here). The ring
 //! readers, the shared face's chord sagitta, the grid's last column and the patch's closure check
-//! ([`nothing_covers_nothing`]) land here first; the patch's own construction (`TryRing`,
-//! `TryCutTheRing`) lands with a later package.
+//! ([`nothing_covers_nothing`]), and each strip's end ring ([`try_ring`], [`try_cut_the_ring`]);
+//! the patch's own construction lands with a later package.
 
-use vector_math::cs_math;
+use vector_math::{cs_math, Vector3};
+
+use super::surface_mitre_joint_step::SideSeams;
+use super::surface_strip_ends;
+use super::{SurfaceBandEnd, SurfaceMixedCorner, SurfaceStrip, SurfaceVertexPool};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// How far off its own circle the shared face's chording already stands - the sagitta of one of
 /// its chords, `(chord / 2) tan(turn / 4)` - which is what a ring standing on those chords may be
@@ -136,4 +141,122 @@ pub fn nothing_covers_nothing(
     }
 
     Ok(())
+}
+
+/// C# `TryRing`: one strip's end ring at the corner, as vertices - every rail crossed with the
+/// plane that strip stops on ([`try_cut_the_ring`]), with the two outer rails taken from the
+/// walkback's own tangent runs (`seams[edge_index]`, the run's last vertex where the strip
+/// `ends_here`, its first otherwise) rather than made again. As `(ring, meets_at)`.
+///
+/// The rail on the face the two edges share has to land on the tangent point - except where the
+/// CUT hands over on a mitre ring, which stands short of the tangency by design and is checked
+/// against its own seam alone. `cut_on` is as [`try_cut_the_ring`]'s.
+///
+/// A tangent run that is missing or empty, where C# would throw reading it, is refused as the
+/// seam not meeting.
+#[allow(clippy::too_many_arguments)]
+pub fn try_ring(
+    pool: &mut SurfaceVertexPool,
+    corner: &SurfaceMixedCorner,
+    strip: &SurfaceStrip,
+    is_the_cut: bool,
+    seams: &[SideSeams],
+    edge_index: usize,
+    ends_here: bool,
+    cut_on: Option<SurfaceBandEnd>,
+) -> Result<(Vec<i32>, Vec<f64>), BevelAdvisory> {
+    let (meets_at, at) = try_cut_the_ring(corner, strip, is_the_cut, cut_on)?;
+    let did_not_meet = |at: Vector3| {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+            vec![at.into()],
+        )
+    };
+
+    let plan = if is_the_cut {
+        &corner.cut
+    } else {
+        &corner.bead
+    };
+    let last = at.len() - 1;
+    let shared_rail = if plan.left_region_key() == corner.shared_region_key {
+        0
+    } else {
+        last
+    };
+
+    let mut ring = vec![0; at.len()];
+
+    for rail in 0..at.len() {
+        if rail != 0 && rail != last {
+            ring[rail] = pool.add(at[rail]);
+            continue;
+        }
+
+        // The rail on the face the two edges share has to land on the tangent point, which is the
+        // corner the walkback left that face with; the other lands where its own band stopped.
+        if rail == shared_rail
+            && !(is_the_cut && corner.hands_over_at_a_mitre)
+            && (at[rail] - corner.tangent_point).length() > surface_strip_ends::meets_the_seam(pool)
+        {
+            return Err(did_not_meet(at[rail]));
+        }
+
+        let run = seams
+            .get(edge_index)
+            .and_then(|sides| sides[if rail == 0 { 0 } else { 1 }].as_ref());
+        let vertex = match run.and_then(|run| if ends_here { run.last() } else { run.first() }) {
+            Some(&(vertex, _)) => vertex,
+            None => return Err(did_not_meet(at[rail])),
+        };
+
+        if (pool.position_of(vertex) - at[rail]).length() > surface_strip_ends::meets_the_seam(pool)
+        {
+            return Err(did_not_meet(at[rail]));
+        }
+
+        ring[rail] = vertex;
+    }
+
+    Ok((ring, meets_at))
+}
+
+/// C# `TryCutTheRing`: one strip's end ring at the corner - where every rail of it crosses the
+/// plane that strip stops on, the handover plane for the cut (`is_the_cut`), the plane the bead's
+/// own ring stands on for the bead - as `(meets_at, at)`: where along its own edge each rail meets
+/// the plane, and where in space. A rail running along the plane is refused by name.
+///
+/// Ordinarily the ring is cut at the SAME plane the band it ends was cut at. A TWO-crease junction
+/// parts them: its one cut is bounded on neither face, and the ring it really ends on LEANS
+/// (63.43 degrees across the cut on the nose fixture) - so that plane is the caller's to name, as
+/// `cut_on`; `None` for every corner whose ring and band stop together.
+pub fn try_cut_the_ring(
+    corner: &SurfaceMixedCorner,
+    strip: &SurfaceStrip,
+    is_the_cut: bool,
+    cut_on: Option<SurfaceBandEnd>,
+) -> Result<(Vec<f64>, Vec<Vector3>), BevelAdvisory> {
+    let stops_at = match cut_on {
+        Some(plane) => plane,
+        None if is_the_cut => corner.cut_stops_at,
+        None => corner.bead_ring_stands_on(),
+    };
+
+    let rails = strip.rail_count().max(0) as usize;
+    let mut meets = Vec::with_capacity(rails);
+    let mut points = Vec::with_capacity(rails);
+
+    for rail in 0..rails as i32 {
+        let Some(param) = strip.try_cross(rail, stops_at.point, stops_at.inward) else {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![corner.corner.into()],
+            ));
+        };
+
+        meets.push(param);
+        points.push(strip.point_on(rail, param));
+    }
+
+    Ok((meets, points))
 }

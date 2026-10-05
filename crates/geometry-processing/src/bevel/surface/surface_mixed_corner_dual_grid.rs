@@ -1,15 +1,16 @@
 //! The grid a LEANING one-crease mixed corner's patch is sewn over ([`SurfaceMixedCornerDualGrid`]).
 //! Ports the record of `Bevel/Surface/SurfaceMixedCornerDualGrid.cs`, its reading from the two
-//! rings and its grid accessors; the reading from the two strips (`TryRead(.., SurfaceStrip, ..)`)
-//! lands with a later package.
+//! rings, its grid accessors, and the reading from the two strips
+//! ([`SurfaceMixedCornerDualGrid::try_read_strips`]).
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::surface_mixed_corner_patch;
 use super::{
     SurfaceMixedCorner, SurfaceMixedCornerDualCanal, SurfaceMixedCornerRowRunsTo,
-    SurfaceMixedCornerRows,
+    SurfaceMixedCornerRows, SurfaceStrip,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -127,6 +128,33 @@ impl SurfaceMixedCornerDualGrid {
     /// Rail `rail` of the row at `station`.
     pub fn at(&self, rail: usize, station: usize) -> Vector3 {
         self.rows.at(rail, self.stations[station])
+    }
+
+    /// C# `TryRead(SurfaceMixedCornerDualCanal, SurfaceStrip, SurfaceStrip, ..)`: reads the grid from
+    /// the two strips themselves, cutting each one's end ring where this corner ends it - the CUT's
+    /// on the canal's own LEANING plane, because a cut running into this blend has no square stop of
+    /// its own out there, and the BEAD's on its own square section, because the canal's first ball
+    /// is a ball of the bead and the two meet G1 with nothing between them.
+    pub fn try_read_strips(
+        canal: Rc<SurfaceMixedCornerDualCanal>,
+        cut: &SurfaceStrip,
+        bead: &SurfaceStrip,
+    ) -> Result<SurfaceMixedCornerDualGrid, BevelAdvisory> {
+        let corner = Rc::clone(&canal.corner);
+        let (_, cut_ring) = surface_mixed_corner_patch::try_cut_the_ring(
+            &corner,
+            cut,
+            true,
+            Some(canal.dual.cut_ring_plane()),
+        )?;
+        let (_, bead_ring) =
+            surface_mixed_corner_patch::try_cut_the_ring(&corner, bead, false, None)?;
+
+        Self::try_read(
+            canal,
+            Self::from_the_shared_face(&corner, &cut_ring),
+            Self::from_the_wall(&corner, &bead_ring),
+        )
     }
 
     /// The grid over `canal` from the cut's ring (read from the shared face) and the bead's ring

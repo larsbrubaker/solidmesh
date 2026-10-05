@@ -2,7 +2,8 @@
 //! (7, 7, 7), size 1, cap normal +z - with the bead's axis stood on +z through the origin): the carries into the cap and down
 //! to the bead's end, which plane bounds each edge's band, the wall read off the corner and its
 //! strip under the blend, the run-out's rigid carry, and the band ends at a junction and at a
-//! chorded mitre; and a chain's band ends and its chorded run's joint.
+//! chorded mitre; a chain's band ends and its chorded run's joint; which chord carries a mixed
+//! corner's ring, and a strip's end ring cut and won from the pool.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,10 +13,13 @@ use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use geometry_processing::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band_of;
+use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
 use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
     try_the_point, where_the_neighbours_plane_crosses,
 };
 use geometry_processing::bevel::surface::surface_mixed_corner_bites::under_the_cap;
+use geometry_processing::bevel::surface::surface_mixed_corner_hands_over_at_the_mitre as hands_over;
+use geometry_processing::bevel::surface::surface_mixed_corner_patch::{try_cut_the_ring, try_ring};
 use geometry_processing::bevel::surface::surface_mixed_corner_which_canal::{
     the_corner_takes_the_dual, try_how_far_the_duals_crease_runs,
 };
@@ -368,4 +372,103 @@ fn rust_only_a_crossing_needs_two_strips_with_the_same_rails() {
             )
         );
     }
+}
+
+/// Which chord carries the ring: the touching chord while its cap band survives between the
+/// handover and its own mitre, the chord before it (cut on its own mitre) where it does not, and
+/// the touching chord at an open chain's end with nothing before it.
+#[test]
+fn rust_only_the_ring_goes_to_the_mitre_when_the_touching_chord_has_no_band() {
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let planned = vec![piece(0, 0.0, 4.0), piece(1, 4.0, 10.0)];
+    let mut corner = mixed_corner(false);
+
+    // The handover keeps x >= 0 and the touching chord's mitre x >= 4: a band is left.
+    assert_eq!(
+        hands_over::try_read(&planned, false, 1, true, &corner),
+        (1, None)
+    );
+    assert_eq!(
+        hands_over::try_read(&planned, false, 0, true, &corner),
+        (0, None)
+    );
+
+    // A handover keeping x <= 2 against the mitre's x >= 4 leaves nothing.
+    corner.cut_stops_at = SurfaceBandEnd::new(Vector3::new(2.0, 0.0, 0.0), -x);
+    let (carries, stops_at) = hands_over::try_read(&planned, false, 1, true, &corner);
+    assert_eq!(carries, 0);
+    assert_eq!(stops_at, Some(hands_over::mitre_with(&planned, 0, 1, true)));
+    assert_eq!(
+        stops_at,
+        Some(SurfaceBandEnd::new(Vector3::new(4.0, 0.0, 0.0), -x))
+    );
+}
+
+/// A strip's end ring cut at a named plane lands every rail on it; a plane the rails run along is
+/// refused at the corner. Won from the pool, the outer rails are the tangent runs' own vertices and
+/// the interior rails new ones; a missing run is a seam that did not meet.
+#[test]
+fn rust_only_a_strips_end_ring_is_cut_and_won_from_the_pool() {
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let corner = mixed_corner(true);
+    let strip = SurfaceStrip::try_create(&square_edge_plan(1.0, true), 2).expect("a strip");
+    let rails = strip.rail_count() as usize;
+    let plane = SurfaceBandEnd::new(Vector3::new(3.0, 0.0, 0.0), x);
+
+    let (meets, at) = try_cut_the_ring(&corner, &strip, true, Some(plane)).expect("crosses");
+    assert_eq!((meets.len(), at.len()), (rails, rails));
+    assert!(at.iter().all(|p| (p.x - 3.0).abs() < 1e-9));
+    assert_eq!(
+        try_cut_the_ring(
+            &corner,
+            &strip,
+            true,
+            Some(SurfaceBandEnd::new(
+                Vector3::ZERO,
+                Vector3::new(0.0, 1.0, 0.0)
+            ))
+        ),
+        Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.corner.into()]
+        ))
+    );
+
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let first = pool.add(at[0]);
+    let last = pool.add(at[rails - 1]);
+    let seams: Vec<SideSeams> = vec![[Some(vec![(first, 0.0)]), Some(vec![(last, 0.0)])]];
+    let before = pool.count();
+
+    // The CUT handing over at a mitre is checked against its own seams alone.
+    let (ring, meets_at) = try_ring(
+        &mut pool,
+        &corner,
+        &strip,
+        true,
+        &seams,
+        0,
+        true,
+        Some(plane),
+    )
+    .expect("meets");
+    assert_eq!(meets_at, meets);
+    assert_eq!((ring[0], ring[rails - 1]), (first, last));
+    assert_eq!(pool.count(), before + rails as i32 - 2);
+
+    let missing: Vec<SideSeams> = vec![[None, None]];
+    assert_eq!(
+        try_ring(
+            &mut pool,
+            &corner,
+            &strip,
+            true,
+            &missing,
+            0,
+            true,
+            Some(plane)
+        )
+        .map_err(|failure| failure.code()),
+        Err(BevelAdvisoryCode::SurfaceStripSeamDidNotMeet)
+    );
 }
