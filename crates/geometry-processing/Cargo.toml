@@ -17,6 +17,7 @@ name = "geometry_processing"
 path = "src/lib.rs"
 
 [dependencies]
+agg-path = { path = "../agg-path" }
 vector-math = { path = "../vector-math" }
 polygon-mesh = { path = "../polygon-mesh" }
 serde = { version = "1", features = ["derive"] }
