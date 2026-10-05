@@ -9,10 +9,29 @@
 //!
 //! Every query may charge the work budget in force, so each answers `Result<_, WorkError>` and a
 //! caller passes a cancel or an exhausted budget up with `?` (C# throws through them).
+//!
+//! Where C# tests a field's concrete type (`field is ChainField`, `is PickField`,
+//! `is BandGroupFields.WithRunOuts`), the trait says it instead: [`ScalarField::kind`] and the
+//! typed accessors, `None` by default and overridden by those types (the bevel-core decision on
+//! field type tests).
 
 use vector_math::Vector3;
 
-use super::WorkError;
+use super::{BandGroupFieldsWithRunOuts, ChainField, PickField, WorkError};
+
+/// Which of the fields C# tests for by type a field is ([`ScalarField::kind`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum FieldKind {
+    /// Any other field (a point, a plane, a run-out, a test's field).
+    #[default]
+    Other,
+    /// One chain's field (C# `ChainField`).
+    ChainField,
+    /// A group of chains' field (C# `PickField`).
+    PickField,
+    /// A group's pick field read with its run-outs (C# `BandGroupFields.WithRunOuts`).
+    WithRunOuts,
+}
 
 /// One number per point in space, negative in the band that is to be deleted, positive outside
 /// it, zero on the level line the cut follows (C# `IScalarField`).
@@ -24,6 +43,27 @@ use super::WorkError;
 pub trait ScalarField {
     /// The field value at a point: negative inside the band, positive outside, zero on the line.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError>;
+
+    /// Which field this is, where C# asks by type; [`FieldKind::Other`] unless overridden.
+    fn kind(&self) -> FieldKind {
+        FieldKind::Other
+    }
+
+    /// This field as a chain's field (C# `field as ChainField`); `None` unless overridden.
+    fn as_chain_field(&self) -> Option<&ChainField> {
+        None
+    }
+
+    /// This field as a pick's field (C# `field as PickField`); `None` unless overridden.
+    fn as_pick_field(&self) -> Option<&PickField> {
+        None
+    }
+
+    /// This field as a group's field with its run-outs (C# `field as BandGroupFields.WithRunOuts`);
+    /// `None` unless overridden.
+    fn as_with_run_outs(&self) -> Option<&BandGroupFieldsWithRunOuts> {
+        None
+    }
 }
 
 /// The least value a field takes over a piece of the mesh, and the point where it takes it.

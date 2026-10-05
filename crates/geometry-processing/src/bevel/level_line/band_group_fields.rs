@@ -4,8 +4,8 @@
 //! `Bevel/LevelLine/BandGroupFields.cs` (a C# static class): the run-out gate ([`run_outs_on`],
 //! [`turn_run_outs_on`] and its scope [`BandGroupFieldsRunOutsScope`], kept on the build's
 //! [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the wrapped field
-//! ([`BandGroupFieldsWithRunOuts`], with its constructor and inner field). The static class's
-//! other functions and the wrapped field's
+//! ([`BandGroupFieldsWithRunOuts`], with its constructor and inner field) and the pick under it
+//! ([`unwrapped`]). The static class's other functions and the wrapped field's
 //! queries land with later packages.
 
 use std::rc::Rc;
@@ -61,6 +61,16 @@ impl Drop for BandGroupFieldsRunOutsScope {
         if let Some(budget) = LevelLineWork::current() {
             budget.run_outs_on.set(self.was);
         }
+    }
+}
+
+/// C# `BandGroupFields.Unwrapped`: the pick field under a group's field: a wrapped group's inner
+/// pick, any other field itself. What asks about the pick's own CHAINS - where two tie, where a
+/// bounded end is a known cut - reads this; the run-out has no chain, tie or end plane.
+pub fn unwrapped(field: &Rc<dyn ChainDistanceField>) -> Rc<dyn ChainDistanceField> {
+    match field.as_with_run_outs() {
+        Some(wrapped) => wrapped.inner().clone(),
+        None => field.clone(),
     }
 }
 

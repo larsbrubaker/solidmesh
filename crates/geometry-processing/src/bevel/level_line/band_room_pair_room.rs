@@ -2,12 +2,17 @@
 //! (a partial of the C# static class `BandRoom`, whose main file is `band_room.rs`): so far its
 //! readings over plain positions - the uniform-setback test ([`is_uniform`]), a point's distance to
 //! a chain ([`distance_to_polyline`]), a vertex's place in a chain ([`index_in`]), two bounding
-//! spheres' gap ([`sphere_gap`]) and the pair-prune bound ([`pair_cannot_lower_the_room`]); the
-//! pair reading lands with later packages.
+//! spheres' gap ([`sphere_gap`]), the pair-prune bound ([`pair_cannot_lower_the_room`]), the edges
+//! running out of shared corners ([`edges_running_out_of_corners`]), the pieces of one chain split
+//! at setback steps ([`pieces_of_one_chain`]) and the ends stopping at an end face
+//! ([`ends_with_an_end_region`]); the pair reading lands with later packages.
 
+use std::collections::HashSet;
+
+use indexmap::IndexSet;
 use vector_math::{cs_math, Vector3};
 
-use super::chain_setback;
+use super::{chain_setback, EndRayBound, ForeignEdgeRegions};
 
 /// C# `BandRoom.PairPruneSlack`: the relative slack the pair-prune bound must clear the least room
 /// by, so a pair whose bound TIES the least cannot be pruned or kept by which way the last bit of
@@ -135,4 +140,192 @@ pub fn pair_cannot_lower_the_room(
     }
 
     gap / denominator > least_so_far * (1.0 + PAIR_PRUNE_SLACK)
+}
+
+/// C# `BandRoom.EdgesRunningOutOfCorners`: the edges of chain j (indices into its chain edges) that
+/// run out of a corner j shares with chain k: the edge on the corner itself, and every edge after
+/// it, walking away from the corner, while both its ends stay BEHIND the corner as k sees it - no
+/// nearer any edge of k at the corner than the corner vertex is - or while it runs AWAY from k.
+/// Along such a run the distance to k IS the distance to the corner, so reading it as a pinch reads
+/// j's own length from the corner, not an approach across a face: the rim's SECOND facet, one chord
+/// from a corner the face turns reflex at, read a room of 0.56 where 3.756 builds ("Top & Round
+/// Should be Union"). The run stops at the first edge that comes round in front of the corner, so a
+/// chain that turns back and does approach k across the face is still read.
+///
+/// The corners are walked in their set's order (C#'s `HashSet`, only added to, so insertion order),
+/// which matters: a later corner's walk stops at an edge an earlier one skipped.
+pub fn edges_running_out_of_corners(
+    positions: &[Vector3],
+    chain_j: &[i32],
+    closed_j: bool,
+    chain_k: &[i32],
+    closed_k: bool,
+    shared_corners: &IndexSet<i32>,
+) -> IndexSet<i32> {
+    let mut skipped: IndexSet<i32> = IndexSet::new();
+    let count_j = chain_j.len() as i32;
+    let edge_count = if closed_j { count_j } else { count_j - 1 };
+    let count_k = chain_k.len() as i32;
+    let at_j = |i: i32| positions[chain_j[i as usize] as usize];
+    for &corner in shared_corners {
+        let at = positions[corner as usize];
+        let k_index = index_in(chain_k, corner);
+        let mut along_k = Vec::new();
+        for step in [-1, 1] {
+            let mut n = k_index + step;
+            if closed_k {
+                n = (n + count_k) % count_k;
+            }
+
+            if n >= 0 && n < count_k && chain_k[n as usize] != corner {
+                along_k.push(positions[chain_k[n as usize] as usize] - at);
+            }
+        }
+
+        let behind = |point: Vector3| {
+            let offset = point - at;
+            along_k
+                .iter()
+                .all(|d| offset.dot(*d) <= 1e-9 * offset.length() * d.length())
+        };
+        let from_k = |point: Vector3| distance_to_polyline(positions, chain_k, closed_k, point);
+
+        // Edge (vertex, next) moves AWAY from k: its middle and its far end both stand further from
+        // k than its near end.
+        let runs_away = |vertex: i32, next: i32| {
+            let near = from_k(at_j(vertex));
+            from_k(at_j(next)) > near && from_k((at_j(vertex) + at_j(next)) / 2.0) > near
+        };
+
+        let j_index = index_in(chain_j, corner);
+        for step in [-1, 1] {
+            // The edge from vertex i to i + 1 is edge i; walking down, the edge from i to i - 1 is
+            // edge i - 1.
+            let mut vertex = j_index;
+            for walked in 0..edge_count.max(0) {
+                let mut edge = if step > 0 { vertex } else { vertex - 1 };
+                if closed_j {
+                    edge = (edge + count_j) % count_j;
+                }
+
+                if edge < 0 || edge >= edge_count || (skipped.contains(&edge) && walked > 0) {
+                    break;
+                }
+
+                let next = if closed_j {
+                    (vertex + step + count_j) % count_j
+                } else {
+                    vertex + step
+                };
+
+                // The edge ON the corner is always left unread; after it only while it stays
+                // behind, or while it runs AWAY from k. A chain leaving the corner at an angle to k
+                // is nearest k at the corner and further off at every step, so its later edges
+                // approach k nowhere the corner does not already (Inner Right Sides and Center.mcx:
+                // the second edge of a concave chain cut in two set the room at 1.67 where the band
+                // cuts cleanly to 2.5). An approach elsewhere - a cube face's far edge running
+                // parallel to k - does not move away, and is read.
+                if walked > 0
+                    && !(behind(at_j(vertex)) && behind(at_j(next)))
+                    && !runs_away(vertex, next)
+                {
+                    break;
+                }
+
+                skipped.insert(edge);
+                vertex = next;
+            }
+        }
+    }
+
+    skipped
+}
+
+/// C# `BandRoom.PiecesOfOneChain`: for each chain, the chains it was ONE chain with before the
+/// split at setback steps: every chain reached from it end to end through a vertex of
+/// `step_corners`, itself included (in the order they were reached; the pieces of one chain share
+/// one list in C#, the same list here for each).
+pub fn pieces_of_one_chain(
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    step_corners: &HashSet<i32>,
+) -> Vec<Vec<i32>> {
+    let mut pieces: Vec<Option<Vec<i32>>> = vec![None; chains.len()];
+    for k in 0..chains.len() {
+        if step_corners.is_empty() {
+            pieces[k] = Some(vec![k as i32]);
+        }
+
+        if pieces[k].is_some() {
+            continue;
+        }
+
+        let mut found = vec![k as i32];
+        let mut i = 0;
+        while i < found.len() {
+            let at = found[i] as usize;
+            i += 1;
+            if closed[at] {
+                continue;
+            }
+
+            let ends = [chains[at][0], chains[at][chains[at].len() - 1]];
+            for (j, chain) in chains.iter().enumerate() {
+                if !found.contains(&(j as i32))
+                    && !closed[j]
+                    && ends.iter().any(|v| {
+                        step_corners.contains(v) && (chain[0] == *v || chain[chain.len() - 1] == *v)
+                    })
+                {
+                    found.push(j as i32);
+                }
+            }
+        }
+
+        for &piece in &found {
+            pieces[piece as usize] = Some(found.clone());
+        }
+    }
+
+    pieces.into_iter().map(Option::unwrap_or_default).collect()
+}
+
+/// C# `BandRoom.EndsWithAnEndRegion`: the ends of chains k and j that stop at an END FACE (an end
+/// region, see [`ForeignEdgeRegions::runs_out`]) - `None` unless both chains have one, the only
+/// case in which the end-to-end approach test can leave a pair's approach unread. An end whose ray
+/// is bounded on a same-sense end face stops ON that face (the end-plane trim), as an end region's
+/// does, though the face is left whole for the trim and so is no end region.
+pub fn ends_with_an_end_region(
+    regions: &ForeignEdgeRegions,
+    chain_edges: &[Vec<(i32, i32)>],
+    k: i32,
+    j: i32,
+    bounds_k: (Option<EndRayBound>, Option<EndRayBound>),
+    bounds_j: (Option<EndRayBound>, Option<EndRayBound>),
+) -> Option<(HashSet<i32>, HashSet<i32>)> {
+    let faced = |chain: i32| {
+        let bounds = if chain == k { bounds_k } else { bounds_j };
+        let (mut first, mut last) = regions.runs_out(chain);
+        first &= !bounds.0.is_some_and(|b| b.same_sense);
+        last &= !bounds.1.is_some_and(|b| b.same_sense);
+        let edges = &chain_edges[chain as usize];
+        let mut ends = HashSet::new();
+        if !first {
+            ends.insert(edges[0].0);
+        }
+
+        if !last {
+            ends.insert(edges[edges.len() - 1].1);
+        }
+
+        ends
+    };
+
+    let of_k = faced(k);
+    let of_j = faced(j);
+    if !of_k.is_empty() && !of_j.is_empty() {
+        Some((of_k, of_j))
+    } else {
+        None
+    }
 }
