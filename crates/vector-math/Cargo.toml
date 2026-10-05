@@ -1,0 +1,16 @@
+# vector-math: agg-sharp's VectorMath (f64 vectors, MathHelper, and in later steps Matrix4X4,
+# Quaternion, AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing).
+# std only; builds for wasm32-unknown-unknown.
+[package]
+name = "vector-math"
+description = "Port of agg-sharp VectorMath: vectors and math helpers for mattercad-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "vector_math"
+path = "src/lib.rs"
