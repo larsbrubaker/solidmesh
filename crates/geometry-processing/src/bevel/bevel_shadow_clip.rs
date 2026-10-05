@@ -1,9 +1,12 @@
 //! The column a cutter must not reach into above a face something stands on
 //! (`Bevel/BevelShadowClip.cs`, a C# `internal static class`, so a module here): one obstructed
 //! face of one selected edge ([`Obstruction`]), recorded by `BevelFaceFit` when it admitted the
-//! group. Drawing the column lands with the core's packages as free functions in this module.
+//! group, with its constructors. Drawing the column lands with the core's packages as free
+//! functions in this module.
 
 use vector_math::Vector3;
+
+use crate::topology::FeatureEdge;
 
 /// C# `BevelShadowClip.Obstruction`: one face of one selected edge that something is standing
 /// on - what `BevelFaceFit` recorded when it admitted the group, and everything the clip needs to
@@ -37,4 +40,58 @@ pub struct Obstruction {
     /// would be "everything in front of the plane", which sweeps in things that merely pass over
     /// the face.
     pub seed_face: i32,
+}
+
+impl Obstruction {
+    /// C#'s constructor (its optional `roundRadius = 0` passed explicitly).
+    #[allow(clippy::too_many_arguments)] // C#'s constructor: one field per argument.
+    pub fn new(
+        plane_normal: Vector3,
+        plane_distance: f64,
+        origin: Vector3,
+        along: Vector3,
+        along_length: f64,
+        across: Vector3,
+        setback: f64,
+        planar_within: f64,
+        seed_face: i32,
+        round_radius: f64,
+    ) -> Self {
+        Self {
+            plane_normal,
+            plane_distance,
+            origin,
+            along,
+            along_length,
+            across,
+            setback,
+            round_radius,
+            planar_within,
+            seed_face,
+        }
+    }
+
+    /// The obstruction a face of normal `face_normal` makes along the selected `edge`.
+    pub fn on(
+        face_normal: Vector3,
+        edge: &FeatureEdge,
+        across: Vector3,
+        setback: f64,
+        planar_within: f64,
+        seed_face: i32,
+        round_radius: f64,
+    ) -> Self {
+        Self::new(
+            face_normal,
+            face_normal.dot(edge.start),
+            edge.start,
+            edge.direction,
+            (edge.end - edge.start).length(),
+            across,
+            setback,
+            planar_within,
+            seed_face,
+            round_radius,
+        )
+    }
 }

@@ -75,3 +75,62 @@ fn rust_only_a_zip_rail_reads_canonically_and_past_its_wrap() {
     assert_eq!(nearest(&parameters, 1, 1.2, 1), 1);
     assert_eq!(nearest(&parameters, 3, 9.0, 1), 3);
 }
+
+#[test]
+fn rust_only_the_bead_batch_withdraws_by_owner() {
+    use geometry_processing::bevel::BevelBeadBatch;
+    use polygon_mesh::solids::platonic_solids;
+    use std::collections::HashSet;
+    let cube = || platonic_solids::create_cube(1.0, 1.0, 1.0);
+    let mut batch = BevelBeadBatch::default();
+    batch.add_chain_bead(0, cube());
+    batch.add_fill_patch(vec![0, 2], cube());
+    batch.add_fill_patch(vec![0, 1], cube());
+    assert_eq!(batch.fill_patches_start_at(), 1);
+    batch.withdraw(&HashSet::from([1]));
+    assert_eq!(batch.whole().len(), 2);
+    assert_eq!(batch.fill_patches_start_at(), 1);
+    batch.withdraw(&HashSet::from([0]));
+    assert!(batch.whole().is_empty());
+}
+
+#[test]
+fn rust_only_small_level_line_readings() {
+    use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
+    use geometry_processing::bevel::level_line::consumed_to_the_rim::lies_on_a_rim;
+    use geometry_processing::bevel::level_line::knife_end_overrun::on_the_plane;
+    use geometry_processing::bevel::level_line::line_walk::in_triangle;
+    use geometry_processing::bevel::level_line::rail_stations::pieces;
+    use std::collections::HashMap;
+
+    assert_eq!(room_margin(4.0, 1e-9), 5e-10);
+    assert_eq!(room_margin(0.0, 1e-9), 0.0);
+    let rims = [(v(0.0, 0.0, 0.0), v(10.0, 0.0, 0.0))];
+    assert!(lies_on_a_rim(
+        &rims,
+        v(1.0, 1e-10, 0.0),
+        v(9.0, 0.0, 0.0),
+        1e-9
+    ));
+    assert!(!lies_on_a_rim(
+        &rims,
+        v(1.0, 1e-3, 0.0),
+        v(9.0, 0.0, 0.0),
+        1e-9
+    ));
+    assert!(on_the_plane(
+        v(5.0, 3.0, 1e-7),
+        v(0.0, 0.0, 0.0),
+        v(0.0, 0.0, 1.0)
+    ));
+    assert!(!on_the_plane(
+        v(0.5, 0.0, 1e-5),
+        v(0.0, 0.0, 0.0),
+        v(0.0, 0.0, 1.0)
+    ));
+    let (a, b, c) = (v(0.0, 0.0, 0.0), v(1.0, 0.0, 0.0), v(0.0, 1.0, 0.0));
+    assert!(in_triangle(a, b, c, v(0.5, 0.5, 0.0)));
+    assert!(!in_triangle(a, b, c, v(0.6, 0.6, 0.0)));
+    let splits = HashMap::from([((1, 5), 3), ((3, 5), 4)]);
+    assert_eq!(pieces(5, 1, &splits), vec![(5, 4), (4, 3), (3, 1)]);
+}
