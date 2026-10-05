@@ -55,4 +55,7 @@ pub use room_source::RoomSource;
 pub use scalar_field::{ChainDistanceField, FieldMaximum, FieldMinimum, ScalarField};
 pub use segment_box_tree::SegmentNode;
 pub use vertex_side::VertexSide;
-pub use work_budget::{LevelLineProgress, LevelLineWorkPhase};
+pub use work_budget::{
+    LevelLineProgress, LevelLineProgressReport, LevelLineWork, LevelLineWorkPhase,
+    LevelLineWorkScope, WorkBudget, WorkBudgetExceeded, WorkCanceled, LEVEL_LINE_WORK_PHASE_COUNT,
+};
