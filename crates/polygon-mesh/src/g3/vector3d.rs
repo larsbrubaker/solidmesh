@@ -1,6 +1,7 @@
 //! The `[f64; 3]` arithmetic of geometry3Sharp's `Vector3d` (`math/Vector3d.cs`) and the
 //! triangle helpers of `MathUtil` (`math/MathUtil.cs`) that the remeshing code (`mesh_util`,
-//! `mesh_refiner_base`, `remesher*`) uses, each with C#'s operation order.
+//! `mesh_refiner_base`, `remesher*`) and `MinimalHoleFill`'s quality metrics (`Area`,
+//! `AspectRatio`) use, each with C#'s operation order.
 
 // Consumed by `MinimalHoleFill` (mesh repair), which lands in a later slice; until then only the
 // tests reach some of it.
@@ -116,6 +117,21 @@ pub(crate) fn fast_normal_direction(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) ->
     let edge1 = sub(v2, v1);
     let edge2 = sub(v3, v1);
     cross(edge1, edge2)
+}
+
+/// C# `MathUtil.Area(v1, v2, v3)`: half the length of the edge cross product.
+pub(crate) fn area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> f64 {
+    0.5 * length(cross(sub(v2, v1), sub(v3, v1)))
+}
+
+/// C# `MathUtil.AspectRatio(v1, v2, v3)`: `abc / (8 (s-a)(s-b)(s-c))`, 1 for an equilateral
+/// triangle and growing as it degenerates.
+pub(crate) fn aspect_ratio(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> f64 {
+    let a = distance(v1, v2);
+    let b = distance(v2, v3);
+    let c = distance(v3, v1);
+    let s = (a + b + c) / 2.0;
+    (a * b * c) / (8.0 * (s - a) * (s - b) * (s - c))
 }
 
 /// C# `MathUtil.Clamp(double, double, double)`.

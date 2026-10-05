@@ -40,7 +40,7 @@ fn tetrahedron() -> DMesh3 {
 
 /// Every edge's triangles contain both its vertices, every triangle's edges are its edges,
 /// and every vertex's edge list holds exactly the edges on it.
-fn check_valid(m: &DMesh3) {
+pub(super) fn check_valid(m: &DMesh3) {
     for eid in m.edge_indices() {
         let [a, b, t0, t1] = m.get_edge(eid);
         assert!(a < b);
