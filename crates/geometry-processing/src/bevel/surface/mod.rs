@@ -57,7 +57,7 @@ mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
 pub mod surface_convex_bite;
 pub mod surface_corner_mitre;
-mod surface_corner_patch;
+pub mod surface_corner_patch;
 pub mod surface_corner_patch_rows;
 mod surface_crossing_at_the_mitre;
 pub mod surface_cut_clip;
@@ -188,7 +188,9 @@ pub use surface_strip_notched_by_a_feature::{
     SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween,
 };
 pub use surface_strip_station::SurfaceStripStation;
-pub use surface_strip_trimmed_at_the_crossing::SurfaceStripTrimmedAtTheCrossing;
+pub use surface_strip_trimmed_at_the_crossing::{
+    SurfaceStripTrimmedAtTheCrossing, SurfaceStripTrims,
+};
 pub use surface_strip_trimmed_by_the_face_beyond::SurfaceStripTrimmedByTheFaceBeyond;
 pub use surface_two_crease_junction_patch::SurfaceTwoCreaseJunctionPatchEndRing;
 pub use surface_two_crease_junction_rings::SurfaceTwoCreaseJunctionRings;

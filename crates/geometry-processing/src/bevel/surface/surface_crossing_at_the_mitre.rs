@@ -1,13 +1,17 @@
 //! Where a run-out that crosses BOTH bands of one mitred corner hands over from the one to the
 //! other ([`SurfaceCrossingAtTheMitre`]): the single point standing on all three surfaces at once.
-//! Ports the fields of `Bevel/Surface/SurfaceCrossingAtTheMitre.cs`; the reading off the mitre ring
-//! and the staircases it hands the two trims land with the run-out crossing package.
+//! Ports `Bevel/Surface/SurfaceCrossingAtTheMitre.cs`: its fields, its turn readings and the
+//! staircases it hands the two trims ([`SurfaceCrossingAtTheMitre::try_the_staircases`]); the
+//! reading off the mitre ring (`TryRead`) lands with a later package.
 
 use std::cell::{Cell, RefCell};
 
 use vector_math::Vector3;
 
-use super::SurfaceMixedCorner;
+use super::{
+    SurfaceMixedCorner, SurfaceStripStation, SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
+};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceCrossingAtTheMitre`: where a run-out that crosses BOTH bands of one mitred corner
 /// hands over from the one to the other.
@@ -163,5 +167,196 @@ impl SurfaceCrossingAtTheMitre {
     /// The same, as a turn PAST the bead's own.
     pub fn turn_past_of(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
         Self::turn_of(corner, at) - corner.turn_radians()
+    }
+}
+
+/// The hand-over's staircases (C# `TheFirstRailUnder`, `TryTheStaircases`, `TheStaircase`).
+impl SurfaceCrossingAtTheMitre {
+    /// C# `TheFirstRailUnder`: the first rail of the ring standing under the run-out, walking from
+    /// the end that is clear.
+    pub fn the_first_rail_under(&self) -> i32 {
+        if self.given_up[0] {
+            self.chord
+        } else {
+            self.chord + 1
+        }
+    }
+
+    /// C# `TryTheStaircases`: the two end stations the mitre becomes - each band's own staircase,
+    /// cut back to its crossings on the rails the run-out took and standing on the shared ring
+    /// everywhere else, with the hand-over carried between the two rails of the chord it splits.
+    /// `leaving` is the trim at the end of the edge the chain ARRIVES on, `arriving` the trim at the
+    /// start of the one it leaves on (C#'s nulls are `None`); `Ok` holds their staircases in the same
+    /// order, and both trims are marked closed.
+    ///
+    /// A mitre is ordinarily ONE ring both strips stop on. Here the run-out has taken the rails below
+    /// the hand-over out of both, so along those rails the two strips do NOT meet: each stops at its
+    /// own crossing with the run-out, and the run-out's own surface stands between them. Above the
+    /// hand-over nothing has changed and the ring is the ring, welded into the pool here and shared by
+    /// index. The hand-over goes in as the BETWEEN of the one chord it splits, on both strips, rather
+    /// than as a tenth rail.
+    pub fn try_the_staircases(
+        &self,
+        pool: &mut SurfaceVertexPool,
+        leaving: Option<&SurfaceStripTrimmedAtTheCrossing>,
+        arriving: Option<&SurfaceStripTrimmedAtTheCrossing>,
+    ) -> Result<(SurfaceStripStation, SurfaceStripStation), BevelAdvisory> {
+        let misses = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingMissesTheMitre,
+                vec![self.at.into()],
+            )
+        };
+
+        let (Some(leaving), Some(arriving)) = (leaving, arriving) else {
+            return Err(misses());
+        };
+
+        let mut on_the_cap = leaving;
+        let mut on_the_wall = arriving;
+
+        // Told apart by which strip each trim is ON, so that the mitre loop may hand them over in
+        // whichever order that corner's two edges run in.
+        if on_the_cap.strip == self.the_wall_band.get()
+            && on_the_wall.strip == self.the_cap_band.get()
+        {
+            (on_the_cap, on_the_wall) = (on_the_wall, on_the_cap);
+        }
+
+        if on_the_cap.strip != self.the_cap_band.get()
+            || on_the_wall.strip != self.the_wall_band.get()
+        {
+            return Err(misses());
+        }
+
+        // The ring's own vertices FIRST and once, so that the rails both strips still meet on are one
+        // vertex and not two a weld apart. The rails the run-out took never reach the ring at all.
+        let on_the_ring: Vec<i32> = (0..self.ring.len())
+            .map(|rail| {
+                if self.given_up[rail] {
+                    -1
+                } else {
+                    pool.add(self.ring[rail])
+                }
+            })
+            .collect();
+
+        // BOTH staircases have to step down to the hand-over on the chord it really splits: the
+        // highest cut rail has to be the one just below the hand-over, or the tops interpolated from
+        // that rail's vertex are carried along a chord that starts somewhere else - an orphan vertex
+        // and a crack the length of a rail.
+        let first_under = self.the_first_rail_under();
+
+        for trim in [on_the_cap, on_the_wall] {
+            let reached = if self.given_up[0] {
+                trim.highest_rail_crossed()
+            } else {
+                trim.lowest_rail_crossed()
+            };
+
+            if !trim.crosses(first_under) || reached != first_under {
+                return Err(misses());
+            }
+        }
+
+        // And the run-out's own chord has to START on that rail's vertex, which is the one the band's
+        // staircase steps down from. Asked by IDENTITY rather than by distance.
+        let chord_starts_at = self.the_chord_starts_at.get();
+
+        if chord_starts_at >= 0 && Some(chord_starts_at) != on_the_cap.vertex_on(first_under) {
+            return Err(misses());
+        }
+
+        // The column tops belong to the CAP band's chord and to no other: they stand on the UPPER
+        // cut's own curve, which is the cap band's. The wall band's chord carries the hand-over and
+        // nothing else.
+        let along_the_chord = self.along_the_chord.borrow();
+        let cap_station = self.the_staircase(
+            on_the_cap,
+            &on_the_ring,
+            &self.param_on_the_cap,
+            along_the_chord.as_deref(),
+        );
+        let wall_station =
+            self.the_staircase(on_the_wall, &on_the_ring, &self.param_on_the_wall, None);
+
+        for station in [&cap_station, &wall_station] {
+            if station.rail.iter().any(|&rail| rail < 0) {
+                // A rail the run-out took that its own curve did not cut: the strip has no vertex to
+                // stop on there, so the staircase has a step with nothing under it.
+                return Err(misses());
+            }
+        }
+
+        leaving.closed_the_end.set(true);
+        arriving.closed_the_end.set(true);
+
+        // Handed back in the order they came in, which is the order the mitre loop assigns them in.
+        if std::ptr::eq(on_the_cap, leaving) {
+            Ok((cap_station, wall_station))
+        } else {
+            Ok((wall_station, cap_station))
+        }
+    }
+
+    /// C# `TheStaircase`: one band's staircase - its own crossing on every rail the run-out took, the
+    /// shared ring on the rest, and the hand-over between the two rails of the chord it splits.
+    fn the_staircase(
+        &self,
+        trim: &SurfaceStripTrimmedAtTheCrossing,
+        on_the_ring: &[i32],
+        on_the_rings_params: &[f64],
+        along_the_chord: Option<&[i32]>,
+    ) -> SurfaceStripStation {
+        let mut rail = vec![0i32; on_the_ring.len()];
+        let mut param = vec![0.0; on_the_ring.len()];
+
+        for at in 0..rail.len() {
+            if self.given_up[at] {
+                rail[at] = trim.vertex_on(at as i32).unwrap_or(-1);
+                param[at] = trim.param_on(at as i32).unwrap_or(on_the_rings_params[at]);
+                continue;
+            }
+
+            rail[at] = on_the_ring[at];
+            param[at] = on_the_rings_params[at];
+        }
+
+        let mut between = vec![Vec::new(); rail.len().saturating_sub(1)];
+
+        for (chord, slot) in between.iter_mut().enumerate() {
+            if chord as i32 != self.chord {
+                // Whatever the curve carried part way along THIS chord: a run-out stationed by the
+                // other band of the pair ends columns between this band's rails, and those points are
+                // the staircase's as much as the run-out's (SurfaceStripTrimmedAtTheCrossing).
+                *slot = trim.the_betweens_on_the_chord_from(chord as i32);
+                continue;
+            }
+
+            // In the order the CHORD runs - from rail Chord to rail Chord + 1 - which is not the order
+            // the column tops were read in. Listed the other way round where the run-out took the rails
+            // at the HIGH end of the profile, the stitch walks the chord's boundary back over itself:
+            // two faces walking one edge the same way and a shell with a hole beside them.
+            let mut carrying = Vec::new();
+            let vertex = self.vertex.get();
+
+            if self.given_up[0] {
+                if let Some(tops) = along_the_chord {
+                    carrying.extend_from_slice(tops);
+                }
+
+                carrying.push(vertex);
+            } else {
+                carrying.push(vertex);
+
+                if let Some(tops) = along_the_chord {
+                    carrying.extend(tops.iter().rev());
+                }
+            }
+
+            *slot = carrying;
+        }
+
+        SurfaceStripStation::new(rail, param, between)
     }
 }
