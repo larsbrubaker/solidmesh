@@ -643,22 +643,32 @@ fn rust_only_the_surface_walk_reads_faces_and_turns_through_vertices() {
     let (n, first, second) = faces::try_wedge(&cube, face, corner).expect("a corner of the face");
     assert!(first.cross(second).dot(n) >= 0.0);
 
-    // Turning through the corner from the top's other triangle finds the top face holding it.
-    let mut turned_face = top[1];
-    let mut direction = into_the_top;
+    // Turning through a corner the top's two triangles share, starting in the other triangle, finds
+    // the face whose wedge holds a direction pointing into this one.
     let other_top = &cube.faces[top[1] as usize];
-    if [other_top.v0, other_top.v1, other_top.v2].contains(&corner) {
-        assert!(turn::try_turn_out_of_the_corner(
-            &cube,
-            &graph,
-            &pairs,
-            corner,
-            None,
-            &mut turned_face,
-            &mut direction
-        ));
-        assert_eq!(turned_face, face);
-    }
+    let shared: Vec<i32> = corners
+        .iter()
+        .copied()
+        .filter(|c| [other_top.v0, other_top.v1, other_top.v2].contains(c))
+        .collect();
+    assert_eq!(
+        shared.len(),
+        2,
+        "the top's two triangles share their diagonal"
+    );
+    let pivot = shared[0];
+    let mut turned_face = top[1];
+    let mut direction = (centroid - at(pivot)).get_normal();
+    assert!(turn::try_turn_out_of_the_corner(
+        &cube,
+        &graph,
+        &pairs,
+        pivot,
+        None,
+        &mut turned_face,
+        &mut direction
+    ));
+    assert_eq!(turned_face, face);
     assert_eq!(
         turn::try_the_corner_under(&cube, face, at(corner), 1e-6),
         Some(corner)
@@ -670,4 +680,91 @@ fn rust_only_the_surface_walk_reads_faces_and_turns_through_vertices() {
         other_edge,
         pairs[&section_room::pair_key(corners[0], corners[2])]
     );
+}
+
+/// The join's own readings on a cube: the fold between the top's two triangles, the shortest strip
+/// from the top onto a side, the faces a walk ran through, the strip flattened with its lengths kept,
+/// a point read into it, a strip's key, and whether a walk arrived.
+#[test]
+fn rust_only_the_join_reads_strips_and_unfolds_them() {
+    use geometry_processing::bevel::sections::section_surface_walk::normal_of;
+    use geometry_processing::bevel::sections::section_surface_walk_join as join;
+    use geometry_processing::bevel::sections::{SurfaceWalkCrossing, SurfaceWalkResult};
+    use vector_math::Vector2;
+
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let up = Vector3::new(0.0, 0.0, 1.0);
+    let top: Vec<i32> = (0..cube.faces.len() as i32)
+        .filter(|&f| normal_of(&cube, f).dot(up) > 0.99)
+        .collect();
+    let side = (0..cube.faces.len() as i32)
+        .find(|&f| normal_of(&cube, f).dot(Vector3::new(1.0, 0.0, 0.0)) > 0.99)
+        .expect("a side");
+
+    let diagonal = join::try_the_fold_between(&cube, &graph, &pairs, top[0], top[1], None)
+        .expect("the top's triangles share their diagonal");
+    let no_crossing: &dyn Fn(i32) -> bool = &|edge| edge == diagonal;
+    assert!(
+        join::try_the_fold_between(&cube, &graph, &pairs, top[0], top[1], Some(no_crossing))
+            .is_none()
+    );
+
+    let (strip, folds) = join::try_strip(&cube, &graph, &pairs, top[0], side, None)
+        .expect("the side is a few faces away");
+    assert_eq!((strip[0], *strip.last().unwrap()), (top[0], side));
+    assert_eq!(folds.len(), strip.len() - 1);
+    for (pair, &fold) in strip.windows(2).zip(&folds) {
+        assert!([graph.get_face(fold, 0), graph.get_face(fold, 1)].contains(&pair[0]));
+        assert!([graph.get_face(fold, 0), graph.get_face(fold, 1)].contains(&pair[1]));
+    }
+
+    let walk = SurfaceWalkResult::new(
+        Vector3::ZERO,
+        top[1],
+        Vector3::ZERO,
+        vec![SurfaceWalkCrossing::new(diagonal, 0.5, Vector3::ZERO)],
+    );
+    let (faces, walked_folds) =
+        join::try_the_faces_walked(&cube, &graph, &pairs, top[0], top[1], &walk, None)
+            .expect("the walk crossed the diagonal");
+    assert_eq!(
+        (faces, walked_folds),
+        (vec![top[0], top[1]], vec![diagonal])
+    );
+
+    let flat = join::flatten(&cube, &strip).expect("a connected strip");
+    for (&one, &at_one) in &flat {
+        for (&other, &at_other) in &flat {
+            let real = (Vector3::from_vector3_float(cube.vertices[one as usize])
+                - Vector3::from_vector3_float(cube.vertices[other as usize]))
+            .length();
+            let shared_face = strip.iter().any(|&f| {
+                let d = &cube.faces[f as usize];
+                [d.v0, d.v1, d.v2].contains(&one) && [d.v0, d.v1, d.v2].contains(&other)
+            });
+            if shared_face {
+                assert!(((at_one - at_other).length() - real).abs() < 1e-5);
+            }
+        }
+    }
+    let corner = cube.faces[top[0] as usize].v1;
+    let corner_at = Vector3::from_vector3_float(cube.vertices[corner as usize]);
+    let read = join::in_flat(&cube, &flat, top[0], corner_at).expect("the face is in the strip");
+    assert!((read - flat[&corner]).length() < 1e-9);
+
+    let placed = join::place(
+        Vector2::ZERO,
+        Vector2::new(4.0, 0.0),
+        5.0,
+        3.0,
+        Vector2::new(0.0, 1.0),
+    );
+    assert!((placed - Vector2::new(4.0, -3.0)).length() < 1e-12);
+    assert_eq!(join::key_of(&[3, 1, 2]), "3,1,2");
+
+    let far = Vector3::new(1.0, 0.0, 0.0);
+    assert!(join::arrived_at(&cube, &walk, Vector3::ZERO, 1.0, false));
+    assert!(!join::arrived_at(&cube, &walk, far, 1.0, true));
 }

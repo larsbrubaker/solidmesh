@@ -19,6 +19,7 @@ pub mod section_smooth_side_boundary;
 pub mod section_split_blend;
 pub mod section_surface_walk;
 pub mod section_surface_walk_faces;
+pub mod section_surface_walk_join;
 pub mod section_walk_vertex_turn;
 
 pub use bevel_section::{BevelSection, SectionKind, SectionSide};
