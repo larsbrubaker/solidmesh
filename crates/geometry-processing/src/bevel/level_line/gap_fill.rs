@@ -1,12 +1,13 @@
 //! The gap fill's rail readings. Ports the nested type of `Bevel/LevelLine/GapFill.cs` (a C#
 //! static class): a loop read both ways round ([`GapFillRailSenses`]), the class's constants and the
-//! rail's monotone slack ([`monotone_slack`]). The fill's other functions land with later packages.
+//! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]). The fill's other functions land with later packages.
 
 use std::rc::Rc;
 
 use vector_math::cs_math;
 
-use super::{ChainField, ZipRail};
+use super::{ChainField, GapFillRefusal, GapFillResult, LevelLineMesh, ZipRail};
+use std::cell::RefCell;
 
 /// The tag the fill's own triangles carry, so the strip can be told from the kept surface. Stood
 /// clear of every side-group id (a pick of several chains numbers its groups 1, 2, 3, ...).
@@ -60,4 +61,14 @@ pub struct GapFillRailSenses {
     pub backward_cost: f64,
     /// Where the deeper of the two refusals happened, for a refusal to name.
     pub offending: i32,
+}
+
+/// The refusal for a rail whose chain parameter is not monotone, naming the offending vertex.
+pub fn not_monotone(mesh: Rc<RefCell<LevelLineMesh>>, offending_vertex: i32) -> GapFillResult {
+    GapFillResult {
+        refusal: GapFillRefusal::RailIsNotMonotone,
+        offending_vertex,
+        mesh: Some(mesh),
+        ..GapFillResult::default()
+    }
 }

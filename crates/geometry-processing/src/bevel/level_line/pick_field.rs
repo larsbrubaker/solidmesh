@@ -1,7 +1,8 @@
 //! One field over a GROUP of chains ([`PickField`]). Ports the type of
 //! `Bevel/LevelLine/PickField.cs` with its construction ([`PickField::new`], refusing bad
-//! arguments with [`PickFieldArgumentError`] where C# throws) and its member read-throughs; the
-//! queries and the `ChainDistanceField` impl land with their method packages.
+//! arguments with [`PickFieldArgumentError`] where C# throws), its member read-throughs and its
+//! end-plane reader ([`PickField::end_plane_reader`]); the queries and the `ChainDistanceField`
+//! impl land with their method packages.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
@@ -166,5 +167,27 @@ impl PickField {
     /// The chains of this group, in ascending index order.
     pub fn members(&self) -> &[i32] {
         &self.members
+    }
+}
+
+impl PickField {
+    /// The members' end planes, read per chain - what the convex cell bound needs - or `None` when
+    /// no member is clipped. Made once; it holds its own handles on the chains.
+    pub fn end_plane_reader(&self) -> Option<ChainFieldEndPlaneReader> {
+        let any_clipped = *self.any_member_clipped.get_or_init(|| {
+            self.members
+                .iter()
+                .any(|&k| self.chains[k as usize].end_plane_reader().is_some())
+        });
+        if !any_clipped {
+            return None;
+        }
+
+        Some(Rc::clone(self.end_plane_reader.get_or_init(|| {
+            let chains = self.chains.clone();
+            Rc::new(move |k: i32, point: vector_math::Vector3| {
+                chains[k as usize].end_plane_at(point)
+            })
+        })))
     }
 }

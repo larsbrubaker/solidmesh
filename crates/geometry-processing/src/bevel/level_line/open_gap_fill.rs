@@ -1,7 +1,9 @@
 //! The gap fill for an OPEN run. Ports the nested type of `Bevel/LevelLine/OpenGapFill.cs` (the
 //! primary file of the C# static partial class `OpenGapFill`): one open run read as a rail
-//! ([`OpenGapFillOpenRail`]), the class's constants, the thread's refusal site ([`ends_site`]) and
-//! the straight-row test ([`is_straight_row`]). The fill's functions land with later
+//! ([`OpenGapFillOpenRail`]), the class's constants, the thread's refusal site ([`ends_site`]), the
+//! straight-row test ([`is_straight_row`]) and the small pieces of the fill: the hole between two
+//! runs ([`hole_between`]), a result carrying the minted vertices ([`with_minted`]), a run end's
+//! meeting point ([`meeting_point_of`]) and a reversed arc ([`backwards`]). The fill's functions land with later
 //! packages.
 
 use std::cell::RefCell;
@@ -57,4 +59,73 @@ pub struct OpenGapFillOpenRail {
     pub vertices: Vec<i32>,
     /// The EXTENDED parameter of each vertex.
     pub parameters: Vec<f64>,
+}
+
+impl OpenGapFillOpenRail {
+    /// How many vertices the rail has.
+    pub fn count(&self) -> i32 {
+        self.vertices.len() as i32
+    }
+}
+
+/// The closed hole two open runs bound, as its directed edges: `one` whole, then `other` without
+/// its two ends (which `one`'s ends meet).
+pub fn hole_between(one: &super::GapLoop, other: &super::GapLoop) -> Vec<(i32, i32)> {
+    let inner = other.vertices.len().saturating_sub(2);
+    let cycle: Vec<i32> = one
+        .vertices
+        .iter()
+        .chain(other.vertices.iter().skip(1).take(inner))
+        .copied()
+        .collect();
+    (0..cycle.len())
+        .map(|i| (cycle[i], cycle[(i + 1) % cycle.len()]))
+        .collect()
+}
+
+/// A filled result with the vertices the virtual rail minted listed first among its added ones
+/// (and, for a one-chain fill, counted in its chain); a refusal, or a fill that minted nothing,
+/// unchanged.
+pub fn with_minted(result: super::GapFillResult, minted: &[i32]) -> super::GapFillResult {
+    if minted.is_empty() || result.refusal != super::GapFillRefusal::None {
+        return result;
+    }
+
+    let vertices: Vec<i32> = minted
+        .iter()
+        .chain(&result.added_vertices)
+        .copied()
+        .collect();
+    let vertices_of_chain = if result.vertices_of_chain.len() == 1 {
+        vec![vertices.len() as i32]
+    } else {
+        result.vertices_of_chain.clone()
+    };
+    super::GapFillResult {
+        added_vertices: vertices,
+        vertices_of_chain,
+        // C# copies the init-only properties it names; the one it leaves out keeps its default.
+        ends_capped_by_end_faces: false,
+        ..result
+    }
+}
+
+/// The run end - `a` or else `b` - that is one of the left rail's two ends, or `None`.
+pub fn meeting_point_of(left: &OpenGapFillOpenRail, a: i32, b: i32) -> Option<i32> {
+    let first = left.vertices[0];
+    let last = left.vertices[left.vertices.len() - 1];
+    if a == first || a == last {
+        return Some(a);
+    }
+
+    if b == first || b == last {
+        Some(b)
+    } else {
+        None
+    }
+}
+
+/// The arc walked the other way.
+pub fn backwards(arc: &[i32]) -> Vec<i32> {
+    arc.iter().rev().copied().collect()
 }

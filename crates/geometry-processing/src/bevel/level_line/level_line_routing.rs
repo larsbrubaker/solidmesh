@@ -1,6 +1,7 @@
 //! Which route the app's bevel build takes, and the watch it can leave behind. Ports the record of
 //! `Bevel/LevelLine/LevelLineRouting.cs` ([`LevelLineChainWatch`]); the C# static class
-//! `LevelLineRouting` (its switch and watch slot) lands with later packages.
+//! `LevelLineRouting` (its switch and watch slot) lands with later packages, except the switch's
+//! reading of a setting ([`reads_as_on`]).
 
 use vector_math::Vector3;
 
@@ -35,4 +36,9 @@ pub struct LevelLineChainWatch {
     pub seam_epsilon: f64,
     /// The sharp-turn angle the route passed, in degrees (C# default positive infinity).
     pub sharp_turn_degrees: f64,
+}
+
+/// Whether a setting's text reads as ON: "1", or "true" in any case.
+pub fn reads_as_on(value: &str) -> bool {
+    value == "1" || value.eq_ignore_ascii_case("true")
 }

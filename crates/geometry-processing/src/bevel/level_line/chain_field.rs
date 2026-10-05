@@ -114,7 +114,11 @@ impl std::fmt::Debug for ChainField {
 /// because the field is built in a dozen places under the build, all of which must read the same
 /// joints. The set holds each position as its component bits with -0.0 read as 0.0 (C#
 /// `Vector3` equality on the crease's own exact vertex positions).
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+///
+/// Neither `Clone` nor `Default`: dropping a scope restores the slot, so a copy would restore it
+/// twice, and a scope made any way but by `smooth_joints_while` would restore a slot it never set.
+#[derive(Debug, PartialEq, Eq)]
+#[must_use = "the smooth joints stay in scope only while the scope is alive"]
 pub struct ChainFieldSmoothJointsScope {
     /// The joint positions in scope before this one began; `None` for none.
     pub previous: Option<HashSet<[u64; 3]>>,

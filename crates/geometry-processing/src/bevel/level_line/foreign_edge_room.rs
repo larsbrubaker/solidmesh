@@ -1,7 +1,8 @@
 //! The room foreign features leave a chain: the size at which the band first reaches an edge that
 //! is not the chain's own. Ports `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class): so far
 //! its constants and switch, the knife test ([`is_a_knife`]) and the clusters of short edges at a
-//! chain's ends ([`cluster_at_the_ends`]); the room readings land with later packages.
+//! chain's ends ([`cluster_at_the_ends`]), and whether an edge meets the chain at an end
+//! ([`meets_the_chain_at_an_end`]); the room readings land with later packages.
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
@@ -119,6 +120,43 @@ pub fn cluster_at_the_ends(
 /// Adds `to` to `from`'s neighbour list.
 pub fn join(neighbours: &mut HashMap<i32, Vec<i32>>, from: i32, to: i32) {
     neighbours.entry(from).or_default().push(to);
+}
+
+/// True when `edge` is a piece of an input edge through one of the chain's run-out ends (the first
+/// end while `first_runs_out`, the last while `last_runs_out`), or lies wholly inside ONE end's
+/// cluster of short edges. C#'s optional arguments (`endCluster = null`, both run-outs true) are
+/// passed explicitly.
+pub fn meets_the_chain_at_an_end(
+    mesh: &LevelLineMesh,
+    chain_edges: &[(i32, i32)],
+    edge: (i32, i32),
+    end_cluster: Option<&[HashSet<i32>]>,
+    first_runs_out: bool,
+    last_runs_out: bool,
+) -> bool {
+    let first = chain_edges[0].0;
+    let last = chain_edges[chain_edges.len() - 1].1;
+    let on = LevelLineMesh::merge(
+        mesh.input_edge_behind(edge.0),
+        mesh.input_edge_behind(edge.1),
+    );
+    if on.0 >= 0
+        && ((first_runs_out && (on.0 == first || on.1 == first))
+            || (last_runs_out && (on.0 == last || on.1 == last)))
+    {
+        return true;
+    }
+
+    let Some(end_cluster) = end_cluster else {
+        return false;
+    };
+
+    // ONE end's cluster must hold the whole edge. Taking the two ends together would exempt an
+    // edge running from a vertex at one end to a vertex at the other - the length of the chain
+    // apart, and a wall like any other.
+    end_cluster
+        .iter()
+        .any(|at_one_end| at_one_end.contains(&edge.0) && at_one_end.contains(&edge.1))
 }
 
 #[cfg(test)]

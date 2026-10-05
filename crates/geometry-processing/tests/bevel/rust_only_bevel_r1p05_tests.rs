@@ -515,3 +515,115 @@ fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
     }
     assert!(ChainField::smooth_joints_in(&points).is_none());
 }
+
+#[test]
+fn rust_only_the_last_small_pieces_read_as_csharp() {
+    use geometry_processing::bevel::level_line::level_line_routing::reads_as_on;
+    use geometry_processing::bevel::level_line::open_gap_fill::{
+        backwards, hole_between, meeting_point_of, with_minted,
+    };
+    use geometry_processing::bevel::level_line::open_gap_fill_cut_section::fans_from_a_rail_run_out;
+    use geometry_processing::bevel::level_line::open_gap_fill_sunk_arc::concave;
+    use geometry_processing::bevel::level_line::{
+        GapFillRefusal, GapFillResult, GapLoop, OpenGapFillOpenRail,
+    };
+
+    assert!(reads_as_on("1") && reads_as_on("TRUE") && reads_as_on("true"));
+    assert!(!reads_as_on("yes") && !reads_as_on("0"));
+
+    let one = GapLoop::new(1, false, vec![1, 2, 3], vec![0.0; 3], 0, false, None);
+    let other = GapLoop::new(2, false, vec![3, 4, 5, 1], vec![0.0; 4], 0, false, None);
+    assert_eq!(
+        hole_between(&one, &other),
+        vec![(1, 2), (2, 3), (3, 4), (4, 5), (5, 1)]
+    );
+
+    let rail = OpenGapFillOpenRail {
+        vertices: vec![7, 8, 9],
+        parameters: vec![-1.0, 0.5, 2.0],
+    };
+    assert_eq!(rail.count(), 3);
+    assert_eq!(meeting_point_of(&rail, 8, 9), Some(9));
+    assert_eq!(meeting_point_of(&rail, 7, 9), Some(7));
+    assert_eq!(meeting_point_of(&rail, 8, 8), None);
+    assert_eq!(backwards(&[1, 2, 3]), vec![3, 2, 1]);
+
+    let right = OpenGapFillOpenRail {
+        vertices: vec![10, 11, 12],
+        parameters: vec![0.0, 1.0, 3.0],
+    };
+    let spokes = [(0, 0), (1, 1), (1, 2)];
+    assert!(fans_from_a_rail_run_out(&spokes, 1, 2, &rail, &right, 1e-9));
+    assert!(!fans_from_a_rail_run_out(
+        &spokes, 0, 0, &rail, &right, 1e-9
+    ));
+
+    let planes = [
+        (v(0.0, 0.0, 0.0), v(0.0, 0.0, 1.0)),
+        (v(10.0, 0.0, 0.0), v(0.0, 0.0, -1.0)),
+    ];
+    assert!(concave(&planes, v(1.0, 0.0, 0.0), v(1.0, 0.0, 1.0)));
+    assert!(!concave(&planes, v(9.0, 0.0, 0.0), v(9.0, 0.0, 1.0)));
+    assert!(!concave(&[], v(0.0, 0.0, 0.0), v(0.0, 0.0, 1.0)));
+
+    let filled = GapFillResult {
+        added_vertices: vec![20, 21],
+        vertices_of_chain: vec![2],
+        ends_capped_by_end_faces: true,
+        ..GapFillResult::default()
+    };
+    let minted = with_minted(filled, &[30]);
+    assert_eq!(minted.added_vertices, vec![30, 20, 21]);
+    assert_eq!(minted.vertices_of_chain, vec![3]);
+    let refused = GapFillResult {
+        refusal: GapFillRefusal::RailIsNotMonotone,
+        ..GapFillResult::default()
+    };
+    assert_eq!(
+        with_minted(refused, &[30]).added_vertices,
+        Vec::<i32>::new()
+    );
+}
+
+#[test]
+fn rust_only_an_edge_meets_the_chain_at_a_run_out_end_or_inside_one_cluster() {
+    use geometry_processing::bevel::level_line::foreign_edge_room::meets_the_chain_at_an_end;
+    use std::collections::HashSet;
+    let mut mesh = LevelLineMesh::new();
+    mesh.descends_from = vec![(0, 0), (1, 1), (2, 2), (3, 3), (0, 3)];
+    let chain = [(0, 1), (1, 2)];
+    // A piece of the input edge 0-3 meets the chain's first end.
+    assert!(meets_the_chain_at_an_end(
+        &mesh,
+        &chain,
+        (3, 4),
+        None,
+        true,
+        true
+    ));
+    assert!(!meets_the_chain_at_an_end(
+        &mesh,
+        &chain,
+        (3, 4),
+        None,
+        false,
+        true
+    ));
+    let clusters = [HashSet::from([0, 3, 4]), HashSet::from([2])];
+    assert!(meets_the_chain_at_an_end(
+        &mesh,
+        &chain,
+        (3, 4),
+        Some(&clusters),
+        false,
+        false
+    ));
+    assert!(!meets_the_chain_at_an_end(
+        &mesh,
+        &chain,
+        (3, 2),
+        Some(&clusters),
+        false,
+        false
+    ));
+}

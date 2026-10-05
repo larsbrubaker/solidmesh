@@ -1,7 +1,8 @@
 //! The open gap fill's cut sections. Ports the nested record of
 //! `Bevel/LevelLine/OpenGapFill.CutSection.cs` (a partial of the C# static class `OpenGapFill`): a
 //! run-out's flat region ([`OpenGapFillFlatRunOutRegion`]) and the region a run-out's flat cut
-//! rows close ([`flat_run_out`]). The other functions land with later packages.
+//! rows close ([`flat_run_out`]), and whether a spoke fans from a run-out rail vertex
+//! ([`fans_from_a_rail_run_out`]). The other functions land with later packages.
 
 use std::collections::HashSet;
 
@@ -72,4 +73,19 @@ pub fn flat_run_out(
         triangles,
         last_cut: last_cut as i32,
     })
+}
+
+/// Whether spoke (`l`, `r`) fans from a left-rail vertex that ran out: the left vertex is shared
+/// with other spokes and the right one stands further along the chain (by more than `tie`).
+pub fn fans_from_a_rail_run_out(
+    spokes: &[(i32, i32)],
+    l: i32,
+    r: i32,
+    left: &OpenGapFillOpenRail,
+    right: &OpenGapFillOpenRail,
+    tie: f64,
+) -> bool {
+    l > 0
+        && right.parameters[r as usize] > left.parameters[l as usize] + tie
+        && spokes.iter().filter(|spoke| spoke.0 == l).count() > 1
 }

@@ -103,7 +103,7 @@ mod level_line_mesh;
 pub mod level_line_mesh_input_strips;
 mod level_line_mesh_insert_polyline;
 pub mod level_line_mesh_needles;
-mod level_line_routing;
+pub mod level_line_routing;
 pub mod needle_meter;
 pub mod open_gap_fill;
 pub mod open_gap_fill_cut_section;
