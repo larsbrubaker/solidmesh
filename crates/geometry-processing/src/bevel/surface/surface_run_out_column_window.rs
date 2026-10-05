@@ -1,8 +1,8 @@
 //! What is left of a run-out's column at each of its turns ([`SurfaceRunOutColumnWindow`]): the
 //! WINDOW between the cut that eats the rows from the cap inward and the cut that eats them from
-//! the wall outward. Ports the fields of `Bevel/Surface/SurfaceRunOutColumnWindow.cs` and the
-//! carry of a band's staircase onto the column ends; its other readings and the builds of the
-//! window land with later packages as further `impl` blocks.
+//! the wall outward. Ports the fields of `Bevel/Surface/SurfaceRunOutColumnWindow.cs`, its
+//! constructor and readings, and the carry of a band's staircase onto the column ends; the builds
+//! of the window land with later packages as further `impl` blocks.
 
 use vector_math::Vector3;
 
@@ -142,5 +142,74 @@ impl SurfaceRunOutColumnWindow {
             // stands outside of - a fin between the two surfaces.
             stands_off_at[station] = corner.axis().distance_to(scallops[station]);
         }
+    }
+}
+
+impl SurfaceRunOutColumnWindow {
+    /// C#'s private constructor, in C#'s argument order.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        stations: Vec<f64>,
+        crosses_at: Vec<f64>,
+        the_wall_has_it: Vec<bool>,
+        stands_off_at: Vec<f64>,
+        scallops: Vec<Vector3>,
+        the_band_ends_them: Vec<bool>,
+        lens_radii: Vec<f64>,
+        the_switch_turn: f64,
+        the_die_point: i32,
+        the_cap_exit: i32,
+        the_cap_exits_turn: f64,
+    ) -> Self {
+        SurfaceRunOutColumnWindow {
+            crosses_at,
+            the_wall_has_it,
+            stands_off_at,
+            scallops,
+            the_band_ends_them,
+            lens_radii,
+            stations,
+            the_switch_turn,
+            the_die_point,
+            the_cap_exit,
+            the_cap_exits_turn,
+        }
+    }
+
+    /// A turn that needs no settling: `turn` itself (C#'s `Settled(turn, out at)` returning true).
+    pub fn settled(turn: f64) -> Option<f64> {
+        Some(turn)
+    }
+
+    /// The turn at which `row` leaves the band.
+    pub fn where_the_row_crosses(&self, row: usize) -> f64 {
+        self.crosses_at[row]
+    }
+
+    /// How far out of the axis the column at `station` ends.
+    pub fn stands_off_at(&self, station: usize) -> f64 {
+        self.stands_off_at[station]
+    }
+
+    /// Where the column at `station` ends.
+    pub fn scallop_at(&self, station: usize) -> Vector3 {
+        self.scallops[station]
+    }
+
+    /// Every column's end.
+    pub fn scallops(&self) -> &[Vector3] {
+        &self.scallops
+    }
+
+    /// Whether the band ends the column at `station`.
+    pub fn the_band_ends_them(&self, station: usize) -> bool {
+        self.the_band_ends_them[station]
+    }
+
+    /// The lens's top at `station` - how far out of the axis it stands - where the column has one.
+    pub fn try_the_lens_top(&self, station: usize) -> Option<f64> {
+        let stands_off = self.lens_radii[station];
+
+        (stands_off > 0.0).then_some(stands_off)
     }
 }

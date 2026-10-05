@@ -1,7 +1,7 @@
 //! The end of a band that RAN OFF its landing face, closed over the face beyond. Ports
 //! `Bevel/Surface/SurfaceStripEndsOverTheFaceBeyond.cs` (C# `internal static class`; a module of
 //! free functions here). What is here is the end ring at a NOTCHED run-off end
-//! ([`try_the_notched_ring`]); the close itself (`TryCloseOverTheFaceBeyond`) lands with a later
+//! ([`try_the_notched_ring`]) and which side ran off ([`try_the_run_off_on`]); the close itself (`TryCloseOverTheFaceBeyond`) lands with a later
 //! package. The trim it reads is [`SurfaceStripTrimmedByTheFaceBeyond`], the cross section comes
 //! from [`super::surface_strip_tail_around_a_feature`].
 
@@ -73,4 +73,24 @@ pub fn try_the_notched_ring(
     }
 
     Ok((ring, meets_at))
+}
+
+/// The one side of edge `edge_index` that ran off its landing face, where either did; refused (at
+/// `corner`) where both did.
+pub fn try_the_run_off_on(
+    ran_off: Option<&[[Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>; 2]]>,
+    edge_index: i32,
+    corner: vector_math::Vector3,
+) -> Result<Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>, crate::bevel::BevelAdvisory> {
+    let left = SurfaceStripTrimmedByTheFaceBeyond::standing_on(ran_off, edge_index, 0);
+    let right = SurfaceStripTrimmedByTheFaceBeyond::standing_on(ran_off, edge_index, 1);
+
+    if left.is_some() && right.is_some() {
+        return Err(crate::bevel::BevelAdvisory::new(
+            crate::bevel::BevelAdvisoryCode::SurfaceStripRunsOffBothSides,
+            vec![corner.into()],
+        ));
+    }
+
+    Ok(left.or(right))
 }

@@ -232,3 +232,33 @@ pub fn try_crossing(
 
     Some((reach, normal, face))
 }
+
+/// Whether `at` stands in the material the plane across the wall's end keeps.
+pub fn stands_in_the_material(across: SurfaceBandEnd, at: Vector3) -> bool {
+    across.signed_distance(at) > 0.0
+}
+
+/// Where three planes (each a point and its normal) meet, or `None` where two of them are
+/// parallel.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn try_where_the_three_meet(
+    first_point: Vector3,
+    first_normal: Vector3,
+    second_point: Vector3,
+    second_normal: Vector3,
+    third_point: Vector3,
+    third_normal: Vector3,
+) -> Option<Vector3> {
+    let determinant = first_normal.dot(second_normal.cross(third_normal));
+
+    if !(determinant.abs() > 1e-9) {
+        return None;
+    }
+
+    Some(
+        ((second_normal.cross(third_normal) * first_point.dot(first_normal))
+            + (third_normal.cross(first_normal) * second_point.dot(second_normal))
+            + (first_normal.cross(second_normal) * third_point.dot(third_normal)))
+            / determinant,
+    )
+}

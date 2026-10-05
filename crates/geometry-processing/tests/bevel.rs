@@ -65,6 +65,8 @@ mod rust_only_bevel_r1p10_tests;
 mod rust_only_bevel_r1p13_switch_tests;
 #[path = "bevel/rust_only_bevel_r1p13_tests.rs"]
 mod rust_only_bevel_r1p13_tests;
+#[path = "bevel/rust_only_bevel_r1p14_roll_tests.rs"]
+mod rust_only_bevel_r1p14_roll_tests;
 #[path = "bevel/rust_only_bevel_r1p15_tests.rs"]
 mod rust_only_bevel_r1p15_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]

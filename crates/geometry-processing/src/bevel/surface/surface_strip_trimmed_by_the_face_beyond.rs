@@ -224,3 +224,20 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
         profile
     }
 }
+
+impl SurfaceStripTrimmedByTheFaceBeyond {
+    /// The trim standing on side `side` of strip `strip` in `trims` (C#'s `[,]`), or `None` where
+    /// there is none or no such strip.
+    pub fn standing_on(
+        trims: Option<&[[Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>; 2]]>,
+        strip: i32,
+        side: usize,
+    ) -> Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>> {
+        let trims = trims?;
+        if strip < 0 || strip as usize >= trims.len() {
+            return None;
+        }
+
+        trims[strip as usize][side].clone()
+    }
+}

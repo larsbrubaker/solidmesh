@@ -1,9 +1,10 @@
 //! Sewing a cut's new vertices into the faces whose sides they stand on. Ports
 //! `Bevel/Surface/SurfaceSplitSewing.cs` (C# `internal static class`; a module of free functions
-//! here). The sewing itself (`SewInTheSplits`) and `Lobes` land with later packages; what is here
+//! here). The sewing itself (`SewInTheSplits`) lands with a later package; what is here
 //! is the one reading of "on this side" that the whole build shares ([`stands_on_the_side`]),
 //! which the fan ([`super::surface_fan`]) asks of its diagonals too, and the two per-face readings
-//! the sewing is built from ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]).
+//! the sewing is built from ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]), and
+//! the lobes a ring that revisits a vertex falls into ([`lobes`]).
 
 use vector_math::Vector3;
 
@@ -112,4 +113,34 @@ pub fn ring_with_the_splits_in(
     }
 
     surface_ring::without_repeats(&ring)
+}
+
+/// The LOBES of a ring that comes back to a vertex it has already visited: each return closes
+/// what was walked since as a lobe of its own (three corners or more), the walk carrying on from
+/// the vertex it came back to; what is left is the last lobe.
+pub fn lobes(ring: &[i32]) -> Vec<Vec<i32>> {
+    let mut lobes = Vec::new();
+    let mut walked: Vec<i32> = Vec::with_capacity(ring.len());
+
+    for &vertex in ring {
+        let Some(already) = walked.iter().position(|&v| v == vertex) else {
+            walked.push(vertex);
+            continue;
+        };
+
+        // Back where it has been: everything since then is a lobe of its own.
+        let lobe = walked[already..].to_vec();
+
+        if lobe.len() >= 3 {
+            lobes.push(lobe);
+        }
+
+        walked.truncate(already + 1);
+    }
+
+    if walked.len() >= 3 {
+        lobes.push(walked);
+    }
+
+    lobes
 }

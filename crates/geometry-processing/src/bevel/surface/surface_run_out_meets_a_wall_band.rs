@@ -335,3 +335,42 @@ impl SurfaceRunOutMeetsAWallBand {
         Some(from + (along * how_far))
     }
 }
+
+impl SurfaceRunOutMeetsAWallBand {
+    /// C#'s private constructor.
+    pub fn new(
+        corner: Rc<SurfaceMixedCorner>,
+        flat_rails: Vec<Vector3>,
+        rail_turns: Vec<f64>,
+        crosses_at: Vec<f64>,
+    ) -> Self {
+        SurfaceRunOutMeetsAWallBand {
+            corner,
+            flat_rails,
+            rail_turns,
+            rail_turns_past_the_bead: crosses_at,
+        }
+    }
+
+    /// The run-out's `stations` short of the band's first rail crossing (by `hair`), then each rail
+    /// crossing a `hair` past the last station kept.
+    pub fn stationed(&self, stations: &[f64], hair: f64) -> Vec<f64> {
+        let mut stationed =
+            Vec::with_capacity(stations.len() + self.rail_turns_past_the_bead.len() + 1);
+        let first = self.rail_turns_past_the_bead[0];
+
+        for &station in stations {
+            if station < first - hair {
+                stationed.push(station);
+            }
+        }
+
+        for &rail in &self.rail_turns_past_the_bead {
+            if stationed.last().is_none_or(|&last| rail - last > hair) {
+                stationed.push(rail);
+            }
+        }
+
+        stationed
+    }
+}

@@ -1,7 +1,8 @@
 //! Pacing out the room a cut has on its region (`Bevel/Surface/SurfaceRoomMeasure.cs`, a static
 //! class: free functions here). The rulers and the exact offset of a rim segment in front of the
-//! chain edge land here first, with the bands a pass takes off a region; the measure itself
-//! (`RoomAcross`, `MeasureCorner`) lands with later packages.
+//! chain edge land here first, with the bands a pass takes off a region, the free end, the corner
+//! a wall shares and its measure; the measure itself (`RoomAcross`, `Measure`) lands with later
+//! packages.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
@@ -102,4 +103,91 @@ pub fn offset_at(along_a: f64, offset_a: f64, along_b: f64, offset_b: f64, at: f
     }
 
     offset_a + ((offset_b - offset_a) * ((at - along_a) / span))
+}
+
+/// Whether `plan`'s edge `edge_index` ends the chain at its start (or end) with no junction there:
+/// a FREE end.
+pub fn free_end(plan: &SurfaceBevelPlan, edge_index: usize, at_the_start: bool) -> bool {
+    if plan.is_closed
+        || (if at_the_start {
+            edge_index != 0
+        } else {
+            edge_index != plan.edges.len() - 1
+        })
+    {
+        return false;
+    }
+
+    plan.try_junction_at(at_the_start).is_none()
+}
+
+/// Whether a wall's offset is read as the room: not where the room is paced out across the
+/// surface, and not where a standing feature hides the wall's far end.
+pub fn read_the_offset(
+    region: &FaceGroup,
+    wall: &crate::topology::FeatureEdge,
+    far_end: Vector3,
+    corner: f64,
+    across_the_surface: bool,
+    beveled_mesh_edges: &HashSet<i32>,
+    chain_vertices: &HashSet<i32>,
+) -> bool {
+    !across_the_surface
+        && !super::surface_room_standing_feature::hides_the_end_of_a_wall(
+            region,
+            wall,
+            far_end,
+            corner,
+            beveled_mesh_edges,
+            chain_vertices,
+        )
+}
+
+/// Whether `rim` meets the chain edge at `corner` (within `tolerance`), and its leg out of it.
+pub fn shares_the_corner(
+    rim: &crate::topology::FeatureEdge,
+    corner: Vector3,
+    tolerance: f64,
+) -> Option<Vector3> {
+    if (rim.start - corner).length() <= tolerance {
+        return Some(rim.end - corner);
+    }
+
+    if (rim.end - corner).length() <= tolerance {
+        return Some(rim.start - corner);
+    }
+
+    None
+}
+
+/// Measures a wall leg meeting the chain edge at its corner: a leg running in front of the band
+/// (`inward`) and past the corner's own reach `corner` along the edge raises the share it `taken`
+/// (reach over offset), and lowers the `nearest` room where its offset is read.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn measure_corner(
+    leg: Vector3,
+    along: Vector3,
+    inward: Vector3,
+    read_the_offset: bool,
+    corner: f64,
+    nearest: &mut f64,
+    taken: &mut f64,
+) {
+    let offset = leg.dot(inward);
+
+    if !(offset > 0.0) {
+        return;
+    }
+
+    let reach = leg.dot(along);
+
+    if !(reach > corner) {
+        return;
+    }
+
+    *taken = cs_math::max_f64(*taken, reach / offset);
+
+    if read_the_offset {
+        *nearest = cs_math::min_f64(*nearest, offset);
+    }
 }

@@ -50,3 +50,22 @@ pub struct SurfaceWallSection {
     /// [`SurfaceWallSection::rests_on_the_crease`] is false.
     pub crease_line: SurfaceLine,
 }
+
+impl SurfaceWallSection {
+    /// C#'s constructor.
+    pub fn new(
+        along: Vector3,
+        touched_facet: i32,
+        facets: Vec<SurfaceRunAcrossSectionStep>,
+        rests_on_the_crease: bool,
+        crease_line: SurfaceLine,
+    ) -> Self {
+        SurfaceWallSection {
+            along,
+            touched_facet,
+            facets,
+            rests_on_the_crease,
+            crease_line,
+        }
+    }
+}

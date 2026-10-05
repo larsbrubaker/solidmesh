@@ -60,3 +60,7 @@ pub fn try_key_of(regions: &FaceRegionCache, face_index: i32) -> Option<(i32, Ar
 
     Some((key, region))
 }
+
+/// How near two points have to be to be the same corner of the rim, relative to the chain edge
+/// (at least 1).
+pub const VERTEX_TOLERANCE: f64 = 1e-5;

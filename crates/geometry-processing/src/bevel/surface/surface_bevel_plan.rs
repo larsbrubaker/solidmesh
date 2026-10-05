@@ -211,3 +211,42 @@ impl SurfaceBevelPlan {
         self.roles.borrow()
     }
 }
+
+impl SurfaceBevelPlan {
+    /// The mesh the plan was read against, or `None` where it had no regions.
+    pub fn mesh(&self) -> Option<&std::sync::Arc<polygon_mesh::Mesh>> {
+        self.regions.as_ref().map(|regions| regions.mesh())
+    }
+
+    /// The weld ruler read off the part's own vertices (zero where the plan has no mesh), read
+    /// once and remembered.
+    pub fn near_enough_on_the_part(&self) -> f64 {
+        if let Some(known) = self.near_enough_on_the_part.get() {
+            return known;
+        }
+
+        let near_enough = self.mesh().map_or(0.0, |mesh| {
+            super::SurfaceVertexPool::near_enough_for(&mesh.vertices)
+        });
+        self.near_enough_on_the_part.set(Some(near_enough));
+        near_enough
+    }
+
+    /// What names the corner standing at one END of this chain, where a JUNCTION stands there: a
+    /// key no edge index can be (-1 at the start, -2 at the end).
+    pub fn junction_key(at_the_start: bool) -> i32 {
+        if at_the_start {
+            -1
+        } else {
+            -2
+        }
+    }
+
+    /// The junction's corner at the chain's start (or end), where one stands there.
+    pub fn try_junction_at(&self, at_the_start: bool) -> Option<Rc<SurfaceMixedCorner>> {
+        self.mixed_corners
+            .borrow()
+            .get(&Self::junction_key(at_the_start))
+            .cloned()
+    }
+}

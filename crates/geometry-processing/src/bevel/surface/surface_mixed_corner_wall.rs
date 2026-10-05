@@ -103,6 +103,26 @@ impl SurfaceMixedCornerWall {
         }
     }
 
+    /// How many facets of the wall the corner knows about, which is as far as the section walked.
+    pub fn count(&self) -> usize {
+        self.facets.len()
+    }
+
+    /// The outward normal of one facet's plane.
+    pub fn normal_of(&self, facet: usize) -> Vector3 {
+        self.facets[facet].normal
+    }
+
+    /// Where one facet's section begins, in the cap face's plane - the end nearer the picked edge.
+    pub fn entry_of(&self, facet: usize) -> Vector3 {
+        self.facets[facet].from
+    }
+
+    /// And where it ends, which is the next facet's beginning.
+    pub fn exit_of(&self, facet: usize) -> Vector3 {
+        self.facets[facet].to
+    }
+
     /// The first facet the walks outward start from: the touched one, or the first where none is.
     fn first_facet(&self) -> usize {
         self.touched_facet.max(0) as usize
@@ -363,5 +383,12 @@ impl SurfaceMixedCornerWall {
         }
 
         (turn > 0.0).then_some(turn)
+    }
+}
+
+impl SurfaceMixedCornerWallFacet {
+    /// C#'s constructor.
+    pub fn new(from: Vector3, to: Vector3, normal: Vector3) -> Self {
+        SurfaceMixedCornerWallFacet { from, to, normal }
     }
 }

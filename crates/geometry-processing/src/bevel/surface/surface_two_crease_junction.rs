@@ -112,3 +112,27 @@ pub fn try_the_bead_edge_carrying_the_ring(
 
     None
 }
+
+/// `arm` read against the canal (`dual`), pointed at the bead edge that really carries the ring
+/// (`carries`), with the chords before it (`swallowed`).
+pub fn with_the_canal(
+    arm: &SurfaceMixedJunctionArm,
+    dual: Rc<SurfaceMixedCornerDualFrame>,
+    carries: i32,
+    swallowed: Vec<i32>,
+) -> SurfaceMixedJunctionArm {
+    SurfaceMixedJunctionArm::new(
+        arm.plan,
+        arm.cut_index,
+        arm.corner_at_the_start,
+        arm.swallowed.clone(),
+        arm.mixed.clone(),
+        super::SurfaceMixedJunctionChainEnd::new(
+            arm.bead_end.plan,
+            carries,
+            arm.bead_end.at_the_start,
+        ),
+        Some(dual),
+        Some(swallowed),
+    )
+}

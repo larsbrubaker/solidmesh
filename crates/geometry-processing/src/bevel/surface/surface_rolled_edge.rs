@@ -54,6 +54,38 @@ pub struct SurfaceRolledEdge {
 }
 
 impl SurfaceRolledEdge {
+    /// C#'s constructor.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        wall_on_the_left: bool,
+        facet: i32,
+        wall_setback: f64,
+        flat_setback: f64,
+        wall_inward: Vector3,
+        wall_tangent_line: SurfaceLine,
+        flat_tangent_line: SurfaceLine,
+        has_center_line: bool,
+        center_line: SurfaceLine,
+        center_distance: f64,
+        band: Rc<HashSet<i32>>,
+        section: Rc<SurfaceWallSection>,
+    ) -> Self {
+        SurfaceRolledEdge {
+            wall_on_the_left,
+            facet,
+            wall_setback,
+            flat_setback,
+            wall_inward,
+            wall_tangent_line,
+            flat_tangent_line,
+            has_center_line,
+            center_line,
+            center_distance,
+            band,
+            section,
+        }
+    }
+
     /// This reading as the plan for its edge, with the flat side's own numbers left exactly as
     /// the unrolled construction drew them apart from its setback and its foot. `left_inward` and
     /// `right_inward` are the faces' in-face directions away from the edge as the plan found them;

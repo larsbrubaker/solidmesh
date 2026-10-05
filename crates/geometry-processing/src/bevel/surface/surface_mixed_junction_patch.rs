@@ -51,3 +51,34 @@ pub fn the_closing_rail_stands(
 
     (stands, turned_to)
 }
+
+/// How near two angles have to be to be one station - an angle, so fixed.
+pub const ANGLE_RULER: f64 = 1e-5;
+
+/// Whether two strips really end on ONE vertex, which two rings that meet there have to: near
+/// enough is not enough, because two indices a weld apart leave an edge nothing pairs with.
+pub fn the_same_vertex(
+    pool: &super::SurfaceVertexPool,
+    mine: i32,
+    theirs: i32,
+) -> Result<(), crate::bevel::BevelAdvisory> {
+    if mine == theirs {
+        return Ok(());
+    }
+
+    Err(crate::bevel::BevelAdvisory::new(
+        crate::bevel::BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+        vec![pool.position_of(mine).into()],
+    ))
+}
+
+impl SurfaceMixedJunctionPatchArrival {
+    /// C#'s constructor.
+    pub fn new(strip: Rc<SurfaceStrip>, edge_index: i32, ends_here: bool) -> Self {
+        SurfaceMixedJunctionPatchArrival {
+            strip,
+            edge_index,
+            ends_here,
+        }
+    }
+}

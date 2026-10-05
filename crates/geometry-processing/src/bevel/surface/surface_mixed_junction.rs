@@ -9,7 +9,9 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
+use super::{
+    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame,
+};
 
 /// C# `SurfaceJunctionKind`: which shape of junction a [`SurfaceMixedJunction`] is - which of the
 /// three picked edges at the vertex are the creases.
@@ -132,5 +134,186 @@ impl SurfaceMixedJunction {
         } else {
             mixed.cut.left_region_key()
         }
+    }
+}
+
+impl SurfaceMixedJunctionChainEnd {
+    /// C#'s constructor.
+    pub fn new(plan: i32, edge: i32, at_the_start: bool) -> Self {
+        SurfaceMixedJunctionChainEnd {
+            plan,
+            edge,
+            at_the_start,
+        }
+    }
+}
+
+impl SurfaceMixedJunctionArm {
+    /// C#'s constructor; `bead_swallowed` is `None` for C#'s default (none).
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        plan: i32,
+        cut_index: i32,
+        corner_at_the_start: bool,
+        swallowed: Vec<i32>,
+        mixed: Rc<SurfaceMixedCorner>,
+        bead_end: SurfaceMixedJunctionChainEnd,
+        dual: Option<Rc<SurfaceMixedCornerDualFrame>>,
+        bead_swallowed: Option<Vec<i32>>,
+    ) -> Self {
+        SurfaceMixedJunctionArm {
+            plan,
+            cut_index,
+            corner_at_the_start,
+            swallowed,
+            mixed,
+            bead_end,
+            bead_swallowed: bead_swallowed.unwrap_or_default(),
+            dual,
+        }
+    }
+}
+
+impl SurfaceMixedJunction {
+    /// How near the two arms' readings of the same turn have to agree - an angle, so fixed.
+    pub const SAME_TURN: f64 = 1e-6;
+
+    /// C#'s private constructor.
+    pub fn new(
+        corner: Vector3,
+        vertex: i32,
+        kind: SurfaceJunctionKind,
+        first: SurfaceMixedJunctionArm,
+        second: SurfaceMixedJunctionArm,
+        cap_region_key: i32,
+    ) -> Self {
+        SurfaceMixedJunction {
+            corner,
+            vertex,
+            kind,
+            first,
+            second,
+            cap_region_key,
+        }
+    }
+
+    /// The bead's plan.
+    pub fn bead_plan(&self) -> i32 {
+        self.first.bead_end.plan
+    }
+
+    /// The bead's edge at the junction.
+    pub fn bead_index(&self) -> i32 {
+        self.first.bead_end.edge
+    }
+
+    /// Whether the junction stands at the bead edge's start.
+    pub fn bead_corner_at_the_start(&self) -> bool {
+        self.first.bead_end.at_the_start
+    }
+
+    /// The three chain ends arriving at the junction: on a two-crease junction the cut's and the
+    /// two beads'; otherwise the two cuts' and the bead's.
+    pub fn the_arriving_ends(&self) -> [SurfaceMixedJunctionChainEnd; 3] {
+        let first_cut = SurfaceMixedJunctionChainEnd::new(
+            self.first.plan,
+            self.first.cut_index,
+            self.first.corner_at_the_start,
+        );
+
+        if self.kind == SurfaceJunctionKind::TwoCreases {
+            return [first_cut, self.first.bead_end, self.second.bead_end];
+        }
+
+        [
+            first_cut,
+            SurfaceMixedJunctionChainEnd::new(
+                self.second.plan,
+                self.second.cut_index,
+                self.second.corner_at_the_start,
+            ),
+            SurfaceMixedJunctionChainEnd::new(
+                self.bead_plan(),
+                self.bead_index(),
+                self.bead_corner_at_the_start(),
+            ),
+        ]
+    }
+
+    /// The bead's plan edge.
+    pub fn bead(&self) -> &SurfaceEdgePlan {
+        &self.first.mixed.bead
+    }
+
+    /// Where the bead's axis meets the cap face - the centre of the arc the ball traces on it.
+    pub fn outer_rail_centre(&self) -> Vector3 {
+        self.first.mixed.outer_rail_centre
+    }
+
+    /// The junction of ONE cut and TWO creases at `vertex`.
+    pub fn of_two_creases(
+        corner: Vector3,
+        vertex: i32,
+        first: SurfaceMixedJunctionArm,
+        second: SurfaceMixedJunctionArm,
+    ) -> Self {
+        Self::new(
+            corner,
+            vertex,
+            SurfaceJunctionKind::TwoCreases,
+            first,
+            second,
+            -1,
+        )
+    }
+
+    /// The open chain ends standing at `vertex` across `plans`, where exactly three edges touch it
+    /// and all three are chain ends (a junction's shape); `None` otherwise.
+    pub fn try_gather_the_ends(
+        plans: &[Rc<SurfaceBevelPlan>],
+        vertex: i32,
+    ) -> Option<Vec<SurfaceMixedJunctionChainEnd>> {
+        let mut ends = Vec::with_capacity(3);
+        let mut touching = 0;
+
+        for (p, plan) in plans.iter().enumerate() {
+            let planned = &plan.edges;
+
+            for (edge, plan_edge) in planned.iter().enumerate() {
+                if plan_edge.edge.from_vertex() == vertex {
+                    touching += 1;
+
+                    if edge == 0 && !plan.is_closed {
+                        ends.push(SurfaceMixedJunctionChainEnd::new(
+                            p as i32,
+                            edge as i32,
+                            true,
+                        ));
+                    }
+                }
+
+                if plan_edge.edge.to_vertex() == vertex {
+                    touching += 1;
+
+                    if edge == planned.len() - 1 && !plan.is_closed {
+                        ends.push(SurfaceMixedJunctionChainEnd::new(
+                            p as i32,
+                            edge as i32,
+                            false,
+                        ));
+                    }
+                }
+            }
+        }
+
+        (touching == 3 && ends.len() == 3).then_some(ends)
+    }
+
+    /// The plan edge a chain end names.
+    pub fn edge_of(
+        plans: &[Rc<SurfaceBevelPlan>],
+        end: SurfaceMixedJunctionChainEnd,
+    ) -> &SurfaceEdgePlan {
+        &plans[end.plan as usize].edges[end.edge as usize]
     }
 }

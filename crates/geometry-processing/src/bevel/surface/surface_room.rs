@@ -162,3 +162,121 @@ impl SurfaceRoomCut {
         }
     }
 }
+
+/// How near a gap has to come to zero, relative to the band's length (at least 1), to be none.
+pub const RELATIVE_TOLERANCE: f64 = 1e-7;
+
+impl SurfaceRoomCut {
+    /// Whether this footprint is seated at a CORNER rather than laid along an edge - a chain end's
+    /// notch or a reflex corner's mitre tip.
+    pub fn corner_footprint(&self) -> bool {
+        self.shape == SurfaceRoomFootprint::EndNotch || self.shape == SurfaceRoomFootprint::MitreTip
+    }
+
+    /// The middle of the chain edge, which is where a refusal is reported at.
+    pub fn midpoint(&self) -> Vector3 {
+        (self.from + self.to) / 2.0
+    }
+}
+
+/// The one mesh edge every cut to `blame` was taken off, or `BevelAdvisory::NO_MESH_EDGE` where
+/// they name two, or one names none.
+pub fn the_edge_that_answered(
+    plans: &[std::rc::Rc<super::SurfaceBevelPlan>],
+    blame: &[SurfaceRoomCut],
+) -> i32 {
+    use crate::bevel::BevelAdvisory;
+
+    let mut named = BevelAdvisory::NO_MESH_EDGE;
+
+    for cut in blame {
+        if cut.plan_index < 0
+            || cut.plan_index as usize >= plans.len()
+            || cut.edge_index < 0
+            || cut.edge_index as usize >= plans[cut.plan_index as usize].edges.len()
+        {
+            return BevelAdvisory::NO_MESH_EDGE;
+        }
+
+        let edge = plans[cut.plan_index as usize].edges[cut.edge_index as usize]
+            .edge
+            .edge
+            .mesh_edge_index;
+
+        if named != BevelAdvisory::NO_MESH_EDGE && named != edge {
+            return BevelAdvisory::NO_MESH_EDGE;
+        }
+
+        named = edge;
+    }
+
+    named
+}
+
+/// The gap across a band's region to a CORNER footprint standing in front of it, and how far the
+/// corner reaches toward the band per unit of size - `(gap, reaches at the band)` - where the corner
+/// stands in front of the band within its material along the edge at the size the two would meet
+/// at. `None` for a band that is itself a corner footprint, a band against its own plan's end
+/// notch, or a corner off to the side, behind, or reaching nothing toward the band.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn try_gap_to_the_corner(band: &SurfaceRoomCut, corner: &SurfaceRoomCut) -> Option<(f64, f64)> {
+    use vector_math::cs_math::{max_f64, min_f64};
+
+    if band.corner_footprint()
+        || (corner.shape == SurfaceRoomFootprint::EndNotch
+            && band.shape == SurfaceRoomFootprint::Band
+            && band.plan_index >= 0
+            && band.plan_index == corner.plan_index)
+        || !(band.length > 0.0)
+    {
+        return None;
+    }
+
+    let tolerance = max_f64(band.length, 1.0) * RELATIVE_TOLERANCE;
+    let away = corner.from - band.from;
+    let offset = away.dot(band.inward);
+
+    if !(offset > tolerance) {
+        return None;
+    }
+
+    let out_of_plane = away.dot(band.along.cross(band.inward)).abs();
+
+    if out_of_plane > offset {
+        return None;
+    }
+
+    let reaches_at_the_band = match (corner.section_side_a, corner.section_side_b) {
+        (Some(a), Some(b)) => max_f64(0.0, max_f64(-a.dot(band.inward), -b.dot(band.inward))),
+        _ => {
+            if corner.inward.length_squared() > 0.0 {
+                corner.setback_per_size * max_f64(0.0, -corner.inward.dot(band.inward))
+            } else {
+                corner.setback_per_size
+            }
+        }
+    };
+
+    if !(reaches_at_the_band > 0.0) {
+        return None;
+    }
+
+    let at_the_size = offset / (band.setback_per_size + reaches_at_the_band);
+    let reach = corner.setback_per_size * at_the_size;
+    let along = away.dot(band.along);
+    let (to_the_tip, from_the_tip) = if corner.inward.length_squared() > 0.0 {
+        (along + (reach * corner.inward.dot(band.along)), along)
+    } else {
+        (along + reach, along - reach)
+    };
+
+    if max_f64(along, max_f64(to_the_tip, from_the_tip))
+        < -(band.overhang_before_from * at_the_size)
+        || min_f64(along, min_f64(to_the_tip, from_the_tip))
+            > band.length + (band.overhang_past_to * at_the_size)
+    {
+        return None;
+    }
+
+    Some((offset, reaches_at_the_band))
+}

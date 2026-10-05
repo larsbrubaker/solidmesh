@@ -48,3 +48,22 @@ pub fn try_where_the_touch_row_leaves_the_face(
         },
     )
 }
+
+/// The corner the wall nobody picked ends at under the blend - where the cap face, the wall and
+/// the plane the wall ends on (`wall_ends_at`, facing into the wall) meet - or `None` where the
+/// wall carries on, or the three do not meet at a point.
+pub fn the_corner_the_wall_ends_at(
+    corner: &SurfaceMixedCorner,
+    wall_ends_at: Option<SurfaceBandEnd>,
+) -> Option<Vector3> {
+    let wall_ends_at = wall_ends_at?;
+
+    super::surface_mixed_corner_wall_ends::try_where_the_three_meet(
+        corner.outer_rail_centre,
+        corner.out_of_the_cap_face,
+        corner.corner,
+        corner.out_of_the_wall,
+        wall_ends_at.point,
+        -wall_ends_at.inward,
+    )
+}

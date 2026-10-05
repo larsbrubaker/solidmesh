@@ -239,3 +239,52 @@ fn coplanar(
 ) -> bool {
     first.plane_normal.dot(second.plane_normal) > 1.0 - THEY_MEET
 }
+
+impl SurfaceStandingFeatureWithheld {
+    /// C#'s constructor: the feature as first reached - by one side (`reaching`: edge and whether
+    /// left) - its landing and its faces.
+    pub fn new(
+        reaching: (i32, bool),
+        landing: Vector3,
+        faces: Vec<Rc<SurfaceStandingFeatureWithheldFace>>,
+    ) -> Self {
+        SurfaceStandingFeatureWithheld {
+            reaches: RefCell::new(vec![reaching]),
+            landing,
+            faces,
+        }
+    }
+}
+
+impl SurfaceStandingFeatureWithheldFace {
+    /// C#'s constructor: one face of the feature, its first crease and what stands within it, its
+    /// plane; no rings yet.
+    pub fn new(
+        mesh_faces: Vec<i32>,
+        crease: (i32, i32),
+        within: Vec<i32>,
+        plane_point: Vector3,
+        plane_normal: Vector3,
+    ) -> Self {
+        let rings = Vec::with_capacity(mesh_faces.len());
+        SurfaceStandingFeatureWithheldFace {
+            mesh_faces,
+            rings: RefCell::new(rings),
+            ring: RefCell::new(None),
+            creases: RefCell::new(vec![crease]),
+            withins: RefCell::new(vec![within]),
+            plane_point,
+            plane_normal,
+        }
+    }
+
+    /// The face's first crease.
+    pub fn crease(&self) -> (i32, i32) {
+        self.creases.borrow()[0]
+    }
+
+    /// What stands within the face's first crease.
+    pub fn within(&self) -> Vec<i32> {
+        self.withins.borrow()[0].clone()
+    }
+}

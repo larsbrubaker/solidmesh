@@ -55,6 +55,19 @@ pub struct SurfaceSplitsOnASegment<'a> {
 /// part way through sees what the stretch carries so far. Here the refinement works on its own
 /// copy and writes it back into `known` after every change, which hands a nested reading of the
 /// same key the same contents at the same moment.
+impl<'a> SurfaceSplitsOnASegment<'a> {
+    /// C#'s constructor (with its field initializers: nothing known yet, settled).
+    pub fn new(pool: &'a SurfaceVertexPool, candidates: Vec<i32>) -> Self {
+        SurfaceSplitsOnASegment {
+            pool,
+            candidates,
+            known: HashMap::new(),
+            settled: true,
+            the_stretch_that_did_not_settle: None,
+        }
+    }
+}
+
 impl SurfaceSplitsOnASegment<'_> {
     /// C# `Between`: the candidates standing along the stretch from `from` to `to`, in order from
     /// one to the other, neither end included.

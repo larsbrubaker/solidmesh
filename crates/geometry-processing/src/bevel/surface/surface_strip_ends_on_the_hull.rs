@@ -2,13 +2,18 @@
 //! part's own hull planes ([`SurfaceStripEndsOnTheHullSupportingPlane`]) each rail goes out
 //! through, at what parameter along the edge, and the one point the end turns at where the rails
 //! change from one plane to the other. Ports the fields of
-//! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs` and the turning point between two planes
-//! ([`SurfaceStripEndsOnTheHull::try_between`]); the reading (`TryRead`) and the closing
-//! (`TryClose`) land with a later package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs`, its constructor, the part's supporting planes
+//! ([`SurfaceStripEndsOnTheHull::supporting_planes_of`]) and the readings the end is built from (the
+//! turning point between two planes, the ties settled, a face on a plane, the apex on a knife edge);
+//! the reading (`TryRead`) and the closing (`TryClose`) land with a later package.
 
 use vector_math::Vector3;
 
-use super::SurfaceStrip;
+use std::collections::HashSet;
+
+use polygon_mesh::Mesh;
+
+use super::{SurfaceLine, SurfaceStrip, SurfaceVertexPool};
 
 /// C# `SurfaceStripEndsOnTheHull`: where a strip leaves the part at one of its ends.
 ///
@@ -133,5 +138,205 @@ impl SurfaceStripEndsOnTheHull {
                 + (a.normal.cross(b.normal) * point_c.dot(normal_c)))
                 / volume,
         )
+    }
+}
+
+impl SurfaceStripEndsOnTheHullSupportingPlane {
+    /// C#'s constructor.
+    pub fn new(at: Vector3, normal: Vector3) -> Self {
+        SurfaceStripEndsOnTheHullSupportingPlane { at, normal }
+    }
+
+    /// Whether this is a plane at all (C#'s default value is none).
+    pub fn exists(&self) -> bool {
+        self.normal.length_squared() > 0.0
+    }
+
+    /// How far `point` stands outside the plane.
+    pub fn outside(&self, point: Vector3) -> f64 {
+        (point - self.at).dot(self.normal)
+    }
+}
+
+impl SurfaceStripEndsOnTheHull {
+    /// C#'s private constructor.
+    pub fn new(
+        at_the_start: bool,
+        exit_at: Vec<f64>,
+        plane_of: Vec<SurfaceStripEndsOnTheHullSupportingPlane>,
+        changes_after: i32,
+        between: Vector3,
+        apex: i32,
+    ) -> Self {
+        SurfaceStripEndsOnTheHull {
+            at_the_start,
+            exit_at,
+            plane_of,
+            changes_after,
+            between,
+            apex,
+        }
+    }
+
+    /// The part's supporting planes: every face plane that has the whole part on its inner side
+    /// (within `near`), each plane once - keyed on the plane itself, rounded to `near`, so a wall
+    /// drawn as a hundred triangles is measured once.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    pub fn supporting_planes_of(
+        mesh: &Mesh,
+        near: f64,
+    ) -> Vec<SurfaceStripEndsOnTheHullSupportingPlane> {
+        let mut supporting = Vec::new();
+        let mut seen: HashSet<(i64, i64, i64, i64)> = HashSet::new();
+        let step = vector_math::cs_math::max_f64(near, 1e-9);
+        // C#'s `(long)Math.Round(reading / step)`; `as` saturates where C# would be undefined.
+        let key = |reading: f64| (reading / step).round_ties_even() as i64;
+
+        for face in mesh.faces.iter() {
+            let normal = Vector3::from_vector3_float(face.normal);
+
+            if !(normal.length_squared() > 0.0) {
+                continue;
+            }
+
+            let normal = normal.get_normal();
+
+            let at = Vector3::from_vector3_float(mesh.vertices[face.v0 as usize]);
+
+            if !seen.insert((
+                key(normal.x),
+                key(normal.y),
+                key(normal.z),
+                key(at.dot(normal)),
+            )) {
+                continue;
+            }
+
+            let inside = mesh
+                .vertices
+                .iter()
+                .all(|&vertex| !((Vector3::from_vector3_float(vertex) - at).dot(normal) > near));
+
+            if inside {
+                supporting.push(SurfaceStripEndsOnTheHullSupportingPlane::new(at, normal));
+            }
+        }
+
+        supporting
+    }
+
+    /// Settles the rails standing on two planes at once (`tied`): each takes the plane its
+    /// neighbour took, forward then back.
+    pub fn settle_the_ties(
+        plane_of: &mut [SurfaceStripEndsOnTheHullSupportingPlane],
+        tied: &[Vec<SurfaceStripEndsOnTheHullSupportingPlane>],
+    ) {
+        for rail in 1..plane_of.len() {
+            let with = plane_of[rail - 1];
+            Self::agree(plane_of, tied, rail, with);
+        }
+
+        for rail in (0..plane_of.len().saturating_sub(1)).rev() {
+            let with = plane_of[rail + 1];
+            Self::agree(plane_of, tied, rail, with);
+        }
+    }
+
+    /// Rail `rail`, tied between two planes or more, takes `with` where that is one of them.
+    pub fn agree(
+        plane_of: &mut [SurfaceStripEndsOnTheHullSupportingPlane],
+        tied: &[Vec<SurfaceStripEndsOnTheHullSupportingPlane>],
+        rail: usize,
+        with: SurfaceStripEndsOnTheHullSupportingPlane,
+    ) {
+        if tied[rail].len() < 2 {
+            return;
+        }
+
+        if tied[rail].contains(&with) {
+            plane_of[rail] = with;
+        }
+    }
+
+    /// Whether one of the first `up_to` `faces` uses `vertex`, lies in `plane` (to `near`) and
+    /// faces the way it does.
+    pub fn theres_a_face_at(
+        pool: &SurfaceVertexPool,
+        faces: &[(i32, i32, i32)],
+        up_to: usize,
+        vertex: i32,
+        plane: SurfaceStripEndsOnTheHullSupportingPlane,
+        near: f64,
+    ) -> bool {
+        faces.iter().take(up_to).any(|&(v0, v1, v2)| {
+            if v0 != vertex && v1 != vertex && v2 != vertex {
+                return false;
+            }
+
+            let a = pool.position_of(v0);
+            let b = pool.position_of(v1);
+            let c = pool.position_of(v2);
+
+            if plane.outside(a).abs() > near
+                || plane.outside(b).abs() > near
+                || plane.outside(c).abs() > near
+            {
+                return false;
+            }
+
+            // And facing the way the plane does: a face lying in it the other way about is
+            // material on the far side of it.
+            let outward = (b - a).cross(c - a);
+
+            outward.length_squared() > 0.0 && outward.get_normal().dot(plane.normal) > 0.9
+        })
+    }
+
+    /// Whether the rails go out through more than two distinct planes.
+    pub fn three_distinct(plane_of: &[SurfaceStripEndsOnTheHullSupportingPlane]) -> bool {
+        let mut distinct: Vec<SurfaceStripEndsOnTheHullSupportingPlane> = Vec::new();
+
+        for &plane in plane_of {
+            if !distinct.contains(&plane) {
+                distinct.push(plane);
+            }
+        }
+
+        distinct.len() > 2
+    }
+
+    /// The part's own vertex at the corner planes `a` and `b` make on the `knife_line`, where the
+    /// knife edge passes through that corner; `None` where it runs along both planes or meets one
+    /// off the other, or no vertex stands there.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    pub fn try_the_apex(
+        pool: &SurfaceVertexPool,
+        a: SurfaceStripEndsOnTheHullSupportingPlane,
+        b: SurfaceStripEndsOnTheHullSupportingPlane,
+        knife_line: SurfaceLine,
+        near: f64,
+    ) -> Option<i32> {
+        let crosses_a = knife_line.direction.dot(a.normal);
+        let crosses_b = knife_line.direction.dot(b.normal);
+        let through_a = crosses_a.abs() > crosses_b.abs();
+        let crosses = if through_a { crosses_a } else { crosses_b };
+
+        if !(crosses.abs() > 1e-9) {
+            // A knife edge running ALONG both planes names no one point on either of them.
+            return None;
+        }
+
+        let crossing = if through_a {
+            knife_line.point + (knife_line.direction * (-a.outside(knife_line.point) / crosses_a))
+        } else {
+            knife_line.point + (knife_line.direction * (-b.outside(knife_line.point) / crosses_b))
+        };
+
+        if a.outside(crossing).abs() > near || b.outside(crossing).abs() > near {
+            // The knife edge does not pass through the corner the two planes make.
+            return None;
+        }
+
+        pool.try_find_near(crossing, pool.snap_near(), None)
     }
 }
