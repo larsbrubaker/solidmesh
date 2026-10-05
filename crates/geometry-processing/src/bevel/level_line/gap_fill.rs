@@ -4,7 +4,8 @@
 //! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
 //! wrap ([`largest_backward_step`]) and the chains' independence check
 //! ([`no_two_chains_share_a_vertex`]), the rail senses' constructor and their pairing
-//! ([`try_pair`]) and the excursion rule ([`within_excursion`]). The fill's
+//! ([`try_pair`]), the excursion rule ([`within_excursion`]), a loop's two senses ([`senses`],
+//! [`try_envelope`]) and the zipper's merge ([`merge`]). The fill's
 //! other functions land with later packages.
 
 use std::collections::HashMap;
@@ -13,7 +14,8 @@ use std::rc::Rc;
 use vector_math::{cs_math, Vector3};
 
 use super::{
-    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError, ZipRail,
+    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
+    LevelLineWork, WorkError, ZipRail,
 };
 use std::cell::RefCell;
 
@@ -241,4 +243,152 @@ pub fn no_two_chains_share_a_vertex(loops: &[GapLoop]) {
 /// and ship a self-intersecting strip.
 pub fn within_excursion(envelope: f64, reading: f64, chain: &ChainField, slack: f64) -> bool {
     envelope - reading <= slack + (MONOTONE_EXCURSION_OF_SETBACK * chain.setback_at(envelope))
+}
+
+/// C# `GapFill.Senses`: re-expresses a loop as a rail BOTH ways round: each sense is cut open at
+/// its own largest backward step and takes its monotone envelope, and reports what that envelope
+/// had to flatten. Nothing is sorted - a loop whose parameter wanders is a fact about the cut, not
+/// something to tidy away - and nothing here picks a sense, because only the PAIR of loops can say
+/// which sense is which.
+pub fn senses(gap_loop: &GapLoop, chain: &ChainField, slack: f64) -> GapFillRailSenses {
+    let mut vertices = gap_loop.vertices.clone();
+    let mut parameters = gap_loop.parameters.clone();
+    let (forward, forward_cost, forward_offender) = try_envelope(
+        &vertices,
+        &parameters,
+        largest_backward_step(&gap_loop.parameters, false),
+        false,
+        chain,
+        slack,
+    );
+
+    vertices.reverse();
+    parameters.reverse();
+    let (backward, backward_cost, backward_offender) = try_envelope(
+        &vertices,
+        &parameters,
+        largest_backward_step(&gap_loop.parameters, true),
+        true,
+        chain,
+        slack,
+    );
+
+    let offender = if backward_offender < 0 {
+        forward_offender
+    } else {
+        backward_offender
+    };
+    GapFillRailSenses::new(
+        forward.map(Rc::new),
+        forward_cost,
+        backward.map(Rc::new),
+        backward_cost,
+        gap_loop.vertices[0.max(offender) as usize],
+    )
+}
+
+/// C# `GapFill.TryEnvelope`: rotates a cycle to begin just after its `wrap` and takes its
+/// MONOTONE ENVELOPE - each point's parameter is the greatest reading so far - refusing when an
+/// excursion below that envelope is deeper than a concave turn can explain
+/// ([`within_excursion`]). Answers (the rail, or `None` on a refusal; the parameter flattened so
+/// far; the offending index into the cycle as given, or -1).
+pub fn try_envelope(
+    vertices: &[i32],
+    parameters: &[f64],
+    wrap: i32,
+    reversed: bool,
+    chain: &ChainField,
+    slack: f64,
+) -> (Option<ZipRail>, f64, i32) {
+    let mut flattened = 0.0;
+    let count = vertices.len() as i32;
+    let start = (wrap + 1) % count;
+    let mut v = vec![0; count as usize];
+    let mut p = vec![0.0; count as usize];
+    for i in 0..count as usize {
+        let index = ((start + i as i32) % count) as usize;
+        v[i] = vertices[index];
+        let mut reading = parameters[index];
+        if i > 0 && reading < p[i - 1] {
+            if !within_excursion(p[i - 1], reading, chain, slack) {
+                return (None, flattened, index as i32);
+            }
+
+            flattened += p[i - 1] - reading;
+            reading = p[i - 1];
+        }
+
+        p[i] = reading;
+    }
+
+    let rail = ZipRail {
+        vertices: v,
+        parameters: p,
+        reversed,
+    };
+    (Some(rail), flattened, -1)
+}
+
+/// C# `GapFill.Merge`: the zipper itself - for each state, which rail advances next. A state is
+/// (left advances so far, right advances so far); the walk runs from (0, 0) to (n, m), which is
+/// the very same spoke again. Across a JUMP the spoke the advance makes is the shorter in parameter
+/// of the two it could make; elsewhere the usual advance gives way where its spoke would cut across
+/// a turn of the chain.
+pub fn merge(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    left: &ZipRail,
+    right: &ZipRail,
+    length: f64,
+    right_offset: f64,
+) -> Result<Vec<(i32, i32, bool)>, WorkError> {
+    let mut steps = Vec::new();
+    let mut a = 0;
+    let mut b = 0;
+
+    // A corner's two rail vertices mean the same parameter but are computed by different roots, so
+    // "the same" has to allow the last bits.
+    let tie = PARAMETER_TIE_RELATIVE * length;
+    while a < left.count() || b < right.count() {
+        // The merge advances one rail per step, so this is bounded - charged all the same, because
+        // the step that advances neither is exactly the runaway this catches.
+        LevelLineWork::charge(1)?;
+        let next_left = if a < left.count() {
+            ZipRail::unwrapped(left, a + 1, length, 0.0)
+        } else {
+            f64::INFINITY
+        };
+        let next_right = if b < right.count() {
+            ZipRail::unwrapped(right, b + 1, length, right_offset)
+        } else {
+            f64::INFINITY
+        };
+        let mut advances_left = next_left <= next_right + tie;
+        if a < left.count()
+            && b < right.count()
+            && (ZipRail::is_a_jump(mesh, left, a, length)
+                || ZipRail::is_a_jump(mesh, right, b, length))
+        {
+            let left_spoke = (next_left - ZipRail::unwrapped(right, b, length, right_offset)).abs();
+            let right_spoke = (ZipRail::unwrapped(left, a, length, 0.0) - next_right).abs();
+            advances_left = left_spoke <= right_spoke + tie;
+        } else if a < left.count() && b < right.count() {
+            advances_left ^= chain.spoke_gives_way_across_a_turn(
+                ZipRail::unwrapped(left, a, length, 0.0),
+                next_left,
+                ZipRail::unwrapped(right, b, length, right_offset),
+                next_right,
+                advances_left,
+            );
+        }
+
+        steps.push((a, b, advances_left));
+        if advances_left {
+            a += 1;
+        } else {
+            b += 1;
+        }
+    }
+
+    Ok(steps)
 }

@@ -2,13 +2,15 @@
 //! class: free functions here). The tests the walk's verdict is made of land here first - which
 //! side a both-sided loop is, which open pieces are a member's own, what each chain side left, and
 //! whether each side closed, and the corner groups' test
-//! ([`every_corner_group_leaves_one_loop`]); the walk itself lands with a later package.
+//! ([`every_corner_group_leaves_one_loop`]) - and the boundary step that follows another
+//! ([`follows`], [`one_of`]); the walk itself lands with a later package.
 
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
 
-use super::{BandGroup, ChainSideLoops, GapLoop, PickCorner};
+use super::triangle_edges::level_line_triangle_corners;
+use super::{BandGroup, ChainSideLoops, GapLoop, LevelLineMesh, PickCorner};
 
 /// Which side a loop that runs on BOTH sides belongs to: the side most of its vertices read, or -
 /// where the smaller side holds a quarter of them or more - the side the group gives it.
@@ -470,4 +472,47 @@ pub fn every_corner_group_leaves_one_loop(
     }
 
     (true, false)
+}
+
+/// C# `GapLoopWalk.Follows`: the boundary step that follows `step` (from, to), found by rotating
+/// round its end vertex through the kept triangles until the fan runs out - or `None` where it does
+/// not (or a triangle does not leave the vertex, where C#'s `First` throws).
+pub fn follows(mesh: &LevelLineMesh, step: (i32, i32)) -> Option<(i32, i32)> {
+    let v = step.1;
+    let t = one_of(mesh, step.0, v)?;
+    let leaving = |triangle: i32| {
+        level_line_triangle_corners(mesh.triangles()[triangle as usize])
+            .into_iter()
+            .find(|c| c.0 == v)
+            .map(|c| c.1)
+    };
+
+    // The corner leaving v in that triangle's own winding; then round the fan, edge by edge.
+    let mut going = leaving(t)?;
+    for _ in 0..=mesh.triangle_count() {
+        let standing = mesh.triangles_on(v, going);
+        if standing.len() == 1 {
+            return Some((v, going));
+        }
+
+        // The neighbour is the one traversing this edge the OTHER way; from it the fan turns on.
+        let neighbour = standing.iter().copied().find(|&i| {
+            level_line_triangle_corners(mesh.triangles()[i as usize])
+                .iter()
+                .any(|c| c.0 == going && c.1 == v)
+        })?;
+        going = leaving(neighbour)?;
+    }
+
+    None
+}
+
+/// C# `GapLoopWalk.OneOf`: the one live triangle traversing the edge `from` -> `to` that way, or
+/// `None`.
+pub fn one_of(mesh: &LevelLineMesh, from: i32, to: i32) -> Option<i32> {
+    mesh.triangles_on(from, to).iter().copied().find(|&i| {
+        level_line_triangle_corners(mesh.triangles()[i as usize])
+            .iter()
+            .any(|c| c.0 == from && c.1 == to)
+    })
 }

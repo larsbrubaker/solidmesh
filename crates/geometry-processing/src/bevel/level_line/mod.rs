@@ -83,6 +83,7 @@ pub mod corner_fill_free_ends;
 pub mod corner_fill_pieces;
 pub mod corner_mitre_patch;
 pub mod corner_rail_strip;
+pub mod corner_tie_points;
 mod crease_run_out;
 pub mod curved_end_face;
 pub mod dying_crease_fill;

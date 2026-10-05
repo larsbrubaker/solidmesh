@@ -1,11 +1,11 @@
 //! The corner fill's loop pieces. Ports `Bevel/LevelLine/CornerFill.Pieces.cs` (a partial of the C#
 //! static class `CornerFill`; the piece type lives in `corner_fill.rs`): so far the trim of a
-//! piece's turn-back at an end ([`trim_the_turn_back`]); the rest of the partial lands with later
-//! packages.
+//! piece's turn-back at an end ([`trim_the_turn_back`]) and of its ends off the line
+//! ([`trim_off_the_line`]); the rest of the partial lands with later packages.
 
 use vector_math::cs_math;
 
-use super::{ChainField, CornerFillPiece};
+use super::{ChainField, CornerFillPiece, LevelLineMesh, WorkError};
 
 /// Trims a piece's turn-back at an end: only a turn-back that comes off the chain's END vertex is
 /// the wrap - a rail that turns back in the middle of its run is a strip that cannot be zipped,
@@ -60,4 +60,30 @@ pub fn trim_the_turn_back(field: &ChainField, piece: &mut CornerFillPiece) {
         piece.vertices.truncate(vertices - tail);
         p.truncate(count - tail);
     }
+}
+
+/// C# `CornerFill.TrimOffTheLine`: drops a piece's end vertices that stand OFF its chain's line
+/// (the chain's own field reads above a tie there): the face piece where two chains of different
+/// setback meet at a setback step, or a run-out's run, which belongs to no rail - kept boundary the
+/// one corner hole runs along. A rail keeps at least two vertices.
+pub fn trim_off_the_line(
+    mesh: &LevelLineMesh,
+    field: &ChainField,
+    piece: &mut CornerFillPiece,
+) -> Result<(), WorkError> {
+    let tie = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let off = |vertex: i32| -> Result<bool, WorkError> {
+        Ok(field.evaluate(mesh.position(vertex))?.value > tie)
+    };
+    while piece.vertices.len() > 2 && off(piece.vertices[0])? {
+        piece.vertices.remove(0);
+        piece.parameters.remove(0);
+    }
+
+    while piece.vertices.len() > 2 && off(piece.vertices[piece.vertices.len() - 1])? {
+        piece.vertices.pop();
+        piece.parameters.pop();
+    }
+
+    Ok(())
 }
