@@ -1,13 +1,14 @@
 //! One field over a GROUP of chains ([`PickField`]). Ports the type of
 //! `Bevel/LevelLine/PickField.cs` with its construction ([`PickField::new`], refusing bad
 //! arguments with [`PickFieldArgumentError`] where C# throws), its member read-throughs and its
-//! end-plane reader ([`PickField::end_plane_reader`]); the queries and the `ChainDistanceField`
+//! end-plane reader ([`PickField::end_plane_reader`]) and whether an edge lies in a member's end
+//! plane ([`PickField::lies_in_an_end_plane`]); the queries and the `ChainDistanceField`
 //! impl land with their method packages.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
 
-use vector_math::cs_math;
+use vector_math::{cs_math, Vector3};
 
 use super::{ChainField, ChainFieldEndPlaneReader};
 
@@ -189,5 +190,15 @@ impl PickField {
                 chains[k as usize].end_plane_at(point)
             })
         })))
+    }
+}
+
+impl PickField {
+    /// C# `PickField.LiesInAnEndPlane`: whether a-b lies in an end plane of any member chain
+    /// ([`ChainField::lies_in_an_end_plane`]).
+    pub fn lies_in_an_end_plane(&self, a: Vector3, b: Vector3) -> bool {
+        self.members
+            .iter()
+            .any(|&k| self.chains[k as usize].lies_in_an_end_plane(a, b))
     }
 }

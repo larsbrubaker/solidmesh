@@ -3,7 +3,7 @@
 //! the work budget's phase tally and progress throttle read them: nanoseconds since the first
 //! reading, from `web_time::Instant`, which reads `performance.now()` in the browser and the
 //! system's monotonic clock natively. Also the number formats the meters write their reports in,
-//! C#'s `N0` ([`n0`]), `G4` ([`g4`]) and `E3` ([`e3`]).
+//! C#'s `G4` ([`g4`]) and `E3` ([`e3`]); `N0` is `vector_math::number_format::format_i64_number`.
 
 use std::sync::OnceLock;
 
@@ -24,25 +24,6 @@ pub fn get_timestamp() -> i64 {
 /// Ticks as seconds (C# `FieldCounters.Seconds`, `ticks / Stopwatch.Frequency`).
 pub fn seconds(ticks: i64) -> f64 {
     ticks as f64 / FREQUENCY as f64
-}
-
-/// A count with thousands separators, as C#'s `N0` format writes it (invariant/en-US grouping).
-pub fn n0(value: i64) -> String {
-    let digits = value.unsigned_abs().to_string();
-    let mut grouped = String::with_capacity(digits.len() + digits.len() / 3 + 1);
-    if value < 0 {
-        grouped.push('-');
-    }
-
-    for (i, digit) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            grouped.push(',');
-        }
-
-        grouped.push(digit);
-    }
-
-    grouped
 }
 
 /// A number as C#'s `G4` format writes it: four significant digits, trailing zeros dropped,

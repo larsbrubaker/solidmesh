@@ -626,6 +626,8 @@ impl WorkBudget {
     ///
     /// C# formats with the current culture; this writes InvariantCulture's text (`N0`, `P1` as
     /// "12.3 %", `F2`), which is what C# writes under it.
+    /// MatterCAD sets the thread culture from its number-format setting
+    /// (`SettingsManagement/NumberFormatSetting.cs`); once that setting is ported, this follows it.
     pub fn phase_report(&self) -> String {
         self.tally_phase();
         let units = *self.phase_units.borrow();

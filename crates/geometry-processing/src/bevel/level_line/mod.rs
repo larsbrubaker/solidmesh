@@ -79,6 +79,7 @@ pub mod corner_cap_flat_ends;
 pub mod corner_cap_hole_fill;
 pub mod corner_cap_hole_fill_switch;
 pub mod corner_fill;
+pub mod corner_fill_free_ends;
 pub mod corner_fill_pieces;
 pub mod corner_mitre_patch;
 pub mod corner_rail_strip;

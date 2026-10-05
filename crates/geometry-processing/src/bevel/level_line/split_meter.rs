@@ -2,8 +2,9 @@
 //! of one already there. Ports the nested types of `Bevel/LevelLine/SplitMeter.cs` (a C# static
 //! class): what added a vertex ([`SplitMeterSplitKind`]) and the record kept of it
 //! ([`SplitMeterSplitRecord`]), and the meter's state, switch, report and vertex grid
-//! ([`SplitMeter`]) with the record it makes of an added vertex. The hooks that note a vertex and
-//! the record's text land with later packages.
+//! ([`SplitMeter`]) with the record it makes of an added vertex, and
+//! the record's text ([`SplitMeterSplitRecord::describe`]); the hooks that note a vertex land
+//! with later packages.
 //!
 //! Costs one static bool read per vertex added when it is off: [`SplitMeter::on`] is false until a
 //! caller calls [`SplitMeter::begin`] AND the field counters' meter is on. It changes nothing the
@@ -15,10 +16,11 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
+use vector_math::number_format::{self, format_i64_number};
 use vector_math::Vector3;
 
 use super::refinement_splits;
-use super::stopwatch::{e3, n0};
+use super::stopwatch::e3;
 use super::{FieldCounters, LevelLineMesh, LevelLineRule, PointPlace};
 
 /// C# `SplitMeter.SplitKind`: what a vertex was added BY - the three ways a position enters the
@@ -82,6 +84,42 @@ pub struct SplitMeterSplitRecord {
 }
 
 impl SplitMeterSplitRecord {
+    /// C# `SplitRecord.Describe`: the record as one line of text - what added the vertex, the rule,
+    /// the context triangle and its corners, the point's distances off the triangle's edges
+    /// against the tolerance (`E3`), the placement's verdict and the point (`F6`,
+    /// InvariantCulture).
+    pub fn describe(&self) -> String {
+        let place = match self.kind {
+            SplitMeterSplitKind::OnEdge => format!(
+                "on-edge split of ({},{}), {} triangle(s) on it",
+                self.edge_from, self.edge_to, self.triangles_on_the_edge
+            ),
+            SplitMeterSplitKind::Interior => "interior point".to_string(),
+            SplitMeterSplitKind::Free => "free vertex (fill)".to_string(),
+        };
+        let judged = match self.place {
+            PointPlace::OnAnEdge => format!("stands on ({},{})", self.judged_from, self.judged_to),
+            PointPlace::AtACorner => format!("stands at corner {}", self.judged_from),
+            PointPlace::Interior => "judged interior".to_string(),
+        };
+        let f6 = |v: f64| number_format::format_f64_fixed(v, 6);
+        format!(
+            "{place}; rule {:?}; triangle {} [{},{},{}]; off its edges AB {}, BC {}, CA {} against {} - {judged}; at ({}, {}, {})",
+            self.rule,
+            self.triangle,
+            self.corner_a,
+            self.corner_b,
+            self.corner_c,
+            e3(self.distance_ab),
+            e3(self.distance_bc),
+            e3(self.distance_ca),
+            e3(self.edge_tolerance),
+            f6(self.point.x),
+            f6(self.point.y),
+            f6(self.point.z),
+        )
+    }
+
     /// Builds a record (C#'s positional constructor).
     #[allow(clippy::too_many_arguments)] // C#'s constructor: one field per argument.
     pub fn new(
@@ -206,13 +244,13 @@ impl SplitMeter {
             let mut lines = vec![format!(
                 "split meter: {} vertices added, {} of them within {} of one already there; \
                  near misses {} in [{}, {}), {} in [{}, {})",
-                n0(s.added),
-                n0(s.coincident_count),
+                format_i64_number(s.added),
+                format_i64_number(s.coincident_count),
                 e3(s.coincident),
-                n0(s.near_middling),
+                format_i64_number(s.near_middling),
                 e3(s.coincident),
                 e3(s.middling),
-                n0(s.near_far),
+                format_i64_number(s.near_far),
                 e3(s.middling),
                 e3(s.near)
             )];

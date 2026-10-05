@@ -2,12 +2,13 @@
 //! is not the chain's own. Ports `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class): so far
 //! its constants and switch, the knife test ([`is_a_knife`]) and the clusters of short edges at a
 //! chain's ends ([`cluster_at_the_ends`]), and whether an edge meets the chain at an end
-//! ([`meets_the_chain_at_an_end`]); the room readings land with later packages.
+//! ([`meets_the_chain_at_an_end`]) and the unindexed edge list ([`every_edge`]); the room readings
+//! land with later packages.
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 
-use super::{LevelLineMesh, LevelLineTriangle};
+use super::{ForeignEdgeIndex, LevelLineMesh, LevelLineTriangle};
 
 /// Fixed, so the room is the same bits every time it is asked for.
 pub const ROOM_BISECTION_STEPS: i32 = 40;
@@ -157,6 +158,24 @@ pub fn meets_the_chain_at_an_end(
     end_cluster
         .iter()
         .any(|at_one_end| at_one_end.contains(&edge.0) && at_one_end.contains(&edge.1))
+}
+
+/// C# `ForeignEdgeRoom.EveryEdge`: every edge the indexes hold that the chain is not exempt from -
+/// the unindexed edge list, as (low, high, extra unit setback 0).
+pub fn every_edge(
+    indexes: &[ForeignEdgeIndex],
+    exempt: Option<&dyn Fn((i32, i32)) -> bool>,
+) -> Vec<(i32, i32, f64)> {
+    let mut every = Vec::new();
+    for index in indexes {
+        for &edge in index.edges() {
+            if exempt.is_none_or(|exempt| !exempt(edge)) {
+                every.push((edge.0, edge.1, 0.0));
+            }
+        }
+    }
+
+    every
 }
 
 #[cfg(test)]

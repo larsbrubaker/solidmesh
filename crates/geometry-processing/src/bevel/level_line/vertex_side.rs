@@ -1,7 +1,8 @@
 //! Which side of the level line a mesh vertex stands on ([`VertexSide`]) and the per-vertex reading
 //! cache the construction shares ([`VertexFieldReading`]). Ports the types of
-//! `Bevel/LevelLine/VertexSide.cs`; the reading's queries land with the refinement's method
-//! package.
+//! `Bevel/LevelLine/VertexSide.cs` with the reading's constructor, its field and the side a value
+//! reads ([`VertexFieldReading::side_for`]); the reading's queries land with the refinement's
+//! method package.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -60,5 +61,65 @@ impl std::fmt::Debug for VertexFieldReading {
             .field("snap", &self.snap)
             .field("values_read", &self.values.borrow().len())
             .finish_non_exhaustive()
+    }
+}
+
+/// C#'s `ArgumentOutOfRangeException` from the `VertexFieldReading` constructor: a snap band that
+/// is not a non-negative length.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NegativeSnap(pub f64);
+
+impl std::fmt::Display for NegativeSnap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the snap band is a length, so it cannot be negative (snap {})",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for NegativeSnap {}
+
+impl VertexFieldReading {
+    /// C#'s constructor (with the field initializers: nothing read yet). A snap that is negative
+    /// or NaN is refused, as C# throws.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn new(
+        mesh: Rc<RefCell<LevelLineMesh>>,
+        field: Rc<dyn ScalarField>,
+        snap: f64,
+    ) -> Result<Self, NegativeSnap> {
+        if !(snap >= 0.0) {
+            return Err(NegativeSnap(snap));
+        }
+
+        Ok(VertexFieldReading {
+            mesh,
+            field,
+            values: RefCell::new(HashMap::new()),
+            sides: RefCell::new(HashMap::new()),
+            remembered_roots: RefCell::new(HashMap::new()),
+            snap,
+        })
+    }
+
+    /// C# `VertexFieldReading.Field`: the field being read.
+    pub fn field(&self) -> &Rc<dyn ScalarField> {
+        &self.field
+    }
+
+    /// C# `VertexFieldReading.SideFor`: the side that a raw field value and a snap band say, with
+    /// no mesh involved.
+    pub fn side_for(value: f64, snap: f64) -> VertexSide {
+        if value.abs() <= snap {
+            return VertexSide::On;
+        }
+
+        if value < 0.0 {
+            VertexSide::Inside
+        } else {
+            VertexSide::Outside
+        }
     }
 }

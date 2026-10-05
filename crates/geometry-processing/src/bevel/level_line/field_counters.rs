@@ -367,7 +367,7 @@ impl FieldCounters {
         Self::with(|t| {
             format!(
                 "dequeues {}, deepest split {}\n{}",
-                stopwatch::n0(t.dequeues),
+                vector_math::number_format::format_i64_number(t.dequeues),
                 t.deepest_split,
                 t.progress.join("\n")
             )

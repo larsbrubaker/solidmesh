@@ -1,12 +1,12 @@
 //! The fill where a growing crease dies out under the band. Ports
 //! `Bevel/LevelLine/DyingCreaseFill.cs` (a C# static class): so far the extreme rail vertex
-//! ([`extreme`]) and the open run between two loop indices ([`run`]); the fill lands with later
-//! packages.
+//! ([`extreme`]), the open run between two loop indices ([`run`]) and which cut it fills
+//! ([`is_one_loop_round_an_open_chain`]); the fill lands with later packages.
 
 use vector_math::{cs_math, Vector3};
 
 use super::open_gap_fill;
-use super::{GapLoop, LevelLineMesh, LevelLineWork, WorkError};
+use super::{BandGapResult, GapLoop, LevelLineMesh, LevelLineWork, WorkError};
 
 /// The loop vertex at the greatest (or least) extended parameter: among the ties - within the open
 /// fill's parameter tie of the chain's `length` - the ones nearest `end_vertex`, and of those the
@@ -77,4 +77,15 @@ pub fn run(gap_loop: &GapLoop, from: usize, to: usize) -> Result<GapLoop, WorkEr
         gap_loop.has_mixed_owners,
         None,
     ))
+}
+
+/// C# `DyingCreaseFill.IsOneLoopRoundAnOpenChain`: whether this cut is the one this type fills: one
+/// OPEN chain, and exactly ONE closed loop left - what a crease dying out at BOTH ends leaves.
+pub fn is_one_loop_round_an_open_chain(gap: Option<&BandGapResult>) -> bool {
+    gap.is_some_and(|gap| {
+        gap.chains.len() == 1
+            && !gap.chains[0].is_closed
+            && gap.loops.len() == 1
+            && gap.loops[0].is_closed
+    })
 }

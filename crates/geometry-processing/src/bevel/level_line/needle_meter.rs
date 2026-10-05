@@ -12,7 +12,9 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, MutexGuard};
 
-use super::stopwatch::{g4, n0};
+use vector_math::number_format::format_i64_number;
+
+use super::stopwatch::g4;
 use super::FieldCounters;
 
 /// C# `NeedleMeter.MadeBy` (a `byte` enum): what put a triangle at an index of the mesh, as the
@@ -284,30 +286,30 @@ impl NeedleMeter {
                 format!(
                     "needle meter: {} repairs; {} per-split calls, {} of them with no needle among \
                      the triangles handed in; whole-mesh pass repaired {}",
-                    n0(s.repairs),
-                    n0(s.calls),
-                    n0(s.calls_with_no_needle),
-                    n0(s.whole_pass_repairs)
+                    format_i64_number(s.repairs),
+                    format_i64_number(s.calls),
+                    format_i64_number(s.calls_with_no_needle),
+                    format_i64_number(s.whole_pass_repairs)
                 ),
                 format!(
                     "  repairs per per-split call that found a needle: {}",
                     indices(CALL_BANDS.len(), |i| format!(
                         "{}: {}",
                         CALL_BANDS[i],
-                        n0(s.calls_by[i])
+                        format_i64_number(s.calls_by[i])
                     ))
                     .join(", ")
                 ),
                 format!(
                     "  longest cascade {} repairs in call {}, through {} distinct apexes",
-                    n0(s.longest),
-                    n0(s.longest_call),
-                    n0(s.longest_distinct_apexes as i64)
+                    format_i64_number(s.longest),
+                    format_i64_number(s.longest_call),
+                    format_i64_number(s.longest_distinct_apexes as i64)
                 ),
                 format!(
                     "  repair children still under the floor: {} of {}",
-                    n0(s.children_under_the_floor),
-                    n0(2 * s.repairs)
+                    format_i64_number(s.children_under_the_floor),
+                    format_i64_number(2 * s.repairs)
                 ),
             ];
 
@@ -316,11 +318,11 @@ impl NeedleMeter {
                 let total: i64 = row.iter().sum();
                 lines.push(format!(
                     "  repaired needles made by {by:?}: {}; height/floor {}",
-                    n0(total),
+                    format_i64_number(total),
                     indices(HEIGHT_BANDS.len(), |i| format!(
                         "{}: {}",
                         HEIGHT_BANDS[i],
-                        n0(row[i])
+                        format_i64_number(row[i])
                     ))
                     .join(", ")
                 ));

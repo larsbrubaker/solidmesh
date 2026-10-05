@@ -1,6 +1,7 @@
 //! The room past a GROWING neighbour, in closed form ([`GrowingCreaseRuns`]). Ports the type of
-//! `Bevel/LevelLine/GrowingCreaseRuns.cs`; the run walks, the bounds and the fillet pierce room
-//! land with the room-reading method package.
+//! `Bevel/LevelLine/GrowingCreaseRuns.cs`, with its constructor, constants and adjacency helper
+//! ([`GrowingCreaseRuns::add`]); the run walks, the bounds and the fillet pierce room land with the
+//! room-reading method package.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -75,6 +76,46 @@ impl std::fmt::Debug for GrowingCreaseRuns {
 }
 
 impl GrowingCreaseRuns {
+    /// C# `GrowingCreaseRuns.GrazingMargin`: how much faster than the radius the ridge's distance
+    /// from the axis must grow for its exit root to be read.
+    pub const GRAZING_MARGIN: f64 = 1e-6;
+
+    /// C# `GrowingCreaseRuns.RootFloor`: a root below this fraction of the chain edge's length is
+    /// rounding, not a size.
+    pub const ROOT_FLOOR: f64 = 1e-9;
+
+    /// C#'s constructor (with the field initializers: empty caches, no adjacency yet). `None` for
+    /// `chain_edges` (or an empty list) reads as the one `chain_edge`; `None` for `is_own_side`
+    /// reads the one-chain tagging, sides 1 and 2.
+    pub fn new(
+        mesh: Rc<RefCell<LevelLineMesh>>,
+        chain_edge: (i32, i32),
+        distance_to_chain: DistanceToChain,
+        chain_edges: Option<Vec<(i32, i32)>>,
+        is_own_side: Option<IsOwnSide>,
+    ) -> Self {
+        GrowingCreaseRuns {
+            mesh,
+            chain_edge,
+            chain_edges: chain_edges
+                .filter(|edges| !edges.is_empty())
+                .unwrap_or_else(|| vec![chain_edge]),
+            distance_to_chain,
+            is_own_side: is_own_side.unwrap_or_else(|| Rc::new(|tag| tag == 1 || tag == 2)),
+            far_end: RefCell::new(HashMap::new()),
+            bounds: RefCell::new(HashMap::new()),
+            neighbours: RefCell::new(None),
+            ridges: RefCell::new(Vec::new()),
+            bound_edges: RefCell::new(HashSet::new()),
+        }
+    }
+
+    /// C# `GrowingCreaseRuns.Add`: appends `to` to `from`'s neighbour list, making the list where
+    /// there is none.
+    pub fn add(neighbours: &mut HashMap<i32, Vec<i32>>, from: i32, to: i32) {
+        neighbours.entry(from).or_default().push(to);
+    }
+
     /// The unit normal of a working-mesh triangle.
     pub fn normal(&self, t: LevelLineTriangle) -> Vector3 {
         let mesh = self.mesh.borrow();

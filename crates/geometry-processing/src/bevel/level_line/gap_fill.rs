@@ -3,7 +3,8 @@
 //! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]),
 //! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
 //! wrap ([`largest_backward_step`]) and the chains' independence check
-//! ([`no_two_chains_share_a_vertex`]). The fill's
+//! ([`no_two_chains_share_a_vertex`]), the rail senses' constructor and their pairing
+//! ([`try_pair`]). The fill's
 //! other functions land with later packages.
 
 use std::collections::HashMap;
@@ -66,6 +67,58 @@ pub struct GapFillRailSenses {
     pub backward_cost: f64,
     /// Where the deeper of the two refusals happened, for a refusal to name.
     pub offending: i32,
+}
+
+impl GapFillRailSenses {
+    /// C#'s constructor.
+    pub fn new(
+        forward: Option<Rc<ZipRail>>,
+        forward_cost: f64,
+        backward: Option<Rc<ZipRail>>,
+        backward_cost: f64,
+        offending: i32,
+    ) -> Self {
+        GapFillRailSenses {
+            forward,
+            forward_cost,
+            backward,
+            backward_cost,
+            offending,
+        }
+    }
+}
+
+/// C# `GapFill.TryPair`: picks one sense for each loop so that exactly one of the two rails
+/// reverses its loop, taking the pairing that flattened less (the left forward on a tie); `None`
+/// where neither pairing reads monotone. Where both loops read monotone BOTH ways - a short loop
+/// whose whole parameter range is inside the slack reads either way round - this is the only thing
+/// that decides the sense, and getting it wrong lays every spoke twice the same way and leaves the
+/// shell open. (Only a NaN cost could pick a pairing with a missing sense; C# then answers true
+/// with a null rail, this `None`.)
+pub fn try_pair(
+    left: &GapFillRailSenses,
+    right: &GapFillRailSenses,
+) -> Option<(Rc<ZipRail>, Rc<ZipRail>)> {
+    let forward_backward = if left.forward.is_some() && right.backward.is_some() {
+        left.forward_cost + right.backward_cost
+    } else {
+        f64::INFINITY
+    };
+    let backward_forward = if left.backward.is_some() && right.forward.is_some() {
+        left.backward_cost + right.forward_cost
+    } else {
+        f64::INFINITY
+    };
+
+    if cs_math::min_f64(forward_backward, backward_forward) == f64::INFINITY {
+        return None;
+    }
+
+    if forward_backward <= backward_forward {
+        Some((left.forward.clone()?, right.backward.clone()?))
+    } else {
+        Some((left.backward.clone()?, right.forward.clone()?))
+    }
 }
 
 /// The refusal for a rail whose chain parameter is not monotone, naming the offending vertex.

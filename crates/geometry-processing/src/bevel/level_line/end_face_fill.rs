@@ -3,7 +3,8 @@
 //! ([`rails_to_the_clip_corner`]), whether both rails end past the chain's end
 //! ([`runs_end_past_the_end`]), whether the end face meets the sides convexly
 //! ([`meets_the_sides_convexly`]), whether a run is planar ([`is_planar`]) and an end face's one
-//! run ([`run`]); the fill itself lands with later packages.
+//! run ([`run`]) and a trimmed run with one end put back whole ([`with_whole_end`]); the fill
+//! itself lands with later packages.
 
 use vector_math::{cs_math, Vector3};
 
@@ -216,4 +217,48 @@ pub fn run(gap: &BandGapResult, tag: i32, from: i32, to: i32) -> Option<Vec<i32>
     }
 
     Some(runs[0].vertices.clone())
+}
+
+/// C# `EndFaceFill.WithWholeEnd`: `run` with its tail (or head) put back as `whole` has it, from
+/// the run's last (or first) vertex on: the other end keeps whatever the trim made of it. The run
+/// itself where that vertex is not on the whole run.
+pub fn with_whole_end(run: &GapLoop, whole: &GapLoop, at_tail: bool) -> GapLoop {
+    let key = if at_tail {
+        run.vertices[run.vertices.len() - 1]
+    } else {
+        run.vertices[0]
+    };
+    let Some(at) = whole.vertices.iter().position(|&v| v == key) else {
+        return run.clone();
+    };
+
+    fn joined<T: Clone>(mine: &[T], theirs: &[T], at: usize, at_tail: bool) -> Vec<T> {
+        if at_tail {
+            mine.iter()
+                .chain(theirs.iter().skip(at + 1))
+                .cloned()
+                .collect()
+        } else {
+            theirs.iter().take(at).chain(mine.iter()).cloned().collect()
+        }
+    }
+
+    let mut joined_loop = GapLoop::new(
+        run.side,
+        run.is_closed,
+        joined(&run.vertices, &whole.vertices, at, at_tail),
+        joined(&run.parameters, &whole.parameters, at, at_tail),
+        run.chain,
+        run.has_mixed_owners,
+        Some(run.owners.clone()),
+    );
+    joined_loop.vertex_owners = match (&run.vertex_owners, &whole.vertex_owners) {
+        (Some(mine), Some(theirs)) => Some(joined(mine, theirs, at, at_tail)),
+        _ => None,
+    };
+    joined_loop.vertex_ties = match (&run.vertex_ties, &whole.vertex_ties) {
+        (Some(mine), Some(theirs)) => Some(joined(mine, theirs, at, at_tail)),
+        _ => None,
+    };
+    joined_loop
 }

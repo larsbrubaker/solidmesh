@@ -5,11 +5,12 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::stopwatch::{e3, g4, n0};
+use geometry_processing::bevel::level_line::stopwatch::{e3, g4};
 use geometry_processing::bevel::level_line::{
     hull_clip, side_witness, FieldCounters, LevelLineMesh, LevelLineTriangle, NeedleMeter,
     SplitMeter,
 };
+use vector_math::number_format::format_i64_number;
 use vector_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
@@ -53,10 +54,10 @@ fn square_and_strip() -> LevelLineMesh {
 
 #[test]
 fn rust_only_meter_reports_write_csharp_number_formats() {
-    assert_eq!(n0(0), "0");
-    assert_eq!(n0(999), "999");
-    assert_eq!(n0(1234567), "1,234,567");
-    assert_eq!(n0(-1000), "-1,000");
+    assert_eq!(format_i64_number(0), "0");
+    assert_eq!(format_i64_number(999), "999");
+    assert_eq!(format_i64_number(1234567), "1,234,567");
+    assert_eq!(format_i64_number(-1000), "-1,000");
 
     assert_eq!(g4(0.0), "0");
     assert_eq!(g4(1.5), "1.5");

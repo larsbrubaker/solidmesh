@@ -4,7 +4,8 @@
 //! `Bevel/LevelLine/BandGroupFields.cs` (a C# static class): the run-out gate ([`run_outs_on`],
 //! [`turn_run_outs_on`] and its scope [`BandGroupFieldsRunOutsScope`], kept on the build's
 //! [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the wrapped field
-//! ([`BandGroupFieldsWithRunOuts`]). The static class's other functions and the wrapped field's
+//! ([`BandGroupFieldsWithRunOuts`], with its constructor and inner field). The static class's
+//! other functions and the wrapped field's
 //! queries land with later packages.
 
 use std::rc::Rc;
@@ -81,6 +82,26 @@ pub struct BandGroupFieldsWithRunOuts {
 }
 
 impl BandGroupFieldsWithRunOuts {
+    /// C#'s constructor.
+    pub fn new(
+        pick: Rc<dyn ChainDistanceField>,
+        pick_sample: Rc<dyn Fn(Vector3) -> FieldSample>,
+        end_planes: Rc<dyn Fn(i32, Vector3) -> f64>,
+        run_outs: Vec<Rc<dyn ChainDistanceField>>,
+    ) -> Self {
+        BandGroupFieldsWithRunOuts {
+            pick,
+            pick_sample,
+            end_planes,
+            run_outs,
+        }
+    }
+
+    /// C# `WithRunOuts.Inner`: the pick field the run-outs are read beside.
+    pub fn inner(&self) -> &Rc<dyn ChainDistanceField> {
+        &self.pick
+    }
+
     /// True only when neither the pick nor any run-out field reaches below `margin` over the box
     /// `min`..`max`.
     pub fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {

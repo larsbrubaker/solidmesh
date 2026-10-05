@@ -1,11 +1,14 @@
 //! The pick's candidate foreign edges, filed by the pair of region tags they stand between
 //! ([`ForeignEdgeRegions`]), with one open chain's growing creases on a pick of several
 //! ([`ForeignEdgeRegionsChainGrowth`]). Ports the types of `Bevel/LevelLine/ForeignEdgeRegions.cs`;
-//! here too the distance to a chain ([`distance_to_chain`]); the filing and the per-chain queries
-//! land with the room-reading method package.
+//! here too the distance to a chain ([`distance_to_chain`]), the constructors, the per-chain
+//! growth readings ([`ForeignEdgeRegions::growing_for`], [`ForeignEdgeRegions::set_aside_for`],
+//! [`ForeignEdgeRegions::sets_aside_any`], [`ForeignEdgeRegions::runs_out`]), the pick's open
+//! chain ([`open_chain_of`]) and a chain's ends ([`chain_ends`]); the filing and the per-chain index
+//! queries land with the room-reading method package.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::IndexMap;
@@ -86,4 +89,117 @@ pub fn distance_to_chain(
             least
         }
     })
+}
+
+impl ForeignEdgeRegions {
+    /// C#'s private constructor (with the field initializer: no index built yet, and no growing
+    /// creases until the filing sets them).
+    pub fn new(
+        mesh: Rc<RefCell<LevelLineMesh>>,
+        by_tag_pair: IndexMap<(i32, i32), Vec<(i32, i32)>>,
+        per_chain: Option<Vec<Option<ForeignEdgeRegionsChainGrowth>>>,
+    ) -> Self {
+        ForeignEdgeRegions {
+            mesh,
+            by_tag_pair,
+            indexed: RefCell::new(IndexMap::new()),
+            per_chain,
+            growing: None,
+        }
+    }
+
+    /// Chain `chain`'s growth on a pick of several open chains (C#'s `perChain?[chain]`); `None`
+    /// on any other pick, for a closed chain, or past the chains (where C#'s indexer throws).
+    fn growth(&self, chain: i32) -> Option<&ForeignEdgeRegionsChainGrowth> {
+        let per_chain = self.per_chain.as_ref()?;
+        per_chain.get(usize::try_from(chain).ok()?)?.as_ref()
+    }
+
+    /// C# `ForeignEdgeRegions.GrowingFor`: the growing creases chain `chain`'s neighbours grow over,
+    /// for its profile-pierce room - the pick's own [`ForeignEdgeRegions::growing`] unless the pick
+    /// holds several open chains.
+    pub fn growing_for(&self, chain: i32) -> Option<Rc<GrowingCreaseRuns>> {
+        if self.per_chain.is_some() {
+            self.growth(chain).map(|growth| growth.runs.clone())
+        } else {
+            self.growing.clone()
+        }
+    }
+
+    /// C# `ForeignEdgeRegions.SetAsideFor`: true when `edge`, filed as foreign to chain `chain` by
+    /// its tags, is not foreign to it: a growing crease of its own. Never true but on a pick of
+    /// several open chains.
+    pub fn set_aside_for(&self, chain: i32, edge: (i32, i32)) -> bool {
+        self.growth(chain)
+            .is_some_and(|growth| growth.set_aside.contains(&edge))
+    }
+
+    /// C# `ForeignEdgeRegions.SetsAsideAny`: true when chain `chain` sets any filed edge aside.
+    pub fn sets_aside_any(&self, chain: i32) -> bool {
+        self.growth(chain)
+            .is_some_and(|growth| !growth.set_aside.is_empty())
+    }
+
+    /// C# `ForeignEdgeRegions.RunsOut`: whether chain `chain`'s ends keep the run-out exemption
+    /// (`ForeignEdgeRoom.MeetsTheChainAtAnEnd`): both do but where a pick of several open chains
+    /// reads an end region at an end, which, as in the one-chain reading, gives it up.
+    pub fn runs_out(&self, chain: i32) -> (bool, bool) {
+        match self.growth(chain) {
+            None => (true, true),
+            Some(growth) => (growth.first_runs_out, growth.last_runs_out),
+        }
+    }
+}
+
+impl ForeignEdgeRegionsChainGrowth {
+    /// C#'s constructor (with the field initializers: nothing set aside or bounding yet, no
+    /// index).
+    pub fn new(
+        runs: Rc<GrowingCreaseRuns>,
+        ends: HashSet<i32>,
+        stretch: HashSet<(i32, i32)>,
+        first_runs_out: bool,
+        last_runs_out: bool,
+    ) -> Self {
+        ForeignEdgeRegionsChainGrowth {
+            ends,
+            stretch,
+            first_runs_out,
+            last_runs_out,
+            runs,
+            set_aside: HashSet::new(),
+            bounding: Vec::new(),
+            index: RefCell::new(None),
+        }
+    }
+}
+
+/// C# `ForeignEdgeRegions.OpenChainOf`: the pick's one open chain, in order, or `None` when the
+/// caller gave no chains or none is open.
+pub fn open_chain_of<'a>(
+    chain_edges: Option<&'a [Vec<(i32, i32)>]>,
+    closed: Option<&[bool]>,
+) -> Option<&'a Vec<(i32, i32)>> {
+    let (chain_edges, closed) = (chain_edges?, closed?);
+    chain_edges
+        .iter()
+        .enumerate()
+        .find(|(k, edges)| !closed[*k] && !edges.is_empty())
+        .map(|(_, edges)| edges)
+}
+
+/// C# `ForeignEdgeRegions.ChainEnds`: the vertices only one of the chain's edges (given by their
+/// keys) touches.
+pub fn chain_ends(chain_keys: &HashSet<(i32, i32)>) -> HashSet<i32> {
+    let mut count: HashMap<i32, i32> = HashMap::new();
+    for &(a, b) in chain_keys {
+        *count.entry(a).or_insert(0) += 1;
+        *count.entry(b).or_insert(0) += 1;
+    }
+
+    count
+        .into_iter()
+        .filter(|&(_, c)| c == 1)
+        .map(|(v, _)| v)
+        .collect()
 }
