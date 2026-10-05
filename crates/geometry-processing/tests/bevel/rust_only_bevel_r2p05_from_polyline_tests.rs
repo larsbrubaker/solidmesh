@@ -388,3 +388,80 @@ fn rust_only_a_parameter_finds_its_segment_and_tangent() {
     assert!((fillet_arc::tangent_at(&sharp, 3.9) - x).length() < 1e-12);
     assert!((fillet_arc::tangent_at(&sharp, 4.0) - bisector).length() < 1e-9);
 }
+
+#[test]
+fn rust_only_a_cell_bound_is_infinite_on_a_clipped_chain_and_sound_on_a_rayed_one() {
+    let corners = [
+        Vector3::new(1.0, -1.0, 0.0),
+        Vector3::new(2.0, -1.0, 0.0),
+        Vector3::new(1.0, -2.0, 0.0),
+    ];
+
+    let rayed =
+        ChainField::from_polyline_rayed(&l_points(), false, &[1.0, 1.0, 1.0], 45.0, (true, true))
+            .unwrap();
+    let samples: Vec<_> = corners
+        .iter()
+        .map(|&c| rayed.evaluate(c).unwrap())
+        .collect();
+    let bound = rayed
+        .segment_cell_bound(
+            0,
+            &samples[0],
+            &samples[1],
+            &samples[2],
+            corners[0],
+            corners[1],
+            corners[2],
+        )
+        .unwrap();
+    assert!(bound.is_finite());
+    for (corner, sample) in corners.iter().zip(&samples) {
+        assert!(
+            bound >= sample.value - 1e-12,
+            "{corner:?}: {bound} < {}",
+            sample.value
+        );
+    }
+    // The same corners on the plain chain bound the same way: the rays only lower the field.
+    let plain = ChainField::from_polyline(&l_points(), false, &[1.0, 1.0, 1.0]).unwrap();
+    assert_eq!(
+        plain
+            .segment_cell_bound(
+                0,
+                &samples[0],
+                &samples[1],
+                &samples[2],
+                corners[0],
+                corners[1],
+                corners[2]
+            )
+            .unwrap(),
+        bound
+    );
+
+    let clipped = ChainField::from_polyline_bounded(
+        &l_points(),
+        false,
+        &[1.0, 1.0, 1.0],
+        f64::INFINITY,
+        (true, false),
+        (Some(EndRayBound::default()), None),
+    )
+    .unwrap();
+    assert_eq!(
+        clipped
+            .segment_cell_bound(
+                0,
+                &samples[0],
+                &samples[1],
+                &samples[2],
+                corners[0],
+                corners[1],
+                corners[2]
+            )
+            .unwrap(),
+        f64::INFINITY,
+        "an end clip raises the field, so a clipped chain gives no bound"
+    );
+}

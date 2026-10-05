@@ -723,3 +723,80 @@ pub fn loops_of_side(
 
     Ok(loops)
 }
+
+/// C# `EveryChainSideLeavesOneOwnedLoop(groups, closed, loops, chains = null)`: the short form,
+/// with the cut fronts set aside and the corner failure unread.
+pub fn every_chain_side_leaves_one_owned_loop(
+    groups: &[BandGroup],
+    closed: &[bool],
+    loops: &[GapLoop],
+    chains: Option<&[Vec<i32>]>,
+) -> bool {
+    every_chain_side_leaves_one_owned_loop_at(groups, closed, loops, chains, true).0
+}
+
+/// C# `EveryChainSideLeavesOneOwnedLoop(..., out failedAtACorner, setAsideCutFronts)`: whether
+/// every chain side the groups read left exactly one loop of its own (closed for a closed chain),
+/// an end group its open pieces, and no mixed-owner loop outside an end group - read per corner
+/// group where the chains meet at corners. Returns `(holds, failed at a corner)`.
+pub fn every_chain_side_leaves_one_owned_loop_at(
+    groups: &[BandGroup],
+    closed: &[bool],
+    loops: &[GapLoop],
+    chains: Option<&[Vec<i32>]>,
+    set_aside_cut_fronts: bool,
+) -> (bool, bool) {
+    if let Some(chains) = chains {
+        let corners = super::pick_validation::corners_of(chains, closed, true);
+        if !corners.is_empty() {
+            return every_corner_group_leaves_one_loop(
+                groups,
+                closed,
+                loops,
+                chains,
+                &corners,
+                set_aside_cut_fronts,
+            );
+        }
+    }
+
+    let end_tags: HashSet<i32> = groups
+        .iter()
+        .filter(|g| g.end_of >= 0)
+        .map(|g| g.tag)
+        .collect();
+    if loops
+        .iter()
+        .any(|l| l.has_mixed_owners && !end_tags.contains(&l.group_tag))
+    {
+        return (false, false);
+    }
+
+    for group in groups {
+        if group.end_of >= 0 {
+            if !end_group_leaves_open_pieces(group, loops) {
+                return (false, false);
+            }
+
+            continue;
+        }
+
+        for &k in &group.members {
+            let side = group.side_of_chain[&k];
+            let mine: Vec<GapLoop> = loops
+                .iter()
+                .filter(|l| l.group_tag == group.tag && l.chain == k && l.side == side)
+                .cloned()
+                .collect();
+            if is_one_piece_per_end(&mine, k, group) {
+                continue;
+            }
+
+            if mine.len() != 1 || (closed[k as usize] && !mine[0].is_closed) {
+                return (false, false);
+            }
+        }
+    }
+
+    (true, false)
+}

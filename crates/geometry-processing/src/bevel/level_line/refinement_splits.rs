@@ -192,3 +192,227 @@ pub fn aspect(a: Vector3, b: Vector3, c: Vector3) -> f64 {
         f64::INFINITY
     }
 }
+
+/// C# `RefinementSplits.LongSide`: an edge at least this share of its triangle's longest is a long
+/// side, the only kind a split is allowed to thin.
+pub const LONG_SIDE: f64 = 0.9;
+
+/// C# `RefinementSplits.LongestEdgePathCap`: how far a longest-edge path is followed.
+pub const LONGEST_EDGE_PATH_CAP: i32 = 32;
+
+/// C# `WouldThinAChild(mesh, v, w, point, ...)`: whether splitting edge `v`-`w` at `point` would
+/// leave a new sliver in a triangle standing on it.
+pub fn would_thin_a_child_on_edge(
+    mesh: &LevelLineMesh,
+    v: i32,
+    w: i32,
+    point: Vector3,
+    aspect_limit: f64,
+    shortest_guarded: f64,
+) -> bool {
+    triangle_thinned_by_on_edge(mesh, v, w, point, aspect_limit, shortest_guarded, None) >= 0
+}
+
+/// C# `TriangleThinnedBy(mesh, v, w, point, ..., tag)`: the first triangle on edge `v`-`w` (of
+/// `tag`, where one is named) that splitting the edge at `point` would thin, or `-1`.
+pub fn triangle_thinned_by_on_edge(
+    mesh: &LevelLineMesh,
+    v: i32,
+    w: i32,
+    point: Vector3,
+    aspect_limit: f64,
+    shortest_guarded: f64,
+    tag: Option<i32>,
+) -> i32 {
+    let a = mesh.position(v);
+    let b = mesh.position(w);
+    let along = b - a;
+    let length_squared = along.length_squared();
+    if length_squared <= 0.0 {
+        return -1;
+    }
+
+    let s = (point - a).dot(along) / length_squared;
+    if s <= 1.0 / aspect_limit || s >= 1.0 - (1.0 / aspect_limit) {
+        return -1;
+    }
+
+    for &parent in mesh.triangles_on(v, w) {
+        let face = mesh.triangles()[parent as usize];
+        if tag.is_some_and(|tag| face.tag != tag) {
+            continue;
+        }
+
+        let longest = longest_edge_length(mesh, face);
+        if longest <= shortest_guarded || length_squared.sqrt() < LONG_SIDE * longest {
+            continue;
+        }
+
+        let x = mesh.position(if face.a != v && face.a != w {
+            face.a
+        } else if face.b != v && face.b != w {
+            face.b
+        } else {
+            face.c
+        });
+        let before = aspect(a, b, x);
+        if is_new_sliver(aspect(a, point, x), before, aspect_limit)
+            || is_new_sliver(aspect(point, b, x), before, aspect_limit)
+        {
+            return parent;
+        }
+    }
+
+    -1
+}
+
+/// C# `WouldThinAChild(mesh, triangle, point, ...)`: whether splitting `triangle` at `point`
+/// would leave a new sliver.
+pub fn would_thin_a_child(
+    mesh: &LevelLineMesh,
+    triangle: i32,
+    point: Vector3,
+    aspect_limit: f64,
+    shortest_guarded: f64,
+) -> bool {
+    triangle_thinned_by(mesh, triangle, point, aspect_limit, shortest_guarded, false) >= 0
+}
+
+/// C# `TriangleThinnedBy(mesh, triangle, point, ..., ownTagOnly)`: the triangle a split at
+/// `point` would thin - `triangle` itself for an interior point, a triangle on the edge for a
+/// point on one (only of `triangle`'s own tag when `own_tag_only`) - or `-1`.
+pub fn triangle_thinned_by(
+    mesh: &LevelLineMesh,
+    triangle: i32,
+    point: Vector3,
+    aspect_limit: f64,
+    shortest_guarded: f64,
+    own_tag_only: bool,
+) -> i32 {
+    let t = mesh.triangles()[triangle as usize];
+    match where_the_point_stands(mesh, t, point, None) {
+        (PointPlace::AtACorner, _, _) => return -1,
+        (PointPlace::OnAnEdge, from, to) => {
+            return triangle_thinned_by_on_edge(
+                mesh,
+                from,
+                to,
+                point,
+                aspect_limit,
+                shortest_guarded,
+                own_tag_only.then_some(t.tag),
+            );
+        }
+        (PointPlace::Interior, _, _) => {}
+    }
+
+    let longest = longest_edge_length(mesh, t);
+    if longest <= shortest_guarded {
+        return -1;
+    }
+
+    for corner in 0..3 {
+        if (point - mesh.position(t.corner(corner))).length() <= longest / aspect_limit {
+            return -1;
+        }
+    }
+
+    let before = aspect(mesh.position(t.a), mesh.position(t.b), mesh.position(t.c));
+    for corner in 0..3 {
+        let a = mesh.position(t.corner(corner));
+        let b = mesh.position(t.corner((corner + 1) % 3));
+        if (b - a).length() >= LONG_SIDE * longest
+            && is_new_sliver(aspect(a, b, point), before, aspect_limit)
+        {
+            return triangle;
+        }
+    }
+
+    -1
+}
+
+/// C# `MeterWouldThin(rule, mesh, v, w, point, chordTolerance)`: under the meter, which of the
+/// would-thin limits splitting edge `v`-`w` at `point` would trip, counted against `rule`.
+pub fn meter_would_thin_on_edge(
+    rule: super::field_counters::LevelLineRule,
+    mesh: &LevelLineMesh,
+    v: i32,
+    w: i32,
+    point: Vector3,
+    chord_tolerance: f64,
+) {
+    use super::field_counters::{FieldCounters, WOULD_THIN_LIMITS};
+
+    if !FieldCounters::meter_on() {
+        return;
+    }
+
+    for (i, &limit) in WOULD_THIN_LIMITS.iter().enumerate() {
+        if would_thin_a_child_on_edge(mesh, v, w, point, limit, 2.0 * chord_tolerance) {
+            FieldCounters::note_would_thin(rule, i as i32);
+        }
+    }
+}
+
+/// C# `MeterWouldThin(rule, mesh, triangle, point, chordTolerance)`: the same for a split of
+/// `triangle` at `point`.
+pub fn meter_would_thin(
+    rule: super::field_counters::LevelLineRule,
+    mesh: &LevelLineMesh,
+    triangle: i32,
+    point: Vector3,
+    chord_tolerance: f64,
+) {
+    use super::field_counters::{FieldCounters, WOULD_THIN_LIMITS};
+
+    if !FieldCounters::meter_on() {
+        return;
+    }
+
+    for (i, &limit) in WOULD_THIN_LIMITS.iter().enumerate() {
+        if would_thin_a_child(mesh, triangle, point, limit, 2.0 * chord_tolerance) {
+            FieldCounters::note_would_thin(rule, i as i32);
+        }
+    }
+}
+
+/// C# `TerminalEdge`: the edge the longest-edge path from `start` ends on - where two
+/// triangles share their longest edge, or the path meets a boundary or another tag's fold -
+/// or `None` where it runs onto a non-manifold or chain edge or past
+/// [`LONGEST_EDGE_PATH_CAP`] steps.
+pub fn terminal_edge(mesh: &LevelLineMesh, start: i32) -> Option<(i32, i32)> {
+    let mut at = start;
+    let mut terminal = longest_edge(mesh, at);
+
+    for _ in 0..LONGEST_EDGE_PATH_CAP {
+        let on = mesh.triangles_on(terminal.0, terminal.1);
+        if on.len() > 2 || mesh.edge_lies_on_a_chain(terminal.0, terminal.1) {
+            return None;
+        }
+
+        // A fold between two tags ends the path as a boundary edge does.
+        let across = if on.len() == 2 {
+            if on[0] == at {
+                on[1]
+            } else {
+                on[0]
+            }
+        } else {
+            -1
+        };
+        if across < 0 || mesh.triangles()[across as usize].tag != mesh.triangles()[at as usize].tag
+        {
+            return Some(terminal);
+        }
+
+        let next = longest_edge(mesh, across);
+        if next == terminal {
+            return Some(terminal);
+        }
+
+        at = across;
+        terminal = next;
+    }
+
+    None
+}

@@ -501,3 +501,346 @@ pub fn reach(row: &mut Vec<i64>) -> &mut Vec<i64> {
 
     row
 }
+
+/// .NET `N0`: a count grouped in threes.
+fn n0(value: i64) -> String {
+    vector_math::number_format::format_i64_number(value)
+}
+
+impl FieldCounters {
+    /// C# `Fired`: one search of `rule` found what it looked for - counted by rule, span bucket
+    /// and both corners' reach bands, when the meter is on.
+    pub fn fired(rule: LevelLineRule) {
+        if !Self::meter_on() {
+            return;
+        }
+
+        Self::with(|t| {
+            let rule = rule as usize;
+            rows(&mut t.fired)[rule] += 1;
+            let bucket = (rule * Self::buckets() as usize) + t.current_bucket as usize;
+            cells(&mut t.bucket_fired)[bucket] += 1;
+            let reaches = Self::reaches() as usize;
+            reach(&mut t.near_fired)[(rule * reaches) + t.near_reach as usize] += 1;
+            reach(&mut t.far_fired)[(rule * reaches) + t.far_reach as usize] += 1;
+        });
+    }
+
+    /// C# `FiredCount`.
+    pub fn fired_count(rule: LevelLineRule) -> i64 {
+        Self::with(|t| rows(&mut t.fired)[rule as usize])
+    }
+
+    /// C# `TotalSteps`: every rule's subdivision steps.
+    pub fn total_steps() -> i64 {
+        Self::with(|t| rows(&mut t.steps).iter().sum())
+    }
+
+    /// C# `StopRuleClock`: the running rule's time banked, and the clock stopped.
+    pub fn stop_rule_clock() {
+        let now = stopwatch::get_timestamp();
+        Self::with(|t| {
+            if t.rule_clock_at != 0 {
+                let rule = t.rule_clock_rule as usize;
+                rows(&mut t.rule_ticks)[rule] += now - t.rule_clock_at;
+                t.rule_clock_at = 0;
+            }
+        });
+    }
+
+    /// C# `Seconds`.
+    pub fn seconds(ticks: i64) -> f64 {
+        ticks as f64 / stopwatch::FREQUENCY as f64
+    }
+
+    /// C# `RuleReport`: one line per rule that was asked, stepped or timed.
+    pub fn rule_report() -> String {
+        Self::with(|t| {
+            let mut lines = vec![format!(
+                "{:<14}{:>10}{:>10}{:>12}{:>12}{:>9}{:>12}{:>12}{:>12}{:>13}{:>10}",
+                "rule",
+                "asked",
+                "fired",
+                "found none",
+                "steps",
+                "deepest",
+                "evaluates",
+                "units",
+                "convex cut",
+                "at the root",
+                "seconds"
+            )];
+
+            for rule in ALL_RULES {
+                let i = rule as usize;
+                if rows(&mut t.asked)[i] == 0
+                    && rows(&mut t.steps)[i] == 0
+                    && rows(&mut t.rule_ticks)[i] == 0
+                {
+                    continue;
+                }
+
+                let asked = rows(&mut t.asked)[i];
+                let fired = rows(&mut t.fired)[i];
+                lines.push(format!(
+                    "{:<14}{:>10}{:>10}{:>12}{:>12}{:>9}{:>12}{:>12}{:>12}{:>13}{:>10.2}",
+                    format!("{rule:?}"),
+                    n0(asked),
+                    n0(fired),
+                    n0(asked - fired),
+                    n0(rows(&mut t.steps)[i]),
+                    rows(&mut t.deepest)[i],
+                    n0(rows(&mut t.evaluates)[i]),
+                    n0(rows(&mut t.units)[i]),
+                    n0(rows(&mut t.convex_retired)[i]),
+                    n0(rows(&mut t.convex_retired_root)[i]),
+                    Self::seconds(rows(&mut t.rule_ticks)[i])
+                ));
+            }
+
+            lines.join("\n")
+        })
+    }
+
+    /// C# `AskedBy(rule, spanOverSize)`: a search of `rule` begins - the rule clock moved to it
+    /// and it made current, and (metered) counted by its span bucket.
+    pub fn asked_by(rule: LevelLineRule, span_over_size: f64) {
+        if Self::meter_on() {
+            Self::rule_clock(rule);
+        }
+
+        Self::with(|t| t.current_rule = rule);
+        if !Self::meter_on() {
+            return;
+        }
+
+        let bucket = Self::bucket_of(span_over_size);
+        Self::with(|t| {
+            rows(&mut t.asked)[rule as usize] += 1;
+            t.current_bucket = bucket;
+            cells(&mut t.bucket_asked)
+                [(rule as usize * Self::buckets() as usize) + bucket as usize] += 1;
+        });
+    }
+
+    /// C# `AskedBy(rule, spanOverSize, nearestOverSize, farthestOverSize)`: as
+    /// [`FieldCounters::asked_by`], with the corners' reach bands counted too.
+    pub fn asked_by_reaching(
+        rule: LevelLineRule,
+        span_over_size: f64,
+        nearest_over_size: f64,
+        farthest_over_size: f64,
+    ) {
+        Self::asked_by(rule, span_over_size);
+        if !Self::meter_on() {
+            return;
+        }
+
+        let near = Self::reach_of(nearest_over_size);
+        let far = Self::reach_of(farthest_over_size);
+        Self::with(|t| {
+            t.near_reach = near;
+            t.far_reach = far;
+            let reaches = Self::reaches() as usize;
+            reach(&mut t.near_asked)[(rule as usize * reaches) + near as usize] += 1;
+            reach(&mut t.far_asked)[(rule as usize * reaches) + far as usize] += 1;
+        });
+    }
+
+    /// C# `NoteRefineStep`: one dequeue of the refinement, with a progress line every 5000.
+    pub fn note_refine_step(triangle_count: i32, pending_count: i32, split_depth: i32) {
+        if !Self::meter_on() {
+            return;
+        }
+
+        Self::rule_clock(LevelLineRule::None);
+        Self::with(|t| {
+            t.dequeues += 1;
+            if split_depth > t.deepest_split {
+                t.deepest_split = split_depth;
+            }
+
+            if t.dequeues % 5000 == 1 {
+                let line = format!(
+                    "  dequeues {:>10}  triangles {:>10}  worklist {:>10}  deepest split {:>4}",
+                    n0(t.dequeues),
+                    n0(i64::from(triangle_count)),
+                    n0(i64::from(pending_count)),
+                    t.deepest_split
+                );
+                t.progress.push(line);
+            }
+        });
+    }
+
+    /// C# `BucketReport`: one line per rule and span bucket that was asked.
+    pub fn bucket_report() -> String {
+        Self::with(|t| {
+            let mut lines = vec![format!(
+                "{:<14}{:>12}{:>10}{:>10}{:>12}{:>12}{:>9}",
+                "rule", "span/size", "asked", "fired", "found none", "steps", "deepest"
+            )];
+
+            for rule in ALL_RULES {
+                for b in 0..Self::buckets() as usize {
+                    let cell = (rule as usize * Self::buckets() as usize) + b;
+                    let asked = cells(&mut t.bucket_asked)[cell];
+                    if asked == 0 {
+                        continue;
+                    }
+
+                    let span = if b == 0 {
+                        "< 0.5".to_string()
+                    } else if b == BUCKET_EDGES.len() {
+                        ">= 16".to_string()
+                    } else {
+                        format!("{} - {}", BUCKET_EDGES[b - 1], BUCKET_EDGES[b])
+                    };
+                    let fired = cells(&mut t.bucket_fired)[cell];
+                    lines.push(format!(
+                        "{:<14}{:>12}{:>10}{:>10}{:>12}{:>12}{:>9}",
+                        format!("{rule:?}"),
+                        span,
+                        n0(asked),
+                        n0(fired),
+                        n0(asked - fired),
+                        n0(cells(&mut t.bucket_steps)[cell]),
+                        cells(&mut t.bucket_deepest)[cell]
+                    ));
+                }
+            }
+
+            lines.join("\n")
+        })
+    }
+
+    /// C# `ReachReport`: one line per rule, corner and reach band that was asked.
+    pub fn reach_report() -> String {
+        Self::with(|t| {
+            let mut lines = vec![format!(
+                "{:<14}{:>8}{:>14}{:>10}{:>10}{:>12}{:>12}",
+                "rule", "corner", "|value|/size", "asked", "fired", "found none", "steps"
+            )];
+
+            let reaches = Self::reaches() as usize;
+            for rule in ALL_RULES {
+                for (which, asked_row, fired_row, steps_row) in [
+                    ("near", &t.near_asked, &t.near_fired, &t.near_steps),
+                    ("far", &t.far_asked, &t.far_fired, &t.far_steps),
+                ] {
+                    for b in 0..reaches {
+                        let cell = (rule as usize * reaches) + b;
+                        // C#'s null rows are the empty ones here.
+                        let asked = asked_row.get(cell).copied().unwrap_or(0);
+                        if asked == 0 {
+                            continue;
+                        }
+
+                        let band = if b == 0 {
+                            format!("< {}", REACH_EDGES[0])
+                        } else if b == REACH_EDGES.len() {
+                            format!(">= {}", REACH_EDGES[REACH_EDGES.len() - 1])
+                        } else {
+                            format!(">= {}, < {}", REACH_EDGES[b - 1], REACH_EDGES[b])
+                        };
+                        let fired = fired_row.get(cell).copied().unwrap_or(0);
+                        let steps = steps_row.get(cell).copied().unwrap_or(0);
+                        lines.push(format!(
+                            "{:<14}{:>8}{:>14}{:>10}{:>10}{:>12}{:>12}",
+                            format!("{rule:?}"),
+                            which,
+                            band,
+                            n0(asked),
+                            n0(fired),
+                            n0(asked - fired),
+                            n0(steps)
+                        ));
+                    }
+                }
+            }
+
+            lines.join("\n")
+        })
+    }
+
+    /// C# `NoSearchNeededReport`: one line per rule whose root cells were read.
+    pub fn no_search_needed_report() -> String {
+        Self::with(|t| {
+            let mut lines = vec![format!(
+                "{:<14}{:>10}{:>11}{:>12}{:>8}{:>27}{:>21}",
+                "rule",
+                "searches",
+                "one chain",
+                "corner max",
+                "both",
+                "both, not already retired",
+                "retired at the root"
+            )];
+
+            for rule in ALL_RULES {
+                let i = rule as usize;
+                if rows(&mut t.root_cells)[i] == 0 {
+                    continue;
+                }
+
+                lines.push(format!(
+                    "{:<14}{:>10}{:>11}{:>12}{:>8}{:>27}{:>21}",
+                    format!("{rule:?}"),
+                    n0(rows(&mut t.root_cells)[i]),
+                    n0(rows(&mut t.root_same_chain)[i]),
+                    n0(rows(&mut t.root_corner_max)[i]),
+                    n0(rows(&mut t.root_both)[i]),
+                    n0(rows(&mut t.root_both_and_searched)[i]),
+                    n0(rows(&mut t.root_retired)[i])
+                ));
+            }
+
+            lines.join("\n")
+        })
+    }
+
+    /// C# `NoteRefinementStarted`: one line for a group's refinement starting, with what has been
+    /// spent so far.
+    pub fn note_refinement_started(group_tag: i32, members: &[i32], candidates: i32) {
+        if !Self::meter_on() {
+            return;
+        }
+
+        let total_steps = Self::total_steps();
+        Self::with(|t| {
+            let members: Vec<String> = members.iter().map(i32::to_string).collect();
+            let line = format!(
+                "  group {group_tag}, chains {}, candidates {:>8}, spent to here: dequeues {:>10}, steps {:>12}, evaluates {:>12}",
+                members.join(","),
+                n0(i64::from(candidates)),
+                n0(t.dequeues),
+                n0(total_steps),
+                n0(t.evaluate)
+            );
+            t.refinements.push(line);
+        });
+    }
+
+    /// C# `Reset`: every count, row and report back to nothing.
+    pub fn reset() {
+        Self::with(|t| *t = FieldCounterTally::default());
+    }
+
+    /// C# `SiteReport`: every counted site, most-counted first (ties by site, descending).
+    pub fn site_report() -> String {
+        Self::with(|t| {
+            let mut lines: Vec<(i64, String)> = t
+                .by_site
+                .iter()
+                .map(|(site, &count)| (count, format!("{count:>10}  {site}")))
+                .collect();
+            lines.sort_by(|a, b| b.1.cmp(&a.1));
+            lines.sort_by_key(|line| std::cmp::Reverse(line.0));
+            lines
+                .into_iter()
+                .map(|(_, line)| line)
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+    }
+}

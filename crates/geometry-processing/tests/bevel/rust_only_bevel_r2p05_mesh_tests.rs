@@ -1,11 +1,12 @@
 //! Rust-only checks of R2.P05's small working-mesh readings: the corner cap's mitre depth, the
 //! self-room ceiling over chain edges, the knife-end overrun's plane neighbour and the foreign
 //! edge room's knife test by edge, open gap loops meeting, and the opposite-sense crease on the
-//! working mesh.
+//! working mesh, valley planes, would-thin splits and the longest-edge path's end.
 
 use geometry_processing::bevel::level_line::{
     chain_on_the_mesh, corner_cap, end_face_sense, foreign_edge_room, knife_end_overrun,
-    open_gap_fill, self_room, BandProfile, GapLoop, LevelLineMesh,
+    open_gap_fill, refinement_splits, self_room, strip_clip_valley, BandProfile, GapLoop,
+    LevelLineMesh,
 };
 use vector_math::Vector3;
 
@@ -222,4 +223,187 @@ fn rust_only_unit_setbacks_read_each_edges_dihedral_and_average_at_the_vertices(
         BandProfile::Chamfer
     )
     .is_err());
+}
+
+#[test]
+fn rust_only_valley_planes_are_two_walls_facing_each_other() {
+    let positions = [
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(0.0, -1.0, 1.0),
+        v(0.0, 1.0, 1.0),
+    ];
+    // A V along x: both walls face up into it.
+    let valley = LevelLineMesh::from_triangles(&positions, &[(0, 2, 1), (0, 1, 3)], None).unwrap();
+    let walls = strip_clip_valley::valley_planes(&valley, &[(0, 2), (0, 3)]).expect("a V");
+    assert_eq!(walls.len(), 2);
+    assert!((walls[0].1 - v(0.0, 1.0, 1.0).get_normal()).length() < 1e-12);
+    assert!((walls[1].1 - v(0.0, -1.0, 1.0).get_normal()).length() < 1e-12);
+    assert!(walls[0].2.contains(&0) && walls[1].2.contains(&0));
+
+    // The same two faces wound the other way are a ridge: neither stands in front of the other.
+    let ridge = LevelLineMesh::from_triangles(&positions, &[(0, 1, 2), (0, 3, 1)], None).unwrap();
+    assert!(strip_clip_valley::valley_planes(&ridge, &[(0, 2), (0, 3)]).is_none());
+
+    // One plane only.
+    assert!(strip_clip_valley::valley_planes(&valley, &[(0, 2), (1, 2)]).is_none());
+}
+
+#[test]
+fn rust_only_a_split_that_would_leave_a_new_sliver_is_seen() {
+    // A low triangle, aspect 100 / 10 = 10.
+    let low = LevelLineMesh::from_triangles(
+        &[v(0.0, 0.0, 0.0), v(10.0, 0.0, 0.0), v(5.0, 1.0, 0.0)],
+        &[(0, 1, 2)],
+        None,
+    )
+    .unwrap();
+
+    // Splitting the long side at a fifth leaves a child of aspect 26 / 2 = 13.
+    let on_the_edge = v(2.0, 0.0, 0.0);
+    assert!(refinement_splits::would_thin_a_child_on_edge(
+        &low,
+        0,
+        1,
+        on_the_edge,
+        12.0,
+        0.0
+    ));
+    assert!(!refinement_splits::would_thin_a_child_on_edge(
+        &low,
+        0,
+        1,
+        on_the_edge,
+        32.0,
+        0.0
+    ));
+    assert_eq!(
+        refinement_splits::triangle_thinned_by_on_edge(&low, 0, 1, on_the_edge, 12.0, 0.0, Some(5)),
+        -1,
+        "no triangle of that tag"
+    );
+    // Guarded: a triangle no longer than the guard is never thinned.
+    assert!(!refinement_splits::would_thin_a_child_on_edge(
+        &low,
+        0,
+        1,
+        on_the_edge,
+        12.0,
+        10.0
+    ));
+    // The same point read through the triangle lands on its edge.
+    assert_eq!(
+        refinement_splits::triangle_thinned_by(&low, 0, on_the_edge, 12.0, 0.0, false),
+        0
+    );
+
+    // An interior point 0.4 up the middle: the child on the long side has aspect 100 / 4 = 25,
+    // and it stands 0.6 from the apex - farther than 10 / 20, nearer than 10 / 12.
+    let inside = v(5.0, 0.4, 0.0);
+    assert!(refinement_splits::would_thin_a_child(
+        &low, 0, inside, 20.0, 0.0
+    ));
+    assert!(
+        !refinement_splits::would_thin_a_child(&low, 0, inside, 12.0, 0.0),
+        "too near the apex to split"
+    );
+    assert!(!refinement_splits::would_thin_a_child(
+        &low, 0, inside, 32.0, 0.0
+    ));
+    // At a corner nothing is split.
+    assert!(!refinement_splits::would_thin_a_child(
+        &low,
+        0,
+        v(10.0, 0.0, 0.0),
+        12.0,
+        0.0
+    ));
+}
+
+#[test]
+fn rust_only_the_longest_edge_path_ends_where_two_triangles_share_it() {
+    // The square's two triangles share their longest edge, the diagonal.
+    assert_eq!(
+        refinement_splits::terminal_edge(&square([0, 0]), 0),
+        Some((0, 2))
+    );
+    assert_eq!(
+        refinement_splits::terminal_edge(&square([0, 0]), 1),
+        Some((0, 2))
+    );
+    // Across a fold between two tags the path stops on the fold.
+    assert_eq!(
+        refinement_splits::terminal_edge(&square([1, 2]), 0),
+        Some((0, 2))
+    );
+}
+
+#[test]
+fn rust_only_every_chain_side_leaves_one_owned_loop() {
+    use geometry_processing::bevel::level_line::{gap_loop_walk, BandGroup};
+
+    let group = BandGroup {
+        tag: 5,
+        members: vec![0],
+        side_of_chain: [(0, 1)].into_iter().collect(),
+        ..Default::default()
+    };
+    let owned = |is_closed: bool, side: i32| {
+        let mut l = GapLoop::new(side, is_closed, vec![1, 2, 3], vec![0.0; 3], 0, false, None);
+        l.group_tag = 5;
+        l
+    };
+    let groups = [group];
+
+    assert!(gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[true],
+        &[owned(true, 1)],
+        None
+    ));
+    // An open loop for a closed chain, none, or two: not one owned loop.
+    assert!(!gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[true],
+        &[owned(false, 1)],
+        None
+    ));
+    assert!(gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[false],
+        &[owned(false, 1)],
+        None
+    ));
+    assert!(!gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[true],
+        &[],
+        None
+    ));
+    assert!(!gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[true],
+        &[owned(true, 1), owned(true, 1)],
+        None
+    ));
+    // The other side's loop is not this side's.
+    assert!(!gap_loop_walk::every_chain_side_leaves_one_owned_loop(
+        &groups,
+        &[true],
+        &[owned(true, 2)],
+        None
+    ));
+    // A mixed-owner loop outside an end group fails the whole read.
+    let mut mixed = owned(true, 1);
+    mixed.has_mixed_owners = true;
+    assert_eq!(
+        gap_loop_walk::every_chain_side_leaves_one_owned_loop_at(
+            &groups,
+            &[true],
+            &[mixed],
+            Some(&[vec![1, 2, 3]]),
+            true
+        ),
+        (false, false)
+    );
 }

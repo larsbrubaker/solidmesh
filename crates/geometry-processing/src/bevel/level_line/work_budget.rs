@@ -682,3 +682,43 @@ impl WorkBudget {
         text
     }
 }
+
+impl WorkBudget {
+    /// C# `WorkBudget.Enter`: the build moves to `phase` - the old phase's meter tallied and the
+    /// rule clock stopped (when metered), the phase's start noted, the refinement's queue cleared
+    /// on entering it, the side groups forgotten on leaving the per-group loop, and the bar told.
+    pub fn enter(&self, phase: LevelLineWorkPhase) {
+        if phase == self.phase.get() {
+            return;
+        }
+
+        if super::FieldCounters::meter_on() {
+            self.tally_phase();
+            super::FieldCounters::stop_rule_clock();
+        }
+
+        self.phase.set(phase);
+        self.phase_started_at.set(self.spent.get());
+
+        if phase == LevelLineWorkPhase::Refinement {
+            self.refinement_taken.set(0);
+            self.refinement_left.set(0);
+        } else if phase != LevelLineWorkPhase::EdgeRoots && phase != LevelLineWorkPhase::CutRoom {
+            // Out of the per-group loop: the phases after it own their global spans again.
+            self.side_group_count.set(0);
+        }
+
+        // A phase change always reports, throttle or no.
+        self.report_now();
+    }
+}
+
+impl LevelLineWork {
+    /// C# `LevelLineWork.Enter`: moves the budget in force, if any, to `phase`
+    /// ([`WorkBudget::enter`]).
+    pub fn enter(phase: LevelLineWorkPhase) {
+        if let Some(budget) = Self::current() {
+            budget.enter(phase);
+        }
+    }
+}

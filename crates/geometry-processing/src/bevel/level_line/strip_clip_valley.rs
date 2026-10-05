@@ -227,3 +227,54 @@ pub fn valley_cap(
 
     Ok(true)
 }
+
+/// One wall of a valley: a point of its plane, its unit normal, and the mesh vertices on it.
+pub type ValleyWall = (Vector3, Vector3, HashSet<i32>);
+
+/// C# `StripClip.ValleyPlanes`: the two planes the edges of `part` stand on, where they are
+/// exactly two, share a vertex, and each stands in front of the other (a V, not a ridge) - or
+/// `None`.
+pub fn valley_planes(mesh: &LevelLineMesh, part: &[(i32, i32)]) -> Option<Vec<ValleyWall>> {
+    const COPLANAR: f64 = 1e-5;
+    let mut walls: Vec<ValleyWall> = Vec::new();
+
+    for &(low, high) in part {
+        let face = mesh.triangles[mesh.triangles_on(low, high)[0] as usize];
+        let origin = mesh.position(face.a);
+        let normal = (mesh.position(face.b) - origin)
+            .cross(mesh.position(face.c) - origin)
+            .get_normal();
+        let same = walls.iter().position(|(wall_origin, wall_normal, _)| {
+            wall_normal.dot(normal) >= 1.0 - (COPLANAR * COPLANAR)
+                && (origin - *wall_origin).dot(*wall_normal).abs()
+                    <= COPLANAR * f64::max(1.0, (origin - *wall_origin).length())
+        });
+
+        match same {
+            None => walls.push((origin, normal, HashSet::from([face.a, face.b, face.c]))),
+            Some(at) => walls[at].2.extend([face.a, face.b, face.c]),
+        }
+    }
+
+    if walls.len() != 2 || walls[0].2.is_disjoint(&walls[1].2) {
+        return None;
+    }
+
+    let in_front_of = |of: usize, wall: usize| {
+        // A corner on the shared crease's line reads zero and says nothing either way.
+        let distances: Vec<f64> = walls[of]
+            .2
+            .iter()
+            .filter(|v| !walls[wall].2.contains(v))
+            .map(|&v| (mesh.position(v) - walls[wall].0).dot(walls[wall].1))
+            .filter(|d| d.abs() > COPLANAR * f64::max(1.0, d.abs()))
+            .collect();
+        !distances.is_empty() && distances.iter().all(|&d| d > 0.0)
+    };
+
+    if in_front_of(0, 1) && in_front_of(1, 0) {
+        Some(walls)
+    } else {
+        None
+    }
+}
