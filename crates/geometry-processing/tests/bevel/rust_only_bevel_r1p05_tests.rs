@@ -226,3 +226,41 @@ fn rust_only_field_queries_read_the_wedge_and_the_pair_corner_exactly() {
         assert!(segment_least.value <= field.read(p) + 1e-12);
     }
 }
+
+#[test]
+fn rust_only_an_ear_cut_tiles_a_rim_by_its_highest_ears() {
+    use std::collections::HashSet;
+    // A unit square rim in z = 0, counter-clockwise about +z, cut with no region triangles.
+    let mut mesh = LevelLineMesh::new();
+    mesh.vertices = vec![
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(1.0, 1.0, 0.0),
+        v(0.0, 1.0, 0.0),
+    ];
+    let tiles = mesh
+        .ear_cut(
+            &[0, 1, 2, 3],
+            v(0.0, 0.0, 0.0),
+            v(0.0, 0.0, 1.0),
+            &HashSet::new(),
+        )
+        .expect("no budget")
+        .expect("a square tiles");
+    assert_eq!(tiles, vec![(3, 0, 1), (1, 2, 3)]);
+    assert_eq!(mesh.longest_rim_cut, 4);
+    // One turn (4 rim vertices) and one emptiness scan of the first, highest ear; the equally high
+    // ears after it are not scanned.
+    assert_eq!(mesh.input_strip_work_spent, 4 + 4);
+
+    // Wound the wrong way round the normal, no ear turns left.
+    let refused = mesh
+        .ear_cut(
+            &[3, 2, 1, 0],
+            v(0.0, 0.0, 0.0),
+            v(0.0, 0.0, 1.0),
+            &HashSet::new(),
+        )
+        .expect("no budget");
+    assert!(refused.is_none());
+}

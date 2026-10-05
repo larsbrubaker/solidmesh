@@ -13,6 +13,8 @@ mod bevel_source_round_tests;
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
+#[path = "bevel/hole_fill_tests.rs"]
+mod hole_fill_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
 #[path = "bevel/rust_only_bevel_r1p01_mesh_tests.rs"]

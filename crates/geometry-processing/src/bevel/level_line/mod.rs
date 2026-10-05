@@ -88,6 +88,8 @@ mod gap_fill_refusal;
 mod gap_fill_result;
 mod gap_loop;
 mod growing_crease_runs;
+pub mod hole_fill;
+pub mod hole_fill_fairing;
 mod hole_fill_result;
 pub mod hull_clip;
 mod knife_end_overrun;
