@@ -156,6 +156,7 @@ pub mod stopwatch;
 pub mod strip_clip;
 pub mod strip_clip_valley;
 pub mod swallowed_side;
+pub mod swallowed_side_runs;
 pub mod triangle_edges;
 mod vertex_side;
 pub mod virtual_rail;

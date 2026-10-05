@@ -29,6 +29,8 @@ mod bevel_source_round_tests;
 mod bevel_sweep_back_depth_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
+#[path = "bevel/chain_field_fixtures.rs"]
+mod chain_field_fixtures;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
@@ -95,6 +97,8 @@ mod rust_only_bevel_r1p14_tests;
 mod rust_only_bevel_r1p15_tests;
 #[path = "bevel/rust_only_bevel_r2p02_field_tests.rs"]
 mod rust_only_bevel_r2p02_field_tests;
+#[path = "bevel/rust_only_bevel_r2p02_fill_tests.rs"]
+mod rust_only_bevel_r2p02_fill_tests;
 #[path = "bevel/rust_only_bevel_r2p02_tests.rs"]
 mod rust_only_bevel_r2p02_tests;
 #[path = "bevel/rust_only_bevel_r2p03_tests.rs"]

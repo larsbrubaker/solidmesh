@@ -1,9 +1,10 @@
 //! A side the band swallows whole. Ports `Bevel/LevelLine/SwallowedSide.cs` (a C# static class):
 //! so far its mesh readings - whether a triangle touches a point ([`touches`]), a side's vertices
 //! ([`side_vertices`]), the direction away from a segment on a side ([`away_on_side`]) and the
-//! planes' tolerance ([`tolerance`]); the swallow tests land with later packages.
+//! planes' tolerance ([`tolerance`]); the swallow tests and the made-up runs are in
+//! `swallowed_side_runs.rs`.
 
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 use vector_math::Vector3;
 
@@ -16,9 +17,10 @@ pub fn touches(mesh: &LevelLineMesh, tri: LevelLineTriangle, point: Vector3) -> 
         || (mesh.position(tri.c) - point).length() <= mesh.same_place()
 }
 
-/// The vertices of a side's live triangles.
-pub fn side_vertices(mesh: &LevelLineMesh, side: i32) -> HashSet<i32> {
-    let mut vertices = HashSet::new();
+/// The vertices of a side's live triangles, in the order first met (C#'s `HashSet`, only added
+/// to, iterates in insertion order, and the crease search takes the first that qualifies).
+pub fn side_vertices(mesh: &LevelLineMesh, side: i32) -> IndexSet<i32> {
+    let mut vertices = IndexSet::new();
     for t in 0..mesh.triangle_count() {
         let tri = mesh.triangles()[t as usize];
         if !mesh.is_removed(t) && tri.tag == side {

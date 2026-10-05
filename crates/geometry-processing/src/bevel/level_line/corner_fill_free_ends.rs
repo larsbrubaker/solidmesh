@@ -1,11 +1,14 @@
 //! A corner loop's pieces split round a chain's FREE end. Ports the piece helpers of
 //! `Bevel/LevelLine/CornerFill.FreeEnds.cs` (a partial of the C# static class `CornerFill`, whose
 //! piece type is in `corner_fill.rs`): the rails kept past an end ([`rails_past_an_end`]), a closed
-//! loop's piece turned to start inside an end arc ([`start_inside_an_end_arc`]) and a piece's slice
-//! ([`slice`]); the split over a group lands with later packages.
+//! loop's piece turned to start inside an end arc ([`start_inside_an_end_arc`]), a piece's slice
+//! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]).
 
 use vector_math::cs_math;
 
+use std::rc::Rc;
+
+use super::corner_fill::same;
 use super::{ChainField, CornerFillPiece};
 
 /// C# `CornerFill.RailsPastAnEnd`: the rails of `piece` with its run(s) at one free end's
@@ -85,4 +88,41 @@ pub fn slice(piece: &CornerFillPiece, first: usize, last: usize) -> CornerFillPi
         vertices: piece.vertices[first..=last].to_vec(),
         parameters: piece.parameters[first..=last].to_vec(),
     }
+}
+
+/// C# `CornerFill.SplitRoundAFreeEnd`: a piece's stretches ROUND a free end of its open chain taken
+/// off, leaving only its rails ([`rails_past_an_end`] at each end no other chain's point stands
+/// on). They happen where no end region of the chain's own was carved: the end face is a side
+/// region of the pick. Each rail keeps one vertex at the end's parameter; the arc beyond it is left
+/// open for the cap, as a carved end region's run is. Every other piece - a closed chain's, or one
+/// with no free end - comes back as it was. (C#'s unused mesh argument is not taken.)
+pub fn split_round_a_free_end(
+    chains: &[Rc<ChainField>],
+    piece: &CornerFillPiece,
+) -> Vec<CornerFillPiece> {
+    let field = &chains[piece.owner as usize];
+    if field.is_closed {
+        return vec![piece.clone()];
+    }
+
+    let tolerance = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let mut result = vec![piece.clone()];
+    let ends = [
+        (field.points[0], 0.0),
+        (field.points[field.points.len() - 1], field.length),
+    ];
+    for (point, parameter) in ends {
+        let free = !chains
+            .iter()
+            .filter(|c| !Rc::ptr_eq(c, field))
+            .any(|c| c.points.iter().any(|&p| same(p, point)));
+        if free {
+            result = result
+                .iter()
+                .flat_map(|p| rails_past_an_end(p, parameter, tolerance))
+                .collect();
+        }
+    }
+
+    result
 }
