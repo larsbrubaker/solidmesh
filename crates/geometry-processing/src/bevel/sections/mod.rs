@@ -15,6 +15,7 @@ pub mod section_junction;
 mod section_pool;
 pub mod section_room;
 pub mod section_run;
+pub mod section_smooth_side_boundary;
 pub mod section_split_blend;
 pub mod section_surface_walk;
 

@@ -1,6 +1,7 @@
 //! Rust-only tests for the bevel-core package R1.P08's methods that no ported C# test class covers
 //! yet: a run's absorbed split vertices (`SectionAbsorbedSplits`), the section builder's starting
-//! readings (`SectionBuilder`) and the room's region and crease readings (`SectionRoom`), on a cube.
+//! readings (`SectionBuilder`), the room's region and crease readings (`SectionRoom`), the smooth
+//! side's crease walk (`SectionSmoothSide`) and the builder's walked-side readings, on a cube.
 //! Each pins the C# rule on a hand-built case.
 
 use indexmap::IndexMap;
@@ -10,7 +11,8 @@ use vector_math::Vector3;
 
 use geometry_processing::bevel::sections::section_split_blend::SplitPlacement;
 use geometry_processing::bevel::sections::{
-    section_builder, section_fan_walk, section_room, BevelSection, SectionAbsorbedSplits,
+    section_builder, section_builder_walked_side, section_fan_walk, section_room,
+    section_smooth_side_boundary, BevelSection, SectionAbsorbedSplits,
 };
 use geometry_processing::topology::FeatureEdgeSet;
 
@@ -184,4 +186,187 @@ fn section_at(chain_vertex: i32, left_boundary: i32, right_boundary: i32) -> Bev
         right_walk_direction: Vector3::ZERO,
         setback: 0.0,
     }
+}
+
+/// The cube's edges at each vertex, as the room keeps them.
+fn edges_at_vertex(graph: &MeshEdgeGraph) -> IndexMap<i32, Vec<i32>> {
+    let mut at: IndexMap<i32, Vec<i32>> = IndexMap::new();
+    for edge in 0..graph.edge_count() {
+        for vertex in [graph.get_vertex0(edge), graph.get_vertex1(edge)] {
+            at.entry(vertex).or_default().push(edge);
+        }
+    }
+    at
+}
+
+/// A crease runs as far as the edge it starts on where the cube's corner turns it two ways at once,
+/// and the slide's chord walk finds the chord a landing lies on, or another crease where it runs
+/// past the end.
+#[test]
+fn rust_only_a_crease_runs_to_the_corner_and_its_chord_is_walked_for() {
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let features = FeatureEdgeSet::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let is_a_feature = section_builder::the_feature_test(&features);
+
+    let fold = features.edges()[0].mesh_edge_index;
+    let (start, end) = (graph.get_vertex0(fold), graph.get_vertex1(fold));
+    let station = Vector3::from_vector3_float(cube.vertices[start as usize]);
+    let far = Vector3::from_vector3_float(cube.vertices[end as usize]);
+    let along = (far - station).get_normal();
+
+    let at = edges_at_vertex(&graph);
+    for feature_test in [None, Some(is_a_feature.as_ref())] {
+        let reached = section_room::length_of_the_crease(
+            &cube,
+            &graph,
+            &at,
+            fold,
+            end,
+            station,
+            along,
+            1e-6,
+            feature_test,
+        );
+        assert!((reached - 10.0).abs() < 1e-9, "reached {reached}");
+    }
+
+    let creases = section_smooth_side_boundary::the_creases_at_each_vertex(
+        &graph,
+        &pairs,
+        Some(is_a_feature.as_ref()),
+    );
+    assert_eq!(creases[&start].len(), 3);
+    assert!(
+        section_smooth_side_boundary::the_creases_at_each_vertex(&graph, &pairs, None).is_empty()
+    );
+
+    let half_way = station + (far - station) * 0.5;
+    assert_eq!(
+        section_smooth_side_boundary::try_the_crease_chord_under(
+            &cube,
+            &graph,
+            &pairs,
+            Some(is_a_feature.as_ref()),
+            fold,
+            start,
+            half_way
+        ),
+        Ok(fold)
+    );
+    let (chord, off) = section_smooth_side_boundary::try_the_crease_chord_down(
+        &cube, &graph, &creases, fold, start, half_way,
+    )
+    .expect("the first chord holds it");
+    assert_eq!(chord, fold);
+    assert!(off < 1e-9);
+
+    // Past the corner nothing carries on straight, so the landing is read off the other creases.
+    let past = station + (far - station) * 1.5;
+    let others: Vec<i32> = creases[&start]
+        .iter()
+        .copied()
+        .filter(|&c| c != fold)
+        .collect();
+    assert_eq!(
+        section_smooth_side_boundary::try_the_crease_chord_under(
+            &cube,
+            &graph,
+            &pairs,
+            Some(is_a_feature.as_ref()),
+            fold,
+            start,
+            past
+        ),
+        Ok(*others.iter().min().unwrap())
+    );
+}
+
+/// The walked side's small readings on a cube: the face across an edge, an edge's corners, the
+/// face's edge at a corner, the corner under a point, and a point placed along a join.
+#[test]
+fn rust_only_the_walked_side_names_its_places() {
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+
+    let face = &cube.faces[0];
+    let (a, b) = (face.v0, face.v1);
+    let edge = pairs[&section_room::pair_key(a, b)];
+    let across = section_builder_walked_side::the_other_face(&graph, edge, 0);
+    assert_ne!(across, 0);
+    assert!(section_builder_walked_side::is_a_corner_of(&graph, edge, a));
+    assert!(!section_builder_walked_side::is_a_corner_of(
+        &graph, edge, face.v2
+    ));
+    assert_eq!(
+        section_builder_walked_side::the_face_edge_at(&cube, &pairs, 0, a),
+        edge
+    );
+
+    let at_a = Vector3::from_vector3_float(cube.vertices[a as usize]);
+    let at_b = Vector3::from_vector3_float(cube.vertices[b as usize]);
+    assert_eq!(
+        section_builder_walked_side::try_the_corner_under(
+            &cube,
+            0,
+            at_a + Vector3::new(1e-9, 0.0, 0.0),
+            1e-6
+        ),
+        Some(a)
+    );
+    assert_eq!(
+        section_builder_walked_side::try_the_corner_under(&cube, 0, (at_a + at_b) / 2.0, 1e-6),
+        None
+    );
+
+    let middle = section_builder_walked_side::try_along_the_join(
+        &cube,
+        &graph,
+        &pairs,
+        at_a,
+        0,
+        at_b,
+        &[],
+        0.5,
+        1e-6,
+    )
+    .expect("a join with length");
+    assert!((middle.point - (at_a + at_b) / 2.0).length() < 1e-9);
+    assert_eq!((middle.face, middle.fold_edge, middle.corner), (0, -1, -1));
+
+    let start = section_builder_walked_side::try_along_the_join(
+        &cube,
+        &graph,
+        &pairs,
+        at_a,
+        0,
+        at_b,
+        &[],
+        0.0,
+        1e-6,
+    )
+    .expect("a join with length");
+    assert_eq!((start.corner, start.fold_edge), (a, edge));
+    assert_eq!(
+        start.along,
+        if graph.get_vertex0(edge) == a {
+            0.0
+        } else {
+            1.0
+        }
+    );
+    assert!(section_builder_walked_side::try_along_the_join(
+        &cube,
+        &graph,
+        &pairs,
+        at_a,
+        0,
+        at_a,
+        &[],
+        0.5,
+        1e-6
+    )
+    .is_none());
 }
