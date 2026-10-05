@@ -132,6 +132,11 @@ pub fn create_octahedron(scale: f64) -> Mesh {
 }
 
 /// A dodecahedron: twelve pentagons, each fanned into three triangles.
+///
+/// Deliberate divergence from C#: agg-sharp's `CreateDodecahedron` adds only 14 of the 20
+/// vertices and its face table is not a closed surface (it throws on index 16). This builds
+/// the canonical golden-ratio dodecahedron with the same cube corners first, then the twelve
+/// golden-rectangle vertices, and faces wound outward.
 pub fn create_dodecahedron(scale: f64) -> Mesh {
     let mut dodecahedron = Mesh::new();
 
@@ -139,7 +144,7 @@ pub fn create_dodecahedron(scale: f64) -> Mesh {
     let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
     let inv_phi = 1.0 / phi;
 
-    // Cube vertices
+    // Cube vertices (0..8)
     for i in [-1.0, 1.0] {
         for j in [-1.0, 1.0] {
             for k in [-1.0, 1.0] {
@@ -148,27 +153,37 @@ pub fn create_dodecahedron(scale: f64) -> Mesh {
         }
     }
 
-    // Rectangle vertices
-    for i in [-1.0, 1.0] {
-        add(&mut dodecahedron, Vector3::new(0.0, i * phi, i * inv_phi));
-        add(&mut dodecahedron, Vector3::new(i * inv_phi, 0.0, i * phi));
-        add(&mut dodecahedron, Vector3::new(i * phi, i * inv_phi, 0.0));
+    // Rectangle vertices: yz plane (8..12), xy plane (12..16), xz plane (16..20)
+    for a in [-1.0, 1.0] {
+        for b in [-1.0, 1.0] {
+            add(&mut dodecahedron, Vector3::new(0.0, a * inv_phi, b * phi));
+        }
+    }
+    for a in [-1.0, 1.0] {
+        for b in [-1.0, 1.0] {
+            add(&mut dodecahedron, Vector3::new(a * inv_phi, b * phi, 0.0));
+        }
+    }
+    for a in [-1.0, 1.0] {
+        for b in [-1.0, 1.0] {
+            add(&mut dodecahedron, Vector3::new(a * phi, 0.0, b * inv_phi));
+        }
     }
 
-    // The 12 pentagonal faces
+    // The 12 pentagonal faces, counter-clockwise seen from outside
     let faces: [[i32; 5]; 12] = [
-        [0, 8, 9, 4, 16],
-        [0, 16, 17, 2, 10],
-        [0, 10, 11, 1, 8],
-        [1, 11, 13, 5, 18],
-        [1, 18, 19, 3, 9],
-        [2, 12, 13, 11, 10],
-        [2, 17, 15, 6, 12],
-        [3, 14, 15, 17, 16],
-        [3, 19, 7, 14, 15],
-        [4, 9, 3, 15, 6],
-        [4, 6, 12, 13, 5],
-        [4, 5, 18, 19, 7],
+        [11, 9, 5, 19, 7],
+        [3, 17, 1, 9, 11],
+        [15, 13, 3, 11, 7],
+        [5, 9, 1, 12, 14],
+        [19, 18, 6, 15, 7],
+        [3, 13, 2, 16, 17],
+        [5, 14, 4, 18, 19],
+        [17, 16, 0, 12, 1],
+        [6, 10, 2, 13, 15],
+        [14, 12, 0, 8, 4],
+        [6, 18, 4, 8, 10],
+        [10, 8, 0, 16, 2],
     ];
 
     for face in faces {

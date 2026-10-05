@@ -4,10 +4,10 @@
 
 #[path = "polygon_mesh/face_normal_tests.rs"]
 mod face_normal_tests;
-#[path = "polygon_mesh/mesh_convex_hull_tests.rs"]
-mod mesh_convex_hull_tests;
 #[path = "polygon_mesh/grid_marching_cubes_tests.rs"]
 mod grid_marching_cubes_tests;
+#[path = "polygon_mesh/mesh_convex_hull_tests.rs"]
+mod mesh_convex_hull_tests;
 #[path = "polygon_mesh/mesh_copy_independence_tests.rs"]
 mod mesh_copy_independence_tests;
 #[path = "polygon_mesh/mesh_edge_graph_tests.rs"]
@@ -20,6 +20,8 @@ mod mesh_split_manifold_tests;
 mod mesh_tests;
 #[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]
 mod rust_only_mesh_editing_tests;
+#[path = "polygon_mesh/rust_only_platonic_solids_tests.rs"]
+mod rust_only_platonic_solids_tests;
 #[path = "polygon_mesh/rust_only_stl_tests.rs"]
 mod rust_only_stl_tests;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
