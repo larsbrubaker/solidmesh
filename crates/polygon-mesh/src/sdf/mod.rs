@@ -1,8 +1,10 @@
-//! Signed distance fields (agg-sharp `PolygonMesh/Sdf`). This slice ports `GridMarchingCubes`,
-//! marching cubes straight over a sampled field, with g3's `DenseGrid3f` it reads. `MeshSdfGrid`
-//! needs g3's narrow-band `MeshSignedDistanceGrid` and the Minkowski shell orientation first.
+//! Signed distance fields (agg-sharp `PolygonMesh/Sdf`): `GridMarchingCubes`, marching cubes
+//! straight over a sampled field, with g3's `DenseGrid3f` it reads, and `MeshSdfGrid`, a solid's
+//! narrow-band signed distance field and the offset surfaces pulled from it.
 
 pub mod grid_marching_cubes;
 mod marching_cubes_tables;
+pub mod mesh_sdf_grid;
 
 pub use grid_marching_cubes::{extract, DenseGrid3f};
+pub use mesh_sdf_grid::{FloodProgress, MeshSdfGrid, SdfGridError};

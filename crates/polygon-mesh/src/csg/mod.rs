@@ -12,11 +12,13 @@
 //!
 //! Not yet here: the implicit-surface processing modes (`Marching_Cubes`, `Dual_Contouring`,
 //! g3 implicits, Phase 2e), face-colour tracking through the run data (Phase 2f), the async
-//! yielding entry points and Minkowski. [`slice_layer`] cuts a mesh into integer polygons and
+//! yielding entry points and the Minkowski runs (`minkowski_processing` has only the shell
+//! orientation and the ball so far). [`slice_layer`] cuts a mesh into integer polygons and
 //! [`path_stitcher`] walls polygon loops back into a mesh.
 
 pub mod boolean_processing;
 mod boolean_progress_adapter;
+mod consistent_winding;
 pub mod csg_operations;
 mod manifold_cancellable_boolean;
 mod manifold_import;
@@ -24,6 +26,8 @@ mod manifold_kernel;
 mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;
+pub mod minkowski_processing;
+pub mod minkowski_shell_orientation;
 pub mod path_stitcher;
 pub mod slice_layer;
 
