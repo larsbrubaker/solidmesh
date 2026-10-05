@@ -3,7 +3,9 @@
 //! Ports the type of `Bevel/LevelLine/ChainField.cs` with the fields of every partial
 //! (`ChainField.EndClip.cs`, `.EndRay.cs`, `.Mitre.cs`, `.Queries.cs`, `.SmoothJointSpans.cs`,
 //! `.Swallow.cs`); the nested records live in the Rust files of the partials that declare them.
-//! Construction, the queries and the `ChainDistanceField` impl land with their method packages.
+//! Here too: the closest-point closed forms on a segment and a triangle, the smooth-joint test and
+//! the sharp-joint finder. Construction, the queries and the `ChainDistanceField` impl land with
+//! their method packages.
 
 use std::cell::OnceCell;
 use std::collections::HashSet;
@@ -116,4 +118,110 @@ impl std::fmt::Debug for ChainField {
 pub struct ChainFieldSmoothJointsScope {
     /// The joint positions in scope before this one began; `None` for none.
     pub previous: Option<HashSet<[u64; 3]>>,
+}
+
+impl ChainField {
+    /// Whether chain point `k` is a smooth joint (built inside the smooth-joints scope).
+    pub fn is_smooth_joint(&self, k: i32) -> bool {
+        self.smooth_joints
+            .as_ref()
+            .is_some_and(|joints| joints.contains(&k))
+    }
+
+    /// The chain's points in order (a closed chain does not repeat its first point).
+    pub fn points(&self) -> &[Vector3] {
+        &self.points
+    }
+
+    /// The closest point of a segment to a point.
+    pub fn closest_on_segment(point: Vector3, a: Vector3, b: Vector3) -> Vector3 {
+        let along = b - a;
+        let length_squared = along.length_squared();
+        if length_squared <= 0.0 {
+            return a;
+        }
+
+        let mut t = (point - a).dot(along) / length_squared;
+        t = t.clamp(0.0, 1.0);
+        a + (along * t)
+    }
+
+    /// The closest point of a triangle - interior included - to a point, by the usual barycentric
+    /// region test.
+    pub fn closest_on_triangle(point: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
+        let ab = b - a;
+        let ac = c - a;
+        let ap = point - a;
+        let d1 = ab.dot(ap);
+        let d2 = ac.dot(ap);
+        if d1 <= 0.0 && d2 <= 0.0 {
+            return a;
+        }
+
+        let bp = point - b;
+        let d3 = ab.dot(bp);
+        let d4 = ac.dot(bp);
+        if d3 >= 0.0 && d4 <= d3 {
+            return b;
+        }
+
+        let vc = (d1 * d4) - (d3 * d2);
+        if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
+            return a + (ab * (d1 / (d1 - d3)));
+        }
+
+        let cp = point - c;
+        let d5 = ab.dot(cp);
+        let d6 = ac.dot(cp);
+        if d6 >= 0.0 && d5 <= d6 {
+            return c;
+        }
+
+        let vb = (d5 * d2) - (d1 * d6);
+        if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
+            return a + (ac * (d2 / (d2 - d6)));
+        }
+
+        let va = (d3 * d6) - (d5 * d4);
+        if va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0 {
+            return b + ((c - b) * ((d4 - d3) / ((d4 - d3) + (d5 - d6))));
+        }
+
+        let denom = 1.0 / (va + vb + vc);
+        a + (ab * (vb * denom)) + (ac * (vc * denom))
+    }
+
+    /// How many segments the chain has: one fewer than its parameters.
+    pub fn segment_count(&self) -> i32 {
+        self.parameter_at_point.len() as i32 - 1
+    }
+
+    /// The chain's joints sharper than [`ChainField::sharp_turn_degrees`] (its segments'
+    /// directions dotting below the threshold's cosine), each as its parameter and the setback
+    /// asked there, in parameter order; none under an infinite threshold. A closed chain's first
+    /// point is a joint at 0. The finder behind the `sharp_joints` cache.
+    pub fn find_sharp_joints(&self) -> Vec<(f64, f64)> {
+        let mut joints = Vec::new();
+        if !self.sharp_turn_degrees.is_finite() {
+            return joints;
+        }
+
+        let sharp = (self.sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
+        let n = self.points.len() as i32;
+        let count = self.segment_count();
+        let direction =
+            |k: i32| (self.points[((k + 1) % n) as usize] - self.points[k as usize]).get_normal();
+        let (first, end) = if self.is_closed { (0, n) } else { (1, n - 1) };
+        for joint in first..end {
+            let before = (joint - 1 + count) % count;
+            if direction(before).dot(direction(joint)) < sharp && !self.is_smooth_joint(joint) {
+                joints.push((
+                    self.parameter_at_point[joint as usize],
+                    self.setbacks[joint as usize],
+                ));
+            }
+        }
+
+        joints
+    }
 }

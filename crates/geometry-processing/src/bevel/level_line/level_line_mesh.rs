@@ -1,7 +1,9 @@
 //! The level-line build's own working triangle mesh ([`LevelLineMesh`]) and its triangle
 //! ([`LevelLineTriangle`]). Ports the types of `Bevel/LevelLine/LevelLineMesh.cs` with the fields
-//! of every partial (`LevelLineMesh.InputStrips.cs`, `.InsertPolyline.cs`, `.Needles.cs`); the
-//! mesh's queries, splits, needle repair and polyline insertion land with their method packages.
+//! of every partial (`LevelLineMesh.InputStrips.cs`, `.InsertPolyline.cs`, `.Needles.cs`), with
+//! the triangle's corner indexer and the mesh's read accessors (triangles, edges, positions,
+//! lengths, the same-place backstop); the splits, needle repair and polyline insertion land with
+//! their method packages.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -130,5 +132,101 @@ impl std::fmt::Debug for LevelLineMesh {
             .field("needles_repaired", &self.needles_repaired)
             .field("has_chain_edge_test", &self.is_chain_edge.is_some())
             .finish_non_exhaustive()
+    }
+}
+
+impl LevelLineTriangle {
+    /// The vertex index at corner 0, 1 or 2 (C# indexer `this[int]`; any other corner reads the
+    /// third, as C#'s does).
+    pub fn corner(&self, corner: i32) -> i32 {
+        if corner == 0 {
+            self.a
+        } else if corner == 1 {
+            self.b
+        } else {
+            self.c
+        }
+    }
+}
+
+/// The refusal [`LevelLineMesh::set_same_place`] gives a negative or NaN length (C# throws
+/// `ArgumentOutOfRangeException`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SamePlaceNotALength(pub f64);
+
+impl std::fmt::Display for SamePlaceNotALength {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "SamePlace is a length: zero means exact coincidence only. (Actual value was {}.)",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for SamePlaceNotALength {}
+
+impl LevelLineMesh {
+    /// The triangles, removed ones included: every walk of this list has to ask
+    /// [`LevelLineMesh::is_removed`] for itself.
+    pub fn triangles(&self) -> &[LevelLineTriangle] {
+        &self.triangles
+    }
+
+    /// How many triangles the mesh holds, removed ones included.
+    pub fn triangle_count(&self) -> i32 {
+        self.triangles.len() as i32
+    }
+
+    /// How near an edge's own end a point has to stand for the edge split to answer with that end
+    /// instead of minting a vertex, as a length. Zero - the default - means exact coincidence only.
+    pub fn same_place(&self) -> f64 {
+        self.same_place
+    }
+
+    /// Sets [`LevelLineMesh::same_place`]. A negative or NaN backstop is not a narrower test, it
+    /// is a silent one - every comparison it takes part in answers false - so it is refused where
+    /// it is set and not diagnosed in the cut.
+    pub fn set_same_place(&mut self, value: f64) -> Result<(), SamePlaceNotALength> {
+        if value.is_nan() || value < 0.0 {
+            return Err(SamePlaceNotALength(value));
+        }
+
+        self.same_place = value;
+        Ok(())
+    }
+
+    /// Every edge of the mesh, each once, as its low and high vertex index, in ascending
+    /// (low, high) order.
+    ///
+    /// The order is CANONICAL - a property of the edge set alone - and not the order the edges
+    /// were made in. Replacing a triangle detaches and re-attaches its edges, so an edge left
+    /// standing on nothing leaves the map and a later split puts it back: the map's own key order
+    /// therefore CHANGES mid-build. A caller that roots and splits in that order splits into
+    /// different vertex indices depending on where in the build it asked, which is exactly the
+    /// fragility this construction exists to remove. Sorting here costs one pass per enumeration
+    /// - a handful per build - and buys the whole cut being a pure function of the input.
+    pub fn edges(&self) -> Vec<(i32, i32)> {
+        let mut keys: Vec<(i32, i32)> = self.edge_triangles.keys().copied().collect();
+        // Keys are distinct, so the unstable sort has no ties to order.
+        keys.sort_unstable();
+        keys
+    }
+
+    /// True when this triangle has been removed. A removed triangle keeps its place in the
+    /// triangle list - so the caller can still weigh the band that left against the solid it came
+    /// from - but it stands on no edge any more, so the edge queries read the mesh that is left.
+    pub fn is_removed(&self, triangle: i32) -> bool {
+        self.removed[triangle as usize]
+    }
+
+    /// The position of a vertex.
+    pub fn position(&self, vertex: i32) -> Vector3 {
+        self.vertices[vertex as usize]
+    }
+
+    /// The length of an edge, or of any vertex pair.
+    pub fn length(&self, a: i32, b: i32) -> f64 {
+        (self.vertices[a as usize] - self.vertices[b as usize]).length()
     }
 }

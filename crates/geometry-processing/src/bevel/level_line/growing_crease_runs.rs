@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::LevelLineMesh;
+use super::{LevelLineMesh, LevelLineTriangle};
 
 /// The distance from a point to the chain (C# `Func<Vector3, double>`).
 pub type DistanceToChain = Rc<dyn Fn(Vector3) -> f64>;
@@ -70,5 +70,14 @@ impl std::fmt::Debug for GrowingCreaseRuns {
             .field("chain_edges", &self.chain_edges)
             .field("ridges", &self.ridges)
             .finish_non_exhaustive()
+    }
+}
+
+impl GrowingCreaseRuns {
+    /// The unit normal of a working-mesh triangle.
+    pub fn normal(&self, t: LevelLineTriangle) -> Vector3 {
+        (self.mesh.position(t.b) - self.mesh.position(t.a))
+            .cross(self.mesh.position(t.c) - self.mesh.position(t.a))
+            .get_normal()
     }
 }
