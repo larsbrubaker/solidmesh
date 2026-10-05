@@ -6,6 +6,8 @@
 mod face_normal_tests;
 #[path = "polygon_mesh/mesh_convex_hull_tests.rs"]
 mod mesh_convex_hull_tests;
+#[path = "polygon_mesh/grid_marching_cubes_tests.rs"]
+mod grid_marching_cubes_tests;
 #[path = "polygon_mesh/mesh_copy_independence_tests.rs"]
 mod mesh_copy_independence_tests;
 #[path = "polygon_mesh/mesh_edge_graph_tests.rs"]

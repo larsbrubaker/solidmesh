@@ -18,8 +18,9 @@ path = "src/lib.rs"
 
 [dependencies]
 vector-math = { path = "../vector-math" }
-# The ClipperLib polygon helpers (agg-sharp's clipper_library) slicing and stitching share with
-# DataConverters2D live in agg-path.
+# agg-path: the path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`) and the
+# ClipperLib polygon helpers (agg-sharp's clipper_library) slicing and stitching share with
+# DataConverters2D.
 agg-path = { path = "../agg-path" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
@@ -28,6 +29,9 @@ manifold-rust = { path = "../../../manifold-rust" }
 # C#'s ClipperLib integer polygons (`List<IntPoint>`) for slicing: Clipper2's `Path64`/`Paths64`
 # and its union, from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust" }
+# agg-sharp's Tesselate (the SGI GLU tessellator) for `CachedTesselator`: tess2-rust is the same
+# SGI algorithm, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
+tess2-rust = { path = "../../../tess2-rust" }
 
 # Native hosts get the kernel's `parallel` feature, as agg-sharp's ManifoldKernel turns
 # ManifoldParallel on everywhere but the browser: wasm32-unknown-unknown has no threads to

@@ -9,6 +9,7 @@ pub mod mesh_output_settings;
 mod mi_convex_hull;
 pub mod stl_processing;
 pub mod stl_writer;
+pub mod vertex_source_to_mesh;
 
 pub use face_bsp_tree::BspNode;
 pub use mesh_convex_hull::ConvexHull;

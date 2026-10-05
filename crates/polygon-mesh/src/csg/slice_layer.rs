@@ -4,13 +4,16 @@
 //!
 //! Not here: the `IBvhItem` accelerator overloads of `CreateSlice`/`GetUnorderdSegments` (and
 //! their `includeBehindThePlane` filter, which only the accelerated path reads) join with the
-//! ray tracer (2d); `AsVertices` joins with agg-path's `VertexData` when a caller needs it.
+//! ray tracer (2d). `IntPointPolygon(s)Extensions.AsVertices` turn polygons back into agg-path
+//! vertices.
 
 use std::collections::HashMap;
 
+use agg_path::shape_path::FlagsAndCommand;
+use agg_path::vertex_data::VertexData;
 use clipper2_rust::{FillRule, Path64, Paths64, Point64};
 use vector_math::cs_sort::introspective_sort;
-use vector_math::{Matrix4X4, Plane, Quaternion, Vector3};
+use vector_math::{Matrix4X4, Plane, Quaternion, Vector2, Vector3};
 
 use crate::Mesh;
 use agg_path::clipper_library::{
@@ -332,6 +335,32 @@ fn get_touching_segment_index(
     }
 
     lookup_segment_index
+}
+
+/// C# `IntPointPolygonsExtensions.AsVertices(polygons, outputScale = 1000)`: each polygon of
+/// more than two points as a path, divided by `output_scale`.
+pub fn polygons_as_vertices(polygons: &Paths64, output_scale: f64) -> Vec<VertexData> {
+    polygons
+        .iter()
+        .filter(|polygon| polygon.len() > 2)
+        .flat_map(|polygon| as_vertices(polygon, output_scale))
+        .collect()
+}
+
+/// C# `IntPointPolygonExtensions.AsVertices(polygon, outputScale = 1000)`: a move-to the last
+/// point, then a line-to every point in order (so the path ends where it began; no close).
+pub fn as_vertices(polygon: &Path64, output_scale: f64) -> Vec<VertexData> {
+    let scaled = |p: &Point64| Vector2::new(p.x as f64 / output_scale, p.y as f64 / output_scale);
+    let Some(last) = polygon.last() else {
+        return Vec::new();
+    };
+    std::iter::once(VertexData::new(FlagsAndCommand::MOVE_TO, scaled(last)))
+        .chain(
+            polygon
+                .iter()
+                .map(|p| VertexData::new(FlagsAndCommand::LINE_TO, scaled(p))),
+        )
+        .collect()
 }
 
 /// The area of a polygon, positive for counter-clockwise (C# `IntPointPolygonExtensions.Area`).
