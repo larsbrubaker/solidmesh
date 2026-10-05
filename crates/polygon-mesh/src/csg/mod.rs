@@ -17,7 +17,8 @@
 //! yielding entry points and the Minkowski runs (`minkowski_processing` has only the shell
 //! orientation and the ball so far; [`minkowski_progress_model`], the bar those runs will
 //! drive, is here). [`slice_layer`] cuts a mesh into integer polygons and
-//! [`path_stitcher`] walls polygon loops back into a mesh.
+//! [`path_stitcher`] walls polygon loops back into a mesh. [`mesh_repair_rust`] is the
+//! kernel-backed repair a caller asks for directly.
 
 pub mod boolean_processing;
 mod boolean_progress_adapter;
@@ -30,6 +31,7 @@ mod manifold_kernel;
 mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;
+pub mod mesh_repair_rust;
 pub mod minkowski_processing;
 pub mod minkowski_progress_model;
 pub mod minkowski_shell_orientation;

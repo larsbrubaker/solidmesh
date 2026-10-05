@@ -1,13 +1,13 @@
 //! Rewinding a surface's backward patch and joining coincident vertices before a kernel import.
 //! Port of agg-sharp `Csg/ConsistentWinding.cs`; called by `minkowski_processing`'s operand
-//! import.
+//! import and by `mesh_repair_rust`.
 //!
 //! The kernel import balances directed edges and refuses a surface where two neighbours run a
 //! shared edge the same way (`NotClosed`), though a closed orientable surface with a backward
 //! patch has exactly one consistent winding up to its sign. Each connected surface keeps the
 //! winding most of its triangles have; only the minority flips, so a whole inside-out shell is
 //! left alone. Connectivity is by exact vertex position, as the kernel welds. Face colours and
-//! textures (which C# carries across) come with Phase 2f.
+//! textures carry across, a flipped face's texture corners reversed with it.
 
 use std::collections::{HashMap, VecDeque};
 
