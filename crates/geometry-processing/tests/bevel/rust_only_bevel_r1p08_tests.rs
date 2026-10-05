@@ -556,3 +556,118 @@ fn rust_only_the_surface_walk_reads_folds_and_feet() {
         (3.5, SurfaceWalkRefusal::CreaseReached, side, 0.4, 2)
     );
 }
+
+/// The walk's face readings on a cube's top: a line leaves a face across its far edge, a direction is
+/// held by the face it points into and carried over the cube's edge onto the side, a vertex's fan
+/// holds a direction in one wedge, and turning through a corner finds the face that carries on.
+#[test]
+fn rust_only_the_surface_walk_reads_faces_and_turns_through_vertices() {
+    use geometry_processing::bevel::sections::section_surface_walk::normal_of;
+    use geometry_processing::bevel::sections::section_surface_walk_faces as faces;
+    use geometry_processing::bevel::sections::section_walk_vertex_turn as turn;
+
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let up = Vector3::new(0.0, 0.0, 1.0);
+    let top: Vec<i32> = (0..cube.faces.len() as i32)
+        .filter(|&f| normal_of(&cube, f).dot(up) > 0.99)
+        .collect();
+    assert_eq!(top.len(), 2);
+    let face = top[0];
+    let drawn = &cube.faces[face as usize];
+    let corners = [drawn.v0, drawn.v1, drawn.v2];
+    let at = |v: i32| Vector3::from_vector3_float(cube.vertices[v as usize]);
+    let centroid = (at(corners[0]) + at(corners[1]) + at(corners[2])) / 3.0;
+
+    // A line from the face's middle towards a corner leaves through that corner.
+    let exit = faces::try_exit(
+        &cube,
+        &pairs,
+        face,
+        centroid,
+        (at(corners[0]) - centroid).get_normal(),
+    )
+    .expect("a line from inside leaves the face");
+    assert_eq!(exit.vertex, corners[0]);
+    assert!((exit.at - at(corners[0])).length() < 1e-9);
+
+    // Edges under a point: a corner's own edges, and only folds when asked.
+    let mid_side = (at(corners[0]) + at(corners[1])) / 2.0;
+    let side_edge = pairs[&section_room::pair_key(corners[0], corners[1])];
+    assert_eq!(
+        faces::try_the_edge_under(&cube, &graph, &pairs, face, mid_side, 1e-6, false),
+        Some(side_edge)
+    );
+    assert_eq!(
+        faces::try_the_edge_under(&cube, &graph, &pairs, face, centroid, 1e-6, false),
+        None
+    );
+
+    // Across a cube edge of the top, a direction pointing off the top is held by the side, carried
+    // over the fold to point down it.
+    let cube_edge = (0..graph.edge_count())
+        .find(|&e| {
+            graph.get_face_count(e) == 2
+                && top.contains(&graph.get_face(e, 0)) != top.contains(&graph.get_face(e, 1))
+        })
+        .expect("the top meets a side");
+    let top_face = if top.contains(&graph.get_face(cube_edge, 0)) {
+        graph.get_face(cube_edge, 0)
+    } else {
+        graph.get_face(cube_edge, 1)
+    };
+    let side = graph.get_face(cube_edge, 0) + graph.get_face(cube_edge, 1) - top_face;
+    let side_normal = normal_of(&cube, side);
+    let off_the_top = Vector3::new(side_normal.x, side_normal.y, 0.0).get_normal();
+    let carried = faces::unfold(&cube, off_the_top, cube_edge, &graph, top_face);
+    assert!((carried - Vector3::new(0.0, 0.0, -1.0)).length() < 1e-9);
+    let (held_by, along) =
+        faces::try_face_holding_at_edge(&cube, &graph, cube_edge, top_face, carried)
+            .expect("the side holds a direction running down it");
+    assert_eq!(held_by, side);
+    assert!((along - carried).length() < 1e-9);
+
+    // A vertex's fan: the face whose wedge holds a direction pointing into it.
+    let corner = corners[0];
+    let fan: Vec<i32> = (0..cube.faces.len() as i32)
+        .filter(|&f| {
+            let d = &cube.faces[f as usize];
+            [d.v0, d.v1, d.v2].contains(&corner)
+        })
+        .collect();
+    let into_the_top = (centroid - at(corner)).get_normal();
+    let (holding, _) = faces::try_face_holding(&cube, corner, into_the_top, &fan)
+        .expect("the top's wedge holds it");
+    assert_eq!(holding, face);
+    let (n, first, second) = faces::try_wedge(&cube, face, corner).expect("a corner of the face");
+    assert!(first.cross(second).dot(n) >= 0.0);
+
+    // Turning through the corner from the top's other triangle finds the top face holding it.
+    let mut turned_face = top[1];
+    let mut direction = into_the_top;
+    let other_top = &cube.faces[top[1] as usize];
+    if [other_top.v0, other_top.v1, other_top.v2].contains(&corner) {
+        assert!(turn::try_turn_out_of_the_corner(
+            &cube,
+            &graph,
+            &pairs,
+            corner,
+            None,
+            &mut turned_face,
+            &mut direction
+        ));
+        assert_eq!(turned_face, face);
+    }
+    assert_eq!(
+        turn::try_the_corner_under(&cube, face, at(corner), 1e-6),
+        Some(corner)
+    );
+    let walked = pairs[&section_room::pair_key(corners[0], corners[1])];
+    let other_edge = turn::try_the_other_edge_at(&cube, face, corners[0], walked, &pairs)
+        .expect("the face's other edge at the corner");
+    assert_eq!(
+        other_edge,
+        pairs[&section_room::pair_key(corners[0], corners[2])]
+    );
+}
