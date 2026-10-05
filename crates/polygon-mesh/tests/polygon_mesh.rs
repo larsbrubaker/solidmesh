@@ -10,6 +10,8 @@ mod mesh_copy_independence_tests;
 mod mesh_edge_graph_tests;
 #[path = "polygon_mesh/mesh_measure_tests.rs"]
 mod mesh_measure_tests;
+#[path = "polygon_mesh/mesh_split_manifold_tests.rs"]
+mod mesh_split_manifold_tests;
 #[path = "polygon_mesh/mesh_tests.rs"]
 mod mesh_tests;
 #[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]

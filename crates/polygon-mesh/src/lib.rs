@@ -8,13 +8,15 @@
 //!
 //! Phase 2c, mesh editing: vertex merging over a vertex BVH (`mesh_editing`), cutting faces and
 //! meshes by planes (`face_split`, `mesh_editing`), T-junction repair (`t_junctions`) and the
-//! face BSP tree (`processors::face_bsp_tree`).
+//! face BSP tree (`processors::face_bsp_tree`), slicing a mesh into clipper2 integer polygons
+//! (`csg::slice_layer`, on `clipper_extensions`) and walling loops back up (`csg::path_stitcher`).
 //!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
 
 pub mod cancel;
+pub mod clipper_extensions;
 pub mod csg;
 mod face;
 mod face_split;

@@ -1,7 +1,10 @@
-//! Port of `Agg.PolygonMesh/MeshTests.cs`: STL parsing, face cut lines, face splitting and the
-//! face BSP tree. The rest (SDF, slicing/stitching on clipper polygons, dual contouring) wait for
-//! their Phase 2 slices and are listed in `docs/PORTING_PLAN.md`.
+//! Port of `Agg.PolygonMesh/MeshTests.cs`: STL parsing, face cut lines, face splitting, the
+//! face BSP tree, slicing and stitching on clipper polygons. The rest (SDF, dual contouring)
+//! wait for their Phase 2 slices and are listed in `docs/PORTING_PLAN.md`.
 
+use clipper2_rust::Point64;
+use polygon_mesh::clipper_extensions::{create_from_string, get_intersections, Intersection};
+use polygon_mesh::csg::{path_stitcher, slice_layer};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::{CancelToken, Face, Mesh};
@@ -231,4 +234,151 @@ fn create_bsp_face_trees() {
     assert_eq!(render_order_list[0], 1);
     assert_eq!(render_order_list[1], 0);
     assert_eq!(render_order_list[2], 2);
+}
+
+#[test]
+fn polygon_requirements() {
+    //       /\1
+    //      /  \
+    //     /    \
+    //    /      \
+    //   /        \
+    //  /          \
+    // /____________\
+    // 2             0
+
+    let outer_loop = create_from_string("x:1000, y:0,x:0, y:1000,x:-1000, y:0,|", 1.0).unwrap();
+
+    // crossing the bottom
+    {
+        let intersections =
+            get_intersections(&outer_loop[0], Point64::new(0, -10), Point64::new(0, 10));
+        assert!(intersections.len() == 1);
+        assert_eq!(intersections[0].0, 2);
+        assert_eq!(intersections[0].1, Intersection::Intersect);
+        assert_eq!(intersections[0].2, Point64::new(0, 0));
+    }
+
+    // touching the top point
+    {
+        let intersections =
+            get_intersections(&outer_loop[0], Point64::new(0, 700), Point64::new(0, 1000));
+        assert!(intersections.len() == 2);
+        for intersection in &intersections {
+            assert_eq!(intersection.1, Intersection::Colinear);
+            assert_eq!(intersection.2, Point64::new(0, 1000));
+        }
+    }
+
+    // touching the bottom line
+    {
+        let intersections =
+            get_intersections(&outer_loop[0], Point64::new(0, -10), Point64::new(0, 0));
+        assert!(intersections.len() == 1);
+        assert_eq!(intersections[0].0, 2);
+        assert_eq!(intersections[0].1, Intersection::Colinear);
+        assert_eq!(intersections[0].2, Point64::new(0, 0));
+    }
+}
+
+#[test]
+fn ensure_correct_stitch_order() {
+    //       /\1
+    //      /1 \
+    //     / /\ \
+    //    / /  \0\
+    //   / 2\  /  \
+    //  /    \/3   \
+    // /____________\
+    // 2             0
+
+    // If the advance is on the 0 (outside) polygon, create [outside prev, outside new, inside]
+    // If the advance is on the 1 (inside) polygon, creat [outside, inside new, inside prev]
+
+    let outer_loop =
+        create_from_string("x:1000, y:0,x:0, y:1000,x:-1000, y:0,|", 1.0).unwrap()[0].clone();
+    let inner_loop = create_from_string("x:400, y:500,x:0, y:750,x:-400, y:500,x:0, y:250,|", 1.0)
+        .unwrap()[0]
+        .clone();
+
+    let (outer_start, inner_start) = path_stitcher::best_start_indices(&outer_loop, &inner_loop);
+
+    assert_eq!(outer_start, 1);
+    assert_eq!(inner_start, 1);
+
+    let expected = [
+        (1, 1, 1), // the point on outer, the point on inner, the polygon to advance on
+        (1, 2, 0),
+        (2, 2, 1),
+        (2, 3, 0),
+        (0, 3, 1),
+        (0, 0, 0),
+        (1, 0, 1),
+    ];
+    for (outer_index, inner_index, poly_index) in expected {
+        let polygon_to_advance_on = path_stitcher::get_polygon_to_advance(
+            &outer_loop,
+            outer_index,
+            &inner_loop,
+            inner_index,
+        );
+        assert_eq!(polygon_to_advance_on, poly_index);
+    }
+}
+
+#[test]
+fn get_slice_loop() {
+    {
+        let mut tetrahedron = platonic_solids::create_tetrahedron(10.0);
+        let min_z = tetrahedron.get_axis_aligned_bounding_box().min_xyz.z;
+        tetrahedron.translate(Vector3::new(0.0, 0.0, -min_z));
+        let cut_plane = Plane::from_normal_and_point(Vector3::UNIT_Z, Vector3::new(0.0, 0.0, 3.0));
+        let slice = slice_layer::create_slice(&tetrahedron, cut_plane, 1000);
+        assert_eq!(slice.len(), 1);
+        assert_eq!(slice[0].len(), 3);
+    }
+
+    {
+        let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+        let cut_plane = Plane::from_normal_and_point(Vector3::UNIT_X, Vector3::new(3.0, 0.0, 0.0));
+        let slice = slice_layer::create_slice(&cube, cut_plane, 1000);
+        assert_eq!(slice.len(), 1);
+        assert_eq!(slice[0].len(), 4);
+    }
+
+    // C# runs this block twice, identically.
+    for _ in 0..2 {
+        let mut cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+        cube.translate_xyz(0.0, 0.0, 5.0); // move bottom to z=0
+        let cut_plane = Plane::from_normal_and_point(Vector3::UNIT_Z, Vector3::new(0.0, 0.0, 5.0));
+        let unordered_segments = slice_layer::get_unorderd_segments(&cube, cut_plane);
+        assert_eq!(unordered_segments.len(), 8);
+        let fast_lookups = slice_layer::create_fast_index_lookup(&unordered_segments);
+        assert_eq!(fast_lookups.len(), 8);
+        let closed_loops = slice_layer::find_closed_polygons(&unordered_segments);
+        assert_eq!(closed_loops.len(), 1);
+    }
+
+    {
+        let mut cube1 = platonic_solids::create_cube(10.0, 10.0, 10.0);
+        cube1.translate_xyz(0.0, 0.0, 5.0); // move bottom to z=0
+        let mut cube2 = platonic_solids::create_cube(10.0, 10.0, 10.0);
+        cube2.translate_xyz(3.0, 3.0, 5.0);
+        let mut cubes = Mesh::new();
+        cubes.copy_all_faces(&cube1, Matrix4X4::IDENTITY);
+        cubes.copy_all_faces(&cube2, Matrix4X4::IDENTITY);
+        let cut_plane = Plane::from_normal_and_point(Vector3::UNIT_Z, Vector3::new(0.0, 0.0, 5.0));
+        let unordered_segments = slice_layer::get_unorderd_segments(&cubes, cut_plane);
+        assert_eq!(unordered_segments.len(), 16);
+        let fast_lookups = slice_layer::create_fast_index_lookup(&unordered_segments);
+        assert_eq!(
+            fast_lookups.len(),
+            16,
+            "There should be two loops of 8 segments that all have unique starts"
+        );
+        let closed_loops = slice_layer::find_closed_polygons(&unordered_segments);
+        assert_eq!(closed_loops.len(), 2);
+        let union = slice_layer::union_closed_polygons(closed_loops);
+        assert_eq!(union.len(), 1);
+    }
 }
