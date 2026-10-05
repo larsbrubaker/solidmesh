@@ -1,16 +1,19 @@
 //! A run's split vertices read as POINTS OF ITS STRIPS rather than as stations of their own
 //! (`Bevel/Sections/SectionAbsorbedSplits.cs`): the per-gap, per-side table
 //! ([`SectionAbsorbedSplits`]) and one absorbed point in it ([`AbsorbedPoint`]), with its reading
-//! off a run ([`SectionAbsorbedSplits::from`]); the corner pass (`BehindTheCorners`) lands with a
-//! later package as a further `impl` block.
+//! off a run ([`SectionAbsorbedSplits::from`]); and the corner pass that swallows the stations a corner's
+//! setback reaches past ([`SectionAbsorbedSplits::behind_the_corners`]).
 //!
 //! A split vertex stands on the straight chain edge between two unsplit stations A and B with the
 //! same two surfaces on its sides the whole way, so the strip between A and B is exactly the strip
 //! an unsplit mesh would get, and the split vertex is merely a point of that strip's two boundary
 //! rows - a strip never subdivided there cannot reverse there.
 
+use vector_math::Vector3;
+
 use super::section_split_blend::SplitPlacement;
-use super::BevelSection;
+use super::{section_corner, BevelSection, SectionPool, SectionSide};
+use crate::topology::ChainEdge;
 
 /// C# `SectionAbsorbedSplits`: for each gap between two consecutive unsplit stations, and for
 /// each side, the boundary points the split vertices in that gap contribute to that strip's
@@ -207,5 +210,145 @@ impl SectionAbsorbedSplits {
     /// C# `Next`: the station after `at` round a run of `count`.
     fn next(at: i32, count: i32) -> i32 {
         (at + 1) % count
+    }
+}
+
+/// The corner pass (C# `BehindTheCorners`, `Swallow`, `IsACorner`).
+impl SectionAbsorbedSplits {
+    /// C# `BehindTheCorners`: which stations a CORNER's setback reaches past, and what their boundary
+    /// point becomes there - walking out along the chain from each corner, a station whose boundary
+    /// on the corner's shared FLAT (offset) side stands BEHIND the corner's offset-meet is swallowed,
+    /// and its point on that side becomes the corner's own by index. The walk stops at the first
+    /// station standing clear, at another corner, or at an end section. `Some((left, right))` - per
+    /// station, the pool index each side takes, or -1 - where any station was swallowed.
+    ///
+    /// Only a CLOSED run's stations line up one for one with its edges; an open run's end sections are
+    /// a reading of their own and no corner pass has been measured against them yet.
+    pub fn behind_the_corners(
+        sections: &[BevelSection],
+        edges: &[ChainEdge],
+        is_closed: bool,
+        pool: &SectionPool,
+    ) -> Option<(Vec<i32>, Vec<i32>)> {
+        if !is_closed || sections.len() != edges.len() {
+            return None;
+        }
+
+        let mut left = vec![-1; sections.len()];
+        let mut right = vec![-1; sections.len()];
+        let mut any = false;
+        let count = edges.len();
+
+        for i in 0..sections.len() {
+            if !Self::is_a_corner(edges, i) {
+                continue;
+            }
+
+            // LEAVING: forwards along the chain, measured along the edge the corner leaves by.
+            any |= Self::swallow(
+                sections,
+                edges,
+                pool,
+                i,
+                1,
+                edges[i].direction().get_normal(),
+                &mut left,
+                &mut right,
+            );
+
+            // ARRIVING: backwards, measured against the edge that came in - a station before the
+            // corner is swallowed when it stands PAST the corner's meet in the direction of travel.
+            let arriving = edges[(i + count - 1) % count].direction().get_normal();
+
+            any |= Self::swallow(
+                sections, edges, pool, i, -1, -arriving, &mut left, &mut right,
+            );
+        }
+
+        any.then_some((left, right))
+    }
+
+    /// C# `Swallow`: walks one way out of a corner swallowing stations while they stand behind its
+    /// reach, and says whether it swallowed any. A station swallowed only on the right still marks its
+    /// LEFT entry, by its own point, since the reading marks an absorbed station there.
+    #[allow(clippy::too_many_arguments)]
+    fn swallow(
+        sections: &[BevelSection],
+        edges: &[ChainEdge],
+        pool: &SectionPool,
+        corner: usize,
+        step: i32,
+        along: Vector3,
+        left: &mut [i32],
+        right: &mut [i32],
+    ) -> bool {
+        let count = sections.len() as i32;
+        let mut any = false;
+        let mut at = (corner as i32 + step + count) % count;
+
+        while at != corner as i32 {
+            let index = at as usize;
+
+            if Self::is_a_corner(edges, index) || left[index] >= 0 {
+                break;
+            }
+
+            let mut swallowed = false;
+
+            for is_left in [true, false] {
+                let (corner_kind, station_kind) = if is_left {
+                    (sections[corner].left_kind, sections[index].left_kind)
+                } else {
+                    (sections[corner].right_kind, sections[index].right_kind)
+                };
+
+                if corner_kind != SectionSide::Offset || station_kind != SectionSide::Offset {
+                    continue;
+                }
+
+                let (meet, point) = if is_left {
+                    (
+                        sections[corner].left_boundary,
+                        sections[index].left_boundary,
+                    )
+                } else {
+                    (
+                        sections[corner].right_boundary,
+                        sections[index].right_boundary,
+                    )
+                };
+
+                if (pool.position_of(point) - pool.position_of(meet)).dot(along) < 0.0 {
+                    if is_left {
+                        left[index] = meet;
+                    } else {
+                        right[index] = meet;
+                    }
+                    swallowed = true;
+                }
+            }
+
+            if !swallowed {
+                break;
+            }
+
+            // The station is absorbed whole: the side that is NOT swallowed keeps its own point.
+            any = true;
+
+            if left[index] < 0 {
+                left[index] = sections[index].left_boundary;
+            }
+
+            at = (at + step + count) % count;
+        }
+
+        any
+    }
+
+    /// C# `IsACorner`: whether the chain turns sharply enough at station `at` to be a corner.
+    fn is_a_corner(edges: &[ChainEdge], at: usize) -> bool {
+        let count = edges.len();
+
+        section_corner::is_sharp_turn(&edges[(at + count - 1) % count], &edges[at])
     }
 }

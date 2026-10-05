@@ -1,7 +1,7 @@
 //! The rolling ball's contact ARC at one chain vertex (`Bevel/Sections/BevelSection.cs`): the
 //! section itself ([`BevelSection`]), what kind of curve its profile is ([`SectionKind`]) and how
-//! each of its ends meets the face beyond ([`SectionSide`]). Its constructor lands with the
-//! core's section packages as an `impl` block; its segment count is here.
+//! each of its ends meets the face beyond ([`SectionSide`]). Its constructor
+//! ([`BevelSection::new`]) and its segment count are `impl` blocks here.
 //!
 //! One per vertex, not one per strip end: a section is computed once at the vertex and held by
 //! the two strips meeting there by reference (`SectionRun`), so the seam between two strips is
@@ -140,5 +140,74 @@ impl BevelSection {
     /// C# `Segments`: how many segments the profile was drawn in.
     pub fn segments(&self) -> i32 {
         self.profile.len() as i32 - 1
+    }
+}
+
+/// C#'s `ArgumentException` from the `BevelSection` constructor: a profile that does not run from
+/// one boundary to the other by the boundaries' own pool indices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SectionProfileDoesNotEndOnItsBoundaries;
+
+impl BevelSection {
+    /// C#'s `BevelSection` constructor with its required arguments; its optional ones take C#'s
+    /// defaults (a smooth section, no walk face, edge or vertex, nothing join-placed, no fold
+    /// crossed), which a caller that has them sets with struct update syntax.
+    ///
+    /// A section's profile ENDS are its boundaries - the same pool indices, not points that agree - and
+    /// it runs from one to the other in at least two points; anything else is refused, as C#
+    /// throws.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        chain_vertex: i32,
+        station: Vector3,
+        tangent: Vector3,
+        left_boundary: i32,
+        right_boundary: i32,
+        profile: Vec<i32>,
+        centre_from: Vector3,
+        centre_to: Vector3,
+        left_kind: SectionSide,
+        right_kind: SectionSide,
+        left_slide_edge: i32,
+        right_slide_edge: i32,
+        setback: f64,
+    ) -> Result<Self, SectionProfileDoesNotEndOnItsBoundaries> {
+        if profile.len() < 2
+            || profile[0] != left_boundary
+            || profile[profile.len() - 1] != right_boundary
+        {
+            return Err(SectionProfileDoesNotEndOnItsBoundaries);
+        }
+
+        Ok(Self {
+            kind: SectionKind::Smooth,
+            chain_vertex,
+            station,
+            tangent,
+            left_boundary,
+            right_boundary,
+            profile,
+            centre_from,
+            centre_to,
+            left_kind,
+            right_kind,
+            left_slide_edge,
+            right_slide_edge,
+            left_walk_face: -1,
+            right_walk_face: -1,
+            left_walk_edge: -1,
+            right_walk_edge: -1,
+            left_walk_parameter: 0.0,
+            right_walk_parameter: 0.0,
+            left_walk_vertex: -1,
+            right_walk_vertex: -1,
+            left_walk_crossed_a_fold: false,
+            right_walk_crossed_a_fold: false,
+            left_boundary_is_join_placed: false,
+            right_boundary_is_join_placed: false,
+            left_walk_direction: Vector3::ZERO,
+            right_walk_direction: Vector3::ZERO,
+            setback,
+        })
     }
 }
