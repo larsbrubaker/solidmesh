@@ -1,11 +1,14 @@
 //! The corner fill's loop pieces. Ports `Bevel/LevelLine/CornerFill.Pieces.cs` (a partial of the C#
 //! static class `CornerFill`; the piece type lives in `corner_fill.rs`): so far the trim of a
 //! piece's turn-back at an end ([`trim_the_turn_back`]) and of its ends off the line
-//! ([`trim_off_the_line`]); the rest of the partial lands with later packages.
+//! ([`trim_off_the_line`]) and a one-owner loop split at another chain's tie run
+//! ([`tie_split`]); the rest of the partial lands with later packages.
 
 use vector_math::cs_math;
 
-use super::{ChainField, CornerFillPiece, LevelLineMesh, WorkError};
+use std::rc::Rc;
+
+use super::{ChainField, CornerFillPiece, GapLoop, LevelLineMesh, WorkError};
 
 /// Trims a piece's turn-back at an end: only a turn-back that comes off the chain's END vertex is
 /// the wrap - a rail that turns back in the middle of its run is a strip that cannot be zipped,
@@ -86,4 +89,78 @@ pub fn trim_off_the_line(
     }
 
     Ok(())
+}
+
+/// C# `CornerFill.TieSplit`: a closed loop the walk handed wholly to one OPEN chain, where one other
+/// chain's rail is nothing but ties (rim 0-1-2-3 with edges 1-5 and 2-6: the bottom face's line is
+/// four corner-tie vertices, and the walk gives all four to the lower index). Split into the
+/// owner's piece - from the end of the other chain's tie run round to its start - and the other
+/// chain's piece, its tie run; the two share their end vertices, as tie vertices belong to both
+/// rails. Left whole, the other chain had no rail on this side and its whole band fell to one hole
+/// across both corners. `None` where the ties name no other chain, or more than one, or it has more
+/// than one run.
+pub fn tie_split(
+    mesh: &LevelLineMesh,
+    chains: &[Rc<ChainField>],
+    gap_loop: &GapLoop,
+    owner: i32,
+) -> Result<Option<[CornerFillPiece; 2]>, WorkError> {
+    let Some(ties) = &gap_loop.vertex_ties else {
+        return Ok(None);
+    };
+
+    // C#'s SelectMany(..).Where(..).Distinct(): first-met order.
+    let mut others: Vec<i32> = Vec::new();
+    for &k in ties.iter().flatten() {
+        if k != owner && !others.contains(&k) {
+            others.push(k);
+        }
+    }
+
+    if others.len() != 1 {
+        return Ok(None);
+    }
+
+    let k = others[0];
+    let n = gap_loop.vertices.len();
+    let starts: Vec<usize> = (0..n)
+        .filter(|&i| ties[i].contains(&k) && !ties[(i + n - 1) % n].contains(&k))
+        .collect();
+    if starts.len() != 1 {
+        return Ok(None);
+    }
+
+    let mut tied = CornerFillPiece {
+        owner: k,
+        ..CornerFillPiece::default()
+    };
+    let mut end = starts[0];
+    let mut i = starts[0];
+    while ties[i % n].contains(&k) && tied.vertices.len() < n {
+        let vertex = gap_loop.vertices[i % n];
+        tied.vertices.push(vertex);
+        tied.parameters.push(
+            chains[k as usize]
+                .evaluate(mesh.position(vertex))?
+                .parameter,
+        );
+        end = i % n;
+        i += 1;
+    }
+
+    if tied.vertices.len() < 2 || tied.vertices.len() >= n {
+        return Ok(None);
+    }
+
+    let mut own = CornerFillPiece {
+        owner,
+        ..CornerFillPiece::default()
+    };
+    for step in 0..=(n - tied.vertices.len() + 1) {
+        let i = (end + step) % n;
+        own.vertices.push(gap_loop.vertices[i]);
+        own.parameters.push(gap_loop.parameters[i]);
+    }
+
+    Ok(Some([own, tied]))
 }

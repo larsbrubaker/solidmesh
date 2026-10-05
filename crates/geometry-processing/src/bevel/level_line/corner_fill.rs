@@ -3,14 +3,18 @@
 //! position test the corner functions share ([`same`]) and the boundary connectors between open
 //! runs ([`connectors`]), which cuts it takes ([`takes`], [`corner_points`]) and the tie rule
 //! ([`fields_tie`], [`ties`]) and a closed chain's piece closed round its seam
-//! ([`close_round_the_seam`]). The fill's other functions land with later packages.
+//! ([`close_round_the_seam`]), and a group loop split into its chains' pieces ([`pieces`]). The
+//! fill's other functions land with later packages.
 
 use std::collections::{HashMap, HashSet};
 
 use vector_math::{cs_math, Vector3};
 
+use std::rc::Rc;
+
 use super::band_side_tagging;
 use super::gap_fill::FILL_TAG;
+use super::{corner_fill_free_ends, corner_fill_pieces};
 use super::{
     BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh, LevelLineMeshError, WorkError,
 };
@@ -232,4 +236,196 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
 
     piece.vertices = vertices;
     piece.parameters = parameters;
+}
+
+/// C# `CornerFill.Pieces`: a group loop split at every change of owner, starting at one: a loop of
+/// one owner all the way round is one closed chain's side and not a corner's, so it is handed back
+/// whole as one piece - except the one-owner loop of a closed chain that also owns a stretch of a
+/// mixed loop, started at the vertex nearest a corner. A one-owner loop of an OPEN chain is split at
+/// another chain's tie run, or round its free ends. Elsewhere each piece takes in a neighbour's
+/// end vertex where the two chains' fields TIE there (it is as much this chain's rail end - on a
+/// cube, the chamfer's mitre corner), pieces are split round free ends, and a chain whose whole
+/// rail here is ties gets its one or two runs of tie vertices as its pieces. An empty list where
+/// the loop has no vertex owners (C# reads through a null there).
+pub fn pieces(
+    mesh: &LevelLineMesh,
+    chains: &[Rc<ChainField>],
+    gap_loop: &GapLoop,
+) -> Result<Vec<CornerFillPiece>, WorkError> {
+    let Some(owners) = gap_loop.vertex_owners.as_deref() else {
+        return Ok(Vec::new());
+    };
+    let n = gap_loop.vertices.len();
+    // An open run is split from its first vertex and has no neighbour past either end; a closed
+    // loop is split from an owner change and wraps.
+    let mut start = if gap_loop.is_closed {
+        (0..n)
+            .find(|&i| owners[i] != owners[(i + n - 1) % n])
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    if gap_loop.is_closed
+        && owners.iter().all(|&o| o == owners[0])
+        && band_side_tagging::both_sided_members_build()
+    {
+        let corners = corner_points(chains);
+        if !corners.is_empty() {
+            // C#'s OrderBy(nearest corner).First(): the first nearest.
+            let nearest = |i: usize| {
+                let p = mesh.position(gap_loop.vertices[i]);
+                corners
+                    .iter()
+                    .map(|&c| (p - c).length_squared())
+                    .fold(f64::INFINITY, |least, d| if d < least { d } else { least })
+            };
+            let mut best = 0;
+            for i in 1..n {
+                if nearest(i) < nearest(best) {
+                    best = i;
+                }
+            }
+
+            start = best;
+        }
+    }
+
+    let mut pieces: Vec<CornerFillPiece> = Vec::new();
+    for step in 0..n {
+        let i = (start + step) % n;
+        if pieces
+            .last()
+            .is_none_or(|current| owners[i] != current.owner)
+        {
+            pieces.push(CornerFillPiece {
+                owner: owners[i],
+                ..CornerFillPiece::default()
+            });
+        }
+
+        let current = pieces.len() - 1;
+        pieces[current].vertices.push(gap_loop.vertices[i]);
+        pieces[current].parameters.push(gap_loop.parameters[i]);
+    }
+
+    if pieces.len() == 1 && gap_loop.is_closed {
+        let field = chains[pieces[0].owner as usize].clone();
+        if field.is_closed {
+            close_round_the_seam(mesh, &field, &mut pieces[0]);
+        } else {
+            if let Some(split) =
+                corner_fill_pieces::tie_split(mesh, chains, gap_loop, pieces[0].owner)?
+            {
+                return Ok(split.to_vec());
+            }
+
+            if corner_fill_free_ends::start_inside_an_end_arc(&field, &mut pieces[0]) {
+                // An open chain's band as a closed loop of its own: both its free ends stand on its own
+                // side group, so the loop runs down one rail, round one end, up the other and round
+                // the other end. Started inside an end arc, it splits into its two rails.
+                return Ok(corner_fill_free_ends::split_round_a_free_end(
+                    chains, &pieces[0],
+                ));
+            }
+        }
+    }
+
+    if pieces.len() < 2 {
+        return Ok(pieces);
+    }
+
+    // A vertex where two chains' fields TIE belongs to both rails. A neighbour that does not tie
+    // stays out, so no two strips ever lay the same stretch.
+    let count = pieces.len();
+    let mut extended = Vec::with_capacity(count);
+    for p in 0..count {
+        let piece = &pieces[p];
+        let previous = (gap_loop.is_closed || p > 0).then(|| &pieces[(p + count - 1) % count]);
+        let following = (gap_loop.is_closed || p < count - 1).then(|| &pieces[(p + 1) % count]);
+        let before = match previous {
+            Some(previous) if ties(mesh, chains, piece.owner, previous, false)? => {
+                previous.vertices[previous.vertices.len() - 1]
+            }
+            _ => -1,
+        };
+        let after = match following {
+            Some(following) if ties(mesh, chains, piece.owner, following, true)? => {
+                following.vertices[0]
+            }
+            _ => -1,
+        };
+        extended.push((before, after));
+    }
+
+    for (piece, (before, after)) in pieces.iter_mut().zip(extended) {
+        let field = &chains[piece.owner as usize];
+        if before >= 0 {
+            piece.vertices.insert(0, before);
+            let at = field.evaluate(mesh.position(before))?.parameter;
+            piece.parameters.insert(0, at);
+        }
+
+        if after >= 0 {
+            piece.vertices.push(after);
+            let at = field.evaluate(mesh.position(after))?.parameter;
+            piece.parameters.push(at);
+        }
+    }
+
+    let mut pieces: Vec<CornerFillPiece> = pieces
+        .iter()
+        .flat_map(|p| corner_fill_free_ends::split_round_a_free_end(chains, p))
+        .collect();
+
+    // A chain whose whole rail here is ties owns no vertex, so the split above gives it no piece
+    // (every edge of a cube: each face's line is four ties). Its piece is its one run of tie
+    // vertices - or two, the two rails of a both-sided member on one loop. An open run does not
+    // wrap, so its tie run cannot either.
+    if let Some(ties_at) = &gap_loop.vertex_ties {
+        let mut tied: Vec<i32> = Vec::new();
+        for &k in ties_at.iter().flatten() {
+            if !tied.contains(&k) && pieces.iter().all(|p| p.owner != k) {
+                tied.push(k);
+            }
+        }
+
+        tied.sort();
+        for k in tied {
+            let starts: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    ties_at[i].contains(&k)
+                        && ((!gap_loop.is_closed && i == 0)
+                            || !ties_at[(i + n - 1) % n].contains(&k))
+                })
+                .collect();
+            if !(starts.len() == 1 || starts.len() == 2) {
+                continue;
+            }
+
+            for run_start in starts {
+                let mut piece = CornerFillPiece {
+                    owner: k,
+                    ..CornerFillPiece::default()
+                };
+                let mut i = run_start;
+                while (gap_loop.is_closed || i < n)
+                    && ties_at[i % n].contains(&k)
+                    && piece.vertices.len() < n
+                {
+                    let vertex = gap_loop.vertices[i % n];
+                    piece.vertices.push(vertex);
+                    piece.parameters.push(
+                        chains[k as usize]
+                            .evaluate(mesh.position(vertex))?
+                            .parameter,
+                    );
+                    i += 1;
+                }
+
+                pieces.push(piece);
+            }
+        }
+    }
+
+    Ok(pieces)
 }

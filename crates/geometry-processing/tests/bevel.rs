@@ -109,6 +109,8 @@ mod rust_only_bevel_r2p02_field_tests;
 mod rust_only_bevel_r2p02_fill_tests;
 #[path = "bevel/rust_only_bevel_r2p02_tests.rs"]
 mod rust_only_bevel_r2p02_tests;
+#[path = "bevel/rust_only_bevel_r2p02_walk_tests.rs"]
+mod rust_only_bevel_r2p02_walk_tests;
 #[path = "bevel/rust_only_bevel_r2p03_tests.rs"]
 mod rust_only_bevel_r2p03_tests;
 #[path = "bevel/rust_only_bevel_r2p05_from_polyline_tests.rs"]

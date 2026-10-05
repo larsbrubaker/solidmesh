@@ -3,14 +3,20 @@
 //! side a both-sided loop is, which open pieces are a member's own, what each chain side left, and
 //! whether each side closed, and the corner groups' test
 //! ([`every_corner_group_leaves_one_loop`]) - and the boundary step that follows another
-//! ([`follows`], [`one_of`]); the walk itself lands with a later package.
+//! ([`follows`], [`one_of`]) - and the walk itself ([`loops_of_side`]).
 
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
 
-use super::triangle_edges::level_line_triangle_corners;
+use std::rc::Rc;
+
+use vector_math::Vector3;
+
+use super::triangle_edges::{self, level_line_triangle_corners};
+use super::{consumed_to_the_rim, corner_fill, foreign_edge_room};
 use super::{BandGroup, ChainSideLoops, GapLoop, LevelLineMesh, PickCorner};
+use super::{ChainField, FieldSample, LevelLineWork, WorkError};
 
 /// Which side a loop that runs on BOTH sides belongs to: the side most of its vertices read, or -
 /// where the smaller side holds a quarter of them or more - the side the group gives it.
@@ -515,4 +521,205 @@ pub fn one_of(mesh: &LevelLineMesh, from: i32, to: i32) -> Option<i32> {
             .iter()
             .any(|c| c.0 == from && c.1 == to)
     })
+}
+
+/// C# `GapLoopWalk.LoopsOfSide`: the gap's boundary on one side, walked with the kept surface on
+/// the left. After the removal a gap edge stands on exactly one triangle, so the steps are read
+/// straight off the mesh: each open edge whose remaining triangle belongs to this side, in that
+/// triangle's own direction - and, across a KNIFE the band reached (or along a side consumed
+/// exactly to its rim, `consumed_rims`), the edge whose kept triangle is the untagged far face.
+///
+/// Which step FOLLOWS a step is asked of the triangle fan ([`follows`]), not of the arriving
+/// vertex: the boundary may pass through one vertex twice, and a successor kept per vertex
+/// threaded a pinched boundary into scrambled loops. An open run is started from its own first
+/// step. Each loop belongs to the chain that MINIMISES the group's field (`sample`) at it, read at
+/// every vertex; a loop whose minimiser changes is mixed. With `tie_fields`, each vertex also names
+/// every member whose field ties the owner's there ([`corner_fill::fields_tie`]).
+#[allow(clippy::too_many_arguments)]
+pub fn loops_of_side(
+    mesh: &LevelLineMesh,
+    sample: &dyn Fn(Vector3) -> Result<FieldSample, WorkError>,
+    group: &BandGroup,
+    tie_fields: Option<&[Rc<ChainField>]>,
+    side_of_both_sided: Option<&dyn Fn(i32, Vector3) -> i32>,
+    consumed_rims: Option<&[(Vector3, Vector3)]>,
+    snap: f64,
+) -> Result<Vec<GapLoop>, WorkError> {
+    let side = group.tag;
+    let mut steps: Vec<(i32, i32)> = Vec::new();
+
+    // A KNIFE the band reached leaves an open edge whose kept triangle is the untagged far face:
+    // the crease stretch is this side's rail there. Which side it belongs to is the removed
+    // triangle's tag, so the removed triangles are read only when such an edge exists.
+    let mut our_removed_on: Option<HashMap<(i32, i32), i32>> = None;
+    let mut ours_across_a_knife = |edge: (i32, i32), kept: i32| {
+        let removed_on = our_removed_on.get_or_insert_with(|| {
+            let mut map = HashMap::new();
+            for r in 0..mesh.triangle_count() {
+                let t = mesh.triangles()[r as usize];
+                if mesh.is_removed(r) && t.tag == side {
+                    for (from, to) in level_line_triangle_corners(t) {
+                        map.insert(triangle_edges::key(from, to), r);
+                    }
+                }
+            }
+
+            map
+        });
+        let Some(&removed) = removed_on.get(&edge) else {
+            return false;
+        };
+        foreign_edge_room::is_a_knife(
+            mesh,
+            mesh.triangles()[removed as usize],
+            mesh.triangles()[kept as usize],
+            edge,
+        ) || consumed_rims.is_some_and(|rims| {
+            consumed_to_the_rim::lies_on_a_rim(
+                rims,
+                mesh.position(edge.0),
+                mesh.position(edge.1),
+                snap,
+            )
+        })
+    };
+
+    // The mesh's edges come in ascending (low, high) order, so the steps are gathered in a
+    // canonical order and the loops do not depend on when the walk was asked.
+    for edge in mesh.edges() {
+        let standing = mesh.triangles_on(edge.0, edge.1);
+        if standing.len() != 1 {
+            continue;
+        }
+
+        let kept_tag = mesh.triangles()[standing[0] as usize].tag;
+        if kept_tag != side && !(kept_tag == 0 && ours_across_a_knife(edge, standing[0])) {
+            continue;
+        }
+
+        let t = mesh.triangles()[standing[0] as usize];
+        if let Some(step) = level_line_triangle_corners(t)
+            .into_iter()
+            .find(|c| triangle_edges::key(c.0, c.1) == edge)
+        {
+            steps.push(step);
+        }
+    }
+
+    let ours: HashSet<(i32, i32)> = steps.iter().copied().collect();
+    let mut reached: HashSet<(i32, i32)> = HashSet::new();
+    for &step in &steps {
+        if let Some(following) = follows(mesh, step) {
+            if ours.contains(&following) {
+                reached.insert(following);
+            }
+        }
+    }
+
+    let mut loops = Vec::new();
+    let mut walked: HashSet<(i32, i32)> = HashSet::new();
+
+    // An open run has to be started from its own first step, or it comes out as two pieces.
+    let heads: Vec<(i32, i32)> = steps
+        .iter()
+        .copied()
+        .filter(|s| !reached.contains(s))
+        .collect();
+    for &start in heads.iter().chain(steps.iter()) {
+        if walked.contains(&start) {
+            continue;
+        }
+
+        let mut run: Vec<i32> = Vec::new();
+        let mut current = start;
+        let mut closed = false;
+        while walked.insert(current) {
+            LevelLineWork::charge(1)?;
+            run.push(current.0);
+            match follows(mesh, current).filter(|f| ours.contains(f)) {
+                None => {
+                    // The last step of an open run: its end vertex closes nothing, so it is carried
+                    // as the run's last point.
+                    run.push(current.1);
+                    break;
+                }
+                Some(following) => {
+                    current = following;
+                    if current == start {
+                        closed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if run.len() > 1 {
+            let mut samples = Vec::with_capacity(run.len());
+            for &v in &run {
+                samples.push(sample(mesh.position(v))?);
+            }
+
+            let owner = samples[0].chain;
+            let mixed = samples.iter().any(|x| x.chain != owner);
+            // A loop's owner is a member of its group (C#'s indexer throws otherwise).
+            let chain_side = if mixed {
+                side
+            } else if let (Some(side_of), true) =
+                (side_of_both_sided, group.both_sided.contains(&owner))
+            {
+                let sides: Vec<i32> = run
+                    .iter()
+                    .map(|&v| side_of(owner, mesh.position(v)))
+                    .collect();
+                side_of_a_both_sided_loop(&sides, group.side_of_chain[&owner])
+            } else {
+                group.side_of_chain[&owner]
+            };
+            let mut owners: Vec<i32> = Vec::new();
+            for x in &samples {
+                if !owners.contains(&x.chain) {
+                    owners.push(x.chain);
+                }
+            }
+
+            owners.sort();
+            let mut gap_loop = GapLoop::new(
+                chain_side,
+                closed,
+                run.clone(),
+                samples.iter().map(|x| x.parameter).collect(),
+                owner,
+                mixed,
+                Some(owners),
+            );
+            gap_loop.vertex_owners = Some(samples.iter().map(|x| x.chain).collect());
+            gap_loop.group_tag = side;
+            if let Some(fields) = tie_fields {
+                let mut ties = Vec::with_capacity(run.len());
+                for (i, &v) in run.iter().enumerate() {
+                    let mut tied = Vec::new();
+                    for &k in &group.members {
+                        if k == samples[i].chain
+                            || corner_fill::fields_tie(
+                                &fields[k as usize],
+                                &fields[samples[i].chain as usize],
+                                mesh.position(v),
+                            )?
+                        {
+                            tied.push(k);
+                        }
+                    }
+
+                    tied.sort();
+                    ties.push(tied);
+                }
+
+                gap_loop.vertex_ties = Some(ties);
+            }
+
+            loops.push(gap_loop);
+        }
+    }
+
+    Ok(loops)
 }

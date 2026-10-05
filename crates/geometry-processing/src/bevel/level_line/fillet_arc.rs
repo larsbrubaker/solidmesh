@@ -2,14 +2,15 @@
 //! its collinear angle, the whole-leg test ([`on_a_whole_leg`]), a sharp joint's seam row
 //! ([`seam_row`]) and its tolerance, the carried skew arc ([`carried`]) with its rigid turn
 //! ([`turn`]), the smooth step, the bend threshold's cosine, the joint search and the carry's
-//! weight ([`carry_weight`]); the arcs that
+//! weight ([`carry_weight`]), and a row end on a joint's seam re-read on its partner's leg
+//! ([`on_the_partners_leg`]); the arcs that
 //! read the level-line mesh land with later packages. The arc point itself is
 //! [`super::gap_fill::arc_point`].
 
 use vector_math::Vector3;
 
 use super::gap_fill::arc_point;
-use super::ChainField;
+use super::{ChainField, LevelLineMesh};
 
 /// How far a chain joint may turn, in degrees, and still be read as straight through: far above
 /// the float noise of an edge an importer split into collinear pieces (well under a thousandth of
@@ -306,4 +307,79 @@ pub fn tangent_at(chain: &ChainField, parameter: f64) -> Vector3 {
     };
 
     ((own * (1.0 - share)) + (other * share)).get_normal()
+}
+
+/// A row end as the carry reads it: its vertex, chain parameter, tie span and lap (C#'s
+/// `(int Vertex, double At, (double Low, double High) Span, double Lap)`).
+pub type RowEnd = (i32, f64, (f64, f64), f64);
+
+/// C# `FilletArc.OnThePartnersLeg`: a row end standing on a sharp joint's SEAM - equidistant from
+/// the joint's two legs, so either leg's fillet passes through it - re-read on the leg its partner
+/// stands nearer, at its foot on that leg; any other end as it was.
+///
+/// Around Center's tips have no inner rail vertex of their own: the one nearest a tip lies on the
+/// seam plane and reads the incoming leg, so its spoke to a wedge vertex on the outgoing leg's side
+/// was drawn about a foreign leg's chain point and cut 0.124 inside the control. Read on the
+/// partner's leg, both ends lie on that leg's fillet and the row is carried along it. A partner
+/// itself on the seam (a row lying in the seam plane) is left alone: neither leg is its. A reading
+/// ON the joint counts as the incoming leg's, so it is re-read only toward the outgoing one - both
+/// other choices were measured worse on Around Center.
+pub fn on_the_partners_leg(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    end: RowEnd,
+    partner_end: RowEnd,
+) -> RowEnd {
+    let length = chain.length;
+    let position = mesh.position(end.0);
+    let partner = mesh.position(partner_end.0);
+    // The joint's own wrap, round the loop whatever the chain (C#'s local `Wrapped`).
+    let wrapped = |parameter: f64| {
+        let parameter = parameter % length;
+        if parameter < 0.0 {
+            parameter + length
+        } else {
+            parameter
+        }
+    };
+
+    // The end as the carry reads it against this partner: its tie span clamped toward the
+    // partner's reading. Which leg it is on is decided by that reading, not the bare station.
+    let reads = (partner_end.1 - end.3).clamp(end.2 .0, end.2 .1) + end.3;
+    for &(joint_at, joint_setback) in chain.sharp_joints() {
+        // The joint's parameter in the end's own unwrapped frame.
+        let mut offset = reads - joint_at;
+        offset -= (offset / length).round_ties_even() * length;
+        if offset.abs() > 2.0 * joint_setback {
+            continue;
+        }
+
+        let apex = chain.point_at(joint_at);
+        let tolerance = seam_tolerance(apex, joint_setback);
+        let step = 1e-3 * joint_setback;
+        let into = (apex - chain.point_at(wrapped(joint_at - step))).get_normal();
+        let out_of = (chain.point_at(wrapped(joint_at + step)) - apex).get_normal();
+        // The seam is the joint's bisector plane: a point on it is equally far from both legs'
+        // lines, and its side says which leg's fillet it is nearer.
+        let normal = (into + out_of).get_normal();
+        let e = position - apex;
+        if e.dot(normal).abs() > tolerance || e.dot(into) > 0.0 || e.dot(out_of) < 0.0 {
+            continue;
+        }
+
+        let side = (partner - apex).dot(normal);
+        if side.abs() <= tolerance {
+            continue;
+        }
+
+        let on_out = side > 0.0;
+        if on_out == (offset > 0.0) {
+            continue;
+        }
+
+        let at = reads - offset + if on_out { e.dot(out_of) } else { e.dot(into) };
+        return (end.0, at, (at - end.3, at - end.3), end.3);
+    }
+
+    end
 }

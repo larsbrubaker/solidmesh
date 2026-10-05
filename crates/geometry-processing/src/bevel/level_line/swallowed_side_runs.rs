@@ -160,9 +160,12 @@ pub fn virtual_run_over(
             run.push((rail_on(segment_of(t), t), t));
         }
 
-        // C# sorts unstably by parameter; the parameters are distinct but for a corner standing on
-        // a station, which this keeps in the order laid.
-        run.sort_by(|p, q| p.1.total_cmp(&q.1));
+        // C#'s List.Sort by parameter: its introspective sort, so equal parameters (a chain corner
+        // standing on a station) come out in C#'s order. Double.CompareTo orders NaN first.
+        vector_math::cs_sort::introspective_sort(&mut run, &mut |p, q| {
+            p.1.partial_cmp(&q.1)
+                .unwrap_or_else(|| q.1.is_nan().cmp(&p.1.is_nan()))
+        });
     }
 
     run.push((rail_on(segment_of(to), to), to));

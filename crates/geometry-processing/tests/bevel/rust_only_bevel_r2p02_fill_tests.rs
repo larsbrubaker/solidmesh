@@ -613,3 +613,82 @@ fn rust_only_a_piece_round_a_free_end_splits_into_its_rails() {
         vec![at_start.clone()]
     );
 }
+
+#[test]
+fn rust_only_a_row_end_on_a_joints_seam_is_read_on_its_partners_leg() {
+    let chain = ChainField {
+        sharp_turn_degrees: 45.0,
+        ..l_chain()
+    };
+    let mut mesh = LevelLineMesh::new();
+    // (3, 1) is on the L's corner seam; the partners stand on the outgoing and incoming sides.
+    mesh.vertices = vec![
+        Vector3::new(3.0, 1.0, 0.0),
+        Vector3::new(4.5, 3.0, 0.0),
+        Vector3::new(1.0, -1.0, 0.0),
+    ];
+    let end = (0, 4.0, (4.0, 4.0), 0.0);
+    let toward_out = (1, 7.0, (7.0, 7.0), 0.0);
+    let toward_in = (2, 1.0, (1.0, 1.0), 0.0);
+    // Read on the outgoing leg at its foot there, one along it.
+    assert_eq!(
+        fillet_arc::on_the_partners_leg(&mesh, &chain, end, toward_out),
+        (0, 5.0, (5.0, 5.0), 0.0)
+    );
+    // Reading on the joint already counts as the incoming leg's: as it was.
+    assert_eq!(
+        fillet_arc::on_the_partners_leg(&mesh, &chain, end, toward_in),
+        end
+    );
+}
+
+#[test]
+fn rust_only_a_one_owner_loop_splits_at_another_chains_tie_run() {
+    use geometry_processing::bevel::level_line::corner_fill_pieces::tie_split;
+    use geometry_processing::bevel::level_line::GapLoop;
+    let x_leg = Rc::new(open_chain(
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        vec![1.0, 1.0],
+    ));
+    let y_leg = Rc::new(open_chain(
+        vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 4.0, 0.0)],
+        vec![1.0, 1.0],
+    ));
+    let chains = vec![x_leg, y_leg];
+    let mut mesh = LevelLineMesh::new();
+    mesh.vertices = (0..6)
+        .map(|i| Vector3::new(1.0, 1.0 + i as f64, 0.0))
+        .collect();
+    let mut gap_loop = GapLoop::new(
+        1,
+        true,
+        (0..6).collect(),
+        vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+        0,
+        false,
+        None,
+    );
+    // Vertices 2, 3 and 4 tie with chain 1.
+    gap_loop.vertex_ties = Some(vec![
+        vec![0],
+        vec![0],
+        vec![0, 1],
+        vec![0, 1],
+        vec![0, 1],
+        vec![0],
+    ]);
+    let [own, tied] = tie_split(&mesh, &chains, &gap_loop, 0)
+        .expect("no budget")
+        .expect("one tie run of one other chain");
+    assert_eq!(tied.owner, 1);
+    assert_eq!(tied.vertices, vec![2, 3, 4]);
+    assert_eq!(tied.parameters, vec![3.0, 4.0, 4.0]);
+    assert_eq!(own.owner, 0);
+    assert_eq!(own.vertices, vec![4, 5, 0, 1, 2]);
+    assert_eq!(own.parameters, vec![4.0, 5.0, 0.0, 1.0, 2.0]);
+    // No ties: nothing to split.
+    gap_loop.vertex_ties = None;
+    assert!(tie_split(&mesh, &chains, &gap_loop, 0)
+        .expect("no budget")
+        .is_none());
+}
