@@ -18,6 +18,9 @@ path = "src/lib.rs"
 
 [dependencies]
 vector-math = { path = "../vector-math" }
+# The ClipperLib polygon helpers (agg-sharp's clipper_library) slicing and stitching share with
+# DataConverters2D live in agg-path.
+agg-path = { path = "../agg-path" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).

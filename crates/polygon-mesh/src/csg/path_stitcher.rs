@@ -9,8 +9,8 @@
 use clipper2_rust::{Path64, Point64};
 use vector_math::Vector3;
 
-use crate::clipper_extensions::{get_intersection, length_squared, Intersection};
 use crate::Mesh;
+use agg_path::clipper_library::{get_intersection, length_squared, Intersection};
 
 fn distance_squared(a: Point64, b: Point64) -> i64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y))

@@ -2,8 +2,8 @@
 //! face BSP tree, slicing and stitching on clipper polygons. The rest (SDF, dual contouring)
 //! wait for their Phase 2 slices and are listed in `docs/PORTING_PLAN.md`.
 
+use agg_path::clipper_library::{create_from_string, Intersection, PolygonExtensions};
 use clipper2_rust::Point64;
-use polygon_mesh::clipper_extensions::{create_from_string, get_intersections, Intersection};
 use polygon_mesh::csg::{path_stitcher, slice_layer};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};
 use polygon_mesh::solids::platonic_solids;
@@ -252,7 +252,7 @@ fn polygon_requirements() {
     // crossing the bottom
     {
         let intersections =
-            get_intersections(&outer_loop[0], Point64::new(0, -10), Point64::new(0, 10));
+            outer_loop[0].get_intersections(Point64::new(0, -10), Point64::new(0, 10));
         assert!(intersections.len() == 1);
         assert_eq!(intersections[0].0, 2);
         assert_eq!(intersections[0].1, Intersection::Intersect);
@@ -262,7 +262,7 @@ fn polygon_requirements() {
     // touching the top point
     {
         let intersections =
-            get_intersections(&outer_loop[0], Point64::new(0, 700), Point64::new(0, 1000));
+            outer_loop[0].get_intersections(Point64::new(0, 700), Point64::new(0, 1000));
         assert!(intersections.len() == 2);
         for intersection in &intersections {
             assert_eq!(intersection.1, Intersection::Colinear);
@@ -273,7 +273,7 @@ fn polygon_requirements() {
     // touching the bottom line
     {
         let intersections =
-            get_intersections(&outer_loop[0], Point64::new(0, -10), Point64::new(0, 0));
+            outer_loop[0].get_intersections(Point64::new(0, -10), Point64::new(0, 0));
         assert!(intersections.len() == 1);
         assert_eq!(intersections[0].0, 2);
         assert_eq!(intersections[0].1, Intersection::Colinear);
