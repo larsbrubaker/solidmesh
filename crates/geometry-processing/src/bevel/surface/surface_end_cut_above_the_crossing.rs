@@ -5,8 +5,8 @@
 //! uncrossed rails close against ([`try_the_end_plane`]), whether the crossing's foot stands on it
 //! ([`the_foot_stands_on_the_end_plane`]), the cut back of the section at the run-out's rim
 //! ([`cut_back_at_the_run_out`]), what each chord carries ([`the_betweens`]) and whether a point
-//! stands clear of every face ([`nothing_stands_at`]); the close itself (`TryClose`) lands with a
-//! later package. The trim it reads is
+//! stands clear of every face ([`nothing_stands_at`]) - and the close itself ([`try_close`]). The
+//! trim it reads is
 //! [`SurfaceStripTrimmedAtTheCrossing`].
 //!
 //! C#'s `IReadOnlyList<int>[] alongTheProfile` is `Option<&[Vec<i32>]>` here: the array may be null,
@@ -15,7 +15,13 @@
 
 use vector_math::Vector3;
 
-use super::{SurfaceStrip, SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool};
+use super::surface_mitre_joint_step::SideSeams;
+use super::{
+    surface_end_cut, surface_strip_ends, SurfaceEdgePlan, SurfaceStrip, SurfaceStripStation,
+    SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
+};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use crate::topology::EdgeConvexity;
 
 /// C# `TheFoot`: what `rail_of` says of the entry that is the crossing's own foot.
 pub const THE_FOOT: i32 = -1;
@@ -337,4 +343,197 @@ pub fn nothing_stands_at(pool: &SurfaceVertexPool, faces: &[(i32, i32, i32)], at
             .into_iter()
             .any(|corner| (pool.position_of(corner) - at).length() < pool.near_enough())
     })
+}
+
+/// C# `TryClose`: a band's end where a mixed corner's run-out crossed it before the end - the
+/// rails the crossing took stop on the crossing (the ring reads their crossing vertices), and the
+/// rest close against the face beyond: the profile across the end plane, with the crossing's foot
+/// and the run-out's die point where they stand on it, cut back at the run-out's rim where nothing
+/// stands at the corner, and cut out of the face beyond ([`surface_end_cut::try_cut`]). Returns
+/// the station the stitch sews to. `seams` is C#'s `List<(int, double)>[,]` indexed by
+/// `edge_index`; a missing or empty run there, where C# would throw, is refused as an end not
+/// supported.
+#[allow(clippy::too_many_arguments)]
+pub fn try_close(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    strip: &SurfaceStrip,
+    edge: &SurfaceEdgePlan,
+    seams: &[SideSeams],
+    edge_index: i32,
+    corner: Vector3,
+    at_the_start: bool,
+    runs_out_facing: Vector3,
+    trimmed: &SurfaceStripTrimmedAtTheCrossing,
+) -> Result<SurfaceStripStation, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripEndNotSupported,
+            vec![corner.into()],
+        )
+    };
+    let seam_end = |side: usize| -> Option<i32> {
+        let run = seams.get(edge_index as usize)?[side].as_ref()?;
+        let end = if at_the_start {
+            run.first()
+        } else {
+            run.last()
+        };
+        end.map(|&(vertex, _)| vertex)
+    };
+    let (Some(on_the_left), Some(on_the_right)) = (seam_end(0), seam_end(1)) else {
+        return Err(not_supported());
+    };
+
+    let Some(normal) = try_the_end_plane(pool, strip, corner, on_the_left, on_the_right, trimmed)
+    else {
+        return Err(not_supported());
+    };
+
+    let rails = strip.rail_count();
+    let mut ring = vec![0; rails.max(0) as usize];
+    let mut meets_at = vec![0.0; rails.max(0) as usize];
+    let mut profile: Vec<i32> = Vec::with_capacity(rails.max(0) as usize);
+    let mut rail_of: Vec<i32> = Vec::with_capacity(rails.max(0) as usize);
+    let mut rolled_wall_end = -1;
+
+    let the_foot_is_on_the_end = trimmed.the_foot_is_on_the_rim.get()
+        && the_foot_stands_on_the_end_plane(strip, corner, normal, trimmed);
+
+    let the_rail_the_foot_stands_under = if trimmed.lowest_rail_crossed() == 0 {
+        trimmed.highest_rail_crossed() + 1
+    } else {
+        trimmed.lowest_rail_crossed()
+    };
+
+    for rail in 0..rails {
+        let Some(param) = strip.try_cross(rail, corner, normal) else {
+            return Err(not_supported());
+        };
+
+        let at = strip.point_on(rail, param);
+        let on_the_end = if rail == 0 {
+            on_the_left
+        } else if rail == rails - 1 {
+            on_the_right
+        } else {
+            -1
+        };
+
+        if the_foot_is_on_the_end && rail == the_rail_the_foot_stands_under {
+            profile.push(trimmed.foot);
+            rail_of.push(THE_FOOT);
+        }
+
+        if on_the_end >= 0 {
+            if (pool.position_of(on_the_end) - at).length()
+                > surface_strip_ends::meets_the_seam(pool)
+            {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+                    vec![at.into()],
+                ));
+            }
+
+            profile.push(on_the_end);
+            rail_of.push(rail);
+
+            if (rail == 0 && edge.left_band.is_some())
+                || (rail == rails - 1 && edge.right_band.is_some())
+            {
+                rolled_wall_end = profile.len() as i32 - 1;
+            }
+        } else {
+            profile.push(pool.add(at));
+            rail_of.push(rail);
+        }
+
+        let r = rail as usize;
+        if trimmed.crosses(rail) {
+            ring[r] = trimmed
+                .vertex_on(rail)
+                .expect("a crossed rail has its vertex");
+            meets_at[r] = trimmed
+                .param_on(rail)
+                .expect("a crossed rail has its parameter");
+        } else {
+            ring[r] = profile[profile.len() - 1];
+            meets_at[r] = param;
+        }
+    }
+
+    let mut the_apex = corner;
+    let mut the_die_is_the_apex = false;
+    let the_die_vertex = trimmed.the_die_vertex.get();
+
+    if the_foot_is_on_the_end && the_die_vertex >= 0 {
+        if trimmed.lowest_rail_crossed() == 0 {
+            profile.insert(0, the_die_vertex);
+            rail_of.insert(0, THE_DIE_POINT);
+        } else {
+            profile.push(the_die_vertex);
+            rail_of.push(THE_DIE_POINT);
+        }
+
+        if nothing_stands_at(pool, faces, corner) {
+            cut_back_at_the_run_out(
+                pool,
+                &mut profile,
+                &mut rail_of,
+                trimmed,
+                normal,
+                &mut the_apex,
+                &mut the_die_is_the_apex,
+            );
+        }
+    }
+
+    if the_die_is_the_apex {
+        if let Some(at) = rail_of.iter().position(|&r| r == THE_DIE_POINT) {
+            profile.remove(at);
+            rail_of.remove(at);
+        }
+    }
+
+    let betweens = |along: Option<&[Vec<i32>]>, rail_of: &[i32]| {
+        the_betweens(
+            rails,
+            along,
+            rail_of,
+            trimmed.foot,
+            the_die_vertex,
+            trimmed.lowest_rail_crossed(),
+            trimmed.highest_rail_crossed(),
+        )
+    };
+
+    if profile.len() < 2 {
+        let between = betweens(None, &rail_of);
+        return Ok(SurfaceStripStation::new(ring, meets_at, between));
+    }
+
+    let into_the_chain = if at_the_start {
+        edge.edge.direction()
+    } else {
+        -edge.edge.direction()
+    };
+
+    let along_the_profile = surface_end_cut::try_cut(
+        pool,
+        faces,
+        &profile,
+        the_apex,
+        edge.convexity() == EdgeConvexity::Concave,
+        into_the_chain,
+        runs_out_facing,
+        rolled_wall_end,
+        if the_foot_is_on_the_end && !the_die_is_the_apex {
+            the_die_vertex
+        } else {
+            -1
+        },
+    )?;
+
+    let between = betweens(Some(&along_the_profile), &rail_of);
+    Ok(SurfaceStripStation::new(ring, meets_at, between))
 }

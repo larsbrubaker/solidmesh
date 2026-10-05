@@ -5,7 +5,8 @@
 //! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs`, its constructor, the part's supporting planes
 //! ([`SurfaceStripEndsOnTheHull::supporting_planes_of`]) and the readings the end is built from (the
 //! turning point between two planes, the ties settled, a face on a plane, the apex on a knife edge);
-//! the reading (`TryRead`) and the closing (`TryClose`) land with a later package.
+//! the reading ([`SurfaceStripEndsOnTheHull::try_read`]) and the closing
+//! ([`SurfaceStripEndsOnTheHull::try_close`]).
 
 use vector_math::Vector3;
 
@@ -13,7 +14,13 @@ use std::collections::HashSet;
 
 use polygon_mesh::Mesh;
 
-use super::{SurfaceLine, SurfaceStrip, SurfaceVertexPool};
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
+use super::surface_mitre_joint_step::SideSeams;
+use super::{
+    surface_end_gives_up_the_section, surface_end_notch, surface_mesh_closure, surface_strip_ends,
+    SurfaceBandRunsOffOverAStretch, SurfaceEdgePlan, SurfaceLine, SurfaceStrip,
+    SurfaceStripStation, SurfaceVertexPool,
+};
 
 /// C# `SurfaceStripEndsOnTheHull`: where a strip leaves the part at one of its ends.
 ///
@@ -338,5 +345,341 @@ impl SurfaceStripEndsOnTheHull {
         }
 
         pool.try_find_near(crossing, pool.snap_near(), None)
+    }
+}
+
+impl SurfaceStripEndsOnTheHull {
+    /// C# `TryRead`: where each rail of `strip` leaves the part at this end of `edge` - the
+    /// supporting plane (of `planes`) its walk goes out through first, at what parameter - with ties
+    /// settled, at most two runs of planes, the turning point between them and, on a knife edge
+    /// (`knife_line`), the part's vertex both planes meet it at. `Err` names why the end is not one
+    /// the hull can close.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    pub fn try_read(
+        pool: &SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        at_the_start: bool,
+        planes: &[SurfaceStripEndsOnTheHullSupportingPlane],
+        knife_line: Option<SurfaceLine>,
+    ) -> Result<SurfaceStripEndsOnTheHull, BevelAdvisory> {
+        let length = (edge.to() - edge.from()).dot(strip.along());
+        let near = pool.near_enough();
+        let walk = if at_the_start {
+            -strip.along()
+        } else {
+            strip.along()
+        };
+        let ends_at = if at_the_start { edge.from() } else { edge.to() };
+
+        let rails = strip.rail_count() as usize;
+        let mut exit_at = vec![0.0; rails];
+        let mut plane_of = vec![SurfaceStripEndsOnTheHullSupportingPlane::default(); rails];
+        let mut tied: Vec<Vec<SurfaceStripEndsOnTheHullSupportingPlane>> = vec![Vec::new(); rails];
+
+        for rail in 0..rails {
+            let mut cut_back_by = f64::NEG_INFINITY;
+
+            for &plane in planes {
+                if !(plane.normal.dot(walk) > 1e-9) {
+                    continue;
+                }
+                // A plane the walk does not go out through, or one the rail runs along.
+                let Some(param) = strip.try_cross(rail as i32, plane.at, plane.normal) else {
+                    continue;
+                };
+
+                let back = if at_the_start { param } else { length - param };
+                if back > cut_back_by + near {
+                    cut_back_by = back;
+                    tied[rail].clear();
+                } else if !(back > cut_back_by - near) {
+                    continue;
+                }
+
+                cut_back_by = vector_math::cs_math::max_f64(cut_back_by, back);
+                tied[rail].push(plane);
+            }
+
+            if tied[rail].is_empty() || cut_back_by < -near || cut_back_by > length + near {
+                // A rail that leaves through nothing, or outside the edge's own span.
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceHullEndNotSupported,
+                    vec![strip
+                        .point_on(rail as i32, if at_the_start { 0.0 } else { length })
+                        .into()],
+                ));
+            }
+
+            exit_at[rail] = if at_the_start {
+                cut_back_by
+            } else {
+                length - cut_back_by
+            };
+            plane_of[rail] = tied[rail][0];
+        }
+
+        Self::settle_the_ties(&mut plane_of, &tied);
+
+        let mut changes_after: i32 = -1;
+        for rail in 1..plane_of.len() {
+            if plane_of[rail] == plane_of[rail - 1] {
+                continue;
+            }
+
+            if changes_after >= 0 {
+                // A third run: a third plane, or the first come back again.
+                let code = if Self::three_distinct(&plane_of) {
+                    BevelAdvisoryCode::SurfaceHullEndOnThreePlanes
+                } else {
+                    BevelAdvisoryCode::SurfaceHullEndCrossesTheCorner
+                };
+                return Err(BevelAdvisory::new(
+                    code,
+                    vec![strip.point_on(rail as i32, exit_at[rail]).into()],
+                ));
+            }
+
+            changes_after = rail as i32 - 1;
+        }
+
+        if Self::three_distinct(&plane_of) {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceHullEndOnThreePlanes,
+                vec![ends_at.into()],
+            ));
+        }
+
+        let mut between = Vector3::ZERO;
+        if changes_after >= 0 {
+            match Self::try_between(strip, &plane_of, changes_after, length, near) {
+                Some(at) => between = at,
+                None => {
+                    let c = changes_after as usize;
+                    return Err(BevelAdvisory::new(
+                        BevelAdvisoryCode::SurfaceHullEndCrossesTheCorner,
+                        vec![strip.point_on(changes_after, exit_at[c]).into()],
+                    ));
+                }
+            }
+        }
+
+        let mut apex = -1;
+        if changes_after >= 0 {
+            if let Some(knife_line) = knife_line {
+                let c = changes_after as usize;
+                match Self::try_the_apex(pool, plane_of[c], plane_of[c + 1], knife_line, near) {
+                    Some(found) => apex = found,
+                    // The two planes meet the knife edge where the part has no vertex: named.
+                    None => {
+                        return Err(BevelAdvisory::new(
+                            BevelAdvisoryCode::SurfaceHullEndNotSupported,
+                            vec![ends_at.into()],
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(SurfaceStripEndsOnTheHull::new(
+            at_the_start,
+            exit_at,
+            plane_of,
+            changes_after,
+            between,
+            apex,
+        ))
+    }
+}
+
+impl SurfaceStripEndsOnTheHull {
+    /// C# `TryClose`: a band that RAN OFF its wall over `stretch` closed where it leaves the part -
+    /// read on the hull ([`Self::try_read`], on the stretch's knife line), the ring standing on the
+    /// two seams' end vertices, and the end cap in two pieces either side of the turn between the
+    /// planes: the run-off side's fanned from the knife edge's apex, the far side's from the chain's
+    /// corner. Returns the station the stitch sews to, or why the end is not one the hull closes.
+    /// `seams` is C#'s `List<(int, double)>[,]` indexed by `edge_index`; a missing or empty run
+    /// there, where C# would throw, is refused as an end not supported.
+    #[allow(clippy::too_many_arguments)]
+    pub fn try_close(
+        pool: &mut SurfaceVertexPool,
+        faces: &mut Vec<(i32, i32, i32)>,
+        faces_before_the_ends: usize,
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        seams: &[SideSeams],
+        edge_index: i32,
+        corner: Vector3,
+        at_the_start: bool,
+        stretch: &SurfaceBandRunsOffOverAStretch,
+        planes: &[SurfaceStripEndsOnTheHullSupportingPlane],
+    ) -> Result<SurfaceStripStation, BevelAdvisory> {
+        let not_supported = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceHullEndNotSupported,
+                vec![corner.into()],
+            )
+        };
+        let ends = Self::try_read(
+            pool,
+            strip,
+            edge,
+            at_the_start,
+            planes,
+            Some(SurfaceLine::new(
+                stretch.knife_line.start,
+                stretch.knife_line.direction,
+            )),
+        )?;
+
+        if ends.changes_after < 0 || ends.apex < 0 {
+            // One plane for every rail: no turn in the end and no corner of the part to die on.
+            return Err(not_supported());
+        }
+
+        let rails = strip.rail_count();
+        let count = rails as usize;
+        let mut ring = vec![0; count];
+        let mut meets_at = vec![0.0; count];
+
+        for rail in 0..count {
+            let at = strip.point_on(rail as i32, ends.exit_at[rail]);
+            meets_at[rail] = ends.exit_at[rail];
+
+            if rail == 0 || rail == count - 1 {
+                // The walkback has already left a vertex where this rail's tangent line dies, and the
+                // strip ends on THAT vertex.
+                let side = if rail == 0 { 0 } else { 1 };
+                let vertex = seams
+                    .get(edge_index as usize)
+                    .and_then(|sides| sides[side].as_ref())
+                    .and_then(|run| {
+                        if at_the_start {
+                            run.first()
+                        } else {
+                            run.last()
+                        }
+                    })
+                    .map(|&(vertex, _)| vertex);
+                let Some(vertex) = vertex else {
+                    return Err(not_supported());
+                };
+
+                if (pool.position_of(vertex) - at).length()
+                    > surface_strip_ends::meets_the_seam(pool)
+                {
+                    return Err(BevelAdvisory::new(
+                        BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+                        vec![at.into()],
+                    ));
+                }
+
+                ring[rail] = vertex;
+                continue;
+            }
+
+            ring[rail] = pool.add(at);
+        }
+
+        let mut between = vec![Vec::new(); (rails - 1).max(0) as usize];
+
+        // Where the end turns from the one plane to the other: minted once, shared by both pieces of
+        // the cap and the stitch.
+        let between_them = pool.add(ends.between);
+        between[ends.changes_after as usize] = vec![between_them];
+
+        let apex = pool.position_of(ends.apex);
+        let into_the_chain = if at_the_start {
+            edge.edge.direction()
+        } else {
+            -edge.edge.direction()
+        };
+
+        // Two pieces, each walked from its own side of the strip INWARD to the turn between the
+        // planes: the run-off side's fanned from the knife edge's apex, the far side's from the
+        // chain's corner.
+        let run_off_rail = if stretch.side == 0 { 0 } else { rails - 1 };
+        let far_rail = if stretch.side == 0 { rails - 1 } else { 0 };
+        let mut run_off_piece = Vec::new();
+        let mut far_piece = Vec::new();
+
+        for step in 0..rails {
+            for from in [run_off_rail, far_rail] {
+                let rail = if from == 0 { step } else { rails - 1 - step };
+                let on_the_run_offs_side = (rail <= ends.changes_after) == (run_off_rail == 0);
+                if on_the_run_offs_side == (from == run_off_rail) {
+                    let piece = if from == run_off_rail {
+                        &mut run_off_piece
+                    } else {
+                        &mut far_piece
+                    };
+                    piece.push(ring[rail as usize]);
+                }
+            }
+        }
+
+        run_off_piece.push(between_them);
+        far_piece.push(between_them);
+
+        // And the far piece closes on the apex as well, along the rim the two planes meet in.
+        far_piece.push(ends.apex);
+
+        if ends.plane_of[far_rail as usize].outside(corner).abs() > pool.near_enough() {
+            // The chain's corner does not stand IN the far piece's plane, so it is no corner of it.
+            return Err(not_supported());
+        }
+
+        // C#'s array of the two pieces is built whole before either is laid, so the corner is pooled
+        // here, before the run-off piece's cap.
+        let corner_vertex = pool.add(corner);
+        let pieces = [
+            (
+                run_off_piece,
+                ends.plane_of[run_off_rail as usize],
+                apex,
+                ends.apex,
+            ),
+            (
+                far_piece,
+                ends.plane_of[far_rail as usize],
+                corner,
+                corner_vertex,
+            ),
+        ];
+
+        for (profile, plane, at, vertex) in pieces {
+            // Asked at the vertex the piece is fanned FROM, of the faces the part had before any end
+            // of this pass was closed.
+            if Self::theres_a_face_at(
+                pool,
+                faces,
+                faces_before_the_ends,
+                vertex,
+                plane,
+                pool.near_enough(),
+            ) && surface_end_gives_up_the_section::the_face_is_behind_it(
+                into_the_chain,
+                plane.normal,
+            ) {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceHullEndGivesUp,
+                    vec![corner.into()],
+                ));
+            }
+
+            let before = faces.len();
+            surface_end_notch::try_cap_with_the_section(pool, faces, &profile, at, plane.normal)?;
+
+            // And the piece really is ONE cover of its own section: named, never picked apart.
+            let (folds, folded) = surface_mesh_closure::folded_edge_count(&faces[before..]);
+            if folds > 0 {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceHullEndNotSupported,
+                    vec![((pool.position_of(folded.0) + pool.position_of(folded.1)) / 2.0).into()],
+                ));
+            }
+        }
+
+        Ok(SurfaceStripStation::new(ring, meets_at, between))
     }
 }

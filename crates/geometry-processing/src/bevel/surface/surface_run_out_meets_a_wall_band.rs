@@ -1,14 +1,15 @@
 //! Where a mixed corner's RUN-OUT meets a band standing on the WALL it turns against
 //! ([`SurfaceRunOutMeetsAWallBand`]). Ports the record of
 //! `Bevel/Surface/SurfaceRunOutMeetsAWallBand.cs` with its readings of the band's profile (where a
-//! rail stands, the near and far sides the ray meets, the cap exit); the reading itself
-//! (`TryRead`) lands with a later package.
+//! rail stands, the near and far sides the ray meets, the cap exit) and the reading itself
+//! ([`SurfaceRunOutMeetsAWallBand::try_read`]).
 
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::SurfaceMixedCorner;
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
+use super::{surface_mixed_corner_run_out, SurfaceMixedCorner, SurfaceStrip};
 
 /// C# `SurfaceRunOutMeetsAWallBand` (a sealed class): where a mixed corner's run-out meets a band
 /// standing on the wall it turns against, read as the radius out of the bead's axis at which that
@@ -372,5 +373,96 @@ impl SurfaceRunOutMeetsAWallBand {
         }
 
         stationed
+    }
+}
+
+impl SurfaceRunOutMeetsAWallBand {
+    /// C# `TryRead`: where the mixed corner's run-out meets `band`, a band standing on the wall it
+    /// turns against - each rail flattened into the cap's plane, its turn about the run-out's centre,
+    /// and the turns past the bead of the rails that cross the run-out's own quarter of the torus.
+    /// `Ok(None)` (C#'s false with no failure) where there is nothing to sew; `Err` names a crossing
+    /// of another shape. `_hands_over_at_a_mitre` is read by no line of the C#.
+    pub fn try_read(
+        corner: Option<&Rc<SurfaceMixedCorner>>,
+        band: Option<&SurfaceStrip>,
+        _hands_over_at_a_mitre: bool,
+    ) -> Result<Option<SurfaceRunOutMeetsAWallBand>, BevelAdvisory> {
+        let (Some(corner), Some(band)) = (corner, band) else {
+            return Ok(None);
+        };
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+        let no_size = !(corner.size > 0.0);
+        if band.rail_count() < 2 || no_size {
+            return Ok(None);
+        }
+
+        if band.along().dot(corner.axis().direction).abs() < 1.0 - Self::ALONG_THE_AXIS {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingBandNotAlongTheAxis,
+                vec![corner.corner.into()],
+            ));
+        }
+
+        let centre = corner.outer_rail_centre;
+        let out_of_the_cap = corner.out_of_the_cap_face;
+        let rails = band.rail_count() as usize;
+        let mut flat = vec![Vector3::ZERO; rails];
+        let mut turns = vec![0.0; rails];
+        let mut crossings = Vec::with_capacity(rails);
+
+        for rail in 0..rails {
+            let at = band.point_on(rail as i32, 0.0);
+
+            // In the cap's own plane, where every way out of the axis lies.
+            flat[rail] = at - (out_of_the_cap * (at - centre).dot(out_of_the_cap));
+            let away = flat[rail] - centre;
+            turns[rail] = away
+                .dot(corner.towards_the_wall_square())
+                .atan2(away.dot(corner.towards_the_shared_face()));
+            let radius = away.length();
+
+            // Only a rail between the ball's own radius and the circle its touch point traces meets
+            // the patch at all.
+            if radius > corner.size
+                && radius < 2.0 * corner.size
+                && turns[rail] > corner.turn_radians()
+                && turns[rail]
+                    <= corner.turn_radians() + surface_mixed_corner_run_out::clears_the_wall()
+            {
+                crossings.push(turns[rail] - corner.turn_radians());
+            }
+        }
+
+        if crossings.is_empty() {
+            // The band stands clear of the run-out's own quarter of the torus: nothing to sew.
+            return Ok(None);
+        }
+
+        if crossings.len() < 2 {
+            // ONE rail of the band inside the run-out, and it the hairpin.
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingAtTheRunOutsDeath,
+                vec![corner.corner.into()],
+            ));
+        }
+
+        // C#'s `List<double>.Sort` (no NaN reaches here; equal values are indistinguishable).
+        crossings.sort_by(|a: &f64, b: &f64| a.partial_cmp(b).expect("finite crossings"));
+
+        let last = crossings[crossings.len() - 1];
+        if !Self::it_is_the_turn_back_of(&turns, Self::the_rail_at(&flat, &turns, corner, last)) {
+            // The turn the profile folds back at stands outside the run-out's own quarter.
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingTurnsBackBeyondTheRunOut,
+                vec![corner.corner.into()],
+            ));
+        }
+
+        Ok(Some(SurfaceRunOutMeetsAWallBand::new(
+            corner.clone(),
+            flat,
+            turns,
+            crossings,
+        )))
     }
 }
