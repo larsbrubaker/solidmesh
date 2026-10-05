@@ -1,8 +1,17 @@
 //! `MatterCAD.GeometryProcessing/Topology`: what a bevel can be applied to. Feature edges
 //! ([`FeatureEdge`], [`FeatureEdgeSet`]), runs of them ([`FeatureEdgeChain`]), the logical surface
-//! a face belongs to ([`FaceGroup`], cached per mesh by [`FaceRegionCache`]) and turning a click
-//! into an edge ([`edge_picking`]).
+//! a face belongs to ([`FaceGroup`], cached per mesh by [`FaceRegionCache`]), turning a click
+//! into an edge ([`edge_picking`]), and the stored selections of a bevel ([`BevelEdgeGroup`],
+//! [`BevelCornerGroup`]) with matching them on a rebuilt mesh ([`bevel_edge_group_resolver`]) and
+//! editing their lists ([`bevel_group_edits`]).
 
+mod bevel_corner_group;
+mod bevel_corner_mode;
+mod bevel_edge_group;
+pub mod bevel_edge_group_resolver;
+mod bevel_group;
+pub mod bevel_group_edits;
+mod bevel_reading_label;
 pub mod edge_picking;
 mod error;
 mod face_group;
@@ -11,6 +20,12 @@ mod feature_edge;
 mod feature_edge_chain;
 mod feature_edge_set;
 
+pub use bevel_corner_group::BevelCornerGroup;
+pub use bevel_corner_mode::BevelCornerMode;
+pub use bevel_edge_group::{BevelEdgeGroup, BevelSelectionKind};
+pub use bevel_edge_group_resolver::{BevelEdgeGroupResolution, MatchTolerances};
+pub use bevel_group::BevelGroup;
+pub use bevel_reading_label::BevelReadingLabel;
 pub use edge_picking::FeatureEdgePick;
 pub use error::TopologyError;
 pub use face_group::FaceGroup;

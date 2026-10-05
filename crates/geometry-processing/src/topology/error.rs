@@ -30,6 +30,12 @@ pub enum TopologyError {
         /// C#'s message.
         message: String,
     },
+    /// An edge that bounds none of a face group's faces (C# `ArgumentException` from
+    /// `BevelEdgeGroupResolver.CreateFromFaceGroup`), with C#'s message.
+    EdgeDoesNotBoundFaceGroup {
+        /// C#'s message.
+        message: String,
+    },
 }
 
 impl fmt::Display for TopologyError {
@@ -52,6 +58,9 @@ impl fmt::Display for TopologyError {
                 "Edge {index} is not an index into a feature edge set of {edge_count} edges."
             ),
             TopologyError::NotFinite { message, .. } => write!(f, "{message}"),
+            TopologyError::EdgeDoesNotBoundFaceGroup { message } => {
+                write!(f, "{message} (Parameter 'boundaryEdge')")
+            }
         }
     }
 }

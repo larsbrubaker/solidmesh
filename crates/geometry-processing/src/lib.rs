@@ -8,4 +8,5 @@
 //! picking. The rest of `Topology/` (the bevel group records and their resolvers, pick
 //! interpretations, path corners), `Path/` and `Bevel/` land in later Phase 5C slices.
 
+pub mod bevel;
 pub mod topology;
