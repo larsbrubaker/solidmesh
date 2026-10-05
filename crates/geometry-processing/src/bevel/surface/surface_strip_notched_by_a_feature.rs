@@ -2,17 +2,20 @@
 //! ([`SurfaceStripNotchedByAFeature`]) and the points between rails it is bounded by
 //! ([`SurfaceStripNotchedByAFeatureBetween`]). Ports the fields of
 //! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs`, the feature's foot as the band sees it, and
-//! its constructor and rail questions; the reading itself lands with a later package as a further
-//! `impl` block.
+//! its constructor, rail questions and readings off the strip; the reading that puts them together
+//! (`TryRead`) lands with a later package as a further `impl` block.
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::surface_mitre_joint_step::SideSeams;
 use super::{
-    SurfaceEdgePlan, SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
-    SurfaceStripTrimmedByTheFaceBeyond, SurfaceVertexPool,
+    surface_strip_ends, SurfaceEdgePlan, SurfaceStandingFeatureWithheld,
+    SurfaceStandingFeatureWithheldFace, SurfaceStrip, SurfaceStripTrimmedByTheFaceBeyond,
+    SurfaceVertexPool,
 };
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceStripNotchedByAFeature`: which rails the feature's extended planes cut, how far along
 /// the edge each of them is cut, and the three points between rails where the two planes and the
@@ -267,5 +270,402 @@ impl SurfaceStripNotchedByAFeatureBetween {
     /// standing on chord zero - a real point of the pool on a real chord of the strip.
     pub fn none() -> Self {
         Self::new(-1, -1, 0.0, None)
+    }
+}
+
+/// The notch's readings off the strip and the feature (C# `TryTheOneFacedNotch`,
+/// `TryTheCreaseCrossing`, `TryTheEndItLeavesThrough`, `TryTheFaceThatCuts`, `TryTheExit`,
+/// `TryTheRidgeOnTheChord`, `TryTheQ`). `Try*` methods with C#'s `out BevelAdvisory failure` return
+/// `Result`; the others return `Option`.
+impl SurfaceStripNotchedByAFeature {
+    /// C# `TryTheOneFacedNotch`: the notch a band that undercut ONE face of the feature takes - the
+    /// trace runs from where the feature's CREASE leaves the strip, out through that face's crossings,
+    /// to a single Q on the band's end ring. `rail_of`, `param_of` and `face_of` are the plane's own
+    /// crossings, which this completes in place (as C# does to its lists) with the crease rail.
+    ///
+    /// The crossing is the walkback's own point: the seam is the run of the tangent line the walkback
+    /// left standing on the landing face, and it ENDS where that face ends - on the crease. So it is
+    /// taken from the seam rather than crossed a second time, which would land a rounding off the one
+    /// the mesh already stands on and crack the whole length of the seam.
+    #[allow(clippy::too_many_arguments)]
+    pub fn try_the_one_faced_notch(
+        pool: &mut SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        strip_index: i32,
+        seams: Option<&[SideSeams]>,
+        at_the_start: bool,
+        feature: &Rc<SurfaceStandingFeatureWithheld>,
+        reach: i32,
+        rail_of: &mut Vec<i32>,
+        param_of: &mut Vec<f64>,
+        face_of: &mut Vec<Rc<SurfaceStandingFeatureWithheldFace>>,
+        end_param: f64,
+        snap: f64,
+    ) -> Result<Self, BevelAdvisory> {
+        let does_not_extend = |at: Vector3| {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+                vec![at.into()],
+            )
+        };
+
+        let Some((crease_rail, crossing)) = Self::try_the_crease_crossing(
+            pool,
+            seams,
+            strip_index,
+            strip.rail_count(),
+            at_the_start,
+            &face_of[0],
+            reach,
+            snap,
+        ) else {
+            // The crease does not run out on either seam of this strip, so the band did not undercut it
+            // where this reading says it did and there is no inner end for the trace to start at.
+            let crease_from = face_of[0].creases.borrow()[reach as usize].0;
+            return Err(does_not_extend(pool.position_of(crease_from)));
+        };
+
+        let first = rail_of[0];
+        let last = rail_of[rail_of.len() - 1];
+
+        if first != crease_rail && last != crease_rail {
+            if first - 1 != crease_rail && last + 1 != crease_rail {
+                // The rails the plane cuts and the rail the crease runs out on are not one run. The
+                // notch is then two holes with strip between them, which is not a hole this end closes.
+                return Err(does_not_extend(pool.position_of(crossing.vertex)));
+            }
+
+            // The plane's own crossing of the SEAM rail is the point the ridge stands on - both of the
+            // feature's faces meet the rail there and neither of them can be said to cut it - so the run
+            // reads one rail short. The crease says what that rail is cut back to.
+            let before = first - 1 == crease_rail;
+            let first_face = face_of[0].clone();
+
+            if before {
+                rail_of.insert(0, crease_rail);
+                param_of.insert(0, crossing.param);
+                face_of.insert(0, first_face);
+            } else {
+                rail_of.push(crease_rail);
+                param_of.push(crossing.param);
+                face_of.push(first_face);
+            }
+        } else {
+            let index = rail_of
+                .iter()
+                .position(|&rail| rail == crease_rail)
+                .unwrap_or_default();
+
+            if (param_of[index] - crossing.param).abs() > surface_strip_ends::meets_the_seam(pool) {
+                // Two readings of one thing disagreeing: the plane says this rail is cut back to one
+                // place and the seam the walkback left says another. Named rather than sewn to whichever
+                // was asked for first.
+                return Err(does_not_extend(pool.position_of(crossing.vertex)));
+            }
+
+            // The seam's own point, and not the one the plane crossing would mint beside it.
+            param_of[index] = crossing.param;
+        }
+
+        // The run's far end from the crease, and the rail just outside it - which way that is said by
+        // the SEAM rail's own end of the profile and not by the run's ordering, since a run of one rail
+        // is both of its own ends at once.
+        let runs_up = crease_rail == 0;
+        let far = if runs_up {
+            rail_of[rail_of.len() - 1]
+        } else {
+            rail_of[0]
+        };
+        let outside = if runs_up { far + 1 } else { far - 1 };
+
+        let q = Self::try_the_q(pool, strip, far, outside, &face_of[0], end_param, snap)?;
+
+        let (lower, upper) = if runs_up {
+            (SurfaceStripNotchedByAFeatureBetween::none(), q)
+        } else {
+            (q, SurfaceStripNotchedByAFeatureBetween::none())
+        };
+
+        Ok(Self::new(
+            strip_index,
+            at_the_start,
+            feature.clone(),
+            reach,
+            rail_of.clone(),
+            param_of.clone(),
+            face_of.clone(),
+            end_param,
+            crossing,
+            lower,
+            upper,
+            crease_rail,
+        ))
+    }
+
+    /// C# `TryTheCreaseCrossing`: where the feature's crease leaves the strip - the vertex the
+    /// walkback's own SEAM ends on, where that vertex stands on the crease's line, and which of the
+    /// strip's two seam rails it is on - as `(crease_rail, crossing)`. A seam table row that is not
+    /// there reads as no seam, as a null run does in C#.
+    #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_the_crease_crossing(
+        pool: &SurfaceVertexPool,
+        seams: Option<&[SideSeams]>,
+        strip_index: i32,
+        rail_count: i32,
+        at_the_start: bool,
+        face: &Rc<SurfaceStandingFeatureWithheldFace>,
+        reach: i32,
+        snap: f64,
+    ) -> Option<(i32, SurfaceStripNotchedByAFeatureBetween)> {
+        let (crease_from, crease_to) = face.creases.borrow()[reach as usize];
+        let from = pool.position_of(crease_from);
+        let to = pool.position_of(crease_to);
+        let along = to - from;
+
+        if !(along.length_squared() > 0.0) {
+            return None;
+        }
+
+        // The ruler, in the crease's OWN parameter: snap is a length, and how far along the crease a
+        // point stands is a fraction of it, so the two are only the same question once the length is
+        // divided out.
+        let ends_within = snap / along.length();
+
+        let mut crease_rail = -1;
+        let mut crossing = SurfaceStripNotchedByAFeatureBetween::none();
+
+        for side in 0..2 {
+            let Some(seam) = seams
+                .and_then(|seams| seams.get(strip_index as usize))
+                .and_then(|row| row[side].as_ref())
+                .filter(|seam| !seam.is_empty())
+            else {
+                continue;
+            };
+
+            // The end of the seam this notch's own end stands at: the run is ordered along the edge,
+            // and a notch at the start of the band is closed by the start of the seam.
+            let mut at = seam[0];
+
+            for &one in seam {
+                if if at_the_start {
+                    one.1 < at.1
+                } else {
+                    one.1 > at.1
+                } {
+                    at = one;
+                }
+            }
+
+            let stands = pool.position_of(at.0);
+            let how_far = (stands - from).dot(along) / along.length_squared();
+
+            if how_far < -ends_within
+                || how_far > 1.0 + ends_within
+                || (stands - (from + (along * how_far))).length() > snap
+            {
+                continue;
+            }
+
+            if crease_rail >= 0 {
+                // BOTH seams end on this crease. The crease lies in ONE of the two landing faces, so only
+                // one of the strip's seam rails can be the one it runs out on - two of them saying so is
+                // two readings of one thing that cannot both be true.
+                return None;
+            }
+
+            crease_rail = if side == 0 { 0 } else { rail_count - 1 };
+            crossing =
+                SurfaceStripNotchedByAFeatureBetween::new(at.0, -1, at.1, Some(face.clone()));
+        }
+
+        (crease_rail >= 0).then_some((crease_rail, crossing))
+    }
+
+    /// C# `TryTheEndItLeavesThrough`: which of the band's two ends the extension runs off through -
+    /// the one whose plane a crease of the feature ends in, since that is the line the feature's own
+    /// faces already die on - as `(at_the_start, end_param)`.
+    pub fn try_the_end_it_leaves_through(
+        pool: &SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        feature: &SurfaceStandingFeatureWithheld,
+        reach: i32,
+        length: f64,
+        snap: f64,
+    ) -> Option<(bool, f64)> {
+        let mut nearest_to_the_end = f64::MAX;
+        let mut nearest_to_the_start = f64::MAX;
+
+        for face in &feature.faces {
+            let (crease_from, crease_to) = face.creases.borrow()[reach as usize];
+
+            for at in [crease_from, crease_to] {
+                let param = strip.param_of(pool.position_of(at));
+
+                nearest_to_the_end = nearest_to_the_end.min((param - length).abs());
+                nearest_to_the_start = nearest_to_the_start.min(param.abs());
+            }
+        }
+
+        if nearest_to_the_end.min(nearest_to_the_start) > snap {
+            return None;
+        }
+
+        let at_the_start = nearest_to_the_start < nearest_to_the_end;
+
+        Some((at_the_start, if at_the_start { 0.0 } else { length }))
+    }
+
+    /// C# `TryTheFaceThatCuts`: which of the feature's faces cuts one rail, and where - the single
+    /// crossing of the wedge this end cut is drawn from. TWO crossings is the ridge itself passing
+    /// through the rail, which has no one plane to cut by, and reads as none: a rail the wedge passes
+    /// clean through is bitten rather than notched (`SurfaceStripBittenByAFeature`).
+    pub fn try_the_face_that_cuts(
+        strip: &SurfaceStrip,
+        feature: &SurfaceStandingFeatureWithheld,
+        rail: i32,
+        snap: f64,
+    ) -> Option<(Rc<SurfaceStandingFeatureWithheldFace>, f64)> {
+        let mut found = Vec::new();
+
+        feature.crossings_on_the_wedge(strip, rail, snap, &mut found);
+
+        if found.len() == 1 {
+            found.pop()
+        } else {
+            None
+        }
+    }
+
+    /// C# `TryTheExit`: the ridge's EXIT - where the feature's own ridge line leaves the strip, read
+    /// against the plane of the quad between the two rails the faces change over at rather than
+    /// against the ideal cylinder.
+    #[allow(clippy::too_many_arguments)]
+    pub fn try_the_exit(
+        pool: &mut SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        feature: &SurfaceStandingFeatureWithheld,
+        rail_of: &[i32],
+        face_of: &[Rc<SurfaceStandingFeatureWithheldFace>],
+        snap: f64,
+    ) -> Result<SurfaceStripNotchedByAFeatureBetween, BevelAdvisory> {
+        let does_not_extend = |at: Vector3| {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+                vec![at.into()],
+            )
+        };
+
+        let mut changed: i32 = -1;
+
+        for step in 0..face_of.len().saturating_sub(1) {
+            if Rc::ptr_eq(&face_of[step], &face_of[step + 1]) {
+                continue;
+            }
+
+            if changed >= 0 {
+                changed = -2;
+                break;
+            }
+
+            changed = step as i32;
+        }
+
+        let ridge = if changed < 0 {
+            None
+        } else {
+            feature.try_the_ridge()
+        };
+
+        let Some((from, along)) = ridge else {
+            // No changeover is a feature standing on ONE plane across the whole notch, and more than one
+            // is a ridge crossing the strip twice; neither is the single exit this cap closes on. And a
+            // feature whose two planes do not meet along a line has no ridge to leave the strip on.
+            return Err(does_not_extend(strip.point_on(rail_of[0], 0.0)));
+        };
+
+        let below = rail_of[changed as usize];
+
+        let Some(at) = Self::try_the_ridge_on_the_chord(strip, edge, from, along, below) else {
+            return Err(does_not_extend(from));
+        };
+
+        Ok(SurfaceStripNotchedByAFeatureBetween::new(
+            Self::share(pool, at, snap),
+            below,
+            strip.param_of(at),
+            Some(face_of[changed as usize].clone()),
+        ))
+    }
+
+    /// C# `TryTheRidgeOnTheChord`: where the feature's RIDGE line meets the strip between rail `below`
+    /// and the one above it - read against the PLANE OF THE QUAD those two rails rule rather than
+    /// against the ideal cylinder, so the point stands on the mesh the strip really has. `None` where
+    /// the ridge runs along that quad. Whether the point stands BETWEEN the two rails is the caller's
+    /// question.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_the_ridge_on_the_chord(
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        from: Vector3,
+        along: Vector3,
+        below: i32,
+    ) -> Option<Vector3> {
+        let quad = (strip.point_on(below + 1, 0.0) - strip.point_on(below, 0.0))
+            .cross(edge.edge.direction())
+            .get_normal();
+        let slope = quad.dot(along);
+
+        if !(slope.abs() > 1e-9) {
+            return None;
+        }
+
+        Some(from + (along * (quad.dot(strip.point_on(below, 0.0) - from) / slope)))
+    }
+
+    /// C# `TryTheQ`: one Q - where a face's plane meets the CHORD the strip's end ring draws between
+    /// the last rail of the notched run (`in_the_run`) and the rail just `outside` it. C#'s unused
+    /// `feature` parameter is dropped.
+    #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_the_q(
+        pool: &mut SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        in_the_run: i32,
+        outside: i32,
+        face: &Rc<SurfaceStandingFeatureWithheldFace>,
+        end_param: f64,
+        snap: f64,
+    ) -> Result<SurfaceStripNotchedByAFeatureBetween, BevelAdvisory> {
+        let inside = strip.point_on(in_the_run, end_param);
+        let does_not_extend = |at: Vector3| {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+                vec![at.into()],
+            )
+        };
+
+        if outside < 0 || outside >= strip.rail_count() {
+            // The run reaches the edge of the profile, so the trace leaves through the strip's own SEAM
+            // rather than through the band's end - a face beyond this end cut does not own.
+            return Err(does_not_extend(inside));
+        }
+
+        let beyond = strip.point_on(outside, end_param);
+        let here = face.plane_normal.dot(inside - face.plane_point);
+        let there = face.plane_normal.dot(beyond - face.plane_point);
+
+        if !(here * there < 0.0) {
+            return Err(does_not_extend(inside));
+        }
+
+        let at = inside + ((beyond - inside) * (here / (here - there)));
+
+        Ok(SurfaceStripNotchedByAFeatureBetween::new(
+            Self::share(pool, at, snap),
+            in_the_run.min(outside),
+            end_param,
+            Some(face.clone()),
+        ))
     }
 }

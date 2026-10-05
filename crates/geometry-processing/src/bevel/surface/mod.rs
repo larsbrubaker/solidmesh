@@ -142,6 +142,7 @@ pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
 pub mod surface_wall_ran_out;
 mod surface_wall_section;
+pub mod surface_wall_stands_clear;
 
 pub use surface_band_end::SurfaceBandEnd;
 pub use surface_band_runs_off_over_a_stretch::SurfaceBandRunsOffOverAStretch;
