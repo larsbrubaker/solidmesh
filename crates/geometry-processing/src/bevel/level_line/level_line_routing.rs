@@ -1,7 +1,7 @@
 //! Which route the app's bevel build takes, and the watch it can leave behind. Ports the record of
 //! `Bevel/LevelLine/LevelLineRouting.cs` ([`LevelLineChainWatch`]); the C# static class
 //! `LevelLineRouting` (its switch and watch slot) lands with later packages, except the switch's
-//! reading of a setting ([`reads_as_on`]).
+//! readings of a setting ([`reads_as_on`], [`reads_as_off`], [`the_running_app_wants_it_on`]).
 
 use vector_math::Vector3;
 
@@ -41,4 +41,18 @@ pub struct LevelLineChainWatch {
 /// Whether a setting's text reads as ON: "1", or "true" in any case.
 pub fn reads_as_on(value: &str) -> bool {
     value == "1" || value.eq_ignore_ascii_case("true")
+}
+
+/// C# `LevelLineRouting.ReadsAsOff`: whether a setting's value asks for a switch to be OFF: "0" or
+/// "false" in any casing. An unset variable (`None`, C#'s null) asks for nothing.
+pub fn reads_as_off(value: Option<&str>) -> bool {
+    matches!(value, Some(v) if v == "0" || v.eq_ignore_ascii_case("false"))
+}
+
+/// C# `LevelLineRouting.TheRunningAppWantsItOn`: whether the running app takes the level line,
+/// given what the developer variable says - on unless it plainly says off, because the level line
+/// is what Surface mode does. A plain function of the value rather than a read of the
+/// environment, so a test can assert both directions without writing a process-wide variable.
+pub fn the_running_app_wants_it_on(value: Option<&str>) -> bool {
+    !reads_as_off(value)
 }

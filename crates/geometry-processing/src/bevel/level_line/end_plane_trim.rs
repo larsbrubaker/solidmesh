@@ -1,12 +1,13 @@
 //! The trim of a rail to a chain's end plane. Ports `Bevel/LevelLine/EndPlaneTrim.cs` (a C# static
 //! class): so far a run trimmed to the end-face corner ([`to_the_corner`]), a run vertex read at
 //! its end-ray parameter ([`at_ray_parameter`]) and the end face's plane at the chain's end
-//! ([`end_plane`]); the trim itself lands with later packages.
+//! ([`end_plane`]), the row's reach past a plane ([`farthest_out`]) and the round's section in the
+//! end plane ([`section`]); the trim itself lands with later packages.
 
 use vector_math::{cs_math, Vector3};
 
 use super::super::float_grid;
-use super::{GapLoop, LevelLineMesh};
+use super::{BandProfile, GapLoop, LevelLineMesh};
 
 /// The run with its vertices inside the end's setback (measured square to `outward`) trimmed off
 /// its tail (or head), stopping at the end-face corner - the last vertex on the end plane before
@@ -155,4 +156,86 @@ pub fn end_plane(
     }
 
     (plane, end_vertex)
+}
+
+/// C# `EndPlaneTrim.FarthestOut`: the greatest of `(q - end) . normal` over the row at the end
+/// vertex: the fillet's arc tangent to both sides at the square rail points (its greatest is at an
+/// end or at its point along the normal's direction in the section), a chamfer's chord (at an
+/// end).
+pub fn farthest_out(
+    rail_left: Vector3,
+    rail_right: Vector3,
+    end: Vector3,
+    normal: Vector3,
+    profile: BandProfile,
+) -> f64 {
+    let out = |q: Vector3| (q - end).dot(normal);
+    let mut best = cs_math::max_f64(out(rail_left), out(rail_right));
+    if profile != BandProfile::Fillet {
+        return best;
+    }
+
+    let sa = rail_left - end;
+    let sb = rail_right - end;
+    let half = sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0).acos() / 2.0;
+    let bisector = (sa.get_normal() + sb.get_normal()).get_normal();
+    let centre = end + (bisector * (sa.length() / half.cos()));
+    let radius = sa.length() * half.tan();
+    let in_section = normal - (sa.cross(sb).get_normal() * normal.dot(sa.cross(sb).get_normal()));
+    if in_section.length_squared() == 0.0 {
+        return best;
+    }
+
+    let top = centre + (in_section.get_normal() * radius);
+    let chord_mid = (rail_left + rail_right) / 2.0;
+    if (top - chord_mid).dot(end - chord_mid) >= 0.0 {
+        best = cs_math::max_f64(best, out(top));
+    }
+
+    best
+}
+
+/// C# `EndPlaneTrim.Section`: the round's section in the end plane from `a` to `b` (both on the
+/// plane): the row at the end vertex - the arc tangent to both sides at the rail points - sampled
+/// at equal angles and each point carried along the chain onto the plane. The ends are `a` and `b`
+/// themselves, to the bit.
+pub fn section(
+    a: Vector3,
+    b: Vector3,
+    end: Vector3,
+    outward: Vector3,
+    normal: Vector3,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Vec<Vector3> {
+    let square = |p: Vector3| p - (outward * (p - end).dot(outward));
+    let onto_the_plane = |p: Vector3| p + (outward * ((end - p).dot(normal) / outward.dot(normal)));
+
+    let mut result = vec![a];
+    if profile == BandProfile::Fillet {
+        let sa = square(a) - end;
+        let sb = square(b) - end;
+        let half = sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0).acos() / 2.0;
+        let bisector = (sa.get_normal() + sb.get_normal()).get_normal();
+        let centre = end + (bisector * (sa.length() / half.cos()));
+        let from_centre = end + sa - centre;
+        let to_centre = end + sb - centre;
+        let sweep = from_centre
+            .get_normal()
+            .dot(to_centre.get_normal())
+            .clamp(-1.0, 1.0)
+            .acos();
+        let axis = from_centre.cross(to_centre).get_normal();
+        let segments = 1.max(fillet_segments);
+        for i in 1..segments {
+            let angle = sweep * i as f64 / segments as f64;
+            let rotated = (from_centre * angle.cos())
+                + (axis.cross(from_centre) * angle.sin())
+                + (axis * axis.dot(from_centre) * (1.0 - angle.cos()));
+            result.push(onto_the_plane(centre + rotated));
+        }
+    }
+
+    result.push(b);
+    result
 }

@@ -1,10 +1,13 @@
 //! The gap fill's rail readings. Ports the nested type of `Bevel/LevelLine/GapFill.cs` (a C#
 //! static class): a loop read both ways round ([`GapFillRailSenses`]), the class's constants and the
-//! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]). The fill's other functions land with later packages.
+//! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]),
+//! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
+//! wrap ([`largest_backward_step`]). The fill's
+//! other functions land with later packages.
 
 use std::rc::Rc;
 
-use vector_math::cs_math;
+use vector_math::{cs_math, Vector3};
 
 use super::{ChainField, GapFillRefusal, GapFillResult, LevelLineMesh, ZipRail};
 use std::cell::RefCell;
@@ -71,4 +74,60 @@ pub fn not_monotone(mesh: Rc<RefCell<LevelLineMesh>>, offending_vertex: i32) -> 
         mesh: Some(mesh),
         ..GapFillResult::default()
     }
+}
+
+/// C# `GapFill.ArcPoint`: the point at `t` on the rational quadratic from `p` to `q` with control
+/// point `c` and middle weight cos(theta / 2), theta being the angle the arc subtends, which is the
+/// supplement of the angle PCQ. Where |P - C| = |Q - C| that is exactly the circular arc tangent
+/// to CP at P and to CQ at Q, centred on P + Q - C.
+///
+/// cos(theta / 2) with theta = pi - angle(PCQ) is sqrt((1 - cos angle(PCQ)) / 2), so the weight is
+/// read straight off the dot product without ever taking an angle. Collinear P, C, Q give weight 1
+/// (the straight line), a right angle at C gives sqrt(2) / 2 - the quarter circle.
+pub fn arc_point(p: Vector3, c: Vector3, q: Vector3, t: f64) -> Vector3 {
+    let to_p = p - c;
+    let to_q = q - c;
+    let lengths = to_p.length() * to_q.length();
+    let cos_at_c = if lengths > 0.0 {
+        (to_p.dot(to_q) / lengths).clamp(-1.0, 1.0)
+    } else {
+        1.0
+    };
+    let weight = cs_math::max_f64(0.0, (1.0 - cos_at_c) / 2.0).sqrt();
+
+    let s = 1.0 - t;
+    let wp = s * s;
+    let wc = 2.0 * t * s * weight;
+    let wq = t * t;
+    ((p * wp) + (c * wc) + (q * wq)) / (wp + wc + wq)
+}
+
+/// C# `GapFill.Backwards`: the arc's vertices in the other order.
+pub fn backwards(arc: &[i32]) -> Vec<i32> {
+    arc.iter().rev().copied().collect()
+}
+
+/// C# `GapFill.LargestBackwardStep`: the index of the LARGEST backward step round the cycle, read
+/// in the given sense: that step is the wrap, where the rail comes back round to the chain's start,
+/// and the rail is cut open there. -1 where no step goes backward.
+pub fn largest_backward_step(parameters: &[f64], reversed: bool) -> i32 {
+    let count = parameters.len();
+    let mut wrap = -1;
+    let mut largest = 0.0;
+    for i in 0..count {
+        let index = if reversed { count - 1 - i } else { i };
+        let here = parameters[index];
+        let next = parameters[if reversed {
+            count - 1 - ((i + 1) % count)
+        } else {
+            (i + 1) % count
+        }];
+        let drop = here - next;
+        if drop > largest {
+            largest = drop;
+            wrap = i as i32;
+        }
+    }
+
+    wrap
 }

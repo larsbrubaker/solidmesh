@@ -1,7 +1,13 @@
 //! A fillet's arc across the band. Ports `Bevel/LevelLine/FilletArc.cs` (a C# static class): so far
-//! its collinear angle and the whole-leg test ([`on_a_whole_leg`]); the arcs land with later
-//! packages.
+//! its collinear angle, the whole-leg test ([`on_a_whole_leg`]), a sharp joint's seam row
+//! ([`seam_row`]) and its tolerance, the carried skew arc ([`carried`]) with its rigid turn
+//! ([`turn`]), the smooth step, the bend threshold's cosine and the joint search; the arcs that
+//! read the level-line mesh land with later packages. The arc point itself is
+//! [`super::gap_fill::arc_point`].
 
+use vector_math::Vector3;
+
+use super::gap_fill::arc_point;
 use super::ChainField;
 
 /// How far a chain joint may turn, in degrees, and still be read as straight through: far above
@@ -69,4 +75,124 @@ pub fn on_a_whole_leg(chain: &ChainField, parameter: f64) -> bool {
     }
 
     sharp_or_end(start) && sharp_or_end(end)
+}
+
+/// C# `FilletArc.SeamRow`: the seam row's points (index 0 and `segments` are `p` and `q`): the
+/// incoming leg's fillet section through the two ends - the arc about the leg's axis through the
+/// apex - each point slid along that leg onto the joint's bisector plane.
+pub fn seam_row(
+    apex: Vector3,
+    into: Vector3,
+    out_of: Vector3,
+    p: Vector3,
+    q: Vector3,
+    segments: i32,
+) -> Vec<Vector3> {
+    let normal = (into + out_of).get_normal();
+    let slide = into.dot(normal);
+    let section = |x: Vector3| (x - apex) - (into * (x - apex).dot(into));
+    let from_section = section(p);
+    let to_section = section(q);
+    let mut row = vec![Vector3::ZERO; (segments + 1) as usize];
+    row[0] = p;
+    row[segments as usize] = q;
+    for s in 1..segments {
+        let on_section = arc_point(
+            from_section,
+            Vector3::ZERO,
+            to_section,
+            s as f64 / segments as f64,
+        );
+        row[s as usize] = apex + on_section - (into * (on_section.dot(normal) / slide));
+    }
+
+    row
+}
+
+/// C# `FilletArc.SeamTolerance`: how far off a sharp joint's bisector plane (or mitre line) a rail
+/// vertex may stand and still be on it: a millionth of the joint's setback plus a millionth of how
+/// far the joint is from the origin.
+///
+/// Scaled by the coordinates' own size, not the chain's length: rails that went through floats
+/// carry about 1e-7 of their coordinate magnitude, so a small chain far from the origin stands
+/// 1e-5 off the plane its double-precision chain puts there - past a chain-length tolerance, and
+/// the tip rows fell back to a single leg's arc
+/// (ChainFieldMitreTests.AroundCenterFarFromTheOriginReadsTheSameWorst).
+pub fn seam_tolerance(apex: Vector3, setback: f64) -> f64 {
+    1e-6 * (setback + apex.length())
+}
+
+/// C# `FilletArc.SmoothStep`: 0 at or below 0, 1 at or above 1, and a smooth cubic between.
+pub fn smooth_step(x: f64) -> f64 {
+    let x = x.clamp(0.0, 1.0);
+    x * x * (3.0 - (2.0 * x))
+}
+
+/// A chain point and the chain's unit direction there (C#'s `(Vector3 Point, Vector3 Tangent)`).
+pub type ChainSection = (Vector3, Vector3);
+
+/// C# `FilletArc.Carried`: a skew spoke's arc points across a turn of the chain (index 0 and
+/// `segments` are the ends): as the translating overload, but each end's section is given as a
+/// chain point and the chain's direction there, and is carried to the mean section by the rigid
+/// turn taking its direction onto the mean's. Where all three directions agree it is that
+/// overload.
+pub fn carried(
+    from_position: Vector3,
+    to_position: Vector3,
+    from_section: ChainSection,
+    mean: ChainSection,
+    to_section: ChainSection,
+    segments: i32,
+) -> Vec<Vector3> {
+    let p = mean.0 + turn(from_section.1, mean.1, from_position - from_section.0);
+    let q = mean.0 + turn(to_section.1, mean.1, to_position - to_section.0);
+    let mut arc = vec![Vector3::ZERO; (segments + 1) as usize];
+    arc[0] = from_position;
+    arc[segments as usize] = to_position;
+    for s in 1..segments {
+        let t = s as f64 / segments as f64;
+        let on_mean = arc_point(p, mean.0, q, t) - mean.0;
+        let back_to_from = from_section.0 + turn(mean.1, from_section.1, on_mean);
+        let back_to_to = to_section.0 + turn(mean.1, to_section.1, on_mean);
+        arc[s as usize] = (back_to_from * (1.0 - t)) + (back_to_to * t);
+    }
+
+    arc
+}
+
+/// C# `FilletArc.SharpCosine`: the cosine of the chain's bend threshold: a joint whose segments'
+/// directions dot below it is sharp. Asked only of a finite threshold (`AlongTheChain` carries
+/// nothing under an infinite one).
+pub fn sharp_cosine(chain: &ChainField) -> f64 {
+    (chain.sharp_turn_degrees * std::f64::consts::PI / 180.0).cos()
+}
+
+/// C# `FilletArc.FirstJointAtOrPast`: the index of the first joint (sorted by parameter) at or
+/// past `parameter`, by binary search; the count where there is none.
+pub fn first_joint_at_or_past(joints: &[(f64, f64)], parameter: f64) -> usize {
+    let mut low = 0;
+    let mut high = joints.len();
+    while low < high {
+        let middle = (low + high) / 2;
+        if joints[middle].0 >= parameter {
+            high = middle;
+        } else {
+            low = middle + 1;
+        }
+    }
+
+    low
+}
+
+/// C# `FilletArc.Turn`: `vector` turned by the rotation taking unit `from` onto unit `to`.
+pub fn turn(from: Vector3, to: Vector3, vector: Vector3) -> Vector3 {
+    let mut axis = from.cross(to);
+    let sin = axis.length();
+    let cos = from.dot(to);
+    if sin < 1e-12 {
+        return vector;
+    }
+
+    axis /= sin;
+    (vector * cos) + (axis.cross(vector) * sin) + (axis * (axis.dot(vector) * (1.0 - cos)))
 }

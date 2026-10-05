@@ -11,10 +11,16 @@ mod bevel_seam_ring_tests;
 mod bevel_source_round_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
+#[path = "bevel/faceted_boss_fade_tests.rs"]
+mod faceted_boss_fade_tests;
+#[path = "bevel/fillet_arc_seam_row_tests.rs"]
+mod fillet_arc_seam_row_tests;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
 #[path = "bevel/hole_fill_tests.rs"]
 mod hole_fill_tests;
+#[path = "bevel/opposite_sense_crease_tests.rs"]
+mod opposite_sense_crease_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
 #[path = "bevel/rust_only_bevel_r1p01_mesh_tests.rs"]
@@ -39,6 +45,8 @@ mod rust_only_bevel_r1p06_tests;
 mod rust_only_bevel_r1p07_tests;
 #[path = "bevel/rust_only_bevel_r1p08_tests.rs"]
 mod rust_only_bevel_r1p08_tests;
+#[path = "bevel/rust_only_bevel_r1p13_tests.rs"]
+mod rust_only_bevel_r1p13_tests;
 #[path = "bevel/rust_only_bevel_r1p15_tests.rs"]
 mod rust_only_bevel_r1p15_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]

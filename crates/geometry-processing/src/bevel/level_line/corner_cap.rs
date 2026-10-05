@@ -2,8 +2,9 @@
 //! V) alternating with k short rail pieces, possibly a single tie vertex each, closed about the
 //! corner's AXIS - the normalised sum of the distinct face normals round V: a chamfer's by a fan, a
 //! fillet's by rings. Ports the nested type of `Bevel/LevelLine/CornerCap.cs` (a C# static partial
-//! class): a strip's end spoke ([`CornerCapLastRow`], with its constructor) and the corner's axis
-//! ([`axis`]). The caps' other functions land with later packages.
+//! class): a strip's end spoke ([`CornerCapLastRow`], with its constructor and material centre),
+//! the corner's axis ([`axis`]), the angle between two directions ([`angle`]) and the turn from one
+//! to the other ([`toward`]). The caps' other functions land with later packages.
 
 use vector_math::Vector3;
 
@@ -42,6 +43,17 @@ pub struct CornerCapLastRow {
 }
 
 impl CornerCapLastRow {
+    /// C# `LastRow.MaterialCentre`: the centre on the MATERIAL side: a concave row's centre
+    /// mirrored through its chain point, the centre the same row would be rolled by were its edge
+    /// convex; a convex row's own centre.
+    pub fn material_centre(&self) -> Vector3 {
+        if self.concave {
+            (self.chain_point * 2.0) - self.centre
+        } else {
+            self.centre
+        }
+    }
+
     /// The spoke whose arc is `arc` (its first and last vertices on the two sides), drawn from
     /// `chain_point`; C#'s optional `concave = false` and `axis = default` are passed explicitly.
     pub fn new(
@@ -120,4 +132,23 @@ pub fn axis(mesh: &LevelLineMesh, v: Vector3) -> Vector3 {
     } else {
         sum.get_normal()
     }
+}
+
+/// C# `CornerCap.Angle`: the angle between two directions, by atan2 of their cross and dot.
+pub fn angle(a: Vector3, b: Vector3) -> f64 {
+    a.cross(b).length().atan2(a.dot(b))
+}
+
+/// C# `CornerCap.Toward`: the point `t` of the way from `from` to `to` about the origin, turning in
+/// their common plane, its length running linearly between theirs.
+pub fn toward(from: Vector3, to: Vector3, angle: f64, t: f64) -> Vector3 {
+    let length = ((1.0 - t) * from.length()) + (t * to.length());
+    if angle <= 1e-12 {
+        return ((from * (1.0 - t)) + (to * t)).get_normal() * length;
+    }
+
+    let sin = angle.sin();
+    let direction = (from.get_normal() * (((1.0 - t) * angle).sin() / sin))
+        + (to.get_normal() * ((t * angle).sin() / sin));
+    direction.get_normal() * length
 }
