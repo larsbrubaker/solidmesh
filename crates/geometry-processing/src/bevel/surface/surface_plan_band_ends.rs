@@ -1,10 +1,11 @@
 //! Where a chain edge's band stops at a corner of the chain - the mitre plane between two edges -
 //! as the plan writes it (`Bevel/Surface/SurfacePlanBandEnds.cs`, a static class: free functions
-//! here). The overloads that read two edge plans (through the mitre seam) land with the round-2
-//! package; this module holds the direction-only forms and the side test.
+//! here): the direction-only forms, the overloads that read two edge plans (through the mitre
+//! seam), and the side test.
 
 use vector_math::Vector3;
 
+use super::surface_mitre_seam;
 use super::{SurfaceBandEnd, SurfaceEdgePlan};
 
 /// How far apart two wedges have to be before one bead is called wider than the other. Well under
@@ -75,4 +76,62 @@ pub fn mitre_normal(arriving: Vector3, leaving: Vector3, square_to: Vector3) -> 
 /// no pool and so no part ruler to ask: a millionth of the wider setback of the two edges.
 pub fn crosses_within(one: &SurfaceEdgePlan, other: &SurfaceEdgePlan) -> f64 {
     vector_math::cs_math::max_f64(one.setback(), other.setback()) * 1e-6
+}
+
+/// C# `BandEndWhereTheChainArrives(SurfaceEdgePlan, SurfaceEdgePlan, Vector3?)`: the same, with the
+/// two PLANS rather than their directions - which lets the band stop on the plane through the
+/// crossing of the two tangent lines (`SurfaceMitreSeam`) rather than on the corner, so that the
+/// band the walkback takes off and the ring the strips are cut on are one surface wherever the two
+/// beads set back by different amounts. `through_instead` is where the plane stands when the two
+/// are two pieces of one chord (`SurfaceMitreOnAChordedRun`), `None` at every ordinary corner.
+pub fn band_end_where_the_chain_arrives(
+    arrived_on: &SurfaceEdgePlan,
+    here: &SurfaceEdgePlan,
+    through_instead: Option<Vector3>,
+) -> SurfaceBandEnd {
+    let point = match through_instead {
+        Some(point) => point,
+        None => surface_mitre_seam::the_point_or(
+            arrived_on,
+            here,
+            crosses_within(arrived_on, here),
+            here.from(),
+        ),
+    };
+
+    SurfaceBandEnd::new(
+        point,
+        mitre_normal(
+            arrived_on.edge.direction(),
+            here.edge.direction(),
+            here.edge.direction(),
+        ),
+    )
+}
+
+/// C# `BandEndWhereTheChainLeaves(SurfaceEdgePlan, SurfaceEdgePlan, Vector3?)`: the same as
+/// [`band_end_where_the_chain_arrives`], at the far end.
+pub fn band_end_where_the_chain_leaves(
+    here: &SurfaceEdgePlan,
+    leaving_for: &SurfaceEdgePlan,
+    through_instead: Option<Vector3>,
+) -> SurfaceBandEnd {
+    let point = match through_instead {
+        Some(point) => point,
+        None => surface_mitre_seam::the_point_or(
+            here,
+            leaving_for,
+            crosses_within(here, leaving_for),
+            here.to(),
+        ),
+    };
+
+    SurfaceBandEnd::new(
+        point,
+        -mitre_normal(
+            here.edge.direction(),
+            leaving_for.edge.direction(),
+            here.edge.direction(),
+        ),
+    )
 }

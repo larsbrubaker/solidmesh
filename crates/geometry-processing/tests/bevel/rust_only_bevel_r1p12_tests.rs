@@ -89,7 +89,9 @@ fn rust_only_the_run_out_reads_a_cubes_edges_faces_and_starts() {
         .is_none());
 }
 
-fn mixed_corner(hands_over_at_a_mitre: bool) -> SurfaceMixedCorner {
+/// A square mixed corner at (7, 7, 7), size 1, its axis +z through the origin (shared with
+/// `rust_only_bevel_r2p01_tests.rs`).
+pub fn mixed_corner(hands_over_at_a_mitre: bool) -> SurfaceMixedCorner {
     let plan = crate::rust_only_bevel_r1p06_tests::square_edge_plan(1.0, true);
     SurfaceMixedCorner::new(
         Vector3::new(7.0, 7.0, 7.0),

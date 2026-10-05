@@ -2,14 +2,16 @@
 //! [`SurfaceMixedCornerWallFacet`]s). Ports the records of
 //! `Bevel/Surface/SurfaceMixedCornerWall.cs` and its turn bookkeeping (the constructor, each
 //! facet's stretch as a turn about the bead's axis, and where a ray, a circle or the touch curve
-//! meets the wall); its reading and the strip under the blend land with a later package.
+//! meets the wall), its reading off a corner ([`SurfaceMixedCornerWall::try_read`]), where the
+//! rail meets it, and the strip of it under the blend.
 
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
-use super::SurfaceMixedCorner;
+use super::{SurfaceMixedCorner, SurfaceWallSection};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedCornerWall.Facet` (a private readonly struct): one facet of the wall - where it
 /// cuts the cap's plane, and the plane it stands in.
@@ -383,6 +385,143 @@ impl SurfaceMixedCornerWall {
         }
 
         (turn > 0.0).then_some(turn)
+    }
+}
+
+/// The wall's reading off its corner, where the rail meets it, and the strip under the blend.
+impl SurfaceMixedCornerWall {
+    /// C# `TryWhereTheRailMeetsTheWall`: the turn at which the ball's touch point on the cap - `2r`
+    /// out of the axis - meets the wall, which is where the runout dies into the sharp edge the part
+    /// keeps. On a flat wall it is sixty degrees past the bead's own end whatever the wedge; on a
+    /// chorded one it is where the outer rail crosses the facet segment it reaches. Where the bead's
+    /// ring leans it is the touch curve's own crossing instead.
+    pub fn try_where_the_rail_meets_the_wall(&self) -> Option<f64> {
+        if self.corner.the_beads_ring_leans() {
+            self.try_where_the_contact_meets_the_wall()
+        } else {
+            self.try_where_a_circle_meets_the_wall(
+                self.corner.outer_rail_radius(),
+                self.corner.turn_radians(),
+            )
+        }
+    }
+
+    /// C# `StripUnderTheBlend`: the strip of this wall the blend stands over between the bead's
+    /// stop plane and the cap, facet by facet as `(rim, normal)` - each facet's piece its section
+    /// segment carried down the wall to the plane the bead's band stops on
+    /// ([`SurfaceMixedCorner::down_to_the_beads_end`]), the last ending at the bead's foot.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > tolerance)`, which skips a NaN too.
+    pub fn strip_under_the_blend(&self) -> Vec<([Vector3; 4], Vector3)> {
+        let mut pieces = Vec::new();
+        let last = (self.touched_facet as i64).min(self.facets.len() as i64 - 1);
+
+        for facet in 0..=last {
+            let each = self.facets[facet as usize];
+            let from = each.from;
+            let to = if facet == last { self.foot } else { each.to };
+
+            // Measured against the FACET's own length rather than against zero: where the bead
+            // rests on a crease its foot IS that crease's vertex, but the two are arrived at through
+            // different arithmetic and agree to the last bit or two rather than exactly. Read as a
+            // piece, that is a rim with a side of no length, which no bite can name a half plane
+            // for - and one piece fewer, not a refusal.
+            if !((to - from).length()
+                > 1e-9 * cs_math::max_f64(1.0, (each.to - each.from).length()))
+            {
+                continue;
+            }
+
+            pieces.push((
+                [
+                    from,
+                    to,
+                    self.corner.down_to_the_beads_end(to),
+                    self.corner.down_to_the_beads_end(from),
+                ],
+                each.normal,
+            ));
+        }
+
+        pieces
+    }
+
+    /// C# `TryRead(SurfaceMixedCorner, out ..)`: reads the wall NOBODY PICKED - the face the runout
+    /// is trimmed against - as one plane or as the walk the bead took across it, its foot the
+    /// corner's cap corner.
+    pub fn try_read(corner: &Rc<SurfaceMixedCorner>) -> Result<Self, BevelAdvisory> {
+        Self::try_read_section(
+            corner,
+            corner.unpicked_section().as_deref(),
+            corner.cap_corner(),
+        )
+    }
+
+    /// C# `TryRead(SurfaceMixedCorner, SurfaceWallSection, Vector3, out ..)`: reads one face of the
+    /// corner - `section` the walk across it, or `None` where it is one plane - with `foot` the
+    /// bead's own foot on it in the cap's plane. A facet that does not run along the bead's axis
+    /// shows in the cap's plane as something other than the segment this is written in, so it is
+    /// refused by name rather than answered wrongly.
+    pub fn try_read_section(
+        corner: &Rc<SurfaceMixedCorner>,
+        section: Option<&SurfaceWallSection>,
+        foot: Vector3,
+    ) -> Result<Self, BevelAdvisory> {
+        let not_supported = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![corner.corner.into()],
+            )
+        };
+
+        let Some(section) = section else {
+            // Nothing was rolled, so the wall is one plane and the corner's own two points name it.
+            return Ok(Self::new(
+                Rc::clone(corner),
+                vec![SurfaceMixedCornerWallFacet::new(
+                    corner.corner,
+                    foot,
+                    corner.out_of_the_wall,
+                )],
+                0,
+                true,
+                foot,
+            ));
+        };
+
+        let along = corner.axis().direction;
+        let mut read = Vec::with_capacity(section.facets.len());
+
+        for step in &section.facets {
+            if step.normal.get_normal().dot(along).abs() > Self::SQUARE_ENOUGH {
+                // A facet leaning off the axis cuts the cap's plane in a line that is not where the
+                // section says it is, and the whole reading below is drawn in that plane.
+                return Err(not_supported());
+            }
+
+            read.push(SurfaceMixedCornerWallFacet::new(
+                Self::in_the_cap(corner, step.from),
+                Self::in_the_cap(corner, step.to),
+                step.normal.get_normal(),
+            ));
+        }
+
+        if read.is_empty() || section.touched_facet as i64 >= read.len() as i64 {
+            return Err(not_supported());
+        }
+
+        Ok(Self::new(
+            Rc::clone(corner),
+            read,
+            section.touched_facet,
+            false,
+            foot,
+        ))
+    }
+
+    /// C# `InTheCap`: one point of the section, carried into the cap face's own plane along a line
+    /// the facet holds - the bead's axis, which every facet of this wall runs along.
+    pub fn in_the_cap(corner: &SurfaceMixedCorner, at: Vector3) -> Vector3 {
+        corner.up_into_the_cap(at)
     }
 }
 

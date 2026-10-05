@@ -1,10 +1,9 @@
 //! Which canal a leaning mixed corner's blend is - the cap-riding one or the DUAL - decided by
 //! CREASE REACH and never by the lean (`Bevel/Surface/SurfaceMixedCornerWhichCanal.cs`, a static
-//! class: free functions here). The cap-riding crease and how far a crease runs land here first;
-//! the dual's own crease reading (`TheCornerTakesTheDual`, `TryHowFarTheDualsCreaseRuns`) lands
-//! with a later package.
+//! class: free functions here): the cap-riding crease, how far a crease runs, and the dual's own
+//! crease reading ([`the_corner_takes_the_dual`], [`try_how_far_the_duals_crease_runs`]).
 
-use super::{SurfaceLine, SurfaceMixedCorner};
+use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualCanal};
 use vector_math::cs_math;
 
 /// How far off the crease's own line a rim edge's end may stand and still be read as ON it - the
@@ -77,4 +76,22 @@ pub fn try_how_far_it_runs(corner: &SurfaceMixedCorner, crease: SurfaceLine) -> 
     }
 
     (reach > 0.0).then_some(reach)
+}
+
+/// C# `TheCornerTakesTheDual`: whether this corner's blend is the DUAL canal - a LEANING corner
+/// whose dual has a crease of the part to fade out on. Square corners keep the cap-riding rows they
+/// were measured with, and a leaning corner whose dual runs the other way out of its own corner is
+/// the cap-riding one.
+pub fn the_corner_takes_the_dual(corner: &SurfaceMixedCorner) -> bool {
+    corner.the_cap_leans() && try_how_far_the_duals_crease_runs(corner).is_some()
+}
+
+/// C# `TryHowFarTheDualsCreaseRuns`: how far the crease runs the way the DUAL travels - the reading
+/// the dual canal's own run-out is bounded by - or `None` where the part carries no edge that way
+/// out of this corner.
+pub fn try_how_far_the_duals_crease_runs(corner: &SurfaceMixedCorner) -> Option<f64> {
+    let dual = corner.try_read_the_dual_canal().ok()?;
+    let crease = SurfaceMixedCornerDualCanal::try_the_crease(corner, &dual)?;
+
+    try_how_far_it_runs(corner, crease)
 }

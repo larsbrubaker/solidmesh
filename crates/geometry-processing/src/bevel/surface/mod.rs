@@ -75,6 +75,7 @@ pub mod surface_face_carries_on;
 mod surface_facet_cut;
 pub mod surface_fan;
 pub mod surface_handover_leaves_a_strip;
+pub mod surface_junction_band_ends;
 mod surface_line;
 pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;

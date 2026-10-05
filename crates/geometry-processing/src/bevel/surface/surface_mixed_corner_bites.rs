@@ -1,7 +1,7 @@
 //! What a mixed corner's run-out bites out of the faces it runs across and turns against
 //! (`Bevel/Surface/SurfaceMixedCornerBites.cs`, a static class: free functions here). Where the
-//! touch row leaves the face it runs across lands here first; the bites themselves land with later
-//! packages.
+//! touch row leaves the face it runs across, and the point under the cap ([`under_the_cap`]), land
+//! here first; the bites themselves land with later packages.
 
 use vector_math::Vector3;
 
@@ -66,4 +66,10 @@ pub fn the_corner_the_wall_ends_at(
         wall_ends_at.point,
         -wall_ends_at.inward,
     )
+}
+
+/// C# `UnderTheCap`: the point on the cap's own plane straight above `at`, which stays in the wall
+/// - carried along the axis, measured against the corner vertex.
+pub fn under_the_cap(corner: &SurfaceMixedCorner, at: Vector3) -> Vector3 {
+    corner.up_into_the_cap_through(at, corner.corner)
 }

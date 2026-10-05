@@ -1,8 +1,9 @@
 //! The corner where a chain's convexity TURNS OVER ([`SurfaceMixedCorner`]) - a convex edge's
 //! cut running into a concave edge's bead at one vertex - read off the two edge plans that meet
 //! there, before anything is cut or stitched. Ports the record of
-//! `Bevel/Surface/SurfaceMixedCorner.cs`; its reading and its derived frame (axis, rails, the
-//! outward sum, which canal it takes) land with the mixed-corner package's methods.
+//! `Bevel/Surface/SurfaceMixedCorner.cs` with its derived frame (axis, rails, the outward sum),
+//! which canal it takes, and the carries into the cap and down to the bead's end; its reading
+//! (`TryRead`) lands with the mixed-corner package's methods.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -10,7 +11,9 @@ use std::rc::Rc;
 use vector_math::Vector3;
 
 use crate::bevel::BevelAdvisory;
+use crate::topology::EdgeConvexity;
 
+use super::surface_mixed_corner_which_canal;
 use super::{
     SurfaceBandEnd, SurfaceEdgePlan, SurfaceLine, SurfaceMixedCornerDualFrame,
     SurfaceMixedCornerSpine, SurfaceWallSection,
@@ -303,5 +306,151 @@ impl SurfaceMixedCorner {
         } else {
             -plan.edge.direction()
         }
+    }
+}
+
+/// The corner's derived planes and carries: where its ring stands, which canal it takes, and how a
+/// point is carried into the cap or down to the bead's end.
+impl SurfaceMixedCorner {
+    /// C# `SharedFaceFoot`: where the patch's own RING stands on the face the two edges share,
+    /// lifted into the cap's plane - the far end of the strip under the blend when the bead rolled
+    /// along THAT face, and the mirror of [`SurfaceMixedCorner::cap_corner`] at the other end of
+    /// the turn.
+    ///
+    /// The cut's tangent line in the shared face, met with the plane the ring is cut at. At an
+    /// ordinary corner that is the tangent point itself, read in the cap; at a MITRE handover the
+    /// ring stands SHORT of the tangency, so the strip under the blend has to reach the RAIL (on the
+    /// C# fixture the rail is at 1.5696 where the tangency is at 1.3288).
+    pub fn shared_face_foot(&self) -> Vector3 {
+        let in_the_shared_face = if self.cut.left_region_key() == self.shared_region_key {
+            self.cut.left_tangent_line
+        } else {
+            self.cut.right_tangent_line
+        };
+        let across = in_the_shared_face.direction.dot(self.cut_stops_at.inward);
+
+        // The ring's plane parallel to the cut's own tangent line would name no rail at all. It
+        // cannot happen at a corner this class read, and the tangency is what the rail is then.
+        let rail = if across.abs() > 1e-9 {
+            in_the_shared_face.point
+                + (in_the_shared_face.direction
+                    * ((self.cut_stops_at.point - in_the_shared_face.point)
+                        .dot(self.cut_stops_at.inward)
+                        / across))
+        } else {
+            self.tangent_point
+        };
+
+        self.up_into_the_cap(rail)
+    }
+
+    /// C# `UpIntoTheCap(Vector3)`: a point of the WALL or of the shared face, carried into the cap
+    /// face's own plane along a line both faces hold - the AXIS, measured against the outer rail's
+    /// centre - so that a reading taken in the cap's plane is still a reading of that face.
+    pub fn up_into_the_cap(&self, at: Vector3) -> Vector3 {
+        self.up_into_the_cap_through(at, self.outer_rail_centre)
+    }
+
+    /// C# `UpIntoTheCap(Vector3, Vector3)`: the same, naming which point of the cap's plane the
+    /// carry is measured against - one plane, and so one answer, but the arithmetic of a square
+    /// corner is kept to the bit wherever it was written against the corner vertex. Where the cap
+    /// stands SQUARE the carry is along the cap's normal; where it LEANS, along the axis.
+    pub fn up_into_the_cap_through(&self, at: Vector3, through_the_cap_at: Vector3) -> Vector3 {
+        if !self.the_beads_ring_leans() {
+            return at
+                + (self.out_of_the_cap_face
+                    * (through_the_cap_at - at).dot(self.out_of_the_cap_face));
+        }
+
+        let along = self.axis().direction;
+
+        at + (along
+            * ((through_the_cap_at - at).dot(self.out_of_the_cap_face)
+                / along.dot(self.out_of_the_cap_face)))
+    }
+
+    /// C# `CapCorner`: the corner the cap face, the wall and the meridian plane at the turn all
+    /// meet at - the point the planar cap that closes the patch is fanned from: a radius out of the
+    /// axis along the last turn's own way out, carried back into the cap along the axis where the
+    /// cap leans.
+    pub fn cap_corner(&self) -> Vector3 {
+        self.up_into_the_cap(
+            self.outer_rail_centre + (self.out_of_the_axis(self.turn_radians()) * self.size),
+        )
+    }
+
+    /// C# `BeadRingStandsOn`: the plane the BEAD's band and its end ring are really cut at - its own
+    /// square section ordinarily, and the LEANING ring the cap-riding ball traces on the bead where
+    /// this corner's canal is the cap-riding one and the cap leans (9.7 um off the square section at
+    /// 5.625 degrees of lean, at `r = 1`). On the DUAL, and on a square corner, nothing moves.
+    pub fn bead_ring_stands_on(&self) -> SurfaceBandEnd {
+        if self.the_beads_ring_leans() {
+            self.spine.tube_ring_plane()
+        } else {
+            self.bead_stops_at
+        }
+    }
+
+    /// C# `TheBeadsRingLeans`: whether that plane is the LEANING one - which says the strip of wall
+    /// under the blend is no longer the section extruded a radius down from the cap. Asked as one
+    /// question everywhere, so the plane a band was cut at and the face under it agree.
+    pub fn the_beads_ring_leans(&self) -> bool {
+        self.the_cap_leans() && !self.takes_the_dual_canal()
+    }
+
+    /// C# `DownToTheBeadsEnd`: where a point of the CAP's plane stands when it is carried down the
+    /// wall to the plane the bead's band and end ring stop on - the lower rim of the strip of wall
+    /// the blend stands over. Down the AXIS (the wall runs along it); on a SQUARE cap the drop is
+    /// the radius exactly, taken as the constant. The divisor cannot vanish: the spine is refused
+    /// below `SQUARE_ENOUGH`.
+    pub fn down_to_the_beads_end(&self, in_the_cap: Vector3) -> Vector3 {
+        if !self.the_beads_ring_leans() {
+            return in_the_cap - (self.out_of_the_cap_face * self.size);
+        }
+
+        let stops_on = self.bead_ring_stands_on();
+        let axis = self.axis().direction;
+        let down = axis
+            * if axis.dot(self.out_of_the_cap_face) > 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+
+        in_the_cap
+            + (down
+                * ((stops_on.point - in_the_cap).dot(stops_on.inward) / down.dot(stops_on.inward)))
+    }
+
+    /// C# `BandEndFor`: which of the two stopping planes bounds `edge` - the handover for the
+    /// convex edge's cut (or, on the DUAL, the canal's own leaning cut-ring plane, which on the nose
+    /// fixture dips 0.89 mm further back at mid turn), the plane the bead's own ring stands on for
+    /// the concave edge's bead.
+    pub fn band_end_for(&self, edge: &SurfaceEdgePlan) -> SurfaceBandEnd {
+        if edge.convexity() != EdgeConvexity::Convex {
+            return self.bead_ring_stands_on();
+        }
+
+        if self.takes_the_dual_canal() {
+            if let Ok(dual) = self.try_read_the_dual_canal() {
+                return dual.cut_ring_plane();
+            }
+        }
+
+        self.cut_stops_at
+    }
+
+    /// C# `TakesTheDualCanal`: whether this corner's blend is the DUAL canal rather than the
+    /// cap-riding one, decided by CREASE REACH and never by the lean. Cached, because the walk is
+    /// over the wall region's whole rim and this is asked once per band end per edge; nothing it is
+    /// read from changes after the corner is read.
+    pub fn takes_the_dual_canal(&self) -> bool {
+        if let Some(takes) = self.takes_the_dual_canal.get() {
+            return takes;
+        }
+
+        let takes = surface_mixed_corner_which_canal::the_corner_takes_the_dual(self);
+        self.takes_the_dual_canal.set(Some(takes));
+        takes
     }
 }

@@ -1,8 +1,11 @@
 //! The two faces a mixed corner's footprint comes off, told apart ([`SurfaceMixedCornerFaces`]).
-//! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs` with its constructor; its reading and the strips
-//! under the blend land with the mixed-corner package's methods.
+//! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs` with its constructor and the strips
+//! under the blend ([`SurfaceMixedCornerFaces::strips_under_the_blend`]); its reading lands with the
+//! mixed-corner package's methods.
 
 use std::rc::Rc;
+
+use vector_math::Vector3;
 
 use super::SurfaceMixedCornerWall;
 
@@ -45,5 +48,18 @@ impl SurfaceMixedCornerFaces {
             rolled_section: rolled,
             unpicked_face: unpicked,
         }
+    }
+
+    /// C# `StripsUnderTheBlend`: every piece of wall the blend stands over between the bead's stop
+    /// plane and the cap - the rolled face's, facet by facet, and the unpicked face's as well where
+    /// that is a face of its own.
+    pub fn strips_under_the_blend(&self) -> Vec<([Vector3; 4], Vector3)> {
+        let mut pieces = self.rolled_section.strip_under_the_blend();
+
+        if !self.one_face {
+            pieces.extend(self.unpicked_face.strip_under_the_blend());
+        }
+
+        pieces
     }
 }
