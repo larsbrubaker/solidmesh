@@ -4,6 +4,8 @@
 
 #[path = "polygon_mesh/face_normal_tests.rs"]
 mod face_normal_tests;
+#[path = "polygon_mesh/mesh_convex_hull_tests.rs"]
+mod mesh_convex_hull_tests;
 #[path = "polygon_mesh/mesh_copy_independence_tests.rs"]
 mod mesh_copy_independence_tests;
 #[path = "polygon_mesh/mesh_edge_graph_tests.rs"]
