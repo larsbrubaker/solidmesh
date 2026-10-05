@@ -6,8 +6,6 @@
 //!
 //! Skipped until their code lands:
 //! - `SoupOperandWithColorsStillRunsOnTheKernel`: face colours (Phase 2f).
-//! - `ASeamSplitByRoundingStillUnions`, `ASeamSplitByRoundingStillUnionsFarFromTheOrigin`: the
-//!   tolerance-weld retry needs `Mesh::merge_vertices` (Phase 2c).
 //! - `CancelObservedByTheKernelSurfacesAsCancellation`,
 //!   `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
 //!   `ReporterSeesProgressWithoutChangingTheResult`: not ported in this slice (UV-sphere fixture,
@@ -472,4 +470,228 @@ fn cube_with_a_non_finite_vertex() -> Mesh {
         ..corner
     };
     mesh
+}
+
+/// A solid whose seams came apart in the last digits still unions. The kernel welds by exact
+/// position and has no tolerance of its own, so such a mesh reads as NotClosed to it; the import
+/// retries with a tolerance-welded copy rather than refusing the part.
+#[test]
+fn a_seam_split_by_rounding_still_unions() {
+    let split = cube_with_split_seams(10.0, 1e-6);
+
+    // Every triangle owns its own corners, so every edge is a boundary edge.
+    assert!(
+        !split.is_manifold(),
+        "the input under test has to be one the kernel would refuse untouched"
+    );
+
+    let result = union_subtract_intersect(
+        CsgModes::Union,
+        &split,
+        translation(-3.0, 0.0, 0.0),
+        &create_cube(10.0, 10.0, 10.0),
+        translation(3.0, 0.0, 0.0),
+    );
+
+    assert!(!result.faces.is_empty());
+    assert!(result.is_manifold());
+
+    // The welded operand still has to be the same 10mm cube it looked like.
+    let bounds = result.get_axis_aligned_bounding_box();
+    assert_within(bounds.x_size(), 16.0, 0.001);
+    assert_within(bounds.y_size(), 10.0, 0.001);
+    assert_within(bounds.z_size(), 10.0, 0.001);
+}
+
+/// The same split-seam solid, out where the coordinates are large, still unions: the float
+/// rounding that splits a seam scales with distance from the origin, not with the part.
+#[test]
+fn a_seam_split_by_rounding_still_unions_far_from_the_origin() {
+    const FAR_FROM_ORIGIN: f64 = 5000.0;
+
+    let split =
+        cube_with_seams_split_by_float_spacing(10.0, Vector3::new(FAR_FROM_ORIGIN, 0.0, 0.0), 2);
+
+    assert!(
+        !split.is_manifold(),
+        "the input under test has to be one the kernel would refuse untouched"
+    );
+
+    let result = union_subtract_intersect(
+        CsgModes::Union,
+        &split,
+        Matrix4X4::IDENTITY,
+        &create_cube(10.0, 10.0, 10.0),
+        translation(FAR_FROM_ORIGIN + 6.0, 0.0, 0.0),
+    );
+
+    assert!(!result.faces.is_empty());
+    assert!(result.is_manifold());
+
+    let bounds = result.get_axis_aligned_bounding_box();
+    assert_within(bounds.x_size(), 16.0, 0.01);
+    assert_within(bounds.y_size(), 10.0, 0.01);
+    assert_within(bounds.z_size(), 10.0, 0.01);
+}
+
+/// .NET's seeded `System.Random` (the Knuth subtractive generator), so the fixtures below
+/// perturb exactly the corners the C# fixtures do.
+struct DotNetRandom {
+    seed_array: [i32; 56],
+    inext: usize,
+    inextp: usize,
+}
+
+impl DotNetRandom {
+    const MBIG: i32 = i32::MAX;
+    const MSEED: i32 = 161_803_398;
+
+    fn new(seed: i32) -> Self {
+        let mut seed_array = [0i32; 56];
+        let subtraction = if seed == i32::MIN {
+            i32::MAX
+        } else {
+            seed.abs()
+        };
+        let mut mj = Self::MSEED - subtraction;
+        seed_array[55] = mj;
+        let mut mk = 1i32;
+        let mut ii = 0usize;
+        for _ in 1..55 {
+            ii += 21;
+            if ii >= 55 {
+                ii -= 55;
+            }
+            seed_array[ii] = mk;
+            mk = mj - mk;
+            if mk < 0 {
+                mk += Self::MBIG;
+            }
+            mj = seed_array[ii];
+        }
+        for _ in 1..5 {
+            for i in 1..56 {
+                let mut n = i + 30;
+                if n >= 55 {
+                    n -= 55;
+                }
+                seed_array[i] = seed_array[i].wrapping_sub(seed_array[1 + n]);
+                if seed_array[i] < 0 {
+                    seed_array[i] += Self::MBIG;
+                }
+            }
+        }
+        Self {
+            seed_array,
+            inext: 0,
+            inextp: 21,
+        }
+    }
+
+    fn internal_sample(&mut self) -> i32 {
+        let mut loc_inext = self.inext + 1;
+        if loc_inext >= 56 {
+            loc_inext = 1;
+        }
+        let mut loc_inextp = self.inextp + 1;
+        if loc_inextp >= 56 {
+            loc_inextp = 1;
+        }
+        let mut ret_val = self.seed_array[loc_inext].wrapping_sub(self.seed_array[loc_inextp]);
+        if ret_val == Self::MBIG {
+            ret_val -= 1;
+        }
+        if ret_val < 0 {
+            ret_val += Self::MBIG;
+        }
+        self.seed_array[loc_inext] = ret_val;
+        self.inext = loc_inext;
+        self.inextp = loc_inextp;
+        ret_val
+    }
+
+    fn next_double(&mut self) -> f64 {
+        f64::from(self.internal_sample()) * (1.0 / f64::from(Self::MBIG))
+    }
+
+    fn next(&mut self, max_value: i32) -> i32 {
+        (self.next_double() * f64::from(max_value)) as i32
+    }
+}
+
+/// `MathF.BitIncrement`: the next float towards +infinity.
+fn bit_increment(value: f32) -> f32 {
+    if value.is_nan() || value == f32::INFINITY {
+        return value;
+    }
+    if value == 0.0 {
+        return f32::from_bits(1);
+    }
+    let bits = value.to_bits();
+    f32::from_bits(if value > 0.0 { bits + 1 } else { bits - 1 })
+}
+
+/// `MathF.BitDecrement`: the next float towards -infinity.
+fn bit_decrement(value: f32) -> f32 {
+    -bit_increment(-value)
+}
+
+/// Rebuilds a cube so every triangle owns its own three corners, each moved by `perturbed`.
+fn split_corners(cube: &Mesh, mut perturbed: impl FnMut(Vector3Float) -> Vector3Float) -> Mesh {
+    let mut split = Mesh::new();
+    for face in cube.faces.iter() {
+        let start = split.vertices.len() as i32;
+        for vertex in [face.v0, face.v1, face.v2] {
+            let position = perturbed(cube.vertices[vertex as usize]);
+            split.vertices.push(position);
+        }
+        let face = Face::new(start, start + 1, start + 2, &split.vertices);
+        split.faces.push(face);
+    }
+    split
+}
+
+/// A cube whose every triangle carries its own copy of its corners, each nudged by up to
+/// `jitter` (C# `CubeWithSplitSeams`).
+fn cube_with_split_seams(size: f64, jitter: f32) -> Mesh {
+    let cube = create_cube(size, size, size);
+    // Deterministic, so a failure here is always the same failure.
+    let mut random = DotNetRandom::new(12345);
+    let mut nudge = move || ((random.next_double() - 0.5) * 2.0 * f64::from(jitter)) as f32;
+    split_corners(&cube, |p| {
+        let x = p.x + nudge();
+        let y = p.y + nudge();
+        let z = p.z + nudge();
+        Vector3Float::new_f32(x, y, z)
+    })
+}
+
+/// A cube at `at` whose every triangle carries its own copy of its corners, each corner nudged
+/// `ulps` steps along the float grid (C# `CubeWithSeamsSplitByFloatSpacing`).
+fn cube_with_seams_split_by_float_spacing(size: f64, at: Vector3, ulps: i32) -> Mesh {
+    let mut cube = create_cube(size, size, size);
+    cube.transform(Matrix4X4::create_translation_vector(at));
+    let mut random = DotNetRandom::new(12345);
+    let mut nudged = move |mut value: f32| {
+        match random.next(3) {
+            0 => {
+                for _ in 0..ulps {
+                    value = bit_decrement(value);
+                }
+            }
+            1 => {
+                for _ in 0..ulps {
+                    value = bit_increment(value);
+                }
+            }
+            _ => {}
+        }
+        value
+    };
+    split_corners(&cube, |p| {
+        let x = nudged(p.x);
+        let y = nudged(p.y);
+        let z = nudged(p.z);
+        Vector3Float::new_f32(x, y, z)
+    })
 }

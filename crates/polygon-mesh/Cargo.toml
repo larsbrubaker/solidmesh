@@ -1,6 +1,6 @@
 # polygon-mesh: agg-sharp's PolygonMesh (Mesh, faces, edges, measurements, Platonic solids, STL).
-# Depends on vector-math and, for CSG (`csg`), the sibling manifold-rust checkout; builds for
-# wasm32-unknown-unknown. The RayTracer/BVH, Sdf/DualContouring and the other processors join in
+# Depends on vector-math, for CSG (`csg`) the sibling manifold-rust checkout, and for slicing
+# the sibling clipper2-rust checkout; builds for wasm32-unknown-unknown. The RayTracer/BVH, Sdf/DualContouring and the other processors join in
 # later Phase 2 slices.
 [package]
 name = "polygon-mesh"
@@ -22,6 +22,9 @@ vector-math = { path = "../vector-math" }
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
 manifold-rust = { path = "../../../manifold-rust" }
+# C#'s ClipperLib integer polygons (`List<IntPoint>`) for slicing: Clipper2's `Path64`/`Paths64`
+# and its union, from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
+clipper2-rust = { path = "../../../clipper2-rust" }
 
 # Native hosts get the kernel's `parallel` feature, as agg-sharp's ManifoldKernel turns
 # ManifoldParallel on everywhere but the browser: wasm32-unknown-unknown has no threads to

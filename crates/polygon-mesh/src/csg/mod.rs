@@ -12,7 +12,8 @@
 //!
 //! Not yet here: the implicit-surface processing modes (`Marching_Cubes`, `Dual_Contouring`,
 //! g3 implicits, Phase 2e), face-colour tracking through the run data (Phase 2f), the async
-//! yielding entry points, Minkowski and `SliceLayer`.
+//! yielding entry points and Minkowski. [`slice_layer`] cuts a mesh into integer polygons and
+//! [`path_stitcher`] walls polygon loops back into a mesh.
 
 pub mod boolean_processing;
 mod boolean_progress_adapter;
@@ -23,6 +24,8 @@ mod manifold_kernel;
 mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;
+pub mod path_stitcher;
+pub mod slice_layer;
 
 use std::fmt;
 use std::sync::Arc;

@@ -2,13 +2,14 @@
 //! flattening into the kernel's `MeshGL64`. Port of agg-sharp `Csg/ManifoldImport.cs`; called by
 //! `manifold_operand_batch` and `boolean_processing::classify_boolean_operand`.
 //!
-//! Not yet here: `WeldSeams`, the tolerance-weld retry for a mesh the kernel calls `NotClosed`.
-//! It needs `Mesh::merge_vertices`, which lands with Phase 2c; until then such a mesh is
-//! refused on the first import. `ImportAsOriginal` (the re-tag that attributes result triangles
+//! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld).
+//! `ImportAsOriginal` (the re-tag that attributes result triangles
 //! to an operand) is only used by face-colour tracking and comes with it in Phase 2f.
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
+
+use vector_math::Vector3;
 
 use super::manifold_kernel;
 use crate::Mesh;
@@ -25,13 +26,33 @@ pub(crate) struct ImportRejected {
 /// Always the robust import. For strictly manifold input it is the plain import - same result,
 /// and the manifold is not marked soup, so the Auto engine still picks the fast exact
 /// pipeline. Closed but non-manifold input is welded into a soup manifold instead of being
-/// rejected. Only geometry that is not even closed fails, as `NotClosed`.
+/// rejected. Only geometry that is not even closed still fails, as `NotClosed` - and that one
+/// gets a second chance through [`weld_seams`] before it is refused.
 ///
 /// The refusal is returned rather than absorbed: a boolean swallows an error operand as empty
 /// geometry and still reports success, which would show up as a part silently missing.
 pub(crate) fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
     manifold_kernel::ensure_configured();
 
+    let rejected = match try_import(mesh, repair_orientation) {
+        Ok(imported) => return Ok(imported),
+        Err(rejected) => rejected,
+    };
+
+    if rejected.status == KernelStatus::NotClosed {
+        if let Some(welded) = weld_seams(mesh) {
+            if let Ok(retried) = try_import(&welded, repair_orientation) {
+                return Ok(retried);
+            }
+        }
+    }
+
+    Err(rejected)
+}
+
+/// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide
+/// whether it is worth a retry (C# `TryImport`).
+fn try_import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
     let imported = Manifold::from_mesh_gl64_robust(&to_rust_mesh_data(mesh));
     let status = imported.status();
     if status != KernelStatus::NoError {
@@ -65,6 +86,45 @@ pub(crate) fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, 
         });
     }
     Ok(repaired)
+}
+
+/// A tolerance-welded copy of a mesh, or `None` when there is no sane scale to weld at.
+///
+/// The kernel welds vertices by exact f64 position and has no tolerance of its own, so a seam
+/// whose two sides differ in the last bits is a pair of boundary edges to it and a visually
+/// closed solid reports `NotClosed`. Positions are stored as `Vector3Float` and every
+/// transform re-rounds them, so a seam shared on disk can come apart in the last digit.
+/// Welding with a tolerance taken from the bounding box - both its size and how far it sits
+/// from the origin (the float grid step at that coordinate) - closes those seams without
+/// moving anything a user could see. Only ever called on the failure path.
+pub(crate) fn weld_seams(mesh: &Mesh) -> Option<Mesh> {
+    let aabb = mesh.get_axis_aligned_bounding_box();
+    let diagonal = aabb.size().length();
+    // `partial_cmp` so a NaN diagonal (a non-finite vertex) is refused like zero, as `!(d > 0)`.
+    if diagonal.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) || diagonal.is_infinite() {
+        // No extent to scale a tolerance against. A non-finite vertex lands here too, and
+        // welding is not the answer to that one anyway.
+        return None;
+    }
+
+    // Whichever of the part's size and its distance from the origin is larger sets the scale
+    // of a seam gap.
+    let distance_from_origin = max_abs_component(aabb.min_xyz).max(max_abs_component(aabb.max_xyz));
+    let tolerance = diagonal.max(distance_from_origin) * 1e-5;
+
+    // Area rather than length, and well under the tolerance squared: this only drops triangles
+    // the weld itself collapsed, not thin ones the model meant to have.
+    let min_face_area = tolerance * tolerance / 10.0;
+    let mut welded = mesh.copy();
+    welded.merge_vertices(tolerance, min_face_area, None);
+    welded.remove_degenerate_faces(min_face_area);
+    welded.remove_unused_vertices();
+    Some(welded)
+}
+
+/// How far the furthest of a corner's three coordinates is from zero.
+fn max_abs_component(corner: Vector3) -> f64 {
+    corner.x.abs().max(corner.y.abs().max(corner.z.abs()))
 }
 
 /// Flattens a mesh into the interleaved position list and triangle index list the kernel
