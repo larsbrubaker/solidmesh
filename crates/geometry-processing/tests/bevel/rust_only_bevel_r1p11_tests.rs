@@ -437,6 +437,7 @@ fn rust_only_the_builder_reads_its_canals() {
         })
         .next()
         .expect("an edge out of the corner");
+    let mut sides_read = 0;
     for on_the_left in [true, false] {
         if let Ok((creases, fan)) = section_builder::try_creases_in_the_fan_reading(
             corner,
@@ -452,10 +453,112 @@ fn rust_only_the_builder_reads_its_canals() {
             assert!(creases
                 .iter()
                 .all(|&e| section_room_is_fold(&cube, &graph, e)));
+            sides_read += 1;
         }
     }
+    assert!(
+        sides_read >= 1,
+        "at least one side of the corner's fan reads"
+    );
 
     fn section_room_is_fold(mesh: &polygon_mesh::Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
         geometry_processing::bevel::sections::section_fan_walk::is_a_crease(mesh, graph, edge)
     }
+}
+
+/// A box's top corner, the chain turning from the front-top edge (+x) onto the right-top edge (+y):
+/// the top is the shared flat side, the wedge square, the mitre plane square to the two directions'
+/// sum through the point the two canal axes meet, and each edge's slid profile lies in that plane.
+#[test]
+fn rust_only_a_box_corner_reads_its_sides_and_mitre() {
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let y = Vector3::new(0.0, 1.0, 0.0);
+    let z = Vector3::new(0.0, 0.0, 1.0);
+    let chain = |start: Vector3, end: Vector3, left: Vector3, right: Vector3| {
+        ChainEdge::new(
+            0,
+            FeatureEdge {
+                start,
+                end,
+                direction: (end - start).get_normal(),
+                normal0: left,
+                normal1: right,
+                ..Default::default()
+            },
+            false,
+        )
+    };
+    let arriving = chain(x * -10.0, Vector3::ZERO, z, -y);
+    let leaving = chain(Vector3::ZERO, y * 10.0, z, x);
+    let r = 2.0;
+
+    let (flat_on_the_left, cosine, wedge) =
+        section_corner::try_read_the_sides(&arriving, &leaving).expect("the top is shared");
+    assert!(flat_on_the_left && cosine.abs() < 1e-12);
+    assert!((wedge - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+    assert!(section_corner::looks_like_a_corner(&arriving, &leaving));
+    assert!(!section_corner::looks_like_a_corner(&arriving, &arriving));
+
+    assert!(
+        (section_corner::the_axis_at(&arriving, Vector3::ZERO, r) - Vector3::new(0.0, r, -r))
+            .length()
+            < 1e-12
+    );
+    let (through, normal) =
+        section_corner::try_the_mitre_plane(&arriving, &leaving, r).expect("the axes meet");
+    assert!((through - Vector3::new(-r, r, -r)).length() < 1e-12);
+    assert!((normal - (x + y).get_normal()).length() < 1e-12);
+
+    for edge in [&arriving, &leaving] {
+        let profile = section_corner::slid_profile(edge, Vector3::ZERO, normal, r, 5);
+        assert_eq!(profile.len(), 5);
+        assert!(profile.iter().all(|p| p.dot(normal).abs() < 1e-9));
+    }
+
+    // Down the front wall (the arriving edge's right face) away from the edge.
+    let away = section_corner::away_in_the_wall(&arriving, false, cosine);
+    assert!((away - (-z)).length() < 1e-12);
+    assert_eq!(section_corner::shared_kind(3), SectionSide::Slide);
+    assert_eq!(section_corner::shared_kind(-1), SectionSide::Offset);
+}
+
+/// A section with one side walked takes that walk's end as its profile's end and records the walk;
+/// one with neither side walked comes back as it was.
+#[test]
+fn rust_only_a_section_is_rewritten_with_its_walked_ends() {
+    use geometry_processing::bevel::sections::section_builder_walked_side::{rewritten, WalkedEnd};
+
+    let section = BevelSection::new(
+        4,
+        Vector3::ZERO,
+        Vector3::new(1.0, 0.0, 0.0),
+        10,
+        12,
+        vec![10, 11, 12],
+        Vector3::ZERO,
+        Vector3::ZERO,
+        SectionSide::Offset,
+        SectionSide::Offset,
+        -1,
+        -1,
+        1.0,
+    )
+    .unwrap();
+    let none = WalkedEnd::new(-1, -1, Vector3::ZERO, false, false, -1, 0.0, -1);
+    assert_eq!(rewritten(&section, &none, &none), section);
+
+    let walked = WalkedEnd::new(20, 7, Vector3::new(0.0, 1.0, 0.0), true, true, 9, 0.25, 30);
+    let redrawn = rewritten(&section, &walked, &none);
+    assert_eq!(redrawn.profile, vec![20, 11, 12]);
+    assert_eq!((redrawn.left_boundary, redrawn.right_boundary), (20, 12));
+    assert_eq!((redrawn.left_walk_face, redrawn.right_walk_face), (7, -1));
+    assert!(redrawn.left_boundary_is_join_placed && redrawn.left_walk_crossed_a_fold);
+    assert_eq!(
+        (
+            redrawn.left_walk_edge,
+            redrawn.left_walk_parameter,
+            redrawn.left_walk_vertex
+        ),
+        (9, 0.25, 30)
+    );
 }

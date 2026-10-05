@@ -6,7 +6,8 @@
 //! ([`try_feature_edge_between`]) and the vertex-pair index of the mesh's edges
 //! ([`edges_by_vertex_pair`]); the creases a side's fan crosses ([`try_creases_in_the_fan`]); and the
 //! profile's interior samples on the canals' circle or corner ellipse
-//! ([`place_the_interior_samples`], [`try_the_canals_corner`]). The build itself (`TryBuild`) lands
+//! ([`place_the_interior_samples`], [`try_the_canals_corner`]); and one side's boundary
+//! ([`try_boundary`]). The build itself (`TryBuild`) lands
 //! with a later package.
 
 use std::collections::HashSet;
@@ -16,8 +17,8 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Vector3;
 
 use super::section_fan_walk::{self, EdgeAtPair};
-use super::{IsAFeatureEdge, NanSectionPoint, SectionPool};
-use crate::bevel::BevelAdvisory;
+use super::{IsAFeatureEdge, NanSectionPoint, SectionPool, SectionSide};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
 /// C# `TheFeatureTest`: the operation's OWN reading of which mesh edges are features - never a
@@ -264,4 +265,100 @@ pub fn slerp(from: Vector3, to: Vector3, along: f64, wedge: f64) -> Vector3 {
     }
 
     ((from * ((1.0 - along) * wedge).sin()) + (to * (along * wedge).sin())) / spread
+}
+
+/// One side's boundary as [`try_boundary`] reads it: where it stands, the centre it is a radius
+/// from, whether it offsets or slides, and the crease it slides down (or -1).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SideBoundary {
+    pub at: Vector3,
+    pub side_centre: Vector3,
+    pub kind: SectionSide,
+    pub slide_edge: i32,
+}
+
+/// C# `TryBoundary`: one side's boundary at a chain vertex. With no crease running into the face on
+/// this side it is the setback straight out along `away` (an OFFSET); with one, it SLIDES down that
+/// crease until it reaches the setback; with more than one there is no one edge to ride and the side
+/// is refused (not routed in v1), as is a crease that leaves square to or back across `away`. The
+/// side's centre is the section's own carried along the chain by however far the slide took the
+/// boundary.
+#[allow(clippy::too_many_arguments)]
+pub fn try_boundary(
+    vertex: i32,
+    station: Vector3,
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    on_the_left: bool,
+    normal: Vector3,
+    away: Vector3,
+    setback: f64,
+    radius: f64,
+    centre: Vector3,
+    tangent: Vector3,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> Result<SideBoundary, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        )
+    };
+
+    let (creases, _) = try_creases_in_the_fan_reading(
+        vertex,
+        arriving,
+        leaving,
+        on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+        is_a_feature_edge,
+    )?;
+
+    if creases.len() > 1 {
+        // More than one crease runs into the face on this side, so there is no one edge for the
+        // boundary to ride and the section would have to fan. Not routed in v1.
+        return Err(not_supported());
+    }
+
+    let (at, kind, slide_edge) = if let Some(&slide_edge) = creases.first() {
+        let other = if graph.get_vertex0(slide_edge) == vertex {
+            graph.get_vertex1(slide_edge)
+        } else {
+            graph.get_vertex0(slide_edge)
+        };
+        let along =
+            (Vector3::from_vector3_float(mesh.vertices[other as usize]) - station).get_normal();
+        let lean = along.dot(away);
+
+        if lean < 1e-9 {
+            // The crease leaves the vertex square to, or back across, the direction the boundary has
+            // to reach out along, so sliding down it never reaches the setback.
+            return Err(not_supported());
+        }
+
+        (
+            station + (along * (setback / lean)),
+            SectionSide::Slide,
+            slide_edge,
+        )
+    } else {
+        (station + (away * setback), SectionSide::Offset, -1)
+    };
+
+    // The centre this side's boundary is a radius from: the section's own centre carried along the
+    // chain by however far the slide took the boundary that way. A side that does not slide takes it
+    // unmoved, because there C + r n IS the boundary.
+    let side_centre = centre + (tangent * (at - centre - (normal * radius)).dot(tangent));
+
+    Ok(SideBoundary {
+        at,
+        side_centre,
+        kind,
+        slide_edge,
+    })
 }

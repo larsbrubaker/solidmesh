@@ -3,7 +3,8 @@
 //! SectionBuilder`): where one such reach ended ([`WalkedEnd`]), the neighbour's end a split
 //! station is joined from ([`the_neighbours_end`], [`the_faces_the_end_lies_in`]) and the place a
 //! join-placed point lands on ([`try_along_the_join`], [`name_the_place`] and their helpers). And the
-//! split station's own point placed on that join ([`the_joins_own_point`]).
+//! split station's own point placed on that join ([`the_joins_own_point`]), and a section with its
+//! walked ends put in ([`rewritten`]).
 
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -497,4 +498,45 @@ pub fn the_joins_own_point(
     }
 
     Ok(none)
+}
+
+/// C# `Rewritten`: a section with its offset sides' WALKED ends put in - each walked side's boundary
+/// point as its profile's end, and the walk's face, direction, placement, fold, edge, parameter and
+/// vertex recorded on the section. A section neither of whose sides was walked comes back as it was.
+pub fn rewritten(section: &BevelSection, left: &WalkedEnd, right: &WalkedEnd) -> BevelSection {
+    if left.face < 0 && right.face < 0 {
+        return section.clone();
+    }
+
+    let mut profile = section.profile.clone();
+    let last = profile.len() - 1;
+
+    if left.boundary >= 0 {
+        profile[0] = left.boundary;
+    }
+
+    if right.boundary >= 0 {
+        profile[last] = right.boundary;
+    }
+
+    BevelSection {
+        left_boundary: profile[0],
+        right_boundary: profile[last],
+        profile,
+        left_walk_face: left.face,
+        right_walk_face: right.face,
+        left_walk_direction: left.direction,
+        right_walk_direction: right.direction,
+        left_boundary_is_join_placed: left.is_join_placed,
+        right_boundary_is_join_placed: right.is_join_placed,
+        left_walk_crossed_a_fold: left.crossed_a_fold,
+        right_walk_crossed_a_fold: right.crossed_a_fold,
+        left_walk_edge: left.edge,
+        right_walk_edge: right.edge,
+        left_walk_parameter: left.parameter,
+        right_walk_parameter: right.parameter,
+        left_walk_vertex: left.vertex,
+        right_walk_vertex: right.vertex,
+        ..section.clone()
+    }
 }
