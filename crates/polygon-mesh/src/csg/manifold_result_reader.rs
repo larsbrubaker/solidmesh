@@ -48,7 +48,7 @@ fn build_mesh(exported: &MeshGL64, operation_name: &str) -> Result<Mesh, Boolean
         i += num_prop;
     }
 
-    for tri in exported.tri_verts.chunks_exact(3) {
+    for tri in exported.tri_verts.as_chunks::<3>().0 {
         let face = Face::new(tri[0] as i32, tri[1] as i32, tri[2] as i32, &mesh.vertices);
         mesh.faces.push(face);
     }

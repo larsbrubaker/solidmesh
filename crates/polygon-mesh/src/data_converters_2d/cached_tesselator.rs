@@ -99,7 +99,9 @@ impl CachedTesselator {
 
         let vertices = tess.vertices();
         self.vertices_cache = vertices
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|xy| Vector2::new(xy[0], xy[1]))
             .collect();
 

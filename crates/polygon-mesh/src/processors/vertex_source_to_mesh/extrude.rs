@@ -363,7 +363,7 @@ fn create_mesh_loop(
         Vector2::new(vertices[i], vertices[i + 1])
     };
 
-    for triangle in tess.elements().chunks_exact(3) {
+    for triangle in tess.elements().as_chunks::<3>().0 {
         if triangle.contains(&tess2_rust::tess::TESS_UNDEF) {
             continue;
         }

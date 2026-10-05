@@ -102,7 +102,7 @@ impl FaceList {
     /// the data the caller meant; three-at-a-time input is the contract).
     pub fn add_from_int_array(&mut self, f: &[i32], vertices: &[Vector3Float]) {
         self.0.clear();
-        for triple in f.chunks_exact(3) {
+        for triple in f.as_chunks::<3>().0 {
             self.0
                 .push(Face::new(triple[0], triple[1], triple[2], vertices));
         }

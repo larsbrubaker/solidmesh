@@ -119,8 +119,7 @@ impl ConvexHullAlgorithm {
                 let mut vertices = self.face_pool[old_face_index].vertices;
                 let old_vertex_index = vertices[forbidden];
 
-                let ordered_pivot_index;
-                if current_vertex_index < old_vertex_index {
+                let ordered_pivot_index = if current_vertex_index < old_vertex_index {
                     let mut pivot = 0;
                     let mut j = forbidden as isize - 1;
                     while j >= 0 {
@@ -133,7 +132,7 @@ impl ConvexHullAlgorithm {
                         }
                         j -= 1;
                     }
-                    ordered_pivot_index = pivot;
+                    pivot
                 } else {
                     let mut pivot = DIM - 1;
                     for j in (forbidden + 1)..DIM {
@@ -144,8 +143,8 @@ impl ConvexHullAlgorithm {
                             break;
                         }
                     }
-                    ordered_pivot_index = pivot;
-                }
+                    pivot
+                };
 
                 vertices[ordered_pivot_index] = current_vertex_index;
                 self.face_pool[new_face_index].vertices = vertices;

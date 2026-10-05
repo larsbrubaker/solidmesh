@@ -76,32 +76,32 @@ impl Clipper {
         e2: usize,
         pt: IntPoint,
     ) -> Result<usize, ClipperError> {
-        let result;
-        let e;
-        let prev_e;
-        if is_horizontal(&self.edges[e2]) || self.edges[e1].dx > self.edges[e2].dx {
-            result = self.add_out_pt(e1, pt)?;
-            self.edges[e2].out_idx = self.edges[e1].out_idx;
-            self.edges[e1].side = EdgeSide::Left;
-            self.edges[e2].side = EdgeSide::Right;
-            e = e1;
-            prev_e = if self.edges[e].prev_in_ael == Some(e2) {
-                self.edges[e2].prev_in_ael
+        let (result, e, prev_e) =
+            if is_horizontal(&self.edges[e2]) || self.edges[e1].dx > self.edges[e2].dx {
+                let result = self.add_out_pt(e1, pt)?;
+                self.edges[e2].out_idx = self.edges[e1].out_idx;
+                self.edges[e1].side = EdgeSide::Left;
+                self.edges[e2].side = EdgeSide::Right;
+                let e = e1;
+                let prev_e = if self.edges[e].prev_in_ael == Some(e2) {
+                    self.edges[e2].prev_in_ael
+                } else {
+                    self.edges[e].prev_in_ael
+                };
+                (result, e, prev_e)
             } else {
-                self.edges[e].prev_in_ael
+                let result = self.add_out_pt(e2, pt)?;
+                self.edges[e1].out_idx = self.edges[e2].out_idx;
+                self.edges[e1].side = EdgeSide::Right;
+                self.edges[e2].side = EdgeSide::Left;
+                let e = e2;
+                let prev_e = if self.edges[e].prev_in_ael == Some(e1) {
+                    self.edges[e1].prev_in_ael
+                } else {
+                    self.edges[e].prev_in_ael
+                };
+                (result, e, prev_e)
             };
-        } else {
-            result = self.add_out_pt(e2, pt)?;
-            self.edges[e1].out_idx = self.edges[e2].out_idx;
-            self.edges[e1].side = EdgeSide::Right;
-            self.edges[e2].side = EdgeSide::Left;
-            e = e2;
-            prev_e = if self.edges[e].prev_in_ael == Some(e1) {
-                self.edges[e1].prev_in_ael
-            } else {
-                self.edges[e].prev_in_ael
-            };
-        }
 
         if let Some(prev_e) = prev_e {
             let (p, c) = (&self.edges[prev_e], &self.edges[e]);

@@ -139,16 +139,16 @@ pub(crate) fn format_fixed6(value: f64, precision: usize) -> String {
     // digits[0] is the 10^exponent place; keep through the 10^-6 place.
     let keep = exponent + 1 + 6;
     let mut int_part = String::new();
-    let frac: String;
-    if keep <= 0 {
+
+    let frac: String = if keep <= 0 {
         // Everything is below the sixth decimal; round on the first digit's position.
         let rounds_up = keep == 0 && digits[0] >= 5;
         int_part.push('0');
-        frac = if rounds_up {
+        if rounds_up {
             "000001".to_string()
         } else {
             "000000".to_string()
-        };
+        }
     } else {
         let mut exp = exponent;
         digits = round_half_up(&digits, keep as usize, &mut exp);
@@ -169,8 +169,8 @@ pub(crate) fn format_fixed6(value: f64, precision: usize) -> String {
         }
         let (i, f) = text.split_once('.').unwrap_or((&text, ""));
         int_part.push_str(i);
-        frac = f.to_string();
-    }
+        f.to_string()
+    };
     format!("{}{}.{}", if negative { "-" } else { "" }, int_part, frac)
 }
 

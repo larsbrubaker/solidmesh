@@ -97,11 +97,11 @@ impl Mesh {
     /// A mesh from a 3xN array of vertex coordinates and a 3xM array of face vertex indexes.
     pub fn from_arrays(v: &[f64], f: &[i32]) -> Self {
         let mut mesh = Mesh::new();
-        for c in v.chunks_exact(3) {
+        for c in v.as_chunks::<3>().0 {
             mesh.vertices
                 .push(Vector3Float::from_vector3(Vector3::new(c[0], c[1], c[2])));
         }
-        for c in f.chunks_exact(3) {
+        for c in f.as_chunks::<3>().0 {
             mesh.faces.add(c[0], c[1], c[2], &mesh.vertices);
         }
         mesh
@@ -112,7 +112,7 @@ impl Mesh {
     pub fn from_vector3_list_and_indices(v: &[Vector3], f: &[i32]) -> Self {
         let mut mesh = Mesh::new();
         mesh.vertices = v.iter().map(|&p| Vector3Float::from_vector3(p)).collect();
-        for c in f.chunks_exact(3) {
+        for c in f.as_chunks::<3>().0 {
             mesh.faces.add(c[0], c[1], c[2], &mesh.vertices);
         }
         mesh

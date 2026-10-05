@@ -7,14 +7,18 @@ use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
 /// Positions read three doubles at a time (`ToVector3List`); a trailing partial triple is
 /// ignored.
 pub fn to_vector3_list(v: &[f64]) -> Vec<Vector3> {
-    v.chunks_exact(3)
+    v.as_chunks::<3>()
+        .0
+        .iter()
         .map(|c| Vector3::new(c[0], c[1], c[2]))
         .collect()
 }
 
 /// Positions read three doubles at a time and narrowed to f32 (`ToVector3FloatList`).
 pub fn to_vector3_float_list(v: &[f64]) -> Vec<Vector3Float> {
-    v.chunks_exact(3)
+    v.as_chunks::<3>()
+        .0
+        .iter()
         .map(|c| Vector3Float::new(c[0], c[1], c[2]))
         .collect()
 }

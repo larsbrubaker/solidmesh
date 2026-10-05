@@ -60,7 +60,7 @@ impl MeshOutputSettings {
             report_progress,
             ..Self::default()
         };
-        for pair in meta_data_key_value_pairs.chunks_exact(2) {
+        for pair in meta_data_key_value_pairs.as_chunks::<2>().0 {
             settings.set_meta_data(pair[0], pair[1]);
         }
         settings
