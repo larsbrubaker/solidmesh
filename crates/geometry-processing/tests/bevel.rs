@@ -55,6 +55,8 @@ mod rust_only_bevel_slice8_tests;
 mod rust_only_bevel_slice9_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
+#[path = "bevel/surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
+mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
 #[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
 mod surface_facet_cut_own_ends_tests;
 #[path = "bevel/surface_fan_tests.rs"]

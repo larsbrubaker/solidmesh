@@ -635,3 +635,150 @@ fn rust_only_the_notch_and_hull_readings() {
             .is_none()
     );
 }
+
+/// The section is cut back at the run-out's rim: what stands across the line from the foot to the
+/// die point, away from the anchor rail, goes - and the corner with it, the die point standing in.
+/// The foot stands on the end plane exactly when its param is where the rail beside it meets it.
+#[test]
+fn rust_only_the_end_cut_cuts_back_at_the_run_out_and_finds_its_foot() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let foot = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let die = pool.add(Vector3::new(0.0, 1.0, 0.0));
+    let kept = pool.add(Vector3::new(-2.0, 0.5, 0.0));
+    let beyond = pool.add(Vector3::new(2.0, 0.5, 0.0));
+
+    let trimmed = SurfaceStripTrimmedAtTheCrossing::new(
+        0,
+        false,
+        vec![1, 2],
+        vec![2.0, 2.0],
+        vec![0, 0],
+        vec![vec![], vec![]],
+        foot,
+        2.0,
+    );
+    trimmed.the_die_vertex.set(die);
+
+    let mut profile = vec![kept, beyond, foot];
+    let mut rail_of = vec![0, 1, surface_end_cut_above_the_crossing::THE_FOOT];
+    let mut apex = Vector3::new(3.0, 3.0, 0.0);
+    let mut the_die_is_the_apex = false;
+    surface_end_cut_above_the_crossing::cut_back_at_the_run_out(
+        &pool,
+        &mut profile,
+        &mut rail_of,
+        &trimmed,
+        Vector3::new(0.0, 0.0, 1.0),
+        &mut apex,
+        &mut the_die_is_the_apex,
+    );
+    assert_eq!(profile, vec![kept, foot]);
+    assert_eq!(
+        rail_of,
+        vec![0, surface_end_cut_above_the_crossing::THE_FOOT]
+    );
+    assert_eq!(apex, Vector3::new(0.0, 1.0, 0.0));
+    assert!(the_die_is_the_apex);
+
+    let strip = SurfaceStrip {
+        origin: Vector3::ZERO,
+        along: Vector3::new(1.0, 0.0, 0.0),
+        rail_points: (0..4)
+            .map(|rail| Vector3::new(0.0, rail as f64, 0.0))
+            .collect(),
+        rail_step_degrees: 30.0,
+        outward_reference: Vector3::new(0.0, 0.0, 1.0),
+    };
+    let on_the_plane = |foot_param: f64| {
+        let trimmed = SurfaceStripTrimmedAtTheCrossing::new(
+            0,
+            false,
+            vec![1, 2],
+            vec![0.0, 0.0],
+            vec![0, 0],
+            vec![vec![], vec![]],
+            foot,
+            foot_param,
+        );
+        surface_end_cut_above_the_crossing::the_foot_stands_on_the_end_plane(
+            &strip,
+            Vector3::new(2.0, 0.0, 0.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            &trimmed,
+        )
+    };
+    assert!(on_the_plane(2.0));
+    assert!(!on_the_plane(2.5));
+}
+
+/// The tail's cross section stands half way between the notch's exit and the furthest the other end
+/// reaches, and the rings past it take the four shapes of a chord; a landing end measures its sliver
+/// by a crease vertex standing on the straight side.
+#[test]
+fn rust_only_the_tail_and_landing_readings() {
+    use geometry_processing::bevel::surface::{
+        surface_strip_ends_at_a_landing_notch, surface_strip_tail_around_a_feature,
+    };
+
+    assert_eq!(
+        surface_strip_tail_around_a_feature::try_the_section(10.0, &[2.0, 4.0], 0.1),
+        Some(7.0)
+    );
+    assert_eq!(
+        surface_strip_tail_around_a_feature::try_the_section(10.0, &[2.0, 12.0], 0.1),
+        None
+    );
+    assert_eq!(
+        surface_strip_tail_around_a_feature::try_the_section(10.0, &[], 0.1),
+        None
+    );
+
+    // Rails 1 and 2 notched; the ridge leaves between them through the exit.
+    let rings = surface_strip_tail_around_a_feature::try_the_rings(
+        &[10, 11, 12, 13],
+        &[false, true, true, false],
+        &[-1, 21, 22, -1],
+        1,
+        99,
+        &[30, -1, 32],
+    )
+    .expect("every chord beside a notched rail has its Q");
+    assert_eq!(
+        rings,
+        vec![
+            vec![10, 11, 21, 30],
+            vec![11, 12, 22, 99, 21],
+            vec![12, 13, 32, 22]
+        ]
+    );
+    assert_eq!(
+        surface_strip_tail_around_a_feature::try_the_rings(
+            &[10, 11],
+            &[false, true],
+            &[-1, 21],
+            -1,
+            99,
+            &[-1]
+        ),
+        Err(0)
+    );
+
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let end = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let on_the_side = pool.add(Vector3::new(2.0, 0.0, 0.0));
+    let off_the_side = pool.add(Vector3::new(2.0, 1.0, 0.0));
+    let corner = Vector3::new(5.0, 0.0, 0.0);
+    assert!(surface_end_cut_crease(&pool, end, on_the_side, corner));
+    assert!(!surface_end_cut_crease(&pool, end, off_the_side, corner));
+
+    fn surface_end_cut_crease(
+        pool: &SurfaceVertexPool,
+        end: i32,
+        crease: i32,
+        corner: Vector3,
+    ) -> bool {
+        surface_strip_ends_at_a_landing_notch::the_crease_stands_on_the_straight_side(
+            pool, end, crease, corner,
+        )
+    }
+}
