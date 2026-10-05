@@ -29,7 +29,6 @@ use geometry_processing::bevel::surface::surface_plan_band_ends::{
     band_end_where_the_chain_arrives, band_end_where_the_chain_leaves,
 };
 use geometry_processing::bevel::surface::surface_run_out_column_ends as column_ends;
-use geometry_processing::bevel::surface::SurfaceRunOutMeetsTheBand;
 use geometry_processing::bevel::surface::{
     surface_junction_band_ends, SurfaceBandEnd, SurfaceMixedCornerFaces, SurfaceMixedCornerWall,
     SurfaceRunOutCarry, SurfaceVertexPool,
@@ -38,6 +37,9 @@ use geometry_processing::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceEdgeRoles, SurfacePlanRecipe,
 };
 use geometry_processing::bevel::surface::{SurfaceCrossingAtTheMitre, SurfaceStrip};
+use geometry_processing::bevel::surface::{
+    SurfaceRunOutColumnWalk, SurfaceRunOutColumnWindow, SurfaceRunOutMeetsTheBand,
+};
 use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
 use geometry_processing::topology::{ChainEdge, EdgeConvexity, FeatureEdge};
 
@@ -602,4 +604,103 @@ fn rust_only_a_row_laps_over_the_walls_leftover_only_under_its_chord() {
     assert!(!laps(middle - (z * 0.1), &trims[..1]));
 
     assert_eq!(wall_ends::try_read(None, &corner), Ok(None));
+}
+
+/// The patch's last column at the end of the bead's turn on the flat-wall corner: three rows of the
+/// ball's arc in the meridian there, from its touch on the cap (`2r` out of the axis) down to its
+/// touch on the bead (`r` out, a radius under the cap).
+fn the_patchs_last_column(corner: &SurfaceMixedCorner, pool: &mut SurfaceVertexPool) -> Vec<i32> {
+    let out = corner.out_of_the_axis(corner.turn_radians());
+    let z = Vector3::new(0.0, 0.0, 1.0);
+    [
+        0.0,
+        std::f64::consts::FRAC_PI_4,
+        std::f64::consts::FRAC_PI_2,
+    ]
+    .iter()
+    .map(|&phi: &f64| pool.add((out * (2.0 - phi.sin())) + (z * (phi.cos() - 1.0))))
+    .collect()
+}
+
+/// With nothing crossing it, the run-out's window is the walk's stations alone, nothing is cut from
+/// above, and the walk draws every station's standing rows down to its trim point - fewer rows as
+/// the wall comes out to meet them - and closes on the one point the wall reaches the touch row at.
+#[test]
+fn rust_only_an_uncrossed_run_out_walks_its_columns_down_to_the_wall() {
+    let corner = run_out_corner();
+    let wall = SurfaceMixedCornerWall::try_read(&corner).expect("one plane");
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let last_column = the_patchs_last_column(&corner, &mut pool);
+    let carry = SurfaceRunOutCarry::of(corner.clone(), None, &pool, &last_column);
+
+    let window = SurfaceRunOutColumnWindow::try_read(
+        &mut pool,
+        &corner,
+        &wall,
+        &last_column,
+        0.1,
+        None,
+        None,
+        None,
+        None,
+        &carry,
+    )
+    .expect("a window");
+    assert!(window.crosses_at.iter().all(|&turn| turn == f64::INFINITY));
+    assert_eq!(window.the_switch_turn, f64::INFINITY);
+    assert_eq!((window.the_cap_exit, window.the_die_point), (-1, -1));
+    assert!(window.the_band_ends_them.iter().all(|&ends| !ends));
+    let clears = wall.try_where_the_rail_meets_the_wall().unwrap() - corner.turn_radians();
+    assert_eq!(*window.stations.last().unwrap(), clears);
+
+    let walk = SurfaceRunOutColumnWalk::try_walk(
+        &mut pool,
+        &corner,
+        &wall,
+        &window,
+        &last_column,
+        &carry,
+        None,
+    )
+    .expect("a walk");
+    assert_eq!(walk.columns[0], last_column);
+    assert_eq!(walk.columns.len(), walk.turns.len());
+    assert_eq!(walk.columns.len(), walk.first_rows.len());
+    assert_eq!(walk.columns.len(), walk.top_rims.len());
+    assert!(walk.first_rows.iter().all(|&row| row == 0));
+    assert!(walk
+        .columns
+        .windows(2)
+        .all(|pair| pair[1].len() <= pair[0].len() + 1));
+    assert_eq!(
+        walk.columns.last().unwrap().len(),
+        1,
+        "it closes on one point"
+    );
+    assert!(walk.the_curve.is_empty() && walk.along_the_chord.is_empty());
+    assert!(walk.on_the_plane.iter().all(|&vertex| vertex < 0));
+
+    // And the same through `try_columns`, which adds no section where nothing is crossed and lets
+    // the cap's sector run to the last column.
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let last_column = the_patchs_last_column(&corner, &mut pool);
+    let drawn = run_out::try_columns(
+        &mut pool,
+        &corner,
+        &wall,
+        &last_column,
+        0.1,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+    .expect("columns");
+    assert_eq!(drawn.columns, walk.columns);
+    assert_eq!(drawn.turns, walk.turns);
+    assert_eq!(drawn.section, None);
+    assert_eq!(drawn.section_on_the_wall, None);
+    assert_eq!((drawn.the_cap_exit, drawn.the_die_point), (-1, -1));
+    assert_eq!(drawn.the_sector_runs_to, drawn.columns.len() as i32 - 1);
 }

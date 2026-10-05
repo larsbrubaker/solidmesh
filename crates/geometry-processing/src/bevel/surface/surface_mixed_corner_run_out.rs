@@ -2,16 +2,19 @@
 //! touch row dies into the sharp edge the part keeps (`Bevel/Surface/SurfaceMixedCornerRunOut.cs`,
 //! a static class: free functions here): its constant, the one-place test, and where a station's
 //! arc meets the wall ([`try_scallop_point`], [`try_scallop_on_the_ring`]), and the turns its
-//! stations stand at ([`try_turns_past_the_bead`]); the run-out's columns land with this package's
-//! later methods.
+//! stations stand at ([`try_turns_past_the_bead`]), and its columns ([`try_columns`]). Emitting
+//! the run-out's surface (`TryEmit`) lands with a later package.
 
 use std::cmp::Ordering;
+use std::rc::Rc;
 
 use vector_math::{cs_math, cs_sort, Vector3};
 
 use super::surface_run_out_column_ends;
 use super::{
-    SurfaceMixedCorner, SurfaceMixedCornerRows, SurfaceMixedCornerWall, SurfaceRunOutCarry,
+    SurfaceBandEnd, SurfaceCrossingAtTheMitre, SurfaceMixedCorner, SurfaceMixedCornerRows,
+    SurfaceMixedCornerWall, SurfaceRunOutCarry, SurfaceRunOutColumnWalk, SurfaceRunOutColumnWindow,
+    SurfaceRunOutMeetsAWallBand, SurfaceRunOutMeetsTheBand, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -273,4 +276,177 @@ pub fn try_turns_past_the_bead(
         Some(&last) if !(last < clears) => Ok(turns),
         _ => Err(not_supported()),
     }
+}
+
+/// What [`try_columns`] draws (C#'s `out` parameters, by name).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SurfaceMixedCornerRunOutColumns {
+    /// The columns, in station order, the patch's own last column first.
+    pub columns: Vec<Vec<i32>>,
+    /// The turn past the bead each column is drawn at, entry for entry with the columns.
+    pub turns: Vec<f64>,
+    /// The first row of the profile each column holds, entry for entry with the columns.
+    pub first_rows: Vec<i32>,
+    /// The curve the CAP band (or the plane across the wall's end) is cut back by, or `None`.
+    pub section: Option<Vec<i32>>,
+    /// The curve the WALL band is cut back by, where both bands of a mitred pair are crossed.
+    pub section_on_the_wall: Option<Vec<i32>>,
+    /// Where the run-out would have died on the sharp edge had nothing crossed it, or -1.
+    pub the_die_point: i32,
+    /// The last column whose top the CAP's own sector may be drawn to (C#'s `int.MaxValue` where
+    /// there are no columns to name).
+    pub the_sector_runs_to: i32,
+    /// Where the crossing curve reaches the touch row and dies on the cap, or -1.
+    pub the_cap_exit: i32,
+    /// What the piece before each column carries on its top rim beyond the two columns' own tops.
+    pub top_rims: Vec<Option<Vec<i32>>>,
+}
+
+/// C# `TryColumns`: the runout's columns, station by station, each one the rows of the patch's
+/// profile that still stand in the material at that turn and then the point where the arc meets the
+/// wall. WHICH rows is the window's to say ([`SurfaceRunOutColumnWindow::try_read`]) and the drawing
+/// the walk's ([`SurfaceRunOutColumnWalk::try_walk`]); what is here is the carry they share, how
+/// far the cap's sector may run, and the SECTION each crossed band (or the plane across the wall's
+/// end) is cut back by. `rows` are the rows the patch's grid was laid with on the spine, or `None`.
+#[allow(clippy::too_many_arguments)]
+pub fn try_columns(
+    pool: &mut SurfaceVertexPool,
+    corner: &Rc<SurfaceMixedCorner>,
+    wall: &SurfaceMixedCornerWall,
+    last_column: &[i32],
+    step: f64,
+    ends_on: Option<SurfaceBandEnd>,
+    meets_the_band: Option<&SurfaceRunOutMeetsTheBand>,
+    meets_a_wall_band: Option<&SurfaceRunOutMeetsAWallBand>,
+    at_the_mitre: Option<&SurfaceCrossingAtTheMitre>,
+    rows: Option<Rc<SurfaceMixedCornerRows>>,
+) -> Result<SurfaceMixedCornerRunOutColumns, BevelAdvisory> {
+    let refused = |code: BevelAdvisoryCode| BevelAdvisory::new(code, vec![corner.corner.into()]);
+
+    // How the patch's own last column is CARRIED past the bead's turn: rigidly about the axis, or
+    // along the SPINE where the ring shrinks and each station has its own radii.
+    let carry = SurfaceRunOutCarry::of(Rc::clone(corner), rows, pool, last_column);
+
+    // And then the WINDOW: both cuts, the turns to draw them at, and the turn past which nothing is
+    // left of any column.
+    let window = SurfaceRunOutColumnWindow::try_read(
+        pool,
+        corner,
+        wall,
+        last_column,
+        step,
+        ends_on,
+        meets_the_band,
+        meets_a_wall_band,
+        at_the_mitre,
+        &carry,
+    )?;
+
+    let walk = SurfaceRunOutColumnWalk::try_walk(
+        pool,
+        corner,
+        wall,
+        &window,
+        last_column,
+        &carry,
+        at_the_mitre,
+    )?;
+
+    // Only where the run-out really dies on the cap: with a band on the CAP as well the window's
+    // exit is the hand-over on the two bands' mitre, which the sector has no business closing on.
+    let the_cap_exit = if at_the_mitre.is_none() {
+        window.the_cap_exit
+    } else {
+        -1
+    };
+    let SurfaceRunOutColumnWalk {
+        columns,
+        turns,
+        first_rows,
+        mut the_curve,
+        top_rims,
+        along_the_chord,
+        tops_between_crossings,
+        the_chord_starts_at,
+        on_the_plane,
+    } = walk;
+
+    // How far the CAP's own sector may be drawn: to the last column standing at or before the cap
+    // exit. With no crossing the exit's turn is infinite and this is every column there is.
+    let mut the_sector_runs_to = i32::MAX;
+
+    for (column, &turn) in turns.iter().enumerate() {
+        if turn <= window.the_cap_exits_turn + surface_run_out_column_ends::HAIR {
+            the_sector_runs_to = column as i32;
+        }
+    }
+
+    let mut drawn = SurfaceMixedCornerRunOutColumns {
+        columns,
+        turns,
+        first_rows,
+        section: None,
+        section_on_the_wall: None,
+        the_die_point: window.the_die_point,
+        the_sector_runs_to,
+        the_cap_exit,
+        top_rims,
+    };
+
+    if meets_a_wall_band.is_some() {
+        if the_curve.len() < 2 {
+            // One corner or none is no curve to cut either surface at.
+            return Err(refused(BevelAdvisoryCode::SurfaceCrossingLeavesTheBand));
+        }
+
+        let Some(at_the_mitre) = at_the_mitre else {
+            // The cap exit last, as the FOOT of the curve: what every column in the lens is topped
+            // by, so the two surfaces meet along the one segment from the band's last rail to it.
+            the_curve.push(the_cap_exit);
+            drawn.section = Some(the_curve);
+
+            return Ok(drawn);
+        };
+
+        // Two curves, one for each band, meeting at the hand-over: the WALL band's is the column
+        // ends that band made; the CAP band's is read below and closes on the same vertex.
+        drawn.section_on_the_wall = Some(the_curve);
+        *at_the_mitre.along_the_chord.borrow_mut() = Some(along_the_chord);
+        at_the_mitre.the_chord_starts_at.set(the_chord_starts_at);
+    }
+
+    if window.the_switch_turn != f64::INFINITY {
+        // The SECTION the face across gives up: every row that reached the plane, in row order,
+        // with whatever the boundary stepped through on the chord into the NEXT crossing, and the
+        // foot the trim curve crossed at.
+        let mut made = Vec::with_capacity(last_column.len() + 1);
+
+        for (row, &on_it) in on_the_plane.iter().enumerate() {
+            if on_it < 0 {
+                continue;
+            }
+
+            made.push(on_it);
+            made.extend_from_slice(&tops_between_crossings[row]);
+        }
+
+        if made.is_empty() || drawn.columns.len() < 2 {
+            return Err(refused(BevelAdvisoryCode::SurfaceCornerNotSupported));
+        }
+
+        // The FOOT: the last column's own trim point with one cut; the hand-over with two (the
+        // last column IS that one point, so the two read the same, and naming it says which).
+        let foot = match at_the_mitre {
+            Some(at_the_mitre) => at_the_mitre.vertex.get(),
+            None => {
+                let last = &drawn.columns[drawn.columns.len() - 1];
+                last[last.len() - 1]
+            }
+        };
+        made.push(foot);
+
+        drawn.section = Some(made);
+    }
+
+    Ok(drawn)
 }
