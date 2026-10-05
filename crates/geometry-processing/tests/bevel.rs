@@ -15,6 +15,8 @@ mod bevel_face_run_out_tests;
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_partner_tube_clip_tests.rs"]
 mod bevel_partner_tube_clip_tests;
+#[path = "bevel/bevel_partnered_bead_tests.rs"]
+mod bevel_partnered_bead_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]

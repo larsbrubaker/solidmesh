@@ -11,6 +11,8 @@ use vector_math::{Vector2, Vector3};
 
 /// The cube's edge.
 pub const SIZE: f64 = 20.0;
+/// The part's volume: the cube less the notch, plus the nose.
+pub const VOLUME: f64 = 8000.0 - 2000.0 + (500.0 / 9.0);
 /// Where the nose's ridge stands.
 pub const RIDGE_Y: f64 = 5.0;
 /// The ridge's height.
@@ -42,6 +44,11 @@ pub fn upper_nose_normal() -> Vector3 {
 
 /// C# `Create()` with its defaults (unscaled, the upper face one triangle).
 pub fn create() -> Mesh {
+    create_scaled(1.0)
+}
+
+/// C# `Create(scale)`, the upper face one triangle.
+pub fn create_scaled(scale: f64) -> Mesh {
     let mut mesh = Mesh::new();
     let centre = Vector2::new(SIZE / 2.0, SIZE / 2.0);
 
@@ -74,6 +81,10 @@ pub fn create() -> Mesh {
     mesh.create_face(&[left_ridge_end(), lower_crease_end(), right_ridge_end()]);
 
     mesh.clean_and_merge();
+
+    if scale != 1.0 {
+        mesh.transform(vector_math::Matrix4X4::create_scale_uniform(scale));
+    }
 
     mesh
 }
@@ -137,13 +148,34 @@ fn slope(mesh: &mut Mesh, mirrored: bool) {
 /// C# `Creases(part, out names)` at scale 1: the nose's four creases, each a one-edge run from
 /// its ridge end to its crease end, with their names.
 pub fn creases(part: &Mesh) -> (Vec<BevelSweptChain>, Vec<String>) {
+    creases_scaled(part, 1.0)
+}
+
+/// C# `Creases(part, out names, scale)`.
+pub fn creases_scaled(part: &Mesh, scale: f64) -> (Vec<BevelSweptChain>, Vec<String>) {
     let features = FeatureEdgeSet::create(part);
 
     let wanted = [
-        ("upper left", left_ridge_end(), upper_crease_end()),
-        ("lower left", left_ridge_end(), lower_crease_end()),
-        ("upper right", right_ridge_end(), upper_crease_end()),
-        ("lower right", right_ridge_end(), lower_crease_end()),
+        (
+            "upper left",
+            left_ridge_end() * scale,
+            upper_crease_end() * scale,
+        ),
+        (
+            "lower left",
+            left_ridge_end() * scale,
+            lower_crease_end() * scale,
+        ),
+        (
+            "upper right",
+            right_ridge_end() * scale,
+            upper_crease_end() * scale,
+        ),
+        (
+            "lower right",
+            right_ridge_end() * scale,
+            lower_crease_end() * scale,
+        ),
     ];
 
     let mut runs = Vec::new();
@@ -157,13 +189,17 @@ pub fn creases(part: &Mesh) -> (Vec<BevelSweptChain>, Vec<String>) {
                 break;
             }
 
-            if (edge.start - from).length() < 1e-6 && (edge.end - to).length() < 1e-6 {
+            if (edge.start - from).length() < 1e-6 * scale
+                && (edge.end - to).length() < 1e-6 * scale
+            {
                 runs.push(BevelSweptChain::new(
                     vec![ChainEdge::new(i as i32, *edge, false)],
                     false,
                 ));
                 found = true;
-            } else if (edge.end - from).length() < 1e-6 && (edge.start - to).length() < 1e-6 {
+            } else if (edge.end - from).length() < 1e-6 * scale
+                && (edge.start - to).length() < 1e-6 * scale
+            {
                 runs.push(BevelSweptChain::new(
                     vec![ChainEdge::new(i as i32, *edge, true)],
                     false,

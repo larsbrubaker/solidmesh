@@ -14,6 +14,10 @@ pub const STRAIGHT_WITHIN_DEGREES: f64 = 0.1;
 
 /// C# `For`: the tubes of every run in `concave_runs` (other than `chain` itself, by identity)
 /// that shares an end with `chain`, and how many such runs were skipped because they turn.
+///
+/// `chain` must be an ELEMENT of `concave_runs` (a reference into that slice) for it to be
+/// skipped as itself: C#'s `ReferenceEquals(other, chain)` is `std::ptr::eq` here, so a copy of
+/// the chain would not be recognised and would count as its own partner.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn for_chain(
     chain: &BevelSweptChain,
