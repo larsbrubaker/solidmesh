@@ -3,8 +3,7 @@
 //! questions the reading is made of land here first - whether what stands past the wall is one
 //! plane, where a rim edge crosses the travel line, and the turn at which a row of the runout
 //! crosses the plane the wall ends on - and the turn the run-out's foot crosses it at
-//! ([`try_where_the_foot_crosses`]). The reading itself (`TryRead`) lands with a later run of this
-//! package.
+//! ([`try_where_the_foot_crosses`]) - and the reading itself ([`try_read`]).
 
 use std::f64::consts::PI;
 
@@ -12,6 +11,7 @@ use vector_math::Vector3;
 
 use super::surface_mixed_corner_run_out;
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerWall};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
 
 /// How far from the travel line a rim edge's own crossing may stand and still be read as on it -
@@ -305,4 +305,83 @@ pub fn try_where_the_foot_crosses(
     }
 
     Some((low + high) / 2.0)
+}
+
+/// C# `TryRead`: the plane the blend is trimmed by where the wall nobody picked runs out under it -
+/// the face across the wall's rim, as the half space its material is on - or `Ok(None)` where that
+/// wall carries on as far as the runout goes (the ordinary corner; also where there are no
+/// `regions`, C#'s null). `Err` only where the wall DOES run out under the blend and what stands
+/// past it is not one plane the trim can be taken in.
+///
+/// Read from the region's own rim: the runout travels along the line the wall and the cap meet in,
+/// so the question is which boundary edge of the wall's region that line crosses first.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn try_read(
+    regions: Option<&FaceRegionCache>,
+    corner: &SurfaceMixedCorner,
+) -> Result<Option<SurfaceBandEnd>, BevelAdvisory> {
+    if regions.is_none() {
+        return Ok(None);
+    }
+
+    // The wall nobody picked is the bead's other region - the one the two edges do not share.
+    let wall = if corner.bead.left_region_key() == corner.shared_region_key {
+        &corner.bead.right_region
+    } else {
+        &corner.bead.left_region
+    };
+
+    // The runout travels along the line the wall and the cap meet in, from the bead's own foot on
+    // the wall outward - which is where every one of its stations' touch points stands.
+    let from = corner.cap_corner();
+    let mut travel = corner.outer_rail_point(corner.turn_radians() + THE_WAY_IT_LEANS)
+        - corner.outer_rail_point(corner.turn_radians());
+
+    travel -= corner.out_of_the_wall * travel.dot(corner.out_of_the_wall);
+    travel -= corner.out_of_the_cap_face * travel.dot(corner.out_of_the_cap_face);
+
+    if !(travel.length_squared() > 0.0) {
+        return Ok(None);
+    }
+
+    let travel = travel.get_normal();
+
+    let mut nearest = f64::MAX;
+    let mut face_past_it = -1;
+    let mut facing = Vector3::ZERO;
+    let mut across = None;
+
+    for edge in wall.boundary_edges() {
+        let Some((how_far, normal, face)) = try_crossing(edge, from, travel) else {
+            continue;
+        };
+
+        if how_far >= nearest {
+            continue;
+        }
+
+        nearest = how_far;
+        face_past_it = face;
+        facing = normal;
+
+        // Named by the point the travel line crosses at rather than by a corner of the edge, so the
+        // plane is the same one however the rim happens to be split into edges.
+        across = Some(SurfaceBandEnd::new(from + (travel * how_far), -normal));
+    }
+
+    let Some(across) = across else {
+        // The wall carries on as far as the runout goes, which is the ordinary corner.
+        return Ok(None);
+    };
+
+    // The blend is trimmed by ONE PLANE there and the section is bitten out of it, so the material
+    // past that rim has to BE one plane, and one this pick is not blending as well.
+    if !the_material_past_it_is_one_plane(regions, corner, wall, face_past_it, facing) {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.corner.into()],
+        ));
+    }
+
+    Ok(Some(across))
 }

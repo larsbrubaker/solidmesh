@@ -28,6 +28,7 @@ use geometry_processing::bevel::surface::surface_mixed_corner_which_canal::{
 use geometry_processing::bevel::surface::surface_plan_band_ends::{
     band_end_where_the_chain_arrives, band_end_where_the_chain_leaves,
 };
+use geometry_processing::bevel::surface::surface_run_out_column_ends as column_ends;
 use geometry_processing::bevel::surface::SurfaceRunOutMeetsTheBand;
 use geometry_processing::bevel::surface::{
     surface_junction_band_ends, SurfaceBandEnd, SurfaceMixedCornerFaces, SurfaceMixedCornerWall,
@@ -570,4 +571,35 @@ fn rust_only_the_run_outs_foot_crosses_a_plane_and_enters_a_section_at_one_turn(
         None,
         "inside already at the bead's end"
     );
+}
+
+/// Over the trim chord from the bead's scallop point to the end's, a point on the side away from
+/// the cap stands on the material the wall keeps and laps; one on the cap's side, one past the
+/// chord's far end, and any point with a single station do not. With no regions the wall-ends
+/// reading finds nothing to trim by.
+#[test]
+fn rust_only_a_row_laps_over_the_walls_leftover_only_under_its_chord() {
+    let corner = run_out_corner();
+    let wall = SurfaceMixedCornerWall::try_read(&corner).expect("one plane");
+    let clears = wall.try_where_the_rail_meets_the_wall().expect("meets") - corner.turn_radians();
+    let trims = [
+        run_out::try_scallop_point(&corner, &wall, 0.0).unwrap(),
+        run_out::try_scallop_point(&corner, &wall, clears).unwrap(),
+    ];
+    let stations = [0.0, clears];
+    let middle = (trims[0] + trims[1]) * 0.5;
+    let z = Vector3::new(0.0, 0.0, 1.0);
+    let laps = |at: Vector3, trims: &[Vector3]| {
+        column_ends::it_laps_over_the_walls_own_leftover(at, trims, &stations, 0, &corner, &wall)
+    };
+
+    assert!(laps(middle - (z * 0.1), &trims));
+    assert!(!laps(middle + (z * 0.1), &trims));
+    assert!(!laps(
+        trims[1] + ((trims[1] - trims[0]) * 0.5) - (z * 0.1),
+        &trims
+    ));
+    assert!(!laps(middle - (z * 0.1), &trims[..1]));
+
+    assert_eq!(wall_ends::try_read(None, &corner), Ok(None));
 }
