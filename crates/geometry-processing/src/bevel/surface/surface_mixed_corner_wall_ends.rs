@@ -2,14 +2,16 @@
 //! (`Bevel/Surface/SurfaceMixedCornerWallEnds.cs`, a static class: free functions here). The
 //! questions the reading is made of land here first - whether what stands past the wall is one
 //! plane, where a rim edge crosses the travel line, and the turn at which a row of the runout
-//! crosses the plane the wall ends on. The reading itself (`TryRead`, `TryWhereTheFootCrosses`)
-//! lands with a later package.
+//! crosses the plane the wall ends on - and the turn the run-out's foot crosses it at
+//! ([`try_where_the_foot_crosses`]). The reading itself (`TryRead`) lands with a later run of this
+//! package.
 
 use std::f64::consts::PI;
 
 use vector_math::Vector3;
 
-use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceMixedCorner};
+use super::surface_mixed_corner_run_out;
+use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerWall};
 use crate::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
 
 /// How far from the travel line a rim edge's own crossing may stand and still be read as on it -
@@ -261,4 +263,46 @@ pub fn try_where_the_three_meet(
             + (first_normal.cross(second_normal) * third_point.dot(third_normal)))
             / determinant,
     )
+}
+
+/// C# `TryWhereTheFootCrosses`: the turn at which the run-out's FOOT (its scallop point on the
+/// wall) crosses `across` and leaves the material, or `None` where it never does: a wall that does
+/// not run out under this blend after all. The curve is the meridian arc met with the wall facet by
+/// facet, so it is walked to the crossing between the bead's own end and `clears` (the turn the
+/// rail would have cleared the wall at), halving sixty times, which is the double's own precision
+/// on a part of any size.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn try_where_the_foot_crosses(
+    corner: &SurfaceMixedCorner,
+    wall: &SurfaceMixedCornerWall,
+    across: SurfaceBandEnd,
+    clears: f64,
+) -> Option<f64> {
+    let inside = surface_mixed_corner_run_out::try_scallop_point(corner, wall, 0.0)?;
+
+    if !(across.signed_distance(inside) > 0.0) {
+        return None;
+    }
+
+    let outside = surface_mixed_corner_run_out::try_scallop_point(corner, wall, clears)?;
+
+    if across.signed_distance(outside) > 0.0 {
+        return None;
+    }
+
+    let mut low = 0.0;
+    let mut high = clears;
+
+    for _ in 0..60 {
+        let middle = (low + high) / 2.0;
+        let at = surface_mixed_corner_run_out::try_scallop_point(corner, wall, middle)?;
+
+        if across.signed_distance(at) > 0.0 {
+            low = middle;
+        } else {
+            high = middle;
+        }
+    }
+
+    Some((low + high) / 2.0)
 }

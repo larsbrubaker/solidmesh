@@ -20,12 +20,15 @@ use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
 use geometry_processing::bevel::surface::surface_mixed_corner_bites::under_the_cap;
 use geometry_processing::bevel::surface::surface_mixed_corner_hands_over_at_the_mitre as hands_over;
 use geometry_processing::bevel::surface::surface_mixed_corner_patch::{try_cut_the_ring, try_ring};
+use geometry_processing::bevel::surface::surface_mixed_corner_run_out as run_out;
+use geometry_processing::bevel::surface::surface_mixed_corner_wall_ends as wall_ends;
 use geometry_processing::bevel::surface::surface_mixed_corner_which_canal::{
     the_corner_takes_the_dual, try_how_far_the_duals_crease_runs,
 };
 use geometry_processing::bevel::surface::surface_plan_band_ends::{
     band_end_where_the_chain_arrives, band_end_where_the_chain_leaves,
 };
+use geometry_processing::bevel::surface::SurfaceRunOutMeetsTheBand;
 use geometry_processing::bevel::surface::{
     surface_junction_band_ends, SurfaceBandEnd, SurfaceMixedCornerFaces, SurfaceMixedCornerWall,
     SurfaceRunOutCarry, SurfaceVertexPool,
@@ -470,5 +473,101 @@ fn rust_only_a_strips_end_ring_is_cut_and_won_from_the_pool() {
         )
         .map_err(|failure| failure.code()),
         Err(BevelAdvisoryCode::SurfaceStripSeamDidNotMeet)
+    );
+}
+
+/// The square corner with its vertex where its own faces meet - on the cap (z = 0), the wall
+/// (y = 1, a radius off the axis) and the shared face (x = 1) - so the run-out has a wall to die on.
+fn run_out_corner() -> Rc<SurfaceMixedCorner> {
+    let mut corner = mixed_corner(false);
+    corner.corner = Vector3::new(1.0, 1.0, 0.0);
+    Rc::new(corner)
+}
+
+/// On a flat wall the rail meets the wall sixty degrees past the bead's own end; the scallop point
+/// stands on the wall a radius under the cap at the bead and on the cap, `2r` out of the axis, where
+/// the run-out dies; the stations are every
+/// whole step and then EXACTLY the end. A step that is not positive asks for nothing, and a ruler
+/// so coarse that the end is one place with the bead's own rail says there is no run-out to draw.
+#[test]
+fn rust_only_a_flat_walls_run_out_is_stationed_to_its_exact_end() {
+    let corner = run_out_corner();
+    let wall = SurfaceMixedCornerWall::try_read(&corner).expect("one plane");
+    let sixty = 0.5f64.acos();
+    let clears = wall.try_where_the_rail_meets_the_wall().expect("meets") - corner.turn_radians();
+    assert!((clears - sixty).abs() < 1e-12);
+
+    let at_the_bead = run_out::try_scallop_point(&corner, &wall, 0.0).expect("on the wall");
+    assert!(close(at_the_bead, Vector3::new(0.0, 1.0, -1.0)));
+    let at_the_end = run_out::try_scallop_point(&corner, &wall, clears).expect("on the wall");
+    assert!((at_the_end.y - 1.0).abs() < 1e-9 && at_the_end.z.abs() < 1e-9);
+    assert!((Vector3::new(at_the_end.x, at_the_end.y, 0.0).length() - 2.0).abs() < 1e-9);
+
+    let turns =
+        run_out::try_turns_past_the_bead(&corner, &wall, 0.1, 1e-6, None, None).expect("a run-out");
+    assert_eq!(turns.len(), 11);
+    assert!(turns.windows(2).all(|pair| pair[0] < pair[1]));
+    assert!((turns[0] - 0.1).abs() < 1e-12);
+    assert_eq!(*turns.last().unwrap(), clears);
+
+    assert_eq!(
+        run_out::try_turns_past_the_bead(&corner, &wall, 0.0, 1e-6, None, None),
+        Ok(Vec::new())
+    );
+    assert_eq!(
+        run_out::try_turns_past_the_bead(&corner, &wall, 0.1, 10.0, None, None)
+            .map_err(|failure| failure.code()),
+        Err(BevelAdvisoryCode::SurfaceCornerNotSupported)
+    );
+}
+
+/// The run-out's foot runs over the flat wall from under the bead (x = 0) round to the cap
+/// (x = -sqrt 3): it crosses the plane x = -1 once, at the turn where it stands on that plane, and a
+/// square section of a band standing at x <= -1 is entered at that very turn. A plane the foot starts
+/// outside of, and a section it starts inside, read no crossing.
+#[test]
+fn rust_only_the_run_outs_foot_crosses_a_plane_and_enters_a_section_at_one_turn() {
+    let corner = run_out_corner();
+    let wall = SurfaceMixedCornerWall::try_read(&corner).expect("one plane");
+    let clears = wall.try_where_the_rail_meets_the_wall().expect("meets") - corner.turn_radians();
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let plane = SurfaceBandEnd::new(Vector3::new(-1.0, 1.0, 0.0), x);
+
+    let turn =
+        wall_ends::try_where_the_foot_crosses(&corner, &wall, plane, clears).expect("crosses");
+    assert!(turn > 0.0 && turn < clears);
+    let foot = run_out::try_scallop_point(&corner, &wall, turn).expect("on the wall");
+    assert!((foot.x + 1.0).abs() < 1e-9);
+    let backwards = SurfaceBandEnd::new(Vector3::new(-1.0, 1.0, 0.0), -x);
+    assert_eq!(
+        wall_ends::try_where_the_foot_crosses(&corner, &wall, backwards, clears),
+        None
+    );
+
+    let strip =
+        Rc::new(SurfaceStrip::try_create(&square_edge_plan(1.0, true), 2).expect("a strip"));
+    let section = |near: f64, far: f64| {
+        SurfaceRunOutMeetsTheBand::new(
+            Vec::new(),
+            Vec::new(),
+            strip.clone(),
+            vec![
+                Vector3::new(near, 0.0, 1.0),
+                Vector3::new(near, 0.0, -5.0),
+                Vector3::new(far, 0.0, -5.0),
+            ],
+            Vector3::new(far, 0.0, 1.0),
+            x,
+            Vector3::new(0.0, 0.0, 1.0),
+        )
+    };
+    let entered = section(-1.0, -5.0)
+        .try_where_the_foot_crosses(&corner, &wall, clears)
+        .expect("enters");
+    assert!((entered - turn).abs() < 1e-9);
+    assert_eq!(
+        section(1.0, -5.0).try_where_the_foot_crosses(&corner, &wall, clears),
+        None,
+        "inside already at the bead's end"
     );
 }

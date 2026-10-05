@@ -2,14 +2,15 @@
 //! ([`SurfaceRunOutMeetsTheBand`]), read as the turns the run-out's own rows and its foot leave the
 //! band's material at. Ports the fields of `Bevel/Surface/SurfaceRunOutMeetsTheBand.cs`, its
 //! constructor and its questions (where a row crosses, whether a row is taken, whether a point
-//! stands in the section, which rail a row is sewn to); the reading itself (`TryRead`) lands with a
-//! later package.
+//! stands in the section, which rail a row is sewn to, and the turn its foot enters the section
+//! at); the reading itself (`TryRead`) lands with a later package.
 
 use std::rc::Rc;
 
 use vector_math::{Vector2, Vector3};
 
-use super::{SurfaceMixedCorner, SurfaceStrip};
+use super::surface_mixed_corner_run_out;
+use super::{SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceStrip};
 
 /// C# `SurfaceRunOutMeetsTheBand`: a run-out and a band crossing, read per row of the run-out.
 ///
@@ -151,5 +152,63 @@ impl SurfaceRunOutMeetsTheBand {
         }
 
         rail.filter(|_| others == 1)
+    }
+}
+
+impl SurfaceRunOutMeetsTheBand {
+    /// C# `TryWhereTheFootCrosses`: the turn at which the run-out's own foot ENTERS the section the
+    /// band's end cut takes out of the wall, or `None` where it never does (a run-out that dies on
+    /// the wall as it always did) - or where it is inside already at the bead's end, which is a band
+    /// under the blend itself and a corner of another shape.
+    ///
+    /// Where it enters need not be where it stays: a section is a bounded polygon the foot can pass
+    /// right through, so the sweep is walked in [`Self::STEPS_ACROSS_THE_SWEEP`] steps to bracket the
+    /// FIRST entry and halved sixty times from there.
+    pub fn try_where_the_foot_crosses(
+        &self,
+        corner: &SurfaceMixedCorner,
+        wall: &SurfaceMixedCornerWall,
+        clears: f64,
+    ) -> Option<f64> {
+        let inside = surface_mixed_corner_run_out::try_scallop_point(corner, wall, 0.0)?;
+
+        if self.it_stands_in_the_section(inside) {
+            return None;
+        }
+
+        let mut low = 0.0;
+        let mut high = clears;
+        let mut entered = false;
+
+        for step in 1..=Self::STEPS_ACROSS_THE_SWEEP {
+            // C#'s `clears * step / StepsAcrossTheSweep`, in doubles left to right.
+            let at = clears * step as f64 / Self::STEPS_ACROSS_THE_SWEEP as f64;
+            let here = surface_mixed_corner_run_out::try_scallop_point(corner, wall, at)?;
+
+            if self.it_stands_in_the_section(here) {
+                high = at;
+                entered = true;
+                break;
+            }
+
+            low = at;
+        }
+
+        if !entered {
+            return None;
+        }
+
+        for _ in 0..60 {
+            let middle = (low + high) / 2.0;
+            let at = surface_mixed_corner_run_out::try_scallop_point(corner, wall, middle)?;
+
+            if self.it_stands_in_the_section(at) {
+                high = middle;
+            } else {
+                low = middle;
+            }
+        }
+
+        Some((low + high) / 2.0)
     }
 }
