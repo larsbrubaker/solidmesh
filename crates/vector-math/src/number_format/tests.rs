@@ -54,3 +54,14 @@ fn rust_only_parse_f64_matches_dotnet_try_parse() {
     assert_eq!(parse_f64("-Infinity"), f64::NEG_INFINITY);
     assert!(parse_f64("NaN").is_nan());
 }
+
+#[test]
+fn rust_only_format_round_trip_ties_round_half_to_even() {
+    // A value needing all 17 (f64) or 9 (f32) digits that sits exactly halfway between two
+    // candidates: .NET 10 picks the even last digit, Rust's shortest formatter rounds up. These
+    // values occur in MatterCAD's golden .mcx files (a float widened to double).
+    assert_eq!(format_f64(-159.60000610351562), "-159.60000610351562");
+    assert_eq!(format_f64(-14.097000122070312), "-14.097000122070312");
+    assert_eq!(format_f64(1.0000000000000002), "1.0000000000000002");
+    assert_eq!(format_f64(0.30000001192092896), "0.30000001192092896");
+}
