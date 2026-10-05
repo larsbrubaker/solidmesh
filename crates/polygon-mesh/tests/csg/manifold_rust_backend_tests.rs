@@ -5,7 +5,6 @@
 //! Rust message carries the kernel status's `Debug` name the same way.
 //!
 //! Skipped until their code lands:
-//! - `SoupOperandWithColorsStillRunsOnTheKernel`: face colours (Phase 2f).
 //! - `CancelObservedByTheKernelSurfacesAsCancellation`,
 //!   `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
 //!   `ReporterSeesProgressWithoutChangingTheResult`: not ported in this slice (UV-sphere fixture,
@@ -13,6 +12,7 @@
 
 use std::collections::HashMap;
 
+use agg_path::Color;
 use polygon_mesh::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes, WindingRule};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Face, Mesh};
@@ -145,6 +145,38 @@ fn closed_non_manifold_input_still_runs_on_the_kernel() {
 
     assert!(!result.faces.is_empty());
     assert!(result.is_manifold());
+}
+
+#[test]
+fn soup_operand_with_colors_still_runs_on_the_kernel() {
+    let pinched = two_cubes_sharing_one_edge();
+    let straddle = create_cube(10.0, 10.0, 20.0);
+
+    let mut result = do_array(
+        &[
+            (&pinched, Matrix4X4::IDENTITY),
+            // Straddles the pinch, so the union is one honest solid rather than two lobes
+            // still touching along a single edge.
+            (&straddle, translation(5.0, 5.0, 0.0)),
+        ],
+        CsgModes::Union,
+        &BooleanOptions {
+            mesh_colors: Some(vec![Color::RED, Color::BLUE]),
+            ..BooleanOptions::default()
+        },
+    )
+    .expect("the robust import takes closed non-manifold input");
+    result.clean_and_merge();
+    result.remove_unused_vertices();
+
+    assert!(!result.faces.is_empty());
+    assert!(result.is_manifold());
+
+    // Colours may be lost for the soup operand, but whatever comes back has to be a usable
+    // parallel array - a mismatched length is what corrupts rendering later.
+    if let Some(face_colors) = &result.face_colors {
+        assert_eq!(face_colors.len(), result.faces.len());
+    }
 }
 
 #[test]

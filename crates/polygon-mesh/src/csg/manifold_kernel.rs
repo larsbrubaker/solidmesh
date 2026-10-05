@@ -45,7 +45,11 @@ pub(crate) fn run_boolean(
     options: &BooleanOptions,
 ) -> Result<Mesh, BooleanError> {
     ensure_configured();
-    let mut batch = ManifoldOperandBatch::new(operation, options.repair_orientation);
+    let mut batch = ManifoldOperandBatch::new(
+        operation,
+        options.mesh_colors.clone(),
+        options.repair_orientation,
+    );
 
     for &(mesh, matrix) in items {
         if batch.try_add(mesh, matrix, cancel)? == AddOutcome::ResultIsEmpty {
@@ -103,7 +107,7 @@ fn combine_and_read(
         &combined
     };
 
-    manifold_result_reader::to_mesh(bool_result, "boolean")
+    manifold_result_reader::read_result(bool_result, batch)
 }
 
 /// The kernel's name for one of our operations.

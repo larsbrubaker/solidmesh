@@ -14,7 +14,7 @@ use std::collections::{HashMap, VecDeque};
 use vector_math::Vector3Float;
 
 use crate::mesh::f32_key;
-use crate::{FaceList, Mesh};
+use crate::{FaceList, FaceTextureData, Mesh};
 
 /// C# `Rewind`: a copy with each connected surface's minority winding flipped to its majority
 /// and exactly coincident vertices joined, or `None` when there is nothing to flip or no
@@ -162,7 +162,17 @@ fn shared_vertex_copy(
             faces.add_with_normal(a, b, c, face.normal);
         }
     }
-    Mesh::from_vertices_and_faces(positions, &faces)
+    let mut rewound = Mesh::from_vertices_and_faces(positions, &faces);
+    rewound.face_colors = mesh.face_colors.clone();
+    for (&face_index, texture) in &mesh.face_textures {
+        let texture = if flip[face_index as usize] {
+            FaceTextureData::new(texture.image.clone(), texture.uv2, texture.uv1, texture.uv0)
+        } else {
+            texture.clone()
+        };
+        rewound.face_textures.insert(face_index, texture);
+    }
+    rewound
 }
 
 fn key(a: i32, b: i32) -> (i32, i32) {

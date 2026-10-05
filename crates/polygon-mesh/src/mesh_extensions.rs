@@ -4,12 +4,14 @@
 //! degenerate-face removal.
 //!
 //! `Face.Split`/`GetCutLine` live in `face_split.rs`, `SplitOnPlanes` in `mesh_editing.rs` and
-//! `RepairTJunctions` in `t_junctions.rs`. Not yet ported: the texture helpers (`GetMaxPlaneProjection`, `PlaceTexture*`,
-//! `AddFaceCopy`, `RemoveTexture`, `TexturedPlane`) and `CopyFaces`' texture and color half,
-//! which need agg `ImageBuffer` and face colors (Phase 2f).
+//! `RepairTJunctions` in `t_junctions.rs`, the texture helpers with an explicit mapping
+//! (`PlaceTexture*`, `RemoveTexture`) in `face_data.rs`. Not yet ported: the projection-picking
+//! texture overloads (`GetMaxPlaneProjection` and the `PlaceTextureOnFace(s)` overloads that use
+//! it) and `AddFaceCopy`; `TexturedPlane` throws `NotImplementedException` in C#.
 
 use std::collections::HashSet;
 
+use agg_path::Color;
 use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
 
 use crate::face::{Face, FaceList};
@@ -60,9 +62,10 @@ impl Face {
 
 impl Mesh {
     /// C# `CopyFaces(copyFrom)`: appends `copy_from`'s vertices as they are and its faces with
-    /// their normals, unwelded. (The face textures and colors it also carries join with 2f.)
+    /// their normals, unwelded, with its face textures and colors at their new indices.
     pub fn copy_faces(&mut self, copy_from: &Mesh) {
         let v_start = self.vertices.len() as i32;
+        let f_start = self.faces.len();
         self.vertices.extend_from_slice(&copy_from.vertices);
         for face in copy_from.faces.iter() {
             self.faces.add_with_normal(
@@ -72,13 +75,39 @@ impl Mesh {
                 face.normal,
             );
         }
+
+        // the copied faces land at f_start and up, so their texture keys move with them
+        for (key, value) in &copy_from.face_textures {
+            self.face_textures
+                .insert(f_start as i32 + key, value.clone());
+        }
+
+        let total_faces = f_start + copy_from.faces.len();
+        if let Some(source_colors) = &copy_from.face_colors {
+            let mut colors = self.face_colors.take().unwrap_or_default();
+            if colors.len() < total_faces {
+                colors.resize(total_faces, Color::default());
+            }
+            let count = source_colors.len().min(copy_from.faces.len());
+            colors[f_start..f_start + count].copy_from_slice(&source_colors[..count]);
+            self.face_colors = Some(colors);
+        } else if let Some(colors) = &mut self.face_colors {
+            // target has face colors but source doesn't - extend with transparent (C#
+            // Array.Resize, which also truncates a longer array)
+            colors.resize(total_faces, Color::default());
+        }
     }
 
-    /// An independent copy of the mesh - its own vertices and faces - so that editing the copy
-    /// can never reach back into the source. (C#'s `Copy` takes a cancellation token and a
-    /// progress callback that it never uses.)
+    /// An independent copy of the mesh - its own vertices, faces and per-face data - so that
+    /// editing the copy can never reach back into the source. (C#'s `Copy` takes a cancellation
+    /// token and a progress callback that it never uses.)
     pub fn copy(&self) -> Mesh {
-        Mesh::from_vertices_and_faces(&self.vertices, &self.faces)
+        let mut copy = Mesh::from_vertices_and_faces(&self.vertices, &self.faces);
+        copy.face_colors = self.face_colors.clone();
+        // A new map so texturing one mesh does not texture the other. The images are shared,
+        // which is safe because nothing edits one in place.
+        copy.face_textures = self.face_textures.clone();
+        copy
     }
 
     /// The plane through the face's three corners.
@@ -217,21 +246,25 @@ impl Mesh {
     /// f32, as C# compares against the f32 `GetArea`).
     pub fn remove_degenerate_faces(&mut self, min_face_area: f64) {
         let mut new_faces = FaceList::new();
+        let mut source_face_index: Vec<i32> = Vec::with_capacity(self.faces.len());
         let min_area_f = min_face_area as f32;
 
-        for face in self.faces.iter() {
+        for (face_idx, face) in self.faces.iter().enumerate() {
             if face.v0 != face.v1 && face.v1 != face.v2 && face.v2 != face.v0 {
                 let p0 = self.vertices[face.v0 as usize];
                 let p1 = self.vertices[face.v1 as usize];
                 let p2 = self.vertices[face.v2 as usize];
                 if p0.get_area(p1, p2) >= min_area_f {
                     new_faces.add(face.v0, face.v1, face.v2, &self.vertices);
+                    source_face_index.push(face_idx as i32);
                 }
             }
         }
 
         if self.faces.len() != new_faces.len() {
             self.faces = new_faces;
+            // the surviving faces keep their geometry, they just move down the list
+            self.remap_face_data(&source_face_index, None);
             self.mark_as_changed();
         }
     }

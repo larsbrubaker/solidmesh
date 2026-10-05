@@ -18,6 +18,10 @@
 //! the offset preview, on the geometry3Sharp pieces it reaches (`g3`); the signed distance
 //! functions of `dual_contouring`.
 //!
+//! Phase 2f, per-face colors and textures (`face_data`): `Mesh::face_colors` and
+//! `Mesh::face_textures` follow the faces through every rebuild, and booleans paint their result
+//! from the operands' colors.
+//!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
@@ -27,6 +31,7 @@ pub mod csg;
 pub mod data_converters_2d;
 pub mod dual_contouring;
 mod face;
+mod face_data;
 mod face_split;
 mod g3;
 mod mesh;
@@ -45,6 +50,7 @@ pub mod vertex_sorters;
 
 pub use cancel::CancelToken;
 pub use face::{Face, FaceList};
+pub use face_data::{CentroidColor, FaceTextureData, FaceTextures};
 pub use face_split::{clip_edge_at_plane, SplitData};
 pub use mesh::Mesh;
 pub use mesh_edge_graph::{MeshEdge, MeshEdgeGraph, VertexFaceList};

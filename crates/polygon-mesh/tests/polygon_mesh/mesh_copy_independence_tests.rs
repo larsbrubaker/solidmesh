@@ -1,10 +1,10 @@
 //! Port of `Agg.PolygonMesh/MeshCopyIndependenceTests.cs`: a copied mesh owns its faces, so no
-//! in place face edit on the copy (reverse, recalculated normals) reaches the source.
-//! `ReversingACopyDoesNotSwapTheSourcesTextureUvs` and `ColoringACopysFacesLeavesTheSourceUncolored`
-//! wait for face textures and colors (later Phase 2 slice).
+//! in place face edit on the copy (reverse, recalculated normals, texture UVs, face colors)
+//! reaches the source.
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3Float;
+use agg_path::Color;
+use polygon_mesh::{FaceTextureData, Mesh};
+use vector_math::{Vector2Float, Vector3Float};
 
 type Snapshot = Vec<(i32, i32, i32, Vector3Float)>;
 
@@ -76,4 +76,42 @@ fn a_copy_still_equals_its_source() {
     let copy = source.copy();
     assert!(copy == source);
     assert_faces_match(&copy, &snapshot(&source));
+}
+
+#[test]
+fn reversing_a_copy_does_not_swap_the_sources_texture_uvs() {
+    let mut source = make_two_triangles();
+    source.face_textures.insert(
+        0,
+        FaceTextureData::new(
+            None,
+            Vector2Float::new(0.0, 0.0),
+            Vector2Float::new(1.0, 0.0),
+            Vector2Float::new(1.0, 1.0),
+        ),
+    );
+
+    let mut copy = source.copy();
+    copy.reverse_faces();
+
+    // reverse_face replaces the entry rather than editing the FaceTextureData in place, which
+    // is what lets the copy share the values safely.
+    assert_eq!(source.face_textures[&0].uv0, Vector2Float::new(0.0, 0.0));
+    assert_eq!(source.face_textures[&0].uv2, Vector2Float::new(1.0, 1.0));
+    assert_eq!(copy.face_textures[&0].uv0, Vector2Float::new(1.0, 1.0));
+    assert_eq!(copy.face_textures[&0].uv2, Vector2Float::new(0.0, 0.0));
+}
+
+#[test]
+fn coloring_a_copys_faces_leaves_the_source_uncolored() {
+    let mut source = make_two_triangles();
+    source.face_colors = Some(vec![Color::RED, Color::RED]);
+
+    let mut copy = source.copy();
+    copy.face_colors.as_mut().expect("copied colors")[0] = Color::BLUE;
+
+    assert_eq!(
+        source.face_colors.as_ref().expect("source colors")[0],
+        Color::RED
+    );
 }

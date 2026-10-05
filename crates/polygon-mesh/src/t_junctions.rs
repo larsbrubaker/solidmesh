@@ -331,6 +331,8 @@ fn repair_t_junctions_pass(
 
         let mut faces_to_remove: HashSet<i32> = HashSet::new();
         let mut new_faces_to_add: Vec<Face> = Vec::new();
+        // which face each new face is a piece of, so the face colors and textures can follow
+        let mut new_face_source: Vec<i32> = Vec::new();
         let mut new_vertices_to_add: Vec<Vector3Float> = Vec::new();
         let mut vertex_index_mapping: HashMap<i32, i32> = HashMap::new();
 
@@ -464,6 +466,7 @@ fn repair_t_junctions_pass(
                             Vector3Float::ZERO,
                         ));
                     }
+                    new_face_source.push(face_index);
                 }
             }
 
@@ -498,9 +501,12 @@ fn repair_t_junctions_pass(
         }
 
         let mut final_faces = FaceList::new();
+        let mut source_face_index: Vec<i32> =
+            Vec::with_capacity(mesh.faces.len() + new_faces_to_add.len());
         for (i, face) in mesh.faces.iter().enumerate() {
             if !faces_to_remove.contains(&(i as i32)) {
                 final_faces.push(*face);
+                source_face_index.push(i as i32);
             }
         }
 
@@ -509,7 +515,13 @@ fn repair_t_junctions_pass(
         }
 
         final_faces.extend(new_faces_to_add);
-        mesh.faces = final_faces;
+        source_face_index.extend(new_face_source);
+        let source_faces = std::mem::replace(&mut mesh.faces, final_faces);
+
+        // the added faces are fans cut out of the faces they replaced, so their UVs come from
+        // interpolating the source face's mapping at the new corners
+        let vertices = mesh.vertices.clone();
+        mesh.remap_face_data(&source_face_index, Some((&source_faces, &vertices)));
         mesh.mark_as_changed();
     }
 

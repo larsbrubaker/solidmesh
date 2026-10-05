@@ -5,9 +5,9 @@
 //!
 //! `MergeVertices`, `GetVertexBvhTree`, `SplitFace` and `Split` are in `mesh_editing.rs`.
 //!
-//! Not yet ported (later Phase 2 slices, they need code that is not here yet): `FaceTextures`
-//! and `FaceColors` with `RemapFaceData` (agg `ImageBuffer`/`Color`), `PropertyBag` and the
-//! `Changed` event. The convex hull and transformed-bounds caches live in
+//! The per-face colors and textures are fields here; `RemapFaceData`, the centroid colors and
+//! the texture helpers live in `face_data.rs`. Not yet ported: `PropertyBag` and the `Changed`
+//! event (shape decided with Phase 5's event outbox). The convex hull and transformed-bounds caches live in
 //! `processors::mesh_convex_hull` and `transformed_aabb_cache`; they key on `changed_count`.
 
 use std::collections::HashMap;
@@ -15,11 +15,13 @@ use std::fmt;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::OnceLock;
 
+use agg_path::Color;
 use vector_math::{
     long_hash, AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float, LONG_HASH_SEED,
 };
 
 use crate::face::FaceList;
+use crate::face_data::{FaceTextureData, FaceTextures};
 use crate::processors::mesh_convex_hull::ConvexHullCache;
 use crate::transformed_aabb_cache::TransformedAabbCache;
 use crate::vector3_list;
@@ -32,6 +34,12 @@ static NEXT_ID: AtomicI32 = AtomicI32::new(0);
 pub struct Mesh {
     pub vertices: Vec<Vector3Float>,
     pub faces: FaceList,
+    /// Lookup by face index into the UVs and image for a face.
+    pub face_textures: FaceTextures,
+    /// Optional per-face colors. When `Some`, `face_colors[face_index]` gives the color for
+    /// that face; `None` means no per-face coloring (the object's own color paints every face).
+    /// Used to preserve per-mesh colors through booleans.
+    pub face_colors: Option<Vec<Color>>,
     changed_count: i32,
     cached_aabb: OnceLock<AxisAlignedBoundingBox>,
     long_hash_before_clean: OnceLock<u64>,
@@ -143,6 +151,19 @@ impl Mesh {
         let face = &mut self.faces[face_index];
         std::mem::swap(&mut face.v0, &mut face.v2);
         face.normal *= -1.0;
+
+        // The UVs are per corner, so the winding flip has to take them along or the face's
+        // texture comes out mirrored. Replaced rather than edited in place, as C# does because a
+        // FaceTextureData can be shared with another face or mesh.
+        if let Some(texture_data) = self.face_textures.get_mut(&(face_index as i32)) {
+            *texture_data = FaceTextureData::new(
+                texture_data.image.clone(),
+                texture_data.uv2,
+                texture_data.uv1,
+                texture_data.uv0,
+            );
+        }
+
         if mark_as_change {
             self.mark_as_changed();
         }
@@ -177,6 +198,7 @@ impl Mesh {
 
         let mut new_vertices: Vec<Vector3Float> = Vec::new();
         let mut new_faces = FaceList::new();
+        let mut source_face_index: Vec<i32> = Vec::with_capacity(self.faces.len());
         let mut position_to_index: HashMap<(u32, u32, u32), i32> = HashMap::new();
         let mut get_index = |position: Vector3Float, new_vertices: &mut Vec<Vector3Float>| {
             let key = (
@@ -190,18 +212,24 @@ impl Mesh {
             })
         };
 
-        for face in self.faces.iter() {
+        for (face_idx, face) in self.faces.iter().enumerate() {
             let iv0 = get_index(self.vertices[face.v0 as usize], &mut new_vertices);
             let iv1 = get_index(self.vertices[face.v1 as usize], &mut new_vertices);
             let iv2 = get_index(self.vertices[face.v2 as usize], &mut new_vertices);
             if iv0 != iv1 && iv1 != iv2 && iv2 != iv0 {
                 new_faces.add(iv0, iv1, iv2, &new_vertices);
+                source_face_index.push(face_idx as i32);
             }
         }
 
         if self.faces.len() != new_faces.len() || self.vertices.len() != new_vertices.len() {
             self.faces = new_faces;
             self.vertices = new_vertices;
+
+            // The welding only moves vertices onto each other, so the faces that survive keep
+            // their geometry and their UVs come across unchanged.
+            self.remap_face_data(&source_face_index, None);
+
             self.mark_as_changed();
         }
     }
@@ -224,6 +252,16 @@ impl Mesh {
             hash = int_long_hash(face.v0, hash);
             hash = int_long_hash(face.v1, hash);
             hash = int_long_hash(face.v2, hash);
+        }
+
+        // Include the face colors so meshes with different per-face colors produce different
+        // hashes and aren't served from stale cache
+        if let Some(face_colors) = &self.face_colors {
+            hash = int_long_hash(face_colors.len() as i32, hash);
+            let color_step = (face_colors.len() / 1000).max(1);
+            for color in face_colors.iter().step_by(color_step) {
+                hash = color.get_long_hash_code(hash);
+            }
         }
 
         hash
@@ -347,14 +385,64 @@ impl Mesh {
         }
     }
 
-    /// Appends every face of `mesh`, transformed by `matrix`, as new welded-per-face geometry.
+    /// Appends every face of `mesh`, transformed by `matrix`, as new welded-per-face geometry,
+    /// with its textures and colors.
+    ///
+    /// Per-face color is all-or-nothing per mesh: `face_colors` is either `None` (the object's
+    /// own color paints every face) or one entry per face. Merging a painted mesh with an
+    /// unpainted one therefore has to invent entries for the unpainted side, and those get
+    /// [`Mesh::UNCOLORED_FACE`] - leaving them at `Color::default()` made them transparent, and
+    /// dropping the array made the painted side lose its colors. Two unpainted meshes stay
+    /// unpainted so their objects' own colors keep doing the work.
     pub fn copy_all_faces(&mut self, mesh: &Mesh, matrix: Matrix4X4) {
-        for face in mesh.faces.iter() {
+        let f_start = self.faces.len();
+
+        // create_face welds duplicate positions and then fans what is left, so a source face
+        // does not reliably produce exactly one face here: a degenerate triangle produces none.
+        // Record which source face actually produced each new face instead of assuming a flat
+        // f_start + source_index offset.
+        let mut source_face_of_new_face: Vec<usize> = Vec::with_capacity(mesh.faces.len());
+        for (i, face) in mesh.faces.iter().enumerate() {
             let v0 = mesh.vertices[face.v0 as usize].transform(matrix);
             let v1 = mesh.vertices[face.v1 as usize].transform(matrix);
             let v2 = mesh.vertices[face.v2 as usize].transform(matrix);
+            let before_create = self.faces.len();
             self.create_face_f32(&[v0, v1, v2]);
+            for _ in before_create..self.faces.len() {
+                source_face_of_new_face.push(i);
+            }
         }
+
+        // The matrix only moves the vertices around, it does not change which corner is which,
+        // so the UVs come across as they are.
+        if !mesh.face_textures.is_empty() {
+            for (i, &source_face) in source_face_of_new_face.iter().enumerate() {
+                if let Some(texture_data) = mesh.face_textures.get(&(source_face as i32)) {
+                    self.face_textures
+                        .insert((f_start + i) as i32, texture_data.clone());
+                }
+            }
+        }
+
+        if mesh.face_colors.is_none() && self.face_colors.is_none() {
+            return;
+        }
+
+        let total_faces = self.faces.len();
+        let mut colors = self.face_colors.take().unwrap_or_default();
+        if colors.len() < total_faces {
+            colors.resize(total_faces, Self::UNCOLORED_FACE);
+        }
+
+        if let Some(source_colors) = &mesh.face_colors {
+            for (i, &source_face) in source_face_of_new_face.iter().enumerate() {
+                if source_face < source_colors.len() {
+                    colors[f_start + i] = source_colors[source_face];
+                }
+            }
+        }
+
+        self.face_colors = Some(colors);
     }
 }
 

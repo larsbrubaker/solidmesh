@@ -117,6 +117,10 @@ pub struct BooleanOptions {
     pub input_resolution: ProcessingResolution,
     /// C# `outputResolution`: how finely the implicit modes mesh the result.
     pub output_resolution: ProcessingResolution,
+    /// C# `meshColors`: one color per operand, in operand order, to paint the result's faces
+    /// from; `None` asks for no color tracking (the result has no face colors). An operand
+    /// that has face colors of its own is painted from those instead. Polygon mode only.
+    pub mesh_colors: Option<Vec<agg_path::Color>>,
 }
 
 impl Default for BooleanOptions {
@@ -130,6 +134,7 @@ impl Default for BooleanOptions {
             processing_mode: ProcessingModes::Polygons,
             input_resolution: ProcessingResolution::R64,
             output_resolution: ProcessingResolution::R64,
+            mesh_colors: None,
         }
     }
 }
@@ -145,6 +150,7 @@ impl fmt::Debug for BooleanOptions {
             .field("processing_mode", &self.processing_mode)
             .field("input_resolution", &self.input_resolution)
             .field("output_resolution", &self.output_resolution)
+            .field("mesh_colors", &self.mesh_colors)
             .finish()
     }
 }

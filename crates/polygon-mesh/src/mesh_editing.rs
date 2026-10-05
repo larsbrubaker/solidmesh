@@ -1,8 +1,9 @@
 //! Mesh editing from agg-sharp `PolygonMesh/Mesh.cs`: the vertex BVH, `UnionFind` and
 //! `MergeVertices`, `SplitFace`, `Split` and the `SplitOnPlanes` extension.
 //!
-//! The C# versions also call `RemapFaceData` so face colors and textures follow the faces;
-//! colors and textures are Phase 2f, so here the faces are all there is to move.
+//! Each rebuild records which source face every new face came from and calls
+//! `Mesh::remap_face_data` (`face_data.rs`) so face colors and textures follow the faces; cut
+//! pieces get their UVs interpolated from the face they were cut out of.
 
 use std::collections::{HashMap, HashSet};
 
@@ -171,6 +172,7 @@ impl Mesh {
 
         // Create new faces, skipping degenerate ones
         let mut new_faces = FaceList::new();
+        let mut source_face_index: Vec<i32> = Vec::with_capacity(self.faces.len());
         for face_idx in 0..self.faces.len() {
             let face = self.faces[face_idx];
             let new_v0 = rep_to_new_index[&uf.find(face.v0 as usize)];
@@ -182,6 +184,7 @@ impl Mesh {
                     .get_area(new_vertices[new_v1 as usize], new_vertices[new_v2 as usize]);
                 if f64::from(area) >= min_face_area {
                     new_faces.add(new_v0, new_v1, new_v2, &new_vertices);
+                    source_face_index.push(face_idx as i32);
                 }
             }
         }
@@ -190,6 +193,11 @@ impl Mesh {
         if self.faces.len() != new_faces.len() || self.vertices.len() != new_vertices.len() {
             self.vertices = new_vertices;
             self.faces = new_faces;
+
+            // Dropping the collapsed faces shifts every face after them down, so the colors
+            // and textures have to follow.
+            self.remap_face_data(&source_face_index, None);
+
             self.mark_as_changed();
         }
     }
@@ -209,6 +217,11 @@ impl Mesh {
             false,
         ) {
             let vertex_count = self.vertices.len() as i32;
+            let source_faces = self.faces.clone();
+            let mut source_face_index: Vec<i32> =
+                Vec::with_capacity(self.faces.len() + new_faces.len());
+            source_face_index
+                .extend((0..self.faces.len() as i32).filter(|&i| i != face_index as i32));
             // removing the face shifts everything after it down, and the pieces go on the end
             self.faces.remove(face_index);
             self.vertices.extend_from_slice(&new_vertices);
@@ -217,8 +230,16 @@ impl Mesh {
                 face.v1 += vertex_count;
                 face.v2 += vertex_count;
                 self.faces.push(face);
+                source_face_index.push(face_index as i32);
             }
 
+            // the pieces are cut out of the face that was split, so their UVs get interpolated
+            let vertices = self.vertices.clone();
+            self.remap_face_data(&source_face_index, Some((&source_faces, &vertices)));
+
+            // Faces and Vertices both changed, so invalidate here rather than leaning on the
+            // mark_as_changed inside clean_and_merge - which returns early for an already
+            // manifold result.
             self.mark_as_changed();
             self.clean_and_merge();
             return true;
@@ -240,9 +261,12 @@ impl Mesh {
         let mut new_vertices: Vec<Vector3Float> = Vec::new();
         let mut new_faces: Vec<Face> = Vec::new();
         let mut faces_to_remove: HashSet<usize> = HashSet::new();
+        // which face each entry of new_faces was cut out of, so the per face data can follow
+        let mut new_face_source: Vec<i32> = Vec::new();
 
         for i in 0..self.faces.len() {
             let face = self.faces[i];
+            let pieces_before = new_faces.len();
             if face.split(
                 &self.vertices,
                 plane,
@@ -252,27 +276,44 @@ impl Mesh {
                 clip_face,
                 discard_faces_on_negative_side,
             ) {
+                // record the face for removal
                 faces_to_remove.insert(i);
+                new_face_source.extend(std::iter::repeat_n(
+                    i as i32,
+                    new_faces.len() - pieces_before,
+                ));
             }
         }
 
         let mut kept_faces = FaceList::new();
+        let mut source_face_index: Vec<i32> =
+            Vec::with_capacity(self.faces.len() + new_faces.len());
         for (i, face) in self.faces.iter().enumerate() {
             if !faces_to_remove.contains(&i) {
                 kept_faces.push(*face);
+                source_face_index.push(i as i32);
             }
         }
 
         let vertex_count = self.vertices.len() as i32;
         self.vertices.extend_from_slice(&new_vertices);
-        for mut face in new_faces {
+        for (i, mut face) in new_faces.into_iter().enumerate() {
             face.v0 += vertex_count;
             face.v1 += vertex_count;
             face.v2 += vertex_count;
             kept_faces.push(face);
+            source_face_index.push(new_face_source[i]);
         }
 
-        self.faces = kept_faces;
+        let source_faces = std::mem::replace(&mut self.faces, kept_faces);
+
+        // the added faces are pieces cut out of the faces they replaced, so their UVs get
+        // interpolated
+        let vertices = self.vertices.clone();
+        self.remap_face_data(&source_face_index, Some((&source_faces, &vertices)));
+
+        // Faces and Vertices both changed. clean_and_merge is the only other thing here that
+        // would invalidate, and callers can switch it off, so do it unconditionally.
         self.mark_as_changed();
 
         if clean_and_merge {
@@ -337,13 +378,18 @@ impl Mesh {
         let mut above_offset: Vec<f64> = Vec::with_capacity(8);
         let mut edge_crossings: Vec<usize> = Vec::with_capacity(8);
 
+        // which source face each emitted triangle came out of; the colors and textures are
+        // moved onto the pieces from this one map once the new face list is in place
+        let mut source_face_index: Vec<i32> = Vec::with_capacity(source_faces.len());
+
         fn add_triangle(
             v0: i32,
             v1: i32,
             v2: i32,
             new_vertices: &[Vector3Float],
-            new_faces: &mut FaceList,
+            out: (&mut FaceList, &mut Vec<i32>, i32),
         ) {
+            let (new_faces, source_face_index, source_face) = out;
             if v0 == v1 || v1 == v2 || v2 == v0 {
                 return;
             }
@@ -354,9 +400,16 @@ impl Mesh {
                 return;
             }
             new_faces.add(v0, v1, v2, new_vertices);
+            source_face_index.push(source_face);
         }
 
-        fn emit_fan(polygon: &[i32], new_vertices: &[Vector3Float], new_faces: &mut FaceList) {
+        fn emit_fan(
+            polygon: &[i32],
+            new_vertices: &[Vector3Float],
+            new_faces: &mut FaceList,
+            source_face_index: &mut Vec<i32>,
+            source_face: i32,
+        ) {
             let mut i = 1;
             while i + 1 < polygon.len() {
                 add_triangle(
@@ -364,7 +417,7 @@ impl Mesh {
                     polygon[i],
                     polygon[i + 1],
                     new_vertices,
-                    new_faces,
+                    (&mut *new_faces, &mut *source_face_index, source_face),
                 );
                 i += 1;
             }
@@ -385,7 +438,8 @@ impl Mesh {
             low
         };
 
-        for face in source_faces.iter() {
+        for (face_index, face) in source_faces.iter().enumerate() {
+            let source_face = face_index as i32;
             let corners = [face.v0, face.v1, face.v2];
 
             ring.clear();
@@ -443,6 +497,7 @@ impl Mesh {
             if ring.len() == 3 {
                 // No plane touched this face - keep it exactly as it was, normal included.
                 new_faces.add_with_normal(face.v0, face.v1, face.v2, face.normal);
+                source_face_index.push(source_face);
                 continue;
             }
 
@@ -508,18 +563,34 @@ impl Mesh {
                     }
                 }
 
-                emit_fan(&below, &new_vertices, &mut new_faces);
+                emit_fan(
+                    &below,
+                    &new_vertices,
+                    &mut new_faces,
+                    &mut source_face_index,
+                    source_face,
+                );
 
                 // Carry on with what is above the plane.
                 std::mem::swap(&mut ring, &mut above);
                 std::mem::swap(&mut ring_offset, &mut above_offset);
             }
 
-            emit_fan(&ring, &new_vertices, &mut new_faces);
+            emit_fan(
+                &ring,
+                &new_vertices,
+                &mut new_faces,
+                &mut source_face_index,
+                source_face,
+            );
         }
 
         self.vertices = new_vertices;
         self.faces = new_faces;
+
+        // Every emitted triangle is a piece of the face it came from, so its corners get the UVs
+        // the source face's mapping gives at those positions.
+        self.remap_face_data(&source_face_index, Some((&source_faces, &source_vertices)));
 
         self.clean_and_merge();
         self.mark_as_changed();

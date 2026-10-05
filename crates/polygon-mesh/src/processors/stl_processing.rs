@@ -62,8 +62,8 @@ impl std::error::Error for StlError {}
 pub enum StlChunk {
     /// A chunk boundary: this many faces read so far; call again.
     Continue { faces_read: i32 },
-    /// The parse finished.
-    Done(Mesh),
+    /// The parse finished. (Boxed: a `Mesh` is much larger than a face count.)
+    Done(Box<Mesh>),
 }
 
 enum Format {
@@ -130,7 +130,7 @@ pub fn parse_file_contents(
         // Re-borrow the callback for each step without giving it up.
         let progress = report_progress.as_mut().map(|p| &mut **p as Progress<'_>);
         if let StlChunk::Done(mesh) = parse.next_chunk(cancel, progress)? {
-            return Ok(mesh);
+            return Ok(*mesh);
         }
     }
 }
@@ -194,7 +194,7 @@ impl<'a> StlParse<'a> {
         mut report_progress: Option<Progress<'_>>,
     ) -> Result<StlChunk, StlError> {
         if self.finished {
-            return Ok(StlChunk::Done(Mesh::new()));
+            return Ok(StlChunk::Done(Box::default()));
         }
         let faces_at_start = self.mesh.faces.len() as i32;
         let done = match self.format {
@@ -210,7 +210,7 @@ impl<'a> StlParse<'a> {
                 return Err(StlError::Cancelled);
             }
             self.finished = true;
-            return Ok(StlChunk::Done(std::mem::take(&mut self.mesh)));
+            return Ok(StlChunk::Done(Box::new(std::mem::take(&mut self.mesh))));
         }
 
         if let Some(report) = report_progress.as_mut() {

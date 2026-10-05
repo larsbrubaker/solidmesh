@@ -2,8 +2,14 @@
 //! net 1). Only the cases that exercise code ported so far are here; the rest are listed in
 //! `docs/PORTING_PLAN.md` with the slice that brings them.
 
+#[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
+mod face_color_boolean_scenarios;
+#[path = "polygon_mesh/face_color_tests.rs"]
+mod face_color_tests;
 #[path = "polygon_mesh/face_normal_tests.rs"]
 mod face_normal_tests;
+#[path = "polygon_mesh/face_texture_tests.rs"]
+mod face_texture_tests;
 #[path = "polygon_mesh/grid_marching_cubes_tests.rs"]
 mod grid_marching_cubes_tests;
 #[path = "polygon_mesh/mesh_convex_hull_tests.rs"]

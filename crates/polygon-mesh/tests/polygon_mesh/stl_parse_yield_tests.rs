@@ -66,7 +66,7 @@ fn parse_yielding(bytes: &[u8]) -> (Mesh, i32) {
             .expect("the parse succeeds")
         {
             StlChunk::Continue { .. } => yields += 1,
-            StlChunk::Done(mesh) => return (mesh, yields),
+            StlChunk::Done(mesh) => return (*mesh, yields),
         }
     }
 }
