@@ -76,6 +76,18 @@ pub const LEVEL_LINE_WORK_PHASE_COUNT: usize = 10;
 /// The progress callback a [`WorkBudget`] reports to (C# `Action<LevelLineProgress>`).
 pub type LevelLineProgressReport = Rc<dyn Fn(LevelLineProgress)>;
 
+/// A watcher of the corner cap's hole fills (C#'s `Action<LevelLineMesh, IReadOnlyList<Vector3>,
+/// int, IReadOnlyList<HoleFillTriangle>, IReadOnlyList<LastRow>>`).
+pub type WatchHoleFills = Rc<
+    dyn Fn(
+        &super::LevelLineMesh,
+        &[vector_math::Vector3],
+        i32,
+        &[super::HoleFillTriangle],
+        &[super::CornerCapLastRow],
+    ),
+>;
+
 /// C# `WorkBudget`: a deterministic allowance of WORK - field queries, mesh splits and loop steps -
 /// that a level line build may spend before it refuses.
 ///
@@ -119,6 +131,11 @@ pub struct WorkBudget {
     /// `SquareCreaseEndClip.SquareCreaseClipsOffInFlow`, on by default);
     /// `square_crease_end_clip::turn_square_crease_clips_off` flips it for the budget in force.
     pub square_crease_clips_off: Cell<bool>,
+    /// Who watches each corner hole the cap closes with the hole fill for this build (C#'s per-flow
+    /// `CornerCap.WatchHoleFills`, an `AsyncLocal` defaulting to null): the mesh, the fill's
+    /// vertices, how many of them are the hole's own points, its triangles and the rows it closed.
+    /// `None` (the default) costs nothing.
+    pub watch_hole_fills: RefCell<Option<WatchHoleFills>>,
     /// How many units have been charged so far.
     pub spent: Cell<i64>,
     /// What is running right now.
@@ -531,6 +548,7 @@ impl WorkBudget {
             both_sided_members_off: Cell::new(false),
             run_outs_on: Cell::new(false),
             square_crease_clips_off: Cell::new(false),
+            watch_hole_fills: RefCell::new(None),
             spent: Cell::new(0),
             phase: Cell::new(LevelLineWorkPhase::None),
             exhausted_in: Cell::new(LevelLineWorkPhase::None),

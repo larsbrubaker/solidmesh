@@ -12,7 +12,9 @@ use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::{ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, ZipRail};
+use super::{
+    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError, ZipRail,
+};
 use std::cell::RefCell;
 
 /// The tag the fill's own triangles carry, so the strip can be told from the kept surface. Stood
@@ -155,6 +157,25 @@ pub fn arc_point(p: Vector3, c: Vector3, q: Vector3, t: f64) -> Vector3 {
     let wc = 2.0 * t * s * weight;
     let wq = t * t;
     ((p * wp) + (c * wc) + (q * wq)) / (wp + wc + wq)
+}
+
+/// Lays one fill triangle `(a, b, c)` into `mesh`, tagged as fill, and records it in `added`. A
+/// triangle with exactly one repeated pair is skipped; one whose three corners are all the same
+/// vertex still reaches [`LevelLineMesh::add_face`], which refuses it (as the C# does).
+pub fn lay(
+    mesh: &mut LevelLineMesh,
+    a: i32,
+    b: i32,
+    c: i32,
+    added: &mut Vec<i32>,
+) -> Result<(), LevelLineMeshError> {
+    let same = i32::from(a == b) + i32::from(b == c) + i32::from(c == a);
+    if same == 1 {
+        return Ok(());
+    }
+
+    added.push(mesh.add_face(a, b, c, FILL_TAG)?);
+    Ok(())
 }
 
 /// C# `GapFill.Backwards`: the arc's vertices in the other order.

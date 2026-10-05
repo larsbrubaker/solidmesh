@@ -7,12 +7,30 @@ use std::collections::{HashMap, HashSet};
 
 use vector_math::{cs_math, Vector3};
 
-use super::{GapLoop, LevelLineMesh};
+use super::gap_fill::FILL_TAG;
+use super::{GapLoop, LevelLineMesh, LevelLineMeshError};
 
 /// True when two positions are the same point, to a billionth of their magnitude (at least 1).
 pub fn same(a: Vector3, b: Vector3) -> bool {
     let tolerance = 1e-9 * cs_math::max_f64(1.0, cs_math::max_f64(a.length(), b.length()));
     (a - b).length_squared() <= tolerance * tolerance
+}
+
+/// Lays one fill triangle `(a, b, c)` into `mesh`, tagged as fill, and records it in `added`; a
+/// triangle that repeats a vertex is skipped.
+pub fn lay(
+    mesh: &mut LevelLineMesh,
+    a: i32,
+    b: i32,
+    c: i32,
+    added: &mut Vec<i32>,
+) -> Result<(), LevelLineMeshError> {
+    if a == b || b == c || c == a {
+        return Ok(());
+    }
+
+    added.push(mesh.add_face(a, b, c, FILL_TAG)?);
+    Ok(())
 }
 
 /// The boundary edges that join each open run's last vertex to the next run's first, walked along

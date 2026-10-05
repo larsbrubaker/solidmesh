@@ -115,11 +115,13 @@ mod hole_fill_result;
 pub mod hull_clip;
 pub mod knife_end_overrun;
 mod level_line_mesh;
+mod level_line_mesh_edits;
 pub mod level_line_mesh_input_strips;
 mod level_line_mesh_insert_polyline;
 pub mod level_line_mesh_needles;
 pub mod level_line_routing;
 pub mod line_walk;
+pub mod needle_apex_retile;
 pub mod needle_meter;
 pub mod open_gap_fill;
 pub mod open_gap_fill_cut_section;
@@ -195,6 +197,7 @@ pub use hole_fill_result::{HoleFillFailure, HoleFillResult, HoleFillTriangle};
 pub use hull_clip::HullClipPlane;
 pub use knife_end_overrun::KnifeEndOverrunEnd;
 pub use level_line_mesh::{IsChainEdge, LevelLineMesh, LevelLineTriangle, SamePlaceNotALength};
+pub use level_line_mesh_edits::LevelLineMeshError;
 pub use level_line_routing::LevelLineChainWatch;
 pub use needle_meter::{NeedleMeter, NeedleMeterMadeBy};
 pub use open_gap_fill::OpenGapFillOpenRail;
@@ -224,6 +227,6 @@ pub use square_crease_end_clip::{
 pub use vertex_side::{VertexFieldReading, VertexSide};
 pub use work_budget::{
     LevelLineProgress, LevelLineProgressReport, LevelLineWork, LevelLineWorkPhase,
-    LevelLineWorkScope, WorkBudget, WorkError, LEVEL_LINE_WORK_PHASE_COUNT,
+    LevelLineWorkScope, WatchHoleFills, WorkBudget, WorkError, LEVEL_LINE_WORK_PHASE_COUNT,
 };
 pub use zip_rail::ZipRail;

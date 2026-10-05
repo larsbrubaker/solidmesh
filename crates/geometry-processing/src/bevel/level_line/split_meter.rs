@@ -407,3 +407,131 @@ impl SplitMeter {
         )
     }
 }
+
+impl SplitMeter {
+    /// An edge split: the point, the edge it was taken on, and the first triangle that stood on it.
+    pub fn note_edge_split(
+        mesh: &LevelLineMesh,
+        vertex: i32,
+        point: Vector3,
+        from: i32,
+        to: i32,
+        standing: &[i32],
+    ) {
+        let triangle = standing.first().copied().unwrap_or(-1);
+        Self::note(
+            mesh,
+            vertex,
+            point,
+            SplitMeterSplitKind::OnEdge,
+            triangle,
+            from,
+            to,
+            standing.len() as i32,
+        );
+    }
+
+    /// A point put inside a triangle.
+    pub fn note_triangle_split(mesh: &LevelLineMesh, vertex: i32, point: Vector3, triangle: i32) {
+        Self::note(
+            mesh,
+            vertex,
+            point,
+            SplitMeterSplitKind::Interior,
+            triangle,
+            -1,
+            -1,
+            0,
+        );
+    }
+
+    /// A free-standing vertex the fill laid in.
+    pub fn note_free_vertex(mesh: &LevelLineMesh, vertex: i32, point: Vector3) {
+        Self::note(
+            mesh,
+            vertex,
+            point,
+            SplitMeterSplitKind::Free,
+            -1,
+            -1,
+            -1,
+            0,
+        );
+    }
+
+    /// Weighs an added vertex against the ones already there: a fresh mesh seeds the grid with
+    /// everything on it before the first add (an input vertex is as much "one already there" as a
+    /// split is), a coincidence is recorded in full up to [`SPLIT_METER_CAP`], and a near miss is
+    /// counted in its band.
+    #[allow(clippy::too_many_arguments)] // C#'s signature.
+    pub fn note(
+        mesh: &LevelLineMesh,
+        vertex: i32,
+        point: Vector3,
+        kind: SplitMeterSplitKind,
+        triangle: i32,
+        from: i32,
+        to: i32,
+        triangles_on_the_edge: i32,
+    ) {
+        if !Self::on() {
+            return;
+        }
+
+        // Read before taking the meter's state: the record reads the field counters' rule.
+        let record = Self::describe(
+            mesh,
+            vertex,
+            point,
+            kind,
+            triangle,
+            from,
+            to,
+            triangles_on_the_edge,
+        );
+        let identity = mesh as *const LevelLineMesh as usize;
+        Self::with(|s| {
+            if s.mesh_under_the_meter != Some(identity) {
+                s.mesh_under_the_meter = Some(identity);
+                s.grid.clear();
+                s.records.clear();
+                let mut v = 0;
+                while v < vertex && v < mesh.vertex_count() {
+                    Self::place(s, v, mesh.position(v));
+                    v += 1;
+                }
+            }
+
+            s.added += 1;
+            s.records.insert(vertex, record);
+
+            let (nearest, distance) = Self::nearest(s, mesh, point, vertex);
+            if nearest >= 0 && distance <= s.coincident {
+                s.coincident_count += 1;
+                if s.duplicates.len() < SPLIT_METER_CAP {
+                    let before = match s.records.get(&nearest) {
+                        Some(older) => older.describe(),
+                        None => {
+                            let at = mesh.position(nearest);
+                            format!("INPUT vertex at ({:.6}, {:.6}, {:.6})", at.x, at.y, at.z)
+                        }
+                    };
+                    let index = s.duplicates.len() + 1;
+                    s.duplicates.push(format!(
+                        "  #{index} vertex {vertex} landed on {nearest}, {} apart\n      new:      {}\n      standing: {before}",
+                        e3(distance),
+                        record.describe()
+                    ));
+                }
+            } else if nearest >= 0 && distance < s.near {
+                if distance < s.middling {
+                    s.near_middling += 1;
+                } else {
+                    s.near_far += 1;
+                }
+            }
+
+            Self::place(s, vertex, point);
+        });
+    }
+}
