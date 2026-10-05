@@ -3,8 +3,8 @@
 //! here are the join's own readings: the strip of faces between two ends ([`try_strip`],
 //! [`try_the_fold_between`], [`try_the_faces_walked`]), that strip unfolded flat ([`flatten`],
 //! [`place`], [`in_flat`]), a strip's key ([`key_of`]) and whether a walk arrived ([`arrived_at`]).
-//! The join itself (`TryJoin`, `TryLayTheLine`) lands with the next run of this package, after the
-//! walk (`TryWalk`).
+//! And the join itself ([`try_join`], [`try_join_counting`], [`try_lay_the_line`]), which lays the
+//! straight line of the unfolded strip as a walk ([`super::section_surface_walk_try::try_walk`]).
 
 use std::collections::VecDeque;
 
@@ -13,8 +13,9 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{cs_math, Vector2, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
-use super::section_surface_walk::{is_the_same_point, normal_of, pair_key};
-use super::SurfaceWalkResult;
+use super::section_surface_walk::{is_the_same_point, normal_of, pair_key, JOIN_ITERATIONS};
+use super::section_surface_walk_try::try_walk;
+use super::{SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult};
 use crate::bevel::surface::SurfaceVertexPool;
 
 /// C# `JoinStripReach`: how many faces deep the strip search looks before it gives up.
@@ -334,4 +335,195 @@ pub fn in_flat(mesh: &Mesh, flat: &FlatStrip, face: i32, at: Vector3) -> Option<
 /// A vertex's position, read as doubles.
 fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])
+}
+
+/// C# `TryJoin` (the seven-argument overload): [`try_join_counting`] without the count.
+#[allow(clippy::too_many_arguments)]
+pub fn try_join(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    end_a: Vector3,
+    end_a_face: i32,
+    end_b: Vector3,
+    end_b_face: i32,
+    stop_at_crease: Option<&dyn Fn(i32) -> bool>,
+) -> Result<Vec<SurfaceWalkCrossing>, SurfaceWalkRefusal> {
+    try_join_counting(
+        mesh,
+        graph,
+        edge_at_pair,
+        end_a,
+        end_a_face,
+        end_b,
+        end_b_face,
+        stop_at_crease,
+    )
+    .0
+}
+
+/// C# `TryJoin` (with `out int unfoldings`): the line ALONG the surface from `end_a` in `end_a_face`
+/// to `end_b` in `end_b_face`, as the edges it crosses - `Ok` with the crossings, `Err` with why it
+/// could not be laid - and how many times the strip was unfolded to lay it.
+///
+/// The strip between the two ends is unfolded flat and the straight line in it walked; where the
+/// walk leaves the strip, the faces it did run through become the next strip, up to
+/// `JOIN_ITERATIONS` times. A strip that comes round again has SETTLED, and is given one last
+/// reading against the MESH's lattice rather than the walk's finer one - the tessellation's own
+/// rounding, which an unfolding of float vertices cannot get below.
+#[allow(clippy::too_many_arguments)]
+pub fn try_join_counting(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    end_a: Vector3,
+    end_a_face: i32,
+    end_b: Vector3,
+    end_b_face: i32,
+    stop_at_crease: Option<&dyn Fn(i32) -> bool>,
+) -> (Result<Vec<SurfaceWalkCrossing>, SurfaceWalkRefusal>, i32) {
+    let mut unfoldings = 0;
+
+    if end_a_face == end_b_face {
+        return (Ok(Vec::new()), unfoldings);
+    }
+
+    let Some((mut faces, _)) = try_strip(
+        mesh,
+        graph,
+        edge_at_pair,
+        end_a_face,
+        end_b_face,
+        stop_at_crease,
+    ) else {
+        return (Err(SurfaceWalkRefusal::FacesNotConnected), unfoldings);
+    };
+
+    // Only asked whether a key is in it, so a `HashSet`'s order cannot reach an output.
+    let mut tried = std::collections::HashSet::new();
+
+    for iteration in 0..JOIN_ITERATIONS {
+        if !tried.insert(key_of(&faces)) {
+            // A strip already unfolded has come round again: the iteration has SETTLED. The strip it
+            // has settled on is the line's own, so what is left between the walk's end and the far end
+            // is the tessellation's own rounding - read once more against the MESH's lattice.
+            let settled = try_lay_the_line(
+                mesh,
+                graph,
+                edge_at_pair,
+                end_a,
+                end_b,
+                &faces,
+                stop_at_crease,
+                true,
+            );
+
+            return match settled {
+                Ok(crossings) => (Ok(crossings), unfoldings),
+                Err(_) => (Err(SurfaceWalkRefusal::JoinLeftTheStrip), unfoldings),
+            };
+        }
+
+        unfoldings = iteration + 1;
+
+        let walk = match try_lay_the_line(
+            mesh,
+            graph,
+            edge_at_pair,
+            end_a,
+            end_b,
+            &faces,
+            stop_at_crease,
+            false,
+        ) {
+            Ok(crossings) => return (Ok(crossings), unfoldings),
+            Err(walk) => walk,
+        };
+
+        let Some(walked) = walk.and_then(|walk| {
+            try_the_faces_walked(
+                mesh,
+                graph,
+                edge_at_pair,
+                end_a_face,
+                end_b_face,
+                &walk,
+                stop_at_crease,
+            )
+        }) else {
+            return (Err(SurfaceWalkRefusal::FacesNotConnected), unfoldings);
+        };
+
+        faces = walked.0;
+    }
+
+    (Err(SurfaceWalkRefusal::JoinLeftTheStrip), unfoldings)
+}
+
+/// C# `TryLayTheLine`: the straight line from `end_a` to `end_b` in the strip of `faces` unfolded
+/// flat, walked along the surface from `end_a`. `Ok` with the walk's crossings where it ARRIVES AT
+/// THE POINT (whichever face it says it ended in - a point on a fold lies in both); `Err` with the
+/// walk, where there was one, for the join to read the faces it ran through. A walk STOPPED by a
+/// crease AT the far end has landed: the end stations of an open boundary stand on the crease their
+/// section slid down. C#'s unused `end_b_face` and `folds` parameters are dropped; a strip that cannot
+/// be flattened (where C# would throw) is no line.
+#[allow(clippy::too_many_arguments)]
+pub fn try_lay_the_line(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    end_a: Vector3,
+    end_b: Vector3,
+    faces: &[i32],
+    stop_at_crease: Option<&dyn Fn(i32) -> bool>,
+    settled: bool,
+) -> Result<Vec<SurfaceWalkCrossing>, Option<SurfaceWalkResult>> {
+    let flat = flatten(mesh, faces).ok_or(None)?;
+    let from = in_flat(mesh, &flat, faces[0], end_a).ok_or(None)?;
+    let to = in_flat(mesh, &flat, faces[faces.len() - 1], end_b).ok_or(None)?;
+    let step = to - from;
+    let distance = step.length();
+
+    if distance < 1e-300 {
+        return Ok(Vec::new());
+    }
+
+    // Back out of the flattened frame: Flatten lays the first face with x along its v0-v1 side.
+    let first = &mesh.faces[faces[0] as usize];
+    let origin = position(mesh, first.v0);
+    let x = (position(mesh, first.v1) - origin).get_normal();
+    let y = normal_of(mesh, faces[0]).cross(x);
+
+    match try_walk(
+        mesh,
+        graph,
+        edge_at_pair,
+        end_a,
+        faces[0],
+        (x * step.x) + (y * step.y),
+        distance,
+        stop_at_crease,
+    ) {
+        Err(walk) => {
+            // A line that ENDS on a feature edge is stopped there by the walk - and it met it AT the
+            // far end. That stop IS the landing; any other reason to stop, and any crease met short of
+            // the far end, still refuses.
+            if walk.refusal != SurfaceWalkRefusal::CreaseReached
+                || !arrived_at(mesh, &walk, end_b, distance, settled)
+            {
+                return Err(Some(walk));
+            }
+
+            Ok(walk.crossings)
+        }
+        Ok(walk) => {
+            // The line has landed when it ARRIVES AT THE POINT, and the face it says it ended in is not
+            // asked to match.
+            if !arrived_at(mesh, &walk, end_b, distance, settled) {
+                return Err(Some(walk));
+            }
+
+            Ok(walk.crossings)
+        }
+    }
 }

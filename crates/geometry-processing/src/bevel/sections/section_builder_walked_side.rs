@@ -2,17 +2,19 @@
 //! (`Bevel/Sections/SectionBuilderWalkedSide.cs`, part of the C# `internal static partial class
 //! SectionBuilder`): where one such reach ended ([`WalkedEnd`]), the neighbour's end a split
 //! station is joined from ([`the_neighbours_end`], [`the_faces_the_end_lies_in`]) and the place a
-//! join-placed point lands on ([`try_along_the_join`], [`name_the_place`] and their helpers). The
-//! join's own point (`TheJoinsOwnPoint`) lands with a later run of this package.
+//! join-placed point lands on ([`try_along_the_join`], [`name_the_place`] and their helpers). And the
+//! split station's own point placed on that join ([`the_joins_own_point`]).
 
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{cs_math, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
+use super::section_split_blend::SplitPlacement;
 use super::{
-    section_room, section_smooth_side_boundary, BevelSection, JunctionSection, SectionKind,
-    SectionPool, SectionSide, SurfaceWalkCrossing,
+    section_room, section_smooth_side_boundary, section_surface_walk, section_surface_walk_join,
+    BevelSection, JunctionSection, NanSectionPoint, SectionKind, SectionPool, SectionSide,
+    SurfaceWalkCrossing,
 };
 
 /// C# `SectionBuilder.WalkedEnd`: where one OFFSET side's reach ended when it was laid along the
@@ -390,4 +392,109 @@ pub fn the_other_face(graph: &MeshEdgeGraph, edge: i32, face: i32) -> i32 {
         .map(|k| graph.get_face(edge, k))
         .find(|&other| other != face)
         .unwrap_or(face)
+}
+
+/// C# `TheJoinsOwnPoint`: a SPLIT station's boundary point on one OFFSET side, placed ON the join
+/// between its two unsplit neighbours' ends - the line along the surface the neighbours' cut runs
+/// along - at the blend's own `placement.parameter` along it, so the split point stands on that cut
+/// rather than a rounding off it. The neighbour's end is each face it may be read as lying in, tried
+/// in turn until a join from one to the other is laid. A side that is not an offset, or a join that
+/// cannot be laid, walks nothing (`boundary` -1). `Err` where the placed point is not a number.
+#[allow(clippy::too_many_arguments)]
+pub fn the_joins_own_point(
+    sections: &[BevelSection],
+    junctions: Option<&IndexMap<i32, JunctionSection>>,
+    placement: SplitPlacement,
+    at: i32,
+    on_the_left: bool,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    pool: &mut SectionPool,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+    lattice: f64,
+) -> Result<WalkedEnd, NanSectionPoint> {
+    let section = &sections[at as usize];
+    let none = WalkedEnd::new(-1, -1, Vector3::ZERO, false, false, -1, 0.0, -1);
+
+    let kind = if on_the_left {
+        section.left_kind
+    } else {
+        section.right_kind
+    };
+
+    if kind != SectionSide::Offset {
+        return Ok(none);
+    }
+
+    // The join LEAVES the neighbour before this station and ARRIVES at the one after it, which at a
+    // junction says which of its two wall ends the join's far end is - see the_neighbours_end.
+    let (from, from_faces) = the_neighbours_end(
+        mesh,
+        graph,
+        edge_at_pair,
+        pool,
+        sections,
+        junctions,
+        placement.before,
+        true,
+        on_the_left,
+        is_a_feature_edge,
+    );
+    let (to, to_faces) = the_neighbours_end(
+        mesh,
+        graph,
+        edge_at_pair,
+        pool,
+        sections,
+        junctions,
+        placement.after,
+        false,
+        on_the_left,
+        is_a_feature_edge,
+    );
+
+    for &from_face in &from_faces {
+        for &to_face in &to_faces {
+            let Ok(crossings) = section_surface_walk_join::try_join(
+                mesh,
+                graph,
+                edge_at_pair,
+                from,
+                from_face,
+                to,
+                to_face,
+                is_a_feature_edge,
+            ) else {
+                continue;
+            };
+
+            let Some(placed) = try_along_the_join(
+                mesh,
+                graph,
+                edge_at_pair,
+                from,
+                from_face,
+                to,
+                &crossings,
+                placement.parameter,
+                lattice,
+            ) else {
+                continue;
+            };
+
+            return Ok(WalkedEnd::new(
+                pool.add(placed.point)?,
+                placed.face,
+                placed.direction,
+                true,
+                section_surface_walk::crossed_a_fold(mesh, graph, Some(&crossings)),
+                placed.fold_edge,
+                placed.along,
+                placed.corner,
+            ));
+        }
+    }
+
+    Ok(none)
 }
