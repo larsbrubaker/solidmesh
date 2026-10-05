@@ -8,7 +8,7 @@
 //! picking, the bevel edge/corner group records, the edge and corner group resolvers, path
 //! corners and the readings of a pick or stored group); `Path/` (the path bevel and segment
 //! runs); `Bevel/` advisories and the leaf clusters of the bevel core below its cyclic centre
-//! (slices 1-4 of `docs/design/bevel-slices.md`, less `BevelLiveSizePreview`). The rest of
+//! (slices 1-7 of `docs/design/bevel-slices.md`, less `BevelLiveSizePreview`). The rest of
 //! `Bevel/` lands in later Phase 5C slices.
 
 pub mod bevel;

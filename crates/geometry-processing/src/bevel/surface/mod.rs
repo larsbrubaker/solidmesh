@@ -6,7 +6,8 @@
 //! ([`surface_mesh_closure`]), the step laid at a mitre joint ([`surface_mitre_joint_step`]) and
 //! the reading of a feature standing on a region ([`surface_room_standing_feature`]), the rolling
 //! ball's spine round a mixed corner ([`SurfaceMixedCornerSpine`]) and the per-region face grid
-//! the wall-clearance questions are asked of ([`SurfaceRegionFaceGrid`]). The construction itself
+//! the wall-clearance questions are asked of ([`SurfaceRegionFaceGrid`]), and the tidying of
+//! the rings a clip leaves ([`surface_ring`]). The construction itself
 //! lands in later slices.
 
 mod surface_band_end;
@@ -17,6 +18,7 @@ pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;
 mod surface_mixed_corner_spine;
 mod surface_region_face_grid;
+pub mod surface_ring;
 pub mod surface_room_standing_feature;
 mod surface_vertex_pool;
 

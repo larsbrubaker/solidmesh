@@ -18,7 +18,11 @@
 //! vertex pool, closure gate, joint step and standing-feature reading ([`surface`]); and the
 //! sixth: which faces lie on a round ([`BevelRoundFaces`]), the convex cell bound, the flat
 //! end-face fill and the room's source ([`level_line`]), and the mixed corner's spine and the
-//! region face grid ([`surface`]). C# `internal static class` helpers are modules of free
+//! region face grid ([`surface`]); and the seventh: the profile and frame an edge's tool is drawn
+//! in ([`bevel_edge_tool_builder`]), the corner handover a run's end reads first
+//! ([`bevel_corner_handover`]), the mixed corner's blend records ([`BevelMixedBlend`],
+//! [`BevelMixedBlendSet`]) and the ring tidying after a clip ([`surface`]); and of the eighth, what a rebuild has to
+//! say about itself ([`BevelRebuildAdvisories`]). C# `internal static class` helpers are modules of free
 //! functions here.
 
 mod bevel_advisory;
@@ -28,13 +32,17 @@ pub mod bevel_arc_chording;
 pub mod bevel_blend_seam;
 mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
+pub mod bevel_corner_handover;
 pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
+pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
+mod bevel_mixed_blend;
 mod bevel_mixed_corner_ends;
 pub mod bevel_pair_corner_crease;
 mod bevel_partner_tube;
 pub mod bevel_profile_polygon;
+mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
 mod bevel_round_faces;
 pub mod bevel_seam_ring;
@@ -51,9 +59,11 @@ pub use bevel_advisory_code::BevelAdvisoryCode;
 pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_end_cap::BevelEndCap;
+pub use bevel_mixed_blend::{BevelMixedBlend, BevelMixedBlendSet};
 pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;
 pub use bevel_pair_corner_crease::PairFaces;
 pub use bevel_partner_tube::BevelPartnerTube;
+pub use bevel_rebuild_advisories::BevelRebuildAdvisories;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
 pub use bevel_round_faces::BevelRoundFaces;
 pub use bevel_surface_labels::BevelSurfaceLabels;

@@ -3,8 +3,12 @@
 
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
+#[path = "bevel/bevel_rebuild_advisories_tests.rs"]
+mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]
 mod bevel_seam_ring_tests;
+#[path = "bevel/bevel_void_wedge_section_tests.rs"]
+mod bevel_void_wedge_section_tests;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
@@ -19,6 +23,8 @@ mod rust_only_bevel_slice4_tests;
 mod rust_only_bevel_slice5_tests;
 #[path = "bevel/rust_only_bevel_slice6_tests.rs"]
 mod rust_only_bevel_slice6_tests;
+#[path = "bevel/rust_only_bevel_slice7_tests.rs"]
+mod rust_only_bevel_slice7_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
 #[path = "bevel/topology_test_meshes.rs"]

@@ -4,7 +4,8 @@
 //! ([`ChainSideLoops`]), the chain-edge error ([`ChainEdgeNotOnTwoTriangles`]), a field reading
 //! ([`FieldSample`]), why a fill was refused ([`GapFillRefusal`]), a gap boundary ([`GapLoop`]),
 //! the hole filler's answer ([`HoleFillResult`]), which reading named the room
-//! ([`RoomReadingKind`]) and what it was about ([`RoomSource`]) - the setback a size asks
+//! ([`RoomReadingKind`]) and what it was about ([`RoomSource`]), one candidate the room is the
+//! least of ([`RoomCandidate`]) - the setback a size asks
 //! ([`chain_setback`]), the curved end face test ([`curved_end_face`]), the Lipschitz bounds
 //! ([`field_bounds`]), the field traits ([`ScalarField`], [`ChainDistanceField`]), the chain's
 //! segment box tree ([`segment_box_tree`]), the convex cell bound the ridge searches prune with
@@ -25,6 +26,7 @@ pub mod flat_hole_fill;
 mod gap_fill_refusal;
 mod gap_loop;
 mod hole_fill_result;
+mod room_candidate;
 mod room_reading_kind;
 mod room_source;
 mod scalar_field;
@@ -39,6 +41,7 @@ pub use field_sample::FieldSample;
 pub use gap_fill_refusal::GapFillRefusal;
 pub use gap_loop::GapLoop;
 pub use hole_fill_result::{HoleFillFailure, HoleFillResult, HoleFillTriangle};
+pub use room_candidate::RoomCandidate;
 pub use room_reading_kind::RoomReadingKind;
 pub use room_source::RoomSource;
 pub use scalar_field::{ChainDistanceField, FieldMaximum, FieldMinimum, ScalarField};
