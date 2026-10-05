@@ -13,11 +13,15 @@ pub fn format_f64(value: f64) -> String {
         return special;
     }
     let shortest = format!("{:e}", value.abs());
-    // When all 17 digits are needed, .NET's are the correctly rounded ones, half to even at an
-    // exact tie ("-159.60000610351562"); Rust's shortest formatter rounds such a tie up.
-    // `{:.16e}` is exact with ties to even, and 17 correctly rounded digits always round-trip.
-    let digits = if split_scientific(&shortest).0.len() == 17 {
-        format!("{:.16e}", value.abs())
+    // .NET's shortest digits are the correctly rounded ones, half to even at an exact tie
+    // ("-159.60000610351562", "-8.847000122070312"); Rust's shortest formatter rounds such a tie
+    // up. `{:.Ne}` is exact with ties to even; the correctly rounded digits of the same length
+    // are at least as close as the shortest ones, so they round-trip too (checked, to be safe
+    // at a power-of-two boundary, where the round-trip interval is lopsided).
+    let length = split_scientific(&shortest).0.len();
+    let rounded = format!("{:.*e}", length - 1, value.abs());
+    let digits = if rounded.parse::<f64>() == Ok(value.abs()) {
+        rounded
     } else {
         shortest
     };
