@@ -120,6 +120,7 @@ fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudge
         input_is_float_stored: false,
         report_throttle_ms: 50,
         pair_corner_end_face_field_off: Cell::new(false),
+        both_sided_members_off: Cell::new(false),
         spent: Cell::new(0),
         phase: Cell::new(LevelLineWorkPhase::None),
         exhausted_in: Cell::new(LevelLineWorkPhase::None),

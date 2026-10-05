@@ -1,6 +1,6 @@
 //! What a surface plan was drawn from, so the same chain can be planned again at another size
-//! ([`SurfacePlanRecipe`], `Bevel/Surface/SurfacePlanRecipe.cs`). Planning at a size lands with
-//! the core's surface packages.
+//! ([`SurfacePlanRecipe`], `Bevel/Surface/SurfacePlanRecipe.cs`), with its constructor. Planning at
+//! a size lands with the core's surface packages.
 
 use std::sync::Arc;
 
@@ -21,4 +21,21 @@ pub struct SurfacePlanRecipe {
     pub curve_regions: Option<Arc<FaceRegionCache>>,
     /// Whether the profile is a round's arc rather than a chamfer's straight cut.
     pub round_profile: bool,
+}
+
+impl SurfacePlanRecipe {
+    /// C#'s constructor.
+    pub fn new(
+        chain: BevelSweptChain,
+        regions: Option<Arc<FaceRegionCache>>,
+        curve_regions: Option<Arc<FaceRegionCache>>,
+        round_profile: bool,
+    ) -> Self {
+        Self {
+            chain,
+            regions,
+            curve_regions,
+            round_profile,
+        }
+    }
 }

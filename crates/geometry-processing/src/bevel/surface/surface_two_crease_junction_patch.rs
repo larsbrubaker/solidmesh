@@ -3,7 +3,8 @@
 //! `SurfaceTwoCreaseJunction` reads it, `SurfaceTwoCreaseJunctionRings` lays its grid). ONE sweep,
 //! not two half patches: its columns run from the upper bead's end ring round to the lower's, the
 //! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Only
-//! its nested record lands here, one strip's end ring ([`SurfaceTwoCreaseJunctionPatchEndRing`]);
+//! its nested record (with its constructor) and the ring positions ([`positions_of`]) land here,
+//! one strip's end ring ([`SurfaceTwoCreaseJunctionPatchEndRing`]);
 //! the patch lands with the two-crease junction package.
 
 /// C# `SurfaceTwoCreaseJunctionPatch.EndRing` (a private readonly struct): one strip's end ring at
@@ -25,4 +26,20 @@ pub struct SurfaceTwoCreaseJunctionPatchEndRing {
     pub meets_at: Vec<f64>,
     /// The same rails in the GRID's order.
     pub as_the_grid_wants_it: Vec<i32>,
+}
+
+impl SurfaceTwoCreaseJunctionPatchEndRing {
+    /// C#'s constructor.
+    pub fn new(ring: Vec<i32>, meets_at: Vec<f64>, as_the_grid_wants_it: Vec<i32>) -> Self {
+        Self {
+            ring,
+            meets_at,
+            as_the_grid_wants_it,
+        }
+    }
+}
+
+/// The pool positions of a ring of vertex indices.
+pub fn positions_of(pool: &super::SurfaceVertexPool, ring: &[i32]) -> Vec<vector_math::Vector3> {
+    ring.iter().map(|&index| pool.position_of(index)).collect()
 }

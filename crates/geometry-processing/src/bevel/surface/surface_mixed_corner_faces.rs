@@ -1,5 +1,5 @@
 //! The two faces a mixed corner's footprint comes off, told apart ([`SurfaceMixedCornerFaces`]).
-//! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs`; its reading and the strips
+//! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs` with its constructor; its reading and the strips
 //! under the blend land with the mixed-corner package's methods.
 
 use std::rc::Rc;
@@ -30,4 +30,20 @@ pub struct SurfaceMixedCornerFaces {
     pub rolled_section: Rc<SurfaceMixedCornerWall>,
     /// The face nobody picked: where the runout's trim curve and its scallop are read.
     pub unpicked_face: Rc<SurfaceMixedCornerWall>,
+}
+
+impl SurfaceMixedCornerFaces {
+    /// C#'s private constructor: the wall the round's section rolls on, the unpicked face's, and
+    /// whether the two are one face.
+    pub fn new(
+        rolled: Rc<SurfaceMixedCornerWall>,
+        unpicked: Rc<SurfaceMixedCornerWall>,
+        one_face: bool,
+    ) -> Self {
+        Self {
+            one_face,
+            rolled_section: rolled,
+            unpicked_face: unpicked,
+        }
+    }
 }

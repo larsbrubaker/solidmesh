@@ -134,3 +134,100 @@ fn rust_only_small_level_line_readings() {
     let splits = HashMap::from([((1, 5), 3), ((3, 5), 4)]);
     assert_eq!(pieces(5, 1, &splits), vec![(5, 4), (4, 3), (3, 1)]);
 }
+
+#[test]
+fn rust_only_the_last_r1p15_pieces_read_as_csharp() {
+    use geometry_processing::bevel::level_line::band_refinement::{
+        farthest_from_the_line3, nearest_to_the_line, span,
+    };
+    use geometry_processing::bevel::level_line::band_side_tagging::{
+        both_sided_members_build, model_scale_of, outward_at,
+    };
+    use geometry_processing::bevel::level_line::corner_fill_pieces::trim_the_turn_back;
+    use geometry_processing::bevel::level_line::strip_clip_valley::one_plane_run;
+    use geometry_processing::bevel::level_line::virtual_rail_past_the_end::last_to_leave;
+    use geometry_processing::bevel::level_line::{BandProfile, ChainField, CornerFillPiece};
+    use geometry_processing::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band;
+    use geometry_processing::bevel::surface::{SurfaceBandEnd, SurfaceLine};
+    use std::collections::HashSet;
+
+    assert_eq!(
+        span(v(0.0, 0.0, 0.0), v(3.0, 0.0, 0.0), v(0.0, 4.0, 0.0)),
+        5.0
+    );
+    assert_eq!(nearest_to_the_line(0.05, -2.0, 1.0), 1.0);
+    assert_eq!(farthest_from_the_line3(0.05, -2.0, 1.0, 0.5), 2.0);
+
+    assert!(both_sided_members_build());
+    let positions = [v(0.0, 0.0, 0.0), v(1e-6, 0.0, 0.0), v(5.0, 0.0, 0.0)];
+    assert_eq!(model_scale_of(&positions), 5.0);
+    assert_eq!(model_scale_of(&[]), 0.0);
+    // The first step back is too short to read: the walk goes on to the next vertex.
+    assert_eq!(
+        outward_at(&positions, &[(0, 1), (1, 2)], true, 5.0),
+        v(-1.0, 0.0, 0.0)
+    );
+
+    // A piece that runs back off the chain's start before climbing loses the turn-back.
+    let field = ChainField {
+        points: vec![v(0.0, 0.0, 0.0), v(4.0, 0.0, 0.0)],
+        setbacks: vec![1.0, 1.0],
+        parameter_at_point: vec![0.0, 4.0],
+        nodes: Vec::new(),
+        smooth_joints: None,
+        sharp_turn_degrees: f64::INFINITY,
+        end_rays: (false, false),
+        end_ray_bounds: (None, None),
+        is_closed: false,
+        length: 4.0,
+        min_setback: 1.0,
+        max_setback: 1.0,
+        extensions: None,
+        end_clips: None,
+        end_plane_reader: Default::default(),
+        sharp_joints: Default::default(),
+    };
+    let mut piece = CornerFillPiece {
+        owner: 0,
+        vertices: vec![9, 8, 7, 6],
+        parameters: vec![0.5, 0.0, 1.0, 2.0],
+    };
+    trim_the_turn_back(&field, &mut piece);
+    assert_eq!(piece.vertices, vec![8, 7, 6]);
+
+    let on: HashSet<i32> = HashSet::from([1, 2, 3, 4]);
+    let planes = vec![
+        (
+            v(0.0, 0.0, 0.0),
+            v(0.0, 0.0, 1.0),
+            HashSet::from([1, 4, 2, 3]),
+        ),
+        (v(0.0, 0.0, 0.0), v(1.0, 0.0, 0.0), HashSet::from([1, 4])),
+    ];
+    assert_eq!(
+        one_plane_run(&[1, 2, 3, 4, 5], &on, &planes),
+        Some(vec![1, 2, 3, 4])
+    );
+
+    // A chamfer row reaches behind the plane only as far as its ends.
+    let behind = last_to_leave(
+        v(0.0, 1.0, -1.0),
+        v(0.0, -1.0, -2.0),
+        v(0.0, 0.0, 0.0),
+        v(0.0, 0.0, 1.0),
+        v(0.0, 0.0, 1.0),
+        BandProfile::Chamfer,
+    );
+    assert_eq!(behind, 2.0);
+
+    let line = SurfaceLine {
+        point: v(0.0, 0.0, 0.0),
+        direction: v(1.0, 0.0, 0.0),
+    };
+    let end = |x: f64, inward: f64| SurfaceBandEnd {
+        point: v(x, 0.0, 0.0),
+        inward: v(inward, 0.0, 0.0),
+    };
+    assert!(leaves_a_band(&[end(1.0, 1.0), end(3.0, -1.0)], &line));
+    assert!(!leaves_a_band(&[end(3.0, 1.0), end(1.0, -1.0)], &line));
+}

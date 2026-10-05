@@ -1,6 +1,6 @@
 //! How the run-out carries the patch's own last column PAST the end of the bead's rim
-//! ([`SurfaceRunOutCarry`]). Ports the record of `Bevel/Surface/SurfaceRunOutCarry.cs`; its
-//! reading and its carry land with the mixed-corner package's methods.
+//! ([`SurfaceRunOutCarry`]). Ports the record of `Bevel/Surface/SurfaceRunOutCarry.cs` with its
+//! constructor and counts; its reading and its carry land with the mixed-corner package's methods.
 
 use std::rc::Rc;
 
@@ -31,4 +31,31 @@ pub struct SurfaceRunOutCarry {
     pub seats: Vec<Vector3>,
     /// Those rows' radii out of the axis, which a rigid turn does not change.
     pub where_they_stand: Vec<f64>,
+}
+
+impl SurfaceRunOutCarry {
+    /// C#'s private constructor.
+    pub fn new(
+        corner: Rc<SurfaceMixedCorner>,
+        rows: Option<Rc<SurfaceMixedCornerRows>>,
+        seats: Vec<Vector3>,
+        where_they_stand: Vec<f64>,
+    ) -> Self {
+        Self {
+            corner,
+            rows,
+            seats,
+            where_they_stand,
+        }
+    }
+
+    /// How many rows the carry lays: one per seat.
+    pub fn rows(&self) -> i32 {
+        self.seats.len() as i32
+    }
+
+    /// True when the carry runs along the corner's spine (it has the spine's rows to follow).
+    pub fn on_the_spine(&self) -> bool {
+        self.rows.is_some()
+    }
 }

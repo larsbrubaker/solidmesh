@@ -105,6 +105,10 @@ pub struct WorkBudget {
     /// thread, so whoever creates the budget captures the caller's setting here, and
     /// `PairCornerEndFaceField::turn_off` flips it for the budget in force.
     pub pair_corner_end_face_field_off: Cell<bool>,
+    /// Whether a pick's both-sided members are turned OFF for this build (C#'s per-flow
+    /// `BandSideTagging.BothSidedMembersBuild`, an `AsyncLocal` defaulting to on), carried the same
+    /// way.
+    pub both_sided_members_off: Cell<bool>,
     /// How many units have been charged so far.
     pub spent: Cell<i64>,
     /// What is running right now.
