@@ -39,8 +39,12 @@
 //! [`SurfaceTwoCreaseJunctionPatchEndRing`], [`SurfaceTwoCreaseJunctionWallCrossing`]); and the
 //! bite's shared sides ([`SurfaceBiteSharedSides`]) and the splits along a stretch
 //! ([`SurfaceSplitsOnASegment`]); and the chain's plan itself ([`SurfaceBevelPlan`]) with what it
-//! was drawn from ([`SurfacePlanRecipe`]). These land as type definitions; their methods, and the
-//! construction itself, land in later slices.
+//! was drawn from ([`SurfacePlanRecipe`]). And the triangulators every stage emits through: the fan
+//! ([`surface_fan`]), the ear clipper for rings no apex sees whole ([`surface_ring_ears`]), the
+//! zipper between two rows ([`surface_row_zip`]) and the side reading the sewing shares with them
+//! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]) and the rolled
+//! section's concave cap ([`surface_end_follows_the_walked_chords`]). The types land as type
+//! definitions; their methods, and the construction itself, land in later slices.
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
@@ -55,9 +59,12 @@ pub mod surface_cut_clip;
 mod surface_edge_plan;
 mod surface_edge_roles;
 mod surface_end_cap_around_a_feature;
+pub mod surface_end_cut;
+pub mod surface_end_follows_the_walked_chords;
 mod surface_end_gains_the_section;
 mod surface_face_carries_on;
 mod surface_facet_cut;
+pub mod surface_fan;
 mod surface_line;
 pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;
@@ -79,18 +86,21 @@ pub mod surface_plan_band_ends;
 mod surface_plan_recipe;
 mod surface_region_face_grid;
 pub mod surface_ring;
+pub mod surface_ring_ears;
 mod surface_roll_across_the_wall;
 mod surface_rolled_edge;
 mod surface_room;
 mod surface_room_crossing;
 pub mod surface_room_measure;
 pub mod surface_room_standing_feature;
+pub mod surface_row_zip;
 mod surface_run_across;
 mod surface_run_out_carry;
 mod surface_run_out_column_walk;
 mod surface_run_out_column_window;
 mod surface_run_out_meets_a_wall_band;
 mod surface_run_out_meets_the_band;
+pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
 mod surface_standing_feature_withheld;
 mod surface_strip;

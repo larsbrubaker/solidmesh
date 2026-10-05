@@ -19,6 +19,8 @@ mod rust_only_bevel_core_leaf_tests;
 mod rust_only_bevel_r1p03_tests;
 #[path = "bevel/rust_only_bevel_r1p01_tests.rs"]
 mod rust_only_bevel_r1p01_tests;
+#[path = "bevel/rust_only_bevel_r1p02_tests.rs"]
+mod rust_only_bevel_r1p02_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]
@@ -41,7 +43,11 @@ mod rust_only_bevel_slice9_tests;
 mod source_round_test_meshes;
 #[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
 mod surface_facet_cut_own_ends_tests;
+#[path = "bevel/surface_fan_tests.rs"]
+mod surface_fan_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
+#[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
+mod surface_ring_ears_bridged_ring_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
