@@ -5,7 +5,7 @@
 //! the budget in force on this thread ([`LevelLineWork`], C#'s `[ThreadStatic]` slot, set by a
 //! [`LevelLineWorkScope`] guard), with the budget's default size, its progress-bar arithmetic
 //! (phase weights and starts, the fraction now, the report), the charging and cancel poll, its
-//! constructors, the side-group and refinement-queue notes and the per-phase tally. It also carries
+//! constructors, the side-group and refinement-queue notes, the per-phase tally and its report. It also carries
 //! the build's per-flow switches (C#'s `AsyncLocal` gates). The phase changes and the nested-search
 //! slice land with later packages as further `impl` blocks.
 
@@ -13,7 +13,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use polygon_mesh::CancelToken;
-use vector_math::cs_math;
+use vector_math::{cs_math, number_format};
 
 use super::stopwatch;
 
@@ -602,5 +602,63 @@ impl LevelLineWork {
         if let Some(budget) = Self::current() {
             budget.note_refinement_queue(taken, left);
         }
+    }
+}
+
+/// Every phase in declaration (C# `Enum.GetValues`) order.
+pub const LEVEL_LINE_WORK_PHASES: [LevelLineWorkPhase; LEVEL_LINE_WORK_PHASE_COUNT] = [
+    LevelLineWorkPhase::None,
+    LevelLineWorkPhase::Sides,
+    LevelLineWorkPhase::Refinement,
+    LevelLineWorkPhase::EdgeRoots,
+    LevelLineWorkPhase::BandDelete,
+    LevelLineWorkPhase::Room,
+    LevelLineWorkPhase::InputStrips,
+    LevelLineWorkPhase::GapLoops,
+    LevelLineWorkPhase::Fill,
+    LevelLineWorkPhase::CutRoom,
+];
+
+impl WorkBudget {
+    /// C# `WorkBudget.PhaseReport`: units and wall seconds per phase of the builds this budget
+    /// metered (only with `FieldCounters.MeterOn`); closes the phase running now, so read it once
+    /// the build is done.
+    ///
+    /// C# formats with the current culture; this writes InvariantCulture's text (`N0`, `P1` as
+    /// "12.3 %", `F2`), which is what C# writes under it.
+    pub fn phase_report(&self) -> String {
+        self.tally_phase();
+        let units = *self.phase_units.borrow();
+        let ticks = *self.phase_ticks.borrow();
+        let total_units: i64 = units.iter().sum();
+        let total_ticks: i64 = ticks.iter().sum();
+        let mut text = format!(
+            "{:<14}{:>14}{:>12}{:>10}{:>12}\n",
+            "phase", "units", "unit share", "seconds", "time share"
+        );
+        for phase in LEVEL_LINE_WORK_PHASES {
+            let i = phase as usize;
+            if units[i] == 0 && ticks[i] == 0 {
+                continue;
+            }
+
+            text.push_str(&format!(
+                "{:<14}{:>14}{:>12}{:>10}{:>12}\n",
+                format!("{phase:?}"),
+                number_format::format_i64_number(units[i]),
+                number_format::format_f64_percent(units[i] as f64 / 1.max(total_units) as f64, 1),
+                number_format::format_f64_fixed(stopwatch::seconds(ticks[i]), 2),
+                number_format::format_f64_percent(ticks[i] as f64 / 1.max(total_ticks) as f64, 1),
+            ));
+        }
+
+        text.push_str(&format!(
+            "{:<14}{:>14}{:>12}{:>10}",
+            "total",
+            number_format::format_i64_number(total_units),
+            "",
+            number_format::format_f64_fixed(stopwatch::seconds(total_ticks), 2),
+        ));
+        text
     }
 }

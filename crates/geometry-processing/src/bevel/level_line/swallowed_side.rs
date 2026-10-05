@@ -1,7 +1,7 @@
 //! A side the band swallows whole. Ports `Bevel/LevelLine/SwallowedSide.cs` (a C# static class):
 //! so far its mesh readings - whether a triangle touches a point ([`touches`]), a side's vertices
-//! ([`side_vertices`]) and the direction away from a segment on a side ([`away_on_side`]); the
-//! swallow tests land with later packages.
+//! ([`side_vertices`]), the direction away from a segment on a side ([`away_on_side`]) and the
+//! planes' tolerance ([`tolerance`]); the swallow tests land with later packages.
 
 use std::collections::HashSet;
 
@@ -68,4 +68,14 @@ pub fn away_on_side(
     }
 
     None
+}
+
+/// C# `SwallowedSide.OnPlanePerLength`: the planes' tolerance per unit of length: the fixture's
+/// walls are float (a few 1e-7 off).
+pub const ON_PLANE_PER_LENGTH: f64 = 1e-5;
+
+/// C# `SwallowedSide.Tolerance`: the planes' tolerance for this chain, scaled by its largest
+/// setback (at least 1).
+pub fn tolerance(chain: &super::ChainField) -> f64 {
+    ON_PLANE_PER_LENGTH * vector_math::cs_math::max_f64(1.0, chain.max_setback)
 }

@@ -1,12 +1,16 @@
 //! Rust-only checks of the bevel core's R1.P13 build-carried switches and budget notes: the work
 //! budget's constructors, side-group and refinement notes and phase tally; the run-out and
-//! square-crease-clip gates kept on the budget in force; the level-line routing statics.
+//! square-crease-clip gates kept on the budget in force; the level-line routing statics; the phase
+//! report; the crease run-out's reading.
 
 use std::rc::Rc;
 
+use indexmap::IndexMap;
+
 use geometry_processing::bevel::level_line::{
     level_line_routing, run_outs_on, square_crease_clips_on, square_crease_end_clips,
-    turn_run_outs_on, turn_square_crease_clips_off, LevelLineWork, LevelLineWorkPhase, WorkBudget,
+    triangle_edges, turn_run_outs_on, turn_square_crease_clips_off, CreaseRunOut, LevelLineWork,
+    LevelLineWorkPhase, WorkBudget,
 };
 use vector_math::Vector3;
 
@@ -154,4 +158,160 @@ fn rust_only_the_level_line_routing_statics() {
                 .as_deref()
         )
     );
+}
+
+#[test]
+fn rust_only_the_phase_report_lists_each_metered_phase_with_its_shares() {
+    let budget = WorkBudget::new(100).expect("a positive limit");
+    {
+        let mut units = budget.phase_units.borrow_mut();
+        units[LevelLineWorkPhase::Sides as usize] = 1500;
+        units[LevelLineWorkPhase::Fill as usize] = 500;
+        let mut ticks = budget.phase_ticks.borrow_mut();
+        ticks[LevelLineWorkPhase::Sides as usize] = 1_000_000_000;
+        ticks[LevelLineWorkPhase::Fill as usize] = 3_000_000_000;
+    }
+    // Before the first tally nothing is charged to the running phase.
+    let report = budget.phase_report();
+    let expected = [
+        "phase                  units  unit share   seconds  time share",
+        "Sides                  1,500      75.0 %      1.00      25.0 %",
+        "Fill                     500      25.0 %      3.00      75.0 %",
+        "total                  2,000                  4.00",
+    ]
+    .join("\n");
+    assert_eq!(report, expected);
+}
+
+#[test]
+fn rust_only_a_square_corner_runs_out_one_plus_root_three_radii_down_the_crease() {
+    // The round runs along +x under the top face z = 0, its side the face y = 0; the wall is
+    // x = 0 and the unpicked crease runs down -z from the corner.
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, -5.0),
+        Vector3::new(5.0, 0.0, 0.0),
+    ];
+    let up = Vector3::new(0.0, 0.0, 1.0);
+    let front = Vector3::new(0.0, -1.0, 0.0);
+    let wall = Vector3::new(-1.0, 0.0, 0.0);
+    let run_out = CreaseRunOut::read(&positions, 0, 1, 2, up, front, wall, 1.0, 4)
+        .expect("the ball returns to the crease");
+    assert!((run_out.reach - (1.0 + 3f64.sqrt())).abs() <= 1e-9);
+    assert!((run_out.end_turn_radians - (5.0 * std::f64::consts::PI / 6.0)).abs() <= 1e-9);
+    assert!((run_out.canal_turn_radians - std::f64::consts::FRAC_PI_2).abs() <= 1e-15);
+    assert_eq!(run_out.wall_contact.len(), 5);
+    assert_eq!(run_out.tube_contact.len(), 5);
+    let end = run_out.end();
+    assert!(run_out.distance_to_crease_line(end) <= 1e-12);
+    assert!(near(run_out.wall_contact[4], end, 1e-9));
+    // At the end the ball touches the crease's sharp edge: its centre stands r from the line,
+    // and always r outside the wall.
+    let centre = run_out.centre_at(run_out.end_turn_radians);
+    assert!((run_out.distance_to_crease_line(centre) - 1.0).abs() <= 1e-9);
+    assert!(((centre - positions[0]).dot(wall) - 1.0).abs() <= 1e-12);
+    // A round lying in its wall has no run-out.
+    let in_the_wall = Vector3::new(0.0, 1.0, 0.0);
+    assert!(CreaseRunOut::read(&positions, 0, 1, 2, up, front, in_the_wall, 1.0, 4).is_none());
+}
+
+fn near(a: Vector3, b: Vector3, tolerance: f64) -> bool {
+    (a - b).length() <= tolerance
+}
+
+#[test]
+fn rust_only_an_edges_sense_and_the_run_out_map() {
+    // Two triangles on the edge 0-1 along x: a floor (normal +z) and a wall rising on y = 0.
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.5, 1.0, 0.0),
+        Vector3::new(0.5, 0.0, 1.0),
+        Vector3::new(0.5, 0.0, -1.0),
+    ];
+    let concave = vec![(0, 1, 2), (1, 0, 3)];
+    let convex = vec![(0, 1, 2), (1, 0, 4)];
+    let flat = vec![(0, 1, 2), (1, 0, 2)];
+    for (indices, expected) in [(concave, 1), (convex, -1), (flat, 0)] {
+        let standing = triangle_edges::standing_map(&indices);
+        assert_eq!(
+            CreaseRunOut::sense(&positions, &indices, &standing, (0, 1)),
+            expected
+        );
+        assert_eq!(
+            CreaseRunOut::sense(&positions, &indices, &standing, (0, 4)),
+            0
+        );
+    }
+    let mut map = IndexMap::new();
+    CreaseRunOut::add(&mut map, 3, (1, 2));
+    CreaseRunOut::add(&mut map, 1, (0, 1));
+    CreaseRunOut::add(&mut map, 3, (2, 3));
+    assert_eq!(map.keys().copied().collect::<Vec<_>>(), vec![3, 1]);
+    assert_eq!(map[&3], vec![(1, 2), (2, 3)]);
+}
+
+#[test]
+fn rust_only_the_foreign_room_meter_counts_per_thread() {
+    use geometry_processing::bevel::level_line::foreign_room_counters;
+    foreign_room_counters::reset();
+    assert_eq!(
+        foreign_room_counters::with(|t| t.edges_per_chain.clone()),
+        Some(vec![])
+    );
+    foreign_room_counters::with(|t| {
+        t.calls = 3;
+        t.pair_calls = 1;
+        t.edges_offered = 40;
+    });
+    foreign_room_counters::read();
+    foreign_room_counters::with(|t| t.in_a_pair = true);
+    foreign_room_counters::read();
+    assert_eq!(
+        foreign_room_counters::report(),
+        "calls 3 (pairs 1), edges offered 40, edges read 2 (pairs 1)"
+    );
+    assert_eq!(foreign_room_counters::since(0), 0);
+    assert!(foreign_room_counters::since(1) >= 0);
+    // Another thread has its own tally.
+    std::thread::spawn(|| assert_eq!(foreign_room_counters::with(|t| t.edges_read), 0))
+        .join()
+        .expect("the other thread's check");
+    foreign_room_counters::reset();
+    assert_eq!(foreign_room_counters::with(|t| t.edges_read), 0);
+}
+
+#[test]
+fn rust_only_results_say_whether_they_came_out_and_strip_clips_note_their_outcome() {
+    use geometry_processing::bevel::level_line::{
+        strip_clip, BandGapRefusal, BandGapResult, GapFillRefusal, GapFillResult, LevelLineTriangle,
+    };
+    let filled = GapFillResult::default();
+    assert!(filled.filled());
+    let refused = GapFillResult {
+        refusal: GapFillRefusal::RailIsNotMonotone,
+        ..GapFillResult::default()
+    };
+    assert!(!refused.filled());
+    let band = BandGapResult::default();
+    assert!(band.built());
+    assert!(band.chain().is_none());
+    let size = BandGapResult {
+        refusal: BandGapRefusal::Size,
+        ..BandGapResult::default()
+    };
+    assert!(!size.built());
+
+    assert_eq!(strip_clip::last_outcome(), None);
+    strip_clip::note(|| "dropped 3".to_string());
+    assert_eq!(strip_clip::last_outcome().as_deref(), Some("dropped 3"));
+    let face = LevelLineTriangle {
+        a: 4,
+        b: 5,
+        c: 6,
+        tag: 0,
+    };
+    assert_eq!(strip_clip::opposite_corner(face, 4, 5), 6);
+    assert_eq!(strip_clip::opposite_corner(face, 6, 5), 4);
+    assert_eq!(strip_clip::opposite_corner(face, 4, 6), 5);
 }

@@ -1,6 +1,7 @@
 //! C#-compatible number text for the vector types' `ToString`/`Parse` (CLAUDE.md "Strings and
 //! formatting"): .NET's default `double.ToString()`/`float.ToString()` (shortest round-trip,
-//! "G" layout), "G17" (object-reference literals), the custom `"0.####"` layout `Vector3.ToString` uses, and
+//! "G" layout), "G17" (object-reference literals), the standard "F"/"N"/"P" formats (the bevel meters'
+//! reports), the custom `"0.####"` layout `Vector3.ToString` uses, and
 //! `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture)`.
 //!
 //! All formatting is InvariantCulture: "NaN", "Infinity", "-Infinity", '.' as the decimal point.
@@ -165,6 +166,71 @@ pub fn try_parse_f64(text: &str) -> Option<f64> {
         return None;
     };
     Some(if negative { -magnitude } else { magnitude })
+}
+
+/// .NET `double.ToString("F<decimals>", InvariantCulture)`: fixed-point with `decimals` places,
+/// rounded from the EXACT binary value with ties to even (as .NET Core 3.0+ does: `2.675` is
+/// "2.67", `0.125` is "0.12"), no grouping; a negative value that rounds to zero keeps its sign.
+pub fn format_f64_fixed(value: f64, decimals: usize) -> String {
+    if let Some(special) = special_text(value.is_nan(), value.is_infinite(), value < 0.0) {
+        return special;
+    }
+    format!("{value:.decimals$}")
+}
+
+/// .NET `double.ToString("N<decimals>", InvariantCulture)`: [`format_f64_fixed`] with the integer
+/// part grouped in threes by ','.
+pub fn format_f64_number(value: f64, decimals: usize) -> String {
+    if let Some(special) = special_text(value.is_nan(), value.is_infinite(), value < 0.0) {
+        return special;
+    }
+    let text = format!("{:.decimals$}", value.abs());
+    let (whole, fraction) = text.split_once('.').unwrap_or((&text, ""));
+    signed_grouped(value.is_sign_negative(), whole, fraction, "")
+}
+
+/// .NET `long.ToString("N0", InvariantCulture)`: the count grouped in threes by ','.
+pub fn format_i64_number(value: i64) -> String {
+    signed_grouped(value < 0, &value.unsigned_abs().to_string(), "", "")
+}
+
+/// .NET `double.ToString("P<decimals>", InvariantCulture)`: the value times 100 - taken off the
+/// exact decimal expansion by moving the point, never by a floating multiply (`0.0135` is
+/// "1.3 %", though `0.0135 * 100` is 1.35000000000000008) - grouped like "N", then " %"
+/// (InvariantCulture's pattern "n %" / "-n %"). No value can tie at the rounding digit (a tie
+/// would need a fifth power in a binary fraction), so ties are moot.
+pub fn format_f64_percent(value: f64, decimals: usize) -> String {
+    if let Some(special) = special_text(value.is_nan(), value.is_infinite(), value < 0.0) {
+        return special;
+    }
+    let places = decimals + 2;
+    let text = format!("{:.places$}", value.abs());
+    let (whole, fraction) = text.split_once('.').unwrap_or((&text, ""));
+    let shifted = format!("{whole}{}", &fraction[..2]);
+    let shifted = shifted.trim_start_matches('0');
+    let shifted = if shifted.is_empty() { "0" } else { shifted };
+    signed_grouped(value.is_sign_negative(), shifted, &fraction[2..], " %")
+}
+
+/// `whole` grouped in threes by ',', then `.fraction` where there is one, then `suffix`, with a
+/// leading '-' where `negative`.
+fn signed_grouped(negative: bool, whole: &str, fraction: &str, suffix: &str) -> String {
+    let mut text = String::with_capacity(whole.len() + whole.len() / 3 + fraction.len() + 4);
+    if negative {
+        text.push('-');
+    }
+    for (i, digit) in whole.chars().enumerate() {
+        if i > 0 && (whole.len() - i).is_multiple_of(3) {
+            text.push(',');
+        }
+        text.push(digit);
+    }
+    if !fraction.is_empty() {
+        text.push('.');
+        text.push_str(fraction);
+    }
+    text.push_str(suffix);
+    text
 }
 
 fn special_text(is_nan: bool, is_infinite: bool, is_negative: bool) -> Option<String> {

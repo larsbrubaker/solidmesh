@@ -1,6 +1,7 @@
 //! A picked chain read on the mesh it was picked from: its edges in its own direction and the two
 //! triangles each stands between. Ports `Bevel/LevelLine/ChainOnTheMesh.cs` (a C# static class,
-//! so a module of functions); the setback steps and unit setbacks land with their method package.
+//! so a module of functions), with the setback-step fraction ([`SETBACK_STEP_FRACTION`]); the
+//! setback steps and unit setbacks land with their method package.
 
 use super::triangle_edges::{self, StandingMap};
 use super::ChainEdgeNotOnTwoTriangles;
@@ -57,3 +58,8 @@ pub fn sides_of(
 
     Ok((left, if left == pair[0] { pair[1] } else { pair[0] }))
 }
+
+/// C# `ChainOnTheMesh.SetbackStepFraction`: how much two neighbouring edges' setbacks may differ,
+/// as a fraction of the larger, and still share a sharp turn of one chain. Below it the vertex
+/// takes their mean; above it the chain is split there.
+pub const SETBACK_STEP_FRACTION: f64 = 0.05;

@@ -1,6 +1,5 @@
 //! What the fill left behind ([`GapFillResult`]). Ports the type of
-//! `Bevel/LevelLine/GapFillResult.cs`; its derived reading (`filled`) lands with the gap-fill
-//! method package.
+//! `Bevel/LevelLine/GapFillResult.cs`, with its derived reading ([`GapFillResult::filled`]).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -61,5 +60,12 @@ impl Default for GapFillResult {
             work_spent: 0,
             work_limit: 0,
         }
+    }
+}
+
+impl GapFillResult {
+    /// C# `GapFillResult.Filled`: true when the fill went in.
+    pub fn filled(&self) -> bool {
+        self.refusal == GapFillRefusal::None
     }
 }

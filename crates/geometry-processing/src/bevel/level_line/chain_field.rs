@@ -125,6 +125,12 @@ pub struct ChainFieldSmoothJointsScope {
 }
 
 impl ChainField {
+    /// C# `ChainField.HasSmoothJoints`: whether this field was built inside the smooth-joints scope
+    /// with smooth joints of its own.
+    pub fn has_smooth_joints(&self) -> bool {
+        self.smooth_joints.is_some()
+    }
+
     /// Whether chain point `k` is a smooth joint (built inside the smooth-joints scope).
     pub fn is_smooth_joint(&self, k: i32) -> bool {
         self.smooth_joints

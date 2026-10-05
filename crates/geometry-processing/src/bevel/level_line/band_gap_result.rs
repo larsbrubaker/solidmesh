@@ -1,6 +1,6 @@
 //! What the band's removal leaves ([`BandGapResult`]): the mesh with a gap in it, the field it was
-//! cut to, and the gap's boundaries. Ports the type of `Bevel/LevelLine/BandGapResult.cs`; its
-//! derived readings (`built`, `chain`) land with the band-gap method package.
+//! cut to, and the gap's boundaries. Ports the type of `Bevel/LevelLine/BandGapResult.cs`, with
+//! its derived readings ([`BandGapResult::built`], [`BandGapResult::chain`]).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -133,5 +133,19 @@ impl Default for BandGapResult {
             work_spent: 0,
             work_limit: 0,
         }
+    }
+}
+
+impl BandGapResult {
+    /// C# `BandGapResult.Built`: true when the band came out; false when the build refused, and
+    /// then `refusal` says why.
+    pub fn built(&self) -> bool {
+        self.refusal == BandGapRefusal::None
+    }
+
+    /// C# `BandGapResult.Chain`: the first chain's field - what every single-chain caller means by
+    /// "the chain"; `None` where there is none.
+    pub fn chain(&self) -> Option<Rc<ChainField>> {
+        self.chains.first().cloned()
     }
 }

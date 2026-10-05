@@ -1,7 +1,18 @@
 //! A fillet's RUN-OUT along a crease nobody picked ([`CreaseRunOut`]). Ports the type of
-//! `Bevel/LevelLine/CreaseRunOut.cs`; its finder and closed-form readings land with later packages.
+//! `Bevel/LevelLine/CreaseRunOut.cs`: the type, its constructor and closed-form readings along the
+//! dual spine ([`CreaseRunOut::centre_at`], [`CreaseRunOut::wall_contact_at`],
+//! [`CreaseRunOut::tube_contact_at`]), the turn it ends at, the reading at one corner
+//! ([`CreaseRunOut::read`]) and an edge's sense ([`CreaseRunOut::sense`]); the finder over a pick
+//! lands with later packages.
 
+use indexmap::IndexMap;
 use vector_math::Vector3;
+
+use super::triangle_edges::{self, StandingMap};
+
+/// C# `CreaseRunOut.Flat`: the sine below which two faces read as one plane, or an edge reads as
+/// neither convex nor concave - dimensionless, so it does not grow with the part.
+pub const FLAT: f64 = 1e-6;
 
 /// C# `CreaseRunOut`: a fillet's RUN-OUT along a crease nobody picked. At a pick corner where a
 /// convex chain meets a concave one, the convex chain's round does not stop on the unpicked concave
@@ -70,6 +81,236 @@ pub struct CreaseRunOut {
 }
 
 impl CreaseRunOut {
+    /// C#'s private constructor: the run-out at `corner` along the crease to `crease_end`, before
+    /// the turn it ends at is read.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        corner: i32,
+        crease_end: i32,
+        corner_point: Vector3,
+        crease_direction: Vector3,
+        crease_length: f64,
+        size: f64,
+        rail_centre: Vector3,
+        axis_direction: Vector3,
+        out_of_the_wall: Vector3,
+        towards_the_shared_face: Vector3,
+        towards_the_side_square: Vector3,
+        canal_turn_radians: f64,
+    ) -> Self {
+        CreaseRunOut {
+            rail_centre,
+            axis_direction,
+            out_of_the_wall,
+            along_the_axis_out_of_the_wall: axis_direction.dot(out_of_the_wall),
+            towards_the_shared_face,
+            towards_the_side_square,
+            corner,
+            crease_end,
+            corner_point,
+            crease_direction,
+            crease_length,
+            size,
+            canal_turn_radians,
+            end_turn_radians: 0.0,
+            reach: 0.0,
+            wall_contact: Vec::new(),
+            tube_contact: Vec::new(),
+        }
+    }
+
+    /// C# `CreaseRunOut.End`: the run-out's end on the crease, P*.
+    pub fn end(&self) -> Vector3 {
+        self.corner_point + (self.crease_direction * self.reach)
+    }
+
+    /// C# `CreaseRunOut.CentreAt`: where the void ball's centre stands at `turn`: on the dual
+    /// spine E.
+    pub fn centre_at(&self, turn: f64) -> Vector3 {
+        self.rail_centre
+            + (self.axis_direction * self.slide_at(turn))
+            + (self.out_of_the_axis(turn) * (2.0 * self.size))
+    }
+
+    /// C# `CreaseRunOut.WallContactAt`: where the ball touches the wall at `turn`: T(theta).
+    pub fn wall_contact_at(&self, turn: f64) -> Vector3 {
+        self.centre_at(turn) - (self.out_of_the_wall * self.size)
+    }
+
+    /// C# `CreaseRunOut.TubeContactAt`: where the ball touches the round's tube at `turn`.
+    pub fn tube_contact_at(&self, turn: f64) -> Vector3 {
+        self.rail_centre
+            + (self.axis_direction * self.slide_at(turn))
+            + (self.out_of_the_axis(turn) * self.size)
+    }
+
+    /// C# `CreaseRunOut.OutOfTheAxis`: the unit direction square to the axis at `turn`, from the
+    /// shared face's side toward the side face's.
+    pub fn out_of_the_axis(&self, turn: f64) -> Vector3 {
+        (self.towards_the_shared_face * turn.cos()) + (self.towards_the_side_square * turn.sin())
+    }
+
+    /// C# `CreaseRunOut.SlideAt`: how far along the axis the centre slides to stay r outside the
+    /// wall at `turn`.
+    pub fn slide_at(&self, turn: f64) -> f64 {
+        (self.size - (2.0 * self.size * self.out_of_the_wall.dot(self.out_of_the_axis(turn))))
+            / self.along_the_axis_out_of_the_wall
+    }
+
+    /// C# `CreaseRunOut.TryTheTurnItEndsAt`: the first turn past the canal's end at which the
+    /// wall contact comes back onto the crease's line, or `None`.
+    ///
+    /// The contact leaves the crease early in the turn - it crosses the side face's root and comes
+    /// out on the wall beyond - so the crossing wanted is the one on the way BACK, and the scan
+    /// starts at the canal's end. Found by sign change of the contact's offset from the crease's
+    /// line, across it in the wall, then bisected; the scan stops at twice the canal's turn.
+    pub fn try_the_turn_it_ends_at(&self) -> Option<f64> {
+        let across = self.crease_direction.cross(self.out_of_the_wall);
+        let off = |turn: f64| (self.wall_contact_at(turn) - self.corner_point).dot(across);
+
+        let mut from = self.canal_turn_radians;
+        let sign = off(from) > 0.0;
+        let step = self.canal_turn_radians / 512.0;
+        let mut to = from + step;
+        while to <= 2.0 * self.canal_turn_radians {
+            if (off(to) > 0.0) == sign {
+                from = to;
+                to += step;
+                continue;
+            }
+
+            let mut lo = from;
+            let mut hi = to;
+            for _ in 0..100 {
+                let mid = (lo + hi) / 2.0;
+                if (off(mid) > 0.0) == sign {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+
+            return Some((lo + hi) / 2.0);
+        }
+
+        None
+    }
+
+    /// C# `CreaseRunOut.Read`: the run-out at `corner` along the crease to `crease_end`, the
+    /// convex round running from the corner toward `along_the_round` between the shared and side
+    /// faces, against the wall; `None` where the round lies in the wall, the faces are one plane,
+    /// or the contact never returns to the crease ahead of the corner.
+    #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+    pub fn read(
+        positions: &[Vector3],
+        corner: i32,
+        crease_end: i32,
+        along_the_round: i32,
+        shared_normal: Vector3,
+        side_normal: Vector3,
+        wall_normal: Vector3,
+        size: f64,
+        samples: i32,
+    ) -> Option<CreaseRunOut> {
+        let at = positions[corner as usize];
+        let axis_direction = (positions[along_the_round as usize] - at).get_normal();
+        let along_the_axis_out_of_the_wall = axis_direction.dot(wall_normal);
+
+        // A round lying IN the wall meets the plane r outside it in lines or nothing: no ellipse
+        // to roll on.
+        if !(along_the_axis_out_of_the_wall.abs() > FLAT) {
+            return None;
+        }
+
+        // The round's axis: r inside both its faces, beside the corner. Where it crosses the
+        // wall's plane (which the corner lies in) is the spine's rail centre.
+        let cosine = shared_normal.dot(side_normal);
+        let axis_point = at - ((shared_normal + side_normal) * (size / (1.0 + cosine)));
+        let rail_centre = axis_point
+            + (axis_direction
+                * ((at - axis_point).dot(wall_normal) / along_the_axis_out_of_the_wall));
+
+        let square = side_normal - (shared_normal * cosine);
+        if !(square.length() > FLAT) {
+            return None;
+        }
+
+        let crease_vector = positions[crease_end as usize] - at;
+        let mut run_out = CreaseRunOut::new(
+            corner,
+            crease_end,
+            at,
+            crease_vector.get_normal(),
+            crease_vector.length(),
+            size,
+            rail_centre,
+            axis_direction,
+            wall_normal,
+            shared_normal,
+            square.get_normal(),
+            cosine.clamp(-1.0, 1.0).acos(),
+        );
+
+        let ends_at = run_out.try_the_turn_it_ends_at()?;
+        let reach = (run_out.wall_contact_at(ends_at) - at).dot(run_out.crease_direction);
+        if !(reach > 0.0) {
+            return None;
+        }
+
+        run_out.end_turn_radians = ends_at;
+        run_out.reach = reach;
+        let turns: Vec<f64> = (0..=samples)
+            .map(|i| {
+                run_out.canal_turn_radians
+                    + ((ends_at - run_out.canal_turn_radians) * i as f64 / samples as f64)
+            })
+            .collect();
+        run_out.wall_contact = turns.iter().map(|&t| run_out.wall_contact_at(t)).collect();
+        run_out.tube_contact = turns.iter().map(|&t| run_out.tube_contact_at(t)).collect();
+        Some(run_out)
+    }
+
+    /// C# `CreaseRunOut.Sense`: +1 for a concave edge, -1 for a convex one, 0 for flat, not
+    /// two-sided or not in the mesh.
+    pub fn sense(
+        positions: &[Vector3],
+        indices: &[(i32, i32, i32)],
+        standing: &StandingMap,
+        key: (i32, i32),
+    ) -> i32 {
+        let Some(faces) = standing.get(&key) else {
+            return 0;
+        };
+        if faces.len() != 2 {
+            return 0;
+        }
+
+        let (a, b, c) = indices[faces[1] as usize];
+        let opposite = if a != key.0 && a != key.1 {
+            a
+        } else if b != key.0 && b != key.1 {
+            b
+        } else {
+            c
+        };
+        let to_opposite = positions[opposite as usize] - positions[key.0 as usize];
+        let rise = triangle_edges::normal(positions, indices[faces[0] as usize]).dot(to_opposite)
+            / to_opposite.length();
+        if rise > FLAT {
+            1
+        } else if rise < -FLAT {
+            -1
+        } else {
+            0
+        }
+    }
+
+    /// C# `CreaseRunOut.Add`: appends `key` to `vertex`'s list in `map`, making the list where
+    /// there is none (insertion order kept, as C#'s `Dictionary`).
+    pub fn add(map: &mut IndexMap<i32, Vec<(i32, i32)>>, vertex: i32, key: (i32, i32)) {
+        map.entry(vertex).or_default().push(key);
+    }
+
     /// How far `p` stands off the crease's line.
     pub fn distance_to_crease_line(&self, p: Vector3) -> f64 {
         let from = p - self.corner_point;
