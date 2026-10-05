@@ -77,6 +77,9 @@ pub enum ClipperError {
     UpdateEdgeIntoAelInvalidCall,
     /// "DoMaxima error"
     DoMaximaError,
+    /// An output ring the sweep is still building has no points. Clipper 6 dereferences
+    /// `OutRec.Pts` here and would throw a `NullReferenceException`; the port reports it.
+    OutRecHasNoPoints,
 }
 
 impl fmt::Display for ClipperError {
@@ -89,6 +92,7 @@ impl fmt::Display for ClipperError {
             }
             ClipperError::UpdateEdgeIntoAelInvalidCall => "UpdateEdgeIntoAEL: invalid call",
             ClipperError::DoMaximaError => "DoMaxima error",
+            ClipperError::OutRecHasNoPoints => "An output polygon has no points.",
         })
     }
 }

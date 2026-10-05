@@ -17,7 +17,7 @@ use vector_math::{Matrix4X4, Plane, Quaternion, Vector2, Vector3};
 
 use crate::Mesh;
 use agg_path::clipper_library::{
-    clean_polygons, int_point, length, length_squared, PolygonsExtensions,
+    clean_polygons, int_point, length, length_squared, ClipperError, PolygonsExtensions,
 };
 
 /// One cut through a face, in the plane's scaled XY space (C# `Segment`).
@@ -69,15 +69,15 @@ pub fn create_slice_with_transform(
 }
 
 /// Unions the polygons, non-zero, the first as subject and the rest as clip
-/// (C# `UnionClosedPolygons`).
-pub fn union_closed_polygons(closed_polygons: Paths64) -> Paths64 {
+/// (C# `UnionClosedPolygons`). Clipper's exceptions come back as the error.
+pub fn union_closed_polygons(closed_polygons: Paths64) -> Result<Paths64, ClipperError> {
     if closed_polygons.len() > 1 {
         return closed_polygons[0..1]
             .to_vec()
             .union(&closed_polygons[1..].to_vec(), FillRule::NonZero);
     }
 
-    closed_polygons
+    Ok(closed_polygons)
 }
 
 /// The transform from the plane to a polygon at z = 0, scaled up by `output_scale`

@@ -4,7 +4,7 @@
 //! one is the mesh it always was. They need `VertexSourceToMesh.Extrude`, so they live with it
 //! here; the offset cases are in agg-path's `tests/agg/room_scale_offset_tolerance_tests.rs`.
 
-use agg_path::clipper_library::JoinType;
+use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::extrude_bevelled;
 use polygon_mesh::Mesh;
@@ -20,9 +20,9 @@ const DESK_BEVELLED_EXTRUDE_CHECKSUM: i64 = -600885690986330816;
 /// An extrude's bevel rings: a 20 ft frame, bevelled in proportion, builds no more of a mesh
 /// than the same frame 300 mm across.
 #[test]
-fn a_room_size_bevelled_extrude_is_no_finer_than_a_bed_size_one() {
-    let at_bed = bevelled_extrude(BED).vertices.len();
-    let at_room = bevelled_extrude(TWENTY_FEET).vertices.len();
+fn a_room_size_bevelled_extrude_is_no_finer_than_a_bed_size_one() -> Result<(), ClipperError> {
+    let at_bed = bevelled_extrude(BED)?.vertices.len();
+    let at_room = bevelled_extrude(TWENTY_FEET)?.vertices.len();
 
     println!("Bevelled frame 300 mm: {at_bed} vertices; 20 ft: {at_room}");
 
@@ -30,12 +30,13 @@ fn a_room_size_bevelled_extrude_is_no_finer_than_a_bed_size_one() {
         at_room as f64 <= at_bed as f64 * 1.05,
         "a 20 ft bevelled frame built {at_room} vertices where a 300 mm one builds {at_bed}"
     );
+    Ok(())
 }
 
 /// A 50 mm bevelled extrude is the mesh it always was.
 #[test]
-fn a_desk_size_bevelled_extrude_is_bit_identical() {
-    let mesh = bevelled_extrude(50.0);
+fn a_desk_size_bevelled_extrude_is_bit_identical() -> Result<(), ClipperError> {
+    let mesh = bevelled_extrude(50.0)?;
     let checksum = checksum(&mesh);
     println!(
         "Bevelled frame 50 mm: {} vertices, checksum {checksum}",
@@ -43,10 +44,11 @@ fn a_desk_size_bevelled_extrude_is_bit_identical() {
     );
 
     assert_eq!(checksum, DESK_BEVELLED_EXTRUDE_CHECKSUM);
+    Ok(())
 }
 
 /// A frame `size` mm across bevelled over a tenth of its size.
-fn bevelled_extrude(size: f64) -> Mesh {
+fn bevelled_extrude(size: f64) -> Result<Mesh, ClipperError> {
     let radius = size / 10.0;
     let height = size / 5.0;
     let bevel = [

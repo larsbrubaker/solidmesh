@@ -7,6 +7,7 @@
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, PolyTree64, Rect64};
 
+use super::clipper_error::ClipperError;
 use crate::clipper6;
 
 /// Clipper2's fill rule as Clipper 6's `PolyFillType` (the same four rules).
@@ -40,44 +41,33 @@ fn clipper6_clip_type(clip_type: ClipType) -> Option<clipper6::ClipType> {
     }
 }
 
-/// `new Clipper()` with `subjects` and `clips` added as closed paths.
-///
-/// Clipper 6 throws only for coordinates beyond +/-2^62 (no flattened path reaches them: a
-/// 1000-units-per-mm grid would be 4.6 billion km across); the C# extension methods let that
-/// exception escape, and here such input clips to nothing.
-fn new_clipper(subjects: &Paths64, clips: &Paths64) -> Option<clipper6::Clipper> {
+/// `new Clipper()` with `subjects` and `clips` added as closed paths. Clipper 6 throws for
+/// coordinates beyond +/-2^62 (no flattened path reaches them: a 1000-units-per-mm grid would
+/// be 4.6 billion km across); that comes back as the error.
+fn new_clipper(subjects: &Paths64, clips: &Paths64) -> Result<clipper6::Clipper, ClipperError> {
     let mut clipper = clipper6::Clipper::new();
-    clipper
-        .add_paths(subjects, clipper6::PolyType::Subject, true)
-        .ok()?;
-    clipper
-        .add_paths(clips, clipper6::PolyType::Clip, true)
-        .ok()?;
-    Some(clipper)
+    clipper.add_paths(subjects, clipper6::PolyType::Subject, true)?;
+    clipper.add_paths(clips, clipper6::PolyType::Clip, true)?;
+    Ok(clipper)
 }
 
 /// `clipper.AddPaths(subjects, ptSubject, true); clipper.AddPaths(clips, ptClip, true);
-/// clipper.Execute(clipType, solution, fillType)`.
+/// clipper.Execute(clipType, solution, fillType)`. Clipper2's `NoClip` (no C# counterpart)
+/// clips nothing and gives an empty solution.
 pub fn execute(
     clip_type: ClipType,
     subjects: &Paths64,
     clips: &Paths64,
     fill_rule: FillRule,
-) -> Paths64 {
+) -> Result<Paths64, ClipperError> {
     let mut solution = Paths64::new();
     let Some(clip_type) = clipper6_clip_type(clip_type) else {
-        return solution;
+        return Ok(solution);
     };
-    if let Some(mut clipper) = new_clipper(subjects, clips) {
-        let fill = poly_fill_type(fill_rule);
-        if clipper
-            .execute(clip_type, &mut solution, fill, fill)
-            .is_err()
-        {
-            solution.clear();
-        }
-    }
-    solution
+    let mut clipper = new_clipper(subjects, clips)?;
+    let fill = poly_fill_type(fill_rule);
+    clipper.execute(clip_type, &mut solution, fill, fill)?;
+    Ok(solution)
 }
 
 /// As [`execute`], into a `PolyTree`: Clipper 6's tree, copied node for node (children in
@@ -87,22 +77,16 @@ pub fn execute_tree(
     subjects: &Paths64,
     clips: &Paths64,
     fill_rule: FillRule,
-) -> PolyTree64 {
+) -> Result<PolyTree64, ClipperError> {
     let mut tree = clipper6::PolyTree::new();
-    if let (Some(clip_type), Some(mut clipper)) =
-        (clipper6_clip_type(clip_type), new_clipper(subjects, clips))
-    {
+    if let Some(clip_type) = clipper6_clip_type(clip_type) {
+        let mut clipper = new_clipper(subjects, clips)?;
         let fill = poly_fill_type(fill_rule);
-        if clipper
-            .execute_tree(clip_type, &mut tree, fill, fill)
-            .is_err()
-        {
-            tree.clear();
-        }
+        clipper.execute_tree(clip_type, &mut tree, fill, fill)?;
     }
     let mut result = PolyTree64::new();
     copy_children(&tree, clipper6::PolyTree::ROOT, &mut result, 0);
-    result
+    Ok(result)
 }
 
 fn copy_children(tree: &clipper6::PolyTree, node: usize, result: &mut PolyTree64, parent: usize) {
@@ -113,15 +97,15 @@ fn copy_children(tree: &clipper6::PolyTree, node: usize, result: &mut PolyTree64
 }
 
 /// `new ClipperOffset(miterLimit, arcTolerance)`, `AddPaths(paths, joinType,
-/// etClosedPolygon)`, `Execute(ref solution, delta)`. As with [`execute`], coordinates beyond
-/// Clipper 6's range give nothing where the C# throws.
+/// etClosedPolygon)`, `Execute(ref solution, delta)`. As with [`execute`], Clipper 6's
+/// exceptions come back as the error.
 pub fn offset_closed_polygons(
     paths: &Paths64,
     delta: f64,
     join_type: JoinType,
     miter_limit: f64,
     arc_tolerance: f64,
-) -> Paths64 {
+) -> Result<Paths64, ClipperError> {
     let mut offseter = clipper6::ClipperOffset::new(miter_limit, arc_tolerance);
     offseter.add_paths(
         paths,
@@ -129,10 +113,8 @@ pub fn offset_closed_polygons(
         clipper6::EndType::ClosedPolygon,
     );
     let mut solution = Paths64::new();
-    if offseter.execute(&mut solution, delta).is_err() {
-        solution.clear();
-    }
-    solution
+    offseter.execute(&mut solution, delta)?;
+    Ok(solution)
 }
 
 /// C# `Clipper.Area`: the signed area, positive when the polygon is counter-clockwise (y up).
@@ -167,13 +149,13 @@ pub fn get_bounds(paths: &Paths64) -> Rect64 {
 /// C# `Clipper.SimplifyPolygon(poly, fillType)`: the polygon unioned with itself under
 /// `fill_rule` with `StrictlySimple` set, which splits a self-intersecting polygon, or one that
 /// touches itself at a vertex, into simple ones.
-pub fn simplify_polygon(poly: &Path64, fill_rule: FillRule) -> Paths64 {
-    clipper6::simplify_polygon(poly, poly_fill_type(fill_rule)).unwrap_or_default()
+pub fn simplify_polygon(poly: &Path64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
+    clipper6::simplify_polygon(poly, poly_fill_type(fill_rule)).map_err(ClipperError)
 }
 
 /// C# `Clipper.SimplifyPolygons(polys, fillType)`: as [`simplify_polygon`] for many.
-pub fn simplify_polygons(polys: &Paths64, fill_rule: FillRule) -> Paths64 {
-    clipper6::simplify_polygons(polys, poly_fill_type(fill_rule)).unwrap_or_default()
+pub fn simplify_polygons(polys: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
+    clipper6::simplify_polygons(polys, poly_fill_type(fill_rule)).map_err(ClipperError)
 }
 
 /// C# `Clipper.ClosedPathsFromPolyTree`: every non-empty contour, parents before children.

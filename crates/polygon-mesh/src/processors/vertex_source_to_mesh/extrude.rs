@@ -8,8 +8,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use agg_path::clipper_library::JoinType;
-use agg_path::clipper_library::PolygonsExtensions;
+use agg_path::clipper_library::{ClipperError, JoinType, PolygonsExtensions};
 use agg_path::data_converters_2d::{
     create_vertex_storage, get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
@@ -24,8 +23,11 @@ use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
 
 /// C# `Extrude(this IVertexSource, zHeightTop)`: the profile from z = 0 up to `z_height_top`
-/// with square ends.
-pub fn extrude(vertex_source_in: &dyn VertexSource, z_height_top: f64) -> Mesh {
+/// with square ends. Clipper's exceptions (C# throws) come back as the error.
+pub fn extrude(
+    vertex_source_in: &dyn VertexSource,
+    z_height_top: f64,
+) -> Result<Mesh, ClipperError> {
     extrude_bevelled(
         vertex_source_in,
         z_height_top,
@@ -46,6 +48,7 @@ pub fn extrude(vertex_source_in: &dyn VertexSource, z_height_top: f64) -> Mesh {
 /// last entry's at `z_height_top`, the profile the top cap is built from. `bottom_bevel` is
 /// its mirror image, ordered from the top of the bevel DOWNWARD, its last inset reached at
 /// z = 0. The join types say how the clipper offset rounds corners while insetting each bevel.
+/// Clipper's exceptions (C# throws) come back as the error.
 pub fn extrude_bevelled(
     vertex_source_in: &dyn VertexSource,
     z_height_top: f64,
@@ -53,11 +56,11 @@ pub fn extrude_bevelled(
     join_type: JoinType,
     bottom_bevel: Option<&[(f64, f64)]>,
     bottom_join_type: JoinType,
-) -> Mesh {
+) -> Result<Mesh, ClipperError> {
     let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
 
     // ensure good winding and consistent shapes
-    let bottom_polygons = get_corrected_winding(&bottom_polygons);
+    let bottom_polygons = get_corrected_winding(&bottom_polygons)?;
 
     if bevel.is_some() || bottom_bevel.is_some() {
         return get_loop_mesh(
@@ -120,7 +123,7 @@ pub fn extrude_bevelled(
 
     mesh.clean_and_merge();
 
-    mesh
+    Ok(mesh)
 }
 
 /// One profile ring of a bevelled extrusion and the height it sits at. The un-inset profile is
@@ -135,8 +138,8 @@ fn get_loop_mesh(
     join_type: JoinType,
     bottom_bevel: Option<&[(f64, f64)]>,
     bottom_join_type: JoinType,
-) -> Mesh {
-    let bottom_polygons_sets = input_polygons.separate_polygon_groups();
+) -> Result<Mesh, ClipperError> {
+    let bottom_polygons_sets = input_polygons.separate_polygon_groups()?;
 
     let mut mesh = Mesh::new();
     for bottom_polygons in bottom_polygons_sets {
@@ -147,7 +150,7 @@ fn get_loop_mesh(
             join_type,
             bottom_bevel,
             bottom_join_type,
-        );
+        )?;
 
         // The first wall segments are the bottom bevel, where the profile GROWS as it rises.
         // The triangulation lays its triangles out counter clockwise in 2D, which only faces
@@ -195,7 +198,7 @@ fn get_loop_mesh(
                     top_loops,
                     *top_height,
                     i < bottom_bevel_wall_count,
-                );
+                )?;
             }
         }
 
@@ -209,7 +212,7 @@ fn get_loop_mesh(
     }
 
     mesh.clean_and_merge();
-    mesh
+    Ok(mesh)
 }
 
 /// C# `BuildBevelRings`: the stack of profile rings the extrusion passes through, bottom to
@@ -222,22 +225,24 @@ fn build_bevel_rings(
     top_join_type: JoinType,
     bottom_bevel: Option<&[(f64, f64)]>,
     bottom_join_type: JoinType,
-) -> Vec<Ring> {
+) -> Result<Vec<Ring>, ClipperError> {
     let mut rings: Vec<Ring> = Vec::new();
     let arc_tolerance = profile.arc_tolerance_for(DEFAULT_SCALING);
     let profile = Rc::new(profile);
     let inset = |inset_amount: f64, join: JoinType| {
-        Rc::new(profile.offset_with_arc_tolerance(inset_amount * 1000.0, join, arc_tolerance))
+        profile
+            .offset_with_arc_tolerance(inset_amount * 1000.0, join, arc_tolerance)
+            .map(Rc::new)
     };
 
     match bottom_bevel {
         Some(bottom_bevel) if !bottom_bevel.is_empty() => {
             // the list runs downward, so its last entry is the narrowest ring - the z = 0 one
             let last = bottom_bevel.len() - 1;
-            rings.push((inset(bottom_bevel[last].1, bottom_join_type), 0.0));
+            rings.push((inset(bottom_bevel[last].1, bottom_join_type)?, 0.0));
             for i in (1..=last).rev() {
                 rings.push((
-                    inset(bottom_bevel[i - 1].1, bottom_join_type),
+                    inset(bottom_bevel[i - 1].1, bottom_join_type)?,
                     bottom_bevel[i].0,
                 ));
             }
@@ -252,16 +257,16 @@ fn build_bevel_rings(
         Some(top_bevel) if !top_bevel.is_empty() => {
             rings.push((Rc::clone(&profile), top_bevel[0].0));
             for i in 0..top_bevel.len() - 1 {
-                rings.push((inset(top_bevel[i].1, top_join_type), top_bevel[i + 1].0));
+                rings.push((inset(top_bevel[i].1, top_join_type)?, top_bevel[i + 1].0));
             }
 
             let last = top_bevel.len() - 1;
-            rings.push((inset(top_bevel[last].1, top_join_type), z_height_top));
+            rings.push((inset(top_bevel[last].1, top_join_type)?, z_height_top));
         }
         _ => rings.push((Rc::clone(&profile), z_height_top)),
     }
 
-    rings
+    Ok(rings)
 }
 
 /// The exact position of a point, for C#'s `HashSet<Vector2>` (`+ 0.0` folds -0 onto 0, which
@@ -280,7 +285,7 @@ fn create_triangulation(
     top_loops: &Paths64,
     top_height: f64,
     flip_winding: bool,
-) {
+) -> Result<(), ClipperError> {
     let hash_set_bottom_vertices: HashSet<(u64, u64)> = bottom_loops
         .iter()
         .flatten()
@@ -289,7 +294,7 @@ fn create_triangulation(
 
     let mut outline_loops = bottom_loops.clone();
     outline_loops.extend(top_loops.iter().cloned());
-    let poly_groups = outline_loops.separate_into_outlines_and_contained_holes();
+    let poly_groups = outline_loops.separate_into_outlines_and_contained_holes()?;
 
     for poly_group in poly_groups {
         if let Some((outline, holes)) = poly_group.split_first() {
@@ -304,6 +309,7 @@ fn create_triangulation(
             );
         }
     }
+    Ok(())
 }
 
 /// C# `CreateMeshLoop`: triangulates one outline minus its holes (clipper units) and adds the

@@ -2,7 +2,7 @@
 //! square and bevelled paths make closed, outward-wound solids of the expected size, including
 //! the bevel bands tess2 triangulates where C# uses TriangleNet (docs/CSHARP_DIVERGENCES.md 290).
 
-use agg_path::clipper_library::JoinType;
+use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::{extrude, extrude_bevelled};
 
@@ -17,8 +17,8 @@ fn square(side: f64) -> VertexStorage {
 }
 
 #[test]
-fn rust_only_a_square_extrudes_to_a_closed_box() {
-    let mesh = extrude(&square(10.0), 5.0);
+fn rust_only_a_square_extrudes_to_a_closed_box() -> Result<(), ClipperError> {
+    let mesh = extrude(&square(10.0), 5.0)?;
 
     assert!(mesh.is_manifold());
     assert_eq!(mesh.vertices.len(), 8);
@@ -30,10 +30,12 @@ fn rust_only_a_square_extrudes_to_a_closed_box() {
     );
     let bounds = mesh.get_axis_aligned_bounding_box();
     assert!((bounds.z_size() - 5.0).abs() < 1e-9);
+    Ok(())
 }
 
 #[test]
-fn rust_only_a_top_and_bottom_bevelled_square_is_a_closed_outward_solid() {
+fn rust_only_a_top_and_bottom_bevelled_square_is_a_closed_outward_solid() -> Result<(), ClipperError>
+{
     let top = [(8.0, -0.5), (10.0, -1.0)];
     let bottom = [(2.0, -0.5), (0.0, -1.0)];
     let mesh = extrude_bevelled(
@@ -43,7 +45,7 @@ fn rust_only_a_top_and_bottom_bevelled_square_is_a_closed_outward_solid() {
         JoinType::Round,
         Some(&bottom),
         JoinType::Round,
-    );
+    )?;
 
     assert!(
         mesh.is_manifold(),
@@ -55,4 +57,5 @@ fn rust_only_a_top_and_bottom_bevelled_square_is_a_closed_outward_solid() {
     let bounds = mesh.get_axis_aligned_bounding_box();
     assert!((bounds.z_size() - 10.0).abs() < 1e-6);
     assert!((bounds.x_size() - 10.0).abs() < 1e-3);
+    Ok(())
 }

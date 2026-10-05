@@ -2,7 +2,9 @@
 //! face BSP tree, slicing and stitching on clipper polygons. The rest (SDF, dual contouring)
 //! wait for their Phase 2 slices and are listed in `docs/PORTING_PLAN.md`.
 
-use agg_path::clipper_library::{create_from_string, Intersection, PolygonExtensions};
+use agg_path::clipper_library::{
+    create_from_string, ClipperError, Intersection, PolygonExtensions,
+};
 use clipper2_rust::Point64;
 use polygon_mesh::csg::{path_stitcher, slice_layer};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};
@@ -327,7 +329,7 @@ fn ensure_correct_stitch_order() {
 }
 
 #[test]
-fn get_slice_loop() {
+fn get_slice_loop() -> Result<(), ClipperError> {
     {
         let mut tetrahedron = platonic_solids::create_tetrahedron(10.0);
         let min_z = tetrahedron.get_axis_aligned_bounding_box().min_xyz.z;
@@ -378,7 +380,8 @@ fn get_slice_loop() {
         );
         let closed_loops = slice_layer::find_closed_polygons(&unordered_segments);
         assert_eq!(closed_loops.len(), 2);
-        let union = slice_layer::union_closed_polygons(closed_loops);
+        let union = slice_layer::union_closed_polygons(closed_loops)?;
         assert_eq!(union.len(), 1);
     }
+    Ok(())
 }

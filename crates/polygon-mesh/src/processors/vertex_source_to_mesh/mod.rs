@@ -11,7 +11,7 @@ mod extrude;
 mod revolve;
 
 pub use extrude::{extrude, extrude_bevelled};
-pub use revolve::revolve;
+pub use revolve::{revolve, RevolveError};
 
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;

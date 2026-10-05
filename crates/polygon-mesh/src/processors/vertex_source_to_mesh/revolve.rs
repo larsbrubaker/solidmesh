@@ -4,7 +4,9 @@
 //! `CreateVertexStorage`) so its winding is normalized and anything left of the axis is
 //! mirrored onto the right before it is swept.
 
-use agg_path::clipper_library::{int_point, PolygonsExtensions};
+use std::fmt;
+
+use agg_path::clipper_library::{int_point, ClipperError, PolygonsExtensions};
 use agg_path::data_converters_2d::{
     create_vertex_storage, get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
@@ -16,6 +18,37 @@ use vector_math::{MathError, Matrix4X4, Vector2, Vector3};
 use super::for_each_triangle;
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
+
+/// What [`revolve`] can fail with, as the C# throws: an angle `Range0ToTau` rejects, or a
+/// Clipper exception from the profile's clean-up.
+#[derive(Clone, Debug, PartialEq)]
+pub enum RevolveError {
+    Angle(MathError),
+    Clipper(ClipperError),
+}
+
+impl From<MathError> for RevolveError {
+    fn from(error: MathError) -> Self {
+        RevolveError::Angle(error)
+    }
+}
+
+impl From<ClipperError> for RevolveError {
+    fn from(error: ClipperError) -> Self {
+        RevolveError::Clipper(error)
+    }
+}
+
+impl fmt::Display for RevolveError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RevolveError::Angle(error) => error.fmt(f),
+            RevolveError::Clipper(error) => error.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for RevolveError {}
 
 /// C# `fixCloseAngles`: snaps an angle within 0.001 of 0 or Tau onto it.
 fn fix_close_angles(angle: f64) -> f64 {
@@ -36,14 +69,14 @@ fn fix_close_angles(angle: f64) -> f64 {
 /// A profile that encloses no area revolves to an empty mesh.
 ///
 /// The angles are brought into `[0, Tau]` first; one that cannot be (below `-Tau`, or NaN) is
-/// the error C#'s `Range0ToTau` throws.
+/// the error C#'s `Range0ToTau` throws; Clipper's exceptions are the other error.
 pub fn revolve(
     source: &dyn VertexSource,
     angle_steps: i32,
     angle_start: f64,
     angle_end: f64,
     revolve_around_z: bool,
-) -> Result<Mesh, MathError> {
+) -> Result<Mesh, RevolveError> {
     let mut angle_steps = angle_steps;
     let angle_start = range_0_to_tau(angle_start)?;
     let angle_end = range_0_to_tau(angle_end)?;
@@ -71,7 +104,7 @@ pub fn revolve(
 
     // Every profile needs its winding normalized, whichever side of the axis it is on: a
     // clockwise one revolves inside out.
-    polygons = get_corrected_winding(&polygons);
+    polygons = get_corrected_winding(&polygons)?;
     if polygons.is_empty() {
         // winding correction drops what encloses no area
         return Ok(Mesh::new());
@@ -88,7 +121,7 @@ pub fn revolve(
             int_point(bounds.left, bounds.top),
             int_point(bounds.left, bounds.bottom),
         ];
-        let right_stuff = polygons.subtract_polygon(&left_clip);
+        let right_stuff = polygons.subtract_polygon(&left_clip)?;
 
         let right_clip: Path64 = vec![
             int_point(0.0, bounds.top),
@@ -96,12 +129,12 @@ pub fn revolve(
             int_point(bounds.right, bounds.bottom),
             int_point(bounds.right, bounds.top),
         ];
-        let left_stuff = polygons.subtract_polygon(&right_clip);
+        let left_stuff = polygons.subtract_polygon(&right_clip)?;
         // mirror left material across the origin
         let left_add = left_stuff.scale(-1.0, 1.0);
         polygons = if !left_add.is_empty() {
             if !right_stuff.is_empty() {
-                right_stuff.union(&left_add, FillRule::EvenOdd)
+                right_stuff.union(&left_add, FillRule::EvenOdd)?
             } else {
                 left_add
             }
@@ -109,7 +142,7 @@ pub fn revolve(
             // there is nothing on the left
             right_stuff
         };
-        polygons = get_corrected_winding(&polygons);
+        polygons = get_corrected_winding(&polygons)?;
     }
 
     // convert the data back to PathStorage

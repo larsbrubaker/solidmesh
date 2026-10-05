@@ -3,11 +3,12 @@
 //! swaps winding counts where two edges cross and starts, extends or closes output rings.
 
 use super::clipper_base::is_horizontal;
-use super::dotnet_sort;
 use super::engine::{top_x, Clipper};
 use super::types::{
-    ip, round, ClipType, IntPoint, IntersectNode, PolyFillType, PolyType, TEdge, UNASSIGNED,
+    ip, round, ClipType, ClipperError, IntPoint, IntersectNode, PolyFillType, PolyType, TEdge,
+    UNASSIGNED,
 };
+use vector_math::cs_sort::introspective_sort;
 
 impl Clipper {
     /// C# `AddEdgeToSEL`. SEL pointers in PEdge are use to build transient lists of horizontal
@@ -115,21 +116,21 @@ impl Clipper {
 
     /// C# `ProcessIntersections`: false when the crossings cannot be ordered so that only
     /// adjacent edges swap.
-    pub(super) fn process_intersections(&mut self, top_y: i64) -> bool {
+    pub(super) fn process_intersections(&mut self, top_y: i64) -> Result<bool, ClipperError> {
         if self.active_edges.is_none() {
-            return true;
+            return Ok(true);
         }
         self.build_intersect_list(top_y);
         if self.intersect_list.is_empty() {
-            return true;
+            return Ok(true);
         }
         if self.intersect_list.len() == 1 || self.fixup_intersection_order() {
-            self.process_intersect_list();
+            self.process_intersect_list()?;
         } else {
-            return false;
+            return Ok(false);
         }
         self.sorted_edges = None;
-        true
+        Ok(true)
     }
 
     fn build_intersect_list(&mut self, top_y: i64) {
@@ -189,7 +190,7 @@ impl Clipper {
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need adjusting ...
         // MyIntersectNodeSort: descending Y, through .NET's unstable List.Sort.
-        dotnet_sort::sort_by(&mut self.intersect_list, |node1, node2| {
+        introspective_sort(&mut self.intersect_list, &mut |node1, node2| {
             node2.pt.y.cmp(&node1.pt.y)
         });
 
@@ -212,13 +213,14 @@ impl Clipper {
         true
     }
 
-    fn process_intersect_list(&mut self) {
+    fn process_intersect_list(&mut self) -> Result<(), ClipperError> {
         for i in 0..self.intersect_list.len() {
             let node = self.intersect_list[i];
-            self.intersect_edges(node.edge1, node.edge2, node.pt);
+            self.intersect_edges(node.edge1, node.edge2, node.pt)?;
             self.swap_positions_in_ael(node.edge1, node.edge2);
         }
         self.intersect_list.clear();
+        Ok(())
     }
 
     fn intersect_point(&self, edge1: usize, edge2: usize) -> IntPoint {
@@ -287,7 +289,12 @@ impl Clipper {
 
     /// C# `IntersectEdges`. e1 will be to the left of e2 BELOW the intersection. Therefore e1
     /// is before e2 in AEL except when e1 is being inserted at the intersection point ...
-    pub(super) fn intersect_edges(&mut self, e1: usize, e2: usize, pt: IntPoint) {
+    pub(super) fn intersect_edges(
+        &mut self,
+        e1: usize,
+        e2: usize,
+        pt: IntPoint,
+    ) -> Result<(), ClipperError> {
         let e1_contributing = self.edges[e1].out_idx >= 0;
         let e2_contributing = self.edges[e2].out_idx >= 0;
 
@@ -297,7 +304,7 @@ impl Clipper {
             //ignore subject-subject open path intersections UNLESS they
             //are both open paths, AND they are both 'contributing maximas' ...
             if a.wind_delta == 0 && b.wind_delta == 0 {
-                return;
+                return Ok(());
             }
             //if intersecting a subj line with a subj poly ...
             else if a.poly_typ == b.poly_typ
@@ -306,13 +313,13 @@ impl Clipper {
             {
                 if a.wind_delta == 0 {
                     if e2_contributing {
-                        self.add_out_pt(e1, pt);
+                        self.add_out_pt(e1, pt)?;
                         if e1_contributing {
                             self.edges[e1].out_idx = UNASSIGNED;
                         }
                     }
                 } else if e1_contributing {
-                    self.add_out_pt(e2, pt);
+                    self.add_out_pt(e2, pt)?;
                     if e2_contributing {
                         self.edges[e2].out_idx = UNASSIGNED;
                     }
@@ -322,7 +329,7 @@ impl Clipper {
                     && b.wind_cnt.abs() == 1
                     && (self.clip_type != ClipType::Union || b.wind_cnt2 == 0)
                 {
-                    self.add_out_pt(e1, pt);
+                    self.add_out_pt(e1, pt)?;
                     if e1_contributing {
                         self.edges[e1].out_idx = UNASSIGNED;
                     }
@@ -330,13 +337,13 @@ impl Clipper {
                     && a.wind_cnt.abs() == 1
                     && (self.clip_type != ClipType::Union || a.wind_cnt2 == 0)
                 {
-                    self.add_out_pt(e2, pt);
+                    self.add_out_pt(e2, pt)?;
                     if e2_contributing {
                         self.edges[e2].out_idx = UNASSIGNED;
                     }
                 }
             }
-            return;
+            return Ok(());
         }
 
         //update winding counts...
@@ -385,22 +392,22 @@ impl Clipper {
                 || (self.edges[e1].poly_typ != self.edges[e2].poly_typ
                     && self.clip_type != ClipType::Xor)
             {
-                self.add_local_max_poly(e1, e2, pt);
+                self.add_local_max_poly(e1, e2, pt)?;
             } else {
-                self.add_out_pt(e1, pt);
-                self.add_out_pt(e2, pt);
+                self.add_out_pt(e1, pt)?;
+                self.add_out_pt(e2, pt)?;
                 swap_sides(&mut self.edges, e1, e2);
                 swap_poly_indexes(&mut self.edges, e1, e2);
             }
         } else if e1_contributing {
             if e2_wc == 0 || e2_wc == 1 {
-                self.add_out_pt(e1, pt);
+                self.add_out_pt(e1, pt)?;
                 swap_sides(&mut self.edges, e1, e2);
                 swap_poly_indexes(&mut self.edges, e1, e2);
             }
         } else if e2_contributing {
             if e1_wc == 0 || e1_wc == 1 {
-                self.add_out_pt(e2, pt);
+                self.add_out_pt(e2, pt)?;
                 swap_sides(&mut self.edges, e1, e2);
                 swap_poly_indexes(&mut self.edges, e1, e2);
             }
@@ -410,17 +417,17 @@ impl Clipper {
             let e2_wc2 = wind_count_for(e2_fill_type2, self.edges[e2].wind_cnt2);
 
             if self.edges[e1].poly_typ != self.edges[e2].poly_typ {
-                self.add_local_min_poly(e1, e2, pt);
+                self.add_local_min_poly(e1, e2, pt)?;
             } else if e1_wc == 1 && e2_wc == 1 {
                 match self.clip_type {
                     ClipType::Intersection => {
                         if e1_wc2 > 0 && e2_wc2 > 0 {
-                            self.add_local_min_poly(e1, e2, pt);
+                            self.add_local_min_poly(e1, e2, pt)?;
                         }
                     }
                     ClipType::Union => {
                         if e1_wc2 <= 0 && e2_wc2 <= 0 {
-                            self.add_local_min_poly(e1, e2, pt);
+                            self.add_local_min_poly(e1, e2, pt)?;
                         }
                     }
                     ClipType::Difference => {
@@ -428,17 +435,18 @@ impl Clipper {
                         if (e1_typ == PolyType::Clip && e1_wc2 > 0 && e2_wc2 > 0)
                             || (e1_typ == PolyType::Subject && e1_wc2 <= 0 && e2_wc2 <= 0)
                         {
-                            self.add_local_min_poly(e1, e2, pt);
+                            self.add_local_min_poly(e1, e2, pt)?;
                         }
                     }
                     ClipType::Xor => {
-                        self.add_local_min_poly(e1, e2, pt);
+                        self.add_local_min_poly(e1, e2, pt)?;
                     }
                 }
             } else {
                 swap_sides(&mut self.edges, e1, e2);
             }
         }
+        Ok(())
     }
 }
 

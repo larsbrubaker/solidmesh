@@ -74,7 +74,11 @@ impl Clipper {
 
     /// The edges of the SEL that overlap `horz_edge` get a join to `op1` (C# loop shared by
     /// two places in `ProcessHorizontal`).
-    fn join_overlapping_horizontals(&mut self, horz_edge: usize, op1: usize) {
+    fn join_overlapping_horizontals(
+        &mut self,
+        horz_edge: usize,
+        op1: usize,
+    ) -> Result<(), ClipperError> {
         let mut e_next_horz = self.sorted_edges;
         while let Some(next_horz) = e_next_horz {
             if self.edges[next_horz].out_idx >= 0
@@ -85,11 +89,12 @@ impl Clipper {
                     self.edges[next_horz].top.x,
                 )
             {
-                let op2 = self.get_last_out_pt(next_horz);
+                let op2 = self.get_last_out_pt(next_horz)?;
                 self.add_join(op2, op1, self.edges[next_horz].top);
             }
             e_next_horz = self.edges[next_horz].next_in_sel;
         }
+        Ok(())
     }
 
     fn process_horizontal(&mut self, mut horz_edge: usize) -> Result<(), ClipperError> {
@@ -160,7 +165,7 @@ impl Clipper {
                             }
                             if self.edges[horz_edge].out_idx >= 0 && !is_open {
                                 let pt = ip(self.maxima[c].x, self.edges[horz_edge].bot.y);
-                                self.add_out_pt(horz_edge, pt);
+                                self.add_out_pt(horz_edge, pt)?;
                             }
                             curr_max = self.maxima[c].next;
                         }
@@ -171,7 +176,7 @@ impl Clipper {
                             }
                             if self.edges[horz_edge].out_idx >= 0 && !is_open {
                                 let pt = ip(self.maxima[c].x, self.edges[horz_edge].bot.y);
-                                self.add_out_pt(horz_edge, pt);
+                                self.add_out_pt(horz_edge, pt)?;
                             }
                             curr_max = self.maxima[c].prev;
                         }
@@ -197,9 +202,9 @@ impl Clipper {
 
                 if self.edges[horz_edge].out_idx >= 0 && !is_open {
                     //note: may be done multiple times
-                    let op = self.add_out_pt(horz_edge, self.edges[edge].curr);
+                    let op = self.add_out_pt(horz_edge, self.edges[edge].curr)?;
                     op1 = Some(op);
-                    self.join_overlapping_horizontals(horz_edge, op);
+                    self.join_overlapping_horizontals(horz_edge, op)?;
                     self.add_ghost_join(op, self.edges[horz_edge].bot);
                 }
 
@@ -208,7 +213,7 @@ impl Clipper {
                 if Some(edge) == e_max_pair && is_last_horz {
                     if self.edges[horz_edge].out_idx >= 0 {
                         let top = self.edges[horz_edge].top;
-                        self.add_local_max_poly(horz_edge, edge, top);
+                        self.add_local_max_poly(horz_edge, edge, top)?;
                     }
                     self.delete_from_ael(horz_edge);
                     self.delete_from_ael(edge);
@@ -217,9 +222,9 @@ impl Clipper {
 
                 let pt = ip(self.edges[edge].curr.x, self.edges[horz_edge].curr.y);
                 if dir == Direction::LeftToRight {
-                    self.intersect_edges(horz_edge, edge, pt);
+                    self.intersect_edges(horz_edge, edge, pt)?;
                 } else {
-                    self.intersect_edges(edge, horz_edge, pt);
+                    self.intersect_edges(edge, horz_edge, pt)?;
                 }
                 let e_next = self.get_next_in_ael(edge, dir);
                 self.swap_positions_in_ael(horz_edge, edge);
@@ -234,20 +239,20 @@ impl Clipper {
 
             horz_edge = self.update_edge_into_ael(horz_edge)?;
             if self.edges[horz_edge].out_idx >= 0 {
-                self.add_out_pt(horz_edge, self.edges[horz_edge].bot);
+                self.add_out_pt(horz_edge, self.edges[horz_edge].bot)?;
             }
             (dir, horz_left, horz_right) = get_horz_direction(&self.edges[horz_edge]);
         } //end for (;;)
 
         if self.edges[horz_edge].out_idx >= 0 && op1.is_none() {
-            let op = self.get_last_out_pt(horz_edge);
-            self.join_overlapping_horizontals(horz_edge, op);
+            let op = self.get_last_out_pt(horz_edge)?;
+            self.join_overlapping_horizontals(horz_edge, op)?;
             self.add_ghost_join(op, self.edges[horz_edge].top);
         }
 
         if self.edges[horz_edge].next_in_lml.is_some() {
             if self.edges[horz_edge].out_idx >= 0 {
-                let op = self.add_out_pt(horz_edge, self.edges[horz_edge].top);
+                let op = self.add_out_pt(horz_edge, self.edges[horz_edge].top)?;
 
                 horz_edge = self.update_edge_into_ael(horz_edge)?;
                 if self.edges[horz_edge].wind_delta == 0 {
@@ -258,12 +263,12 @@ impl Clipper {
                 let e_next = self.edges[horz_edge].next_in_ael;
                 let h = self.edges[horz_edge].clone();
                 if let Some(prev) = e_prev.filter(|&p| self.shares_bottom(&h, &self.edges[p])) {
-                    let op2 = self.add_out_pt(prev, h.bot);
+                    let op2 = self.add_out_pt(prev, h.bot)?;
                     self.add_join(op, op2, h.top);
                 } else if let Some(next) =
                     e_next.filter(|&n| self.shares_bottom(&h, &self.edges[n]))
                 {
-                    let op2 = self.add_out_pt(next, h.bot);
+                    let op2 = self.add_out_pt(next, h.bot)?;
                     self.add_join(op, op2, h.top);
                 }
             } else {
@@ -271,7 +276,7 @@ impl Clipper {
             }
         } else {
             if self.edges[horz_edge].out_idx >= 0 {
-                self.add_out_pt(horz_edge, self.edges[horz_edge].top);
+                self.add_out_pt(horz_edge, self.edges[horz_edge].top)?;
             }
             self.delete_from_ael(horz_edge);
         }
@@ -369,7 +374,7 @@ impl Clipper {
                 if promote {
                     edge = self.update_edge_into_ael(edge)?;
                     if self.edges[edge].out_idx >= 0 {
-                        self.add_out_pt(edge, self.edges[edge].bot);
+                        self.add_out_pt(edge, self.edges[edge].bot)?;
                     }
                     self.add_edge_to_sel(edge);
                 } else {
@@ -388,8 +393,8 @@ impl Clipper {
                             && p.wind_delta != 0
                         {
                             let ip = cur.curr;
-                            let op = self.add_out_pt(prev, ip);
-                            let op2 = self.add_out_pt(edge, ip);
+                            let op = self.add_out_pt(prev, ip)?;
+                            let op2 = self.add_out_pt(edge, ip)?;
                             self.add_join(op, op2, ip); //StrictlySimple (type-3) join
                         }
                     }
@@ -410,7 +415,7 @@ impl Clipper {
             if self.is_intermediate(edge, top_y as f64) {
                 let mut op = None;
                 if self.edges[edge].out_idx >= 0 {
-                    op = Some(self.add_out_pt(edge, self.edges[edge].top));
+                    op = Some(self.add_out_pt(edge, self.edges[edge].top)?);
                 }
                 edge = self.update_edge_into_ael(edge)?;
 
@@ -422,12 +427,12 @@ impl Clipper {
                     if let Some(prev) =
                         e_prev.filter(|&p| self.continues_beside(&cur, &self.edges[p]))
                     {
-                        let op2 = self.add_out_pt(prev, cur.bot);
+                        let op2 = self.add_out_pt(prev, cur.bot)?;
                         self.add_join(op, op2, cur.top);
                     } else if let Some(next) =
                         e_next.filter(|&n| self.continues_beside(&cur, &self.edges[n]))
                     {
-                        let op2 = self.add_out_pt(next, cur.bot);
+                        let op2 = self.add_out_pt(next, cur.bot)?;
                         self.add_join(op, op2, cur.top);
                     }
                 }
@@ -458,7 +463,7 @@ impl Clipper {
     fn do_maxima(&mut self, e: usize) -> Result<(), ClipperError> {
         let Some(e_max_pair) = self.get_maxima_pair_ex(e) else {
             if self.edges[e].out_idx >= 0 {
-                self.add_out_pt(e, self.edges[e].top);
+                self.add_out_pt(e, self.edges[e].top)?;
             }
             self.delete_from_ael(e);
             return Ok(());
@@ -470,7 +475,7 @@ impl Clipper {
                 break;
             }
             let top = self.edges[e].top;
-            self.intersect_edges(e, next, top);
+            self.intersect_edges(e, next, top)?;
             self.swap_positions_in_ael(e, next);
             e_next = self.edges[e].next_in_ael;
         }
@@ -480,19 +485,19 @@ impl Clipper {
             self.delete_from_ael(e_max_pair);
         } else if self.edges[e].out_idx >= 0 && self.edges[e_max_pair].out_idx >= 0 {
             let top = self.edges[e].top;
-            self.add_local_max_poly(e, e_max_pair, top);
+            self.add_local_max_poly(e, e_max_pair, top)?;
             self.delete_from_ael(e);
             self.delete_from_ael(e_max_pair);
         } else if self.edges[e].wind_delta == 0 {
             let top = self.edges[e].top;
             if self.edges[e].out_idx >= 0 {
-                self.add_out_pt(e, top);
+                self.add_out_pt(e, top)?;
                 self.edges[e].out_idx = UNASSIGNED;
             }
             self.delete_from_ael(e);
 
             if self.edges[e_max_pair].out_idx >= 0 {
-                self.add_out_pt(e_max_pair, top);
+                self.add_out_pt(e_max_pair, top)?;
                 self.edges[e_max_pair].out_idx = UNASSIGNED;
             }
             self.delete_from_ael(e_max_pair);

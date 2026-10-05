@@ -6,6 +6,7 @@
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, Point64};
 
+use super::clipper_error::ClipperError;
 use super::clipper_statics::execute;
 use super::int_point_extensions::{calc_intersection, get_intersection, int_point, Intersection};
 use super::polygons_extensions::PolygonsExtensions;
@@ -39,10 +40,14 @@ pub trait PolygonExtensions {
 
     /// C# `Offset(distance)`: offset by `distance` clipper units with round joins, the arc
     /// tolerance cut by the polygon's own size ([`PolygonsExtensions::arc_tolerance_for`]).
-    fn offset(&self, distance: f64) -> Paths64;
+    fn offset(&self, distance: f64) -> Result<Paths64, ClipperError>;
 
     /// C# `Offset(distance, arcTolerance)`: round joins at a fixed arc tolerance.
-    fn offset_with_arc_tolerance(&self, distance: f64, arc_tolerance: f64) -> Paths64;
+    fn offset_with_arc_tolerance(
+        &self,
+        distance: f64,
+        arc_tolerance: f64,
+    ) -> Result<Paths64, ClipperError>;
 
     /// C# `Rotate(radians)`: each point rotated about the origin and rounded back to the grid.
     fn rotate(&self, radians: f64) -> Path64;
@@ -51,10 +56,10 @@ pub trait PolygonExtensions {
     fn scale(&self, scale_x: f64, scale_y: f64) -> Path64;
 
     /// C# `Subtract(Polygons other)`: even-odd difference.
-    fn subtract(&self, other: &Paths64) -> Paths64;
+    fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError>;
 
     /// C# `Subtract(Polygon other)`.
-    fn subtract_polygon(&self, other: &Path64) -> Paths64;
+    fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
     /// C# `Translate(x, y, scale)`: each point moved by `(x, y) * scale`.
     fn translate(&self, x: f64, y: f64, scale: f64) -> Path64;
@@ -134,13 +139,17 @@ impl PolygonExtensions for Path64 {
         length
     }
 
-    fn offset(&self, distance: f64) -> Paths64 {
+    fn offset(&self, distance: f64) -> Result<Paths64, ClipperError> {
         let arc_tolerance = vec![self.clone()]
             .arc_tolerance_for(super::polygons_extensions::DEFAULT_CLIPPER_UNITS_PER_UNIT);
         self.offset_with_arc_tolerance(distance, arc_tolerance)
     }
 
-    fn offset_with_arc_tolerance(&self, distance: f64, arc_tolerance: f64) -> Paths64 {
+    fn offset_with_arc_tolerance(
+        &self,
+        distance: f64,
+        arc_tolerance: f64,
+    ) -> Result<Paths64, ClipperError> {
         vec![self.clone()].offset_with_arc_tolerance(distance, JoinType::Round, arc_tolerance)
     }
 
@@ -161,7 +170,7 @@ impl PolygonExtensions for Path64 {
             .collect()
     }
 
-    fn subtract(&self, other: &Paths64) -> Paths64 {
+    fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError> {
         execute(
             ClipType::Difference,
             &vec![self.clone()],
@@ -170,7 +179,7 @@ impl PolygonExtensions for Path64 {
         )
     }
 
-    fn subtract_polygon(&self, other: &Path64) -> Paths64 {
+    fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError> {
         self.subtract(&vec![other.clone()])
     }
 

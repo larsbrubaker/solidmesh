@@ -8,9 +8,11 @@
 //! `PolygonExtensions.cs` ([`polygon_extensions`]), `PolygonsExtensions.cs`
 //! ([`polygons_extensions`]), and from agg-sharp's modified Clipper 6.4.2 `clipper.cs` the
 //! statics ([`clipper_statics`], which adapts those types to [`crate::clipper6`]) and
-//! `CleanPolygon(s)` ([`clean_polygon`]).
+//! `CleanPolygon(s)` ([`clean_polygon`]). Every helper that runs Clipper 6 returns
+//! `Result<_, `[`ClipperError`]`>`, where the C# would throw.
 
 pub mod clean_polygon;
+pub mod clipper_error;
 pub mod clipper_statics;
 pub mod int_point_extensions;
 pub mod polygon_extensions;
@@ -21,6 +23,7 @@ pub use clean_polygon::{clean_polygon, clean_polygons, DEFAULT_CLEAN_DISTANCE};
 /// which callers should name through here. Clipper 6 has no bevel join; `Bevel` offsets as
 /// `Square` ([`clipper_statics::clipper6_join_type`]).
 pub use clipper2_rust::JoinType;
+pub use clipper_error::ClipperError;
 pub use clipper_statics::{
     area, closed_paths_from_poly_tree, get_bounds, orientation, point_in_polygon, simplify_polygon,
     simplify_polygons,

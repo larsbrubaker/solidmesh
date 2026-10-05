@@ -3,11 +3,13 @@
 //! `clipper_library/PolygonsExtensions.cs`: the booleans (`CombinePolygons`, `Union`,
 //! `Subtract`, `Intersect`), the size-aware offsets (`ArcToleranceFor`, `Offset`), the
 //! transforms, `CreateFromString`, and the PolyTree walks that split polygons into outlines
-//! with their holes. The booleans and offsets run on the Clipper 6 port ([`crate::clipper6`]).
+//! with their holes. The booleans and offsets run on the Clipper 6 port ([`crate::clipper6`])
+//! and return its exceptions as [`ClipperError`].
 //! Not ported (no caller): `GetBoundsLong`.
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, PolyTree64};
 
+use super::clipper_error::ClipperError;
 use super::clipper_statics::{execute, execute_tree, offset_closed_polygons};
 use super::int_point_extensions::int_point;
 use super::polygon_extensions::PolygonExtensions;
@@ -40,7 +42,12 @@ pub struct PolygonDescription {
 /// C# `PolygonsExtensions`, on a list of polygons.
 pub trait PolygonsExtensions {
     /// C# `CombinePolygons(bPolys, clipType, fillType)`: `self` as subject, `b` as clip.
-    fn combine_polygons(&self, b: &Paths64, clip_type: ClipType, fill_rule: FillRule) -> Paths64;
+    fn combine_polygons(
+        &self,
+        b: &Paths64,
+        clip_type: ClipType,
+        fill_rule: FillRule,
+    ) -> Result<Paths64, ClipperError>;
 
     /// The union of every polygon's bounds ([`RectangleDouble::ZERO_INTERSECTION`] when empty).
     fn get_bounds(&self) -> RectangleDouble;
@@ -55,7 +62,7 @@ pub trait PolygonsExtensions {
 
     /// C# `Offset(distance, joinType)`: offset by `distance` clipper units with the arc
     /// tolerance cut by the polygons' own size.
-    fn offset(&self, distance: f64, join_type: JoinType) -> Paths64;
+    fn offset(&self, distance: f64, join_type: JoinType) -> Result<Paths64, ClipperError>;
 
     /// C# `Offset(distance, joinType, arcTolerance)`.
     fn offset_with_arc_tolerance(
@@ -63,7 +70,7 @@ pub trait PolygonsExtensions {
         distance: f64,
         join_type: JoinType,
         arc_tolerance: f64,
-    ) -> Paths64;
+    ) -> Result<Paths64, ClipperError>;
 
     /// C# `Rotate(radians)`.
     fn rotate(&self, radians: f64) -> Paths64;
@@ -73,36 +80,41 @@ pub trait PolygonsExtensions {
 
     /// C# `SeparatePolygonGroups`: the even-odd union, one set per outline (the outline, its
     /// holes), a hole's islands' sets before their outline's.
-    fn separate_polygon_groups(&self) -> Vec<Paths64>;
+    fn separate_polygon_groups(&self) -> Result<Vec<Paths64>, ClipperError>;
 
     /// C# `DescribeAllPolygons`: every polygon of the even-odd union, outline then holes.
-    fn describe_all_polygons(&self) -> Vec<PolygonDescription>;
+    fn describe_all_polygons(&self) -> Result<Vec<PolygonDescription>, ClipperError>;
 
     /// C# `SeparateIntoOutlinesAndContainedHoles`: the even-odd union as outlines, each
     /// followed by its holes.
-    fn separate_into_outlines_and_contained_holes(&self) -> Vec<Paths64>;
+    fn separate_into_outlines_and_contained_holes(&self) -> Result<Vec<Paths64>, ClipperError>;
 
     /// C# `Subtract(Polygons other)`: even-odd difference.
-    fn subtract(&self, other: &Paths64) -> Paths64;
+    fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError>;
 
     /// C# `Subtract(Polygon other)`.
-    fn subtract_polygon(&self, other: &Path64) -> Paths64;
+    fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
     /// C# `Translate(x, y, scale)`.
     fn translate(&self, x: f64, y: f64, scale: f64) -> Paths64;
 
     /// C# `Union(other, fillType)` (the C# default fill is even-odd).
-    fn union(&self, other: &Paths64, fill_rule: FillRule) -> Paths64;
+    fn union(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError>;
 
     /// C# `Union(Polygon other)`: even-odd.
-    fn union_polygon(&self, other: &Path64) -> Paths64;
+    fn union_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
     /// C# `Intersect(other, fillType)` (the C# default fill is even-odd).
-    fn intersect(&self, other: &Paths64, fill_rule: FillRule) -> Paths64;
+    fn intersect(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError>;
 }
 
 impl PolygonsExtensions for Paths64 {
-    fn combine_polygons(&self, b: &Paths64, clip_type: ClipType, fill_rule: FillRule) -> Paths64 {
+    fn combine_polygons(
+        &self,
+        b: &Paths64,
+        clip_type: ClipType,
+        fill_rule: FillRule,
+    ) -> Result<Paths64, ClipperError> {
         execute(clip_type, self, b, fill_rule)
     }
 
@@ -130,7 +142,7 @@ impl PolygonsExtensions for Paths64 {
         )
     }
 
-    fn offset(&self, distance: f64, join_type: JoinType) -> Paths64 {
+    fn offset(&self, distance: f64, join_type: JoinType) -> Result<Paths64, ClipperError> {
         let arc_tolerance = self.arc_tolerance_for(DEFAULT_CLIPPER_UNITS_PER_UNIT);
         self.offset_with_arc_tolerance(distance, join_type, arc_tolerance)
     }
@@ -140,7 +152,7 @@ impl PolygonsExtensions for Paths64 {
         distance: f64,
         join_type: JoinType,
         arc_tolerance: f64,
-    ) -> Paths64 {
+    ) -> Result<Paths64, ClipperError> {
         offset_closed_polygons(
             self,
             distance,
@@ -160,32 +172,32 @@ impl PolygonsExtensions for Paths64 {
             .collect()
     }
 
-    fn separate_polygon_groups(&self) -> Vec<Paths64> {
-        let poly_tree = union_tree(self);
+    fn separate_polygon_groups(&self) -> Result<Vec<Paths64>, ClipperError> {
+        let poly_tree = union_tree(self)?;
         let mut ret = Vec::new();
         poly_tree_to_polygon_sets(&poly_tree, 0, &mut ret);
-        ret
+        Ok(ret)
     }
 
-    fn describe_all_polygons(&self) -> Vec<PolygonDescription> {
-        let poly_tree = union_tree(self);
+    fn describe_all_polygons(&self) -> Result<Vec<PolygonDescription>, ClipperError> {
+        let poly_tree = union_tree(self)?;
         let mut output = Vec::new();
         describe_all_polygons_in(&poly_tree, 0, 0, 0, 0, &mut output);
-        output
+        Ok(output)
     }
 
-    fn separate_into_outlines_and_contained_holes(&self) -> Vec<Paths64> {
-        let poly_tree = union_tree(self);
+    fn separate_into_outlines_and_contained_holes(&self) -> Result<Vec<Paths64>, ClipperError> {
+        let poly_tree = union_tree(self)?;
         let mut ret = Vec::new();
         poly_tree_to_outlines_and_contained_holes(&poly_tree, 0, &mut ret);
-        ret
+        Ok(ret)
     }
 
-    fn subtract(&self, other: &Paths64) -> Paths64 {
+    fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError> {
         self.combine_polygons(other, ClipType::Difference, FillRule::EvenOdd)
     }
 
-    fn subtract_polygon(&self, other: &Path64) -> Paths64 {
+    fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError> {
         self.subtract(&vec![other.clone()])
     }
 
@@ -195,21 +207,21 @@ impl PolygonsExtensions for Paths64 {
             .collect()
     }
 
-    fn union(&self, other: &Paths64, fill_rule: FillRule) -> Paths64 {
+    fn union(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
         self.combine_polygons(other, ClipType::Union, fill_rule)
     }
 
-    fn union_polygon(&self, other: &Path64) -> Paths64 {
+    fn union_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError> {
         self.union(&vec![other.clone()], FillRule::EvenOdd)
     }
 
-    fn intersect(&self, other: &Paths64, fill_rule: FillRule) -> Paths64 {
+    fn intersect(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
         self.combine_polygons(other, ClipType::Intersection, fill_rule)
     }
 }
 
 /// `clipper.AddPaths(polygons, ptSubject, true); clipper.Execute(ctUnion, polyTree)`.
-fn union_tree(polygons: &Paths64) -> PolyTree64 {
+fn union_tree(polygons: &Paths64) -> Result<PolyTree64, ClipperError> {
     execute_tree(
         ClipType::Union,
         polygons,

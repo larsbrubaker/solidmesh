@@ -14,11 +14,10 @@
 //! Execute and the sweep's winding rules), [`horizontals`] (intersections, horizontals, maxima),
 //! [`out_polys`] (output points and records, results, PolyTree), [`joins`] (common-edge joins
 //! and strictly-simple splitting), [`poly_tree`], [`offset`] (`ClipperOffset`), [`statics`]
-//! (`Area`, `PointInPolygon`, `SimplifyPolygon(s)`, Minkowski, PolyTree walks) and
-//! [`dotnet_sort`] (.NET's unstable `List.Sort`, which orders the intersection list).
+//! (`Area`, `PointInPolygon`, `SimplifyPolygon(s)`, Minkowski, PolyTree walks). The
+//! intersection list is ordered with `vector_math::cs_sort` (.NET's unstable `List.Sort`).
 
 mod clipper_base;
-pub mod dotnet_sort;
 mod engine;
 mod horizontals;
 mod intersections;

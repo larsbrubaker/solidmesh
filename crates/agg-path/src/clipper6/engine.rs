@@ -157,7 +157,7 @@ impl Clipper {
         let Some(mut bot_y) = self.pop_scanbeam() else {
             return Ok(false);
         };
-        self.insert_local_minima_into_ael(bot_y);
+        self.insert_local_minima_into_ael(bot_y)?;
         loop {
             let top_y = match self.pop_scanbeam() {
                 Some(y) => y,
@@ -166,12 +166,12 @@ impl Clipper {
             };
             self.process_horizontals()?;
             self.ghost_joins.clear();
-            if !self.process_intersections(top_y) {
+            if !self.process_intersections(top_y)? {
                 return Ok(false);
             }
             self.process_edges_at_top_of_scanbeam(top_y)?;
             bot_y = top_y;
-            self.insert_local_minima_into_ael(bot_y);
+            self.insert_local_minima_into_ael(bot_y)?;
         }
 
         //fix orientations ...
@@ -186,7 +186,7 @@ impl Clipper {
             }
         }
 
-        self.join_common_edges();
+        self.join_common_edges()?;
 
         for i in 0..self.poly_outs.len() {
             if self.poly_outs[i].pts.is_none() {
@@ -199,12 +199,12 @@ impl Clipper {
         }
 
         if self.strictly_simple {
-            self.do_simple_polygons();
+            self.do_simple_polygons()?;
         }
         Ok(true)
     }
 
-    fn insert_local_minima_into_ael(&mut self, bot_y: i64) {
+    fn insert_local_minima_into_ael(&mut self, bot_y: i64) -> Result<(), ClipperError> {
         while let Some(lm) = self.pop_local_minima(bot_y) {
             let lb = lm.left_bound;
             let rb = lm.right_bound;
@@ -215,14 +215,14 @@ impl Clipper {
                     self.insert_edge_into_ael(rb, None);
                     self.set_winding_count(rb);
                     if self.is_contributing(rb) {
-                        op1 = Some(self.add_out_pt(rb, self.edges[rb].bot));
+                        op1 = Some(self.add_out_pt(rb, self.edges[rb].bot)?);
                     }
                 }
                 (Some(lb), None) => {
                     self.insert_edge_into_ael(lb, None);
                     self.set_winding_count(lb);
                     if self.is_contributing(lb) {
-                        op1 = Some(self.add_out_pt(lb, self.edges[lb].bot));
+                        op1 = Some(self.add_out_pt(lb, self.edges[lb].bot)?);
                     }
                     self.insert_scanbeam(self.edges[lb].top.y);
                 }
@@ -233,7 +233,7 @@ impl Clipper {
                     self.edges[rb].wind_cnt = self.edges[lb].wind_cnt;
                     self.edges[rb].wind_cnt2 = self.edges[lb].wind_cnt2;
                     if self.is_contributing(lb) {
-                        op1 = Some(self.add_local_min_poly(lb, rb, self.edges[lb].bot));
+                        op1 = Some(self.add_local_min_poly(lb, rb, self.edges[lb].bot)?);
                     }
                     self.insert_scanbeam(self.edges[lb].top.y);
                 }
@@ -291,7 +291,7 @@ impl Clipper {
                     && self.edges[lb].wind_delta != 0
                     && self.edges[lb_prev].wind_delta != 0
                 {
-                    let op2 = self.add_out_pt(lb_prev, self.edges[lb].bot);
+                    let op2 = self.add_out_pt(lb_prev, self.edges[lb].bot)?;
                     // lb contributes here, so op1 was set when it was inserted.
                     if let Some(op1) = op1 {
                         self.add_join(op1, op2, self.edges[lb].top);
@@ -313,7 +313,7 @@ impl Clipper {
                         && self.edges[rb].wind_delta != 0
                         && self.edges[rb_prev].wind_delta != 0
                     {
-                        let op2 = self.add_out_pt(rb_prev, self.edges[rb].bot);
+                        let op2 = self.add_out_pt(rb_prev, self.edges[rb].bot)?;
                         if let Some(op1) = op1 {
                             self.add_join(op1, op2, self.edges[rb].top);
                         }
@@ -328,11 +328,12 @@ impl Clipper {
                     //nb: For calculating winding counts etc, IntersectEdges() assumes
                     //that param1 will be to the right of param2 ABOVE the intersection ...
                     let pt = self.edges[lb].curr;
-                    self.intersect_edges(rb, edge, pt); //order important here
+                    self.intersect_edges(rb, edge, pt)?; //order important here
                     e = self.edges[edge].next_in_ael;
                 }
             }
         }
+        Ok(())
     }
 
     fn insert_edge_into_ael(&mut self, edge: usize, start_edge: Option<usize>) {

@@ -5,7 +5,7 @@
 
 use super::clipper_base::slopes_equal3;
 use super::engine::Clipper;
-use super::types::{Direction, IntPoint};
+use super::types::{ClipperError, Direction, IntPoint};
 
 /// C# `GetOverlap`: the overlap of two x ranges, if any.
 fn get_overlap(a1: i64, a2: i64, b1: i64, b2: i64) -> Option<(i64, i64)> {
@@ -353,28 +353,33 @@ impl Clipper {
         true
     }
 
-    fn pts_of(&self, out_rec: usize) -> usize {
-        self.poly_outs[out_rec].pts.expect("a live ring has points")
-    }
-
-    fn fixup_first_lefts1(&mut self, old_out_rec: usize, new_out_rec: usize) {
+    fn fixup_first_lefts1(
+        &mut self,
+        old_out_rec: usize,
+        new_out_rec: usize,
+    ) -> Result<(), ClipperError> {
         for i in 0..self.poly_outs.len() {
             let first_left = self.parse_first_left(self.poly_outs[i].first_left);
             if let Some(pts) = self.poly_outs[i].pts {
                 if first_left == Some(old_out_rec)
-                    && self.poly2_contains_poly1(pts, self.pts_of(new_out_rec))
+                    && self.poly2_contains_poly1(pts, self.ring_pts(new_out_rec)?)
                 {
                     self.poly_outs[i].first_left = Some(new_out_rec);
                 }
             }
         }
+        Ok(())
     }
 
     /// A polygon has split into two such that one is now the inner of the other. It's possible
     /// that these polygons now wrap around other polygons, so check every polygon that's also
     /// contained by OuterOutRec's FirstLeft container (including nil) to see if they've become
     /// inner to the new inner polygon ...
-    fn fixup_first_lefts2(&mut self, inner_out_rec: usize, outer_out_rec: usize) {
+    fn fixup_first_lefts2(
+        &mut self,
+        inner_out_rec: usize,
+        outer_out_rec: usize,
+    ) -> Result<(), ClipperError> {
         let orfl = self.poly_outs[outer_out_rec].first_left;
         for i in 0..self.poly_outs.len() {
             let Some(pts) = self.poly_outs[i].pts else {
@@ -390,9 +395,9 @@ impl Clipper {
             {
                 continue;
             }
-            if self.poly2_contains_poly1(pts, self.pts_of(inner_out_rec)) {
+            if self.poly2_contains_poly1(pts, self.ring_pts(inner_out_rec)?) {
                 self.poly_outs[i].first_left = Some(inner_out_rec);
-            } else if self.poly2_contains_poly1(pts, self.pts_of(outer_out_rec)) {
+            } else if self.poly2_contains_poly1(pts, self.ring_pts(outer_out_rec)?) {
                 self.poly_outs[i].first_left = Some(outer_out_rec);
             } else if self.poly_outs[i].first_left == Some(inner_out_rec)
                 || self.poly_outs[i].first_left == Some(outer_out_rec)
@@ -400,6 +405,7 @@ impl Clipper {
                 self.poly_outs[i].first_left = orfl;
             }
         }
+        Ok(())
     }
 
     /// Same as FixupFirstLefts1 but doesn't call Poly2ContainsPoly1().
@@ -425,16 +431,20 @@ impl Clipper {
     /// After splitting `out_rec1` into it and the new `out_rec2`, decide which (if either)
     /// contains the other and fix hole states and FirstLeft links (shared by
     /// `JoinCommonEdges` and `DoSimplePolygons`). Returns which ring may need reorienting.
-    fn settle_split(&mut self, out_rec1: usize, out_rec2: usize) -> Option<usize> {
-        let (pts1, pts2) = (self.pts_of(out_rec1), self.pts_of(out_rec2));
+    fn settle_split(
+        &mut self,
+        out_rec1: usize,
+        out_rec2: usize,
+    ) -> Result<Option<usize>, ClipperError> {
+        let (pts1, pts2) = (self.ring_pts(out_rec1)?, self.ring_pts(out_rec2)?);
         if self.poly2_contains_poly1(pts2, pts1) {
             //outRec1 contains outRec2 ...
             self.poly_outs[out_rec2].is_hole = !self.poly_outs[out_rec1].is_hole;
             self.poly_outs[out_rec2].first_left = Some(out_rec1);
             if self.using_poly_tree {
-                self.fixup_first_lefts2(out_rec2, out_rec1);
+                self.fixup_first_lefts2(out_rec2, out_rec1)?;
             }
-            Some(out_rec2)
+            Ok(Some(out_rec2))
         } else if self.poly2_contains_poly1(pts1, pts2) {
             //outRec2 contains outRec1 ...
             self.poly_outs[out_rec2].is_hole = self.poly_outs[out_rec1].is_hole;
@@ -442,22 +452,22 @@ impl Clipper {
             self.poly_outs[out_rec2].first_left = self.poly_outs[out_rec1].first_left;
             self.poly_outs[out_rec1].first_left = Some(out_rec2);
             if self.using_poly_tree {
-                self.fixup_first_lefts2(out_rec1, out_rec2);
+                self.fixup_first_lefts2(out_rec1, out_rec2)?;
             }
-            Some(out_rec1)
+            Ok(Some(out_rec1))
         } else {
             //the 2 polygons are completely separate ...
             self.poly_outs[out_rec2].is_hole = self.poly_outs[out_rec1].is_hole;
             self.poly_outs[out_rec2].first_left = self.poly_outs[out_rec1].first_left;
             //fixup FirstLeft pointers that may need reassigning to OutRec2
             if self.using_poly_tree {
-                self.fixup_first_lefts1(out_rec1, out_rec2);
+                self.fixup_first_lefts1(out_rec1, out_rec2)?;
             }
-            None
+            Ok(None)
         }
     }
 
-    pub(super) fn join_common_edges(&mut self) {
+    pub(super) fn join_common_edges(&mut self) -> Result<(), ClipperError> {
         for i in 0..self.joins.len() {
             let join = self.joins[i];
 
@@ -480,7 +490,7 @@ impl Clipper {
             } else if self.out_rec1_right_of_out_rec2(out_rec2, out_rec1) {
                 out_rec1
             } else {
-                self.get_lowermost_rec(out_rec1, out_rec2)
+                self.get_lowermost_rec(out_rec1, out_rec2)?
             };
 
             if !self.join_points(i, out_rec1, out_rec2) {
@@ -496,9 +506,9 @@ impl Clipper {
                 self.poly_outs[out_rec2].pts = Some(self.joins[i].out_pt2);
 
                 //update all OutRec2.Pts Idx's ...
-                self.update_out_pt_idxs(out_rec2);
+                self.update_out_pt_idxs(out_rec2)?;
 
-                if let Some(inner) = self.settle_split(out_rec1, out_rec2) {
+                if let Some(inner) = self.settle_split(out_rec1, out_rec2)? {
                     let pts = self.poly_outs[inner].pts;
                     if (self.poly_outs[inner].is_hole ^ self.reverse_solution)
                         == (self.area_out_pt(pts) > 0.0)
@@ -525,11 +535,12 @@ impl Clipper {
                 }
             }
         }
+        Ok(())
     }
 
-    fn update_out_pt_idxs(&mut self, out_rec: usize) {
+    fn update_out_pt_idxs(&mut self, out_rec: usize) -> Result<(), ClipperError> {
         let idx = self.poly_outs[out_rec].idx;
-        let start = self.pts_of(out_rec);
+        let start = self.ring_pts(out_rec)?;
         let mut op = start;
         loop {
             self.out_pts[op].idx = idx;
@@ -538,9 +549,10 @@ impl Clipper {
                 break;
             }
         }
+        Ok(())
     }
 
-    pub(super) fn do_simple_polygons(&mut self) {
+    pub(super) fn do_simple_polygons(&mut self) -> Result<(), ClipperError> {
         let mut i = 0;
         while i < self.poly_outs.len() {
             let out_rec = i;
@@ -570,8 +582,8 @@ impl Clipper {
                         self.poly_outs[out_rec].pts = Some(op);
                         let out_rec2 = self.create_out_rec();
                         self.poly_outs[out_rec2].pts = Some(op2);
-                        self.update_out_pt_idxs(out_rec2);
-                        self.settle_split(out_rec, out_rec2);
+                        self.update_out_pt_idxs(out_rec2)?;
+                        self.settle_split(out_rec, out_rec2)?;
                         op2 = op; //ie get ready for the next iteration
                     }
                     op2 = self.out_pts[op2].next;
@@ -582,5 +594,6 @@ impl Clipper {
                 }
             }
         }
+        Ok(())
     }
 }

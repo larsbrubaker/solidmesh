@@ -9,7 +9,9 @@ use super::clipper_base::{
 };
 use super::engine::{top_x, Clipper};
 use super::poly_tree::PolyTree;
-use super::types::{ip, EdgeSide, IntPoint, OutPt, OutRec, Paths, HORIZONTAL, UNASSIGNED};
+use super::types::{
+    ip, ClipperError, EdgeSide, IntPoint, OutPt, OutRec, Paths, HORIZONTAL, UNASSIGNED,
+};
 
 impl Clipper {
     /// C# `CreateOutRec`.
@@ -39,27 +41,46 @@ impl Clipper {
         index
     }
 
-    pub(super) fn add_local_max_poly(&mut self, e1: usize, e2: usize, pt: IntPoint) {
-        self.add_out_pt(e1, pt);
+    /// The first point of `out_rec`'s ring (C# `outRec.Pts`, which the sweep only reads while
+    /// the ring has points); [`ClipperError::OutRecHasNoPoints`] where the C# would throw.
+    pub(super) fn ring_pts(&self, out_rec: usize) -> Result<usize, ClipperError> {
+        self.poly_outs[out_rec]
+            .pts
+            .ok_or(ClipperError::OutRecHasNoPoints)
+    }
+
+    pub(super) fn add_local_max_poly(
+        &mut self,
+        e1: usize,
+        e2: usize,
+        pt: IntPoint,
+    ) -> Result<(), ClipperError> {
+        self.add_out_pt(e1, pt)?;
         if self.edges[e2].wind_delta == 0 {
-            self.add_out_pt(e2, pt);
+            self.add_out_pt(e2, pt)?;
         }
         if self.edges[e1].out_idx == self.edges[e2].out_idx {
             self.edges[e1].out_idx = UNASSIGNED;
             self.edges[e2].out_idx = UNASSIGNED;
         } else if self.edges[e1].out_idx < self.edges[e2].out_idx {
-            self.append_polygon(e1, e2);
+            self.append_polygon(e1, e2)?;
         } else {
-            self.append_polygon(e2, e1);
+            self.append_polygon(e2, e1)?;
         }
+        Ok(())
     }
 
-    pub(super) fn add_local_min_poly(&mut self, e1: usize, e2: usize, pt: IntPoint) -> usize {
+    pub(super) fn add_local_min_poly(
+        &mut self,
+        e1: usize,
+        e2: usize,
+        pt: IntPoint,
+    ) -> Result<usize, ClipperError> {
         let result;
         let e;
         let prev_e;
         if is_horizontal(&self.edges[e2]) || self.edges[e1].dx > self.edges[e2].dx {
-            result = self.add_out_pt(e1, pt);
+            result = self.add_out_pt(e1, pt)?;
             self.edges[e2].out_idx = self.edges[e1].out_idx;
             self.edges[e1].side = EdgeSide::Left;
             self.edges[e2].side = EdgeSide::Right;
@@ -70,7 +91,7 @@ impl Clipper {
                 self.edges[e].prev_in_ael
             };
         } else {
-            result = self.add_out_pt(e2, pt);
+            result = self.add_out_pt(e2, pt)?;
             self.edges[e1].out_idx = self.edges[e2].out_idx;
             self.edges[e1].side = EdgeSide::Right;
             self.edges[e2].side = EdgeSide::Left;
@@ -99,15 +120,15 @@ impl Clipper {
                     )
                 {
                     let e_top = c.top;
-                    let out_pt = self.add_out_pt(prev_e, pt);
+                    let out_pt = self.add_out_pt(prev_e, pt)?;
                     self.add_join(result, out_pt, e_top);
                 }
             }
         }
-        result
+        Ok(result)
     }
 
-    pub(super) fn add_out_pt(&mut self, e: usize, pt: IntPoint) -> usize {
+    pub(super) fn add_out_pt(&mut self, e: usize, pt: IntPoint) -> Result<usize, ClipperError> {
         if self.edges[e].out_idx < 0 {
             let out_rec = self.create_out_rec();
             self.poly_outs[out_rec].is_open = self.edges[e].wind_delta == 0;
@@ -117,19 +138,17 @@ impl Clipper {
                 self.set_hole_state(e, out_rec);
             }
             self.edges[e].out_idx = self.poly_outs[out_rec].idx; //nb: do this after SetZ !
-            new_op
+            Ok(new_op)
         } else {
             let out_rec = self.edges[e].out_idx as usize;
             //OutRec.Pts is the 'Left-most' point & OutRec.Pts.Prev is the 'Right-most'
-            let op = self.poly_outs[out_rec]
-                .pts
-                .expect("a contributing edge's ring has points");
+            let op = self.ring_pts(out_rec)?;
             let to_front = self.edges[e].side == EdgeSide::Left;
             let op_prev = self.out_pts[op].prev;
             if to_front && pt == self.out_pts[op].pt {
-                return op;
+                return Ok(op);
             } else if !to_front && pt == self.out_pts[op_prev].pt {
-                return op_prev;
+                return Ok(op_prev);
             }
 
             let new_op = self.new_out_pt(self.poly_outs[out_rec].idx, pt);
@@ -140,19 +159,18 @@ impl Clipper {
             if to_front {
                 self.poly_outs[out_rec].pts = Some(new_op);
             }
-            new_op
+            Ok(new_op)
         }
     }
 
     /// C# `GetLastOutPt`.
-    pub(super) fn get_last_out_pt(&self, e: usize) -> usize {
-        let out_rec = &self.poly_outs[self.edges[e].out_idx as usize];
-        let pts = out_rec.pts.expect("a contributing edge's ring has points");
-        if self.edges[e].side == EdgeSide::Left {
+    pub(super) fn get_last_out_pt(&self, e: usize) -> Result<usize, ClipperError> {
+        let pts = self.ring_pts(self.edges[e].out_idx as usize)?;
+        Ok(if self.edges[e].side == EdgeSide::Left {
             pts
         } else {
             self.out_pts[pts].prev
-        }
+        })
     }
 
     fn set_hole_state(&mut self, e: usize, out_rec: usize) {
@@ -243,17 +261,21 @@ impl Clipper {
     }
 
     /// C# `GetLowermostRec`: work out which polygon fragment has the correct hole state ...
-    pub(super) fn get_lowermost_rec(&mut self, out_rec1: usize, out_rec2: usize) -> usize {
+    pub(super) fn get_lowermost_rec(
+        &mut self,
+        out_rec1: usize,
+        out_rec2: usize,
+    ) -> Result<usize, ClipperError> {
         for rec in [out_rec1, out_rec2] {
             if self.poly_outs[rec].bottom_pt.is_none() {
-                let pts = self.poly_outs[rec].pts.expect("a live ring has points");
+                let pts = self.ring_pts(rec)?;
                 self.poly_outs[rec].bottom_pt = Some(self.get_bottom_pt(pts));
             }
         }
         let b_pt1 = self.poly_outs[out_rec1].bottom_pt.unwrap_or_default();
         let b_pt2 = self.poly_outs[out_rec2].bottom_pt.unwrap_or_default();
         let (p1, p2) = (self.out_pts[b_pt1].pt, self.out_pts[b_pt2].pt);
-        if p1.y > p2.y {
+        Ok(if p1.y > p2.y {
             out_rec1
         } else if p1.y < p2.y {
             out_rec2
@@ -265,7 +287,7 @@ impl Clipper {
             out_rec1
         } else {
             out_rec2
-        }
+        })
     }
 
     /// C# `OutRec1RightOfOutRec2`.
@@ -289,7 +311,7 @@ impl Clipper {
         out_rec
     }
 
-    fn append_polygon(&mut self, e1: usize, e2: usize) {
+    fn append_polygon(&mut self, e1: usize, e2: usize) -> Result<(), ClipperError> {
         let out_rec1 = self.edges[e1].out_idx as usize;
         let out_rec2 = self.edges[e2].out_idx as usize;
 
@@ -298,18 +320,14 @@ impl Clipper {
         } else if self.out_rec1_right_of_out_rec2(out_rec2, out_rec1) {
             out_rec1
         } else {
-            self.get_lowermost_rec(out_rec1, out_rec2)
+            self.get_lowermost_rec(out_rec1, out_rec2)?
         };
 
         //get the start and ends of both output polygons and
         //join E2 poly onto E1 poly and delete pointers to E2 ...
-        let p1_lft = self.poly_outs[out_rec1]
-            .pts
-            .expect("a live ring has points");
+        let p1_lft = self.ring_pts(out_rec1)?;
         let p1_rt = self.out_pts[p1_lft].prev;
-        let p2_lft = self.poly_outs[out_rec2]
-            .pts
-            .expect("a live ring has points");
+        let p2_lft = self.ring_pts(out_rec2)?;
         let p2_rt = self.out_pts[p2_lft].prev;
 
         //join e2 poly onto e1 poly and delete pointers to e2 ...
@@ -373,6 +391,7 @@ impl Clipper {
             e = self.edges[edge].next_in_ael;
         }
         self.poly_outs[out_rec2].idx = self.poly_outs[out_rec1].idx;
+        Ok(())
     }
 
     /// C# `ReversePolyPtLinks`.
