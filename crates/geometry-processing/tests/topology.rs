@@ -3,5 +3,7 @@
 
 #[path = "topology/feature_edge_collinear_run_tests.rs"]
 mod feature_edge_collinear_run_tests;
+#[path = "topology/rust_only_bevel_group_tests.rs"]
+mod rust_only_bevel_group_tests;
 #[path = "topology/split_crease_test_meshes.rs"]
 mod split_crease_test_meshes;

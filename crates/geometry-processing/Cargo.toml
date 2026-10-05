@@ -19,3 +19,7 @@ path = "src/lib.rs"
 [dependencies]
 vector-math = { path = "../vector-math" }
 polygon-mesh = { path = "../polygon-mesh" }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"
