@@ -540,3 +540,118 @@ pub fn rewritten(section: &BevelSection, left: &WalkedEnd, right: &WalkedEnd) ->
         ..section.clone()
     }
 }
+
+/// Why a section's side could not be laid: refused by name, or a point that is not a number (C#
+/// throws there).
+#[derive(Debug, Clone, PartialEq)]
+pub enum SectionBuildRefusal {
+    /// Refused, with the advisory the user is shown.
+    Refused(crate::bevel::BevelAdvisory),
+    /// A section point that is not a number.
+    NotANumber(NanSectionPoint),
+}
+
+impl From<NanSectionPoint> for SectionBuildRefusal {
+    fn from(nan: NanSectionPoint) -> Self {
+        SectionBuildRefusal::NotANumber(nan)
+    }
+}
+
+/// C# `SectionBuilder.TryLayOneSide`: an OFFSET side's boundary walked along the surface from the
+/// station, through the face of the chain vertex's fan that holds it - the walked end, or the
+/// unwalked one (`WalkedEnd(-1, -1, 0)`) where the side is not an offset or no walk starts.
+/// Refused (`SizeExceedsFaceWidth`) where the walk meets a crease before it has gone the reach.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn try_lay_one_side(
+    section: &BevelSection,
+    arriving: &crate::topology::ChainEdge,
+    leaving: &crate::topology::ChainEdge,
+    on_the_left: bool,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    pool: &mut SectionPool,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> Result<WalkedEnd, SectionBuildRefusal> {
+    let unwalked = WalkedEnd::new(-1, -1, Vector3::ZERO, false, false, -1, 0.0, -1);
+    let (kind, boundary) = if on_the_left {
+        (section.left_kind, section.left_boundary)
+    } else {
+        (section.right_kind, section.right_boundary)
+    };
+
+    if kind != SectionSide::Offset {
+        return Ok(unwalked);
+    }
+
+    let reach = pool.position_of(boundary) - section.station;
+    let distance = reach.length();
+    if !(distance > 0.0) {
+        return Ok(unwalked);
+    }
+
+    let Ok((_, fan)) = super::section_builder::try_creases_in_the_fan_reading(
+        section.chain_vertex,
+        arriving,
+        leaving,
+        on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+        is_a_feature_edge,
+    ) else {
+        return Ok(unwalked);
+    };
+
+    let Ok((face, in_face)) = super::section_surface_walk_faces::try_face_holding(
+        mesh,
+        section.chain_vertex,
+        reach,
+        &fan,
+    ) else {
+        return Ok(unwalked);
+    };
+
+    let walk = match super::section_surface_walk_try::try_walk(
+        mesh,
+        graph,
+        edge_at_pair,
+        section.station,
+        face,
+        in_face,
+        distance,
+        is_a_feature_edge,
+    ) {
+        Ok(walk) => walk,
+        Err(walk) => {
+            if walk.refusal == super::section_surface_walk::SurfaceWalkRefusal::CreaseReached {
+                return Err(SectionBuildRefusal::Refused(
+                    crate::bevel::BevelAdvisory::new(
+                        crate::bevel::BevelAdvisoryCode::SizeExceedsFaceWidth,
+                        vec![walk.end.into()],
+                    ),
+                ));
+            }
+
+            return Ok(unwalked);
+        }
+    };
+
+    let drawn = pool.position_of(boundary);
+    let walked_boundary = if section_surface_walk::is_the_same_point(drawn, walk.end, distance) {
+        boundary
+    } else {
+        pool.add(walk.end)?
+    };
+
+    Ok(WalkedEnd::new(
+        walked_boundary,
+        walk.end_face,
+        walk.end_direction,
+        false,
+        section_surface_walk::crossed_a_fold(mesh, graph, Some(&walk.crossings)),
+        walk.end_edge,
+        walk.end_parameter,
+        walk.end_vertex,
+    ))
+}

@@ -454,3 +454,50 @@ impl SurfaceMixedCorner {
         takes
     }
 }
+
+impl SurfaceMixedCorner {
+    /// C# `SurfaceMixedCorner.TryRead(arriving, leaving, ...)`: the ordinary corner read off its
+    /// two edge plans ([`surface_mixed_corner_read_off_the_edge_plans::try_read`]).
+    ///
+    /// [`surface_mixed_corner_read_off_the_edge_plans::try_read`]: super::surface_mixed_corner_read_off_the_edge_plans::try_read
+    pub fn try_read(
+        arriving: &SurfaceEdgePlan,
+        leaving: &SurfaceEdgePlan,
+        corner: Vector3,
+        size: f64,
+        near_enough: f64,
+    ) -> Result<SurfaceMixedCorner, crate::bevel::BevelAdvisory> {
+        super::surface_mixed_corner_read_off_the_edge_plans::try_read(
+            arriving,
+            leaving,
+            corner,
+            size,
+            near_enough,
+        )
+    }
+
+    /// C# `SurfaceMixedCorner.TryRead(ringCarriedBy, touchingTheBead, ringStopsAt, ...)`: a corner
+    /// whose ring another plan carries and stops.
+    #[allow(clippy::too_many_arguments)]
+    pub fn try_read_carried(
+        ring_carried_by: &SurfaceEdgePlan,
+        touching_the_bead: &SurfaceEdgePlan,
+        ring_stops_at: Option<SurfaceBandEnd>,
+        arriving: &SurfaceEdgePlan,
+        leaving: &SurfaceEdgePlan,
+        corner: Vector3,
+        size: f64,
+        near_enough: f64,
+    ) -> Result<SurfaceMixedCorner, crate::bevel::BevelAdvisory> {
+        super::surface_mixed_corner_read_off_the_edge_plans::try_read_carried(
+            ring_carried_by,
+            touching_the_bead,
+            ring_stops_at,
+            arriving,
+            leaving,
+            corner,
+            size,
+            near_enough,
+        )
+    }
+}

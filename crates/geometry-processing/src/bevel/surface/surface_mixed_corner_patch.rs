@@ -260,3 +260,85 @@ pub fn try_cut_the_ring(
 
     Ok((meets, points))
 }
+
+/// C# `SurfaceMixedCornerPatch.Emit`: the patch's grid of pool vertices emitted as quads, each
+/// facing the corner's summed outward direction.
+pub fn emit(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &SurfaceMixedCorner,
+    grid: &[Vec<i32>],
+) {
+    let outward = corner.outward_sum();
+
+    for p in 0..grid.len().saturating_sub(1) {
+        for j in 0..grid[p].len().saturating_sub(1) {
+            super::surface_fan::emit_facing(
+                &[
+                    grid[p][j],
+                    grid[p + 1][j],
+                    grid[p + 1][j + 1],
+                    grid[p][j + 1],
+                ],
+                pool,
+                faces,
+                outward,
+            );
+        }
+    }
+}
+
+/// C# `SurfaceMixedCornerPatch.TryTurnTheRingRound`: the cut's ring `profile` turned round the
+/// corner's axis through `turns` stations - row `p` of the grid is rail `p` at each turn, the
+/// first column the ring itself and the last rail (on the shared face) the turns already laid
+/// there, which the turned rail has to meet. Hands back the grid and the rows read off the ring.
+pub fn try_turn_the_ring_round(
+    pool: &mut SurfaceVertexPool,
+    corner: &SurfaceMixedCorner,
+    profile: &[i32],
+    turns: &[i32],
+) -> Result<(Vec<Vec<i32>>, super::SurfaceMixedCornerRows), BevelAdvisory> {
+    if turns.len() < 2 || profile.len() < 2 {
+        // One rail is no ring and no turn is no patch.
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.corner.into()],
+        ));
+    }
+
+    let ring: Vec<Vector3> = profile.iter().map(|&p| pool.position_of(p)).collect();
+    let rows = super::SurfaceMixedCornerRows::try_read_corner(corner, &ring)?;
+
+    let step = corner.turn_radians() / (turns.len() - 1) as f64;
+    let mut grid = Vec::with_capacity(profile.len());
+    for p in 0..profile.len() {
+        let mut row = Vec::with_capacity(turns.len());
+        let on_the_shared_face = p == profile.len() - 1;
+        for (j, &turn) in turns.iter().enumerate() {
+            let at = rows.at(p, j as f64 * step);
+            if j == 0 {
+                row.push(profile[p]);
+                continue;
+            }
+
+            if on_the_shared_face {
+                if (pool.position_of(turns[j]) - at).length()
+                    > surface_strip_ends::meets_the_seam(pool)
+                {
+                    return Err(BevelAdvisory::new(
+                        BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+                        vec![at.into()],
+                    ));
+                }
+
+                row.push(turn);
+                continue;
+            }
+
+            row.push(pool.add(at));
+        }
+        grid.push(row);
+    }
+
+    Ok((grid, rows))
+}

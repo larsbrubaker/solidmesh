@@ -286,3 +286,30 @@ fn rust_only_foreign_creases_are_filed_by_tag_pair_and_indexed_once() {
     // Seeds that do not tell the pair apart read nothing.
     assert!(regions.for_chain(&|_| true).is_empty());
 }
+
+#[test]
+fn rust_only_a_chains_growing_runs_keep_the_seeds_delegate_live() {
+    use std::cell::{Cell, RefCell};
+    use std::rc::Rc;
+
+    use geometry_processing::bevel::level_line::foreign_edge_regions_filing::Seeds;
+    use geometry_processing::bevel::level_line::ForeignEdgeRegions;
+
+    let mesh = Rc::new(RefCell::new(square([1, 2])));
+    let own_tag = Rc::new(Cell::new(1));
+    let reading = own_tag.clone();
+    let seeds: Seeds = Rc::new(move |tag, _chain| tag == reading.get());
+    let end_tags = |_: i32| vec![0, 0];
+
+    let per_chain =
+        ForeignEdgeRegions::per_chain(&mesh, &[vec![(0, 1)]], &[false], &end_tags, Some(&seeds))
+            .unwrap();
+    let runs = &per_chain[0].as_ref().expect("an open chain grows").runs;
+    assert!((runs.is_own_side)(1));
+    assert!(!(runs.is_own_side)(7));
+
+    // A tag the build adds later is read through the same delegate, as C#'s is.
+    own_tag.set(7);
+    assert!((runs.is_own_side)(7));
+    assert!(!(runs.is_own_side)(1));
+}

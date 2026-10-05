@@ -541,3 +541,82 @@ fn to_nine_places(value: f64) -> String {
 fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])
 }
+
+/// One rebuilt fan: the faces it replaces, and the faces it is replaced by.
+type RebuiltFan = (Vec<i32>, Vec<(i32, i32, i32)>);
+
+/// C# `BevelSplitChords.RemovedFrom`: every vertex whose fan reads as a split chord (two flat
+/// sides of one straight crease through it) re-cut without it, in place - two candidate fans
+/// sharing a face are left alone, and a repair that would open the part is not made. How many
+/// fans were rebuilt.
+pub fn removed_from(mesh: &mut Mesh) -> i32 {
+    let lattice = lattice_for(mesh);
+    if lattice.is_nan() || lattice <= 0.0 {
+        // Nothing to scale a ruler against, so no distance at which two edges are one line.
+        return 0;
+    }
+
+    let faces_on_edge = faces_on_each_edge(mesh);
+    let faces_at_vertex = faces_at_each_vertex(mesh);
+    let mut claimed = std::collections::HashSet::new();
+    let mut rebuilt_fans: Vec<RebuiltFan> = Vec::new();
+
+    for (vertex, fan) in faces_at_vertex.iter().enumerate() {
+        let Some(fan) = fan else {
+            continue;
+        };
+        if fan.len() < 2 {
+            continue;
+        }
+
+        let Ok(replacement) =
+            try_read_split_chord(mesh, vertex as i32, fan, &faces_on_edge, lattice)
+        else {
+            continue;
+        };
+
+        if fan.iter().any(|face| claimed.contains(face)) {
+            // Two candidates sharing a face would each rebuild the other's fan.
+            continue;
+        }
+
+        claimed.extend(fan.iter().copied());
+        rebuilt_fans.push((fan.clone(), replacement));
+    }
+
+    if rebuilt_fans.is_empty() {
+        return 0;
+    }
+
+    let mut rebuilt = polygon_mesh::FaceList::new();
+    let mut source_face_index = Vec::with_capacity(mesh.faces.len());
+    for face_index in 0..mesh.faces.len() as i32 {
+        if claimed.contains(&face_index) {
+            continue;
+        }
+
+        let face = mesh.faces[face_index as usize];
+        rebuilt.add(face.v0, face.v1, face.v2, &mesh.vertices);
+        source_face_index.push(face_index);
+    }
+
+    for (fan, faces) in &rebuilt_fans {
+        for &(v0, v1, v2) in faces {
+            rebuilt.add(v0, v1, v2, &mesh.vertices);
+            // Every triangle of a rebuilt fan wears the paint of the fan's first face.
+            source_face_index.push(fan[0]);
+        }
+    }
+
+    if super::bevel_working_mesh::open_edge_count(&rebuilt)
+        > super::bevel_working_mesh::open_edge_count(&mesh.faces)
+    {
+        // The repair would tear the part: leave the mesh as it arrived.
+        return 0;
+    }
+
+    mesh.faces = rebuilt;
+    super::bevel_working_mesh::carry_face_data_onto(mesh, &source_face_index);
+    mesh.mark_as_changed();
+    rebuilt_fans.len() as i32
+}

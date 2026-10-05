@@ -20,8 +20,9 @@ use super::{
 /// C# `Func<int, int[]>` naming each chain's end tags per triangle.
 pub type EndTagsOf<'a> = &'a dyn Fn(i32) -> Vec<i32>;
 
-/// C# `Func<int, int, bool>`: whether a tag is chain `k`'s own side.
-pub type Seeds<'a> = &'a dyn Fn(i32, i32) -> bool;
+/// C# `Func<int, int, bool>`: whether a tag is chain `k`'s own side. Shared (`Rc`) because each
+/// chain's growing runs keep it, live, as C#'s delegate is kept: the build adds tags as it goes.
+pub type Seeds = Rc<dyn Fn(i32, i32) -> bool>;
 
 impl ForeignEdgeRegions {
     /// C# `ForeignEdgeRegions.Over`. `chain_keys` keeps C#'s `HashSet` insertion order (its
@@ -32,7 +33,7 @@ impl ForeignEdgeRegions {
         chain_edges: Option<&[Vec<(i32, i32)>]>,
         closed: Option<&[bool]>,
         end_tags_of: Option<EndTagsOf>,
-        seeds: Option<Seeds>,
+        seeds: Option<&Seeds>,
     ) -> Result<ForeignEdgeRegions, WorkError> {
         let keys: HashSet<(i32, i32)> = chain_keys.iter().copied().collect();
         let mut by_tag_pair: IndexMap<(i32, i32), Vec<(i32, i32)>> = IndexMap::new();
@@ -148,7 +149,7 @@ impl ForeignEdgeRegions {
         chain_edges: &[Vec<(i32, i32)>],
         closed: &[bool],
         end_tags_of: EndTagsOf,
-        seeds: Option<Seeds>,
+        seeds: Option<&Seeds>,
     ) -> Result<Vec<Option<ForeignEdgeRegionsChainGrowth>>, WorkError> {
         let mut per_chain = Vec::with_capacity(chain_edges.len());
         for (k, edges) in chain_edges.iter().enumerate() {
@@ -165,22 +166,18 @@ impl ForeignEdgeRegions {
                 .iter()
                 .map(|&(a, b)| triangle_edges::key(a, b))
                 .collect();
-            let seeds_of = seeds.expect("a pick of several chains names its seeds");
+            let seeds_of = seeds
+                .expect("a pick of several chains names its seeds")
+                .clone();
             let own_side = move |tag: i32| seeds_of(tag, chain);
 
             let distance_mesh = mesh.clone();
             let distance_keys = keys.clone();
-            // The runs keep their own-side test past this call, so it is read here into the
-            // tags the pick's triangles carry.
-            let own_tags: HashSet<i32> = mesh
-                .borrow()
-                .triangles
-                .iter()
-                .map(|t| t.tag)
-                .filter(|&tag| own_side(tag))
-                .collect();
-            let own_for_runs: Option<super::IsOwnSide> =
-                seeds.map(|_| Rc::new(move |tag: i32| own_tags.contains(&tag)) as super::IsOwnSide);
+            // The runs keep the delegate itself, live, as C#'s do.
+            let own_for_runs: Option<super::IsOwnSide> = seeds.map(|seeds| {
+                let seeds = seeds.clone();
+                Rc::new(move |tag: i32| seeds(tag, chain)) as super::IsOwnSide
+            });
             let runs = Rc::new(GrowingCreaseRuns::new(
                 mesh.clone(),
                 edges[0],

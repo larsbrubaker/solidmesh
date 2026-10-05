@@ -116,3 +116,190 @@ pub fn try_touch_at(
 
     Some((on_first + on_second) / 2.0)
 }
+
+/// C# `SurfaceMixedCornerReadOffTheEdgePlans.TryRead(arriving, leaving, ...)`: the ordinary
+/// corner, whose ring is carried by - and touches the bead along - the convex edge's own plan.
+pub fn try_read(
+    arriving: &SurfaceEdgePlan,
+    leaving: &SurfaceEdgePlan,
+    corner: Vector3,
+    size: f64,
+    near_enough: f64,
+) -> Result<super::SurfaceMixedCorner, crate::bevel::BevelAdvisory> {
+    let cut_ordinarily = if arriving.convexity() == crate::topology::EdgeConvexity::Convex {
+        arriving
+    } else {
+        leaving
+    };
+
+    try_read_carried(
+        cut_ordinarily,
+        cut_ordinarily,
+        None,
+        arriving,
+        leaving,
+        corner,
+        size,
+        near_enough,
+    )
+}
+
+/// C# `SurfaceMixedCornerReadOffTheEdgePlans.TryRead(ringCarriedBy, touchingTheBead,
+/// ringStopsAt, ...)`: a mixed corner read off its convex cut's and concave bead's edge plans -
+/// where the cut's ring touches the bead, the bead's axis and its two feet, the cap face and the
+/// spine the ball rolls round - or `SurfaceCornerNotSupported` (or
+/// `SurfaceMixedCornerBeadRingCrossesNoRail` where no spine stands).
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn try_read_carried(
+    ring_carried_by: &SurfaceEdgePlan,
+    touching_the_bead: &SurfaceEdgePlan,
+    ring_stops_at: Option<super::SurfaceBandEnd>,
+    arriving: &SurfaceEdgePlan,
+    leaving: &SurfaceEdgePlan,
+    corner: Vector3,
+    size: f64,
+    near_enough: f64,
+) -> Result<super::SurfaceMixedCorner, crate::bevel::BevelAdvisory> {
+    use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+    use crate::topology::EdgeConvexity;
+
+    use super::{SurfaceBandEnd, SurfaceMixedCorner, SurfaceMixedCornerSpine};
+
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.into()],
+        )
+    };
+
+    let cut = ring_carried_by;
+    let bead = if arriving.convexity() == EdgeConvexity::Convex {
+        leaving
+    } else {
+        arriving
+    };
+    if cut.convexity() != EdgeConvexity::Convex || bead.convexity() != EdgeConvexity::Concave {
+        return Err(not_supported());
+    }
+
+    if !cut.has_center_line || !bead.has_center_line {
+        return Err(not_supported());
+    }
+
+    let Some(shared_key) = try_name_the_shared_region(cut, bead) else {
+        return Err(not_supported());
+    };
+
+    if !touching_the_bead.has_center_line {
+        return Err(not_supported());
+    }
+
+    let on_the_crease = rests_on_the_crease_of_the_shared_face(bead, shared_key);
+    let touched = if on_the_crease {
+        bead.wall_section.as_ref().and_then(|section| {
+            try_touch_at(
+                tangent_line_of(touching_the_bead, shared_key, true),
+                section.crease_line,
+                0.0,
+                near_enough,
+            )
+        })
+    } else {
+        try_touch_at(
+            touching_the_bead.center_line,
+            bead.center_line,
+            2.0 * size,
+            near_enough,
+        )
+    };
+    let Some(tangent_point) = touched else {
+        return Err(not_supported());
+    };
+
+    let along_the_axis = bead.center_line.direction;
+    let along_the_axis_point = bead.center_line.closest_point_to(corner);
+    let shared_foot =
+        tangent_line_of(bead, shared_key, true).closest_point_to(along_the_axis_point);
+    let out_of_the_axis_to_the_shared_face = shared_foot - along_the_axis_point;
+    if (out_of_the_axis_to_the_shared_face.length() - size).abs() > near_enough {
+        return Err(not_supported());
+    }
+
+    let towards_the_shared_face = out_of_the_axis_to_the_shared_face.get_normal();
+    if (tangent_point
+        - bead.center_line.closest_point_to(tangent_point)
+        - (towards_the_shared_face * size))
+        .length()
+        > near_enough
+    {
+        return Err(not_supported());
+    }
+
+    let out_of_the_cap_face = outward_of_the_other_side(cut, shared_key);
+    let away_along_the_cut = SurfaceMixedCorner::away_from_the_corner(touching_the_bead, corner);
+    let away_along_the_bead = SurfaceMixedCorner::away_from_the_corner(bead, corner);
+    let wall_foot = tangent_line_of(bead, shared_key, false).closest_point_to(along_the_axis_point);
+    let out_of_the_axis_to_the_wall = wall_foot - along_the_axis_point;
+    if (out_of_the_axis_to_the_wall.length() - size).abs() > near_enough {
+        return Err(not_supported());
+    }
+
+    let towards_the_wall = out_of_the_axis_to_the_wall.get_normal();
+    let out_of_the_wall = -towards_the_wall;
+    let square = towards_the_wall
+        - (towards_the_shared_face * towards_the_wall.dot(towards_the_shared_face));
+    if !(square.length_squared() > 0.0) {
+        return Err(not_supported());
+    }
+
+    let turn_radians = towards_the_shared_face
+        .dot(towards_the_wall)
+        .clamp(-1.0, 1.0)
+        .acos();
+    let along_out_of_the_cap = along_the_axis.dot(out_of_the_cap_face);
+    if !(along_out_of_the_cap.abs() > SurfaceMixedCorner::SQUARE_ENOUGH) {
+        return Err(not_supported());
+    }
+
+    let to_the_cap =
+        -(bead.center_line.point - corner).dot(out_of_the_cap_face) / along_out_of_the_cap;
+    let outer_rail_centre = bead.center_line.point + (along_the_axis * to_the_cap);
+    if (outer_rail_centre - corner).length() > (2.0 * size) + near_enough {
+        return Err(not_supported());
+    }
+
+    let Some(spine) = SurfaceMixedCornerSpine::try_create(
+        bead.center_line,
+        outer_rail_centre,
+        out_of_the_cap_face,
+        along_out_of_the_cap,
+        false,
+        towards_the_shared_face,
+        square.get_normal(),
+        size,
+        turn_radians,
+        away_along_the_bead,
+        SurfaceMixedCorner::SQUARE_ENOUGH,
+    ) else {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceMixedCornerBeadRingCrossesNoRail,
+            vec![corner.into()],
+        ));
+    };
+
+    Ok(SurfaceMixedCorner::new(
+        corner,
+        size,
+        shared_key,
+        cut.clone(),
+        bead.clone(),
+        tangent_point,
+        ring_stops_at.unwrap_or_else(|| SurfaceBandEnd::new(tangent_point, away_along_the_cut)),
+        SurfaceBandEnd::new(tangent_point, away_along_the_bead),
+        spine,
+        outer_rail_centre,
+        out_of_the_cap_face,
+        out_of_the_wall,
+        ring_stops_at.is_some(),
+    ))
+}
