@@ -12,15 +12,20 @@
 //! ([`BevelSurfaceWalk`]), the float grid step ([`float_grid`]) and the level line's leaf records
 //! ([`level_line`]); and the fourth: more level-line leaves (field bounds and samples, the field
 //! traits, the segment box tree, gap loops and fill refusals), the section point pool
-//! ([`sections`]) and the surface construction's leaf records ([`surface`]). C# `internal static
-//! class` helpers are modules of free functions here.
+//! ([`sections`]) and the surface construction's leaf records ([`surface`]); and the fifth: the
+//! seams a run's end stops on - a blend's handover ([`bevel_blend_seam`]) and a corner patch's
+//! drive-through and cap stand-off ([`bevel_corner_seam`]) - with the surface construction's
+//! vertex pool, closure gate, joint step and standing-feature reading ([`surface`]). C# `internal
+//! static class` helpers are modules of free functions here.
 
 mod bevel_advisory;
 mod bevel_advisory_code;
 pub mod bevel_advisory_codes;
 pub mod bevel_arc_chording;
+pub mod bevel_blend_seam;
 mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
+pub mod bevel_corner_seam;
 pub mod bevel_crease_merge;
 mod bevel_end_cap;
 mod bevel_mixed_corner_ends;

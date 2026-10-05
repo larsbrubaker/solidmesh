@@ -13,5 +13,9 @@ mod rust_only_bevel_slice2_tests;
 mod rust_only_bevel_slice3_tests;
 #[path = "bevel/rust_only_bevel_slice4_tests.rs"]
 mod rust_only_bevel_slice4_tests;
+#[path = "bevel/rust_only_bevel_slice5_tests.rs"]
+mod rust_only_bevel_slice5_tests;
+#[path = "bevel/surface_mesh_closure_tests.rs"]
+mod surface_mesh_closure_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
