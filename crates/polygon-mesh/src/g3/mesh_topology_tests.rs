@@ -141,3 +141,112 @@ fn rust_only_loners_and_selected_boundary_triangles_are_removed() {
     assert_eq!(m.triangle_count(), 6);
     assert_eq!(MeshBoundaryLoops::new(&m).loops.len(), 1);
 }
+
+#[test]
+fn rust_only_simple_hole_filler_closes_a_quad_hole_with_a_centroid_fan() {
+    use super::simple_hole_filler::SimpleHoleFiller;
+    let mut m = open_box();
+    let lp = MeshBoundaryLoops::new(&m).loops.remove(0);
+    let mut filler = SimpleHoleFiller::new(&lp);
+    assert_eq!(filler.validate(&m), ValidationStatus::Ok);
+    assert!(filler.fill(&mut m, -1).unwrap());
+    assert!(m.is_closed());
+    assert_eq!(m.vertex(filler.new_vertex), [0.5, 0.5, 1.0]);
+    assert_eq!(filler.new_triangles.as_ref().map(Vec::len), Some(4));
+
+    // filling it again is refused and leaves no stray vertex
+    let vertex_count = m.vertex_count();
+    let mut again = SimpleHoleFiller::new(&lp);
+    assert!(!again.fill(&mut m, -1).unwrap());
+    assert_eq!(again.new_vertex, INVALID_ID);
+    assert_eq!(m.vertex_count(), vertex_count);
+}
+
+#[test]
+fn rust_only_simple_hole_filler_closes_a_triangle_hole_with_one_triangle() {
+    use super::simple_hole_filler::SimpleHoleFiller;
+    // a tetrahedron missing one face
+    let mut m = DMesh3::default();
+    for p in [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+    ] {
+        m.append_vertex(p);
+    }
+    m.append_triangle(0, 2, 1);
+    m.append_triangle(0, 1, 3);
+    m.append_triangle(1, 2, 3);
+    let lp = MeshBoundaryLoops::new(&m).loops.remove(0);
+    assert_eq!(lp.vertex_count(), 3);
+    let mut filler = SimpleHoleFiller::new(&lp);
+    assert!(filler.fill(&mut m, -1).unwrap());
+    assert!(m.is_closed());
+    assert_eq!(filler.new_vertex, INVALID_ID);
+    assert_eq!(m.vertex_count(), 4);
+}
+
+/// The open box closed with its top, wound outward.
+fn closed_box() -> DMesh3 {
+    let mut m = open_box();
+    m.append_triangle(4, 5, 6);
+    m.append_triangle(4, 6, 7);
+    m
+}
+
+/// Signed volume (positive when wound outward).
+fn signed_volume(m: &DMesh3) -> f64 {
+    m.triangle_indices()
+        .map(|t| {
+            let [a, b, c] = m.get_tri_vertices(t as usize);
+            (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+                + a[2] * (b[0] * c[1] - b[1] * c[0]))
+                / 6.0
+        })
+        .sum()
+}
+
+#[test]
+fn rust_only_orientation_makes_a_component_consistent_then_turns_it_outward() {
+    use super::mesh_repair_orientation::MeshRepairOrientation;
+    let mut m = closed_box();
+    // wind the whole box inward, then flip two triangles back so it is inconsistent too;
+    // triangle 0 seeds the flood fill, so the fill makes everything agree with it (inward)
+    m.reverse_orientation();
+    m.reverse_tri_orientation(3);
+    m.reverse_tri_orientation(8);
+    let mut orient = MeshRepairOrientation::new();
+    orient.orient_components(&mut m);
+    assert!((signed_volume(&m) + 1.0).abs() < 1e-12);
+    orient.solve_global_orientation(&mut m);
+    assert!((signed_volume(&m) - 1.0).abs() < 1e-12);
+    assert!(m.is_closed());
+}
+
+#[test]
+fn rust_only_ray_hit_query_finds_the_nearest_face_and_honours_the_filter() {
+    use super::ray_intersection::Ray3d;
+    use super::DMeshAABBTree3;
+    let m = closed_box();
+    let tree = DMeshAABBTree3::new(&m);
+    // straight down through the middle: the top (triangles 10, 11) first
+    let ray = Ray3d::new([0.25, 0.5, 5.0], [0.0, 0.0, -2.0]);
+    assert_eq!(ray.direction, [0.0, 0.0, -1.0]);
+    let hit = tree
+        .find_nearest_hit_triangle(&ray, f64::MAX, None)
+        .unwrap();
+    assert!(hit == 10 || hit == 11);
+    // with the top filtered out, the bottom (triangles 0, 1)
+    let not_top = |t: i32| t < 10;
+    let hit = tree
+        .find_nearest_hit_triangle(&ray, f64::MAX, Some(&not_top))
+        .unwrap();
+    assert!(hit == 0 || hit == 1);
+    // a miss
+    let away = Ray3d::new([5.0, 5.0, 5.0], [0.0, 0.0, 1.0]);
+    assert_eq!(
+        tree.find_nearest_hit_triangle(&away, f64::MAX, None),
+        Some(-1)
+    );
+}

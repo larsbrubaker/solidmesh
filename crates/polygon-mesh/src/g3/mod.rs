@@ -17,22 +17,28 @@ pub(crate) mod dmesh3_edge_ops;
 pub(crate) mod dmesh3_queries;
 pub(crate) mod dmesh3_set_triangle;
 pub(crate) mod dmesh_aabb_tree3;
+pub(crate) mod dynamic_priority_queue;
 pub(crate) mod edge_loop;
 pub(crate) mod implicit3d;
 pub(crate) mod marching_cubes;
 pub(crate) mod marching_cubes_pro;
+pub(crate) mod merge_coincident_edges;
 pub(crate) mod mesh_boundary_loops;
+pub(crate) mod mesh_constraints;
 pub(crate) mod mesh_editor;
 pub(crate) mod mesh_face_selection;
 pub(crate) mod mesh_iterators;
-pub(crate) mod mesh_constraints;
 pub(crate) mod mesh_refiner_base;
+pub(crate) mod mesh_repair_orientation;
 pub(crate) mod mesh_signed_distance_grid;
 pub(crate) mod mesh_util;
+pub(crate) mod point_set_hashtable;
+pub(crate) mod ray_intersection;
 pub(crate) mod ref_count_vector;
 pub(crate) mod remesher;
 pub(crate) mod remesher_pro;
 pub(crate) mod signed_distance_grid;
+pub(crate) mod simple_hole_filler;
 pub(crate) mod small_list_set;
 pub(crate) mod tri_distance;
 pub(crate) mod vector3d;
@@ -42,6 +48,8 @@ pub(crate) use dmesh_aabb_tree3::DMeshAABBTree3;
 
 #[cfg(test)]
 mod dmesh3_tests;
+#[cfg(test)]
+mod mesh_repair_ops_tests;
 #[cfg(test)]
 mod mesh_topology_tests;
 #[cfg(test)]

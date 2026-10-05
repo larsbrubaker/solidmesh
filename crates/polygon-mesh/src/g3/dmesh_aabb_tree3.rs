@@ -1,5 +1,6 @@
 //! The part of geometry3Sharp's `DMeshAABBTree3` (`spatial/DMeshAABBTree.cs`) the signed
-//! distance grid reaches: the default top-down midpoint build and `FindNearestTriangle`.
+//! distance grid and the mesh repair reach: the default top-down midpoint build,
+//! `FindNearestTriangle`, and `FindNearestHitTriangle` with its `TriangleFilterF`.
 //!
 //! The layout is g3's: float box centres and extents per box, `box_to_index` into one
 //! `index_list` whose leading part holds the leaf triangle lists (`[N t1 .. tN]`) and whose tail
@@ -7,9 +8,12 @@
 //! reads the boxes padded by g3's `box_eps`, so it prunes exactly where g3 does.
 
 use super::dmesh3::{tri_distance_sqr, AxisAlignedBox3d, DMesh3};
+use super::ray_intersection::{is_normalized, ray_box_intersect_t, ray_triangle_intersects, Ray3d};
 
 /// g3 `MathUtil.ZeroTolerance`.
 const ZERO_TOLERANCE: f64 = 1e-08;
+/// g3 `MathUtil.ZeroTolerancef`, widened as C# widens it when adding it to a double.
+const ZERO_TOLERANCE_F: f64 = 1e-6f32 as f64;
 /// g3 `MathUtil.Epsilonf`.
 const EPSILON_F: f32 = 1.192_092_9e-7;
 /// g3 `box_eps`: `50.0f * MathUtil.Epsilonf`.
@@ -191,6 +195,102 @@ impl<'a> DMeshAABBTree3<'a> {
                 }
             }
         }
+    }
+
+    /// C# `FindNearestHitTriangle(ray, fMaxDist)` with `TriangleFilterF`: the nearest triangle
+    /// the ray hits (only those `filter` accepts), or -1. `None` where C# throws for a ray whose
+    /// direction is not normalized.
+    pub(crate) fn find_nearest_hit_triangle(
+        &self,
+        ray: &Ray3d,
+        max_dist: f64,
+        filter: Option<&dyn Fn(i32) -> bool>,
+    ) -> Option<i32> {
+        if !is_normalized(ray.direction) {
+            return None;
+        }
+        // [RMS] note: using float.MaxValue here because we need to use <= to compare box hit
+        //   to fNearestT, and box hit returns double.MaxValue on no-hit. So, if we set
+        //   nearestT to double.MaxValue, then we will test all boxes (!)
+        let mut nearest_t = if max_dist < f64::MAX {
+            max_dist
+        } else {
+            f32::MAX as f64
+        };
+        let mut tid = -1;
+        self.find_hit_triangle(self.root_index, ray, &mut nearest_t, &mut tid, filter);
+        Some(tid)
+    }
+
+    fn find_hit_triangle(
+        &self,
+        i_box: i32,
+        ray: &Ray3d,
+        nearest_t: &mut f64,
+        tid: &mut i32,
+        filter: Option<&dyn Fn(i32) -> bool>,
+    ) {
+        let idx = self.box_to_index[i_box as usize];
+        if idx < self.triangles_end {
+            // triange-list case, array is [N t1 t2 ... tN]
+            let idx = idx as usize;
+            let num_tris = self.index_list[idx] as usize;
+            for i in 1..=num_tris {
+                let ti = self.index_list[idx + i];
+                if filter.is_some_and(|f| !f(ti)) {
+                    continue;
+                }
+                let [v0, v1, v2] = self.mesh.get_tri_vertices(ti as usize);
+                if let Some(ray_t) = ray_triangle_intersects(ray, v0, v1, v2) {
+                    if ray_t < *nearest_t {
+                        *nearest_t = ray_t;
+                        *tid = ti;
+                    }
+                }
+            }
+        } else {
+            // internal node, either 1 or 2 child boxes
+            let e = ZERO_TOLERANCE_F;
+            let idx = idx as usize;
+            let child1 = self.index_list[idx];
+            if child1 < 0 {
+                // 1 child, descend if nearer than cur min-dist
+                let child1 = -child1 - 1;
+                let child1_t = self.box_ray_intersect_t(child1, ray);
+                if child1_t <= *nearest_t + e {
+                    self.find_hit_triangle(child1, ray, nearest_t, tid, filter);
+                }
+            } else {
+                // 2 children, descend closest first
+                let child1 = child1 - 1;
+                let child2 = self.index_list[idx + 1] - 1;
+                let child1_t = self.box_ray_intersect_t(child1, ray);
+                let child2_t = self.box_ray_intersect_t(child2, ray);
+                let (first, first_t, second, second_t) = if child1_t < child2_t {
+                    (child1, child1_t, child2, child2_t)
+                } else {
+                    (child2, child2_t, child1, child1_t)
+                };
+                if first_t <= *nearest_t + e {
+                    self.find_hit_triangle(first, ray, nearest_t, tid, filter);
+                    if second_t <= *nearest_t + e {
+                        self.find_hit_triangle(second, ray, nearest_t, tid, filter);
+                    }
+                }
+            }
+        }
+    }
+
+    /// C# `box_ray_intersect_t`: the box widened by `box_eps` (in float), `f64::MAX` on a miss.
+    fn box_ray_intersect_t(&self, i_box: i32, ray: &Ray3d) -> f64 {
+        let c = self.box_centers[i_box as usize];
+        let e = self.box_extents[i_box as usize];
+        let half: [f64; 3] = std::array::from_fn(|a| (e[a] + BOX_EPS) as f64);
+        let bx = AxisAlignedBox3d {
+            min: std::array::from_fn(|a| c[a] as f64 - half[a]),
+            max: std::array::from_fn(|a| c[a] as f64 + half[a]),
+        };
+        ray_box_intersect_t(ray, &bx).unwrap_or(f64::MAX)
     }
 
     /// C# `box_distance_sqr`: the box widened by `box_eps` in float, then measured in double.
