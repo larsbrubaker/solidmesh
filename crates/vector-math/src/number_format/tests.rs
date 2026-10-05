@@ -373,3 +373,19 @@ fn custom_scientific_e0_matches_dotnet() {
         assert_eq!(format_f64_scientific_e0(value, 3), expected, "{value:?}");
     }
 }
+
+#[test]
+fn custom_scientific_e0_reads_fifteen_digits_not_the_shortest() {
+    // .NET 10, `ToString("0.################e0")` and `("0.##############e0")`: values whose
+    // shortest round-trip text has more than 15 digits print from their 15-digit rounding.
+    for (value, expected) in [
+        (0.1 + 0.2, "3e-1"),
+        (1.0000000000000002, "1e0"),
+        (1.2345678901234567, "1.23456789012346e0"),
+        (9.999999999999998, "1e1"),
+        (123.45678901234567, "1.23456789012346e2"),
+    ] {
+        assert_eq!(format_f64_scientific_e0(value, 16), expected, "{value:?}");
+        assert_eq!(format_f64_scientific_e0(value, 14), expected, "{value:?}");
+    }
+}

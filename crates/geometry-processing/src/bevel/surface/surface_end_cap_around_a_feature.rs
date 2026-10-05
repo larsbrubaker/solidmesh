@@ -5,11 +5,14 @@
 //! face. Here are its nested record, where one piece meets the feature
 //! ([`SurfaceEndCapAroundAFeatureMeeting`]), the walk round the section's rim that splits it
 //! ([`try_walk_around`]), the stitches read along the profile ([`try_the_betweens`]) and the ring
-//! tests ([`the_area_of`], [`is_simple`]); the capping itself (`TryCap`) lands with a later package.
+//! tests ([`the_area_of`], [`is_simple`]), and the capping itself ([`try_cap`]).
 
 use vector_math::Vector3;
 
-use super::{SurfaceStripNotchedByAFeature, SurfaceVertexPool};
+use super::{
+    surface_end_cut, surface_end_notch, surface_fan, SurfaceStripNotchedByAFeature,
+    SurfaceVertexPool,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceEndCapAroundAFeature.Meeting` (a private readonly struct): where one of the two
@@ -276,4 +279,88 @@ pub fn is_simple(ring: &[i32]) -> bool {
     }
 
     true
+}
+
+/// C# `TryCap`: the section of a run-out end (facing `runs_out_facing`) split by the feature
+/// standing in it - the head piece the corner still sees, capped as the section is, and the sliver
+/// past the feature's far trace with whatever the walkback left on its straight side sewn in.
+/// Returns the stitch each chord of the end's ring carries (C#'s `out between`), or why the end
+/// cannot be capped round the feature.
+#[allow(clippy::too_many_arguments)]
+pub fn try_cap(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    walk: &[i32],
+    the_die_point: i32,
+    notch: &SurfaceStripNotchedByAFeature,
+    ring: &[i32],
+    corner: Vector3,
+    runs_out_facing: Vector3,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let does_not_extend = |at: Vector3| {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+            vec![at.into()],
+        )
+    };
+
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    let no_wall = !(runs_out_facing.length_squared() > 0.0);
+    if no_wall {
+        // The end has a face BEYOND it rather than a wall of its own: named rather than capped.
+        return Err(does_not_extend(corner));
+    }
+
+    let facing = runs_out_facing.get_normal();
+
+    let (head, head_step, tail, at_the_head, at_the_tail) =
+        try_walk_around(pool, walk, the_die_point, notch, ring, corner)?;
+
+    let mut profile = head;
+    profile.push(at_the_head.q);
+    profile.push(at_the_head.crease);
+
+    if !is_simple(&profile) {
+        return Err(does_not_extend(pool.position_of(at_the_head.q)));
+    }
+
+    let along_the_profile =
+        surface_end_notch::try_cap_with_the_section(pool, faces, &profile, corner, facing)?;
+    let along: Vec<Option<Vec<i32>>> = along_the_profile.into_iter().map(Some).collect();
+    let between = try_the_betweens(pool, walk, &head_step, &profile, &along, ring.len() as i32)?;
+
+    if tail.is_empty() {
+        // A one-faced notch: no sliver beyond it to close.
+        return Ok(between);
+    }
+
+    // The sliver's own straight side, between the foot and the crease vertex, with whatever the
+    // walkback left standing along it sewn in.
+    let foot = tail[tail.len() - 1];
+    let mut sliver = Vec::with_capacity(tail.len() + 3);
+    sliver.push(at_the_tail.q);
+    sliver.extend(&tail);
+    sliver.extend(surface_end_cut::standing_between(
+        pool,
+        &surface_end_cut::vertices_of(faces),
+        foot,
+        at_the_tail.crease,
+    ));
+    sliver.push(at_the_tail.crease);
+
+    if !is_simple(&sliver) {
+        return Err(does_not_extend(pool.position_of(at_the_tail.q)));
+    }
+
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    let covers_nothing = !(the_area_of(&sliver, pool, facing) > 0.0);
+    if covers_nothing {
+        // A sliver of no area, or wound the other way about, covers nothing.
+        return Err(does_not_extend(pool.position_of(at_the_tail.q)));
+    }
+
+    // The sliver carries no betweens of its own: it is a ring of points already standing.
+    surface_fan::emit_facing(&sliver, pool, faces, facing);
+
+    Ok(between)
 }

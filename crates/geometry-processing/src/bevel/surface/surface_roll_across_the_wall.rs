@@ -4,8 +4,8 @@
 //! ALONG the surface rather than across a chord of it. What lands here is the file's types - what a
 //! chain edge's two landing surfaces turned out to be ([`SurfaceRollReading`]), which side is the
 //! wall and what the roll reads of the two ([`SurfaceRollAcrossTheWallSides`]), and where one
-//! facet's solve put the wall foot ([`SurfaceRollAcrossTheWallLanding`]); the roll itself lands
-//! with the plan package.
+//! facet's solve put the wall foot ([`SurfaceRollAcrossTheWallLanding`]) - and the roll itself,
+//! facet by facet ([`try_touch`], [`try_roll`]), and the reading that chooses to roll ([`read`]).
 //!
 //! A fillet flows across a smooth mating surface staying tangent to it, and on a tessellated wall
 //! "tangent to it" has to mean tangent to ONE facet: the facet k of the section walk where the
@@ -35,6 +35,7 @@ use super::{
     SurfaceLine, SurfaceRolledEdge, SurfaceRunAcrossSectionStep, SurfaceVertexPool,
     SurfaceWallSection,
 };
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup};
 use polygon_mesh::Mesh;
 
@@ -429,4 +430,303 @@ pub fn is_finite(value: f64) -> bool {
 /// C# `IsFinite(Vector3)`.
 pub fn is_finite_vector(value: Vector3) -> bool {
     is_finite(value.x) && is_finite(value.y) && is_finite(value.z)
+}
+
+/// C# `TryTouch`: where one facet's solve puts the profile - the wall foot, the flat foot and the
+/// centre (all `origin` where it lands nowhere) - and whether that wall foot is on the facet, before
+/// its near end or past its far one. A chamfer's foot is its own size along the section.
+#[allow(clippy::too_many_arguments)]
+pub fn try_touch(
+    side: &SurfaceRollAcrossTheWallSides,
+    origin: Vector3,
+    flat_normal: Vector3,
+    facet_point: Vector3,
+    facet_normal: Vector3,
+    trace: Vector3,
+    offset: f64,
+    round_profile: bool,
+    size: f64,
+    step: &SurfaceRunAcrossSectionStep,
+    on_the_trace: f64,
+) -> (SurfaceRollAcrossTheWallLanding, Vector3, Vector3, Vector3) {
+    use SurfaceRollAcrossTheWallLanding as Landing;
+
+    if !round_profile {
+        let wanted = size - step.run_to_entry;
+        if wanted < -on_the_trace {
+            return (Landing::BeforeIt, origin, origin, origin);
+        }
+
+        if wanted > step.crossed() + on_the_trace {
+            return (Landing::PastIt, origin, origin, origin);
+        }
+
+        let foot = step.from + (trace * wanted);
+        let flat_foot = origin + (side.flat_inward * size);
+        return (Landing::OnTheFacet, foot, flat_foot, origin);
+    }
+
+    let Some(centre) = try_centre(
+        side.along,
+        origin,
+        flat_normal,
+        facet_point,
+        facet_normal,
+        offset,
+    ) else {
+        return (Landing::Nowhere, origin, origin, origin);
+    };
+
+    let foot = centre - (facet_normal * offset);
+    let flat_foot = centre - (flat_normal * offset);
+
+    if (flat_foot - origin).dot(side.flat_inward) < -on_the_trace {
+        return (Landing::Nowhere, foot, flat_foot, centre);
+    }
+
+    let along_the_trace = (foot - step.from).dot(trace);
+
+    // Inclusive at both ends: a foot exactly on the crease between two facets is the same point
+    // whichever of them claims it.
+    if along_the_trace < -on_the_trace {
+        return (Landing::BeforeIt, foot, flat_foot, centre);
+    }
+
+    let landing = if along_the_trace <= step.crossed() + on_the_trace {
+        Landing::OnTheFacet
+    } else {
+        Landing::PastIt
+    };
+    (landing, foot, flat_foot, centre)
+}
+
+/// C# `TryRoll`: the profile rolled along the wall side's section walk to the one facet it
+/// touches (or the crease between two it rests on), read as the rolled edge; where it runs out of
+/// wall first, the advisory naming the size that fits ([`super::surface_wall_ran_out::advisory`]).
+pub fn try_roll(
+    mesh: &Mesh,
+    side: &SurfaceRollAcrossTheWallSides,
+    size: f64,
+    round_profile: bool,
+    convex: bool,
+    cache: &mut SurfaceRunAcrossRegionMapsCache,
+) -> Result<SurfaceRolledEdge, BevelAdvisory> {
+    let on_the_trace = tolerance_on(mesh);
+    let origin = side.origin();
+    let flat_normal = in_the_section_of_the_normal(side.flat_normal, side.along);
+
+    // The centre stands in the wedge the profile is drawn in: one sign for convexity.
+    let offset = if convex { -1.0 } else { 1.0 } * size;
+
+    // The facet whose own foot ran off its FAR end.
+    let mut ran_past_the_end_of = -1;
+
+    for k in 0..side.steps.len() {
+        let step = &side.steps[k];
+        let trace = step.to - step.from;
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN skips, as the C#'s `!(x > 0)` does
+        let no_trace = !(trace.length_squared() > 0.0);
+        if no_trace {
+            continue;
+        }
+
+        let trace = trace.get_normal();
+        let facet_normal = out_of_the_facet(side.along, trace, step.normal);
+        let (landing, foot, flat_foot, centre) = try_touch(
+            side,
+            origin,
+            flat_normal,
+            step.from,
+            facet_normal,
+            trace,
+            offset,
+            round_profile,
+            size,
+            step,
+            on_the_trace,
+        );
+
+        if landing == SurfaceRollAcrossTheWallLanding::OnTheFacet {
+            let reached = step.run_to_entry + (foot - step.from).dot(trace);
+            return Ok(the_reading(
+                mesh,
+                side,
+                k as i32,
+                trace,
+                foot,
+                flat_foot,
+                centre,
+                reached,
+                round_profile,
+                on_the_trace,
+                cache,
+                false,
+            ));
+        }
+
+        if landing == SurfaceRollAcrossTheWallLanding::BeforeIt
+            && ran_past_the_end_of == k as i32 - 1
+        {
+            if let Some((foot, flat_foot, centre)) = try_touch_the_crease(
+                side,
+                origin,
+                flat_normal,
+                &side.steps[k - 1],
+                step,
+                trace,
+                offset,
+                on_the_trace,
+            ) {
+                return Ok(the_reading(
+                    mesh,
+                    side,
+                    k as i32,
+                    trace,
+                    foot,
+                    flat_foot,
+                    centre,
+                    step.run_to_entry,
+                    round_profile,
+                    on_the_trace,
+                    cache,
+                    true,
+                ));
+            }
+        }
+
+        ran_past_the_end_of = if landing == SurfaceRollAcrossTheWallLanding::PastIt {
+            k as i32
+        } else {
+            -1
+        };
+    }
+
+    Err(super::surface_wall_ran_out::advisory(
+        mesh,
+        side,
+        size,
+        round_profile,
+        convex,
+        flat_normal,
+        on_the_trace,
+        Some(cache),
+    ))
+}
+
+/// The face grid of a region, from whoever keeps it (divergence 650): asked only for a curved
+/// side of a round profile, where C#'s `OfThePlainBall` fetches it from its memo.
+pub type RegionGridSource<'a> =
+    &'a mut dyn FnMut(&FaceGroup) -> Option<Rc<super::SurfaceRegionFaceGrid>>;
+
+/// C# `Read`: what the chain edge's two landing surfaces are - two planes (`NotCurved`), one side
+/// curving along its section that the profile rolls across (`Rolled`, with the rolled edge), or a
+/// refusal (both curved, or the roll ran out of wall). A curved side the plain ball already stands
+/// clear of is planned as the plane its own facet is.
+#[allow(clippy::too_many_arguments)]
+pub fn read(
+    mesh: Option<&Mesh>,
+    chain_edge: &ChainEdge,
+    left_region: &Arc<FaceGroup>,
+    right_region: &Arc<FaceGroup>,
+    along: Vector3,
+    left_normal: Vector3,
+    right_normal: Vector3,
+    left_inward: Vector3,
+    right_inward: Vector3,
+    size: f64,
+    round_profile: bool,
+    convex: bool,
+    cache: &mut SurfaceRunAcrossRegionMapsCache,
+    grid_of: RegionGridSource,
+) -> (
+    SurfaceRollReading,
+    Option<SurfaceRolledEdge>,
+    Option<BevelAdvisory>,
+) {
+    let Some(mesh) = mesh else {
+        return (SurfaceRollReading::NotCurved, None, None);
+    };
+
+    let left_steps =
+        curves_along_its_section(mesh, left_region, chain_edge, along, left_inward, cache);
+    let right_steps =
+        curves_along_its_section(mesh, right_region, chain_edge, along, right_inward, cache);
+    let mut left_curved = left_steps.is_some();
+    let mut right_curved = right_steps.is_some();
+
+    // A section square to the chain edge can leave the edge's own facet without leaving its PLANE:
+    // a side the ball stands clear of is planned as the plane its own facet is.
+    if left_curved
+        && round_profile
+        && super::surface_wall_stands_clear::of_the_plain_ball(
+            grid_of(left_region).as_deref(),
+            left_steps.as_deref().unwrap_or(&[]),
+            along,
+            chain_edge.from(),
+            right_normal,
+            size,
+            convex,
+        )
+    {
+        left_curved = false;
+    }
+
+    if right_curved
+        && round_profile
+        && super::surface_wall_stands_clear::of_the_plain_ball(
+            grid_of(right_region).as_deref(),
+            right_steps.as_deref().unwrap_or(&[]),
+            along,
+            chain_edge.from(),
+            left_normal,
+            size,
+            convex,
+        )
+    {
+        right_curved = false;
+    }
+
+    if !left_curved && !right_curved {
+        return (SurfaceRollReading::NotCurved, None, None);
+    }
+
+    if left_curved && right_curved {
+        let refusal = BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceLandsOnTwoCurvedFaces,
+            vec![((chain_edge.from() + chain_edge.to()) / 2.0).into()],
+        );
+        return (SurfaceRollReading::Refused, None, Some(refusal));
+    }
+
+    let side = SurfaceRollAcrossTheWallSides::new(
+        *chain_edge,
+        along,
+        left_curved,
+        if left_curved { left_steps } else { right_steps }.unwrap_or_default(),
+        if left_curved {
+            left_region.clone()
+        } else {
+            right_region.clone()
+        },
+        if left_curved {
+            left_inward
+        } else {
+            right_inward
+        },
+        if left_curved {
+            right_normal
+        } else {
+            left_normal
+        },
+        if left_curved {
+            right_inward
+        } else {
+            left_inward
+        },
+    );
+
+    match try_roll(mesh, &side, size, round_profile, convex, cache) {
+        Ok(rolled) => (SurfaceRollReading::Rolled, Some(rolled), None),
+        Err(refusal) => (SurfaceRollReading::Refused, None, Some(refusal)),
+    }
 }

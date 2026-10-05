@@ -2,15 +2,16 @@
 //! clear of the notch, and the rings that close what lies past that cross section. Ports
 //! `Bevel/Surface/SurfaceStripTailAroundAFeature.cs` (C# `internal static class`; a module of free
 //! functions here). What is here are the cross section ([`try_the_section`],
-//! [`try_the_section_clear_of_the_notch`]) and the rings past it ([`try_the_rings`]); the sewing
-//! itself (`TrySew`) lands with a later package. Every corner of a ring is a vertex already in the
+//! [`try_the_section_clear_of_the_notch`]), the rings past it ([`try_the_rings`]) and the sewing
+//! itself ([`try_sew`]). Every corner of a ring is a vertex already in the
 //! pool - a corner that cannot be found is a refusal by name, never a new vertex.
 
 use super::{
-    SurfaceStrip, SurfaceStripNotchedByAFeature, SurfaceStripTrimmedAtTheCrossing,
-    SurfaceVertexPool,
+    surface_fan, surface_ring, SurfaceStrip, SurfaceStripNotchedByAFeature,
+    SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use vector_math::Vector3;
 
 /// C# `TryTheSection`: where the strip STOPS - a parameter standing strictly clear of the notch's
 /// deepest point (`exit`) on one side and of everything the strip's OTHER end reaches on the other,
@@ -169,4 +170,97 @@ pub fn try_the_rings(
     }
 
     Ok(rings)
+}
+
+/// C# `TrySew`: the tail past the cross section `station` (rail by rail) closed around the
+/// feature's notch - each notched rail's crossing found in the pool (the crease rail's by identity,
+/// the notch's own seam vertex), each standing Q on its chord of the end ring - as the rings
+/// [`try_the_rings`] reads, fanned the way the rest of the strip faces. Every corner is a vertex
+/// already in the pool; one that cannot be found is a refusal by name.
+pub fn try_sew(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    strip: &SurfaceStrip,
+    notch: &SurfaceStripNotchedByAFeature,
+    station: &[i32],
+) -> Result<(), BevelAdvisory> {
+    let does_not_extend = |at: Vector3| {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+            vec![at.into()],
+        )
+    };
+    let rails = strip.rail_count();
+    let mut notched = vec![false; rails.max(0) as usize];
+    let mut crossing = vec![-1; rails.max(0) as usize];
+    let mut q_on = vec![-1; (rails - 1).max(0) as usize];
+
+    for rail in 0..rails {
+        let r = rail as usize;
+        notched[r] = notch.notches(rail);
+        if !notched[r] {
+            continue;
+        }
+
+        if rail == notch.the_crease_rail {
+            // The crease rail's crossing is on hand BY IDENTITY - the walkback's own seam vertex.
+            crossing[r] = notch.exit.vertex;
+            continue;
+        }
+
+        let param = notch
+            .param_on(rail)
+            .expect("a notched rail has a parameter");
+        let at = strip.point_on(rail, param);
+        match pool.try_find_near(
+            at,
+            SurfaceVertexPool::near_enough_for(pool.vertices()),
+            None,
+        ) {
+            Some(found) => crossing[r] = found,
+            // The extension was drawn to this very crossing a moment ago; not finding it means the
+            // two readings have come apart.
+            None => return Err(does_not_extend(at)),
+        }
+    }
+
+    for q in [&notch.at_the_low_rail, &notch.at_the_high_rail] {
+        if !q.stands() {
+            // A ONE-FACED notch's missing Q: no chord of the end ring for it to stand on.
+            continue;
+        }
+
+        if q.below < 0 || q.below as usize >= q_on.len() {
+            return Err(does_not_extend(pool.position_of(q.vertex)));
+        }
+
+        q_on[q.below as usize] = q.vertex;
+    }
+
+    let rings = match try_the_rings(
+        station,
+        &notched,
+        &crossing,
+        notch.exit.below,
+        notch.exit.vertex,
+        &q_on,
+    ) {
+        Ok(rings) => rings,
+        Err(refused_at) => {
+            let rail = refused_at.min(rails - 1).max(0);
+            return Err(does_not_extend(strip.point_on(rail, notch.end_param)));
+        }
+    };
+
+    for ring in rings {
+        // Faced the way the rest of the strip is faced: each band is a piece of the strip's surface.
+        surface_fan::emit_facing(
+            &surface_ring::without_repeats(&ring),
+            pool,
+            faces,
+            strip.outward_reference,
+        );
+    }
+
+    Ok(())
 }

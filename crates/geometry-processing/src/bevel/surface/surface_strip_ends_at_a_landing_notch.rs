@@ -2,9 +2,8 @@
 //! ring the ordinary open end would have stood on, cut back to a cross section clear of the notch,
 //! the tail past that section sewn band by band, and the section the end gives up split around the
 //! extension. Ports `Bevel/Surface/SurfaceStripEndsAtALandingNotch.cs` (C# `internal static class`;
-//! a module of free functions here). What is here is which way the cap is walked ([`try_the_walk`])
-//! and the notched ring ([`try_the_ring`]); the close itself (`TryCloseTheLandingEnd`) lands with a
-//! later package.
+//! a module of free functions here): which way the cap is walked ([`try_the_walk`]), the notched
+//! ring ([`try_the_ring`]) and the close itself ([`try_close_the_landing_end`]).
 //!
 //! Nothing here is a second composition: the three pieces are the very ones the RUN-OFF end already
 //! composes (`SurfaceStripEndsOverTheFaceBeyond`), and what differs is where the ring comes from. A
@@ -21,8 +20,9 @@ use vector_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{
-    surface_strip_ends, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
-    SurfaceStripNotchedByAFeature, SurfaceVertexPool,
+    surface_end_cap_around_a_feature, surface_strip_ends, surface_strip_tail_around_a_feature,
+    SurfaceStandingFeatureWithheldFace, SurfaceStrip, SurfaceStripNotchedByAFeature,
+    SurfaceStripStation, SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -248,4 +248,74 @@ pub fn try_the_ring(
     }
 
     Ok((ring, meets_at))
+}
+
+/// C# `TryCloseTheLandingEnd`: a landed band's end notched by a standing feature's extension -
+/// the ring cut back to a cross section clear of the notch (measured against `the_other_end`), the
+/// section the end gives up capped around the feature, and the tail past it sewn band by band.
+/// Returns the station the stitch's last band sews to (C#'s `out station`), or why the end could
+/// not be closed.
+#[allow(clippy::too_many_arguments)]
+pub fn try_close_the_landing_end(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    strip: &SurfaceStrip,
+    seams: &[SideSeams],
+    edge_index: i32,
+    corner: Vector3,
+    at_the_start: bool,
+    runs_out_facing: Vector3,
+    notch: &SurfaceStripNotchedByAFeature,
+    the_other_end: Option<&SurfaceStripStation>,
+    crossed_at_the_other_end: Option<&SurfaceStripTrimmedAtTheCrossing>,
+    notched_at_the_other_end: Option<&SurfaceStripNotchedByAFeature>,
+) -> Result<SurfaceStripStation, BevelAdvisory> {
+    let Some(the_other_end) =
+        the_other_end.filter(|other| other.param.len() as i32 == strip.rail_count())
+    else {
+        // The strip's other end has not been closed yet, or was closed on another strip's rails.
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+            vec![corner.into()],
+        ));
+    };
+
+    let section = surface_strip_tail_around_a_feature::try_the_section_clear_of_the_notch(
+        pool,
+        strip,
+        notch,
+        notched_at_the_other_end,
+        crossed_at_the_other_end,
+        &the_other_end.param,
+    )?;
+
+    let (ring, meets_at) = try_the_ring(
+        pool,
+        strip,
+        seams,
+        edge_index,
+        corner,
+        at_the_start,
+        runs_out_facing,
+        notch,
+        section,
+    )?;
+
+    let walk = try_the_walk(pool, notch, &ring, corner)?;
+
+    let between = surface_end_cap_around_a_feature::try_cap(
+        pool,
+        faces,
+        &walk,
+        -1,
+        notch,
+        &ring,
+        corner,
+        runs_out_facing,
+    )?;
+    surface_strip_tail_around_a_feature::try_sew(pool, faces, strip, notch, &ring)?;
+
+    // Whatever the cap left standing on the ring's own chords, so the stitch's last band sews to
+    // those points too.
+    Ok(SurfaceStripStation::new(ring, meets_at, between))
 }
