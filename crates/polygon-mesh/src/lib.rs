@@ -14,6 +14,9 @@
 //! Phase 2d, the ray tracer's trace path (`ray_tracer`): traceables, hits, the BVH and its default
 //! builder, and the shapes MatterCAD picks with.
 //!
+//! Phase 2e, the implicit surfaces (`sdf`): marching cubes over a sampled field and `MeshSdfGrid`,
+//! the offset preview, on the geometry3Sharp pieces it reaches (`g3`).
+//!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
@@ -23,6 +26,7 @@ pub mod csg;
 pub mod data_converters_2d;
 mod face;
 mod face_split;
+mod g3;
 mod mesh;
 mod mesh_edge_graph;
 mod mesh_editing;
