@@ -84,7 +84,8 @@ impl<'a> DMeshAABBTree3<'a> {
         let mut triangles = vec![0i32; count];
         let mut centers = vec![[0.0f64; 3]; count];
         let mut i = 0;
-        for ti in 0..count {
+        for ti in mesh.triangle_indices() {
+            let ti = ti as usize;
             let centroid = mesh.get_tri_centroid(ti);
             let d2 =
                 centroid[0] * centroid[0] + centroid[1] * centroid[1] + centroid[2] * centroid[2];

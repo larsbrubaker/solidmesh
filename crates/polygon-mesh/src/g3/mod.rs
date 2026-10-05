@@ -13,10 +13,16 @@ pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
 pub(crate) mod dmesh3_edge_ops;
 pub(crate) mod dmesh3_queries;
+pub(crate) mod dmesh3_set_triangle;
 pub(crate) mod dmesh_aabb_tree3;
+pub(crate) mod edge_loop;
 pub(crate) mod implicit3d;
 pub(crate) mod marching_cubes;
 pub(crate) mod marching_cubes_pro;
+pub(crate) mod mesh_boundary_loops;
+pub(crate) mod mesh_editor;
+pub(crate) mod mesh_face_selection;
+pub(crate) mod mesh_iterators;
 pub(crate) mod mesh_signed_distance_grid;
 pub(crate) mod ref_count_vector;
 pub(crate) mod signed_distance_grid;
@@ -28,3 +34,5 @@ pub(crate) use dmesh_aabb_tree3::DMeshAABBTree3;
 
 #[cfg(test)]
 mod dmesh3_tests;
+#[cfg(test)]
+mod mesh_topology_tests;

@@ -243,7 +243,7 @@ impl DMesh3 {
     }
 
     /// C# `add_tri_edge`.
-    fn add_tri_edge(&mut self, tid: i32, v0: i32, v1: i32, j: usize, eid: i32) {
+    pub(super) fn add_tri_edge(&mut self, tid: i32, v0: i32, v1: i32, j: usize, eid: i32) {
         if eid != INVALID_ID {
             self.edges[eid as usize][3] = tid;
             self.triangle_edges[tid as usize][j] = eid;
