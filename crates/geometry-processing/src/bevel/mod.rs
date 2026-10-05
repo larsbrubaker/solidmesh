@@ -15,8 +15,11 @@
 //! ([`sections`]) and the surface construction's leaf records ([`surface`]); and the fifth: the
 //! seams a run's end stops on - a blend's handover ([`bevel_blend_seam`]) and a corner patch's
 //! drive-through and cap stand-off ([`bevel_corner_seam`]) - with the surface construction's
-//! vertex pool, closure gate, joint step and standing-feature reading ([`surface`]). C# `internal
-//! static class` helpers are modules of free functions here.
+//! vertex pool, closure gate, joint step and standing-feature reading ([`surface`]); and the
+//! sixth: which faces lie on a round ([`BevelRoundFaces`]), the convex cell bound, the flat
+//! end-face fill and the room's source ([`level_line`]), and the mixed corner's spine and the
+//! region face grid ([`surface`]). C# `internal static class` helpers are modules of free
+//! functions here.
 
 mod bevel_advisory;
 mod bevel_advisory_code;
@@ -33,6 +36,7 @@ pub mod bevel_pair_corner_crease;
 mod bevel_partner_tube;
 pub mod bevel_profile_polygon;
 mod bevel_round_descriptor;
+mod bevel_round_faces;
 pub mod bevel_seam_ring;
 pub mod bevel_shared_edges;
 mod bevel_surface_labels;
@@ -51,5 +55,6 @@ pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;
 pub use bevel_pair_corner_crease::PairFaces;
 pub use bevel_partner_tube::BevelPartnerTube;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
+pub use bevel_round_faces::BevelRoundFaces;
 pub use bevel_surface_labels::BevelSurfaceLabels;
 pub use bevel_surface_walk::{BevelSurfaceWalk, SurfaceWalkStop};

@@ -4,10 +4,12 @@
 //! ([`ChainSideLoops`]), the chain-edge error ([`ChainEdgeNotOnTwoTriangles`]), a field reading
 //! ([`FieldSample`]), why a fill was refused ([`GapFillRefusal`]), a gap boundary ([`GapLoop`]),
 //! the hole filler's answer ([`HoleFillResult`]), which reading named the room
-//! ([`RoomReadingKind`]) - the setback a size asks ([`chain_setback`]), the curved end face test
-//! ([`curved_end_face`]), the Lipschitz bounds ([`field_bounds`]), the field traits
-//! ([`ScalarField`], [`ChainDistanceField`]) and the chain's segment box tree
-//! ([`segment_box_tree`]). The build itself lands with the cyclic bevel core.
+//! ([`RoomReadingKind`]) and what it was about ([`RoomSource`]) - the setback a size asks
+//! ([`chain_setback`]), the curved end face test ([`curved_end_face`]), the Lipschitz bounds
+//! ([`field_bounds`]), the field traits ([`ScalarField`], [`ChainDistanceField`]), the chain's
+//! segment box tree ([`segment_box_tree`]), the convex cell bound the ridge searches prune with
+//! ([`convex_cell_bound`]) and the flat end-face fill ([`flat_hole_fill`]). The build itself
+//! lands with the cyclic bevel core.
 
 mod band_gap_refusal;
 mod band_group;
@@ -15,13 +17,16 @@ mod band_profile;
 mod chain_edge_not_on_two_triangles;
 pub mod chain_setback;
 mod chain_side_loops;
+pub mod convex_cell_bound;
 pub mod curved_end_face;
 pub mod field_bounds;
 mod field_sample;
+pub mod flat_hole_fill;
 mod gap_fill_refusal;
 mod gap_loop;
 mod hole_fill_result;
 mod room_reading_kind;
+mod room_source;
 mod scalar_field;
 pub mod segment_box_tree;
 
@@ -35,5 +40,6 @@ pub use gap_fill_refusal::GapFillRefusal;
 pub use gap_loop::GapLoop;
 pub use hole_fill_result::{HoleFillFailure, HoleFillResult, HoleFillTriangle};
 pub use room_reading_kind::RoomReadingKind;
+pub use room_source::RoomSource;
 pub use scalar_field::{ChainDistanceField, FieldMaximum, FieldMinimum, ScalarField};
 pub use segment_box_tree::SegmentNode;
