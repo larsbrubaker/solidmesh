@@ -8,6 +8,8 @@
 //! what is reached is ported; each file names the C# it follows. See `THIRD_PARTY_NOTICES.md`.
 //! The dynamic `DMesh3` (`dmesh3*`, `ref_count_vector`, `small_list_set`) is the base the mesh
 //! repair (`MeshAutoRepair`) builds on.
+//! The remesher `MinimalHoleFill` runs (`remesher`, `remesher_pro`, with `mesh_constraints`,
+//! `mesh_refiner_base`, `mesh_util` and `vector3d`) edits that `DMesh3`.
 
 pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
@@ -23,11 +25,17 @@ pub(crate) mod mesh_boundary_loops;
 pub(crate) mod mesh_editor;
 pub(crate) mod mesh_face_selection;
 pub(crate) mod mesh_iterators;
+pub(crate) mod mesh_constraints;
+pub(crate) mod mesh_refiner_base;
 pub(crate) mod mesh_signed_distance_grid;
+pub(crate) mod mesh_util;
 pub(crate) mod ref_count_vector;
+pub(crate) mod remesher;
+pub(crate) mod remesher_pro;
 pub(crate) mod signed_distance_grid;
 pub(crate) mod small_list_set;
 pub(crate) mod tri_distance;
+pub(crate) mod vector3d;
 
 pub(crate) use dmesh3::DMesh3;
 pub(crate) use dmesh_aabb_tree3::DMeshAABBTree3;
@@ -36,3 +44,5 @@ pub(crate) use dmesh_aabb_tree3::DMeshAABBTree3;
 mod dmesh3_tests;
 #[cfg(test)]
 mod mesh_topology_tests;
+#[cfg(test)]
+mod remesher_tests;
