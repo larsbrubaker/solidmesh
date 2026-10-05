@@ -12,8 +12,10 @@ use clipper2_rust::{FillRule, Path64, Paths64, Point64};
 use vector_math::cs_sort::introspective_sort;
 use vector_math::{Matrix4X4, Plane, Quaternion, Vector3};
 
-use crate::clipper_extensions::{self, compare_x, int_point, length, length_squared};
 use crate::Mesh;
+use agg_path::clipper_library::{
+    clean_polygons, int_point, length, length_squared, PolygonsExtensions,
+};
 
 /// One cut through a face, in the plane's scaled XY space (C# `Segment`).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -67,11 +69,9 @@ pub fn create_slice_with_transform(
 /// (C# `UnionClosedPolygons`).
 pub fn union_closed_polygons(closed_polygons: Paths64) -> Paths64 {
     if closed_polygons.len() > 1 {
-        return clipper_extensions::union(
-            &closed_polygons[0..1].to_vec(),
-            &closed_polygons[1..].to_vec(),
-            FillRule::NonZero,
-        );
+        return closed_polygons[0..1]
+            .to_vec()
+            .union(&closed_polygons[1..].to_vec(), FillRule::NonZero);
     }
 
     closed_polygons
@@ -294,7 +294,7 @@ pub fn find_closed_polygons(unordered_segments: &[Segment]) -> Paths64 {
         perimeter_length >= minimum_perimeter
     });
 
-    clipper_extensions::clean_polygons(&closed_polygons, 1.0)
+    clean_polygons(&closed_polygons, 1.0)
 }
 
 /// The segments by exact start position (C# `CreateFastIndexLookup`).
@@ -455,4 +455,9 @@ impl SortedIntPoint {
 
 fn distance_squared(a: Point64, b: Point64) -> f64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y)) as f64
+}
+
+/// Orders by x only, as C#'s `IndexAndPositionSorter`.
+fn compare_x(a: &Point64, b: &Point64) -> std::cmp::Ordering {
+    a.x.cmp(&b.x)
 }
