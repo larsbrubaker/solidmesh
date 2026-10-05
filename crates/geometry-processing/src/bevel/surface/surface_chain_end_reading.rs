@@ -1,8 +1,8 @@
 //! The one question a chain's free END asks of the mesh that its own two faces cannot answer
 //! ([`SurfaceChainEndReading`]): does the crease it stops at carry on past that corner, in an edge
-//! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`; the
-//! per-cache table (C#'s static `ConditionalWeakTable`) and the reading itself land with the plan
-//! package.
+//! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`, its
+//! constructor and its surface and vertex indexes; the per-cache table (C#'s static
+//! `ConditionalWeakTable`, `For`) and the reading itself land with later packages.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -94,5 +94,51 @@ impl SurfaceChainEndReading {
         }
 
         Some(key)
+    }
+}
+
+impl SurfaceChainEndReading {
+    /// C#'s private constructor (with its field initializers): a reading of `curve_regions` with
+    /// both memos empty. The per-cache table that hands one reading out per cache (C#'s `For`
+    /// over a static `ConditionalWeakTable`) is not ported yet.
+    pub fn new(curve_regions: Arc<FaceRegionCache>) -> Self {
+        SurfaceChainEndReading {
+            curve_regions,
+            memos: Mutex::new(SurfaceChainEndReadingMemos::default()),
+        }
+    }
+
+    /// The graph edges standing at `vertex`, indexed on the first ask. A chain that never asks -
+    /// every closed one - pays nothing for it. Called with the memos locked (C# under
+    /// `readingLock`).
+    pub fn edges_at<'m>(
+        &self,
+        memos: &'m mut SurfaceChainEndReadingMemos,
+        vertex: i32,
+    ) -> &'m [i32] {
+        let edges_at_vertex = memos.edges_at_vertex.get_or_insert_with(|| {
+            let graph = self.curve_regions.graph();
+            let mut edges_at_vertex = HashMap::with_capacity(graph.edge_count().max(0) as usize);
+
+            for edge in 0..graph.edge_count() {
+                Self::record(&mut edges_at_vertex, graph.get_vertex0(edge), edge);
+                Self::record(&mut edges_at_vertex, graph.get_vertex1(edge), edge);
+            }
+
+            edges_at_vertex
+        });
+
+        edges_at_vertex
+            .get(&vertex)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
+    }
+
+    /// Records `edge` as standing at `vertex`.
+    pub fn record(edges_at_vertex: &mut HashMap<i32, Vec<i32>>, vertex: i32, edge: i32) {
+        edges_at_vertex
+            .entry(vertex)
+            .or_insert_with(|| Vec::with_capacity(6))
+            .push(edge);
     }
 }

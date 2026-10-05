@@ -3,8 +3,9 @@
 //! still sees, the sliver beyond the feature's far trace, and nothing at all between them - the
 //! extended feature is material there, so that stretch of the end plane is interior and carries no
 //! face. Here are its nested record, where one piece meets the feature
-//! ([`SurfaceEndCapAroundAFeatureMeeting`]), and the walk round the section's rim that splits it
-//! ([`try_walk_around`]); the capping itself (`TryCap`) lands with a later package.
+//! ([`SurfaceEndCapAroundAFeatureMeeting`]), the walk round the section's rim that splits it
+//! ([`try_walk_around`]), the stitches read along the profile ([`try_the_betweens`]) and the ring
+//! tests ([`the_area_of`], [`is_simple`]); the capping itself (`TryCap`) lands with a later package.
 
 use vector_math::Vector3;
 
@@ -191,4 +192,88 @@ fn carry(walk: &mut Vec<i32>, vertex: i32) -> bool {
     }
 
     false
+}
+
+/// The stitch each chord of the end's ring carries, by the LOWER rail of the pair it spans:
+/// `along_the_profile[chord]` (the vertices found standing on chord `chord` of `profile`, `None`
+/// or empty where none) mapped onto the rail pair `walk` gives the two `head_step` ends, read from
+/// the lower rail. `rails` is the strip's rail count. Refused, at the first such vertex, where a
+/// chord carries vertices but the ring has no neighbouring rail pair for it - the stitch has
+/// nothing to sew it to, so it is named here rather than dropped.
+pub fn try_the_betweens(
+    pool: &SurfaceVertexPool,
+    walk: &[i32],
+    head_step: &[i32],
+    profile: &[i32],
+    along_the_profile: &[Option<Vec<i32>>],
+    rails: i32,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let mut between = vec![Vec::new(); i32::max(0, rails - 1) as usize];
+
+    let mut chord = 0;
+    while chord + 1 < profile.len() && chord < along_the_profile.len() {
+        let Some(found) = along_the_profile[chord]
+            .as_ref()
+            .filter(|found| !found.is_empty())
+        else {
+            chord += 1;
+            continue;
+        };
+
+        let from = head_step.get(chord).copied().unwrap_or(-1);
+        let to = head_step.get(chord + 1).copied().unwrap_or(-1);
+
+        if from < 0 || to < 0 || (walk[from as usize] - walk[to as usize]).abs() != 1 {
+            // Standing on a chord the ring has no neighbouring rail pair for - the chord into the
+            // feature's Q, the one into the crease vertex, or one spanning rails a trim collapsed
+            // onto a single point.
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+                vec![pool.position_of(found[0]).into()],
+            ));
+        }
+
+        let (from, to) = (walk[from as usize], walk[to as usize]);
+        let mut carried = found.clone();
+
+        if from > to {
+            // A walk running DOWN the rails reads each chord from its higher rail, and a
+            // station's between is read from the lower one.
+            carried.reverse();
+        }
+
+        between[from.min(to) as usize] = carried;
+        chord += 1;
+    }
+
+    Ok(between)
+}
+
+/// The signed area of the polygon `ring` (a fan from its first vertex), seen along `facing`.
+pub fn the_area_of(ring: &[i32], pool: &SurfaceVertexPool, facing: Vector3) -> f64 {
+    let mut twice = Vector3::ZERO;
+    let first = pool.position_of(ring[0]);
+
+    for at in 1..ring.len().saturating_sub(1) {
+        twice += (pool.position_of(ring[at]) - first).cross(pool.position_of(ring[at + 1]) - first);
+    }
+
+    twice.dot(facing) / 2.0
+}
+
+/// Whether `ring` is a simple polygon by index: at least three vertices, none repeated.
+pub fn is_simple(ring: &[i32]) -> bool {
+    if ring.len() < 3 {
+        return false;
+    }
+
+    for at in 0..ring.len() {
+        for other in (at + 1)..ring.len() {
+            if ring[at] == ring[other] {
+                return false;
+            }
+        }
+    }
+
+    true
 }

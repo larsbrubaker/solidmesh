@@ -77,6 +77,7 @@ pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
 pub mod surface_mitre_seam;
 mod surface_mixed_corner;
+pub mod surface_mixed_corner_bites;
 pub mod surface_mixed_corner_cut_edge;
 mod surface_mixed_corner_dual_canal;
 mod surface_mixed_corner_dual_frame;
@@ -131,6 +132,7 @@ mod surface_two_crease_junction_patch;
 mod surface_two_crease_junction_rings;
 pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
+pub mod surface_wall_ran_out;
 mod surface_wall_section;
 
 pub use surface_band_end::SurfaceBandEnd;

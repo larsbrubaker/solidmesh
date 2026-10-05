@@ -1,11 +1,11 @@
 //! Which edge of a mixed corner is really the CUT where the bead rolled along a chorded wall
 //! (`Bevel/Surface/SurfaceMixedCornerCutEdge.cs`, a static class: free functions here). The
-//! sagitta guard of the wall's chords lands here first; the cut edge's walk lands with a later
-//! package.
+//! sagitta guard of the wall's chords and how far apart two skew lines stand land here first; the
+//! cut edge's walk lands with a later package.
 
 use vector_math::Vector3;
 
-use super::SurfaceWallSection;
+use super::{SurfaceLine, SurfaceWallSection};
 
 /// How square two of a section's facets have to stand to each other to be two triangles of ONE
 /// chord of the wall rather than two chords: a millionth off parallel, which is float storage and
@@ -64,4 +64,27 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
     }
 
     sagitta
+}
+
+/// How far apart two skew lines stand - the length of their common perpendicular - or `None`
+/// where they are parallel and have no single one.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn try_apart(first: SurfaceLine, second: SurfaceLine) -> Option<f64> {
+    let between = second.point - first.point;
+    let direction_dot = first.direction.dot(second.direction);
+    let determinant = 1.0 - (direction_dot * direction_dot);
+
+    if !(determinant.abs() > 1e-12) {
+        return None;
+    }
+
+    let along_first = between.dot(first.direction);
+    let along_second = between.dot(second.direction);
+    let here = (along_first - (direction_dot * along_second)) / determinant;
+    let there = ((direction_dot * along_first) - along_second) / determinant;
+
+    Some(
+        ((first.point + (first.direction * here)) - (second.point + (second.direction * there)))
+            .length(),
+    )
 }

@@ -1,9 +1,10 @@
 //! A CONVEX bite taken out of one flat face of the part, bounded by a ring of points lying in that
 //! face rather than by a single tangent line. Ports `Bevel/Surface/SurfaceConvexBite.cs` (C#
-//! `internal static class`; a module of free functions here). What is here is the reading that
-//! puts the vertices standing on a piece's sides into it ([`with_the_vertices_standing_on_it`]),
-//! which reads the pieces across its sides off [`SurfaceBiteSharedSides`]; the bite itself
-//! (`TryTake`) and its other readings land with later packages.
+//! `internal static class`; a module of free functions here). What is here are the readings
+//! that put the vertices standing on a piece's sides into it ([`with_the_vertices_standing_on_it`],
+//! which reads the pieces across its sides off [`SurfaceBiteSharedSides`]) and take the ones lying
+//! straight through back out ([`without_the_straight_through`]), and the tests a bite is guarded
+//! by; the bite itself (`TryTake`) lands with a later package.
 //!
 //! The walkback's own cut is a half space through a straight tangent line, which is all a strip
 //! along one edge ever needs (`SurfaceFacetCut`). A mixed corner's blend needs more: its footprint
@@ -12,6 +13,8 @@
 //! half planes their own sides name.
 
 use indexmap::IndexSet;
+
+use vector_math::Vector3;
 
 use super::{SurfaceBiteSharedSides, SurfaceVertexPool};
 
@@ -128,4 +131,207 @@ pub fn with_the_vertices_standing_on_it(
 /// C# `NamedBy`: whether a piece names `vertex` as one of its own corners.
 fn named_by(piece: &[i32], vertex: i32) -> bool {
     piece.contains(&vertex)
+}
+
+/// `piece` without the corners at or past `split_from` (the bite's own new vertices) that lie
+/// straight through between their standing neighbours, dropped one at a time down to a triangle;
+/// then any dropped corner the ring stopped carrying while the dropping went on is put back.
+pub fn without_the_straight_through(
+    pool: &SurfaceVertexPool,
+    piece: &[i32],
+    split_from: i32,
+) -> Vec<i32> {
+    let mut dropped = vec![false; piece.len()];
+    let mut standing = piece.len();
+    let mut going = true;
+
+    while going && standing > 3 {
+        going = false;
+
+        for corner in 0..piece.len() {
+            if dropped[corner] || piece[corner] < split_from {
+                continue;
+            }
+
+            if !on_the_side_between(pool, piece, &dropped, corner) {
+                continue;
+            }
+
+            dropped[corner] = true;
+            standing -= 1;
+            going = true;
+
+            break;
+        }
+    }
+
+    // And back in goes anything the ring stopped carrying while the dropping went on.
+    let mut restoring = true;
+
+    while restoring {
+        restoring = false;
+
+        for corner in 0..piece.len() {
+            if !dropped[corner] || on_the_side_between(pool, piece, &dropped, corner) {
+                continue;
+            }
+
+            dropped[corner] = false;
+            standing += 1;
+            restoring = true;
+        }
+    }
+
+    let mut kept = Vec::with_capacity(standing);
+
+    for (corner, &vertex) in piece.iter().enumerate() {
+        if !dropped[corner] {
+            kept.push(vertex);
+        }
+    }
+
+    kept
+}
+
+/// Whether `corner` lies strictly between its two standing neighbours, within the pool's ruler of
+/// the side they span.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn on_the_side_between(
+    pool: &SurfaceVertexPool,
+    piece: &[i32],
+    dropped: &[bool],
+    corner: usize,
+) -> bool {
+    let (Some(before), Some(after)) = (
+        standing(piece, dropped, corner, -1),
+        standing(piece, dropped, corner, 1),
+    ) else {
+        return false;
+    };
+    if before == after {
+        return false;
+    }
+
+    let from = pool.position_of(piece[before]);
+    let run = pool.position_of(piece[after]) - from;
+
+    if !(run.length_squared() > 0.0) {
+        return false;
+    }
+
+    let at = pool.position_of(piece[corner]) - from;
+    let along = at.dot(run) / run.length_squared();
+
+    along > 0.0 && along < 1.0 && (at - (run * along)).length() < pool.near_enough()
+}
+
+/// The nearest corner from `corner` stepping `step` (+1 or -1) round the ring that is not
+/// dropped, or `None` where every other corner is.
+pub fn standing(piece: &[i32], dropped: &[bool], corner: usize, step: i64) -> Option<usize> {
+    let count = piece.len() as i64;
+
+    for walked in 1..count {
+        let at = ((corner as i64 + (step * walked)) % count + count) % count;
+
+        if !dropped[at as usize] {
+            return Some(at as usize);
+        }
+    }
+
+    None
+}
+
+/// Whether `piece` covers nothing: fewer than three corners, or every corner within the pool's
+/// ruler of the line through its two furthest-apart corners.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn covers_nothing(pool: &SurfaceVertexPool, piece: &[i32]) -> bool {
+    if piece.len() < 3 {
+        return true;
+    }
+
+    let mut from = pool.position_of(piece[0]);
+    let mut to = from;
+    let mut longest = 0.0;
+
+    for one in 0..piece.len() {
+        for other in (one + 1)..piece.len() {
+            let apart = (pool.position_of(piece[other]) - pool.position_of(piece[one])).length();
+
+            if apart > longest {
+                longest = apart;
+                from = pool.position_of(piece[one]);
+                to = pool.position_of(piece[other]);
+            }
+        }
+    }
+
+    if !(longest > 0.0) {
+        return true;
+    }
+
+    let along = (to - from) / longest;
+
+    piece.iter().all(|&vertex| {
+        let at = pool.position_of(vertex) - from;
+
+        !((at - (along * at.dot(along))).length() > pool.near_enough())
+    })
+}
+
+/// Whether every point of `rim` stands inside every half plane of `region` (each a point and its
+/// inward direction), to a slack measured against the RING's own size rather than the part's:
+/// this is arithmetic on these few points, and what it has to forgive is the rounding in their
+/// own dot products.
+pub fn it_is_convex(rim: &[Vector3], region: &[(Vector3, Vector3)]) -> bool {
+    let mut least = rim[0];
+    let mut most = rim[0];
+
+    for &at in rim {
+        least = Vector3::component_min(least, at);
+        most = Vector3::component_max(most, at);
+    }
+
+    let slack = 1e-9 * f64::max(1.0, (most - least).length());
+
+    for &at in rim {
+        for &(point, inward) in region {
+            if (at - point).dot(inward) < -slack {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+/// Whether `face` lies in the bite's plane (through `plane_point`, facing `plane_normal`, to the
+/// pool's ruler) and its bounding box overlaps the bite's (`low`..`high`).
+pub fn is_in_the_bites_way(
+    pool: &SurfaceVertexPool,
+    face: (i32, i32, i32),
+    plane_normal: Vector3,
+    plane_point: Vector3,
+    low: Vector3,
+    high: Vector3,
+) -> bool {
+    let mut lowest = pool.position_of(face.0);
+    let mut highest = lowest;
+
+    for vertex in [face.0, face.1, face.2] {
+        let at = pool.position_of(vertex);
+
+        if (at - plane_point).dot(plane_normal).abs() > pool.near_enough() {
+            return false;
+        }
+
+        lowest = Vector3::component_min(lowest, at);
+        highest = Vector3::component_max(highest, at);
+    }
+
+    !(highest.x < low.x
+        || lowest.x > high.x
+        || highest.y < low.y
+        || lowest.y > high.y
+        || highest.z < low.z
+        || lowest.z > high.z)
 }

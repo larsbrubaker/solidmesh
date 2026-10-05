@@ -360,3 +360,48 @@ impl SurfaceCrossingAtTheMitre {
         SurfaceStripStation::new(rail, param, between)
     }
 }
+
+impl SurfaceCrossingAtTheMitre {
+    /// C#'s private constructor, with the settable properties at their initializers (`-1` for the
+    /// bands, the vertex and the chord's start; no run along the chord yet).
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        ring: Vec<Vector3>,
+        on_the_cap: Vec<f64>,
+        on_the_wall: Vec<f64>,
+        given_up: Vec<bool>,
+        mitre_normal: Vector3,
+        chord: i32,
+        along_the_chord: f64,
+        at: Vector3,
+        turn_past: f64,
+    ) -> Self {
+        SurfaceCrossingAtTheMitre {
+            given_up,
+            ring,
+            param_on_the_cap: on_the_cap,
+            param_on_the_wall: on_the_wall,
+            mitre_normal,
+            chord,
+            how_far_along_the_chord: along_the_chord,
+            at,
+            turn_past,
+            ..Default::default()
+        }
+    }
+
+    /// Whether the run-out has given rail `rail` of the ring up (it stands under the run-out).
+    pub fn is_given_up(&self, rail: usize) -> bool {
+        self.given_up[rail]
+    }
+
+    /// The rail of the ring the run-out leaves standing clear: the last where it gives up from rail
+    /// zero, and rail zero otherwise.
+    pub fn the_rail_that_stands_clear(&self) -> usize {
+        if self.given_up[0] {
+            self.given_up.len() - 1
+        } else {
+            0
+        }
+    }
+}

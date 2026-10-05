@@ -1,8 +1,8 @@
 //! Reading a mixed corner's frame off the two edge plans that meet there
 //! (`Bevel/Surface/SurfaceMixedCornerReadOffTheEdgePlans.cs`, a static class: free functions
 //! here). The questions the reading is made of land here first: which region the two edges
-//! share, whether the bead rests on a crease of it, and which side's normal and tangent line to
-//! read. The reading itself lands with a later package.
+//! share, whether the bead rests on a crease of it, which side's normal and tangent line to
+//! read, and where two skew lines touch. The reading itself lands with a later package.
 
 use vector_math::Vector3;
 
@@ -82,4 +82,37 @@ pub fn tangent_line_of(plan: &SurfaceEdgePlan, shared_key: i32, shared: bool) ->
     } else {
         plan.right_tangent_line
     }
+}
+
+/// Where two skew lines standing `apart` from each other touch - the midpoint of their common
+/// perpendicular - provided that perpendicular really is `apart` long, within `tolerance`;
+/// `None` where they are parallel or stand another distance apart.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn try_touch_at(
+    first: SurfaceLine,
+    second: SurfaceLine,
+    apart: f64,
+    tolerance: f64,
+) -> Option<Vector3> {
+    let between = second.point - first.point;
+    let direction_dot = first.direction.dot(second.direction);
+    let determinant = 1.0 - (direction_dot * direction_dot);
+
+    if !(determinant.abs() > 1e-12) {
+        return None;
+    }
+
+    let along_first = between.dot(first.direction);
+    let along_second = between.dot(second.direction);
+    let here = (along_first - (direction_dot * along_second)) / determinant;
+    let there = ((direction_dot * along_first) - along_second) / determinant;
+
+    let on_first = first.point + (first.direction * here);
+    let on_second = second.point + (second.direction * there);
+
+    if ((on_first - on_second).length() - apart).abs() > tolerance {
+        return None;
+    }
+
+    Some((on_first + on_second) / 2.0)
 }

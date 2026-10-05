@@ -2,12 +2,18 @@
 //! walk passed rather than one straight line. Ports
 //! `Bevel/Surface/SurfaceEndFollowsTheWalkedChords.cs` (C# `internal static class`; a module of free
 //! functions here). What is here is the concave reading - the section added as the bead's own end
-//! cap ([`try_cap_with_the_section`]), ear clipped by [`super::surface_ring_ears`]; the convex
-//! reading (`TryTakeTheSection`) and its rim and wedge helpers land with later packages.
+//! cap ([`try_cap_with_the_section`]), ear clipped by [`super::surface_ring_ears`]; the walk
+//! of the chords the cap follows ([`the_chords_the_cap_follows`]) and the rim, wedge and bulge
+//! readings the convex section is made of; the convex reading itself (`TryTakeTheSection`) lands
+//! with a later package. The rim is an `IndexMap` and every set an `IndexSet`, because which
+//! neighbour the walk tries first and which corner it starts at follow C#'s insertion order.
 
+use indexmap::{IndexMap, IndexSet};
 use vector_math::Vector3;
 
-use super::{surface_end_cut, surface_ring, surface_ring_ears, SurfaceVertexPool};
+use super::{
+    surface_cut_clip, surface_end_cut, surface_ring, surface_ring_ears, SurfaceVertexPool,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `TryCapWithTheSection`: the section added as the bead's own end cap, bounded on the wall
@@ -86,4 +92,348 @@ pub fn try_cap_with_the_section(
     // Nothing stands part way along a chord: this face was built from the profile's own vertices, and
     // nothing of the mesh was cut to make room for it.
     Ok(vec![Vec::new(); profile.len() - 1])
+}
+
+/// How many rim edges the walk from the corner to the wall's foot may take before it is read as
+/// going nowhere.
+pub const THE_FURTHEST_WALK: i32 = 64;
+
+/// The rim vertices the cap walks past from the `corner` to the wall's foot (`profile[wall_end]`)
+/// along the rim of the end faces `in_the_end` of `faces`: walked BOTH ways round the rim from the
+/// corner, the SHORTER arrival being the wall's side of the section. `None` where the corner has
+/// no rim of its own, the foot is on the corner's own rim edge (nothing was walked past: the
+/// unrolled section), or neither way arrives.
+pub fn the_chords_the_cap_follows(
+    pool: &SurfaceVertexPool,
+    faces: &[(i32, i32, i32)],
+    in_the_end: &IndexSet<i32>,
+    profile: &[i32],
+    wall_end: usize,
+    corner: Vector3,
+) -> Option<Vec<i32>> {
+    let wall_foot = pool.position_of(profile[wall_end]);
+    let mut reach = pool.near_enough();
+
+    for &vertex in profile {
+        reach = f64::max(
+            reach,
+            (pool.position_of(vertex) - corner).length() + pool.near_enough(),
+        );
+    }
+
+    let rim = the_rim(faces, in_the_end);
+
+    let here = try_the_corners_own_rim(pool, &rim, corner)?;
+
+    let mut shortest: Option<Vec<i32>> = None;
+
+    for &neighbour in &rim[&here] {
+        let mut chain = Vec::new();
+        let mut seen = IndexSet::new();
+        seen.insert(here);
+        let mut previous = here;
+        let mut at = neighbour;
+
+        for _ in 0..THE_FURTHEST_WALK {
+            // Arrival is by POSITION against a rim vertex the walkback made.
+            if (pool.position_of(at) - wall_foot).length() < pool.near_enough() {
+                if chain.is_empty() {
+                    // The foot is on the corner's own rim edge: nothing was walked past, so this
+                    // is the unrolled section however the plan read the edge.
+                    return None;
+                }
+
+                if shortest
+                    .as_ref()
+                    .is_none_or(|best| chain.len() < best.len())
+                {
+                    shortest = Some(chain);
+                }
+
+                break;
+            }
+
+            if !seen.insert(at) || (pool.position_of(at) - corner).length() > reach {
+                break;
+            }
+            let Some(next) = rim.get(&at).filter(|next| next.len() == 2) else {
+                // Back on itself, off the end of the section, or a rim that forks: not this walk.
+                break;
+            };
+
+            chain.push(at);
+
+            let onward = if next[0] == previous {
+                next[1]
+            } else {
+                next[0]
+            };
+
+            previous = at;
+            at = onward;
+        }
+    }
+
+    shortest
+}
+
+/// The rim of the end faces: every directed side of a face in `in_the_end` whose reverse is not
+/// also a side, joined both ways, in the order the faces name them.
+pub fn the_rim(faces: &[(i32, i32, i32)], in_the_end: &IndexSet<i32>) -> IndexMap<i32, Vec<i32>> {
+    let mut used: IndexSet<(i32, i32)> = IndexSet::new();
+
+    for &face in in_the_end {
+        let (v0, v1, v2) = faces[face as usize];
+        let corners = [v0, v1, v2];
+
+        for side in 0..3 {
+            used.insert((corners[side], corners[(side + 1) % 3]));
+        }
+    }
+
+    let mut rim = IndexMap::new();
+
+    for &(from, to) in &used {
+        if used.contains(&(to, from)) || from == to {
+            continue;
+        }
+
+        join(&mut rim, from, to);
+        join(&mut rim, to, from);
+    }
+
+    rim
+}
+
+/// Adds `to` to `from`'s rim neighbours, once.
+pub fn join(rim: &mut IndexMap<i32, Vec<i32>>, from: i32, to: i32) {
+    let joined = rim.entry(from).or_insert_with(|| Vec::with_capacity(2));
+
+    if !joined.contains(&to) {
+        joined.push(to);
+    }
+}
+
+/// The ONE rim vertex standing at `corner`, with exactly two rim neighbours; `None` where none
+/// does, or more than one, or it forks.
+pub fn try_the_corners_own_rim(
+    pool: &SurfaceVertexPool,
+    rim: &IndexMap<i32, Vec<i32>>,
+    corner: Vector3,
+) -> Option<i32> {
+    let mut here = None;
+
+    for (&vertex, joined) in rim {
+        if (pool.position_of(vertex) - corner).length() < pool.near_enough() {
+            if here.is_some() || joined.len() != 2 {
+                return None;
+            }
+
+            here = Some(vertex);
+        }
+    }
+
+    here
+}
+
+/// The half planes, in the plane facing `plane_normal`, each side of the closed `outline` bounds,
+/// facing its middle; `None` where a side has no length or its middle stands on one.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn try_the_wedge(
+    outline: &[Vector3],
+    plane_normal: Vector3,
+) -> Option<Vec<(Vector3, Vector3)>> {
+    let mut the_wedge = Vec::with_capacity(outline.len());
+
+    let mut middle = Vector3::ZERO;
+    let count = outline.len() as f64;
+
+    for &at in outline {
+        middle += at / count;
+    }
+
+    for side in 0..outline.len() {
+        let from = outline[side];
+        let along = outline[(side + 1) % outline.len()] - from;
+
+        if !(along.length_squared() > 0.0) {
+            return None;
+        }
+
+        let inward = plane_normal.cross(along);
+
+        if !(inward.length_squared() > 0.0) {
+            return None;
+        }
+
+        let inward = inward.get_normal();
+
+        let reach = (middle - from).dot(inward);
+
+        if reach == 0.0 {
+            return None;
+        }
+
+        the_wedge.push((from, if reach > 0.0 { inward } else { -inward }));
+    }
+
+    Some(the_wedge)
+}
+
+/// Whether every point of `outline` stands inside every half plane of `the_wedge`, to the pool's
+/// ruler.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+pub fn it_is_convex(
+    outline: &[Vector3],
+    the_wedge: &[(Vector3, Vector3)],
+    pool: &SurfaceVertexPool,
+) -> bool {
+    outline.iter().all(|&at| {
+        the_wedge
+            .iter()
+            .all(|&(point, inward)| !((at - point).dot(inward) < -pool.near_enough()))
+    })
+}
+
+/// Whether `corner` stands outside some half plane of `the_bulge`, to the pool's ruler.
+pub fn the_corner_is_outside_the_bulge(
+    corner: Vector3,
+    the_bulge: &[(Vector3, Vector3)],
+    pool: &SurfaceVertexPool,
+) -> bool {
+    the_bulge
+        .iter()
+        .any(|&(point, inward)| (corner - point).dot(inward) < -pool.near_enough())
+}
+
+/// Whether every vertex of `profile` stands inside every half plane of `the_wedge`, to the
+/// pool's ruler.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+pub fn it_holds_the_profile(
+    pool: &SurfaceVertexPool,
+    profile: &[i32],
+    the_wedge: &[(Vector3, Vector3)],
+) -> bool {
+    profile.iter().all(|&vertex| {
+        let at = pool.position_of(vertex);
+
+        the_wedge
+            .iter()
+            .all(|&(point, inward)| !((at - point).dot(inward) < -pool.near_enough()))
+    })
+}
+
+/// The half planes each chord of `profile` bounds in the plane facing `plane_normal`, facing the
+/// profile's own middle - or, for a profile with no bulge to it (a chamfer's one chord, whose
+/// middle is ON it), facing away from `corner`, which leaves the whole polygon as the section.
+/// Chords of no length, or along the normal, are skipped.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn the_bulge(
+    pool: &SurfaceVertexPool,
+    profile: &[i32],
+    corner: Vector3,
+    plane_normal: Vector3,
+) -> Vec<(Vector3, Vector3)> {
+    let mut the_bulge = Vec::with_capacity(profile.len().saturating_sub(1));
+    let mut middle = Vector3::ZERO;
+    let count = profile.len() as f64;
+
+    for &vertex in profile {
+        middle += pool.position_of(vertex) / count;
+    }
+
+    for i in 0..profile.len().saturating_sub(1) {
+        let from = pool.position_of(profile[i]);
+        let along = pool.position_of(profile[i + 1]) - from;
+
+        if !(along.length_squared() > 0.0) {
+            continue;
+        }
+
+        let inward = plane_normal.cross(along);
+
+        if !(inward.length_squared() > 0.0) {
+            continue;
+        }
+
+        let inward = inward.get_normal();
+
+        let mut leaning = (middle - from).dot(inward);
+
+        if leaning.abs() < pool.near_enough() {
+            leaning = -(corner - from).dot(inward);
+        }
+
+        the_bulge.push((from, if leaning > 0.0 { inward } else { -inward }));
+    }
+
+    the_bulge
+}
+
+/// The pieces of `ring` the section leaves standing: those outside the wedge's half planes, and
+/// whatever of the inside stands beyond the bulge's chords.
+pub fn pieces_left_of(
+    ring: &[i32],
+    pool: &mut SurfaceVertexPool,
+    the_wedge: &[(Vector3, Vector3)],
+    the_bulge: &[(Vector3, Vector3)],
+) -> Vec<Vec<i32>> {
+    let mut pieces = Vec::with_capacity(the_wedge.len() + 1);
+    let mut inside = ring.to_vec();
+
+    for &(point, inward) in the_wedge {
+        let outside = surface_cut_clip::clip_by(&inside, pool, point, -inward, None, None);
+
+        if outside.len() >= 3 {
+            pieces.push(outside);
+        }
+
+        inside = surface_cut_clip::clip_by(&inside, pool, point, inward, None, None);
+
+        if inside.len() < 3 {
+            return pieces;
+        }
+    }
+
+    for &(point, inward) in the_bulge {
+        inside = surface_cut_clip::clip_by(&inside, pool, point, inward, None, None);
+
+        if inside.len() < 3 {
+            return pieces;
+        }
+    }
+
+    pieces.push(inside);
+    pieces
+}
+
+/// Whether the section swallows `face` whole: every corner inside every half plane of
+/// `the_wedge` and behind at least one chord of `the_bulge`, to the cut's own ruler.
+pub fn the_section_swallows_it(
+    pool: &SurfaceVertexPool,
+    face: (i32, i32, i32),
+    the_wedge: &[(Vector3, Vector3)],
+    the_bulge: &[(Vector3, Vector3)],
+) -> bool {
+    let on_the_cut = surface_cut_clip::on_the_cut(pool);
+
+    for vertex in [face.0, face.1, face.2] {
+        let at = pool.position_of(vertex);
+
+        for &(point, inward) in the_wedge {
+            if (at - point).dot(inward) < -on_the_cut {
+                return false;
+            }
+        }
+
+        let behind_a_chord = the_bulge.iter().fold(false, |behind, &(point, inward)| {
+            behind | ((at - point).dot(inward) < on_the_cut)
+        });
+
+        if !behind_a_chord {
+            return false;
+        }
+    }
+
+    true
 }

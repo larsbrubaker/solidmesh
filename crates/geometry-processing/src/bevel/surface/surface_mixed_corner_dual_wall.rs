@@ -1,13 +1,14 @@
 //! What the WALL gives up and gains under a leaning one-crease corner's patch - the face rail zero
 //! runs across, made to end exactly where that rail runs. Ports
 //! `Bevel/Surface/SurfaceMixedCornerDualWall.cs`, a static class (free functions here): its record,
-//! where rail zero leaves one crease ([`SurfaceMixedCornerDualWallCrossing`]), the bead's foot on
-//! its crease ([`try_the_foot`]) and the root's fan ([`try_fill_the_root`], [`try_fan`]). The rest
+//! where rail zero leaves one crease ([`SurfaceMixedCornerDualWallCrossing`]), how it is found
+//! ([`try_the_crossing`]), the bead's foot on its crease ([`try_the_foot`]), a rim's positions
+//! ([`rim_of`]) and the root's fan ([`try_fill_the_root`], [`try_fan`]). The rest
 //! of the wall's reading lands with later packages.
 
 use vector_math::Vector3;
 
-use super::{surface_fan, SurfaceMixedCorner, SurfaceVertexPool};
+use super::{surface_fan, SurfaceLine, SurfaceMixedCorner, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedCornerDualWall.Crossing` (a private readonly struct): where rail zero leaves
@@ -117,4 +118,57 @@ pub fn try_fan(
     }
 
     Ok(())
+}
+
+impl SurfaceMixedCornerDualWallCrossing {
+    /// C#'s constructor: rail zero leaves the crease between stations `before` and `after`, at
+    /// `at`.
+    pub fn new(before: i32, after: i32, at: Vector3) -> Self {
+        SurfaceMixedCornerDualWallCrossing { before, after, at }
+    }
+}
+
+/// Where rail zero (`on_the_wall`, walked on from station `from`) crosses `crease` in the wall
+/// facing `out_of_the_wall`, as the two stations it falls between and the point between them.
+/// Refused where it never does: a wall with no mouth, which is not this corner drawn differently.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < 0)`, which a NaN also passes.
+pub fn try_the_crossing(
+    crease: SurfaceLine,
+    out_of_the_wall: Vector3,
+    on_the_wall: &[Vector3],
+    from: usize,
+) -> Result<SurfaceMixedCornerDualWallCrossing, BevelAdvisory> {
+    let across = crease.direction.cross(out_of_the_wall);
+    let mut started = (on_the_wall[from] - crease.point).dot(across);
+
+    for station in (from + 1)..on_the_wall.len() {
+        let here = (on_the_wall[station] - crease.point).dot(across);
+
+        if !(started * here < 0.0) {
+            started = here;
+            continue;
+        }
+
+        let previous = on_the_wall[station - 1];
+        let was = (previous - crease.point).dot(across);
+
+        return Ok(SurfaceMixedCornerDualWallCrossing::new(
+            station as i32 - 1,
+            station as i32,
+            previous + ((on_the_wall[station] - previous) * (was / (was - here))),
+        ));
+    }
+
+    Err(BevelAdvisory::new(
+        BevelAdvisoryCode::SurfaceCornerNotSupported,
+        vec![BevelAdvisoryArg::Vector3(crease.point)],
+    ))
+}
+
+/// The positions of the rim's vertices `snap_to`, in order.
+pub fn rim_of(pool: &SurfaceVertexPool, snap_to: &[i32]) -> Vec<Vector3> {
+    snap_to
+        .iter()
+        .map(|&vertex| pool.position_of(vertex))
+        .collect()
 }

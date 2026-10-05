@@ -135,3 +135,58 @@ fn rust_only_two_pieces_of_one_crease_are_one_line() {
     assert!(surface_mitre_seam::the_lines_are_one(&plan, &plan, 1e-9));
     assert!(surface_mitre_seam::try_the_point(&plan, &plan, 1e-9).is_none());
 }
+
+#[test]
+fn rust_only_three_end_rings_close_into_one_loop() {
+    use geometry_processing::bevel::surface::surface_corner_patch::try_order_the_sides;
+
+    // The second ring meets the first's end by its own far end, so it is turned over.
+    let sides = try_order_the_sides(&[vec![1, 2, 3], vec![5, 4, 3], vec![5, 6, 1]]).unwrap();
+    assert_eq!(sides, vec![vec![1, 2, 3], vec![3, 4, 5], vec![5, 6, 1]]);
+
+    // Rings that do not close are refused.
+    assert!(try_order_the_sides(&[vec![1, 2, 3], vec![3, 4, 5], vec![5, 6, 7]]).is_none());
+}
+
+#[test]
+fn rust_only_a_closed_tetrahedron_covers_nothing_twice() {
+    use geometry_processing::bevel::surface::surface_mixed_corner_patch::nothing_covers_nothing;
+    use geometry_processing::bevel::surface::SurfaceVertexPool;
+
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
+    let b = pool.add(Vector3::new(1.0, 0.0, 0.0));
+    let c = pool.add(Vector3::new(0.0, 1.0, 0.0));
+    let d = pool.add(Vector3::new(0.0, 0.0, 1.0));
+
+    let closed = [(a, c, b), (a, b, d), (b, c, d), (c, a, d)];
+    assert!(nothing_covers_nothing(&pool, &closed).is_ok());
+
+    // A face twice over, and one wound the same way as its neighbour, are both refused.
+    assert!(nothing_covers_nothing(&pool, &[(a, c, b), (c, b, a)]).is_err());
+    assert!(nothing_covers_nothing(&pool, &[(a, b, c), (a, b, d)]).is_err());
+}
+
+#[test]
+fn rust_only_skew_lines_and_size_windows() {
+    use geometry_processing::bevel::surface::surface_mixed_corner_cut_edge::try_apart;
+    use geometry_processing::bevel::surface::surface_wall_ran_out::bound;
+
+    // Two skew lines a unit apart along z.
+    let apart = try_apart(
+        SurfaceLine::new(Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0)),
+        SurfaceLine::new(Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 1.0, 0.0)),
+    )
+    .unwrap();
+    assert!((apart - 1.0).abs() < 1e-15);
+
+    // size - 2 >= 0 raises the floor to 2; 3 - size >= 0 lowers the ceiling to 3.
+    let (mut lowest, mut highest) = (0.0, f64::INFINITY);
+    bound(1.0, -2.0, &mut lowest, &mut highest);
+    bound(-1.0, 3.0, &mut lowest, &mut highest);
+    assert_eq!((lowest, highest), (2.0, 3.0));
+
+    // A condition that never holds whatever the size closes the window.
+    bound(0.0, -1.0, &mut lowest, &mut highest);
+    assert_eq!(highest, f64::NEG_INFINITY);
+}

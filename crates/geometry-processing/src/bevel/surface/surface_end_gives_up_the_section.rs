@@ -1,12 +1,15 @@
 //! A convex chain end whose face beyond gives the section up. Ports
 //! `Bevel/Surface/SurfaceEndGivesUpTheSection.cs` (C# `internal static class`; a module of free
 //! functions here). What is here is the sewing of the faces the subtraction did not rebuild to the
-//! vertices it made ([`sew_the_rim`]); the subtraction itself (`TryGiveItUp`) and its readings land
-//! with later packages.
+//! vertices it made ([`sew_the_rim`]), the half planes the section is bounded by and the pieces a
+//! face leaves outside them ([`pieces_outside_of`], [`pieces_left_of`]); the subtraction itself
+//! (`TryGiveItUp`) and its other readings land with later packages.
 
 use std::collections::HashSet;
 
-use super::{surface_fan, SurfaceVertexPool};
+use vector_math::Vector3;
+
+use super::{surface_cut_clip, surface_fan, SurfaceVertexPool};
 
 /// C# `SewTheRim`: splits any face the subtraction did NOT rebuild wherever one of the vertices it
 /// made stands part way along an edge of that face, so the rim sews by index rather than by
@@ -120,4 +123,136 @@ fn standing_on(
     found.sort_by(|first, second| first.0.total_cmp(&second.0));
 
     found.into_iter().map(|(_, vertex)| vertex).collect()
+}
+
+/// How far into the end face the chain has to lean for the face to stand BEHIND the end, as a
+/// cosine - a dimensionless floor.
+pub const LEANS_INTO_THE_FACE: f64 = 1e-6;
+
+/// Whether the end face (facing `end_face_outward`) stands behind the chain's end, which leans
+/// `into_the_chain`.
+pub fn the_face_is_behind_it(into_the_chain: Vector3, end_face_outward: Vector3) -> bool {
+    into_the_chain.dot(end_face_outward) > LEANS_INTO_THE_FACE
+}
+
+/// Whether the section swallows `face` whole: every corner inside every half plane of
+/// `the_wedge` and behind at least one chord of `the_bulge` (whose half spaces are the chords
+/// read AWAY from the corner, so the corner side of a chord is the one this reads as outside),
+/// to the cut's own ruler.
+pub fn the_section_swallows_it(
+    pool: &SurfaceVertexPool,
+    face: (i32, i32, i32),
+    the_wedge: &[(Vector3, Vector3)],
+    the_bulge: &[(Vector3, Vector3)],
+) -> bool {
+    let on_the_cut = surface_cut_clip::on_the_cut(pool);
+
+    for vertex in [face.0, face.1, face.2] {
+        let at = pool.position_of(vertex);
+
+        for &(point, inward) in the_wedge {
+            if (at - point).dot(inward) < -on_the_cut {
+                return false;
+            }
+        }
+
+        let behind_a_chord = the_bulge.iter().fold(false, |behind, &(point, inward)| {
+            behind | ((at - point).dot(inward) < on_the_cut)
+        });
+
+        if !behind_a_chord {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// The pieces of `ring` the section leaves standing: those outside the wedge's half planes, and
+/// whatever of the inside stands beyond the bulge's chords.
+pub fn pieces_left_of(
+    ring: &[i32],
+    pool: &mut SurfaceVertexPool,
+    the_wedge: &[(Vector3, Vector3)],
+    the_bulge: &[(Vector3, Vector3)],
+) -> Vec<Vec<i32>> {
+    let (mut pieces, inside) = pieces_outside_of(ring, pool, the_wedge, None);
+
+    let Some(mut inside) = inside else {
+        return pieces;
+    };
+
+    for &(point, inward) in the_bulge {
+        inside = surface_cut_clip::clip_by(&inside, pool, point, inward, None, None);
+
+        if inside.len() < 3 {
+            return pieces;
+        }
+    }
+
+    pieces.push(inside);
+    pieces
+}
+
+/// The pieces of `ring` outside each half plane of `the_region` in turn, clipping what is left
+/// inside as it goes, and that inside (`None` once it is less than a triangle). `snap_to` is
+/// passed to every clip.
+pub fn pieces_outside_of(
+    ring: &[i32],
+    pool: &mut SurfaceVertexPool,
+    the_region: &[(Vector3, Vector3)],
+    snap_to: Option<&[i32]>,
+) -> (Vec<Vec<i32>>, Option<Vec<i32>>) {
+    let mut pieces = Vec::with_capacity(the_region.len() + 1);
+
+    let mut inside = ring.to_vec();
+
+    for &(point, inward) in the_region {
+        let outside = surface_cut_clip::clip_by(&inside, pool, point, -inward, snap_to, None);
+
+        if outside.len() >= 3 {
+            pieces.push(outside);
+        }
+
+        inside = surface_cut_clip::clip_by(&inside, pool, point, inward, snap_to, None);
+
+        if inside.len() < 3 {
+            return (pieces, None);
+        }
+    }
+
+    (pieces, Some(inside))
+}
+
+/// The half plane in the plane facing `plane_normal` bounded by the line `from`..`to`, as a point
+/// and the unit inward direction toward `inside`; `None` where the line has no length, lies along
+/// the normal, or `inside` stands on it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn try_half_plane(
+    from: Vector3,
+    to: Vector3,
+    plane_normal: Vector3,
+    inside: Vector3,
+) -> Option<(Vector3, Vector3)> {
+    let along = to - from;
+
+    if !(along.length_squared() > 0.0) {
+        return None;
+    }
+
+    let inward = plane_normal.cross(along);
+
+    if !(inward.length_squared() > 0.0) {
+        return None;
+    }
+
+    let inward = inward.get_normal();
+
+    let reach = (inside - from).dot(inward);
+
+    if reach == 0.0 {
+        return None;
+    }
+
+    Some((from, if reach > 0.0 { inward } else { -inward }))
 }

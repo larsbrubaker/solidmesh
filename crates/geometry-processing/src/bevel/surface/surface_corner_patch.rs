@@ -3,9 +3,10 @@
 //! ball centre square to its own edge, and the spherical triangle between the three end rings is
 //! stitched in as the patch - the rung 3 reading of `BevelCornerPatches`, built as surface and
 //! shared by vertex rather than built as a solid and subtracted. Here are its nested record, one
-//! strip arriving at the corner ([`SurfaceCornerPatchArrival`]), and the cut of one strip's end at
-//! the ball's plane ([`try_cut_the_end`]); the rest of the patch's construction lands with later
-//! packages.
+//! strip arriving at the corner ([`SurfaceCornerPatchArrival`]), the ball's centre
+//! ([`try_find_the_ball_centre`]), the cut of one strip's end at the ball's plane
+//! ([`try_cut_the_end`]) and the ordering of the three end rings round the patch
+//! ([`try_order_the_sides`]); the rest of the patch's construction lands with later packages.
 
 use std::rc::Rc;
 
@@ -79,4 +80,144 @@ pub fn try_cut_the_end(
     }
 
     Ok((ring, meets_at))
+}
+
+/// How near two face normals have to agree to be one face, and two setbacks to be one plane - a
+/// dimensionless floor.
+pub const FACE_NORMALS_AGREE: f64 = 1e-6;
+
+impl SurfaceCornerPatchArrival {
+    /// C#'s constructor.
+    pub fn new(
+        strip: Rc<SurfaceStrip>,
+        edge: SurfaceEdgePlan,
+        on_the_left: i32,
+        on_the_right: i32,
+    ) -> Self {
+        SurfaceCornerPatchArrival {
+            strip,
+            edge,
+            on_the_left,
+            on_the_right,
+        }
+    }
+}
+
+/// The centre of the ball of radius `size` tangent to the three faces the `arrivals` end on: the
+/// corner moved by the solution of `n . x = -size` over the three face normals (the minus because
+/// the normals face out of the material and the centre is inside it). Refused where two edges end
+/// on one face at different setbacks, where the arrivals name other than three faces, or where the
+/// three do not cut a point out between them.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn try_find_the_ball_centre(
+    arrivals: &[SurfaceCornerPatchArrival],
+    corner: Vector3,
+    size: f64,
+) -> Result<Vector3, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.into()],
+        )
+    };
+
+    let mut normals: Vec<Vector3> = Vec::with_capacity(3);
+    let mut offsets: Vec<f64> = Vec::with_capacity(3);
+
+    for arrival in arrivals {
+        for normal in [
+            arrival.edge.edge.left_normal(),
+            arrival.edge.edge.right_normal(),
+        ] {
+            let offset = size;
+
+            let already = normals
+                .iter()
+                .position(|face| face.dot(normal) > 1.0 - FACE_NORMALS_AGREE);
+
+            let Some(already) = already else {
+                normals.push(normal.get_normal());
+                offsets.push(offset);
+                continue;
+            };
+
+            if (offsets[already] - offset).abs() > size * FACE_NORMALS_AGREE {
+                // Two edges ending on one face, set back by different amounts: there is no single
+                // plane both of them can end on and no one ball for the patch to be part of.
+                return Err(not_supported());
+            }
+        }
+    }
+
+    if normals.len() != 3 {
+        // Three edges over anything but three faces - two of them sharing both their faces, or a
+        // corner the flood reads as fewer surfaces than it has.
+        return Err(not_supported());
+    }
+
+    let determinant = normals[0].dot(normals[1].cross(normals[2]));
+
+    if !(determinant.abs() > FACE_NORMALS_AGREE) {
+        // Three faces that do not cut a point out between them - two of them parallel, or all
+        // three through one line - so there is no corner here to put a ball in.
+        return Err(not_supported());
+    }
+
+    // Cramer, written out: the inverse of a 3x3 whose rows are the normals, applied to the
+    // offsets.
+    let wanted = Vector3::new(-offsets[0], -offsets[1], -offsets[2]);
+
+    let first = normals[1].cross(normals[2]);
+    let second = normals[2].cross(normals[0]);
+    let third = normals[0].cross(normals[1]);
+
+    Ok(corner + (((first * wanted.x) + (second * wanted.y) + (third * wanted.z)) / determinant))
+}
+
+/// The three end `rings` joined end to start round the patch - each turned over where it meets
+/// the last by its own far end - starting from the first; `None` where they do not close into
+/// one loop.
+pub fn try_order_the_sides(rings: &[Vec<i32>]) -> Option<Vec<Vec<i32>>> {
+    let mut sides = Vec::with_capacity(rings.len());
+    sides.push(rings[0].clone());
+
+    let mut used = vec![false; rings.len()];
+
+    used[0] = true;
+
+    for _ in 1..rings.len() {
+        let ending = *sides.last()?.last()?;
+        let mut found = false;
+
+        for next in 0..rings.len() {
+            if found {
+                break;
+            }
+            if used[next] {
+                continue;
+            }
+
+            let ring = &rings[next];
+
+            if ring[0] == ending {
+                sides.push(ring.clone());
+                used[next] = true;
+                found = true;
+            } else if ring[ring.len() - 1] == ending {
+                sides.push(ring.iter().rev().copied().collect());
+                used[next] = true;
+                found = true;
+            }
+        }
+
+        if !found {
+            return None;
+        }
+    }
+
+    if sides.last()?.last()? != &sides[0][0] {
+        return None;
+    }
+
+    Some(sides)
 }

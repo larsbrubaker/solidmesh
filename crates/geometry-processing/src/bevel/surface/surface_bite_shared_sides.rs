@@ -1,8 +1,8 @@
 //! The pieces ONE bite leaves, read as neighbours of each other ([`SurfaceBiteSharedSides`]): what
 //! a piece's side looks like from the piece on the other side of it. Ports the fields of
-//! `Bevel/Surface/SurfaceBiteSharedSides.cs` and its chain-across reading
-//! ([`SurfaceBiteSharedSides::try_the_chain_across`]); its constructor lands with a later package
-//! as a further `impl` block.
+//! `Bevel/Surface/SurfaceBiteSharedSides.cs` its constructor
+//! ([`SurfaceBiteSharedSides::new`]) and its chain-across reading
+//! ([`SurfaceBiteSharedSides::try_the_chain_across`]).
 
 use std::collections::HashMap;
 
@@ -142,5 +142,27 @@ impl SurfaceBiteSharedSides {
         }
 
         None
+    }
+}
+
+impl SurfaceBiteSharedSides {
+    /// Indexes `pieces` by vertex: for each vertex, the pieces that carry it, in piece order and
+    /// each once. Only looked up, so the `HashMap`'s order cannot reach an output.
+    pub fn new(pieces: Vec<Vec<i32>>) -> Self {
+        let mut carried_by: HashMap<i32, Vec<i32>> = HashMap::new();
+
+        for (piece, vertices) in pieces.iter().enumerate() {
+            let piece = piece as i32;
+
+            for &vertex in vertices {
+                let carriers = carried_by.entry(vertex).or_default();
+
+                if carriers.last() != Some(&piece) {
+                    carriers.push(piece);
+                }
+            }
+        }
+
+        SurfaceBiteSharedSides { pieces, carried_by }
     }
 }
