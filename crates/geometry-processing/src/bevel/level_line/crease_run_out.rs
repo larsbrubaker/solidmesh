@@ -317,3 +317,135 @@ impl CreaseRunOut {
         (from - (self.crease_direction * from.dot(self.crease_direction))).length()
     }
 }
+
+impl CreaseRunOut {
+    /// C# `CreaseRunOut.Find`: every run-out at a corner where a picked convex chain edge and a
+    /// picked concave one share a face and an unpicked concave feature crease leaves the corner
+    /// between the convex edge's side face and the concave edge's wall. `chains` are the picked
+    /// chains as vertex lists (`closed` per chain); `is_feature_edge` says whether a mesh edge is a
+    /// crease at all. Corners are visited in vertex order; C#'s `samples` default is 16.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn find(
+        positions: &[Vector3],
+        indices: &[(i32, i32, i32)],
+        chains: &[Vec<i32>],
+        closed: &[bool],
+        is_feature_edge: &dyn Fn(i32, i32) -> bool,
+        size: f64,
+        samples: i32,
+    ) -> Vec<CreaseRunOut> {
+        let standing = triangle_edges::standing_map(indices);
+        let mut chain_keys = std::collections::HashSet::new();
+        let mut at_vertex: IndexMap<i32, Vec<(i32, i32)>> = IndexMap::new();
+
+        for (k, chain) in chains.iter().enumerate() {
+            let edges = if closed[k] {
+                chain.len()
+            } else {
+                chain.len() - 1
+            };
+
+            for i in 0..edges {
+                let key = triangle_edges::key(chain[i], chain[(i + 1) % chain.len()]);
+                if chain_keys.insert(key) {
+                    CreaseRunOut::add(&mut at_vertex, key.0, key);
+                    CreaseRunOut::add(&mut at_vertex, key.1, key);
+                }
+            }
+        }
+
+        let n = |t: i32| triangle_edges::normal(positions, indices[t as usize]);
+        let coplanar = |a: i32, b: i32| n(a).dot(n(b)) > 1.0 - FLAT;
+        let sense = |key: (i32, i32)| CreaseRunOut::sense(positions, indices, &standing, key);
+
+        at_vertex.sort_keys();
+
+        let mut found = Vec::new();
+
+        for (&corner, edges) in &at_vertex {
+            for &convex in edges.iter().filter(|&&e| sense(e) < 0) {
+                for &concave in edges.iter().filter(|&&e| sense(e) > 0) {
+                    // The shared face stands on both chain edges; each edge's other face is its
+                    // side / wall.
+                    let convex_faces = &standing[&convex];
+                    let concave_faces = &standing[&concave];
+                    let shared: Vec<(i32, i32)> = convex_faces
+                        .iter()
+                        .flat_map(|&a| {
+                            concave_faces
+                                .iter()
+                                .filter(move |&&b| coplanar(a, b))
+                                .map(move |&b| (a, b))
+                        })
+                        .collect();
+
+                    if shared.len() != 1 {
+                        continue;
+                    }
+
+                    let side = *convex_faces
+                        .iter()
+                        .find(|&&t| t != shared[0].0)
+                        .expect("a convex chain edge stands on two faces");
+                    let wall = *concave_faces
+                        .iter()
+                        .find(|&&t| t != shared[0].1)
+                        .expect("a concave chain edge stands on two faces");
+
+                    for (&crease_key, faces) in standing.iter().filter(|(k, _)| {
+                        (k.0 == corner || k.1 == corner) && !chain_keys.contains(*k)
+                    }) {
+                        if faces.len() != 2
+                            || !is_feature_edge(crease_key.0, crease_key.1)
+                            || !(sense(crease_key) > 0)
+                        {
+                            continue;
+                        }
+
+                        let on_side = faces
+                            .iter()
+                            .copied()
+                            .find(|&t| coplanar(t, side))
+                            .unwrap_or(-1);
+                        let on_wall = faces
+                            .iter()
+                            .copied()
+                            .find(|&t| t != on_side && coplanar(t, wall))
+                            .unwrap_or(-1);
+
+                        if on_side < 0 || on_wall < 0 {
+                            continue;
+                        }
+
+                        let far = if crease_key.0 == corner {
+                            crease_key.1
+                        } else {
+                            crease_key.0
+                        };
+                        let along = if convex.0 == corner {
+                            convex.1
+                        } else {
+                            convex.0
+                        };
+
+                        if let Some(run_out) = CreaseRunOut::read(
+                            positions,
+                            corner,
+                            far,
+                            along,
+                            n(shared[0].0),
+                            n(side),
+                            n(wall),
+                            size,
+                            samples,
+                        ) {
+                            found.push(run_out);
+                        }
+                    }
+                }
+            }
+        }
+
+        found
+    }
+}

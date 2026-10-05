@@ -117,3 +117,17 @@ impl From<Rc<ChainField>> for RoomField {
         Self::from_chain(field)
     }
 }
+
+impl RoomField {
+    /// C# `RoomField.WithSetbacksScaled`: the same room with its chain's - or its group's member
+    /// chains' - setbacks times `factor`.
+    pub fn with_setbacks_scaled(&self, factor: f64) -> Result<RoomField, WorkError> {
+        Ok(match (&self.one, &self.several) {
+            (Some(one), _) => RoomField::from_chain(Rc::new(one.with_setbacks_scaled(factor)?)),
+            (None, Some(several)) => {
+                RoomField::from_pick(Rc::new(several.with_setbacks_scaled(factor)?))
+            }
+            (None, None) => RoomField::default(),
+        })
+    }
+}

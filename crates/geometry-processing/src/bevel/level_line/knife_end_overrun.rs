@@ -136,3 +136,40 @@ pub fn read(
         across: across.get_normal(),
     }))
 }
+
+/// C# `KnifeEndOverrun.MeetsThePlane`: the open-edge neighbour of `outermost` (not `inward`) that
+/// stands on the end's plane, or `-1`.
+pub fn meets_the_plane(
+    mesh: &super::LevelLineMesh,
+    outermost: i32,
+    inward: i32,
+    end: &KnifeEndOverrunEnd,
+) -> i32 {
+    for (low, high) in mesh.edges() {
+        let other = if low == outermost {
+            high
+        } else if high == outermost {
+            low
+        } else {
+            -1
+        };
+
+        if other < 0
+            || other == inward
+            || mesh
+                .triangles_on(low, high)
+                .iter()
+                .filter(|&&t| !mesh.is_removed(t))
+                .count()
+                != 1
+        {
+            continue;
+        }
+
+        if on_the_plane(mesh.position(other), end.vertex, end.normal) {
+            return other;
+        }
+    }
+
+    -1
+}

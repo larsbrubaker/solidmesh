@@ -144,3 +144,20 @@ pub fn sample_at(
 
     field.evaluate(position)
 }
+
+/// C# `SelfRoom.SelfRoomCeiling`: [`chain_ceiling`] over the chain edges' vertices, each once, in
+/// the order they are first met.
+pub fn self_room_ceiling(mesh: &LevelLineMesh, chain_edges: &[(i32, i32)]) -> f64 {
+    let mut seen = std::collections::HashSet::new();
+    let mut points = Vec::new();
+
+    for &(from, to) in chain_edges {
+        for vertex in [from, to] {
+            if seen.insert(vertex) {
+                points.push(mesh.position(vertex));
+            }
+        }
+    }
+
+    chain_ceiling(&points)
+}

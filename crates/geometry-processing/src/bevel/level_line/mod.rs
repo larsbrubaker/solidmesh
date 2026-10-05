@@ -64,6 +64,7 @@ mod chain_field;
 mod chain_field_clip;
 mod chain_field_end_clip;
 mod chain_field_end_ray;
+pub mod chain_field_from_polyline;
 mod chain_field_mitre;
 mod chain_field_nearest;
 mod chain_field_queries;

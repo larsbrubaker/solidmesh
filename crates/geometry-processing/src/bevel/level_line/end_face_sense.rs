@@ -462,3 +462,42 @@ pub fn oblique_ends(
         reader.is_oblique_end(chain[chain.len() - 1], chain[chain.len() - 2]),
     )
 }
+
+/// C# `EndFaceSense.IsOppositeSenseCrease(mesh, chainEdge, edge)`: the working-mesh form - the
+/// chain edge's two triangles, and the crease's filled triangle as its side and the other as its
+/// far face. `false` where either edge is not two triangles or the crease is not between a filled
+/// and an unfilled one.
+pub fn is_opposite_sense_crease_on(
+    mesh: &super::LevelLineMesh,
+    chain_edge: (i32, i32),
+    edge: (i32, i32),
+) -> bool {
+    let on_chain = mesh.triangles_on(chain_edge.0, chain_edge.1);
+    let on_crease = mesh.triangles_on(edge.0, edge.1);
+    if on_chain.len() != 2 || on_crease.len() != 2 {
+        return false;
+    }
+
+    let first = mesh.triangles[on_crease[0] as usize];
+    let second = mesh.triangles[on_crease[1] as usize];
+    if (first.tag == 0) == (second.tag == 0) {
+        return false;
+    }
+
+    let corners = |t: super::LevelLineTriangle| (t.a, t.b, t.c);
+    let (side, far) = if first.tag != 0 {
+        (first, second)
+    } else {
+        (second, first)
+    };
+
+    is_opposite_sense_crease(
+        &mesh.vertices,
+        corners(mesh.triangles[on_chain[0] as usize]),
+        corners(mesh.triangles[on_chain[1] as usize]),
+        chain_edge.0,
+        corners(side),
+        corners(far),
+        edge.0,
+    )
+}

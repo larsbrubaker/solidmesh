@@ -178,6 +178,29 @@ pub fn every_edge(
     every
 }
 
+/// C# `ForeignEdgeRoom.IsAKnife(mesh, edge)`: whether a mesh edge between a tagged (filled)
+/// triangle and an untagged one is a knife - read with the tagged one as the side.
+pub fn is_a_knife_edge(mesh: &LevelLineMesh, edge: (i32, i32)) -> bool {
+    let standing = mesh.triangles_on(edge.0, edge.1);
+    if standing.len() != 2 {
+        return false;
+    }
+
+    let first = mesh.triangles[standing[0] as usize];
+    let second = mesh.triangles[standing[1] as usize];
+    if (first.tag == 0) == (second.tag == 0) {
+        return false;
+    }
+
+    let (side, far) = if first.tag != 0 {
+        (first, second)
+    } else {
+        (second, first)
+    };
+
+    is_a_knife(mesh, side, far, edge)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

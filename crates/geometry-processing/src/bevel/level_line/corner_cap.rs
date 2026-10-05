@@ -383,3 +383,47 @@ pub fn toward(from: Vector3, to: Vector3, angle: f64, t: f64) -> Vector3 {
         + (to.get_normal() * ((t * angle).sin() / sin));
     direction.get_normal() * length
 }
+
+/// C# `CornerCap.MitreDepth`: the average depth along `n` from `v` of the planes of the strip
+/// triangles standing one each on the edges of `cycle` - `None` where an edge stands on anything
+/// but exactly one triangle of `added`, or a triangle is degenerate or edge-on to `n`.
+pub fn mitre_depth(
+    mesh: &LevelLineMesh,
+    cycle: &[i32],
+    v: Vector3,
+    n: Vector3,
+    added: &[i32],
+) -> Option<f64> {
+    let strips: std::collections::HashSet<i32> = added.iter().copied().collect();
+    let mut depths = Vec::with_capacity(cycle.len());
+
+    for i in 0..cycle.len() {
+        let on: Vec<i32> = mesh
+            .triangles_on(cycle[i], cycle[(i + 1) % cycle.len()])
+            .iter()
+            .copied()
+            .filter(|&t| !mesh.is_removed(t))
+            .collect();
+
+        if on.len() != 1 || !strips.contains(&on[0]) {
+            return None;
+        }
+
+        let face = mesh.triangles[on[0] as usize];
+        let a = mesh.position(face.a);
+        let normal = (mesh.position(face.b) - a).cross(mesh.position(face.c) - a);
+
+        if normal.length_squared() < 1e-24 || normal.get_normal().dot(n).abs() < 1e-6 {
+            return None;
+        }
+
+        depths.push((a - v).dot(normal) / n.dot(normal));
+    }
+
+    // C#'s `Average()` throws on an empty cycle; an empty one has no depth here.
+    if depths.is_empty() {
+        return None;
+    }
+
+    Some(depths.iter().sum::<f64>() / depths.len() as f64)
+}

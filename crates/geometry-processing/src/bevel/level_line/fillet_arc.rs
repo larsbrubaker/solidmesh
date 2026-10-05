@@ -261,3 +261,49 @@ pub fn carry_weight(
 
     gentle * away_from_joints
 }
+
+/// C# `FilletArc.TangentAt`: the chain's unit tangent at `parameter`, blended across each joint
+/// between the two segments' midpoints so it turns smoothly - except at a sharp joint, where it
+/// keeps its own segment's direction (the bisector exactly at the vertex).
+pub fn tangent_at(chain: &ChainField, parameter: f64) -> Vector3 {
+    let points = &chain.points;
+    let n = points.len() as i32;
+    let count = if chain.is_closed { n } else { n - 1 };
+    let (segment, along) = chain.segment_holding(parameter);
+
+    let direction = |k: i32| (points[((k + 1) % n) as usize] - points[k as usize]).get_normal();
+    let half_length = |k: i32| (points[((k + 1) % n) as usize] - points[k as usize]).length() / 2.0;
+    let half = half_length(segment);
+    let own = direction(segment);
+    let before = along < half;
+    let mut neighbour = if before { segment - 1 } else { segment + 1 };
+
+    if chain.is_closed {
+        neighbour = (neighbour + count) % count;
+    } else if neighbour < 0 || neighbour >= count {
+        return own;
+    }
+
+    let other = direction(neighbour);
+
+    if own.dot(other) < sharp_cosine(chain) {
+        let at_vertex = chain.length * 1e-7;
+        let off_the_vertex = if before { along } else { (2.0 * half) - along };
+        return if off_the_vertex <= at_vertex {
+            (own + other).get_normal()
+        } else {
+            own
+        };
+    }
+
+    // The share of the neighbour's direction: this half's length over both halves' at the joint,
+    // none at this segment's midpoint.
+    let span = half + half_length(neighbour);
+    let share = if before {
+        (half - along) / span
+    } else {
+        (along - half) / span
+    };
+
+    ((own * (1.0 - share)) + (other * share)).get_normal()
+}

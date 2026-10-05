@@ -221,3 +221,57 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
         -past
     }
 }
+
+/// C# `OpenGapFill.EndsMeet`: whether two open gap loops meet end to end - the left's start the
+/// right's end and the left's end the right's start - each on the ridge between their two sides.
+pub fn ends_meet(
+    mesh: &super::LevelLineMesh,
+    left: &super::GapLoop,
+    right: &super::GapLoop,
+) -> Result<bool, super::WorkError> {
+    if left.vertices.len() < 2 || right.vertices.len() < 2 {
+        return Ok(false);
+    }
+
+    let ends = [
+        (left.vertices[0], right.vertices[right.vertices.len() - 1]),
+        (left.vertices[left.vertices.len() - 1], right.vertices[0]),
+    ];
+
+    for (at_left, at_right) in ends {
+        if at_left != at_right || !on_the_ridge_between(mesh, at_left, left.side, right.side)? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+/// C# `OpenGapFill.OnTheRidgeBetween`: whether some edge at `vertex` stands between a triangle
+/// tagged `left_tag` and one tagged `right_tag`. Each edge looked at is charged.
+pub fn on_the_ridge_between(
+    mesh: &super::LevelLineMesh,
+    vertex: i32,
+    left_tag: i32,
+    right_tag: i32,
+) -> Result<bool, super::WorkError> {
+    for (low, high) in mesh.edges() {
+        super::LevelLineWork::charge(1)?;
+        if low != vertex && high != vertex {
+            continue;
+        }
+
+        let standing = mesh.triangles_on(low, high);
+        if standing.len() != 2 {
+            continue;
+        }
+
+        let one = mesh.triangles[standing[0] as usize].tag;
+        let other = mesh.triangles[standing[1] as usize].tag;
+        if (one == left_tag && other == right_tag) || (one == right_tag && other == left_tag) {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}

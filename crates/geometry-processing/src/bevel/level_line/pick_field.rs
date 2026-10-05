@@ -446,3 +446,17 @@ impl ScalarField for PickField {
         Some(self)
     }
 }
+
+impl PickField {
+    /// C# `PickField.WithSetbacksScaled`: the same pick with every MEMBER chain's setbacks times
+    /// `factor`; the other chains it holds are shared unchanged.
+    pub fn with_setbacks_scaled(&self, factor: f64) -> Result<PickField, WorkError> {
+        let mut scaled = self.chains.clone();
+
+        for &k in &self.members {
+            scaled[k as usize] = Rc::new(self.chains[k as usize].with_setbacks_scaled(factor)?);
+        }
+
+        Ok(PickField::new(scaled, &self.members).expect("a pick's own members are valid"))
+    }
+}

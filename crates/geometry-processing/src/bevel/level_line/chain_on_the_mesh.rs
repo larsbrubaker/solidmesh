@@ -63,3 +63,67 @@ pub fn sides_of(
 /// as a fraction of the larger, and still share a sharp turn of one chain. Below it the vertex
 /// takes their mean; above it the chain is split there.
 pub const SETBACK_STEP_FRACTION: f64 = 0.05;
+
+/// C# `ChainOnTheMesh.PerEdgeUnitSetbacks`: each chain edge's setback at size 1 - the chamfer's
+/// own, or the fillet's at the edge's dihedral between its two triangles.
+pub fn per_edge_unit_setbacks(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[(i32, i32)],
+    profile: super::BandProfile,
+) -> Result<Vec<f64>, ChainEdgeNotOnTwoTriangles> {
+    let standing = triangle_edges::standing_map(indices);
+    let mut per_edge = Vec::with_capacity(chain_edges.len());
+
+    for &(from, to) in chain_edges {
+        let (left, right) = sides_of(indices, &standing, from, to)?;
+        per_edge.push(if profile == super::BandProfile::Chamfer {
+            super::chain_setback::for_chamfer(1.0)
+        } else {
+            super::chain_setback::for_fillet(
+                1.0,
+                triangle_edges::normal(positions, indices[left as usize]),
+                triangle_edges::normal(positions, indices[right as usize]),
+            )
+        });
+    }
+
+    Ok(per_edge)
+}
+
+/// C# `ChainOnTheMesh.UnitSetbacks`: each chain vertex's setback at size 1, the mean of the
+/// edges either side of it (the one edge at an open chain's end).
+pub fn unit_setbacks(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chain: &[i32],
+    is_closed: bool,
+    chain_edges: &[(i32, i32)],
+    profile: super::BandProfile,
+) -> Result<Vec<f64>, ChainEdgeNotOnTwoTriangles> {
+    let per_edge = per_edge_unit_setbacks(positions, indices, chain_edges, profile)?;
+    let edge_count = chain_edges.len() as i64;
+    let mut setbacks = Vec::with_capacity(chain.len());
+
+    for v in 0..chain.len() as i64 {
+        let before = if is_closed {
+            (v - 1 + edge_count) % edge_count
+        } else {
+            v - 1
+        };
+        let after = if is_closed { v % edge_count } else { v };
+        let mut sum = 0.0;
+        let mut count = 0.0;
+
+        for side in [before, after] {
+            if side >= 0 && (side as usize) < per_edge.len() {
+                sum += per_edge[side as usize];
+                count += 1.0;
+            }
+        }
+
+        setbacks.push(sum / count);
+    }
+
+    Ok(setbacks)
+}
