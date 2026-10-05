@@ -5,17 +5,21 @@
 //! (`SurfaceCrossingAtTheMitre.TryTheStaircases`), and the two corner closings (`SurfaceCornerMitre.TryClose`,
 //! `SurfaceCornerPatch.TryCutTheEnd`) on the square edge plan R1.P06's tests build, the standing
 //! feature's ridge, crease and wedge readings (`SurfaceStandingFeatureWithheld`) and the end cap's walk
-//! round a notch (`SurfaceEndCapAroundAFeature.TryWalkAround`). Each pins the C# rule on a hand-built case.
+//! round a notch (`SurfaceEndCapAroundAFeature.TryWalkAround`), the end cut above a crossing's readings
+//! (`SurfaceEndCutAboveTheCrossing`), the trim by the face beyond's rings (`SurfaceStripTrimmedByTheFaceBeyond`),
+//! the notch's small readings and the hull end's turning point (`SurfaceStripEndsOnTheHull`). Each pins the C# rule on a hand-built case.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use geometry_processing::bevel::surface::{
     surface_corner_mitre, surface_corner_patch, surface_end_cap_around_a_feature,
-    SurfaceCornerPatchArrival, SurfaceCrossingAtTheMitre, SurfaceEndCapAroundAFeatureMeeting,
-    SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
-    SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween, SurfaceStripStation,
-    SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
+    surface_end_cut_above_the_crossing, surface_strip_ends, SurfaceCornerPatchArrival,
+    SurfaceCrossingAtTheMitre, SurfaceEndCapAroundAFeatureMeeting, SurfaceStandingFeatureWithheld,
+    SurfaceStandingFeatureWithheldFace, SurfaceStrip, SurfaceStripEndsOnTheHull,
+    SurfaceStripEndsOnTheHullSupportingPlane, SurfaceStripNotchedByAFeature,
+    SurfaceStripNotchedByAFeatureBetween, SurfaceStripStation, SurfaceStripTrimmedAtTheCrossing,
+    SurfaceStripTrimmedByTheFaceBeyond, SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use vector_math::Vector3;
@@ -426,4 +430,208 @@ fn rust_only_the_end_cap_walks_round_the_notch() {
         Vector3::ZERO
     )
     .is_err());
+}
+
+/// Each chord carries what the rim holds between its two rails, the foot goes on the chord beside
+/// the crossing with what the cut left on the way to it, and the end plane holds both tangent
+/// vertices where neither was crossed.
+#[test]
+fn rust_only_the_end_cut_above_a_crossing_reads_its_chords() {
+    let foot = 50;
+    // Rim: rail 0, rail 1, the foot, rail 2 crossed away (absent); the crossing took rails 2..3.
+    let rail_of = [0, 1, surface_end_cut_above_the_crossing::THE_FOOT];
+    let along = vec![vec![7], vec![8], vec![]];
+    let betweens =
+        surface_end_cut_above_the_crossing::the_betweens(4, Some(&along), &rail_of, foot, -1, 2, 3);
+    // Chord 0 carries what stands between rails 0 and 1; chord 1 (rail 1 to the crossed rail 2)
+    // carries what the rim left on the way to the foot, then the foot.
+    assert_eq!(betweens, vec![vec![7], vec![8, foot], vec![]]);
+
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let strip = SurfaceStrip {
+        origin: Vector3::ZERO,
+        along: Vector3::new(1.0, 0.0, 0.0),
+        rail_points: vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(0.0, 0.0, -1.0)],
+        rail_step_degrees: 0.0,
+        outward_reference: Vector3::new(0.0, -1.0, 1.0).get_normal(),
+    };
+    let left = pool.add(Vector3::new(3.0, 1.0, 0.0));
+    let right = pool.add(Vector3::new(3.0, 0.0, -1.0));
+    let untouched = SurfaceStripTrimmedAtTheCrossing::new(
+        0,
+        false,
+        vec![5],
+        vec![0.0],
+        vec![0],
+        vec![vec![]],
+        -1,
+        0.0,
+    );
+    let normal = surface_end_cut_above_the_crossing::try_the_end_plane(
+        &pool,
+        &strip,
+        Vector3::new(3.0, 0.0, 0.0),
+        left,
+        right,
+        &untouched,
+    )
+    .expect("neither tangent line was crossed");
+    assert!((normal.cross(Vector3::new(1.0, 0.0, 0.0))).length() < 1e-12);
+
+    let both = SurfaceStripTrimmedAtTheCrossing::new(
+        0,
+        false,
+        vec![0, 1],
+        vec![0.0, 0.0],
+        vec![0, 0],
+        vec![vec![], vec![]],
+        -1,
+        0.0,
+    );
+    assert!(surface_end_cut_above_the_crossing::try_the_end_plane(
+        &pool,
+        &strip,
+        Vector3::ZERO,
+        left,
+        right,
+        &both
+    )
+    .is_none());
+    assert_eq!(
+        surface_strip_ends::meets_the_seam(&pool),
+        pool.near_enough()
+    );
+}
+
+/// The trim by the face beyond collapses the rails it took onto its shared point, walks the rim from
+/// one step outside the first kept rail, and reads the profile from its corner beyond.
+#[test]
+fn rust_only_the_trim_by_the_face_beyond_reads_its_rings() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let strip = SurfaceStrip {
+        origin: Vector3::ZERO,
+        along: Vector3::new(1.0, 0.0, 0.0),
+        rail_points: (0..4)
+            .map(|rail| Vector3::new(0.0, rail as f64, 0.0))
+            .collect(),
+        rail_step_degrees: 30.0,
+        outward_reference: Vector3::new(0.0, 0.0, 1.0),
+    };
+    let shared = pool.add(Vector3::new(9.0, 9.0, 9.0));
+    let seam = pool.add(Vector3::new(2.0, 3.0, 0.0));
+    let trim = SurfaceStripTrimmedByTheFaceBeyond::new(
+        0,
+        true,
+        5.0,
+        vec![0.0, 0.0, 1.0, 2.0],
+        2,
+        shared,
+        99,
+        Vector3::ZERO,
+        Vector3::new(1.0, 0.0, 0.0),
+    );
+
+    assert_eq!(SurfaceStripTrimmedByTheFaceBeyond::rail_at(1, 4, 0), 3);
+    let (ring, meets_at) = trim.ring_at(&mut pool, &strip, true, seam);
+    assert_eq!((ring[0], ring[1], ring[3]), (shared, shared, seam));
+    assert_eq!(meets_at, vec![5.0, 5.0, 1.0, 2.0]);
+    assert!((pool.position_of(ring[2]) - Vector3::new(1.0, 2.0, 0.0)).length() < 1e-6);
+    assert_eq!(trim.walk_of_the_rim(4), vec![1, 2, 3]);
+    assert_eq!(trim.profile_of(&ring), vec![99, shared, ring[2], seam]);
+}
+
+/// The notch's small readings and the hull end's turning point between two planes.
+#[test]
+fn rust_only_the_notch_and_hull_readings() {
+    let mut pool = SurfaceVertexPool::new(&[]);
+    let (feature, _, _) = two_faced_feature(&mut pool);
+    let notch = SurfaceStripNotchedByAFeature::new(
+        0,
+        true,
+        feature.clone(),
+        0,
+        vec![2, 3],
+        vec![0.5, 0.75],
+        vec![feature.faces[0].clone(), feature.faces[0].clone()],
+        1.0,
+        SurfaceStripNotchedByAFeatureBetween::none(),
+        SurfaceStripNotchedByAFeatureBetween::none(),
+        SurfaceStripNotchedByAFeatureBetween::none(),
+        -1,
+    );
+    assert_eq!(notch.param_on(3), Some(0.75));
+    assert_eq!(notch.param_on(0), None);
+    assert!(SurfaceStripNotchedByAFeature::on_one_face_only(
+        &notch.face_of
+    ));
+    assert!(!SurfaceStripNotchedByAFeature::on_one_face_only(
+        &feature.faces[1..]
+    ));
+    assert!(!SurfaceStripNotchedByAFeatureBetween::none().stands());
+
+    let near = pool.position_of(0);
+    let count = pool.count();
+    assert_eq!(
+        SurfaceStripNotchedByAFeature::share(&mut pool, near, 1e-6),
+        0
+    );
+    assert_eq!(
+        SurfaceStripNotchedByAFeature::share(&mut pool, Vector3::new(7.0, 7.0, 7.0), 1e-6),
+        count
+    );
+
+    let trim = SurfaceStripTrimmedByTheFaceBeyond::new(
+        1,
+        true,
+        0.0,
+        vec![],
+        2,
+        0,
+        0,
+        Vector3::ZERO,
+        Vector3::ZERO,
+    );
+    assert!(SurfaceStripNotchedByAFeature::is_collapsed(
+        &[None, Some(&trim)],
+        5,
+        4
+    ));
+    assert!(!SurfaceStripNotchedByAFeature::is_collapsed(
+        &[None, Some(&trim)],
+        5,
+        2
+    ));
+
+    let table = vec![[Some(Rc::new(notch)), None]];
+    assert!(SurfaceStripNotchedByAFeature::standing_at(Some(&table), 0, true).is_some());
+    assert!(SurfaceStripNotchedByAFeature::standing_at(Some(&table), 0, false).is_none());
+
+    // A strip along x ruled by rails at y = 0 and y = 2, between the planes x + y = 1 and x - y = -1:
+    // they meet the band at (0, 1, 0), half way across, at the edge's start.
+    let strip = SurfaceStrip {
+        origin: Vector3::ZERO,
+        along: Vector3::new(1.0, 0.0, 0.0),
+        rail_points: vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 2.0, 0.0)],
+        rail_step_degrees: 0.0,
+        outward_reference: Vector3::new(0.0, 0.0, 1.0),
+    };
+    let plane =
+        |at: Vector3, normal: Vector3| SurfaceStripEndsOnTheHullSupportingPlane { at, normal };
+    let planes = [
+        plane(
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(1.0, 1.0, 0.0).get_normal(),
+        ),
+        plane(
+            Vector3::new(-1.0, 0.0, 0.0),
+            Vector3::new(1.0, -1.0, 0.0).get_normal(),
+        ),
+    ];
+    let between = SurfaceStripEndsOnTheHull::try_between(&strip, &planes, 0, 10.0, 1e-9)
+        .expect("the two planes cross the band between its rails");
+    assert!((between - Vector3::new(0.0, 1.0, 0.0)).length() < 1e-12);
+    assert!(
+        SurfaceStripEndsOnTheHull::try_between(&strip, &[planes[0], planes[0]], 0, 10.0, 1e-9)
+            .is_none()
+    );
 }

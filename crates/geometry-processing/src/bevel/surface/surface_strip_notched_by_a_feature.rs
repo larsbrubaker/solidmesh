@@ -1,8 +1,9 @@
 //! A band's strip notched back by a feature STANDING inside its footprint
 //! ([`SurfaceStripNotchedByAFeature`]) and the points between rails it is bounded by
 //! ([`SurfaceStripNotchedByAFeatureBetween`]). Ports the fields of
-//! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs` and the feature's foot as the band sees it;
-//! the reading and its rail questions land with another package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs`, the feature's foot as the band sees it, and
+//! its constructor and rail questions; the reading itself lands with a later package as a further
+//! `impl` block.
 
 use std::rc::Rc;
 
@@ -10,7 +11,7 @@ use vector_math::Vector3;
 
 use super::{
     SurfaceEdgePlan, SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
-    SurfaceVertexPool,
+    SurfaceStripTrimmedByTheFaceBeyond, SurfaceVertexPool,
 };
 
 /// C# `SurfaceStripNotchedByAFeature`: which rails the feature's extended planes cut, how far along
@@ -144,5 +145,127 @@ impl SurfaceStripNotchedByAFeatureBetween {
     /// a rail and carries `below` of -1 by design.
     pub fn stands(&self) -> bool {
         self.face.is_some() && self.vertex >= 0 && self.below >= 0
+    }
+}
+
+/// C#'s `SurfaceStripNotchedByAFeature[,]`: per strip, the notch at its start (`[0]`) and at its end
+/// (`[1]`), `None` where that end is not notched. C#'s null table is `None` at the call sites.
+pub type SurfaceStripNotches = Vec<[Option<Rc<SurfaceStripNotchedByAFeature>>; 2]>;
+
+/// The notch's constructor and its small readings (C# constructor, `ParamOn`, `OnOneFaceOnly`,
+/// `Share`, `IsCollapsed`, `StandingAt`).
+impl SurfaceStripNotchedByAFeature {
+    /// C#'s private constructor.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        strip: i32,
+        at_the_start: bool,
+        feature: Rc<SurfaceStandingFeatureWithheld>,
+        reach: i32,
+        rail_of: Vec<i32>,
+        param_of: Vec<f64>,
+        face_of: Vec<Rc<SurfaceStandingFeatureWithheldFace>>,
+        end_param: f64,
+        exit: SurfaceStripNotchedByAFeatureBetween,
+        lower: SurfaceStripNotchedByAFeatureBetween,
+        upper: SurfaceStripNotchedByAFeatureBetween,
+        the_crease_rail: i32,
+    ) -> Self {
+        Self {
+            strip,
+            at_the_start,
+            feature,
+            reach,
+            rail_of,
+            param_of,
+            face_of,
+            end_param,
+            exit,
+            at_the_low_rail: lower,
+            at_the_high_rail: upper,
+            the_crease_rail,
+        }
+    }
+
+    /// C# `ParamOn`: how far along the edge `rail` is cut back to, or `None` for a rail the notch
+    /// does not take (where C#'s `ParamOf[Array.IndexOf(..)]` would throw; callers ask
+    /// [`Self::notches`] first).
+    pub fn param_on(&self, rail: i32) -> Option<f64> {
+        self.rail_of
+            .iter()
+            .position(|&on| on == rail)
+            .map(|index| self.param_of[index])
+    }
+
+    /// C# `OnOneFaceOnly`: whether one face of the feature cut every rail the trace took.
+    pub fn on_one_face_only(face_of: &[Rc<SurfaceStandingFeatureWithheldFace>]) -> bool {
+        face_of.iter().all(|face| Rc::ptr_eq(face, &face_of[0]))
+    }
+
+    /// C# `Share`: the vertex at one point - the part's OWN where it already has one within `snap`,
+    /// and a new one only where it has not. A crossing landing on a crease the walkback left standing
+    /// is that crease's vertex and not a second beside it.
+    pub fn share(pool: &mut SurfaceVertexPool, at: Vector3, snap: f64) -> i32 {
+        match pool.try_find_near(at, snap, None) {
+            Some(found) => found,
+            None => pool.add(at),
+        }
+    }
+
+    /// C# `IsCollapsed`: whether the run-off trim has already collapsed one rail to a point. `ran_off`
+    /// is C#'s array of trims, `None` where a side did not run off.
+    pub fn is_collapsed(
+        ran_off: &[Option<&SurfaceStripTrimmedByTheFaceBeyond>],
+        rail_count: i32,
+        rail: i32,
+    ) -> bool {
+        ran_off.iter().flatten().any(|trim| {
+            (if trim.side == 0 {
+                rail
+            } else {
+                rail_count - 1 - rail
+            }) < trim.first_kept
+        })
+    }
+
+    /// C# `StandingAt`: the notch standing at one end of one strip, or `None` where that end is not
+    /// notched.
+    pub fn standing_at(
+        notches: Option<&SurfaceStripNotches>,
+        strip: i32,
+        at_the_start: bool,
+    ) -> Option<Rc<SurfaceStripNotchedByAFeature>> {
+        let notches = notches?;
+
+        if strip < 0 || strip as usize >= notches.len() {
+            return None;
+        }
+
+        notches[strip as usize][if at_the_start { 0 } else { 1 }].clone()
+    }
+}
+
+impl SurfaceStripNotchedByAFeatureBetween {
+    /// C#'s `Between` constructor: the vertex, the lower of the two rails it stands between, how far
+    /// along the edge it stands, and the face whose plane drew it.
+    pub fn new(
+        vertex: i32,
+        below: i32,
+        param: f64,
+        face: Option<Rc<SurfaceStandingFeatureWithheldFace>>,
+    ) -> Self {
+        Self {
+            vertex,
+            below,
+            param,
+            face,
+        }
+    }
+
+    /// C# `Between.None`: no point at all - the Q a ONE-FACED notch does not have. Said with a vertex
+    /// and a chord of -1 rather than left as the default, because that default reads as vertex zero
+    /// standing on chord zero - a real point of the pool on a real chord of the strip.
+    pub fn none() -> Self {
+        Self::new(-1, -1, 0.0, None)
     }
 }

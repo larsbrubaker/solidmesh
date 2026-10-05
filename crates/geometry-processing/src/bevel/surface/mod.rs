@@ -65,6 +65,7 @@ mod surface_edge_plan;
 mod surface_edge_roles;
 pub mod surface_end_cap_around_a_feature;
 pub mod surface_end_cut;
+pub mod surface_end_cut_above_the_crossing;
 pub mod surface_end_follows_the_walked_chords;
 mod surface_end_gains_the_section;
 pub mod surface_end_gives_up_the_section;
@@ -122,6 +123,7 @@ pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
 mod surface_standing_feature_withheld;
 mod surface_strip;
+pub mod surface_strip_ends;
 mod surface_strip_ends_on_the_hull;
 mod surface_strip_notched_by_a_feature;
 mod surface_strip_station;
@@ -189,7 +191,7 @@ pub use surface_strip_ends_on_the_hull::{
     SurfaceStripEndsOnTheHull, SurfaceStripEndsOnTheHullSupportingPlane,
 };
 pub use surface_strip_notched_by_a_feature::{
-    SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween,
+    SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween, SurfaceStripNotches,
 };
 pub use surface_strip_station::SurfaceStripStation;
 pub use surface_strip_trimmed_at_the_crossing::{

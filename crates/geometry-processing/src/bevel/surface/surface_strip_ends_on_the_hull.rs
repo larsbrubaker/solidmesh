@@ -2,10 +2,13 @@
 //! part's own hull planes ([`SurfaceStripEndsOnTheHullSupportingPlane`]) each rail goes out
 //! through, at what parameter along the edge, and the one point the end turns at where the rails
 //! change from one plane to the other. Ports the fields of
-//! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs`; the reading (`TryRead`) and the closing
-//! (`TryClose`) land with the strip-ends package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs` and the turning point between two planes
+//! ([`SurfaceStripEndsOnTheHull::try_between`]); the reading (`TryRead`) and the closing
+//! (`TryClose`) land with a later package as further `impl` blocks.
 
 use vector_math::Vector3;
+
+use super::SurfaceStrip;
 
 /// C# `SurfaceStripEndsOnTheHull`: where a strip leaves the part at one of its ends.
 ///
@@ -64,4 +67,71 @@ pub struct SurfaceStripEndsOnTheHullSupportingPlane {
     pub at: Vector3,
     /// Its outward normal, which is the part's own.
     pub normal: Vector3,
+}
+
+/// The end's turning point between two hull planes (C# `TryBetween`, `TryThreePlanes`).
+impl SurfaceStripEndsOnTheHull {
+    /// C# `TryBetween`: where the end turns from one plane to the other - the line the two planes
+    /// meet in, crossed with the CHORD between the two rails either side of the change. `None` where
+    /// the two planes do not meet in a line at all, or where they meet the band outside that chord -
+    /// which is the corner being crossed somewhere the rails do not rule. `exit_at` is C#'s unused
+    /// rail parameters, kept out of the signature.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_between(
+        strip: &SurfaceStrip,
+        plane_of: &[SurfaceStripEndsOnTheHullSupportingPlane],
+        changes_after: i32,
+        length: f64,
+        near: f64,
+    ) -> Option<Vector3> {
+        // The band between two rails is a ruled quad and so a PLANE - both rails run along the same
+        // direction - and the chord the section is really bounded by is where one hull plane cuts that
+        // quad. So where the section turns from the one plane to the other is where all THREE meet:
+        // one point, by Cramer, with nothing sampled and nothing searched for.
+        let foot = strip.point_on(changes_after, 0.0);
+        let across = strip.point_on(changes_after + 1, 0.0) - foot;
+        let column = strip.along().cross(across);
+
+        if !(column.length_squared() > 0.0) {
+            return None;
+        }
+
+        let between = Self::try_three_planes(
+            plane_of[changes_after as usize],
+            plane_of[changes_after as usize + 1],
+            foot,
+            column,
+        )?;
+
+        // And it has to stand ON the band: between the two rails, and inside the edge's own span. A
+        // corner the two planes meet at somewhere else is a corner this end does not turn at.
+        let sideways = (between - foot).dot(across) / across.length_squared();
+        let along = strip.param_of(between) - strip.param_of(foot);
+
+        (sideways >= -near && sideways <= 1.0 + near && along >= -near && along <= length + near)
+            .then_some(between)
+    }
+
+    /// C# `TryThreePlanes`: where three planes meet, by Cramer's rule - `None` where they do not meet
+    /// at a point.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_three_planes(
+        a: SurfaceStripEndsOnTheHullSupportingPlane,
+        b: SurfaceStripEndsOnTheHullSupportingPlane,
+        point_c: Vector3,
+        normal_c: Vector3,
+    ) -> Option<Vector3> {
+        let volume = a.normal.dot(b.normal.cross(normal_c));
+
+        if !(volume.abs() > 1e-9) {
+            return None;
+        }
+
+        Some(
+            ((b.normal.cross(normal_c) * a.at.dot(a.normal))
+                + (normal_c.cross(a.normal) * b.at.dot(b.normal))
+                + (a.normal.cross(b.normal) * point_c.dot(normal_c)))
+                / volume,
+        )
+    }
 }
