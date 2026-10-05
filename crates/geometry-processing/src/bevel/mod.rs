@@ -98,6 +98,7 @@ mod bevel_surface_walk;
 pub mod bevel_sweep_back_depth;
 pub mod bevel_sweep_fold_check;
 pub mod bevel_t_vertex_slivers;
+pub mod bevel_thin_slivers;
 pub mod bevel_valley_fold_mitre;
 pub mod bevel_working_mesh;
 pub mod float_grid;

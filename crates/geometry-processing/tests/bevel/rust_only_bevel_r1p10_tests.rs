@@ -136,3 +136,51 @@ fn rust_only_beads_are_gathered_by_the_corner_void_they_share() {
     assert!(Rc::ptr_eq(&grouped[1].0, &twin));
     assert_eq!(grouped[1].1.len(), 1);
 }
+
+#[test]
+fn rust_only_sliver_readings_and_a_clean_cube_left_alone() {
+    use geometry_processing::bevel::bevel_t_vertex_slivers::{
+        dropped_from, stands_on, try_read_t_vertex,
+    };
+    use geometry_processing::bevel::bevel_thin_slivers::{collapsed_from, the_one_it_is};
+    use polygon_mesh::{Face, Mesh};
+    use vector_math::Vector3Float;
+
+    let v = |x: f64, y: f64, z: f64| Vector3::new(x, y, z);
+    assert!(stands_on(
+        v(0.0, 0.0, 0.0),
+        v(10.0, 0.0, 0.0),
+        v(4.0, 1e-9, 0.0),
+        1e-6
+    ));
+    assert!(!stands_on(
+        v(0.0, 0.0, 0.0),
+        v(10.0, 0.0, 0.0),
+        v(4.0, 1e-3, 0.0),
+        1e-6
+    ));
+    assert!(!stands_on(
+        v(0.0, 0.0, 0.0),
+        v(10.0, 0.0, 0.0),
+        v(1e-8, 0.0, 0.0),
+        1e-6
+    ));
+
+    let mut sliver = Mesh::default();
+    sliver.vertices = vec![
+        Vector3Float::new(0.0, 0.0, 0.0),
+        Vector3Float::new(10.0, 0.0, 0.0),
+        Vector3Float::new(4.0, 0.0, 0.0),
+    ];
+    let face = Face::new(0, 1, 2, &sliver.vertices);
+    assert_eq!(try_read_t_vertex(&sliver, &face, 1e-4), Some(2));
+
+    let mut groups = vec![0, 0, 1, 2];
+    assert_eq!(the_one_it_is(&mut groups, 3), 0);
+
+    let mut cube = platonic_solids::create_cube(20.0, 20.0, 20.0);
+    let faces = cube.faces.len();
+    assert_eq!(dropped_from(&mut cube), 0);
+    assert_eq!(collapsed_from(&mut cube), 0);
+    assert_eq!(cube.faces.len(), faces);
+}
