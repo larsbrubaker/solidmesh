@@ -2,12 +2,19 @@
 //! (7, 7, 7), size 1, cap normal +z - with the bead's axis stood on +z through the origin): the carries into the cap and down
 //! to the bead's end, which plane bounds each edge's band, the wall read off the corner and its
 //! strip under the blend, the run-out's rigid carry, and the band ends at a junction and at a
-//! chorded mitre.
+//! chorded mitre; and a chain's band ends and its chorded run's joint.
 
+use std::collections::HashMap;
 use std::rc::Rc;
+
+use indexmap::IndexMap;
 
 use vector_math::Vector3;
 
+use geometry_processing::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band_of;
+use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
+    try_the_point, where_the_neighbours_plane_crosses,
+};
 use geometry_processing::bevel::surface::surface_mixed_corner_bites::under_the_cap;
 use geometry_processing::bevel::surface::surface_mixed_corner_which_canal::{
     the_corner_takes_the_dual, try_how_far_the_duals_crease_runs,
@@ -19,7 +26,12 @@ use geometry_processing::bevel::surface::{
     surface_junction_band_ends, SurfaceBandEnd, SurfaceMixedCornerFaces, SurfaceMixedCornerWall,
     SurfaceRunOutCarry, SurfaceVertexPool,
 };
-use geometry_processing::topology::EdgeConvexity;
+use geometry_processing::bevel::surface::{
+    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceEdgeRoles, SurfacePlanRecipe,
+};
+use geometry_processing::bevel::surface::{SurfaceCrossingAtTheMitre, SurfaceStrip};
+use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
+use geometry_processing::topology::{ChainEdge, EdgeConvexity, FeatureEdge};
 
 use crate::rust_only_bevel_r1p06_tests::square_edge_plan;
 use geometry_processing::bevel::surface::{SurfaceLine, SurfaceMixedCorner};
@@ -213,4 +225,147 @@ fn rust_only_the_plan_band_ends_face_into_their_bands() {
         leaves,
         SurfaceBandEnd::new(through, Vector3::new(-1.0, 0.0, 0.0))
     );
+}
+
+/// One piece of the square edge along +x, from `from` to `to` (both on the x axis): the same two
+/// tangent lines as the whole edge, so consecutive pieces are collinear.
+fn piece(index: i32, from: f64, to: f64) -> SurfaceEdgePlan {
+    let mut plan = square_edge_plan(1.0, true);
+    plan.edge = ChainEdge::new(
+        index,
+        FeatureEdge {
+            start: Vector3::new(from, 0.0, 0.0),
+            end: Vector3::new(to, 0.0, 0.0),
+            ..plan.edge.edge
+        },
+        false,
+    );
+    plan
+}
+
+fn chain_plan(edges: Vec<SurfaceEdgePlan>, end_trim: Option<SurfaceBandEnd>) -> SurfaceBevelPlan {
+    SurfaceBevelPlan::new(
+        edges,
+        false,
+        1.0,
+        true,
+        None,
+        HashMap::new(),
+        true,
+        false,
+        None,
+        end_trim,
+        IndexMap::new(),
+        SurfaceEdgeRoles::default(),
+        SurfacePlanRecipe {
+            chain: BevelSweptChain::default(),
+            regions: None,
+            curve_regions: None,
+            round_profile: true,
+        },
+    )
+}
+
+/// Two pieces of one chord with no neighbours beyond them: the run's band IS the run (0 to 10 on
+/// both tangent lines), so the joint keeps its corner and no point is read.
+#[test]
+fn rust_only_a_chorded_run_with_no_neighbours_keeps_its_corner() {
+    let edges = vec![piece(0, 0.0, 4.0), piece(1, 4.0, 10.0)];
+    let x = Vector3::new(1.0, 0.0, 0.0);
+
+    for line in [edges[0].left_tangent_line, edges[0].right_tangent_line] {
+        assert_eq!(
+            where_the_neighbours_plane_crosses(&edges, false, 0, true, Vector3::ZERO, x, line),
+            0.0
+        );
+        assert_eq!(
+            where_the_neighbours_plane_crosses(&edges, false, 1, false, Vector3::ZERO, x, line),
+            10.0
+        );
+    }
+    // The neighbour's plane at the joint, square to the run, crosses each line at the joint.
+    let at_the_joint = where_the_neighbours_plane_crosses(
+        &edges,
+        false,
+        1,
+        true,
+        Vector3::ZERO,
+        x,
+        edges[0].left_tangent_line,
+    );
+    assert!((at_the_joint - 4.0).abs() < 1e-12);
+
+    assert_eq!(try_the_point(&edges, false, 0, 1e-9), None);
+    assert_eq!(
+        try_the_point(&edges, false, 1, 1e-9),
+        None,
+        "no edge after the last"
+    );
+    assert_eq!(
+        chain_plan(edges, None).the_chorded_runs_joint_after(0),
+        None
+    );
+}
+
+/// The band ends of a two-piece open chain: the start runs out (the square plane through the first
+/// corner), the joint is the mitre between the pieces facing into each one's band, and the end is
+/// trimmed; a band whose ends cross leaves nothing.
+#[test]
+fn rust_only_a_chains_band_ends_are_its_run_out_mitre_and_trim() {
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let trim = SurfaceBandEnd::new(Vector3::new(10.0, 0.0, 0.0), -x);
+    let plan = chain_plan(vec![piece(0, 0.0, 4.0), piece(1, 4.0, 10.0)], Some(trim));
+    let joint = Vector3::new(4.0, 0.0, 0.0);
+
+    for left in [true, false] {
+        assert_eq!(
+            plan.band_ends_of(0, left),
+            vec![
+                SurfaceBandEnd::new(Vector3::ZERO, x),
+                SurfaceBandEnd::new(joint, -x)
+            ]
+        );
+        assert_eq!(
+            plan.band_ends_of(1, left),
+            vec![SurfaceBandEnd::new(joint, x), trim]
+        );
+    }
+
+    let line = plan.edges[0].left_tangent_line;
+    assert!(leaves_a_band_of(&plan, 0, true, &line));
+    let crossed = chain_plan(
+        vec![piece(0, 0.0, 4.0), piece(1, 4.0, 10.0)],
+        Some(SurfaceBandEnd::new(Vector3::new(-1.0, 0.0, 0.0), -x)),
+    );
+    assert!(!leaves_a_band_of(&crossed, 1, true, &line));
+}
+
+/// The mitre crossing is refused by name, at the mitre corner, where a strip is missing or the two
+/// strips do not have the same rails to make one ring of.
+#[test]
+fn rust_only_a_crossing_needs_two_strips_with_the_same_rails() {
+    let corner = Rc::new(mixed_corner(false));
+    let wall = SurfaceMixedCornerWall::try_read(&corner).expect("one plane");
+    let plan = square_edge_plan(1.0, true);
+    let two = SurfaceStrip::try_create(&plan, 2).expect("a quarter in two");
+    let three = SurfaceStrip::try_create(&plan, 3).expect("a quarter in three");
+    assert_ne!(two.rail_count(), three.rail_count());
+    let at = Vector3::new(5.0, 0.0, 0.0);
+
+    for (cap, on_the_wall) in [
+        (None, Some(&two)),
+        (Some(&two), None),
+        (Some(&two), Some(&three)),
+    ] {
+        let refused =
+            SurfaceCrossingAtTheMitre::try_read(&corner, &wall, cap, on_the_wall, at, 1e-9)
+                .expect_err("no ring to hand over on");
+        assert_eq!(
+            refused,
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingMissesTheMitre,
+                vec![at.into()]
+            )
+        );
+    }
 }

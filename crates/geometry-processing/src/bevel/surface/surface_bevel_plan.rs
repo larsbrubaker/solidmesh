@@ -1,7 +1,8 @@
 //! The geometry one chain's bevel is built from, worked out before anything is cut or stitched
 //! ([`SurfaceBevelPlan`], `Bevel/Surface/SurfaceBevelPlan.cs`): its constructor, accessors, band
-//! ends, mixed corners and per-region setbacks. Planning a chain and recording a junction land with
-//! later surface packages as further `impl` blocks.
+//! ends, mixed corners, per-region setbacks, and where each edge's band stops
+//! ([`SurfaceBevelPlan::band_ends_of`]). Planning a chain and recording a junction land with later
+//! surface packages as further `impl` blocks.
 
 use std::cell::{Cell, Ref, RefCell};
 use std::collections::HashMap;
@@ -10,6 +11,9 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 
+use vector_math::Vector3;
+
+use super::{surface_junction_band_ends, surface_mitre_on_a_chorded_run, surface_plan_band_ends};
 use super::{
     SurfaceBandEnd, SurfaceEdgePlan, SurfaceEdgeRoles, SurfaceMixedCorner, SurfacePlanRecipe,
 };
@@ -248,5 +252,116 @@ impl SurfaceBevelPlan {
             .borrow()
             .get(&Self::junction_key(at_the_start))
             .cloned()
+    }
+}
+
+/// Where each edge's band stops.
+impl SurfaceBevelPlan {
+    /// C# `BandEndsOf`: the planes the band on one face of edge `edge_index` (`left` or right) stops
+    /// at, one per end that has one.
+    ///
+    /// At an interior corner that is the mitre plane with the neighbour (through the chorded run's
+    /// joint where the two are pieces of one chord) where the mitre bounds this side; where the
+    /// convexity turns over it is the mixed corner's own plane for this edge - left off the face the
+    /// two edges SHARE, which the other edge's band ends, unless the corner hands over on a mitre
+    /// ring ([`SurfaceMixedCorner::both_bands_stop_on_the_shared_face`]). At a free end it is the
+    /// junction's reading, the end's trim, or the square plane where the end runs out.
+    ///
+    /// Which corner stands at an end is the ROLES' answer and not the neighbour's index: where a
+    /// blend swallows an edge, the corner's cut is further along the chain than the corner is.
+    /// C#'s note that the mixed-corner path reads only `readings[0]` (a second junction arm owed at
+    /// an interior two-crease corner, which no fixture reaches) is kept as it is.
+    pub fn band_ends_of(&self, edge_index: usize, left: bool) -> Vec<SurfaceBandEnd> {
+        let mut ends = Vec::with_capacity(2);
+        let last = self.edges.len() - 1;
+        let here = &self.edges[edge_index];
+        let region_key = if left {
+            here.left_region_key()
+        } else {
+            here.right_region_key()
+        };
+        let mixed_at = |where_the_chain_leaves: bool| {
+            let at = self
+                .roles
+                .borrow()
+                .try_corner_at(edge_index as i32, where_the_chain_leaves)?;
+            self.mixed_corners.borrow().get(&at).cloned()
+        };
+
+        if edge_index > 0 || self.is_closed {
+            let arrived_on = if edge_index > 0 { edge_index - 1 } else { last };
+
+            if let Some(mixed) = mixed_at(false) {
+                // The convexity turns over here, so the two bands do not meet on a mitre plane: each
+                // stops on the plane the OTHER edge's direction names through the point the two
+                // strips touch at; the shared face runs on and the other edge's band ends it.
+                if mixed.shared_region_key != region_key
+                    || mixed.both_bands_stop_on_the_shared_face()
+                {
+                    ends.push(mixed.band_end_for(here));
+                }
+            } else if surface_plan_band_ends::the_mitre_bounds_this_side(
+                here,
+                &self.edges[arrived_on],
+                region_key,
+            ) {
+                // Including a SWALLOWED edge, whose band is bounded by the ordinary mitre planes with
+                // its two neighbours: it owes no strip, but the band it takes off is its own stretch.
+                ends.push(surface_plan_band_ends::band_end_where_the_chain_arrives(
+                    &self.edges[arrived_on],
+                    here,
+                    self.the_chorded_runs_joint_after(arrived_on),
+                ));
+            }
+        } else if let Some(junction) = self.junction_arms.borrow().get(&Self::junction_key(true)) {
+            surface_junction_band_ends::add(&mut ends, junction, here, region_key);
+        } else if let Some(trim) = self.start_trim {
+            ends.push(trim);
+        } else if self.start_runs_out {
+            ends.push(self.start_band_end());
+        }
+
+        if edge_index < last || self.is_closed {
+            if let Some(mixed) = mixed_at(true) {
+                if mixed.shared_region_key != region_key
+                    || mixed.both_bands_stop_on_the_shared_face()
+                {
+                    ends.push(mixed.band_end_for(here));
+                }
+            } else {
+                let leaving_for = &self.edges[if edge_index < last { edge_index + 1 } else { 0 }];
+
+                if surface_plan_band_ends::the_mitre_bounds_this_side(here, leaving_for, region_key)
+                {
+                    ends.push(surface_plan_band_ends::band_end_where_the_chain_leaves(
+                        here,
+                        leaving_for,
+                        self.the_chorded_runs_joint_after(edge_index),
+                    ));
+                }
+            }
+        } else if let Some(junction) = self.junction_arms.borrow().get(&Self::junction_key(false)) {
+            surface_junction_band_ends::add(&mut ends, junction, here, region_key);
+        } else if let Some(trim) = self.end_trim {
+            ends.push(trim);
+        } else if self.end_runs_out {
+            ends.push(self.end_band_end());
+        }
+
+        ends
+    }
+
+    /// C# `TheChordedRunsJointAfter`: where the mitre plane between edge `leaving` and the one after
+    /// it stands, when the two are two pieces of ONE chord a boolean split and the corner between
+    /// them is not where the plane goes - `None` at every ordinary corner
+    /// (`SurfaceMitreOnAChordedRun`). Read here because it is the RUN's reading: it needs the two
+    /// pieces' outer neighbours, which only the chain's own edge list holds.
+    pub fn the_chorded_runs_joint_after(&self, leaving: usize) -> Option<Vector3> {
+        surface_mitre_on_a_chorded_run::try_the_point(
+            &self.edges,
+            self.is_closed,
+            leaving,
+            self.near_enough_on_the_part(),
+        )
     }
 }

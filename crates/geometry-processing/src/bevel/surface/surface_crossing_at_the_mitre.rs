@@ -1,15 +1,17 @@
 //! Where a run-out that crosses BOTH bands of one mitred corner hands over from the one to the
 //! other ([`SurfaceCrossingAtTheMitre`]): the single point standing on all three surfaces at once.
 //! Ports `Bevel/Surface/SurfaceCrossingAtTheMitre.cs`: its fields, its turn readings and the
-//! staircases it hands the two trims ([`SurfaceCrossingAtTheMitre::try_the_staircases`]); the
-//! reading off the mitre ring (`TryRead`) lands with a later package.
+//! staircases it hands the two trims ([`SurfaceCrossingAtTheMitre::try_the_staircases`]), and the
+//! reading off the mitre ring ([`SurfaceCrossingAtTheMitre::try_read`]).
 
 use std::cell::{Cell, RefCell};
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
+use super::surface_mixed_corner_run_out;
 use super::{
-    SurfaceMixedCorner, SurfaceStripStation, SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
+    SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceStrip, SurfaceStripStation,
+    SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -403,5 +405,172 @@ impl SurfaceCrossingAtTheMitre {
         } else {
             0
         }
+    }
+}
+
+impl SurfaceCrossingAtTheMitre {
+    /// C# `TryRead`: reads the hand-over of one run-out across the two bands of one mitred corner -
+    /// `corner` the run-out comes out of, `wall` its reading of the wall it turns against,
+    /// `on_the_cap` / `on_the_wall` the strips of the band on the cap it travels across and on the
+    /// wall it turns against (`None` where C#'s is null), `the_mitre_corner` the part's own corner
+    /// the two bands mitre at, `near_enough` the part's ruler.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    pub fn try_read(
+        corner: &SurfaceMixedCorner,
+        wall: &SurfaceMixedCornerWall,
+        on_the_cap: Option<&SurfaceStrip>,
+        on_the_wall: Option<&SurfaceStrip>,
+        the_mitre_corner: Vector3,
+        near_enough: f64,
+    ) -> Result<Self, BevelAdvisory> {
+        let misses = |at: Vector3| {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingMissesTheMitre,
+                vec![at.into()],
+            )
+        };
+
+        let (Some(on_the_cap), Some(on_the_wall)) = (on_the_cap, on_the_wall) else {
+            return Err(misses(the_mitre_corner));
+        };
+
+        if on_the_cap.rail_count() != on_the_wall.rail_count() || on_the_cap.rail_count() < 2 {
+            return Err(misses(the_mitre_corner));
+        }
+
+        // The mitre plane. Its NORMAL is named exactly as `SurfaceStripMitre.TryMitre` names it, so
+        // the ring read here and the ring built there are one curve. Its POINT is the CORNER, and it
+        // stays the corner even though an ordinary chain mitre's plane has moved to the crossing of
+        // the two beads' tangent lines (`SurfaceMitreSeam`): this is a MIXED corner, where that
+        // crossing is a different point and the wrong one - MEASURED: reading it through the seam
+        // fails five of the C# run-out tests.
+        let mut mitre_normal = on_the_cap.along() + on_the_wall.along();
+
+        if !(mitre_normal.length_squared() > 0.0) {
+            return Err(misses(the_mitre_corner));
+        }
+
+        mitre_normal = mitre_normal.get_normal();
+
+        let rails = on_the_cap.rail_count() as usize;
+        let mut ring = vec![Vector3::ZERO; rails];
+        let mut cap_params = vec![0.0; rails];
+        let mut wall_params = vec![0.0; rails];
+
+        for rail in 0..rails {
+            let (Some(on_cap), Some(on_wall)) = (
+                on_the_cap.try_cross(rail as i32, the_mitre_corner, mitre_normal),
+                on_the_wall.try_cross(rail as i32, the_mitre_corner, mitre_normal),
+            ) else {
+                return Err(misses(the_mitre_corner));
+            };
+            cap_params[rail] = on_cap;
+            wall_params[rail] = on_wall;
+
+            ring[rail] = on_the_cap.point_on(rail as i32, on_cap);
+
+            if (ring[rail] - on_the_wall.point_on(rail as i32, on_wall)).length() > near_enough {
+                // The two strips do not meet in one ring, so there is no shared chord to put the
+                // hand-over on and nothing said here would be shared by both.
+                return Err(misses(ring[rail]));
+            }
+        }
+
+        // How far the run-out really turns, which bounds the sweep: past this the ball has left the
+        // cap altogether and nothing it would reach is the run-out's.
+        let Some(meets_the_wall) = wall.try_where_the_rail_meets_the_wall() else {
+            return Err(misses(the_mitre_corner));
+        };
+
+        let clears = cs_math::min_f64(
+            meets_the_wall,
+            corner.turn_radians() + surface_mixed_corner_run_out::clears_the_wall(),
+        );
+
+        let given_up: Vec<bool> = ring
+            .iter()
+            .map(|&at| Self::above_the_arc(corner, at, clears) <= 0.0)
+            .collect();
+
+        if given_up[0] && given_up[rails - 1] {
+            // Nothing of the mitre stands clear of the run-out, so there is no ring left to hand
+            // over on and both bands would be drawn entirely inside material the run-out took.
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingSwallowsTheMitre,
+                vec![ring[0].into()],
+            ));
+        }
+
+        let mut straddles: Option<usize> = None;
+
+        for chord in 0..rails - 1 {
+            if given_up[chord] == given_up[chord + 1] {
+                continue;
+            }
+
+            if straddles.is_some() {
+                // The ring dips under the run-out and comes back, which no single hand-over
+                // describes: the two staircases would each have to end twice. Named rather than
+                // closed on the first of them.
+                return Err(misses(ring[chord]));
+            }
+
+            straddles = Some(chord);
+        }
+
+        let Some(straddles) = straddles else {
+            // Both ends clear and nothing between: the run-out never reaches the mitre at all, and
+            // this is not the crossing the room reading said it was.
+            return Err(misses(the_mitre_corner));
+        };
+
+        // Bisected from the CLEAR end of the straddling chord, so the parameter reported runs from
+        // rail `straddles` to `straddles + 1` whichever of the two the ring was under.
+        let (mut low, mut high) = if given_up[straddles] {
+            (1.0, 0.0)
+        } else {
+            (0.0, 1.0)
+        };
+        let chord_from = ring[straddles];
+        let chord_step = ring[straddles + 1] - ring[straddles];
+
+        for _ in 0..60 {
+            let middle = (low + high) / 2.0;
+
+            if Self::above_the_arc(corner, chord_from + (chord_step * middle), clears) > 0.0 {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+
+        let along = (low + high) / 2.0;
+        let stands_at = chord_from + (chord_step * along);
+
+        // AND IT HAS TO BE ON THE RUN-OUT. A sign change is not only the arc: a chord whose clear
+        // end is clear because its own TURN is past the last meridian straddles just as readily,
+        // and the point it converges on is then the meridian. What the arc really says is that the
+        // point stands a ball's radius off the sweep, so that is what is asked, to the part's ruler.
+        let turn_past = Self::turn_past_of(corner, stands_at);
+
+        if ((stands_at - corner.ball_centre_at(corner.turn_radians() + turn_past)).length()
+            - corner.size)
+            .abs()
+            > near_enough
+        {
+            return Err(misses(stands_at));
+        }
+
+        Ok(Self::new(
+            ring,
+            cap_params,
+            wall_params,
+            given_up,
+            mitre_normal,
+            straddles as i32,
+            along,
+            stands_at,
+            turn_past,
+        ))
     }
 }

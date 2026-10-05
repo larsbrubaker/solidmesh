@@ -1,10 +1,11 @@
 //! Whether a handover between two band ends still leaves a strip of band between them. Ports
 //! `Bevel/Surface/SurfaceHandoverLeavesAStrip.cs` (a C# static class): so far the band test along a
-//! line ([`leaves_a_band`]); the handover reading lands with later packages.
+//! line ([`leaves_a_band`]) and its plan form ([`leaves_a_band_of`]); the handover reading lands
+//! with later packages.
 
 use vector_math::cs_math;
 
-use super::{SurfaceBandEnd, SurfaceLine};
+use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceLine};
 
 /// True when some stretch of `line` stands on the kept side of every band end (each end's
 /// `inward` half-space through its point): the half-spaces cut the line to an interval, open when
@@ -35,4 +36,15 @@ pub fn leaves_a_band(ends: &[SurfaceBandEnd], line: &SurfaceLine) -> bool {
     }
 
     from < to
+}
+
+/// C# `LeavesABand(SurfaceBevelPlan, int, bool, SurfaceLine)`: whether the band ends of one side of
+/// one edge of `plan` ([`SurfaceBevelPlan::band_ends_of`]) leave any of `line` standing.
+pub fn leaves_a_band_of(
+    plan: &SurfaceBevelPlan,
+    edge_index: usize,
+    left: bool,
+    line: &SurfaceLine,
+) -> bool {
+    leaves_a_band(&plan.band_ends_of(edge_index, left), line)
 }
