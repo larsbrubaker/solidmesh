@@ -6,6 +6,7 @@ pub mod face_bsp_tree;
 pub mod mesh_output_settings;
 pub mod stl_processing;
 pub mod stl_writer;
+pub mod vertex_source_to_mesh;
 
 pub use face_bsp_tree::BspNode;
 pub use mesh_output_settings::{CsgOption, MeshOutputSettings, OutputType};

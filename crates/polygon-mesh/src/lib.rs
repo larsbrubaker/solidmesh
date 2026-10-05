@@ -21,6 +21,7 @@
 pub mod cancel;
 pub mod clipper_extensions;
 pub mod csg;
+pub mod data_converters_2d;
 mod face;
 mod face_split;
 mod mesh;
@@ -30,6 +31,7 @@ mod mesh_extensions;
 mod mesh_measure;
 pub mod processors;
 pub mod ray_tracer;
+pub mod sdf;
 pub mod solids;
 mod t_junctions;
 pub mod vector3_list;

@@ -25,6 +25,11 @@ manifold-rust = { path = "../../../manifold-rust" }
 # C#'s ClipperLib integer polygons (`List<IntPoint>`) for slicing: Clipper2's `Path64`/`Paths64`
 # and its union, from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust" }
+# The path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`).
+agg-path = { path = "../agg-path" }
+# agg-sharp's Tesselate (the SGI GLU tessellator) for `CachedTesselator`: tess2-rust is the same
+# SGI algorithm, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
+tess2-rust = { path = "../../../tess2-rust" }
 
 # Native hosts get the kernel's `parallel` feature, as agg-sharp's ManifoldKernel turns
 # ManifoldParallel on everywhere but the browser: wasm32-unknown-unknown has no threads to
