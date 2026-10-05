@@ -56,6 +56,7 @@ mod surface_bevel_planless_loop;
 mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
 pub mod surface_convex_bite;
+pub mod surface_corner_mitre;
 mod surface_corner_patch;
 pub mod surface_corner_patch_rows;
 mod surface_crossing_at_the_mitre;

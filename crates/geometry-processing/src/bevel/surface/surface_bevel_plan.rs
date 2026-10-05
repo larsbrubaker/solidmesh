@@ -1,9 +1,9 @@
 //! The geometry one chain's bevel is built from, worked out before anything is cut or stitched
-//! ([`SurfaceBevelPlan`], `Bevel/Surface/SurfaceBevelPlan.cs`). Planning a chain, its band ends,
-//! recording a junction and the per-region setbacks land with the core's surface packages as
-//! `impl` blocks.
+//! ([`SurfaceBevelPlan`], `Bevel/Surface/SurfaceBevelPlan.cs`): its constructor, accessors, band
+//! ends, mixed corners and per-region setbacks. Planning a chain and recording a junction land with
+//! later surface packages as further `impl` blocks.
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -142,5 +142,72 @@ impl SurfaceBevelPlan {
         }
 
         lowest
+    }
+}
+
+/// The plan's constructor and its plain accessors (C# `<init>`, the private constructor,
+/// `Regions`, `MixedCornerCount`, `MixedCornerKeys`, `Roles`). The other C# properties are the
+/// public fields themselves.
+impl SurfaceBevelPlan {
+    /// C#'s private constructor, with the field initializers (`<init>`: no junction arms yet, and
+    /// the part's ruler not read yet). Called by the planner once it has read the chain.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        edges: Vec<SurfaceEdgePlan>,
+        is_closed: bool,
+        size: f64,
+        round_profile: bool,
+        regions: Option<Arc<FaceRegionCache>>,
+        setback_by_region: HashMap<i32, f64>,
+        start_runs_out: bool,
+        end_runs_out: bool,
+        start_trim: Option<SurfaceBandEnd>,
+        end_trim: Option<SurfaceBandEnd>,
+        mixed_corners: IndexMap<i32, Rc<SurfaceMixedCorner>>,
+        roles: SurfaceEdgeRoles,
+        recipe: SurfacePlanRecipe,
+    ) -> Self {
+        Self {
+            regions,
+            setback_by_region,
+            mixed_corners: RefCell::new(mixed_corners),
+            junction_arms: RefCell::new(HashMap::new()),
+            roles: RefCell::new(roles),
+            recipe,
+            edges,
+            is_closed,
+            size,
+            near_enough_on_the_part: Cell::new(None),
+            round_profile,
+            start_runs_out,
+            end_runs_out,
+            start_trim,
+            end_trim,
+        }
+    }
+
+    /// C# `Regions`: the regions this plan was read against, so that a reading which has to name a
+    /// face NOT on the chain can ask which surface it belongs to - the face beyond a chain's end
+    /// (`SurfaceRoomEndCut`).
+    pub fn regions(&self) -> Option<&Arc<FaceRegionCache>> {
+        self.regions.as_ref()
+    }
+
+    /// C# `MixedCornerCount`: how many corners of this chain turn the convexity over.
+    pub fn mixed_corner_count(&self) -> i32 {
+        self.mixed_corners.borrow().len() as i32
+    }
+
+    /// C# `MixedCornerKeys`: what names each of them - the index of the edge the chain ARRIVES on
+    /// for a corner inside the chain, and a sentinel for a JUNCTION standing at one of its ends - in
+    /// the order they were recorded. A copy, since recording a junction later changes the map.
+    pub fn mixed_corner_keys(&self) -> Vec<i32> {
+        self.mixed_corners.borrow().keys().copied().collect()
+    }
+
+    /// C# `Roles`: what part each of this chain's edges plays - which of them have strips of their
+    /// own, which a blend swallows, and which edge each mixed corner's CUT is.
+    pub fn roles(&self) -> Ref<'_, SurfaceEdgeRoles> {
+        self.roles.borrow()
     }
 }

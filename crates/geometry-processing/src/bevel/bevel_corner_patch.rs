@@ -2,7 +2,9 @@
 //! groups meeting at it ([`BevelCornerPatch`]), every patch a selection asked for with where each
 //! ball sits and what an unpatched corner has to say ([`BevelCornerPatchSet`]), and what has been
 //! selected at one mesh vertex ([`Corner`], nested in the C# `static class BevelCornerPatches`,
-//! whose functions land in this module with the core's corner-patch packages).
+//! whose functions land in this module: here the corner's own constants, building one corner's tool
+//! ([`try_build`]) and placing its ball ([`try_get_inset_point`]); collecting a selection's corners
+//! lands with a later package).
 //!
 //! Where three or more fillet chains of one radius meet at a vertex, the swept tools leave the
 //! intersection of their cylinders where a rolling ball would leave a sphere: on an OUTSIDE corner
@@ -16,10 +18,14 @@
 use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
+use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use vector_math::{Matrix4X4, Vector3};
 
-use super::BevelAdvisory;
+use super::{
+    bevel_corner_face_ring, bevel_corner_patch_mesher, bevel_edge_tool_builder, BevelAdvisory,
+    BevelAdvisoryCode,
+};
 use crate::topology::FeatureEdge;
 
 /// C# `BevelCornerPatch` (a readonly struct): one corner tool and the groups whose selections
@@ -85,4 +91,172 @@ pub struct Corner {
     /// The mesh edges already taken in, so one edge picked into two groups is one edge. Only
     /// asked for membership, never iterated.
     pub mesh_edges: HashSet<i32>,
+}
+
+/// C# `BevelCornerPatches.MinimumEdgesForAPatch`: how many selected fillet chains have to end at a
+/// vertex before their cylinders leave anything to patch. Two meeting chains are resolved by the
+/// union alone.
+pub const MINIMUM_EDGES_FOR_A_PATCH: i32 = 3;
+
+/// C# `BevelCornerPatches.MinimumSegmentsForAPatch`: a one segment fillet is a chamfer chord, and a
+/// chamfer corner is the planar cutback the union already gives; below this there is no arc for
+/// the patch to be tangent to.
+pub const MINIMUM_SEGMENTS_FOR_A_PATCH: i32 = 2;
+
+/// C# `BevelCornerPatches.TouchAgreement`: how far a face may be from the ball, as a fraction of the
+/// radius, and still count as touching it - what an apex of four or more faces is tested against.
+/// Loose enough for the single precision the mesh stores its positions in, and a tenth of a micron
+/// on a millimetre fillet is still far tighter than any corner a user could mean.
+const TOUCH_AGREEMENT: f64 = 1e-4;
+
+/// C# `BevelCornerPatches.MaximumInsetRadii`: how far from the vertex the ball's centre may sit, in
+/// radii, before the corner is too sharp to patch. That distance is `r / sin(half the narrowest
+/// wedge)`, so twenty is a wedge of about six degrees, and the outer radius is measured from it.
+const MAXIMUM_INSET_RADII: f64 = 20.0;
+
+/// One corner's tool as [`try_build`] hands it back: the shell, the void cone a fill is clipped to
+/// (`None` on a scoop, or where none could be built), the ball's centre, and each run's seam
+/// published against its own mesh edge.
+pub type BuiltCornerTool = (Mesh, Option<Mesh>, Vector3, Vec<(i32, Vec<Vector3>)>);
+
+impl Corner {
+    /// C# `Corner.Edges`: the selected feature edges at the vertex.
+    pub fn edges(&self) -> &[FeatureEdge] {
+        &self.edges
+    }
+}
+
+/// C# `BevelCornerPatches.TryBuild`: one corner's tool, or the reason there is none (C#'s
+/// `warning`). `Err(None)` is a corner this was never asked to patch - a partial selection, whose
+/// ends are capped by the surface as before.
+///
+/// `fill` says this is an INSIDE corner, whose ball sits in the void: the mirror derived on the
+/// class, which is the same construction with the face normals turned round.
+pub fn try_build(
+    corner: &Corner,
+    fill: bool,
+    radius: f64,
+    segments: i32,
+) -> Result<BuiltCornerTool, Option<BevelAdvisory>> {
+    let Some(ring) = bevel_corner_face_ring::try_order(corner.edges()) else {
+        return Err(None);
+    };
+    let mut normals = ring.normals;
+    let edge_of_sector = ring.edge_of_sector;
+
+    // The ring as the SURFACE presents it, kept back before the mirror below negates it in place. The
+    // void cone is the corner's own OUTWARD half spaces and its rays have to be signed against them
+    // (bevel_corner_patch_mesher::try_build_void_cone), so the fill leg cannot hand over the mirrored
+    // copy it draws its own shell from - the two describe opposite cones.
+    let outward = if fill { Some(normals.clone()) } else { None };
+
+    if fill {
+        // The whole of the mirror. A ball that stands a radius OUTSIDE every face is a ball that
+        // stands a radius inside every face of the corner these normals describe turned round, and
+        // the ring the walk above just closed is the same ring either way.
+        for normal in normals.iter_mut() {
+            *normal = -*normal;
+        }
+    }
+
+    let edge_count = corner.edges().len() as i32;
+
+    let Some((center, from_center)) = try_get_inset_point(&normals, corner.position, radius) else {
+        return Err(Some(BevelAdvisory::new(
+            if fill {
+                BevelAdvisoryCode::CornerBallDoesNotTouchAllInsideEdges
+            } else {
+                BevelAdvisoryCode::CornerBallDoesNotTouchAllEdges
+            },
+            vec![edge_count.into(), corner.position.into()],
+        )));
+    };
+
+    let outer_radius = from_center.length() + radius;
+
+    let shell =
+        bevel_corner_patch_mesher::build_shell(center, &normals, radius, outer_radius, segments)
+            .filter(|(mesh, _)| {
+                classify_boolean_operand(mesh, Matrix4X4::IDENTITY, false)
+                    == BooleanOperandVerdict::Clean
+            });
+
+    let Some((mesh, seam_rings)) = shell else {
+        return Err(Some(BevelAdvisory::new(
+            if fill {
+                BevelAdvisoryCode::CornerPatchNotSolidToAdd
+            } else {
+                BevelAdvisoryCode::CornerPatchNotSolidToCut
+            },
+            vec![edge_count.into(), corner.position.into()],
+        )));
+    };
+
+    // The wall over each sector is the plane one run stops on, so the arc the shell just drew there
+    // is that run's seam - published against its own mesh edge for the sweep to carry
+    // (BevelSeamRing).
+    let seams: Vec<(i32, Vec<Vector3>)> = seam_rings
+        .into_iter()
+        .enumerate()
+        .map(|(sector, seam)| (corner.edges()[edge_of_sector[sector]].mesh_edge_index, seam))
+        .collect();
+
+    // Only a FILL has anything to be clipped to. A scoop takes material away, so reaching too far
+    // costs it nothing it was not already entitled to take, and there is no void to name.
+    let void_cone = outward.and_then(|outward| {
+        bevel_corner_patch_mesher::try_build_void_cone(
+            corner.position,
+            &outward,
+            bevel_edge_tool_builder::CONTAINMENT_MARGIN * outer_radius,
+            segments,
+            true,
+        )
+    });
+
+    Ok((mesh, void_cone, center, seams))
+}
+
+/// C# `BevelCornerPatches.TryGetInsetPoint`: where the rolling ball sits when it touches every face
+/// of the corner at once - the point `radius` from all of them - as the centre and the vector from
+/// the centre back out to the vertex (C#'s `fromCenter`). Solved from the triple of faces that is
+/// furthest from degenerate and then checked against the rest, so an apex of four or more faces is
+/// patched only when one ball really does touch all of them.
+pub fn try_get_inset_point(
+    normals: &[Vector3],
+    vertex: Vector3,
+    radius: f64,
+) -> Option<(Vector3, Vector3)> {
+    let mut from_center = Vector3::ZERO;
+    let mut best_determinant: f64 = 0.0;
+
+    for a in 0..normals.len() {
+        for b in a + 1..normals.len() {
+            for c in b + 1..normals.len() {
+                let determinant = normals[a].dot(normals[b].cross(normals[c]));
+
+                if determinant.abs() <= best_determinant.abs() {
+                    continue;
+                }
+
+                best_determinant = determinant;
+
+                from_center = (normals[b].cross(normals[c])
+                    + normals[c].cross(normals[a])
+                    + normals[a].cross(normals[b]))
+                    * (radius / determinant);
+            }
+        }
+    }
+
+    if best_determinant.abs() < 1e-6 || from_center.length() > radius * MAXIMUM_INSET_RADII {
+        return None;
+    }
+
+    for normal in normals {
+        if (normal.dot(from_center) - radius).abs() > radius * TOUCH_AGREEMENT {
+            return None;
+        }
+    }
+
+    Some((vertex - from_center, from_center))
 }

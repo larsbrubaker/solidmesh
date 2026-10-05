@@ -1,7 +1,7 @@
 //! The bevel surface over ONE chain edge, as the lines it is ruled by ([`SurfaceStrip`]). Ports
 //! `Bevel/Surface/SurfaceStrip.cs`: its fields and its construction from a plan
-//! ([`SurfaceStrip::try_create`]); its rail readings (`PointOn`, `ParamOf`, `TryCross`) land with
-//! another package as further `impl` blocks.
+//! ([`SurfaceStrip::try_create`]), and its rail readings ([`SurfaceStrip::point_on`],
+//! [`SurfaceStrip::param_of`], [`SurfaceStrip::try_cross`]).
 
 use vector_math::{math_helper, Vector3};
 
@@ -229,5 +229,45 @@ impl SurfaceStrip {
         let sin = radians.sin();
 
         (vector * cos) + (axis.cross(vector) * sin) + (axis * axis.dot(vector) * (1.0 - cos))
+    }
+}
+
+/// The strip's readings (C# `RailCount`, `Along`, `PointOn`, `ParamOf`, `TryCross`).
+impl SurfaceStrip {
+    /// C# `RailCount`: how many rails the strip is ruled by - one more than the number of quad
+    /// columns.
+    pub fn rail_count(&self) -> i32 {
+        self.rail_points.len() as i32
+    }
+
+    /// C# `Along`: the unit direction the rails run in, which is the chain's own walk direction.
+    pub fn along(&self) -> Vector3 {
+        self.along
+    }
+
+    /// C# `PointOn`: the point on one rail at `param` along the edge from its start.
+    pub fn point_on(&self, rail: i32, param: f64) -> Vector3 {
+        self.rail_points[rail as usize] + (self.along * param)
+    }
+
+    /// C# `ParamOf`: how far along the edge `point` stands, measured from the edge's start.
+    pub fn param_of(&self, point: Vector3) -> f64 {
+        (point - self.origin).dot(self.along)
+    }
+
+    /// C# `TryCross`: where one rail crosses the plane through `plane_point` with `plane_normal`, as
+    /// a parameter along the edge. `None` on a plane the rails run along, which is a mitre or an end
+    /// face the strip cannot be cut at.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_cross(&self, rail: i32, plane_point: Vector3, plane_normal: Vector3) -> Option<f64> {
+        let slope = plane_normal.dot(self.along);
+
+        if !(slope.abs() > 1e-9) {
+            return None;
+        }
+
+        let param = plane_normal.dot(plane_point - self.rail_points[rail as usize]) / slope;
+
+        param.is_finite().then_some(param)
     }
 }

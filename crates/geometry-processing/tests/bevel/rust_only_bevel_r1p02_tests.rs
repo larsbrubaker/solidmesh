@@ -7,10 +7,12 @@
 //! `SurfaceConvexBite.WithTheVerticesStandingOnIt`) and the corner fans (`SurfaceMixedCornerDualWall`,
 //! `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`, `SurfaceMixedCornerRunOutStrip.Draw`), the patch
 //! refinement (`BevelPatchRefinement`), the corner rows (`SurfaceCornerPatchRows`) and the corner
-//! patch's two solids (`BevelCornerPatchMesher`). Each pins the C# rule on a hand-built case.
+//! patch's two solids (`BevelCornerPatchMesher`) and one corner's tool (`BevelCornerPatches.TryBuild`,
+//! `TryGetInsetPoint`) and the plan's constructor and accessors (`SurfaceBevelPlan`). Each pins the C# rule on a hand-built case.
 
 use std::collections::HashMap;
 
+use geometry_processing::bevel::bevel_corner_patch::{self, Corner};
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::bevel::surface::{
     surface_convex_bite, surface_corner_patch_rows, surface_end_cut,
@@ -20,10 +22,13 @@ use geometry_processing::bevel::surface::{
     SurfaceMixedCornerDualWallCrossing, SurfaceSplitsOnASegment,
     SurfaceTwoCreaseJunctionWallCrossing, SurfaceVertexPool,
 };
+use geometry_processing::bevel::surface::{SurfaceBevelPlan, SurfaceEdgeRoles, SurfacePlanRecipe};
+use geometry_processing::bevel::BevelSweptChain;
 use geometry_processing::bevel::{
     bevel_corner_patch_mesher, bevel_patch_refinement, BevelAdvisoryCode,
 };
-use indexmap::IndexSet;
+use geometry_processing::topology::FeatureEdge;
+use indexmap::{IndexMap, IndexSet};
 use vector_math::Vector3;
 
 /// Two rows of equal count alternate, the upper winning each tie, and a row of 2 chords hands over
@@ -537,4 +542,92 @@ fn rust_only_the_corner_mesher_builds_closed_solids() {
         Vector3::new(1.0, 0.0, 0.0),
     ];
     assert!(bevel_corner_patch_mesher::try_build_void_cone(centre, &flat, 5.0, 4, false).is_none());
+}
+
+/// A cube corner's ball sits a radius in from all three faces, its tool is a closed shell with one
+/// seam per run published against that run's own edge, and two edges alone are no corner to patch.
+#[test]
+fn rust_only_a_cube_corner_builds_its_tool() {
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let y = Vector3::new(0.0, 1.0, 0.0);
+    let z = Vector3::new(0.0, 0.0, 1.0);
+    let at = Vector3::new(10.0, 10.0, 10.0);
+
+    let (centre, from_centre) =
+        bevel_corner_patch::try_get_inset_point(&[x, y, z], at, 2.0).expect("a cube corner");
+    assert!((centre - Vector3::new(8.0, 8.0, 8.0)).length() < 1e-12);
+    assert!((from_centre - Vector3::new(2.0, 2.0, 2.0)).length() < 1e-12);
+
+    let edge = |index: i32, normal0: Vector3, normal1: Vector3| FeatureEdge {
+        mesh_edge_index: index,
+        normal0,
+        normal1,
+        ..FeatureEdge::default()
+    };
+    let edges = vec![edge(4, y, z), edge(7, z, x), edge(9, x, y)];
+    let corner = Corner {
+        vertex: 0,
+        position: at,
+        edges: edges.clone(),
+        groups: vec![0],
+        mesh_edges: [4, 7, 9].into_iter().collect(),
+    };
+    assert_eq!(corner.edges().len(), 3);
+
+    let (mesh, void_cone, ball, seams) =
+        bevel_corner_patch::try_build(&corner, false, 2.0, 4).expect("the scoop builds");
+    assert!(surface_mesh_closure::is_closed(&mesh).0);
+    assert!(void_cone.is_none());
+    assert!((ball - centre).length() < 1e-12);
+    let mut published: Vec<i32> = seams.iter().map(|(edge, _)| *edge).collect();
+    published.sort();
+    assert_eq!(published, vec![4, 7, 9]);
+    for (_, seam) in &seams {
+        assert_eq!(seam.len(), 5);
+        for point in seam {
+            assert!(((*point - centre).length() - 2.0).abs() < 1e-9);
+        }
+    }
+
+    let partial = Corner {
+        edges: edges[..2].to_vec(),
+        ..corner
+    };
+    assert!(bevel_corner_patch::try_build(&partial, false, 2.0, 4)
+        .err()
+        .is_some_and(|warning| warning.is_none()));
+}
+
+/// A plan built straight from its parts reads them back: no mixed corners, the roles it was given,
+/// no regions, and the part's ruler not yet read.
+#[test]
+fn rust_only_a_plan_reads_back_what_it_was_built_from() {
+    let plan = SurfaceBevelPlan::new(
+        Vec::new(),
+        true,
+        2.5,
+        true,
+        None,
+        HashMap::new(),
+        false,
+        false,
+        None,
+        None,
+        IndexMap::new(),
+        SurfaceEdgeRoles::default(),
+        SurfacePlanRecipe {
+            chain: BevelSweptChain::default(),
+            regions: None,
+            curve_regions: None,
+            round_profile: true,
+        },
+    );
+
+    assert_eq!(plan.mixed_corner_count(), 0);
+    assert!(plan.mixed_corner_keys().is_empty());
+    assert_eq!(*plan.roles(), SurfaceEdgeRoles::default());
+    assert!(plan.regions().is_none());
+    assert!(plan.junction_arms.borrow().is_empty());
+    assert_eq!(plan.near_enough_on_the_part.get(), None);
+    assert!(plan.is_closed && plan.round_profile && plan.size == 2.5);
 }
