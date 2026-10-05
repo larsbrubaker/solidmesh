@@ -327,3 +327,135 @@ fn rust_only_a_split_station_is_blended_from_its_neighbours() {
     );
     assert!((blended.centre_from - Vector3::new(0.7, 0.0, 0.0)).length() < 1e-9);
 }
+
+/// The room's per-station readings: a boundary's motion per radius, the radius up to which a
+/// boundary segment keeps the edge's direction, which stations carry the chord's room, and the
+/// part's cache of edges and lattices.
+#[test]
+fn rust_only_the_room_reads_boundaries_and_caches_the_part() {
+    use geometry_processing::bevel::sections::section_room::{self, Boundary};
+    use geometry_processing::bevel::sections::SectionRoomCache;
+    use polygon_mesh::solids::platonic_solids;
+    use polygon_mesh::MeshEdgeGraph;
+
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let here = Boundary::new(Vector3::new(0.0, 1.0, 0.0), 2.0, 5.0, true);
+    assert_eq!(here.per_radius(), Vector3::new(0.0, 2.0, 0.0));
+
+    // The next boundary closes in along the edge by half a unit per radius: a segment 3 long stands
+    // still at a radius of 6.
+    let closing = Boundary::new(Vector3::new(-0.5, 2.0, 0.0), 1.0, 5.0, true);
+    assert!((section_room::keeps_its_direction(x * 3.0, x, here, closing) - 6.0).abs() < 1e-12);
+    assert_eq!(
+        section_room::keeps_its_direction(x * 3.0, x, closing, here),
+        f64::MAX
+    );
+
+    let stations = [Vector3::ZERO, x, x * 2.0, Vector3::new(1.0, 5.0, 0.0)];
+    let sides = [here; 4];
+    assert!(section_room::the_chord_carries_its_room(
+        &stations, &sides, &sides, 1, 1e-6
+    ));
+    assert!(!section_room::the_chord_carries_its_room(
+        &stations, &sides, &sides, 0, 1e-6
+    ));
+    assert!(!section_room::the_chord_carries_its_room(
+        &stations, &sides, &sides, 1, 0.0
+    ));
+
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let cache = SectionRoomCache::new(&cube, &graph);
+    assert!((cache.span - 300f64.sqrt()).abs() < 1e-9);
+    assert!((cache.lattice - 8.0 * cache.span * 1.1920929e-7).abs() < 1e-18);
+    assert_eq!(cache.edge_at_pair.len() as i32, graph.edge_count());
+    assert_eq!(
+        cache.edges_at_vertex.values().map(Vec::len).sum::<usize>() as i32,
+        2 * graph.edge_count()
+    );
+    assert!(cache.feature_regions_by_face.is_empty() && cache.coplanar_regions_by_face.is_empty());
+}
+
+/// The builder's canal readings: a slerp a quarter turn round, an arm squashed across a lean, a square
+/// edge's canal axis a radius in from both faces, and the creases one side of a cube corner's fan
+/// crosses.
+#[test]
+fn rust_only_the_builder_reads_its_canals() {
+    use geometry_processing::bevel::sections::section_builder;
+    use polygon_mesh::solids::platonic_solids;
+    use polygon_mesh::MeshEdgeGraph;
+
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let y = Vector3::new(0.0, 1.0, 0.0);
+    let half = section_builder::slerp(x, y, 0.5, std::f64::consts::FRAC_PI_2);
+    assert!((half - Vector3::new(0.5f64.sqrt(), 0.5f64.sqrt(), 0.0)).length() < 1e-12);
+    assert_eq!(section_builder::slerp(x, y, 0.5, 0.0), x);
+    assert_eq!(
+        section_builder::squashed(Vector3::new(2.0, 3.0, 0.0), x, 0.5),
+        Vector3::new(1.0, 3.0, 0.0)
+    );
+
+    // A square edge along x, its faces' normals +z and -y: the axis stands a radius in from both.
+    let square = ChainEdge::new(
+        0,
+        FeatureEdge {
+            start: Vector3::ZERO,
+            end: x * 10.0,
+            direction: x,
+            normal0: Vector3::new(0.0, 0.0, 1.0),
+            normal1: Vector3::new(0.0, -1.0, 0.0),
+            ..Default::default()
+        },
+        false,
+    );
+    let axis = section_builder::try_the_axis_at(&square, 2.0).expect("a square edge has an axis");
+    assert!((axis - Vector3::new(0.0, 2.0, -2.0)).length() < 1e-12);
+    assert!(section_builder::try_the_canals_corner(&square, &square, 2.0, x).is_none());
+
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let features = geometry_processing::topology::FeatureEdgeSet::create(&cube);
+    let first = features.edges()[0];
+    let arriving =
+        section_builder::try_feature_edge_between(&features, first.end_vertex, first.start_vertex)
+            .expect("an edge into the corner");
+    let corner = first.start_vertex;
+    let leaving = features
+        .edges_at_vertex(corner)
+        .iter()
+        .filter_map(|&e| {
+            let edge = features.edges()[e as usize];
+            let other = if edge.start_vertex == corner {
+                edge.end_vertex
+            } else {
+                edge.start_vertex
+            };
+            (other != first.end_vertex)
+                .then(|| section_builder::try_feature_edge_between(&features, corner, other))
+                .flatten()
+        })
+        .next()
+        .expect("an edge out of the corner");
+    for on_the_left in [true, false] {
+        if let Ok((creases, fan)) = section_builder::try_creases_in_the_fan_reading(
+            corner,
+            &arriving,
+            &leaving,
+            on_the_left,
+            &cube,
+            &graph,
+            &pairs,
+            None,
+        ) {
+            assert!(!fan.is_empty());
+            assert!(creases
+                .iter()
+                .all(|&e| section_room_is_fold(&cube, &graph, e)));
+        }
+    }
+
+    fn section_room_is_fold(mesh: &polygon_mesh::Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
+        geometry_processing::bevel::sections::section_fan_walk::is_a_crease(mesh, graph, edge)
+    }
+}

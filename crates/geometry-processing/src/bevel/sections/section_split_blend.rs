@@ -103,6 +103,7 @@ pub fn between_values(from: f64, to: f64, parameter: f64) -> f64 {
 /// nearest unsplit neighbours either side, and says what it did at each station (C#'s `placed`;
 /// `SplitPlacement::new(-1, -1, 0.0)` where it did nothing). A run of under three stations, or a mesh
 /// with no lattice, is left alone. `Err` where a blended point is not a number (where C# throws).
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn apply(
     sections: &mut [BevelSection],
     mesh: &Mesh,
@@ -116,7 +117,7 @@ pub fn apply(
 
     let lattice = bevel_split_chords::lattice_for(mesh);
 
-    if lattice.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
+    if !(lattice > 0.0) {
         return Ok(placed);
     }
 

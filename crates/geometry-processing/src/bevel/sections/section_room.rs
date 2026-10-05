@@ -13,6 +13,8 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{cs_math, Vector3};
 
 use super::section_fan_walk::{self, EdgeAtPair};
+use super::section_split_blend;
+use crate::bevel::bevel_split_chords;
 use crate::topology::FeatureEdge;
 
 /// C# `SectionRoom.Boundary`: where one side's boundary goes per unit of radius,
@@ -406,4 +408,105 @@ fn face_normal(mesh: &Mesh, face: i32) -> Vector3 {
 /// A vertex's position, read as doubles.
 fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])
+}
+
+/// C# `SmallestWedgeCosine`: how nearly two normals may line up before the vertex has no wedge to draw
+/// a section in - the same bound `SectionBuilder` refuses at, because a radius the section rule cannot
+/// draw at all is not a question of room.
+pub const SMALLEST_WEDGE_COSINE: f64 = -0.999999;
+
+impl Boundary {
+    /// C#'s `Boundary` constructor: where one side's boundary goes per unit of radius (`along`,
+    /// `reach`), the largest radius that fits it, and whether the side is an offset.
+    pub fn new(along: Vector3, reach: f64, largest_that_fits: f64, is_offset: bool) -> Self {
+        Self {
+            along,
+            reach,
+            largest_that_fits,
+            is_offset,
+        }
+    }
+
+    /// C# `PerRadius`: where the boundary moves per unit of radius.
+    pub fn per_radius(&self) -> Vector3 {
+        self.along * self.reach
+    }
+}
+
+/// C# `TheChordCarriesItsRoom`: whether station `i` is a split vertex the blend will redraw from its
+/// neighbours - both sides offsets, standing on the straight chord between them on the blend's own
+/// ruler - so that its room is the chord's rather than its own.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn the_chord_carries_its_room(
+    stations: &[Vector3],
+    left: &[Boundary],
+    right: &[Boundary],
+    i: usize,
+    chord_lattice: f64,
+) -> bool {
+    if !(chord_lattice > 0.0) {
+        return false;
+    }
+
+    let count = stations.len();
+
+    section_split_blend::reads_as_a_split_vertex(
+        left[i].is_offset,
+        right[i].is_offset,
+        stations[i],
+        stations[(i + count - 1) % count],
+        stations[(i + 1) % count],
+        chord_lattice,
+    )
+}
+
+/// C# `KeepsItsDirection`: the largest radius at which the boundary segment from one station's side
+/// to the next keeps the chain edge's own direction, or `f64::MAX` where it keeps it at every radius.
+/// `(span + r (u_next - u_here)) . d > 0` is linear in `r`: where the bracket's dot is not negative
+/// the segment only ever lengthens along the edge, and where it is negative the root is the radius at
+/// which it stands still, one step before the strip there folds back on itself.
+pub fn keeps_its_direction(
+    span: Vector3,
+    direction: Vector3,
+    here: Boundary,
+    next: Boundary,
+) -> f64 {
+    let closing = -(next.per_radius() - here.per_radius()).dot(direction);
+
+    if closing <= 1e-12 {
+        return f64::MAX;
+    }
+
+    span.dot(direction) / closing
+}
+
+impl SectionRoomCache {
+    /// C#'s `SectionRoomCache` constructor, with its initializers (`<init>`: empty region caches):
+    /// the mesh's edges by vertex pair and by vertex, its own lattice - eight float steps of its
+    /// bounding diagonal - and the ruler the split blend reads a split vertex with.
+    pub fn new(mesh: &Mesh, graph: &MeshEdgeGraph) -> Self {
+        let span = mesh.get_axis_aligned_bounding_box().size().length();
+        let mut edges_at_vertex: IndexMap<i32, Vec<i32>> = IndexMap::new();
+
+        for edge in 0..graph.edge_count() {
+            edges_at_vertex
+                .entry(graph.get_vertex0(edge))
+                .or_default()
+                .push(edge);
+            edges_at_vertex
+                .entry(graph.get_vertex1(edge))
+                .or_default()
+                .push(edge);
+        }
+
+        Self {
+            edge_at_pair: section_fan_walk::edges_by_vertex_pair(graph),
+            lattice: 8.0 * span * 1.1920929e-7,
+            span,
+            chord_lattice: bevel_split_chords::lattice_for(mesh),
+            edges_at_vertex,
+            feature_regions_by_face: IndexMap::new(),
+            coplanar_regions_by_face: IndexMap::new(),
+        }
+    }
 }
