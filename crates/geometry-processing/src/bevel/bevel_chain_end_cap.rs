@@ -1,7 +1,7 @@
 //! What a run does at each of its two ends (`Bevel/BevelChainEndCap.cs`): [`BevelChainEnds`],
-//! the decision `BevelEndCap` records one half of. Resolving it - the cap plane scan, the 5.3
-//! corner exemption, the bead's square cap and the overshoot bound - lands with the core's
-//! packages as an `impl` block.
+//! the decision `BevelEndCap` records one half of. Its constructor, the shared overshoot answer
+//! and the squared-off ends land here; resolving it - the cap plane scan, the 5.3 corner
+//! exemption, the bead's square cap and the overshoot bound - lands with later packages.
 //!
 //! A cutter that finds a face bounding its end vertex stops on that face's plane; one that finds
 //! none overshoots, which costs nothing because what it reaches is material a neighbouring tool
@@ -12,6 +12,7 @@
 //! the run is used.
 
 use super::BevelEndCap;
+use crate::topology::ChainEdge;
 
 /// C# `BevelChainEnds`: the end treatment for one run of a group's selection.
 ///
@@ -68,6 +69,55 @@ impl Default for BevelChainEnds {
             end_overshoot_corner: None,
             start_maximum_overshoot: f64::INFINITY,
             end_maximum_overshoot: f64::INFINITY,
+        }
+    }
+}
+
+impl BevelChainEnds {
+    /// The steepest a cap plane may stand off square to the run, in degrees.
+    pub const MAXIMUM_CAP_PLANE_ANGLE_DEGREES: f64 = 80.0;
+
+    /// C#'s constructor with its optional arguments at their defaults: no pair or overshoot
+    /// corner, no exit planes, and an unbounded overshoot at both ends. Callers that name an
+    /// optional argument set it with struct-update syntax.
+    pub fn new(start: BevelEndCap, end: BevelEndCap) -> Self {
+        BevelChainEnds {
+            start,
+            end,
+            ..BevelChainEnds::default()
+        }
+    }
+
+    /// Both ends overshooting (C#'s static `Overshoot`): no cap plane at either.
+    pub fn overshoot() -> Self {
+        Self::new(BevelEndCap::default(), BevelEndCap::default())
+    }
+
+    /// These ends with the run's start and/or end squared off - capped on the plane square to the
+    /// run through its first (or last) vertex - and everything else kept.
+    pub fn squared_at(&self, run: &[ChainEdge], at_start: bool, at_end: bool) -> BevelChainEnds {
+        if !at_start && !at_end {
+            return self.clone();
+        }
+
+        let first = &run[0];
+        let last = &run[run.len() - 1];
+
+        let out_at_start = -first.direction();
+        let out_at_end = last.direction();
+
+        BevelChainEnds {
+            start: if at_start {
+                BevelEndCap::new(out_at_start, out_at_start.dot(first.from()))
+            } else {
+                self.start.clone()
+            },
+            end: if at_end {
+                BevelEndCap::new(out_at_end, out_at_end.dot(last.to()))
+            } else {
+                self.end.clone()
+            },
+            ..self.clone()
         }
     }
 }

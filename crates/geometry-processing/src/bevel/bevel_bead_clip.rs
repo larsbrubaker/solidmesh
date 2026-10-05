@@ -51,3 +51,34 @@ pub struct Clippable {
     /// with no squared end, which is most of them.
     pub exit_planes: Option<Vec<BevelEndCap>>,
 }
+
+impl Tally {
+    /// C#'s constructor.
+    pub fn new(to_the_corner: i32, to_the_wedge: i32, unclipped: i32) -> Self {
+        Tally {
+            to_the_corner,
+            to_the_wedge,
+            unclipped,
+        }
+    }
+}
+
+impl Clippable {
+    /// C#'s constructor; the optional corner voids, fallback wedge and exit planes are `None` for
+    /// C#'s defaults.
+    pub fn new(
+        bead: Mesh,
+        wedge: Mesh,
+        corner_voids: Option<Vec<Mesh>>,
+        fallback_wedge: Option<Mesh>,
+        exit_planes: Option<Vec<BevelEndCap>>,
+    ) -> Self {
+        Clippable {
+            bead,
+            wedge,
+            corner_voids,
+            fallback_wedge,
+            exit_planes,
+        }
+    }
+}

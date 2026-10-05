@@ -1,6 +1,6 @@
 //! Fixture builders ported from `GeometryProcessingTests/Fixtures/TopologyTestMeshes.cs`, added
 //! one builder at a time as the test classes that use them land. So far:
-//! `CreateIsoscelesPrism` (`BevelArcChordingTests`).
+//! `CreateIsoscelesPrism` (`BevelArcChordingTests`) and `CreateArcPrism` (`BevelSweepBackDepthTests`).
 
 use polygon_mesh::Mesh;
 use vector_math::{math_helper, Vector2, Vector3};
@@ -49,4 +49,20 @@ pub fn create_isosceles_prism(apex_angle_degrees: f64, length: f64, height: f64)
     mesh.clean_and_merge();
 
     mesh
+}
+
+/// A half disc of `radius` (its arc chorded into `segments`, closed by its diameter on the x axis),
+/// extruded `height` along z.
+pub fn create_arc_prism(radius: f64, height: f64, segments: i32) -> Mesh {
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(radius, 0.0);
+    for i in 1..=segments {
+        let angle = std::f64::consts::PI * f64::from(i) / f64::from(segments);
+        path.line_to(radius * angle.cos(), radius * angle.sin());
+    }
+
+    path.close_polygon();
+
+    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, height)
+        .expect("a half disc extrudes")
 }

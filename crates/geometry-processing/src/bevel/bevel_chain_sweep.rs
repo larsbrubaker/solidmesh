@@ -1,8 +1,8 @@
 //! One continuous tool swept along a whole chain of edges, mitred at every joint - the plan's 5.1
 //! per-chain sweep (`Bevel/BevelChainSweep.cs`, the C# `internal static partial class
-//! BevelChainSweep`): which section a sweep carries ([`BevelSweptSection`]). The sweep lands with
-//! the core's packages as free functions here and in its sibling files
-//! ([`super::bevel_chain_sweep_mesh`]).
+//! BevelChainSweep`): which section a sweep carries ([`BevelSweptSection`]) and its two rulers. The
+//! sweep lands with later packages as free functions here and in its sibling files
+//! ([`super::bevel_chain_sweep_mesh`], [`super::bevel_chain_sweep_rings`]).
 
 /// C# `BevelSweptSection`: which section a sweep carries along the chain. All of them are swept
 /// by exactly the same code - the same per-segment frames, mitre planes and end caps - which is
@@ -27,3 +27,10 @@ pub enum BevelSweptSection {
     /// chain's overshooting cutter.
     Ball,
 }
+
+/// The least cosine a joint's mitre may stand at against either segment before the joint is too
+/// sharp to mitre.
+pub const MINIMUM_MITER_COSINE: f64 = 0.1;
+
+/// The fewest segments a closed run may have.
+pub const MINIMUM_CLOSED_SEGMENTS: i32 = 3;

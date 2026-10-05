@@ -1,13 +1,15 @@
 //! Where a mixed corner's RUN-OUT and another chain's BAND land on one another
 //! ([`SurfaceRunOutMeetsTheBand`]), read as the turns the run-out's own rows and its foot leave the
-//! band's material at. Ports the fields of `Bevel/Surface/SurfaceRunOutMeetsTheBand.cs`; the
-//! reading and its questions land with the run-out crossing package as further `impl` blocks.
+//! band's material at. Ports the fields of `Bevel/Surface/SurfaceRunOutMeetsTheBand.cs`, its
+//! constructor and its questions (where a row crosses, whether a row is taken, whether a point
+//! stands in the section, which rail a row is sewn to); the reading itself (`TryRead`) lands with a
+//! later package.
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use vector_math::{Vector2, Vector3};
 
-use super::SurfaceStrip;
+use super::{SurfaceMixedCorner, SurfaceStrip};
 
 /// C# `SurfaceRunOutMeetsTheBand`: a run-out and a band crossing, read per row of the run-out.
 ///
@@ -41,4 +43,113 @@ pub struct SurfaceRunOutMeetsTheBand {
     pub across: Vector3,
     /// The other axis of the band's section; see [`SurfaceRunOutMeetsTheBand::across`].
     pub up: Vector3,
+}
+
+impl SurfaceRunOutMeetsTheBand {
+    /// How many steps the reading takes across the run-out's sweep.
+    pub const STEPS_ACROSS_THE_SWEEP: i32 = 240;
+
+    /// C#'s private constructor.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        crosses_at: Vec<f64>,
+        the_band_has_it_at_the_seed: Vec<bool>,
+        band: Rc<SurfaceStrip>,
+        profile: Vec<Vector3>,
+        sharp_corner: Vector3,
+        across: Vector3,
+        up: Vector3,
+    ) -> Self {
+        SurfaceRunOutMeetsTheBand {
+            crosses_at,
+            the_band_has_it_at_the_seed,
+            band,
+            profile,
+            sharp_corner,
+            across,
+            up,
+        }
+    }
+
+    /// The turn at which `row` leaves the band's material, or infinity where it never does (or
+    /// there is no such row).
+    pub fn where_the_row_crosses(&self, row: i32) -> f64 {
+        if row >= 0 && (row as usize) < self.crosses_at.len() {
+            self.crosses_at[row as usize]
+        } else {
+            f64::INFINITY
+        }
+    }
+
+    /// Whether the band already has any row at the run-out's seed.
+    pub fn it_has_taken_a_row_already(&self) -> bool {
+        self.the_band_has_it_at_the_seed.iter().any(|&taken| taken)
+    }
+
+    /// Whether `at` stands inside the band's section - the polygon of its profile closed at the
+    /// sharp corner - read in the (across, up) plane by the even-odd rule.
+    pub fn it_stands_in_the_section(&self, at: Vector3) -> bool {
+        let read = |p: Vector3| Vector2::new(p.dot(self.across), p.dot(self.up));
+        let corner = read(self.sharp_corner);
+        let here = read(at);
+
+        let mut inside = false;
+        let mut previous = corner;
+
+        for rail in 0..=self.profile.len() {
+            let next = if rail < self.profile.len() {
+                read(self.profile[rail])
+            } else {
+                corner
+            };
+
+            if (previous.y > here.y) != (next.y > here.y) {
+                let crosses = previous.x
+                    + ((here.y - previous.y) / (next.y - previous.y) * (next.x - previous.x));
+
+                if crosses > here.x {
+                    inside = !inside;
+                }
+            }
+
+            previous = next;
+        }
+
+        inside
+    }
+
+    /// The one free rail of `profile` a run-out `row` is sewn to: the nearest untaken rail within
+    /// `near_enough` of the row's height (along `up`, about the corner's outer rail centre), and
+    /// only where it is the ONLY rail within the ruler, taken or not - two rails under one row is a
+    /// chording the two do not share.
+    pub fn try_the_rail_for(
+        corner: &SurfaceMixedCorner,
+        profile: &[Vector3],
+        row: Vector3,
+        up: Vector3,
+        near_enough: f64,
+        taken: &[bool],
+    ) -> Option<usize> {
+        let height = (row - corner.outer_rail_centre).dot(up);
+        let mut nearest = f64::MAX;
+        let mut others = 0;
+        let mut rail = None;
+
+        for (candidate, &point) in profile.iter().enumerate() {
+            let off = ((point - corner.outer_rail_centre).dot(up) - height).abs();
+
+            if off > near_enough {
+                continue;
+            }
+
+            others += 1;
+
+            if !taken[candidate] && off < nearest {
+                nearest = off;
+                rail = Some(candidate);
+            }
+        }
+
+        rail.filter(|_| others == 1)
+    }
 }

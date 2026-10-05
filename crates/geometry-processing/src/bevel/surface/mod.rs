@@ -63,6 +63,7 @@ mod surface_crossing_at_the_mitre;
 pub mod surface_cut_clip;
 mod surface_edge_plan;
 mod surface_edge_roles;
+pub mod surface_end_across_the_corner;
 pub mod surface_end_cap_around_a_feature;
 pub mod surface_end_cut;
 pub mod surface_end_cut_above_the_crossing;
