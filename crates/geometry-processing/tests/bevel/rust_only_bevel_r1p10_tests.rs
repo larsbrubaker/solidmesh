@@ -184,3 +184,150 @@ fn rust_only_sliver_readings_and_a_clean_cube_left_alone() {
     assert_eq!(collapsed_from(&mut cube), 0);
     assert_eq!(cube.faces.len(), faces);
 }
+
+#[test]
+fn rust_only_the_bead_clips_run_through_the_combiner_and_the_padded_hull() {
+    use geometry_processing::bevel::bevel_bead_clip::{clip_to, join};
+    use geometry_processing::bevel::bevel_bead_corner_pieces::piece;
+    use geometry_processing::bevel::bevel_source_hull::{build, lies_inside};
+    use polygon_mesh::csg::{BooleanError, CsgModes};
+    use polygon_mesh::Mesh;
+    use std::cell::RefCell;
+    use vector_math::Matrix4X4;
+
+    let part = platonic_solids::create_cube(20.0, 20.0, 20.0);
+    let hull = build(Some(&part)).expect("a cube has a hull");
+    let size = hull.get_axis_aligned_bounding_box().size();
+    assert!(
+        size.x > 20.0 && size.x < 20.001,
+        "padded a hair outward: {size:?}"
+    );
+    assert!(lies_inside(Some(&hull), Some(&part)));
+    assert!(!lies_inside(
+        Some(&hull),
+        Some(&platonic_solids::create_cube(30.0, 30.0, 30.0))
+    ));
+    assert!(lies_inside(None, Some(&part)));
+
+    // A combiner that records each call's mode and operand count and answers with a small cube.
+    let calls = RefCell::new(Vec::new());
+    let combine = |operands: &[(Mesh, Matrix4X4)], mode: CsgModes| -> Result<Mesh, BooleanError> {
+        calls.borrow_mut().push((mode, operands.len()));
+        Ok(platonic_solids::create_cube(2.0, 2.0, 2.0))
+    };
+
+    let bead = platonic_solids::create_cube(30.0, 30.0, 30.0);
+    let clipped =
+        clip_to(&part, Matrix4X4::IDENTITY, &bead, &[], &combine, None).expect("not cancelled");
+    assert!(clipped.is_some());
+    // The keep set (the part alone), then the bead with it and the hull it reaches past.
+    assert_eq!(
+        *calls.borrow(),
+        vec![(CsgModes::Union, 1), (CsgModes::Intersect, 3)]
+    );
+
+    calls.borrow_mut().clear();
+    let lone = join(vec![part.clone()], &combine).expect("not cancelled");
+    assert!(
+        lone.is_some() && calls.borrow().is_empty(),
+        "a lone piece needs no union"
+    );
+
+    let refuses = |_: &[(Mesh, Matrix4X4)], _: CsgModes| -> Result<Mesh, BooleanError> {
+        Err(BooleanError::Kernel {
+            message: "no".into(),
+        })
+    };
+    assert!(piece(
+        &bead,
+        Matrix4X4::IDENTITY,
+        Some(&hull),
+        &part,
+        &part,
+        &refuses,
+        None
+    )
+    .expect("not cancelled")
+    .is_none());
+    let cancels = |_: &[(Mesh, Matrix4X4)], _: CsgModes| -> Result<Mesh, BooleanError> {
+        Err(BooleanError::Cancelled)
+    };
+    assert!(join(vec![part.clone(), part], &cancels).is_err());
+}
+
+#[test]
+fn rust_only_the_shadow_body_and_clip_geometry() {
+    use geometry_processing::bevel::bevel_shadow_body::{
+        convex_region, enclosed_volume, round_the_centroid, try_meet,
+    };
+    use geometry_processing::bevel::bevel_shadow_clip::{self, clip_to_half_space, Obstruction};
+    use polygon_mesh::MeshEdgeGraph;
+
+    let v = |x: f64, y: f64, z: f64| Vector3::new(x, y, z);
+
+    // Six planes boxing [0,2] x [0,3] x [0,4], cut out of a big cube about the box.
+    let planes = [
+        (v(1.0, 0.0, 0.0), 0.0),
+        (v(-1.0, 0.0, 0.0), -2.0),
+        (v(0.0, 1.0, 0.0), 0.0),
+        (v(0.0, -1.0, 0.0), -3.0),
+        (v(0.0, 0.0, 1.0), 0.0),
+        (v(0.0, 0.0, -1.0), -4.0),
+    ];
+    let region = convex_region(&planes, v(1.0, 1.5, 2.0), 40.0).expect("a box");
+    assert!((enclosed_volume(&region) - 24.0).abs() < 1e-6);
+
+    let square = [
+        v(0.0, 0.0, 0.0),
+        v(2.0, 0.0, 0.0),
+        v(2.0, 2.0, 0.0),
+        v(0.0, 2.0, 0.0),
+    ];
+    let half = clip_to_half_space(&square, v(1.0, 0.0, 0.0), 1.0);
+    assert_eq!(half.len(), 4);
+    assert!(half.iter().all(|p| p.x >= 1.0 - 1e-12));
+
+    assert_eq!(
+        try_meet((v(1.0, 0.0, 0.0), 2.0), (v(0.0, 1.0, 0.0), 3.0)),
+        Some(v(2.0, 3.0, 0.0))
+    );
+    assert_eq!(
+        try_meet((v(1.0, 0.0, 0.0), 2.0), (v(1.0, 0.0, 0.0), 3.0)),
+        None
+    );
+
+    // Four corners of a square in z = 0 come back once each, round the centroid.
+    let ring = round_the_centroid(
+        vec![
+            v(1.0, 1.0, 0.0),
+            v(-1.0, -1.0, 0.0),
+            v(1.0, -1.0, 0.0),
+            v(-1.0, 1.0, 0.0),
+            v(1.0, 1.0, 0.0),
+        ],
+        v(0.0, 0.0, 1.0),
+        1e-9,
+    );
+    assert_eq!(ring.len(), 4);
+
+    let obstruction = Obstruction::new(
+        v(0.0, 0.0, 1.0),
+        10.0,
+        v(0.0, 0.0, 10.0),
+        v(1.0, 0.0, 0.0),
+        20.0,
+        v(0.0, 1.0, 0.0),
+        2.0,
+        1e-6,
+        -1,
+        0.0,
+    );
+    assert!(bevel_shadow_clip::standing_on(&obstruction) >= 1e-6);
+    let cube = platonic_solids::create_cube(20.0, 20.0, 20.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    // A seed face off the mesh stands on nothing, so no column and no body.
+    let (columns, bodies) =
+        bevel_shadow_clip::build(&cube, &graph, &[obstruction], true, 1.0).expect("clipper");
+    assert!(columns.is_empty());
+    assert_eq!(bodies, 0);
+}
