@@ -1,10 +1,14 @@
 //! Where a mixed corner's RUN-OUT skirt and another chain's BAND land on one another over the same
 //! region, and the two footprints are sewn together rather than refused ([`SurfaceRoomCrossing`]).
-//! Ports the record of `Bevel/Surface/SurfaceRoomCrossing.cs`, its derived readings and the test
-//! that finds one ([`SurfaceRoomCrossing::try_cross`]); gathering every crossing of a pass
-//! (`Gather`, which polls cancellation) lands with a later package.
+//! Ports the record of `Bevel/Surface/SurfaceRoomCrossing.cs`, its derived readings, the test
+//! that finds one ([`SurfaceRoomCrossing::try_cross`]) and the gathering of every crossing of a pass
+//! ([`SurfaceRoomCrossing::gather`]).
+
+use polygon_mesh::CancelToken;
 
 use super::{SurfaceRoomCut, SurfaceRoomFootprint};
+use crate::bevel::level_line::WorkError;
+use vector_math::cs_math;
 
 /// C# `SurfaceRoomCrossing` (a sealed record): a run-out skirt and a band crossing over one region.
 ///
@@ -97,6 +101,45 @@ impl SurfaceRoomCrossing {
                     && crossing.stands_on_the_wall()
             })
         })
+    }
+
+    /// Every crossing among `cuts` (C#'s null is `None`, which has none) at `size`, each pair
+    /// asked once in order; a crossing whose band's own end notch is among the cuts also takes the
+    /// cap notch. Polls `cancellation_token` before each pair, leaving with
+    /// [`WorkError::Cancelled`] as C#'s `ThrowIfCancellationRequested` does.
+    pub fn gather(
+        cuts: Option<&[SurfaceRoomCut]>,
+        size: f64,
+        cancellation_token: &CancelToken,
+    ) -> Result<Vec<SurfaceRoomCrossing>, WorkError> {
+        let mut crossings = Vec::new();
+
+        let Some(cuts) = cuts else {
+            return Ok(crossings);
+        };
+
+        for here in 0..cuts.len() {
+            for other in (here + 1)..cuts.len() {
+                if cancellation_token.is_cancelled() {
+                    return Err(WorkError::Cancelled);
+                }
+
+                if let Some(crossing) = Self::try_cross(&cuts[here], &cuts[other], size) {
+                    crossings.push(crossing);
+                }
+            }
+        }
+
+        for crossing in &mut crossings {
+            if cuts
+                .iter()
+                .any(|cut| Self::it_is_the_bands_notch(crossing, cut))
+            {
+                crossing.also_takes_the_cap_notch = true;
+            }
+        }
+
+        Ok(crossings)
     }
 
     /// Whether the pair `here`/`other` (a run-out skirt and a band, either way round) is one of
@@ -202,15 +245,12 @@ impl SurfaceRoomCrossing {
         // band's foot line.
         let across_to_the_band = -skirt.inward.dot(band.inward);
         let reach = skirt.setback_per_size * size * across_to_the_band;
-        // C#'s Math.Min, which passes a NaN through.
-        let usable_reach = if reach.is_nan() || gap.is_nan() {
-            f64::NAN
-        } else {
-            reach.min(gap)
-        };
+        let usable_reach = cs_math::min_f64(reach, gap);
         let the_bands_foot_line = gap - (band.setback_per_size * size);
 
-        if !(usable_reach > the_bands_foot_line + (f64::max(gap, 1.0) * Self::RELATIVE_TOLERANCE)) {
+        if !(usable_reach
+            > the_bands_foot_line + (cs_math::max_f64(gap, 1.0) * Self::RELATIVE_TOLERANCE))
+        {
             // The row that gets furthest dies before the strip begins, so the two footprints
             // never meet on this region and there is nothing here to sew.
             return None;
@@ -248,7 +288,7 @@ impl SurfaceRoomCrossing {
         skirt: &SurfaceRoomCut,
         size: f64,
     ) -> Option<f64> {
-        let tolerance = f64::max(band.length, 1.0) * Self::RELATIVE_TOLERANCE;
+        let tolerance = cs_math::max_f64(band.length, 1.0) * Self::RELATIVE_TOLERANCE;
 
         let opens = -(band.overhang_before_from * size);
         let closes = band.length + (band.overhang_past_to * size);
@@ -259,23 +299,15 @@ impl SurfaceRoomCrossing {
         let along_from = from_the_band.dot(band.along);
         let along_to = to_the_band.dot(band.along);
 
-        // C#'s Math.Min / Math.Max pass a NaN through, and a NaN compares false either way, so a
-        // NaN end is not refused here.
-        let either_is_nan = along_from.is_nan() || along_to.is_nan();
-        if !either_is_nan
-            && (along_from.min(along_to) < opens - tolerance
-                || along_from.max(along_to) > closes + tolerance)
+        if cs_math::min_f64(along_from, along_to) < opens - tolerance
+            || cs_math::max_f64(along_from, along_to) > closes + tolerance
         {
             return None;
         }
 
         let near = from_the_band.dot(band.inward);
         let far = to_the_band.dot(band.inward);
-        let gap = if near.is_nan() || far.is_nan() {
-            f64::NAN
-        } else {
-            near.min(far)
-        };
+        let gap = cs_math::min_f64(near, far);
 
         (gap > tolerance).then_some(gap)
     }

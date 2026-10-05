@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::SurfaceBevelPlan;
 use crate::topology::FaceGroup;
@@ -58,14 +58,14 @@ pub fn offset_to_segment(
     a: Vector3,
     b: Vector3,
 ) -> f64 {
-    let tolerance = f64::max(length, 1.0) * RELATIVE_TOLERANCE;
+    let tolerance = cs_math::max_f64(length, 1.0) * RELATIVE_TOLERANCE;
 
     // How much of the span the two have to SHARE before they face each other at all is a CORNER's
     // width and not a rounding: a rim that leaves the chain edge's own corner is written in
     // floats, and the stretch of it below the corner overlaps the span by a millionth or so
     // without standing in front of anything. Read at the finer ruler that overlap is a wall the
     // width of a corner, which on the picture hanger's gusset says a 20 mm face is 0.4 mm wide.
-    let sharing = f64::max(length, 1.0) * VERTEX_TOLERANCE;
+    let sharing = cs_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
 
     let along_a = (a - from).dot(along);
     let along_b = (b - from).dot(along);
@@ -73,15 +73,15 @@ pub fn offset_to_segment(
     let offset_b = (b - from).dot(inward);
 
     // C#'s Math.Max/Math.Min: NaN in either argument gives NaN.
-    let low = csharp_max(csharp_min(along_a, along_b), 0.0);
-    let high = csharp_min(csharp_max(along_a, along_b), length);
+    let low = cs_math::max_f64(cs_math::min_f64(along_a, along_b), 0.0);
+    let high = cs_math::min_f64(cs_math::max_f64(along_a, along_b), length);
 
     let shared = high - low;
     if shared <= sharing || shared.is_nan() {
         return f64::INFINITY;
     }
 
-    let nearest = csharp_min(
+    let nearest = cs_math::min_f64(
         offset_at(along_a, offset_a, along_b, offset_b, low),
         offset_at(along_a, offset_a, along_b, offset_b, high),
     );
@@ -98,27 +98,8 @@ pub fn offset_at(along_a: f64, offset_a: f64, along_b: f64, offset_b: f64, at: f
     let span = along_b - along_a;
 
     if span == 0.0 {
-        return csharp_min(offset_a, offset_b);
+        return cs_math::min_f64(offset_a, offset_b);
     }
 
     offset_a + ((offset_b - offset_a) * ((at - along_a) / span))
-}
-
-/// C#'s `Math.Min`, which returns NaN when either argument is NaN (Rust's `f64::min` returns the
-/// other one).
-fn csharp_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.min(b)
-    }
-}
-
-/// C#'s `Math.Max`, NaN-propagating like [`csharp_min`].
-fn csharp_max(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.max(b)
-    }
 }

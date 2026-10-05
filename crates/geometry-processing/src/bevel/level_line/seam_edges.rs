@@ -1,11 +1,12 @@
 //! A crease DOUBLED by a ribbon microns wide is the same crease, not a wall beside one
-//! ([`SeamEdges`]). Ports the type of `Bevel/LevelLine/SeamEdges.cs`; its constructor and readings
-//! land with a later package.
+//! ([`SeamEdges`]). Ports the type of `Bevel/LevelLine/SeamEdges.cs`, its constructor and the
+//! readings of a point beside the chain; the seam test and the wrapped feature-edge test
+//! (`IsSeam`, `NotTheChainsSeam`) land with a later package.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 /// C# `SeamEdges`: says which feature edges are a doubling ribbon's, so the whole construction can
 /// stop reading them as features.
@@ -50,4 +51,67 @@ pub struct SeamEdges {
     /// while the edges are read through a shared handle, hence the `RefCell`; only looked up, never
     /// iterated, so a `HashMap`.
     pub beside: RefCell<HashMap<i32, bool>>,
+}
+
+impl SeamEdges {
+    /// C#'s private constructor (with its field initializer: nothing yet read beside).
+    pub fn new(
+        positions: Vec<Vector3>,
+        polylines: Vec<Vec<Vector3>>,
+        chain_keys: HashSet<(i32, i32)>,
+        ends: Vec<Vector3>,
+        seam_epsilon: f64,
+    ) -> Self {
+        SeamEdges {
+            positions,
+            polylines,
+            chain_keys,
+            ends,
+            seam_epsilon,
+            beside: RefCell::new(HashMap::new()),
+        }
+    }
+
+    /// Whether input `vertex` stands within the seam epsilon of the chain, remembered per vertex.
+    /// A vertex the cut has added (outside the input positions) stands on no input seam.
+    pub fn beside(&self, vertex: i32) -> bool {
+        if vertex < 0 || vertex as usize >= self.positions.len() {
+            return false;
+        }
+
+        if let Some(&known) = self.beside.borrow().get(&vertex) {
+            return known;
+        }
+
+        let within = self.point_is_beside(self.positions[vertex as usize]);
+        self.beside.borrow_mut().insert(vertex, within);
+        within
+    }
+
+    /// Whether `point` stands within the seam epsilon of any segment of the chain's polylines.
+    pub fn point_is_beside(&self, point: Vector3) -> bool {
+        self.polylines.iter().any(|polyline| {
+            polyline.windows(2).any(|pair| {
+                let t = Self::parameter_on_segment(point, pair[0], pair[1]);
+                let nearest = pair[0] + ((pair[1] - pair[0]) * t);
+
+                (point - nearest).length() <= self.seam_epsilon
+            })
+        })
+    }
+
+    /// Where `point` projects onto the segment `from`..`to`, clamped to it (zero for a segment of
+    /// no length).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    pub fn parameter_on_segment(point: Vector3, from: Vector3, to: Vector3) -> f64 {
+        let along = to - from;
+        let length_squared = along.length_squared();
+        if !(length_squared > 0.0) {
+            return 0.0;
+        }
+
+        let offset = point - from;
+        let projected = (offset.x * along.x) + (offset.y * along.y) + (offset.z * along.z);
+        cs_math::min_f64(1.0, cs_math::max_f64(0.0, projected / length_squared))
+    }
 }

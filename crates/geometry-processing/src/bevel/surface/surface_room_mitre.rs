@@ -4,7 +4,7 @@
 //! carries a band by is read here too. Adding every tip of a plan (`AddTo`) lands with a later
 //! package.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceRoomCut, SurfaceRoomFootprint};
 
@@ -50,7 +50,7 @@ pub fn try_cut(
     let corner = arriving.to();
 
     if (leaving.from() - corner).length()
-        > f64::max((arriving.to() - arriving.from()).length(), 1.0) * VERTEX_TOLERANCE
+        > cs_math::max_f64((arriving.to() - arriving.from()).length(), 1.0) * VERTEX_TOLERANCE
     {
         // Not one corner at all: the chain's own order says these two edges meet, and where they
         // do not there is no crossing to read.
@@ -158,7 +158,7 @@ pub fn chains_direction_past(
 
     let square = away.length_squared();
     if (meets - corner).length()
-        > f64::max((edge.to() - edge.from()).length(), 1.0) * VERTEX_TOLERANCE
+        > cs_math::max_f64((edge.to() - edge.from()).length(), 1.0) * VERTEX_TOLERANCE
         || square.is_nan()
         || square <= 0.0
     {
@@ -199,13 +199,7 @@ pub fn overhang_per_setback(
         return 0.0;
     }
 
-    // C#'s Math.Max(0, x), which passes a NaN through.
-    let overhang = inward.dot(normal) / along_the_edge;
-    if overhang.is_nan() {
-        overhang
-    } else {
-        overhang.max(0.0)
-    }
+    cs_math::max_f64(0.0, inward.dot(normal) / along_the_edge)
 }
 
 /// The unit inward direction at the edge and the setback one side of `edge` gives up, as the

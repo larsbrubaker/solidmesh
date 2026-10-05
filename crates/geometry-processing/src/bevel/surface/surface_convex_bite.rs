@@ -14,7 +14,7 @@
 
 use indexmap::IndexSet;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceBiteSharedSides, SurfaceVertexPool};
 
@@ -291,7 +291,7 @@ pub fn it_is_convex(rim: &[Vector3], region: &[(Vector3, Vector3)]) -> bool {
         most = Vector3::component_max(most, at);
     }
 
-    let slack = 1e-9 * f64::max(1.0, (most - least).length());
+    let slack = 1e-9 * cs_math::max_f64(1.0, (most - least).length());
 
     for &at in rim {
         for &(point, inward) in region {

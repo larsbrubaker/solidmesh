@@ -105,3 +105,22 @@ pub fn bridges(neighbours: &HashMap<i32, Vec<i32>>) -> HashSet<(i32, i32)> {
 
     bridges
 }
+
+impl PairCornerEndFaceField {
+    /// A point on the round's axis.
+    pub fn axis_point(&self) -> Vector3 {
+        self.axis_point
+    }
+
+    /// The triangles of `indices` that use `vertex`, in order.
+    pub fn triangles_at(
+        indices: &[(i32, i32, i32)],
+        vertex: i32,
+    ) -> impl Iterator<Item = usize> + '_ {
+        indices
+            .iter()
+            .enumerate()
+            .filter(move |(_, &(a, b, c))| a == vertex || b == vertex || c == vertex)
+            .map(|(t, _)| t)
+    }
+}

@@ -3,7 +3,7 @@
 //! reach and wedge tests, and the snap of a cut ring onto the profile, land here first; the cap
 //! (`TryCapWithTheSection`) and the notch itself land with later packages.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{surface_ring, SurfaceVertexPool};
 
@@ -66,12 +66,7 @@ pub fn the_reach_of_the_section(pool: &SurfaceVertexPool, profile: &[i32], corne
 
     for &vertex in profile {
         let here = (pool.position_of(vertex) - corner).length();
-        // C#'s Math.Max, which passes a NaN through.
-        reach = if here.is_nan() || f64::is_nan(reach) {
-            f64::NAN
-        } else {
-            f64::max(reach, here)
-        };
+        reach = cs_math::max_f64(reach, here);
     }
 
     reach

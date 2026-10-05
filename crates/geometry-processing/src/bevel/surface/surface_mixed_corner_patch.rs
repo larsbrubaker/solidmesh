@@ -4,6 +4,8 @@
 //! ([`nothing_covers_nothing`]) land here first; the patch's own construction (`TryRing`,
 //! `TryCutTheRing`) lands with a later package.
 
+use vector_math::cs_math;
+
 /// How far off its own circle the shared face's chording already stands - the sagitta of one of
 /// its chords, `(chord / 2) tan(turn / 4)` - which is what a ring standing on those chords may be
 /// off the ideal torus by without being wrong about anything the mesh knows.
@@ -34,13 +36,13 @@ pub fn the_shared_faces_own_sagitta(
             continue;
         }
 
-        widest = f64::max(
+        widest = cs_math::max_f64(
             widest,
             walk.facets[facet].crossed() / 2.0 * (turned / 4.0).tan(),
         );
     }
 
-    f64::max(pool.near_enough(), widest)
+    cs_math::max_f64(pool.near_enough(), widest)
 }
 
 /// The cut's ring read from the cap face round to the shared face, whichever way its own rails

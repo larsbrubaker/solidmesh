@@ -394,3 +394,10 @@ impl ChainDistanceField for RunOutField {
         })
     }
 }
+
+impl RunOutField {
+    /// How far along the crease the wedge ends, P* (C#'s `Reach`).
+    pub fn reach(&self) -> f64 {
+        self.reach
+    }
+}

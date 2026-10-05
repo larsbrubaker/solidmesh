@@ -125,3 +125,110 @@ fn rust_only_level_line_ceilings_aspects_and_refusals() {
     let refused = band_gap::refused_by_size(1.5);
     assert_eq!((refused.refusal, refused.room), (BandGapRefusal::Size, 1.5));
 }
+
+#[test]
+fn rust_only_a_pick_is_checked_and_its_touching_chains_found() {
+    use geometry_processing::bevel::level_line::pick_validation::{
+        check_pick_arguments, every_touching_pair, PickArgumentError,
+    };
+
+    let chains = vec![vec![0, 1, 2], vec![5, 6], vec![2, 7]];
+    assert_eq!(
+        check_pick_arguments(&[], &[], &chains, &[false, false, false]),
+        Ok(())
+    );
+    assert_eq!(
+        check_pick_arguments(&[], &[], &[], &[]),
+        Err(PickArgumentError::NoChains)
+    );
+    assert_eq!(
+        check_pick_arguments(&[], &[], &chains, &[false]),
+        Err(PickArgumentError::ClosedFlagsDoNotMatch)
+    );
+    assert_eq!(
+        check_pick_arguments(&[], &[], &[vec![0, 1]], &[true]),
+        Err(PickArgumentError::ClosedChainTooShort)
+    );
+
+    // Chains 0 and 2 share vertex 2; chain 1 touches nobody.
+    assert_eq!(every_touching_pair(&chains), vec![(0, 2, 2)]);
+}
+
+#[test]
+fn rust_only_a_room_reading_says_what_bounded_it() {
+    use geometry_processing::bevel::level_line::RoomReading;
+
+    let unbounded = RoomReading {
+        read: true,
+        room: f64::INFINITY,
+        ..RoomReading::default()
+    };
+    assert!(unbounded.unbounded() && unbounded.is_a_size_statement());
+
+    let touching = RoomReading {
+        read: true,
+        chains_are_apart: false,
+        ..RoomReading::default()
+    };
+    assert!(!touching.unbounded() && !touching.is_a_size_statement());
+}
+
+#[test]
+fn rust_only_gathering_crossings_leaves_when_cancelled() {
+    use geometry_processing::bevel::level_line::WorkError;
+    use geometry_processing::bevel::surface::{SurfaceRoomCrossing, SurfaceRoomCut};
+    use polygon_mesh::CancelToken;
+
+    let cut = SurfaceRoomCut::new(
+        1,
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        1.0,
+        1.0,
+        f64::INFINITY,
+    );
+    let cuts = [cut, cut];
+
+    let token = CancelToken::new();
+    assert!(SurfaceRoomCrossing::gather(Some(&cuts), 1.0, &token)
+        .unwrap()
+        .is_empty());
+    assert!(SurfaceRoomCrossing::gather(None, 1.0, &token)
+        .unwrap()
+        .is_empty());
+
+    token.cancel();
+    assert!(matches!(
+        SurfaceRoomCrossing::gather(Some(&cuts), 1.0, &token),
+        Err(WorkError::Cancelled)
+    ));
+}
+
+#[test]
+fn rust_only_the_gap_loop_walks_verdicts() {
+    use geometry_processing::bevel::level_line::gap_loop_walk::{
+        each_side_leaves_one_closed_loop, side_of_a_both_sided_loop,
+        without_open_members_own_pieces,
+    };
+    use geometry_processing::bevel::level_line::GapLoop;
+
+    // Mostly one side reads that side; a quarter or more on the other is the group's call.
+    assert_eq!(side_of_a_both_sided_loop(&[1, 1, 1, 1, 1, 2], 2), 1);
+    assert_eq!(side_of_a_both_sided_loop(&[1, 1, 2, 2], 1), 1);
+    assert_eq!(side_of_a_both_sided_loop(&[1, 1, 2, 2], 2), 2);
+
+    let closed_on = |side: i32| GapLoop::new(side, true, Vec::new(), Vec::new(), 0, false, None);
+    assert!(each_side_leaves_one_closed_loop(&[
+        closed_on(1),
+        closed_on(2)
+    ]));
+    assert!(!each_side_leaves_one_closed_loop(&[closed_on(1)]));
+
+    // Two open pieces of one open member and nothing else: its one-chain build keeps the first.
+    let piece = |vertex: i32| GapLoop::new(1, false, vec![vertex], vec![0.0], 0, false, None);
+    let kept = without_open_members_own_pieces(vec![piece(1), piece(2)], &[0], &[false], &[]);
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].vertices, vec![1]);
+}

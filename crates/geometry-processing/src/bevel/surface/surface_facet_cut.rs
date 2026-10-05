@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{surface_cut_clip, surface_ring, SurfaceBandEnd, SurfaceLine, SurfaceVertexPool};
 
@@ -251,8 +251,8 @@ impl SurfaceFacetCut {
             return false;
         }
 
-        let where_ = cs_min(
-            cs_max(
+        let where_ = cs_math::min_f64(
+            cs_math::max_f64(
                 (point - self.chain_from).dot(run) / run.length_squared(),
                 0.0,
             ),
@@ -313,7 +313,7 @@ impl SurfaceFacetCut {
         let at_start = removed_at_from + ((removed_at_to - removed_at_from) * start);
         let at_finish = removed_at_from + ((removed_at_to - removed_at_from) * finish);
 
-        if cs_min(at_start, at_finish) >= -on_the_cut {
+        if cs_math::min_f64(at_start, at_finish) >= -on_the_cut {
             return None;
         }
 
@@ -341,9 +341,9 @@ impl SurfaceFacetCut {
             let crossing = at_from / (at_from - at_to);
 
             if at_from < 0.0 {
-                *start = cs_max(*start, crossing);
+                *start = cs_math::max_f64(*start, crossing);
             } else {
-                *finish = cs_min(*finish, crossing);
+                *finish = cs_math::min_f64(*finish, crossing);
             }
         }
 
@@ -360,8 +360,8 @@ impl SurfaceFacetCut {
         for &corner in ring {
             let at = end.signed_distance(pool.position_of(corner));
 
-            least = cs_min(least, at);
-            most = cs_max(most, at);
+            least = cs_math::min_f64(least, at);
+            most = cs_math::max_f64(most, at);
         }
 
         let stands_on =
@@ -412,8 +412,8 @@ impl SurfaceFacetCut {
             for &vertex in &between {
                 let at = end.signed_distance(pool.position_of(vertex));
 
-                least = cs_min(least, at);
-                most = cs_max(most, at);
+                least = cs_math::min_f64(least, at);
+                most = cs_math::max_f64(most, at);
             }
 
             let on_the_cut = surface_cut_clip::on_the_cut(pool);
@@ -467,23 +467,5 @@ impl SurfaceFacetCut {
         }
 
         surface_ring::knit(pieces, pool)
-    }
-}
-
-/// C#'s `Math.Min`, which passes a NaN through.
-fn cs_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.min(b)
-    }
-}
-
-/// C#'s `Math.Max`, which passes a NaN through.
-fn cs_max(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.max(b)
     }
 }

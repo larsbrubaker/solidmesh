@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
 
@@ -103,9 +103,7 @@ impl SurfaceMixedCornerDualCanal {
         }
 
         match self.try_the_cap_crossing(turn) {
-            // C#'s Math.Min, which passes a NaN through.
-            Some(crossing) if crossing.is_nan() || sweep.is_nan() => f64::NAN,
-            Some(crossing) => crossing.min(sweep),
+            Some(crossing) => cs_math::min_f64(crossing, sweep),
             None => 0.0,
         }
     }

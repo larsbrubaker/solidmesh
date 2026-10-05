@@ -4,8 +4,9 @@
 //! functions here). What is here are the readings the close is built from - the end plane the
 //! uncrossed rails close against ([`try_the_end_plane`]), whether the crossing's foot stands on it
 //! ([`the_foot_stands_on_the_end_plane`]), the cut back of the section at the run-out's rim
-//! ([`cut_back_at_the_run_out`]) and what each chord carries ([`the_betweens`]); the close itself
-//! (`TryClose`) lands with a later package. The trim it reads is
+//! ([`cut_back_at_the_run_out`]), what each chord carries ([`the_betweens`]) and whether a point
+//! stands clear of every face ([`nothing_stands_at`]); the close itself (`TryClose`) lands with a
+//! later package. The trim it reads is
 //! [`SurfaceStripTrimmedAtTheCrossing`].
 //!
 //! C#'s `IReadOnlyList<int>[] alongTheProfile` is `Option<&[Vec<i32>]>` here: the array may be null,
@@ -327,4 +328,13 @@ pub fn try_the_end_plane(
     }
 
     Some(normal.get_normal())
+}
+
+/// Whether no corner of any of `faces` stands within the pool's ruler of `at`.
+pub fn nothing_stands_at(pool: &SurfaceVertexPool, faces: &[(i32, i32, i32)], at: Vector3) -> bool {
+    !faces.iter().any(|&(v0, v1, v2)| {
+        [v0, v1, v2]
+            .into_iter()
+            .any(|corner| (pool.position_of(corner) - at).length() < pool.near_enough())
+    })
 }

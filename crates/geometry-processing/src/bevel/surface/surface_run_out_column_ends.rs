@@ -5,6 +5,8 @@
 
 use std::cmp::Ordering;
 
+use vector_math::cs_math;
+
 use super::surface_mixed_corner_run_out;
 
 /// How near two turns have to be to be one station - an angle, so fixed.
@@ -125,7 +127,7 @@ pub fn too_close_to_the_end(near_enough: f64, size: f64) -> f64 {
     }
 
     surface_mixed_corner_run_out::clears_the_wall()
-        - cs_min(1.0, 1.0 / (2.0 - cs_min(1.0, near_enough / size))).acos()
+        - cs_math::min_f64(1.0, 1.0 / (2.0 - cs_math::min_f64(1.0, near_enough / size))).acos()
 }
 
 /// C#'s `double.CompareTo`, which orders a NaN before every number (`List<double>.Sort`).
@@ -135,14 +137,5 @@ fn cs_compare(a: &f64, b: &f64) -> Ordering {
         (true, false) => Ordering::Less,
         (false, true) => Ordering::Greater,
         (false, false) => a.partial_cmp(b).unwrap_or(Ordering::Equal),
-    }
-}
-
-/// C#'s `Math.Min`, which passes a NaN through.
-fn cs_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.min(b)
     }
 }

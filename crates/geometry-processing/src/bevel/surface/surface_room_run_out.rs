@@ -3,7 +3,7 @@
 //! class: free functions here). How far the run-out's arc reaches across a direction lands here
 //! first; laying the footprints lands with a later package.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::SurfaceMixedCorner;
 
@@ -28,20 +28,11 @@ pub fn span_across(
 
     let at = |turn: f64| centre + (along_zero * turn.cos()) + (along_quarter * turn.sin());
 
-    // C#'s Math.Min / Math.Max, which pass a NaN through.
     let mut take = |turn: f64| {
         let here = at(turn);
 
-        nearest = if here.is_nan() || f64::is_nan(nearest) {
-            f64::NAN
-        } else {
-            f64::min(nearest, here)
-        };
-        furthest = if here.is_nan() || f64::is_nan(furthest) {
-            f64::NAN
-        } else {
-            f64::max(furthest, here)
-        };
+        nearest = cs_math::min_f64(nearest, here);
+        furthest = cs_math::max_f64(furthest, here);
     };
 
     take(corner.turn_radians());

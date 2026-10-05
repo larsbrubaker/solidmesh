@@ -2,7 +2,7 @@
 //! functions here). Its tolerances and the chain's ceiling land here first; the reading of a
 //! side's own room lands with later packages.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 /// The FINE pass's tolerance, as a fraction of the peak distance it reads.
 pub const PEAK_RELATIVE_TOLERANCE: f64 = 1.0 / 20.0;
@@ -28,12 +28,7 @@ pub fn chain_ceiling(chain_points: &[Vector3]) -> f64 {
         for i in 0..chain_points.len() {
             for j in (i + 1)..chain_points.len() {
                 let apart = (chain_points[j] - chain_points[i]).length();
-                // C#'s Math.Max, which passes a NaN through.
-                greatest = if apart.is_nan() || f64::is_nan(greatest) {
-                    f64::NAN
-                } else {
-                    f64::max(greatest, apart)
-                };
+                greatest = cs_math::max_f64(greatest, apart);
             }
         }
     } else {

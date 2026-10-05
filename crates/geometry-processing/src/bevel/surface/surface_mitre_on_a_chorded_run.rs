@@ -3,6 +3,8 @@
 //! neighbour walks, the collinearity test and the starvation test land here first; reading the
 //! point itself (`TryThePoint`, `WhereTheNeighboursPlaneCrosses`) lands with a later package.
 
+use vector_math::cs_math;
+
 use super::{surface_mitre_seam, SurfaceEdgePlan};
 
 /// How far along a mitre plane a tangent line has to run to be read as crossing it, as a cosine.
@@ -26,8 +28,8 @@ pub fn starves_a_piece_by_standing_outside_the_run(
     }
 
     // C#'s Math.Min / Math.Max, which pass a NaN through.
-    cs_min(at_the_joint, high) <= cs_max(before_the_joint, low)
-        || cs_min(after_the_joint, high) <= cs_max(at_the_joint, low)
+    cs_math::min_f64(at_the_joint, high) <= cs_math::max_f64(before_the_joint, low)
+        || cs_math::min_f64(after_the_joint, high) <= cs_math::max_f64(at_the_joint, low)
 }
 
 /// Whether edges `arrived_on` and `goes_on` are pieces of one straight crease: their tangent
@@ -61,20 +63,4 @@ pub fn try_the_previous(edges: &[SurfaceEdgePlan], is_closed: bool, edge: usize)
     }
 
     (is_closed && edges.len() > 1).then(|| edges.len() - 1)
-}
-
-fn cs_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.min(b)
-    }
-}
-
-fn cs_max(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.max(b)
-    }
 }

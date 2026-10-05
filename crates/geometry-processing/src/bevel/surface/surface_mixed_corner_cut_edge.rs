@@ -3,7 +3,7 @@
 //! sagitta guard of the wall's chords and how far apart two skew lines stand land here first; the
 //! cut edge's walk lands with a later package.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceLine, SurfaceWallSection};
 
@@ -52,7 +52,7 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
         let here = chords[chord];
 
         let turn = before.0.dot(here.0).clamp(-1.0, 1.0).acos();
-        let across = f64::max(before.1, here.1);
+        let across = cs_math::max_f64(before.1, here.1);
 
         if !(turn > 0.0) || !(across > 0.0) {
             continue;
@@ -60,7 +60,7 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
 
         let radius = across / (2.0 * (turn / 2.0).sin());
 
-        sagitta = f64::max(sagitta, radius * (1.0 - (turn / 2.0).cos()));
+        sagitta = cs_math::max_f64(sagitta, radius * (1.0 - (turn / 2.0).cos()));
     }
 
     sagitta

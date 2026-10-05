@@ -5,6 +5,7 @@
 //! with a later package.
 
 use super::{SurfaceLine, SurfaceMixedCorner};
+use vector_math::cs_math;
 
 /// How far off the crease's own line a rim edge's end may stand and still be read as ON it - the
 /// part's ruler, as everywhere else a position is compared here.
@@ -66,9 +67,9 @@ pub fn try_how_far_it_runs(corner: &SurfaceMixedCorner, crease: SurfaceLine) -> 
             continue;
         }
 
-        reach = f64::max(
+        reach = cs_math::max_f64(
             reach,
-            f64::max(
+            cs_math::max_f64(
                 (edge.start - corner.corner).dot(crease.direction),
                 (edge.end - corner.corner).dot(crease.direction),
             ),

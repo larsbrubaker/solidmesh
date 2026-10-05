@@ -9,7 +9,7 @@
 //! neighbour the walk tries first and which corner it starts at follow C#'s insertion order.
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::{
     surface_cut_clip, surface_end_cut, surface_ring, surface_ring_ears, SurfaceVertexPool,
@@ -115,7 +115,7 @@ pub fn the_chords_the_cap_follows(
     let mut reach = pool.near_enough();
 
     for &vertex in profile {
-        reach = f64::max(
+        reach = cs_math::max_f64(
             reach,
             (pool.position_of(vertex) - corner).length() + pool.near_enough(),
         );

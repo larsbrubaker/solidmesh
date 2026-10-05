@@ -59,6 +59,10 @@ mod rust_only_bevel_slice9_tests;
 mod source_round_test_meshes;
 #[path = "bevel/surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
 mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
+#[path = "bevel/surface_cut_ruler_tests.rs"]
+mod surface_cut_ruler_tests;
+#[path = "bevel/surface_end_gains_the_section_reading_tests.rs"]
+mod surface_end_gains_the_section_reading_tests;
 #[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
 mod surface_facet_cut_own_ends_tests;
 #[path = "bevel/surface_fan_tests.rs"]
@@ -67,5 +71,7 @@ mod surface_fan_tests;
 mod surface_mesh_closure_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
 mod surface_ring_ears_bridged_ring_tests;
+#[path = "bevel/surface_run_out_column_top_tests.rs"]
+mod surface_run_out_column_top_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;

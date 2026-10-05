@@ -1,6 +1,6 @@
-//! What a room reading found, and what it cost ([`RoomReading`]). Ports the type of
-//! `Bevel/LevelLine/RoomReading.cs`; its derived readings (`unbounded`, `is_a_size_statement`) and
-//! the fault conversions land with the room-reading method package.
+//! What a room reading found, and what it cost ([`RoomReading`]). Ports
+//! `Bevel/LevelLine/RoomReading.cs`: the type (its field initializers are `Default`) and its
+//! derived readings ([`RoomReading::unbounded`], [`RoomReading::is_a_size_statement`]).
 
 use super::{LevelLineWorkPhase, RoomCandidate, RoomSource};
 
@@ -92,5 +92,24 @@ impl Default for RoomReading {
             work_spent: 0,
             work_limit: 0,
         }
+    }
+}
+
+impl RoomReading {
+    /// Whether the reading finished and found no rim at all: room without bound.
+    pub fn unbounded(&self) -> bool {
+        self.read && self.room == f64::INFINITY
+    }
+
+    /// Whether the room is a statement about SIZE: the reading finished, and nothing about the
+    /// pick itself (sides it does not divide, no crease, an edge off two triangles, chains that
+    /// touch or a chain that touches itself) is what bounded it.
+    pub fn is_a_size_statement(&self) -> bool {
+        self.read
+            && self.chain_divides_sides
+            && self.chain_has_a_crease_to_bevel
+            && self.chain_edge_stands_on_two_triangles
+            && self.chains_are_apart
+            && self.chain_is_simple
     }
 }
