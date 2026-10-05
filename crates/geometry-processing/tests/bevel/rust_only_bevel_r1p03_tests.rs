@@ -136,3 +136,54 @@ fn rust_only_a_missing_wall_section_has_no_sagitta() {
 
     assert_eq!(sagitta_of_the_walls_chords(None), 0.0);
 }
+
+#[test]
+fn rust_only_a_room_cut_keeps_its_defaults_and_is_told_its_plan() {
+    use geometry_processing::bevel::surface::{SurfaceRoomCut, SurfaceRoomFootprint};
+
+    let cut = SurfaceRoomCut::new(
+        7,
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(2.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        2.0,
+        1.0,
+        f64::INFINITY,
+    );
+    assert_eq!(cut.shape, SurfaceRoomFootprint::Band);
+    assert_eq!((cut.plan_index, cut.edge_index, cut.side), (-1, -1, -1));
+    assert_eq!(cut.corner_key, SurfaceRoomCut::NO_CORNER);
+    assert!(cut.section_side_a.is_none() && cut.section_side_b.is_none());
+
+    let on = SurfaceRoomCut {
+        edge_index: 3,
+        ..cut
+    }
+    .on_plan(4);
+    assert_eq!((on.plan_index, on.edge_index, on.region_key), (4, 3, 7));
+}
+
+#[test]
+fn rust_only_a_square_mitre_carries_the_outside_band_one_setback() {
+    use geometry_processing::bevel::surface::surface_room_mitre::overhang_per_setback;
+
+    let into_the_edge = Vector3::new(-1.0, 0.0, 0.0);
+    let past_the_corner = Vector3::new(0.0, 1.0, 0.0);
+
+    // The band on the outside of a square turn runs a whole setback past the corner; the one on
+    // the inside is cut back, which reads as no overhang.
+    let outside =
+        overhang_per_setback(into_the_edge, past_the_corner, Vector3::new(0.0, -1.0, 0.0));
+    assert!((outside - 1.0).abs() < 1e-12);
+    assert_eq!(
+        overhang_per_setback(into_the_edge, past_the_corner, Vector3::new(0.0, 1.0, 0.0)),
+        0.0
+    );
+
+    // Nothing carries on past a free end.
+    assert_eq!(
+        overhang_per_setback(into_the_edge, Vector3::ZERO, Vector3::new(0.0, -1.0, 0.0)),
+        0.0
+    );
+}

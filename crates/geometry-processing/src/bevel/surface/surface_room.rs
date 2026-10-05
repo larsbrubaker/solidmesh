@@ -3,7 +3,8 @@
 //! (`PathBevel.RelaxRadii`), where a corner's room is the run of path beside it and the corners
 //! sharing that run negotiate it between them. Only its nested types land here - what kind of
 //! footprint a cut is ([`SurfaceRoomFootprint`]) and one side of one chain edge
-//! ([`SurfaceRoomCut`]); the measuring and the pair rule land with the room package.
+//! ([`SurfaceRoomCut`], with its constructor); the measuring and the pair rule land with later
+//! packages.
 //!
 //! Room is a distance ACROSS a face region: from a chain edge, in the region's own plane, along the
 //! inward direction the bevel sets back along, to the first piece of that region's rim standing in
@@ -108,4 +109,56 @@ pub struct SurfaceRoomCut {
     pub section_side_a: Option<Vector3>,
     /// The other side of that section; see [`SurfaceRoomCut::section_side_a`].
     pub section_side_b: Option<Vector3>,
+}
+
+impl SurfaceRoomCut {
+    /// What `corner_key` reads as where no mixed corner made this cut. Not -1, because a JUNCTION
+    /// at the start of a chain is keyed -1.
+    pub const NO_CORNER: i32 = i32::MIN;
+
+    /// C#'s constructor with its optional arguments left at their defaults: a [`SurfaceRoomFootprint::Band`]
+    /// on no plan, edge or side, with no overhang, no corner, not the wall bite, and no section
+    /// sides. Callers that name an optional argument set that field with struct-update syntax
+    /// (`SurfaceRoomCut { edge_index, ..SurfaceRoomCut::new(..) }`), which names it as the C# call
+    /// sites do.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        region_key: i32,
+        from: Vector3,
+        to: Vector3,
+        along: Vector3,
+        inward: Vector3,
+        length: f64,
+        setback_per_size: f64,
+        room: f64,
+    ) -> Self {
+        SurfaceRoomCut {
+            region_key,
+            from,
+            to,
+            along,
+            inward,
+            length,
+            setback_per_size,
+            room,
+            shape: SurfaceRoomFootprint::Band,
+            plan_index: -1,
+            overhang_before_from: 0.0,
+            overhang_past_to: 0.0,
+            edge_index: -1,
+            side: -1,
+            corner_key: Self::NO_CORNER,
+            the_wall_bite: false,
+            section_side_a: None,
+            section_side_b: None,
+        }
+    }
+
+    /// The same cut, told which plan of the pass it belongs to.
+    pub fn on_plan(&self, plan_index: i32) -> SurfaceRoomCut {
+        SurfaceRoomCut {
+            plan_index,
+            ..*self
+        }
+    }
 }

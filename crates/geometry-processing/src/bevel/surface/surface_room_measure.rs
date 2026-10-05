@@ -1,9 +1,15 @@
 //! Pacing out the room a cut has on its region (`Bevel/Surface/SurfaceRoomMeasure.cs`, a static
 //! class: free functions here). The rulers and the exact offset of a rim segment in front of the
-//! chain edge land here first; the measure itself (`RoomAcross`, `MeasureCorner`, the bands on a
-//! region) lands with later packages.
+//! chain edge land here first, with the bands a pass takes off a region; the measure itself
+//! (`RoomAcross`, `MeasureCorner`) lands with later packages.
+
+use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use vector_math::Vector3;
+
+use super::SurfaceBevelPlan;
+use crate::topology::FaceGroup;
 
 /// How near a rim edge has to come to the chain edge's own line before it is read as being that
 /// line rather than in front of it, and how much of the span two segments must share before they
@@ -17,6 +23,22 @@ pub const RELATIVE_TOLERANCE: f64 = 1e-7;
 /// keeps its vertices as floats: two readings of one corner differ in the last bit or two of a
 /// float, which at 20 mm is already coarser than a tenth of a millionth.
 pub const VERTEX_TOLERANCE: f64 = 1e-5;
+
+/// What a region no band of this pass lands on has, so that the reading needs no null case: one
+/// shared empty set, as C#'s static instance is.
+static NO_BANDS: LazyLock<HashSet<i32>> = LazyLock::new(HashSet::new);
+
+/// Which edges the pass is beveling take a band off `region`, or an empty set where none does.
+/// Those are the partners a band on that region negotiates its share of the face with rather than
+/// the walls it stops at. Looked up only, so the `HashMap` order cannot reach an output.
+pub fn bands_on_the_region<'a>(
+    bands_on_region: &'a HashMap<i32, HashSet<i32>>,
+    region: &FaceGroup,
+) -> &'a HashSet<i32> {
+    bands_on_region
+        .get(&SurfaceBevelPlan::key_of(region))
+        .unwrap_or(&NO_BANDS)
+}
 
 /// The smallest offset along `inward` at which the segment `a`..`b` stands in front of the chain
 /// edge's own span (from `from`, `length` along unit `along`), or infinity where it does not
