@@ -4,8 +4,10 @@
 //! report, the way out of a build it gives ([`WorkError`]: cancelled, or the budget exceeded) and
 //! the budget in force on this thread ([`LevelLineWork`], C#'s `[ThreadStatic]` slot, set by a
 //! [`LevelLineWorkScope`] guard), with the budget's default size, its progress-bar arithmetic
-//! (phase weights and starts, the fraction now, the report) and the charging and cancel poll. The
-//! phase changes and the nested-search slice land with later packages as further `impl` blocks.
+//! (phase weights and starts, the fraction now, the report), the charging and cancel poll, its
+//! constructors, the side-group and refinement-queue notes and the per-phase tally. It also carries
+//! the build's per-flow switches (C#'s `AsyncLocal` gates). The phase changes and the nested-search
+//! slice land with later packages as further `impl` blocks.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -109,6 +111,14 @@ pub struct WorkBudget {
     /// `BandSideTagging.BothSidedMembersBuild`, an `AsyncLocal` defaulting to on), carried the same
     /// way.
     pub both_sided_members_off: Cell<bool>,
+    /// Whether the side groups read their crease run-outs' fields for this build (C#'s per-flow
+    /// `BandGroupFields.RunOutsOnInFlow`, off by default); `BandGroupFields::turn_run_outs_on`
+    /// flips it for the budget in force.
+    pub run_outs_on: Cell<bool>,
+    /// Whether the square-crease end clips are turned OFF for this build (C#'s per-flow
+    /// `SquareCreaseEndClip.SquareCreaseClipsOffInFlow`, on by default);
+    /// `square_crease_end_clip::turn_square_crease_clips_off` flips it for the budget in force.
+    pub square_crease_clips_off: Cell<bool>,
     /// How many units have been charged so far.
     pub spent: Cell<i64>,
     /// What is running right now.
@@ -467,6 +477,130 @@ impl LevelLineWork {
         match Self::current() {
             Some(budget) if budget.cancellation_token.is_cancelled() => Err(WorkError::Cancelled),
             _ => Ok(()),
+        }
+    }
+}
+
+/// C#'s `ArgumentOutOfRangeException` from the `WorkBudget` constructor: a limit that is not a
+/// positive count of work.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NonPositiveWorkLimit(pub i64);
+
+impl std::fmt::Display for NonPositiveWorkLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "a work budget is a count of work, so it must be positive (limit {})",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for NonPositiveWorkLimit {}
+
+impl WorkBudget {
+    /// C# `WorkBudget(long limit)`: an allowance with no cancellation and no progress report.
+    pub fn new(limit: i64) -> Result<WorkBudget, NonPositiveWorkLimit> {
+        Self::with_cancellation(limit, CancelToken::default(), None)
+    }
+
+    /// C# `WorkBudget(long, CancellationToken, Action<LevelLineProgress>)`: an allowance that also
+    /// carries the caller's cancellation and, where it wants one, a progress report. The token is
+    /// read every `CancelCheckEvery` charges, so a cancel lands within a few milliseconds of work
+    /// wherever the build has got to; the report is called on every phase change and at most every
+    /// [`WorkBudget::report_throttle_ms`] between. Wall clock is allowed there alone: it only
+    /// decides how often the bar is told, and no result depends on it. C#'s `init` properties
+    /// (`InputIsFloatStored`, `ReportThrottleMs`) are the public fields, set before the budget is
+    /// shared. The per-flow switches start at C#'s flow defaults.
+    pub fn with_cancellation(
+        limit: i64,
+        cancellation_token: CancelToken,
+        progress: Option<LevelLineProgressReport>,
+    ) -> Result<WorkBudget, NonPositiveWorkLimit> {
+        if limit <= 0 {
+            return Err(NonPositiveWorkLimit(limit));
+        }
+
+        Ok(WorkBudget {
+            cancellation_token,
+            progress,
+            limit,
+            input_is_float_stored: false,
+            report_throttle_ms: 50,
+            pair_corner_end_face_field_off: Cell::new(false),
+            both_sided_members_off: Cell::new(false),
+            run_outs_on: Cell::new(false),
+            square_crease_clips_off: Cell::new(false),
+            spent: Cell::new(0),
+            phase: Cell::new(LevelLineWorkPhase::None),
+            exhausted_in: Cell::new(LevelLineWorkPhase::None),
+            since_cancel_check: Cell::new(0),
+            last_report_ms: Cell::new(0),
+            last_fraction: Cell::new(0.0),
+            side_group_index: Cell::new(0),
+            side_group_count: Cell::new(0),
+            refinement_taken: Cell::new(0),
+            refinement_left: Cell::new(0),
+            phase_started_at: Cell::new(0),
+            phase_estimates: RefCell::new([0.0; LEVEL_LINE_WORK_PHASE_COUNT]),
+            phase_units: RefCell::new([0; LEVEL_LINE_WORK_PHASE_COUNT]),
+            phase_ticks: RefCell::new([0; LEVEL_LINE_WORK_PHASE_COUNT]),
+            phase_tally_units_at: Cell::new(0),
+            phase_tally_ticks_at: Cell::new(0),
+        })
+    }
+
+    /// C# `WorkBudget.Exhausted`: true once the budget has run out; the build that owns it has
+    /// refused by then.
+    pub fn exhausted(&self) -> bool {
+        self.exhausted_in.get() != LevelLineWorkPhase::None
+    }
+
+    /// C# `WorkBudget.EnterSideGroup`: says which side group the refinement and edge roots about to
+    /// run belong to, of how many, so the bar walks across the groups.
+    pub fn enter_side_group(&self, index: i32, count: i32) {
+        self.side_group_count.set(0.max(count));
+        self.side_group_index.set(0.max(index.min(count - 1)));
+    }
+
+    /// C# `WorkBudget.NoteRefinementQueue`: the refinement's own worklist - how many triangles it
+    /// has taken and how many are waiting. Only the bar reads it: nothing is charged and no result
+    /// depends on it.
+    pub fn note_refinement_queue(&self, taken: i64, left: i64) {
+        self.refinement_taken.set(taken);
+        self.refinement_left.set(left);
+    }
+
+    /// C# `WorkBudget.TallyPhase`: adds the units and stopwatch ticks spent since the last tally
+    /// to the running phase (the per-phase meter, kept only under `FieldCounters.MeterOn`).
+    pub fn tally_phase(&self) {
+        let now = stopwatch::get_timestamp();
+        if self.phase_tally_ticks_at.get() != 0 {
+            let phase = self.phase.get() as usize;
+            self.phase_units.borrow_mut()[phase] +=
+                self.spent.get() - self.phase_tally_units_at.get();
+            self.phase_ticks.borrow_mut()[phase] += now - self.phase_tally_ticks_at.get();
+        }
+
+        self.phase_tally_units_at.set(self.spent.get());
+        self.phase_tally_ticks_at.set(now);
+    }
+}
+
+impl LevelLineWork {
+    /// C# `LevelLineWork.EnterSideGroup`: names the side group whose refinement runs next on the
+    /// budget in force ([`WorkBudget::enter_side_group`]).
+    pub fn enter_side_group(index: i32, count: i32) {
+        if let Some(budget) = Self::current() {
+            budget.enter_side_group(index, count);
+        }
+    }
+
+    /// C# `LevelLineWork.NoteRefinementQueue`: tells the budget in force how far the refinement's
+    /// worklist has got ([`WorkBudget::note_refinement_queue`]).
+    pub fn note_refinement_queue(taken: i64, left: i64) {
+        if let Some(budget) = Self::current() {
+            budget.note_refinement_queue(taken, left);
         }
     }
 }

@@ -2,14 +2,16 @@
 //! static class): a loop read both ways round ([`GapFillRailSenses`]), the class's constants and the
 //! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]),
 //! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
-//! wrap ([`largest_backward_step`]). The fill's
+//! wrap ([`largest_backward_step`]) and the chains' independence check
+//! ([`no_two_chains_share_a_vertex`]). The fill's
 //! other functions land with later packages.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::{ChainField, GapFillRefusal, GapFillResult, LevelLineMesh, ZipRail};
+use super::{ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, ZipRail};
 use std::cell::RefCell;
 
 /// The tag the fill's own triangles carry, so the strip can be told from the kept surface. Stood
@@ -130,4 +132,30 @@ pub fn largest_backward_step(parameters: &[f64], reversed: bool) -> i32 {
     }
 
     wrap
+}
+
+/// C# `GapFill.NoTwoChainsShareAVertex` (`[Conditional("DEBUG")]`): the independence the per-chain
+/// fill rests on, asserted rather than assumed: no vertex of one chain's loops stands on
+/// another's. Debug builds only (`debug_assert!`, as C#'s conditional method) - what it checks is
+/// a consequence of the cut, so a release build paying for it every fill would learn nothing.
+pub fn no_two_chains_share_a_vertex(loops: &[GapLoop]) {
+    if !cfg!(debug_assertions) {
+        return;
+    }
+
+    let mut owner: HashMap<i32, i32> = HashMap::new();
+    for gap_loop in loops {
+        for &vertex in &gap_loop.vertices {
+            if let Some(&first) = owner.get(&vertex) {
+                debug_assert!(
+                    first == gap_loop.chain,
+                    "vertex {vertex} stands on chain {first}'s loops and on chain {}'s: the pick's \
+                     bands are not disjoint and the fills are not independent",
+                    gap_loop.chain
+                );
+            }
+
+            owner.insert(vertex, gap_loop.chain);
+        }
+    }
 }

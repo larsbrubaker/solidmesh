@@ -163,6 +163,7 @@ pub use band_cut::{BandCutResult, LevelLineChain};
 pub use band_gap_refusal::BandGapRefusal;
 pub use band_gap_result::BandGapResult;
 pub use band_group::BandGroup;
+pub use band_group_fields::{run_outs_on, turn_run_outs_on};
 pub use band_group_fields::{BandGroupFieldsRunOutsScope, BandGroupFieldsWithRunOuts};
 pub use band_profile::BandProfile;
 pub use bounded_maximum::{BoundedMaximumCanonicalMaximum, BoundedMaximumCellBound};
@@ -214,6 +215,9 @@ pub use seam_edges::SeamEdges;
 pub use segment_box_tree::SegmentNode;
 pub use split_meter::{SplitMeter, SplitMeterSplitKind, SplitMeterSplitRecord, SplitMeterState};
 pub use square_crease_end_clip::SquareCreaseEndClipSquareCreaseClipsOffScope;
+pub use square_crease_end_clip::{
+    square_crease_clips_on, square_crease_end_clips, turn_square_crease_clips_off,
+};
 pub use vertex_side::{VertexFieldReading, VertexSide};
 pub use work_budget::{
     LevelLineProgress, LevelLineProgressReport, LevelLineWork, LevelLineWorkPhase,
