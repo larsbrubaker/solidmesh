@@ -3,12 +3,14 @@
 //! a face belongs to ([`FaceGroup`], cached per mesh by [`FaceRegionCache`]), turning a click
 //! into an edge ([`edge_picking`]), and the stored selections of a bevel ([`BevelEdgeGroup`],
 //! [`BevelCornerGroup`]) with matching them on a rebuilt mesh ([`bevel_edge_group_resolver`]) and
-//! editing their lists ([`bevel_group_edits`]).
+//! editing their lists ([`bevel_group_edits`]), and the readings a pick (or a stored group) can
+//! mean ([`pick_interpretations`], [`bevel_edge_readings`]).
 
 mod bevel_corner_group;
 mod bevel_corner_mode;
 mod bevel_edge_group;
 pub mod bevel_edge_group_resolver;
+pub mod bevel_edge_readings;
 mod bevel_group;
 pub mod bevel_group_edits;
 mod bevel_reading_label;
@@ -19,6 +21,8 @@ mod face_region_cache;
 mod feature_edge;
 mod feature_edge_chain;
 mod feature_edge_set;
+mod pick_interpretation;
+pub mod pick_interpretations;
 
 pub use bevel_corner_group::BevelCornerGroup;
 pub use bevel_corner_mode::BevelCornerMode;
@@ -33,3 +37,4 @@ pub use face_region_cache::FaceRegionCache;
 pub use feature_edge::{EdgeConvexity, FeatureEdge};
 pub use feature_edge_chain::{ChainEdge, ChainEnd, ChainStopReason, FeatureEdgeChain};
 pub use feature_edge_set::FeatureEdgeSet;
+pub use pick_interpretation::{PickInterpretation, PickInterpretationKind};

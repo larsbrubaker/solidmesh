@@ -1,12 +1,13 @@
 //! Ports `GeometryProcessingTests/FeatureEdgeCollinearRunTests.cs`: the collinear run, what one
 //! picked edge means in a CAD package - the whole straight crease it lies in, not the one mesh
 //! edge the triangulation happened to cut it into.
-//!
-//! Not yet ported: `AStoredRunIsFoundAmongTheReadingsWhicheverRungItWasPickedAt` needs
-//! `PickInterpretations`, `BevelEdgeGroupResolver` and `BevelEdgeReadings` (the next Topology
-//! slice, which needs `Bevel/BevelAdvisory*` first).
 
-use geometry_processing::topology::{ChainStopReason, FeatureEdgeChain, FeatureEdgeSet};
+use std::sync::Arc;
+
+use geometry_processing::topology::{
+    bevel_edge_group_resolver, bevel_edge_readings, pick_interpretations, BevelSelectionKind,
+    ChainStopReason, FaceGroup, FeatureEdgeChain, FeatureEdgeSet, MatchTolerances,
+};
 use polygon_mesh::solids::platonic_solids;
 use vector_math::Vector3;
 
@@ -142,6 +143,46 @@ fn a_cube_edge_is_its_own_run() {
     assert_eq!(run.count(), 1);
     assert_eq!(run.start().reason, ChainStopReason::Corner);
     assert_eq!(run.end().reason, ChainStopReason::Corner);
+}
+
+/// A run stored at any rung of the ladder is one of the readings its row offers: the readings
+/// are seeded from the finest rung while the resolver walks the group's own set, so the list
+/// emits the collinear run per rung to be able to contain what the group resolved to.
+#[test]
+fn a_stored_run_is_found_among_the_readings_whichever_rung_it_was_picked_at() {
+    let mesh = Arc::new(split_crease_test_meshes::create_flush_brick_stack(&[0.0]));
+
+    for picked_at_degrees in pick_interpretations::default_flat_angle_ladder_degrees() {
+        let features = FeatureEdgeSet::create_with_angle(&mesh, picked_at_degrees);
+        let seed = seed_containing(&features, Vector3::new(5.0, 0.0, 10.0));
+        let group = bevel_edge_group_resolver::create_from_edge(
+            &features,
+            seed,
+            BevelSelectionKind::Edge,
+            FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+        )
+        .unwrap();
+
+        let readings = bevel_edge_readings::for_group_on_mesh(&mesh, &group).unwrap();
+        let resolution = bevel_edge_group_resolver::resolve_in(
+            &group,
+            &mesh,
+            None,
+            Arc::new(FeatureEdgeSet::create_with_angle(&mesh, picked_at_degrees)),
+            MatchTolerances::default(),
+        );
+
+        assert_eq!(
+            resolution.edges.len(),
+            2,
+            "the whole crease is two mesh edges, read at {picked_at_degrees} degrees"
+        );
+
+        assert!(
+            bevel_edge_readings::index_of_current_reading(&readings, &resolution.edges) >= 0,
+            "a group picked at {picked_at_degrees} degrees has to be able to say which reading it is on"
+        );
+    }
 }
 
 /// The feature edge whose segment passes through a position.
