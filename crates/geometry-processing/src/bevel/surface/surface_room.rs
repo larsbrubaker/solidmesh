@@ -1,0 +1,111 @@
+//! How much ROOM the surface construction has, and the largest size that fits in it
+//! (`Bevel/Surface/SurfaceRoom.cs`, a static class): the 3D reading of the 2D bevel's relaxation
+//! (`PathBevel.RelaxRadii`), where a corner's room is the run of path beside it and the corners
+//! sharing that run negotiate it between them. Only its nested types land here - what kind of
+//! footprint a cut is ([`SurfaceRoomFootprint`]) and one side of one chain edge
+//! ([`SurfaceRoomCut`]); the measuring and the pair rule land with the room package.
+//!
+//! Room is a distance ACROSS a face region: from a chain edge, in the region's own plane, along the
+//! inward direction the bevel sets back along, to the first piece of that region's rim standing in
+//! front of the edge. Two cuts landing on ONE region from opposite sides share the room between
+//! them: a cut's setback is `size * k` with `k` fixed by its wedge, so "each fits its share of the
+//! gap" and "both setbacks fit in the gap" are the same inequality, `size * (k_a + k_b) <= gap`,
+//! and the answer is the smallest of the linear constraints rather than a fixed point. And the
+//! answer is a refusal, not a shrink, in the same words and advisory codes the boolean construction
+//! uses.
+
+use vector_math::Vector3;
+
+/// C# `SurfaceRoom.Footprint`: what a cut IS, which is what the pair rule has to know about it - a
+/// band laid along an edge, or one of the footprints that stand at a CORNER instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SurfaceRoomFootprint {
+    /// The band one side of one chain edge takes off one region.
+    #[default]
+    Band = 0,
+
+    /// The skirt a mixed corner's RUN-OUT lays on the face past the end of the bead's rim
+    /// (`SurfaceRoomRunOut`). It is laid ALONG a direction as a band is, and read as one everywhere
+    /// the pair rule asks how two cuts face each other - but it belongs to no EDGE, which is what
+    /// tells it from a band: a chain's own notch stands between its BANDS by construction and is
+    /// exempt from them, and it stands nowhere in particular with respect to its chain's skirts.
+    RunOutSkirt,
+
+    /// The section a chain's END takes out of the face beyond its corner (`SurfaceRoomEndCut`). It
+    /// reaches the same distance whichever way the face runs, so it carries no
+    /// [`SurfaceRoomCut::inward`], and it is never negotiated against its OWN plan's bands - the
+    /// two tangent points it is bounded by STAND on them.
+    EndNotch,
+
+    /// The tip of the wedge two bands mitre into at a REFLEX corner of one region
+    /// (`SurfaceRoomMitre`). It reaches one way only - along [`SurfaceRoomCut::inward`], out of the
+    /// corner and into the face - and it belongs to no band, so its own plan's cuts are negotiated
+    /// against it like anyone else's.
+    MitreTip,
+}
+
+/// C# `SurfaceRoom.Cut` (a readonly struct): one side of one chain edge - the band it wants to take
+/// off one region, and how much of that region there is to take.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct SurfaceRoomCut {
+    /// Which region this cut lands on (`SurfaceBevelPlan.KeyOf`).
+    pub region_key: i32,
+    /// Where the chain edge starts, which is the origin of the frame room is measured in.
+    pub from: Vector3,
+    /// Where the chain edge ends.
+    pub to: Vector3,
+    /// The unit direction along the chain edge.
+    pub along: Vector3,
+    /// The unit direction into the region, square to the edge and in the region's plane.
+    pub inward: Vector3,
+    /// The length of the chain edge.
+    pub length: f64,
+    /// How far this cut sets back per unit of SIZE - `1 / tan(wedge / 2)` for a round and 1 for a
+    /// chamfer. The setback is linear in the size, which is what makes every constraint here a
+    /// division rather than a search.
+    pub setback_per_size: f64,
+    /// The distance across the region along [`SurfaceRoomCut::inward`] to its far rim, or infinity
+    /// where no rim edge stands in front of this one.
+    pub room: f64,
+    /// What kind of footprint this is, which is what the pair rule reads it as.
+    pub shape: SurfaceRoomFootprint,
+    /// Which plan of the pass this cut belongs to, or -1 where it belongs to none. Only the corner
+    /// rule asks: an end's notch sits BETWEEN its own plan's bands by construction, so the two are
+    /// not negotiated against each other.
+    pub plan_index: i32,
+    /// How far past [`SurfaceRoomCut::from`] this band's own material reaches, per unit of SIZE:
+    /// the overhang the mitre at that end of the edge carries it by
+    /// (`SurfaceRoomMitre.OverhangPerSetback`), and zero where the mitre cuts the band back instead
+    /// or where the chain simply ends there. The edge's span is where the band is MEASURED from;
+    /// where its material really stands is that span widened by these two.
+    pub overhang_before_from: f64,
+    /// The same past [`SurfaceRoomCut::to`].
+    pub overhang_past_to: f64,
+    /// Which edge of the plan's chain this band was taken off, or -1 where it was taken off no edge
+    /// at all. With [`SurfaceRoomCut::side`] and the plan index that NAMES a band, which is what a
+    /// crossing has to say to be sewn: the builder holds its strips by plan and edge, and a
+    /// crossing that could only be recognised by its geometry would have to be matched back to one
+    /// by measuring.
+    pub edge_index: i32,
+    /// Which side of that edge this band takes - 0 for the left region and 1 for the right, the
+    /// order `SurfaceRoomMeasure.Measure` walks them in - or -1 where it is not a band.
+    pub side: i32,
+    /// Which MIXED CORNER of the plan's chain laid this skirt (`SurfaceBevelPlan.MixedCornerKeys`:
+    /// the index of the edge the chain arrives on, or a junction sentinel), or C#'s `NoCorner`
+    /// (`i32::MIN`) where this cut is not a run-out's skirt.
+    pub corner_key: i32,
+    /// Whether this footprint is the bite a run-out takes out of the WALL it turns against rather
+    /// than the skirt it lays on the cap it runs across (`SurfaceRoomRunOut`). One mixed corner
+    /// lays both, and they are the same KIND of footprint to the pair rule - but a band crossed on
+    /// one of them is sewn along a curve of quite another shape than a band crossed on the other,
+    /// so the crossing has to say which it came off.
+    pub the_wall_bite: bool,
+    /// One SIDE of the section an end notch takes, relative to its corner and per unit of size
+    /// (`SurfaceRoomNotchSides`), or `None` where the two could not be named and the notch's reach
+    /// has to be read as spreading every way. A notch's reach is DIRECTIONAL: the end plane is
+    /// rarely square to the chain, so the section leans to one side of the corner, and the two
+    /// sides are what bound it.
+    pub section_side_a: Option<Vector3>,
+    /// The other side of that section; see [`SurfaceRoomCut::section_side_a`].
+    pub section_side_b: Option<Vector3>,
+}

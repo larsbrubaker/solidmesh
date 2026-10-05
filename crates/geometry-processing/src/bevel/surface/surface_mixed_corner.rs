@@ -1,0 +1,104 @@
+//! The corner where a chain's convexity TURNS OVER ([`SurfaceMixedCorner`]) - a convex edge's
+//! cut running into a concave edge's bead at one vertex - read off the two edge plans that meet
+//! there, before anything is cut or stitched. Ports the record of
+//! `Bevel/Surface/SurfaceMixedCorner.cs`; its reading and its derived frame (axis, rails, the
+//! outward sum, which canal it takes) land with the mixed-corner package's methods.
+
+use std::cell::Cell;
+
+use vector_math::Vector3;
+
+use super::{SurfaceBandEnd, SurfaceEdgePlan, SurfaceMixedCornerSpine};
+
+/// C# `SurfaceMixedCorner` (a sealed class): the frame of the surface a ball rolling from inside
+/// the crease to outside the rim sweeps between a cut and a bead - derived once, here, so that the
+/// walkback, the strip ends and the patch all quote the same numbers. Shared by every reading of
+/// the corner (the canal, the walls, the run-out, a junction's arms), hence held through `Rc`.
+///
+/// A mitre cannot serve here, because the two strips are not one surface bent round the corner:
+/// one bulges into the void and the other into the material, and no plane through the corner cuts
+/// both of them where they belong.
+///
+/// **How sharp a corner this describes.** The ball's touch point on the cap traces a circle of
+/// radius `2r` about the axis, and the axis stands `r / sin(wedge / 2)` from the corner - so the
+/// ball reaches the corner only while the void wedge is sixty degrees or more. Under that the cap
+/// is left a spike nothing closes, which is a corner of another shape; it is refused by name.
+///
+/// **Name the three faces.** The two edges MUST share one face region: S, the SHARED face. The
+/// convex edge's other region is T, the face the cut also comes down from; the concave edge's
+/// other region is W, the wall the bead also stands against. The corner vertex lies on all three.
+///
+/// **The two cylinders are tangent, at one point.** The cut is one cylinder of radius `r` and the
+/// bead another; their axes are skew, and because both stand a radius off S's plane on OPPOSITE
+/// sides their common perpendicular is square to S and exactly `2r` long. So they touch at ONE
+/// point, [`SurfaceMixedCorner::tangent_point`], the midpoint of that perpendicular. There is no
+/// trim curve between the strips; the gap between them is a new surface.
+///
+/// **And either of the other two faces may be the shared one.** Where S is a chorded wall the bead
+/// is tangent to the facet `k` its profile ROLLED to, and the CUT is the chord standing on facet
+/// `k` rather than the convex edge arriving at the corner (`SurfaceMixedCornerCutEdge`).
+///
+/// **Where each strip stops.** The cut stops on the HANDOVER plane - through the bead's axis,
+/// spanned by that axis and the way out of it towards S - and the bead stops on the cut's own
+/// tangent plane in S. Both pass through the tangent point; stated as [`SurfaceBandEnd`]s they
+/// bound the band each edge's walkback takes off as well, so the material removed and the ribbon
+/// put back stop on one surface rather than on two that nearly agree.
+///
+/// **And the blend between them is a canal on an elliptical spine** ([`SurfaceMixedCornerSpine`]):
+/// the ball's centre stands a radius inside T and `2r` from the bead's axis. Where the axis LEANS
+/// that canal is not the whole corner - measured against the Onshape control on
+/// `NoseInNotchTestMeshes` the corner is the DUAL canal (`SurfaceMixedCornerDualFrame`), and which
+/// of the two a leaning corner takes is decided by CREASE REACH and never by the lean
+/// (`SurfaceMixedCornerWhichCanal`).
+#[derive(Debug)]
+pub struct SurfaceMixedCorner {
+    /// Remembers `TakesTheDualCanal`, which is a walk over the wall's whole rim: asked once per
+    /// band end per edge, and nothing it is read from can change after the corner is read. `None`
+    /// until first asked (C#'s `bool?`).
+    pub takes_the_dual_canal: Cell<Option<bool>>,
+    /// Where the rolling ball's centre runs and what it touches as it goes - the ONE source of all
+    /// three, which the accessors quote rather than derive a second time.
+    pub spine: SurfaceMixedCornerSpine,
+    /// Whether the ring is a MITRE ring the chain already had rather than the section through the
+    /// point the two cylinders touch at (`SurfaceMixedCornerHandsOverAtTheMitre`). Two things
+    /// follow: the cut's band stops on that plane on the face the two edges SHARE as well - the
+    /// ordinary corner leaves that side to the other edge's band, but here the ring stands short of
+    /// the bead and the blend covers between - and the patch's stations lean
+    /// (`SurfaceMixedCornerRingSchedule`).
+    pub hands_over_at_a_mitre: bool,
+    /// The vertex the two edges meet at, which lies on all three faces of the corner.
+    pub corner: Vector3,
+    /// The fillet radius the corner was read at.
+    pub size: f64,
+    /// What names the face region the two edges SHARE - the one S stands for above.
+    pub shared_region_key: i32,
+    /// The convex edge's plan, whose strip is the cut.
+    pub cut: SurfaceEdgePlan,
+    /// The concave edge's plan, whose strip is the bead.
+    pub bead: SurfaceEdgePlan,
+    /// The one point the two cylinders touch at: on the shared face, a radius from both centre
+    /// lines, and the corner the shared face's walkback is left with.
+    pub tangent_point: Vector3,
+    /// The handover plane, as the half space the CUT's band and strip are kept in: through the
+    /// tangent point, facing the way the convex edge runs away from the corner.
+    pub cut_stops_at: SurfaceBandEnd,
+    /// The plane the BEAD's band and end ring both stop on: the bead's own SQUARE section through
+    /// the point the two cylinders touch at, facing the way the concave edge runs away from the
+    /// corner.
+    ///
+    /// Square, and not the leaning ring the cap-riding spine traces on the bead
+    /// (`SurfaceMixedCornerSpine::tube_ring_plane`), because that spine is not this corner's
+    /// surface where the corner leans: the blend is the DUAL canal, whose first ball stands ON the
+    /// bead's axis, so the canal leaves the bead's square section tangentially and the two meet G1
+    /// (`SurfaceObliqueMixedCornerWallSpineTests.TurnZeroIsABallOfTheBeadItself`). On a square
+    /// corner the two planes are the same plane.
+    pub bead_stops_at: SurfaceBandEnd,
+    /// The centre of the arc the ball's touch point traces on the cap face: where the bead's axis
+    /// meets that face's plane.
+    pub outer_rail_centre: Vector3,
+    /// The cap face's outward normal - the face the outer rail runs across.
+    pub out_of_the_cap_face: Vector3,
+    /// The void wall's outward normal - the plane the bead's other tangency lies in. On a wall the
+    /// bead rolled along, that is the FACET it rolled to and not the chain edge's own facet.
+    pub out_of_the_wall: Vector3,
+}
