@@ -12,6 +12,8 @@ mod mesh_edge_graph_tests;
 mod mesh_measure_tests;
 #[path = "polygon_mesh/mesh_tests.rs"]
 mod mesh_tests;
+#[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]
+mod rust_only_mesh_editing_tests;
 #[path = "polygon_mesh/rust_only_stl_tests.rs"]
 mod rust_only_stl_tests;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
