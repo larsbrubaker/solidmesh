@@ -26,7 +26,7 @@ use super::{
     bevel_corner_face_ring, bevel_corner_patch_mesher, bevel_edge_tool_builder, BevelAdvisory,
     BevelAdvisoryCode,
 };
-use crate::topology::FeatureEdge;
+use crate::topology::{BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge};
 
 /// C# `BevelCornerPatch` (a readonly struct): one corner tool and the groups whose selections
 /// meet at it. A patch that built is always used, even where one of those groups then failed to
@@ -119,11 +119,153 @@ const MAXIMUM_INSET_RADII: f64 = 20.0;
 /// published against its own mesh edge.
 pub type BuiltCornerTool = (Mesh, Option<Mesh>, Vector3, Vec<(i32, Vec<Vector3>)>);
 
+impl BevelCornerPatch {
+    /// C#'s constructor.
+    pub fn new(mesh: Mesh, void_cone: Option<Mesh>, groups: Vec<i32>, is_fill: bool) -> Self {
+        BevelCornerPatch {
+            mesh,
+            void_cone,
+            groups,
+            is_fill,
+        }
+    }
+}
+
+impl BevelCornerPatchSet {
+    /// C#'s constructor.
+    pub fn new(
+        patches: Vec<BevelCornerPatch>,
+        ball_centres: IndexMap<i32, Vector3>,
+        fill_ball_centres: IndexMap<i32, Vector3>,
+        warnings: Vec<Option<Vec<BevelAdvisory>>>,
+        runs_may_drive_through: IndexSet<i32>,
+        seam_rings: IndexMap<(i32, i32), Vec<Vector3>>,
+    ) -> Self {
+        BevelCornerPatchSet {
+            patches,
+            ball_centres,
+            fill_ball_centres,
+            warnings,
+            runs_may_drive_through,
+            seam_rings,
+        }
+    }
+
+    /// C# `Empty` (`<cinit>`): no patches, no centres, no warnings. A fresh value each call rather
+    /// than a shared static, which is the same set to every reader.
+    pub fn empty() -> Self {
+        BevelCornerPatchSet::new(
+            Vec::new(),
+            IndexMap::new(),
+            IndexMap::new(),
+            Vec::new(),
+            IndexSet::new(),
+            IndexMap::new(),
+        )
+    }
+}
+
 impl Corner {
+    /// C#'s constructor (with `<init>`'s empty lists).
+    pub fn new(vertex: i32, position: Vector3) -> Self {
+        Corner {
+            vertex,
+            position,
+            edges: Vec::new(),
+            groups: Vec::new(),
+            mesh_edges: HashSet::new(),
+        }
+    }
+
+    /// C# `Corner.Groups`: the groups whose edges meet here, in first-seen order.
+    pub fn groups(&self) -> &[i32] {
+        &self.groups
+    }
+
+    /// C# `Corner.Add`: `edge` (once per mesh edge) and its group. The edges stay sorted by mesh
+    /// edge so the face ring and its triangulation never depend on selection order.
+    pub fn add(&mut self, edge: FeatureEdge, group_index: i32) {
+        if !self.mesh_edges.insert(edge.mesh_edge_index) {
+            return;
+        }
+
+        self.edges.push(edge);
+        self.edges.sort_by_key(|e| e.mesh_edge_index);
+
+        if !self.groups.contains(&group_index) {
+            self.groups.push(group_index);
+        }
+    }
+
     /// C# `Corner.Edges`: the selected feature edges at the vertex.
     pub fn edges(&self) -> &[FeatureEdge] {
         &self.edges
     }
+}
+
+/// C# `BevelCornerPatches.Collect`: every vertex where eligible groups' convex edges meet (the
+/// OUTSIDE corners), every vertex where concave ones meet and nothing convex does (the INSIDE
+/// corners), and every vertex any concave edge ends at - `(outside, inside, concave vertices)`, in
+/// the order the vertices were first met.
+pub fn collect(
+    resolutions: &[BevelEdgeGroupResolution],
+    eligible: &[bool],
+) -> (Vec<Corner>, Vec<Corner>, HashSet<i32>) {
+    let mut convex_at_vertex: IndexMap<i32, Corner> = IndexMap::new();
+    let mut concave_at_vertex: IndexMap<i32, Corner> = IndexMap::new();
+
+    for (group_index, resolution) in resolutions.iter().enumerate() {
+        if !eligible[group_index] {
+            continue;
+        }
+
+        for edge in &resolution.edges {
+            let at_vertex = match edge.convexity {
+                EdgeConvexity::Convex => &mut convex_at_vertex,
+                EdgeConvexity::Concave => &mut concave_at_vertex,
+                // Neither, which is an edge flat enough that there is no corner here to patch.
+                _ => continue,
+            };
+
+            record(
+                at_vertex,
+                edge.start_vertex,
+                edge.start,
+                edge,
+                group_index as i32,
+            );
+            record(
+                at_vertex,
+                edge.end_vertex,
+                edge.end,
+                edge,
+                group_index as i32,
+            );
+        }
+    }
+
+    let concave_vertices: HashSet<i32> = concave_at_vertex.keys().copied().collect();
+    let inside_corners = concave_at_vertex
+        .into_values()
+        .filter(|corner| !convex_at_vertex.contains_key(&corner.vertex))
+        .collect();
+    let outside_corners = convex_at_vertex.into_values().collect();
+
+    (outside_corners, inside_corners, concave_vertices)
+}
+
+/// C# `BevelCornerPatches.Record`: `edge` added to the corner at `vertex`, made on first ask.
+pub fn record(
+    at_vertex: &mut IndexMap<i32, Corner>,
+    vertex: i32,
+    position: Vector3,
+    edge: &FeatureEdge,
+    group_index: i32,
+) {
+    at_vertex
+        .entry(vertex)
+        .or_insert_with(|| Corner::new(vertex, position))
+        .add(*edge, group_index);
 }
 
 /// C# `BevelCornerPatches.TryBuild`: one corner's tool, or the reason there is none (C#'s

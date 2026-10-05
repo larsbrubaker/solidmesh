@@ -80,6 +80,7 @@ pub mod bevel_overshoot_rings;
 pub mod bevel_pair_corner_crease;
 pub mod bevel_pair_corner_reach;
 mod bevel_partner_tube;
+pub mod bevel_partner_tube_clip;
 pub mod bevel_partnered_bead;
 pub mod bevel_patch_refinement;
 pub mod bevel_profile_polygon;
@@ -87,6 +88,7 @@ mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
 pub mod bevel_round_entry;
 mod bevel_round_faces;
+pub mod bevel_run_partners;
 pub mod bevel_seam_ring;
 pub mod bevel_shadow_clip;
 pub mod bevel_shared_edges;
@@ -118,7 +120,7 @@ pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_corner_patch::{BevelCornerPatch, BevelCornerPatchSet};
 pub use bevel_end_cap::BevelEndCap;
 pub use bevel_face_fit::{BevelFaceFit, BevelFaceFitEndCaps};
-pub use bevel_face_run_out::{BevelFaceRunOut, BevelRunOutBound};
+pub use bevel_face_run_out::{BevelFaceRunOut, BevelRunOutBound, BevelRunOutMeasure};
 pub use bevel_group_result::{
     bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
 };

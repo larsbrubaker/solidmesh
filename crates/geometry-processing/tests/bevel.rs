@@ -9,10 +9,16 @@ mod bevel_bead_batch_tests;
 mod bevel_cap_clip_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
+#[path = "bevel/bevel_face_run_out_tests.rs"]
+mod bevel_face_run_out_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
+#[path = "bevel/bevel_partner_tube_clip_tests.rs"]
+mod bevel_partner_tube_clip_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
+#[path = "bevel/bevel_run_partners_tests.rs"]
+mod bevel_run_partners_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]
 mod bevel_seam_ring_tests;
 #[path = "bevel/bevel_source_round_tests.rs"]
@@ -31,6 +37,8 @@ mod flat_hole_fill_tests;
 mod hole_fill_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
+#[path = "bevel/nose_in_notch_test_meshes.rs"]
+mod nose_in_notch_test_meshes;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
@@ -67,6 +75,8 @@ mod rust_only_bevel_r1p09_tests;
 mod rust_only_bevel_r1p10_tests;
 #[path = "bevel/rust_only_bevel_r1p11_tests.rs"]
 mod rust_only_bevel_r1p11_tests;
+#[path = "bevel/rust_only_bevel_r1p12_tests.rs"]
+mod rust_only_bevel_r1p12_tests;
 #[path = "bevel/rust_only_bevel_r1p13_field_tests.rs"]
 mod rust_only_bevel_r1p13_field_tests;
 #[path = "bevel/rust_only_bevel_r1p13_switch_tests.rs"]

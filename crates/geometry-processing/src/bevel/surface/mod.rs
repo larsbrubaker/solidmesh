@@ -95,6 +95,7 @@ pub mod surface_mixed_corner_ring_schedule;
 mod surface_mixed_corner_rows;
 pub mod surface_mixed_corner_run_out;
 pub mod surface_mixed_corner_run_out_strip;
+pub mod surface_mixed_corner_sector;
 mod surface_mixed_corner_spine;
 mod surface_mixed_corner_wall;
 pub mod surface_mixed_corner_wall_ends;

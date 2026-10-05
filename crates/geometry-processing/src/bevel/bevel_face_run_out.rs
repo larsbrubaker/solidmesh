@@ -3,12 +3,14 @@
 //! the walk along that line over the face the bead rides ([`BevelFaceRunOut`]). Creating it and
 //! measuring land with the core's packages as `impl` blocks.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 use std::sync::Arc;
 
 use indexmap::IndexSet;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
+
+use vector_math::Vector3;
 
 use super::BevelSurfaceWalk;
 use crate::topology::{EdgeConvexity, FeatureEdgeSet};
@@ -114,5 +116,186 @@ impl BevelFaceRunOut {
         }
 
         BevelFaceRunOut::new(mesh, graph, Rc::new(surface_edges), convexity)
+    }
+}
+
+/// C# `BevelFaceRunOut.TryMeasure`'s answer: how far the line stays on the face, what stopped it,
+/// and the mesh edge it stopped at (`-1` for none).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct BevelRunOutMeasure {
+    /// How far along the direction the line stayed on the face.
+    pub distance: f64,
+    /// What stopped it.
+    pub bound: BevelRunOutBound,
+    /// The mesh edge it stopped at, `-1` for none.
+    pub bounding_edge: i32,
+}
+
+impl BevelFaceRunOut {
+    /// C# `TryMeasure`: how far the line from `from` along `direction` stays on the face
+    /// `riding_face` belongs to, up to `limit`, and what stops it. `None` where `from` is not on
+    /// that face at all - a caller's mistake rather than a shape with no run-out.
+    pub fn try_measure(
+        &self,
+        riding_face: i32,
+        from: Vector3,
+        direction: Vector3,
+        limit: f64,
+    ) -> Option<BevelRunOutMeasure> {
+        let start_face = self.try_find_start(riding_face, from)?;
+
+        let stop = self
+            .walk
+            .walk(start_face, from, direction, -1, -1, limit, None);
+        let mut bound = BevelRunOutBound::OpenBoundary;
+
+        if stop.blocking_edge >= 0 {
+            if let Some(convexity) = self.convexity_by_mesh_edge.get(&stop.blocking_edge) {
+                bound = if *convexity == EdgeConvexity::Concave {
+                    BevelRunOutBound::ConcaveEdge
+                } else {
+                    BevelRunOutBound::ConvexEdge
+                };
+            }
+        }
+
+        Some(BevelRunOutMeasure {
+            distance: stop.travelled,
+            bound,
+            bounding_edge: stop.blocking_edge,
+        })
+    }
+
+    /// C# `TryEdgeEnds`: a mesh edge's two end positions, `None` for an edge out of range or of no
+    /// length.
+    pub fn try_edge_ends(&self, mesh_edge: i32) -> Option<(Vector3, Vector3)> {
+        if mesh_edge < 0 || mesh_edge >= self.graph.edge_count() {
+            return None;
+        }
+
+        let from = self.position(self.graph.get_vertex0(mesh_edge));
+        let to = self.position(self.graph.get_vertex1(mesh_edge));
+
+        if (to - from).length() > 0.0 {
+            Some((from, to))
+        } else {
+            None
+        }
+    }
+
+    /// C# `TryEdgeFaceNormals`: the unit normals of a manifold mesh edge's two faces.
+    pub fn try_edge_face_normals(&self, mesh_edge: i32) -> Option<(Vector3, Vector3)> {
+        if mesh_edge < 0
+            || mesh_edge >= self.graph.edge_count()
+            || self.graph.get_face_count(mesh_edge) != 2
+        {
+            return None;
+        }
+
+        let normal0 = self.try_face_normal(self.graph.get_face(mesh_edge, 0))?;
+        let normal1 = self.try_face_normal(self.graph.get_face(mesh_edge, 1))?;
+
+        Some((normal0, normal1))
+    }
+
+    /// C# `TryFaceNormal`: a face's unit normal from its corners, `None` for a degenerate face.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_face_normal(&self, face: i32) -> Option<Vector3> {
+        let (a, b, c) = self.corners(face);
+        let normal = (b - a).cross(c - a);
+
+        if !(normal.length() > 0.0) {
+            return None;
+        }
+
+        Some(normal.get_normal())
+    }
+
+    /// C# `TryFindStart`: the face of `riding_face`'s surface (flooded across every edge that is
+    /// not a surface edge) that holds `from`.
+    pub fn try_find_start(&self, riding_face: i32, from: Vector3) -> Option<i32> {
+        let mut seen = HashSet::from([riding_face]);
+        let mut queue = VecDeque::from([riding_face]);
+
+        while let Some(face) = queue.pop_front() {
+            if self.contains(face, from) {
+                return Some(face);
+            }
+
+            let mesh_face = self.mesh.faces[face as usize];
+
+            for side in 0..3 {
+                let (vertex_a, vertex_b) = match side {
+                    0 => (mesh_face.v0, mesh_face.v1),
+                    1 => (mesh_face.v1, mesh_face.v2),
+                    _ => (mesh_face.v2, mesh_face.v0),
+                };
+
+                let Some(edge) = self.try_edge_between(vertex_a, vertex_b) else {
+                    continue;
+                };
+
+                if self.surface_edges.contains(&edge) || self.graph.get_face_count(edge) != 2 {
+                    continue;
+                }
+
+                let first = self.graph.get_face(edge, 0);
+                let across = if first == face {
+                    self.graph.get_face(edge, 1)
+                } else {
+                    first
+                };
+
+                if seen.insert(across) {
+                    queue.push_back(across);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// C# `TryEdgeBetween`: the mesh edge joining two vertices.
+    pub fn try_edge_between(&self, vertex_a: i32, vertex_b: i32) -> Option<i32> {
+        self.edges_by_vertex_pair
+            .get(&(vertex_a.min(vertex_b), vertex_a.max(vertex_b)))
+            .copied()
+    }
+
+    /// C# `Contains`: whether `point`, dropped onto `face`'s plane, lies inside the triangle to
+    /// [`INSIDE_THE_TRIANGLE`] of its doubled area.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    pub fn contains(&self, face: i32, point: Vector3) -> bool {
+        let (a, b, c) = self.corners(face);
+
+        let mut normal = (b - a).cross(c - a);
+        let twice_area = normal.length();
+
+        if !(twice_area > 0.0) {
+            return false;
+        }
+
+        normal /= twice_area;
+
+        let on_the_plane = point - (normal * (point - a).dot(normal));
+        let slack = -INSIDE_THE_TRIANGLE * twice_area;
+
+        (b - a).cross(on_the_plane - a).dot(normal) >= slack
+            && (c - b).cross(on_the_plane - b).dot(normal) >= slack
+            && (a - c).cross(on_the_plane - c).dot(normal) >= slack
+    }
+
+    fn position(&self, vertex: i32) -> Vector3 {
+        Vector3::from_vector3_float(self.mesh.vertices[vertex as usize])
+    }
+
+    fn corners(&self, face: i32) -> (Vector3, Vector3, Vector3) {
+        let mesh_face = self.mesh.faces[face as usize];
+
+        (
+            self.position(mesh_face.v0),
+            self.position(mesh_face.v1),
+            self.position(mesh_face.v2),
+        )
     }
 }

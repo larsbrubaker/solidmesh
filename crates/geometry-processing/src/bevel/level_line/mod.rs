@@ -42,7 +42,7 @@
 //! [`ForeignApproach`]), the growing-crease room ([`GrowingCreaseRuns`]), and the build's three
 //! answers ([`BandGapResult`], [`GapFillResult`], [`RoomReading`]).
 
-mod band_cut;
+pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_in_turn;
 pub mod band_gap_reading;
