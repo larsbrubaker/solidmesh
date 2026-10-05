@@ -210,12 +210,28 @@ fn rust_only_a_vertex_on_a_straight_crease_is_a_split_chord() {
         2
     );
 
-    let off_it = build(Vector3::new(1.0, 0.0, 0.25));
-    let decline =
-        bevel_split_chords::would_remove(&off_it, 0).expect_err("not on the line any more");
-    assert!(
-        decline.starts_with("creases:") || decline.starts_with("the line:"),
-        "{decline}"
+    // The re-cut: each flat side's outline, the floor's and the wall's, one triangle apiece.
+    let fan = bevel_split_chords::faces_at_each_vertex(&on_the_crease)[0]
+        .clone()
+        .unwrap();
+    assert_eq!(
+        bevel_split_chords::try_read_split_chord(
+            &on_the_crease,
+            0,
+            &fan,
+            &bevel_split_chords::faces_on_each_edge(&on_the_crease),
+            bevel_split_chords::lattice_for(&on_the_crease),
+        ),
+        Ok(vec![(1, 2, 3), (3, 4, 1)])
+    );
+
+    // Past the crease's far end the vertex is on its line but not BETWEEN its ends: both sides are
+    // still flat and the two creases are still the edges along the line, so the line is what
+    // declines it - C#'s own text, numbers in its `0.#########`.
+    let past_the_end = build(Vector3::new(3.0, 0.0, 0.0));
+    assert_eq!(
+        bevel_split_chords::would_remove(&past_the_end, 0),
+        Err("the line: off it by 0 against a lattice of 0.000002861, ends dot 3".to_string())
     );
 
     // A vertex on the open rim of this patch: one edge of its fan has a single face.
@@ -235,4 +251,79 @@ fn rust_only_a_vertex_on_a_straight_crease_is_a_split_chord() {
         Vector3::new(2.0, 0.0, 0.0),
         1e-9
     ));
+}
+
+/// A run of four stations, one of them standing on the straight chord between its neighbours with
+/// both sides offsets: the blend redraws it from them, its two boundary points slid along the chain
+/// onto the line between the neighbours' boundaries, and says where along the chord it stands.
+#[test]
+fn rust_only_a_split_station_is_blended_from_its_neighbours() {
+    let mesh = polygon_mesh::solids::platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let mut pool = SectionPool::new(&[]);
+    let x = Vector3::new(1.0, 0.0, 0.0);
+    let mut section = |vertex: i32, station: Vector3, left: Vector3, right: Vector3| {
+        let l = pool.add(left).unwrap();
+        let r = pool.add(right).unwrap();
+        BevelSection::new(
+            vertex,
+            station,
+            x,
+            l,
+            r,
+            vec![l, r],
+            station,
+            station,
+            SectionSide::Offset,
+            SectionSide::Offset,
+            -1,
+            -1,
+            1.0,
+        )
+        .unwrap()
+    };
+    let mut sections = vec![
+        section(
+            0,
+            Vector3::ZERO,
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, -1.0, 0.0),
+        ),
+        section(
+            1,
+            x,
+            Vector3::new(1.3, 1.0, 0.0),
+            Vector3::new(0.8, -1.0, 0.0),
+        ),
+        section(
+            2,
+            x * 2.0,
+            Vector3::new(2.0, 1.0, 0.0),
+            Vector3::new(2.0, -1.0, 0.0),
+        ),
+        section(
+            3,
+            Vector3::new(1.0, 5.0, 0.0),
+            Vector3::new(1.0, 6.0, 0.0),
+            Vector3::new(1.0, 4.0, 0.0),
+        ),
+    ];
+    let lattice = geometry_processing::bevel::bevel_split_chords::lattice_for(&mesh);
+    assert!(section_split_blend::reads_as_a_split_vertex_at(
+        &sections, 1, lattice
+    ));
+    assert!(!section_split_blend::reads_as_a_split_vertex_at(
+        &sections, 0, lattice
+    ));
+
+    let placed = section_split_blend::apply(&mut sections, &mesh, &mut pool).expect("numbers");
+    assert_eq!(placed[1], SplitPlacement::new(0, 2, 0.5));
+    assert_eq!(placed[0].before, -1);
+    let blended = &sections[1];
+    assert!(
+        (pool.position_of(blended.left_boundary) - Vector3::new(1.0, 1.0, 0.0)).length() < 1e-6
+    );
+    assert!(
+        (pool.position_of(blended.right_boundary) - Vector3::new(1.0, -1.0, 0.0)).length() < 1e-6
+    );
+    assert!((blended.centre_from - Vector3::new(0.7, 0.0, 0.0)).length() < 1e-9);
 }

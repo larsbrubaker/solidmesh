@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use polygon_mesh::{Face, Mesh};
-use vector_math::{cs_math, Vector3};
+use vector_math::{cs_math, number_format, Vector3};
 
 /// C# `FloatStorageEpsilon`: the step between neighbouring floats at magnitude one, which is how a
 /// mesh stores a point.
@@ -69,7 +69,7 @@ pub fn would_remove(mesh: &Mesh, vertex: i32) -> Result<(), String> {
 
 /// C# `TryReadSplitChord`: the vertex's fan read as two flat sides of one straight crease through it,
 /// re-cut without it - `Ok(replacement)` with the new faces, `Err(decline)` with why not.
-fn try_read_split_chord(
+pub fn try_read_split_chord(
     mesh: &Mesh,
     vertex: i32,
     fan: &[i32],
@@ -531,25 +531,10 @@ pub fn faces_at_each_vertex(mesh: &Mesh) -> Vec<Option<Vec<i32>>> {
     at_the_vertex
 }
 
-/// C#'s custom numeric format `0.#########`: up to nine decimal places, trailing zeros dropped, and
-/// .NET's spellings of the infinities and NaN.
+/// C#'s custom numeric format `0.#########` (InvariantCulture), as the decline texts write their
+/// numbers.
 fn to_nine_places(value: f64) -> String {
-    if value.is_nan() {
-        return "NaN".to_string();
-    }
-
-    if value.is_infinite() {
-        return if value > 0.0 { "∞" } else { "-∞" }.to_string();
-    }
-
-    let text = format!("{value:.9}");
-    let text = text.trim_end_matches('0').trim_end_matches('.');
-
-    if text == "-0" {
-        "0".to_string()
-    } else {
-        text.to_string()
-    }
+    number_format::format_f64_max_decimals(value, 9)
 }
 
 /// A vertex's position, read as doubles.
