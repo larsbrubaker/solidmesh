@@ -3,14 +3,12 @@
 //! `clipper_library/PolygonsExtensions.cs`: the booleans (`CombinePolygons`, `Union`,
 //! `Subtract`, `Intersect`), the size-aware offsets (`ArcToleranceFor`, `Offset`), the
 //! transforms, `CreateFromString`, and the PolyTree walks that split polygons into outlines
-//! with their holes. The booleans and offsets run on clipper2-rust, not Clipper 6
-//! (docs/CSHARP_DIVERGENCES.md 220). Not ported (no caller): `GetBoundsLong`.
+//! with their holes. The booleans and offsets run on the Clipper 6 port ([`crate::clipper6`]).
+//! Not ported (no caller): `GetBoundsLong`.
 
-use clipper2_rust::{
-    ClipType, ClipperOffset, EndType, FillRule, JoinType, Path64, Paths64, PolyTree64,
-};
+use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, PolyTree64};
 
-use super::clipper_statics::{execute, execute_tree};
+use super::clipper_statics::{execute, execute_tree, offset_closed_polygons};
 use super::int_point_extensions::int_point;
 use super::polygon_extensions::PolygonExtensions;
 use crate::curve_tolerance;
@@ -143,11 +141,7 @@ impl PolygonsExtensions for Paths64 {
         join_type: JoinType,
         arc_tolerance: f64,
     ) -> Paths64 {
-        let mut offseter = ClipperOffset::new(DEFAULT_MITER_LIMIT, arc_tolerance, false, false);
-        offseter.add_paths(self, join_type, EndType::Polygon);
-        let mut solution = Paths64::new();
-        offseter.execute(distance, &mut solution);
-        solution
+        offset_closed_polygons(self, distance, join_type, DEFAULT_MITER_LIMIT, arc_tolerance)
     }
 
     fn rotate(&self, radians: f64) -> Paths64 {
