@@ -11,8 +11,8 @@
 //! face BSP tree (`processors::face_bsp_tree`), slicing a mesh into clipper2 integer polygons
 //! (`csg::slice_layer`, on agg-path's `clipper_library`) and walling loops back up (`csg::path_stitcher`).
 //!
-//! Phase 2d, the ray tracer's trace path (`ray_tracer`): traceables, hits, the BVH and its default
-//! builder, and the shapes MatterCAD picks with.
+//! Phase 2d, the ray tracer (`ray_tracer`): traceables, hits, the BVH and its default builder,
+//! the shapes MatterCAD picks with, materials, solid box/sphere shapes and view-space CSG.
 //!
 //! Phase 2e, the implicit surfaces (`sdf`): marching cubes over a sampled field and `MeshSdfGrid`,
 //! the offset preview, on the geometry3Sharp pieces it reaches (`g3`); the signed distance

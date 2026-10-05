@@ -1,19 +1,21 @@
 //! A triangle that keeps its own corners (agg-sharp `RayTracer/Primitive/Shapes/TriangleShape.cs`,
 //! with the `BaseShape.cs` members it inherits). MatterCAD builds these when a mesh is traced
 //! with a material (`AddTraceables`) and in its trace tests; picking uses the lighter
-//! [`super::MinimalTriangle`]. The material and `GetColor`/`GetUv` arrive with the renderer.
+//! [`super::MinimalTriangle`]. `new` is C#'s constructor with a `null` material;
+//! `with_material` takes one.
 
 use std::any::Any;
 
 use vector_math::{
-    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Ray, Vector3, Vector3Float,
+    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3, Vector3Float,
 };
 
+use super::base_shape::{leaf_get_contained, leaf_get_crossing, leaf_get_touching};
 use super::triangle_hit::{triangle_surface_area, EdgeRule, TriangleProjection};
-use super::{IntersectInfo, Traceable};
+use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};
 
 /// A triangle with f32 corners (C# `TriangleShape`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TriangleShape {
     projection: TriangleProjection,
     aabb_min_xyz: Vector3Float,
@@ -22,11 +24,42 @@ pub struct TriangleShape {
     vertices: [Vector3Float; 3],
     /// The face this came from, -1 when none (C# `index`, kept by the constructor's caller).
     pub index: i32,
+    material: Option<MaterialRef>,
+}
+
+impl PartialEq for TriangleShape {
+    /// Same corners, face index and (the same shared) material.
+    fn eq(&self, other: &Self) -> bool {
+        self.projection == other.projection
+            && self.aabb_min_xyz == other.aabb_min_xyz
+            && self.aabb_max_xyz == other.aabb_max_xyz
+            && self.center == other.center
+            && self.vertices == other.vertices
+            && self.index == other.index
+            && match (&self.material, &other.material) {
+                (Some(a), Some(b)) => std::sync::Arc::ptr_eq(a, b),
+                (None, None) => true,
+                _ => false,
+            }
+    }
 }
 
 impl TriangleShape {
-    /// The triangle through three corners (C# `TriangleShape(Vector3, Vector3, Vector3, ...)`).
+    /// The triangle through three corners with no material (C# `TriangleShape(Vector3,
+    /// Vector3, Vector3, null, index)`).
     pub fn new(vertex0: Vector3, vertex1: Vector3, vertex2: Vector3, index: i32) -> Self {
+        Self::with_material(vertex0, vertex1, vertex2, None, index)
+    }
+
+    /// The triangle through three corners (C# `TriangleShape(Vector3, Vector3, Vector3,
+    /// MaterialAbstract, int)`).
+    pub fn with_material(
+        vertex0: Vector3,
+        vertex1: Vector3,
+        vertex2: Vector3,
+        material: Option<MaterialRef>,
+        index: i32,
+    ) -> Self {
         let vertices = [
             Vector3Float::from_vector3(vertex0),
             Vector3Float::from_vector3(vertex1),
@@ -44,7 +77,26 @@ impl TriangleShape {
             center: Vector3Float::from_vector3((vertex0 + vertex1 + vertex2) / 3.0),
             vertices,
             index,
+            material,
         }
+    }
+
+    /// Replaces the material (C# `Material` setter).
+    pub fn set_material(&mut self, material: Option<MaterialRef>) {
+        self.material = material;
+    }
+
+    /// C# `TriangleShape.GetUv`: the hit position projected on two axes in the triangle's
+    /// plane, in f32 as the C# computes it.
+    pub(crate) fn plane_uv(&self, info: &IntersectInfo<'_>) -> (f64, f64) {
+        let normal = self.projection.plane.normal();
+        let vec_u = Vector3Float::new_f32(normal.y, normal.z, -normal.x);
+        let vec_v = vec_u.cross(normal);
+
+        let u = Vector3Float::from_vector3(info.hit_position).dot(vec_u);
+        let v = Vector3Float::from_vector3(info.hit_position).dot(vec_v);
+
+        (f64::from(u), f64::from(v))
     }
 
     /// The triangle through three f32 corners.
@@ -123,12 +175,7 @@ impl Traceable for TriangleShape {
         results: &mut Vec<&'a dyn Traceable>,
         sub_region: &AxisAlignedBoundingBox,
     ) -> bool {
-        if self.get_axis_aligned_bounding_box().contains(sub_region) {
-            results.push(self);
-            return true;
-        }
-
-        false
+        leaf_get_contained(self, results, sub_region)
     }
 
     fn contains(&self, position: Vector3) -> bool {
@@ -155,10 +202,46 @@ impl Traceable for TriangleShape {
             hit_position,
             normal_at_hit,
             distance_to_hit,
+            ..IntersectInfo::new()
         })
     }
 
     fn get_intersect_cost(&self) -> f64 {
         350.0
+    }
+
+    fn intersection_iterator<'a>(
+        &'a self,
+        _ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        Err(RayTracerError::NotSupported(
+            "TriangleShape.IntersectionIterator",
+        ))
+    }
+
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_crossing(self, plane))
+    }
+
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_touching(self, position, error))
+    }
+
+    fn as_primitive(&self) -> Option<&dyn Primitive> {
+        Some(self)
+    }
+}
+
+impl Primitive for TriangleShape {
+    fn material(&self) -> Option<&MaterialRef> {
+        self.material.as_ref()
+    }
+
+    fn get_uv(&self, info: &IntersectInfo<'_>) -> Result<(f64, f64), RayTracerError> {
+        Ok(self.plane_uv(info))
     }
 }

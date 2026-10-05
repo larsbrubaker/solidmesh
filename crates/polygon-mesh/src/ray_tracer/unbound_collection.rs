@@ -8,9 +8,9 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Ray, Vector3};
+use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
-use super::{IntersectInfo, Traceable, TraceableRef};
+use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef, PLANE_CROSSED_BY_ERROR};
 
 /// A list of traceables with no hierarchy (C# `UnboundCollection`).
 pub struct UnboundCollection {
@@ -148,5 +148,58 @@ impl Traceable for UnboundCollection {
         }
 
         total_intersect_cost
+    }
+
+    fn intersection_iterator<'a>(
+        &'a self,
+        ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        let mut hits = Vec::new();
+        for item in &self.items {
+            hits.extend(item.intersection_iterator(ray)?);
+        }
+        Ok(hits)
+    }
+
+    /// The direct items whose bounds the plane crosses (the C# does not descend into them).
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        let mut crossing = Vec::new();
+        if plane.crossed_by(
+            &self.get_axis_aligned_bounding_box(),
+            PLANE_CROSSED_BY_ERROR,
+        ) {
+            for item in &self.items {
+                if plane.crossed_by(
+                    &item.get_axis_aligned_bounding_box(),
+                    PLANE_CROSSED_BY_ERROR,
+                ) {
+                    crossing.push(item.as_ref());
+                }
+            }
+        }
+        Ok(crossing)
+    }
+
+    /// The direct items whose bounds hold `position` within `error`.
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        let mut touching = Vec::new();
+        if self
+            .get_axis_aligned_bounding_box()
+            .contains_point_within(position, error)
+        {
+            for item in &self.items {
+                if item
+                    .get_axis_aligned_bounding_box()
+                    .contains_point_within(position, error)
+                {
+                    touching.push(item.as_ref());
+                }
+            }
+        }
+        Ok(touching)
     }
 }

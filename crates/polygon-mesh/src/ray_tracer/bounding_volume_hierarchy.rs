@@ -5,10 +5,11 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Ray, Vector3};
+use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 use super::{
-    BvhBuilderLocallyOrderedClustering, IntersectInfo, Traceable, TraceableRef, UnboundCollection,
+    BvhBuilderLocallyOrderedClustering, IntersectInfo, RayTracerError, Traceable, TraceableRef,
+    UnboundCollection, PLANE_CROSSED_BY_ERROR,
 };
 
 /// How [`BoundingVolumeHierarchy::create_new_hierarchy`] builds the tree (C#
@@ -183,5 +184,53 @@ impl Traceable for BoundingVolumeHierarchy {
 
     fn get_intersect_cost(&self) -> f64 {
         AxisAlignedBoundingBox::get_intersect_cost()
+    }
+
+    /// The near child's hits, then the far child's (C# drops `None` hits as it goes).
+    fn intersection_iterator<'a>(
+        &'a self,
+        ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        let mut hits = Vec::new();
+        if ray.intersection(&self.aabb) {
+            let (check_first, check_second) = self.ordered_children(ray.direction_normal);
+            for child in [check_first, check_second] {
+                hits.extend(
+                    child
+                        .intersection_iterator(ray)?
+                        .into_iter()
+                        .filter(|info| info.hit_type != IntersectionType::None),
+                );
+            }
+        }
+        Ok(hits)
+    }
+
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        let mut crossing = Vec::new();
+        if plane.crossed_by(
+            &self.get_axis_aligned_bounding_box(),
+            PLANE_CROSSED_BY_ERROR,
+        ) {
+            crossing.extend(self.left.get_crossing(plane)?);
+            crossing.extend(self.right.get_crossing(plane)?);
+        }
+        Ok(crossing)
+    }
+
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        let mut touching = Vec::new();
+        if self
+            .get_axis_aligned_bounding_box()
+            .contains_point_within(position, error)
+        {
+            touching.extend(self.left.get_touching(position, error)?);
+            touching.extend(self.right.get_touching(position, error)?);
+        }
+        Ok(touching)
     }
 }

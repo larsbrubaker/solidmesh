@@ -15,37 +15,88 @@
 //! [`Traceable::as_any`]. The C# `Ray` is a class the BVH narrows in place as it finds
 //! hits, so tracing takes `&mut Ray`.
 //!
-//! Not here yet (later 2d work): materials and colors (`IPrimitive.Material`, `GetColor`,
-//! `GetUv`, which need `ColorF`), ray bundles (`FindFirstRay`, `GetClosestIntersections`),
-//! `IntersectionIterator` and the CSG `Difference`/`IntersectInfo.Subtract`, `GetCrossing` and
-//! `GetTouching`, the other builders and shapes, and the image renderer.
+//! Materials and the [`Primitive`] trait (C# `IPrimitive`) live in `material`; the solid shapes
+//! [`BoxShape`] and [`SphereShape`] and the view-space CSG node [`Difference`] report every hit
+//! along a ray through [`Traceable::intersection_iterator`], which `Difference` combines with
+//! [`IntersectInfo::subtract`] (in `intersect_info_subtract`).
+//!
+//! Where the C# throws `NotImplementedException` (the triangles' and plane's
+//! `IntersectionIterator`, `Transform`'s and `Difference`'s `GetCrossing`/`GetTouching`) the
+//! Rust returns [`RayTracerError::NotSupported`].
+//!
+//! Not here yet (later 2d work): ray bundles (`FindFirstRay`, `GetClosestIntersections`),
+//! `Cylinder`, the other builders, and the image renderer.
 
+mod base_shape;
 mod bounding_volume_hierarchy;
+mod box_shape;
 mod bvh_builder_locally_ordered_clustering;
 mod bvh_iterator;
+mod difference;
+mod intersect_info_subtract;
+mod material;
 mod minimal_triangle;
 mod plane_shape;
+mod sphere_shape;
 mod transform;
 mod triangle_hit;
 mod triangle_shape;
+mod triangle_shape_uv;
 mod unbound_collection;
 
 use std::any::Any;
 use std::sync::Arc;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Ray, Vector3};
+use agg_path::ColorF;
+use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 pub use bounding_volume_hierarchy::{BoundingVolumeHierarchy, BvhCreationOptions};
+pub use box_shape::BoxShape;
 pub use bvh_builder_locally_ordered_clustering::BvhBuilderLocallyOrderedClustering;
 pub use bvh_iterator::{BvhDescentFilter, BvhIterator};
+pub use difference::Difference;
+pub use intersect_info_subtract::compare_intersect_info_on_distance;
+pub use material::{
+    base_shape_default_material, wrap_up, MaterialAbstract, MaterialProperties, MaterialRef,
+    Primitive, SolidMaterial,
+};
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
 pub use plane_shape::PlaneShape;
+pub use sphere_shape::SphereShape;
 pub use transform::Transform;
 pub use triangle_shape::TriangleShape;
+pub use triangle_shape_uv::TriangleShapeUv;
 pub use unbound_collection::UnboundCollection;
 
 /// A shared traceable, as C# shares `ITraceable` references.
 pub type TraceableRef = Arc<dyn Traceable>;
+
+/// What the C# reports by throwing from the ray tracer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RayTracerError {
+    /// The C# member throws `NotImplementedException` (named here).
+    NotSupported(&'static str),
+    /// A color was asked of a shape whose material is the C# `null`.
+    NoMaterial,
+    /// A hit list handed to [`IntersectInfo::subtract`] is malformed (the C# exception text).
+    BadHitList(&'static str),
+    /// A shape's construction arguments are invalid (the C# `ArgumentException` text).
+    InvalidArgument(&'static str),
+}
+
+impl std::fmt::Display for RayTracerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RayTracerError::NotSupported(what) => write!(f, "{what} is not implemented"),
+            RayTracerError::NoMaterial => write!(f, "the shape has no material"),
+            RayTracerError::BadHitList(text) | RayTracerError::InvalidArgument(text) => {
+                write!(f, "{text}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for RayTracerError {}
 
 /// Something a ray can be traced against and a BVH can hold (C# `ITraceable : IBvhItem`).
 pub trait Traceable: Any + Send + Sync {
@@ -87,7 +138,33 @@ pub trait Traceable: Any + Send + Sync {
 
     /// The relative cost of an intersection test against this (a bounds test is 1).
     fn get_intersect_cost(&self) -> f64;
+
+    /// Every hit along `ray`, front and back faces as the ray's `intersection_type` asks, for
+    /// view-space CSG (C# `IntersectionIterator`). Containers concatenate their children's.
+    fn intersection_iterator<'a>(
+        &'a self,
+        ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError>;
+
+    /// The items whose bounds the plane crosses (C# `IBvhItem.GetCrossing`): a leaf itself, a
+    /// BVH node its children's, an [`UnboundCollection`] its direct items.
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError>;
+
+    /// The items whose bounds hold `position` within `error` (C# `IBvhItem.GetTouching`).
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError>;
+
+    /// This as a [`Primitive`] when it has a material (the C# `is IPrimitive` test).
+    fn as_primitive(&self) -> Option<&dyn Primitive> {
+        None
+    }
 }
+
+/// C# `Plane.CrossedBy(bounds)` with its default error.
+pub(crate) const PLANE_CROSSED_BY_ERROR: f64 = 0.001;
 
 /// Everything about a ray-shape hit (C# `IntersectInfo`).
 #[derive(Clone, Copy)]
@@ -97,6 +174,8 @@ pub struct IntersectInfo<'a> {
     pub hit_position: Vector3,
     pub normal_at_hit: Vector3,
     pub distance_to_hit: f64,
+    /// The shaded color the renderer stores (C# `TotalColor`), transparent black until set.
+    pub total_color: ColorF,
 }
 
 impl<'a> IntersectInfo<'a> {
@@ -108,7 +187,14 @@ impl<'a> IntersectInfo<'a> {
             hit_position: Vector3::ZERO,
             normal_at_hit: Vector3::ZERO,
             distance_to_hit: f64::MAX,
+            total_color: ColorF::new(0.0, 0.0, 0.0, 0.0),
         }
+    }
+
+    /// True when the hit object is `object` itself (C# reference `==`).
+    pub fn hit_object_is(&self, object: &dyn Traceable) -> bool {
+        self.closest_hit_object
+            .is_some_and(|hit| std::ptr::addr_eq(hit as *const dyn Traceable, object))
     }
 
     /// The hit object as a `T`, if it is one (C# `info.ClosestHitObject is T t`).
@@ -132,6 +218,7 @@ impl std::fmt::Debug for IntersectInfo<'_> {
             .field("hit_position", &self.hit_position)
             .field("normal_at_hit", &self.normal_at_hit)
             .field("distance_to_hit", &self.distance_to_hit)
+            .field("total_color", &self.total_color)
             .finish()
     }
 }

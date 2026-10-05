@@ -7,11 +7,12 @@ use std::any::Any;
 use std::sync::Arc;
 
 use vector_math::{
-    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Ray, Vector3, Vector3Float,
+    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3, Vector3Float,
 };
 
+use super::base_shape::{leaf_get_crossing, leaf_get_touching};
 use super::triangle_hit::{triangle_surface_area, EdgeRule, TriangleProjection};
-use super::{IntersectInfo, Traceable};
+use super::{IntersectInfo, RayTracerError, Traceable};
 
 /// The corner lookup: `(face_index, vertex_index 0..3) -> corner` (C# `Func<int, int,
 /// Vector3Float>`).
@@ -165,10 +166,32 @@ impl Traceable for MinimalTriangle {
             hit_position,
             normal_at_hit,
             distance_to_hit,
+            ..IntersectInfo::new()
         })
     }
 
     fn get_intersect_cost(&self) -> f64 {
         350.0
+    }
+
+    fn intersection_iterator<'a>(
+        &'a self,
+        _ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        Err(RayTracerError::NotSupported(
+            "MinimalTriangle.IntersectionIterator",
+        ))
+    }
+
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_crossing(self, plane))
+    }
+
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_touching(self, position, error))
     }
 }

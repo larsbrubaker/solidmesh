@@ -5,9 +5,9 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Ray, Vector3};
+use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector3};
 
-use super::{IntersectInfo, Traceable, TraceableRef};
+use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef};
 
 /// A child traceable under a transform (C# `RayTracer.Traceable.Transform`).
 pub struct Transform {
@@ -124,5 +124,30 @@ impl Traceable for Transform {
 
     fn get_intersect_cost(&self) -> f64 {
         self.child.get_intersect_cost()
+    }
+
+    fn intersection_iterator<'a>(
+        &'a self,
+        ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        let local_ray = self.get_local_space_ray(ray);
+        Ok(self
+            .child
+            .intersection_iterator(&local_ray)?
+            .into_iter()
+            .map(|local_info| self.get_global_space_info(local_info))
+            .collect())
+    }
+
+    fn get_crossing(&self, _plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Err(RayTracerError::NotSupported("Transform.GetCrossing"))
+    }
+
+    fn get_touching(
+        &self,
+        _position: Vector3,
+        _error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Err(RayTracerError::NotSupported("Transform.GetTouching"))
     }
 }

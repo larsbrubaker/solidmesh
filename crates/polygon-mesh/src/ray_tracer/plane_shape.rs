@@ -1,13 +1,14 @@
 //! An infinite plane (agg-sharp `RayTracer/Primitive/Shapes/PlaneShape.cs`, with the
 //! `BaseShape.cs` members it inherits). MatterCAD's drag handles trace their mouse rays against
-//! these (the bed plane, and planes through the grabbed point). The material arrives with the
-//! renderer; MatterCAD passes `null` everywhere it builds one.
+//! these (the bed plane, and planes through the grabbed point). MatterCAD passes a `null`
+//! material everywhere it builds one, so it keeps none (divergence 530).
 
 use std::any::Any;
 
 use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
-use super::{IntersectInfo, Traceable};
+use super::base_shape::{leaf_get_crossing, leaf_get_touching};
+use super::{IntersectInfo, RayTracerError, Traceable};
 
 /// An infinite plane (C# `PlaneShape`).
 #[derive(Debug, Clone, Copy)]
@@ -33,6 +34,7 @@ impl PlaneShape {
             hit_position: ray.origin + ray.direction_normal * distance_to_hit,
             normal_at_hit: self.plane.normal,
             distance_to_hit,
+            ..IntersectInfo::new()
         }
     }
 
@@ -126,5 +128,26 @@ impl Traceable for PlaneShape {
 
     fn get_intersect_cost(&self) -> f64 {
         350.0
+    }
+
+    fn intersection_iterator<'a>(
+        &'a self,
+        _ray: &Ray,
+    ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError> {
+        Err(RayTracerError::NotSupported(
+            "PlaneShape.IntersectionIterator",
+        ))
+    }
+
+    fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_crossing(self, plane))
+    }
+
+    fn get_touching(
+        &self,
+        position: Vector3,
+        error: f64,
+    ) -> Result<Vec<&dyn Traceable>, RayTracerError> {
+        Ok(leaf_get_touching(self, position, error))
     }
 }
