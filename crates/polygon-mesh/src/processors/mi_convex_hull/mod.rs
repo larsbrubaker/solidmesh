@@ -9,13 +9,12 @@
 //! `Random(1)` so the same input selects the same hull vertices and emits the same faces in the
 //! same order. Neighbors: `data_model` (faces, connectors, lists, pools), `math_helper` (planes,
 //! volumes), `initialize` (bounding box points and the initial simplex), `main_loop` (cone
-//! building), `net_random` (.NET's seeded `Random`).
+//! building); .NET's seeded `Random` is `vector_math::dotnet_random`.
 
 mod data_model;
 mod initialize;
 mod main_loop;
 mod math_helper;
-mod net_random;
 
 use std::collections::HashSet;
 

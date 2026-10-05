@@ -12,7 +12,9 @@
 //! `estimator`, the BVH (`bvh`: `BvhTree`, its two builders, Morton codes, `RayHitInfo`, with
 //! `Ray::get_closest_intersection`), the `parallel` loop wrapper (sequential on every host,
 //! divergence 30) and .NET's introsort (`cs_sort`) the builders need to order ties as the C#
-//! does. `SmallestEnclosingCircle.cs` is not ported: it is LGPL-3 (Project Nayuki).
+//! does. `dotnet_random` is .NET's seeded `Random`, shared by the crates above that must draw
+//! the numbers the C# draws. `SmallestEnclosingCircle.cs` is not ported: it is LGPL-3 (Project
+//! Nayuki).
 //! `RectangleDouble`/`RectangleInt` are not in VectorMath (agg-sharp `agg/Primitives`).
 //!
 //! Conventions: C# static methods are associated functions, C# properties are methods
@@ -24,6 +26,7 @@ mod axis_aligned_bounding_box;
 pub mod bvh;
 pub mod cs_math;
 pub mod cs_sort;
+pub mod dotnet_random;
 pub mod easing;
 pub mod estimator;
 pub mod float_hash;
