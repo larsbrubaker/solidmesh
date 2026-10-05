@@ -39,7 +39,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
 
 use super::surface_room_standing_feature;
 use super::SurfaceBandRunsOffOverAStretch;
@@ -102,7 +102,7 @@ impl BandSpan {
 
     /// How near two readings of one position are, at this edge's scale.
     fn near(&self) -> f64 {
-        cs_max(self.length, 1.0) * VERTEX_TOLERANCE
+        cs_math::max_f64(self.length, 1.0) * VERTEX_TOLERANCE
     }
 }
 
@@ -325,7 +325,7 @@ pub fn consumes_the_face_to_its_rim(
             continue;
         };
 
-        farthest_of_all = cs_max(farthest_of_all, in_front.farthest);
+        farthest_of_all = cs_math::max_f64(farthest_of_all, in_front.farthest);
     }
 
     // The FARTHEST any rim reaches, because one rim standing at the setback while another stands
@@ -481,7 +481,7 @@ pub fn try_read_a_stretch(
             ));
         }
 
-        highest = cs_max(highest, windows[at].1);
+        highest = cs_math::max_f64(highest, windows[at].1);
     }
 
     let touches_the_start = lowest <= near;
@@ -708,7 +708,7 @@ fn try_in_front_over_the_span(rim: &FeatureEdge, span: &BandSpan, near: f64) -> 
         return None;
     }
 
-    let farthest = cs_max(
+    let farthest = cs_math::max_f64(
         start_in + ((end_in - start_in) * low),
         start_in + ((end_in - start_in) * high),
     );
@@ -748,8 +748,8 @@ fn try_in_front_over_the_span(rim: &FeatureEdge, span: &BandSpan, near: f64) -> 
         let at_low = start_along + ((end_along - start_along) * under_low);
         let at_high = start_along + ((end_along - start_along) * under_high);
 
-        under_from = cs_max(cs_min(at_low, at_high), 0.0);
-        under_to = cs_min(cs_max(at_low, at_high), span.length);
+        under_from = cs_math::max_f64(cs_math::min_f64(at_low, at_high), 0.0);
+        under_to = cs_math::min_f64(cs_math::max_f64(at_low, at_high), span.length);
     }
 
     Some(InFront {
@@ -771,30 +771,12 @@ fn narrow(at_start: f64, at_end: f64, floor: f64, low: &mut f64, high: &mut f64)
     let crosses = (floor - at_start) / rise;
 
     if rise > 0.0 {
-        *low = cs_max(*low, crosses);
+        *low = cs_math::max_f64(*low, crosses);
     } else {
-        *high = cs_min(*high, crosses);
+        *high = cs_math::min_f64(*high, crosses);
     }
 
     *low <= *high
-}
-
-/// C# `Math.Max`: NaN propagates, which `f64::max` would not.
-fn cs_max(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.max(b)
-    }
-}
-
-/// C# `Math.Min`: NaN propagates, which `f64::min` would not.
-fn cs_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
-        f64::NAN
-    } else {
-        a.min(b)
-    }
 }
 
 /// C# `double.CompareTo`: NaN sorts first, and equal values (0.0 and -0.0 included) are equal.

@@ -100,6 +100,11 @@ pub struct WorkBudget {
     /// The shortest gap between two progress reports, in milliseconds of wall clock. Settable only
     /// so a test can see every charge's report without racing the clock (C# default 50).
     pub report_throttle_ms: i64,
+    /// Whether the pair corner's end-face field is turned OFF for this build (C#'s per-flow
+    /// `PairCornerEndFaceField.OffInFlow`): a per-flow switch travels with the build, not the
+    /// thread, so whoever creates the budget captures the caller's setting here, and
+    /// `PairCornerEndFaceField::turn_off` flips it for the budget in force.
+    pub pair_corner_end_face_field_off: Cell<bool>,
     /// How many units have been charged so far.
     pub spent: Cell<i64>,
     /// What is running right now.

@@ -72,6 +72,7 @@ pub mod convex_cell_bound;
 pub mod corner_cap;
 pub mod corner_cap_hole_fill;
 pub mod corner_fill;
+pub mod corner_mitre_patch;
 mod crease_run_out;
 pub mod curved_end_face;
 pub mod dying_crease_fill;

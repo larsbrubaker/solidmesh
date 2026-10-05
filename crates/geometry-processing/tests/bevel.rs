@@ -73,6 +73,8 @@ mod surface_fan_tests;
 mod surface_mesh_closure_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
 mod surface_ring_ears_bridged_ring_tests;
+#[path = "bevel/surface_room_crossing_tests.rs"]
+mod surface_room_crossing_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
 mod surface_run_out_column_top_tests;
 #[path = "bevel/topology_test_meshes.rs"]

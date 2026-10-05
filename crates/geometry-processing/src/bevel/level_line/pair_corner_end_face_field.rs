@@ -3,13 +3,13 @@
 //! ([`PairCornerEndFaceFieldScope`]). Ports the types of
 //! `Bevel/LevelLine/PairCornerEndFaceField.cs`, with the bridges of a vertex graph ([`bridges`]); the
 //! construction and field queries are in `pair_corner_end_face_field_queries.rs`, and the finder
-//! and the per-flow gate land with later packages.
+//! lands with a later package. The per-flow gate is a switch on the build's [`WorkBudget`](super::WorkBudget).
 
 use std::collections::{HashMap, HashSet};
 
 use vector_math::Vector3;
 
-use super::triangle_edges;
+use super::{triangle_edges, LevelLineWork};
 
 /// C# `PairCornerEndFaceField`: the part of a picked edge's round that runs out through its END
 /// FACE at a mitred pair corner - negative in the prism the round's cylinder leaves in front of it
@@ -43,12 +43,39 @@ pub struct PairCornerEndFaceField {
     pub planes: Vec<(Vector3, f64)>,
 }
 
-/// C# `PairCornerEndFaceField.Scope`: turns the end-face field off for this flow until it is
-/// dropped, which puts back what was there before.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// C# `PairCornerEndFaceField.Scope`: turns the end-face field off for the build in force until
+/// it is dropped, which puts back what was there before. The switch lives on the build's
+/// [`WorkBudget`](super::WorkBudget) (C#'s `AsyncLocal`, per the bevel-core decision that per-flow switches travel
+/// with the build); with no budget in force there is no build to switch and the scope does nothing.
+#[derive(Debug)]
+#[must_use = "the field stays off only while the scope is alive"]
 pub struct PairCornerEndFaceFieldScope {
     /// Whether the field was off when the scope was opened - restored when it closes.
     pub was: bool,
+}
+
+impl PairCornerEndFaceFieldScope {
+    /// C#'s `Scope()`: remembers the setting and turns the field off.
+    pub fn new() -> Self {
+        let was = LevelLineWork::current()
+            .is_some_and(|budget| budget.pair_corner_end_face_field_off.replace(true));
+        PairCornerEndFaceFieldScope { was }
+    }
+}
+
+impl Default for PairCornerEndFaceFieldScope {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for PairCornerEndFaceFieldScope {
+    /// C#'s `Dispose`: puts back what was there before.
+    fn drop(&mut self) {
+        if let Some(budget) = LevelLineWork::current() {
+            budget.pair_corner_end_face_field_off.set(self.was);
+        }
+    }
 }
 
 /// The bridges of an undirected vertex graph (each vertex's neighbours listed both ways round),
@@ -107,6 +134,17 @@ pub fn bridges(neighbours: &HashMap<i32, Vec<i32>>) -> HashSet<(i32, i32)> {
 }
 
 impl PairCornerEndFaceField {
+    /// Whether the end-face field is on for the build in force (on wherever no budget is, as C#'s
+    /// flow default is).
+    pub fn on() -> bool {
+        LevelLineWork::current().is_none_or(|budget| !budget.pair_corner_end_face_field_off.get())
+    }
+
+    /// Turns the field off for the build in force until the returned scope is dropped.
+    pub fn turn_off() -> PairCornerEndFaceFieldScope {
+        PairCornerEndFaceFieldScope::new()
+    }
+
     /// A point on the round's axis.
     pub fn axis_point(&self) -> Vector3 {
         self.axis_point

@@ -119,6 +119,7 @@ fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudge
         limit,
         input_is_float_stored: false,
         report_throttle_ms: 50,
+        pair_corner_end_face_field_off: Cell::new(false),
         spent: Cell::new(0),
         phase: Cell::new(LevelLineWorkPhase::None),
         exhausted_in: Cell::new(LevelLineWorkPhase::None),
@@ -626,4 +627,9 @@ fn rust_only_an_edge_meets_the_chain_at_a_run_out_end_or_inside_one_cluster() {
         false,
         false
     ));
+}
+
+/// A plain budget for other files' checks: a generous limit, never cancelled.
+pub fn budget_for_tests() -> std::rc::Rc<WorkBudget> {
+    budget(i64::MAX, polygon_mesh::CancelToken::new())
 }

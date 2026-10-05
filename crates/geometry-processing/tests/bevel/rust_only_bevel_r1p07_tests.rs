@@ -232,3 +232,26 @@ fn rust_only_the_gap_loop_walks_verdicts() {
     assert_eq!(kept.len(), 1);
     assert_eq!(kept[0].vertices, vec![1]);
 }
+
+#[test]
+fn rust_only_the_end_face_field_switch_travels_with_the_build() {
+    use geometry_processing::bevel::level_line::{LevelLineWork, PairCornerEndFaceField};
+
+    // With no build in force there is nothing to switch, and the field reads on.
+    assert!(PairCornerEndFaceField::on());
+    {
+        let _off = PairCornerEndFaceField::turn_off();
+        assert!(PairCornerEndFaceField::on());
+    }
+
+    // Inside a build the switch is its budget's: off while the scope lives, back after.
+    let budget = crate::rust_only_bevel_r1p05_tests::budget_for_tests();
+    let _work = LevelLineWork::begin(Some(budget.clone()));
+    assert!(PairCornerEndFaceField::on());
+    {
+        let _off = PairCornerEndFaceField::turn_off();
+        assert!(!PairCornerEndFaceField::on());
+        assert!(budget.pair_corner_end_face_field_off.get());
+    }
+    assert!(PairCornerEndFaceField::on());
+}
