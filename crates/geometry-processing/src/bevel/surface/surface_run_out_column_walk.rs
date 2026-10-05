@@ -1,6 +1,7 @@
 //! The WALK that draws a run-out's columns ([`SurfaceRunOutColumnWalk`]). Ports the fields of
-//! `Bevel/Surface/SurfaceRunOutColumnWalk.cs`; the walk itself lands with the run-out package as a
-//! further `impl` block. Kept apart from `SurfaceMixedCornerRunOut`, which reads the turns and
+//! `Bevel/Surface/SurfaceRunOutColumnWalk.cs`, its constructor and the test of a column topped by a
+//! chord between two crossings; the walk itself lands with a later package as a further `impl`
+//! block. Kept apart from `SurfaceMixedCornerRunOut`, which reads the turns and
 //! emits the surface, and from [`super::SurfaceRunOutColumnWindow`], which reads what ends the
 //! columns from above and below.
 
@@ -13,6 +14,8 @@
 /// own rows turned to that station's meridian, so two neighbours pair by ROW NUMBER rather than by
 /// position - which is why the first row each of them holds is carried alongside it
 /// (`SurfaceMixedCornerRunOutStrip`).
+use super::surface_run_out_column_ends::HAIR;
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SurfaceRunOutColumnWalk {
     /// The column tops standing between one crossed row's crossing and the NEXT one's, entry per
@@ -46,4 +49,58 @@ pub struct SurfaceRunOutColumnWalk {
     pub the_chord_starts_at: i32,
     /// The vertex each row left standing ON the plane across a wall's end, or -1 per row.
     pub on_the_plane: Vec<i32>,
+}
+
+impl SurfaceRunOutColumnWalk {
+    /// C#'s private constructor, in C#'s argument order.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        columns: Vec<Vec<i32>>,
+        turns: Vec<f64>,
+        first_rows: Vec<i32>,
+        the_curve: Vec<i32>,
+        top_rims: Vec<Option<Vec<i32>>>,
+        along_the_chord: Vec<i32>,
+        tops_between_crossings: Vec<Vec<i32>>,
+        the_chord_starts_at: i32,
+        on_the_plane: Vec<i32>,
+    ) -> Self {
+        SurfaceRunOutColumnWalk {
+            tops_between_crossings,
+            columns,
+            turns,
+            first_rows,
+            the_curve,
+            top_rims,
+            along_the_chord,
+            the_chord_starts_at,
+            on_the_plane,
+        }
+    }
+
+    /// Whether the column at `past` is topped by the CHORD between the crossings of rows
+    /// `first_row - 1` and `first_row` (it stands strictly between those two crossings, at or
+    /// before the last row crossed), and - second - whether that chord is missing because the
+    /// earlier row left no vertex on the plane. Returns `(tops_it, the_chord_is_missing)`.
+    pub fn the_chord_between_two_crossings_tops_it(
+        first_row: usize,
+        the_last_crossed: usize,
+        crosses_at: &[f64],
+        on_the_plane: &[i32],
+        past: f64,
+    ) -> (bool, bool) {
+        let between_two_crossings = first_row > 0
+            && first_row < crosses_at.len()
+            && first_row <= the_last_crossed
+            && crosses_at[first_row] != f64::INFINITY
+            && past > crosses_at[first_row - 1] + HAIR
+            && past < crosses_at[first_row] - HAIR;
+
+        let the_chord_is_missing = between_two_crossings && on_the_plane[first_row - 1] < 0;
+
+        (
+            between_two_crossings && !the_chord_is_missing,
+            the_chord_is_missing,
+        )
+    }
 }

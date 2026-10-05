@@ -1,8 +1,9 @@
 //! The one question a chain's free END asks of the mesh that its own two faces cannot answer
 //! ([`SurfaceChainEndReading`]): does the crease it stops at carry on past that corner, in an edge
 //! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`, its
-//! constructor and its surface and vertex indexes; the per-cache table (C#'s static
-//! `ConditionalWeakTable`, `For`) and the reading itself land with later packages.
+//! constructor and its surface and vertex indexes; C#'s per-cache table (`For`) is an owned
+//! value here ([`SurfaceChainEndReading::for_regions`], divergence 656); the reading itself lands
+//! with a later package.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -99,8 +100,7 @@ impl SurfaceChainEndReading {
 
 impl SurfaceChainEndReading {
     /// C#'s private constructor (with its field initializers): a reading of `curve_regions` with
-    /// both memos empty. The per-cache table that hands one reading out per cache (C#'s `For`
-    /// over a static `ConditionalWeakTable`) is not ported yet.
+    /// both memos empty.
     pub fn new(curve_regions: Arc<FaceRegionCache>) -> Self {
         SurfaceChainEndReading {
             curve_regions,
@@ -140,5 +140,15 @@ impl SurfaceChainEndReading {
             .entry(vertex)
             .or_insert_with(|| Vec::with_capacity(6))
             .push(edge);
+    }
+}
+
+impl SurfaceChainEndReading {
+    /// The reading of `curve_regions`, or `None` where there is no cache (C#'s `null`). C# hands
+    /// out ONE reading per cache from a static `ConditionalWeakTable`; here the caller that
+    /// builds the plans owns the reading this returns and passes it to every plan read against
+    /// that cache, so the memos are still filled once per cache (divergence 656).
+    pub fn for_regions(curve_regions: Option<&Arc<FaceRegionCache>>) -> Option<Self> {
+        curve_regions.map(|cache| Self::new(cache.clone()))
     }
 }

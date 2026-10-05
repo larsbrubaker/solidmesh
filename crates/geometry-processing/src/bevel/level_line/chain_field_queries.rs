@@ -57,3 +57,14 @@ impl ChainFieldMeshPiece {
         }
     }
 }
+
+impl ChainField {
+    /// True when no point of the box `min`..`max` can carry a field value at or below `margin`:
+    /// the box stands farther from the chain's own box than the greatest setback plus that margin.
+    /// The cull a caller that only asks "does this piece dip below the line" uses to skip the
+    /// search - it answers from two boxes, so it can never turn a dipping piece away.
+    pub fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
+        let root = &self.nodes[0];
+        super::segment_box_tree::box_gap(min, max, root.min, root.max) - self.max_setback > margin
+    }
+}

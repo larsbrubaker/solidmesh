@@ -43,6 +43,7 @@
 //! answers ([`BandGapResult`], [`GapFillResult`], [`RoomReading`]).
 
 mod band_cut;
+pub mod band_gap;
 pub mod band_gap_in_turn;
 mod band_gap_refusal;
 mod band_gap_result;
@@ -120,6 +121,7 @@ pub mod run_out_field;
 mod scalar_field;
 mod seam_edges;
 pub mod segment_box_tree;
+pub mod self_room;
 pub mod sharp_joint_corners;
 pub mod side_witness;
 pub mod split_meter;
@@ -170,7 +172,7 @@ pub use open_gap_fill::OpenGapFillOpenRail;
 pub use open_gap_fill_cut_section::OpenGapFillFlatRunOutRegion;
 pub use pair_corner_end_face_field::{PairCornerEndFaceField, PairCornerEndFaceFieldScope};
 pub use pick_fault::PickFault;
-pub use pick_field::PickField;
+pub use pick_field::{PickField, PickFieldArgumentError};
 pub use pick_validation::PickCorner;
 pub use pinch_ladder_search::PinchLadderSearchPinchLadder;
 pub use point_field::PointField;

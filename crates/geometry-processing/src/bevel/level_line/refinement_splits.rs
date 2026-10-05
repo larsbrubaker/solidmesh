@@ -1,9 +1,13 @@
 //! The mesh edits the refinement makes and the bookkeeping that goes with them. Ports
 //! `Bevel/LevelLine/RefinementSplits.cs`: where a point stands in a triangle ([`PointPlace`],
-//! [`where_the_point_stands`]) and the triangle-size readings the refinement splits by
-//! ([`cannot_be_divided_further`], [`longest_edge_length`], [`longest_edge`]); the splits
-//! themselves land with later packages.
+//! [`where_the_point_stands`]) the triangle-size readings the refinement splits by
+//! ([`cannot_be_divided_further`], [`longest_edge_length`], [`longest_edge`], [`aspect`],
+//! [`is_new_sliver`]) and the queue bookkeeping ([`enqueue`]); the splits themselves land with later
+//! packages.
 
+use std::collections::{HashMap, VecDeque};
+
+use indexmap::IndexSet;
 use vector_math::{cs_math, Vector3};
 
 use super::{LevelLineMesh, LevelLineTriangle};
@@ -146,4 +150,45 @@ pub fn longest_edge(mesh: &LevelLineMesh, triangle: i32) -> (i32, i32) {
     }
 
     best
+}
+
+/// What a split that has nothing to insert reports in place of a vertex.
+pub const NOTHING_TO_INSERT: i32 = -1;
+
+/// Queues each of `triangles` once (in first-seen order, as C#'s `Distinct` keeps it) at
+/// refinement depth `at`.
+pub fn enqueue(
+    triangles: impl IntoIterator<Item = i32>,
+    pending: &mut VecDeque<i32>,
+    depth: &mut HashMap<i32, i32>,
+    at: i32,
+) {
+    let distinct: IndexSet<i32> = triangles.into_iter().collect();
+
+    for child in distinct {
+        depth.insert(child, at);
+        pending.push_back(child);
+    }
+}
+
+/// Whether a child triangle of aspect `child` is a NEW sliver: past the limit and worse than its
+/// `parent` was.
+pub fn is_new_sliver(child: f64, parent: f64, aspect_limit: f64) -> bool {
+    child > aspect_limit && child > parent
+}
+
+/// The aspect of the triangle abc: its longest edge squared over twice its area - infinity for a
+/// triangle of no area.
+pub fn aspect(a: Vector3, b: Vector3, c: Vector3) -> f64 {
+    let longest = cs_math::max_f64(
+        (b - a).length(),
+        cs_math::max_f64((c - b).length(), (a - c).length()),
+    );
+    let twice_area = (b - a).cross(c - a).length();
+
+    if twice_area > 0.0 {
+        longest * longest / twice_area
+    } else {
+        f64::INFINITY
+    }
 }

@@ -1,9 +1,12 @@
 //! One field over a GROUP of chains ([`PickField`]). Ports the type of
-//! `Bevel/LevelLine/PickField.cs`; construction, the queries and the `ChainDistanceField` impl
-//! land with their method packages.
+//! `Bevel/LevelLine/PickField.cs` with its construction ([`PickField::new`], refusing bad
+//! arguments with [`PickFieldArgumentError`] where C# throws) and its member read-throughs; the
+//! queries and the `ChainDistanceField` impl land with their method packages.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
+
+use vector_math::cs_math;
 
 use super::{ChainField, ChainFieldEndPlaneReader};
 
@@ -58,5 +61,110 @@ impl std::fmt::Debug for PickField {
             .field("min_setback", &self.min_setback)
             .field("max_setback", &self.max_setback)
             .finish_non_exhaustive()
+    }
+}
+
+impl PickField {
+    /// True only when NO member chain reaches below `margin` over the box `min`..`max` - one chain
+    /// that might is enough to make the caller pay for the exact search.
+    pub fn nothing_reaches_below(
+        &self,
+        min: vector_math::Vector3,
+        max: vector_math::Vector3,
+        margin: f64,
+    ) -> bool {
+        self.members
+            .iter()
+            .all(|&k| self.chains[k as usize].nothing_reaches_below(min, max, margin))
+    }
+}
+
+/// Where C# `PickField`'s constructor throws an `ArgumentException`: a caller's bug, reported with
+/// C#'s message rather than a panic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PickFieldArgumentError {
+    /// No member chains (C# "A pick field needs at least one chain.").
+    NoMembers,
+    /// A member index outside the chains (C# "A member names a chain the pick does not hold.").
+    MemberOutOfRange,
+    /// Members repeated or out of order (C# "A group's members must be distinct and in ascending
+    /// order.").
+    MembersNotAscending,
+}
+
+impl std::fmt::Display for PickFieldArgumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            PickFieldArgumentError::NoMembers => "A pick field needs at least one chain.",
+            PickFieldArgumentError::MemberOutOfRange => {
+                "A member names a chain the pick does not hold."
+            }
+            PickFieldArgumentError::MembersNotAscending => {
+                "A group's members must be distinct and in ascending order."
+            }
+        })
+    }
+}
+
+impl std::error::Error for PickFieldArgumentError {}
+
+impl PickField {
+    /// A tie between two chains is two arithmetics answering the same number, so "the same" has
+    /// to allow a few bits of drift - the same relative rule `ChainField` uses between its own
+    /// segments.
+    pub const TIE_RELATIVE: f64 = 1e-12;
+
+    /// The field over `member_chains` (distinct, ascending indices into `all_chains`), its
+    /// setbacks the least and greatest of the members'. C#'s null checks have no Rust case.
+    pub fn new(
+        all_chains: Vec<Rc<ChainField>>,
+        member_chains: &[i32],
+    ) -> Result<PickField, PickFieldArgumentError> {
+        if member_chains.is_empty() {
+            return Err(PickFieldArgumentError::NoMembers);
+        }
+
+        let mut members = Vec::with_capacity(member_chains.len());
+        let mut min_setback = f64::INFINITY;
+        let mut max_setback = f64::NEG_INFINITY;
+
+        for (i, &k) in member_chains.iter().enumerate() {
+            if k < 0 || k as usize >= all_chains.len() {
+                return Err(PickFieldArgumentError::MemberOutOfRange);
+            }
+
+            if i > 0 && k <= members[i - 1] {
+                return Err(PickFieldArgumentError::MembersNotAscending);
+            }
+
+            members.push(k);
+            let chain = &all_chains[k as usize];
+            min_setback = cs_math::min_f64(min_setback, chain.min_setback);
+            max_setback = cs_math::max_f64(max_setback, chain.max_setback);
+        }
+
+        Ok(PickField {
+            chains: all_chains,
+            members,
+            end_plane_reader: OnceCell::new(),
+            any_member_clipped: OnceCell::new(),
+            min_setback,
+            max_setback,
+        })
+    }
+
+    /// The field of ONE chain - today's field to the bit.
+    pub fn of(chain: Rc<ChainField>) -> PickField {
+        Self::new(vec![chain], &[0]).expect("one chain, member 0, is always a valid pick")
+    }
+
+    /// Every chain the pick knows.
+    pub fn chains(&self) -> &[Rc<ChainField>] {
+        &self.chains
+    }
+
+    /// The chains of this group, in ascending index order.
+    pub fn members(&self) -> &[i32] {
+        &self.members
     }
 }

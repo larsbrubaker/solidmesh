@@ -190,3 +190,31 @@ fn rust_only_skew_lines_and_size_windows() {
     bound(0.0, -1.0, &mut lowest, &mut highest);
     assert_eq!(highest, f64::NEG_INFINITY);
 }
+
+#[test]
+fn rust_only_a_chain_end_reading_indexes_the_vertices_once() {
+    use geometry_processing::bevel::surface::SurfaceChainEndReading;
+    use geometry_processing::topology::FaceRegionCache;
+
+    // No cache, no reading (C#'s null).
+    assert!(SurfaceChainEndReading::for_regions(None).is_none());
+
+    let mesh = Arc::new(create_isosceles_prism(90.0, 10.0, 5.0));
+    let cache = Arc::new(FaceRegionCache::new(mesh, None, 30.0));
+    let reading = SurfaceChainEndReading::for_regions(Some(&cache)).unwrap();
+
+    let mut memos = reading.memos.lock().unwrap();
+    assert!(memos.edges_at_vertex.is_none());
+
+    let standing = reading.edges_at(&mut memos, 0).to_vec();
+    assert!(!standing.is_empty());
+
+    let graph = cache.graph();
+    for &edge in &standing {
+        assert!(graph.get_vertex0(edge) == 0 || graph.get_vertex1(edge) == 0);
+    }
+
+    // Indexed on the first ask, and the second reads the same index.
+    assert!(memos.edges_at_vertex.is_some());
+    assert_eq!(reading.edges_at(&mut memos, 0), standing.as_slice());
+}

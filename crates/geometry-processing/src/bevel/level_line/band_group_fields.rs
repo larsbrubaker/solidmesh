@@ -40,3 +40,15 @@ pub struct BandGroupFieldsWithRunOuts {
     /// The run-out fields read beside the pick.
     pub run_outs: Vec<Rc<dyn ChainDistanceField>>,
 }
+
+impl BandGroupFieldsWithRunOuts {
+    /// True only when neither the pick nor any run-out field reaches below `margin` over the box
+    /// `min`..`max`.
+    pub fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
+        self.pick.nothing_reaches_below(min, max, margin)
+            && self
+                .run_outs
+                .iter()
+                .all(|run_out| run_out.nothing_reaches_below(min, max, margin))
+    }
+}
