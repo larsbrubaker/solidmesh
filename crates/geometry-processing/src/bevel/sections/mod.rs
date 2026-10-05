@@ -13,6 +13,7 @@ pub mod section_corner;
 pub mod section_end;
 pub mod section_fan_walk;
 pub mod section_junction;
+pub mod section_junction_build;
 pub mod section_junction_canal;
 mod section_pool;
 pub mod section_room;

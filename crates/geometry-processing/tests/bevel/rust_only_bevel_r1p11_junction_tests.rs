@@ -1,8 +1,10 @@
 //! Rust-only tests for the bevel-core package R1.P11's junction and corner fold readings, split from
 //! `rust_only_bevel_r1p11_tests.rs` by responsibility: one canal at a junction (`SectionJunction.Canal`),
 //! the junction section's samples (`JunctionSection`), the junction's line and facet readings, a side's
-//! boundary sliding down a crease (`SectionBuilder.TryBoundary`) and the corner's smooth-fold reading
-//! (`SectionCorner.IsASmoothFold`). Each pins the C# rule on a hand-built case.
+//! boundary sliding down a crease (`SectionBuilder.TryBoundary`), the corner's smooth-fold reading
+//! (`SectionCorner.IsASmoothFold`), and a box's top corner built as a mitre (`SectionCorner.TryBuild`,
+//! its fold readings) and refused as a junction (`SectionBuilder.TryJunction`). Each pins the C# rule
+//! on a hand-built case.
 
 use std::rc::Rc;
 
@@ -10,12 +12,15 @@ use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::MeshEdgeGraph;
 use vector_math::Vector3;
 
+use geometry_processing::bevel::sections::section_corner::CornerRefusal;
 use geometry_processing::bevel::sections::section_junction::Canal;
+use geometry_processing::bevel::sections::section_junction_build::{self, JunctionRefusal};
 use geometry_processing::bevel::sections::section_junction_canal as junction;
 use geometry_processing::bevel::sections::{
     section_builder, section_corner, BevelSection, JunctionPiece, JunctionSection, SectionKind,
-    SectionSide,
+    SectionPool, SectionSide,
 };
+use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
 /// A square edge along +x: its left face the top (+z), its right the front (-y).
@@ -215,4 +220,168 @@ fn rust_only_a_boundary_slides_down_the_crease_on_its_side() {
     let slid = slid.expect("the side whose fan crosses the third edge slides down it");
     assert_eq!(slid.slide_edge, third);
     assert!((slid.at - (station + away * 1.5)).length() < 1e-9);
+}
+
+/// A box's top corner, between two top-rim edges, as the corner rule draws it: the top is the
+/// shared flat side, so the wall-side fan holds the ONE vertical fold (`try_the_fold`) and the top's
+/// fan holds none (`try_the_shared_side`, an offset); the section is the arriving edge's profile slid
+/// onto the bisector plane. The same corner is no junction - its two wedges are equal - so the
+/// junction rule refuses it by name.
+#[test]
+fn rust_only_a_box_top_corner_is_built_as_a_mitre() {
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let features = FeatureEdgeSet::create(&cube);
+    let at = |v: i32| Vector3::from_vector3_float(cube.vertices[v as usize]);
+    let top = |v: i32| at(v).z > 4.999;
+
+    let corner = (0..cube.vertices.len() as i32)
+        .find(|&v| top(v))
+        .expect("the box has a top");
+    let station = at(corner);
+    let mut rim = Vec::new();
+    let mut below = -1;
+    for &e in features.edges_at_vertex(corner) {
+        let edge = features.edges()[e as usize];
+        let other = if edge.start_vertex == corner {
+            edge.end_vertex
+        } else {
+            edge.start_vertex
+        };
+        if top(other) {
+            rim.push(other);
+        } else {
+            below = other;
+        }
+    }
+    assert_eq!(
+        rim.len(),
+        2,
+        "two top-rim edges and one wall fold meet at a top corner"
+    );
+
+    let arriving = section_builder::try_feature_edge_between(&features, rim[0], corner).unwrap();
+    let leaving = section_builder::try_feature_edge_between(&features, corner, rim[1]).unwrap();
+    let (flat_on_the_left, cosine, _) =
+        section_corner::try_read_the_sides(&arriving, &leaving).expect("the top is shared");
+    let wall_fold =
+        pairs[&geometry_processing::bevel::sections::section_room::pair_key(corner, below)];
+    let (r, segments) = (1.5, 4);
+
+    // The two fold readings on the real corner.
+    assert_eq!(
+        section_corner::try_the_fold(
+            corner,
+            &arriving,
+            &leaving,
+            !flat_on_the_left,
+            cosine,
+            r,
+            &cube,
+            &graph,
+            &pairs,
+            station,
+        ),
+        Ok(wall_fold)
+    );
+    assert_eq!(
+        section_corner::try_the_shared_side(
+            corner,
+            &arriving,
+            &leaving,
+            flat_on_the_left,
+            &cube,
+            &graph,
+            &pairs,
+            station,
+        ),
+        Ok(-1)
+    );
+    // Folding the wall the wrong way finds the top's fan, which holds no crease to ride.
+    assert!(section_corner::try_the_fold(
+        corner,
+        &arriving,
+        &leaving,
+        flat_on_the_left,
+        cosine,
+        r,
+        &cube,
+        &graph,
+        &pairs,
+        station,
+    )
+    .is_err());
+
+    assert!(!section_junction_build::is_a_junction_station(
+        &cube,
+        &graph,
+        &arriving,
+        &leaving,
+        corner,
+        None,
+        Some(&pairs),
+    ));
+
+    let mut pool = SectionPool::new(&cube.vertices);
+    let section = section_corner::try_build(
+        &arriving, &leaving, &cube, &graph, &pairs, &mut pool, r, segments, None,
+    )
+    .expect("a box corner is a mitre");
+    assert_eq!(section.kind, SectionKind::Corner);
+    assert_eq!(section.chain_vertex, corner);
+    assert_eq!(section.profile.len(), segments as usize + 1);
+    assert_eq!(section.left_boundary, section.profile[0]);
+    assert_eq!(section.right_boundary, section.profile[segments as usize]);
+    assert!(
+        (section.setback - r).abs() < 1e-12,
+        "a square wedge sets back one radius"
+    );
+    let bisector = (arriving.direction() + leaving.direction()).get_normal();
+    assert!((section.tangent - bisector).length() < 1e-12);
+    for &p in &section.profile {
+        assert!((pool.position_of(p) - station).dot(bisector).abs() < 1e-9);
+    }
+    let (shared, wall) = if flat_on_the_left {
+        (
+            (section.left_kind, section.left_slide_edge),
+            (section.right_kind, section.right_slide_edge),
+        )
+    } else {
+        (
+            (section.right_kind, section.right_slide_edge),
+            (section.left_kind, section.left_slide_edge),
+        )
+    };
+    assert_eq!(shared, (SectionSide::Offset, -1));
+    assert_eq!(wall, (SectionSide::Slide, wall_fold));
+
+    // The junction rule at the same corner: one crease on the wall side, but the leaving canal's wall
+    // end is the arriving canal's own (a corner's case), so it is refused by name and mints nothing.
+    let minted = pool.count();
+    match section_builder::try_junction(
+        &arriving, &leaving, corner, station, &cube, &graph, &pairs, &mut pool, r, segments, None,
+    ) {
+        Err(JunctionRefusal::Refused(advisory)) => {
+            assert_eq!(
+                advisory.code(),
+                BevelAdvisoryCode::SurfaceCornerNotSupported
+            )
+        }
+        other => panic!("a box corner is no junction - instead {other:?}"),
+    }
+    assert_eq!(pool.count(), minted);
+
+    // A chain doubling back has no corner to bisect, and shares no side the rule can read.
+    match section_corner::try_build(
+        &arriving, &arriving, &cube, &graph, &pairs, &mut pool, r, segments, None,
+    ) {
+        Err(CornerRefusal::Refused(advisory)) => {
+            assert_eq!(
+                advisory.code(),
+                BevelAdvisoryCode::SurfaceCornerNotSupported
+            )
+        }
+        other => panic!("no corner to draw - instead {other:?}"),
+    }
 }

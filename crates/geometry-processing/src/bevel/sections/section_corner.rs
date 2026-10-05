@@ -3,15 +3,18 @@
 //! static class`; a module of free functions here). What is here are the corner's tolerances and the
 //! reading of a turn ([`turn_degrees`], [`is_sharp_turn`]); the mitre plane ([`try_the_mitre_plane`]);
 //! the reading of the two sides ([`try_read_the_sides`]) and the slid profile each edge's canal cuts
-//! in the bisector ([`slid_profile`]). The corner's construction (`TryBuild`) lands with a later run
-//! of this package.
+//! in the bisector ([`slid_profile`]); the fold and shared side the section ends on
+//! ([`try_the_fold`], [`try_the_shared_side`]); and the corner's construction ([`try_build`]).
 
 use vector_math::{cs_math, math_helper, Vector3};
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
-use super::{section_builder, SectionSide};
+use super::{
+    section_builder, section_junction_build, BevelSection, NanSectionPoint, SectionKind,
+    SectionPool, SectionSide,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup, FeatureEdge};
 
@@ -317,4 +320,181 @@ pub fn is_a_smooth_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
         .get_normal();
 
     one.dot(other) > smooth_surface_dot()
+}
+
+/// Why [`try_build`] drew no corner. C# answers `false` with an advisory, or - at a JUNCTION, which
+/// `SectionJunction` draws - `false` with NO advisory ("handled elsewhere", never a refusal to
+/// publish); a point that is not a number is where C# throws.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CornerRefusal {
+    /// The station is a junction: not this rule's to draw, and nothing named.
+    AJunction,
+    /// The corner this rule cannot draw, named.
+    Refused(BevelAdvisory),
+    /// A profile point that is not a number.
+    NotANumber(NanSectionPoint),
+}
+
+impl From<NanSectionPoint> for CornerRefusal {
+    fn from(nan: NanSectionPoint) -> Self {
+        CornerRefusal::NotANumber(nan)
+    }
+}
+
+/// C# `TryBuild`: the mitre section at the vertex `leaving` starts from - the arriving edge's own
+/// section slid onto the bisector plane, shared by both strips - or why there is none. The
+/// operation's `is_a_feature_edge` is read ONLY to tell a junction from a corner this rule cannot
+/// draw; the mitre's own fold reading keeps its fallback.
+#[allow(clippy::too_many_arguments)]
+pub fn try_build(
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    pool: &mut SectionPool,
+    radius: f64,
+    segments: i32,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> Result<BevelSection, CornerRefusal> {
+    let vertex = leaving.from_vertex();
+    let station = leaving.from();
+    let refused = || {
+        CornerRefusal::Refused(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        ))
+    };
+
+    let Some((flat_on_the_left, cosine, wedge)) = try_read_the_sides(arriving, leaving) else {
+        // Either the two edges share no flat side, or they meet it at different wedges. Both mean the
+        // two canals do not cut the bisector plane in the same curve.
+        if section_junction_build::is_a_junction_station(
+            mesh,
+            graph,
+            arriving,
+            leaving,
+            vertex,
+            is_a_feature_edge,
+            Some(edge_at_pair),
+        ) {
+            // ONE SHARED FLAT SIDE AT TWO WEDGES is not a corner this rule failed at - it is a
+            // JUNCTION, and `SectionJunction` draws it; no, and NOTHING named.
+            return Err(CornerRefusal::AJunction);
+        }
+
+        return Err(refused());
+    };
+
+    let along_in = arriving.direction().get_normal();
+    let along_out = leaving.direction().get_normal();
+    let mut bisector = along_in + along_out;
+
+    if bisector.length() < SAME_TO_WITHIN {
+        // The chain doubles back on itself; there is no corner to bisect.
+        return Err(refused());
+    }
+
+    bisector = bisector.get_normal();
+
+    let lean = along_in.dot(bisector);
+
+    if lean < SAME_TO_WITHIN {
+        return Err(refused());
+    }
+
+    let setback = radius * (wedge / 2.0).tan();
+
+    let fold = try_the_fold(
+        vertex,
+        arriving,
+        leaving,
+        !flat_on_the_left,
+        cosine,
+        setback,
+        mesh,
+        graph,
+        edge_at_pair,
+        station,
+    )
+    .map_err(CornerRefusal::Refused)?;
+    let shared_fold = try_the_shared_side(
+        vertex,
+        arriving,
+        leaving,
+        flat_on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+        station,
+    )
+    .map_err(CornerRefusal::Refused)?;
+
+    let points = (segments.max(1) + 1) as usize;
+
+    // The arriving edge's own straight-edge section at the vertex, slid onto the bisector plane - and
+    // the LEAVING edge's, drawn only to be measured against it. By the reflection the two are one
+    // curve when the corner is symmetric; where the shared side is a smooth wall rather than one plane
+    // they part by a little, and how much is the whole question of whether one section serves both
+    // strips.
+    let drawn = slid_profile(arriving, station, bisector, radius, points);
+    let seen_from_the_other_side = slid_profile(leaving, station, bisector, radius, points);
+    let mut apart = 0.0;
+
+    for k in 0..points {
+        apart = cs_math::max_f64(apart, (drawn[k] - seen_from_the_other_side[k]).length());
+    }
+
+    if apart > PROFILES_MEET_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS * radius {
+        // The two canals do not cut the bisector plane in the same curve, so there is no one section
+        // to share and drawing the arriving edge's for both would leave the leaving strip off its own
+        // canal by this much.
+        return Err(refused());
+    }
+
+    let left = arriving.left_normal().get_normal();
+    let right = arriving.right_normal().get_normal();
+    let centre = station - ((left + right) * radius / (1.0 + cosine));
+
+    let mut profile = Vec::with_capacity(points);
+
+    for &at in &drawn {
+        profile.push(pool.add(at)?);
+    }
+
+    let mitre_centre = centre - (along_in * ((centre - station).dot(bisector) / lean));
+    let (left_kind, right_kind) = if flat_on_the_left {
+        (shared_kind(shared_fold), SectionSide::Slide)
+    } else {
+        (SectionSide::Slide, shared_kind(shared_fold))
+    };
+    let (left_slide_edge, right_slide_edge) = if flat_on_the_left {
+        (shared_fold, fold)
+    } else {
+        (fold, shared_fold)
+    };
+
+    let section = BevelSection::new(
+        vertex,
+        station,
+        bisector,
+        profile[0],
+        profile[points - 1],
+        profile,
+        mitre_centre,
+        mitre_centre,
+        left_kind,
+        right_kind,
+        left_slide_edge,
+        right_slide_edge,
+        setback,
+    )
+    // The profile has at least two points and runs from its own first to its own last by
+    // construction, so the constructor's refusal cannot be met.
+    .map_err(|_| refused())?;
+
+    Ok(BevelSection {
+        kind: SectionKind::Corner,
+        ..section
+    })
 }

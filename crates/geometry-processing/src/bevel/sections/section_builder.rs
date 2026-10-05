@@ -7,8 +7,8 @@
 //! ([`edges_by_vertex_pair`]); the creases a side's fan crosses ([`try_creases_in_the_fan`]); and the
 //! profile's interior samples on the canals' circle or corner ellipse
 //! ([`place_the_interior_samples`], [`try_the_canals_corner`]); and one side's boundary
-//! ([`try_boundary`]). The build itself (`TryBuild`) lands
-//! with a later package.
+//! ([`try_boundary`]); and the junction drawn at a station read as one ([`try_junction`]). The build
+//! itself (`TryBuild`) lands with a later package.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -17,7 +17,11 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Vector3;
 
 use super::section_fan_walk::{self, EdgeAtPair};
-use super::{IsAFeatureEdge, NanSectionPoint, SectionPool, SectionSide};
+use super::section_junction_build::{self, JunctionRefusal};
+use super::section_junction_canal;
+use super::{
+    BevelSection, IsAFeatureEdge, JunctionSection, NanSectionPoint, SectionPool, SectionSide,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
@@ -361,4 +365,80 @@ pub fn try_boundary(
         kind,
         slide_edge,
     })
+}
+
+/// C# `TryJunction`: draws the JUNCTION at a station the predicate has already read as one, and hands
+/// back its LEAVING section as the station's section, with the junction itself, as
+/// `(section, junction)`.
+///
+/// The fold is read here rather than inside `SectionJunction` so that the section can be drawn and
+/// measured without a mesh - and it is read with the OPERATION's own feature predicate, because the
+/// coplanarity fallback calls a tessellated bore's own facet folds creases and the wall-side fan then
+/// holds two (mesh edges 117 and 121 at vertex 19 of the pierced face).
+#[allow(clippy::too_many_arguments)]
+pub fn try_junction(
+    arriving: &ChainEdge,
+    leaving: &ChainEdge,
+    vertex: i32,
+    station: Vector3,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    pool: &mut SectionPool,
+    radius: f64,
+    segments: i32,
+    is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
+) -> Result<(Rc<BevelSection>, JunctionSection), JunctionRefusal> {
+    let refused = || {
+        JunctionRefusal::Refused(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![station.into()],
+        ))
+    };
+
+    // The wall side is the side the shared FLAT one is not; the predicate has already read that
+    // exactly one crease leaves the vertex into it.
+    let Some(flat_on_the_left) = section_junction_canal::try_read_the_flat_side(arriving, leaving)
+    else {
+        return Err(refused());
+    };
+
+    let creases = try_creases_in_the_fan_reading(
+        vertex,
+        arriving,
+        leaving,
+        !flat_on_the_left,
+        mesh,
+        graph,
+        edge_at_pair,
+        is_a_feature_edge,
+    )
+    .map_err(JunctionRefusal::Refused)?
+    .0;
+
+    if creases.len() != 1 {
+        return Err(refused());
+    }
+
+    let other = if graph.get_vertex0(creases[0]) == vertex {
+        graph.get_vertex1(creases[0])
+    } else {
+        graph.get_vertex0(creases[0])
+    };
+
+    // The mesh is handed in so that the FAR stretch - drawn on the canal's IDEAL wall, which a
+    // tessellated wall is not - is carried out onto the facets of the part that hold it.
+    let junction = section_junction_build::try_build(
+        arriving,
+        leaving,
+        (Vector3::from_vector3_float(mesh.vertices[other as usize]) - station).get_normal(),
+        pool,
+        radius,
+        segments,
+        Some(mesh),
+    )?;
+
+    // The station's ONE section is the LEAVING one; the arriving strip reads its end off the run's
+    // junction ledger, which is what keeps everything that indexes sections[i] unchanged.
+    Ok((Rc::clone(&junction.leaving_section), junction))
 }
