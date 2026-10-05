@@ -2,10 +2,12 @@
 //! [`ForeignEdgeIndexNode`]) and what a nearest-first search over it comes back with
 //! ([`ForeignApproach`]). Ports `Bevel/LevelLine/ForeignEdgeIndex.cs`: the types, their
 //! constructors, the edge count and list, and the tree's object-median build step
-//! ([`ForeignEdgeIndex::add`]); building over a mesh and searching land with the room-reading
-//! method package.
+//! ([`ForeignEdgeIndex::add`]), and the nearest-first search ([`ForeignEdgeIndex::least_approach`],
+//! [`ForeignEdgeIndex::search`]); building over a mesh lands with the room-reading method package.
 
-use vector_math::Vector3;
+use vector_math::{cs_math, Vector3};
+
+use super::{foreign_room_counters, segment_box_tree, ChainField, WorkError};
 
 /// C# `ForeignApproach`: what a nearest-first search over foreign edges came back with - the least
 /// closest approach to the chain, and every edge whose approach is within the factor the search
@@ -171,5 +173,120 @@ impl ForeignEdgeIndex {
 
         built[index] = ForeignEdgeIndexNode::new(start, count, left, right, min, max);
         index as i32
+    }
+}
+
+impl ForeignEdgeIndex {
+    /// C# `ForeignEdgeIndex.LeastApproach`: the least closest approach of the bare chain field to
+    /// the edges of `indexes` (less nothing: its value), and every edge read with its approach.
+    /// A box is skipped when its gap to the chain's box exceeds `best * factor` - `factor` 1 for a
+    /// caller wanting only the least, above 1 for one that also needs the edges near it - which can
+    /// only skip edges whose approach is above what the caller still has any use for. `skip` is the
+    /// per-chain filter that is not about the tags; a skipped edge cannot lower the best.
+    pub fn least_approach(
+        indexes: &[std::rc::Rc<ForeignEdgeIndex>],
+        bare: &ChainField,
+        factor: f64,
+        skip: Option<&dyn Fn((i32, i32)) -> bool>,
+    ) -> Result<ForeignApproach, WorkError> {
+        let mut chain_min = Vector3::POSITIVE_INFINITY;
+        let mut chain_max = Vector3::NEGATIVE_INFINITY;
+        for &point in &bare.points {
+            chain_min = Vector3::component_min(chain_min, point);
+            chain_max = Vector3::component_max(chain_max, point);
+        }
+
+        let mut best = f64::INFINITY;
+        let mut near = Vec::new();
+        let mut read = 0;
+        for index in indexes {
+            if index.nodes.is_empty() {
+                continue;
+            }
+
+            index.search(
+                0, bare, chain_min, chain_max, factor, skip, &mut near, &mut best, &mut read,
+            )?;
+        }
+
+        Ok(ForeignApproach::new(best, near, read))
+    }
+
+    /// C# `ForeignEdgeIndex.Search`: the tree's walk for [`ForeignEdgeIndex::least_approach`],
+    /// nearest child first so the prune has the best bound it can before the far side is tried.
+    #[allow(clippy::too_many_arguments)]
+    pub fn search(
+        &self,
+        node: usize,
+        bare: &ChainField,
+        chain_min: Vector3,
+        chain_max: Vector3,
+        factor: f64,
+        skip: Option<&dyn Fn((i32, i32)) -> bool>,
+        near: &mut Vec<((i32, i32), f64)>,
+        best: &mut f64,
+        read: &mut i32,
+    ) -> Result<(), WorkError> {
+        let here = self.nodes[node];
+        if segment_box_tree::box_gap(here.min, here.max, chain_min, chain_max) > *best * factor {
+            return Ok(());
+        }
+
+        if here.left < 0 {
+            for i in here.start..here.start + here.count {
+                let edge = self.edges[i as usize];
+                if skip.is_some_and(|skip| skip(edge)) {
+                    continue;
+                }
+
+                foreign_room_counters::read();
+                *read += 1;
+                let approach = bare
+                    .min_along_segment(
+                        self.ends[(i * 2) as usize],
+                        self.ends[((i * 2) + 1) as usize],
+                    )?
+                    .value;
+                near.push((edge, approach));
+
+                // Math.Min and not a comparison, so a NaN approach carries through exactly as the
+                // unindexed reading's least does.
+                *best = cs_math::min_f64(*best, approach);
+            }
+
+            return Ok(());
+        }
+
+        let left = self.nodes[here.left as usize];
+        let right = self.nodes[here.right as usize];
+        let to_left = segment_box_tree::box_gap(left.min, left.max, chain_min, chain_max);
+        let to_right = segment_box_tree::box_gap(right.min, right.max, chain_min, chain_max);
+        let (first, second) = if to_left <= to_right {
+            (here.left, here.right)
+        } else {
+            (here.right, here.left)
+        };
+        self.search(
+            first as usize,
+            bare,
+            chain_min,
+            chain_max,
+            factor,
+            skip,
+            near,
+            best,
+            read,
+        )?;
+        self.search(
+            second as usize,
+            bare,
+            chain_min,
+            chain_max,
+            factor,
+            skip,
+            near,
+            best,
+            read,
+        )
     }
 }

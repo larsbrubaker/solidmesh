@@ -5,7 +5,8 @@
 //! CONVEX creases). Ports `Bevel/LevelLine/EndFaceSense.cs` (a C# static class): so far its
 //! readings over plain positions and triangles - the fold test ([`is_convex`]), the crease sense
 //! ([`is_opposite_sense_crease`]), which ends take an end ray ([`oblique_ends`]), the rays' bounds
-//! ([`end_ray_bounds`]) and the convex ends' planes ([`convex_end_faces`]); the readings over a
+//! ([`end_ray_bounds`]), the convex ends' planes ([`convex_end_faces`]) and whether an end face is
+//! the opposite sense on a tagged triangle list ([`is_opposite_sense`]); the readings over a
 //! tagged `LevelLineMesh` land with later packages.
 //!
 //! The sense is read exactly as `ForeignEdgeRoom.IsAKnife` reads a fold: an edge is convex where
@@ -17,7 +18,11 @@ use vector_math::{cs_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::end_face_sense_oblique::ObliqueEndReader;
-use super::{end_face_crease_plane, end_plane_trim, BandProfile, EndRayBound};
+use super::triangle_edges::{self, StandingMap};
+use super::{
+    chain_on_the_mesh, end_face_crease_plane, end_plane_trim, BandProfile,
+    ChainEdgeNotOnTwoTriangles, EndRayBound,
+};
 
 /// One triangle by its three corner indices into the positions (C#'s `(int A, int B, int C)`).
 pub type Corners = (i32, i32, i32);
@@ -500,4 +505,55 @@ pub fn is_opposite_sense_crease_on(
         corners(far),
         edge.0,
     )
+}
+
+/// C# `EndFaceSense.IsOppositeSense`: true when EVERY crease incident to `end` between a picked side
+/// (tag 1 or 2) and an untagged triangle folds the opposite way to `chain_edge`, and there is at
+/// least one. Since flow rung 3 an oblique end face is taken too: its end carries the end ray, so
+/// the rows run on square to the chain until the end face's plane clips them. The chain edge not
+/// standing on two triangles is the error C# throws.
+pub fn is_opposite_sense(
+    positions: &[Vector3],
+    indices: &[Corners],
+    standing: &StandingMap,
+    tags: &[i32],
+    chain_edge: (i32, i32),
+    end: i32,
+) -> Result<bool, ChainEdgeNotOnTwoTriangles> {
+    let (left, right) = chain_on_the_mesh::sides_of(indices, standing, chain_edge.0, chain_edge.1)?;
+    let chain_is_convex = is_convex(
+        positions,
+        indices[left as usize],
+        indices[right as usize],
+        chain_edge.0,
+    );
+    let mut creases = 0;
+    for (i, &t) in indices.iter().enumerate() {
+        if tags[i] != 0 || !has(t, end) {
+            continue;
+        }
+
+        for (a, b) in triangle_edges::corners(t) {
+            if a != end && b != end {
+                continue;
+            }
+
+            let Some(across) = standing.get(&triangle_edges::key(a, b)) else {
+                continue;
+            };
+
+            for &j in across {
+                if j as usize == i || (tags[j as usize] != 1 && tags[j as usize] != 2) {
+                    continue;
+                }
+
+                creases += 1;
+                if is_convex(positions, indices[j as usize], t, a) == chain_is_convex {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+
+    Ok(creases > 0)
 }

@@ -4,7 +4,9 @@
 //! end-plane reader ([`PickField::end_plane_reader`]) and whether an edge lies in a member's end
 //! plane ([`PickField::lies_in_an_end_plane`]), the point query ([`PickField::evaluate`]) and its
 //! readings, the bounded maximum queries and the field seam ([`ScalarField`], saying it is a
-//! pick's field); the least queries and the `ChainDistanceField`
+//! pick's field), the least queries ([`PickField::min_along_segment`],
+//! [`PickField::min_over_triangle`]) and the [`ChainDistanceField`] impl they complete; the swallow
+//! scale and the `ChainDistanceField`
 //! impl land with their method packages.
 
 use std::cell::OnceCell;
@@ -15,8 +17,8 @@ use vector_math::{cs_math, Vector3};
 use super::bounded_maximum;
 use super::stopwatch;
 use super::{
-    ChainField, ChainFieldEndPlaneReader, FieldCounters, FieldKind, FieldMaximum, FieldSample,
-    LevelLineWork, ScalarField, WorkError,
+    ChainDistanceField, ChainField, ChainFieldEndPlaneReader, FieldCounters, FieldKind,
+    FieldMaximum, FieldMinimum, FieldSample, LevelLineWork, ScalarField, WorkError,
 };
 
 /// C# `PickField`: one field over a GROUP of chains - the least value any of the group's chains
@@ -458,5 +460,115 @@ impl PickField {
         }
 
         Ok(PickField::new(scaled, &self.members).expect("a pick's own members are valid"))
+    }
+}
+
+impl PickField {
+    /// C# `PickField.MinAlongSegment`: the least of the members' least along a segment, a later
+    /// member taking over only by beating the best by more than a relative tie.
+    pub fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
+        let mut best = FieldMinimum::default();
+        let mut have = false;
+        for &k in &self.members {
+            let found = self.chains[k as usize].min_along_segment(a, b)?;
+            if !have || found.value < best.value - (Self::TIE_RELATIVE * (1.0 + best.value.abs())) {
+                best = found;
+                have = true;
+            }
+        }
+
+        Ok(best)
+    }
+
+    /// C# `PickField.MinOverTriangle`: the least of the members' least over a triangle, ties
+    /// to the lower member.
+    pub fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        let mut best = FieldMinimum::default();
+        let mut have = false;
+        for &k in &self.members {
+            let found = self.chains[k as usize].min_over_triangle(a, b, c)?;
+            if !have || found.value < best.value - (Self::TIE_RELATIVE * (1.0 + best.value.abs())) {
+                best = found;
+                have = true;
+            }
+        }
+
+        Ok(best)
+    }
+}
+
+impl ChainDistanceField for PickField {
+    fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
+        PickField::min_along_segment(self, a, b)
+    }
+
+    fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        PickField::min_over_triangle(self, a, b, c)
+    }
+
+    fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
+        PickField::nothing_reaches_below(self, min, max, margin)
+    }
+
+    fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        PickField::max_along_segment(self, a, b, tolerance)
+    }
+
+    fn max_along_segment_at_least(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        PickField::max_along_segment_at_least(self, a, b, tolerance, at_least)
+    }
+
+    fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        PickField::max_over_triangle(self, a, b, c, tolerance)
+    }
+
+    fn max_over_triangle_bounded(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        PickField::max_over_triangle_bounded(self, a, b, c, tolerance, stop_above, at_least)
+    }
+
+    fn island_peak(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        snap: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        PickField::island_peak(self, a, b, c, tolerance, snap)
     }
 }

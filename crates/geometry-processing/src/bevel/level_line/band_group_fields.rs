@@ -5,18 +5,21 @@
 //! [`turn_run_outs_on`] and its scope [`BandGroupFieldsRunOutsScope`], kept on the build's
 //! [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the wrapped field
 //! ([`BandGroupFieldsWithRunOuts`], with its constructor, inner field, point query, bounded maxima
-//! and field seam) and the pick under it
-//! ([`unwrapped`]). The static class's other functions and the wrapped field's
-//! queries land with later packages.
+//! least queries, field seam and `ChainDistanceField` impl) and the pick under it
+//! ([`unwrapped`]), and each group's field ([`of`]). The static class's run-out finder lands with
+//! a later package.
 
 use std::rc::Rc;
+
+use indexmap::IndexMap;
 
 use vector_math::Vector3;
 
 use super::bounded_maximum;
+use super::{BandGroup, ChainField, PickField, PickFieldArgumentError};
 use super::{
-    ChainDistanceField, FieldCounters, FieldKind, FieldMaximum, FieldSample, LevelLineWork,
-    ScalarField, WorkError,
+    ChainDistanceField, FieldCounters, FieldKind, FieldMaximum, FieldMinimum, FieldSample,
+    LevelLineWork, ScalarField, WorkError,
 };
 
 /// C# `BandGroupFields.RunOutsOn`: whether the side groups read their crease run-outs' fields for
@@ -253,4 +256,182 @@ impl ScalarField for BandGroupFieldsWithRunOuts {
     fn as_with_run_outs(&self) -> Option<&BandGroupFieldsWithRunOuts> {
         Some(self)
     }
+}
+
+impl BandGroupFieldsWithRunOuts {
+    /// C# `WithRunOuts.MinAlongSegment`: the pick's least along a segment, lowered to any run-out
+    /// that could reach below it and does.
+    pub fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
+        let mut best = self.pick.min_along_segment(a, b)?;
+        for run_out in &self.run_outs {
+            let (min, max) = (Vector3::component_min(a, b), Vector3::component_max(a, b));
+            if !run_out.nothing_reaches_below(min, max, best.value) {
+                let found = run_out.min_along_segment(a, b)?;
+                if found.value < best.value {
+                    best = found;
+                }
+            }
+        }
+
+        Ok(best)
+    }
+
+    /// C# `WithRunOuts.MinOverTriangle`: the pick's least over a triangle, lowered to any
+    /// run-out that could reach below it and does.
+    pub fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        let mut best = self.pick.min_over_triangle(a, b, c)?;
+        for run_out in &self.run_outs {
+            let min = Vector3::component_min(a, Vector3::component_min(b, c));
+            let max = Vector3::component_max(a, Vector3::component_max(b, c));
+            if !run_out.nothing_reaches_below(min, max, best.value) {
+                let found = run_out.min_over_triangle(a, b, c)?;
+                if found.value < best.value {
+                    best = found;
+                }
+            }
+        }
+
+        Ok(best)
+    }
+}
+
+impl ChainDistanceField for BandGroupFieldsWithRunOuts {
+    fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
+        BandGroupFieldsWithRunOuts::min_along_segment(self, a, b)
+    }
+
+    fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        BandGroupFieldsWithRunOuts::min_over_triangle(self, a, b, c)
+    }
+
+    fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
+        BandGroupFieldsWithRunOuts::nothing_reaches_below(self, min, max, margin)
+    }
+
+    fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        BandGroupFieldsWithRunOuts::max_along_segment(self, a, b, tolerance)
+    }
+
+    fn max_along_segment_at_least(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        BandGroupFieldsWithRunOuts::max_along_segment_at_least(self, a, b, tolerance, at_least)
+    }
+
+    fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        BandGroupFieldsWithRunOuts::max_over_triangle(self, a, b, c, tolerance)
+    }
+
+    fn max_over_triangle_bounded(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        BandGroupFieldsWithRunOuts::max_over_triangle_bounded(
+            self, a, b, c, tolerance, stop_above, at_least,
+        )
+    }
+}
+
+/// A group's point query (C#'s `Func<Vector3, FieldSample>`).
+pub type GroupSampler = Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>;
+
+/// C# `BandGroupFields.Of`: each group's field and its sampler, keyed by group tag in the groups'
+/// order. A pick of ONE chain (`only`) reads the bare chain field, so nothing moves under it; a
+/// larger pick reads the [`PickField`] of the group's members that CUT (a grow-over member owns its
+/// pieces - the loop walk's sample, over every member - but does not cut the face), which for a
+/// group seeded by one chain answers bit for bit what that chain answers. A group named in
+/// `run_outs` reads the least of that and its run-outs. A pick field refused for its arguments
+/// (C# throws) is the error.
+#[allow(clippy::type_complexity)]
+pub fn of(
+    groups: &[BandGroup],
+    only: bool,
+    fields: &[Rc<ChainField>],
+    run_outs: Option<&IndexMap<i32, Vec<Rc<dyn ChainDistanceField>>>>,
+) -> Result<
+    (
+        IndexMap<i32, Rc<dyn ChainDistanceField>>,
+        IndexMap<i32, GroupSampler>,
+    ),
+    PickFieldArgumentError,
+> {
+    let mut group_fields: IndexMap<i32, Rc<dyn ChainDistanceField>> = IndexMap::new();
+    let mut samples: IndexMap<i32, GroupSampler> = IndexMap::new();
+    for group in groups {
+        let (mut pick_field, mut sample, end_planes): (
+            Rc<dyn ChainDistanceField>,
+            GroupSampler,
+            Option<Rc<dyn Fn(i32, Vector3) -> f64>>,
+        ) = if only {
+            let field = fields[0].clone();
+            let reader = field.end_plane_reader();
+            let sampled = field.clone();
+            (field, Rc::new(move |p| sampled.evaluate(p)), reader)
+        } else {
+            let cutting: Vec<i32> = group
+                .members
+                .iter()
+                .copied()
+                .filter(|m| !group.grow_over_members.contains(m))
+                .collect();
+            let pick = Rc::new(PickField::new(fields.to_vec(), &cutting)?);
+            let owning = if cutting.len() == group.members.len() {
+                pick.clone()
+            } else {
+                Rc::new(PickField::new(fields.to_vec(), &group.members)?)
+            };
+            let reader = pick.end_plane_reader();
+            (pick, Rc::new(move |p| owning.evaluate(p)), reader)
+        };
+
+        if let Some(here) = run_outs
+            .and_then(|r| r.get(&group.tag))
+            .filter(|h| !h.is_empty())
+        {
+            let with_run_outs = Rc::new(BandGroupFieldsWithRunOuts::new(
+                pick_field,
+                sample,
+                end_planes,
+                here.clone(),
+            ));
+            let wrapper = with_run_outs.clone();
+            sample = Rc::new(move |p| wrapper.evaluate(p));
+            pick_field = with_run_outs;
+        }
+
+        group_fields.insert(group.tag, pick_field);
+        samples.insert(group.tag, sample);
+    }
+
+    Ok((group_fields, samples))
 }
