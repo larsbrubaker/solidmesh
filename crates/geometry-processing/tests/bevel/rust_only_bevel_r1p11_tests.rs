@@ -168,3 +168,71 @@ fn rust_only_the_split_blend_reads_its_neighbours() {
     assert_eq!(SplitPlacement::new(0, 2, 0.5).parameter, 0.5);
     assert!(section_split_blend::absorb_split_vertices());
 }
+
+/// A vertex a boolean left part way along a straight crease - the fold between a floor and a wall -
+/// reads as a split chord the repair would take out; moved off the line it does not, and says why.
+#[test]
+fn rust_only_a_vertex_on_a_straight_crease_is_a_split_chord() {
+    use geometry_processing::bevel::bevel_split_chords;
+    use polygon_mesh::Mesh;
+    use vector_math::Vector3Float;
+
+    let build = |middle: Vector3| {
+        let mut mesh = Mesh::new();
+        for at in [
+            middle,
+            Vector3::new(0.0, 0.0, 0.0),
+            Vector3::new(1.0, -1.0, 0.0),
+            Vector3::new(2.0, 0.0, 0.0),
+            Vector3::new(1.0, 0.0, 1.0),
+        ] {
+            mesh.vertices.push(Vector3Float::from_vector3(at));
+        }
+        // The ring round vertex 0: floor (z = 0) from 1 through 2 to 3, wall (y = 0) from 3 through 4 to 1.
+        for (b, c) in [(1, 2), (2, 3), (3, 4), (4, 1)] {
+            let vertices = mesh.vertices.clone();
+            mesh.faces.add(0, b, c, &vertices);
+        }
+        mesh
+    };
+
+    let on_the_crease = build(Vector3::new(1.0, 0.0, 0.0));
+    assert!(bevel_split_chords::lattice_for(&on_the_crease) > 0.0);
+    assert_eq!(bevel_split_chords::would_remove(&on_the_crease, 0), Ok(()));
+    assert_eq!(
+        bevel_split_chords::faces_at_each_vertex(&on_the_crease)[0]
+            .as_ref()
+            .map(Vec::len),
+        Some(4)
+    );
+    assert_eq!(
+        bevel_split_chords::faces_on_each_edge(&on_the_crease)[&(0, 1)].len(),
+        2
+    );
+
+    let off_it = build(Vector3::new(1.0, 0.0, 0.25));
+    let decline =
+        bevel_split_chords::would_remove(&off_it, 0).expect_err("not on the line any more");
+    assert!(
+        decline.starts_with("creases:") || decline.starts_with("the line:"),
+        "{decline}"
+    );
+
+    // A vertex on the open rim of this patch: one edge of its fan has a single face.
+    assert_eq!(
+        bevel_split_chords::would_remove(&on_the_crease, 2),
+        Err("unreadable edge to 3, 1 faces on it".to_string())
+    );
+    assert!(bevel_split_chords::stands_on_the_line_between(
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::ZERO,
+        Vector3::new(2.0, 0.0, 0.0),
+        1e-9
+    ));
+    assert!(!bevel_split_chords::stands_on_the_line_between(
+        Vector3::new(3.0, 0.0, 0.0),
+        Vector3::ZERO,
+        Vector3::new(2.0, 0.0, 0.0),
+        1e-9
+    ));
+}

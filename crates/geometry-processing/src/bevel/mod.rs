@@ -92,6 +92,7 @@ pub mod bevel_shadow_clip;
 pub mod bevel_shared_edges;
 pub mod bevel_source_rounds;
 mod bevel_source_rounds_fit;
+pub mod bevel_split_chords;
 pub mod bevel_straight_run;
 mod bevel_surface_labels;
 mod bevel_surface_walk;
