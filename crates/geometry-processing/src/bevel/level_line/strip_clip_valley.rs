@@ -1,14 +1,17 @@
 //! The strip clip's VALLEY mode. Ports `Bevel/LevelLine/StripClip.Valley.cs` (a partial of the C#
 //! static class `StripClip`): so far which side of a plane the other face says is kept
 //! ([`other_says`]), the one run of a loop lying in a single plane ([`one_plane_run`]) and the fan
-//! from a corner facing the wall ([`fan_facing`]); the
-//! valley cap lands with later packages.
+//! from a corner facing the wall ([`fan_facing`]), and the valley's cap ([`valley_cap`]).
 
 use std::collections::HashSet;
 
 use vector_math::Vector3;
 
-use super::{LevelLineMesh, LevelLineMeshError};
+use indexmap::{IndexMap, IndexSet};
+
+use super::strip_clip::{directed, format_e0, note, ClipPlane};
+use super::triangle_edges;
+use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
 
 /// Whether a signed distance stands on the side the other face keeps: above zero in a valley,
 /// below zero otherwise.
@@ -103,4 +106,124 @@ pub fn fan_facing(
     }
 
     Ok(false)
+}
+
+/// C# `StripClip.ValleyCap`: closes a valley's hole. The drop leaves the walls' crease ring and
+/// the kept round's clip loop; each wall's cap is its stretch of the ring, the shared crease on to
+/// the tie beside the stretch's end, its clip curve, and the shared crease back from the other tie
+/// - fanned in the wall's plane by [`fan_facing`]. The faces laid join `strip`.
+pub fn valley_cap(
+    mesh: &mut LevelLineMesh,
+    strip: &mut HashSet<i32>,
+    planes: &[ClipPlane],
+    dropped: &[LevelLineTriangle],
+    crease: &IndexSet<(i32, i32)>,
+) -> Result<bool, LevelLineMeshError> {
+    let mut outline: IndexSet<(i32, i32)> = crease
+        .iter()
+        .map(|&(a, b)| triangle_edges::key(a, b))
+        .collect();
+    for face in dropped {
+        for (p, q) in triangle_edges::corners((face.a, face.b, face.c)) {
+            if mesh.triangles_on(p, q).len() == 1 {
+                outline.insert(triangle_edges::key(p, q));
+            }
+        }
+    }
+
+    let mut next: IndexMap<i32, i32> = IndexMap::new();
+    for &(low, high) in &outline {
+        let standing = mesh.triangles_on(low, high);
+        if standing.len() != 1 {
+            continue;
+        }
+
+        let standing0 = standing[0];
+        let (a, b) = directed(mesh.triangles()[standing0 as usize], low, high);
+        if let Some(&other) = next.get(&b) {
+            note(|| {
+                let reading = |p: &ClipPlane, v: i32| {
+                    if p.2.contains(&v) {
+                        "on".to_string()
+                    } else {
+                        format_e0((mesh.position(v) - p.0).dot(p.1))
+                    }
+                };
+                let on_planes: Vec<String> = planes
+                    .iter()
+                    .map(|p| format!("{},{}", reading(p, a), reading(p, other)))
+                    .collect();
+                format!(
+                    "valley outline branches at {b} {}: from {a} {} and {other} {}; stands on {}; planes {}",
+                    mesh.position(b),
+                    mesh.position(a),
+                    mesh.position(other),
+                    if strip.contains(&standing0) { "strip" } else { "kept" },
+                    on_planes.join("/")
+                )
+            });
+            return Ok(false);
+        }
+
+        next.insert(b, a);
+    }
+
+    let mut loops: Vec<Vec<i32>> = Vec::new();
+    while !next.is_empty() {
+        let mut loop_ = Vec::new();
+        let mut at = *next.keys().min().expect("not empty");
+        while let Some(to) = next.shift_remove(&at) {
+            loop_.push(at);
+            at = to;
+        }
+
+        if at != loop_[0] {
+            note(|| format!("valley outline does not close at {at}"));
+            return Ok(false);
+        }
+
+        loops.push(loop_);
+    }
+
+    let crease_vertices: HashSet<i32> = crease.iter().flat_map(|&(a, b)| [a, b]).collect();
+    let (ring, clip): (Vec<&Vec<i32>>, Vec<&Vec<i32>>) = loops
+        .iter()
+        .partition(|l| l.iter().any(|v| crease_vertices.contains(v)));
+    if ring.len() != 1 || clip.len() != 1 {
+        note(|| {
+            format!(
+                "valley outline: {} crease rings, {} clip loops",
+                ring.len(),
+                clip.len()
+            )
+        });
+        return Ok(false);
+    }
+
+    let (ring, clip) = (ring[0].clone(), clip[0].clone());
+    for w in 0..planes.len() {
+        let on = &planes[w].2;
+        let stretch = one_plane_run(&ring, on, planes);
+        let curve = one_plane_run(&clip, on, planes);
+        let (Some(stretch), Some(curve)) = (stretch, curve) else {
+            note(|| format!("valley wall {w}: no single stretch or clip curve"));
+            return Ok(false);
+        };
+
+        // The shared crease carries on from the stretch's end to the NEARER tie.
+        let gap = |p: i32, q: i32| (mesh.position(p) - mesh.position(q)).length();
+        let stretch_end = stretch[stretch.len() - 1];
+        if gap(stretch_end, curve[0]) > gap(stretch_end, curve[curve.len() - 1]) {
+            note(|| format!("valley wall {w}: the clip curve runs the wrong way round"));
+            return Ok(false);
+        }
+
+        let polygon: Vec<i32> = stretch.iter().chain(curve.iter()).copied().collect();
+        if !fan_facing(mesh, strip, &polygon, planes[w].1)? {
+            note(|| format!("valley wall {w}: no fan corner sees the whole cap"));
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
 }

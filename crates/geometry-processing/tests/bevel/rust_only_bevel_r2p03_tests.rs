@@ -270,3 +270,98 @@ fn rust_only_the_valley_cap_fans_from_a_corner_that_sees_the_whole_polygon() {
     .expect("refused"));
     assert!(strip.is_empty());
 }
+
+#[test]
+fn rust_only_the_flat_end_carries_a_chamfer_strip_to_the_end_plane() {
+    use geometry_processing::bevel::level_line::end_plane_trim_carry::carry;
+    use geometry_processing::bevel::level_line::{BandProfile, ChainField};
+
+    // A chain along +x ending at x = 10; the chamfer's last row stands at x = 9 and the run goes out
+    // to the end plane, across the section and back.
+    let chain =
+        ChainField::from_polyline(&[v(0.0, 0.0, 0.0), v(10.0, 0.0, 0.0)], false, &[1.0, 1.0])
+            .expect("a chain");
+    let mut mesh = points(&[
+        v(9.0, 1.0, 0.0),
+        v(9.0, 0.5, 0.5),
+        v(9.0, 0.0, 1.0),
+        v(10.0, 1.0, 0.0),
+        v(10.0, 0.0, 1.0),
+    ]);
+    let mut added = Vec::new();
+    assert!(carry(
+        &mut mesh,
+        &chain,
+        &[0, 1, 2],
+        &[0, 3, 4, 2],
+        true,
+        BandProfile::Chamfer,
+        &mut added
+    )
+    .expect("carried"));
+    assert!(added.len() >= 2);
+
+    // The section (3-4) is answered by a triangle reaching a row vertex.
+    let section_face = added.iter().any(|&t| {
+        let f = mesh.triangles()[t as usize];
+        let c = [f.a, f.b, f.c];
+        c.contains(&3) && c.contains(&4)
+    });
+    assert!(section_face);
+
+    // A row that does not share the run's ends is not the carry's.
+    let mut added = Vec::new();
+    assert!(!carry(
+        &mut mesh,
+        &chain,
+        &[0, 1],
+        &[1, 3, 4, 2],
+        true,
+        BandProfile::Chamfer,
+        &mut added
+    )
+    .expect("refused"));
+}
+
+#[test]
+fn rust_only_the_strip_clip_splits_along_a_plane_until_nothing_crosses() {
+    use geometry_processing::bevel::level_line::strip_clip::{self, ClipPlane};
+    use std::collections::HashSet;
+
+    let mut mesh = square();
+    let mut strip: HashSet<i32> = [0, 1].into_iter().collect();
+    let mut attached = strip.clone();
+    let mut planes: Vec<ClipPlane> = vec![(v(0.5, 0.0, 0.0), v(1.0, 0.0, 0.0), HashSet::new())];
+    let distance = |mesh: &LevelLineMesh, planes: &[ClipPlane], plane: i32, vertex: i32| {
+        let p = &planes[plane as usize];
+        if p.2.contains(&vertex) {
+            0.0
+        } else {
+            (mesh.position(vertex) - p.0).dot(p.1)
+        }
+    };
+
+    let made = strip_clip::split_along(
+        &mut mesh,
+        &mut strip,
+        &mut attached,
+        0,
+        &mut planes,
+        &distance,
+        false,
+    )
+    .expect("split");
+    assert_eq!(made, 3);
+    assert_eq!(planes[0].2.len(), 3);
+    for &t in &strip {
+        if mesh.is_removed(t) {
+            continue;
+        }
+        let f = mesh.triangles()[t as usize];
+        let d: Vec<f64> = [f.a, f.b, f.c]
+            .iter()
+            .map(|&c| distance(&mesh, &planes, 0, c))
+            .collect();
+        assert!(!(d.iter().any(|&x| x < 0.0) && d.iter().any(|&x| x > 0.0)));
+    }
+}
