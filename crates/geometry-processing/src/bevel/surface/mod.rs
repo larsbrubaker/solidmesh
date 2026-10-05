@@ -105,6 +105,7 @@ pub mod surface_room_end_cut;
 pub mod surface_room_measure;
 pub mod surface_room_mitre;
 pub mod surface_room_notch_sides;
+pub mod surface_room_run_out;
 pub mod surface_room_standing_feature;
 pub mod surface_row_zip;
 mod surface_run_across;

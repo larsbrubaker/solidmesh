@@ -1,12 +1,17 @@
 //! A band's strip notched back by a feature STANDING inside its footprint
 //! ([`SurfaceStripNotchedByAFeature`]) and the points between rails it is bounded by
 //! ([`SurfaceStripNotchedByAFeatureBetween`]). Ports the fields of
-//! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs`; the reading and its rail questions land with
-//! the standing-feature package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs` and the feature's foot as the band sees it;
+//! the reading and its rail questions land with another package as further `impl` blocks.
 
 use std::rc::Rc;
 
-use super::{SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace};
+use vector_math::Vector3;
+
+use super::{
+    SurfaceEdgePlan, SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
+    SurfaceVertexPool,
+};
 
 /// C# `SurfaceStripNotchedByAFeature`: which rails the feature's extended planes cut, how far along
 /// the edge each of them is cut, and the three points between rails where the two planes and the
@@ -80,4 +85,40 @@ pub struct SurfaceStripNotchedByAFeatureBetween {
     pub param: f64,
     /// The face whose plane drew it, or `None` where nothing did.
     pub face: Option<Rc<SurfaceStandingFeatureWithheldFace>>,
+}
+
+impl SurfaceStripNotchedByAFeature {
+    /// The feature's FOOT as the band sees it: whichever end of its creases (the crease each face
+    /// holds at `reach`) stands nearest the picked edge's LINE, which is the point the band's reach
+    /// has to cover for the feature to be in its way at all. Read off the crease ENDS rather than
+    /// off the feature's facets, because those ends are the part's own vertices; measured to the
+    /// edge's line and not to its segment, because a foot past either end of it is the end cut's
+    /// business.
+    pub fn the_foot_of(
+        pool: &SurfaceVertexPool,
+        edge: &SurfaceEdgePlan,
+        feature: &SurfaceStandingFeatureWithheld,
+        reach: usize,
+    ) -> Vector3 {
+        let along = (edge.to() - edge.from()).get_normal();
+        let mut foot = edge.from();
+        let mut nearest = f64::MAX;
+
+        for face in &feature.faces {
+            let crease = face.creases.borrow()[reach];
+
+            for end in [crease.0, crease.1] {
+                let at = pool.position_of(end);
+                let from_the_edge = at - edge.from();
+                let across = (from_the_edge - (along * from_the_edge.dot(along))).length();
+
+                if across < nearest {
+                    nearest = across;
+                    foot = at;
+                }
+            }
+        }
+
+        foot
+    }
 }

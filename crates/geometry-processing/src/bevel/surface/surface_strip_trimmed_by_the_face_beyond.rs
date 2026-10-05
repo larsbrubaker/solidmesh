@@ -1,9 +1,12 @@
 //! A band's strip cut back along the FACE BEYOND the region it landed on
 //! ([`SurfaceStripTrimmedByTheFaceBeyond`]). Ports the fields of
-//! `Bevel/Surface/SurfaceStripTrimmedByTheFaceBeyond.cs`; the reading and its ring, rim and profile
-//! questions land with the run-off package as further `impl` blocks.
+//! `Bevel/Surface/SurfaceStripTrimmedByTheFaceBeyond.cs` and the corner beyond (three planes met);
+//! the reading and its ring, rim and profile questions land with another package as further
+//! `impl` blocks.
 
 use vector_math::Vector3;
+
+use super::{SurfaceEdgePlan, SurfaceVertexPool};
 
 /// C# `SurfaceStripTrimmedByTheFaceBeyond`: which rails the face beyond's plane crosses inside the
 /// edge's span, where each of them is cut, and the one point the rails it never crosses all
@@ -51,4 +54,62 @@ pub struct SurfaceStripTrimmedByTheFaceBeyond {
     /// tangent vertices there; a band that ran off it has a point, which is all the stitch needs -
     /// it reads the seam's first and last vertex, and here they are the same one.
     pub seam: Vec<(i32, f64)>,
+}
+
+impl SurfaceStripTrimmedByTheFaceBeyond {
+    /// The part's own vertex where the plane beyond (`plane_point`, `plane_normal`), the plane the
+    /// band ENDS on and the landing face on `side` (0 left, 1 right) all meet - the corner the
+    /// section turns down at. Looked up in the pool rather than minted: it is a vertex of three
+    /// faces the build never touches, and a second one a rounding away is a crack.
+    pub fn try_the_corner_beyond(
+        pool: &SurfaceVertexPool,
+        edge: &SurfaceEdgePlan,
+        side: i32,
+        at_the_start: bool,
+        plane_point: Vector3,
+        plane_normal: Vector3,
+    ) -> Option<i32> {
+        let along = edge.edge.direction();
+        let ends_at = if at_the_start { edge.to() } else { edge.from() };
+        let landing = if side == 0 {
+            edge.edge.left_normal()
+        } else {
+            edge.edge.right_normal()
+        };
+
+        let at = Self::try_three_planes(
+            plane_point,
+            plane_normal,
+            ends_at,
+            along,
+            edge.from(),
+            landing,
+        )?;
+
+        pool.try_find_near(at, pool.near_enough(), None)
+    }
+
+    /// Where three planes meet, by Cramer's rule - `None` where they do not meet at a point.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    pub fn try_three_planes(
+        point_a: Vector3,
+        normal_a: Vector3,
+        point_b: Vector3,
+        normal_b: Vector3,
+        point_c: Vector3,
+        normal_c: Vector3,
+    ) -> Option<Vector3> {
+        let volume = normal_a.dot(normal_b.cross(normal_c));
+
+        if !(volume.abs() > 1e-9) {
+            return None;
+        }
+
+        Some(
+            ((normal_b.cross(normal_c) * point_a.dot(normal_a))
+                + (normal_c.cross(normal_a) * point_b.dot(normal_b))
+                + (normal_a.cross(normal_b) * point_c.dot(normal_c)))
+                / volume,
+        )
+    }
 }

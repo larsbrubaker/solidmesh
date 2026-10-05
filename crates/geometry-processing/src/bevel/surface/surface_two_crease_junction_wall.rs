@@ -2,12 +2,13 @@
 //! (`Bevel/Surface/SurfaceTwoCreaseJunctionWall.cs`, a static class): the one face the patch's row
 //! zero runs across, made to end exactly where that row runs - two bites and one fill, and no
 //! repair. Here are its nested record, where row zero leaves one crease
-//! ([`SurfaceTwoCreaseJunctionWallCrossing`]), and the fill ([`try_fill_the_notch`]); the bites
-//! land with later packages.
+//! ([`SurfaceTwoCreaseJunctionWallCrossing`]) and how it is found ([`try_the_crossing`]), the bead's
+//! foot ([`try_the_foot`]) and the fill ([`try_fill_the_notch`]); the bites land with later
+//! packages.
 
 use vector_math::Vector3;
 
-use super::{surface_fan, SurfaceVertexPool};
+use super::{surface_fan, SurfaceMixedCorner, SurfaceMixedJunctionArm, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceTwoCreaseJunctionWall.Crossing` (a private readonly struct): where row zero leaves
@@ -95,4 +96,83 @@ pub fn try_fill_the_notch(
     }
 
     Ok(())
+}
+
+impl SurfaceTwoCreaseJunctionWallCrossing {
+    /// C#'s constructor: row zero leaves the crease between stations `before` and `after`, at `at`.
+    pub fn new(before: i32, after: i32, at: Vector3) -> Self {
+        SurfaceTwoCreaseJunctionWallCrossing { before, after, at }
+    }
+}
+
+/// Where row zero (`on_the_wall`, walked from its start where `from_the_start`, else from its end)
+/// crosses `arm`'s crease - the line through `corner` along the bead, in the wall facing
+/// `out_of_the_wall` - as the two stations it falls between and the point between them.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < 0)`, which a NaN also passes.
+pub fn try_the_crossing(
+    arm: &SurfaceMixedJunctionArm,
+    corner: Vector3,
+    out_of_the_wall: Vector3,
+    on_the_wall: &[Vector3],
+    from_the_start: bool,
+) -> Result<SurfaceTwoCreaseJunctionWallCrossing, BevelAdvisory> {
+    let away = SurfaceMixedCorner::away_from_the_corner(&arm.mixed.bead, corner);
+    let across = away.cross(out_of_the_wall);
+
+    let count = on_the_wall.len() as i32;
+    let step: i32 = if from_the_start { 1 } else { -1 };
+    let from = if from_the_start { 0 } else { count - 1 };
+
+    let mut started = (on_the_wall[from as usize] - corner).dot(across);
+
+    let mut station = from + step;
+    while station >= 0 && station < count {
+        let here = (on_the_wall[station as usize] - corner).dot(across);
+
+        if !(started * here < 0.0) {
+            started = here;
+            station += step;
+            continue;
+        }
+
+        let previous = on_the_wall[(station - step) as usize];
+        let was = (previous - corner).dot(across);
+
+        return Ok(SurfaceTwoCreaseJunctionWallCrossing::new(
+            station - step,
+            station,
+            previous + ((on_the_wall[station as usize] - previous) * (was / (was - here))),
+        ));
+    }
+
+    // DEFENSIVE. The reading has already said the canal ends ON this bead and the bead's band ends
+    // short of the corner, so row zero leaves the bead's side of the crease somewhere along the
+    // turn. A row that never does is a notch with no mouth, which is not this corner drawn
+    // differently.
+    Err(BevelAdvisory::new(
+        BevelAdvisoryCode::SurfaceCornerNotSupported,
+        vec![corner.into()],
+    ))
+}
+
+/// The bead's own FOOT on `arm`'s crease: where the plane the bead's band stops on crosses the
+/// crease line through `corner`.
+pub fn try_the_foot(
+    arm: &SurfaceMixedJunctionArm,
+    corner: Vector3,
+) -> Result<Vector3, BevelAdvisory> {
+    let away = SurfaceMixedCorner::away_from_the_corner(&arm.mixed.bead, corner);
+    let stops_at = arm.mixed.bead_stops_at;
+
+    let leaning = away.dot(stops_at.inward);
+
+    if leaning.abs() < 1e-9 {
+        // DEFENSIVE: a band that stops on a plane its own edge runs along stops nowhere.
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.into()],
+        ));
+    }
+
+    Ok(corner + (away * ((stops_at.point - corner).dot(stops_at.inward) / leaning)))
 }

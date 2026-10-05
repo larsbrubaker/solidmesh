@@ -1,9 +1,12 @@
 //! What is left of a run-out's column at each of its turns ([`SurfaceRunOutColumnWindow`]): the
 //! WINDOW between the cut that eats the rows from the cap inward and the cut that eats them from
-//! the wall outward. Ports the fields of `Bevel/Surface/SurfaceRunOutColumnWindow.cs`; its readings
-//! and the builds of the window land with the run-out package as further `impl` blocks.
+//! the wall outward. Ports the fields of `Bevel/Surface/SurfaceRunOutColumnWindow.cs` and the
+//! carry of a band's staircase onto the column ends; its other readings and the builds of the
+//! window land with later packages as further `impl` blocks.
 
 use vector_math::Vector3;
+
+use super::{SurfaceMixedCorner, SurfaceRunOutMeetsAWallBand};
 
 /// C# `SurfaceRunOutColumnWindow`: the window each run-out column is drawn in.
 ///
@@ -59,4 +62,85 @@ pub struct SurfaceRunOutColumnWindow {
     /// touch row runs over cap the BAND has already taken, so the sector the cap gives up ends
     /// there (`SurfaceMixedCornerBites.TryBiteTheCapFace`) however far the stations run on.
     pub the_cap_exits_turn: f64,
+}
+
+impl SurfaceRunOutColumnWindow {
+    /// The nearest station from `from` stepping by `step` (+1 or -1) that the band ends AND a rail
+    /// of the band stands at, or -1 where none does.
+    pub fn the_rail_station_before(
+        stations: &[f64],
+        the_band_ends_them: &[bool],
+        meets_a_wall_band: &SurfaceRunOutMeetsAWallBand,
+        from: i32,
+        step: i32,
+    ) -> i32 {
+        let mut station = from + step;
+        while station >= 0 && (station as usize) < stations.len() {
+            if the_band_ends_them[station as usize]
+                && meets_a_wall_band.the_rail_standing_at(stations[station as usize]) >= 0
+            {
+                return station;
+            }
+
+            station += step;
+        }
+
+        -1
+    }
+
+    /// Moves every column end the band ends at, but that stands between two of the band's rails,
+    /// onto the CHORD between the rail stations either side of it (`scallops`), and re-reads its
+    /// stand-off (`stands_off_at`) with it: the strip is ruled by those chords, so that is where
+    /// the band's own end really is. The chord stands outside the curve it subtends, so the
+    /// re-read can only ever take rows OFF a column, never add one.
+    pub fn onto_the_bands_staircase(
+        corner: &SurfaceMixedCorner,
+        stations: &[f64],
+        the_band_ends_them: &[bool],
+        meets_a_wall_band: &SurfaceRunOutMeetsAWallBand,
+        scallops: &mut [Vector3],
+        stands_off_at: &mut [f64],
+    ) {
+        for station in 0..stations.len() {
+            if !the_band_ends_them[station]
+                || meets_a_wall_band.the_rail_standing_at(stations[station]) >= 0
+            {
+                continue;
+            }
+
+            let before = Self::the_rail_station_before(
+                stations,
+                the_band_ends_them,
+                meets_a_wall_band,
+                station as i32,
+                -1,
+            );
+            let after = Self::the_rail_station_before(
+                stations,
+                the_band_ends_them,
+                meets_a_wall_band,
+                station as i32,
+                1,
+            );
+
+            if before < 0 || after < 0 || stations[after as usize] <= stations[before as usize] {
+                // Off the end of the band's own rails, with no chord between two of them to stand
+                // on: left where the band really ends the column, and refused by name at the STRIP
+                // if the staircase cannot carry it there. The strip is the authority on where its
+                // own vertices may stand, so nothing is named here.
+                continue;
+            }
+
+            let (before, after) = (before as usize, after as usize);
+            let how_far =
+                (stations[station] - stations[before]) / (stations[after] - stations[before]);
+
+            scallops[station] = scallops[before] + ((scallops[after] - scallops[before]) * how_far);
+
+            // And the stand-off with it. The end has MOVED, and what admits rows to the column is
+            // this number: left on the curve it would admit a row the column's own end already
+            // stands outside of - a fin between the two surfaces.
+            stands_off_at[station] = corner.axis().distance_to(scallops[station]);
+        }
+    }
 }

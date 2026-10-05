@@ -187,3 +187,64 @@ fn rust_only_a_square_mitre_carries_the_outside_band_one_setback() {
         0.0
     );
 }
+
+#[test]
+fn rust_only_a_chord_meets_the_touch_circle_within_its_own_span() {
+    use geometry_processing::bevel::surface::SurfaceRunOutMeetsAWallBand;
+
+    // From inside a circle of radius 2 out to past it, along +x: the crossing is at x = 2.
+    let at = SurfaceRunOutMeetsAWallBand::try_across(
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(3.0, 0.0, 0.0),
+        2.0,
+    )
+    .unwrap();
+    assert!((at - Vector3::new(2.0, 0.0, 0.0)).length() < 1e-12);
+
+    // A chord wholly inside never reaches it.
+    assert!(SurfaceRunOutMeetsAWallBand::try_across(
+        Vector3::new(0.5, 0.0, 0.0),
+        Vector3::new(1.5, 0.0, 0.0),
+        2.0
+    )
+    .is_none());
+
+    // The turn-back is where the turns peak, and an end rail counts against nothing beyond it.
+    let turns = [0.1, 0.4, 0.3];
+    assert!(SurfaceRunOutMeetsAWallBand::it_is_the_turn_back_of(
+        &turns, 1
+    ));
+    assert!(!SurfaceRunOutMeetsAWallBand::it_is_the_turn_back_of(
+        &turns, 0
+    ));
+    assert!(!SurfaceRunOutMeetsAWallBand::it_is_the_turn_back_of(
+        &turns, 3
+    ));
+}
+
+#[test]
+fn rust_only_three_planes_meet_at_their_common_point() {
+    use geometry_processing::bevel::surface::SurfaceStripTrimmedByTheFaceBeyond;
+
+    let at = SurfaceStripTrimmedByTheFaceBeyond::try_three_planes(
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 2.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 3.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    )
+    .unwrap();
+    assert!((at - Vector3::new(1.0, 2.0, 3.0)).length() < 1e-12);
+
+    // Two parallel planes do not meet at a point.
+    assert!(SurfaceStripTrimmedByTheFaceBeyond::try_three_planes(
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
+    )
+    .is_none());
+}

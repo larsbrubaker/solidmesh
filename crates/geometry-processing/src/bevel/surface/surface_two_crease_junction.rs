@@ -1,9 +1,15 @@
 //! A junction where TWO creases meet one bead at one corner
 //! (`Bevel/Surface/SurfaceTwoCreaseJunction.cs`, a static class: free functions here). The tests
-//! the junction's reading is made of land here first; the reading itself lands with a later
-//! package.
+//! the junction's reading is made of, and the bead edge that carries its ring, land here first;
+//! the reading itself lands with a later package.
 
-use super::{SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
+use std::rc::Rc;
+
+use vector_math::Vector3;
+
+use super::{
+    SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerDualFrame, SurfaceMixedJunctionArm,
+};
 
 /// How near the two arms' readings of the SAME turn have to agree, as a dimensionless angle and
 /// so a fixed epsilon - the same reasoning as [`SurfaceMixedCorner::SQUARE_ENOUGH`].
@@ -47,4 +53,61 @@ pub fn wall_key_of(mixed: &SurfaceMixedCorner) -> i32 {
     } else {
         mixed.bead.left_region_key()
     }
+}
+
+/// Which edge of the bead's chain really CARRIES the blend's end ring on `arm`, and which chords
+/// between it and the corner the blend SWALLOWS, as `(carries, swallowed)` - or `None` where the
+/// dual's first ball does not stand on the bead's axis, stands behind the corner, or the ring
+/// stands past the whole chain.
+///
+/// **Read as the station, not as a count of edges.** The canal's first ball on this arm is
+/// centred ON the bead's own axis, so the ring it is tangent to is the bead's SQUARE section
+/// there, and the one number that places it is how far along the axis that centre stands from
+/// the corner's own foot on it. The edge whose span reaches that far is the one with band left to
+/// carry the ring; every edge the walk passed on the way is wholly inside the blend and owes no
+/// strip. Measured ALONG the axis - exact for a COLLINEAR chain, which is what a split crease is.
+/// A station landing exactly on a chord's far end is given to that chord rather than the next.
+pub fn try_the_bead_edge_carrying_the_ring(
+    plans: &[Rc<SurfaceBevelPlan>],
+    arm: &SurfaceMixedJunctionArm,
+    dual: &SurfaceMixedCornerDualFrame,
+    corner: Vector3,
+    near_enough: f64,
+) -> Option<(i32, Vec<i32>)> {
+    let mixed = &arm.mixed;
+    let centre = dual.spine.centre_at(0.0);
+
+    if (centre - mixed.axis().closest_point_to(centre)).length() > near_enough {
+        return None;
+    }
+
+    let away = SurfaceMixedCorner::away_from_the_corner(&mixed.bead, corner);
+    let foot = mixed.axis().closest_point_to(corner);
+    let station = (centre - foot).dot(away);
+
+    if station < 0.0 {
+        return None;
+    }
+
+    let edges = &plans[arm.bead_end.plan as usize].edges;
+    let step = if arm.bead_end.at_the_start { 1 } else { -1 };
+    let mut passed = Vec::new();
+
+    let mut at = arm.bead_end.edge;
+    while at >= 0 && (at as usize) < edges.len() {
+        let edge = &edges[at as usize];
+
+        // How far down the axis this edge reaches. Both ends are asked and the further taken, so
+        // which way the edge's own From and To run is nobody's business here.
+        let reaches = f64::max((edge.from() - foot).dot(away), (edge.to() - foot).dot(away));
+
+        if station <= reaches + near_enough {
+            return Some((at, passed));
+        }
+
+        passed.push(at);
+        at += step;
+    }
+
+    None
 }
