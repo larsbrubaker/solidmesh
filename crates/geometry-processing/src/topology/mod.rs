@@ -7,6 +7,7 @@
 //! mean ([`pick_interpretations`], [`bevel_edge_readings`]).
 
 mod bevel_corner_group;
+pub mod bevel_corner_group_resolver;
 mod bevel_corner_mode;
 mod bevel_edge_group;
 pub mod bevel_edge_group_resolver;
@@ -21,10 +22,12 @@ mod face_region_cache;
 mod feature_edge;
 mod feature_edge_chain;
 mod feature_edge_set;
+mod path_corner_set;
 mod pick_interpretation;
 pub mod pick_interpretations;
 
 pub use bevel_corner_group::BevelCornerGroup;
+pub use bevel_corner_group_resolver::BevelCornerGroupResolution;
 pub use bevel_corner_mode::BevelCornerMode;
 pub use bevel_edge_group::{BevelEdgeGroup, BevelSelectionKind};
 pub use bevel_edge_group_resolver::{BevelEdgeGroupResolution, MatchTolerances};
@@ -37,4 +40,5 @@ pub use face_region_cache::FaceRegionCache;
 pub use feature_edge::{EdgeConvexity, FeatureEdge};
 pub use feature_edge_chain::{ChainEdge, ChainEnd, ChainStopReason, FeatureEdgeChain};
 pub use feature_edge_set::FeatureEdgeSet;
+pub use path_corner_set::{PathCorner, PathCornerSet};
 pub use pick_interpretation::{PickInterpretation, PickInterpretationKind};

@@ -47,6 +47,14 @@ pub enum TopologyError {
         /// How many readings the list has.
         reading_count: usize,
     },
+    /// A corner index that is not into the path corner set (C# `ArgumentOutOfRangeException`
+    /// from `BevelCornerGroupResolver.CreateFromCorner`).
+    CornerIndexOutOfRange {
+        /// The index given.
+        index: i32,
+        /// How many corners the set has.
+        corner_count: usize,
+    },
 }
 
 impl fmt::Display for TopologyError {
@@ -79,6 +87,10 @@ impl fmt::Display for TopologyError {
             TopologyError::ReadingIndexOutOfRange { .. } => write!(
                 f,
                 "Specified argument was out of the range of valid values. (Parameter 'index')"
+            ),
+            TopologyError::CornerIndexOutOfRange { .. } => write!(
+                f,
+                "Specified argument was out of the range of valid values. (Parameter 'cornerIndex')"
             ),
         }
     }

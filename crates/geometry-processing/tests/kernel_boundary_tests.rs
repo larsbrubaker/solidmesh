@@ -4,9 +4,8 @@
 //!
 //! The C# forbidden assemblies map to the Rust crates that carry them: `Gui` to `agg-gui*`,
 //! `Localizations`/`MatterCAD.Common`/`MatterCADLib` to the app and settings crates,
-//! `DataConverters3D` to `mattercad-model`. The required ones are `PolygonMesh` and `VectorMath`;
-//! C#'s third required reference, `Agg`, is the path model the `Path/` folder uses, and joins
-//! this list (as `agg-path`) with that slice (docs/PORTING_PLAN.md, gp3).
+//! `DataConverters3D` to `mattercad-model`. The required ones are `PolygonMesh`, `VectorMath`
+//! and `Agg`, the path model the `Path/` folder uses (here `agg-path`).
 
 const FORBIDDEN_PREFIXES: [&str; 6] = [
     "agg-gui",
@@ -65,4 +64,5 @@ fn kernel_is_built_on_agg_mesh_and_vector_math() {
 
     assert!(names.iter().any(|name| name == "polygon-mesh"));
     assert!(names.iter().any(|name| name == "vector-math"));
+    assert!(names.iter().any(|name| name == "agg-path"));
 }
