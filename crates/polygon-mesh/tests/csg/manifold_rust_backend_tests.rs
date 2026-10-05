@@ -4,11 +4,10 @@
 //! C# asserts a status by its name in the exception message (`ManifoldStatus.NotClosed`); the
 //! Rust message carries the kernel status's `Debug` name the same way.
 //!
-//! Skipped until their code lands:
-//! - `CancelObservedByTheKernelSurfacesAsCancellation`,
-//!   `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
-//!   `ReporterSeesProgressWithoutChangingTheResult`: not ported in this slice (UV-sphere fixture,
-//!   threaded cancel and kernel phase streaming; see the slice report).
+//! The cancellation and progress cases (`CancelObservedByTheKernelSurfacesAsCancellation`,
+//! `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
+//! `ReporterSeesProgressWithoutChangingTheResult`) are in `manifold_rust_backend_cancel_tests.rs`,
+//! split for the 800-line limit.
 
 use std::collections::HashMap;
 
@@ -417,7 +416,7 @@ fn repair_orientation_makes_an_inverted_operand_union_like_a_correct_one() {
 }
 
 /// The signed volume of a closed mesh, positive when its faces wind outward.
-fn signed_volume(mesh: &Mesh) -> f64 {
+pub(super) fn signed_volume(mesh: &Mesh) -> f64 {
     let mut total = 0.0;
     for face in mesh.faces.iter() {
         let a = Vector3::from_vector3_float(mesh.vertices[face.v0 as usize]);

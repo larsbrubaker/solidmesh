@@ -42,16 +42,17 @@ pub(crate) fn boolean(
 /// The n-ary boolean as one CSG tree (what makes a large n-ary union tractable). It reads the
 /// process-global engine and the default winding rule.
 ///
-/// The kernel's tree evaluation takes no progress reporter (manifold-rust has
-/// `CsgNode::evaluate_with_token` only), so unlike agg-sharp the booleans inside the batch do
-/// not stream their phases; the caller's adapter still reports either end of the combine.
+/// `progress` goes to every binary boolean the tree runs (`CsgNode::
+/// evaluate_with_token_and_progress`), so each one streams its own kernel phases from the
+/// start; observation only, the result is the same either way.
 pub(crate) fn batch_boolean(
     manifolds: &[Manifold],
     operation_type: OpType,
+    progress: Option<&ProgressReporter>,
     cancel: &CancelToken,
 ) -> Result<Manifold, BooleanError> {
     manifold_kernel::ensure_configured();
-    let result = batch_boolean_core(manifolds, operation_type, cancel);
+    let result = batch_boolean_core(manifolds, operation_type, progress, cancel);
     if result.status() == KernelStatus::Cancelled {
         return Err(BooleanError::Cancelled);
     }
@@ -61,6 +62,7 @@ pub(crate) fn batch_boolean(
 fn batch_boolean_core(
     manifolds: &[Manifold],
     operation_type: OpType,
+    progress: Option<&ProgressReporter>,
     cancel: &CancelToken,
 ) -> Manifold {
     // A single operand has nothing to combine with and every operation is identity on it - but
@@ -82,6 +84,7 @@ fn batch_boolean_core(
         .collect();
 
     Manifold::from_impl(
-        CsgNode::op_n(operation_type, leaves).evaluate_with_token(Some(cancel.kernel_token())),
+        CsgNode::op_n(operation_type, leaves)
+            .evaluate_with_token_and_progress(Some(cancel.kernel_token()), progress),
     )
 }

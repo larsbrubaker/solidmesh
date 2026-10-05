@@ -302,8 +302,12 @@ fn try_split_by_face_colors(
         // Not as_original: the union has to keep the sub-manifolds' boolean history, because
         // that history is what carries each colour group's original id into the run data of
         // whatever this is later combined with.
-        _ => match manifold_cancellable_boolean::batch_boolean(&sub_manifolds, OpType::Add, cancel)
-        {
+        _ => match manifold_cancellable_boolean::batch_boolean(
+            &sub_manifolds,
+            OpType::Add,
+            None,
+            cancel,
+        ) {
             Ok(union) => Ok(Some(union)),
             Err(BooleanError::Cancelled) => Err(OperandError::Cancelled),
             Err(_) => Ok(None),

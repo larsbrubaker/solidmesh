@@ -15,7 +15,8 @@
 //!
 //! Not yet here: face-colour tracking through the run data (Phase 2f), the async
 //! yielding entry points and the Minkowski runs (`minkowski_processing` has only the shell
-//! orientation and the ball so far). [`slice_layer`] cuts a mesh into integer polygons and
+//! orientation and the ball so far; [`minkowski_progress_model`], the bar those runs will
+//! drive, is here). [`slice_layer`] cuts a mesh into integer polygons and
 //! [`path_stitcher`] walls polygon loops back into a mesh.
 
 pub mod boolean_processing;
@@ -30,6 +31,7 @@ mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;
 pub mod minkowski_processing;
+pub mod minkowski_progress_model;
 pub mod minkowski_shell_orientation;
 pub mod path_stitcher;
 pub mod slice_layer;

@@ -10,7 +10,7 @@ use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{BooleanConfig, BooleanEngine, OpType, WindingRule};
 use vector_math::Matrix4X4;
 
-use super::boolean_progress_adapter::BooleanProgressAdapter;
+use super::boolean_progress_adapter::{progress_sink_for, BooleanProgressAdapter};
 use super::manifold_operand_batch::{AddOutcome, ManifoldOperandBatch};
 use super::{manifold_cancellable_boolean, manifold_pairwise_fold, manifold_result_reader};
 use super::{BooleanError, BooleanOptions, BooleanReporter, CsgModes};
@@ -99,8 +99,12 @@ fn combine_and_read(
         &combined
     } else {
         let progress = batch_progress_for(reporter, amount_per_operation, ratio_completed);
-        combined =
-            manifold_cancellable_boolean::batch_boolean(&batch.manifolds, operation_type, cancel)?;
+        combined = manifold_cancellable_boolean::batch_boolean(
+            &batch.manifolds,
+            operation_type,
+            progress_sink_for(progress.as_ref()).as_ref(),
+            cancel,
+        )?;
         if let Some(progress) = &progress {
             progress.complete_operation(COMBINE_COMPLETE_PHASE);
         }
