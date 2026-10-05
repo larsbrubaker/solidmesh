@@ -1,7 +1,7 @@
 //! The rolling ball's contact ARC at one chain vertex (`Bevel/Sections/BevelSection.cs`): the
 //! section itself ([`BevelSection`]), what kind of curve its profile is ([`SectionKind`]) and how
 //! each of its ends meets the face beyond ([`SectionSide`]). Its constructor lands with the
-//! core's section packages as an `impl` block.
+//! core's section packages as an `impl` block; its segment count is here.
 //!
 //! One per vertex, not one per strip end: a section is computed once at the vertex and held by
 //! the two strips meeting there by reference (`SectionRun`), so the seam between two strips is
@@ -134,4 +134,11 @@ pub struct BevelSection {
     /// `radius * tan(phi / 2)` for the angle phi between the two side normals. A boundary that
     /// slides stands farther from the station than this, by `1 / cos(beta)`.
     pub setback: f64,
+}
+
+impl BevelSection {
+    /// C# `Segments`: how many segments the profile was drawn in.
+    pub fn segments(&self) -> i32 {
+        self.profile.len() as i32 - 1
+    }
 }
