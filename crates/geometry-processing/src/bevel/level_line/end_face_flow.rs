@@ -1,12 +1,20 @@
 //! How the band flows over a chain's end face. Ports `Bevel/LevelLine/EndFaceFlow.cs` (a C# static
 //! class): so far its constants, the facet normal ([`normal_of`]), the side-turn test
 //! ([`turns_along_a_side`]), the end-face bend ([`bends`]) and whether the end region's flood
-//! crosses a soft bend ([`crosses_a_soft_bend`]); the flows land with later packages.
+//! crosses a soft bend ([`crosses_a_soft_bend`]) and a flat patch of the end region
+//! ([`flat_patch`]), and the flow over a narrow end face ([`flow_over_a_narrow_end_face`]); the
+//! round-run reading lands with a later package.
 
 use vector_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
-use super::{ChainField, WorkError};
+use std::cell::RefCell;
+use std::collections::{HashSet, VecDeque};
+
+use indexmap::IndexSet;
+
+use super::band_side_tagging;
+use super::{ChainField, LevelLineWork, WorkError};
 
 /// How many FULL facets past the end vertex's own one, each between two soft joins, make a round.
 pub const ROUND_RUN_JOINS: i32 = 3;
@@ -124,4 +132,140 @@ pub fn crosses_a_soft_bend(
             Some(reach) => reach.min_along_segment(pa, pb)?.value < 0.0,
             None => !turns_along_a_side(positions, indices, standing, a, b, side_normals, false),
         })
+}
+
+/// A flat patch of triangles and the soft bends on its rim.
+pub type FlatPatch = (IndexSet<i32>, Vec<(i32, i32)>);
+
+/// C# `EndFaceFlow.FlatPatch`: the triangles reached from `seeds` without crossing a chain edge, a
+/// fold or a bend (a bend at `end_vertex` is crossed, as the end flood crosses it), and the soft
+/// bends on the patch's rim that do not lead back into `previous`. Both keep C#'s `HashSet`
+/// insertion order.
+#[allow(clippy::too_many_arguments)]
+pub fn flat_patch(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    chain_keys: &HashSet<(i32, i32)>,
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    seeds: &[i32],
+    previous: Option<&IndexSet<i32>>,
+    end_vertex: i32,
+) -> Result<FlatPatch, WorkError> {
+    let mut patch: IndexSet<i32> = seeds.iter().copied().collect();
+    let mut pending: VecDeque<i32> = patch.iter().copied().collect();
+    let mut soft_bends: IndexSet<(i32, i32)> = IndexSet::new();
+    while let Some(t) = pending.pop_front() {
+        LevelLineWork::charge(1)?;
+        for (a, b) in triangle_edges::corners(indices[t as usize]) {
+            let key = triangle_edges::key(a, b);
+            let Some(on) = standing.get(&key).filter(|on| on.len() == 2) else {
+                continue;
+            };
+            if chain_keys.contains(&key) || is_feature_edge(a, b) {
+                continue;
+            }
+
+            if a != end_vertex && b != end_vertex && bends(positions, indices, standing, a, b) {
+                soft_bends.insert(key);
+                continue;
+            }
+
+            for &next in on {
+                if patch.insert(next) {
+                    pending.push_back(next);
+                }
+            }
+        }
+    }
+
+    soft_bends.retain(|key| {
+        let on = &standing[key];
+        !(on.iter().all(|t| patch.contains(t))
+            || previous.is_some_and(|previous| on.iter().any(|t| previous.contains(t))))
+    });
+    Ok((patch, soft_bends.into_iter().collect()))
+}
+
+/// C# `EndFaceFlow.FlowOverANarrowEndFace`: the Flow decision at an END - an end face narrower than
+/// the setback is not an end the band stops at. Where the band at this size (`end_reach`'s level
+/// line) cuts across a far crease of the end region (a crease not at the end vertex), the region
+/// carries on over that crease onto the next face, so the end cut lands there and the creases
+/// running out of the narrow face's far side are part of that end, not foreign walls. The flow
+/// crosses only creases the band reaches, so it stops where the setback does.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn flow_over_a_narrow_end_face(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    chain_keys: &HashSet<(i32, i32)>,
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    end_vertex: i32,
+    tag: i32,
+    tags: &mut [i32],
+    end_reach: &ChainField,
+    can_enter: Option<&dyn Fn(i32) -> bool>,
+) -> Result<(), WorkError> {
+    let mut across = Vec::new();
+    for (&key, on) in standing {
+        if on.len() != 2 || key.0 == end_vertex || key.1 == end_vertex || chain_keys.contains(&key)
+        {
+            continue;
+        }
+
+        let inside = if tags[on[0] as usize] == tag {
+            on[0]
+        } else if tags[on[1] as usize] == tag {
+            on[1]
+        } else {
+            -1
+        };
+        let outside = if inside == on[0] { on[1] } else { on[0] };
+        if inside < 0 || tags[outside as usize] != 0 {
+            continue;
+        }
+
+        // A CREASE, not a bend: a curved end face's facets bend one into the next, and the band
+        // crossing one of those is still inside the end face.
+        if is_feature_edge(key.0, key.1)
+            && end_reach
+                .min_along_segment(positions[key.0 as usize], positions[key.1 as usize])?
+                .value
+                < 0.0
+        {
+            across.push(outside);
+        }
+    }
+
+    if across.is_empty() {
+        return Ok(());
+    }
+
+    // The flood's stop test reads the band, which may charge the budget: the first error stops
+    // every crossing and is handed back after the flood.
+    let failed: RefCell<Option<WorkError>> = RefCell::new(None);
+    let stops = |a: i32, b: i32| {
+        if failed.borrow().is_some() {
+            return true;
+        }
+
+        if !(is_feature_edge(a, b) || bends(positions, indices, standing, a, b)) {
+            return false;
+        }
+
+        match end_reach.min_along_segment(positions[a as usize], positions[b as usize]) {
+            Ok(least) => !(least.value < 0.0),
+            Err(error) => {
+                *failed.borrow_mut() = Some(error);
+                true
+            }
+        }
+    };
+    band_side_tagging::flood(
+        indices, standing, chain_keys, &stops, &across, tag, tags, can_enter,
+    )?;
+    match failed.into_inner() {
+        Some(error) => Err(error),
+        None => Ok(()),
+    }
 }

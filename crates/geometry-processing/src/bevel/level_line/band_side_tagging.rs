@@ -2,14 +2,19 @@
 //! regions. Ports `Bevel/LevelLine/BandSideTagging.cs` (a C# static class): so far its tags, the
 //! both-sided-members switch, the model's scale, the outward direction at a chain end and a facet
 //! normal, the flood out from seeds ([`flood`]) and the connected regions ([`connected_regions`]);
-//! the side and end floods land with later packages.
+//! which side of a chain a point lies on ([`side_of`]) and the first both-sided member at a mixed
+//! corner ([`first_both_sided_at_a_mixed_corner`]); the side and end floods land with later
+//! packages.
 
 use vector_math::Vector3;
 
 use std::collections::{HashSet, VecDeque};
 
 use super::triangle_edges::{self, StandingMap};
-use super::{LevelLineWork, WorkError};
+use super::{
+    chain_on_the_mesh, end_face_sense, BandGroup, ChainEdgeNotOnTwoTriangles, LevelLineWork,
+    WorkError,
+};
 
 /// The end flood's tag at the chain's FIRST vertex.
 pub const FIRST_END_TAG: i32 = 3;
@@ -164,4 +169,116 @@ pub fn connected_regions(
     }
 
     Ok(region_of)
+}
+
+/// C# `BandSideTagging.SideOf`: which side of the chain (1 left, 2 right, as
+/// `chain_on_the_mesh::sides_of` names them) `point` lies on, read from the geometry: at the chain
+/// edge nearest the point, the side whose triangle runs away from the edge the way the point does.
+/// What names the side of a loop of a both-sided member, whose two sides carry one tag.
+pub fn side_of(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    chain_edges: &[(i32, i32)],
+    point: Vector3,
+) -> Result<i32, ChainEdgeNotOnTwoTriangles> {
+    let mut best = f64::MAX;
+    let mut side = 1;
+    for &(from, to) in chain_edges {
+        let a = positions[from as usize];
+        let along = positions[to as usize] - a;
+        let t = ((point - a).dot(along) / along.length_squared()).clamp(0.0, 1.0);
+        let foot = a + (along * t);
+        let distance = (point - foot).length_squared();
+        if distance >= best {
+            continue;
+        }
+
+        best = distance;
+        let (left, right) = chain_on_the_mesh::sides_of(indices, standing, from, to)?;
+        let away = |triangle: i32| {
+            let tri = indices[triangle as usize];
+            let third = if tri.0 != from && tri.0 != to {
+                tri.0
+            } else if tri.1 != from && tri.1 != to {
+                tri.1
+            } else {
+                tri.2
+            };
+            let off = positions[third as usize] - a;
+            let inward = off - (along * (off.dot(along) / along.length_squared()));
+            (point - foot).dot(inward.get_normal())
+        };
+        side = if away(left) >= away(right) { 1 } else { 2 };
+    }
+
+    Ok(side)
+}
+
+/// C# `BandSideTagging.FirstBothSidedAtAMixedCorner`: the lowest both-sided member that meets
+/// another chain at a MIXED corner - a vertex where the picked edges do not all fold the same way
+/// (a pocket rim with its inner edge, an L's re-entrant corner) - or -1. At a mixed corner the
+/// both-sided blend came back self-intersecting or its room read small, so such a member is still
+/// read as a chain that does not divide its sides. No positions (C#'s null) reads none.
+pub fn first_both_sided_at_a_mixed_corner(
+    positions: Option<&[Vector3]>,
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[Vec<(i32, i32)>],
+    groups: &[BandGroup],
+) -> Result<i32, ChainEdgeNotOnTwoTriangles> {
+    let mut both_sided: Vec<i32> = groups
+        .iter()
+        .flat_map(|g| g.both_sided.iter().copied())
+        .collect();
+    both_sided.sort();
+    both_sided.dedup();
+    let Some(positions) = positions else {
+        return Ok(-1);
+    };
+    if both_sided.is_empty() {
+        return Ok(-1);
+    }
+
+    let standing = triangle_edges::standing_map(indices);
+    for k in both_sided {
+        let mut own: Vec<i32> = Vec::new();
+        for &(from, to) in &chain_edges[k as usize] {
+            for v in [from, to] {
+                if !own.contains(&v) {
+                    own.push(v);
+                }
+            }
+        }
+
+        let others: HashSet<i32> = (0..chain_edges.len())
+            .filter(|&j| j as i32 != k)
+            .flat_map(|j| chain_edges[j].iter().flat_map(|&(f, t)| [f, t]))
+            .collect();
+        for corner in own.into_iter().filter(|v| others.contains(v)) {
+            let mut senses: HashSet<bool> = HashSet::new();
+            for &(from, to) in chain_edges.iter().flatten() {
+                if from != corner && to != corner {
+                    continue;
+                }
+
+                let (left, right) = chain_on_the_mesh::sides_of(indices, &standing, from, to)?;
+                if left < 0 || right < 0 {
+                    continue;
+                }
+
+                senses.insert(end_face_sense::is_convex(
+                    positions,
+                    indices[left as usize],
+                    indices[right as usize],
+                    from,
+                ));
+            }
+
+            if senses.len() > 1 {
+                return Ok(k);
+            }
+        }
+    }
+
+    Ok(-1)
 }

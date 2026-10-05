@@ -3,8 +3,9 @@
 //! chain's surviving piece ([`surviving_piece`]), the crease walk on the end face
 //! ([`crease_on_the_end_face`]), a triangle's oriented plane ([`plane_of`], [`same_plane`]), the
 //! chains' senses ([`chain_senses`]), the knife tips that make a pick build rounds first
-//! ([`rounds_first_tips`], [`takes_rounds_first`]) and the face they end on ([`the_tips_end_face`]);
-//! the build lands with later packages.
+//! ([`rounds_first_tips`], [`takes_rounds_first`]), the face they end on ([`the_tips_end_face`]),
+//! the chains pass A builds ([`the_rounds_chains`]), the rounds' band ([`the_rounds_band`]) and the
+//! smooth joints over it ([`smooth_joints_over_the_rounds`]); the build lands with later packages.
 
 use std::collections::{HashMap, HashSet};
 
@@ -14,7 +15,7 @@ use vector_math::{cs_math, Vector3};
 
 use super::end_face_sense::{self, COPLANAR_TOLERANCE};
 use super::triangle_edges::{self, StandingMap};
-use super::LevelLineMesh;
+use super::{GapFillResult, LevelLineMesh};
 
 /// The mesh's live triangles as index triples, in triangle order.
 pub fn kept(mesh: &LevelLineMesh) -> Vec<(i32, i32, i32)> {
@@ -322,4 +323,93 @@ pub fn the_tips_end_face(
     }
 
     end_face
+}
+
+/// C# `BandGap.TheRoundsChains`: the chains pass A builds - each open convex chain ending at a
+/// knife tip. Every other member of the pick (a face's rim, a convex chain at no tip) is built in
+/// pass B with the joined creases, on the part the rounds left.
+pub fn the_rounds_chains(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: Option<&[bool]>,
+) -> Vec<i32> {
+    let tips = rounds_first_tips(positions, indices, chains, closed);
+    let senses = chain_senses(positions, indices, chains, closed);
+    (0..chains.len())
+        .filter(|&k| {
+            senses[k] == Some(true)
+                && !closed.is_some_and(|c| c[k])
+                && chains[k].len() > 1
+                && (tips.contains_key(&chains[k][0])
+                    || tips.contains_key(&chains[k][chains[k].len() - 1]))
+        })
+        .map(|k| k as i32)
+        .collect()
+}
+
+/// C# `BandGap.TheRoundsBand`: the rounds' mesh as kept triangles, and which of them are the
+/// round's band - the rounds' own (added) triangles on no face the input had: a facet of the round,
+/// not a piece of a face the fill tiled again. Empty where the rounds carry no mesh (C# reads
+/// through a null there).
+pub fn the_rounds_band(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    rounds: &GapFillResult,
+) -> (Vec<(i32, i32, i32)>, Vec<bool>) {
+    let Some(mesh) = &rounds.mesh else {
+        return (Vec::new(), Vec::new());
+    };
+    let mesh = mesh.borrow();
+    let input_planes: Vec<OrientedPlane> =
+        indices.iter().map(|&t| plane_of(positions, t)).collect();
+    let kept_index: Vec<i32> = (0..mesh.triangle_count())
+        .filter(|&t| !mesh.is_removed(t))
+        .collect();
+    let triangles = kept(&mesh);
+    let added: HashSet<i32> = rounds.added_triangles.iter().copied().collect();
+    let band = triangles
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| {
+            let plane = plane_of(&mesh.vertices, t);
+            added.contains(&kept_index[i]) && !input_planes.iter().any(|&p| same_plane(p, plane))
+        })
+        .collect();
+    (triangles, band)
+}
+
+/// C# `BandGap.SmoothJointsOverTheRounds`: the joined creases' vertices that are pass B's SMOOTH
+/// joints - an interior vertex whose two crease edges both border the rounds' band. There the
+/// crease is the round's section, a sampled smooth curve, so its turns are sampling and not
+/// corners.
+pub fn smooth_joints_over_the_rounds(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    creases: &[Vec<i32>],
+    rounds: &GapFillResult,
+) -> Vec<Vector3> {
+    let (triangles, band) = the_rounds_band(positions, indices, rounds);
+    let Some(mesh) = &rounds.mesh else {
+        return Vec::new();
+    };
+    let mesh = mesh.borrow();
+    let standing = triangle_edges::standing_map(&triangles);
+    let borders_the_band = |a: i32, b: i32| {
+        standing
+            .get(&triangle_edges::key(a, b))
+            .is_some_and(|on| on.iter().any(|&t| band[t as usize]))
+    };
+    let mut smooth = Vec::new();
+    for crease in creases {
+        for i in 1..crease.len().saturating_sub(1) {
+            if borders_the_band(crease[i - 1], crease[i])
+                && borders_the_band(crease[i], crease[i + 1])
+            {
+                smooth.push(mesh.vertices[crease[i] as usize]);
+            }
+        }
+    }
+
+    smooth
 }

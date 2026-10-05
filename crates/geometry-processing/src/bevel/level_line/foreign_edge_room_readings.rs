@@ -3,12 +3,15 @@
 //! edge lists are in `foreign_edge_room.rs`): whether every edge's value stands above zero at a
 //! trial size ([`every_value_is_above_zero`]), the bisection every room reading ends in
 //! ([`bisect`]) and where the edge that sets the room comes nearest the chain
-//! ([`where_the_room_is_set`]). The readings that bracket and index the room land with their
-//! method package.
+//! ([`where_the_room_is_set`]), and the bracket read off one pass of the bare field
+//! ([`bracket_from_one_bare_pass`]) and the room itself ([`room_for`]). The indexed reading lands
+//! with its method package.
 
 use vector_math::Vector3;
 
-use super::foreign_edge_room::{ROOM_BISECTION_STEPS, UNIFORM_SETBACK_TOLERANCE};
+use super::foreign_edge_room::{
+    ROOM_BISECTION_STEPS, ROOM_BRACKET_DOUBLINGS, UNIFORM_SETBACK_TOLERANCE,
+};
 use super::{foreign_room_counters, ChainField, LevelLineMesh, LevelLineWork, WorkError};
 
 /// A foreign edge as (low, high, the other chain's extra unit setback taken off it).
@@ -116,4 +119,163 @@ pub fn bisect(
     }
 
     Ok(0.5 * (lo + hi))
+}
+
+/// What [`bracket_from_one_bare_pass`] reads.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct BarePassBracket {
+    /// True where the bracket holds; false sends the room reading down its doubling path.
+    pub bracketed: bool,
+    /// The edges the bisection still has to read (those whose lower end stands at or below the
+    /// bracket's upper end); `None` where nothing was bracketed (C# leaves its `ref` untouched).
+    pub searched: Option<Vec<ForeignEdge>>,
+    /// The bracket's low end: a size at which every value is still at or above zero.
+    pub lo: f64,
+    /// The bracket's high end.
+    pub hi: f64,
+    /// True where an edge already stands on the chain: the room is zero outright.
+    pub touches_the_chain: bool,
+}
+
+/// C# `ForeignEdgeRoom.BracketFromOneBarePass`: brackets the room from ONE pass of the BARE field
+/// (setback zero) over the foreign edges: with every unit setback in [`lowest_unit`,
+/// `highest_unit`] and positive, each edge's critical size lies in
+/// [approach / (highest + extra), approach / (lowest + extra)], so the room lies between the least
+/// lower end and the least upper end, and the edges whose lower end stands above that least upper
+/// end can never matter (pruned once, against the initial upper end). Not bracketed where the
+/// derivation does not hold (a unit setback not positive, a negative extra); an edge whose
+/// approach is at or below zero touches the chain.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn bracket_from_one_bare_pass(
+    mesh: &LevelLineMesh,
+    foreign: &[ForeignEdge],
+    field_at: FieldAt,
+    lowest_unit: f64,
+    highest_unit: f64,
+) -> Result<BarePassBracket, WorkError> {
+    let mut answer = BarePassBracket::default();
+    if !(lowest_unit > 0.0) {
+        return Ok(answer);
+    }
+
+    let bare = field_at(0.0);
+    let mut low_ends = vec![0.0; foreign.len()];
+    let mut bracket_low = f64::INFINITY;
+    let mut bracket_high = f64::INFINITY;
+    for (i, &(low, high, extra_unit)) in foreign.iter().enumerate() {
+        foreign_room_counters::read();
+        let approach = bare
+            .min_along_segment(mesh.position(low), mesh.position(high))?
+            .value;
+        if !(approach > 0.0) {
+            // Nothing can be built between the chain and something already standing on it.
+            answer.touches_the_chain = approach <= 0.0 && extra_unit >= 0.0;
+            return Ok(answer);
+        }
+
+        if !(extra_unit >= 0.0) {
+            return Ok(answer);
+        }
+
+        low_ends[i] = approach / (highest_unit + extra_unit);
+        bracket_low = vector_math::cs_math::min_f64(bracket_low, low_ends[i]);
+        bracket_high =
+            vector_math::cs_math::min_f64(bracket_high, approach / (lowest_unit + extra_unit));
+    }
+
+    if !(bracket_low > 0.0) || bracket_high.is_infinite() {
+        return Ok(answer);
+    }
+
+    answer.searched = Some(
+        foreign
+            .iter()
+            .zip(&low_ends)
+            .filter(|(_, &low_end)| low_end <= bracket_high)
+            .map(|(&edge, _)| edge)
+            .collect(),
+    );
+    answer.bracketed = true;
+    answer.lo = bracket_low;
+    answer.hi = bracket_high;
+    Ok(answer)
+}
+
+/// C# `ForeignEdgeRoom.RoomFor`: the room the `foreign` edges leave the chain - the size at which
+/// the band first reaches one of them; +infinity with none. Where the chain asks ONE setback per
+/// unit of size the room is read in one pass of the bare field (each edge's closest approach over
+/// its share of the setback - the two bands close on each other from both ends of the approach).
+/// Otherwise it is bracketed from one bare pass and bisected; where the bracket does not hold, an
+/// edge already touching the chain is room zero, and the room is otherwise bracketed by doubling
+/// from the `asked` size (+infinity where it never closes).
+pub fn room_for(
+    mesh: &LevelLineMesh,
+    foreign: &[ForeignEdge],
+    field_at: FieldAt,
+    unit_setback: &[f64],
+    asked: f64,
+) -> Result<f64, WorkError> {
+    if foreign.is_empty() {
+        return Ok(f64::INFINITY);
+    }
+
+    foreign_room_counters::with(|t| {
+        t.calls += 1;
+        t.edges_offered += foreign.len() as i64;
+        if t.in_a_pair {
+            t.pair_calls += 1;
+        } else if let Some(per_chain) = &mut t.edges_per_chain {
+            per_chain.push(foreign.len() as i32);
+        }
+    });
+
+    let (lowest_unit, highest_unit) = least_and_greatest(unit_setback);
+    if lowest_unit > 0.0 && highest_unit - lowest_unit <= UNIFORM_SETBACK_TOLERANCE * highest_unit {
+        // The bare distance field - no setback taken off - so each edge's approach is read once.
+        let bare = field_at(0.0);
+        let mut best = f64::MAX;
+        for &(low, high, extra_unit) in foreign {
+            foreign_room_counters::read();
+            let approach = bare
+                .min_along_segment(mesh.position(low), mesh.position(high))?
+                .value;
+            best = vector_math::cs_math::min_f64(best, approach / (highest_unit + extra_unit));
+        }
+
+        return Ok(best);
+    }
+
+    let bracket = bracket_from_one_bare_pass(mesh, foreign, field_at, lowest_unit, highest_unit)?;
+    let searched: Vec<ForeignEdge> = bracket.searched.unwrap_or_else(|| foreign.to_vec());
+    let (mut lo, mut hi) = (bracket.lo, bracket.hi);
+    if !bracket.bracketed {
+        foreign_room_counters::with(|t| {
+            t.bracket_fallbacks += 1;
+            if bracket.touches_the_chain {
+                t.touching_fallbacks += 1;
+            }
+        });
+        if bracket.touches_the_chain {
+            // An edge ALREADY standing on the chain leaves nothing to build in: the room is zero.
+            return Ok(0.0);
+        }
+
+        lo = 0.0;
+        hi = asked;
+        let mut doubling = 0;
+        while doubling < ROOM_BRACKET_DOUBLINGS
+            && every_value_is_above_zero(mesh, &searched, field_at, hi)?
+        {
+            LevelLineWork::charge(1)?;
+            lo = hi;
+            hi *= 2.0;
+            doubling += 1;
+        }
+
+        if every_value_is_above_zero(mesh, &searched, field_at, hi)? {
+            return Ok(f64::INFINITY);
+        }
+    }
+
+    bisect(mesh, &searched, field_at, lo, hi)
 }
