@@ -115,10 +115,17 @@ pub fn format_f64_max_decimals(value: f64, max_decimals: usize) -> String {
 }
 
 /// .NET `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v)`,
-/// returning the parsed value, or 0 where TryParse fails. Accepts surrounding white space
-/// (U+0009–U+000D, U+0020), a leading sign, a decimal point, an exponent, and the invariant
-/// symbols "NaN", "Infinity", "-Infinity" (case-insensitive) and "∞".
+/// returning the parsed value, or 0 where TryParse fails (see [`try_parse_f64`]).
 pub fn parse_f64(text: &str) -> f64 {
+    try_parse_f64(text).unwrap_or(0.0)
+}
+
+/// .NET `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v)`:
+/// `None` where TryParse returns false. Accepts surrounding white space
+/// (U+0009–U+000D, U+0020), a leading sign, a decimal point, an exponent, and the invariant
+/// symbols "NaN", "Infinity", "-Infinity" (case-insensitive) and "∞". No thousands separators
+/// (`NumberStyles.Float` has no `AllowThousands`), so "12,5" is `None`.
+pub fn try_parse_f64(text: &str) -> Option<f64> {
     let trimmed = text.trim_matches(|c: char| ('\u{9}'..='\u{d}').contains(&c) || c == ' ');
     let (negative, body) = match trimmed.as_bytes().first() {
         Some(b'-') => (true, &trimmed[1..]),
@@ -139,18 +146,11 @@ pub fn parse_f64(text: &str) -> f64 {
             .is_some_and(|b| b.is_ascii_digit() || b == b'.')
     {
         // Rust's grammar matches .NET's for this alphabet ("1.", ".5", "1e5", "1E+05").
-        match body.parse::<f64>() {
-            Ok(v) => v,
-            Err(_) => return 0.0,
-        }
+        body.parse::<f64>().ok()?
     } else {
-        return 0.0;
+        return None;
     };
-    if negative {
-        -magnitude
-    } else {
-        magnitude
-    }
+    Some(if negative { -magnitude } else { magnitude })
 }
 
 fn special_text(is_nan: bool, is_infinite: bool, is_negative: bool) -> Option<String> {

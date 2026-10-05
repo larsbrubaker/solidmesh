@@ -56,6 +56,15 @@ fn rust_only_parse_f64_matches_dotnet_try_parse() {
 }
 
 #[test]
+fn rust_only_try_parse_f64_reports_failure() {
+    assert_eq!(try_parse_f64(" 12.5 "), Some(12.5));
+    assert_eq!(try_parse_f64("0"), Some(0.0));
+    assert_eq!(try_parse_f64("12,5"), None);
+    assert_eq!(try_parse_f64("wide"), None);
+    assert_eq!(try_parse_f64(""), None);
+}
+
+#[test]
 fn rust_only_format_round_trip_ties_round_half_to_even() {
     // A value whose shortest digits sit exactly halfway between two
     // candidates: .NET 10 picks the even last digit, Rust's shortest formatter rounds up. These
