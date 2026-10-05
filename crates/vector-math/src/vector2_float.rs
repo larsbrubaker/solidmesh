@@ -9,7 +9,7 @@
 //! `multiply`/`divide`; the vector-scale overloads are `multiply_components`/
 //! `divide_components`; static `Rotate(v, r)` is `rotated`; static `Normalize(v)` is
 //! `normalized`; the `ref` `BaryCentric` overload (double weights, double arithmetic) is
-//! `bary_centric_f64`. `Transform(Vector2Float, Quaternion)` arrives in Phase 1b.
+//! `bary_centric_f64`. `Transform(Vector2Float, Quaternion)` is in `vector_transforms.rs`.
 
 use crate::math_helper::{self, MathError};
 use crate::number_format::format_f32;
@@ -20,9 +20,15 @@ use std::ops::{
 };
 
 /// A 2D vector of f32 (C# `MatterHackers.VectorMath.Vector2Float`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+///
+/// Serializes as Newtonsoft does (`{"X":..,"Y":..}`); members missing when reading keep
+/// their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector2Float {
+    #[serde(rename = "X")]
     pub x: f32,
+    #[serde(rename = "Y")]
     pub y: f32,
 }
 
@@ -401,5 +407,13 @@ impl DivAssign<f32> for Vector2Float {
 impl fmt::Display for Vector2Float {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", format_f32(self.x), format_f32(self.y))
+    }
+}
+
+/// C# `GetHashCode`: the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector2Float {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f32(self.x, state);
+        crate::float_hash::hash_f32(self.y, state);
     }
 }

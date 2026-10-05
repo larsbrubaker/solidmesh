@@ -9,7 +9,7 @@
 //! `component_max_scalar`; static `GetPerpendicular(a, b)` and instance
 //! `GetPerpendicular(b)` are `get_perpendicular_with`. The C# `IConvertible` members all throw
 //! `NotImplementedException` and are not ported. `Vector3Ex.Transform*` (Matrix4X4,
-//! Quaternion) arrive in Phase 1b.
+//! Quaternion) are in `vector_transforms.rs`.
 
 use crate::cs_math::{max_f64, min_f64};
 use crate::number_format::{format_f64_max_decimals, parse_f64};
@@ -20,10 +20,17 @@ use std::ops::{
 };
 
 /// A 3D vector of f64 (C# `MatterHackers.VectorMath.Vector3`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+///
+/// Serializes as Newtonsoft does (`{"X":..,"Y":..,"Z":..}`); members missing when reading keep
+/// their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector3 {
+    #[serde(rename = "X")]
     pub x: f64,
+    #[serde(rename = "Y")]
     pub y: f64,
+    #[serde(rename = "Z")]
     pub z: f64,
 }
 
@@ -486,5 +493,14 @@ impl fmt::Display for Vector3 {
             format_f64_max_decimals(self.y, 4),
             format_f64_max_decimals(self.z, 4)
         )
+    }
+}
+
+/// C# `GetHashCode`: the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector3 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
+        crate::float_hash::hash_f64(self.z, state);
     }
 }

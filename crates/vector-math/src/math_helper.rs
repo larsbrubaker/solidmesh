@@ -43,6 +43,9 @@ pub enum MathError {
     /// `BinomialCoefficient`'s factorial product overflowed to zero (or to -1 under
     /// `long.MinValue`), which C# reports as a division error.
     DivisionOverflow,
+    /// A matrix builder was given an out-of-range argument (C# `ArgumentOutOfRangeException`
+    /// naming the parameter, e.g. `CreatePerspectiveFieldOfView`'s "fovy").
+    ArgumentOutOfRange(&'static str),
 }
 
 impl fmt::Display for MathError {
@@ -54,6 +57,10 @@ impl fmt::Display for MathError {
                 write!(f, "StartAngle != Range0ToTau(StartAngle)")
             }
             MathError::DivisionOverflow => write!(f, "Attempted to divide by zero."),
+            MathError::ArgumentOutOfRange(name) => write!(
+                f,
+                "Specified argument was out of the range of valid values. (Parameter '{name}')"
+            ),
         }
     }
 }

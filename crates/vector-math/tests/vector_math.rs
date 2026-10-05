@@ -1,10 +1,11 @@
 // Ported tests from agg-sharp `Tests/Agg.Tests/Agg.VectorMath/VectorMathTests.cs`, one file
-// per C# test class (CLAUDE.md "Testing framework", net 1). Phase 1a ports the classes and
-// tests that cover the vector types; the Easing, WorldView, Frustum, Plane, hash and JSON
-// serialization tests join with Phase 1b.
+// per C# test class (CLAUDE.md "Testing framework", net 1), plus Rust-only checks. The Easing
+// and WorldView tests join with Phase 1c.
 
 #[path = "vector_math/math_helper_constant_tests.rs"]
 mod math_helper_constant_tests;
+#[path = "vector_math/rust_only_matrix_tests.rs"]
+mod rust_only_matrix_tests;
 #[path = "vector_math/vector2_tests.rs"]
 mod vector2_tests;
 #[path = "vector_math/vector3_tests.rs"]

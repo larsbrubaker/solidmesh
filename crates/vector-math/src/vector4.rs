@@ -5,7 +5,7 @@
 //! operators; the vector-scale overloads are `multiply_components`/`divide_components`; static
 //! `Normalize(v)` is `normalized`; `ToString(string format)` is `to_string_with`, taking the
 //! per-component formatter. `Transform(Vector4, Matrix4X4)` and `Transform(Vector4,
-//! Quaternion)` arrive in Phase 1b.
+//! Quaternion)` are in `vector_transforms.rs`.
 
 use crate::number_format::{format_f64, parse_f64};
 use crate::{long_hash, Vector2, Vector3, LONG_HASH_SEED};
@@ -343,5 +343,15 @@ impl DivAssign<f64> for Vector4 {
 impl fmt::Display for Vector4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_string_with(format_f64))
+    }
+}
+
+/// C# `GetHashCode`: the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector4 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
+        crate::float_hash::hash_f64(self.z, state);
+        crate::float_hash::hash_f64(self.w, state);
     }
 }

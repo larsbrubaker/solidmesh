@@ -10,7 +10,7 @@
 //! float are `component_min_value`/`component_max_value`; static `Normalize(v)` is
 //! `normalized`. Not ported: the `Xy` setter and the Quaternion/perspective/position
 //! transforms, which throw `NotImplementedException` in C#; `Transform(Matrix4X4)`,
-//! `TransformVector` and `TransformNormal*` arrive with Matrix4X4 (Phase 1b).
+//! `TransformVector` and `TransformNormal*` are in `vector_transforms.rs`.
 
 use crate::cs_math::{max_f32, min_f32};
 use crate::number_format::format_f32;
@@ -21,10 +21,17 @@ use std::ops::{
 };
 
 /// A 3D vector of f32 (C# `MatterHackers.VectorMath.Vector3Float`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+///
+/// Serializes as Newtonsoft does (`{"X":..,"Y":..,"Z":..}`); members missing when reading keep
+/// their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector3Float {
+    #[serde(rename = "X")]
     pub x: f32,
+    #[serde(rename = "Y")]
     pub y: f32,
+    #[serde(rename = "Z")]
     pub z: f32,
 }
 
@@ -411,5 +418,14 @@ impl fmt::Display for Vector3Float {
             format_f32(self.y),
             format_f32(self.z)
         )
+    }
+}
+
+/// C# `GetHashCode`: the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector3Float {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f32(self.x, state);
+        crate::float_hash::hash_f32(self.y, state);
+        crate::float_hash::hash_f32(self.z, state);
     }
 }

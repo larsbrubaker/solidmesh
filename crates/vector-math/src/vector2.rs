@@ -5,7 +5,7 @@
 //! operators (same arithmetic); `Multiply(v, Vector2)`/`Divide(v, Vector2)` are
 //! `multiply_components`/`divide_components`; static `Rotate(v, r)` is `get_rotated`; static
 //! and instance `Dot`/`Cross` are one method; C# `Equals(other, errorRange)` is
-//! `equals_within`. `Transform(Vector2, Quaternion)` arrives with Quaternion (Phase 1b).
+//! `equals_within`. `Transform(Vector2, Quaternion)` is in `vector_transforms.rs`.
 
 use crate::math_helper::{self, MathError};
 use crate::number_format::{format_f64, parse_f64};
@@ -16,9 +16,15 @@ use std::ops::{
 };
 
 /// A 2D vector of f64 (C# `MatterHackers.VectorMath.Vector2`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+///
+/// Serializes as Newtonsoft does (`{"X":..,"Y":..}`); members missing when reading keep
+/// their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector2 {
+    #[serde(rename = "X")]
     pub x: f64,
+    #[serde(rename = "Y")]
     pub y: f64,
 }
 
@@ -395,5 +401,13 @@ impl DivAssign<f64> for Vector2 {
 impl fmt::Display for Vector2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", format_f64(self.x), format_f64(self.y))
+    }
+}
+
+/// C# `GetHashCode`: the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector2 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
     }
 }
