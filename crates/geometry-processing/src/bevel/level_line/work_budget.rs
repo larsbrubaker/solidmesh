@@ -1,16 +1,14 @@
 //! The level-line build's work accounting (`Bevel/LevelLine/WorkBudget.cs`): which phase was
 //! running ([`LevelLineWorkPhase`]), how far a build has got ([`LevelLineProgress`]), the
 //! deterministic allowance a build spends ([`WorkBudget`]) with its cancellation and progress
-//! report, the two ways out of a build it raises ([`WorkCanceled`], [`WorkBudgetExceeded`]) and
+//! report, the way out of a build it gives ([`WorkError`]: cancelled, or the budget exceeded) and
 //! the budget in force on this thread ([`LevelLineWork`], C#'s `[ThreadStatic]` slot, set by a
 //! [`LevelLineWorkScope`] guard), with the budget's default size, its progress-bar arithmetic
-//! (phase weights and starts, the fraction now, the report) and the two exits' constructors and
-//! messages. The charging, the phase changes and the nested-search slice land with later runs of
-//! the work-budget package as further `impl` blocks.
+//! (phase weights and starts, the fraction now, the report) and the charging and cancel poll. The
+//! phase changes and the nested-search slice land with later packages as further `impl` blocks.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::sync::Arc;
 
 use polygon_mesh::CancelToken;
 use vector_math::cs_math;
@@ -74,7 +72,7 @@ pub struct LevelLineProgress {
 pub const LEVEL_LINE_WORK_PHASE_COUNT: usize = 10;
 
 /// The progress callback a [`WorkBudget`] reports to (C# `Action<LevelLineProgress>`).
-pub type LevelLineProgressReport = Arc<dyn Fn(LevelLineProgress) + Send + Sync>;
+pub type LevelLineProgressReport = Rc<dyn Fn(LevelLineProgress)>;
 
 /// C# `WorkBudget`: a deterministic allowance of WORK - field queries, mesh splits and loop steps -
 /// that a level line build may spend before it refuses.
@@ -150,23 +148,35 @@ impl std::fmt::Debug for WorkBudget {
     }
 }
 
-/// C# `WorkCanceledException`: raised inside the module when the caller's cancellation token is
-/// cancelled, and turned into the caller's cancellation at every entry point. Its own type, so no
-/// handler of the budget's refusal can mistake a cancel for a build that ran away.
+/// How a level-line build leaves early (C#'s `WorkCanceledException` and
+/// `WorkBudgetExceededException`): returned by every function that charges the budget or polls
+/// for a cancel and passed up with `?`; the build's entry points turn it into C#'s outcome - the
+/// caller's cancellation, or a refusal by name. Two cases, so no handler of the budget's refusal
+/// can mistake a cancel for a build that ran away.
 #[derive(Debug, Clone)]
-pub struct WorkCanceled {
-    /// The budget whose token was cancelled.
-    pub budget: Rc<WorkBudget>,
+pub enum WorkError {
+    /// The caller's cancellation token was cancelled.
+    Cancelled,
+    /// The budget ran out - a way of leaving a deep worklist at once, not an error a caller is
+    /// meant to handle.
+    BudgetExceeded(Rc<WorkBudget>),
 }
 
-/// C# `WorkBudgetExceededException`: raised inside the module when a [`WorkBudget`] runs out, and
-/// handled at every entry point. It is a way of leaving a deep worklist at once, not an error a
-/// caller is meant to handle.
-#[derive(Debug, Clone)]
-pub struct WorkBudgetExceeded {
-    /// The budget that ran out.
-    pub budget: Rc<WorkBudget>,
+impl std::fmt::Display for WorkError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WorkError::Cancelled => f.write_str("the level line build was cancelled by its caller"),
+            WorkError::BudgetExceeded(budget) => write!(
+                f,
+                "the level line work budget of {} units ran out in {:?}",
+                budget.limit,
+                budget.exhausted_in.get()
+            ),
+        }
+    }
 }
+
+impl std::error::Error for WorkError {}
 
 thread_local! {
     /// C# `LevelLineWork.current` (`[ThreadStatic]`): the budget in force on this thread.
@@ -244,7 +254,7 @@ pub const PHASE_ORDER: [LevelLineWorkPhase; 8] = [
 ];
 
 /// C# `Environment.TickCount64`: milliseconds of wall clock, for the progress throttle alone (no
-/// result depends on it). Read off the meters' clock, so it stands still in the browser.
+/// result depends on it). Read off the meters' clock.
 pub fn tick_count_ms() -> i64 {
     stopwatch::get_timestamp() / (stopwatch::FREQUENCY / 1000)
 }
@@ -388,37 +398,66 @@ impl WorkBudget {
     }
 }
 
-impl WorkCanceled {
-    /// C#'s constructor.
-    pub fn new(budget: Rc<WorkBudget>) -> Self {
-        Self { budget }
+impl WorkBudget {
+    /// Charges work. When the budget runs out this answers [`WorkError::BudgetExceeded`], which
+    /// the construction's own entry points turn into a refusal BY NAME - no caller of this module
+    /// ever sees it, and no partial mesh is ever handed back. Every [`CANCEL_CHECK_EVERY`] charges
+    /// it reads the cancellation token and, when the throttle allows, reports progress.
+    pub fn charge(self: &Rc<Self>, units: i64) -> Result<(), WorkError> {
+        self.spent.set(self.spent.get() + units);
+        if self.spent.get() > self.limit {
+            let phase = self.phase.get();
+            self.exhausted_in.set(if phase == LevelLineWorkPhase::None {
+                LevelLineWorkPhase::Refinement
+            } else {
+                phase
+            });
+            return Err(WorkError::BudgetExceeded(Rc::clone(self)));
+        }
+
+        let since = self.since_cancel_check.get() + 1;
+        self.since_cancel_check.set(since);
+        if since < CANCEL_CHECK_EVERY {
+            return Ok(());
+        }
+
+        // A counter compare on the hot path, and the token and the clock read only once every few
+        // hundred charges - far too little work to notice, and short enough that a cancel lands
+        // within milliseconds.
+        self.since_cancel_check.set(0);
+
+        if self.cancellation_token.is_cancelled() {
+            return Err(WorkError::Cancelled);
+        }
+
+        if self.progress.is_some()
+            && tick_count_ms() - self.last_report_ms.get() >= self.report_throttle_ms
+        {
+            self.report_now();
+        }
+
+        Ok(())
     }
 }
 
-impl std::fmt::Display for WorkCanceled {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("the level line build was cancelled by its caller")
+impl LevelLineWork {
+    /// Charges units of work to the budget in force; nothing when there is none (C#'s default
+    /// `units = 1` is passed explicitly).
+    pub fn charge(units: i64) -> Result<(), WorkError> {
+        match Self::current() {
+            Some(budget) => budget.charge(units),
+            None => Ok(()),
+        }
+    }
+
+    /// Leaves at once if the build in force has been cancelled, WITHOUT charging anything - for
+    /// loops that are long but charged coarsely (or not at all), where adding charges would move
+    /// the work-unit totals the ratchet tests pin. A token read and nothing else, so it may sit in
+    /// an inner loop.
+    pub fn poll_cancel() -> Result<(), WorkError> {
+        match Self::current() {
+            Some(budget) if budget.cancellation_token.is_cancelled() => Err(WorkError::Cancelled),
+            _ => Ok(()),
+        }
     }
 }
-
-impl std::error::Error for WorkCanceled {}
-
-impl WorkBudgetExceeded {
-    /// C#'s constructor.
-    pub fn new(budget: Rc<WorkBudget>) -> Self {
-        Self { budget }
-    }
-}
-
-impl std::fmt::Display for WorkBudgetExceeded {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "the level line work budget of {} units ran out in {:?}",
-            self.budget.limit,
-            self.budget.exhausted_in.get()
-        )
-    }
-}
-
-impl std::error::Error for WorkBudgetExceeded {}

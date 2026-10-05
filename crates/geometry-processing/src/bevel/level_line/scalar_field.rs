@@ -6,8 +6,13 @@
 //! [`ChainDistanceField::max_along_segment_at_least`] and the six-argument `MaxOverTriangle` is
 //! [`ChainDistanceField::max_over_triangle_bounded`] (its `atLeast` default of negative infinity
 //! passed explicitly).
+//!
+//! Every query may charge the work budget in force, so each answers `Result<_, WorkError>` and a
+//! caller passes a cancel or an exhausted budget up with `?` (C# throws through them).
 
 use vector_math::Vector3;
+
+use super::WorkError;
 
 /// One number per point in space, negative in the band that is to be deleted, positive outside
 /// it, zero on the level line the cut follows (C# `IScalarField`).
@@ -18,7 +23,7 @@ use vector_math::Vector3;
 /// because the refinement leans on that to rule out an edge crossing the line twice.
 pub trait ScalarField {
     /// The field value at a point: negative inside the band, positive outside, zero on the line.
-    fn value_at(&self, point: Vector3) -> f64;
+    fn value_at(&self, point: Vector3) -> Result<f64, WorkError>;
 }
 
 /// The least value a field takes over a piece of the mesh, and the point where it takes it.
@@ -69,10 +74,15 @@ impl FieldMaximum {
 pub trait ChainDistanceField: ScalarField {
     /// The least field value along the segment from `a` to `b`, and where it stands - exact,
     /// whatever the setback does.
-    fn min_along_segment(&self, a: Vector3, b: Vector3) -> FieldMinimum;
+    fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError>;
 
     /// The least field value over the triangle abc, its interior included.
-    fn min_over_triangle(&self, a: Vector3, b: Vector3, c: Vector3) -> FieldMinimum;
+    fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError>;
 
     /// A cheap "no" to `is the least value over this box at or below the margin`, for a caller
     /// that only asks whether a piece dips across the line. The default answers "cannot say", so a
@@ -85,7 +95,12 @@ pub trait ChainDistanceField: ScalarField {
     /// mirror of [`ChainDistanceField::min_along_segment`]. An edge with both ends INSIDE whose
     /// middle rises above the line crosses it twice, exactly as an edge with both ends outside that
     /// dips below it does, and neither pair of crossings can be seen from the ends.
-    fn max_along_segment(&self, a: Vector3, b: Vector3, tolerance: f64) -> FieldMaximum;
+    fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError>;
 
     /// The same search, given a floor `at_least` to prune against from its first step, so every
     /// sub-segment whose bound cannot beat it is discarded - the one-dimensional twin of the seeded
@@ -98,13 +113,18 @@ pub trait ChainDistanceField: ScalarField {
         b: Vector3,
         tolerance: f64,
         at_least: f64,
-    ) -> FieldMaximum;
+    ) -> Result<FieldMaximum, WorkError>;
 
     /// The GREATEST field value over the triangle abc, its interior included, to within
     /// `tolerance` - the island of kept material a cut would otherwise swallow whole, and the room
     /// a loop closing on itself has. Found by bounded search, not by sampling.
-    fn max_over_triangle(&self, a: Vector3, b: Vector3, c: Vector3, tolerance: f64)
-        -> FieldMaximum;
+    fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError>;
 
     /// The same search, told a value `at_least` the answer must beat to be of any use - so every
     /// part of the triangle whose bound cannot beat it is discarded from the first step - and a
@@ -126,7 +146,7 @@ pub trait ChainDistanceField: ScalarField {
         tolerance: f64,
         stop_above: f64,
         at_least: f64,
-    ) -> FieldMaximum;
+    ) -> Result<FieldMaximum, WorkError>;
 
     /// The island rule's search: whether the field rises above `snap` inside the triangle abc, and
     /// where the split vertex goes when it does - a point the SAME whatever a search pruning harder
@@ -138,7 +158,7 @@ pub trait ChainDistanceField: ScalarField {
         c: Vector3,
         tolerance: f64,
         snap: f64,
-    ) -> FieldMaximum {
+    ) -> Result<FieldMaximum, WorkError> {
         self.max_over_triangle_bounded(a, b, c, tolerance, f64::INFINITY, snap - tolerance)
     }
 }

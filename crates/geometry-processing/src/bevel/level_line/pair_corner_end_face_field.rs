@@ -2,7 +2,8 @@
 //! ([`PairCornerEndFaceField`]), and the scope that turns it off for a flow
 //! ([`PairCornerEndFaceFieldScope`]). Ports the types of
 //! `Bevel/LevelLine/PairCornerEndFaceField.cs`, with the bridges of a vertex graph ([`bridges`]); the
-//! finder, the field queries and the per-flow gate land with later packages.
+//! construction and field queries are in `pair_corner_end_face_field_queries.rs`, and the finder
+//! and the per-flow gate land with later packages.
 
 use std::collections::{HashMap, HashSet};
 

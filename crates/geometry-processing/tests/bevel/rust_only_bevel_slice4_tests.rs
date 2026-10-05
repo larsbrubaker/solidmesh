@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::level_line::{
     field_bounds, segment_box_tree, ChainDistanceField, FieldMaximum, FieldMinimum, GapLoop,
-    ScalarField,
+    ScalarField, WorkError,
 };
 use geometry_processing::bevel::sections::SectionPool;
 use geometry_processing::bevel::surface::{
@@ -92,24 +92,34 @@ fn rust_only_the_segment_box_tree_splits_by_index_and_bounds_every_leaf() {
 struct HeightField;
 
 impl ScalarField for HeightField {
-    fn value_at(&self, point: Vector3) -> f64 {
-        point.z
+    fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
+        Ok(point.z)
     }
 }
 
 impl ChainDistanceField for HeightField {
-    fn min_along_segment(&self, a: Vector3, b: Vector3) -> FieldMinimum {
+    fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
         let p = if a.z <= b.z { a } else { b };
-        FieldMinimum::new(p.z, p)
+        Ok(FieldMinimum::new(p.z, p))
     }
 
-    fn min_over_triangle(&self, a: Vector3, b: Vector3, c: Vector3) -> FieldMinimum {
-        self.min_along_segment(self.min_along_segment(a, b).point, c)
+    fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        self.min_along_segment(self.min_along_segment(a, b)?.point, c)
     }
 
-    fn max_along_segment(&self, a: Vector3, b: Vector3, _tolerance: f64) -> FieldMaximum {
+    fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        _tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
         let p = if a.z >= b.z { a } else { b };
-        FieldMaximum::new(p.z, p)
+        Ok(FieldMaximum::new(p.z, p))
     }
 
     fn max_along_segment_at_least(
@@ -118,17 +128,23 @@ impl ChainDistanceField for HeightField {
         b: Vector3,
         t: f64,
         at_least: f64,
-    ) -> FieldMaximum {
-        let found = self.max_along_segment(a, b, t);
-        if found.value > at_least {
+    ) -> Result<FieldMaximum, WorkError> {
+        let found = self.max_along_segment(a, b, t)?;
+        Ok(if found.value > at_least {
             found
         } else {
             FieldMaximum::new(at_least, Vector3::ZERO)
-        }
+        })
     }
 
-    fn max_over_triangle(&self, a: Vector3, b: Vector3, c: Vector3, t: f64) -> FieldMaximum {
-        self.max_along_segment(self.max_along_segment(a, b, t).point, c, t)
+    fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        t: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.max_along_segment(self.max_along_segment(a, b, t)?.point, c, t)
     }
 
     fn max_over_triangle_bounded(
@@ -139,13 +155,13 @@ impl ChainDistanceField for HeightField {
         t: f64,
         _stop_above: f64,
         at_least: f64,
-    ) -> FieldMaximum {
-        let found = self.max_over_triangle(a, b, c, t);
-        if found.value > at_least {
+    ) -> Result<FieldMaximum, WorkError> {
+        let found = self.max_over_triangle(a, b, c, t)?;
+        Ok(if found.value > at_least {
             found
         } else {
             FieldMaximum::new(at_least, Vector3::ZERO)
-        }
+        })
     }
 }
 
@@ -161,9 +177,9 @@ fn rust_only_a_field_answers_the_island_rule_through_its_seeded_search() {
         !field.nothing_reaches_below(a, b, 0.0),
         "the default cannot say"
     );
-    let peak = field.island_peak(a, b, c, 0.1, 1.5);
+    let peak = field.island_peak(a, b, c, 0.1, 1.5).expect("no budget");
     assert_eq!(peak, FieldMaximum::new(2.0, b));
-    let none = field.island_peak(a, b, c, 0.1, 3.0);
+    let none = field.island_peak(a, b, c, 0.1, 3.0).expect("no budget");
     assert_eq!(
         none.value, 2.9,
         "nothing beats the snap: the floor itself comes back"

@@ -1,13 +1,16 @@
 //! The field of one `CreaseRunOut` ([`RunOutField`]). Ports the type of
 //! `Bevel/LevelLine/RunOutField.cs`, with its constructors (a bare cone, the field of a run-out,
-//! the wedge under a contact profile), its reading and the golden-section least; the field queries
-//! that charge the work budget land with later runs of the package.
+//! the wedge under a contact profile), its reading, the golden-section least and its field
+//! queries ([`ScalarField`], [`ChainDistanceField`]).
 
 use std::cmp::Ordering;
 
 use vector_math::{cs_math, Vector3};
 
-use super::CreaseRunOut;
+use super::{
+    ChainDistanceField, CreaseRunOut, FieldMaximum, FieldMinimum, LevelLineWork, ScalarField,
+    WorkError,
+};
 
 /// The steepest taper taken - a guard, not a tuning: it keeps a degenerate reading (a contact
 /// sample almost at P*) from turning the sliver into a fan.
@@ -273,5 +276,121 @@ impl RunOutField {
         }
 
         best
+    }
+}
+
+impl RunOutField {
+    /// The greater of the field's values at the two ends - convex, so the greatest over a segment
+    /// or triangle stands at a corner.
+    pub fn greatest(&self, a: Vector3, b: Vector3) -> Result<FieldMaximum, WorkError> {
+        let va = self.value_at(a)?;
+        let vb = self.value_at(b)?;
+        Ok(if va >= vb {
+            FieldMaximum::new(va, a)
+        } else {
+            FieldMaximum::new(vb, b)
+        })
+    }
+}
+
+impl ScalarField for RunOutField {
+    fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
+        LevelLineWork::charge(1)?;
+        Ok(self.read(point))
+    }
+}
+
+impl ChainDistanceField for RunOutField {
+    fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
+        LevelLineWork::charge(1)?;
+        let t = Self::least_of(&|u| self.read(a + ((b - a) * u)), 0.0, 1.0);
+        let at = a + ((b - a) * t);
+        Ok(FieldMinimum::new(self.read(at), at))
+    }
+
+    fn min_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+    ) -> Result<FieldMinimum, WorkError> {
+        LevelLineWork::charge(1)?;
+        let at = |u: f64, v: f64| a + ((b - a) * u) + ((c - a) * v);
+        let least_across = |u: f64| {
+            self.read(at(
+                u,
+                Self::least_of(&|v| self.read(at(u, v)), 0.0, 1.0 - u),
+            ))
+        };
+        let best_u = Self::least_of(&least_across, 0.0, 1.0);
+        let best_v = Self::least_of(&|v| self.read(at(best_u, v)), 0.0, 1.0 - best_u);
+        let point = at(best_u, best_v);
+        Ok(FieldMinimum::new(self.read(point), point))
+    }
+
+    /// True when the box misses a ball holding every point the field reads at or below `margin`.
+    /// The ball must hold the SUBLEVEL set `{f <= m}`, not the solid: with `m = max(margin, 0)`,
+    /// over `s` in `[-m, reach + m]` the sublevel set lies in a cylinder of half-length
+    /// `reach / 2 + m` about the centre and radius `slope (reach + m) + m norm`; the ball through
+    /// its rims holds it, and the hull lines and the width cap only shrink it further.
+    fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
+        let m = cs_math::max_f64(margin, 0.0);
+        let half_length = (self.reach / 2.0) + m;
+        let rim = (self.slope * (self.reach + m)) + (m * self.norm);
+        let radius = ((half_length * half_length) + (rim * rim)).sqrt();
+        let nearest = Vector3::component_max(min, Vector3::component_min(max, self.ball_centre));
+        (nearest - self.ball_centre).length() > radius
+    }
+
+    fn max_along_segment(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        _tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        self.greatest(a, b)
+    }
+
+    fn max_along_segment_at_least(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        _tolerance: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        let greatest = self.greatest(a, b)?;
+        Ok(if greatest.value > at_least {
+            greatest
+        } else {
+            FieldMaximum::new(at_least, a)
+        })
+    }
+
+    fn max_over_triangle(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        _tolerance: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        let first = self.greatest(a, b)?;
+        self.greatest(first.point, c)
+    }
+
+    fn max_over_triangle_bounded(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        tolerance: f64,
+        _stop_above: f64,
+        at_least: f64,
+    ) -> Result<FieldMaximum, WorkError> {
+        let greatest = self.max_over_triangle(a, b, c, tolerance)?;
+        Ok(if greatest.value > at_least {
+            greatest
+        } else {
+            FieldMaximum::new(at_least, a)
+        })
     }
 }

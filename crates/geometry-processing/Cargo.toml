@@ -21,6 +21,7 @@ agg-path = { path = "../agg-path" }
 vector-math = { path = "../vector-math" }
 polygon-mesh = { path = "../polygon-mesh" }
 indexmap = "2"
+web-time = "1"
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

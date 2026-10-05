@@ -1,31 +1,24 @@
 //! The level-line meters' clock: C#'s `Stopwatch.GetTimestamp` and `Stopwatch.Frequency`, as the
 //! diagnostic meters (`FieldCounters`, `NeedleMeter`, `SplitMeter`, `ForeignRoomCounters`) and
-//! the work budget's phase tally read them. Native builds count nanoseconds since the first
-//! reading; `wasm32-unknown-unknown` has no clock std can read, so there every timestamp is 0 and
-//! every metered time reads zero (`docs/CSHARP_DIVERGENCES.md` 653). Also the number formats
-//! the meters write their reports in, C#'s `N0` ([`n0`]), `G4` ([`g4`]) and `E3` ([`e3`]).
+//! the work budget's phase tally and progress throttle read them: nanoseconds since the first
+//! reading, from `web_time::Instant`, which reads `performance.now()` in the browser and the
+//! system's monotonic clock natively. Also the number formats the meters write their reports in,
+//! C#'s `N0` ([`n0`]), `G4` ([`g4`]) and `E3` ([`e3`]).
+
+use std::sync::OnceLock;
+
+use web_time::Instant;
 
 /// Ticks per second of [`get_timestamp`] (C# `Stopwatch.Frequency`).
 pub const FREQUENCY: i64 = 1_000_000_000;
 
-/// The current timestamp in ticks (C# `Stopwatch.GetTimestamp`): never 0 natively, so a meter
-/// may keep 0 as "not running" the way the C# does.
-#[cfg(not(target_arch = "wasm32"))]
+/// The current timestamp in ticks (C# `Stopwatch.GetTimestamp`): never 0, so a meter may keep 0
+/// as "not running" the way the C# does.
 pub fn get_timestamp() -> i64 {
-    use std::sync::OnceLock;
-    use std::time::Instant;
-
     static ORIGIN: OnceLock<Instant> = OnceLock::new();
     let origin = *ORIGIN.get_or_init(Instant::now);
     // Saturating: i64 nanoseconds run out after 292 years of process time.
     1 + i64::try_from(origin.elapsed().as_nanos()).unwrap_or(i64::MAX - 1)
-}
-
-/// The current timestamp in ticks: always 0 in the browser, where std has no clock (divergence
-/// 653), so the meters' clocks never start there.
-#[cfg(target_arch = "wasm32")]
-pub fn get_timestamp() -> i64 {
-    0
 }
 
 /// Ticks as seconds (C# `FieldCounters.Seconds`, `ticks / Stopwatch.Frequency`).

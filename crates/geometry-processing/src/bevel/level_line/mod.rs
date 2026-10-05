@@ -102,6 +102,7 @@ pub mod open_gap_fill_cut_section;
 pub mod open_gap_fill_stations;
 pub mod open_gap_fill_sunk_arc;
 pub mod pair_corner_end_face_field;
+mod pair_corner_end_face_field_queries;
 mod pick_fault;
 mod pick_field;
 pub mod pick_validation;
@@ -186,6 +187,6 @@ pub use square_crease_end_clip::SquareCreaseEndClipSquareCreaseClipsOffScope;
 pub use vertex_side::{VertexFieldReading, VertexSide};
 pub use work_budget::{
     LevelLineProgress, LevelLineProgressReport, LevelLineWork, LevelLineWorkPhase,
-    LevelLineWorkScope, WorkBudget, WorkBudgetExceeded, WorkCanceled, LEVEL_LINE_WORK_PHASE_COUNT,
+    LevelLineWorkScope, WorkBudget, WorkError, LEVEL_LINE_WORK_PHASE_COUNT,
 };
 pub use zip_rail::ZipRail;

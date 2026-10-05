@@ -110,3 +110,119 @@ fn rust_only_a_run_out_wedge_reads_under_its_profile() {
     assert!((least - 0.3).abs() < 1e-9);
     assert_eq!(RunOutField::least_of(&|x| x, 2.0, 1.0), 2.0);
 }
+
+fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudget> {
+    use std::cell::{Cell, RefCell};
+    std::rc::Rc::new(WorkBudget {
+        cancellation_token: token,
+        progress: None,
+        limit,
+        input_is_float_stored: false,
+        report_throttle_ms: 50,
+        spent: Cell::new(0),
+        phase: Cell::new(LevelLineWorkPhase::None),
+        exhausted_in: Cell::new(LevelLineWorkPhase::None),
+        since_cancel_check: Cell::new(0),
+        last_report_ms: Cell::new(0),
+        last_fraction: Cell::new(0.0),
+        side_group_index: Cell::new(0),
+        side_group_count: Cell::new(0),
+        refinement_taken: Cell::new(0),
+        refinement_left: Cell::new(0),
+        phase_started_at: Cell::new(0),
+        phase_estimates: RefCell::new(Default::default()),
+        phase_units: RefCell::new(Default::default()),
+        phase_ticks: RefCell::new(Default::default()),
+        phase_tally_units_at: Cell::new(0),
+        phase_tally_ticks_at: Cell::new(0),
+    })
+}
+
+#[test]
+fn rust_only_a_budget_runs_out_or_is_cancelled_as_an_error() {
+    use geometry_processing::bevel::level_line::{LevelLineWork, WorkError};
+    // No budget in force: charging is free.
+    assert!(LevelLineWork::charge(1_000_000).is_ok());
+
+    let spent = budget(10, polygon_mesh::CancelToken::new());
+    let _scope = LevelLineWork::begin(Some(spent.clone()));
+    assert!(LevelLineWork::charge(10).is_ok());
+    match LevelLineWork::charge(1) {
+        Err(WorkError::BudgetExceeded(b)) => {
+            assert_eq!(b.exhausted_in.get(), LevelLineWorkPhase::Refinement);
+            assert_eq!(
+                WorkError::BudgetExceeded(b).to_string(),
+                "the level line work budget of 10 units ran out in Refinement"
+            );
+        }
+        other => panic!("expected the budget to run out, got {other:?}"),
+    }
+
+    let token = polygon_mesh::CancelToken::new();
+    let watched = budget(1_000_000, token.clone());
+    let _inner = LevelLineWork::begin(Some(watched));
+    assert!(LevelLineWork::poll_cancel().is_ok());
+    token.cancel();
+    assert!(matches!(
+        LevelLineWork::poll_cancel(),
+        Err(WorkError::Cancelled)
+    ));
+    // The charge reads the token only every 256 charges.
+    let mut answer = Ok(());
+    for _ in 0..256 {
+        answer = LevelLineWork::charge(1);
+        if answer.is_err() {
+            break;
+        }
+    }
+    assert!(matches!(answer, Err(WorkError::Cancelled)));
+}
+
+#[test]
+fn rust_only_field_queries_read_the_wedge_and_the_pair_corner_exactly() {
+    use geometry_processing::bevel::level_line::{
+        ChainDistanceField, PairCornerEndFaceField, ScalarField,
+    };
+    let wedge = RunOutField::cone(v(0.0, 0.0, 0.0), v(1.0, 0.0, 0.0), 4.0, 0.5, f64::INFINITY);
+    assert_eq!(
+        wedge.value_at(v(2.0, 3.0, 0.0)).ok(),
+        Some(wedge.read(v(2.0, 3.0, 0.0)))
+    );
+    let least = wedge
+        .min_along_segment(v(1.0, 2.0, 0.0), v(3.0, 2.0, 0.0))
+        .expect("no budget");
+    assert!(
+        least.value <= wedge.read(v(1.0, 2.0, 0.0)) && least.value <= wedge.read(v(3.0, 2.0, 0.0))
+    );
+    let most = wedge
+        .max_over_triangle(v(1.0, 0.0, 0.0), v(2.0, 1.0, 0.0), v(9.0, 0.0, 0.0), 0.01)
+        .expect("no budget");
+    assert_eq!(most.point, v(9.0, 0.0, 0.0));
+
+    // A square corner of a 2-round: the axis stands 2 inside both faces.
+    let field = PairCornerEndFaceField::of(
+        v(0.0, 0.0, 0.0),
+        v(1.0, 0.0, 0.0),
+        v(0.0, 1.0, 0.0),
+        v(0.0, 0.0, 1.0),
+        v(-1.0, 0.0, 0.0),
+        2.0,
+    );
+    assert_eq!(field.axis_point, v(0.0, -2.0, -2.0));
+    assert_eq!(
+        PairCornerEndFaceField::quadratic_roots(1.0, 0.0, -4.0),
+        vec![2.0, -2.0]
+    );
+    assert_eq!(
+        PairCornerEndFaceField::quadratic_roots(0.0, 2.0, -4.0),
+        vec![2.0]
+    );
+    let segment_least = field
+        .min_along_segment(v(0.0, -1.0, -1.0), v(0.0, -3.0, -3.0))
+        .expect("no budget");
+    // The exact least is no greater than any sampled reading along the segment.
+    for i in 0..=20 {
+        let p = v(0.0, -1.0, -1.0) + (v(0.0, -2.0, -2.0) * (i as f64 / 20.0));
+        assert!(segment_least.value <= field.read(p) + 1e-12);
+    }
+}
