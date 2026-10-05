@@ -47,6 +47,7 @@ pub mod bevel_advisory_codes;
 pub mod bevel_arc_chording;
 pub mod bevel_bead_batch;
 pub mod bevel_bead_clip;
+pub mod bevel_bead_corner_pieces;
 pub mod bevel_bead_exit;
 pub mod bevel_blend_seam;
 pub mod bevel_cap_clip;

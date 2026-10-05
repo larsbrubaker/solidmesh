@@ -5,6 +5,8 @@
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
 mod bevel_bead_batch_tests;
+#[path = "bevel/bevel_cap_clip_tests.rs"]
+mod bevel_cap_clip_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]

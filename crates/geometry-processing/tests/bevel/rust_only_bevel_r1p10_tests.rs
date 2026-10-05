@@ -102,3 +102,37 @@ fn rust_only_a_cap_plane_half_space_stands_past_the_plane_and_clips_or_withdraws
         Err(BooleanError::Cancelled)
     ));
 }
+
+#[test]
+fn rust_only_beads_are_gathered_by_the_corner_void_they_share() {
+    use geometry_processing::bevel::bevel_bead_clip::Clippable;
+    use geometry_processing::bevel::bevel_bead_corner_pieces::beads_by_corner;
+    use std::rc::Rc;
+    let cube = |size: f64| platonic_solids::create_cube(size, size, size);
+    let corner = Rc::new(cube(1.0));
+    // Equal geometry, a different corner.
+    let twin = Rc::new(cube(1.0));
+    let beads = vec![
+        Clippable::new(
+            cube(2.0),
+            cube(9.0),
+            Some(vec![Rc::clone(&corner)]),
+            None,
+            None,
+        ),
+        Clippable::new(cube(3.0), cube(9.0), None, None, None),
+        Clippable::new(
+            cube(4.0),
+            cube(9.0),
+            Some(vec![Rc::clone(&corner), Rc::clone(&twin)]),
+            None,
+            None,
+        ),
+    ];
+    let grouped = beads_by_corner(&beads);
+    assert_eq!(grouped.len(), 2);
+    assert!(Rc::ptr_eq(&grouped[0].0, &corner));
+    assert_eq!(grouped[0].1.len(), 2);
+    assert!(Rc::ptr_eq(&grouped[1].0, &twin));
+    assert_eq!(grouped[1].1.len(), 1);
+}

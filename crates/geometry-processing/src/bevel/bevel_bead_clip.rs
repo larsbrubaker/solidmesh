@@ -4,6 +4,8 @@
 //! ([`Clippable`]). The trims themselves land with the core's bead-clip packages as free
 //! functions in this module; `BevelBeadBatch` is what gathers the [`Clippable`]s.
 
+use std::rc::Rc;
+
 use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::Mesh;
 use vector_math::Matrix4X4;
@@ -51,7 +53,9 @@ pub struct Clippable {
     /// [`Clippable::corner_voids`] is `Some`.
     pub wedge: Mesh,
     /// The void of each 5.3 corner this chain overshoots into, or `None` where it reaches none.
-    pub corner_voids: Option<Vec<Mesh>>,
+    /// Shared (`Rc`): every bead meeting at a corner holds the SAME void, and the corner pieces
+    /// group the beads by that identity (C# reads it by reference), never by geometry.
+    pub corner_voids: Option<Vec<Rc<Mesh>>>,
     /// The same wedge swept along the overshoot instead of squared (`BevelTool.FallbackWedge`),
     /// or `None` where there was nothing to square.
     pub fallback_wedge: Option<Mesh>,
@@ -78,7 +82,7 @@ impl Clippable {
     pub fn new(
         bead: Mesh,
         wedge: Mesh,
-        corner_voids: Option<Vec<Mesh>>,
+        corner_voids: Option<Vec<Rc<Mesh>>>,
         fallback_wedge: Option<Mesh>,
         exit_planes: Option<Vec<BevelEndCap>>,
     ) -> Self {
