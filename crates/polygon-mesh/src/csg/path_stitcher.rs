@@ -1,16 +1,15 @@
 //! Walling two integer polygon loops into a mesh. Port of agg-sharp `Csg/PathStitcher.cs`
-//! (namespace `Processors`): the start-pair search, the advance rule for an outer/inner pair and
-//! the two wall builders `Stitch` uses.
-//!
-//! Not here yet: `Stitch` itself, whose top-only and bottom-only cases cap a loop through
-//! agg-path's `VertexStorage.TriangulateFaces` (`VertexSourceToMesh`, Phase 2e); it lands with
-//! that slice on top of [`create_simple_wall`] and [`stitch_2_single_walls`].
+//! (namespace `Processors`): `Stitch`, the start-pair search, the advance rule for an
+//! outer/inner pair and the two wall builders `Stitch` uses. Its top-only and bottom-only cases
+//! cap a loop through `VertexSourceToMesh.TriangulateFaces`.
 
-use clipper2_rust::{Path64, Point64};
-use vector_math::Vector3;
+use clipper2_rust::{Path64, Paths64, Point64};
+use vector_math::{Matrix4X4, Vector3};
 
+use crate::processors::vertex_source_to_mesh::triangulate_faces;
 use crate::Mesh;
 use agg_path::clipper_library::{get_intersection, length_squared, Intersection};
+use agg_path::data_converters_2d::create_vertex_storage;
 
 fn distance_squared(a: Point64, b: Point64) -> i64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y))
@@ -18,6 +17,65 @@ fn distance_squared(a: Point64, b: Point64) -> i64 {
 
 fn at_height(point: Point64, height: f64) -> Vector3 {
     Vector3::new(point.x as f64, point.y as f64, height)
+}
+
+/// C# `Stitch(bottomLoop, bottomHeight, topLoop, topHeight, scaling = 1000)`: a cap facing up
+/// when there is only a bottom, one facing down when there is only a top, walls when both have
+/// the same number of loops (paired by index, `scaling` clipper units to the unit), and `None`
+/// otherwise. `None` and an empty list are the same absent loop.
+pub fn stitch(
+    bottom_loop: Option<&Paths64>,
+    bottom_height: f64,
+    top_loop: Option<&Paths64>,
+    top_height: f64,
+    scaling: f64,
+) -> Option<Mesh> {
+    let bottom_loop = bottom_loop.filter(|loops| !loops.is_empty());
+    let top_loop = top_loop.filter(|loops| !loops.is_empty());
+    match (bottom_loop, top_loop) {
+        // only a bottom: if there is no top then we need to create a top
+        (Some(bottom_loop), None) => Some(create_top(bottom_loop, bottom_height, scaling)),
+        // only a top: if there is no bottom then we need to create a bottom
+        (None, Some(top_loop)) => Some(create_bottom(top_loop, top_height, scaling)),
+        // simple bottom and top
+        (Some(bottom_loop), Some(top_loop)) if bottom_loop.len() == top_loop.len() => {
+            let mut mesh = Mesh::new();
+            for (bottom, top) in bottom_loop.iter().zip(top_loop) {
+                let walls = if bottom.len() == top.len() {
+                    create_simple_wall(bottom, bottom_height * 1000.0, top, top_height * 1000.0)
+                } else {
+                    stitch_2_single_walls(bottom, bottom_height * 1000.0, top, top_height * 1000.0)
+                };
+                mesh.copy_all_faces(&walls, Matrix4X4::IDENTITY);
+            }
+
+            mesh.transform(Matrix4X4::create_scale_uniform(1.0 / scaling));
+            Some(mesh)
+        }
+        _ => None,
+    }
+}
+
+/// C# `CreateTop`.
+fn create_top(path: &Paths64, top_height: f64, scaling: f64) -> Mesh {
+    triangulate_faces(
+        &create_vertex_storage(path, scaling),
+        None,
+        None,
+        top_height,
+    )
+}
+
+/// C# `CreateBottom`.
+fn create_bottom(path: &Paths64, bottom_height: f64, scaling: f64) -> Mesh {
+    let mut mesh = triangulate_faces(
+        &create_vertex_storage(path, scaling),
+        None,
+        None,
+        bottom_height,
+    );
+    mesh.reverse_faces();
+    mesh
 }
 
 /// The closest pair of vertices between the two loops, first found on a tie

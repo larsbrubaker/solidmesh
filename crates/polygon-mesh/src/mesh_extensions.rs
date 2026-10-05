@@ -5,7 +5,8 @@
 //!
 //! `Face.Split`/`GetCutLine` live in `face_split.rs`, `SplitOnPlanes` in `mesh_editing.rs` and
 //! `RepairTJunctions` in `t_junctions.rs`. Not yet ported: the texture helpers (`GetMaxPlaneProjection`, `PlaceTexture*`,
-//! `CopyFaces`, `AddFaceCopy`, `RemoveTexture`, `TexturedPlane`), which need agg `ImageBuffer`.
+//! `AddFaceCopy`, `RemoveTexture`, `TexturedPlane`) and `CopyFaces`' texture and color half,
+//! which need agg `ImageBuffer` and face colors (Phase 2f).
 
 use std::collections::HashSet;
 
@@ -58,6 +59,21 @@ impl Face {
 }
 
 impl Mesh {
+    /// C# `CopyFaces(copyFrom)`: appends `copy_from`'s vertices as they are and its faces with
+    /// their normals, unwelded. (The face textures and colors it also carries join with 2f.)
+    pub fn copy_faces(&mut self, copy_from: &Mesh) {
+        let v_start = self.vertices.len() as i32;
+        self.vertices.extend_from_slice(&copy_from.vertices);
+        for face in copy_from.faces.iter() {
+            self.faces.add_with_normal(
+                face.v0 + v_start,
+                face.v1 + v_start,
+                face.v2 + v_start,
+                face.normal,
+            );
+        }
+    }
+
     /// An independent copy of the mesh - its own vertices and faces - so that editing the copy
     /// can never reach back into the source. (C#'s `Copy` takes a cancellation token and a
     /// progress callback that it never uses.)
