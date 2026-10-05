@@ -2,14 +2,17 @@
 //! `Bevel/Surface/SurfaceEndGivesUpTheSection.cs` (C# `internal static class`; a module of free
 //! functions here). What is here is the sewing of the faces the subtraction did not rebuild to the
 //! vertices it made ([`sew_the_rim`]), the half planes the section is bounded by and the pieces a
-//! face leaves outside them ([`pieces_outside_of`], [`pieces_left_of`]); the subtraction itself
-//! (`TryGiveItUp`) and its other readings land with later packages.
+//! face leaves outside them ([`pieces_outside_of`], [`pieces_left_of`]), and the subtraction
+//! itself ([`try_give_it_up`]).
 
 use std::collections::HashSet;
 
+use indexmap::IndexSet;
+
 use vector_math::Vector3;
 
-use super::{surface_cut_clip, surface_fan, SurfaceVertexPool};
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
+use super::{surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, SurfaceVertexPool};
 
 /// C# `SewTheRim`: splits any face the subtraction did NOT rebuild wherever one of the vertices it
 /// made stands part way along an edge of that face, so the rim sews by index rather than by
@@ -255,4 +258,102 @@ pub fn try_half_plane(
     }
 
     Some((from, if reach > 0.0 { inward } else { -inward }))
+}
+
+/// C# `TryGiveItUp`: takes the section between `corner` and `profile` (the strip's end ring, rail
+/// by rail, already in `pool`) out of the end face (`in_the_end` names its faces in `faces`;
+/// `plane_normal` is its outward normal), leaving the profile as that face's boundary. Returns
+/// what the subtraction left standing part way along each chord of the profile (C#'s
+/// `out alongTheProfile`), or why the section could not be taken off.
+pub fn try_give_it_up(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    profile: &[i32],
+    corner: Vector3,
+    plane_normal: Vector3,
+    in_the_end: &IndexSet<i32>,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripEndNotSupported,
+            vec![corner.into()],
+        )
+    };
+    let first = pool.position_of(profile[0]);
+    let last = pool.position_of(profile[profile.len() - 1]);
+
+    // The wedge at the corner and the chord across it: the triangle the section is cut out of.
+    let (Some(along_the_first_side), Some(along_the_last_side), Some(across_the_wedge)) = (
+        try_half_plane(corner, first, plane_normal, last),
+        try_half_plane(corner, last, plane_normal, first),
+        try_half_plane(first, last, plane_normal, corner),
+    ) else {
+        // A section with no area against the corner takes nothing off and would leave the bead open.
+        return Err(not_supported());
+    };
+
+    // The bulge between the arc and that chord, as the side of each chord of the arc AWAY from
+    // the corner.
+    let mut the_bulge = Vec::with_capacity(profile.len() - 1);
+    for i in 0..profile.len() - 1 {
+        if let Some((point, inward)) = try_half_plane(
+            pool.position_of(profile[i]),
+            pool.position_of(profile[i + 1]),
+            plane_normal,
+            corner,
+        ) {
+            the_bulge.push((point, -inward));
+        }
+    }
+
+    if the_bulge.is_empty() {
+        return Err(not_supported());
+    }
+
+    let the_wedge = [along_the_first_side, along_the_last_side, across_the_wedge];
+    let mut rebuilt = Vec::with_capacity(faces.len());
+    let mut cut_faces = Vec::new();
+    let mut untouched = Vec::new();
+    let the_first_new_vertex = pool.vertices().len() as i32;
+
+    for (face, &the_face) in faces.iter().enumerate() {
+        if !in_the_end.contains(&(face as i32)) {
+            untouched.push(rebuilt.len() as i32);
+            rebuilt.push(the_face);
+            continue;
+        }
+
+        let started_at = rebuilt.len();
+        let (v0, v1, v2) = the_face;
+        for piece in pieces_left_of(&[v0, v1, v2], pool, &the_wedge, &the_bulge) {
+            let snapped = surface_end_notch::snapped_to_the_profile(
+                &piece,
+                profile,
+                pool,
+                the_first_new_vertex,
+            );
+            surface_fan::emit(&snapped, pool, &mut rebuilt);
+        }
+
+        if rebuilt.len() == started_at
+            && !the_section_swallows_it(pool, the_face, &the_wedge, &the_bulge)
+        {
+            // Nothing came back, and the section does not cover this face: it is a NEEDLE, kept so
+            // its edges keep their only use.
+            rebuilt.push(the_face);
+            continue;
+        }
+
+        cut_faces.extend(started_at as i32..rebuilt.len() as i32);
+    }
+
+    // Read BEFORE the sew, which drops the faces it splits and appends their pieces.
+    let along_the_profile = surface_end_cut::on_the_profile(pool, &rebuilt, &cut_faces, profile);
+
+    sew_the_rim(pool, &mut rebuilt, &untouched, the_first_new_vertex);
+
+    faces.clear();
+    faces.extend(rebuilt);
+
+    Ok(along_the_profile)
 }

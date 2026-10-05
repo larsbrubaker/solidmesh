@@ -3,7 +3,7 @@
 //! up, because the corner is a REENTRANT vertex of that face and the section stands in the bite
 //! beside it rather than in the face at all. Its nested reading lands here
 //! ([`SurfaceEndGainsTheSectionReading`]) with the measure that makes it
-//! ([`how_the_face_stands_to_it`]); the cap (`TryGainIt`) lands with a later package.
+//! ([`how_the_face_stands_to_it`]), and the cap ([`try_gain_it`]).
 
 /// C# `SurfaceEndGainsTheSection.Reading`: which of the two the end face is - it holds some of the
 /// section and is CUT, or it holds none of it and GAINS it.
@@ -16,6 +16,7 @@
 use indexmap::IndexSet;
 use vector_math::Vector3;
 
+use super::super::BevelAdvisory;
 use super::surface_end_notch::{self, SurfaceEndNotchSide};
 use super::SurfaceVertexPool;
 
@@ -189,4 +190,16 @@ pub fn area_of(polygon: &[Vector3]) -> f64 {
     }
 
     twice.length() / 2.0
+}
+
+/// C# `TryGainIt`: the section, which the end face does not hold, laid as the cap that closes the
+/// strip's end - [`surface_end_notch::try_cap_with_the_section`].
+pub fn try_gain_it(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    profile: &[i32],
+    corner: Vector3,
+    plane_normal: Vector3,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    surface_end_notch::try_cap_with_the_section(pool, faces, profile, corner, plane_normal)
 }

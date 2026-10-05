@@ -3,14 +3,20 @@
 //! What is here are the readings the end caps share with the cut: the vertices standing along a
 //! straight run ([`standing_between`]), the vertices a face list uses ([`vertices_of`]), the
 //! vertices standing on each chord of the profile ([`on_the_profile`]) and the end face the profile
-//! lies in ([`try_find_the_end_plane`]). The cut itself (`TryCut`) lands with a later package.
+//! lies in ([`try_find_the_end_plane`]), and the cut itself ([`try_cut`]).
 
 use indexmap::IndexSet;
 use vector_math::Vector3;
 
 use std::collections::HashMap;
 
-use super::{surface_cut_clip, SurfaceVertexPool};
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
+use super::{
+    surface_cut_clip, surface_end_follows_the_walked_chords, surface_end_gains_the_section,
+    surface_end_gives_up_the_section, surface_end_notch, surface_fan, surface_ring,
+    surface_split_sewing, SurfaceEndGainsTheSectionReading, SurfaceFacetCut, SurfaceLine,
+    SurfaceVertexPool,
+};
 
 /// C# `StandingBetween`: the vertices standing part way along the straight run from `from` to
 /// `to`, in order along it - what the walkback's own cut left on one side of the section, gathered
@@ -283,4 +289,256 @@ pub fn corners_of(pool: &SurfaceVertexPool, face: (i32, i32, i32)) -> [Vector3; 
         pool.position_of(face.1),
         pool.position_of(face.2),
     ]
+}
+
+/// C# `SurfaceEndCut.TryCut`: the notch a chain end's section takes out of the end face beyond its
+/// corner, routed by what the end is: a run-out's cap (`runs_out_facing`), a concave end's
+/// subtraction or cap, the walked chords along a rolled wall (`rolled_wall_end`), a face that gains
+/// the section, or the ordinary notch - the face cut facet by facet by the section's two sides and
+/// the profile's chords (all but the chord into `the_die_point`), the pieces knitted and fanned and
+/// the cut's new vertices sewn back in. Returns what stands part way along each chord of the
+/// profile, or why the end could not be cut.
+#[allow(clippy::too_many_arguments)]
+pub fn try_cut(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    profile: &[i32],
+    corner: Vector3,
+    concave: bool,
+    into_the_chain: Vector3,
+    runs_out_facing: Vector3,
+    rolled_wall_end: i32,
+    the_die_point: i32,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let not_supported = |at: Vector3| {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripEndNotSupported,
+            vec![at.into()],
+        )
+    };
+    if profile.len() < 2 {
+        return Err(not_supported(corner));
+    }
+
+    if runs_out_facing.length_squared() > 0.0 {
+        let facing = if concave {
+            -runs_out_facing.get_normal()
+        } else {
+            runs_out_facing.get_normal()
+        };
+        return surface_end_notch::try_cap_with_the_section(pool, faces, profile, corner, facing);
+    }
+
+    let Some((plane_normal, in_the_end)) = try_find_the_end_plane(pool, faces, profile, corner)
+    else {
+        return Err(not_supported(corner));
+    };
+
+    let walls_end = (rolled_wall_end >= 0 && (rolled_wall_end as usize) < profile.len())
+        .then_some(rolled_wall_end as usize);
+
+    if concave {
+        if surface_end_gives_up_the_section::the_face_is_behind_it(into_the_chain, plane_normal) {
+            return surface_end_gives_up_the_section::try_give_it_up(
+                pool,
+                faces,
+                profile,
+                corner,
+                plane_normal,
+                &in_the_end,
+            );
+        }
+
+        if let Some(wall_end) = walls_end {
+            if let Some(along_the_wall) =
+                surface_end_follows_the_walked_chords::the_chords_the_cap_follows(
+                    pool,
+                    faces,
+                    &in_the_end,
+                    profile,
+                    wall_end,
+                    corner,
+                )
+            {
+                return surface_end_follows_the_walked_chords::try_cap_with_the_section(
+                    pool,
+                    faces,
+                    profile,
+                    rolled_wall_end,
+                    corner,
+                    plane_normal,
+                    &along_the_wall,
+                );
+            }
+        }
+
+        return surface_end_notch::try_cap_with_the_section(
+            pool,
+            faces,
+            profile,
+            corner,
+            plane_normal,
+        );
+    }
+
+    if let Some(wall_end) = walls_end {
+        if let Some(walked_chords) =
+            surface_end_follows_the_walked_chords::the_chords_the_cap_follows(
+                pool,
+                faces,
+                &in_the_end,
+                profile,
+                wall_end,
+                corner,
+            )
+        {
+            return surface_end_follows_the_walked_chords::try_take_the_section(
+                pool,
+                faces,
+                profile,
+                wall_end,
+                corner,
+                plane_normal,
+                &in_the_end,
+                &walked_chords,
+            );
+        }
+    }
+
+    let mut cuts = Vec::with_capacity(profile.len() - 1);
+    for i in 0..profile.len() - 1 {
+        let from = pool.position_of(profile[i]);
+        let to = pool.position_of(profile[i + 1]);
+        let chord = to - from;
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN skips, as the C#'s `!(x > 0)` does
+        let no_chord = !(chord.length_squared() > 0.0);
+        if no_chord {
+            continue;
+        }
+
+        let mut away = plane_normal.cross(chord).get_normal();
+        let how_far_off = (corner - from).dot(away);
+
+        let is_the_chord_into_the_die_point =
+            the_die_point >= 0 && (profile[i] == the_die_point || profile[i + 1] == the_die_point);
+        if is_the_chord_into_the_die_point {
+            continue;
+        }
+
+        if how_far_off.abs() <= pool.near_enough() {
+            return Err(not_supported(from));
+        }
+
+        if how_far_off > 0.0 {
+            away = -away;
+        }
+
+        cuts.push(SurfaceFacetCut::with_own_ends(
+            SurfaceLine::new(from, chord.get_normal()),
+            away,
+            vec![profile[i], profile[i + 1]],
+        ));
+    }
+
+    if cuts.is_empty() {
+        return Err(not_supported(corner));
+    }
+
+    let sides = surface_end_notch::the_sides_of_the_section(pool, profile, corner, plane_normal);
+    if !surface_end_notch::the_section_stands_in_the_wedge(pool, profile, &sides) {
+        return Err(not_supported(corner));
+    }
+
+    if surface_end_gains_the_section::how_the_face_stands_to_it(
+        pool,
+        faces,
+        &in_the_end,
+        profile,
+        corner,
+        plane_normal,
+        &sides,
+    ) == SurfaceEndGainsTheSectionReading::TheFaceIsBesideIt
+    {
+        return surface_end_gains_the_section::try_gain_it(
+            pool,
+            faces,
+            profile,
+            corner,
+            plane_normal,
+        );
+    }
+
+    let reach =
+        surface_end_notch::the_reach_of_the_section(pool, profile, corner) + pool.near_enough();
+    let low = corner - Vector3::new(reach, reach, reach);
+    let high = corner + Vector3::new(reach, reach, reach);
+
+    let split_from = pool.vertices().len() as i32;
+    let mut rebuilt = Vec::with_capacity(faces.len());
+    let mut cut_faces = Vec::new();
+
+    for (face, &the_face) in faces.iter().enumerate() {
+        if !in_the_end.contains(&(face as i32))
+            || !surface_end_notch::the_section_could_reach(pool, the_face, low, high)
+        {
+            rebuilt.push(the_face);
+            continue;
+        }
+
+        let started_at = rebuilt.len();
+        let mut pieces = Vec::with_capacity(sides.len() + 1);
+        let mut in_the_wedge = vec![the_face.0, the_face.1, the_face.2];
+
+        for (point, inward, ends) in &sides {
+            if in_the_wedge.len() < 3 {
+                break;
+            }
+
+            if !it_lies_along_the_side(pool, &in_the_wedge, *point, *inward) {
+                let outside = surface_cut_clip::clip_by(
+                    &in_the_wedge,
+                    pool,
+                    *point,
+                    -*inward,
+                    None,
+                    Some(ends),
+                );
+                if outside.len() >= 3 {
+                    pieces.push(outside);
+                }
+            }
+
+            in_the_wedge =
+                surface_cut_clip::clip_by(&in_the_wedge, pool, *point, *inward, None, Some(ends));
+        }
+
+        for cut in &cuts {
+            if in_the_wedge.len() < 3 {
+                break;
+            }
+
+            in_the_wedge = cut.clip(&in_the_wedge, pool);
+        }
+
+        if in_the_wedge.len() >= 3 {
+            pieces.push(in_the_wedge);
+        }
+
+        for piece in surface_ring::knit(pieces, pool) {
+            let snapped =
+                surface_end_notch::snapped_to_the_profile(&piece, profile, pool, split_from);
+            surface_fan::emit(&snapped, pool, &mut rebuilt);
+        }
+
+        cut_faces.extend(started_at as i32..rebuilt.len() as i32);
+    }
+
+    let along_the_profile = on_the_profile(pool, &rebuilt, &cut_faces, profile);
+
+    surface_split_sewing::sew_in_the_splits_since_unchecked(pool, &mut rebuilt, split_from);
+
+    faces.clear();
+    faces.extend(rebuilt);
+
+    Ok(along_the_profile)
 }

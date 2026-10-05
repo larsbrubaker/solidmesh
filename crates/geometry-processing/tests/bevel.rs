@@ -49,6 +49,8 @@ mod hole_fill_validity_tests;
 mod island_split_order_tests;
 #[path = "bevel/level_line_fixture.rs"]
 mod level_line_fixture;
+#[path = "bevel/lobed_prism_meshes.rs"]
+mod lobed_prism_meshes;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
@@ -149,12 +151,18 @@ mod spoke_centre_parameter_tests;
 mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
 #[path = "bevel/surface_cut_ruler_tests.rs"]
 mod surface_cut_ruler_tests;
+#[path = "bevel/surface_end_cut_leaves_the_die_points_chord_alone_tests.rs"]
+mod surface_end_cut_leaves_the_die_points_chord_alone_tests;
 #[path = "bevel/surface_end_gains_the_section_reading_tests.rs"]
 mod surface_end_gains_the_section_reading_tests;
 #[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
 mod surface_facet_cut_own_ends_tests;
+#[path = "bevel/surface_fan_sliver_ring_tests.rs"]
+mod surface_fan_sliver_ring_tests;
 #[path = "bevel/surface_fan_tests.rs"]
 mod surface_fan_tests;
+#[path = "bevel/surface_giving_up_the_section_sews_by_index_tests.rs"]
+mod surface_giving_up_the_section_sews_by_index_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
@@ -163,6 +171,8 @@ mod surface_ring_ears_bridged_ring_tests;
 mod surface_room_crossing_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
 mod surface_run_out_column_top_tests;
+#[path = "bevel/surface_sewing_bowed_side_tests.rs"]
+mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
 #[path = "bevel/topology_test_meshes.rs"]

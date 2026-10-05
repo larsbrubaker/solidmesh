@@ -1,11 +1,12 @@
 //! The NOTCH a chain end's section takes out of the face beyond its corner
 //! (`Bevel/Surface/SurfaceEndNotch.cs`, a static class: free functions here). The section's sides,
-//! reach and wedge tests, and the snap of a cut ring onto the profile, land here first; the cap
-//! (`TryCapWithTheSection`) and the notch itself land with later packages.
+//! reach and wedge tests, the snap of a cut ring onto the profile, and the cap
+//! ([`try_cap_with_the_section`]); the notch itself lands with a later package.
 
 use vector_math::{cs_math, Vector3};
 
-use super::{surface_ring, SurfaceVertexPool};
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
+use super::{surface_end_cut, surface_fan, surface_ring, SurfaceVertexPool};
 
 /// One straight side of the section: a point on it (the corner), the unit direction into the
 /// section, and the vertices standing on it by construction (the corner's own vertex where the
@@ -138,4 +139,71 @@ pub fn snapped_to_the_profile(
     }
 
     surface_ring::without_repeats(&snapped)
+}
+
+/// C# `TryCapWithTheSection`: the section laid as the cap that closes the strip's end, fanned from
+/// a new vertex at `corner` and wound to face `plane_normal`. The two end triangles go as rings with
+/// whatever the walkback's end cut left on the section's straight sides, so every such point gets a
+/// triangle with area. Returns what stands part way along each chord of the profile (nothing,
+/// here), or why the cap could not be laid.
+pub fn try_cap_with_the_section(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    profile: &[i32],
+    corner: Vector3,
+    plane_normal: Vector3,
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let apex = pool.add(corner);
+    let last = profile.len() - 1;
+    let before = faces.len();
+
+    // What the walkback's end cut left standing on the section's two straight sides, walked ONCE.
+    let standing = surface_end_cut::vertices_of(faces);
+    let from_the_corner = surface_end_cut::standing_between(pool, &standing, apex, profile[0]);
+    let back_to_the_corner =
+        surface_end_cut::standing_between(pool, &standing, profile[last], apex);
+
+    if profile.len() == 2 {
+        // A chamfer's section is one triangle, and both of the straight sides belong to it.
+        let mut whole = vec![apex];
+        whole.extend(&from_the_corner);
+        whole.push(profile[0]);
+        whole.push(profile[1]);
+        whole.extend(&back_to_the_corner);
+        surface_fan::emit_facing(&whole, pool, faces, plane_normal);
+    } else {
+        // A round's section is not convex, so only the two end triangles go as rings.
+        let mut first = vec![apex];
+        first.extend(&from_the_corner);
+        first.push(profile[0]);
+        first.push(profile[1]);
+        surface_fan::emit_facing(&first, pool, faces, plane_normal);
+
+        for i in 1..profile.len() - 2 {
+            surface_fan::emit_triangle_facing(
+                pool,
+                faces,
+                apex,
+                profile[i],
+                profile[i + 1],
+                plane_normal,
+            );
+        }
+
+        let mut second = vec![profile[last - 1], profile[last]];
+        second.extend(&back_to_the_corner);
+        second.push(apex);
+        surface_fan::emit_facing(&second, pool, faces, plane_normal);
+    }
+
+    if faces.len() <= before {
+        // An end with no cap is an open mesh: refuse it rather than publish the hole.
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripEndNotSupported,
+            vec![corner.into()],
+        ));
+    }
+
+    // Nothing stands part way along a chord: this face was built from the profile's own vertices.
+    Ok(vec![Vec::new(); profile.len() - 1])
 }

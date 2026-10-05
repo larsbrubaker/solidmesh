@@ -1,7 +1,7 @@
 //! C#-compatible number text for the vector types' `ToString`/`Parse` (CLAUDE.md "Strings and
 //! formatting"): .NET's default `double.ToString()`/`float.ToString()` (shortest round-trip,
 //! "G" layout), "G17" (object-reference literals), the standard "F"/"N"/"P" formats (the bevel meters'
-//! reports), the custom `"0.####"` layout `Vector3.ToString` uses, and
+//! reports), the custom `"0.####"` layout `Vector3.ToString` uses, the custom scientific `"0.###e0"`, and
 //! `double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture)`.
 //!
 //! All formatting is InvariantCulture: "NaN", "Infinity", "-Infinity", '.' as the decimal point.
@@ -230,6 +230,62 @@ fn signed_grouped(negative: bool, whole: &str, fraction: &str, suffix: &str) -> 
         text.push_str(fraction);
     }
     text.push_str(suffix);
+    text
+}
+
+/// .NET's custom scientific format `"0.<max_decimals #>e0"` (InvariantCulture), e.g. `"0.###e0"`:
+/// one integer digit, up to `max_decimals` fractional digits with trailing zeros (and a bare '.')
+/// dropped, and an exponent of at least one digit with only a minus sign ("1.235e-4", "1e1",
+/// "0e0"). As in .NET, the value is first reduced to 15 significant digits (round-half-even on the
+/// exact value), then rounded half away from zero; a carry past 9 moves the exponent ("9.9995" is
+/// "1e1"). Zero (either sign) prints "0e0".
+pub fn format_f64_scientific_e0(value: f64, max_decimals: usize) -> String {
+    if let Some(special) = special_text(value.is_nan(), value.is_infinite(), value < 0.0) {
+        return special;
+    }
+    if value == 0.0 {
+        return "0e0".to_string();
+    }
+
+    let (mut digits, mut exponent) = split_scientific(&format!("{:.14e}", value.abs()));
+    let keep = 1 + max_decimals;
+    if digits.len() > keep {
+        let round_up = digits[keep] >= b'5';
+        digits.truncate(keep);
+        if round_up {
+            let mut i = keep;
+            loop {
+                if i == 0 {
+                    digits.insert(0, b'1');
+                    digits.pop();
+                    exponent += 1;
+                    break;
+                }
+                i -= 1;
+                if digits[i] == b'9' {
+                    digits[i] = b'0';
+                } else {
+                    digits[i] += 1;
+                    break;
+                }
+            }
+        }
+    }
+    while digits.len() > 1 && digits.last() == Some(&b'0') {
+        digits.pop();
+    }
+
+    let mut text = String::new();
+    if value < 0.0 {
+        text.push('-');
+    }
+    text.push(digits[0] as char);
+    if digits.len() > 1 {
+        text.push('.');
+        text.extend(digits[1..].iter().map(|&d| d as char));
+    }
+    text.push('e');
+    text.push_str(&exponent.to_string());
     text
 }
 

@@ -4,15 +4,16 @@
 //! functions here). What is here is the concave reading - the section added as the bead's own end
 //! cap ([`try_cap_with_the_section`]), ear clipped by [`super::surface_ring_ears`]; the walk
 //! of the chords the cap follows ([`the_chords_the_cap_follows`]) and the rim, wedge and bulge
-//! readings the convex section is made of; the convex reading itself (`TryTakeTheSection`) lands
-//! with a later package. The rim is an `IndexMap` and every set an `IndexSet`, because which
+//! readings the convex section is made of, and the convex reading itself
+//! ([`try_take_the_section`]). The rim is an `IndexMap` and every set an `IndexSet`, because which
 //! neighbour the walk tries first and which corner it starts at follow C#'s insertion order.
 
 use indexmap::{IndexMap, IndexSet};
 use vector_math::{cs_math, Vector3};
 
 use super::{
-    surface_cut_clip, surface_end_cut, surface_ring, surface_ring_ears, SurfaceVertexPool,
+    surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, surface_ring,
+    surface_ring_ears, surface_split_sewing, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -436,4 +437,92 @@ pub fn the_section_swallows_it(
     }
 
     true
+}
+
+/// C# `TryTakeTheSection`: the convex reading - the section, bounded on the wall side by the
+/// chords the walk passed (`walked`, the rim vertices between the corner and the wall foot), taken
+/// out of the end cap (`in_the_end` names its faces) as the polygon its outline names less the bulge
+/// the arc puts back. Returns what the cut left standing part way along each chord of the profile,
+/// or why the section could not be taken off.
+#[allow(clippy::too_many_arguments)]
+pub fn try_take_the_section(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    profile: &[i32],
+    wall_end: usize,
+    corner: Vector3,
+    plane_normal: Vector3,
+    in_the_end: &IndexSet<i32>,
+    walked: &[i32],
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripEndNotSupported,
+            vec![corner.into()],
+        )
+    };
+    let flat_foot = pool.position_of(profile[if wall_end == 0 { profile.len() - 1 } else { 0 }]);
+    let wall_foot = pool.position_of(profile[wall_end]);
+
+    // The section's own outline, written from the FLAT FOOT round, the chord across the profile's
+    // two feet LAST.
+    let mut outline = Vec::with_capacity(walked.len() + 3);
+    outline.push(flat_foot);
+    outline.push(corner);
+    outline.extend(walked.iter().map(|&v| pool.position_of(v)));
+    outline.push(wall_foot);
+
+    let Some(the_wedge) = try_the_wedge(&outline, plane_normal) else {
+        return Err(not_supported());
+    };
+    if !it_is_convex(&outline, &the_wedge, pool) || !it_holds_the_profile(pool, profile, &the_wedge)
+    {
+        // A wall that turns the other way, or a section standing outside its own outline.
+        return Err(not_supported());
+    }
+
+    let the_bulge = the_bulge(pool, profile, corner, plane_normal);
+    if the_bulge.is_empty() || !the_corner_is_outside_the_bulge(corner, &the_bulge, pool) {
+        return Err(not_supported());
+    }
+
+    // Everything the clips add to the pool from here is a point the notch made.
+    let split_from = pool.vertices().len() as i32;
+    let mut rebuilt = Vec::with_capacity(faces.len());
+    let mut cut_faces = Vec::new();
+
+    for (face, &the_face) in faces.iter().enumerate() {
+        if !in_the_end.contains(&(face as i32)) {
+            rebuilt.push(the_face);
+            continue;
+        }
+
+        let started_at = rebuilt.len();
+        let (v0, v1, v2) = the_face;
+        for piece in pieces_left_of(&[v0, v1, v2], pool, &the_wedge, &the_bulge) {
+            let snapped =
+                surface_end_notch::snapped_to_the_profile(&piece, profile, pool, split_from);
+            surface_fan::emit(&snapped, pool, &mut rebuilt);
+        }
+
+        if rebuilt.len() == started_at
+            && !the_section_swallows_it(pool, the_face, &the_wedge, &the_bulge)
+        {
+            // A NEEDLE: dropping it would lose the only use its edges had.
+            rebuilt.push(the_face);
+            continue;
+        }
+
+        cut_faces.extend(started_at as i32..rebuilt.len() as i32);
+    }
+
+    // Read BEFORE the sew, which drops the faces it splits and appends their pieces.
+    let along_the_profile = surface_end_cut::on_the_profile(pool, &rebuilt, &cut_faces, profile);
+
+    surface_split_sewing::sew_in_the_splits_since_unchecked(pool, &mut rebuilt, split_from);
+
+    faces.clear();
+    faces.extend(rebuilt);
+
+    Ok(along_the_profile)
 }

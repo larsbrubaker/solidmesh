@@ -376,34 +376,9 @@ pub fn crosses_at_a_needles_apex(
     Ok(false)
 }
 
-/// C#'s custom numeric format `0.###e0`: up to three decimals, trailing zeros dropped, and an
-/// exponent of at least one digit with only a minus sign.
+/// C#'s custom numeric format `0.###e0` (the outcome notes' distances).
 pub(super) fn format_e0(value: f64) -> String {
-    if !value.is_finite() {
-        return vector_math::number_format::format_f64(value);
-    }
-    if value == 0.0 {
-        return "0e0".to_string();
-    }
-
-    let mut exponent = value.abs().log10().floor() as i32;
-    let mut mantissa = value / 10f64.powi(exponent);
-    // Round away from zero to three decimals, as .NET's custom formats do.
-    // (f64::round rounds half away from zero.)
-    mantissa = (mantissa * 1000.0).round() / 1000.0;
-    if mantissa.abs() >= 10.0 {
-        mantissa /= 10.0;
-        exponent += 1;
-    }
-
-    let mut digits = format!("{mantissa:.3}");
-    while digits.ends_with('0') {
-        digits.pop();
-    }
-    if digits.ends_with('.') {
-        digits.pop();
-    }
-    format!("{digits}e{exponent}")
+    vector_math::number_format::format_f64_scientific_e0(value, 3)
 }
 
 /// C# `StripClip.Cap`: closes the hole the drop left. Its outline is the crease stretch plus the

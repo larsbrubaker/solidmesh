@@ -1,13 +1,13 @@
 //! Sewing a cut's new vertices into the faces whose sides they stand on. Ports
 //! `Bevel/Surface/SurfaceSplitSewing.cs` (C# `internal static class`; a module of free functions
-//! here). The sewing itself (`SewInTheSplits`) lands with a later package; what is here
-//! is the one reading of "on this side" that the whole build shares ([`stands_on_the_side`]),
+//! here): the sewing itself ([`sew_in_the_splits`] and its overloads), the one reading of "on this side" that the whole build shares ([`stands_on_the_side`]),
 //! which the fan ([`super::surface_fan`]) asks of its diagonals too, and the two per-face readings
 //! the sewing is built from ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]), and
 //! the lobes a ring that revisits a vertex falls into ([`lobes`]).
 
 use vector_math::Vector3;
 
+use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_fan, surface_ring, SurfaceSplitsOnASegment, SurfaceVertexPool};
 
 /// C# `StandsOnTheSide`: whether `point` stands part way along the side from `from` to `to` -
@@ -143,4 +143,157 @@ pub fn lobes(ring: &[i32]) -> Vec<Vec<i32>> {
     }
 
     lobes
+}
+
+/// C# `SewInTheSplits(pool, faces, splitFrom, out failure)`: every face carrying one of the cut's
+/// own new vertices (every pool vertex from `split_from` on) part way along an edge rebuilt
+/// through it; `Err` (C#'s false with its failure) where the readings did not settle.
+pub fn sew_in_the_splits_since(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let count = pool.vertices().len() as i32;
+    if split_from >= count {
+        return Ok(());
+    }
+
+    let splits: Vec<i32> = (split_from..count).collect();
+    sew_in_the_splits(pool, faces, &splits)
+}
+
+/// C# `SewInTheSplits(pool, faces, splitFrom)`: the same sewing for callers that do not carry a
+/// refusal of their own.
+pub fn sew_in_the_splits_since_unchecked(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    split_from: i32,
+) {
+    let _ = sew_in_the_splits_since(pool, faces, split_from);
+}
+
+/// C# `SewInTheSplits(pool, faces, splits)`: the same sewing, for vertices NAMED rather than
+/// counted from a watermark, for callers that do not carry a refusal of their own.
+pub fn sew_in_the_splits_unchecked(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    splits: &[i32],
+) {
+    let _ = sew_in_the_splits(pool, faces, splits);
+}
+
+/// What the sewing does with one face: keep it, or lay these lobes in its place.
+enum Sewn {
+    Kept((i32, i32, i32)),
+    Lobes(Vec<Vec<i32>>),
+}
+
+/// C# `SewInTheSplits(pool, faces, splits, out failure)`: every face with one of `splits` part way
+/// along a side is rebuilt through it, lobe by lobe (a lobe the part cannot tell from one straight
+/// line, whose neighbours already carry its middle, is dropped); `Err` where splits crowd closer
+/// together than the ruler, so a side's readings did not settle.
+///
+/// The faces are read first and laid after: the stretch readings borrow the pool while the fan may
+/// add a middle vertex to it. The fans run in the C#'s order over the same pool, and the readings
+/// never touch a vertex a fan adds, so the faces and vertices are the C#'s.
+pub fn sew_in_the_splits(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    splits: &[i32],
+) -> Result<(), BevelAdvisory> {
+    if splits.is_empty() {
+        return Ok(());
+    }
+
+    let mut low = pool.position_of(splits[0]);
+    let mut high = low;
+    for &vertex in splits {
+        let at = pool.position_of(vertex);
+        low = Vector3::component_min(low, at);
+        high = Vector3::component_max(high, at);
+    }
+
+    let near = pool.near_enough();
+    low -= Vector3::new(near, near, near);
+    high += Vector3::new(near, near, near);
+
+    let (plan, unsettled) = {
+        let reader: &SurfaceVertexPool = pool;
+        // ONE reading for the whole pass, keyed by the stretch rather than by the face asking.
+        let mut standing_on = SurfaceSplitsOnASegment::new(reader, splits.to_vec());
+        let mut plan = Vec::with_capacity(faces.len());
+        for &face in faces.iter() {
+            let corners = [face.0, face.1, face.2];
+            let mut lowest = reader.position_of(face.0);
+            let mut highest = lowest;
+            for vertex in [face.1, face.2] {
+                let at = reader.position_of(vertex);
+                lowest = Vector3::component_min(lowest, at);
+                highest = Vector3::component_max(highest, at);
+            }
+
+            if highest.x < low.x
+                || lowest.x > high.x
+                || highest.y < low.y
+                || lowest.y > high.y
+                || highest.z < low.z
+                || lowest.z > high.z
+            {
+                plan.push(Sewn::Kept(face));
+                continue;
+            }
+
+            let ring = ring_with_the_splits_in(&corners, &mut standing_on);
+            if ring.len() == 3 {
+                plan.push(Sewn::Kept(face));
+                continue;
+            }
+
+            // LOBE by lobe: a pinched ring is two pieces meeting at a point.
+            let mut laid = Vec::new();
+            for lobe in lobes(&ring) {
+                if surface_fan::covers_nothing(&lobe, reader)
+                    && the_neighbours_carry_its_middle(reader, &mut standing_on, &lobe)
+                {
+                    continue;
+                }
+
+                laid.push(lobe);
+            }
+            plan.push(Sewn::Lobes(laid));
+        }
+
+        let unsettled = if standing_on.settled {
+            None
+        } else {
+            Some(match standing_on.the_stretch_that_did_not_settle {
+                None => reader.position_of(splits[0]),
+                Some((from, _)) => reader.position_of(from),
+            })
+        };
+        (plan, unsettled)
+    };
+
+    let mut sewn = Vec::with_capacity(faces.len());
+    for step in plan {
+        match step {
+            Sewn::Kept(face) => sewn.push(face),
+            Sewn::Lobes(lobes) => {
+                for lobe in lobes {
+                    surface_fan::emit(&lobe, pool, &mut sewn);
+                }
+            }
+        }
+    }
+
+    faces.clear();
+    faces.extend(sewn);
+
+    match unsettled {
+        Some(at) => Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceConstructionNotBuilt,
+            vec![at.into()],
+        )),
+        None => Ok(()),
+    }
 }

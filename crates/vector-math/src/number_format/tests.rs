@@ -339,3 +339,37 @@ fn rust_only_standard_formats_match_dotnet() {
         assert_eq!(format_i64_number(value), expected);
     }
 }
+
+#[test]
+fn custom_scientific_e0_matches_dotnet() {
+    // Expected strings from .NET 10's `x.ToString("0.###e0", CultureInfo.InvariantCulture)`.
+    for (value, expected) in [
+        (0.0, "0e0"),
+        (-0.0, "0e0"),
+        (1.0, "1e0"),
+        (-1.0, "-1e0"),
+        (1.2345, "1.235e0"),
+        (1.2355, "1.236e0"),
+        (1.0005, "1.001e0"),
+        (1.0015, "1.002e0"),
+        (9.9995, "1e1"),
+        (9.99951, "1e1"),
+        (0.000123456, "1.235e-4"),
+        (-2.5e-7, "-2.5e-7"),
+        (12345.678, "1.235e4"),
+        (1e300, "1e300"),
+        (1.5e-320, "1.5e-320"),
+        (f64::NAN, "NaN"),
+        (f64::INFINITY, "Infinity"),
+        (f64::NEG_INFINITY, "-Infinity"),
+        (0.1, "1e-1"),
+        (100.0, "1e2"),
+        (1.23e-5, "1.23e-5"),
+        (0.30000000000000004, "3e-1"),
+        (2.0004999999999997, "2.001e0"),
+        (1.2345678901234568e17, "1.235e17"),
+        (4.4999999999999996e-5, "4.5e-5"),
+    ] {
+        assert_eq!(format_f64_scientific_e0(value, 3), expected, "{value:?}");
+    }
+}
