@@ -116,6 +116,59 @@ impl SurfaceMixedCorner {
     /// box. Lengths keep the ruler; angles keep this.
     pub const SQUARE_ENOUGH: f64 = 1e-6;
 
+    /// C#'s constructor; `takes_the_dual_canal` starts unasked.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        corner: Vector3,
+        size: f64,
+        shared_region_key: i32,
+        cut: SurfaceEdgePlan,
+        bead: SurfaceEdgePlan,
+        tangent_point: Vector3,
+        cut_stops_at: SurfaceBandEnd,
+        bead_stops_at: SurfaceBandEnd,
+        spine: SurfaceMixedCornerSpine,
+        outer_rail_centre: Vector3,
+        out_of_the_cap_face: Vector3,
+        out_of_the_wall: Vector3,
+        hands_over_at_a_mitre: bool,
+    ) -> Self {
+        SurfaceMixedCorner {
+            takes_the_dual_canal: Cell::new(None),
+            spine,
+            hands_over_at_a_mitre,
+            corner,
+            size,
+            shared_region_key,
+            cut,
+            bead,
+            tangent_point,
+            cut_stops_at,
+            bead_stops_at,
+            outer_rail_centre,
+            out_of_the_cap_face,
+            out_of_the_wall,
+        }
+    }
+
+    /// Whether BOTH bands are stopped at this corner on the face the two edges SHARE as well as
+    /// on the other one - only where the corner hands over on a MITRE ring, where the cut's ring
+    /// stands SHORT of the bead's and the blend covers the stretch between.
+    pub fn both_bands_stop_on_the_shared_face(&self) -> bool {
+        self.hands_over_at_a_mitre
+    }
+
+    /// Where the rolling ball touches the cap face at `turn`.
+    pub fn outer_rail_point(&self, turn: f64) -> Vector3 {
+        self.spine.t_contact_at(turn)
+    }
+
+    /// Where the rolling ball's centre stands at `turn`: `2r` out of the axis, a radius in from the
+    /// cap.
+    pub fn ball_centre_at(&self, turn: f64) -> Vector3 {
+        self.spine.centre_at(turn)
+    }
+
     /// The bead's rolling-ball axis, the concave edge's own centre line.
     pub fn axis(&self) -> SurfaceLine {
         self.bead.center_line

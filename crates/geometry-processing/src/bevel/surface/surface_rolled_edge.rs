@@ -1,6 +1,6 @@
-//! One chain edge as the roll across a curved wall read it ([`SurfaceRolledEdge`]). Ports the
-//! record of `Bevel/Surface/SurfaceRolledEdge.cs`; its `AsPlan` - the reading turned into a
-//! [`SurfaceEdgePlan`] - lands with its methods.
+//! One chain edge as the roll across a curved wall read it ([`SurfaceRolledEdge`]). Ports
+//! `Bevel/Surface/SurfaceRolledEdge.cs`: the record and its `AsPlan`, the reading turned into a
+//! [`SurfaceEdgePlan`].
 //!
 //! [`SurfaceEdgePlan`]: super::SurfaceEdgePlan
 
@@ -9,7 +9,10 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{SurfaceLine, SurfaceWallSection};
+use std::sync::Arc;
+
+use super::{SurfaceEdgePlan, SurfaceLine, SurfaceWallSection};
+use crate::topology::{ChainEdge, FaceGroup};
 
 /// C# `SurfaceRolledEdge` (a readonly struct): one chain edge as `SurfaceRollAcrossTheWall` read
 /// it - which side was the wall, which facet of it the profile touches, and the lines and setbacks
@@ -48,4 +51,59 @@ pub struct SurfaceRolledEdge {
     /// mixed corner at either end of it runs off the end of the bead and takes its footprint off
     /// the facets past `k` as well ([`SurfaceWallSection`]).
     pub section: Rc<SurfaceWallSection>,
+}
+
+impl SurfaceRolledEdge {
+    /// This reading as the plan for its edge, with the flat side's own numbers left exactly as
+    /// the unrolled construction drew them apart from its setback and its foot. `left_inward` and
+    /// `right_inward` are the faces' in-face directions away from the edge as the plan found them;
+    /// `wedge_angle_degrees` is the edge's own dihedral wedge, which is what a room check reads.
+    pub fn as_plan(
+        &self,
+        chain_edge: ChainEdge,
+        left_region: Arc<FaceGroup>,
+        right_region: Arc<FaceGroup>,
+        wedge_angle_degrees: f64,
+        left_inward: Vector3,
+        right_inward: Vector3,
+    ) -> SurfaceEdgePlan {
+        let left = self.wall_on_the_left;
+
+        SurfaceEdgePlan::new(
+            chain_edge,
+            left_region,
+            right_region,
+            wedge_angle_degrees,
+            if left {
+                self.wall_setback
+            } else {
+                self.flat_setback
+            },
+            if left {
+                self.flat_setback
+            } else {
+                self.wall_setback
+            },
+            if left { self.wall_inward } else { left_inward },
+            if left { right_inward } else { self.wall_inward },
+            left_inward,
+            right_inward,
+            if left {
+                self.wall_tangent_line
+            } else {
+                self.flat_tangent_line
+            },
+            if left {
+                self.flat_tangent_line
+            } else {
+                self.wall_tangent_line
+            },
+            self.has_center_line,
+            self.center_line,
+            self.center_distance,
+            if left { Some(self.band.clone()) } else { None },
+            if left { None } else { Some(self.band.clone()) },
+            Some(self.section.clone()),
+        )
+    }
 }

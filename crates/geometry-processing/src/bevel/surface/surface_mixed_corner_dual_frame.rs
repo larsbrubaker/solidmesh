@@ -1,11 +1,11 @@
 //! The mixed corner's OTHER canal ([`SurfaceMixedCornerDualFrame`]): the bead's VOID ball,
 //! rolling along the wall and pressed against the cut's tube. Ports the record of
-//! `Bevel/Surface/SurfaceMixedCornerDualFrame.cs` with its reading ([`SurfaceMixedCornerDualFrame::try_read_the_dual`]);
-//! its rail accessors land with another package.
+//! `Bevel/Surface/SurfaceMixedCornerDualFrame.cs` with its reading
+//! ([`SurfaceMixedCornerDualFrame::try_read_the_dual`]) and its rail accessors.
 
 use vector_math::Vector3;
 
-use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
+use super::{SurfaceBandEnd, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedCornerDualFrame` (a sealed class): the mixed corner's OTHER canal, read - the
@@ -145,5 +145,26 @@ impl SurfaceMixedCornerDualFrame {
             turn_radians,
             spine,
         ))
+    }
+}
+
+impl SurfaceMixedCornerDualFrame {
+    /// The plane the CUT's end ring lies in: through the point the two cylinders touch at,
+    /// carrying the whole curve the void ball traces on the cut's tube. Planar because the
+    /// contact curve is the spine's own ellipse pulled halfway back to the axis, an affine image of
+    /// it; on a square corner it is the cut's own square handover plane.
+    pub fn cut_ring_plane(&self) -> SurfaceBandEnd {
+        self.spine.tube_ring_plane()
+    }
+
+    /// Where the ball touches the WALL at `turn` - the dual's own rail, the mirror of the
+    /// cap-riding reading's outer rail.
+    pub fn wall_rail_at(&self, turn: f64) -> Vector3 {
+        self.spine.t_contact_at(turn)
+    }
+
+    /// Where the ball touches the CUT's tube at `turn` - the rail the cut's end ring is cut on.
+    pub fn cut_contact_at(&self, turn: f64) -> Vector3 {
+        self.spine.bead_contact_at(turn)
     }
 }

@@ -1,7 +1,6 @@
 //! What the surface construction has to know about ONE edge of a chain ([`SurfaceEdgePlan`]).
-//! Ports the record of `Bevel/Surface/SurfaceEdgePlan.cs`; its read-throughs (convexity,
-//! dihedral, the widest setback, the region keys, the two ends) land with its methods once
-//! `SurfaceBevelPlan` is in.
+//! Ports the record of `Bevel/Surface/SurfaceEdgePlan.cs`, its constructor and its
+//! read-throughs (convexity, dihedral, the region keys, the two ends).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -106,6 +105,57 @@ pub struct SurfaceEdgePlan {
 }
 
 impl SurfaceEdgePlan {
+    /// C#'s constructor, every field named in C#'s order; `wall_section` is C#'s optional last
+    /// argument (pass `None` for its default).
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        edge: ChainEdge,
+        left_region: Arc<FaceGroup>,
+        right_region: Arc<FaceGroup>,
+        wedge_angle_degrees: f64,
+        left_setback: f64,
+        right_setback: f64,
+        left_inward: Vector3,
+        right_inward: Vector3,
+        left_inward_at_the_edge: Vector3,
+        right_inward_at_the_edge: Vector3,
+        left_tangent_line: SurfaceLine,
+        right_tangent_line: SurfaceLine,
+        has_center_line: bool,
+        center_line: SurfaceLine,
+        center_distance: f64,
+        left_band: Option<Rc<HashSet<i32>>>,
+        right_band: Option<Rc<HashSet<i32>>>,
+        wall_section: Option<Rc<SurfaceWallSection>>,
+    ) -> Self {
+        SurfaceEdgePlan {
+            edge,
+            left_region,
+            right_region,
+            wedge_angle_degrees,
+            left_setback,
+            right_setback,
+            left_band,
+            right_band,
+            left_inward,
+            right_inward,
+            left_inward_at_the_edge,
+            right_inward_at_the_edge,
+            left_tangent_line,
+            right_tangent_line,
+            has_center_line,
+            center_line,
+            center_distance,
+            wall_section,
+        }
+    }
+
+    /// The angle between the two faces measured through the material, in degrees: 90 on a box
+    /// edge.
+    pub fn dihedral_angle_degrees(&self) -> f64 {
+        self.edge.edge.dihedral_angle_degrees()
+    }
+
     /// Which way the solid folds here. Recorded, not branched on: the construction is the same
     /// either way and only the side the strip bulges differs.
     pub fn convexity(&self) -> EdgeConvexity {
