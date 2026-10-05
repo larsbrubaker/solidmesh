@@ -8,6 +8,27 @@ use vector_math::{cs_math, Vector3};
 
 use super::{LevelLineMesh, LevelLineTriangle};
 
+/// True when a triangle stands no higher than `floor` over its longest edge, with no area that
+/// any division can improve. One implementation, and it is the MESH's: the mesh asks the same
+/// question of itself inside its split backstop and the repair, and two copies of a tolerance
+/// test are two things to keep in step. This is the name the rules read it by.
+pub fn has_no_height(mesh: &LevelLineMesh, t: LevelLineTriangle, floor: f64) -> bool {
+    mesh.has_no_height(t, floor)
+}
+
+/// The triangles standing on the edges from `parent`'s corners to a vertex `inserted` inside it -
+/// the triangles round a point the split just put in.
+pub fn neighbours_of_vertex(
+    mesh: &LevelLineMesh,
+    parent: LevelLineTriangle,
+    inserted: i32,
+) -> Vec<i32> {
+    let mut around = mesh.triangles_on(parent.a, inserted).to_vec();
+    around.extend_from_slice(mesh.triangles_on(parent.b, inserted));
+    around.extend_from_slice(mesh.triangles_on(parent.c, inserted));
+    around
+}
+
 /// C# `PointPlace`: where a point stands in a triangle - the three answers, and they are not
 /// overlapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

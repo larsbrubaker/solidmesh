@@ -68,3 +68,11 @@ pub struct CreaseRunOut {
     /// [`CreaseRunOut::wall_contact`].
     pub tube_contact: Vec<Vector3>,
 }
+
+impl CreaseRunOut {
+    /// How far `p` stands off the crease's line.
+    pub fn distance_to_crease_line(&self, p: Vector3) -> f64 {
+        let from = p - self.corner_point;
+        (from - (self.crease_direction * from.dot(self.crease_direction))).length()
+    }
+}

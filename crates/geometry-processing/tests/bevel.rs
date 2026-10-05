@@ -29,6 +29,8 @@ mod rust_only_bevel_r1p03_tests;
 mod rust_only_bevel_r1p04_tests;
 #[path = "bevel/rust_only_bevel_r1p06_tests.rs"]
 mod rust_only_bevel_r1p06_tests;
+#[path = "bevel/rust_only_bevel_r1p05_tests.rs"]
+mod rust_only_bevel_r1p05_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]

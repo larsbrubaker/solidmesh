@@ -270,3 +270,185 @@ impl LevelLineMesh {
         FieldCounters::note_needle_on_a_chain_edge();
     }
 }
+
+impl LevelLineTriangle {
+    /// C#'s constructor: three corners in winding order and the tag.
+    pub fn new(a: i32, b: i32, c: i32, tag: i32) -> Self {
+        Self { a, b, c, tag }
+    }
+}
+
+impl LevelLineMesh {
+    /// An empty mesh (C#'s private constructor; the builders fill it).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The vertex positions.
+    pub fn vertices(&self) -> &[Vector3] {
+        &self.vertices
+    }
+
+    /// How many vertices the mesh holds.
+    pub fn vertex_count(&self) -> i32 {
+        self.vertices.len() as i32
+    }
+
+    /// How many triangles have been removed - the gap's band.
+    pub fn removed_count(&self) -> i32 {
+        self.removed_count
+    }
+
+    /// The INPUT edge a vertex descends from, as the two input vertex indices behind it, or
+    /// (-1, -1) where it descends from no single input edge. An input vertex answers (itself,
+    /// itself), since it stands on every input edge that names it. A split-edge vertex descends
+    /// from whatever its parent ENDS descend from, merged - so a piece of an input edge answers
+    /// that edge however many times it has been split; two vertices are on one input edge exactly
+    /// when their two answers name the same two input vertices between them, which is structure and
+    /// not a tolerance.
+    pub fn input_edge_behind(&self, vertex: i32) -> (i32, i32) {
+        self.descends_from[vertex as usize]
+    }
+
+    /// The input edge two ancestries have in common: the pair of input vertices they name between
+    /// them, or (-1, -1) where they name none, one, or more than two - none of which is a single
+    /// input edge.
+    pub fn merge(left: (i32, i32), right: (i32, i32)) -> (i32, i32) {
+        let mut low = -1;
+        let mut high = -1;
+        for vertex in [left.0, left.1, right.0, right.1] {
+            if vertex < 0 {
+                return (-1, -1);
+            }
+
+            if vertex == low || vertex == high {
+                continue;
+            }
+
+            if low < 0 {
+                low = vertex;
+            } else if high < 0 {
+                high = vertex;
+            } else {
+                return (-1, -1);
+            }
+        }
+
+        if high < 0 {
+            (low, low)
+        } else {
+            (low.min(high), low.max(high))
+        }
+    }
+
+    /// Takes a triangle out of the mesh: it leaves every edge it stood on, and an edge left
+    /// standing on nothing leaves the mesh with it. Removing a triangle twice is a no-op.
+    pub fn remove_triangle(&mut self, triangle: i32) {
+        if self.removed[triangle as usize] {
+            return;
+        }
+
+        self.detach(triangle, self.triangles[triangle as usize]);
+        self.removed[triangle as usize] = true;
+        self.removed_count += 1;
+    }
+
+    /// The triangles standing on an edge: one on a boundary, two inside a closed mesh.
+    pub fn triangles_on(&self, a: i32, b: i32) -> &[i32] {
+        self.edge_triangles
+            .get(&Self::key(a, b))
+            .map_or(&[], |found| found.as_slice())
+    }
+
+    /// True when the edge exists in the mesh.
+    pub fn has_edge(&self, a: i32, b: i32) -> bool {
+        self.edge_triangles.contains_key(&Self::key(a, b))
+    }
+
+    /// A triangle's centroid.
+    pub fn centroid(&self, triangle: i32) -> Vector3 {
+        let t = self.triangles[triangle as usize];
+        (self.vertices[t.a as usize] + self.vertices[t.b as usize] + self.vertices[t.c as usize])
+            / 3.0
+    }
+
+    /// The corner of a triangle that is not either end of one of its own edges.
+    pub fn opposite_corner(t: LevelLineTriangle, a: i32, b: i32) -> i32 {
+        if t.a != a && t.a != b {
+            t.a
+        } else if t.b != a && t.b != b {
+            t.b
+        } else {
+            t.c
+        }
+    }
+
+    /// The (low, high) key of an edge.
+    pub fn key(a: i32, b: i32) -> (i32, i32) {
+        if a < b {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    }
+
+    /// Starts a fresh memo of edges a refinement rule has already found clean, discarding whatever
+    /// a previous refinement left. One refinement runs against ONE field and ONE reading, and an
+    /// answer about an edge is an answer about that field, so a memo may never outlive the call
+    /// that filled it.
+    pub fn forget_clean_edges(&mut self) {
+        self.answered_clean = Some(HashSet::new());
+    }
+
+    /// Whether a rule has already found this edge clean and it has not been split since - the mesh
+    /// keeps the mark because the mesh is what knows when an edge stops existing.
+    pub fn is_answered_clean(&self, a: i32, b: i32) -> bool {
+        self.answered_clean
+            .as_ref()
+            .is_some_and(|clean| clean.contains(&Self::key(a, b)))
+    }
+
+    /// Marks an edge clean until it is split (nothing while no memo is running).
+    pub fn answer_clean(&mut self, a: i32, b: i32) {
+        if let Some(clean) = &mut self.answered_clean {
+            clean.insert(Self::key(a, b));
+        }
+    }
+
+    /// Stands triangle `index` on its three edges.
+    pub fn attach(&mut self, index: i32, t: LevelLineTriangle) {
+        self.attach_edge(index, t.a, t.b);
+        self.attach_edge(index, t.b, t.c);
+        self.attach_edge(index, t.c, t.a);
+    }
+
+    /// Stands triangle `index` on edge `a b`.
+    pub fn attach_edge(&mut self, index: i32, a: i32, b: i32) {
+        self.edge_triangles
+            .entry(Self::key(a, b))
+            .or_insert_with(|| Vec::with_capacity(2))
+            .push(index);
+    }
+
+    /// Takes triangle `index` off its three edges.
+    pub fn detach(&mut self, index: i32, t: LevelLineTriangle) {
+        self.detach_edge(index, t.a, t.b);
+        self.detach_edge(index, t.b, t.c);
+        self.detach_edge(index, t.c, t.a);
+    }
+
+    /// Takes triangle `index` off edge `a b` (its first entry, as C#'s `List.Remove`); an edge left
+    /// standing on nothing leaves the mesh.
+    pub fn detach_edge(&mut self, index: i32, a: i32, b: i32) {
+        let key = Self::key(a, b);
+        if let Some(list) = self.edge_triangles.get_mut(&key) {
+            if let Some(at) = list.iter().position(|&t| t == index) {
+                list.remove(at);
+            }
+
+            if list.is_empty() {
+                self.edge_triangles.remove(&key);
+            }
+        }
+    }
+}
