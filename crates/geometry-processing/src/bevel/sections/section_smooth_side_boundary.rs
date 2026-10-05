@@ -143,11 +143,8 @@ pub fn try_the_crease_chord_down(
 }
 
 /// C# `TheCreasesAtEachVertex`: the FEATURE edges leaving each vertex, read off the edges-by-pair
-/// table the operation already built. Nothing where there is no feature test.
-///
-/// C# walks its `Dictionary<long, int>`'s values in insertion order, which is edge-index order (the
-/// table is filled edge by edge); the Rust table is a `HashMap`, so the edges are walked in ascending
-/// index instead, which is the same order wherever no two edges share a vertex pair.
+/// table the operation already built, walked in that table's own order (C#'s insertion order - see
+/// [`EdgeAtPair`]). Nothing where there is no feature test.
 pub fn the_creases_at_each_vertex(
     graph: &MeshEdgeGraph,
     edge_at_pair: &EdgeAtPair,
@@ -159,10 +156,7 @@ pub fn the_creases_at_each_vertex(
         return at;
     };
 
-    let mut edges: Vec<i32> = edge_at_pair.values().copied().collect();
-    edges.sort_unstable();
-
-    for edge in edges {
+    for &edge in edge_at_pair.values() {
         if !is_a_feature_edge(edge) {
             continue;
         }

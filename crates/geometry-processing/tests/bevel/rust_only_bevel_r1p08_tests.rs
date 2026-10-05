@@ -12,7 +12,8 @@ use vector_math::Vector3;
 use geometry_processing::bevel::sections::section_split_blend::SplitPlacement;
 use geometry_processing::bevel::sections::{
     section_builder, section_builder_walked_side, section_fan_walk, section_room,
-    section_smooth_side_boundary, BevelSection, SectionAbsorbedSplits,
+    section_smooth_side_boundary, BevelSection, JunctionSection, SectionAbsorbedSplits,
+    SectionPool,
 };
 use geometry_processing::topology::FeatureEdgeSet;
 
@@ -369,4 +370,189 @@ fn rust_only_the_walked_side_names_its_places() {
         1e-6
     )
     .is_none());
+}
+
+/// A neighbour's end: a walked side's own point and walk face; a junction's wall side read off the
+/// wall end on the join's own edge where that end was carried onto a facet, and the section's own
+/// point where it was not; nothing to set out from where the side was neither walked nor slid.
+#[test]
+fn rust_only_the_neighbours_end_reads_the_junction_wall() {
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+    let mut pool = SectionPool::new(&cube.vertices);
+    let own = pool.add(Vector3::new(1.0, 2.0, 3.0)).unwrap();
+    let carried = pool.add(Vector3::new(4.0, 5.0, 6.0)).unwrap();
+
+    let mut walked = section_at(10, own, own);
+    walked.left_walk_face = 3;
+    let plain = section_at(11, own, own);
+    let sections = vec![walked, plain.clone()];
+
+    let (point, faces) = section_builder_walked_side::the_neighbours_end(
+        &cube, &graph, &pairs, &pool, &sections, None, 0, true, true, None,
+    );
+    assert_eq!((point, faces), (Vector3::new(1.0, 2.0, 3.0), vec![3]));
+
+    let junction = JunctionSection {
+        chain_vertex: 11,
+        station: Vector3::ZERO,
+        through: Vector3::ZERO,
+        normal: Vector3::ZERO,
+        samples: vec![carried, own],
+        carried_onto: vec![7, -1],
+        arriving_wall_end: 1,
+        leaving_wall_end: 0,
+        fold_point: -1,
+        arriving_wall: Vector3::ZERO,
+        leaving_wall: Vector3::ZERO,
+        flat_on_the_left: false,
+        setback_arriving: 0.0,
+        setback_leaving: 0.0,
+        arriving_section: std::rc::Rc::new(plain.clone()),
+        leaving_section: std::rc::Rc::new(plain),
+    };
+    let mut junctions = IndexMap::new();
+    junctions.insert(1, junction);
+
+    // The join leaves the junction: its LEAVING wall end, carried onto facet 7.
+    let (point, faces) = section_builder_walked_side::the_neighbours_end(
+        &cube,
+        &graph,
+        &pairs,
+        &pool,
+        &sections,
+        Some(&junctions),
+        1,
+        true,
+        true,
+        None,
+    );
+    assert_eq!((point, faces), (Vector3::new(4.0, 5.0, 6.0), vec![7]));
+
+    // Arriving: that wall end was carried nowhere, so the section's own point - neither walked nor
+    // slid, so no face to set out from.
+    let (point, faces) = section_builder_walked_side::the_neighbours_end(
+        &cube,
+        &graph,
+        &pairs,
+        &pool,
+        &sections,
+        Some(&junctions),
+        1,
+        false,
+        true,
+        None,
+    );
+    assert_eq!(
+        (point, faces),
+        (Vector3::new(1.0, 2.0, 3.0), Vec::<i32>::new())
+    );
+
+    // The junction's FLAT side is read the ordinary way.
+    let (_, faces) = section_builder_walked_side::the_neighbours_end(
+        &cube,
+        &graph,
+        &pairs,
+        &pool,
+        &sections,
+        Some(&junctions),
+        1,
+        true,
+        false,
+        None,
+    );
+    assert!(faces.is_empty());
+}
+
+/// The surface walk's small readings on a cube: its grid, one point read twice, feet along an edge,
+/// folds (a cube edge is one, a face's diagonal is not), a parameter turned to the graph's way, and a
+/// refusal carrying where it stopped.
+#[test]
+fn rust_only_the_surface_walk_reads_folds_and_feet() {
+    use geometry_processing::bevel::sections::section_surface_walk as walk;
+    use geometry_processing::bevel::sections::{
+        SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult,
+    };
+    use geometry_processing::bevel::surface::SurfaceVertexPool;
+
+    let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let graph = MeshEdgeGraph::create(&cube);
+    let pairs = section_builder::edges_by_vertex_pair(&graph);
+
+    assert!(walk::grid_of(&cube) >= SurfaceVertexPool::weld_distance_for(&cube.vertices));
+    assert!(walk::is_the_same_point(
+        Vector3::ZERO,
+        Vector3::new(5e-10, 0.0, 0.0),
+        0.5
+    ));
+    assert!(!walk::is_the_same_point(
+        Vector3::ZERO,
+        Vector3::new(1e-6, 0.0, 0.0),
+        2.0
+    ));
+
+    let face = &cube.faces[0];
+    let side = pairs[&walk::pair_key(face.v0, face.v1)];
+    let diagonal = [(face.v0, face.v1), (face.v1, face.v2), (face.v2, face.v0)]
+        .iter()
+        .map(|&(a, b)| pairs[&walk::pair_key(a, b)])
+        .find(|&edge| !walk::is_a_fold(&cube, &graph, edge))
+        .expect("a triangle of a cube's side has its diagonal");
+    assert!(walk::is_a_fold(&cube, &graph, side));
+
+    let crossing = |edge: i32| SurfaceWalkCrossing::new(edge, 0.5, Vector3::ZERO);
+    assert!(walk::crossed_a_fold(
+        &cube,
+        &graph,
+        Some(&[crossing(diagonal), crossing(side)])
+    ));
+    assert!(!walk::crossed_a_fold(
+        &cube,
+        &graph,
+        Some(&[crossing(diagonal)])
+    ));
+    assert!(!walk::crossed_a_fold(&cube, &graph, None));
+
+    let v0 = graph.get_vertex0(side);
+    let at_v0 = Vector3::from_vector3_float(cube.vertices[v0 as usize]);
+    let at_v1 = Vector3::from_vector3_float(cube.vertices[graph.get_vertex1(side) as usize]);
+    let quarter = walk::foot_on(&cube, &graph, side, 0.25);
+    assert!((quarter - (at_v0 + (at_v1 - at_v0) * 0.25)).length() < 1e-12);
+    assert!((walk::along_from(&cube, &graph, side, quarter) - 0.25).abs() < 1e-12);
+    assert_eq!(
+        walk::along_from(&cube, &graph, side, at_v1 + (at_v1 - at_v0)),
+        1.0
+    );
+    assert_eq!(walk::parameter_on(&graph, side, v0, 0.25), 0.25);
+    assert_eq!(
+        walk::parameter_on(&graph, side, graph.get_vertex1(side), 0.25),
+        0.75
+    );
+
+    let fresh = SurfaceWalkResult::new(Vector3::ZERO, 2, Vector3::ZERO, vec![]);
+    assert_eq!(
+        (fresh.end_edge, fresh.end_vertex, fresh.refusal),
+        (-1, -1, SurfaceWalkRefusal::None)
+    );
+    let stopped = walk::refused(
+        Vector3::ZERO,
+        2,
+        Vector3::ZERO,
+        vec![crossing(side)],
+        3.5,
+        SurfaceWalkRefusal::CreaseReached,
+        side,
+        0.4,
+    );
+    assert_eq!(
+        (
+            stopped.travelled,
+            stopped.refusal,
+            stopped.end_edge,
+            stopped.end_parameter,
+            stopped.end_face
+        ),
+        (3.5, SurfaceWalkRefusal::CreaseReached, side, 0.4, 2)
+    );
 }

@@ -12,8 +12,7 @@
 //! where a crease is looked for and where the re-mesh splits a slide side into its two flat
 //! halves.
 
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Vector3;
 
@@ -21,8 +20,10 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge};
 
 /// Every mesh edge by the pair of vertices it joins ([`edges_by_vertex_pair`], [`pair_key`]).
-/// Only ever looked up, so a `HashMap`'s order cannot leak out.
-pub type EdgeAtPair = HashMap<i64, i32>;
+/// An [`IndexMap`] in C#'s `Dictionary<long, int>` insertion order (edge-index order, a repeated
+/// pair keeping its first place and taking the later edge), because some readers walk its values
+/// (`SectionSmoothSide.TheCreasesAtEachVertex`) and that order reaches what they build.
+pub type EdgeAtPair = IndexMap<i64, i32>;
 
 /// A fan turned through (C#'s two `out` lists).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -146,7 +147,7 @@ pub fn is_a_crease(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
 /// Every mesh edge, looked up by the pair of vertices it joins. Where two edges join the same pair
 /// the later one wins, as C#'s indexer assignment does.
 pub fn edges_by_vertex_pair(graph: &MeshEdgeGraph) -> EdgeAtPair {
-    let mut found = HashMap::with_capacity(graph.edge_count().max(0) as usize);
+    let mut found = IndexMap::with_capacity(graph.edge_count().max(0) as usize);
 
     for edge in 0..graph.edge_count() {
         found.insert(
