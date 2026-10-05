@@ -1,23 +1,21 @@
-//! .NET `System.Random` seeded with a fixed value (`new Random(seed)`, the legacy
-//! `Net5CompatSeedImpl`: Knuth's subtractive generator). MIConvexHull picks its starting simplex
-//! with `new Random(1)`, so the hull's vertex choice depends on reproducing this sequence exactly.
-//!
-//! A copy of the seeded half of `mattercad-expressions`' `net_random.rs`, which polygon-mesh
-//! cannot depend on (it sits above this crate). Ports .NET Runtime's `CompatPrng` (MIT, see
-//! THIRD_PARTY_NOTICES.md).
+//! .NET `System.Random` seeded with a fixed value: the legacy `Net5CompatSeedImpl` (Knuth's
+//! subtractive generator) that `new Random(seed)` runs, so code that seeds a `Random` gets the
+//! numbers MatterCAD and agg-sharp get (`rand(seed)` in expressions, MIConvexHull's starting
+//! simplex, test fixtures). Ports .NET Runtime's `CompatPrng` (MIT, see THIRD_PARTY_NOTICES.md).
+//! The unseeded `Random.Shared` stand-in stays in mattercad-expressions, its only user.
 
 const MBIG: i32 = i32::MAX;
 const MSEED: i32 = 161803398;
 
 /// `new Random(seed)`.
-pub(super) struct NetRandom {
+pub struct DotNetRandom {
     seed_array: [i32; 56],
     inext: usize,
     inextp: usize,
 }
 
-impl NetRandom {
-    pub(super) fn new(seed: i32) -> NetRandom {
+impl DotNetRandom {
+    pub fn new(seed: i32) -> DotNetRandom {
         let mut seed_array = [0i32; 56];
         let subtraction = if seed == i32::MIN {
             i32::MAX
@@ -52,7 +50,7 @@ impl NetRandom {
                 }
             }
         }
-        NetRandom {
+        DotNetRandom {
             seed_array,
             inext: 0,
             inextp: 21,
@@ -81,28 +79,14 @@ impl NetRandom {
         ret
     }
 
-    /// `Next(maxValue)`: `(int)(Sample() * maxValue)`, in [0, max_value).
-    pub(super) fn next(&mut self, max_value: i32) -> i32 {
-        let sample = self.internal_sample() as f64 * (1.0 / MBIG as f64);
-        (sample * max_value as f64) as i32
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::NetRandom;
-
-    #[test]
-    fn rust_only_seeded_sequence_matches_dotnet() {
-        // `new Random(1).Next(100)` x5 and `new Random(1).Next(7)` x5 from .NET 10.
-        let mut r = NetRandom::new(1);
-        let a: Vec<i32> = (0..5).map(|_| r.next(100)).collect();
-        let mut r = NetRandom::new(1);
-        let b: Vec<i32> = (0..5).map(|_| r.next(7)).collect();
-        assert_eq!(a, NET_100);
-        assert_eq!(b, NET_7);
+    /// `NextDouble()` (`Sample()`): [0, 1).
+    pub fn next_double(&mut self) -> f64 {
+        self.internal_sample() as f64 * (1.0 / MBIG as f64)
     }
 
-    const NET_100: [i32; 5] = [24, 11, 46, 77, 65];
-    const NET_7: [i32; 5] = [1, 0, 3, 5, 4];
+    /// `Next(maxValue)`: `(int)(Sample() * maxValue)`, in [0, max_value). The cast truncates, as
+    /// C#'s does; `Sample()` is below 1, so the product never reaches `max_value`.
+    pub fn next(&mut self, max_value: i32) -> i32 {
+        (self.next_double() * max_value as f64) as i32
+    }
 }

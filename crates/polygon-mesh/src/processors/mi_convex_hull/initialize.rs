@@ -7,8 +7,8 @@
 
 use super::data_model::FaceInternal;
 use super::math_helper::{calculate_face_plane, get_vertex_distance, volume_of_simplex, DIM};
-use super::net_random::NetRandom;
 use super::{ConvexHullAlgorithm, HullFailed};
+use vector_math::dotnet_random::DotNetRandom;
 
 /// `Constants.FractionalNegligibleVolume` in the 1.1.19.1019 package.
 const FRACTIONAL_NEGLIGIBLE_VOLUME: f64 = 1e-8;
@@ -183,7 +183,7 @@ impl ConvexHullAlgorithm {
         bb_points: &[i32],
         other_points: &[i32],
     ) -> Result<(Option<Vec<i32>>, f64), HullFailed> {
-        let mut random = NetRandom::new(1);
+        let mut random = DotNetRandom::new(1);
         let mut best_vertex_indices: Option<Vec<i32>> = None;
         let mut max_volume = DEFAULT_PLANE_DISTANCE_TOLERANCE;
         let num_bb_points = bb_points.len();

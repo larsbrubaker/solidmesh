@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use polygon_mesh::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes, WindingRule};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Face, Mesh};
+use vector_math::dotnet_random::DotNetRandom;
 use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
 const NOT_CLOSED: &str = "NotClosed";
@@ -532,91 +533,6 @@ fn a_seam_split_by_rounding_still_unions_far_from_the_origin() {
     assert_within(bounds.x_size(), 16.0, 0.01);
     assert_within(bounds.y_size(), 10.0, 0.01);
     assert_within(bounds.z_size(), 10.0, 0.01);
-}
-
-/// .NET's seeded `System.Random` (the Knuth subtractive generator), so the fixtures below
-/// perturb exactly the corners the C# fixtures do.
-struct DotNetRandom {
-    seed_array: [i32; 56],
-    inext: usize,
-    inextp: usize,
-}
-
-impl DotNetRandom {
-    const MBIG: i32 = i32::MAX;
-    const MSEED: i32 = 161_803_398;
-
-    fn new(seed: i32) -> Self {
-        let mut seed_array = [0i32; 56];
-        let subtraction = if seed == i32::MIN {
-            i32::MAX
-        } else {
-            seed.abs()
-        };
-        let mut mj = Self::MSEED - subtraction;
-        seed_array[55] = mj;
-        let mut mk = 1i32;
-        let mut ii = 0usize;
-        for _ in 1..55 {
-            ii += 21;
-            if ii >= 55 {
-                ii -= 55;
-            }
-            seed_array[ii] = mk;
-            mk = mj - mk;
-            if mk < 0 {
-                mk += Self::MBIG;
-            }
-            mj = seed_array[ii];
-        }
-        for _ in 1..5 {
-            for i in 1..56 {
-                let mut n = i + 30;
-                if n >= 55 {
-                    n -= 55;
-                }
-                seed_array[i] = seed_array[i].wrapping_sub(seed_array[1 + n]);
-                if seed_array[i] < 0 {
-                    seed_array[i] += Self::MBIG;
-                }
-            }
-        }
-        Self {
-            seed_array,
-            inext: 0,
-            inextp: 21,
-        }
-    }
-
-    fn internal_sample(&mut self) -> i32 {
-        let mut loc_inext = self.inext + 1;
-        if loc_inext >= 56 {
-            loc_inext = 1;
-        }
-        let mut loc_inextp = self.inextp + 1;
-        if loc_inextp >= 56 {
-            loc_inextp = 1;
-        }
-        let mut ret_val = self.seed_array[loc_inext].wrapping_sub(self.seed_array[loc_inextp]);
-        if ret_val == Self::MBIG {
-            ret_val -= 1;
-        }
-        if ret_val < 0 {
-            ret_val += Self::MBIG;
-        }
-        self.seed_array[loc_inext] = ret_val;
-        self.inext = loc_inext;
-        self.inextp = loc_inextp;
-        ret_val
-    }
-
-    fn next_double(&mut self) -> f64 {
-        f64::from(self.internal_sample()) * (1.0 / f64::from(Self::MBIG))
-    }
-
-    fn next(&mut self, max_value: i32) -> i32 {
-        (self.next_double() * f64::from(max_value)) as i32
-    }
 }
 
 /// `MathF.BitIncrement`: the next float towards +infinity.

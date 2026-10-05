@@ -1,12 +1,17 @@
-//! Paths to meshes: agg-sharp `PolygonMesh/Processors/VertexSourceToMesh.cs`. This slice ports
-//! `TriangulateFaces`, the flat fill every other entry point builds on, over
-//! [`CachedTesselator`]. `Extrude` and `Revolve` need the clipper conversions of agg-path's
-//! DataConverters2D (`CreatePolygons`, `GetCorrectedWinding`, `CreateVertexStorage`, `Offset`)
-//! and join once those land.
+//! Paths to meshes: agg-sharp `PolygonMesh/Processors/VertexSourceToMesh.cs`. `TriangulateFaces`
+//! (the flat fill every other entry point builds on, over [`CachedTesselator`]) is in this
+//! file; `Revolve` is in [`revolve`] and `Extrude` with its bevel rings in
+//! [`extrude`], split by entry point for the file-size limit.
 
 use agg_path::vertex_data::VertexData;
 use agg_path::vertex_source::VertexSource;
 use vector_math::{Matrix4X4, Vector2, Vector3};
+
+mod extrude;
+mod revolve;
+
+pub use extrude::{extrude, extrude_bevelled};
+pub use revolve::revolve;
 
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
