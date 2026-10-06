@@ -398,6 +398,11 @@ pub fn try_close_the_ends(
                 seam_end(end.edge, 0, end.at_the_start),
                 seam_end(end.edge, 1, end.at_the_start),
             ) else {
+                // Unreachable from real input: an end is only gathered where its strip stands, and
+                // `SurfaceBevelBuilder` gives every edge it did not swallow both seams before this
+                // runs (picked over the edge, the run-off's own seam, or the shared corner
+                // `SurfaceMitreConsumesTheRail::try_fill_the_seams` lays on a consumed side) - which
+                // is why C# indexes them unguarded. Kept as a refusal rather than a panic.
                 return Err(BevelAdvisory::new(
                     BevelAdvisoryCode::SurfaceCornerNotSupported,
                     vec![end.corner.into()],

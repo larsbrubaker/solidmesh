@@ -131,6 +131,8 @@ mod many_holes_mouth_room_tests;
 mod meter_lock;
 #[path = "bevel/no_duplicate_vertex_tests.rs"]
 mod no_duplicate_vertex_tests;
+#[path = "bevel/nose_in_notch_mixed_corners.rs"]
+mod nose_in_notch_mixed_corners;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
 #[path = "bevel/open_chain_fixtures.rs"]
@@ -279,6 +281,8 @@ mod surface_bevel_plan_tests;
 mod strip_clip_rib_meshes;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
 mod surface_clip_classifies_one_point_one_way_tests;
+#[path = "bevel/surface_concave_end_where_the_face_carries_on_tests.rs"]
+mod surface_concave_end_where_the_face_carries_on_tests;
 #[path = "bevel/surface_convex_bite_tests.rs"]
 mod surface_convex_bite_tests;
 #[path = "bevel/surface_crease_faces_are_one_surface_tests.rs"]
@@ -301,14 +305,42 @@ mod surface_fan_tests;
 mod surface_giving_up_the_section_sews_by_index_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
+#[path = "bevel/surface_mixed_corner_dual_canal_tests.rs"]
+mod surface_mixed_corner_dual_canal_tests;
+#[path = "bevel/surface_mixed_corner_dual_grid_tests.rs"]
+mod surface_mixed_corner_dual_grid_tests;
+#[path = "bevel/surface_mixed_corner_dual_on_a_square_corner_tests.rs"]
+mod surface_mixed_corner_dual_on_a_square_corner_tests;
+#[path = "bevel/surface_mixed_corner_reading_tests.rs"]
+mod surface_mixed_corner_reading_tests;
+#[path = "bevel/surface_mixed_corner_run_out_second_wall_tests.rs"]
+mod surface_mixed_corner_run_out_second_wall_tests;
+#[path = "bevel/surface_oblique_mixed_corner_bites_tests.rs"]
+mod surface_oblique_mixed_corner_bites_tests;
+#[path = "bevel/surface_oblique_mixed_corner_wall_spine_tests.rs"]
+mod surface_oblique_mixed_corner_wall_spine_tests;
+#[path = "bevel/surface_plan_cost_tests.rs"]
+mod surface_plan_cost_tests;
 #[path = "bevel/surface_rim_closes_at_a_knife_edge_tests.rs"]
 mod surface_rim_closes_at_a_knife_edge_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
 mod surface_ring_ears_bridged_ring_tests;
+#[path = "bevel/surface_room_across_a_curved_wall_tests.rs"]
+mod surface_room_across_a_curved_wall_tests;
+#[path = "bevel/surface_room_corner_wall_tests.rs"]
+mod surface_room_corner_wall_tests;
 #[path = "bevel/surface_room_crossing_tests.rs"]
 mod surface_room_crossing_tests;
+#[path = "bevel/surface_room_half_disc_rim_tests.rs"]
+mod surface_room_half_disc_rim_tests;
+#[path = "bevel/surface_room_notch_reach_tests.rs"]
+mod surface_room_notch_reach_tests;
+#[path = "bevel/surface_room_tests.rs"]
+mod surface_room_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
 mod surface_run_out_column_top_tests;
+#[path = "bevel/surface_run_out_lens_readings_tests.rs"]
+mod surface_run_out_lens_readings_tests;
 #[path = "bevel/surface_run_out_strip_top_rim_tests.rs"]
 mod surface_run_out_strip_top_rim_tests;
 #[path = "bevel/surface_sewing_bowed_side_tests.rs"]

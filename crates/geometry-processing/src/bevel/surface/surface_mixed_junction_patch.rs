@@ -74,6 +74,9 @@ pub fn try_close(
         return Err(not_supported());
     }
 
+    // Unreachable from real input: the only caller (`surface_strip_ends::try_close_the_junction`)
+    // builds `arriving` from `the_arriving_ends()`, a fixed three, and refuses before calling if any
+    // of their strips is missing - so C#'s unguarded reads of the three never see fewer.
     let [first_arrival, second_arrival, bead_arrival, ..] = arriving else {
         return Err(not_supported());
     };

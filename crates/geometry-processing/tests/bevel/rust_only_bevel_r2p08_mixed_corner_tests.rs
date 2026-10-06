@@ -8,8 +8,11 @@
 use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker;
+use geometry_processing::bevel::surface::surface_mixed_corner_patch::{
+    emit, from_the_cap_face, from_the_handover, try_cut_the_ring, try_turn_the_ring_round,
+};
 use geometry_processing::bevel::surface::{
-    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceVertexPool,
+    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceStrip, SurfaceVertexPool,
 };
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::Mesh;
@@ -232,4 +235,97 @@ fn rust_only_the_plan_reads_the_real_mixed_corner_itself() {
     )
     .unwrap_or_else(|failure| panic!("{failure:?}"));
     assert!((read.tangent_point - by_hand.tangent_point).length() <= 1e-12);
+}
+
+#[test]
+fn rust_only_the_real_corners_ring_is_turned_round_and_emitted() {
+    // The plan's own corner on the L prism: the cut's ring and the bead's, each cut where the
+    // corner stops them, share their rail on the shared face - so the ordinary grid turns the
+    // cut's ring round the bead's axis to the bead's ring, and emit lays it as outward quads.
+    let mesh = Arc::new(create_l_shaped_grid_prism());
+    let features = FeatureEdgeSet::create(&mesh);
+    let regions = Arc::new(FaceRegionCache::new(
+        mesh.clone(),
+        None,
+        features.flat_angle_degrees(),
+    ));
+    let chains = bevel_chain_linker::link(&[
+        features.edges()[the_convex_edge_of(
+            &features,
+            top_corner(),
+            Vector3::new(10.0, 20.0, 10.0),
+            1e-6,
+        )],
+        features.edges()[the_concave_edge(&features)],
+    ]);
+    let plan = SurfaceBevelPlan::try_create(&chains[0], &regions, RADIUS, true)
+        .unwrap_or_else(|reason| panic!("the chain would not plan: {reason:?}"));
+    let corner = plan
+        .try_mixed_corner_after(0)
+        .expect("the plan reads the corner");
+
+    let cut = SurfaceStrip::try_create(&corner.cut, 4).expect("the cut's strip");
+    let bead = SurfaceStrip::try_create(&corner.bead, 4).expect("the bead's strip");
+    let (_, cut_points) = try_cut_the_ring(&corner, &cut, true, None).expect("the cut's ring");
+    let (_, bead_points) = try_cut_the_ring(&corner, &bead, false, None).expect("the bead's ring");
+
+    let mut pool = SurfaceVertexPool::new(&mesh.vertices);
+    let cut_ring: Vec<i32> = cut_points.iter().map(|&at| pool.add(at)).collect();
+    let bead_ring: Vec<i32> = bead_points.iter().map(|&at| pool.add(at)).collect();
+    let profile = from_the_cap_face(&corner, &cut_ring);
+    let turns = from_the_handover(&corner, &bead_ring);
+    assert_eq!(
+        profile.last(),
+        turns.first(),
+        "the cut's rail on the shared face is the bead's first"
+    );
+
+    let (grid, _rows) = try_turn_the_ring_round(&mut pool, &corner, &profile, &turns)
+        .unwrap_or_else(|failure| panic!("the ring would not turn: {failure:?}"));
+    assert_eq!(grid.len(), profile.len());
+    for (p, row) in grid.iter().enumerate() {
+        assert_eq!(row.len(), turns.len());
+        assert_eq!(row[0], profile[p], "the first column is the ring itself");
+    }
+    assert_eq!(
+        grid[grid.len() - 1],
+        turns,
+        "the last row is the turns laid on the shared face"
+    );
+
+    // Every grid vertex stands a radius off the ball's centre at its turn - the patch is the
+    // ball's surface swept round the corner.
+    let step = corner.turn_radians() / (turns.len() - 1) as f64;
+    for row in &grid {
+        for (j, &v) in row.iter().enumerate() {
+            let centre = corner.spine.centre_at(j as f64 * step);
+            assert!(
+                ((pool.position_of(v) - centre).length() - RADIUS).abs() <= 1e-3,
+                "{:?} is not a radius off {centre:?}",
+                pool.position_of(v)
+            );
+        }
+    }
+
+    let mut faces = Vec::new();
+    emit(&mut pool, &mut faces, &corner, &grid);
+    assert!(
+        faces.len() >= (profile.len() - 1) * (turns.len() - 1),
+        "one quad (one or two triangles) per cell: {} faces",
+        faces.len()
+    );
+    let outward = corner.outward_sum();
+    let mut facing = Vector3::ZERO;
+    for &(a, b, c) in &faces {
+        let (a, b, c) = (
+            pool.position_of(a),
+            pool.position_of(b),
+            pool.position_of(c),
+        );
+        facing += (b - a).cross(c - a);
+    }
+    assert!(
+        facing.dot(outward) > 0.0,
+        "the patch faces the corner's outward sum"
+    );
 }

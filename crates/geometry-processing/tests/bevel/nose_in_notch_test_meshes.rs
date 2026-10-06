@@ -51,6 +51,10 @@ pub fn upper_nose_normal() -> Vector3 {
     Vector3::new(0.0, -2.0, 3.0).get_normal()
 }
 
+pub fn lower_nose_normal() -> Vector3 {
+    Vector3::new(0.0, -2.0, -3.0).get_normal()
+}
+
 /// C# `Create()` with its defaults (unscaled, the upper face one triangle).
 pub fn create() -> Mesh {
     create_scaled(1.0)

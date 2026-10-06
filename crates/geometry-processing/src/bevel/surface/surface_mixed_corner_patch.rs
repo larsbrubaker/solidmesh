@@ -516,7 +516,11 @@ pub fn try_close(
 
     // And where the wall RAN OUT under the blend, the face across its end gives up the section the
     // blend leaves in that face's own plane (SurfaceMixedCornerWallEnds). C# reads
-    // `wallEndsAt.Value` unguarded: a section without a plane is refused rather than thrown.
+    // `wallEndsAt.Value` unguarded, and that is sound: with neither band crossing, the run-out only
+    // draws a section once the window has a finite switch turn, and that turn is read off
+    // `wall_ends_at` alone (`SurfaceRunOutColumnWindow::try_read`), so a section here always comes
+    // with a plane. The `else` cannot be reached from real input; it is kept as a refusal rather
+    // than an `expect`.
     if let Some(section) = run_out.section.as_deref() {
         if meets_the_band.is_none() && meets_a_wall_band.is_none() {
             let Some(across) = wall_ends_at else {
