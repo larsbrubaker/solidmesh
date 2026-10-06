@@ -2,8 +2,8 @@
 //! class): so far its constants, the facet normal ([`normal_of`]), the side-turn test
 //! ([`turns_along_a_side`]), the end-face bend ([`bends`]) and whether the end region's flood
 //! crosses a soft bend ([`crosses_a_soft_bend`]) and a flat patch of the end region
-//! ([`flat_patch`]), and the flow over a narrow end face ([`flow_over_a_narrow_end_face`]); the
-//! round-run reading lands with a later package.
+//! ([`flat_patch`]), and the flow over a narrow end face ([`flow_over_a_narrow_end_face`]) and
+//! the round-run reading ([`rounds_from_the_end`]).
 
 use vector_math::Vector3;
 
@@ -268,4 +268,111 @@ pub fn flow_over_a_narrow_end_face(
         Some(error) => Err(error),
         None => Ok(()),
     }
+}
+
+/// C# `EndFaceFlow.RoundsFromTheEnd`: true when the END FACE is a ROUND FROM THE END ON: from the
+/// end vertex on, a run of soft bends bounding [`ROUND_RUN_JOINS`] full facets as wide as each
+/// other, all turning by as much, about the same axis - and the part of a facet the end vertex
+/// stands on no wider than they are, wherever in that facet the vertex sits. A D prism's flat edge
+/// ending on the D's round is the case: stopped at the first join the next facet read as foreign,
+/// a finer round giving a SMALLER room. Not a flat end face that rounds away later, nor a flat face
+/// with a lean or two in it.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn rounds_from_the_end(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    chain_keys: &HashSet<(i32, i32)>,
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    seeds: &[i32],
+    end_vertex: i32,
+) -> Result<bool, WorkError> {
+    let mut entry_from = positions[end_vertex as usize];
+    let mut entry_along = Vector3::ZERO;
+    let (mut area, mut exits) = flat_patch(
+        positions,
+        indices,
+        standing,
+        chain_keys,
+        is_feature_edge,
+        seeds,
+        None,
+        end_vertex,
+    )?;
+    let mut widths = Vec::new();
+    let mut turns = Vec::new();
+    let mut axes: Vec<Vector3> = Vec::new();
+    for join in 0..=ROUND_RUN_JOINS {
+        if exits.is_empty() {
+            return Ok(false);
+        }
+
+        // The next join is the exit nearest the entry (a point at the end vertex, a join line
+        // after).
+        let from_entry = |edge: (i32, i32)| {
+            let from = positions[edge.0 as usize];
+            let along = (positions[edge.1 as usize] - from).get_normal();
+            if join == 0 {
+                let to_end = entry_from - from;
+                return (to_end - (along * to_end.dot(along))).length();
+            }
+
+            let offset = ((from + positions[edge.1 as usize]) / 2.0) - entry_from;
+            (offset - (entry_along * offset.dot(entry_along))).length()
+        };
+
+        // C#'s OrderBy(..).First(): the first nearest, NaN ordering first.
+        let mut exit = exits[0];
+        for &candidate in &exits[1..] {
+            let (d, best) = (from_entry(candidate), from_entry(exit));
+            if !best.is_nan() && (d.is_nan() || d < best) {
+                exit = candidate;
+            }
+        }
+
+        let width = from_entry(exit);
+        let on = &standing[&exit];
+        // C#'s List.Find: the first match, or 0 where none.
+        let inside = on.iter().copied().find(|t| area.contains(t)).unwrap_or(0);
+        let across = on.iter().copied().find(|t| !area.contains(t)).unwrap_or(0);
+        let in_normal = normal_of(positions, indices[inside as usize]);
+        let out_normal = normal_of(positions, indices[across as usize]);
+        let axis = in_normal.cross(out_normal);
+        if !(width > 0.0) || !(axis.length() > 0.0) {
+            return Ok(false);
+        }
+
+        widths.push(width);
+        turns.push(in_normal.dot(out_normal).clamp(-1.0, 1.0).acos());
+        axes.push(axis.get_normal());
+
+        // Across the join: every edge of it is the next area's entry.
+        entry_from = positions[exit.0 as usize];
+        entry_along = (positions[exit.1 as usize] - entry_from).get_normal();
+        let previous = area;
+        let next = flat_patch(
+            positions,
+            indices,
+            standing,
+            chain_keys,
+            is_feature_edge,
+            &[across],
+            Some(&previous),
+            end_vertex,
+        )?;
+        area = next.0;
+        exits = next.1;
+    }
+
+    // The end vertex's own facet is only bounded ABOVE: where the vertex sits inside it must not
+    // decide whether the wall is a round.
+    let full = &widths[1..];
+    let least = |values: &[f64]| values.iter().copied().fold(f64::INFINITY, f64::min);
+    let most = |values: &[f64]| values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    Ok(most(full) <= ROUND_RUN_SPREAD * least(full)
+        && widths[0] <= ROUND_RUN_SPREAD * least(full)
+        && most(&turns) <= ROUND_RUN_SPREAD * least(&turns)
+        && axes
+            .iter()
+            .all(|axis| axis.dot(axes[0]) > round_run_axis_cosine()))
 }

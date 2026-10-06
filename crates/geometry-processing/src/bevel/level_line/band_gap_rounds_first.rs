@@ -160,7 +160,7 @@ pub fn chain_senses(
         let count = if closed.is_some_and(|c| c[k]) {
             chain.len()
         } else {
-            chain.len() - 1
+            chain.len().saturating_sub(1)
         };
         let mut sense: Option<bool> = None;
         for i in 0..count {

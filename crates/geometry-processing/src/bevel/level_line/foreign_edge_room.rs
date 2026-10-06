@@ -163,7 +163,7 @@ pub fn meets_the_chain_at_an_end(
 /// C# `ForeignEdgeRoom.EveryEdge`: every edge the indexes hold that the chain is not exempt from -
 /// the unindexed edge list, as (low, high, extra unit setback 0).
 pub fn every_edge(
-    indexes: &[ForeignEdgeIndex],
+    indexes: &[std::rc::Rc<ForeignEdgeIndex>],
     exempt: Option<&dyn Fn((i32, i32)) -> bool>,
 ) -> Vec<(i32, i32, f64)> {
     let mut every = Vec::new();

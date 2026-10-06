@@ -4,14 +4,18 @@
 //! trial size ([`every_value_is_above_zero`]), the bisection every room reading ends in
 //! ([`bisect`]) and where the edge that sets the room comes nearest the chain
 //! ([`where_the_room_is_set`]), and the bracket read off one pass of the bare field
-//! ([`bracket_from_one_bare_pass`]) and the room itself ([`room_for`]). The indexed reading lands
-//! with its method package.
+//! ([`bracket_from_one_bare_pass`]), the room itself ([`room_for`]) and the room read off a spatial
+//! index of the foreign edges ([`room_from_index`]).
 
 use vector_math::Vector3;
 
+use std::rc::Rc;
+
 use super::foreign_edge_room::{
-    ROOM_BISECTION_STEPS, ROOM_BRACKET_DOUBLINGS, UNIFORM_SETBACK_TOLERANCE,
+    every_edge, read_every_foreign_edge, PRUNE_SLACK, ROOM_BISECTION_STEPS, ROOM_BRACKET_DOUBLINGS,
+    UNIFORM_SETBACK_TOLERANCE,
 };
+use super::ForeignEdgeIndex;
 use super::{foreign_room_counters, ChainField, LevelLineMesh, LevelLineWork, WorkError};
 
 /// A foreign edge as (low, high, the other chain's extra unit setback taken off it).
@@ -278,4 +282,108 @@ pub fn room_for(
     }
 
     bisect(mesh, &searched, field_at, lo, hi)
+}
+
+/// C# `ForeignEdgeRoom.RoomFromIndex`: the same room as [`room_for`], read off a SPATIAL INDEX of
+/// the pick's foreign edges rather than a pass over all of them: the chain's own edges (`exempt`)
+/// aside, the answer is the same number. The nearest-first search reads each edge's bare approach
+/// once, the uniform setback answers outright, and otherwise the bracket [least / highest,
+/// least / lowest] is bisected over the edges near enough to set it. Every edge read the plain way
+/// where the switch asks for it, a unit setback is not positive, or an approach is NaN.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn room_from_index(
+    mesh: &LevelLineMesh,
+    indexes: &[Rc<ForeignEdgeIndex>],
+    field_at: FieldAt,
+    unit_setback: &[f64],
+    asked: f64,
+    exempt: Option<&dyn Fn((i32, i32)) -> bool>,
+) -> Result<f64, WorkError> {
+    let mut offered: i32 = indexes.iter().map(|index| index.count()).sum();
+    if offered == 0 {
+        return Ok(f64::INFINITY);
+    }
+
+    let (lowest_unit, highest_unit) = least_and_greatest(unit_setback);
+    if read_every_foreign_edge() || !(lowest_unit > 0.0) {
+        return room_for(
+            mesh,
+            &every_edge(indexes, exempt),
+            field_at,
+            unit_setback,
+            asked,
+        );
+    }
+
+    // The meters mean what they meant before the index: OFFERED is after the exemption, counted
+    // only when a measurement is running.
+    let measuring = foreign_room_counters::with(|t| t.edges_per_chain.is_some());
+    if let (Some(exempt), true) = (exempt, measuring) {
+        for index in indexes {
+            offered -= index.edges().iter().filter(|&&edge| exempt(edge)).count() as i32;
+        }
+    }
+
+    foreign_room_counters::with(|t| {
+        t.calls += 1;
+        t.edges_offered += i64::from(offered);
+        if t.in_a_pair {
+            t.pair_calls += 1;
+        } else if let Some(per_chain) = &mut t.edges_per_chain {
+            per_chain.push(offered);
+        }
+    });
+
+    let found = ForeignEdgeIndex::least_approach(
+        indexes,
+        &field_at(0.0),
+        (highest_unit / lowest_unit) * (1.0 + PRUNE_SLACK),
+        exempt,
+    )?;
+    foreign_room_counters::with(|t| t.search_edges_read += i64::from(found.read));
+    if found.least == f64::INFINITY {
+        // Every edge the indexes hold was exempt: nothing foreign bounds this chain at all.
+        return Ok(f64::INFINITY);
+    }
+
+    if highest_unit - lowest_unit <= UNIFORM_SETBACK_TOLERANCE * highest_unit {
+        return Ok(found.least / highest_unit);
+    }
+
+    if found.least.is_nan() {
+        // A NaN approach is a NaN room on the unindexed path; the whole reading goes back there.
+        return room_for(
+            mesh,
+            &every_edge(indexes, exempt),
+            field_at,
+            unit_setback,
+            asked,
+        );
+    }
+
+    if !(found.least > 0.0) {
+        // An edge already standing on the chain leaves nothing to build in.
+        foreign_room_counters::with(|t| {
+            t.bracket_fallbacks += 1;
+            t.touching_fallbacks += 1;
+        });
+        return Ok(0.0);
+    }
+
+    let lo = found.least / highest_unit;
+    let hi = found.least / lowest_unit;
+    // Unreachable with a positive least approach and a positive unit setback (C# throws).
+    assert!(
+        lo > 0.0 && !hi.is_infinite(),
+        "a positive approach and unit setback did not bracket"
+    );
+
+    let kept: Vec<ForeignEdge> = found
+        .near
+        .iter()
+        .filter(|(_, approach)| approach / highest_unit <= hi)
+        .map(|&(edge, _)| (edge.0, edge.1, 0.0))
+        .collect();
+    foreign_room_counters::with(|t| t.kept_edges += kept.len() as i64);
+    bisect(mesh, &kept, field_at, lo, hi)
 }

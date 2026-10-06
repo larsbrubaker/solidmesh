@@ -377,3 +377,322 @@ fn rust_only_the_room_for_a_chain_reads_uniform_setbacks_in_one_pass_and_bisects
         Some(0.0)
     );
 }
+
+#[test]
+fn rust_only_an_ends_end_face_is_flooded_as_its_end_region() {
+    use std::collections::HashSet;
+
+    use geometry_processing::bevel::level_line::band_side_tagging_ends::{flood_ends, EndReach};
+    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    // The cube's top-front edge 0 -> 1 (top side 1, front side 2) ending on the x = 1 face, whose
+    // creases with the sides are folds.
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.5, 1.0),
+        Vector3::new(1.0, 0.0, 0.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3), (1, 3, 2)];
+    let standing = standing_map(&indices);
+    let chain_keys: HashSet<(i32, i32)> = [(0, 1)].into_iter().collect();
+    let folds = |a: i32, b: i32| a != b;
+    let tagged = |end_rays: (bool, bool)| {
+        let mut tags = vec![1, 2, 0];
+        flood_ends(
+            &positions,
+            &indices,
+            &standing,
+            &chain_keys,
+            &folds,
+            &[(0, 1)],
+            &mut tags,
+            None,
+            end_rays,
+            EndReach::default(),
+            false,
+        )
+        .expect("two sides");
+        tags
+    };
+    // The last end's face is its end region (tag 4); the first end has no untagged face.
+    assert_eq!(tagged((false, false)), vec![1, 2, 4]);
+    // An end carrying the end ray keeps its end face whole and untagged.
+    assert_eq!(tagged((false, true)), vec![1, 2, 0]);
+    // A flat end face bounded by folds is no round from the end on: it has no soft join to cross.
+    let rounds = geometry_processing::bevel::level_line::end_face_flow::rounds_from_the_end(
+        &positions,
+        &indices,
+        &standing,
+        &chain_keys,
+        &folds,
+        &[2],
+        1,
+    )
+    .expect("no budget");
+    assert!(!rounds);
+}
+
+#[test]
+fn rust_only_the_sides_band_and_end_regions_of_a_cube_edge() {
+    use geometry_processing::bevel::level_line::band_side_tagging_ends::{
+        end_regions_of, tag_band, tag_sides, SideReach,
+    };
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.5, 1.0),
+        Vector3::new(1.0, 0.0, 0.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3), (1, 3, 2)];
+    let folds = |a: i32, b: i32| a != b;
+    let none = |_: i32, _: i32| false;
+    let (tags, divides) = tag_sides(
+        &indices,
+        &[(0, 1)],
+        &folds,
+        true,
+        Some(&positions),
+        (false, false),
+        SideReach::default(),
+    )
+    .expect("two sides");
+    assert!(divides);
+    assert_eq!(tags, vec![1, 2, 4]);
+    // Without end floods (or positions) the sides alone.
+    let (bare, _) = tag_sides(
+        &indices,
+        &[(0, 1)],
+        &folds,
+        false,
+        None,
+        (false, false),
+        SideReach::default(),
+    )
+    .expect("two sides");
+    assert_eq!(bare, vec![1, 2, 0]);
+    // With no folds at all one region reaches both sides: the chain does not divide them.
+    let (joined, divides) = tag_sides(
+        &indices,
+        &[(0, 1)],
+        &none,
+        true,
+        Some(&positions),
+        (false, false),
+        SideReach::default(),
+    )
+    .expect("two sides");
+    assert!(!divides);
+    assert_eq!(joined[1], 1);
+
+    // The band at a size: the end face the band reaches is its end region.
+    let field = ChainField::from_polyline(&[positions[0], positions[1]], false, &[0.5, 0.5])
+        .expect("a chain");
+    let (band, divides) =
+        tag_band(&positions, &indices, &[(0, 1)], &folds, &field, 0.0, true).expect("two sides");
+    assert!(divides);
+    assert_eq!(band, vec![1, 2, 4]);
+
+    // On a pick's tagging where side 2 is another chain's: still the last end's region.
+    let regions = end_regions_of(
+        &positions,
+        &indices,
+        &[(0, 1)],
+        &folds,
+        &[1, 2, 0],
+        &|t| t == 1,
+        (false, false),
+        None,
+    )
+    .expect("two sides");
+    assert_eq!(regions, vec![1, -1, 4]);
+}
+
+#[test]
+fn rust_only_the_room_read_off_the_index_is_the_plain_reading() {
+    use geometry_processing::bevel::level_line::foreign_edge_room_readings::{
+        room_for, room_from_index,
+    };
+    use geometry_processing::bevel::level_line::{ForeignEdgeIndex, LevelLineMesh};
+    let mut mesh = LevelLineMesh::new();
+    mesh.vertices = vec![
+        Vector3::new(1.0, 3.0, 0.0),
+        Vector3::new(3.0, 3.0, 0.0),
+        Vector3::new(1.0, 30.0, 0.0),
+        Vector3::new(3.0, 30.0, 0.0),
+    ];
+    let ends = mesh.vertices.clone();
+    let mut order = vec![0, 1];
+    let mut nodes = Vec::new();
+    ForeignEdgeIndex::add(&mut nodes, &ends, &mut order, 0, 2);
+    let edges: Vec<(i32, i32)> = order.iter().map(|&i| (2 * i, 2 * i + 1)).collect();
+    let sorted: Vec<Vector3> = order
+        .iter()
+        .flat_map(|&i| [ends[(2 * i) as usize], ends[(2 * i + 1) as usize]])
+        .collect();
+    let index = Rc::new(ForeignEdgeIndex::new(edges, sorted, nodes));
+    let indexes = [index];
+    let uniform = |size: f64| {
+        ChainField::from_polyline(
+            &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+            false,
+            &[size, size],
+        )
+        .expect("a chain")
+    };
+    let varying = |size: f64| {
+        ChainField::from_polyline(
+            &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+            false,
+            &[size, 2.0 * size],
+        )
+        .expect("a chain")
+    };
+    let indexed =
+        room_from_index(&mesh, &indexes, &uniform, &[1.0, 1.0], 1.0, None).expect("no budget");
+    assert!((indexed - 3.0).abs() <= 1e-12);
+    let plain_edges = [(0, 1, 0.0), (2, 3, 0.0)];
+    let indexed =
+        room_from_index(&mesh, &indexes, &varying, &[1.0, 2.0], 1.0, None).expect("no budget");
+    let plain = room_for(&mesh, &plain_edges, &varying, &[1.0, 2.0], 1.0).expect("no budget");
+    assert!((indexed - plain).abs() <= 1e-9);
+    // Every edge exempt: nothing bounds the chain.
+    let all = |_: (i32, i32)| true;
+    assert_eq!(
+        room_from_index(&mesh, &indexes, &varying, &[1.0, 2.0], 1.0, Some(&all)).ok(),
+        Some(f64::INFINITY)
+    );
+}
+
+#[test]
+fn rust_only_a_picks_free_end_floods_its_end_face_as_an_end_group() {
+    use geometry_processing::bevel::level_line::pick_end_floods::flood_pick_ends;
+    use geometry_processing::bevel::level_line::BandGroup;
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.5, 1.0),
+        Vector3::new(1.0, 0.0, 0.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3), (1, 3, 2)];
+    let folds = |a: i32, b: i32| a != b;
+    let side = |tag: i32| {
+        let mut side_of = indexmap::IndexMap::new();
+        side_of.insert(0, tag);
+        BandGroup {
+            tag,
+            members: vec![0],
+            side_of_chain: side_of,
+            ..BandGroup::default()
+        }
+    };
+    let mut groups = vec![side(1), side(2)];
+    let mut tags = vec![1, 2, 0];
+    flood_pick_ends(
+        &positions,
+        &indices,
+        &[vec![(0, 1)]],
+        &folds,
+        None,
+        &mut tags,
+        &mut groups,
+        None,
+    )
+    .expect("the end floods");
+    // The end at 1 stands on the untagged face, which becomes the chain's end group; the end at 0
+    // stands on no face of its own and joins nothing.
+    assert_eq!(tags, vec![1, 2, 3]);
+    assert_eq!(groups.len(), 3);
+    assert_eq!(groups[2].tag, 3);
+    assert_eq!(groups[2].members, vec![0]);
+    assert_eq!(groups[2].end_of, 0);
+    assert_eq!(groups[2].side_of_chain.get(&0), Some(&3));
+    assert!(groups[..2].iter().all(|g| g.end_members.is_empty()));
+
+    // A closed chain has no ends to flood.
+    let mut closed_tags = vec![1, 2, 0];
+    let mut closed_groups = vec![side(1), side(2)];
+    flood_pick_ends(
+        &positions,
+        &indices,
+        &[vec![(0, 1), (1, 2), (2, 0)]],
+        &folds,
+        None,
+        &mut closed_tags,
+        &mut closed_groups,
+        None,
+    )
+    .expect("nothing to flood");
+    assert_eq!(closed_tags, vec![1, 2, 0]);
+    assert_eq!(closed_groups.len(), 2);
+}
+
+#[test]
+fn rust_only_the_side_groups_of_one_and_two_chains() {
+    use geometry_processing::bevel::level_line::band_side_groups::{
+        group_sides, has_a_both_sided_member,
+    };
+    let positions = vec![
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.0, 1.0),
+        Vector3::new(1.0, 0.5, 1.0),
+        Vector3::new(1.0, 0.0, 0.0),
+    ];
+    let indices = vec![(0, 1, 2), (1, 0, 3), (1, 3, 2)];
+    let folds = |a: i32, b: i32| a != b;
+    let none = |_: i32, _: i32| false;
+    // One chain: its two sides, and the end face flooded as the second end's region - what the
+    // side tagging reads.
+    let (tags, groups, undivided) = group_sides(
+        &indices,
+        &[vec![(0, 1)]],
+        &folds,
+        true,
+        Some(&positions),
+        None,
+        None,
+    )
+    .expect("two sides");
+    assert_eq!(tags, vec![1, 2, 4]);
+    assert_eq!(undivided, -1);
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[0].side_of_chain.get(&0), Some(&1));
+    assert_eq!(groups[1].side_of_chain.get(&0), Some(&2));
+    // With no folds one region reaches both sides: the chain is undivided.
+    let (_, _, undivided) = group_sides(
+        &indices,
+        &[vec![(0, 1)]],
+        &none,
+        true,
+        Some(&positions),
+        None,
+        None,
+    )
+    .expect("one region");
+    assert_eq!(undivided, 0);
+    // Two chains sharing the face between them: that face is one group with both as members.
+    let (tags, groups, undivided) = group_sides(
+        &indices,
+        &[vec![(0, 1)], vec![(1, 3)]],
+        &folds,
+        false,
+        None,
+        None,
+        None,
+    )
+    .expect("three groups");
+    assert_eq!(undivided, -1);
+    assert_eq!(tags, vec![1, 2, 3]);
+    assert_eq!(groups.len(), 3);
+    assert_eq!(groups[1].members, vec![0, 1]);
+    assert!(groups.iter().all(|g| g.both_sided.is_empty()));
+    let chains = [vec![0, 1], vec![1, 3]];
+    assert!(!has_a_both_sided_member(
+        &positions,
+        &indices,
+        Some(&chains),
+        &[false, false],
+        Some(&folds)
+    )
+    .expect("grouped"));
+    assert!(!has_a_both_sided_member(&positions, &indices, None, &[], None).expect("no pick"));
+}

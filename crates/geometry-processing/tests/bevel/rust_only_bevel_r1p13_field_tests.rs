@@ -43,7 +43,7 @@ fn rust_only_the_foreign_edge_tree_splits_at_the_longest_axis_median() {
     assert_eq!((built[2].start, built[2].count), (3, 3));
 
     let edges: Vec<(i32, i32)> = (0..6).map(|i| (2 * i, 2 * i + 1)).collect();
-    let index = ForeignEdgeIndex::new(edges.clone(), ends, built);
+    let index = Rc::new(ForeignEdgeIndex::new(edges.clone(), ends, built));
     assert_eq!(index.count(), 6);
     assert_eq!(index.edges(), &edges[..]);
     let all = foreign_edge_room::every_edge(std::slice::from_ref(&index), None);
