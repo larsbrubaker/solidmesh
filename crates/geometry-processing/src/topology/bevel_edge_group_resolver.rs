@@ -136,6 +136,49 @@ pub fn create_from_edge(
     ))
 }
 
+/// The optional seed filter [`create_groups_for_all_edges`] takes: `false` skips that feature edge.
+pub type IncludeEdge<'a> = &'a dyn Fn(&FeatureEdgeSet, i32) -> bool;
+
+/// "Bevel everything": one [`BevelSelectionKind::Edge`] group per straight CREASE of `mesh` at
+/// `flat_angle_degrees`, not one per mesh edge. A crease a boolean cut into several mesh edges
+/// would otherwise be swept once per piece, from rows of the panel that select the same edges.
+/// Each group is anchored on the first edge of its collinear run, and every feature edge lands in
+/// exactly one run. `include` (C#'s optional predicate) skips a seed it answers `false` for.
+///
+/// Ports C# `BevelFeatureObject3D.CreateGroupsForAllEdges`, hosted here because it is pure
+/// topology; the operation object calls it when it is ported.
+pub fn create_groups_for_all_edges(
+    mesh: &Mesh,
+    flat_angle_degrees: f64,
+    include: Option<IncludeEdge<'_>>,
+) -> Result<Vec<BevelEdgeGroup>, TopologyError> {
+    let features = FeatureEdgeSet::create_with_angle(mesh, flat_angle_degrees);
+    let mut groups = Vec::with_capacity(features.count());
+    let mut already_in_a_run = vec![false; features.count()];
+
+    for i in 0..features.count() {
+        let seed = i as i32;
+        if already_in_a_run[i] || include.is_some_and(|include| !include(&features, seed)) {
+            continue;
+        }
+
+        // Walked before the group is made rather than after it resolves, because it is the same
+        // walk the resolver will do and this is the cheapest place to know what the group takes.
+        for run_edge in FeatureEdgeChain::propagate_collinear(&features, seed)?.edges() {
+            already_in_a_run[run_edge.edge_index as usize] = true;
+        }
+
+        groups.push(create_from_edge(
+            &features,
+            seed,
+            BevelSelectionKind::Edge,
+            FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+        )?);
+    }
+
+    Ok(groups)
+}
+
 /// A face-group selection anchored on one of the region's rim edges, with the region's face as
 /// the anchor's first face (so the flood re-runs on the same side after a rebuild).
 pub fn create_from_face_group(

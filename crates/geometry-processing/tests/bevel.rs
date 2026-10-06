@@ -275,10 +275,10 @@ mod several_chains_fixtures;
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
 mod spoke_centre_parameter_tests;
-#[path = "bevel/surface_bevel_plan_tests.rs"]
-mod surface_bevel_plan_tests;
 #[path = "bevel/strip_clip_rib_meshes.rs"]
 mod strip_clip_rib_meshes;
+#[path = "bevel/surface_bevel_plan_tests.rs"]
+mod surface_bevel_plan_tests;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
 mod surface_clip_classifies_one_point_one_way_tests;
 #[path = "bevel/surface_concave_end_where_the_face_carries_on_tests.rs"]
