@@ -139,6 +139,49 @@ fn count_x(mesh: &Mesh, value: f32) -> usize {
     mesh.vertices.iter().filter(|v| v.x == value).count()
 }
 
+/// `PathStitcher.Stitch` with the C# default scaling (1000) on two loop strings.
+fn stitch_strings(bottom: &str, top: &str) -> Mesh {
+    let bottom = create_from_string(bottom, 1.0).unwrap();
+    let top = create_from_string(top, 1.0).unwrap();
+    path_stitcher::stitch(Some(&bottom), 0.0, Some(&top), 10.0, 1000.0)
+        .expect("one loop, or a matching pair, always stitches")
+}
+
+// C# opens this test with `return;`, so none of its assertions run there. The three CCW cases
+// hold for `Stitch` (C# and Rust alike) and are asserted with the C# values. The three CW
+// "error condition" cases expect 0 faces, but `Stitch` caps or walls a loop whatever its
+// winding (8, 2 and 2 faces); C# keeps them as the disabled intent, and they stay that here:
+//   CW skirt "0,0, 0,100, 100,100, 100,0" both ways -> 0 faces
+//   CW bottom only -> 0 faces; CW top only -> 0 faces
+#[test]
+fn single_loop_stiching() {
+    // only a CCW bottom
+    {
+        let mesh = stitch_strings("0,0, 100,0, 100,100, 0,100", "");
+        // only a bottom face, no walls
+        assert_eq!(mesh.faces.len(), 2);
+        for vertex in &mesh.vertices {
+            assert_eq!(vertex.z, 0.0);
+        }
+    }
+
+    // only a CCW top
+    {
+        let mesh = stitch_strings("", "0,0, 100,0, 100,100, 0,100");
+        // only a top face, no walls
+        assert_eq!(mesh.faces.len(), 2);
+        for vertex in &mesh.vertices {
+            assert_eq!(vertex.z, 10.0);
+        }
+    }
+
+    // a simple skirt wound ccw
+    {
+        let mesh = stitch_strings("0,0, 100,0, 100,100, 0,100", "0,0 ,100,0, 100,100, 0,100");
+        assert_eq!(mesh.faces.len(), 8);
+    }
+}
+
 #[test]
 fn split_face_edge_edge() {
     let test_positions = |p0: usize, p1: usize, p2: usize| {

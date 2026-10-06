@@ -3,9 +3,9 @@
 //!
 //! C# yields through a global `ProgressReporter.UiYield` hook from an async parse; here the
 //! caller drives [`StlParse::next_chunk`] and each `Continue` is a point where it gets its
-//! thread back. `AParseNobodyIsWatchingNeverYields` has no counterpart: with no global hook
-//! there is nothing to yield to implicitly (the synchronous entry point never returns
-//! mid-parse), so the case it guards cannot arise.
+//! thread back. A caller with no reporter (exports, thumbnails, tests) uses the synchronous
+//! [`stl_processing::parse_file_contents`], which hands control back only with the finished
+//! mesh: that is `AParseNobodyIsWatchingNeverYields` here.
 
 use polygon_mesh::processors::stl_processing::{self, StlChunk, StlParse, FACES_PER_YIELD};
 use polygon_mesh::processors::{stl_writer, MeshOutputSettings};
@@ -95,6 +95,23 @@ fn a_large_stl_hands_the_ui_its_thread_back_while_it_parses_true() {
 #[test]
 fn a_large_stl_hands_the_ui_its_thread_back_while_it_parses_false() {
     a_large_stl_hands_the_ui_its_thread_back_while_it_parses(false);
+}
+
+#[test]
+fn a_parse_nobody_is_watching_never_yields() {
+    // The only reason not to hop the event loop is that there is no reporter. Getting this
+    // wrong costs every non-UI caller - exports, thumbnails, tests - a UI hop per chunk of
+    // every STL it reads. C# also checks `ProgressReporter.Null`, the singleton a null Action
+    // becomes; Rust has one "no reporter", `None`, so the one parse covers both.
+    let parsed =
+        stl_processing::parse_file_contents(&multi_chunk_stl_bytes(), &CancelToken::new(), None)
+            .expect("the parse succeeds");
+    // The one return carries every face: no chunk boundary handed control back mid-parse.
+    assert_eq!(
+        parsed.faces.len() as i32,
+        FACE_COUNT,
+        "a parse with no reporter has no progress to paint"
+    );
 }
 
 fn yielding_does_not_change_the_parsed_mesh(binary: bool) {
