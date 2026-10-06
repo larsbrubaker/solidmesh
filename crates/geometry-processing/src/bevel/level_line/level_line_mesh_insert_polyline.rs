@@ -33,7 +33,8 @@ fn orient(a: (f64, f64), b: (f64, f64), c: (f64, f64)) -> f64 {
 
 impl LevelLineMesh {
     /// C# `LevelLineMesh.InsertPolyline`: inserts `points` as a chain of edges through the flat
-    /// region of kept triangles `in_region` accepts, all in the plane of `plane_normal`; answers
+    /// region of kept triangles `in_region` accepts (asked of the mesh as it stands, as C#'s
+    /// closure over it reads it), all in the plane of `plane_normal`; answers
     /// the chain's vertices in order (every point of the polyline and every crossing), or `None`
     /// where it cannot. Each segment's first point is made a vertex, then every region edge the
     /// open segment crosses is split where it crosses, nearest first, then its last point.
@@ -41,7 +42,7 @@ impl LevelLineMesh {
         &mut self,
         points: &[Vector3],
         plane_normal: Vector3,
-        in_region: &dyn Fn(i32) -> bool,
+        in_region: &dyn Fn(&LevelLineMesh, i32) -> bool,
     ) -> Result<Option<Vec<i32>>, LevelLineMeshError> {
         let n = plane_normal.get_normal();
         let u = (if n.x.abs() < 0.9 {
@@ -144,9 +145,9 @@ impl LevelLineMesh {
     }
 
     /// The live region triangles, in index order.
-    fn region(&self, in_region: &dyn Fn(i32) -> bool) -> Vec<i32> {
+    fn region(&self, in_region: &dyn Fn(&LevelLineMesh, i32) -> bool) -> Vec<i32> {
         (0..self.triangle_count())
-            .filter(|&t| !self.removed[t as usize] && in_region(t))
+            .filter(|&t| !self.removed[t as usize] && in_region(self, t))
             .collect()
     }
 
@@ -157,7 +158,7 @@ impl LevelLineMesh {
         &mut self,
         p: Vector3,
         flat: &dyn Fn(Vector3) -> (f64, f64),
-        in_region: &dyn Fn(i32) -> bool,
+        in_region: &dyn Fn(&LevelLineMesh, i32) -> bool,
     ) -> Result<Option<i32>, LevelLineMeshError> {
         let q = flat(p);
         for t in self.region(in_region) {

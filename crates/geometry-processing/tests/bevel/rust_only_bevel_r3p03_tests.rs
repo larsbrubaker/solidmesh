@@ -213,3 +213,86 @@ fn rust_only_a_run_is_cut_at_its_end_parameter() {
         .expect("no budget")
         .is_none());
 }
+
+#[test]
+fn rust_only_the_corner_fill_refuses_what_it_cannot_zip() {
+    use geometry_processing::bevel::level_line::corner_fill_fill::{fill, CornerFillError};
+    use geometry_processing::bevel::level_line::{
+        BandGapResult, BandProfile, GapFillRefusal, GapLoop,
+    };
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let mesh = Rc::new(RefCell::new(LevelLineMesh::new()));
+    let gap = BandGapResult {
+        mesh: Some(mesh),
+        loops: vec![GapLoop::new(
+            1,
+            true,
+            vec![0, 1, 2],
+            vec![0.0, 1.0, 2.0],
+            0,
+            false,
+            None,
+        )],
+        ..BandGapResult::default()
+    };
+
+    // A fillet of no segments is refused by name.
+    assert!(matches!(
+        fill(&gap, BandProfile::Fillet, 0),
+        Err(CornerFillError::FilletSegments(_))
+    ));
+
+    // A loop whose vertices name no owner leaves no one loop per side.
+    let refused = fill(&gap, BandProfile::Fillet, 4).expect("a verdict");
+    assert_eq!(refused.refusal, GapFillRefusal::SideDoesNotLeaveOneLoop);
+    assert!(refused.mesh.is_some());
+}
+
+#[test]
+fn rust_only_an_end_plane_trim_with_no_end_face_says_why() {
+    use geometry_processing::bevel::level_line::end_plane_trim_run::{run, trim_end};
+    use geometry_processing::bevel::level_line::open_gap_fill::{ends_site, set_ends_site};
+    use geometry_processing::bevel::level_line::{BandProfile, ChainField, GapLoop};
+    // A chain along x with no triangle standing at either end: no end plane to trim to.
+    let chain = ChainField::from_polyline(
+        &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        false,
+        &[1.0, 1.0],
+    )
+    .expect("a chain");
+    let mut mesh = LevelLineMesh::from_triangles(
+        &[
+            Vector3::new(1.0, 1.0, 0.0),
+            Vector3::new(3.0, 1.0, 0.0),
+            Vector3::new(2.0, 2.0, 0.0),
+        ],
+        &[(0, 1, 2)],
+        None,
+    )
+    .expect("a triangle");
+    set_ends_site(None);
+    let mut left = GapLoop::new(1, false, vec![0, 1], vec![1.0, 3.0], 0, false, None);
+    let mut right = GapLoop::new(2, false, vec![1, 0], vec![3.0, 1.0], 0, false, None);
+    let trimmed = trim_end(
+        &mut mesh,
+        &chain,
+        &mut left,
+        &mut right,
+        true,
+        BandProfile::Fillet,
+        4,
+    )
+    .expect("no budget");
+    assert!(trimmed.is_none());
+    assert_eq!(ends_site().as_deref(), Some(" / trim 1: no end plane"));
+
+    set_ends_site(None);
+    assert!(
+        run(&mut mesh, &chain, 0, 1, false, BandProfile::Fillet, 4, 0)
+            .expect("no budget")
+            .is_none()
+    );
+    assert_eq!(ends_site().as_deref(), Some(" / section: no end plane"));
+    set_ends_site(None);
+}

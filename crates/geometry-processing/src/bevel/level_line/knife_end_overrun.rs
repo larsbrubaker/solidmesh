@@ -3,8 +3,8 @@
 //! ray to E, and the round past the first rail's end is laid as rows clipped by E, so the end hole
 //! left is a flat piece of E. Ports the nested type of `Bevel/LevelLine/KnifeEndOverrun.cs` (a C#
 //! static class): the end read ([`KnifeEndOverrunEnd`]) and the on-the-plane test
-//! ([`on_the_plane`]), and the overrun read at one end ([`read`]); laying the rows lands with a
-//! later package.
+//! ([`on_the_plane`]), the overrun read at one end ([`read`]) and the rows laid past the end
+//! spoke ([`lay`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -172,4 +172,93 @@ pub fn meets_the_plane(
     }
 
     -1
+}
+
+/// C# `KnifeEndOverrun.Lay`: lays the rows past the strip's end spoke `end_spoke` (A to B): one at
+/// every station of the running-on rail `bv` beyond index `from`, each the fillet section there
+/// clipped by E, then a fan to the vertex where that rail meets E.
+#[allow(clippy::too_many_arguments)]
+pub fn lay(
+    mesh: &mut LevelLineMesh,
+    chain: &ChainField,
+    end: &KnifeEndOverrunEnd,
+    end_spoke: &[i32],
+    bv: &[i32],
+    bp: &[f64],
+    from: i32,
+    segments: i32,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+) -> Result<(), super::LevelLineMeshError> {
+    use super::gap_fill::{arc_point, quads};
+
+    let off = |p: Vector3| (p - end.vertex).dot(end.normal);
+
+    // A cell is laid with its higher-parameter row first, as the strip lays its quads.
+    let cell = |mesh: &mut LevelLineMesh,
+                beyond: &[i32],
+                previous: &[i32],
+                added: &mut Vec<i32>|
+     -> Result<(), super::LevelLineMeshError> {
+        if end.last {
+            quads(mesh, beyond, previous, added)
+        } else {
+            quads(mesh, previous, beyond, added)
+        }
+    };
+
+    let mut previous = end_spoke.to_vec();
+    let step: i32 = if end.last { 1 } else { -1 };
+    let mut k = from + step;
+    while k >= 0 && (k as usize) < bv.len() {
+        let p = mesh.position(bv[k as usize]);
+        if off(p) > 0.0 {
+            break;
+        }
+
+        let (_, c) = chain.point_on_the_ray(bp[k as usize]);
+        let q = c + (end.across * (p - c).length());
+        let at = |s: f64| arc_point(p, c, q, s);
+        let mut cut = 1.0;
+        if off(at(1.0)) > 0.0 {
+            let (mut inside, mut outside) = (0.0, 1.0);
+            for _ in 0..60 {
+                let mid = (inside + outside) / 2.0;
+                if off(at(mid)) > 0.0 {
+                    outside = mid;
+                } else {
+                    inside = mid;
+                }
+            }
+
+            cut = (inside + outside) / 2.0;
+        }
+
+        // A to B, as the strip's spokes run: the end on E first, the rail station last.
+        let mut row = vec![0; segments as usize + 1];
+        row[segments as usize] = bv[k as usize];
+        for i in 0..segments {
+            row[i as usize] = mesh.add_vertex(at(cut * (segments - i) as f64 / segments as f64));
+            added_vertices.push(row[i as usize]);
+        }
+
+        cell(mesh, &row, &previous, added)?;
+        previous = row;
+        k += step;
+    }
+
+    // The rail's outermost station is not on E: the fan to the vertex where the kept boundary
+    // meets E closes the round there.
+    let outermost = if end.last { bv.len() as i32 - 1 } else { 0 };
+    let inward = if bv.len() > 1 {
+        bv[(outermost - step) as usize]
+    } else {
+        -1
+    };
+    let on_e = meets_the_plane(mesh, bv[outermost as usize], inward, end);
+    if on_e >= 0 {
+        cell(mesh, &vec![on_e; segments as usize + 1], &previous, added)?;
+    }
+
+    Ok(())
 }

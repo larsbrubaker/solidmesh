@@ -28,7 +28,7 @@ fn a_polyline_across_a_square_becomes_edges_and_cuts_off_the_top() {
     let mut mesh = LevelLineMesh::from_triangles(&square(), &HALVES, None).expect("a square");
     let line = line();
     let chain = mesh
-        .insert_polyline(&line, Vector3::new(0.0, 0.0, 1.0), &|_| true)
+        .insert_polyline(&line, Vector3::new(0.0, 0.0, 1.0), &|_, _| true)
         .expect("no budget");
     assert!(chain.is_some());
     let chain = chain.expect("a chain");
