@@ -116,3 +116,74 @@ fn rust_only_a_side_that_is_not_an_offset_or_reaches_nowhere_is_not_walked() {
         );
     }
 }
+
+#[test]
+fn rust_only_a_cube_edges_run_is_capped_on_the_faces_beyond_its_ends() {
+    use geometry_processing::bevel::bevel_chain_end_cap::ResolveOptions;
+    use geometry_processing::bevel::BevelChainEnds;
+    use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
+
+    let cube = create_cube(2.0, 2.0, 2.0);
+    let features = FeatureEdgeSet::create(&cube);
+    let edge = features.edges()[0];
+    let run = [ChainEdge::new(0, edge, false)];
+    let mut warnings = Vec::new();
+
+    let ends = BevelChainEnds::resolve(
+        &run,
+        false,
+        0.5,
+        Some(&features),
+        Some(&[edge]),
+        Some(&mut warnings),
+        ResolveOptions::default(),
+    );
+
+    // Each end of a lone cube edge meets the cube face square to it: capped on that face's plane,
+    // facing the way the run leaves.
+    let direction = run[0].direction();
+    assert!(ends.start.is_capped() && ends.end.is_capped());
+    assert!(
+        (ends.start.plane_normal + direction).length() < 1e-9,
+        "{:?}",
+        ends.start.plane_normal
+    );
+    assert!(
+        (ends.end.plane_normal - direction).length() < 1e-9,
+        "{:?}",
+        ends.end.plane_normal
+    );
+    assert!(ends.end.plane_distance >= direction.dot(run[0].to()) - 1e-9);
+    assert_eq!((ends.start_pair_corner, ends.end_pair_corner), (None, None));
+    assert_eq!(
+        (ends.start_overshoot_corner, ends.end_overshoot_corner),
+        (None, None)
+    );
+    assert!(warnings.is_empty(), "{warnings:?}");
+
+    // A closed run, or no features, overshoots freely.
+    assert_eq!(
+        BevelChainEnds::resolve(
+            &run,
+            true,
+            0.5,
+            Some(&features),
+            None,
+            None,
+            ResolveOptions::default()
+        ),
+        BevelChainEnds::overshoot()
+    );
+    assert_eq!(
+        BevelChainEnds::resolve(
+            &run,
+            false,
+            0.5,
+            None,
+            None,
+            None,
+            ResolveOptions::default()
+        ),
+        BevelChainEnds::overshoot()
+    );
+}

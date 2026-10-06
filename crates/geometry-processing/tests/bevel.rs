@@ -5,8 +5,14 @@
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
 mod bevel_bead_batch_tests;
+#[path = "bevel/bevel_bead_closes_over_stand_off_tests.rs"]
+mod bevel_bead_closes_over_stand_off_tests;
+#[path = "bevel/bevel_bead_exit_tests.rs"]
+mod bevel_bead_exit_tests;
 #[path = "bevel/bevel_cap_clip_tests.rs"]
 mod bevel_cap_clip_tests;
+#[path = "bevel/bevel_cap_stand_off_tests.rs"]
+mod bevel_cap_stand_off_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
 #[path = "bevel/bevel_face_run_out_tests.rs"]
@@ -21,6 +27,8 @@ mod bevel_partnered_bead_tests;
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]
 mod bevel_run_partners_tests;
+#[path = "bevel/bevel_runs_out_under_the_wall_tests.rs"]
+mod bevel_runs_out_under_the_wall_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]
 mod bevel_seam_ring_tests;
 #[path = "bevel/bevel_source_hull_tests.rs"]

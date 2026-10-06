@@ -53,6 +53,7 @@ pub mod bevel_blend_seam;
 pub mod bevel_cap_clip;
 pub mod bevel_chain_end_budget;
 pub mod bevel_chain_end_cap;
+pub mod bevel_chain_end_plane;
 pub mod bevel_chain_linker;
 pub mod bevel_chain_sweep;
 pub mod bevel_chain_sweep_mesh;

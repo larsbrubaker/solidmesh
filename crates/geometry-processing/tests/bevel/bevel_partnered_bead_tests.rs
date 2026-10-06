@@ -446,77 +446,12 @@ fn the_same_four_beads_build_and_union_at_ten_times_scale() {
     the_same_four_beads_build_and_union_at(10.0, 50.0);
 }
 
-/// C# `TopologyTestMeshes.CreateGridSolid`: the solid cells of an axis-aligned grid, each exposed
-/// cell face one quad.
-fn create_grid_solid(
-    xs: &[f64],
-    ys: &[f64],
-    zs: &[f64],
-    is_solid: impl Fn(i32, i32, i32) -> bool,
-) -> Mesh {
-    let mut mesh = Mesh::new();
-    let v = Vector3::new;
-
-    for i in 0..xs.len() as i32 - 1 {
-        for j in 0..ys.len() as i32 - 1 {
-            for k in 0..zs.len() as i32 - 1 {
-                if !is_solid(i, j, k) {
-                    continue;
-                }
-
-                let (x0, x1) = (xs[i as usize], xs[i as usize + 1]);
-                let (y0, y1) = (ys[j as usize], ys[j as usize + 1]);
-                let (z0, z1) = (zs[k as usize], zs[k as usize + 1]);
-
-                if !is_solid(i + 1, j, k) {
-                    mesh.create_face(&[v(x1, y0, z0), v(x1, y1, z0), v(x1, y1, z1), v(x1, y0, z1)]);
-                }
-                if !is_solid(i - 1, j, k) {
-                    mesh.create_face(&[v(x0, y0, z1), v(x0, y1, z1), v(x0, y1, z0), v(x0, y0, z0)]);
-                }
-                if !is_solid(i, j + 1, k) {
-                    mesh.create_face(&[v(x0, y1, z0), v(x0, y1, z1), v(x1, y1, z1), v(x1, y1, z0)]);
-                }
-                if !is_solid(i, j - 1, k) {
-                    mesh.create_face(&[v(x1, y0, z0), v(x1, y0, z1), v(x0, y0, z1), v(x0, y0, z0)]);
-                }
-                if !is_solid(i, j, k + 1) {
-                    mesh.create_face(&[v(x0, y0, z1), v(x1, y0, z1), v(x1, y1, z1), v(x0, y1, z1)]);
-                }
-                if !is_solid(i, j, k - 1) {
-                    mesh.create_face(&[v(x0, y1, z0), v(x1, y1, z0), v(x1, y0, z0), v(x0, y0, z0)]);
-                }
-            }
-        }
-    }
-
-    mesh.clean_and_merge();
-
-    mesh
-}
-
-/// C# `SurfaceTestMeshes.CreateSquareBossOnPlate`: a 20 x 20 x 4 plate with an 8 x 8 boss standing
-/// 8 tall on its middle.
-fn create_square_boss_on_plate() -> Mesh {
-    create_grid_solid(
-        &[0.0, 6.0, 14.0, 20.0],
-        &[0.0, 6.0, 14.0, 20.0],
-        &[0.0, 4.0, 12.0],
-        |i, j, k| {
-            (0..3).contains(&i)
-                && (0..3).contains(&j)
-                && (0..2).contains(&k)
-                && (k == 0 || (i == 1 && j == 1))
-        },
-    )
-}
-
 /// C# `ABossCornerIsHandedBackBecauseNothingRunsOutThere`.
 #[test]
 fn a_boss_corner_is_handed_back_because_nothing_runs_out_there() {
     const BOSS_RADIUS: f64 = 2.0;
 
-    let boss = create_square_boss_on_plate();
+    let boss = crate::topology_test_meshes::create_square_boss_on_plate();
     let features = FeatureEdgeSet::create(&boss);
     let run_out = Rc::new(BevelFaceRunOut::create(
         std::sync::Arc::new(boss.clone()),

@@ -34,6 +34,11 @@ pub fn lower_crease_end() -> Vector3 {
     Vector3::new(10.0, 10.0, 20.0 / 3.0)
 }
 
+/// The notch's floor corner.
+pub fn notch_floor() -> Vector3 {
+    Vector3::new(10.0, 10.0, 0.0)
+}
+
 pub fn left_slope_normal() -> Vector3 {
     Vector3::new(1.0, -1.0, 0.0).get_normal()
 }
