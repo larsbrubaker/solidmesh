@@ -1,8 +1,7 @@
 //! The wedge two bands mitre into at a REFLEX corner of one region, as the room reads it
 //! (`Bevel/Surface/SurfaceRoomMitre.cs`, a static class: free functions here). The tip of that
 //! wedge is a footprint of its own ([`SurfaceRoomFootprint::MitreTip`]); the overhang a mitre
-//! carries a band by is read here too. Adding every tip of a plan (`AddTo`) lands with a later
-//! package.
+//! carries a band by is read here too, and every tip of a plan is added ([`add_to`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -231,4 +230,49 @@ pub fn try_band(
     }
 
     Some((inward.get_normal(), setback))
+}
+
+/// C# `AddTo`: every mitre tip this plan's corners lay on the regions they turn across - one per
+/// corner per SHARED region, and only where that corner is reflex in it - added to `cuts`. A MIXED
+/// corner is left out: the convexity turns over there, so the two bands do not mitre at all and
+/// what stands past the corner is the run-out, read as its own cut.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+pub fn add_to(cuts: &mut Vec<SurfaceRoomCut>, plan: Option<&SurfaceBevelPlan>) {
+    let Some(plan) = plan else {
+        return;
+    };
+
+    if !(plan.size > 0.0) || plan.edges.is_empty() {
+        return;
+    }
+
+    let last = plan.edges.len() - 1;
+
+    for arrived_on in 0..=last {
+        let leaves_on = if arrived_on < last { arrived_on + 1 } else { 0 };
+
+        if leaves_on == arrived_on
+            || (arrived_on == last && !plan.is_closed)
+            || plan.try_mixed_corner_after(arrived_on as i32).is_some()
+        {
+            continue;
+        }
+
+        let arriving = &plan.edges[arrived_on];
+        let leaving = &plan.edges[leaves_on];
+
+        for arriving_side in 0..2 {
+            for leaving_side in 0..2 {
+                if let Some(tip) = try_cut(
+                    plan,
+                    arriving,
+                    arriving_side == 0,
+                    leaving,
+                    leaving_side == 0,
+                ) {
+                    cuts.push(tip);
+                }
+            }
+        }
+    }
 }

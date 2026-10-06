@@ -1,12 +1,18 @@
 //! A crease DOUBLED by a ribbon microns wide is the same crease, not a wall beside one
 //! ([`SeamEdges`]). Ports the type of `Bevel/LevelLine/SeamEdges.cs`, its constructor and the
-//! readings of a point beside the chain; the seam test and the wrapped feature-edge test
-//! (`IsSeam`, `NotTheChainsSeam`) land with a later package.
+//! readings of a point beside the chain, the seam test ([`SeamEdges::is_seam`]) and the wrapped
+//! feature-edge test ([`SeamEdges::not_the_chains_seam`]).
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
+
+use super::{chain_on_the_mesh, triangle_edges};
+
+/// A feature-edge test over two vertex indices (C#'s `Func<int, int, bool>`).
+pub type FeatureEdgeTest = Rc<dyn Fn(i32, i32) -> bool>;
 
 /// C# `SeamEdges`: says which feature edges are a doubling ribbon's, so the whole construction can
 /// stop reading them as features.
@@ -113,5 +119,106 @@ impl SeamEdges {
         let offset = point - from;
         let projected = (offset.x * along.x) + (offset.y * along.y) + (offset.z * along.z);
         cs_math::min_f64(1.0, cs_math::max_f64(0.0, projected / length_squared))
+    }
+}
+
+impl SeamEdges {
+    /// C# `NotTheChainsSeam`: the caller's feature test with the pick's own seams taken out of it -
+    /// or the caller's test itself, unwrapped, where there is no epsilon to apply (or nothing to
+    /// read it against) and the answer must not move by so much as a bit.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    pub fn not_the_chains_seam(
+        positions: Option<&[Vector3]>,
+        chains: Option<&[Vec<i32>]>,
+        closed: Option<&[bool]>,
+        is_feature_edge: Option<FeatureEdgeTest>,
+        seam_epsilon: f64,
+    ) -> Option<FeatureEdgeTest> {
+        let (Some(test), Some(positions), Some(chains)) =
+            (is_feature_edge.clone(), positions, chains)
+        else {
+            return is_feature_edge;
+        };
+
+        if !(seam_epsilon > 0.0) {
+            return Some(test);
+        }
+
+        let mut polylines = Vec::new();
+        let mut ends = Vec::new();
+        let mut chain_keys = HashSet::new();
+
+        for (k, chain) in chains.iter().enumerate() {
+            if chain.len() < 2 {
+                continue;
+            }
+
+            let mut points: Vec<Vector3> = chain.iter().map(|&v| positions[v as usize]).collect();
+
+            let is_closed = closed.is_some_and(|closed| k < closed.len() && closed[k]);
+
+            if is_closed {
+                points.push(points[0]);
+            } else {
+                ends.push(points[0]);
+                ends.push(points[points.len() - 1]);
+            }
+
+            polylines.push(points);
+
+            for (from, to) in chain_on_the_mesh::chain_edges(chain, is_closed) {
+                chain_keys.insert(triangle_edges::key(from, to));
+            }
+        }
+
+        if polylines.is_empty() {
+            return Some(test);
+        }
+
+        let seams = SeamEdges::new(
+            positions.to_vec(),
+            polylines,
+            chain_keys,
+            ends,
+            seam_epsilon,
+        );
+
+        Some(Rc::new(move |a, b| test(a, b) && !seams.is_seam(a, b)))
+    }
+
+    /// C# `IsSeam`: a doubling edge runs BESIDE the chain and is the chain's seam; a cluster of
+    /// near-coincident vertices sits AT one of its ends and is not (crossing one floods round the
+    /// chain's end, so it is left a feature here and taken instead by
+    /// `ForeignEdgeRoom.MeetsTheChainAtAnEnd`). The cluster's shape is an edge lying wholly within
+    /// the epsilon of ONE end vertex - the SAME end, since a ribbon beside a one-edge chain has a
+    /// vertex within the epsilon of EACH end.
+    pub fn is_seam(&self, a: i32, b: i32) -> bool {
+        if self.chain_keys.contains(&triangle_edges::key(a, b)) {
+            return false;
+        }
+
+        if !self.beside(a) || !self.beside(b) {
+            return false;
+        }
+
+        // Both ends beside the pick is not yet BESIDE it: an edge from one chain's end to ANOTHER
+        // chain's end runs across the gap between them (an end face's edge along a stair's tread),
+        // so its midpoint has to stand within the epsilon too.
+        let low = self.positions[a as usize];
+        let high = self.positions[b as usize];
+
+        if !self.point_is_beside((low + high) / 2.0) {
+            return false;
+        }
+
+        for &end in &self.ends {
+            if (low - end).length() <= self.seam_epsilon
+                && (high - end).length() <= self.seam_epsilon
+            {
+                return false;
+            }
+        }
+
+        true
     }
 }

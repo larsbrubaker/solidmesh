@@ -2,14 +2,14 @@
 //! ([`SurfaceChainEndReading`]): does the crease it stops at carry on past that corner, in an edge
 //! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`, its
 //! constructor and its surface and vertex indexes; C#'s per-cache table (`For`) is an owned
-//! value here ([`SurfaceChainEndReading::for_regions`], divergence 656); the reading itself lands
-//! with a later package.
+//! value here ([`SurfaceChainEndReading::for_regions`], divergence 656); and the reading itself
+//! ([`SurfaceChainEndReading::runs_out_at`]).
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use super::SurfaceBevelPlan;
-use crate::topology::FaceRegionCache;
+use crate::topology::{ChainEdge, FaceRegionCache};
 
 /// C# `SurfaceChainEndReading`: whether a chain's end corner is one where the crease carries on.
 ///
@@ -150,5 +150,54 @@ impl SurfaceChainEndReading {
     /// that cache, so the memos are still filled once per cache (divergence 656).
     pub fn for_regions(curve_regions: Option<&Arc<FaceRegionCache>>) -> Option<Self> {
         curve_regions.map(|cache| Self::new(cache.clone()))
+    }
+}
+
+impl SurfaceChainEndReading {
+    /// C# `RunsOutAt`: whether the chain merely STOPS at `corner_vertex` - another edge stands
+    /// there, between the same two surfaces as `chain_edge`, carrying the crease on past the end of
+    /// what was picked. Asked with the memos locked for the whole reading (C#'s `readingLock`); a
+    /// lock another reader panicked under still holds memos that are only ever added to, so it is
+    /// taken as it stands.
+    pub fn runs_out_at(&self, chain_edge: &ChainEdge, corner_vertex: i32) -> bool {
+        let mut memos = self
+            .memos
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+        self.asks_the_mesh(&mut memos, chain_edge, corner_vertex)
+    }
+
+    /// C# `AsksTheMesh`: the reading itself, with the memos locked.
+    pub fn asks_the_mesh(
+        &self,
+        memos: &mut SurfaceChainEndReadingMemos,
+        chain_edge: &ChainEdge,
+        corner_vertex: i32,
+    ) -> bool {
+        let Some(picked) =
+            self.try_surface_pair(memos, chain_edge.left_face(), chain_edge.right_face())
+        else {
+            return false;
+        };
+
+        // Copied out of the memo, which the surface readings below fill as they go.
+        let edges = self.edges_at(memos, corner_vertex).to_vec();
+        let graph = self.curve_regions.graph();
+
+        for edge in edges {
+            if edge == chain_edge.edge.mesh_edge_index || graph.get_face_count(edge) != 2 {
+                continue;
+            }
+
+            let carried_on =
+                self.try_surface_pair(memos, graph.get_face(edge, 0), graph.get_face(edge, 1));
+
+            if carried_on == Some(picked) {
+                return true;
+            }
+        }
+
+        false
     }
 }

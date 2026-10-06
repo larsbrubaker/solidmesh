@@ -1,12 +1,13 @@
 //! A LEANING one-crease mixed corner's canal, read WHOLE ([`SurfaceMixedCornerDualCanal`]).
 //! Ports the record of `Bevel/Surface/SurfaceMixedCornerDualCanal.cs` with the turn it dies at, its
-//! crease and its row accessors; the reading itself (`TryRead`) lands with a later package.
+//! crease and its row accessors, and the reading itself ([`SurfaceMixedCornerDualCanal::try_read`]).
 
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedCornerDualCanal` (a sealed class): the dual's void ball rolling from the bead's
 /// own end ring round until it dies on the crease the cap and the wall meet in - which is further
@@ -237,5 +238,45 @@ impl SurfaceMixedCornerDualCanal {
         }
 
         (from + to) / 2.0
+    }
+}
+
+impl SurfaceMixedCornerDualCanal {
+    /// C# `TryRead`: reads the whole canal of a leaning one-crease mixed corner, or says why it has
+    /// none. `how_far_the_crease_runs` is how far the edge between the cap and the wall actually
+    /// runs from the corner: a blend that would die past the end of it is larger than the edge it
+    /// is dying on (`SurfaceMixedCornerRunOutPastTheCrease`); pass infinity to ask only for the
+    /// geometry.
+    pub fn try_read(
+        corner: &Rc<SurfaceMixedCorner>,
+        how_far_the_crease_runs: f64,
+    ) -> Result<SurfaceMixedCornerDualCanal, BevelAdvisory> {
+        let named = |code: BevelAdvisoryCode| BevelAdvisory::new(code, vec![corner.corner.into()]);
+
+        let dual = Rc::new(corner.try_read_the_dual_canal()?);
+
+        // DEFENSIVE: a cap and a wall in one plane meet in no line. The corner reading has already
+        // taken a ball centre out between three faces, which two parallel ones cannot bound.
+        let Some(crease) = Self::try_the_crease(corner, &dual) else {
+            return Err(named(BevelAdvisoryCode::SurfaceCornerNotSupported));
+        };
+
+        let read = Self::new(Rc::clone(corner), Rc::clone(&dual), crease, 0.0);
+
+        let Some(dies_at) = read.try_the_turn_it_dies_at() else {
+            return Err(named(
+                BevelAdvisoryCode::SurfaceMixedCornerRunOutPastTheCrease,
+            ));
+        };
+
+        let canal = Self::new(Rc::clone(corner), dual, crease, dies_at);
+
+        if canal.reach_along_the_crease() > how_far_the_crease_runs {
+            return Err(named(
+                BevelAdvisoryCode::SurfaceMixedCornerRunOutPastTheCrease,
+            ));
+        }
+
+        Ok(canal)
     }
 }
