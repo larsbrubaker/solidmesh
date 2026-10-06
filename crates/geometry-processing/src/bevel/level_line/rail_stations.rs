@@ -1,7 +1,7 @@
 //! A rail's stations. Ports `Bevel/LevelLine/RailStations.cs` (a C# static class): so far the
 //! pieces an edge was split into ([`pieces`]), the edge key ([`key`]) and the parameters each
-//! rail vertex stands for ([`tie_spans`], with [`jump_near`]); the stations land with later
-//! packages.
+//! rail vertex stands for ([`tie_spans`], with [`jump_near`]), and the stations a long rail edge
+//! is given where it spans several of the other rail's vertices ([`densify`]).
 
 use std::collections::HashMap;
 
@@ -174,4 +174,124 @@ pub fn jump_near(
     } else {
         at_p
     })
+}
+
+/// C# `RailStations.Densify`: adds a station to every edge of the rail (`vertices`, climbing
+/// `parameters`) whose parameter span holds at least `fewest` of `others` - the point ON the edge
+/// whose chain parameter is the other rail's vertex parameter, split through the mesh's own split -
+/// inserting each into the rail's lists in order and recording each split in `splits` (the split
+/// edge, undirected, to its new vertex), and each far end standing for a jump in `jump_ends` (at
+/// the jump's foot). Answers -1, or the rail vertex starting an edge whose parameter FALLS along it
+/// where stations were asked for - they would come out of order, so the caller refuses.
+/// `fewest` is C#'s default 2 for the zip's pairing, 1 where a strip end is set back.
+#[allow(clippy::too_many_arguments)]
+pub fn densify(
+    mesh: &mut LevelLineMesh,
+    chain: &ChainField,
+    vertices: &mut Vec<i32>,
+    parameters: &mut Vec<f64>,
+    others: &[f64],
+    tie: f64,
+    splits: &mut HashMap<(i32, i32), i32>,
+    jump_ends: &mut HashMap<i32, f64>,
+    fewest: usize,
+) -> Result<i32, super::LevelLineMeshError> {
+    let mut i = 0;
+    while i + 1 < vertices.len() {
+        let from = parameters[i];
+        let to = parameters[i + 1];
+        let mut inside: Vec<f64> = others
+            .iter()
+            .copied()
+            .filter(|&p| p > from + tie && p < to - tie)
+            .collect();
+
+        if inside.len() < fewest {
+            i += 1;
+            continue;
+        }
+
+        // Values strictly inside a span, so never NaN: the total order is C#'s default one.
+        inside.sort_by(f64::total_cmp);
+        let a = vertices[i];
+        let b = vertices[i + 1];
+        let pa = mesh.position(a);
+        let pb = mesh.position(b);
+        let length = (pb - pa).length();
+        let mut stations: Vec<(i32, f64)> = Vec::new();
+        let mut t_last = 0.0;
+        let mut near = a;
+        let note_jump = |jump_ends: &mut HashMap<i32, f64>, foot: f64| {
+            let entry = jump_ends.entry(b).or_insert(foot);
+            *entry = cs_math::min_f64(*entry, foot);
+        };
+        for target in inside {
+            super::LevelLineWork::charge(1)?;
+
+            // Bisection from the last station on: where the parameter climbs along the edge the
+            // reading brackets the target; where it jumps, the bisection closes on the jump.
+            let mut lo = t_last;
+            let mut hi = 1.0;
+            let mut step = 0;
+            while step < 60 && (hi - lo) * length > tie {
+                let mid = (lo + hi) / 2.0;
+                if chain.evaluate(pa + ((pb - pa) * mid))?.parameter < target {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+                step += 1;
+            }
+
+            let t = (lo + hi) / 2.0;
+            let point = pa + ((pb - pa) * t);
+            let reading = chain.evaluate(point)?.parameter;
+            if t * length <= 1e3 * tie || (1.0 - t) * length <= 1e3 * tie {
+                // The target sits in a jump at one of the edge's ends, so that end vertex is itself
+                // the station; the FAR end stands for the whole jump and is ordered at its foot.
+                if t * length > 1e3 * tie {
+                    let foot = chain.evaluate(pa + ((pb - pa) * lo))?.parameter;
+                    note_jump(jump_ends, foot);
+                }
+
+                continue;
+            }
+
+            if (reading - target).abs() > 1e3 * tie {
+                if (1.0 - t) * length <= 0.05 * length {
+                    // A jump in the edge's last twentieth reads as one at the far end.
+                    let foot = chain.evaluate(pa + ((pb - pa) * lo))?.parameter;
+                    note_jump(jump_ends, foot);
+                }
+
+                // A JUMP inside the edge: no point on it means that parameter, and the fan to it is
+                // the honest pairing.
+                continue;
+            }
+
+            if stations.last().is_some_and(|last| reading < last.1) {
+                // The parameter FALLS along the edge: the stations would come out of order.
+                return Ok(a);
+            }
+
+            let v = mesh.split_edge(near, b, point, true)?;
+            if v == near || v == b {
+                continue;
+            }
+
+            splits.insert(key(near, b), v);
+            stations.push((v, reading));
+            near = v;
+            t_last = t;
+        }
+
+        for (s, &(vertex, parameter)) in stations.iter().enumerate() {
+            vertices.insert(i + 1 + s, vertex);
+            parameters.insert(i + 1 + s, parameter);
+        }
+
+        i += stations.len() + 1;
+    }
+
+    Ok(-1)
 }

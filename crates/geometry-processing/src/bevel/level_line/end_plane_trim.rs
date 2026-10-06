@@ -2,7 +2,8 @@
 //! class): so far a run trimmed to the end-face corner ([`to_the_corner`]), a run vertex read at
 //! its end-ray parameter ([`at_ray_parameter`]) and the end face's plane at the chain's end
 //! ([`end_plane`]), the row's reach past a plane ([`farthest_out`]) and the round's section in the
-//! end plane ([`section`]); the trim itself lands with later packages.
+//! end plane ([`section`]), and a run cut at an end parameter ([`cut_at`]); the trim itself
+//! lands with later packages.
 
 use vector_math::{cs_math, Vector3};
 
@@ -238,4 +239,99 @@ pub fn section(
 
     result.push(b);
     result
+}
+
+/// C# `EndPlaneTrim.CutAt`: the run cut at chain parameter `t`, keeping the part away from its
+/// head end (`at_head`) or its tail - the cut a vertex ON the end plane (an exact split, never a
+/// neighbour a float step off it, or a rail vertex within placement noise of `t`) - with the cut
+/// off stretch from the cut back to the end. `None` where `t` falls on no edge of the run, or on a
+/// pair of rail vertices the mesh does not join: refused, never thrown.
+pub fn cut_at(
+    mesh: &mut LevelLineMesh,
+    run: &GapLoop,
+    t: f64,
+    at_head: bool,
+) -> Result<Option<(GapLoop, Vec<i32>)>, super::LevelLineMeshError> {
+    let mut stretch = Vec::new();
+    let mut vertices = run.vertices.clone();
+    let mut parameters = run.parameters.clone();
+    if !at_head {
+        vertices.reverse();
+        parameters.reverse();
+    }
+
+    // A cut within placement noise of a rail vertex IS that vertex: a split there minted a second
+    // vertex 1e-7 from the first, which the end zip read as the run turning backwards.
+    const SAME_STATION: f64 = 1e-5;
+
+    // Now the end being cut is at index 0.
+    for i in 0..vertices.len().saturating_sub(1) {
+        let (low, high) = (
+            cs_math::min_f64(parameters[i], parameters[i + 1]),
+            cs_math::max_f64(parameters[i], parameters[i + 1]),
+        );
+        let along = (t - parameters[i]) / (parameters[i + 1] - parameters[i]);
+
+        // The rail whose own P sets t is cut at P itself.
+        let at_the_runs_end = i == 0 && along.abs() < SAME_STATION;
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        if !(t > low && t <= high) && !at_the_runs_end {
+            continue;
+        }
+
+        let cut = if t == parameters[i + 1] || along > 1.0 - SAME_STATION {
+            vertices[i + 1]
+        } else if along < SAME_STATION {
+            vertices[i]
+        } else if mesh.triangles_on(vertices[i], vertices[i + 1]).is_empty() {
+            // Two rail vertices the mesh does not join: there is no edge to cut.
+            return Ok(None);
+        } else {
+            let a = mesh.position(vertices[i]);
+            let b = mesh.position(vertices[i + 1]);
+            // Exact only: the trim's cut is a vertex ON the end plane.
+            mesh.split_edge(
+                vertices[i],
+                vertices[i + 1],
+                a + ((b - a) * ((t - parameters[i]) / (parameters[i + 1] - parameters[i]))),
+                false,
+            )?
+        };
+
+        stretch.push(cut);
+        for k in (0..=i).rev() {
+            if vertices[k] != cut {
+                stretch.push(vertices[k]);
+            }
+        }
+
+        let mut kept_vertices = vec![cut];
+        let mut kept_parameters = vec![t];
+        for k in (i + 1)..vertices.len() {
+            if vertices[k] != cut {
+                kept_vertices.push(vertices[k]);
+                kept_parameters.push(parameters[k]);
+            }
+        }
+
+        if !at_head {
+            kept_vertices.reverse();
+            kept_parameters.reverse();
+        }
+
+        return Ok(Some((
+            GapLoop::new(
+                run.side,
+                false,
+                kept_vertices,
+                kept_parameters,
+                run.chain,
+                false,
+                None,
+            ),
+            stretch,
+        )));
+    }
+
+    Ok(None)
 }

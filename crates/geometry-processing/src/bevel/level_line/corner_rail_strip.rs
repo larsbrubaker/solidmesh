@@ -1,7 +1,8 @@
 //! The corner fill's zip of one chain's two rail pieces into the strip between them. Ports
 //! `Bevel/LevelLine/CornerRailStrip.cs` (a C# static class): so far the chain parameter a
 //! jump-end spoke's arc is drawn about ([`spoke_centre_parameter`]) and the rail vertex nearest an
-//! end ([`nearest`]); the strip itself lands with later packages.
+//! end ([`nearest`]), and a strip end set back to where its chain ties another ([`set_back`]);
+//! the strip itself lands with later packages.
 
 /// The chain parameter a jump-end spoke's arc is drawn about: the mean of its two ends, each TIE
 /// vertex (a span wider than `tie`) read at the end of its span nearest its partner - on the
@@ -60,4 +61,122 @@ pub fn nearest(parameters: &[f64], inside: i32, end: f64, outward: i32) -> i32 {
     } else {
         inside
     }
+}
+
+/// The observer [`WATCH_SETBACKS`] holds.
+pub type WatchSetbacks = std::rc::Rc<dyn Fn(bool)>;
+
+thread_local! {
+    /// C# `[ThreadStatic] CornerRailStrip.WatchSetbacks`: told `true` for each rail end a setback
+    /// densified and `false` for each that stops short of it. Per thread; `None` by default.
+    pub static WATCH_SETBACKS: std::cell::RefCell<Option<WatchSetbacks>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// C# `CornerRailStrip.SetBack`: where an end of either rail piece (`av`/`ap`, `bv`/`bp`) ties
+/// another chain's field, the strip end is set back to the tie's parameter reaching INTO the chain
+/// (the greatest of the tied ends at its first end, `low`, the least at its last): a rail running
+/// past it is given a station there ([`super::rail_stations::densify`], one other vertex). Answers
+/// the setback less (or plus) the tie, or `None` where neither end ties.
+#[allow(clippy::too_many_arguments)]
+pub fn set_back(
+    mesh: &mut super::LevelLineMesh,
+    chains: &[std::rc::Rc<super::ChainField>],
+    own: usize,
+    av: &mut Vec<i32>,
+    ap: &mut Vec<f64>,
+    bv: &mut Vec<i32>,
+    bp: &mut Vec<f64>,
+    tie: f64,
+    splits: &mut std::collections::HashMap<(i32, i32), i32>,
+    jump_ends: &mut std::collections::HashMap<i32, f64>,
+    low: bool,
+) -> Result<Option<f64>, super::LevelLineMeshError> {
+    use vector_math::cs_math;
+
+    let tied = |mesh: &super::LevelLineMesh, vertex: i32| -> Result<bool, super::WorkError> {
+        for (k, other) in chains.iter().enumerate() {
+            if k != own
+                && super::corner_fill::fields_tie(&chains[own], other, mesh.position(vertex))?
+            {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    };
+    let end_of = |vertices: &[i32], parameters: &[f64]| {
+        if low {
+            (vertices[0], parameters[0])
+        } else {
+            (
+                vertices[vertices.len() - 1],
+                parameters[parameters.len() - 1],
+            )
+        }
+    };
+    let (a_vertex, a_end) = end_of(av, ap);
+    let (b_vertex, b_end) = end_of(bv, bp);
+    let a_tied = tied(mesh, a_vertex)?;
+    let b_tied = tied(mesh, b_vertex)?;
+    let tied_ends: Vec<f64> = [(a_tied, a_end), (b_tied, b_end)]
+        .iter()
+        .filter(|e| e.0)
+        .map(|e| e.1)
+        .collect();
+    if tied_ends.is_empty() {
+        return Ok(None);
+    }
+
+    // The setback reaches INTO the chain: the greater parameter at its first end, the lesser at
+    // its last (C#'s LINQ Max / Min).
+    let setback = if low {
+        tied_ends
+            .iter()
+            .copied()
+            .fold(f64::NAN, |m, e| if m.is_nan() || e > m { e } else { m })
+    } else {
+        tied_ends[1..].iter().fold(tied_ends[0], |m, &e| {
+            if m.is_nan() || e.is_nan() {
+                f64::NAN
+            } else {
+                cs_math::min_f64(m, e)
+            }
+        })
+    };
+    let watch = WATCH_SETBACKS.with(|w| w.borrow().clone());
+    for (vertices, parameters, end) in [(av, ap, a_end), (bv, bp, b_end)] {
+        let runs_past = if low {
+            end < setback - tie
+        } else {
+            end > setback + tie
+        };
+        let stops_short = if low {
+            end > setback + tie
+        } else {
+            end < setback - tie
+        };
+        if runs_past {
+            super::rail_stations::densify(
+                mesh,
+                &chains[own],
+                vertices,
+                parameters,
+                &[setback],
+                tie,
+                splits,
+                jump_ends,
+                1,
+            )?;
+            if let Some(watch) = &watch {
+                watch(true);
+            }
+        } else if stops_short {
+            if let Some(watch) = &watch {
+                watch(false);
+            }
+        }
+    }
+
+    Ok(Some(if low { setback - tie } else { setback + tie }))
 }

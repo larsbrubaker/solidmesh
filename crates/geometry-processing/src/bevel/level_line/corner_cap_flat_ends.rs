@@ -372,3 +372,34 @@ pub fn with_the_end_face_triangle_taken(
 
     hole_loop.to_vec()
 }
+
+/// C# `CornerCap.ClosesFlatHole`: a hole, walked the way the cap lays its edges, closed flat by the
+/// flat hole fill; false with nothing laid where it is not planar within the cut's snap.
+pub fn closes_flat_hole(
+    mesh: &mut LevelLineMesh,
+    hole_loop: &[i32],
+    added: &mut Vec<i32>,
+) -> Result<bool, LevelLineMeshError> {
+    let snap = if mesh.same_place() > 0.0 {
+        mesh.same_place()
+    } else {
+        DEFAULT_SNAP
+    };
+    let points: Vec<Vector3> = hole_loop.iter().map(|&i| mesh.position(i)).collect();
+    let Some((triangles, _)) = flat_hole_fill::fill(&points, snap, None) else {
+        return Ok(false);
+    };
+
+    for triangle in &triangles {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(
+            mesh,
+            hole_loop[triangle.a as usize],
+            hole_loop[triangle.b as usize],
+            hole_loop[triangle.c as usize],
+            added,
+        )?;
+    }
+
+    Ok(true)
+}

@@ -73,14 +73,20 @@ mod end_plane_trim_corner_tests;
 mod exact_refinement_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
+#[path = "bevel/fillet_arc_carry_tests.rs"]
+mod fillet_arc_carry_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
 mod fillet_arc_seam_row_tests;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
+#[path = "bevel/hole_fill_flat_wall_tests.rs"]
+mod hole_fill_flat_wall_tests;
 #[path = "bevel/hole_fill_tests.rs"]
 mod hole_fill_tests;
 #[path = "bevel/hole_fill_validity_tests.rs"]
 mod hole_fill_validity_tests;
+#[path = "bevel/insert_polyline_tests.rs"]
+mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
 #[path = "bevel/level_line_fixture.rs"]
@@ -181,6 +187,8 @@ mod rust_only_bevel_r2p08_tests;
 mod rust_only_bevel_r2p09_tests;
 #[path = "bevel/rust_only_bevel_r3p02_tests.rs"]
 mod rust_only_bevel_r3p02_tests;
+#[path = "bevel/rust_only_bevel_r3p03_tests.rs"]
+mod rust_only_bevel_r3p03_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]

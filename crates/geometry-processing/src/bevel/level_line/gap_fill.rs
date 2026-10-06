@@ -451,3 +451,64 @@ pub fn merge(
 
     Ok(steps)
 }
+
+/// C# `GapFill.Arcs`: a closed chain's zip's arcs, one per advance - the straight spoke at one
+/// segment, otherwise the fillet's row carried along the chain between the two rails' unwrapped
+/// readings ([`super::fillet_arc_rows::along_the_chain`]) - with the first repeated at the end to
+/// close the loop.
+#[allow(clippy::too_many_arguments)]
+pub fn arcs(
+    mesh: &mut LevelLineMesh,
+    chain: &super::ChainField,
+    advances: &[(i32, i32, bool)],
+    left: &super::zip_rail::ZipRail,
+    right: &super::zip_rail::ZipRail,
+    left_span: &[(f64, f64)],
+    right_span: &[(f64, f64)],
+    length: f64,
+    right_offset: f64,
+    segments: i32,
+    added_vertices: &mut Vec<i32>,
+) -> Vec<Vec<i32>> {
+    use super::zip_rail::ZipRail;
+
+    let mut arcs: Vec<Vec<i32>> = Vec::new();
+    let tie = PARAMETER_TIE_RELATIVE * length;
+    for &(advance_left, advance_right, _) in advances {
+        let (i, j) = (
+            (advance_left % left.count()) as usize,
+            (advance_right % right.count()) as usize,
+        );
+        if segments == 1 {
+            arcs.push(vec![left.vertices[i], right.vertices[j]]);
+            continue;
+        }
+
+        let left_at = ZipRail::unwrapped(left, advance_left, length, 0.0);
+        let right_at = ZipRail::unwrapped(right, advance_right, length, right_offset);
+        let from = (
+            left.vertices[i],
+            left_at,
+            left_span[i],
+            left_at - left.parameters[i],
+        );
+        let to = (
+            right.vertices[j],
+            right_at,
+            right_span[j],
+            right_at - right.parameters[j],
+        );
+        arcs.push(super::fillet_arc_rows::along_the_chain(
+            mesh,
+            chain,
+            from,
+            to,
+            segments,
+            tie,
+            added_vertices,
+        ));
+    }
+
+    arcs.push(arcs[0].clone());
+    arcs
+}

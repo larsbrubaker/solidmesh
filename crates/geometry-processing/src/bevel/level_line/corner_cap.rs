@@ -4,7 +4,8 @@
 //! fillet's by rings. Ports the nested type of `Bevel/LevelLine/CornerCap.cs` (a C# static partial
 //! class): a strip's end spoke ([`CornerCapLastRow`], with its constructor and material centre),
 //! the corner's axis ([`axis`]), the angle between two directions ([`angle`]) and the turn from one
-//! to the other ([`toward`]). The caps' other functions land with later packages.
+//! to the other ([`toward`]), and the close of a corner's holes ([`close`], with
+//! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -426,4 +427,357 @@ pub fn mitre_depth(
     }
 
     Some(depths.iter().sum::<f64>() / depths.len() as f64)
+}
+
+/// C# `CornerCap.Close`: walks the open edges (`open`, each directed the way the hole runs) into
+/// cycles and closes each: a fillet's hole (with `last_rows`) under the hole fill is closed flat
+/// where it lies in one plane and faired otherwise ([`super::corner_cap_hole_fill::fill_one`]);
+/// any other by [`close_one`]. A chamfer hole that does not turn about its corner closes flat where
+/// both-sided members build. Answers the refusal and the offending vertex (-1 on success).
+#[allow(clippy::too_many_arguments)]
+pub fn close(
+    mesh: &mut LevelLineMesh,
+    open: &std::collections::HashSet<(i32, i32)>,
+    corners: &[Vector3],
+    last_rows: Option<&[CornerCapLastRow]>,
+    fillet_segments: i32,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+    mut boundary_changes: Option<&mut Vec<(i32, i32, bool)>>,
+) -> Result<(super::GapFillRefusal, i32), LevelLineMeshError> {
+    use super::GapFillRefusal;
+
+    let mut edges: Vec<(i32, i32)> = open.iter().copied().collect();
+    edges.sort_unstable();
+    let mut next: std::collections::HashMap<i32, i32> = std::collections::HashMap::new();
+    for (a, b) in edges {
+        if next.contains_key(&a) {
+            return Ok((GapFillRefusal::FillWouldNotClose, a));
+        }
+
+        next.insert(a, b);
+    }
+
+    let mut starts: Vec<i32> = next.keys().copied().collect();
+    starts.sort_unstable();
+    let mut walked = std::collections::HashSet::new();
+    for start in starts {
+        if walked.contains(&start) {
+            continue;
+        }
+
+        let mut cycle = Vec::new();
+        let mut current = start;
+        while walked.insert(current) {
+            cycle.push(current);
+            match next.get(&current) {
+                Some(&following) => current = following,
+                None => return Ok((GapFillRefusal::FillWouldNotClose, cycle[cycle.len() - 1])),
+            }
+        }
+
+        if current != start || cycle.len() < 3 {
+            return Ok((GapFillRefusal::FillWouldNotClose, current));
+        }
+
+        // A chamfer's strips are planes, so its corner is flat; the filler takes only a fillet's
+        // holes, and a fillet's hole lying in ONE plane closes flat, not faired.
+        let hole_fill = super::corner_cap_hole_fill_switch::use_hole_fill() && last_rows.is_some();
+        if hole_fill {
+            cycle = super::corner_cap_flat_ends::with_the_end_face_triangle_taken(
+                mesh,
+                &cycle,
+                boundary_changes.as_deref_mut(),
+            );
+        }
+
+        let (mut refusal, offending) = if hole_fill {
+            if closes_planar_fillet_hole(mesh, &cycle, added)? {
+                (GapFillRefusal::None, -1)
+            } else {
+                super::corner_cap_hole_fill::fill_one(
+                    mesh,
+                    &cycle,
+                    corners,
+                    last_rows,
+                    added,
+                    added_vertices,
+                )?
+            }
+        } else {
+            close_one(
+                mesh,
+                &cycle,
+                corners,
+                last_rows,
+                fillet_segments,
+                added,
+                added_vertices,
+            )?
+        };
+
+        // A chamfer hole that does not turn about its nearest corner is the flat end of an open
+        // chain the corner fill took with the rest of the pick; it closes flat. close_one refuses
+        // before it lays anything, so nothing is left to undo.
+        if refusal == GapFillRefusal::CornerCapNotStarShaped
+            && last_rows.is_none()
+            && super::band_side_tagging::both_sided_members_build()
+            && super::corner_cap_flat_ends::closes_flat_hole(mesh, &cycle, added)?
+        {
+            refusal = GapFillRefusal::None;
+        }
+
+        if refusal != GapFillRefusal::None {
+            return Ok((refusal, offending));
+        }
+    }
+
+    Ok((GapFillRefusal::None, -1))
+}
+
+/// C# `CornerCap.ClosesPlanarFilletHole`: a fillet's hole closed flat where it lies in one plane
+/// and the flat fill keeps every one of the loop's own edges; false with nothing laid otherwise.
+pub fn closes_planar_fillet_hole(
+    mesh: &mut LevelLineMesh,
+    hole_loop: &[i32],
+    added: &mut Vec<i32>,
+) -> Result<bool, LevelLineMeshError> {
+    let snap = if mesh.same_place() > 0.0 {
+        mesh.same_place()
+    } else {
+        1e-9
+    };
+    let points: Vec<Vector3> = hole_loop.iter().map(|&i| mesh.position(i)).collect();
+    let Some((triangles, _)) = super::flat_hole_fill::fill(&points, snap, None) else {
+        return Ok(false);
+    };
+
+    let mut laid = std::collections::HashSet::new();
+    for t in &triangles {
+        laid.insert((t.a, t.b));
+        laid.insert((t.b, t.c));
+        laid.insert((t.c, t.a));
+    }
+
+    let n = hole_loop.len() as i32;
+    if (0..n).any(|i| !laid.contains(&(i, (i + 1) % n))) {
+        return Ok(false);
+    }
+
+    for triangle in &triangles {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(
+            mesh,
+            hole_loop[triangle.a as usize],
+            hole_loop[triangle.b as usize],
+            hole_loop[triangle.c as usize],
+            added,
+        )?;
+    }
+
+    Ok(true)
+}
+
+/// C# `CornerCap.CloseOne`: the hole belongs to the corner nearest its boundary's mean; it must
+/// turn once about that corner's axis, strictly forward at every step. A fillet's is closed by
+/// [`rings`]; a chamfer's by a fan to a centre on the axis at the strips' mitre depth.
+pub fn close_one(
+    mesh: &mut LevelLineMesh,
+    cycle: &[i32],
+    corners: &[Vector3],
+    last_rows: Option<&[CornerCapLastRow]>,
+    fillet_segments: i32,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+) -> Result<(super::GapFillRefusal, i32), LevelLineMeshError> {
+    use super::GapFillRefusal;
+
+    let points: Vec<Vector3> = cycle.iter().map(|&i| mesh.position(i)).collect();
+    let mut sum = Vector3::ZERO;
+    for &p in &points {
+        sum += p;
+    }
+    let mean = sum / points.len() as f64;
+    if corners.is_empty() {
+        return Ok((GapFillRefusal::FillWouldNotClose, cycle[0]));
+    }
+
+    // The hole belongs to the corner it surrounds: the nearest one to its boundary's mean (C#'s
+    // stable `OrderBy(...).First()`, NaN first).
+    let key = |c: &Vector3| (*c - mean).length_squared();
+    let mut v = corners[0];
+    for c in &corners[1..] {
+        let (kc, kv) = (key(c), key(&v));
+        if (kc.is_nan() && !kv.is_nan()) || kc < kv {
+            v = *c;
+        }
+    }
+    let n = axis(mesh, v);
+    if n.length_squared() == 0.0 {
+        return Ok((GapFillRefusal::CornerCapNotStarShaped, cycle[0]));
+    }
+
+    let u = if n.x.abs() < 0.9 {
+        Vector3::new(1.0, 0.0, 0.0)
+    } else {
+        Vector3::new(0.0, 1.0, 0.0)
+    };
+    let u = (u - (n * u.dot(n))).get_normal();
+    let w = n.cross(u);
+    let angles: Vec<f64> = points
+        .iter()
+        .map(|&p| (p - v).dot(w).atan2((p - v).dot(u)))
+        .collect();
+    let mut turned = 0.0;
+    for i in 0..cycle.len() {
+        let step = angles[(i + 1) % cycle.len()] - angles[i];
+        let step = ieee_remainder(step, 2.0 * std::f64::consts::PI);
+        let off = points[i] - v;
+        let radial = (off - (n * off.dot(n))).length();
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        if !(step > 1e-12) || radial <= 1e-12 {
+            return Ok((
+                GapFillRefusal::CornerCapNotStarShaped,
+                cycle[(i + 1) % cycle.len()],
+            ));
+        }
+
+        turned += step;
+    }
+
+    if (turned - (2.0 * std::f64::consts::PI)).abs() > 1e-6 {
+        return Ok((GapFillRefusal::CornerCapNotStarShaped, cycle[0]));
+    }
+
+    if let Some(last_rows) = last_rows {
+        return rings(
+            mesh,
+            cycle,
+            v,
+            n,
+            last_rows,
+            fillet_segments,
+            added,
+            added_vertices,
+        );
+    }
+
+    let depth = match mitre_depth(mesh, cycle, v, n, added) {
+        Some(depth) => depth,
+        None => points.iter().map(|&p| (p - v).dot(n)).sum::<f64>() / points.len() as f64,
+    };
+    let centre = mesh.add_vertex(v + (n * depth));
+    added_vertices.push(centre);
+    for i in 0..cycle.len() {
+        LevelLineWork::charge(1)?;
+        corner_fill::lay(mesh, cycle[i], cycle[(i + 1) % cycle.len()], centre, added)?;
+    }
+
+    Ok((GapFillRefusal::None, -1))
+}
+
+/// C# `CornerCap.Rings`: a fillet's corner hole closed by rings up a ball - centred on the mean of
+/// the hole's rows' material centres, its radius their mean - from the boundary to the top on the
+/// corner's axis (at a MIXED corner, the bisector of its chains), one ring per quarter-arc step of
+/// the fillet's segments.
+#[allow(clippy::too_many_arguments)]
+pub fn rings(
+    mesh: &mut LevelLineMesh,
+    cycle: &[i32],
+    v: Vector3,
+    n: Vector3,
+    last_rows: &[CornerCapLastRow],
+    fillet_segments: i32,
+    added: &mut Vec<i32>,
+    added_vertices: &mut Vec<i32>,
+) -> Result<(super::GapFillRefusal, i32), LevelLineMeshError> {
+    use super::GapFillRefusal;
+
+    let on_cycle: std::collections::HashSet<i32> = cycle.iter().copied().collect();
+    let rows: Vec<&CornerCapLastRow> = last_rows
+        .iter()
+        .filter(|r| r.arc.iter().all(|a| on_cycle.contains(a)))
+        .collect();
+    if rows.is_empty() {
+        // No strip ends on this hole, so it has no ball to be rounded by.
+        return Ok((GapFillRefusal::CornerCapNotStarShaped, cycle[0]));
+    }
+
+    let mut o = Vector3::ZERO;
+    for r in &rows {
+        o += r.material_centre();
+    }
+    let o = o / rows.len() as f64;
+    let radius = rows.iter().map(|r| r.radius).sum::<f64>() / rows.len() as f64;
+    let mut n = n;
+    if rows.iter().any(|r| r.concave) {
+        // A MIXED corner: the axis is the corner's own bisector of its chains - minus the sum of
+        // the unit directions from V to each row's chain point.
+        let mut away = Vector3::ZERO;
+        for r in &rows {
+            away += (r.chain_point - v).get_normal();
+        }
+        if away.length_squared() > 1e-24 {
+            n = (away * -1.0).get_normal();
+        }
+    }
+
+    let top = n * radius;
+    let angles: Vec<f64> = cycle
+        .iter()
+        .map(|&b| angle(mesh.position(b) - o, top))
+        .collect();
+    // C#'s LINQ `Max` (NaN lowest) and the first index holding it.
+    let max = angles
+        .iter()
+        .copied()
+        .fold(f64::NAN, |m, a| if m.is_nan() || a > m { a } else { m });
+    if max > std::f64::consts::PI - 1e-6 {
+        // A boundary point straight below the ball's centre has no one arc up to the top.
+        let index = angles.iter().position(|&a| a == max).unwrap_or(0);
+        return Ok((GapFillRefusal::CornerCapNotStarShaped, cycle[index]));
+    }
+
+    // C#'s `(int)Math.Ceiling(...)` truncates toward zero; `as` saturates where it would not.
+    let rings = std::cmp::max(
+        1,
+        ((max * 2.0 * fillet_segments as f64 / std::f64::consts::PI) - 1e-9).ceil() as i32,
+    );
+
+    let centre = mesh.add_vertex(o + top);
+    added_vertices.push(centre);
+    let mut levels: Vec<Vec<i32>> = Vec::with_capacity(cycle.len());
+    for i in 0..cycle.len() {
+        let mut level = vec![0; rings as usize + 1];
+        level[0] = cycle[i];
+        level[rings as usize] = centre;
+        let from = mesh.position(cycle[i]) - o;
+        for j in 1..rings {
+            level[j as usize] =
+                mesh.add_vertex(o + toward(from, top, angles[i], j as f64 / rings as f64));
+            added_vertices.push(level[j as usize]);
+        }
+
+        levels.push(level);
+    }
+
+    for i in 0..cycle.len() {
+        let x = levels[i].clone();
+        let y = levels[(i + 1) % cycle.len()].clone();
+        for j in 0..(rings - 1) as usize {
+            LevelLineWork::charge(1)?;
+            corner_fill::lay(mesh, x[j], y[j], y[j + 1], added)?;
+            corner_fill::lay(mesh, x[j], y[j + 1], x[j + 1], added)?;
+        }
+
+        corner_fill::lay(
+            mesh,
+            x[rings as usize - 1],
+            y[rings as usize - 1],
+            centre,
+            added,
+        )?;
+    }
+
+    Ok((GapFillRefusal::None, -1))
 }
