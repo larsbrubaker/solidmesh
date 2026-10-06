@@ -218,6 +218,78 @@ impl VertexFieldReading {
         self.field.value_at(point)
     }
 
+    /// C# `VertexFieldReading.ValueAt`: the field value at a vertex, evaluated once and
+    /// remembered.
+    pub fn value_at(&self, vertex: i32) -> Result<f64, super::WorkError> {
+        self.grow(vertex)?;
+        Ok(self.values.borrow()[&vertex])
+    }
+
+    /// C# `VertexFieldReading.SideOf`: the side a vertex stands on - the one answer every
+    /// triangle round it reads.
+    pub fn side_of(&self, vertex: i32) -> Result<VertexSide, super::WorkError> {
+        self.grow(vertex)?;
+        Ok(self.sides.borrow()[&vertex])
+    }
+
+    /// C# `VertexFieldReading.PutOnTheLine`: promotes a vertex to [`VertexSide::On`] - what an
+    /// edge root lying within the snap of an end does instead of cutting a sliver. The value is
+    /// left as it was; only the side moves.
+    pub fn put_on_the_line(&self, vertex: i32) -> Result<(), super::WorkError> {
+        self.grow(vertex)?;
+        self.sides.borrow_mut().insert(vertex, VertexSide::On);
+        Ok(())
+    }
+
+    /// C# `VertexFieldReading.Grow`: reads a vertex once, leaving every vertex nobody asked
+    /// about unread. A vertex not in the mesh is a caller's bug (C# throws
+    /// `ArgumentOutOfRangeException`).
+    fn grow(&self, vertex: i32) -> Result<(), super::WorkError> {
+        if self.values.borrow().contains_key(&vertex) {
+            return Ok(());
+        }
+
+        // The mesh is read and released before the field is asked: a field never reads it, but a
+        // caller may hold it mutably between reads.
+        let (position, float_input_vertex) = {
+            let mesh = self.mesh.borrow();
+            assert!(
+                vertex >= 0 && vertex < mesh.vertex_count(),
+                "no such vertex in the mesh"
+            );
+            (
+                mesh.position(vertex),
+                mesh.input_is_float_stored && mesh.input_edge_behind(vertex) == (vertex, vertex),
+            )
+        };
+        let value = self.field.value_at(position)?;
+        self.values.borrow_mut().insert(vertex, value);
+        let mut side = Self::side_for(value, self.snap);
+
+        // A float-stored INPUT vertex is where the store put it, to a float's step: a vertex the
+        // shape puts on the line reads a float's width off zero, above the snap, and is on the
+        // line all the same. Only an input vertex: one the build made is exact.
+        if side != VertexSide::On
+            && float_input_vertex
+            && value.abs() <= crate::bevel::float_grid::step_at_point(position)
+        {
+            side = VertexSide::On;
+        }
+
+        // A vertex ON a bounded end's plane (a known cut, flat ends on) reads the clipped field's 0
+        // wherever the chain is within its setback, but the plane is the band's boundary there,
+        // not its level line: on the band side the chain's own value places it.
+        if side == VertexSide::On
+            && self.has_known_cuts()
+            && self.known_cut_value_at(position)? < -self.snap
+        {
+            side = VertexSide::Inside;
+        }
+
+        self.sides.borrow_mut().insert(vertex, side);
+        Ok(())
+    }
+
     /// C# `VertexFieldReading.SideFor`: the side that a raw field value and a snap band say, with
     /// no mesh involved.
     pub fn side_for(value: f64, snap: f64) -> VertexSide {

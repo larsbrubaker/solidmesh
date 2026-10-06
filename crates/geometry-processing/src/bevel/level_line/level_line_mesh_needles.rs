@@ -26,6 +26,47 @@ impl LevelLineMesh {
         self.left_alone.len() as i32
     }
 
+    /// C# `LevelLineMesh.RepairNeedlesAround`: repairs any needle among the triangles handed in
+    /// (a split's children) and answers with the triangles the repair made or changed - what goes
+    /// back on the refinement's worklist in place of the needles. Nothing at all without a needle
+    /// floor; only the triangles handed in are read on entry.
+    pub fn repair_needles_around(
+        &mut self,
+        triangles: impl IntoIterator<Item = i32>,
+    ) -> Result<Vec<i32>, WorkError> {
+        if self.needle_floor <= 0.0 {
+            return Ok(Vec::new());
+        }
+
+        // The ordinary split makes no needle at all, so neither the worklist nor the answer is
+        // allocated until a triangle is under the floor.
+        let mut pending: Option<VecDeque<i32>> = None;
+        for triangle in triangles {
+            if triangle as usize >= self.triangles.len()
+                || self.removed[triangle as usize]
+                || !self.has_no_height(self.triangles[triangle as usize], self.needle_floor)
+            {
+                continue;
+            }
+
+            pending
+                .get_or_insert_with(VecDeque::new)
+                .push_back(triangle);
+        }
+
+        let Some(mut pending) = pending else {
+            if FieldCounters::meter_on() {
+                NeedleMeter::note_no_needle();
+            }
+
+            return Ok(Vec::new());
+        };
+
+        let mut touched = Vec::new();
+        self.metered_repair_from(&mut pending, &mut touched, true)?;
+        Ok(touched)
+    }
+
     /// True when the triangle stands no higher than `floor` over its own longest edge - a needle,
     /// whose three corners are collinear and whose apex can therefore stand INSIDE another edge.
     pub fn has_no_height(&self, t: LevelLineTriangle, floor: f64) -> bool {

@@ -71,6 +71,8 @@ mod island_split_order_tests;
 mod level_line_fixture;
 #[path = "bevel/lobed_prism_meshes.rs"]
 mod lobed_prism_meshes;
+#[path = "bevel/longest_edge_bisection_tests.rs"]
+mod longest_edge_bisection_tests;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
@@ -157,6 +159,8 @@ mod rust_only_bevel_r2p05_mesh_tests;
 mod rust_only_bevel_r2p08_tests;
 #[path = "bevel/rust_only_bevel_r2p09_tests.rs"]
 mod rust_only_bevel_r2p09_tests;
+#[path = "bevel/rust_only_bevel_r3p02_tests.rs"]
+mod rust_only_bevel_r3p02_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]

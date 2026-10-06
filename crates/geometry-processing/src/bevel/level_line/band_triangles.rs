@@ -69,3 +69,59 @@ pub fn candidates(
 
     Ok(near)
 }
+
+/// C# `BandTriangles.BandOfSide`: the band of one side - its inside triangles that reach the chain
+/// through inside triangles of that same side - read on the reading's own mesh. A vertex ON the
+/// chain reads the field as minus its setback, so it is inside by the field's own rule.
+#[allow(clippy::needless_range_loop)]
+pub fn band_of_side(
+    reading: &super::VertexFieldReading,
+    side: i32,
+    on_the_chain: &HashSet<i32>,
+) -> Result<Vec<i32>, super::band_cut::BandCutError> {
+    let mesh = reading.mesh.borrow();
+    let count = mesh.triangle_count() as usize;
+
+    // A triangle already OUT of the mesh is asked nothing: its edges are detached and no root was
+    // ever found on them, so it would read as straddling the line.
+    let mut inside = vec![false; count];
+    for i in 0..count {
+        if mesh.triangles()[i].tag == side && !mesh.is_removed(i as i32) {
+            inside[i] =
+                super::band_cut::side_of_triangle(reading, i as i32)? == super::VertexSide::Inside;
+        }
+    }
+
+    let mut band = Vec::new();
+    let mut seen = vec![false; count];
+    let mut pending = std::collections::VecDeque::new();
+    for i in 0..count {
+        let t = mesh.triangles()[i];
+        if inside[i]
+            && !mesh.is_removed(i as i32)
+            && (on_the_chain.contains(&t.a)
+                || on_the_chain.contains(&t.b)
+                || on_the_chain.contains(&t.c))
+        {
+            seen[i] = true;
+            pending.push_back(i as i32);
+        }
+    }
+
+    while let Some(triangle) = pending.pop_front() {
+        super::LevelLineWork::charge(1)?;
+        band.push(triangle);
+        for (a, b) in
+            triangle_edges::level_line_triangle_corners(mesh.triangles()[triangle as usize])
+        {
+            for &neighbour in mesh.triangles_on(a, b) {
+                if !seen[neighbour as usize] && inside[neighbour as usize] {
+                    seen[neighbour as usize] = true;
+                    pending.push_back(neighbour);
+                }
+            }
+        }
+    }
+
+    Ok(band)
+}

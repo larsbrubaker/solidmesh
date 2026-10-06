@@ -1,6 +1,9 @@
 //! The band cut's records (`Bevel/LevelLine/BandCut.cs`): one run of the level line through the
-//! cut mesh ([`LevelLineChain`]) and what the cut leaves ([`BandCutResult`]). The cut itself (C#'s
-//! static `BandCut`) lands with its method package as functions of this module.
+//! cut mesh ([`LevelLineChain`]) and what the cut leaves ([`BandCutResult`]), and the cut itself
+//! (C#'s static `BandCut`: [`cut`], [`put_the_root_on_the_line`], [`side_of_triangle`]).
+//!
+//! C# hands the cut the mesh and a reading of it; the mesh is always the reading's own, so here
+//! the cut takes the reading and edits its mesh, borrowing it only between the reading's reads.
 
 /// C# `LevelLineChain`: one run of the level line through the cut mesh, as mesh vertices in order.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -128,4 +131,164 @@ pub fn key(a: i32, b: i32) -> (i32, i32) {
     } else {
         (b, a)
     }
+}
+
+/// Why the cut could not be taken (C#'s exceptions, and the work budget's).
+#[derive(Debug, Clone)]
+pub enum BandCutError {
+    /// The work budget ran out, the build was cancelled, or the mesh refused a split.
+    Mesh(super::LevelLineMeshError),
+    /// A root's edge is no longer in the mesh (C#'s `ArgumentException` message).
+    RootEdgeGone(String),
+    /// A triangle still straddles the line after the cut (C#'s `InvalidOperationException`
+    /// message).
+    Straddles(String),
+}
+
+impl From<super::LevelLineMeshError> for BandCutError {
+    fn from(error: super::LevelLineMeshError) -> Self {
+        BandCutError::Mesh(error)
+    }
+}
+
+impl From<super::WorkError> for BandCutError {
+    fn from(error: super::WorkError) -> Self {
+        BandCutError::Mesh(error.into())
+    }
+}
+
+impl std::fmt::Display for BandCutError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BandCutError::Mesh(error) => write!(f, "{error}"),
+            BandCutError::RootEdgeGone(message) | BandCutError::Straddles(message) => {
+                f.write_str(message)
+            }
+        }
+    }
+}
+
+impl std::error::Error for BandCutError {}
+
+/// C# `BandCut.PutTheRootOnTheLine`: splits an edge at a root and reads the vertex there onto the
+/// line, leaving the edge with a vertex on it however the mesh answered. An INTERIOR vertex the
+/// mesh already carried (a T-vertex through a needle) divided nothing, so the edge's triangles are
+/// re-tiled through it: nothing is minted and no position moves.
+pub fn put_the_root_on_the_line(
+    reading: &super::VertexFieldReading,
+    a: i32,
+    b: i32,
+    point: vector_math::Vector3,
+) -> Result<(), super::LevelLineMeshError> {
+    // Asked as "is the answer a vertex that was already there": a new vertex is always the next id.
+    let (before, mid) = {
+        let mut mesh = reading.mesh.borrow_mut();
+        let before = mesh.vertex_count();
+        (before, mesh.split_edge(a, b, point, true)?)
+    };
+    reading.put_on_the_line(mid)?;
+    if mid < before && mid != a && mid != b {
+        reading.mesh.borrow_mut().retile_through(a, b, mid);
+    }
+
+    Ok(())
+}
+
+/// C# `BandCut.Cut`: splits every root into the reading's mesh and reads off the partition and the
+/// line, threaded from the mesh's canonical edges.
+pub fn cut(
+    reading: &super::VertexFieldReading,
+    roots: &[super::EdgeRoot],
+) -> Result<BandCutResult, BandCutError> {
+    for root in roots {
+        if !reading.mesh.borrow().has_edge(root.a, root.b) {
+            return Err(BandCutError::RootEdgeGone(format!(
+                "the root's edge {}-{} is no longer in the mesh (Parameter 'roots')",
+                root.a, root.b
+            )));
+        }
+
+        put_the_root_on_the_line(reading, root.a, root.b, root.point)?;
+    }
+
+    let triangle_count = reading.mesh.borrow().triangle_count();
+    let mut inside = Vec::new();
+    let mut outside = Vec::new();
+    for triangle in 0..triangle_count {
+        // A triangle out of the mesh is on neither side.
+        if reading.mesh.borrow().is_removed(triangle) {
+            continue;
+        }
+
+        if side_of_triangle(reading, triangle)? == super::VertexSide::Inside {
+            inside.push(triangle);
+        } else {
+            outside.push(triangle);
+        }
+    }
+
+    let mut on_inside = vec![false; triangle_count as usize];
+    for &t in &inside {
+        on_inside[t as usize] = true;
+    }
+
+    // Canonical by the mesh's edges, so the line's edges - and the chains threaded from them - read
+    // the same whatever splitting went before.
+    let mesh = reading.mesh.borrow();
+    let line_edges: Vec<(i32, i32)> = mesh
+        .edges()
+        .into_iter()
+        .filter(|&(low, high)| {
+            let standing = mesh.triangles_on(low, high);
+            standing.len() == 2
+                && on_inside[standing[0] as usize] != on_inside[standing[1] as usize]
+        })
+        .collect();
+
+    Ok(BandCutResult::new(inside, outside, chain(&line_edges)))
+}
+
+/// C# `BandCut.SideOfTriangle`: which half a triangle belongs to. Any inside corner puts it inside,
+/// any outside corner outside (after the cut it cannot have both); one entirely on the line is
+/// placed by its centroid - on a known cut, by the chain's own value there.
+pub fn side_of_triangle(
+    reading: &super::VertexFieldReading,
+    triangle: i32,
+) -> Result<super::VertexSide, BandCutError> {
+    let t = reading.mesh.borrow().triangles()[triangle as usize];
+    let mut saw_inside = false;
+    let mut saw_outside = false;
+    for corner in 0..3 {
+        match reading.side_of(t.corner(corner))? {
+            super::VertexSide::Inside => saw_inside = true,
+            super::VertexSide::Outside => saw_outside = true,
+            super::VertexSide::On => {}
+        }
+    }
+
+    if saw_inside && saw_outside {
+        return Err(BandCutError::Straddles(format!(
+            "triangle {triangle} still straddles the line after the cut - a root was missed"
+        )));
+    }
+
+    if saw_inside {
+        return Ok(super::VertexSide::Inside);
+    }
+
+    if saw_outside {
+        return Ok(super::VertexSide::Outside);
+    }
+
+    let centroid = reading.mesh.borrow().centroid(triangle);
+    let value = if reading.has_known_cuts() {
+        reading.known_cut_value_at(centroid)?
+    } else {
+        reading.value_at_point(centroid)?
+    };
+    Ok(if value < 0.0 {
+        super::VertexSide::Inside
+    } else {
+        super::VertexSide::Outside
+    })
 }

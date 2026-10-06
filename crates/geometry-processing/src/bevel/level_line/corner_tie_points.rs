@@ -1,8 +1,8 @@
 //! The MITRE POINT rule of a pick with corners: on every band triangle where two member chains of
 //! the group both reach the line, the point where BOTH read zero (where their two level lines meet)
 //! is made a mesh vertex before the refinement runs. Ports `Bevel/LevelLine/CornerTiePoints.cs`
-//! (a C# static class): so far the Newton solve for that point inside a triangle ([`try_mitre`],
-//! [`try_mitre_from`]); the insertion lands with its method package.
+//! (a C# static class): the Newton solve for that point inside a triangle ([`try_mitre`],
+//! [`try_mitre_from`]) and the insertion over a band's candidates ([`insert`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -99,4 +99,87 @@ pub fn try_mitre_from(
     }
 
     Ok(None)
+}
+
+/// C# `CornerTiePoints.Insert`: inserts every mitre point the candidate triangles hold - where two
+/// chains owning parts of a triangle both read zero and no third member reads lower - and hands
+/// back the candidates with every triangle a split made in place of a divided one (first-seen
+/// order, removed triangles dropped). A pick of fewer than two members has no mitre.
+pub fn insert(
+    mesh: &mut super::LevelLineMesh,
+    pick: &super::PickField,
+    candidates: Vec<i32>,
+    snap: f64,
+) -> Result<Vec<i32>, super::LevelLineMeshError> {
+    use super::ScalarField;
+
+    if pick.members().len() < 2 {
+        return Ok(candidates);
+    }
+
+    let mut pending: std::collections::VecDeque<i32> = candidates.iter().copied().collect();
+    let mut depth = std::collections::HashMap::new();
+    let mut seen = candidates;
+    while let Some(triangle) = pending.pop_front() {
+        LevelLineWork::charge(1)?;
+        if mesh.is_removed(triangle) {
+            continue;
+        }
+
+        let t = mesh.triangles()[triangle as usize];
+        let a = mesh.position(t.a);
+        let b = mesh.position(t.b);
+        let c = mesh.position(t.c);
+
+        // The chains that own some part of the triangle: its corners', its edges' midpoints' and
+        // its centre's minimisers. Two level lines meet only where their two chains take turns.
+        let mut owners = Vec::new();
+        for p in [
+            a,
+            b,
+            c,
+            (a + b) / 2.0,
+            (b + c) / 2.0,
+            (c + a) / 2.0,
+            (a + b + c) / 3.0,
+        ] {
+            owners.push(pick.evaluate(p)?.chain);
+        }
+        owners.sort();
+        owners.dedup();
+        let before = pending.len();
+        let mut i = 0;
+        while i < owners.len() && pending.len() == before {
+            let mut j = i + 1;
+            while j < owners.len() && pending.len() == before {
+                let first = &pick.chains()[owners[i] as usize];
+                let second = &pick.chains()[owners[j] as usize];
+                // On the line only if no third member reads lower there.
+                if let Some(point) = try_mitre(first, second, a, b, c)? {
+                    // C#'s `> snap` skip, so a NaN reading is inserted as C# inserts it.
+                    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+                    if !(pick.value_at(point)?.abs() > snap) {
+                        super::refinement_splits_enqueue::insert_on_the_line(
+                            mesh,
+                            triangle,
+                            point,
+                            snap,
+                            &mut pending,
+                            &mut depth,
+                        )?;
+                    }
+                }
+                j += 1;
+            }
+            i += 1;
+        }
+
+        seen.extend(pending.iter().skip(before).copied());
+    }
+
+    let distinct: indexmap::IndexSet<i32> = seen.into_iter().collect();
+    Ok(distinct
+        .into_iter()
+        .filter(|&tri| !mesh.is_removed(tri))
+        .collect())
 }

@@ -110,3 +110,45 @@ pub fn triangle_holding(mesh: &LevelLineMesh, triangles: &[i32], point: Vector3)
         -1
     }
 }
+
+/// C# `SideWitness.HoldsAnOutsideVertex`: whether anything of the side is already known to
+/// survive. Stops at the first Outside vertex, reading corners in C#'s short-circuit order.
+pub fn holds_an_outside_vertex(
+    mesh: &LevelLineMesh,
+    reading: &super::VertexFieldReading,
+    triangles: &[i32],
+) -> Result<bool, super::WorkError> {
+    for &triangle in triangles {
+        let t = mesh.triangles()[triangle as usize];
+        for corner in [t.a, t.b, t.c] {
+            if reading.side_of(corner)? == super::VertexSide::Outside {
+                return Ok(true);
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+/// C# `SideWitness.Insert`: puts the witness into the mesh the way the Island rule puts its peak
+/// in - on an edge when it stands on one, inside the triangle otherwise, nothing at an existing
+/// corner. "At a corner" is asked at the reading's SNAP, not the triangle's millionth: the last
+/// surviving scrap of a side is about two snaps wide, and a millionth would swallow it.
+pub fn insert(
+    mesh: &mut LevelLineMesh,
+    triangle: i32,
+    point: Vector3,
+    snap: f64,
+    pending: &mut std::collections::VecDeque<i32>,
+    depth: &mut std::collections::HashMap<i32, i32>,
+) -> Result<(), super::LevelLineMeshError> {
+    super::refinement_splits_enqueue::insert_where_it_stands(
+        mesh,
+        triangle,
+        point,
+        pending,
+        depth,
+        Some(snap),
+    )?;
+    Ok(())
+}
