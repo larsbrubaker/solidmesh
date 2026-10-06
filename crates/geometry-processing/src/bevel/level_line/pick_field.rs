@@ -435,6 +435,10 @@ impl PickField {
 }
 
 impl ScalarField for PickField {
+    fn as_chain_distance_field(&self) -> Option<&dyn super::ChainDistanceField> {
+        Some(self)
+    }
+
     /// C# `PickField.ValueAt`: [`PickField::evaluate`]'s value.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         Ok(self.evaluate(point)?.value)

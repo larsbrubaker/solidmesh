@@ -80,6 +80,10 @@ impl PointField {
 }
 
 impl ScalarField for PointField {
+    fn as_chain_distance_field(&self) -> Option<&dyn super::ChainDistanceField> {
+        Some(self)
+    }
+
     fn value_at(&self, x: Vector3) -> Result<f64, WorkError> {
         Ok(self.read(x))
     }

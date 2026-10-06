@@ -326,3 +326,68 @@ fn rust_only_two_chains_mitre_point_is_made_a_vertex() {
         Some(vec![2, 0])
     );
 }
+
+#[test]
+fn rust_only_a_sharp_joints_inside_corner_is_made_a_vertex_on_the_line() {
+    use geometry_processing::bevel::level_line::sharp_joint_corners::insert;
+    use geometry_processing::bevel::level_line::ChainField;
+    // An L whose joint at (4, 0) turns a right angle: its inside corner, a setback from both
+    // legs, is (3, 1).
+    let chain = ChainField::from_polyline(
+        &[
+            Vector3::new(0.0, 0.0, 0.0),
+            Vector3::new(4.0, 0.0, 0.0),
+            Vector3::new(4.0, 4.0, 0.0),
+        ],
+        false,
+        &[1.0, 1.0, 1.0],
+    )
+    .expect("a chain");
+    let mesh = LevelLineMesh::from_triangles(
+        &[
+            Vector3::new(2.0, 0.5, 0.0),
+            Vector3::new(3.6, 0.5, 0.0),
+            Vector3::new(2.0, 2.5, 0.0),
+        ],
+        &[(0, 1, 2)],
+        None,
+    )
+    .expect("a triangle");
+    // Joints sharper than 45 degrees are sharp (a plain polyline's threshold is infinite).
+    let mut chain = chain;
+    chain.sharp_turn_degrees = 45.0;
+    let chain = Rc::new(chain);
+    let field: Rc<dyn ScalarField> = chain.clone();
+    let reading =
+        VertexFieldReading::new(Rc::new(RefCell::new(mesh)), field.clone(), 1e-9).expect("a snap");
+    let triangles =
+        insert(&reading, field.as_ref(), [chain.as_ref()], vec![0], 1e-9).expect("inserted");
+    assert_eq!(reading.mesh.borrow().vertex_count(), 4);
+    assert!((reading.mesh.borrow().position(3) - Vector3::new(3.0, 1.0, 0.0)).length() <= 1e-9);
+    assert_eq!(reading.side_of(3).ok(), Some(VertexSide::On));
+    assert_eq!(triangles.len(), 3);
+
+    // A straight chain has no sharp joint, and no end clip without a same-sense end plane: the
+    // candidates come back as they were.
+    let straight = ChainField::from_polyline(
+        &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
+        false,
+        &[1.0, 1.0],
+    )
+    .expect("a chain");
+    assert_eq!(
+        insert(&reading, field.as_ref(), [&straight], vec![2, 0], 1e-9).ok(),
+        Some(vec![2, 0])
+    );
+    assert_eq!(
+        geometry_processing::bevel::level_line::end_clip_corners::insert(
+            &reading,
+            &straight,
+            [&straight],
+            vec![2, 0],
+            1e-9
+        )
+        .ok(),
+        Some(vec![2, 0])
+    );
+}

@@ -244,6 +244,10 @@ impl BandGroupFieldsWithRunOuts {
 }
 
 impl ScalarField for BandGroupFieldsWithRunOuts {
+    fn as_chain_distance_field(&self) -> Option<&dyn super::ChainDistanceField> {
+        Some(self)
+    }
+
     /// C# `WithRunOuts.ValueAt`: [`BandGroupFieldsWithRunOuts::evaluate`]'s value.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         Ok(self.evaluate(point)?.value)

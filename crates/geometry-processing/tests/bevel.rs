@@ -1,6 +1,8 @@
 //! Ported `R/Tests/GeometryProcessingTests` test classes for `Bevel/`, one file each (CLAUDE.md
 //! net 1), with the C# fixture builders they need (`Fixtures/*.cs`) as Rust modules.
 
+#[path = "bevel/band_cut_tests.rs"]
+mod band_cut_tests;
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
@@ -59,8 +61,12 @@ mod bore_test_meshes;
 mod chain_field_fixtures;
 #[path = "bevel/crease_run_out_tests.rs"]
 mod crease_run_out_tests;
+#[path = "bevel/degenerate_triangle_refinement_tests.rs"]
+mod degenerate_triangle_refinement_tests;
 #[path = "bevel/end_plane_trim_corner_tests.rs"]
 mod end_plane_trim_corner_tests;
+#[path = "bevel/exact_refinement_tests.rs"]
+mod exact_refinement_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
@@ -75,12 +81,16 @@ mod hole_fill_validity_tests;
 mod island_split_order_tests;
 #[path = "bevel/level_line_fixture.rs"]
 mod level_line_fixture;
+#[path = "bevel/level_line_test_geometry.rs"]
+mod level_line_test_geometry;
 #[path = "bevel/lobed_prism_meshes.rs"]
 mod lobed_prism_meshes;
 #[path = "bevel/longest_edge_bisection_tests.rs"]
 mod longest_edge_bisection_tests;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
+#[path = "bevel/no_duplicate_vertex_tests.rs"]
+mod no_duplicate_vertex_tests;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
 #[path = "bevel/opposite_sense_crease_tests.rs"]

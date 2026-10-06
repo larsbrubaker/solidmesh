@@ -294,6 +294,10 @@ impl RunOutField {
 }
 
 impl ScalarField for RunOutField {
+    fn as_chain_distance_field(&self) -> Option<&dyn super::ChainDistanceField> {
+        Some(self)
+    }
+
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         LevelLineWork::charge(1)?;
         Ok(self.read(point))

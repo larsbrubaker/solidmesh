@@ -326,6 +326,10 @@ impl ChainField {
 }
 
 impl ScalarField for ChainField {
+    fn as_chain_distance_field(&self) -> Option<&dyn super::ChainDistanceField> {
+        Some(self)
+    }
+
     /// C# `ChainField.ValueAt`: [`ChainField::evaluate`]'s value, as the bare field seam asks.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         Ok(self.evaluate(point)?.value)

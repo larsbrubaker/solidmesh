@@ -1,8 +1,8 @@
 //! The inside corner of one chain's own SHARP JOINT, made a mesh vertex before the refinement
 //! runs: on a face holding both of the joint's legs, the point standing the joint's setback from
 //! each leg - where the level line turns. Ports `Bevel/LevelLine/SharpJointCorners.cs` (a C#
-//! static class, so a module of functions): the corner itself ([`the_inside_corner`]) and its
-//! tests; the insertion lands with its method package.
+//! static class, so a module of functions): the corner itself ([`the_inside_corner`]), its tests
+//! and the insertion over a band's candidates ([`insert`]).
 //!
 //! Without it the cut meets that corner only when the face's own edges pass through it: on the
 //! knife-edge prism the cut chorded a corner off, the rail had no vertex standing for the joint's
@@ -80,4 +80,72 @@ pub fn the_inside_corner(chain: &ChainField, at: f64, setback: f64) -> Option<(V
         apex + (bisector * (setback / sin_half)),
         back.cross(ahead).get_normal(),
     ))
+}
+
+/// C# `SharpJointCorners.Insert`: inserts every member chain's sharp-joint inside corner that a
+/// candidate triangle of the reading's mesh holds - on the group's line only - putting each on the
+/// line, and hands back the candidates with every triangle a split made in place of a divided one
+/// (first-seen order, removed triangles dropped).
+pub fn insert<'a>(
+    reading: &super::VertexFieldReading,
+    group_field: &dyn super::ScalarField,
+    members: impl IntoIterator<Item = &'a ChainField>,
+    candidates: Vec<i32>,
+    snap: f64,
+) -> Result<Vec<i32>, super::LevelLineMeshError> {
+    let mut corners = Vec::new();
+    for chain in members {
+        for &(at, setback) in chain.sharp_joints() {
+            // On the group's line only: a corner another member reads nearer, or one off the
+            // group's own faces, is not where this group's level line turns.
+            if let Some((point, plane)) = the_inside_corner(chain, at, setback) {
+                if group_field.value_at(point)?.abs() <= off_the_line(point, setback) {
+                    corners.push((point, plane));
+                }
+            }
+        }
+    }
+
+    if corners.is_empty() {
+        return Ok(candidates);
+    }
+
+    let mut pending = std::collections::VecDeque::new();
+    let mut depth = std::collections::HashMap::new();
+    let mut result = candidates;
+    for (corner, plane) in corners {
+        for triangle in result.clone() {
+            super::LevelLineWork::charge(1)?;
+            {
+                let mesh = reading.mesh.borrow();
+                if mesh.is_removed(triangle) || !holds(&mesh, triangle, corner, plane) {
+                    continue;
+                }
+            }
+
+            let before = pending.len();
+            // On the line by construction: its reading there is float noise either side of zero,
+            // and read as a side the cut crossed its edges on one placement and not the other.
+            let made = super::refinement_splits_enqueue::insert_on_the_line(
+                &mut reading.mesh.borrow_mut(),
+                triangle,
+                corner,
+                snap,
+                &mut pending,
+                &mut depth,
+            )?;
+            if made >= 0 {
+                reading.put_on_the_line(made)?;
+            }
+            result.extend(pending.iter().skip(before).copied());
+            break;
+        }
+    }
+
+    let distinct: indexmap::IndexSet<i32> = result.into_iter().collect();
+    let mesh = reading.mesh.borrow();
+    Ok(distinct
+        .into_iter()
+        .filter(|&t| !mesh.is_removed(t))
+        .collect())
 }

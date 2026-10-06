@@ -64,6 +64,12 @@ pub trait ScalarField {
     fn as_with_run_outs(&self) -> Option<&BandGroupFieldsWithRunOuts> {
         None
     }
+
+    /// This field as one that can be ASKED where it runs (C# `field is IChainDistanceField`);
+    /// `None` unless overridden - every [`ChainDistanceField`] implementation overrides it.
+    fn as_chain_distance_field(&self) -> Option<&dyn ChainDistanceField> {
+        None
+    }
 }
 
 /// The least value a field takes over a piece of the mesh, and the point where it takes it.
