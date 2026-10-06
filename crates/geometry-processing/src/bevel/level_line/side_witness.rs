@@ -1,8 +1,9 @@
 //! The last point of a side to survive the cut, made a VERTEX of the mesh so that the side's
 //! survival is decided exactly instead of inside a search tolerance. Ports
 //! `Bevel/LevelLine/SideWitness.cs` (a C# static class): its constants, its per-thread tally
-//! ([`SideWitnessTally`], [`reset`]) and the side's live triangles and the triangle holding a
-//! point; the witness search and its insertion land with later packages.
+//! ([`SideWitnessTally`], [`reset`]), the side's live triangles, the reading's own last surviving
+//! point ([`from_the_reading`]), the triangle holding a point, the decision search ([`search`]) and
+//! the witness's insertion; giving a side its witness lands with its own package.
 //!
 //! The refinement's rules find the level line by bounded search, and every such search answers
 //! only to within its own accuracy. Where the last surviving scrap of a side is a small island
@@ -12,10 +13,13 @@
 //! that already holds one Outside vertex after refinement is left exactly as it stands.
 
 use std::cell::Cell;
+use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
-use super::{ChainField, LevelLineMesh};
+use super::band_room::REFERENCE_SIZE;
+use super::self_room;
+use super::{ChainDistanceField, ChainField, LevelLineMesh, RoomField, WorkError};
 
 /// How close to the snap the witness search decides, as a fraction of the size. Fifty times finer
 /// than the refinement's own `size / 20`, which is what the search has to beat to be worth
@@ -82,6 +86,52 @@ pub fn live_triangles_of_side(mesh: &LevelLineMesh, side: i32) -> Vec<i32> {
         .collect()
 }
 
+/// C# `SideWitness.FromTheReading`: the reading's own last surviving point for this side, read at
+/// the size being built, with the side's triangle holding it - the first line. `None` when the
+/// reading has no such point for this side, when the field is not one a room can be read from (a
+/// chain's or a pick's), when the point does NOT stand above the snap (a side genuinely swallowed
+/// at this size), or when no triangle of the side holds it.
+///
+/// The reading is taken on the field at [`REFERENCE_SIZE`], where the room itself was read;
+/// setbacks are linear in the size, so scaling the build's field back to the reference is the
+/// same field the reading saw. The ceiling is left off (infinite): only the point is wanted.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn from_the_reading(
+    mesh: &LevelLineMesh,
+    field: &dyn ChainDistanceField,
+    triangles: &[i32],
+    side: i32,
+    size: f64,
+    snap: f64,
+) -> Result<Option<(i32, Vector3)>, WorkError> {
+    let reference = if let Some(chain) = field.as_chain_field() {
+        RoomField::from_chain(Rc::new(chain.with_setbacks_scaled(REFERENCE_SIZE / size)?))
+    } else if let Some(pick) = field.as_pick_field() {
+        RoomField::from_pick(Rc::new(pick.with_setbacks_scaled(REFERENCE_SIZE / size)?))
+    } else {
+        return Ok(None);
+    };
+
+    let point = self_room::last_surviving_point_of_side(
+        mesh,
+        &reference,
+        side,
+        REFERENCE_SIZE,
+        f64::INFINITY,
+    )?;
+    let point = match point {
+        Some(point) if field.value_at(point)? > snap => point,
+        _ => return Ok(None),
+    };
+
+    let holding = triangle_holding(mesh, triangles, point);
+    Ok(if holding < 0 {
+        None
+    } else {
+        Some((holding, point))
+    })
+}
+
 /// The triangle of `triangles` nearest `point` - the first of a tie - when the point stands ON it
 /// (within [`ON_THE_TRIANGLE`] of its longest side), or -1.
 pub fn triangle_holding(mesh: &LevelLineMesh, triangles: &[i32], point: Vector3) -> i32 {
@@ -109,6 +159,35 @@ pub fn triangle_holding(mesh: &LevelLineMesh, triangles: &[i32], point: Vector3)
     } else {
         -1
     }
+}
+
+/// C# `SideWitness.Search`: the first point of the side found standing above the snap, and the
+/// triangle holding it - the decision search, the second line. `None` when no triangle of the side
+/// holds one.
+///
+/// The threshold is the snap and it never rises: `at_least` prunes every piece that cannot reach
+/// it, `stop_above` ends the search on the first value that clears it. An answer that did not beat
+/// the threshold stands at a meaningless point, so it is compared strictly and then dropped.
+pub fn search(
+    mesh: &LevelLineMesh,
+    field: &dyn ChainDistanceField,
+    triangles: &[i32],
+    tolerance: f64,
+    snap: f64,
+) -> Result<Option<(i32, Vector3)>, WorkError> {
+    for &triangle in triangles {
+        let t = mesh.triangles()[triangle as usize];
+        let a = mesh.position(t.a);
+        let b = mesh.position(t.b);
+        let c = mesh.position(t.c);
+
+        let greatest = field.max_over_triangle_bounded(a, b, c, tolerance, snap, snap)?;
+        if greatest.value > snap {
+            return Ok(Some((triangle, greatest.point)));
+        }
+    }
+
+    Ok(None)
 }
 
 /// C# `SideWitness.HoldsAnOutsideVertex`: whether anything of the side is already known to

@@ -1,14 +1,19 @@
 //! The room foreign features leave a chain: the size at which the band first reaches an edge that
-//! is not the chain's own. Ports `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class): so far
-//! its constants and switch, the knife test ([`is_a_knife`]) and the clusters of short edges at a
-//! chain's ends ([`cluster_at_the_ends`]), and whether an edge meets the chain at an end
-//! ([`meets_the_chain_at_an_end`]) and the unindexed edge list ([`every_edge`]); the room readings
-//! land with later packages.
+//! is not the chain's own. Ports `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class): its
+//! constants and switch, the knife test ([`is_a_knife`]), the foreign edges themselves
+//! ([`foreign_edges`]), whether an edge meets the chain at an end ([`meets_the_chain_at_an_end`]),
+//! the clusters of short edges at a chain's ends ([`cluster_at_the_ends`]) and the unindexed edge
+//! list ([`every_edge`]); the room readings over those edges are in `foreign_edge_room_readings.rs`.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
-use super::{ForeignEdgeIndex, LevelLineMesh, LevelLineTriangle};
+use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
+use super::{end_face_sense, triangle_edges};
+use super::{
+    ChainField, ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh, LevelLineTriangle, WorkError,
+};
 
 /// Fixed, so the room is the same bits every time it is asked for.
 pub const ROOM_BISECTION_STEPS: i32 = 40;
@@ -72,6 +77,158 @@ pub fn is_a_knife(
     // as +-1e-16, and a bare "< 0" let where the part sat decide whether it was a knife - Meeting
     // Edge Round's corner joined its rail across one only when turned, and its fill moved with it.
     convex && side_normal.dot(normal_of(far)) < -RIGHT_ANGLE_NOISE
+}
+
+/// C# `ForeignEdgeRoom.ForeignEdges`: the foreign feature edges - where a side's region ends on
+/// something that is not the chain, and not at the chain's own ends. A region only ever ends at a
+/// chain edge (which puts the other side across it) or at a feature edge (which leaves untagged
+/// material across it), so an edge onto tag 0 is exactly a foreign feature edge, and it stays one
+/// through every split, since a split's children inherit their parent's tag. A crease a growing
+/// neighbour grows over is replaced by what it grows into; the growing runs read along the way are
+/// handed to `growing_runs` when given (C#'s optional list, and `seam_epsilon` 0 is C#'s default).
+///
+/// The mesh and the field are shared (`Rc`) because the growing runs keep both, live, as C#'s
+/// do: the runs walk the working mesh and read the field's distance after this returns. The
+/// runs' distance delegate cannot return the field's work error, so it is held aside and handed
+/// up here once the walk that met it is done.
+pub fn foreign_edges(
+    mesh: &Rc<RefCell<LevelLineMesh>>,
+    chain_edges: &[(i32, i32)],
+    field: &Rc<ChainField>,
+    chain_is_closed: bool,
+    seam_epsilon: f64,
+    growing_runs: Option<&mut Vec<GrowingCreaseRuns>>,
+) -> Result<Vec<(i32, i32)>, WorkError> {
+    // Read in the mesh's canonical edge order, though the answer would not change in any other:
+    // the room these edges are asked for is the LEAST closest approach over them, and a minimum is
+    // the same number whichever order it is taken in.
+    let chain_keys: HashSet<(i32, i32)> = chain_edges
+        .iter()
+        .map(|&(from, to)| triangle_edges::key(from, to))
+        .collect();
+    let m = mesh.borrow();
+    let end_cluster = cluster_at_the_ends(&m, chain_edges, chain_is_closed, seam_epsilon);
+
+    // THE HONEST ROOM AT AN END. An end that stands on an END FACE carries an end region (tag 3 at
+    // the first vertex, 4 at the last), and an end tag reads as a picked side's: a side-to-end fold
+    // (1|3) is not foreign, while the end region's own boundary with the rest of the part (3|0) IS,
+    // so a short end edge or a small end face bounds the room by size. That end's run-out exemption
+    // goes with it. An end with NO end region - a fade, dying or running on along its crease - keeps
+    // the exemption. Safe to read 3 and 4 this way because this reading is of ONE chain, where they
+    // can only be end tags, never a second chain's sides.
+    let first_end_has_a_face =
+        !chain_is_closed && m.triangles.iter().any(|t| t.tag == FIRST_END_TAG);
+    let last_end_has_a_face =
+        !chain_is_closed && m.triangles.iter().any(|t| t.tag == SECOND_END_TAG);
+    // A GROWING end (no end region: the end face is of the opposite sense and never cut) is bounded
+    // by its crease stretch's far end, not by the stretch itself.
+    let growing_ends = if chain_is_closed {
+        None
+    } else {
+        Some(end_face_sense::growing_crease_stretch(
+            &m,
+            chain_edges,
+            !first_end_has_a_face,
+            !last_end_has_a_face,
+            None,
+        ))
+    };
+    let mut edges = Vec::new();
+    let mut growing: Option<GrowingCreaseRuns> = None;
+    let failed: Rc<RefCell<Option<WorkError>>> = Rc::new(RefCell::new(None));
+    let chain_ends: HashSet<i32> = if chain_is_closed {
+        HashSet::new()
+    } else {
+        HashSet::from([chain_edges[0].0, chain_edges[chain_edges.len() - 1].1])
+    };
+    for edge in m.edges() {
+        if chain_keys.contains(&edge)
+            || growing_ends
+                .as_ref()
+                .is_some_and(|growing_ends| growing_ends.contains(&edge))
+        {
+            continue;
+        }
+
+        let standing = m.triangles_on(edge.0, edge.1);
+        let tags = || standing.iter().map(|&t| m.triangles[t as usize].tag);
+        if !tags().any(|t| t != 0) || !tags().any(|t| t == 0) {
+            continue;
+        }
+
+        if !chain_is_closed
+            && meets_the_chain_at_an_end(
+                &m,
+                chain_edges,
+                edge,
+                end_cluster.as_deref(),
+                !first_end_has_a_face,
+                !last_end_has_a_face,
+            )
+        {
+            continue;
+        }
+
+        if is_a_knife_edge(&m, edge) {
+            continue;
+        }
+
+        // A crease the neighbour GROWS over bounds the room by what it grows into - for now on a
+        // pick of ONE OPEN chain only, the only shape the clip and caps are built for.
+        let runs = growing.get_or_insert_with(|| {
+            let field = Rc::clone(field);
+            let failed = Rc::clone(&failed);
+            GrowingCreaseRuns::new(
+                Rc::clone(mesh),
+                chain_edges[0],
+                Rc::new(move |p| match field.evaluate(p) {
+                    Ok(sample) => sample.distance,
+                    Err(error) => {
+                        // C#'s delegate throws here; the first error is handed up by whoever
+                        // checks `failed`, and the budget stays spent (or cancelled) meanwhile.
+                        failed.borrow_mut().get_or_insert(error);
+                        f64::NAN
+                    }
+                }),
+                Some(chain_edges.to_vec()),
+                None,
+            )
+        });
+        let bounds = if chain_is_closed {
+            None
+        } else {
+            runs.bounds_of(edge, &chain_ends)?
+        };
+        if let Some(error) = failed.borrow_mut().take() {
+            return Err(error);
+        }
+
+        if let Some(bounds) = bounds {
+            edges.extend(bounds);
+            continue;
+        }
+
+        edges.push(edge);
+    }
+
+    drop(m);
+    if let Some(growing) = growing {
+        // A growing neighbour's RIDGE out of its run's near end is what the cap extends past (the
+        // tie), read as the pierce room and not as a wall. Where its near end is also on the
+        // chain's own crease, the ridge is that crease turning on round a concave corner - the
+        // fade's road ("Every Chamfer Works.mcx"). The ridge may be met before its growing crease
+        // is, so it is dropped once the walk is done.
+        edges.retain(|&e| !growing.is_ridge_off_the_chains_crease(e));
+        if let Some(error) = failed.borrow_mut().take() {
+            return Err(error);
+        }
+
+        if let Some(growing_runs) = growing_runs {
+            growing_runs.push(growing);
+        }
+    }
+
+    Ok(edges)
 }
 
 /// Per end of an open chain (first, then last), the vertices joined to it by edges no longer than

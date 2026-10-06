@@ -5,14 +5,17 @@
 //! spheres' gap ([`sphere_gap`]), the pair-prune bound ([`pair_cannot_lower_the_room`]), the edges
 //! running out of shared corners ([`edges_running_out_of_corners`]), the pieces of one chain split
 //! at setback steps ([`pieces_of_one_chain`]) and the ends stopping at an end face
-//! ([`ends_with_an_end_region`]); the pair reading lands with later packages.
+//! ([`ends_with_an_end_region`]) and the end-to-end approach test ([`approach_is_end_to_end`]).
+//! The pick's room itself ([`room_of_pick`]) is in `band_room_pair_room_pick.rs`.
 
 use std::collections::HashSet;
 
 use indexmap::IndexSet;
 use vector_math::{cs_math, Vector3};
 
-use super::{chain_setback, EndRayBound, ForeignEdgeRegions};
+use super::{chain_setback, ChainField, EndRayBound, ForeignEdgeRegions, LevelLineMesh, WorkError};
+
+pub use super::band_room_pair_room_pick::{room_of_pick, PickRoom};
 
 /// C# `BandRoom.PairPruneSlack`: the relative slack the pair-prune bound must clear the least room
 /// by, so a pair whose bound TIES the least cannot be pruned or kept by which way the last bit of
@@ -20,7 +23,7 @@ use super::{chain_setback, EndRayBound, ForeignEdgeRegions};
 pub const PAIR_PRUNE_SLACK: f64 = 1e-9;
 
 /// C#'s `Enumerable.Min` over doubles: NaN where any value is NaN.
-fn linq_min(values: &[f64]) -> f64 {
+pub fn linq_min(values: &[f64]) -> f64 {
     let mut least = values[0];
     for &v in values {
         if v.is_nan() {
@@ -36,7 +39,7 @@ fn linq_min(values: &[f64]) -> f64 {
 }
 
 /// C#'s `Enumerable.Max` over doubles: NaN only where every value is NaN.
-fn linq_max(values: &[f64]) -> f64 {
+pub fn linq_max(values: &[f64]) -> f64 {
     let mut most = values[0];
     for &v in &values[1..] {
         if v > most || most.is_nan() {
@@ -328,4 +331,45 @@ pub fn ends_with_an_end_region(
     } else {
         None
     }
+}
+
+/// C# `BandRoom.EndToEndTolerance`: how near, relative to the approach, a closest point must stand
+/// to a chain end to be that end.
+const END_TO_END_TOLERANCE: f64 = 1e-9;
+
+/// C# `BandRoom.ApproachIsEndToEnd`: true when chain j's edge approaches chain k closest END TO END
+/// across both chains' end regions: the edge's nearest point to k is an end of j that stops at an
+/// end face, and k's nearest point to it is an end of k that does too. Each band stops at its own
+/// end face there, so the beads never meet and the approach is no pinch (Center Flows Through: two
+/// collinear chains with the fin between them). Any approach with either point interior to its
+/// chain, or at an end with no end region (a fade, a growing end), is read as it always was.
+pub fn approach_is_end_to_end(
+    mesh: &LevelLineMesh,
+    bare_of_k: &ChainField,
+    edge_of_j: (i32, i32),
+    ends: &(HashSet<i32>, HashSet<i32>),
+) -> Result<bool, WorkError> {
+    let (of_k, of_j) = ends;
+    let end_of_j = if of_j.contains(&edge_of_j.0) {
+        edge_of_j.0
+    } else if of_j.contains(&edge_of_j.1) {
+        edge_of_j.1
+    } else {
+        -1
+    };
+    if end_of_j < 0 {
+        return Ok(false);
+    }
+
+    let at_end = bare_of_k.evaluate(mesh.position(end_of_j))?;
+    let least =
+        bare_of_k.min_along_segment(mesh.position(edge_of_j.0), mesh.position(edge_of_j.1))?;
+    let tolerance = END_TO_END_TOLERANCE * cs_math::max_f64(at_end.distance, 1e-300);
+    if (least.point - mesh.position(end_of_j)).length() > tolerance {
+        return Ok(false);
+    }
+
+    Ok(of_k
+        .iter()
+        .any(|&v| (at_end.nearest - mesh.position(v)).length() <= tolerance))
 }

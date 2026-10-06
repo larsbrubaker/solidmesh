@@ -1,9 +1,9 @@
 //! The needle half of the working mesh: triangles with no height, the T-vertices among them, and
 //! the counters that say what a build met. Ports `Bevel/LevelLine/LevelLineMesh.Needles.cs` (a
-//! partial of `LevelLineMesh`, whose fields live in `level_line_mesh.rs`): so far its constant, the
+//! partial of `LevelLineMesh`, whose fields live in `level_line_mesh.rs`): its constant, the
 //! no-height test, the left-alone count, the silent discard, the chain-edge test, the re-tiling
-//! through a T-vertex and the repair pass (`RepairNeedles` / `RepairNeedlesAround`, which start a
-//! pass, land with another package).
+//! through a T-vertex, and the repair passes - over the whole mesh (`RepairNeedles`) and around a
+//! split's children (`RepairNeedlesAround`).
 
 use std::collections::VecDeque;
 
@@ -24,6 +24,34 @@ impl LevelLineMesh {
     /// apex is at an END of its long edge, and the slivers repair itself leaves behind.
     pub fn needles_left_alone(&self) -> i32 {
         self.left_alone.len() as i32
+    }
+
+    /// C# `LevelLineMesh.RepairNeedles`: repairs every NEEDLE in the mesh - a triangle under the
+    /// needle floor whose apex projects strictly inside its own long edge is a T-VERTEX, so the
+    /// neighbour across that edge is re-tiled through the apex and the needle is dropped. Answers
+    /// with the triangles made or changed, so a caller mid-refinement can put them on its worklist.
+    /// Nothing at all without a needle floor.
+    pub fn repair_needles(&mut self) -> Result<Vec<i32>, WorkError> {
+        let mut touched = Vec::new();
+        if self.needle_floor <= 0.0 {
+            return Ok(touched);
+        }
+
+        // Only the needles are enqueued: the repair charges the work budget once per dequeue, so
+        // handing it every triangle charged one unit per triangle of the model and a known-room
+        // build's work grew with the mesh. The repair skips a triangle with height anyway, so the
+        // answer is the same; what a repair makes, it enqueues itself.
+        let mut pending = VecDeque::new();
+        for triangle in 0..self.triangles.len() {
+            if !self.removed[triangle]
+                && self.has_no_height(self.triangles[triangle], self.needle_floor)
+            {
+                pending.push_back(triangle as i32);
+            }
+        }
+
+        self.metered_repair_from(&mut pending, &mut touched, false)?;
+        Ok(touched)
     }
 
     /// C# `LevelLineMesh.RepairNeedlesAround`: repairs any needle among the triangles handed in
