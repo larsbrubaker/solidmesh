@@ -1,15 +1,217 @@
 //! The open fill's row stations. Ports `Bevel/LevelLine/OpenGapFill.Stations.cs` (a partial of the
-//! C# static class `OpenGapFill`): so far its row-spacing share, the mitred-turn test
-//! ([`is_mitred_turn_at`]) and the thinning of rows to where the round needs them
-//! ([`rows_where_the_round_needs_them`]), the parameters each rail vertex stands for
-//! ([`tie_spans`], [`on_the_edge`]); the stations land with later packages.
+//! C# static class `OpenGapFill`): each rail split at the other's parameters
+//! ([`with_stations_of`]), the row-spacing share, the mitred-turn test ([`is_mitred_turn_at`]), the
+//! parameters each rail vertex stands for ([`tie_spans`], [`on_the_edge`]), the thinning of rows to
+//! where the round needs them ([`rows_where_the_round_needs_them`]) and the zipper that pairs the
+//! two rails ([`spokes`]).
 
 use vector_math::{cs_math, Vector3};
 
-use super::{ChainField, LevelLineMesh, OpenGapFillOpenRail, WorkError};
+use super::{ChainField, LevelLineMesh, LevelLineMeshError, OpenGapFillOpenRail, WorkError};
+use crate::bevel::float_grid;
 
 /// The least spacing between kept rows, as a share of the row's own width.
 pub const MIN_ROW_SPACING_SHARE: f64 = 1.0 / 8.0;
+
+/// C# `OpenGapFill.WithStationsOf`: `rail` with a vertex split into its edge at every parameter
+/// where `other` has one strictly inside that edge. The split point is the edge's point at that
+/// parameter, read linearly along the edge, so it lies on the level line the edge already is.
+///
+/// AN EDGE THAT STARTS OR ENDS AT A TIE: a rail vertex equidistant from two legs of a turning
+/// chain (the inside corner of a chamfer turning over a cube corner, at (7, 7, 10) for d 3)
+/// carries one leg's parameter, but the edge leaving it runs along the other leg, so its
+/// parameters do not start there: read linearly from 17 to 40, the station for the turn's own
+/// parameter 20 landed 2.2 along the edge at (4.78, 7, 10) instead of on the corner, its spoke
+/// crossed from one chamfer plane to the other, and the turn removed 174.33 where the mitre
+/// removes 171. So each end's parameter is read as the chain sees the edge just inside that end,
+/// and a station the edge never reaches (inside the tie's jump) is not split in: the zipper pairs
+/// it with the tie vertex itself, which is the mitre.
+///
+/// Returns `rail` itself (cloned) where nothing was split in or snapped.
+pub fn with_stations_of(
+    mesh: &mut LevelLineMesh,
+    chain: &ChainField,
+    rail: &OpenGapFillOpenRail,
+    other: &OpenGapFillOpenRail,
+    length: f64,
+) -> Result<OpenGapFillOpenRail, LevelLineMeshError> {
+    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let rail_count = rail.vertices.len();
+    let other_count = other.parameters.len();
+    let mut vertices = vec![rail.vertices[0]];
+    let mut parameters = vec![rail.parameters[0]];
+    let mut j = 0usize;
+    let mut snapped = false;
+    let mut last_end_reads: Option<f64> = None;
+    // Read before any split: a split rail edge stands on no triangle afterwards either.
+    let virtual_edges: Vec<bool> = (0..rail_count.saturating_sub(1))
+        .map(|k| {
+            mesh.triangles_on(rail.vertices[k], rail.vertices[k + 1])
+                .is_empty()
+        })
+        .collect();
+    let is_virtual_edge = |k: i64| k >= 0 && k + 1 < rail_count as i64 && virtual_edges[k as usize];
+
+    // Rail vertex k is where the rail meets a crease and runs on virtually past it: one of its two
+    // edges stands on no triangle and the other does.
+    let starts_a_virtual_stretch =
+        |k: i64| is_virtual_edge(k - 1) != is_virtual_edge(k) && k > 0 && k + 1 < rail_count as i64;
+    let mut i = 0usize;
+    while i + 1 < rail_count {
+        let (mut from, mut to) = (rail.parameters[i], rail.parameters[i + 1]);
+        let mut low = rail.vertices[i];
+        let mut high_reads: Option<f64> = None;
+        let (skip_below, skip_above) = (from, to);
+        (from, to) = on_the_edge(
+            chain,
+            mesh.position(low),
+            mesh.position(rail.vertices[i + 1]),
+            from,
+            to,
+            tie,
+        )?;
+        while j < other_count && other.parameters[j] <= cs_math::max_f64(from, skip_below) + tie {
+            j += 1;
+        }
+
+        while j < other_count && other.parameters[j] < cs_math::min_f64(to, skip_above) - tie {
+            let t = other.parameters[j];
+            let high = rail.vertices[i + 1];
+            let point = mesh.position(low)
+                + ((mesh.position(high) - mesh.position(low)) * ((t - from) / (to - from)));
+
+            // A station within a float step of the RAIL's own end IS that end: the two rails' ends
+            // on an end face read parameters a float step apart where the part came from float
+            // storage, so the other rail's end asked for a station a hair along this rail's first
+            // edge (Encroaching Side at its saved 3.4: 1.15e-7 above the bottom and 5e-7 below the
+            // top). Split in, it made a second row a float step from the end row, a zero-width
+            // strip between them. So the end takes the station's parameter instead - the two
+            // rails' ends then read the same parameter and the zipper pairs them one to one. Merely
+            // skipping the station left the other rail's end reading past this one's, and the
+            // zipper paired it a row away: Encroaching Side's front round near the top stood 0.209
+            // off its control. The parameter stays monotone by construction: the station lies
+            // strictly inside this end edge. Only at the rail's two ends: an interior rail vertex a
+            // float step from a station is a real station of its own (Thin Front's fin rows moved
+            // 0.065 off the control when every edge end paired).
+            let step = float_grid::step_at_point(point);
+            let at_the_first_end = i == 0
+                && vertices.len() == 1
+                && (point - mesh.position(rail.vertices[0])).length() <= step;
+            let at_the_last_end =
+                i + 2 == rail_count && (point - mesh.position(high)).length() <= step;
+            if (at_the_first_end || at_the_last_end) && !is_mitred_turn_at(chain, t, tie) {
+                if at_the_first_end {
+                    parameters[0] = t;
+                    from = t;
+                } else {
+                    last_end_reads = Some(t);
+                }
+
+                snapped = true;
+                j += 1;
+                continue;
+            }
+
+            // A VIRTUAL rail edge (carried past a crease, standing on no triangle) takes its
+            // station as a plain vertex: there is no triangle to split. A station within a float
+            // step of the vertex where the rail meets the crease and runs on virtually (from either
+            // edge meeting there) IS that vertex, as at the rail's own ends: the other rail's
+            // crease vertex read a parameter a float step off this one's where the part came from
+            // float storage, and split in it made a whole row a hair from the crease row - Inner
+            // Right Sides and Center's ridge alone, rows 8.7e-7 apart at both end faces, zero-area
+            // triangles pass B's cut then read as creases and crossed with zero-length rail edges
+            // (RoundsFirstTests.TheRoundsLeaveNoTwinVertices).
+            let is_virtual = mesh.triangles_on(low, high).is_empty();
+            if !is_mitred_turn_at(chain, t, tie) {
+                if low == rail.vertices[i]
+                    && starts_a_virtual_stretch(i as i64)
+                    && (point - mesh.position(low)).length() <= step
+                {
+                    let last = parameters.len() - 1;
+                    parameters[last] = t;
+                    from = t;
+                    snapped = true;
+                    j += 1;
+                    continue;
+                }
+
+                if starts_a_virtual_stretch(i as i64 + 1)
+                    && (point - mesh.position(high)).length() <= step
+                {
+                    high_reads = Some(t);
+                    j += 1;
+                    continue;
+                }
+            }
+
+            // Rounds first's pass B: a station nearer a vertex this rail already has than a row is
+            // worth (rows_where_the_round_needs_them) IS that vertex, as a station a float step
+            // from one is above: split in, it cut the side triangle on the rail edge into slivers
+            // beside that vertex.
+            if chain.has_smooth_joints() && !is_mitred_turn_at(chain, t, tie) {
+                let spacing =
+                    MIN_ROW_SPACING_SHARE * 2.0 * chain.setback_at(t.clamp(0.0, chain.length));
+                if (point - mesh.position(low)).length() < spacing && vertices.len() > 1 {
+                    let last = parameters.len() - 1;
+                    parameters[last] = t;
+                    from = t;
+                    snapped = true;
+                    j += 1;
+                    continue;
+                }
+
+                if (point - mesh.position(high)).length() < spacing && i + 2 < rail_count {
+                    high_reads = Some(t);
+                    j += 1;
+                    continue;
+                }
+            }
+
+            let split = if is_virtual {
+                mesh.add_vertex(point)
+            } else {
+                mesh.split_edge(low, high, point, true)?
+            };
+            if (split == low || split == high) && !is_mitred_turn_at(chain, t, tie) {
+                // The mesh answered with an end of the edge: the station lies within the build's
+                // snap of a tie vertex whose reading jumps past it (the other rail's station a hair
+                // beyond the jump's top), so the zipper pairs it with that vertex, as it does a
+                // station inside the jump. Adding it again made a zero-length rail edge, which the
+                // strip clip read as a virtual edge with no growing neighbour and refused
+                // GrowingNeighbourClipRefused (Top Face Should stil bevel c68 at 3.2 and 3.59). Not
+                // at a MITRED turn: there the same repeat marks the fold
+                // MitreInsideCornerKeptEdgeTests names - read past, that part gains volume - so the
+                // repeat is kept and the clip still refuses until the fill emits the mitre's inside
+                // corner right.
+                j += 1;
+                continue;
+            }
+
+            vertices.push(split);
+            parameters.push(t);
+            low = split;
+            from = t;
+            j += 1;
+        }
+
+        vertices.push(rail.vertices[i + 1]);
+        parameters.push(match last_end_reads {
+            Some(reads) if i + 2 == rail_count => reads,
+            _ => high_reads.unwrap_or(rail.parameters[i + 1]),
+        });
+        snapped |= high_reads.is_some();
+        i += 1;
+    }
+
+    Ok(if vertices.len() == rail_count && !snapped {
+        rail.clone()
+    } else {
+        OpenGapFillOpenRail {
+            vertices,
+            parameters,
+        }
+    })
+}
 
 /// True when the chain parameter `parameter` stands (within `tie`) at an interior chain vertex
 /// that turns past the sharp-turn threshold and is not a smooth joint.

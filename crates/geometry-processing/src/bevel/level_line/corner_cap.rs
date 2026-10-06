@@ -5,7 +5,8 @@
 //! class): a strip's end spoke ([`CornerCapLastRow`], with its constructor and material centre),
 //! the corner's axis ([`axis`]), the angle between two directions ([`angle`]) and the turn from one
 //! to the other ([`toward`]), and the close of a corner's holes ([`close`], with
-//! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]).
+//! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]). Its end-face cap `ZipEnd` is in
+//! `corner_cap_zip_end.rs`.
 
 use vector_math::{cs_math, Vector3};
 

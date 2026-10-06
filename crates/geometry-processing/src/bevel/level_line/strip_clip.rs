@@ -2,11 +2,12 @@
 //! laid whole across a virtual rail overlap the neighbour that stands past the reached crease;
 //! each of its faces on that crease clips the strip, the strip where EVERY face's distance is below
 //! zero is dropped, and the neighbour grows a cap in each face's plane. Ports
-//! `Bevel/LevelLine/StripClip.cs` (a C# static class, so a module of functions): so far the
+//! `Bevel/LevelLine/StripClip.cs` (a C# static class, so a module of functions): the
 //! directed edge, the opposite corner, the cap snap and the last outcome note ([`note`],
 //! [`last_outcome`]), and the clip's mesh work: the ties ([`insert_ties`]), the split along a plane
 //! ([`split_along`], [`crosses_at_a_needles_apex`]), the cap ([`cap`]), and the part the neighbour
-//! grows into ([`attached`], [`grow`]). The clip's driver lands with its method package.
+//! grows into ([`attached`], [`grow`]). The clip's driver (`TryClipAndCap`, `ClipOnOneNeighbour`) is
+//! `strip_clip_neighbour`; its valley mode is `strip_clip_valley`.
 
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};

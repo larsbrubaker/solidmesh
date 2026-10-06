@@ -4,14 +4,17 @@
 //! straight-row test ([`is_straight_row`]) and the small pieces of the fill: the hole between two
 //! runs ([`hole_between`]), a result carrying the minted vertices ([`with_minted`]), a run end's
 //! meeting point ([`meeting_point_of`]), a reversed arc ([`backwards`]), a run read as a rail
-//! ([`try_rail`]) and the extended parameter past an end ([`extended`]). The fill's other functions
-//! land with later packages.
+//! ([`try_rail`]), the extended parameter past an end ([`extended`]) and the rows laid along the
+//! spokes ([`arcs`]). The fill itself (`Fill`) is in `open_gap_fill_fill.rs`, kept apart for the
+//! file-size limit; `TryOpen` and `TryFade` land with a later package.
 
 use std::cell::RefCell;
 
 use vector_math::{cs_math, Vector3};
 
-use super::{gap_fill, ChainField, LevelLineMesh};
+use super::{
+    gap_fill, open_gap_fill_cut_section, open_gap_fill_stations, ChainField, LevelLineMesh,
+};
 
 thread_local! {
     /// C# `[ThreadStatic] OpenGapFill.EndsSite`: which open-end site last refused the open-chain
@@ -220,6 +223,151 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
     } else {
         -past
     }
+}
+
+/// C# `OpenGapFill.Arcs`: one arc per spoke, from the left rail's vertex to the right rail's
+/// through the chain's own point at the mean of the two extended parameters - clamped into the
+/// chain, so a spoke past an end takes the END VERTEX as its control point and the nose is the
+/// profile swept round that vertex. Every vertex minted is appended to `added_vertices`; each
+/// spoke charged. `rows_on_the_ray` and `meets_on_the_crease` are C#'s defaulted `false`
+/// parameters.
+#[allow(clippy::too_many_arguments)]
+pub fn arcs(
+    mesh: &mut LevelLineMesh,
+    chain: &ChainField,
+    spokes: &[(i32, i32)],
+    left: &OpenGapFillOpenRail,
+    right: &OpenGapFillOpenRail,
+    segments: i32,
+    added_vertices: &mut Vec<i32>,
+    rows_on_the_ray: bool,
+    meets_on_the_crease: bool,
+) -> Result<Vec<Vec<i32>>, super::WorkError> {
+    let mut arcs = Vec::new();
+    let tie = PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, chain.length);
+    let left_span = open_gap_fill_stations::tie_spans(mesh, chain, left, tie)?;
+    let right_span = open_gap_fill_stations::tie_spans(mesh, chain, right, tie)?;
+    let row_length = (segments + 1) as usize;
+    for &(l, r) in spokes {
+        super::LevelLineWork::charge(1)?;
+        let (lu, ru) = (l as usize, r as usize);
+        let a = left.vertices[lu];
+        let b = right.vertices[ru];
+        if segments == 1 || a == b {
+            // A degenerate spoke stands at a meeting point P: it is one vertex, repeated, so the
+            // cell beside it comes out as a fan onto P rather than a row of flat quads.
+            arcs.push(if a == b && segments > 1 {
+                vec![a; row_length]
+            } else {
+                vec![a, b]
+            });
+            continue;
+        }
+
+        // A row with one end ON a meeting point, where the fade has run out to nothing: that end
+        // stands on the crease itself, so the row's fillet has no radius and the row is the
+        // straight edge to it. It is carried as that edge alone (the meeting point repeated), so
+        // each cell beside it is a flat fan onto the meeting point. Bent round the chain's end
+        // vertex instead, every such row shared one tangent at the meeting point and the rows'
+        // first cells stood 1e-4 apart and folded in single precision (Many Holes' c904, c1915,
+        // c3066: the Boolean kernel read the fade self-intersecting). Only where the rails meet on
+        // the crease - an end-face fill's meeting points are the end face's corners.
+        if meets_on_the_crease {
+            if let Some(meeting) = meeting_point_of(left, a, b) {
+                let mut straight = vec![meeting; row_length];
+                straight[if meeting == a { segments as usize } else { 0 }] =
+                    if meeting == a { b } else { a };
+                arcs.push(straight);
+                continue;
+            }
+        }
+
+        // A row past an end the END-PLANE TRIM closes stands on the ray: its control point is the
+        // chain's LINE carried on, not the end vertex the clamp gives (at 0.9 of the sheared
+        // prism's room a row behind its near end was bent round that vertex and stood 0.0057
+        // inside the round). Every other fill keeps the clamp, bit for bit.
+        // A tie vertex (see tie_spans) stands for every parameter its jump spans, so it reads the
+        // one nearest its partner's: the mitre spoke from a turn's inside corner to the turn's
+        // outer vertex is drawn about the turn's vertex itself, in the bisector plane.
+        let left_reads = right.parameters[ru].clamp(left_span[lu].0, left_span[lu].1);
+        let right_reads = left.parameters[lu].clamp(right_span[ru].0, right_span[ru].1);
+        let mean = (left_reads + right_reads) / 2.0;
+        let c = if rows_on_the_ray {
+            chain.point_on_the_ray(mean).1
+        } else {
+            chain.point_at(mean.clamp(0.0, chain.length))
+        };
+
+        let mut arc = vec![0; row_length];
+        arc[0] = a;
+        arc[segments as usize] = b;
+        let p = mesh.position(a);
+        let q = mesh.position(b);
+        let mut along: Box<dyn Fn(f64) -> Vector3> =
+            Box::new(move |f| gap_fill::arc_point(p, c, q, f));
+        // A row past the chain's end whose spoke is short against its reach to the control point:
+        // the fade has all but run out there, so it too is laid as its straight edge (the far end
+        // repeated, as a meeting-point row is). Past the end both rails stand on the circle round
+        // the clamped end vertex, and where the input's own fan of edges at that vertex is dense
+        // the rail vertices crowd 3e-4 apart; every row bent round that one vertex left a shared
+        // rail vertex on the one tangent toward it, and the cells between them folded in single
+        // precision (Many Holes c563 at its search size: rows from left 7530 / 7561 onto right
+        // 7570, spokes 0.006 and 0.0008 against a reach of 0.026). Rows inside the chain's span
+        // never take this: their mean is on the chain.
+        if meets_on_the_crease
+            && !rows_on_the_ray
+            && (mean < 0.0 || mean > chain.length)
+            && (q - p).length()
+                < SHORT_PAST_END_SPOKE * cs_math::min_f64((p - c).length(), (q - c).length())
+        {
+            let mut straight = vec![b; row_length];
+            straight[0] = a;
+            arcs.push(straight);
+            continue;
+        }
+
+        if super::corner_cap_flat_ends::use_flat_ends()
+            && rows_on_the_ray
+            && open_gap_fill_cut_section::fans_from_a_rail_run_out(spokes, l, r, left, right, tie)
+        {
+            let cut = open_gap_fill_cut_section::cut_section_arc(mesh, chain, left, lu, right, ru)?;
+            if cut.in_the_plane {
+                // Wholly in the cutting plane: the row is its one straight edge, carried by B
+                // repeated, so each cell beside it is a flat fan onto B and a last such row on the
+                // end run is no hole.
+                for slot in arc.iter_mut().take(segments as usize).skip(1) {
+                    *slot = b;
+                }
+
+                arcs.push(arc);
+                continue;
+            }
+
+            if let Some(cut_row) = cut.row {
+                // The row is the round alone, from where the section crosses the face A ran out
+                // onto down to B. Its straight part in that face is not laid as the row: that
+                // face's piece between A, the rows' crossings and the in-plane rows beyond them is
+                // one flat region (FlatRunOut), and laid a row at a time the straight parts fanned
+                // onto A one way while the in-plane rows fanned back over the same face the other
+                // (Bottom Center Edge at its saved 6: a zero-thickness double sheet the app's
+                // self-intersection check drops the build for).
+                let cut_at = cut.cut_at;
+                arc[0] = mesh.add_vertex(cut_row(cut_at));
+                added_vertices.push(arc[0]);
+                along = Box::new(move |f| cut_row(cut_at + ((1.0 - cut_at) * f)));
+            }
+        }
+
+        for s in 1..segments {
+            let added = mesh.add_vertex(along(f64::from(s) / f64::from(segments)));
+            added_vertices.push(added);
+            arc[s as usize] = added;
+        }
+
+        arcs.push(arc);
+    }
+
+    Ok(arcs)
 }
 
 /// C# `OpenGapFill.EndsMeet`: whether two open gap loops meet end to end - the left's start the

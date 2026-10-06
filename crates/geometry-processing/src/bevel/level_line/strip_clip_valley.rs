@@ -1,7 +1,9 @@
 //! The strip clip's VALLEY mode. Ports `Bevel/LevelLine/StripClip.Valley.cs` (a partial of the C#
-//! static class `StripClip`): so far which side of a plane the other face says is kept
+//! static class `StripClip`): which side of a plane the other face says is kept
 //! ([`other_says`]), the one run of a loop lying in a single plane ([`one_plane_run`]) and the fan
-//! from a corner facing the wall ([`fan_facing`]), and the valley's cap ([`valley_cap`]).
+//! from a corner facing the wall ([`fan_facing`]), the valley's cap ([`valley_cap`]), the two walls
+//! ([`valley_planes`]) and the valley's two ties ([`insert_valley_ties`]). The clip that picks
+//! this mode is `strip_clip_neighbour`.
 
 use std::collections::HashSet;
 
@@ -9,7 +11,7 @@ use vector_math::Vector3;
 
 use indexmap::{IndexMap, IndexSet};
 
-use super::strip_clip::{directed, format_e0, note, ClipPlane};
+use super::strip_clip::{directed, format_e0, insert_ties, note, ClipDistance, ClipPlane};
 use super::triangle_edges;
 use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
 
@@ -277,4 +279,39 @@ pub fn valley_planes(mesh: &LevelLineMesh, part: &[(i32, i32)]) -> Option<Vec<Va
     } else {
         None
     }
+}
+
+/// C# `StripClip.InsertValleyTies`: both ties of a valley. The shared crease pierces the kept
+/// round once beside each of its old ends, so each end on the crease stretch (`crease_vertices`)
+/// takes the crossing nearest it - the ridge's rule ([`insert_ties`]), read once per end, ends in
+/// ascending order. False where a tie would split an edge the kept surface stands on.
+pub fn insert_valley_ties(
+    mesh: &mut LevelLineMesh,
+    strip: &mut HashSet<i32>,
+    attached: &mut HashSet<i32>,
+    crease_vertices: &HashSet<i32>,
+    planes: &mut [ClipPlane],
+    distance: ClipDistance,
+) -> Result<bool, LevelLineMeshError> {
+    let mut ends: Vec<i32> = planes[0]
+        .2
+        .iter()
+        .filter(|v| planes[1].2.contains(v) && crease_vertices.contains(v))
+        .copied()
+        .collect();
+    ends.sort_unstable();
+    for end in ends {
+        if !insert_ties(
+            mesh,
+            strip,
+            attached,
+            &HashSet::from([end]),
+            planes,
+            distance,
+        )? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
 }

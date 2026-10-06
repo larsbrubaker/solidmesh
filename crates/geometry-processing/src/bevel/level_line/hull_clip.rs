@@ -4,8 +4,9 @@
 //! strip OUTSIDE any of them is dropped. Ports the nested type of `Bevel/LevelLine/HullClip.cs` (a
 //! C# static class): one supporting plane ([`HullClipPlane`]), the kept surface's supporting
 //! planes the strip crosses ([`crossed_supporting_planes`]), the face-directed edge ([`directed`])
-//! and the thread's last outcome ([`note`], [`last_outcome`]). The clip itself lands with later
-//! packages.
+//! and the thread's last outcome ([`note`], [`last_outcome`]), the clip back to the hull
+//! ([`clip`], splitting along each plane with [`split_along`]) and the hull end of a fill
+//! ([`try_clip_and_cap`], capping each plane's hole with [`cap`] and [`ear_clip`]).
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -166,6 +167,203 @@ pub fn crossed_supporting_planes(mesh: &LevelLineMesh, strip: &HashSet<i32>) -> 
     }
 
     planes
+}
+
+/// C# `Clip`'s local `Distance`: a vertex ON plane `plane` by bookkeeping reads zero, every other
+/// its computed signed distance.
+fn plane_distance(mesh: &LevelLineMesh, planes: &[HullClipPlane], plane: i32, vertex: i32) -> f64 {
+    let plane = &planes[plane as usize];
+    if plane.on.contains(&vertex) {
+        0.0
+    } else {
+        (mesh.position(vertex) - plane.origin).dot(plane.normal)
+    }
+}
+
+/// C# `HullClip.Clip`: splits `strip` along each plane where it bounds the hull and drops every
+/// piece outside any plane. False, with the strip as far as it got, where a crossing lies on an
+/// edge the kept surface stands on or a piece is left straddling a plane.
+pub fn clip(
+    mesh: &mut LevelLineMesh,
+    strip: &mut HashSet<i32>,
+    planes: &mut [HullClipPlane],
+) -> Result<bool, LevelLineMeshError> {
+    let distance = plane_distance;
+
+    // The TIES first, as StripClip's: where two planes' zeros meet inside a strip triangle (the
+    // part's edge between them piercing the strip), a vertex on both, so both clip curves end on
+    // it. Without it the piece round the pierce straddles both planes with each crossing outside
+    // the other plane, and no split is made there.
+    for f in 0..planes.len() {
+        for h in (f + 1)..planes.len() {
+            let mut ordered: Vec<i32> = strip.iter().copied().collect();
+            ordered.sort_unstable();
+            for t in ordered {
+                let face = mesh.triangles()[t as usize];
+                let (fi, hi) = (f as i32, h as i32);
+                let (fa, fb, fc) = (
+                    distance(mesh, planes, fi, face.a),
+                    distance(mesh, planes, fi, face.b),
+                    distance(mesh, planes, fi, face.c),
+                );
+                let (ha, hb, hc) = (
+                    distance(mesh, planes, hi, face.a),
+                    distance(mesh, planes, hi, face.b),
+                    distance(mesh, planes, hi, face.c),
+                );
+                let (p1, q1, r1) = (fb - fa, fc - fa, -fa);
+                let (p2, q2, r2) = (hb - ha, hc - ha, -ha);
+                let det = (p1 * q2) - (q1 * p2);
+                if det == 0.0 {
+                    continue;
+                }
+
+                let u = ((r1 * q2) - (q1 * r2)) / det;
+                let v = ((p1 * r2) - (r1 * p2)) / det;
+                const INTERIOR: f64 = 1e-9;
+                if u <= INTERIOR || v <= INTERIOR || 1.0 - u - v <= INTERIOR {
+                    continue;
+                }
+
+                let a = mesh.position(face.a);
+                let at = a + ((mesh.position(face.b) - a) * u) + ((mesh.position(face.c) - a) * v);
+                let others = (0..planes.len())
+                    .filter(|&g| g != f && g != h)
+                    .all(|g| (at - planes[g].origin).dot(planes[g].normal) <= 0.0);
+                if !others {
+                    continue;
+                }
+
+                let before = mesh.triangle_count();
+                let tie = mesh.split_triangle(t, at)?;
+                for child in before..mesh.triangle_count() {
+                    strip.insert(child);
+                }
+
+                planes[f].on.insert(tie);
+                planes[h].on.insert(tie);
+            }
+        }
+    }
+
+    // To a fixed point, as StripClip's: a split along one plane can make an edge newly cross
+    // another inside the hull.
+    let mut splits = 1;
+    while splits > 0 {
+        splits = 0;
+        for f in 0..planes.len() {
+            let made = split_along(mesh, strip, f, planes, &distance)?;
+            if made < 0 {
+                return Ok(false);
+            }
+
+            splits += made;
+        }
+    }
+
+    // A piece with no corner inside some plane and one outside it is in the air.
+    let outside = |mesh: &LevelLineMesh, planes: &[HullClipPlane], t: i32| {
+        let face = mesh.triangles()[t as usize];
+        (0..planes.len() as i32).any(|f| {
+            let (da, db, dc) = (
+                distance(mesh, planes, f, face.a),
+                distance(mesh, planes, f, face.b),
+                distance(mesh, planes, f, face.c),
+            );
+            da >= 0.0 && db >= 0.0 && dc >= 0.0 && da + db + dc > 0.0
+        })
+    };
+    let mut air: Vec<i32> = strip
+        .iter()
+        .copied()
+        .filter(|&t| outside(mesh, planes, t))
+        .collect();
+    air.sort_unstable();
+    for t in air {
+        mesh.remove_triangle(t);
+        strip.remove(&t);
+    }
+
+    // What is left must lie inside every plane: a piece still straddling one was never split
+    // because its crossing lay outside another plane, and the pieces that are left would be in
+    // the air in part. (Sorted, so the note names the same first piece every run; C# names the
+    // set's first.)
+    let mut straddling: Vec<i32> = strip
+        .iter()
+        .copied()
+        .filter(|&t| {
+            let face = mesh.triangles()[t as usize];
+            (0..planes.len() as i32).any(|f| {
+                distance(mesh, planes, f, face.a) > 0.0
+                    || distance(mesh, planes, f, face.b) > 0.0
+                    || distance(mesh, planes, f, face.c) > 0.0
+            })
+        })
+        .collect();
+    straddling.sort_unstable();
+    if let Some(&first) = straddling.first() {
+        let mesh = &*mesh;
+        let planes = &*planes;
+        note(|| {
+            let face = mesh.triangles()[first as usize];
+            let corners: Vec<String> = [face.a, face.b, face.c]
+                .iter()
+                .map(|&v| {
+                    let readings: Vec<String> = (0..planes.len() as i32)
+                        .map(|f| format!("{:.3e}", distance(mesh, planes, f, v)))
+                        .collect();
+                    format!("{}[{}]", mesh.position(v), readings.join(","))
+                })
+                .collect();
+            format!(
+                "{} pieces straddle, first {}",
+                straddling.len(),
+                corners.join(" ")
+            )
+        });
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
+/// C# `HullClip.TryClipAndCap`: the hull end of a fill - clips the strip laid from `start` on the
+/// part's supporting planes it crosses, drops the air, and caps the hole in each plane, bounded
+/// there by the clip curve and the part's own edges round the mouth. The kept edges round the hole
+/// become the end's closing run in `kept`, and the rails' virtual edges leave it. False when the
+/// clip or a cap cannot close.
+pub fn try_clip_and_cap(
+    mesh: &mut LevelLineMesh,
+    laid: &mut Vec<i32>,
+    start: usize,
+    kept: &mut Vec<(i32, i32)>,
+) -> Result<bool, LevelLineMeshError> {
+    let mut strip: HashSet<i32> = laid[start..].iter().copied().collect();
+    let mut planes = crossed_supporting_planes(mesh, &strip);
+    note(|| {
+        let named: Vec<String> = planes
+            .iter()
+            .map(|p| format!("{}@{}", p.normal, p.origin))
+            .collect();
+        format!("planes {}: {}", planes.len(), named.join(" "))
+    });
+    // C#'s `&&` short-circuits: the cap runs only on a clip that held.
+    let result = !planes.is_empty()
+        && clip(mesh, &mut strip, &mut planes)?
+        && cap(mesh, &mut strip, &planes, kept)?;
+    if result {
+        note(|| "done".to_string());
+    }
+
+    laid.truncate(start);
+    let mut left: Vec<i32> = strip
+        .iter()
+        .copied()
+        .filter(|&t| !mesh.is_removed(t))
+        .collect();
+    left.sort_unstable();
+    laid.extend(left);
+    Ok(result)
 }
 
 /// C# `HullClip.EarClip`: closes one planar outline, traversed the way its cap runs, by ear

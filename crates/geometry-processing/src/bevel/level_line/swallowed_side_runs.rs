@@ -4,7 +4,7 @@
 //! side is swallowed ([`is_swallowed`]), the run made up off the mesh ([`virtual_run`],
 //! [`virtual_run_over`]), the span the rows must cover ([`row_span`]), the room where the two ties
 //! merge ([`ties_merge_room`]) and both sides' runs ([`runs_if_both_swallowed`]). The swallowed
-//! strip's fill lands with its method package.
+//! strip's fill is `swallowed_side::fill`.
 
 use vector_math::{cs_math, Vector3};
 

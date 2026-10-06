@@ -1,12 +1,136 @@
 //! The fill where a growing crease dies out under the band. Ports
 //! `Bevel/LevelLine/DyingCreaseFill.cs` (a C# static class): so far the extreme rail vertex
-//! ([`extreme`]), the open run between two loop indices ([`run`]) and which cut it fills
-//! ([`is_one_loop_round_an_open_chain`]); the fill lands with later packages.
+//! ([`extreme`]), the open run between two loop indices ([`run`]), which cut it fills
+//! ([`is_one_loop_round_an_open_chain`]) and the fill itself ([`try_die_out`]), which cuts the one
+//! loop into two runs and hands them to the fade's own fill (`open_gap_fill_fill::fill`).
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
 use super::open_gap_fill;
-use super::{BandGapResult, GapLoop, LevelLineMesh, LevelLineWork, WorkError};
+use super::open_gap_fill_fill::{self, OpenFillEnds};
+use super::{
+    BandGapResult, BandProfile, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
+    LevelLineMeshError, LevelLineWork, WorkError,
+};
+
+/// A watcher of the dying crease's hole, as directed edges.
+pub type WatchDyingHole = Rc<dyn Fn(&[(i32, i32)])>;
+
+thread_local! {
+    /// C# `[ThreadStatic] DyingCreaseFill.WatchDyingHole`: a read-only observer of the dying
+    /// crease's hole - the directed edges round the two runs the loop is cut into, handed over
+    /// just before the fade's fill closes them. Per thread; `None` (the default) costs nothing.
+    pub static WATCH_DYING_HOLE: RefCell<Option<WatchDyingHole>> = const { RefCell::new(None) };
+}
+
+/// C# `DyingCreaseFill.TryDieOut`: the fill where a growing crease dies out at both ends under the
+/// band - one open chain and one closed loop round it. The loop is cut at the two vertices where
+/// it passes the chain's ends ([`extreme`]) into two open runs, which go to the fade's own fill.
+/// Anything else about a one-loop open gap is refused by name.
+pub fn try_die_out(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, LevelLineMeshError> {
+    let refused = GapFillResult {
+        refusal: GapFillRefusal::OpenChainEnds,
+        mesh: gap.mesh.clone(),
+        ..GapFillResult::default()
+    };
+    // C# reads `gap.Mesh` without a null check: a gap with no mesh cannot be one loop round a
+    // chain the cut walked, so it is refused here rather than dereferenced.
+    let Some(mesh_handle) = gap
+        .mesh
+        .as_ref()
+        .filter(|_| is_one_loop_round_an_open_chain(Some(gap)))
+    else {
+        open_gap_fill::set_ends_site(Some("dying crease 1".to_string()));
+        return Ok(refused);
+    };
+
+    let gap_loop = &gap.loops[0];
+    let chain = &gap.chains[0];
+    if gap_loop.vertices.len() < 4 {
+        // Fewer than four boundary vertices cannot make two rails of two points each.
+        open_gap_fill::set_ends_site(Some("dying crease 2".to_string()));
+        return Ok(refused);
+    }
+
+    let (near, far) = {
+        let mesh = mesh_handle.borrow();
+        let mut extended = vec![0.0; gap_loop.vertices.len()];
+        for (i, value) in extended.iter_mut().enumerate() {
+            LevelLineWork::charge(1)?;
+            *value = open_gap_fill::extended(
+                mesh.position(gap_loop.vertices[i]),
+                gap_loop.parameters[i],
+                chain,
+            );
+        }
+
+        let points = chain.points();
+        (
+            extreme(&mesh, gap_loop, &extended, chain.length, points[0], false),
+            extreme(
+                &mesh,
+                gap_loop,
+                &extended,
+                chain.length,
+                points[points.len() - 1],
+                true,
+            ),
+        )
+    };
+
+    if near == far {
+        open_gap_fill::set_ends_site(Some("dying crease 3".to_string()));
+        return Ok(refused);
+    }
+
+    let one = run(gap_loop, near as usize, far as usize)?;
+    let other = run(gap_loop, far as usize, near as usize)?;
+    if one.vertices.len() < 2 || other.vertices.len() < 2 {
+        open_gap_fill::set_ends_site(Some("dying crease 4".to_string()));
+        return Ok(refused);
+    }
+
+    let watch = WATCH_DYING_HOLE.with(|watch| watch.borrow().clone());
+    if let Some(watch) = watch {
+        watch(&open_gap_fill::hole_between(&one, &other));
+    }
+
+    let mut laid = Vec::new();
+    let built = open_gap_fill_fill::fill(
+        mesh_handle,
+        chain,
+        &one,
+        &other,
+        profile,
+        fillet_segments,
+        &mut laid,
+        OpenFillEnds::default(),
+    )?;
+    Ok(if built.filled() {
+        let (triangles, vertices) = (
+            built.added_triangles.len() as i32,
+            built.added_vertices.len() as i32,
+        );
+        GapFillResult {
+            refusal: GapFillRefusal::None,
+            mesh: built.mesh,
+            added_triangles: built.added_triangles,
+            added_vertices: built.added_vertices,
+            triangles_of_chain: vec![triangles],
+            vertices_of_chain: vec![vertices],
+            ..GapFillResult::default()
+        }
+    } else {
+        built
+    })
+}
 
 /// The loop vertex at the greatest (or least) extended parameter: among the ties - within the open
 /// fill's parameter tie of the chain's `length` - the ones nearest `end_vertex`, and of those the

@@ -9,7 +9,9 @@
 //! ([`on_the_ball`], [`covers_the_ball_once`]), and one corner hole closed by the filler
 //! ([`fill_one`], with [`convex_creases_at_the_arc_ends`] and [`in_face_cross_tangent`]) with its
 //! watchers ([`WATCH_CORNER_HOLES`], the build's `WorkBudget::watch_hole_fills`) and its last
-//! failure ([`last_hole_fill_failure`]). Its switch is in `corner_cap_hole_fill_switch.rs`.
+//! failure ([`last_hole_fill_failure`]). Its switch is in `corner_cap_hole_fill_switch.rs`; its
+//! end hole closed by the one filler (`EndHoleByTheOneFiller`) is in
+//! `corner_cap_hole_fill_end.rs`.
 
 use indexmap::IndexMap;
 use std::cell::Cell;

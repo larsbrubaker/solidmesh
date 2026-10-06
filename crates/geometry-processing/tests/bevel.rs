@@ -93,6 +93,8 @@ mod hole_fill_flat_wall_tests;
 mod hole_fill_tests;
 #[path = "bevel/hole_fill_validity_tests.rs"]
 mod hole_fill_validity_tests;
+#[path = "bevel/hull_clip_tests.rs"]
+mod hull_clip_tests;
 #[path = "bevel/insert_polyline_tests.rs"]
 mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]

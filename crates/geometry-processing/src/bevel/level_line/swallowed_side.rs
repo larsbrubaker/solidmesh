@@ -1,14 +1,18 @@
 //! A side the band swallows whole. Ports `Bevel/LevelLine/SwallowedSide.cs` (a C# static class):
 //! so far its mesh readings - whether a triangle touches a point ([`touches`]), a side's vertices
 //! ([`side_vertices`]), the direction away from a segment on a side ([`away_on_side`]) and the
-//! planes' tolerance ([`tolerance`]); the swallow tests and the made-up runs are in
-//! `swallowed_side_runs.rs`.
+//! planes' tolerance ([`tolerance`]) - and the swallowed strip's fill ([`fill`]); the swallow
+//! tests and the made-up runs are in `swallowed_side_runs.rs`.
 
 use indexmap::IndexSet;
 
 use vector_math::Vector3;
 
-use super::{LevelLineMesh, LevelLineTriangle};
+use super::open_gap_fill_fill::{self, OpenFillEnds};
+use super::{
+    BandGapResult, BandProfile, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
+    LevelLineMeshError, LevelLineTriangle,
+};
 
 /// True when a corner of `tri` stands within the mesh's same-place backstop of `point`.
 pub fn touches(mesh: &LevelLineMesh, tri: LevelLineTriangle, point: Vector3) -> bool {
@@ -80,4 +84,73 @@ pub const ON_PLANE_PER_LENGTH: f64 = 1e-5;
 /// setback (at least 1).
 pub fn tolerance(chain: &super::ChainField) -> f64 {
     ON_PLANE_PER_LENGTH * vector_math::cs_math::max_f64(1.0, chain.max_setback)
+}
+
+/// C# `SwallowedSide.Fill`: the swallowed strip - each side's made-up run minted as the rail (side
+/// 1 walked ascending, side 2 descending, as the cut walks a side's run with the kept surface on
+/// its left), the rows laid whole between them, and the valley clip (`strip_clip`) dropping what
+/// is behind either wall and growing both walls to the round. Asked only of a gap with swallowed
+/// runs (C#'s caller, `GapFill.Fill`, checks first); a gap without them, or without a mesh, has no
+/// strip to lay and is refused as open chain ends rather than dereferenced.
+pub fn fill(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, LevelLineMeshError> {
+    let (Some(mesh_handle), Some(runs)) = (gap.mesh.as_ref(), gap.swallowed_runs.as_ref()) else {
+        return Ok(GapFillResult {
+            refusal: GapFillRefusal::OpenChainEnds,
+            mesh: gap.mesh.clone(),
+            ..GapFillResult::default()
+        });
+    };
+
+    let mut minted = Vec::new();
+    let (left, right) = {
+        let mut mesh = mesh_handle.borrow_mut();
+        let mut run_of = |side: i32| {
+            let run = &runs[(side - 1) as usize];
+            let mut vertices: Vec<i32> = run.iter().map(|r| mesh.add_vertex(r.0)).collect();
+            let mut parameters: Vec<f64> = run.iter().map(|r| r.1).collect();
+            minted.extend(vertices.iter().copied());
+            if side == 2 {
+                vertices.reverse();
+                parameters.reverse();
+            }
+
+            GapLoop::new(side, false, vertices, parameters, 0, false, None)
+        };
+        let left = run_of(1);
+        let right = run_of(2);
+        (left, right)
+    };
+
+    let filled = open_gap_fill_fill::fill(
+        mesh_handle,
+        &gap.chains[0],
+        &left,
+        &right,
+        profile,
+        fillet_segments,
+        &mut Vec::new(),
+        OpenFillEnds::default(),
+    )?;
+    if !filled.filled() {
+        return Ok(filled);
+    }
+
+    let vertices: Vec<i32> = minted
+        .into_iter()
+        .chain(filled.added_vertices.iter().copied())
+        .collect();
+    let (triangles, vertex_count) = (filled.added_triangles.len() as i32, vertices.len() as i32);
+    Ok(GapFillResult {
+        refusal: GapFillRefusal::None,
+        mesh: filled.mesh,
+        added_triangles: filled.added_triangles,
+        added_vertices: vertices,
+        triangles_of_chain: vec![triangles],
+        vertices_of_chain: vec![vertex_count],
+        ..GapFillResult::default()
+    })
 }
