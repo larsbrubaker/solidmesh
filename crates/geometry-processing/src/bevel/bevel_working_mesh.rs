@@ -5,14 +5,17 @@
 //! ([`StampedVerdict`], held by whoever holds the source mesh - C#'s weak table keyed by the mesh
 //! becomes an owned value passed in, per the bevel-core rule for per-object readings), carrying the
 //! working mesh into the source's placement ([`carry_into`]), the folded-flap drop, the weld the
-//! kernel needs, and the shared seam and openness readings. `CreateFrom` lands with the core's
-//! packages.
+//! kernel needs, the shared seam and openness readings, and the working copy itself
+//! ([`create_from`], [`create_from_with_advisories`]).
 
 use std::collections::{HashMap, HashSet};
 
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::{Face, FaceList, Mesh};
 use vector_math::{cs_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
+
+use super::{bevel_t_vertex_slivers, bevel_thin_slivers, BevelAdvisory, BevelAdvisoryCode};
+use crate::topology::FeatureEdgeSet;
 
 /// The least a working copy can be worth repairing for, as a fraction of its bounding box.
 /// Anything flatter than this encloses nothing to speak of, so the sign of its volume is
@@ -384,4 +387,78 @@ pub fn signed_volume(mesh: &Mesh) -> f64 {
     }
 
     total / 6.0
+}
+
+/// C# `CreateFrom(Mesh, CancellationToken)`: [`create_from_with_advisories`] with its advisories
+/// put aside.
+pub fn create_from(source_mesh: &Mesh, remembered: &mut StampedVerdict) -> Mesh {
+    create_from_with_advisories(source_mesh, remembered).0
+}
+
+/// C# `CreateFrom(Mesh, CancellationToken, out IReadOnlyList<BevelAdvisory>)`: a working copy of
+/// `source_mesh` - never the source's own mesh, which a design must get back exactly as it went in -
+/// repaired if feature detection finds nothing in it, turned the right way out if it arrived inside
+/// out, and freed of folded flaps, thin slivers and T-vertex slivers; with what had to be repaired,
+/// for the caller to put in front of the user. The weld stays quiet by product decision: it changes
+/// nothing about what the part IS. `remembered` is the source's stamped verdict (C#'s weak table).
+///
+/// The split-chord pass (`BevelSplitChords`) would stand between the thin slivers and the
+/// T-vertices and is deliberately NOT called: wired in, it moved six Onshape-control pins and the
+/// face-edge survey and cleared neither part it was written for.
+pub fn create_from_with_advisories(
+    source_mesh: &Mesh,
+    remembered: &mut StampedVerdict,
+) -> (Mesh, Vec<BevelAdvisory>) {
+    let mut working_mesh = source_mesh.copy();
+
+    if FeatureEdgeSet::create(&working_mesh).count() == 0 {
+        working_mesh.clean_and_merge();
+    }
+
+    // Turned the right way out BEFORE the weld is considered: an inside-out mesh is one the kernel
+    // refuses for a reason no welding fixes, so asked the other way round every seam the weld closed
+    // was thrown away.
+    let mut advisories = Vec::new();
+
+    if is_inside_out(&working_mesh) {
+        turn_right_way_out(&mut working_mesh);
+        advisories.push(BevelAdvisory::new(
+            BevelAdvisoryCode::SourceMeshWasInsideOut,
+            Vec::new(),
+        ));
+    }
+
+    let mut repaired =
+        welded_if_the_kernel_would_refuse_it(Some(source_mesh), remembered, working_mesh);
+
+    // After the weld, because a weld is what puts a flap's two faces on the same three vertices.
+    let flap_pairs = folded_flaps_dropped(&mut repaired);
+
+    if flap_pairs > 0 {
+        advisories.push(BevelAdvisory::new(
+            BevelAdvisoryCode::SourceMeshHadFoldedFlaps,
+            vec![flap_pairs.into()],
+        ));
+    }
+
+    // The seams the weld would have closed, ahead of the all-or-nothing T-vertex pass.
+    let thin = bevel_thin_slivers::collapsed_from(&mut repaired);
+
+    if thin > 0 {
+        advisories.push(BevelAdvisory::new(
+            BevelAdvisoryCode::SourceMeshHadThinSlivers,
+            vec![thin.into()],
+        ));
+    }
+
+    let slivers = bevel_t_vertex_slivers::dropped_from(&mut repaired);
+
+    if slivers > 0 {
+        advisories.push(BevelAdvisory::new(
+            BevelAdvisoryCode::SourceMeshHadTVertexSlivers,
+            vec![slivers.into()],
+        ));
+    }
+
+    (repaired, advisories)
 }

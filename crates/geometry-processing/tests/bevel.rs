@@ -23,6 +23,8 @@ mod bevel_face_fit_cap_tests;
 mod bevel_face_fit_concave_collision_tests;
 #[path = "bevel/bevel_face_run_out_tests.rs"]
 mod bevel_face_run_out_tests;
+#[path = "bevel/bevel_folded_flap_repair_tests.rs"]
+mod bevel_folded_flap_repair_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_pair_corner_recognition_tests.rs"]

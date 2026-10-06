@@ -3,8 +3,8 @@
 //! ball sits and what an unpatched corner has to say ([`BevelCornerPatchSet`]), and what has been
 //! selected at one mesh vertex ([`Corner`], nested in the C# `static class BevelCornerPatches`,
 //! whose functions land in this module: here the corner's own constants, building one corner's tool
-//! ([`try_build`]) and placing its ball ([`try_get_inset_point`]); collecting a selection's corners
-//! lands with a later package).
+//! ([`try_build`]), placing its ball ([`try_get_inset_point`]), collecting a selection's corners
+//! ([`collect`]) and the whole selection's tools ([`create`])).
 //!
 //! Where three or more fillet chains of one radius meet at a vertex, the swept tools leave the
 //! intersection of their cylinders where a rolling ball would leave a sphere: on an OUTSIDE corner
@@ -401,4 +401,112 @@ pub fn try_get_inset_point(
     }
 
     Some((vertex - from_center, from_center))
+}
+
+/// C# `BevelCornerPatches.Create`: the corner tools for a whole selection, read across every group
+/// at once - a vertex does not care which group each edge was picked into. `resolutions` is every
+/// group's resolved selection and `eligible` which of them resolved and fit; a chamfer
+/// (`round_profile` false), or a fillet of fewer than [`MINIMUM_SEGMENTS_FOR_A_PATCH`] segments,
+/// needs no patch and gets none. The corners a run may drive straight through are the three-edge
+/// outside ones with no concave edge at the vertex and a ball that built (see `BevelChainEnds`).
+pub fn create(
+    resolutions: &[BevelEdgeGroupResolution],
+    eligible: &[bool],
+    round_profile: bool,
+    radius: f64,
+    segments: i32,
+) -> BevelCornerPatchSet {
+    let mut warnings: Vec<Option<Vec<BevelAdvisory>>> = vec![None; resolutions.len()];
+    let mut patches = Vec::new();
+    let mut ball_centres = IndexMap::new();
+    let mut fill_ball_centres = IndexMap::new();
+    let mut seam_rings = IndexMap::new();
+
+    if !round_profile || segments < MINIMUM_SEGMENTS_FOR_A_PATCH {
+        // A one segment fillet is a chamfer chord, and a chamfer corner is the union's job.
+        return BevelCornerPatchSet::new(
+            patches,
+            ball_centres,
+            fill_ball_centres,
+            warnings,
+            IndexSet::new(),
+            seam_rings,
+        );
+    }
+
+    let mut patch = |corner: &Corner,
+                     fill: bool,
+                     centres: &mut IndexMap<i32, Vector3>,
+                     patches: &mut Vec<BevelCornerPatch>,
+                     warnings: &mut Vec<Option<Vec<BevelAdvisory>>>| {
+        if (corner.edges.len() as i32) < MINIMUM_EDGES_FOR_A_PATCH {
+            return;
+        }
+
+        match try_build(corner, fill, radius, segments) {
+            Ok((mesh, void_cone, ball_centre, seams)) => {
+                patches.push(BevelCornerPatch::new(
+                    mesh,
+                    void_cone,
+                    corner.groups.clone(),
+                    fill,
+                ));
+                centres.insert(corner.vertex, ball_centre);
+
+                for (mesh_edge, points) in seams {
+                    seam_rings.insert((corner.vertex, mesh_edge), points);
+                }
+            }
+            Err(Some(warning)) => {
+                for &group in &corner.groups {
+                    warnings[group as usize]
+                        .get_or_insert_with(Vec::new)
+                        .push(warning.clone());
+                }
+            }
+            Err(None) => {}
+        }
+    };
+
+    let (outside_corners, inside_corners, concave_vertices) = collect(resolutions, eligible);
+
+    for corner in &outside_corners {
+        patch(
+            corner,
+            false,
+            &mut ball_centres,
+            &mut patches,
+            &mut warnings,
+        );
+    }
+
+    for corner in &inside_corners {
+        patch(
+            corner,
+            true,
+            &mut fill_ball_centres,
+            &mut patches,
+            &mut warnings,
+        );
+    }
+
+    // Which of those scoops the runs may drive straight through rather than stop on.
+    let through_corners: IndexSet<i32> = outside_corners
+        .iter()
+        .filter(|corner| {
+            corner.edges.len() as i32 == MINIMUM_EDGES_FOR_A_PATCH
+                && !concave_vertices.contains(&corner.vertex)
+                && ball_centres.contains_key(&corner.vertex)
+        })
+        .map(|corner| corner.vertex)
+        .collect();
+
+    BevelCornerPatchSet::new(
+        patches,
+        ball_centres,
+        fill_ball_centres,
+        warnings,
+        through_corners,
+        seam_rings,
+    )
 }
