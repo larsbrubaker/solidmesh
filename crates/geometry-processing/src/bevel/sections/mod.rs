@@ -8,6 +8,9 @@
 pub mod bevel_section;
 pub mod section_absorbed_splits;
 pub mod section_builder;
+pub mod section_builder_offsets;
+pub mod section_builder_run;
+pub mod section_builder_station;
 pub mod section_builder_walked_side;
 pub mod section_corner;
 pub mod section_end;

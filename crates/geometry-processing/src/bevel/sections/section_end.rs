@@ -445,3 +445,95 @@ pub fn the_crease_between(
 
     found
 }
+
+/// C# `SectionEnd.TryBuild`: the END section at a run's open end - the profile swept between the
+/// two faces' feet, slid onto the end's own (leaning) plane, and each boundary walked onto the
+/// crease it slides along.
+#[allow(clippy::too_many_arguments)]
+pub fn try_build(
+    edge: &ChainEdge,
+    at_the_start: bool,
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    edge_at_pair: &EdgeAtPair,
+    pool: &mut SectionPool,
+    radius: f64,
+    segments: i32,
+) -> Result<super::BevelSection, super::section_builder_walked_side::SectionBuildRefusal> {
+    use super::section_builder_walked_side::SectionBuildRefusal;
+
+    let read = try_read(edge, at_the_start, mesh, graph, edge_at_pair)
+        .map_err(SectionBuildRefusal::Refused)?;
+    let wedge = read.cosine.clamp(-1.0, 1.0).acos();
+    let centre = read.station - ((read.left + read.right) * radius / (1.0 + read.cosine));
+    let points = segments.max(1) + 1;
+    let mut profile = vec![0; points as usize];
+    for (k, slot) in profile.iter_mut().enumerate() {
+        let swept = centre
+            + (super::section_builder::slerp(
+                read.left,
+                read.right,
+                k as f64 / f64::from(points - 1),
+                wedge,
+            ) * radius);
+        *slot = pool.add(slid_onto_the_plane(
+            swept,
+            read.station,
+            read.transverse,
+            read.along,
+            read.lean,
+        ))?;
+    }
+
+    let slid_centre =
+        slid_onto_the_plane(centre, read.station, read.transverse, read.along, read.lean);
+    let mut at_the_vertex = None;
+    walk_the_boundary_onto_the_crease(
+        mesh,
+        graph,
+        edge_at_pair,
+        pool,
+        read.station,
+        read.transverse,
+        read.left_slide,
+        read.vertex,
+        &mut profile,
+        0,
+        &mut at_the_vertex,
+    )?;
+    let last = profile.len() - 1;
+    walk_the_boundary_onto_the_crease(
+        mesh,
+        graph,
+        edge_at_pair,
+        pool,
+        read.station,
+        read.transverse,
+        read.right_slide,
+        read.vertex,
+        &mut profile,
+        last,
+        &mut at_the_vertex,
+    )?;
+
+    let section = super::BevelSection::new(
+        read.vertex,
+        read.station,
+        read.along,
+        profile[0],
+        profile[last],
+        profile.clone(),
+        slid_centre,
+        slid_centre,
+        super::SectionSide::Slide,
+        super::SectionSide::Slide,
+        read.left_slide,
+        read.right_slide,
+        radius * (wedge / 2.0).tan(),
+    )
+    .expect("an end section's profile ends on its boundaries");
+    Ok(super::BevelSection {
+        kind: super::SectionKind::End,
+        ..section
+    })
+}

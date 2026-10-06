@@ -549,6 +549,19 @@ pub enum SectionBuildRefusal {
     Refused(crate::bevel::BevelAdvisory),
     /// A section point that is not a number.
     NotANumber(NanSectionPoint),
+    /// Declined with nothing named - C#'s `false` with a null advisory, where another rule (a
+    /// junction) draws the station.
+    Declined,
+}
+
+impl SectionBuildRefusal {
+    /// The advisory C# hands back as its `failure` (`None` for a decline or a NaN).
+    pub fn advisory(&self) -> Option<&crate::bevel::BevelAdvisory> {
+        match self {
+            SectionBuildRefusal::Refused(advisory) => Some(advisory),
+            _ => None,
+        }
+    }
 }
 
 impl From<NanSectionPoint> for SectionBuildRefusal {

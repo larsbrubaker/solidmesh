@@ -21,12 +21,16 @@ mod bevel_chain_linker_rim_closure_tests;
 mod bevel_face_fit_cap_tests;
 #[path = "bevel/bevel_face_fit_concave_collision_tests.rs"]
 mod bevel_face_fit_concave_collision_tests;
+#[path = "bevel/bevel_face_fit_corner_tests.rs"]
+mod bevel_face_fit_corner_tests;
 #[path = "bevel/bevel_face_run_out_tests.rs"]
 mod bevel_face_run_out_tests;
 #[path = "bevel/bevel_folded_flap_repair_tests.rs"]
 mod bevel_folded_flap_repair_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
+#[path = "bevel/bevel_obstruction_test_meshes.rs"]
+mod bevel_obstruction_test_meshes;
 #[path = "bevel/bevel_pair_corner_recognition_tests.rs"]
 mod bevel_pair_corner_recognition_tests;
 #[path = "bevel/bevel_partner_tube_clip_tests.rs"]
@@ -181,6 +185,8 @@ mod rust_only_bevel_slice7_tests;
 mod rust_only_bevel_slice8_tests;
 #[path = "bevel/rust_only_bevel_slice9_tests.rs"]
 mod rust_only_bevel_slice9_tests;
+#[path = "bevel/section_loop_entry_tests.rs"]
+mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
