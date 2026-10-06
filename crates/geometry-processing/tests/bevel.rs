@@ -39,6 +39,8 @@ mod bevel_pair_corner_recognition_tests;
 mod bevel_partner_tube_clip_tests;
 #[path = "bevel/bevel_partnered_bead_tests.rs"]
 mod bevel_partnered_bead_tests;
+#[path = "bevel/bevel_patch_refinement_tests.rs"]
+mod bevel_patch_refinement_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]
@@ -53,6 +55,8 @@ mod bevel_source_hull_tests;
 mod bevel_source_round_tests;
 #[path = "bevel/bevel_sweep_back_depth_tests.rs"]
 mod bevel_sweep_back_depth_tests;
+#[path = "bevel/bevel_t_vertex_sliver_repair_tests.rs"]
+mod bevel_t_vertex_sliver_repair_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/bore_test_meshes.rs"]
@@ -199,6 +203,10 @@ mod rust_only_bevel_slice9_tests;
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
+#[path = "bevel/section_surface_walk_fold_tests.rs"]
+mod section_surface_walk_fold_tests;
+#[path = "bevel/section_surface_walk_roof.rs"]
+mod section_surface_walk_roof;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
