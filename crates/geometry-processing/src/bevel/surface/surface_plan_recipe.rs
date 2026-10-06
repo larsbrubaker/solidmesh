@@ -1,10 +1,12 @@
 //! What a surface plan was drawn from, so the same chain can be planned again at another size
-//! ([`SurfacePlanRecipe`], `Bevel/Surface/SurfacePlanRecipe.cs`), with its constructor. Planning at
-//! a size lands with the core's surface packages.
+//! ([`SurfacePlanRecipe`], `Bevel/Surface/SurfacePlanRecipe.cs`), with its constructor and the
+//! chain planned again at a size ([`SurfacePlanRecipe::try_plan_at`]).
 
+use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::bevel::BevelSweptChain;
+use super::SurfaceBevelPlan;
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
 use crate::topology::FaceRegionCache;
 
 /// C# `SurfacePlanRecipe` (a sealed class): everything `SurfaceBevelPlan::try_create` was handed
@@ -37,5 +39,26 @@ impl SurfacePlanRecipe {
             curve_regions,
             round_profile,
         }
+    }
+
+    /// C# `TryPlanAt`: the same chain planned at `size`, or the reason it could not be - which is
+    /// not this reading's to report, since the size it was asked about is one nobody has asked for
+    /// yet. No regions (C#'s null) plans nothing. (C#'s null CHAIN cannot arise: the chain is held
+    /// by value.)
+    pub fn try_plan_at(&self, size: f64) -> Result<Rc<SurfaceBevelPlan>, BevelAdvisory> {
+        let Some(regions) = &self.regions else {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::NoEdgesResolved,
+                Vec::new(),
+            ));
+        };
+
+        SurfaceBevelPlan::try_create_with_curve_regions(
+            &self.chain,
+            regions,
+            self.curve_regions.as_ref(),
+            size,
+            self.round_profile,
+        )
     }
 }

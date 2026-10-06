@@ -1,11 +1,55 @@
 //! Whether a handover between two band ends still leaves a strip of band between them. Ports
-//! `Bevel/Surface/SurfaceHandoverLeavesAStrip.cs` (a C# static class): so far the band test along a
-//! line ([`leaves_a_band`]) and its plan form ([`leaves_a_band_of`]); the handover reading lands
-//! with later packages.
+//! `Bevel/Surface/SurfaceHandoverLeavesAStrip.cs` (a C# static class): the check of a whole plan
+//! ([`try_check`]), the band test along a line ([`leaves_a_band`]) and its plan form
+//! ([`leaves_a_band_of`]).
 
 use vector_math::cs_math;
 
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceLine};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+
+/// C# `TryCheck`: checks every corner of `plan` that swallows an edge - that the edge carrying the
+/// corner's ring still has a band to hand over on both its sides. A plan that swallows nothing is
+/// not measured at all. `Err` is C#'s `failureReason`, named at the corner.
+pub fn try_check(plan: &SurfaceBevelPlan) -> Result<(), BevelAdvisory> {
+    if plan.roles().swallowed_count() == 0 {
+        return Ok(());
+    }
+
+    // The plan's OWN corner keys and not 0..edges: a junction's corner stands at an end of the
+    // chain and is named by a sentinel no edge index can be (SurfaceBevelPlan.JunctionKey).
+    for corner in plan.mixed_corner_keys() {
+        let Some(cut) = plan.roles().try_the_edge_carrying_the_ring_at(corner) else {
+            continue;
+        };
+        let cut = cut as usize;
+
+        for left in [true, false] {
+            let line = if left {
+                &plan.edges[cut].left_tangent_line
+            } else {
+                &plan.edges[cut].right_tangent_line
+            };
+
+            if leaves_a_band_of(plan, cut, left, line) {
+                continue;
+            }
+
+            let at = if corner >= 0 {
+                plan.edges[corner as usize].to()
+            } else {
+                plan.edges[cut].from()
+            };
+
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![at.into()],
+            ));
+        }
+    }
+
+    Ok(())
+}
 
 /// True when some stretch of `line` stands on the kept side of every band end (each end's
 /// `inward` half-space through its point): the half-spaces cut the line to an interval, open when

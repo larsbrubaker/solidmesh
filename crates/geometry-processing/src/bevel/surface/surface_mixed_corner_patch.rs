@@ -1,14 +1,25 @@
 //! The patch that closes a mixed corner between the cut's end ring and the bead's
 //! (`Bevel/Surface/SurfaceMixedCornerPatch.cs`, a static class: free functions here). The ring
 //! readers, the shared face's chord sagitta, the grid's last column and the patch's closure check
-//! ([`nothing_covers_nothing`]), and each strip's end ring ([`try_ring`], [`try_cut_the_ring`]);
-//! the patch's own construction lands with a later package.
+//! ([`nothing_covers_nothing`]), each strip's end ring ([`try_ring`], [`try_cut_the_ring`]), the
+//! patch's grid and quads ([`try_turn_the_ring_round`], [`emit`]), and the close itself
+//! ([`try_close`], answering a [`SurfaceMixedCornerPatchClosed`]).
+
+use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::surface_strip_ends;
-use super::{SurfaceBandEnd, SurfaceMixedCorner, SurfaceStrip, SurfaceVertexPool};
+use super::{
+    surface_mixed_corner_bites, surface_mixed_corner_ring_schedule, surface_mixed_corner_run_out,
+    surface_mixed_corner_wall_ends, surface_split_sewing,
+};
+use super::{
+    SurfaceBandEnd, SurfaceCrossingAtTheMitre, SurfaceMixedCorner, SurfaceMixedCornerFaces,
+    SurfaceRunOutMeetsAWallBand, SurfaceRunOutMeetsTheBand, SurfaceStrip, SurfaceStripStation,
+    SurfaceVertexPool,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// How far off its own circle the shared face's chording already stands - the sagitta of one of
@@ -341,4 +352,236 @@ pub fn try_turn_the_ring_round(
     }
 
     Ok((grid, rows))
+}
+
+/// What [`try_close`] hands back (C#'s `out` parameters): each strip's end ring for the stitch to
+/// sew it up to, the curve each crossed band is cut back by, and where the run-out would have died.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SurfaceMixedCornerPatchClosed {
+    /// The cut's end ring.
+    pub cut_station: SurfaceStripStation,
+    /// The bead's end ring.
+    pub bead_station: SurfaceStripStation,
+    /// The curve the CAP band is cut back by, where a band was crossed; `None` otherwise.
+    pub crossing: Option<Vec<i32>>,
+    /// The curve the WALL band is cut back by, where one was crossed; `None` otherwise.
+    pub crossing_on_the_wall: Option<Vec<i32>>,
+    /// Where the run-out would have died on the sharp edge had nothing crossed it, or -1.
+    pub the_die_point: i32,
+}
+
+/// C# `TryClose`: closes the corner - the two end rings, the bites the blend's footprint takes out
+/// of the faces nobody picked, the torus patch between the rings, and the runout that carries it
+/// on past the end of the bead's rim to the sharp edge.
+///
+/// `cut_index` / `bead_index` say which edge of the build each strip is (its tangent runs in
+/// `seams`), `cut_ends_here` / `bead_ends_here` whether the corner is the END of that strip's own
+/// edge. `wall_ends_at` is the plane the blend is trimmed by where the wall nobody picked RUNS OUT
+/// under it (`None` where it carries on). `crossed_band` (with `the_bands_edge`, its edge's start)
+/// is another chain's band crossing the runout on the cap, `crossed_wall_band` one standing on the
+/// wall, and `at_the_mitre` the hand-over where both are crossed at once.
+#[allow(clippy::too_many_arguments)]
+pub fn try_close(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &Rc<SurfaceMixedCorner>,
+    cut: &SurfaceStrip,
+    bead: &SurfaceStrip,
+    seams: &[SideSeams],
+    cut_index: usize,
+    bead_index: usize,
+    cut_ends_here: bool,
+    bead_ends_here: bool,
+    wall_ends_at: Option<SurfaceBandEnd>,
+    crossed_band: Option<&Rc<SurfaceStrip>>,
+    the_bands_edge: Vector3,
+    crossed_wall_band: Option<&SurfaceStrip>,
+    at_the_mitre: Option<&SurfaceCrossingAtTheMitre>,
+) -> Result<SurfaceMixedCornerPatchClosed, BevelAdvisory> {
+    // Everything this adds is new, and whatever of it lands part way along an edge of a face
+    // nobody cut is a T junction - so the sew below is told where the corner's own vertices start.
+    let split_from = pool.vertices().len() as i32;
+
+    let (cut_ring, cut_meets_at) = try_ring(
+        pool,
+        corner,
+        cut,
+        true,
+        seams,
+        cut_index,
+        cut_ends_here,
+        None,
+    )?;
+    let (bead_ring, bead_meets_at) = try_ring(
+        pool,
+        corner,
+        bead,
+        false,
+        seams,
+        bead_index,
+        bead_ends_here,
+        None,
+    )?;
+
+    // Both rings read from the same end: the profile from the cap face round to the shared face,
+    // and the turn from the handover round to the wall.
+    let profile = from_the_cap_face(corner, &cut_ring);
+    let turns = from_the_handover(corner, &bead_ring);
+
+    // Which grid: the ordinary one, where the ring stands square to the axis and its rail on the
+    // shared face IS the bead's first, or the leaning one, where the ring is a MITRE ring and
+    // every column has its own angle to turn through (SurfaceMixedCornerRingSchedule). Only the
+    // ordinary grid has ROWS of its own for the run-out to carry its last column on.
+    let the_ring_is_the_beads_own_start = profile.last() == turns.first();
+
+    let (grid, rows) = if the_ring_is_the_beads_own_start {
+        let (grid, rows) = try_turn_the_ring_round(pool, corner, &profile, &turns)?;
+        (grid, Some(Rc::new(rows)))
+    } else {
+        let slack = the_shared_faces_own_sagitta(corner, pool);
+        let grid = surface_mixed_corner_ring_schedule::try_turn_the_ring_round(
+            pool, corner, &profile, &turns, slack,
+        )?;
+        (grid, None)
+    };
+
+    // The corner's two faces, each a run of facets read in the cap's own plane: the one the bead
+    // ROLLED along and the one NOBODY PICKED (SurfaceMixedCornerFaces). Usually the same face.
+    let corner_faces = SurfaceMixedCornerFaces::try_read(corner)?;
+    let wall = Rc::clone(&corner_faces.unpicked_face);
+
+    // Where another chain's BAND crosses the runout on the cap, the turns its own rows and its
+    // foot leave that band's material at - read off the seed ring (SurfaceRunOutMeetsTheBand).
+    let meets_the_band = match crossed_band {
+        Some(crossed_band) => {
+            let seed: Vec<Vector3> = last_column_of(&grid)
+                .iter()
+                .map(|&row| pool.position_of(row))
+                .collect();
+
+            SurfaceRunOutMeetsTheBand::try_read(
+                Some(corner),
+                Some(crossed_band),
+                the_bands_edge,
+                Some(&seed),
+                pool.near_enough(),
+            )?
+        }
+        None => None,
+    };
+
+    // And where that band stands on the WALL the corner turns against, the radius out of the axis
+    // it ends each column at (SurfaceRunOutMeetsAWallBand).
+    let meets_a_wall_band = SurfaceRunOutMeetsAWallBand::try_read(
+        Some(corner),
+        crossed_wall_band,
+        at_the_mitre.is_some(),
+    )?;
+
+    let run_out = surface_mixed_corner_run_out::try_columns(
+        pool,
+        corner,
+        &wall,
+        &last_column_of(&grid),
+        corner.turn_radians() / (turns.len() - 1) as f64,
+        wall_ends_at,
+        meets_the_band.as_ref(),
+        meets_a_wall_band.as_ref(),
+        at_the_mitre,
+        rows,
+    )?;
+
+    surface_mixed_corner_bites::try_bite_the_cap_face(
+        pool,
+        faces,
+        corner,
+        &grid,
+        &run_out.columns,
+        surface_mixed_corner_bites::the_corner_the_wall_ends_at(corner, wall_ends_at),
+        wall_ends_at,
+        run_out.the_die_point,
+        run_out.the_sector_runs_to,
+        run_out.the_cap_exit,
+        split_from,
+    )?;
+    surface_mixed_corner_bites::try_bite_the_wall(
+        pool,
+        faces,
+        corner,
+        &corner_faces,
+        &run_out.columns,
+        &run_out.turns,
+        split_from,
+    )?;
+
+    // And where the wall RAN OUT under the blend, the face across its end gives up the section the
+    // blend leaves in that face's own plane (SurfaceMixedCornerWallEnds). C# reads
+    // `wallEndsAt.Value` unguarded: a section without a plane is refused rather than thrown.
+    if let Some(section) = run_out.section.as_deref() {
+        if meets_the_band.is_none() && meets_a_wall_band.is_none() {
+            let Some(across) = wall_ends_at else {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceCornerNotSupported,
+                    vec![corner.corner.into()],
+                ));
+            };
+
+            surface_mixed_corner_wall_ends::try_bite_the_section(
+                pool, faces, corner, across, section, split_from,
+            )?;
+        }
+    }
+
+    // A band's crossing gives up no section of its own: what stands on the other side of that
+    // curve is the band's STRIP, so the section is handed back to be sewn to. With both bands
+    // crossed there are two, each cut back at its own end.
+    let (mut crossing, mut crossing_on_the_wall) = (None, None);
+
+    if meets_the_band.is_some() || meets_a_wall_band.is_some() {
+        crossing = if at_the_mitre.is_some() || meets_the_band.is_some() {
+            run_out.section.clone()
+        } else {
+            None
+        };
+        crossing_on_the_wall = if at_the_mitre.is_some() {
+            run_out.section_on_the_wall.clone()
+        } else if meets_a_wall_band.is_some() {
+            run_out.section.clone()
+        } else {
+            None
+        };
+    }
+
+    emit(pool, faces, corner, &grid);
+
+    // A missing top rim and an empty one draw the same (SurfaceMixedCornerRunOutStrip).
+    let top_rims: Vec<Vec<i32>> = run_out
+        .top_rims
+        .iter()
+        .map(|rim| rim.clone().unwrap_or_default())
+        .collect();
+
+    surface_mixed_corner_run_out::try_emit(
+        pool,
+        faces,
+        corner,
+        &run_out.columns,
+        &run_out.first_rows,
+        Some(&top_rims),
+    )?;
+
+    // ONCE, and after everything: every crossing the bites made, sewn into whatever face now
+    // carries it part way along an edge; a sewing whose readings did not settle is refused rather
+    // than published.
+    surface_split_sewing::sew_in_the_splits_since(pool, faces, split_from)?;
+
+    nothing_covers_nothing(pool, faces)?;
+
+    Ok(SurfaceMixedCornerPatchClosed {
+        cut_station: SurfaceStripStation::clean(cut_ring, cut_meets_at),
+        bead_station: SurfaceStripStation::clean(bead_ring, bead_meets_at),
+        crossing,
+        crossing_on_the_wall,
+        the_die_point: run_out.the_die_point,
+    })
 }

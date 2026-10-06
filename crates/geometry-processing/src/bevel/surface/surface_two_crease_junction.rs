@@ -1,15 +1,16 @@
 //! A junction where TWO creases meet one bead at one corner
-//! (`Bevel/Surface/SurfaceTwoCreaseJunction.cs`, a static class: free functions here). The tests
-//! the junction's reading is made of, and the bead edge that carries its ring, land here first;
-//! the reading itself lands with a later package.
+//! (`Bevel/Surface/SurfaceTwoCreaseJunction.cs`, a static class: free functions here): the
+//! reading ([`try_read`]), the tests it is made of, and the bead edge that carries its ring.
 
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
 use super::{
-    SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerDualFrame, SurfaceMixedJunctionArm,
+    SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerDualFrame, SurfaceMixedJunction,
+    SurfaceMixedJunctionArm, SurfaceMixedJunctionChainEnd,
 };
+use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// How near the two arms' readings of the SAME turn have to agree, as a dimensionless angle and
 /// so a fixed epsilon - the same reasoning as [`SurfaceMixedCorner::SQUARE_ENOUGH`].
@@ -18,6 +19,108 @@ pub const SAME_TURN: f64 = 1e-6;
 /// How near the two walls' outward normals have to stand to be one plane, as the length between
 /// two unit vectors. Dimensionless, so fixed rather than the part's own ruler.
 pub const SAME_WALL: f64 = 1e-6;
+
+/// C# `TryRead`: reads the junction one cut and two creases make at `corner` (the welded mesh's
+/// `vertex`), or says why it cannot be read - always named AT the corner. Pure: it asks the plans
+/// and nothing else. `ends` are the three chain ends the gathering found, in the plans' own order;
+/// `creases` says which two of them are the creases (exactly two, which is what picks this
+/// reading), so the third end is the cut. A shape this does not answer falls back to
+/// [`BevelAdvisoryCode::SurfaceJunctionOfTwoCreases`].
+pub fn try_read(
+    plans: &[Rc<SurfaceBevelPlan>],
+    vertex: i32,
+    corner: Vector3,
+    near_enough: f64,
+    ends: &[SurfaceMixedJunctionChainEnd],
+    creases: &[usize],
+) -> Result<SurfaceMixedJunction, BevelAdvisory> {
+    let two_creases = || refusal(BevelAdvisoryCode::SurfaceJunctionOfTwoCreases, corner);
+
+    // The one end of the three that is not a crease is the cut, and BOTH arms are read off it.
+    let mut cut = 0;
+    for end in 0..ends.len() {
+        if creases[0] != end && creases[1] != end {
+            cut = end;
+        }
+    }
+
+    let mut arms = Vec::with_capacity(2);
+    for &crease in creases {
+        let arm = SurfaceMixedJunction::try_read_the_arm(
+            plans,
+            ends[cut],
+            ends[crease],
+            corner,
+            plans[ends[crease].plan as usize].size,
+            near_enough,
+        )
+        .map_err(|reason| reason.unwrap_or_else(two_creases))?;
+
+        if arm.mixed.hands_over_at_a_mitre {
+            // The ring stands short of the tangency on a chord BEFORE the one that touches, so this
+            // arm's dual is drawn about a different cut line from the other's - two canals, and the
+            // shape is still not one this reading answers.
+            return Err(two_creases());
+        }
+
+        arms.push(arm);
+    }
+
+    if arms[0].mixed.shared_region_key == arms[1].mixed.shared_region_key {
+        // Both creases read as standing on the SAME face of the cut. DEFENSIVE: the mirror of the
+        // one-crease branch's "two cuts sharing one face" guard, and no fixture drives it - named
+        // rather than built, because a corner whose arms disagree about the faces is not one canal.
+        return Err(two_creases());
+    }
+
+    if !the_creases_stand_against_one_wall(&arms[0].mixed, &arms[1].mixed) {
+        return Err(refusal(
+            BevelAdvisoryCode::SurfaceJunctionOfTwoCreasesOnTwoWalls,
+            corner,
+        ));
+    }
+
+    let mut duals = Vec::with_capacity(2);
+    for arm in &arms {
+        duals.push(Rc::new(arm.mixed.try_read_the_dual_canal()?));
+    }
+
+    if !the_two_duals_are_one_canal(&duals[0], &duals[1], near_enough) {
+        return Err(refusal(
+            BevelAdvisoryCode::SurfaceJunctionBeadsDoNotShareOneCanal,
+            corner,
+        ));
+    }
+
+    let mut carrying = Vec::with_capacity(2);
+    for (arm, dual) in arms.iter().zip(&duals) {
+        carrying.push(
+            try_the_bead_edge_carrying_the_ring(plans, arm, dual, corner, near_enough).ok_or_else(
+                || {
+                    refusal(
+                        BevelAdvisoryCode::SurfaceJunctionCanalRunsOffTheBead,
+                        corner,
+                    )
+                },
+            )?,
+        );
+    }
+
+    let (second_carries, second_swallowed) = carrying.pop().expect("two arms were read");
+    let (first_carries, first_swallowed) = carrying.pop().expect("two arms were read");
+
+    Ok(SurfaceMixedJunction::of_two_creases(
+        corner,
+        vertex,
+        with_the_canal(&arms[0], duals[0].clone(), first_carries, first_swallowed),
+        with_the_canal(&arms[1], duals[1].clone(), second_carries, second_swallowed),
+    ))
+}
+
+/// A refusal of this reading's, which every code here words at the corner.
+fn refusal(code: BevelAdvisoryCode, at: Vector3) -> BevelAdvisory {
+    BevelAdvisory::new(code, vec![BevelAdvisoryArg::Vector3(at)])
+}
 
 /// Whether the two creases stand against ONE face - the same region, and one plane. Both,
 /// because two coplanar faces of a part are still two faces to walk back, and two facets of one
@@ -127,11 +230,7 @@ pub fn with_the_canal(
         arm.corner_at_the_start,
         arm.swallowed.clone(),
         arm.mixed.clone(),
-        super::SurfaceMixedJunctionChainEnd::new(
-            arm.bead_end.plan,
-            carries,
-            arm.bead_end.at_the_start,
-        ),
+        SurfaceMixedJunctionChainEnd::new(arm.bead_end.plan, carries, arm.bead_end.at_the_start),
         Some(dual),
         Some(swallowed),
     )

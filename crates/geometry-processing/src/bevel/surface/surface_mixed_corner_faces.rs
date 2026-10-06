@@ -1,13 +1,14 @@
 //! The two faces a mixed corner's footprint comes off, told apart ([`SurfaceMixedCornerFaces`]).
 //! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs` with its constructor and the strips
-//! under the blend ([`SurfaceMixedCornerFaces::strips_under_the_blend`]); its reading lands with the
-//! mixed-corner package's methods.
+//! under the blend ([`SurfaceMixedCornerFaces::strips_under_the_blend`]), and its reading off a
+//! corner ([`SurfaceMixedCornerFaces::try_read`]).
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::SurfaceMixedCornerWall;
+use super::{SurfaceMixedCorner, SurfaceMixedCornerWall};
+use crate::bevel::BevelAdvisory;
 
 /// C# `SurfaceMixedCornerFaces` (a sealed class): the face the bead ROLLED along, which the strip
 /// under the blend is cut from, and the face NOBODY PICKED, which the runout is trimmed against.
@@ -48,6 +49,26 @@ impl SurfaceMixedCornerFaces {
             rolled_section: rolled,
             unpicked_face: unpicked,
         }
+    }
+
+    /// C# `TryRead`: reads both faces of one mixed corner, or says why it cannot - each of them is
+    /// a run of facets in the cap's own plane ([`SurfaceMixedCornerWall`]).
+    pub fn try_read(corner: &Rc<SurfaceMixedCorner>) -> Result<Self, BevelAdvisory> {
+        let unpicked = Rc::new(SurfaceMixedCornerWall::try_read(corner)?);
+
+        if !corner.rolled_is_the_shared_face() {
+            // The bead rolled onto the wall nobody picked - or rolled nowhere at all - so one
+            // reading is both faces and every bite comes off it exactly as it always did.
+            return Ok(Self::new(Rc::clone(&unpicked), unpicked, true));
+        }
+
+        let rolled = Rc::new(SurfaceMixedCornerWall::try_read_section(
+            corner,
+            corner.rolled_section().as_deref(),
+            corner.shared_face_foot(),
+        )?);
+
+        Ok(Self::new(rolled, unpicked, false))
     }
 
     /// C# `StripsUnderTheBlend`: every piece of wall the blend stands over between the bead's stop

@@ -5,14 +5,16 @@
 //! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Only
 //! its nested record (with its constructor), the ring positions ([`positions_of`]) and the three
 //! end rings won from the pool ([`try_the_end_rings`]) land here, one strip's end ring being a
-//! [`SurfaceTwoCreaseJunctionPatchEndRing`], with the patch's grid ([`try_the_grid`]) and its
-//! quads ([`emit`]); the patch's driver lands with the two-crease junction package.
+//! [`SurfaceTwoCreaseJunctionPatchEndRing`], with the patch's driver ([`try_close`]), its grid
+//! ([`try_the_grid`]) and its quads ([`emit`]).
 
 use super::surface_mitre_joint_step::SideSeams;
-use super::{surface_fan, surface_mixed_corner_patch};
 use super::{
-    SurfaceMixedJunction, SurfaceMixedJunctionPatchArrival, SurfaceTwoCreaseJunctionRings,
-    SurfaceVertexPool,
+    surface_fan, surface_mixed_corner_patch, surface_split_sewing, surface_two_crease_junction_wall,
+};
+use super::{
+    SurfaceMixedJunction, SurfaceMixedJunctionPatchArrival, SurfaceStripStation,
+    SurfaceTwoCreaseJunctionRings, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -46,6 +48,60 @@ impl SurfaceTwoCreaseJunctionPatchEndRing {
             as_the_grid_wants_it,
         }
     }
+}
+
+/// C# `TryClose`: closes the junction - the three end rings, the grid between them and what the
+/// wall gives up under it. `arriving` is the three strips in the order this patch wants them: the
+/// CUT, then the first arm's bead, then the second's (`SurfaceMixedJunction::the_arriving_ends`).
+/// Returns one end ring per strip, in the order they were handed in.
+pub fn try_close(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    junction: &SurfaceMixedJunction,
+    arriving: &[SurfaceMixedJunctionPatchArrival],
+    seams: &[SideSeams],
+) -> Result<Vec<SurfaceStripStation>, BevelAdvisory> {
+    // Everything added here is new, and whatever of it lands part way along an edge of a face
+    // nobody cut is a T junction - so the sew at the end is told where the corner's own vertices
+    // start.
+    let split_from = pool.vertices().len() as i32;
+
+    let (cut, first, last) = try_the_end_rings(pool, junction, arriving, seams)?;
+
+    let rings = SurfaceTwoCreaseJunctionRings::try_read(
+        junction,
+        positions_of(pool, &cut.as_the_grid_wants_it),
+        positions_of(pool, &first.as_the_grid_wants_it),
+        positions_of(pool, &last.as_the_grid_wants_it),
+    )?;
+
+    let grid = try_the_grid(
+        pool,
+        junction,
+        &rings,
+        &cut.as_the_grid_wants_it,
+        &first.as_the_grid_wants_it,
+        &last.as_the_grid_wants_it,
+    )?;
+
+    surface_two_crease_junction_wall::try_give_up_the_notch(
+        pool, faces, junction, &grid, split_from,
+    )?;
+
+    emit(pool, faces, junction, &grid);
+
+    // ONCE, and after everything: every crossing this made, sewn into whatever face now carries it
+    // part way along an edge (`surface_mixed_corner_patch` says why it is not carried in the
+    // rings). C# calls the overload that drops the verdict.
+    surface_split_sewing::sew_in_the_splits_since_unchecked(pool, faces, split_from);
+
+    surface_mixed_corner_patch::nothing_covers_nothing(pool, faces)?;
+
+    Ok(vec![
+        SurfaceStripStation::clean(cut.ring, cut.meets_at),
+        SurfaceStripStation::clean(first.ring, first.meets_at),
+        SurfaceStripStation::clean(last.ring, last.meets_at),
+    ])
 }
 
 /// The pool positions of a ring of vertex indices.

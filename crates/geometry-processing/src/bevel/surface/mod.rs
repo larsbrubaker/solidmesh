@@ -92,6 +92,7 @@ pub mod surface_mixed_corner_faces;
 pub mod surface_mixed_corner_hands_over_at_the_mitre;
 pub mod surface_mixed_corner_patch;
 pub mod surface_mixed_corner_read_off_the_edge_plans;
+pub mod surface_mixed_corner_readings;
 pub mod surface_mixed_corner_ring_schedule;
 mod surface_mixed_corner_rows;
 pub mod surface_mixed_corner_run_out;

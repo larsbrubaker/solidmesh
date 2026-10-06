@@ -2,15 +2,23 @@
 //! two cuts' end rings, and the sector it takes out of the cap face
 //! (`Bevel/Surface/SurfaceMixedJunctionPatch.cs`, a static class). Its nested record lands
 //! here, one strip standing at the junction ([`SurfaceMixedJunctionPatchArrival`]), with the
-//! closing ring's check ([`the_closing_rail_stands`]), the patch's schedule ([`try_schedule`]) and
-//! the grid's quads ([`emit`]).
+//! patch's driver ([`try_close`]), the walls under the blend ([`try_bite_the_strips_under_the_blend`]),
+//! the closing ring's check ([`the_closing_rail_stands`]), the patch's schedule ([`try_schedule`]),
+//! the cap's sector ([`try_bite_the_cap_face`]) and the grid's quads ([`emit`]).
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::{surface_fan, surface_mixed_corner_ring_schedule};
-use super::{SurfaceMixedCorner, SurfaceStrip, SurfaceVertexPool};
+use super::surface_mitre_joint_step::SideSeams;
+use super::{
+    surface_convex_bite, surface_fan, surface_mixed_corner_patch,
+    surface_mixed_corner_ring_schedule, surface_split_sewing, surface_two_crease_junction_patch,
+};
+use super::{
+    SurfaceJunctionKind, SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceMixedJunction,
+    SurfaceStrip, SurfaceStripStation, SurfaceVertexPool,
+};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceMixedJunctionPatch.Arrival` (a readonly struct): one strip standing at the junction,
@@ -23,6 +31,183 @@ pub struct SurfaceMixedJunctionPatchArrival {
     pub edge_index: i32,
     /// Whether the corner is that strip's FINISH rather than its start.
     pub ends_here: bool,
+}
+
+/// C# `TryClose`: closes the junction - the three end rings, the grid between them and the cap's
+/// sector. `arriving` is the three strips at the corner: the first cut, the second cut and the bead
+/// (for a TWO-crease junction, the cut and then both beads - that corner is a patch of its own,
+/// [`surface_two_crease_junction_patch::try_close`]). Returns one end ring per strip, in the order
+/// they were handed in. C# reads the three arrivals unguarded; fewer is refused by name.
+pub fn try_close(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    junction: &SurfaceMixedJunction,
+    arriving: &[SurfaceMixedJunctionPatchArrival],
+    seams: &[SideSeams],
+) -> Result<Vec<SurfaceStripStation>, BevelAdvisory> {
+    if junction.kind == SurfaceJunctionKind::TwoCreases {
+        // One cut and two beads: the grid below is written about ONE bead's axis, and the canal this
+        // corner really is turns about the CUT's - so it is a patch of its own rather than a case of
+        // this one, and the arrivals it is handed are the cut once and both beads.
+        return surface_two_crease_junction_patch::try_close(
+            pool, faces, junction, arriving, seams,
+        );
+    }
+
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![junction.corner.into()],
+        )
+    };
+
+    // Which arm LEADS: the one whose ring does NOT lean - First where neither does, since then the
+    // two choices are the same grid. The lead is the frame everything below is read in, and every
+    // interior vertex of the patch is a vertex of the LEADING ring carried round the axis, so the
+    // lean is left where it can only be REUSED - the closing column. Only one of the two may lean
+    // at all: two leaning rings is a corner of its own.
+    let first_leans = junction.first.mixed.hands_over_at_a_mitre;
+    let second_leans = junction.second.mixed.hands_over_at_a_mitre;
+    let lead_is_first = !first_leans || second_leans;
+
+    if first_leans && second_leans {
+        return Err(not_supported());
+    }
+
+    let [first_arrival, second_arrival, bead_arrival, ..] = arriving else {
+        return Err(not_supported());
+    };
+
+    let (lead, closes) = if lead_is_first {
+        (&junction.first.mixed, &junction.second.mixed)
+    } else {
+        (&junction.second.mixed, &junction.first.mixed)
+    };
+    let (lead_arrival, close_arrival) = if lead_is_first {
+        (first_arrival, second_arrival)
+    } else {
+        (second_arrival, first_arrival)
+    };
+
+    // A negative edge index finds no seam and is refused as the seam not meeting.
+    let edge = |arrival: &SurfaceMixedJunctionPatchArrival| {
+        usize::try_from(arrival.edge_index).unwrap_or(usize::MAX)
+    };
+
+    // Everything added here is new, and whatever of it lands part way along an edge of a face
+    // nobody cut is a T junction - so the sew at the end is told where the corner's own vertices
+    // start.
+    let split_from = pool.vertices().len() as i32;
+
+    let (lead_ring, lead_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        lead,
+        &lead_arrival.strip,
+        true,
+        seams,
+        edge(lead_arrival),
+        lead_arrival.ends_here,
+        None,
+    )?;
+    let (close_ring, close_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        closes,
+        &close_arrival.strip,
+        true,
+        seams,
+        edge(close_arrival),
+        close_arrival.ends_here,
+        None,
+    )?;
+    let (bead_ring, bead_meets_at) = surface_mixed_corner_patch::try_ring(
+        pool,
+        lead,
+        &bead_arrival.strip,
+        false,
+        seams,
+        edge(bead_arrival),
+        bead_arrival.ends_here,
+        None,
+    )?;
+
+    // All three read from the same end, whichever way each strip's own rails run: both profiles
+    // from the cap face round to the face that cut shares with the bead, and the bead's from the
+    // leading cut's tangency round to the closing one's.
+    let profile = surface_mixed_corner_patch::from_the_cap_face(lead, &lead_ring);
+    let closing = surface_mixed_corner_patch::from_the_cap_face(closes, &close_ring);
+    let turns = surface_mixed_corner_patch::from_the_handover(lead, &bead_ring);
+
+    // How far a reused rail may stand from where the turn puts it: the widest chord sagitta either
+    // shared face carries, which is what the mesh itself already stands off the true surface there.
+    let slack = surface_mixed_corner_patch::the_shared_faces_own_sagitta(lead, pool).max(
+        surface_mixed_corner_patch::the_shared_faces_own_sagitta(closes, pool),
+    );
+
+    let grid = try_schedule(pool, lead, closes, &profile, &closing, &turns, slack)?;
+    try_bite_the_cap_face(pool, faces, lead, closes, &grid, split_from)?;
+    try_bite_the_strips_under_the_blend(pool, faces, junction, split_from)?;
+
+    emit(pool, faces, lead, &grid);
+
+    // ONCE, and after everything: every crossing the bites made, sewn into whatever face now
+    // carries it part way along an edge. C# calls the overload that drops the verdict.
+    surface_split_sewing::sew_in_the_splits_since_unchecked(pool, faces, split_from);
+
+    surface_mixed_corner_patch::nothing_covers_nothing(pool, faces)?;
+
+    let lead_station = SurfaceStripStation::clean(lead_ring, lead_meets_at);
+    let close_station = SurfaceStripStation::clean(close_ring, close_meets_at);
+    let bead_station = SurfaceStripStation::clean(bead_ring, bead_meets_at);
+
+    Ok(if lead_is_first {
+        vec![lead_station, close_station, bead_station]
+    } else {
+        vec![close_station, lead_station, bead_station]
+    })
+}
+
+/// C# `TryBiteTheStripsUnderTheBlend`: the wall each arm stands over, where it stands over any -
+/// the stretch of the face it shares with the bead between the bead's own stop plane and the cap,
+/// facet by facet ([`SurfaceMixedCornerWall::strip_under_the_blend`]).
+///
+/// Owed exactly where the arm hands over on a MITRE ring, which is where the bead's band stops at
+/// its own height on that face rather than running out to the cap rim - the same reading the plan's
+/// band ends make. Where both arms hand over on their own tangency nothing is owed at all.
+pub fn try_bite_the_strips_under_the_blend(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    junction: &SurfaceMixedJunction,
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    for arm in [&junction.first.mixed, &junction.second.mixed] {
+        if !arm.both_bands_stop_on_the_shared_face() {
+            continue;
+        }
+
+        let rolled = if arm.rolled_is_the_shared_face() {
+            arm.rolled_section()
+        } else {
+            None
+        };
+        let wall = SurfaceMixedCornerWall::try_read_section(
+            arm,
+            rolled.as_deref(),
+            arm.shared_face_foot(),
+        )?;
+
+        for (piece, normal) in wall.strip_under_the_blend() {
+            let rim = piece.to_vec();
+            let snap_to: Vec<i32> = piece.iter().map(|&at| pool.add(at)).collect();
+
+            // Each piece in its OWN facet's plane, named by a point of that piece: on a rolled bead
+            // the facets past the first do not pass through the corner at all.
+            surface_convex_bite::try_take(
+                pool, faces, &rim, normal, piece[0], &snap_to, split_from,
+            )?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Whether the rail the CLOSING ring is reused for (`closing`) really stands where the turn puts

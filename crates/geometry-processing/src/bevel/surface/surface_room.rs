@@ -1,10 +1,9 @@
 //! How much ROOM the surface construction has, and the largest size that fits in it
 //! (`Bevel/Surface/SurfaceRoom.cs`, a static class): the 3D reading of the 2D bevel's relaxation
 //! (`PathBevel.RelaxRadii`), where a corner's room is the run of path beside it and the corners
-//! sharing that run negotiate it between them. Only its nested types land here - what kind of
-//! footprint a cut is ([`SurfaceRoomFootprint`]) and one side of one chain edge
-//! ([`SurfaceRoomCut`], with its constructor); the measuring and the pair rule land with later
-//! packages.
+//! sharing that run negotiate it between them. Its nested types - what kind of footprint a cut is
+//! ([`SurfaceRoomFootprint`]) and one side of one chain edge ([`SurfaceRoomCut`]) - the fit of a
+//! whole pass ([`try_fit`]) and the pair rule ([`largest_fitting`]).
 //!
 //! Room is a distance ACROSS a face region: from a chain edge, in the region's own plane, along the
 //! inward direction the bevel sets back along, to the first piece of that region's rim standing in
@@ -15,11 +14,15 @@
 //! answer is a refusal, not a shrink, in the same words and advisory codes the boolean construction
 //! uses.
 
+use std::rc::Rc;
+
 use polygon_mesh::CancelToken;
 use vector_math::Vector3;
 
-use super::{surface_room_measure, SurfaceRoomCrossing};
+use super::{surface_room_fixed_point, surface_room_measure, SurfaceRoomCrossing};
+use super::{SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan};
 use crate::bevel::level_line::WorkError;
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceRoom.Footprint`: what a cut IS, which is what the pair rule has to know about it - a
 /// band laid along an edge, or one of the footprints that stand at a CORNER instead.
@@ -183,14 +186,101 @@ impl SurfaceRoomCut {
     }
 }
 
+/// C# `SurfaceRoom.FitTolerance`: how near the request the largest fitting size has to come to
+/// count as the request.
+pub const FIT_TOLERANCE: f64 = 1e-9;
+
+/// What [`try_fit`] reads (C#'s return and its three `out`s).
+#[derive(Debug, Clone)]
+pub struct SurfaceRoomFit {
+    /// C#'s return: whether every plan fits at the requested size.
+    pub fits: bool,
+    /// The request where it fits, and the size that would have fitted where it does not (the
+    /// request again where a reading refused by NAME).
+    pub largest_fitting_size: f64,
+    /// `None` where the request fits, and otherwise the advisory naming the size that does.
+    pub refusal: Option<BevelAdvisory>,
+    /// Every skirt over a band the build has to SEW rather than refuse. Meaningful only where
+    /// [`SurfaceRoomFit::fits`].
+    pub crossings: Vec<SurfaceRoomCrossing>,
+}
+
+/// C# `TryFit`: the largest size every one of `plans` (drawn at `requested_size`) fits at, and -
+/// where that is smaller than the request - the refusal to say so with, the size named settled by
+/// [`surface_room_fixed_point::settled`]. `stretches` (C#'s optional list) collects every band that
+/// runs off PART of its own span. A cancel passes up as [`WorkError::Cancelled`].
+pub fn try_fit(
+    plans: &[Rc<SurfaceBevelPlan>],
+    requested_size: f64,
+    cancellation_token: &CancelToken,
+    stretches: Option<&mut Vec<SurfaceBandRunsOffOverAStretch>>,
+) -> Result<SurfaceRoomFit, WorkError> {
+    let mut sewn = Vec::new();
+    let mut named = Vec::new();
+
+    let cuts = surface_room_measure::measure(plans, Some(&mut named), stretches);
+
+    if let Some(first) = named.into_iter().next() {
+        // A reading that refuses by NAME: no size fits such a shape, so the request is handed back
+        // unchanged.
+        return Ok(SurfaceRoomFit {
+            fits: false,
+            largest_fitting_size: requested_size,
+            refusal: Some(first),
+            crossings: sewn,
+        });
+    }
+
+    // Whose answer it was, so the refusal is written against the guilty cut's group.
+    let mut blame = Vec::new();
+
+    let (mut largest_fitting_size, worst_at, worst_is_a_collision) = largest_fitting(
+        &cuts,
+        requested_size,
+        cancellation_token,
+        requested_size,
+        Some(&mut sewn),
+        Some(&mut blame),
+    )?;
+
+    if largest_fitting_size >= requested_size - (requested_size.abs() * FIT_TOLERANCE) {
+        return Ok(SurfaceRoomFit {
+            fits: true,
+            largest_fitting_size: requested_size,
+            refusal: None,
+            crossings: sewn,
+        });
+    }
+
+    // The size named has to be a size the user can then ASK for: re-measured until it settles.
+    largest_fitting_size =
+        surface_room_fixed_point::settled(plans, largest_fitting_size, cancellation_token)?;
+
+    let refusal = BevelAdvisory::new(
+        if worst_is_a_collision {
+            BevelAdvisoryCode::SizeCollidesAcrossFace
+        } else {
+            BevelAdvisoryCode::SizeExceedsFaceWidth
+        },
+        vec![
+            requested_size.into(),
+            worst_at.into(),
+            largest_fitting_size.into(),
+        ],
+    )
+    .on_mesh_edge(the_edge_that_answered(plans, &blame));
+
+    Ok(SurfaceRoomFit {
+        fits: false,
+        largest_fitting_size,
+        refusal: Some(refusal),
+        crossings: sewn,
+    })
+}
+
 /// The one mesh edge every cut to `blame` was taken off, or `BevelAdvisory::NO_MESH_EDGE` where
 /// they name two, or one names none.
-pub fn the_edge_that_answered(
-    plans: &[std::rc::Rc<super::SurfaceBevelPlan>],
-    blame: &[SurfaceRoomCut],
-) -> i32 {
-    use crate::bevel::BevelAdvisory;
-
+pub fn the_edge_that_answered(plans: &[Rc<SurfaceBevelPlan>], blame: &[SurfaceRoomCut]) -> i32 {
     let mut named = BevelAdvisory::NO_MESH_EDGE;
 
     for cut in blame {

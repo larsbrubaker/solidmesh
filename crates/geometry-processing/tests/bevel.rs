@@ -239,10 +239,14 @@ mod segment_cell_bound_tests;
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
 mod spoke_centre_parameter_tests;
+#[path = "bevel/surface_bevel_plan_tests.rs"]
+mod surface_bevel_plan_tests;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
 mod surface_clip_classifies_one_point_one_way_tests;
 #[path = "bevel/surface_convex_bite_tests.rs"]
 mod surface_convex_bite_tests;
+#[path = "bevel/surface_crease_faces_are_one_surface_tests.rs"]
+mod surface_crease_faces_are_one_surface_tests;
 #[path = "bevel/surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
 mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
 #[path = "bevel/surface_cut_ruler_tests.rs"]

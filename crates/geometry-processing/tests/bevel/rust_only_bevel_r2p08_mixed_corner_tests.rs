@@ -1,6 +1,6 @@
 //! Rust-only checks of R2.P08's mixed corner on a REAL corner - the L prism's convex rim meeting
-//! its concave inside edge, each planned off the mesh (`try_plan_edge`, standing in for
-//! `SurfaceBevelPlan.TryCreate`, which lands with R3.P01): `SurfaceMixedCorner::try_read`'s
+//! its concave inside edge, each planned off the mesh by `SurfaceBevelPlan::try_create`, and the
+//! two planned as one chain so the plan reads the corner itself: `SurfaceMixedCorner::try_read`'s
 //! success path, either way round, and on a LEANING cap (C# `SurfaceMixedCornerReadingTests.
 //! ACapThatLeansIsReadAsAnEllipseAtEveryScale`'s construction); and the patch's ring turned round
 //! the corner and emitted.
@@ -8,8 +8,9 @@
 use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_plan_edge_reading::try_plan_edge;
-use geometry_processing::bevel::surface::{SurfaceEdgePlan, SurfaceMixedCorner, SurfaceVertexPool};
+use geometry_processing::bevel::surface::{
+    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceVertexPool,
+};
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::Mesh;
 use vector_math::{Vector3, Vector3Float};
@@ -28,18 +29,15 @@ fn plan_of(
     edge_index: usize,
     radius: f64,
 ) -> SurfaceEdgePlan {
-    let regions = FaceRegionCache::new(mesh.clone(), None, features.flat_angle_degrees());
+    let regions = Arc::new(FaceRegionCache::new(
+        mesh.clone(),
+        None,
+        features.flat_angle_degrees(),
+    ));
     let chain = bevel_chain_linker::link(&[features.edges()[edge_index]]).remove(0);
-    let mut maps = Default::default();
-    try_plan_edge(
-        &chain.edges[0],
-        &regions,
-        radius,
-        true,
-        &mut maps,
-        &mut |_| None,
-    )
-    .unwrap_or_else(|reason| panic!("the plan refused the edge: {reason:?}"))
+    let plan = SurfaceBevelPlan::try_create(&chain, &regions, radius, true)
+        .unwrap_or_else(|reason| panic!("the plan refused the edge: {reason:?}"));
+    plan.edges[0].clone()
 }
 
 fn the_concave_edge(features: &FeatureEdgeSet) -> usize {
@@ -189,4 +187,49 @@ fn rust_only_a_cap_that_leans_is_read_as_an_ellipse_at_unit_scale() {
 #[test]
 fn rust_only_a_cap_that_leans_is_read_as_an_ellipse_at_a_hundred_times() {
     a_cap_that_leans_is_read_as_an_ellipse(100.0);
+}
+
+#[test]
+fn rust_only_the_plan_reads_the_real_mixed_corner_itself() {
+    // The convex rim and the concave inside edge planned as ONE chain: TryCreate reads the corner
+    // where the convexity turns over, and it is the corner the two edges read by hand.
+    let mesh = Arc::new(create_l_shaped_grid_prism());
+    let features = FeatureEdgeSet::create(&mesh);
+    let near_enough = SurfaceVertexPool::near_enough_for(&mesh.vertices);
+    let convex_index = the_convex_edge_of(
+        &features,
+        top_corner(),
+        Vector3::new(10.0, 20.0, 10.0),
+        1e-6,
+    );
+    let concave_index = the_concave_edge(&features);
+    let regions = Arc::new(FaceRegionCache::new(
+        mesh.clone(),
+        None,
+        features.flat_angle_degrees(),
+    ));
+    let chains = bevel_chain_linker::link(&[
+        features.edges()[convex_index],
+        features.edges()[concave_index],
+    ]);
+    assert_eq!(chains.len(), 1, "the two edges meet at the corner");
+    let plan = SurfaceBevelPlan::try_create(&chains[0], &regions, RADIUS, true)
+        .unwrap_or_else(|reason| panic!("the chain would not plan: {reason:?}"));
+
+    assert_eq!(plan.edges.len(), 2);
+    assert_eq!(plan.mixed_corner_count(), 1);
+    let read = plan
+        .try_mixed_corner_after(0)
+        .expect("the corner is keyed by the edge the chain arrives on");
+    assert!((read.corner - top_corner()).length() <= 1e-9);
+
+    let by_hand = SurfaceMixedCorner::try_read(
+        &plan_of(&mesh, &features, convex_index, RADIUS),
+        &plan_of(&mesh, &features, concave_index, RADIUS),
+        top_corner(),
+        RADIUS,
+        near_enough,
+    )
+    .unwrap_or_else(|failure| panic!("{failure:?}"));
+    assert!((read.tangent_point - by_hand.tangent_point).length() <= 1e-12);
 }

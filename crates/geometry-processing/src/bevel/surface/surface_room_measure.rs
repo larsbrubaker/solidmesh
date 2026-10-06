@@ -1,10 +1,11 @@
 //! Pacing out the room a cut has on its region (`Bevel/Surface/SurfaceRoomMeasure.cs`, a static
 //! class: free functions here). The rulers and the exact offset of a rim segment in front of the
 //! chain edge land here first, with the bands a pass takes off a region, the free end, the corner
-//! a wall shares and its measure, and the room across one region ([`room_across`]); the whole
-//! measure (`Measure`) lands with a later package.
+//! a wall shares and its measure, the room across one region ([`room_across`]), and the whole
+//! measure of a pass ([`measure`]).
 
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::LazyLock;
 
 use vector_math::{cs_math, Vector3};
@@ -13,8 +14,11 @@ use polygon_mesh::Mesh;
 
 use super::surface_band_runs_off_the_face_beyond::{self, BandSpan, ChainAtTheSpan};
 use super::surface_run_across::SurfaceRunAcrossRegionMapsCache;
+use super::{surface_room_end_cut, surface_room_mitre, surface_room_run_out};
 use super::{surface_room_standing_feature, surface_run_across_walk};
-use super::{SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan};
+use super::{
+    SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceRoomCut, SurfaceRoomFootprint,
+};
 use crate::bevel::BevelAdvisory;
 use crate::topology::EdgeConvexity;
 use crate::topology::FaceGroup;
@@ -199,6 +203,193 @@ pub fn measure_corner(
     }
 }
 
+/// C# `Measure`: every cut every plan makes, with the room each has. One entry per chain edge per
+/// side, in plan order (a side whose region or geometry cannot be measured is left out rather than
+/// guessed at), then each plan's run-out skirts and wall bites, its end notches and its mitre tips.
+/// `named` collects what a room reading has to REFUSE by name (C#'s optional list, `None` for
+/// null); `stretches` collects every band that runs off PART of its own span.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+pub fn measure(
+    plans: &[Rc<SurfaceBevelPlan>],
+    mut named: Option<&mut Vec<BevelAdvisory>>,
+    mut stretches: Option<&mut Vec<SurfaceBandRunsOffOverAStretch>>,
+) -> Vec<SurfaceRoomCut> {
+    let mut cuts = Vec::new();
+
+    // One reading of each region's facets, shared by every cut that lands on it.
+    let mut region_maps = SurfaceRunAcrossRegionMapsCache::new();
+
+    // Which mesh edges this pass is beveling, their end vertices, and which of them take a band off
+    // which region (looked up only, so no hash order reaches an output).
+    let mut beveled = HashSet::new();
+    let mut chain_vertices = HashSet::new();
+    let mut bands_on_region: HashMap<i32, HashSet<i32>> = HashMap::new();
+
+    for plan in plans {
+        for edge in &plan.edges {
+            beveled.insert(edge.edge.edge.mesh_edge_index);
+            chain_vertices.insert(edge.edge.edge.start_vertex);
+            chain_vertices.insert(edge.edge.edge.end_vertex);
+
+            for side in 0..2 {
+                let lands = if side == 0 {
+                    &edge.left_region
+                } else {
+                    &edge.right_region
+                };
+
+                bands_on_region
+                    .entry(SurfaceBevelPlan::key_of(lands))
+                    .or_default()
+                    .insert(edge.edge.edge.mesh_edge_index);
+            }
+        }
+    }
+
+    for (plan_index, plan) in plans.iter().enumerate() {
+        let plan_index = plan_index as i32;
+        let mesh = plan.mesh().map(|mesh| mesh.as_ref());
+
+        for (edge_index, edge) in plan.edges.iter().enumerate() {
+            let span = edge.to() - edge.from();
+            let length = span.length();
+
+            if !(length > 0.0) {
+                continue;
+            }
+
+            let along = span / length;
+
+            // Which way the chain carries on past each end of this edge, which mitres the band there.
+            let past_the_start = surface_room_mitre::chains_direction_past(plan, edge_index, false);
+            let past_the_end = surface_room_mitre::chains_direction_past(plan, edge_index, true);
+
+            for side in 0..2 {
+                let region = if side == 0 {
+                    &edge.left_region
+                } else {
+                    &edge.right_region
+                };
+
+                // The direction at the EDGE, not the one the cut ends up using.
+                let inward = if side == 0 {
+                    edge.left_inward_at_the_edge
+                } else {
+                    edge.right_inward_at_the_edge
+                };
+
+                // What THIS side really gives up per unit of size, read off the plan.
+                let setback = if side == 0 {
+                    edge.left_setback
+                } else {
+                    edge.right_setback
+                };
+                let setback_per_size = setback / plan.size;
+
+                // The guard that keeps an infinity out of the arithmetic.
+                if !(inward.length_squared() > 0.0)
+                    || !(setback_per_size > 0.0)
+                    || setback_per_size.is_infinite()
+                    || setback_per_size.is_nan()
+                {
+                    continue;
+                }
+
+                let inward = inward.get_normal();
+
+                let (room, ran_off_over_a_stretch) = room_across(
+                    mesh,
+                    edge.from(),
+                    edge.to(),
+                    along,
+                    length,
+                    inward,
+                    setback,
+                    region,
+                    &beveled,
+                    &chain_vertices,
+                    bands_on_the_region(&bands_on_region, region),
+                    Some(&mut region_maps),
+                    named.as_deref_mut(),
+                    edge.edge.edge.mesh_edge_index,
+                    edge.convexity(),
+                    free_end(plan, edge_index, true),
+                    free_end(plan, edge_index, false),
+                );
+
+                if let Some(stretch) = ran_off_over_a_stretch {
+                    // The room says nothing about a band running off only PART of its span, so the
+                    // fact is carried out of the measuring for the build to end the strip on.
+                    if let Some(stretches) = stretches.as_deref_mut() {
+                        stretches.push(stretch.on(plan_index, edge_index as i32, side));
+                    }
+                }
+
+                cuts.push(SurfaceRoomCut {
+                    shape: SurfaceRoomFootprint::Band,
+                    plan_index,
+                    overhang_before_from: setback_per_size
+                        * surface_room_mitre::overhang_per_setback(along, past_the_start, inward),
+                    overhang_past_to: setback_per_size
+                        * surface_room_mitre::overhang_per_setback(-along, past_the_end, inward),
+                    edge_index: edge_index as i32,
+                    side,
+                    ..SurfaceRoomCut::new(
+                        SurfaceBevelPlan::key_of(region),
+                        edge.from(),
+                        edge.to(),
+                        along,
+                        inward,
+                        length,
+                        setback_per_size,
+                        room,
+                    )
+                });
+            }
+        }
+
+        // The cuts no EDGE owns: each two-edge mixed corner's run-out skirt on the cap, and the bite
+        // it takes out of the wall. A junction (a negative key) has none.
+        for key in plan.mixed_corner_keys() {
+            if key < 0 {
+                continue;
+            }
+
+            let Some(mixed) = plan.try_mixed_corner_after(key) else {
+                continue;
+            };
+
+            let Some(skirt) = surface_room_run_out::try_cut(&mixed, key) else {
+                continue;
+            };
+
+            cuts.push(skirt.on_plan(plan_index));
+
+            if let Some(bite) = surface_room_run_out::try_wall_cut(&mixed, key) {
+                cuts.push(bite.on_plan(plan_index));
+            }
+        }
+
+        // What each free END of an open chain notches out of the face beyond its corner.
+        for end in 0..2 {
+            if let Some(notch) = surface_room_end_cut::try_cut(Some(plan), end == 0) {
+                cuts.push(notch.on_plan(plan_index));
+            }
+        }
+
+        // What two bands take between them where they MITRE at a reflex corner of their region.
+        let before = cuts.len();
+
+        surface_room_mitre::add_to(&mut cuts, Some(plan));
+
+        for tip in &mut cuts[before..] {
+            *tip = tip.on_plan(plan_index);
+        }
+    }
+
+    cuts
+}
+
 /// C# `RoomAcross`: how far a cut along the chain edge `from`-`to` can reach into `region` before
 /// it meets a wall - infinite where the band runs OFF the region whole; paced out along a curved
 /// landing's own surface where that walk answers; the rim it runs off over a stretch charged only
@@ -208,7 +399,7 @@ pub fn measure_corner(
 /// band runs off over, if any (C#'s `out ranOffOverAStretch`).
 #[allow(clippy::too_many_arguments)]
 pub fn room_across(
-    mesh: &Mesh,
+    mesh: Option<&Mesh>,
     from: Vector3,
     to: Vector3,
     along: Vector3,
@@ -238,7 +429,7 @@ pub fn room_across(
 
     // A band that takes the WHOLE of this region over its own span runs OFF its convex rim.
     match surface_band_runs_off_the_face_beyond::try_read(
-        Some(mesh),
+        mesh,
         Some(region),
         &span,
         beveled_mesh_edges,
@@ -255,15 +446,18 @@ pub fn room_across(
     }
 
     // A CURVED landing is paced out along its own surface instead.
-    let run = surface_run_across_walk::try_across_a_curved_region(
-        mesh,
-        region,
-        from,
-        to,
-        along,
-        inward,
-        region_maps,
-    );
+    // C# returns false on a null mesh; `None` here reads the same.
+    let run = mesh.and_then(|mesh| {
+        surface_run_across_walk::try_across_a_curved_region(
+            mesh,
+            region,
+            from,
+            to,
+            along,
+            inward,
+            region_maps,
+        )
+    });
     let across_the_surface = run.is_some();
     let mut nearest = run.unwrap_or(f64::INFINITY);
 
@@ -279,7 +473,7 @@ pub fn room_across(
             free_at_the_end,
         };
         match surface_band_runs_off_the_face_beyond::try_read_a_stretch(
-            Some(mesh),
+            mesh,
             Some(region),
             &span,
             chain,

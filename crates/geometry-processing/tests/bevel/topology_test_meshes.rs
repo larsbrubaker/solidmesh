@@ -296,3 +296,123 @@ pub fn create_l_shaped_grid_prism() -> Mesh {
         (0..2).contains(&i) && (0..2).contains(&j) && k == 0 && !(i == 1 && j == 1)
     })
 }
+
+/// C# `LPrismTestMeshes.CreateLShapedPrism`: an L cross section extruded 10 in z - five square
+/// corners and one reflex corner at (10, 10), which is the one concave edge of the solid.
+pub fn create_l_shaped_prism() -> Mesh {
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(0.0, 0.0);
+    path.line_to(20.0, 0.0);
+    path.line_to(20.0, 10.0);
+    path.line_to(10.0, 10.0);
+    path.line_to(10.0, 20.0);
+    path.line_to(0.0, 20.0);
+    path.close_polygon();
+
+    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, 10.0)
+        .expect("the L outline extrudes")
+}
+
+/// C# `LPrismTestMeshes.CreateLPrismWithFadingInnerCorner`: the L prism whose inner corner FADES -
+/// sharp for the bottom half, then opened out into a fillet that grows from nothing at the middle
+/// to `top_radius` at the top face. The blend is the exact rolling-ball surface, which for a
+/// linearly growing radius is a CONE: each of the `blend_facets` sectors is one planar triangle
+/// standing on the apex at `(10, 10, height / 2)`, so the only angles in the fade are the arc's
+/// own facet steps (`90 / blend_facets` between sectors and half that where the first leaves the
+/// wall) and at any flat tolerance above those the apex has exactly ONE feature edge on it, the
+/// 90 degree crease below.
+pub fn create_l_prism_with_fading_inner_corner(
+    top_radius: f64,
+    blend_facets: i32,
+    height: f64,
+) -> Mesh {
+    // The L's outline, counter clockwise, with the reflex corner at (10, 10)
+    let outline = [
+        Vector2::new(0.0, 0.0),
+        Vector2::new(20.0, 0.0),
+        Vector2::new(20.0, 10.0),
+        Vector2::new(10.0, 10.0),
+        Vector2::new(10.0, 20.0),
+        Vector2::new(0.0, 20.0),
+    ];
+
+    let corner = Vector2::new(10.0, 10.0);
+    let apex = Vector3::from_vector2(corner, height / 2.0);
+
+    // The rolling ball's centre at the top face, and the arc it leaves, from the tangent point on
+    // the y = 10 wall round to the tangent point on the x = 10 wall
+    let centre = corner + Vector2::new(top_radius, top_radius);
+    let arc: Vec<Vector3> = (0..=blend_facets)
+        .map(|i| {
+            let angle =
+                math_helper::degrees_to_radians(270.0 - (90.0 * i as f64 / blend_facets as f64));
+
+            Vector3::from_vector2(
+                centre + (Vector2::new(angle.cos(), angle.sin()) * top_radius),
+                height,
+            )
+        })
+        .collect();
+
+    let mut mesh = Mesh::new();
+    let at = |point: Vector2, z: f64| Vector3::from_vector2(point, z);
+
+    // The top face: the L with the corner filled in to the arc, walked from a vertex every other
+    // one is visible from, because CreateFace fans from the first point it is given
+    let mut top = vec![
+        at(outline[0], height),
+        at(outline[1], height),
+        at(outline[2], height),
+    ];
+    top.extend_from_slice(&arc);
+    top.push(at(outline[4], height));
+    top.push(at(outline[5], height));
+    mesh.create_face(&top);
+
+    // The bottom face, reversed and started at the reflex corner - the one vertex the whole L is
+    // visible from
+    mesh.create_face(&[
+        at(outline[3], 0.0),
+        at(outline[2], 0.0),
+        at(outline[1], 0.0),
+        at(outline[0], 0.0),
+        at(outline[5], 0.0),
+        at(outline[4], 0.0),
+    ]);
+
+    // The four walls that never touch the corner
+    for i in [0, 1, 4, 5] {
+        let from = outline[i];
+        let to = outline[(i + 1) % outline.len()];
+
+        mesh.create_face(&[at(from, 0.0), at(to, 0.0), at(to, height), at(from, height)]);
+    }
+
+    // and the two that do, each a pentagon that gives up its top corner to the blend
+    let last = blend_facets as usize;
+    mesh.create_face(&[
+        at(outline[2], 0.0),
+        at(outline[3], 0.0),
+        apex,
+        arc[0],
+        at(outline[2], height),
+    ]);
+    mesh.create_face(&[
+        at(outline[3], 0.0),
+        at(outline[4], 0.0),
+        at(outline[4], height),
+        arc[last],
+        apex,
+    ]);
+
+    // The blend itself: one planar sector per arc chord, all standing on the apex
+    for i in 0..last {
+        mesh.create_face(&[apex, arc[i + 1], arc[i]]);
+    }
+
+    // CreateFace makes fresh vertices every call, so what is above is triangle soup until it is
+    // welded
+    mesh.clean_and_merge();
+
+    mesh
+}
