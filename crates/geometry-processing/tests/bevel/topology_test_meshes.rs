@@ -1,6 +1,7 @@
 //! Fixture builders ported from `GeometryProcessingTests/Fixtures/TopologyTestMeshes.cs`, added
 //! one builder at a time as the test classes that use them land. So far:
-//! `CreateIsoscelesPrism` (`BevelArcChordingTests`) and `CreateArcPrism` (`BevelSweepBackDepthTests`).
+//! `CreateIsoscelesPrism` (`BevelArcChordingTests`), `CreateArcPrism` (`BevelSweepBackDepthTests`)
+//! and `CreateFrustum` (`TaperedBarrelTestMeshes`), among others below.
 
 use polygon_mesh::Mesh;
 use vector_math::{math_helper, Vector2, Vector3};
@@ -267,4 +268,22 @@ pub fn create_pyramid_pocket_prism(sides: i32, radius: f64, height: f64, apex: V
 
     mesh.clean_and_merge();
     mesh
+}
+
+/// C# `TopologyTestMeshes.CreateFrustum`: a `sides`-sided frustum about z, `bottom_radius` at
+/// z = -height / 2 tapering to `top_radius` at +height / 2, closed at both ends.
+pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i32) -> Mesh {
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(0.0, -height / 2.0);
+    path.line_to(bottom_radius, -height / 2.0);
+    path.line_to(top_radius, height / 2.0);
+    path.line_to(0.0, height / 2.0);
+    polygon_mesh::processors::vertex_source_to_mesh::revolve(
+        &path,
+        sides,
+        0.0,
+        std::f64::consts::TAU,
+        true,
+    )
+    .expect("the frustum revolves")
 }

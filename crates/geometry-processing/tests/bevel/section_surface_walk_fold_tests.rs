@@ -1,10 +1,6 @@
 //! Port of `SectionSurfaceWalkFoldTests.cs`: the surface walk ON A FOLD - a direction or a walk
 //! running along an edge between two facets, leaning off it by float noise. A fold is where a
 //! direction computed from single-precision vertices lands outside BOTH faces' wedges at once.
-//!
-//! `AWalkUpAFoldEndingOnAFeatureVertexStopsThereAsACrease` waits on the `TaperedBarrelTestMeshes`
-//! fixture (a boolean of a revolved frustum and two bores), not yet ported; it is listed in
-//! `docs/design/bevel-core/progress-R2P09.md`.
 
 use polygon_mesh::Mesh;
 use vector_math::{math_helper, Vector3};
@@ -14,6 +10,9 @@ use geometry_processing::bevel::sections::section_surface_walk_faces::{
     try_face_holding, try_face_holding_at_edge,
 };
 use geometry_processing::bevel::sections::section_surface_walk_try::try_walk;
+use geometry_processing::bevel::sections::SurfaceWalkRefusal;
+
+use crate::tapered_barrel_test_meshes;
 
 use crate::section_surface_walk_roof::{a_roof, corners, frame};
 
@@ -102,6 +101,79 @@ fn a_direction_along_the_fold_from_a_point_on_it_leaning_off_by_float_noise_is_h
 #[test]
 fn a_direction_along_the_fold_from_a_point_on_it_leaning_off_by_float_noise_is_held_minus_1e_8() {
     a_direction_along_the_fold_from_a_point_on_it_leaning_off_by_float_noise_is_held(-1e-8);
+}
+
+/// A WALK UP A FOLD THAT RUNS INTO A CREASE AT A VERTEX stops there as `CreaseReached`, having
+/// travelled the distance to that vertex. On the tapered barrel the 90 degree bore is centred on a
+/// wall fold, so the fold rising from the bottom rim at (0, -16, -15) ends exactly on the mouth's
+/// lowest vertex; the line leaves its face through that vertex and turns round the vertex's fan
+/// until the mouth - a feature - stops the turn (it used to be refused `NoFaceHoldsTheDirection`,
+/// and the bottom rim's room jumped from the 4.8579 the mouth allows to 14.0082).
+#[test]
+fn a_walk_up_a_fold_ending_on_a_feature_vertex_stops_there_as_a_crease() {
+    let part = tapered_barrel_test_meshes::the_working_part();
+    let resolution = tapered_barrel_test_meshes::the_wall(&part);
+    let graph = part.get_mesh_edge_graph();
+    let edge_at_pair = section_fan_walk::edges_by_vertex_pair(&graph);
+    let features: std::collections::HashSet<i32> = resolution
+        .features
+        .edges()
+        .iter()
+        .map(|feature| feature.mesh_edge_index)
+        .collect();
+
+    let at = |i: usize| Vector3::from_vector3_float(part.vertices[i]);
+    // C#'s `OrderBy(..).First()`: the nearest, the first of any tie.
+    let nearest = |to: Vector3| {
+        let mut best = 0;
+        for i in 1..part.vertices.len() {
+            if (at(i) - to).length() < (at(best) - to).length() {
+                best = i;
+            }
+        }
+        best
+    };
+
+    let rim = nearest(Vector3::new(0.0, -16.0, -15.0));
+    let mouth = nearest(Vector3::new(0.0, -15.2667, -9.5));
+    let start = at(rim);
+    let end = at(mouth);
+    let fan: Vec<i32> = (0..part.faces.len())
+        .filter(|&f| {
+            corners(&part, f).contains(&(rim as i32)) && (part.faces[f].normal.z as f64).abs() < 0.5
+        })
+        .map(|f| f as i32)
+        .collect();
+
+    let (face, in_face) =
+        try_face_holding(&part, rim as i32, end - start, &fan).expect("a wall face holds it");
+
+    let stops = |edge: i32| features.contains(&edge);
+    let walk = match try_walk(
+        &part,
+        &graph,
+        &edge_at_pair,
+        start,
+        face,
+        in_face,
+        30.0,
+        Some(&stops),
+    ) {
+        Ok(walk) => panic!("the walk should stop at the mouth: {walk:?}"),
+        Err(walk) => walk,
+    };
+
+    assert_eq!(
+        walk.refusal,
+        SurfaceWalkRefusal::CreaseReached,
+        "{:?} {} {:?} face {} start {start:?} rim {rim} mouth {mouth} {end:?} dir {in_face:?}",
+        walk.refusal,
+        walk.travelled,
+        walk.end,
+        walk.end_face
+    );
+    assert!((walk.travelled - (end - start).length()).abs() <= 1e-6);
+    assert!((walk.end - end).length() < 1e-9);
 }
 
 /// WALKING DOWN A FOLD OF LONG, NARROW PANELS (30 long, 2 wide), set out from its end with a

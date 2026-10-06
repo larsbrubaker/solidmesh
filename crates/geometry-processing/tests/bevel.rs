@@ -211,12 +211,12 @@ mod rust_only_bevel_slice9_tests;
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
+#[path = "bevel/section_straight_bore_tests.rs"]
+mod section_straight_bore_tests;
 #[path = "bevel/section_surface_walk_fold_tests.rs"]
 mod section_surface_walk_fold_tests;
 #[path = "bevel/section_surface_walk_roof.rs"]
 mod section_surface_walk_roof;
-#[path = "bevel/section_straight_bore_tests.rs"]
-mod section_straight_bore_tests;
 #[path = "bevel/section_walked_end_vertex_tests.rs"]
 mod section_walked_end_vertex_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
@@ -243,6 +243,8 @@ mod surface_fan_tests;
 mod surface_giving_up_the_section_sews_by_index_tests;
 #[path = "bevel/surface_mesh_closure_tests.rs"]
 mod surface_mesh_closure_tests;
+#[path = "bevel/surface_rim_closes_at_a_knife_edge_tests.rs"]
+mod surface_rim_closes_at_a_knife_edge_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
 mod surface_ring_ears_bridged_ring_tests;
 #[path = "bevel/surface_room_crossing_tests.rs"]
@@ -255,6 +257,8 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/tapered_barrel_test_meshes.rs"]
+mod tapered_barrel_test_meshes;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
 #[path = "bevel/warped_wall_test_meshes.rs"]

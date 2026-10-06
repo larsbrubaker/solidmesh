@@ -43,6 +43,10 @@ pub fn left_slope_normal() -> Vector3 {
     Vector3::new(1.0, -1.0, 0.0).get_normal()
 }
 
+pub fn right_slope_normal() -> Vector3 {
+    Vector3::new(-1.0, -1.0, 0.0).get_normal()
+}
+
 pub fn upper_nose_normal() -> Vector3 {
     Vector3::new(0.0, -2.0, 3.0).get_normal()
 }
