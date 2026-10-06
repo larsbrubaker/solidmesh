@@ -2,7 +2,9 @@
 //! `PolygonMesh/Mesh.cs`: `FaceTextureData`, `RemapFaceData` and `InterpolateFaceTexture`,
 //! `UncoloredFace`/`UnknownFaceColor`, `SaveFaceCentroidColors`, `FindNearestCentroidColor`,
 //! `RestoreFaceColorsFromCentroids`, and the texture extension methods (`PlaceTextureOnFace`,
-//! `PlaceTextureOnFaces`, `PlaceTexture`, `RemoveTexture`) with an explicit mapping.
+//! `PlaceTextureOnFaces`, `PlaceTexture`, `RemoveTexture`) with an explicit mapping, and the
+//! projection-picking `GetMaxPlaneProjection` and `PlaceTextureOnFaces(face, image)`, which
+//! stretch an image over a face's plane.
 //!
 //! The fields themselves (`Mesh::face_colors`, `Mesh::face_textures`) live on `Mesh` in
 //! `mesh.rs`; the operations that rebuild the face list (`mesh.rs`, `mesh_editing.rs`,
@@ -13,8 +15,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use agg_path::image::ImageBuffer;
-use agg_path::Color;
-use vector_math::{Matrix4X4, Vector2Float, Vector3, Vector3Float};
+use agg_path::{Color, RectangleDouble};
+use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
 use crate::face::FaceList;
 use crate::mesh::Mesh;
@@ -283,6 +285,55 @@ impl Mesh {
         {
             self.face_textures.remove(&key);
             self.mark_as_changed();
+        }
+    }
+
+    /// C# `GetMaxPlaneProjection(faces, textureToUse, initialTransform)`: the mapping that
+    /// rotates the first face's normal onto +Z and then stretches the faces' rotated bounds to the
+    /// unit square, so a texture placed with it covers exactly those faces. The image is not read
+    /// (C# takes it and ignores it), so it is not a parameter here.
+    pub fn get_max_plane_projection(
+        &self,
+        faces: &[usize],
+        initial_transform: Option<Matrix4X4>,
+    ) -> Matrix4X4 {
+        // If not set than make it identity
+        let first_transform = initial_transform.unwrap_or(Matrix4X4::IDENTITY);
+
+        let texture_coordinate_mapping = Matrix4X4::create_rotation_quaternion(
+            Quaternion::from_directions(self.faces[faces[0]].normal.as_vector3(), Vector3::UNIT_Z),
+        );
+
+        let mut bounds = RectangleDouble::ZERO_INTERSECTION;
+
+        for &face in faces {
+            let f = self.faces[face];
+            for vertex_index in [f.v0, f.v1, f.v2] {
+                let edge_start_position = self.vertices[vertex_index as usize];
+                let texture_uv = edge_start_position.transform(texture_coordinate_mapping);
+                bounds.expand_to_include(Vector2::from_vector3_float(texture_uv));
+            }
+        }
+
+        let centering = Matrix4X4::create_translation(-bounds.left, -bounds.bottom, 0.0);
+        let scaling = Matrix4X4::create_scale(1.0 / bounds.width(), 1.0 / bounds.height(), 1.0);
+
+        texture_coordinate_mapping * first_transform * centering * scaling
+    }
+
+    /// C# `PlaceTextureOnFaces(face, textureToUse)`: planar-projects `texture_to_use` along the
+    /// normal of face `face` over every face coplanar with it, stretched to cover them
+    /// ([`Mesh::get_max_plane_projection`]).
+    pub fn place_texture_on_coplanar_faces(
+        &mut self,
+        face: usize,
+        texture_to_use: Option<Arc<ImageBuffer>>,
+    ) {
+        //// planar project along the normal of this face
+        let faces = self.get_coplanar_faces_of_face(face);
+        if !faces.is_empty() {
+            let mapping = self.get_max_plane_projection(&faces, None);
+            self.place_texture_on_faces(&faces, texture_to_use, mapping);
         }
     }
 

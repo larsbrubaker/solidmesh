@@ -235,3 +235,26 @@ fn remove_degenerate_faces_moves_face_textures_with_their_faces() {
     assert_eq!(mesh.face_textures.len(), 1);
     assert!(mesh.face_textures.contains_key(&0));
 }
+
+/// `PlaceTextureOnFaces(face, image)` (what MatterCAD's image object textures its plate with)
+/// covers face 0 and every face coplanar with it, stretched so their UVs span exactly the unit
+/// square, and leaves the other faces untextured.
+#[test]
+fn rust_only_place_texture_on_coplanar_faces_spans_the_unit_square() {
+    let mut cube = create_cube(30.0, 15.0, 0.2);
+    let coplanar = cube.get_coplanar_faces_of_face(0);
+    cube.place_texture_on_coplanar_faces(0, Some(test_texture()));
+
+    assert_eq!(cube.face_textures.len(), coplanar.len());
+    let (mut min, mut max) = ((f32::MAX, f32::MAX), (f32::MIN, f32::MIN));
+    for face in &coplanar {
+        let data = &cube.face_textures[&(*face as i32)];
+        for corner in [data.uv0, data.uv1, data.uv2] {
+            min = (min.0.min(corner.x), min.1.min(corner.y));
+            max = (max.0.max(corner.x), max.1.max(corner.y));
+        }
+    }
+    let close = |a: f32, b: f32| (a - b).abs() < 1e-5;
+    assert!(close(min.0, 0.0) && close(min.1, 0.0), "min {min:?}");
+    assert!(close(max.0, 1.0) && close(max.1, 1.0), "max {max:?}");
+}

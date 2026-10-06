@@ -5,9 +5,9 @@
 //!
 //! `Face.Split`/`GetCutLine` live in `face_split.rs`, `SplitOnPlanes` in `mesh_editing.rs` and
 //! `RepairTJunctions` in `t_junctions.rs`, the texture helpers with an explicit mapping
-//! (`PlaceTexture*`, `RemoveTexture`) in `face_data.rs`. Not yet ported: the projection-picking
-//! texture overloads (`GetMaxPlaneProjection` and the `PlaceTextureOnFace(s)` overloads that use
-//! it) and `AddFaceCopy`; `TexturedPlane` throws `NotImplementedException` in C#.
+//! (`PlaceTexture*`, `RemoveTexture`, `GetMaxPlaneProjection`) in `face_data.rs`. Not yet ported:
+//! the single-face projection overload `PlaceTextureOnFace(face, image)` and `AddFaceCopy`;
+//! `TexturedPlane` throws `NotImplementedException` in C#.
 
 use std::collections::HashSet;
 
