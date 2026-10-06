@@ -1,6 +1,7 @@
 //! The part of geometry3Sharp's `DMeshAABBTree3` (`spatial/DMeshAABBTree.cs`) the signed
 //! distance grid and the mesh repair reach: the default top-down midpoint build,
-//! `FindNearestTriangle`, and `FindNearestHitTriangle` with its `TriangleFilterF`.
+//! `FindNearestTriangle`, and `FindNearestHitTriangle` with its `TriangleFilterF`. The fast
+//! winding number over the same tree is `fast_winding`.
 //!
 //! The layout is g3's: float box centres and extents per box, `box_to_index` into one
 //! `index_list` whose leading part holds the leaf triangle lists (`[N t1 .. tN]`) and whose tail
@@ -17,7 +18,7 @@ const ZERO_TOLERANCE_F: f64 = 1e-6f32 as f64;
 /// g3 `MathUtil.Epsilonf`.
 const EPSILON_F: f32 = 1.192_092_9e-7;
 /// g3 `box_eps`: `50.0f * MathUtil.Epsilonf`.
-const BOX_EPS: f32 = 50.0 * EPSILON_F;
+pub(super) const BOX_EPS: f32 = 50.0 * EPSILON_F;
 /// g3 `TopDownLeafMaxTriCount` (a leaf holds fewer than this many triangles).
 const TOP_DOWN_LEAF_MAX_TRI_COUNT: usize = 4;
 
@@ -69,14 +70,15 @@ struct BoxesSet {
 }
 
 /// g3 `DMeshAABBTree3`, built with `TopDownMidpoint` (C# `new DMeshAABBTree3(mesh, autoBuild: true)`).
+/// The fields are visible to `fast_winding`, which walks the same layout.
 pub(crate) struct DMeshAABBTree3<'a> {
-    mesh: &'a DMesh3,
-    box_to_index: Vec<i32>,
-    box_centers: Vec<[f32; 3]>,
-    box_extents: Vec<[f32; 3]>,
-    index_list: Vec<i32>,
-    triangles_end: i32,
-    root_index: i32,
+    pub(super) mesh: &'a DMesh3,
+    pub(super) box_to_index: Vec<i32>,
+    pub(super) box_centers: Vec<[f32; 3]>,
+    pub(super) box_extents: Vec<[f32; 3]>,
+    pub(super) index_list: Vec<i32>,
+    pub(super) triangles_end: i32,
+    pub(super) root_index: i32,
 }
 
 impl<'a> DMeshAABBTree3<'a> {

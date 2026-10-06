@@ -130,7 +130,7 @@ fn max_abs_component(corner: Vector3) -> f64 {
 /// Flattens a mesh into the interleaved position list and triangle index list the kernel
 /// takes. Positions widen from the mesh's f32 to f64 with no narrowing at the boundary; three
 /// properties per vertex and nothing else set (no merge vectors, runs or tangents).
-fn to_rust_mesh_data(mesh: &Mesh) -> MeshGL64 {
+pub(crate) fn to_rust_mesh_data(mesh: &Mesh) -> MeshGL64 {
     let mut vert_properties = Vec::with_capacity(mesh.vertices.len() * 3);
     for vertex in &mesh.vertices {
         vert_properties.push(f64::from(vertex.x));

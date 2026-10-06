@@ -13,7 +13,11 @@
 //! the fill that `region_operator` / `dsubmesh3` extract and splice back, sized with
 //! `mesh_queries`' edge-length statistics. `mesh_auto_repair` (g3 `MeshAutoRepair`, the Repair
 //! tool's default pass, exposed as `Mesh::auto_repaired`) drives all of it.
+//! `advanced_repair` (the Repair tool's Advanced path, `Mesh::advanced_repaired`) adds the
+//! kernel face orientation and `remove_occluded_triangles`, which tests points with the fast
+//! winding number (`fast_winding`) or axis rays.
 
+pub(crate) mod advanced_repair;
 pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
 pub(crate) mod dmesh3_edge_ops;
@@ -23,6 +27,7 @@ pub(crate) mod dmesh_aabb_tree3;
 pub(crate) mod dsubmesh3;
 pub(crate) mod dynamic_priority_queue;
 pub(crate) mod edge_loop;
+pub(crate) mod fast_winding;
 pub(crate) mod implicit3d;
 pub(crate) mod marching_cubes;
 pub(crate) mod marching_cubes_pro;
@@ -45,6 +50,7 @@ pub(crate) mod ref_count_vector;
 pub(crate) mod region_operator;
 pub(crate) mod remesher;
 pub(crate) mod remesher_pro;
+pub(crate) mod remove_occluded_triangles;
 pub(crate) mod signed_distance_grid;
 pub(crate) mod simple_hole_filler;
 pub(crate) mod small_list_set;
@@ -68,3 +74,5 @@ mod minimal_hole_fill_tests;
 mod region_operator_tests;
 #[cfg(test)]
 mod remesher_tests;
+#[cfg(test)]
+mod remove_occluded_triangles_tests;

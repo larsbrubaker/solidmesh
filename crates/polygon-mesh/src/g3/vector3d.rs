@@ -116,7 +116,6 @@ pub(crate) fn fast_normal_direction(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) ->
     cross(edge1, edge2)
 }
 
-#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
 /// C# `MathUtil.Area(v1, v2, v3)`: half the length of the edge cross product.
 pub(crate) fn area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> f64 {
     0.5 * length(cross(sub(v2, v1), sub(v3, v1)))

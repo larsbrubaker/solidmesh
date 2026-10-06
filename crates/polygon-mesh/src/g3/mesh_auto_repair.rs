@@ -4,9 +4,10 @@
 //! bowties, and if the mesh is still open retries and then erodes boundary triangles, before a
 //! final degenerate-edge cleanup and global orientation. Also `MathUtil.ModuloIteration`.
 //!
-//! Only `RemoveMode = None` is ported (the Repair tool's default; the interior/occluded removal
-//! needs g3's winding-number and occlusion queries, which nothing ported reaches), and there is
-//! no progress reporter or cancellation: nothing sets them on this path. C#'s final
+//! Only `RemoveMode = None` is ported here (the Repair tool's default never sets another; the
+//! Advanced path's interior/occluded removal runs `remove_occluded_triangles` itself, from
+//! `advanced_repair`, which also reuses the hole, crack, collapse and orientation helpers below),
+//! and there is no progress reporter or cancellation: nothing sets them on this path. C#'s final
 //! `Mesh = new DMesh3(Mesh, true)` replaces only the repairer's own reference with a compacted
 //! copy; callers (`RepairObject3D_2.Repair`) read the mesh they passed in, which is the one
 //! edited here. `MeshNormals.QuickCompute` on that copy has no observable output.
@@ -158,7 +159,7 @@ impl MeshAutoRepair {
 
 /// C# `fill_trivial_holes`: three-vertex loops get one triangle, four-vertex loops a minimal
 /// fill (or a fan if that fails).
-fn fill_trivial_holes(mesh: &mut DMesh3) -> Result<(), G3Exception> {
+pub(crate) fn fill_trivial_holes(mesh: &mut DMesh3) -> Result<(), G3Exception> {
     let loops = MeshBoundaryLoops::new(mesh);
     for lp in &loops.loops {
         if lp.vertex_count() == 3 {
@@ -175,7 +176,7 @@ fn fill_trivial_holes(mesh: &mut DMesh3) -> Result<(), G3Exception> {
 
 /// C# `fill_any_holes`: a minimal fill of every loop, a fan where that fails. Returns
 /// `SawOpenSpans` of the loops it filled.
-fn fill_any_holes(mesh: &mut DMesh3) -> Result<bool, G3Exception> {
+pub(crate) fn fill_any_holes(mesh: &mut DMesh3) -> Result<bool, G3Exception> {
     let loops = MeshBoundaryLoops::new(mesh);
     for lp in &loops.loops {
         let filled = MinimalHoleFill::default().apply(mesh, lp)?;
@@ -188,7 +189,7 @@ fn fill_any_holes(mesh: &mut DMesh3) -> Result<bool, G3Exception> {
 
 /// C# `repair_cracks`: a `MergeCoincidentEdges` pass; anything it throws is caught (and the
 /// mesh keeps whatever it had already changed).
-fn repair_cracks(mesh: &mut DMesh3, unique_only: bool, merge_dist: f64) -> bool {
+pub(crate) fn repair_cracks(mesh: &mut DMesh3, unique_only: bool, merge_dist: f64) -> bool {
     let merge = MergeCoincidentEdges {
         merge_distance: merge_dist,
         only_unique_pairs: unique_only,
@@ -237,7 +238,7 @@ fn collapse_degenerate_edges(
 }
 
 /// C# `collapse_all_degenerate_edges`: repeats until a pass collapses nothing.
-fn collapse_all_degenerate_edges(
+pub(crate) fn collapse_all_degenerate_edges(
     mesh: &mut DMesh3,
     min_length: f64,
     boundary_only: bool,
@@ -247,7 +248,7 @@ fn collapse_all_degenerate_edges(
 }
 
 /// C# `repair_orientation`.
-fn repair_orientation(mesh: &mut DMesh3, global: bool) {
+pub(crate) fn repair_orientation(mesh: &mut DMesh3, global: bool) {
     let mut orient = MeshRepairOrientation::new();
     orient.orient_components(mesh);
     if global {

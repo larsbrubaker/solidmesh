@@ -1,10 +1,13 @@
 //! Mesh repairs performed with the boolean kernel's import, for callers that want a repair and
 //! not a boolean. Port of agg-sharp `Csg/MeshRepairRust.cs` (static class `MeshRepair`):
 //! `RewindBackwardPatches`, which the model's boolean operations use to retry an operand the
-//! kernel refused. `TryRepairOrientation` (the Repair design tool's kernel repair) is not here
-//! yet.
+//! kernel refused, and `TryRepairOrientation`, the Repair tool's shell-level face orientation
+//! (`g3::advanced_repair`).
 
-use super::{consistent_winding, manifold_import};
+use manifold_rust::manifold::Manifold;
+use manifold_rust::types::Error as KernelStatus;
+
+use super::{consistent_winding, manifold_import, manifold_kernel, manifold_result_reader};
 use crate::Mesh;
 
 /// C# `MeshRepair.RewindBackwardPatches`: a copy of `source_mesh` with the triangles of a
@@ -28,4 +31,54 @@ pub fn rewind_backward_patches(source_mesh: &Mesh) -> Option<Mesh> {
 
     let welded = manifold_import::weld_seams(source_mesh)?;
     consistent_winding::rewind(&welded)
+}
+
+/// C# `MeshRepair.TryRepairOrientation`: rewinds inside-out shells so every body reads as solid
+/// material, using the kernel's exact shell-level orientation repair. `None` when the kernel
+/// could not take the mesh (empty input, an import or repair error status, or an empty result),
+/// in which case the caller uses its own fallback.
+///
+/// The kernel decides per shell with exact predicates: outermost shells end up wound outward,
+/// legitimate cavity shells end up wound inward, and coincident or doubled sheets are left
+/// alone. That last point is a real behavioural difference from geometry3Sharp's
+/// `MeshRepairOrientation`, which flood-fills a consistent winding across each connected
+/// component and then picks a global sign: the kernel is deliberately conservative and never
+/// removes or reverses material it has no evidence about, so a single shell whose triangles
+/// disagree with each other comes back unchanged rather than guessed at.
+///
+/// Import is the robust one, so closed-but-non-manifold soup is welded rather than rejected.
+/// Geometry that is not closed at all cannot be imported, and that is the main reason this
+/// returns `None`. Vertices may be welded and reindexed by the round trip, so anything keyed on
+/// vertex or face index (per-face colours, for instance) has to be carried across by position.
+/// `source_mesh` is left unmodified.
+pub fn try_repair_orientation(source_mesh: &Mesh) -> Option<Mesh> {
+    if source_mesh.faces.is_empty() || source_mesh.vertices.is_empty() {
+        return None;
+    }
+
+    // This is the one entry point into the kernel that does not go through a boolean, so it is
+    // the one that has to ask for the kernel's process-global configuration itself: without it
+    // a Repair performed before any boolean in the session would run on different settings than
+    // the same Repair performed after one.
+    manifold_kernel::ensure_configured();
+
+    let imported =
+        Manifold::from_mesh_gl64_robust(&manifold_import::to_rust_mesh_data(source_mesh));
+    if imported.status() != KernelStatus::NoError {
+        return None;
+    }
+
+    let repaired = imported.repair_orientation();
+    if repaired.status() != KernelStatus::NoError {
+        return None;
+    }
+
+    // An empty result from a non-empty input means the kernel lost the solid. Handing that back
+    // would silently delete the user's model, so it counts as a failure and the caller falls
+    // back instead. A result with fewer than three properties per vertex is refused too.
+    let result = manifold_result_reader::to_mesh(&repaired, "orientation repair").ok()?;
+    if result.faces.is_empty() {
+        return None;
+    }
+    Some(result)
 }
