@@ -160,3 +160,111 @@ pub fn create_rib_on_plate() -> Mesh {
         },
     )
 }
+
+/// C# `TopologyTestMeshes.CreateCylinder`: a `sides`-sided cylinder of `radius` and `height` about
+/// z, centred on the origin.
+pub fn create_cylinder(radius: f64, height: f64, sides: i32) -> Mesh {
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(0.0, -height / 2.0);
+    path.line_to(radius, -height / 2.0);
+    path.line_to(radius, height / 2.0);
+    path.line_to(0.0, height / 2.0);
+    polygon_mesh::processors::vertex_source_to_mesh::revolve(
+        &path,
+        sides,
+        0.0,
+        std::f64::consts::TAU,
+        true,
+    )
+    .expect("the cylinder revolves")
+}
+
+/// C# `TopologyTestMeshes.CreateBoreBlockWithChordWall`: a 40 x 40 x 20 block with a bore of
+/// radius 8 through it and a flat-walled lobe cut across the bore's side.
+pub fn create_bore_block_with_chord_wall(sides: i32) -> Mesh {
+    use polygon_mesh::csg::boolean_processing::do_array;
+    use polygon_mesh::csg::CsgModes;
+    use vector_math::Matrix4X4;
+
+    let block = polygon_mesh::solids::platonic_solids::create_cube(40.0, 40.0, 20.0);
+    let bore = create_cylinder(8.0, 30.0, sides);
+
+    let mut lobe = agg_path::vertex_storage::VertexStorage::new();
+    lobe.move_to(0.0, -6.0);
+    lobe.line_to(12.0, -6.0);
+    lobe.line_to(12.0, 6.0);
+    lobe.line_to(0.0, 6.0);
+    lobe.close_polygon();
+    let mut lobe_mesh = polygon_mesh::processors::vertex_source_to_mesh::extrude(&lobe, 30.0)
+        .expect("the lobe extrudes");
+    lobe_mesh.translate(Vector3::new(0.0, 0.0, -15.0));
+
+    do_array(
+        &[
+            (&block, Matrix4X4::IDENTITY),
+            (&bore, Matrix4X4::IDENTITY),
+            (&lobe_mesh, Matrix4X4::IDENTITY),
+        ],
+        CsgModes::Subtract,
+        &polygon_mesh::CancelToken::new(),
+        &polygon_mesh::csg::BooleanOptions::default(),
+    )
+    .expect("the bore and lobe cut the block")
+}
+
+/// C# `TopologyTestMeshes.CreateShallowRidgeBlock`: a 20 x 20 block whose top is two triangles
+/// folded `step_degrees` along a diagonal ridge, one of them flat.
+pub fn create_shallow_ridge_block(step_degrees: f64) -> Mesh {
+    let half = 10.0;
+    let top = 5.0;
+    let bottom = -5.0;
+    let far = top - (2f64.sqrt() * half * math_helper::degrees_to_radians(step_degrees).tan());
+
+    let flat_far = Vector3::new(-half, half, top);
+    let on_ridge = Vector3::new(-half, -half, top);
+    let corner = Vector3::new(half, half, top);
+    let dipped = Vector3::new(half, -half, far);
+    let b = |x: f64, y: f64| Vector3::new(x, y, bottom);
+
+    let mut mesh = Mesh::new();
+    mesh.create_face(&[flat_far, on_ridge, corner]);
+    mesh.create_face(&[corner, on_ridge, dipped]);
+    mesh.create_face(&[
+        b(-half, half),
+        b(half, half),
+        b(half, -half),
+        b(-half, -half),
+    ]);
+    mesh.create_face(&[b(-half, half), flat_far, corner, b(half, half)]);
+    mesh.create_face(&[b(half, half), corner, dipped, b(half, -half)]);
+    mesh.create_face(&[flat_far, b(-half, half), b(-half, -half), on_ridge]);
+    mesh.create_face(&[on_ridge, b(-half, -half), b(half, -half), dipped]);
+    mesh.clean_and_merge();
+    mesh
+}
+
+/// C# `TopologyTestMeshes.CreatePyramidPocketPrism`: a `sides`-sided prism of circumradius
+/// `radius` and `height` whose top is a pyramid pocket sunk to `apex`.
+pub fn create_pyramid_pocket_prism(sides: i32, radius: f64, height: f64, apex: Vector3) -> Mesh {
+    let rim: Vec<Vector3> = (0..sides)
+        .map(|i| {
+            let angle = 2.0 * std::f64::consts::PI * f64::from(i) / f64::from(sides);
+            Vector3::new(radius * angle.cos(), radius * angle.sin(), height)
+        })
+        .collect();
+    let floor = |p: Vector3| Vector3::new(p.x, p.y, 0.0);
+
+    let mut mesh = Mesh::new();
+    for i in 1..(sides - 1) as usize {
+        mesh.create_face(&[floor(rim[0]), floor(rim[i + 1]), floor(rim[i])]);
+    }
+
+    for i in 0..sides as usize {
+        let next = (i + 1) % sides as usize;
+        mesh.create_face(&[floor(rim[i]), floor(rim[next]), rim[next], rim[i]]);
+        mesh.create_face(&[rim[i], rim[next], apex]);
+    }
+
+    mesh.clean_and_merge();
+    mesh
+}

@@ -9,16 +9,24 @@ mod bevel_bead_batch_tests;
 mod bevel_bead_closes_over_stand_off_tests;
 #[path = "bevel/bevel_bead_exit_tests.rs"]
 mod bevel_bead_exit_tests;
+#[path = "bevel/bevel_bead_runs_off_its_wall_tests.rs"]
+mod bevel_bead_runs_off_its_wall_tests;
 #[path = "bevel/bevel_cap_clip_tests.rs"]
 mod bevel_cap_clip_tests;
 #[path = "bevel/bevel_cap_stand_off_tests.rs"]
 mod bevel_cap_stand_off_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
+#[path = "bevel/bevel_face_fit_cap_tests.rs"]
+mod bevel_face_fit_cap_tests;
+#[path = "bevel/bevel_face_fit_concave_collision_tests.rs"]
+mod bevel_face_fit_concave_collision_tests;
 #[path = "bevel/bevel_face_run_out_tests.rs"]
 mod bevel_face_run_out_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
+#[path = "bevel/bevel_pair_corner_recognition_tests.rs"]
+mod bevel_pair_corner_recognition_tests;
 #[path = "bevel/bevel_partner_tube_clip_tests.rs"]
 mod bevel_partner_tube_clip_tests;
 #[path = "bevel/bevel_partnered_bead_tests.rs"]
@@ -205,3 +213,5 @@ mod surface_sewing_bowed_side_tests;
 mod surface_splits_on_a_segment_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
+#[path = "bevel/warped_wall_test_meshes.rs"]
+mod warped_wall_test_meshes;
