@@ -5,10 +5,11 @@
 //! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Only
 //! its nested record (with its constructor), the ring positions ([`positions_of`]) and the three
 //! end rings won from the pool ([`try_the_end_rings`]) land here, one strip's end ring being a
-//! [`SurfaceTwoCreaseJunctionPatchEndRing`]; the patch lands with the two-crease junction package.
+//! [`SurfaceTwoCreaseJunctionPatchEndRing`], with the patch's grid ([`try_the_grid`]) and its
+//! quads ([`emit`]); the patch's driver lands with the two-crease junction package.
 
 use super::surface_mitre_joint_step::SideSeams;
-use super::surface_mixed_corner_patch;
+use super::{surface_fan, surface_mixed_corner_patch};
 use super::{
     SurfaceMixedJunction, SurfaceMixedJunctionPatchArrival, SurfaceTwoCreaseJunctionRings,
     SurfaceVertexPool,
@@ -127,4 +128,81 @@ pub fn try_the_end_rings(
         SurfaceTwoCreaseJunctionPatchEndRing::new(first_ring, first_meets_at, first_grid),
         SurfaceTwoCreaseJunctionPatchEndRing::new(last_ring, last_meets_at, last_grid),
     ))
+}
+
+/// C# `TryTheGrid`: the patch's grid, station by station and rail by rail - the first and last
+/// rows the two beads' end rings, the last rail the cut's ring, and every other vertex minted at the
+/// rings' own position - refused where the closing column does not stand, or a bead's tube contact
+/// is not the cut ring's own end rail.
+pub fn try_the_grid(
+    pool: &mut SurfaceVertexPool,
+    junction: &SurfaceMixedJunction,
+    rings: &SurfaceTwoCreaseJunctionRings,
+    cut_ring: &[i32],
+    first_ring: &[i32],
+    last_ring: &[i32],
+) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
+    let (stands, stands_off, _) = rings
+        .the_closing_column_stands(SurfaceTwoCreaseJunctionRings::closing_slack(junction, pool));
+    if !stands {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+            vec![stands_off.into()],
+        ));
+    }
+
+    let rails = rings.rails_per_row();
+    let stations = rings.station_count();
+
+    // The two corners the rings SHARE are one vertex.
+    for (bead, station) in [(first_ring, 0), (last_ring, stations - 1)] {
+        if bead[rails - 1] != cut_ring[station] {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
+                vec![pool.position_of(cut_ring[station]).into()],
+            ));
+        }
+    }
+
+    let mut grid = Vec::with_capacity(stations);
+    #[allow(clippy::needless_range_loop)] // C#'s station-by-rail grid, read by index
+    for station in 0..stations {
+        let mut row = Vec::with_capacity(rails);
+        for rail in 0..rails {
+            let vertex = if station == 0 {
+                first_ring[rail]
+            } else if station == stations - 1 {
+                last_ring[rail]
+            } else if rail == rails - 1 {
+                cut_ring[station]
+            } else {
+                pool.add(rings.at(rail, station))
+            };
+            row.push(vertex);
+        }
+        grid.push(row);
+    }
+
+    Ok(grid)
+}
+
+/// C# `Emit`: the grid's quads, each fanned facing the junction's outward sum.
+pub fn emit(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    junction: &SurfaceMixedJunction,
+    grid: &[Vec<i32>],
+) {
+    let outward = junction.first.mixed.outward_sum();
+    for station in 0..grid.len().saturating_sub(1) {
+        for rail in 0..grid[station].len().saturating_sub(1) {
+            let quad = [
+                grid[station][rail],
+                grid[station + 1][rail],
+                grid[station + 1][rail + 1],
+                grid[station][rail + 1],
+            ];
+            surface_fan::emit_facing(&quad, pool, faces, outward);
+        }
+    }
 }

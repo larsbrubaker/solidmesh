@@ -2,8 +2,8 @@
 //! touch row dies into the sharp edge the part keeps (`Bevel/Surface/SurfaceMixedCornerRunOut.cs`,
 //! a static class: free functions here): its constant, the one-place test, and where a station's
 //! arc meets the wall ([`try_scallop_point`], [`try_scallop_on_the_ring`]), and the turns its
-//! stations stand at ([`try_turns_past_the_bead`]), and its columns ([`try_columns`]). Emitting
-//! the run-out's surface (`TryEmit`) lands with a later package.
+//! stations stand at ([`try_turns_past_the_bead`]), its columns ([`try_columns`]), and the run-out
+//! drawn station by station ([`try_emit`]).
 
 use std::cmp::Ordering;
 use std::rc::Rc;
@@ -11,6 +11,7 @@ use std::rc::Rc;
 use vector_math::{cs_math, cs_sort, Vector3};
 
 use super::surface_run_out_column_ends;
+use super::{surface_mixed_corner_patch, surface_mixed_corner_run_out_strip};
 use super::{
     SurfaceBandEnd, SurfaceCrossingAtTheMitre, SurfaceMixedCorner, SurfaceMixedCornerRows,
     SurfaceMixedCornerWall, SurfaceRunOutCarry, SurfaceRunOutColumnWalk, SurfaceRunOutColumnWindow,
@@ -449,4 +450,49 @@ pub fn try_columns(
     }
 
     Ok(drawn)
+}
+
+/// C# `TryEmit`: the run-out drawn as a strip between each pair of neighbouring stations' columns
+/// (with each station's top rim), facing the corner's outward sum; refused, naming the first piece
+/// that covers a face already drawn, where the corner came in clean and a piece makes it fold.
+pub fn try_emit(
+    pool: &mut super::SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &super::SurfaceMixedCorner,
+    columns: &[Vec<i32>],
+    first_rows: &[i32],
+    top_rims: Option<&[Vec<i32>]>,
+) -> Result<(), BevelAdvisory> {
+    let outward = corner.outward_sum();
+
+    // Whether anything covers itself BEFORE the run-out has drawn a thing.
+    let came_in_clean = surface_mixed_corner_patch::nothing_covers_nothing(pool, faces).is_ok();
+
+    for station in 0..columns.len().saturating_sub(1) {
+        let top_rim = top_rims
+            .filter(|rims| station + 1 < rims.len())
+            .map(|rims| rims[station + 1].as_slice());
+        surface_mixed_corner_run_out_strip::emit(
+            pool,
+            faces,
+            &columns[station],
+            &columns[station + 1],
+            first_rows[station],
+            first_rows[station + 1],
+            top_rim,
+            outward,
+        );
+
+        // Read as each piece LANDS: the first station a fold shows at is the piece that made it.
+        if came_in_clean {
+            if let Err(covered) = surface_mixed_corner_patch::nothing_covers_nothing(pool, faces) {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceRunOutLiesOnAFaceAlreadyDrawn,
+                    vec![covered.args()[0].clone()],
+                ));
+            }
+        }
+    }
+
+    Ok(())
 }

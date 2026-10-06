@@ -1,12 +1,13 @@
 //! A band's strip cut short at the curve a mixed corner's RUN-OUT crosses it in
 //! ([`SurfaceStripTrimmedAtTheCrossing`]). Ports
 //! `Bevel/Surface/SurfaceStripTrimmedAtTheCrossing.cs`: its fields, its constructor and its rail
-//! questions; the reading itself (`TryRead`) lands with a later package as a further `impl` block.
+//! questions, and the reading itself ([`SurfaceStripTrimmedAtTheCrossing::try_read`]).
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use super::{SurfaceCrossingAtTheMitre, SurfaceStrip, SurfaceVertexPool};
+use super::{SurfaceCrossingAtTheMitre, SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceStripTrimmedAtTheCrossing`: which rails the crossing stands on, how far along the
 /// edge each of them is cut, and the one point on the profile between two rails where the run-out's
@@ -271,5 +272,117 @@ impl SurfaceStripTrimmedAtTheCrossing {
         }
 
         (nearest <= pool.near_enough()).then_some((rail, param))
+    }
+}
+
+impl SurfaceStripTrimmedAtTheCrossing {
+    /// C# `TryRead`: the strip `strip_index` cut short where the run-out's `crossing` (its rows,
+    /// then its foot) crosses it - each row on the rail it stands on (a row on none is carried onto
+    /// the chord between the two rails either side), at the end of the band the crossing stands at
+    /// (or at `at_the_mitre`). `Ok(None)` (C#'s false with no failure) where there is nothing to
+    /// read; `Err` where the profiles do not match, or the crossing leaves the band.
+    #[allow(clippy::too_many_arguments)]
+    pub fn try_read(
+        pool: Option<&SurfaceVertexPool>,
+        strip: Option<&SurfaceStrip>,
+        strip_index: i32,
+        edge: &SurfaceEdgePlan,
+        crossing: Option<&[i32]>,
+        at_the_mitre: Option<Rc<SurfaceCrossingAtTheMitre>>,
+    ) -> Result<Option<SurfaceStripTrimmedAtTheCrossing>, BevelAdvisory> {
+        let (Some(pool), Some(strip), Some(crossing)) = (pool, strip, crossing) else {
+            return Ok(None);
+        };
+        if crossing.len() < 2 {
+            return Ok(None);
+        }
+
+        let rows = crossing.len() - 1;
+        let mut rail_of = Vec::with_capacity(rows);
+        let mut param_of = Vec::with_capacity(rows);
+        let mut at = Vec::with_capacity(rows);
+        let mut between: Vec<Vec<i32>> = Vec::with_capacity(rows);
+        let mut carried = Vec::new();
+
+        for &row in &crossing[..rows] {
+            let Some((rail, param)) = Self::try_the_rail_under(pool, strip, row) else {
+                carried.push(row);
+                continue;
+            };
+
+            rail_of.push(rail);
+            param_of.push(param);
+            at.push(row);
+            between.push(std::mem::take(&mut carried));
+        }
+
+        if rail_of.is_empty() || !carried.is_empty() || !between[0].is_empty() {
+            let at = if carried.is_empty() {
+                crossing[0]
+            } else {
+                carried[0]
+            };
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingProfilesDoNotMatch,
+                vec![pool.position_of(at).into()],
+            ));
+        }
+
+        for corner in 1..rail_of.len() {
+            for &carried_on in &between[corner] {
+                if (rail_of[corner] - rail_of[corner - 1]).abs() != 1
+                    || !Self::stands_on_the_chord(pool, at[corner - 1], at[corner], carried_on)
+                {
+                    return Err(BevelAdvisory::new(
+                        BevelAdvisoryCode::SurfaceCrossingProfilesDoNotMatch,
+                        vec![pool.position_of(carried_on).into()],
+                    ));
+                }
+            }
+        }
+
+        let foot = crossing[crossing.len() - 1];
+        let foot_param = strip.param_of(pool.position_of(foot));
+
+        let length = (edge.to() - edge.from()).dot(strip.along());
+        let mut reach = foot_param;
+        for &param in &param_of {
+            reach = vector_math::cs_math::max_f64(reach, param);
+        }
+
+        let mut nearest = foot_param;
+        for &param in &param_of {
+            nearest = vector_math::cs_math::min_f64(nearest, param);
+        }
+
+        let at_the_start = nearest < length - reach;
+        let near = vector_math::cs_math::max_f64(pool.near_enough(), 0.0);
+        let stands_at_the_end = at_the_mitre.is_some()
+            || if at_the_start {
+                nearest <= near
+            } else {
+                reach >= length - near
+            };
+
+        if !stands_at_the_end {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingLeavesTheBand,
+                vec![pool.position_of(foot).into()],
+            ));
+        }
+
+        let trimmed = SurfaceStripTrimmedAtTheCrossing::new(
+            strip_index,
+            at_the_start,
+            rail_of,
+            param_of,
+            at,
+            between,
+            foot,
+            foot_param,
+        );
+        *trimmed.at_the_mitre.borrow_mut() = at_the_mitre;
+
+        Ok(Some(trimmed))
     }
 }

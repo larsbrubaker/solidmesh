@@ -2,8 +2,8 @@
 //! ([`SurfaceStripNotchedByAFeature`]) and the points between rails it is bounded by
 //! ([`SurfaceStripNotchedByAFeatureBetween`]). Ports the fields of
 //! `Bevel/Surface/SurfaceStripNotchedByAFeature.cs`, the feature's foot as the band sees it, and
-//! its constructor, rail questions and readings off the strip; the reading that puts them together
-//! (`TryRead`) lands with a later package as a further `impl` block.
+//! its constructor, rail questions and readings off the strip, and the reading that puts them
+//! together ([`SurfaceStripNotchedByAFeature::try_read`]).
 
 use std::rc::Rc;
 
@@ -667,5 +667,123 @@ impl SurfaceStripNotchedByAFeature {
             end_param,
             Some(face.clone()),
         ))
+    }
+}
+
+impl SurfaceStripNotchedByAFeature {
+    /// C# `TryRead`: the notch a standing `feature` cuts into the strip at the end it leaves
+    /// through - the rails (not collapsed by a run-off) a face of the feature cuts inside the span,
+    /// which must be one run; a one-faced notch, or the exit and the Q at either side. `Ok(None)` (C#'s
+    /// true with no notch) where no rail is cut; `Err` names why the feature cannot be notched round.
+    #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_read(
+        pool: &mut SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        strip_index: i32,
+        feature: &Rc<SurfaceStandingFeatureWithheld>,
+        reach: i32,
+        ran_off: &[Option<&SurfaceStripTrimmedByTheFaceBeyond>],
+        seams: Option<&[SideSeams]>,
+    ) -> Result<Option<SurfaceStripNotchedByAFeature>, BevelAdvisory> {
+        let snap = SurfaceVertexPool::near_enough_for(pool.vertices());
+        let length = (edge.to() - edge.from()).length();
+
+        let Some((at_the_start, end_param)) =
+            Self::try_the_end_it_leaves_through(pool, strip, feature, reach, length, snap)
+        else {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStandingFeatureInTheBand,
+                vec![Self::the_foot_of(pool, edge, feature, reach as usize).into()],
+            ));
+        };
+
+        let mut rail_of = Vec::new();
+        let mut param_of = Vec::new();
+        let mut face_of = Vec::new();
+
+        for rail in 0..strip.rail_count() {
+            if Self::is_collapsed(ran_off, strip.rail_count(), rail) {
+                continue;
+            }
+
+            let Some((face, param)) = Self::try_the_face_that_cuts(strip, feature, rail, snap)
+            else {
+                continue;
+            };
+
+            if !(param > snap && param < length - snap) {
+                continue;
+            }
+
+            rail_of.push(rail);
+            param_of.push(param);
+            face_of.push(face);
+        }
+
+        if rail_of.is_empty() {
+            return Ok(None);
+        }
+
+        if rail_of[rail_of.len() - 1] - rail_of[0] != rail_of.len() as i32 - 1 {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStandingFeatureDoesNotExtend,
+                vec![strip.point_on(rail_of[0], param_of[0]).into()],
+            ));
+        }
+
+        if Self::on_one_face_only(&face_of) {
+            return Self::try_the_one_faced_notch(
+                pool,
+                strip,
+                strip_index,
+                seams,
+                at_the_start,
+                feature,
+                reach,
+                &mut rail_of,
+                &mut param_of,
+                &mut face_of,
+                end_param,
+                snap,
+            )
+            .map(Some);
+        }
+
+        let exit = Self::try_the_exit(pool, strip, edge, feature, &rail_of, &face_of, snap)?;
+        let lower = Self::try_the_q(
+            pool,
+            strip,
+            rail_of[0],
+            rail_of[0] - 1,
+            &face_of[0],
+            end_param,
+            snap,
+        )?;
+        let last = rail_of.len() - 1;
+        let upper = Self::try_the_q(
+            pool,
+            strip,
+            rail_of[last],
+            rail_of[last] + 1,
+            &face_of[last],
+            end_param,
+            snap,
+        )?;
+
+        Ok(Some(SurfaceStripNotchedByAFeature::new(
+            strip_index,
+            at_the_start,
+            feature.clone(),
+            reach,
+            rail_of,
+            param_of,
+            face_of,
+            end_param,
+            exit,
+            lower,
+            upper,
+            -1,
+        )))
     }
 }

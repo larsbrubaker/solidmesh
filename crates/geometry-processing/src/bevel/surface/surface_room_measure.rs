@@ -1,15 +1,22 @@
 //! Pacing out the room a cut has on its region (`Bevel/Surface/SurfaceRoomMeasure.cs`, a static
 //! class: free functions here). The rulers and the exact offset of a rim segment in front of the
 //! chain edge land here first, with the bands a pass takes off a region, the free end, the corner
-//! a wall shares and its measure; the measure itself (`RoomAcross`, `Measure`) lands with later
-//! packages.
+//! a wall shares and its measure, and the room across one region ([`room_across`]); the whole
+//! measure (`Measure`) lands with a later package.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 use vector_math::{cs_math, Vector3};
 
-use super::SurfaceBevelPlan;
+use polygon_mesh::Mesh;
+
+use super::surface_band_runs_off_the_face_beyond::{self, BandSpan, ChainAtTheSpan};
+use super::surface_run_across::SurfaceRunAcrossRegionMapsCache;
+use super::{surface_room_standing_feature, surface_run_across_walk};
+use super::{SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan};
+use crate::bevel::BevelAdvisory;
+use crate::topology::EdgeConvexity;
 use crate::topology::FaceGroup;
 
 /// How near a rim edge has to come to the chain edge's own line before it is read as being that
@@ -190,4 +197,217 @@ pub fn measure_corner(
     if read_the_offset {
         *nearest = cs_math::min_f64(*nearest, offset);
     }
+}
+
+/// C# `RoomAcross`: how far a cut along the chain edge `from`-`to` can reach into `region` before
+/// it meets a wall - infinite where the band runs OFF the region whole; paced out along a curved
+/// landing's own surface where that walk answers; the rim it runs off over a stretch charged only
+/// over the rest of the span; every other rim read as a corner wall at either end (summed into what
+/// the two mitres take from the edge's length) or as a wall straight across. Refusals the run-off
+/// readings name are added to `named` on `mesh_edge_index`. Returns the room and the stretch the
+/// band runs off over, if any (C#'s `out ranOffOverAStretch`).
+#[allow(clippy::too_many_arguments)]
+pub fn room_across(
+    mesh: &Mesh,
+    from: Vector3,
+    to: Vector3,
+    along: Vector3,
+    length: f64,
+    inward: Vector3,
+    setback: f64,
+    region: &FaceGroup,
+    beveled_mesh_edges: &HashSet<i32>,
+    chain_vertices: &HashSet<i32>,
+    bands_on_this_region: &HashSet<i32>,
+    region_maps: Option<&mut SurfaceRunAcrossRegionMapsCache>,
+    mut named: Option<&mut Vec<BevelAdvisory>>,
+    mesh_edge_index: i32,
+    chain_convexity: EdgeConvexity,
+    free_at_the_start: bool,
+    free_at_the_end: bool,
+) -> (f64, Option<SurfaceBandRunsOffOverAStretch>) {
+    let mut ran_off_over_a_stretch = None;
+    let corner = cs_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
+    let span = BandSpan {
+        from,
+        along,
+        length,
+        inward,
+        setback,
+    };
+
+    // A band that takes the WHOLE of this region over its own span runs OFF its convex rim.
+    match surface_band_runs_off_the_face_beyond::try_read(
+        Some(mesh),
+        Some(region),
+        &span,
+        beveled_mesh_edges,
+        chain_vertices,
+    ) {
+        Ok(Some(_)) => return (f64::INFINITY, None),
+        Ok(None) => {}
+        Err(why) => {
+            // It runs off onto something that is not one plane: carried out by name.
+            if let Some(named) = named.as_deref_mut() {
+                named.push(why.on_mesh_edge(mesh_edge_index));
+            }
+        }
+    }
+
+    // A CURVED landing is paced out along its own surface instead.
+    let run = surface_run_across_walk::try_across_a_curved_region(
+        mesh,
+        region,
+        from,
+        to,
+        along,
+        inward,
+        region_maps,
+    );
+    let across_the_surface = run.is_some();
+    let mut nearest = run.unwrap_or(f64::INFINITY);
+
+    // The run-off over PART of the span; not on a landing paced out across its own surface.
+    let mut goes_over_these_rims: Option<std::sync::Arc<HashSet<i32>>> = None;
+    let mut rest_of_the_span_from = from;
+    let mut rest_of_the_span = length;
+
+    if !across_the_surface {
+        let chain = ChainAtTheSpan {
+            convexity: chain_convexity,
+            free_at_the_start,
+            free_at_the_end,
+        };
+        match surface_band_runs_off_the_face_beyond::try_read_a_stretch(
+            Some(mesh),
+            Some(region),
+            &span,
+            chain,
+            beveled_mesh_edges,
+            chain_vertices,
+        ) {
+            Ok(Some(stretch)) => {
+                goes_over_these_rims = Some(stretch.rims_it_runs_off.clone());
+
+                // The part of the span the band does NOT run off over: one interval.
+                rest_of_the_span = cs_math::max_f64(length - stretch.until, 0.0);
+                rest_of_the_span_from = if stretch.at_the_start {
+                    from + (along * stretch.until)
+                } else {
+                    from
+                };
+                ran_off_over_a_stretch = Some(stretch);
+            }
+            Ok(None) => {}
+            Err(why) => {
+                if let Some(named) = named {
+                    named.push(why.on_mesh_edge(mesh_edge_index));
+                }
+            }
+        }
+    }
+
+    // What the mitre at either end takes out of the edge's own length, per unit of setback.
+    let mut taken_at_from = 0.0;
+    let mut taken_at_to = 0.0;
+
+    for rim in region.boundary_edges() {
+        if goes_over_these_rims
+            .as_ref()
+            .is_some_and(|rims| rims.contains(&rim.mesh_edge_index))
+        {
+            // The knife edge the band runs OFF over its stretch: a wall over the REST of the span.
+            if rest_of_the_span > 0.0 {
+                let over_the_rest = offset_to_segment(
+                    rest_of_the_span_from,
+                    along,
+                    rest_of_the_span,
+                    inward,
+                    rim.start,
+                    rim.end,
+                );
+                if over_the_rest < nearest {
+                    nearest = over_the_rest;
+                }
+            }
+
+            continue;
+        }
+
+        let leg_at_from = shares_the_corner(rim, from, corner);
+        let leg_at_to = if leg_at_from.is_none() {
+            shares_the_corner(rim, to, corner)
+        } else {
+            None
+        };
+        let (at_from, at_to) = (leg_at_from.is_some(), leg_at_to.is_some());
+
+        if bands_on_this_region.contains(&rim.mesh_edge_index) {
+            // The chain edge itself, and every other edge taking a band off THIS region.
+            continue;
+        }
+
+        if (at_from || at_to) && beveled_mesh_edges.contains(&rim.mesh_edge_index) {
+            // A corner the pass is beveling that lands on some OTHER region.
+            continue;
+        }
+
+        if surface_room_standing_feature::stands_on(region, rim, beveled_mesh_edges, chain_vertices)
+        {
+            // Not a wall at all: a feature HANGING over the region.
+            continue;
+        }
+
+        if let Some(leg) = leg_at_from {
+            let offset = read_the_offset(
+                region,
+                rim,
+                from + leg,
+                corner,
+                across_the_surface,
+                beveled_mesh_edges,
+                chain_vertices,
+            );
+            measure_corner(
+                leg,
+                along,
+                inward,
+                offset,
+                corner,
+                &mut nearest,
+                &mut taken_at_from,
+            );
+        } else if let Some(leg) = leg_at_to {
+            let offset = read_the_offset(
+                region,
+                rim,
+                to + leg,
+                corner,
+                across_the_surface,
+                beveled_mesh_edges,
+                chain_vertices,
+            );
+            measure_corner(
+                leg,
+                -along,
+                inward,
+                offset,
+                corner,
+                &mut nearest,
+                &mut taken_at_to,
+            );
+        } else if !across_the_surface {
+            let offset = offset_to_segment(from, along, length, inward, rim.start, rim.end);
+            if offset < nearest {
+                nearest = offset;
+            }
+        }
+    }
+
+    let taken = taken_at_from + taken_at_to;
+    if taken > 0.0 {
+        nearest = cs_math::min_f64(nearest, length / taken);
+    }
+
+    (nearest, ran_off_over_a_stretch)
 }

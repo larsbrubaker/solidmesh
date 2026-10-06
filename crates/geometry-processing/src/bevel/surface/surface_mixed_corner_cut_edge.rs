@@ -1,11 +1,13 @@
 //! Which edge of a mixed corner is really the CUT where the bead rolled along a chorded wall
 //! (`Bevel/Surface/SurfaceMixedCornerCutEdge.cs`, a static class: free functions here). The
-//! sagitta guard of the wall's chords and how far apart two skew lines stand land here first; the
-//! cut edge's walk lands with a later package.
+//! sagitta guard of the wall's chords, how far apart two skew lines stand, and the cut edge's walk
+//! ([`try_find`], [`try_find_for_the_bead`], [`try_walk`]).
 
 use vector_math::{cs_math, Vector3};
 
-use super::{SurfaceLine, SurfaceWallSection};
+use super::surface_mixed_corner_read_off_the_edge_plans::rests_on_the_crease_of_the_face_shared_with;
+use super::{SurfaceEdgePlan, SurfaceLine, SurfaceWallSection};
+use crate::topology::EdgeConvexity;
 
 /// How square two of a section's facets have to stand to each other to be two triangles of ONE
 /// chord of the wall rather than two chords: a millionth off parallel, which is float storage and
@@ -87,4 +89,160 @@ pub fn try_apart(first: SurfaceLine, second: SurfaceLine) -> Option<f64> {
         ((first.point + (first.direction * here)) - (second.point + (second.direction * there)))
             .length(),
     )
+}
+
+/// C# `TryFind(planned, isClosed, cornerIndex, cutIsArriving, ..)`: the cut edge of the corner
+/// between `planned[corner_index]` and the next, walking from the cut's side away from the bead
+/// (the leaving edge where the cut arrives, else the arriving one). Returns the cut's index and
+/// the edges swallowed before it.
+pub fn try_find(
+    planned: &[SurfaceEdgePlan],
+    is_closed: bool,
+    corner_index: i32,
+    cut_is_arriving: bool,
+    size: f64,
+    near_enough: f64,
+) -> Option<(i32, Vec<i32>)> {
+    let count = planned.len() as i32;
+    let leaving = (corner_index + 1) % count;
+    let bead_index = if cut_is_arriving {
+        leaving
+    } else {
+        corner_index
+    };
+
+    try_walk(
+        planned,
+        is_closed,
+        if cut_is_arriving {
+            corner_index
+        } else {
+            leaving
+        },
+        if cut_is_arriving { -1 } else { 1 },
+        bead_index,
+        &planned[bead_index as usize],
+        size,
+        near_enough,
+    )
+}
+
+/// C# `TryFind(planned, isClosed, cornerIsAtTheStart, bead, ..)`: the same walk for a `bead` of
+/// another chain meeting this run at its start (or end).
+pub fn try_find_for_the_bead(
+    planned: &[SurfaceEdgePlan],
+    is_closed: bool,
+    corner_is_at_the_start: bool,
+    bead: &SurfaceEdgePlan,
+    size: f64,
+    near_enough: f64,
+) -> Option<(i32, Vec<i32>)> {
+    try_walk(
+        planned,
+        is_closed,
+        if corner_is_at_the_start {
+            0
+        } else {
+            planned.len() as i32 - 1
+        },
+        if corner_is_at_the_start { 1 } else { -1 },
+        -1,
+        bead,
+        size,
+        near_enough,
+    )
+}
+
+/// C# `TryWalk`: walks the run from `at` by `step` until an edge's centre line stands 2r from the
+/// bead's (the cut), or - for a bead resting on a crease - past the local maximum of that distance
+/// (the chord before is the cut, within the wall chords' sagitta of 2r). `None` where the walk
+/// meets a concave or centre-less edge, clears the bead without touching, runs off an open end or
+/// comes back to the bead. Returns the cut's index and the edges swallowed before it.
+#[allow(clippy::too_many_arguments)]
+pub fn try_walk(
+    planned: &[SurfaceEdgePlan],
+    is_closed: bool,
+    mut at: i32,
+    step: i32,
+    bead_index: i32,
+    bead: &SurfaceEdgePlan,
+    size: f64,
+    near_enough: f64,
+) -> Option<(i32, Vec<i32>)> {
+    let count = planned.len() as i32;
+
+    if !bead.has_center_line {
+        return None;
+    }
+
+    let mut passed = Vec::new();
+
+    // A bead RESTING ON A CREASE is tangent to neither facet's plane; qualified against the face
+    // the walked chords share.
+    let rests_on_the_crease =
+        rests_on_the_crease_of_the_face_shared_with(bead, &planned[at as usize]);
+
+    // How far short of 2r a crease landing is allowed to stand.
+    let allowed_deficit = if rests_on_the_crease {
+        sagitta_of_the_walls_chords(bead.wall_section.as_deref()) + near_enough
+    } else {
+        0.0
+    };
+
+    let mut nearest = -1;
+    let mut nearest_apart = f64::NEG_INFINITY;
+
+    for _ in 0..count {
+        let plan = &planned[at as usize];
+
+        if plan.convexity() != EdgeConvexity::Convex || !plan.has_center_line {
+            return None;
+        }
+
+        let apart = try_apart(plan.center_line, bead.center_line)?;
+
+        if (apart - (2.0 * size)).abs() <= near_enough {
+            return Some((at, passed));
+        }
+
+        // Down from the local maximum by more than the part's own ruler.
+        if rests_on_the_crease && nearest >= 0 && apart < nearest_apart - near_enough {
+            if (2.0 * size) - nearest_apart > allowed_deficit {
+                // No tangency here to hand over on.
+                return None;
+            }
+
+            // Past the local maximum: the chord before this one is the cut.
+            passed.pop();
+            return Some((nearest, passed));
+        }
+
+        nearest = at;
+        nearest_apart = apart;
+
+        if apart > 2.0 * size {
+            // The ball has already cleared this edge's cylinder without touching one.
+            return None;
+        }
+
+        passed.push(at);
+
+        let mut ahead = at + step;
+        if ahead < 0 || ahead >= count {
+            if !is_closed {
+                return None;
+            }
+
+            ahead = (ahead + count) % count;
+        }
+
+        if ahead == bead_index {
+            // All the way round to the bead itself.
+            return None;
+        }
+
+        at = ahead;
+    }
+
+    None
 }

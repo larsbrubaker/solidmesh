@@ -1,12 +1,13 @@
 //! A band's strip cut back along the FACE BEYOND the region it landed on
 //! ([`SurfaceStripTrimmedByTheFaceBeyond`]). Ports
 //! `Bevel/Surface/SurfaceStripTrimmedByTheFaceBeyond.cs`: its fields, its constructor, the corner
-//! beyond (three planes met) and its ring, rim and profile questions; the reading itself lands with
-//! a later package as a further `impl` block.
+//! beyond (three planes met) and its ring, rim and profile questions, and the reading itself
+//! ([`SurfaceStripTrimmedByTheFaceBeyond::try_read`]).
 
 use vector_math::Vector3;
 
 use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceStripTrimmedByTheFaceBeyond`: which rails the face beyond's plane crosses inside the
 /// edge's span, where each of them is cut, and the one point the rails it never crosses all
@@ -239,5 +240,110 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
         }
 
         trims[strip as usize][side].clone()
+    }
+}
+
+impl SurfaceStripTrimmedByTheFaceBeyond {
+    /// C# `TryRead`: the strip cut back along the face beyond (the plane `plane_point`,
+    /// `plane_normal`) where its band ran off at `side` - each rail's crossing, clamped into the span
+    /// only for the rails the run-off collapsed; the point the surface ends on at the far end, minted
+    /// once; and the part's corner the three planes meet at. `Err` names where the run-off reading and
+    /// this one disagree, or where no vertex stands at the corner beyond.
+    #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+    pub fn try_read(
+        pool: &mut SurfaceVertexPool,
+        strip: &SurfaceStrip,
+        edge: &SurfaceEdgePlan,
+        side: i32,
+        plane_point: Vector3,
+        plane_normal: Vector3,
+        at_the_start: bool,
+    ) -> Result<SurfaceStripTrimmedByTheFaceBeyond, BevelAdvisory> {
+        let disagrees = |at: Vector3| {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceRunOffReadingDisagrees,
+                vec![at.into()],
+            )
+        };
+        let length = (edge.to() - edge.from()).dot(strip.along());
+        let far_param = if at_the_start { length } else { 0.0 };
+        let rail_count = strip.rail_count();
+        let mut trimmed_at = vec![0.0; rail_count.max(0) as usize];
+        let mut first_kept = -1;
+
+        for i in 0..rail_count {
+            let rail = Self::rail_at(side, rail_count, i);
+            let r = rail as usize;
+
+            let Some(crossing) = strip.try_cross(rail, plane_point, plane_normal) else {
+                // A rail running ALONG the plane beyond: the two readings have come apart.
+                return Err(disagrees(strip.point_on(rail, 0.0)));
+            };
+            trimmed_at[r] = crossing;
+
+            let in_the_span =
+                trimmed_at[r] > -pool.near_enough() && trimmed_at[r] < length + pool.near_enough();
+
+            if first_kept < 0 {
+                if in_the_span {
+                    first_kept = i;
+                }
+            } else if !in_the_span {
+                // A rail further in than the first one crossed, standing outside the span again.
+                return Err(disagrees(strip.point_on(rail, trimmed_at[r])));
+            }
+
+            // Only the COLLAPSED rails are ever clamped.
+            trimmed_at[r] = vector_math::cs_math::min_f64(
+                vector_math::cs_math::max_f64(trimmed_at[r], 0.0),
+                length,
+            );
+        }
+
+        if first_kept <= 0 {
+            // Nothing was cut off, or the tangent rail still crosses inside the span.
+            return Err(disagrees((edge.from() + edge.to()) / 2.0));
+        }
+
+        // Where the surface really ends on the run-off side: minted HERE, before anything is drawn.
+        let in_the_air = strip.point_on(Self::rail_at(side, rail_count, first_kept - 1), far_param);
+        let on_the_part = strip.point_on(Self::rail_at(side, rail_count, first_kept), far_param);
+        let across = (in_the_air - on_the_part).dot(plane_normal);
+
+        if !(across.abs() > 0.0) {
+            // The chord the surface ends on runs ALONG the plane beyond.
+            return Err(disagrees(on_the_part));
+        }
+
+        let shared = pool.add(
+            on_the_part
+                + ((in_the_air - on_the_part)
+                    * ((plane_point - on_the_part).dot(plane_normal) / across)),
+        );
+
+        let Some(corner_beyond) =
+            Self::try_the_corner_beyond(pool, edge, side, at_the_start, plane_point, plane_normal)
+        else {
+            // The three planes do not meet at a vertex the part already has: named.
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceStripEndNotSupported,
+                vec![(if at_the_start { edge.to() } else { edge.from() }).into()],
+            ));
+        };
+
+        let mut trimmed = SurfaceStripTrimmedByTheFaceBeyond::new(
+            side,
+            at_the_start,
+            far_param,
+            trimmed_at,
+            first_kept,
+            shared,
+            corner_beyond,
+            plane_point,
+            plane_normal,
+        );
+        trimmed.seam = vec![(shared, far_param)];
+
+        Ok(trimmed)
     }
 }

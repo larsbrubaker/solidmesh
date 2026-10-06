@@ -15,7 +15,11 @@
 //! answer is a refusal, not a shrink, in the same words and advisory codes the boolean construction
 //! uses.
 
+use polygon_mesh::CancelToken;
 use vector_math::Vector3;
+
+use super::{surface_room_measure, SurfaceRoomCrossing};
+use crate::bevel::level_line::WorkError;
 
 /// C# `SurfaceRoom.Footprint`: what a cut IS, which is what the pair rule has to know about it - a
 /// band laid along an edge, or one of the footprints that stand at a CORNER instead.
@@ -279,4 +283,140 @@ pub fn try_gap_to_the_corner(band: &SurfaceRoomCut, corner: &SurfaceRoomCut) -> 
     }
 
     Some((offset, reaches_at_the_band))
+}
+
+/// C# `SurfaceRoom.OpposingCosine`: how nearly two cuts' inward directions must oppose for the pair
+/// to face each other across one region.
+pub const OPPOSING_COSINE: f64 = -0.999;
+
+/// What [`largest_fitting`] reads (C#'s return and its two `out`s): the largest size every cut
+/// and every facing pair has room for, where the worst limit stands, and whether it is a collision
+/// between two cuts.
+pub type SurfaceRoomLargestFitting = (f64, Vector3, bool);
+
+/// C# `LargestFitting`: the largest size from `starting_from` down that every cut's own room and
+/// every pair of cuts facing each other across one region allows - a skirt the pass sews across a
+/// band (gathered at `measured_at_size`, else `starting_from`, into `crossings` where given) is no
+/// collision. `blame`, where given, is left holding the cut (or pair) that set the limit.
+pub fn largest_fitting(
+    cuts: &[SurfaceRoomCut],
+    starting_from: f64,
+    cancellation_token: &CancelToken,
+    measured_at_size: f64,
+    crossings: Option<&mut Vec<SurfaceRoomCrossing>>,
+    mut blame: Option<&mut Vec<SurfaceRoomCut>>,
+) -> Result<SurfaceRoomLargestFitting, WorkError> {
+    // Every reach below is a RATE; the crossing test is the one reading that needs the size.
+    let at_size = if measured_at_size.is_infinite() {
+        starting_from
+    } else {
+        measured_at_size
+    };
+
+    let mut largest_fitting_size = starting_from;
+    let mut worst_at = Vector3::ZERO;
+    let mut worst_is_a_collision = false;
+
+    let blame_only = |blame: &mut Option<&mut Vec<SurfaceRoomCut>>, these: &[SurfaceRoomCut]| {
+        if let Some(blame) = blame.as_deref_mut() {
+            blame.clear();
+            blame.extend_from_slice(these);
+        }
+    };
+
+    for cut in cuts {
+        if cancellation_token.is_cancelled() {
+            return Err(WorkError::Cancelled);
+        }
+
+        if cut.room.is_infinite() {
+            continue;
+        }
+
+        let allowed = cut.room / cut.setback_per_size;
+        if allowed < largest_fitting_size {
+            largest_fitting_size = allowed;
+            worst_at = cut.midpoint();
+            worst_is_a_collision = false;
+            blame_only(&mut blame, &[*cut]);
+        }
+    }
+
+    // Every skirt over a band this pass SEWS rather than refuses, read before the negotiation.
+    let sewn = SurfaceRoomCrossing::gather(Some(cuts), at_size, cancellation_token)?;
+    if let Some(crossings) = crossings {
+        crossings.extend(sewn.iter().cloned());
+    }
+
+    // The negotiation: two cuts facing each other across one region are solved together.
+    for i in 0..cuts.len() {
+        for j in i + 1..cuts.len() {
+            if cancellation_token.is_cancelled() {
+                return Err(WorkError::Cancelled);
+            }
+
+            let here = &cuts[i];
+            let other = &cuts[j];
+
+            if here.region_key != other.region_key {
+                continue;
+            }
+
+            // A run-out's skirt over another chain's band is sewn, not a collision.
+            if SurfaceRoomCrossing::it_is_sewn(Some(&sewn), here, other) {
+                continue;
+            }
+
+            if here.corner_footprint() || other.corner_footprint() {
+                let (corner, band) = if here.corner_footprint() {
+                    (here, other)
+                } else {
+                    (other, here)
+                };
+
+                let Some((gap, reaches_at_the_band)) = try_gap_to_the_corner(band, corner) else {
+                    continue;
+                };
+
+                // A footprint that reaches only ONE way is worth what it reaches towards this band.
+                let allowed_here = gap / (band.setback_per_size + reaches_at_the_band);
+                if allowed_here < largest_fitting_size {
+                    largest_fitting_size = allowed_here;
+                    worst_at = corner.from;
+                    worst_is_a_collision = true;
+                    blame_only(&mut blame, &[*band, *corner]);
+                }
+
+                continue;
+            }
+
+            if here.inward.dot(other.inward) > OPPOSING_COSINE {
+                continue;
+            }
+
+            let gap = surface_room_measure::offset_to_segment(
+                here.from,
+                here.along,
+                here.length,
+                here.inward,
+                other.from,
+                other.to,
+            );
+            let at = here.midpoint();
+
+            if gap.is_infinite() {
+                continue;
+            }
+
+            let allowed = gap / (here.setback_per_size + other.setback_per_size);
+            if allowed < largest_fitting_size {
+                largest_fitting_size = allowed;
+                worst_at = at;
+                worst_is_a_collision = true;
+                blame_only(&mut blame, &[*here, *other]);
+            }
+        }
+    }
+
+    Ok((largest_fitting_size, worst_at, worst_is_a_collision))
 }

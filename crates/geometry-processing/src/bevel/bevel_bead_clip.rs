@@ -512,6 +512,11 @@ pub fn without_corners(
 
 /// C# `AlreadyGoingOnWhole`: whether clippable `index`'s bead is already in the beads going on
 /// whole - read off the indices the first pass sent there, where C# compares references.
+///
+/// The difference: C#'s reference test would also find a bead the CALLER had put in
+/// `beadsGoingOnWhole` before the clip ran; this knows only the beads the first pass sent there.
+/// The batch never lists one bead both ways (a bead is clippable or goes on whole), so the two
+/// agree for every caller there is.
 pub fn already_going_on_whole(went_on_whole: &[bool], index: usize) -> bool {
     went_on_whole.get(index).copied().unwrap_or(false)
 }

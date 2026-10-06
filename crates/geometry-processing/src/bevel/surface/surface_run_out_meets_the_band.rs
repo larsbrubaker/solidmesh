@@ -3,14 +3,16 @@
 //! band's material at. Ports the fields of `Bevel/Surface/SurfaceRunOutMeetsTheBand.cs`, its
 //! constructor and its questions (where a row crosses, whether a row is taken, whether a point
 //! stands in the section, which rail a row is sewn to, and the turn its foot enters the section
-//! at); the reading itself (`TryRead`) lands with a later package.
+//! at), and the reading itself ([`SurfaceRunOutMeetsTheBand::try_read`]).
 
 use std::rc::Rc;
 
 use vector_math::{Vector2, Vector3};
 
 use super::surface_mixed_corner_run_out;
+use super::{surface_mixed_corner_wall_ends, SurfaceBandEnd};
 use super::{SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceStrip};
+use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// C# `SurfaceRunOutMeetsTheBand`: a run-out and a band crossing, read per row of the run-out.
 ///
@@ -210,5 +212,90 @@ impl SurfaceRunOutMeetsTheBand {
         }
 
         Some((low + high) / 2.0)
+    }
+}
+
+impl SurfaceRunOutMeetsTheBand {
+    /// C# `TryRead`: where the mixed corner's run-out rows (`rows`, one per rail of the band's
+    /// section) cross another chain's `band` - each row sewn to its own rail, read against one plane
+    /// standing in that rail's line facing the band's material: where it crosses and whether the band
+    /// already has it at the seed. `Ok(None)` (C#'s false with no failure) where there is nothing to
+    /// read; `Err` where the two profiles do not match.
+    pub fn try_read(
+        corner: Option<&SurfaceMixedCorner>,
+        band: Option<&Rc<SurfaceStrip>>,
+        the_bands_edge: Vector3,
+        rows: Option<&[Vector3]>,
+        near_enough: f64,
+    ) -> Result<Option<SurfaceRunOutMeetsTheBand>, BevelAdvisory> {
+        let (Some(corner), Some(band), Some(rows)) = (corner, band, rows) else {
+            return Ok(None);
+        };
+        if rows.len() < 2 || band.rail_count() < 2 {
+            return Ok(None);
+        }
+
+        // The band's own section, square to the way its rails run.
+        let profile: Vec<Vector3> = (0..band.rail_count())
+            .map(|rail| band.point_on(rail, 0.0))
+            .collect();
+
+        let up = -corner.out_of_the_cap_face;
+        let across = band.along().cross(up);
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+        let square = !(across.length_squared() > 0.0);
+        if square {
+            // The band runs square to the cap it is crossed on.
+            return Ok(None);
+        }
+
+        let mut across = across.get_normal();
+
+        // Pointing the way the material the band KEPT lies.
+        if across.dot(corner.corner - profile[0]) < 0.0 {
+            across = -across;
+        }
+
+        let do_not_match = || {
+            BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCrossingProfilesDoNotMatch,
+                vec![corner.corner.into()],
+            )
+        };
+
+        if rows.len() != profile.len() {
+            // Two samplings of one arc that do not even have the same number of samples.
+            return Err(do_not_match());
+        }
+
+        let mut crosses_at = vec![0.0; rows.len()];
+        let mut already = vec![false; rows.len()];
+        let mut taken = vec![false; profile.len()];
+
+        for (row, &at) in rows.iter().enumerate() {
+            let Some(rail) = Self::try_the_rail_for(corner, &profile, at, up, near_enough, &taken)
+            else {
+                return Err(do_not_match());
+            };
+
+            taken[rail] = true;
+
+            // One plane per row, standing in its own rail's line and facing the band's material.
+            let meets_there = SurfaceBandEnd::new(profile[rail], across);
+
+            already[row] = !surface_mixed_corner_wall_ends::stands_in_the_material(meets_there, at);
+            crosses_at[row] =
+                surface_mixed_corner_wall_ends::where_it_crosses(corner, at, meets_there);
+        }
+
+        Ok(Some(SurfaceRunOutMeetsTheBand::new(
+            crosses_at,
+            already,
+            band.clone(),
+            profile,
+            the_bands_edge,
+            across,
+            up,
+        )))
     }
 }

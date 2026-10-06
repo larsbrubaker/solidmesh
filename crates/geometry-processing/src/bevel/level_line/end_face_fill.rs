@@ -3,8 +3,10 @@
 //! ([`rails_to_the_clip_corner`]), whether both rails end past the chain's end
 //! ([`runs_end_past_the_end`]), whether the end face meets the sides convexly
 //! ([`meets_the_sides_convexly`]), whether a run is planar ([`is_planar`]) and an end face's one
-//! run ([`run`]) and a trimmed run with one end put back whole ([`with_whole_end`]); the fill
-//! itself lands with later packages.
+//! run ([`run`]), a trimmed run with one end put back whole ([`with_whole_end`]), whether a gap
+//! is concave ([`is_concave`]), a run without its end-face edges ([`without_end_face_edges`]) and
+//! the crease stretch along the end face ([`crease_run`]); the fill itself lands with later
+//! packages.
 
 use vector_math::{cs_math, Vector3};
 
@@ -261,4 +263,187 @@ pub fn with_whole_end(run: &GapLoop, whole: &GapLoop, at_tail: bool) -> GapLoop 
         _ => None,
     };
     joined_loop
+}
+
+/// C#'s `Comparer<double>.Default`: NaN sorts below every number.
+fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => std::cmp::Ordering::Equal,
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal),
+    }
+}
+
+/// C# `EndFaceFill.IsConcave`: whether the gap between `left` and `right` is concave - read at the
+/// run's middle PARAMETER, on the rail edge whose span crosses it (else the nearest), on the first
+/// triangle with area standing on that edge: concave where the vertex of `right` nearest that
+/// parameter stands in front of it.
+pub fn is_concave(mesh: &LevelLineMesh, left: &GapLoop, right: &GapLoop) -> bool {
+    let parameters = &left.parameters;
+    let at = (parameters[0] + parameters[parameters.len() - 1]) / 2.0;
+
+    // OrderBy(..).First(): the first of the least.
+    let mut nearest = 0;
+    for i in 1..right.vertices.len() {
+        if cs_compare(
+            (right.parameters[i] - at).abs(),
+            (right.parameters[nearest] - at).abs(),
+        ) == std::cmp::Ordering::Less
+        {
+            nearest = i;
+        }
+    }
+    let across = right.vertices[nearest];
+
+    // OrderBy(spans it ? 0 : 1).ThenBy(distance of its middle): a stable sort.
+    let mut edges: Vec<usize> = (0..left.vertices.len().saturating_sub(1)).collect();
+    let spans = |i: usize| {
+        let (p, q) = (parameters[i], parameters[i + 1]);
+        cs_math::min_f64(p, q) <= at && at <= cs_math::max_f64(p, q)
+    };
+    edges.sort_by(|&i, &j| {
+        let key_i = if spans(i) { 0 } else { 1 };
+        let key_j = if spans(j) { 0 } else { 1 };
+        key_i.cmp(&key_j).then_with(|| {
+            cs_compare(
+                ((parameters[i] + parameters[i + 1]) / 2.0 - at).abs(),
+                ((parameters[j] + parameters[j + 1]) / 2.0 - at).abs(),
+            )
+        })
+    });
+
+    for i in edges {
+        for &t in mesh.triangles_on(left.vertices[i], left.vertices[i + 1]) {
+            let face = mesh.triangles()[t as usize];
+            let a0 = mesh.position(face.a);
+            let n = (mesh.position(face.b) - a0).cross(mesh.position(face.c) - a0);
+            if n.length() > 0.0 {
+                return n.dot(mesh.position(across) - mesh.position(left.vertices[i])) > 0.0;
+            }
+        }
+    }
+
+    false
+}
+
+/// C# `EndFaceFill.WithoutEndFaceEdges`: `run` without the edges at either end that stand on the
+/// end face alone (tag 0); `None` (noting the site) where nothing is left.
+pub fn without_end_face_edges(mesh: &LevelLineMesh, run: &GapLoop) -> Option<GapLoop> {
+    let on_the_end_face_alone = |a: i32, b: i32| {
+        let standing = mesh.triangles_on(a, b);
+        standing.len() == 1 && mesh.triangles()[standing[0] as usize].tag == 0
+    };
+
+    let mut from = 0;
+    let mut to = run.vertices.len() as i32 - 1;
+    while from < to
+        && on_the_end_face_alone(run.vertices[from as usize], run.vertices[from as usize + 1])
+    {
+        from += 1;
+    }
+
+    while to > from
+        && on_the_end_face_alone(run.vertices[to as usize - 1], run.vertices[to as usize])
+    {
+        to -= 1;
+    }
+
+    if to - from < 1 {
+        open_gap_fill::append_ends_site(" / EndFaceFill:435");
+        return None;
+    }
+
+    if from == 0 && to == run.vertices.len() as i32 - 1 {
+        return Some(run.clone());
+    }
+
+    let (from, count) = (from as usize, (to - from + 1) as usize);
+    let mut trimmed = GapLoop::new(
+        run.side,
+        run.is_closed,
+        run.vertices[from..from + count].to_vec(),
+        run.parameters[from..from + count].to_vec(),
+        run.chain,
+        run.has_mixed_owners,
+        Some(run.owners.clone()),
+    );
+    trimmed.vertex_owners = run
+        .vertex_owners
+        .as_ref()
+        .map(|owners| owners.iter().skip(from).take(count).copied().collect());
+    trimmed.vertex_ties = run
+        .vertex_ties
+        .as_ref()
+        .map(|ties| ties.iter().skip(from).take(count).cloned().collect());
+    Some(trimmed)
+}
+
+/// C# `EndFaceFill.CreaseRun`: the boundary stretch from `from` to `to` along edges standing on
+/// the end face alone (tag 0), which must pass through `end_vertex`; `None` (noting the site)
+/// where it branches, dead-ends, loops or misses the end vertex.
+pub fn crease_run(
+    mesh: &LevelLineMesh,
+    from: i32,
+    to: i32,
+    end_vertex: Vector3,
+) -> Option<Vec<i32>> {
+    let mut run = vec![from];
+    let mut previous = -1;
+    let mut current = from;
+    let edges = mesh.edges();
+    while current != to {
+        let mut next = -1;
+        for &(low, high) in &edges {
+            if low != current && high != current {
+                continue;
+            }
+
+            let other = if low == current { high } else { low };
+            let standing = mesh.triangles_on(low, high);
+            if other == previous
+                || standing.len() != 1
+                || mesh.triangles()[standing[0] as usize].tag != 0
+            {
+                continue;
+            }
+
+            if next >= 0 {
+                // Two ways on: the boundary branches, and no single stretch is named.
+                open_gap_fill::append_ends_site(" / EndFaceFill:488");
+                return None;
+            }
+
+            next = other;
+        }
+
+        if next < 0 || run.contains(&next) {
+            open_gap_fill::append_ends_site(" / EndFaceFill:496");
+            return None;
+        }
+
+        run.push(next);
+        previous = current;
+        current = next;
+    }
+
+    let away = |v: i32| (mesh.position(v) - end_vertex).length();
+    if !run.iter().any(|&v| away(v) <= mesh.same_place()) {
+        // LINQ's Min: NaN reads as the smallest.
+        let mut least = away(run[0]);
+        for &v in &run[1..] {
+            let x = away(v);
+            if x < least || x.is_nan() {
+                least = x;
+            }
+        }
+        open_gap_fill::append_ends_site(&format!(
+            " / EndFaceFill:511 run of {} misses the end vertex by {}",
+            run.len(),
+            vector_math::number_format::format_f64_max_decimals(least, 3)
+        ));
+        return None;
+    }
+
+    Some(run)
 }

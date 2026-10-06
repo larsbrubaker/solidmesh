@@ -6,14 +6,16 @@
 //! strip arriving at the corner ([`SurfaceCornerPatchArrival`]), the ball's centre
 //! ([`try_find_the_ball_centre`]), the cut of one strip's end at the ball's plane
 //! ([`try_cut_the_end`]) and the ordering of the three end rings round the patch
-//! ([`try_order_the_sides`]); the rest of the patch's construction lands with later packages.
+//! ([`try_order_the_sides`]), and the close itself ([`try_close`]).
 
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::{surface_corner_mitre, surface_corner_patch_rows, SurfaceStripStation};
 use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use crate::topology::EdgeConvexity;
 
 /// C# `SurfaceCornerPatch.Arrival` (a readonly struct): one strip arriving at the corner - which
 /// strip, what it was planned as, and the two vertices the walkback left where its own two tangent
@@ -220,4 +222,76 @@ pub fn try_order_the_sides(rings: &[Vec<i32>]) -> Option<Vec<Vec<i32>>> {
     }
 
     Some(sides)
+}
+
+/// C# `TryClose`: the corner where three strips meet - a chamfer's closed by the mitre
+/// ([`surface_corner_mitre::try_close`]); a round's each cut at the plane through the ball's
+/// centre (mirrored through the corner where all three are concave), the three end rings ordered
+/// round the patch and the spherical triangle stitched in. Returns each strip's station, or why
+/// the corner is not one this patch closes.
+pub fn try_close(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    arrivals: &[SurfaceCornerPatchArrival],
+    corner: Vector3,
+    size: f64,
+    round_profile: bool,
+) -> Result<Vec<SurfaceStripStation>, BevelAdvisory> {
+    let not_supported = || {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.into()],
+        )
+    };
+
+    if arrivals.len() != 3 {
+        return Err(not_supported());
+    }
+
+    if !round_profile {
+        return surface_corner_mitre::try_close(pool, arrivals, corner);
+    }
+
+    let all_concave = arrivals
+        .iter()
+        .all(|a| a.edge.convexity() == EdgeConvexity::Concave);
+
+    let mut centre = match try_find_the_ball_centre(arrivals, corner, size) {
+        Ok(centre) => centre,
+        Err(failure) => {
+            if all_concave {
+                return Err(BevelAdvisory::new(
+                    BevelAdvisoryCode::SurfaceJunctionOfThreeCreases,
+                    vec![corner.into()],
+                ));
+            }
+            return Err(failure);
+        }
+    };
+
+    if all_concave {
+        centre = corner + (corner - centre);
+    }
+
+    let mut rings = Vec::with_capacity(arrivals.len());
+    let mut meets_at = Vec::with_capacity(arrivals.len());
+    for arrival in arrivals {
+        let (ring, meets) = try_cut_the_end(pool, arrival, centre, corner)?;
+        rings.push(ring);
+        meets_at.push(meets);
+    }
+
+    let Some(sides) = try_order_the_sides(&rings) else {
+        return Err(not_supported());
+    };
+
+    if !surface_corner_patch_rows::try_emit(pool, faces, &sides, centre, size, all_concave) {
+        return Err(not_supported());
+    }
+
+    Ok(rings
+        .into_iter()
+        .zip(meets_at)
+        .map(|(ring, meets)| SurfaceStripStation::clean(ring, meets))
+        .collect())
 }
