@@ -241,7 +241,8 @@ pub use segment_box_tree::SegmentNode;
 pub use split_meter::{SplitMeter, SplitMeterSplitKind, SplitMeterSplitRecord, SplitMeterState};
 pub use square_crease_end_clip::SquareCreaseEndClipSquareCreaseClipsOffScope;
 pub use square_crease_end_clip::{
-    square_crease_clips_on, square_crease_end_clips, turn_square_crease_clips_off,
+    cap_room, square_crease_clips_on, square_crease_end_clips, square_crease_end_clips_of_pick,
+    square_crease_end_room, turn_square_crease_clips_off,
 };
 pub use vertex_side::{VertexFieldReading, VertexSide};
 pub use work_budget::{

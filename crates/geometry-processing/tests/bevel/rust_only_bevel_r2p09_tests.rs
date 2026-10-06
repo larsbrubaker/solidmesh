@@ -1,6 +1,5 @@
 //! Rust-only checks of the R2.P09 package's small readings: the fill's closure check on a square,
-//! the pick's seams taken out of a feature test, and closed chains left alone where nothing is
-//! closed.
+//! the pick's seams taken out of a feature test, and closed chains turned to start at a corner.
 
 use std::rc::Rc;
 
@@ -87,9 +86,17 @@ fn rust_only_a_ribbon_beside_the_chain_is_its_seam() {
     assert!(SeamEdges::not_the_chains_seam(None, Some(&chains), None, None, 1e-3).is_none());
 }
 
-/// Where no chain is closed, or nothing says which are, the chains come back as they were.
+/// Where no chain is closed, or nothing says which are, the chains come back as they were; a
+/// closed loop holding a corner of the pick - where an open chain ends on it and three chain edges
+/// meet - is turned to start there, its direction and the open chain untouched.
 #[test]
 fn rust_only_open_chains_keep_their_start() {
+    let loop_and_spur = vec![vec![0, 1, 2, 3], vec![2, 4]];
+    assert_eq!(
+        band_gap::start_closed_chains_at_a_corner(&loop_and_spur, Some(&[true, false])),
+        vec![vec![2, 3, 0, 1], vec![2, 4]]
+    );
+
     let chains = vec![vec![3, 4, 5], vec![5, 6]];
     assert_eq!(
         band_gap::start_closed_chains_at_a_corner(&chains, None),

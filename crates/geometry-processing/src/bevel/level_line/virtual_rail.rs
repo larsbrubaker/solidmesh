@@ -2,12 +2,15 @@
 //! Where the band has run past an opposite-sense crease, the cut leaves the side's rail as two runs
 //! that stop on the crease; the rail between them is laid in the side's own plane at the setback
 //! from the chain, as points minted as new vertices. Ports `Bevel/LevelLine/VirtualRail.cs` (a C#
-//! static class, so a module of functions); the join itself lands with its method packages.
+//! static class, so a module of functions): the chain's fold, the opposite-sense crease's vertices
+//! ([`opposite_sense_crease_vertices`]); the join itself lands with its method packages.
+
+use std::collections::HashSet;
 
 use indexmap::IndexMap;
 
-use super::triangle_edges;
-use super::LevelLineMesh;
+use super::{end_face_sense, triangle_edges};
+use super::{LevelLineMesh, LevelLineTriangle};
 
 /// A side-1 and a side-2 triangle meeting on an edge - the chain's fold, whose sense the crease is
 /// read against - removed or not, since the cut takes both away, as (near, far, vertex). The least
@@ -43,4 +46,48 @@ pub fn chain_pair(mesh: &LevelLineMesh) -> Option<(i32, i32, i32)> {
     }
 
     best
+}
+
+/// C# `OppositeSenseCreaseVertices`: every vertex on a crease between a removed triangle of `side`
+/// and a kept untagged one that folds opposite to the chain. The side's triangles there are gone
+/// after the cut, so the sense is read off the removed triangles themselves, and the chain's off
+/// its two sides' triangles on the chain's fold ([`chain_pair`]), removed or not. Only looked up.
+pub fn opposite_sense_crease_vertices(mesh: &LevelLineMesh, side: i32) -> HashSet<i32> {
+    let corners = |t: LevelLineTriangle| (t.a, t.b, t.c);
+    let mut found = HashSet::new();
+
+    let Some((near, far, vertex)) = chain_pair(mesh) else {
+        return found;
+    };
+
+    for r in 0..mesh.triangle_count() {
+        let removed = mesh.triangles[r as usize];
+
+        if !mesh.is_removed(r) || removed.tag != side {
+            continue;
+        }
+
+        for (p, q) in triangle_edges::corners(corners(removed)) {
+            let standing = mesh.triangles_on(p, q);
+
+            if standing.len() != 1 || mesh.triangles[standing[0] as usize].tag != 0 {
+                continue;
+            }
+
+            if end_face_sense::is_opposite_sense_crease(
+                mesh.vertices(),
+                corners(mesh.triangles[near as usize]),
+                corners(mesh.triangles[far as usize]),
+                vertex,
+                corners(removed),
+                corners(mesh.triangles[standing[0] as usize]),
+                p,
+            ) {
+                found.insert(p);
+                found.insert(q);
+            }
+        }
+    }
+
+    found
 }

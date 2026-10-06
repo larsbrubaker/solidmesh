@@ -5,11 +5,11 @@
 //! `Bevel/LevelLine/StripClip.cs` (a C# static class, so a module of functions): so far the
 //! directed edge, the opposite corner, the cap snap and the last outcome note ([`note`],
 //! [`last_outcome`]), and the clip's mesh work: the ties ([`insert_ties`]), the split along a plane
-//! ([`split_along`], [`crosses_at_a_needles_apex`]) and the cap ([`cap`]). The clip's driver lands
-//! with its method package.
+//! ([`split_along`], [`crosses_at_a_needles_apex`]), the cap ([`cap`]), and the part the neighbour
+//! grows into ([`attached`], [`grow`]). The clip's driver lands with its method package.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use indexmap::{IndexMap, IndexSet};
 use vector_math::Vector3;
@@ -17,7 +17,7 @@ use vector_math::Vector3;
 use super::super::float_grid;
 use super::strip_clip_valley::other_says;
 use super::{flat_hole_fill, triangle_edges};
-use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
+use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle, LevelLineWork, WorkError};
 
 /// One of the neighbour's face planes the strip is clipped on: C#'s
 /// `(Vector3 Origin, Vector3 Normal, HashSet<int> On)`.
@@ -554,4 +554,141 @@ fn cs_bool(value: bool) -> &'static str {
     } else {
         "False"
     }
+}
+
+/// Whether input vertex `v` stands inside the neighbour: below zero on ANY face for a valley, on
+/// EVERY face otherwise (C#'s local `Inside`).
+fn inside(
+    mesh: &LevelLineMesh,
+    planes: &[ClipPlane],
+    distance: ClipDistance,
+    valley: bool,
+    v: i32,
+) -> bool {
+    if valley {
+        (0..planes.len()).any(|f| distance(mesh, planes, f as i32, v) < 0.0)
+    } else {
+        (0..planes.len()).all(|f| distance(mesh, planes, f as i32, v) < 0.0)
+    }
+}
+
+/// C# `Attached`: the strip triangles the neighbour grows into FROM THE REACHED CREASE - flooded
+/// from the rows that start on the virtual stretch (`virtual_edges`), across shared edges, through
+/// triangles with a corner inside the neighbour (`distance(face, vertex)` against each of `planes`).
+/// A second part inside the faces, where the neighbour's ridge leaves the round again further on, is
+/// not attached: the control keeps the round whole there.
+pub fn attached(
+    mesh: &LevelLineMesh,
+    strip: &HashSet<i32>,
+    virtual_edges: &[(i32, i32)],
+    planes: &[ClipPlane],
+    distance: ClipDistance,
+    valley: bool,
+) -> Result<HashSet<i32>, WorkError> {
+    let touches = |face: LevelLineTriangle| {
+        let inside = |v| inside(mesh, planes, distance, valley, v);
+        inside(face.a) || inside(face.b) || inside(face.c)
+    };
+
+    let seeds: HashSet<i32> = virtual_edges.iter().flat_map(|&(a, b)| [a, b]).collect();
+    let mut attached: HashSet<i32> = ordered(strip)
+        .into_iter()
+        .filter(|&t| {
+            let face = mesh.triangles[t as usize];
+            touches(face)
+                && (seeds.contains(&face.a) || seeds.contains(&face.b) || seeds.contains(&face.c))
+        })
+        .collect();
+
+    // C#'s `attached.OrderBy(t => t)`: the flood is seeded ascending, so the set's own order never
+    // reaches it.
+    let mut seeded: Vec<i32> = attached.iter().copied().collect();
+    seeded.sort_unstable();
+    let mut work: VecDeque<i32> = seeded.into();
+
+    while let Some(next) = work.pop_front() {
+        LevelLineWork::charge(1)?;
+        let face = mesh.triangles[next as usize];
+
+        for (p, q) in triangle_edges::corners((face.a, face.b, face.c)) {
+            for &other in mesh.triangles_on(p, q) {
+                if strip.contains(&other)
+                    && !attached.contains(&other)
+                    && touches(mesh.triangles[other as usize])
+                {
+                    attached.insert(other);
+                    work.push_back(other);
+                }
+            }
+        }
+    }
+
+    Ok(attached)
+}
+
+/// C# `Grow`: grows the attached part across shared edges into every strip triangle the
+/// neighbour reaches into - a corner strictly inside every face, or an edge crossing a face where
+/// every other face is below zero (a piece whose corners all sit on the clip curves or outside,
+/// with the lens running through its edge).
+pub fn grow(
+    mesh: &LevelLineMesh,
+    strip: &HashSet<i32>,
+    attached: &mut HashSet<i32>,
+    planes: &[ClipPlane],
+    distance: ClipDistance,
+    valley: bool,
+) -> Result<(), WorkError> {
+    let count = planes.len();
+    let d = |f: usize, v: i32| distance(mesh, planes, f as i32, v);
+    let bounding = |a: i32, b: i32| {
+        (0..count).any(|f| {
+            let (da, db) = (d(f, a), d(f, b));
+
+            if !((da < 0.0 && db > 0.0) || (da > 0.0 && db < 0.0)) {
+                return false;
+            }
+
+            let s = da / (da - db);
+
+            (0..count)
+                .filter(|&h| h != f)
+                .all(|h| other_says(d(h, a) + ((d(h, b) - d(h, a)) * s), valley))
+        })
+    };
+    let reached = |face: LevelLineTriangle| {
+        let inside = |v| inside(mesh, planes, distance, valley, v);
+        inside(face.a)
+            || inside(face.b)
+            || inside(face.c)
+            || bounding(face.a, face.b)
+            || bounding(face.b, face.c)
+            || bounding(face.c, face.a)
+    };
+
+    let mut seeded: Vec<i32> = attached
+        .iter()
+        .copied()
+        .filter(|t| strip.contains(t))
+        .collect();
+    seeded.sort_unstable();
+    let mut work: VecDeque<i32> = seeded.into();
+
+    while let Some(next) = work.pop_front() {
+        LevelLineWork::charge(1)?;
+        let face = mesh.triangles[next as usize];
+
+        for (p, q) in triangle_edges::corners((face.a, face.b, face.c)) {
+            for &other in mesh.triangles_on(p, q) {
+                if strip.contains(&other)
+                    && !attached.contains(&other)
+                    && reached(mesh.triangles[other as usize])
+                {
+                    attached.insert(other);
+                    work.push_back(other);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

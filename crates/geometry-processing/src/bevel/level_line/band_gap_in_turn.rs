@@ -1,10 +1,12 @@
 //! The band built one chain at a time. Ports `Bevel/LevelLine/BandGap.InTurn.cs` (a partial of the
 //! C# static class `BandGap`): so far the walk along a split edge's pieces ([`walk_along`]), the
 //! in-turn test ([`takes_open_chains_in_turn`]), a chain's ends carried onto the mesh an earlier
-//! cut left ([`ends_on_the_mesh`], [`nearest_on_the_edge`]) and the built mesh's coplanar turn; the
-//! build lands with later packages.
+//! cut left ([`ends_on_the_mesh`], [`nearest_on_the_edge`]), the built mesh's coplanar turn, and a
+//! chain and the feature test carried onto a built mesh ([`chain_after_a_build`],
+//! [`feature_edges_after_a_build`]); the build lands with later packages.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use indexmap::IndexMap;
 use vector_math::Vector3;
@@ -169,4 +171,95 @@ pub fn walk_along(
     }
 
     Some(walk)
+}
+
+/// C# `ChainAfterABuild`: `original` carried onto the mesh an earlier chain's build left - every
+/// split edge walked along its pieces, and an open chain whose end the earlier band took away
+/// started at that band's rim ([`ends_on_the_mesh`]). A build only appends vertices and never moves
+/// the input's, so a split edge's pieces run straight from one end to the other; an edge that
+/// cannot be walked that way is left as it was (`original` comes back), and the build refuses it
+/// by name as before.
+pub fn chain_after_a_build(
+    original: &[i32],
+    is_closed: bool,
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+) -> Vec<i32> {
+    let standing = triangle_edges::standing_map(indices);
+    let mut neighbours: IndexMap<i32, Vec<i32>> = IndexMap::new();
+
+    for &(a, b) in standing.keys() {
+        neighbours.entry(a).or_default().push(b);
+        neighbours.entry(b).or_default().push(a);
+    }
+
+    let mut chain = original.to_vec();
+
+    if !is_closed {
+        match ends_on_the_mesh(&chain, positions, &neighbours) {
+            Some(on_the_mesh) => chain = on_the_mesh,
+            None => return original.to_vec(),
+        }
+    }
+
+    // The walk reads the same lists, looked up only.
+    let lookup: HashMap<i32, Vec<i32>> = neighbours.into_iter().collect();
+    let mut carried = vec![chain[0]];
+    let count = if is_closed {
+        chain.len()
+    } else {
+        chain.len() - 1
+    };
+
+    for i in 0..count {
+        let from = chain[i];
+        let to = chain[(i + 1) % chain.len()];
+
+        match walk_along(from, to, positions, &standing, &lookup) {
+            Some(walk) => carried.extend(walk),
+            None => return original.to_vec(),
+        }
+    }
+
+    if is_closed {
+        // The walk came back to the first vertex, which the chain names once.
+        carried.pop();
+    }
+
+    carried
+}
+
+/// C# `FeatureEdgesAfterABuild`: the caller's feature test carried onto a built mesh - an edge of
+/// the input (both ends below `input_count`, and in `input_edges`) asks the caller's test; any
+/// other is a feature where its two faces turn by more than [`COPLANAR_AFTER_A_BUILD`].
+pub fn feature_edges_after_a_build(
+    positions: Vec<Vector3>,
+    indices: Vec<(i32, i32, i32)>,
+    input_count: i32,
+    input_edges: HashSet<(i32, i32)>,
+    is_feature_edge: Rc<dyn Fn(i32, i32) -> bool>,
+) -> Rc<dyn Fn(i32, i32) -> bool> {
+    let standing = triangle_edges::standing_map(&indices);
+
+    Rc::new(move |a, b| {
+        let normal_of = |(ta, tb, tc): (i32, i32, i32)| {
+            let at = positions[ta as usize];
+            (positions[tb as usize] - at)
+                .cross(positions[tc as usize] - at)
+                .get_normal()
+        };
+        let key = triangle_edges::key(a, b);
+
+        if a < input_count && b < input_count && input_edges.contains(&key) {
+            return is_feature_edge(a, b);
+        }
+
+        match standing.get(&key) {
+            Some(on) if on.len() == 2 => {
+                1.0 - normal_of(indices[on[0] as usize]).dot(normal_of(indices[on[1] as usize]))
+                    > COPLANAR_AFTER_A_BUILD
+            }
+            _ => false,
+        }
+    })
 }

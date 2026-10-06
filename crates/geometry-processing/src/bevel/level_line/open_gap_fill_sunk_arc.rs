@@ -1,12 +1,12 @@
 //! The open fill's sunk arc. Ports `Bevel/LevelLine/OpenGapFill.SunkArc.cs` (a partial of the C#
 //! static class `OpenGapFill`): so far a triangle's doubled area ([`area2`]), the planes of a side's
 //! removed triangles ([`planes`]), whether a spoke stands past an end ([`past_an_end`]) and whether
-//! a step turns into the left side's nearest plane ([`concave`]); the arc lands with later
-//! packages.
+//! a step turns into the left side's nearest plane ([`concave`]), and the first sunk arc point
+//! ([`sunk_arc_point`]).
 
 use vector_math::Vector3;
 
-use super::{ChainField, LevelLineMesh, LevelLineTriangle, OpenGapFillOpenRail};
+use super::{ChainField, GapLoop, LevelLineMesh, LevelLineTriangle, OpenGapFillOpenRail};
 
 /// Twice a triangle's area.
 pub fn area2(mesh: &LevelLineMesh, t: LevelLineTriangle) -> f64 {
@@ -61,4 +61,76 @@ pub fn concave(left_planes: &[(Vector3, Vector3)], p: Vector3, q: Vector3) -> bo
     }
 
     nearest.is_some_and(|((_, normal), _)| normal.dot(q - p) > 0.0)
+}
+
+/// C# `SunkArcPoint`: the first arc point of a CONCAVE chain's strip that stands inside the solid -
+/// behind every plane of the triangles the band removed on one side - or -1. Exact for a flat side
+/// and a convex curved one; on a concave curved side it can only miss, never refuse wrongly. It
+/// catches an arc whose rail stands far round a convex boss (at 0.9 of the room at a radius-5
+/// boss's foot the fill removed 119.8 where the fillet adds).
+///
+/// Concave is read PER SPOKE, from the left side only, and a spoke past a chain end
+/// (`past_an_end`) is skipped. A point may stand a chord's sag behind the facets: the allowance is
+/// a tenth of the spoke's own chord.
+pub fn sunk_arc_point(
+    mesh: &LevelLineMesh,
+    left_loop: &GapLoop,
+    right_loop: &GapLoop,
+    arcs: &[Vec<i32>],
+    past_an_end: &[bool],
+) -> i32 {
+    if arcs.iter().all(|arc| arc.len() <= 2) {
+        return -1;
+    }
+
+    let sides = [planes(mesh, left_loop.side), planes(mesh, right_loop.side)];
+    let mut deepest = 0.0;
+    let mut at = -1;
+
+    for (row, arc) in arcs.iter().enumerate() {
+        if past_an_end[row] {
+            continue;
+        }
+
+        // C# reads `arc[0]` and `arc[^1]` unguarded; an empty spoke has neither and is skipped.
+        let (Some(&first), Some(&last)) = (arc.first(), arc.last()) else {
+            continue;
+        };
+
+        if first == last || !concave(&sides[0], mesh.position(first), mesh.position(last)) {
+            continue;
+        }
+
+        let allowance = 0.1 * (mesh.position(last) - mesh.position(first)).length();
+
+        for &vertex in &arc[1..arc.len().saturating_sub(1).max(1)] {
+            let point = mesh.position(vertex);
+
+            for side_planes in &sides {
+                if side_planes.is_empty() {
+                    continue;
+                }
+
+                // How far behind the LEAST-behind plane: positive only when behind every one.
+                // C#'s `Min` over doubles, which a NaN would win.
+                let depth = side_planes
+                    .iter()
+                    .map(|&(origin, normal)| normal.dot(origin - point))
+                    .fold(f64::INFINITY, |least, d| {
+                        if d < least || d.is_nan() {
+                            d
+                        } else {
+                            least
+                        }
+                    });
+
+                if depth > allowance && depth > deepest {
+                    deepest = depth;
+                    at = vertex;
+                }
+            }
+        }
+    }
+
+    at
 }

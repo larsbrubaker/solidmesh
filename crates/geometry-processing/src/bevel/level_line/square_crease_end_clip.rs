@@ -3,10 +3,15 @@
 //! (a C# static class): the per-flow gate ([`square_crease_clips_on`],
 //! [`turn_square_crease_clips_off`] and its scope [`SquareCreaseEndClipSquareCreaseClipsOffScope`],
 //! kept on the build's [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the clips read
-//! off plain positions ([`square_crease_end_clips`]); the clips over a pick land with later
-//! packages. Reads the end-face sense (`end_face_sense.rs`).
+//! off plain positions ([`square_crease_end_clips`]), and the clips over a pick with the room they
+//! leave ([`square_crease_end_clips_of_pick`], [`square_crease_end_room`], [`cap_room`]). Reads the
+//! end-face sense (`end_face_sense.rs`).
+
+use std::collections::HashSet;
 
 use vector_math::{cs_math, Vector3};
+
+use super::{end_face_sense, pick_validation, RoomSource};
 
 use super::end_face_sense::{face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE};
 use super::{EndRayBound, LevelLineWork};
@@ -217,5 +222,104 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
         })
     } else {
         None
+    }
+}
+
+/// C# `SquareCreaseEndClipsOfPick`: [`square_crease_end_clips`] over a pick, as the build reads
+/// them - an end at a CORNER of the pick is the corner's business (as for the end rays), and an end
+/// already carrying a ray's bound keeps it. Each entry is `(None, None)` where no end clips.
+pub fn square_crease_end_clips_of_pick(
+    positions: &[Vector3],
+    indices: &[Corners],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    end_rays: &[(bool, bool)],
+) -> Vec<(Option<EndRayBound>, Option<EndRayBound>)> {
+    let corner_ends: HashSet<i32> = if chains.len() > 1 {
+        pick_validation::corners_of(chains, closed, true)
+            .iter()
+            .map(|corner| corner.vertex)
+            .collect()
+    } else {
+        HashSet::new()
+    };
+
+    chains
+        .iter()
+        .enumerate()
+        .map(|(k, chain)| {
+            let (first, last) =
+                square_crease_end_clips(positions, indices, chain, closed[k], end_rays[k]);
+            let at_a_corner = |end: Option<&i32>| end.is_some_and(|v| corner_ends.contains(v));
+
+            (
+                if at_a_corner(chain.first()) {
+                    None
+                } else {
+                    first
+                },
+                if at_a_corner(chain.last()) {
+                    None
+                } else {
+                    last
+                },
+            )
+        })
+        .collect()
+}
+
+/// C# `SquareCreaseEndRoom`: the least [`EndRayBound::crease_room`] over a pick's square crease
+/// end clips - infinity where none clips - and the chain it is read at (-1 with none), as
+/// `(room, chain)`. The build takes it, so a size past the crease is refused by size.
+pub fn square_crease_end_room(
+    positions: &[Vector3],
+    indices: &[Corners],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    sharp_turn_degrees: f64,
+) -> (f64, i32) {
+    let rays: Vec<(bool, bool)> = chains
+        .iter()
+        .enumerate()
+        .map(|(k, chain)| {
+            end_face_sense::oblique_ends(positions, indices, chain, closed[k], sharp_turn_degrees)
+        })
+        .collect();
+    let clips = square_crease_end_clips_of_pick(positions, indices, chains, closed, &rays);
+    let mut room = f64::INFINITY;
+    let mut chain = -1;
+
+    for (k, (first, last)) in clips.iter().enumerate() {
+        for clip in [first, last].into_iter().flatten() {
+            if clip.crease_room < room {
+                room = clip.crease_room;
+                chain = k as i32;
+            }
+        }
+    }
+
+    (room, chain)
+}
+
+/// C# `CapRoom`: lowers `room` to [`square_crease_end_room`] where that is less, naming the chain
+/// it is read at in `room_set_by`. A square crease end's section stays on its crease only so far
+/// down it - past the crease's far vertex the arc's foot leaves the crease and no cap exists (the
+/// fill refused `ArcSinksIntoTheSolid` at 7 on 15mm Bevel Top Edge) - and the build's foreign
+/// reading plateaus at zero on the clip plane, so it does not say so itself.
+pub fn cap_room(
+    positions: &[Vector3],
+    indices: &[Corners],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    sharp_turn_degrees: f64,
+    room: &mut f64,
+    room_set_by: &mut RoomSource,
+) {
+    let (crease_room, crease_chain) =
+        square_crease_end_room(positions, indices, chains, closed, sharp_turn_degrees);
+
+    if crease_room < *room {
+        *room = crease_room;
+        *room_set_by = RoomSource::foreign(crease_chain);
     }
 }
