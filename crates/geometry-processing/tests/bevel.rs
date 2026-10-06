@@ -61,8 +61,16 @@ mod bevel_t_vertex_sliver_repair_tests;
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/bore_test_meshes.rs"]
 mod bore_test_meshes;
+#[path = "bevel/chain_field_end_clip_tests.rs"]
+mod chain_field_end_clip_tests;
+#[path = "bevel/chain_field_end_ray_tests.rs"]
+mod chain_field_end_ray_tests;
 #[path = "bevel/chain_field_fixtures.rs"]
 mod chain_field_fixtures;
+#[path = "bevel/chain_field_tests.rs"]
+mod chain_field_tests;
+#[path = "bevel/clipped_cell_bound_tests.rs"]
+mod clipped_cell_bound_tests;
 #[path = "bevel/crease_run_out_tests.rs"]
 mod crease_run_out_tests;
 #[path = "bevel/degenerate_triangle_refinement_tests.rs"]
@@ -105,6 +113,8 @@ mod no_duplicate_vertex_tests;
 mod nose_in_notch_test_meshes;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
+#[path = "bevel/pick_field_tests.rs"]
+mod pick_field_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
 #[path = "bevel/rust_only_bevel_r1p01_mesh_tests.rs"]
@@ -221,6 +231,8 @@ mod section_surface_walk_fold_tests;
 mod section_surface_walk_roof;
 #[path = "bevel/section_walked_end_vertex_tests.rs"]
 mod section_walked_end_vertex_tests;
+#[path = "bevel/segment_cell_bound_tests.rs"]
+mod segment_cell_bound_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
@@ -265,5 +277,7 @@ mod surface_splits_on_a_segment_tests;
 mod tapered_barrel_test_meshes;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
+#[path = "bevel/union_of_balls_field_tests.rs"]
+mod union_of_balls_field_tests;
 #[path = "bevel/warped_wall_test_meshes.rs"]
 mod warped_wall_test_meshes;
