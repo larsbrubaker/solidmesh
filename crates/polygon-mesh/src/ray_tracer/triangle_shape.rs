@@ -11,7 +11,7 @@ use vector_math::{
 };
 
 use super::base_shape::{leaf_get_contained, leaf_get_crossing, leaf_get_touching};
-use super::triangle_hit::{triangle_surface_area, EdgeRule, TriangleProjection};
+use super::triangle_hit::{triangle_surface_area, TriangleProjection};
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};
 
 /// A triangle with f32 corners (C# `TriangleShape`).
@@ -194,8 +194,7 @@ impl Traceable for TriangleShape {
 
     fn get_closest_intersection<'a>(&'a self, ray: &mut Ray) -> Option<IntersectInfo<'a>> {
         let (distance_to_hit, hit_position, normal_at_hit) =
-            self.projection
-                .hit(ray, &|i| self.vertices[i], EdgeRule::Strict)?;
+            self.projection.hit(ray, &|i| self.vertices[i])?;
         Some(IntersectInfo {
             hit_type: IntersectionType::FrontFace,
             closest_hit_object: Some(self),

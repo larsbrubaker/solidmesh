@@ -2,7 +2,9 @@
 //! `RayTracer/Primitive/Shapes/TriangleShape.cs` and `MinimalTriangle.cs` carry identical
 //! copies): the plane from the corners, the major axis the triangle is projected along, the
 //! projected bounds, the 2D side-of-line test and the surface area. The two C# copies differ in
-//! one place, the side-of-line test (`< 0` versus `<= 0`), which [`EdgeRule`] keeps apart.
+//! one place, the side-of-line test (`< 0` versus `<= 0`); neither counts a point exactly on an
+//! edge as inside for both projected windings, so here both shapes share one test that does
+//! (`docs/CSHARP_DIVERGENCES.md` 1840).
 
 use std::cmp::Ordering;
 
@@ -12,15 +14,6 @@ use vector_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Fl
 /// The projected axes for each major axis (C# `xMapping`, `yMapping`).
 const X_MAPPING: [usize; 3] = [1, 0, 0];
 const Y_MAPPING: [usize; 3] = [2, 2, 1];
-
-/// Which side of an edge a point exactly on it counts as.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum EdgeRule {
-    /// `TriangleShape`: cross `< 0` is side 1.
-    Strict,
-    /// `MinimalTriangle`: cross `<= 0` is side 1.
-    Inclusive,
-}
 
 /// The precomputed projection of a triangle (C# `MajorAxis`, `boundsOnMajorAxis`, `Plane`).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -100,7 +93,6 @@ impl TriangleProjection {
         &self,
         ray: &Ray,
         corners: &dyn Fn(usize) -> Vector3Float,
-        rule: EdgeRule,
     ) -> Option<(f64, Vector3, Vector3)> {
         let (hit_plane, distance_to_hit, in_front) = self.plane.ray_hit_plane(ray);
         if !hit_plane {
@@ -117,9 +109,9 @@ impl TriangleProjection {
 
         let hit_position = ray.origin + ray.direction_normal * f64::from(distance_to_hit);
         let have_hit_in_2d = match self.major_axis {
-            0 => self.check_2d_hit(hit_position.y, hit_position.z, corners, rule),
-            1 => self.check_2d_hit(hit_position.x, hit_position.z, corners, rule),
-            _ => self.check_2d_hit(hit_position.x, hit_position.y, corners, rule),
+            0 => self.check_2d_hit(hit_position.y, hit_position.z, corners),
+            1 => self.check_2d_hit(hit_position.x, hit_position.z, corners),
+            _ => self.check_2d_hit(hit_position.x, hit_position.y, corners),
         };
 
         if have_hit_in_2d {
@@ -133,13 +125,7 @@ impl TriangleProjection {
         }
     }
 
-    fn check_2d_hit(
-        &self,
-        x: f64,
-        y: f64,
-        corners: &dyn Fn(usize) -> Vector3Float,
-        rule: EdgeRule,
-    ) -> bool {
+    fn check_2d_hit(&self, x: f64, y: f64, corners: &dyn Fn(usize) -> Vector3Float) -> bool {
         // check the bounding rect
         if x >= f64::from(self.left)
             && x <= f64::from(self.right)
@@ -155,35 +141,40 @@ impl TriangleProjection {
             let vertex1 = project(1);
             let vertex2 = project(2);
             let hit_position = Vector2::new(x, y);
-            let mut sum_of_line_sides = find_side_of_line(vertex0, vertex1, hit_position, rule);
-            sum_of_line_sides += find_side_of_line(vertex1, vertex2, hit_position, rule);
-            sum_of_line_sides += find_side_of_line(vertex2, vertex0, hit_position, rule);
-            if sum_of_line_sides == -3 || sum_of_line_sides == 3 {
-                return true;
-            }
+            // C# sums `FindSideOfLine` (1 or -1 per edge) and wants 3 or -3. A point exactly on
+            // an edge (cross 0) then counts for one winding only, so a ray onto an edge two
+            // triangles share missed both whenever their projection wound the other way. Here
+            // an edge only rules the point out when it lies strictly on the other side from
+            // another edge: on an edge or corner, every triangle touching it reports the hit.
+            let sides = [
+                side_of_line(vertex0, vertex1, hit_position),
+                side_of_line(vertex1, vertex2, hit_position),
+                side_of_line(vertex2, vertex0, hit_position),
+            ];
+            let on_side_one = sides.iter().any(|&cross| cross < 0.0);
+            let on_side_two = sides.iter().any(|&cross| cross > 0.0);
+            return !(on_side_one && on_side_two);
         }
 
         false
     }
 }
 
-/// 1 or -1 for the side of the line `side_point0 -> side_point1` that `test_position` is on
-/// (C# `FindSideOfLine`).
-pub(crate) fn find_side_of_line(
+/// The cross product C# `FindSideOfLine` takes the sign of: negative on one side of the line
+/// `side_point0 -> side_point1`, positive on the other, zero on it. The line is always measured
+/// from its lexicographically smaller end, so two triangles sharing an edge (which run it in
+/// opposite directions) get exactly opposite values for the same point: rounding can never put
+/// a point outside both.
+pub(crate) fn side_of_line(
     side_point0: Vector2,
     side_point1: Vector2,
     test_position: Vector2,
-    rule: EdgeRule,
-) -> i32 {
-    let cross = (test_position - side_point0).cross(side_point1 - side_point0);
-    let on_side_one = match rule {
-        EdgeRule::Strict => cross < 0.0,
-        EdgeRule::Inclusive => cross <= 0.0,
-    };
-    if on_side_one {
-        1
+) -> f64 {
+    let reversed = (side_point1.x, side_point1.y) < (side_point0.x, side_point0.y);
+    if reversed {
+        -(test_position - side_point1).cross(side_point0 - side_point1)
     } else {
-        -1
+        (test_position - side_point0).cross(side_point1 - side_point0)
     }
 }
 

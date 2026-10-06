@@ -12,5 +12,7 @@ mod parallel_sequential_equivalence_tests;
 mod rust_only_ray_tracer_tests;
 #[path = "ray_tracer/rust_only_shape_tests.rs"]
 mod rust_only_shape_tests;
+#[path = "ray_tracer/rust_only_triangle_edge_tests.rs"]
+mod rust_only_triangle_edge_tests;
 #[path = "ray_tracer/trace_api_tests.rs"]
 mod trace_api_tests;

@@ -11,7 +11,7 @@ use vector_math::{
 };
 
 use super::base_shape::{leaf_get_crossing, leaf_get_touching};
-use super::triangle_hit::{triangle_surface_area, EdgeRule, TriangleProjection};
+use super::triangle_hit::{triangle_surface_area, TriangleProjection};
 use super::{IntersectInfo, RayTracerError, Traceable};
 
 /// The corner lookup: `(face_index, vertex_index 0..3) -> corner` (C# `Func<int, int,
@@ -158,8 +158,7 @@ impl Traceable for MinimalTriangle {
 
     fn get_closest_intersection<'a>(&'a self, ray: &mut Ray) -> Option<IntersectInfo<'a>> {
         let (distance_to_hit, hit_position, normal_at_hit) =
-            self.projection
-                .hit(ray, &|i| self.vertex(i), EdgeRule::Inclusive)?;
+            self.projection.hit(ray, &|i| self.vertex(i))?;
         Some(IntersectInfo {
             hit_type: IntersectionType::FrontFace,
             closest_hit_object: Some(self),
