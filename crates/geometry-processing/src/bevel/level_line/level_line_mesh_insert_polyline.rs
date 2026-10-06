@@ -15,7 +15,8 @@ use vector_math::Vector3;
 
 use super::{LevelLineMesh, LevelLineMeshError};
 
-/// C#'s `Math.Sign` on a double: -1, 0 or 1 (C# throws on NaN; NaN reads 0 here).
+/// C#'s `Math.Sign` on a double: -1, 0 or 1. Never handed a NaN: `insert_polyline` refuses a
+/// polyline or plane that is not finite before any orientation is read (divergence 1073).
 fn sign(x: f64) -> i32 {
     if x > 0.0 {
         1
@@ -38,6 +39,9 @@ impl LevelLineMesh {
     /// the chain's vertices in order (every point of the polyline and every crossing), or `None`
     /// where it cannot. Each segment's first point is made a vertex, then every region edge the
     /// open segment crosses is split where it crosses, nearest first, then its last point.
+    ///
+    /// An empty polyline, or one whose points or plane are not finite, is refused (`None`) with
+    /// the mesh untouched (divergence 1073: C#'s `Math.Sign` threw on the NaN orientations).
     pub fn insert_polyline(
         &mut self,
         points: &[Vector3],
@@ -53,6 +57,11 @@ impl LevelLineMesh {
         .cross(n)
         .get_normal();
         let w = n.cross(u);
+        let finite = |v: Vector3| v.x.is_finite() && v.y.is_finite() && v.z.is_finite();
+        if points.is_empty() || !finite(u) || !finite(w) || !points.iter().all(|&p| finite(p)) {
+            return Ok(None);
+        }
+
         let origin = points[0];
         let flat = |p: Vector3| ((p - origin).dot(u), (p - origin).dot(w));
 

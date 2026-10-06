@@ -85,3 +85,29 @@ fn triangle_area(mesh: &LevelLineMesh, t: i32) -> f64 {
 fn area(mesh: &LevelLineMesh) -> f64 {
     kept(mesh).into_iter().map(|t| triangle_area(mesh, t)).sum()
 }
+
+/// A polyline with a point that is not a number is refused and the mesh is left as it was. C#'s
+/// `Math.Sign` threw on the NaN orientations (divergence 1073).
+#[test]
+fn rust_only_a_polyline_with_a_nan_point_is_refused_and_the_mesh_untouched() {
+    let mut mesh = LevelLineMesh::from_triangles(&square(), &HALVES, None).expect("a square");
+    let before = (mesh.vertices.clone(), mesh.triangle_count());
+    let nan_line = [
+        Vector3::new(0.0, 0.3, 0.0),
+        Vector3::new(f64::NAN, 0.6, 0.0),
+        Vector3::new(1.0, 0.5, 0.0),
+    ];
+
+    let chain = mesh
+        .insert_polyline(&nan_line, Vector3::new(0.0, 0.0, 1.0), &|_, _| true)
+        .expect("no budget");
+
+    assert!(chain.is_none());
+    assert_eq!(mesh.vertices, before.0);
+    assert_eq!(mesh.triangle_count(), before.1);
+
+    let flat_plane =
+        mesh.insert_polyline(&line()[..], Vector3::new(f64::NAN, 0.0, 1.0), &|_, _| true);
+    assert!(flat_plane.expect("no budget").is_none());
+    assert_eq!(mesh.vertices, before.0);
+}

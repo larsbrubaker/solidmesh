@@ -179,3 +179,37 @@ fn the_chain(features: &FeatureEdgeSet) -> Vec<ChainEdge> {
     chain.sort_by(|left, right| left.from().x.total_cmp(&right.from().x));
     chain
 }
+
+/// With the split blend off, no station is split, so none is placed along a join: each is laid
+/// from its own station. C# read every station as split there (divergence 1070).
+#[test]
+fn rust_only_with_the_blend_off_no_station_is_join_placed() {
+    let part = the_ledge();
+    let graph = part.get_mesh_edge_graph();
+    let features = FeatureEdgeSet::create_with_graph(&part, &graph, 10.0);
+    let mut pool = SectionPool::new(&part.vertices);
+    let edges = the_chain(&features);
+
+    let run = match try_build_run(
+        &edges,
+        false,
+        &part,
+        &graph,
+        &mut pool,
+        RADIUS,
+        SEGMENTS,
+        false,
+        Some(&features),
+    ) {
+        Ok(run) => run,
+        Err(failure) => panic!("the ledge's two-edge chain builds: {failure:?}"),
+    };
+
+    for section in &run.sections {
+        assert!(
+            !section.left_boundary_is_join_placed && !section.right_boundary_is_join_placed,
+            "station {:?} was placed along a join",
+            section.station
+        );
+    }
+}

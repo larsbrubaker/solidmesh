@@ -268,9 +268,9 @@ pub fn try_build(
     let placed = if blend_split_vertices {
         section_split_blend::apply(&mut sections, mesh, pool)?
     } else {
-        // C#'s `new SplitPlacement[n]`: every entry the struct's default (0, 0, 0), which its
-        // `IsSplit` (both indices >= 0) reads as SPLIT - kept as C# has it; see the R2.P08 report.
-        vec![section_split_blend::SplitPlacement::new(0, 0, 0.0); sections.len()]
+        // No blend: no station is split (divergence 1070; C# left the struct default (0, 0, 0),
+        // which its `IsSplit` read as split at every station).
+        vec![section_split_blend::SplitPlacement::new(-1, -1, 0.0); sections.len()]
     };
 
     lay_the_offsets_along_the_surface(
