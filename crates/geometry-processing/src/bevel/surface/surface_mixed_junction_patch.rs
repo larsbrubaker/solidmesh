@@ -211,3 +211,41 @@ pub fn try_schedule(
 
     Ok(grid)
 }
+
+/// C# `SurfaceMixedJunctionPatch.TryBiteTheCapFace`: the cap face bitten out from the sector's
+/// apex (between `corner` and the corner it `closes` on) round the grid's outer rail.
+pub fn try_bite_the_cap_face(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &SurfaceMixedCorner,
+    closes: &SurfaceMixedCorner,
+    grid: &[Vec<i32>],
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let outer_rail = &grid[0];
+    let apex = super::surface_mixed_corner_sector::try_apex_between(
+        corner,
+        closes,
+        pool.position_of(outer_rail[0]),
+        pool.position_of(outer_rail[outer_rail.len() - 1]),
+    )?;
+
+    let mut rim = Vec::with_capacity(outer_rail.len() + 1);
+    rim.push(apex);
+    let mut snap_to = Vec::with_capacity(outer_rail.len() + 1);
+    snap_to.push(pool.add(apex));
+    for &vertex in outer_rail {
+        rim.push(pool.position_of(vertex));
+        snap_to.push(vertex);
+    }
+
+    super::surface_convex_bite::try_take(
+        pool,
+        faces,
+        &rim,
+        corner.out_of_the_cap_face,
+        corner.corner,
+        &snap_to,
+        split_from,
+    )
+}

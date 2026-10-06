@@ -73,3 +73,39 @@ pub fn the_corner_the_wall_ends_at(
 pub fn under_the_cap(corner: &SurfaceMixedCorner, at: Vector3) -> Vector3 {
     corner.up_into_the_cap_through(at, corner.corner)
 }
+
+/// C# `SurfaceMixedCornerBites.TrySector`: the cap face's sector from `apex` round `stations`
+/// bitten out (snapped to the cap corner and the stations); nothing with fewer than two stations.
+#[allow(clippy::too_many_arguments)]
+pub fn try_sector(
+    pool: &mut super::SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &SurfaceMixedCorner,
+    stations: &[i32],
+    cap_corner: i32,
+    apex: Vector3,
+    split_from: i32,
+) -> Result<(), crate::bevel::BevelAdvisory> {
+    if stations.len() < 2 {
+        return Ok(());
+    }
+
+    let mut rim = Vec::with_capacity(stations.len() + 1);
+    rim.push(apex);
+    let mut snap_to = Vec::with_capacity(stations.len() + 1);
+    snap_to.push(cap_corner);
+    for &vertex in stations {
+        rim.push(pool.position_of(vertex));
+        snap_to.push(vertex);
+    }
+
+    super::surface_convex_bite::try_take(
+        pool,
+        faces,
+        &rim,
+        corner.out_of_the_cap_face,
+        corner.corner,
+        &snap_to,
+        split_from,
+    )
+}

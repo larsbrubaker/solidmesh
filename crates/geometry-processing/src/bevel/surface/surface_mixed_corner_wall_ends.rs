@@ -385,3 +385,64 @@ pub fn try_read(
 
     Ok(Some(across))
 }
+
+/// C# `SurfaceMixedCornerWallEnds.TryBiteTheSection`: the wall's section between the cap, the
+/// wall and the band end `across` bitten out one triangle at a time - each pair of section
+/// stations with the point the three planes meet at. Refused for a section of fewer than two
+/// stations or planes that do not meet at a point.
+pub fn try_bite_the_section(
+    pool: &mut super::SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &super::SurfaceMixedCorner,
+    across: super::SurfaceBandEnd,
+    section: &[i32],
+    split_from: i32,
+) -> Result<(), crate::bevel::BevelAdvisory> {
+    let not_supported = || {
+        crate::bevel::BevelAdvisory::new(
+            crate::bevel::BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.corner.into()],
+        )
+    };
+
+    if section.len() < 2 {
+        return Err(not_supported());
+    }
+
+    let facing = -across.inward;
+    let Some(at_the_corner) = try_where_the_three_meet(
+        corner.outer_rail_centre,
+        corner.out_of_the_cap_face,
+        corner.corner,
+        corner.out_of_the_wall,
+        across.point,
+        facing,
+    ) else {
+        return Err(not_supported());
+    };
+
+    let corners = pool.add(at_the_corner);
+    for pair in section.windows(2) {
+        if pair[0] == corners || pair[1] == corners {
+            continue;
+        }
+
+        let rim = [
+            at_the_corner,
+            pool.position_of(pair[0]),
+            pool.position_of(pair[1]),
+        ];
+        let snap_to = [corners, pair[0], pair[1]];
+        super::surface_convex_bite::try_take(
+            pool,
+            faces,
+            &rim,
+            facing,
+            across.point,
+            &snap_to,
+            split_from,
+        )?;
+    }
+
+    Ok(())
+}

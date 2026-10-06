@@ -176,3 +176,127 @@ pub fn try_the_foot(
 
     Ok(corner + (away * ((stops_at.point - corner).dot(stops_at.inward) / leaning)))
 }
+
+/// C# `SurfaceTwoCreaseJunctionWall.TryGiveUpTheNotch`: rail zero of the junction's grid crossed
+/// with each arm's bead crease (the first from the grid's start, the second from its end), each
+/// arm's bite taken, and the notch between the crossings fanned from the corner where it is not
+/// already closed. An arm whose wall is an unpicked section is refused.
+pub fn try_give_up_the_notch(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    junction: &super::SurfaceMixedJunction,
+    grid: &[Vec<i32>],
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let corner = junction.corner;
+    let out_of_the_wall = junction.first.mixed.out_of_the_wall;
+    for arm in [&junction.first, &junction.second] {
+        if arm.mixed.unpicked_section().is_some() {
+            return Err(BevelAdvisory::new(
+                BevelAdvisoryCode::SurfaceCornerNotSupported,
+                vec![corner.into()],
+            ));
+        }
+    }
+
+    let on_the_wall: Vec<Vector3> = grid
+        .iter()
+        .map(|rails| pool.position_of(rails[0]))
+        .collect();
+    let first_crossing =
+        try_the_crossing(&junction.first, corner, out_of_the_wall, &on_the_wall, true)?;
+    let second_crossing = try_the_crossing(
+        &junction.second,
+        corner,
+        out_of_the_wall,
+        &on_the_wall,
+        false,
+    )?;
+
+    let first_at = pool.add(first_crossing.at);
+    let second_at = pool.add(second_crossing.at);
+    try_bite(
+        pool,
+        faces,
+        &junction.first,
+        corner,
+        out_of_the_wall,
+        grid,
+        first_crossing,
+        first_at,
+        true,
+        split_from,
+    )?;
+    try_bite(
+        pool,
+        faces,
+        &junction.second,
+        corner,
+        out_of_the_wall,
+        grid,
+        second_crossing,
+        second_at,
+        false,
+        split_from,
+    )?;
+
+    if first_crossing.before >= second_crossing.before {
+        return Ok(());
+    }
+
+    try_fill_the_notch(
+        pool,
+        faces,
+        corner,
+        out_of_the_wall,
+        grid,
+        first_crossing,
+        first_at,
+        second_crossing,
+        second_at,
+    )
+}
+
+/// C# `TryBite`: the wall bitten from the arm's own end of rail zero, round the bead's foot on its
+/// crease and the crossing, back along the rail to that end.
+#[allow(clippy::too_many_arguments)]
+pub fn try_bite(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    arm: &SurfaceMixedJunctionArm,
+    corner: Vector3,
+    out_of_the_wall: Vector3,
+    grid: &[Vec<i32>],
+    crossing: SurfaceTwoCreaseJunctionWallCrossing,
+    crossing_at: i32,
+    from_the_start: bool,
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let foot = try_the_foot(arm, corner)?;
+    let step: i32 = if from_the_start { 1 } else { -1 };
+    let contact = if from_the_start {
+        0
+    } else {
+        grid.len() as i32 - 1
+    };
+    let mut snap_to = vec![grid[contact as usize][0], pool.add(foot), crossing_at];
+    let mut station = crossing.before;
+    while station != contact {
+        snap_to.push(grid[station as usize][0]);
+        station -= step;
+    }
+
+    let rim: Vec<Vector3> = snap_to
+        .iter()
+        .map(|&vertex| pool.position_of(vertex))
+        .collect();
+    super::surface_convex_bite::try_take(
+        pool,
+        faces,
+        &rim,
+        out_of_the_wall,
+        corner,
+        &snap_to,
+        split_from,
+    )
+}

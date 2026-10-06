@@ -287,3 +287,12 @@ pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i
     )
     .expect("the frustum revolves")
 }
+
+/// C# `LPrismTestMeshes.CreateLShapedGridPrism`: an L of three 10 mm cells, 10 tall - one concave
+/// edge up its inside corner, meeting the top's convex rim at (10, 10, 10).
+pub fn create_l_shaped_grid_prism() -> Mesh {
+    let across = [0.0, 10.0, 20.0];
+    create_grid_solid(&across, &across, &[0.0, 10.0], |i, j, k| {
+        (0..2).contains(&i) && (0..2).contains(&j) && k == 0 && !(i == 1 && j == 1)
+    })
+}

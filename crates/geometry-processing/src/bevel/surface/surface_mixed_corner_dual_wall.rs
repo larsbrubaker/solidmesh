@@ -172,3 +172,144 @@ pub fn rim_of(pool: &SurfaceVertexPool, snap_to: &[i32]) -> Vec<Vector3> {
         .map(|&vertex| pool.position_of(vertex))
         .collect()
 }
+
+/// C# `SurfaceMixedCornerDualWall.TryGiveUpTheWall`: rail zero of the dual grid crossed with the
+/// bead's crease and then the canal's, and the wall given up in three parts - the bead's bite,
+/// the root fanned from the corner between the two crossings, and the lune past the canal's.
+/// A corner whose wall is an unpicked section is refused.
+pub fn try_give_up_the_wall(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    read: &super::SurfaceMixedCornerDualGrid,
+    grid: &[Vec<i32>],
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let canal = &read.canal;
+    let corner = &canal.corner;
+    let out_of_the_wall = corner.out_of_the_wall;
+    if corner.unpicked_section().is_some() {
+        return Err(BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![corner.corner.into()],
+        ));
+    }
+
+    let on_the_wall: Vec<Vector3> = grid
+        .iter()
+        .map(|rails| pool.position_of(rails[0]))
+        .collect();
+    let beads_crease = SurfaceLine::new(
+        corner.corner,
+        SurfaceMixedCorner::away_from_the_corner(&corner.bead, corner.corner),
+    );
+    let at_the_bead = try_the_crossing(beads_crease, out_of_the_wall, &on_the_wall, 0)?;
+    let at_the_edge = try_the_crossing(
+        canal.crease,
+        out_of_the_wall,
+        &on_the_wall,
+        at_the_bead.after as usize,
+    )?;
+
+    let bead_at = pool.add(at_the_bead.at);
+    let edge_at = pool.add(at_the_edge.at);
+    try_the_beads_bite(
+        pool,
+        faces,
+        corner,
+        out_of_the_wall,
+        grid,
+        at_the_bead,
+        bead_at,
+        split_from,
+    )?;
+    try_fill_the_root(
+        pool,
+        faces,
+        corner.corner,
+        out_of_the_wall,
+        grid,
+        at_the_bead,
+        bead_at,
+        at_the_edge,
+        edge_at,
+    )?;
+    try_the_lune(
+        pool,
+        faces,
+        read,
+        out_of_the_wall,
+        grid,
+        at_the_edge,
+        edge_at,
+        split_from,
+    )
+}
+
+/// C# `TryTheBeadsBite`: the wall bitten from rail zero's start, round the bead's foot on its
+/// crease and the crossing, back down the rail to its start.
+#[allow(clippy::too_many_arguments)]
+pub fn try_the_beads_bite(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    corner: &SurfaceMixedCorner,
+    out_of_the_wall: Vector3,
+    grid: &[Vec<i32>],
+    crossing: SurfaceMixedCornerDualWallCrossing,
+    crossing_at: i32,
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let foot = try_the_foot(corner)?;
+    let mut snap_to = vec![grid[0][0], pool.add(foot), crossing_at];
+    let mut station = crossing.before;
+    while station > 0 {
+        snap_to.push(grid[station as usize][0]);
+        station -= 1;
+    }
+
+    let rim = rim_of(pool, &snap_to);
+    super::surface_convex_bite::try_take(
+        pool,
+        faces,
+        &rim,
+        out_of_the_wall,
+        corner.corner,
+        &snap_to,
+        split_from,
+    )
+}
+
+/// C# `TryTheLune`: the wall bitten from the canal's crossing along rail zero to the grid's end -
+/// nothing where fewer than three distinct points are left.
+#[allow(clippy::too_many_arguments)]
+pub fn try_the_lune(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    read: &super::SurfaceMixedCornerDualGrid,
+    out_of_the_wall: Vector3,
+    grid: &[Vec<i32>],
+    crossing: SurfaceMixedCornerDualWallCrossing,
+    crossing_at: i32,
+    split_from: i32,
+) -> Result<(), BevelAdvisory> {
+    let mut snap_to = vec![crossing_at];
+    for rails in grid.iter().skip(crossing.after as usize) {
+        if snap_to[snap_to.len() - 1] != rails[0] {
+            snap_to.push(rails[0]);
+        }
+    }
+
+    if snap_to.len() < 3 {
+        return Ok(());
+    }
+
+    let rim = rim_of(pool, &snap_to);
+    super::surface_convex_bite::try_take(
+        pool,
+        faces,
+        &rim,
+        out_of_the_wall,
+        read.canal.crease.point,
+        &snap_to,
+        split_from,
+    )
+}

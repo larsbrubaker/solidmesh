@@ -181,6 +181,8 @@ mod rust_only_bevel_r2p05_crease_tests;
 mod rust_only_bevel_r2p05_from_polyline_tests;
 #[path = "bevel/rust_only_bevel_r2p05_mesh_tests.rs"]
 mod rust_only_bevel_r2p05_mesh_tests;
+#[path = "bevel/rust_only_bevel_r2p08_mixed_corner_tests.rs"]
+mod rust_only_bevel_r2p08_mixed_corner_tests;
 #[path = "bevel/rust_only_bevel_r2p08_tests.rs"]
 mod rust_only_bevel_r2p08_tests;
 #[path = "bevel/rust_only_bevel_r2p09_tests.rs"]
@@ -223,6 +225,8 @@ mod section_walked_end_vertex_tests;
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
 mod spoke_centre_parameter_tests;
+#[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
+mod surface_clip_classifies_one_point_one_way_tests;
 #[path = "bevel/surface_convex_bite_tests.rs"]
 mod surface_convex_bite_tests;
 #[path = "bevel/surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
