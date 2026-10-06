@@ -335,3 +335,136 @@ pub fn is_in_the_bites_way(
         || highest.z < low.z
         || lowest.z > high.z)
 }
+
+/// C# `SurfaceConvexBite.TryTake`: the convex region `rim` (in the plane of `plane_normal`
+/// through `plane_point`) bitten out of `faces` - every face in the bite's way clipped to what
+/// lies outside the region, its pieces snapped to `snap_to` (the profile, for pool vertices from
+/// `split_from` on), the vertices standing on their sides carried in, straight-through vertices
+/// dropped, and each piece that covers anything fanned facing its own face. Refused
+/// (`SurfaceCornerNotSupported`) for a rim of fewer than three points, a side with no half plane,
+/// or a rim that is not convex.
+#[allow(clippy::too_many_arguments)]
+pub fn try_take(
+    pool: &mut SurfaceVertexPool,
+    faces: &mut Vec<(i32, i32, i32)>,
+    rim: &[Vector3],
+    plane_normal: Vector3,
+    plane_point: Vector3,
+    snap_to: &[i32],
+    split_from: i32,
+) -> Result<(), crate::bevel::BevelAdvisory> {
+    use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
+
+    let not_supported = |at: Vector3| {
+        BevelAdvisory::new(
+            BevelAdvisoryCode::SurfaceCornerNotSupported,
+            vec![at.into()],
+        )
+    };
+
+    if rim.len() < 3 {
+        return Err(not_supported(plane_point));
+    }
+
+    let mut middle = Vector3::ZERO;
+    for &at in rim {
+        middle += at;
+    }
+    middle /= rim.len() as f64;
+
+    let mut region = Vec::with_capacity(rim.len());
+    let mut low = rim[0];
+    let mut high = rim[0];
+    for side in 0..rim.len() {
+        let from = rim[side];
+        let to = rim[(side + 1) % rim.len()];
+        let Some(half_plane) =
+            super::surface_end_gives_up_the_section::try_half_plane(from, to, plane_normal, middle)
+        else {
+            return Err(not_supported(from));
+        };
+        region.push(half_plane);
+        low = Vector3::component_min(low, from);
+        high = Vector3::component_max(high, from);
+    }
+
+    if !it_is_convex(rim, &region) {
+        return Err(not_supported(rim[0]));
+    }
+
+    let near = pool.near_enough();
+    low -= Vector3::new(near, near, near);
+    high += Vector3::new(near, near, near);
+
+    let mut carried = IndexSet::new();
+    for &face in faces.iter() {
+        if is_in_the_bites_way(pool, face, plane_normal, plane_point, low, high) {
+            carried.insert(face.0);
+            carried.insert(face.1);
+            carried.insert(face.2);
+        }
+    }
+
+    let mut clipped: Vec<(Vector3, Vec<i32>)> = Vec::new();
+    let mut places: Vec<((i32, i32, i32), i32, usize)> = Vec::with_capacity(faces.len());
+    for &face in faces.iter() {
+        if !is_in_the_bites_way(pool, face, plane_normal, plane_point, low, high) {
+            places.push((face, -1, 0));
+            continue;
+        }
+
+        let (pieces, _) = super::surface_end_gives_up_the_section::pieces_outside_of(
+            &[face.0, face.1, face.2],
+            pool,
+            &region,
+            Some(snap_to),
+        );
+        let face_normal = (pool.position_of(face.1) - pool.position_of(face.0))
+            .cross(pool.position_of(face.2) - pool.position_of(face.0));
+        let facing = if face_normal.length_squared() > 0.0 {
+            face_normal
+        } else {
+            plane_normal
+        };
+        let first = clipped.len();
+        for piece in pieces {
+            clipped.push((
+                facing,
+                super::surface_end_notch::snapped_to_the_profile(&piece, snap_to, pool, split_from),
+            ));
+        }
+        places.push((face, first as i32, clipped.len() - first));
+    }
+
+    let rings: Vec<Vec<i32>> = clipped.iter().map(|(_, ring)| ring.clone()).collect();
+    let shared = SurfaceBiteSharedSides::new(rings);
+    let mut rebuilt = Vec::with_capacity(faces.len());
+    for &(face, from, count) in &places {
+        if from < 0 {
+            rebuilt.push(face);
+            continue;
+        }
+
+        for (piece, (facing, ring)) in clipped.iter().enumerate().skip(from as usize).take(count) {
+            let snapped = without_the_straight_through(
+                pool,
+                &with_the_vertices_standing_on_it(
+                    pool,
+                    ring.clone(),
+                    &carried,
+                    Some(&shared),
+                    piece as i32,
+                ),
+                split_from,
+            );
+            if covers_nothing(pool, &snapped) {
+                continue;
+            }
+
+            super::surface_fan::emit_facing(&snapped, pool, &mut rebuilt, *facing);
+        }
+    }
+
+    *faces = rebuilt;
+    Ok(())
+}

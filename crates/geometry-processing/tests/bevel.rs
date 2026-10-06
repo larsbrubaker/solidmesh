@@ -207,10 +207,16 @@ mod section_room_split_crease_tests;
 mod section_surface_walk_fold_tests;
 #[path = "bevel/section_surface_walk_roof.rs"]
 mod section_surface_walk_roof;
+#[path = "bevel/section_straight_bore_tests.rs"]
+mod section_straight_bore_tests;
+#[path = "bevel/section_walked_end_vertex_tests.rs"]
+mod section_walked_end_vertex_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
 mod spoke_centre_parameter_tests;
+#[path = "bevel/surface_convex_bite_tests.rs"]
+mod surface_convex_bite_tests;
 #[path = "bevel/surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
 mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
 #[path = "bevel/surface_cut_ruler_tests.rs"]
