@@ -26,12 +26,13 @@ pub trait PolygonExtensions {
         end: Point64,
     ) -> Vec<(usize, Intersection, Point64)>;
 
-    /// C# `GetWindingDirection`, documented as "1 if ccw, -1 if cw". Ported as written: it sums
-    /// `(x2 + x1) * (y2 + y1)`, not the shoelace's `(x2 - x1) * (y2 + y1)`, so reversing a
-    /// polygon does not change its answer.
+    /// C# `GetWindingDirection`: 1 if counter-clockwise (y up), -1 if clockwise or degenerate,
+    /// from the signed area (divergence 1172: the C# sum cannot tell the two apart).
     fn get_winding_direction(&self) -> i32;
 
-    /// C# `Length(isClosed)`: the square root of [`PolygonExtensions::length_squared`].
+    /// C# `Length(isClosed)`: the sum of the edge lengths (with the closing edge when
+    /// `is_closed`). C# takes the square root of [`PolygonExtensions::length_squared`]
+    /// instead (divergence 1173).
     fn length(&self, is_closed: bool) -> f64;
 
     /// C# `LengthSquared(isClosed)`: the sum of each edge's squared length (with the closing
@@ -95,23 +96,10 @@ impl PolygonExtensions for Path64 {
     }
 
     fn get_winding_direction(&self) -> i32 {
-        let point_count = self.len();
-        let mut total_turns = 0.0;
-        for point_index in 0..point_count {
-            let current_point = self[point_index];
-            let next_point = self[(point_index + 1) % point_count];
-
-            // sum  (x2 − x1)(y2 + y1) -- as the C# comment says; the C# computes the sums.
-            // C# long arithmetic wraps on overflow (unchecked), so it wraps here too.
-            let turn_amount = next_point
-                .x
-                .wrapping_add(current_point.x)
-                .wrapping_mul(next_point.y.wrapping_add(current_point.y));
-
-            total_turns += turn_amount as f64;
-        }
-
-        if total_turns > 0.0 {
+        // C# sums `(x2 + x1) * (y2 + y1)`, which is the same for a polygon and its reverse
+        // (and positive for any polygon in the positive quadrant), so it cannot tell the
+        // orientation it is named for (divergence 1172). The signed (shoelace) area does.
+        if super::clipper_statics::area(self) > 0.0 {
             1
         } else {
             -1
@@ -119,7 +107,23 @@ impl PolygonExtensions for Path64 {
     }
 
     fn length(&self, is_closed: bool) -> f64 {
-        self.length_squared(is_closed).sqrt()
+        // C# returns the square root of the summed squared edges, which is not the path's
+        // length for more than one edge (divergence 1173). Sum the edge lengths.
+        let mut length = 0.0;
+        if self.len() > 1 {
+            let mut previous_point = if is_closed {
+                self[self.len() - 1]
+            } else {
+                self[0]
+            };
+            for &current_point in &self[if is_closed { 0 } else { 1 }..] {
+                let dx = (previous_point.x - current_point.x) as f64;
+                let dy = (previous_point.y - current_point.y) as f64;
+                length += (dx * dx + dy * dy).sqrt();
+                previous_point = current_point;
+            }
+        }
+        length
     }
 
     fn length_squared(&self, is_closed: bool) -> f64 {
