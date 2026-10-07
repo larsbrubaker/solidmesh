@@ -4,12 +4,17 @@
 //! projected bounds, the 2D side-of-line test and the surface area. The two C# copies differ in
 //! one place, the side-of-line test (`< 0` versus `<= 0`); neither counts a point exactly on an
 //! edge as inside for both projected windings, so here both shapes share one test that does
-//! (`docs/CSHARP_DIVERGENCES.md` 1840).
+//! (`docs/CSHARP_DIVERGENCES.md` 1840), and a point within the plane hit's single-precision slack
+//! of an edge counts as on it (2276).
 
 use std::cmp::Ordering;
 
 use vector_math::cs_math::{max_f32, min_f32};
 use vector_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Float};
+
+/// How many single-precision steps of the hit distance a hit may fall outside a triangle and
+/// still count as on its edge (see `TriangleProjection::hit`).
+const HIT_SLACK_FLOAT_STEPS: f64 = 4.0;
 
 /// The projected axes for each major axis (C# `xMapping`, `yMapping`).
 const X_MAPPING: [usize; 3] = [1, 0, 0];
@@ -108,10 +113,17 @@ impl TriangleProjection {
         }
 
         let hit_position = ray.origin + ray.direction_normal * f64::from(distance_to_hit);
+        // The plane hit is single precision (C# `PlaneFloat.RayHitPlane`), so the point is only
+        // known to a few float steps of its distance along the ray. Two faces that share an edge
+        // but project along different axes each place their own hit, and a ray onto the edge
+        // can land that far outside both; within that slack the point counts as on the edge
+        // (divergence 2276).
+        let tolerance =
+            f64::from(distance_to_hit).abs() * f64::from(f32::EPSILON) * HIT_SLACK_FLOAT_STEPS;
         let have_hit_in_2d = match self.major_axis {
-            0 => self.check_2d_hit(hit_position.y, hit_position.z, corners),
-            1 => self.check_2d_hit(hit_position.x, hit_position.z, corners),
-            _ => self.check_2d_hit(hit_position.x, hit_position.y, corners),
+            0 => self.check_2d_hit(hit_position.y, hit_position.z, tolerance, corners),
+            1 => self.check_2d_hit(hit_position.x, hit_position.z, tolerance, corners),
+            _ => self.check_2d_hit(hit_position.x, hit_position.y, tolerance, corners),
         };
 
         if have_hit_in_2d {
@@ -125,12 +137,18 @@ impl TriangleProjection {
         }
     }
 
-    fn check_2d_hit(&self, x: f64, y: f64, corners: &dyn Fn(usize) -> Vector3Float) -> bool {
+    fn check_2d_hit(
+        &self,
+        x: f64,
+        y: f64,
+        tolerance: f64,
+        corners: &dyn Fn(usize) -> Vector3Float,
+    ) -> bool {
         // check the bounding rect
-        if x >= f64::from(self.left)
-            && x <= f64::from(self.right)
-            && y >= f64::from(self.bottom)
-            && y <= f64::from(self.top)
+        if x >= f64::from(self.left) - tolerance
+            && x <= f64::from(self.right) + tolerance
+            && y >= f64::from(self.bottom) - tolerance
+            && y <= f64::from(self.top) + tolerance
         {
             let (x_axis, y_axis) = self.axes();
             let project = |i: usize| {
@@ -146,10 +164,20 @@ impl TriangleProjection {
             // triangles share missed both whenever their projection wound the other way. Here
             // an edge only rules the point out when it lies strictly on the other side from
             // another edge: on an edge or corner, every triangle touching it reports the hit.
+            // Each cross product is the point's distance from its edge times the edge's length;
+            // within `tolerance` of the edge it counts as on it.
+            let side = |a: Vector2, b: Vector2| {
+                let cross = side_of_line(a, b, hit_position);
+                if cross.abs() <= tolerance * (b - a).length() {
+                    0.0
+                } else {
+                    cross
+                }
+            };
             let sides = [
-                side_of_line(vertex0, vertex1, hit_position),
-                side_of_line(vertex1, vertex2, hit_position),
-                side_of_line(vertex2, vertex0, hit_position),
+                side(vertex0, vertex1),
+                side(vertex1, vertex2),
+                side(vertex2, vertex0),
             ];
             let on_side_one = sides.iter().any(|&cross| cross < 0.0);
             let on_side_two = sides.iter().any(|&cross| cross > 0.0);
