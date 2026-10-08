@@ -16,6 +16,9 @@
 //! `advanced_repair` (the Repair tool's Advanced path, `Mesh::advanced_repaired`) adds the
 //! kernel face orientation and `remove_occluded_triangles`, which tests points with the fast
 //! winding number (`fast_winding`) or axis rays.
+//! `reducer` (the Reduce tool's `Mesh::reduced_to_triangle_count`) is Garland-Heckbert quadric
+//! simplification over the same `DMesh3`, with `quadric_error`, `index_priority_queue` and, to
+//! keep the surface, `mesh_projection_target`.
 
 pub(crate) mod advanced_repair;
 pub(crate) mod dmesh3;
@@ -29,6 +32,7 @@ pub(crate) mod dynamic_priority_queue;
 pub(crate) mod edge_loop;
 pub(crate) mod fast_winding;
 pub(crate) mod implicit3d;
+pub(crate) mod index_priority_queue;
 pub(crate) mod marching_cubes;
 pub(crate) mod marching_cubes_pro;
 pub(crate) mod merge_coincident_edges;
@@ -38,6 +42,7 @@ pub(crate) mod mesh_constraints;
 pub(crate) mod mesh_editor;
 pub(crate) mod mesh_face_selection;
 pub(crate) mod mesh_iterators;
+pub(crate) mod mesh_projection_target;
 pub(crate) mod mesh_queries;
 pub(crate) mod mesh_refiner_base;
 pub(crate) mod mesh_repair_orientation;
@@ -45,7 +50,9 @@ pub(crate) mod mesh_signed_distance_grid;
 pub(crate) mod mesh_util;
 pub(crate) mod minimal_hole_fill;
 pub(crate) mod point_set_hashtable;
+pub(crate) mod quadric_error;
 pub(crate) mod ray_intersection;
+pub(crate) mod reducer;
 pub(crate) mod ref_count_vector;
 pub(crate) mod region_operator;
 pub(crate) mod remesher;
@@ -70,6 +77,8 @@ mod mesh_repair_ops_tests;
 mod mesh_topology_tests;
 #[cfg(test)]
 mod minimal_hole_fill_tests;
+#[cfg(test)]
+mod reducer_tests;
 #[cfg(test)]
 mod region_operator_tests;
 #[cfg(test)]
