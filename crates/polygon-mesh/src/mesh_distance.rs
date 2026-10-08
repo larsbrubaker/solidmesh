@@ -4,13 +4,14 @@
 //! mattercad-model because it is built on the crate's geometry3Sharp pieces (`g3`: the AABB tree's
 //! nearest-pair search in `dmesh_aabb_tree3_pairs`, the triangle-triangle distance in
 //! `dist_triangle3_triangle3`, and the fast winding number in `fast_winding`), and on the boolean
-//! kernel (`csg`) for telling a touch from a crossing. The AI tool's `measure` reads it.
+//! kernel (`csg`) for telling a touch from a crossing. The AI tool's `measure` reads it;
+//! `point_distances` answers point-to-surface distances over the same tree.
 
 use vector_math::{Matrix4X4, Vector3};
 
 use crate::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes};
 use crate::g3::dist_triangle3_triangle3::dist_triangle3_triangle3;
-use crate::g3::dmesh3::DMesh3;
+use crate::g3::dmesh3::{tri_distance_sqr, DMesh3};
 use crate::g3::dmesh_aabb_tree3::DMeshAABBTree3;
 use crate::g3::fast_winding::FastWinding;
 use crate::{CancelToken, Mesh};
@@ -94,6 +95,29 @@ pub fn between(
         a_inside_b: false,
         b_inside_a: false,
     }))
+}
+
+/// The distance from each of `points` to the nearest point of `mesh`'s surface, through one AABB
+/// tree (g3's `FindNearestTriangle` then `MeshQueries.TriDistanceSqr`, as MatterCAD's wall
+/// thickness checks measure a hollowed part). `f64::MAX` for every point when the mesh has no
+/// faces.
+pub fn point_distances(mesh: &Mesh, points: &[Vector3]) -> Vec<f64> {
+    if mesh.faces.is_empty() {
+        return vec![f64::MAX; points.len()];
+    }
+    let soup = triangle_soup(mesh);
+    let tree = DMeshAABBTree3::new(&soup);
+    points
+        .iter()
+        .map(|p| {
+            let query = [p.x, p.y, p.z];
+            let tid = tree.find_nearest_triangle(query, f64::MAX);
+            if tid < 0 {
+                return f64::MAX;
+            }
+            tri_distance_sqr(&soup.get_tri_vertices(tid as usize), query).sqrt()
+        })
+        .collect()
 }
 
 /// C# `SurfacesCross`: surfaces that meet either just touch (a part resting on another) or
