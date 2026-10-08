@@ -16,17 +16,21 @@
 //! `advanced_repair` (the Repair tool's Advanced path, `Mesh::advanced_repaired`) adds the
 //! kernel face orientation and `remove_occluded_triangles`, which tests points with the fast
 //! winding number (`fast_winding`) or axis rays.
+//! `dmesh_aabb_tree3_pairs` (the trees' nearest triangle pair) and `dist_triangle3_triangle3`
+//! measure the gap between two meshes for `mesh_distance`.
 //! `reducer` (the Reduce tool's `Mesh::reduced_to_triangle_count`) is Garland-Heckbert quadric
 //! simplification over the same `DMesh3`, with `quadric_error`, `index_priority_queue` and, to
 //! keep the surface, `mesh_projection_target`.
 
 pub(crate) mod advanced_repair;
+pub(crate) mod dist_triangle3_triangle3;
 pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
 pub(crate) mod dmesh3_edge_ops;
 pub(crate) mod dmesh3_queries;
 pub(crate) mod dmesh3_set_triangle;
 pub(crate) mod dmesh_aabb_tree3;
+mod dmesh_aabb_tree3_pairs;
 pub(crate) mod dsubmesh3;
 pub(crate) mod dynamic_priority_queue;
 pub(crate) mod edge_loop;

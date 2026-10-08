@@ -22,6 +22,9 @@
 //! `Mesh::face_textures` follow the faces through every rebuild, and booleans paint their result
 //! from the operands' colors.
 //!
+//! `mesh_distance` (MatterCADLib `MeshDistance`) measures the true gap between two meshes'
+//! surfaces and whether they overlap.
+//!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
 //! with row vectors (`p * M`). Long operations take a [`CancelToken`].
@@ -35,6 +38,7 @@ mod face_data;
 mod face_split;
 mod g3;
 mod mesh;
+pub mod mesh_distance;
 mod mesh_edge_graph;
 mod mesh_editing;
 mod mesh_extensions;
