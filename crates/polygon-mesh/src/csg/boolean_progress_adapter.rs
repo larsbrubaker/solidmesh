@@ -46,6 +46,25 @@ impl BooleanProgressAdapter {
         }
     }
 
+    /// [`Self::new`] with C#'s `operationLabel` (Minkowski passes "Dilate" or "Erode").
+    pub(crate) fn with_label(
+        reporter: BooleanReporter,
+        ratio_completed: f64,
+        amount_per_operation: f64,
+        operation_count: usize,
+        operation_label: &'static str,
+    ) -> Self {
+        Self {
+            operation_label,
+            ..Self::new(
+                reporter,
+                ratio_completed,
+                amount_per_operation,
+                operation_count,
+            )
+        }
+    }
+
     /// One kernel report. A `None` fraction is an indeterminate phase: it says nothing about
     /// how far along the phase is, so only the message changes.
     pub(crate) fn report(&self, phase: &str, fraction: Option<f64>) {

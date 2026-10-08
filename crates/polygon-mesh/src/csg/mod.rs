@@ -32,6 +32,7 @@ mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;
 pub mod mesh_repair_rust;
+pub mod minkowski_morph;
 pub mod minkowski_processing;
 pub mod minkowski_progress_model;
 pub mod minkowski_shell_orientation;

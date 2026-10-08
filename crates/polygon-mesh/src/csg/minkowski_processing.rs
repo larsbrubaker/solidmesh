@@ -1,8 +1,8 @@
-//! The part of agg-sharp `Csg/MinkowskiProcessing.cs` ported so far: `OrientShellsAsSolid` (the
+//! agg-sharp `Csg/MinkowskiProcessing.cs`'s operand side: `OrientShellsAsSolid` (the
 //! solid exactly as Dilate and Erode read it), with the operand import it shares with the
 //! Minkowski runs (`ImportOperand`, `ImportRewindingABackwardPatch`, `TryImport`,
-//! `ThrowIfEmpty`), and `SphereMesh`. The Minkowski sum and difference themselves, their
-//! progress model and async entry points come with the rest of Minkowski.
+//! `ThrowIfEmpty`), and `SphereMesh`. The Minkowski sum and difference themselves (`Run`,
+//! `Morph` and their entry points) are `minkowski_morph.rs`.
 
 use std::fmt;
 
@@ -101,7 +101,7 @@ pub fn orient_shells_as_solid(solid: &Mesh, cancel: &CancelToken) -> Result<Mesh
 
 /// C# `ImportOperand`: the import with the backward-patch retry, and for a soup import one
 /// more try with exactly coincident vertices joined, kept only if that pairs up.
-fn import_operand(mesh: &Mesh) -> Result<Manifold, MinkowskiError> {
+pub(crate) fn import_operand(mesh: &Mesh) -> Result<Manifold, MinkowskiError> {
     let imported = import_rewinding_a_backward_patch(mesh)?;
     if imported.as_impl().is_soup {
         if let Some(joined) = consistent_winding::join_coincident_vertices(mesh) {
@@ -141,7 +141,7 @@ fn try_import(mesh: &Mesh) -> Option<Manifold> {
 }
 
 /// C# `ThrowIfEmpty`.
-fn throw_if_empty(mesh: &Mesh) -> Result<(), MinkowskiError> {
+pub(crate) fn throw_if_empty(mesh: &Mesh) -> Result<(), MinkowskiError> {
     if mesh.vertices.is_empty() || mesh.faces.is_empty() {
         return Err(MinkowskiError::InvalidArgument(
             "A Minkowski operand needs geometry; this mesh has none.".to_string(),
