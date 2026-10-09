@@ -23,7 +23,8 @@
 //! from the operands' colors.
 //!
 //! `mesh_distance` (MatterCADLib `MeshDistance`) measures the true gap between two meshes'
-//! surfaces and whether they overlap.
+//! surfaces and whether they overlap. `rendering` (agg-sharp `PolygonMesh/Rendering`) has the
+//! outline a mesh casts straight down, as clipper polygons (`OrthographicZProjection`).
 //!
 //! Conventions follow vector-math: C# properties are methods, C# extension methods on `Mesh`
 //! and `Face` are inherent methods, indices stay `i32` as in C#, and matrices are row-major
@@ -45,6 +46,7 @@ mod mesh_extensions;
 mod mesh_measure;
 pub mod processors;
 pub mod ray_tracer;
+pub mod rendering;
 pub mod sdf;
 pub mod solids;
 mod t_junctions;
