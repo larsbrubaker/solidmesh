@@ -221,6 +221,19 @@ impl Mesh {
         }
     }
 
+    /// C# `PlaceTextureOnFace(face, textureToUse)`: planar-projects `texture_to_use` along the
+    /// normal of face `face`, stretched to cover that one face
+    /// ([`Mesh::get_max_plane_projection`] over it alone).
+    pub fn place_texture_on_face_projected(
+        &mut self,
+        face: usize,
+        texture_to_use: Option<Arc<ImageBuffer>>,
+    ) {
+        //// planar project along the normal of this face
+        let mapping = self.get_max_plane_projection(&[face], None);
+        self.place_texture_on_face(face, texture_to_use, mapping, true);
+    }
+
     /// Textures every face in `faces` as [`Mesh::place_texture_on_face`] does, except that a
     /// face already textured keeps its existing texture (C# `PlaceTextureOnFaces` with a
     /// mapping: the existing entries are added in last).
