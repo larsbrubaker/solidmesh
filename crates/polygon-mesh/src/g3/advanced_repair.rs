@@ -7,6 +7,10 @@
 //! with the retry and erosion rounds and the final cleanup. Face colors are carried across by
 //! face centroid, as C# does.
 //!
+//! [`Mesh::advanced_repaired_with_g3_orientation`] is the same pipeline as MatterCAD's obsolete
+//! `RepairObject3D.Repair` (`DesignTools/Obsolete/RepairObject3D.cs`) runs it: every orientation
+//! pass is geometry3Sharp's `MeshRepairOrientation`, and the face colors are not carried across.
+//!
 //! C#'s `goto repeat_all` / `goto all_done` are a labeled loop and its `break`. C# reads its
 //! cancellation token between phases and inside the hole-filling and edge-collapse loops, and a
 //! cancel hands back the mesh as it stood before the `DMesh3` work (the welded copy, or the
@@ -89,6 +93,14 @@ fn check(cancel: &CancelToken) -> Result<(), Stop> {
     }
 }
 
+/// How the pipeline orients faces: `RepairObject3D_2`'s kernel-first passes, or the obsolete
+/// `RepairObject3D`'s geometry3Sharp passes (C# `RepairOrientation(dMesh3, token, true)`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Orientation {
+    PreferKernel,
+    Geometry3Sharp,
+}
+
 /// What the pipeline hands back: the welded mesh as is (the weld-only early return), or the
 /// repaired `DMesh3`, which loses face colors and gets them restored.
 enum Outcome {
@@ -110,7 +122,13 @@ impl Mesh {
         let saved_face_colors = self.save_face_centroid_colors();
 
         let mut in_mesh: Option<Mesh> = None;
-        match run(self, options, cancel, &mut in_mesh) {
+        match run(
+            self,
+            options,
+            Orientation::PreferKernel,
+            cancel,
+            &mut in_mesh,
+        ) {
             Ok(Outcome::Welded(mesh)) => Ok(mesh),
             Ok(Outcome::Repaired(dmesh3)) => {
                 let mut result = dmesh3.to_mesh();
@@ -121,12 +139,37 @@ impl Mesh {
             Err(Stop::Failed(e)) => Err(MeshAutoRepairError(e.0)),
         }
     }
+
+    /// MatterCAD's obsolete `RepairObject3D.Repair`: the Advanced pipeline with geometry3Sharp's
+    /// `MeshRepairOrientation` (components, then the global sign) for the FaceOrientation step and
+    /// every global pass, and the result straight from `ToMesh`, without the face colors (the
+    /// obsolete class never saved them). `Err` and a cancel are as [`Self::advanced_repaired`].
+    pub fn advanced_repaired_with_g3_orientation(
+        &self,
+        options: &AdvancedRepairOptions,
+        cancel: &CancelToken,
+    ) -> Result<Mesh, MeshAutoRepairError> {
+        let mut in_mesh: Option<Mesh> = None;
+        match run(
+            self,
+            options,
+            Orientation::Geometry3Sharp,
+            cancel,
+            &mut in_mesh,
+        ) {
+            Ok(Outcome::Welded(mesh)) => Ok(mesh),
+            Ok(Outcome::Repaired(dmesh3)) => Ok(dmesh3.to_mesh()),
+            Err(Stop::Cancelled) => Ok(in_mesh.unwrap_or_else(|| self.copy())),
+            Err(Stop::Failed(e)) => Err(MeshAutoRepairError(e.0)),
+        }
+    }
 }
 
 /// The Advanced branch of C# `Repair`. `in_mesh` is C#'s `inMesh` once the weld replaces it.
 fn run(
     source: &Mesh,
     options: &AdvancedRepairOptions,
+    orientation: Orientation,
     cancel: &CancelToken,
     in_mesh: &mut Option<Mesh>,
 ) -> Result<Outcome, Stop> {
@@ -163,7 +206,14 @@ fn run(
             // Shell by shell, with exact containment queries, so nested shells come out right:
             // the outside wound outward and cavities wound inward. Falls back to the
             // geometry3Sharp flood fill for anything the kernel cannot take.
-            dmesh3 = repair_orientation_prefer_kernel(dmesh3, cancel)?;
+            dmesh3 = if orientation == Orientation::PreferKernel {
+                repair_orientation_prefer_kernel(dmesh3, cancel)?
+            } else {
+                // make sure orientation of connected components is consistent
+                check(cancel)?;
+                repair_orientation(&mut dmesh3, true);
+                dmesh3
+            };
         }
 
         if options.remove_mode != RemoveModes::None {
@@ -194,7 +244,8 @@ fn run(
 
             // Possibly we have joined regions with different orientation (is it?), fix that
             // TODO: mobius strips again
-            dmesh3 = global_orientation_pass(dmesh3, options.face_orientation, cancel)?;
+            dmesh3 =
+                global_orientation_pass(dmesh3, options.face_orientation, orientation, cancel)?;
             check(cancel)?;
 
             // get rid of any remaining single-triangles before we start filling holes
@@ -260,7 +311,7 @@ fn run(
 
         // finally do global orientation - this is the best moment for the kernel, since hole
         // filling has just made the mesh as close to closed as it gets
-        dmesh3 = global_orientation_pass(dmesh3, options.face_orientation, cancel)?;
+        dmesh3 = global_orientation_pass(dmesh3, options.face_orientation, orientation, cancel)?;
         check(cancel)?;
     }
 
@@ -287,13 +338,15 @@ fn remove_inside(dmesh3: &mut DMesh3, remove_mode: RemoveModes) {
 /// finish with a global orientation pass. Running geometry3Sharp's pass there undoes the kernel
 /// repair the user asked for: its flood fill picks one sign per component and turns cavity
 /// shells outward, so a hollow box comes back solid. When face-orientation repair is on we
-/// therefore re-run the kernel instead. With it off, geometry3Sharp's pass runs.
+/// therefore re-run the kernel instead. With it off, or for the obsolete `RepairObject3D` (which
+/// predates the kernel pass), geometry3Sharp's pass runs.
 fn global_orientation_pass(
     mut dmesh3: DMesh3,
     face_orientation: bool,
+    orientation: Orientation,
     cancel: &CancelToken,
 ) -> Result<DMesh3, Stop> {
-    if face_orientation {
+    if face_orientation && orientation == Orientation::PreferKernel {
         return repair_orientation_prefer_kernel(dmesh3, cancel);
     }
     check(cancel)?;
