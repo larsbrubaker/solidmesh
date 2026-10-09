@@ -349,6 +349,8 @@ mod surface_sewing_bowed_side_tests;
 mod surface_splits_on_a_segment_tests;
 #[path = "bevel/tapered_barrel_test_meshes.rs"]
 mod tapered_barrel_test_meshes;
+#[path = "bevel/thread_cpu_time.rs"]
+mod thread_cpu_time;
 #[path = "bevel/top_and_round_corner_room_tests.rs"]
 mod top_and_round_corner_room_tests;
 #[path = "bevel/topology_test_meshes.rs"]

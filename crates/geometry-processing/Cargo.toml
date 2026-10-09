@@ -26,3 +26,12 @@ serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 serde_json = "1"
+
+# The cost rungs time the work on the test thread's own CPU clock (tests/bevel/thread_cpu_time.rs),
+# which a loaded machine does not stretch as it does a wall clock. Tests only; the library itself
+# still builds for wasm32-unknown-unknown with no platform crate.
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading"] }

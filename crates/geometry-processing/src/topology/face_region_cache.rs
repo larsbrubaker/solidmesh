@@ -1,7 +1,10 @@
 //! The face regions of one mesh at one tolerance, flooded once each and kept. Ports
 //! `Topology/FaceRegionCache.cs`. Each region is a [`FaceGroup`]; picking asks for them at
-//! mouse-move rate.
+//! mouse-move rate. A reader that keeps answers per cache (the bevel's chain-end reading, C#'s
+//! `ConditionalWeakTable` keyed by a cache) keeps them here, with the cache
+//! ([`FaceRegionCache::attached`]).
 
+use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Mutex};
@@ -32,6 +35,9 @@ pub struct FaceRegionCache {
     // Looked up by face only, never iterated, so a HashMap's order cannot leak out.
     regions: Mutex<HashMap<i32, Arc<FaceGroup>>>,
     floods: AtomicI32,
+    graph_scans: AtomicI32,
+    // One value per type, looked up by type only and never iterated (see `attached`).
+    attached: Mutex<HashMap<TypeId, Arc<dyn Any + Send + Sync>>>,
     flat_angle_degrees: f64,
 }
 
@@ -66,6 +72,8 @@ impl FaceRegionCache {
             barriers,
             regions: Mutex::new(HashMap::new()),
             floods: AtomicI32::new(0),
+            graph_scans: AtomicI32::new(0),
+            attached: Mutex::new(HashMap::new()),
             flat_angle_degrees,
         }
     }
@@ -90,6 +98,38 @@ impl FaceRegionCache {
     /// costs one walk of the mesh rather than two.
     pub fn flood_count(&self) -> i32 {
         self.floods.load(Ordering::SeqCst)
+    }
+
+    /// How many times a reader has scanned EVERY edge of [`Self::graph`] - the other walk of the
+    /// whole mesh a plan can make, which a flood count cannot see. A reader that indexes the graph
+    /// says so with [`Self::note_graph_scan`]; a test asks, as it asks [`Self::flood_count`], so
+    /// that what planning costs is a count that reads the same on any machine and under any load.
+    pub fn graph_scan_count(&self) -> i32 {
+        self.graph_scans.load(Ordering::SeqCst)
+    }
+
+    /// Records one scan of every edge of [`Self::graph`] (see [`Self::graph_scan_count`]).
+    pub fn note_graph_scan(&self) {
+        self.graph_scans.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// The one `T` kept WITH this cache: made (`T::default()`) on the first ask and handed to
+    /// every later one, for as long as the cache lives. C# keys answers it reads off a cache by
+    /// the cache's identity in a static `ConditionalWeakTable`, so they go when the cache does;
+    /// kept on the cache itself, they do the same with no table that outlives it. `T` guards its
+    /// own contents (a `Mutex`) when readers on more than one thread fill it.
+    pub fn attached<T: Any + Default + Send + Sync>(&self) -> Arc<T> {
+        let mut attached = self.attached.lock().unwrap_or_else(|e| e.into_inner());
+        let value = attached
+            .entry(TypeId::of::<T>())
+            .or_insert_with(|| Arc::new(T::default()))
+            .clone();
+        drop(attached);
+
+        // Stored under T's own TypeId, so the downcast always holds.
+        value
+            .downcast::<T>()
+            .unwrap_or_else(|_| Arc::new(T::default()))
     }
 
     /// The region a face belongs to, flooded on the first ask and remembered after it - for

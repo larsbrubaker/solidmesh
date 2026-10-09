@@ -1,8 +1,9 @@
 //! The one question a chain's free END asks of the mesh that its own two faces cannot answer
 //! ([`SurfaceChainEndReading`]): does the crease it stops at carry on past that corner, in an edge
 //! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`, its
-//! constructor and its surface and vertex indexes; C#'s per-cache table (`For`) is an owned
-//! value here ([`SurfaceChainEndReading::for_regions`], divergence 656); and the reading itself
+//! constructor and its surface and vertex indexes; C#'s per-cache table (`For`), whose memos are
+//! kept on the cache itself here ([`SurfaceChainEndReading::for_regions`],
+//! [`FaceRegionCache::attached`], divergence 656); and the reading itself
 //! ([`SurfaceChainEndReading::runs_out_at`]).
 
 use std::collections::HashMap;
@@ -34,15 +35,18 @@ use crate::topology::{ChainEdge, FaceRegionCache};
 /// those into one.
 ///
 /// A cache may be read from more than one thread, so the two memos sit behind one `Mutex` - C#'s
-/// `readingLock`, held across a whole reading. C#'s `graph` field is the cache's own graph
+/// `readingLock`, held across a whole reading - and every reading of one cache shares them, as
+/// every caller of C#'s `For` shares one reading: they are kept on the cache
+/// ([`FaceRegionCache::attached`]). C#'s `graph` field is the cache's own graph
 /// (`curveRegions.Graph`), which the Rust cache owns, so it is reached through
 /// [`SurfaceChainEndReading::curve_regions`] rather than held twice.
 #[derive(Debug)]
 pub struct SurfaceChainEndReading {
     /// The CURVE tolerance regions the reading floods, shared with every other reader of the mesh.
     pub curve_regions: Arc<FaceRegionCache>,
-    /// The two memos, guarded together (C# `readingLock`).
-    pub memos: Mutex<SurfaceChainEndReadingMemos>,
+    /// The two memos, guarded together (C# `readingLock`) and shared by every reading of
+    /// [`Self::curve_regions`].
+    pub memos: Arc<Mutex<SurfaceChainEndReadingMemos>>,
 }
 
 /// The two memos a [`SurfaceChainEndReading`] keeps, guarded together by its `Mutex` as C#'s
@@ -99,12 +103,13 @@ impl SurfaceChainEndReading {
 }
 
 impl SurfaceChainEndReading {
-    /// C#'s private constructor (with its field initializers): a reading of `curve_regions` with
-    /// both memos empty.
+    /// C#'s private constructor (with its field initializers): a reading of `curve_regions`,
+    /// with the memos the cache keeps for its readings - empty the first time it is read.
     pub fn new(curve_regions: Arc<FaceRegionCache>) -> Self {
+        let memos = curve_regions.attached::<Mutex<SurfaceChainEndReadingMemos>>();
         SurfaceChainEndReading {
             curve_regions,
-            memos: Mutex::new(SurfaceChainEndReadingMemos::default()),
+            memos,
         }
     }
 
@@ -117,6 +122,8 @@ impl SurfaceChainEndReading {
         vertex: i32,
     ) -> &'m [i32] {
         let edges_at_vertex = memos.edges_at_vertex.get_or_insert_with(|| {
+            // Counted on the cache, so what planning costs reads as a count (SurfacePlanCostTests).
+            self.curve_regions.note_graph_scan();
             let graph = self.curve_regions.graph();
             let mut edges_at_vertex = HashMap::with_capacity(graph.edge_count().max(0) as usize);
 
@@ -145,9 +152,9 @@ impl SurfaceChainEndReading {
 
 impl SurfaceChainEndReading {
     /// The reading of `curve_regions`, or `None` where there is no cache (C#'s `null`). C# hands
-    /// out ONE reading per cache from a static `ConditionalWeakTable`; here the caller that
-    /// builds the plans owns the reading this returns and passes it to every plan read against
-    /// that cache, so the memos are still filled once per cache (divergence 656).
+    /// out ONE reading per cache from a static `ConditionalWeakTable`; here every reading of a
+    /// cache shares the memos the cache keeps ([`FaceRegionCache::attached`]), so they are
+    /// filled once per cache however many plans are read against it (divergence 656).
     pub fn for_regions(curve_regions: Option<&Arc<FaceRegionCache>>) -> Option<Self> {
         curve_regions.map(|cache| Self::new(cache.clone()))
     }
