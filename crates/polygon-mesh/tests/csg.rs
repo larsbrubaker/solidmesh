@@ -2,6 +2,8 @@
 //! (CLAUDE.md net 1). Cases that need code not ported yet are listed as skipped in each file's
 //! header.
 
+#[path = "csg/boolean_processing_crash_tests.rs"]
+mod boolean_processing_crash_tests;
 #[path = "csg/csg_tests.rs"]
 mod csg_tests;
 #[path = "csg/implicit_boolean_tests.rs"]
