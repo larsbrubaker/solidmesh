@@ -3,7 +3,7 @@
 //! the call `MeshConvexHull` makes). Expected strings were printed by a .NET 10 console app over
 //! the same point sets; each face is its vertices' indices into the input.
 
-use super::create;
+use super::{create, ConvexHullAlgorithm};
 
 fn faces_string(points: &[[f64; 3]]) -> String {
     match create(points, 0.01) {
@@ -114,4 +114,78 @@ fn rust_only_padding_with_no_candidate_has_no_hull() {
         [0.3, 0.5, 0.5],
     ];
     assert_eq!(faces_string(&points), "null");
+}
+
+/// The surface of an `n` x `n` x `n` cube lattice, each point once, in x-major lattice order:
+/// every point sits at a minimum or maximum on some axis, so every point is a bounding box point
+/// (the flat-extremes case of a densely tessellated part with a flat base).
+fn cube_surface_grid(n: usize) -> Vec<[f64; 3]> {
+    let mut points = Vec::new();
+    for x in 0..=n {
+        for y in 0..=n {
+            for z in 0..=n {
+                if x == 0 || x == n || y == 0 || y == n || z == 0 || z == n {
+                    points.push([x as f64, y as f64, z as f64]);
+                }
+            }
+        }
+    }
+    points
+}
+
+#[test]
+fn rust_only_bounding_box_points_are_distinct_in_first_seen_order() {
+    // C# `Distinct()`: x minima, x maxima, then y and z extremes not already seen.
+    let points = [
+        [0.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+        [0.0, 1.0, 0.5],
+        [0.5, 0.5, 0.5],
+        [1.0, 0.0, 0.0],
+    ];
+    let mut hull = ConvexHullAlgorithm::new(&points, 0.01).expect("enough vertices");
+    hull.find_bounding_box_points();
+    assert_eq!(hull.bounding_box_points, vec![0, 2, 1, 4]);
+    assert_eq!(hull.minima, [0.0; 3]);
+    assert_eq!(hull.maxima, [1.0; 3]);
+}
+
+#[test]
+fn rust_only_cube_surface_grid_hull_is_pinned() {
+    // Pinned (as is the 163 grid below) from the port before bounding box deduplication moved to a hash set: the same
+    // bounding box points in the same order pick the same initial simplex and the same faces.
+    assert_eq!(
+        faces_string(&cube_surface_grid(8)),
+        PINNED_CUBE_SURFACE_GRID_8
+    );
+}
+
+const PINNED_CUBE_SURFACE_GRID_8: &str = "319,377,385 377,145,72 385,377,72 377,319,305 \
+     377,305,145 8,145,305 8,42,72 72,80,385 80,72,42 385,80,8 80,42,8 319,313,305 8,305,313 \
+     313,319,385 8,313,385 0,72,145 145,8,0 0,8,72";
+
+const PINNED_CUBE_SURFACE_GRID_163: &str = "132683,125813,163 156654,132683,132520 \
+     163,132520,132683 132683,156654,159415 125813,132683,159415 163,125813,159415 \
+     159415,26895,163 159252,156654,132520 159252,132520,34294 156654,159252,159415 \
+     159415,159252,26895 159252,34294,26732 26732,26895,159252 26895,26732,163 0,34294,132520 \
+     132520,163,0 0,26732,34294 0,163,26732";
+
+#[test]
+fn rust_only_dense_flat_based_grid_hulls_quickly() {
+    // 6 * 163^2 + 2 = 159,416 points, all of them bounding box points. Deduplicating them with a
+    // linear scan was quadratic (over 3 s in a dev build); with a hash set it takes milliseconds.
+    // The bound is generous so a loaded machine never trips it, yet far below the quadratic cost.
+    let points = cube_surface_grid(163);
+    assert_eq!(points.len(), 159_416);
+    let mut hull = ConvexHullAlgorithm::new(&points, 0.01).expect("enough vertices");
+    let start = std::time::Instant::now();
+    hull.find_bounding_box_points();
+    let dedupe = start.elapsed();
+    assert_eq!(hull.bounding_box_points.len(), points.len());
+    let start = std::time::Instant::now();
+    let faces = faces_string(&points);
+    let whole = start.elapsed();
+    eprintln!("bounding box points {dedupe:?}, whole hull {whole:?}");
+    assert_eq!(faces, PINNED_CUBE_SURFACE_GRID_163);
+    assert!(dedupe < std::time::Duration::from_millis(500), "{dedupe:?}");
 }

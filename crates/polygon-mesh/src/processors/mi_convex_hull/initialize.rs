@@ -5,6 +5,8 @@
 //! the "distance" from the centroid only keeps the last axis's square, and a padding vertex of -1
 //! (no candidate found) makes C# throw on first use.
 
+use std::collections::HashSet;
+
 use super::data_model::FaceInternal;
 use super::math_helper::{calculate_face_plane, get_vertex_distance, volume_of_simplex, DIM};
 use super::{ConvexHullAlgorithm, HullFailed};
@@ -54,13 +56,11 @@ impl ConvexHullAlgorithm {
             points.extend_from_slice(&min_indices);
             points.extend_from_slice(&max_indices);
         }
-        let mut distinct = Vec::with_capacity(points.len());
-        for p in points {
-            if !distinct.contains(&p) {
-                distinct.push(p);
-            }
-        }
-        self.bounding_box_points = distinct;
+        // LINQ `Distinct()` is a hash set yielding first occurrences in order; a linear scan
+        // here is quadratic when a dense part has many vertices on a flat extreme.
+        let mut seen = HashSet::with_capacity(points.len());
+        points.retain(|&p| seen.insert(p));
+        self.bounding_box_points = points;
     }
 
     /// `ShiftAndScalePositions`: shift so the minimum on each axis is half the maximum (no
