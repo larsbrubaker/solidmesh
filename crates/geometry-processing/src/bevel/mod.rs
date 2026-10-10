@@ -38,7 +38,8 @@
 //! ([`BevelFaceFit`]), the run-out and its bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the
 //! partnered bead's run, ends and stations ([`bevel_partnered_bead`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
 //! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
-//! ([`bevel_t_vertex_slivers`]) and the working mesh's verdict cache ([`bevel_working_mesh`]).
+//! ([`bevel_t_vertex_slivers`]), the working mesh's verdict cache ([`bevel_working_mesh`]) and one
+//! mesh state prepared for picking ([`BevelPickData`]).
 //! C# `internal static class` helpers are modules of free functions here.
 
 mod bevel_advisory;
@@ -90,6 +91,7 @@ pub mod bevel_partnered_bead_section;
 pub mod bevel_partnered_bead_stations;
 pub mod bevel_partnered_bead_tolerances;
 pub mod bevel_patch_refinement;
+pub mod bevel_pick_data;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
 mod bevel_round_descriptor;
@@ -137,6 +139,7 @@ pub use bevel_mixed_blend::{BevelMixedBlend, BevelMixedBlendSet};
 pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;
 pub use bevel_pair_corner_crease::PairFaces;
 pub use bevel_partner_tube::BevelPartnerTube;
+pub use bevel_pick_data::BevelPickData;
 pub use bevel_rebuild_advisories::BevelRebuildAdvisories;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
 pub use bevel_round_faces::BevelRoundFaces;
