@@ -1,8 +1,8 @@
 //! Port of MatterCAD `Tests/MatterCADTests/Standard/PolygonTraceTests.cs`: a `TriangleShape`'s
 //! projection axis and its front-face-only hits. Same names and values.
-//! `RayBundleSameResultAsIndividualRays` has an empty body in C#; `CorrectRayOnCircle` traces an
-//! STL through MatterCAD's `MeshToBVH` and agg-sharp's `RayTracer.TracePrimaryRay`, which are not
-//! ported yet.
+//! `RayBundleSameResultAsIndividualRays` has an empty body in C#. `CorrectRayOnCircle` needs
+//! MatterCAD's `MeshToBVH`, so it lives in mattercad-model
+//! (`crates/mattercad-model/tests/scene_core/polygon_trace_tests.rs`).
 
 use std::sync::Arc;
 

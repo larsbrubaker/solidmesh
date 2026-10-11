@@ -24,8 +24,10 @@
 //! `IntersectionIterator`, `Transform`'s and `Difference`'s `GetCrossing`/`GetTouching`) the
 //! Rust returns [`RayTracerError::NotSupported`].
 //!
+//! [`RayTracer`] (C# `RayTracer.cs`) traces a primary ray into a [`Scene`]'s shapes.
+//!
 //! Not here yet (later 2d work): ray bundles (`FindFirstRay`, `GetClosestIntersections`),
-//! `Cylinder`, the other builders, and the image renderer.
+//! `Cylinder`, the other builders, cameras, lights, and the image renderer.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
@@ -37,6 +39,8 @@ mod intersect_info_subtract;
 mod material;
 mod minimal_triangle;
 mod plane_shape;
+mod ray_tracer_engine;
+mod scene;
 mod sphere_shape;
 mod transform;
 mod triangle_hit;
@@ -62,6 +66,8 @@ pub use material::{
 };
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
 pub use plane_shape::PlaneShape;
+pub use ray_tracer_engine::{AntiAliasing, RayTracer};
+pub use scene::{Background, Scene};
 pub use sphere_shape::SphereShape;
 pub use transform::Transform;
 pub use triangle_shape::TriangleShape;
