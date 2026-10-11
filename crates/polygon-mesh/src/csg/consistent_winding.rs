@@ -22,7 +22,7 @@ use crate::{FaceList, FaceTextureData, Mesh};
 ///
 /// Only edges with exactly two faces link. Faces that collapse onto a repeated position are
 /// skipped, as the import drops them.
-pub(crate) fn rewind(mesh: &Mesh) -> Option<Mesh> {
+pub fn rewind(mesh: &Mesh) -> Option<Mesh> {
     let faces = &mesh.faces;
     let (positions, welded) = weld_by_position(mesh);
     let mut corners: Vec<Option<(i32, i32, i32)>> = vec![None; faces.len()];

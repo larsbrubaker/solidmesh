@@ -16,9 +16,9 @@ use crate::Mesh;
 
 /// The kernel refused a mesh (C# `MeshImportRejectedException`).
 #[derive(Debug, Clone)]
-pub(crate) struct ImportRejected {
-    pub(crate) message: String,
-    pub(crate) status: KernelStatus,
+pub struct ImportRejected {
+    pub message: String,
+    pub status: KernelStatus,
 }
 
 /// Uploads a mesh, rejecting one the kernel could not accept.
@@ -31,7 +31,7 @@ pub(crate) struct ImportRejected {
 ///
 /// The refusal is returned rather than absorbed: a boolean swallows an error operand as empty
 /// geometry and still reports success, which would show up as a part silently missing.
-pub(crate) fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
+pub fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
     manifold_kernel::ensure_configured();
 
     let rejected = match try_import(mesh, repair_orientation) {

@@ -1,6 +1,6 @@
 //! The public entry points for booleans over [`Mesh`]es. Port of agg-sharp
-//! `Csg/BooleanProcessing.cs` (polygon mode: `DoArray`, `Do`, `ClassifyBooleanOperand`) and
-//! `Csg/BooleanOperandVerdict.cs`.
+//! `Csg/BooleanProcessing.cs` (polygon mode: `DoArray`, `DoArrayAsync`, `Do`,
+//! `ClassifyBooleanOperand`) and `Csg/BooleanOperandVerdict.cs`.
 //!
 //! Polygon mode runs on manifold-rust, the one and only boolean kernel (`manifold_kernel`).
 //! There is no second engine behind it: an input the kernel cannot take is an error the caller
@@ -8,6 +8,9 @@
 //! ([`super::ProcessingModes`], chosen in [`BooleanOptions`]) resample the operands as implicit
 //! surfaces instead (`implicit_boolean`); they never fail.
 
+use std::future::Future;
+
+use agg_path::progress_reporter::ProgressReporter;
 use vector_math::Matrix4X4;
 
 use super::{
@@ -49,6 +52,29 @@ pub fn do_array(
     // (the robust import plus the Auto engine handle closed non-manifold geometry) and no
     // fallback (a mesh the kernel refused is better reported than silently replaced).
     manifold_kernel::run_boolean(items, operation, cancel, options)
+}
+
+/// [`do_array`] for a job that can hand the UI its thread back (C# `DoArrayAsync`): the same
+/// boolean, yielding through `reporter` after each operand's import and around the combine.
+///
+/// `reporter` is the progress sink and replaces `options.reporter`; the host's yield is
+/// `ui_yield` (divergence 4252: C# reads the process-global `ProgressReporter.UiYield`), and a
+/// hop runs only when `reporter`'s throttle lets it through. Nobody watching -
+/// [`ProgressReporter::null`], or a reporter with no target - never yields, and watched or not
+/// the kernel takes the same n-ary route. The implicit-surface modes report nothing and have no
+/// per-operand boundary to hand a frame back at, so for them this is [`do_array`].
+pub async fn do_array_async<F: Future<Output = ()>>(
+    items: &[(&Mesh, Matrix4X4)],
+    operation: CsgModes,
+    reporter: &ProgressReporter,
+    ui_yield: Option<&dyn Fn() -> F>,
+    cancel: &CancelToken,
+    options: &BooleanOptions,
+) -> Result<Mesh, BooleanError> {
+    if options.processing_mode != ProcessingModes::Polygons {
+        return do_array(items, operation, cancel, options);
+    }
+    manifold_kernel::run_boolean_async(items, operation, cancel, options, reporter, ui_yield).await
 }
 
 /// The two-operand spelling of [`do_array`]. In an implicit mode it meshes with plain marching

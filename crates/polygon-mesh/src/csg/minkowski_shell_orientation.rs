@@ -34,7 +34,7 @@ pub(crate) fn repair(imported: Manifold, cancel: &CancelToken) -> Option<Manifol
 /// C# `MayHaveInvertedShell`: false only when every edge-connected shell encloses a positive
 /// volume, the case in which the repair provably changes nothing. A soup import, or one with
 /// an unpaired halfedge, always takes the repair.
-pub(crate) fn may_have_inverted_shell(manifold: &Manifold) -> bool {
+pub fn may_have_inverted_shell(manifold: &Manifold) -> bool {
     let imp = manifold.as_impl();
     if imp.is_soup {
         return true;

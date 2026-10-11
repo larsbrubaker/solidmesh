@@ -50,7 +50,7 @@ fn throw_if_errored(result: &Manifold, operation_name: &str) -> Result<(), Boole
 }
 
 /// A result as a mesh, or the error its status names (`operation_name` goes in the message).
-pub(crate) fn to_mesh(result: &Manifold, operation_name: &str) -> Result<Mesh, BooleanError> {
+pub fn to_mesh(result: &Manifold, operation_name: &str) -> Result<Mesh, BooleanError> {
     throw_if_errored(result, operation_name)?;
     // -1 is the export's "no property slot holds normals".
     build_mesh(&result.get_mesh_gl64(-1), operation_name)
