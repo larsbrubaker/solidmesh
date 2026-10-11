@@ -9,16 +9,19 @@
 //! axis counts triangle crossings (orientation free), and a voxel is inside when at least two of
 //! its three parities say so, so one axis grazing an edge or a small hole cannot flip it.
 //!
-//! C#'s `DistanceGridBuilder` (a GPU fill awaited by `BuildAsync`) is not ported yet: the CPU
-//! flood is the only fill, which C# keeps as the reference the GPU is tested against. C# runs
-//! the crossing count with `Parallel.For` and atomic increments; the counts and votes do not
+//! A grid given a `DistanceGridBuilder` (`distance_grid_builder.rs`; MatterCAD's GPU fill) lays
+//! the grid out as the flood would and takes the unsigned distances from it instead
+//! (`build_with_injected_distances`); the CPU flood is the reference that fill is tested against.
+//! C# builds such a grid only through `BuildAsync`, which awaits the builder; here the builder
+//! blocks, so `build` serves both. C# runs the crossing count with `Parallel.For` and atomic increments; the counts and votes do not
 //! depend on order, so here it runs on one thread.
 
 use std::sync::atomic::{AtomicI32, AtomicI64, AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use vector_math::Vector3;
 
+use super::distance_grid_builder::{DistanceBuildError, DistanceGridBuilder, DistanceGridRequest};
 use super::grid_marching_cubes::{extract, DenseGrid3f};
 use crate::csg::minkowski_processing::{orient_shells_as_solid, MinkowskiError};
 use crate::csg::minkowski_shell_orientation::mesh_may_need_repair;
@@ -39,6 +42,8 @@ pub enum SdfGridError {
     /// Orienting the part's shells failed other than by the kernel refusing the part (which the
     /// grid absorbs, as C# does).
     Orientation(MinkowskiError),
+    /// The injected `DistanceGridBuilder` failed (C# the exception it threw), with its message.
+    DistanceFill(String),
 }
 
 impl std::fmt::Display for SdfGridError {
@@ -47,6 +52,7 @@ impl std::fmt::Display for SdfGridError {
             SdfGridError::OutOfRange(message) => write!(f, "{message}"),
             SdfGridError::Cancelled => write!(f, "The operation was canceled."),
             SdfGridError::Orientation(error) => write!(f, "{error}"),
+            SdfGridError::DistanceFill(message) => write!(f, "{message}"),
         }
     }
 }
@@ -67,6 +73,7 @@ pub struct MeshSdfGrid {
     resolution: i32,
     orient_shells: bool,
     flood_progress: Option<FloodProgress>,
+    distance_builder: Option<Arc<dyn DistanceGridBuilder>>,
     build_lock: Mutex<()>,
     built: OnceLock<Built>,
     cell_size_bits: AtomicU64,
@@ -104,6 +111,7 @@ impl MeshSdfGrid {
             resolution: resolution.min(Self::MAX_RESOLUTION),
             orient_shells: true,
             flood_progress: None,
+            distance_builder: None,
             build_lock: Mutex::new(()),
             built: OnceLock::new(),
             cell_size_bits: AtomicU64::new(0f64.to_bits()),
@@ -117,6 +125,13 @@ impl MeshSdfGrid {
     /// true unless the caller already ran [`orient_shells_as_solid`] on the mesh.
     pub fn with_orient_shells(mut self, orient_shells: bool) -> Self {
         self.orient_shells = orient_shells;
+        self
+    }
+
+    /// C# `new MeshSdfGrid(.., distanceBuilder)`: computes the unsigned band distances with
+    /// `builder` instead of g3's CPU flood; the sign is still the crossing vote here.
+    pub fn with_distance_builder(mut self, builder: Arc<dyn DistanceGridBuilder>) -> Self {
+        self.distance_builder = Some(builder);
         self
     }
 
@@ -167,8 +182,8 @@ impl MeshSdfGrid {
             .map_or(Vector3::new(0.0, 0.0, 0.0), |built| built.origin)
     }
 
-    /// C# `Build`: computes the field if it has not been computed yet. Safe from several
-    /// threads: one builds, the others wait for it.
+    /// C# `Build` (and `BuildAsync` for a grid with a `DistanceGridBuilder`): computes the field
+    /// if it has not been computed yet. Safe from several threads: one builds, the others wait.
     pub fn build(&self, cancel: &CancelToken) -> Result<(), SdfGridError> {
         if self.built.get().is_some() {
             return Ok(());
@@ -181,7 +196,12 @@ impl MeshSdfGrid {
             return Ok(());
         }
         let dmesh = self.prepare(cancel)?;
-        let (mut field, origin) = self.build_cpu_distances(&dmesh, cancel)?;
+        let (mut field, origin) = match &self.distance_builder {
+            Some(builder) => {
+                self.build_with_injected_distances(&dmesh, builder.as_ref(), cancel)?
+            }
+            None => self.build_cpu_distances(&dmesh, cancel)?,
+        };
         apply_crossing_signs(&dmesh, &mut field, origin, self.cell_size(), cancel)?;
         let _ = self.built.set(Built { field, origin });
         self.grid_builds.fetch_add(1, Ordering::SeqCst);
@@ -252,6 +272,74 @@ impl MeshSdfGrid {
             grid,
             Vector3::new(origin[0] as f64, origin[1] as f64, origin[2] as f64),
         ))
+    }
+
+    /// C# `BuildWithInjectedDistances`: the grid laid out exactly as g3's `Compute` does with
+    /// `PadWidth` set (f32 origin, f32 cell size, the same truncating counts), so the injected
+    /// distances land on exactly the samples the CPU flood would have written.
+    fn build_with_injected_distances(
+        &self,
+        dmesh: &DMesh3,
+        builder: &dyn DistanceGridBuilder,
+        cancel: &CancelToken,
+    ) -> Result<(DenseGrid3f, Vector3), SdfGridError> {
+        let cell_size = self.cell_size();
+        let bounds = dmesh.cached_bounds();
+        let dx = cell_size as f32;
+        let pad = (self.max_radius + (2.0 * cell_size)) as f32;
+        let origin: [f32; 3] = std::array::from_fn(|a| bounds.min[a] as f32 - pad);
+        let max: [f32; 3] = std::array::from_fn(|a| bounds.max[a] as f32 + pad);
+        let ni = ((max[0] - origin[0]) / dx) as i32 + 1;
+        let nj = ((max[1] - origin[1]) / dx) as i32 + 1;
+        let nk = ((max[2] - origin[2]) / dx) as i32 + 1;
+        let grid_origin = Vector3::new(origin[0] as f64, origin[1] as f64, origin[2] as f64);
+
+        let mut triangles = Vec::with_capacity(dmesh.triangle_count() * 9);
+        for tid in dmesh.triangle_indices() {
+            for p in dmesh.get_tri_vertices(tid as usize) {
+                triangles.push((p[0] - grid_origin.x) as f32);
+                triangles.push((p[1] - grid_origin.y) as f32);
+                triangles.push((p[2] - grid_origin.z) as f32);
+            }
+        }
+
+        if cancel.is_cancelled() {
+            return Err(SdfGridError::Cancelled);
+        }
+
+        // g3's upper bound for samples the band never reached.
+        let cap = (ni + nj + nk) as f32 * dx;
+        let distances = builder
+            .compute_distances(&DistanceGridRequest {
+                triangles: &triangles,
+                ni,
+                nj,
+                nk,
+                cell_size: dx,
+                band: (self.max_radius + (2.0 * cell_size)) as f32,
+                cap,
+                stage_done: None,
+            })
+            .map_err(|error| match error {
+                DistanceBuildError::Cancelled => SdfGridError::Cancelled,
+                DistanceBuildError::Failed(message) => SdfGridError::DistanceFill(message),
+            })?;
+        let mut field = DenseGrid3f::new(
+            ni.max(0) as usize,
+            nj.max(0) as usize,
+            nk.max(0) as usize,
+            0.0,
+        );
+        let size = field.size();
+        // C# `Array.Copy(distances, field.Buffer, field.size)` throws on a short answer.
+        if distances.len() < size {
+            return Err(SdfGridError::DistanceFill(format!(
+                "The distance fill returned {} distances for a grid of {size} samples.",
+                distances.len()
+            )));
+        }
+        field.buffer.copy_from_slice(&distances[..size]);
+        Ok((field, grid_origin))
     }
 
     /// C# `Extract`: the surface at signed distance `iso` from the part (positive grows it,
