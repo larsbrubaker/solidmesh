@@ -1,8 +1,11 @@
 //! Port of `Agg.PolygonMesh/CsgTests.cs` (class `MeshCsgTests`): two-mesh booleans through
 //! `csg_operations` and `boolean_processing`.
 //!
-//! Skipped: `SubtractHasAllFaces` and `SubtractionMakesClosedSolid` build their operands with
-//! agg-sharp's `MatterHackers.Csg` solid tree and `RenderGl.CsgToMesh`, which are not ported.
+//! `SubtractHasAllFaces` and `SubtractionMakesClosedSolid` build their operands with agg-sharp's
+//! `MatterHackers.Csg` solid tree (`Box`, `Translate`, `keep - subtract`) and convert it with
+//! `CsgToMesh`. That tree's only MatterCAD caller is label printing, which is out of scope, so
+//! the same centred 10 mm boxes come from `create_cube` and the difference from
+//! `csg_operations::subtract`: the same geometry and the same checks.
 
 use polygon_mesh::csg::{boolean_processing, csg_operations, BooleanOptions, CsgModes};
 use polygon_mesh::solids::platonic_solids::{create_cube, create_cube_vector, create_icosahedron};
@@ -37,6 +40,53 @@ fn subtract_works() {
             && intersect_aabb.y_size() == 40.0
             && intersect_aabb.z_size() == 40.0
     );
+}
+
+#[test]
+fn subtract_has_all_faces() {
+    let x_offset = -0.4;
+    let keep_mesh = create_cube(10.0, 10.0, 10.0);
+    let mut subtract_mesh = create_cube(10.0, 10.0, 10.0);
+    subtract_mesh.translate(Vector3::new(x_offset, -3.0, 2.0));
+    let result_mesh =
+        csg_operations::subtract(&keep_mesh, &subtract_mesh, &none()).expect("subtract runs");
+
+    let bottom_of_subtract_faces: Vec<_> = result_mesh
+        .faces
+        .iter()
+        .filter(|f| are_equal(f.normal.z as f64, 1.0) && face_at_height(&result_mesh, f, -3.0))
+        .collect();
+
+    let mut all_vertices: Vec<Vector3> = Vec::new();
+    for face in &bottom_of_subtract_faces {
+        for vi in [face.v0, face.v1, face.v2] {
+            let position = Vector3::from_vector3_float(result_mesh.vertices[vi as usize]);
+            if !all_vertices.contains(&position) {
+                all_vertices.push(position);
+            }
+        }
+    }
+
+    assert!(has_position(&all_vertices, Vector3::new(4.6, 2.0, -3.0)));
+    assert!(has_position(&all_vertices, Vector3::new(4.6, -5.0, -3.0)));
+    assert!(has_position(&all_vertices, Vector3::new(-5.0, 2.0, -3.0)));
+    assert!(has_position(&all_vertices, Vector3::new(-5.0, -5.0, -3.0)));
+
+    assert_eq!(keep_mesh.get_non_manifold_edges().len(), 0);
+    assert_eq!(subtract_mesh.get_non_manifold_edges().len(), 0);
+    assert_eq!(result_mesh.get_non_manifold_edges().len(), 0);
+}
+
+fn has_position(all_vertices: &[Vector3], position: Vector3) -> bool {
+    all_vertices
+        .iter()
+        .any(|vertex| vertex.equals_within(position, 0.0001))
+}
+
+fn face_at_height(mesh: &Mesh, face: &polygon_mesh::Face, height: f64) -> bool {
+    [face.v0, face.v1, face.v2]
+        .iter()
+        .all(|&vi| are_equal(mesh.vertices[vi as usize].z as f64, height))
 }
 
 #[test]
@@ -179,6 +229,18 @@ fn ensure_simple_cube_subtraction() {
             && intersect_aabb.y_size() == 10.0
             && intersect_aabb.z_size() == 10.0
     );
+}
+
+#[test]
+fn subtraction_makes_closed_solid() {
+    let x_offset = -0.4;
+
+    let box_combine = create_cube(10.0, 10.0, 10.0);
+    let mut subtract = create_cube(10.0, 10.0, 10.0);
+    subtract.translate(Vector3::new(x_offset, -3.0, 2.0));
+    let result = csg_operations::subtract(&box_combine, &subtract, &none()).expect("subtract runs");
+
+    assert!(result.is_manifold());
 }
 
 #[test]

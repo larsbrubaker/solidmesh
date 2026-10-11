@@ -1,15 +1,17 @@
 //! Port of `Agg.PolygonMesh/MinkowskiProgressModelTests.cs`: the sweep's and the union tree's
 //! unit-to-time mappings in `minkowski_progress_model`.
-//!
-//! Skipped until its code lands:
-//! - `APatchedDilationsPhaseTotalMatchesTheModelsLayout`: needs the kernel's
-//!   `Manifold::try_dilate_by_convex` and `ProgressReporter::phase_total`, which manifold-rust
-//!   does not have yet (manifold-sharp's `ConvexDilation.cs`; an upstream sync step).
+//! `APatchedDilationsPhaseTotalMatchesTheModelsLayout` runs manifold-rust's
+//! `Manifold::try_dilate_by_convex` directly, as the C# runs manifold-sharp's.
 
+use manifold_rust::linalg::Vec3;
+use manifold_rust::manifold::Manifold;
+use manifold_rust::progress::ProgressReporter;
 use polygon_mesh::csg::minkowski_progress_model::{
     kernel_units, time_fraction, tree_hull_units, tree_time_fraction, tree_units,
     TREE_LEAF_TIME_SHARE, TREE_LEVEL_TIME_SHARE,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, OnceLock, Weak};
 
 fn assert_within(actual: f64, expected: f64, tolerance: f64) {
     assert!(
@@ -138,4 +140,44 @@ fn the_tree_hull_count_is_recovered_from_its_unit_total() {
             assert_eq!(tree_hull_units(total, erosion), hulls);
         }
     }
+}
+
+/// A dilation builds one hull per convex patch, so its tree has fewer hulls than the solid has
+/// triangles; the host must read them from the kernel's phase total, and that total must be one
+/// the model's layout produces.
+#[test]
+fn a_patched_dilations_phase_total_matches_the_models_layout() {
+    let solid = Manifold::cube(Vec3::new(20.0, 20.0, 20.0), true)
+        - Manifold::cube(Vec3::new(10.0, 10.0, 10.0), false)
+        - Manifold::sphere(6.0, 24).translate(Vec3::new(-10.0, 0.0, 0.0));
+    // C#'s callback reads the reporter it belongs to; here it reaches it through a weak handle
+    // set once the reporter exists.
+    let phase_total = Arc::new(AtomicU64::new(0));
+    let reporter_cell: Arc<OnceLock<Weak<ProgressReporter>>> = Arc::new(OnceLock::new());
+    let reporter = {
+        let phase_total = Arc::clone(&phase_total);
+        let reporter_cell = Arc::clone(&reporter_cell);
+        Arc::new(ProgressReporter::new(move |_phase, _fraction| {
+            if let Some(reporter) = reporter_cell.get().and_then(Weak::upgrade) {
+                phase_total.store(reporter.phase_total(), Ordering::SeqCst);
+            }
+        }))
+    };
+    reporter_cell
+        .set(Arc::downgrade(&reporter))
+        .expect("set once");
+
+    assert!(solid
+        .try_dilate_by_convex(&Manifold::sphere(1.0, 8), None, Some(&reporter))
+        .is_some());
+
+    let hulls = tree_hull_units(phase_total.load(Ordering::SeqCst) as i64, false);
+    assert!(
+        hulls > 0,
+        "the kernel's total has to be one the model's unit layout produces"
+    );
+    assert!(
+        hulls < solid.num_tri() as i64,
+        "patches merge triangles, so a triangle count would misplace every stage"
+    );
 }

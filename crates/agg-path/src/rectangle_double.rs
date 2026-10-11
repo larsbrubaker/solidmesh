@@ -4,6 +4,7 @@
 
 use crate::rectangle_int::RectangleInt;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::ops::{BitAnd, BitOr, Mul};
 use vector_math::cs_math::{max_f64, min_f64};
 use vector_math::number_format::format_f64;
@@ -15,6 +16,17 @@ pub struct RectangleDouble {
     pub bottom: f64,
     pub right: f64,
     pub top: f64,
+}
+
+/// C# `GetHashCode` (`new { x1 = Left, x2 = Right, y1 = Bottom, y2 = Top }.GetHashCode()`):
+/// equal rectangles hash equal. -0 is folded into 0, which `==` treats as the same value (as
+/// .NET's double hash does).
+impl Hash for RectangleDouble {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for side in [self.left, self.right, self.bottom, self.top] {
+            (side + 0.0).to_bits().hash(state);
+        }
+    }
 }
 
 /// C# `RectangleDouble.OutCode` (Cohen-Sutherland), a `[Flags]` enum.

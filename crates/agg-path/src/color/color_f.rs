@@ -2,6 +2,7 @@
 //! conversion, the arithmetic operators, premultiply/demultiply, wavelength colours, tweening
 //! and blending. [`super::color8::Color`] is the 8-bit colour it converts to and from.
 
+use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Sub};
 
 use super::color8::{uround, Color};
@@ -35,6 +36,16 @@ pub struct ColorF {
     pub green: f32,
     pub blue: f32,
     pub alpha: f32,
+}
+
+/// C# `GetHashCode` (`new { blue, green, red, alpha }.GetHashCode()`): equal colours hash
+/// equal. -0 is folded into 0, which `==` treats as the same value (as .NET's float hash does).
+impl Hash for ColorF {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for channel in [self.blue, self.green, self.red, self.alpha] {
+            (channel + 0.0).to_bits().hash(state);
+        }
+    }
 }
 
 impl ColorF {

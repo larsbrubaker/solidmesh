@@ -3,6 +3,8 @@
 // `Vector3Tests` are the `MatterHackers.Agg.Tests` classes, distinct from the same-named
 // `Agg.VectorMath` classes in the `vector_math` area.
 
+#[path = "other/invariant_culture_tests.rs"]
+mod invariant_culture_tests;
 #[path = "other/vector2_tests.rs"]
 mod vector2_tests;
 #[path = "other/vector3_tests.rs"]
