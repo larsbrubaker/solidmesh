@@ -6,7 +6,8 @@
 //! n-ary entry point. Behind it, `manifold_kernel` drives one boolean: `manifold_operand_batch`
 //! collects and imports the operands (`manifold_import`), `manifold_cancellable_boolean` and
 //! `manifold_pairwise_fold` combine them, and `manifold_result_reader` reads the answer back
-//! into a `Mesh`. `boolean_progress_adapter` maps the kernel's phases onto a caller's progress
+//! into a `Mesh`. [`manifold_kernel_call_counts`] counts the kernel evaluations by kind, for
+//! tests. `boolean_progress_adapter` maps the kernel's phases onto a caller's progress
 //! window. This module holds the types they share: the operation, the failures and the
 //! progress callback.
 //!
@@ -28,6 +29,7 @@ mod implicit_boolean;
 mod manifold_cancellable_boolean;
 mod manifold_import;
 mod manifold_kernel;
+pub mod manifold_kernel_call_counts;
 mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 mod manifold_result_reader;

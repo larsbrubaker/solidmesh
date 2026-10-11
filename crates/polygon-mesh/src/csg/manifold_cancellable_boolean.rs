@@ -11,7 +11,7 @@ use manifold_rust::manifold::Manifold;
 use manifold_rust::progress::ProgressReporter;
 use manifold_rust::types::{BooleanEngine, Error as KernelStatus, OpType, WindingRule};
 
-use super::{manifold_kernel, BooleanError};
+use super::{manifold_kernel, manifold_kernel_call_counts, BooleanError};
 use crate::CancelToken;
 
 /// One binary boolean.
@@ -24,6 +24,7 @@ pub(crate) fn boolean(
     progress: Option<&ProgressReporter>,
     cancel: &CancelToken,
 ) -> Result<Manifold, BooleanError> {
+    manifold_kernel_call_counts::count_pairwise_step();
     manifold_kernel::ensure_configured();
     let result = a.boolean_with_engine_rule_and_progress(
         b,

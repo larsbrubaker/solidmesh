@@ -10,7 +10,7 @@ use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, OpType};
 use vector_math::Matrix4X4;
 
-use super::{manifold_cancellable_boolean, manifold_import};
+use super::{manifold_cancellable_boolean, manifold_import, manifold_kernel_call_counts};
 use super::{BooleanError, CsgModes, SkippedBooleanOperand};
 use crate::{CancelToken, CentroidColor, Face, Mesh};
 
@@ -302,15 +302,18 @@ fn try_split_by_face_colors(
         // Not as_original: the union has to keep the sub-manifolds' boolean history, because
         // that history is what carries each colour group's original id into the run data of
         // whatever this is later combined with.
-        _ => match manifold_cancellable_boolean::batch_boolean(
-            &sub_manifolds,
-            OpType::Add,
-            None,
-            cancel,
-        ) {
-            Ok(union) => Ok(Some(union)),
-            Err(BooleanError::Cancelled) => Err(OperandError::Cancelled),
-            Err(_) => Ok(None),
-        },
+        _ => {
+            manifold_kernel_call_counts::count_color_group_union();
+            match manifold_cancellable_boolean::batch_boolean(
+                &sub_manifolds,
+                OpType::Add,
+                None,
+                cancel,
+            ) {
+                Ok(union) => Ok(Some(union)),
+                Err(BooleanError::Cancelled) => Err(OperandError::Cancelled),
+                Err(_) => Ok(None),
+            }
+        }
     }
 }

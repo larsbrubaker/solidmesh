@@ -12,7 +12,10 @@ use vector_math::Matrix4X4;
 
 use super::boolean_progress_adapter::{progress_sink_for, BooleanProgressAdapter};
 use super::manifold_operand_batch::{AddOutcome, ManifoldOperandBatch};
-use super::{manifold_cancellable_boolean, manifold_pairwise_fold, manifold_result_reader};
+use super::{
+    manifold_cancellable_boolean, manifold_kernel_call_counts, manifold_pairwise_fold,
+    manifold_result_reader,
+};
 use super::{BooleanError, BooleanOptions, BooleanReporter, CsgModes};
 use crate::{CancelToken, Mesh};
 
@@ -99,6 +102,7 @@ fn combine_and_read(
         &combined
     } else {
         let progress = batch_progress_for(reporter, amount_per_operation, ratio_completed);
+        manifold_kernel_call_counts::count_operand_combine();
         combined = manifold_cancellable_boolean::batch_boolean(
             &batch.manifolds,
             operation_type,
