@@ -56,7 +56,7 @@ pub(crate) fn combine_pairwise(
 /// report so the bar has somewhere new to move to before it paints. `sink_reporter` is the
 /// kernel-side form of `yield_reporter` (`None` when nobody watches it).
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn combine_pairwise_async<F: Future<Output = ()>>(
+pub(crate) async fn combine_pairwise_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     manifolds: &[Manifold],
     operation_type: OpType,
     winding_rule: WindingRule,
@@ -65,7 +65,7 @@ pub(crate) async fn combine_pairwise_async<F: Future<Output = ()>>(
     amount_per_operation: f64,
     ratio_completed: f64,
     yield_reporter: &ProgressReporter,
-    ui_yield: Option<&dyn Fn() -> F>,
+    ui_yield: Option<&Y>,
 ) -> Result<Manifold, BooleanError> {
     let progress = adapter_for(
         manifolds,

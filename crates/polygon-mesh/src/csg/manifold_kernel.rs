@@ -79,13 +79,13 @@ pub(crate) fn run_boolean(
 /// The yields are only ever between kernel calls: the n-ary batch (or one pairwise boolean of a
 /// winding-rule fold) is one uninterruptible call, so the frame it holds is still frozen for
 /// however long that call takes.
-pub(crate) async fn run_boolean_async<F: Future<Output = ()>>(
+pub(crate) async fn run_boolean_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     items: &[(&Mesh, Matrix4X4)],
     operation: CsgModes,
     cancel: &CancelToken,
     options: &BooleanOptions,
     reporter: &ProgressReporter,
-    ui_yield: Option<&dyn Fn() -> F>,
+    ui_yield: Option<&Y>,
 ) -> Result<Mesh, BooleanError> {
     ensure_configured();
     let options = BooleanOptions {
@@ -122,13 +122,13 @@ pub(crate) async fn run_boolean_async<F: Future<Output = ()>>(
 /// [`combine_and_read`] with a yield on either side of the batch, or between each pair of a
 /// winding-rule fold (C# `CombineAndReadAsync`). Reading the result back is one export with no
 /// point inside it where handing the frame away would leave the kernel's data half-read.
-async fn combine_and_read_async<F: Future<Output = ()>>(
+async fn combine_and_read_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     batch: &ManifoldOperandBatch,
     operation: CsgModes,
     cancel: &CancelToken,
     options: &BooleanOptions,
     reporter: &ProgressReporter,
-    ui_yield: Option<&dyn Fn() -> F>,
+    ui_yield: Option<&Y>,
 ) -> Result<Mesh, BooleanError> {
     if batch.manifolds.is_empty() {
         return Ok(Mesh::new());
@@ -206,11 +206,18 @@ fn boolean_reporter_for(reporter: &ProgressReporter) -> Option<BooleanReporter> 
 
 /// C# `await reporter.YieldToUi()`: hands the UI its thread when the reporter's throttle lets
 /// the hop through.
-pub(crate) async fn yield_to_ui<F: Future<Output = ()>>(
+pub(crate) async fn yield_to_ui<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     reporter: &ProgressReporter,
-    ui_yield: Option<&dyn Fn() -> F>,
+    ui_yield: Option<&Y>,
 ) {
-    if let Some(hop) = reporter.yield_to_ui(ui_yield) {
+    // The host's yield is only borrowed as a `dyn Fn` for the throttle's decision, never across
+    // the await, so a caller whose yield is `Sync` keeps a `Send` future (a stepped compute job
+    // on the model's worker pool).
+    let hop = ui_yield.and_then(|ui_yield| {
+        let call = || ui_yield();
+        reporter.yield_to_ui(Some(&call as &dyn Fn() -> F))
+    });
+    if let Some(hop) = hop {
         hop.await;
     }
 }

@@ -63,11 +63,15 @@ pub fn do_array(
 /// [`ProgressReporter::null`], or a reporter with no target - never yields, and watched or not
 /// the kernel takes the same n-ary route. The implicit-surface modes report nothing and have no
 /// per-operand boundary to hand a frame back at, so for them this is [`do_array`].
-pub async fn do_array_async<F: Future<Output = ()>>(
+///
+/// `ui_yield` is any `Fn` (a `&dyn Fn` included): with a `Send + Sync` yield and `Send` inputs
+/// the returned future is `Send`, so a job that owns its operands can be polled step by step
+/// wherever it runs.
+pub async fn do_array_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     items: &[(&Mesh, Matrix4X4)],
     operation: CsgModes,
     reporter: &ProgressReporter,
-    ui_yield: Option<&dyn Fn() -> F>,
+    ui_yield: Option<&Y>,
     cancel: &CancelToken,
     options: &BooleanOptions,
 ) -> Result<Mesh, BooleanError> {
