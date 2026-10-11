@@ -2,11 +2,13 @@
 //! writing (`StlProcessing.cs`, split into `stl_processing` for the reader and `stl_writer`)
 //! and `MeshOutputSettings`, plus the face BSP tree (`FaceBspTree.cs`) and the convex hull (`MeshConvexHull.cs`, on a port of
 //! MIConvexHull in `mi_convex_hull`) and `planar_region_simplifier`
-//! (`PlanarRegionSimplifier.cs`, on manifold-rust's ear clipper); the rest of the folder joins in
+//! (`PlanarRegionSimplifier.cs`, on manifold-rust's ear clipper) and `mesh_helper`'s plane
+//! (`MeshHelper.cs`); the rest of the folder joins in
 //! later Phase 2 slices.
 
 pub mod face_bsp_tree;
 pub mod mesh_convex_hull;
+pub mod mesh_helper;
 pub mod mesh_output_settings;
 mod mi_convex_hull;
 pub mod planar_region_simplifier;
