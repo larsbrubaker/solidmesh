@@ -39,6 +39,8 @@ pub(crate) mod surface_edge_bore_mouth_tests;
 pub(crate) mod surface_end_cut_leaves_the_die_points_chord_alone_tests;
 #[path = "surface_end_gains_the_section_reading_tests.rs"]
 pub(crate) mod surface_end_gains_the_section_reading_tests;
+#[path = "surface_face_walkback_tests.rs"]
+pub(crate) mod surface_face_walkback_tests;
 #[path = "surface_facet_cut_own_ends_tests.rs"]
 pub(crate) mod surface_facet_cut_own_ends_tests;
 #[path = "surface_facet_knits_across_its_cuts_tests.rs"]
@@ -141,6 +143,8 @@ pub(crate) mod surface_seam_window_tests;
 pub(crate) mod surface_sewing_bowed_side_tests;
 #[path = "surface_splits_on_a_segment_tests.rs"]
 pub(crate) mod surface_splits_on_a_segment_tests;
+#[path = "surface_standing_feature_extension_tests.rs"]
+pub(crate) mod surface_standing_feature_extension_tests;
 #[path = "surface_standing_feature_in_the_band_tests.rs"]
 pub(crate) mod surface_standing_feature_in_the_band_tests;
 #[path = "surface_standing_feature_stretch_tests.rs"]
@@ -149,12 +153,16 @@ pub(crate) mod surface_standing_feature_stretch_tests;
 pub(crate) mod surface_standing_feature_tail_and_cap_tests;
 #[path = "surface_strip_bitten_by_a_feature_tests.rs"]
 pub(crate) mod surface_strip_bitten_by_a_feature_tests;
+#[path = "surface_strip_ends_on_the_hull_build_tests.rs"]
+pub(crate) mod surface_strip_ends_on_the_hull_build_tests;
 #[path = "surface_strip_ends_on_the_hull_tests.rs"]
 pub(crate) mod surface_strip_ends_on_the_hull_tests;
 #[path = "surface_strip_mitre_rails_tests.rs"]
 pub(crate) mod surface_strip_mitre_rails_tests;
 #[path = "surface_strip_oblique_end_tests.rs"]
 pub(crate) mod surface_strip_oblique_end_tests;
+#[path = "surface_strip_runs_off_a_convex_edge_tests.rs"]
+pub(crate) mod surface_strip_runs_off_a_convex_edge_tests;
 #[path = "surface_strip_tests.rs"]
 pub(crate) mod surface_strip_tests;
 #[path = "surface_tangent_run_ends_tests.rs"]

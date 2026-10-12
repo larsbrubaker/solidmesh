@@ -71,7 +71,7 @@ pub fn create() -> Mesh {
 
 /// C# `Create(scale)`, the upper face one triangle.
 pub fn create_scaled(scale: f64) -> Mesh {
-    create_full(scale, None)
+    create_full(scale, false, None)
 }
 
 /// C# `Create(theUpperRightCreaseSplitAt: split)`: the same solid with the upper right crease - the
@@ -81,11 +81,25 @@ pub fn create_scaled(scale: f64) -> Mesh {
 /// the upper nose face becomes two facets and the right slope's fan triangle across the crease
 /// becomes two; only ONE of the crease's two rim edges then touches the corner it dies in.
 pub fn create_with_upper_right_crease_split_at(split: Vector3) -> Mesh {
-    create_full(1.0, Some(split))
+    create_full(1.0, false, Some(split))
 }
 
 /// C# `Create(scale, theUpperFaceFannedFromInside: false, theUpperRightCreaseSplitAt)`.
-fn create_full(scale: f64, upper_right_crease_split_at: Option<Vector3>) -> Mesh {
+/// C# `Create(theUpperFaceFannedFromInside: true)`: the same solid with the nose's UPPER face cut
+/// into three triangles about a point strictly inside it - which is what a boolean leaves, and the
+/// shape of what "15mm Bevel Top Edge.mcx" carries. Only the facet across the upper left crease is
+/// the one a band on the top left edge reaches, and it shares no EDGE with the lower face.
+pub fn create_with_the_upper_face_fanned_from_inside() -> Mesh {
+    create_full(1.0, true, None)
+}
+
+/// C#'s `Create` with all its options. C# refuses asking for the fan and the split together; the
+/// public constructors above never ask for both.
+fn create_full(
+    scale: f64,
+    upper_face_fanned_from_inside: bool,
+    upper_right_crease_split_at: Option<Vector3>,
+) -> Mesh {
     let mut mesh = Mesh::new();
     let centre = Vector2::new(SIZE / 2.0, SIZE / 2.0);
 
@@ -115,7 +129,16 @@ fn create_full(scale: f64, upper_right_crease_split_at: Option<Vector3>) -> Mesh
     slope(&mut mesh, true, upper_right_crease_split_at);
 
     // The nose's two faces, each a triangle from the two ridge ends to the crease end they share.
-    if let Some(split) = upper_right_crease_split_at {
+    if upper_face_fanned_from_inside {
+        // The same triangle, fanned from a point strictly INSIDE it - three facets, of which only
+        // the one across the upper left crease is the one the band reaches. (Fanned from (12, 8, 12)
+        // on the outline instead, one of the three would be a zero area facet.)
+        let inside = Vector3::new(10.0, 7.0, 34.0 / 3.0);
+
+        mesh.create_face(&[left_ridge_end(), right_ridge_end(), inside]);
+        mesh.create_face(&[right_ridge_end(), upper_crease_end(), inside]);
+        mesh.create_face(&[upper_crease_end(), left_ridge_end(), inside]);
+    } else if let Some(split) = upper_right_crease_split_at {
         // The same triangle, cut from the left ridge end to the point the crease is chorded at, so
         // this face carries the same two crease edges the slope beyond it does.
         mesh.create_face(&[left_ridge_end(), split, upper_crease_end()]);

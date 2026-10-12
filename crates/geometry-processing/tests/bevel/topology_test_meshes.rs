@@ -358,6 +358,25 @@ pub fn create_l_shaped_prism() -> Mesh {
         .expect("the L outline extrudes")
 }
 
+/// C# `TopologyTestMeshes.CreateNotchedPrism`: a square prism with a triangular notch cut into its
+/// +x side. The notch's apex at (16, 10) is a reflex corner, so the vertical edge there is concave
+/// and its VOID wedge is 2 atan(1.5) = 112.62 degrees, at an angle chosen so every outline
+/// coordinate is an integer and nothing rounds on the way through Clipper.
+pub fn create_notched_prism() -> Mesh {
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(0.0, 0.0);
+    path.line_to(20.0, 0.0);
+    path.line_to(20.0, 4.0);
+    path.line_to(16.0, 10.0);
+    path.line_to(20.0, 16.0);
+    path.line_to(20.0, 20.0);
+    path.line_to(0.0, 20.0);
+    path.close_polygon();
+
+    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, 10.0)
+        .expect("the notched outline extrudes")
+}
+
 /// C# `LPrismTestMeshes.CreateLPrismWithFadingInnerCorner`: the L prism whose inner corner FADES -
 /// sharp for the bottom half, then opened out into a fillet that grows from nothing at the middle
 /// to `top_radius` at the top face. The blend is the exact rolling-ball surface, which for a
