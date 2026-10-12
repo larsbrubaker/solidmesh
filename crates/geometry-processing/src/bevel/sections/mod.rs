@@ -16,6 +16,7 @@ pub mod section_builder_station;
 pub mod section_builder_walked_side;
 pub mod section_corner;
 pub mod section_end;
+pub mod section_end_splice;
 pub mod section_fan_remesh;
 pub mod section_fan_walk;
 pub mod section_junction;

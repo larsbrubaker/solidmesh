@@ -49,6 +49,10 @@ mod bevel_partner_tube_clip_tests;
 mod bevel_partnered_bead_tests;
 #[path = "bevel/bevel_patch_refinement_tests.rs"]
 mod bevel_patch_refinement_tests;
+#[path = "bevel/bevel_published_mesh_sliver_tests.rs"]
+mod bevel_published_mesh_sliver_tests;
+#[path = "bevel/bevel_published_mesh_tests.rs"]
+mod bevel_published_mesh_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]
@@ -145,6 +149,8 @@ mod fillet_arc_seam_row_tests;
 mod fillet_thin_front_fin;
 #[path = "bevel/five_hole_plate_fixture.rs"]
 mod five_hole_plate_fixture;
+#[path = "bevel/five_hole_plate_tests.rs"]
+mod five_hole_plate_tests;
 #[path = "bevel/flat_ends_clip_tests.rs"]
 mod flat_ends_clip_tests;
 #[path = "bevel/flat_ends_combination_tests.rs"]
@@ -209,6 +215,8 @@ mod many_holes_mouth_room_tests;
 mod mesh_measurements;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
+#[path = "bevel/micro_step_seam_tests.rs"]
+mod micro_step_seam_tests;
 #[path = "bevel/name_every_tight_chain_tests.rs"]
 mod name_every_tight_chain_tests;
 #[path = "bevel/no_duplicate_vertex_tests.rs"]
