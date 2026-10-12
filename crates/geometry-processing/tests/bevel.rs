@@ -75,6 +75,8 @@ mod bevel_t_vertex_sliver_repair_tests;
 mod bevel_thin_sliver_conditioning_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
+#[path = "bevel/boolean_kernel_gate.rs"]
+mod boolean_kernel_gate;
 #[path = "bevel/bore_test_meshes.rs"]
 mod bore_test_meshes;
 #[path = "bevel/chain_field_end_clip_tests.rs"]
@@ -95,6 +97,16 @@ mod convex_end_ray_room_tests;
 mod crease_dies_out_fixtures;
 #[path = "bevel/crease_run_out_tests.rs"]
 mod crease_run_out_tests;
+#[path = "bevel/cube_corner_ball_tests.rs"]
+mod cube_corner_ball_tests;
+#[path = "bevel/cube_corner_fill_tests.rs"]
+mod cube_corner_fill_tests;
+#[path = "bevel/cube_corner_tests.rs"]
+mod cube_corner_tests;
+#[path = "bevel/cube_edge_end_cap_tests.rs"]
+mod cube_edge_end_cap_tests;
+#[path = "bevel/cube_edge_union_tests.rs"]
+mod cube_edge_union_tests;
 #[path = "bevel/degenerate_triangle_refinement_tests.rs"]
 mod degenerate_triangle_refinement_tests;
 #[path = "bevel/encroaching_side_room_tests.rs"]
@@ -111,6 +123,8 @@ mod faceted_boss_fade_tests;
 mod fade_end_room_tests;
 #[path = "bevel/fifteen_mm_room_reading_tests.rs"]
 mod fifteen_mm_room_reading_tests;
+#[path = "bevel/fill_closes_or_refuses_tests.rs"]
+mod fill_closes_or_refuses_tests;
 #[path = "bevel/fillet_arc_carry_tests.rs"]
 mod fillet_arc_carry_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
@@ -131,8 +145,16 @@ mod grid_hole_plate_fixture;
 mod growing_crease_room_source_tests;
 #[path = "bevel/gusset_test_meshes.rs"]
 mod gusset_test_meshes;
+#[path = "bevel/hole_fill_corner_tests.rs"]
+mod hole_fill_corner_tests;
+#[path = "bevel/hole_fill_density_tests.rs"]
+mod hole_fill_density_tests;
 #[path = "bevel/hole_fill_flat_wall_tests.rs"]
 mod hole_fill_flat_wall_tests;
+#[path = "bevel/hole_fill_free_end_tests.rs"]
+mod hole_fill_free_end_tests;
+#[path = "bevel/hole_fill_one_loop_corner_tests.rs"]
+mod hole_fill_one_loop_corner_tests;
 #[path = "bevel/hole_fill_tests.rs"]
 mod hole_fill_tests;
 #[path = "bevel/hole_fill_validity_tests.rs"]
@@ -199,6 +221,8 @@ mod room_pairs_cost_tests;
 mod room_read_cost_tests;
 #[path = "bevel/room_scales_with_the_part_tests.rs"]
 mod room_scales_with_the_part_tests;
+#[path = "bevel/round_mouth_fillet_crossings.rs"]
+mod round_mouth_fillet_crossings;
 #[path = "bevel/rounds_first_grow_over_end_tests.rs"]
 mod rounds_first_grow_over_end_tests;
 #[path = "bevel/rounds_first_tests.rs"]
