@@ -3,6 +3,8 @@
 
 #[path = "bevel/annulus_plate_builder.rs"]
 mod annulus_plate_builder;
+#[path = "bevel/around_center_mitre_knife_tests.rs"]
+mod around_center_mitre_knife_tests;
 #[path = "bevel/band_cut_tests.rs"]
 mod band_cut_tests;
 #[path = "bevel/band_gap_tests.rs"]
@@ -33,6 +35,8 @@ mod bevel_chain_linker_rim_closure_tests;
 mod bevel_collinear_run_fold_tests;
 #[path = "bevel/bevel_corner_void_tests.rs"]
 mod bevel_corner_void_tests;
+#[path = "bevel/bevel_ends_measure_tests.rs"]
+mod bevel_ends_measure_tests;
 #[path = "bevel/bevel_face_fit_cap_tests.rs"]
 mod bevel_face_fit_cap_tests;
 #[path = "bevel/bevel_face_fit_concave_collision_tests.rs"]
@@ -45,6 +49,8 @@ mod bevel_face_run_out_tests;
 mod bevel_folded_flap_repair_tests;
 #[path = "bevel/bevel_gusset_poke_through_tests.rs"]
 mod bevel_gusset_poke_through_tests;
+#[path = "bevel/bevel_invariants_measure_tests.rs"]
+mod bevel_invariants_measure_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_obstruction_test_meshes.rs"]
@@ -99,6 +105,10 @@ mod bevel_taper_fallback_tests;
 mod bevel_thin_sliver_conditioning_tests;
 #[path = "bevel/bevel_three_run_corner_tests.rs"]
 mod bevel_three_run_corner_tests;
+#[path = "bevel/bevel_to_center_blend_crease_tests.rs"]
+mod bevel_to_center_blend_crease_tests;
+#[path = "bevel/bevel_to_center_pair_corner_tests.rs"]
+mod bevel_to_center_pair_corner_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/bevel_volume_probes.rs"]
@@ -123,6 +133,10 @@ mod chain_field_end_clip_tests;
 mod chain_field_end_ray_tests;
 #[path = "bevel/chain_field_fixtures.rs"]
 mod chain_field_fixtures;
+#[path = "bevel/chain_field_mitre_tests.rs"]
+mod chain_field_mitre_tests;
+#[path = "bevel/chain_field_speed_tests.rs"]
+mod chain_field_speed_tests;
 #[path = "bevel/chain_field_tests.rs"]
 mod chain_field_tests;
 #[path = "bevel/chain_to_chain_room_tests.rs"]
@@ -149,6 +163,10 @@ mod convex_end_ray_room_tests;
 mod coplanar_diagonal_flip;
 #[path = "bevel/corner_pick_with_mouth_tests.rs"]
 mod corner_pick_with_mouth_tests;
+#[path = "bevel/corner_setback_measure_tests.rs"]
+mod corner_setback_measure_tests;
+#[path = "bevel/corner_volume_measure_tests.rs"]
+mod corner_volume_measure_tests;
 #[path = "bevel/crease_dies_out_fixtures.rs"]
 mod crease_dies_out_fixtures;
 #[path = "bevel/crease_dies_out_tests.rs"]
@@ -159,6 +177,8 @@ mod crease_run_out_tests;
 mod cube_corner_ball_tests;
 #[path = "bevel/cube_corner_fill_tests.rs"]
 mod cube_corner_fill_tests;
+#[path = "bevel/cube_corner_measure_tests.rs"]
+mod cube_corner_measure_tests;
 #[path = "bevel/cube_corner_tests.rs"]
 mod cube_corner_tests;
 #[path = "bevel/cube_edge_end_cap_tests.rs"]
@@ -257,6 +277,10 @@ mod hole_fill_one_loop_corner_tests;
 mod hole_fill_tests;
 #[path = "bevel/hole_fill_validity_tests.rs"]
 mod hole_fill_validity_tests;
+#[path = "bevel/hole_row_bridge_fixture.rs"]
+mod hole_row_bridge_fixture;
+#[path = "bevel/hole_row_bridge_tests.rs"]
+mod hole_row_bridge_tests;
 #[path = "bevel/hourglass_beside_square_fixture.rs"]
 mod hourglass_beside_square_fixture;
 #[path = "bevel/hourglass_beside_square_tests.rs"]
@@ -699,6 +723,10 @@ mod thread_cpu_time;
 mod top_and_round_corner_room_tests;
 #[path = "bevel/top_center_face_tests.rs"]
 mod top_center_face_tests;
+#[path = "bevel/top_center_nose_control_measure_tests.rs"]
+mod top_center_nose_control_measure_tests;
+#[path = "bevel/top_center_nose_run_out_measure_tests.rs"]
+mod top_center_nose_run_out_measure_tests;
 #[path = "bevel/top_center_nose_run_out_tests.rs"]
 mod top_center_nose_run_out_tests;
 #[path = "bevel/topology_only_probe_tests.rs"]

@@ -134,8 +134,8 @@ fn a_build_of_two_spanned_rims_leaves_each_side_its_own_loop() {
 }
 
 /// C# `SpanningEdges`: every INPUT edge whose two ends are on DIFFERENT chains of the pick, by
-/// length.
-fn spanning_edges(
+/// length. Shared with `hole_row_bridge_tests`, whose C# class carries the same helper.
+pub(crate) fn spanning_edges(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],

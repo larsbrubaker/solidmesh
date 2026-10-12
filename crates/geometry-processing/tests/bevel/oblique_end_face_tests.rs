@@ -39,11 +39,11 @@ fn section() -> [Vector2; 3] {
     ]
 }
 
-fn chain() -> Vec<i32> {
+pub(crate) fn chain() -> Vec<i32> {
     vec![2, 5]
 }
 
-fn indices() -> Vec<(i32, i32, i32)> {
+pub(crate) fn indices() -> Vec<(i32, i32, i32)> {
     let mut indices = vec![(0, 2, 1), (3, 4, 5)];
     for i in 0..3 {
         let j = (i + 1) % 3;
@@ -54,7 +54,7 @@ fn indices() -> Vec<(i32, i32, i32)> {
     indices
 }
 
-fn positions(motion: Option<Matrix4X4>) -> Vec<Vector3> {
+pub(crate) fn positions(motion: Option<Matrix4X4>) -> Vec<Vector3> {
     let positions: Vec<Vector3> = section()
         .iter()
         .map(|p| Vector3::new(lean() * p.y, p.x, p.y))
@@ -96,7 +96,7 @@ fn build(size: f64) -> BandGapResult {
     build_on(&positions(None), &indices(), &chain(), size)
 }
 
-fn room_of() -> f64 {
+pub(crate) fn room_of() -> f64 {
     let gap = build(100.0);
     if gap.refusal == BandGapRefusal::Size {
         gap.room

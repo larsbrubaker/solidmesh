@@ -98,3 +98,26 @@ impl LevelLineFixture {
         fixture
     }
 }
+
+/// Every fixture in the fixture folder, by name, in ordinal order (C#'s
+/// `Directory.GetFiles(directory, "*.txt").OrderBy(p => p, StringComparer.Ordinal)` in the
+/// measurements that sweep it), less `top-center-face-control-nose`: a control mesh of bare
+/// triangles in another format, which C#'s sweeps read as a fixture and throw on
+/// (`docs/CSHARP_DIVERGENCES.md` 5015).
+pub fn fixture_names() -> Vec<String> {
+    let directory = format!(
+        "{}/tests/bevel/level_line_fixtures",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let mut names: Vec<String> = std::fs::read_dir(&directory)
+        .unwrap_or_else(|e| panic!("{directory}: {e}"))
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.ends_with(".txt") && name != "top-center-face-control-nose.txt")
+        .collect();
+    names.sort();
+    names
+        .into_iter()
+        .map(|name| name.trim_end_matches(".txt").to_string())
+        .collect()
+}
