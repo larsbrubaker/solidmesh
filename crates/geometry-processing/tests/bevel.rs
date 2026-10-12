@@ -91,6 +91,8 @@ mod chain_field_tests;
 mod chain_to_chain_room_tests;
 #[path = "bevel/clipped_cell_bound_tests.rs"]
 mod clipped_cell_bound_tests;
+#[path = "bevel/concave_edge_end_face_tests.rs"]
+mod concave_edge_end_face_tests;
 #[path = "bevel/convex_end_ray_room_tests.rs"]
 mod convex_end_ray_room_tests;
 #[path = "bevel/crease_dies_out_fixtures.rs"]
@@ -111,10 +113,20 @@ mod cube_edge_union_tests;
 mod degenerate_triangle_refinement_tests;
 #[path = "bevel/encroaching_side_room_tests.rs"]
 mod encroaching_side_room_tests;
+#[path = "bevel/end_face_builds.rs"]
+mod end_face_builds;
+#[path = "bevel/end_face_carry_tests.rs"]
+mod end_face_carry_tests;
+#[path = "bevel/end_face_measures.rs"]
+mod end_face_measures;
 #[path = "bevel/end_face_room_tests.rs"]
 mod end_face_room_tests;
 #[path = "bevel/end_plane_trim_corner_tests.rs"]
 mod end_plane_trim_corner_tests;
+#[path = "bevel/end_ray_reach_tests.rs"]
+mod end_ray_reach_tests;
+#[path = "bevel/end_region_shapes_tests.rs"]
+mod end_region_shapes_tests;
 #[path = "bevel/exact_refinement_tests.rs"]
 mod exact_refinement_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
@@ -133,6 +145,12 @@ mod fillet_arc_seam_row_tests;
 mod fillet_thin_front_fin;
 #[path = "bevel/five_hole_plate_fixture.rs"]
 mod five_hole_plate_fixture;
+#[path = "bevel/flat_ends_clip_tests.rs"]
+mod flat_ends_clip_tests;
+#[path = "bevel/flat_ends_combination_tests.rs"]
+mod flat_ends_combination_tests;
+#[path = "bevel/flat_ends_every_chamfer_seam_tests.rs"]
+mod flat_ends_every_chamfer_seam_tests;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
 #[path = "bevel/foreign_edge_index_tests.rs"]
@@ -199,12 +217,20 @@ mod no_duplicate_vertex_tests;
 mod nose_in_notch_mixed_corners;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
+#[path = "bevel/oblique_end_face_owner_tests.rs"]
+mod oblique_end_face_owner_tests;
+#[path = "bevel/oblique_end_face_tests.rs"]
+mod oblique_end_face_tests;
 #[path = "bevel/one_room_reading_tests.rs"]
 mod one_room_reading_tests;
 #[path = "bevel/open_chain_fixtures.rs"]
 mod open_chain_fixtures;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
+#[path = "bevel/opposite_sense_end_face_tests.rs"]
+mod opposite_sense_end_face_tests;
+#[path = "bevel/outline_prisms.rs"]
+mod outline_prisms;
 #[path = "bevel/parallel_edges_room_tests.rs"]
 mod parallel_edges_room_tests;
 #[path = "bevel/pick_field_tests.rs"]
