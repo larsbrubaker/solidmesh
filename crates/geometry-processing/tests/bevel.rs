@@ -31,6 +31,8 @@ mod bevel_face_fit_corner_tests;
 mod bevel_face_run_out_tests;
 #[path = "bevel/bevel_folded_flap_repair_tests.rs"]
 mod bevel_folded_flap_repair_tests;
+#[path = "bevel/bevel_gusset_poke_through_tests.rs"]
+mod bevel_gusset_poke_through_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_obstruction_test_meshes.rs"]
@@ -67,6 +69,8 @@ mod bevel_sweep_back_depth_tests;
 mod bevel_sweep_batches_tests;
 #[path = "bevel/bevel_t_vertex_sliver_repair_tests.rs"]
 mod bevel_t_vertex_sliver_repair_tests;
+#[path = "bevel/bevel_thin_sliver_conditioning_tests.rs"]
+mod bevel_thin_sliver_conditioning_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
 #[path = "bevel/bore_test_meshes.rs"]
@@ -111,6 +115,8 @@ mod gap_fill_tests;
 mod grid_hole_plate_fixture;
 #[path = "bevel/growing_crease_room_source_tests.rs"]
 mod growing_crease_room_source_tests;
+#[path = "bevel/gusset_test_meshes.rs"]
+mod gusset_test_meshes;
 #[path = "bevel/hole_fill_flat_wall_tests.rs"]
 mod hole_fill_flat_wall_tests;
 #[path = "bevel/hole_fill_tests.rs"]
@@ -141,6 +147,8 @@ mod longest_edge_bisection_tests;
 mod many_chain_foreign_cost_tests;
 #[path = "bevel/many_holes_mouth_room_tests.rs"]
 mod many_holes_mouth_room_tests;
+#[path = "bevel/mesh_measurements.rs"]
+mod mesh_measurements;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
 #[path = "bevel/name_every_tight_chain_tests.rs"]
@@ -157,6 +165,8 @@ mod open_chain_fixtures;
 mod opposite_sense_crease_tests;
 #[path = "bevel/pick_field_tests.rs"]
 mod pick_field_tests;
+#[path = "bevel/pyramid_recess_test_meshes.rs"]
+mod pyramid_recess_test_meshes;
 #[path = "bevel/raked_box_fixture.rs"]
 mod raked_box_fixture;
 #[path = "bevel/room_ceiling_tests.rs"]
@@ -265,6 +275,8 @@ mod rust_only_bevel_section_routing_tests;
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice12_tests.rs"]
 mod rust_only_bevel_slice12_tests;
+#[path = "bevel/rust_only_bevel_slice17_tests.rs"]
+mod rust_only_bevel_slice17_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]
 mod rust_only_bevel_slice2_tests;
 #[path = "bevel/rust_only_bevel_slice3_tests.rs"]
@@ -317,6 +329,8 @@ mod strip_clip_rib_meshes;
 mod strip_clip_rib_tests;
 #[path = "bevel/surface_bevel_plan_tests.rs"]
 mod surface_bevel_plan_tests;
+#[path = "bevel/surface_chain_opens_at_the_junction_tests.rs"]
+mod surface_chain_opens_at_the_junction_tests;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
 mod surface_clip_classifies_one_point_one_way_tests;
 #[path = "bevel/surface_concave_end_where_the_face_carries_on_tests.rs"]
@@ -373,6 +387,8 @@ mod surface_room_crossing_tests;
 mod surface_room_half_disc_rim_tests;
 #[path = "bevel/surface_room_notch_reach_tests.rs"]
 mod surface_room_notch_reach_tests;
+#[path = "bevel/surface_room_partial_run_off_tests.rs"]
+mod surface_room_partial_run_off_tests;
 #[path = "bevel/surface_room_tests.rs"]
 mod surface_room_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
@@ -385,12 +401,18 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
+mod surface_strip_ends_on_the_hull_tests;
+#[path = "bevel/surface_test_chains.rs"]
+mod surface_test_chains;
 #[path = "bevel/swallowed_side_tests.rs"]
 mod swallowed_side_tests;
 #[path = "bevel/sweep_mesh_measures.rs"]
 mod sweep_mesh_measures;
 #[path = "bevel/tapered_barrel_test_meshes.rs"]
 mod tapered_barrel_test_meshes;
+#[path = "bevel/tapered_ledge_test_meshes.rs"]
+mod tapered_ledge_test_meshes;
 #[path = "bevel/thread_cpu_time.rs"]
 mod thread_cpu_time;
 #[path = "bevel/top_and_round_corner_room_tests.rs"]

@@ -45,16 +45,24 @@
 //! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]), the rolled
 //! section's concave cap ([`surface_end_follows_the_walked_chords`]), the rim sewing of a section
 //! given up ([`surface_end_gives_up_the_section`]) and the convex bite's side reading
-//! ([`surface_convex_bite`]). The types land as type definitions; their methods, and the
+//! ([`surface_convex_bite`]). And the pass's chain readings before any plan - the join of runs
+//! meeting end to end ([`surface_chain_join`]), the cut at every junction a chain passes through
+//! ([`surface_chain_opens_at_the_junction`]) and the crease a feature interrupts
+//! ([`surface_interrupted_crease`]) - with the builder's crossings of a band by a run-out
+//! ([`surface_bevel_crossings`]) and the sector a mitre of unequal setbacks gives up
+//! ([`surface_mitre_sector`]). The types land as type definitions; their methods, and the
 //! construction itself, land in later slices.
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
 pub mod surface_band_runs_off_the_face_beyond;
+pub mod surface_bevel_crossings;
 mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 mod surface_bite_shared_sides;
 mod surface_chain_end_reading;
+pub mod surface_chain_join;
+pub mod surface_chain_opens_at_the_junction;
 pub mod surface_convex_bite;
 pub mod surface_corner_mitre;
 pub mod surface_corner_patch;
@@ -75,12 +83,14 @@ pub mod surface_face_carries_on;
 mod surface_facet_cut;
 pub mod surface_fan;
 pub mod surface_handover_leaves_a_strip;
+pub mod surface_interrupted_crease;
 pub mod surface_junction_band_ends;
 mod surface_line;
 pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
 pub mod surface_mitre_seam;
+pub mod surface_mitre_sector;
 mod surface_mixed_corner;
 pub mod surface_mixed_corner_bites;
 pub mod surface_mixed_corner_cut_edge;
