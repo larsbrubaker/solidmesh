@@ -12,7 +12,7 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGa
 use geometry_processing::bevel::level_line::corner_cap::WATCH_END_HOLE_AT;
 use geometry_processing::bevel::level_line::corner_cap_flat_ends::set_use_flat_ends_override;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::BandGapResult;
+use geometry_processing::bevel::level_line::{BandGapResult, WorkBudget};
 
 use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
@@ -69,6 +69,15 @@ pub fn as_saved(fixture: &LevelLineFixture, known_room: Option<f64>) -> BandGapB
         sharp_turn_degrees: fixture.sharp_turn_degrees,
         fillet_segments: fixture.segments,
     }
+}
+
+/// C#'s `new WorkBudget(WorkBudget.DefaultLimit(fixture.Indices.Count)) { InputIsFloatStored =
+/// ... }`: the default allowance for the fixture's size.
+pub fn default_budget(fixture: &LevelLineFixture, input_is_float_stored: bool) -> Rc<WorkBudget> {
+    let mut budget = WorkBudget::new(WorkBudget::default_limit(fixture.indices.len() as i32))
+        .expect("a positive limit");
+    budget.input_is_float_stored = input_is_float_stored;
+    Rc::new(budget)
 }
 
 /// Sets this thread's `CornerCap.UseFlatEndsOverride` and, on drop, clears it and

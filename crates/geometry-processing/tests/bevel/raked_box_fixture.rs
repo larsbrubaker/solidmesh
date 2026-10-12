@@ -1,11 +1,19 @@
-//! Port of the test fixture `LevelLine/RakedBoxFixture.cs` (the pick and its constants): a long
+//! Port of the test fixture `LevelLine/RakedBoxFixture.cs` (the pick, its constants, its room
+//! reading and build, and the unit setbacks its rim carries): a long
 //! box whose one long wall is raked so its fold is 45 degrees, its other long wall square - so the
 //! rim asks two different unit setbacks, and the room has a closed form.
 
 #![allow(dead_code)]
 
-use crate::level_line_room_geometry::SolidWithChain;
+use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use geometry_processing::bevel::level_line::band_gap_reading;
+use geometry_processing::bevel::level_line::chain_setback;
+use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
+use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, RoomReading};
 use vector_math::{Matrix4X4, Vector3};
+
+use crate::level_line_feature_edges::feature_edges_over;
+use crate::level_line_room_geometry::SolidWithChain;
 
 pub const WIDTH: f64 = 2.0;
 pub const LENGTH: f64 = 20.0;
@@ -85,4 +93,93 @@ pub fn pick(square_first: bool, motion: Option<Matrix4X4>) -> SolidWithChain {
     }
 
     (positions, indices, rim)
+}
+
+/// C# `FeatureEdges`: the pick's feature edges - every fold of 30 degrees or more, which is all
+/// eight of them.
+pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
+    feature_edges_over(positions, indices, FOLD_DEGREES)
+}
+
+/// C# `Read`: the rim's room, read on the input mesh.
+pub fn read(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    rim: &[i32],
+    profile: BandProfile,
+) -> RoomReading {
+    band_gap_reading::read_room(
+        positions,
+        indices,
+        rim,
+        true,
+        Some(feature_edges(positions, indices)),
+        profile,
+        1e-9,
+        None,
+        0.0,
+        f64::INFINITY,
+    )
+    .expect("the rim reads")
+}
+
+/// C# `Build`: a build of the rim at one size, optionally handed a room already read.
+pub fn build(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    rim: &[i32],
+    size: f64,
+    known_room: Option<f64>,
+    profile: BandProfile,
+) -> BandGapResult {
+    band_gap_entry_points::build(
+        positions,
+        indices,
+        rim,
+        true,
+        Some(feature_edges(positions, indices)),
+        size,
+        profile,
+        &BandGapBuildOptions {
+            known_room,
+            ..BandGapBuildOptions::default()
+        },
+    )
+    .expect("a valid pick")
+}
+
+/// C# `UnitSetbacks`: the two unit setbacks the rim's field really carries, read from the
+/// production `ChainSetback` and the part's own face normals - so a fixture that quietly stopped
+/// varying is caught rather than assumed.
+pub fn unit_setbacks(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    rim: &[i32],
+) -> (f64, f64) {
+    let mut lowest = f64::INFINITY;
+    let mut highest = f64::NEG_INFINITY;
+    for i in 0..rim.len() {
+        let a = rim[i];
+        let b = rim[(i + 1) % rim.len()];
+        let sides: Vec<Vector3> = indices
+            .iter()
+            .filter(|&&t| holds(t, a) && holds(t, b))
+            .map(|&t| normal(positions, t))
+            .collect();
+        let unit = chain_setback::for_fillet(1.0, sides[0], sides[1]);
+        lowest = lowest.min(unit);
+        highest = highest.max(unit);
+    }
+
+    (lowest, highest)
+}
+
+fn holds(t: (i32, i32, i32), vertex: i32) -> bool {
+    t.0 == vertex || t.1 == vertex || t.2 == vertex
+}
+
+fn normal(positions: &[Vector3], t: (i32, i32, i32)) -> Vector3 {
+    (positions[t.1 as usize] - positions[t.0 as usize])
+        .cross(positions[t.2 as usize] - positions[t.0 as usize])
+        .get_normal()
 }

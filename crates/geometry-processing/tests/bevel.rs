@@ -299,10 +299,18 @@ mod parallel_edges_room_tests;
 mod pick_field_tests;
 #[path = "bevel/picture_hanger_test_mesh.rs"]
 mod picture_hanger_test_mesh;
+#[path = "bevel/port_mouth_carry_tests.rs"]
+mod port_mouth_carry_tests;
 #[path = "bevel/pyramid_recess_test_meshes.rs"]
 mod pyramid_recess_test_meshes;
+#[path = "bevel/rail_monotone_tests.rs"]
+mod rail_monotone_tests;
 #[path = "bevel/raked_box_fixture.rs"]
 mod raked_box_fixture;
+#[path = "bevel/ridge_search_cost_tests.rs"]
+mod ridge_search_cost_tests;
+#[path = "bevel/ridge_survives_tests.rs"]
+mod ridge_survives_tests;
 #[path = "bevel/rigid_motion_meshes.rs"]
 mod rigid_motion_meshes;
 #[path = "bevel/room_ceiling_tests.rs"]
@@ -311,14 +319,20 @@ mod room_ceiling_tests;
 mod room_pairs_cost_tests;
 #[path = "bevel/room_read_cost_tests.rs"]
 mod room_read_cost_tests;
+#[path = "bevel/room_rigid_motion_tests.rs"]
+mod room_rigid_motion_tests;
 #[path = "bevel/room_scales_with_the_part_tests.rs"]
 mod room_scales_with_the_part_tests;
 #[path = "bevel/round_mouth_fillet_crossings.rs"]
 mod round_mouth_fillet_crossings;
+#[path = "bevel/round_mouth_fillet_tests.rs"]
+mod round_mouth_fillet_tests;
 #[path = "bevel/rounds_first_grow_over_end_tests.rs"]
 mod rounds_first_grow_over_end_tests;
 #[path = "bevel/rounds_first_tests.rs"]
 mod rounds_first_tests;
+#[path = "bevel/run_out_field_tests.rs"]
+mod run_out_field_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
 #[path = "bevel/rust_only_bevel_r1p01_mesh_tests.rs"]
@@ -439,6 +453,10 @@ mod rust_only_bevel_slice9_tests;
 mod rust_only_bevel_sliver_collapse_tests;
 #[path = "bevel/rust_only_section_smooth_seam_tests.rs"]
 mod rust_only_section_smooth_seam_tests;
+#[path = "bevel/saved_pick_self_intersection_tests.rs"]
+mod saved_pick_self_intersection_tests;
+#[path = "bevel/second_column_land_join_tests.rs"]
+mod second_column_land_join_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
 mod section_hanger_top_rim_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
@@ -465,8 +483,14 @@ mod section_surface_walk_roof;
 mod section_tapered_barrel_tests;
 #[path = "bevel/section_walked_end_vertex_tests.rs"]
 mod section_walked_end_vertex_tests;
+#[path = "bevel/seeded_search_cost_tests.rs"]
+mod seeded_search_cost_tests;
 #[path = "bevel/segment_cell_bound_tests.rs"]
 mod segment_cell_bound_tests;
+#[path = "bevel/self_crossing_chain_tests.rs"]
+mod self_crossing_chain_tests;
+#[path = "bevel/self_room_varying_setback_tests.rs"]
+mod self_room_varying_setback_tests;
 #[path = "bevel/several_chains_fixtures.rs"]
 mod several_chains_fixtures;
 #[path = "bevel/side_witness_tests.rs"]

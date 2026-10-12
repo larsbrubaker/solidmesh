@@ -124,8 +124,9 @@ fn pick_named(name: &str) -> Pick {
 }
 
 /// C# `StripSolid`: the same 4 by 20 by 4 box `RidgeSurvivesTests` uses - a top face of two
-/// triangles.
-fn strip_solid() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
+/// triangles; `RidgeSurvivesTests` and `RoomRigidMotionTests` (which each carry a copy in C#) read
+/// this one.
+pub fn strip_solid() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     let positions = vec![
         Vector3::new(-2.0, -10.0, -2.0),
         Vector3::new(2.0, -10.0, -2.0),
