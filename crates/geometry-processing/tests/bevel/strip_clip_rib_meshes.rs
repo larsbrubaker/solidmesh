@@ -49,8 +49,9 @@ const RIBBED_TOP: [(i32, i32, i32); 7] = [
     (4, 8, 9),
 ];
 
-/// The two flanks (T R P facing -x, T Q R facing +x) and the back face y = 8.
-const RIB_FACES: [(i32, i32, i32); 3] = [(8, 11, 9), (8, 10, 11), (9, 11, 10)];
+/// C# `StripClipRibTests.RibFaces`: the two flanks (T R P facing -x, T Q R facing +x) and the back
+/// face y = 8.
+pub const RIB_FACES: [(i32, i32, i32); 3] = [(8, 11, 9), (8, 10, 11), (9, 11, 10)];
 
 const PLAIN_TOP: [(i32, i32, i32); 2] = [(4, 5, 6), (4, 6, 7)];
 

@@ -3,6 +3,8 @@
 
 #[path = "bevel/band_cut_tests.rs"]
 mod band_cut_tests;
+#[path = "bevel/band_gap_tests.rs"]
+mod band_gap_tests;
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
@@ -95,12 +97,16 @@ mod fifteen_mm_room_reading_tests;
 mod fillet_arc_carry_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
 mod fillet_arc_seam_row_tests;
+#[path = "bevel/fillet_thin_front_fin.rs"]
+mod fillet_thin_front_fin;
 #[path = "bevel/five_hole_plate_fixture.rs"]
 mod five_hole_plate_fixture;
 #[path = "bevel/flat_hole_fill_tests.rs"]
 mod flat_hole_fill_tests;
 #[path = "bevel/foreign_edge_index_tests.rs"]
 mod foreign_edge_index_tests;
+#[path = "bevel/gap_fill_tests.rs"]
+mod gap_fill_tests;
 #[path = "bevel/grid_hole_plate_fixture.rs"]
 mod grid_hole_plate_fixture;
 #[path = "bevel/growing_crease_room_source_tests.rs"]
@@ -161,6 +167,10 @@ mod room_pairs_cost_tests;
 mod room_read_cost_tests;
 #[path = "bevel/room_scales_with_the_part_tests.rs"]
 mod room_scales_with_the_part_tests;
+#[path = "bevel/rounds_first_grow_over_end_tests.rs"]
+mod rounds_first_grow_over_end_tests;
+#[path = "bevel/rounds_first_tests.rs"]
+mod rounds_first_tests;
 #[path = "bevel/rust_only_bevel_core_leaf_tests.rs"]
 mod rust_only_bevel_core_leaf_tests;
 #[path = "bevel/rust_only_bevel_r1p01_mesh_tests.rs"]
@@ -303,6 +313,8 @@ mod source_round_test_meshes;
 mod spoke_centre_parameter_tests;
 #[path = "bevel/strip_clip_rib_meshes.rs"]
 mod strip_clip_rib_meshes;
+#[path = "bevel/strip_clip_rib_tests.rs"]
+mod strip_clip_rib_tests;
 #[path = "bevel/surface_bevel_plan_tests.rs"]
 mod surface_bevel_plan_tests;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
@@ -373,6 +385,8 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/swallowed_side_tests.rs"]
+mod swallowed_side_tests;
 #[path = "bevel/sweep_mesh_measures.rs"]
 mod sweep_mesh_measures;
 #[path = "bevel/tapered_barrel_test_meshes.rs"]

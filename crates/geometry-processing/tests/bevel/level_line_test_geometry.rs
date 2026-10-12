@@ -364,3 +364,55 @@ pub fn open_edges(mesh: &LevelLineMesh) -> Vec<(i32, i32)> {
         .filter(|e| mesh.triangles_on(e.0, e.1).len() == 1)
         .collect()
 }
+
+/// C# `VolumeOfEveryTriangleEvenRemoved`: the volume counting EVERY triangle the mesh holds, the
+/// band's removed ones included - the reading a refinement test wants, where the claim is that the
+/// cut only SPLIT. Never the reading for a fill test.
+pub fn volume_of_every_triangle_even_removed(mesh: &LevelLineMesh) -> f64 {
+    let mut total = 0.0;
+    for t in mesh.triangles() {
+        let a = mesh.position(t.a);
+        let b = mesh.position(t.b);
+        let c = mesh.position(t.c);
+        total += a.dot(b.cross(c));
+    }
+
+    total / 6.0
+}
+
+/// C# `SignedVolume(positions, indices)`: the enclosed volume of bare positions and index triples.
+pub fn signed_volume_of(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> f64 {
+    let mut total = 0.0;
+    for &(a, b, c) in indices {
+        total += positions[a as usize].dot(positions[b as usize].cross(positions[c as usize]));
+    }
+
+    total / 6.0
+}
+
+/// C# `WindingNumber`: how many turns the triangles subtend at a point - one inside a closed solid,
+/// none outside, a half on its surface. Needs nothing of the solid but its own triangles, so it
+/// reads a box with a hole through it as readily as a cube.
+pub fn winding_number(positions: &[Vector3], indices: &[(i32, i32, i32)], point: Vector3) -> f64 {
+    let mut total = 0.0;
+    for &(ia, ib, ic) in indices {
+        let a = positions[ia as usize] - point;
+        let b = positions[ib as usize] - point;
+        let c = positions[ic as usize] - point;
+        let la = a.length();
+        let lb = b.length();
+        let lc = c.length();
+        if la == 0.0 || lb == 0.0 || lc == 0.0 {
+            // The point is a corner of the solid; the solid angle there is not defined by this
+            // formula.
+            return 0.5;
+        }
+
+        // Van Oosterom and Strackee: the signed solid angle of a triangle seen from the origin.
+        let numerator = a.dot(b.cross(c));
+        let denominator = (la * lb * lc) + (a.dot(b) * lc) + (b.dot(c) * la) + (c.dot(a) * lb);
+        total += 2.0 * numerator.atan2(denominator);
+    }
+
+    total / (4.0 * std::f64::consts::PI)
+}

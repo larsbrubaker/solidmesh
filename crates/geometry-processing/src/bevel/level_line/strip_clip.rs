@@ -50,6 +50,12 @@ pub fn last_outcome() -> Option<String> {
     LAST_OUTCOME.with(|o| o.borrow().clone())
 }
 
+/// C# `StripClip.LastOutcome = value`: sets (or, with `None`, clears) this thread's outcome, as a
+/// caller does before a fill whose clip it means to read.
+pub fn set_last_outcome(outcome: Option<String>) {
+    LAST_OUTCOME.with(|o| *o.borrow_mut() = outcome);
+}
+
 /// C# `StripClip.Note`: records the clip's outcome. Written always, not only under the meter: the
 /// sweep classifies no-result rows by the refusing site, and a clip runs a handful of times per
 /// fill, so the string costs nothing beside the mesh work.
