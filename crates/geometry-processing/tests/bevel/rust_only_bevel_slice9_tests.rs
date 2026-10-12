@@ -120,7 +120,10 @@ fn rust_only_a_row_says_whether_it_failed_partly_refused_or_warned() {
 
     let mut partly = BevelGroupResult::new(2, group, 12, None, Some("held".into()));
     partly.loop_failures = Some(vec![BevelLoopFailure {
-        advisory: BevelAdvisory::new(BevelAdvisoryCode::SizeRemovesNothing, vec![]),
+        advisory: Some(BevelAdvisory::new(
+            BevelAdvisoryCode::SizeRemovesNothing,
+            vec![],
+        )),
         failure_reason: "one loop".into(),
         largest_size_that_fits: None,
         edge_count: 3,

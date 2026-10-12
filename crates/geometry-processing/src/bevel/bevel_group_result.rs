@@ -143,8 +143,9 @@ impl BevelGroupResult {
 /// smaller size or a second operation, and neither is findable from a row that simply built.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelLoopFailure {
-    /// Which refusal the loop got, for a caller that asks by code rather than by prose.
-    pub advisory: BevelAdvisory,
+    /// Which refusal the loop got, for a caller that asks by code rather than by prose. `None` on
+    /// a loop read back from a saved file (`BevelStoredResults` keeps the sentence, not the code).
+    pub advisory: Option<BevelAdvisory>,
 
     /// The sentence it was written as, already localized.
     pub failure_reason: String,
