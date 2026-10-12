@@ -1,9 +1,9 @@
 //! Port of the test helper `ManyHolesRimReading.cs`: Many Holes' rim pick read as plain data - its
 //! edges chained into runs on vertex indices (`chain`), each closed loop's shape (`shape`), and
 //! every closed loop of a resolved pick filleted ALONE through the sections - room, build,
-//! assembly - and measured (`read_every_loop`). Read by `section_many_holes_neighbour_tests` on
-//! [`crate::many_holes_test_mesh`]. C#'s `CancellationToken` parameter is left out: nothing here
-//! cancels.
+//! assembly - and measured (`read_every_loop`). Read by `section_many_holes_tests` and
+//! `section_many_holes_neighbour_tests` on [`crate::many_holes_test_mesh`]. C#'s
+//! `CancellationToken` parameter is left out: nothing here cancels.
 
 #![allow(dead_code)]
 

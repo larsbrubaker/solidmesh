@@ -2,7 +2,8 @@
 //! hands the bevel construction, in the space the size is quoted in, with the one pick the app
 //! resolved on it - read from `fixtures/ManyHolesWorkingMesh.txt` (copied from C#'s
 //! `Fixtures/ManyHolesWorkingMesh.txt`) instead of loading the `.mcx` on every turn. Read by
-//! `section_many_holes_neighbour_tests` through [`crate::many_holes_rim_reading`].
+//! `section_many_holes_tests` and `section_many_holes_neighbour_tests` through
+//! [`crate::many_holes_rim_reading`].
 
 #![allow(dead_code)]
 

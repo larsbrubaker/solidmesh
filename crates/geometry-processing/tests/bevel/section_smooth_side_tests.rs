@@ -729,13 +729,13 @@ fn flatness(part: &Mesh, facet: &SmoothSideFacetCut) -> f64 {
     worst
 }
 
-fn twice_the_area(part: &Mesh, face: i32, normal: Vector3) -> f64 {
+pub(crate) fn twice_the_area(part: &Mesh, face: i32, normal: Vector3) -> f64 {
     let (a, b, c) = corners(part, face);
 
     (b - a).cross(c - a).dot(normal)
 }
 
-fn ring_area(pool: &SectionPool, ring: &[i32], normal: Vector3) -> f64 {
+pub(crate) fn ring_area(pool: &SectionPool, ring: &[i32], normal: Vector3) -> f64 {
     let mut twice = Vector3::ZERO;
 
     for i in 0..ring.len() {

@@ -437,7 +437,6 @@ fn volume_of(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> f64 {
 /// C# `BuildForMeter`: builds the cone's apex (at half its room) or the cube's corner 1 (at 0.8)
 /// as the tests above do, for SliverSplitGuardTests' meter to read whether the sliver guard fires
 /// on a point bevel.
-#[allow(dead_code)]
 pub(crate) fn build_for_meter(is_cone: bool, kind: PointBevelKind) {
     let (positions, triangles) = if is_cone { cone(true) } else { cube(2.0) };
     let corner = if is_cone { 0 } else { 1 };

@@ -24,6 +24,10 @@ pub(crate) mod section_loft_tests;
 pub(crate) mod section_loop_entry_tests;
 #[path = "section_many_holes_neighbour_tests.rs"]
 pub(crate) mod section_many_holes_neighbour_tests;
+#[path = "section_many_holes_tests.rs"]
+pub(crate) mod section_many_holes_tests;
+#[path = "section_open_mouth_arc_cut_tests.rs"]
+pub(crate) mod section_open_mouth_arc_cut_tests;
 #[path = "section_open_mouth_arc_tests.rs"]
 pub(crate) mod section_open_mouth_arc_tests;
 #[path = "section_pierced_face_junction_tests.rs"]

@@ -2,22 +2,32 @@
 //! (`refinement_splits::would_thin_a_child*`, `refinement_splits_enqueue::bisect_instead_of_thinning*`):
 //! a split that would leave a child far thinner than its parent bisects that child's longest-edge
 //! path instead.
-//!
-//! `TheGuardWouldFireOnTheLandAndNowhereOnThePinnedFixtures` reads its builds through
-//! `PointBevelTests.BuildForMeter` (the point cone and cube rows) and lands with that class's port.
 
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use geometry_processing::bevel::level_line::field_counters::{ALL_RULES, WOULD_THIN_LIMITS};
+use geometry_processing::bevel::level_line::point_bevel::PointBevelKind;
 use geometry_processing::bevel::level_line::refinement_splits::{
     would_thin_a_child, would_thin_a_child_on_edge,
 };
 use geometry_processing::bevel::level_line::refinement_splits_enqueue::{
     bisect_instead_of_thinning_on_edge, SLIVER_ASPECT_LIMIT,
 };
-use geometry_processing::bevel::level_line::{FieldCounters, LevelLineMesh, LevelLineRule};
+use geometry_processing::bevel::level_line::{
+    BandProfile, FieldCounters, LevelLineMesh, LevelLineRule, WorkBudget,
+};
+
+use crate::end_face_builds::build_chains;
+use crate::level_line_feature_edges::feature_edges_over;
+use crate::level_line_fixture::LevelLineFixture;
+use crate::level_line_room_geometry::{hourglass_solid, l_prism};
+use crate::point_bevel_tests::build_for_meter;
+use crate::ridge_search_cost_tests::append_to_cost_log;
+use crate::{grid_hole_plate_fixture, several_chains_fixtures};
 
 const LIMIT: f64 = SLIVER_ASPECT_LIMIT;
 
@@ -224,6 +234,220 @@ fn the_guard_answers_false_when_the_bisection_divides_nothing() {
     assert_eq!(mesh.vertex_count(), 3);
     assert_eq!(pending.len(), 0);
     assert_eq!(FieldCounters::fired_count(LevelLineRule::SliverGuard), 0);
+}
+
+/// The would-fire meter over the land reproducers and the pinned fixtures, at every candidate limit.
+/// The guard must fire where the land regresses (pass A's 2, 3, 9 and the face rim's 2, 3, 8) and
+/// never on a build whose mesh a pin records, so `SLIVER_ASPECT_LIMIT` is the smallest candidate
+/// silent on all of those.
+#[test]
+fn the_guard_would_fire_on_the_land_and_nowhere_on_the_pinned_fixtures() {
+    let mut table = String::new();
+    table.push_str(&format!("{:<22}{:<12}", "build", "rule"));
+    for l in WOULD_THIN_LIMITS {
+        table.push_str(&format!("{:>8}", format!("A{l}")));
+    }
+    table.push('\n');
+
+    let mut at_the_limit: Vec<(String, i64, i64)> = Vec::new();
+    for (name, build) in builds() {
+        FieldCounters::reset();
+        FieldCounters::set_meter_on(true);
+        {
+            let _off = MeterOff;
+            build();
+        }
+
+        let mut any = false;
+        for rule in ALL_RULES {
+            let row: Vec<i64> = WOULD_THIN_LIMITS
+                .iter()
+                .map(|&l| FieldCounters::would_thin(rule, l))
+                .collect();
+            if row.iter().any(|&n| n > 0) {
+                any = true;
+                table.push_str(&format!("{:<22}{:<12}", name, format!("{rule:?}")));
+                for n in row {
+                    table.push_str(&format!("{n:>8}"));
+                }
+                table.push('\n');
+            }
+        }
+
+        if !any {
+            table.push_str(&format!("{name:<22}(none)\n"));
+        }
+
+        // The meter reads a rule's split BEFORE the guard takes it, so where the guard is in force
+        // these rows count the splits it was asked about, and this line how many it bisected
+        // instead.
+        let fired = FieldCounters::fired_count(LevelLineRule::SliverGuard);
+        table.push_str(&format!("{:<22}{:<12}{:>8}\n", name, "guard fired", fired));
+
+        let count: i64 = ALL_RULES
+            .iter()
+            .map(|&rule| FieldCounters::would_thin(rule, LIMIT))
+            .sum();
+        at_the_limit.push((name, count, fired));
+    }
+
+    println!("{table}");
+    append_to_cost_log(&table);
+
+    for (name, count, fired) in at_the_limit {
+        if name.starts_with("land") {
+            assert!(count > 0, "{name} is the regress the guard is for\n{table}");
+            assert!(fired > 0, "the guard bisects on {name}\n{table}");
+        } else {
+            assert_eq!(
+                count, 0,
+                "{name} is pinned, so the guard must stay silent there\n{table}"
+            );
+            assert_eq!(fired, 0, "{name} is pinned\n{table}");
+        }
+    }
+}
+
+/// C# `Builds`: the builds the meter reads, each the way the test that pins or reproduces it
+/// builds it. Only the meter is read, so each build's own result is dropped.
+fn builds() -> Vec<(String, Box<dyn Fn()>)> {
+    let mut builds: Vec<(String, Box<dyn Fn()>)> = vec![
+        (
+            "land passA 2,3,9".to_string(),
+            Box::new(|| trio("many-holes-passA-37chains-r05", &[2, 3, 9])),
+        ),
+        (
+            "land facerim 2,3,8".to_string(),
+            Box::new(|| trio("many-holes-facerim-25chains-r05", &[2, 3, 8])),
+        ),
+    ];
+
+    for (fixture, size) in [("A", 0.3), ("B", 0.5), ("C", 0.3)] {
+        builds.push((
+            format!("SeveralChains {fixture} {size}"),
+            Box::new(move || {
+                let (positions, indices, chains) = several_chains_fixtures::named(fixture);
+                let feature =
+                    feature_edges_over(&positions, &indices, several_chains_fixtures::FOLD_DEGREES);
+                let closed = vec![true; chains.len()];
+                band_gap_entry_points::build_pick(
+                    &positions,
+                    &indices,
+                    &chains,
+                    &closed,
+                    Some(feature),
+                    size,
+                    BandProfile::Chamfer,
+                    &BandGapBuildOptions::default(),
+                )
+                .expect("a valid pick");
+            }),
+        ));
+    }
+
+    for (which, size) in [
+        ("hourglass", 0.4),
+        ("hourglass", 0.1),
+        ("L", 0.2),
+        ("L", 0.05),
+    ] {
+        builds.push((
+            format!("ridge {which} {size}"),
+            Box::new(move || {
+                let (positions, indices, chain) = if which == "hourglass" {
+                    hourglass_solid(10.0, 2.0, 4.0, 4.0)
+                } else {
+                    l_prism()
+                };
+                let budget = WorkBudget::new(WorkBudget::default_limit(indices.len() as i32))
+                    .expect("a positive limit");
+                band_gap_entry_points::build(
+                    &positions,
+                    &indices,
+                    &chain,
+                    true,
+                    Some(feature_edges_over(&positions, &indices, 45.0)),
+                    size,
+                    BandProfile::Fillet,
+                    &BandGapBuildOptions {
+                        chord_tolerance: 0.0,
+                        snap: 1e-9,
+                        known_room: None,
+                        budget: Some(Rc::new(budget)),
+                        ..BandGapBuildOptions::default()
+                    },
+                )
+                .expect("a valid pick");
+            }),
+        ));
+    }
+
+    // Point bevels refine through the same rules with no chain edges and a chord tolerance of a
+    // thousandth of the setback - a cone tip and a cube corner, as PointBevelTests builds them.
+    builds.push((
+        "point cone fillet".to_string(),
+        Box::new(|| build_for_meter(true, PointBevelKind::Fillet)),
+    ));
+    builds.push((
+        "point cone chamfer".to_string(),
+        Box::new(|| build_for_meter(true, PointBevelKind::Chamfer)),
+    ));
+    builds.push((
+        "point cube chamfer".to_string(),
+        Box::new(|| build_for_meter(false, PointBevelKind::Chamfer)),
+    ));
+
+    for holes in [2, 4, 6] {
+        builds.push((
+            format!("grid {holes}"),
+            Box::new(move || {
+                let (positions, indices, chains) = grid_hole_plate_fixture::pick_with_span(
+                    holes,
+                    grid_hole_plate_fixture::DEFAULT_SPAN,
+                );
+                let closed = vec![true; chains.len()];
+                let budget = WorkBudget::new(500 * WorkBudget::default_limit(indices.len() as i32))
+                    .expect("a positive limit");
+                band_gap_entry_points::build_pick(
+                    &positions,
+                    &indices,
+                    &chains,
+                    &closed,
+                    Some(grid_hole_plate_fixture::feature_edges(&positions, &indices)),
+                    grid_hole_plate_fixture::SIZE,
+                    BandProfile::Chamfer,
+                    &BandGapBuildOptions {
+                        chord_tolerance: 0.0,
+                        snap: 1e-9,
+                        known_room: None,
+                        budget: Some(Rc::new(budget)),
+                        ..BandGapBuildOptions::default()
+                    },
+                )
+                .expect("a valid pick");
+            }),
+        ));
+    }
+
+    builds
+}
+
+/// C# `Trio`: three chains of a captured Many Holes pick, built as the capture records.
+fn trio(capture: &str, picked: &[usize]) {
+    let fixture = Rc::new(LevelLineFixture::load(capture));
+    let mut budget = WorkBudget::new(WorkBudget::default_limit(fixture.indices.len() as i32))
+        .expect("a positive limit");
+    budget.input_is_float_stored = true;
+    let options = BandGapBuildOptions {
+        chord_tolerance: 0.0,
+        snap: 1e-9,
+        known_room: None,
+        budget: Some(Rc::new(budget)),
+        seam_epsilon: fixture.seam_epsilon,
+        sharp_turn_degrees: fixture.sharp_turn_degrees,
+        fillet_segments: fixture.segments,
+    };
+    build_chains(&fixture, picked, fixture.size, &options);
 }
 
 fn strip() -> LevelLineMesh {
