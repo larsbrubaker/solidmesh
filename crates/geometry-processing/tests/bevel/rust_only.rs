@@ -4,6 +4,8 @@
 
 #[path = "rust_only_bevel_core_leaf_tests.rs"]
 pub(crate) mod rust_only_bevel_core_leaf_tests;
+#[path = "rust_only_bevel_level_line_watch_tests.rs"]
+pub(crate) mod rust_only_bevel_level_line_watch_tests;
 #[path = "rust_only_bevel_r1p01_mesh_tests.rs"]
 pub(crate) mod rust_only_bevel_r1p01_mesh_tests;
 #[path = "rust_only_bevel_r1p01_meter_tests.rs"]

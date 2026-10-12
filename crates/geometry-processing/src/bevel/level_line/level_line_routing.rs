@@ -3,14 +3,16 @@
 //! `LevelLineRouting`'s process-wide switch ([`use_level_line`], [`reset_to_the_default`],
 //! [`turn_on_for_the_running_app`]), its route diagnostics ([`last_route`], [`first_route`]) and the
 //! switch's readings of a setting ([`reads_as_on`], [`reads_as_off`],
-//! [`the_running_app_wants_it_on`]). The watch slots land with later packages.
+//! [`the_running_app_wants_it_on`]) and its test seams ([`watch`], [`watch_room`],
+//! [`watch_budget`]).
 //!
 //! C#'s statics stay process-wide here (the bevel-core decision on process-wide settings), made
 //! thread-safe because the kernel runs on worker threads: an atomic for the switch, a mutex for
-//! the route strings.
+//! the route strings and the chain and room watches. The budget watch alone is per thread, because
+//! the allowances it is handed are single-threaded (`Rc`).
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{LazyLock, Mutex, MutexGuard};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 use vector_math::Vector3;
 
@@ -101,6 +103,49 @@ pub fn reset_to_the_default() {
     ));
 }
 
+/// What [`watch`] is handed: every pick the app route is about to give the kernel.
+pub type ChainWatch = Arc<dyn Fn(&LevelLineChainWatch) + Send + Sync>;
+
+/// What [`watch_room`] is handed: the known room the app route is about to give the build.
+pub type RoomWatch = Arc<dyn Fn(Option<f64>) + Send + Sync>;
+
+/// C#'s `Watch` and `WatchRoom`.
+static WATCHES: Mutex<(Option<ChainWatch>, Option<RoomWatch>)> = Mutex::new((None, None));
+
+fn watches() -> MutexGuard<'static, (Option<ChainWatch>, Option<RoomWatch>)> {
+    // Two plain slots, whole after any write: a poisoned lock's data is still good.
+    WATCHES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// C# `LevelLineRouting.Watch` (get): handed every chain the app route is about to give the
+/// kernel, before it gives it. A test seam only - nothing in the app sets it, and `None` (the
+/// normal case) costs one check per pass. It exists so a defect the SWEEP finds can be carried
+/// into the kernel's own tests as a fixture without the test having to rebuild the app's pick,
+/// features and working mesh for itself.
+pub fn watch() -> Option<ChainWatch> {
+    watches().0.clone()
+}
+
+/// C# `LevelLineRouting.Watch` (set).
+pub fn set_watch(watch: Option<ChainWatch>) {
+    watches().0 = watch;
+}
+
+/// C# `LevelLineRouting.WatchRoom` (get): handed the room the app route is about to give
+/// `BandGap.Build` as its known room (`None` when it gives none), once that room is read. A test
+/// seam like [`watch`], and separate from it because [`watch`] fires BEFORE the room read - a dump
+/// may cancel there and never pay for it.
+pub fn watch_room() -> Option<RoomWatch> {
+    watches().1.clone()
+}
+
+/// C# `LevelLineRouting.WatchRoom` (set).
+pub fn set_watch_room(watch: Option<RoomWatch>) {
+    watches().1 = watch;
+}
+
 /// C# `LevelLineChainWatch`: the whole PICK exactly as the app route hands it to `BandGap.Build`,
 /// for `LevelLineRouting.Watch`. Plain data so a test can write it out and read it back.
 ///
@@ -110,8 +155,9 @@ pub fn reset_to_the_default() {
 /// members have no default, so none is written here.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LevelLineChainWatch {
-    /// The pick's name, as the route labels it.
-    pub pick: String,
+    /// The pick's name, as the route labels it; `None` (C#'s null) where the route names none,
+    /// which the app route never does.
+    pub pick: Option<String>,
     /// The mesh's vertex positions.
     pub positions: Vec<Vector3>,
     /// The mesh's triangles, as three vertex indices each.
