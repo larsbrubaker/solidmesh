@@ -4,14 +4,19 @@
 //! not is named with its reason - and only the number of passes moves. C# `[Arguments]` cases are
 //! one test each, suffixed with the argument.
 
+use std::collections::HashSet;
+
+use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
 use geometry_processing::bevel::level_line::pick_validation;
 use geometry_processing::bevel::level_line::{
-    BandProfile, ChainsThatCannotFit, RoomCandidate, RoomReading, RoomReadingKind, RoomSource,
+    BandGapRefusal, BandProfile, ChainsThatCannotFit, RoomCandidate, RoomReading, RoomReadingKind,
+    RoomSource,
 };
 use vector_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
+use crate::level_line_test_geometry::cube_solid;
 use crate::several_chains_fixtures::{self, FOLD_DEGREES};
 
 /// C#'s `BandGap.ReadRoom(positions, indices, chains, closed, feature, BandProfile.Chamfer, 1e-9,
@@ -70,6 +75,107 @@ fn chains_that_stand_apart_name_no_pair() {
     let (_, _, chains) = several_chains_fixtures::named("A");
 
     assert_eq!(pick_validation::every_touching_pair(&chains).len(), 0);
+}
+
+/// Reading every pair does not change what the build refuses: the FIRST pair of the list that is
+/// not a CORNER is, bit for bit, the pair `BandGapRefusal::ChainsTouch` names. Here the rim and 4-0
+/// meet at the corner 4, which is built rather than refused; 4-0 and 0-1 meet end to end at 0 with
+/// only two picked edges there.
+#[test]
+fn the_first_pair_is_still_what_the_refusal_names() {
+    let (positions, indices) = cube_solid(1.0);
+    let feature = feature_edges_over(&positions, &indices, FOLD_DEGREES);
+    let chains = vec![vec![4, 5, 6, 7], vec![4, 0], vec![0, 1]];
+    let closed = [true, false, false];
+
+    let built = band_gap_entry_points::build_pick(
+        &positions,
+        &indices,
+        &chains,
+        &closed,
+        Some(feature),
+        0.1,
+        BandProfile::Chamfer,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the pick builds or refuses by name");
+    let corner_vertices: HashSet<i32> = pick_validation::corners_of(&chains, &closed, false)
+        .iter()
+        .map(|c| c.vertex)
+        .collect();
+    let first = pick_validation::every_touching_pair(&chains)
+        .into_iter()
+        .find(|p| !corner_vertices.contains(&p.2))
+        .expect("a pair that is not a corner");
+    assert_eq!(first, (1, 2, 0));
+
+    assert_eq!(built.refusal, BandGapRefusal::ChainsTouch);
+    assert_eq!(
+        (
+            built.offending_chain,
+            built.other_chain,
+            built.offending_vertex
+        ),
+        first
+    );
+}
+
+/// Fixture C - a hole 0.3 from the plate's rim, the pick's room set by the two chains closing on
+/// each other - at a size over the PAIR's room but under what either chain has alone names exactly
+/// ONE chain, and the survivor really does fit: its own reading stands at or above the size and it
+/// builds.
+#[test]
+fn a_pair_too_tight_for_both_drops_one_and_the_survivor_builds() {
+    let (positions, indices, chains) = several_chains_fixtures::named("C");
+    let reading = read_room(&positions, &indices, &chains);
+
+    // Between the pair's room (the 0.3 gap shared between two bands) and the 0.3 one band alone
+    // reaches.
+    let size = 0.25;
+    assert!(
+        reading.room < size,
+        "the pick as a whole does not fit at this size: {}",
+        reading.room
+    );
+
+    let cannot_fit = ChainsThatCannotFit::read(&reading, size);
+
+    assert_eq!(
+        cannot_fit.dropped.len(),
+        1,
+        "dropping one of the two gives the other the whole gap"
+    );
+    assert_eq!(cannot_fit.unresolved.len(), 0);
+    assert_eq!(
+        cannot_fit.dropped[0].because.kind,
+        RoomReadingKind::ChainToChain
+    );
+
+    let survivors: Vec<Vec<i32>> = chains
+        .iter()
+        .enumerate()
+        .filter(|&(k, _)| k as i32 != cannot_fit.dropped[0].chain)
+        .map(|(_, c)| c.clone())
+        .collect();
+    let of_survivors = read_room(&positions, &indices, &survivors);
+    assert!(
+        of_survivors.room >= size,
+        "what is left must really fit, or the pass was wasted: {}",
+        of_survivors.room
+    );
+
+    let built = band_gap_entry_points::build_pick(
+        &positions,
+        &indices,
+        &survivors,
+        &vec![true; survivors.len()],
+        Some(feature_edges_over(&positions, &indices, FOLD_DEGREES)),
+        size,
+        BandProfile::Chamfer,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the survivors build or refuse by name");
+    assert_eq!(built.refusal, BandGapRefusal::None);
 }
 
 /// A size the whole pick has room for names nobody.

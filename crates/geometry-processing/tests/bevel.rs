@@ -5,6 +5,8 @@
 mod band_cut_tests;
 #[path = "bevel/band_gap_tests.rs"]
 mod band_gap_tests;
+#[path = "bevel/band_side_end_tag_tests.rs"]
+mod band_side_end_tag_tests;
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
@@ -83,18 +85,30 @@ mod chain_field_end_ray_tests;
 mod chain_field_fixtures;
 #[path = "bevel/chain_field_tests.rs"]
 mod chain_field_tests;
+#[path = "bevel/chain_to_chain_room_tests.rs"]
+mod chain_to_chain_room_tests;
 #[path = "bevel/clipped_cell_bound_tests.rs"]
 mod clipped_cell_bound_tests;
+#[path = "bevel/convex_end_ray_room_tests.rs"]
+mod convex_end_ray_room_tests;
+#[path = "bevel/crease_dies_out_fixtures.rs"]
+mod crease_dies_out_fixtures;
 #[path = "bevel/crease_run_out_tests.rs"]
 mod crease_run_out_tests;
 #[path = "bevel/degenerate_triangle_refinement_tests.rs"]
 mod degenerate_triangle_refinement_tests;
+#[path = "bevel/encroaching_side_room_tests.rs"]
+mod encroaching_side_room_tests;
+#[path = "bevel/end_face_room_tests.rs"]
+mod end_face_room_tests;
 #[path = "bevel/end_plane_trim_corner_tests.rs"]
 mod end_plane_trim_corner_tests;
 #[path = "bevel/exact_refinement_tests.rs"]
 mod exact_refinement_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
+#[path = "bevel/fade_end_room_tests.rs"]
+mod fade_end_room_tests;
 #[path = "bevel/fifteen_mm_room_reading_tests.rs"]
 mod fifteen_mm_room_reading_tests;
 #[path = "bevel/fillet_arc_carry_tests.rs"]
@@ -131,6 +145,8 @@ mod hull_clip_tests;
 mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
+#[path = "bevel/known_room_refuses_first_tests.rs"]
+mod known_room_refuses_first_tests;
 #[path = "bevel/level_line_feature_edges.rs"]
 mod level_line_feature_edges;
 #[path = "bevel/level_line_fixture.rs"]
@@ -139,6 +155,8 @@ mod level_line_fixture;
 mod level_line_room_geometry;
 #[path = "bevel/level_line_test_geometry.rs"]
 mod level_line_test_geometry;
+#[path = "bevel/level_line_test_solids.rs"]
+mod level_line_test_solids;
 #[path = "bevel/lobed_prism_meshes.rs"]
 mod lobed_prism_meshes;
 #[path = "bevel/longest_edge_bisection_tests.rs"]
@@ -159,10 +177,14 @@ mod no_duplicate_vertex_tests;
 mod nose_in_notch_mixed_corners;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
 mod nose_in_notch_test_meshes;
+#[path = "bevel/one_room_reading_tests.rs"]
+mod one_room_reading_tests;
 #[path = "bevel/open_chain_fixtures.rs"]
 mod open_chain_fixtures;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
+#[path = "bevel/parallel_edges_room_tests.rs"]
+mod parallel_edges_room_tests;
 #[path = "bevel/pick_field_tests.rs"]
 mod pick_field_tests;
 #[path = "bevel/pyramid_recess_test_meshes.rs"]
@@ -429,6 +451,8 @@ mod topology_test_meshes;
 mod two_mouths_in_one_facet_mesh;
 #[path = "bevel/union_of_balls_field_tests.rs"]
 mod union_of_balls_field_tests;
+#[path = "bevel/usable_room_tests.rs"]
+mod usable_room_tests;
 #[path = "bevel/virtual_rail_tests.rs"]
 mod virtual_rail_tests;
 #[path = "bevel/warped_wall_test_meshes.rs"]
