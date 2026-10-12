@@ -111,8 +111,9 @@ fn the_sections_build_the_same_bore_mouth_wherever_the_part_stands() {
     );
 }
 
-/// The moved build's signature against the identity build's, as the numbers that differ.
-fn how_it_differs_from(moved: &TopologySignature, at_the_origin: &TopologySignature) -> String {
+/// C# `HowItDiffersFrom` (both robustness classes carry it): the moved build's signature against
+/// the identity build's, as the numbers that differ.
+pub fn how_it_differs_from(moved: &TopologySignature, at_the_origin: &TopologySignature) -> String {
     let mut differences = Vec::new();
 
     if moved.vertices != at_the_origin.vertices {

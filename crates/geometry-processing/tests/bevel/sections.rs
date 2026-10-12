@@ -16,6 +16,8 @@ pub(crate) mod section_blend_fence_tests;
 pub(crate) mod section_corner_tests;
 #[path = "section_edge_loop_and_face_tests.rs"]
 pub(crate) mod section_edge_loop_and_face_tests;
+#[path = "section_every_pick_matrix_tests.rs"]
+pub(crate) mod section_every_pick_matrix_tests;
 #[path = "section_face_rebuild_tests.rs"]
 pub(crate) mod section_face_rebuild_tests;
 #[path = "section_fan_remesh_tests.rs"]
@@ -50,6 +52,8 @@ pub(crate) mod section_robustness_tests;
 pub(crate) mod section_room_split_crease_tests;
 #[path = "section_room_tests.rs"]
 pub(crate) mod section_room_tests;
+#[path = "section_routed_accuracy_reading_tests.rs"]
+pub(crate) mod section_routed_accuracy_reading_tests;
 #[path = "section_routed_pass_tests.rs"]
 pub(crate) mod section_routed_pass_tests;
 #[path = "section_routing_opt_in_tests.rs"]

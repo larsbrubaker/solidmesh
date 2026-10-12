@@ -11,6 +11,10 @@ pub(crate) mod bevel_around_center_tip_dihedrals;
 pub(crate) mod bevel_obstruction_test_meshes;
 #[path = "bore_test_meshes.rs"]
 pub(crate) mod bore_test_meshes;
+#[path = "bore_test_meshes_barrel_port.rs"]
+pub(crate) mod bore_test_meshes_barrel_port;
+#[path = "bore_test_meshes_edge_bore.rs"]
+pub(crate) mod bore_test_meshes_edge_bore;
 #[path = "edge_loop_and_face_test_mesh.rs"]
 pub(crate) mod edge_loop_and_face_test_mesh;
 #[path = "gusset_test_meshes.rs"]

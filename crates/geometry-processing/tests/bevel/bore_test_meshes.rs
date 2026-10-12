@@ -275,7 +275,9 @@ pub fn split_the_edge_between(mesh: &mut Mesh, from: Vector3, to: Vector3, at: f
         });
 
         let Some(carries) = carries else {
-            replaced.add(face.v0, face.v1, face.v2, &mesh.vertices);
+            // C# keeps the face itself, with the normal it was made with - before any stand-off
+            // moved its vertices - and the builder reads that normal.
+            replaced.add_with_normal(face.v0, face.v1, face.v2, face.normal);
             continue;
         };
 

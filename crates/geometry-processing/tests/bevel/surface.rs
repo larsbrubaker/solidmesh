@@ -5,10 +5,14 @@
 
 #[path = "surface_around_center_tests.rs"]
 pub(crate) mod surface_around_center_tests;
+#[path = "surface_barrel_port_mouth_tests.rs"]
+pub(crate) mod surface_barrel_port_mouth_tests;
 #[path = "surface_bevel_plan_tests.rs"]
 pub(crate) mod surface_bevel_plan_tests;
 #[path = "surface_bevel_robustness_tests.rs"]
 pub(crate) mod surface_bevel_robustness_tests;
+#[path = "surface_bore_mouth_tests.rs"]
+pub(crate) mod surface_bore_mouth_tests;
 #[path = "surface_chain_opens_at_the_junction_tests.rs"]
 pub(crate) mod surface_chain_opens_at_the_junction_tests;
 #[path = "surface_clip_classifies_one_point_one_way_tests.rs"]
@@ -29,6 +33,8 @@ pub(crate) mod surface_crease_faces_are_one_surface_tests;
 pub(crate) mod surface_crossed_end_carries_what_stands_before_the_foot_tests;
 #[path = "surface_cut_ruler_tests.rs"]
 pub(crate) mod surface_cut_ruler_tests;
+#[path = "surface_edge_bore_mouth_tests.rs"]
+pub(crate) mod surface_edge_bore_mouth_tests;
 #[path = "surface_end_cut_leaves_the_die_points_chord_alone_tests.rs"]
 pub(crate) mod surface_end_cut_leaves_the_die_points_chord_alone_tests;
 #[path = "surface_end_gains_the_section_reading_tests.rs"]
@@ -73,8 +79,16 @@ pub(crate) mod surface_oblique_round_corner_tests;
 pub(crate) mod surface_plan_cost_tests;
 #[path = "surface_raked_bore_band_outline_tests.rs"]
 pub(crate) mod surface_raked_bore_band_outline_tests;
+#[path = "surface_raked_bore_blend_seam_tests.rs"]
+pub(crate) mod surface_raked_bore_blend_seam_tests;
+#[path = "surface_raked_bore_corner_twin_tests.rs"]
+pub(crate) mod surface_raked_bore_corner_twin_tests;
+#[path = "surface_raked_bore_mouth_claim_tests.rs"]
+pub(crate) mod surface_raked_bore_mouth_claim_tests;
 #[path = "surface_raked_bore_mouth_tests.rs"]
 pub(crate) mod surface_raked_bore_mouth_tests;
+#[path = "surface_raked_bore_split_chord_tests.rs"]
+pub(crate) mod surface_raked_bore_split_chord_tests;
 #[path = "surface_rib_foot_junction_tests.rs"]
 pub(crate) mod surface_rib_foot_junction_tests;
 #[path = "surface_rim_closes_at_a_knife_edge_tests.rs"]

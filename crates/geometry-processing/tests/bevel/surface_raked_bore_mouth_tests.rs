@@ -7,10 +7,9 @@
 //!
 //! Also holds the class's shared constants and the raked mouth's walkback
 //! ([`the_raked_mouth_walked_back`]), which the other raked-bore classes read. The straight bore's
-//! half (`SurfaceBoreMouthTests.cs`) builds through `SurfaceTestBuild.TryBevel` and waits on slice
-//! S28, as do this half's build-side helpers (`AssertNothingStandsInTheBore`,
-//! `AssertEveryRakedBlendVertexStandsARadiusFromItsOwnCentreLine`), which land with the tests that
-//! call them.
+//! half (`SurfaceBoreMouthTests.cs`) is `surface_bore_mouth_tests.rs`, which also holds this half's
+//! build-side readings (`AssertNothingStandsInTheBore`,
+//! `AssertEveryRakedBlendVertexStandsARadiusFromItsOwnCentreLine` and the raked mouth's edges).
 
 use std::rc::Rc;
 use std::sync::Arc;
