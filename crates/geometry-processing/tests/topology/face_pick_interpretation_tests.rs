@@ -3,28 +3,26 @@
 //! of the two faces its edge divides, and a click in the middle of a face offers that face's rim
 //! and nothing else. The region is flooded at the pick's FLAT tolerance, not at the thirty degree
 //! curve tolerance a chain walks with.
-//!
-//! Not yet ported:
-//! - `ACylinderRimEdgeOffersTheChainAndTheWallFacetWithTheCapsRimCollapsedIntoTheChain` needs
-//!   `TopologyTestMeshes.CreateCylinder`, which is `VertexSourceToMesh.Revolve` (Phase 2e, not
-//!   yet in polygon-mesh); the fixture joins `tests/topology/` with it.
-//! - `AGroupOnAPartlyOpenFaceIsWarnedAboutRatherThanRefused` needs `Bevel/BevelGroupTools.TryBuild`
-//!   (a later Phase 5C Bevel slice).
 
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use geometry_processing::bevel::bevel_group_tools::{self, BevelGroupToolsOptions};
+use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{
-    bevel_edge_group_resolver, pick_interpretations, BevelSelectionKind, FaceRegionCache,
-    FeatureEdge, FeatureEdgeChain, FeatureEdgeSet, PickInterpretation, PickInterpretationKind,
+    bevel_edge_group_resolver, pick_interpretations, BevelSelectionKind, FaceGroup,
+    FaceRegionCache, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet, PickInterpretation,
+    PickInterpretationKind,
 };
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
 use crate::split_crease_test_meshes;
+use crate::topology_test_meshes::create_cylinder;
 
 const CUBE_SIZE: f64 = 20.0;
+const CYLINDER_SIDES: i32 = 64;
 
 fn assert_within(actual: f64, expected: f64, tolerance: f64) {
     assert!(
@@ -281,6 +279,86 @@ fn a_face_bounded_partly_by_an_open_edge_offers_the_rest_of_its_rim() {
             "an edge along the open side has nothing to bevel against and cannot be in the rim"
         );
     }
+}
+
+/// A cylinder rim edge offers the collinear run, the tangent chain round the whole rim, and the
+/// wall facet it was clicked on - with the cap's rim collapsed into the chain, since it is the same
+/// 64 edges.
+#[test]
+fn a_cylinder_rim_edge_offers_the_chain_and_the_wall_facet_with_the_caps_rim_collapsed_into_the_chain(
+) {
+    let cylinder = Arc::new(create_cylinder(10.0, 10.0, CYLINDER_SIDES));
+    let readings = readings_on_edge_at(&cylinder, 5.0);
+
+    assert_eq!(readings[0].kind(), PickInterpretationKind::CollinearRun);
+    assert_eq!(readings[0].count(), 1);
+
+    assert_eq!(readings[1].kind(), PickInterpretationKind::TangentChain);
+    assert_eq!(
+        readings[1].count(),
+        CYLINDER_SIDES as usize,
+        "read at ten degrees the wall is one surface and the rim walks the whole way round"
+    );
+
+    assert_eq!(readings[2].kind(), PickInterpretationKind::FaceGroup);
+    assert_eq!(
+        readings[2].count(),
+        4,
+        "at the pick's own tolerance the wall is facets, so the face clicked on is one quad"
+    );
+
+    assert_eq!(
+        readings.len(),
+        3,
+        "the cap's rim is the same 64 edges as the chain, so it is that reading told twice"
+    );
+}
+
+/// A group on a partly open face is warned about rather than refused: a partial rim is a warning
+/// about the part, naming how many boundary edges had nothing to bevel against.
+#[test]
+fn a_group_on_a_partly_open_face_is_warned_about_rather_than_refused() {
+    let open = Arc::new(split_crease_test_meshes::create_bar_with_a_wall_missing());
+    let features = Arc::new(FeatureEdgeSet::create(&open));
+    let top = index_of_face_with_normal(&open, Vector3::new(0.0, 0.0, 1.0));
+
+    let (readings, region) = pick_interpretations::build_for_face(
+        &open,
+        None,
+        &features,
+        top,
+        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+        None,
+    )
+    .unwrap();
+    let region = region.expect("the face's region");
+
+    let resolution = bevel_edge_group_resolver::resolve(readings[0].group(), &open);
+
+    assert!(
+        resolution.is_resolved(),
+        "the three closed sides of the face are a real selection"
+    );
+
+    let built =
+        bevel_group_tools::try_build(&resolution, true, 1.0, 4, BevelGroupToolsOptions::default())
+            .unwrap_or_else(|refusal| {
+                panic!(
+                    "a partial rim is a warning about the part, not a refusal of the group: {:?}",
+                    refusal.reason
+                )
+            });
+
+    let warnings = built.warnings.expect("the partial rim is said");
+    let open_edges = region.open_boundary_mesh_edges().len() as i32;
+
+    assert!(
+        warnings.iter().any(
+            |warning| warning.code() == BevelAdvisoryCode::FaceRegionRimIsPartial
+                && warning.args().first() == Some(&BevelAdvisoryArg::Int(open_edges))
+        ),
+        "the warning has to name how many edges of the boundary had nothing to bevel against"
+    );
 }
 
 /// One flood per face, however many times it is asked for.

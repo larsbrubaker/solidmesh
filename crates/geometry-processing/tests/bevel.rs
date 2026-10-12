@@ -9,6 +9,8 @@ mod band_cut_tests;
 mod band_gap_tests;
 #[path = "bevel/band_side_end_tag_tests.rs"]
 mod band_side_end_tag_tests;
+#[path = "bevel/bead_sequence.rs"]
+mod bead_sequence;
 #[path = "bevel/bevel_arc_chording_tests.rs"]
 mod bevel_arc_chording_tests;
 #[path = "bevel/bevel_bead_batch_tests.rs"]
@@ -19,6 +21,8 @@ mod bevel_bead_closes_over_stand_off_tests;
 mod bevel_bead_exit_tests;
 #[path = "bevel/bevel_bead_runs_off_its_wall_tests.rs"]
 mod bevel_bead_runs_off_its_wall_tests;
+#[path = "bevel/bevel_blocked_crease_end_tests.rs"]
+mod bevel_blocked_crease_end_tests;
 #[path = "bevel/bevel_cap_clip_tests.rs"]
 mod bevel_cap_clip_tests;
 #[path = "bevel/bevel_cap_stand_off_tests.rs"]
@@ -27,6 +31,8 @@ mod bevel_cap_stand_off_tests;
 mod bevel_chain_linker_rim_closure_tests;
 #[path = "bevel/bevel_collinear_run_fold_tests.rs"]
 mod bevel_collinear_run_fold_tests;
+#[path = "bevel/bevel_corner_void_tests.rs"]
+mod bevel_corner_void_tests;
 #[path = "bevel/bevel_face_fit_cap_tests.rs"]
 mod bevel_face_fit_cap_tests;
 #[path = "bevel/bevel_face_fit_concave_collision_tests.rs"]
@@ -43,6 +49,8 @@ mod bevel_gusset_poke_through_tests;
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_obstruction_test_meshes.rs"]
 mod bevel_obstruction_test_meshes;
+#[path = "bevel/bevel_oversize_run_out_tests.rs"]
+mod bevel_oversize_run_out_tests;
 #[path = "bevel/bevel_pair_corner_recognition_tests.rs"]
 mod bevel_pair_corner_recognition_tests;
 #[path = "bevel/bevel_pair_corner_trim_tests.rs"]
@@ -59,6 +67,8 @@ mod bevel_published_mesh_sliver_tests;
 mod bevel_published_mesh_tests;
 #[path = "bevel/bevel_rebuild_advisories_tests.rs"]
 mod bevel_rebuild_advisories_tests;
+#[path = "bevel/bevel_recess_apex_run_out_tests.rs"]
+mod bevel_recess_apex_run_out_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]
 mod bevel_run_partners_tests;
 #[path = "bevel/bevel_run_taper_tests.rs"]
@@ -69,6 +79,10 @@ mod bevel_runs_out_under_the_wall_tests;
 mod bevel_seam_ring_tests;
 #[path = "bevel/bevel_second_pass_merge_tests.rs"]
 mod bevel_second_pass_merge_tests;
+#[path = "bevel/bevel_shadow_body_tests.rs"]
+mod bevel_shadow_body_tests;
+#[path = "bevel/bevel_shadow_clip_tests.rs"]
+mod bevel_shadow_clip_tests;
 #[path = "bevel/bevel_source_hull_tests.rs"]
 mod bevel_source_hull_tests;
 #[path = "bevel/bevel_source_round_tests.rs"]
@@ -83,8 +97,12 @@ mod bevel_t_vertex_sliver_repair_tests;
 mod bevel_taper_fallback_tests;
 #[path = "bevel/bevel_thin_sliver_conditioning_tests.rs"]
 mod bevel_thin_sliver_conditioning_tests;
+#[path = "bevel/bevel_three_run_corner_tests.rs"]
+mod bevel_three_run_corner_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
 mod bevel_void_wedge_section_tests;
+#[path = "bevel/bevel_volume_probes.rs"]
+mod bevel_volume_probes;
 #[path = "bevel/boolean_kernel_gate.rs"]
 mod boolean_kernel_gate;
 #[path = "bevel/bore_test_meshes.rs"]
@@ -255,6 +273,8 @@ mod input_needle_strip_tests;
 mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
+#[path = "bevel/kernel_cut_helpers.rs"]
+mod kernel_cut_helpers;
 #[path = "bevel/known_room_refuses_first_tests.rs"]
 mod known_room_refuses_first_tests;
 #[path = "bevel/land_sliver_joins_two_bands_tests.rs"]
