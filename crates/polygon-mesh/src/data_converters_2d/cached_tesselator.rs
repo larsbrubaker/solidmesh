@@ -5,8 +5,8 @@
 //! and the intersections it combines go into `VerticesCache`, and every triangle corner it
 //! emits goes into `IndicesCache` with the edge flag in force. Here tess2-rust runs the same
 //! SGI algorithm (NonZero winding, C#'s default, triangles only, as C#'s edge-flag callback
-//! forces) and its output is read back into the same two caches. Triangle order and the corner
-//! each triangle starts on may differ from C#'s render callbacks (divergence 230).
+//! forces) and its render order fills the same two caches: C#'s vertex numbering (input
+//! vertices, then combined ones) and C#'s triangle order, corner for corner.
 
 use agg_path::vertex_data::VertexData;
 use agg_path::vertex_source::VertexSource;
@@ -97,25 +97,26 @@ impl CachedTesselator {
             return;
         }
 
-        let vertices = tess.vertices();
-        self.vertices_cache = vertices
-            .as_chunks::<2>()
-            .0
+        // tess2-rust's render order is the callback GLU port's: every input vertex in order, then
+        // each combined vertex as the sweep made it (C# `AddVertex` and `CallCombine` both append
+        // to `VerticesCache`, so unused and repeated positions are kept), and the triangles in
+        // the order `RenderLonelyTriangles` emits them, with the edge flag in force per corner.
+        let Some(order) = tess.render_order() else {
+            return;
+        };
+        self.vertices_cache = order
+            .vertices
             .iter()
-            .map(|xy| Vector2::new(xy[0], xy[1]))
+            .map(|v| Vector2::new(v[0], v[1]))
             .collect();
-
-        let elements = tess.elements();
-        let flags = tess.edge_flags();
-        for (corner, &index) in elements.iter().enumerate() {
-            if index == tess2_rust::tess::TESS_UNDEF {
-                continue;
-            }
-            self.indices_cache.push(RenderIndices {
-                index: index as i32,
-                is_edge: flags.get(corner).copied().unwrap_or(0) != 0,
-            });
-        }
+        self.indices_cache = order
+            .indices
+            .iter()
+            .map(|r| RenderIndices {
+                index: r.index as i32,
+                is_edge: r.is_edge,
+            })
+            .collect();
     }
 }
 
@@ -166,6 +167,69 @@ mod tests {
             .filter(|r| r.is_edge)
             .count();
         assert_eq!(edges, 8);
+    }
+
+    /// C#'s callback order on the square with a hole: the caches hold the eight input vertices
+    /// in input order and the triangles as agg-sharp's GLU port renders them (the sequence
+    /// tess2-rust's `render_order` tests pin and its lion conformance test checks against
+    /// recorded C# output), so a mesh built from them has C#'s vertex and face order.
+    #[test]
+    fn rust_only_square_with_hole_caches_in_csharp_render_order() {
+        let mut tesselator = CachedTesselator::new();
+        tesselator.send_vertex_source(&square_with_hole());
+        let positions: Vec<(f64, f64)> = tesselator
+            .vertices_cache
+            .iter()
+            .map(|v| (v.x, v.y))
+            .collect();
+        assert_eq!(
+            positions,
+            vec![
+                (0.0, 0.0),
+                (10.0, 0.0),
+                (10.0, 10.0),
+                (0.0, 10.0),
+                (3.0, 3.0),
+                (3.0, 7.0),
+                (7.0, 7.0),
+                (7.0, 3.0),
+            ]
+        );
+        let corners: Vec<(i32, bool)> = tesselator
+            .indices_cache
+            .iter()
+            .map(|r| (r.index, r.is_edge))
+            .collect();
+        let (f, t) = (false, true);
+        assert_eq!(
+            corners,
+            vec![
+                (0, f),
+                (4, f),
+                (3, t),
+                (4, f),
+                (0, t),
+                (1, f),
+                (4, f),
+                (1, f),
+                (7, t),
+                (7, f),
+                (1, f),
+                (6, t),
+                (3, f),
+                (5, f),
+                (2, t),
+                (5, f),
+                (3, f),
+                (4, t),
+                (2, f),
+                (5, t),
+                (6, f),
+                (2, f),
+                (6, f),
+                (1, t),
+            ]
+        );
     }
 
     #[test]
