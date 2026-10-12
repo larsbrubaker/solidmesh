@@ -4,7 +4,7 @@
 //! open end and at a junction ([`JunctionSection`]), the builder of one chain's run of sections
 //! ([`SectionRun`]), the room reading ([`SectionRoomCache`]), the surface walk
 //! ([`SurfaceWalkResult`]) and the router between the legacy construction and the sections
-//! ([`section_routing`]), with the region re-mesh ([`section_fan_remesh`]) and the mixed
+//! ([`section_routing`]), the cut of a run's smooth side ([`section_smooth_side`]), with the region re-mesh ([`section_fan_remesh`]) and the mixed
 //! corner's reading ([`section_mixed_corner`]).
 
 pub mod bevel_section;
@@ -28,7 +28,12 @@ pub mod section_room_smooth_side;
 pub mod section_routing;
 pub mod section_routing_clauses;
 pub mod section_run;
+pub mod section_smooth_side;
 pub mod section_smooth_side_boundary;
+pub mod section_smooth_side_facets;
+pub mod section_smooth_side_holes;
+pub mod section_smooth_side_junction_rim;
+pub mod section_smooth_side_triangulate;
 pub mod section_split_blend;
 pub mod section_surface_walk;
 pub mod section_surface_walk_faces;

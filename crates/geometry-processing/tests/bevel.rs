@@ -281,6 +281,8 @@ mod section_room_split_crease_tests;
 mod section_routing_opt_in_tests;
 #[path = "bevel/section_routing_partition_tests.rs"]
 mod section_routing_partition_tests;
+#[path = "bevel/section_smooth_side_bridged_holes_tests.rs"]
+mod section_smooth_side_bridged_holes_tests;
 #[path = "bevel/section_straight_bore_tests.rs"]
 mod section_straight_bore_tests;
 #[path = "bevel/section_surface_walk_fold_tests.rs"]
@@ -381,6 +383,8 @@ mod thread_cpu_time;
 mod top_and_round_corner_room_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
+#[path = "bevel/two_mouths_in_one_facet_mesh.rs"]
+mod two_mouths_in_one_facet_mesh;
 #[path = "bevel/union_of_balls_field_tests.rs"]
 mod union_of_balls_field_tests;
 #[path = "bevel/virtual_rail_tests.rs"]
