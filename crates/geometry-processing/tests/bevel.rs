@@ -393,6 +393,8 @@ mod rust_only_bevel_slice8_tests;
 mod rust_only_bevel_slice9_tests;
 #[path = "bevel/rust_only_bevel_sliver_collapse_tests.rs"]
 mod rust_only_bevel_sliver_collapse_tests;
+#[path = "bevel/rust_only_section_smooth_seam_tests.rs"]
+mod rust_only_section_smooth_seam_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
 mod section_hanger_top_rim_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
@@ -513,6 +515,8 @@ mod surface_standing_feature_stretch_tests;
 mod surface_standing_feature_tail_and_cap_tests;
 #[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
 mod surface_strip_ends_on_the_hull_tests;
+#[path = "bevel/surface_strip_oblique_end_tests.rs"]
+mod surface_strip_oblique_end_tests;
 #[path = "bevel/surface_tangent_run_ends_tests.rs"]
 mod surface_tangent_run_ends_tests;
 #[path = "bevel/surface_test_chains.rs"]

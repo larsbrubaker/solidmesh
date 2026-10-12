@@ -53,7 +53,11 @@
 //! ([`surface_run_stops_short`]); the cap a leaning corner's run-out gives up
 //! ([`surface_mixed_corner_dual_cap`]); and a standing feature's bite out of a strip
 //! ([`SurfaceStripBittenByAFeature`]) and its faces extended out to the strip
-//! ([`surface_standing_feature_faces`]). The types land as type definitions; their methods, and
+//! ([`surface_standing_feature_faces`]); the band's outline borrowed across a chorded wall's
+//! creases ([`surface_band_outline`]), the stitch of one strip's quads between its two rings
+//! ([`surface_bevel_stitch`]), the builder's step that reads every standing feature into bites and
+//! notches ([`surface_builder_standing_features`]) and the mitre whose tip stands past the shared
+//! face's rim ([`SurfaceMitreOverTheFaceBeyond`]). The types land as type definitions; their methods, and
 //! the construction itself, land in later slices.
 //! ([`surface_convex_bite`]). And the pass's chain readings before any plan - the join of runs
 //! meeting end to end ([`surface_chain_join`]), the cut at every junction a chain passes through
@@ -68,12 +72,15 @@
 //! ([`surface_walkback_tangent_runs`]).
 
 mod surface_band_end;
+pub mod surface_band_outline;
 mod surface_band_runs_off_over_a_stretch;
 pub mod surface_band_runs_off_the_face_beyond;
 pub mod surface_bevel_crossings;
 mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
+pub mod surface_bevel_stitch;
 mod surface_bite_shared_sides;
+pub mod surface_builder_standing_features;
 mod surface_chain_end_reading;
 pub mod surface_chain_join;
 pub mod surface_chain_opens_at_the_junction;
@@ -103,6 +110,7 @@ mod surface_line;
 pub mod surface_mesh_closure;
 pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
+mod surface_mitre_over_the_face_beyond;
 pub mod surface_mitre_seam;
 pub mod surface_mitre_sector;
 mod surface_mixed_corner;
@@ -206,6 +214,7 @@ pub use surface_end_gains_the_section::SurfaceEndGainsTheSectionReading;
 pub use surface_face_carries_on::SurfaceFaceCarriesOnWayOn;
 pub use surface_facet_cut::SurfaceFacetCut;
 pub use surface_line::SurfaceLine;
+pub use surface_mitre_over_the_face_beyond::{SurfaceMitreHull, SurfaceMitreOverTheFaceBeyond};
 pub use surface_mixed_corner::SurfaceMixedCorner;
 pub use surface_mixed_corner_dual_canal::SurfaceMixedCornerDualCanal;
 pub use surface_mixed_corner_dual_frame::SurfaceMixedCornerDualFrame;
