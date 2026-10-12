@@ -269,6 +269,8 @@ mod rust_only_bevel_r3p02_tests;
 mod rust_only_bevel_r3p03_tests;
 #[path = "bevel/rust_only_bevel_r4p01_tests.rs"]
 mod rust_only_bevel_r4p01_tests;
+#[path = "bevel/rust_only_bevel_s18_tests.rs"]
+mod rust_only_bevel_s18_tests;
 #[path = "bevel/rust_only_bevel_section_routing_tests.rs"]
 mod rust_only_bevel_section_routing_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
@@ -311,6 +313,8 @@ mod section_straight_bore_tests;
 mod section_surface_walk_fold_tests;
 #[path = "bevel/section_surface_walk_roof.rs"]
 mod section_surface_walk_roof;
+#[path = "bevel/section_tapered_barrel_tests.rs"]
+mod section_tapered_barrel_tests;
 #[path = "bevel/section_walked_end_vertex_tests.rs"]
 mod section_walked_end_vertex_tests;
 #[path = "bevel/segment_cell_bound_tests.rs"]
@@ -401,6 +405,8 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/surface_standing_feature_tail_and_cap_tests.rs"]
+mod surface_standing_feature_tail_and_cap_tests;
 #[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
 mod surface_strip_ends_on_the_hull_tests;
 #[path = "bevel/surface_test_chains.rs"]

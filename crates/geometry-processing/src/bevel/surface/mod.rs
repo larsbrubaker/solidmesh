@@ -45,6 +45,16 @@
 //! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]), the rolled
 //! section's concave cap ([`surface_end_follows_the_walked_chords`]), the rim sewing of a section
 //! given up ([`surface_end_gives_up_the_section`]) and the convex bite's side reading
+//! ([`surface_convex_bite`]). And the pass's bookkeeping around the build: the groups sharing an
+//! edge linked as one selection ([`surface_shared_edge_network`]), a region and the cuts asked of it
+//! ([`SurfaceRegionWalkback`]), the room and the build agreeing on their run-offs
+//! ([`surface_run_off_agreement`]), the seams re-read after the later cuts
+//! ([`surface_seam_re_read`]) and the warning where a run stops short
+//! ([`surface_run_stops_short`]); the cap a leaning corner's run-out gives up
+//! ([`surface_mixed_corner_dual_cap`]); and a standing feature's bite out of a strip
+//! ([`SurfaceStripBittenByAFeature`]) and its faces extended out to the strip
+//! ([`surface_standing_feature_faces`]). The types land as type definitions; their methods, and
+//! the construction itself, land in later slices.
 //! ([`surface_convex_bite`]). And the pass's chain readings before any plan - the join of runs
 //! meeting end to end ([`surface_chain_join`]), the cut at every junction a chain passes through
 //! ([`surface_chain_opens_at_the_junction`]) and the crease a feature interrupts
@@ -95,6 +105,7 @@ mod surface_mixed_corner;
 pub mod surface_mixed_corner_bites;
 pub mod surface_mixed_corner_cut_edge;
 mod surface_mixed_corner_dual_canal;
+pub mod surface_mixed_corner_dual_cap;
 mod surface_mixed_corner_dual_frame;
 mod surface_mixed_corner_dual_grid;
 pub mod surface_mixed_corner_dual_wall;
@@ -118,6 +129,7 @@ pub mod surface_plan_band_ends;
 pub mod surface_plan_edge_reading;
 pub mod surface_plan_recipe;
 mod surface_region_face_grid;
+mod surface_region_walkback;
 pub mod surface_ring;
 pub mod surface_ring_ears;
 pub mod surface_roll_across_the_wall;
@@ -134,16 +146,22 @@ pub mod surface_room_standing_feature;
 pub mod surface_row_zip;
 pub mod surface_run_across;
 pub mod surface_run_across_walk;
+pub mod surface_run_off_agreement;
 pub mod surface_run_out_carry;
 pub mod surface_run_out_column_ends;
 mod surface_run_out_column_walk;
 mod surface_run_out_column_window;
 mod surface_run_out_meets_a_wall_band;
 mod surface_run_out_meets_the_band;
+pub mod surface_run_stops_short;
+pub mod surface_seam_re_read;
+pub mod surface_shared_edge_network;
 pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
+pub mod surface_standing_feature_faces;
 mod surface_standing_feature_withheld;
 mod surface_strip;
+mod surface_strip_bitten_by_a_feature;
 pub mod surface_strip_ends;
 pub mod surface_strip_ends_at_a_landing_notch;
 mod surface_strip_ends_on_the_hull;
@@ -193,6 +211,7 @@ pub use surface_mixed_junction::{
 pub use surface_mixed_junction_patch::SurfaceMixedJunctionPatchArrival;
 pub use surface_plan_recipe::SurfacePlanRecipe;
 pub use surface_region_face_grid::{nearest_on_the_triangle, SurfaceRegionFaceGrid};
+pub use surface_region_walkback::SurfaceRegionWalkback;
 pub use surface_roll_across_the_wall::{
     SurfaceRollAcrossTheWallLanding, SurfaceRollAcrossTheWallSides, SurfaceRollReading,
 };
@@ -212,6 +231,7 @@ pub use surface_standing_feature_withheld::{
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
 };
 pub use surface_strip::SurfaceStrip;
+pub use surface_strip_bitten_by_a_feature::SurfaceStripBittenByAFeature;
 pub use surface_strip_ends_on_the_hull::{
     SurfaceStripEndsOnTheHull, SurfaceStripEndsOnTheHullSupportingPlane,
 };
