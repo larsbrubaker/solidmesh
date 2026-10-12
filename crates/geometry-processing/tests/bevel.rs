@@ -293,8 +293,6 @@ mod open_mouth_arc_walk;
 mod opposite_sense_crease_tests;
 #[path = "bevel/opposite_sense_end_face_tests.rs"]
 mod opposite_sense_end_face_tests;
-#[path = "bevel/outline_prisms.rs"]
-mod outline_prisms;
 #[path = "bevel/parallel_edges_room_tests.rs"]
 mod parallel_edges_room_tests;
 #[path = "bevel/pick_field_tests.rs"]

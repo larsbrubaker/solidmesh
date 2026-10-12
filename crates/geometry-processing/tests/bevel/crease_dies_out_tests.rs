@@ -15,8 +15,8 @@ use crate::crease_dies_out_fixtures::{
     swollen_ridge_block_with_a_seam_copy, FOLD_DEGREES, PEAK_RIDGE, RING, SEAM_RING,
 };
 use crate::level_line_feature_edges::feature_edges_over;
+use crate::level_line_test_geometry::distance_to_surface;
 use crate::level_line_test_geometry::{signed_volume, winding_number};
-use crate::outline_prisms::distance_to_surface;
 use crate::several_chains_fixtures;
 use crate::sweep_mesh_measures;
 

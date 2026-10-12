@@ -1,12 +1,11 @@
 //! Port of `LevelLine/CreaseRunOutTests.cs`: where a fillet's run-out along an unpicked crease
 //! ends, against the Onshape control.
 
-use std::collections::HashMap;
-
 use geometry_processing::bevel::level_line::CreaseRunOut;
 use vector_math::math_helper::radians_to_degrees;
 use vector_math::Vector3;
 
+use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::nose_in_notch_test_meshes as nose;
 
@@ -47,7 +46,7 @@ fn the_built_nose_runs_out_at_both_ridge_ends_like_the_control() {
         &indices,
         &[chain],
         &[true],
-        &is_feature,
+        &*is_feature,
         1.0,
         16,
     );
@@ -192,42 +191,4 @@ fn built_nose() -> BuiltPick {
     ];
 
     (positions, indices, chain)
-}
-
-/// C# `LevelLineTestGeometry.FeatureEdgesOver`: an edge is a feature where it is not two
-/// triangles meeting within `degrees`.
-fn feature_edges_over(
-    positions: &[Vector3],
-    indices: &[(i32, i32, i32)],
-    degrees: f64,
-) -> impl Fn(i32, i32) -> bool {
-    let mut standing: HashMap<(i32, i32), Vec<usize>> = HashMap::new();
-    for (i, &(a, b, c)) in indices.iter().enumerate() {
-        for (p, q) in [(a, b), (b, c), (c, a)] {
-            let key = if p < q { (p, q) } else { (q, p) };
-            standing
-                .entry(key)
-                .or_insert_with(|| Vec::with_capacity(2))
-                .push(i);
-        }
-    }
-
-    let normals: Vec<Vector3> = indices
-        .iter()
-        .map(|&(a, b, c)| {
-            let pa = positions[a as usize];
-            (positions[b as usize] - pa)
-                .cross(positions[c as usize] - pa)
-                .get_normal()
-        })
-        .collect();
-    let limit = (degrees * std::f64::consts::PI / 180.0).cos();
-
-    move |a, b| {
-        let key = if a < b { (a, b) } else { (b, a) };
-        match standing.get(&key) {
-            Some(pair) if pair.len() == 2 => normals[pair[0]].dot(normals[pair[1]]) < limit,
-            _ => true,
-        }
-    }
 }

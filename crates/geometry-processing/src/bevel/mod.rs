@@ -1,52 +1,50 @@
-//! `MatterCAD.GeometryProcessing/Bevel`: the bevel itself. Ported so far: the advisories the
-//! kernel reports refusals and warnings with ([`BevelAdvisory`], [`BevelAdvisoryCode`],
-//! [`bevel_advisory_codes`]), and the first leaf cluster of the core: arc chording
-//! ([`bevel_arc_chording`]), the construction mode ([`BevelConstructionMode`]), the corner face
-//! ring ([`bevel_corner_face_ring`]), the second pass's crease merge ([`bevel_crease_merge`])
-//! and the end cap plane ([`BevelEndCap`]); and the second: the cross-section ear clip
-//! ([`bevel_profile_polygon`]), the selected ends at a corner ([`BevelMixedCornerEnds`]), the
-//! crease between two runs ([`bevel_pair_corner_crease`]), the partner's ball tube
-//! ([`BevelPartnerTube`]) and the analytic round ([`BevelRoundDescriptor`]); and the third: the
-//! shared seam ring ([`bevel_seam_ring`]), one-edge-one-tool ([`bevel_shared_edges`]), the
-//! per-tolerance surface labels ([`BevelSurfaceLabels`]), the straight surface walk
-//! ([`BevelSurfaceWalk`]), the float grid step ([`float_grid`]) and the level line's leaf records
-//! ([`level_line`]); and the fourth: more level-line leaves (field bounds and samples, the field
-//! traits, the segment box tree, gap loops and fill refusals), the section point pool
-//! ([`sections`]) and the surface construction's leaf records ([`surface`]); and the fifth: the
-//! seams a run's end stops on - a blend's handover ([`bevel_blend_seam`]) and a corner patch's
-//! drive-through and cap stand-off ([`bevel_corner_seam`]) - with the surface construction's
-//! vertex pool, closure gate, joint step and standing-feature reading ([`surface`]); and the
-//! sixth: which faces lie on a round ([`BevelRoundFaces`]), the convex cell bound, the flat
-//! end-face fill and the room's source ([`level_line`]), and the mixed corner's spine and the
-//! region face grid ([`surface`]); and the seventh: the profile and frame an edge's tool is drawn
-//! in ([`bevel_edge_tool_builder`]), the corner handover a run's end reads first
-//! ([`bevel_corner_handover`]), the mixed corner's blend records ([`BevelMixedBlend`],
-//! [`BevelMixedBlendSet`]) and the ring tidying after a clip ([`surface`]); and the eighth: what a rebuild has to
-//! say about itself ([`BevelRebuildAdvisories`]), the cut where a crease's ball enters a round
-//! ([`bevel_round_entry`]), the rounds a part arrives with ([`bevel_source_rounds`]) and the walk
-//! of a side's fan at a chain vertex ([`sections`]); and the ninth: what one end of a run can
-//! afford ([`bevel_chain_end_budget`]), what each group did on a rebuild ([`BevelGroupResult`],
-//! [`BevelRebuildResults`], [`bevel_group_failures`]) and the clip, run-off readings and planless
-//! loop of the surface construction ([`surface`]); and the tenth: the mixed corner's blend tool
-//! mesh ([`bevel_mixed_blend_tool`]) and how far a tube runs to reach its partner's axis at a pair
-//! corner ([`bevel_pair_corner_reach`]); and the twelfth: the void each 5.3 corner opens
-//! ([`BevelCornerVoids`]), the warning at a crowded mixed corner ([`bevel_mixed_corners`]) and the
-//! partner tube trim at a pair corner ([`bevel_pair_corner_trim`]). The cyclic core's type definitions land ahead of its
-//! methods: the bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]), the cap clip
-//! ([`bevel_cap_clip`]), a run's end treatment ([`BevelChainEnds`]), the sweep's chains, sections
-//! and segments ([`BevelSweptChain`], [`BevelSweptSection`], [`bevel_chain_sweep_mesh`]), the
-//! corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`]) with their shell and void cone
-//! ([`bevel_corner_patch_mesher`]) and interior refinement ([`bevel_patch_refinement`]), the face-width check
-//! ([`BevelFaceFit`]), the run-out and its bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the
-//! partnered bead's run, ends and stations ([`bevel_partnered_bead`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
-//! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
-//! ([`bevel_t_vertex_slivers`]), the working mesh's verdict cache ([`bevel_working_mesh`]) and one
-//! mesh state prepared for picking ([`BevelPickData`]). Slice 13 adds a run's taper ([`BevelRunTaper`]), the
-//! rebuild's boolean budget ([`bevel_rebuild_step_budget`]), the second pass's run plan
-//! ([`BevelSecondPassRunPlan`]), the shadow clips' apply step ([`bevel_shadow_clip_applier`]) and
-//! the sliver recut ([`bevel_sliver_collapse`]).
-//! Adjacent selections join into shared sweeps ([`bevel_sweep_batches`]) and each run's tool carries
-//! what the boolean needs ([`BevelTool`]).
+//! `MatterCAD.GeometryProcessing/Bevel`: the bevel itself.
+//!
+//! - **Reporting.** The advisories the kernel reports refusals and warnings with
+//!   ([`BevelAdvisory`], [`BevelAdvisoryCode`], [`bevel_advisory_codes`]), what a rebuild has to
+//!   say about itself ([`BevelRebuildAdvisories`]) and what each group did on it
+//!   ([`BevelGroupResult`], [`BevelRebuildResults`], [`bevel_group_failures`]), and the rebuild's
+//!   boolean budget ([`bevel_rebuild_step_budget`]).
+//! - **Tools and sweeps.** The construction mode ([`BevelConstructionMode`]), the profile and
+//!   frame an edge's tool is drawn in ([`bevel_edge_tool_builder`]), arc chording
+//!   ([`bevel_arc_chording`]), the cross-section ear clip ([`bevel_profile_polygon`]), the
+//!   analytic round ([`BevelRoundDescriptor`]), a run's taper ([`BevelRunTaper`]), one edge to one
+//!   tool ([`bevel_shared_edges`]), adjacent selections joined into shared sweeps
+//!   ([`bevel_sweep_batches`]), each run's tool and what the boolean needs ([`BevelTool`]), and
+//!   the sweep's chains, sections and segments ([`BevelSweptChain`], [`BevelSweptSection`],
+//!   [`bevel_chain_sweep_mesh`]).
+//! - **Run ends.** The end cap plane ([`BevelEndCap`]), a run's end treatment
+//!   ([`BevelChainEnds`]), what one end can afford ([`bevel_chain_end_budget`]), the corner
+//!   handover read first ([`bevel_corner_handover`]) and the seams an end stops on: a blend's
+//!   handover ([`bevel_blend_seam`]) and a corner patch's drive-through and cap stand-off
+//!   ([`bevel_corner_seam`]).
+//! - **Corners.** The corner face ring ([`bevel_corner_face_ring`]), the shared seam ring
+//!   ([`bevel_seam_ring`]), the corner patches ([`BevelCornerPatch`], [`BevelCornerPatchSet`])
+//!   with their shell and void cone ([`bevel_corner_patch_mesher`]) and interior refinement
+//!   ([`bevel_patch_refinement`]), the void each 5.3 corner opens ([`BevelCornerVoids`]); the
+//!   mixed corner's selected ends ([`BevelMixedCornerEnds`]), blend records ([`BevelMixedBlend`],
+//!   [`BevelMixedBlendSet`]), blend tool mesh ([`bevel_mixed_blend_tool`]) and crowding warning
+//!   ([`bevel_mixed_corners`]); and the pair corner's crease ([`bevel_pair_corner_crease`]),
+//!   partner tube ([`BevelPartnerTube`]), reach ([`bevel_pair_corner_reach`]) and trim
+//!   ([`bevel_pair_corner_trim`]).
+//! - **Beads and rounds.** The bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]),
+//!   the cap clip ([`bevel_cap_clip`]), the partnered bead's run, ends and stations
+//!   ([`bevel_partnered_bead`]), which faces lie on a round ([`BevelRoundFaces`]), the rounds a
+//!   part arrives with ([`bevel_source_rounds`]) and the cut where a crease's ball enters a round
+//!   ([`bevel_round_entry`]).
+//! - **Fitting and cleaning.** The face-width check ([`BevelFaceFit`]), the run-out and its
+//!   bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the interrupted-crease readings
+//!   ([`bevel_interrupted_crease`]), the second pass's crease merge ([`bevel_crease_merge`]) and
+//!   run plan ([`BevelSecondPassRunPlan`]), the shadow clips' obstructions and apply step
+//!   ([`bevel_shadow_clip`], [`bevel_shadow_clip_applier`]), the T-vertex repair
+//!   ([`bevel_t_vertex_slivers`]), the sliver recut ([`bevel_sliver_collapse`]), the published
+//!   mesh's cleaning ([`bevel_published_mesh`]), the working mesh's verdict cache
+//!   ([`bevel_working_mesh`]) and one mesh state prepared for picking ([`BevelPickData`]).
+//! - **Shared readings.** The per-tolerance surface labels ([`BevelSurfaceLabels`]), the
+//!   straight surface walk ([`BevelSurfaceWalk`]) and the float grid step ([`float_grid`]).
+//! - **Constructions.** The level-line build ([`level_line`]), the vertex-centric sections
+//!   ([`sections`]) and the surface construction ([`surface`]).
+//!
 //! C# `internal static class` helpers are modules of free functions here.
 
 mod bevel_advisory;

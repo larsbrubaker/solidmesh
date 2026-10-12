@@ -1,75 +1,77 @@
-//! `MatterCAD.GeometryProcessing/Bevel/Surface`: the surface bevel construction. Ported so far:
-//! its leaf records - a band end's half space ([`SurfaceBandEnd`]), a partial run-off
-//! ([`SurfaceBandRunsOffOverAStretch`]), which edges own a strip ([`SurfaceEdgeRoles`]) and the
-//! plan's infinite line ([`SurfaceLine`]) - and the pieces every stage of it shares: the welding
-//! vertex pool ([`SurfaceVertexPool`]), the closure gate the answer is refused by
-//! ([`surface_mesh_closure`]), the step laid at a mitre joint ([`surface_mitre_joint_step`]) and
-//! the reading of a feature standing on a region ([`surface_room_standing_feature`]), the rolling
-//! ball's spine round a mixed corner ([`SurfaceMixedCornerSpine`]) and the per-region face grid
-//! the wall-clearance questions are asked of ([`SurfaceRegionFaceGrid`]), and the tidying of
-//! the rings a clip leaves ([`surface_ring`]); and the half-space clip every cut is drawn with
-//! ([`surface_cut_clip`]), the whole-span and partial readings of a band running off the face it
-//! lands on ([`surface_band_runs_off_the_face_beyond`]) and the closed loop the planner left
-//! without a plan ([`SurfaceBevelPlanlessLoop`]).
-//! And the types of the construction's middle: the walk across a curved region
-//! ([`SurfaceRunAcrossSectionStep`], [`SurfaceRunAcrossSectionStart`],
-//! [`SurfaceRunAcrossRegionMaps`]) and the wall a rolled edge was planned from
-//! ([`SurfaceWallSection`]); one edge's plan ([`SurfaceEdgePlan`]) and a rolled edge's reading
-//! ([`SurfaceRolledEdge`]); the mixed corner ([`SurfaceMixedCorner`]), its dual canal
-//! ([`SurfaceMixedCornerDualFrame`], [`SurfaceMixedCornerDualCanal`],
-//! [`SurfaceMixedCornerDualGrid`], [`SurfaceMixedCornerDualWallCrossing`]), its rows
-//! ([`SurfaceMixedCornerRows`]), its walls ([`SurfaceMixedCornerWall`],
-//! [`SurfaceMixedCornerFaces`]) and its run-out ([`SurfaceRunOutCarry`],
-//! [`SurfaceRunOutMeetsAWallBand`]); and the three-edge junction ([`SurfaceMixedJunction`],
-//! [`SurfaceJunctionKind`]) with its two-crease rings ([`SurfaceTwoCreaseJunctionRings`]).
-//! And the strips and what cuts them: the ruled strip ([`SurfaceStrip`]) and its stations
-//! ([`SurfaceStripStation`]), the half space a face is walked back to ([`SurfaceFacetCut`]), the
-//! roll along a curved wall ([`SurfaceRollReading`], [`SurfaceRollAcrossTheWallSides`],
-//! [`SurfaceRollAcrossTheWallLanding`]), a chain end's reading ([`SurfaceChainEndReading`]) and
-//! the face carrying on past it ([`SurfaceFaceCarriesOnWayOn`]); the room ([`SurfaceRoomCut`],
-//! [`SurfaceRoomFootprint`], [`SurfaceRoomCrossing`]); the strip's ends - on the hull
-//! ([`SurfaceStripEndsOnTheHull`]), trimmed by the face beyond
-//! ([`SurfaceStripTrimmedByTheFaceBeyond`]), gaining the section
-//! ([`SurfaceEndGainsTheSectionReading`]) - the features standing in a band
-//! ([`SurfaceStandingFeatureWithheld`], [`SurfaceStripNotchedByAFeature`],
-//! [`SurfaceEndCapAroundAFeatureMeeting`]); the run-out's columns ([`SurfaceRunOutColumnWindow`],
-//! [`SurfaceRunOutColumnWalk`]) and its crossings of a band ([`SurfaceRunOutMeetsTheBand`],
-//! [`SurfaceStripTrimmedAtTheCrossing`], [`SurfaceCrossingAtTheMitre`]); the strips arriving at a
-//! corner ([`SurfaceCornerPatchArrival`], [`SurfaceMixedJunctionPatchArrival`],
-//! [`SurfaceTwoCreaseJunctionPatchEndRing`], [`SurfaceTwoCreaseJunctionWallCrossing`]); and the
-//! bite's shared sides ([`SurfaceBiteSharedSides`]) and the splits along a stretch
-//! ([`SurfaceSplitsOnASegment`]); and the chain's plan itself ([`SurfaceBevelPlan`]) with what it
-//! was drawn from ([`SurfacePlanRecipe`]). And the triangulators every stage emits through: the fan
-//! ([`surface_fan`]), the ear clipper for rings no apex sees whole ([`surface_ring_ears`]), the
-//! zipper between two rows ([`surface_row_zip`]) and the side reading the sewing shares with them
-//! ([`surface_split_sewing`]); the end cut's run readings ([`surface_end_cut`]), the rolled
-//! section's concave cap ([`surface_end_follows_the_walked_chords`]), the rim sewing of a section
-//! given up ([`surface_end_gives_up_the_section`]) and the convex bite's side reading
-//! ([`surface_convex_bite`]). And the pass's bookkeeping around the build: the groups sharing an
-//! edge linked as one selection ([`surface_shared_edge_network`]), a region and the cuts asked of it
-//! ([`SurfaceRegionWalkback`]), the room and the build agreeing on their run-offs
-//! ([`surface_run_off_agreement`]), the seams re-read after the later cuts
-//! ([`surface_seam_re_read`]) and the warning where a run stops short
-//! ([`surface_run_stops_short`]); the cap a leaning corner's run-out gives up
-//! ([`surface_mixed_corner_dual_cap`]); and a standing feature's bite out of a strip
-//! ([`SurfaceStripBittenByAFeature`]) and its faces extended out to the strip
-//! ([`surface_standing_feature_faces`]); the band's outline borrowed across a chorded wall's
-//! creases ([`surface_band_outline`]), the stitch of one strip's quads between its two rings
-//! ([`surface_bevel_stitch`]), the builder's step that reads every standing feature into bites and
-//! notches ([`surface_builder_standing_features`]) and the mitre whose tip stands past the shared
-//! face's rim ([`SurfaceMitreOverTheFaceBeyond`]). The types land as type definitions; their methods, and
-//! the construction itself, land in later slices.
-//! ([`surface_convex_bite`]). And the pass's chain readings before any plan - the join of runs
-//! meeting end to end ([`surface_chain_join`]), the cut at every junction a chain passes through
-//! ([`surface_chain_opens_at_the_junction`]) and the crease a feature interrupts
-//! ([`surface_interrupted_crease`]) - with the builder's crossings of a band by a run-out
-//! ([`surface_bevel_crossings`]) and the sector a mitre of unequal setbacks gives up
-//! ([`surface_mitre_sector`]). The types land as type definitions; their methods, and the
-//! construction itself, land in later slices. And the leaning corner's dual-canal patch
-//! ([`surface_mixed_corner_dual_patch`]), the stretches of a feature a band passes under
-//! ([`surface_standing_feature_stretch`]), and the walkback's band reach and standing-feature
-//! guard ([`surface_walkback_bands`]) with the tangent runs each cut leaves
-//! ([`surface_walkback_tangent_runs`]).
+//! `MatterCAD.GeometryProcessing/Bevel/Surface`: the surface bevel construction.
+//!
+//! - **Plan.** The chain's plan ([`SurfaceBevelPlan`]) and what it was drawn from
+//!   ([`SurfacePlanRecipe`]), one edge's plan ([`SurfaceEdgePlan`]), which edges own a strip
+//!   ([`SurfaceEdgeRoles`]), the plan's infinite line ([`SurfaceLine`]), a band end's half space
+//!   ([`SurfaceBandEnd`]), the closed loop the planner left without a plan
+//!   ([`SurfaceBevelPlanlessLoop`]) and the chain readings before any plan: the join of runs
+//!   meeting end to end ([`surface_chain_join`]), the cut at every junction a chain passes through
+//!   ([`surface_chain_opens_at_the_junction`]) and the crease a feature interrupts
+//!   ([`surface_interrupted_crease`]).
+//! - **Shared pieces.** The welding vertex pool ([`SurfaceVertexPool`]), the closure gate the
+//!   answer is refused by ([`surface_mesh_closure`]), the half-space clip every cut is drawn with
+//!   ([`surface_cut_clip`]), the tidying of the rings a clip leaves ([`surface_ring`]), the
+//!   per-region face grid the wall-clearance questions are asked of ([`SurfaceRegionFaceGrid`]),
+//!   and the triangulators every stage emits through: the fan ([`surface_fan`]), the ear clipper
+//!   for rings no apex sees whole ([`surface_ring_ears`]), the zipper between two rows
+//!   ([`surface_row_zip`]) and the side reading the sewing shares with them
+//!   ([`surface_split_sewing`]); the stitch of one strip's quads between its two rings
+//!   ([`surface_bevel_stitch`]).
+//! - **Strips.** The ruled strip ([`SurfaceStrip`]) and its stations ([`SurfaceStripStation`]),
+//!   the half space a face is walked back to ([`SurfaceFacetCut`]), the walk across a curved
+//!   region ([`SurfaceRunAcrossSectionStep`], [`SurfaceRunAcrossSectionStart`],
+//!   [`SurfaceRunAcrossRegionMaps`]), the wall a rolled edge was planned from
+//!   ([`SurfaceWallSection`]) and the rolled edge's reading ([`SurfaceRolledEdge`]), the roll
+//!   along a curved wall ([`SurfaceRollReading`], [`SurfaceRollAcrossTheWallSides`],
+//!   [`SurfaceRollAcrossTheWallLanding`]), the splits along a stretch
+//!   ([`SurfaceSplitsOnASegment`]) and a band running off the face it lands on, over a stretch or
+//!   the whole span ([`SurfaceBandRunsOffOverAStretch`],
+//!   [`surface_band_runs_off_the_face_beyond`]), and the band's outline borrowed across a chorded
+//!   wall's creases ([`surface_band_outline`]).
+//! - **Strip ends.** A chain end's reading ([`SurfaceChainEndReading`]) and the face carrying on
+//!   past it ([`SurfaceFaceCarriesOnWayOn`]); the strip ending on the hull
+//!   ([`SurfaceStripEndsOnTheHull`]), trimmed by the face beyond
+//!   ([`SurfaceStripTrimmedByTheFaceBeyond`]) or gaining the section
+//!   ([`SurfaceEndGainsTheSectionReading`]); the end cut's run readings ([`surface_end_cut`]), the
+//!   rolled section's concave cap ([`surface_end_follows_the_walked_chords`]), the rim sewing of a
+//!   section given up ([`surface_end_gives_up_the_section`]) and the convex bite's side reading
+//!   ([`surface_convex_bite`]).
+//! - **Room.** The room ([`SurfaceRoomCut`], [`SurfaceRoomFootprint`], [`SurfaceRoomCrossing`])
+//!   and the reading of a feature standing on a region ([`surface_room_standing_feature`]).
+//! - **Standing features.** The features standing in a band ([`SurfaceStandingFeatureWithheld`],
+//!   [`SurfaceStripNotchedByAFeature`], [`SurfaceEndCapAroundAFeatureMeeting`]), a feature's bite
+//!   out of a strip ([`SurfaceStripBittenByAFeature`]) and its faces extended out to the strip
+//!   ([`surface_standing_feature_faces`]), the stretches of a feature a band passes under
+//!   ([`surface_standing_feature_stretch`]) and the builder's step that reads every standing
+//!   feature into bites and notches ([`surface_builder_standing_features`]).
+//! - **Run-outs and crossings.** The run-out's columns ([`SurfaceRunOutColumnWindow`],
+//!   [`SurfaceRunOutColumnWalk`]) and its crossings of a band ([`SurfaceRunOutMeetsTheBand`],
+//!   [`SurfaceStripTrimmedAtTheCrossing`], [`SurfaceCrossingAtTheMitre`]), and the builder's
+//!   crossings of a band by a run-out ([`surface_bevel_crossings`]).
+//! - **Mitres.** The step laid at a mitre joint ([`surface_mitre_joint_step`]) and the sector a
+//!   mitre of unequal setbacks gives up ([`surface_mitre_sector`]) and the mitre whose tip stands
+//!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]).
+//! - **Corners and junctions.** The mixed corner ([`SurfaceMixedCorner`]), the rolling ball's
+//!   spine round it ([`SurfaceMixedCornerSpine`]), its dual canal ([`SurfaceMixedCornerDualFrame`],
+//!   [`SurfaceMixedCornerDualCanal`], [`SurfaceMixedCornerDualGrid`],
+//!   [`SurfaceMixedCornerDualWallCrossing`]) and the cap a leaning corner's run-out gives up
+//!   ([`surface_mixed_corner_dual_cap`]) and its dual-canal patch
+//!   ([`surface_mixed_corner_dual_patch`]), its rows ([`SurfaceMixedCornerRows`]), walls
+//!   ([`SurfaceMixedCornerWall`], [`SurfaceMixedCornerFaces`]) and run-out
+//!   ([`SurfaceRunOutCarry`], [`SurfaceRunOutMeetsAWallBand`]); the three-edge junction
+//!   ([`SurfaceMixedJunction`], [`SurfaceJunctionKind`]) with its two-crease rings
+//!   ([`SurfaceTwoCreaseJunctionRings`]); the strips arriving at a corner
+//!   ([`SurfaceCornerPatchArrival`], [`SurfaceMixedJunctionPatchArrival`],
+//!   [`SurfaceTwoCreaseJunctionPatchEndRing`], [`SurfaceTwoCreaseJunctionWallCrossing`]) and the
+//!   bite's shared sides ([`SurfaceBiteSharedSides`]).
+//! - **The pass around the build.** The groups sharing an edge linked as one selection
+//!   ([`surface_shared_edge_network`]), a region and the cuts asked of it
+//!   ([`SurfaceRegionWalkback`]) with the walkback's result ([`SurfaceWalkbackRuns`]), its band
+//!   reach and standing-feature guard ([`surface_walkback_bands`]) and the tangent runs each cut
+//!   leaves ([`surface_walkback_tangent_runs`]), the room
+//!   and the build agreeing on their run-offs ([`surface_run_off_agreement`]), the seams re-read
+//!   after the later cuts ([`surface_seam_re_read`]) and the warning where a run stops short
+//!   ([`surface_run_stops_short`]).
 
 mod surface_band_end;
 pub mod surface_band_outline;

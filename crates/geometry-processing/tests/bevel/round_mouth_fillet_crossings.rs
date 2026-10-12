@@ -1,6 +1,6 @@
 //! Port of `RoundMouthFilletTests.CrossingPairs` (`LevelLine/RoundMouthFilletTests.cs`), the
-//! shared count of triangle pairs that pierce each other, which `HoleFillOneLoopCornerTests` and
-//! other classes read; the class's own tests are ported separately.
+//! shared count of triangle pairs that pierce each other, which `HoleFillOneLoopCornerTests`,
+//! `FlatEndsCombinationTests` and other classes read; the class's own tests are ported separately.
 
 #![allow(dead_code)]
 

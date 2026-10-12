@@ -17,15 +17,13 @@ use indexmap::IndexMap;
 use vector_math::cs_sort::introspective_sort;
 
 use super::surface_band_runs_off_the_face_beyond::{consumes_the_face_to_its_rim, BandSpan};
-use super::{SurfaceFacetCut, SurfaceLine, SurfaceRegionWalkback, SurfaceVertexPool};
+use super::{
+    SurfaceFacetCut, SurfaceLine, SurfaceRegionWalkback, SurfaceVertexPool, SurfaceWalkbackRuns,
+};
 use crate::topology::FaceGroup;
 
 /// One region's kept triangles, as the walkback emitted them.
 pub type KeptFaces = Vec<(i32, i32, i32)>;
-
-/// One per-cut table of runs: for each `(edge index, left)`, contiguous runs of vertex indices -
-/// the shape `SurfaceWalkbackResult` publishes its tables in.
-pub type CutRuns = IndexMap<(i32, bool), Vec<Vec<i32>>>;
 
 /// C# `GatherTangentRuns`: what each cut left of its tangent line as a boundary of the region it
 /// cut - the region's own CUT EDGES (edges of kept triangles with both ends standing on the line)
@@ -47,8 +45,8 @@ pub fn gather_tangent_runs(
     beveled_mesh_edges: Option<&HashSet<i32>>,
     chain_vertices: Option<&HashSet<i32>>,
     kept_range_of_facet: Option<&IndexMap<i32, (i32, i32)>>,
-    mut rail_continuations: Option<&mut CutRuns>,
-) -> CutRuns {
+    mut rail_continuations: Option<&mut SurfaceWalkbackRuns>,
+) -> SurfaceWalkbackRuns {
     let mut tangent_runs = IndexMap::new();
     let no_faces = KeptFaces::new();
 

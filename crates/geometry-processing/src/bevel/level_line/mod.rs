@@ -1,46 +1,46 @@
-//! `MatterCAD.GeometryProcessing/Bevel/LevelLine`: the level-line bevel build. Ported so far: its
-//! leaf records - why a gap was refused ([`BandGapRefusal`]), the band's profile
-//! ([`BandProfile`]), a side group ([`BandGroup`]), the per-side loop reading
-//! ([`ChainSideLoops`]), the chain-edge error ([`ChainEdgeNotOnTwoTriangles`]), a field reading
-//! ([`FieldSample`]), why a fill was refused ([`GapFillRefusal`]), a gap boundary ([`GapLoop`]),
-//! the hole filler's answer ([`HoleFillResult`]), which reading named the room
-//! ([`RoomReadingKind`]) and what it was about ([`RoomSource`]), one candidate the room is the
-//! least of ([`RoomCandidate`]) - the setback a size asks
-//! ([`chain_setback`]), the curved end face test ([`curved_end_face`]), the Lipschitz bounds
-//! ([`field_bounds`]), the field traits ([`ScalarField`], [`ChainDistanceField`]), the chain's
-//! segment box tree ([`segment_box_tree`]), the convex cell bound the ridge searches prune with
-//! ([`convex_cell_bound`]) and the flat end-face fill ([`flat_hole_fill`]). The build itself
-//! lands with the cyclic bevel core, whose record types come first: a crossed edge's root
-//! ([`EdgeRoot`]), a pick's fault ([`PickFault`]), a vertex's side of the line ([`VertexSide`])
-//! and the work phase and progress ([`LevelLineWorkPhase`], [`LevelLineProgress`]). The core's
-//! further type definitions are landed too, methods to follow: the group field with run-outs and
-//! its gate scope ([`BandGroupFieldsWithRunOuts`], [`BandGroupFieldsRunOutsScope`]), the bounded
-//! search's cell bound and best-so-far ([`BoundedMaximumCellBound`],
-//! [`BoundedMaximumCanonicalMaximum`]), a corner cap's last row ([`CornerCapLastRow`]), a corner
-//! fill's loop piece ([`CornerFillPiece`]), a crease run-out and its field ([`CreaseRunOut`],
-//! [`RunOutField`]), the refinement rules ([`LevelLineRule`]), a zip rail and its two senses
-//! ([`ZipRail`], [`GapFillRailSenses`]), a hull clip's supporting plane ([`HullClipPlane`]), a
-//! knife end's overrun ([`KnifeEndOverrunEnd`]), the route's watch record
-//! ([`LevelLineChainWatch`]), the needle and split meters' records ([`NeedleMeterMadeBy`],
-//! [`SplitMeterSplitKind`], [`SplitMeterSplitRecord`]), the open fill's rail and flat run-out
-//! region ([`OpenGapFillOpenRail`], [`OpenGapFillFlatRunOutRegion`]), the pair-corner end-face field
-//! and its scope ([`PairCornerEndFaceField`], [`PairCornerEndFaceFieldScope`]), a pick corner
-//! ([`PickCorner`]), a pinch ladder's finding ([`PinchLadderSearchPinchLadder`]), a picked point's
-//! field ([`PointField`]), where a point stands in a triangle ([`PointPlace`]), the seam reading
-//! ([`SeamEdges`]) and the square-crease clip's scope
-//! ([`SquareCreaseEndClipSquareCreaseClipsOffScope`]).
+//! `MatterCAD.GeometryProcessing/Bevel/LevelLine`: the level-line bevel build.
 //!
-//! The core's working types are landed as well, methods to follow: the chain's distance field
-//! ([`ChainField`], with its end-ray bound [`EndRayBound`], mitre and end rays
-//! [`ChainFieldExtension`], end clips [`ChainFieldEndClip`], query pieces [`ChainFieldMeshPiece`]
-//! and smooth-joint scope [`ChainFieldSmoothJointsScope`]), the field over a group of chains
-//! ([`PickField`]) and the one a room reading asks ([`RoomField`]), the working mesh
-//! ([`LevelLineMesh`], [`LevelLineTriangle`]) and its per-vertex reading
-//! ([`VertexFieldReading`]), the band cut's line and halves ([`LevelLineChain`],
-//! [`BandCutResult`]), the foreign-edge filing and its box tree ([`ForeignEdgeRegions`],
-//! [`ForeignEdgeRegionsChainGrowth`], [`ForeignEdgeIndex`], [`ForeignEdgeIndexNode`],
-//! [`ForeignApproach`]), the growing-crease room ([`GrowingCreaseRuns`]), and the build's three
-//! answers ([`BandGapResult`], [`GapFillResult`], [`RoomReading`]).
+//! - **Fields.** The field traits ([`ScalarField`], [`ChainDistanceField`]) and a field reading
+//!   ([`FieldSample`]); the chain's distance field ([`ChainField`], with its end-ray bound
+//!   [`EndRayBound`], mitre and end rays [`ChainFieldExtension`], end clips
+//!   [`ChainFieldEndClip`], query pieces [`ChainFieldMeshPiece`] and smooth-joint scope
+//!   [`ChainFieldSmoothJointsScope`]), the field over a group of chains ([`PickField`]), the one a
+//!   room reading asks ([`RoomField`]), a picked point's field ([`PointField`]), a crease run-out
+//!   and its field ([`CreaseRunOut`], [`RunOutField`]), the group field with run-outs and its gate
+//!   scope ([`BandGroupFieldsWithRunOuts`], [`BandGroupFieldsRunOutsScope`]) and the pair-corner
+//!   end-face field and its scope ([`PairCornerEndFaceField`], [`PairCornerEndFaceFieldScope`]).
+//! - **Searches and bounds.** The Lipschitz bounds ([`field_bounds`]), the chain's segment box
+//!   tree ([`segment_box_tree`]), the convex cell bound the ridge searches prune with
+//!   ([`convex_cell_bound`]), the bounded search's cell bound and best-so-far
+//!   ([`BoundedMaximumCellBound`], [`BoundedMaximumCanonicalMaximum`]) and a pinch ladder's
+//!   finding ([`PinchLadderSearchPinchLadder`]).
+//! - **The working mesh.** The mesh ([`LevelLineMesh`], [`LevelLineTriangle`]) and its
+//!   per-vertex reading ([`VertexFieldReading`]), a vertex's side of the line ([`VertexSide`]),
+//!   a crossed edge's root ([`EdgeRoot`]), where a point stands in a triangle ([`PointPlace`]),
+//!   the refinement rules ([`LevelLineRule`]), the needle and split meters' records
+//!   ([`NeedleMeterMadeBy`], [`SplitMeterSplitKind`], [`SplitMeterSplitRecord`]), the chain-edge
+//!   error ([`ChainEdgeNotOnTwoTriangles`]) and the seam reading ([`SeamEdges`]).
+//! - **Band cut and gaps.** The band's profile ([`BandProfile`]), a side group ([`BandGroup`]),
+//!   the per-side loop reading ([`ChainSideLoops`]), the setback a size asks ([`chain_setback`]),
+//!   the band cut's line and halves ([`LevelLineChain`], [`BandCutResult`]), a gap boundary
+//!   ([`GapLoop`]), why a gap was refused ([`BandGapRefusal`]) and the gap's answer
+//!   ([`BandGapResult`]).
+//! - **Room.** Which reading named the room ([`RoomReadingKind`]) and what it was about
+//!   ([`RoomSource`]), one candidate the room is the least of ([`RoomCandidate`]), the answer
+//!   ([`RoomReading`]), the foreign-edge filing and its box tree ([`ForeignEdgeRegions`],
+//!   [`ForeignEdgeRegionsChainGrowth`], [`ForeignEdgeIndex`], [`ForeignEdgeIndexNode`],
+//!   [`ForeignApproach`]) and the growing-crease room ([`GrowingCreaseRuns`]).
+//! - **Fills and ends.** Why a fill was refused ([`GapFillRefusal`]) and its answer
+//!   ([`GapFillResult`]), the hole filler's answer ([`HoleFillResult`]), the flat end-face fill
+//!   ([`flat_hole_fill`]), the curved end face test ([`curved_end_face`]), a zip rail and its two
+//!   senses ([`ZipRail`], [`GapFillRailSenses`]), the open fill's rail and flat run-out region
+//!   ([`OpenGapFillOpenRail`], [`OpenGapFillFlatRunOutRegion`]), a corner cap's last row
+//!   ([`CornerCapLastRow`]), a corner fill's loop piece ([`CornerFillPiece`]), a hull clip's
+//!   supporting plane ([`HullClipPlane`]), a knife end's overrun ([`KnifeEndOverrunEnd`]) and the
+//!   square-crease clip's scope ([`SquareCreaseEndClipSquareCreaseClipsOffScope`]).
+//! - **Picks and progress.** A pick corner ([`PickCorner`]) and a pick's fault ([`PickFault`]),
+//!   the route's watch record ([`LevelLineChainWatch`]) and the work phase and progress
+//!   ([`LevelLineWorkPhase`], [`LevelLineProgress`]).
 
 pub mod band_cut;
 pub mod band_gap;

@@ -1,7 +1,6 @@
 //! Port of `BevelPartneredBeadTests.cs`: the nose-in-notch part's four creases, each a bead built
 //! from its rolling balls and its partners' tubes.
 
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use polygon_mesh::csg::boolean_processing::do_array;
@@ -11,11 +10,11 @@ use polygon_mesh::{CancelToken, Mesh};
 use geometry_processing::bevel::bevel_face_fit::DEFAULT_SURFACE_TOLERANCE_DEGREES;
 use geometry_processing::bevel::bevel_partnered_bead::try_build;
 use geometry_processing::bevel::bevel_run_partners::{for_chain, try_ball_centre_line};
-use geometry_processing::bevel::bevel_working_mesh::signed_volume;
 use geometry_processing::bevel::{BevelFaceRunOut, BevelPartnerTube, BevelSweptChain};
 use geometry_processing::topology::{ChainEdge, EdgeConvexity, FeatureEdgeSet};
 use vector_math::{Matrix4X4, Vector3};
 
+use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_test_meshes as nose;
 
 const RADIUS: f64 = 5.0;
@@ -272,52 +271,6 @@ fn no_bead_stands_past_the_knife_tip_its_face_ends_on() {
             nose::SIZE
         );
     }
-}
-
-/// C# `MeshMeasurements.ShellCount`: how many vertex-connected shells a mesh is, with vertices at
-/// the same float position taken as one.
-fn shell_count(mesh: &Mesh) -> usize {
-    let mut canonical_of_position: HashMap<(u32, u32, u32), usize> = HashMap::new();
-    let mut parent: Vec<usize> = Vec::new();
-
-    let mut canonical = |position: vector_math::Vector3Float, parent: &mut Vec<usize>| {
-        let key = (
-            position.x.to_bits(),
-            position.y.to_bits(),
-            position.z.to_bits(),
-        );
-        *canonical_of_position.entry(key).or_insert_with(|| {
-            parent.push(parent.len());
-            parent.len() - 1
-        })
-    };
-
-    fn root(parent: &mut [usize], mut index: usize) -> usize {
-        while parent[index] != index {
-            parent[index] = parent[parent[index]];
-            index = parent[index];
-        }
-        index
-    }
-
-    let mut used = HashSet::new();
-
-    for face in mesh.faces.iter() {
-        let v0 = canonical(mesh.vertices[face.v0 as usize], &mut parent);
-        let v1 = canonical(mesh.vertices[face.v1 as usize], &mut parent);
-        let v2 = canonical(mesh.vertices[face.v2 as usize], &mut parent);
-        used.extend([v0, v1, v2]);
-
-        for (a, b) in [(v0, v1), (v0, v2)] {
-            let (root_a, root_b) = (root(&mut parent, a), root(&mut parent, b));
-            if root_a != root_b {
-                parent[root_b] = root_a;
-            }
-        }
-    }
-
-    let roots: HashSet<usize> = used.into_iter().map(|v| root(&mut parent, v)).collect();
-    roots.len()
 }
 
 fn union(operands: &[&Mesh]) -> Option<Mesh> {

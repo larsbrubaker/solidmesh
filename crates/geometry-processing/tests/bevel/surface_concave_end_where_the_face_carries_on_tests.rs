@@ -17,6 +17,8 @@ use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeS
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
+use crate::surface_walkback_checks::regions_of;
+
 const RADIUS: f64 = 2.0;
 
 /// The cap's reflex corner, which is where the crease stops and what the refusal names.
@@ -28,6 +30,7 @@ fn reflex_corner() -> Vector3 {
 fn a_bead_ending_at_its_own_faces_reflex_corner_with_no_face_across_is_refused() {
     let part = slab_with_a_wedge_touching_down_at_the_corner();
     let (regions, features) = regions_of(&part);
+    let regions = Arc::new(regions);
 
     let chain = chain_of(&features, the_wedges_front_crease(&features));
 
@@ -76,6 +79,7 @@ fn a_bead_ending_at_its_own_faces_reflex_corner_with_no_face_across_is_refused()
 fn the_same_bead_with_one_face_across_the_corner_still_plans() {
     let part = slab_with_a_box_on_its_cap();
     let (regions, features) = regions_of(&part);
+    let regions = Arc::new(regions);
 
     let chain = chain_of(&features, the_wedges_front_crease(&features));
 
@@ -94,18 +98,6 @@ fn the_same_bead_with_one_face_across_the_corner_still_plans() {
         plan.start_trim.is_some() || plan.end_trim.is_some(),
         "and that plane is what the band is given to stop at"
     );
-}
-
-/// C# `SurfaceWalkbackChecks.RegionsOf`.
-fn regions_of(mesh: &Arc<Mesh>) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
-    let features = FeatureEdgeSet::create(mesh);
-    let regions = FaceRegionCache::new(
-        mesh.clone(),
-        Some(mesh.get_mesh_edge_graph()),
-        features.flat_angle_degrees(),
-    );
-
-    (Arc::new(regions), features)
 }
 
 fn chain_of(features: &FeatureEdgeSet, edge_index: usize) -> BevelSweptChain {

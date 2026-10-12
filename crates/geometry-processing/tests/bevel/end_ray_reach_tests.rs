@@ -9,7 +9,8 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
 
 use crate::end_face_builds::{as_saved, feature_of, FlatEnds};
-use crate::end_face_measures::{fill_with_the_filler, prism};
+use crate::end_face_measures::prism;
+use crate::hole_fill_corner_tests::fill_with_the_filler;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of};
 use geometry_processing::bevel::level_line::band_gap_entry_points;
@@ -41,8 +42,7 @@ fn chain_alone_adds_its_prism(chain_index: usize) {
     .expect("a valid pick");
 
     assert!(gap.built(), "chain {chain_index}: {:?}", gap.refusal);
-    let filled =
-        fill_with_the_filler(&gap, BandProfile::Fillet, fixture.segments).expect("the fill runs");
+    let filled = fill_with_the_filler(&gap, BandProfile::Fillet, fixture.segments);
     println!(
         "chain {chain_index}: fill {:?}, vertex {}, edge {:?}",
         filled.refusal, filled.offending_vertex, filled.open_edge

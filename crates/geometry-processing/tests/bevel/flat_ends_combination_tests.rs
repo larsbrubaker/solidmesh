@@ -13,9 +13,10 @@ use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
 use geometry_processing::bevel::level_line::GapFillRefusal;
 
 use crate::end_face_builds::{as_saved, build_chains, feature_of, FlatEnds};
-use crate::end_face_measures::{crossing_pairs, to_triangle};
+use crate::end_face_measures::to_triangle;
 use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
+use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures;
 
 #[test]

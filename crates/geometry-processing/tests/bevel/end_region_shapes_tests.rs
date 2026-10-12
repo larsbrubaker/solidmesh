@@ -15,11 +15,12 @@ use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
 use vector_math::dotnet_random::DotNetRandom;
 use vector_math::{Vector2, Vector3};
 
-use crate::end_face_measures::SolidWithRim;
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::l_prism;
+use crate::level_line_room_geometry::SolidWithChain;
+use crate::level_line_test_geometry::distance_to_surface;
 use crate::level_line_test_geometry::winding_number;
-use crate::outline_prisms::{distance_to_surface, prism_on_outline};
+use crate::level_line_test_solids::prism_on_outline;
 use crate::sweep_mesh_measures;
 
 const FOLD_DEGREES: f64 = 10.0;
@@ -34,7 +35,7 @@ fn corners(t: (i32, i32, i32)) -> [i32; 3] {
     [t.0, t.1, t.2]
 }
 
-fn tags_of(solid: &SolidWithRim) -> Vec<i32> {
+fn tags_of(solid: &SolidWithChain) -> Vec<i32> {
     let (positions, indices, chain) = solid;
     let feature = feature_edges_over(positions, indices, FOLD_DEGREES);
     tag_sides(
@@ -50,7 +51,7 @@ fn tags_of(solid: &SolidWithRim) -> Vec<i32> {
     .0
 }
 
-fn room_of_solid(solid: &SolidWithRim) -> f64 {
+fn room_of_solid(solid: &SolidWithChain) -> f64 {
     let (positions, indices, chain) = solid;
     room_of(
         positions,
@@ -68,7 +69,7 @@ fn room_of_solid(solid: &SolidWithRim) -> f64 {
 /// then `GapFill.Fill(built, Fillet)`: asserts both and that the result is closed; hands back the
 /// kept triangles and the filled positions.
 fn builds_and_fills_closed(
-    solid: &SolidWithRim,
+    solid: &SolidWithChain,
     size: f64,
     label: &str,
 ) -> (Vec<(i32, i32, i32)>, Vec<Vector3>) {
@@ -288,7 +289,7 @@ fn a_round_rolling_under_into_the_bottom_stops_short_of_it() {
 /// and fill closed at a quarter, half and three quarters of the smallest room.
 #[test]
 fn where_the_end_sits_on_a_facet_does_not_decide_the_bevel() {
-    let parts: Vec<(f64, SolidWithRim)> = [0.0, 1e-6, 0.5]
+    let parts: Vec<(f64, SolidWithChain)> = [0.0, 1e-6, 0.5]
         .iter()
         .map(|&t| (t, chord_prism(t)))
         .collect();
@@ -316,7 +317,7 @@ fn where_the_end_sits_on_a_facet_does_not_decide_the_bevel() {
     }
 }
 
-fn builds_closed_under_its_room(name: &str, solid: &SolidWithRim) {
+fn builds_closed_under_its_room(name: &str, solid: &SolidWithChain) {
     let (positions, indices, _) = solid;
     let room = room_of_solid(solid);
     println!("{name}: room {room}");
@@ -375,7 +376,7 @@ fn largest_bend_degrees(positions: &[Vector3], indices: &[(i32, i32, i32)], of: 
 /// inward by one degree below the row `bend_row`, and above it carries a fixed pseudo-random x
 /// noise of up to 3e-4 on its inner vertices. The chain is the top front edge (y = -1, z = +1) from
 /// x = -1 to x = +1, so its second end stands on the noisy face.
-fn noisy_end_box(bend_row: i32, second_bend_row: i32) -> SolidWithRim {
+fn noisy_end_box(bend_row: i32, second_bend_row: i32) -> SolidWithChain {
     let lean = (std::f64::consts::PI / 180.0).tan();
     let mut random = DotNetRandom::new(7);
     let cells = CELLS as f64;
@@ -451,7 +452,7 @@ fn noisy_end_box(bend_row: i32, second_bend_row: i32) -> SolidWithRim {
 /// A slab 2 x 2 x 1 (x, y, z) whose x = +1 end is a quarter round of radius 1 in 12 facets of 7.5
 /// degrees (soft), from the top's end (1, 1) down and back to the bottom at x = 0, tangent. The
 /// chain is the top front edge, y = -1, z = 1, from x = -1 to x = +1.
-fn slab_rolling_under() -> SolidWithRim {
+fn slab_rolling_under() -> SolidWithChain {
     let mut outline = vec![Vector2::new(-1.0, 0.0)];
     for k in 0..=12 {
         let angle = (-std::f64::consts::PI / 2.0) + (k as f64 * std::f64::consts::PI / 24.0);
@@ -474,7 +475,7 @@ fn slab_rolling_under() -> SolidWithRim {
 /// A prism 4 tall on a cylinder of radius 1 in 48 facets, cut by a flat on the +x side whose top
 /// edge is the chain. The flat meets the round at `along` of the way along the facet from the
 /// corner at 60 degrees to the one at 67.5, and at its mirror.
-fn chord_prism(along: f64) -> SolidWithRim {
+fn chord_prism(along: f64) -> SolidWithChain {
     let corner = |degrees: f64| {
         Vector2::new(
             (degrees * std::f64::consts::PI / 180.0).cos(),
@@ -495,7 +496,7 @@ fn chord_prism(along: f64) -> SolidWithRim {
 
 /// A prism 4 tall on a D: a half circle of radius 1 in `facets` facets bulging to +x, closed by the
 /// flat x = 0. The chain is the flat's top edge, from (0, 1) to (0, -1).
-fn d_prism(facets: i32) -> SolidWithRim {
+fn d_prism(facets: i32) -> SolidWithChain {
     let mut outline: Vec<Vector2> = (0..=facets)
         .map(|k| (std::f64::consts::PI * k as f64 / facets as f64) - (std::f64::consts::PI / 2.0))
         .map(|angle| Vector2::new(angle.cos(), angle.sin()))

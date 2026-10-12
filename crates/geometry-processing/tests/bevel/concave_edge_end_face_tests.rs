@@ -10,9 +10,9 @@ use geometry_processing::bevel::level_line::gap_fill;
 use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal, GapFillResult};
 use vector_math::{Matrix4X4, Vector3};
 
-use crate::end_face_measures::square_pocket;
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of};
+use crate::level_line_test_solids::square_pocket;
 use crate::sweep_mesh_measures;
 
 const FOLD_DEGREES: f64 = 20.0;

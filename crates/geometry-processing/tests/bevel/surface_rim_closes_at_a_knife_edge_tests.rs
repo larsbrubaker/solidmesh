@@ -5,31 +5,19 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
 
 use crate::nose_in_notch_test_meshes;
-
-/// C# `SurfaceWalkbackChecks.RegionsOf`: the part's regions at its own feature tolerance.
-fn regions_of(mesh: &Mesh) -> FaceRegionCache {
-    let features = FeatureEdgeSet::create(mesh);
-
-    FaceRegionCache::new(
-        Arc::new(mesh.clone()),
-        Some(mesh.get_mesh_edge_graph()),
-        features.flat_angle_degrees(),
-    )
-}
+use crate::surface_walkback_checks::regions_of;
 
 /// Each slope of the nose-in-notch part is rimmed by one closed loop, at the knife edge included.
 #[test]
 fn a_slope_whose_rim_turns_through_the_noses_knife_edge_still_closes() {
     let part = nose_in_notch_test_meshes::create();
-    let regions = regions_of(&part);
+    let (regions, _) = regions_of(&Arc::new(part.clone()));
 
     for (name, normal) in [
         ("left", nose_in_notch_test_meshes::left_slope_normal()),

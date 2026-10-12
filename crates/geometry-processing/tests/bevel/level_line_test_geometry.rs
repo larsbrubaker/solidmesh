@@ -1,6 +1,6 @@
 //! Port of the test helper `LevelLine/LevelLineTestGeometry.cs` (the parts the band cut and
 //! refinement tests read): the analytic fields, the hand-built meshes, `RunCut` and the mesh
-//! measures; plus `BridgeFixtureTests.CoincidentVertices`, which the degenerate-triangle test reads.
+//! measures, with `DistanceToSurface`; plus `BridgeFixtureTests.CoincidentVertices`, which the degenerate-triangle test reads.
 
 #![allow(dead_code)]
 
@@ -415,4 +415,60 @@ pub fn winding_number(positions: &[Vector3], indices: &[(i32, i32, i32)], point:
     }
 
     total / (4.0 * std::f64::consts::PI)
+}
+
+/// C# `DistanceToSurface`: how far a point stands from the nearest of the given triangles.
+pub fn distance_to_surface(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    point: Vector3,
+) -> f64 {
+    let mut least = f64::INFINITY;
+    for &(ia, ib, ic) in indices {
+        least = least.min(distance_to_triangle(
+            positions[ia as usize],
+            positions[ib as usize],
+            positions[ic as usize],
+            point,
+        ));
+    }
+
+    least
+}
+
+fn distance_to_triangle(a: Vector3, b: Vector3, c: Vector3, point: Vector3) -> f64 {
+    // The foot of the perpendicular in barycentric coordinates, then clamped onto the triangle by
+    // taking the least distance to its three edges when that foot falls outside.
+    let ab = b - a;
+    let ac = c - a;
+    let normal = ab.cross(ac);
+    let area = normal.length();
+    if area > 0.0 {
+        let foot = point - (normal * (normal.dot(point - a) / (area * area)));
+        let u = normal.dot((b - foot).cross(c - foot)) / (area * area);
+        let v = normal.dot((c - foot).cross(a - foot)) / (area * area);
+        let w = 1.0 - u - v;
+        if u >= 0.0 && v >= 0.0 && w >= 0.0 {
+            return (point - foot).length();
+        }
+    }
+
+    f64::min(
+        distance_to_segment(a, b, point),
+        f64::min(
+            distance_to_segment(b, c, point),
+            distance_to_segment(c, a, point),
+        ),
+    )
+}
+
+fn distance_to_segment(a: Vector3, b: Vector3, point: Vector3) -> f64 {
+    let along = b - a;
+    let squared = along.length_squared();
+    let t = if squared > 0.0 {
+        (along.dot(point - a) / squared).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (point - (a + (along * t))).length()
 }

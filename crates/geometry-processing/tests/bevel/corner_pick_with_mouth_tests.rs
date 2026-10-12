@@ -15,11 +15,11 @@ use vector_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::{box_with_square_hole, SolidWithChains};
+use crate::level_line_test_geometry::distance_to_surface;
 use crate::level_line_test_geometry::{
     cube_solid, signed_volume, signed_volume_of, winding_number,
 };
 use crate::level_line_test_solids::prism_on_outline;
-use crate::outline_prisms::distance_to_surface;
 use crate::several_chains_fixtures::FOLD_DEGREES;
 use crate::sweep_mesh_measures;
 

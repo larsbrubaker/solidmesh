@@ -13,10 +13,11 @@ use geometry_processing::bevel::surface::{
 };
 use geometry_processing::bevel::BevelSweptChain;
 use geometry_processing::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
+use polygon_mesh::CancelToken;
 use vector_math::Vector3;
 
 use super::nose_in_notch_test_meshes;
+use super::surface_walkback_checks::regions_of;
 
 /// What the pair is asked for, and what the omnidirectional reading refused at 1.8065.
 const SIZE: f64 = 2.0;
@@ -45,7 +46,8 @@ const ONE_PLUS_ROOT_TWO: f64 = 2.414_213_562_373_095_1;
 #[test]
 fn the_ridge_ends_notch_leans_away_from_the_knife_edges_band_and_the_size_fits() {
     let part = nose_in_notch_test_meshes::create();
-    let (regions, features) = regions_of(&part);
+    let (regions, features) = regions_of(&Arc::new(part.clone()));
+    let regions = Arc::new(regions);
     let plans = the_pair(&regions, &features, SIZE);
 
     let cuts = surface_room_measure::measure(&plans, None, None);
@@ -112,7 +114,8 @@ fn the_ridge_ends_notch_leans_away_from_the_knife_edges_band_and_the_size_fits()
 #[test]
 fn a_notch_leaning_at_a_band_is_still_charged_for_what_leans_that_way() {
     let part = nose_in_notch_test_meshes::create();
-    let (regions, features) = regions_of(&part);
+    let (regions, features) = regions_of(&Arc::new(part.clone()));
+    let regions = Arc::new(regions);
     let knife = match SurfaceBevelPlan::try_create(&the_knife_edge(&features), &regions, SIZE, true)
     {
         Ok(plan) => plan,
@@ -176,19 +179,6 @@ fn a_notch_leaning_at_a_band_is_still_charged_for_what_leans_that_way() {
             "the {name} rim and the section meet at {answer:.5} - instead {largest:.5}"
         );
     }
-}
-
-/// C# `SurfaceWalkbackChecks.RegionsOf`: the regions of a mesh, flooded at the same flat tolerance
-/// its feature edges were found at.
-fn regions_of(mesh: &Mesh) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
-    let features = FeatureEdgeSet::create(mesh);
-    let regions = FaceRegionCache::new(
-        Arc::new(mesh.clone()),
-        Some(mesh.get_mesh_edge_graph()),
-        features.flat_angle_degrees(),
-    );
-
-    (Arc::new(regions), features)
 }
 
 /// The ridge and the knife edge, planned at one size: the pair the fixture is picked as.
