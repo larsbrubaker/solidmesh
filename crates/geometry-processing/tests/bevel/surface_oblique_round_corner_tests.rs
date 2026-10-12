@@ -239,7 +239,7 @@ fn it_keeps_exactly_what_its_own_chord_planes_keep() {
 
 /// C# `TheFaceListOf`: the mesh's faces as one string - each face's three corners in published
 /// order, rounded to a nanometre - hashed, with the face count after a slash.
-fn the_face_list_of(mesh: &Mesh) -> String {
+pub fn the_face_list_of(mesh: &Mesh) -> String {
     let mut said = String::new();
 
     for face in mesh.faces.iter() {

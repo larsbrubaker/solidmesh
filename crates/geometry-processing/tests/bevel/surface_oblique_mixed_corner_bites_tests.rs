@@ -3,8 +3,6 @@
 //! how far the ladder can climb on it - the CAP FACE RUNS OUT under the blend, a third of the way
 //! through the turn. Both tests are measurements of the fixture, not of a wish.
 
-use std::rc::Rc;
-
 use geometry_processing::bevel::surface::surface_mixed_corner_patch::try_cut_the_ring;
 use geometry_processing::bevel::surface::surface_mixed_corner_sector::try_apex;
 use geometry_processing::bevel::surface::{
@@ -14,15 +12,10 @@ use geometry_processing::topology::{EdgeConvexity, FeatureEdgeSet};
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
-use crate::nose_in_notch_mixed_corners;
 use crate::nose_in_notch_test_meshes;
+use crate::surface_oblique_mixed_corner_reading_tests::the_oblique_corner;
 
 const SEGMENTS: i32 = 8;
-
-/// C# `SurfaceObliqueMixedCornerReadingTests.TheObliqueCorner`: the left ridge end at `r = 1`.
-fn the_oblique_corner() -> Rc<SurfaceMixedCorner> {
-    nose_in_notch_mixed_corners::at_the_ridge_end(nose_in_notch_test_meshes::left_ridge_end(), 1.0)
-}
 
 /// The cap's bite is the convex bite on the ELLIPSE ARC, on the patch's own pooled outer rail, with
 /// its apex where the cut's stopping plane crosses the closing radius.
@@ -198,7 +191,7 @@ fn the_outer_rail_of(corner: &SurfaceMixedCorner) -> Vec<Vector3> {
 }
 
 /// How many stations the patch's grid has - one per rail of the bead's own end ring.
-fn the_station_count_of(corner: &SurfaceMixedCorner) -> i32 {
+pub fn the_station_count_of(corner: &SurfaceMixedCorner) -> i32 {
     let bead = SurfaceStrip::try_create(&corner.bead, SEGMENTS)
         .unwrap_or_else(|why| panic!("the bead's strip refused: {why:?}"));
 
@@ -206,7 +199,7 @@ fn the_station_count_of(corner: &SurfaceMixedCorner) -> i32 {
 }
 
 /// The patch's rows, and the cut's end ring they are read off (from the cap face).
-fn the_rows_of(corner: &SurfaceMixedCorner) -> (SurfaceMixedCornerRows, Vec<Vector3>) {
+pub fn the_rows_of(corner: &SurfaceMixedCorner) -> (SurfaceMixedCornerRows, Vec<Vector3>) {
     let cut = SurfaceStrip::try_create(&corner.cut, SEGMENTS)
         .unwrap_or_else(|why| panic!("the cut's strip refused: {why:?}"));
 

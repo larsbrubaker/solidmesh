@@ -7,9 +7,6 @@
 //! sections and sectors built on it - and a fixture that each of them built again would be a fixture
 //! per class to keep in step.
 
-// The classes that read the corner land a few at a time and each uses only part of it.
-#![allow(dead_code)]
-
 use std::rc::Rc;
 use std::sync::Arc;
 

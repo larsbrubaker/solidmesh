@@ -543,7 +543,7 @@ pub fn the_vertex_at(plans: &[Rc<SurfaceBevelPlan>], corner: Vector3) -> i32 {
     panic!("no planned edge stands at {corner}");
 }
 
-fn the_plans_of(
+pub fn the_plans_of(
     regions: &Arc<FaceRegionCache>,
     radius: f64,
     edges: &[FeatureEdge],
@@ -567,7 +567,7 @@ fn the_plans_of(
         .collect()
 }
 
-fn the_edge_from(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> FeatureEdge {
+pub fn the_edge_from(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> FeatureEdge {
     let found: Vec<FeatureEdge> = features
         .edges()
         .iter()

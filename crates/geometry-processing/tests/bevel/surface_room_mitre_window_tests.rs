@@ -220,7 +220,7 @@ fn the_tongues_foot() -> Vector3 {
     Vector3::new(10.0, 20.0, 0.0)
 }
 
-fn regions_of(prism: &Mesh) -> Arc<FaceRegionCache> {
+pub fn regions_of(prism: &Mesh) -> Arc<FaceRegionCache> {
     Arc::new(FaceRegionCache::new(
         Arc::new(prism.clone()),
         Some(prism.get_mesh_edge_graph()),
@@ -250,7 +250,7 @@ fn the_caps_cuts(prism: &Mesh, size: f64) -> Vec<SurfaceRoomCut> {
 }
 
 /// The cap's rim, joined into chains and planned at one size.
-fn the_caps_rim(
+pub fn the_caps_rim(
     prism: &Mesh,
     regions: &Arc<FaceRegionCache>,
     size: f64,
@@ -268,7 +268,7 @@ fn the_caps_rim(
 }
 
 /// The cap both readings are made on: the prism's bottom, which is where the notch's apex is.
-fn the_cap(prism: &Mesh) -> FaceGroup {
+pub fn the_cap(prism: &Mesh) -> FaceGroup {
     let seed = (0..prism.faces.len())
         .find(|&face| {
             (Vector3::from_vector3_float(prism.faces[face].normal) + Vector3::UNIT_Z).length()
