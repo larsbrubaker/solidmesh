@@ -85,6 +85,14 @@ mod bevel_void_wedge_section_tests;
 mod boolean_kernel_gate;
 #[path = "bevel/bore_test_meshes.rs"]
 mod bore_test_meshes;
+#[path = "bevel/both_sided_member_tests.rs"]
+mod both_sided_member_tests;
+#[path = "bevel/bridge_fixture_tests.rs"]
+mod bridge_fixture_tests;
+#[path = "bevel/canonical_maximum_tests.rs"]
+mod canonical_maximum_tests;
+#[path = "bevel/center_slanted_chain_tests.rs"]
+mod center_slanted_chain_tests;
 #[path = "bevel/chain_field_end_clip_tests.rs"]
 mod chain_field_end_clip_tests;
 #[path = "bevel/chain_field_end_ray_tests.rs"]
@@ -95,10 +103,22 @@ mod chain_field_fixtures;
 mod chain_field_tests;
 #[path = "bevel/chain_to_chain_room_tests.rs"]
 mod chain_to_chain_room_tests;
+#[path = "bevel/chamfer_turn_tests.rs"]
+mod chamfer_turn_tests;
 #[path = "bevel/clipped_cell_bound_tests.rs"]
 mod clipped_cell_bound_tests;
+#[path = "bevel/closed_loop_defect_tests.rs"]
+mod closed_loop_defect_tests;
+#[path = "bevel/concave_corner_rim_fill_tests.rs"]
+mod concave_corner_rim_fill_tests;
 #[path = "bevel/concave_edge_end_face_tests.rs"]
 mod concave_edge_end_face_tests;
+#[path = "bevel/concave_end_cap_rows_tests.rs"]
+mod concave_end_cap_rows_tests;
+#[path = "bevel/concave_rim_fill_tests.rs"]
+mod concave_rim_fill_tests;
+#[path = "bevel/convex_cell_bound_tests.rs"]
+mod convex_cell_bound_tests;
 #[path = "bevel/convex_end_ray_room_tests.rs"]
 mod convex_end_ray_room_tests;
 #[path = "bevel/corner_pick_with_mouth_tests.rs"]
@@ -563,6 +583,8 @@ mod thread_cpu_time;
 mod top_and_round_corner_room_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
+#[path = "bevel/two_hole_bridge_fixture.rs"]
+mod two_hole_bridge_fixture;
 #[path = "bevel/two_mouths_in_one_facet_mesh.rs"]
 mod two_mouths_in_one_facet_mesh;
 #[path = "bevel/union_of_balls_field_tests.rs"]

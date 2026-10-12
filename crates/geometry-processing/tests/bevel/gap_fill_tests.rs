@@ -455,7 +455,7 @@ fn is_closed_and_consistent(mesh: &LevelLineMesh) -> bool {
 }
 
 /// How many separate pieces the live mesh is in - one, for a solid with a bevel cut into it.
-fn shell_count(mesh: &LevelLineMesh) -> i32 {
+pub fn shell_count(mesh: &LevelLineMesh) -> i32 {
     let live: Vec<i32> = (0..mesh.triangle_count())
         .filter(|&t| !mesh.is_removed(t))
         .collect();
