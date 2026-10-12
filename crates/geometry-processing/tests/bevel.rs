@@ -301,6 +301,8 @@ mod rust_only_bevel_slice10_tests;
 mod rust_only_bevel_slice12_tests;
 #[path = "bevel/rust_only_bevel_slice17_tests.rs"]
 mod rust_only_bevel_slice17_tests;
+#[path = "bevel/rust_only_bevel_slice19_tests.rs"]
+mod rust_only_bevel_slice19_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]
 mod rust_only_bevel_slice2_tests;
 #[path = "bevel/rust_only_bevel_slice3_tests.rs"]
@@ -433,6 +435,8 @@ mod surface_standing_feature_tail_and_cap_tests;
 mod surface_strip_ends_on_the_hull_tests;
 #[path = "bevel/surface_test_chains.rs"]
 mod surface_test_chains;
+#[path = "bevel/surface_walkback_checks.rs"]
+mod surface_walkback_checks;
 #[path = "bevel/swallowed_side_tests.rs"]
 mod swallowed_side_tests;
 #[path = "bevel/sweep_mesh_measures.rs"]

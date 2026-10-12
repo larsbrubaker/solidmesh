@@ -87,6 +87,7 @@ pub mod bevel_interrupted_crease;
 pub mod bevel_mitre_fit;
 mod bevel_mixed_blend;
 pub mod bevel_mixed_blend_tool;
+pub mod bevel_mixed_blends;
 mod bevel_mixed_corner_ends;
 pub mod bevel_mixed_corners;
 pub mod bevel_overshoot_rings;
