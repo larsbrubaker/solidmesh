@@ -45,6 +45,8 @@
 //! rebuild's boolean budget ([`bevel_rebuild_step_budget`]), the second pass's run plan
 //! ([`BevelSecondPassRunPlan`]), the shadow clips' apply step ([`bevel_shadow_clip_applier`]) and
 //! the sliver recut ([`bevel_sliver_collapse`]).
+//! Adjacent selections join into shared sweeps ([`bevel_sweep_batches`]) and each run's tool carries
+//! what the boolean needs ([`BevelTool`]).
 //! C# `internal static class` helpers are modules of free functions here.
 
 mod bevel_advisory;
@@ -123,9 +125,11 @@ pub mod bevel_straight_run;
 mod bevel_surface_labels;
 mod bevel_surface_walk;
 pub mod bevel_sweep_back_depth;
+pub mod bevel_sweep_batches;
 pub mod bevel_sweep_fold_check;
 pub mod bevel_t_vertex_slivers;
 pub mod bevel_thin_slivers;
+mod bevel_tool;
 pub mod bevel_valley_fold_mitre;
 pub mod bevel_working_mesh;
 pub mod float_grid;
@@ -161,3 +165,5 @@ pub use bevel_run_taper::BevelRunTaper;
 pub use bevel_second_pass_run_plan::BevelSecondPassRunPlan;
 pub use bevel_surface_labels::BevelSurfaceLabels;
 pub use bevel_surface_walk::{BevelSurfaceWalk, SurfaceWalkStop};
+pub use bevel_sweep_batches::BevelSweepBatch;
+pub use bevel_tool::BevelTool;

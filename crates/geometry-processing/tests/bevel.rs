@@ -61,6 +61,8 @@ mod bevel_source_hull_tests;
 mod bevel_source_round_tests;
 #[path = "bevel/bevel_sweep_back_depth_tests.rs"]
 mod bevel_sweep_back_depth_tests;
+#[path = "bevel/bevel_sweep_batches_tests.rs"]
+mod bevel_sweep_batches_tests;
 #[path = "bevel/bevel_t_vertex_sliver_repair_tests.rs"]
 mod bevel_t_vertex_sliver_repair_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
@@ -135,6 +137,8 @@ mod many_chain_foreign_cost_tests;
 mod many_holes_mouth_room_tests;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
+#[path = "bevel/name_every_tight_chain_tests.rs"]
+mod name_every_tight_chain_tests;
 #[path = "bevel/no_duplicate_vertex_tests.rs"]
 mod no_duplicate_vertex_tests;
 #[path = "bevel/nose_in_notch_mixed_corners.rs"]

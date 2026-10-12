@@ -3,7 +3,8 @@
 //! ([`section_fan_walk`]), and the type definitions of the construction: the section at a chain
 //! vertex ([`BevelSection`]) and at a junction ([`JunctionSection`]), the absorbed split points
 //! ([`SectionAbsorbedSplits`]), the room cache ([`SectionRoomCache`]), one chain's run of
-//! sections ([`SectionRun`]) and the surface walk's result ([`SurfaceWalkResult`]). The construction itself lands with the cyclic bevel core.
+//! sections ([`SectionRun`]) and the surface walk's result ([`SurfaceWalkResult`]). The construction itself lands with the cyclic bevel core; its region re-mesh
+//! ([`section_fan_remesh`]) and the mixed corner's reading ([`section_mixed_corner`]) are here.
 
 pub mod bevel_section;
 pub mod section_absorbed_splits;
@@ -14,10 +15,12 @@ pub mod section_builder_station;
 pub mod section_builder_walked_side;
 pub mod section_corner;
 pub mod section_end;
+pub mod section_fan_remesh;
 pub mod section_fan_walk;
 pub mod section_junction;
 pub mod section_junction_build;
 pub mod section_junction_canal;
+pub mod section_mixed_corner;
 mod section_pool;
 pub mod section_room;
 pub mod section_room_smooth_side;
