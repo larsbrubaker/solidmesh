@@ -575,6 +575,8 @@ mod section_loft_junction_tests;
 mod section_loft_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
 mod section_loop_entry_tests;
+#[path = "bevel/section_pierced_face_junction_tests.rs"]
+mod section_pierced_face_junction_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
 #[path = "bevel/section_routing_opt_in_tests.rs"]
@@ -699,6 +701,8 @@ mod surface_room_half_disc_rim_tests;
 mod surface_room_notch_reach_tests;
 #[path = "bevel/surface_room_partial_run_off_tests.rs"]
 mod surface_room_partial_run_off_tests;
+#[path = "bevel/surface_room_standing_feature_tests.rs"]
+mod surface_room_standing_feature_tests;
 #[path = "bevel/surface_room_tests.rs"]
 mod surface_room_tests;
 #[path = "bevel/surface_run_out_column_top_tests.rs"]
@@ -727,6 +731,10 @@ mod surface_strip_oblique_end_tests;
 mod surface_tangent_run_ends_tests;
 #[path = "bevel/surface_test_chains.rs"]
 mod surface_test_chains;
+#[path = "bevel/surface_two_crease_junction_reading_tests.rs"]
+mod surface_two_crease_junction_reading_tests;
+#[path = "bevel/surface_two_crease_junction_rings_tests.rs"]
+mod surface_two_crease_junction_rings_tests;
 #[path = "bevel/surface_walkback_checks.rs"]
 mod surface_walkback_checks;
 #[path = "bevel/surface_walkback_fold_gate_tests.rs"]

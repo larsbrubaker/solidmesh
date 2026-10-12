@@ -1,5 +1,5 @@
-//! Port of the test fixture `Fixtures/NoseInNotchTestMeshes.cs` (its `Create` with the default
-//! arguments, the named points and normals, and the crease and group picks the tests make on it): a
+//! Port of the test fixture `Fixtures/NoseInNotchTestMeshes.cs` (its `Create` with the upper face
+//! whole or chorded on its right crease - `theUpperFaceFannedFromInside` is not ported yet - the named points and normals, and the crease and group picks the tests make on it): a
 //! 20 mm cube with a triangular notch cut down its
 //! back, and a two-faced nose standing in the notch.
 
@@ -71,6 +71,21 @@ pub fn create() -> Mesh {
 
 /// C# `Create(scale)`, the upper face one triangle.
 pub fn create_scaled(scale: f64) -> Mesh {
+    create_full(scale, None)
+}
+
+/// C# `Create(theUpperRightCreaseSplitAt: split)`: the same solid with the upper right crease - the
+/// run from [`right_ridge_end`] to [`upper_crease_end`] - CHORDED into two mesh edges through
+/// `split`, which is what the boolean behind "Center Flows Through.mcx" leaves on that crease (at
+/// (12, 8, 12), its t = 0.6). Both faces that meet along the crease are cut at the same point, so
+/// the upper nose face becomes two facets and the right slope's fan triangle across the crease
+/// becomes two; only ONE of the crease's two rim edges then touches the corner it dies in.
+pub fn create_with_upper_right_crease_split_at(split: Vector3) -> Mesh {
+    create_full(1.0, Some(split))
+}
+
+/// C# `Create(scale, theUpperFaceFannedFromInside: false, theUpperRightCreaseSplitAt)`.
+fn create_full(scale: f64, upper_right_crease_split_at: Option<Vector3>) -> Mesh {
     let mut mesh = Mesh::new();
     let centre = Vector2::new(SIZE / 2.0, SIZE / 2.0);
 
@@ -96,10 +111,18 @@ pub fn create_scaled(scale: f64) -> Mesh {
         Vector3::new(SIZE, 0.0, SIZE),
     ]);
 
-    slope(&mut mesh, false);
-    slope(&mut mesh, true);
+    slope(&mut mesh, false, None);
+    slope(&mut mesh, true, upper_right_crease_split_at);
 
-    mesh.create_face(&[left_ridge_end(), right_ridge_end(), upper_crease_end()]);
+    // The nose's two faces, each a triangle from the two ridge ends to the crease end they share.
+    if let Some(split) = upper_right_crease_split_at {
+        // The same triangle, cut from the left ridge end to the point the crease is chorded at, so
+        // this face carries the same two crease edges the slope beyond it does.
+        mesh.create_face(&[left_ridge_end(), split, upper_crease_end()]);
+        mesh.create_face(&[left_ridge_end(), right_ridge_end(), split]);
+    } else {
+        mesh.create_face(&[left_ridge_end(), right_ridge_end(), upper_crease_end()]);
+    }
     mesh.create_face(&[left_ridge_end(), lower_crease_end(), right_ridge_end()]);
 
     mesh.clean_and_merge();
@@ -129,7 +152,16 @@ fn fan(mesh: &mut Mesh, z: f64, up: bool, centre: Vector2) {
     }
 }
 
-fn slope(mesh: &mut Mesh, mirrored: bool) {
+/// One slope: the rectangle from the cube's own corner edge across to the centre crease, less the
+/// triangle the nose bites out of it, fanned from the ridge end that is the bite's apex.
+/// `crease_split_at` chords the crease from the apex to `around[3]`; only the MIRRORED slope's is
+/// ever asked for, because the two facets it makes are wound the mirrored way.
+fn slope(mesh: &mut Mesh, mirrored: bool, crease_split_at: Option<Vector3>) {
+    assert!(
+        crease_split_at.is_none() || mirrored,
+        "only the right slope's crease is chorded"
+    );
+
     let at = |x: f64, y: f64, z: f64| {
         if mirrored {
             Vector3::new(SIZE - x, y, z)
@@ -150,6 +182,15 @@ fn slope(mesh: &mut Mesh, mirrored: bool) {
 
     for i in 0..around.len() - 1 {
         if i == 3 {
+            continue;
+        }
+
+        if let (2, Some(split)) = (i, crease_split_at) {
+            // The one fan triangle whose apex-to-around[3] side IS the upper crease, cut at the
+            // same point the nose's own face is, so the two sides of the crease go on sharing
+            // their edges.
+            mesh.create_face(&[apex, around[2], split]);
+            mesh.create_face(&[split, around[2], around[3]]);
             continue;
         }
 
