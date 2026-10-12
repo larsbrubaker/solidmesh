@@ -9,10 +9,10 @@
 //! it at both ends, so the wedge passes through two runs of rails and only the one at the
 //! feature's own seam is the bite.
 //!
-//! Waiting on `SurfaceTestBuild.TryBevel` (slice S28): `TheTipBandBuildsWithTheBiteInIt`,
-//! `TheLeftTipBiteIsTheRightsMirror`, `TheBallCornerAndTheRunOutBuildWithTheLeftBite`,
-//! `TheTwoTipBandsEachBiteTheNoseAndItsFacesRunOutBothWays`, `TheMitreBuildsWithTheRightBite` and
-//! `AllFiveGroupsOfTheCenterFeatureBuildTogether`.
+//! The build half - the tip band alone, the left tip mirrored, the ball corner, both tips, the mitre
+//! and all five groups of "Bevel to Center Feature.mcx" - runs the whole surface pipeline
+//! (`surface_test_build::try_bevel`) and holds the answer to a closed solid that carries the lens's
+//! tip.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -20,18 +20,21 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
 use geometry_processing::bevel::surface::{
-    surface_face_walkback, SurfaceEdgePlan, SurfaceStandingFeatureWithheld,
+    surface_face_walkback, surface_mesh_closure, SurfaceEdgePlan, SurfaceStandingFeatureWithheld,
     SurfaceStandingFeatureWithheldFace, SurfaceStrip, SurfaceStripBiteRows,
     SurfaceStripBittenByAFeature, SurfaceStripStation, SurfaceStripTrimmedByTheFaceBeyond,
     SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::Mesh;
+use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 
+use crate::mesh_measurements::{shell_count, signed_volume};
+use crate::nose_in_notch_cut::anchor;
 use crate::nose_in_notch_test_meshes::{self as nose, RIDGE_Y, RIDGE_Z, SIZE};
 use crate::surface_standing_feature_stretch_tests::{plan_of, top_edge_of};
+use crate::surface_test_build::{expect_built, try_bevel, TryBevelOptions};
 use crate::surface_walkback_checks::regions_of;
 
 /// The fixture's own radius: reach 3.4/tan 22.5 = 8.208, against the nose foot's 7.071.
@@ -50,6 +53,31 @@ fn the_tip_edge_foot() -> Vector3 {
 /// The same edge's ceiling end.
 fn the_tip_edge_top() -> Vector3 {
     Vector3::new(SIZE, 0.0, SIZE)
+}
+
+/// The left knife tip's vertical edge, floor end.
+fn the_left_tip_edge_foot() -> Vector3 {
+    Vector3::new(0.0, 0.0, 0.0)
+}
+
+/// The same edge's ceiling end.
+fn the_left_tip_edge_top() -> Vector3 {
+    Vector3::new(0.0, 0.0, SIZE)
+}
+
+/// Where the left slope's top edge meets the centre crease.
+fn the_centre_crease_top() -> Vector3 {
+    Vector3::new(10.0, 10.0, SIZE)
+}
+
+/// The far end of the top edge along x = 0.
+fn the_back_top_on_x0() -> Vector3 {
+    Vector3::new(0.0, SIZE, SIZE)
+}
+
+/// The far end of the top edge along x = 20.
+fn the_back_top_on_x20() -> Vector3 {
+    Vector3::new(SIZE, SIZE, SIZE)
 }
 
 /// One band, taken to the stage the bite is read at: the plan, the walkback that held the nose
@@ -315,6 +343,225 @@ fn a_feature_under_the_bands_end_is_not_a_bite() {
 /// whose seam was never picked is refused long before a bite is read. The station is built by hand
 /// for the same reason: all the slice asks of one is the vertex and parameter on the rail it cuts
 /// at.
+/// AND THE BUILD. The reading above turned into surface: the round runs the whole height of the tip
+/// with the nose's lens-shaped hole in the middle of it, and the nose's own two faces trimmed on it.
+/// The nose's OLD ridge end is gone - the two extended faces carry the ridge straight on past it to
+/// the tip - and the lens's tip is in it.
+#[test]
+fn the_tip_band_builds_with_the_bite_in_it() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+    let tip = vec![anchor(&features, the_tip_edge_foot(), the_tip_edge_top())];
+
+    let mesh = built(
+        &part,
+        &tip,
+        RADIUS,
+        "the nose mid strip is a bite out of the round and not a refusal",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    // Smaller than the part, and smaller than the size that clears the foot: a round on a convex
+    // tip takes material away, and a bigger one takes more.
+    let clear = built(&part, &tip, 2.9, "the smaller round builds");
+
+    assert!(
+        signed_volume(&mesh) < signed_volume(&clear),
+        "3.4 takes more of the tip than 2.9 does"
+    );
+    assert!(signed_volume(&mesh) < nose::VOLUME);
+
+    assert!(
+        !carries(&mesh, nose::right_ridge_end()),
+        "the extended ridge runs straight through {:?} to the tip",
+        nose::right_ridge_end()
+    );
+
+    assert!(
+        carries(&mesh, Vector3::new(15.5202, RIDGE_Y, RIDGE_Z)),
+        "the bite closes on the ridge's own crossing of the chord between rails 9 and 10"
+    );
+}
+
+/// THE LEFT TIP IS THE RIGHT ONE MIRRORED, and the build says so: the band on the LEFT knife tip
+/// takes a bite of its own out of the same two nose faces, closing on a lens tip at the mirror of
+/// the right one.
+#[test]
+fn the_left_tip_bite_is_the_rights_mirror() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+    let tip = vec![anchor(
+        &features,
+        the_left_tip_edge_foot(),
+        the_left_tip_edge_top(),
+    )];
+
+    let mesh = built(
+        &part,
+        &tip,
+        RADIUS,
+        "the left tip's nose mid strip is a bite out of the round, as the right one's is",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    assert!(signed_volume(&mesh) < nose::VOLUME);
+
+    assert!(
+        !carries(&mesh, nose::left_ridge_end()),
+        "the extended ridge runs straight through {:?} to the left tip",
+        nose::left_ridge_end()
+    );
+
+    assert!(
+        carries(&mesh, Vector3::new(SIZE - 15.5202, RIDGE_Y, RIDGE_Z)),
+        "the left bite closes on the ridge's crossing at the mirror of the right lens's tip"
+    );
+}
+
+/// THE LEFT TIP'S THREE-EDGE CORNER, with the bite under it: the left tip's vertical edge, the left
+/// slope's top edge running in to the centre crease, and the top edge along x = 0, which meet on a
+/// 45 degree knife point at (0, 0, 20) and are cornered there with a ball.
+#[test]
+fn the_ball_corner_and_the_run_out_build_with_the_left_bite() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+
+    let groups = vec![
+        anchor(&features, the_left_tip_edge_foot(), the_left_tip_edge_top()),
+        anchor(&features, the_left_tip_edge_top(), the_centre_crease_top()),
+        anchor(&features, the_left_tip_edge_top(), the_back_top_on_x0()),
+    ];
+
+    let mesh = built(
+        &part,
+        &groups,
+        RADIUS,
+        "a ball corner over a bitten band is three runs meeting, not a refusal",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    assert!(
+        carries(&mesh, Vector3::new(SIZE - 15.5202, RIDGE_Y, RIDGE_Z)),
+        "the corner above does not move the bite: it still closes on the ridge's own crossing"
+    );
+}
+
+/// BOTH TIPS AT ONCE ("Bevel to Center Feature.mcx"): the nose is ONE feature, its two faces are
+/// undercut from OPPOSITE ends by the two knife tips' bands, and the nose's faces are emitted ONCE
+/// with both reaches taken into them rather than once per band.
+#[test]
+fn the_two_tip_bands_each_bite_the_nose_and_its_faces_run_out_both_ways() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+
+    let groups = vec![
+        anchor(&features, the_tip_edge_foot(), the_tip_edge_top()),
+        anchor(&features, the_left_tip_edge_foot(), the_left_tip_edge_top()),
+    ];
+
+    let mesh = built(
+        &part,
+        &groups,
+        RADIUS,
+        "one nose bitten from both ends is two bites and one extension",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    // BOTH lens tips, which is the whole claim: the faces ran out to the right tip AND to the left.
+    for tip in [
+        Vector3::new(15.5202, RIDGE_Y, RIDGE_Z),
+        Vector3::new(4.4798, RIDGE_Y, RIDGE_Z),
+    ] {
+        assert!(
+            carries(&mesh, tip),
+            "the ridge runs out onto the round at {tip:?}"
+        );
+    }
+
+    // AND BOTH OLD RIDGE ENDS ARE GONE, each for the reason its own single-tip test gives.
+    for end in [nose::left_ridge_end(), nose::right_ridge_end()] {
+        assert!(
+            !carries(&mesh, end),
+            "the extended ridge runs straight through {end:?} to the tip beyond it"
+        );
+    }
+
+    // Two rounds take more than two smaller ones, and both take less than the part.
+    let clear = built(&part, &groups, 2.9, "the smaller rounds build");
+
+    assert!(
+        signed_volume(&mesh) < signed_volume(&clear),
+        "3.4 takes more of each tip than 2.9 does"
+    );
+    assert!(signed_volume(&mesh) < nose::VOLUME);
+}
+
+/// THE RIGHT TIP'S PAIR CORNER, with the bite under it: the right tip's vertical edge and the top
+/// edge along x = 20, mitred against each other at (20, 0, 20) because the third edge at that
+/// vertex is not picked.
+#[test]
+fn the_mitre_builds_with_the_right_bite() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+
+    let groups = vec![
+        anchor(&features, the_tip_edge_foot(), the_tip_edge_top()),
+        anchor(&features, the_tip_edge_top(), the_back_top_on_x20()),
+    ];
+
+    let mesh = built(
+        &part,
+        &groups,
+        RADIUS,
+        "a mitred pair over a bitten band is two runs meeting, not a refusal",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    assert!(
+        carries(&mesh, Vector3::new(15.5202, RIDGE_Y, RIDGE_Z)),
+        "the mitre above does not move the bite: it still closes on the ridge's own crossing"
+    );
+}
+
+/// ALL FIVE GROUPS AT ONCE, which is the whole of what "Bevel to Center Feature.mcx" picks: an
+/// unequal-setback mitre at (20, 0, 20), a three-edge junction at (0, 0, 20) and the nose bitten by
+/// two bands from two different chains. Every reading this ladder built has to hold at once.
+#[test]
+fn all_five_groups_of_the_center_feature_build_together() {
+    let part = nose::create();
+    let features = FeatureEdgeSet::create(&part);
+
+    let groups = vec![
+        anchor(&features, the_tip_edge_foot(), the_tip_edge_top()),
+        anchor(&features, the_left_tip_edge_foot(), the_left_tip_edge_top()),
+        anchor(&features, the_left_tip_edge_top(), the_centre_crease_top()),
+        anchor(&features, the_left_tip_edge_top(), the_back_top_on_x0()),
+        anchor(&features, the_tip_edge_top(), the_back_top_on_x20()),
+    ];
+
+    let mesh = built(
+        &part,
+        &groups,
+        RADIUS,
+        "every reading of the ladder has to hold at once",
+    );
+
+    assert_it_is_a_sound_solid(&mesh);
+
+    let clear = built(&part, &groups, 2.9, "and the same five at a smaller size");
+
+    assert!(
+        signed_volume(&mesh) < signed_volume(&clear),
+        "3.4 takes more off every one of the five than 2.9 does"
+    );
+    assert!(signed_volume(&mesh) < nose::VOLUME);
+}
+
 #[test]
 fn a_side_with_no_seam_at_all_is_named() {
     let mut band = the_tip_band();
@@ -427,4 +674,51 @@ fn the_band_on(
         feature,
         runs,
     }
+}
+
+/// A surface-mode build of these groups at this class's own chording, which has to succeed.
+fn built(
+    part: &Mesh,
+    groups: &[geometry_processing::topology::BevelEdgeGroup],
+    size: f64,
+    because: &str,
+) -> Mesh {
+    expect_built(
+        try_bevel(
+            part,
+            groups,
+            size,
+            SEGMENTS,
+            &CancelToken::new(),
+            TryBevelOptions::default(),
+        ),
+        because,
+    )
+}
+
+/// Closed, manifold, one shell, and no triangle with two corners at one vertex.
+fn assert_it_is_a_sound_solid(mesh: &Mesh) {
+    let (open, open_at) = surface_mesh_closure::open_edge_count(mesh);
+
+    assert_eq!(
+        open, 0,
+        "nothing may be left open, and something is at {open_at:?}"
+    );
+    assert!(mesh.is_manifold());
+    assert_eq!(shell_count(mesh), 1);
+    assert_eq!(
+        mesh.faces
+            .iter()
+            .filter(|face| face.v0 == face.v1 || face.v1 == face.v2 || face.v2 == face.v0)
+            .count(),
+        0,
+        "a triangle with two corners at one point covers nothing and shades as a crack"
+    );
+}
+
+/// Whether a mesh carries a vertex at one place, to a thousandth.
+fn carries(mesh: &Mesh, at: Vector3) -> bool {
+    mesh.vertices
+        .iter()
+        .any(|&vertex| (Vector3::from_vector3_float(vertex) - at).length() < 1e-3)
 }

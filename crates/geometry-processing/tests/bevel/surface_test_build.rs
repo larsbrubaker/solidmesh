@@ -22,15 +22,16 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::sections::section_routing;
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_interrupted_crease, surface_room, surface_shared_edge_network,
-    SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceBevelPlanlessLoop,
-    SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
+    surface_bevel_builder, surface_interrupted_crease, surface_mesh_closure, surface_room,
+    surface_shared_edge_network, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan,
+    SurfaceBevelPlanlessLoop, SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
 };
 use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use geometry_processing::topology::bevel_edge_group_resolver;
 use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache};
 use polygon_mesh::{CancelToken, Mesh};
 
+use crate::mesh_measurements::shell_count;
 use crate::surface_test_chains::join_and_open;
 
 /// C# `LegacyConstructionPin`: pins `section_routing::use_sections` OFF for as long as the handle
@@ -132,6 +133,44 @@ pub fn try_bevel_resolutions(
         plans_built,
         result,
     }
+}
+
+impl TryBevelOutcome {
+    /// C#'s `bool` answer: whether the build succeeded.
+    pub fn built(&self) -> bool {
+        self.result.is_ok()
+    }
+
+    /// C#'s `out reason`: the advisory a refused build names, `None` where it built or declined
+    /// with nothing named.
+    pub fn reason(&self) -> Option<&BevelAdvisory> {
+        self.result
+            .as_ref()
+            .err()
+            .and_then(|failure| failure.advisory())
+    }
+}
+
+/// The mesh a build that has to succeed hands back - C#'s `IsTrue().Because(...)` on `TryBevel`
+/// followed by its `out built` - or the failure, named, with `because`.
+pub fn expect_built(outcome: TryBevelOutcome, because: &str) -> Mesh {
+    match outcome.result {
+        Ok(built) => built.mesh,
+        Err(failure) => panic!("{because} - instead {failure:?}"),
+    }
+}
+
+/// The three checks nearly every built answer is held to: closed (`SurfaceMeshClosure.IsClosed`),
+/// manifold, and one shell.
+pub fn assert_sound(mesh: &Mesh) {
+    let (closed, open_at) = surface_mesh_closure::is_closed(mesh);
+
+    assert!(
+        closed,
+        "nothing may be left open, and something is at {open_at:?}"
+    );
+    assert!(mesh.is_manifold());
+    assert_eq!(shell_count(mesh), 1);
 }
 
 fn refused(reason: BevelAdvisory) -> Result<SurfaceBuilt, SurfaceBuildFailure> {

@@ -5,6 +5,8 @@
 
 #[path = "bead_sequence.rs"]
 pub(crate) mod bead_sequence;
+#[path = "bevel_around_center_tip_dihedrals.rs"]
+pub(crate) mod bevel_around_center_tip_dihedrals;
 #[path = "bevel_obstruction_test_meshes.rs"]
 pub(crate) mod bevel_obstruction_test_meshes;
 #[path = "bore_test_meshes.rs"]
@@ -13,6 +15,8 @@ pub(crate) mod bore_test_meshes;
 pub(crate) mod edge_loop_and_face_test_mesh;
 #[path = "gusset_test_meshes.rs"]
 pub(crate) mod gusset_test_meshes;
+#[path = "half_space_solids.rs"]
+pub(crate) mod half_space_solids;
 #[path = "handover_corner_test_mesh.rs"]
 pub(crate) mod handover_corner_test_mesh;
 #[path = "inner_face_test_mesh.rs"]
@@ -41,6 +45,8 @@ pub(crate) mod picture_hanger_test_mesh;
 pub(crate) mod pyramid_recess_test_meshes;
 #[path = "rigid_motion_meshes.rs"]
 pub(crate) mod rigid_motion_meshes;
+#[path = "skew_ridge_solid.rs"]
+pub(crate) mod skew_ridge_solid;
 #[path = "source_round_test_meshes.rs"]
 pub(crate) mod source_round_test_meshes;
 #[path = "surface_test_build.rs"]

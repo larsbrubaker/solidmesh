@@ -8,15 +8,15 @@ use std::f64::consts::PI;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
     surface_room, surface_room_measure, SurfaceBevelPlan, SurfaceRoomFootprint,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
-use polygon_mesh::{CancelToken, Mesh};
+use polygon_mesh::CancelToken;
+
+use crate::surface_mitre_consumes_a_chord_tests::half_disc_prism;
 
 /// A mesh keeps its vertices as floats, so a distance of 10 is a distance of 10 to about this.
 const NEAR: f64 = 1e-4;
@@ -125,23 +125,4 @@ fn plan_of_the_rim(size: f64) -> Rc<SurfaceBevelPlan> {
     SurfaceBevelPlan::try_create(&chain, &regions, size, true).unwrap_or_else(|reason| {
         panic!("the rim has to plan before its room can be measured: {reason:?}")
     })
-}
-
-/// A half disc, drawn with `facets` chords on its arc and closed by its diameter, extruded along z.
-fn half_disc_prism(facets: i32, radius: f64, height: f64) -> Mesh {
-    let mut path = VertexStorage::new();
-
-    for i in 0..=facets {
-        let angle = PI * i as f64 / facets as f64;
-
-        if i == 0 {
-            path.move_to(radius, 0.0);
-        } else {
-            path.line_to(radius * angle.cos(), radius * angle.sin());
-        }
-    }
-
-    path.close_polygon();
-
-    extrude(&path, height).expect("a half disc extrudes")
 }

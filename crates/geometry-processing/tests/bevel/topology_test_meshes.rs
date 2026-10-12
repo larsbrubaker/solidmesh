@@ -133,6 +133,51 @@ pub fn create_square_boss_on_plate() -> Mesh {
     )
 }
 
+/// C# `TopologyTestMeshes.CreateTwoAlignedBlocksOnAPlate`: two 12 x 12 blocks on (or sunk into) a
+/// 4 mm plate, `land` of plate between them, their near foot creases collinear along `y = 4`.
+///
+/// **Sunk**: each pocket's floor is a region of its own, the two blocks' footprints lying between
+/// them, so the crease that resumes does not ride the pair this one rides. **Proud**: at a block's
+/// foot the wall bounds the block itself, so a face FALLS AWAY there, the corner a crease dies in.
+pub fn create_two_aligned_blocks_on_a_plate(standing_proud: bool, land: f64) -> Mesh {
+    let xs = [0.0, 4.0, 16.0, 16.0 + land, 28.0 + land, 32.0 + land];
+    let ys = [0.0, 4.0, 16.0, 20.0];
+    let zs = [0.0, 6.0, 10.0];
+
+    // The two cells the blocks are: the upper layer's middle row, first and third columns.
+    let is_a_block = |i: i32, j: i32, k: i32| k == 1 && j == 1 && (i == 1 || i == 3);
+
+    create_grid_solid(&xs, &ys, &zs, |i, j, k| {
+        if !(0..=4).contains(&i) || !(0..=2).contains(&j) || !(0..=1).contains(&k) {
+            return false;
+        }
+
+        // The plate is the whole lower layer either way; the upper layer is the two blocks alone,
+        // or everything BUT them, which is the same two shapes the other way round.
+        k == 0
+            || if standing_proud {
+                is_a_block(i, j, k)
+            } else {
+                !is_a_block(i, j, k)
+            }
+    })
+}
+
+/// C# `TopologyTestMeshes.TheFirstBlocksNearCrease`: where the first block's foot crease runs,
+/// along the near side of the plate.
+pub fn the_first_blocks_near_crease() -> (Vector3, Vector3) {
+    (Vector3::new(4.0, 4.0, 6.0), Vector3::new(16.0, 4.0, 6.0))
+}
+
+/// C# `TopologyTestMeshes.TheSecondBlocksNearCrease`: and the second's, collinear with it across
+/// the land.
+pub fn the_second_blocks_near_crease(land: f64) -> (Vector3, Vector3) {
+    (
+        Vector3::new(16.0 + land, 4.0, 6.0),
+        Vector3::new(28.0 + land, 4.0, 6.0),
+    )
+}
+
 /// C# `TopologyTestMeshes.CreateCornerPocketBlock`: a `size` cube with a `pocket` cube bitten out
 /// of its far corner.
 pub fn create_corner_pocket_block(size: f64, pocket: f64) -> Mesh {

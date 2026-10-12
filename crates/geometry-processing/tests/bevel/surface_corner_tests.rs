@@ -348,8 +348,6 @@ fn a_row_whose_ends_stand_opposite_on_the_ball_refuses_the_corner() {
 /// C# `TheFilletedCubeCorner`: the cube corner filleted at this class's own size and sample count -
 /// the SQUARE corner, whose patch is a sphere octant - for the oblique corner's rows to be held to
 /// leaving it exactly as it was.
-// Read by `SurfaceObliqueRoundCornerTests.TheOctantIsUnchanged`, which lands with its own class.
-#[allow(dead_code)]
 pub fn the_filleted_cube_corner() -> Mesh {
     build(three_edges_at_the_corner, SIZE, true, SEGMENTS)
 }
