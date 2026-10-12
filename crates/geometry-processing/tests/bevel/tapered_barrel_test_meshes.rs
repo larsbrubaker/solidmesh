@@ -1,15 +1,15 @@
 //! Port of the test fixture `Fixtures/TaperedBarrelTestMeshes.cs`: a 48-facet tapered barrel (16
 //! at the bottom to 12 at the top, 30 tall) with two radial bores through its wall at different
 //! heights and a quarter turn apart, and the wall picked as the app picks it. Laid out with the
-//! exact Pi only: the `FloatPi` layout (`ThePartAsFloatPiLaidItOut`) only the working-mesh
-//! prologue's own test reads, and it lands with that test.
+//! exact Pi, and once with agg's old float Pi (`ThePartAsFloatPiLaidItOut`), the raw boolean the
+//! working-mesh prologue's own test reads.
 
 #![allow(dead_code)]
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
 use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Matrix4X4, Vector2, Vector3};
+use vector_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
 
 use geometry_processing::bevel::bevel_working_mesh::{create_from, StampedVerdict};
 use geometry_processing::topology::{
@@ -30,9 +30,30 @@ pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
 /// C# `ThePart`: the barrel with both bores through it.
 pub fn the_part() -> Mesh {
-    let barrel = topology_test_meshes::create_frustum(BOTTOM_RADIUS, TOP_RADIUS, HEIGHT, FACETS);
-    let upper = a_radial_bore(0.0, 8.0);
-    let lower = a_radial_bore(90.0, -8.0);
+    the_boolean(std::f64::consts::PI)
+}
+
+/// C# `FloatPi` (`3.1415927f`): Pi as agg's `MathHelper` held it until it became exact - a
+/// float, 8.7e-8 over.
+pub const FLOAT_PI: f64 = std::f32::consts::PI as f64;
+
+/// C# `ThePartAsFloatPiLaidItOut`: [`the_part`] as it came out while agg's Pi was [`FLOAT_PI`] -
+/// every revolve step and the quarter turn that lays each drill on its side a hair long, so the
+/// boolean cut the wall's folds twice a fraction of a micron apart and left DOUBLED fold vertices and
+/// zero-area slivers: the raw output the working-mesh prologue exists to clean up. Only the
+/// prologue's own test reads this.
+pub fn the_part_as_float_pi_laid_it_out() -> Mesh {
+    the_boolean(FLOAT_PI)
+}
+
+/// C# `TheBoolean`: the barrel and both bores laid out with `pi`, the bores subtracted.
+fn the_boolean(pi: f64) -> Mesh {
+    let barrel = revolved_with(
+        pi,
+        topology_test_meshes::create_frustum(BOTTOM_RADIUS, TOP_RADIUS, HEIGHT, FACETS),
+    );
+    let upper = a_radial_bore(0.0, 8.0, pi);
+    let lower = a_radial_bore(90.0, -8.0, pi);
 
     do_array(
         &[
@@ -45,6 +66,33 @@ pub fn the_part() -> Mesh {
         &BooleanOptions::default(),
     )
     .expect("the bores cut the barrel")
+}
+
+/// C# `RevolvedWith`: a mesh revolved about z moved to where a revolve under `pi` would have put
+/// it - every vertex's angle round the axis scaled by `pi / PI`, as each step of 2 pi / n was.
+fn revolved_with(pi: f64, mut revolved: Mesh) -> Mesh {
+    if pi == std::f64::consts::PI {
+        return revolved;
+    }
+
+    for i in 0..revolved.vertices.len() {
+        let at = Vector3::from_vector3_float(revolved.vertices[i]);
+        let radius = (at.x * at.x + at.y * at.y).sqrt();
+        let mut angle = at.y.atan2(at.x);
+
+        // The revolve's steps run 0 to 2 pi; atan2 hands the upper half back negative.
+        if angle < -1e-9 {
+            angle += 2.0 * std::f64::consts::PI;
+        }
+
+        angle *= pi / std::f64::consts::PI;
+        revolved.vertices[i] = Vector3Float::new(radius * angle.cos(), radius * angle.sin(), at.z);
+    }
+
+    revolved.mark_as_changed();
+    revolved.calculate_normals();
+
+    revolved
 }
 
 /// C# `TheWorkingPart`: [`the_part`] through the working-mesh prologue, the only form any bevel
@@ -111,13 +159,17 @@ fn away_from_the_axis(part: &Mesh, face: usize) -> f64 {
 }
 
 /// C# `ARadialBore`: a cylinder laid on its side, long enough to pass through both walls, turned
-/// `turn_degrees` about the axis and lifted to `at_height`.
-fn a_radial_bore(turn_degrees: f64, at_height: f64) -> Mesh {
-    let mut drill =
-        topology_test_meshes::create_cylinder(BORE_RADIUS, 4.0 * BOTTOM_RADIUS, BORE_SIDES);
+/// `turn_degrees` about the axis and lifted to `at_height`, laid out with `pi`.
+fn a_radial_bore(turn_degrees: f64, at_height: f64, pi: f64) -> Mesh {
+    let mut drill = revolved_with(
+        pi,
+        topology_test_meshes::create_cylinder(BORE_RADIUS, 4.0 * BOTTOM_RADIUS, BORE_SIDES),
+    );
 
+    // The quarter turn is in the layout's own Pi, as MathHelper.Tau / 4 was; the turn about the
+    // axis is DegreesToRadians, which always used the exact Math.PI.
     drill.transform(
-        Matrix4X4::create_rotation_y(std::f64::consts::PI / 2.0)
+        Matrix4X4::create_rotation_y(pi / 2.0)
             * Matrix4X4::create_rotation_z(math_helper::degrees_to_radians(turn_degrees))
             * Matrix4X4::create_translation(0.0, 0.0, at_height),
     );

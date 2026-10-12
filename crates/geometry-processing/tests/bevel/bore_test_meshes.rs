@@ -1,13 +1,22 @@
 //! The plate with a round bore, the plate with a RAKED bore, and the split of one of its edges.
 //! Ports the pieces of `Tests/GeometryProcessingTests/Fixtures/BoreTestMeshes.cs`
 //! (`CreatePlateWithARoundBore`, `CreatePlateWithARakedBore`, `TileTheRingBetween`) and
-//! `BoreTestMeshesSplitChords.cs` (`SplitTheEdgeBetween`) that the ported classes read; the
+//! `BoreTestMeshesSplitChords.cs` (`CreatePlateWithARakedBoreWhoseMouthChordsAreSplit`,
+//! `SplitTheEdgeBetween`) that the ported classes read; the
 //! fixture's other parts land with the classes that read them.
 
 use agg_path::vertex_storage::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::revolve;
 use polygon_mesh::{FaceList, Mesh};
 use vector_math::{math_helper, Vector3, Vector3Float};
+
+/// C# `RakedSides`: how many facets round the raked fixture's bore, which is also its mouth's
+/// chord count.
+pub const RAKED_SIDES: i32 = 40;
+
+/// C# `RakedRakeDegrees`: how far the raked fixture's drill leans off the plate's normal, in the
+/// x z plane.
+pub const RAKED_RAKE_DEGREES: f64 = 45.0;
 
 /// C# `CreatePlateWithARoundBore`: a plate `thickness` thick, centred on z = 0, with a bore of
 /// `radius` drawn with `sides` facets and `land` of plate outside it.
@@ -185,6 +194,50 @@ fn tile_the_ring_between(
             turned += 1;
         }
     }
+}
+
+/// C# `CreatePlateWithARakedBoreWhoseMouthChordsAreSplit`: the raked plate with chords of its
+/// upper mouth split by an extra vertex standing part way along each - the thing a boolean leaves
+/// behind and a hand built ring never has. `splits` names each chord by the index of the vertex it
+/// leaves and how far along it the extra vertex stands. `standing_at` is where the bore's own
+/// centre is put, moved BEFORE the splits so each split vertex is read off the float coordinates
+/// the part's own boolean would have read it off (C#'s default `Vector3.Zero` leaves it in place).
+pub fn create_plate_with_a_raked_bore_whose_mouth_chords_are_split(
+    sides: i32,
+    radius: f64,
+    thickness: f64,
+    rake_degrees: f64,
+    splits: &[(i32, f64)],
+    land: f64,
+    standing_at: Vector3,
+) -> Mesh {
+    let mut mesh = create_plate_with_a_raked_bore(sides, radius, thickness, rake_degrees, land);
+
+    if standing_at != Vector3::ZERO {
+        for v in mesh.vertices.iter_mut() {
+            *v = Vector3Float::from_vector3(Vector3::from_vector3_float(*v) + standing_at);
+        }
+        mesh.mark_as_changed();
+    }
+
+    let rake = math_helper::degrees_to_radians(rake_degrees);
+    let axis = Vector3::new(rake.sin(), 0.0, rake.cos());
+    let across = Vector3::new(rake.cos(), 0.0, -rake.sin());
+    let along = Vector3::new(0.0, 1.0, 0.0);
+
+    let mouth_vertex = |index: i32| {
+        let turn =
+            2.0 * std::f64::consts::PI * (((index % sides) + sides) % sides) as f64 / sides as f64;
+        let on_the_section = (across * (radius * turn.cos())) + (along * (radius * turn.sin()));
+
+        on_the_section + (axis * (((thickness / 2.0) - on_the_section.z) / axis.z)) + standing_at
+    };
+
+    for &(chord, at) in splits {
+        split_the_edge_between(&mut mesh, mouth_vertex(chord), mouth_vertex(chord + 1), at);
+    }
+
+    mesh
 }
 
 /// C# `SplitTheEdgeBetween`: splits the mesh edge between the vertices nearest `from` and `to` at

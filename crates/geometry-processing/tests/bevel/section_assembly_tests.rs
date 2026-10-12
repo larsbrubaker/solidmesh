@@ -19,7 +19,7 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{Matrix4X4, Vector3};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
-use crate::{mesh_measurements, rigid_motion_meshes};
+use crate::{mesh_measurements, rigid_motion_meshes, section_robustness_tests};
 
 const SIDES: i32 = 24;
 const BORE_RADIUS: f64 = 3.0;
@@ -136,6 +136,35 @@ fn every_ring_edge_is_used_once_by_a_face_and_once_by_a_strip_the_other_way_roun
              folds there"
         );
     }
+}
+
+/// Every point of every strip stands a radius from the centre segment of the section that minted
+/// it - the claim that what was assembled is still a rolling ball's surface and not merely a closed
+/// mesh.
+#[test]
+fn every_strip_point_stands_a_radius_from_its_own_stations_canal() {
+    let (part, graph, chain) = the_bore(Matrix4X4::IDENTITY);
+    let mut pool = SectionPool::new(&part.vertices);
+
+    let run = try_build_chain(
+        Some(&chain),
+        &part,
+        &graph,
+        &mut pool,
+        RADIUS,
+        SEGMENTS,
+        true,
+    )
+    .unwrap_or_else(|why_not| panic!("the bore's sections build - instead {why_not:?}"));
+
+    let reach = section_robustness_tests::worst_reach_off_the_canal(&run, &pool, RADIUS);
+
+    assert!(
+        reach < 1e-9,
+        "every sample stands a radius from its own station's canal - the worst is {reach} off \
+         it. Not from the centre SEGMENT: a station's section is the ellipse the two crossing \
+         cylinders cut, so a circle about one centre reads the stretch as a 3e-4 error"
+    );
 }
 
 /// The first row of the robustness story for the new path: where the part stands changes nothing

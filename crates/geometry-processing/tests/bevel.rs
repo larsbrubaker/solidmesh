@@ -347,6 +347,10 @@ mod many_chain_foreign_cost_tests;
 mod many_holes_mouth_room_tests;
 #[path = "bevel/many_holes_rim_cost_tests.rs"]
 mod many_holes_rim_cost_tests;
+#[path = "bevel/many_holes_rim_reading.rs"]
+mod many_holes_rim_reading;
+#[path = "bevel/many_holes_test_mesh.rs"]
+mod many_holes_test_mesh;
 #[path = "bevel/mesh_measurements.rs"]
 mod mesh_measurements;
 #[path = "bevel/mesh_surface_distance.rs"]
@@ -567,6 +571,8 @@ mod saved_pick_self_intersection_tests;
 mod second_column_land_join_tests;
 #[path = "bevel/section_assembly_tests.rs"]
 mod section_assembly_tests;
+#[path = "bevel/section_construction_tests.rs"]
+mod section_construction_tests;
 #[path = "bevel/section_face_rebuild_tests.rs"]
 mod section_face_rebuild_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
@@ -579,6 +585,8 @@ mod section_loft_tests;
 mod section_loop_entry_tests;
 #[path = "bevel/section_pierced_face_junction_tests.rs"]
 mod section_pierced_face_junction_tests;
+#[path = "bevel/section_robustness_tests.rs"]
+mod section_robustness_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
 #[path = "bevel/section_routing_opt_in_tests.rs"]
@@ -623,6 +631,8 @@ mod side_witness_tests;
 mod skew_row_cross_tangent_tests;
 #[path = "bevel/slanted_face_rim_tests.rs"]
 mod slanted_face_rim_tests;
+#[path = "bevel/sliver_split_guard_tests.rs"]
+mod sliver_split_guard_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
@@ -637,6 +647,8 @@ mod strip_clip_rib_meshes;
 mod strip_clip_rib_tests;
 #[path = "bevel/surface_bevel_plan_tests.rs"]
 mod surface_bevel_plan_tests;
+#[path = "bevel/surface_bevel_robustness_tests.rs"]
+mod surface_bevel_robustness_tests;
 #[path = "bevel/surface_chain_opens_at_the_junction_tests.rs"]
 mod surface_chain_opens_at_the_junction_tests;
 #[path = "bevel/surface_clip_classifies_one_point_one_way_tests.rs"]
