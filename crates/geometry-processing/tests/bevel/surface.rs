@@ -23,6 +23,8 @@ pub(crate) mod surface_collinear_chord_mitre_tests;
 pub(crate) mod surface_concave_corner_tests;
 #[path = "surface_concave_end_where_the_face_carries_on_tests.rs"]
 pub(crate) mod surface_concave_end_where_the_face_carries_on_tests;
+#[path = "surface_cone_rim_tests.rs"]
+pub(crate) mod surface_cone_rim_tests;
 #[path = "surface_convex_bite_tests.rs"]
 pub(crate) mod surface_convex_bite_tests;
 #[path = "surface_corner_tests.rs"]
@@ -83,6 +85,8 @@ pub(crate) mod surface_mixed_corner_section_stands_on_the_plane_tests;
 pub(crate) mod surface_mixed_corner_sector_tests;
 #[path = "surface_mixed_corner_tests.rs"]
 pub(crate) mod surface_mixed_corner_tests;
+#[path = "surface_oblique_corner_tests.rs"]
+pub(crate) mod surface_oblique_corner_tests;
 #[path = "surface_oblique_mixed_corner_bites_tests.rs"]
 pub(crate) mod surface_oblique_mixed_corner_bites_tests;
 #[path = "surface_oblique_mixed_corner_wall_spine_tests.rs"]
@@ -117,6 +121,8 @@ pub(crate) mod surface_room_across_a_curved_wall_tests;
 pub(crate) mod surface_room_corner_wall_tests;
 #[path = "surface_room_crossing_tests.rs"]
 pub(crate) mod surface_room_crossing_tests;
+#[path = "surface_room_end_cut_tests.rs"]
+pub(crate) mod surface_room_end_cut_tests;
 #[path = "surface_room_half_disc_rim_tests.rs"]
 pub(crate) mod surface_room_half_disc_rim_tests;
 #[path = "surface_room_mitre_window_tests.rs"]
@@ -125,6 +131,8 @@ pub(crate) mod surface_room_mitre_window_tests;
 pub(crate) mod surface_room_notch_reach_tests;
 #[path = "surface_room_partial_run_off_tests.rs"]
 pub(crate) mod surface_room_partial_run_off_tests;
+#[path = "surface_room_skirt_meets_its_own_chains_notch_tests.rs"]
+pub(crate) mod surface_room_skirt_meets_its_own_chains_notch_tests;
 #[path = "surface_room_standing_feature_tests.rs"]
 pub(crate) mod surface_room_standing_feature_tests;
 #[path = "surface_room_tests.rs"]
@@ -139,6 +147,8 @@ pub(crate) mod surface_run_out_lens_readings_tests;
 pub(crate) mod surface_run_out_strip_top_rim_tests;
 #[path = "surface_seam_window_tests.rs"]
 pub(crate) mod surface_seam_window_tests;
+#[path = "surface_separate_rim_picks_tests.rs"]
+pub(crate) mod surface_separate_rim_picks_tests;
 #[path = "surface_sewing_bowed_side_tests.rs"]
 pub(crate) mod surface_sewing_bowed_side_tests;
 #[path = "surface_splits_on_a_segment_tests.rs"]
@@ -177,3 +187,5 @@ pub(crate) mod surface_walkback_checks;
 pub(crate) mod surface_walkback_fold_gate_tests;
 #[path = "surface_walkback_guard_tests.rs"]
 pub(crate) mod surface_walkback_guard_tests;
+#[path = "surface_wall_consumed_to_its_rim_tests.rs"]
+pub(crate) mod surface_wall_consumed_to_its_rim_tests;

@@ -10,6 +10,8 @@
 //! The bore readings are in `surface_bore_mouth_tests.rs`, the eaten chord's build in
 //! `surface_mitre_consumes_a_chord_tests.rs`.
 
+use std::sync::Arc;
+
 use geometry_processing::bevel::sections::section_routing;
 use geometry_processing::bevel::surface::SurfaceLine;
 use geometry_processing::topology::{
@@ -23,9 +25,12 @@ use crate::mesh_measurements::signed_volume;
 use crate::surface_bore_mouth_tests::{
     centre_lines, the_raked_bores_facet_planes, the_upper_mouth, the_upper_raked_mouth,
 };
+use crate::surface_cone_rim_tests;
 use crate::surface_mitre_consumes_a_chord_tests;
 use crate::surface_raked_bore_mouth_tests::{RAKED_RADIUS, RAKED_THICKNESS, RAKE_DEGREES};
+use crate::surface_separate_rim_picks_tests;
 use crate::surface_test_build::{pinned_to_the_sections, try_bevel, TryBevelOptions};
+use crate::topology_test_meshes::create_cylinder;
 
 /// How near the canal a published blend vertex can be read to stand: the mesh keeps its vertices
 /// as floats, so a radius of three is only good to about 3e-7 whatever the construction does in
@@ -205,6 +210,85 @@ fn the_eaten_chords_routed_solid_parts_from_the_booleans_by_a_thousandth_of_a_pe
     assert!(
         (solid - 3084.605151).abs() <= 0.005,
         "the routed staircase holds the same solid to 1.4e-4 of it - it reads {solid:.6}"
+    );
+}
+
+/// The cone rim, routed: the routed rim takes the ring its own tessellated profile sweeps to within
+/// a boundary row's miss of the analytic solid.
+#[test]
+fn the_cones_routed_rim_leaves_material_the_analytic_fillet_takes() {
+    let _sections = pinned_to_the_sections();
+
+    let built = surface_cone_rim_tests::build(1.5, true, 8);
+    let profile = surface_cone_rim_tests::profile(1.5, true, 8);
+
+    let removed = surface_cone_rim_tests::frustum_volume() - signed_volume(&built);
+    let analytic = surface_cone_rim_tests::removed_volume(&profile);
+
+    assert_eq!(section_routing::last_route().as_deref(), Some("sections"));
+
+    assert!(
+        (removed - 9.368221).abs() <= 1e-4,
+        "the routed rim takes the ring its own tessellated profile sweeps to within {:.6} mm^3 of \
+         {analytic:.6}, where the circle-about-a-lerped-centre section left 0.274 standing. What \
+         is left is the BOUNDARY rows', not the interior samples' - it reads {removed:.6}",
+        analytic - removed
+    );
+}
+
+/// The cylinder band, routed: the interior samples are ON the canal and what is left is the two
+/// BOUNDARY rows, set back from the edge line instead of from where two stations' tangent lines
+/// cross.
+#[test]
+fn the_cylinder_bands_routed_vertices_stand_off_the_rolling_ball_circle_by_the_same_fault() {
+    let _sections = pinned_to_the_sections();
+
+    let part = create_cylinder(9.0, 3.0, 24);
+    let features = Arc::new(FeatureEdgeSet::create(&part));
+    let run: Vec<_> = surface_separate_rim_picks_tests::the_top_rim(&features)
+        .into_iter()
+        .take(24)
+        .collect();
+
+    let (built, _) = surface_separate_rim_picks_tests::built(
+        &part,
+        &surface_separate_rim_picks_tests::each_on_its_own(&features, &run),
+        true,
+    );
+
+    assert_eq!(section_routing::last_route().as_deref(), Some("sections"));
+
+    let facets: Vec<Vector3> = run
+        .iter()
+        .map(surface_separate_rim_picks_tests::facet_normal_under)
+        .collect();
+    let added = surface_separate_rim_picks_tests::the_bands_own_vertices(&part, &built, &run);
+
+    let worst = added
+        .iter()
+        .map(|&vertex| {
+            facets
+                .iter()
+                .map(|&normal| {
+                    (surface_separate_rim_picks_tests::distance_to_the_balls_centre_line(
+                        vertex, normal,
+                    ) - 0.5)
+                        .abs()
+                })
+                .fold(f64::INFINITY, f64::min)
+        })
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    assert_eq!(
+        added.len(),
+        216,
+        "the routed band's own vertices, a triangulation pin"
+    );
+
+    assert!(
+        (worst - 1.8303e-5).abs() <= 1e-7,
+        "the band's worst vertex was 1.0587e-3 off the canal and is now 1.83e-5: the interior \
+         samples are ON the canal and what is left is the two BOUNDARY rows - it reads {worst:e}"
     );
 }
 

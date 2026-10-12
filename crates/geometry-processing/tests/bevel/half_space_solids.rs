@@ -33,6 +33,38 @@ pub fn through(at: Vector3, facing: Vector3) -> Wall {
     }
 }
 
+/// The chamfer wall for the edge along `direction` through `on` between the two faces, set back
+/// `size` along each of them: the plane through the two points the bevel's tangent lines stand at.
+/// Chamfering every edge of a CONVEX solid is exactly intersecting it with one of these per edge,
+/// so the polytope of the walls plus the chamfer walls is the answer a bevel test measures against.
+pub fn chamfer(on: Vector3, direction: Vector3, first: Wall, second: Wall, size: f64) -> Wall {
+    let along = direction.get_normal();
+    let touches_first = on + (into_the_face(along, first, second) * size);
+    let touches_second = on + (into_the_face(along, second, first) * size);
+
+    let mut facing = (touches_second - touches_first).cross(along);
+
+    // Out of the material, which is the way both of the faces it is set back from look.
+    if facing.dot(first.facing + second.facing) < 0.0 {
+        facing = -facing;
+    }
+
+    through(touches_first, facing)
+}
+
+/// The unit step from a point of the edge into `face`, square to the edge: the direction the
+/// setback is measured in. Of the two ways along the face it is the one that leaves `other`'s wall
+/// behind, which is what makes it the inward one.
+fn into_the_face(along: Vector3, face: Wall, other: Wall) -> Vector3 {
+    let across = along.cross(face.facing).get_normal();
+
+    if across.dot(other.facing) > 0.0 {
+        -across
+    } else {
+        across
+    }
+}
+
 /// The polytope the walls bound, as a welded mesh with one fan per wall.
 pub fn build(walls: &[Wall]) -> Mesh {
     let corners = corners(walls);
