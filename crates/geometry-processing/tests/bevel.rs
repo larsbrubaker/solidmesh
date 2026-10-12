@@ -537,14 +537,28 @@ mod segment_cell_bound_tests;
 mod self_crossing_chain_tests;
 #[path = "bevel/self_room_varying_setback_tests.rs"]
 mod self_room_varying_setback_tests;
+#[path = "bevel/several_chains_fill_tests.rs"]
+mod several_chains_fill_tests;
 #[path = "bevel/several_chains_fixtures.rs"]
 mod several_chains_fixtures;
+#[path = "bevel/several_chains_support.rs"]
+mod several_chains_support;
+#[path = "bevel/several_chains_tests.rs"]
+mod several_chains_tests;
 #[path = "bevel/side_witness_tests.rs"]
 mod side_witness_tests;
+#[path = "bevel/skew_row_cross_tangent_tests.rs"]
+mod skew_row_cross_tangent_tests;
+#[path = "bevel/slanted_face_rim_tests.rs"]
+mod slanted_face_rim_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
 mod spoke_centre_parameter_tests;
+#[path = "bevel/stair_step_chain_tests.rs"]
+mod stair_step_chain_tests;
+#[path = "bevel/step_corner_rim_tests.rs"]
+mod step_corner_rim_tests;
 #[path = "bevel/strip_clip_rib_meshes.rs"]
 mod strip_clip_rib_meshes;
 #[path = "bevel/strip_clip_rib_tests.rs"]
@@ -645,22 +659,40 @@ mod sweep_mesh_measures;
 mod tapered_barrel_test_meshes;
 #[path = "bevel/tapered_ledge_test_meshes.rs"]
 mod tapered_ledge_test_meshes;
+#[path = "bevel/tessellated_cylinder.rs"]
+mod tessellated_cylinder;
 #[path = "bevel/thread_cpu_time.rs"]
 mod thread_cpu_time;
 #[path = "bevel/top_and_round_corner_room_tests.rs"]
 mod top_and_round_corner_room_tests;
+#[path = "bevel/top_center_face_tests.rs"]
+mod top_center_face_tests;
+#[path = "bevel/top_center_nose_run_out_tests.rs"]
+mod top_center_nose_run_out_tests;
+#[path = "bevel/topology_only_probe_tests.rs"]
+mod topology_only_probe_tests;
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;
+#[path = "bevel/trebled_end_geometry.rs"]
+mod trebled_end_geometry;
+#[path = "bevel/trebled_end_seam_tests.rs"]
+mod trebled_end_seam_tests;
 #[path = "bevel/two_hole_bridge_fixture.rs"]
 mod two_hole_bridge_fixture;
 #[path = "bevel/two_mouths_in_one_facet_mesh.rs"]
 mod two_mouths_in_one_facet_mesh;
 #[path = "bevel/union_of_balls_field_tests.rs"]
 mod union_of_balls_field_tests;
+#[path = "bevel/unstoppable_build_tests.rs"]
+mod unstoppable_build_tests;
 #[path = "bevel/usable_room_tests.rs"]
 mod usable_room_tests;
 #[path = "bevel/virtual_rail_tests.rs"]
 mod virtual_rail_tests;
+#[path = "bevel/waisted_side_tests.rs"]
+mod waisted_side_tests;
+#[path = "bevel/wall_consumed_to_its_rim_tests.rs"]
+mod wall_consumed_to_its_rim_tests;
 #[path = "bevel/warped_wall_test_meshes.rs"]
 mod warped_wall_test_meshes;
 #[path = "bevel/work_budget_tests.rs"]

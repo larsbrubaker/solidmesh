@@ -442,7 +442,7 @@ fn smallest_live_area(mesh: &LevelLineMesh) -> f64 {
 
 /// Closed and consistently oriented in one statement: count every directed edge of the live mesh
 /// and require each to appear exactly once, with its opposite appearing exactly once too.
-fn is_closed_and_consistent(mesh: &LevelLineMesh) -> bool {
+pub fn is_closed_and_consistent(mesh: &LevelLineMesh) -> bool {
     let mut seen: HashMap<(i32, i32), i32> = HashMap::new();
     for t in live_triangles(mesh) {
         for e in [(t.a, t.b), (t.b, t.c), (t.c, t.a)] {
