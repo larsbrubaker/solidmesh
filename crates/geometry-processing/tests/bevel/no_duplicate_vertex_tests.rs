@@ -13,7 +13,7 @@ use geometry_processing::bevel::level_line::refinement_splits_enqueue::{
 use geometry_processing::bevel::level_line::{LevelLineMesh, VertexFieldReading, VertexSide};
 use vector_math::Vector3;
 
-use super::level_line_test_geometry::PlaneField;
+use crate::level_line_test_geometry::PlaneField;
 
 /// A fan of four round a hub, with its spoke 0-1 split at (0.5, 0, 0): (mesh, hub, split, neighbour).
 fn split_fan() -> (LevelLineMesh, i32, i32, i32) {

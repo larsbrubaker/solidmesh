@@ -9,7 +9,7 @@ use geometry_processing::bevel::level_line::hull_clip::{clip, crossed_supporting
 use geometry_processing::bevel::level_line::LevelLineMesh;
 use vector_math::Vector3;
 
-use super::level_line_test_geometry::cube_solid;
+use crate::level_line_test_geometry::cube_solid;
 
 /// A square strip in the plane x = c across a box [-1, 1]^3 reaching 1 past its front (y = 1) and
 /// top (z = 1): only those two planes are crossed, and what is left is the quarter inside, area 1,

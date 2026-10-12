@@ -34,8 +34,8 @@ use polygon_mesh::{CancelToken, Mesh};
 use vector_math::math_helper::radians_to_degrees;
 use vector_math::{Vector2, Vector3};
 
-use super::nose_in_notch_cut::{anchor, cut_ridge};
-use super::nose_in_notch_test_meshes as meshes;
+use crate::nose_in_notch_cut::{anchor, cut_ridge};
+use crate::nose_in_notch_test_meshes as meshes;
 
 const RADIUS: f64 = 2.0;
 const SEGMENTS: i32 = 16;

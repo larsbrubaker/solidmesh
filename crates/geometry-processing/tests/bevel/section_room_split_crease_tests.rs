@@ -7,7 +7,7 @@ use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Vector3;
 
-use super::bore_test_meshes;
+use crate::bore_test_meshes;
 
 const SIDES: i32 = 24;
 const BORE_RADIUS: f64 = 3.0;

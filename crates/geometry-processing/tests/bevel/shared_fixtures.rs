@@ -1,0 +1,59 @@
+//! The shared fixture builders of the `bevel` test area: `R/Tests/GeometryProcessingTests/Fixtures/*.cs`
+//! ported one module each, plus the private helpers several C# test classes each carry a copy of
+//! (bead sequence, kernel cuts, the bevel meter lock, thread CPU time). The `bevel.rs` root
+//! re-exports every member, so test files in any group reach them as `crate::<module>`.
+
+#[path = "bead_sequence.rs"]
+pub(crate) mod bead_sequence;
+#[path = "bevel_obstruction_test_meshes.rs"]
+pub(crate) mod bevel_obstruction_test_meshes;
+#[path = "bore_test_meshes.rs"]
+pub(crate) mod bore_test_meshes;
+#[path = "edge_loop_and_face_test_mesh.rs"]
+pub(crate) mod edge_loop_and_face_test_mesh;
+#[path = "gusset_test_meshes.rs"]
+pub(crate) mod gusset_test_meshes;
+#[path = "handover_corner_test_mesh.rs"]
+pub(crate) mod handover_corner_test_mesh;
+#[path = "inner_face_test_mesh.rs"]
+pub(crate) mod inner_face_test_mesh;
+#[path = "kernel_cut_helpers.rs"]
+pub(crate) mod kernel_cut_helpers;
+#[path = "lobed_prism_meshes.rs"]
+pub(crate) mod lobed_prism_meshes;
+#[path = "many_holes_test_mesh.rs"]
+pub(crate) mod many_holes_test_mesh;
+#[path = "mesh_measurements.rs"]
+pub(crate) mod mesh_measurements;
+#[path = "mesh_surface_distance.rs"]
+pub(crate) mod mesh_surface_distance;
+#[path = "meter_lock.rs"]
+pub(crate) mod meter_lock;
+#[path = "nose_in_notch_cut.rs"]
+pub(crate) mod nose_in_notch_cut;
+#[path = "nose_in_notch_mixed_corners.rs"]
+pub(crate) mod nose_in_notch_mixed_corners;
+#[path = "nose_in_notch_test_meshes.rs"]
+pub(crate) mod nose_in_notch_test_meshes;
+#[path = "picture_hanger_test_mesh.rs"]
+pub(crate) mod picture_hanger_test_mesh;
+#[path = "pyramid_recess_test_meshes.rs"]
+pub(crate) mod pyramid_recess_test_meshes;
+#[path = "rigid_motion_meshes.rs"]
+pub(crate) mod rigid_motion_meshes;
+#[path = "source_round_test_meshes.rs"]
+pub(crate) mod source_round_test_meshes;
+#[path = "surface_test_chains.rs"]
+pub(crate) mod surface_test_chains;
+#[path = "tapered_barrel_test_meshes.rs"]
+pub(crate) mod tapered_barrel_test_meshes;
+#[path = "tapered_ledge_test_meshes.rs"]
+pub(crate) mod tapered_ledge_test_meshes;
+#[path = "thread_cpu_time.rs"]
+pub(crate) mod thread_cpu_time;
+#[path = "topology_test_meshes.rs"]
+pub(crate) mod topology_test_meshes;
+#[path = "two_mouths_in_one_facet_mesh.rs"]
+pub(crate) mod two_mouths_in_one_facet_mesh;
+#[path = "warped_wall_test_meshes.rs"]
+pub(crate) mod warped_wall_test_meshes;

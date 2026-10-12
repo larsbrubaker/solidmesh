@@ -16,8 +16,8 @@ use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::{Matrix4X4, Vector3};
 
-use super::kernel_cut_helpers::{boolean, edge_group};
-use super::nose_in_notch_test_meshes as meshes;
+use crate::kernel_cut_helpers::{boolean, edge_group};
+use crate::nose_in_notch_test_meshes as meshes;
 
 /// C# `CutRidgeAsync`'s answer: the boolean's own result, the tidied and welded part the second
 /// pass reads, and the upper and lower concave picks.

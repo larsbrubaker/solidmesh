@@ -17,7 +17,7 @@ use geometry_processing::topology::{BevelSelectionKind, FaceGroup, FeatureEdge, 
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::Vector3;
 
-use super::topology_test_meshes::create_l_shaped_prism;
+use crate::topology_test_meshes::create_l_shaped_prism;
 
 const RADIUS: f64 = 3.4;
 

@@ -8,7 +8,7 @@ use geometry_processing::bevel::level_line::{field_bounds, ChainField, FieldSamp
 use vector_math::dotnet_random::DotNetRandom;
 use vector_math::Vector3;
 
-use super::clipped_cell_bound_tests::greatest_by_sampling;
+use crate::clipped_cell_bound_tests::greatest_by_sampling;
 
 const SQUARE: [Vector3; 6] = [
     Vector3::new(-2.0, -2.0, 0.0),

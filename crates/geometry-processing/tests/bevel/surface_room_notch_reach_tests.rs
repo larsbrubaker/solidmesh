@@ -16,8 +16,8 @@ use geometry_processing::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::CancelToken;
 use vector_math::Vector3;
 
-use super::nose_in_notch_test_meshes;
-use super::surface_walkback_checks::regions_of;
+use crate::nose_in_notch_test_meshes;
+use crate::surface_walkback_checks::regions_of;
 
 /// What the pair is asked for, and what the omnidirectional reading refused at 1.8065.
 const SIZE: f64 = 2.0;

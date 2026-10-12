@@ -16,10 +16,10 @@ use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
 use vector_math::Vector3;
 
-use super::bead_sequence::{clip_and_union, light_tools};
-use super::bevel_volume_probes::{probe_cube, volume_inside};
-use super::mesh_measurements::{shell_count, signed_volume};
-use super::nose_in_notch_test_meshes as meshes;
+use crate::bead_sequence::{clip_and_union, light_tools};
+use crate::bevel_volume_probes::{probe_cube, volume_inside};
+use crate::mesh_measurements::{shell_count, signed_volume};
+use crate::nose_in_notch_test_meshes as meshes;
 
 const RADIUS: f64 = 6.0;
 

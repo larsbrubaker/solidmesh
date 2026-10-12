@@ -12,7 +12,7 @@ use geometry_processing::bevel::level_line::{
 };
 use vector_math::{cs_math, Matrix4X4, Vector3};
 
-use super::level_line_test_geometry::{
+use crate::level_line_test_geometry::{
     cube, cylinder, is_watertight, line_points, run_cut, shortest_side, signed_volume,
     smallest_triangle_area, subdivided_plane, surface_area, two_triangle_square, BallField,
     CapsuleField, MovedField, PlaneField,

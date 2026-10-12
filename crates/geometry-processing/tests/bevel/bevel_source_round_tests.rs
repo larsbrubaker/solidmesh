@@ -26,7 +26,7 @@ use geometry_processing::topology::{EdgeConvexity, FaceGroup, FeatureEdge, Featu
 use polygon_mesh::Mesh;
 use vector_math::{math_helper, Matrix4X4, Vector2, Vector3};
 
-use super::source_round_test_meshes;
+use crate::source_round_test_meshes;
 
 const SIDES: i32 = 40;
 const POST_RADIUS: f64 = 10.0;

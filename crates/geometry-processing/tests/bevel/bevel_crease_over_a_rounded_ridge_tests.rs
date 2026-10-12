@@ -27,8 +27,8 @@ use polygon_mesh::{CancelToken, Mesh};
 use vector_math::math_helper::radians_to_degrees;
 use vector_math::{Matrix4X4, Vector3};
 
-use super::nose_in_notch_cut::{cut_ridge, RidgeCut};
-use super::nose_in_notch_test_meshes as meshes;
+use crate::nose_in_notch_cut::{cut_ridge, RidgeCut};
+use crate::nose_in_notch_test_meshes as meshes;
 
 /// The one radius, used for both the ridge round and the beads, as the fixtures ask for it.
 const RADIUS: f64 = 2.0;

@@ -18,8 +18,8 @@ use geometry_processing::topology::{
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 
-use super::nose_in_notch_cut::cut_ridge;
-use super::nose_in_notch_test_meshes;
+use crate::nose_in_notch_cut::cut_ridge;
+use crate::nose_in_notch_test_meshes;
 
 const RADIUS: f64 = 2.0;
 

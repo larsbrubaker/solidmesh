@@ -10,7 +10,7 @@ use geometry_processing::bevel::level_line::{
 };
 use vector_math::Vector3;
 
-use super::level_line_test_geometry::coincident_vertices;
+use crate::level_line_test_geometry::coincident_vertices;
 
 const SNAP: f64 = 1e-9;
 

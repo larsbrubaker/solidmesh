@@ -19,7 +19,7 @@ use geometry_processing::topology::{
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
-use super::source_round_test_meshes;
+use crate::source_round_test_meshes;
 
 const SIZE: f64 = 2.0;
 

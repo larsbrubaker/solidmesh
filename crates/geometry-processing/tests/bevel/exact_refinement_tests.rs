@@ -10,7 +10,7 @@ use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh, ScalarFi
 use vector_math::dotnet_random::DotNetRandom;
 use vector_math::{cs_math, Matrix4X4, Vector3};
 
-use super::level_line_test_geometry::{
+use crate::level_line_test_geometry::{
     cube, is_watertight, run_cut, signed_volume, subdivided_plane, surface_area,
     two_triangle_square,
 };

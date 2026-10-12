@@ -16,7 +16,7 @@ use polygon_mesh::{CancelToken, Mesh};
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
-use super::topology_test_meshes;
+use crate::topology_test_meshes;
 
 /// A mesh keeps its vertices as floats, so a run of 31 mm is a run of 31 mm to about this.
 const NEAR: f64 = 1e-3;

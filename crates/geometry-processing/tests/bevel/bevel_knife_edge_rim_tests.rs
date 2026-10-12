@@ -26,14 +26,14 @@ use polygon_mesh::{FaceList, Mesh};
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::{Vector2, Vector3, Vector3Float};
 
-use super::end_face_measures::to_triangle;
-use super::kernel_cut_helpers::boolean;
-use super::knife_edge_rim_measures::{
+use crate::end_face_measures::to_triangle;
+use crate::kernel_cut_helpers::boolean;
+use crate::knife_edge_rim_measures::{
     assert_every_section, knife_centre_y, measure_back_corner, measure_knife_edge_chamfer_section,
     measure_knife_edge_section, measure_top_edge_chamfer_section, measure_top_edge_section,
     measure_top_knife_corner, prism, r#box, show, x_min_face, SectionReading, RADIUS, SIZE,
 };
-use super::sweep_mesh_measures;
+use crate::sweep_mesh_measures;
 
 const SEGMENTS: i32 = 16;
 

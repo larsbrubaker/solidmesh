@@ -7,7 +7,7 @@ use geometry_processing::bevel::bevel_arc_chording::{effective_segments, segment
 use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids;
 
-use super::topology_test_meshes::create_isosceles_prism;
+use crate::topology_test_meshes::create_isosceles_prism;
 
 /// The count a fresh fillet carries, and the one every number below is stated against.
 const EIGHT: i32 = 8;

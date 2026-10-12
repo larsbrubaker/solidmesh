@@ -7,7 +7,7 @@
 use geometry_processing::bevel::surface::{surface_fan, surface_split_sewing, SurfaceVertexPool};
 use vector_math::{Vector3, Vector3Float};
 
-use super::lobed_prism_meshes;
+use crate::lobed_prism_meshes;
 
 fn listed(faces: &[(i32, i32, i32)]) -> String {
     faces
