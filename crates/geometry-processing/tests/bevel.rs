@@ -115,6 +115,8 @@ mod cube_edge_end_cap_tests;
 mod cube_edge_union_tests;
 #[path = "bevel/degenerate_triangle_refinement_tests.rs"]
 mod degenerate_triangle_refinement_tests;
+#[path = "bevel/edge_loop_and_face_test_mesh.rs"]
+mod edge_loop_and_face_test_mesh;
 #[path = "bevel/encroaching_side_room_tests.rs"]
 mod encroaching_side_room_tests;
 #[path = "bevel/end_face_builds.rs"]
@@ -169,6 +171,8 @@ mod grid_hole_plate_fixture;
 mod growing_crease_room_source_tests;
 #[path = "bevel/gusset_test_meshes.rs"]
 mod gusset_test_meshes;
+#[path = "bevel/handover_corner_test_mesh.rs"]
+mod handover_corner_test_mesh;
 #[path = "bevel/hole_fill_corner_tests.rs"]
 mod hole_fill_corner_tests;
 #[path = "bevel/hole_fill_density_tests.rs"]
@@ -187,6 +191,8 @@ mod hole_fill_validity_tests;
 mod hourglass_beside_square_fixture;
 #[path = "bevel/hull_clip_tests.rs"]
 mod hull_clip_tests;
+#[path = "bevel/inner_face_test_mesh.rs"]
+mod inner_face_test_mesh;
 #[path = "bevel/insert_polyline_tests.rs"]
 mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]
@@ -213,6 +219,8 @@ mod many_chain_foreign_cost_tests;
 mod many_holes_mouth_room_tests;
 #[path = "bevel/mesh_measurements.rs"]
 mod mesh_measurements;
+#[path = "bevel/mesh_surface_distance.rs"]
+mod mesh_surface_distance;
 #[path = "bevel/meter_lock.rs"]
 mod meter_lock;
 #[path = "bevel/micro_step_seam_tests.rs"]
@@ -233,6 +241,8 @@ mod oblique_end_face_tests;
 mod one_room_reading_tests;
 #[path = "bevel/open_chain_fixtures.rs"]
 mod open_chain_fixtures;
+#[path = "bevel/open_mouth_arc_walk.rs"]
+mod open_mouth_arc_walk;
 #[path = "bevel/opposite_sense_crease_tests.rs"]
 mod opposite_sense_crease_tests;
 #[path = "bevel/opposite_sense_end_face_tests.rs"]
@@ -243,10 +253,14 @@ mod outline_prisms;
 mod parallel_edges_room_tests;
 #[path = "bevel/pick_field_tests.rs"]
 mod pick_field_tests;
+#[path = "bevel/picture_hanger_test_mesh.rs"]
+mod picture_hanger_test_mesh;
 #[path = "bevel/pyramid_recess_test_meshes.rs"]
 mod pyramid_recess_test_meshes;
 #[path = "bevel/raked_box_fixture.rs"]
 mod raked_box_fixture;
+#[path = "bevel/rigid_motion_meshes.rs"]
+mod rigid_motion_meshes;
 #[path = "bevel/room_ceiling_tests.rs"]
 mod room_ceiling_tests;
 #[path = "bevel/room_pairs_cost_tests.rs"]
@@ -379,6 +393,8 @@ mod rust_only_bevel_slice8_tests;
 mod rust_only_bevel_slice9_tests;
 #[path = "bevel/rust_only_bevel_sliver_collapse_tests.rs"]
 mod rust_only_bevel_sliver_collapse_tests;
+#[path = "bevel/section_hanger_top_rim_tests.rs"]
+mod section_hanger_top_rim_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
@@ -389,8 +405,12 @@ mod section_routing_opt_in_tests;
 mod section_routing_partition_tests;
 #[path = "bevel/section_smooth_side_bridged_holes_tests.rs"]
 mod section_smooth_side_bridged_holes_tests;
+#[path = "bevel/section_smooth_side_tests.rs"]
+mod section_smooth_side_tests;
 #[path = "bevel/section_straight_bore_tests.rs"]
 mod section_straight_bore_tests;
+#[path = "bevel/section_surface_walk_arc_join_tests.rs"]
+mod section_surface_walk_arc_join_tests;
 #[path = "bevel/section_surface_walk_fold_tests.rs"]
 mod section_surface_walk_fold_tests;
 #[path = "bevel/section_surface_walk_roof.rs"]
