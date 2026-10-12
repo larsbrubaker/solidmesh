@@ -8,10 +8,12 @@
 //! ([`section_routing`]), the cut of a run's smooth side ([`section_smooth_side`]), the reading of
 //! which side of each run is smooth ([`section_smooth_seam`]), the rewrite of the part's faces
 //! around every chain vertex ([`section_face_rebuild`]), the region
-//! re-mesh ([`section_fan_remesh`]) and the mixed corner's reading ([`section_mixed_corner`]).
+//! re-mesh ([`section_fan_remesh`]), the mixed corner's reading ([`section_mixed_corner`]) and the
+//! whole build published as one closed mesh ([`section_assembly`]).
 
 pub mod bevel_section;
 pub mod section_absorbed_splits;
+pub mod section_assembly;
 pub mod section_builder;
 pub mod section_builder_offsets;
 pub mod section_builder_run;

@@ -87,6 +87,8 @@ mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 pub mod surface_bevel_stitch;
 mod surface_bite_shared_sides;
+pub mod surface_bitten_feature_faces;
+pub mod surface_builder_mixed_corners;
 pub mod surface_builder_standing_features;
 mod surface_chain_end_reading;
 pub mod surface_chain_join;

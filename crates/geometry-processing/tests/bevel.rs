@@ -561,6 +561,8 @@ mod rust_only_section_smooth_seam_tests;
 mod saved_pick_self_intersection_tests;
 #[path = "bevel/second_column_land_join_tests.rs"]
 mod second_column_land_join_tests;
+#[path = "bevel/section_assembly_tests.rs"]
+mod section_assembly_tests;
 #[path = "bevel/section_face_rebuild_tests.rs"]
 mod section_face_rebuild_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
