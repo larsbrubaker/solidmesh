@@ -72,7 +72,8 @@
 //!   ([`SurfaceRegionWalkback`]) with the walkback's result ([`SurfaceWalkbackRuns`]), its band
 //!   reach and standing-feature guard ([`surface_walkback_bands`]) and the tangent runs each cut
 //!   leaves ([`surface_walkback_tangent_runs`]), the two-pass rewrite of the mesh the walkback
-//!   cuts ([`surface_walkback_rewrite`]), the room
+//!   cuts ([`surface_walkback_rewrite`]), the walkback itself, which drives them all
+//!   ([`surface_face_walkback`]), the room
 //!   and the build agreeing on their run-offs ([`surface_run_off_agreement`]), the seams re-read
 //!   after the later cuts ([`surface_seam_re_read`]) and the warning where a run stops short
 //!   ([`surface_run_stops_short`]).
@@ -107,6 +108,7 @@ pub mod surface_end_gains_the_section;
 pub mod surface_end_gives_up_the_section;
 pub mod surface_end_notch;
 pub mod surface_face_carries_on;
+pub mod surface_face_walkback;
 mod surface_facet_cut;
 pub mod surface_fan;
 pub mod surface_handover_leaves_a_strip;

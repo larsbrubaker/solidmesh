@@ -2,7 +2,8 @@
 //! append-only point pool ([`SectionPool`]), the walk of a side's fan at a chain vertex
 //! ([`section_fan_walk`]), the section at a chain vertex ([`BevelSection`]), at a corner, at an
 //! open end and at a junction ([`JunctionSection`]), the builder of one chain's run of sections
-//! ([`SectionRun`]), the room reading ([`SectionRoomCache`]), the surface walk
+//! ([`SectionRun`]), the loft of each run's strips between its sections ([`section_loft`]), the
+//! room reading ([`SectionRoomCache`]), the surface walk
 //! ([`SurfaceWalkResult`]), the router between the legacy construction and the sections
 //! ([`section_routing`]), the cut of a run's smooth side ([`section_smooth_side`]), the reading of
 //! which side of each run is smooth ([`section_smooth_seam`]), the rewrite of the part's faces
@@ -26,6 +27,8 @@ pub mod section_fan_walk;
 pub mod section_junction;
 pub mod section_junction_build;
 pub mod section_junction_canal;
+pub mod section_loft;
+mod section_loft_gaps;
 pub mod section_mixed_corner;
 mod section_pool;
 pub mod section_room;

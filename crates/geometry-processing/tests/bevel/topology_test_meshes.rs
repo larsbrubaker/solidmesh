@@ -622,3 +622,144 @@ pub fn create_forked_fins_on_a_slab() -> Mesh {
 
     mesh
 }
+
+/// C# `SurfaceTestMeshes.CreateFinOnASlab`: a step with ONE fin standing on its tread, against the riser. The step
+/// is 20 wide: the tread is `y` in [0, 10] at `z` = 20 and the riser stands behind it to `z` = 30.
+/// The fin is the tetrahedron on `(2, 10, 20)`, `(10, 10, 20)`, `(6, 5, 20)` and the peak
+/// `(6, 10, 24)`, standing on the tread and buried in the riser behind it. The solid is
+/// 10000 + 80/3 mm^3.
+pub fn create_fin_on_a_slab() -> Mesh {
+    let mut mesh = Mesh::new();
+
+    let a = Vector3::new(2.0, 10.0, 20.0);
+    let b = Vector3::new(10.0, 10.0, 20.0);
+    let c = Vector3::new(6.0, 5.0, 20.0);
+    let peak = Vector3::new(6.0, 10.0, 24.0);
+
+    // The tread, in five triangles rather than a fan: the fin's root bites a notch out of it whose
+    // apex is a reflex corner, and no corner of the tread can see past that apex.
+    let corner = Vector3::new(0.0, 0.0, 20.0);
+
+    mesh.create_face(&[
+        corner,
+        Vector3::new(20.0, 0.0, 20.0),
+        Vector3::new(20.0, 10.0, 20.0),
+    ]);
+    mesh.create_face(&[Vector3::new(20.0, 10.0, 20.0), b, c]);
+    mesh.create_face(&[corner, Vector3::new(20.0, 10.0, 20.0), c]);
+    mesh.create_face(&[corner, c, a]);
+    mesh.create_face(&[corner, a, Vector3::new(0.0, 10.0, 20.0)]);
+
+    // The riser, which carries the fin's own notch on its foot: three convex pieces rather than a
+    // fan, because every fan of this shape runs a diagonal through the notch's peak.
+    mesh.create_face(&[
+        Vector3::new(0.0, 10.0, 20.0),
+        a,
+        peak,
+        Vector3::new(0.0, 10.0, 30.0),
+    ]);
+    mesh.create_face(&[
+        b,
+        Vector3::new(20.0, 10.0, 20.0),
+        Vector3::new(20.0, 10.0, 30.0),
+        peak,
+    ]);
+    mesh.create_face(&[
+        Vector3::new(0.0, 10.0, 30.0),
+        peak,
+        Vector3::new(20.0, 10.0, 30.0),
+    ]);
+
+    a_steps_shell(&mut mesh);
+
+    // The fin's two sloping faces, each wound to face out and away from the peak.
+    mesh.create_face(&[a, c, peak]);
+    mesh.create_face(&[c, b, peak]);
+
+    mesh.clean_and_merge();
+
+    mesh
+}
+
+/// C# `SurfaceTestMeshes.CreatePlateWithABossFootSpanningTheRim`: a 30 x 30 plate, its top at z = 20 with the front
+/// rim broken at x = 8 and 22, and a triangular boss on `(5, 6)`, `(25, 6)`, `(15, 20)` standing to
+/// z = 28 - its long foot edge running alongside the picked middle third of the front rim.
+pub fn create_plate_with_a_boss_foot_spanning_the_rim() -> Mesh {
+    let top = 20.0;
+    let boss_top = 28.0;
+
+    // The plate's top rim, with the two extra corners on the front that make its middle third an
+    // edge of its own to pick
+    let o0 = Vector3::new(0.0, 0.0, top);
+    let o1 = Vector3::new(8.0, 0.0, top);
+    let o2 = Vector3::new(22.0, 0.0, top);
+    let o3 = Vector3::new(30.0, 0.0, top);
+    let o4 = Vector3::new(30.0, 30.0, top);
+    let o5 = Vector3::new(0.0, 30.0, top);
+
+    // The boss's foot, and the same triangle at its top
+    let a = Vector3::new(5.0, 6.0, top);
+    let b = Vector3::new(25.0, 6.0, top);
+    let c = Vector3::new(15.0, 20.0, top);
+    let a_up = Vector3::new(a.x, a.y, boss_top);
+    let b_up = Vector3::new(b.x, b.y, boss_top);
+    let c_up = Vector3::new(c.x, c.y, boss_top);
+
+    let mut mesh = Mesh::new();
+
+    mesh.create_face(&[
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 30.0, 0.0),
+        Vector3::new(30.0, 30.0, 0.0),
+        Vector3::new(30.0, 0.0, 0.0),
+    ]);
+    mesh.create_face(&[
+        Vector3::new(30.0, 0.0, 0.0),
+        o3,
+        o2,
+        o1,
+        o0,
+        Vector3::new(0.0, 0.0, 0.0),
+    ]);
+    mesh.create_face(&[
+        Vector3::new(0.0, 30.0, 0.0),
+        o5,
+        o4,
+        Vector3::new(30.0, 30.0, 0.0),
+    ]);
+    mesh.create_face(&[
+        o0,
+        o5,
+        Vector3::new(0.0, 30.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+    ]);
+    mesh.create_face(&[
+        Vector3::new(30.0, 0.0, 0.0),
+        Vector3::new(30.0, 30.0, 0.0),
+        o4,
+        o3,
+    ]);
+
+    // The top, triangle by triangle rather than as one polygon, so that the foot edge from a to b
+    // is a single edge of it and nothing else crosses the band
+    mesh.create_face(&[a, o0, o1]);
+    mesh.create_face(&[a, o1, o2]);
+    mesh.create_face(&[a, o2, o3]);
+    mesh.create_face(&[a, o3, b]);
+    mesh.create_face(&[o5, o0, a]);
+    mesh.create_face(&[o5, a, c]);
+    mesh.create_face(&[c, b, o3]);
+    mesh.create_face(&[c, o3, o4]);
+    mesh.create_face(&[o5, c, o4]);
+
+    // The boss: each wall traverses its foot edge the other way round from the top, which is what
+    // makes the two of them agree
+    mesh.create_face(&[c, a, a_up, c_up]);
+    mesh.create_face(&[b, c, c_up, b_up]);
+    mesh.create_face(&[a, b, b_up, a_up]);
+    mesh.create_face(&[a_up, b_up, c_up]);
+
+    mesh.clean_and_merge();
+
+    mesh
+}

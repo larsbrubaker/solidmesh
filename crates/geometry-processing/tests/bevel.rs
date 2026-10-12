@@ -527,6 +527,8 @@ mod second_column_land_join_tests;
 mod section_face_rebuild_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
 mod section_hanger_top_rim_tests;
+#[path = "bevel/section_loft_tests.rs"]
+mod section_loft_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
@@ -607,6 +609,8 @@ mod surface_end_cut_leaves_the_die_points_chord_alone_tests;
 mod surface_end_gains_the_section_reading_tests;
 #[path = "bevel/surface_facet_cut_own_ends_tests.rs"]
 mod surface_facet_cut_own_ends_tests;
+#[path = "bevel/surface_facet_knits_across_its_cuts_tests.rs"]
+mod surface_facet_knits_across_its_cuts_tests;
 #[path = "bevel/surface_fan_sliver_ring_tests.rs"]
 mod surface_fan_sliver_ring_tests;
 #[path = "bevel/surface_fan_tests.rs"]
@@ -675,6 +679,10 @@ mod surface_tangent_run_ends_tests;
 mod surface_test_chains;
 #[path = "bevel/surface_walkback_checks.rs"]
 mod surface_walkback_checks;
+#[path = "bevel/surface_walkback_fold_gate_tests.rs"]
+mod surface_walkback_fold_gate_tests;
+#[path = "bevel/surface_walkback_guard_tests.rs"]
+mod surface_walkback_guard_tests;
 #[path = "bevel/swallowed_side_tests.rs"]
 mod swallowed_side_tests;
 #[path = "bevel/sweep_mesh_measures.rs"]

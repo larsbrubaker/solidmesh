@@ -8,6 +8,8 @@
 //! decision - which region is cut where - and this is the mechanics of carrying that decision into
 //! triangles without leaving a T junction or a crack behind. Nothing here is new.
 
+use std::rc::Rc;
+
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::{Vector3, Vector3Float};
@@ -262,7 +264,7 @@ pub fn assemble(
     pool: &SurfaceVertexPool,
     faces: &[(i32, i32, i32)],
     tangent_runs: &mut SurfaceWalkbackRuns,
-    withheld: &[SurfaceStandingFeatureWithheld],
+    withheld: &[Rc<SurfaceStandingFeatureWithheld>],
     rail_continuations: Option<&mut SurfaceWalkbackRuns>,
     band_corners: Option<&mut SurfaceWalkbackRuns>,
 ) -> Mesh {
