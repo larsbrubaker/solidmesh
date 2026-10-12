@@ -68,7 +68,8 @@
 //!   ([`surface_shared_edge_network`]), a region and the cuts asked of it
 //!   ([`SurfaceRegionWalkback`]) with the walkback's result ([`SurfaceWalkbackRuns`]), its band
 //!   reach and standing-feature guard ([`surface_walkback_bands`]) and the tangent runs each cut
-//!   leaves ([`surface_walkback_tangent_runs`]), the room
+//!   leaves ([`surface_walkback_tangent_runs`]), the two-pass rewrite of the mesh the walkback
+//!   cuts ([`surface_walkback_rewrite`]), the room
 //!   and the build agreeing on their run-offs ([`surface_run_off_agreement`]), the seams re-read
 //!   after the later cuts ([`surface_seam_re_read`]) and the warning where a run stops short
 //!   ([`surface_run_stops_short`]).
@@ -195,6 +196,7 @@ pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
 pub mod surface_walkback_bands;
 mod surface_walkback_result;
+pub mod surface_walkback_rewrite;
 pub mod surface_walkback_standing_features;
 pub mod surface_walkback_tangent_runs;
 pub mod surface_wall_ran_out;

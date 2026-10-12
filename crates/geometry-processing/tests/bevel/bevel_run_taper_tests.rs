@@ -1,13 +1,18 @@
 //! Port of `R/Tests/GeometryProcessingTests/BevelRunTaperTests.cs`: the run-out a selected open
 //! run walks onto the unselected edges past its free ends ([`BevelRunTaper`]) and the tapered
-//! sweep along it (`bevel_tapered_sweep`). The C# test that builds through `BevelGroupTools`
-//! lands with that type.
+//! sweep along it (`bevel_tapered_sweep`), and a run built through `bevel_group_tools` tapering
+//! only its free end.
 
+use std::sync::Arc;
+
+use geometry_processing::bevel::bevel_group_tools::{try_build, BevelGroupToolsOptions};
 use geometry_processing::bevel::{bevel_chain_linker, bevel_tapered_sweep};
 use geometry_processing::bevel::{
     BevelChainEnds, BevelRunTaper, BevelSurfaceLabels, BevelSweptSection,
 };
+use geometry_processing::topology::bevel_edge_group_resolver::create_from_edge;
 use geometry_processing::topology::FeatureEdgeSet;
+use geometry_processing::topology::{BevelEdgeGroupResolution, BevelSelectionKind};
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::solids::platonic_solids;
 use vector_math::{Matrix4X4, Vector3};
@@ -223,4 +228,86 @@ fn runout_ending_almost_on_a_facet_joint_has_one_tip() {
     )
     .unwrap_or_else(|failure| panic!("{failure:?}"));
     assert!(tool.is_manifold());
+}
+
+/// C# `AFreeEndRunsOutEvenWhereTheOtherEndIsSharedWithAnotherPick`: a rim facet picked beside
+/// another pick runs out at its free end and keeps the overshoot at the shared one.
+#[test]
+fn a_free_end_runs_out_even_where_the_other_end_is_shared_with_another_pick() {
+    let mesh = create_cylinder(10.0, 10.0, 40);
+    let features = Arc::new(FeatureEdgeSet::create(&mesh));
+    let seed = *features
+        .edges()
+        .iter()
+        .find(|e| e.start.z == 5.0 && e.end.z == 5.0)
+        .expect("a top rim edge");
+    let chain = bevel_chain_linker::link(&[seed]).remove(0);
+
+    // The rim edge next door, picked in the same operation but not in this group - which is
+    // exactly how G2 stands beside G3 in the fixture.
+    let to_vertex = chain.edges[0].to_vertex();
+    let neighbour = *features
+        .edges()
+        .iter()
+        .find(|e| {
+            e.mesh_edge_index != seed.mesh_edge_index
+                && e.start.z == 5.0
+                && e.end.z == 5.0
+                && (e.start_vertex == to_vertex || e.end_vertex == to_vertex)
+        })
+        .expect("a neighbouring rim edge");
+
+    let group = create_from_edge(
+        &features,
+        seed.mesh_edge_index,
+        BevelSelectionKind::Edge,
+        30.0,
+    )
+    .expect("the rim edge makes a group");
+    let resolution = BevelEdgeGroupResolution {
+        group,
+        features: Arc::clone(&features),
+        failure_reason: None,
+        seed_edge_index: seed.mesh_edge_index,
+        edges: vec![seed],
+        chain: None,
+        face_group: None,
+    };
+
+    let mut swept: Option<BevelRunTaper> = None;
+    let mut labels = BevelSurfaceLabels::new(&mesh, None);
+    let selected = [seed, neighbour];
+    let mut sweep = |taper: &BevelRunTaper, ends: &BevelChainEnds, section| {
+        swept = Some(taper.clone());
+        bevel_tapered_sweep::try_create(taper, ends, 2.0, 8, true, section, 0.0).ok()
+    };
+    let built = try_build(
+        &resolution,
+        true,
+        2.0,
+        8,
+        BevelGroupToolsOptions {
+            selected_across_groups: Some(&selected),
+            surface_labels: Some(&mut labels),
+            sweep_taper: Some(&mut sweep),
+            ..Default::default()
+        },
+    );
+
+    let tools = match built {
+        Ok(built) => built.tools,
+        Err(refusal) => panic!("{:?}", refusal.reason),
+    };
+    let swept = swept.expect(
+        "the free end of this pick meets nothing but unselected rim, which is the run-out's own case",
+    );
+    assert!(
+        swept.start_length > 0.0,
+        "the FREE end - the one no other pick stands at - is the end that runs out"
+    );
+    assert_eq!(
+        swept.end_length, 0.0,
+        "and the shared end keeps the overshoot the two picks are meant to overlap across"
+    );
+    assert_eq!(tools.len(), 1);
 }

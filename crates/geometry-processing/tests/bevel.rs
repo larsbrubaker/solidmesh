@@ -77,6 +77,8 @@ mod bevel_sweep_back_depth_tests;
 mod bevel_sweep_batches_tests;
 #[path = "bevel/bevel_t_vertex_sliver_repair_tests.rs"]
 mod bevel_t_vertex_sliver_repair_tests;
+#[path = "bevel/bevel_taper_fallback_tests.rs"]
+mod bevel_taper_fallback_tests;
 #[path = "bevel/bevel_thin_sliver_conditioning_tests.rs"]
 mod bevel_thin_sliver_conditioning_tests;
 #[path = "bevel/bevel_void_wedge_section_tests.rs"]
@@ -457,6 +459,8 @@ mod rust_only_section_smooth_seam_tests;
 mod saved_pick_self_intersection_tests;
 #[path = "bevel/second_column_land_join_tests.rs"]
 mod second_column_land_join_tests;
+#[path = "bevel/section_face_rebuild_tests.rs"]
+mod section_face_rebuild_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
 mod section_hanger_top_rim_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]

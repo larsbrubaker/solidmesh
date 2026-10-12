@@ -81,6 +81,7 @@ pub mod bevel_face_fit_exemptions;
 pub mod bevel_face_fit_walls;
 pub mod bevel_face_run_out;
 mod bevel_group_result;
+pub mod bevel_group_tools;
 pub mod bevel_interrupted_crease;
 pub mod bevel_mitre_fit;
 mod bevel_mixed_blend;
