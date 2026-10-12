@@ -25,16 +25,26 @@ mod bevel_bead_exit_tests;
 mod bevel_bead_runs_off_its_wall_tests;
 #[path = "bevel/bevel_blocked_crease_end_tests.rs"]
 mod bevel_blocked_crease_end_tests;
+#[path = "bevel/bevel_canal_over_the_round_tests.rs"]
+mod bevel_canal_over_the_round_tests;
 #[path = "bevel/bevel_cap_clip_tests.rs"]
 mod bevel_cap_clip_tests;
 #[path = "bevel/bevel_cap_stand_off_tests.rs"]
 mod bevel_cap_stand_off_tests;
+#[path = "bevel/bevel_center_bottom_corner_tests.rs"]
+mod bevel_center_bottom_corner_tests;
+#[path = "bevel/bevel_centre_flows_through_tests.rs"]
+mod bevel_centre_flows_through_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
 #[path = "bevel/bevel_collinear_run_fold_tests.rs"]
 mod bevel_collinear_run_fold_tests;
 #[path = "bevel/bevel_corner_void_tests.rs"]
 mod bevel_corner_void_tests;
+#[path = "bevel/bevel_crease_over_a_rounded_ridge_tests.rs"]
+mod bevel_crease_over_a_rounded_ridge_tests;
+#[path = "bevel/bevel_drive_through_guard_tests.rs"]
+mod bevel_drive_through_guard_tests;
 #[path = "bevel/bevel_ends_measure_tests.rs"]
 mod bevel_ends_measure_tests;
 #[path = "bevel/bevel_face_fit_cap_tests.rs"]
@@ -51,6 +61,8 @@ mod bevel_folded_flap_repair_tests;
 mod bevel_gusset_poke_through_tests;
 #[path = "bevel/bevel_invariants_measure_tests.rs"]
 mod bevel_invariants_measure_tests;
+#[path = "bevel/bevel_knife_edge_rim_tests.rs"]
+mod bevel_knife_edge_rim_tests;
 #[path = "bevel/bevel_mitre_split_tests.rs"]
 mod bevel_mitre_split_tests;
 #[path = "bevel/bevel_obstruction_test_meshes.rs"]
@@ -299,6 +311,8 @@ mod insert_polyline_tests;
 mod island_split_order_tests;
 #[path = "bevel/kernel_cut_helpers.rs"]
 mod kernel_cut_helpers;
+#[path = "bevel/knife_edge_rim_measures.rs"]
+mod knife_edge_rim_measures;
 #[path = "bevel/known_room_refuses_first_tests.rs"]
 mod known_room_refuses_first_tests;
 #[path = "bevel/land_sliver_joins_two_bands_tests.rs"]

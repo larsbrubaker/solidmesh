@@ -1,11 +1,15 @@
 //! Port of the test fixture `Fixtures/NoseInNotchTestMeshes.cs` (its `Create` with the default
-//! arguments, and the named points and normals): a 20 mm cube with a triangular notch cut down its
+//! arguments, the named points and normals, and the crease and group picks the tests make on it): a
+//! 20 mm cube with a triangular notch cut down its
 //! back, and a two-faced nose standing in the notch.
 
 #![allow(dead_code)]
 
 use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
+use geometry_processing::topology::bevel_edge_group_resolver;
+use geometry_processing::topology::{
+    BevelEdgeGroup, BevelSelectionKind, ChainEdge, FaceGroup, FeatureEdgeSet,
+};
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
@@ -37,6 +41,11 @@ pub fn lower_crease_end() -> Vector3 {
 /// The notch's floor corner.
 pub fn notch_floor() -> Vector3 {
     Vector3::new(10.0, 10.0, 0.0)
+}
+
+/// The notch's ceiling corner.
+pub fn notch_ceiling() -> Vector3 {
+    Vector3::new(10.0, 10.0, SIZE)
 }
 
 pub fn left_slope_normal() -> Vector3 {
@@ -229,4 +238,88 @@ pub fn creases_scaled(part: &Mesh, scale: f64) -> (Vec<BevelSweptChain>, Vec<Str
     }
 
     (runs, names)
+}
+
+/// C# `CentreBottomGroups(features, out names)` at scale 1: the three creases "5mm Bevel Center
+/// Bottom.mcx" picks, as groups a rebuild can resolve - the notch's own centre crease from the floor
+/// up to [`lower_crease_end`], and the two LOWER nose creases that die on the same point. All three
+/// meet at that one concave junction, which is what makes this selection the inside-corner mirror
+/// of a three-run boss.
+///
+/// One group per edge, which is what the all-edges gesture gives and what the fixture carries. The
+/// two UPPER nose creases are deliberately NOT in it: their absence is why each nose bead's ridge
+/// end has no partner to be bounded by and has to be ended on the plane of the face across the
+/// ridge instead (`BevelPartneredBead`).
+pub fn centre_bottom_groups(features: &FeatureEdgeSet) -> (Vec<BevelEdgeGroup>, Vec<String>) {
+    groups_on(
+        features,
+        &[
+            ("centre", notch_floor(), lower_crease_end()),
+            ("lower left", left_ridge_end(), lower_crease_end()),
+            ("lower right", right_ridge_end(), lower_crease_end()),
+        ],
+        1.0,
+        "",
+    )
+}
+
+/// C# `CentreFlowsThroughGroups(features, out names)` at scale 1: the two creases "Center Flows
+/// Through.mcx" picks, as groups a rebuild can resolve - the two pieces the nose leaves of the
+/// notch's own centre crease, from the floor up to [`lower_crease_end`], and from
+/// [`upper_crease_end`] on up to the ceiling.
+///
+/// The nose's own four creases are deliberately NOT in it. That is what makes this selection the
+/// INTERRUPTED crease rather than a corner: neither piece has a selected neighbour at the end where
+/// the nose stops it, and what stands there is not a corner the two faces make but the nose's own
+/// face, standing over the crease line the two slopes go on making behind it.
+pub fn centre_flows_through_groups(
+    features: &FeatureEdgeSet,
+) -> (Vec<BevelEdgeGroup>, Vec<String>) {
+    groups_on(
+        features,
+        &[
+            ("below the nose", notch_floor(), lower_crease_end()),
+            ("above the nose", upper_crease_end(), notch_ceiling()),
+        ],
+        1.0,
+        "centre crease ",
+    )
+}
+
+/// The shared body of C#'s two group lists: one edge group seeded on the feature edge running
+/// between each named pair of points (either way round), at `scale`.
+fn groups_on(
+    features: &FeatureEdgeSet,
+    wanted: &[(&str, Vector3, Vector3)],
+    scale: f64,
+    what: &str,
+) -> (Vec<BevelEdgeGroup>, Vec<String>) {
+    let mut groups = Vec::new();
+    let mut names = Vec::new();
+
+    for &(name, from, to) in wanted {
+        let (from, to) = (from * scale, to * scale);
+        let seed = features.edges().iter().position(|edge| {
+            ((edge.start - from).length() < 1e-5 * scale && (edge.end - to).length() < 1e-5 * scale)
+                || ((edge.start - to).length() < 1e-5 * scale
+                    && (edge.end - from).length() < 1e-5 * scale)
+        });
+
+        let Some(seed) = seed else {
+            panic!("the fixture has no {what}{name} crease from {from} to {to}");
+        };
+
+        groups.push(
+            bevel_edge_group_resolver::create_from_edge(
+                features,
+                seed as i32,
+                BevelSelectionKind::Edge,
+                FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+            )
+            .expect("the edge is in the set"),
+        );
+        names.push(name.to_string());
+    }
+
+    (groups, names)
 }

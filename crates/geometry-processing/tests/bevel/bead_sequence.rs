@@ -41,6 +41,29 @@ pub fn light_tools(
     radius: f64,
     segments: i32,
 ) -> Option<Built> {
+    light(part, groups, radius, segments, false)
+}
+
+/// [`light_tools`] with the corner patches' FILLS added (`BevelCenterBottomCornerTests`): each
+/// fill is buried |v - c| + r past its corner, deeper than any bead's back, so it travels with the
+/// void that corner opens and is trimmed to it, as `BevelFeatureMeshBuilder` trims it; a fill with
+/// no void cone goes on whole.
+pub fn light_tools_and_fills(
+    part: &Mesh,
+    groups: &[BevelEdgeGroup],
+    radius: f64,
+    segments: i32,
+) -> Option<Built> {
+    light(part, groups, radius, segments, true)
+}
+
+fn light(
+    part: &Mesh,
+    groups: &[BevelEdgeGroup],
+    radius: f64,
+    segments: i32,
+    fills: bool,
+) -> Option<Built> {
     let (resolutions, _) = bevel_edge_group_resolver::resolve_all(groups, part);
     let eligible: Vec<bool> = resolutions.iter().map(|r| r.is_resolved()).collect();
     let patches = bevel_corner_patch::create(&resolutions, &eligible, true, radius, segments);
@@ -79,6 +102,24 @@ pub fn light_tools(
         .ok()?;
 
         sort(built.tools, &mut solids, &mut clippable, false);
+    }
+
+    if fills {
+        for patch in patches.patches.iter().filter(|patch| patch.is_fill) {
+            // Without the trim the centre-bottom fill comes out of the notch's own centre crease
+            // above the junction, which is 0.219 mm of shell standing in air where the control
+            // has none.
+            match &patch.void_cone {
+                Some(void_cone) => clippable.push(Clippable::new(
+                    patch.mesh.clone(),
+                    void_cone.clone(),
+                    None,
+                    None,
+                    None,
+                )),
+                None => solids.push(patch.mesh.clone()),
+            }
+        }
     }
 
     Some(Built { solids, clippable })

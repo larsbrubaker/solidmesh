@@ -11,22 +11,19 @@ use geometry_processing::bevel::bevel_face_fit::DEFAULT_SURFACE_TOLERANCE_DEGREE
 use geometry_processing::bevel::bevel_group_tools::{self, BevelGroupToolsOptions};
 use geometry_processing::bevel::{bevel_published_mesh, bevel_working_mesh, BevelFaceFit};
 use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
-};
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanError, BooleanOptions, CsgModes};
+use geometry_processing::topology::{BevelEdgeGroup, FeatureEdgeSet};
+use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::{Matrix4X4, Vector3};
 
+use super::kernel_cut_helpers::{boolean, edge_group};
 use super::nose_in_notch_test_meshes as meshes;
 
 /// C# `CutRidgeAsync`'s answer: the boolean's own result, the tidied and welded part the second
 /// pass reads, and the upper and lower concave picks.
 pub struct RidgeCut {
-    /// What the boolean returned, before it was tidied and welded; only
-    /// `TheCreaseWalkNeedsTheCutTidiedFirst` reads it.
-    #[allow(dead_code)]
+    /// What the boolean returned, before it was tidied and welded; only the tests of what the tidy
+    /// takes away (`bevel_crease_over_a_rounded_ridge_tests`) read it.
     pub raw: Mesh,
     pub cut: Arc<Mesh>,
     pub upper: BevelEdgeGroup,
@@ -80,7 +77,7 @@ pub fn cut_ridge(radius: f64, segments: i32) -> RidgeCut {
     if let Some(clips) = built.tools[0].cap_clips.clone() {
         let combine =
             |operands: &[(Mesh, Matrix4X4)], mode: CsgModes| -> Result<Mesh, BooleanError> {
-                let meshes: Vec<Mesh> = operands.iter().map(|(mesh, _)| mesh.clone()).collect();
+                let meshes: Vec<&Mesh> = operands.iter().map(|(mesh, _)| mesh).collect();
                 Ok(boolean(&meshes, mode))
             };
 
@@ -104,7 +101,7 @@ pub fn cut_ridge(radius: f64, segments: i32) -> RidgeCut {
     // rebuild reads - the same subtract TIDIED and then welded, in that order, exactly as
     // BevelFeatureMeshBuilder does it. The difference between them is a whole crease
     // (TheCreaseWalkNeedsTheCutTidiedFirst).
-    let raw = boolean(&[part.copy(), cutters[0].clone()], CsgModes::Subtract);
+    let raw = boolean(&[&part, &cutters[0]], CsgModes::Subtract);
 
     let cancel = CancelToken::new();
     let cleaned = bevel_published_mesh::clean(&raw, &cancel).expect("not cancelled");
@@ -128,39 +125,7 @@ pub fn cut_ridge(radius: f64, segments: i32) -> RidgeCut {
 }
 
 /// C# `Anchor`: a group anchored on the feature edge running between `from` and `to`, either way
-/// round.
+/// round - the same helper as the shadow and seam classes' `Group`, so it is that one.
 pub fn anchor(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> BevelEdgeGroup {
-    for i in 0..features.count() {
-        let edge = &features.edges()[i];
-
-        if ((edge.start - from).length() < 1e-5 && (edge.end - to).length() < 1e-5)
-            || ((edge.start - to).length() < 1e-5 && (edge.end - from).length() < 1e-5)
-        {
-            return bevel_edge_group_resolver::create_from_edge(
-                features,
-                i as i32,
-                BevelSelectionKind::Edge,
-                FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
-            )
-            .expect("the edge is in the set");
-        }
-    }
-
-    panic!("the fixture has no feature edge from {from} to {to}");
-}
-
-/// C# `Boolean`: one n-ary boolean of the meshes, untransformed, at the polygon mode's defaults.
-fn boolean(meshes: &[Mesh], mode: CsgModes) -> Mesh {
-    let items: Vec<(&Mesh, Matrix4X4)> = meshes
-        .iter()
-        .map(|mesh| (mesh, Matrix4X4::IDENTITY))
-        .collect();
-
-    do_array(
-        &items,
-        mode,
-        &CancelToken::new(),
-        &BooleanOptions::default(),
-    )
-    .expect("the boolean runs")
+    edge_group(features, from, to)
 }
