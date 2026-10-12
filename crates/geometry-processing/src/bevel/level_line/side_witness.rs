@@ -3,7 +3,7 @@
 //! `Bevel/LevelLine/SideWitness.cs` (a C# static class): its constants, its per-thread tally
 //! ([`SideWitnessTally`], [`reset`]), the side's live triangles, the reading's own last surviving
 //! point ([`from_the_reading`]), the triangle holding a point, the decision search ([`search`]) and
-//! the witness's insertion; giving a side its witness lands with its own package.
+//! the witness's insertion, and giving a side its witness ([`give_the_side_a_witness`]).
 //!
 //! The refinement's rules find the level line by bounded search, and every such search answers
 //! only to within its own accuracy. Where the last surviving scrap of a side is a small island
@@ -13,10 +13,12 @@
 //! that already holds one Outside vertex after refinement is left exactly as it stands.
 
 use std::cell::Cell;
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
+use super::band_refinement::{refine, RefineError, RefineOptions};
 use super::band_room::REFERENCE_SIZE;
 use super::self_room;
 use super::{ChainDistanceField, ChainField, LevelLineMesh, RoomField, WorkError};
@@ -75,6 +77,85 @@ pub fn update_tally(f: impl FnOnce(&mut SideWitnessTally)) {
 /// Zeroes this thread's tally.
 pub fn reset() {
     TALLY.with(|cell| cell.set(SideWitnessTally::default()));
+}
+
+/// C# `SideWitness.GiveTheSideAWitness`: gives a side that refinement has left with no Outside
+/// vertex its last surviving point as a vertex, and refines round it, so that the cut sees the
+/// loop the room promised.
+///
+/// The mesh is the reading's own (as in [`super::band_refinement::refine`], which C# hands the
+/// mesh beside the reading); it is borrowed only between reads. C#'s `bool` with its
+/// `out offendingTriangle` is the inner result: `Ok(())` when the side survives (or is left as it
+/// stands - C#'s `true`, whose `out` is always -1), `Err(triangle)` only when the second
+/// refinement meets a triangle it cannot settle. The work budget's exits and C#'s exceptions are
+/// the outer `Err`.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn give_the_side_a_witness(
+    reading: &super::VertexFieldReading,
+    field: &dyn ChainDistanceField,
+    side: i32,
+    size: f64,
+    chord_tolerance: f64,
+    topology_only: bool,
+) -> Result<Result<(), i32>, RefineError> {
+    let triangles = live_triangles_of_side(&reading.mesh.borrow(), side);
+    if triangles.is_empty() || holds_an_outside_vertex(&reading.mesh.borrow(), reading, &triangles)?
+    {
+        return Ok(Ok(()));
+    }
+
+    update_tally(|tally| tally.entered += 1);
+    let snap = reading.snap;
+    let tolerance = cs_math::max_f64(size * WITNESS_ACCURACY, snap);
+    if !(tolerance > 0.0) {
+        // A search needs a positive accuracy; with no size and no snap to take one from there is
+        // nothing to decide either.
+        return Ok(Ok(()));
+    }
+
+    let mut witness =
+        from_the_reading(&reading.mesh.borrow(), field, &triangles, side, size, snap)?;
+    if witness.is_some() {
+        update_tally(|tally| tally.by_the_readings_point += 1);
+    } else {
+        witness = search(&reading.mesh.borrow(), field, &triangles, tolerance, snap)?;
+        if witness.is_some() {
+            update_tally(|tally| tally.by_the_decision_search += 1);
+        }
+    }
+
+    let Some((triangle, point)) = witness else {
+        // The side really is swallowed at this size - every point of it stands at or below the
+        // line. Today's path then refuses, which is the right answer.
+        return Ok(Ok(()));
+    };
+
+    update_tally(|tally| tally.inserted += 1);
+    let mut pending = VecDeque::new();
+    let mut depth = HashMap::new();
+    insert(
+        &mut reading.mesh.borrow_mut(),
+        triangle,
+        point,
+        snap,
+        &mut pending,
+        &mut depth,
+    )?;
+    let candidates: Vec<i32> = pending.into_iter().collect();
+    let (settled, offending_triangle) = refine(
+        reading,
+        &candidates,
+        chord_tolerance,
+        RefineOptions {
+            topology_only,
+            ..RefineOptions::default()
+        },
+    )?;
+    Ok(if settled {
+        Ok(())
+    } else {
+        Err(offending_triangle)
+    })
 }
 
 /// The side's triangles still in the mesh, in triangle order.
@@ -218,8 +299,8 @@ pub fn insert(
     triangle: i32,
     point: Vector3,
     snap: f64,
-    pending: &mut std::collections::VecDeque<i32>,
-    depth: &mut std::collections::HashMap<i32, i32>,
+    pending: &mut VecDeque<i32>,
+    depth: &mut HashMap<i32, i32>,
 ) -> Result<(), super::LevelLineMeshError> {
     super::refinement_splits_enqueue::insert_where_it_stands(
         mesh,

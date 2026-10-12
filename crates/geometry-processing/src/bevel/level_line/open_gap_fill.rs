@@ -5,22 +5,36 @@
 //! runs ([`hole_between`]), a result carrying the minted vertices ([`with_minted`]), a run end's
 //! meeting point ([`meeting_point_of`]), a reversed arc ([`backwards`]), a run read as a rail
 //! ([`try_rail`]), the extended parameter past an end ([`extended`]) and the rows laid along the
-//! spokes ([`arcs`]). The fill itself (`Fill`) is in `open_gap_fill_fill.rs`, kept apart for the
-//! file-size limit; `TryOpen` and `TryFade` land with a later package.
+//! spokes ([`arcs`]), and the entry points that route an open chain's gap ([`try_open`]) and fill
+//! the fade ([`try_fade`]). The fill itself (`Fill`) is in `open_gap_fill_fill.rs`, kept apart for
+//! the file-size limit.
 
 use std::cell::RefCell;
+use std::collections::HashSet;
+use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
+use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
-    gap_fill, open_gap_fill_cut_section, open_gap_fill_stations, ChainField, LevelLineMesh,
+    corner_cap_flat_ends, dying_crease_fill, end_face_fill, gap_fill, open_gap_fill_cut_section,
+    open_gap_fill_stations, virtual_rail, virtual_rail_past_the_end, BandGapResult, BandProfile,
+    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
 };
+
+/// A watcher of the fade's hole, as directed edges.
+pub type WatchFadeHole = Rc<dyn Fn(&[(i32, i32)])>;
 
 thread_local! {
     /// C# `[ThreadStatic] OpenGapFill.EndsSite`: which open-end site last refused the open-chain
     /// ends - or, for a refused growing-neighbour clip, which strip-clip stage - on this thread, for
     /// the route the app reports; set just before each such refusal.
     static ENDS_SITE: RefCell<Option<String>> = const { RefCell::new(None) };
+
+    /// C# `[ThreadStatic] OpenGapFill.WatchFadeHole`: a read-only observer of the fade's hole - the
+    /// directed edges round the two runs that meet at both ends, handed over just before the fill
+    /// closes them. Per thread; `None` (the default) costs nothing.
+    pub static WATCH_FADE_HOLE: RefCell<Option<WatchFadeHole>> = const { RefCell::new(None) };
 }
 
 /// This thread's last open-end refusal site; `None` before any.
@@ -76,6 +90,23 @@ impl OpenGapFillOpenRail {
     }
 }
 
+/// C# `OpenGapFill.TryOpen`: an open chain's gap, routed by WHAT THE CUT LEFT: one closed loop
+/// round the whole chain is a crease that DIES OUT at both ends
+/// (`dying_crease_fill::try_die_out`), and two open runs meeting on a continuing ridge is the fade
+/// ([`try_fade`]).
+pub fn try_open(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, LevelLineMeshError> {
+    set_ends_site(None);
+    if dying_crease_fill::is_one_loop_round_an_open_chain(Some(gap)) {
+        dying_crease_fill::try_die_out(gap, profile, fillet_segments)
+    } else {
+        try_fade(gap, profile, fillet_segments)
+    }
+}
+
 /// The closed hole two open runs bound, as its directed edges: `one` whole, then `other` without
 /// its two ends (which `one`'s ends meet).
 pub fn hole_between(one: &super::GapLoop, other: &super::GapLoop) -> Vec<(i32, i32)> {
@@ -91,9 +122,154 @@ pub fn hole_between(one: &super::GapLoop, other: &super::GapLoop) -> Vec<(i32, i
         .collect()
 }
 
+/// The one loop on `side`, or `None` where there is not exactly one (C#'s `Single` throws there;
+/// every caller has counted the sides first).
+fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
+    let mut on_side = loops.iter().filter(|l| l.side == side);
+    match (on_side.next(), on_side.next()) {
+        (Some(only), None) => Some(only.clone()),
+        _ => None,
+    }
+}
+
+/// C# `OpenGapFill.TryFade`: the open gap this rung builds: one chain, one open run per side, and
+/// the runs' ends meeting on the continuing ridge. Runs on the END regions too go to the end-face
+/// fill, runs ending apart to the growing end faces' fill; anything else about an open gap is
+/// refused by name ([`ends_site`]).
+pub fn try_fade(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, LevelLineMeshError> {
+    let refused = GapFillResult {
+        refusal: GapFillRefusal::OpenChainEnds,
+        mesh: gap.mesh.clone(),
+        ..GapFillResult::default()
+    };
+
+    // A side's rail cut in two by a GROWING neighbour is one rail, run on virtually past it (flow
+    // rung 2).
+    let mut minted = Vec::new();
+    let loops = virtual_rail::joined_sides(gap, &mut minted)?;
+    let closed = loops.iter().filter(|l| l.is_closed).count();
+    let side_count = |side: i32| loops.iter().filter(|l| l.side == side).count();
+    if gap.chains.len() != 1 || closed > 0 || side_count(1) != 1 || side_count(2) != 1 {
+        set_ends_site(Some(format!(
+            "fade shape: chains {}, runs {}, closed {}, side1 {}, side2 {}",
+            gap.chains.len(),
+            loops.len(),
+            closed,
+            side_count(1),
+            side_count(2)
+        )));
+        return Ok(refused);
+    }
+
+    let (Some(mut left), Some(mut right)) = (single_side(&loops, 1), single_side(&loops, 2)) else {
+        return Ok(refused);
+    };
+    if loops.len() != 2 {
+        // Runs on the END regions too: the chain ends on end faces (see end_face_fill).
+        set_ends_site(Some("end faces".to_string()));
+        let filled = end_face_fill::try_end_faces(
+            gap,
+            left,
+            right,
+            profile,
+            fillet_segments,
+            None,
+            Some(&mut minted),
+        )?;
+        return Ok(with_minted(filled.unwrap_or(refused), &minted));
+    }
+
+    // C# reads `gap.Mesh` without a null check: only a built gap is filled, so a gap with no mesh
+    // is refused here rather than dereferenced.
+    let Some(mesh_handle) = gap.mesh.as_ref() else {
+        return Ok(refused);
+    };
+    let meet = ends_meet(&mesh_handle.borrow(), &left, &right)?;
+    if !meet {
+        // Runs ending APART with no end region between them: the end faces are of the opposite
+        // sense, uncut, and grow over the bead's section (see
+        // `end_face_fill::try_growing_end_faces`). Flow rung 3: at an end carrying the end ray the
+        // rails run on virtually past the growing end face's crease to where the row last leaves
+        // its plane, and the strip is clipped there (StripClip).
+        set_ends_site(Some("ends apart (growing end faces)".to_string()));
+        let extended =
+            virtual_rail_past_the_end::extended(gap, &loops, profile, &mut minted, true)?;
+        let (Some(extended_left), Some(extended_right)) =
+            (single_side(&extended, 1), single_side(&extended, 2))
+        else {
+            return Ok(refused);
+        };
+        left = extended_left;
+        right = extended_right;
+
+        let minted_set: HashSet<i32> = minted.iter().copied().collect();
+        let filled = if corner_cap_flat_ends::use_flat_ends() {
+            end_face_fill::try_end_faces(
+                gap,
+                left,
+                right,
+                profile,
+                fillet_segments,
+                Some(&minted_set),
+                Some(&mut minted),
+            )?
+        } else {
+            end_face_fill::try_growing_end_faces(
+                gap,
+                left,
+                right,
+                profile,
+                fillet_segments,
+                Some(&minted_set),
+            )?
+        };
+        return Ok(with_minted(filled.unwrap_or(refused), &minted));
+    }
+
+    let watch = WATCH_FADE_HOLE.with(|watch| watch.borrow().clone());
+    if let Some(watch) = watch {
+        watch(&hole_between(&left, &right));
+    }
+
+    let fade = open_gap_fill_fill::fill(
+        mesh_handle,
+        &gap.chains[0],
+        &left,
+        &right,
+        profile,
+        fillet_segments,
+        &mut Vec::new(),
+        OpenFillEnds::default(),
+    )?;
+    Ok(if fade.filled() {
+        let (triangles, vertices) = (
+            fade.added_triangles.len() as i32,
+            fade.added_vertices.len() as i32,
+        );
+        with_minted(
+            GapFillResult {
+                refusal: GapFillRefusal::None,
+                mesh: fade.mesh,
+                added_triangles: fade.added_triangles,
+                added_vertices: fade.added_vertices,
+                triangles_of_chain: vec![triangles],
+                vertices_of_chain: vec![vertices],
+                ..GapFillResult::default()
+            },
+            &minted,
+        )
+    } else {
+        fade
+    })
+}
+
 /// A filled result with the vertices the virtual rail minted listed first among its added ones
-/// (and, for a one-chain fill, counted in its chain); a refusal, or a fill that minted nothing,
-/// unchanged.
+/// (and, for a one-chain fill, counted in its chain), everything else about it - its end-face
+/// capping included - kept; a refusal, or a fill that minted nothing, unchanged.
 pub fn with_minted(result: super::GapFillResult, minted: &[i32]) -> super::GapFillResult {
     if minted.is_empty() || result.refusal != super::GapFillRefusal::None {
         return result;
@@ -112,8 +288,9 @@ pub fn with_minted(result: super::GapFillResult, minted: &[i32]) -> super::GapFi
     super::GapFillResult {
         added_vertices: vertices,
         vertices_of_chain,
-        // C# copies the init-only properties it names; the one it leaves out keeps its default.
-        ends_capped_by_end_faces: false,
+        // C# rebuilds the result naming each property but `EndsCappedByEndFaces`, so a fade
+        // capped by `TryEndFaces` lost its flag; every other field is kept, and so is that one
+        // (divergence 4850).
         ..result
     }
 }

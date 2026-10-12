@@ -3,7 +3,7 @@
 //! in-turn test ([`takes_open_chains_in_turn`]), a chain's ends carried onto the mesh an earlier
 //! cut left ([`ends_on_the_mesh`], [`nearest_on_the_edge`]), the built mesh's coplanar turn, and a
 //! chain and the feature test carried onto a built mesh ([`chain_after_a_build`],
-//! [`feature_edges_after_a_build`]); the build lands with later packages.
+//! [`feature_edges_after_a_build`]), and the build itself ([`build_open_chains_in_turn`]).
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -11,8 +11,52 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
+use super::band_gap::BandGapBuildError;
+use super::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use super::gap_fill::{self, GapFillError};
+use super::open_gap_fill::set_ends_site;
+use super::pick_validation::PickArgumentError;
+use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges::{self, StandingMap};
-use super::BandGapResult;
+use super::{BandGapResult, BandProfile, GapFillRefusal, GapFillResult, WorkBudget};
+
+/// C#'s `Func<int, WorkBudget> budgetFor`: a work budget for a mesh of so many triangles, per cut
+/// and per fill.
+pub type BudgetFor<'a> = &'a dyn Fn(i32) -> Rc<WorkBudget>;
+
+/// Why a pick built a chain (or a pass) at a time and filled could not run: the cut's error
+/// ([`BandGapBuildError`]) or the fill's ([`GapFillError`]) - C#'s exceptions out of `Build` and
+/// `GapFill.Fill`, passed up as they come. A refusal is not one of them.
+#[derive(Debug)]
+pub enum BuildAndFillError {
+    /// The cut could not run.
+    Build(BandGapBuildError),
+    /// The fill could not run.
+    Fill(GapFillError),
+}
+
+impl From<BandGapBuildError> for BuildAndFillError {
+    fn from(error: BandGapBuildError) -> Self {
+        BuildAndFillError::Build(error)
+    }
+}
+
+impl From<GapFillError> for BuildAndFillError {
+    fn from(error: GapFillError) -> Self {
+        BuildAndFillError::Fill(error)
+    }
+}
+
+impl std::fmt::Display for BuildAndFillError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BuildAndFillError::Build(error) => write!(f, "{error}"),
+            BuildAndFillError::Fill(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for BuildAndFillError {}
 
 /// C# `BandGap.CoplanarAfterABuild`: how far (one minus the normals' dot) two faces of a built
 /// mesh may turn and still be one face.
@@ -261,5 +305,151 @@ pub fn feature_edges_after_a_build(
             }
             _ => false,
         }
+    })
+}
+
+/// C# `BandGap.BuildOpenChainsInTurn`: cuts and fills chain 0 alone, then chain 1 alone on the
+/// result, and so on. All or nothing, as the fill of one cut is: the first chain that refuses
+/// refuses the pick, named by [`GapFillResult::offending_chain`].
+///
+/// `room` is the pick-wide room, already read and cleared by the size - handed to every chain's
+/// build; `None` where the pick-wide cut never read one, so each chain reads its own.
+/// `budget_for` gives a work budget for a mesh of so many triangles, per cut and per fill; `None`
+/// for the default. `closed` says whether each chain closes on itself; `None` for every chain
+/// open.
+///
+/// A pick of no chains is refused as the pick-wide build refuses it
+/// ([`PickArgumentError::NoChains`]); C# reads a fill it never made there.
+#[allow(clippy::too_many_arguments)]
+pub fn build_open_chains_in_turn(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    is_feature_edge: Option<FeatureEdgeTest>,
+    size: f64,
+    profile: BandProfile,
+    fillet_segments: i32,
+    room: Option<f64>,
+    snap: f64,
+    seam_epsilon: f64,
+    sharp_turn_degrees: f64,
+    budget_for: Option<BudgetFor<'_>>,
+    closed: Option<&[bool]>,
+) -> Result<GapFillResult, BuildAndFillError> {
+    let is_feature_edge: FeatureEdgeTest =
+        is_feature_edge.unwrap_or_else(|| Rc::new(|_: i32, _: i32| false));
+    let input_count = positions.len() as i32;
+    let input_edges: HashSet<(i32, i32)> = indices
+        .iter()
+        .flat_map(|&t| triangle_edges::corners(t))
+        .map(|(a, b)| triangle_edges::key(a, b))
+        .collect();
+    let mut current: Vec<Vector3> = positions.to_vec();
+    let mut current_indices: Vec<(i32, i32, i32)> = indices.to_vec();
+    let mut filled: Option<GapFillResult> = None;
+    // In the pick's own order. Building closed rims first was tried (a rim cannot be carried past
+    // a vertex an earlier open chain's band took away) and cost Inner Right Sides and Center
+    // f6+c10+c12+c23 at 0.1, which builds only in this order.
+    for (k, original) in chains.iter().enumerate() {
+        // The input's own feature edges keep their word; an edge the earlier chains' cuts and
+        // fills made is a feature where its two faces are not coplanar - a bead's facets and a
+        // split crease, never a split flat face, so a later chain's side still floods across what
+        // an earlier cut left of it.
+        let feature = if k == 0 {
+            is_feature_edge.clone()
+        } else {
+            feature_edges_after_a_build(
+                current.clone(),
+                current_indices.clone(),
+                input_count,
+                input_edges.clone(),
+                is_feature_edge.clone(),
+            )
+        };
+        let is_closed = closed.is_some_and(|c| c[k]);
+        let chain = if k == 0 {
+            original.clone()
+        } else {
+            chain_after_a_build(original, is_closed, &current, &current_indices)
+        };
+        let options = BandGapBuildOptions {
+            chord_tolerance: 0.0,
+            snap,
+            known_room: room,
+            budget: budget_for.map(|f| f(current_indices.len() as i32)),
+            seam_epsilon,
+            sharp_turn_degrees,
+            fillet_segments,
+        };
+        let gap = build_pick(
+            &current,
+            &current_indices,
+            &[chain],
+            &[is_closed],
+            Some(feature),
+            size,
+            profile,
+            &options,
+        )?;
+        if !gap.built() {
+            set_ends_site(Some(format!("in turn: chain {k} band {:?}", gap.refusal)));
+            return Ok(GapFillResult {
+                refusal: GapFillRefusal::OpenChainEnds,
+                offending_chain: k as i32,
+                mesh: gap.mesh.clone(),
+                phase: gap.phase,
+                ..GapFillResult::default()
+            });
+        }
+
+        let fill_triangles = gap.mesh.as_ref().map_or(current_indices.len() as i32, |m| {
+            m.borrow().triangle_count()
+        });
+        let this_fill = gap_fill::fill_with_budget(
+            &gap,
+            profile,
+            fillet_segments,
+            budget_for.map(|f| f(fill_triangles)),
+        )?;
+        if !this_fill.filled() {
+            return Ok(GapFillResult {
+                refusal: this_fill.refusal,
+                offending_vertex: this_fill.offending_vertex,
+                open_edge: this_fill.open_edge,
+                mesh: this_fill.mesh,
+                offending_chain: k as i32,
+                phase: this_fill.phase,
+                work_spent: this_fill.work_spent,
+                work_limit: this_fill.work_limit,
+                ..GapFillResult::default()
+            });
+        }
+
+        if let Some(mesh) = &this_fill.mesh {
+            let mesh = mesh.borrow();
+            current = mesh.vertices.clone();
+            current_indices = super::band_gap_rounds_first::kept(&mesh);
+        }
+
+        filled = Some(this_fill);
+    }
+
+    // The last chain's fill is the pick's mesh. Every vertex past the input's is one the chains
+    // added (a build only ever appends vertices); the triangles are the last fill's own, the
+    // earlier chains' being read back as input there.
+    let filled = filled.ok_or(BandGapBuildError::Arguments(PickArgumentError::NoChains))?;
+    let vertex_count = filled
+        .mesh
+        .as_ref()
+        .map_or(input_count, |m| m.borrow().vertex_count());
+    Ok(GapFillResult {
+        refusal: GapFillRefusal::None,
+        mesh: filled.mesh,
+        added_triangles: filled.added_triangles,
+        added_vertices: (input_count..vertex_count).collect(),
+        phase: filled.phase,
+        work_spent: filled.work_spent,
+        work_limit: filled.work_limit,
+        ..GapFillResult::default()
     })
 }

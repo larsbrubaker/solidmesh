@@ -574,6 +574,49 @@ impl WorkBudget {
         self.exhausted_in.get() != LevelLineWorkPhase::None
     }
 
+    /// C# `WorkBudget.ASliceForANestedSearch`: a progress hook for a search this build runs on an
+    /// allowance of its own (the pinch ladder): the search's fraction is mapped into what is left of
+    /// the phase running now, so the bar moves through the search and never past the phase's end.
+    /// `None` when nobody is watching this build.
+    pub fn a_slice_for_a_nested_search(self: &Rc<Self>) -> Option<LevelLineProgressReport> {
+        self.progress.as_ref()?;
+
+        let from = self.last_fraction.get();
+        let phase = self.phase.get();
+        let starts = Self::the_starts();
+        let weights = Self::the_weights();
+        let mut end = starts[phase as usize] + weights[phase as usize];
+
+        if self.side_group_count.get() > 0
+            && (phase == LevelLineWorkPhase::Refinement || phase == LevelLineWorkPhase::EdgeRoots)
+        {
+            // Inside the per-group loop the phase's span is the whole loop's; the search stays in
+            // its group's slice.
+            let span = weights[LevelLineWorkPhase::Refinement as usize]
+                + weights[LevelLineWorkPhase::EdgeRoots as usize];
+            end = starts[LevelLineWorkPhase::Refinement as usize]
+                + (span * f64::from(self.side_group_index.get() + 1)
+                    / f64::from(self.side_group_count.get()));
+        }
+
+        let to = cs_math::max_f64(from, end);
+        let budget = Rc::clone(self);
+        Some(Rc::new(move |progress: LevelLineProgress| {
+            budget.last_report_ms.set(tick_count_ms());
+            let fraction = budget.clamped(
+                from + ((to - from)
+                    * cs_math::min_f64(1.0, cs_math::max_f64(0.0, progress.fraction))),
+            );
+            if let Some(report) = budget.progress.as_ref() {
+                report(LevelLineProgress::new(
+                    budget.phase.get(),
+                    budget.spent.get(),
+                    fraction,
+                ));
+            }
+        }))
+    }
+
     /// C# `WorkBudget.EnterSideGroup`: says which side group the refinement and edge roots about to
     /// run belong to, of how many, so the bar walks across the groups.
     pub fn enter_side_group(&self, index: i32, count: i32) {

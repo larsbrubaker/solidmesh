@@ -66,7 +66,7 @@ pub fn group_sides(
     end_floods: bool,
     positions: Option<&[Vector3]>,
     end_rays: Option<&[(bool, bool)]>,
-    end_face_reaches: Option<&[ChainField]>,
+    end_face_reaches: Option<&[std::rc::Rc<ChainField>]>,
 ) -> Result<GroupedSides, SideTaggingError> {
     let standing = triangle_edges::standing_map(indices);
     let chain_keys: HashSet<(i32, i32)> = chain_edges

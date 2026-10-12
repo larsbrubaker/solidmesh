@@ -5,7 +5,8 @@
 //! chains' senses ([`chain_senses`]), the knife tips that make a pick build rounds first
 //! ([`rounds_first_tips`], [`takes_rounds_first`]), the face they end on ([`the_tips_end_face`]),
 //! the chains pass A builds ([`the_rounds_chains`]), the rounds' band ([`the_rounds_band`]) and the
-//! smooth joints over it ([`smooth_joints_over_the_rounds`]); the build lands with later packages.
+//! smooth joints over it ([`smooth_joints_over_the_rounds`]), and the build itself: pass A alone
+//! ([`build_the_rounds`]) and the whole pick ([`build_rounds_first`]).
 
 use std::collections::{HashMap, HashSet};
 
@@ -13,9 +14,20 @@ use indexmap::IndexMap;
 
 use vector_math::{cs_math, Vector3};
 
+use super::band_gap_after_the_rounds::{
+    creases_after_the_rounds_closed, feature_edges_after_the_rounds,
+};
+use super::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use super::band_gap_in_turn::{BudgetFor, BuildAndFillError};
 use super::end_face_sense::{self, COPLANAR_TOLERANCE};
+use super::gap_fill;
+use super::open_gap_fill::set_ends_site;
+use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges::{self, StandingMap};
-use super::{GapFillResult, LevelLineMesh};
+use super::{
+    BandProfile, ChainField, GapFillRefusal, GapFillResult, LevelLineMesh, RoomReadingKind,
+    RoomSource,
+};
 
 /// The mesh's live triangles as index triples, in triangle order.
 pub fn kept(mesh: &LevelLineMesh) -> Vec<(i32, i32, i32)> {
@@ -412,4 +424,248 @@ pub fn smooth_joints_over_the_rounds(
     }
 
     smooth
+}
+
+/// C# `BandGap.BuildTheRounds`: pass A of a rounds-first pick - the convex chains at its knife
+/// tips alone ([`the_rounds_chains`]), cut pick-wide and filled, each end running out through its
+/// end face as a chain alone does. Refused as the cut or the fill refused.
+#[allow(clippy::too_many_arguments)]
+pub fn build_the_rounds(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: Option<&[bool]>,
+    is_feature_edge: Option<FeatureEdgeTest>,
+    size: f64,
+    profile: BandProfile,
+    fillet_segments: i32,
+    snap: f64,
+    seam_epsilon: f64,
+    sharp_turn_degrees: f64,
+    budget_for: Option<BudgetFor<'_>>,
+) -> Result<GapFillResult, BuildAndFillError> {
+    let convex = the_rounds_chains(positions, indices, chains, closed);
+    let convex_chains: Vec<Vec<i32>> = convex.iter().map(|&k| chains[k as usize].clone()).collect();
+    let convex_closed: Vec<bool> = convex
+        .iter()
+        .map(|&k| closed.is_some_and(|c| c[k as usize]))
+        .collect();
+    let options = BandGapBuildOptions {
+        chord_tolerance: 0.0,
+        snap,
+        known_room: None,
+        budget: budget_for.map(|f| f(indices.len() as i32)),
+        seam_epsilon,
+        sharp_turn_degrees,
+        fillet_segments,
+    };
+    let gap = build_pick(
+        positions,
+        indices,
+        &convex_chains,
+        &convex_closed,
+        is_feature_edge,
+        size,
+        profile,
+        &options,
+    )?;
+    if !gap.built() {
+        return Ok(GapFillResult {
+            refusal: GapFillRefusal::OpenChainEnds,
+            mesh: gap.mesh.clone(),
+            phase: gap.phase,
+            ..GapFillResult::default()
+        });
+    }
+
+    let fill_triangles = gap
+        .mesh
+        .as_ref()
+        .map_or(indices.len() as i32, |m| m.borrow().triangle_count());
+    Ok(gap_fill::fill_with_budget(
+        &gap,
+        profile,
+        fillet_segments,
+        budget_for.map(|f| f(fill_triangles)),
+    )?)
+}
+
+/// C# `BandGap.BuildRoundsFirst`: a rounds-first pick built whole - the convex chains
+/// ([`build_the_rounds`]), then the concave creases read again on what they left
+/// ([`creases_after_the_rounds_closed`]), cut pick-wide and filled with the band flooding over the
+/// round ([`feature_edges_after_the_rounds`]). Refused as the first pass that refused;
+/// [`GapFillRefusal::OpenChainEnds`] where the creases cannot be read. `room` is the whole pick's,
+/// unread here: each pass reads its own, since neither pass is the pick.
+///
+/// The feature reading is `None` only where a rounds chain's edge stands on no triangle, which the
+/// built pass A rules out; C# throws there, and it is refused here as the unreadable creases are.
+#[allow(clippy::too_many_arguments)]
+pub fn build_rounds_first(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    is_feature_edge: Option<FeatureEdgeTest>,
+    size: f64,
+    profile: BandProfile,
+    fillet_segments: i32,
+    _room: Option<f64>,
+    snap: f64,
+    seam_epsilon: f64,
+    sharp_turn_degrees: f64,
+    budget_for: Option<BudgetFor<'_>>,
+    closed: Option<&[bool]>,
+) -> Result<GapFillResult, BuildAndFillError> {
+    // The room is the whole pick's; each pass reads its own, since neither pass is the pick.
+    let rounds = build_the_rounds(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge.clone(),
+        size,
+        profile,
+        fillet_segments,
+        snap,
+        seam_epsilon,
+        sharp_turn_degrees,
+        budget_for,
+    )?;
+    if !rounds.filled() {
+        return Ok(rounds);
+    }
+
+    let Some(rounds_mesh) = rounds.mesh.clone() else {
+        return Ok(the_creases_cannot_be_read(&rounds));
+    };
+    let mut creases_closed = Vec::new();
+    let creases = {
+        let mesh = rounds_mesh.borrow();
+        creases_after_the_rounds_closed(
+            positions,
+            indices,
+            chains,
+            closed,
+            &mesh,
+            Some(&mut creases_closed),
+        )
+    };
+    let Some(creases) = creases else {
+        return Ok(the_creases_cannot_be_read(&rounds));
+    };
+
+    let Some(feature) = feature_edges_after_the_rounds(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge,
+        &rounds,
+    ) else {
+        return Ok(the_creases_cannot_be_read(&rounds));
+    };
+    let (rounds_vertices, kept) = {
+        let mesh = rounds_mesh.borrow();
+        (mesh.vertices.clone(), kept(&mesh))
+    };
+
+    // The creases on the rounds. Over the round the joined crease is the round's section, so its
+    // turns there are sampling: smooth joints for everything pass B builds, the pick's sharp-turn
+    // threshold kept for every other joint.
+    let filled = {
+        let _smooth = ChainField::smooth_joints_while(smooth_joints_over_the_rounds(
+            positions, indices, &creases, &rounds,
+        ));
+        let options = BandGapBuildOptions {
+            chord_tolerance: 0.0,
+            snap,
+            known_room: None,
+            budget: budget_for.map(|f| f(kept.len() as i32)),
+            seam_epsilon,
+            sharp_turn_degrees,
+            fillet_segments,
+        };
+        let gap = build_pick(
+            &rounds_vertices,
+            &kept,
+            &creases,
+            &creases_closed,
+            Some(feature),
+            size,
+            profile,
+            &options,
+        )?;
+        if !gap.built() {
+            set_ends_site(Some(format!(
+                "rounds first: creases band {:?} (room {} set by {})",
+                gap.refusal,
+                vector_math::number_format::format_f64_max_decimals(gap.room, 4),
+                room_source_text(&gap.room_set_by)
+            )));
+            return Ok(GapFillResult {
+                refusal: GapFillRefusal::OpenChainEnds,
+                mesh: gap.mesh.clone(),
+                phase: gap.phase,
+                ..GapFillResult::default()
+            });
+        }
+
+        let fill_triangles = gap
+            .mesh
+            .as_ref()
+            .map_or(kept.len() as i32, |m| m.borrow().triangle_count());
+        gap_fill::fill_with_budget(
+            &gap,
+            profile,
+            fillet_segments,
+            budget_for.map(|f| f(fill_triangles)),
+        )?
+    };
+    if !filled.filled() {
+        return Ok(filled);
+    }
+
+    let input_count = positions.len() as i32;
+    let vertex_count = filled
+        .mesh
+        .as_ref()
+        .map_or(input_count, |m| m.borrow().vertex_count());
+    Ok(GapFillResult {
+        refusal: GapFillRefusal::None,
+        mesh: filled.mesh,
+        added_triangles: filled.added_triangles,
+        added_vertices: (input_count..vertex_count).collect(),
+        phase: filled.phase,
+        work_spent: filled.work_spent,
+        work_limit: filled.work_limit,
+        ..GapFillResult::default()
+    })
+}
+
+/// [`build_rounds_first`]'s refusal where the creases after the rounds cannot be read.
+fn the_creases_cannot_be_read(rounds: &GapFillResult) -> GapFillResult {
+    set_ends_site(Some(
+        "rounds first: the creases after the rounds cannot be read".to_string(),
+    ));
+    GapFillResult {
+        refusal: GapFillRefusal::OpenChainEnds,
+        mesh: rounds.mesh.clone(),
+        ..GapFillResult::default()
+    }
+}
+
+/// C#'s `RoomSource.ToString()` (a `readonly record struct`), which the diagnostic site prints:
+/// `RoomSource { Kind = Foreign, Chain = 0, OtherChain = -1, CreaseAt =  }`, an unset `CreaseAt`
+/// printing nothing.
+fn room_source_text(source: &RoomSource) -> String {
+    let kind = match source.kind {
+        RoomReadingKind::None => "None",
+        RoomReadingKind::Foreign => "Foreign",
+        RoomReadingKind::SelfRoom => "Self",
+        RoomReadingKind::ChainToChain => "ChainToChain",
+    };
+    let crease_at = source.crease_at.map_or(String::new(), |at| at.to_string());
+    format!(
+        "RoomSource {{ Kind = {kind}, Chain = {}, OtherChain = {}, CreaseAt = {crease_at} }}",
+        source.chain, source.other_chain
+    )
 }

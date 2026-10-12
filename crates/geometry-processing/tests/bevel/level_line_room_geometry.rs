@@ -112,3 +112,81 @@ pub fn l_prism() -> SolidWithChain {
 
     (positions, indices, top)
 }
+
+/// C# `LevelLineTestGeometry.HourglassSolid`: a flat top face whose outline is two square lobes
+/// joined by a narrow neck, extruded down to a closed solid; the top face's whole rim is the chain.
+/// The true room is half `neck_width`. C#'s defaults are lobe 10, neck width 2, neck length 4,
+/// half height 4.
+pub fn hourglass_solid(
+    lobe: f64,
+    neck_width: f64,
+    neck_length: f64,
+    half_height: f64,
+) -> SolidWithChain {
+    let half = lobe / 2.0;
+    let neck = neck_width / 2.0;
+    let inner = neck_length / 2.0;
+    let outer = inner + lobe;
+
+    // Four columns of four points each: the two lobes' far edges and the two neck mouths.
+    let xs = [-outer, -inner, inner, outer];
+    let ys = [-half, -neck, neck, half];
+    let mut positions = Vec::new();
+    for x in xs {
+        for y in ys {
+            positions.push(Vector3::new(x, y, half_height));
+        }
+    }
+
+    let top = positions.len() as i32;
+    for i in 0..top as usize {
+        positions.push(Vector3::new(positions[i].x, positions[i].y, -half_height));
+    }
+
+    let p = |column: i32, row: i32| (column * 4) + row;
+
+    // The top face as quads: the left lobe in three bands, the neck, the right lobe in three bands.
+    let mut quads = Vec::new();
+    for row in [0, 1, 2] {
+        quads.push((p(0, row), p(1, row), p(1, row + 1), p(0, row + 1)));
+        quads.push((p(2, row), p(3, row), p(3, row + 1), p(2, row + 1)));
+    }
+
+    quads.push((p(1, 1), p(2, 1), p(2, 2), p(1, 2)));
+
+    let mut indices = Vec::new();
+    for (a, b, c, d) in quads {
+        indices.push((a, b, c));
+        indices.push((a, c, d));
+        indices.push((top + a, top + c, top + b));
+        indices.push((top + a, top + d, top + c));
+    }
+
+    // The rim, walked counter-clockwise seen from +z, and a wall quad under each of its edges.
+    let rim = vec![
+        p(0, 0),
+        p(1, 0),
+        p(1, 1),
+        p(2, 1),
+        p(2, 0),
+        p(3, 0),
+        p(3, 1),
+        p(3, 2),
+        p(3, 3),
+        p(2, 3),
+        p(2, 2),
+        p(1, 2),
+        p(1, 3),
+        p(0, 3),
+        p(0, 2),
+        p(0, 1),
+    ];
+    for i in 0..rim.len() {
+        let a = rim[i];
+        let b = rim[(i + 1) % rim.len()];
+        indices.push((a, top + a, top + b));
+        indices.push((a, top + b, b));
+    }
+
+    (positions, indices, rim)
+}

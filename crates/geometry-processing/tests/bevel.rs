@@ -237,6 +237,8 @@ mod rust_only_bevel_r2p09_tests;
 mod rust_only_bevel_r3p02_tests;
 #[path = "bevel/rust_only_bevel_r3p03_tests.rs"]
 mod rust_only_bevel_r3p03_tests;
+#[path = "bevel/rust_only_bevel_r4p01_tests.rs"]
+mod rust_only_bevel_r4p01_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]
@@ -271,6 +273,8 @@ mod section_walked_end_vertex_tests;
 mod segment_cell_bound_tests;
 #[path = "bevel/several_chains_fixtures.rs"]
 mod several_chains_fixtures;
+#[path = "bevel/side_witness_tests.rs"]
+mod side_witness_tests;
 #[path = "bevel/source_round_test_meshes.rs"]
 mod source_round_test_meshes;
 #[path = "bevel/spoke_centre_parameter_tests.rs"]
@@ -347,6 +351,8 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/sweep_mesh_measures.rs"]
+mod sweep_mesh_measures;
 #[path = "bevel/tapered_barrel_test_meshes.rs"]
 mod tapered_barrel_test_meshes;
 #[path = "bevel/thread_cpu_time.rs"]
@@ -357,5 +363,9 @@ mod top_and_round_corner_room_tests;
 mod topology_test_meshes;
 #[path = "bevel/union_of_balls_field_tests.rs"]
 mod union_of_balls_field_tests;
+#[path = "bevel/virtual_rail_tests.rs"]
+mod virtual_rail_tests;
 #[path = "bevel/warped_wall_test_meshes.rs"]
 mod warped_wall_test_meshes;
+#[path = "bevel/work_budget_tests.rs"]
+mod work_budget_tests;

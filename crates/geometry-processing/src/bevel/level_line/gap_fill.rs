@@ -5,17 +5,20 @@
 //! wrap ([`largest_backward_step`]) and the chains' independence check
 //! ([`no_two_chains_share_a_vertex`]), the rail senses' constructor and their pairing
 //! ([`try_pair`]), the excursion rule ([`within_excursion`]), a loop's two senses ([`senses`],
-//! [`try_envelope`]) and the zipper's merge ([`merge`]). The fill's
-//! other functions land with later packages.
+//! [`try_envelope`]) and the zipper's merge ([`merge`]), and the fill's entry points ([`fill`],
+//! [`fill_with_budget`], [`fill_within`]); one chain's fill is `gap_fill_one_chain`.
 
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use vector_math::{cs_math, Vector3};
 
+use super::corner_fill_fill::CornerFillError;
+use super::gap_fill_one_chain::fill_one_chain;
 use super::{
-    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
-    LevelLineWork, WorkError, ZipRail,
+    corner_fill, corner_fill_fill, dying_crease_fill, open_gap_fill, swallowed_side, BandGapResult,
+    BandProfile, ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
+    LevelLineMeshError, LevelLineWork, LevelLineWorkPhase, WorkBudget, WorkError, ZipRail,
 };
 use std::cell::RefCell;
 
@@ -47,6 +50,245 @@ pub const MONOTONE_SLACK_OF_SETBACK: f64 = 1e-2;
 /// setbacks or less and the rest from 7.39 up - correspondences that really do cross. Three is the
 /// bound between those two populations.
 pub const MONOTONE_EXCURSION_OF_SETBACK: f64 = 3.0;
+
+/// Why the fill could not run: C#'s exceptions. A budget that runs out is not one of them - the
+/// fill refuses by name ([`GapFillRefusal::WorkBudgetExceeded`]) and hands back a result.
+#[derive(Debug, Clone)]
+pub enum GapFillError {
+    /// The caller cancelled (C#'s `OperationCanceledException`): it says nothing about the part,
+    /// so it is never a refusal.
+    Cancelled,
+    /// The mesh refused an edit - or, inside [`fill_within`], the work budget's own exit, which
+    /// [`fill_with_budget`] turns into a refusal or [`GapFillError::Cancelled`].
+    Mesh(LevelLineMeshError),
+    /// A caller's bug C# throws an `ArgumentException` (or `ArgumentOutOfRangeException`) for.
+    Argument(String),
+}
+
+impl From<LevelLineMeshError> for GapFillError {
+    fn from(error: LevelLineMeshError) -> Self {
+        GapFillError::Mesh(error)
+    }
+}
+
+impl From<WorkError> for GapFillError {
+    fn from(error: WorkError) -> Self {
+        GapFillError::Mesh(error.into())
+    }
+}
+
+impl From<CornerFillError> for GapFillError {
+    fn from(error: CornerFillError) -> Self {
+        match error {
+            CornerFillError::Mesh(error) => GapFillError::Mesh(error),
+            CornerFillError::FilletSegments(message) => GapFillError::Argument(message),
+        }
+    }
+}
+
+impl std::fmt::Display for GapFillError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GapFillError::Cancelled => f.write_str("the gap fill was cancelled by its caller"),
+            GapFillError::Mesh(error) => write!(f, "{error}"),
+            GapFillError::Argument(message) => f.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for GapFillError {}
+
+/// C# `GapFill.Fill(gap, profile, filletSegments = 4)`: lays the strip between a closed gap's two
+/// loops, spending the default work for the mesh's size - [`fill_with_budget`] with no budget.
+/// C#'s default of four fillet segments is [`DEFAULT_FILLET_SEGMENTS`].
+pub fn fill(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, GapFillError> {
+    fill_with_budget(gap, profile, fillet_segments, None)
+}
+
+/// C# `Fill`'s default `filletSegments`.
+pub const DEFAULT_FILLET_SEGMENTS: i32 = 4;
+
+/// C# `GapFill.Fill(gap, profile, filletSegments, budget)`: fills the gap, spending no more than
+/// the given work (`None` takes the default for the mesh's size). A fill that runs out refuses by
+/// name and hands back nothing part-built; a cancel leaves as [`GapFillError::Cancelled`].
+pub fn fill_with_budget(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+    budget: Option<Rc<WorkBudget>>,
+) -> Result<GapFillResult, GapFillError> {
+    let budget = match budget {
+        Some(budget) => budget,
+        None => {
+            let triangle_count = gap
+                .mesh
+                .as_ref()
+                .map_or(0, |mesh| mesh.borrow().triangle_count());
+            Rc::new(
+                WorkBudget::new(WorkBudget::default_limit(triangle_count))
+                    .expect("the default limit is a positive count of work"),
+            )
+        }
+    };
+    if budget.cancellation_token.is_cancelled() {
+        return Err(GapFillError::Cancelled);
+    }
+
+    let _scope = LevelLineWork::begin(Some(Rc::clone(&budget)));
+    LevelLineWork::enter(LevelLineWorkPhase::Fill);
+    let filled = if corner_fill::takes(Some(gap), profile) {
+        corner_fill_fill::fill(gap, profile, fillet_segments).map_err(GapFillError::from)
+    } else {
+        fill_within(gap, profile, fillet_segments)
+    };
+    match filled {
+        // The caller asked for this, so it leaves as cancellation and never as a refusal: a
+        // refusal is a statement about the part, and this one says nothing about the part at all.
+        Err(GapFillError::Mesh(LevelLineMeshError::Work(WorkError::Cancelled))) => {
+            Err(GapFillError::Cancelled)
+        }
+        Err(GapFillError::Mesh(LevelLineMeshError::Work(WorkError::BudgetExceeded(_)))) => {
+            Ok(GapFillResult {
+                refusal: GapFillRefusal::WorkBudgetExceeded,
+                // The mesh travels with this refusal like it does with every other: the fill has
+                // taken its part-laid strip back out, and a caller that cannot see the mesh
+                // cannot check that.
+                mesh: gap.mesh.clone(),
+                phase: budget.exhausted_in.get(),
+                work_spent: budget.spent.get(),
+                work_limit: budget.limit,
+                ..GapFillResult::default()
+            })
+        }
+        other => other,
+    }
+}
+
+/// C# `GapFill.FillWithin`: the fill under the budget [`fill_with_budget`] put in force. Routes a
+/// gap of swallowed runs to `swallowed_side`, an open one to `open_gap_fill`, and otherwise fills
+/// each chain of the pick between its own two loops; one chain's refusal takes the WHOLE pick's
+/// strip back out. The work budget's exit leaves as `Err` with every laid triangle removed.
+pub fn fill_within(
+    gap: &BandGapResult,
+    profile: BandProfile,
+    fillet_segments: i32,
+) -> Result<GapFillResult, GapFillError> {
+    if !gap.built() {
+        return Err(GapFillError::Argument(
+            "a refused gap has nothing to fill (Parameter 'gap')".to_string(),
+        ));
+    }
+
+    if fillet_segments < 1 {
+        return Err(GapFillError::Argument(
+            "an arc is drawn with at least one segment (Parameter 'filletSegments')".to_string(),
+        ));
+    }
+
+    if gap.swallowed_runs.is_some() {
+        // Both sides swallowed whole: no run of the cut's, the strip is laid on runs made up off
+        // the mesh.
+        return Ok(swallowed_side::fill(gap, profile, fillet_segments)?);
+    }
+
+    if gap.loops.iter().any(|l| !l.is_closed)
+        || dying_crease_fill::is_one_loop_round_an_open_chain(Some(gap))
+    {
+        // WHAT THE CUT LEFT tells the two open cases apart, never a guess from the chain's shape.
+        // A crease that CARRIES ON past both ends leaves two open runs sharing their end vertices
+        // and fades out (see open_gap_fill). A chain ending on an END FACE leaves its runs ending
+        // APART, with the end face's surface between them; that needs an end flood and a cap.
+        return Ok(open_gap_fill::try_open(gap, profile, fillet_segments)?);
+    }
+
+    let mesh = gap.mesh.as_ref().expect("a built gap carries its mesh");
+    no_two_chains_share_a_vertex(&gap.loops);
+
+    let mut added_triangles = Vec::new();
+    let mut added_vertices = Vec::new();
+    let mut triangles_of_chain = vec![0; gap.chains.len()];
+    let mut vertices_of_chain = vec![0; gap.chains.len()];
+    for k in 0..gap.chains.len() {
+        let mine: Vec<GapLoop> = gap
+            .loops
+            .iter()
+            .filter(|l| l.chain == k as i32)
+            .cloned()
+            .collect();
+        let one = if mine.len() != 2
+            || mine.iter().filter(|l| l.side == 1).count() != 1
+            || mine.iter().filter(|l| l.side == 2).count() != 1
+        {
+            GapFillResult {
+                refusal: GapFillRefusal::SideDoesNotLeaveOneLoop,
+                mesh: Some(Rc::clone(mesh)),
+                ..GapFillResult::default()
+            }
+        } else {
+            match fill_one_chain(
+                mesh,
+                &gap.chains[k],
+                &mine,
+                profile,
+                fillet_segments,
+                &mut added_triangles,
+            ) {
+                Ok(one) => one,
+                Err(error @ LevelLineMeshError::Work(WorkError::BudgetExceeded(_))) => {
+                    // The budget runs out in the middle of a strip, so the pick is left
+                    // part-zipped; take every triangle laid so far back out before the refusal
+                    // leaves. The chain's own fill appends to this very list as it goes, which is
+                    // what makes the partial work visible here at all.
+                    let mut edit = mesh.borrow_mut();
+                    for &triangle in &added_triangles {
+                        edit.remove_triangle(triangle);
+                    }
+
+                    return Err(error.into());
+                }
+                Err(error) => return Err(error.into()),
+            }
+        };
+
+        if !one.filled() {
+            // One chain's fill refusing takes the WHOLE pick's strip back out - every chain's, not
+            // just this one's. A half-filled mesh is not a solid, and handing one back so that
+            // something downstream could sew up the rest is the repair pass this construction
+            // does not have.
+            let mut edit = mesh.borrow_mut();
+            for &triangle in &added_triangles {
+                edit.remove_triangle(triangle);
+            }
+
+            return Ok(GapFillResult {
+                refusal: one.refusal,
+                offending_vertex: one.offending_vertex,
+                open_edge: one.open_edge,
+                offending_chain: k as i32,
+                mesh: Some(Rc::clone(mesh)),
+                ..GapFillResult::default()
+            });
+        }
+
+        added_vertices.extend_from_slice(&one.added_vertices);
+        triangles_of_chain[k] = one.added_triangles.len() as i32;
+        vertices_of_chain[k] = one.added_vertices.len() as i32;
+    }
+
+    Ok(GapFillResult {
+        refusal: GapFillRefusal::None,
+        mesh: Some(Rc::clone(mesh)),
+        added_triangles,
+        added_vertices,
+        triangles_of_chain,
+        vertices_of_chain,
+        ..GapFillResult::default()
+    })
+}
 
 /// How far back a rail's parameter may step on this chain and still count as standing still.
 pub fn monotone_slack(chain: &ChainField) -> f64 {

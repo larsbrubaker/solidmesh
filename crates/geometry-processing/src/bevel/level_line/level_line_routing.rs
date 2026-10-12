@@ -152,3 +152,25 @@ pub fn reads_as_off(value: Option<&str>) -> bool {
 pub fn the_running_app_wants_it_on(value: Option<&str>) -> bool {
     !reads_as_off(value)
 }
+
+thread_local! {
+    /// C# `LevelLineRouting.WatchBudget`. The allowances are single-threaded (`Rc`), so the seam is
+    /// held per thread - the kernel runs a build on one thread, and the test that sets the watch
+    /// runs that build on its own.
+    static WATCH_BUDGET: std::cell::RefCell<Option<BudgetWatch>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// What [`watch_budget`] is handed: every work allowance the kernel makes, as it is made.
+pub type BudgetWatch = std::rc::Rc<dyn Fn(&std::rc::Rc<super::WorkBudget>)>;
+
+/// C# `LevelLineRouting.WatchBudget` (get): the watch handed every allowance, or `None`.
+pub fn watch_budget() -> Option<BudgetWatch> {
+    WATCH_BUDGET.with(|w| w.borrow().clone())
+}
+
+/// C# `LevelLineRouting.WatchBudget` (set). A test seam like the chain watch: a test sums
+/// `WorkBudget::spent` over a rebuild's allowances to judge how much WORK a build did.
+pub fn set_watch_budget(watch: Option<BudgetWatch>) {
+    WATCH_BUDGET.with(|w| *w.borrow_mut() = watch);
+}

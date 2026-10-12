@@ -45,6 +45,9 @@
 pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_after_the_rounds;
+pub mod band_gap_build_fault;
+pub mod band_gap_build_within;
+pub mod band_gap_entry_points;
 pub mod band_gap_extra_fields;
 pub mod band_gap_in_turn;
 pub mod band_gap_reading;
@@ -108,6 +111,7 @@ pub mod edge_root;
 pub mod end_clip_corners;
 pub mod end_face_crease_plane;
 pub mod end_face_fill;
+pub mod end_face_fill_try;
 pub mod end_face_flow;
 pub mod end_face_sense;
 mod end_face_sense_oblique;

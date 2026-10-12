@@ -26,7 +26,7 @@ pub fn flood_pick_ends(
     end_rays: Option<&[(bool, bool)]>,
     tags: &mut [i32],
     groups: &mut Vec<BandGroup>,
-    end_face_reaches: Option<&[ChainField]>,
+    end_face_reaches: Option<&[std::rc::Rc<ChainField>]>,
 ) -> Result<(), SideTaggingError> {
     // Every end region is read on the SIDE tagging alone: an end group tagged for one chain would
     // read to the next chain's flood as foreign surface and stop it short of an end face the two
@@ -48,7 +48,7 @@ pub fn flood_pick_ends(
             .filter(|g| g.members.contains(&(k as i32)))
             .map(|g| g.tag)
             .collect();
-        let reach = end_face_reaches.map(|r| &r[k]);
+        let reach = end_face_reaches.map(|r| &*r[k]);
         let rays = end_rays.map(|r| r[k]).unwrap_or_default();
         let ends = end_regions_of(
             positions,

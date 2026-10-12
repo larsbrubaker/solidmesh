@@ -2,15 +2,14 @@
 //! ROW OF FIVE square through-holes, the pick being that face's whole rim - the outer loop plus one
 //! chain per hole, six chains. Two of the holes stand 0.6 from the plate's edge, too near for
 //! `SIZE`; the other three have room to spare.
-//!
-//! The C# `Read` (over `BandGap.ReadRoom`) is not ported here: `BandGap.ReadRoom` has no Rust
-//! counterpart yet.
 
 #![allow(dead_code)]
 
 use std::collections::HashMap;
 
+use geometry_processing::bevel::level_line::band_gap_reading;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
+use geometry_processing::bevel::level_line::{BandProfile, RoomReading};
 use vector_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
@@ -231,4 +230,29 @@ fn outer_loop() -> Vec<(f64, f64)> {
 /// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
+}
+
+/// C# `Read`: one room reading of the pick, optionally asked to name every candidate under a size
+/// (C#'s default is `NaN`, naming none).
+pub fn read(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    name_every_candidate_under: f64,
+) -> RoomReading {
+    let closed = vec![true; chains.len()];
+    band_gap_reading::read_room_of_pick(
+        positions,
+        indices,
+        chains,
+        &closed,
+        Some(feature_edges(positions, indices)),
+        BandProfile::Chamfer,
+        1e-9,
+        None,
+        name_every_candidate_under,
+        0.0,
+        f64::INFINITY,
+    )
+    .expect("the pick reads")
 }

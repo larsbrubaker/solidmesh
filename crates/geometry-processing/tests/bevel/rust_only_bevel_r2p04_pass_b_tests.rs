@@ -121,7 +121,7 @@ fn rust_only_pass_bs_creases_and_feature_edges_off_the_rounds() {
         &input_indices,
         &[vec![0, 1]],
         None,
-        Some(&only_0_1),
+        Some(Rc::new(only_0_1)),
         &rounds,
     )
     .expect("a reading");

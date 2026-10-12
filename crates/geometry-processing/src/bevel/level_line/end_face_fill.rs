@@ -5,11 +5,13 @@
 //! ([`meets_the_sides_convexly`]), whether a run is planar ([`is_planar`]) and an end face's one
 //! run ([`run`]), a trimmed run with one end put back whole ([`with_whole_end`]), whether a gap
 //! is concave ([`is_concave`]), a run without its end-face edges ([`without_end_face_edges`]) and
-//! the crease stretch along the end face ([`crease_run`]); the fill itself lands with later
-//! packages.
+//! the crease stretch along the end face ([`crease_run`]). The fill itself (`TryEndFaces`,
+//! `TryGrowingEndFaces`) is in `end_face_fill_try.rs`, kept apart for the file-size limit and
+//! re-exported here.
 
 use vector_math::{cs_math, Vector3};
 
+pub use super::end_face_fill_try::{try_end_faces, try_growing_end_faces};
 use super::open_gap_fill;
 use super::{BandGapResult, ChainField, GapLoop, LevelLineMesh, LevelLineTriangle};
 

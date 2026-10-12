@@ -2,15 +2,15 @@
 //! bosses - one an hourglass in plan, one a square - and the pick is both bosses' rims at the top
 //! of their walls. One chain of the pick pinches WELL BELOW the room the pick reads, so the size
 //! refusal can only name a size a probe actually built at.
-//!
-//! The C# `Read` and `Build` (over `BandGap.ReadRoom` / `BandGap.Build`) are not ported here: those
-//! entry points have no Rust counterpart yet.
 
 #![allow(dead_code)]
 
 use std::collections::HashMap;
 
+use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use geometry_processing::bevel::level_line::band_gap_reading;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
+use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, RoomReading};
 use vector_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
@@ -295,4 +295,50 @@ fn subdivide_on_the_grid(corners: &[(f64, f64)]) -> Vec<(f64, f64)> {
 /// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
+}
+
+/// C# `Read`: the whole pick's room, read on the input mesh.
+pub fn read(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    profile: BandProfile,
+) -> RoomReading {
+    let closed = vec![true; chains.len()];
+    band_gap_reading::read_room_of_pick(
+        positions,
+        indices,
+        chains,
+        &closed,
+        Some(feature_edges(positions, indices)),
+        profile,
+        1e-9,
+        None,
+        f64::NAN,
+        0.0,
+        f64::INFINITY,
+    )
+    .expect("the pick reads")
+}
+
+/// C# `Build`: a build of the whole pick at one size.
+pub fn build(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    size: f64,
+    profile: BandProfile,
+) -> BandGapResult {
+    let closed = vec![true; chains.len()];
+    band_gap_entry_points::build_pick(
+        positions,
+        indices,
+        chains,
+        &closed,
+        Some(feature_edges(positions, indices)),
+        size,
+        profile,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the pick builds or refuses by name")
 }

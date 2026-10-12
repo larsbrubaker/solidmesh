@@ -4,6 +4,7 @@
 //! `Bevel/LevelLine/BandGap.RoundsFirst.cs`; the helpers they read are in `band_gap_rounds_first`.
 
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use vector_math::Vector3;
 
@@ -12,6 +13,7 @@ use super::band_gap_rounds_first::{
     surviving_piece, the_rounds_band, the_rounds_chains, the_tips_end_face, OrientedPlane,
 };
 use super::end_face_sense::COPLANAR_TOLERANCE;
+use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges;
 use super::{GapFillResult, LevelLineMesh};
 
@@ -146,22 +148,20 @@ pub fn creases_after_the_rounds_closed(
     Some(result)
 }
 
-/// The feature-edge reading [`feature_edges_after_the_rounds`] answers.
-pub type FeatureEdgeReading<'a> = Box<dyn Fn(i32, i32) -> bool + 'a>;
-
 /// C# `BandGap.FeatureEdgesAfterTheRounds`: the feature edges of pass B, on the rounds' mesh. The
 /// input's own edges keep their word. The rounds' band is NOT a feature inside or along its rails
 /// (where it meets a convex chain's side face); where the band meets any other face it IS one. Any
 /// other edge the rounds made is a feature where its two faces are not coplanar. `None` where the
-/// rounds carry no mesh or a rounds chain's edge stands on no triangle (C# throws there).
-pub fn feature_edges_after_the_rounds<'a>(
-    positions: &'a [Vector3],
+/// rounds carry no mesh or a rounds chain's edge stands on no triangle (C# throws there). The
+/// reading owns what it reads, so it can be handed to the pass-B build as its feature test.
+pub fn feature_edges_after_the_rounds(
+    positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
     closed: Option<&[bool]>,
-    is_feature_edge: Option<&'a dyn Fn(i32, i32) -> bool>,
+    is_feature_edge: Option<FeatureEdgeTest>,
     rounds: &GapFillResult,
-) -> Option<FeatureEdgeReading<'a>> {
+) -> Option<FeatureEdgeTest> {
     let input_standing = triangle_edges::standing_map(indices);
     let mut side_planes: Vec<OrientedPlane> = Vec::new();
     for k in the_rounds_chains(positions, indices, chains, closed) {
@@ -184,10 +184,10 @@ pub fn feature_edges_after_the_rounds<'a>(
     let standing = triangle_edges::standing_map(&triangles);
     let count = positions.len() as i32;
 
-    Some(Box::new(move |a: i32, b: i32| {
+    Some(Rc::new(move |a: i32, b: i32| {
         let key = triangle_edges::key(a, b);
         if a < count && b < count && input_standing.contains_key(&key) {
-            return is_feature_edge.is_some_and(|f| f(a, b));
+            return is_feature_edge.as_ref().is_some_and(|f| f(a, b));
         }
 
         let Some(on) = standing.get(&key).filter(|on| on.len() == 2) else {

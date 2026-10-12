@@ -356,3 +356,11 @@ pub fn coincident_vertices(mesh: &LevelLineMesh, snap: f64) -> Vec<(i32, i32, Ve
 
     found
 }
+
+/// C# `OpenEdges`: every edge of the mesh with only one triangle on it.
+pub fn open_edges(mesh: &LevelLineMesh) -> Vec<(i32, i32)> {
+    mesh.edges()
+        .into_iter()
+        .filter(|e| mesh.triangles_on(e.0, e.1).len() == 1)
+        .collect()
+}
