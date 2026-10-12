@@ -478,7 +478,7 @@ fn the_rim_built(read: &Rim, radius: f64) -> Mesh {
 }
 
 /// The length of two skew lines' common perpendicular, as the walk measures it.
-fn apart(first: SurfaceLine, second: SurfaceLine) -> f64 {
+pub(crate) fn apart(first: SurfaceLine, second: SurfaceLine) -> f64 {
     let between = second.point - first.point;
     let direction_dot = first.direction.dot(second.direction);
     let determinant = 1.0 - (direction_dot * direction_dot);
@@ -493,27 +493,27 @@ fn apart(first: SurfaceLine, second: SurfaceLine) -> f64 {
 
 /// One reading of the barrel's rim: the mesh it came off, its plans, and the corner at the top of
 /// the right seam.
-struct Rim {
-    prism: Mesh,
-    regions: Arc<FaceRegionCache>,
-    chain: BevelSweptChain,
-    planned: Vec<SurfaceEdgePlan>,
+pub(crate) struct Rim {
+    pub(crate) prism: Mesh,
+    pub(crate) regions: Arc<FaceRegionCache>,
+    pub(crate) chain: BevelSweptChain,
+    pub(crate) planned: Vec<SurfaceEdgePlan>,
     /// The edge the chain ARRIVES at the corner on, which is what names the corner.
-    corner_index: i32,
+    pub(crate) corner_index: i32,
     /// Whether the convex side of the corner is that arriving edge.
-    cut_is_arriving: bool,
-    cut_index: i32,
-    swallowed: Vec<i32>,
-    bead: SurfaceEdgePlan,
-    corner1: Rc<SurfaceMixedCorner>,
+    pub(crate) cut_is_arriving: bool,
+    pub(crate) cut_index: i32,
+    pub(crate) swallowed: Vec<i32>,
+    pub(crate) bead: SurfaceEdgePlan,
+    pub(crate) corner1: Rc<SurfaceMixedCorner>,
     /// The part's own ruler, which the readings measure lengths against.
-    near_enough: f64,
+    pub(crate) near_enough: f64,
 }
 
 /// The LOBE WALL as a face pick, planned at `radius`, with the corner at the top of its right seam
 /// read off it - the same reading `surface_mixed_corner_over_a_curved_shared_face_tests` makes at
 /// the fixture's own size.
-fn the_walls_rim(radius: f64) -> Rim {
+pub(crate) fn the_walls_rim(radius: f64) -> Rim {
     let prism = lobed_prism_meshes::create();
     let graph = prism.get_mesh_edge_graph();
     let regions = Arc::new(FaceRegionCache::new(

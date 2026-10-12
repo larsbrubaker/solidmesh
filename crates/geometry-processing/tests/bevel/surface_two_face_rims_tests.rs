@@ -238,7 +238,7 @@ fn both_rims(cube: &Mesh) -> Vec<FeatureEdge> {
 
 /// The rim of the face region whose outward normal is `normal`, which is what clicking that face
 /// of the cube selects.
-fn rim_of(cube: &Mesh, normal: Vector3) -> Vec<FeatureEdge> {
+pub(crate) fn rim_of(cube: &Mesh, normal: Vector3) -> Vec<FeatureEdge> {
     let seed = (0..cube.faces.len())
         .find(|&face| {
             (Vector3::from_vector3_float(cube.faces[face].normal) - normal).length() < 1e-6
@@ -338,7 +338,7 @@ fn faces_within(mesh: &Mesh, of: Vector3, reach: f64) -> Vec<[Vector3; 3]> {
         .collect()
 }
 
-fn assert_it_is_a_sound_solid(built: &Mesh) {
+pub(crate) fn assert_it_is_a_sound_solid(built: &Mesh) {
     assert!(
         built.is_manifold(),
         "a bevel of a closed solid stays a closed solid"

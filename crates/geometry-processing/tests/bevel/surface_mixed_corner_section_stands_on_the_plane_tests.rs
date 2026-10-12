@@ -117,7 +117,7 @@ fn the_profile_at_the_last_turn(corner: &SurfaceMixedCorner) -> Vec<Vector3> {
 
 /// The short-walled prism's barrel picked as a face, its rim planned whole at `radius`, and the
 /// mixed corner whose runout reaches past the end of the wall.
-fn the_walls_rim(
+pub(crate) fn the_walls_rim(
     radius: f64,
 ) -> (
     Mesh,
@@ -154,7 +154,7 @@ fn the_walls_rim(
 }
 
 /// Any one facet of the lobe's own wall - a side face standing well outside the flat side.
-fn a_facet_of_the_lobes_wall(prism: &Mesh) -> i32 {
+pub(crate) fn a_facet_of_the_lobes_wall(prism: &Mesh) -> i32 {
     for (face, facet) in prism.faces.iter().enumerate() {
         let middle = (Vector3::from_vector3_float(prism.vertices[facet.v0 as usize])
             + Vector3::from_vector3_float(prism.vertices[facet.v1 as usize])

@@ -63,6 +63,8 @@ pub(crate) mod surface_fan_tests;
 pub(crate) mod surface_giving_up_the_section_sews_by_index_tests;
 #[path = "surface_interrupted_crease_tests.rs"]
 pub(crate) mod surface_interrupted_crease_tests;
+#[path = "surface_joined_ring_tests.rs"]
+pub(crate) mod surface_joined_ring_tests;
 #[path = "surface_mesh_closure_tests.rs"]
 pub(crate) mod surface_mesh_closure_tests;
 #[path = "surface_mitre_consumes_a_chord_tests.rs"]
@@ -79,6 +81,8 @@ pub(crate) mod surface_mixed_corner_dual_canal_tests;
 pub(crate) mod surface_mixed_corner_dual_grid_tests;
 #[path = "surface_mixed_corner_dual_on_a_square_corner_tests.rs"]
 pub(crate) mod surface_mixed_corner_dual_on_a_square_corner_tests;
+#[path = "surface_mixed_corner_over_a_curved_shared_face_tests.rs"]
+pub(crate) mod surface_mixed_corner_over_a_curved_shared_face_tests;
 #[path = "surface_mixed_corner_over_a_curved_wall_tests.rs"]
 pub(crate) mod surface_mixed_corner_over_a_curved_wall_tests;
 #[path = "surface_mixed_corner_reading_tests.rs"]
@@ -97,6 +101,8 @@ pub(crate) mod surface_mixed_corner_section_stands_on_the_plane_tests;
 pub(crate) mod surface_mixed_corner_sector_tests;
 #[path = "surface_mixed_corner_tests.rs"]
 pub(crate) mod surface_mixed_corner_tests;
+#[path = "surface_mixed_corner_where_the_wall_runs_out_tests.rs"]
+pub(crate) mod surface_mixed_corner_where_the_wall_runs_out_tests;
 #[path = "surface_mixed_junction_build_tests.rs"]
 pub(crate) mod surface_mixed_junction_build_tests;
 #[path = "surface_mixed_junction_over_a_curved_wall_tests.rs"]
@@ -137,6 +143,8 @@ pub(crate) mod surface_rib_foot_junction_tests;
 pub(crate) mod surface_rim_closes_at_a_knife_edge_tests;
 #[path = "surface_ring_ears_bridged_ring_tests.rs"]
 pub(crate) mod surface_ring_ears_bridged_ring_tests;
+#[path = "surface_roll_across_the_wall_tests.rs"]
+pub(crate) mod surface_roll_across_the_wall_tests;
 #[path = "surface_room_across_a_curved_wall_tests.rs"]
 pub(crate) mod surface_room_across_a_curved_wall_tests;
 #[path = "surface_room_corner_wall_tests.rs"]
@@ -155,6 +163,8 @@ pub(crate) mod surface_room_mitre_window_tests;
 pub(crate) mod surface_room_notch_reach_tests;
 #[path = "surface_room_partial_run_off_tests.rs"]
 pub(crate) mod surface_room_partial_run_off_tests;
+#[path = "surface_room_run_out_tests.rs"]
+pub(crate) mod surface_room_run_out_tests;
 #[path = "surface_room_skirt_meets_its_own_chains_notch_tests.rs"]
 pub(crate) mod surface_room_skirt_meets_its_own_chains_notch_tests;
 #[path = "surface_room_standing_feature_tests.rs"]

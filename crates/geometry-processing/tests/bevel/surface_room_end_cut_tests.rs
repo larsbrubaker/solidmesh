@@ -352,7 +352,10 @@ fn the_far_corners_edge_picked_alone_is_unaffected() {
 }
 
 /// C#'s LINQ `Single`: the one cut that matches.
-fn single(cuts: &[SurfaceRoomCut], matches: impl Fn(&SurfaceRoomCut) -> bool) -> SurfaceRoomCut {
+pub(crate) fn single(
+    cuts: &[SurfaceRoomCut],
+    matches: impl Fn(&SurfaceRoomCut) -> bool,
+) -> SurfaceRoomCut {
     let found: Vec<&SurfaceRoomCut> = cuts.iter().filter(|cut| matches(cut)).collect();
 
     assert_eq!(found.len(), 1, "exactly one cut matches");
@@ -380,7 +383,7 @@ fn the_notch_at_the_far_corner(cuts: &[SurfaceRoomCut]) -> SurfaceRoomCut {
     })
 }
 
-fn regions_of(prism: &Mesh) -> Arc<FaceRegionCache> {
+pub(crate) fn regions_of(prism: &Mesh) -> Arc<FaceRegionCache> {
     Arc::new(FaceRegionCache::new(
         Arc::new(prism.clone()),
         Some(prism.get_mesh_edge_graph()),
@@ -436,7 +439,7 @@ fn the_vertical_edge_at_the_far_corner(prism: &Mesh) -> FeatureEdge {
 }
 
 /// Each picked edge joined into chains and planned at one size.
-fn plans_for(
+pub(crate) fn plans_for(
     regions: &Arc<FaceRegionCache>,
     size: f64,
     picked: &[FeatureEdge],
@@ -451,12 +454,12 @@ fn plans_for(
         .collect()
 }
 
-fn normal_of(prism: &Mesh, face: usize) -> Vector3 {
+pub(crate) fn normal_of(prism: &Mesh, face: usize) -> Vector3 {
     Vector3::from_vector3_float(prism.faces[face].normal)
 }
 
 /// The lobe picked whole - one smooth region of 9 degree facets, which is the cylinder's barrel.
-fn the_barrel(prism: &Mesh) -> FaceGroup {
+pub(crate) fn the_barrel(prism: &Mesh) -> FaceGroup {
     region_at(prism, |face| {
         normal_of(prism, face).dot(-Vector3::UNIT_Y) > 0.99
             && normal_of(prism, face).z.abs() < 1e-6
@@ -465,21 +468,21 @@ fn the_barrel(prism: &Mesh) -> FaceGroup {
 }
 
 /// The flat side the cap runs across to, which is the cube's own side rim in the fixture.
-fn the_far_side(prism: &Mesh) -> FaceGroup {
+pub(crate) fn the_far_side(prism: &Mesh) -> FaceGroup {
     region_at(prism, |face| {
         (normal_of(prism, face) + Vector3::UNIT_X).length() < 1e-6
     })
 }
 
 /// The cap the skirt is laid on: the prism's bottom.
-fn the_bottom_cap(prism: &Mesh) -> FaceGroup {
+pub(crate) fn the_bottom_cap(prism: &Mesh) -> FaceGroup {
     region_at(prism, |face| {
         (normal_of(prism, face) + Vector3::UNIT_Z).length() < 1e-6
     })
 }
 
 /// The region flooded from the first face answering `seeds`.
-fn region_at(prism: &Mesh, seeds: impl Fn(usize) -> bool) -> FaceGroup {
+pub(crate) fn region_at(prism: &Mesh, seeds: impl Fn(usize) -> bool) -> FaceGroup {
     let seed = (0..prism.faces.len())
         .find(|&face| seeds(face))
         .expect("a face answers the seed");
@@ -489,7 +492,7 @@ fn region_at(prism: &Mesh, seeds: impl Fn(usize) -> bool) -> FaceGroup {
 }
 
 /// The middle of one face, which is what tells the lobe's facets from the flat side's.
-fn middle_of(mesh: &Mesh, face: usize) -> Vector3 {
+pub(crate) fn middle_of(mesh: &Mesh, face: usize) -> Vector3 {
     let face = &mesh.faces[face];
 
     (Vector3::from_vector3_float(mesh.vertices[face.v0 as usize])

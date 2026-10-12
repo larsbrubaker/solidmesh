@@ -223,7 +223,7 @@ fn the_front_rim(features: &FeatureEdgeSet) -> Vec<FeatureEdge> {
         .collect()
 }
 
-fn edge_between(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> FeatureEdge {
+pub(crate) fn edge_between(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> FeatureEdge {
     let found: Vec<FeatureEdge> = features
         .edges()
         .iter()
