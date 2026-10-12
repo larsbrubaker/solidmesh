@@ -35,7 +35,8 @@
 //! - **Fitting and cleaning.** The face-width check ([`BevelFaceFit`]), the run-out and its
 //!   bound ([`BevelFaceRunOut`], [`BevelRunOutBound`]), the interrupted-crease readings
 //!   ([`bevel_interrupted_crease`]), the second pass's crease merge ([`bevel_crease_merge`]) and
-//!   run plan ([`BevelSecondPassRunPlan`]), the shadow clips' obstructions and apply step
+//!   run plan ([`BevelSecondPassRunPlan`]) and the pass itself, re-beading the concave creases on
+//!   the cut part ([`bevel_second_pass`]), the shadow clips' obstructions and apply step
 //!   ([`bevel_shadow_clip`], [`bevel_shadow_clip_applier`]), the T-vertex repair
 //!   ([`bevel_t_vertex_slivers`]), the sliver recut ([`bevel_sliver_collapse`]), the published
 //!   mesh's cleaning ([`bevel_published_mesh`]), the working mesh's verdict cache
@@ -112,6 +113,7 @@ mod bevel_round_faces;
 pub mod bevel_run_partners;
 pub mod bevel_run_taper;
 pub mod bevel_seam_ring;
+pub mod bevel_second_pass;
 pub mod bevel_second_pass_run_plan;
 pub mod bevel_shadow_body;
 pub mod bevel_shadow_clip;
@@ -164,6 +166,7 @@ pub use bevel_rebuild_advisories::BevelRebuildAdvisories;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
 pub use bevel_round_faces::BevelRoundFaces;
 pub use bevel_run_taper::BevelRunTaper;
+pub use bevel_second_pass::{BevelSecondPassRebead, BevelSecondPassRun};
 pub use bevel_second_pass_run_plan::BevelSecondPassRunPlan;
 pub use bevel_surface_labels::BevelSurfaceLabels;
 pub use bevel_surface_walk::{BevelSurfaceWalk, SurfaceWalkStop};

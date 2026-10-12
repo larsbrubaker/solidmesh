@@ -27,7 +27,8 @@
 //!   ([`SurfaceSplitsOnASegment`]) and a band running off the face it lands on, over a stretch or
 //!   the whole span ([`SurfaceBandRunsOffOverAStretch`],
 //!   [`surface_band_runs_off_the_face_beyond`]), and the band's outline borrowed across a chorded
-//!   wall's creases ([`surface_band_outline`]).
+//!   wall's creases ([`surface_band_outline`]); the run of a walked-back tangent line each strip
+//!   sews to ([`surface_seam_over_the_edge`]).
 //! - **Strip ends.** A chain end's reading ([`SurfaceChainEndReading`]) and the face carrying on
 //!   past it ([`SurfaceFaceCarriesOnWayOn`]); the strip ending on the hull
 //!   ([`SurfaceStripEndsOnTheHull`]), trimmed by the face beyond
@@ -40,7 +41,8 @@
 //!   and the reading of a feature standing on a region ([`surface_room_standing_feature`]).
 //! - **Standing features.** The features standing in a band ([`SurfaceStandingFeatureWithheld`],
 //!   [`SurfaceStripNotchedByAFeature`], [`SurfaceEndCapAroundAFeatureMeeting`]), a feature's bite
-//!   out of a strip ([`SurfaceStripBittenByAFeature`]) and its faces extended out to the strip
+//!   out of a strip ([`SurfaceStripBittenByAFeature`]) with the rows laid across it
+//!   ([`SurfaceStripBiteRows`]) and its faces extended out to the strip
 //!   ([`surface_standing_feature_faces`]), the stretches of a feature a band passes under
 //!   ([`surface_standing_feature_stretch`]) and the builder's step that reads every standing
 //!   feature into bites and notches ([`surface_builder_standing_features`]).
@@ -49,8 +51,9 @@
 //!   [`SurfaceStripTrimmedAtTheCrossing`], [`SurfaceCrossingAtTheMitre`]), and the builder's
 //!   crossings of a band by a run-out ([`surface_bevel_crossings`]).
 //! - **Mitres.** The step laid at a mitre joint ([`surface_mitre_joint_step`]) and the sector a
-//!   mitre of unequal setbacks gives up ([`surface_mitre_sector`]) and the mitre whose tip stands
-//!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]).
+//!   mitre of unequal setbacks gives up ([`surface_mitre_sector`]), the mitre whose tip stands
+//!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]) and the short chord whose two
+//!   mitres crossed over on some of its rails ([`SurfaceMitreConsumesTheRail`]).
 //! - **Corners and junctions.** The mixed corner ([`SurfaceMixedCorner`]), the rolling ball's
 //!   spine round it ([`SurfaceMixedCornerSpine`]), its dual canal ([`SurfaceMixedCornerDualFrame`],
 //!   [`SurfaceMixedCornerDualCanal`], [`SurfaceMixedCornerDualGrid`],
@@ -111,6 +114,7 @@ pub mod surface_interrupted_crease;
 pub mod surface_junction_band_ends;
 mod surface_line;
 pub mod surface_mesh_closure;
+mod surface_mitre_consumes_the_rail;
 pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
 mod surface_mitre_over_the_face_beyond;
@@ -170,6 +174,7 @@ mod surface_run_out_column_window;
 mod surface_run_out_meets_a_wall_band;
 mod surface_run_out_meets_the_band;
 pub mod surface_run_stops_short;
+pub mod surface_seam_over_the_edge;
 pub mod surface_seam_re_read;
 pub mod surface_shared_edge_network;
 pub mod surface_split_sewing;
@@ -178,6 +183,7 @@ pub mod surface_standing_feature_faces;
 pub mod surface_standing_feature_stretch;
 mod surface_standing_feature_withheld;
 mod surface_strip;
+mod surface_strip_bite_rows;
 mod surface_strip_bitten_by_a_feature;
 pub mod surface_strip_ends;
 pub mod surface_strip_ends_at_a_landing_notch;
@@ -218,6 +224,7 @@ pub use surface_end_gains_the_section::SurfaceEndGainsTheSectionReading;
 pub use surface_face_carries_on::SurfaceFaceCarriesOnWayOn;
 pub use surface_facet_cut::SurfaceFacetCut;
 pub use surface_line::SurfaceLine;
+pub use surface_mitre_consumes_the_rail::SurfaceMitreConsumesTheRail;
 pub use surface_mitre_over_the_face_beyond::{SurfaceMitreHull, SurfaceMitreOverTheFaceBeyond};
 pub use surface_mixed_corner::SurfaceMixedCorner;
 pub use surface_mixed_corner_dual_canal::SurfaceMixedCornerDualCanal;
@@ -256,6 +263,7 @@ pub use surface_standing_feature_withheld::{
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
 };
 pub use surface_strip::SurfaceStrip;
+pub use surface_strip_bite_rows::SurfaceStripBiteRows;
 pub use surface_strip_bitten_by_a_feature::SurfaceStripBittenByAFeature;
 pub use surface_strip_ends_on_the_hull::{
     SurfaceStripEndsOnTheHull, SurfaceStripEndsOnTheHullSupportingPlane,

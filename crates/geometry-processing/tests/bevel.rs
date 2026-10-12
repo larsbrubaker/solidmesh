@@ -309,6 +309,8 @@ mod needle_cascade_meter_tests;
 mod needle_repair_tests;
 #[path = "bevel/no_duplicate_vertex_tests.rs"]
 mod no_duplicate_vertex_tests;
+#[path = "bevel/nose_in_notch_cut.rs"]
+mod nose_in_notch_cut;
 #[path = "bevel/nose_in_notch_mixed_corners.rs"]
 mod nose_in_notch_mixed_corners;
 #[path = "bevel/nose_in_notch_test_meshes.rs"]
@@ -633,6 +635,8 @@ mod surface_run_out_column_top_tests;
 mod surface_run_out_lens_readings_tests;
 #[path = "bevel/surface_run_out_strip_top_rim_tests.rs"]
 mod surface_run_out_strip_top_rim_tests;
+#[path = "bevel/surface_seam_window_tests.rs"]
+mod surface_seam_window_tests;
 #[path = "bevel/surface_sewing_bowed_side_tests.rs"]
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
