@@ -47,10 +47,14 @@ mod bevel_patch_refinement_tests;
 mod bevel_rebuild_advisories_tests;
 #[path = "bevel/bevel_run_partners_tests.rs"]
 mod bevel_run_partners_tests;
+#[path = "bevel/bevel_run_taper_tests.rs"]
+mod bevel_run_taper_tests;
 #[path = "bevel/bevel_runs_out_under_the_wall_tests.rs"]
 mod bevel_runs_out_under_the_wall_tests;
 #[path = "bevel/bevel_seam_ring_tests.rs"]
 mod bevel_seam_ring_tests;
+#[path = "bevel/bevel_second_pass_merge_tests.rs"]
+mod bevel_second_pass_merge_tests;
 #[path = "bevel/bevel_source_hull_tests.rs"]
 mod bevel_source_hull_tests;
 #[path = "bevel/bevel_source_round_tests.rs"]
@@ -261,6 +265,8 @@ mod rust_only_bevel_slice7_tests;
 mod rust_only_bevel_slice8_tests;
 #[path = "bevel/rust_only_bevel_slice9_tests.rs"]
 mod rust_only_bevel_slice9_tests;
+#[path = "bevel/rust_only_bevel_sliver_collapse_tests.rs"]
+mod rust_only_bevel_sliver_collapse_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]

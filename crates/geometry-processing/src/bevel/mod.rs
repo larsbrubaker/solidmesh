@@ -41,7 +41,10 @@
 //! partnered bead's run, ends and stations ([`bevel_partnered_bead`]), the interrupted-crease readings ([`bevel_interrupted_crease`]), the
 //! shadow clip's obstructions ([`bevel_shadow_clip`]), the T-vertex repair
 //! ([`bevel_t_vertex_slivers`]), the working mesh's verdict cache ([`bevel_working_mesh`]) and one
-//! mesh state prepared for picking ([`BevelPickData`]).
+//! mesh state prepared for picking ([`BevelPickData`]). Slice 13 adds a run's taper ([`BevelRunTaper`]), the
+//! rebuild's boolean budget ([`bevel_rebuild_step_budget`]), the second pass's run plan
+//! ([`BevelSecondPassRunPlan`]), the shadow clips' apply step ([`bevel_shadow_clip_applier`]) and
+//! the sliver recut ([`bevel_sliver_collapse`]).
 //! C# `internal static class` helpers are modules of free functions here.
 
 mod bevel_advisory;
@@ -99,14 +102,19 @@ pub mod bevel_patch_refinement;
 pub mod bevel_pick_data;
 pub mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
+pub mod bevel_rebuild_step_budget;
 mod bevel_round_descriptor;
 pub mod bevel_round_entry;
 mod bevel_round_faces;
 pub mod bevel_run_partners;
+pub mod bevel_run_taper;
 pub mod bevel_seam_ring;
+pub mod bevel_second_pass_run_plan;
 pub mod bevel_shadow_body;
 pub mod bevel_shadow_clip;
+pub mod bevel_shadow_clip_applier;
 pub mod bevel_shared_edges;
+pub mod bevel_sliver_collapse;
 pub mod bevel_source_hull;
 pub mod bevel_source_rounds;
 mod bevel_source_rounds_fit;
@@ -149,5 +157,7 @@ pub use bevel_pick_data::BevelPickData;
 pub use bevel_rebuild_advisories::BevelRebuildAdvisories;
 pub use bevel_round_descriptor::{BevelRoundDescriptor, RoundStation};
 pub use bevel_round_faces::BevelRoundFaces;
+pub use bevel_run_taper::BevelRunTaper;
+pub use bevel_second_pass_run_plan::BevelSecondPassRunPlan;
 pub use bevel_surface_labels::BevelSurfaceLabels;
 pub use bevel_surface_walk::{BevelSurfaceWalk, SurfaceWalkStop};
