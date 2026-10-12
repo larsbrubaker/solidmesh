@@ -551,6 +551,8 @@ mod second_column_land_join_tests;
 mod section_face_rebuild_tests;
 #[path = "bevel/section_hanger_top_rim_tests.rs"]
 mod section_hanger_top_rim_tests;
+#[path = "bevel/section_loft_junction_tests.rs"]
+mod section_loft_junction_tests;
 #[path = "bevel/section_loft_tests.rs"]
 mod section_loft_tests;
 #[path = "bevel/section_loop_entry_tests.rs"]
@@ -659,6 +661,10 @@ mod surface_oblique_mixed_corner_bites_tests;
 mod surface_oblique_mixed_corner_wall_spine_tests;
 #[path = "bevel/surface_plan_cost_tests.rs"]
 mod surface_plan_cost_tests;
+#[path = "bevel/surface_raked_bore_band_outline_tests.rs"]
+mod surface_raked_bore_band_outline_tests;
+#[path = "bevel/surface_raked_bore_mouth_tests.rs"]
+mod surface_raked_bore_mouth_tests;
 #[path = "bevel/surface_rim_closes_at_a_knife_edge_tests.rs"]
 mod surface_rim_closes_at_a_knife_edge_tests;
 #[path = "bevel/surface_ring_ears_bridged_ring_tests.rs"]
@@ -693,6 +699,8 @@ mod surface_splits_on_a_segment_tests;
 mod surface_standing_feature_stretch_tests;
 #[path = "bevel/surface_standing_feature_tail_and_cap_tests.rs"]
 mod surface_standing_feature_tail_and_cap_tests;
+#[path = "bevel/surface_strip_bitten_by_a_feature_tests.rs"]
+mod surface_strip_bitten_by_a_feature_tests;
 #[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
 mod surface_strip_ends_on_the_hull_tests;
 #[path = "bevel/surface_strip_oblique_end_tests.rs"]

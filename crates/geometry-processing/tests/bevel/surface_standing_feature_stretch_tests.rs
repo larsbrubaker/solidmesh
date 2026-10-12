@@ -371,7 +371,7 @@ fn a_strip_of_wall(turn_per_facet_degrees: f64) -> Mesh {
 }
 
 /// C# `PlanOf`: one picked edge, planned on both the regions it lands on.
-fn plan_of(
+pub fn plan_of(
     regions: &Arc<FaceRegionCache>,
     features: &FeatureEdgeSet,
     pick: usize,
@@ -388,7 +388,7 @@ fn plan_of(
 
 /// C# `TopEdgeOf`: the edge between two named points, whichever way round the mesh happens to hold
 /// it.
-fn top_edge_of(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> usize {
+pub fn top_edge_of(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> usize {
     let found: Vec<usize> = (0..features.count())
         .filter(|&index| {
             let edge = &features.edges()[index];

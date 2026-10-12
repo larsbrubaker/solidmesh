@@ -1,12 +1,13 @@
-//! The plate with a round bore and the split of one of its edges. Ports the two pieces of
-//! `Tests/GeometryProcessingTests/Fixtures/BoreTestMeshes.cs` (`CreatePlateWithARoundBore`) and
-//! `BoreTestMeshesSplitChords.cs` (`SplitTheEdgeBetween`) that `section_room_split_crease_tests.rs`
-//! reads; the fixture's other parts land with the classes that read them.
+//! The plate with a round bore, the plate with a RAKED bore, and the split of one of its edges.
+//! Ports the pieces of `Tests/GeometryProcessingTests/Fixtures/BoreTestMeshes.cs`
+//! (`CreatePlateWithARoundBore`, `CreatePlateWithARakedBore`, `TileTheRingBetween`) and
+//! `BoreTestMeshesSplitChords.cs` (`SplitTheEdgeBetween`) that the ported classes read; the
+//! fixture's other parts land with the classes that read them.
 
 use agg_path::vertex_storage::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::revolve;
 use polygon_mesh::{FaceList, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use vector_math::{math_helper, Vector3, Vector3Float};
 
 /// C# `CreatePlateWithARoundBore`: a plate `thickness` thick, centred on z = 0, with a bore of
 /// `radius` drawn with `sides` facets and `land` of plate outside it.
@@ -20,6 +21,170 @@ pub fn create_plate_with_a_round_bore(sides: i32, radius: f64, thickness: f64, l
     // The closing segment back to (radius, -thickness / 2) is the BORE wall, which is why the
     // profile is left open here.
     revolve(&path, sides, 0.0, std::f64::consts::TAU, true).expect("the plate revolves")
+}
+
+/// C# `CreatePlateWithARakedBore`: the same plate and the same bore, drilled at a RAKE instead of
+/// square - so each mouth is an ELLIPSE and the wedge along it runs from `90 - rake` at one end of
+/// the loop to `90 + rake` at the other.
+///
+/// With the section taken square to the axis through the origin, the upper mouth comes out as the
+/// ellipse `(r cos a / cos(rake) + (t / 2) tan(rake), r sin a)`, and the lower mouth the same the
+/// other way. Both contain the origin as long as the plate is thinner than `2 r / sin(rake)`, which
+/// is what lets each face be tiled by walking the mouth and the rim together in ANGLE about the
+/// origin ([`tile_the_ring_between`]) with no boolean anywhere and so no seam of one.
+pub fn create_plate_with_a_raked_bore(
+    sides: i32,
+    radius: f64,
+    thickness: f64,
+    rake_degrees: f64,
+    land: f64,
+) -> Mesh {
+    let rake = math_helper::degrees_to_radians(rake_degrees);
+    let axis = Vector3::new(rake.sin(), 0.0, rake.cos());
+    let across = Vector3::new(rake.cos(), 0.0, -rake.sin());
+    let along = Vector3::new(0.0, 1.0, 0.0);
+
+    let count = sides as usize;
+    let mut upper = Vec::with_capacity(count);
+    let mut lower = Vec::with_capacity(count);
+    let mut rim = Vec::with_capacity(count);
+
+    let outer_radius = (radius / rake.cos()) + ((thickness / 2.0) * rake.tan()) + land;
+
+    for i in 0..sides {
+        let turn = 2.0 * std::f64::consts::PI * f64::from(i) / f64::from(sides);
+        let on_the_section = (across * (radius * turn.cos())) + (along * (radius * turn.sin()));
+
+        // Slid along the drill's own axis until it reaches each face, which is what makes the
+        // mouth an ellipse and each wall facet an exactly planar parallelogram.
+        upper.push(on_the_section + (axis * (((thickness / 2.0) - on_the_section.z) / axis.z)));
+        lower.push(on_the_section + (axis * (((-thickness / 2.0) - on_the_section.z) / axis.z)));
+        rim.push(Vector3::new(
+            outer_radius * turn.cos(),
+            outer_radius * turn.sin(),
+            0.0,
+        ));
+    }
+
+    let mut mesh = Mesh::new();
+
+    tile_the_ring_between(&mut mesh, &upper, &rim, thickness / 2.0, true);
+    tile_the_ring_between(&mut mesh, &lower, &rim, -thickness / 2.0, false);
+
+    for i in 0..count {
+        let next = (i + 1) % count;
+
+        // The bore's wall, whose outward normal points IN toward the axis because the material of
+        // a plate is outside its bore, and the plate's own outside.
+        mesh.create_face(&[upper[i], upper[next], lower[next], lower[i]]);
+
+        mesh.create_face(&[
+            Vector3::new(rim[i].x, rim[i].y, thickness / 2.0),
+            Vector3::new(rim[i].x, rim[i].y, -thickness / 2.0),
+            Vector3::new(rim[next].x, rim[next].y, -thickness / 2.0),
+            Vector3::new(rim[next].x, rim[next].y, thickness / 2.0),
+        ]);
+    }
+
+    mesh.clean_and_merge();
+
+    mesh
+}
+
+/// C# `TileTheRingBetween`: tiles the flat ring between an inner loop and an outer one, both
+/// wound the same way and both containing the origin, by walking them together in ANGLE about it:
+/// at each step the vertex whose angle comes next is taken, and the triangle between the old spoke
+/// and the new one is emitted. It cannot fold, because the two sequences are each sorted by angle
+/// and so the spokes cannot cross.
+///
+/// `z` is the plane to lay the ring in (the outer loop is given at z = 0 and moved to it);
+/// `facing_up` whether the ring's normal is +z.
+fn tile_the_ring_between(
+    mesh: &mut Mesh,
+    mouth: &[Vector3],
+    rim: &[Vector3],
+    z: f64,
+    facing_up: bool,
+) {
+    let sides = mouth.len();
+    let rim_sides = rim.len();
+    let start = mouth[0].y.atan2(mouth[0].x);
+    let two_pi = 2.0 * std::f64::consts::PI;
+
+    let ahead = |at: Vector3| {
+        let turn = at.y.atan2(at.x) - start;
+
+        if turn < 0.0 {
+            turn + two_pi
+        } else {
+            turn
+        }
+    };
+
+    let mut inner = vec![0.0; sides + 1];
+    for k in 1..sides {
+        inner[k] = ahead(mouth[k]);
+    }
+
+    inner[sides] = two_pi;
+
+    // Which of the rim's vertices stands just past the mouth's first, so the walk starts on a
+    // spoke that spans less than one step of either loop.
+    let mut first = 0;
+    let mut least = f64::MAX;
+    for (k, &at) in rim.iter().enumerate() {
+        let turn = ahead(at);
+
+        if turn > 0.0 && turn < least {
+            least = turn;
+            first = k;
+        }
+    }
+
+    let mut outer = vec![0.0; rim_sides + 1];
+    outer[0] = least;
+    for k in 1..=rim_sides {
+        let turn = ahead(rim[(first + k) % rim_sides]);
+
+        outer[k] = if turn <= outer[k - 1] {
+            turn + two_pi
+        } else {
+            turn
+        };
+    }
+
+    let mut emit = |from: Vector3, spoke: Vector3, to: Vector3| {
+        let a = Vector3::new(from.x, from.y, z);
+        let b = Vector3::new(spoke.x, spoke.y, z);
+        let c = Vector3::new(to.x, to.y, z);
+
+        if facing_up {
+            mesh.create_face(&[a, b, c]);
+        } else {
+            mesh.create_face(&[a, c, b]);
+        }
+    };
+
+    let mut walked = 0;
+    let mut turned = 0;
+
+    while walked < sides || turned < rim_sides {
+        if walked < sides && (turned >= rim_sides || inner[walked + 1] <= outer[turned + 1]) {
+            emit(
+                mouth[walked],
+                rim[(first + turned) % rim_sides],
+                mouth[(walked + 1) % sides],
+            );
+            walked += 1;
+        } else {
+            emit(
+                mouth[walked % sides],
+                rim[(first + turned) % rim_sides],
+                rim[(first + turned + 1) % rim_sides],
+            );
+            turned += 1;
+        }
+    }
 }
 
 /// C# `SplitTheEdgeBetween`: splits the mesh edge between the vertices nearest `from` and `to` at
