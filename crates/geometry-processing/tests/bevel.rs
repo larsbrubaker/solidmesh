@@ -507,10 +507,14 @@ mod surface_run_out_strip_top_rim_tests;
 mod surface_sewing_bowed_side_tests;
 #[path = "bevel/surface_splits_on_a_segment_tests.rs"]
 mod surface_splits_on_a_segment_tests;
+#[path = "bevel/surface_standing_feature_stretch_tests.rs"]
+mod surface_standing_feature_stretch_tests;
 #[path = "bevel/surface_standing_feature_tail_and_cap_tests.rs"]
 mod surface_standing_feature_tail_and_cap_tests;
 #[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
 mod surface_strip_ends_on_the_hull_tests;
+#[path = "bevel/surface_tangent_run_ends_tests.rs"]
+mod surface_tangent_run_ends_tests;
 #[path = "bevel/surface_test_chains.rs"]
 mod surface_test_chains;
 #[path = "bevel/surface_walkback_checks.rs"]

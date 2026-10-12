@@ -61,7 +61,11 @@
 //! ([`surface_interrupted_crease`]) - with the builder's crossings of a band by a run-out
 //! ([`surface_bevel_crossings`]) and the sector a mitre of unequal setbacks gives up
 //! ([`surface_mitre_sector`]). The types land as type definitions; their methods, and the
-//! construction itself, land in later slices.
+//! construction itself, land in later slices. And the leaning corner's dual-canal patch
+//! ([`surface_mixed_corner_dual_patch`]), the stretches of a feature a band passes under
+//! ([`surface_standing_feature_stretch`]), and the walkback's band reach and standing-feature
+//! guard ([`surface_walkback_bands`]) with the tangent runs each cut leaves
+//! ([`surface_walkback_tangent_runs`]).
 
 mod surface_band_end;
 mod surface_band_runs_off_over_a_stretch;
@@ -108,6 +112,7 @@ mod surface_mixed_corner_dual_canal;
 pub mod surface_mixed_corner_dual_cap;
 mod surface_mixed_corner_dual_frame;
 mod surface_mixed_corner_dual_grid;
+pub mod surface_mixed_corner_dual_patch;
 pub mod surface_mixed_corner_dual_wall;
 pub mod surface_mixed_corner_faces;
 pub mod surface_mixed_corner_hands_over_at_the_mitre;
@@ -159,6 +164,7 @@ pub mod surface_shared_edge_network;
 pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
 pub mod surface_standing_feature_faces;
+pub mod surface_standing_feature_stretch;
 mod surface_standing_feature_withheld;
 mod surface_strip;
 mod surface_strip_bitten_by_a_feature;
@@ -177,8 +183,10 @@ pub mod surface_two_crease_junction_patch;
 mod surface_two_crease_junction_rings;
 pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
+pub mod surface_walkback_bands;
 mod surface_walkback_result;
 pub mod surface_walkback_standing_features;
+pub mod surface_walkback_tangent_runs;
 pub mod surface_wall_ran_out;
 mod surface_wall_section;
 pub mod surface_wall_stands_clear;
@@ -230,6 +238,7 @@ pub use surface_run_out_column_window::SurfaceRunOutColumnWindow;
 pub use surface_run_out_meets_a_wall_band::SurfaceRunOutMeetsAWallBand;
 pub use surface_run_out_meets_the_band::SurfaceRunOutMeetsTheBand;
 pub use surface_splits_on_a_segment::SurfaceSplitsOnASegment;
+pub use surface_standing_feature_stretch::SurfaceStandingFeatureStretch;
 pub use surface_standing_feature_withheld::{
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
 };
