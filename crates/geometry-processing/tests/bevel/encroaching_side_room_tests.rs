@@ -166,7 +166,7 @@ fn read(out: &mut dyn Write) -> std::io::Result<()> {
 }
 
 /// C#'s `0.####` / `0.#` formats: at most `places` decimals, trailing zeros dropped.
-fn up_to(value: f64, places: usize) -> String {
+pub fn up_to(value: f64, places: usize) -> String {
     let text = format!("{value:.places$}");
     if text.contains('.') {
         text.trim_end_matches('0').trim_end_matches('.').to_string()

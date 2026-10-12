@@ -3,6 +3,8 @@
 
 #[path = "bevel/annulus_plate_builder.rs"]
 mod annulus_plate_builder;
+#[path = "bevel/around_center_kink_measure_tests.rs"]
+mod around_center_kink_measure_tests;
 #[path = "bevel/around_center_mitre_knife_tests.rs"]
 mod around_center_mitre_knife_tests;
 #[path = "bevel/band_cut_tests.rs"]
