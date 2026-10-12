@@ -603,7 +603,7 @@ fn build(
 /// origin is the corner the bevel takes off.
 // C#'s rotation of (0, -1) is kept term by term, multiplications by -1 included.
 #[allow(clippy::neg_multiply)]
-fn fillet_profile(radius: f64, wedge_radians: f64, segments: i32) -> Vec<Vector2> {
+pub fn fillet_profile(radius: f64, wedge_radians: f64, segments: i32) -> Vec<Vector2> {
     let sweep = std::f64::consts::PI - wedge_radians;
     let centre = Vector2::new(
         radius / (wedge_radians / 2.0).tan(),
@@ -624,7 +624,7 @@ fn fillet_profile(radius: f64, wedge_radians: f64, segments: i32) -> Vec<Vector2
 }
 
 /// How much one edge's bevel takes per unit length: the area between the corner and the profile.
-fn section_area(profile: &[Vector2]) -> f64 {
+pub fn section_area(profile: &[Vector2]) -> f64 {
     let mut twice = 0.0;
 
     let mut ring = vec![Vector2::new(0.0, 0.0)];
@@ -641,7 +641,7 @@ fn section_area(profile: &[Vector2]) -> f64 {
 }
 
 /// What two bevels meeting at one corner would each take twice if the mitre did not stop them.
-fn mitred_corner_overlap(profile: &[Vector2]) -> f64 {
+pub fn mitred_corner_overlap(profile: &[Vector2]) -> f64 {
     let mut overlap = 0.0;
 
     for i in 0..profile.len().saturating_sub(1) {

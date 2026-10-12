@@ -492,7 +492,7 @@ pub fn the_crossing_built() -> Mesh {
         .unwrap_or_else(|reason| panic!("the crossing has to build: {reason}"))
 }
 
-fn build_with(
+pub fn build_with(
     prism: &Mesh,
     regions: &FaceRegionCache,
     plans: &[Rc<SurfaceBevelPlan>],
@@ -736,7 +736,7 @@ fn the_seam_and_the_one_edge(
 }
 
 /// The picked edges, joined into chains and planned at one size.
-fn plans_for(
+pub fn plans_for(
     regions: &Arc<FaceRegionCache>,
     size: f64,
     seeds: Vec<FeatureEdge>,
@@ -752,7 +752,7 @@ fn plans_for(
 }
 
 /// The lobe picked whole - one smooth region of 9 degree facets, which is the cylinder's barrel.
-fn the_barrel(prism: &Mesh) -> Arc<FaceGroup> {
+pub fn the_barrel(prism: &Mesh) -> Arc<FaceGroup> {
     region_at(prism, |face| {
         let normal = Vector3::from_vector3_float(prism.faces[face].normal);
 
@@ -763,7 +763,7 @@ fn the_barrel(prism: &Mesh) -> Arc<FaceGroup> {
 }
 
 /// The flat side the cap runs across to, which is the cube's own side rim in the fixture.
-fn the_far_side(prism: &Mesh) -> Arc<FaceGroup> {
+pub fn the_far_side(prism: &Mesh) -> Arc<FaceGroup> {
     region_at(prism, |face| {
         (Vector3::from_vector3_float(prism.faces[face].normal) + Vector3::UNIT_X).length() < 1e-6
     })
@@ -791,7 +791,7 @@ fn region_at(prism: &Mesh, seeds: impl Fn(usize) -> bool) -> Arc<FaceGroup> {
     panic!("no face answers the seed");
 }
 
-fn lobed_regions(prism: &Mesh) -> Arc<FaceRegionCache> {
+pub fn lobed_regions(prism: &Mesh) -> Arc<FaceRegionCache> {
     Arc::new(FaceRegionCache::new(
         Arc::new(prism.clone()),
         Some(prism.get_mesh_edge_graph()),

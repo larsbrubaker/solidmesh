@@ -540,12 +540,12 @@ fn build_chain(
 }
 
 /// The kite between the edge and its two tangent points less the sector of the rolling ball.
-fn wedge_area(radius: f64, wedge_radians: f64) -> f64 {
+pub fn wedge_area(radius: f64, wedge_radians: f64) -> f64 {
     (radius * radius / (wedge_radians / 2.0).tan()) - (radius * radius * (PI - wedge_radians) / 2.0)
 }
 
 /// How much more an inscribed chording takes than the arc it stands in for.
-fn chord_excess_area(radius: f64, sweep_radians: f64, segments: i32) -> f64 {
+pub fn chord_excess_area(radius: f64, sweep_radians: f64, segments: i32) -> f64 {
     radius * radius / 2.0
         * (sweep_radians - (segments as f64 * (sweep_radians / segments as f64).sin()))
 }
