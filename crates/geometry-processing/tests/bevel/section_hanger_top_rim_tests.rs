@@ -1,19 +1,43 @@
 //! Port of `SectionHangerTopRimTests.cs`: ROW G1 OF THE PICTURE HANGER, on the hanger's own mesh
 //! ([`crate::picture_hanger_test_mesh`]) - the top face's ten edge rim at z = 20, the face that rim
-//! goes round, and the eleventh corner standing a tenth of a millimetre inside it.
-//!
-//! The C# tests still to come wait on `SurfaceTestBuild.TryBevel` (and through it
-//! `SurfaceBevelBuilder.TryBuild`), which is not ported yet:
-//! `TheTopRimTakesItsFilletThroughTheSections` and `TheTopRimIsRoutedThroughTheSections`.
+//! goes round, and the eleventh corner standing a tenth of a millimetre inside it - taking its 0.4
+//! fillet through the sections, closed, manifold and in one shell, built through the shared
+//! `SurfaceTestBuild` port with the sections flag pinned on.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
+use geometry_processing::bevel::sections::section_routing;
 use geometry_processing::topology::bevel_edge_group_resolver::{self, BevelEdgeGroupResolution};
+use polygon_mesh::CancelToken;
 
 use crate::picture_hanger_test_mesh as fixture;
+use crate::surface_test_build::{
+    pinned_to_the_sections, the_closed_readable_mesh, try_bevel_resolutions, TryBevelOptions,
+    TryBevelOutcome,
+};
+
+/// THE CLAIM: the hanger's top rim takes its 0.4 fillet through the sections, closed, manifold and
+/// in one shell.
+#[test]
+fn the_top_rim_takes_its_fillet_through_the_sections() {
+    let _sections = pinned_to_the_sections();
+
+    the_closed_readable_mesh(&the_top_rim_at(fixture::SIZE));
+}
+
+/// It goes through the sections, not the edge-centric fallback: the rim passes every clause of the
+/// router's reading and its room fits the 0.4.
+#[test]
+fn the_top_rim_is_routed_to_the_sections() {
+    let _sections = pinned_to_the_sections();
+
+    the_top_rim_at(fixture::SIZE);
+
+    assert_eq!(section_routing::last_route().as_deref(), Some("sections"));
+}
 
 /// The group the file carries really is the ten edge rim of the top face, on this copy too.
 #[test]
@@ -205,6 +229,20 @@ fn distance_to_the_segment(part: &Mesh, corner: i32, from: i32, to: i32) -> f64 
     };
 
     (at - (start + (along * t))).length()
+}
+
+/// C# `TheTopRimAt`: the rim alone, built the part builder's own way - see `SurfaceTestBuild`.
+fn the_top_rim_at(size: f64) -> TryBevelOutcome {
+    let part = fixture::the_part();
+
+    try_bevel_resolutions(
+        &part,
+        &[the_rim(&part)],
+        size,
+        fixture::SEGMENTS,
+        &CancelToken::new(),
+        TryBevelOptions::default(),
+    )
 }
 
 /// C# `TheRim`: the top face's rim, resolved off the fixture's stored group.

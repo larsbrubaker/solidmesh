@@ -20,15 +20,17 @@
 //! The fixture IS conditioned: it was dumped where `BevelFeaturePartBuilder` hands the construction
 //! its mesh, after `BevelWorkingMesh.CreateFrom`, and nothing is re-conditioned here.
 //!
-//! Two C# tests read the barrel's outer wall through `SurfaceTestBuild.TryBevel` (C#'s
-//! `TheOuterWallAt`), which lands with the surface bevel builder (S28):
-//! `TheRoomRefusesThePickBeforeTheRouterIsReached` lands with it, and
-//! `EveryHoleTakesItsFilletThroughTheSections` is `[Skip]` (RED) in C# - forty of the fifty loops
-//! take 0.5 soundly and ten still refuse - so it is recorded as skipped, not ported.
+//! `TheRoomRefusesThePickBeforeTheRouterIsReached` reads the barrel's outer wall through the shared
+//! `SurfaceTestBuild` port (C#'s `TheOuterWallAt`).
+//!
+//! Skipped as in C# (`[Skip]`):
+//! - `EveryHoleTakesItsFilletThroughTheSections`: "RED: read loop by loop, FORTY of the fifty loops
+//!   take 0.5 soundly - 10 still refuse, one of them on the smooth side's cut in the assembly
+//!   (ARingWillNotTriangulate)".
 
 use std::collections::HashSet;
 
-use polygon_mesh::Mesh;
+use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 
 use geometry_processing::bevel::bevel_chain_linker::link;
@@ -45,9 +47,37 @@ use geometry_processing::topology::bevel_edge_group_resolver::{self, BevelEdgeGr
 
 use crate::many_holes_rim_reading::{self, LoopAnswer};
 use crate::many_holes_test_mesh;
+use crate::surface_test_build::{
+    pinned_to_the_sections, try_bevel_resolutions, TryBevelOptions, TryBevelOutcome,
+};
 
 /// THE FIXTURE IS THE PART THE APP BUILT: the text resource reads back to the welded working mesh
 /// the part builder hands over, and its anchors resolve to the pick that was dumped beside it.
+/// WHERE THE KERNEL STOPS TODAY on the whole pick in ONE pass, with the flag on: the room refuses
+/// it `SizeExceedsFaceWidth` before any plan is routed, so the router never speaks. The app reaches
+/// the router because `BevelSurfacePartBuilder`'s drop-and-retry takes the refusing loops out and
+/// bisects for a size that fits; `SurfaceTestBuild` is one flat call and does none of that.
+#[test]
+fn the_room_refuses_the_pick_before_the_router_is_reached() {
+    let _sections = pinned_to_the_sections();
+
+    let outcome = the_outer_wall_at(many_holes_test_mesh::SIZE);
+
+    let reason = match outcome.mesh_or_reason() {
+        Ok(_) => panic!("the whole pick does not build in one pass"),
+        Err(reason) => reason,
+    };
+
+    assert_eq!(
+        reason.map(|reason| reason.code().to_string()).as_deref(),
+        Some("SizeExceedsFaceWidth"),
+        "in ONE pass the room stops the pick before any plan is routed, so the router never speaks \
+         - the app's sentences come from its drop-and-retry, which this call does not have. \
+         (LastRoute is not asserted: it is a process-wide static another test's pass may have \
+         written.)"
+    );
+}
+
 #[test]
 fn the_fixture_is_the_working_mesh_and_the_pick_the_app_resolved() {
     let part = many_holes_test_mesh::the_part();
@@ -531,6 +561,21 @@ fn the_loop_table() -> Vec<LoopAnswer> {
         many_holes_test_mesh::SEGMENTS,
         None,
         None::<&HashSet<usize>>,
+    )
+}
+
+/// C# `TheOuterWallAt`: the barrel's outer wall, built the part builder's own way - see
+/// `SurfaceTestBuild`.
+fn the_outer_wall_at(size: f64) -> TryBevelOutcome {
+    let part = many_holes_test_mesh::the_part();
+
+    try_bevel_resolutions(
+        &part,
+        &[the_rim(&part)],
+        size,
+        many_holes_test_mesh::SEGMENTS,
+        &CancelToken::new(),
+        TryBevelOptions::default(),
     )
 }
 

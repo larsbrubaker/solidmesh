@@ -80,3 +80,11 @@ pub fn closest_point_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3)
 
     a + (ab * (vb * denominator)) + (ac * (vc * denominator))
 }
+
+/// C# `FarthestFrom`, which the section classes comparing two builds each carry: the farthest any
+/// vertex of `one` stands from the surface of `other`.
+pub fn farthest_from(one: &Mesh, other: &Mesh) -> f64 {
+    one.vertices.iter().fold(0.0, |farthest: f64, vertex| {
+        farthest.max(from(other, Vector3::from_vector3_float(*vertex)))
+    })
+}

@@ -14,11 +14,15 @@ use geometry_processing::bevel::sections::{
     section_assembly, section_face_rebuild, section_loft, SectionPool,
 };
 use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use geometry_processing::topology::{
+    bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeChain, FeatureEdgeSet,
+};
+use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 use vector_math::{Matrix4X4, Vector3};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
+use crate::mesh_surface_distance::farthest_from;
+use crate::surface_test_build::{try_bevel, TryBevelOptions};
 use crate::{mesh_measurements, rigid_motion_meshes, section_robustness_tests};
 
 const SIDES: i32 = 24;
@@ -188,6 +192,75 @@ fn where_the_part_stands_changes_none_of_the_assembly() {
             signature,
             "the build moved by {name} has the topology it had at the origin"
         );
+    }
+}
+
+/// The same bore filleted by the construction this replaces: the two builds enclose the same
+/// material and their surfaces lie on each other - the stand-in for an analytic removed volume.
+#[test]
+fn it_removes_the_same_material_as_the_construction_it_replaces() {
+    let (part, graph, chain) = the_bore(Matrix4X4::IDENTITY);
+
+    let built =
+        section_assembly::try_build(Some(&part), Some(&graph), Some(&chain), RADIUS, SEGMENTS)
+            .unwrap_or_else(|failure| panic!("the sections build - instead {failure:?}"));
+
+    let legacy = the_same_bore_by_the_legacy_construction();
+
+    let by_the_sections = mesh_measurements::signed_volume(&built);
+    let by_the_legacy = mesh_measurements::signed_volume(&legacy);
+    let apart = (by_the_sections - by_the_legacy).abs() / by_the_legacy.abs();
+
+    assert!(
+        apart < 1e-3,
+        "the sections enclose {by_the_sections} and the legacy build {by_the_legacy} - {apart} apart"
+    );
+
+    // Three parts in a thousand OF THE RADIUS, which is the section rule's own error against the
+    // per-facet-exact position the legacy construction computes. It is not a slack tolerance
+    // standing in for agreement: an index or a winding wrong anywhere would be off by a whole
+    // setback.
+    let on_the_legacy = farthest_from(&built, &legacy);
+    let on_the_sections = farthest_from(&legacy, &built);
+
+    assert!(
+        on_the_legacy < 3e-3 * RADIUS,
+        "every point of the assembled surface lies on the legacy one - farthest {on_the_legacy}"
+    );
+
+    assert!(
+        on_the_sections < 3e-3 * RADIUS,
+        "and the other way round - farthest {on_the_sections}"
+    );
+}
+
+/// C# `TheSameBoreByTheLegacyConstruction`.
+fn the_same_bore_by_the_legacy_construction() -> Mesh {
+    let part = create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0);
+    let graph = part.get_mesh_edge_graph();
+    let features = FeatureEdgeSet::create_with_graph(&part, &graph, BEND_THRESHOLD_DEGREES);
+    let seed = the_upper_mouth(&features);
+
+    let group = bevel_edge_group_resolver::create_from_edge(
+        &features,
+        seed,
+        BevelSelectionKind::TangentChain,
+        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+    )
+    .expect("the mouth is a crease of the plate");
+
+    match try_bevel(
+        &part,
+        &[group],
+        RADIUS,
+        SEGMENTS,
+        &CancelToken::new(),
+        TryBevelOptions::default(),
+    )
+    .result
+    {
+        Ok(built) => built.mesh,
+        Err(reason) => panic!("the legacy construction fillets this bore - instead {reason:?}"),
     }
 }
 

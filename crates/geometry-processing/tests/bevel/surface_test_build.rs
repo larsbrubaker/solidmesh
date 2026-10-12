@@ -26,7 +26,7 @@ use geometry_processing::bevel::surface::{
     surface_shared_edge_network, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan,
     SurfaceBevelPlanlessLoop, SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::bevel_edge_group_resolver;
 use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache};
 use polygon_mesh::{CancelToken, Mesh};
@@ -34,28 +34,50 @@ use polygon_mesh::{CancelToken, Mesh};
 use crate::mesh_measurements::shell_count;
 use crate::surface_test_chains::join_and_open;
 
-/// C# `LegacyConstructionPin`: pins `section_routing::use_sections` OFF for as long as the handle
-/// lives, then puts back the value it found.
+/// Pins `section_routing::use_sections` for as long as the handle lives, then puts back the value
+/// it found - C# `LegacyConstructionPin`, and the `try { UseSections = true; ... } finally { ... }`
+/// the routing classes write out by hand.
 ///
-/// For the classes that read the LEGACY construction: their passes are cases the sections would
-/// route if the flag were on, so what they assert is only true of the legacy path and they must not
-/// route. The flag is process-wide, so a test pinning it must not run beside one that sets it - as
-/// the routing tests are (nextest runs each test in its own process).
-pub struct LegacyConstructionPin {
+/// The flag is process-wide, so a test pinning it must not run beside one that sets it the other
+/// way - nextest runs each test in its own process, as C#'s `[NotInParallel]` classes ask.
+pub struct UseSectionsPin {
     found_use_sections: bool,
 }
 
-/// C# `PinnedToTheLegacyConstruction`.
-pub fn pinned_to_the_legacy_construction() -> LegacyConstructionPin {
-    let found_use_sections = section_routing::use_sections();
-    section_routing::set_use_sections(false);
+/// C# `LegacyConstructionPin`'s type name, for the classes that read the legacy construction.
+pub type LegacyConstructionPin = UseSectionsPin;
 
-    LegacyConstructionPin { found_use_sections }
+/// C# `PinnedToTheLegacyConstruction`: the flag OFF, for the classes that read the LEGACY
+/// construction - their passes are cases the sections would route if the flag were on, so what
+/// they assert is only true of the legacy path and they must not route.
+pub fn pinned_to_the_legacy_construction() -> LegacyConstructionPin {
+    pinned_use_sections(false)
 }
 
-impl Drop for LegacyConstructionPin {
+/// The flag ON, as the section classes set it in their `try` blocks.
+pub fn pinned_to_the_sections() -> UseSectionsPin {
+    pinned_use_sections(true)
+}
+
+fn pinned_use_sections(on: bool) -> UseSectionsPin {
+    let found_use_sections = section_routing::use_sections();
+    section_routing::set_use_sections(on);
+
+    UseSectionsPin { found_use_sections }
+}
+
+impl Drop for UseSectionsPin {
     fn drop(&mut self) {
         section_routing::set_use_sections(self.found_use_sections);
+    }
+}
+
+/// C# `Station(reason)` the section classes each carry: where an advisory says it went wrong, for
+/// the message of an assertion that is not met.
+pub fn station(reason: Option<&BevelAdvisory>) -> String {
+    match reason.and_then(|reason| reason.args().first()) {
+        Some(BevelAdvisoryArg::Vector3(at)) => format!("{at:?}"),
+        _ => "nowhere named".to_string(),
     }
 }
 
@@ -149,6 +171,42 @@ impl TryBevelOutcome {
             .err()
             .and_then(|failure| failure.advisory())
     }
+
+    /// C#'s `bool` and its two `out`s: the built mesh, or the advisory the build named (`None` for
+    /// a decline, a cancel or a NaN - C#'s `false` with a null `reason`).
+    pub fn mesh_or_reason(&self) -> Result<&Mesh, Option<&BevelAdvisory>> {
+        match &self.result {
+            Ok(built) => Ok(&built.mesh),
+            Err(failure) => Err(failure.advisory()),
+        }
+    }
+}
+
+/// The assertions the section owner-file classes make of every build they expect to publish: built, closed, at most two faces on an edge, one
+/// shell, and readable by a second pass.
+pub fn the_closed_readable_mesh(outcome: &TryBevelOutcome) -> &Mesh {
+    let mesh = match outcome.mesh_or_reason() {
+        Ok(mesh) => mesh,
+        Err(reason) => panic!(
+            "{:?} at {}",
+            reason.map(BevelAdvisory::code),
+            station(reason)
+        ),
+    };
+
+    let (open, open_at) = surface_mesh_closure::open_edge_count(mesh);
+    assert_eq!(open, 0, "open at {open_at:?}");
+
+    assert!(crate::rigid_motion_meshes::most_faces_on_an_edge(mesh) <= 2);
+    assert_eq!(shell_count(mesh), 1);
+
+    let (unreadable, unreadable_at) = crate::mesh_measurements::unclassifiable_edges(Some(mesh));
+    assert_eq!(
+        unreadable, 0,
+        "a second pass reads {unreadable_at} as a torn face"
+    );
+
+    mesh
 }
 
 /// The mesh a build that has to succeed hands back - C#'s `IsTrue().Because(...)` on `TryBevel`
