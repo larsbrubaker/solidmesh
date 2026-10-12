@@ -1,6 +1,8 @@
 //! Ported `R/Tests/GeometryProcessingTests` test classes for `Bevel/`, one file each (CLAUDE.md
 //! net 1), with the C# fixture builders they need (`Fixtures/*.cs`) as Rust modules.
 
+#[path = "bevel/annulus_plate_builder.rs"]
+mod annulus_plate_builder;
 #[path = "bevel/band_cut_tests.rs"]
 mod band_cut_tests;
 #[path = "bevel/band_gap_tests.rs"]
@@ -99,8 +101,12 @@ mod clipped_cell_bound_tests;
 mod concave_edge_end_face_tests;
 #[path = "bevel/convex_end_ray_room_tests.rs"]
 mod convex_end_ray_room_tests;
+#[path = "bevel/corner_pick_with_mouth_tests.rs"]
+mod corner_pick_with_mouth_tests;
 #[path = "bevel/crease_dies_out_fixtures.rs"]
 mod crease_dies_out_fixtures;
+#[path = "bevel/crease_dies_out_tests.rs"]
+mod crease_dies_out_tests;
 #[path = "bevel/crease_run_out_tests.rs"]
 mod crease_run_out_tests;
 #[path = "bevel/cube_corner_ball_tests.rs"]
@@ -113,6 +119,8 @@ mod cube_corner_tests;
 mod cube_edge_end_cap_tests;
 #[path = "bevel/cube_edge_union_tests.rs"]
 mod cube_edge_union_tests;
+#[path = "bevel/curling_side_run_concavity_tests.rs"]
+mod curling_side_run_concavity_tests;
 #[path = "bevel/degenerate_triangle_refinement_tests.rs"]
 mod degenerate_triangle_refinement_tests;
 #[path = "bevel/edge_loop_and_face_test_mesh.rs"]
@@ -135,18 +143,26 @@ mod end_ray_reach_tests;
 mod end_region_shapes_tests;
 #[path = "bevel/exact_refinement_tests.rs"]
 mod exact_refinement_tests;
+#[path = "bevel/face_rim_corner_mirror_tests.rs"]
+mod face_rim_corner_mirror_tests;
 #[path = "bevel/faceted_boss_fade_tests.rs"]
 mod faceted_boss_fade_tests;
+#[path = "bevel/faceted_wall_chamfer_flow_tests.rs"]
+mod faceted_wall_chamfer_flow_tests;
 #[path = "bevel/fade_end_room_tests.rs"]
 mod fade_end_room_tests;
 #[path = "bevel/fifteen_mm_room_reading_tests.rs"]
 mod fifteen_mm_room_reading_tests;
+#[path = "bevel/figure_eight_rim_tests.rs"]
+mod figure_eight_rim_tests;
 #[path = "bevel/fill_closes_or_refuses_tests.rs"]
 mod fill_closes_or_refuses_tests;
 #[path = "bevel/fillet_arc_carry_tests.rs"]
 mod fillet_arc_carry_tests;
 #[path = "bevel/fillet_arc_seam_row_tests.rs"]
 mod fillet_arc_seam_row_tests;
+#[path = "bevel/fillet_strip_sag_tests.rs"]
+mod fillet_strip_sag_tests;
 #[path = "bevel/fillet_thin_front_fin.rs"]
 mod fillet_thin_front_fin;
 #[path = "bevel/five_hole_plate_fixture.rs"]
@@ -165,6 +181,12 @@ mod flat_hole_fill_tests;
 mod foreign_edge_index_tests;
 #[path = "bevel/gap_fill_tests.rs"]
 mod gap_fill_tests;
+#[path = "bevel/goes_to_sides_end_tests.rs"]
+mod goes_to_sides_end_tests;
+#[path = "bevel/graze_fixture.rs"]
+mod graze_fixture;
+#[path = "bevel/graze_fixture_tests.rs"]
+mod graze_fixture_tests;
 #[path = "bevel/grid_hole_plate_fixture.rs"]
 mod grid_hole_plate_fixture;
 #[path = "bevel/growing_crease_room_source_tests.rs"]
@@ -189,6 +211,8 @@ mod hole_fill_tests;
 mod hole_fill_validity_tests;
 #[path = "bevel/hourglass_beside_square_fixture.rs"]
 mod hourglass_beside_square_fixture;
+#[path = "bevel/hourglass_beside_square_tests.rs"]
+mod hourglass_beside_square_tests;
 #[path = "bevel/hull_clip_tests.rs"]
 mod hull_clip_tests;
 #[path = "bevel/inner_face_test_mesh.rs"]
@@ -209,6 +233,8 @@ mod level_line_room_geometry;
 mod level_line_test_geometry;
 #[path = "bevel/level_line_test_solids.rs"]
 mod level_line_test_solids;
+#[path = "bevel/line_to_line_fixture.rs"]
+mod line_to_line_fixture;
 #[path = "bevel/lobed_prism_meshes.rs"]
 mod lobed_prism_meshes;
 #[path = "bevel/longest_edge_bisection_tests.rs"]
