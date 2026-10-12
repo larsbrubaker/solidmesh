@@ -86,9 +86,10 @@ fn measure(span: f64, size: f64) -> Cost {
     }
 }
 
-/// C# `Digest`: every live triangle's corners to the bit (C# "R" text), SHA-256, the first 16 hex
-/// digits upper case - the same reading the cost tests pin.
-fn digest(mesh: &LevelLineMesh) -> String {
+/// C# `Digest` (here and in `ManyChainBuildCostTests`, which reads this one): every live
+/// triangle's corners to the bit (C# "R" text), SHA-256, the first 16 hex digits upper case - the
+/// same reading the cost tests pin.
+pub fn digest(mesh: &LevelLineMesh) -> String {
     let mut text = String::new();
     for t in 0..mesh.triangle_count() {
         if mesh.is_removed(t) {
