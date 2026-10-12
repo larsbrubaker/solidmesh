@@ -192,9 +192,8 @@ fn the_rounded_skew_ridge_is_one_closed_shell_the_kernel_takes() {
     assert_eq!(shell_count(&built), 1);
 
     // C# imports with `Manifold.FromMeshGL64Robust` on `SurfaceResultImportsIntoManifoldTests
-    // .AsMeshGL64`, the same marshalling `manifold_import` does. `import` adds a weld retry on
-    // `NotClosed` only, which the closure gate above already rules out.
-    let imported = manifold_import::import(&built, false).unwrap_or_else(|rejected| {
+    // .AsMeshGL64`: the strict import, the same marshalling with no weld-and-retry.
+    let imported = manifold_import::import_strict(&built).unwrap_or_else(|rejected| {
         panic!(
             "the kernel is the next thing to read a fillet after the builder publishes it - \
              {rejected:?}"

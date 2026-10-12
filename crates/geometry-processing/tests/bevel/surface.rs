@@ -59,6 +59,8 @@ pub(crate) mod surface_mitre_consumes_a_chord_tests;
 pub(crate) mod surface_mitre_of_rounds_chorded_apart_tests;
 #[path = "surface_mitre_with_unequal_setbacks_tests.rs"]
 pub(crate) mod surface_mitre_with_unequal_setbacks_tests;
+#[path = "surface_mixed_corner_dual_build_tests.rs"]
+pub(crate) mod surface_mixed_corner_dual_build_tests;
 #[path = "surface_mixed_corner_dual_canal_tests.rs"]
 pub(crate) mod surface_mixed_corner_dual_canal_tests;
 #[path = "surface_mixed_corner_dual_grid_tests.rs"]
@@ -67,8 +69,18 @@ pub(crate) mod surface_mixed_corner_dual_grid_tests;
 pub(crate) mod surface_mixed_corner_dual_on_a_square_corner_tests;
 #[path = "surface_mixed_corner_reading_tests.rs"]
 pub(crate) mod surface_mixed_corner_reading_tests;
+#[path = "surface_mixed_corner_run_out_bookkeeping_tests.rs"]
+pub(crate) mod surface_mixed_corner_run_out_bookkeeping_tests;
 #[path = "surface_mixed_corner_run_out_second_wall_tests.rs"]
 pub(crate) mod surface_mixed_corner_run_out_second_wall_tests;
+#[path = "surface_mixed_corner_run_out_tests.rs"]
+pub(crate) mod surface_mixed_corner_run_out_tests;
+#[path = "surface_mixed_corner_section_stands_on_the_plane_tests.rs"]
+pub(crate) mod surface_mixed_corner_section_stands_on_the_plane_tests;
+#[path = "surface_mixed_corner_sector_tests.rs"]
+pub(crate) mod surface_mixed_corner_sector_tests;
+#[path = "surface_mixed_corner_tests.rs"]
+pub(crate) mod surface_mixed_corner_tests;
 #[path = "surface_oblique_mixed_corner_bites_tests.rs"]
 pub(crate) mod surface_oblique_mixed_corner_bites_tests;
 #[path = "surface_oblique_mixed_corner_wall_spine_tests.rs"]
@@ -89,6 +101,8 @@ pub(crate) mod surface_raked_bore_mouth_claim_tests;
 pub(crate) mod surface_raked_bore_mouth_tests;
 #[path = "surface_raked_bore_split_chord_tests.rs"]
 pub(crate) mod surface_raked_bore_split_chord_tests;
+#[path = "surface_result_imports_into_manifold_tests.rs"]
+pub(crate) mod surface_result_imports_into_manifold_tests;
 #[path = "surface_rib_foot_junction_tests.rs"]
 pub(crate) mod surface_rib_foot_junction_tests;
 #[path = "surface_rim_closes_at_a_knife_edge_tests.rs"]
@@ -115,6 +129,8 @@ pub(crate) mod surface_room_standing_feature_tests;
 pub(crate) mod surface_room_tests;
 #[path = "surface_run_out_column_top_tests.rs"]
 pub(crate) mod surface_run_out_column_top_tests;
+#[path = "surface_run_out_crosses_a_band_tests.rs"]
+pub(crate) mod surface_run_out_crosses_a_band_tests;
 #[path = "surface_run_out_lens_readings_tests.rs"]
 pub(crate) mod surface_run_out_lens_readings_tests;
 #[path = "surface_run_out_strip_top_rim_tests.rs"]

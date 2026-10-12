@@ -2,7 +2,9 @@
 //! flattening into the kernel's `MeshGL64`. Port of agg-sharp `Csg/ManifoldImport.cs`; called by
 //! `manifold_operand_batch` and `boolean_processing::classify_boolean_operand`.
 //!
-//! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld).
+//! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld);
+//! [`import_strict`] is the one-shot import with no retry, for callers that must read exactly
+//! what the kernel makes of the mesh as given.
 //! `ImportAsOriginal` (the re-tag that attributes result triangles
 //! to an operand) is only used by face-colour tracking and comes with it in Phase 2f.
 
@@ -48,6 +50,17 @@ pub fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportR
     }
 
     Err(rejected)
+}
+
+/// Uploads a mesh exactly as given: C#'s `Manifold.FromMeshGL64Robust` over the same
+/// marshalling, with no weld-and-retry and no orientation repair.
+///
+/// For callers that must see the kernel's own reading of the mesh - the bevel tests that check
+/// a built fillet is a solid the kernel takes, where a tolerance weld would close a seam the
+/// builder left open and hide it.
+pub fn import_strict(mesh: &Mesh) -> Result<Manifold, ImportRejected> {
+    manifold_kernel::ensure_configured();
+    try_import(mesh, false)
 }
 
 /// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide

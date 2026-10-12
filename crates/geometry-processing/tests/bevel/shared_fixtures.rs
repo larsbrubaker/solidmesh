@@ -53,6 +53,8 @@ pub(crate) mod rigid_motion_meshes;
 pub(crate) mod skew_ridge_solid;
 #[path = "source_round_test_meshes.rs"]
 pub(crate) mod source_round_test_meshes;
+#[path = "surface_mixed_corner_fixture.rs"]
+pub(crate) mod surface_mixed_corner_fixture;
 #[path = "surface_test_build.rs"]
 pub(crate) mod surface_test_build;
 #[path = "surface_test_chains.rs"]

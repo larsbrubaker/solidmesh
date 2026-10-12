@@ -12,7 +12,9 @@
 use std::collections::HashMap;
 
 use agg_path::Color;
-use polygon_mesh::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes, WindingRule};
+use polygon_mesh::csg::{
+    boolean_processing, manifold_import, BooleanError, BooleanOptions, CsgModes, WindingRule,
+};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Face, Mesh};
 use vector_math::dotnet_random::DotNetRandom;
@@ -533,6 +535,31 @@ fn a_seam_split_by_rounding_still_unions() {
     assert_within(bounds.x_size(), 16.0, 0.001);
     assert_within(bounds.y_size(), 10.0, 0.001);
     assert_within(bounds.z_size(), 10.0, 0.001);
+}
+
+/// The strict import takes no second chance: the split-seam solid the retrying import welds and
+/// accepts is refused as the kernel reads it, `NotClosed`.
+#[test]
+fn rust_only_the_strict_import_does_not_weld_and_retry() {
+    let split = cube_with_split_seams(10.0, 1e-6);
+
+    let rejected = manifold_import::import_strict(&split)
+        .err()
+        .expect("the strict import must refuse what the kernel refuses");
+    assert!(
+        rejected.message.contains(NOT_CLOSED),
+        "{}",
+        rejected.message
+    );
+
+    // The same mesh through the retrying import is welded and taken - the retry is the only
+    // difference between the two.
+    assert!(manifold_import::import(&split, false).is_ok());
+
+    // And a mesh the kernel takes as given comes through the strict import unchanged.
+    let cube = manifold_import::import_strict(&create_cube(10.0, 10.0, 10.0))
+        .expect("a closed cube imports");
+    assert!((cube.volume() - 1000.0).abs() < 1e-9);
 }
 
 /// The same split-seam solid, out where the coordinates are large, still unions: the float

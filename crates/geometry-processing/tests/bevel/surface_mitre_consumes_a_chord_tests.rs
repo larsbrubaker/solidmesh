@@ -126,7 +126,6 @@ fn two_chords_in_a_row_are_still_refused() {
 
 /// C# `TheEatenChordBuilt`: the size 2 answer, for the kernel to read
 /// (`SurfaceResultImportsIntoManifoldTests`).
-#[allow(dead_code)]
 pub fn the_eaten_chord_built() -> Mesh {
     let (_, built) = build(2.0);
 
