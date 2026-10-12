@@ -249,6 +249,8 @@ mod rust_only_bevel_r3p02_tests;
 mod rust_only_bevel_r3p03_tests;
 #[path = "bevel/rust_only_bevel_r4p01_tests.rs"]
 mod rust_only_bevel_r4p01_tests;
+#[path = "bevel/rust_only_bevel_section_routing_tests.rs"]
+mod rust_only_bevel_section_routing_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
 #[path = "bevel/rust_only_bevel_slice12_tests.rs"]
@@ -275,6 +277,10 @@ mod rust_only_bevel_sliver_collapse_tests;
 mod section_loop_entry_tests;
 #[path = "bevel/section_room_split_crease_tests.rs"]
 mod section_room_split_crease_tests;
+#[path = "bevel/section_routing_opt_in_tests.rs"]
+mod section_routing_opt_in_tests;
+#[path = "bevel/section_routing_partition_tests.rs"]
+mod section_routing_partition_tests;
 #[path = "bevel/section_straight_bore_tests.rs"]
 mod section_straight_bore_tests;
 #[path = "bevel/section_surface_walk_fold_tests.rs"]

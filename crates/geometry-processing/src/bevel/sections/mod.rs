@@ -1,10 +1,11 @@
-//! `MatterCAD.GeometryProcessing/Bevel/Sections`: the section construction. Ported so far: its
-//! append-only point pool ([`SectionPool`]) and the walk of a side's fan at a chain vertex
-//! ([`section_fan_walk`]), and the type definitions of the construction: the section at a chain
-//! vertex ([`BevelSection`]) and at a junction ([`JunctionSection`]), the absorbed split points
-//! ([`SectionAbsorbedSplits`]), the room cache ([`SectionRoomCache`]), one chain's run of
-//! sections ([`SectionRun`]) and the surface walk's result ([`SurfaceWalkResult`]). The construction itself lands with the cyclic bevel core; its region re-mesh
-//! ([`section_fan_remesh`]) and the mixed corner's reading ([`section_mixed_corner`]) are here.
+//! `MatterCAD.GeometryProcessing/Bevel/Sections`: the vertex-centric section construction - its
+//! append-only point pool ([`SectionPool`]), the walk of a side's fan at a chain vertex
+//! ([`section_fan_walk`]), the section at a chain vertex ([`BevelSection`]), at a corner, at an
+//! open end and at a junction ([`JunctionSection`]), the builder of one chain's run of sections
+//! ([`SectionRun`]), the room reading ([`SectionRoomCache`]), the surface walk
+//! ([`SurfaceWalkResult`]) and the router between the legacy construction and the sections
+//! ([`section_routing`]), with the region re-mesh ([`section_fan_remesh`]) and the mixed
+//! corner's reading ([`section_mixed_corner`]).
 
 pub mod bevel_section;
 pub mod section_absorbed_splits;
@@ -24,6 +25,8 @@ pub mod section_mixed_corner;
 mod section_pool;
 pub mod section_room;
 pub mod section_room_smooth_side;
+pub mod section_routing;
+pub mod section_routing_clauses;
 pub mod section_run;
 pub mod section_smooth_side_boundary;
 pub mod section_split_blend;
