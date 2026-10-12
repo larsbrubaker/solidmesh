@@ -3,6 +3,8 @@
 //! tests. The `bevel.rs` root re-exports every member, so test files in any group reach them as
 //! `crate::<module>`.
 
+#[path = "surface_around_center_tests.rs"]
+pub(crate) mod surface_around_center_tests;
 #[path = "surface_bevel_plan_tests.rs"]
 pub(crate) mod surface_bevel_plan_tests;
 #[path = "surface_bevel_robustness_tests.rs"]
@@ -15,6 +17,8 @@ pub(crate) mod surface_clip_classifies_one_point_one_way_tests;
 pub(crate) mod surface_concave_end_where_the_face_carries_on_tests;
 #[path = "surface_convex_bite_tests.rs"]
 pub(crate) mod surface_convex_bite_tests;
+#[path = "surface_corner_tests.rs"]
+pub(crate) mod surface_corner_tests;
 #[path = "surface_crease_faces_are_one_surface_tests.rs"]
 pub(crate) mod surface_crease_faces_are_one_surface_tests;
 #[path = "surface_crossed_end_carries_what_stands_before_the_foot_tests.rs"]
@@ -57,6 +61,8 @@ pub(crate) mod surface_plan_cost_tests;
 pub(crate) mod surface_raked_bore_band_outline_tests;
 #[path = "surface_raked_bore_mouth_tests.rs"]
 pub(crate) mod surface_raked_bore_mouth_tests;
+#[path = "surface_rib_foot_junction_tests.rs"]
+pub(crate) mod surface_rib_foot_junction_tests;
 #[path = "surface_rim_closes_at_a_knife_edge_tests.rs"]
 pub(crate) mod surface_rim_closes_at_a_knife_edge_tests;
 #[path = "surface_ring_ears_bridged_ring_tests.rs"]
@@ -89,6 +95,8 @@ pub(crate) mod surface_seam_window_tests;
 pub(crate) mod surface_sewing_bowed_side_tests;
 #[path = "surface_splits_on_a_segment_tests.rs"]
 pub(crate) mod surface_splits_on_a_segment_tests;
+#[path = "surface_standing_feature_in_the_band_tests.rs"]
+pub(crate) mod surface_standing_feature_in_the_band_tests;
 #[path = "surface_standing_feature_stretch_tests.rs"]
 pub(crate) mod surface_standing_feature_stretch_tests;
 #[path = "surface_standing_feature_tail_and_cap_tests.rs"]
@@ -101,6 +109,8 @@ pub(crate) mod surface_strip_ends_on_the_hull_tests;
 pub(crate) mod surface_strip_mitre_rails_tests;
 #[path = "surface_strip_oblique_end_tests.rs"]
 pub(crate) mod surface_strip_oblique_end_tests;
+#[path = "surface_strip_tests.rs"]
+pub(crate) mod surface_strip_tests;
 #[path = "surface_tangent_run_ends_tests.rs"]
 pub(crate) mod surface_tangent_run_ends_tests;
 #[path = "surface_two_crease_junction_reading_tests.rs"]

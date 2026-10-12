@@ -1,0 +1,254 @@
+//! Port of `Fixtures/SurfaceTestBuild.cs`: a surface-mode build of one part's groups, by the part
+//! builder's own steps in the part builder's own order - `BevelSurfacePartBuilder.BuildTheGroupsTogether`,
+//! which lives above the kernel crate.
+//!
+//! One copy for every kernel test that needs the whole pipeline rather than one stage of it. It is
+//! the ORDER that matters and is easy to get wrong - the interrupted-crease reading before the
+//! plans, the room before the builder - so a second hand-written copy of it in another test file
+//! would be a second thing to keep in step with production.
+//!
+//! **Two of the part builder's gates are left out, on purpose.** It short-circuits on no plans -
+//! nothing here ever has no plan, and a test that did would want to see the advisory rather than
+//! nothing - and it reads `surface_mesh_closure::is_closed` on the ANSWER, turning an open result
+//! into `SurfaceResultNotClosed`. That last one is deliberately not taken here: closure is what most
+//! of these tests are about, and a helper that refused an open mesh would hand them a code where
+//! they want the mesh and the place it is open. Every caller asserts closure itself.
+
+// The kernel tests that build through here land a class at a time.
+#![allow(dead_code)]
+
+use std::rc::Rc;
+use std::sync::Arc;
+
+use geometry_processing::bevel::sections::section_routing;
+use geometry_processing::bevel::surface::{
+    surface_bevel_builder, surface_interrupted_crease, surface_room, surface_shared_edge_network,
+    SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceBevelPlanlessLoop,
+    SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
+};
+use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use geometry_processing::topology::bevel_edge_group_resolver;
+use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache};
+use polygon_mesh::{CancelToken, Mesh};
+
+use crate::surface_test_chains::join_and_open;
+
+/// C# `LegacyConstructionPin`: pins `section_routing::use_sections` OFF for as long as the handle
+/// lives, then puts back the value it found.
+///
+/// For the classes that read the LEGACY construction: their passes are cases the sections would
+/// route if the flag were on, so what they assert is only true of the legacy path and they must not
+/// route. The flag is process-wide, so a test pinning it must not run beside one that sets it - as
+/// the routing tests are (nextest runs each test in its own process).
+pub struct LegacyConstructionPin {
+    found_use_sections: bool,
+}
+
+/// C# `PinnedToTheLegacyConstruction`.
+pub fn pinned_to_the_legacy_construction() -> LegacyConstructionPin {
+    let found_use_sections = section_routing::use_sections();
+    section_routing::set_use_sections(false);
+
+    LegacyConstructionPin { found_use_sections }
+}
+
+impl Drop for LegacyConstructionPin {
+    fn drop(&mut self) {
+        section_routing::set_use_sections(self.found_use_sections);
+    }
+}
+
+/// C#'s optional parameters of `TryBevel`.
+#[derive(Clone, Copy)]
+pub struct TryBevelOptions {
+    /// C#'s `roundProfile`: a fillet where true, a chamfer where false.
+    pub round_profile: bool,
+    /// C#'s `carryTheFeatureReading`: hands the pick's own feature set down the PLAN path. A seam
+    /// of the ladder, off by default.
+    pub carry_the_feature_reading: bool,
+}
+
+impl Default for TryBevelOptions {
+    fn default() -> Self {
+        TryBevelOptions {
+            round_profile: true,
+            carry_the_feature_reading: false,
+        }
+    }
+}
+
+/// What a build that ran hands back besides its answer: C#'s `plansBuilt` list, filled with the
+/// plans the build made (before the builder ran), for a test that has to read what was planned.
+pub struct TryBevelOutcome {
+    /// The plans made, whether or not the build then succeeded.
+    pub plans_built: Vec<Rc<SurfaceBevelPlan>>,
+    /// The build's own answer.
+    pub result: Result<SurfaceBuilt, SurfaceBuildFailure>,
+}
+
+/// C# `TryBevel(part, groups, ...)`: the build from GROUPS.
+pub fn try_bevel(
+    part: &Mesh,
+    groups: &[BevelEdgeGroup],
+    size: f64,
+    segments: i32,
+    cancellation_token: &CancelToken,
+    options: TryBevelOptions,
+) -> TryBevelOutcome {
+    let (resolutions, _) = bevel_edge_group_resolver::resolve_all(groups, part);
+
+    try_bevel_resolutions(
+        part,
+        &resolutions,
+        size,
+        segments,
+        cancellation_token,
+        options,
+    )
+}
+
+/// C# `TryBevel(part, resolutions, ...)`: the same build from RESOLUTIONS rather than groups - for
+/// a test that has to hand one group more than one edge, which only the resolution carries.
+pub fn try_bevel_resolutions(
+    part: &Mesh,
+    resolutions: &[BevelEdgeGroupResolution],
+    size: f64,
+    segments: i32,
+    cancellation_token: &CancelToken,
+    options: TryBevelOptions,
+) -> TryBevelOutcome {
+    let mut plans_built = Vec::new();
+    let result = build(
+        part,
+        resolutions,
+        size,
+        segments,
+        cancellation_token,
+        options,
+        &mut plans_built,
+    );
+
+    TryBevelOutcome {
+        plans_built,
+        result,
+    }
+}
+
+fn refused(reason: BevelAdvisory) -> Result<SurfaceBuilt, SurfaceBuildFailure> {
+    Err(SurfaceBuildFailure::Refused(reason))
+}
+
+fn build(
+    part: &Mesh,
+    resolutions: &[BevelEdgeGroupResolution],
+    size: f64,
+    segments: i32,
+    cancellation_token: &CancelToken,
+    options: TryBevelOptions,
+    plans_built: &mut Vec<Rc<SurfaceBevelPlan>>,
+) -> Result<SurfaceBuilt, SurfaceBuildFailure> {
+    let graph = part.get_mesh_edge_graph();
+    let first = &resolutions[0];
+    let regions = Arc::new(FaceRegionCache::new(
+        Arc::new(part.clone()),
+        Some(graph.clone()),
+        first.features.flat_angle_degrees(),
+    ));
+    let curve_regions = Arc::new(FaceRegionCache::new(
+        Arc::new(part.clone()),
+        Some(graph.clone()),
+        first.group.curve_tolerance_degrees,
+    ));
+
+    let chains = join_and_open(&surface_shared_edge_network::link_together(resolutions));
+
+    if let Some(reason) = surface_interrupted_crease::try_read(
+        &chains,
+        &first.features,
+        &regions,
+        size,
+        options.round_profile,
+    ) {
+        return refused(reason);
+    }
+
+    let mut plans = Vec::new();
+    let mut planless = Vec::new();
+
+    for chain in &chains {
+        match SurfaceBevelPlan::try_create_with_curve_regions(
+            chain,
+            &regions,
+            Some(&curve_regions),
+            size,
+            options.round_profile,
+        ) {
+            Ok(plan) => plans.push(plan),
+            Err(reason) => {
+                // A closed loop whose two sides BOTH read curved is one the planner will not plan
+                // and the sections can still walk - see SurfaceBevelPlanlessLoop. It is carried to
+                // the builder as the bare ring the loop entry takes; with the flag off nothing is
+                // carried and the refusal stands exactly where it always did.
+                if section_routing::use_sections()
+                    && reason.code() == BevelAdvisoryCode::SurfaceLandsOnTwoCurvedFaces
+                    && chain.is_closed
+                    && chain.edges.len() >= 3
+                {
+                    planless.push(SurfaceBevelPlanlessLoop {
+                        ring: chain.edges.iter().map(|edge| edge.from_vertex()).collect(),
+                        features: first.features.clone(),
+                        size,
+                        planner_refusal: reason,
+                    });
+
+                    continue;
+                }
+
+                return refused(reason);
+            }
+        }
+    }
+
+    plans_built.extend(plans.iter().cloned());
+
+    let mut stretches: Vec<SurfaceBandRunsOffOverAStretch> = Vec::new();
+    let mut crossings = None;
+
+    // The legacy room read cannot speak for a pass that carries plan-less loops: it reads bands
+    // rolled off PLANS and there is no plan for those loops, so what it would answer is a verdict
+    // on part of the pick. A routed pass reads its own room (section_routing::has_room) over every
+    // run it built.
+    if !plans.is_empty() && planless.is_empty() {
+        let fit = surface_room::try_fit(&plans, size, cancellation_token, Some(&mut stretches))
+            .map_err(|_| SurfaceBuildFailure::Cancelled)?;
+
+        if !fit.fits {
+            return match fit.refusal {
+                Some(reason) => refused(reason),
+                None => Err(SurfaceBuildFailure::Declined),
+            };
+        }
+
+        crossings = Some(fit.crossings);
+    }
+
+    surface_bevel_builder::try_build(
+        part,
+        &graph,
+        &regions,
+        &plans,
+        segments,
+        cancellation_token,
+        SurfaceBuildOptions {
+            crossings: crossings.as_deref(),
+            ran_off_over_a_stretch: Some(&stretches),
+            lay_the_oblique_rows_anyway: false,
+            planless_loops: &planless,
+            features: if options.carry_the_feature_reading {
+                Some(&first.features)
+            } else {
+                None
+            },
+        },
+    )
+}

@@ -43,6 +43,8 @@ pub(crate) mod pyramid_recess_test_meshes;
 pub(crate) mod rigid_motion_meshes;
 #[path = "source_round_test_meshes.rs"]
 pub(crate) mod source_round_test_meshes;
+#[path = "surface_test_build.rs"]
+pub(crate) mod surface_test_build;
 #[path = "surface_test_chains.rs"]
 pub(crate) mod surface_test_chains;
 #[path = "tapered_barrel_test_meshes.rs"]

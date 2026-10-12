@@ -56,7 +56,8 @@
 //!   mitres crossed over on some of its rails ([`SurfaceMitreConsumesTheRail`]), the patch
 //!   a reflex mitre's narrower arc covers past its far rim ([`SurfaceMitreSliver`]), the mitre of two
 //!   arcs chorded at different steps ([`surface_mitre_chorded_apart`]) and the ring two strips share
-//!   at a mitre ([`surface_strip_mitre`], its rails [`surface_strip_mitre_rails`]).
+//!   at a mitre ([`surface_strip_mitre`], its rails [`surface_strip_mitre_rails`]), and the two
+//!   staircase rings a consumed chord and its neighbours meet on ([`surface_staircase_mitre`]).
 //! - **Corners and junctions.** The mixed corner ([`SurfaceMixedCorner`]), the rolling ball's
 //!   spine round it ([`SurfaceMixedCornerSpine`]), its dual canal ([`SurfaceMixedCornerDualFrame`],
 //!   [`SurfaceMixedCornerDualCanal`], [`SurfaceMixedCornerDualGrid`],
@@ -80,17 +81,25 @@
 //!   and the build agreeing on their run-offs ([`surface_run_off_agreement`]), the seams re-read
 //!   after the later cuts ([`surface_seam_re_read`]) and the warning where a run stops short
 //!   ([`surface_run_stops_short`]).
+//! - **The builder.** The pass itself, a mesh and plans in and the bevelled mesh out
+//!   ([`surface_bevel_builder`], answering [`SurfaceBuilt`] or [`SurfaceBuildFailure`] under
+//!   [`SurfaceBuildOptions`]), with its seams, corner loop and last stitching pass in private
+//!   neighbours.
 
 mod surface_band_end;
 pub mod surface_band_outline;
 mod surface_band_runs_off_over_a_stretch;
 pub mod surface_band_runs_off_the_face_beyond;
+pub mod surface_bevel_builder;
+mod surface_bevel_builder_corners;
+mod surface_bevel_builder_seams;
 pub mod surface_bevel_crossings;
 mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 pub mod surface_bevel_stitch;
 mod surface_bite_shared_sides;
 pub mod surface_bitten_feature_faces;
+mod surface_builder_bitten_strips;
 pub mod surface_builder_mixed_corners;
 pub mod surface_builder_standing_features;
 mod surface_chain_end_reading;
@@ -189,6 +198,7 @@ pub mod surface_seam_re_read;
 pub mod surface_shared_edge_network;
 pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
+pub mod surface_staircase_mitre;
 pub mod surface_standing_feature_faces;
 pub mod surface_standing_feature_stretch;
 mod surface_standing_feature_withheld;
@@ -223,6 +233,7 @@ pub mod surface_wall_stands_clear;
 
 pub use surface_band_end::SurfaceBandEnd;
 pub use surface_band_runs_off_over_a_stretch::SurfaceBandRunsOffOverAStretch;
+pub use surface_bevel_builder::{SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt};
 pub use surface_bevel_plan::SurfaceBevelPlan;
 pub use surface_bevel_planless_loop::SurfaceBevelPlanlessLoop;
 pub use surface_bite_shared_sides::SurfaceBiteSharedSides;

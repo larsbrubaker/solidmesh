@@ -51,7 +51,7 @@ pub fn try_survey_the_run_outs(
     first_of_plan: &[i32],
     count: i32,
     crossings: Option<&[SurfaceRoomCrossing]>,
-    consumed: &[Option<Rc<SurfaceMitreConsumesTheRail>>],
+    consumed: &[Option<SurfaceMitreConsumesTheRail>],
     lay_the_oblique_rows_anyway: bool,
 ) -> Result<(), BevelAdvisory> {
     if lay_the_oblique_rows_anyway {
