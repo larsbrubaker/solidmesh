@@ -342,6 +342,38 @@ pub fn create_l_shaped_grid_prism() -> Mesh {
     })
 }
 
+/// C# `LPrismTestMeshes.CreateShearedLShapedGridPrism`: the same L prism LEANED OVER as it rises,
+/// about its own top face - that face is still `z = 10` and its rim is exactly where it was, but
+/// every vertical edge, the concave one included, now runs `lean_degrees` off square to it. Leaning
+/// in x tilts the face the two picked edges SHARE and leaves the unpicked wall the plane `y = 10`;
+/// leaning in y (`along_the_rim`) tilts that wall instead. The grid cap is sheared rather than the
+/// extruded one because the kernel wants the grid cap for anything that lands on the cap face.
+pub fn create_sheared_l_shaped_grid_prism(lean_degrees: f64, along_the_rim: bool) -> Mesh {
+    let mut mesh = create_l_shaped_grid_prism();
+    let shear = math_helper::degrees_to_radians(lean_degrees).tan();
+
+    mesh.transform(vector_math::Matrix4X4::new(
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        if along_the_rim { 0.0 } else { shear },
+        if along_the_rim { shear } else { 0.0 },
+        1.0,
+        0.0,
+        if along_the_rim { 0.0 } else { -10.0 * shear },
+        if along_the_rim { -10.0 * shear } else { 0.0 },
+        0.0,
+        1.0,
+    ));
+
+    mesh
+}
+
 /// C# `LPrismTestMeshes.CreateLShapedPrism`: an L cross section extruded 10 in z - five square
 /// corners and one reflex corner at (10, 10), which is the one concave edge of the solid.
 pub fn create_l_shaped_prism() -> Mesh {
