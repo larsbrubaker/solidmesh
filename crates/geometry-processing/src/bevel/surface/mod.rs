@@ -52,8 +52,11 @@
 //!   crossings of a band by a run-out ([`surface_bevel_crossings`]).
 //! - **Mitres.** The step laid at a mitre joint ([`surface_mitre_joint_step`]) and the sector a
 //!   mitre of unequal setbacks gives up ([`surface_mitre_sector`]), the mitre whose tip stands
-//!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]) and the short chord whose two
-//!   mitres crossed over on some of its rails ([`SurfaceMitreConsumesTheRail`]).
+//!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]), the short chord whose two
+//!   mitres crossed over on some of its rails ([`SurfaceMitreConsumesTheRail`]), the patch
+//!   a reflex mitre's narrower arc covers past its far rim ([`SurfaceMitreSliver`]), the mitre of two
+//!   arcs chorded at different steps ([`surface_mitre_chorded_apart`]) and the ring two strips share
+//!   at a mitre ([`surface_strip_mitre`], its rails [`surface_strip_mitre_rails`]).
 //! - **Corners and junctions.** The mixed corner ([`SurfaceMixedCorner`]), the rolling ball's
 //!   spine round it ([`SurfaceMixedCornerSpine`]), its dual canal ([`SurfaceMixedCornerDualFrame`],
 //!   [`SurfaceMixedCornerDualCanal`], [`SurfaceMixedCornerDualGrid`],
@@ -118,12 +121,15 @@ pub mod surface_interrupted_crease;
 pub mod surface_junction_band_ends;
 mod surface_line;
 pub mod surface_mesh_closure;
+pub mod surface_mitre_chorded_apart;
 mod surface_mitre_consumes_the_rail;
 pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
 mod surface_mitre_over_the_face_beyond;
 pub mod surface_mitre_seam;
 pub mod surface_mitre_sector;
+mod surface_mitre_sliver;
+mod surface_mitre_sliver_sew;
 mod surface_mixed_corner;
 pub mod surface_mixed_corner_bites;
 pub mod surface_mixed_corner_cut_edge;
@@ -193,6 +199,8 @@ pub mod surface_strip_ends;
 pub mod surface_strip_ends_at_a_landing_notch;
 mod surface_strip_ends_on_the_hull;
 pub mod surface_strip_ends_over_the_face_beyond;
+pub mod surface_strip_mitre;
+pub mod surface_strip_mitre_rails;
 mod surface_strip_notched_by_a_feature;
 mod surface_strip_station;
 pub mod surface_strip_tail_around_a_feature;
@@ -230,6 +238,7 @@ pub use surface_facet_cut::SurfaceFacetCut;
 pub use surface_line::SurfaceLine;
 pub use surface_mitre_consumes_the_rail::SurfaceMitreConsumesTheRail;
 pub use surface_mitre_over_the_face_beyond::{SurfaceMitreHull, SurfaceMitreOverTheFaceBeyond};
+pub use surface_mitre_sliver::{SurfaceMitreSliver, SurfaceMitreSliverRun};
 pub use surface_mixed_corner::SurfaceMixedCorner;
 pub use surface_mixed_corner_dual_canal::SurfaceMixedCornerDualCanal;
 pub use surface_mixed_corner_dual_frame::SurfaceMixedCornerDualFrame;

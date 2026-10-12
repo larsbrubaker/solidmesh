@@ -169,6 +169,7 @@ pub mod pick_that_fits;
 pub mod pick_validation;
 pub mod pinch_ladder_search;
 pub mod point_bevel;
+pub mod point_candidates;
 mod point_field;
 pub mod point_star;
 pub mod rail_stations;

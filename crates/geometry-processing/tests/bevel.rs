@@ -405,6 +405,8 @@ mod pick_field_tests;
 mod picture_hanger_test_mesh;
 #[path = "bevel/pinned_chain_end_tests.rs"]
 mod pinned_chain_end_tests;
+#[path = "bevel/point_bevel_tests.rs"]
+mod point_bevel_tests;
 #[path = "bevel/port_mouth_carry_tests.rs"]
 mod port_mouth_carry_tests;
 #[path = "bevel/pyramid_recess_test_meshes.rs"]
@@ -725,6 +727,8 @@ mod surface_standing_feature_tail_and_cap_tests;
 mod surface_strip_bitten_by_a_feature_tests;
 #[path = "bevel/surface_strip_ends_on_the_hull_tests.rs"]
 mod surface_strip_ends_on_the_hull_tests;
+#[path = "bevel/surface_strip_mitre_rails_tests.rs"]
+mod surface_strip_mitre_rails_tests;
 #[path = "bevel/surface_strip_oblique_end_tests.rs"]
 mod surface_strip_oblique_end_tests;
 #[path = "bevel/surface_tangent_run_ends_tests.rs"]
