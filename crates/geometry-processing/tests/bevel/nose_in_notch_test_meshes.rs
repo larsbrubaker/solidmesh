@@ -1,5 +1,6 @@
 //! Port of the test fixture `Fixtures/NoseInNotchTestMeshes.cs` (its `Create` with the upper face
-//! whole or chorded on its right crease - `theUpperFaceFannedFromInside` is not ported yet - the named points and normals, and the crease and group picks the tests make on it): a
+//! whole, chorded on its right crease or fanned from inside, the named points and normals, and the
+//! crease and group picks the tests make on it): a
 //! 20 mm cube with a triangular notch cut down its
 //! back, and a two-faced nose standing in the notch.
 
