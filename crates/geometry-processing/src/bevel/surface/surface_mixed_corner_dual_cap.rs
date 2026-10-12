@@ -52,7 +52,8 @@ pub fn try_give_up_the_cap(
     // From the changeover - the cut ring's own last rail, which stands on the cut's tube and on the
     // cap's plane at once - round to the dying point.
     // The cut ring always carries its changeover station; `saturating_sub` only keeps an empty cut
-    // ring (where C# would index station -1 and throw) from wrapping.
+    // ring (where C# would index station -1 and throw) from wrapping; the grid refuses a cut ring
+    // of fewer than two points before one reaches here (divergence 4958).
     let from = read.stations_the_cut_carries().saturating_sub(1);
     for row in &grid[from..read.station_count()] {
         if profile.last() != Some(&row[last]) {

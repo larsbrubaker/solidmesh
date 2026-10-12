@@ -486,7 +486,8 @@ fn how_much_further_the_far_face_is(
 /// floors are the same plane but two regions, while a slope the nose bites into is still ONE region
 /// above the nose and below it. Unordered, because which surface a run calls left is which way it
 /// happens to be walked. Named by [`SurfaceBevelPlan::key_of`]. A face the cache holds no region
-/// for (where C# would throw on the null) matches nothing.
+/// for (where C# would throw on the null) matches nothing; a chain edge's two faces are always
+/// mesh faces, so the builder never asks that (divergence 4958).
 fn the_same_two_regions(run: &ChainEdge, other: &ChainEdge, regions: &FaceRegionCache) -> bool {
     let key = |face: i32| {
         regions

@@ -285,10 +285,10 @@ impl SurfaceStripBittenByAFeature {
 
     /// C# `TryTheTip`: the TIP the bite closes on - the feature's ridge read against the plane of
     /// the quad between the last covered rail and the first uncovered one, and standing BETWEEN the
-    /// two of them. `Err` carries where to name a refusal: the point that would not do, or (as C#
-    /// leaves its `out at`) the origin where the ridge runs along the quad.
+    /// two of them. `Err` carries where to name a refusal: the point that would not do, or the last
+    /// covered rail where there is no such point (no ridge, or one running along the quad).
     #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
-    fn try_the_tip(
+    pub(super) fn try_the_tip(
         pool: &mut SurfaceVertexPool,
         strip: &SurfaceStrip,
         edge: &SurfaceEdgePlan,
@@ -308,7 +308,9 @@ impl SurfaceStripBittenByAFeature {
         let Some(at) = SurfaceStripNotchedByAFeature::try_the_ridge_on_the_chord(
             strip, edge, from, along, below,
         ) else {
-            return Err(Vector3::ZERO);
+            // Named where the reading stood, at the last covered rail (divergence 4957): C# set
+            // `at` there first and then let this call's `out` overwrite it with the origin.
+            return Err(strip.point_on(last, 0.0));
         };
 
         // Across the chord rather than along the edge: the quad is ruled, so the point it found is
@@ -412,3 +414,7 @@ fn refused(strip: &SurfaceStrip, rail: i32, param: f64) -> BevelAdvisory {
         vec![strip.point_on(rail, param).into()],
     )
 }
+
+#[cfg(test)]
+#[path = "surface_strip_bitten_by_a_feature_tests.rs"]
+mod tests;

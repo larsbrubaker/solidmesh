@@ -281,16 +281,35 @@ fn try_splice(
 /// vertex - the projection walk steps chord by chord and stops at the first chord whose span holds
 /// the landing, and every point stepped over is swallowed. -1 where the rim ran out before the
 /// landing did.
-fn swallowed_along(mesh: &Mesh, ring: &[i32], at: i32, way: i32, landing: Vector3) -> i32 {
+///
+/// Also -1 where the walk reaches a rim point that is not a mesh vertex (divergence 4955): the
+/// rim is ring indices into the section POOL, and once one end has been spliced into a region the
+/// rim carries that end's profile, which the pool minted past the mesh. C# reads every rim point
+/// from `mesh.Vertices` and throws there; a landing that slides into the other end's profile is
+/// two splices claiming one stretch of rim, which is the same refusal as a rim that ran out.
+pub(super) fn swallowed_along(
+    mesh: &Mesh,
+    ring: &[i32],
+    at: i32,
+    way: i32,
+    landing: Vector3,
+) -> i32 {
     let count = ring.len() as i32;
     let wrap = |index: i32| ((index % count + count) % count) as usize;
+    let mesh_vertex = |index: i32| {
+        usize::try_from(index)
+            .ok()
+            .and_then(|index| mesh.vertices.get(index))
+            .map(|&vertex| Vector3::from_vector3_float(vertex))
+    };
 
     for swallowed in 0..count - 1 {
-        let from =
-            Vector3::from_vector3_float(mesh.vertices[ring[wrap(at + (way * swallowed))] as usize]);
-        let to = Vector3::from_vector3_float(
-            mesh.vertices[ring[wrap(at + (way * (swallowed + 1)))] as usize],
-        );
+        let (Some(from), Some(to)) = (
+            mesh_vertex(ring[wrap(at + (way * swallowed))]),
+            mesh_vertex(ring[wrap(at + (way * (swallowed + 1)))]),
+        ) else {
+            return -1;
+        };
         let along = to - from;
 
         if along.length_squared() < 1e-300 {
@@ -329,3 +348,7 @@ fn the_face_still_on(rebuilt: &[Triple], dropped: &HashSet<i32>, vertex: i32) ->
 
     -1
 }
+
+#[cfg(test)]
+#[path = "section_end_splice_tests.rs"]
+mod tests;

@@ -209,6 +209,7 @@ fn upper_left_inners_bead_adds_the_controls_volume() {
     );
     let meter_was = FieldCounters::meter_on();
     FieldCounters::set_meter_on(true);
+    hull_clip::set_last_outcome(Some("none".to_string()));
     let filled = gap_fill::fill(&gap, profile_of(&fixture), fixture.segments);
     let hull = hull_clip::last_outcome();
     FieldCounters::set_meter_on(meter_was);

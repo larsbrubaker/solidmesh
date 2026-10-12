@@ -156,8 +156,10 @@ pub fn try_cut_the_band_back(
         at_the_mitre,
     )?;
 
-    // C# dereferences the trim unchecked here; it reads null only where the strip is gone or the
-    // curve has fewer than two corners, which no crossing the build hands over has.
+    // No trim is read only where the strip is gone or the curve has fewer than two corners, which
+    // no crossing the build hands over has: a crossing comes back from the patch only where the
+    // run-out met this band's strip, and it is a column of the run-out's profile (divergence 4958).
+    // C# answers that state with a false that carries no failure.
     let Some(trim) = trim else {
         return Ok(());
     };

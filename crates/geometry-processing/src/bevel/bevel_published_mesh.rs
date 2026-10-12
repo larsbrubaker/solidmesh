@@ -138,10 +138,18 @@ fn is_an_improvement_on(cleaned: &Mesh, published_mesh: &Mesh) -> bool {
     let before = signed_volume(published_mesh);
     let after = signed_volume(cleaned);
 
+    if before.is_nan() || after.is_nan() {
+        // A volume that cannot be measured is not one the cleanup can be shown to keep, so the
+        // mesh the boolean gave is handed back (divergence 4956; C#'s `Math.Sign` throws on NaN).
+        // `clean` never gets here with one: a NaN coordinate makes the seam tolerance 0 first.
+        return false;
+    }
+
     sign(after) == sign(before) && (after - before).abs() <= before.abs() * VOLUME_CHANGE_FRACTION
 }
 
-/// C#'s `Math.Sign` of a double: -1, 0 or 1 (zero of either sign is 0).
+/// C#'s `Math.Sign` of a double: -1, 0 or 1 (zero of either sign is 0). C# throws on NaN, which
+/// [`is_an_improvement_on`] answers before asking.
 fn sign(value: f64) -> i32 {
     if value > 0.0 {
         1
@@ -167,3 +175,7 @@ fn signed_volume(mesh: &Mesh) -> f64 {
 
     total / 6.0
 }
+
+#[cfg(test)]
+#[path = "bevel_published_mesh_tests.rs"]
+mod tests;

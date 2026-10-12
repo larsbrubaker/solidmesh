@@ -4,8 +4,8 @@
 //! strip OUTSIDE any of them is dropped. Ports the nested type of `Bevel/LevelLine/HullClip.cs` (a
 //! C# static class): one supporting plane ([`HullClipPlane`]), the kept surface's supporting
 //! planes the strip crosses ([`crossed_supporting_planes`]), the face-directed edge ([`directed`])
-//! and the thread's last outcome ([`note`], [`last_outcome`]), the clip back to the hull
-//! ([`clip`], splitting along each plane with [`split_along`]) and the hull end of a fill
+//! and the thread's last outcome ([`note`], [`last_outcome`], [`set_last_outcome`]), the clip back
+//! to the hull ([`clip`], splitting along each plane with [`split_along`]) and the hull end of a fill
 //! ([`try_clip_and_cap`], capping each plane's hole with [`cap`] and [`ear_clip`]).
 
 use std::cell::RefCell;
@@ -40,6 +40,12 @@ pub fn note(outcome: impl FnOnce() -> String) {
 /// Where the last hull end on this thread stopped; `None` before any was noted.
 pub fn last_outcome() -> Option<String> {
     LAST_OUTCOME.with(|last| last.borrow().clone())
+}
+
+/// C# `HullClip.LastOutcome = value`: sets (or, with `None`, clears) this thread's outcome, as a
+/// test does before a fill whose hull end it means to read.
+pub fn set_last_outcome(outcome: Option<String>) {
+    LAST_OUTCOME.with(|last| *last.borrow_mut() = outcome);
 }
 
 /// C# `HullClip.Plane`: a supporting plane - a point on it, its outward normal, and the vertices
