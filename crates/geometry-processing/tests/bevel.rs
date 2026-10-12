@@ -35,6 +35,8 @@ mod bevel_mitre_split_tests;
 mod bevel_obstruction_test_meshes;
 #[path = "bevel/bevel_pair_corner_recognition_tests.rs"]
 mod bevel_pair_corner_recognition_tests;
+#[path = "bevel/bevel_pair_corner_trim_tests.rs"]
+mod bevel_pair_corner_trim_tests;
 #[path = "bevel/bevel_partner_tube_clip_tests.rs"]
 mod bevel_partner_tube_clip_tests;
 #[path = "bevel/bevel_partnered_bead_tests.rs"]
@@ -241,6 +243,8 @@ mod rust_only_bevel_r3p03_tests;
 mod rust_only_bevel_r4p01_tests;
 #[path = "bevel/rust_only_bevel_slice10_tests.rs"]
 mod rust_only_bevel_slice10_tests;
+#[path = "bevel/rust_only_bevel_slice12_tests.rs"]
+mod rust_only_bevel_slice12_tests;
 #[path = "bevel/rust_only_bevel_slice2_tests.rs"]
 mod rust_only_bevel_slice2_tests;
 #[path = "bevel/rust_only_bevel_slice3_tests.rs"]

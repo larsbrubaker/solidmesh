@@ -4,6 +4,7 @@
 
 use vector_math::Vector3;
 
+use super::bevel_chain_linker::{link_resolution, split_by_convexity};
 use super::bevel_partnered_bead::{
     try_end_on_the_across_plane, BevelPartneredBeadEnd, BevelPartneredBeadRun,
 };
@@ -13,7 +14,7 @@ use super::bevel_partnered_bead_tolerances::{
 };
 use super::bevel_run_partners::try_ball_centre_line;
 use super::{BevelPartnerTube, BevelRunOutBound, BevelSweptChain};
-use crate::topology::ChainEdge;
+use crate::topology::{BevelEdgeGroupResolution, ChainEdge, EdgeConvexity};
 
 /// C# `TryReadPartners`: this end's partner tubes, read from every run in `concave_runs` (other
 /// than this one) that meets it here - or the refusal that says the end cannot be bounded.
@@ -194,4 +195,52 @@ pub fn is_the_same_run(one: &BevelSweptChain, other: &BevelSweptChain) -> bool {
             .iter()
             .zip(&other.edges)
             .all(|(a, b)| a.edge.mesh_edge_index == b.edge.mesh_edge_index)
+}
+
+/// C# `ConcaveRunsAcrossGroups`: every CONCAVE run of a whole rebuild, linked and split BY
+/// CONVEXITY, in one list.
+///
+/// Across every group and not per group, because partnership is a fact about a VERTEX and has
+/// nothing to do with which group each edge was picked into - the all-edges gesture puts every
+/// edge in a group of its own, and on the fixture this was built for the four creases are four
+/// groups. Ineligible groups are left out: a group whose size does not fit builds no bead at all,
+/// so nothing of it is there to bound anybody. `eligible` is C#'s nullable list: `None` takes
+/// every group.
+///
+/// Linking and the convexity split are all this can do, and that is LESS than the tool builder
+/// does. The builder also applies `BevelChainLinker.SplitWhereTheMitreCannotFit`, which is
+/// size-dependent - it cuts a run where the radius asked for will not fit the corner - and partner
+/// discovery has no size to ask with, so the runs here can be longer than the ones actually swept.
+/// The consequence is a known gap: a bead end that lands on a mitre-split boundary is resolved
+/// against a partner run that sees the crease running THROUGH that point rather than ending at it.
+/// Nothing exercises it today - the motivating shape is a convex rim, whose runs are not in this
+/// list at all - so it is written down rather than fixed, because the fix is to thread the sizes
+/// through discovery and that is only worth doing once something needs it.
+pub fn concave_runs_across_groups(
+    resolutions: &[BevelEdgeGroupResolution],
+    eligible: Option<&[bool]>,
+) -> Vec<BevelSweptChain> {
+    let mut runs = Vec::new();
+
+    for (i, resolution) in resolutions.iter().enumerate() {
+        if let Some(eligible) = eligible {
+            if i >= eligible.len() || !eligible[i] {
+                continue;
+            }
+        }
+
+        if !resolution.is_resolved() || resolution.edges.is_empty() {
+            continue;
+        }
+
+        for linked in link_resolution(resolution) {
+            for run in split_by_convexity(linked) {
+                if !run.edges.is_empty() && run.edges[0].edge.convexity == EdgeConvexity::Concave {
+                    runs.push(run);
+                }
+            }
+        }
+    }
+
+    runs
 }

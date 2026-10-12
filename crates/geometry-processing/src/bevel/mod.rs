@@ -29,7 +29,9 @@
 //! [`BevelRebuildResults`], [`bevel_group_failures`]) and the clip, run-off readings and planless
 //! loop of the surface construction ([`surface`]); and the tenth: the mixed corner's blend tool
 //! mesh ([`bevel_mixed_blend_tool`]) and how far a tube runs to reach its partner's axis at a pair
-//! corner ([`bevel_pair_corner_reach`]). The cyclic core's type definitions land ahead of its
+//! corner ([`bevel_pair_corner_reach`]); and the twelfth: the void each 5.3 corner opens
+//! ([`BevelCornerVoids`]), the warning at a crowded mixed corner ([`bevel_mixed_corners`]) and the
+//! partner tube trim at a pair corner ([`bevel_pair_corner_trim`]). The cyclic core's type definitions land ahead of its
 //! methods: the bead batch and clip ([`BevelBeadBatch`], [`bevel_bead_clip`]), the cap clip
 //! ([`bevel_cap_clip`]), a run's end treatment ([`BevelChainEnds`]), the sweep's chains, sections
 //! and segments ([`BevelSweptChain`], [`BevelSweptSection`], [`bevel_chain_sweep_mesh`]), the
@@ -66,6 +68,7 @@ pub mod bevel_corner_handover;
 pub mod bevel_corner_patch;
 pub mod bevel_corner_patch_mesher;
 pub mod bevel_corner_seam;
+mod bevel_corner_voids;
 pub mod bevel_crease_merge;
 pub mod bevel_edge_tool_builder;
 mod bevel_end_cap;
@@ -80,9 +83,11 @@ pub mod bevel_mitre_fit;
 mod bevel_mixed_blend;
 pub mod bevel_mixed_blend_tool;
 mod bevel_mixed_corner_ends;
+pub mod bevel_mixed_corners;
 pub mod bevel_overshoot_rings;
 pub mod bevel_pair_corner_crease;
 pub mod bevel_pair_corner_reach;
+pub mod bevel_pair_corner_trim;
 mod bevel_partner_tube;
 pub mod bevel_partner_tube_clip;
 pub mod bevel_partnered_bead;
@@ -129,6 +134,7 @@ pub use bevel_chain_sweep::BevelSweptSection;
 pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_corner_patch::{BevelCornerPatch, BevelCornerPatchSet};
+pub use bevel_corner_voids::BevelCornerVoids;
 pub use bevel_end_cap::BevelEndCap;
 pub use bevel_face_fit::{BevelFaceFit, BevelFaceFitEndCaps};
 pub use bevel_face_run_out::{BevelFaceRunOut, BevelRunOutBound, BevelRunOutMeasure};
