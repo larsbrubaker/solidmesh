@@ -25,6 +25,8 @@ mod bevel_cap_clip_tests;
 mod bevel_cap_stand_off_tests;
 #[path = "bevel/bevel_chain_linker_rim_closure_tests.rs"]
 mod bevel_chain_linker_rim_closure_tests;
+#[path = "bevel/bevel_collinear_run_fold_tests.rs"]
+mod bevel_collinear_run_fold_tests;
 #[path = "bevel/bevel_face_fit_cap_tests.rs"]
 mod bevel_face_fit_cap_tests;
 #[path = "bevel/bevel_face_fit_concave_collision_tests.rs"]
@@ -89,6 +91,8 @@ mod boolean_kernel_gate;
 mod bore_test_meshes;
 #[path = "bevel/both_sided_member_tests.rs"]
 mod both_sided_member_tests;
+#[path = "bevel/bridge_diagnosis_tests.rs"]
+mod bridge_diagnosis_tests;
 #[path = "bevel/bridge_fixture_tests.rs"]
 mod bridge_fixture_tests;
 #[path = "bevel/canonical_maximum_tests.rs"]
@@ -173,6 +177,8 @@ mod faceted_boss_fade_tests;
 mod faceted_wall_chamfer_flow_tests;
 #[path = "bevel/fade_end_room_tests.rs"]
 mod fade_end_room_tests;
+#[path = "bevel/fade_end_row_fold_tests.rs"]
+mod fade_end_row_fold_tests;
 #[path = "bevel/fifteen_mm_room_reading_tests.rs"]
 mod fifteen_mm_room_reading_tests;
 #[path = "bevel/figure_eight_rim_tests.rs"]
@@ -237,14 +243,20 @@ mod hourglass_beside_square_fixture;
 mod hourglass_beside_square_tests;
 #[path = "bevel/hull_clip_tests.rs"]
 mod hull_clip_tests;
+#[path = "bevel/inner_face_bore_carry_tests.rs"]
+mod inner_face_bore_carry_tests;
 #[path = "bevel/inner_face_test_mesh.rs"]
 mod inner_face_test_mesh;
+#[path = "bevel/input_needle_strip_tests.rs"]
+mod input_needle_strip_tests;
 #[path = "bevel/insert_polyline_tests.rs"]
 mod insert_polyline_tests;
 #[path = "bevel/island_split_order_tests.rs"]
 mod island_split_order_tests;
 #[path = "bevel/known_room_refuses_first_tests.rs"]
 mod known_room_refuses_first_tests;
+#[path = "bevel/level_line_cost_gate.rs"]
+mod level_line_cost_gate;
 #[path = "bevel/level_line_feature_edges.rs"]
 mod level_line_feature_edges;
 #[path = "bevel/level_line_fixture.rs"]
@@ -265,6 +277,8 @@ mod longest_edge_bisection_tests;
 mod many_chain_foreign_cost_tests;
 #[path = "bevel/many_holes_mouth_room_tests.rs"]
 mod many_holes_mouth_room_tests;
+#[path = "bevel/many_holes_rim_cost_tests.rs"]
+mod many_holes_rim_cost_tests;
 #[path = "bevel/mesh_measurements.rs"]
 mod mesh_measurements;
 #[path = "bevel/mesh_surface_distance.rs"]
@@ -275,6 +289,8 @@ mod meter_lock;
 mod micro_step_seam_tests;
 #[path = "bevel/name_every_tight_chain_tests.rs"]
 mod name_every_tight_chain_tests;
+#[path = "bevel/needle_cascade_meter_tests.rs"]
+mod needle_cascade_meter_tests;
 #[path = "bevel/no_duplicate_vertex_tests.rs"]
 mod no_duplicate_vertex_tests;
 #[path = "bevel/nose_in_notch_mixed_corners.rs"]
@@ -297,6 +313,8 @@ mod opposite_sense_crease_tests;
 mod opposite_sense_end_face_tests;
 #[path = "bevel/parallel_edges_room_tests.rs"]
 mod parallel_edges_room_tests;
+#[path = "bevel/pass_one_pinch_tests.rs"]
+mod pass_one_pinch_tests;
 #[path = "bevel/pick_field_tests.rs"]
 mod pick_field_tests;
 #[path = "bevel/picture_hanger_test_mesh.rs"]

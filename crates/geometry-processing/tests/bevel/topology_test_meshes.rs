@@ -474,3 +474,151 @@ pub fn create_boss_on_slab(post_radius: f64, sides: i32, slab_top: f64) -> Mesh 
     )
     .expect("the post and slab union")
 }
+
+/// C# `SurfaceTestMeshes.AStepsShell`: everything of the step that neither fin fixture changes -
+/// the two sides, the bottom, the riser's top and back, and the tread's own front.
+fn a_steps_shell(mesh: &mut Mesh) {
+    // The two sides, each an L fanned from its own reflex corner - the corner that makes the
+    // band's end a plane of its own.
+    let side = [
+        Vector2::new(10.0, 30.0),
+        Vector2::new(20.0, 30.0),
+        Vector2::new(20.0, 0.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(0.0, 20.0),
+    ];
+
+    for i in 0..side.len() - 1 {
+        mesh.create_face(&[
+            Vector3::new(0.0, 10.0, 20.0),
+            Vector3::new(0.0, side[i].x, side[i].y),
+            Vector3::new(0.0, side[i + 1].x, side[i + 1].y),
+        ]);
+        mesh.create_face(&[
+            Vector3::new(20.0, 10.0, 20.0),
+            Vector3::new(20.0, side[i + 1].x, side[i + 1].y),
+            Vector3::new(20.0, side[i].x, side[i].y),
+        ]);
+    }
+
+    let quad = |mesh: &mut Mesh, q: [[f64; 3]; 4]| {
+        let corners: Vec<Vector3> = q.iter().map(|c| Vector3::new(c[0], c[1], c[2])).collect();
+        mesh.create_face(&corners);
+    };
+    quad(
+        mesh,
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 20.0, 0.0],
+            [20.0, 20.0, 0.0],
+            [20.0, 0.0, 0.0],
+        ],
+    );
+    quad(
+        mesh,
+        [
+            [0.0, 10.0, 30.0],
+            [20.0, 10.0, 30.0],
+            [20.0, 20.0, 30.0],
+            [0.0, 20.0, 30.0],
+        ],
+    );
+    quad(
+        mesh,
+        [
+            [0.0, 20.0, 0.0],
+            [0.0, 20.0, 30.0],
+            [20.0, 20.0, 30.0],
+            [20.0, 20.0, 0.0],
+        ],
+    );
+    quad(
+        mesh,
+        [
+            [0.0, 0.0, 0.0],
+            [20.0, 0.0, 0.0],
+            [20.0, 0.0, 20.0],
+            [0.0, 0.0, 20.0],
+        ],
+    );
+}
+
+/// C# `SurfaceTestMeshes.CreateForkedFinsOnASlab`: the step with a riser fin narrowed to (2, 10)..
+/// (6, 10) and its apex at (4, 5, 20), and a second, four-sided tent on (4, 5), (5, 1), (9, 1),
+/// (8, 4) sharing that apex and nothing else - so four standing creases meet there, the tread's
+/// rim pinches, and a walk of the rim that starts down the fin's own tail leaves the tent's ring
+/// broken open behind it: a rim that FORKS. A band 6 mm in off the tread's left edge has the pinch
+/// and one corner of the ring inside it.
+pub fn create_forked_fins_on_a_slab() -> Mesh {
+    let mut mesh = Mesh::new();
+
+    let shared = Vector3::new(4.0, 5.0, 20.0);
+    let left = Vector3::new(2.0, 10.0, 20.0);
+    let right = Vector3::new(6.0, 10.0, 20.0);
+    let peak = Vector3::new(4.0, 10.0, 23.0);
+
+    let near_tent = Vector3::new(5.0, 1.0, 20.0);
+    let far_tent = Vector3::new(9.0, 1.0, 20.0);
+    let high_tent = Vector3::new(8.0, 4.0, 20.0);
+    let tent_peak = Vector3::new(6.5, 2.75, 23.0);
+
+    // The riser fin's own two faces FIRST, so that its two creases are the older edges at the
+    // shared apex: a walk of the rim there takes them before the tent's, which is what leaves the
+    // tent's ring broken open behind it - the shape this fixture is for.
+    mesh.create_face(&[left, shared, peak]);
+    mesh.create_face(&[shared, right, peak]);
+
+    // The tread, less that notch and the tent's own ring, in the four convex pieces the pinch
+    // leaves.
+    mesh.create_face(&[
+        Vector3::new(0.0, 0.0, 20.0),
+        Vector3::new(20.0, 0.0, 20.0),
+        far_tent,
+        near_tent,
+    ]);
+    mesh.create_face(&[
+        Vector3::new(20.0, 0.0, 20.0),
+        Vector3::new(20.0, 10.0, 20.0),
+        high_tent,
+        far_tent,
+    ]);
+    mesh.create_face(&[Vector3::new(20.0, 10.0, 20.0), right, shared, high_tent]);
+    mesh.create_face(&[
+        Vector3::new(0.0, 0.0, 20.0),
+        near_tent,
+        shared,
+        left,
+        Vector3::new(0.0, 10.0, 20.0),
+    ]);
+
+    // The riser, with the one notch its own fin makes on its foot.
+    mesh.create_face(&[
+        Vector3::new(0.0, 10.0, 20.0),
+        left,
+        peak,
+        Vector3::new(0.0, 10.0, 30.0),
+    ]);
+    mesh.create_face(&[
+        right,
+        Vector3::new(20.0, 10.0, 20.0),
+        Vector3::new(20.0, 10.0, 30.0),
+        peak,
+    ]);
+    mesh.create_face(&[
+        Vector3::new(0.0, 10.0, 30.0),
+        peak,
+        Vector3::new(20.0, 10.0, 30.0),
+    ]);
+
+    a_steps_shell(&mut mesh);
+
+    // And the tent's four.
+    mesh.create_face(&[shared, near_tent, tent_peak]);
+    mesh.create_face(&[near_tent, far_tent, tent_peak]);
+    mesh.create_face(&[far_tent, high_tent, tent_peak]);
+    mesh.create_face(&[high_tent, shared, tent_peak]);
+
+    mesh.clean_and_merge();
+
+    mesh
+}
