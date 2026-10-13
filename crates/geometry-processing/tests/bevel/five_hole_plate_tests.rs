@@ -17,6 +17,7 @@ use geometry_processing::bevel::level_line::{
 use vector_math::Vector3;
 
 use crate::five_hole_plate_fixture as fixture;
+use crate::gap_fill_tests::shell_count;
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChains;
 use crate::level_line_test_geometry::{cube_solid, signed_volume_of};
@@ -671,41 +672,4 @@ fn is_closed_and_consistent(mesh: &LevelLineMesh) -> bool {
 
     seen.iter()
         .all(|(e, &count)| count == 1 && seen.get(&(e.1, e.0)) == Some(&1))
-}
-
-/// How many separate pieces the live mesh is in - one, for a solid with a bevel cut into it.
-fn shell_count(mesh: &LevelLineMesh) -> i32 {
-    let live: Vec<i32> = (0..mesh.triangle_count())
-        .filter(|&t| !mesh.is_removed(t))
-        .collect();
-    let mut neighbours: HashMap<i32, Vec<i32>> = live.iter().map(|&t| (t, Vec::new())).collect();
-    for (low, high) in mesh.edges() {
-        let standing = mesh.triangles_on(low, high).to_vec();
-        for i in 0..standing.len() {
-            for j in i + 1..standing.len() {
-                neighbours.entry(standing[i]).or_default().push(standing[j]);
-                neighbours.entry(standing[j]).or_default().push(standing[i]);
-            }
-        }
-    }
-
-    let mut seen = HashSet::new();
-    let mut shells = 0;
-    for &start in &live {
-        if !seen.insert(start) {
-            continue;
-        }
-
-        shells += 1;
-        let mut stack = vec![start];
-        while let Some(at) = stack.pop() {
-            for &next in &neighbours[&at] {
-                if seen.insert(next) {
-                    stack.push(next);
-                }
-            }
-        }
-    }
-
-    shells
 }

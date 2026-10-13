@@ -5,7 +5,7 @@
 //! that overlap or continue each other are one edge set, not two picks. C# `[Arguments]` cases run
 //! as one loop per test.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 use geometry_processing::bevel::bevel_chain_linker;
@@ -21,6 +21,7 @@ use geometry_processing::topology::FeatureEdgeSet;
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
+use crate::gap_fill_tests::shell_count;
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{cube_solid, signed_volume};
 
@@ -758,49 +759,4 @@ fn is_closed_and_consistent(mesh: &LevelLineMesh) -> bool {
     counts
         .iter()
         .all(|(e, n)| *n == 1 && seen.get(&(e.1, e.0)) == Some(&1))
-}
-
-fn shell_count(mesh: &LevelLineMesh) -> i32 {
-    let mut neighbours: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
-    for t in 0..mesh.triangle_count() {
-        if !mesh.is_removed(t) {
-            neighbours.insert(t, Vec::new());
-        }
-    }
-
-    for (low, high) in mesh.edges() {
-        let standing = mesh.triangles_on(low, high).to_vec();
-        for i in 0..standing.len() {
-            for j in (i + 1)..standing.len() {
-                neighbours
-                    .get_mut(&standing[i])
-                    .expect("a live triangle")
-                    .push(standing[j]);
-                neighbours
-                    .get_mut(&standing[j])
-                    .expect("a live triangle")
-                    .push(standing[i]);
-            }
-        }
-    }
-
-    let mut visited = HashSet::new();
-    let mut shells = 0;
-    for &start in neighbours.keys() {
-        if !visited.insert(start) {
-            continue;
-        }
-
-        shells += 1;
-        let mut stack = vec![start];
-        while let Some(at) = stack.pop() {
-            for &next in &neighbours[&at] {
-                if visited.insert(next) {
-                    stack.push(next);
-                }
-            }
-        }
-    }
-
-    shells
 }
