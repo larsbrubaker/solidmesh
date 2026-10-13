@@ -117,6 +117,23 @@ pub fn create_grid_solid(
     mesh
 }
 
+/// C# `SurfaceTestMeshes.CreateThinWallBetweenLedges`: a 28 x 30 x 5 plate carrying a 4 x 30 x 20
+/// wall, 30 mm of it, from x = 12 to x = 16 and up to z = 25. Its two feet are a pair of concave
+/// creases - (12, y, 5) and (16, y, 5) - facing away from each other across a wall thinner than
+/// the radius they are filleted at. The ledges are 12 mm so a radius-8 setback has face to land on
+/// at both feet.
+// Used by the thin wall bead clip port in mattercad-model; the kernel `bevel` binary has no user.
+#[allow(dead_code)]
+pub fn create_thin_wall_between_ledges() -> Mesh {
+    // The whole base, and above it only the middle column, which is the wall
+    create_grid_solid(
+        &[0.0, 12.0, 16.0, 28.0],
+        &[0.0, 30.0],
+        &[0.0, 5.0, 25.0],
+        |i, j, k| (0..3).contains(&i) && j == 0 && (0..2).contains(&k) && (k == 0 || i == 1),
+    )
+}
+
 /// C# `SurfaceTestMeshes.CreateSquareBossOnPlate`: a 20 x 20 x 4 plate with an 8 x 8 boss standing
 /// 8 tall on its middle.
 pub fn create_square_boss_on_plate() -> Mesh {

@@ -125,7 +125,7 @@ pub struct WorkBudget {
     pub both_sided_members_off: Cell<bool>,
     /// Whether the side groups read their crease run-outs' fields for this build (C#'s per-flow
     /// `BandGroupFields.RunOutsOnInFlow`, off by default); `BandGroupFields::turn_run_outs_on`
-    /// flips it for the budget in force.
+    /// flips it for the budget in force, and a budget created inside a scope starts on.
     pub run_outs_on: Cell<bool>,
     /// Whether the square-crease end clips are turned OFF for this build (C#'s per-flow
     /// `SquareCreaseEndClip.SquareCreaseClipsOffInFlow`, on by default);
@@ -546,7 +546,7 @@ impl WorkBudget {
             report_throttle_ms: 50,
             pair_corner_end_face_field_off: Cell::new(false),
             both_sided_members_off: Cell::new(false),
-            run_outs_on: Cell::new(false),
+            run_outs_on: Cell::new(super::band_group_fields::flow_run_outs_on()),
             square_crease_clips_off: Cell::new(false),
             watch_hole_fills: RefCell::new(None),
             spent: Cell::new(0),

@@ -33,6 +33,20 @@ pub fn run_outs_on() -> bool {
     LevelLineWork::current().is_some_and(|budget| budget.run_outs_on.get())
 }
 
+thread_local! {
+    /// The flow's own setting, for a scope opened before the build that will read it exists
+    /// (C#'s `AsyncLocal` flows into whatever the opening flow starts). The thread the scope was
+    /// opened on stands for the flow: a build that runs inline on it - an app-level test's
+    /// rebuild - captures the setting when its budget is created ([`flow_run_outs_on`]).
+    static FLOW_RUN_OUTS_ON: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// What a new build's budget starts its run-out gate at: on while a [`turn_run_outs_on`] scope
+/// is open on this flow.
+pub fn flow_run_outs_on() -> bool {
+    FLOW_RUN_OUTS_ON.with(std::cell::Cell::get)
+}
+
 /// C# `BandGroupFields.TurnRunOutsOn`: turns run-outs on for the build in force until the returned
 /// scope is dropped, which puts back what was there before.
 pub fn turn_run_outs_on() -> BandGroupFieldsRunOutsScope {
@@ -40,20 +54,23 @@ pub fn turn_run_outs_on() -> BandGroupFieldsRunOutsScope {
 }
 
 /// C# `BandGroupFields.RunOutsScope`: turns run-outs on for the build in force until it is
-/// dropped, which puts back what was there before. With no budget in force there is no build to
-/// switch and the scope does nothing.
+/// dropped, which puts back what was there before. With no budget in force the scope sets the
+/// flow's setting, which the next build started on this flow captures in its budget.
 #[derive(Debug)]
 #[must_use = "run-outs stay on only while the scope is alive"]
 pub struct BandGroupFieldsRunOutsScope {
     /// Whether run-outs were on when the scope was opened - restored when it closes.
     pub was: bool,
+    /// The flow's own setting when the scope was opened - restored when it closes.
+    was_in_flow: bool,
 }
 
 impl BandGroupFieldsRunOutsScope {
     /// C#'s `RunOutsScope()`: remembers the setting and turns run-outs on.
     pub fn new() -> Self {
         let was = LevelLineWork::current().is_some_and(|budget| budget.run_outs_on.replace(true));
-        BandGroupFieldsRunOutsScope { was }
+        let was_in_flow = FLOW_RUN_OUTS_ON.with(|flow| flow.replace(true));
+        BandGroupFieldsRunOutsScope { was, was_in_flow }
     }
 }
 
@@ -69,6 +86,7 @@ impl Drop for BandGroupFieldsRunOutsScope {
         if let Some(budget) = LevelLineWork::current() {
             budget.run_outs_on.set(self.was);
         }
+        FLOW_RUN_OUTS_ON.with(|flow| flow.set(self.was_in_flow));
     }
 }
 
