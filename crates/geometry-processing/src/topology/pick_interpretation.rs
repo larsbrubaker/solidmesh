@@ -40,9 +40,10 @@ pub struct PickInterpretation {
 }
 
 impl PickInterpretation {
-    /// C#'s internal constructor; `stops_where_the_shape_does` defaults to true as its `init`
-    /// property does, and [`Self::with_stops_where_the_shape_does`] sets it.
-    pub(crate) fn new(
+    /// C#'s internal constructor (public here because the tests that pin how a list of readings
+    /// labels itself build lists the pick never would); `stops_where_the_shape_does` defaults to
+    /// true as its `init` property does, and [`Self::with_stops_where_the_shape_does`] sets it.
+    pub fn new(
         kind: PickInterpretationKind,
         features: Arc<FeatureEdgeSet>,
         seed_edge_index: i32,
