@@ -1,6 +1,8 @@
 //! Port of the test fixture `Fixtures/WarpedWallTestMeshes.cs`: a block whose front wall is a
 //! gently twisted (hyperbolic) sheet of quads, and an L with such a wall in its inside corner.
 
+#![allow(dead_code)]
+
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
