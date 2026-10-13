@@ -122,3 +122,5 @@ pub(crate) mod rust_only_bevel_slice8_tests;
 pub(crate) mod rust_only_bevel_slice9_tests;
 #[path = "rust_only_bevel_sliver_collapse_tests.rs"]
 pub(crate) mod rust_only_bevel_sliver_collapse_tests;
+#[path = "rust_only_thingi10k_sweep_tests.rs"]
+pub(crate) mod rust_only_thingi10k_sweep_tests;
