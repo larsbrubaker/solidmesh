@@ -63,12 +63,16 @@ pub(crate) mod surface_end_notch_follows_the_walked_chords_tests;
 pub(crate) mod surface_end_notch_stays_in_its_section_tests;
 #[path = "surface_end_where_the_face_carries_on_tests.rs"]
 pub(crate) mod surface_end_where_the_face_carries_on_tests;
+#[path = "surface_every_face_subset_survey_tests.rs"]
+pub(crate) mod surface_every_face_subset_survey_tests;
 #[path = "surface_face_walkback_tests.rs"]
 pub(crate) mod surface_face_walkback_tests;
 #[path = "surface_facet_cut_own_ends_tests.rs"]
 pub(crate) mod surface_facet_cut_own_ends_tests;
 #[path = "surface_facet_knits_across_its_cuts_tests.rs"]
 pub(crate) mod surface_facet_knits_across_its_cuts_tests;
+#[path = "surface_fading_crease_reading_tests.rs"]
+pub(crate) mod surface_fading_crease_reading_tests;
 #[path = "surface_fan_sliver_ring_tests.rs"]
 pub(crate) mod surface_fan_sliver_ring_tests;
 #[path = "surface_fan_tests.rs"]
@@ -81,6 +85,8 @@ pub(crate) mod surface_interrupted_crease_tests;
 pub(crate) mod surface_joined_ring_tests;
 #[path = "surface_leaning_cap_riding_bead_end_tests.rs"]
 pub(crate) mod surface_leaning_cap_riding_bead_end_tests;
+#[path = "surface_leaning_corner_canal_selector_tests.rs"]
+pub(crate) mod surface_leaning_corner_canal_selector_tests;
 #[path = "surface_mesh_closure_tests.rs"]
 pub(crate) mod surface_mesh_closure_tests;
 #[path = "surface_mitre_consumes_a_chord_tests.rs"]
@@ -157,6 +163,8 @@ pub(crate) mod surface_raked_bore_corner_twin_tests;
 pub(crate) mod surface_raked_bore_mouth_claim_tests;
 #[path = "surface_raked_bore_mouth_tests.rs"]
 pub(crate) mod surface_raked_bore_mouth_tests;
+#[path = "surface_raked_bore_rolling_ball_tests.rs"]
+pub(crate) mod surface_raked_bore_rolling_ball_tests;
 #[path = "surface_raked_bore_split_chord_tests.rs"]
 pub(crate) mod surface_raked_bore_split_chord_tests;
 #[path = "surface_recess_rim_end_tolerance_tests.rs"]
@@ -177,6 +185,8 @@ pub(crate) mod surface_ring_ears_bridged_ring_tests;
 pub(crate) mod surface_roll_across_the_wall_tests;
 #[path = "surface_room_across_a_curved_wall_tests.rs"]
 pub(crate) mod surface_room_across_a_curved_wall_tests;
+#[path = "surface_room_barrel_wall_reading_tests.rs"]
+pub(crate) mod surface_room_barrel_wall_reading_tests;
 #[path = "surface_room_corner_wall_tests.rs"]
 pub(crate) mod surface_room_corner_wall_tests;
 #[path = "surface_room_crossing_tests.rs"]

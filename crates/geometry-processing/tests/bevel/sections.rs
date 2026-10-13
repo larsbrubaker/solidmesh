@@ -62,6 +62,8 @@ pub(crate) mod section_pierced_face_tests;
 pub(crate) mod section_pierced_face_top_join_tests;
 #[path = "section_robustness_tests.rs"]
 pub(crate) mod section_robustness_tests;
+#[path = "section_room_smooth_side_tests.rs"]
+pub(crate) mod section_room_smooth_side_tests;
 #[path = "section_room_split_crease_tests.rs"]
 pub(crate) mod section_room_split_crease_tests;
 #[path = "section_room_tests.rs"]
@@ -90,8 +92,12 @@ pub(crate) mod section_straight_bore_tests;
 pub(crate) mod section_surface_walk_arc_join_tests;
 #[path = "section_surface_walk_fold_tests.rs"]
 pub(crate) mod section_surface_walk_fold_tests;
+#[path = "section_surface_walk_mouth_tests.rs"]
+pub(crate) mod section_surface_walk_mouth_tests;
 #[path = "section_surface_walk_roof.rs"]
 pub(crate) mod section_surface_walk_roof;
+#[path = "section_surface_walk_tests.rs"]
+pub(crate) mod section_surface_walk_tests;
 #[path = "section_tapered_barrel_mouth_reading_tests.rs"]
 pub(crate) mod section_tapered_barrel_mouth_reading_tests;
 #[path = "section_tapered_barrel_tests.rs"]

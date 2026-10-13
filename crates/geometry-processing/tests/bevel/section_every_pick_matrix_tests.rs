@@ -432,13 +432,13 @@ fn is_on_the_queue(
     );
 }
 
-fn kind(complaint: &str) -> &str {
+pub(crate) fn kind(complaint: &str) -> &str {
     complaint
         .find(" at ")
         .map_or(complaint, |at| &complaint[..at])
 }
 
-fn show(value: &BevelAdvisoryArg) -> String {
+pub(crate) fn show(value: &BevelAdvisoryArg) -> String {
     match value {
         BevelAdvisoryArg::Vector3(at) => point(*at),
         other => format!("{other:?}"),
@@ -446,7 +446,7 @@ fn show(value: &BevelAdvisoryArg) -> String {
 }
 
 /// C#'s `({0:0.##}, {1:0.##}, {2:0.##})`, InvariantCulture - "-0" kept, as .NET writes it.
-fn point(at: Vector3) -> String {
+pub(crate) fn point(at: Vector3) -> String {
     format!(
         "({}, {}, {})",
         format_f64_max_decimals(at.x, 2),

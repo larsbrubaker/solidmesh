@@ -358,7 +358,10 @@ fn the_clearance_is_buried_and_changes_nothing_outside_the_part() {
 }
 
 /// C# `TheSameFourBeadsBuildAndUnionAtAHundredthAndAtTenTimesTheRadius`, one test per C# case.
-fn the_same_four_beads_build_and_union_at(scale: f64, radius: f64) {
+fn the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius(
+    scale: f64,
+    radius: f64,
+) {
     let part = nose::create_scaled(scale);
     let (runs, names) = nose::creases_scaled(&part, scale);
     let run_out = Rc::new(BevelFaceRunOut::create(
@@ -390,13 +393,13 @@ fn the_same_four_beads_build_and_union_at(scale: f64, radius: f64) {
 }
 
 #[test]
-fn the_same_four_beads_build_and_union_at_a_tenth_scale() {
-    the_same_four_beads_build_and_union_at(0.1, 0.5);
+fn the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius_0_1_0_5() {
+    the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius(0.1, 0.5);
 }
 
 #[test]
-fn the_same_four_beads_build_and_union_at_ten_times_scale() {
-    the_same_four_beads_build_and_union_at(10.0, 50.0);
+fn the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius_10_50() {
+    the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius(10.0, 50.0);
 }
 
 /// C# `ABossCornerIsHandedBackBecauseNothingRunsOutThere`.

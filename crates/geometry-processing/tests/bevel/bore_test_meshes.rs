@@ -1,6 +1,7 @@
 //! The plate with a round bore, the plate with a RAKED bore, and the split of one of its edges.
 //! Ports the pieces of `Tests/GeometryProcessingTests/Fixtures/BoreTestMeshes.cs`
-//! (`CreatePlateWithARoundBore`, `CreatePlateWithARakedBore`, `TileTheRingBetween`) and
+//! (`CreatePlateWithARoundBore`, `CreatePlateWithARakedBore`, `CreateTheRakedFixture` and its
+//! `Raked*` dimensions, `TileTheRingBetween`) and
 //! `BoreTestMeshesSplitChords.cs` (`CreatePlateWithARakedBoreWhoseMouthChordsAreSplit`,
 //! `SplitTheEdgeBetween`) that the ported classes read; the
 //! fixture's other parts land with the classes that read them.
@@ -17,6 +18,31 @@ pub const RAKED_SIDES: i32 = 40;
 /// C# `RakedRakeDegrees`: how far the raked fixture's drill leans off the plate's normal, in the
 /// x z plane.
 pub const RAKED_RAKE_DEGREES: f64 = 45.0;
+
+/// C# `RakedRadius`: the raked fixture's bore radius.
+pub const RAKED_RADIUS: f64 = 1.5;
+
+/// C# `RakedThickness`: how thick that plate is, centred on z = 0.
+pub const RAKED_THICKNESS: f64 = 3.0;
+
+/// C# `RakedDrillAxis`: the raked fixture's drill direction, leaned [`RAKED_RAKE_DEGREES`] off the
+/// plate's normal in the x z plane.
+pub fn raked_drill_axis() -> Vector3 {
+    let rake = math_helper::degrees_to_radians(RAKED_RAKE_DEGREES);
+    Vector3::new(rake.sin(), 0.0, rake.cos())
+}
+
+/// C# `CreateTheRakedFixture`: the raked fixture at the dimensions every suite that reads it uses
+/// (C#'s default land of 6).
+pub fn create_the_raked_fixture() -> Mesh {
+    create_plate_with_a_raked_bore(
+        RAKED_SIDES,
+        RAKED_RADIUS,
+        RAKED_THICKNESS,
+        RAKED_RAKE_DEGREES,
+        6.0,
+    )
+}
 
 /// C# `CreatePlateWithARoundBore`: a plate `thickness` thick, centred on z = 0, with a bore of
 /// `radius` drawn with `sides` facets and `land` of plate outside it.

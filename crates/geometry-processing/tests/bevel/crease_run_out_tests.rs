@@ -109,17 +109,17 @@ fn no_run_out_where_no_unpicked_crease_ends_a_mixed_corner(name: &str) {
 }
 
 #[test]
-fn no_run_out_inner_right_sides_and_center_op0() {
+fn no_run_out_where_no_unpicked_crease_ends_a_mixed_corner_inner_right_sides_and_center_op0() {
     no_run_out_where_no_unpicked_crease_ends_a_mixed_corner("inner-right-sides-and-center-op0");
 }
 
 #[test]
-fn no_run_out_full_front_ridge_and_hips() {
+fn no_run_out_where_no_unpicked_crease_ends_a_mixed_corner_full_front_ridge_and_hips() {
     no_run_out_where_no_unpicked_crease_ends_a_mixed_corner("full-front-ridge-and-hips");
 }
 
 #[test]
-fn no_run_out_top_center_face_f6_r01() {
+fn no_run_out_where_no_unpicked_crease_ends_a_mixed_corner_top_center_face_f6_r01() {
     no_run_out_where_no_unpicked_crease_ends_a_mixed_corner("top-center-face-f6-r01");
 }
 

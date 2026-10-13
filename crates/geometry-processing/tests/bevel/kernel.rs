@@ -71,6 +71,8 @@ pub(crate) mod bevel_published_mesh_tests;
 pub(crate) mod bevel_rebuild_advisories_tests;
 #[path = "bevel_recess_apex_run_out_tests.rs"]
 pub(crate) mod bevel_recess_apex_run_out_tests;
+#[path = "bevel_recess_rim_run_off_tests.rs"]
+pub(crate) mod bevel_recess_rim_run_off_tests;
 #[path = "bevel_run_partners_tests.rs"]
 pub(crate) mod bevel_run_partners_tests;
 #[path = "bevel_run_taper_tests.rs"]
@@ -89,6 +91,8 @@ pub(crate) mod bevel_shadow_clip_tests;
 pub(crate) mod bevel_source_hull_tests;
 #[path = "bevel_source_round_tests.rs"]
 pub(crate) mod bevel_source_round_tests;
+#[path = "bevel_split_chord_conditioning_tests.rs"]
+pub(crate) mod bevel_split_chord_conditioning_tests;
 #[path = "bevel_sweep_back_depth_tests.rs"]
 pub(crate) mod bevel_sweep_back_depth_tests;
 #[path = "bevel_sweep_batches_tests.rs"]

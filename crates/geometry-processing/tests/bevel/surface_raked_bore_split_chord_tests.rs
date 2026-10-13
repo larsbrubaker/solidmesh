@@ -27,13 +27,13 @@ use crate::surface_test_build::{
 };
 
 /// The part's own bore: forty facets, 1.5 radius, 45 degrees, through a 4 mm wall.
-const SIDES: i32 = 40;
+pub(crate) const SIDES: i32 = 40;
 
-const RADIUS: f64 = 1.5;
+pub(crate) const RADIUS: f64 = 1.5;
 
-const THICKNESS: f64 = 4.0;
+pub(crate) const THICKNESS: f64 = 4.0;
 
-const RAKE_DEGREES: f64 = 45.0;
+pub(crate) const RAKE_DEGREES: f64 = 45.0;
 
 const SIZE: f64 = 0.4;
 
@@ -44,11 +44,11 @@ const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 /// How much plate stands outside the mouth, chosen so the box round this fixture has the HANGER's
 /// own diagonal - because the weld ruler every reading of the build is made against is a millionth
 /// of that box.
-const THE_HANGERS_OWN_LAND: f64 = 23.01;
+pub(crate) const THE_HANGERS_OWN_LAND: f64 = 23.01;
 
 /// The eight splits the part's own boolean left, read off its mouth loop and turned into this
 /// fixture's frame by the ellipse's own parameter.
-const THE_PARTS_OWN_SPLITS: [(i32, f64); 8] = [
+pub(crate) const THE_PARTS_OWN_SPLITS: [(i32, f64); 8] = [
     (9, 0.365755),
     (10, 0.354150),
     (12, 0.331480),
@@ -59,12 +59,12 @@ const THE_PARTS_OWN_SPLITS: [(i32, f64); 8] = [
     (30, 0.362577),
 ];
 
-fn the_hangers_own_stand_off() -> Vector3 {
+pub(crate) fn the_hangers_own_stand_off() -> Vector3 {
     Vector3::new(-28.5, 23.66, 12.0)
 }
 
 /// The split plate at a rake, standing where it is put.
-fn the_split_part(rake_degrees: f64, standing_at: Vector3) -> Mesh {
+pub(crate) fn the_split_part(rake_degrees: f64, standing_at: Vector3) -> Mesh {
     create_plate_with_a_raked_bore_whose_mouth_chords_are_split(
         SIDES,
         RADIUS,
@@ -77,7 +77,11 @@ fn the_split_part(rake_degrees: f64, standing_at: Vector3) -> Mesh {
 }
 
 /// The tangent chain seeded on the upper mouth of a part standing at `standing_at`.
-fn the_mouth_group(part: &Mesh, standing_at: Vector3, rake_degrees: f64) -> BevelEdgeGroup {
+pub(crate) fn the_mouth_group(
+    part: &Mesh,
+    standing_at: Vector3,
+    rake_degrees: f64,
+) -> BevelEdgeGroup {
     let features = FeatureEdgeSet::create_with_graph(
         part,
         &part.get_mesh_edge_graph(),
@@ -93,7 +97,7 @@ fn the_mouth_group(part: &Mesh, standing_at: Vector3, rake_degrees: f64) -> Beve
     .expect("the mouth's edge is in the set")
 }
 
-fn the_chain_length(part: &Mesh, group: &BevelEdgeGroup) -> usize {
+pub(crate) fn the_chain_length(part: &Mesh, group: &BevelEdgeGroup) -> usize {
     bevel_edge_group_resolver::resolve_all(std::slice::from_ref(group), part).0[0]
         .edges
         .len()

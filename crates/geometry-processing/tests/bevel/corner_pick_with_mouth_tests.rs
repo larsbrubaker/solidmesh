@@ -142,7 +142,7 @@ fn the_fillet_removes_less_than_the_chamfer() {
 
 /// The two adjacent cube faces' pick: its rails end at ties too (its edges pass through them).
 #[test]
-fn every_rail_of_the_cubes_corner_group_ends_at_a_tie() {
+fn every_rail_of_the_cubes_corner_groups_ends_at_a_tie() {
     let (positions, indices) = cube_solid(1.0);
     let two_faces = vec![vec![4, 5], vec![5, 6, 7, 4], vec![5, 1, 0, 4]];
     let gap = build(
