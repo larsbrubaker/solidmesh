@@ -5,7 +5,8 @@
 //! nearest-pair search in `dmesh_aabb_tree3_pairs`, the triangle-triangle distance in
 //! `dist_triangle3_triangle3`, and the fast winding number in `fast_winding`), and on the boolean
 //! kernel (`csg`) for telling a touch from a crossing. The AI tool's `measure` reads it;
-//! `point_distances` answers point-to-surface distances over the same tree.
+//! `point_distances` answers point-to-surface distances over the same tree, and
+//! `point_triangle_distance_sqr` is g3's public single point-triangle distance.
 
 use vector_math::{Matrix4X4, Vector3};
 
@@ -118,6 +119,12 @@ pub fn point_distances(mesh: &Mesh, points: &[Vector3]) -> Vec<f64> {
             tri_distance_sqr(&soup.get_tri_vertices(tid as usize), query).sqrt()
         })
         .collect()
+}
+
+/// g3's public `DistPoint3Triangle3.DistanceSqr`: the squared distance from `point` to the
+/// triangle `triangle` (Eberly's region walk). A zero-area triangle answers NaN, as in g3.
+pub fn point_triangle_distance_sqr(triangle: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
+    tri_distance_sqr(triangle, point)
 }
 
 /// C# `SurfacesCross`: surfaces that meet either just touch (a part resting on another) or
