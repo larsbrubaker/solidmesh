@@ -6,15 +6,18 @@
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
+use super::fast_hash::FastBuildHasher;
 use super::LevelLineTriangle;
 
 /// Per edge key (low, high), the triangles standing on it, in triangle order; the map keeps the
-/// order the edges were first met in (C# `Dictionary` insertion order).
-pub type StandingMap = IndexMap<(i32, i32), Vec<i32>>;
+/// order the edges were first met in (C# `Dictionary` insertion order), hashed by the cheap
+/// [`FastBuildHasher`] since the order never depends on the hash.
+pub type StandingMap = IndexMap<(i32, i32), Vec<i32>, FastBuildHasher>;
 
 /// Which triangles of `indices` stand on each edge.
 pub fn standing_map(indices: &[(i32, i32, i32)]) -> StandingMap {
-    let mut standing = StandingMap::new();
+    let mut standing =
+        StandingMap::with_capacity_and_hasher(indices.len() * 3 / 2, FastBuildHasher::default());
     for (i, &(a, b, c)) in indices.iter().enumerate() {
         let i = i as i32;
         standing_on(&mut standing, a, b).push(i);

@@ -230,6 +230,7 @@ impl ChainField {
                 vector_math::cs_math::min_f64(1.0, (scan_best + 1) as f64 / scan_steps as f64);
             for _ in 0..Self::TERNARY_STEPS {
                 LevelLineWork::poll_cancel()?;
+                let (was_lo, was_hi) = (lo, hi);
                 let third = (hi - lo) / 3.0;
                 let left = at(lo + third).0;
                 let right = at(hi - third).0;
@@ -237,6 +238,13 @@ impl ChainField {
                     hi -= third;
                 } else {
                     lo += third;
+                }
+
+                // A step is a function of (lo, hi) alone, so once the bracket stops moving (a
+                // third too small to change either end) every remaining step repeats it: the
+                // same bits as running them out, for the cost of none of their field reads.
+                if lo == was_lo && hi == was_hi {
+                    break;
                 }
             }
 

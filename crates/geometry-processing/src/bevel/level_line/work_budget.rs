@@ -435,6 +435,22 @@ impl WorkBudget {
 }
 
 impl WorkBudget {
+    /// The plain charge, when that is all it is: adds `units` and counts the charge toward the
+    /// next cancellation check, answering true. Answers false, having changed nothing, when this
+    /// charge would pass the limit or reach the cancellation check, which [`WorkBudget::charge`]
+    /// then does in full.
+    fn charge_when_plain(&self, units: i64) -> bool {
+        let spent = self.spent.get() + units;
+        let since = self.since_cancel_check.get() + 1;
+        if spent > self.limit || since >= CANCEL_CHECK_EVERY {
+            return false;
+        }
+
+        self.spent.set(spent);
+        self.since_cancel_check.set(since);
+        true
+    }
+
     /// Charges work. When the budget runs out this answers [`WorkError::BudgetExceeded`], which
     /// the construction's own entry points turn into a refusal BY NAME - no caller of this module
     /// ever sees it, and no partial mesh is ever handed back. Every [`CANCEL_CHECK_EVERY`] charges
@@ -480,6 +496,20 @@ impl LevelLineWork {
     /// Charges units of work to the budget in force; nothing when there is none (C#'s default
     /// `units = 1` is passed explicitly).
     pub fn charge(units: i64) -> Result<(), WorkError> {
+        // The common charge touches two counters and nothing else, so it is answered from the
+        // slot without cloning the budget's `Rc`; the charge that reaches the limit or the
+        // cancellation check takes the full path.
+        let answered = CURRENT.with(|slot| {
+            let slot = slot.borrow();
+            match slot.as_deref() {
+                None => true,
+                Some(budget) => budget.charge_when_plain(units),
+            }
+        });
+        if answered {
+            return Ok(());
+        }
+
         match Self::current() {
             Some(budget) => budget.charge(units),
             None => Ok(()),
@@ -491,9 +521,17 @@ impl LevelLineWork {
     /// the work-unit totals the ratchet tests pin. A token read and nothing else, so it may sit in
     /// an inner loop.
     pub fn poll_cancel() -> Result<(), WorkError> {
-        match Self::current() {
-            Some(budget) if budget.cancellation_token.is_cancelled() => Err(WorkError::Cancelled),
-            _ => Ok(()),
+        let cancelled = CURRENT.with(|slot| {
+            let slot = slot.borrow();
+            match slot.as_deref() {
+                Some(budget) => budget.cancellation_token.is_cancelled(),
+                None => false,
+            }
+        });
+        if cancelled {
+            Err(WorkError::Cancelled)
+        } else {
+            Ok(())
         }
     }
 }

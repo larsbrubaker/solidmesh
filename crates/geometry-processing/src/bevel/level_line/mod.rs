@@ -119,6 +119,7 @@ mod end_face_sense_oblique;
 pub mod end_plane_trim;
 pub mod end_plane_trim_carry;
 pub mod end_plane_trim_run;
+pub mod fast_hash;
 pub mod field_bounds;
 pub mod field_counters;
 mod field_sample;
