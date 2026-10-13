@@ -426,6 +426,32 @@ pub fn create_notched_prism() -> Mesh {
         .expect("the notched outline extrudes")
 }
 
+/// C# `TopologyTestMeshes.CreateShallowReflexPrism`: a square prism whose top edge is kinked INWARD
+/// by a hair, so the vertical edge at the kink is concave but folds by only `turn_degrees`. The
+/// fixture for the band between the two tolerances that matter: a fold of more than
+/// `FeatureEdge.DefaultFlatAngleDegrees` is a feature edge and can be selected, and a fold of
+/// less than a degree is too little for a blend to be carried round. The kink is
+/// `10 tan(turn / 2)` deep over a 10 mm run, which at 0.8 degrees is 70 microns - seventy of
+/// agg's own 0.001 mm grid steps, so the extrusion does not round it away. C#'s `height`
+/// defaults to 10.
+// Read by mattercad-model's mixed corner tests; the geometry-processing binaries that mount this
+// file do not use it.
+#[allow(dead_code)]
+pub fn create_shallow_reflex_prism(turn_degrees: f64, height: f64) -> Mesh {
+    let kink = 10.0 * (math_helper::degrees_to_radians(turn_degrees) / 2.0).tan();
+
+    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    path.move_to(0.0, 0.0);
+    path.line_to(20.0, 0.0);
+    path.line_to(20.0, 20.0);
+    path.line_to(10.0, 20.0 - kink);
+    path.line_to(0.0, 20.0);
+    path.close_polygon();
+
+    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, height)
+        .expect("the shallow reflex outline extrudes")
+}
+
 /// C# `LPrismTestMeshes.CreateLPrismWithFadingInnerCorner`: the L prism whose inner corner FADES -
 /// sharp for the bottom half, then opened out into a fillet that grows from nothing at the middle
 /// to `top_radius` at the top face. The blend is the exact rolling-ball surface, which for a
