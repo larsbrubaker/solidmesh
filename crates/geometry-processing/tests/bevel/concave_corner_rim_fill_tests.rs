@@ -1,9 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ConcaveCornerRimFillTests.cs`: the rim of an
-//! L-shaped top face. At the L's inner corner the top face's own level line rounds the INSIDE of a
-//! ninety degree turn, so its rail's chain parameter genuinely swings BACK there - the reading the
-//! zipper cannot use raw. The monotone envelope in the gap fill is held to it: the fill closes,
-//! keeps the solid's winding and moves an amount that is continuous in the size and invariant under
-//! a rigid motion. C# `[Arguments]` rows are a loop over the same-named test.
+//! The rim of an L-shaped top face. At the L's inner corner the top face's own level line rounds
+//! the INSIDE of a ninety degree turn, so its rail's chain parameter genuinely swings BACK there -
+//! the reading the zipper cannot use raw. The monotone envelope in the gap fill is held to it: the
+//! fill closes, keeps the solid's winding and moves an amount that is continuous in the size and
+//! invariant under a rigid motion. Each test's cases run as a loop inside it.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::{
@@ -24,7 +23,7 @@ const FOLD_DEGREES: f64 = 20.0;
 /// The length of the L's rim: 6 + 2 + 4 + 3 + 2 + 5.
 const RIM_LENGTH: f64 = 22.0;
 
-/// C# `AnLShapedRimFillsClosed`.
+/// An l shaped rim fills closed.
 #[test]
 fn an_l_shaped_rim_fills_closed() {
     for size in [0.2, 0.4, 0.6, 0.8] {
@@ -50,7 +49,7 @@ fn an_l_shaped_rim_fills_closed() {
     }
 }
 
-/// C# `TheRemovedVolumeIsContinuousInTheSize`: the fillet TAKES material - a positive amount,
+/// The fillet TAKES material - a positive amount,
 /// growing smoothly with the size, and never more than rounding every edge in isolation would take
 /// (the sum of the chorded edge prisms is an upper bound: the five convex corners overlap, and the
 /// inner corner adds back less than they take off).
@@ -69,7 +68,7 @@ fn the_removed_volume_is_continuous_in_the_size() {
     assert!(just_over < edge_prisms(0.42));
 }
 
-/// C# `TheFillIsInvariantUnderARigidMotion`: the same pick on the same part turned and moved takes
+/// The same pick on the same part turned and moved takes
 /// the same material away - the two cuts are the SAME cut, vertex for vertex.
 #[test]
 fn the_fill_is_invariant_under_a_rigid_motion() {
@@ -98,19 +97,18 @@ fn the_fill_is_invariant_under_a_rigid_motion() {
     );
 }
 
-/// C# `Removed`: how much smaller the filled solid is than the one that went in.
+/// How much smaller the filled solid is than the one that went in.
 fn removed(solid: &SolidWithChain, before: f64, size: f64) -> f64 {
     let fill = build(solid, size);
     let mesh = fill.mesh.as_ref().expect("a filled mesh").borrow();
     before - signed_volume(&mesh)
 }
 
-/// C# `EdgePrisms`: what rounding all six rim edges in isolation would take.
+/// What rounding all six rim edges in isolation would take.
 fn edge_prisms(size: f64) -> f64 {
     chorded_fillet_section(size, 4) * RIM_LENGTH
 }
 
-/// C# `Build`.
 fn build(solid: &SolidWithChain, size: f64) -> GapFillResult {
     let gap = band_gap_entry_points::build(
         &solid.0,
@@ -133,7 +131,6 @@ fn build(solid: &SolidWithChain, size: f64) -> GapFillResult {
     gap_fill::fill(&gap, BandProfile::Fillet, 4).expect("the fill runs")
 }
 
-/// C# `Moved`.
 fn moved(solid: &SolidWithChain) -> SolidWithChain {
     let turn = Matrix4X4::create_rotation(Vector3::new(0.3, -0.7, 1.1))
         * Matrix4X4::create_translation(11.5, -3.25, 7.125);
@@ -144,7 +141,7 @@ fn moved(solid: &SolidWithChain) -> SolidWithChain {
     )
 }
 
-/// C# `LPrism`: a prism on an L outline, capped top and bottom by a fan from a point that sees
+/// A prism on an L outline, capped top and bottom by a fan from a point that sees
 /// every corner of the L, with the top rim as the picked chain. Its one inner corner turns through
 /// ninety degrees the concave way.
 fn l_prism() -> SolidWithChain {

@@ -1,7 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainFieldEndRayTests.cs`: the end ray - an open
-//! chain's line carried on past an end named in `ChainField::end_rays`. Past that end a point reads
-//! its offset from the extended LINE and a parameter beyond the end; short of the end, and at an
-//! end without a ray, it reads exactly as before. C# `[Arguments]` rows are a loop.
+//! The end ray - an open chain's line carried on past an end named in `ChainField::end_rays`. Past
+//! that end a point reads its offset from the extended LINE and a parameter beyond the end; short
+//! of the end, and at an end without a ray, it reads exactly as before. Each test's cases run as a
+//! loop.
 
 use geometry_processing::bevel::level_line::ChainField;
 use vector_math::Vector3;

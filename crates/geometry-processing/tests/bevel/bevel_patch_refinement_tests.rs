@@ -1,8 +1,7 @@
-//! Port of `BevelPatchRefinementTests.cs`: the corner patch refined on the inside and untouched on
-//! its boundary. The boundary is the SEAM the runs ending at that corner carry point for point, so a
-//! refinement that moved it, or put a point between two of its points, would leave two solids
-//! meeting along two different polylines; the interior belongs to nobody else and is where the
-//! chord error lives.
+//! The corner patch refined on the inside and untouched on its boundary. The boundary is the SEAM
+//! the runs ending at that corner carry point for point, so a refinement that moved it, or put a
+//! point between two of its points, would leave two solids meeting along two different polylines;
+//! the interior belongs to nobody else and is where the chord error lives.
 
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
@@ -91,7 +90,7 @@ fn the_built_patch_keeps_its_seam_and_puts_every_other_vertex_on_the_ball_knife_
 }
 
 /// The same thing said of a real corner patch: its boundary vertices are the seam ring, to the bit,
-/// and everything else it carries is on the ball. (C#'s one test with two `[Arguments]`.)
+/// and everything else it carries is on the ball. One test run on two fixtures.
 fn the_built_patch_keeps_its_seam_and_puts_every_other_vertex_on_the_ball(fixture: &str) {
     let (part, picks) = part(fixture);
     let features = FeatureEdgeSet::create(&part);

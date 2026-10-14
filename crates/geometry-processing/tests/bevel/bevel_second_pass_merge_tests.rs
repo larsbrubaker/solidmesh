@@ -1,6 +1,5 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelSecondPassMergeTests.cs`: what the second pass
-//! (`bevel_second_pass`) makes of the creases it re-reads - which of them are the SAME crease
-//! ([`merge`]), which members a run's swept reading answers for
+//! What the second pass (`bevel_second_pass`) makes of the creases it re-reads - which of them are
+//! the SAME crease ([`merge`]), which members a run's swept reading answers for
 //! ([`longest_reading_and_what_it_covers`]), which of them are the crease the pick actually named,
 //! and what it does when the replacement will not sweep - on the nose-in-notch part with its ridge
 //! rounded (`nose_in_notch_cut`).
@@ -229,8 +228,8 @@ fn a_crease_whose_replacement_will_not_sweep_keeps_the_bead_it_has() {
         "nothing was built, so nothing of the first pass may be taken away"
     );
 
-    // Every kept row carries its reason by construction (a `BevelAdvisory`, never null), which is
-    // C#'s "a kept bead with no reason beside it is a silent fallback".
+    // Every kept row carries its reason by construction (a `BevelAdvisory`, never absent), so no
+    // kept bead is a silent fallback.
     assert_eq!(
         sorted(
             rebead
@@ -244,7 +243,7 @@ fn a_crease_whose_replacement_will_not_sweep_keeps_the_bead_it_has() {
     );
 }
 
-/// C#'s `ambiguityRatio: 1`: the resolver's gate open, every other tolerance at its default.
+/// An ambiguity ratio of 1: the resolver's gate open, every other tolerance at its default.
 fn gate_open() -> MatchTolerances {
     MatchTolerances {
         ambiguity_ratio: 1.0,
@@ -252,7 +251,7 @@ fn gate_open() -> MatchTolerances {
     }
 }
 
-/// C# `Read`: the crease this group reads off the cut part, by its feature set index and by the
+/// The crease this group reads off the cut part, by its feature set index and by the
 /// mesh edge each of those stands for - the two candidate identities.
 fn read(cut: &Mesh, group: &BevelEdgeGroup) -> (Vec<i32>, Vec<i32>) {
     let features = std::sync::Arc::new(FeatureEdgeSet::create_with_graph(
@@ -282,7 +281,7 @@ fn read(cut: &Mesh, group: &BevelEdgeGroup) -> (Vec<i32>, Vec<i32>) {
     (feature_indices, mesh_edges)
 }
 
-/// C# `Rebead`: the second pass over the cut part, against the first pass's readings taken on the
+/// The second pass over the cut part, against the first pass's readings taken on the
 /// part as it was BEFORE the ridge was rounded - which is where the rebuild takes them and what the
 /// guard measures a re-read crease against.
 fn rebead(

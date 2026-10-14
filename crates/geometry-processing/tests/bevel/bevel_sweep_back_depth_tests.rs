@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/BevelSweepBackDepthTests.cs`: the FLOOR under the sweep's
-//! one retry - a run that folded at full back depth is offered a shallower back, but only while
-//! that back is still deep enough to bury the tool in material.
+//! The FLOOR under the sweep's one retry - a run that folded at full back depth is offered a
+//! shallower back, but only while that back is still deep enough to bury the tool in material.
 
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::bevel_sweep_back_depth::{

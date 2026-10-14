@@ -1,4 +1,4 @@
-//! The construction `LevelLine/GrazeFixture.cs` and `LevelLine/LineToLineFixture.cs` share, written
+//! The construction the graze and line-to-line level-line fixtures share, written
 //! once: an annulus plate's vertices welded by rounding (`At`), its planar top face wound by signed
 //! area (`Top`), the hole and plate rim vertices by index (`Hole`, `Rim`), and the closing tail both
 //! fixtures repeat word for word - the bottom face, the hole's wall and the plate's wall. Each
@@ -58,10 +58,11 @@ impl AnnulusPlateBuilder {
         self.step
     }
 
-    /// C# `At`: rounding to the weld welds the pieces that meet; every region shares its boundary
+    /// Rounding to the weld welds the pieces that meet; every region shares its boundary
     /// points by construction, so nothing that should stay apart is ever within it.
     pub fn at(&mut self, x: f64, y: f64, z: f64) -> i32 {
-        // C# `(long)Math.Round(...)`: banker's rounding.
+        // Banker's rounding, so a coordinate exactly half way between weld steps always lands on
+        // the same key.
         let key = (
             (x * self.weld).round_ties_even() as i64,
             (y * self.weld).round_ties_even() as i64,
@@ -77,7 +78,7 @@ impl AnnulusPlateBuilder {
         index
     }
 
-    /// C# `Top`: the top face is planar at z = 0, so a triangle's winding is its signed area and
+    /// The top face is planar at z = 0, so a triangle's winding is its signed area and
     /// the tiling can name its corners in whatever order reads best without ever getting a normal
     /// backwards.
     pub fn top(&mut self, a: i32, b: i32, c: i32) {
@@ -92,18 +93,17 @@ impl AnnulusPlateBuilder {
         });
     }
 
-    /// C# `Wrapped`.
     fn wrapped(&self, i: i32) -> i32 {
         ((i % self.ring_segments) + self.ring_segments) % self.ring_segments
     }
 
-    /// C# `Hole`: hole rim vertex `i`, any integer taken round the ring.
+    /// Hole rim vertex `i`, any integer taken round the ring.
     pub fn hole(&mut self, i: i32) -> i32 {
         let a = self.wrapped(i) as f64 * self.step;
         self.at(self.hole_radius * a.cos(), self.hole_radius * a.sin(), 0.0)
     }
 
-    /// C# `Rim`: plate rim vertex `j`, any integer taken round the ring.
+    /// Plate rim vertex `j`, any integer taken round the ring.
     pub fn rim(&mut self, j: i32) -> i32 {
         let a = self.rim_offset + (self.wrapped(j) as f64 * self.step);
         self.at(

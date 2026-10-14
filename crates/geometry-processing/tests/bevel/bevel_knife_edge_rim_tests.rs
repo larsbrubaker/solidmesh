@@ -1,8 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelKnifeEdgeRimTests.cs`: a face rim whose four
-//! edges are NOT all right angles - "Center Right and Left Side.mcx" reduced to the prism it is a
-//! slice of. Three of the rim's edges are ordinary 90 degree box edges; the fourth is a 45 degree
-//! KNIFE edge where the selected face meets a slope, and a radius 2 fillet there spans 135 degrees
-//! and touches down `R / tan(22.5) = 4.83` from the edge instead of 2.
+//! A face rim whose four edges are NOT all right angles - "Center Right and Left Side.mcx" reduced
+//! to the prism it is a slice of. Three of the rim's edges are ordinary 90 degree box edges; the
+//! fourth is a 45 degree KNIFE edge where the selected face meets a slope, and a radius 2 fillet
+//! there spans 135 degrees and touches down `R / tan(22.5) = 4.83` from the edge instead of 2.
 //!
 //! The sections are measured by slicing the cut part with planes square to the edge being checked
 //! and asking every point of the cut surface how far it is from the arc that edge is supposed to
@@ -136,8 +135,8 @@ fn a_box_face_rim_of_four_right_angles_is_exact() {
 /// the band's boundary there runs on the top face beyond the top round's rail at x = 2, round the
 /// corner at the knife's reach, to the slope. In the control the knife round cuts the top face
 /// there, and the corner hole's rim must lie on the two rounds' mitred solid for
-/// `CornerMitrePatch.OnTheMitre` to place the filler (it declined on (2, 18, 20), 0.8284 outside
-/// the knife's round, while the band stopped at the step).
+/// `corner_mitre_patch::on_the_mitre` to place the filler (it declined on (2, 18, 20), 0.8284
+/// outside the knife's round, while the band stopped at the step).
 #[test]
 fn the_knifes_band_carries_past_the_step_onto_the_top_face() {
     let gap = band_of_the_x_min_rim(&prism(), RADIUS, false);
@@ -531,7 +530,7 @@ fn round_the_x_min_rim(part: &Mesh, round_profile: bool) -> Mesh {
 
     let solids: Vec<Mesh> = tools.into_iter().map(|tool| tool.mesh).collect();
     // The tools have to union, and the cutter has to come out of the part: the shared boolean
-    // panics where the kernel refuses either (C#'s null).
+    // panics where the kernel refuses either.
     let cutter = if solids.len() == 1 {
         solids[0].clone()
     } else {

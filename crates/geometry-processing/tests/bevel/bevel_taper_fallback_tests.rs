@@ -1,4 +1,4 @@
-//! Port of `BevelTaperFallbackTests.cs`: a run whose run-out the kernel refuses falls back to the
+//! A run whose run-out the kernel refuses falls back to the
 //! plain tool it would have had with the taper turned off (`bevel_group_tools::try_build`).
 
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use vector_math::{Matrix4X4, Vector3};
 
 use crate::topology_test_meshes::create_cylinder;
 
-/// C# `ARunWhoseTaperWillNotSweepFallsBackToThePlainTool`, both profiles.
+/// A run whose taper will not sweep falls back to the plain tool, for both profiles.
 #[test]
 fn a_run_whose_taper_will_not_sweep_falls_back_to_the_plain_tool() {
     for round in [true, false] {

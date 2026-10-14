@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ClippedCellBoundTests.cs`: the convex cell bound
-//! over a field with an END CLIP. A clipped sample's `distance - value` is NOT a setback, and the
-//! plane raises the field above every union-of-balls term - either one alone would let the bound
-//! stand under the field and retire the cell holding the peak. Also holds C#'s `internal`
-//! `GreatestBySampling`, which `SegmentCellBoundTests` shares.
+//! The convex cell bound over a field with an END CLIP. A clipped sample's `distance - value` is
+//! NOT a setback, and the plane raises the field above every union-of-balls term - either one alone
+//! would let the bound stand under the field and retire the cell holding the peak. Also holds
+//! `greatest_by_sampling`, which `segment_cell_bound_tests` shares.
 
 use std::rc::Rc;
 
@@ -134,7 +133,7 @@ fn pick_bound(field: &PickField, a: Vector3, b: Vector3, c: Vector3) -> f64 {
 }
 
 /// The field's greatest value over a dense barycentric grid of the cell, corners and edges
-/// included (C#'s default `steps` is 40).
+/// included (40 steps a side is the usual density).
 pub fn greatest_by_sampling(
     value_at: &dyn Fn(Vector3) -> f64,
     a: Vector3,

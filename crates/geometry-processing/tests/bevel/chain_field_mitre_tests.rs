@@ -1,9 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainFieldMitreTests.cs`: a chain vertex turning
-//! sharper than the bend threshold is MITRED on the outside of its turn - each edge's line carried
-//! on to the bisector plane, the offset polygon's corner - and one at or below the threshold keeps
-//! the vertex's ball bit for bit. The Around Center cases fill `around-center-r5` at the app's bend
-//! threshold and measure it against `around-center-control`. C# `[Arguments]` rows are a loop over
-//! the same-named test.
+//! A chain vertex turning sharper than the bend threshold is MITRED on the outside of its turn -
+//! each edge's line carried on to the bisector plane, the offset polygon's corner - and one at or
+//! below the threshold keeps the vertex's ball bit for bit. The Around Center cases fill
+//! `around-center-r5` at the app's bend threshold and measure it against `around-center-control`.
+//! Each test's cases run as a loop inside it.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -34,7 +33,7 @@ fn within(actual: f64, expected: f64, tolerance: f64) -> bool {
     (actual - expected).abs() <= tolerance
 }
 
-/// C# `TheOutsideOfASharpTurnReadsTheOffsetPolygonsCorner`.
+/// The outside of a sharp turn reads the offset polygon's corner.
 #[test]
 fn the_outside_of_a_sharp_turn_reads_the_offset_polygons_corner() {
     let plain = ChainField::from_polyline(&l_chain(), false, &[1.0, 1.0, 1.0]).expect("a chain");
@@ -106,7 +105,7 @@ fn the_outside_of_a_sharp_turn_reads_the_offset_polygons_corner() {
     );
 }
 
-/// C# `ATurnBelowTheThresholdIsBitIdentical`.
+/// A turn below the threshold is bit identical.
 #[test]
 fn a_turn_below_the_threshold_is_bit_identical() {
     // A 40-sided cylinder rim: every turn is 9 degrees, below the threshold.
@@ -149,7 +148,7 @@ fn a_turn_below_the_threshold_is_bit_identical() {
     }
 }
 
-/// C# `TheClosedChainsWrapIsMitredLikeAnyOtherVertex`.
+/// The closed chain's wrap is mitred like any other vertex.
 #[test]
 fn the_closed_chains_wrap_is_mitred_like_any_other_vertex() {
     // A closed square, starting at a corner: the wrap vertex (0, 0, 0) turns 90 degrees like the
@@ -190,7 +189,7 @@ fn the_closed_chains_wrap_is_mitred_like_any_other_vertex() {
     );
 }
 
-/// C# `AroundCenterFollowsTheControlAtItsSharpTurns`: size / 50 and not the old construction's
+/// Size / 50 and not the old construction's
 /// 0.05 - CAD exactness is not the goal (plan, decision 4).
 #[test]
 fn around_center_follows_the_control_at_its_sharp_turns() {
@@ -201,7 +200,7 @@ fn around_center_follows_the_control_at_its_sharp_turns() {
     );
 }
 
-/// C# `AroundCenterTipSpokesAreDrawnOnThePartnersLeg`.
+/// Around Center's tip spokes are drawn on the partner's leg.
 #[test]
 fn around_center_tip_spokes_are_drawn_on_the_partners_leg() {
     // Tighter than size / 50, so a slip back is seen before the test above fails: the tip spoke
@@ -216,7 +215,7 @@ fn around_center_tip_spokes_are_drawn_on_the_partners_leg() {
     );
 }
 
-/// C# `AroundCenterBuildsWithoutCrossingCells`.
+/// Around Center builds without crossing cells.
 #[test]
 fn around_center_builds_without_crossing_cells() {
     // The seam rows (FilletArc.InTheSeam) and the re-read tip spokes sit between rows still drawn
@@ -225,7 +224,7 @@ fn around_center_builds_without_crossing_cells() {
     assert_eq!(crossing_pairs(&mesh.borrow()), 0);
 }
 
-/// C# `AroundCenterFarFromTheOriginReadsTheSameWorst`.
+/// Around Center far from the origin reads the same worst.
 #[test]
 fn around_center_far_from_the_origin_reads_the_same_worst() {
     // Moved 1000 mm off in each axis: the seam rows must still be taken, which a tolerance scaled
@@ -241,7 +240,7 @@ fn around_center_far_from_the_origin_reads_the_same_worst() {
     );
 }
 
-/// C# `AroundCenterRoundedThroughFloatsReadsTheSameWorst`.
+/// Around Center rounded through floats reads the same worst.
 #[test]
 fn around_center_rounded_through_floats_reads_the_same_worst() {
     // Rails come through floats: ~4e-6 of noise at these coordinates, above a chain-length 1e-7
@@ -254,7 +253,8 @@ fn around_center_rounded_through_floats_reads_the_same_worst() {
     );
 }
 
-/// C# `AroundCenterRoundedThroughFloatsFarFromTheOriginReadsTheSameWorst` (rows 100, 300, 1000).
+/// Around Center rounded through floats far from the origin (100, 300 and 1000 out) reads the
+/// same worst distance off the control.
 #[test]
 fn around_center_rounded_through_floats_far_from_the_origin_reads_the_same_worst() {
     // The inner diamond's vertex on the wrap joint's bisector is on both legs, and the float
@@ -272,7 +272,7 @@ fn around_center_rounded_through_floats_far_from_the_origin_reads_the_same_worst
     }
 }
 
-/// C# `AroundCenterRotatedAndMovedThroughFloatsBuildsTheSameFill` (seeds 1-4): Around Center placed
+/// For seeds 1-4: Around Center placed
 /// by a rigid motion (rotated about a seeded random axis, then moved a seeded random distance out)
 /// and rounded through floats must build the same fill as at the origin: the same worst distance
 /// off the control, and the same triangle count - the merge's spokes and the rails' starts do not
@@ -298,12 +298,12 @@ fn around_center_rotated_and_moved_through_floats_builds_the_same_fill() {
     }
 }
 
-/// C#'s `random.NextDouble() * 2 * Math.PI`.
+/// A seeded random angle in [0, 2 pi).
 fn random_angle(random: &mut DotNetRandom) -> f64 {
     random.next_double() * 2.0 * std::f64::consts::PI
 }
 
-/// C#'s local `Unit()`.
+/// A seeded random unit direction.
 fn unit_from(random: &mut DotNetRandom) -> Vector3 {
     let x = random.next_double() - 0.5;
     let y = random.next_double() - 0.5;
@@ -311,7 +311,8 @@ fn unit_from(random: &mut DotNetRandom) -> Vector3 {
     Vector3::new(x, y, z)
 }
 
-/// C# `AroundCenterFill(place, throughFloats)`.
+/// The Around Center fill with every vertex moved by `place`, rounded through floats when
+/// `through_floats`.
 fn around_center_fill(
     place: &dyn Fn(Vector3) -> Vector3,
     through_floats: bool,
@@ -355,7 +356,7 @@ fn around_center_fill(
     (mesh, control, fixture.size)
 }
 
-/// C# `AroundCenterWorstOffTheControl(shift, throughFloats)`.
+/// The Around Center fill's worst distance off the control, both moved by `shift`.
 fn around_center_worst_off_the_control_shifted(
     shift: Vector3,
     through_floats: bool,
@@ -365,7 +366,7 @@ fn around_center_worst_off_the_control_shifted(
     (worst, worst_at, size)
 }
 
-/// C# `AroundCenterWorstOffTheControl(place, throughFloats)`: the published vertex standing
+/// The published vertex standing
 /// furthest off the control's surface, and the fill's live triangle count.
 fn around_center_worst_off_the_control(
     place: &dyn Fn(Vector3) -> Vector3,

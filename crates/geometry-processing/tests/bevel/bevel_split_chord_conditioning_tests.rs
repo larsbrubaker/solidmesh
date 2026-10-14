@@ -1,8 +1,7 @@
-//! Port of `BevelSplitChordConditioningTests.cs`: the split-chord pass (`bevel_split_chords`) on the
-//! raked bore whose mouth chords a boolean split (`bore_test_meshes`), with the fixture numbers of
-//! `surface_raked_bore_split_chord_tests`. The working copy reads the forty chords the bore has,
-//! wherever the part stands; a whole mouth is left exactly as it arrived; and only the star of a
-//! removed vertex is re-cut.
+//! The split-chord pass (`bevel_split_chords`) on the raked bore whose mouth chords a boolean split
+//! (`bore_test_meshes`), with the fixture numbers of `surface_raked_bore_split_chord_tests`. The
+//! working copy reads the forty chords the bore has, wherever the part stands; a whole mouth is
+//! left exactly as it arrived; and only the star of a removed vertex is re-cut.
 
 use std::collections::HashSet;
 

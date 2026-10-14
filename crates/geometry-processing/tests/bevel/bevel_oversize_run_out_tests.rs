@@ -1,11 +1,11 @@
-//! Ports `GeometryProcessingTests/BevelOversizeRunOutTests.cs`: a round BIGGER than the face it has
-//! to land on, run over the nose-in-notch part's top edge - "15mm Bevel Top Edge.mcx", where the
-//! Onshape control neither refuses nor shrinks but eats the whole of that face on the cut's side and
-//! runs the cylinder out on the walls either end. The pick is the LEFT slope's top edge from the 45
-//! degree knife tip at (0, 0, 20) to the centre crease at (10, 10, 20): 14.142 long, shorter than
-//! the radius 15. Both old refusals (face width, and `CapPullsToolBackPastSegment`) are about the
-//! one plane x = 0 the run ends on, and both are answered by it: the group is admitted on the cap,
-//! and the cap is built by the boolean (`bevel_cap_clip`) where the sweep cannot carry it.
+//! A round BIGGER than the face it has to land on, run over the nose-in-notch part's top edge -
+//! "15mm Bevel Top Edge.mcx", where the Onshape control neither refuses nor shrinks but eats the
+//! whole of that face on the cut's side and runs the cylinder out on the walls either end. The pick
+//! is the LEFT slope's top edge from the 45 degree knife tip at (0, 0, 20) to the centre crease at
+//! (10, 10, 20): 14.142 long, shorter than the radius 15. Both old refusals (face width, and
+//! `CapPullsToolBackPastSegment`) are about the one plane x = 0 the run ends on, and both are
+//! answered by it: the group is admitted on the cap, and the cap is built by the boolean
+//! (`bevel_cap_clip`) where the sweep cannot carry it.
 
 use std::rc::Rc;
 use std::sync::Arc;

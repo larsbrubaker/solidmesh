@@ -1,7 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/BevelSourceHullTests.cs` 1:1: the part's padded hull
-//! (a cube's is the cube pushed out by the pad, a tetrahedron's is the tetrahedron and not its box,
-//! a concave L's swallows the notch) and the bound it puts on a bead clip (a bead whose void runs
-//! past the end of the part is capped at it; one well inside is unchanged).
+//! The part's padded hull (a cube's is the cube pushed out by the pad, a tetrahedron's is the
+//! tetrahedron and not its box, a concave L's swallows the notch) and the bound it puts on a bead
+//! clip (a bead whose void runs past the end of the part is capped at it; one well inside is
+//! unchanged).
 
 use geometry_processing::bevel::bevel_bead_clip::{self, Clippable};
 use geometry_processing::bevel::bevel_source_hull::{self, PAD_FRACTION};

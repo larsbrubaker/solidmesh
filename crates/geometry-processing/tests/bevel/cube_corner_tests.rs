@@ -1,8 +1,8 @@
-//! Port of `LevelLine/CubeCornerTests.cs`: the first corner case of the level line - two adjacent
-//! cube faces picked as the app links them (the shared top-front edge 4-5, the rest of the top rim
-//! 5-6-7-4 and the rest of the front rim 5-1-0-4), three open chains meeting at two corners. Read
-//! as corners, not refused as chains that touch; the pair room is not read round the corner; the
-//! cut leaves each side group one loop whose owner changes only at the corners.
+//! The first corner case of the level line - two adjacent cube faces picked as the app links them
+//! (the shared top-front edge 4-5, the rest of the top rim 5-6-7-4 and the rest of the front rim
+//! 5-1-0-4), three open chains meeting at two corners. Read as corners, not refused as chains that
+//! touch; the pair room is not read round the corner; the cut leaves each side group one loop whose
+//! owner changes only at the corners.
 
 use std::rc::Rc;
 
@@ -20,7 +20,7 @@ use crate::several_chains_fixtures::FOLD_DEGREES;
 
 const ALL_OPEN: [bool; 3] = [false, false, false];
 
-/// C# `TwoAdjacentFacesAreTwoCornersWithRoomAndOneLoopPerGroup`.
+/// Two adjacent faces are two corners with room and one loop per group.
 #[test]
 fn two_adjacent_faces_are_two_corners_with_room_and_one_loop_per_group() {
     // Half 1, so the edge is 2 and a tenth of it is 0.2.
@@ -102,7 +102,7 @@ fn two_adjacent_faces_are_two_corners_with_room_and_one_loop_per_group() {
     ));
 }
 
-/// C# `ACornerPickRoutesToTheLevelLine`: the kernel's own validation takes the two faces as a good
+/// The kernel's own validation takes the two faces as a good
 /// pick with their two corners rather than naming a fault the route would fall through on.
 #[test]
 fn a_corner_pick_routes_to_the_level_line() {

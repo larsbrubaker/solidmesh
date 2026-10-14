@@ -1,7 +1,7 @@
-//! Port of `LevelLine/CubeCornerFillTests.cs`: the first corner case of the level line, the fill
-//! half (the strips and the corner hole, see `CornerFill`) - two adjacent faces of a cube (edge 2)
-//! picked as three open chains meeting at two corners, each chain zipped between its two rail
-//! pieces and each corner's hole closed. C# `[Arguments]` cases run as one loop per test.
+//! The first corner case of the level line, the fill half (the strips and the corner hole, see
+//! `CornerFill`) - two adjacent faces of a cube (edge 2) picked as three open chains meeting at two
+//! corners, each chain zipped between its two rail pieces and each corner's hole closed. Each
+//! test's cases run as a loop inside it.
 
 use std::rc::Rc;
 
@@ -35,7 +35,7 @@ const FIXTURE_A_DIGEST: &str = "013765d38bb29bf9";
 
 const EVERY_EDGE_ROOM: f64 = 1.0;
 
-/// C#'s motion: turned and carried off the origin.
+/// The rigid motion: turned and carried off the origin.
 fn motion() -> Matrix4X4 {
     Matrix4X4::create_rotation(Vector3::new(0.3, -0.7, 1.1))
         * Matrix4X4::create_translation(11.5, -3.25, 7.125)
@@ -46,7 +46,7 @@ fn largest_coordinate(p: Vector3) -> f64 {
     p.x.abs().max(p.y.abs().max(p.z.abs()))
 }
 
-/// C# `TwoAdjacentFacesChamferToAClosedSolidInsideTheCube`.
+/// Two adjacent faces chamfer to a closed solid inside the cube.
 #[test]
 fn two_adjacent_faces_chamfer_to_a_closed_solid_inside_the_cube() {
     for size in [0.2, 0.1, 0.5, 0.9] {
@@ -97,7 +97,7 @@ fn two_adjacent_faces_chamfer_to_a_closed_solid_inside_the_cube() {
     }
 }
 
-/// C# `APickWithoutCornersFillsBitIdentically`: a pick whose chains touch nowhere fills through the
+/// A pick whose chains touch nowhere fills through the
 /// per-chain zip exactly as before - pinned by the digest of fixture A's chamfer.
 #[test]
 fn a_pick_without_corners_fills_bit_identically() {
@@ -143,7 +143,7 @@ fn a_pick_without_corners_fills_bit_identically() {
     assert_eq!(digest, FIXTURE_A_DIGEST);
 }
 
-/// C# `EveryEdgeOfTheCubeChamfersClosed`: every edge of the cube as its own chain, twelve chains
+/// Every edge of the cube as its own chain, twelve chains
 /// meeting three at a time at eight corners.
 #[test]
 fn every_edge_of_the_cube_chamfers_closed() {
@@ -191,7 +191,7 @@ fn every_edge_of_the_cube_chamfers_closed() {
     }
 }
 
-/// C# `EveryEdgeOfTheCubeReadsRoomOne`: a face collapses when the insets of its four edges meet at
+/// A face collapses when the insets of its four edges meet at
 /// its centre, size 1 on a cube of edge 2; past it the band refuses by size.
 #[test]
 fn every_edge_of_the_cube_reads_room_one() {
@@ -267,7 +267,7 @@ fn fill_every_edge(size: f64, motion: Option<Matrix4X4>) -> GapFillResult {
     .expect("the fill")
 }
 
-/// C# `TwoAdjacentFacesFilletToAClosedSolidInsideTheCube`: the same two faces FILLETED; at a cube
+/// The same two faces FILLETED; at a cube
 /// corner with every edge rounded at one radius the true blend is a sphere octant about the
 /// corner's inset point, and a fillet removes less than the chamfer of the same size.
 #[test]
@@ -398,7 +398,7 @@ fn fill_cube_gap(size: f64, motion: Option<Matrix4X4>, profile: BandProfile) -> 
     built
 }
 
-/// C# `Digest`: every live triangle's corner positions, bit for bit, in triangle order, folded by
+/// Every live triangle's corner positions, bit for bit, in triangle order, folded by
 /// FNV-1a.
 fn digest(mesh: &LevelLineMesh) -> String {
     let mut h: u64 = 1469598103934665603;

@@ -1,11 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ConvexCellBoundTests.cs`: what `ConvexCellBound`
-//! (the union-of-balls bound read from the corners' own chain points) is worth to the
-//! refinement's bounded searches, and that it is sound. For any chain point c, `|q - c| - s(c)` is
-//! convex and stands above the field everywhere, so over a cell it is greatest at a corner; it is
-//! also never looser than the Lipschitz bound it joins. The cost rows' ceilings are work units
-//! (deterministic, not clock time) and `FieldCounters` is per thread here, so C#'s
-//! `[NotInParallel]` needs no nextest override. C# `[Arguments]` rows are a loop over the
-//! same-named test.
+//! What `ConvexCellBound` (the union-of-balls bound read from the corners' own chain points) is
+//! worth to the refinement's bounded searches, and that it is sound. For any chain point c, `|q -
+//! c| - s(c)` is convex and stands above the field everywhere, so over a cell it is greatest at a
+//! corner; it is also never looser than the Lipschitz bound it joins. The cost rows' ceilings are
+//! work units (deterministic, not clock time) and `FieldCounters` is per thread, so the tests need
+//! not run alone. Each test's cases run as a loop inside it.
 
 use std::fmt::Write as _;
 use std::rc::Rc;
@@ -22,7 +20,7 @@ use vector_math::Vector3;
 
 use crate::grid_hole_plate_fixture;
 
-/// C# `Cost`: one build's cost, with the mesh digest that says the output did not move.
+/// One build's cost, with the mesh digest that says the output did not move.
 struct Cost {
     spent: i64,
     evaluates: i64,
@@ -31,7 +29,7 @@ struct Cost {
     meter: String,
 }
 
-/// Turns the meter off however the measure leaves (C#'s `finally`).
+/// Turns the meter off however the measure leaves.
 struct MeterOff;
 
 impl Drop for MeterOff {
@@ -40,7 +38,6 @@ impl Drop for MeterOff {
     }
 }
 
-/// C# `Measure`.
 fn measure(span: f64, size: f64) -> Cost {
     let (positions, indices, chains) = grid_hole_plate_fixture::pick_with_span(4, span);
     let budget = Rc::new(
@@ -86,8 +83,9 @@ fn measure(span: f64, size: f64) -> Cost {
     }
 }
 
-/// C# `Digest` (here and in `ManyChainBuildCostTests`, which reads this one): every live
-/// triangle's corners to the bit (C# "R" text), SHA-256, the first 16 hex digits upper case - the
+/// The mesh's digest (here and in `many_chain_build_cost_tests`, which reads this one): every live
+/// triangle's corners to the bit (shortest round-trip text), SHA-256, the first 16 hex digits upper
+/// case - the
 /// same reading the cost tests pin.
 pub fn digest(mesh: &LevelLineMesh) -> String {
     let mut text = String::new();
@@ -116,9 +114,9 @@ pub fn digest(mesh: &LevelLineMesh) -> String {
     hex[..16].to_string()
 }
 
-/// C# `TheSharperBoundCostsLessAndBuildsTheSameMesh`: one build at a stated span over size must
-/// cost no more than the ceiling the sharper bound measured, and must build the mesh recorded here
-/// (at span 2 byte for byte the digest `ManyChainBuildCostTests` pinned BEFORE the bound existed).
+/// One build at a stated span over size must cost no more than the ceiling the sharper bound
+/// measured, and must build the mesh recorded here (at span 2 byte for byte the digest
+/// `many_chain_build_cost_tests` pinned BEFORE the bound existed).
 #[test]
 fn the_sharper_bound_costs_less_and_builds_the_same_mesh() {
     let rows: [(f64, f64, i64, &str); 2] = [
@@ -160,7 +158,7 @@ fn the_sharper_bound_costs_less_and_builds_the_same_mesh() {
     }
 }
 
-/// C# `FieldsToBeSoundOver`: one chain whose setback varies, a pick of several such chains, and
+/// One chain whose setback varies, a pick of several such chains, and
 /// the same field with its setbacks scaled.
 fn fields_to_be_sound_over() -> Vec<(&'static str, RoomField)> {
     let square = [
@@ -204,7 +202,7 @@ fn fields_to_be_sound_over() -> Vec<(&'static str, RoomField)> {
     ]
 }
 
-/// C# `TheBoundStandsOverTheFieldAndUnderTheLipschitzBound`: over seeded random cells the bound
+/// Over seeded random cells the bound
 /// never stands below a value the field really takes inside the cell, and never above the
 /// Lipschitz bound the refinement used before it.
 #[test]
@@ -251,7 +249,7 @@ fn the_bound_stands_over_the_field_and_under_the_lipschitz_bound() {
     }
 }
 
-/// C# `EverySampleSaysItsValueIsItsDistanceLessItsSetback`: the value IS the distance less the
+/// The value IS the distance less the
 /// setback at the chain point the sample names - the bound rebuilds the value from `distance` and
 /// `nearest`.
 #[test]
@@ -274,7 +272,7 @@ fn every_sample_says_its_value_is_its_distance_less_its_setback() {
     }
 }
 
-/// C# `SeedingASearchChangesItsCostAndNotItsAnswer`: a floor it must beat changes a search's COST
+/// A floor it must beat changes a search's COST
 /// and not its answer.
 #[test]
 fn seeding_a_search_changes_its_cost_and_not_its_answer() {
@@ -323,7 +321,7 @@ fn seeding_a_search_changes_its_cost_and_not_its_answer() {
     }
 }
 
-/// C# `SomewhereAbout`: a point somewhere about the chains above - inside the band, outside it,
+/// A point somewhere about the chains above - inside the band, outside it,
 /// and over the gap.
 fn somewhere_about(random: &mut DotNetRandom) -> Vector3 {
     Vector3::new(
@@ -333,7 +331,7 @@ fn somewhere_about(random: &mut DotNetRandom) -> Vector3 {
     )
 }
 
-/// C# `Spread`: a cell edge of a size the refinement really works at, from a hundredth up to a
+/// A cell edge of a size the refinement really works at, from a hundredth up to a
 /// whole chain.
 fn spread(random: &mut DotNetRandom) -> Vector3 {
     let scale = 10f64.powf((random.next_double() * 2.5) - 2.0);

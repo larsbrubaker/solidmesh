@@ -1,4 +1,4 @@
-//! Port of the barrel-port half of `Fixtures/BoreTestMeshes.cs` (`CreateBarrelWithARadialPort` and
+//! The barrel-port half of the bore test meshes (`create_barrel_with_a_radial_port` and
 //! everything it lays): a segment of the "Many Holes" flash hider's BARREL with one radial PORT
 //! bored through it, at the part's own numbers - a 124 sided barrel of radius 16.3565 with a 64
 //! facet bore of radius 1.484 drilled square through its 3 mm wall, the barrel's axis along y and
@@ -32,12 +32,12 @@ pub const BARREL_HALF_LENGTH: f64 = 6.0;
 
 const TAU: f64 = 2.0 * std::f64::consts::PI;
 
-/// C# `(int)Math.Round(x)`: banker's rounding, then truncation.
+/// Banker's rounding, then truncation, so a value on a half step always rounds the same way.
 fn round_to_int(value: f64) -> i32 {
     value.round_ties_even() as i32
 }
 
-/// C# `CreateBarrelWithARadialPort` at its default arguments.
+/// The barrel with a radial port at its default arguments.
 pub fn create_barrel_with_a_radial_port() -> Mesh {
     create_barrel_with_a_radial_port_sized(
         BARREL_SIDES,
@@ -50,7 +50,7 @@ pub fn create_barrel_with_a_radial_port() -> Mesh {
     )
 }
 
-/// C# `CreateBarrelWithARadialPort`: the segment closed off flat underneath and square at its four
+/// The segment closed off flat underneath and square at its four
 /// sides; the port runs from its mouth down through the flat underside, so the only loop of the
 /// barrel's own rim with a curved surface on both sides is the mouth itself.
 pub fn create_barrel_with_a_radial_port_sized(
@@ -106,7 +106,7 @@ pub fn create_barrel_with_a_radial_port_sized(
     mesh
 }
 
-/// C# `TheMouthOfTheRadialPort`: the port mouth as the exact intersection of the two faceted
+/// The port mouth as the exact intersection of the two faceted
 /// cylinders - the hit of each bore ruling on the barrel, and between two of those every crossing
 /// of a barrel crease by that bore facet's own plane. Answers the loop and where in it each
 /// ruling's hit sits.
@@ -490,7 +490,7 @@ fn emit_the_face_facing(mesh: &mut Mesh, polygon: &[Vector3], facing: Vector3) {
     mesh.create_face(&points);
 }
 
-/// C#'s `WalkTheRingBetween` for this fixture: the ring between an inner loop and an outer one,
+/// The ring walk for this fixture: the ring between an inner loop and an outer one,
 /// both wound the same way about the origin and both containing it, taken by whichever loop's next
 /// vertex comes first in ANGLE about it.
 fn walk_the_ring_between(

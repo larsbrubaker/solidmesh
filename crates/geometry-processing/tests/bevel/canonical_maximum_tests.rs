@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/CanonicalMaximumTests.cs`: a plateau or a ridge
-//! has a whole LINE of equally greatest value, so "the greatest point" is only a statement about
-//! the part if the search names the same one of them wherever the part stands.
+//! A plateau or a ridge has a whole LINE of equally greatest value, so "the greatest point" is only
+//! a statement about the part if the search names the same one of them wherever the part stands.
 
 use std::f64::consts::PI;
 
@@ -10,7 +9,7 @@ use vector_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 
-/// C# `Motions`: five proper rotations with translations - no reflections, so the part is not
+/// Five proper rotations with translations - no reflections, so the part is not
 /// changed.
 fn motions() -> Vec<Matrix4X4> {
     vec![
@@ -30,7 +29,7 @@ fn field(chain: &[Vector3], setbacks: &[f64]) -> ChainField {
     ChainField::from_polyline(chain, false, setbacks).expect("a valid polyline")
 }
 
-/// C# `TheGreatestPointOnAPlateauIsTheSameWhereverThePartStands`: the field of a straight chain
+/// The field of a straight chain
 /// has a RIDGE parallel to it; the greatest point must be the same point of the part in every
 /// placement.
 #[test]
@@ -69,7 +68,7 @@ fn the_greatest_point_on_a_plateau_is_the_same_wherever_the_part_stands() {
     }
 }
 
-/// C# `TheGreatestPointOnARidgeSegmentIsTheSameWhereverThePartStands`: the same claim in one
+/// The same claim in one
 /// dimension - a segment lying ALONG the ridge is equally greatest everywhere.
 #[test]
 fn the_greatest_point_on_a_ridge_segment_is_the_same_wherever_the_part_stands() {
@@ -98,7 +97,7 @@ fn the_greatest_point_on_a_ridge_segment_is_the_same_wherever_the_part_stands() 
     }
 }
 
-/// C# `AStripWhoseSpineIsARidgeIsCutTheSameWhereverItStands`: a two-triangle strip whose spine is
+/// A two-triangle strip whose spine is
 /// a ridge is cut the same way in every placement - same triangle and vertex counts.
 #[test]
 fn a_strip_whose_spine_is_a_ridge_is_cut_the_same_wherever_it_stands() {
@@ -143,7 +142,7 @@ fn a_strip_whose_spine_is_a_ridge_is_cut_the_same_wherever_it_stands() {
     }
 }
 
-/// C# `Cut`: the refusal and, where it built, the mesh's vertex and triangle counts.
+/// The refusal and, where it built, the mesh's vertex and triangle counts.
 fn cut(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

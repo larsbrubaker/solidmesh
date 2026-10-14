@@ -1,5 +1,4 @@
-//! Port of `BevelPartnerTubeClipTests.cs`: a partnered bead's station profile clipped out of its
-//! partners' tubes.
+//! A partnered bead's station profile clipped out of its partners' tubes.
 
 use geometry_processing::bevel::bevel_edge_tool_builder as builder;
 use geometry_processing::bevel::bevel_partner_tube_clip::try_clip;
@@ -51,7 +50,7 @@ fn in_part(point: Vector2, x_axis: Vector3, y_axis: Vector3) -> Vector3 {
     (x_axis * point.x) + (y_axis * point.y)
 }
 
-/// C# `WithNoPartnerTheProfileIsHandedBackPointForPoint`.
+/// With no partner the profile is handed back point for point.
 #[test]
 fn with_no_partner_the_profile_is_handed_back_point_for_point() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -69,7 +68,7 @@ fn with_no_partner_the_profile_is_handed_back_point_for_point() {
     }
 }
 
-/// C# `APartnerThatDoesNotReachThisStationChangesNothing`.
+/// A partner that does not reach this station changes nothing.
 #[test]
 fn a_partner_that_does_not_reach_this_station_changes_nothing() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -88,7 +87,7 @@ fn a_partner_that_does_not_reach_this_station_changes_nothing() {
     assert_eq!(clipped.len(), profile.len());
 }
 
-/// C# `APartnerTubeReachingIntoTheFillTakesItsBite`.
+/// A partner tube reaching into the fill takes its bite.
 #[test]
 fn a_partner_tube_reaching_into_the_fill_takes_its_bite() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -135,7 +134,7 @@ fn a_partner_tube_reaching_into_the_fill_takes_its_bite() {
     );
 }
 
-/// C# `APartnerTubeThatSwallowsTheStationIsRefusedInWords`.
+/// A partner tube that swallows the station is refused in words.
 #[test]
 fn a_partner_tube_that_swallows_the_station_is_refused_in_words() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -155,7 +154,7 @@ fn a_partner_tube_that_swallows_the_station_is_refused_in_words() {
     );
 }
 
-/// C# `TwoPartnersAreBothTakenOut`.
+/// Two partners are both taken out.
 #[test]
 fn two_partners_are_both_taken_out() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -185,7 +184,7 @@ fn inside(partner: &BevelPartnerTube, point: Vector2, x_axis: Vector3, y_axis: V
     partner.depth(in_part(point, x_axis, y_axis)) < -1e-6
 }
 
-/// C# `ADeepBiteKeepsTheCountAndLaysTheSeamInOneDirectionRoundTheTube`.
+/// A deep bite keeps the count and lays the seam in one direction round the tube.
 #[test]
 fn a_deep_bite_keeps_the_count_and_lays_the_seam_in_one_direction_round_the_tube() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -308,7 +307,7 @@ fn flat(point: Vector3, x_axis: Vector3, y_axis: Vector3) -> Vector2 {
     Vector2::new(point.dot(x_axis), point.dot(y_axis))
 }
 
-/// C# `ADeepBiteSpendsItsEndSlotsOnTheCrossingsThemselves`.
+/// A deep bite spends its end slots on the crossings themselves.
 #[test]
 fn a_deep_bite_spends_its_end_slots_on_the_crossings_themselves() {
     let (profile, x_axis, y_axis, z_axis) = profile();
@@ -354,7 +353,7 @@ fn a_deep_bite_spends_its_end_slots_on_the_crossings_themselves() {
     );
 }
 
-/// C# `AChordedPartnerLeavesTheSeamOnItsOwnFacetsAndASmoothOneDoesNot`.
+/// A chorded partner leaves the seam on its own facets and a smooth one does not.
 #[test]
 fn a_chorded_partner_leaves_the_seam_on_its_own_facets_and_a_smooth_one_does_not() {
     let (profile, x_axis, y_axis, z_axis) = profile();

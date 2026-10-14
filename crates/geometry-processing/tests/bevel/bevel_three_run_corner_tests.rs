@@ -1,11 +1,11 @@
-//! Ports `GeometryProcessingTests/BevelThreeRunCornerTests.cs`: three runs meeting at one corner
-//! where their setbacks are NOT equal - the rolling ball vertex blend on a 45 degree knife tip,
-//! the corner "Bevel to Center Feature.mcx" measures against Onshape. The tip's tool touches down
-//! `R / tan(22.5) = 8.208` along its faces while the top edges set back only `R = 3.4`; a point on
-//! a 90 degree edge retreats `R(sqrt(2) - 1)` under its fillet, so the top edge at the tip's own
-//! setback has to be 1.408 below where it started. At an ALL-CONVEX corner of exactly three runs
-//! each run drives one ring PAST the centre plane (`bevel_corner_seam`, `bevel_overshoot_rings`),
-//! so the patch's wall is interior to the union rather than coincident with a cap.
+//! Three runs meeting at one corner where their setbacks are NOT equal - the rolling ball vertex
+//! blend on a 45 degree knife tip, the corner "Bevel to Center Feature.mcx" measures against
+//! Onshape. The tip's tool touches down `R / tan(22.5) = 8.208` along its faces while the top edges
+//! set back only `R = 3.4`; a point on a 90 degree edge retreats `R(sqrt(2) - 1)` under its fillet,
+//! so the top edge at the tip's own setback has to be 1.408 below where it started. At an
+//! ALL-CONVEX corner of exactly three runs each run drives one ring PAST the centre plane
+//! (`bevel_corner_seam`, `bevel_overshoot_rings`), so the patch's wall is interior to the union
+//! rather than coincident with a cap.
 
 use geometry_processing::bevel::bevel_arc_chording::effective_segments;
 use geometry_processing::bevel::bevel_corner_patch;

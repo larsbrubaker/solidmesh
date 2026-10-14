@@ -1,5 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/AroundCenterKinkMeasureTests.Flow.cs`, the second
-//! partial of `AroundCenterKinkMeasureTests` (the `flow` module of
+//! The second half of `around_center_kink_measure_tests` (its `flow` module, in
 //! `around_center_kink_measure_tests.rs`, whose gate, build and log plumbing it shares): a
 //! MEASUREMENT of the flow design ("a blend that flows onto the neighbouring face") at the tip wall
 //! of "5mm Bevel Around Center".
@@ -90,7 +89,7 @@ impl Rows<'_> {
         to_control(self.control, q).0
     }
 
-    /// C#'s `Row`: the worst arc vertex to the control, and the arc's midpoint's.
+    /// The worst arc vertex to the control, and the arc's midpoint's.
     fn row(&self, l: Vector3, c: Vector3) -> (f64, f64) {
         let r = self.rail.at;
         let mut worst = 0.0f64;
@@ -141,7 +140,7 @@ impl Rows<'_> {
     }
 }
 
-/// C# `TheFlowDesignReadsAgainstTheControl`: the mitred field (sharp turn 10 degrees) along the
+/// The mitred field (sharp turn 10 degrees) along the
 /// knife crease v0-v2, the value carried one hop onto the `x = -20` face and the width of the strip
 /// it reads below zero, the mitred rail's crossing of the crease, and the mitre wedge's rows laid
 /// with today's control point and with the tangent-meet one. The rows are laid by hand from the

@@ -1,39 +1,38 @@
 //! The plate with a round bore, the plate with a RAKED bore, and the split of one of its edges.
-//! Ports the pieces of `Tests/GeometryProcessingTests/Fixtures/BoreTestMeshes.cs`
-//! (`CreatePlateWithARoundBore`, `CreatePlateWithARakedBore`, `CreateTheRakedFixture` and its
-//! `Raked*` dimensions, `TileTheRingBetween`) and
-//! `BoreTestMeshesSplitChords.cs` (`CreatePlateWithARakedBoreWhoseMouthChordsAreSplit`,
-//! `SplitTheEdgeBetween`) that the ported classes read; the
-//! fixture's other parts land with the classes that read them.
+//! The pieces of the bore test meshes (`create_plate_with_a_round_bore`,
+//! `create_plate_with_a_raked_bore`, `create_the_raked_fixture` and its `RAKED_*` dimensions,
+//! `tile_the_ring_between`) and of their split-chord variant
+//! (`create_plate_with_a_raked_bore_whose_mouth_chords_are_split`, `split_the_edge_between`) that
+//! the test classes here read; the barrel port and the edge bore are their own modules.
 
 use agg_path::vertex_storage::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::revolve;
 use polygon_mesh::{FaceList, Mesh};
 use vector_math::{math_helper, Vector3, Vector3Float};
 
-/// C# `RakedSides`: how many facets round the raked fixture's bore, which is also its mouth's
+/// How many facets round the raked fixture's bore, which is also its mouth's
 /// chord count.
 pub const RAKED_SIDES: i32 = 40;
 
-/// C# `RakedRakeDegrees`: how far the raked fixture's drill leans off the plate's normal, in the
+/// How far the raked fixture's drill leans off the plate's normal, in the
 /// x z plane.
 pub const RAKED_RAKE_DEGREES: f64 = 45.0;
 
-/// C# `RakedRadius`: the raked fixture's bore radius.
+/// The raked fixture's bore radius.
 pub const RAKED_RADIUS: f64 = 1.5;
 
-/// C# `RakedThickness`: how thick that plate is, centred on z = 0.
+/// How thick that plate is, centred on z = 0.
 pub const RAKED_THICKNESS: f64 = 3.0;
 
-/// C# `RakedDrillAxis`: the raked fixture's drill direction, leaned [`RAKED_RAKE_DEGREES`] off the
+/// The raked fixture's drill direction, leaned [`RAKED_RAKE_DEGREES`] off the
 /// plate's normal in the x z plane.
 pub fn raked_drill_axis() -> Vector3 {
     let rake = math_helper::degrees_to_radians(RAKED_RAKE_DEGREES);
     Vector3::new(rake.sin(), 0.0, rake.cos())
 }
 
-/// C# `CreateTheRakedFixture`: the raked fixture at the dimensions every suite that reads it uses
-/// (C#'s default land of 6).
+/// The raked fixture at the dimensions every suite that reads it uses
+/// (a land of 6).
 pub fn create_the_raked_fixture() -> Mesh {
     create_plate_with_a_raked_bore(
         RAKED_SIDES,
@@ -44,7 +43,7 @@ pub fn create_the_raked_fixture() -> Mesh {
     )
 }
 
-/// C# `CreatePlateWithARoundBore`: a plate `thickness` thick, centred on z = 0, with a bore of
+/// A plate `thickness` thick, centred on z = 0, with a bore of
 /// `radius` drawn with `sides` facets and `land` of plate outside it.
 pub fn create_plate_with_a_round_bore(sides: i32, radius: f64, thickness: f64, land: f64) -> Mesh {
     let mut path = VertexStorage::new();
@@ -58,7 +57,7 @@ pub fn create_plate_with_a_round_bore(sides: i32, radius: f64, thickness: f64, l
     revolve(&path, sides, 0.0, std::f64::consts::TAU, true).expect("the plate revolves")
 }
 
-/// C# `CreatePlateWithARakedBore`: the same plate and the same bore, drilled at a RAKE instead of
+/// The same plate and the same bore, drilled at a RAKE instead of
 /// square - so each mouth is an ELLIPSE and the wedge along it runs from `90 - rake` at one end of
 /// the loop to `90 + rake` at the other.
 ///
@@ -126,7 +125,7 @@ pub fn create_plate_with_a_raked_bore(
     mesh
 }
 
-/// C# `TileTheRingBetween`: tiles the flat ring between an inner loop and an outer one, both
+/// Tiles the flat ring between an inner loop and an outer one, both
 /// wound the same way and both containing the origin, by walking them together in ANGLE about it:
 /// at each step the vertex whose angle comes next is taken, and the triangle between the old spoke
 /// and the new one is emitted. It cannot fold, because the two sequences are each sorted by angle
@@ -222,12 +221,12 @@ fn tile_the_ring_between(
     }
 }
 
-/// C# `CreatePlateWithARakedBoreWhoseMouthChordsAreSplit`: the raked plate with chords of its
+/// The raked plate with chords of its
 /// upper mouth split by an extra vertex standing part way along each - the thing a boolean leaves
 /// behind and a hand built ring never has. `splits` names each chord by the index of the vertex it
 /// leaves and how far along it the extra vertex stands. `standing_at` is where the bore's own
 /// centre is put, moved BEFORE the splits so each split vertex is read off the float coordinates
-/// the part's own boolean would have read it off (C#'s default `Vector3.Zero` leaves it in place).
+/// the part's own boolean would have read it off (a zero `standing_at` leaves it in place).
 pub fn create_plate_with_a_raked_bore_whose_mouth_chords_are_split(
     sides: i32,
     radius: f64,
@@ -266,7 +265,7 @@ pub fn create_plate_with_a_raked_bore_whose_mouth_chords_are_split(
     mesh
 }
 
-/// C# `SplitTheEdgeBetween`: splits the mesh edge between the vertices nearest `from` and `to` at
+/// Splits the mesh edge between the vertices nearest `from` and `to` at
 /// `at` of the way along it, each face on it into two keeping its winding.
 pub fn split_the_edge_between(mesh: &mut Mesh, from: Vector3, to: Vector3, at: f64) {
     let nearest = |mesh: &Mesh, point: Vector3| {
@@ -301,8 +300,8 @@ pub fn split_the_edge_between(mesh: &mut Mesh, from: Vector3, to: Vector3, at: f
         });
 
         let Some(carries) = carries else {
-            // C# keeps the face itself, with the normal it was made with - before any stand-off
-            // moved its vertices - and the builder reads that normal.
+            // The face is kept itself, with the normal it was made with - before any stand-off
+            // moved its vertices - because the builder reads that normal.
             replaced.add_with_normal(face.v0, face.v1, face.v2, face.normal);
             continue;
         };

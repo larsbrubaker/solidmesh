@@ -1,7 +1,6 @@
-//! Port of `LevelLine/EndFaceCarryTests.cs`: plan stage 2, the end face's half (flag on) - where a
-//! round ends on an END FACE, the strip is carried to that face's plane and cut into it, so the
-//! crease's old corner at the end stops being a vertex of anything the fill keeps. Bottom Center
-//! Edge's apex end is the app control's witness.
+//! Plan stage 2, the end face's half (flag on) - where a round ends on an END FACE, the strip is
+//! carried to that face's plane and cut into it, so the crease's old corner at the end stops being
+//! a vertex of anything the fill keeps. Bottom Center Edge's apex end is the app control's witness.
 
 use std::rc::Rc;
 

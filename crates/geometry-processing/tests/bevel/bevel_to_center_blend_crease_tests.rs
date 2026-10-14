@@ -1,15 +1,14 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BevelToCenterBlendCreaseTests.cs`: where "Bevel to
-//! Center Feature"'s left-slope top edge (G2, fixture chain 2: v18 - v2) ends on the notch's concave
-//! crease, the Onshape control runs its round out FLAT in the right slope's plane - app frame
-//! x + y = 20, the plane of the unpicked right-slope top edge v12 - v18 and of the top face's own
-//! flat edge v18 - v7, which is collinear with it. Without the square-crease end clip the rebuild
-//! carries the round on past that plane into the top face's far triangles and stops it about a
-//! radius from the crease vertex v18, leaving ~79 degree creases on the top face. C# `[Arguments]`
-//! rows are a loop over the same-named test.
+//! Where "Bevel to Center Feature"'s left-slope top edge (G2, fixture chain 2: v18 - v2) ends on
+//! the notch's concave crease, the Onshape control runs its round out FLAT in the right slope's
+//! plane - app frame x + y = 20, the plane of the unpicked right-slope top edge v12 - v18 and of
+//! the top face's own flat edge v18 - v7, which is collinear with it. Without the square-crease end
+//! clip the rebuild carries the round on past that plane into the top face's far triangles and
+//! stops it about a radius from the crease vertex v18, leaving ~79 degree creases on the top face.
+//! Each test's cases run as a loop inside it.
 //!
-//! Skipped as in C# (`[Skip]`): `TheRightTipsPairCornerIsTheMitreOfItsTwoRounds` ("0.519 with the
-//! patch laid on the mitre and its crease split in (CornerMitrePatch.OnTheMitre): the filler's
-//! patch is too coarse for a 3.4 round - the next rung").
+//! Not yet asserted: that the right tip's pair corner is the mitre of its two rounds (0.519 off
+//! with the patch laid on the mitre and its crease split in: the filler's patch is too coarse for
+//! a 3.4 round - the next rung).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -30,16 +29,16 @@ use crate::sweep_mesh_measures;
 /// This fixture's frame is the app's shifted by (-20, -118.5, 0).
 const TO_APP: Vector3 = Vector3::new(20.0, 118.5, 0.0);
 
-/// C# `TheCreaseEndStopsInTheRightSlopesPlane` (rows 3.4, 3.0): no output vertex below the top
+/// At sizes 3.4 and 3.0, no output vertex below the top
 /// face near the crease stands past the right slope's plane. Measured (both sizes build and fill)
-/// without the end clip (`SquareCreaseEndClip.SquareCreaseEndClips`): 2.708 past it at 3.0 and
+/// without the end clip (`square_crease_end_clip`): 2.708 past it at 3.0 and
 /// 3.084 at 3.4, among them app (10.696, 10.477, 18.961), the vertex the app test read as the G2
 /// run-out's worst (0.829 from the control).
 #[test]
 fn the_crease_end_stops_in_the_right_slopes_plane() {
     for size in [3.4, 3.0] {
-        // C#'s `using (SquareCreaseEndClip.TurnSquareCreaseClipsOff())`: the switch rides on the
-        // build's and the fill's budgets.
+        // The clip is switched off for this one build: the switch rides on the build's and the
+        // fill's budgets, so no other test sees it.
         let unclipped = past_the_plane(size, true);
         assert!(unclipped > 2.5, "{size}: the curl, without the clip");
 
@@ -51,7 +50,7 @@ fn the_crease_end_stops_in_the_right_slopes_plane() {
     }
 }
 
-/// C# `AtTheSavedSizeTheWholePickDoesNotIntersectItself`: the whole pick at the saved 3.4 fills
+/// The whole pick at the saved 3.4 fills
 /// without intersecting itself where the source does not - the check the app's level-line route
 /// makes before it keeps a build. Failing it, the app quietly takes the existing Surface
 /// construction instead.
@@ -80,7 +79,7 @@ fn at_the_saved_size_the_whole_pick_does_not_intersect_itself() {
     );
 }
 
-/// C# `TheEdgeAloneFillsWithTheClipAtEverySize` (rows 1, 3.4, 4, 5.5, 6.3, 6.59): "15mm Bevel Top
+/// At sizes 1, 3.4, 4, 5.5, 6.3 and 6.59: "15mm Bevel Top
 /// Edge" is the same part with the same edge picked alone, and the clipped end fills at every size
 /// up to the file's 6.59. Read SAME sense, the corners where the rails meet the plane are made
 /// vertices on the plane's edges (`EndClipCorners`) and the end is capped in the plane. Read
@@ -119,7 +118,7 @@ fn the_edge_alone_fills_with_the_clip_at_every_size() {
     }
 }
 
-/// C# `PastTheCreaseTheEdgeAloneIsRefusedBySize`: past the crease's length below the end vertex
+/// Past the crease's length below the end vertex
 /// (6.667, down to the nose) the section's foot leaves the crease, and the fill refused
 /// ArcSinksIntoTheSolid at 7.0. The room reads the crease's length, so 7.0 is refused by size and
 /// the reading offered to a drag names the same number, to a float's noise.
@@ -162,11 +161,10 @@ fn past_the_crease_the_edge_alone_is_refused_by_size() {
     );
 }
 
-/// C# `EachTipsRoundReachesTheBottomFace` (rows 3.4, 3.0): each knife tip's round reaches the
-/// BOTTOM face - the midpoint of the round's bottom arc, `size` from the tip's axis toward the tip,
-/// is on the output surface, as it is on the Onshape control. The corner fill's rows at a free end
-/// (`CornerFill.FreeEnds`) carry a station on each rail wherever the other has one, so the last row
-/// lies in the bottom plane.
+/// At sizes 3.4 and 3.0, each knife tip's round reaches the BOTTOM face - the midpoint of the
+/// round's bottom arc, `size` from the tip's axis toward the tip, is on the output surface, as it
+/// is on the Onshape control. The corner fill's rows at a free end (`corner_fill_free_ends`) carry
+/// a station on each rail wherever the other has one, so the last row lies in the bottom plane.
 #[test]
 fn each_tips_round_reaches_the_bottom_face() {
     let fixture = Rc::new(LevelLineFixture::load("bevel-to-center-feature-r34"));
@@ -212,8 +210,8 @@ fn each_tips_round_reaches_the_bottom_face() {
     }
 }
 
-/// The edge-alone build of `fifteen-mm-top-edge-r659`: C#'s `chordTolerance: 0, snap: 1e-9,
-/// sharpTurnDegrees: 20, filletSegments: fixture.Segments`.
+/// The edge-alone build of `fifteen-mm-top-edge-r659`: no chord tolerance, a 1e-9 snap, sharp
+/// turns from 20 degrees, and the fixture's own fillet segments.
 fn build_edge_alone(fixture: &Rc<LevelLineFixture>, size: f64) -> BandGapResult {
     let all: Vec<usize> = (0..fixture.chains.len()).collect();
     build_chains(
@@ -230,8 +228,8 @@ fn build_edge_alone(fixture: &Rc<LevelLineFixture>, size: f64) -> BandGapResult 
     )
 }
 
-/// C#'s refusal message: the refusal, the offending vertex and the open edge's first end, in the
-/// app's frame.
+/// The refusal message: the refusal, the offending vertex and the open edge's first end, in the
+/// app's frame, so a failure names where to look in the app.
 fn describe(filled: &GapFillResult) -> String {
     let at = |v: i32| match &filled.mesh {
         Some(mesh) if v >= 0 => format!("{:?}", mesh.borrow().vertices()[v as usize] + TO_APP),
@@ -245,10 +243,9 @@ fn describe(filled: &GapFillResult) -> String {
     )
 }
 
-/// C# `PastThePlane`: how far past the right slope's plane the filled whole pick's farthest vertex
-/// under the top face near the crease stands. `clips_off` is C#'s
-/// `SquareCreaseEndClip.TurnSquareCreaseClipsOff()` scope round the call, carried on the build's
-/// and the fill's budgets.
+/// How far past the right slope's plane the filled whole pick's farthest vertex
+/// under the top face near the crease stands. `clips_off` turns the square-crease end clip off
+/// for this call only, carried on the build's and the fill's budgets.
 fn past_the_plane(size: f64, clips_off: bool) -> f64 {
     let fixture = Rc::new(LevelLineFixture::load("bevel-to-center-feature-r34"));
     let pick = [0usize, 1, 2, 3];

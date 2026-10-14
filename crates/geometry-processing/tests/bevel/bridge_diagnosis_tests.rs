@@ -1,8 +1,8 @@
-//! Port of `LevelLine/BridgeDiagnosisTests.cs`: WHERE the joint cut BRIDGES two chains' level
-//! lines, and what the mesh and the field look like at each bridge. `PassOnePinchTests` says the
-//! witness pick leaves mixed loops; this walks those loops and prints, at every owner change, the
-//! mesh edge the boundary stands on, the triangles either side, every corner's reading, and what
-//! the field truly does over the band triangle removed there.
+//! WHERE the joint cut BRIDGES two chains' level lines, and what the mesh and the field look like
+//! at each bridge. `pass_one_pinch_tests` says the witness pick leaves mixed loops; this walks
+//! those loops and prints, at every owner change, the mesh edge the boundary stands on, the
+//! triangles either side, every corner's reading, and what the field truly does over the band
+//! triangle removed there.
 //!
 //! A measurement, not a contract - the assertions only keep the run honest. The witness walk is
 //! gated on `LEVELLINE_COST=1` (`level_line_cost_gate`), because a pass of the pick is tens of
@@ -26,7 +26,7 @@ use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;
 
 /// The chain pairs whose bridges are wanted, as survivor indices - "3,8;4,5" by default, the two
-/// pairs `PassOnePinchTests` named on the witness. Overridden by `LEVELLINE_BRIDGE_PAIRS`.
+/// pairs `pass_one_pinch_tests` named on the witness. Overridden by `LEVELLINE_BRIDGE_PAIRS`.
 fn wanted_pairs() -> Vec<(i32, i32)> {
     let asked = std::env::var("LEVELLINE_BRIDGE_PAIRS").unwrap_or_default();
     let text = if asked.is_empty() {
@@ -329,7 +329,7 @@ fn join(values: &[i32]) -> String {
         .join(",")
 }
 
-/// What C#'s `NameTheBridges`, `Describe` and `Corner` share as parameters.
+/// What the bridge naming, describing and corner readings share as parameters.
 struct Context<'a> {
     mesh: &'a LevelLineMesh,
     field: &'a PickField,

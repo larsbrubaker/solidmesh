@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BridgeFixtureTests.cs`: the Many Holes BRIDGE on
-//! a synthetic part (`two_hole_bridge_fixture`) - a joint build of two rims that stand four sizes
-//! apart, over a top face whose triangles SPAN the two of them, must leave each picked side its own
-//! closed loop and must not leave the refined mesh with two vertices in the same place. C#
-//! `[Arguments]` rows are a loop over the same-named test; C#'s `CoincidentVertices` is
+//! The Many Holes BRIDGE on a synthetic part (`two_hole_bridge_fixture`) - a joint build of two
+//! rims that stand four sizes apart, over a top face whose triangles SPAN the two of them, must
+//! leave each picked side its own closed loop and must not leave the refined mesh with two vertices
+//! in the same place. Each test's cases run as a loop inside it; coincident vertices are read by
 //! `level_line_test_geometry::coincident_vertices`.
 
 use std::collections::{HashMap, HashSet};
@@ -14,7 +13,7 @@ use crate::level_line_test_geometry::coincident_vertices;
 use crate::two_hole_bridge_fixture::{self, GAP_IN_SIZES, RADIUS_IN_SIZES, SIZE};
 use geometry_processing::bevel::level_line::BandGapRefusal;
 
-/// C# `TheMiddleStripSpansTheTwoRimsWithLongEdges`: what the spanning triangulation is, in sizes -
+/// What the spanning triangulation is, in sizes -
 /// a statement of the fixture's geometry, so it fails loudly if a change to the fixture quietly
 /// stops it spanning.
 #[test]
@@ -50,7 +49,7 @@ fn the_middle_strip_spans_the_two_rims_with_long_edges() {
     );
 }
 
-/// C# `ABuildOfTwoSpannedRimsLeavesEachSideItsOwnLoop`: the joint build of both rims - no refusal,
+/// The joint build of both rims - no refusal,
 /// every picked side left exactly one closed loop wholly its own, and no two vertices of the
 /// refined mesh in the same place. Swept along the hole radius, which sets the longest spanning
 /// chord (`2R + gap`: 14, 20 and 26 sizes, the witness's own range).
@@ -133,8 +132,8 @@ fn a_build_of_two_spanned_rims_leaves_each_side_its_own_loop() {
     }
 }
 
-/// C# `SpanningEdges`: every INPUT edge whose two ends are on DIFFERENT chains of the pick, by
-/// length. Shared with `hole_row_bridge_tests`, whose C# class carries the same helper.
+/// Every INPUT edge whose two ends are on DIFFERENT chains of the pick, by
+/// length. Shared with `hole_row_bridge_tests`, which reads the same edges.
 pub(crate) fn spanning_edges(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

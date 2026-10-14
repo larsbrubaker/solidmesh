@@ -1,10 +1,9 @@
-//! Ports `MatterCADTests/Standard/BevelVoidWedgeSectionTests.cs`: the two things the void wedge
-//! has to be, held against each other at every dihedral the builder accepts. It has to CONTAIN the
-//! part of the bead that lies in the void, or the clip would trim the bead it exists to protect;
-//! and it has to stay no wider than the bead's own section, or it gets refused where the bead
-//! sweeps fine (an over-large wedge fails silently: a refused wedge is a bead added unclipped).
-//! The test lives with the kernel it exercises (`bevel_edge_tool_builder`) rather than with the app
-//! tests, since it touches nothing else. C# `[MethodDataSource(Corners)]` rows are a loop.
+//! The two things the void wedge has to be, held against each other at every dihedral the builder
+//! accepts. It has to CONTAIN the part of the bead that lies in the void, or the clip would trim
+//! the bead it exists to protect; and it has to stay no wider than the bead's own section, or it
+//! gets refused where the bead sweeps fine (an over-large wedge fails silently: a refused wedge is
+//! a bead added unclipped). The test lives with the kernel it exercises (`bevel_edge_tool_builder`)
+//! rather than with the app tests, since it touches nothing else. The corners run as a loop.
 
 use geometry_processing::bevel::bevel_edge_tool_builder as builder;
 use geometry_processing::topology::EdgeConvexity;

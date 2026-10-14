@@ -1,5 +1,5 @@
-//! Port of `BevelFaceFitConcaveCollisionTests.cs`: two beads meeting across a narrow slot floor
-//! are admitted; a round and a bead sharing a face still collide.
+//! Two beads meeting across a narrow slot floor are admitted; a round and a bead sharing a face
+//! still collide.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ fn fit_of(block: Mesh, groups: &[BevelEdgeGroup]) -> BevelFaceFit {
     )
 }
 
-/// C# `TwoBeadsMeetingAcrossANarrowFaceAreAdmitted`.
+/// Two beads meeting across a narrow face are admitted.
 #[test]
 fn two_beads_meeting_across_a_narrow_face_are_admitted() {
     let block = slotted_block();
@@ -68,7 +68,7 @@ fn two_beads_meeting_across_a_narrow_face_are_admitted() {
     }
 }
 
-/// C# `ARoundAndABeadSharingAFaceStillCollide`.
+/// A round and a bead sharing a face still collide.
 #[test]
 fn a_round_and_a_bead_sharing_a_face_still_collide() {
     let block = slotted_block();

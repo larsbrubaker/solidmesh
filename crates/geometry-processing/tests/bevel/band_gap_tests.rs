@@ -1,4 +1,4 @@
-//! Port of `LevelLine/BandGapTests.cs`: the band's removal, held to the requirement - the part that
+//! The band's removal, held to the requirement - the part that
 //! is left plus the band that came out is still the solid that went in, the only open edges are the
 //! gap's own, the gap's boundary stands at its setback with the kept surface on its left, and a
 //! band that would reach a foreign feature refuses by size and names the room truthfully.
@@ -26,8 +26,7 @@ use crate::level_line_test_geometry::{
 /// A fold threshold that reads a 90 degree corner as a feature and a 16-sided cylinder as smooth.
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `BandGap.Build(positions, indices, chain, closed, feature, size, profile)` with C#'s
-/// defaults for the rest.
+/// The band gap of one chain at `size` and `profile`, every other argument at its default.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -58,7 +57,7 @@ fn chain(result: &BandGapResult) -> Rc<ChainField> {
     result.chain().expect("the chain")
 }
 
-/// The room margin of a pick whose largest unit setback is `unit`, at C#'s default snap.
+/// The room margin of a pick whose largest unit setback is `unit`, at the default 1e-9 snap.
 fn margin(unit: f64) -> f64 {
     room_margin(unit, 1e-9)
 }
@@ -562,7 +561,6 @@ fn a_top_face_refuses_above_its_own_room_and_builds_below_it() {
     );
 }
 
-/// C# `Time`.
 fn time(what: &str, build: impl FnOnce() -> BandGapResult) -> String {
     let watch = Instant::now();
     let result = build();
@@ -578,7 +576,6 @@ fn time(what: &str, build: impl FnOnce() -> BandGapResult) -> String {
     )
 }
 
-/// C# `CubeTopRim`.
 fn cube_top_rim(size: f64, profile: BandProfile) -> BandGapResult {
     let (positions, indices) = cube_solid(1.0);
     build(
@@ -592,14 +589,13 @@ fn cube_top_rim(size: f64, profile: BandProfile) -> BandGapResult {
     )
 }
 
-/// C# `Loops.Single(l => l.Side == side).Vertices`.
+/// The vertices of the one loop on `side`; fails unless there is exactly one.
 fn single_side(result: &BandGapResult, side: i32) -> Vec<i32> {
     let found: Vec<_> = result.loops.iter().filter(|l| l.side == side).collect();
     assert_eq!(found.len(), 1);
     found[0].vertices.clone()
 }
 
-/// C# `LoopEdges`.
 fn loop_edges(result: &BandGapResult) -> Vec<(i32, i32)> {
     let mut edges = Vec::new();
     for gap_loop in &result.loops {
@@ -619,7 +615,6 @@ fn loop_edges(result: &BandGapResult) -> Vec<(i32, i32)> {
     edges
 }
 
-/// C# `Key`.
 fn key(a: i32, b: i32) -> (i32, i32) {
     if a < b {
         (a, b)

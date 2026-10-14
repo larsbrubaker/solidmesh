@@ -1,9 +1,8 @@
-//! Port of `LevelLine/CornerPickWithMouthTests.cs`: a pick with corners that ALSO holds a closed
-//! chain touching none of them - the owner file "Outer faces should still do the bevel" in
-//! miniature: a box (4 x 4 x 2) with a square hole through it, its top rim and front rim picked as
-//! three open chains meeting at two corners, plus the hole's top mouth. The mouth's two loops are
-//! each one owner all the way round, so the corner fill hands them to the per-chain zip. C#
-//! `[Arguments]` rows are loops over the same-named test.
+//! A pick with corners that ALSO holds a closed chain touching none of them - the owner file "Outer
+//! faces should still do the bevel" in miniature: a box (4 x 4 x 2) with a square hole through it,
+//! its top rim and front rim picked as three open chains meeting at two corners, plus the hole's
+//! top mouth. The mouth's two loops are each one owner all the way round, so the corner fill hands
+//! them to the per-chain zip. Each test's cases run as a loop inside it.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::corner_fill;
@@ -36,7 +35,7 @@ fn pick() -> Vec<Vec<i32>> {
 
 const CLOSED: [bool; 4] = [false, false, false, true];
 
-/// C#'s `BandGap.Build(positions, indices, chains, closed, feature, size, profile)`.
+/// The band gap of the pick at `size` and `profile`, every other argument at its default.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -58,7 +57,7 @@ fn build(
     .expect("the pick is well formed")
 }
 
-/// C#'s `GapFill.Fill(gap, profile)`.
+/// The gap's fill at `profile`, with the default fillet segments.
 fn fill(gap: &BandGapResult, profile: BandProfile) -> GapFillResult {
     gap_fill::fill(gap, profile, DEFAULT_FILLET_SEGMENTS).expect("the fill runs")
 }
@@ -158,7 +157,7 @@ fn every_rail_of_the_cubes_corner_groups_ends_at_a_tie() {
 }
 
 /// Wherever a corner group's loop changes owner, one of the two vertices either side of the change
-/// reads the two chains' fields equal (`CornerFill.FieldsTie`): the rail ENDS at the mitre point
+/// reads the two chains' fields equal (`corner_fill::fields_tie`): the rail ENDS at the mitre point
 /// rather than short of it.
 fn assert_every_rail_ends_at_a_tie(gap: &BandGapResult) {
     let mesh = gap.mesh.as_ref().expect("a built mesh").borrow();
@@ -329,8 +328,7 @@ fn an_l_blocks_added_material_stays_within_the_concave_profile() {
 
         let mesh = filled.mesh.as_ref().expect("a filled mesh").borrow();
         let bound = concave_bound(profile, size, std::f64::consts::PI / 4.0);
-        // LINQ's OrderByDescending(...).FirstOrDefault(): the first of the largest, or the default
-        // (a zero reading) when nothing stands outside.
+        // The first of the largest, or a zero reading when nothing stands outside.
         let mut worst: (Vector3, f64) = (Vector3::ZERO, 0.0);
         let mut first = true;
         for &v in &filled.added_vertices {
@@ -354,7 +352,7 @@ fn an_l_blocks_added_material_stays_within_the_concave_profile() {
     }
 }
 
-/// C# `ConcaveBound`: how far off the nearer face a profile of setback `size` stands at a concave
+/// How far off the nearer face a profile of setback `size` stands at a concave
 /// edge whose faces open by 2 `half_opening`: the arc's (or the chord's) point on the bisector.
 pub fn concave_bound(profile: BandProfile, size: f64, half_opening: f64) -> f64 {
     let sin = half_opening.sin();

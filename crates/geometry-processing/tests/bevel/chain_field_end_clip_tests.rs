@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainFieldEndClipTests.cs`: at an end whose ray
-//! is BOUNDED the field is clipped by the end face's plane - `max(value, (p - V) . n)` - so the band
-//! stops exactly on that plane. A straight chain along x from 0 to 10, setback 1, its last end's
-//! plane through (10, 0, 0) leaning 45 degrees: `n = (1, 0, 1) / sqrt 2`.
+//! At an end whose ray is BOUNDED the field is clipped by the end face's plane - `max(value, (p -
+//! V) . n)` - so the band stops exactly on that plane. A straight chain along x from 0 to 10,
+//! setback 1, its last end's plane through (10, 0, 0) leaning 45 degrees: `n = (1, 0, 1) / sqrt 2`.
 
 use geometry_processing::bevel::level_line::{ChainField, EndRayBound};
 use vector_math::dotnet_random::DotNetRandom;

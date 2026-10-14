@@ -1,9 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/EncroachingSideRoomTests.cs`: the owner file
-//! "Encroaching Side" as the app route hands it to the kernel (size 3.4, fillet, one open chain),
-//! read for which reading names the room and what stands there. A reading, not a verdict: it
-//! returns at once unless `BEVEL_ENCROACHING_READ=1`, and asserts nothing; `BEVEL_ENCROACHING_LOG`
-//! names a file the reading goes to instead of standard output. Beside it, a Rust-only test derives
-//! the pick's room from the fixture's geometry and asserts the kernel reads it.
+//! The owner file "Encroaching Side" as the app route hands it to the kernel (size 3.4, fillet, one
+//! open chain), read for which reading names the room and what stands there. A reading, not a
+//! verdict: it returns at once unless `BEVEL_ENCROACHING_READ=1`, and asserts nothing;
+//! `BEVEL_ENCROACHING_LOG` names a file the reading goes to instead of standard output. Beside it,
+//! a Rust-only test derives the pick's room from the fixture's geometry and asserts the kernel
+//! reads it.
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -16,14 +16,14 @@ use vector_math::Vector3;
 
 use crate::level_line_fixture::LevelLineFixture;
 
-/// C# `TheRoomAndWhatNamesIt`.
+/// The room and what names it.
 ///
-/// What it reads (checked against MatterCAD C# at the pinned `REFERENCE`, which prints the same):
+/// What it reads:
 /// room 3.53553393056 (5 / sqrt 2) set by the FOREIGN reading, the same with the sharp turn at
 /// infinity or 30 degrees, and the build at 3.4 succeeds. The wedge at the pick is 45 degrees, so
 /// a 3.4 fillet sets back 3.4 / tan 22.5 = 8.21 on the notch wall, past the web's tip v9
-/// (-5, -113.5, 10) 7.0711 from the pick. The C# remark's 2.9289 (7.0711 tan 22.5, refused by
-/// size) is the band reaching that tip, read before concave neighbours were grown; the web's two
+/// (-5, -113.5, 10) 7.0711 from the pick. The band reaching that tip would read 2.9289 (7.0711 tan
+/// 22.5, refused by size) if concave neighbours were not grown; but the web's two
 /// faces meet the wall in CONCAVE creases (5-9, 9-11, 66.9 degrees) and grow over the cut, so
 /// what bounds the room is the web's ridge 1-9 leaving the round. The derivation is pinned by
 /// `rust_only_encroaching_side_room_is_where_the_grown_web_ridge_leaves_the_round`.
@@ -42,7 +42,6 @@ fn the_room_and_what_names_it() {
     read(&mut out).expect("the reading is written");
 }
 
-/// C# `Read`.
 fn read(out: &mut dyn Write) -> std::io::Result<()> {
     let fixture = Rc::new(LevelLineFixture::load("encroaching-side-r34"));
     let positions = &fixture.positions;
@@ -120,8 +119,8 @@ fn read(out: &mut dyn Write) -> std::io::Result<()> {
     }
 
     // Every feature edge not on the chain, by its distance from the picked edge and the turn it
-    // carries. The faces are kept in first-seen order (C#'s Dictionary), and the sort is stable
-    // (C#'s OrderBy).
+    // carries. The faces are kept in first-seen order and the sort is stable, so the listing reads
+    // the same every run.
     let a = positions[chain[0] as usize];
     let b = positions[chain[chain.len() - 1] as usize];
     let mut faces: Vec<((i32, i32), Vec<usize>)> = Vec::new();
@@ -165,7 +164,7 @@ fn read(out: &mut dyn Write) -> std::io::Result<()> {
     Ok(())
 }
 
-/// C#'s `0.####` / `0.#` formats: at most `places` decimals, trailing zeros dropped.
+/// At most `places` decimals, trailing zeros dropped, so readings stay short.
 pub fn up_to(value: f64, places: usize) -> String {
     let text = format!("{value:.places$}");
     if text.contains('.') {
@@ -189,7 +188,7 @@ fn other_vertex(t: (i32, i32, i32), low: i32, high: i32) -> i32 {
         .expect("a triangle has a third vertex")
 }
 
-/// C# `Distance`: the least distance between two segments, sampled - enough for a reading.
+/// The least distance between two segments, sampled - enough for a reading.
 fn distance(p: Vector3, q: Vector3, a: Vector3, b: Vector3) -> f64 {
     let mut best = f64::MAX;
     let axis = b - a;

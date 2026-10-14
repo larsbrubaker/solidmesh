@@ -1,8 +1,7 @@
-//! Shared plumbing of the end-face test classes (`LevelLine/EndFaceCarryTests.cs`,
-//! `FlatEndsClipTests.cs`, `ObliqueEndFaceOwnerTests.cs` and their neighbours): the C#
-//! `BandGap.Build(fixture..., chordTolerance: 0, snap: 1e-9, ...)` call those classes repeat, and
-//! the `try { CornerCap.UseFlatEndsOverride = ...; } finally { ... = null; }` they wrap it in, as a
-//! guard that clears the per-thread switches when it drops.
+//! Shared plumbing of the end-face test classes (`end_face_carry_tests`, `flat_ends_clip_tests`,
+//! `oblique_end_face_owner_tests` and their neighbours): the band gap build on a fixture (no chord
+//! tolerance, a 1e-9 snap, ...) those classes repeat, and the flat-ends override they set round
+//! it, as a guard that clears the per-thread switches when it drops.
 
 #![allow(dead_code)]
 
@@ -17,14 +16,14 @@ use geometry_processing::bevel::level_line::{BandGapResult, WorkBudget};
 use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 
-/// The fixture's feature edges as the kernel takes them (C# `fixture.IsFeatureEdge`).
+/// The fixture's feature edges as the kernel takes them.
 pub fn feature_of(fixture: &Rc<LevelLineFixture>) -> FeatureEdgeTest {
     let fixture = Rc::clone(fixture);
     Rc::new(move |a, b| fixture.is_feature_edge(a, b))
 }
 
-/// C# `BandGap.Build(positions, indices, chains, closed, IsFeatureEdge, size, Profile, ...)` on the
-/// fixture with the given options: the chains picked are `chains` (indices into the fixture's).
+/// The band gap on the fixture at `size` with the given options: the chains picked are `chains`
+/// (indices into the fixture's).
 pub fn build_chains(
     fixture: &Rc<LevelLineFixture>,
     chains: &[usize],
@@ -46,7 +45,7 @@ pub fn build_chains(
     .expect("a valid pick")
 }
 
-/// C#'s `chordTolerance: 0, snap: 1e-9, sharpTurnDegrees: degrees` (every other argument its
+/// No chord tolerance, a 1e-9 snap and sharp turns from `degrees` (every other argument its
 /// default).
 pub fn at_bend(degrees: f64) -> BandGapBuildOptions {
     BandGapBuildOptions {
@@ -57,8 +56,8 @@ pub fn at_bend(degrees: f64) -> BandGapBuildOptions {
     }
 }
 
-/// C#'s `0, 1e-9, knownRoom, null, fixture.SeamEpsilon, fixture.SharpTurnDegrees,
-/// fixture.Segments`: the fixture's own build.
+/// The fixture's own build: no chord tolerance, a 1e-9 snap, `known_room`, and the fixture's seam
+/// epsilon, sharp turn and segments.
 pub fn as_saved(fixture: &LevelLineFixture, known_room: Option<f64>) -> BandGapBuildOptions {
     BandGapBuildOptions {
         chord_tolerance: 0.0,
@@ -71,8 +70,8 @@ pub fn as_saved(fixture: &LevelLineFixture, known_room: Option<f64>) -> BandGapB
     }
 }
 
-/// C#'s `new WorkBudget(WorkBudget.DefaultLimit(fixture.Indices.Count)) { InputIsFloatStored =
-/// ... }`: the default allowance for the fixture's size.
+/// The default work allowance for the fixture's size, marked float-stored when
+/// `input_is_float_stored`.
 pub fn default_budget(fixture: &LevelLineFixture, input_is_float_stored: bool) -> Rc<WorkBudget> {
     let mut budget = WorkBudget::new(WorkBudget::default_limit(fixture.indices.len() as i32))
         .expect("a positive limit");
@@ -80,8 +79,8 @@ pub fn default_budget(fixture: &LevelLineFixture, input_is_float_stored: bool) -
     Rc::new(budget)
 }
 
-/// Sets this thread's `CornerCap.UseFlatEndsOverride` and, on drop, clears it and
-/// `CornerCap.WatchEndHoleAt` (C#'s `finally`).
+/// Sets this thread's flat-ends override and, on drop, clears it and the corner cap's
+/// `WATCH_END_HOLE_AT`, however the test leaves.
 pub struct FlatEnds;
 
 impl FlatEnds {

@@ -1,5 +1,5 @@
-//! Port of `BevelRunsOutUnderTheWallTests.cs`: a concave apex crease whose end walls lean too far
-//! to cap on runs on under them instead of squaring off, with room enough to reach them.
+//! A concave apex crease whose end walls lean too far to cap on runs on under them instead of
+//! squaring off, with room enough to reach them.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -27,7 +27,7 @@ fn reach_the_wall_needs() -> f64 {
     RADIUS / 2f64.sqrt() / 2.0
 }
 
-/// C# `BothEndsRunOnUnderTheEndWallInsteadOfSquaringOff`.
+/// Both ends run on under the end wall instead of squaring off.
 #[test]
 fn both_ends_run_on_under_the_end_wall_instead_of_squaring_off() {
     let (ends, _, _) = apex_crease_ends();
@@ -47,7 +47,7 @@ fn both_ends_run_on_under_the_end_wall_instead_of_squaring_off() {
     }
 }
 
-/// C# `TheEndWallCannotBeCappedOnAndCannotBeAnExitEither`.
+/// The end wall cannot be capped on and cannot be an exit either.
 #[test]
 fn the_end_wall_cannot_be_capped_on_and_cannot_be_an_exit_either() {
     let (ends, _, _) = apex_crease_ends();

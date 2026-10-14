@@ -1,5 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/DegenerateTriangleRefinementTests.cs`: a triangle
-//! of no area in the band must not be able to keep the refinement firing.
+//! A triangle of no area in the band must not be able to keep the refinement firing.
 
 use std::cell::RefCell;
 use std::rc::Rc;

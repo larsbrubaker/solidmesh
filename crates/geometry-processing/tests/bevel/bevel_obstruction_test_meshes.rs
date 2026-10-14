@@ -1,6 +1,6 @@
-//! Port of the test fixture `Fixtures/BevelObstructionTestMeshes.cs`: parts built around a fillet's
-//! setback, each putting a feature INSIDE the band of the 20 mm cube's top edge at x = 0 (or, for
-//! the blocked crease, across an L's concave foot) to ask what happens to it.
+//! Parts built around a fillet's setback, each putting a feature INSIDE the band of the 20 mm
+//! cube's top edge at x = 0 (or, for the blocked crease, across an L's concave foot) to ask what
+//! happens to it.
 
 #![allow(dead_code)]
 
@@ -9,14 +9,14 @@ use vector_math::Vector3;
 
 use crate::topology_test_meshes::create_grid_solid;
 
-/// C# `BlockedAt`: where the block starts, which is where the selected crease has to stop.
+/// Where the block starts, which is where the selected crease has to stop.
 pub const BLOCKED_AT: f64 = 10.0;
 
-/// C# `BlockedSpan`: how long the block is, and how much of the part is left past the crease's
+/// How long the block is, and how much of the part is left past the crease's
 /// end.
 pub const BLOCKED_SPAN: f64 = 2.0;
 
-/// C# `CreateRibNearATopEdge`: a 20 mm cube with a 2 wide, 4 tall RIB on its top face running the
+/// A 20 mm cube with a 2 wide, 4 tall RIB on its top face running the
 /// full length in y, parallel to the top edge at x = 0 and `rib_distance` in from it - a feature
 /// that ENCROACHES on a fillet's tangent band from the material side.
 pub fn create_rib_near_a_top_edge(rib_distance: f64) -> Mesh {
@@ -30,7 +30,7 @@ pub fn create_rib_near_a_top_edge(rib_distance: f64) -> Mesh {
     })
 }
 
-/// C# `CreateLBossNearATopEdge`: the same cube with an L-shaped boss on its top - x in [1, 2] over
+/// The same cube with an L-shaped boss on its top - x in [1, 2] over
 /// the full depth, plus x in [2, 4] for y in [0, 10] - so the notch, x in [2, 4], y in [10, 20],
 /// is inside the 5 mm setback and is material the fillet is entitled to cut.
 pub fn create_l_boss_near_a_top_edge() -> Mesh {
@@ -49,7 +49,7 @@ pub fn create_l_boss_near_a_top_edge() -> Mesh {
     })
 }
 
-/// C# `CreateRibAndBridgeNearATopEdge`: the same cube carrying BOTH a rib standing on the top face
+/// The same cube carrying BOTH a rib standing on the top face
 /// inside the band (x in [1, 3]) AND a deck (z in [26, 30]) passing over the band on a post at
 /// x in [12, 16], well outside it. The rib's column is the shadow clip's; the bridge's is not.
 pub fn create_rib_and_bridge_near_a_top_edge() -> Mesh {
@@ -66,7 +66,7 @@ pub fn create_rib_and_bridge_near_a_top_edge() -> Mesh {
     })
 }
 
-/// C# `CreateBlockedCreaseEnd`: an L prism (wall x in [0, 4] 20 tall, floor x in [4, 12] 4 thick)
+/// An L prism (wall x in [0, 4] 20 tall, floor x in [4, 12] 4 thick)
 /// whose concave foot crease is BLOCKED by a block filling the corner from [`BLOCKED_AT`] to the
 /// end, the part stopping [`BLOCKED_SPAN`] mm later with nothing on the far side.
 pub fn create_blocked_crease_end() -> Mesh {
@@ -85,7 +85,6 @@ pub fn create_blocked_crease_end() -> Mesh {
     })
 }
 
-/// C# `CreateRibEndingAt`.
 pub fn create_rib_ending_at(rib_ends_at: f64) -> Mesh {
     let size = 20.0;
     let near = 1.0;

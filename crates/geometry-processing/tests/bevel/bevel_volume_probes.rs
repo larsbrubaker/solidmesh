@@ -1,6 +1,5 @@
-//! Ports `GeometryProcessingTests/BevelVolumeProbes.cs`: a boolean-based "is this point inside the
-//! solid" probe for kernel-side bevel tests. Like the C# (which copies MatterCADTests'
-//! `BevelCornerPatchProbes` so the kernel tests need no application), it is pure polygon-mesh.
+//! A boolean-based "is this point inside the solid" probe for kernel-side bevel tests. It is pure
+//! polygon-mesh, so the kernel tests need no application.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -22,7 +21,7 @@ pub fn probe_cube(at: Vector3, side: f64) -> Mesh {
     cube
 }
 
-/// The volume of `result` inside `probe` (C#'s `Polygons` mode at its default resolutions).
+/// The volume of `result` inside `probe` (the polygon boolean at its default resolutions).
 pub fn volume_inside(result: &Mesh, probe: &Mesh) -> f64 {
     let intersection = do_array(
         &[(result, Matrix4X4::IDENTITY), (probe, Matrix4X4::IDENTITY)],

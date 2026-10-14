@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/BevelMitreSplitTests.cs`: a rim that turns a corner the
-//! swept tool cannot be mitred through is CUT there rather than refused
-//! (`bevel_chain_linker::split_where_the_mitre_cannot_fit`), and a rim whose corners the tool
-//! carries perfectly well is left exactly as it was.
+//! A rim that turns a corner the swept tool cannot be mitred through is CUT there rather than
+//! refused (`bevel_chain_linker::split_where_the_mitre_cannot_fit`), and a rim whose corners the
+//! tool carries perfectly well is left exactly as it was.
 
 use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
@@ -118,7 +117,7 @@ fn a_box_tops_rim_keeps_its_four_corners_because_the_mitre_fits_them() {
          easily"
     );
 
-    // C#'s IsSameReferenceAs: a run with nothing to cut is handed back untouched rather than
+    // A run with nothing to cut is handed back untouched rather than
     // rebuilt - here, the very value that went in.
     assert_eq!(pieces[0], rim);
     assert!(

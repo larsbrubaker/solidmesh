@@ -1,6 +1,6 @@
-//! Port of `LevelLine/CubeCornerBallTests.cs`: a cube (20 across) filleted on every edge at 2 with
-//! 8 segments, by the level line - each corner of three equal convex fillets is the rolling ball's
-//! octant, meeting each fillet tangentially along its end circle. The kernel twin of the app's
+//! A cube (20 across) filleted on every edge at 2 with 8 segments, by the level line - each corner
+//! of three equal convex fillets is the rolling ball's octant, meeting each fillet tangentially
+//! along its end circle. The kernel twin of the app's
 //! `BevelCornerPatchTests.TheLevelLinesCornerPatchMeetsEachFilletTangentlyAlongTheirSharedCircle`.
 
 use geometry_processing::bevel::level_line::corner_cap_hole_fill::{
@@ -23,13 +23,13 @@ const RADIUS: f64 = 2.0;
 
 const SEGMENTS: i32 = 8;
 
-/// C# `EveryCornerFillVertexIsOnTheBall`.
+/// Every corner fill vertex is on the ball.
 #[test]
 fn every_corner_fill_vertex_is_on_the_ball() {
     assert_every_corner_is_on_the_ball(None);
 }
 
-/// C# `EveryCornerOfAFarTurnedFloatCubeIsOnTheBall`: the same cube turned arbitrarily, carried far
+/// The same cube turned arbitrarily, carried far
 /// from the origin and rounded to float, as a part's vertices are.
 #[test]
 fn every_corner_of_a_far_turned_float_cube_is_on_the_ball() {
@@ -38,7 +38,7 @@ fn every_corner_of_a_far_turned_float_cube_is_on_the_ball() {
     assert_every_corner_is_on_the_ball(Some(motion));
 }
 
-/// C# `OnlyAHoleRimmedByOneBallIsPlacedOnIt`: a hole whose rows are not one ball - two arcs of
+/// A hole whose rows are not one ball - two arcs of
 /// unequal radius about one centre - is handed back as the filler laid it; an octant of three equal
 /// arcs is placed on the ball.
 #[test]
@@ -75,7 +75,7 @@ fn only_a_hole_rimmed_by_one_ball_is_placed_on_it() {
     let placed = on_the_ball(filled.clone(), &hole, &ball);
     assert!((placed.vertices[6].length() - 2.0).abs() <= 1e-12);
 
-    // C#'s `ReferenceEquals(..., filled)`: handed back untouched.
+    // Handed back untouched.
     let unequal = [
         ball[0].clone(),
         row(vec![6, 7, 8], Vector3::new(0.0, 1.5, 1.5), false),
@@ -90,7 +90,7 @@ fn only_a_hole_rimmed_by_one_ball_is_placed_on_it() {
     assert_eq!(on_the_ball(filled.clone(), &hole, &concave), filled);
 }
 
-/// C# `AFoldedPatchDoesNotCoverTheBallOnce`: a patch with one triangle turned against the loop - a
+/// A patch with one triangle turned against the loop - a
 /// fold - does not cover the ball once, so it is never placed on the ball; the same patch unfolded
 /// does.
 #[test]
@@ -176,7 +176,7 @@ fn inset_point_of(p: Vector3) -> Vector3 {
     Vector3::new(sign(p.x) * inset, sign(p.y) * inset, sign(p.z) * inset)
 }
 
-/// C# `SeamLean`: the faces within a chord of a seam circle and the worst lean of their normals off
+/// The faces within a chord of a seam circle and the worst lean of their normals off
 /// the true surface's normal at their centroid - the ball's in its octant, the fillet cylinder's
 /// outside it.
 fn seam_lean(mesh: &LevelLineMesh) -> (f64, i32) {
@@ -224,7 +224,7 @@ fn seam_lean(mesh: &LevelLineMesh) -> (f64, i32) {
     (worst_lean, faces)
 }
 
-/// C# `SurfaceNormal`: the true surface's outward normal beside a corner - the ball's radial
+/// The true surface's outward normal beside a corner - the ball's radial
 /// direction inside its octant, else the fillet cylinder's.
 fn surface_normal(position: Vector3, centre: Vector3) -> Vector3 {
     let offset = position - centre;

@@ -1,11 +1,11 @@
-//! Ports `GeometryProcessingTests/BevelRecessApexRunOutTests.cs`: the apex end of "UpperLeftInner
-//! should bevel.mcx" - one concave crease of a pyramidal recess, rounded at 3 mm, dying into the
-//! three way concave corner where the recess's ridge starts, beaded through the kernel's own
-//! sequence (`bead_sequence::full_tools`) on the fixture's own fourteen vertices, both ways up, and
-//! both where the box frame puts the part and where the rebuild actually has it. The control carries
-//! the bead's cylinder past the apex, lets the lower slope cut it, and the bead dies 2.293 mm past
-//! the apex; the apex vertex must end up buried rather than left standing as a surface vertex the
-//! union fans spurious triangles from. C#'s `[Arguments]` rows are a loop.
+//! The apex end of "UpperLeftInner should bevel.mcx" - one concave crease of a pyramidal recess,
+//! rounded at 3 mm, dying into the three way concave corner where the recess's ridge starts, beaded
+//! through the kernel's own sequence (`bead_sequence::full_tools`) on the fixture's own fourteen
+//! vertices, both ways up, and both where the box frame puts the part and where the rebuild
+//! actually has it. The control carries the bead's cylinder past the apex, lets the lower slope cut
+//! it, and the bead dies 2.293 mm past the apex; the apex vertex must end up buried rather than
+//! left standing as a surface vertex the union fans spurious triangles from. The cases run as a
+//! loop.
 
 use polygon_mesh::Mesh;
 use vector_math::Vector3;

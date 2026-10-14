@@ -1,9 +1,6 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelDriveThroughGuardTests.cs`: the two guards around
-//! the drive-through overshoot (`bevel_corner_seam::try_drive_through`) - which SECTION may carry
-//! it (only the tool's, never the ball tube's), and the corner shape that must not be given one at
-//! all (a ball centre level with or past the corner vertex).
-//!
-//! C#'s private `Group` helper is never called by the class, so it has no port here.
+//! The two guards around the drive-through overshoot (`bevel_corner_seam::try_drive_through`) -
+//! which SECTION may carry it (only the tool's, never the ball tube's), and the corner shape that
+//! must not be given one at all (a ball centre level with or past the corner vertex).
 
 use std::collections::HashSet;
 
@@ -232,8 +229,8 @@ fn a_corner_whose_ball_centre_is_not_behind_the_vertex_gets_no_overshoot() {
             vertex.z
         );
 
-        // C#'s out parameter is the default cap here; in Rust a declined drive-through hands
-        // back no cap at all, so nothing half-built can reach the end.
+        // A declined drive-through hands back no cap at all, so nothing half-built can reach the
+        // end.
         assert!(
             !degenerate.is_some_and(|cap| cap.drives_through),
             "declining has to leave the plain cap the end had before, not a half-built one"

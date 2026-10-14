@@ -1,6 +1,6 @@
-//! Port of `BevelPairCornerRecognitionTests.cs`: two selected runs meeting over an unselected
-//! crease between surfaces both overshoot the corner (and pair, taking the ball, where the crease
-//! is concave); a shallow step keeps its cap with the surface labelling in hand.
+//! Two selected runs meeting over an unselected crease between surfaces both overshoot the corner
+//! (and pair, taking the ball, where the crease is concave); a shallow step keeps its cap with the
+//! surface labelling in hand.
 
 use std::sync::Arc;
 
@@ -18,7 +18,8 @@ use vector_math::Vector3;
 use crate::topology_test_meshes::{create_bore_block_with_chord_wall, create_shallow_ridge_block};
 use crate::warped_wall_test_meshes::{create_warped_wall_block, create_warped_wall_l};
 
-/// C# `TwoRunsMeetingOverACreaseBetweenAFacettedBoreAndAFlatWallBothOvershootTheCorner`.
+/// Two runs meeting over a crease between a facetted bore and a flat wall both overshoot the
+/// corner.
 #[test]
 fn two_runs_meeting_over_a_crease_between_a_facetted_bore_and_a_flat_wall_both_overshoot_the_corner(
 ) {
@@ -44,7 +45,7 @@ fn two_runs_meeting_over_a_crease_between_a_facetted_bore_and_a_flat_wall_both_o
     );
 }
 
-/// C# `TwoRunsMeetingOverACreaseOnAWarpedWallBothOvershootTheCorner`.
+/// Two runs meeting over a crease on a warped wall both overshoot the corner.
 #[test]
 fn two_runs_meeting_over_a_crease_on_a_warped_wall_both_overshoot_the_corner() {
     let radius = 2.0;
@@ -63,7 +64,7 @@ fn two_runs_meeting_over_a_crease_on_a_warped_wall_both_overshoot_the_corner() {
     );
 }
 
-/// C# `TwoRunsMeetingOverAConcaveCreaseOnAWarpedWallPairAndTakeTheBall`.
+/// Two runs meeting over a concave crease on a warped wall pair and take the ball.
 #[test]
 fn two_runs_meeting_over_a_concave_crease_on_a_warped_wall_pair_and_take_the_ball() {
     let radius = 2.0;
@@ -89,7 +90,7 @@ fn two_runs_meeting_over_a_concave_crease_on_a_warped_wall_pair_and_take_the_bal
     );
 }
 
-/// C# `AShallowStepKeepsItsCapEvenWithTheSurfaceLabellingInHand`.
+/// A shallow step keeps its cap even with the surface labelling in hand.
 #[test]
 fn a_shallow_step_keeps_its_cap_even_with_the_surface_labelling_in_hand() {
     let radius = 1.0;

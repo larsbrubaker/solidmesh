@@ -1,7 +1,6 @@
-//! Port of `BevelGussetPokeThroughTests.cs`: the sliver a POKE-THROUGH leaves, measured on the
-//! kernel's own boolean output rather than described - `gusset_test_meshes` is the left half of
-//! "Chain and Face Should Both work.mcx" as the union left it, and this is where its top face is
-//! refused.
+//! The sliver a POKE-THROUGH leaves, measured on the kernel's own boolean output rather than
+//! described - `gusset_test_meshes` is the left half of "Chain and Face Should Both work.mcx" as
+//! the union left it, and this is where its top face is refused.
 //!
 //! The gusset stands 0.1 mm proud of the plate's y = -6 face and carries a 1.3113417e-07 term in
 //! its own rotation, so its top misses z = 20 by a hair. Between the two the boolean leaves a

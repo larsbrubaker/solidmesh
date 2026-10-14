@@ -1,16 +1,15 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelPublishedMeshSliverTests.cs`: the SLIVER half of
-//! the publish-time cleanup (`bevel_published_mesh::clean` through `bevel_sliver_collapse`) -
-//! triangles the boolean left lying in a flat face with all but no ALTITUDE, which the
-//! weld-and-area pass never touched because their area is small only in proportion to how LONG
-//! they are.
+//! The SLIVER half of the publish-time cleanup (`bevel_published_mesh::clean` through
+//! `bevel_sliver_collapse`) - triangles the boolean left lying in a flat face with all but no
+//! ALTITUDE, which the weld-and-area pass never touched because their area is small only in
+//! proportion to how LONG they are.
 //!
 //! Measured on "Inner Right Sides and Center.mcx" and "5mm Bevel Around Center.mcx": 24 triangles
 //! lying in one corner face's own plane with edges up to 7.8 mm and areas around 7e-5 mm^2 - an
 //! altitude of about 2e-5 mm - and two more spanning a whole 22.6 and 28.3 mm face diagonal.
 //! Nothing about them is wrong in POSITION; every vertex is on the surface. What is wrong is that a
 //! triangle that thin has no reliable normal, so the flat-shaded fill and the outline pass draw
-//! them as lines and fans across a face that should read as one flat plane. C#'s "the same
-//! instance comes back" is `clean` answering `None`.
+//! them as lines and fans across a face that should read as one flat plane. "Nothing to tidy" is
+//! `clean` answering `None`.
 
 use geometry_processing::bevel::{bevel_published_mesh, bevel_sliver_collapse, bevel_working_mesh};
 use polygon_mesh::{CancelToken, Mesh};
@@ -121,7 +120,7 @@ fn worst_stored_normal_error(mesh: &Mesh) -> f64 {
 /// diagonal has a full 2.83 mm edge and an altitude of 17 nanometres. A side face that has nothing
 /// wrong with it is given a garbage stored normal too, so that the recompute at the end of the
 /// cleanup is read as well as the collapse.
-// C#'s garbage normal is the literal 0.7071f, not a constant.
+// The garbage normal is the literal 0.7071, not a constant.
 #[allow(clippy::approx_constant)]
 #[test]
 fn a_sliver_in_a_flat_face_is_collapsed_and_every_normal_comes_back_from_the_vertices() {

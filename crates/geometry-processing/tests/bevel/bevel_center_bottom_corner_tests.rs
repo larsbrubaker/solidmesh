@@ -1,7 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelCenterBottomCornerTests.cs`: the inside-corner
-//! mirror of `BevelThreeRunCornerTests` - THREE concave runs of one 5 mm fillet meeting at one
-//! concave junction on the nose-in-notch part, the selection "5mm Bevel Center Bottom.mcx" carries
-//! (`nose_in_notch_test_meshes::centre_bottom_groups`), held to the Onshape control's numbers.
+//! The inside-corner mirror of `bevel_three_run_corner_tests` - THREE concave runs of one 5 mm
+//! fillet meeting at one concave junction on the nose-in-notch part, the selection "5mm Bevel
+//! Center Bottom.mcx" carries (`nose_in_notch_test_meshes::centre_bottom_groups`), held to the
+//! Onshape control's numbers.
 //!
 //! The two nose creases end at the ridge, and the runs that would partner them there - the two
 //! UPPER nose creases - are not selected. So what bounds each nose bead is the PLANE of the face

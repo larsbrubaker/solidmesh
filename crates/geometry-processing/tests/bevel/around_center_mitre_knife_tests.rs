@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/AroundCenterMitreKnifeTests.cs`: "5mm Bevel Around
-//! Center" with the mitre on (the app's default bend threshold, 10 degrees) - the tip's mitre runs
-//! to a convex 45-degree KNIFE crease, where the band must stop with zero width and the crease
-//! stretch become the rail, which is what the Onshape control does. `the_rails_read_in_walk_order`
-//! is C#'s measurement, gated on `BEVEL_AROUND_CENTER_MEASURE=1` as there:
+//! "5mm Bevel Around Center" with the mitre on (the app's default bend threshold, 10 degrees) - the
+//! tip's mitre runs to a convex 45-degree KNIFE crease, where the band must stop with zero width
+//! and the crease stretch become the rail, which is what the Onshape control does.
+//! `the_rails_read_in_walk_order` is a measurement, gated on `BEVEL_AROUND_CENTER_MEASURE=1`:
 //! `BEVEL_AROUND_CENTER_MEASURE=1 cargo nextest run --workspace --test bevel --no-capture
 //! around_center_mitre_knife_tests::the_rails_read_in_walk_order`.
 
@@ -20,8 +19,8 @@ use crate::sweep_mesh_measures;
 
 const MITRE_DEGREES: f64 = 10.0;
 
-/// The fixture's whole pick at its size: C#'s `chordTolerance: 0, snap: 1e-9, knownRoom: null,
-/// seamEpsilon: 0, sharpTurnDegrees: MitreDegrees`.
+/// The fixture's whole pick at its size: no chord tolerance, a 1e-9 snap, the room measured, no
+/// seam epsilon, and sharp turns mitred from `MITRE_DEGREES`.
 fn build(fixture: &Rc<LevelLineFixture>) -> BandGapResult {
     let all: Vec<usize> = (0..fixture.chains.len()).collect();
     build_chains(
@@ -39,7 +38,7 @@ fn build(fixture: &Rc<LevelLineFixture>) -> BandGapResult {
     )
 }
 
-/// The control surface's distance from `q` (C#'s `control.Indices.Min(...)`).
+/// The control surface's distance from `q`: the least over its triangles.
 fn off_the_control(control: &LevelLineFixture, q: Vector3) -> f64 {
     control
         .indices
@@ -56,7 +55,7 @@ fn off_the_control(control: &LevelLineFixture, q: Vector3) -> f64 {
         .fold(f64::INFINITY, f64::min)
 }
 
-/// C# `TheMitredTipStopsOnTheKnifeAndTheCreaseIsTheRail`.
+/// The mitred tip stops on the knife and the crease is the rail.
 #[test]
 fn the_mitred_tip_stops_on_the_knife_and_the_crease_is_the_rail() {
     let fixture = Rc::new(LevelLineFixture::load("around-center-r5"));
@@ -106,7 +105,7 @@ fn the_mitred_tip_stops_on_the_knife_and_the_crease_is_the_rail() {
     );
 }
 
-/// C# `TheZipDoesNotSpokeAcrossTheInnerRailsJumps`: the zip across a JUMP - the inner rail is four
+/// The zip across a JUMP - the inner rail is four
 /// vertices each reading a different leg, and the merge's usual rule spoked the tip's outer
 /// vertices to the inner vertex 11.8 of parameter away (0.776 off the control). With the
 /// shorter-spoke rule across a jump the worst is 0.272 - a ratchet, not the goal.
@@ -128,7 +127,7 @@ fn the_zip_does_not_spoke_across_the_inner_rails_jumps() {
     assert!(worst < 0.3, "{worst}");
 }
 
-/// C# `TheRailsReadInWalkOrder`: a MEASUREMENT, gated on `BEVEL_AROUND_CENTER_MEASURE=1` - both
+/// A MEASUREMENT, gated on `BEVEL_AROUND_CENTER_MEASURE=1` - both
 /// sides' loops in walk order, each vertex's parameter and the chain point it reads, so a jump in a
 /// rail's parameter can be read for what it is.
 #[test]

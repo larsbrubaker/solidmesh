@@ -1,12 +1,11 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/CenterSlantedChainTests.cs`: the part fifteen
-//! fixture files share ("Center And Right Face.mcx" among them) - chains c12 and c21 are the
-//! slanted short edges of the centre feature. Each chain ends where the feature's corner meets a
-//! slanted base face that wraps round that corner: the base is a SIDE of the chain and carries on
-//! past the end. Flat ends clip that band (a concave chain's ray onto an end face facing on along
-//! it is bounded where a side's own face carries on past the end plane) and the flat hole fill
-//! closes the end, so these rows hold the flag ON. C#'s `C21BuildsClosedWithoutCrossingWithFlatEnds`
-//! is `[Skip]` in C# (c21 alone is InTurnVertexCloseTests' answer, which the Boolean kernel reads
-//! SelfIntersecting) and is not ported.
+//! The part fifteen fixture files share ("Center And Right Face.mcx" among them) - chains c12 and
+//! c21 are the slanted short edges of the centre feature. Each chain ends where the feature's
+//! corner meets a slanted base face that wraps round that corner: the base is a SIDE of the chain
+//! and carries on past the end. Flat ends clip that band (a concave chain's ray onto an end face
+//! facing on along it is bounded where a side's own face carries on past the end plane) and the
+//! flat hole fill closes the end, so these rows hold the flag ON. c21 has no such row: alone it
+//! builds the in-turn vertex close tests' answer, which the Boolean kernel reads as
+//! self-intersecting.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -23,19 +22,18 @@ use crate::level_line_fixture::LevelLineFixture;
 use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures;
 
-/// C# `C12BuildsClosedWithoutCrossingWithFlatEnds`.
+/// c12 builds closed, without crossing, with flat ends.
 #[test]
 fn c12_builds_closed_without_crossing_with_flat_ends() {
     builds_closed_without_crossing("center-and-right-face-c12-r005");
 }
 
-/// C# `BuildsClosedWithoutCrossing`: the row with `CornerCap.UseFlatEndsOverride = true`.
+/// The row with `CornerCap.UseFlatEndsOverride = true`.
 fn builds_closed_without_crossing(name: &str) {
     let _flat = FlatEnds::set(true);
     builds_closed_without_crossing_as_is(name);
 }
 
-/// C# `BuildsClosedWithoutCrossingAsIs`.
 fn builds_closed_without_crossing_as_is(name: &str) {
     let fixture = Rc::new(LevelLineFixture::load(name));
     let size = fixture.size;

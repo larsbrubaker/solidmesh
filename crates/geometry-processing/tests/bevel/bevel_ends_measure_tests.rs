@@ -1,10 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BevelEndsMeasureTests.cs`: flat ends, measured
-//! before they were built - every chain END a kernel fixture reaches, which construction closes it
-//! today, and the shape of its hole. Gated on `BEVEL_ENDS=1`; prints a table and, when
-//! `BEVEL_ENDS_OUT` names a file, writes it there. Changes nothing the build does:
+//! Flat ends, measured before they were built - every chain END a kernel fixture reaches, which
+//! construction closes it today, and the shape of its hole. Gated on `BEVEL_ENDS=1`; prints a table
+//! and, when `BEVEL_ENDS_OUT` names a file, writes it there. Changes nothing the build does:
 //! `BEVEL_ENDS=1 cargo nextest run --workspace --test bevel --profile measure --no-capture
-//! bevel_ends_measure_tests`. C# `[NotInParallel]` is a `threads-required` override in
-//! `.config/nextest.toml`; its runs can take minutes, hence the `measure` profile.
+//! bevel_ends_measure_tests`. It runs alone (a `threads-required` override in
+//! `.config/nextest.toml`); its runs can take minutes, hence the `measure` profile.
 //!
 //! Per end: the construction (`zip` = the corner cap's zip between the strip's last row and the end
 //! face's run; `fade`, `dying`, `hull cap`, `strip cap` = the other end fills' watches), the
@@ -14,8 +13,8 @@
 //! read as a loop: its edge count and its largest distance from its best plane (`flat`).
 //!
 //! The fixture folder also holds `top-center-face-control-nose.txt`, a control mesh in another
-//! format; C# reads it as a fixture and throws, so the measurement never runs. Rust leaves it out
-//! (`docs/CSHARP_DIVERGENCES.md` 5015).
+//! format. The sweep leaves it out: read as a fixture it would fail on its first line, and a
+//! measurement that fails before it measures anything reads nothing.
 
 use std::rc::Rc;
 use std::sync::mpsc;
@@ -48,7 +47,7 @@ fn fixture_names() -> Vec<String> {
 }
 
 /// Every fixture the ends measurement reads loads as a level-line fixture: the control mesh that
-/// would stop it is left out (divergence 5015).
+/// would stop it is left out.
 #[test]
 fn rust_only_every_fixture_the_ends_measurement_reads_loads() {
     let names = fixture_names();
@@ -59,7 +58,7 @@ fn rust_only_every_fixture_the_ends_measurement_reads_loads() {
     }
 }
 
-/// C# `MeasureEveryEndOnEveryKernelFixture`.
+/// Measure every end on every kernel fixture.
 #[test]
 fn measure_every_end_on_every_kernel_fixture() {
     if std::env::var(RUN_VARIABLE).as_deref() != Ok("1") {
@@ -118,8 +117,8 @@ fn measure_every_end_on_every_kernel_fixture() {
     }
 
     for (name, run) in runs {
-        // C#'s `Task.WhenAny(work, Task.Delay(PerFixture))`: a run past its time box is reported
-        // and left to finish on its own thread.
+        // A run past its time box is reported and left to finish on its own thread, so one slow
+        // fixture cannot hold up the rest.
         let (sender, receiver) = mpsc::channel();
         std::thread::spawn(move || {
             let _ = sender.send(run());
@@ -138,7 +137,7 @@ fn measure_every_end_on_every_kernel_fixture() {
     }
 }
 
-/// C# `Measure`: the fixture's whole pick (`alone` < 0) or one chain of it.
+/// The fixture's whole pick (`alone` < 0) or one chain of it.
 fn measure(name: &str, alone: i32) -> String {
     let fixture = Rc::new(LevelLineFixture::load(name));
     let (chains, closed) = if alone < 0 {
@@ -189,7 +188,6 @@ fn measure(name: &str, alone: i32) -> String {
     })
 }
 
-/// C# `MeasureFade`.
 fn measure_fade(edges: i32, size: f64) -> String {
     let (positions, indices) = open_chain_fixtures::cylinder();
     let gap = band_gap_entry_points::build(
@@ -210,7 +208,6 @@ fn measure_fade(edges: i32, size: f64) -> String {
     watched(&gap, size, || gap_fill::fill(&gap, BandProfile::Fillet, 8))
 }
 
-/// C# `MeasureShearedPrism`.
 fn measure_sheared_prism(fraction: f64) -> String {
     let size = fraction * oblique_end_face_tests::room_of();
     let positions = oblique_end_face_tests::positions(None);
@@ -232,7 +229,7 @@ fn measure_sheared_prism(fraction: f64) -> String {
     watched(&gap, size, || gap_fill::fill(&gap, BandProfile::Fillet, 8))
 }
 
-/// C# `Watched`: runs one fill with every end watch on and reads each end hole it hands over.
+/// Runs one fill with every end watch on and reads each end hole it hands over.
 fn watched<E: std::fmt::Debug, F: FnOnce() -> Result<GapFillResult, E>>(
     gap: &BandGapResult,
     r: f64,
@@ -282,7 +279,7 @@ fn watched<E: std::fmt::Debug, F: FnOnce() -> Result<GapFillResult, E>>(
         Err(e) => format!("threw {e:?}"),
     };
 
-    // C#'s `finally`.
+    // The watches go off whatever the fill did, so the next fill runs unwatched.
     corner_cap::WATCH_END_HOLE_AT.with(|w| *w.borrow_mut() = None);
     open_gap_fill::WATCH_FADE_HOLE.with(|w| *w.borrow_mut() = None);
     dying_crease_fill::WATCH_DYING_HOLE.with(|w| *w.borrow_mut() = None);
@@ -307,7 +304,7 @@ fn watched<E: std::fmt::Debug, F: FnOnce() -> Result<GapFillResult, E>>(
     )
 }
 
-/// C# `ZipShape`: the zipped end hole - row and run from S to T round the end vertex V.
+/// The zipped end hole - row and run from S to T round the end vertex V.
 fn zip_shape(mesh: &LevelLineMesh, row: &[i32], run: &[i32], v: Vector3, r: f64) -> String {
     let run_points: Vec<Vector3> = run.iter().map(|&i| mesh.position(i)).collect();
     let mut with_v = run_points.clone();
@@ -338,7 +335,7 @@ fn zip_shape(mesh: &LevelLineMesh, row: &[i32], run: &[i32], v: Vector3, r: f64)
     )
 }
 
-/// C# `LoopShape`: a fade-type hole read as a loop of directed edges - edge count and flatness.
+/// A fade-type hole read as a loop of directed edges - edge count and flatness.
 fn loop_shape(mesh: &LevelLineMesh, edges: &[(i32, i32)], r: f64) -> String {
     let mut vertices = Vec::new();
     for &(a, b) in edges {
@@ -363,7 +360,7 @@ fn loop_shape(mesh: &LevelLineMesh, edges: &[(i32, i32)], r: f64) -> String {
     format!("{} edges, flat {flat:.3}", edges.len())
 }
 
-/// C# `BestPlane`: a plane through the points' centroid with the normal of the largest-area
+/// A plane through the points' centroid with the normal of the largest-area
 /// triangle among them - exact for a planar set, and a fair reading of how far a non-planar one
 /// departs.
 pub(crate) fn best_plane(points: &[Vector3]) -> (Vector3, Vector3) {

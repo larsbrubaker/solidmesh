@@ -1,11 +1,10 @@
-//! Ports `GeometryProcessingTests/BevelShadowClipTests.cs`: a RIB standing on the face a fillet is
-//! landing on - the general case of "Encroaching Side.mcx". The rolling ball never collides with
-//! the rib; what goes wrong is only the CUTTER, a solid that fills the whole corner and so takes
-//! the column under the rib's foot. The clip is the rib's FOOTPRINT on the face extruded down
-//! through the cutter (a SHADOW), not a half space through one of its faces, which would hand back
-//! most of the cut. The fixture is `create_rib_near_a_top_edge`: a 20 mm cube, the top edge at
-//! x = 0 rounded at 5, and a rib 2 wide and 4 tall on the top face - inside the setback at 1, beyond
-//! it at 8.
+//! A RIB standing on the face a fillet is landing on - the general case of "Encroaching Side.mcx".
+//! The rolling ball never collides with the rib; what goes wrong is only the CUTTER, a solid that
+//! fills the whole corner and so takes the column under the rib's foot. The clip is the rib's
+//! FOOTPRINT on the face extruded down through the cutter (a SHADOW), not a half space through one
+//! of its faces, which would hand back most of the cut. The fixture is
+//! `create_rib_near_a_top_edge`: a 20 mm cube, the top edge at x = 0 rounded at 5, and a rib 2 wide
+//! and 4 tall on the top face - inside the setback at 1, beyond it at 8.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -226,7 +225,7 @@ fn round(part: &Mesh) -> (bool, Vec<Obstruction>, Option<Vec<BevelTool>>) {
     (admitted, check.standing_on_a_face, tools)
 }
 
-/// `BevelShadowClip.Build` with the bodies, as the C# test asks for it.
+/// The shadow clip built with the bodies, as the tests here ask for it.
 fn shadows(part: &Mesh, obstructions: &[Obstruction]) -> Vec<Mesh> {
     bevel_shadow_clip::build(part, &part.get_mesh_edge_graph(), obstructions, true, 1.0)
         .expect("the clipper takes the outline")

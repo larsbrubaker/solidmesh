@@ -1,7 +1,6 @@
-//! Port of `LevelLine/CubeEdgeEndCapTests.cs`: stage 2, rung 6, the planar END CAP. One top edge of
-//! a cube of edge 2 ends on two end faces; the strip fills between the side runs and each end's
-//! hole is zipped by angle about the end vertex, so the cap lies in the end face. C# `[Arguments]`
-//! cases run as one loop per test.
+//! Stage 2, rung 6, the planar END CAP. One top edge of a cube of edge 2 ends on two end faces; the
+//! strip fills between the side runs and each end's hole is zipped by angle about the end vertex,
+//! so the cap lies in the end face. Each test's cases run as a loop inside it.
 
 use std::rc::Rc;
 
@@ -25,7 +24,7 @@ const EDGE_LENGTH: f64 = 2.0;
 
 const CHAIN: [i32; 2] = [4, 5];
 
-/// C# `ACubeEdgeFillsClosedWithItsCapsInTheEndFaces`.
+/// A cube edge fills closed with its caps in the end faces.
 #[test]
 fn a_cube_edge_fills_closed_with_its_caps_in_the_end_faces() {
     for (profile, fraction) in [
@@ -156,7 +155,7 @@ fn a_cube_edge_fills_closed_with_its_caps_in_the_end_faces() {
     }
 }
 
-/// C# `OverTheRoomRefusesBySizeNamingIt`.
+/// Over the room refuses by size naming it.
 #[test]
 fn over_the_room_refuses_by_size_naming_it() {
     for profile in [BandProfile::Chamfer, BandProfile::Fillet] {

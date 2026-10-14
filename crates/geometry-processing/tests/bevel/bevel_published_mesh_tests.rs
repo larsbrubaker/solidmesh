@@ -1,11 +1,11 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelPublishedMeshTests.cs`: the publish-time cleanup,
-//! what a bevel hands the viewport after the last boolean has run (`bevel_published_mesh::clean`).
+//! The publish-time cleanup, what a bevel hands the viewport after the last boolean has run
+//! (`bevel_published_mesh::clean`).
 //!
 //! The case it exists for is the one the "5mm Bevel Around Center" fixture shows - four beads of
 //! one radius unioned onto one feature, meeting almost tangentially, and the kernel's output
 //! shredded where they meet. Here that is reproduced in the small: a closed box with one of its
 //! faces split by a vertex duplicated a fraction of a micron away, and a fin of two back-to-back
-//! triangles standing off it. C#'s "the same instance comes back" is `clean` answering `None`.
+//! triangles standing off it. "Nothing to tidy" is `clean` answering `None`.
 
 use geometry_processing::bevel::{bevel_published_mesh, bevel_working_mesh};
 use polygon_mesh::solids::platonic_solids;

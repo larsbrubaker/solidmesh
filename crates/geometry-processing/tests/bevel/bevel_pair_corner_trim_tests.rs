@@ -1,11 +1,11 @@
-//! Port of `BevelPairCornerTrimTests.cs`: who trims whom at a pair corner, and what happens when
-//! the kernel says no - `bevel_pair_corner_trim` on its own, without a rebuild.
+//! Who trims whom at a pair corner, and what happens when the kernel says no -
+//! `bevel_pair_corner_trim` on its own, without a rebuild.
 //!
 //! The plan is pure - candidates in, trims out, no mesh is read - so the tubes here are empty
-//! meshes used only for their identity (`Rc::ptr_eq`, C#'s reference equality), and every
+//! meshes used only for their identity (`Rc::ptr_eq`), and every
 //! assertion is about WHICH tube came back rather than what is in it. The last tests run
-//! `apply` with the boolean itself passed in, which is how the production code takes it. C#'s
-//! `IsSameReferenceAs` on a cutter becomes "the same vertices and faces": the cutter list holds
+//! `apply` with the boolean itself passed in, which is how the production code takes it. "The
+//! same cutter" means the same vertices and faces: the cutter list holds
 //! owned meshes here, so a kept cutter is the one that was there and a replaced one carries the
 //! trimmed mesh's geometry.
 
@@ -32,7 +32,7 @@ fn ball() -> Option<Rc<Mesh>> {
     Some(Rc::new(Mesh::new()))
 }
 
-/// C#'s `IsEquivalentTo` over tubes: the same objects, in any order.
+/// The same tubes, by identity, in any order.
 fn same_balls(actual: &[Rc<Mesh>], expected: &[&Rc<Mesh>]) -> bool {
     actual.len() == expected.len()
         && expected
@@ -250,8 +250,7 @@ fn a_kernel_refusal_leaves_the_cutter_exactly_as_it_was() {
 fn a_result_the_kernel_will_not_vouch_for_leaves_the_cutter_as_it_was() {
     let cutter = platonic_solids::create_cube(10.0, 10.0, 10.0);
 
-    // C# hands back a null mesh; the Rust combiner's nearest is an empty one, which no operand
-    // check vouches for either.
+    // A boolean with no answer hands back an empty mesh, which no operand check vouches for.
     let kept = apply_to_one_cutter(cutter.clone(), &|_, _| Ok(Mesh::new()));
 
     assert!(
@@ -297,8 +296,7 @@ fn a_trimmed_cutter_replaces_the_one_it_was_made_from() {
 
 #[test]
 fn no_candidates_is_no_work() {
-    // C# asks with a null list and with an empty one; the Rust slice has no null, so both are the
-    // empty slice.
+    // No candidates at all is the empty slice.
     assert!(
         plan(&[]).0.is_empty(),
         "a selection with no pair corner in it - which is most of them - costs no boolean"

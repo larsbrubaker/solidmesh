@@ -1,5 +1,5 @@
-//! Port of `BevelBeadRunsOffItsWallTests.cs`: a bead whose wall runs out onto the cube's own
-//! convex edge is admitted; one wider than its wall everywhere is still refused.
+//! A bead whose wall runs out onto the cube's own convex edge is admitted; one wider than its wall
+//! everywhere is still refused.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -46,7 +46,7 @@ fn pyramidal_recess_in_a_cube() -> Mesh {
     let apex = apex();
     let far = v(s - apex.x, apex.y, apex.z);
 
-    // In C#'s order, so the faces are numbered as C#'s are.
+    // In a fixed order, so every face keeps the index the tests read it by.
     let mut mesh = Mesh::new();
     quad(&mut mesh, c010, c011, c111, c110);
     quad(&mut mesh, c000, c001, c011, c010);
@@ -69,7 +69,7 @@ fn quad(mesh: &mut Mesh, a: Vector3, b: Vector3, c: Vector3, d: Vector3) {
     mesh.create_face(&[a, c, d]);
 }
 
-/// C# `TheFixtureIsACubeWithAConcaveCreaseFromItsRimToTheRecessApex`.
+/// The fixture is a cube with a concave crease from its rim to the recess apex.
 #[test]
 fn the_fixture_is_a_cube_with_a_concave_crease_from_its_rim_to_the_recess_apex() {
     let part = pyramidal_recess_in_a_cube();
@@ -105,14 +105,14 @@ fn fit_at(radius: f64) -> BevelFaceFit {
     )
 }
 
-/// C# `ABeadIsAdmittedWhereItsWallRunsOutOntoTheCubesOwnConvexEdge`.
+/// A bead is admitted where its wall runs out onto the cube's own convex edge.
 #[test]
 fn a_bead_is_admitted_where_its_wall_runs_out_onto_the_cubes_own_convex_edge() {
     let checked = fit_at(RADIUS).try_check_group(0);
     assert!(checked.is_ok(), "{checked:?}");
 }
 
-/// C# `ABeadWiderThanItsWallEverywhereIsStillRefused`.
+/// A bead wider than its wall everywhere is still refused.
 #[test]
 fn a_bead_wider_than_its_wall_everywhere_is_still_refused() {
     let reason = fit_at(RADIUS_NO_WALL_CAN_CARRY)

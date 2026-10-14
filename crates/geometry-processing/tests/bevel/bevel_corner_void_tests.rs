@@ -1,11 +1,11 @@
-//! Ports `GeometryProcessingTests/BevelCornerVoidTests.cs`: the pieces a bead's 5.3 corner is made
-//! of, each read on its own - the wedge's squared-off end (`BevelChainEnds::squared_at`), the ring
-//! of faces the corner's void is drawn from (`bevel_corner_face_ring::try_order_at_vertex`), and
-//! the pair of wedges a chain carries away from it (`bevel_group_tools::sweep_void_wedges`).
+//! The pieces a bead's 5.3 corner is made of, each read on its own - the wedge's squared-off end
+//! (`BevelChainEnds::squared_at`), the ring of faces the corner's void is drawn from
+//! (`bevel_corner_face_ring::try_order_at_vertex`), and the pair of wedges a chain carries away
+//! from it (`bevel_group_tools::sweep_void_wedges`).
 //!
-//! C#'s `IsSameReferenceAs` checks read as equality here: Rust's `squared_at` hands back a clone
-//! where it squares nothing, and `sweep_void_wedges` takes `None` for "nothing was squared" (what
-//! C# reads off that identity) and returns owned meshes, told apart by their size.
+//! "The same wedge" reads as equality here: `squared_at` hands back a clone where it squares
+//! nothing, and `sweep_void_wedges` takes `None` for "nothing was squared" and returns owned
+//! meshes, told apart by their size.
 
 use geometry_processing::bevel::bevel_corner_face_ring::{try_order, try_order_at_vertex};
 use geometry_processing::bevel::bevel_corner_patch_mesher::try_build_void_cone;
@@ -158,7 +158,7 @@ fn the_corners_ring_closes_over_every_crease_at_the_vertex_and_refuses_a_plain_e
 /// still good.
 ///
 /// Driven rather than provoked: the branches that matter are the ones where a sweep comes back
-/// `None`, and no fixture in the corpus produces one at a 5.3 corner (see the C# remarks). Three
+/// `None`, and no fixture in the corpus produces one at a 5.3 corner. Three
 /// cases, and the caller acts differently on each: squaring worked, so the squared wedge is used
 /// and the overshooting one is kept in reserve for the clip to fall back to; squaring would not
 /// sweep, so the overshooting one is used, there is nothing further to fall back to, and the
@@ -388,7 +388,7 @@ fn a_fills_cone_sets_its_apex_back_so_its_walls_cross_the_faces_rather_than_lyin
     );
 }
 
-/// Whether a returned wedge is the given one (C#'s `IsSameReferenceAs`): the test's two wedges are
+/// Whether a returned wedge is the given one: the test's two wedges are
 /// cubes of different sizes, so their vertices tell them apart.
 fn is(wedge: &Option<Mesh>, expected: &Mesh) -> bool {
     wedge.as_ref().is_some_and(|mesh| {
@@ -400,7 +400,7 @@ fn is(wedge: &Option<Mesh>, expected: &Mesh) -> bool {
 fn apex(cone: &Mesh, corner: Vector3) -> Vector3 {
     let mut vertices: Vec<Vector3> = cone.vertices.iter().map(|v| v.as_vector3()).collect();
 
-    // C# OrderBy is stable; a stable sort keeps the first of any tie, as First() does.
+    // A stable sort keeps the first of any tie, so the nearest vertex is the first one met.
     vertices.sort_by(|a, b| (*a - corner).length().total_cmp(&(*b - corner).length()));
 
     vertices[0]

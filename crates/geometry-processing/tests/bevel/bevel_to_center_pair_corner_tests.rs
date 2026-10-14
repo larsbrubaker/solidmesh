@@ -1,15 +1,14 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BevelToCenterPairCornerTests.cs`: "Bevel to Center
-//! Feature" as the app hands it to the kernel - five groups at the saved 3.4 fillet, which the
-//! route joins into FOUR open chains. The right tip's vertical edge and the top edge along its side
-//! meet end to end and are one chain, 10 - 12 - 19, turning at the pair corner v12 (0, -118.5,
-//! 20); the band splits it there into two members, the tip (member 0) and the top edge (member 1).
-//! This fixture's frame is the app's shifted by (-20, -118.5, 0).
+//! "Bevel to Center Feature" as the app hands it to the kernel - five groups at the saved 3.4
+//! fillet, which the route joins into FOUR open chains. The right tip's vertical edge and the top
+//! edge along its side meet end to end and are one chain, 10 - 12 - 19, turning at the pair corner
+//! v12 (0, -118.5, 20); the band splits it there into two members, the tip (member 0) and the top
+//! edge (member 1). This fixture's frame is the app's shifted by (-20, -118.5, 0).
 //!
 //! The pair corner's end-face field (`PairCornerEndFaceField`, on by default) makes the top face's
 //! group read the least of its pick field and the tip's round carried through the top, so the top
 //! face is cut along the arc about the tip's axis; the step-corner carry alone keeps the top face
-//! within the tip's round as well. C#'s `PairCornerEndFaceField.TurnOff()` scope rides on the
-//! build's budget. C# `[Arguments]` rows are a loop over the same-named test.
+//! within the tip's round as well. Turning the pair-corner end-face field off rides on the
+//! build's budget, so it reaches no other build. Each test's cases run as a loop inside it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -32,7 +31,7 @@ const FIXTURE: &str = "bevel-to-center-feature-r34";
 /// The right tip plus its top edge: v10 up the tip to the pair corner v12, then back along x = 0.
 const RIGHT_TIP_CHAIN: usize = 1;
 
-/// C# `TheTopFaceStopsAtTheTipsRoundAtThePairCorner`: every level-line vertex the cut leaves on the
+/// Every level-line vertex the cut leaves on the
 /// TOP face in front of the tip's round lies on that round - the tip's fillet axis stands at
 /// (-3.4, -110.292) in plan, so nothing of the top face may stand more than 3.4 from it ahead of
 /// y = -110.292. The control is 15.192 deep; without the cut the rebuild's 16.6 is exactly the
@@ -60,8 +59,8 @@ fn the_top_face_stops_at_the_tips_round_at_the_pair_corner() {
     );
 }
 
-/// The right tip's chain alone, open, at `size` - with C#'s `PairCornerEndFaceField.TurnOff()`
-/// scope in force when `field_off`.
+/// The right tip's chain alone, open, at `size` - with the pair-corner end-face field turned off
+/// for this build when `field_off`.
 fn build_right_tip(fixture: &Rc<LevelLineFixture>, size: f64, field_off: bool) -> BandGapResult {
     let budget = default_budget(fixture, false);
     let _work = LevelLineWork::begin(Some(Rc::clone(&budget)));
@@ -70,12 +69,12 @@ fn build_right_tip(fixture: &Rc<LevelLineFixture>, size: f64, field_off: bool) -
         budget: Some(Rc::clone(&budget)),
         ..as_saved(fixture, None)
     };
-    // C# builds with `new[] { false }`: the chain is open in the fixture as well.
+    // The chain is built open, as it is in the fixture.
     assert!(!fixture.closed[RIGHT_TIP_CHAIN]);
     build_chains(fixture, &[RIGHT_TIP_CHAIN], size, &options)
 }
 
-/// C# `FarthestAhead`: how far from the tip's axis the farthest level-line vertex the build leaves
+/// How far from the tip's axis the farthest level-line vertex the build leaves
 /// on the top face ahead of it stands.
 fn farthest_ahead(fixture: &Rc<LevelLineFixture>, field_off: bool) -> f64 {
     let gap = build_right_tip(fixture, fixture.size, field_off);
@@ -97,7 +96,7 @@ fn farthest_ahead(fixture: &Rc<LevelLineFixture>, field_off: bool) -> f64 {
         .fold(f64::NEG_INFINITY, f64::max)
 }
 
-/// C# `UnderThePinchTheFilledTopFaceStopsAtTheTipsRound`: the same spike in a BUILT part, at a size
+/// The same spike in a BUILT part, at a size
 /// under the pinch the saved 3.4 is refused by - the right tip's chain alone fills at 2.5, and its
 /// top face must end on the tip's round there too. Without the end-face cut and the step-corner
 /// carry it kept (-2.5, -116, 20), 3.536 (size * sqrt 2) from the tip's axis where the round is 2.5.
@@ -119,7 +118,7 @@ fn under_the_pinch_the_filled_top_face_stops_at_the_tips_round() {
     );
 }
 
-/// C# `FilledFarthestAhead`: the filled right tip's farthest top-face vertex ahead of its axis,
+/// The filled right tip's farthest top-face vertex ahead of its axis,
 /// from that axis, after checking the fill is one good shell.
 fn filled_farthest_ahead(fixture: &Rc<LevelLineFixture>, size: f64, field_off: bool) -> f64 {
     let gap = build_right_tip(fixture, size, field_off);
@@ -157,7 +156,7 @@ fn filled_farthest_ahead(fixture: &Rc<LevelLineFixture>, size: f64, field_off: b
         .fold(f64::NEG_INFINITY, f64::max)
 }
 
-/// C# `AtTheSavedSizeThePickCutsAndFills` (rows {1}, {0, 1, 2, 3}): at the saved 3.4 the right tip
+/// For the right tip alone ({1}) and the whole pick ({0, 1, 2, 3}): at the saved 3.4 the right tip
 /// alone and the whole pick cut, fill as one shell, and the right tip's top face still ends on its
 /// round - the Onshape control builds all five runs at this size.
 ///
@@ -226,7 +225,7 @@ fn at_the_saved_size_the_pick_cuts_and_fills() {
     }
 }
 
-/// C# `OnlyAnOpenChainsMitredCornerIsAPairCorner`: a face rim's corners are not pair corners - they
+/// A face rim's corners are not pair corners - they
 /// share the picked face and turn their walls through a convex crease as the knife tip does, but
 /// the rim is closed and its next edge cuts that wall itself. The knife tip's pick still finds its
 /// corner.
@@ -283,7 +282,7 @@ fn only_an_open_chains_mitred_corner_is_a_pair_corner() {
     }
 }
 
-/// C# `TheCornerFieldsLeastAndGreatestAreExact`: the corner field's least and greatest over a
+/// The corner field's least and greatest over a
 /// triangle are exact - never above (least) or below (greatest) what a dense grid reads, and within
 /// the grid's spacing of it.
 #[test]
@@ -332,7 +331,7 @@ fn the_corner_fields_least_and_greatest_are_exact() {
     }
 }
 
-/// C# `TheCornerFieldCutsOnlyInTheCornersEndRegion`: the field cuts only in the corner's end
+/// The field cuts only in the corner's end
 /// region. Its round's prism runs on along the member's first segment forever, and it is keyed to
 /// the end face's whole side group, so without bounds it cut far down the member - past a partial
 /// member's free end, or where a curved member has left the straight prism - and on a notch of the
@@ -389,7 +388,7 @@ fn the_corner_field_cuts_only_in_the_corners_end_region() {
     );
 }
 
-/// C# `AtASixtyDegreeEdgeTheAxisAndZeroSetAreTheRounds`: at another dihedral - normals 120 degrees
+/// At another dihedral - normals 120 degrees
 /// apart, a 60 degree edge - the axis stands the size inside both faces and the field's zero set is
 /// the round's cylinder in front of it.
 #[test]
@@ -425,7 +424,7 @@ fn at_a_sixty_degree_edge_the_axis_and_zero_set_are_the_rounds() {
     assert!(field.read(axis - (toward * (SIZE + 1.0))) > 0.0);
 }
 
-/// C# `ARimWithAPickedTailHasNoPairCorners`: a face rim with a picked TAIL is still a rim - its
+/// A face rim with a picked TAIL is still a rim - its
 /// corners are on a cycle of picked edges, so they are not pair corners, though the tail makes one
 /// rim corner a three-way junction and the rim no longer a pure ring.
 #[test]
@@ -468,10 +467,10 @@ fn a_rim_with_a_picked_tail_has_no_pair_corners() {
     assert!(found.is_none());
 }
 
-/// C# `ADraftedBoxEdgeIsNotAKnife` (rows 88 false, 80 true): only an edge clearly sharper than
-/// square is a knife - a box whose vertical edge is drafted to 88 degrees (normals 92 apart, shared
-/// . own = -0.035) has no pair corner where that edge meets the front face's top edge, and the same
-/// corner with the edge at 80 degrees (shared . own = -0.17) has one.
+/// A drafted box edge is not a knife (88 degrees: no pair corner; 80: one): only an edge clearly
+/// sharper than square is a knife - a box whose vertical edge is drafted to 88 degrees (normals 92
+/// apart, shared . own = -0.035) has no pair corner where that edge meets the front face's top
+/// edge, and the same corner with the edge at 80 degrees (shared . own = -0.17) has one.
 #[test]
 fn a_drafted_box_edge_is_not_a_knife() {
     for (edge_degrees, is_a_pair_corner) in [(88.0, false), (80.0, true)] {
@@ -515,7 +514,7 @@ fn a_drafted_box_edge_is_not_a_knife() {
     }
 }
 
-/// C# `TipAxis`: the right tip's fillet axis in plan at `size` - `size` in from both the x = 0 face
+/// The right tip's fillet axis in plan at `size` - `size` in from both the x = 0 face
 /// and the 45 degree slope that meet at the tip v12, so (tip.x - size, tip.y + size (1 + sqrt 2)).
 fn tip_axis(fixture: &LevelLineFixture, size: f64) -> Vector2 {
     let tip = fixture.positions[12];

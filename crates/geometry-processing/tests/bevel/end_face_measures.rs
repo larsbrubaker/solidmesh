@@ -1,12 +1,11 @@
-//! Ports of the measuring helpers the end-face test classes borrow from C# test classes not yet
-//! ported here: `TopCenterFaceTests.ToTriangle` (with `ToSegment`) and
-//! `CornerVolumeMeasureTests.Prism`.
+//! Measuring helpers the end-face test classes share: the distance to a triangle (`to_triangle`,
+//! with its segment form) and the exact fillet prism (`prism`).
 
 #![allow(dead_code)]
 
 use vector_math::Vector3;
 
-/// C# `TopCenterFaceTests.ToTriangle`: the distance from `p` to the triangle a-b-c.
+/// The distance from `p` to the triangle a-b-c.
 pub fn to_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> f64 {
     let mut n = (b - a).cross(c - a);
     let length = n.length();
@@ -34,7 +33,7 @@ fn to_segment(p: Vector3, a: Vector3, b: Vector3) -> f64 {
     (p - (a + (d * t))).length()
 }
 
-/// C# `CornerVolumeMeasureTests.Prism`: the exact fillet prism of radius `r` along the chain -
+/// The exact fillet prism of radius `r` along the chain -
 /// per edge, its length times r^2 (tan(phi / 2) - phi / 2), taken off where the edge is convex and
 /// added where it is concave.
 pub fn prism(

@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BandCutTests.cs`: the band cut - conforming
-//! splits, the refinement, the roots and the partition - on hand-built solids and planes with
-//! analytic fields. C# `[Arguments]` rows are loops over the same-named test.
+//! The band cut - conforming splits, the refinement, the roots and the partition - on hand-built
+//! solids and planes with analytic fields. Each test's cases run as a loop inside it.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -304,7 +303,7 @@ fn two_runs_of_the_same_cut_agree_exactly() {
         );
     }
 
-    // C#'s `IsEquivalentTo`: the same lines, in any order.
+    // The same lines, in any order.
     assert_eq!(names(&second_cut.lines), names(&first_cut.lines));
 }
 

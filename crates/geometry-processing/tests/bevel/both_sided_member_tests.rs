@@ -1,9 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BothSidedMemberTests.cs`: a face rim with an
-//! open edge starting at one of its corners - the box's top rim 4-5-6-7 and the vertical edge 5-1.
-//! The edge's two sides are the front and right faces, separate regions, but both are the rim's
-//! outer side, so they fall in one side group: the edge is a BOTH-SIDED member of that group, not
-//! a chain that fails to divide its sides. C# `[Arguments]`/`[MatrixDataSource]` rows are loops
-//! over the same-named test.
+//! A face rim with an open edge starting at one of its corners - the box's top rim 4-5-6-7 and the
+//! vertical edge 5-1. The edge's two sides are the front and right faces, separate regions, but
+//! both are the rim's outer side, so they fall in one side group: the edge is a BOTH-SIDED member
+//! of that group, not a chain that fails to divide its sides. Each test's cases, and their
+//! combinations, run as loops inside it.
 
 use std::rc::Rc;
 
@@ -25,15 +24,12 @@ use crate::level_line_test_geometry::{
 };
 use crate::several_chains_fixtures::FOLD_DEGREES;
 
-/// C# `RimAndEdge`.
 fn rim_and_edge() -> Vec<Vec<i32>> {
     vec![vec![4, 5, 6, 7], vec![5, 1]]
 }
 
-/// C# `Closed`.
 const CLOSED: [bool; 2] = [true, false];
 
-/// C# `ChainEdges`.
 fn chain_edges() -> Vec<Vec<(i32, i32)>> {
     rim_and_edge()
         .iter()
@@ -42,7 +38,8 @@ fn chain_edges() -> Vec<Vec<(i32, i32)>> {
         .collect()
 }
 
-/// C# `BandGap.Build(..., size, profile, 0, 1e-9, knownRoom: null)` on the box.
+/// The band gap on the box at `size` and `profile`: no chord tolerance, a 1e-9 snap, the room
+/// measured.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -65,7 +62,7 @@ fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `AnEdgeFromARimCornerIsBothSidedInTheRimsOuterGroup`.
+/// An edge from a rim corner is both-sided in the rim's outer group.
 #[test]
 fn an_edge_from_a_rim_corner_is_both_sided_in_the_rims_outer_group() {
     let (positions, indices) = cube_solid(1.0);
@@ -92,7 +89,7 @@ fn an_edge_from_a_rim_corner_is_both_sided_in_the_rims_outer_group() {
         .all(|g| g.both_sided.is_empty()));
 }
 
-/// C# `TheBandAroundARimCornerEdgeLeavesOneLoopDownOneRailAndUpTheOther`: both-sided members are
+/// Both-sided members are
 /// read (the default), so the band is cut: the rim's inner side leaves its one closed loop, the
 /// outer group ONE open loop running up the edge's one rail, round the rim and down its other rail
 /// (owned by the edge, then the rim, then the edge), and the edge's free end its end region's one
@@ -101,8 +98,8 @@ fn an_edge_from_a_rim_corner_is_both_sided_in_the_rims_outer_group() {
 fn the_band_around_a_rim_corner_edge_leaves_one_loop_down_one_rail_and_up_the_other() {
     let (positions, indices) = cube_solid(1.0);
 
-    // C#'s per-flow `BandSideTagging.BothSidedMembersBuild = false` travels with the build's
-    // budget here.
+    // Turning both-sided members off travels with the build's budget, so it reaches no other
+    // build.
     let off =
         WorkBudget::new(WorkBudget::default_limit(indices.len() as i32)).expect("a positive limit");
     off.both_sided_members_off.set(true);
@@ -166,7 +163,7 @@ fn the_band_around_a_rim_corner_edge_leaves_one_loop_down_one_rail_and_up_the_ot
     assert_eq!(runs, vec![1, 0, 1]);
 }
 
-/// C# `TheFilletFillsWhenTheRimStartsAtTheCorner`: with the rim picked starting at the corner,
+/// With the rim picked starting at the corner,
 /// the corner fill takes the pick - the corner is an end on the rim's interior - and the fillet
 /// fills.
 #[test]
@@ -188,7 +185,7 @@ fn the_fillet_fills_when_the_rim_starts_at_the_corner() {
     assert_eq!(fill.refusal, GapFillRefusal::None);
 }
 
-/// C# `TheFilletFillsWhicheverVertexTheRimStartsAt`: the rim picked from ANY of its vertices fills
+/// The rim picked from ANY of its vertices fills
 /// the same - the band rotates a closed chain to start at a corner before its fields are built.
 #[test]
 fn the_fillet_fills_whichever_vertex_the_rim_starts_at() {
@@ -217,7 +214,7 @@ fn the_fillet_fills_whichever_vertex_the_rim_starts_at() {
     }
 }
 
-/// C# `TheRimAndCornerEdgeFillClosedAcrossTheRoom`: the box rim + corner edge filled at a spread
+/// The box rim + corner edge filled at a spread
 /// of the pick's room, fillet and chamfer: the answer is closed, one shell, has no zero-area
 /// triangle, and every edge here is convex so the volume only goes down.
 #[test]
@@ -285,7 +282,7 @@ fn the_rim_and_corner_edge_fill_closed_across_the_room() {
     }
 }
 
-/// C# `Specks`: live triangles of (near) zero area.
+/// Live triangles of (near) zero area.
 fn specks(mesh: &LevelLineMesh) -> usize {
     (0..mesh.triangle_count())
         .filter(|&t| {
@@ -294,8 +291,8 @@ fn specks(mesh: &LevelLineMesh) -> usize {
         .count()
 }
 
-/// C# `ABothSidedMembersLoopSideIsReadFromTheGeometry`: which side of the edge a point is on,
-/// read from the geometry, agrees with the side `ChainOnTheMesh.SidesOf` names.
+/// Which side of the edge a point is on,
+/// read from the geometry, agrees with the side `chain_on_the_mesh::sides_of` names.
 #[test]
 fn a_both_sided_members_loop_side_is_read_from_the_geometry() {
     let (positions, indices) = cube_solid(1.0);

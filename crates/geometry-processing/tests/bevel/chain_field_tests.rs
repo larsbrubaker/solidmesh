@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainFieldTests.cs`: the distance field the
-//! level line is the zero set of - exact, deterministic and continuous. C# `[Arguments]` rows are
-//! loops over the same-named test.
+//! The distance field the level line is the zero set of - exact, deterministic and continuous. Each
+//! test's cases run as a loop inside it.
 
 use std::time::Instant;
 

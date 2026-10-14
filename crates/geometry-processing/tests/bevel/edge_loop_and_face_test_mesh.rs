@@ -1,8 +1,7 @@
-//! Port of the test fixture `Fixtures/EdgeLoopAndFaceTestMesh.cs`: the half cylinder of
-//! "Edge Loop And Face Should Match.mcx", cut out of its own owner file - the welded working mesh the
-//! bevel construction is handed (40 vertices, 76 triangles), in the space the size is quoted in, with
-//! the file's three picks (the Test copy's one FaceGroup and the Control copy's Edge plus
-//! TangentChain) as the anchored groups the app resolves them from.
+//! The half cylinder of "Edge Loop And Face Should Match.mcx", cut out of its own owner file - the
+//! welded working mesh the bevel construction is handed (40 vertices, 76 triangles), in the space
+//! the size is quoted in, with the file's three picks (the Test copy's one FaceGroup and the
+//! Control copy's Edge plus TangentChain) as the anchored groups the app resolves them from.
 //!
 //! The part: a half cylinder radius 10 with its axis along y, flat on z = 0, spanning x -10..10,
 //! y -20..0 and z 0..9.966 (the arc is inscribed at 19 facets). The rim every pick names is the
@@ -25,12 +24,12 @@ pub const SEGMENTS: i32 = 8;
 /// The operation's bend threshold, which every group is read at.
 pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
-/// C# `ThePart`: the welded working mesh, 40 vertices and 76 triangles.
+/// The welded working mesh, 40 vertices and 76 triangles.
 pub fn the_part() -> Mesh {
     Mesh::from_arrays(COORDINATES, TRIANGLES)
 }
 
-/// C# `TheEndFace`: the Test copy's one pick - the y = -20 end face, as a face group off its anchors.
+/// The Test copy's one pick - the y = -20 end face, as a face group off its anchors.
 pub fn the_end_face() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::FaceGroup,
@@ -46,7 +45,7 @@ pub fn the_end_face() -> BevelEdgeGroup {
     }
 }
 
-/// C# `TheStraightEdge`: the Control copy's first pick - the end face's straight diameter, as one
+/// The Control copy's first pick - the end face's straight diameter, as one
 /// Edge.
 pub fn the_straight_edge() -> BevelEdgeGroup {
     BevelEdgeGroup {
@@ -63,7 +62,7 @@ pub fn the_straight_edge() -> BevelEdgeGroup {
     }
 }
 
-/// C# `TheArc`: the Control copy's second pick - the arc of the same rim, as a TangentChain.
+/// The Control copy's second pick - the arc of the same rim, as a TangentChain.
 pub fn the_arc() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::TangentChain,

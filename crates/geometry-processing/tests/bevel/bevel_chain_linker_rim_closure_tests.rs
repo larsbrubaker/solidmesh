@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/BevelChainLinkerRimClosureTests.cs`: the rim of one face of
-//! a box has to link into ONE closed run whichever of its edges the walk starts from, even where
-//! the face's normal misses its axis by a ten-millionth - which breaks the square-corner tie any
-//! normal comparison is deciding.
+//! The rim of one face of a box has to link into ONE closed run whichever of its edges the walk
+//! starts from, even where the face's normal misses its axis by a ten-millionth - which breaks the
+//! square-corner tie any normal comparison is deciding.
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::topology::{bevel_edge_group_resolver, FaceGroup, FeatureEdgeSet};

@@ -1,6 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChamferTurnTests.cs`: one chain turning 90
-//! degrees over a cube's convex corner (the two top edges 5-6 and 6-7), chamfered and filleted,
-//! removes the mitred closed form (`BevelSurfaceLadderCornerTests.Rung3_TwoCubeEdgesAtACorner`'s).
+//! One chain turning 90 degrees over a cube's convex corner (the two top edges 5-6 and 6-7),
+//! chamfered and filleted, removes the mitred closed form
+//! (`BevelSurfaceLadderCornerTests.Rung3_TwoCubeEdgesAtACorner`'s).
 
 use std::collections::HashSet;
 use std::f64::consts::PI;
@@ -14,7 +14,7 @@ use crate::level_line_test_geometry::{cube_solid, signed_volume, signed_volume_o
 use crate::several_chains_fixtures::FOLD_DEGREES;
 use crate::sweep_mesh_measures;
 
-/// C# `AChamferTurningOverACubeCornerRemovesTheMitredClosedForm`: the two chamfer planes meet on
+/// The two chamfer planes meet on
 /// their bisector, so the pick removes 2 x 20 x d^2/2 less the d^3/3 the mitre stops counting
 /// twice.
 #[test]
@@ -68,7 +68,7 @@ fn a_chamfer_turning_over_a_cube_corner_removes_the_mitred_closed_form() {
     );
 }
 
-/// C# `AFilletTurningOverACubeCornerRemovesTheMitredClosedForm`: the same turn filleted, 8
+/// The same turn filleted, 8
 /// segments - the swept sections less the mitred overlap, and the mitre's own arc lying in the
 /// bisector plane x = y.
 #[test]

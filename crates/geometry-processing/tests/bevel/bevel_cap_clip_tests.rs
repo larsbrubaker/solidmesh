@@ -1,11 +1,10 @@
-//! Ports `GeometryProcessingTests/BevelCapClipTests.cs`: the end cap the sweep cannot carry, and
-//! what `bevel_cap_clip` is allowed to do about it. Every test is arithmetic on a cube or a
-//! hand-made plane - no kernel - because the three things worth pinning are decisions: where the
-//! half space sits, that only one cap is ever demoted, and that a clip the kernel refuses costs the
-//! group rather than shipping the untrimmed tool.
+//! The end cap the sweep cannot carry, and what `bevel_cap_clip` is allowed to do about it. Every
+//! test is arithmetic on a cube or a hand-made plane - no kernel - because the three things worth
+//! pinning are decisions: where the half space sits, that only one cap is ever demoted, and that a
+//! clip the kernel refuses costs the group rather than shipping the untrimmed tool.
 //!
-//! C#'s combiner hands back null for "the answer it will not vouch for"; the Rust combiner returns
-//! a `Result<Mesh, _>`, so that case is an empty mesh, which is no usable operand either.
+//! The combiner returns a `Result<Mesh, _>`, and "the answer it will not vouch for" is an empty
+//! mesh, which is no usable operand.
 
 use geometry_processing::bevel::bevel_cap_clip::{self, Candidate, ClippedCap};
 use geometry_processing::bevel::bevel_chain_linker;
@@ -188,7 +187,7 @@ fn a_run_no_demotion_rescues_keeps_the_first_attempts_refusal() {
     let tool =
         bevel_cap_clip::try_create(&run, false, Some(&ends), RADIUS, SEGMENTS, true, None, 0.0);
 
-    // Rust's `Err` is C#'s null tool with no clips owed.
+    // `Err` is no tool, with no clips owed.
     match tool {
         Ok(_) => panic!("neither single-cap retry can sweep either, so there is no tool to have"),
         Err(reason) => assert_eq!(
@@ -198,8 +197,8 @@ fn a_run_no_demotion_rescues_keeps_the_first_attempts_refusal() {
     }
 }
 
-/// C#'s `[Arguments("partial")]`, `[Arguments("rejected")]`, `[Arguments("null")]`: all three of the
-/// ways a subtract can decline, one remedy for all three.
+/// The cases "partial", "rejected" and "null": all three of the ways a subtract can decline, one
+/// remedy for all three.
 fn a_clip_the_kernel_will_not_run_withdraws_the_cutter_and_fails_its_group(refusal: &str) {
     let other = platonic_solids::create_cube(4.0, 4.0, 4.0);
     let mut cutters = vec![platonic_solids::create_cube(2.0, 2.0, 2.0), other.clone()];

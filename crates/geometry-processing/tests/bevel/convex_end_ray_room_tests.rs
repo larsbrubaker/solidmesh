@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ConvexEndRayRoomTests.cs`: "Chain and Face Should
-//! Both work.mcx"'s chain pick c20, whose convex oblique end carries an unbounded end ray that a
-//! crease past the end face lies ON. The band is clipped at the end face, so that edge is read
-//! against the end vertex, and the room is set by what really bounds the band.
+//! "Chain and Face Should Both work.mcx"'s chain pick c20, whose convex oblique end carries an
+//! unbounded end ray that a crease past the end face lies ON. The band is clipped at the end face,
+//! so that edge is read against the end vertex, and the room is set by what really bounds the band.
 
 use std::rc::Rc;
 
@@ -26,7 +25,7 @@ fn feature_of(fixture: &Rc<LevelLineFixture>) -> FeatureEdgeTest {
     Rc::new(move |a, b| lookup.is_feature_edge(a, b))
 }
 
-/// Clears this thread's flat-ends override when dropped - C#'s `finally`.
+/// Clears this thread's flat-ends override when dropped, however the test leaves.
 struct FlatEndsOverride;
 
 impl Drop for FlatEndsOverride {
@@ -35,7 +34,7 @@ impl Drop for FlatEndsOverride {
     }
 }
 
-/// C# `ChainAndFaceC20BuildsAtASmallSize`.
+/// Chain and face c20 builds at a small size.
 #[test]
 fn chain_and_face_c20_builds_at_a_small_size() {
     let fixture = Rc::new(LevelLineFixture::load("chain-and-face-c20-r005"));
@@ -69,7 +68,7 @@ fn chain_and_face_c20_builds_at_a_small_size() {
     assert!(gap.room > 1.0, "{}", gap.room);
 }
 
-/// C# `ChainAndFaceC20WithASecondChainReadsTheRoomPastItsEndFace`: the same c20 chain picked with a
+/// The same c20 chain picked with a
 /// second, far edge, so the room is read by the MULTI-chain reading - which with flat ends on must
 /// take the same convex-end rule.
 #[test]

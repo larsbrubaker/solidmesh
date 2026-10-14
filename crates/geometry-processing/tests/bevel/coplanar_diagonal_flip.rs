@@ -1,17 +1,17 @@
-//! Port of the test helper `LevelLine/CoplanarDiagonalFlip.cs`: re-triangulates a source's flat
-//! faces the other way. Every diagonal shared by two coplanar triangles that form a strictly
-//! convex quad is swapped for the quad's other diagonal. The part's shape is unchanged; only the
-//! triangles across its flat faces differ - which is what a source built by another boolean route
-//! hands the level line. Used by `level_line_triangulation_invariance_tests`.
+//! Re-triangulates a source's flat faces the other way. Every diagonal shared by two coplanar
+//! triangles that form a strictly convex quad is swapped for the quad's other diagonal. The part's
+//! shape is unchanged; only the triangles across its flat faces differ - which is what a source
+//! built by another boolean route hands the level line. Used by
+//! `level_line_triangulation_invariance_tests`.
 
 use std::collections::{BTreeMap, HashSet};
 
 use vector_math::Vector3;
 
-/// C# `FlipAll`: the source with every flippable coplanar diagonal flipped, and how many were.
+/// The source with every flippable coplanar diagonal flipped, and how many were.
 /// Each triangle takes part in at most one flip, so the result does not depend on the order of
 /// later flips undoing earlier ones. An edge `keep` names (feature and chain edges) is never
-/// flipped. C#'s `planeTolerance` default is 1e-9.
+/// flipped. The usual plane tolerance is 1e-9.
 pub fn flip_all(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -25,7 +25,7 @@ pub fn flip_all(
         .flat_map(|&t| edges_of(t))
         .map(|(a, b)| key(a, b))
         .collect();
-    // C# walks `standing.OrderBy(pair => pair.Key)`: a sorted map gives the same order.
+    // A sorted map walks the edges in key order, so the flips are the same every run.
     let mut standing: BTreeMap<(i32, i32), Vec<usize>> = BTreeMap::new();
     for (t, &triangle) in triangles.iter().enumerate() {
         for (a, b) in edges_of(triangle) {

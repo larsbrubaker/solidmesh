@@ -1,8 +1,8 @@
 //! THE ROUND THE USER MODELLED, read off the source mesh and rolled on: the two pieces that let a
 //! fillet on the crease where a 40 sided post meets a flat wall stand on the POST rather than on
-//! the plane of the one facet of it the crease edge happens to lie in. Ports
-//! `Tests/GeometryProcessingTests/BevelSourceRoundTests.cs`, over `bevel_source_rounds::try_fit`,
-//! `BevelRoundFaces` and `BevelRoundDescriptor`; its meshes are `source_round_test_meshes.rs`.
+//! the plane of the one facet of it the crease edge happens to lie in. Over
+//! `bevel_source_rounds::try_fit`, `bevel_round_faces` and `bevel_round_descriptor`; its meshes are
+//! `source_round_test_meshes.rs`.
 //!
 //! The fixture is the "Unexpected Gap In Fillet" part reduced to numbers: a radius 10 prism drawn
 //! with 40 chords, its axis along z through (5, -4), standing in a wall whose face is the plane
@@ -69,8 +69,8 @@ fn the_prism_wall_is_fitted_to_the_cylinder_it_was_drawn_from() {
     );
 
     // The wall is the one surface with a facet for every chord; the two caps are one face each.
-    // (LINQ's GroupBy keeps first-appearance order and its OrderByDescending is stable, so the
-    // first label to reach the largest count wins.)
+    // (Labels are counted in first-appearance order and the sort is stable, so the first label to
+    // reach the largest count wins.)
     let mut counts: Vec<(i32, usize)> = Vec::new();
     for &label in &surfaces {
         match counts.iter_mut().find(|(seen, _)| *seen == label) {
@@ -243,7 +243,7 @@ fn the_station_is_found_wherever_the_part_sits_in_space() {
 
     // The long vertical crease nearest where the near-side one was before the part was moved.
     // Found rather than assumed, as above: the boolean decides which mesh edges are there.
-    // (LINQ's OrderBy is stable, so the first of equal distances wins.)
+    // (The first of equal distances wins.)
     let crease = features
         .edges()
         .iter()
@@ -467,7 +467,7 @@ fn a_sliver_of_a_cylinder_is_too_little_to_fit() {
 /// are, and the pair scan this stands against could only refuse one after examining all of them.
 /// Two seconds is far above the few milliseconds the one pass takes and far below the pair scan,
 /// so the bound says which of the two is running without being a stopwatch on the machine's mood.
-/// (C#'s `[Timeout(120_000)]` has no libtest equivalent; the two-second bound is the test.)
+/// The two-second bound is the test.
 #[test]
 fn a_huge_surface_is_answered_in_one_pass_over_its_facets() {
     const ACROSS: i32 = 100;
@@ -535,7 +535,7 @@ fn wall_facets(post: &Mesh, chords: usize) -> Vec<i32> {
         wall.push((face as i32, normal.y.atan2(normal.x)));
     }
 
-    // LINQ's OrderBy(|angle|).ThenBy(face): a total order, so the stable sort is the same one.
+    // By |angle|, then by face: a total order, so no tie is left to chance.
     wall.sort_by(|one, other| {
         one.1
             .abs()
@@ -576,7 +576,7 @@ fn the_post_as_a_round() -> BevelRoundDescriptor {
 
 /// The vertical crease on the near side, where the post meets the wall, with the part's surface
 /// labels. Found rather than assumed, because the boolean decides which mesh edges are there.
-/// (LINQ's OrderByDescending is stable, so the first of equal lengths wins.)
+/// (The first of equal lengths wins.)
 fn the_crease(part: &Mesh) -> (FeatureEdge, Vec<i32>) {
     let graph = part.get_mesh_edge_graph();
     let surfaces =

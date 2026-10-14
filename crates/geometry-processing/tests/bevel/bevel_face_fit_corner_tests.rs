@@ -1,4 +1,4 @@
-//! Port of `BevelFaceFitCornerTests.cs`: the face-width check at corners - an obstruction standing
+//! The face-width check at corners - an obstruction standing
 //! on the face is seen, runs meeting at a corner are the corner's business, a face narrowing to a
 //! convex edge is admitted, and parallel runs too close, or a feature narrow along its whole
 //! length, still refuse.
@@ -52,7 +52,8 @@ fn fitted_double(reason: &geometry_processing::bevel::BevelAdvisory) -> f64 {
     }
 }
 
-/// C# `ARibIsSeenWhetherOrNotItsCreaseEndsOnTheSampleLine(ribEndsAt, what)`.
+/// A rib is seen whether or not its crease ends on the sample line, for a rib ending at
+/// `rib_ends_at` (`what` names the case).
 fn a_rib_is_seen_whether_or_not_its_crease_ends_on_the_sample_line(rib_ends_at: f64, what: &str) {
     let part = create_rib_ending_at(rib_ends_at);
     assert!(part.is_manifold());
@@ -82,7 +83,7 @@ fn a_rib_is_seen_whether_or_not_its_crease_ends_on_the_sample_line_clear_of_its_
     );
 }
 
-/// C# `TwoRunsMeetingAtAnAcuteCornerAreTheCornersBusinessAndNotACollision`.
+/// Two runs meeting at an acute corner are the corner's business and not a collision.
 #[test]
 fn two_runs_meeting_at_an_acute_corner_are_the_corners_business_and_not_a_collision() {
     let prism = create_isosceles_prism(APEX_DEGREES, PRISM_LENGTH, CUBE_SIZE);
@@ -107,7 +108,7 @@ fn two_runs_meeting_at_an_acute_corner_are_the_corners_business_and_not_a_collis
     }
 }
 
-/// C# `AFaceNarrowingToAConvexEdgeAtASharedCornerIsAdmitted`.
+/// A face narrowing to a convex edge at a shared corner is admitted.
 #[test]
 fn a_face_narrowing_to_a_convex_edge_at_a_shared_corner_is_admitted() {
     let prism = create_isosceles_prism(APEX_DEGREES, PRISM_LENGTH, CUBE_SIZE);
@@ -123,7 +124,7 @@ fn a_face_narrowing_to_a_convex_edge_at_a_shared_corner_is_admitted() {
     assert!(checked.is_ok(), "{checked:?}");
 }
 
-/// C# `TwoParallelRunsCloserThanTheirSetbacksStillRefuse`.
+/// Two parallel runs closer than their setbacks still refuse.
 #[test]
 fn two_parallel_runs_closer_than_their_setbacks_still_refuse() {
     let width = 4.0;
@@ -150,7 +151,7 @@ fn two_parallel_runs_closer_than_their_setbacks_still_refuse() {
     assert!((fitted_double(&reason) - width / 2.0).abs() <= 1e-6);
 }
 
-/// C# `AFeatureNarrowAlongItsWholeLengthIsRefusedThoughEveryBlockerSharesItsCorner`.
+/// A feature narrow along its whole length is refused though every blocker shares its corner.
 #[test]
 fn a_feature_narrow_along_its_whole_length_is_refused_though_every_blocker_shares_its_corner() {
     let thin = 0.2;

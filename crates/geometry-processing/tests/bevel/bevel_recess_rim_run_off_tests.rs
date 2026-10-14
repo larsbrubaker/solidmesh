@@ -1,9 +1,8 @@
-//! Port of `BevelRecessRimRunOffTests.cs`: the pyramid recess's upper left crease
-//! (`pyramid_recess_test_meshes`), planned at 3 mm over 8 segments and built through the surface
-//! construction with the ROOM's own reading handed to the build - its left wall runs off over a
-//! stretch, dies on the knife edge, and the bead turns onto the cube's top and dies past the apex.
-//! Every case runs either way up (`mirror_z`) and at either place (the box frame, or where the
-//! rebuild has the part).
+//! The pyramid recess's upper left crease (`pyramid_recess_test_meshes`), planned at 3 mm over 8
+//! segments and built through the surface construction with the ROOM's own reading handed to the
+//! build - its left wall runs off over a stretch, dies on the knife edge, and the bead turns onto
+//! the cube's top and dies past the apex. Every case runs either way up (`mirror_z`) and at either
+//! place (the box frame, or where the rebuild has the part).
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -62,8 +61,8 @@ fn the_crease_builds_and_the_kernel_takes_it(mirror_z: bool, where_the_rebuild_h
         "the bead and the part are one solid"
     );
 
-    // C# imports with `Manifold.FromMeshGL64Robust` on `SurfaceResultImportsIntoManifoldTests
-    // .AsMeshGL64`: the strict import, the same marshalling with no weld-and-retry.
+    // The strict import, the same marshalling `surface_result_imports_into_manifold_tests` reads
+    // with no weld-and-retry, so a defect in the build cannot be welded away.
     if let Err(rejected) = manifold_import::import_strict(&built) {
         panic!(
             "the kernel takes the published mesh, which a Combine after a Fillet would hand it - \
@@ -344,10 +343,10 @@ fn the_crease(mirror_z: bool, where_the_rebuild_has_the_part: bool) -> Mesh {
         })
         .copied()
         .collect();
-    assert_eq!(creases.len(), 1, "C#'s Single: the one upper left crease");
+    assert_eq!(creases.len(), 1, "exactly one: the upper left crease");
 
     let mut chains = surface_chain_join::join(&bevel_chain_linker::link(&creases));
-    assert_eq!(chains.len(), 1, "C#'s Single: the one chain");
+    assert_eq!(chains.len(), 1, "exactly one chain");
     let chain = chains.remove(0);
 
     let plan: Rc<SurfaceBevelPlan> = SurfaceBevelPlan::try_create(&chain, &regions, RADIUS, true)

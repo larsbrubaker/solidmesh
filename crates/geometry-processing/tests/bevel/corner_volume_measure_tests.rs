@@ -1,15 +1,15 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/CornerVolumeMeasureTests.cs`: measured before the
-//! corner filler became the default - where a fillet pick's volume goes. Every added triangle
-//! carries one tag, so the fill is split from the strips by the corner cap's hole-fill watch and
-//! held between two bounds on its own loop: a fan to the loop's centroid (a sharp-ish cap) and the
-//! same patch pushed radially onto the nearest strip end's extended cylinder (the strips carried on
-//! into the corner). Each chain is also built alone and read against its exact straight prism
-//! (length x r^2 (tan(phi/2) - phi/2) per edge), so the difference is what that chain's ends do.
+//! Measured before the corner filler became the default - where a fillet pick's volume goes. Every
+//! added triangle carries one tag, so the fill is split from the strips by the corner cap's
+//! hole-fill watch and held between two bounds on its own loop: a fan to the loop's centroid (a
+//! sharp-ish cap) and the same patch pushed radially onto the nearest strip end's extended cylinder
+//! (the strips carried on into the corner). Each chain is also built alone and read against its
+//! exact straight prism (length x r^2 (tan(phi/2) - phi/2) per edge), so the difference is what
+//! that chain's ends do.
 //!
 //! Gated: `BEVEL_CORNER_VOLUME=1` (`BEVEL_CORNER_VOLUME_OUT` appends to a file). Prints only:
 //! `BEVEL_CORNER_VOLUME=1 cargo nextest run --workspace --test bevel --profile measure
-//! --no-capture corner_volume_measure_tests`. C# `[NotInParallel]` is a `threads-required`
-//! override in `.config/nextest.toml`. C# `[Arguments]` rows are a loop over the same-named test.
+//! --no-capture corner_volume_measure_tests`. It runs alone (a `threads-required` override in
+//! `.config/nextest.toml`). Each test's cases run as a loop inside it.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -35,7 +35,7 @@ const RUN_VARIABLE: &str = "BEVEL_CORNER_VOLUME";
 /// One filled hole: its fill's points, its loop's length, its triangles and its strip ends.
 type Hole = (Vec<Vector3>, usize, Vec<HoleFillTriangle>, Vec<Row>);
 
-/// The pick's build at the measured size, for any of its chains (C#'s `build` delegate).
+/// The pick's build at the measured size, for any of its chains.
 struct Pick {
     positions: Vec<Vector3>,
     indices: Vec<(i32, i32, i32)>,
@@ -124,8 +124,8 @@ fn pick(name: &str) -> Pick {
     }
 }
 
-/// C# `WhereTheVolumeGoes` (rows inner-right-sides-and-center-op0, outer-faces-r04,
-/// cube-two-faces).
+/// Where the volume goes, on inner-right-sides-and-center-op0, outer-faces-r04 and
+/// cube-two-faces.
 #[test]
 fn where_the_volume_goes() {
     if std::env::var(RUN_VARIABLE).as_deref() != Ok("1") {
@@ -409,7 +409,7 @@ fn where_the_volume_goes_row(name: &str) {
     ));
 }
 
-/// C# `ChainAloneSectionProfile` (row inner-right-sides-and-center-op0): each chain of the fixture
+/// On inner-right-sides-and-center-op0: each chain of the fixture
 /// built alone, its removed cross-section (negative where it adds) read every 0.5 mm along each of
 /// its edges, from 3 mm before the edge to 3 mm past it, against the exact straight prism's
 /// section - so an excess is placed on the whole strip or at the ends.
@@ -569,7 +569,7 @@ fn min_of(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::INFINITY, f64::min)
 }
 
-/// C# `Log`: to the console, and appended to `BEVEL_CORNER_VOLUME_OUT` when set.
+/// To the console, and appended to `BEVEL_CORNER_VOLUME_OUT` when set.
 fn log(line: &str) {
     use std::io::Write as _;
 
@@ -592,7 +592,7 @@ fn polyline_length(positions: &[Vector3], chain: &[i32]) -> f64 {
         .sum()
 }
 
-/// C# `SectionArea`: a closed mesh's cross-section area in the plane through `origin` square to
+/// A closed mesh's cross-section area in the plane through `origin` square to
 /// `normal` - each crossing triangle's segment, oriented along normal x its own normal, summed as a
 /// signed polygon area.
 fn section_area(
@@ -637,7 +637,6 @@ fn tet(a: Vector3, b: Vector3, c: Vector3) -> f64 {
     a.dot(b.cross(c)) / 6.0
 }
 
-/// C# `OntoNearestCylinder`.
 fn onto_nearest_cylinder(p: Vector3, rows: &[Row]) -> Vector3 {
     let Some(mut row) = rows.first() else {
         return p;
@@ -658,7 +657,7 @@ fn onto_nearest_cylinder(p: Vector3, rows: &[Row]) -> Vector3 {
     }
 }
 
-/// C# `Prism`: the exact straight fillet's removed prism along a chain - per edge, length x r^2
+/// The exact straight fillet's removed prism along a chain - per edge, length x r^2
 /// (tan(phi/2) - phi/2), signed (a concave edge adds).
 pub(crate) fn prism(
     positions: &[Vector3],
@@ -709,7 +708,7 @@ pub(crate) fn prism(
     total
 }
 
-/// C# `Row`: a strip end's circle, carried on as the cylinder its strip would continue as past the
+/// A strip end's circle, carried on as the cylinder its strip would continue as past the
 /// end.
 struct Row {
     centre: Vector3,

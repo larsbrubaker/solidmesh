@@ -1,9 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ConcaveEndCapRowsTests.cs`: concave open chains
-//! from the catalogue whose END FACE is reflex at the chain's end vertex V - the inner corner of an
-//! L block. The cut there is the level line round V, running the far way round it through the
-//! material, so the end hole SURROUNDS V; the hole is fanned to V. Each chain is filled alone, at
-//! 0.9 of its room where the saved size does not fit. C# `[Arguments]` rows are a loop over the
-//! same-named test.
+//! Concave open chains from the catalogue whose END FACE is reflex at the chain's end vertex V -
+//! the inner corner of an L block. The cut there is the level line round V, running the far way
+//! round it through the material, so the end hole SURROUNDS V; the hole is fanned to V. Each chain
+//! is filled alone, at 0.9 of its room where the saved size does not fit. Each test's cases run as
+//! a loop inside it.
 
 use std::rc::Rc;
 
@@ -19,7 +18,7 @@ use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of};
 use crate::sweep_mesh_measures;
 
-/// C# `AReflexEndFaceFansItsCapAboutTheEndVertex`.
+/// A reflex end face fans its cap about the end vertex.
 #[test]
 fn a_reflex_end_face_fans_its_cap_about_the_end_vertex() {
     let rows: [(&str, usize, f64, f64); 3] = [
@@ -132,7 +131,7 @@ fn a_reflex_end_face_fans_its_cap_about_the_end_vertex_row(
     );
 }
 
-/// C# `AnObliqueOppositeSenseEndFaceRefusesByName`: UpperLeftInner's concave chain ends on its
+/// UpperLeftInner's concave chain ends on its
 /// hull, an end face of the OPPOSITE sense that is oblique to the chain; it reaches the growing
 /// cap, which is not star-shaped about the end vertex on the hull and refuses there.
 #[test]
@@ -147,7 +146,7 @@ fn an_oblique_opposite_sense_end_face_refuses_by_name() {
     assert_eq!(filled.refusal, GapFillRefusal::CornerCapNotStarShaped);
 }
 
-/// C#'s `fixture.Segments > 0 ? fixture.Segments : 4`.
+/// The fixture's own fillet segments, or 4 where it names none.
 fn segments_of(fixture: &LevelLineFixture) -> i32 {
     if fixture.segments > 0 {
         fixture.segments
@@ -156,7 +155,6 @@ fn segments_of(fixture: &LevelLineFixture) -> i32 {
     }
 }
 
-/// C# `Positions`.
 fn positions(fixture: &LevelLineFixture, motion: Option<Matrix4X4>) -> Vec<Vector3> {
     match motion {
         Some(motion) => fixture
@@ -168,7 +166,6 @@ fn positions(fixture: &LevelLineFixture, motion: Option<Matrix4X4>) -> Vec<Vecto
     }
 }
 
-/// C# `Build`.
 fn build(
     fixture: &Rc<LevelLineFixture>,
     chain: usize,
@@ -192,7 +189,6 @@ fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `SizeThatBuilds`.
 fn size_that_builds(
     fixture: &Rc<LevelLineFixture>,
     chain: usize,
@@ -206,7 +202,6 @@ fn size_that_builds(
     }
 }
 
-/// C# `Fill`.
 fn fill(
     fixture: &Rc<LevelLineFixture>,
     chain: usize,

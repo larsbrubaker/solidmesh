@@ -1,6 +1,6 @@
-//! Port of `BevelBeadClosesOverStandOffTests.cs`: a bead's cap stands off the vertex where the
-//! capping face closes back over the run, stays on it where the face looks outward, and a hairpin
-//! pair of beads mitres where a right-angled pair does not.
+//! A bead's cap stands off the vertex where the capping face closes back over the run, stays on it
+//! where the face looks outward, and a hairpin pair of beads mitres where a right-angled pair does
+//! not.
 
 use geometry_processing::bevel::bevel_chain_end_cap::ResolveOptions;
 use geometry_processing::bevel::{
@@ -34,7 +34,7 @@ fn resolve(
     )
 }
 
-/// C# `ABeadCapStandsOffTheVertexWhereTheFaceClosesOverTheRun`.
+/// A bead cap stands off the vertex where the face closes over the run.
 #[test]
 fn a_bead_cap_stands_off_the_vertex_where_the_face_closes_over_the_run() {
     let part = nose::create();
@@ -56,7 +56,7 @@ fn a_bead_cap_stands_off_the_vertex_where_the_face_closes_over_the_run() {
     assert_eq!(partner.edges.len(), 1);
 }
 
-/// C# `ABeadCapStaysOnTheVertexWhereTheFaceLooksOutward`.
+/// A bead cap stays on the vertex where the face looks outward.
 #[test]
 fn a_bead_cap_stays_on_the_vertex_where_the_face_looks_outward() {
     let part = nose::create();
@@ -79,7 +79,7 @@ fn a_bead_cap_stays_on_the_vertex_where_the_face_looks_outward() {
     );
 }
 
-/// C# `AHairpinPairOfBeadsMitresAndARightAngledPairDoesNot`.
+/// A hairpin pair of beads mitres and a right angled pair does not.
 #[test]
 fn a_hairpin_pair_of_beads_mitres_and_a_right_angled_pair_does_not() {
     let part = nose::create();

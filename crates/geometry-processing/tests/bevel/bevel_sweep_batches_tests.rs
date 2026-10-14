@@ -1,6 +1,6 @@
-//! Port of `BevelSweepBatchesTests.cs`: adjacent selected rows of one compatible bucket share one
+//! Adjacent selected rows of one compatible bucket share one
 //! sweep, and every row with its own treatment (a branch, a bead, a corner, a clip, a face rim)
-//! stays on its own. C# `[Arguments]` cases are one test each, suffixed with the argument.
+//! stays on its own. Each case is a test of its own, suffixed with its argument.
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::bevel_sweep_batches;
@@ -37,7 +37,7 @@ fn adjacent_groups_share_one_sweep_and_duplicate_edges_appear_once() {
         .filter(|edge| edge.start.z == 5.0 && edge.end.z == 5.0)
         .copied()
         .collect();
-    // OrderBy is stable, as sort_by is.
+    // A stable sort: equal angles keep their order.
     rim.sort_by(|a, b| {
         let angle_a = (a.start.y + a.end.y).atan2(a.start.x + a.end.x);
         let angle_b = (b.start.y + b.end.y).atan2(b.start.x + b.end.x);

@@ -1,4 +1,4 @@
-//! Port of `BevelPartneredBeadTests.cs`: the nose-in-notch part's four creases, each a bead built
+//! The nose-in-notch part's four creases, each a bead built
 //! from its rolling balls and its partners' tubes.
 
 use std::rc::Rc;
@@ -54,7 +54,7 @@ fn sagitta_of(run: &BevelSweptChain) -> f64 {
     RADIUS * (1.0 - (sweep / (2.0 * f64::from(SEGMENTS + 2))).cos())
 }
 
-/// C# `EveryOneOfTheFourCreasesBuildsItsBead`.
+/// Every one of the four creases builds its bead.
 #[test]
 fn every_one_of_the_four_creases_builds_its_bead() {
     let (runs, names, run_out) = setup();
@@ -76,7 +76,7 @@ fn every_one_of_the_four_creases_builds_its_bead() {
     }
 }
 
-/// C# `PastTheEndsOfItsCreaseNoBeadReachesIntoAPartnersTube`.
+/// Past the ends of its crease no bead reaches into a partner's tube.
 #[test]
 fn past_the_ends_of_its_crease_no_bead_reaches_into_a_partners_tube() {
     let (runs, names, run_out) = setup();
@@ -142,7 +142,7 @@ fn past_the_ends_of_its_crease_no_bead_reaches_into_a_partners_tube() {
     }
 }
 
-/// C# `TheBeadRunsPastBothEndsOfItsCreaseAsFarAsTheControlDoes`.
+/// The bead runs past both ends of its crease as far as the control does.
 #[test]
 fn the_bead_runs_past_both_ends_of_its_crease_as_far_as_the_control_does() {
     let (runs, names, run_out) = setup();
@@ -179,7 +179,7 @@ fn the_bead_runs_past_both_ends_of_its_crease_as_far_as_the_control_does() {
     );
 }
 
-/// C# `APartnerRidingAnotherFaceCoversNothingOnThisRunsFace`.
+/// A partner riding another face covers nothing on this run's face.
 #[test]
 fn a_partner_riding_another_face_covers_nothing_on_this_runs_face() {
     let (runs, names, run_out) = setup();
@@ -238,7 +238,7 @@ fn a_partner_riding_another_face_covers_nothing_on_this_runs_face() {
     );
 }
 
-/// C# `NoBeadStandsPastTheKnifeTipItsFaceEndsOn`.
+/// No bead stands past the knife tip its face ends on.
 #[test]
 fn no_bead_stands_past_the_knife_tip_its_face_ends_on() {
     let (runs, names, run_out) = setup();
@@ -286,7 +286,7 @@ fn union(operands: &[&Mesh]) -> Option<Mesh> {
     .filter(|mesh| !mesh.vertices.is_empty())
 }
 
-/// C# `TheFourBeadsAndThePartMakeOneSolidWithNoVoidBetweenThem`.
+/// The four beads and the part make one solid with no void between them.
 #[test]
 fn the_four_beads_and_the_part_make_one_solid_with_no_void_between_them() {
     let part = nose::create();
@@ -317,7 +317,7 @@ fn the_four_beads_and_the_part_make_one_solid_with_no_void_between_them() {
     );
 }
 
-/// C# `TheClearanceIsBuriedAndChangesNothingOutsideThePart`.
+/// The clearance is buried and changes nothing outside the part.
 #[test]
 fn the_clearance_is_buried_and_changes_nothing_outside_the_part() {
     let part = nose::create();
@@ -357,7 +357,8 @@ fn the_clearance_is_buried_and_changes_nothing_outside_the_part() {
     }
 }
 
-/// C# `TheSameFourBeadsBuildAndUnionAtAHundredthAndAtTenTimesTheRadius`, one test per C# case.
+/// The same four beads build and union at a hundredth and at ten times the radius; one test per
+/// case.
 fn the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius(
     scale: f64,
     radius: f64,
@@ -402,7 +403,7 @@ fn the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radiu
     the_same_four_beads_build_and_union_at_a_hundredth_and_at_ten_times_the_radius(10.0, 50.0);
 }
 
-/// C# `ABossCornerIsHandedBackBecauseNothingRunsOutThere`.
+/// A boss corner is handed back because nothing runs out there.
 #[test]
 fn a_boss_corner_is_handed_back_because_nothing_runs_out_there() {
     const BOSS_RADIUS: f64 = 2.0;

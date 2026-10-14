@@ -1,4 +1,4 @@
-//! Port of `BevelRunPartnersTests.cs`: a run's partners are the runs it shares an END vertex with,
+//! A run's partners are the runs it shares an END vertex with,
 //! read as the straight tube each one's ball sweeps.
 
 use geometry_processing::bevel::bevel_run_partners::{for_chain, try_ball_centre_line};
@@ -14,7 +14,7 @@ fn index_of(names: &[String], name: &str) -> usize {
     names.iter().position(|n| n == name).unwrap()
 }
 
-/// C# `ARunsPartnersAreTheRunsItSharesAnEndVertexWith`.
+/// A run's partners are the runs it shares an end vertex with.
 #[test]
 fn a_runs_partners_are_the_runs_it_shares_an_end_vertex_with() {
     let part = nose::create();
@@ -59,7 +59,7 @@ fn a_runs_partners_are_the_runs_it_shares_an_end_vertex_with() {
     );
 }
 
-/// C# `TheBallCentreLineIsWhereTheControlsAxisIs`.
+/// The ball centre line is where the control's axis is.
 #[test]
 fn the_ball_centre_line_is_where_the_controls_axis_is() {
     let part = nose::create();
@@ -88,7 +88,7 @@ fn the_ball_centre_line_is_where_the_controls_axis_is() {
     );
 }
 
-/// C# `ARunThatTurnsIsSkippedRatherThanApproximated`.
+/// A run that turns is skipped rather than approximated.
 #[test]
 fn a_run_that_turns_is_skipped_rather_than_approximated() {
     let part = nose::create();

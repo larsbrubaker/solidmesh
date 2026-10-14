@@ -1,10 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BevelInvariantsMeasureTests.cs`: the two
-//! invariants the hole filler checks, MEASURED on every dumped kernel fixture without changing what
-//! the build does. Gated on `BEVEL_INVARIANTS=1`; prints a table and, when `BEVEL_INVARIANTS_OUT`
-//! names a file, writes it there:
-//! `BEVEL_INVARIANTS=1 cargo nextest run --workspace --test bevel --profile measure --no-capture
-//! bevel_invariants_measure_tests`. C# `[NotInParallel]` is a `threads-required` override in
-//! `.config/nextest.toml`.
+//! The two invariants the hole filler checks, MEASURED on every dumped kernel fixture without
+//! changing what the build does. Gated on `BEVEL_INVARIANTS=1`; prints a table and, when
+//! `BEVEL_INVARIANTS_OUT` names a file, writes it there: `BEVEL_INVARIANTS=1 cargo nextest run
+//! --workspace --test bevel --profile measure --no-capture bevel_invariants_measure_tests`. It runs
+//! alone (a `threads-required` override in `.config/nextest.toml`).
 //!
 //! Invariant 1: the deleted band around one connected pick has Euler characteristic V - E of the
 //! pick's edge graph, and (reading the band as planar, genus 0) 2 - (V - E) boundary loops - read
@@ -12,7 +10,8 @@
 //! whose chain vertices it holds. Invariant 2: every hole the corner caps face is a disk - one
 //! boundary loop, every vertex on it once - read off the directed edges the corner fill leaves open;
 //! end holes are read too (the zip's row and run, and the fade, dying-crease and hull and strip clip
-//! cap holes). The fixture folder's control mesh is left out (divergence 5015).
+//! cap holes). The fixture folder's control mesh is left out: it is in another format, and read as
+//! a fixture it would stop the sweep before it measured anything.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -37,7 +36,7 @@ const RUN_VARIABLE: &str = "BEVEL_INVARIANTS";
 
 const PER_FIXTURE: Duration = Duration::from_secs(90);
 
-/// C# `MeasureTheInvariantsOnEveryKernelFixture`.
+/// Measure the invariants on every kernel fixture.
 #[test]
 fn measure_the_invariants_on_every_kernel_fixture() {
     if std::env::var(RUN_VARIABLE).as_deref() != Ok("1") {
@@ -47,8 +46,8 @@ fn measure_the_invariants_on_every_kernel_fixture() {
 
     let mut table = String::from("fixture | band | fill | inv1 (per pick component: chi band/pick, loops band/expected) | inv2 (corner holes) | end zips | other end fills (fade, dying crease, hull and strip clip caps)\n");
     for name in level_line_fixture::fixture_names() {
-        // C#'s `Task.WhenAny(work, Task.Delay(PerFixture))`: a run past its time box is reported
-        // and left to finish on its own thread.
+        // A run past its time box is reported and left to finish on its own thread, so one slow
+        // fixture cannot hold up the rest.
         let (sender, receiver) = mpsc::channel();
         let fixture_name = name.clone();
         std::thread::spawn(move || {
@@ -68,7 +67,6 @@ fn measure_the_invariants_on_every_kernel_fixture() {
     }
 }
 
-/// C# `Measure`.
 fn measure(fixture: LevelLineFixture) -> String {
     let fixture = Rc::new(fixture);
     let gap = match band_gap_entry_points::build_pick(
@@ -148,7 +146,7 @@ fn measure(fixture: LevelLineFixture) -> String {
         Err(e) => format!("threw {e}"),
     };
 
-    // C#'s `finally`.
+    // The watches go off whatever the fill did, so the next fill runs unwatched.
     WATCH_OPEN_HOLES.with(|w| *w.borrow_mut() = None);
     corner_cap_zip_end::WATCH_END_HOLE.with(|w| *w.borrow_mut() = None);
     open_gap_fill::WATCH_FADE_HOLE.with(|w| *w.borrow_mut() = None);
@@ -170,7 +168,7 @@ fn measure(fixture: LevelLineFixture) -> String {
     let end_holes = if ends.is_empty() {
         "no end zip".to_string()
     } else {
-        // C#'s `GroupBy(e => e)`: groups in first-seen order.
+        // Groups in first-seen order, so the row reads the same every run.
         let mut grouped: IndexMap<&str, i32> = IndexMap::new();
         for e in ends.iter() {
             *grouped.entry(e.as_str()).or_insert(0) += 1;
@@ -195,7 +193,7 @@ fn measure(fixture: LevelLineFixture) -> String {
     format!("cut | {fill} | {invariant1} | {invariant2} | {end_holes} | {other_end_holes}")
 }
 
-/// C# `EndHole`: invariant 2 for one end hole - the row and the run both run from S to T, so the
+/// Invariant 2 for one end hole - the row and the run both run from S to T, so the
 /// hole is a disk when they share exactly those two ends and neither repeats a vertex.
 fn end_hole(row: &[i32], run: &[i32]) -> String {
     if row.len() < 2
@@ -226,7 +224,7 @@ fn end_hole(row: &[i32], run: &[i32]) -> String {
     }
 }
 
-/// C# `InvariantOne`: invariant 1 per connected pick component, read off the deleted band.
+/// Invariant 1 per connected pick component, read off the deleted band.
 fn invariant_one(fixture: &LevelLineFixture, gap: &BandGapResult) -> String {
     // The pick's edge graph and its connected components.
     let mut pick_edges: HashSet<(i32, i32)> = HashSet::new();
@@ -269,7 +267,7 @@ fn invariant_one(fixture: &LevelLineFixture, gap: &BandGapResult) -> String {
         }
     }
 
-    // C#'s `GroupBy(v => Find(pickParent, v))`: components in first-seen order.
+    // Components by their union-find root, in first-seen order.
     let keys: Vec<i32> = pick_parent.keys().copied().collect();
     let mut components: IndexMap<i32, Vec<i32>> = IndexMap::new();
     for v in keys {
@@ -349,7 +347,7 @@ fn invariant_one(fixture: &LevelLineFixture, gap: &BandGapResult) -> String {
     parts.join("; ")
 }
 
-/// C# `InvariantTwo`: invariant 2 for one call's open edges - each connected hole one simple loop.
+/// Invariant 2 for one call's open edges - each connected hole one simple loop.
 fn invariant_two(open: &[(i32, i32)]) -> String {
     let mut parent: IndexMap<i32, i32> = IndexMap::new();
     for &(a, b) in open {
@@ -382,7 +380,7 @@ fn invariant_two(open: &[(i32, i32)]) -> String {
     format!("{} holes [{}]", holes.len(), holes.join(", "))
 }
 
-/// C# `Loops`: the cycles a set of directed edges falls into, and whether every vertex on them has
+/// The cycles a set of directed edges falls into, and whether every vertex on them has
 /// exactly one edge in and one out (a simple loop set); a vertex with more is a pinch, walked by
 /// taking any unused edge.
 fn loops_of(edges: &[(i32, i32)]) -> (i32, bool) {

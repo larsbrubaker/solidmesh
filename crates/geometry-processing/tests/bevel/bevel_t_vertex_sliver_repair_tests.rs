@@ -1,9 +1,8 @@
-//! Port of `BevelTVertexSliverRepairTests.cs`: the T-VERTEX SLIVER repair - a zero-area triangle
-//! whose three corners are collinear, stitching a vertex that sits part way ALONG a longer edge
-//! into the surface, which is what a boolean leaves where one solid's facet met another's edge.
-//! Invisible to every measure of the part, but a face with no plane to face out of; the cure drops
-//! the sliver and splits the face across its long edge at the middle vertex, on the working copy,
-//! with an advisory.
+//! The T-VERTEX SLIVER repair - a zero-area triangle whose three corners are collinear, stitching a
+//! vertex that sits part way ALONG a longer edge into the surface, which is what a boolean leaves
+//! where one solid's facet met another's edge. Invisible to every measure of the part, but a face
+//! with no plane to face out of; the cure drops the sliver and splits the face across its long edge
+//! at the middle vertex, on the working copy, with an advisory.
 
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::{Face, Mesh};
@@ -329,7 +328,7 @@ fn a_cube_whose_floor_and_wall_split_one_edge_differently() -> Mesh {
 
 /// The cube's eight corners, its ceiling, and every wall but the one at y = 0.
 ///
-/// `Vector3Float::new` rounds its doubles to float, as C#'s `(float)` casts did.
+/// `Vector3Float::new` rounds its doubles to float, as a stored mesh holds them.
 fn a_cube_without_its_y_zero_wall() -> Mesh {
     let mut mesh = Mesh::new();
     let size = CUBE_SIZE;

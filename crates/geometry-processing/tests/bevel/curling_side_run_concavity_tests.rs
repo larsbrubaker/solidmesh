@@ -1,10 +1,9 @@
-//! Port of `LevelLine/CurlingSideRunConcavityTests.cs`: "15mm Bevel Top Edge.mcx" - the chevron's
-//! left slope top edge, walked from the ridge end (where the notch's nose creases meet it) to the
-//! convex corner on the x = 0 wall. The top face's side run curls round the ridge end, so the
-//! middle of that run stands on the slope's own plane extended - and the end-face fill read the
-//! chain's sense off exactly that vertex, found the convex edge concave by noise, and refused
-//! `OpenChainEnds` through the concave end check. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! "15mm Bevel Top Edge.mcx" - the chevron's left slope top edge, walked from the ridge end (where
+//! the notch's nose creases meet it) to the convex corner on the x = 0 wall. The top face's side
+//! run curls round the ridge end, so the middle of that run stands on the slope's own plane
+//! extended - and the end-face fill read the chain's sense off exactly that vertex, found the
+//! convex edge concave by noise, and refused the open chain's ends through the concave end check.
+//! Each test's cases run as a loop inside it.
 
 use std::rc::Rc;
 

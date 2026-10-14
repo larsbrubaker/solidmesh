@@ -1,5 +1,5 @@
-//! Port of `BevelBeadExitTests.cs`: a concave crease dying on a face it runs out through is
-//! bounded by that face's plane; one dying at a corner that closes over it keeps its fill.
+//! A concave crease dying on a face it runs out through is bounded by that face's plane; one dying
+//! at a corner that closes over it keeps its fill.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -21,7 +21,7 @@ const RADIUS: f64 = 4.0;
 const ON_A_PLANE: f64 = 1e-6;
 const BOX_ON_THE_PLANE: f64 = 1e-3;
 
-/// C# `ACreaseDyingOnAFaceItRunsOutThroughIsBoundedByIt`.
+/// A crease dying on a face it runs out through is bounded by it.
 #[test]
 fn a_crease_dying_on_a_face_it_runs_out_through_is_bounded_by_it() {
     let part = create_wall_on_slab(true);
@@ -61,7 +61,7 @@ fn a_crease_dying_on_a_face_it_runs_out_through_is_bounded_by_it() {
     assert!(min < -2.0 * SIZE, "the box reaches only {}", -min);
 }
 
-/// C# `ACreaseDyingAtACornerThatClosesOverItKeepsItsFill`.
+/// A crease dying at a corner that closes over it keeps its fill.
 #[test]
 fn a_crease_dying_at_a_corner_that_closes_over_it_keeps_its_fill() {
     let part = create_wall_on_slab(false);

@@ -1,8 +1,8 @@
-//! The kernel's own bead sequence as several C# bevel test classes each carry a private copy of
-//! it (`BevelRecessApexRunOutTests.BeadTheCreaseAsync`, `BevelBlockedCreaseEndTests`,
-//! `BevelCenterBottomCornerTests`, `BevelCentreFlowsThroughTests`, ...), shared here once: the
+//! The kernel's own bead sequence, which several bevel test classes need (the recess apex
+//! run-out, blocked crease end, centre bottom corner and centre flows-through tests, ...),
+//! shared here once: the
 //! tools each group builds - split into the solids that go on whole and the beads the clip trims -
-//! and the clip and union that finishes the part (`BevelBeadClip.ApplyAllAsync`, then the union).
+//! and the clip and union that finishes the part (`bevel_bead_clip::apply_all`, then the union).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -31,10 +31,10 @@ pub struct Built {
     pub clippable: Vec<Clippable>,
 }
 
-/// The light sequence (`BevelBlockedCreaseEndTests`, `BevelCenterBottomCornerTests`,
-/// `BevelCentreFlowsThroughTests`): resolve, the corner patches, the concave runs and the run-out,
-/// and the tools. `None` where a group did not build. The clippable beads carry no exit planes,
-/// as C#'s four-argument `Clippable` there.
+/// The light sequence (`bevel_blocked_crease_end_tests`, `bevel_center_bottom_corner_tests`,
+/// `bevel_centre_flows_through_tests`): resolve, the corner patches, the concave runs and the
+/// run-out, and the tools. `None` where a group did not build. The clippable beads carry no exit
+/// planes, as those tests' clips take them.
 pub fn light_tools(
     part: &Mesh,
     groups: &[BevelEdgeGroup],
@@ -44,7 +44,7 @@ pub fn light_tools(
     light(part, groups, radius, segments, false)
 }
 
-/// [`light_tools`] with the corner patches' FILLS added (`BevelCenterBottomCornerTests`): each
+/// [`light_tools`] with the corner patches' FILLS added (`bevel_center_bottom_corner_tests`): each
 /// fill is buried |v - c| + r past its corner, deeper than any bead's back, so it travels with the
 /// void that corner opens and is trimmed to it, as `BevelFeatureMeshBuilder` trims it; a fill with
 /// no void cone goes on whole.
@@ -125,10 +125,10 @@ fn light(
     Some(Built { solids, clippable })
 }
 
-/// The full sequence `BevelFeatureMeshBuilder` runs (`BevelRecessApexRunOutTests`,
-/// `BevelTwoBeadCornerClipTests`): resolve, award, face fit, the cross-group readings (corner
+/// The full sequence the feature mesh builder runs (`bevel_recess_apex_run_out_tests`,
+/// the two-bead corner clip): resolve, award, face fit, the cross-group readings (corner
 /// voids, surface labels, corner patches, mixed blends, concave runs, run-out) and the tools, the
-/// clippable beads carrying their exit planes. Panics, as C# throws, where a group does not fit or
+/// clippable beads carrying their exit planes. Panics where a group does not fit or
 /// does not build.
 pub fn full_tools(part: &Mesh, groups: &[BevelEdgeGroup], radius: f64, segments: i32) -> Built {
     let (resolutions, graph) = bevel_edge_group_resolver::resolve_all(groups, part);
@@ -236,7 +236,7 @@ fn sort(
     }
 }
 
-/// `BevelBeadClip.ApplyAllAsync` over the clippable solids, then the union of everything: the
+/// `bevel_bead_clip::apply_all` over the clippable solids, then the union of everything: the
 /// finished part and the clip's tally.
 pub fn clip_and_union(
     part: &Mesh,

@@ -1,34 +1,33 @@
-//! Port of `Fixtures/BoreTestMeshesEdgeBore.cs`: the block whose bore comes out through its own
-//! EDGE - the kernel's cut of "Inner Face Should Bevel.mcx", built exactly and with no boolean
-//! under it. A 20 mm cube and a 40 sided bore of radius 5 whose axis runs through the cube's centre
-//! along (1, 0, 1)/sqrt 2, so each mouth is a closed loop draped over a convex 90 degree edge and
-//! crosses the cube's crease twice, at two of its own vertices. The other bore fixtures are in
-//! `bore_test_meshes.rs`.
+//! The block whose bore comes out through its own EDGE - the kernel's cut of "Inner Face Should
+//! Bevel.mcx", built exactly and with no boolean under it. A 20 mm cube and a 40 sided bore of
+//! radius 5 whose axis runs through the cube's centre along (1, 0, 1)/sqrt 2, so each mouth is a
+//! closed loop draped over a convex 90 degree edge and crosses the cube's crease twice, at two of
+//! its own vertices. The other bore fixtures are in `bore_test_meshes.rs`.
 
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
-/// C# `EdgeBoreSides`: how many facets round the edge-bore fixture, which is the part's own count.
+/// How many facets round the edge-bore fixture, which is the part's own count.
 pub const EDGE_BORE_SIDES: i32 = 40;
 
-/// C# `EdgeBoreRadius`: that bore's circumradius, measured square to its own axis.
+/// That bore's circumradius, measured square to its own axis.
 pub const EDGE_BORE_RADIUS: f64 = 5.0;
 
-/// C# `EdgeBoreBlock`: how wide the block is, the part's own 20 mm cube.
+/// How wide the block is, the part's own 20 mm cube.
 pub const EDGE_BORE_BLOCK: f64 = 20.0;
 
-/// C# `EdgeBoreDrillAxis`: 45 degrees in the x z plane, so the drill runs corner to corner of the
+/// 45 degrees in the x z plane, so the drill runs corner to corner of the
 /// block's section and leaves through an EDGE rather than a face.
 pub fn edge_bore_drill_axis() -> Vector3 {
     Vector3::new(0.5_f64.sqrt(), 0.0, 0.5_f64.sqrt())
 }
 
-/// C# `CreateTheEdgeBoreFixture`: the edge-bore fixture at the dimensions every suite reads.
+/// The edge-bore fixture at the dimensions every suite reads.
 pub fn create_the_edge_bore_fixture() -> Mesh {
     create_block_with_a_bore_through_its_edge(EDGE_BORE_SIDES, EDGE_BORE_RADIUS, EDGE_BORE_BLOCK)
 }
 
-/// C# `CreateBlockWithABoreThroughItsEdge`: a block with a round bore drilled through it at 45
+/// A block with a round bore drilled through it at 45
 /// degrees THROUGH ITS OWN EDGE, so each mouth is a hole draped over a convex 90 degree edge - half
 /// of it on the top face and half on the side.
 ///
@@ -102,7 +101,7 @@ pub fn create_block_with_a_bore_through_its_edge(sides: i32, radius: f64, block:
 
 type Laid = (Vector2, Vector2, Vector2);
 
-/// C# `TileTheBentFacesAround`: tiles the two block faces one mouth is draped over, as one bent
+/// Tiles the two block faces one mouth is draped over, as one bent
 /// surface unfolded into (u, v) - u runs from the far edge of the first face, across the crease at
 /// u = half and on down the second, v is y throughout.
 fn tile_the_bent_faces_around(mesh: &mut Mesh, mouth: &[Vector3], half: f64, reflected: bool) {
@@ -157,7 +156,7 @@ fn tile_the_bent_faces_around(mesh: &mut Mesh, mouth: &[Vector3], half: f64, ref
     }
 }
 
-/// C# `WalkTheRingBetween`, the 2D form of `TileTheRingBetween`: walks an inner loop and an outer
+/// The 2D form of `tile_the_ring_between`: walks an inner loop and an outer
 /// one together in ANGLE about a point both contain, and hands back the triangles between the
 /// spokes.
 fn walk_the_ring_between(mouth: &[Vector2], rim: &[Vector2], about: Vector2) -> Vec<Laid> {
@@ -233,7 +232,7 @@ fn walk_the_ring_between(mouth: &[Vector2], rim: &[Vector2], about: Vector2) -> 
     laid
 }
 
-/// C# `CutOnTheCrease`: cuts one laid triangle on the crease line u = `at`, so nothing the walk
+/// Cuts one laid triangle on the crease line u = `at`, so nothing the walk
 /// lays is bent across the block's own edge. A triangle is convex, so each side of the cut is one
 /// convex polygon and a fan off its first vertex tiles it.
 fn cut_on_the_crease(laid: Laid, at: f64) -> Vec<Laid> {

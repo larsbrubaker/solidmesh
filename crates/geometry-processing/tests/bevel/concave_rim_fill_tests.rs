@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ConcaveRimFillTests.cs`: a CONCAVE closed chain -
-//! the floor-to-wall rim of a square pocket - filleted. The result is closed, wound the way the
-//! input was, and its volume GROWS, because a fillet on a concave edge fills the corner with
-//! material instead of taking it away.
+//! A CONCAVE closed chain - the floor-to-wall rim of a square pocket - filleted. The result is
+//! closed, wound the way the input was, and its volume GROWS, because a fillet on a concave edge
+//! fills the corner with material instead of taking it away.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::{
@@ -16,7 +15,7 @@ use crate::level_line_test_solids::square_pocket;
 
 const FOLD_DEGREES: f64 = 20.0;
 
-/// C# `Math.Sign` of a double.
+/// The sign of a double: -1, 0 or 1.
 fn sign(value: f64) -> i32 {
     if value > 0.0 {
         1
@@ -27,7 +26,7 @@ fn sign(value: f64) -> i32 {
     }
 }
 
-/// C# `APocketFloorRimFillsClosedAndKeepsItsWinding`.
+/// A pocket floor rim fills closed and keeps its winding.
 #[test]
 fn a_pocket_floor_rim_fills_closed_and_keeps_its_winding() {
     let (positions, indices, floor_rim) = square_pocket(2.0, 1.0, 1.0, 0.0);

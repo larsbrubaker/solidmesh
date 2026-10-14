@@ -1,18 +1,18 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/CornerSetbackMeasureTests.cs`: the corner
-//! setbacks, measured before they were built - at every corner hole the filler closes, each strip
-//! end's distance from the corner vertex (in the size r), its last row's arc radius against r, and
-//! what stopped it - each arc end's distance to its own chain and to the NEIGHBOURING chains at the
-//! corner. Beside it the IDEAL setback for straight chains and flat faces: in each face the chain
-//! shares with a neighbouring picked chain, the point where the two rails cross, s = (d_j + d_k cos
-//! theta) / sin theta, d = r tan(phi / 2) each chain's rail offset (phi its faces' turn) and theta
-//! the angle between the chains in that face - a cube corner gives 1 r.
+//! The corner setbacks, measured before they were built - at every corner hole the filler closes,
+//! each strip end's distance from the corner vertex (in the size r), its last row's arc radius
+//! against r, and what stopped it - each arc end's distance to its own chain and to the
+//! NEIGHBOURING chains at the corner. Beside it the IDEAL setback for straight chains and flat
+//! faces: in each face the chain shares with a neighbouring picked chain, the point where the two
+//! rails cross, s = (d_j + d_k cos theta) / sin theta, d = r tan(phi / 2) each chain's rail offset
+//! (phi its faces' turn) and theta the angle between the chains in that face - a cube corner gives
+//! 1 r.
 //!
 //! `where_each_strip_end_stops` is gated on `BEVEL_SETBACKS=1` (`BEVEL_SETBACKS_OUT` appends to a
 //! file) and prints only: `BEVEL_SETBACKS=1 cargo nextest run --workspace --test bevel --profile
 //! measure --no-capture corner_setback_measure_tests`. `every_corner_strip_end_is_a_flat_row_of_radius_r`
-//! always runs. C# `[NotInParallel]` is a `threads-required` override in `.config/nextest.toml`:
-//! the corner-hole watch is process-wide, so its holes are also told apart by the thread that
-//! reads them (C#'s by their mesh). C# `[Arguments]` rows are a loop over the same-named test.
+//! always runs. It runs alone (a `threads-required` override in `.config/nextest.toml`): the
+//! corner-hole watch is process-wide, so its holes are also told apart by the thread that reads
+//! them. Each test's cases run as a loop inside it.
 
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -52,7 +52,7 @@ struct Row {
 /// One corner hole: its loop, its corner and the strip ends on it.
 type Hole = (Vec<Vector3>, Vector3, Vec<Row>);
 
-/// C# `Fixture(name, scale)`: the pick, its size and segments, and how it builds.
+/// The pick, its size and segments, and how it builds.
 struct CornerFixture {
     positions: Vec<Vector3>,
     indices: Vec<(i32, i32, i32)>,
@@ -218,7 +218,7 @@ impl Drop for CornerHoles {
     }
 }
 
-/// C# `WhereEachStripEndStops` (gated, prints only).
+/// Where each strip end stops (gated, prints only).
 #[test]
 fn where_each_strip_end_stops() {
     if std::env::var(RUN_VARIABLE).as_deref() != Ok("1") {
@@ -321,7 +321,7 @@ fn where_each_strip_end_stops_row(name: &str, scale: f64) {
     }
 }
 
-/// C# `EveryCornerStripEndIsAFlatRowOfRadiusR`: the setbacks' invariant - with the filler on,
+/// The setbacks' invariant - with the filler on,
 /// every strip end at a corner is a flat cross-section square to its chain (its two rail ends at
 /// one chain parameter), and a fillet's last row there is an arc of radius r, however far apart the
 /// band cut stopped the two rails.
@@ -373,7 +373,7 @@ fn every_corner_strip_end_is_a_flat_row_of_radius_r_row(name: &str, scale: f64, 
             fill_with_the_filler(&gap, BandProfile::Fillet, f.segments);
         }
 
-        // C#'s `finally`.
+        // The watch and the override go off whatever the build did, so the next build is plain.
         WATCH_SETBACKS.with(|w| *w.borrow_mut() = None);
         set_use_hole_fill_override(None);
         (gap, watch.taken())
@@ -419,7 +419,7 @@ fn every_corner_strip_end_is_a_flat_row_of_radius_r_row(name: &str, scale: f64, 
     assert!(read > 0, "{name} at {scale}");
 }
 
-/// Corner vertices: chain ends shared by two or more chains, in first-seen order (C#'s `GroupBy`).
+/// Corner vertices: chain ends shared by two or more chains, in first-seen order.
 fn corner_vertices(chains: &[Vec<i32>]) -> Vec<i32> {
     let mut counts: indexmap::IndexMap<i32, i32> = indexmap::IndexMap::new();
     for c in chains {
@@ -434,7 +434,7 @@ fn corner_vertices(chains: &[Vec<i32>]) -> Vec<i32> {
         .collect()
 }
 
-/// C#'s `ends.OrderBy(e => (positions[e] - corner).Length).First()`: the first nearest.
+/// The end nearest `corner`; the first of any tie.
 fn nearest_end(ends: &[i32], positions: &[Vector3], corner: Vector3) -> i32 {
     let mut best = ends[0];
     for &e in &ends[1..] {
@@ -453,7 +453,7 @@ fn chains_at(chains: &[Vec<i32>], v: i32) -> Vec<usize> {
         .collect()
 }
 
-/// C#'s `at.OrderBy(k => DistanceToChain(...)).First()`: the first nearest chain.
+/// The chain nearest `p`; the first of any tie.
 fn own_chain(at: &[usize], positions: &[Vector3], chains: &[Vec<i32>], p: Vector3) -> usize {
     let mut best = at[0];
     for &k in &at[1..] {
@@ -467,7 +467,7 @@ fn own_chain(at: &[usize], positions: &[Vector3], chains: &[Vec<i32>], p: Vector
     best
 }
 
-/// C# `Ideal`: the straight-chain, flat-face ideal setback of chain `own` at `v` in r - per face of
+/// The straight-chain, flat-face ideal setback of chain `own` at `v` in r - per face of
 /// own's first edge, the point along own where its rail crosses the rail of the neighbouring picked
 /// chain lying in that face.
 fn ideal(
@@ -552,7 +552,7 @@ fn on_first_edge(
     (next, on)
 }
 
-/// C# `Into`: per triangle on the chain's first edge at `v` (`rail_offset`'s order), the in-face
+/// Per triangle on the chain's first edge at `v` (`rail_offset`'s order), the in-face
 /// unit direction from the chain into it.
 fn into(positions: &[Vector3], indices: &[(i32, i32, i32)], chain: &[i32], v: i32) -> Vec<Vector3> {
     let (next, on) = on_first_edge(indices, chain, v);
@@ -581,7 +581,7 @@ fn turn_degrees(positions: &[Vector3], indices: &[(i32, i32, i32)], chain: &[i32
     }
 }
 
-/// C# `RailOffset`: r tan(phi / 2) for the chain's first edge at `v`, phi the turn between its two
+/// R tan(phi / 2) for the chain's first edge at `v`, phi the turn between its two
 /// triangles' normals - and those normals, `None` where the edge does not stand on two triangles.
 fn rail_offset(
     positions: &[Vector3],
@@ -617,7 +617,7 @@ fn direction(positions: &[Vector3], chain: &[i32], v: i32) -> Vector3 {
     (positions[next as usize] - positions[v as usize]).get_normal()
 }
 
-/// C# `TangentNear`: the unit direction of the chain's segment nearest `p` (the first of equals).
+/// The unit direction of the chain's segment nearest `p` (the first of equals).
 fn tangent_near(positions: &[Vector3], chain: &[i32], p: Vector3) -> Vector3 {
     let mut best: Option<(f64, Vector3)> = None;
     for i in 0..chain.len() - 1 {
@@ -667,7 +667,7 @@ fn show(p: Vector3) -> String {
     format!("({:.3},{:.3},{:.3})", p.x, p.y, p.z)
 }
 
-/// C# `Log`: to the console, and appended to `BEVEL_SETBACKS_OUT` when set.
+/// To the console, and appended to `BEVEL_SETBACKS_OUT` when set.
 fn log(line: &str) {
     use std::io::Write as _;
 

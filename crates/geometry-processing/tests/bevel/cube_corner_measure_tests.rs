@@ -1,14 +1,13 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/CubeCornerMeasureTests.cs`: the second
-//! MEASUREMENT taken before the corner construction was built - two adjacent cube faces picked as
-//! the app links them (the shared top-front edge, the rest of the top rim and the rest of the front
-//! rim: three open chains meeting at two corners of three ends), which the corner reading now lets
-//! through, so what the rest of the build does at a corner can be read.
+//! The second MEASUREMENT taken before the corner construction was built - two adjacent cube faces
+//! picked as the app links them (the shared top-front edge, the rest of the top rim and the rest of
+//! the front rim: three open chains meeting at two corners of three ends), which the corner reading
+//! now lets through, so what the rest of the build does at a corner can be read.
 //!
 //! Asserts nothing. Returns at once unless `STAGE3_MEASURE=1`; appends its reading to the file
 //! named by `STAGE3_MEASURE_LOG`, or to the system temp folder, and prints it:
 //! `STAGE3_MEASURE=1 cargo nextest run --workspace --test bevel --no-capture
-//! cube_corner_measure_tests`. C# `[NotInParallel]` is a `threads-required` override in
-//! `.config/nextest.toml`.
+//! cube_corner_measure_tests`. It runs alone (a `threads-required` override in
+//! `.config/nextest.toml`).
 
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -28,7 +27,7 @@ use crate::several_chains_fixtures;
 
 const SNAP: f64 = 1e-9;
 
-/// C# `TwoAdjacentCubeFacesReadAtTheirCorners`.
+/// Two adjacent cube faces read at their corners.
 #[test]
 fn two_adjacent_cube_faces_read_at_their_corners() {
     if std::env::var("STAGE3_MEASURE").as_deref() != Ok("1") {
@@ -74,7 +73,6 @@ fn p(v: Vector3) -> String {
     format!("({:.4}, {:.4}, {:.4})", v.x, v.y, v.z)
 }
 
-/// C# `Measure`.
 #[allow(clippy::too_many_arguments)]
 fn measure(
     positions: &[Vector3],
@@ -279,7 +277,7 @@ fn measure(
             group_loops.len()
         );
         let Ok(pick) = PickField::new(fields.clone(), &members) else {
-            // C#'s `new PickField(fields, members)` throws on a group with no members.
+            // A group with no members has no pick field.
             continue;
         };
         for l in group_loops {
@@ -360,7 +358,7 @@ fn measure(
                     .iter()
                     .map(|&k| (k, fields[k as usize].evaluate(at).expect("no budget").value))
                     .collect();
-                // C#'s OrderBy is stable: equal values keep the members' order.
+                // A stable sort: equal values keep the members' order.
                 values.sort_by(|a, b| a.1.total_cmp(&b.1));
                 if values.len() >= 2 && (values[0].1 - values[1].1).abs() <= 1e-9 {
                     let _ = writeln!(

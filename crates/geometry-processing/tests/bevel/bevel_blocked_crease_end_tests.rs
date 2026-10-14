@@ -1,10 +1,9 @@
-//! Ports `GeometryProcessingTests/BevelBlockedCreaseEndTests.cs`: the far side of
-//! `BevelCentreFlowsThroughTests` - a concave crease blocked near its end by something standing on
-//! it, with NOTHING on the far side of the block (the part stops 2 mm later). A bead that runs on
-//! through an interruption must not run on here, because what it would leave out there is standing
-//! in open air past the end of the part. Two guards are stacked: the block's square front face is a
-//! perfect capping plane, and no other selected run picks the crease up beyond it. Asserted as the
-//! part's own extent. C#'s `[Arguments]` rows are a loop.
+//! The far side of `bevel_centre_flows_through_tests` - a concave crease blocked near its end by
+//! something standing on it, with NOTHING on the far side of the block (the part stops 2 mm later).
+//! A bead that runs on through an interruption must not run on here, because what it would leave
+//! out there is standing in open air past the end of the part. Two guards are stacked: the block's
+//! square front face is a perfect capping plane, and no other selected run picks the crease up
+//! beyond it. Asserted as the part's own extent. The cases run as a loop.
 
 use polygon_mesh::Mesh;
 use vector_math::Vector3;

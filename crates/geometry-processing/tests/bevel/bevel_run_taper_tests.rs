@@ -1,7 +1,6 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelRunTaperTests.cs`: the run-out a selected open
-//! run walks onto the unselected edges past its free ends ([`BevelRunTaper`]) and the tapered
-//! sweep along it (`bevel_tapered_sweep`), and a run built through `bevel_group_tools` tapering
-//! only its free end.
+//! The run-out a selected open run walks onto the unselected edges past its free ends
+//! ([`BevelRunTaper`]) and the tapered sweep along it (`bevel_tapered_sweep`), and a run built
+//! through `bevel_group_tools` tapering only its free end.
 
 use std::sync::Arc;
 
@@ -230,7 +229,7 @@ fn runout_ending_almost_on_a_facet_joint_has_one_tip() {
     assert!(tool.is_manifold());
 }
 
-/// C# `AFreeEndRunsOutEvenWhereTheOtherEndIsSharedWithAnotherPick`: a rim facet picked beside
+/// A rim facet picked beside
 /// another pick runs out at its free end and keeps the overshoot at the shared one.
 #[test]
 fn a_free_end_runs_out_even_where_the_other_end_is_shared_with_another_pick() {

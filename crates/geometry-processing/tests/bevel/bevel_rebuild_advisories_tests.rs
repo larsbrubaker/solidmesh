@@ -1,7 +1,6 @@
-//! Ports `GeometryProcessingTests/BevelRebuildAdvisoriesTests.cs`: the once-per-operation rule
-//! `BevelRebuildAdvisories` exists to keep. What is at risk is the COUNT: each of these is raised
-//! from inside a loop over chains, so without the flag eight chains tripping one fallback would put
-//! eight copies of one sentence in the panel.
+//! The once-per-operation rule `BevelRebuildAdvisories` exists to keep. What is at risk is the
+//! COUNT: each of these is raised from inside a loop over chains, so without the flag eight chains
+//! tripping one fallback would put eight copies of one sentence in the panel.
 
 use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelRebuildAdvisories};
 

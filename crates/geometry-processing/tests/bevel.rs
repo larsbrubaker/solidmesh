@@ -1,12 +1,12 @@
-//! Ported `R/Tests/GeometryProcessingTests` test classes for `Bevel/`, one file each (CLAUDE.md
-//! net 1), with the C# fixture builders they need (`Fixtures/*.cs`) as Rust modules.
+//! The bevel kernel's test binary: one file per test class (CLAUDE.md net 1), with the fixture
+//! builders they need as modules.
 //!
-//! The member modules are listed in group modules under `bevel/`, by C# folder and class prefix, so
-//! no list outgrows the file-size gate: `level_line` (`LevelLine/*.cs` and its helpers),
-//! `sections` (`Section*`), `surface` (`Surface*`), `kernel` (`Bevel*` and the remaining top-level
-//! classes), `rust_only` (`rust_only_bevel_*`) and `shared_fixtures` (`Fixtures/*.cs` and helpers
-//! shared across groups). Each group is re-exported here, so every member resolves as
-//! `crate::<module>` from any test file; a test's path carries its group
+//! The member modules are listed in group modules under `bevel/`, by subject and class prefix, so
+//! no list outgrows the file-size gate: `level_line` (the level-line classes and their helpers),
+//! `sections` (`section_*`), `surface` (`surface_*`), `kernel` (`bevel_*` and the remaining
+//! top-level classes), `rust_only` (`rust_only_bevel_*`) and `shared_fixtures` (the fixture
+//! builders and helpers shared across groups). Each group is re-exported here, so every member
+//! resolves as `crate::<module>` from any test file; a test's path carries its group
 //! (`level_line::chain_field_tests::...`), which `.config/nextest.toml`'s filters match.
 
 #[path = "bevel/kernel.rs"]

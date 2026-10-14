@@ -1,7 +1,6 @@
-//! Ports `GeometryProcessingTests/BevelArcChordingTests.cs`: the one rule that says how finely an
-//! arc is chorded, which a run's profile and the corner patch's boundary both have to read the
-//! same way or the seam between them does not meet. C# `[Arguments]` rows are loops over the
-//! same rows, with the same `Because` text as the assertion message.
+//! The one rule that says how finely an arc is chorded, which a run's profile and the corner
+//! patch's boundary both have to read the same way or the seam between them does not meet. Each
+//! test's rows run as a loop, each row's reason as the assertion message.
 
 use geometry_processing::bevel::bevel_arc_chording::{effective_segments, segments_for};
 use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};

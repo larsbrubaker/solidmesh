@@ -1,7 +1,7 @@
-//! Port of `BevelFoldedFlapRepairTests.cs`: the FOLDED FLAP repair - two faces on the same three
-//! vertices wound opposite ways, which a boolean can leave behind where two solids met flush. A
-//! flap encloses no volume, but every edge it lies along is used by FOUR faces, and the surface
-//! construction republishes the source's own faces - so it is repaired once, on the working copy
+//! The FOLDED FLAP repair - two faces on the same three vertices wound opposite ways, which a
+//! boolean can leave behind where two solids met flush. A flap encloses no volume, but every edge
+//! it lies along is used by FOUR faces, and the surface construction republishes the source's own
+//! faces - so it is repaired once, on the working copy
 //! (`bevel_working_mesh::create_from_with_advisories`), and reported.
 
 use polygon_mesh::solids::platonic_solids;

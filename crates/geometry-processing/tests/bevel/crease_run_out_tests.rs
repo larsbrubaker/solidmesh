@@ -1,5 +1,4 @@
-//! Port of `LevelLine/CreaseRunOutTests.cs`: where a fillet's run-out along an unpicked crease
-//! ends, against the Onshape control.
+//! Where a fillet's run-out along an unpicked crease ends, against the Onshape control.
 
 use geometry_processing::bevel::level_line::CreaseRunOut;
 use vector_math::math_helper::radians_to_degrees;
@@ -25,7 +24,7 @@ fn find(fixture: &LevelLineFixture) -> Vec<CreaseRunOut> {
     )
 }
 
-/// C# `TheNoseFixtureRunsOutAtBothRidgeEndsLikeTheControl`.
+/// The nose fixture runs out at both ridge ends like the control.
 #[test]
 fn the_nose_fixture_runs_out_at_both_ridge_ends_like_the_control() {
     let fixture = LevelLineFixture::load("top-center-face-nose-r1");
@@ -36,7 +35,7 @@ fn the_nose_fixture_runs_out_at_both_ridge_ends_like_the_control() {
     assert_eq!(corners, vec![1, 9]);
 }
 
-/// C# `TheBuiltNoseRunsOutAtBothRidgeEndsLikeTheControl`.
+/// The built nose runs out at both ridge ends like the control.
 #[test]
 fn the_built_nose_runs_out_at_both_ridge_ends_like_the_control() {
     let (positions, indices, chain) = built_nose();
@@ -60,7 +59,7 @@ fn the_built_nose_runs_out_at_both_ridge_ends_like_the_control() {
         .any(|&p| (p - nose::right_ridge_end()).length() < 1e-4));
 }
 
-/// C# `TheMirroredNoseReadsTheMirroredRunOuts`.
+/// The mirrored nose reads the mirrored run outs.
 #[test]
 fn the_mirrored_nose_reads_the_mirrored_run_outs() {
     let fixture = LevelLineFixture::load("top-center-face-nose-r1");
@@ -97,7 +96,7 @@ fn the_mirrored_nose_reads_the_mirrored_run_outs() {
     }
 }
 
-/// C# `NoRunOutWhereNoUnpickedCreaseEndsAMixedCorner`, one test per C# case.
+/// No run-out where no unpicked crease ends a mixed corner; one test per case.
 fn no_run_out_where_no_unpicked_crease_ends_a_mixed_corner(name: &str) {
     let fixture = LevelLineFixture::load(name);
     let run_outs = find(&fixture);
@@ -168,7 +167,7 @@ fn assert_the_controls_run_outs(run_outs: &[CreaseRunOut], size: f64) {
 /// Positions, triangles and one picked chain.
 type BuiltPick = (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<i32>);
 
-/// C# `Nose()`: the built nose, with the pick the fixture walks round its upper face.
+/// The built nose, with the pick the fixture walks round its upper face.
 fn built_nose() -> BuiltPick {
     let mut mesh = nose::create();
     mesh.clean_and_merge();

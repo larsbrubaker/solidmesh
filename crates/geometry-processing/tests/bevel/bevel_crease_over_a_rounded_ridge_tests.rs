@@ -1,8 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelCreaseOverARoundedRidgeTests.cs`: the second pass
-//! of a mixed bevel on the nose-in-notch part (`nose_in_notch_cut`) - round the ridge FIRST, then
-//! read the two concave creases that died on it as the ONE curved crease the cut mesh now carries
-//! (18 mesh edges: both straight pieces and eight arc facets either side of the crest), and roll one
-//! bead along the whole of it.
+//! The second pass of a mixed bevel on the nose-in-notch part (`nose_in_notch_cut`) - round the
+//! ridge FIRST, then read the two concave creases that died on it as the ONE curved crease the cut
+//! mesh now carries (18 mesh edges: both straight pieces and eight arc facets either side of the
+//! crest), and roll one bead along the whole of it.
 //!
 //! The subtract that makes the round leaves the cut shredded where the round runs TANGENT into the
 //! faces it meets - slivers, micron-apart duplicate vertices and zero-area faces - so the cut is put
@@ -389,8 +388,8 @@ fn the_whole_crease_sweeps_as_one_bead_the_kernel_will_take() {
     );
 }
 
-/// C# `ResolveCrease(group, features, TangentToleranceDegrees, FacetStep + Margin)` at the
-/// default match tolerances.
+/// The group's crease resolved at the test's tangent tolerance and a reach of one facet step
+/// plus the margin, at the default match tolerances.
 fn resolve_crease(
     group: &BevelEdgeGroup,
     features: Arc<FeatureEdgeSet>,
@@ -424,8 +423,8 @@ fn ends(resolution: &BevelEdgeGroupResolution) -> [Vector3; 2] {
     ]
 }
 
-/// C# `BevelPublishedMesh.Clean`, which hands the mesh it was given back where there is nothing
-/// to tidy (`None` in Rust).
+/// The publish-time cleanup, handing the mesh it was given back where there is nothing to tidy
+/// (`clean` answers `None` then).
 fn tidy(raw: &Mesh) -> Mesh {
     bevel_published_mesh::clean(raw, &CancelToken::new())
         .expect("not cancelled")

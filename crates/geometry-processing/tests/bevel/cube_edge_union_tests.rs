@@ -1,9 +1,8 @@
-//! Port of `LevelLine/CubeEdgeUnionTests.cs`: the plan's goal on the simplest part there is - on a
-//! cube, every union of up to two face rims and up to two single edges builds pick-wide at a tenth
-//! of the side, closed, one shell and consistently oriented. The union is linked the way the app
-//! links a pick (each mesh edge once, by the production `BevelChainLinker`), so a rim and an edge
-//! that overlap or continue each other are one edge set, not two picks. C# `[Arguments]` cases run
-//! as one loop per test.
+//! The plan's goal on the simplest part there is - on a cube, every union of up to two face rims
+//! and up to two single edges builds pick-wide at a tenth of the side, closed, one shell and
+//! consistently oriented. The union is linked the way the app links a pick (each mesh edge once, by
+//! the production `bevel_chain_linker`), so a rim and an edge that overlap or continue each other
+//! are one edge set, not two picks. Each test's cases run as a loop inside it.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
@@ -30,7 +29,6 @@ const FOLD_DEGREES: f64 = 30.0;
 /// Half 1: the side is 2 and a tenth of it is 0.2.
 const SIZE: f64 = 0.2;
 
-/// C# `FaceRims`.
 pub const FACE_RIMS: [[i32; 4]; 6] = [
     [0, 1, 2, 3],
     [4, 5, 6, 7],
@@ -42,14 +40,14 @@ pub const FACE_RIMS: [[i32; 4]; 6] = [
 
 type EdgeSet = BTreeSet<(i32, i32)>;
 
-/// The cube, its feature test and C#'s `FoldDegrees` reading.
+/// The cube and its feature test at `FOLD_DEGREES`.
 fn cube() -> (Vec<Vector3>, Vec<(i32, i32, i32)>, FeatureEdgeTest) {
     let (positions, indices) = cube_solid(1.0);
     let feature = feature_edges_over(&positions, &indices, FOLD_DEGREES);
     (positions, indices, feature)
 }
 
-/// C# `UnionsOfTwoRimsAndTwoEdgesBuildClosedNoFewerThanTheFloor`: run as a RATCHET - the counts
+/// Run as a RATCHET - the counts
 /// that build (pick-wide, and on the app's route) may only go up. Two open edges sharing no vertex
 /// never build pick-wide; the app builds them in turn, so the app's route makes the full claim of
 /// 509 for both profiles. A build counts only with the right SHAPE ([`shape`]).
@@ -123,7 +121,7 @@ fn unions_of_two_rims_and_two_edges_build_closed_no_fewer_than_the_floor() {
     }
 }
 
-/// C# `ARimWithAnEdgeOffItsCornerBuildsPickWide`: a face's rim with an edge leaving one of its
+/// A face's rim with an edge leaving one of its
 /// corners, the edge's far end at its chain's start.
 #[test]
 fn a_rim_with_an_edge_off_its_corner_builds_pick_wide() {
@@ -140,7 +138,7 @@ fn a_rim_with_an_edge_off_its_corner_builds_pick_wide() {
     }
 }
 
-/// C# `ARimWithAPathOffItsCornerEndingOnTheRimsSideBuildsPickWide`: rim 0-1-2-3 with the path
+/// Rim 0-1-2-3 with the path
 /// 0-4-5, whose free end stands on the rim's own outer side - ONE stretch of the side's closed loop.
 #[test]
 fn a_rim_with_a_path_off_its_corner_ending_on_the_rims_side_builds_pick_wide() {
@@ -155,7 +153,7 @@ fn a_rim_with_a_path_off_its_corner_ending_on_the_rims_side_builds_pick_wide() {
     }
 }
 
-/// C# `TwoEdgesEndingOnEachOthersSidesCutPickWideAndBuildInTurn`: edges 0-1 and 2-6 share no
+/// Edges 0-1 and 2-6 share no
 /// vertex and each ends on a side of the other; the pick-wide cut stands, and the app builds it a
 /// chain at a time.
 #[test]
@@ -183,7 +181,7 @@ fn two_edges_ending_on_each_others_sides_cut_pick_wide_and_build_in_turn() {
     }
 }
 
-/// C# `ARimWithAnEdgeEndingOnAnotherEdgesSideBuildsPickWide`: rim 0-1-2-3 with edge 0-4 off its
+/// Rim 0-1-2-3 with edge 0-4 off its
 /// corner and edge 5-6 touching neither.
 #[test]
 fn a_rim_with_an_edge_ending_on_another_edges_side_builds_pick_wide() {
@@ -198,7 +196,7 @@ fn a_rim_with_an_edge_ending_on_another_edges_side_builds_pick_wide() {
     }
 }
 
-/// C# `AFillNeverSaysFilledOverADoubledFlap`: rim 3-0-4-7 and edge 3-2 - whatever the fill makes
+/// Rim 3-0-4-7 and edge 3-2 - whatever the fill makes
 /// of the pick, it never says Filled over a mesh that is not closed.
 #[test]
 fn a_fill_never_says_filled_over_a_doubled_flap() {
@@ -227,7 +225,7 @@ fn a_fill_never_says_filled_over_a_doubled_flap() {
     }
 }
 
-/// C# `EdgesEndingFreeOnAnEndFaceBuildPickWide`: open edges ending FREE on an end face in a pick of
+/// Open edges ending FREE on an end face in a pick of
 /// several chains - the end face is the chain's END REGION, cut and bounded as the chain alone cuts
 /// it.
 #[test]
@@ -250,7 +248,7 @@ fn edges_ending_free_on_an_end_face_build_pick_wide() {
     }
 }
 
-/// C# `ThreeEdgesOfACornerChamferToTheirMitrePoint`: the three edges of one cube corner, each
+/// The three edges of one cube corner, each
 /// running out free onto its far end face, chamfered pick-wide - the cap is the mitre, a fan to the
 /// point the three strip planes share.
 #[test]
@@ -285,7 +283,7 @@ fn three_edges_of_a_corner_chamfer_to_their_mitre_point() {
     );
 }
 
-/// C# `AnEdgeWhoseRailIsAllTiesLaysItsOwnStrip`: an edge whose rail on some side is nothing but
+/// An edge whose rail on some side is nothing but
 /// corner ties still lays its own strip when that side is an OPEN run, or when both its rails are
 /// runs of ONE loop.
 #[test]
@@ -307,7 +305,7 @@ fn an_edge_whose_rail_is_all_ties_lays_its_own_strip() {
     }
 }
 
-/// C# `AnEdgeWhoseBandIsALoopOfItsOwnBuildsPickWide`: rims 0-1-2-3 and 3-0-4-7 with edge 5-6, whose
+/// Rims 0-1-2-3 and 3-0-4-7 with edge 5-6, whose
 /// band is a closed loop all its own - split into its two rails and zipped.
 #[test]
 fn an_edge_whose_band_is_a_loop_of_its_own_builds_pick_wide() {
@@ -323,7 +321,7 @@ fn an_edge_whose_band_is_a_loop_of_its_own_builds_pick_wide() {
     }
 }
 
-/// C# `TwoRimsJoinedByAnEdgeFilletInsideTheCube`: the corner rings must stand in or on the cube,
+/// The corner rings must stand in or on the cube,
 /// since every picked edge is convex and a bevel only removes material.
 #[test]
 fn two_rims_joined_by_an_edge_fillet_inside_the_cube() {
@@ -353,7 +351,7 @@ fn two_rims_joined_by_an_edge_fillet_inside_the_cube() {
     assert_eq!(said, None, "{}", describe(&edges));
 }
 
-/// C# `ABothSidedLoopsSideDoesNotDependOnWhereTheWalkStarted`.
+/// A both-sided loop's side does not depend on where the walk started.
 #[test]
 fn a_both_sided_loops_side_does_not_depend_on_where_the_walk_started() {
     let round_the_edge: Vec<i32> = std::iter::repeat_n(1, 7)
@@ -383,8 +381,8 @@ fn rotated(list: &[i32], start: usize) -> Vec<i32> {
         .collect()
 }
 
-/// C#'s `BandGap.Build(..., Size, profile, 0, 1e-9, null, new WorkBudget(...), sharpTurnDegrees:
-/// FoldDegrees, filletSegments: 8)`.
+/// The band gap at `SIZE` and `profile`: no chord tolerance, a 1e-9 snap, the room measured, a
+/// work budget, sharp turns from `FOLD_DEGREES`, and 8 fillet segments.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -416,8 +414,8 @@ fn build(
     .map_err(|e| format!("threw {e:?}"))
 }
 
-/// C# `TryPickWide`: `None` where the pick builds pick-wide closed, one shell and consistently
-/// oriented; why not otherwise. C#'s caught exception is the kernel's error here.
+/// `None` where the pick builds pick-wide closed, one shell and consistently
+/// oriented; why not otherwise, the kernel's error included.
 fn try_pick_wide(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -491,7 +489,7 @@ fn verdict(fill: &GapFillResult) -> Option<String> {
     None
 }
 
-/// C# `Shape`: `None` where the built part has the shape a convex-edge bevel on the cube must
+/// `None` where the built part has the shape a convex-edge bevel on the cube must
 /// have; what is wrong otherwise. Every picked cube edge is convex, so a bevel only removes
 /// material, only near its picks, and no more than its prisms: (1) every vertex lies in or on the
 /// cube; (2) a vertex on no cube face plane is within r*sqrt(2) of the nearest picked edge segment;
@@ -561,7 +559,7 @@ fn shape(
 
     let cube = 8.0 * HALF * HALF * HALF;
     let volume = signed_volume(&mesh);
-    // C#'s `!(volume < cube - Tolerance)`: a NaN volume fails too.
+    // Not below the cube less the tolerance fails, and so does a NaN volume.
     if volume.partial_cmp(&(cube - TOLERANCE)) != Some(std::cmp::Ordering::Less) {
         return Some(format!(
             "shape: volume {volume} does not drop below the cube's {cube}"
@@ -584,7 +582,7 @@ fn shape(
     None
 }
 
-/// C# `LevelLineTestGeometry.ChordedFilletSection`: the section a fillet of `segments` rows removes
+/// The section a fillet of `segments` rows removes
 /// from a right-angled edge - r^2 less the sum of r^2 sin(step) / 2, MORE than the true round's
 /// r^2 (1 - pi / 4).
 pub fn chorded_fillet_section(r: f64, segments: i32) -> f64 {
@@ -607,7 +605,7 @@ fn distance_to_segment(p: Vector3, a: Vector3, b: Vector3) -> f64 {
     (p - (a + (ab * t))).length()
 }
 
-/// C# `EveryUnion`: every distinct non-empty union of at most two face rims and at most two cube
+/// Every distinct non-empty union of at most two face rims and at most two cube
 /// edges.
 fn every_union() -> Vec<EdgeSet> {
     let all_edges: Vec<(i32, i32)> = FACE_RIMS
@@ -650,7 +648,6 @@ fn every_union() -> Vec<EdgeSet> {
     unions
 }
 
-/// C# `RimEdges`.
 pub fn rim_edges(rim: &[i32; 4]) -> impl Iterator<Item = (i32, i32)> + '_ {
     rim.iter()
         .enumerate()
@@ -665,7 +662,7 @@ fn key(a: i32, b: i32) -> (i32, i32) {
     }
 }
 
-/// C# `Describe`: the edges in order.
+/// The edges in order.
 fn describe(edges: &EdgeSet) -> String {
     edges
         .iter()
@@ -674,7 +671,7 @@ fn describe(edges: &EdgeSet) -> String {
         .join(" ")
 }
 
-/// C# `Link`: the edge set as chains, as the app links a pick (BevelSurfacePartBuilder.TheChainsOf)
+/// The edge set as chains, as the app links a pick (BevelSurfacePartBuilder.TheChainsOf)
 /// - each mesh edge once, linked by the production `BevelChainLinker`.
 pub fn link(
     positions: &[Vector3],

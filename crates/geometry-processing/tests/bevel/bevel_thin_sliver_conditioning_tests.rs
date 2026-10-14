@@ -1,7 +1,6 @@
-//! Port of `BevelThinSliverConditioningTests.cs`: the THIN SLIVER conditioning a working copy gets
-//! on its way in (`bevel_thin_slivers`), read on the poke-through that needs it -
-//! `gusset_test_meshes::create_plate_with_gusset_poking_through`, whose gusset tip the boolean
-//! wrote three times over within two microns.
+//! The THIN SLIVER conditioning a working copy gets on its way in (`bevel_thin_slivers`), read on
+//! the poke-through that needs it - `gusset_test_meshes::create_plate_with_gusset_poking_through`,
+//! whose gusset tip the boolean wrote three times over within two microns.
 //!
 //! Two vertices nearer than the weld distance ARE one vertex - that is what
 //! `bevel_working_mesh::seam_tolerance_for` means, and what the kernel's own seam weld does with
@@ -33,10 +32,10 @@ const FLAT_ANGLE_DEGREES: f64 = 10.0;
 /// The pass does its own job: every edge shorter than the weld distance is collapsed, the
 /// triangles hanging on them go, and the part is the same part to within two microns.
 ///
-/// Driven directly rather than through `BevelWorkingMesh.CreateFrom`, because on THIS fixture the
-/// seam weld gets there first: the raw boolean output is one the kernel would refuse, so the weld
-/// runs and closes the tip on its way past. What is held here is the pass's own reading of a real
-/// one.
+/// Driven directly rather than through `bevel_working_mesh::create_from`, because on THIS fixture
+/// the seam weld gets there first: the raw boolean output is one the kernel would refuse, so the
+/// weld runs and closes the tip on its way past. What is held here is the pass's own reading of a
+/// real one.
 #[test]
 fn the_sliver_edges_are_collapsed_as_the_one_point_they_are() {
     let mut part = gusset_test_meshes::create_plate_with_gusset_poking_through();
@@ -115,8 +114,8 @@ fn the_top_floods_as_one_surface_once_the_sliver_is_gone() {
 
 /// And with the sliver gone the top face's rim FITS at the 0.4 it asks for: the band down the
 /// plate's y = -6 wall has the whole 20 mm of that wall, and the band down the gusset's hypotenuse
-/// the whole 20 of its own. (This was a pin at 0.3999824; `SurfaceRoomCornerWallTests` holds both
-/// of its fixes on a block built to say so.)
+/// the whole 20 of its own. (This was a pin at 0.3999824; `surface_room_corner_wall_tests` holds
+/// both of its fixes on a block built to say so.)
 #[test]
 fn the_top_face_fits_at_the_size_it_asks_for_once_the_sliver_is_gone() {
     let part = the_conditioned_fixture();
@@ -165,9 +164,9 @@ fn the_top_face_fits_at_the_size_it_asks_for_once_the_sliver_is_gone() {
 }
 
 /// The fixture with both source conditioning passes run over it, in the order
-/// `BevelWorkingMesh.CreateFrom` runs them - the thin slivers collapsed and then the collinear ones
-/// that leaves dropped. Not `CreateFrom` itself, because this fixture is raw boolean output the
-/// kernel would refuse, so the seam weld would run first and do part of the work.
+/// `bevel_working_mesh::create_from` runs them - the thin slivers collapsed and then the collinear
+/// ones that leaves dropped. Not `CreateFrom` itself, because this fixture is raw boolean output
+/// the kernel would refuse, so the seam weld would run first and do part of the work.
 fn the_conditioned_fixture() -> Mesh {
     let mut part = gusset_test_meshes::create_plate_with_gusset_poking_through();
 
@@ -178,7 +177,7 @@ fn the_conditioned_fixture() -> Mesh {
 }
 
 /// The thinnest triangle of a mesh, as the shortest altitude any of them has.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)` skips NaN too.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` skips NaN too.
 fn thinnest_face(mesh: &Mesh) -> f64 {
     let mut thinnest = f64::INFINITY;
 

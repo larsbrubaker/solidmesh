@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/BandSideEndTagTests.cs`: an OPEN chain that ends
-//! on an END FACE tags the faces round each end with an end tag of its own - 3 at the chain's first
-//! vertex, 4 at its last - while tags 1 and 2, and every closed chain's and every running-on or
-//! dying end's tags, stay bit-identical to the tagging without end floods. C# `[MethodDataSource]`
-//! rows are loops over the same-named test.
+//! An OPEN chain that ends on an END FACE tags the faces round each end with an end tag of its
+//! own - 3 at the chain's first vertex, 4 at its last - while tags 1 and 2, and every closed
+//! chain's and every running-on or dying end's tags, stay bit-identical to the tagging without end
+//! floods. Each test's cases run as a loop inside it.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -34,7 +33,7 @@ const FOLD_DEGREES: f64 = 10.0;
 
 const SNAP: f64 = 1e-7;
 
-/// C# `Pick`: a pick over a fixture, named for the test's line.
+/// A pick over a fixture, named for the test's line.
 struct Pick {
     name: String,
     positions: Vec<Vector3>,
@@ -59,7 +58,6 @@ fn pick(
     }
 }
 
-/// C# `Picks`.
 fn picks() -> Vec<Pick> {
     let mut picks = Vec::new();
 
@@ -104,7 +102,6 @@ fn picks() -> Vec<Pick> {
     picks
 }
 
-/// C# `EndFacePicks`.
 fn end_face_picks() -> Vec<Pick> {
     let mut picks = Vec::new();
     let (p, i) = cube_solid(1.0);
@@ -139,8 +136,8 @@ fn sides_of(
     sides_on(&pick.positions, &pick.indices, edges, feature, end_floods)
 }
 
-/// C# `TagSides(indices, edges, feature, out divides, positions: positions)` with end floods, or
-/// `endFloods: false` without positions.
+/// The side tags of `indices` with end floods when positions are given, or without end floods
+/// when they are not.
 fn sides_on(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -160,7 +157,7 @@ fn sides_on(
     .expect("the sides tag")
 }
 
-/// C# `ClosedChainsAndRunningOnEndsTagAsBefore`.
+/// Closed chains and running on ends tag as before.
 #[test]
 fn closed_chains_and_running_on_ends_tag_as_before() {
     for pick in picks() {
@@ -235,9 +232,9 @@ fn closed_chains_and_running_on_ends_tag_as_before() {
     }
 }
 
-/// C# `RoomOf` of `TheRoomAtAnEndIsNeverAboveTheRoomBlindToIt` and
-/// `AnEndFloodOverAForwardNoseStopsShortOfTheBottom`: `BandRoom.RoomOfCutMesh` over the solid
-/// tagged as given, with C#'s defaults for every optional argument.
+/// The room `the_room_at_an_end_is_never_above_the_room_blind_to_it` and
+/// `an_end_flood_over_a_forward_nose_stops_short_of_the_bottom` read: the cut mesh's room over the
+/// solid tagged as given, with every optional argument at its default.
 fn room_of_tags(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -275,7 +272,7 @@ fn room_of_tags(
     .0
 }
 
-/// C# `TheRoomAtAnEndIsNeverAboveTheRoomBlindToIt`: the room SEES end tags - an end region's
+/// The room SEES end tags - an end region's
 /// boundary with the rest of the part is foreign - and on these fixtures that only ever holds the
 /// room down.
 #[test]
@@ -300,7 +297,7 @@ fn the_room_at_an_end_is_never_above_the_room_blind_to_it() {
     }
 }
 
-/// C# `AnEndFloodStopsShortOfTheBottomThroughASmoothRounding`: where the end face meets the rest
+/// Where the end face meets the rest
 /// of the part SMOOTHLY by a rounding that turns back ALONG the chain, the end flood stops at that
 /// first bend.
 #[test]
@@ -330,7 +327,7 @@ fn an_end_flood_stops_short_of_the_bottom_through_a_smooth_rounding() {
     );
 }
 
-/// C# `AnEndFloodOverAForwardNoseStopsShortOfTheBottom`: the size-free end flood reads a forward
+/// The size-free end flood reads a forward
 /// nose as one end face, but must not run on round it into the bottom, which runs back ALONGSIDE
 /// the chain.
 #[test]
@@ -354,7 +351,7 @@ fn an_end_flood_over_a_forward_nose_stops_short_of_the_bottom() {
     assert!(room <= thickness, "{room} against {thickness}");
 }
 
-/// C# `ACubeEdgeTagsItsTwoEndFaces`: one top edge of a cube - the top and the front are the two
+/// One top edge of a cube - the top and the front are the two
 /// sides, the end face round vertex 4 is end 3 and the one round vertex 5 end 4, and the bottom
 /// and the back stay 0.
 #[test]
@@ -401,7 +398,7 @@ fn a_cube_edge_tags_its_two_end_faces() {
     }
 }
 
-/// C# `OneEndOnAFaceAndOneRunningOnTagsOnlyTheFace`: HALF a cube's top edge, [4, Mid] - the end at
+/// HALF a cube's top edge, [4, Mid] - the end at
 /// 4 stands on an end face and gets end tag 3; the end at Mid runs on along the crease, so there is
 /// no tag 4, and every triangle off the end face is tagged as before end tags.
 #[test]
@@ -427,7 +424,7 @@ fn one_end_on_a_face_and_one_running_on_tags_only_the_face() {
         .all(|t| tags[t] == before[t]));
 }
 
-/// C# `AHexagonalPrismEdgeTagsItsTwoEndFaces`: one top edge of a hexagonal prism (obtuse ends) -
+/// One top edge of a hexagonal prism (obtuse ends) -
 /// the top cap and the edge's wall quad are the sides, the two neighbouring wall quads the ends,
 /// and the bottom cap and the three far walls stay 0.
 #[test]
@@ -467,7 +464,7 @@ fn a_hexagonal_prism_edge_tags_its_two_end_faces() {
     }
 }
 
-/// C# `AnObtuseEndFacePickFillsClosed`: a hexagonal prism's top edge (obtuse ends) fills closed
+/// A hexagonal prism's top edge (obtuse ends) fills closed
 /// through the end cap.
 #[test]
 fn an_obtuse_end_face_pick_fills_closed() {
@@ -498,7 +495,7 @@ fn corners(t: (i32, i32, i32)) -> [i32; 3] {
     [t.0, t.1, t.2]
 }
 
-/// C# `FieldOf`: the chain's field at `size`, from the unit setbacks of a fillet.
+/// The chain's field at `size`, from the unit setbacks of a fillet.
 fn field_of(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -520,7 +517,7 @@ fn field_of(
     ChainField::from_polyline(&points, closed, &setbacks).expect("the chain makes a field")
 }
 
-/// C# `SlabWithARoundedEnd`: a slab 2 x 2 x 1 whose edge between its x = +1 face and its bottom
+/// A slab 2 x 2 x 1 whose edge between its x = +1 face and its bottom
 /// is rounded (radius 0.5, 12 facets of 7.5 degrees - smooth under the fold threshold). The pick
 /// is the top front edge from x = -1 to x = +1. Answers the solid, the chain and the bottom wall's
 /// triangles.
@@ -562,7 +559,7 @@ fn slab_with_a_rounded_end() -> (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<i32>, V
     (positions, indices, chain, bottom_wall)
 }
 
-/// C# `SlabWithAForwardNose`: a slab whose end is a faceted soft NOSE bulging FORWARD past the
+/// A slab whose end is a faceted soft NOSE bulging FORWARD past the
 /// chain's end and rolling round under into the bottom (32 facets, smooth under the fold
 /// threshold). Answers the solid, the chain, the bottom's triangles and the slab's thickness.
 #[allow(clippy::type_complexity)]
@@ -606,7 +603,7 @@ fn slab_with_a_forward_nose() -> (
     (positions, indices, chain, bottom, T + r)
 }
 
-/// C# `HexPrism`: a hexagonal prism of circumradius 2, height 4 (`PrismOnOutline`'s default).
+/// A hexagonal prism of circumradius 2, height 4 (`PrismOnOutline`'s default).
 fn hex_prism() -> SolidWithChain {
     let outline: Vec<Vector2> = (0..6)
         .map(|i| {

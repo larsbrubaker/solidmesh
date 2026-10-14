@@ -1,7 +1,7 @@
-//! Port of `LevelLine/ConcaveEdgeEndFaceTests.cs`: stage 2 rung 7 - one CONCAVE edge of a square
-//! pocket's floor ends on two end faces (the neighbouring pocket walls x = -1 and x = 1). A concave
-//! bevel ADDS material, so each end's hole lies in that end wall's plane and is zipped there as the
-//! convex cap is. C# `[Arguments]` rows are a loop over the same-named test.
+//! Stage 2 rung 7 - one CONCAVE edge of a square pocket's floor ends on two end faces (the
+//! neighbouring pocket walls x = -1 and x = 1). A concave bevel ADDS material, so each end's hole
+//! lies in that end wall's plane and is zipped there as the convex cap is. Each test's cases run as
+//! a loop inside it.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading::room_of;

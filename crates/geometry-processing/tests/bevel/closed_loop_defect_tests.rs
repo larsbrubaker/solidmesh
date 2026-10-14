@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ClosedLoopDefectTests.cs`: the closed-loop picks
-//! the SWEEP found the level line taking and failing, carried into the kernel as the app route's
-//! own arguments. A closed chain either builds a closed solid with a real volume change, or refuses
-//! BY SIZE with a room that is true - and nothing else. C# `[Arguments]` rows are a loop over the
-//! same-named test.
+//! The closed-loop picks the SWEEP found the level line taking and failing, carried into the kernel
+//! as the app route's own arguments. A closed chain either builds a closed solid with a real volume
+//! change, or refuses BY SIZE with a room that is true - and nothing else. Each test's cases run as
+//! a loop inside it.
 
 use std::rc::Rc;
 
@@ -14,7 +13,7 @@ use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::{open_edges, signed_volume, signed_volume_of};
 
-/// C# `AClosedRimBuildsOrRefusesBySize`: the rim of the top face of "Simple Internal Fillet", at
+/// The rim of the top face of "Simple Internal Fillet", at
 /// r1 and r2. The sweep's rows read "the fill refused, SideDoesNotLeaveOneLoop" and "the fill
 /// refused, OpenChainEnds".
 #[test]

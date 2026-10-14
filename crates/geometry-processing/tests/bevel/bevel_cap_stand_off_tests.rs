@@ -1,4 +1,4 @@
-//! Port of `BevelCapStandOffTests.cs`: a cutter's cap clears a top face that is not flat to the
+//! A cutter's cap clears a top face that is not flat to the
 //! last bit, and a bead's cap is not pushed off the face it stops on.
 
 use geometry_processing::bevel::bevel_chain_end_cap::ResolveOptions;
@@ -17,7 +17,7 @@ const RADIUS: f64 = 3.0;
 const LARGEST_HARMLESS_STAND_OFF: f64 = 1e-4;
 const ON_A_PLANE: f64 = 1e-9;
 
-/// C# `ACuttersCapClearsATopFaceThatIsNotFlatToTheLastBit`.
+/// A cutter's cap clears a top face that is not flat to the last bit.
 #[test]
 fn a_cutters_cap_clears_a_top_face_that_is_not_flat_to_the_last_bit() {
     let mesh = box_with_a_tilted_top(OUT_OF_FLAT);
@@ -66,7 +66,7 @@ fn a_cutters_cap_clears_a_top_face_that_is_not_flat_to_the_last_bit() {
     assert!(ends.start.plane_distance > furthest_below);
 }
 
-/// C# `ABeadsCapIsNotPushedOffTheFaceItStopsOn`.
+/// A bead's cap is not pushed off the face it stops on.
 #[test]
 fn a_beads_cap_is_not_pushed_off_the_face_it_stops_on() {
     let part = create_rib_on_plate();

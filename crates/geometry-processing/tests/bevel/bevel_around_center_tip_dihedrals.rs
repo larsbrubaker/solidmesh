@@ -1,17 +1,17 @@
-//! Port of the two shared measuring helpers of `BevelAroundCenterTipTests.cs`, `WorstDihedralDegrees`
-//! and `Dihedrals`: the bend across every two-sided edge of a mesh in a region, read on a mesh
-//! welded at 1e-4 so that a seam the construction left as two coincident vertices still reads as
-//! one edge. Other classes (`SurfaceConcaveCornerTests`, ...) measure smoothness with them, so they
-//! live here once rather than in each.
+//! The two shared measuring helpers of the around-center tip tests, `worst_dihedral_degrees` and
+//! `dihedrals`: the bend across every two-sided edge of a mesh in a region, read on a mesh welded
+//! at 1e-4 so that a seam the construction left as two coincident vertices still reads as one edge.
+//! Other classes (`surface_concave_corner_tests`, ...) measure smoothness with them, so they live
+//! here once rather than in each.
 
 use std::collections::HashMap;
 
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
-/// C# `WorstDihedralDegrees`: the sharpest bend in the region, how many edges were measured, and
-/// the six sharpest named for a failure message. Panics where the region selected no edges, as C#
-/// throws: there is nothing to measure.
+/// The sharpest bend in the region, how many edges were measured, and
+/// the six sharpest named for a failure message. Panics where the region selected no edges:
+/// there is nothing to measure.
 pub fn worst_dihedral_degrees(
     mesh: &Mesh,
     in_region: impl Fn(Vector3) -> bool,
@@ -23,7 +23,7 @@ pub fn worst_dihedral_degrees(
         "the region selected no edges, so there is nothing to measure"
     );
 
-    // C#'s OrderByDescending is a stable sort; so is sort_by.
+    // A stable sort, so equal bends keep the order they were met in.
     let mut sharpest = bends.clone();
     sharpest.sort_by(|a, b| b.0.total_cmp(&a.0));
 
@@ -42,9 +42,9 @@ pub fn worst_dihedral_degrees(
     (sharpest[0].0, bends.len(), offenders)
 }
 
-// C#'s `!(cross.LengthSquared > 0)`, which skips a NaN normal as well.
+// `!(cross.length_squared() > 0)` skips a NaN normal as well as a zero one.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
-/// C# `Dihedrals`: every edge two faces share in the region, with the angle between their normals
+/// Every edge two faces share in the region, with the angle between their normals
 /// in degrees and the edge's midpoint, in the order the edges were first met.
 pub fn dihedrals(mesh: &Mesh, in_region: impl Fn(Vector3) -> bool) -> Vec<(f64, Vector3)> {
     const GRID: f64 = 1e-4;
@@ -55,7 +55,8 @@ pub fn dihedrals(mesh: &Mesh, in_region: impl Fn(Vector3) -> bool) -> Vec<(f64, 
 
     for (index, &stored) in mesh.vertices.iter().enumerate() {
         let vertex = Vector3::from_vector3_float(stored);
-        // C#'s `(long)Math.Round(...)`: banker's rounding, then a truncating cast.
+        // Banker's rounding, then a truncating cast: a coordinate on a half step always lands in
+        // the same cell.
         let cell = (
             (vertex.x / GRID).round_ties_even() as i64,
             (vertex.y / GRID).round_ties_even() as i64,
@@ -89,8 +90,8 @@ pub fn dihedrals(mesh: &Mesh, in_region: impl Fn(Vector3) -> bool) -> Vec<(f64, 
         identity[index] = found;
     }
 
-    // C#'s Dictionary iterates in insertion order here (nothing is removed), so the edges are kept
-    // in a list in the order they were first met, with a map into it.
+    // The edges are kept in a list in the order they were first met, with a map into it, so the
+    // reading is the same every run.
     let mut edge_order: Vec<(usize, usize)> = Vec::new();
     let mut by_edge: HashMap<(usize, usize), Vec<Vector3>> = HashMap::new();
 

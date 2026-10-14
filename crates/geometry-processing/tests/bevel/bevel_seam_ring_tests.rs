@@ -1,8 +1,7 @@
-//! Ports `GeometryProcessingTests/BevelSeamRingTests.cs`: the seam a corner patch and the runs that
-//! end on it meet along - the ring of points on each ball-centre plane. Both solids have to carry
-//! the SAME points there, not points a rounding apart, or the union of the operands is self
-//! intersecting; so the test is EXACT equality rather than a tolerance. C#'s `[Arguments]` rows are
-//! a loop, and its `[Timeout(120_000)]` is left to nextest's slow-test settings.
+//! The seam a corner patch and the runs that end on it meet along - the ring of points on each
+//! ball-centre plane. Both solids have to carry the SAME points there, not points a rounding apart,
+//! or the union of the operands is self intersecting; so the test is EXACT equality rather than a
+//! tolerance. The cases run as a loop, and a time limit is left to nextest's slow-test settings.
 
 use std::collections::HashSet;
 
@@ -310,8 +309,8 @@ fn sharing(
     direction: Vector3,
     misses: &mut Vec<String>,
 ) -> usize {
-    // C#'s HashSet<Vector3> matches by exact component equality; Vector3 is not Eq here, so the
-    // same exact test is a scan of a list (`Vector3`'s `==` is exact).
+    // The match is exact component equality; `Vector3` is not `Eq`, so the exact test is a scan of
+    // a list (`Vector3`'s `==` is exact).
     let patch_points: Vec<Vector3> = patches.patches[0]
         .mesh
         .vertices

@@ -1,6 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/EndFaceRoomTests.cs`: stage 2, rung 5 - the room
-//! is honest at an END FACE. The band may cut up to the end face's far edges but never across them;
-//! a triangular prism's vertical edge tells the honest room from one blind to its end faces.
+//! Stage 2, rung 5 - the room is honest at an END FACE. The band may cut up to the end face's far
+//! edges but never across them; a triangular prism's vertical edge tells the honest room from one
+//! blind to its end faces.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading;
@@ -56,7 +56,6 @@ fn room_of(positions: &[Vector3], indices: &[(i32, i32, i32)], chain: &[i32]) ->
     .expect("the room reads")
 }
 
-/// C# `Build`.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -76,7 +75,7 @@ fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `ACubeEdgeRoomIsTheFaceWidth`: one top edge of a cube of edge 2 - the side faces' widths and
+/// One top edge of a cube of edge 2 - the side faces' widths and
 /// the end faces' far edges agree on a room of 2.
 #[test]
 fn a_cube_edge_room_is_the_face_width() {
@@ -90,7 +89,7 @@ fn a_cube_edge_room_is_the_face_width() {
     assert!(2.0 - room < ROOM_SLACK, "{room}");
 }
 
-/// C# `AShortEndFaceBoundsTheRoom`: the vertical edge at a triangular prism's apex - a fillet's
+/// The vertical edge at a triangular prism's apex - a fillet's
 /// unit setback is 0.15 there, and each cap's far rim edge stands `ALTITUDE` from the chain's ends,
 /// so the room is 0.3 / 0.15 = 2.
 #[test]
@@ -104,7 +103,7 @@ fn a_short_end_face_bounds_the_room() {
     assert!((ALTITUDE / 0.15) - room < ROOM_SLACK, "{room}");
 }
 
-/// C# `AnEndFacePickRefusesBySizeAboveItsRoomAndFillsClosedUnder`: above the end face's room the
+/// Above the end face's room the
 /// build refuses by SIZE, naming that room; under it the band builds and the fill closes.
 #[test]
 fn an_end_face_pick_refuses_by_size_above_its_room_and_fills_closed_under() {
@@ -133,7 +132,7 @@ fn an_end_face_pick_refuses_by_size_above_its_room_and_fills_closed_under() {
     }
 }
 
-/// C# `ApexPrism`: a prism 4 tall on the triangle W = (-2, 0), X = (2, 0), V = (0, 0.3); the chain
+/// A prism 4 tall on the triangle W = (-2, 0), X = (2, 0), V = (0, 0.3); the chain
 /// is the vertical edge at V, top to bottom.
 fn apex_prism() -> SolidWithChain {
     let outline = [

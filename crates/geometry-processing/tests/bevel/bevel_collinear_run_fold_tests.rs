@@ -1,7 +1,6 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelCollinearRunFoldTests.cs`: a vertex sitting in
-//! the middle of a straight crease (the collinear vertex a boolean leaves) must not change what
-//! the sweep carries there, nor the size a refusal quotes, and two caps of one straight run may
-//! not each spend the whole of it.
+//! A vertex sitting in the middle of a straight crease (the collinear vertex a boolean leaves) must
+//! not change what the sweep carries there, nor the size a refusal quotes, and two caps of one
+//! straight run may not each spend the whole of it.
 
 use geometry_processing::bevel::{bevel_chain_linker, bevel_chain_sweep, bevel_tapered_sweep};
 use geometry_processing::bevel::{

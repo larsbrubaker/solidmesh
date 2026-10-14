@@ -1,8 +1,7 @@
-//! Port of `LevelLine/CreaseDiesOutTests.cs`: a crease that DIES OUT into a smooth surface at both
-//! of its ends - a block whose top ridge swells out of a flat top and sinks back into it, the whole
-//! crease picked. Round each end the two sides are ONE smooth surface, so the sides do not divide,
-//! and that is what a dying-out end MEANS, not a defect. The fixtures are
-//! `crease_dies_out_fixtures.rs`.
+//! A crease that DIES OUT into a smooth surface at both of its ends - a block whose top ridge
+//! swells out of a flat top and sinks back into it, the whole crease picked. Round each end the two
+//! sides are ONE smooth surface, so the sides do not divide, and that is what a dying-out end
+//! MEANS, not a defect. The fixtures are `crease_dies_out_fixtures.rs`.
 
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::{
@@ -35,7 +34,7 @@ fn loops_text(gap: &BandGapResult) -> String {
         .join(" ")
 }
 
-/// C# `GapFill.Fill(gap, BandProfile.Fillet)`.
+/// The gap's fillet fill, with the default fillet segments.
 fn fill(gap: &BandGapResult) -> GapFillResult {
     gap_fill::fill(gap, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs")
 }

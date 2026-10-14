@@ -1,9 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/BevelBeadBatchTests.cs`: what the second pass may take
-//! back off the bead batch, and what it must take back ALONGSIDE a rebuilt bead - a corner FILL
-//! goes when either bead it continues is rebuilt.
+//! What the second pass may take back off the bead batch, and what it must take back ALONGSIDE a
+//! rebuilt bead - a corner FILL goes when either bead it continues is rebuilt.
 //!
-//! C# tells the meshes apart by reference; Rust meshes are values, so each box here is a cube of
-//! its own size, and "the same mesh" is read off its vertices.
+//! Meshes are values, so each box here is a cube of its own size, and "the same mesh" is read off
+//! its vertices.
 
 use std::collections::HashSet;
 
@@ -87,7 +86,7 @@ fn clippable() -> Clippable {
     Clippable::new(cube(5.0), cube(6.0), None, None, None)
 }
 
-/// C#'s `IsEquivalentTo`: the same meshes in any order.
+/// The same meshes in any order.
 fn assert_equivalent(actual: &[Mesh], expected: &[&Mesh], because: &str) {
     assert_eq!(actual.len(), expected.len(), "{because}");
     for want in expected {

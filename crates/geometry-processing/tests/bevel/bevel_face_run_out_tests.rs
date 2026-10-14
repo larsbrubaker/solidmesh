@@ -1,4 +1,4 @@
-//! Port of `BevelFaceRunOutTests.cs`: how far a bead's tangent line carries on past the end of its
+//! How far a bead's tangent line carries on past the end of its
 //! crease, and what stops it there.
 
 use std::sync::Arc;
@@ -55,7 +55,7 @@ fn slope_face(part: &Mesh) -> i32 {
     panic!("the fixture has to have a left slope to ride");
 }
 
-/// C# `PastTheRidgeEndTheRunCarriesOnToTheCubesConvexCornerEdge`.
+/// Past the ridge end the run carries on to the cube's convex corner edge.
 #[test]
 fn past_the_ridge_end_the_run_carries_on_to_the_cubes_convex_corner_edge() {
     let part = nose::create();
@@ -79,7 +79,7 @@ fn past_the_ridge_end_the_run_carries_on_to_the_cubes_convex_corner_edge() {
     );
 }
 
-/// C# `PastTheCreaseEndTheRunCarriesOnToTheNotchesConcaveCentreCrease`.
+/// Past the crease end the run carries on to the notch's concave centre crease.
 #[test]
 fn past_the_crease_end_the_run_carries_on_to_the_notches_concave_centre_crease() {
     let part = nose::create();
@@ -103,7 +103,7 @@ fn past_the_crease_end_the_run_carries_on_to_the_notches_concave_centre_crease()
     );
 }
 
-/// C# `ARunThatEndsWhereItsOwnFaceEndsHasNothingToCarryOnInto`.
+/// A run that ends where its own face ends has nothing to carry on into.
 #[test]
 fn a_run_that_ends_where_its_own_face_ends_has_nothing_to_carry_on_into() {
     let cube = create_cube(20.0, 20.0, 20.0);

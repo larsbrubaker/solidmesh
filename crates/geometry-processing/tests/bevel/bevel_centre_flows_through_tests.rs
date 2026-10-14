@@ -1,7 +1,6 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelCentreFlowsThroughTests.cs`: a crease INTERRUPTED
-//! by the feature standing on it - the two pieces the nose leaves of the nose-in-notch part's
-//! centre crease (`nose_in_notch_test_meshes::centre_flows_through_groups`), both beaded at 6 mm,
-//! the selection "Center Flows Through.mcx" carries.
+//! A crease INTERRUPTED by the feature standing on it - the two pieces the nose leaves of the
+//! nose-in-notch part's centre crease (`nose_in_notch_test_meshes::centre_flows_through_groups`),
+//! both beaded at 6 mm, the selection "Center Flows Through.mcx" carries.
 //!
 //! The Onshape control's answer is ONE cylinder of radius 6 about (10, 1.5147) running the whole
 //! 20 mm height, with nothing at all where the nose interrupts the crease; the nose is kept where it
@@ -215,7 +214,7 @@ fn centre_crease_below_the_nose(features: &FeatureEdgeSet) -> ChainEdge {
     panic!("the fixture has no centre crease below the nose");
 }
 
-/// C# `FilletAsync`: builds and unions the given groups' beads onto the part, exactly as a rebuild
+/// Builds and unions the given groups' beads onto the part, exactly as a rebuild
 /// does, every bead trimmed to what it is entitled to occupy.
 fn fillet(
     part: &polygon_mesh::Mesh,

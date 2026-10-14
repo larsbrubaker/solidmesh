@@ -1,8 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/BevelCanalOverTheRoundTests.cs`: the second pass's
-//! bead over the rounded ridge of the nose-in-notch part (`nose_in_notch_cut`), held to the
-//! rolling-ball CANAL a CAD package builds there - a radius-2 pipe whose centre keeps a distance of
-//! 2 from both the right slope plane and the true cylinder of the round, so its spine is an
-//! ellipse arc, not a polyline.
+//! The second pass's bead over the rounded ridge of the nose-in-notch part (`nose_in_notch_cut`),
+//! held to the rolling-ball CANAL a CAD package builds there - a radius-2 pipe whose centre keeps a
+//! distance of 2 from both the right slope plane and the true cylinder of the round, so its spine
+//! is an ellipse arc, not a polyline.
 //!
 //! The analytic canal, derived from the part and the radius: the nose's half wedge is
 //! atan(2/3) = 33.69 degrees, so a round of radius r on the ridge is the cylinder on the axis
@@ -331,7 +330,7 @@ struct Station {
 /// Every surface point of every interior ring measured to the analytic canal, grouped by station.
 /// Each point is also checked to be a vertex of the bead Rebead handed back, so what is measured
 /// IS that bead's surface and not a sweep of this test's own.
-#[allow(clippy::needless_range_loop)] // C#'s index loops, read against the rings and the profile.
+#[allow(clippy::needless_range_loop)] // Index loops, read against the rings and the profile.
 fn measure_stations(
     swept: &[SweptSegment],
     rings: &[Vec<Vector3>],
@@ -459,8 +458,8 @@ fn measure_stations(
 
 /// The largest distance any point of one section is from the same point of the next, over every
 /// joint of the run, with the joint it happens at. It is exactly what
-/// `BevelMitreFit.JointsTheMitreCannotFit` measures: past a fraction of the size the two sections
-/// are no longer one section to mitre and the linker cuts the run there instead.
+/// `bevel_mitre_fit::joints_the_mitre_cannot_fit` measures: past a fraction of the size the two
+/// sections are no longer one section to mitre and the linker cuts the run there instead.
 fn worst_profile_deviation(swept: &[SweptSegment]) -> (f64, usize) {
     let mut worst = 0.0;
     let mut at = 0;
@@ -604,7 +603,7 @@ fn spine_in_the_plane(point: Vector3, direction: Vector3) -> (f64, Vector3) {
     let arc_half_angle = arc_half_angle();
     let side = |phi: f64| (spine(phi) - point).dot(direction);
     let sign = |value: f64| {
-        // C# Math.Sign: -1, 0 or 1
+        // The sign: -1, 0 or 1
         if value > 0.0 {
             1
         } else if value < 0.0 {
@@ -659,7 +658,7 @@ fn spine_in_the_plane(point: Vector3, direction: Vector3) -> (f64, Vector3) {
         }
     }
 
-    // OrderBy is stable: the first of equal distances wins.
+    // A stable order: the first of equal distances wins.
     crossings
         .into_iter()
         .fold(None, |best: Option<(f64, Vector3)>, crossing| match best {
@@ -683,7 +682,7 @@ fn section_tangent_point_on_the_round(segment: &SweptSegment, at: Vector3) -> Ve
         })
         .map(|point| at + segment.offset(point))
         .collect();
-    // OrderBy(...).First(): the first of equal keys wins.
+    // The first of equal keys wins.
     if candidates[1].x + candidates[1].y < candidates[0].x + candidates[0].y {
         candidates[1]
     } else {
@@ -730,7 +729,7 @@ fn report_the_cut_part(cut: &Mesh, report: &mut String) {
         .copied()
         .filter(|v| (v.y - tangent_y).abs() < 1e-2)
         .collect();
-    // OrderByDescending is stable.
+    // A stable sort, largest first: equal lines keep their order.
     tangent_lines.sort_by(|a, b| b.x.total_cmp(&a.x));
     tangent_lines.truncate(2);
     let _ = writeln!(

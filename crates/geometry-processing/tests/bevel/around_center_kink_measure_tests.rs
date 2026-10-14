@@ -1,17 +1,16 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/AroundCenterKinkMeasureTests.cs`: a MEASUREMENT of
-//! "5mm Bevel Around Center.mcx" as the app route hands it to the kernel (`around-center-r5.txt`,
-//! one closed 5-edge concave chain with four sharp kinks where an unpicked crease runs in) against
-//! the file's Onshape control (`around-center-control.txt`, same frame): per kink the turn, the
-//! dihedrals, the unpicked crease and the side tags; the setback along the chain; and at the level
-//! line's worst published vertex, where it is against the control. The C# `.Flow` partial
-//! (`the_flow_design_reads_against_the_control`) is the `flow` module beside this file, so both
-//! tests sit under this class's path.
+//! A MEASUREMENT of "5mm Bevel Around Center.mcx" as the app route hands it to the kernel
+//! (`around-center-r5.txt`, one closed 5-edge concave chain with four sharp kinks where an unpicked
+//! crease runs in) against the file's Onshape control (`around-center-control.txt`, same frame):
+//! per kink the turn, the dihedrals, the unpicked crease and the side tags; the setback along the
+//! chain; and at the level line's worst published vertex, where it is against the control. The flow
+//! design's reading (`the_flow_design_reads_against_the_control`) is the `flow` module beside this
+//! file, so both tests sit under this class's path.
 //!
 //! Asserts nothing. Returns at once unless `BEVEL_AROUND_CENTER_MEASURE=1`; writes its reading to
 //! the file named by `BEVEL_AROUND_CENTER_MEASURE_LOG` (the flow reading to that name plus
 //! `.flow.txt`), and to stdout: `BEVEL_AROUND_CENTER_MEASURE=1 cargo nextest run --workspace --test
-//! bevel --profile measure --no-capture around_center_kink_measure_tests`. C# `[NotInParallel]` is
-//! a `threads-required` override in `.config/nextest.toml`.
+//! bevel --profile measure --no-capture around_center_kink_measure_tests`. It runs alone (a
+//! `threads-required` override in `.config/nextest.toml`), so its timings read undisturbed.
 
 use std::collections::HashSet;
 use std::fmt::Write as _;
@@ -40,13 +39,12 @@ pub(super) const RUN_VARIABLE: &str = "BEVEL_AROUND_CENTER_MEASURE";
 /// The file the reading is written to, when set.
 pub(super) const LOG_VARIABLE: &str = "BEVEL_AROUND_CENTER_MEASURE_LOG";
 
-/// C#'s `P(v)`: `({X:0.###}, {Y:0.###}, {Z:0.###})`.
+/// A point as `(x, y, z)`, each coordinate to at most three decimals with trailing zeros dropped.
 pub(super) fn p(v: Vector3) -> String {
     format!("({}, {}, {})", up_to(v.x, 3), up_to(v.y, 3), up_to(v.z, 3))
 }
 
-/// C#'s `BandGap.Build(positions, indices, fixture.Chains, fixture.Closed, fixture.IsFeatureEdge,
-/// fixture.Size, fixture.Profile)`: the whole pick with every optional argument at its default.
+/// The fixture's whole pick at its size and profile, every optional argument at its default.
 pub(super) fn build(fixture: &Rc<LevelLineFixture>) -> BandGapResult {
     band_gap_entry_points::build_pick(
         &fixture.positions,
@@ -61,7 +59,7 @@ pub(super) fn build(fixture: &Rc<LevelLineFixture>) -> BandGapResult {
     .expect("a valid pick")
 }
 
-/// C#'s `ToControl(p, out at)`: the control surface's distance from `q` and the control point it
+/// The control surface's distance from `q` and the control point it
 /// is read at (the first triangle reaching the least distance).
 pub(super) fn to_control(control: &LevelLineFixture, q: Vector3) -> (f64, Vector3) {
     let mut best = f64::INFINITY;
@@ -98,7 +96,7 @@ fn degrees(cos: f64) -> f64 {
     cos.clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI
 }
 
-/// C# `TheKinkedChainReadsAgainstTheControl`.
+/// The kinked chain reads against the control.
 #[test]
 fn the_kinked_chain_reads_against_the_control() {
     if std::env::var(RUN_VARIABLE).as_deref() != Ok("1") {
@@ -272,7 +270,7 @@ fn the_kinked_chain_reads_against_the_control() {
     publish(&log, "");
 }
 
-/// The rest of C# `TheKinkedChainReadsAgainstTheControl` on a built band: the field's setbacks,
+/// The rest of `the_kinked_chain_reads_against_the_control` on a built band: the field's setbacks,
 /// the fill's worst published vertices, the rail, and the control's own blend boundary.
 fn read_the_band(
     log: &mut String,
@@ -322,7 +320,7 @@ fn read_the_band(
                 (v, q, d, at)
             })
             .collect();
-        // C#'s OrderByDescending is stable: a stable sort keeps ties in vertex order.
+        // A stable sort keeps ties in vertex order, so the reading is the same every run.
         worst_list.sort_by(|a, b| b.2.total_cmp(&a.2));
         let _ = writeln!(log, "worst published vertices to the control:");
         for &(v, q, d, at) in worst_list.iter().take(12) {
@@ -388,7 +386,7 @@ fn read_the_band(
         log,
         "control blend boundary (on the source, beside a blend vertex):"
     );
-    // C#'s HashSet<int> of ints never removed from iterates in insertion order.
+    // An insertion-ordered set, so the boundary prints in the order the triangles meet it.
     let mut boundary: IndexSet<i32> = IndexSet::new();
     for &(a, b, c) in &control.indices {
         let vs = [a, b, c];

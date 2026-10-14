@@ -1,5 +1,5 @@
-//! Port of the fixture builders of `LevelLine/CreaseDiesOutTests.cs` (`SwollenRidgeBlock`,
-//! `SwollenRidgeBlockWithASeamCopy`, `Chain`, `Neighbours`, `Build` and `SeamEpsilon`): a block
+//! The fixture builders of the crease-dies-out tests (the swollen ridge block, with and without a
+//! seam copy, its chain, neighbours, build and seam epsilon): a block
 //! whose top ridge swells from nearly flat at the caps to a real crease in the middle, so the
 //! picked crease dies out into the flat top at both ends. Read by `crease_dies_out_tests.rs` and
 //! `band_side_end_tag_tests.rs`.
@@ -33,7 +33,7 @@ pub const SEAM_RING: i32 = 6;
 /// How wide the doubled crease's ribbon is: eight microns, under the seam epsilon here.
 pub const SEAM_RIBBON: f64 = 0.008;
 
-/// C# `SeamEpsilon`: the app's seam epsilon by the app's own rule - 5e-4 of the bounding-box
+/// The app's seam epsilon by the app's own rule - 5e-4 of the bounding-box
 /// diagonal.
 pub fn seam_epsilon() -> f64 {
     let (positions, _) = swollen_ridge_block();
@@ -47,7 +47,7 @@ pub fn seam_epsilon() -> f64 {
     5e-4 * (high - low).length()
 }
 
-/// C# `Build`: the whole picked run at a size, fillet profile, at the app's seam epsilon.
+/// The whole picked run at a size, fillet profile, at the app's seam epsilon.
 pub fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> BandGapResult {
     build_chain(
         positions,
@@ -57,7 +57,7 @@ pub fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> B
     )
 }
 
-/// The same build for any chain - C#'s `BandGap.Build` call the mixed-end and seam tests make.
+/// The same build for any chain - the band gap call the mixed-end and seam tests make.
 pub fn build_chain(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -81,8 +81,8 @@ pub fn build_chain(
     .expect("the pick is well formed")
 }
 
-/// C# `Neighbours`: every vertex joined to this one by a triangle edge (a `HashSet` in C#;
-/// first-seen order here).
+/// Every vertex joined to this one by a triangle edge, in first-seen order so the reading is the
+/// same every run.
 pub fn neighbours(indices: &[(i32, i32, i32)], vertex: i32) -> Vec<i32> {
     let mut found = Vec::new();
     for &(ta, tb, tc) in indices {
@@ -105,8 +105,8 @@ pub fn neighbours(indices: &[(i32, i32, i32)], vertex: i32) -> Vec<i32> {
     found
 }
 
-/// C# `Chain`: the pick - the maximal run of FEATURE edges along the ridge, read off the geometry
-/// at the same threshold the kernel is handed. C#'s defaults are stride `RING` and column 4.
+/// The pick - the maximal run of FEATURE edges along the ridge, read off the geometry
+/// at the same threshold the kernel is handed. The usual stride is `RING` and the column 4.
 pub fn chain(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -143,7 +143,7 @@ pub fn chain(
     }
 }
 
-/// C# `SwollenRidgeBlock`: a block whose top carries a ridge that SWELLS - a raised cosine from
+/// A block whose top carries a ridge that SWELLS - a raised cosine from
 /// `FLAT_RIDGE` at each cap to `PEAK_RIDGE` in the middle - so the crease is a feature only over
 /// the middle of the length and dies out into the flat top at both ends.
 pub fn swollen_ridge_block() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
@@ -195,7 +195,7 @@ pub fn swollen_ridge_block() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     )
 }
 
-/// C# `SwollenRidgeBlockWithASeamCopy`: the same block with its crease DOUBLED - the ridge carries
+/// The same block with its crease DOUBLED - the ridge carries
 /// a second point a ribbon's width along the top, so the picked crease has a copy of itself beside
 /// it sharing both end vertices, as on the real part. The ribbon lies ALONG the left face (a flat
 /// ribbon across the top would split the crease's fold in two and neither half would be a

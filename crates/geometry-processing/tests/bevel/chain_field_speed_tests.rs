@@ -1,9 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainFieldSpeedTests.cs`: the speed requirement,
-//! and the proof that meeting it changed no answer. A live drag rebuilds the band every step, so a
-//! 20,000 triangle part with a 256 segment rim has to build in a fraction of a second, and the
-//! indexed field must answer exactly what the plain loop over every chain segment answered. The
-//! class's cylinder is `tessellated_cylinder.rs`; C# `[NotInParallel]` is a `threads-required`
-//! override in `.config/nextest.toml`. C# `[Arguments]` rows are a loop over the same-named test.
+//! The speed requirement, and the proof that meeting it changed no answer. A live drag rebuilds the
+//! band every step, so a 20,000 triangle part with a 256 segment rim has to build in a fraction of
+//! a second, and the indexed field must answer exactly what the plain loop over every chain segment
+//! answered. The class's cylinder is `tessellated_cylinder.rs`. It runs alone (a `threads-required`
+//! override in `.config/nextest.toml`), so its timings read undisturbed. Each test's cases run as a
+//! loop inside it.
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -44,7 +44,7 @@ fn within(actual: f64, expected: f64, tolerance: f64) -> bool {
     (actual - expected).abs() <= tolerance
 }
 
-/// C# `IndexedQueriesAnswerWhatTheExhaustiveSearchAnswers`: the index may only make the same query
+/// The index may only make the same query
 /// cheaper, never different - over random points, segments and triangles round a wiggly chain with
 /// a varying setback, every indexed answer equals the exhaustive one to the exactness the rest of
 /// the module is pinned to.
@@ -93,7 +93,7 @@ fn indexed_queries_answer_what_the_exhaustive_search_answers() {
     }
 }
 
-/// C# `TheClosedFormAnswersWhatTheConvexSearchAnswers`: the closed form used where a chain
+/// The closed form used where a chain
 /// segment's setback is constant may only make the same query cheaper, never different - held to
 /// the convex search it replaces, over the configurations closed forms are usually got wrong in:
 /// parallel, touching, crossing, coplanar and degenerate.
@@ -301,7 +301,7 @@ fn assert_segment_and_triangle_agree(
     }
 }
 
-/// C# `ARimOfATwentyThousandTriangleCylinderBuildsInsideTheDragBudget` (rows Fillet, Chamfer): the
+/// For a fillet and a chamfer: the
 /// drag budget, as a ceiling a regression trips over - a fillet and a chamfer on the top rim of a
 /// 20,000 triangle cylinder, each built and filled inside [`unit_ceiling`] work units, with a
 /// wall-clock hang guard behind it.
@@ -375,7 +375,7 @@ fn a_rim_of_a_twenty_thousand_triangle_cylinder_builds_inside_the_drag_budget() 
     }
 }
 
-/// C# `ADragOverTenSizesPaysForItsRoomOnlyOnce`: the drag itself - the room is a statement about
+/// The drag itself - the room is a statement about
 /// the part and the pick, so it is read ONCE and every size after that is a bare build handed that
 /// room. The row printed is what a user feels per step.
 #[test]
@@ -443,17 +443,18 @@ fn a_drag_over_ten_sizes_pays_for_its_room_only_once() {
     );
 }
 
-/// C# `AKnownRoomBuildDoesNotGrowWithTheModel`: a build handed its room costs what the BAND costs
+/// A build handed its room costs what the BAND costs
 /// and not what the MODEL costs - the same top rim on a cylinder of ten times the triangles costs
 /// only a little more, because the walk out from the chain never enters the surface the line
 /// cannot reach.
 ///
-/// **The GROWTH, not the ratio.** What the model's share costs is `big - small`; the ratio
-/// `big / small` is that same growth divided by a number that has nothing to do with the model, so
-/// it moves whenever the BAND gets cheaper - which is a thing to want, not a regression. Pruning the
-/// ridge rule's peak search (see `RidgeSearchCostTests`) took 12,288 work units off each row alike,
-/// leaving the growth untouched at 98,574 while the ratio rose from 3.16 to 3.96 and broke a `< 4x`
-/// claim. The growth is the quantity the requirement is about, and it is read the same on both.
+/// **The GROWTH, not the ratio.** What the model's share costs is `big - small`; the ratio `big /
+/// small` is that same growth divided by a number that has nothing to do with the model, so it
+/// moves whenever the BAND gets cheaper - which is a thing to want, not a regression. Pruning the
+/// ridge rule's peak search (see `ridge_search_cost_tests`) took 12,288 work units off each row
+/// alike, leaving the growth untouched at 98,574 while the ratio rose from 3.16 to 3.96 and broke a
+/// `< 4x` claim. The growth is the quantity the requirement is about, and it is read the same on
+/// both.
 ///
 /// **In work units, not milliseconds.** A work unit is an integer the algorithm decides, so the two
 /// rows repeat to the digit whatever else the machine is running. The times are still printed for
@@ -494,7 +495,7 @@ fn a_known_room_build_does_not_grow_with_the_model() {
     assert!(growth < 110_000, "growth {growth}");
 }
 
-/// C#'s local `BuildCost`: the work units and milliseconds of one known-room build.
+/// The work units and milliseconds of one known-room build.
 fn build_cost(model: &SolidWithChain) -> (i64, f64) {
     let (positions, indices, rim) = model;
     let feature = feature_edges_over(positions, indices, FOLD_DEGREES);
@@ -551,7 +552,7 @@ fn build_cost(model: &SolidWithChain) -> (i64, f64) {
     (budget.spent.get(), elapsed)
 }
 
-/// C# `ClosestOnSegment`: the closest point of a segment to a point - the reference query's own
+/// The closest point of a segment to a point - the reference query's own
 /// piece.
 fn closest_on_segment(point: Vector3, a: Vector3, b: Vector3) -> Vector3 {
     let along = b - a;
@@ -564,7 +565,7 @@ fn closest_on_segment(point: Vector3, a: Vector3, b: Vector3) -> Vector3 {
     a + (along * t)
 }
 
-/// C# `ClosestOnTriangle`: the closest point of a triangle to a point, by projection onto its plane
+/// The closest point of a triangle to a point, by projection onto its plane
 /// then its edges.
 fn closest_on_triangle(point: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
     let mut normal = (b - a).cross(c - a);

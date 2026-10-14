@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ChainToChainRoomTests.cs`: two stretches of ONE
-//! chain can run close across a side (the hourglass face's neck), and where they do the BUILD reads
-//! the pinch - it refuses BY SIZE naming the neck's half width - while the room stays a reading of
-//! WIDTH. C# `[Arguments]` rows are loops over the same-named test.
+//! Two stretches of ONE chain can run close across a side (the hourglass face's neck), and where
+//! they do the BUILD reads the pinch - it refuses BY SIZE naming the neck's half width - while the
+//! room stays a reading of WIDTH. Each test's cases run as a loop inside it.
 
 use std::time::Instant;
 
@@ -20,13 +19,12 @@ use crate::level_line_test_geometry::open_edges;
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Motion`: a fixed proper rotation and a translation - the motion `RoomRigidMotionTests` uses.
+/// A fixed proper rotation and a translation - the motion `room_rigid_motion_tests` uses.
 fn motion() -> Matrix4X4 {
     Matrix4X4::create_rotation(Vector3::new(0.3, -0.7, 1.1))
         * Matrix4X4::create_translation_vector(Vector3::new(11.5, -3.25, 7.125))
 }
 
-/// C# `Pick`.
 struct Pick {
     positions: Vec<Vector3>,
     indices: Vec<(i32, i32, i32)>,
@@ -34,7 +32,7 @@ struct Pick {
     feature: FeatureEdgeTest,
 }
 
-/// C# `Hourglass`: `HourglassSolid` at the given neck width (C#'s other defaults: lobe 10, neck
+/// `hourglass_solid` at the given neck width (and its usual lobe 10, neck
 /// length 4, half height 4), optionally moved by `motion`.
 fn hourglass(neck_width: f64, moved: bool) -> Pick {
     let (mut positions, indices, rim) = hourglass_solid(10.0, neck_width, 4.0, 4.0);
@@ -52,7 +50,6 @@ fn hourglass(neck_width: f64, moved: bool) -> Pick {
     }
 }
 
-/// C# `RoomOf`.
 fn room_of(pick: &Pick) -> f64 {
     band_gap_reading::room_of(
         &pick.positions,
@@ -66,7 +63,6 @@ fn room_of(pick: &Pick) -> f64 {
     .expect("the room reads")
 }
 
-/// C# `Build`.
 fn build(pick: &Pick, size: f64) -> BandGapResult {
     band_gap_entry_points::build(
         &pick.positions,
@@ -81,7 +77,7 @@ fn build(pick: &Pick, size: f64) -> BandGapResult {
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `ASizeThatClosesTheNeckRefusesNamingItsHalfWidth`: a size that closes the neck refuses BY
+/// A size that closes the neck refuses BY
 /// SIZE, and the room it names is a size KNOWN to fit - at or under the neck's half width, and
 /// within an eighth of it.
 #[test]
@@ -120,7 +116,7 @@ fn a_size_that_closes_the_neck_refuses_naming_its_half_width() {
     }
 }
 
-/// C# `TheRoomIsTheFacesWidthAndSaysNothingOfTheNeck`: the room stays a reading of WIDTH - the wide
+/// The room stays a reading of WIDTH - the wide
 /// face, not the neck.
 #[test]
 fn the_room_is_the_faces_width_and_says_nothing_of_the_neck() {
@@ -137,7 +133,7 @@ fn the_room_is_the_faces_width_and_says_nothing_of_the_neck() {
     }
 }
 
-/// C# `TheNeckRoomNamedBuildsAndAHairAboveItRefuses`: the room a refusal names BUILDS and fills
+/// The room a refusal names BUILDS and fills
 /// closed; well above the sliver the ladder leaves unresolved the pinch is still read.
 #[test]
 fn the_neck_room_named_builds_and_a_hair_above_it_refuses() {
@@ -164,11 +160,11 @@ fn the_neck_room_named_builds_and_a_hair_above_it_refuses() {
     }
 }
 
-/// C# `ThePinchRefusalCostsAHandfulOfProbes`: the ladder is the whole price of a pinch refusal, so
+/// The ladder is the whole price of a pinch refusal, so
 /// the count is pinned.
 #[test]
 fn the_pinch_refusal_costs_a_handful_of_probes() {
-    // C# `[Arguments(2.0)]`, its one row.
+    // Its one case: a neck 2 wide.
     {
         let neck_width = 2.0;
         let pick = hourglass(neck_width, false);
@@ -191,7 +187,7 @@ fn the_pinch_refusal_costs_a_handful_of_probes() {
     }
 }
 
-/// C# `TheNeckReadsTheSameAfterARigidMotion`: turning and moving the hourglass says the same
+/// Turning and moving the hourglass says the same
 /// numbers.
 #[test]
 fn the_neck_reads_the_same_after_a_rigid_motion() {

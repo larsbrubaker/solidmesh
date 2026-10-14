@@ -1,4 +1,4 @@
-//! Port of `BevelFaceFitCapTests.cs`: a losing wall must use its own admission rule rather than
+//! A losing wall must use its own admission rule rather than
 //! claim the run's cap.
 
 use std::rc::Rc;
@@ -16,7 +16,8 @@ use vector_math::Vector3;
 
 use crate::topology_test_meshes::create_pyramid_pocket_prism;
 
-/// C# `ALosingWallMustUseItsOwnAdmissionRuleRatherThanClaimTheRunsCap(roundProfile)`.
+/// A losing wall must use its own admission rule rather than claim the run's cap, for a round or
+/// a chamfer profile.
 fn a_losing_wall_must_use_its_own_admission_rule_rather_than_claim_the_runs_cap(
     round_profile: bool,
 ) {

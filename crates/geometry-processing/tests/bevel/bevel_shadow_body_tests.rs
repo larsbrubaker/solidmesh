@@ -1,10 +1,9 @@
-//! Ports `GeometryProcessingTests/BevelShadowBodyTests.cs`: the plan's step 25 - an obstruction
-//! that WIDENS behind the face it stands on keeps its shoulders, not just the column under its
-//! footprint. Measured on the nose-in-notch part at both the radii the fixtures use - 3.4, where
-//! the round only nicks the nose ("Encroaching Side.mcx"), and 15, where it uncovers the whole of
-//! it ("15mm Bevel Top Edge.mcx"). Every test runs the cut BOTH ways - prisms alone and prisms plus
-//! body - so what the body is worth is measured rather than asserted, and held to the nose's own
-//! two exact planes rather than to a control mesh.
+//! The plan's step 25 - an obstruction that WIDENS behind the face it stands on keeps its
+//! shoulders, not just the column under its footprint. Measured on the nose-in-notch part at both
+//! the radii the fixtures use - 3.4, where the round only nicks the nose ("Encroaching Side.mcx"),
+//! and 15, where it uncovers the whole of it ("15mm Bevel Top Edge.mcx"). Every test runs the cut
+//! BOTH ways - prisms alone and prisms plus body - so what the body is worth is measured rather
+//! than asserted, and held to the nose's own two exact planes rather than to a control mesh.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -424,7 +423,7 @@ fn obstructions(
     (check.trimmed_by_a_wall_it_ends_on, check.standing_on_a_face)
 }
 
-/// The 5 mm round on the top edge at x = 0 of a 20 mm cube - `BevelShadowClipTests`' own
+/// The 5 mm round on the top edge at x = 0 of a 20 mm cube - `bevel_shadow_clip_tests`' own
 /// selection - and what `BevelFaceFit` found standing in its way.
 fn the_top_edge_round(part: &Mesh) -> (Vec<Obstruction>, Mesh, usize) {
     const RADIUS: f64 = 5.0;
@@ -453,9 +452,9 @@ fn the_top_edge_round(part: &Mesh) -> (Vec<Obstruction>, Mesh, usize) {
 
 /// "15mm Bevel Top Edge.mcx"'s cut, by the rebuild's own steps (fit, tools, the cap clip, the
 /// shadow, the subtract): the left slope's top edge at radius 15, whose cap the sweep cannot carry,
-/// cut down far enough to uncover the buried nose. `BevelOversizeRunOutTests.RoundAsync` is this with
-/// the bodies, so it reads it from here. The clip goes through `bevel_cap_clip::apply` rather than
-/// being re-done, and a withdrawal fails loudly.
+/// cut down far enough to uncover the buried nose. `bevel_oversize_run_out_tests::round` is this
+/// with the bodies, so it reads it from here. The clip goes through `bevel_cap_clip::apply` rather
+/// than being re-done, and a withdrawal fails loudly.
 pub fn the_oversize_round(include_bodies: bool) -> Mesh {
     const RADIUS: f64 = 15.0;
 
