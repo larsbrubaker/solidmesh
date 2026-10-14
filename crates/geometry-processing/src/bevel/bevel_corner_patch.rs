@@ -1,10 +1,9 @@
-//! Plan 6's spherical corner, both ways up (`Bevel/BevelCornerPatch.cs`): one corner tool and the
-//! groups meeting at it ([`BevelCornerPatch`]), every patch a selection asked for with where each
-//! ball sits and what an unpatched corner has to say ([`BevelCornerPatchSet`]), and what has been
-//! selected at one mesh vertex ([`Corner`], nested in the C# `static class BevelCornerPatches`,
-//! whose functions land in this module: here the corner's own constants, building one corner's tool
-//! ([`try_build`]), placing its ball ([`try_get_inset_point`]), collecting a selection's corners
-//! ([`collect`]) and the whole selection's tools ([`create`])).
+//! Plan 6's spherical corner, both ways up: one corner tool and the groups meeting at it
+//! ([`BevelCornerPatch`]), every patch a selection asked for with where each ball sits and what an
+//! unpatched corner has to say ([`BevelCornerPatchSet`]), and what has been selected at one mesh
+//! vertex ([`Corner`]), with the corner functions: the corner's own constants, building one
+//! corner's tool ([`try_build`]), placing its ball ([`try_get_inset_point`]), collecting a
+//! selection's corners ([`collect`]) and the whole selection's tools ([`create`]).
 //!
 //! Where three or more fillet chains of one radius meet at a vertex, the swept tools leave the
 //! intersection of their cylinders where a rolling ball would leave a sphere: on an OUTSIDE corner
@@ -12,8 +11,8 @@
 //! same shape of void left unfilled. A patch is the solid that settles the difference, to
 //! subtract in the first case and to union on in the second.
 //!
-//! The set's tables are C# `Dictionary`s and `HashSet`s; they are [`IndexMap`]s and
-//! [`IndexSet`]s here because `Collect` fills them in a fixed order and C# keeps it.
+//! The set's tables are [`IndexMap`]s and [`IndexSet`]s because [`collect`] fills them in a fixed
+//! order, which reaches the output.
 
 use std::collections::HashSet;
 
@@ -28,10 +27,10 @@ use super::{
 };
 use crate::topology::{BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge};
 
-/// C# `BevelCornerPatch` (a readonly struct): one corner tool and the groups whose selections
-/// meet at it. A patch that built is always used, even where one of those groups then failed to
-/// sweep its chain: every chain ending here was laid on this patch's own plane, so withholding
-/// the patch would leave them stopped short around a hole.
+/// One corner tool and the groups whose selections meet at it. A patch that built is always used,
+/// even where one of those groups then failed to sweep its chain: every chain ending here was laid
+/// on this patch's own plane, so withholding the patch would leave them stopped short around a
+/// hole.
 #[derive(Debug, Clone, Default)]
 pub struct BevelCornerPatch {
     /// The corner solid, in the source item's own local space: one to SUBTRACT at an outside
@@ -49,9 +48,9 @@ pub struct BevelCornerPatch {
     pub is_fill: bool,
 }
 
-/// C# `BevelCornerPatchSet`: every corner patch a selection asked for, where each patched
-/// corner's ball sits (which is where the chains ending there stop), and what any corner that
-/// could not be patched has to say. `Default` is C#'s `BevelCornerPatchSet.Empty`.
+/// Every corner patch a selection asked for, where each patched corner's ball sits (which is where
+/// the chains ending there stop), and what any corner that could not be patched has to say.
+/// `Default` is the empty set ([`BevelCornerPatchSet::empty`]).
 #[derive(Debug, Clone, Default)]
 pub struct BevelCornerPatchSet {
     /// The corner solids, one per patched vertex - to subtract or to union on as each says.
@@ -76,7 +75,7 @@ pub struct BevelCornerPatchSet {
     pub seam_rings: IndexMap<(i32, i32), Vec<Vector3>>,
 }
 
-/// C# `BevelCornerPatches.Corner`: what has been selected at one mesh vertex.
+/// What has been selected at one mesh vertex.
 #[derive(Debug, Clone, Default)]
 pub struct Corner {
     /// The mesh vertex this corner is, which is how a chain end recognizes it.
@@ -93,25 +92,23 @@ pub struct Corner {
     pub mesh_edges: HashSet<i32>,
 }
 
-/// C# `BevelCornerPatches.MinimumEdgesForAPatch`: how many selected fillet chains have to end at a
-/// vertex before their cylinders leave anything to patch. Two meeting chains are resolved by the
-/// union alone.
+/// How many selected fillet chains have to end at a vertex before their cylinders leave anything to
+/// patch. Two meeting chains are resolved by the union alone.
 pub const MINIMUM_EDGES_FOR_A_PATCH: i32 = 3;
 
-/// C# `BevelCornerPatches.MinimumSegmentsForAPatch`: a one segment fillet is a chamfer chord, and a
-/// chamfer corner is the planar cutback the union already gives; below this there is no arc for
-/// the patch to be tangent to.
+/// A one segment fillet is a chamfer chord, and a chamfer corner is the planar cutback the union
+/// already gives; below this there is no arc for the patch to be tangent to.
 pub const MINIMUM_SEGMENTS_FOR_A_PATCH: i32 = 2;
 
-/// C# `BevelCornerPatches.TouchAgreement`: how far a face may be from the ball, as a fraction of the
-/// radius, and still count as touching it - what an apex of four or more faces is tested against.
-/// Loose enough for the single precision the mesh stores its positions in, and a tenth of a micron
-/// on a millimetre fillet is still far tighter than any corner a user could mean.
+/// How far a face may be from the ball, as a fraction of the radius, and still count as touching
+/// it - what an apex of four or more faces is tested against. Loose enough for the single precision
+/// the mesh stores its positions in, and a tenth of a micron on a millimetre fillet is still far
+/// tighter than any corner a user could mean.
 const TOUCH_AGREEMENT: f64 = 1e-4;
 
-/// C# `BevelCornerPatches.MaximumInsetRadii`: how far from the vertex the ball's centre may sit, in
-/// radii, before the corner is too sharp to patch. That distance is `r / sin(half the narrowest
-/// wedge)`, so twenty is a wedge of about six degrees, and the outer radius is measured from it.
+/// How far from the vertex the ball's centre may sit, in radii, before the corner is too sharp to
+/// patch. That distance is `r / sin(half the narrowest wedge)`, so twenty is a wedge of about six
+/// degrees, and the outer radius is measured from it.
 const MAXIMUM_INSET_RADII: f64 = 20.0;
 
 /// One corner's tool as [`try_build`] hands it back: the shell, the void cone a fill is clipped to
@@ -120,7 +117,7 @@ const MAXIMUM_INSET_RADII: f64 = 20.0;
 pub type BuiltCornerTool = (Mesh, Option<Mesh>, Vector3, Vec<(i32, Vec<Vector3>)>);
 
 impl BevelCornerPatch {
-    /// C#'s constructor.
+    /// A corner tool, its void cone, the groups it belongs to and whether it fills.
     pub fn new(mesh: Mesh, void_cone: Option<Mesh>, groups: Vec<i32>, is_fill: bool) -> Self {
         BevelCornerPatch {
             mesh,
@@ -132,7 +129,7 @@ impl BevelCornerPatch {
 }
 
 impl BevelCornerPatchSet {
-    /// C#'s constructor.
+    /// A set from its parts.
     pub fn new(
         patches: Vec<BevelCornerPatch>,
         ball_centres: IndexMap<i32, Vector3>,
@@ -151,8 +148,8 @@ impl BevelCornerPatchSet {
         }
     }
 
-    /// C# `Empty` (`<cinit>`): no patches, no centres, no warnings. A fresh value each call rather
-    /// than a shared static, which is the same set to every reader.
+    /// No patches, no centres, no warnings. A fresh value each call rather than a shared static,
+    /// which is the same set to every reader.
     pub fn empty() -> Self {
         BevelCornerPatchSet::new(
             Vec::new(),
@@ -166,7 +163,7 @@ impl BevelCornerPatchSet {
 }
 
 impl Corner {
-    /// C#'s constructor (with `<init>`'s empty lists).
+    /// A corner at `vertex`, with nothing selected there yet.
     pub fn new(vertex: i32, position: Vector3) -> Self {
         Corner {
             vertex,
@@ -177,13 +174,13 @@ impl Corner {
         }
     }
 
-    /// C# `Corner.Groups`: the groups whose edges meet here, in first-seen order.
+    /// The groups whose edges meet here, in first-seen order.
     pub fn groups(&self) -> &[i32] {
         &self.groups
     }
 
-    /// C# `Corner.Add`: `edge` (once per mesh edge) and its group. The edges stay sorted by mesh
-    /// edge so the face ring and its triangulation never depend on selection order.
+    /// Adds `edge` (once per mesh edge) and its group. The edges stay sorted by mesh edge so the
+    /// face ring and its triangulation never depend on selection order.
     pub fn add(&mut self, edge: FeatureEdge, group_index: i32) {
         if !self.mesh_edges.insert(edge.mesh_edge_index) {
             return;
@@ -197,16 +194,15 @@ impl Corner {
         }
     }
 
-    /// C# `Corner.Edges`: the selected feature edges at the vertex.
+    /// The selected feature edges at the vertex.
     pub fn edges(&self) -> &[FeatureEdge] {
         &self.edges
     }
 }
 
-/// C# `BevelCornerPatches.Collect`: every vertex where eligible groups' convex edges meet (the
-/// OUTSIDE corners), every vertex where concave ones meet and nothing convex does (the INSIDE
-/// corners), and every vertex any concave edge ends at - `(outside, inside, concave vertices)`, in
-/// the order the vertices were first met.
+/// Every vertex where eligible groups' convex edges meet (the OUTSIDE corners), every vertex where
+/// concave ones meet and nothing convex does (the INSIDE corners), and every vertex any concave
+/// edge ends at - `(outside, inside, concave vertices)`, in the order the vertices were first met.
 pub fn collect(
     resolutions: &[BevelEdgeGroupResolution],
     eligible: &[bool],
@@ -254,7 +250,7 @@ pub fn collect(
     (outside_corners, inside_corners, concave_vertices)
 }
 
-/// C# `BevelCornerPatches.Record`: `edge` added to the corner at `vertex`, made on first ask.
+/// Adds `edge` to the corner at `vertex`, making the corner on first ask.
 pub fn record(
     at_vertex: &mut IndexMap<i32, Corner>,
     vertex: i32,
@@ -268,9 +264,8 @@ pub fn record(
         .add(*edge, group_index);
 }
 
-/// C# `BevelCornerPatches.TryBuild`: one corner's tool, or the reason there is none (C#'s
-/// `warning`). `Err(None)` is a corner this was never asked to patch - a partial selection, whose
-/// ends are capped by the surface as before.
+/// One corner's tool, or the reason there is none. `Err(None)` is a corner this was never asked to
+/// patch - a partial selection, whose ends are capped by the surface as before.
 ///
 /// `fill` says this is an INSIDE corner, whose ball sits in the void: the mirror derived on the
 /// class, which is the same construction with the face normals turned round.
@@ -358,11 +353,11 @@ pub fn try_build(
     Ok((mesh, void_cone, center, seams))
 }
 
-/// C# `BevelCornerPatches.TryGetInsetPoint`: where the rolling ball sits when it touches every face
-/// of the corner at once - the point `radius` from all of them - as the centre and the vector from
-/// the centre back out to the vertex (C#'s `fromCenter`). Solved from the triple of faces that is
-/// furthest from degenerate and then checked against the rest, so an apex of four or more faces is
-/// patched only when one ball really does touch all of them.
+/// Where the rolling ball sits when it touches every face of the corner at once - the point
+/// `radius` from all of them - as the centre and the vector from the centre back out to the vertex.
+/// Solved from the triple of faces that is furthest from degenerate and then checked against the
+/// rest, so an apex of four or more faces is patched only when one ball really does touch all of
+/// them.
 pub fn try_get_inset_point(
     normals: &[Vector3],
     vertex: Vector3,
@@ -403,12 +398,12 @@ pub fn try_get_inset_point(
     Some((vertex - from_center, from_center))
 }
 
-/// C# `BevelCornerPatches.Create`: the corner tools for a whole selection, read across every group
-/// at once - a vertex does not care which group each edge was picked into. `resolutions` is every
-/// group's resolved selection and `eligible` which of them resolved and fit; a chamfer
-/// (`round_profile` false), or a fillet of fewer than [`MINIMUM_SEGMENTS_FOR_A_PATCH`] segments,
-/// needs no patch and gets none. The corners a run may drive straight through are the three-edge
-/// outside ones with no concave edge at the vertex and a ball that built (see `BevelChainEnds`).
+/// The corner tools for a whole selection, read across every group at once - a vertex does not care
+/// which group each edge was picked into. `resolutions` is every group's resolved selection and
+/// `eligible` which of them resolved and fit; a chamfer (`round_profile` false), or a fillet of
+/// fewer than [`MINIMUM_SEGMENTS_FOR_A_PATCH`] segments, needs no patch and gets none. The corners
+/// a run may drive straight through are the three-edge outside ones with no concave edge at the
+/// vertex and a ball that built (see `BevelChainEnds`).
 pub fn create(
     resolutions: &[BevelEdgeGroupResolution],
     eligible: &[bool],

@@ -1,7 +1,6 @@
-//! The surfaces of `BevelCornerPatches`: one spherical polygon builder and the two solids drawn over
-//! it - the SHELL a corner is patched with ([`build_shell`]), and the VOID CONE a fill is clipped
-//! to ([`try_build_void_cone`]). Ports `Bevel/BevelCornerPatchMesher.cs` (C# `internal static
-//! class`; a module of free functions here).
+//! The surfaces of `BevelCornerPatches`: one spherical polygon builder and the two solids drawn
+//! over it - the SHELL a corner is patched with ([`build_shell`]), and the VOID CONE a fill is
+//! clipped to ([`try_build_void_cone`]).
 //!
 //! Split from `BevelCornerPatches` ([`super::bevel_corner_patch`]) along the seam between the two
 //! jobs that file was doing. What stays there is the READING of a corner - which faces meet at it,
@@ -46,9 +45,9 @@ const MINIMUM_CAP_COVERAGE: f64 = 1e-2;
 /// kernel calls clean and one it calls self-intersecting.
 const WALLS_CLEAR_THE_FACES_BY: f64 = 1e-3;
 
-/// C# `BuildShell`: the shell itself - the spherical polygon whose corners are the face normals,
-/// drawn at the inner and the outer radius, and closed by one planar wall over each of its boundary
-/// arcs - with the seam rings (C#'s `out seamRings`). `None` where the normals have no middle.
+/// The shell itself - the spherical polygon whose corners are the face normals, drawn at the inner
+/// and the outer radius, and closed by one planar wall over each of its boundary arcs - with the
+/// seam rings. `None` where the normals have no middle.
 ///
 /// One fanned polygon read twice. What keeps the walls between them planar is that both surfaces
 /// are bounded by the SAME boundary arcs, and the wall over each arc lies in the plane those two
@@ -158,10 +157,10 @@ pub fn build_shell(
     Some((mesh, seam_rings))
 }
 
-/// C# `FanDirections`: the spherical polygon over a ring of unit directions, as directions rather
-/// than as points - the middle direction first, then every sample of the fan, with the triangles
-/// that join them and the boundary arc of each sector (C#'s `out patch`, `out arcs`). `None` where
-/// the ring has no middle - directions that sum to nothing span no cone.
+/// The spherical polygon over a ring of unit directions, as directions rather than as points - the
+/// middle direction first, then every sample of the fan, with the triangles that join them and the
+/// boundary arc of each sector. `None` where the ring has no middle - directions that sum to
+/// nothing span no cone.
 ///
 /// The polygon is fanned into one spherical triangle per boundary arc and each of those is
 /// subdivided `segments` deep. The ribs from the middle out to each corner are built once and
@@ -250,15 +249,15 @@ fn fan_directions(corners: &[Vector3], segments: i32) -> Option<Fan> {
     Some((directions, patch, arcs))
 }
 
-/// C# `TryBuildVoidCone`: the void the corner owes its FILL, as a solid to clip that fill against -
-/// the cone of the corner's own outward half spaces, bounded by a ball of radius `length` about the
-/// vertex. `None` where it cannot be read, which leaves the fill to go on whole and say so.
+/// The void the corner owes its FILL, as a solid to clip that fill against - the cone of the
+/// corner's own outward half spaces, bounded by a ball of radius `length` about the vertex. `None`
+/// where it cannot be read, which leaves the fill to go on whole and say so.
 ///
 /// `normals` are the corner's OUTWARD face normals in ring order - not the mirrored ring the fill's
-/// shell is drawn over, which gives the same rays but the opposite cone. `clear_the_faces` (C#
-/// default false) sets the apex back into the corner so the walls do not lie in the part's own face
-/// planes: taken by a corner FILL, whose cone is unioned with the part on its own, and not by the
-/// void a 5.3 corner opens for two beads.
+/// shell is drawn over, which gives the same rays but the opposite cone. `clear_the_faces`
+/// (normally false) sets the apex back into the corner so the walls do not lie in the part's own
+/// face planes: taken by a corner FILL, whose cone is unioned with the part on its own, and not by
+/// the void a 5.3 corner opens for two beads.
 ///
 /// **One sign for the whole ring, and it is not the ball's.** The rays are `u_i = n_i x n_(i+1)`,
 /// which fixes their axes but not their ends; signing each by the ball's centre goes wrong on a
@@ -381,9 +380,9 @@ pub fn try_build_void_cone(
     }
 }
 
-/// C# `TryOrientOutOfTheCorner`: turns a ring of edge rays to point out of the corner along the
-/// VOID, in place, and says whether that could be done at all. The two candidate answers are the
-/// rays as they came and the rays all reversed - one sign for the ring rather than one per ray.
+/// Turns a ring of edge rays to point out of the corner along the VOID, in place, and says whether
+/// that could be done at all. The two candidate answers are the rays as they came and the rays all
+/// reversed - one sign for the ring rather than one per ray.
 ///
 /// BOTH signs passing is refused too: every ray is then orthogonal to every face plane to within
 /// [`RAY_OUTSIDE_FACE_TOLERANCE`] - the corner has flattened out - and the one taken would be
@@ -408,8 +407,8 @@ fn try_orient_out_of_the_corner(normals: &[Vector3], rays: &mut [Vector3]) -> bo
     true
 }
 
-/// C# `LiesInEveryFace`: whether every ray taken with the given sign lies in every one of the
-/// corner's half spaces, which is the definition of the ring pointing out of the corner.
+/// Whether every ray taken with the given sign lies in every one of the corner's half spaces, which
+/// is the definition of the ring pointing out of the corner.
 fn lies_in_every_face(normals: &[Vector3], rays: &[Vector3], sign: i32) -> bool {
     for &ray in rays {
         for &normal in normals {
@@ -424,11 +423,11 @@ fn lies_in_every_face(normals: &[Vector3], rays: &[Vector3], sign: i32) -> bool 
     true
 }
 
-/// C# `SmallestPlaneDistance`: the nearest any of a fanned polygon's triangle PLANES comes to the
-/// origin, with the polygon's directions read as unit vectors - a lower bound on the closest the
-/// SURFACE comes, so scaling by it never leaves the ball uncovered. A cap NO triangle of which had a
-/// plane comes back as zero, which fails the caller's coverage floor and refuses the corner out
-/// loud, rather than infinity, which would collapse the cone to the apex.
+/// The nearest any of a fanned polygon's triangle PLANES comes to the origin, with the polygon's
+/// directions read as unit vectors - a lower bound on the closest the SURFACE comes, so scaling by
+/// it never leaves the ball uncovered. A cap NO triangle of which had a plane comes back as zero,
+/// which fails the caller's coverage floor and refuses the corner out loud, rather than infinity,
+/// which would collapse the cone to the apex.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn smallest_plane_distance(directions: &[Vector3], patch: &[(i32, i32, i32)]) -> f64 {
     let mut closest = f64::MAX;
@@ -455,24 +454,23 @@ fn smallest_plane_distance(directions: &[Vector3], patch: &[(i32, i32, i32)]) ->
     }
 }
 
-/// C# `Add`: appends a direction and answers its index.
+/// Appends a direction and answers its index.
 fn add(directions: &mut Vec<Vector3>, direction: Vector3) -> i32 {
     directions.push(direction);
 
     directions.len() as i32 - 1
 }
 
-/// C# `Slerp`: the point `fraction` of the way along the great circle from one unit vector to
-/// another. It lives on [`bevel_seam_ring`] because the boundary arcs this fan ends on are the
-/// seam, and one formula in one place keeps the patch's sampling and the published seam the same
-/// arithmetic.
+/// The point `fraction` of the way along the great circle from one unit vector to another. It lives
+/// on [`bevel_seam_ring`] because the boundary arcs this fan ends on are the seam, and one formula
+/// in one place keeps the patch's sampling and the published seam the same arithmetic.
 fn slerp(from: Vector3, to: Vector3, fraction: f64) -> Vector3 {
     bevel_seam_ring::slerp(from, to, fraction)
 }
 
-/// C# `AddOriented`: one triangle, wound so its normal agrees with the direction the solid faces
-/// there. Deciding it per triangle rather than by construction is what lets the faces be walked in
-/// whichever way round the vertex the mesh happened to order them.
+/// One triangle, wound so its normal agrees with the direction the solid faces there. Deciding it
+/// per triangle rather than by construction is what lets the faces be walked in whichever way round
+/// the vertex the mesh happened to order them.
 fn add_oriented(mesh: &mut Mesh, index0: i32, index1: i32, index2: i32, facing: Vector3) {
     let position0 = Vector3::from_vector3_float(mesh.vertices[index0 as usize]);
     let normal = (Vector3::from_vector3_float(mesh.vertices[index1 as usize]) - position0)

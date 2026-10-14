@@ -1,7 +1,6 @@
-//! The pieces of beads that meet at a 5.3 corner. Ports `Bevel/BevelBeadCornerPieces.cs` (a C#
-//! static class): the beads gathered by the corner void they share ([`beads_by_corner`]), the
-//! corner pieces taken ONCE per corner over the union of the beads that share it
-//! ([`apply_corners`], [`corner_piece`]) and one bead's piece over two voids ([`piece`],
+//! The pieces of beads that meet at a 5.3 corner: the beads gathered by the corner void they share
+//! ([`beads_by_corner`]), the corner pieces taken ONCE per corner over the union of the beads that
+//! share it ([`apply_corners`], [`corner_piece`]) and one bead's piece over two voids ([`piece`],
 //! [`intersect_piece`]).
 
 use std::rc::Rc;
@@ -14,9 +13,9 @@ use super::bevel_bead_clip::{is_usable_keep_set, Clippable, CombineMeshes};
 use super::level_line::LevelLineWork;
 use super::{bevel_bead_exit, bevel_source_hull, bevel_working_mesh, BevelEndCap};
 
-/// Each corner void the clippable beads reach, in first-met order, with the beads that reach it.
-/// A void is ONE corner by identity (`Rc::ptr_eq`, C#'s reference equality): every bead meeting
-/// at a corner holds the same void, and two corners never merge for having equal geometry.
+/// Each corner void the clippable beads reach, in first-met order, with the beads that reach it. A
+/// void is ONE corner by identity (`Rc::ptr_eq`): every bead meeting at a corner holds the same
+/// void, and two corners never merge for having equal geometry.
 pub fn beads_by_corner(clippable_beads: &[Clippable]) -> Vec<(Rc<Mesh>, Vec<&Mesh>)> {
     let mut order: Vec<(Rc<Mesh>, Vec<&Mesh>)> = Vec::new();
     for clippable in clippable_beads {
@@ -38,7 +37,7 @@ pub fn beads_by_corner(clippable_beads: &[Clippable]) -> Vec<(Rc<Mesh>, Vec<&Mes
 /// The bead's piece over two voids: the bead intersected with their union (the keep set), the
 /// source hull where the bead reaches past it, and its exit planes; `None` where the kernel
 /// refuses either step, the keep set is unusable or the piece comes back empty. A cancel passes up.
-#[allow(clippy::too_many_arguments)] // C#'s signature.
+#[allow(clippy::too_many_arguments)] // each argument is a separate input.
 pub fn piece(
     bead: &Mesh,
     item_matrix: Matrix4X4,
@@ -210,8 +209,8 @@ pub fn corner_piece(
     Ok(bevel_working_mesh::is_usable_operand(Some(&piece), None).then_some(piece))
 }
 
-/// C# `LostACorner`: whether any of the bead's corner voids is one whose shared piece the kernel
-/// refused - by identity (`Rc::ptr_eq`), as C#'s `HashSet<Mesh>` of references reads it.
+/// Whether any of the bead's corner voids is one whose shared piece the kernel refused - by
+/// identity (`Rc::ptr_eq`), so two corners with equal geometry stay apart.
 pub fn lost_a_corner(clippable: &Clippable, refused_corners: &[Rc<Mesh>]) -> bool {
     clippable.corner_voids.as_ref().is_some_and(|voids| {
         voids.iter().any(|corner| {
@@ -222,9 +221,9 @@ pub fn lost_a_corner(clippable: &Clippable, refused_corners: &[Rc<Mesh>]) -> boo
     })
 }
 
-/// C# `OwnCornerPiecesAsync`: the bead's own pieces - over the part (to its wedge) and over each
-/// of its corner voids - for a bead whose corners no shared piece could be made of; `None` where
-/// the kernel refuses any of them. A cancel passes up.
+/// The bead's own pieces - over the part (to its wedge) and over each of its corner voids - for a
+/// bead whose corners no shared piece could be made of; `None` where the kernel refuses any of
+/// them. A cancel passes up.
 pub fn own_corner_pieces(
     working_mesh: &Mesh,
     item_matrix: Matrix4X4,

@@ -1,16 +1,16 @@
-//! Every distinct thing the bevel kernel has to say to a user. Ports `Bevel/BevelAdvisoryCode.cs`:
-//! one member per sentence, in the C# declaration order, with the values the sentence quotes
-//! carried as [`super::BevelAdvisory::args`] in the order documented on each member. The words
-//! live in the application (`BevelAdvisoryText`), which keeps the kernel free of localization.
+//! Every distinct thing the bevel kernel has to say to a user: one member per sentence, with the
+//! values the sentence quotes carried as [`super::BevelAdvisory::args`] in the order documented on
+//! each member. The words live in the application (`BevelAdvisoryText`), which keeps the kernel
+//! free of localization.
 //!
 //! Positions are carried as raw `Vector3` values and formatted by the app, so a test can assert on
-//! the corner an advisory names without parsing a sentence. Where a sentence used to be chosen by
-//! a bool (fill or cut, sharp or flat) the two are separate codes, so that the argument list of
-//! any one code is fixed. `Display` prints the member name, as C# `Enum.ToString` does.
+//! the corner an advisory names without parsing a sentence. Where a sentence used to be chosen by a
+//! bool (fill or cut, sharp or flat) the two are separate codes, so that the argument list of any
+//! one code is fixed. `Display` prints the member name, the stable name a test or a log reads.
 
 use std::fmt;
 
-/// Which sentence a [`super::BevelAdvisory`] is (C# `BevelAdvisoryCode`).
+/// Which sentence a [`super::BevelAdvisory`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BevelAdvisoryCode {
     /// BevelCapClip.ApplyAsync: a clip the kernel refused. Args: (Vector3 at, double size).

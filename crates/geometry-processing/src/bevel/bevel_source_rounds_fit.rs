@@ -1,8 +1,6 @@
-//! The circle arithmetic behind a fitted source round: the Kasa algebraic circle fit and its 3 by
-//! 3 solve, the chord count a surface was drawn with, and how much of the circle its points go
-//! round. Ports the private numeric helpers of `Bevel/BevelSourceRounds.cs` (`TryFitCircle`,
-//! `TrySolve3`, `CountTheChords`, `AngularSpan`); `bevel_source_rounds.rs` is the reader that
-//! decides what to fit.
+//! The circle arithmetic behind a fitted source round: the Kasa algebraic circle fit and its 3 by 3
+//! solve, the chord count a surface was drawn with, and how much of the circle its points go round;
+//! `bevel_source_rounds.rs` is the reader that decides what to fit.
 
 use std::f64::consts::TAU;
 
@@ -123,7 +121,7 @@ pub(super) fn count_the_chords(normals: &[Vector3], e1: Vector3, e2: Vector3) ->
         .map(|normal| normal.dot(e2).atan2(normal.dot(e1)))
         .collect();
 
-    // Equal angles are interchangeable, so the unstable C# sort's tie order cannot reach the gaps.
+    // Equal angles are interchangeable, so the sort's tie order cannot reach the gaps.
     angles.sort_by(f64::total_cmp);
 
     let mut gaps: Vec<f64> = angles
@@ -141,8 +139,8 @@ pub(super) fn count_the_chords(normals: &[Vector3], e1: Vector3, e2: Vector3) ->
     let median = gaps[gaps.len() / 2];
 
     if median > 0.0 {
-        // C# `(int)Math.Round(...)`: banker's rounding; the count of a real tessellation is far
-        // inside i32, where `as` and C#'s cast agree.
+        // Banker's rounding; the count of a real tessellation is far inside i32, so `as` never
+        // saturates.
         (TAU / median).round_ties_even() as i32
     } else {
         0

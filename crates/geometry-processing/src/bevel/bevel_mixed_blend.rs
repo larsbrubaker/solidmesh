@@ -1,11 +1,10 @@
-//! One mixed corner's blend tool and the groups whose selections meet at it
-//! ([`BevelMixedBlend`]), and every blend a selection asked for with the two cap decisions the
-//! chains ending at one of them have to be told about before they are swept
-//! ([`BevelMixedBlendSet`]). Ports `Bevel/BevelMixedBlend.cs`.
+//! One mixed corner's blend tool and the groups whose selections meet at it ([`BevelMixedBlend`]),
+//! and every blend a selection asked for with the two cap decisions the chains ending at one of
+//! them have to be told about before they are swept ([`BevelMixedBlendSet`]).
 //!
-//! The set's tables are C# `IReadOnlyDictionary`s keyed by (mesh vertex, mesh EDGE); they are
-//! [`IndexMap`]s here because `BevelMixedBlends` fills them in a fixed order and C#'s
-//! `Dictionary` keeps it - which is also what [`super::bevel_blend_seam`] reads them as.
+//! The set's tables are keyed by (mesh vertex, mesh EDGE); they are [`IndexMap`]s because
+//! `BevelMixedBlends` fills them in a fixed order that reaches the output - which is also what
+//! [`super::bevel_blend_seam`] reads them as.
 
 use indexmap::IndexMap;
 use polygon_mesh::Mesh;
@@ -159,8 +158,8 @@ impl BevelMixedBlendSet {
         &self.concave_cap_normals
     }
 
-    /// The warnings per group, in the resolutions' own order, or `None` (C# null) for a group
-    /// with no corner to complain about.
+    /// The warnings per group, in the resolutions' own order, or `None` for a group with no corner
+    /// to complain about.
     pub fn warnings(&self) -> &[Option<Vec<BevelAdvisory>>] {
         &self.warnings
     }

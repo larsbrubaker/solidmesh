@@ -1,8 +1,8 @@
-//! Whether a group's bevel has FACE to land on ([`BevelFaceFit`], `Bevel/BevelFaceFit.cs` and
-//! `Bevel/BevelFaceFit.Exemptions.cs`): the plan's other size limit - not how far the tool runs
-//! along the chain but how far it reaches across the two faces beside it, measured by walking the
-//! surface ([`BevelSurfaceWalk`]) square to each selected edge. Creating the check, the walk per
-//! sample and the exemptions land with the core's packages as `impl` blocks.
+//! Whether a group's bevel has FACE to land on ([`BevelFaceFit`]): the plan's other size limit -
+//! not how far the tool runs along the chain but how far it reaches across the two faces beside it,
+//! measured by walking the surface ([`BevelSurfaceWalk`]) square to each selected edge. Creating
+//! the check, the walk per sample and the exemptions land with the core's packages as `impl`
+//! blocks.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -24,10 +24,9 @@ use crate::topology::{
 /// One group's canonical free-end caps, by `(vertex, mesh edge)` of the run end they cap.
 pub type BevelFaceFitEndCaps = HashMap<(i32, i32), BevelEndCap>;
 
-/// C# `BevelFaceFit` (a sealed partial class): one rebuild's face-width check. Every selected edge
-/// sets the cut back from itself along each of its two faces; the walk measures how much face
-/// there IS to set back into, and a group whose setback does not fit is refused with the largest
-/// size that would have.
+/// One rebuild's face-width check. Every selected edge sets the cut back from itself along each of
+/// its two faces; the walk measures how much face there IS to set back into, and a group whose
+/// setback does not fit is refused with the largest size that would have.
 #[derive(Debug)]
 pub struct BevelFaceFit {
     /// The welded working mesh the groups were resolved against.
@@ -49,9 +48,9 @@ pub struct BevelFaceFit {
     /// corner two selected runs turn. A set rather than a count because one edge picked into two
     /// groups is one edge.
     pub selected_edges_at_vertex: HashMap<i32, HashSet<i32>>,
-    /// Canonical free-end caps, read only for groups whose face width needs a cap exemption: by
-    /// the group's index in `resolutions` (C# keys by the resolution object), then by
-    /// `(vertex, mesh edge)`. Filled lazily the first time a group asks, hence the `RefCell`.
+    /// Canonical free-end caps, read only for groups whose face width needs a cap exemption: by the
+    /// group's index in `resolutions`, then by `(vertex, mesh edge)`. Filled lazily the first time
+    /// a group asks, hence the `RefCell`.
     pub free_end_caps: RefCell<HashMap<usize, BevelFaceFitEndCaps>>,
     /// How far off a plane a vertex may lie and still be called ON it, scaled to the part because
     /// mesh vertices are float.
@@ -65,28 +64,28 @@ pub struct BevelFaceFit {
     pub largest_setback: f64,
 }
 
-/// C# `DefaultSurfaceToleranceDegrees`: the "is this still one surface" reading a face ends at.
+/// The "is this still one surface" reading a face ends at.
 pub const DEFAULT_SURFACE_TOLERANCE_DEGREES: f64 = FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES;
 
-/// C# `SampleFractions`: where along each selected edge the width is sampled.
+/// Where along each selected edge the width is sampled.
 pub const SAMPLE_FRACTIONS: [f64; 3] = [0.1, 0.5, 0.9];
 
-/// C# `MinimumWedgeAngleDegrees`: below this a wedge builds no tool.
+/// Below this a wedge builds no tool.
 pub const MINIMUM_WEDGE_ANGLE_DEGREES: f64 = 1.0;
 
-/// C# `MaximumWedgeAngleDegrees`: above this a wedge builds no tool.
+/// Above this a wedge builds no tool.
 pub const MAXIMUM_WEDGE_ANGLE_DEGREES: f64 = 179.0;
 
-/// C# `PlaneToleranceOfTheParticularPart`: the plane tolerance as a fraction of the part's diagonal.
+/// The plane tolerance as a fraction of the part's diagonal.
 pub const PLANE_TOLERANCE_OF_THE_PARTICULAR_PART: f64 = 1e-5;
 
-/// C# `SameCapPlaneAgreement` (a static readonly): two cap planes within half a degree are the same.
+/// Two cap planes within half a degree are the same.
 pub fn same_cap_plane_agreement() -> f64 {
     degrees_to_radians(0.5).cos()
 }
 
 impl BevelFaceFit {
-    /// C#'s (private) constructor, with `<init>`'s empty free-end-cap memo.
+    /// A check from its readings, with an empty free-end-cap memo.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         mesh: Arc<Mesh>,
@@ -120,7 +119,7 @@ impl BevelFaceFit {
         }
     }
 
-    /// C# `Create`: reads the part's surface at `surface_tolerance_degrees` (C#'s default is
+    /// Reads the part's surface at `surface_tolerance_degrees` (normally
     /// [`DEFAULT_SURFACE_TOLERANCE_DEGREES`]) and every resolved group's setbacks. `graph` is the
     /// mesh's edge graph where the caller already has one; `None` builds it.
     pub fn create(
@@ -206,10 +205,10 @@ impl BevelFaceFit {
         )
     }
 
-    /// C# `StandsOnTheFaceRatherThanEndingIt`: whether a fillet's walk on `face` stopped at a
-    /// concave, unselected obstruction standing ON the face's own plane rather than at the face's
-    /// end - `Some((planar_within, seed_face))`, the seed being the obstruction's own face across
-    /// `blocking_edge`. `crossed` is every triangle the walk crossed.
+    /// Whether a fillet's walk on `face` stopped at a concave, unselected obstruction standing ON
+    /// the face's own plane rather than at the face's end - `Some((planar_within, seed_face))`, the
+    /// seed being the obstruction's own face across `blocking_edge`. `crossed` is every triangle
+    /// the walk crossed.
     pub fn stands_on_the_face_rather_than_ending_it(
         &self,
         face: i32,
@@ -276,12 +275,12 @@ impl BevelFaceFit {
         Some((self.plane_tolerance, seed_face))
     }
 
-    /// C# `OnThePlane`.
+    /// Whether `point` lies on the plane, within the part's plane tolerance.
     pub fn on_the_plane(&self, normal: Vector3, plane_distance: f64, point: Vector3) -> bool {
         (normal.dot(point) - plane_distance).abs() <= self.plane_tolerance
     }
 
-    /// C# `LiesInThePlane`: all three of `face`'s corners on the plane.
+    /// All three of `face`'s corners on the plane.
     pub fn lies_in_the_plane(&self, face: i32, normal: Vector3, plane_distance: f64) -> bool {
         let mesh_face = self.mesh.faces[face as usize];
 
@@ -290,7 +289,7 @@ impl BevelFaceFit {
             && self.on_the_plane(normal, plane_distance, self.position(mesh_face.v2))
     }
 
-    /// C# `FaceNormal`: the walk's normal of `face`, zero for a degenerate face (C#'s `out` default).
+    /// The walk's normal of `face`, zero for a degenerate face.
     pub fn face_normal(&self, face: i32) -> Vector3 {
         self.walk.try_get_face_normal(face).unwrap_or_default()
     }
@@ -300,7 +299,7 @@ impl BevelFaceFit {
     }
 }
 
-/// C# `AddSelectedEdgeAt`.
+/// Records `edge` as selected at `vertex`.
 pub fn add_selected_edge_at(
     selected_edges_at_vertex: &mut HashMap<i32, HashSet<i32>>,
     vertex: i32,
@@ -312,8 +311,8 @@ pub fn add_selected_edge_at(
         .insert(mesh_edge_index);
 }
 
-/// C# `TryGetSetback`: how far `edge`'s bevel of `size` sets back along each face, or `None` where
-/// no tool could be built (a non-positive size, or a wedge outside 1..179 degrees).
+/// How far `edge`'s bevel of `size` sets back along each face, or `None` where no tool could be
+/// built (a non-positive size, or a wedge outside 1..179 degrees).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_get_setback(edge: &FeatureEdge, size: f64, round_profile: bool) -> Option<f64> {
     if !(size > 0.0) {

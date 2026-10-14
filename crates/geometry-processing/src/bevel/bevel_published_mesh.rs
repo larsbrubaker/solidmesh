@@ -1,6 +1,6 @@
-//! The last thing a bevel does to its result before anyone sees it (`Bevel/BevelPublishedMesh.cs`):
-//! weld the seams the boolean left open and drop the triangles it left with no area ([`clean`]).
-//! It welds at the tolerance `bevel_working_mesh` welds the mesh a bevel works against
+//! The last thing a bevel does to its result before anyone sees it: weld the seams the boolean left
+//! open and drop the triangles it left with no area ([`clean`]). It welds at the tolerance
+//! `bevel_working_mesh` welds the mesh a bevel works against
 //! ([`super::bevel_working_mesh::seam_tolerance_for`]) and then collapses the long slivers the weld
 //! cannot see ([`super::bevel_sliver_collapse::collapse`]).
 //!
@@ -36,14 +36,13 @@ use super::level_line::WorkError;
 /// so on a 20 mm part the honest changes here are orders of magnitude below this.
 const VOLUME_CHANGE_FRACTION: f64 = 1e-6;
 
-/// C# `BevelPublishedMesh.Clean`: the mesh to publish for a rebuilt bevel - welded and de-slivered
-/// where that leaves a closed solid of the same volume, and the mesh handed in where it does not.
+/// The mesh to publish for a rebuilt bevel - welded and de-slivered where that leaves a closed
+/// solid of the same volume, and the mesh handed in where it does not.
 ///
-/// C# returns the SAME instance when there was nothing to do (or nothing worth doing), so a result
-/// that was already clean is published unchanged rather than copied - which also keeps face colors
-/// and every other per-face datum exactly as the boolean wrote them. Here that answer is `None`:
-/// publish `published_mesh` as it is. `Some` is the cleaned copy. A cancel the sliver collapse
-/// sees comes back as [`WorkError::Cancelled`].
+/// A result that was already clean (or that nothing was worth doing to) is published unchanged
+/// rather than copied - which also keeps face colors and every other per-face datum exactly as the
+/// boolean wrote them. That answer is `None`: publish `published_mesh` as it is. `Some` is the
+/// cleaned copy. A cancel the sliver collapse sees comes back as [`WorkError::Cancelled`].
 pub fn clean(
     published_mesh: &Mesh,
     cancellation_token: &CancelToken,
@@ -123,8 +122,8 @@ pub fn clean(
     Ok(Some(cleaned))
 }
 
-/// C# `IsAnImprovementOn`: whether a cleaned mesh is one worth publishing in place of the one the
-/// boolean gave - a closed solid enclosing the same material, wound the same way round.
+/// Whether a cleaned mesh is one worth publishing in place of the one the boolean gave - a closed
+/// solid enclosing the same material, wound the same way round.
 ///
 /// A weld can fuse vertices a manifold deliberately kept apart, and dropping a face leaves a hole
 /// where the surface was. A sign change is windings that stopped agreeing with each other - a
@@ -139,16 +138,16 @@ fn is_an_improvement_on(cleaned: &Mesh, published_mesh: &Mesh) -> bool {
     let after = signed_volume(cleaned);
 
     if before.is_nan() || after.is_nan() {
-        // A volume that cannot be measured is not one the cleanup can be shown to keep, so the
-        // mesh the boolean gave is handed back (divergence 4956; C#'s `Math.Sign` throws on NaN).
-        // `clean` never gets here with one: a NaN coordinate makes the seam tolerance 0 first.
+        // A volume that cannot be measured is not one the cleanup can be shown to keep, so the mesh
+        // the boolean gave is handed back rather than the rebuild failing. `clean` never gets here
+        // with one: a NaN coordinate makes the seam tolerance 0 first.
         return false;
     }
 
     sign(after) == sign(before) && (after - before).abs() <= before.abs() * VOLUME_CHANGE_FRACTION
 }
 
-/// C#'s `Math.Sign` of a double: -1, 0 or 1 (zero of either sign is 0). C# throws on NaN, which
+/// The sign of a double: -1, 0 or 1 (zero of either sign is 0). A NaN has no sign, which
 /// [`is_an_improvement_on`] answers before asking.
 fn sign(value: f64) -> i32 {
     if value > 0.0 {
@@ -160,8 +159,8 @@ fn sign(value: f64) -> i32 {
     }
 }
 
-/// C# `SignedVolume`: the volume the mesh's faces enclose, signed by which way they wind, from the
-/// divergence theorem. Positive when they face out.
+/// The volume the mesh's faces enclose, signed by which way they wind, from the divergence theorem.
+/// Positive when they face out.
 fn signed_volume(mesh: &Mesh) -> f64 {
     let mut total = 0.0;
 

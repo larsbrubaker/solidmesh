@@ -1,8 +1,8 @@
-//! THE SECOND PASS OF A MIXED BEVEL (`Bevel/BevelSecondPass.cs`, with its `BevelSecondPassRun`):
-//! round the convex edges first, then read every selected concave crease AGAIN on the part as the
-//! cut left it, and roll one bead along the whole of each - over the rounds and all - instead of
-//! asking a boolean to settle a bead against the round it runs into. Each merged run is planned by
-//! [`BevelSecondPassRunPlan`] and swept by [`bevel_group_tools::try_build`].
+//! THE SECOND PASS OF A MIXED BEVEL, with its [`BevelSecondPassRun`]: round the convex edges first,
+//! then read every selected concave crease AGAIN on the part as the cut left it, and roll one bead
+//! along the whole of each - over the rounds and all - instead of asking a boolean to settle a bead
+//! against the round it runs into. Each merged run is planned by [`BevelSecondPassRunPlan`] and
+//! swept by [`bevel_group_tools::try_build`].
 //!
 //! **Why the crease has to be read twice.** A crease that ran into a sharp ridge stops there; once
 //! that ridge is ROUNDED the same crease carries on across the round's facets, because the round is
@@ -26,7 +26,8 @@
 //! than as `bead - the cut region`. They were built on a part the cut had already been taken out of,
 //! so there is nothing of the cut left in them to put back.
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are written that way on purpose: each is false for NaN, which is the
+// point.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use std::rc::Rc;
@@ -50,9 +51,9 @@ use crate::topology::{
     FeatureEdgeSet, MatchTolerances,
 };
 
-/// C# `BevelSecondPassRun`: one concave crease read off the CUT part and swept as one bead, together
-/// with the rows of the user's group list it was built for - which is more than one wherever the
-/// round joined two of their creases into one.
+/// One concave crease read off the CUT part and swept as one bead, together with the rows of the
+/// user's group list it was built for - which is more than one wherever the round joined two of
+/// their creases into one.
 #[derive(Debug, Clone)]
 pub struct BevelSecondPassRun {
     /// The resolutions' indices of every group whose crease this run carries, in order. More than
@@ -67,7 +68,7 @@ pub struct BevelSecondPassRun {
     pub edge_count: i32,
 }
 
-/// What [`rebead`] hands back besides its runs (C#'s two `out` parameters).
+/// What [`rebead`] hands back besides its runs.
 #[derive(Debug, Clone, Default)]
 pub struct BevelSecondPassRebead {
     /// One per crease this pass re-beaded.
@@ -96,23 +97,23 @@ const FACET_STEP_MARGIN_DEGREES: f64 = 2.0;
 /// loose enough for the accumulated float error of a boolean and a weld.
 pub const ANCHOR_FRACTION_OF_THE_DIAGONAL: f64 = 1e-3;
 
-/// C# `FaceToleranceDegrees`: how far a crease may turn from one edge to the next, in degrees - the
-/// widest facet step any round in this operation can have, and a margin. A cut spans its edge's own
-/// dihedral in `segments` facets, and the widest dihedral a convex edge can present is 180 degrees -
-/// so this is the bound over every round the operation might have made, taken once rather than
-/// tracked per cutter. It stays far below the turn a real corner makes (67 degrees at the tightest
-/// crease on the nose-in-notch part, against 13.25 at 16 segments).
+/// How far a crease may turn from one edge to the next, in degrees - the widest facet step any
+/// round in this operation can have, and a margin. A cut spans its edge's own dihedral in
+/// `segments` facets, and the widest dihedral a convex edge can present is 180 degrees - so this is
+/// the bound over every round the operation might have made, taken once rather than tracked per
+/// cutter. It stays far below the turn a real corner makes (67 degrees at the tightest crease on
+/// the nose-in-notch part, against 13.25 at 16 segments).
 pub fn face_tolerance_degrees(segments: i32) -> f64 {
     (180.0 / f64::from(segments.max(1))) + FACET_STEP_MARGIN_DEGREES
 }
 
-/// C# `Rebead`: re-reads the concave creases on the cut part and sweeps one bead along each.
+/// Re-reads the concave creases on the cut part and sweeps one bead along each.
 ///
-/// `cut_mesh` is the part with every cutter already taken out of it, welded and repaired (`None` is
-/// C#'s null); `groups` the stored groups, in the resolutions' order and in the build's own space;
+/// `cut_mesh` is the part with every cutter already taken out of it, welded and repaired (or
+/// `None`); `groups` the stored groups, in the resolutions' order and in the build's own space;
 /// `resolutions` what the FIRST pass made of those groups, on the uncut part; `eligible` which of
 /// them the first pass was willing to build a tool for. A cancel comes back as
-/// [`WorkError::Cancelled`] (C#'s `ThrowIfCancellationRequested`).
+/// [`WorkError::Cancelled`].
 #[allow(clippy::too_many_arguments)]
 pub fn rebead(
     cut_mesh: Option<&Arc<Mesh>>,
@@ -133,7 +134,7 @@ pub fn rebead(
     };
 
     let graph = Rc::new(cut_mesh.get_mesh_edge_graph());
-    // C#'s Dictionary<double, FeatureEdgeSet>: looked up by the flat angle's value.
+    // The feature sets read so far, looked up by the flat angle's value.
     let mut by_flat_angle: Vec<(f64, Arc<FeatureEdgeSet>)> = Vec::new();
     let face_tolerance = face_tolerance_degrees(segments);
 
@@ -232,11 +233,11 @@ pub fn rebead(
 
     for run in &members {
         // The run is named by the UNION of its members' readings, not by the first of them. Two
-        // groups the merge put together need only OVERLAP - BevelCreaseMerge joins A to B and B to C
-        // with A and C sharing nothing - so the first member's reading can be a proper part of what
-        // the run has to carry, and sweeping it alone would take C's first-pass bead off the batch
-        // and put nothing where it was. The merge only ever puts a group with a reading in a run, so
-        // a plan always comes back (C# would dereference the missing reading).
+        // groups the merge put together need only OVERLAP - BevelCreaseMerge joins A to B and B to
+        // C with A and C sharing nothing - so the first member's reading can be a proper part of
+        // what the run has to carry, and sweeping it alone would take C's first-pass bead off the
+        // batch and put nothing where it was. The merge only ever puts a group with a reading in a
+        // run, so a plan always comes back.
         plans.push(BevelSecondPassRunPlan::for_members(
             run,
             &creases,
@@ -370,15 +371,14 @@ pub fn rebead(
     Ok(answer)
 }
 
-/// C#'s `Dictionary<double, ...>` key equality (`double.Equals`): equal values, with NaN equal to
-/// NaN.
+/// Key equality by value: equal values, with NaN equal to NaN.
 fn same_key(a: f64, b: f64) -> bool {
     a == b || (a.is_nan() && b.is_nan())
 }
 
-/// C# `NamesTheSameCrease`: whether a crease re-read on the CUT part is the crease the group's pick
-/// names, rather than some other crease the resolver settled a tie in favour of. `tolerance` is how
-/// near counts as through, in the build's own units - see [`ANCHOR_FRACTION_OF_THE_DIAGONAL`].
+/// Whether a crease re-read on the CUT part is the crease the group's pick names, rather than some
+/// other crease the resolver settled a tie in favour of. `tolerance` is how near counts as through,
+/// in the build's own units - see [`ANCHOR_FRACTION_OF_THE_DIAGONAL`].
 ///
 /// Two ways of being the same, and a crease need only be one of them. It may run through the pick's
 /// own midpoint - which is the pick, so nothing more is needed. Or it may carry one of the edges the
@@ -412,8 +412,7 @@ pub fn names_the_same_crease(
     false
 }
 
-/// C# `DistanceToSegment`: how far a point lies from a segment, which is what "the crease runs
-/// through the pick" is.
+/// How far a point lies from a segment, which is what "the crease runs through the pick" is.
 fn distance_to_segment(point: Vector3, from: Vector3, to: Vector3) -> f64 {
     let along = to - from;
     let length_squared = along.length_squared();
@@ -422,16 +421,15 @@ fn distance_to_segment(point: Vector3, from: Vector3, to: Vector3) -> f64 {
         return (point - from).length();
     }
 
-    // C#'s Math.Clamp, which passes NaN through as f64::clamp does.
+    // f64::clamp passes a NaN through.
     let t = ((point - from).dot(along) / length_squared).clamp(0.0, 1.0);
 
     (point - (from + (along * t))).length()
 }
 
-/// C# `TheRoundChangedIt`: whether the cut changed this crease into something the first pass's bead
-/// does not describe - it bends, which is a crease that has run onto a round. A crease that is still
-/// the straight run it was keeps its first-pass bead, whatever else the cut did elsewhere on the
-/// part.
+/// Whether the cut changed this crease into something the first pass's bead does not describe - it
+/// bends, which is a crease that has run onto a round. A crease that is still the straight run it
+/// was keeps its first-pass bead, whatever else the cut did elsewhere on the part.
 fn the_round_changed_it(
     crease: &BevelEdgeGroupResolution,
     before: &BevelEdgeGroupResolution,
@@ -451,14 +449,13 @@ fn the_round_changed_it(
         .any(|edge| first.dot(edge.direction()).abs() < collinear_dot())
 }
 
-/// C# `CollinearDot`: how straight the edges of a run have to be to each other to be the straight
-/// crease the first pass swept - `FeatureEdgeChain::default_collinear_angle_degrees` as a dot
-/// product.
+/// How straight the edges of a run have to be to each other to be the straight crease the first
+/// pass swept - `FeatureEdgeChain::default_collinear_angle_degrees` as a dot product.
 fn collinear_dot() -> f64 {
     math_helper::degrees_to_radians(FeatureEdgeChain::default_collinear_angle_degrees()).cos()
 }
 
-/// C# `IsAllConcave`.
+/// Whether the group resolved to edges and every one of them is concave.
 fn is_all_concave(resolution: &BevelEdgeGroupResolution) -> bool {
     if !resolution.is_resolved() || resolution.edges.is_empty() {
         return false;

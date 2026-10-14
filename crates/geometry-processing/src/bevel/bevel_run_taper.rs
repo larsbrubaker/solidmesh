@@ -1,15 +1,14 @@
-//! The real mesh edges around a selected open run that its round tapers out along
-//! (`Bevel/BevelRunTaper.cs`): the walk off each free end of the run onto the unselected edges
-//! that carry on from it, as far as each end asked to reach. `BevelGroupTools` builds one and
-//! `BevelTaperedSweep` sweeps it.
+//! The real mesh edges around a selected open run that its round tapers out along: the walk off
+//! each free end of the run onto the unselected edges that carry on from it, as far as each end
+//! asked to reach. `BevelGroupTools` builds one and `BevelTaperedSweep` sweeps it.
 
 use std::collections::HashSet;
 
 use super::bevel_chain_linker::BevelSweptChain;
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
-/// C# `BevelRunTaper`: real mesh edges surrounding a selected run, with physical runout extents.
-/// A C# `record`, so a plain value; C#'s `with` expressions are struct updates on a clone.
+/// Real mesh edges surrounding a selected run, with physical runout extents. A plain value; a
+/// changed copy is a struct update on a clone.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BevelRunTaper {
     /// The selected run with the runout neighbours walked onto in front of and behind it.
@@ -29,11 +28,11 @@ impl BevelRunTaper {
     /// as far as each end asked to reach.
     ///
     /// A run of any length is taken, not just a lone edge: a run's end is the same situation a lone
-    /// edge's end is - selected material meeting unselected material at a vertex nothing else owns -
-    /// and the answer to it is the same. Only a CLOSED run has no free end to run out of. Each end
-    /// is walked and bounded on its own, so a run may taper at one end, at both, or at neither -
-    /// including where the caller offers only one of them, by asking for a length of zero at the
-    /// other. `surfaces` is the per-face surface label (`None` is C#'s null, which tapers nothing).
+    /// edge's end is - selected material meeting unselected material at a vertex nothing else
+    /// owns - and the answer to it is the same. Only a CLOSED run has no free end to run out of.
+    /// Each end is walked and bounded on its own, so a run may taper at one end, at both, or at
+    /// neither - including where the caller offers only one of them, by asking for a length of zero
+    /// at the other. `surfaces` is the per-face surface label (`None` tapers nothing).
     pub fn create(
         chain: &BevelSweptChain,
         features: &FeatureEdgeSet,

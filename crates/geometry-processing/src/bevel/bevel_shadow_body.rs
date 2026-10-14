@@ -1,8 +1,7 @@
 //! The solid an obstruction stands as above a face - its SHADOW BODY - for the shadow clip to keep
-//! a cutter out of (`Bevel/BevelShadowBody.cs`, a C# `internal static class`, so a module here):
-//! the faces standing on the obstruction's face reached without crossing a concave fold, the
-//! convex region their planes bound inside the band, slabs along each spine, and the checks that
-//! give the body up where it would not be the obstruction's.
+//! a cutter out of: the faces standing on the obstruction's face reached without crossing a concave
+//! fold, the convex region their planes bound inside the band, slabs along each spine, and the
+//! checks that give the body up where it would not be the obstruction's.
 
 use std::collections::{HashMap, HashSet};
 
@@ -67,8 +66,8 @@ pub fn the_body_should_be_given_up(cutter: &Mesh, clipped: Option<&Mesh>) -> boo
 /// The obstruction's shadow body, or `None` where it would not be the obstruction's: no faces
 /// standing on it, fewer than two face planes (a half space cuts the cutter in two), faces that do
 /// not close a convex body (an L-shaped boss's notch would be filled), or a region outside the
-/// band's sane share. C#'s optional `clearanceMultiplier = 1` is passed explicitly.
-#[allow(clippy::too_many_arguments)] // C#'s signature.
+/// band's sane share. `clearance_multiplier` is normally 1.
+#[allow(clippy::too_many_arguments)] // each argument is a separate input.
 pub fn build(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -573,7 +572,8 @@ pub fn round_the_centroid(points: Vec<Vector3>, normal: Vector3, same_spot: f64)
         up.dot(offset).atan2(across.dot(offset))
     };
 
-    // C#'s `List.Sort` (an introsort) by descending angle.
+    // By descending angle, with an introsort whose tie order is fixed, so the result is
+    // reproducible.
     vector_math::cs_sort::introspective_sort(&mut distinct, &mut |left, right| {
         let (a, b) = (angle(*right), angle(*left));
         match (a.is_nan(), b.is_nan()) {

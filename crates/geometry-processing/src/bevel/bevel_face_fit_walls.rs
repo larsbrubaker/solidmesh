@@ -1,6 +1,5 @@
-//! The face-width check's wall reading (`Bevel/BevelFaceFit.cs`: `RunsOutOntoAWallTheRunEndsOn`
-//! and `TheRunEndsOnThatWall`): a walk stopped by an unselected crease whose far face is the
-//! very wall the run's own free end caps on is no lack of face - the end cap clips the band
+//! The face-width check's wall reading: a walk stopped by an unselected crease whose far face is
+//! the very wall the run's own free end caps on is no lack of face - the end cap clips the band
 //! there anyway. Split from `bevel_face_fit.rs` by responsibility.
 
 use vector_math::Vector3;
@@ -12,9 +11,9 @@ use super::{
 use crate::topology::FeatureEdge;
 
 impl BevelFaceFit {
-    /// C# `RunsOutOntoAWallTheRunEndsOn`: whether the walk on `face` from `edge` stopped at an
-    /// unselected manifold crease whose OTHER face (the one off the walked face's plane) is a wall
-    /// the run (group `group_index` of `resolutions`) ends on at either end of `edge`.
+    /// Whether the walk on `face` from `edge` stopped at an unselected manifold crease whose OTHER
+    /// face (the one off the walked face's plane) is a wall the run (group `group_index` of
+    /// `resolutions`) ends on at either end of `edge`.
     pub fn runs_out_onto_a_wall_the_run_ends_on(
         &self,
         group_index: usize,
@@ -70,10 +69,9 @@ impl BevelFaceFit {
         )
     }
 
-    /// C# `TheRunEndsOnThatWall`: whether `vertex` (on the wall's plane) is a free end of the run,
-    /// with only its own selected edge there, whose resolved cap lies along that wall and stands no
-    /// further off it than a bead's stand-off. The group's free-end caps are resolved once and
-    /// kept.
+    /// Whether `vertex` (on the wall's plane) is a free end of the run, with only its own selected
+    /// edge there, whose resolved cap lies along that wall and stands no further off it than a
+    /// bead's stand-off. The group's free-end caps are resolved once and kept.
     pub fn the_run_ends_on_that_wall(
         &self,
         group_index: usize,

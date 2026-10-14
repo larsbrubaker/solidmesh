@@ -1,15 +1,14 @@
-//! The face-width check's exemptions (`Bevel/BevelFaceFit.Exemptions.cs`, the partial class's
-//! second file): the stops a walk can hit that are NOT a group running out of face.
+//! The face-width check's exemptions: the stops a walk can hit that are NOT a group running out of
+//! face.
 
 use super::BevelFaceFit;
 use crate::topology::{EdgeConvexity, FeatureEdge};
 
-/// C# `NegligibleSliverFraction`: a face narrower than this fraction of the setback is a sliver.
+/// A face narrower than this fraction of the setback is a sliver.
 pub const NEGLIGIBLE_SLIVER_FRACTION: f64 = 0.02;
 
 impl BevelFaceFit {
-    /// C# `ANegligibleSliverPastAConvexEdge`: a stop at an unselected convex edge with only a
-    /// sliver of face before it.
+    /// A stop at an unselected convex edge with only a sliver of face before it.
     pub fn a_negligible_sliver_past_a_convex_edge(
         &self,
         blocking_edge: i32,
@@ -22,7 +21,7 @@ impl BevelFaceFit {
             && !self.setbacks.contains_key(&blocking_edge)
     }
 
-    /// C# `TwoBeadsSharingTheFace`: a concave edge's collision with another concave stop.
+    /// A concave edge's collision with another concave stop.
     pub fn two_beads_sharing_the_face(
         &self,
         edge: &FeatureEdge,
@@ -34,8 +33,8 @@ impl BevelFaceFit {
             && self.concave_surface_edges.contains(&blocking_edge)
     }
 
-    /// C# `ABeadRunningOutPastAConvexEdge`: a concave edge's bead running out past an unselected
-    /// convex edge, with full width elsewhere on the face.
+    /// A concave edge's bead running out past an unselected convex edge, with full width elsewhere
+    /// on the face.
     pub fn a_bead_running_out_past_a_convex_edge(
         &self,
         edge: &FeatureEdge,
@@ -50,8 +49,8 @@ impl BevelFaceFit {
             && !self.setbacks.contains_key(&blocking_edge)
     }
 
-    /// C# `TheCornersBusiness`: a stop at an edge sharing a vertex with `edge`, where the face has
-    /// full width elsewhere and the stop is selected or convex - the corner's to resolve.
+    /// A stop at an edge sharing a vertex with `edge`, where the face has full width elsewhere and
+    /// the stop is selected or convex - the corner's to resolve.
     pub fn the_corners_business(
         &self,
         edge: &FeatureEdge,

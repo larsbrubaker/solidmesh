@@ -1,5 +1,5 @@
 //! How deep a swept tool may reach BACK into the part before its turn folds it over itself
-//! (`Bevel/BevelSweepBackDepth.cs`, a static class: free functions here). A chain's tightest turn
+//!. A chain's tightest turn
 //! names a radius the tool's back reach has to stay inside; where it does not, the sweep is
 //! retried at the depth the turn allows.
 
@@ -71,7 +71,7 @@ pub fn measure_back_reach(swept: &[SweptSegment]) -> f64 {
 
 /// The chain's tightest turn as a radius: at each joint, the shorter of the two edges over the
 /// angle turned; infinity where the chain never turns.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
 pub fn turn_radius(chain: &[ChainEdge], is_closed: bool) -> f64 {
     let mut tightest = f64::INFINITY;
     let count = chain.len();
@@ -100,9 +100,8 @@ pub fn turn_radius(chain: &[ChainEdge], is_closed: bool) -> f64 {
     tightest
 }
 
-/// The same reading over the swept segments (C#'s `TurnRadius(IReadOnlyList<SweptSegment>, ..)`
-/// overload): each segment's own length and direction.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+/// The same reading over the swept segments: each segment's own length and direction.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
 pub fn turn_radius_of_the_segments(swept: &[SweptSegment], is_closed: bool) -> f64 {
     let mut tightest = f64::INFINITY;
     let count = swept.len();

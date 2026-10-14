@@ -1,6 +1,5 @@
 //! How far a sweep runs STRAIGHT on - segments carrying one section along one line - and the rings
-//! an end cap has already passed on such a run (`Bevel/BevelStraightRun.cs`, a static class: free
-//! functions here).
+//! an end cap has already passed on such a run.
 
 use std::collections::HashSet;
 
@@ -122,8 +121,8 @@ pub fn run_to_ring(swept: &[SweptSegment], ring: usize) -> f64 {
     swept[..ring].iter().map(|segment| segment.length).sum()
 }
 
-/// C#'s `Enumerable.Max` over doubles: NaNs are passed over unless every value is one. A capped
-/// end always has its slides; an empty list reads as no reach.
+/// The largest value: NaNs are passed over unless every value is one. A capped end always has its
+/// slides; an empty list reads as no reach.
 fn enumerable_max(values: &[f64]) -> f64 {
     let mut iter = values.iter().copied().skip_while(|v| v.is_nan());
     let Some(mut value) = iter.next() else {
@@ -137,7 +136,7 @@ fn enumerable_max(values: &[f64]) -> f64 {
     value
 }
 
-/// C#'s `Enumerable.Min` over doubles: any NaN is the answer.
+/// The smallest value: any NaN is the answer.
 fn enumerable_min(values: &[f64]) -> f64 {
     let mut value = match values.first() {
         Some(&first) => first,

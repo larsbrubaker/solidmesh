@@ -1,7 +1,6 @@
 //! How far one chain's rolling-ball TUBE has to run past a pair corner to reach the partner's own
 //! arc axis - the number `BevelPairCornerTrim` needs and the plain overshoot only happens to give
-//! where the two runs meet their faces at the same angle. Ports `Bevel/BevelPairCornerReach.cs`
-//! (C# `internal static class`; a module of free functions here). The frame and wedge it reads are
+//! where the two runs meet their faces at the same angle. The frame and wedge it reads are
 //! [`bevel_edge_tool_builder`]'s; the tube it lengthens is [`super::BevelPartnerTube`].
 //!
 //! **The geometry, in one line.** Everything cutter A has past the shared vertex lies within a
@@ -58,8 +57,7 @@ use crate::topology::{ChainEdge, EdgeConvexity, FeatureEdge, FeatureEdgeSet};
 /// the whole SELECTION took, which is what says who the partners are - the same set
 /// `BevelChainEnds.Resolve` reads the corner off, built once by the caller because this is asked
 /// once per end and the incidence at a vertex is walked in full. `size` is the radius every tool of
-/// the operation is swept at. A `None` `features` or `selected_mesh_edges` is C#'s null and means
-/// no reach.
+/// the operation is swept at. A `None` `features` or `selected_mesh_edges` means no reach.
 pub fn to_partner_axis(
     corner: Option<i32>,
     end: &ChainEdge,

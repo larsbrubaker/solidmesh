@@ -1,9 +1,9 @@
 //! Split chords: a vertex a boolean left standing part way along a straight crease, reading as a
-//! corner of nothing (`Bevel/BevelSplitChords.cs`, a C# `internal static class`; a module of free
-//! functions here). What is here is the READING of one such vertex - whether it would be removed
-//! ([`would_remove`]) and the re-cut of the two fans either side of it - with the mesh's own lattice
-//! ([`lattice_for`]) and the straight-line test the split blend shares ([`stands_on_the_line_between`]).
-//! The repair pass that takes every such vertex out lands with a later package.
+//! corner of nothing. What is here is the READING of one such vertex - whether it would be removed
+//! ([`would_remove`]) and the re-cut of the two fans either side of it - with the mesh's own
+//! lattice ([`lattice_for`]) and the straight-line test the split blend shares
+//! ([`stands_on_the_line_between`]). The repair pass that takes every such vertex out lands with a
+//! later package.
 //!
 //! The faces-on-each-edge table is only looked up, so a `HashMap`'s order cannot reach an output; the
 //! vertex's link (`next_round`) is walked for its creases in insertion order, so it is an [`IndexMap`].
@@ -14,20 +14,19 @@ use indexmap::IndexMap;
 use polygon_mesh::{Face, Mesh};
 use vector_math::{cs_math, number_format, Vector3};
 
-/// C# `FloatStorageEpsilon`: the step between neighbouring floats at magnitude one, which is how a
-/// mesh stores a point.
+/// The step between neighbouring floats at magnitude one, which is how a mesh stores a point.
 const FLOAT_STORAGE_EPSILON: f64 = 1.1920929e-7;
 
-/// C# `LatticeFactor`: how many of those steps still count as one straight line. Eight rather than
-/// one because a vertex a boolean wrote has been through several roundings on its way here, and
-/// rather than thirty-two because the smallest turn these rims really make is thousands of steps wide.
+/// How many of those steps still count as one straight line. Eight rather than one because a vertex
+/// a boolean wrote has been through several roundings on its way here, and rather than thirty-two
+/// because the smallest turn these rims really make is thousands of steps wide.
 const LATTICE_FACTOR: f64 = 8.0;
 
 /// The faces on each edge, by the edge's two vertices (low first).
 pub type FacesOnEachEdge = HashMap<(i32, i32), Vec<i32>>;
 
-/// C# `LatticeFor`: the mesh's own lattice - [`LATTICE_FACTOR`] float steps at its furthest
-/// coordinate - or zero for a mesh with no extent (or an infinite one).
+/// The mesh's own lattice - [`LATTICE_FACTOR`] float steps at its furthest coordinate - or zero for
+/// a mesh with no extent (or an infinite one).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn lattice_for(mesh: &Mesh) -> f64 {
     let bounds = mesh.get_axis_aligned_bounding_box();
@@ -47,8 +46,8 @@ pub fn lattice_for(mesh: &Mesh) -> f64 {
     furthest * FLOAT_STORAGE_EPSILON * LATTICE_FACTOR
 }
 
-/// C# `WouldRemove`: whether `vertex` reads as a split chord the repair would take out - `Ok(())`
-/// where it does, `Err(decline)` with the reason (C#'s `out string decline`) where it does not.
+/// Whether `vertex` reads as a split chord the repair would take out - `Ok(())` where it does,
+/// `Err(decline)` with the reason where it does not.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn would_remove(mesh: &Mesh, vertex: i32) -> Result<(), String> {
     let lattice = lattice_for(mesh);
@@ -67,8 +66,8 @@ pub fn would_remove(mesh: &Mesh, vertex: i32) -> Result<(), String> {
     try_read_split_chord(mesh, vertex, fan, &faces_on_each_edge(mesh), lattice).map(|_| ())
 }
 
-/// C# `TryReadSplitChord`: the vertex's fan read as two flat sides of one straight crease through it,
-/// re-cut without it - `Ok(replacement)` with the new faces, `Err(decline)` with why not.
+/// The vertex's fan read as two flat sides of one straight crease through it, re-cut without it -
+/// `Ok(replacement)` with the new faces, `Err(decline)` with why not.
 pub fn try_read_split_chord(
     mesh: &Mesh,
     vertex: i32,
@@ -192,9 +191,9 @@ pub fn try_read_split_chord(
     Ok(replacement)
 }
 
-/// C# `TryRecutStar`: one side's outline (the path round the vertex from one crease end to the other)
-/// re-cut into triangles by clipping its tallest ear each time, appended to `into` - false where some
-/// remainder has no ear with height above the lattice that lies the way the outline does.
+/// One side's outline (the path round the vertex from one crease end to the other) re-cut into
+/// triangles by clipping its tallest ear each time, appended to `into` - false where some remainder
+/// has no ear with height above the lattice that lies the way the outline does.
 fn try_recut_star(
     mesh: &Mesh,
     path: &[i32],
@@ -262,9 +261,9 @@ fn try_recut_star(
     true
 }
 
-/// C# `IsAnEar`: the corner `at` between `before` and `after` as an ear of the outline - its height
-/// (twice its area over its longest side) where it turns the way the outline does, stands taller than
-/// the lattice, and holds no other corner of the outline.
+/// The corner `at` between `before` and `after` as an ear of the outline - its height (twice its
+/// area over its longest side) where it turns the way the outline does, stands taller than the
+/// lattice, and holds no other corner of the outline.
 #[allow(clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
 fn is_an_ear(
     mesh: &Mesh,
@@ -309,14 +308,14 @@ fn is_an_ear(
     Some(twice_area / longest)
 }
 
-/// C# `IsInside`: whether a point stands inside the triangle or on its rim, read about `normal`.
+/// Whether a point stands inside the triangle or on its rim, read about `normal`.
 fn is_inside(point: Vector3, a: Vector3, b: Vector3, c: Vector3, normal: Vector3) -> bool {
     (b - a).cross(point - a).dot(normal) >= 0.0
         && (c - b).cross(point - b).dot(normal) >= 0.0
         && (a - c).cross(point - c).dot(normal) >= 0.0
 }
 
-/// C# `OutlineNormal`: the unit Newell normal of an outline, or zero for one with no area.
+/// The unit Newell normal of an outline, or zero for one with no area.
 fn outline_normal(mesh: &Mesh, path: &[i32]) -> Vector3 {
     let mut sum = Vector3::ZERO;
 
@@ -334,7 +333,7 @@ fn outline_normal(mesh: &Mesh, path: &[i32]) -> Vector3 {
     }
 }
 
-/// C# `TryReadAcross`: the edge of `face` across from `vertex`, in the direction the face winds.
+/// The edge of `face` across from `vertex`, in the direction the face winds.
 fn try_read_across(face: &Face, vertex: i32) -> Option<(i32, i32)> {
     if face.v0 == vertex {
         Some((face.v1, face.v2))
@@ -347,9 +346,9 @@ fn try_read_across(face: &Face, vertex: i32) -> Option<(i32, i32)> {
     }
 }
 
-/// C# `AreOneSurfaceAcross`: whether the edge from `vertex` to `other` divides one flat surface -
-/// both its faces within the lattice of one plane - as `(one_surface, readable)`; an edge with other
-/// than two faces, or a first face with no plane, is not readable.
+/// Whether the edge from `vertex` to `other` divides one flat surface - both its faces within the
+/// lattice of one plane - as `(one_surface, readable)`; an edge with other than two faces, or a
+/// first face with no plane, is not readable.
 fn are_one_surface_across(
     mesh: &Mesh,
     vertex: i32,
@@ -382,7 +381,7 @@ fn are_one_surface_across(
     (off(across.v0) && off(across.v1) && off(across.v2), true)
 }
 
-/// C# `StandsOnTheLineBetween(Mesh, ..)`: [`stands_on_the_line_between`] for three mesh vertices.
+/// [`stands_on_the_line_between`] for three mesh vertices.
 fn stands_on_the_line_between_vertices(
     mesh: &Mesh,
     vertex: i32,
@@ -398,9 +397,9 @@ fn stands_on_the_line_between_vertices(
     )
 }
 
-/// C# `StandsOnTheLineBetween`: whether `point` stands on the straight line from `from` to `to`,
-/// within the lattice, and BETWEEN them - a chord a boolean split carries its extra vertex INSIDE the
-/// chord, and one standing past an end would make the merged edge longer than either piece.
+/// Whether `point` stands on the straight line from `from` to `to`, within the lattice, and BETWEEN
+/// them - a chord a boolean split carries its extra vertex INSIDE the chord, and one standing past
+/// an end would make the merged edge longer than either piece.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn stands_on_the_line_between(
     point: Vector3,
@@ -418,8 +417,7 @@ pub fn stands_on_the_line_between(
     along.cross(point - from).length() / length <= lattice && (point - from).dot(point - to) < 0.0
 }
 
-/// C# `TheWayRound`: the link walked from `from` to `to`, both ends included, or `None` where it does
-/// not get there.
+/// The link walked from `from` to `to`, both ends included, or `None` where it does not get there.
 fn the_way_round(next_round: &IndexMap<i32, i32>, from: i32, to: i32) -> Option<Vec<i32>> {
     let mut path = vec![from];
     let mut at = from;
@@ -439,8 +437,8 @@ fn the_way_round(next_round: &IndexMap<i32, i32>, from: i32, to: i32) -> Option<
     None
 }
 
-/// C# `IsFlat`: whether one side of the fan (its path round the vertex) lies within the lattice of
-/// one plane through the vertex, as `(flat, worst_out_of_plane)`; a side of one face is flat.
+/// Whether one side of the fan (its path round the vertex) lies within the lattice of one plane
+/// through the vertex, as `(flat, worst_out_of_plane)`; a side of one face is flat.
 fn is_flat(mesh: &Mesh, vertex: i32, path: &[i32], lattice: f64) -> (bool, f64) {
     if path.len() < 3 {
         // One face, which is flat by itself and has nothing to be compared with.
@@ -476,8 +474,7 @@ fn is_flat(mesh: &Mesh, vertex: i32, path: &[i32], lattice: f64) -> (bool, f64) 
     (worst_out_of_plane <= lattice, worst_out_of_plane)
 }
 
-/// C# `PlaneOf`: a face's unit normal and a point it passes through, the normal zero for a face with
-/// no area.
+/// A face's unit normal and a point it passes through, the normal zero for a face with no area.
 fn plane_of(mesh: &Mesh, face: &Face) -> (Vector3, Vector3) {
     let through = position(mesh, face.v0);
     let cross = (position(mesh, face.v1) - through).cross(position(mesh, face.v2) - through);
@@ -491,7 +488,7 @@ fn plane_of(mesh: &Mesh, face: &Face) -> (Vector3, Vector3) {
     (normal, through)
 }
 
-/// C# `FacesOnEachEdge`: every face on each edge, by the edge's two vertices (low first).
+/// Every face on each edge, by the edge's two vertices (low first).
 pub fn faces_on_each_edge(mesh: &Mesh) -> FacesOnEachEdge {
     let mut on_the_edge = FacesOnEachEdge::with_capacity(mesh.faces.len() * 3);
 
@@ -505,8 +502,8 @@ pub fn faces_on_each_edge(mesh: &Mesh) -> FacesOnEachEdge {
     on_the_edge
 }
 
-/// C# `FacesAtEachVertex`: every face at each vertex, once each even where a face names a vertex
-/// twice; `None` for a vertex no face uses (C#'s null entry).
+/// Every face at each vertex, once each even where a face names a vertex twice; `None` for a vertex
+/// no face uses.
 pub fn faces_at_each_vertex(mesh: &Mesh) -> Vec<Option<Vec<i32>>> {
     let mut at_the_vertex: Vec<Option<Vec<i32>>> = vec![None; mesh.vertices.len()];
 
@@ -531,8 +528,8 @@ pub fn faces_at_each_vertex(mesh: &Mesh) -> Vec<Option<Vec<i32>>> {
     at_the_vertex
 }
 
-/// C#'s custom numeric format `0.#########` (InvariantCulture), as the decline texts write their
-/// numbers.
+/// Up to nine decimal places, trailing zeros dropped, culture-invariant: how the decline texts
+/// write their numbers.
 fn to_nine_places(value: f64) -> String {
     number_format::format_f64_max_decimals(value, 9)
 }
@@ -545,10 +542,9 @@ fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
 /// One rebuilt fan: the faces it replaces, and the faces it is replaced by.
 type RebuiltFan = (Vec<i32>, Vec<(i32, i32, i32)>);
 
-/// C# `BevelSplitChords.RemovedFrom`: every vertex whose fan reads as a split chord (two flat
-/// sides of one straight crease through it) re-cut without it, in place - two candidate fans
-/// sharing a face are left alone, and a repair that would open the part is not made. How many
-/// fans were rebuilt.
+/// Every vertex whose fan reads as a split chord (two flat sides of one straight crease through it)
+/// re-cut without it, in place - two candidate fans sharing a face are left alone, and a repair
+/// that would open the part is not made. How many fans were rebuilt.
 pub fn removed_from(mesh: &mut Mesh) -> i32 {
     let lattice = lattice_for(mesh);
     if lattice.is_nan() || lattice <= 0.0 {

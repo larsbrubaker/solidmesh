@@ -1,9 +1,8 @@
-//! The void each 5.3 corner opens, read from the PART and remembered for the whole rebuild
-//! (`Bevel/BevelCornerVoids.cs`): the solid a bead is allowed to keep material in past its own
-//! last vertex, in place of the wedge that used to run out there with it. [`super::bevel_bead_clip`]
-//! takes the cones this hands out as its corner pieces; the cone itself is
-//! [`super::bevel_corner_patch_mesher::try_build_void_cone`] over the ring
-//! [`super::bevel_corner_face_ring::try_order_at_vertex`] reads.
+//! The void each 5.3 corner opens, read from the PART and remembered for the whole rebuild: the
+//! solid a bead is allowed to keep material in past its own last vertex, in place of the wedge that
+//! used to run out there with it. [`super::bevel_bead_clip`] takes the cones this hands out as its
+//! corner pieces; the cone itself is [`super::bevel_corner_patch_mesher::try_build_void_cone`] over
+//! the ring [`super::bevel_corner_face_ring::try_order_at_vertex`] reads.
 //!
 //! **What went wrong without it.** A bead and its void wedge are swept along one chain, off one
 //! set of frames, through one set of mitres and onto one set of ENDS, and that shared construction
@@ -81,7 +80,7 @@
 //! them the corner's, and takes that one ONCE for both beads meeting here - which is the second
 //! reason this type memoizes, beyond the cost: a cone handed to two beads separately would cut both
 //! of them with one surface and duplicate it. The cone is handed out as an `Rc` for that reason:
-//! the bead clip groups the beads by the cone's identity, as C# does by reference.
+//! the bead clip groups the beads by the cone's identity.
 //!
 //! A refusal is still possible, and the answer to one is still silent. The chains fall back to the
 //! clip that shipped before this existed - the wedge swept with its overshoot, no cone
@@ -112,11 +111,11 @@ use super::bevel_corner_patch_mesher::try_build_void_cone;
 use super::bevel_edge_tool_builder as builder;
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
-/// C#'s `Dictionary<(int Vertex, double Reach), Mesh>`, keyed by the reach's bits as C#'s
-/// `double.Equals` compares it ([`reach_key`]); a refusal is remembered as `None`.
+/// The cones built so far by (vertex, reach), the reach keyed by its bits under value equality
+/// ([`reach_key`]); a refusal is remembered as `None`.
 type BuiltCones = IndexMap<(i32, u64), Option<Rc<Mesh>>>;
 
-/// C# `BevelCornerVoids`: the corners of one part, read on demand and remembered.
+/// The corners of one part, read on demand and remembered.
 #[derive(Debug)]
 pub struct BevelCornerVoids {
     part: Arc<Mesh>,
@@ -142,8 +141,8 @@ impl BevelCornerVoids {
         }
     }
 
-    /// C# `Features`: the part's creases at the flat angle this reading is defined at, built once
-    /// and only if asked.
+    /// The part's creases at the flat angle this reading is defined at, built once and only if
+    /// asked.
     fn features(&self) -> &FeatureEdgeSet {
         self.features.get_or_init(|| match &self.graph {
             Some(graph) => FeatureEdgeSet::create_with_graph(
@@ -158,7 +157,7 @@ impl BevelCornerVoids {
         })
     }
 
-    /// C# `TryRead`: the void one 5.3 corner opens, or `None` where that corner cannot be read.
+    /// The void one 5.3 corner opens, or `None` where that corner cannot be read.
     ///
     /// `corner` is the vertex this end overshoots into another selected run at
     /// (`BevelChainEnds.StartOvershootCorner`), or `None` where the end is not that kind of end and
@@ -212,7 +211,7 @@ impl BevelCornerVoids {
     }
 }
 
-/// A dictionary key with C# `double.Equals` semantics: 0.0 and -0.0 alike, every NaN alike.
+/// A dictionary key by value: 0.0 and -0.0 alike, every NaN alike.
 fn reach_key(value: f64) -> u64 {
     if value == 0.0 {
         0

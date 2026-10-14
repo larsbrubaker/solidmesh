@@ -1,8 +1,7 @@
-//! What one group did on the rebuild that has just run ([`BevelGroupResult`], with the rim loops
-//! it refused while building the rest, [`BevelLoopFailure`]); the second readings of a group
-//! failure where the sentence the geometry produced is not what went wrong
-//! ([`bevel_group_failures`]); and everything one rebuild had to report, as one immutable thing
-//! ([`BevelRebuildResults`]). Ports `Bevel/BevelGroupResult.cs`.
+//! What one group did on the rebuild that has just run ([`BevelGroupResult`], with the rim loops it
+//! refused while building the rest, [`BevelLoopFailure`]); the second readings of a group failure
+//! where the sentence the geometry produced is not what went wrong ([`bevel_group_failures`]); and
+//! everything one rebuild had to report, as one immutable thing ([`BevelRebuildResults`]).
 //!
 //! A row carries the group's identity rather than a pre-formatted "Group 3 was skipped: ..."
 //! string, because the property panel already knows which row it is drawing and needs the reason
@@ -14,11 +13,11 @@ use super::bevel_advisory_codes;
 use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use crate::topology::{BevelCornerGroup, BevelEdgeGroup};
 
-/// The group a row is about, whichever leg of the operation resolved it - C#'s abstract
-/// `BevelGroup` reference, which is one of these two concrete kinds (the Rust [`BevelGroup`] is a
-/// trait and cannot be held by value). A copy of the group as it was resolved: C# holds the
-/// reference so a caller can find the row again after the list is reordered, and the copy answers
-/// that by value (divergence 651).
+/// The group a row is about, whichever leg of the operation resolved it: one of the two concrete
+/// kinds ([`BevelGroup`] is a trait and cannot be held by value). A copy of the group as it was
+/// resolved, so a caller can find the row again after the list is reordered by comparing values:
+/// groups are immutable once resolved (every edit copies), so the copy is the group the row was
+/// made from, and two groups equal field for field are the same selection.
 ///
 /// [`BevelGroup`]: crate::topology::BevelGroup
 #[derive(Debug, Clone, PartialEq)]
@@ -29,9 +28,9 @@ pub enum BevelResultGroup {
     Corner(BevelCornerGroup),
 }
 
-/// C# `BevelGroupResult` (a sealed record). The four positional members and `warning` are the
-/// constructor's ([`BevelGroupResult::new`]); the rest are C#'s init-only properties, left at
-/// their defaults by `new` and set by the composer.
+/// One row of a rebuild's report: what happened to one group. The four positional members and
+/// `warning` are the constructor's ([`BevelGroupResult::new`]); the rest are left at their defaults
+/// by `new` and set by the composer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelGroupResult {
     /// Where the group sat in the selection it came from - `BevelFeatureObject3D.Groups` on the
@@ -92,7 +91,7 @@ pub struct BevelGroupResult {
 }
 
 impl BevelGroupResult {
-    /// C#'s positional constructor; `warning` is optional there so that the many callers with
+    /// A row from its four positional members; `warning` is optional so that the many callers with
     /// nothing to warn about read as the four things they are about.
     pub fn new(
         group_index: i32,
@@ -135,7 +134,7 @@ impl BevelGroupResult {
 }
 
 /// One rim loop of a group that could not be built, on a row that built the rest of its loops
-/// (C# `BevelLoopFailure`, a sealed record).
+/// ([`BevelLoopFailure`]).
 ///
 /// The same three things a refused ROW carries - the refusal, the sentence it was written as, and
 /// the largest size that would have built it - said about a part of a row instead of all of it,
@@ -159,11 +158,10 @@ pub struct BevelLoopFailure {
     pub edge_count: i32,
 }
 
-/// Second readings of a group failure, where the sentence the geometry produced is true but is
-/// not what went wrong (C# `internal static class BevelGroupFailures`; a module here). Kept beside
-/// [`BevelGroupResult`] because this is the same subject - the words a skipped group comes back
-/// with - and separate from the builder that composes them because the builder is about tools and
-/// booleans.
+/// Second readings of a group failure, where the sentence the geometry produced is true but is not
+/// what went wrong. Kept beside [`BevelGroupResult`] because this is the same subject - the words a
+/// skipped group comes back with - and separate from the builder that composes them because the
+/// builder is about tools and booleans.
 pub mod bevel_group_failures {
     use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
     use crate::topology::pick_interpretations::{
@@ -265,7 +263,7 @@ pub mod bevel_group_failures {
 }
 
 /// Everything one rebuild had to report, as one immutable thing: what each group did, which of
-/// those failed, and what went wrong with the cut as a whole (C# `BevelRebuildResults`).
+/// those failed, and what went wrong with the cut as a whole.
 ///
 /// One object rather than three lists on the operation, for the reason `BevelEdgePickModel.PickData`
 /// is one object: it is composed on the rebuild's worker and read by the property panel, and three
@@ -282,7 +280,7 @@ pub struct BevelRebuildResults {
 }
 
 impl BevelRebuildResults {
-    /// C#'s `Empty`: nothing reported.
+    /// Nothing reported.
     pub fn empty() -> Self {
         Self::default()
     }

@@ -1,7 +1,7 @@
-//! The sweep for a run with a FINITE runout (`Bevel/BevelTaperedSweep.cs`): the selected span at
-//! full size, and each tapered end drawn down to a single tip vertex over a length the caller
-//! measured off the part ([`try_create`]). The run and its two lengths are a
-//! [`BevelRunTaper`]; the segments and the per-vertex rings are the plain sweep's
+//! The sweep for a run with a FINITE runout: the selected span at full size, and each tapered end
+//! drawn down to a single tip vertex over a length the caller measured off the part
+//! ([`try_create`]). The run and its two lengths are a [`BevelRunTaper`]; the segments and the
+//! per-vertex rings are the plain sweep's
 //! ([`super::bevel_chain_sweep_sections::try_build_segments`],
 //! [`super::bevel_chain_sweep_rings::try_build_rings`]).
 //!
@@ -23,13 +23,13 @@ use super::{
     BevelAdvisory, BevelAdvisoryCode, BevelChainEnds, BevelEndCap, BevelRunTaper, BevelSweptSection,
 };
 
-/// C# `BevelTaperedSweep.TryCreate`: a finite runout keeps the selected span full size and closes
-/// each tapered end with one tip vertex.
+/// A finite runout keeps the selected span full size and closes each tapered end with one tip
+/// vertex.
 ///
 /// `back_depth` is how far past each face a section's cleared back may run, or zero for the size
 /// itself - the same limit `bevel_chain_sweep::try_create` takes, and honoured here for the same
 /// reason: a run whose mitre would not fit at full depth is handed a shallower one, and a tapered
-/// run is no less entitled to it than a plain sweep is. (C#'s defaults: `section` the tool,
+/// run is no less entitled to it than a plain sweep is. (Callers normally pass `section` the tool,
 /// `back_depth` zero.)
 #[allow(clippy::too_many_arguments)]
 pub fn try_create(
@@ -107,8 +107,8 @@ pub fn try_create(
     let selected_end = distances[(taper.selected_index + taper.selected_count) as usize];
     let first = selected_start - taper.start_length;
     let last = selected_end + taper.end_length;
-    // C#'s SortedSet<double>: the facet joints inside the span, both endpoints and the taper
-    // stations, in ascending order with exact duplicates dropped.
+    // A sorted set: the facet joints inside the span, both endpoints and the taper stations, in
+    // ascending order with exact duplicates dropped.
     let mut stations: Vec<f64> = distances
         .iter()
         .copied()
@@ -142,9 +142,10 @@ pub fn try_create(
     }
     distinct_stations.push(last);
     for &distance in &distinct_stations {
-        // C#'s `Array.FindLastIndex` gives -1 for a station before the run's first joint, which
-        // C# then indexes with and throws; the station is read on the first segment instead
-        // (divergence 4915).
+        // A start tip can sit a rounding error before the run's first joint (the walk and the sweep
+        // add the same chords in opposite orders) and find no segment. It is on the run by
+        // construction, so it is read on the first segment, where `t` comes out a hair below zero
+        // and the tip lands where it was meant to.
         let found = distances.iter().rposition(|&d| d <= distance).unwrap_or(0);
         let segment = last_segment.min(found);
         let t = (distance - distances[segment]) / swept[segment].length;

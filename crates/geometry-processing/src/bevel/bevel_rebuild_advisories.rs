@@ -1,6 +1,5 @@
 //! Everything a bevel rebuild has to SAY about itself: the repair the working mesh needed, plus
-//! each place the rebuild succeeded while quietly delivering less than the user asked for. Ports
-//! `Bevel/BevelRebuildAdvisories.cs`.
+//! each place the rebuild succeeded while quietly delivering less than the user asked for.
 //!
 //! The list exists because of one failure mode that is worse than a failed rebuild: a rebuild
 //! that reports success and hands back a part which is not the part that was asked for. Every
@@ -21,7 +20,7 @@
 
 use super::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `BevelRebuildAdvisories` (an `internal sealed class`).
+/// The advisories one rebuild has gathered, in the order they were raised.
 #[derive(Debug, Clone, Default)]
 pub struct BevelRebuildAdvisories {
     messages: Vec<BevelAdvisory>,
@@ -33,10 +32,10 @@ pub struct BevelRebuildAdvisories {
 }
 
 impl BevelRebuildAdvisories {
-    /// Starts from whatever repairing the working mesh had to report (`BevelWorkingMesh.CreateFrom`;
-    /// `None` is C#'s null, nothing), which travels with the rebuild for the same reason everything
-    /// else here does: the repair is made on a copy and never on the design, so this is the only
-    /// trace of it the user ever gets.
+    /// Starts from whatever repairing the working mesh had to report
+    /// (`BevelWorkingMesh.CreateFrom`; `None` for nothing), which travels with the rebuild for the
+    /// same reason everything else here does: the repair is made on a copy and never on the design,
+    /// so this is the only trace of it the user ever gets.
     pub fn new<I: IntoIterator<Item = BevelAdvisory>>(source_advisories: Option<I>) -> Self {
         Self {
             messages: source_advisories

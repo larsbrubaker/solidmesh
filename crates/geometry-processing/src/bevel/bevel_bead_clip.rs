@@ -1,12 +1,11 @@
-//! Trimming a concave run's bead to the part plus the voids it may fill (`Bevel/BevelBeadClip.cs`,
-//! a C# `internal static class`, so a module here): the per-rebuild count of which route each
-//! chain's trim took ([`Tally`]) and one chain's bead with everything it may occupy
-//! ([`Clippable`]), the trims, and the whole clip ([`apply_all`]); `BevelBeadBatch` is what
+//! Trimming a concave run's bead to the part plus the voids it may fill: the per-rebuild count of
+//! which route each chain's trim took ([`Tally`]) and one chain's bead with everything it may
+//! occupy ([`Clippable`]), the trims, and the whole clip ([`apply_all`]); `BevelBeadBatch` is what
 //! gathers the [`Clippable`]s.
 //!
-//! C# asks whether a bead is already going on whole by REFERENCE (`AlreadyGoingOnWhole`); the
-//! beads here are owned values, so the driver keeps the index of each clippable it sent on whole in
-//! the first pass and asks that instead ([`already_going_on_whole`]).
+//! The beads are owned values, so to know whether a bead is already going on whole the driver keeps
+//! the index of each clippable it sent on whole in the first pass and asks that instead
+//! ([`already_going_on_whole`]).
 
 use std::rc::Rc;
 
@@ -20,15 +19,14 @@ use super::{
     BevelRebuildAdvisories,
 };
 
-/// The rebuild's batched boolean the bead and cap clips run through (C#'s injected
-/// `Func<List<(Mesh, Matrix4X4)>, CsgModes, Task<Mesh>> combineAsync`): synchronous, inside the
-/// bevel's compute job, per the bevel-core decision; cancellation comes back as
-/// [`BooleanError::Cancelled`].
+/// The rebuild's batched boolean the bead and cap clips run through, injected by the caller:
+/// synchronous, inside the bevel's compute job, per the bevel-core decision; cancellation comes
+/// back as [`BooleanError::Cancelled`].
 pub type CombineMeshes<'a> =
     dyn Fn(&[(Mesh, Matrix4X4)], CsgModes) -> Result<Mesh, BooleanError> + 'a;
 
-/// C# `BevelBeadClip.Tally`: which chain's bead was actually trimmed to over one rebuild - the
-/// corner's, its own wedge's, or none at all.
+/// Which chain's bead was actually trimmed to over one rebuild - the corner's, its own wedge's, or
+/// none at all.
 ///
 /// Kept because the difference is invisible in the result and matters: a chain that falls back
 /// to the wedge alone produces exactly the shape that shipped before the corner void existed.
@@ -47,9 +45,9 @@ pub struct Tally {
     pub unclipped: i32,
 }
 
-/// C# `BevelBeadClip.Clippable`: one chain's bead and everything it may fill - its own void
-/// wedge, the void of each 5.3 corner it overshoots into, and the wedge to fall back to when the
-/// kernel will not build the keep-set those corners belong to.
+/// One chain's bead and everything it may fill - its own void wedge, the void of each 5.3 corner it
+/// overshoots into, and the wedge to fall back to when the kernel will not build the keep-set those
+/// corners belong to.
 ///
 /// A named shape rather than a tuple because the corner voids and the fallback wedge only make
 /// sense together: a fallback wedge exists exactly where corner voids do.
@@ -62,7 +60,7 @@ pub struct Clippable {
     pub wedge: Mesh,
     /// The void of each 5.3 corner this chain overshoots into, or `None` where it reaches none.
     /// Shared (`Rc`): every bead meeting at a corner holds the SAME void, and the corner pieces
-    /// group the beads by that identity (C# reads it by reference), never by geometry.
+    /// group the beads by that identity, never by geometry.
     pub corner_voids: Option<Vec<Rc<Mesh>>>,
     /// The same wedge swept along the overshoot instead of squared (`BevelTool.FallbackWedge`),
     /// or `None` where there was nothing to square.
@@ -74,7 +72,7 @@ pub struct Clippable {
 }
 
 impl Tally {
-    /// C#'s constructor.
+    /// A tally from its three counts.
     pub fn new(to_the_corner: i32, to_the_wedge: i32, unclipped: i32) -> Self {
         Tally {
             to_the_corner,
@@ -85,8 +83,8 @@ impl Tally {
 }
 
 impl Clippable {
-    /// C#'s constructor; the optional corner voids, fallback wedge and exit planes are `None` for
-    /// C#'s defaults.
+    /// A bead and its wedge; the optional corner voids, fallback wedge and exit planes start as
+    /// `None`.
     pub fn new(
         bead: Mesh,
         wedge: Mesh,
@@ -109,8 +107,8 @@ pub fn is_usable_keep_set(keep: Option<&Mesh>) -> bool {
     keep.is_some_and(|keep| !keep.vertices.is_empty() && keep.is_manifold())
 }
 
-/// The combiner's answer as C# reads it: a cancel passes up, any other refusal (C#'s caught
-/// `InvalidOperationException`s: a partial union, a rejected import, a kernel error) is no mesh.
+/// The combiner's answer as the clips read it: a cancel passes up, any other refusal (a partial
+/// union, a rejected import, a kernel error) is no mesh.
 fn combined(
     combine: &CombineMeshes<'_>,
     operands: &[(Mesh, Matrix4X4)],
@@ -124,7 +122,7 @@ fn combined(
 }
 
 /// The pieces as one solid: a lone piece as it is, several by a union, `None` where the kernel
-/// refuses the union or its answer is no usable operand (C# `JoinAsync`).
+/// refuses the union or its answer is no usable operand.
 pub fn join(pieces: Vec<Mesh>, combine: &CombineMeshes<'_>) -> Result<Option<Mesh>, BooleanError> {
     if pieces.len() == 1 {
         return Ok(pieces.into_iter().next());
@@ -139,8 +137,8 @@ pub fn join(pieces: Vec<Mesh>, combine: &CombineMeshes<'_>) -> Result<Option<Mes
 }
 
 /// The bead trimmed to the part and the voids it may fill, bounded by the part's own padded hull
-/// built here (C# `ClipToAsync`; `exit_planes` is C#'s optional, `None` by default).
-#[allow(clippy::too_many_arguments)] // C#'s signature.
+/// built here (`exit_planes` is optional: `None` for none).
+#[allow(clippy::too_many_arguments)] // each argument is a separate input.
 pub fn clip_to(
     working_mesh: &Mesh,
     item_matrix: Matrix4X4,
@@ -163,8 +161,8 @@ pub fn clip_to(
 
 /// The bead trimmed to the KEEP SET - the part unioned with the voids the bead may fill - and to
 /// the source hull and exit planes; `None` where the kernel will not build the keep set or it is
-/// unusable (C# `ClipToBoundedAsync`).
-#[allow(clippy::too_many_arguments)] // C#'s signature.
+/// unusable.
+#[allow(clippy::too_many_arguments)] // each argument is a separate input.
 pub fn clip_to_bounded(
     working_mesh: &Mesh,
     item_matrix: Matrix4X4,
@@ -201,8 +199,8 @@ pub fn clip_to_bounded(
 
 /// The solid intersected with the keep set, with the source hull where the solid reaches past it,
 /// and with the inside of each exit plane; `None` where the kernel refuses or the answer is no
-/// usable operand (C# `IntersectAsync`).
-#[allow(clippy::too_many_arguments)] // C#'s signature.
+/// usable operand.
+#[allow(clippy::too_many_arguments)] // each argument is a separate input.
 pub fn intersect(
     solid: &Mesh,
     solid_matrix: Matrix4X4,
@@ -278,10 +276,10 @@ pub fn cap_to_the_hull(
     Ok(())
 }
 
-/// C# `ApplyAllAsync`: every clippable bead trimmed (corners first, then each bead to its corners,
-/// its own corner pieces or its wedge, and the batch joined - or, where the batch will not join,
-/// every bead again without its corners), then every bead going on whole capped to the part's
-/// padded hull. Returns the clipped meshes and the tally. A cancel passes up.
+/// Every clippable bead trimmed (corners first, then each bead to its corners, its own corner
+/// pieces or its wedge, and the batch joined - or, where the batch will not join, every bead again
+/// without its corners), then every bead going on whole capped to the part's padded hull. Returns
+/// the clipped meshes and the tally. A cancel passes up.
 #[allow(clippy::too_many_arguments)]
 pub fn apply_all(
     working_mesh: &Mesh,
@@ -316,10 +314,10 @@ pub fn apply_all(
     Ok(applied)
 }
 
-/// C# `ApplyEachAsync`: the corners' shared pieces first, then each bead trimmed to its corners
-/// (where it kept them), to its own corner pieces, or to its wedge - and where none of those go,
-/// sent on whole (and advised once); the batch joined into one solid where any corner was kept, or
-/// every bead trimmed again without corners where the batch will not join.
+/// The corners' shared pieces first, then each bead trimmed to its corners (where it kept them), to
+/// its own corner pieces, or to its wedge - and where none of those go, sent on whole (and advised
+/// once); the batch joined into one solid where any corner was kept, or every bead trimmed again
+/// without corners where the batch will not join.
 #[allow(clippy::too_many_arguments)]
 pub fn apply_each(
     working_mesh: &Mesh,
@@ -457,10 +455,10 @@ pub fn apply_each(
     Ok((second, Tally::new(0, count, unclipped + gave_up)))
 }
 
-/// C# `WithoutCornersAsync`: every bead not already going on whole trimmed to its fallback wedge
-/// (or its wedge) alone; one the kernel will not trim goes on whole (and is advised once). Returns
-/// the trimmed beads and how many gave up. `went_on_whole` names, by index, the clippables the
-/// first pass already sent on whole (C#'s `AlreadyGoingOnWhole` by reference).
+/// Every bead not already going on whole trimmed to its fallback wedge (or its wedge) alone; one
+/// the kernel will not trim goes on whole (and is advised once). Returns the trimmed beads and how
+/// many gave up. `went_on_whole` names, by index, the clippables the first pass already sent on
+/// whole.
 #[allow(clippy::too_many_arguments)]
 pub fn without_corners(
     working_mesh: &Mesh,
@@ -510,13 +508,12 @@ pub fn without_corners(
     Ok((clipped, gave_up))
 }
 
-/// C# `AlreadyGoingOnWhole`: whether clippable `index`'s bead is already in the beads going on
-/// whole - read off the indices the first pass sent there, where C# compares references.
+/// Whether clippable `index`'s bead is already in the beads going on whole - read off the indices
+/// the first pass sent there.
 ///
-/// The difference: C#'s reference test would also find a bead the CALLER had put in
-/// `beadsGoingOnWhole` before the clip ran; this knows only the beads the first pass sent there.
-/// The batch never lists one bead both ways (a bead is clippable or goes on whole), so the two
-/// agree for every caller there is.
+/// It knows only the beads the first pass sent there, not one a caller had put in the whole beads
+/// before the clip ran. The batch never lists one bead both ways (a bead is clippable or goes on
+/// whole), so that is every bead there can be.
 pub fn already_going_on_whole(went_on_whole: &[bool], index: usize) -> bool {
     went_on_whole.get(index).copied().unwrap_or(false)
 }

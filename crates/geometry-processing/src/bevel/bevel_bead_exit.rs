@@ -1,8 +1,7 @@
-//! Where a BEAD's run leaves its end vertex through a face of the part it does not own
-//! (`Bevel/BevelBeadExit.cs`, a static class: free functions here): the exit planes a bead is
-//! clipped to so it adds no material past them. Reading the exits off the faces at the end vertex
-//! and gathering a run's two ends' exits land here, with the half-space inside an exit plane
-//! ([`inside`]).
+//! Where a BEAD's run leaves its end vertex through a face of the part it does not own: the exit
+//! planes a bead is clipped to so it adds no material past them. Reading the exits off the faces at
+//! the end vertex and gathering a run's two ends' exits land here, with the half-space inside an
+//! exit plane ([`inside`]).
 
 use vector_math::{math_helper, Vector3};
 
@@ -23,9 +22,8 @@ pub fn minimum_agreement() -> f64 {
 const SAME_PLANE: f64 = 1e-9;
 
 /// The faces the run leaves its end vertex (at `position`, running `outward`) through: every face
-/// of the `incident` feature edges that is neither of the run's own two faces and faces the way
-/// out by more than [`minimum_agreement`], each plane once. `None` (C#'s null) where there are
-/// none.
+/// of the `incident` feature edges that is neither of the run's own two faces and faces the way out
+/// by more than [`minimum_agreement`], each plane once. `None` where there are none.
 pub fn faces_the_run_leaves_through(
     incident: &[i32],
     features: &FeatureEdgeSet,
@@ -75,8 +73,8 @@ pub fn already_have(exits: Option<&[BevelEndCap]>, normal: Vector3) -> bool {
     })
 }
 
-/// Both ends' exit planes together (start first), or `None` where neither end has any. C#'s null
-/// `ends` is `None`.
+/// Both ends' exit planes together (start first), or `None` where neither end has any or `ends` is
+/// `None`.
 pub fn of(ends: Option<&BevelChainEnds>) -> Option<Vec<BevelEndCap>> {
     let ends = ends?;
 

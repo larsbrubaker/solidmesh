@@ -1,7 +1,6 @@
-//! The RINGS half of the chain sweep (`Bevel/BevelChainSweep.Rings.cs`, part of the C#
-//! `internal static partial class BevelChainSweep`): carrying a corner's seam onto an end ring
-//! ([`carry`]), the mitred ring at a joint ([`try_build_joint`]), every ring of a run
-//! ([`try_build_rings`]) and how far two segments' profiles differ ([`profile_deviation`]).
+//! The RINGS half of the chain sweep: carrying a corner's seam onto an end ring ([`carry`]), the
+//! mitred ring at a joint ([`try_build_joint`]), every ring of a run ([`try_build_rings`]) and how
+//! far two segments' profiles differ ([`profile_deviation`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -132,8 +131,8 @@ pub fn try_build_joint(
 
         ring.push(after.from + placed);
 
-        // Reaching the joint drags each strip along its own segment by this much. The caller
-        // sizes both slides before the joints are built (C# reads them unguarded).
+        // Reaching the joint drags each strip along its own segment by this much. The caller sizes
+        // both slides before the joints are built, so they are read unguarded here.
         let end_slide = (placed - before.offset(point)).dot(before.direction);
         let start_slide = (placed - after.offset(point)).dot(after.direction);
         before

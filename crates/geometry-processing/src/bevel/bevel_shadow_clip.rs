@@ -1,11 +1,10 @@
-//! The column a cutter must not reach into above a face something stands on
-//! (`Bevel/BevelShadowClip.cs`, a C# `internal static class`, so a module here): one obstructed
-//! face of one selected edge ([`Obstruction`]), recorded by `BevelFaceFit` when it admitted the
-//! group, with its constructors, the class's constants and the column's small readings (whether a
-//! face stands clear of the plane, how far it stands on it, a polygon cut to a half space) and the
-//! columns themselves ([`build`]): each obstruction's standing material, flattened into the band,
-//! unioned into a footprint and extruded up the obstruction's height - with its shadow body where
-//! asked for.
+//! The column a cutter must not reach into above a face something stands on: one obstructed face of
+//! one selected edge ([`Obstruction`]), recorded by `BevelFaceFit` when it admitted the group, with
+//! its constructors, the class's constants and the column's small readings (whether a face stands
+//! clear of the plane, how far it stands on it, a polygon cut to a half space) and the columns
+//! themselves ([`build`]): each obstruction's standing material, flattened into the band, unioned
+//! into a footprint and extruded up the obstruction's height - with its shadow body where asked
+//! for.
 
 use agg_path::clipper6::{IntPoint as Point64, Path as Path64, Paths as Paths64};
 use agg_path::clipper_library::clipper_statics;
@@ -31,9 +30,8 @@ pub const IN_FRONT_OF_THE_FACE: f64 = 4.0 * 1.192092896e-7;
 /// The scale the column's outline is taken to integers at for the polygon clipper.
 pub const CLIPPER_SCALE: f64 = 1000.0;
 
-/// C# `BevelShadowClip.Obstruction`: one face of one selected edge that something is standing
-/// on - what `BevelFaceFit` recorded when it admitted the group, and everything the clip needs to
-/// draw the column.
+/// One face of one selected edge that something is standing on - what `BevelFaceFit` recorded when
+/// it admitted the group, and everything the clip needs to draw the column.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Obstruction {
     /// The obstructed face's outward normal, which is the direction the shadow is cast along.
@@ -66,8 +64,8 @@ pub struct Obstruction {
 }
 
 impl Obstruction {
-    /// C#'s constructor (its optional `roundRadius = 0` passed explicitly).
-    #[allow(clippy::too_many_arguments)] // C#'s constructor: one field per argument.
+    /// An obstruction from its parts (`round_radius` is 0 for a flat one).
+    #[allow(clippy::too_many_arguments)] // one field per argument.
     pub fn new(
         plane_normal: Vector3,
         plane_distance: f64,
@@ -170,8 +168,8 @@ pub fn clip_to_half_space(polygon: &[Vector3], normal: Vector3, distance: f64) -
 }
 
 /// The columns (and, with `include_bodies`, the shadow bodies) a cutter must not reach into above
-/// the obstructions, each a usable operand, with how many bodies were added. C#'s optional
-/// `bodyClearanceMultiplier = 1` is passed explicitly; Clipper's exceptions come back as the error.
+/// the obstructions, each a usable operand, with how many bodies were added.
+/// `body_clearance_multiplier` is normally 1; Clipper's failures come back as the error.
 pub fn build(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -253,7 +251,7 @@ pub fn build(
                 continue;
             }
 
-            // C#'s `new IntPoint(double, double)` truncates toward zero.
+            // Truncated toward zero onto Clipper's integer grid.
             let flattened: Path64 = polygon
                 .iter()
                 .map(|&vertex| {
@@ -308,7 +306,7 @@ pub fn build(
 }
 
 /// The faces reached from the obstruction's seed face across its edges while each stands clear of
-/// the obstruction's plane, in the order reached (C#'s insertion-ordered `HashSet<int>`).
+/// the obstruction's plane, in the order reached.
 pub fn standing_material(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,

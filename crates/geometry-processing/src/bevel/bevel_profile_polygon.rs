@@ -1,6 +1,5 @@
 //! The plane-polygon arithmetic every swept section's CROSS SECTION needs: which way it is wound,
-//! and how to cap it with triangles. Ports `Bevel/BevelProfilePolygon.cs` (a C# `internal static
-//! class`, so a module of free functions here).
+//! and how to cap it with triangles.
 //!
 //! Separate from the sweep because three different builders cap the same shape - the chain
 //! sweep's own square ends, the tapered runout's, and `BevelPartneredBeadSection`'s stations - and
@@ -17,9 +16,8 @@ use vector_math::Vector2;
 /// Shared with `BevelPartneredBead`, which caps its own stations and has exactly the same polygon
 /// to cap: simple, wound the same way, and reflex where the arc turns back.
 ///
-/// C# hands back the partial triangle list alongside `false`; every caller drops it, so a refusal
-/// here is `None`. Fewer than two points is `None` too, where C# throws from the list's negative
-/// capacity (divergence 410).
+/// A refusal is `None`: no caller has a use for a partial triangle list. Fewer than three points is
+/// `None` too, since no polygon that small can be capped.
 pub fn try_triangulate(polygon: &[Vector2]) -> Option<Vec<i32>> {
     if polygon.len() < 3 {
         return None;
@@ -29,8 +27,7 @@ pub fn try_triangulate(polygon: &[Vector2]) -> Option<Vec<i32>> {
     let mut remaining: Vec<i32> = (0..polygon.len() as i32).collect();
 
     // Each pass either clips an ear or the polygon is not simple; the guard is what stops a bad
-    // profile spinning here rather than failing. C# `attemptsLeft-- > 0` tests before the
-    // decrement, which the explicit check below keeps.
+    // profile spinning here rather than failing. The count is tested before it is decremented.
     let mut attempts_left = (polygon.len() * polygon.len()) as i64;
 
     while remaining.len() > 3 && {
@@ -81,8 +78,8 @@ fn is_ear(polygon: &[Vector2], remaining: &[i32], previous: i32, current: i32, n
 
     let area = cross(b - a, c - a);
 
-    // Reflex (or collinear) in a counter clockwise polygon, so not an ear. Written as C#'s
-    // `area <= 0` refusal, so a NaN area is (as there) not refused here.
+    // Reflex (or collinear) in a counter clockwise polygon, so not an ear. Written as an `area <=
+    // 0` refusal, so a NaN area is not refused here.
     if area <= 0.0 {
         return false;
     }

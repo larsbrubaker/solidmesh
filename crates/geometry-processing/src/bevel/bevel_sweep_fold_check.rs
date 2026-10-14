@@ -1,6 +1,6 @@
-//! Whether a swept tool FOLDS at the size it was asked for (`Bevel/BevelSweepFoldCheck.cs`, a
-//! static class: one function here, [`try_check_for_folds`]): a joint or a cap that drags a strip
-//! back further than its segment (or a capped straight run) is long turns that strip inside out.
+//! Whether a swept tool FOLDS at the size it was asked for ([`try_check_for_folds`]): a joint or a
+//! cap that drags a strip back further than its segment (or a capped straight run) is long turns
+//! that strip inside out.
 
 use vector_math::{cs_math, Vector3};
 

@@ -1,7 +1,7 @@
-//! Linking a group's selected edges into the runs a single swept tool is built along
-//! (`Bevel/BevelChainLinker.cs`): one such run ([`BevelSweptChain`]) and the linking - walking
-//! the selected edges into runs ([`link`], [`link_resolution`]), and splitting a run where its
-//! convexity turns over ([`split_by_convexity`]) or where one mitred sweep cannot carry it
+//! Linking a group's selected edges into the runs a single swept tool is built along: one such run
+//! ([`BevelSweptChain`]) and the linking - walking the selected edges into runs ([`link`],
+//! [`link_resolution`]), and splitting a run where its convexity turns over
+//! ([`split_by_convexity`]) or where one mitred sweep cannot carry it
 //! ([`split_where_the_mitre_cannot_fit`]).
 
 use std::collections::HashMap;
@@ -13,8 +13,8 @@ use super::bevel_chain_sweep_sections::try_build_segments;
 use super::{bevel_mitre_fit, bevel_sweep_back_depth};
 use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge};
 
-/// C# `BevelSweptChain`: one run of edges a single swept tool is built along - the edges head to
-/// tail, and whether the run closes on itself.
+/// One run of edges a single swept tool is built along - the edges head to tail, and whether the
+/// run closes on itself.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BevelSweptChain {
     /// The edges in sweep order, each oriented along the sweep so consecutive edges meet head to
@@ -26,7 +26,7 @@ pub struct BevelSweptChain {
 }
 
 impl BevelSweptChain {
-    /// C#'s constructor.
+    /// A run of `edges`, closed into a loop or not.
     pub fn new(edges: Vec<ChainEdge>, is_closed: bool) -> Self {
         BevelSweptChain { edges, is_closed }
     }
@@ -236,7 +236,7 @@ pub fn add_incidence(at_vertex: &mut HashMap<i32, Vec<i32>>, vertex: i32, edge_i
 
 /// `chain` split where a single mitred sweep cannot carry it - or kept whole at a shallower back
 /// depth where that alone lets every joint fit - and that back depth (zero where none was needed).
-/// C#'s two overloads; the short one is [`split_where_the_mitre_cannot_fit`].
+/// The short form is [`split_where_the_mitre_cannot_fit`].
 pub fn split_where_the_mitre_cannot_fit_with_depth(
     chain: BevelSweptChain,
     size: f64,

@@ -1,7 +1,6 @@
-//! Plan 5.3's hardest corner, found and named rather than silently mis-built
-//! (`Bevel/BevelMixedCorners.cs`, a C# `internal static class`, so a module here): a vertex where
-//! FOUR or more selected edges meet and they are not all the same convexity, so cuts and beads
-//! have to interact there and more than one construction could claim the corner.
+//! Plan 5.3's hardest corner, found and named rather than silently mis-built: a vertex where FOUR
+//! or more selected edges meet and they are not all the same convexity, so cuts and beads have to
+//! interact there and more than one construction could claim the corner.
 //!
 //! **What is and is not handled, per the plan's resolved decision.** TWO selected edges of mixed
 //! convexity meeting at a vertex - the L bracket's ends, one cut chain running into one bead
@@ -47,8 +46,8 @@ use crate::topology::{BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge};
 /// docs.
 const MINIMUM_EDGES_TO_WARN_ABOUT: i32 = 4;
 
-/// C# `CappedCorner`: the line a mixed corner that nothing rounded has to carry - how many
-/// selected edges of both kinds meet there, where, and that the join is left square.
+/// The line a mixed corner that nothing rounded has to carry - how many selected edges of both
+/// kinds meet there, where, and that the join is left square.
 ///
 /// One sentence in one place, because a user reading a group's row cannot tell - and should not
 /// have to - which part of the build found the corner. `BevelMixedBlends` says this same line at a
@@ -61,12 +60,12 @@ pub fn capped_corner(edge_count: i32, position: Vector3) -> BevelAdvisory {
     )
 }
 
-/// C# `Describe`: the warnings per group, in the resolutions' own order, or `None` for a group
-/// with no such corner on it. A corner says two things - the capped line and the reason - and both
-/// go to every group at it.
+/// The warnings per group, in the resolutions' own order, or `None` for a group with no such corner
+/// on it. A corner says two things - the capped line and the reason - and both go to every group at
+/// it.
 pub fn describe(resolutions: &[BevelEdgeGroupResolution]) -> Vec<Option<Vec<BevelAdvisory>>> {
     let mut warnings: Vec<Option<Vec<BevelAdvisory>>> = vec![None; resolutions.len()];
-    // C#'s Dictionary, read back in insertion order: the order the lines reach each group's row.
+    // Read back in insertion order: the order the lines reach each group's row.
     let mut at_vertex: IndexMap<i32, Corner> = IndexMap::new();
 
     for (group_index, resolution) in resolutions.iter().enumerate() {
@@ -118,7 +117,7 @@ fn record(
         .add(edge, group_index);
 }
 
-/// C# `Corner`: what has been selected at one mesh vertex so far.
+/// What has been selected at one mesh vertex so far.
 struct Corner {
     groups: IndexSet<usize>,
     mesh_edges: IndexSet<i32>,

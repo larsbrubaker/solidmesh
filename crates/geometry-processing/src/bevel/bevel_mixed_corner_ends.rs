@@ -1,5 +1,5 @@
 //! What one selection put at one mesh vertex: which feature edges end there and which rows of the
-//! group list each of them was picked into. Ports `Bevel/BevelMixedCornerEnds.cs`.
+//! group list each of them was picked into.
 //!
 //! Read once, across every group at a time ([`BevelMixedCornerEnds::collect`]), because a vertex
 //! does not care which group each edge came from - a cut and a bead meeting at one are usually two
@@ -15,7 +15,7 @@ use vector_math::Vector3;
 
 use crate::topology::{BevelEdgeGroupResolution, FeatureEdge};
 
-/// C# `BevelMixedCornerEnds`.
+/// One vertex where selected edges end, with the groups each edge there was picked into.
 #[derive(Debug, Clone)]
 pub struct BevelMixedCornerEnds {
     /// The mesh vertex this corner is, which is how a chain end recognizes it.
@@ -55,8 +55,8 @@ impl BevelMixedCornerEnds {
     /// through this corner rather than two runs ending at it - see `BevelMixedBlends` for why a
     /// blend cannot be built over that.
     ///
-    /// An edge that does not end here shares nothing (`false`), where C# indexes the list at -1
-    /// and throws (divergence 411).
+    /// An edge that does not end here is in no group here, so it shares nothing (`false`) rather
+    /// than reading a group list it does not have.
     pub fn shares_a_group(&self, first: &FeatureEdge, second: &FeatureEdge) -> bool {
         let Some(for_first) = self.groups_of(first.mesh_edge_index) else {
             return false;
@@ -106,11 +106,11 @@ impl BevelMixedCornerEnds {
         }
     }
 
-    /// Every vertex where selected edges end, in the order C#'s `Dictionary.Values` lists them
-    /// (first recorded first). An edge picked into two groups is counted once; both pickings ask
-    /// for the same ball, because the operation has only one size.
+    /// Every vertex where selected edges end, first recorded first. An edge picked into two groups
+    /// is counted once; both pickings ask for the same ball, because the operation has only one
+    /// size.
     ///
-    /// `eligible` is read at every resolution's index, as C# does; it must be at least as long.
+    /// `eligible` is read at every resolution's index, so it must be at least as long.
     pub fn collect(
         resolutions: &[BevelEdgeGroupResolution],
         eligible: &[bool],

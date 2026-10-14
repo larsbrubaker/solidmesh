@@ -1,6 +1,5 @@
-//! Which concave runs a bead has to stay out of (`Bevel/BevelRunPartners.cs`, a static class):
-//! every other concave run that shares an END with this one, read as the straight tube its ball
-//! sweeps ([`BevelPartnerTube`]).
+//! Which concave runs a bead has to stay out of: every other concave run that shares an END with
+//! this one, read as the straight tube its ball sweeps ([`BevelPartnerTube`]).
 
 use std::collections::HashSet;
 
@@ -9,15 +8,15 @@ use vector_math::Vector3;
 
 use super::{BevelPartnerTube, BevelSweptChain};
 
-/// C# `StraightWithinDegrees`: how far a run's edges may turn and still be one straight tube.
+/// How far a run's edges may turn and still be one straight tube.
 pub const STRAIGHT_WITHIN_DEGREES: f64 = 0.1;
 
-/// C# `For`: the tubes of every run in `concave_runs` (other than `chain` itself, by identity)
-/// that shares an end with `chain`, and how many such runs were skipped because they turn.
+/// The tubes of every run in `concave_runs` (other than `chain` itself, by identity) that shares an
+/// end with `chain`, and how many such runs were skipped because they turn.
 ///
-/// `chain` must be an ELEMENT of `concave_runs` (a reference into that slice) for it to be
-/// skipped as itself: C#'s `ReferenceEquals(other, chain)` is `std::ptr::eq` here, so a copy of
-/// the chain would not be recognised and would count as its own partner.
+/// `chain` must be an ELEMENT of `concave_runs` (a reference into that slice) for it to be skipped
+/// as itself: it is recognised by address (`std::ptr::eq`), so a copy of the chain would not be
+/// recognised and would count as its own partner.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn for_chain(
     chain: &BevelSweptChain,
@@ -61,8 +60,8 @@ pub fn for_chain(
     (tubes, skipped_for_turning)
 }
 
-/// C# `TryBallCentreLine`: the line a ball of radius `size` rolling along a straight concave run
-/// centres on - `(axis_point, direction)` - or `None` for a run that turns or a wedge too open.
+/// The line a ball of radius `size` rolling along a straight concave run centres on - `(axis_point,
+/// direction)` - or `None` for a run that turns or a wedge too open.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_ball_centre_line(chain: &BevelSweptChain, size: f64) -> Option<(Vector3, Vector3)> {
     if chain.edges.is_empty() || !(size > 0.0) {

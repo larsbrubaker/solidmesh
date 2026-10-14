@@ -1,23 +1,21 @@
-//! Which of the two constructions of a bevel builds it: the solid tools and booleans that
-//! shipped first, or the direct rewrite of the surface that replaces them. Ports
-//! `Bevel/BevelConstructionMode.cs`.
+//! Which of the two constructions of a bevel builds it: the solid tools and booleans that shipped
+//! first, or the direct rewrite of the surface that replaces them.
 //!
 //! The enum exists so the test ladder can run every rung in BOTH constructions until the new one
 //! carries the whole corpus; it and `Boolean` are deleted together at the end of the
 //! polygon-space bevel plan, and nothing outside that plan should grow a dependency on being able
 //! to choose.
 //!
-//! Serialized by NAME rather than by ordinal (C# `StringEnumConverter`), so a member added in the
-//! middle later does not re-interpret the bevels already saved in people's files - the same rule
-//! `BevelSelectionKind` carries, for the same reason. serde's default unit-variant form is the
-//! variant name, which is what Newtonsoft writes.
+//! Serialized by NAME rather than by ordinal, so a member added in the middle later does not
+//! re-interpret the bevels already saved in people's files - the same rule `BevelSelectionKind`
+//! carries, for the same reason. serde's default unit-variant form is the variant name, which is
+//! what Newtonsoft writes.
 
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-/// C# `BevelConstructionMode`. `Default` is C#'s `default(BevelConstructionMode)`, the first
-/// member.
+/// Which construction builds a bevel. `Default` is the first member.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum BevelConstructionMode {
     /// Sweep a solid tool per chain - a cutter for a convex edge, a bead for a concave one - and
@@ -34,7 +32,7 @@ pub enum BevelConstructionMode {
 }
 
 impl fmt::Display for BevelConstructionMode {
-    /// The member name, as C# `Enum.ToString` prints it.
+    /// The member name, the same text the setting is saved as.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             BevelConstructionMode::Boolean => f.write_str("Boolean"),

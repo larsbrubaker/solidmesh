@@ -1,6 +1,6 @@
 //! What ONE merged run of the second pass is going to sweep, and which of the groups in it that
-//! sweep answers for (`Bevel/BevelSecondPassRunPlan.cs`). Built from a run as
-//! [`super::bevel_crease_merge::merge`] grouped it; `BevelSecondPass` sweeps it.
+//! sweep answers for. Built from a run as [`super::bevel_crease_merge::merge`] grouped it;
+//! `BevelSecondPass` sweeps it.
 //!
 //! **Why the first member's reading is not enough.** The crease merge is transitive: A is put
 //! with B for sharing an edge with it and C is put with them for sharing one with B, and A and C
@@ -22,7 +22,7 @@ use std::collections::HashSet;
 use super::bevel_chain_linker::{self, BevelSweptChain};
 use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge};
 
-/// C# `BevelSecondPassRunPlan`.
+/// How one merged run of the second pass is swept, and which groups' rows it answers for.
 #[derive(Debug, Clone)]
 pub struct BevelSecondPassRunPlan {
     /// The reading the sweep is built FROM: its group's own tolerances, its feature set and its
@@ -63,8 +63,7 @@ impl BevelSecondPassRunPlan {
     /// `members` is the run as the crease merge grouped it; `creases` is every group's reading on
     /// the cut part, by resolution index (`None` where there is none), and `mesh_edges_of_crease`
     /// the mesh edges of each of those readings, in the same indexing. The merge only ever puts a
-    /// group with a reading in a run; `None` comes back for a run that breaks that (C# would
-    /// dereference the missing reading).
+    /// group with a reading in a run; `None` comes back for a run that breaks that.
     pub fn for_members(
         members: &[usize],
         creases: &[Option<BevelEdgeGroupResolution>],
@@ -139,9 +138,9 @@ impl BevelSecondPassRunPlan {
 /// member read. Everyone else is named in `not_covered` and keeps the bead they have, so no member
 /// of a merged run can lose its fillet to a sweep that does not run along its crease.
 ///
-/// Returns the member whose reading is swept, the members that reading covers (it first, so the
-/// run is named by the row it was resolved from), and the members it does not. `members` must not
-/// be empty (C# reads `members[0]`); a member with no reading reads as no edges.
+/// Returns the member whose reading is swept, the members that reading covers (it first, so the run
+/// is named by the row it was resolved from), and the members it does not. `members` must not be
+/// empty (the first member is read unguarded); a member with no reading reads as no edges.
 pub fn longest_reading_and_what_it_covers(
     members: &[usize],
     mesh_edges_of_crease: &[Option<Vec<i32>>],

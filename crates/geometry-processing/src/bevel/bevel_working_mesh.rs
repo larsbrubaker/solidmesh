@@ -1,12 +1,10 @@
-//! The copy of a source mesh that a fillet or chamfer works against - welded if it needed
-//! welding, turned right way out, freed of any face folded back over itself, and never the
-//! source's own object (`Bevel/BevelWorkingMesh.cs`, a C# `internal static class`, so a module
-//! here): the remembered verdict on whether a source mesh is usable as it stands
-//! ([`StampedVerdict`], held by whoever holds the source mesh - C#'s weak table keyed by the mesh
-//! becomes an owned value passed in, per the bevel-core rule for per-object readings), carrying the
-//! working mesh into the source's placement ([`carry_into`]), the folded-flap drop, the weld the
-//! kernel needs, the shared seam and openness readings, and the working copy itself
-//! ([`create_from`], [`create_from_with_advisories`]).
+//! The copy of a source mesh that a fillet or chamfer works against - welded if it needed welding,
+//! turned right way out, freed of any face folded back over itself, and never the source's own
+//! object: the remembered verdict on whether a source mesh is usable as it stands
+//! ([`StampedVerdict`], held by whoever holds the source mesh as an owned value passed in, per the
+//! bevel-core rule for per-object readings), carrying the working mesh into the source's placement
+//! ([`carry_into`]), the folded-flap drop, the weld the kernel needs, the shared seam and openness
+//! readings, and the working copy itself ([`create_from`], [`create_from_with_advisories`]).
 
 use std::collections::{HashMap, HashSet};
 
@@ -35,9 +33,9 @@ pub const SEAM_TOLERANCE_OF_THE_PARTICULAR_PART: f64 = 1e-5;
 /// The scale is a trade, not a proof: 1.5 mm on a part three metres across.
 pub const SEAM_EPSILON_OF_THE_PARTICULAR_PART: f64 = 5e-4;
 
-/// C# `BevelWorkingMesh.StampedVerdict`: whether a source mesh can be used without the weld
-/// repair, stamped with the mesh's `changed_count` when the verdict was taken, so a mesh edited
-/// in place answers afresh rather than from a verdict about what it used to be.
+/// Whether a source mesh can be used without the weld repair, stamped with the mesh's
+/// `changed_count` when the verdict was taken, so a mesh edited in place answers afresh rather than
+/// from a verdict about what it used to be.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct StampedVerdict {
     /// The source mesh's `changed_count` when the verdict was taken, or `None` on a fresh entry.
@@ -63,8 +61,7 @@ pub fn carry_into(working_mesh: &mut Mesh, matrix: Matrix4X4) {
     }
 }
 
-/// Reverses every face's winding. (C# first rewrites each face with its own corners and normal,
-/// an identity copy of a value type, so only the reversal does anything.)
+/// Reverses every face's winding.
 pub fn turn_right_way_out(working_mesh: &mut Mesh) {
     working_mesh.reverse_faces();
 }
@@ -72,7 +69,7 @@ pub fn turn_right_way_out(working_mesh: &mut Mesh) {
 /// Drops every pair of faces on the same three vertices wound opposite ways - a flap folded back
 /// over itself - where cancelling them leaves no edge open; returns how many pairs went.
 pub fn folded_flaps_dropped(mesh: &mut Mesh) -> i32 {
-    // First-met order, so the pairing walks the faces as C#'s dictionary does.
+    // First-met order, so the pairing walks the faces in a fixed order.
     let mut faces_on_the_same_vertices: indexmap::IndexMap<(i32, i32, i32), Vec<usize>> =
         indexmap::IndexMap::new();
     for (face_index, face) in mesh.faces.iter().enumerate() {
@@ -242,7 +239,7 @@ pub fn welded_if_the_kernel_would_refuse_it(
     }
 
     let tolerance = seam_tolerance_for(&working_mesh);
-    // Negated so a NaN reads as no extent, as C#'s `!(tolerance > 0)`.
+    // A NaN reads as no extent, as zero does.
     if tolerance.is_nan() || tolerance <= 0.0 {
         // Nothing to scale a tolerance against, and a mesh with no extent is not one welding helps.
         return working_mesh;
@@ -278,14 +275,14 @@ pub fn seam_tolerance_for(mesh: &Mesh) -> f64 {
         * SEAM_TOLERANCE_OF_THE_PARTICULAR_PART
 }
 
-/// How far a feature edge may stand from a picked chain and still be read as that chain's own seam
-/// (C#'s `SeamEpsilonFor(Mesh)`); a mesh with no extent has no seams.
+/// How far a feature edge may stand from a picked chain and still be read as that chain's own seam;
+/// a mesh with no extent has no seams.
 pub fn seam_epsilon_for(mesh: &Mesh) -> f64 {
     seam_epsilon_of_diagonal(mesh.get_axis_aligned_bounding_box().size().length())
 }
 
-/// The same number off bare vertices (C#'s `SeamEpsilonFor(IReadOnlyList<Vector3>)`), so a caller
-/// holding the kernel's own positions reads what the app reads.
+/// The same number off bare vertices, so a caller holding the kernel's own positions reads what the
+/// app reads.
 pub fn seam_epsilon_for_positions(positions: &[Vector3]) -> f64 {
     let Some(&first) = positions.first() else {
         return 0.0;
@@ -389,18 +386,17 @@ pub fn signed_volume(mesh: &Mesh) -> f64 {
     total / 6.0
 }
 
-/// C# `CreateFrom(Mesh, CancellationToken)`: [`create_from_with_advisories`] with its advisories
-/// put aside.
+/// [`create_from_with_advisories`] with its advisories put aside.
 pub fn create_from(source_mesh: &Mesh, remembered: &mut StampedVerdict) -> Mesh {
     create_from_with_advisories(source_mesh, remembered).0
 }
 
-/// C# `CreateFrom(Mesh, CancellationToken, out IReadOnlyList<BevelAdvisory>)`: a working copy of
-/// `source_mesh` - never the source's own mesh, which a design must get back exactly as it went in -
-/// repaired if feature detection finds nothing in it, turned the right way out if it arrived inside
-/// out, and freed of folded flaps, thin slivers and T-vertex slivers; with what had to be repaired,
-/// for the caller to put in front of the user. The weld stays quiet by product decision: it changes
-/// nothing about what the part IS. `remembered` is the source's stamped verdict (C#'s weak table).
+/// A working copy of `source_mesh` - never the source's own mesh, which a design must get back
+/// exactly as it went in - repaired if feature detection finds nothing in it, turned the right way
+/// out if it arrived inside out, and freed of folded flaps, thin slivers and T-vertex slivers; with
+/// what had to be repaired, for the caller to put in front of the user. The weld stays quiet by
+/// product decision: it changes nothing about what the part IS. `remembered` is the source's
+/// stamped verdict.
 ///
 /// The split-chord pass (`BevelSplitChords`) would stand between the thin slivers and the
 /// T-vertices and is deliberately NOT called: wired in, it moved six Onshape-control pins and the

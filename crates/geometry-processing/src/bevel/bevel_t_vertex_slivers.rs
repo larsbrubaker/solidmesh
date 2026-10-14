@@ -1,7 +1,7 @@
 //! Dropping the zero-area slivers a boolean leaves over a T-junction in the input, and putting the
-//! vertex each stitched into the face whose edge it stands on (`Bevel/BevelTVertexSlivers.cs`, a
-//! C# `internal static class`, so a module here): one face's split ([`Split`]) and the repair's
-//! faces with where each came from ([`Rebuild`]), and the repair itself ([`dropped_from`]).
+//! vertex each stitched into the face whose edge it stands on: one face's split ([`Split`]) and the
+//! repair's faces with where each came from ([`Rebuild`]), and the repair itself
+//! ([`dropped_from`]).
 
 use std::collections::{HashMap, HashSet};
 
@@ -10,8 +10,7 @@ use vector_math::{cs_sort, Vector3};
 
 use super::bevel_working_mesh;
 
-/// C# `BevelTVertexSlivers.Split`: which vertices a face has to take in, and along which of its
-/// own edges.
+/// Which vertices a face has to take in, and along which of its own edges.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Split {
     /// The start of the face's edge being split, in the direction the face winds round it.
@@ -22,8 +21,7 @@ pub struct Split {
     pub middles: Vec<i32>,
 }
 
-/// C# `BevelTVertexSlivers.Rebuild`: the faces of the repair, and where each of them came from
-/// in the mesh it is replacing.
+/// The faces of the repair, and where each of them came from in the mesh it is replacing.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Rebuild {
     /// The repaired faces.
@@ -93,7 +91,7 @@ pub fn dropped_from(mesh: &mut Mesh) -> i32 {
 }
 
 impl Split {
-    /// C#'s constructor: the edge X-Y the middles go into, none yet.
+    /// The edge X-Y the middles go into, none yet.
     pub fn new(x: i32, y: i32) -> Self {
         Self {
             x,
@@ -135,7 +133,7 @@ pub fn try_plan_the_splits(
 
     for split in splits.values_mut() {
         // Met in the order they stand along the edge, so the fan lays one triangle per span and
-        // none of them crosses another. C#'s `List.Sort` (an introsort) and `double.CompareTo`.
+        // none of them crosses another. Sorted with an introsort, whose tie order is fixed.
         let (x, y) = (split.x, split.y);
         cs_sort::introspective_sort(&mut split.middles, &mut |first, second| {
             let a = along_the_edge(mesh, x, y, *first);
@@ -217,8 +215,8 @@ pub fn stands_on(from: Vector3, to: Vector3, point: Vector3, weld_distance: f64)
         && (point - to).length() > weld_distance
 }
 
-/// The vertex of a sliver standing on its own longest edge (the first of a tie, in C#'s order),
-/// or `None` where the face is no T-vertex sliver.
+/// The vertex of a sliver standing on its own longest edge (the first of a tie, so the choice is
+/// fixed), or `None` where the face is no T-vertex sliver.
 pub fn try_read_t_vertex(mesh: &Mesh, face: &Face, weld_distance: f64) -> Option<i32> {
     let p0 = at(mesh, face.v0);
     let p1 = at(mesh, face.v1);
@@ -246,7 +244,7 @@ pub fn try_read_t_vertex(mesh: &Mesh, face: &Face, weld_distance: f64) -> Option
 }
 
 impl Rebuild {
-    /// C#'s constructor.
+    /// The repair's faces and the source face each came from.
     pub fn new(faces: FaceList, source_face_index: Vec<i32>) -> Self {
         Self {
             faces,

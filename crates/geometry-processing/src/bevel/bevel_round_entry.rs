@@ -1,8 +1,8 @@
-//! Where the rolling ball enters a round while the crease is still on the flat: cuts the one
-//! crease edge that straddles that moment, so no swept segment has to stand for both sides of it
-//! at once. Ports `Bevel/BevelRoundEntry.cs`. Reads [`BevelRoundFaces`] (which faces are a
-//! round's tangent planes) and [`BevelRoundDescriptor::try_find_station`]; cuts with
-//! `FeatureEdge::over_part_of_its_length`. Its caller is `BevelChainSweep.TryCreate`.
+//! Where the rolling ball enters a round while the crease is still on the flat: cuts the one crease
+//! edge that straddles that moment, so no swept segment has to stand for both sides of it at once.
+//! Reads [`BevelRoundFaces`] (which faces are a round's tangent planes) and
+//! [`BevelRoundDescriptor::try_find_station`]; cuts with `FeatureEdge::over_part_of_its_length`.
+//! Its caller is `BevelChainSweep.TryCreate`.
 //!
 //! **The lead.** A round runs out tangentially onto a flat NOSE face, and the second pass's crease
 //! crosses that face obliquely before it ever reaches the round's own facets. The ball rolling in
@@ -61,8 +61,7 @@ const EDGE_SAMPLES: i32 = 16;
 
 /// The same chain with every edge that straddles a round's entry cut at the entry, or `None` where
 /// none does and the chain stands as it came - which is every chain whose caller has no rounds at
-/// all, and every chain that never crosses a round's tangent plane. (C# hands back the very list
-/// it was given there, and `BevelChainSweep.TryCreate` tells the two apart by reference.)
+/// all, and every chain that never crosses a round's tangent plane.
 ///
 /// `chain` is the run about to be swept, each edge oriented along the walk. `rounds` the rounds
 /// known to be in the part - cut there by the first pass, or fitted off the source mesh where the
@@ -223,8 +222,7 @@ fn pieces(edge: &ChainEdge, rounds: &BevelRoundFaces, size: f64) -> Option<Vec<C
     // coarser than the tessellation the crease is read off, which is the most that can be asked
     // of it.
     let chord = 2.0 * round.radius * (PI / round.segments as f64).sin();
-    // C# `(int)Math.Ceiling(...)`; `as` saturates where C# would be undefined on a NaN or a
-    // huge count, which only a degenerate round could produce.
+    // `as` saturates on a NaN or a huge count, which only a degenerate round could produce.
     let pieces = 1.max((((high - low) * length) / chord).ceil() as i32);
 
     let mut cuts = vec![0.0];

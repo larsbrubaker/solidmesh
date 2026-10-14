@@ -1,8 +1,8 @@
 //! Collapsing the thin slivers a boolean leaves where two of a face's corners are one point at the
-//! weld's tolerance (`Bevel/BevelThinSlivers.cs`, a C# `internal static class`, so a module here):
-//! the vertices within the weld distance of each other along a face edge are joined into one group
-//! (union-find, the lowest index naming it), each group moved to its own middle, and every face two
-//! of whose corners joined dropped - unless that would leave the mesh more open than it was.
+//! weld's tolerance: the vertices within the weld distance of each other along a face edge are
+//! joined into one group (union-find, the lowest index naming it), each group moved to its own
+//! middle, and every face two of whose corners joined dropped - unless that would leave the mesh
+//! more open than it was.
 
 use std::collections::HashMap;
 

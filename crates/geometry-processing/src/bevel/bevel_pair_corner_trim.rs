@@ -1,8 +1,7 @@
 //! The corner where two ROUND convex chains overshoot into each other across an unselected crease
 //! ([`super::BevelChainEnds::start_pair_corner`]): each cutter has its partner's rolling-ball tube
-//! taken out of it before plan 5.3's union, which turns the union of two cuts into the cut a rolling
-//! ball makes. Ports `Bevel/BevelPairCornerTrim.cs` (a C# `internal static class`, so a module of
-//! free functions here). How far the tube reaches is [`super::bevel_pair_corner_reach`]'s; which
+//! taken out of it before plan 5.3's union, which turns the union of two cuts into the cut a
+//! rolling ball makes. How far the tube reaches is [`super::bevel_pair_corner_reach`]'s; which
 //! creases it is asked at is [`super::bevel_pair_corner_crease`]'s.
 //!
 //! **What is wrong with the union alone.** 5.3's answer to two chains meeting is to let both
@@ -88,11 +87,10 @@
 //! treatment. Which is the one outcome this stage must never cause: the corner it is polishing was,
 //! until this file existed, a part that built.
 //!
-//! So every refusal is caught here - C#'s `InvalidOperationException`, the base of
-//! `PartialBooleanException` and the kernel's `MeshImportRejectedException`, which in Rust is every
-//! [`BooleanError`] but [`BooleanError::Cancelled`]. A cancellation still travels straight out to
-//! the rebuild that asked for it. (`BevelBeadClip` carries the same note for the same reason - a
-//! refused operand escaping a corner treatment was worth fixing in both places at once.)
+//! So every refusal is caught here - a partial boolean or a mesh the kernel rejected, which is
+//! every [`BooleanError`] but [`BooleanError::Cancelled`]. A cancellation still travels straight
+//! out to the rebuild that asked for it. (`BevelBeadClip` carries the same note for the same
+//! reason - a refused operand escaping a corner treatment was worth fixing in both places at once.)
 
 use std::rc::Rc;
 
@@ -105,23 +103,23 @@ use super::bevel_bead_clip::CombineMeshes;
 use super::bevel_working_mesh::is_usable_operand;
 use super::BevelChainEnds;
 
-/// C# `BevelPairCornerTrim.Candidate`: one cutter that meets another selected run over an
-/// unselected crease, as the trim stage needs it - where it sits in the batch, the tube its own
-/// ball leaves, and the corners it meets neighbours at.
+/// One cutter that meets another selected run over an unselected crease, as the trim stage needs
+/// it - where it sits in the batch, the tube its own ball leaves, and the corners it meets
+/// neighbours at.
 #[derive(Debug, Clone)]
 pub struct BevelPairCornerTrimCandidate {
     /// Where this cutter is in the builder's cutter list.
     pub cutter_index: i32,
     /// The tube this chain's rolling ball leaves, or `None` where it could not be swept - in which
     /// case this cutter can still BE trimmed, it just cannot trim anyone else. Shared (`Rc`): the
-    /// same tube is handed to every partner, as C# hands the one object.
+    /// same tube is handed to every partner.
     pub ball_sweep: Option<Rc<Mesh>>,
-    /// The vertices this chain overshoots into another selected run at; `None` is C#'s null.
+    /// The vertices this chain overshoots into another selected run at, or `None`.
     pub pair_corners: Option<Vec<i32>>,
 }
 
 impl BevelPairCornerTrimCandidate {
-    /// C#'s constructor.
+    /// A candidate from its cutter, tube and pair corners.
     pub fn new(
         cutter_index: i32,
         ball_sweep: Option<Rc<Mesh>>,
@@ -135,7 +133,7 @@ impl BevelPairCornerTrimCandidate {
     }
 }
 
-/// C# `BevelPairCornerTrim.Trim`: one cutter and the partners' tubes to take out of it.
+/// One cutter and the partners' tubes to take out of it.
 #[derive(Debug, Clone)]
 pub struct BevelPairCornerTrimTrim {
     /// Where this cutter is in the builder's cutter list.
@@ -145,7 +143,7 @@ pub struct BevelPairCornerTrimTrim {
 }
 
 impl BevelPairCornerTrimTrim {
-    /// C#'s constructor.
+    /// A cutter and the partners' tubes to take out of it.
     pub fn new(cutter_index: i32, partner_balls: Vec<Rc<Mesh>>) -> Self {
         BevelPairCornerTrimTrim {
             cutter_index,
@@ -154,8 +152,8 @@ impl BevelPairCornerTrimTrim {
     }
 }
 
-/// C# `Plan`: which cutters have to be trimmed by which tubes, worked out before any boolean runs
-/// so the caller can size its progress budget by it - and, second, C#'s `out cuttersLeftUntrimmed`.
+/// Which cutters have to be trimmed by which tubes, worked out before any boolean runs so the
+/// caller can size its progress budget by it - and, second, the cutters left untrimmed.
 ///
 /// A cutter is never trimmed by its OWN tube - `Z - B` is `Z`, so it would be a boolean that
 /// changed nothing - and two runs pair only where [`super::BevelChainEnds`] said they meet, which is
@@ -169,12 +167,11 @@ impl BevelPairCornerTrimTrim {
 /// a coincident surface for the kernel to decide about and a second import to pay for, on a stage
 /// that runs inside a live size drag.
 ///
-/// `candidates` is every cutter that meets another selected run over an unselected crease (C#'s
-/// null list is the empty slice). The second value is the batch index of each cutter that had at
-/// least one partner with no tube, which is a corner going out as plan 5.3's ridge. "At least one"
-/// because a cutter with one tubed partner and one tubeless one is both trimmed and reported - the
-/// trim it did get says nothing about the corner it did not. Empty on every selection where every
-/// pairing was met.
+/// `candidates` is every cutter that meets another selected run over an unselected crease (empty
+/// for none). The second value is the batch index of each cutter that had at least one partner with
+/// no tube, which is a corner going out as plan 5.3's ridge. "At least one" because a cutter with
+/// one tubed partner and one tubeless one is both trimmed and reported - the trim it did get says
+/// nothing about the corner it did not. Empty on every selection where every pairing was met.
 pub fn plan(
     candidates: &[BevelPairCornerTrimCandidate],
 ) -> (Vec<BevelPairCornerTrimTrim>, Vec<i32>) {
@@ -263,9 +260,8 @@ pub fn plan(
     (trims, cutters_left_untrimmed)
 }
 
-/// C# `CornersOf`: the vertices one run overshoots into another selected run at, or `None` where
-/// it does neither end - which is every run but the few that meet a neighbour over an unselected
-/// crease.
+/// The vertices one run overshoots into another selected run at, or `None` where it does neither
+/// end - which is every run but the few that meet a neighbour over an unselected crease.
 ///
 /// Lives here rather than with the builder that calls it because what it reads is this trim's own
 /// input: a pair corner is only ever a pair corner to [`plan`].
@@ -289,8 +285,7 @@ pub fn corners_of(ends: Option<&BevelChainEnds>) -> Option<Vec<i32>> {
     Some(corners)
 }
 
-/// C# `ApplyAsync`: runs the planned trims, replacing each cutter in place with itself less its
-/// partners' tubes.
+/// Runs the planned trims, replacing each cutter in place with itself less its partners' tubes.
 ///
 /// `cutters` is the cutter batch, in the source item's own space; trimmed entries are replaced.
 /// `trims` is what [`plan`] worked out. `combine` is the caller's own boolean, so these steps share

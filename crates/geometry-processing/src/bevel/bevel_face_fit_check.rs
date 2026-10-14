@@ -1,9 +1,8 @@
-//! The face-width check of one group (`Bevel/BevelFaceFit.cs`: the three `TryCheckGroup`
-//! overloads): every selected edge's setback walked across each of its faces at three samples,
-//! and the group refused with the largest size that would have fitted where a walk runs out of
-//! face - unless the stop is one of the exemptions, a wall the run ends on, or an obstruction
-//! standing on the face (handed back for the shadow clip). Split from `bevel_face_fit.rs` by
-//! responsibility.
+//! The face-width check of one group: every selected edge's setback walked across each of its faces
+//! at three samples, and the group refused with the largest size that would have fitted where a
+//! walk runs out of face - unless the stop is one of the exemptions, a wall the run ends on, or an
+//! obstruction standing on the face (handed back for the shadow clip). Split from
+//! `bevel_face_fit.rs` by responsibility.
 
 use std::collections::HashSet;
 
@@ -13,28 +12,28 @@ use super::bevel_face_fit::{try_get_setback, SAMPLE_FRACTIONS};
 use super::bevel_shadow_clip::Obstruction;
 use super::{BevelAdvisory, BevelAdvisoryCode, BevelFaceFit};
 
-/// What C# `TryCheckGroup` hands back: the refusal (`None` where the group fits), whether a stop
-/// was a wall the run ends on (set either way, as C#'s `out` is), and the obstructions found
+/// What [`BevelFaceFit::try_check_group_fully`] hands back: the refusal (`None` where the group
+/// fits), whether a stop was a wall the run ends on (set either way), and the obstructions found
 /// standing on a face where the group fits.
 #[derive(Debug, Clone, Default)]
 pub struct GroupCheck {
     /// The refusal, or `None` where the group fits.
     pub failure: Option<BevelAdvisory>,
-    /// C# `trimmedByAWallItEndsOn`.
+    /// Whether a walk stopped at a wall the run's own free end caps on.
     pub trimmed_by_a_wall_it_ends_on: bool,
-    /// C# `standingOnAFace`: empty unless the group fits.
+    /// Empty unless the group fits.
     pub standing_on_a_face: Vec<Obstruction>,
 }
 
 impl GroupCheck {
-    /// Whether the group fits (C#'s return value).
+    /// Whether the group fits.
     pub fn fits(&self) -> bool {
         self.failure.is_none()
     }
 }
 
 impl BevelFaceFit {
-    /// C# `TryCheckGroup(groupIndex, out failureReason)`.
+    /// Whether the group fits, or the refusal that says why not.
     pub fn try_check_group(&self, group_index: usize) -> Result<(), BevelAdvisory> {
         match self.try_check_group_fully(group_index).failure {
             Some(failure) => Err(failure),
@@ -42,8 +41,7 @@ impl BevelFaceFit {
         }
     }
 
-    /// C# `TryCheckGroup(groupIndex, out failureReason, out trimmedByAWallItEndsOn)`: the
-    /// verdict, and whether a wall the run ends on trimmed it.
+    /// The verdict, and whether a wall the run ends on trimmed it.
     pub fn try_check_group_trimmed(&self, group_index: usize) -> (Result<(), BevelAdvisory>, bool) {
         let check = self.try_check_group_fully(group_index);
         let trimmed = check.trimmed_by_a_wall_it_ends_on;
@@ -56,8 +54,8 @@ impl BevelFaceFit {
         )
     }
 
-    /// C# `TryCheckGroup(groupIndex, out failureReason, out trimmedByAWallItEndsOn, out
-    /// standingOnAFace)`. An unresolved group fits trivially.
+    /// The whole check: the refusal, the wall reading and the obstructions. An unresolved group
+    /// fits trivially.
     pub fn try_check_group_fully(&self, group_index: usize) -> GroupCheck {
         let mut check = GroupCheck::default();
         let mut standing_on_a_face_found: Vec<Obstruction> = Vec::new();

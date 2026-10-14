@@ -1,6 +1,5 @@
-//! One station's section of a partnered bead (`Bevel/BevelPartneredBeadSection.cs`, a file of the
-//! C# `static partial class BevelPartneredBead`): how the arc is closed - on the crease line, past
-//! the end against a partner, a wall or a plane - and the bead sewn from the sections.
+//! One station's section of a partnered bead: how the arc is closed - on the crease line, past the
+//! end against a partner, a wall or a plane - and the bead sewn from the sections.
 
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3, Vector3Float};
@@ -14,8 +13,8 @@ use super::bevel_partnered_bead_tolerances::{
 };
 use super::{bevel_profile_polygon, BevelPartnerTube};
 
-/// C# `Along`: where the `i`-th of `beyond` spent slots sits along a walk (`walked` its running
-/// lengths), stretched so the first lands at 0 and the last at 1; one slot takes the middle.
+/// Where the `i`-th of `beyond` spent slots sits along a walk (`walked` its running lengths),
+/// stretched so the first lands at 0 and the last at 1; one slot takes the middle.
 pub fn along(walked: &[f64], beyond: usize, i: usize) -> f64 {
     if beyond == 1 {
         return 0.5;
@@ -30,8 +29,8 @@ pub fn along(walked: &[f64], beyond: usize, i: usize) -> f64 {
     }
 }
 
-/// C# `OnTheLine`: where the segment from `outside` to `inside` crosses `depth`'s zero, by its
-/// linear interpolation (`outside` itself where the two depths agree).
+/// Where the segment from `outside` to `inside` crosses `depth`'s zero, by its linear interpolation
+/// (`outside` itself where the two depths agree).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn on_the_line(outside: Vector2, inside: Vector2, depth: &dyn Fn(Vector2) -> f64) -> Vector2 {
     let here = depth(outside);
@@ -45,9 +44,8 @@ pub fn on_the_line(outside: Vector2, inside: Vector2, depth: &dyn Fn(Vector2) ->
     }
 }
 
-/// C# `Close`: the arc closed into a polygon - its far end buried into the far side, the closing
-/// point buried into the corner, and its near end buried into the riding face, each by `burial`
-/// clearances.
+/// The arc closed into a polygon - its far end buried into the far side, the closing point buried
+/// into the corner, and its near end buried into the riding face, each by `burial` clearances.
 pub fn close(
     run: &BevelPartneredBeadRun,
     closing: Vector2,
@@ -65,9 +63,9 @@ pub fn close(
     polygon
 }
 
-/// C# `Burial`: how many clearances a station past a face end may bury its flat sides - fewer as
-/// the face's own end comes near, so the burial never pokes through it. `ends` is the run's
-/// `[start, end]` pair the station's `past_end` indexes.
+/// How many clearances a station past a face end may bury its flat sides - fewer as the face's own
+/// end comes near, so the burial never pokes through it. `ends` is the run's `[start, end]` pair
+/// the station's `past_end` indexes.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn burial(
     run: &BevelPartneredBeadRun,
@@ -100,9 +98,8 @@ pub fn burial(
     reach.clamp(0.02, 1.0)
 }
 
-/// C# `Sew`: the bead from its stations' rings, strip by strip, capped at both ends by the first
-/// and last sections triangulated. `None` where there are too few rings or a cap will not
-/// triangulate.
+/// The bead from its stations' rings, strip by strip, capped at both ends by the first and last
+/// sections triangulated. `None` where there are too few rings or a cap will not triangulate.
 pub fn sew(
     rings: &[Vec<Vector3>],
     first_section: &[Vector2],
@@ -156,7 +153,7 @@ pub fn sew(
     Some(mesh)
 }
 
-/// C# `SignedArea`: the polygon's signed area, positive anticlockwise.
+/// The polygon's signed area, positive anticlockwise.
 pub fn signed_area(polygon: &[Vector2]) -> f64 {
     let mut twice = 0.0;
     let count = polygon.len();
@@ -170,9 +167,9 @@ pub fn signed_area(polygon: &[Vector2]) -> f64 {
     twice / 2.0
 }
 
-/// C# `TryStation`: one station's section - the arc closed on the crease, or past the end against
-/// its partners, wall or planes - clipped out of the partners' tubes and cut at any face end or
-/// across plane. `ends` is the run's `[start, end]` pair.
+/// One station's section - the arc closed on the crease, or past the end against its partners, wall
+/// or planes - clipped out of the partners' tubes and cut at any face end or across plane. `ends`
+/// is the run's `[start, end]` pair.
 pub fn try_station(
     run: &BevelPartneredBeadRun,
     ends: &[BevelPartneredBeadEnd; 2],
@@ -234,8 +231,7 @@ pub fn try_station(
     Ok(section)
 }
 
-/// C# `TryCutAtTheFaceEnd`: the section cut at the plane the riding face ends at, past an end
-/// that has one.
+/// The section cut at the plane the riding face ends at, past an end that has one.
 pub fn try_cut_at_the_face_end(
     run: &BevelPartneredBeadRun,
     ends: &[BevelPartneredBeadEnd; 2],
@@ -262,7 +258,7 @@ pub fn try_cut_at_the_face_end(
     )
 }
 
-/// C# `TryCutOnTheAcrossPlane`: the section cut at the across plane, past an end that stops on it.
+/// The section cut at the across plane, past an end that stops on it.
 pub fn try_cut_on_the_across_plane(
     run: &BevelPartneredBeadRun,
     ends: &[BevelPartneredBeadEnd; 2],
@@ -289,8 +285,8 @@ pub fn try_cut_on_the_across_plane(
     )
 }
 
-/// C# `TryCutOnAPlane`: the points of `section` beyond the plane laid along the line it cuts the
-/// section on, keeping the point count; `covers` and `meets` word the refusals.
+/// The points of `section` beyond the plane laid along the line it cuts the section on, keeping the
+/// point count; `covers` and `meets` word the refusals.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_cut_on_a_plane(
     run: &BevelPartneredBeadRun,
@@ -373,9 +369,8 @@ pub fn try_cut_on_a_plane(
     Ok(())
 }
 
-/// C# `TryClosePastTheEnd`: where a station past the end closes - on the crease, on a wall, or on
-/// the foot of the partner that covers it - as `(closing, into the corner, the partners reaching
-/// this station)`.
+/// Where a station past the end closes - on the crease, on a wall, or on the foot of the partner
+/// that covers it - as `(closing, into the corner, the partners reaching this station)`.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_close_past_the_end(
     run: &BevelPartneredBeadRun,
@@ -465,9 +460,9 @@ pub fn try_close_past_the_end(
     Ok((closing, into_the_corner, reaching))
 }
 
-/// C# `TryWallHere`: where the wall an end ran out onto crosses this station - `(on the wall,
-/// into the corner)`, the corner point buried a clearance inside both the riding face and the
-/// wall, at most [`DEEPEST_BURIAL`] clearances deep.
+/// Where the wall an end ran out onto crosses this station - `(on the wall, into the corner)`, the
+/// corner point buried a clearance inside both the riding face and the wall, at most
+/// [`DEEPEST_BURIAL`] clearances deep.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_wall_here(
     run: &BevelPartneredBeadRun,
@@ -512,7 +507,7 @@ pub fn try_wall_here(
     Some((on_the_wall, buried))
 }
 
-/// C# `Covered`: whether `point` lies inside any of `partners` by [`covered_by`].
+/// Whether `point` lies inside any of `partners` by [`covered_by`].
 pub fn covered(
     run: &BevelPartneredBeadRun,
     partners: &[BevelPartnerTube],

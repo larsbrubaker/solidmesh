@@ -1,5 +1,4 @@
-//! Where along a partnered run its sections are taken (`Bevel/BevelPartneredBeadStations.cs`, a
-//! file of the C# `static partial class BevelPartneredBead`).
+//! Where along a partnered run its sections are taken, for [`super::bevel_partnered_bead`].
 
 use super::bevel_partnered_bead::{
     BevelPartneredBeadEnd, BevelPartneredBeadRun, BevelPartneredBeadStation,
@@ -7,8 +6,8 @@ use super::bevel_partnered_bead::{
 use super::bevel_partnered_bead_tolerances::CUT_BY;
 use super::BevelRunOutBound;
 
-/// C# `Stations`: every station along the run, past its start, along its crease and past its end,
-/// sorted; `ends` is the run's `[start, end]` pair, which each station's `past_end` indexes.
+/// Every station along the run, past its start, along its crease and past its end, sorted; `ends`
+/// is the run's `[start, end]` pair, which each station's `past_end` indexes.
 pub fn stations(
     run: &BevelPartneredBeadRun,
     ends: &[BevelPartneredBeadEnd; 2],
@@ -82,8 +81,8 @@ pub fn stations(
         .collect()
 }
 
-/// C# `AddApart`: `along` added where it is strictly inside `lowest..highest` and not within a
-/// thousandth of the spacing of a station already there.
+/// Adds `along` where it is strictly inside `lowest..highest` and not within a thousandth of the
+/// spacing of a station already there.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn add_apart(alongs: &mut Vec<f64>, along: f64, lowest: f64, highest: f64, spacing: f64) {
     if !(along > lowest) || !(along < highest) {
@@ -99,8 +98,8 @@ pub fn add_apart(alongs: &mut Vec<f64>, along: f64, lowest: f64, highest: f64, s
     alongs.push(along);
 }
 
-/// C# `PastTheEnd`: which end (`0` the start, `1` the end) closes the station at `along`, or
-/// `None` for one inside both the crease and the second face's span.
+/// Which end (`0` the start, `1` the end) closes the station at `along`, or `None` for one inside
+/// both the crease and the second face's span.
 pub fn past_the_end(
     run: &BevelPartneredBeadRun,
     start_along: f64,
@@ -118,8 +117,8 @@ pub fn past_the_end(
     None
 }
 
-/// C# `AddTheAcrossPlaneCrossings`: a station wherever an arc point crosses the across plane an
-/// end stops on, so the section's cut lands on a station.
+/// A station wherever an arc point crosses the across plane an end stops on, so the section's cut
+/// lands on a station.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn add_the_across_plane_crossings(
     run: &BevelPartneredBeadRun,
@@ -154,12 +153,12 @@ pub fn add_the_across_plane_crossings(
     }
 }
 
-/// C# `Spacing`: the arc's own chord, which stations along the run are spaced at.
+/// The arc's own chord, which stations along the run are spaced at.
 pub fn spacing(run: &BevelPartneredBeadRun) -> f64 {
     2.0 * run.size * (std::f64::consts::PI / 2.0 / f64::from(run.point_count - 1)).sin()
 }
 
-/// C# `Reach`: how far past the crease an end's stations go - one spacing more against a wall.
+/// How far past the crease an end's stations go - one spacing more against a wall.
 pub fn reach(end: &BevelPartneredBeadEnd, spacing: f64) -> f64 {
     if end.bound == BevelRunOutBound::ConcaveEdge {
         end.distance + spacing
@@ -168,7 +167,7 @@ pub fn reach(end: &BevelPartneredBeadEnd, spacing: f64) -> f64 {
     }
 }
 
-/// C# `Steps`: how many spacings cover `reach` (at least one, where there is any reach).
+/// How many spacings cover `reach` (at least one, where there is any reach).
 pub fn steps(reach: f64, spacing: f64) -> i32 {
     if reach > 0.0 {
         1.max((reach / spacing).ceil() as i32)

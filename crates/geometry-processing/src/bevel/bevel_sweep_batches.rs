@@ -1,6 +1,6 @@
-//! Joins adjacent selections for sweeping without changing their persisted groups or row
-//! identities ([`create`], [`BevelSweepBatch`]). Ports `Bevel/BevelSweepBatches.cs`. It reads the
-//! resolver's rows (`topology::bevel_edge_group_resolver`) and links each batch's edges with
+//! Joins adjacent selections for sweeping without changing their persisted groups or row identities
+//! ([`create`], [`BevelSweepBatch`]). It reads the resolver's rows
+//! (`topology::bevel_edge_group_resolver`) and links each batch's edges with
 //! [`super::bevel_chain_linker`]; the edge builder sweeps each batch as one tool.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
@@ -13,8 +13,7 @@ use vector_math::math_helper;
 use super::bevel_chain_linker::{self, BevelSweptChain};
 use crate::topology::{BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge};
 
-/// C# `BevelSweepBatch`: a temporary shared sweep and the original selection rows that contribute
-/// to it.
+/// A temporary shared sweep and the original selection rows that contribute to it.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BevelSweepBatch {
     /// The contributing rows' indices in the resolutions, ascending.
@@ -23,9 +22,9 @@ pub struct BevelSweepBatch {
     pub chains: Vec<BevelSweptChain>,
 }
 
-/// C#'s `(FeatureEdgeSet, double)` key: the feature set by IDENTITY (ResolveAll caches one per
-/// exact flat tolerance on one working mesh) and the curve tolerance by `double.Equals`, under
-/// which `0.0` and `-0.0` are one key and NaN equals NaN.
+/// The key rows batch by: the feature set by IDENTITY (ResolveAll caches one per exact flat
+/// tolerance on one working mesh) and the curve tolerance by value, under which `0.0` and `-0.0`
+/// are one key and NaN equals NaN.
 fn compatibility_key(resolution: &BevelEdgeGroupResolution) -> (usize, u64) {
     let tolerance = resolution.group.curve_tolerance_degrees;
     let bits = if tolerance == 0.0 {
@@ -38,9 +37,9 @@ fn compatibility_key(resolution: &BevelEdgeGroupResolution) -> (usize, u64) {
     (Arc::as_ptr(&resolution.features) as usize, bits)
 }
 
-/// C# `BevelSweepBatches.Create`: the batches the eligible, compatible, unclipped rows join into.
-/// The caller has already checked each group's fit and identified any clipping that owns its
-/// cutters. `eligible`, `trimmed_by_a_wall` and `shadow_columns` run in step with `resolutions`.
+/// The batches the eligible, compatible, unclipped rows join into. The caller has already checked
+/// each group's fit and identified any clipping that owns its cutters. `eligible`,
+/// `trimmed_by_a_wall` and `shadow_columns` run in step with `resolutions`.
 pub fn create(
     resolutions: &[BevelEdgeGroupResolution],
     eligible: &[bool],
@@ -65,7 +64,7 @@ pub fn create(
         }
     }
 
-    // Insertion ordered, as C#'s Dictionary iterates: the batches come out in this order.
+    // Insertion ordered: the batches come out in this order.
     let mut compatible: IndexMap<(usize, u64), (f64, Vec<usize>)> = IndexMap::new();
     for (i, resolution) in resolutions.iter().enumerate() {
         // Cap withdrawals and shadow/body fallbacks are owned by a single row. Leave those
@@ -123,8 +122,7 @@ pub fn create(
             }
             let mut pending = VecDeque::new();
             let mut contributors: Vec<usize> = Vec::new();
-            // Read back sorted by mesh edge index; a repeated edge keeps its last copy, as C#'s
-            // indexer assignment does.
+            // Read back sorted by mesh edge index; a repeated edge keeps its last copy.
             let mut edges: BTreeMap<i32, FeatureEdge> = BTreeMap::new();
             pending.push_back(seed);
             while let Some(index) = pending.pop_front() {
@@ -173,8 +171,8 @@ pub fn create(
     batches
 }
 
-/// C# `EveryCrossRowJointContinues`: whether every joint in a merged chain where two DIFFERENT
-/// rows meet is a CONTINUATION of one run rather than a corner between two of them.
+/// Whether every joint in a merged chain where two DIFFERENT rows meet is a CONTINUATION of one run
+/// rather than a corner between two of them.
 ///
 /// A merged row is swept as one tool, so every joint inside it is resolved by the sweep's mitre.
 /// That is the right answer where the run simply carries on - the facets of a tessellated rim,

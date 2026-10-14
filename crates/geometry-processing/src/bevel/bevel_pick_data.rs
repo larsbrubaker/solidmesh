@@ -1,8 +1,8 @@
-//! One state of one mesh, prepared for picking. Ports `Bevel/BevelPickData.cs`: the welded
-//! working copy ([`super::bevel_working_mesh`]), a BVH over it, its edge graph, and the feature
-//! edge set of the operation's own bend threshold. The construction plane's face picker
-//! (mattercad-model `construction_plane_pick_model`) is built on it; C#'s `BevelPickDataSource`,
-//! which keys and publishes it for edge picking, ports with the bevel pick model.
+//! One state of one mesh, prepared for picking: the welded working copy
+//! ([`super::bevel_working_mesh`]), a BVH over it, its edge graph, and the feature edge set of the
+//! operation's own bend threshold. The construction plane's face picker (mattercad-model
+//! `construction_plane_pick_model`) is built on it; the source that keys and publishes it for edge
+//! picking lives with the bevel pick model.
 
 use std::sync::{Arc, OnceLock};
 
@@ -19,8 +19,8 @@ use crate::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache,
 /// one through.
 pub const SAME_RUNG_DEGREES: f64 = 1e-6;
 
-/// C# `BevelPickData`. Immutable once built, which is what lets a background build hand it to the
-/// UI thread whole and lets anything ask it a question from any thread.
+/// One mesh state ready to pick on. Immutable once built, which is what lets a background build
+/// hand it to the UI thread whole and lets anything ask it a question from any thread.
 pub struct BevelPickData {
     source_mesh: Arc<Mesh>,
     source_changed_count: i32,
@@ -47,10 +47,9 @@ impl std::fmt::Debug for BevelPickData {
 }
 
 impl BevelPickData {
-    /// C# `Build`: prepares one state of one mesh for picking - a mesh copy, a weld check over it,
-    /// a BVH and a feature edge scan. `build_bvh` builds the tree over the working mesh (passed in
-    /// because the BVH policy lives with the app, C#'s `m => m.CreateBVHData()`); `None` is C#'s
-    /// null hierarchy for a mesh with nothing to trace.
+    /// Prepares one state of one mesh for picking - a mesh copy, a weld check over it, a BVH and a
+    /// feature edge scan. `build_bvh` builds the tree over the working mesh (passed in because the
+    /// BVH policy lives with the app); it answers `None` for a mesh with nothing to trace.
     pub fn build(
         source_mesh: &Arc<Mesh>,
         source_changed_count: i32,
@@ -87,35 +86,34 @@ impl BevelPickData {
         }
     }
 
-    /// C# `WorkingMesh`: the welded copy of the source mesh everything about this snapshot is
-    /// measured against.
+    /// The welded copy of the source mesh everything about this snapshot is measured against.
     pub fn working_mesh(&self) -> &Arc<Mesh> {
         &self.working_mesh
     }
 
-    /// C# `Bvh`: the ray tracing tree over [`Self::working_mesh`], in that mesh's own space.
+    /// The ray tracing tree over [`Self::working_mesh`], in that mesh's own space.
     pub fn bvh(&self) -> Option<&TraceableRef> {
         self.bvh.as_ref()
     }
 
-    /// C# `Graph`: the edge graph of [`Self::working_mesh`].
+    /// The edge graph of [`Self::working_mesh`].
     pub fn graph(&self) -> &MeshEdgeGraph {
         &self.graph
     }
 
-    /// C# `PickFeatures`: the set a pick runs in, built at the operation's bend threshold.
+    /// The set a pick runs in, built at the operation's bend threshold.
     pub fn pick_features(&self) -> &Arc<FeatureEdgeSet> {
         &self.pick_features
     }
 
-    /// C# `Ladder`: the feature edge sets the readings of a pick are built from -
-    /// [`Self::pick_features`], and only it.
+    /// The feature edge sets the readings of a pick are built from - [`Self::pick_features`], and
+    /// only it.
     pub fn ladder(&self) -> &[Arc<FeatureEdgeSet>] {
         &self.ladder
     }
 
-    /// C# `FaceRegions`: the face regions of [`Self::working_mesh`], each flooded once as it is
-    /// first asked for. Built lazily, so a part nobody hovers a face on never pays for it.
+    /// The face regions of [`Self::working_mesh`], each flooded once as it is first asked for.
+    /// Built lazily, so a part nobody hovers a face on never pays for it.
     pub fn face_regions(&self) -> &FaceRegionCache {
         self.face_regions.get_or_init(|| {
             FaceRegionCache::new(
@@ -126,8 +124,8 @@ impl BevelPickData {
         })
     }
 
-    /// C# `Resolve`: one group against this snapshot, re-read at the threshold the snapshot was
-    /// built at, so the resolve costs an anchor match rather than a fresh scan of the mesh.
+    /// One group against this snapshot, re-read at the threshold the snapshot was built at, so the
+    /// resolve costs an anchor match rather than a fresh scan of the mesh.
     pub fn resolve(&self, group: &BevelEdgeGroup) -> BevelEdgeGroupResolution {
         bevel_edge_group_resolver::resolve_in(
             &group.read_at(self.flat_angle_degrees),
@@ -138,10 +136,10 @@ impl BevelPickData {
         )
     }
 
-    /// C# `IsFor`: whether this was built from a given state of a given mesh. Reference identity
-    /// is not enough on its own - a source can be edited in place and come back the same object
-    /// with different geometry, which the change count is the counter for - and the tolerance is
-    /// in the key as well, because moving the threshold changes which edges are candidates.
+    /// Whether this was built from a given state of a given mesh. Reference identity is not enough
+    /// on its own - a source can be edited in place and come back the same object with different
+    /// geometry, which the change count is the counter for - and the tolerance is in the key as
+    /// well, because moving the threshold changes which edges are candidates.
     pub fn is_for(&self, mesh: &Arc<Mesh>, changed_count: i32, flat_angle_degrees: f64) -> bool {
         Arc::ptr_eq(&self.source_mesh, mesh)
             && self.source_changed_count == changed_count

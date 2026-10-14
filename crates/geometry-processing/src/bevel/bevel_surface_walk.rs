@@ -1,6 +1,6 @@
-//! Walking a mesh surface in a straight line from an edge until it turns away - the measurement
-//! the face fit asks "how much face is there to set back into" with, split out from the policy
-//! that reads the answer. Ports `Bevel/BevelSurfaceWalk.cs`.
+//! Walking a mesh surface in a straight line from an edge until it turns away - the measurement the
+//! face fit asks "how much face is there to set back into" with, split out from the policy that
+//! reads the answer.
 //!
 //! Everything here is geometry that could be asked of any mesh - where a face ends, which way is
 //! across an edge, what a triangle's normal is - and nothing here knows what a bevel or a setback
@@ -27,7 +27,7 @@ const VERTEX_COINCIDENCE: f64 = 1e-6;
 /// not offered, and the walk falls back to the behaviour it had before this test existed.
 const SAME_SURFACE: f64 = 0.996;
 
-/// Where a [`BevelSurfaceWalk::walk`] stopped (C#'s return value and two `out` parameters).
+/// Where a [`BevelSurfaceWalk::walk`] stopped.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SurfaceWalkStop {
     /// How far the walk travelled.
@@ -40,16 +40,16 @@ pub struct SurfaceWalkStop {
     pub stopped_in_face: i32,
 }
 
-/// C# `BevelSurfaceWalk`. Holds its mesh, graph and stopping edges through shared handles so a
-/// type can own its walk as the C# does (`BevelFaceFit`, `BevelFaceRunOut`); the walk only reads
-/// them.
+/// A walk across one part's surface square to an edge, stopping where a face ends. Holds its mesh,
+/// graph and stopping edges through shared handles so a type can own its walk (`BevelFaceFit`,
+/// `BevelFaceRunOut`); the walk only reads them.
 #[derive(Debug)]
 pub struct BevelSurfaceWalk {
     mesh: Arc<Mesh>,
     graph: Rc<MeshEdgeGraph>,
     // Which mesh edges end a face, by mesh edge index, at the caller's own tolerance. An ordered
-    // set: C# hands in a `HashSet<int>` whose iteration (insertion) order decides ties in
-    // `try_blocking_edge_at` through `surface_edges_at_vertex`.
+    // set: its insertion order decides ties in `try_blocking_edge_at` through
+    // `surface_edges_at_vertex`, so the walk stops at the same edge on every run.
     surface_edges: Rc<IndexSet<i32>>,
     // The vertex pair a triangle side is, to the edge index the graph knows it by. The walk
     // crosses sides and has to ask the graph what is on the other one. Only looked up.
@@ -305,7 +305,7 @@ impl BevelSurfaceWalk {
 
         let cross = (position1 - position0).cross(position2 - position0);
 
-        // C# `!(LengthSquared > 0)`: zero, negative or NaN.
+        // Zero, negative or NaN: no normal.
         let length_squared = cross.length_squared();
         if length_squared <= 0.0 || length_squared.is_nan() || length_squared.is_infinite() {
             return None;

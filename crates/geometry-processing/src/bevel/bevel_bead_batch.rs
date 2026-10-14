@@ -1,6 +1,5 @@
 //! The beads a rebuild has gathered so far, each remembered with WHOSE it is, so the second pass
-//! can take back the ones whose crease it re-read (`Bevel/BevelBeadBatch.cs`), with its adding,
-//! reading and withdrawing.
+//! can take back the ones whose crease it re-read, with its adding, reading and withdrawing.
 //!
 //! Two lists rather than one, because a bead that brought a void wedge with it is trimmed to that
 //! wedge before it joins the batch ([`super::bevel_bead_clip`]) and a bead that did not goes on
@@ -14,7 +13,7 @@ use polygon_mesh::Mesh;
 
 use super::bevel_bead_clip::Clippable;
 
-/// C# `BevelBeadBatch`. `Default` is C#'s freshly constructed batch: every list empty.
+/// The beads of one rebuild and whose each is. `Default` is an empty batch: every list empty.
 #[derive(Debug, Clone, Default)]
 pub struct BevelBeadBatch {
     /// The beads that go on with no trim of their own, fill patches last.
@@ -31,7 +30,7 @@ pub struct BevelBeadBatch {
     pub fill_patches_in_whole: i32,
 }
 
-/// C# `BevelBeadBatch.Owner`: whose one bead is - a group's, or a corner's.
+/// Whose one bead is - a group's, or a corner's.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Owner {
     /// The group whose crease a chain bead was swept along; negative for a corner fill.
@@ -57,7 +56,7 @@ impl BevelBeadBatch {
         self.whole.len() as i32 - self.fill_patches_in_whole
     }
 
-    /// The whole beads, for the clip to trim in place (C#'s mutable `List<Mesh>` view).
+    /// The whole beads, for the clip to trim in place.
     pub fn whole_for_clipping(&mut self) -> &mut Vec<Mesh> {
         &mut self.whole
     }
@@ -68,8 +67,7 @@ impl BevelBeadBatch {
         self.whole_owners.push(Owner::new(group, None));
     }
 
-    /// Adds a chain bead to be trimmed to its void wedge, owned by `group` (C#'s
-    /// `AddChainBead(int, Clippable)` overload).
+    /// Adds a chain bead to be trimmed to its void wedge, owned by `group`.
     pub fn add_chain_bead_clippable(&mut self, group: i32, bead: Clippable) {
         self.clippable.push(bead);
         self.clippable_owners.push(Owner::new(group, None));
@@ -83,8 +81,7 @@ impl BevelBeadBatch {
         self.fill_patches_in_whole += 1;
     }
 
-    /// Adds a corner fill to be trimmed to its void wedge (C#'s `AddFillPatch(.., Clippable)`
-    /// overload).
+    /// Adds a corner fill to be trimmed to its void wedge.
     pub fn add_fill_patch_clippable(&mut self, adjoining_groups: Vec<i32>, patch: Clippable) {
         self.clippable.push(patch);
         self.clippable_owners
@@ -114,7 +111,7 @@ impl BevelBeadBatch {
 }
 
 impl Owner {
-    /// C#'s constructor: a chain bead's group, or -1 and the adjoining groups for a fill patch.
+    /// A chain bead's group, or -1 and the adjoining groups for a fill patch.
     pub fn new(group: i32, adjoining_groups: Option<Vec<i32>>) -> Self {
         Self {
             group,

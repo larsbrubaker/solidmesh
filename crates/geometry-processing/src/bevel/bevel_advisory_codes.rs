@@ -1,5 +1,5 @@
 //! What a [`BevelAdvisoryCode`] is ABOUT, where something has to tell one sort from another.
-//! Ports `Bevel/BevelAdvisoryCodes.cs` (C# `internal static class`; crate-visible here).
+//! Crate-visible free functions.
 
 use super::bevel_advisory::{BevelAdvisory, BevelAdvisoryArg};
 use super::bevel_advisory_code::BevelAdvisoryCode;
@@ -29,7 +29,7 @@ pub fn is_a_note_rather_than_a_complaint(code: BevelAdvisoryCode) -> bool {
 }
 
 /// The largest size a refusal about the SIZE already worked out would have fitted, where the
-/// refusal carries one (C# `TryTheMostThatFits`; `None` for false).
+/// refusal carries one (`None` otherwise).
 ///
 /// These are the refusals whose own sentence ends "The most that fits there is about x". The
 /// codes are listed rather than a convention being assumed about argument three, because an

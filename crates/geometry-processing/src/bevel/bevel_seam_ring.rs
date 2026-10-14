@@ -1,6 +1,6 @@
-//! The ring of points a corner patch and the run that ends on it MEET at: the arc of the ball's
-//! own surface lying in the plane through the ball's centre square to that run. Computed here
-//! once, by one route, and carried literally by both solids. Ports `Bevel/BevelSeamRing.cs`.
+//! The ring of points a corner patch and the run that ends on it MEET at: the arc of the ball's own
+//! surface lying in the plane through the ball's centre square to that run. Computed here once, by
+//! one route, and carried literally by both solids.
 //!
 //! The two used to be computed twice, by two different routes: the corner patch mesher slerps
 //! between the two face normals on the ball's sphere, the run builds its arc in a 2D profile frame

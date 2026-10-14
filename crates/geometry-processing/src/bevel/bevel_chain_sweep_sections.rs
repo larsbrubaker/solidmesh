@@ -1,8 +1,6 @@
-//! The SECTIONS half of the chain sweep (`Bevel/BevelChainSweep.Sections.cs`, part of the C#
-//! `internal static partial class BevelChainSweep`): one swept segment per chain edge, its
-//! cross section drawn in the edge's own frame ([`try_build_segments`]) - or, where one of the
-//! edge's faces is a facet of a round, square to the rolling ball's spine
-//! ([`try_stand_on_the_round`]).
+//! The SECTIONS half of the chain sweep: one swept segment per chain edge, its cross section drawn
+//! in the edge's own frame ([`try_build_segments`]) - or, where one of the edge's faces is a facet
+//! of a round, square to the rolling ball's spine ([`try_stand_on_the_round`]).
 
 use vector_math::{Vector2, Vector3};
 
@@ -12,8 +10,7 @@ use super::{bevel_edge_tool_builder, bevel_profile_polygon};
 use super::{BevelAdvisory, BevelAdvisoryCode, BevelSweptSection};
 use crate::topology::{ChainEdge, EdgeConvexity};
 
-/// C#'s short overload of `TryBuildSegments`: [`try_build_segments_on_rounds`] without saying
-/// whether any segment stood on a round.
+/// [`try_build_segments_on_rounds`] without saying whether any segment stood on a round.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_segments(
     chain: &[ChainEdge],

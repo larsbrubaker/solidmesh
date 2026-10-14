@@ -1,5 +1,5 @@
 //! Which of the second pass's re-read creases are the SAME crease, and so must be beaded once
-//! between them rather than once each. Ports `Bevel/BevelCreaseMerge.cs`.
+//! between them rather than once each.
 //!
 //! What identifies a crease is the MESH edges it runs over, on the cut part. Two groups whose
 //! creases the round joined resolve onto the same run of mesh edges (each from its own end of
@@ -16,8 +16,8 @@ use std::collections::{BTreeMap, HashMap};
 /// Groups the creases that share any mesh edge, transitively.
 ///
 /// `mesh_edges_of_crease` holds one entry per crease, in the caller's own order, with the mesh
-/// edges that crease runs over. A `None` (C# null) or empty entry is a crease the caller has
-/// nothing to say about; it takes no part and is left out of the answer.
+/// edges that crease runs over. A `None` or empty entry is a crease the caller has nothing to say
+/// about; it takes no part and is left out of the answer.
 ///
 /// Answers one list per distinct crease, each holding the indices into `mesh_edges_of_crease`
 /// that share it, in increasing order. The lists come back ordered by their first member, so the

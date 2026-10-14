@@ -1,7 +1,7 @@
 //! A CYLINDER in the part: where its axis runs, how big it is, and which part of its surface is
 //! really there. It is the analytic surface behind a tessellated round, so a pass can roll its ball
 //! on the round itself rather than on the plane of whichever facet an edge of the crease happens to
-//! lie in. Ports `Bevel/BevelRoundDescriptor.cs`.
+//! lie in.
 //!
 //! **Two kinds of round, one descriptor.** A round the FIRST PASS CUT is described from its own
 //! cutter and read by the second pass across the crease it re-reads. A round the part ARRIVED with
@@ -34,7 +34,7 @@ const SPAN_SLACK_DEGREES: f64 = 5.0;
 const NEARLY_ALONG_THE_AXIS: f64 = 1e-3;
 
 /// Where a ball rolling between a round and a slope stands for one section
-/// ([`BevelRoundDescriptor::try_find_station`]): C#'s four `out` values.
+/// ([`BevelRoundDescriptor::try_find_station`]).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoundStation {
     /// The angle about the axis, in the round's own basis.
@@ -47,7 +47,8 @@ pub struct RoundStation {
     pub contact: Vector3,
 }
 
-/// C# `BevelRoundDescriptor`.
+/// One round of a part: its axis, radius, chord count, and the span it covers along and about the
+/// axis.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelRoundDescriptor {
     /// A point of the axis.
@@ -314,7 +315,8 @@ impl BevelRoundDescriptor {
     /// spine's tightest radius of curvature, where the distance is monotone - otherwise the scan
     /// may have found one of three roots and there is no saying which.
     ///
-    /// A NaN distance refuses the station (`None`), where C#'s `Math.Sign` throws (divergence 412).
+    /// A NaN distance refuses the station (`None`): only NaN input geometry produces one, and every
+    /// reader already handles "no station" as a refusal.
     pub fn try_find_station(
         &self,
         through: Vector3,
@@ -552,7 +554,7 @@ impl BevelRoundDescriptor {
     }
 }
 
-/// C# `Math.Sign(double)`: -1, 0 or 1, and no answer for NaN (C# throws `ArithmeticException`).
+/// -1, 0 or 1, and no answer for NaN, which has no sign.
 fn cs_sign(value: f64) -> Option<i32> {
     if value.is_nan() {
         None

@@ -1,6 +1,5 @@
 //! The plane a BEAD stops on where its run folds back on a partner into a VALLEY - a hairpin
-//! between two concave runs (`Bevel/BevelValleyFoldMitre.cs`, a static class: one function here,
-//! [`try_mitre`]).
+//! between two concave runs ([`try_mitre`]).
 
 use vector_math::{math_helper, Vector3};
 

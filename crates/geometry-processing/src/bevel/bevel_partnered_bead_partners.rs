@@ -1,6 +1,5 @@
-//! Which runs bound a partnered bead at each end (`Bevel/BevelPartneredBeadPartners.cs`, a file of
-//! the C# `static partial class BevelPartneredBead`): every other concave run meeting this one at
-//! an end, as the chorded tube its own bead is built from.
+//! Which runs bound a partnered bead at each end: every other concave run meeting this one at an
+//! end, as the chorded tube its own bead is built from.
 
 use vector_math::Vector3;
 
@@ -16,8 +15,8 @@ use super::bevel_run_partners::try_ball_centre_line;
 use super::{BevelPartnerTube, BevelRunOutBound, BevelSweptChain};
 use crate::topology::{BevelEdgeGroupResolution, ChainEdge, EdgeConvexity};
 
-/// C# `TryReadPartners`: this end's partner tubes, read from every run in `concave_runs` (other
-/// than this one) that meets it here - or the refusal that says the end cannot be bounded.
+/// This end's partner tubes, read from every run in `concave_runs` (other than this one) that meets
+/// it here - or the refusal that says the end cannot be bounded.
 pub fn try_read_partners(
     chain: &BevelSweptChain,
     concave_runs: &[BevelSweptChain],
@@ -76,7 +75,7 @@ pub fn try_read_partners(
     Ok(())
 }
 
-/// C# `RidesTheSameFace`: whether any partner's tube runs along the riding face, one size off it.
+/// Whether any partner's tube runs along the riding face, one size off it.
 pub fn rides_the_same_face(run: &BevelPartneredBeadRun, end: &BevelPartneredBeadEnd) -> bool {
     let slack = reaches_the_face(run);
     let on_the_face = run.edges[0].from();
@@ -87,8 +86,8 @@ pub fn rides_the_same_face(run: &BevelPartneredBeadRun, end: &BevelPartneredBead
     })
 }
 
-/// C# `SpanOf`: how far along its own axis a partner's tube reaches - its crease plus each end's
-/// run-out - as `(from, to)`.
+/// How far along its own axis a partner's tube reaches - its crease plus each end's run-out - as
+/// `(from, to)`.
 pub fn span_of(
     run: &BevelPartneredBeadRun,
     other: &BevelSweptChain,
@@ -125,8 +124,8 @@ pub fn span_of(
     (from, to)
 }
 
-/// C# `ReachOf`: how far past `vertex` a partner's own bead runs out, read the way this run's
-/// ends are - one spacing more against a wall.
+/// How far past `vertex` a partner's own bead runs out, read the way this run's ends are - one
+/// spacing more against a wall.
 #[allow(clippy::too_many_arguments)]
 pub fn reach_of(
     run: &BevelPartneredBeadRun,
@@ -171,8 +170,8 @@ pub fn reach_of(
     }
 }
 
-/// C# `MeetsHere`: whether `other` starts or ends at this end - by vertex index, or within the
-/// part's own meeting tolerance of its position.
+/// Whether `other` starts or ends at this end - by vertex index, or within the part's own meeting
+/// tolerance of its position.
 pub fn meets_here(
     run: &BevelPartneredBeadRun,
     other: &BevelSweptChain,
@@ -187,7 +186,7 @@ pub fn meets_here(
         || (last.to() - end.vertex).length() < meeting_within(run)
 }
 
-/// C# `IsTheSameRun`: the same mesh edges in the same order.
+/// The same mesh edges in the same order.
 pub fn is_the_same_run(one: &BevelSweptChain, other: &BevelSweptChain) -> bool {
     one.edges.len() == other.edges.len()
         && one
@@ -197,15 +196,13 @@ pub fn is_the_same_run(one: &BevelSweptChain, other: &BevelSweptChain) -> bool {
             .all(|(a, b)| a.edge.mesh_edge_index == b.edge.mesh_edge_index)
 }
 
-/// C# `ConcaveRunsAcrossGroups`: every CONCAVE run of a whole rebuild, linked and split BY
-/// CONVEXITY, in one list.
+/// Every CONCAVE run of a whole rebuild, linked and split BY CONVEXITY, in one list.
 ///
 /// Across every group and not per group, because partnership is a fact about a VERTEX and has
-/// nothing to do with which group each edge was picked into - the all-edges gesture puts every
-/// edge in a group of its own, and on the fixture this was built for the four creases are four
-/// groups. Ineligible groups are left out: a group whose size does not fit builds no bead at all,
-/// so nothing of it is there to bound anybody. `eligible` is C#'s nullable list: `None` takes
-/// every group.
+/// nothing to do with which group each edge was picked into - the all-edges gesture puts every edge
+/// in a group of its own, and on the fixture this was built for the four creases are four groups.
+/// Ineligible groups are left out: a group whose size does not fit builds no bead at all, so
+/// nothing of it is there to bound anybody. `eligible` is optional: `None` takes every group.
 ///
 /// Linking and the convexity split are all this can do, and that is LESS than the tool builder
 /// does. The builder also applies `BevelChainLinker.SplitWhereTheMitreCannotFit`, which is

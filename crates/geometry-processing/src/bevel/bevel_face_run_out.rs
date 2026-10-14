@@ -1,7 +1,7 @@
-//! How far a run may carry on PAST the end of its crease, and what stops it there
-//! (`Bevel/BevelFaceRunOut.cs`): what stopped a run's tangent line ([`BevelRunOutBound`]), and
-//! the walk along that line over the face the bead rides ([`BevelFaceRunOut`]). Creating it and
-//! measuring land with the core's packages as `impl` blocks.
+//! How far a run may carry on PAST the end of its crease, and what stops it there: what stopped a
+//! run's tangent line ([`BevelRunOutBound`]), and the walk along that line over the face the bead
+//! rides ([`BevelFaceRunOut`]). Creating it and measuring land with the core's packages as `impl`
+//! blocks.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
@@ -15,8 +15,7 @@ use vector_math::Vector3;
 use super::BevelSurfaceWalk;
 use crate::topology::{EdgeConvexity, FeatureEdgeSet};
 
-/// C# `BevelRunOutBound`: what stopped a run's tangent line, which is what decides how the bead
-/// ends there.
+/// What stopped a run's tangent line, which is what decides how the bead ends there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum BevelRunOutBound {
     /// The mesh ran out - an open rim, or a non-manifold junction. Nothing to run out onto.
@@ -31,9 +30,9 @@ pub enum BevelRunOutBound {
     ConcaveEdge,
 }
 
-/// C# `BevelFaceRunOut` (a sealed class): the part's surface read once, at the same "is this still
-/// one surface" tolerance `BevelFaceFit` walks with, so a run-out and a width refusal never
-/// disagree about where a face ends. Shared by every bead of a rebuild (`Rc`).
+/// The part's surface read once, at the same "is this still one surface" tolerance `BevelFaceFit`
+/// walks with, so a run-out and a width refusal never disagree about where a face ends. Shared by
+/// every bead of a rebuild (`Rc`).
 ///
 /// A crease ends where either of its two faces ends. Where the face that ends is the OTHER one,
 /// the bead does not stop with the crease: it rides the surviving face until its own tangent line
@@ -56,16 +55,16 @@ pub struct BevelFaceRunOut {
     /// not the pair, and the flood has only the pair to go on.
     pub edges_by_vertex_pair: HashMap<(i32, i32), i32>,
     /// The diagonal of the part's own bounding box, which is the scale a POSITION tolerance about
-    /// this mesh belongs to (C#'s `Diagonal` property).
+    /// this mesh belongs to.
     pub diagonal: f64,
 }
 
-/// C# `InsideTheTriangle`: how far inside a triangle's edges a point still counts as in it.
+/// How far inside a triangle's edges a point still counts as in it.
 pub const INSIDE_THE_TRIANGLE: f64 = 1e-6;
 
 impl BevelFaceRunOut {
-    /// C#'s (private) constructor: the walk over `surface_edges`, the part's diagonal and the
-    /// vertex-pair index of every graph edge.
+    /// A run-out reader from the walk over `surface_edges`, the part's diagonal and the vertex-pair
+    /// index of every graph edge.
     pub fn new(
         mesh: Arc<Mesh>,
         graph: Rc<MeshEdgeGraph>,
@@ -95,7 +94,7 @@ impl BevelFaceRunOut {
         }
     }
 
-    /// C# `Create`: reads the part's surface once at `surface_tolerance_degrees` (C#'s default is
+    /// Reads the part's surface once at `surface_tolerance_degrees` (normally
     /// `bevel_face_fit::DEFAULT_SURFACE_TOLERANCE_DEGREES`), so a run-out and a width refusal never
     /// disagree about where a face ends. `graph` is the mesh's edge graph where the caller already
     /// has one; `None` builds it.
@@ -119,8 +118,8 @@ impl BevelFaceRunOut {
     }
 }
 
-/// C# `BevelFaceRunOut.TryMeasure`'s answer: how far the line stays on the face, what stopped it,
-/// and the mesh edge it stopped at (`-1` for none).
+/// What [`BevelFaceRunOut::try_measure`] answers: how far the line stays on the face, what stopped
+/// it, and the mesh edge it stopped at (`-1` for none).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct BevelRunOutMeasure {
     /// How far along the direction the line stayed on the face.
@@ -132,9 +131,9 @@ pub struct BevelRunOutMeasure {
 }
 
 impl BevelFaceRunOut {
-    /// C# `TryMeasure`: how far the line from `from` along `direction` stays on the face
-    /// `riding_face` belongs to, up to `limit`, and what stops it. `None` where `from` is not on
-    /// that face at all - a caller's mistake rather than a shape with no run-out.
+    /// How far the line from `from` along `direction` stays on the face `riding_face` belongs to,
+    /// up to `limit`, and what stops it. `None` where `from` is not on that face at all - a
+    /// caller's mistake rather than a shape with no run-out.
     pub fn try_measure(
         &self,
         riding_face: i32,
@@ -166,8 +165,7 @@ impl BevelFaceRunOut {
         })
     }
 
-    /// C# `TryEdgeEnds`: a mesh edge's two end positions, `None` for an edge out of range or of no
-    /// length.
+    /// A mesh edge's two end positions, `None` for an edge out of range or of no length.
     pub fn try_edge_ends(&self, mesh_edge: i32) -> Option<(Vector3, Vector3)> {
         if mesh_edge < 0 || mesh_edge >= self.graph.edge_count() {
             return None;
@@ -183,7 +181,7 @@ impl BevelFaceRunOut {
         }
     }
 
-    /// C# `TryEdgeFaceNormals`: the unit normals of a manifold mesh edge's two faces.
+    /// The unit normals of a manifold mesh edge's two faces.
     pub fn try_edge_face_normals(&self, mesh_edge: i32) -> Option<(Vector3, Vector3)> {
         if mesh_edge < 0
             || mesh_edge >= self.graph.edge_count()
@@ -198,7 +196,7 @@ impl BevelFaceRunOut {
         Some((normal0, normal1))
     }
 
-    /// C# `TryFaceNormal`: a face's unit normal from its corners, `None` for a degenerate face.
+    /// A face's unit normal from its corners, `None` for a degenerate face.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_face_normal(&self, face: i32) -> Option<Vector3> {
         let (a, b, c) = self.corners(face);
@@ -211,8 +209,8 @@ impl BevelFaceRunOut {
         Some(normal.get_normal())
     }
 
-    /// C# `TryFindStart`: the face of `riding_face`'s surface (flooded across every edge that is
-    /// not a surface edge) that holds `from`.
+    /// The face of `riding_face`'s surface (flooded across every edge that is not a surface edge)
+    /// that holds `from`.
     pub fn try_find_start(&self, riding_face: i32, from: Vector3) -> Option<i32> {
         let mut seen = HashSet::from([riding_face]);
         let mut queue = VecDeque::from([riding_face]);
@@ -255,14 +253,14 @@ impl BevelFaceRunOut {
         None
     }
 
-    /// C# `TryEdgeBetween`: the mesh edge joining two vertices.
+    /// The mesh edge joining two vertices.
     pub fn try_edge_between(&self, vertex_a: i32, vertex_b: i32) -> Option<i32> {
         self.edges_by_vertex_pair
             .get(&(vertex_a.min(vertex_b), vertex_a.max(vertex_b)))
             .copied()
     }
 
-    /// C# `Contains`: whether `point`, dropped onto `face`'s plane, lies inside the triangle to
+    /// Whether `point`, dropped onto `face`'s plane, lies inside the triangle to
     /// [`INSIDE_THE_TRIANGLE`] of its doubled area.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn contains(&self, face: i32, point: Vector3) -> bool {

@@ -1,6 +1,5 @@
 //! Where one free end of an open swept run has to stop: a plane through the corner vertex that
 //! the tool must not cross, or nothing at all, which means run past the end as phase 2 did.
-//! Ports `Bevel/BevelEndCap.cs`.
 //!
 //! The normal is oriented the way the sweep LEAVES this end - out past the last vertex - so the
 //! tool is the half space `normal . x <= distance` and both ends read the same way whichever end
@@ -12,8 +11,7 @@
 
 use vector_math::Vector3;
 
-/// C# `BevelEndCap` (a readonly struct). `Default` is C#'s `default(BevelEndCap)`: an uncapped
-/// end.
+/// How one free end of a swept run stops. `Default` is an uncapped end.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BevelEndCap {
     /// The points a corner PATCH has already put on this plane, which the sweep's own ring takes
@@ -41,13 +39,13 @@ pub struct BevelEndCap {
 }
 
 impl BevelEndCap {
-    /// A cap on a plane, with C#'s optional arguments at their defaults (no drive-through, no
-    /// seam points).
+    /// A cap on a plane, with the optional parts at their defaults (no drive-through, no seam
+    /// points).
     pub fn new(plane_normal: Vector3, plane_distance: f64) -> Self {
         Self::with_options(plane_normal, plane_distance, false, 0.0, None)
     }
 
-    /// A cap with every constructor argument given, as C#'s full constructor.
+    /// A cap with every part given.
     pub fn with_options(
         plane_normal: Vector3,
         plane_distance: f64,

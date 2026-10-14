@@ -1,5 +1,4 @@
-//! Everything one resolved group of selected edges turns into (`Bevel/BevelGroupTools.cs`, C#
-//! `internal static class`, free functions here): the runs it links up to
+//! Everything one resolved group of selected edges turns into: the runs it links up to
 //! ([`super::bevel_chain_linker`]), the tools swept along them ([`super::bevel_chain_sweep`],
 //! [`super::bevel_tapered_sweep`], [`super::bevel_cap_clip`], [`super::bevel_partnered_bead`]), and
 //! the trims those tools carry with them ([`BevelTool`]).
@@ -39,13 +38,13 @@ use crate::topology::{
     BevelEdgeGroupResolution, BevelSelectionKind, ChainEdge, EdgeConvexity, FeatureEdge,
 };
 
-/// C# `sweepTaper`: how to sweep a run that has grown a finite run-out, told the taper, the ends
-/// and which section to draw; `None` from it is a taper the kernel refused.
+/// How to sweep a run that has grown a finite run-out, told the taper, the ends and which section
+/// to draw; `None` from it is a taper the kernel refused.
 pub type BevelSweepTaper<'f> =
     &'f mut dyn FnMut(&BevelRunTaper, &BevelChainEnds, BevelSweptSection) -> Option<Mesh>;
 
-/// [`try_build`]'s optional arguments, at C#'s defaults by `Default` (every one `None`, `false`,
-/// except `allow_taper`, which is true). Each field's meaning is C#'s parameter of the same name:
+/// [`try_build`]'s optional arguments, at their defaults by `Default` (every one `None`, `false`,
+/// except `allow_taper`, which is true). The fields:
 ///
 /// - `selected_across_groups`: every edge every group selected, which is what an end may overlap
 ///   into rather than cap against (plan 6's cross-group corner); `None` reads this group's own.
@@ -122,9 +121,8 @@ pub struct BevelGroupToolsRefusal {
     pub warnings: Option<Vec<BevelAdvisory>>,
 }
 
-/// C# `TryBuild`: the tools for one resolved group, or the reason the group cannot be applied. All
-/// or nothing: a group that could only be half applied would leave a part that looks beveled and is
-/// not.
+/// The tools for one resolved group, or the reason the group cannot be applied. All or nothing: a
+/// group that could only be half applied would leave a part that looks beveled and is not.
 ///
 /// One tool per RUN of connected edges, not one per edge: a run of two or more is swept as a single
 /// mitred solid (`BevelChainSweep`), which is what makes the joints between them meet instead of
@@ -474,7 +472,7 @@ pub fn try_build(
                     back_depth,
                 ) {
                     Ok((mesh, clips)) => {
-                        // C# hands back null clips where the caps were swept.
+                        // An empty list means the caps were swept, so there is nothing to clip.
                         cap_clips = (!clips.is_empty()).then_some(clips);
                         Some(mesh)
                     }
@@ -713,16 +711,16 @@ fn selected_mesh_edges(selected: &[FeatureEdge]) -> HashSet<i32> {
     selected.iter().map(|edge| edge.mesh_edge_index).collect()
 }
 
-/// C# `SweepVoidWedges`: one bead's void wedge swept onto its 5.3 ends squared off where the corner
-/// out there could be read, and - where that happened - the same wedge swept onto the ends it
-/// always had, for the clip to fall back to.
+/// One bead's void wedge swept onto its 5.3 ends squared off where the corner out there could be
+/// read, and - where that happened - the same wedge swept onto the ends it always had, for the clip
+/// to fall back to.
 ///
 /// `ends` are the ends the BEAD itself was swept onto, overshoots and all. `squared_ends` are the
 /// same ends with the readable 5.3 corners capped square (`BevelChainEnds.SquaredAt`), or `None`
-/// where there was nothing to square - C# reads that as `SquaredAt` handing back the very same
-/// object. `sweep` sweeps the wedge onto a given set of ends, told whether they are the SQUARED
-/// ones; it is injected because what this function IS is the choice between two sweeps, and the
-/// branches that matter are the ones where a sweep comes back `None`, which no fixture produces.
+/// where there was nothing to square. `sweep` sweeps the wedge onto a given set of ends, told
+/// whether they are the SQUARED ones; it is injected because what this function IS is the choice
+/// between two sweeps, and the branches that matter are the ones where a sweep comes back `None`,
+/// which no fixture produces.
 ///
 /// Returns the wedge to clip with, the one to fall back to where the first will not do (`None`
 /// where there is none), and whether the corners were squared off at all - the caller's cue to keep

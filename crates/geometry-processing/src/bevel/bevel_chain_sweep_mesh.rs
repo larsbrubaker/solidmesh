@@ -1,16 +1,15 @@
-//! The SEWING half of the chain sweep (`Bevel/BevelChainSweep.Mesh.cs`, part of the C#
-//! `internal static partial class BevelChainSweep`): the per-segment record the finished rings
-//! are built from ([`SweptSegment`]). Its constructor and profile offset, the cap's own
-//! profile ([`cap_profile`]), and the solid sewn from the rings ([`build_mesh`]).
+//! The SEWING half of the chain sweep: the per-segment record the finished rings are built from
+//! ([`SweptSegment`]). Its constructor and profile offset, the cap's own profile ([`cap_profile`]),
+//! and the solid sewn from the rings ([`build_mesh`]).
 
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3, Vector3Float};
 
 use super::{bevel_profile_polygon, BevelChainEnds};
 
-/// C# `BevelChainSweep.SweptSegment`: one edge of the chain with everything the sweep needs from
-/// it - where it runs, the frame its cross section is drawn in, and how far each end of its strip
-/// is dragged by the joints at its ends.
+/// One edge of the chain with everything the sweep needs from it - where it runs, the frame its
+/// cross section is drawn in, and how far each end of its strip is dragged by the joints at its
+/// ends.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SweptSegment {
     /// Where the edge starts.
@@ -29,7 +28,7 @@ pub struct SweptSegment {
     pub profile_reversed: bool,
     /// The fillet's tangent distance along each face at this segment.
     pub tangent_distance: f64,
-    /// The edge's length, `|to - from|` (computed by C#'s constructor).
+    /// The edge's length, `|to - from|` (computed by [`SweptSegment::new`]).
     pub length: f64,
     /// How far each profile point of the ring at this segment's start is dragged along it by the
     /// joint there; `None` until the joint has been placed.
@@ -40,8 +39,8 @@ pub struct SweptSegment {
 }
 
 impl SweptSegment {
-    /// C#'s constructor: the segment's length is read off its ends; it starts with its profile the
-    /// right way round and no slides.
+    /// A segment whose length is read off its ends; it starts with its profile the right way round
+    /// and no slides.
     pub fn new(
         from: Vector3,
         to: Vector3,

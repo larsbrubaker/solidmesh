@@ -1,9 +1,8 @@
-//! Clipping a cutter whose run ended on a cap plane the sweep could not carry
-//! (`Bevel/BevelCapClip.cs`, a C# `internal static class`, so a module here): one cap a boolean
-//! owes ([`ClippedCap`]), one cutter with the caps to take off it ([`Candidate`]) and a cutter
-//! that could not be clipped and was withdrawn ([`Withdrawal`]). The sweep with its cap-clip
-//! fallback ([`try_create`]), the demotions it retries with ([`attempts_for`]), the half-space
-//! box a cap plane is clipped by ([`half_space`]) and the clip itself ([`apply`]) land here.
+//! Clipping a cutter whose run ended on a cap plane the sweep could not carry: one cap a boolean
+//! owes ([`ClippedCap`]), one cutter with the caps to take off it ([`Candidate`]) and a cutter that
+//! could not be clipped and was withdrawn ([`Withdrawal`]). The sweep with its cap-clip fallback
+//! ([`try_create`]), the demotions it retries with ([`attempts_for`]), the half-space box a cap
+//! plane is clipped by ([`half_space`]) and the clip itself ([`apply`]) land here.
 
 use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::solids::platonic_solids;
@@ -16,9 +15,8 @@ use super::bevel_working_mesh;
 use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelChainEnds, BevelEndCap};
 use crate::topology::ChainEdge;
 
-/// C# `BevelCapClip.ClippedCap`: one cap the boolean owes - the plane to subtract, and the
-/// vertex the run ends at, which is what the refusal has to name if the subtraction cannot be
-/// made.
+/// One cap the boolean owes - the plane to subtract, and the vertex the run ends at, which is what
+/// the refusal has to name if the subtraction cannot be made.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ClippedCap {
     /// The half space the tool must stay out of, in the cutter's own space.
@@ -27,7 +25,7 @@ pub struct ClippedCap {
     pub at: Vector3,
 }
 
-/// C# `BevelCapClip.Candidate`: one cutter and the cap planes to take off it.
+/// One cutter and the cap planes to take off it.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Candidate {
     /// Where this cutter is in the builder's cutter list.
@@ -40,8 +38,8 @@ pub struct Candidate {
     pub clips: Vec<ClippedCap>,
 }
 
-/// C# `BevelCapClip.Withdrawal`: a cutter that could not be clipped and has been taken out of
-/// the batch, with what to say on its group's row.
+/// A cutter that could not be clipped and has been taken out of the batch, with what to say on its
+/// group's row.
 #[derive(Debug, Clone)]
 pub struct Withdrawal {
     /// The group whose cutter was withdrawn.
@@ -51,14 +49,14 @@ pub struct Withdrawal {
 }
 
 impl ClippedCap {
-    /// C#'s constructor.
+    /// A cap owed on `plane`, at the run's end `at`.
     pub fn new(plane: BevelEndCap, at: Vector3) -> Self {
         ClippedCap { plane, at }
     }
 }
 
 impl Candidate {
-    /// C#'s constructor.
+    /// A cutter and the caps to take off it.
     pub fn new(cutter_index: i32, group_index: i32, size: f64, clips: Vec<ClippedCap>) -> Self {
         Candidate {
             cutter_index,
@@ -71,8 +69,8 @@ impl Candidate {
 
 /// The retries a run capped at either end is offered: each capped end in turn demoted to an
 /// overshoot (and its cap owed as a clip at the run's first or last vertex), the other end's cap
-/// and overshoot bound carried across unchanged. Exit planes are not carried, as C#'s retry does
-/// not carry them.
+/// and overshoot bound carried across unchanged. Exit planes are not carried: a demoted end
+/// overshoots, so it has no squared exit to clip to.
 pub fn attempts_for(
     ends: &BevelChainEnds,
     run: &[ChainEdge],
@@ -178,7 +176,7 @@ pub fn try_create(
 pub const SPAN_IN_DIAGONALS: f64 = 4.0;
 
 impl Withdrawal {
-    /// C#'s constructor.
+    /// A withdrawn cutter's group and the reason it was withdrawn.
     pub fn new(group_index: i32, reason: BevelAdvisory) -> Self {
         Self {
             group_index,
@@ -215,8 +213,8 @@ pub fn half_space(cap: &BevelEndCap, bounds: &AxisAlignedBoundingBox) -> Mesh {
 /// kernel would not run. `cutters` is the builder's list, in the source item's own space: clipped
 /// entries are replaced in place and withdrawn ones REMOVED, so this runs once every index written
 /// while the tools were built has been read. Returns the groups whose cutter was withdrawn, for the
-/// caller to fail on their own rows; a cancel of the boolean passes up as an error (C# lets
-/// `OperationCanceledException` through), any other refusal withdraws the cutter.
+/// caller to fail on their own rows; a cancel of the boolean passes up as an error, any other
+/// refusal withdraws the cutter.
 pub fn apply(
     cutters: &mut Vec<Mesh>,
     candidates: &[Candidate],

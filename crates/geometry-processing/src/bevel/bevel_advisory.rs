@@ -1,8 +1,8 @@
 //! One thing the kernel has to say - a refusal or a warning - as a code and the values it quotes,
-//! for the application to put into words (`BevelAdvisoryText`). Ports `Bevel/BevelAdvisory.cs`.
+//! for the application to put into words (`BevelAdvisoryText`).
 //!
-//! C# carries the arguments as `object[]`; every argument any code documents is an `int`, a
-//! `double`, a `Vector2`, a `Vector3` or a `string`, so here they are a [`BevelAdvisoryArg`] each.
+//! Every argument any code documents is an `int`, a `double`, a `Vector2`, a `Vector3` or a
+//! `string`, so each one is a [`BevelAdvisoryArg`].
 
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -11,23 +11,22 @@ use vector_math::{float_hash, Vector2, Vector3};
 
 use super::bevel_advisory_code::BevelAdvisoryCode;
 
-/// One value an advisory quotes: the boxed `object` of C# `BevelAdvisory.Args`, as the kinds the
-/// codes actually carry.
+/// One value an advisory quotes, as one of the kinds the codes actually carry.
 ///
-/// Equality is C#'s boxed `Equals`: an `Int` and a `Double` of the same number are NOT equal
-/// (deliberate - the formatter's templates care which one they get), and two doubles compare as
-/// `double.Equals` does (NaN equals NaN, 0.0 equals -0.0).
+/// Equality is by kind first: an `Int` and a `Double` of the same number are NOT equal
+/// (deliberate - the formatter's templates care which one they get), and two doubles compare by
+/// value (NaN equals NaN, 0.0 equals -0.0).
 #[derive(Debug, Clone)]
 pub enum BevelAdvisoryArg {
-    /// A C# `int`: a count.
+    /// A count.
     Int(i32),
-    /// A C# `double`: a size, an angle, a distance.
+    /// A size, an angle, a distance.
     Double(f64),
-    /// A C# `Vector2`: a point of a path.
+    /// A point of a path.
     Vector2(Vector2),
-    /// A C# `Vector3`: where on the part.
+    /// Where on the part.
     Vector3(Vector3),
-    /// A C# `string`: a name the sentence quotes.
+    /// A name the sentence quotes.
     String(String),
 }
 

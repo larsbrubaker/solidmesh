@@ -1,6 +1,6 @@
 //! Which logical surface each face of the working mesh belongs to, labelled once per rebuild and
 //! per distinct curve tolerance: what the pair-corner crease reading asks when two faces are one
-//! surface and two planes. Ports `Bevel/BevelSurfaceLabels.cs`.
+//! surface and two planes.
 //!
 //! **Why the GROUP's tolerance and not a blanket one.** A labelling is only ever read to say "these
 //! two faces are the same surface", and saying yes REMOVES a candidate from the cap scan.
@@ -18,14 +18,14 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::topology::FaceGroup;
 
-/// C# `BevelSurfaceLabels`.
+/// The part's faces labelled by which surface each belongs to, read once per tolerance.
 pub struct BevelSurfaceLabels<'a> {
     part: &'a Mesh,
     graph: Option<&'a MeshEdgeGraph>,
     // The graph built on first use where the caller had none.
     built_graph: OnceCell<MeshEdgeGraph>,
-    // Keyed by tolerance with C#'s `double` key equality (NaN equals NaN, -0 equals +0). Few
-    // distinct tolerances ever occur, so a list is the map; it is only looked up, never iterated.
+    // Keyed by tolerance by value (NaN equals NaN, -0 equals +0). Few distinct tolerances ever
+    // occur, so a list is the map; it is only looked up, never iterated.
     labelled: Vec<(f64, Vec<i32>)>,
 }
 
@@ -67,7 +67,7 @@ impl<'a> BevelSurfaceLabels<'a> {
     }
 }
 
-/// C# `double.Equals`, which a `Dictionary<double, _>` keys by.
+/// Key equality by value: equal values, with NaN equal to NaN.
 fn same_key(a: f64, b: f64) -> bool {
     a == b || (a.is_nan() && b.is_nan())
 }

@@ -1,6 +1,6 @@
 //! One edge, one tool. Where two groups of the same operation name the SAME mesh edge, the edge is
 //! awarded to one of them and taken out of the other's selection before any chain is linked or any
-//! sweep is run. Ports `Bevel/BevelSharedEdges.cs`.
+//! sweep is run.
 //!
 //! **Why it has to happen at all.** A user can easily name an edge twice without meaning to: pick
 //! a crease as an `Edge`, then pick the face beside it as a `FaceGroup`, and the face hands back its
@@ -22,12 +22,11 @@ use std::collections::HashMap;
 
 use crate::topology::BevelEdgeGroupResolution;
 
-/// The same resolutions with every mesh edge named by more than one group left in only one of
-/// them, and, per group, whether it resolved to edges and lost ALL of them to other groups (C#'s
-/// `out bool[] gaveEveryEdgeAway`) - the case the caller has to say something about.
+/// The same resolutions with every mesh edge named by more than one group left in only one of them,
+/// and, per group, whether it resolved to edges and lost ALL of them to other groups - the case the
+/// caller has to say something about.
 ///
-/// Takes the resolutions by value: where nothing is shared they come back untouched (C# returns
-/// the same list instance).
+/// Takes the resolutions by value: where nothing is shared they come back untouched.
 pub fn award_once(
     resolutions: Vec<BevelEdgeGroupResolution>,
 ) -> (Vec<BevelEdgeGroupResolution>, Vec<bool>) {

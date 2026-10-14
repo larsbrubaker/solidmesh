@@ -1,7 +1,6 @@
 //! Takes the triangles a boolean leaves lying IN a flat face with all but no ALTITUDE out of a
-//! mesh, by recutting each of them together with the face it leans on
-//! (`Bevel/BevelSliverCollapse.cs`, a C# `internal static class`, so a module of free functions
-//! here). `BevelPublishedMesh` runs it on the mesh a bevel publishes.
+//! mesh, by recutting each of them together with the face it leans on. `BevelPublishedMesh` runs it
+//! on the mesh a bevel publishes.
 //!
 //! **Why altitude and not area.** `Mesh.RemoveDegenerateFaces` drops triangles by AREA, and the
 //! ones a near-tangent union leaves are not small in area because they are small: they are small
@@ -255,8 +254,7 @@ fn faces_the_same_way(piece: &Face, parent: &Face) -> bool {
 ///
 /// Thinnest first so that a sweep spends its one claim per face on the worst offenders. Which face
 /// a contested pair goes to is otherwise arbitrary, and arbitrary here would mean the answer
-/// depended on face order. C#'s `List.Sort` is unstable; equal altitudes are broken by face index
-/// here so the order is fixed.
+/// depended on face order, so equal altitudes are broken by face index.
 fn slivers_by_thinnest_first(mesh: &Mesh, altitude_tolerance: f64) -> Vec<(f64, usize)> {
     let mut found = Vec::new();
 
@@ -376,7 +374,7 @@ fn edge_key(a: i32, b: i32) -> EdgeKey {
 /// Per-face colors and textures are keyed by face INDEX, so a rebuild that drops and appends faces
 /// leaves them painted onto whatever triangle lands on the index. They are carried over here from
 /// the face each new one came from - the same thing `Mesh.RemapFaceData` does for the operations
-/// inside PolygonMesh, which is not visible from C#'s assembly.
+/// inside polygon-mesh.
 fn rebuild(mesh: &mut Mesh, dropped: &[bool], split_in_two: &HashMap<usize, (Face, Face)>) {
     let was = std::mem::take(&mut mesh.faces);
     let mut rebuilt = FaceList::new();

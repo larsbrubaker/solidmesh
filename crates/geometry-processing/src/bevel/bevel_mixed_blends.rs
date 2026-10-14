@@ -1,6 +1,5 @@
 //! The corner where a filleted CONVEX edge runs into a filleted CONCAVE one - the L bracket's
-//! ends - blended rather than left with a fin of bead standing beside a rounded rim. Ports
-//! `Bevel/BevelMixedBlends.cs` (C# `internal static class`; a module of free functions here).
+//! ends - blended rather than left with a fin of bead standing beside a rounded rim.
 //!
 //! This half reads topology - which edges met, which faces they share, whether the corner leans
 //! further than the budget - and decides which corners get a tool and what each refusal says. The
@@ -62,13 +61,13 @@ const MAXIMUM_SEAM_LEAN_DEGREES: f64 = 80.0;
 /// How far round the rim has to turn before there is an arc worth blending along, in degrees.
 const MINIMUM_TURN_DEGREES: f64 = 1.0;
 
-/// The handover planes, keyed by (mesh vertex, mesh EDGE), as C#'s `Dictionary` in fill order.
+/// The handover planes, keyed by (mesh vertex, mesh EDGE), in fill order.
 type Handovers = IndexMap<(i32, i32), BevelEndCap>;
 
 /// The concave cap normals, keyed the same way.
 type CapNormals = IndexMap<(i32, i32), Vector3>;
 
-/// C# `List<BevelAdvisory>[]`: one optional list of warnings per group.
+/// One optional list of warnings per group.
 type Warnings = Vec<Option<Vec<BevelAdvisory>>>;
 
 /// The blend tools for a whole selection, read across every group at once - a vertex does not
@@ -287,7 +286,7 @@ fn blend_pair(
     concave_cap_normals.insert((corner.vertex, concave.mesh_edge_index), tool.cap_normal);
 }
 
-/// C# `Warn`: adds `warning` to every group meeting at the corner.
+/// Adds `warning` to every group meeting at the corner.
 fn warn(corner: &BevelMixedCornerEnds, warnings: &mut Warnings, warning: BevelAdvisory) {
     for &group in corner.groups() {
         warnings[group as usize]
@@ -301,7 +300,7 @@ fn advisory(code: BevelAdvisoryCode, at: Vector3) -> BevelAdvisory {
     BevelAdvisory::new(code, vec![BevelAdvisoryArg::Vector3(at)])
 }
 
-/// What [`try_build`] hands back for a tool that built: C#'s `out` parameters.
+/// What [`try_build`] hands back for a tool that built: the mesh and its readings.
 struct BuiltBlend {
     mesh: Mesh,
     cap_face_reach: f64,

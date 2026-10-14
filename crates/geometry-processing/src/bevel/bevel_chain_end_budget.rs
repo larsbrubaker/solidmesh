@@ -1,6 +1,5 @@
 //! What ONE END of a run can afford to do, measured against the segment that has to pay for it -
-//! and the sentence the user reads when it cannot afford what it wanted. Ports
-//! `Bevel/BevelChainEndBudget.cs` (C# `internal static class`; a module of free functions here).
+//! and the sentence the user reads when it cannot afford what it wanted.
 //!
 //! Two questions, one budget. [`minimum_bead_cap_agreement`] asks how far off square a capping
 //! plane may lean before the slide onto it stops fitting in the end's own segment;
@@ -21,8 +20,8 @@ use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelEndCap};
 use crate::topology::ChainEdge;
 
 /// How far one end may overshoot - half its own segment at every uncapped end that is not a 5.3
-/// corner - and whether that bound is actually shorter than the overshoot it replaces, which is
-/// the only case worth telling the user about. Returned as C#'s `(Limit, Bit)`.
+/// corner - and whether that bound is actually shorter than the overshoot it replaces, which is the
+/// only case worth telling the user about. Returned as `(limit, bit)`.
 ///
 /// `cap` is what that end resolved to; a capped end never overshoots and so never takes a bound.
 /// `reaches_for_something` is whether this end is running on TOWARDS something rather than merely
@@ -142,7 +141,7 @@ pub fn held_back(
 /// is nothing there to gouge. A cutter that gives up a plane OVERSHOOTS, and the overshoot gouges
 /// the geometry past the corner that the cap existed to protect, so a cutter goes on trimming
 /// against any plane that still means something and takes the fold refusal when it comes.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn minimum_bead_cap_agreement(size: f64, segment: &ChainEdge) -> f64 {
     let budget = (segment.to() - segment.from()).length() / 2.0;

@@ -1,8 +1,7 @@
-//! Recognising the unselected crease that lies BETWEEN two selected runs at a 5.3 corner - the
-//! one edge whose vote `BevelChainEnds` has to pass over, as against a third crease that genuinely
+//! Recognising the unselected crease that lies BETWEEN two selected runs at a 5.3 corner - the one
+//! edge whose vote `BevelChainEnds` has to pass over, as against a third crease that genuinely
 //! bounds the corner and still caps - and, of the creases it does recognise, which ones the pair's
-//! rolling ball can go round ([`takes_the_partners_ball`]). Ports
-//! `Bevel/BevelPairCornerCrease.cs` (a C# `internal static class`).
+//! rolling ball can go round ([`takes_the_partners_ball`]).
 //!
 //! It lives apart from the cap scan that asks it because it is a different question from the one
 //! that file is about. Everything there weighs a plane - how square is it to the run, can the
@@ -24,9 +23,8 @@ fn same_surface_agreement() -> f64 {
     math_helper::degrees_to_radians(0.5).cos()
 }
 
-/// The run's own two tangent faces and those of every selected neighbour of its convexity
-/// departing from the vertex - C# `LiesBetweenSelectedRuns`'s face arguments, with its defaults
-/// (`-1`, `-1`, null) as [`Default`].
+/// The run's own two tangent faces and those of every selected neighbour of its convexity departing
+/// from the vertex, with no faces (`-1`, `-1`, `None`) as [`Default`].
 #[derive(Debug, Clone, Copy)]
 pub struct PairFaces<'a> {
     /// The face `own_normal0` came off.

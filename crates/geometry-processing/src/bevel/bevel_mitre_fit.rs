@@ -1,6 +1,5 @@
-//! Which joints of a chain a single mitred sweep CANNOT carry (`Bevel/BevelMitreFit.cs`, a static
-//! class: one function here, [`joints_the_mitre_cannot_fit`]) - where the run is split so each
-//! piece sweeps on its own.
+//! Which joints of a chain a single mitred sweep CANNOT carry ([`joints_the_mitre_cannot_fit`]) -
+//! where the run is split so each piece sweeps on its own.
 
 use super::bevel_chain_sweep::{BevelSweptSection, MINIMUM_CLOSED_SEGMENTS};
 use super::bevel_chain_sweep_rings::{profile_deviation, try_build_joint_at};
@@ -17,7 +16,7 @@ pub const SECTIONS_DIFFER_FRACTION: f64 = 0.25;
 /// two good joints is dragged back by its joints further than it is long (charged to the joint
 /// that drags it most). `None` where every joint fits, or the chain is too short to ask or cannot
 /// be sectioned at all.
-#[allow(clippy::needless_range_loop)] // C#'s index loops, read against two arrays.
+#[allow(clippy::needless_range_loop)] // index loops, read against two arrays.
 pub fn joints_the_mitre_cannot_fit(
     chain: &[ChainEdge],
     is_closed: bool,

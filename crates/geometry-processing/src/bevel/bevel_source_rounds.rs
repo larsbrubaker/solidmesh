@@ -1,9 +1,9 @@
 //! THE ROUNDS THE USER MODELLED, read straight off the working mesh: the cylinder behind a
 //! tessellated bore, boss or turned face that a selected concave crease runs along, so the first
 //! pass can roll its ball on that cylinder rather than on the plane of whichever facet the crease
-//! edge happens to lie in. Ports `Bevel/BevelSourceRounds.cs`. Labels the part through
-//! [`BevelRoundFaces::label`] (with `read_from_the_source_mesh` set), reading surfaces off
-//! [`BevelSurfaceLabels`]; its caller is `BevelGroupTools`.
+//! edge happens to lie in. Labels the part through [`BevelRoundFaces::label`] (with
+//! `read_from_the_source_mesh` set), reading surfaces off [`BevelSurfaceLabels`]; its caller is
+//! `BevelGroupTools`.
 //!
 //! **Why it is needed.** [`BevelRoundFaces::create`] describes only the rounds the FIRST PASS cut -
 //! it reads them off the resolutions, where a convex edge and the operation's size say exactly
@@ -79,9 +79,6 @@ const MINIMUM_CHORD_GAPS_TO_FIT_THROUGH: i32 = 4;
 /// every labelling tolerance is a fraction of. `round_profile` is whether the tool's profile is an
 /// arc: a chamfer's section is not a rolling ball's, and both readers of the result are gated on
 /// the same flag, so nothing is fitted at all for one.
-///
-/// C#'s null part, labels or resolutions (which answer null) cannot occur here, and its list may
-/// hold null resolutions, which are skipped; a Rust slice holds none.
 pub fn create(
     part: &Mesh,
     resolutions: &[BevelEdgeGroupResolution],
@@ -152,8 +149,7 @@ pub fn create(
 /// One labelling of the part and the faces of each of its surfaces.
 type SurfacesAtATolerance<'l> = (&'l [i32], HashMap<i32, Vec<i32>>);
 
-/// C#'s `HashSet<(double, int)>` key: `double` equality, under which -0 equals +0 and every NaN
-/// equals every other.
+/// A tolerance as a set key by value: -0 equals +0 and every NaN equals every other.
 fn tolerance_key(tolerance: f64) -> u64 {
     if tolerance == 0.0 {
         0.0f64.to_bits()
@@ -218,8 +214,7 @@ fn corners(part: &Mesh, face: i32) -> (Vector3, Vector3, Vector3, [i32; 3]) {
 /// crease at phi = 0.
 pub fn try_fit(part: &Mesh, faces: &[i32], through: Vector3) -> Option<BevelRoundDescriptor> {
     let mut normals = Vec::with_capacity(faces.len());
-    // Insertion ordered as C#'s HashSet<int> iterates: the circle fit's sums run over it, and
-    // their order is their rounding.
+    // Insertion ordered: the circle fit's sums run over it, and their order is their rounding.
     let mut vertices: IndexSet<i32> = IndexSet::new();
 
     // WHICH FACETS EACH VERTEX IS ON, which is what says whether it is on the analytic cylinder. A

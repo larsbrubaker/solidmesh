@@ -1,6 +1,6 @@
-//! The one question both corner constructions have to ask their selected ends before they can
-//! build anything: do these edges close a RING of faces round the vertex, and in what order do
-//! those faces go? Ports `Bevel/BevelCornerFaceRing.cs`.
+//! The one question both corner constructions have to ask their selected ends before they can build
+//! anything: do these edges close a RING of faces round the vertex, and in what order do those
+//! faces go?
 //!
 //! `BevelCornerPatches` needs the order - the shell it draws is the spherical polygon whose
 //! corners are those normals - and `BevelMixedBlends` needs only the answer, because a ring of
@@ -11,8 +11,6 @@
 //! cube corner has three planes but up to six triangles on them, and which pair of triangles an
 //! edge lands on depends on which way each square happened to be split. Two triangles closer
 //! together than a feature edge's own flat angle are the same surface by definition.
-//!
-//! C#'s `bool TryOrder(..., out normals, out edgeOfSector)` is an `Option` here.
 
 use vector_math::Vector3;
 
@@ -58,9 +56,8 @@ pub fn try_order(edges: &[FeatureEdge]) -> Option<CornerFaceRing> {
         return None;
     }
 
-    // Every plane has to be shared by exactly two of the selected edges, or the ring is open.
-    // Every plane was created by an edge, so each list is non-empty (C# `??=` never leaves one
-    // null here).
+    // Every plane has to be shared by exactly two of the selected edges, or the ring is open. Every
+    // plane was created by an edge, so each list is non-empty.
     let mut edges_on_plane: Vec<Vec<usize>> = vec![Vec::new(); planes.len()];
 
     for (i, &(first, second)) in edge_planes.iter().enumerate() {

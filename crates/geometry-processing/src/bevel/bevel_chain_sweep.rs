@@ -1,14 +1,12 @@
 //! One continuous tool swept along a whole chain of edges, mitred at every joint - the plan's 5.1
-//! per-chain sweep (`Bevel/BevelChainSweep.cs`, the C# `internal static partial class
-//! BevelChainSweep`): which section a sweep carries ([`BevelSweptSection`]), its two rulers, and the
+//! per-chain sweep: which section a sweep carries ([`BevelSweptSection`]), its two rulers, and the
 //! sweep itself ([`try_create`]); the sections, rings and sewing are its sibling files
 //! ([`super::bevel_chain_sweep_sections`], [`super::bevel_chain_sweep_rings`],
 //! [`super::bevel_chain_sweep_mesh`]).
 
-/// C# `BevelSweptSection`: which section a sweep carries along the chain. All of them are swept
-/// by exactly the same code - the same per-segment frames, mitre planes and end caps - which is
-/// the point of asking for the wedge and the ball here rather than building a second solid some
-/// other way.
+/// Which section a sweep carries along the chain. All of them are swept by exactly the same code -
+/// the same per-segment frames, mitre planes and end caps - which is the point of asking for the
+/// wedge and the ball here rather than building a second solid some other way.
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::Mesh;
 use vector_math::{cs_math, Matrix4X4};

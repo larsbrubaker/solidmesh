@@ -1,14 +1,13 @@
 //! The two corner treatments a run's end hands over to before it looks at any face of its own: a
-//! corner patch's ball, and a mixed pair's blend. Ports `Bevel/BevelCornerHandover.cs` (C#
-//! `internal static class`; a module of free functions here).
+//! corner patch's ball, and a mixed pair's blend.
 //!
 //! Both are corners something else has already decided the shape of, so the end's whole job is
 //! to stop on the plane that thing published rather than read the topology a second time. They
 //! come first, and they come as a pair, for the reason written inside [`try_hand_over`].
 //!
-//! The tables are C# `IReadOnlyDictionary`s / `IReadOnlySet`, only ever looked up here, each
-//! possibly absent (C# null). The dictionaries are [`IndexMap`]s as in
-//! [`super::bevel_blend_seam`], because the sets that build them keep C#'s insertion order.
+//! The tables are only ever looked up here, each possibly absent. The dictionaries are
+//! [`IndexMap`]s as in [`super::bevel_blend_seam`], because the sets that build them keep their
+//! insertion order.
 
 use std::collections::HashSet;
 
@@ -17,8 +16,8 @@ use vector_math::Vector3;
 
 use super::{bevel_blend_seam, bevel_corner_seam, BevelEndCap};
 
-/// The plane this end hands its corner over on, or `None` (C# false) where neither owns the
-/// corner and the caller's own face scan has to decide.
+/// The plane this end hands its corner over on, or `None` where neither owns the corner and the
+/// caller's own face scan has to decide.
 ///
 /// `vertex` is the run's end vertex and `position` where it is; `outward` the direction the sweep
 /// leaves this end by; `own_edge` the mesh edge of the run's own last edge, which is what keys a

@@ -1,7 +1,7 @@
 //! The volume a PARTNER run's rolling ball keeps empty: the cylinder of the bevel's radius about
 //! that run's ball-centre line, over the SPAN that run's own bead covers. A run that shares a chain
 //! end with this one has to keep its own bead out of it, which is how two beads meeting at a chain
-//! end come to bound each other. Ports `Bevel/BevelPartnerTube.cs`.
+//! end come to bound each other.
 //!
 //! Measured off the Onshape control in "5mm Bevel Around Center.mcx": every one of its 136 faces
 //! lies on a plane of the part or on one of four radius 5 cylinders, and where two beads overlap the
@@ -20,7 +20,7 @@
 
 use vector_math::{cs_math, Vector3};
 
-/// C# `BevelPartnerTube` (a readonly struct).
+/// The tube a partner run's rolling ball sweeps out, as a value.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BevelPartnerTube {
     /// Any point on the ball-centre line.
@@ -45,8 +45,8 @@ impl BevelPartnerTube {
     /// How far off a surface a point may be and still be called ON it, in millimetres.
     pub const ON_THE_SURFACE: f64 = 1e-9;
 
-    /// The smooth tube, endless in both directions (C#'s defaults for `from`/`to`): what every
-    /// caller that only asks about points beside the partner's own crease means.
+    /// The smooth tube, endless in both directions (no `from`/`to`): what every caller that only
+    /// asks about points beside the partner's own crease means.
     pub fn new(axis_point: Vector3, axis_direction: Vector3, radius: f64) -> Self {
         Self::spanning(
             axis_point,
@@ -110,7 +110,7 @@ impl BevelPartnerTube {
     /// tangent points in the directions `-normal0` and `-normal1` from the ball-centre line. Outside
     /// the arc's sweep the surface is the cylinder again. `facets` below one - or a wedge with no
     /// arc to speak of - hands back the smooth cylinder.
-    // The negated comparisons are C#'s `!(x > 1e-9)`, which refuse a NaN as well.
+    // The negated comparisons `!(x > 1e-9)` refuse a NaN as well.
     #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
     pub fn around_the_chorded_arc(
         axis_point: Vector3,
@@ -279,8 +279,7 @@ impl BevelPartnerTube {
             turned -= std::f64::consts::PI * 2.0;
         }
 
-        // C# `(int)Math.Floor(...)`. .NET 9+ converts saturating with NaN to 0, exactly as Rust's
-        // `as` does, so even a NaN angle reads the same facet here as in MatterCAD.
+        // `as` saturates and turns a NaN into 0, so even a NaN angle reads a real facet.
         let facet = (turned / self.step).floor() as i32;
 
         if facet < 0 || facet >= self.facets {

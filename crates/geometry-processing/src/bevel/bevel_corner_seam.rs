@@ -1,5 +1,5 @@
 //! How a run's cutter meets the surface it stops on - the face that bounds its end, or the corner
-//! patch that owns the vertex. Ports `Bevel/BevelCornerSeam.cs`.
+//! patch that owns the vertex.
 //!
 //! Both answers are about the same hazard, which is why they live together: two solids that share
 //! a plane EXACTLY are the worst thing a boolean kernel can be handed, and each of the two seams
@@ -63,7 +63,7 @@ pub fn stand_off(is_bead: bool, position: Vector3) -> f64 {
 }
 
 /// The cap for a run that may drive straight through its corner rather than stop on the patch's
-/// wall, or `None` where this corner is not one of those (C#'s `TryDriveThrough` returning false).
+/// wall, or `None` where this corner is not one of those.
 ///
 /// `seam_points` are the points the patch has put on the ball-centre plane, which this end's ring
 /// carries in place of its own arc (`BevelSeamRing`). Driving through does not move that ring -

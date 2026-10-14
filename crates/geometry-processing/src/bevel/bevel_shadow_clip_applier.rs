@@ -1,7 +1,6 @@
-//! Runs the shadow clips the rebuild planned (`Bevel/BevelShadowClipApplier.cs`, a C# `internal
-//! static class`, so a module here): each cutter less the columns some other feature standing on
-//! its bevelled face has a claim on ([`super::bevel_shadow_clip`]), with the retry that gives the
-//! obstruction's BODY up when the kernel refuses it ([`super::bevel_shadow_body`]).
+//! Runs the shadow clips the rebuild planned: each cutter less the columns some other feature
+//! standing on its bevelled face has a claim on ([`super::bevel_shadow_clip`]), with the retry that
+//! gives the obstruction's BODY up when the kernel refuses it ([`super::bevel_shadow_body`]).
 //!
 //! The apply half of the rebuild's three cutter corrections, alongside the pair-corner trim and
 //! [`super::bevel_cap_clip::apply`]. It runs FIRST of the three because it replaces cutters in
@@ -18,8 +17,7 @@ use super::bevel_bead_clip::CombineMeshes;
 use super::bevel_shadow_clip::{self, Obstruction};
 use super::{bevel_shadow_body, bevel_working_mesh, BevelRebuildAdvisories};
 
-/// One planned clip (C#'s `(int CutterIndex, int GroupIndex, IReadOnlyList<Mesh> Columns)`):
-/// which cutter a group's columns belong to.
+/// One planned clip: which cutter a group's columns belong to.
 #[derive(Debug, Clone, Default)]
 pub struct PlannedShadowClip {
     /// The cutter in the batch the columns come off.
@@ -30,8 +28,8 @@ pub struct PlannedShadowClip {
     pub columns: Vec<Mesh>,
 }
 
-/// What stops a shadow clip run: the combine's error (C# lets the boolean's exceptions through,
-/// a cancel among them), or the column rebuild's Clipper error.
+/// What stops a shadow clip run: the combine's error (a cancel among them), or the column rebuild's
+/// Clipper error.
 #[derive(Debug)]
 pub enum ShadowClipApplyError {
     /// The rebuild's combine failed or was cancelled.

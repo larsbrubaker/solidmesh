@@ -1,7 +1,6 @@
 //! The blend tool's geometry, and nothing else: how one mixed corner's rim, axis and radius become
-//! a mesh. Ports `Bevel/BevelMixedBlendTool.cs` (C# `internal static class`; a module of free
-//! functions here). Why there is a tool there at all, which corners get one and what each refusal
-//! means live on `BevelMixedBlends`, which is this module's only caller; the record it fills is
+//! a mesh. Why there is a tool there at all, which corners get one and what each refusal means live
+//! on `BevelMixedBlends`, which is this module's only caller; the record it fills is
 //! [`super::BevelMixedBlend`].
 //!
 //! Split out because the two halves answer different questions and change for different reasons.
@@ -16,9 +15,9 @@ use vector_math::{cs_math, math_helper, Vector2, Vector3, Vector3Float};
 use super::bevel_edge_tool_builder;
 use super::BevelEndCap;
 
-/// What [`build`] hands back: C#'s returned mesh and its five `out` parameters. The reaches and
-/// both handover planes are filled whether or not the mesh could be drawn, exactly as the C# `out`
-/// values are, so a caller that reads them after a refusal sees what C# would.
+/// What [`build`] hands back: the mesh and five readings beside it. The reaches and both handover
+/// planes are filled whether or not the mesh could be drawn, so a caller can still read them after
+/// a refusal.
 #[derive(Debug, Clone)]
 pub struct MixedBlendTool {
     /// The tool, or `None` where one station's cross section could not be drawn (its wedge fell
@@ -230,7 +229,7 @@ pub fn build(
     }
 }
 
-/// [`stations`]' result: the ring directions and C#'s two `out` reaches.
+/// [`stations`]' result: the ring directions and the two reaches.
 struct Stations {
     directions: Vec<Vector3>,
     /// How far past the void face the tool reaches, which is the same number with the runout or
@@ -368,8 +367,8 @@ fn stations(
 
     let back_along_the_arc = back_along_the_arc.get_normal();
 
-    // C#'s `(int)` truncates; both quotients are finite and small here (the turn and step come from
-    // a bead's arc), so `as` saturating instead cannot be reached.
+    // Both quotients are finite and small here (the turn and step come from a bead's arc), so `as`
+    // never saturates.
     let runout_stations = (runout_turn / step).ceil() as i32 + 1;
 
     // Never round so far that the sweep comes back onto its own first ring, which would stop the
@@ -402,9 +401,9 @@ fn stations(
     })
 }
 
-/// The plane through the axis that one end ring is drawn in, or nothing (C#'s `default`) where the
-/// direction it leaves the axis by runs along the axis itself - which no ring does, and is guarded
-/// because the normal is read off a cross product.
+/// The plane through the axis that one end ring is drawn in, or nothing where the direction it
+/// leaves the axis by runs along the axis itself - which no ring does, and is guarded because the
+/// normal is read off a cross product.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn seam(from_axis: Vector3, along_edge: Vector3, axis_point: Vector3) -> BevelEndCap {
     let seam = from_axis.cross(along_edge);

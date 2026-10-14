@@ -1,10 +1,9 @@
 //! A straight open concave run's bead built from the balls that roll along it and its PARTNERS'
-//! tubes, rather than swept and clipped (`Bevel/BevelPartneredBead.cs`, the RUN file of the C#
-//! `static partial class BevelPartneredBead`): what the run is ([`BevelPartneredBeadRun`]), what
-//! each of its ends does ([`BevelPartneredBeadEnd`]) and one place along it a section is taken
-//! ([`BevelPartneredBeadStation`]), reading the run and building the bead ([`try_build`]). The
-//! partial class's other files are the sibling modules `bevel_partnered_bead_partners`,
-//! `..._stations`, `..._section` and `..._tolerances`.
+//! tubes, rather than swept and clipped - the RUN file of the partnered bead: what the run is
+//! ([`BevelPartneredBeadRun`]), what each of its ends does ([`BevelPartneredBeadEnd`]) and one
+//! place along it a section is taken ([`BevelPartneredBeadStation`]), reading the run and building
+//! the bead ([`try_build`]). The partial class's other files are the sibling modules
+//! `bevel_partnered_bead_partners`, `..._stations`, `..._section` and `..._tolerances`.
 
 use std::rc::Rc;
 
@@ -28,8 +27,8 @@ use super::bevel_run_partners::try_ball_centre_line;
 use super::{BevelFaceRunOut, BevelPartnerTube, BevelRunOutBound, BevelSweptChain};
 use crate::topology::{ChainEdge, EdgeConvexity};
 
-/// C# `BevelPartneredBead.Run` (private): everything about the run that is the same at every one
-/// of its stations. Built by one read of the run and owned by that build.
+/// Everything about the run that is the same at every one of its stations. Built by one read of the
+/// run and owned by that build.
 #[derive(Debug)]
 pub struct BevelPartneredBeadRun {
     /// A point of the rolling ball's centre line, the origin `along` is measured from.
@@ -86,9 +85,9 @@ pub struct BevelPartneredBeadRun {
     pub reverse: bool,
 }
 
-/// C# `BevelPartneredBead.End` (private): what one end of the run does - which face it rides on
-/// past the crease, how far, and against whom. A run has two, held as `[start, end]`;
-/// [`BevelPartneredBeadStation::past_end`] names one by its index there.
+/// What one end of the run does - which face it rides on past the crease, how far, and against
+/// whom. A run has two, held as `[start, end]`; [`BevelPartneredBeadStation::past_end`] names one
+/// by its index there.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BevelPartneredBeadEnd {
     /// Whether this is the run's start end.
@@ -133,8 +132,7 @@ pub struct BevelPartneredBeadEnd {
     pub ends_on_the_across_plane: bool,
 }
 
-/// C# `BevelPartneredBead.Station` (a private readonly struct): one place along the run a section
-/// is taken, and how that section closes.
+/// One place along the run a section is taken, and how that section closes.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct BevelPartneredBeadStation {
     /// Where along the run, from [`BevelPartneredBeadRun::axis_point`].
@@ -142,31 +140,31 @@ pub struct BevelPartneredBeadStation {
     /// Whether this station stands past the crease's own end vertex, rather than merely past the
     /// end of the SECOND face's span inside it.
     pub past_the_crease: bool,
-    /// The end whose partner closes this station, as its index in the run's `[start, end]` pair
-    /// (C# holds the `End` itself), or `None` for a station inside the crease, which closes on the
-    /// crease line.
+    /// The end whose partner closes this station, as its index in the run's `[start, end]` pair (an
+    /// index, so the station does not borrow the run), or `None` for a station inside the crease,
+    /// which closes on the crease line.
     pub past_end: Option<usize>,
 }
 
 impl BevelPartneredBeadRun {
-    /// C# `Run.Along`: how far along the run `point` stands, from the axis point.
+    /// How far along the run `point` stands, from the axis point.
     pub fn along(&self, point: Vector3) -> f64 {
         (point - self.axis_point).dot(self.direction)
     }
 
-    /// C# `Run.Origin`: the ball centre `along` the run.
+    /// The ball centre `along` the run.
     pub fn origin(&self, along: f64) -> Vector3 {
         self.axis_point + (self.direction * along)
     }
 
-    /// C# `Run.InPart`: a station-frame point at `along`, in the part.
+    /// A station-frame point at `along`, in the part.
     pub fn in_part(&self, along: f64, point: Vector2) -> Vector3 {
         self.origin(along) + (self.x_axis * point.x) + (self.y_axis * point.y)
     }
 }
 
 impl BevelPartneredBeadStation {
-    /// C#'s constructor (C#'s argument order: along, past end, past the crease).
+    /// A station at `along`, with the end that closes it and whether it is past the crease.
     pub fn new(along: f64, past_end: Option<usize>, past_the_crease: bool) -> Self {
         BevelPartneredBeadStation {
             along,
@@ -176,8 +174,8 @@ impl BevelPartneredBeadStation {
     }
 }
 
-/// C# `TryReadRun`: the run, and its `[start, end]` pair, read off the part - or the refusal that
-/// says why this run has no partnered bead.
+/// The run, and its `[start, end]` pair, read off the part - or the refusal that says why this run
+/// has no partnered bead.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_read_run(
     chain: &BevelSweptChain,
@@ -304,8 +302,8 @@ pub fn try_read_run(
     Ok((run, [start, end]))
 }
 
-/// C# `TryRideFace`: which of `edge`'s two faces this end rides past the crease on (`true` for
-/// the left), filling in how far and what stops it; refused where nothing runs out here.
+/// Which of `edge`'s two faces this end rides past the crease on (`true` for the left), filling in
+/// how far and what stops it; refused where nothing runs out here.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_ride_face(
     run: &BevelPartneredBeadRun,
@@ -414,7 +412,7 @@ pub fn try_ride_face(
     Ok(rides_left)
 }
 
-/// C#'s `{0:0.###}`: up to three decimal places, trailing zeros dropped.
+/// Up to three decimal places, trailing zeros dropped.
 pub(crate) fn format_three_places(value: f64) -> String {
     let text = format!("{value:.3}");
     let text = text.trim_end_matches('0').trim_end_matches('.');
@@ -425,9 +423,9 @@ pub(crate) fn format_three_places(value: f64) -> String {
     }
 }
 
-/// C# `MeasureTheSecondFacesSpan`: where along the run the second face really exists, walked out
-/// of the crease's middle along its own tangent line; an end whose second face runs out over a
-/// convex edge also reads that edge's across plane.
+/// Where along the run the second face really exists, walked out of the crease's middle along its
+/// own tangent line; an end whose second face runs out over a convex edge also reads that edge's
+/// across plane.
 pub fn measure_the_second_faces_span(
     run: &mut BevelPartneredBeadRun,
     first: &ChainEdge,
@@ -480,8 +478,8 @@ pub fn measure_the_second_faces_span(
     }
 }
 
-/// C# `ReadTheAcrossPlane`: the plane of the face across the convex edge the second face ran out
-/// over, its normal turned toward the riding face's tangent line.
+/// The plane of the face across the convex edge the second face ran out over, its normal turned
+/// toward the riding face's tangent line.
 pub fn read_the_across_plane(
     run: &BevelPartneredBeadRun,
     end: &mut BevelPartneredBeadEnd,
@@ -511,8 +509,8 @@ pub fn read_the_across_plane(
     };
 }
 
-/// C# `TryEndOnTheAcrossPlane`: whether this end's riding line closes on its across plane, and if
-/// so the end stops a tip short of it, on a convex edge.
+/// Whether this end's riding line closes on its across plane, and if so the end stops a tip short
+/// of it, on a convex edge.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_end_on_the_across_plane(
     run: &BevelPartneredBeadRun,
@@ -539,8 +537,7 @@ pub fn try_end_on_the_across_plane(
     true
 }
 
-/// C# `TryBuildArc`: the run's arc and the station frame's fixed points, and which way round its
-/// polygons are walked.
+/// The run's arc and the station frame's fixed points, and which way round its polygons are walked.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_build_arc(
     run: &mut BevelPartneredBeadRun,
@@ -612,10 +609,10 @@ pub fn try_build_arc(
     Ok(())
 }
 
-/// C# `TryBuild`: a straight open concave run's partnered bead - read the run and both ends'
-/// partners, take every station's section and sew them - or the refusal that says this run's
-/// bead is the one the sweep has always built. `clearance` is C#'s optional argument (`None`
-/// takes [`CLEARANCE_IN_SIZES`] sizes). `concave_runs` is every concave run of the rebuild.
+/// A straight open concave run's partnered bead - read the run and both ends' partners, take every
+/// station's section and sew them - or the refusal that says this run's bead is the one the sweep
+/// has always built. `clearance` is optional (`None` takes [`CLEARANCE_IN_SIZES`] sizes).
+/// `concave_runs` is every concave run of the rebuild.
 pub fn try_build(
     chain: &BevelSweptChain,
     concave_runs: &[BevelSweptChain],

@@ -1,5 +1,5 @@
-//! The extra rings a TOOL drives through past a run's end where that end overshoots onto a plane
-//! of its own (`Bevel/BevelOvershootRings.cs`, a static class: free functions here).
+//! The extra rings a TOOL drives through past a run's end where that end overshoots onto a plane of
+//! its own.
 
 use vector_math::{Vector2, Vector3};
 
@@ -65,7 +65,7 @@ pub fn ring(
 
 /// Profile point `point`'s offset, with the three clearance points (1, 2, 3 of the original
 /// five-point profile, whichever way its winding was normalised) pulled `fraction` of the way in.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn tapered_offset(segment: &SweptSegment, point: usize, fraction: f64) -> Vector3 {
     let profile = &segment.profile;
     let count = profile.len();

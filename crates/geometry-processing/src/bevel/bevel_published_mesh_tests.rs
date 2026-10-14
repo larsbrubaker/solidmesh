@@ -1,5 +1,6 @@
 //! Unit tests of `bevel_published_mesh`'s private improvement test (`IsAnImprovementOn`), which
-//! needs private access: a volume that reads NaN (divergence 4956).
+//! needs private access: a volume that reads NaN is no improvement, so the cleanup is refused
+//! rather than the rebuild failing.
 
 use polygon_mesh::solids::platonic_solids;
 use vector_math::Vector3Float;
@@ -19,8 +20,8 @@ fn rust_only_a_volume_that_reads_nan_is_no_improvement() {
     let mut poisoned = cube.clone();
     poisoned.vertices[0] = Vector3Float::new(f64::NAN, 1.0, 1.0);
 
-    // C#'s Math.Sign threw on either of these; the cleanup is refused instead, so the mesh the
-    // boolean gave is the one published.
+    // Neither volume has a sign, so the cleanup is refused and the mesh the boolean gave is the one
+    // published.
     assert!(!is_an_improvement_on(&cube, &poisoned));
     assert!(!is_an_improvement_on(&poisoned, &cube));
     assert!(!is_an_improvement_on(&poisoned, &poisoned));

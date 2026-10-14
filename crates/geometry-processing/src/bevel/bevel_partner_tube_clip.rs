@@ -1,23 +1,22 @@
-//! A partnered bead's station profile clipped out of its partners' tubes
-//! (`Bevel/BevelPartnerTubeClip.cs`, a static class): where a partner run's ball tube swallows a
-//! stretch of the profile, those points are laid along the seam the tube draws in the station's
-//! plane instead, so the profile keeps its point count and its winding.
+//! A partnered bead's station profile clipped out of its partners' tubes: where a partner run's
+//! ball tube swallows a stretch of the profile, those points are laid along the seam the tube draws
+//! in the station's plane instead, so the profile keeps its point count and its winding.
 
 use vector_math::{Vector2, Vector3};
 
 use super::BevelPartnerTube;
 
-/// C# `IntrudesBy`: how far inside a tube a point has to be to count as swallowed.
+/// How far inside a tube a point has to be to count as swallowed.
 pub const INTRUDES_BY: f64 = 1e-7;
 
-/// C# `Halvings`: how many bisections pin a crossing down.
+/// How many bisections pin a crossing down.
 pub const HALVINGS: i32 = 40;
 
 const ALONG_THE_PLANE: &str =
     "the partner run's tube runs along this station's plane, so it draws no seam in it";
 
-/// C# `TryClip`: `profile` (in the station's `x_axis`/`y_axis` plane through `origin`, `z_axis`
-/// its normal) clipped out of every partner tube in turn, or the refusal that stopped it.
+/// `profile` (in the station's `x_axis`/`y_axis` plane through `origin`, `z_axis` its normal)
+/// clipped out of every partner tube in turn, or the refusal that stopped it.
 pub fn try_clip(
     profile: &[Vector2],
     origin: Vector3,
@@ -35,8 +34,8 @@ pub fn try_clip(
     Ok(clipped)
 }
 
-/// C# `TryClipOne`: `profile` clipped out of one partner's tube. Untouched where nothing
-/// intrudes; refused where the tube swallows it all or crosses it other than twice.
+/// `profile` clipped out of one partner's tube. Untouched where nothing intrudes; refused where the
+/// tube swallows it all or crosses it other than twice.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_clip_one(
     profile: &[Vector2],
@@ -151,13 +150,13 @@ pub fn try_clip_one(
     Ok(clipped)
 }
 
-/// C# `Intrudes`: a depth far enough inside the tube to count as swallowed.
+/// A depth far enough inside the tube to count as swallowed.
 pub fn intrudes(depth: f64) -> bool {
     depth < -INTRUDES_BY
 }
 
-/// C# `Crossing`: where the segment `from`..`to` crosses the tube's wall, by [`HALVINGS`]
-/// bisections from `from`'s side.
+/// Where the segment `from`..`to` crosses the tube's wall, by [`HALVINGS`] bisections from `from`'s
+/// side.
 pub fn crossing(
     from: Vector2,
     to: Vector2,
@@ -183,8 +182,8 @@ pub fn crossing(
     from + ((to - from) * ((low + high) / 2.0))
 }
 
-/// C# `TryDrawSeam`: the tube's seam in the station's plane from `from` to `to`, sampled at
-/// `parameters`, taken the way round whose halfway point the profile encloses.
+/// The tube's seam in the station's plane from `from` to `to`, sampled at `parameters`, taken the
+/// way round whose halfway point the profile encloses.
 #[allow(clippy::too_many_arguments)]
 pub fn try_draw_seam(
     from: Vector2,
@@ -255,8 +254,7 @@ pub fn try_draw_seam(
     )
 }
 
-/// C# `TryAt`: the tube's ruling at `angle` crossed with the station's plane, in the plane's own
-/// coordinates.
+/// The tube's ruling at `angle` crossed with the station's plane, in the plane's own coordinates.
 pub fn try_at(
     angle: f64,
     origin: Vector3,
@@ -271,7 +269,7 @@ pub fn try_at(
     Some(Vector2::new(offset.dot(x_axis), offset.dot(y_axis)))
 }
 
-/// C# `Encloses`: the even-odd test of `point` against the closed `profile`.
+/// The even-odd test of `point` against the closed `profile`.
 pub fn encloses(profile: &[Vector2], point: Vector2) -> bool {
     let mut inside = false;
     let count = profile.len();

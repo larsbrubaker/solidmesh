@@ -1,7 +1,6 @@
 //! One level of refinement of a corner patch's spherical polygon that leaves its BOUNDARY exactly
 //! where it was: every interior edge is split at its midpoint on the sphere, every boundary edge is
-//! untouched, and the triangles are re-cut to suit. Ports `Bevel/BevelPatchRefinement.cs` (C#
-//! `internal static class`; a module of free functions here). The corner patch's mesher
+//! untouched, and the triangles are re-cut to suit. The corner patch's mesher
 //! (`BevelCornerPatchMesher`) and the surface corner's rows (`SurfaceCornerPatchRows`) refine with
 //! it.
 //!
@@ -22,14 +21,14 @@
 //! triangles (192 on the ball becomes 744 at eight segments over three sectors).
 //!
 //! The kept-edge set and the midpoint memo are only looked up, never iterated, so a `HashSet` /
-//! `HashMap` order cannot reach the output; the midpoints are appended in triangle order, as C#'s.
+//! `HashMap` order cannot reach the output; the midpoints are appended in triangle order.
 
 use std::collections::{HashMap, HashSet};
 
 use vector_math::Vector3;
 
-/// C# `Refine`: the refined triangle list, with the midpoints appended to `directions` as unit
-/// vectors - so the caller's own indices, and every direction it already had, keep their meaning.
+/// The refined triangle list, with the midpoints appended to `directions` as unit vectors - so the
+/// caller's own indices, and every direction it already had, keep their meaning.
 ///
 /// `boundary` is the polygon's boundary walks - the seam arcs - whose edges are the ones that must
 /// not be split; `None` or empty refines everything, which is what a caller with no seam to keep
@@ -116,7 +115,7 @@ pub fn refine(
     refined
 }
 
-/// C# `Edge`: an edge as a key, read the same way from either end.
+/// An edge as a key, read the same way from either end.
 fn edge(from: i32, to: i32) -> (i32, i32) {
     if from < to {
         (from, to)

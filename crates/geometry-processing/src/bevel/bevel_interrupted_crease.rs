@@ -1,13 +1,10 @@
 //! Whether a bead's end is where its crease ENDED or only where something INTERRUPTED it - the
-//! difference between stopping square there and running on through
-//! (`Bevel/BevelInterruptedCrease.cs`, a C# `internal static class`, so a module here): the
-//! running reading of how the faces bounding one end lean against the run ([`Leaning`]) and what
-//! one end's reading came to ([`Interruption`]). The readings are `impl` blocks and free functions
-//! in this module.
+//! difference between stopping square there and running on through: the running reading of how the
+//! faces bounding one end lean against the run ([`Leaning`]) and what one end's reading came to
+//! ([`Interruption`]). The readings are `impl` blocks and free functions in this module.
 
-/// C# `BevelInterruptedCrease.Leaning` (a mutable struct): which way the faces bounding one end
-/// lean against the run, accumulated as the cap plane scan meets them, and the reading of whether
-/// that end is an interruption.
+/// Which way the faces bounding one end lean against the run, accumulated as the cap plane scan
+/// meets them, and the reading of whether that end is an interruption.
 use vector_math::{cs_math, Vector3};
 
 use super::bevel_chain_end_budget;
@@ -23,9 +20,8 @@ pub struct Leaning {
     pub falls_away_from_the_run: bool,
 }
 
-/// C# `BevelInterruptedCrease.Interruption`: what one end's reading came to - whether it is an
-/// interruption to run on through, and how far along the run the crease picks up again on the
-/// far side of it.
+/// What one end's reading came to - whether it is an interruption to run on through, and how far
+/// along the run the crease picks up again on the far side of it.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Interruption {
     /// How far past this end the selection's own crease resumes. Zero where it does not, and the
@@ -128,7 +124,7 @@ impl Leaning {
 }
 
 impl Interruption {
-    /// C#'s constructor.
+    /// An interruption whose far side is `gap` ahead.
     pub fn new(gap: f64) -> Self {
         Interruption { gap }
     }
@@ -204,8 +200,7 @@ pub fn short_of_the_far_side(
 }
 
 /// How far ahead along the run's line the nearest open concave run starts again, running on the
-/// same way - `(gap, which run)`, or `(0, -1)` where none does (C#'s two overloads, the second's
-/// `out int which` folded in).
+/// same way - `(gap, which run)`, or `(0, -1)` where none does.
 pub fn crease_resumes_beyond(
     concave_runs: Option<&[BevelSweptChain]>,
     position: Vector3,

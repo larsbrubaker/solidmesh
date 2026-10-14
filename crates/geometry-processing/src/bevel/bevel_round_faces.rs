@@ -1,7 +1,7 @@
-//! Which faces of a part are facets of a ROUND, and of which round. Ports
-//! `Bevel/BevelRoundFaces.cs`. Built on [`BevelRoundDescriptor`]'s containment and
-//! tangent-plane tests; `BevelSourceRounds` (the rounds a part arrives with) labels through
-//! [`BevelRoundFaces::label`] too, and the sweep (`BevelChainSweep.TryStandOnTheRound`) and `BevelRoundEntry` read it.
+//! Which faces of a part are facets of a ROUND, and of which round. Built on
+//! [`BevelRoundDescriptor`]'s containment and tangent-plane tests; `BevelSourceRounds` (the rounds
+//! a part arrives with) labels through [`BevelRoundFaces::label`] too, and the sweep
+//! (`BevelChainSweep.TryStandOnTheRound`) and `BevelRoundEntry` read it.
 //!
 //! It is the one thing the sweep cannot work out for itself: a facet is a plane like any other,
 //! and only something outside the sweep - the first pass's own resolutions, or a fit of the
@@ -48,9 +48,8 @@ const TANGENT_PLANE_ANGLE_DEGREES: f64 = 2.0;
 /// first pass placed itself.
 const TANGENT_LINE_TOLERANCE_FRACTION: f64 = 1e-2;
 
-/// Which faces of a part lie on a round, and which are a round's tangent planes (C# `internal
-/// sealed class BevelRoundFaces`). Lookups only, so the face maps are `HashMap`s: no iteration
-/// order reaches a result.
+/// Which faces of a part lie on a round, and which are a round's tangent planes. Lookups only, so
+/// the face maps are `HashMap`s: no iteration order reaches a result.
 #[derive(Debug, Clone)]
 pub struct BevelRoundFaces {
     by_face: HashMap<i32, BevelRoundDescriptor>,
@@ -93,13 +92,11 @@ impl BevelRoundFaces {
     /// first pass was willing to build a tool for; `size` the operation's size, which is every
     /// round's radius; `segments` how many chords each round's arc was drawn with.
     ///
-    /// `round_profile` is whether the tool's profile is an arc (C# defaults it to true). A
-    /// CHAMFER's first pass left flat cuts rather than rounds, and both readers of this -
+    /// `round_profile` is whether the tool's profile is an arc (normally true). A CHAMFER's first
+    /// pass left flat cuts rather than rounds, and both readers of this -
     /// `BevelChainSweep.TryStandOnTheRound` and `BevelRoundEntry` - are gated on the same flag, so
     /// nothing would ever be asked of what this walk of the whole mesh would find. It answers with
     /// an empty one instead.
-    ///
-    /// C#'s list may hold null resolutions, which are skipped; a Rust slice holds none.
     pub fn create(
         cut_mesh: &Mesh,
         resolutions: &[BevelEdgeGroupResolution],
@@ -140,12 +137,12 @@ impl BevelRoundFaces {
     /// Labels the faces of a part against a list of rounds already described: which of them lie
     /// ON one, and which are one's TANGENT PLANE.
     ///
-    /// The half of [`Self::create`] that does not care where the rounds came from, so a round
-    /// read off the SOURCE mesh (`BevelSourceRounds`) is labelled by exactly the same tests the
-    /// cut ones are and every reader downstream - `BevelChainSweep.TryStandOnTheRound`,
-    /// `BevelRoundEntry` - works unchanged. `size` is the operation's size, which every tolerance
-    /// below is a fraction of; `read_from_the_source_mesh` (C# default false) whether these rounds
-    /// were read off the part as it arrived - see [`Self::read_from_the_source_mesh`].
+    /// The half of [`Self::create`] that does not care where the rounds came from, so a round read
+    /// off the SOURCE mesh (`BevelSourceRounds`) is labelled by exactly the same tests the cut ones
+    /// are and every reader downstream - `BevelChainSweep.TryStandOnTheRound`, `BevelRoundEntry` -
+    /// works unchanged. `size` is the operation's size, which every tolerance below is a fraction
+    /// of; `read_from_the_source_mesh` (normally false) whether these rounds were read off the part
+    /// as it arrived - see [`Self::read_from_the_source_mesh`].
     pub fn label(
         part: &Mesh,
         rounds: &[BevelRoundDescriptor],
@@ -221,7 +218,7 @@ impl BevelRoundFaces {
     }
 
     /// The round a face belongs to and whether the face is one of its tangent planes, or `None`
-    /// where it belongs to none (C# `TryReadFace(face, out isTangentPlane)`, null for none).
+    /// where it belongs to none.
     ///
     /// The flag is false where the face is a FACET of the round - its own plane a chord of the
     /// cylinder - and true where it is one of the two flat faces the round runs out onto

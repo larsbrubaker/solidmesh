@@ -1,7 +1,6 @@
-//! The source part's convex hull, padded a hair outward - the bound every bead is kept inside so
-//! it adds no material past the part's own extent (`Bevel/BevelSourceHull.cs`, a C# `internal
-//! static class`, so a module here): building it ([`build`]) and asking whether a solid already
-//! lies inside it ([`lies_inside`]).
+//! The source part's convex hull, padded a hair outward - the bound every bead is kept inside so it
+//! adds no material past the part's own extent: building it ([`build`]) and asking whether a solid
+//! already lies inside it ([`lies_inside`]).
 
 use polygon_mesh::processors::ConvexHull;
 use polygon_mesh::Mesh;

@@ -1,7 +1,7 @@
-//! What a run does at each of its two ends (`Bevel/BevelChainEndCap.cs`): [`BevelChainEnds`],
-//! the decision `BevelEndCap` records one half of. Its constructor, the shared overshoot answer
-//! and the squared-off ends land here; resolving it - the cap plane scan, the 5.3 corner
-//! exemption, the bead's square cap and the overshoot bound - lands with later packages.
+//! What a run does at each of its two ends: [`BevelChainEnds`], the decision `BevelEndCap` records
+//! one half of. Its constructor, the shared overshoot answer and the squared-off ends land here;
+//! resolving it - the cap plane scan, the 5.3 corner exemption, the bead's square cap and the
+//! overshoot bound - lands with later packages.
 //!
 //! A cutter that finds a face bounding its end vertex stops on that face's plane; one that finds
 //! none overshoots, which costs nothing because what it reaches is material a neighbouring tool
@@ -14,10 +14,10 @@
 use super::BevelEndCap;
 use crate::topology::ChainEdge;
 
-/// C# `BevelChainEnds`: the end treatment for one run of a group's selection.
+/// The end treatment for one run of a group's selection.
 ///
-/// `Default` is C#'s `BevelChainEnds.Overshoot`: both ends run past the last vertex, unbounded -
-/// what a closed loop and a run with nothing to cap against get.
+/// `Default` is [`BevelChainEnds::overshoot`]: both ends run past the last vertex, unbounded - what
+/// a closed loop and a run with nothing to cap against get.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelChainEnds {
     /// The faces the run leaves the part through at a START that had to square off, as planes
@@ -56,8 +56,8 @@ pub struct BevelChainEnds {
 
 impl Default for BevelChainEnds {
     fn default() -> Self {
-        // C#'s constructor defaults: no pair or overshoot corner, no exit planes, and both
-        // overshoots unbounded.
+        // Nothing read yet: no pair or overshoot corner, no exit planes, and both overshoots
+        // unbounded.
         Self {
             start_exit_planes: None,
             end_exit_planes: None,
@@ -77,9 +77,9 @@ impl BevelChainEnds {
     /// The steepest a cap plane may stand off square to the run, in degrees.
     pub const MAXIMUM_CAP_PLANE_ANGLE_DEGREES: f64 = 80.0;
 
-    /// C#'s constructor with its optional arguments at their defaults: no pair or overshoot
-    /// corner, no exit planes, and an unbounded overshoot at both ends. Callers that name an
-    /// optional argument set it with struct-update syntax.
+    /// The two ends' caps, with everything else at its default: no pair or overshoot corner, no
+    /// exit planes, and an unbounded overshoot at both ends. Callers that name an optional argument
+    /// set it with struct-update syntax.
     pub fn new(start: BevelEndCap, end: BevelEndCap) -> Self {
         BevelChainEnds {
             start,
@@ -88,7 +88,7 @@ impl BevelChainEnds {
         }
     }
 
-    /// Both ends overshooting (C#'s static `Overshoot`): no cap plane at either.
+    /// Both ends overshooting: no cap plane at either.
     pub fn overshoot() -> Self {
         Self::new(BevelEndCap::default(), BevelEndCap::default())
     }
@@ -122,26 +122,26 @@ impl BevelChainEnds {
     }
 }
 
-/// C# `BevelChainEnds.Resolve`'s optional arguments, at C#'s defaults by `Default` (round
-/// profile on, everything else absent).
+/// [`BevelChainEnds::resolve`]'s optional arguments, at their defaults by `Default` (round profile
+/// on, everything else absent).
 pub struct ResolveOptions<'a, 's> {
-    /// C# `patchedCorners`.
+    /// Where a corner patch has put a ball in an OUTSIDE corner, by mesh vertex.
     pub patched_corners: Option<&'a indexmap::IndexMap<i32, vector_math::Vector3>>,
-    /// C# `blendHandovers`.
+    /// The plane a blend hands a cut over on, by (mesh vertex, mesh edge).
     pub blend_handovers: Option<&'a indexmap::IndexMap<(i32, i32), BevelEndCap>>,
-    /// C# `blendCappedCorners`.
+    /// The face normal a blend caps a bead on, by (mesh vertex, mesh edge).
     pub blend_capped_corners: Option<&'a indexmap::IndexMap<(i32, i32), vector_math::Vector3>>,
-    /// C# `filledCorners`.
+    /// Where a corner patch has put a ball out in the VOID of an inside corner, by mesh vertex.
     pub filled_corners: Option<&'a indexmap::IndexMap<i32, vector_math::Vector3>>,
-    /// C# `roundProfile`.
+    /// Whether the tool's profile is an arc.
     pub round_profile: bool,
-    /// C# `surfaceOfFace`.
+    /// The surface label of each face, read only by the end that needs it.
     pub surface_of_face: Option<&'a mut dyn FnMut() -> Option<&'s [i32]>>,
-    /// C# `runsMayDriveThrough`.
+    /// The patched vertices whose runs may drive straight through.
     pub runs_may_drive_through: Option<&'a std::collections::HashSet<i32>>,
-    /// C# `patchSeamRings`.
+    /// The points a corner patch has already put on each run's plane, by (vertex, mesh edge).
     pub patch_seam_rings: Option<&'a indexmap::IndexMap<(i32, i32), Vec<vector_math::Vector3>>>,
-    /// C# `concaveRuns`.
+    /// Every concave run of the whole rebuild.
     pub concave_runs: Option<&'a [super::BevelSweptChain]>,
 }
 
@@ -162,7 +162,7 @@ impl Default for ResolveOptions<'_, '_> {
 }
 
 impl BevelChainEnds {
-    /// C# `BevelChainEnds.Resolve`: both ends of an open run capped
+    /// Both ends of an open run capped
     /// ([`resolve_end`](super::bevel_chain_end_plane::resolve_end)), each one's overshoot bounded,
     /// with the advisories for interrupted creases left short and ends held back. A closed run, an
     /// empty one or no feature set overshoots freely.

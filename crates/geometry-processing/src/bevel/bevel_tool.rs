@@ -1,6 +1,6 @@
 //! One tool built for one run of edges, and which way the boolean has to take it ([`BevelTool`]).
-//! Ports `Bevel/BevelTool.cs`. The tool builders (the chain sweep, the partnered bead) make these;
-//! the cutter and bead clips ([`super::bevel_bead_clip`], [`super::bevel_cap_clip`]) read them.
+//! The tool builders (the chain sweep, the partnered bead) make these; the cutter and bead clips
+//! ([`super::bevel_bead_clip`], [`super::bevel_cap_clip`]) read them.
 
 use std::rc::Rc;
 
@@ -9,9 +9,9 @@ use polygon_mesh::Mesh;
 use super::bevel_cap_clip::ClippedCap;
 use super::BevelEndCap;
 
-/// C# `BevelTool`: one tool built for one run of edges, and which way the boolean has to take it:
-/// a convex run makes a cutter to SUBTRACT, a concave run makes a bead to UNION (the plan's
-/// section 3 table, both rows).
+/// One tool built for one run of edges, and which way the boolean has to take it: a convex run
+/// makes a cutter to SUBTRACT, a concave run makes a bead to UNION (the plan's section 3 table,
+/// both rows).
 #[derive(Debug, Clone)]
 pub struct BevelTool {
     /// The tool solid, in the source item's own local space.
@@ -72,8 +72,8 @@ pub struct BevelTool {
 }
 
 impl BevelTool {
-    /// C#'s constructor with only its two required arguments; every optional one takes C#'s
-    /// default (`None`, `false`). Set the public fields for the rest, as C#'s named arguments do.
+    /// A tool from its two required parts; every optional one takes its default (`None`, `false`).
+    /// Set the public fields for the rest.
     pub fn new(mesh: Mesh, is_bead: bool) -> Self {
         BevelTool {
             mesh,

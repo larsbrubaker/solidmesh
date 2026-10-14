@@ -1,9 +1,8 @@
 //! The cross section one edge's bevel is cut with, and the frame it is drawn in: on a convex edge
 //! the profile of the material that has to go, on a concave edge the mirror of the same
-//! construction, which is the bead that is unioned on. `BevelChainSweep` is what turns these into
-//! a solid. Ports `Bevel/BevelEdgeToolBuilder.cs` (C# `internal static class`; a module of free
-//! functions here, its `Try*(out ..., out BevelAdvisory)` methods returning
-//! `Result<_, BevelAdvisory>`).
+//! construction, which is the bead that is unioned on. `BevelChainSweep` is what turns these into a
+//! solid. Its `try_*` functions return `Result<_, BevelAdvisory>`: the built section, or the reason
+//! there is none.
 //!
 //! The size is dimensioned the way CAD dimensions it - a chamfer's setback is measured along each
 //! face, a fillet's radius is the rolling ball - and the round is the true tangent arc (tangent
@@ -66,7 +65,7 @@ pub const TUBE_STAND_OFF_FRACTION: f64 = 0.25;
 /// and that is deliberate at a corner the tool has to reach past. It is also why `BevelChainEnds`
 /// bounds it at an uncapped end shorter than itself.
 pub fn overshoot(size: f64, tangent_distance: f64) -> f64 {
-    // C# Math.Max: NaN propagates, which f64::max would not.
+    // NaN propagates, which f64::max would not do: a NaN size must not read as a real overshoot.
     if size.is_nan() || tangent_distance.is_nan() {
         return f64::NAN;
     }
@@ -100,7 +99,7 @@ pub fn tangent_distance(size: f64, wedge_angle_degrees: f64, round_profile: bool
 }
 
 /// Refuses a size that would remove nothing.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_validate_size(size: f64) -> Result<(), BevelAdvisory> {
     if !(size > 0.0) {
@@ -129,7 +128,7 @@ pub fn profile_wedge_angle_degrees(edge: &FeatureEdge) -> f64 {
 /// for a fillet is that same `size / sin(halfAngle)` and for a chamfer is `sqrt(2) size`. And the
 /// profile return lies inside the triangle those corners span. So the larger of the two closed
 /// forms bounds both profiles.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn cross_section_reach(size: f64, wedge_angle_degrees: f64) -> f64 {
     let sine_of_half_angle = (degrees_to_radians(wedge_angle_degrees) / 2.0).sin();
@@ -214,7 +213,7 @@ pub fn try_build_frame(
 /// so "out past face 0" is INTO the material and the cleared apex is the buried back of a bead.
 ///
 /// `back_depth` is how far past each face the cleared walls may run, when that has to be less than
-/// the size; zero (C#'s default) means the size itself.
+/// the size; zero means the size itself.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_cross_section(
     normal0: Vector3,
@@ -253,7 +252,7 @@ pub fn try_build_cross_section(
     // through itself on the inside of the turn - see BevelChainSweep.TryCreate, which measures the
     // fold and retries rather than refusing the tool. Never DEEPER than the size.
     let clearance = if back_depth > 0.0 {
-        // C# Math.Min: NaN cannot reach here (back_depth > 0 is false for NaN).
+        // NaN cannot reach here (back_depth > 0 is false for NaN), so f64::min is safe.
         back_depth.min(size)
     } else {
         size
@@ -331,12 +330,12 @@ pub fn try_build_cross_section(
 /// floor by three decades and matches `BevelCornerPatchMesher.TryBuildVoidCone`'s setback.
 ///
 /// **And why ONE wedge is still drawn flush** (`clear_the_faces` false). Where the bead squares off
-/// against a 5.3 corner the keep-set is `wedge ∪ corner void`, whose walls lie ON these same
-/// faces, so an inset makes a near-parallel pair rather than removing a coincidence
+/// against a 5.3 corner the keep-set is `wedge ∪ corner void`, whose walls lie ON these same faces,
+/// so an inset makes a near-parallel pair rather than removing a coincidence
 /// (`BevelTwoBeadCornerClipTests`). That squared wedge alone is swept flush
 /// (`BevelSweptSection.VoidWedgeOnTheFaces`); the section tests also measure the bare triangle.
-/// C#'s default is true.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+/// `clear_the_faces` is normally true.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_build_void_wedge_cross_section(
     normal0: Vector3,
@@ -418,8 +417,7 @@ pub fn try_build_void_wedge_cross_section(
 /// bracketed against the Onshape control of `CornerShouldBeSmoothRegressionTests` (a whole
 /// sagitta stood 0.049 mm proud; a half-step rotation cut 0.098 mm below).
 ///
-/// A chamfer has no ball, so a square profile is refused (with a zero tangent distance in C#'s
-/// out parameter, which a `Result` does not carry).
+/// A chamfer has no ball, so a square profile is refused.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_ball_cross_section(
     normal0: Vector3,
@@ -522,8 +520,8 @@ fn try_measure_corner(
     let face1_out = Vector2::new(normal1.dot(x_axis), normal1.dot(y_axis));
 
     // The interior angle of the corner, measured through the wedge the profile is drawn in - the
-    // material on a convex edge, the void on a concave one. (C# Math.Clamp; a NaN dot stays NaN
-    // through clamp and acos alike and passes both angle bounds, exactly as in C#.)
+    // material on a convex edge, the void on a concave one. (A NaN dot stays NaN through clamp and
+    // acos alike and passes both angle bounds.)
     let interior_angle = face0_direction.dot(face1_direction).clamp(-1.0, 1.0).acos();
     let interior_angle_degrees = radians_to_degrees(interior_angle);
 

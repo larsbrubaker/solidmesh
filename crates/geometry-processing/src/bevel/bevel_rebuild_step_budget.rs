@@ -1,7 +1,6 @@
 //! How many booleans one bevel rebuild is going to ask the kernel for, which is what the progress
-//! bar is shared out over (`Bevel/BevelRebuildStepBudget.cs`, a C# `internal static class`, so a
-//! module of free functions here). Read off the bead batch ([`super::BevelBeadBatch`]) and the
-//! groups' resolutions before anything is cut.
+//! bar is shared out over. Read off the bead batch ([`super::BevelBeadBatch`]) and the groups'
+//! resolutions before anything is cut.
 //!
 //! The bar counts what the rebuild's combine is ASKED rather than what succeeds, so the WORST case
 //! is what has to be budgeted: a term left OUT here does not make the bar finish early, it makes
@@ -48,8 +47,8 @@ pub fn count(
     // three of its own (the beads meeting there unioned, the keep-set unioned, the intersect),
     // counted once however many beads share it, plus one join for the batch they go into.
     let mut clip_steps = 0;
-    // C# counts corners by reference identity (`ReferenceEqualityComparer`): the shared `Rc`'s
-    // address is that identity here.
+    // Corners are counted by identity, the shared `Rc`'s address: every bead at one corner holds
+    // the same void, and two corners never merge for having equal geometry.
     let mut counted_corners: HashSet<*const Mesh> = HashSet::new();
 
     for clippable in &beads.clippable {

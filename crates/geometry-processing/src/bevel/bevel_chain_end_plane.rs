@@ -1,7 +1,7 @@
-//! The plane a chain END is capped on (`Bevel/BevelChainEndPlane.cs`, a static class): handed
-//! over to a corner patch or blend where one owns the vertex; otherwise the face beyond the end
-//! that agrees best with the way the run leaves, the run running on or dying buried past an
-//! interrupted crease, a valley fold's mitre, or no plane at all.
+//! The plane a chain END is capped on: handed over to a corner patch or blend where one owns the
+//! vertex; otherwise the face beyond the end that agrees best with the way the run leaves, the run
+//! running on or dying buried past an interrupted crease, a valley fold's mitre, or no plane at
+//! all.
 
 use std::collections::HashSet;
 
@@ -16,7 +16,7 @@ use super::{
 };
 use crate::topology::{FeatureEdge, FeatureEdgeSet};
 
-/// What C# `ResolveEnd` hands back besides the cap: the pair corner the end stands at, whether a
+/// What [`resolve_end`] hands back besides the cap: the pair corner the end stands at, whether a
 /// selected run meets it, the interruption it runs on past, and the faces a bead leaves through.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ResolvedEnd {
@@ -35,19 +35,19 @@ pub struct ResolvedEnd {
 /// The corner patches' and blends' readings `ResolveEnd` hands over to, all optional.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct EndHandovers<'a> {
-    /// C# `patchedCorners`.
+    /// Where a corner patch has put a ball, by mesh vertex.
     pub patched_corners: Option<&'a IndexMap<i32, Vector3>>,
-    /// C# `blendHandovers`.
+    /// The plane a blend hands a cut over on, by (mesh vertex, mesh edge).
     pub blend_handovers: Option<&'a IndexMap<(i32, i32), BevelEndCap>>,
-    /// C# `blendCappedCorners`.
+    /// The face normal a blend caps a bead on, by (mesh vertex, mesh edge).
     pub blend_capped_corners: Option<&'a IndexMap<(i32, i32), Vector3>>,
-    /// C# `runsMayDriveThrough`.
+    /// The patched vertices whose runs may drive straight through.
     pub runs_may_drive_through: Option<&'a HashSet<i32>>,
-    /// C# `patchSeamRings`.
+    /// The points a corner patch has already put on each run's plane, by (vertex, mesh edge).
     pub patch_seam_rings: Option<&'a IndexMap<(i32, i32), Vec<Vector3>>>,
 }
 
-/// C# `BevelChainEndPlane.ResolveEnd`.
+/// The cap one end of a run stops on, with what it read on the way ([`ResolvedEnd`]).
 #[allow(clippy::too_many_arguments)]
 pub fn resolve_end<'s>(
     vertex: i32,
