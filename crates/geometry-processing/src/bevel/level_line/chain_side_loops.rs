@@ -1,8 +1,7 @@
 //! What the cut left ONE picked side of ONE chain - the reading a multi-loop refusal is made on,
-//! said per chain and per side rather than as the single yes or no the build decides by. Ports
-//! `Bevel/LevelLine/ChainSideLoops.cs`.
+//! said per chain and per side rather than as the single yes or no the build decides by.
 
-/// C# `ChainSideLoops` (a readonly record struct).
+/// The loops the cut left one side of one chain.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChainSideLoops {
     /// The chain, as an index into the gap result's chains.

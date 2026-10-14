@@ -1,13 +1,12 @@
 //! The chain a bevel is built round, as a distance field ([`ChainField`]), and the scope that
 //! makes fields built inside it read given joints as smooth ([`ChainFieldSmoothJointsScope`]).
-//! Ports the type of `Bevel/LevelLine/ChainField.cs` with the fields of every partial
-//! (`ChainField.EndClip.cs`, `.EndRay.cs`, `.Mitre.cs`, `.Queries.cs`, `.SmoothJointSpans.cs`,
-//! `.Swallow.cs`); the nested records live in the Rust files of the partials that declare them.
-//! Here too: the closest-point closed forms on a segment and a triangle, the smooth-joint test and
+//! The type holds the fields every `chain_field_*` module reads; the nested records live in the
+//! modules that use them. Here too: the closest-point closed forms on a segment and a triangle,
+//! the smooth-joint test and
 //! the sharp-joint finder, and the readings along the chain - where a parameter stands
 //! ([`ChainField::locate_on_chain`]), the point and setback there, the sharp joints found once -
-//! and the exact point query ([`ChainField::evaluate`]). Construction, the other queries and the
-//! `ChainDistanceField` impl land with their method packages.
+//! and the exact point query ([`ChainField::evaluate`]). Construction is in
+//! `chain_field_from_polyline.rs`, the other queries in the other `chain_field_*` modules.
 
 use std::cell::OnceCell;
 use std::collections::HashSet;
@@ -21,11 +20,11 @@ use super::{
     SegmentNode, WorkError,
 };
 
-/// The greatest end plane's reading at a point, as the convex cell bound takes it (C#
-/// `Func<int, Vector3, double>`: chain index, point).
+/// The greatest end plane's reading at a point, as the convex cell bound takes it (chain index,
+/// point).
 pub type ChainFieldEndPlaneReader = Rc<dyn Fn(i32, Vector3) -> f64>;
 
-/// C# `ChainField`: the chain a bevel is built round, as a distance field - a polyline carrying a
+/// The chain a bevel is built round, as a distance field - a polyline carrying a
 /// setback at each of its points, able to say for any point in space how far inside or outside
 /// the setback boundary it lies, and which point of the chain put it there.
 ///
@@ -81,17 +80,15 @@ pub struct ChainField {
     pub min_setback: f64,
     /// The largest setback any point of the chain asks for - at worst, the room a build needs.
     pub max_setback: f64,
-    /// Per segment, the rays it also answers for (C# `extensions`); `None` when the chain has no
+    /// Per segment, the rays it also answers for; `None` when the chain has no
     /// sharp turn, and `None` for a segment with none.
     pub extensions: Option<Vec<Option<Vec<ChainFieldExtension>>>>,
     /// The end planes the field is clipped by; `None` when no end's ray is bounded.
     pub end_clips: Option<Vec<ChainFieldEndClip>>,
-    /// The end-plane reader handed to the convex cell bound, made once on first ask (C#
-    /// `endPlaneReader ??=`).
+    /// The end-plane reader handed to the convex cell bound, made once on first ask.
     pub end_plane_reader: OnceCell<ChainFieldEndPlaneReader>,
     /// The chain's joints sharper than [`ChainField::sharp_turn_degrees`], each as its parameter
-    /// and the setback asked there, in parameter order; found once on first ask (C# `sharpJoints
-    /// ??=`).
+    /// and the setback asked there, in parameter order; found once on first ask.
     pub sharp_joints: OnceCell<Vec<(f64, f64)>>,
 }
 
@@ -110,7 +107,7 @@ impl std::fmt::Debug for ChainField {
     }
 }
 
-/// C# `ChainField.SmoothJointsScope`: holds the smooth-joint positions that were in scope before
+/// Holds the smooth-joint positions that were in scope before
 /// `ChainField::smooth_joints_while`, and puts them back when the scope ends.
 ///
 /// The scope exists because rounds first's pass B (`BandGap.BuildRoundsFirst`) joins crease runs
@@ -118,8 +115,8 @@ impl std::fmt::Debug for ChainField {
 /// its samples turn past the pick's sharp-turn threshold - read as mitres, the strip kept repeated
 /// stations there and the clip refused the self-loop rail edges. A scope rather than a parameter,
 /// because the field is built in a dozen places under the build, all of which must read the same
-/// joints. The set holds each position as its component bits with -0.0 read as 0.0 (C#
-/// `Vector3` equality on the crease's own exact vertex positions).
+/// joints. The set holds each position as its component bits with -0.0 read as 0.0 (exact
+/// equality on the crease's own vertex positions, where -0.0 and 0.0 are the same point).
 ///
 /// Neither `Clone` nor `Default`: dropping a scope restores the slot, so a copy would restore it
 /// twice, and a scope made any way but by `smooth_joints_while` would restore a slot it never set.
@@ -131,7 +128,7 @@ pub struct ChainFieldSmoothJointsScope {
 }
 
 impl ChainField {
-    /// C# `ChainField.HasSmoothJoints`: whether this field was built inside the smooth-joints scope
+    /// Whether this field was built inside the smooth-joints scope
     /// with smooth joints of its own.
     pub fn has_smooth_joints(&self) -> bool {
         self.smooth_joints.is_some()
@@ -243,14 +240,14 @@ impl ChainField {
 }
 
 thread_local! {
-    /// C# `ChainField.SmoothJointsInScope` (an `AsyncLocal`): the joint positions fields built now
+    /// The joint positions fields built now
     /// read as smooth, as component bits with -0.0 read as 0.0; `None` outside any scope. The
     /// bevel runs on one thread, so the build's flow is the thread.
     static SMOOTH_JOINTS_IN_SCOPE: std::cell::RefCell<Option<HashSet<[u64; 3]>>> =
         const { std::cell::RefCell::new(None) };
 }
 
-/// A position's key in the smooth-joint set: C# `Vector3` equality, so -0.0 and 0.0 are one.
+/// A position's key in the smooth-joint set: exact equality, so -0.0 and 0.0 are one.
 fn joint_key(p: Vector3) -> [u64; 3] {
     let bits = |v: f64| {
         if v == 0.0 {
@@ -296,14 +293,14 @@ impl ChainField {
 }
 
 impl ChainFieldSmoothJointsScope {
-    /// C#'s constructor: the joints in scope before this one began.
+    /// A scope remembering the joints in scope before this one began.
     pub fn new(previous: Option<HashSet<[u64; 3]>>) -> Self {
         Self { previous }
     }
 }
 
 impl Drop for ChainFieldSmoothJointsScope {
-    /// C# `Dispose`: puts back the joints that were in scope before.
+    /// Puts back the joints that were in scope before.
     fn drop(&mut self) {
         let previous = self.previous.take();
         SMOOTH_JOINTS_IN_SCOPE.with(|slot| *slot.borrow_mut() = previous);
@@ -311,7 +308,7 @@ impl Drop for ChainFieldSmoothJointsScope {
 }
 
 impl ChainField {
-    /// C# `ChainField.SetbackAt`: the setback asked at a chain parameter - linear along each chain
+    /// The setback asked at a chain parameter - linear along each chain
     /// segment between the setbacks of its two points, so it is continuous everywhere, including
     /// round a closed chain's wrap.
     pub fn setback_at(&self, parameter: f64) -> f64 {
@@ -321,7 +318,7 @@ impl ChainField {
         from + ((to - from) * t)
     }
 
-    /// C# `ChainField.PointAt`: the point of the chain at a chain parameter.
+    /// The point of the chain at a chain parameter.
     pub fn point_at(&self, parameter: f64) -> Vector3 {
         let (segment, t) = self.locate_on_chain(parameter);
         let from = self.points[segment];
@@ -329,7 +326,7 @@ impl ChainField {
         from + ((to - from) * t)
     }
 
-    /// C# `ChainField.Evaluate`: the exact nearest point of the chain to `point`, over every
+    /// The exact nearest point of the chain to `point`, over every
     /// segment, with ties broken by the lower parameter (see the type's remarks for why that rule
     /// is a rule), clipped by the chain's bounded end planes. Charges one unit of work.
     #[track_caller]
@@ -354,13 +351,13 @@ impl ChainField {
         Ok(self.clipped(point, sample))
     }
 
-    /// C# `ChainField.SharpJoints`: the chain's joints sharper than its bend threshold, each as
+    /// The chain's joints sharper than its bend threshold, each as
     /// its parameter and the setback asked there, in parameter order; found once.
     pub fn sharp_joints(&self) -> &[(f64, f64)] {
         self.sharp_joints.get_or_init(|| self.find_sharp_joints())
     }
 
-    /// C# `ChainField.LocateOnChain`: the segment a chain parameter falls on and how far along it
+    /// The segment a chain parameter falls on and how far along it
     /// (0..1). A closed chain wraps the parameter round its loop; an open one is held to its ends.
     /// The parameter is first read back from the smooth-joint spans onto the chain.
     pub fn locate_on_chain(&self, parameter: f64) -> (usize, f64) {

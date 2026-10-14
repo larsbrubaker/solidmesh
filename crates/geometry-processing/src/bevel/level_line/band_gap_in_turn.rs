@@ -1,5 +1,5 @@
-//! The band built one chain at a time. Ports `Bevel/LevelLine/BandGap.InTurn.cs` (a partial of the
-//! C# static class `BandGap`): so far the walk along a split edge's pieces ([`walk_along`]), the
+//! The band built one chain at a time (a part of the band gap, whose main module is
+//! `band_gap.rs`): the walk along a split edge's pieces ([`walk_along`]), the
 //! in-turn test ([`takes_open_chains_in_turn`]), a chain's ends carried onto the mesh an earlier
 //! cut left ([`ends_on_the_mesh`], [`nearest_on_the_edge`]), the built mesh's coplanar turn, and a
 //! chain and the feature test carried onto a built mesh ([`chain_after_a_build`],
@@ -20,13 +20,13 @@ use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges::{self, StandingMap};
 use super::{BandGapResult, BandProfile, GapFillRefusal, GapFillResult, WorkBudget};
 
-/// C#'s `Func<int, WorkBudget> budgetFor`: a work budget for a mesh of so many triangles, per cut
+/// A work budget for a mesh of so many triangles, per cut
 /// and per fill.
 pub type BudgetFor<'a> = &'a dyn Fn(i32) -> Rc<WorkBudget>;
 
 /// Why a pick built a chain (or a pass) at a time and filled could not run: the cut's error
-/// ([`BandGapBuildError`]) or the fill's ([`GapFillError`]) - C#'s exceptions out of `Build` and
-/// `GapFill.Fill`, passed up as they come. A refusal is not one of them.
+/// ([`BandGapBuildError`]) or the fill's ([`GapFillError`]), passed up as they come. A refusal is
+/// not one of them.
 #[derive(Debug)]
 pub enum BuildAndFillError {
     /// The cut could not run.
@@ -58,11 +58,11 @@ impl std::fmt::Display for BuildAndFillError {
 
 impl std::error::Error for BuildAndFillError {}
 
-/// C# `BandGap.CoplanarAfterABuild`: how far (one minus the normals' dot) two faces of a built
+/// How far (one minus the normals' dot) two faces of a built
 /// mesh may turn and still be one face.
 pub const COPLANAR_AFTER_A_BUILD: f64 = 1e-9;
 
-/// C# `BandGap.TakesOpenChainsInTurn`: true when `gap`, the pick-wide cut, is to be built in turn:
+/// True when `gap`, the pick-wide cut, is to be built in turn:
 /// several chains, every one open, the cut built (so the pick-wide room cleared the size), and no
 /// loop shared between chains - a loop two chains' fronts both reach is a handover the chains
 /// alone cannot build.
@@ -78,12 +78,12 @@ pub fn takes_open_chains_in_turn(gap: Option<&BandGapResult>, closed: &[bool]) -
     })
 }
 
-/// C# `BandGap.EndsOnTheMesh`: an open chain whose END an earlier chain's band cut away (the two
+/// An open chain whose END an earlier chain's band cut away (the two
 /// met at that vertex, so it lay in the earlier band) starts instead where its first edge now
 /// enters the mesh - the vertex the earlier cut left on that edge, at the earlier band's rim.
 /// `None` where no such vertex is: the chain then lies inside the earlier band and the two
-/// interact. The neighbour map keeps C#'s `Dictionary` order, which [`nearest_on_the_edge`]
-/// breaks its ties by.
+/// interact. The neighbour map keeps insertion order, which [`nearest_on_the_edge`] breaks its
+/// ties by, so the same mesh always picks the same vertex.
 pub fn ends_on_the_mesh(
     chain: &[i32],
     positions: &[Vector3],
@@ -122,7 +122,7 @@ pub fn ends_on_the_mesh(
     }
 }
 
-/// C# `BandGap.NearestOnTheEdge`: the mesh vertex (a key of `neighbours`) on the segment from
+/// The mesh vertex (a key of `neighbours`) on the segment from
 /// `from` to `to` nearest `from`, or -1; the first in the map's order wins a tie.
 pub fn nearest_on_the_edge(
     from: i32,
@@ -217,7 +217,7 @@ pub fn walk_along(
     Some(walk)
 }
 
-/// C# `ChainAfterABuild`: `original` carried onto the mesh an earlier chain's build left - every
+/// `original` carried onto the mesh an earlier chain's build left - every
 /// split edge walked along its pieces, and an open chain whose end the earlier band took away
 /// started at that band's rim ([`ends_on_the_mesh`]). A build only appends vertices and never moves
 /// the input's, so a split edge's pieces run straight from one end to the other; an edge that
@@ -273,7 +273,7 @@ pub fn chain_after_a_build(
     carried
 }
 
-/// C# `FeatureEdgesAfterABuild`: the caller's feature test carried onto a built mesh - an edge of
+/// The caller's feature test carried onto a built mesh - an edge of
 /// the input (both ends below `input_count`, and in `input_edges`) asks the caller's test; any
 /// other is a feature where its two faces turn by more than [`COPLANAR_AFTER_A_BUILD`].
 pub fn feature_edges_after_a_build(
@@ -308,7 +308,7 @@ pub fn feature_edges_after_a_build(
     })
 }
 
-/// C# `BandGap.BuildOpenChainsInTurn`: cuts and fills chain 0 alone, then chain 1 alone on the
+/// Cuts and fills chain 0 alone, then chain 1 alone on the
 /// result, and so on. All or nothing, as the fill of one cut is: the first chain that refuses
 /// refuses the pick, named by [`GapFillResult::offending_chain`].
 ///
@@ -319,7 +319,7 @@ pub fn feature_edges_after_a_build(
 /// open.
 ///
 /// A pick of no chains is refused as the pick-wide build refuses it
-/// ([`PickArgumentError::NoChains`]); C# reads a fill it never made there.
+/// ([`PickArgumentError::NoChains`]): there is no fill to read.
 #[allow(clippy::too_many_arguments)]
 pub fn build_open_chains_in_turn(
     positions: &[Vector3],

@@ -1,5 +1,4 @@
-//! Closest approach between one chain segment and a piece of the mesh, in closed form. Ports
-//! `Bevel/LevelLine/ChainApproach.cs` (a C# static class, so a module of functions); the closest
+//! Closest approach between one chain segment and a piece of the mesh, in closed form. The closest
 //! points it evaluates are [`ChainField::closest_on_segment`] and
 //! [`ChainField::closest_on_triangle`].
 //!
@@ -156,6 +155,6 @@ fn least_over_candidates(
 }
 
 fn clamp01(value: f64) -> f64 {
-    // NaN passes through, as C#'s two comparisons let it.
+    // NaN passes through, so a broken reading stays visible downstream.
     value.clamp(0.0, 1.0)
 }

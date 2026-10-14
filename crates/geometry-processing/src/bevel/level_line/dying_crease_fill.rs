@@ -1,5 +1,4 @@
-//! The fill where a growing crease dies out under the band. Ports
-//! `Bevel/LevelLine/DyingCreaseFill.cs` (a C# static class): so far the extreme rail vertex
+//! The fill where a growing crease dies out under the band: the extreme rail vertex
 //! ([`extreme`]), the open run between two loop indices ([`run`]), which cut it fills
 //! ([`is_one_loop_round_an_open_chain`]) and the fill itself ([`try_die_out`]), which cuts the one
 //! loop into two runs and hands them to the fade's own fill (`open_gap_fill_fill::fill`).
@@ -20,13 +19,13 @@ use super::{
 pub type WatchDyingHole = Rc<dyn Fn(&[(i32, i32)])>;
 
 thread_local! {
-    /// C# `[ThreadStatic] DyingCreaseFill.WatchDyingHole`: a read-only observer of the dying
+    /// A read-only observer of the dying
     /// crease's hole - the directed edges round the two runs the loop is cut into, handed over
     /// just before the fade's fill closes them. Per thread; `None` (the default) costs nothing.
     pub static WATCH_DYING_HOLE: RefCell<Option<WatchDyingHole>> = const { RefCell::new(None) };
 }
 
-/// C# `DyingCreaseFill.TryDieOut`: the fill where a growing crease dies out at both ends under the
+/// The fill where a growing crease dies out at both ends under the
 /// band - one open chain and one closed loop round it. The loop is cut at the two vertices where
 /// it passes the chain's ends ([`extreme`]) into two open runs, which go to the fade's own fill.
 /// Anything else about a one-loop open gap is refused by name.
@@ -40,8 +39,8 @@ pub fn try_die_out(
         mesh: gap.mesh.clone(),
         ..GapFillResult::default()
     };
-    // C# reads `gap.Mesh` without a null check: a gap with no mesh cannot be one loop round a
-    // chain the cut walked, so it is refused here rather than dereferenced.
+    // A guard against a gap with no mesh: it cannot be one loop round a chain the cut walked, so
+    // it is refused here.
     let Some(mesh_handle) = gap
         .mesh
         .as_ref()
@@ -203,7 +202,7 @@ pub fn run(gap_loop: &GapLoop, from: usize, to: usize) -> Result<GapLoop, WorkEr
     ))
 }
 
-/// C# `DyingCreaseFill.IsOneLoopRoundAnOpenChain`: whether this cut is the one this type fills: one
+/// Whether this cut is the one this type fills: one
 /// OPEN chain, and exactly ONE closed loop left - what a crease dying out at BOTH ends leaves.
 pub fn is_one_loop_round_an_open_chain(gap: Option<&BandGapResult>) -> bool {
     gap.is_some_and(|gap| {

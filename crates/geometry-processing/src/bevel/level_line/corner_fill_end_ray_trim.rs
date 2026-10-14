@@ -1,15 +1,14 @@
-//! The corner fill's end-ray trim (`Bevel/LevelLine/CornerFill.EndRayTrim.cs`, a partial of the C#
-//! static class `CornerFill`, whose piece type is in `corner_fill.rs`): the convexity reading at a
+//! The corner fill's end-ray trim (the piece type is in `corner_fill.rs`): the convexity reading at a
 //! run's end ([`is_convex_at`]), the trim of a pick's free rayed ends to their end planes
 //! ([`trim_end_ray_ends`]) and of its grow-over ends ([`trim_grow_over_ends`]). The section each
 //! lays is `end_plane_trim_run::run`'s.
 
 use super::{GapLoop, LevelLineMesh};
 
-/// C# `IsConvexAt`: whether the chain a side run borders is convex at the run's end - the other
+/// Whether the chain a side run borders is convex at the run's end - the other
 /// rail's end (`across`) stands behind the face kept on the run's last edge (the reading
 /// `EndFaceFill.IsConcave` takes at a run's middle). A run of fewer than two vertices has no last
-/// edge (C# would throw reading one) and reads as not convex.
+/// edge and reads as not convex.
 pub fn is_convex_at(mesh: &LevelLineMesh, run: &GapLoop, across: i32) -> bool {
     let count = run.vertices.len();
 
@@ -39,7 +38,7 @@ pub fn is_convex_at(mesh: &LevelLineMesh, run: &GapLoop, across: i32) -> bool {
 /// The sections a trim laid, by the (from, to) of the boundary stretch each replaces.
 pub type TrimSections = indexmap::IndexMap<(i32, i32), Vec<i32>>;
 
-/// C# `CornerFill.TrimEndRayEnds`: where the corner fill's connectors walk from an open run's end
+/// Where the corner fill's connectors walk from an open run's end
 /// to another run's start through a free rayed end vertex of a CONVEX chain, the end face is
 /// trimmed to the chain's end plane between the two ([`super::end_plane_trim_run::run`]) and the
 /// section recorded in `sections`. True when any was trimmed.
@@ -117,7 +116,7 @@ pub fn trim_end_ray_ends(
     Ok(trimmed)
 }
 
-/// C# `CornerFill.TrimGrowOverEnds`: an open run owned by one grow-over member of its group whose
+/// An open run owned by one grow-over member of its group whose
 /// interior passes exactly one of that chain's rayed ends is replaced by the end plane's section
 /// laid in the group's own face ([`super::end_plane_trim_run::run`]), every vertex owned by (and
 /// tied to) the chain and read at the end's parameter; the section is recorded in `sections`.

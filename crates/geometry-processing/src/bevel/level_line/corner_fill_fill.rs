@@ -1,8 +1,8 @@
 //! The corner fill: a pick whose chains meet at corners filled chain by chain - a closed chain's
 //! own two loops zipped whole, every other chain's two rail pieces zipped into a strip - and the
 //! holes left round the corners closed by the corner caps, refusing (and taking every laid
-//! triangle back out) where the shell does not close. Ports `CornerFill.Fill` from
-//! `Bevel/LevelLine/CornerFill.cs`; the pieces and connectors are in `corner_fill`, the trims in
+//! triangle back out) where the shell does not close. The pieces and connectors are in
+//! `corner_fill`, the trims in
 //! `corner_fill_end_ray_trim`, the strip in `corner_rail_strip_zip`, the caps in `corner_cap`.
 
 use std::cell::RefCell;
@@ -24,7 +24,7 @@ use super::{
 pub type WatchOpenHoles = Rc<dyn Fn(&HashSet<(i32, i32)>)>;
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerFill.WatchOpenHoles`: told the open edges the caps are handed.
+    /// Told the open edges the caps are handed.
     /// Per thread; `None` by default.
     pub static WATCH_OPEN_HOLES: RefCell<Option<WatchOpenHoles>> = const { RefCell::new(None) };
 }
@@ -34,7 +34,7 @@ thread_local! {
 pub enum CornerFillError {
     /// The work budget ran out, the build was cancelled, or the mesh refused an edit.
     Mesh(LevelLineMeshError),
-    /// A fillet asked for with fewer than one segment (C#'s `ArgumentOutOfRangeException`).
+    /// A fillet asked for with fewer than one segment.
     FilletSegments(String),
 }
 
@@ -61,7 +61,7 @@ impl std::fmt::Display for CornerFillError {
 
 impl std::error::Error for CornerFillError {}
 
-/// C# `CornerFill.Fill`: fills the gap's band at its corners. The gap's mesh is the one filled.
+/// Fills the gap's band at its corners. The gap's mesh is the one filled.
 pub fn fill(
     gap: &BandGapResult,
     profile: BandProfile,

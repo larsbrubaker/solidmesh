@@ -1,6 +1,5 @@
 //! The refinement when the field can be ASKED where it runs: no halving anywhere, only splits at
-//! points the field itself names. Ports `BandRefinement.RefineByAsking` from
-//! `Bevel/LevelLine/BandRefinement.cs`; `band_refinement` routes to it, the bump rule is
+//! points the field itself names. `band_refinement` routes to it, the bump rule is
 //! `edge_bump_rule` and the mixed edge rule `band_refinement_mixed_edge`.
 //!
 //! The rules, in order: (i) an edge dipping below the line between two outside ends is split once
@@ -59,7 +58,7 @@ fn insert_or_bisect(
     Ok(())
 }
 
-/// C# `BandRefinement.RefineByAsking`: see the module header. Answers `(true, -1)` when every
+/// See the module header. Answers `(true, -1)` when every
 /// triangle settled and `(false, triangle)` for a triangle under the floor a rule still fires on.
 pub fn refine_by_asking(
     reading: &VertexFieldReading,

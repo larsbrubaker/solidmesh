@@ -1,5 +1,5 @@
-//! The corner fill's loop reading. Ports the nested type of `Bevel/LevelLine/CornerFill.cs` (a C#
-//! static partial class): one stretch of a group loop read by one chain ([`CornerFillPiece`]), the
+//! The corner fill's loop reading: one stretch of a group loop read by one chain
+//! ([`CornerFillPiece`]), the
 //! position test the corner functions share ([`same`]) and the boundary connectors between open
 //! runs ([`connectors`]), which cuts it takes ([`takes`], [`corner_points`]) and the tie rule
 //! ([`fields_tie`], [`ties`]) and a closed chain's piece closed round its seam
@@ -88,7 +88,7 @@ pub fn connectors(mesh: &LevelLineMesh, loops: &[GapLoop]) -> Option<Vec<(i32, i
     Some(connectors)
 }
 
-/// C# `CornerFill.Piece`: one stretch of a group loop read by one chain - its vertices in the
+/// One stretch of a group loop read by one chain - its vertices in the
 /// loop's walk order, each with the chain parameter it reads.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct CornerFillPiece {
@@ -100,7 +100,7 @@ pub struct CornerFillPiece {
     pub parameters: Vec<f64>,
 }
 
-/// C# `CornerFill.Takes`: true for a built gap, chamfer or fillet, whose chains meet at a corner: a
+/// True for a built gap, chamfer or fillet, whose chains meet at a corner: a
 /// point where at least two open chains end and at least three picked edges gather (an interior
 /// vertex of another chain there counts twice).
 pub fn takes(gap: Option<&BandGapResult>, profile: BandProfile) -> bool {
@@ -111,7 +111,7 @@ pub fn takes(gap: Option<&BandGapResult>, profile: BandProfile) -> bool {
     })
 }
 
-/// C# `CornerFill.CornerPoints`: the corners of the pick, as positions - see [`takes`]. Two ends
+/// The corners of the pick, as positions - see [`takes`]. Two ends
 /// alone (two edges) are a chain cut at a setback step, not a corner, unless both-sided members
 /// build, where one end with another chain's interior through it is one too.
 pub fn corner_points(chains: &[std::rc::Rc<ChainField>]) -> Vec<Vector3> {
@@ -148,7 +148,7 @@ pub fn corner_points(chains: &[std::rc::Rc<ChainField>]) -> Vec<Vector3> {
     corners
 }
 
-/// C# `CornerFill.Ties`: true when the neighbouring piece's nearest vertex (its first, or its last)
+/// True when the neighbouring piece's nearest vertex (its first, or its last)
 /// reads the same field value for `chain` as for its own owner - a tie the walk broke by chain
 /// index.
 pub fn ties(
@@ -170,7 +170,7 @@ pub fn ties(
     )
 }
 
-/// C# `CornerFill.FieldsTie`: THE tie rule of a pick with corners - two chains' fields read the
+/// THE tie rule of a pick with corners - two chains' fields read the
 /// same value at `p` up to rounding, scaled by the longer chain. The fill extends a rail over a tie
 /// by it, and the band's corner-aware loop test counts a tie vertex as owned by every chain that
 /// ties there by it - one rule, so the two halves never disagree about which vertex is whose.
@@ -179,7 +179,7 @@ pub fn fields_tie(a: &ChainField, b: &ChainField, p: Vector3) -> Result<bool, Wo
     Ok((a.evaluate(p)?.value - b.evaluate(p)?.value).abs() <= tolerance)
 }
 
-/// C# `CornerFill.CloseRoundTheSeam`: a one-owner piece of a CLOSED chain turned to start at its
+/// A one-owner piece of a CLOSED chain turned to start at its
 /// vertex nearest the chain's seam, and closed by that vertex again at the end, so the rail is
 /// monotone. The seam vertex is read at both ends: once as the reading gave it, once from across
 /// the seam - on a mitre at the seam corner the two readings tie at p and L - p (its feet on the two
@@ -193,7 +193,8 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
         return;
     }
 
-    // C#'s OrderBy(..).First(): the first nearest in piece order, NaN ordering below every number.
+    // The first nearest in piece order, NaN ordering below every number, so ties and broken
+    // readings pick the same vertex on every run.
     let seam = chain.point_at(0.0);
     let distance = |i: usize| (mesh.position(piece.vertices[i]) - seam).length_squared();
     let mut first = 0;
@@ -238,7 +239,7 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
     piece.parameters = parameters;
 }
 
-/// C# `CornerFill.Pieces`: a group loop split at every change of owner, starting at one: a loop of
+/// A group loop split at every change of owner, starting at one: a loop of
 /// one owner all the way round is one closed chain's side and not a corner's, so it is handed back
 /// whole as one piece - except the one-owner loop of a closed chain that also owns a stretch of a
 /// mixed loop, started at the vertex nearest a corner. A one-owner loop of an OPEN chain is split at
@@ -246,7 +247,7 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
 /// end vertex where the two chains' fields TIE there (it is as much this chain's rail end - on a
 /// cube, the chamfer's mitre corner), pieces are split round free ends, and a chain whose whole
 /// rail here is ties gets its one or two runs of tie vertices as its pieces. An empty list where
-/// the loop has no vertex owners (C# reads through a null there).
+/// the loop has no vertex owners.
 pub fn pieces(
     mesh: &LevelLineMesh,
     chains: &[Rc<ChainField>],
@@ -271,7 +272,7 @@ pub fn pieces(
     {
         let corners = corner_points(chains);
         if !corners.is_empty() {
-            // C#'s OrderBy(nearest corner).First(): the first nearest.
+            // The vertex nearest a corner, the first one on a tie.
             let nearest = |i: usize| {
                 let p = mesh.position(gap_loop.vertices[i]);
                 corners

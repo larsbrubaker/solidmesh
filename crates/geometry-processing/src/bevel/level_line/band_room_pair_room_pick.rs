@@ -1,6 +1,5 @@
-//! The room of a pick of several chains. Ports `BandRoom.RoomOfPick` from
-//! `Bevel/LevelLine/BandRoom.PairRoom.cs` (a partial of the C# static class `BandRoom`); the pair
-//! reading's helpers are in `band_room_pair_room.rs`, which re-exports this.
+//! The room of a pick of several chains. The pair reading's helpers are in
+//! `band_room_pair_room.rs`, which re-exports this.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -30,7 +29,7 @@ use super::{
     LevelLineMesh, LevelLineWork, PickField, RoomCandidate, RoomField, RoomReadingKind, RoomSource,
 };
 
-/// What C#'s `RoomOfPick` answers: the room, and its `out` parameters.
+/// What [`room_of_pick`] answers: the room, and everything else the reading found.
 #[derive(Debug, Clone)]
 pub struct PickRoom {
     /// The pick's room, less the margin a kept strip needs.
@@ -47,19 +46,19 @@ pub struct PickRoom {
 /// two unit setbacks the approach was shared between, and for a self reading the group.
 type RawReading = (RoomSource, f64, f64, f64, bool, Option<Vec<i32>>);
 
-/// The budget's spend so far, or 0 when no budget is in force (C#'s `LevelLineWork.Current?.Spent ?? 0`).
+/// The budget's spend so far, or 0 when no budget is in force.
 fn spent_now() -> i64 {
     LevelLineWork::current().map_or(0, |budget| budget.spent.get())
 }
 
-/// C# `BandRoom.RoomOfPick`: ONE room for a pick of several chains, read once on the INPUT mesh.
+/// ONE room for a pick of several chains, read once on the INPUT mesh.
 ///
 /// Three readings, and the room is the least of them: FOREIGN per chain (each chain with its own
 /// field), CHAIN TO CHAIN over ordered pairs inside a group (the approach shared between the two
 /// unit setbacks), and SELF per group (the group's own field under the whole pick's ceiling).
 /// `name_every_candidate_under` (NaN for none) keeps every pair that could read under that size,
 /// so the candidates are complete up to it; the room and its source cannot move. A chain edge not
-/// on two triangles is C#'s `ChainEdgeNotOnTwoTrianglesException`, the `ChainEdge` error.
+/// on two triangles is the `ChainEdge` error.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn room_of_pick(
     positions: &[Vector3],

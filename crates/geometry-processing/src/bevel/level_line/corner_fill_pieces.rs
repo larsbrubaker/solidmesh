@@ -1,8 +1,7 @@
-//! The corner fill's loop pieces. Ports `Bevel/LevelLine/CornerFill.Pieces.cs` (a partial of the C#
-//! static class `CornerFill`; the piece type lives in `corner_fill.rs`): so far the trim of a
+//! The corner fill's loop pieces (the piece type lives in `corner_fill.rs`): the trim of a
 //! piece's turn-back at an end ([`trim_the_turn_back`]) and of its ends off the line
 //! ([`trim_off_the_line`]) and a one-owner loop split at another chain's tie run
-//! ([`tie_split`]); the rest of the partial lands with later packages.
+//! ([`tie_split`]).
 
 use vector_math::cs_math;
 
@@ -65,7 +64,7 @@ pub fn trim_the_turn_back(field: &ChainField, piece: &mut CornerFillPiece) {
     }
 }
 
-/// C# `CornerFill.TrimOffTheLine`: drops a piece's end vertices that stand OFF its chain's line
+/// Drops a piece's end vertices that stand OFF its chain's line
 /// (the chain's own field reads above a tie there): the face piece where two chains of different
 /// setback meet at a setback step, or a run-out's run, which belongs to no rail - kept boundary the
 /// one corner hole runs along. A rail keeps at least two vertices.
@@ -91,7 +90,7 @@ pub fn trim_off_the_line(
     Ok(())
 }
 
-/// C# `CornerFill.TieSplit`: a closed loop the walk handed wholly to one OPEN chain, where one other
+/// A closed loop the walk handed wholly to one OPEN chain, where one other
 /// chain's rail is nothing but ties (rim 0-1-2-3 with edges 1-5 and 2-6: the bottom face's line is
 /// four corner-tie vertices, and the walk gives all four to the lower index). Split into the
 /// owner's piece - from the end of the other chain's tie run round to its start - and the other
@@ -109,7 +108,7 @@ pub fn tie_split(
         return Ok(None);
     };
 
-    // C#'s SelectMany(..).Where(..).Distinct(): first-met order.
+    // Every other tie once, in first-met order, so the result is the same on every run.
     let mut others: Vec<i32> = Vec::new();
     for &k in ties.iter().flatten() {
         if k != owner && !others.contains(&k) {

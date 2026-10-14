@@ -1,9 +1,8 @@
 //! The chain field's LEAST queries: the least value along a segment of the mesh or over a
-//! triangle, exact, and where it stands. Ports the least-value methods of
-//! `Bevel/LevelLine/ChainField.Queries.cs` (`MinAlongSegment`, `MinOverTriangle`, `LeastOverPiece`,
-//! `VisitLeast`, `LeastOverPieceExhaustive`, `LeastOverSegments` and the mesh piece's
-//! `ClosestApproachTo`/`ClippedApproachTo`), with `ChainField.Mitre.cs`'s `LeastOverExtensions` and
-//! `ChainField.EndClip.cs`'s `ClipLeast`, split out of `chain_field_queries.rs` for length.
+//! triangle, exact, and where it stands: along a segment, over a triangle and over a mesh piece
+//! (with the exhaustive reading it is checked against), the walk over the segments, the mesh
+//! piece's closest and clipped approach, the least over the mitre rays and the clipped least.
+//! Split out of `chain_field_queries.rs` for length.
 //!
 //! Over ONE chain segment `|P - C(u)| - setback(u)` is convex jointly in the piece's point and the
 //! chain parameter, so partially minimising over the piece (its closed-form closest point) leaves
@@ -26,7 +25,7 @@ use vector_math::Vector3;
 type Best = (f64, Vector3, i32);
 
 impl ChainFieldMeshPiece {
-    /// C# `MeshPiece.ClosestApproachTo`: the closest approach between this piece and a chain
+    /// The closest approach between this piece and a chain
     /// segment, and the point of the piece attaining it.
     pub fn closest_approach_to(&self, from: Vector3, to: Vector3) -> (f64, Vector3) {
         if self.is_triangle {
@@ -36,7 +35,7 @@ impl ChainFieldMeshPiece {
         }
     }
 
-    /// C# `MeshPiece.ClippedApproachTo`: the closest approach between the part of this piece on
+    /// The closest approach between the part of this piece on
     /// the kept side of a plane through `from` (normal `keep`) and a chain segment; +infinity when
     /// no part of the piece is on that side (or a triangle only touches the plane: the other ray
     /// reads that boundary identically).
@@ -76,7 +75,7 @@ impl ChainFieldMeshPiece {
 }
 
 impl ChainField {
-    /// C# `ChainField.MinAlongSegment`: the least field value along a segment of the mesh - exact,
+    /// The least field value along a segment of the mesh - exact,
     /// not a bound - and where it stands. Asked by the refinement of an edge whose two ends are
     /// both outside the line: a minimum below zero means the edge dips across.
     pub fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
@@ -87,7 +86,7 @@ impl ChainField {
         self.least_over_piece(min, max, &ChainFieldMeshPiece::segment(a, b))
     }
 
-    /// C# `ChainField.MinOverTriangle`: the least field value over a whole triangle, interior
+    /// The least field value over a whole triangle, interior
     /// included - the only way to see a loop of the line that lies wholly inside one big flat
     /// triangle and touches none of its edges.
     pub fn min_over_triangle(
@@ -103,7 +102,7 @@ impl ChainField {
         self.least_over_piece(min, max, &ChainFieldMeshPiece::triangle(a, b, c))
     }
 
-    /// C# `ChainField.LeastOverPiece`: the least of `|P - C(u)| - setback(u)` over a convex piece
+    /// The least of `|P - C(u)| - setback(u)` over a convex piece
     /// of the mesh (boxed by `piece_min`..`piece_max`) and the whole chain, its rays and its end
     /// clips.
     pub fn least_over_piece(
@@ -118,7 +117,7 @@ impl ChainField {
         Ok(FieldMinimum::new(best.0, best.1))
     }
 
-    /// C# `ChainField.VisitLeast`: the box tree's walk for [`ChainField::least_over_piece`]: a
+    /// The box tree's walk for [`ChainField::least_over_piece`]: a
     /// subtree whose whole box stands far enough from the piece that even its greatest setback
     /// cannot bring a value below the best found so far (not even to a tie, which might come from
     /// a lower segment) is skipped whole, and the nearer child is visited FIRST.
@@ -158,7 +157,7 @@ impl ChainField {
         self.visit_least(second as usize, piece_min, piece_max, piece, best)
     }
 
-    /// C# `ChainField.LeastOverPieceExhaustive`: the reference for
+    /// The reference for
     /// [`ChainField::least_over_piece`] - every segment searched, in order, no index, no closed
     /// form - over a piece known only by its closest-point function.
     pub fn least_over_piece_exhaustive(
@@ -175,7 +174,7 @@ impl ChainField {
         Ok(FieldMinimum::new(best.0, best.1))
     }
 
-    /// C# `ChainField.LeastOverSegments`: the closed form where the setback allows it, and the
+    /// The closed form where the setback allows it, and the
     /// convex search where it does not, over the chain segments `first..end`. A coarse scan first,
     /// then the ternary search inside the sub-interval that won it; the ends are taken outright as
     /// well, since a minimum on u = 0 or 1 (a chain corner) is the common case.
@@ -257,7 +256,7 @@ impl ChainField {
         Ok(())
     }
 
-    /// C# `ChainField.LeastOverExtensions`: offers the rays of the segments `first..end` to a
+    /// Offers the rays of the segments `first..end` to a
     /// least-value query: the piece is clipped to each ray's side of the bisector and the
     /// closed-form approach taken. A piece with no geometry cannot be clipped, so it reads the plain
     /// polyline only.
@@ -290,7 +289,7 @@ impl ChainField {
         }
     }
 
-    /// C# `ChainField.ClipLeast`: the least of the CLIPPED field over a piece, given the unclipped
+    /// The least of the CLIPPED field over a piece, given the unclipped
     /// least and where it stands. Where the end plane does not stand above the unclipped least at
     /// its minimiser, that least is attained and stands. Otherwise each term (segment, ray) whose
     /// own unclipped least could beat the plane's reading there is searched for the least of

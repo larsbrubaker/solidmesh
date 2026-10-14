@@ -1,7 +1,7 @@
-//! Building a [`ChainField`] from its polyline (`LevelLine/ChainField.cs`, the constructor and the
-//! four `FromPolyline` overloads): the points and setbacks copied, the parameter at each point
+//! Building a [`ChainField`] from its polyline: the points and setbacks copied, the parameter at
+//! each point
 //! walked, the smooth joints in scope read, the mitres and end rays found, the end clips set and
-//! the segment box tree built. Also the rebuild with scaled setbacks (`ChainField.Swallow.cs`), the
+//! the segment box tree built. Also the rebuild with scaled setbacks (for the swallow scale), the
 //! exhaustive reading the tree is checked against, and the segment a parameter falls on.
 
 use std::cell::OnceCell;
@@ -12,15 +12,14 @@ use vector_math::Vector3;
 use super::chain_field_nearest::ChainFieldNearest;
 use super::{segment_box_tree, ChainField, EndRayBound, FieldSample, LevelLineWork, WorkError};
 
-/// Where C# `ChainField.FromPolyline` throws an `ArgumentException`: a caller's bug, reported with
-/// C#'s message rather than a panic.
+/// Why a polyline builds no field: a caller's bug, reported with a message rather than a panic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChainFieldArgumentError {
-    /// Fewer than two points (C# "A chain needs at least two points.").
+    /// Fewer than two points.
     TooFewPoints,
-    /// Not one setback per point (C# "There must be exactly one setback per chain point.").
+    /// Not one setback per point.
     SetbackCountMismatch,
-    /// The chain has no length (C# "A chain of zero length has no field.").
+    /// The chain has no length.
     ZeroLength,
 }
 
@@ -39,7 +38,7 @@ impl std::fmt::Display for ChainFieldArgumentError {
 impl std::error::Error for ChainFieldArgumentError {}
 
 impl ChainField {
-    /// C#'s (private) constructor: the field over an already-walked polyline. The smooth joints
+    /// The field over an already-walked polyline. The smooth joints
     /// are read from the scope [`ChainField::smooth_joints_while`] set, and a closed chain has no
     /// end rays and no end bounds whatever it was handed.
     #[allow(clippy::too_many_arguments)]
@@ -113,7 +112,7 @@ impl ChainField {
         }
     }
 
-    /// C# `FromPolyline(points, isClosed, setbackAtPoint)`: no sharp-turn threshold, so no joint is
+    /// No sharp-turn threshold, so no joint is
     /// mitred.
     pub fn from_polyline(
         points: &[Vector3],
@@ -123,7 +122,7 @@ impl ChainField {
         ChainField::from_polyline_sharp(points, is_closed, setback_at_point, f64::INFINITY)
     }
 
-    /// C# `FromPolyline(..., sharpTurnDegrees)`: joints turning by more than the threshold mitred.
+    /// Joints turning by more than the threshold mitred.
     pub fn from_polyline_sharp(
         points: &[Vector3],
         is_closed: bool,
@@ -139,7 +138,7 @@ impl ChainField {
         )
     }
 
-    /// C# `FromPolyline(..., sharpTurnDegrees, endRays)`: the named open ends read on past as rays.
+    /// The named open ends read on past as rays.
     pub fn from_polyline_rayed(
         points: &[Vector3],
         is_closed: bool,
@@ -157,7 +156,7 @@ impl ChainField {
         )
     }
 
-    /// C# `FromPolyline(..., sharpTurnDegrees, endRays, endRayBounds)`: the rays bounded by their
+    /// The rays bounded by their
     /// end faces' planes, and the band clipped there.
     pub fn from_polyline_bounded(
         points: &[Vector3],
@@ -216,7 +215,7 @@ impl ChainField {
 }
 
 impl ChainField {
-    /// C# `ChainField.WithSetbacksScaled` (`ChainField.Swallow.cs`): the same chain with every
+    /// The same chain with every
     /// setback times `factor`, rebuilt with the same threshold, end rays and bounds. Each point is
     /// charged like any other reading of one, so a climb that keeps asking is cancellable.
     pub fn with_setbacks_scaled(&self, factor: f64) -> Result<ChainField, WorkError> {
@@ -238,7 +237,7 @@ impl ChainField {
         .expect("a field's own polyline always rebuilds"))
     }
 
-    /// C# `EvaluateExhaustive`: the reading by visiting every segment and its rays, no tree - what
+    /// The reading by visiting every segment and its rays, no tree - what
     /// the tree's answer is checked against. An exact tie keeps the earlier segment.
     pub fn evaluate_exhaustive(&self, point: Vector3) -> FieldSample {
         let segment_count = self.segment_count() as usize;
@@ -272,7 +271,7 @@ impl ChainField {
         )
     }
 
-    /// C# `SegmentHolding`: the segment a chain parameter falls on and how far along it - wrapped on
+    /// The segment a chain parameter falls on and how far along it - wrapped on
     /// a closed chain, clamped on an open one, read through the smooth-joint spans first.
     pub fn segment_holding(&self, parameter: f64) -> (i32, f64) {
         let mut parameter = self.on_the_chain_from_spans(parameter);

@@ -1,6 +1,5 @@
-//! The pick's room as a reading. Ports `BandRoom.ReadRoomOfPick` from
-//! `Bevel/LevelLine/BandRoom.cs` (a partial of the C# static class `BandRoom`, whose main file is
-//! `band_room.rs`): the budget installed for the reading, and C#'s catches turned into readings.
+//! The pick's room as a reading (a part of the band room, whose main module is `band_room.rs`):
+//! the budget installed for the reading, and the reading's faults turned into readings.
 
 use std::rc::Rc;
 
@@ -12,12 +11,12 @@ use super::band_side_tagging_ends::SideTaggingError;
 use super::seam_edges::FeatureEdgeTest;
 use super::{BandProfile, LevelLineWork, LevelLineWorkPhase, RoomReading, WorkBudget, WorkError};
 
-/// C# `BandRoom.ReadRoomOfPick`: the pick's room, with the same work budget and the same
+/// The pick's room, with the same work budget and the same
 /// refusals-by-name a single chain's reading has (see [`room_of_pick`] for what the number means).
 ///
 /// A run-out budget is the unread reading (`read` false, room NaN, the phase it ran out in), a chain
 /// edge not on two triangles is a reading of room zero naming that edge, and the caller's
-/// cancellation is the one `Err` (C# rethrows it as `OperationCanceledException`).
+/// cancellation is the one `Err`.
 #[allow(clippy::too_many_arguments)]
 pub fn read_room_of_pick(
     positions: &[Vector3],

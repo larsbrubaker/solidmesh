@@ -1,8 +1,8 @@
 //! The room, read off a mesh and a pick without building anything: the least of what foreign
 //! features bound, what two chains of one pick leave each other, and what each side holds of
-//! itself, less the margin a kept strip needs to exist at all. Ports `Bevel/LevelLine/BandRoom.cs`
-//! (a C# static partial class; its pair room is `band_room_pair_room.rs`, and its reading of a pick
-//! of several chains, `ReadRoomOfPick`, is `band_room_read_pick.rs`): the chains' lengths
+//! itself, less the margin a kept strip needs to exist at all (the pair room is
+//! `band_room_pair_room.rs`, and the reading of a pick of several chains is
+//! `band_room_read_pick.rs`): the chains' lengths
 //! ([`lengths_of`]), the room of one chain ([`read_room_of_one`], over `room_within`), the
 //! past-the-end test ([`is_past_an_end_face`]), the convex end faces as a list ([`present`]), which
 //! foreign reading names the room ([`the_foreign_source`]), the room read off a mesh cut into sides
@@ -27,11 +27,11 @@ use super::{
     WorkBudget, WorkError,
 };
 
-/// C# `BandRoom.RoomDigits`: significant digits the room is rounded down to, so it reads the same
+/// Significant digits the room is rounded down to, so it reads the same
 /// at any size asked.
 pub const ROOM_DIGITS: i32 = 12;
 
-/// C# `BandRoom.ReferenceSize`: the ONE size every room is read at. A setback is held per unit of
+/// The ONE size every room is read at. A setback is held per unit of
 /// size, so the reading is a ratio and the number that comes out is a size; reading at the size a
 /// caller asked for instead would tie the answer to the question, because the searches underneath
 /// carry tolerances that scale with it.
@@ -52,11 +52,10 @@ pub fn lengths_of(positions: &[Vector3], chains: &[Vec<i32>], closed: &[bool]) -
     lengths
 }
 
-/// C# `BandRoom.ReadRoomOfOne`: the room of one chain, spending no more than `budget`. A reading
+/// The room of one chain, spending no more than `budget`. A reading
 /// that ran out of work refuses by name (`read` false, room NaN); a chain edge not on two
-/// triangles is an answer (room 0, the edge named); a cancel leaves as `Err` (C# rethrows
-/// `OperationCanceledException`): it says nothing about the part. Other argument faults C# throws
-/// come back as [`ReadRoomError`].
+/// triangles is an answer (room 0, the edge named); a cancel leaves as `Err`: it says nothing
+/// about the part. Other argument faults come back as [`ReadRoomError`].
 #[allow(clippy::too_many_arguments)]
 pub fn read_room_of_one(
     positions: &[Vector3],
@@ -120,7 +119,7 @@ pub fn read_room_of_one(
     }
 }
 
-/// What [`room_within`] reads besides the room (C#'s `out` parameters).
+/// What [`room_within`] reads besides the room.
 #[derive(Debug, Clone, Copy)]
 pub struct RoomWithin {
     /// The room.
@@ -133,14 +132,14 @@ pub struct RoomWithin {
     pub set_by: RoomSource,
 }
 
-/// How [`room_within`] can leave without a room: C#'s exceptions.
+/// How [`room_within`] can leave without a room.
 #[derive(Debug, Clone)]
 pub enum RoomWithinError {
     /// The budget ran out, or the caller cancelled.
     Work(WorkError),
-    /// A chain edge not on two triangles (C# `ChainEdgeNotOnTwoTrianglesException`).
+    /// A chain edge not on two triangles.
     ChainEdge(ChainEdgeNotOnTwoTriangles),
-    /// A caller's bug C# throws an `ArgumentException` for.
+    /// A caller's bug: arguments no room can be read for.
     Read(ReadRoomError),
 }
 
@@ -165,7 +164,7 @@ impl From<SideTaggingError> for RoomWithinError {
     }
 }
 
-/// C# `BandRoom.RoomWithin`: the room of one chain read off the input mesh tagged into its sides.
+/// The room of one chain read off the input mesh tagged into its sides.
 #[allow(clippy::too_many_arguments)]
 fn room_within(
     positions: &[Vector3],
@@ -258,7 +257,7 @@ fn room_within(
     };
 
     // Scaling the setbacks moves no point, so a polyline that builds a field at one size builds it
-    // at every size: C#'s ArgumentException (a chain of no length) is read once, here.
+    // at every size: a chain of no length is caught once, here.
     if let Err(bad) = field_of(REFERENCE_SIZE, end_rays) {
         return Err(RoomWithinError::Read(ReadRoomError::ChainField(bad)));
     }
@@ -310,7 +309,7 @@ pub fn is_past_an_end_face(
         .any(|face| beyond(mesh.position(edge.0), face) && beyond(mesh.position(edge.1), face))
 }
 
-/// C# `BandRoom.Present`: the convex end faces `EndFaceSense.ConvexEndFaces` found, as a list.
+/// The convex end faces `EndFaceSense.ConvexEndFaces` found, as a list.
 pub fn present(ends: (Option<PointPlane>, Option<PointPlane>)) -> Vec<PointPlane> {
     let mut faces = Vec::new();
     if let Some(first) = ends.0 {
@@ -324,7 +323,7 @@ pub fn present(ends: (Option<PointPlane>, Option<PointPlane>)) -> Vec<PointPlane
     faces
 }
 
-/// C# `BandRoom.TheForeignSource`: which foreign reading a one-chain room names: a growing
+/// Which foreign reading a one-chain room names: a growing
 /// neighbour's far crease only where it alone sets the room - strictly under every edge on the face
 /// (a tie stays the face's own reading, the sentence the user has always read) and not undercut by
 /// the fillet-pierce room, which is the ridge leaving the round and no crease at all. `crease_at` is
@@ -346,7 +345,7 @@ pub fn the_foreign_source(
     }
 }
 
-/// C# `BandRoom.RoomOfCutMesh`: the room read off a mesh tagged into sides, saying also WHICH of
+/// The room read off a mesh tagged into sides, saying also WHICH of
 /// the two - what bounds the sides from outside, or a side running out of itself - named it. The
 /// chain index it carries is 0, the only chain there is.
 ///
@@ -355,7 +354,7 @@ pub fn the_foreign_source(
 /// tolerances below scale with the size they are given, so the same geometry read at two sizes
 /// answers two rooms and a build at the room a refusal named could be refused again. Everything is
 /// read at [`REFERENCE_SIZE`]; the setback is held per unit of size, so the answer is a ratio and
-/// any size would have given the same room but for those tolerances. C#'s optional arguments are
+/// any size would have given the same room but for those tolerances. The optional arguments are
 /// passed explicitly (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces).
 #[allow(clippy::too_many_arguments)]
 pub fn room_of_cut_mesh(
@@ -373,7 +372,7 @@ pub fn room_of_cut_mesh(
 ) -> Result<(f64, RoomSource), WorkError> {
     let field = Rc::new(field_at(REFERENCE_SIZE));
     // The mesh is shared (`Rc<RefCell>`) because the growing runs the foreign reading hands back
-    // keep it, live, as C#'s do; nothing here edits it.
+    // keep it, live; nothing here edits it.
 
     let mut growing: Vec<GrowingCreaseRuns> = Vec::new();
     let mut foreign: Vec<ForeignEdge> = foreign_edge_room::foreign_edges(
@@ -456,8 +455,8 @@ pub fn room_of_cut_mesh(
         profile,
         fillet_segments,
     );
-    // C#'s lazy `creaseAt` reads the crease only where the far bound alone sets the room; it can
-    // spend work, so it is read here, under the same condition, before the source is named.
+    // The crease is read only where the far bound alone sets the room; reading it can spend work,
+    // so it is read here, under that condition, before the source is named.
     let crease_at = if room != f64::INFINITY && far_room < near_room && room == far_room {
         foreign_edge_room_readings::where_the_room_is_set(
             mesh,
@@ -537,7 +536,7 @@ pub fn room_of_cut_mesh(
     ))
 }
 
-/// LINQ `first.Except(second)`: the distinct elements of `first` not in `second`, in order.
+/// The distinct elements of `first` not in `second`, in order.
 fn except(first: &[ForeignEdge], second: &[ForeignEdge]) -> Vec<ForeignEdge> {
     let mut kept: Vec<ForeignEdge> = Vec::new();
     for &e in first {
@@ -549,7 +548,7 @@ fn except(first: &[ForeignEdge], second: &[ForeignEdge]) -> Vec<ForeignEdge> {
     kept
 }
 
-/// C# `BandRoom.SteadyDown`: the room rounded DOWN onto a grid of [`ROOM_DIGITS`] significant
+/// The room rounded DOWN onto a grid of [`ROOM_DIGITS`] significant
 /// digits, which is what makes the room a number a user can hand straight back.
 ///
 /// A room is a division and a subtraction over floating point, so two readings of the same
@@ -576,7 +575,7 @@ pub fn steady_down(room: f64) -> f64 {
     on_grid(room, ROOM_DIGITS)
 }
 
-/// C# `BandRoom.OnGrid`: a positive number rounded DOWN onto a grid of the given significant
+/// A positive number rounded DOWN onto a grid of the given significant
 /// digits.
 pub fn on_grid(value: f64, digits: i32) -> f64 {
     if !value.is_finite() || value <= 0.0 {

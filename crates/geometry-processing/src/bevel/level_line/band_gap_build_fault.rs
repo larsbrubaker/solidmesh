@@ -1,7 +1,9 @@
-//! How the band gap's build leaves by a fault: C#'s exceptions out of `BandGap.BuildWithin`
-//! (`Bevel/LevelLine/BandGap.cs`), gathered into one [`BuildFault`] with the conversions from every
-//! callee's error. Split out of `band_gap_build_within.rs` for size;
-//! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns each into C#'s outcome.
+//! How the band gap's build leaves by a fault: every way out of
+//! [`build_within`](super::band_gap_build_within::build_within) other than a result, gathered into
+//! one [`BuildFault`] with the conversions from every callee's error. Split out of
+//! `band_gap_build_within.rs` for size;
+//! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns each into the
+//! caller's outcome.
 
 use super::band_gap::BandGapBuildError;
 use super::band_gap_reading::ReadRoomError;
@@ -12,15 +14,15 @@ use super::chain_field_from_polyline::ChainFieldArgumentError;
 use super::level_line_mesh_edits::LevelLineMeshError;
 use super::{band_cut, ChainEdgeNotOnTwoTriangles, WorkError};
 
-/// How C#'s `BuildWithin` leaves by an exception: the two `Build` catches (the work ran out or was
-/// cancelled; a chain edge not on two triangles) and the caller's bugs it lets through.
+/// How the build within leaves by a fault: the two the build turns into refusals (the work ran
+/// out or was cancelled; a chain edge not on two triangles) and the caller's bugs it lets through.
 #[derive(Debug, Clone)]
 pub enum BuildFault {
-    /// C# `WorkBudgetExceededException` / `WorkCanceledException`.
+    /// The work budget ran out, or the work was cancelled.
     Work(WorkError),
-    /// C# `ChainEdgeNotOnTwoTrianglesException`.
+    /// A chain edge does not stand on exactly two triangles.
     ChainEdge(ChainEdgeNotOnTwoTriangles),
-    /// Everything else C# throws out of the build uncaught.
+    /// Every other fault, passed to the caller as it comes.
     Error(BandGapBuildError),
 }
 
@@ -104,7 +106,7 @@ impl From<band_cut::BandCutError> for BuildFault {
     }
 }
 
-/// A defect C# would throw uncaught out of the build, named by its message.
+/// A defect in the build (a broken invariant), named by its message.
 pub fn defect(message: impl std::fmt::Display) -> BuildFault {
     BuildFault::Error(BandGapBuildError::Defect(message.to_string()))
 }

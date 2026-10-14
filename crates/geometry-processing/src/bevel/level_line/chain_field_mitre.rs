@@ -1,14 +1,13 @@
-//! A segment's line carried past a sharp vertex ([`ChainFieldExtension`]), from
-//! `Bevel/LevelLine/ChainField.Mitre.cs`; its constructor and reading, and the rays offered to a
-//! point query, are in `chain_field_nearest.rs`; finding the mitres is in `chain_field_rays.rs`.
-//! Here too the rays' far ends per segment ([`ChainField::reaches_of`]). The other `ChainField`
-//! methods of that partial land with their method package.
+//! A segment's line carried past a sharp vertex ([`ChainFieldExtension`]); its constructor and
+//! reading, and the rays offered to a point query, are in `chain_field_nearest.rs`; finding the
+//! mitres is in `chain_field_rays.rs`. Here too the rays' far ends per segment
+//! ([`ChainField::reaches_of`]).
 
 use vector_math::Vector3;
 
 use super::ChainField;
 
-/// C# `ChainField.Extension`: one segment's line carried past a sharp vertex (a mitre ray), or past
+/// One segment's line carried past a sharp vertex (a mitre ray), or past
 /// an open chain's end (an end ray).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct ChainFieldExtension {
@@ -31,7 +30,7 @@ pub struct ChainFieldExtension {
 }
 
 impl ChainField {
-    /// C# `ChainField.ReachesOf`: the far end of every ray, per segment - what the box tree folds
+    /// The far end of every ray, per segment - what the box tree folds
     /// into each segment's box; `None` where there are no rays, and `None` for a segment without.
     pub fn reaches_of(
         extensions: Option<&[Option<Vec<ChainFieldExtension>>]>,

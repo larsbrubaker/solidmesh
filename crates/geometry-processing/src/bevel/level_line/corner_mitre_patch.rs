@@ -1,6 +1,5 @@
 //! The patch a corner hole between TWO convex rounds is filled with, laid onto the mitred solid
-//! the two rounds make (`Bevel/LevelLine/CornerMitrePatch.cs`, a static class: one function here,
-//! [`on_the_mitre`]).
+//! the two rounds make ([`on_the_mitre`]).
 
 use indexmap::IndexSet;
 use vector_math::{cs_math, Vector3};
@@ -26,7 +25,7 @@ struct Round<'a> {
 /// on the crease, and crease chords that cut inside a curved crease are split until they stand no
 /// farther off it than a row's own segment stands off its arc); and the patch is then refined to
 /// the rows' own spacing, each long edge halved onto its own round's surface.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
 pub fn on_the_mitre(
     filled: HoleFillResult,
     points: &[Vector3],
@@ -255,7 +254,7 @@ pub fn on_the_mitre(
         .map(|&(a, b)| (vertices[a as usize] - vertices[b as usize]).length())
         .fold(0.0, cs_math::max_f64);
     let passes = if target > 0.0 && longest > target {
-        // C#'s `(int)Math.Ceiling(..)`; `as` saturates where C# would be undefined.
+        // The ceiling is a whole number; `as` saturates should it be out of range.
         i32::min(4, (longest / target).log2().ceil() as i32)
     } else {
         0

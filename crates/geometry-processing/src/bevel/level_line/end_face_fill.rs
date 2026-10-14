@@ -1,5 +1,5 @@
-//! The fill across a chain's end face. Ports `Bevel/LevelLine/EndFaceFill.cs` (a C# static class):
-//! so far its readings - a rail carried along the end plane to the clip corner
+//! The fill across a chain's end face: its readings - a rail carried along the end plane to the
+//! clip corner
 //! ([`rails_to_the_clip_corner`]), whether both rails end past the chain's end
 //! ([`runs_end_past_the_end`]), whether the end face meets the sides convexly
 //! ([`meets_the_sides_convexly`]), whether a run is planar ([`is_planar`]) and an end face's one
@@ -145,7 +145,7 @@ pub fn meets_the_sides_convexly(mesh: &LevelLineMesh, end_tag: i32, v: Vector3) 
         for end in at_v.iter().filter(|t| t.tag == end_tag) {
             let side_corners = [side.a, side.b, side.c];
             let end_corners = [end.a, end.b, end.c];
-            // C# `Intersect`: distinct, in the first sequence's order.
+            // Distinct, in the first sequence's order.
             let mut shared: Vec<i32> = Vec::new();
             for c in side_corners {
                 if end_corners.contains(&c) && !shared.contains(&c) {
@@ -180,7 +180,7 @@ pub fn is_planar(mesh: &LevelLineMesh, run: &[i32]) -> bool {
     }
 
     let o = mesh.position(run[0]);
-    // C#'s `Enumerable.Max`: a NaN is displaced by any number.
+    // A NaN is displaced by any number.
     let extent = run
         .iter()
         .map(|&v| (mesh.position(v) - o).length())
@@ -223,7 +223,7 @@ pub fn run(gap: &BandGapResult, tag: i32, from: i32, to: i32) -> Option<Vec<i32>
     Some(runs[0].vertices.clone())
 }
 
-/// C# `EndFaceFill.WithWholeEnd`: `run` with its tail (or head) put back as `whole` has it, from
+/// `run` with its tail (or head) put back as `whole` has it, from
 /// the run's last (or first) vertex on: the other end keeps whatever the trim made of it. The run
 /// itself where that vertex is not on the whole run.
 pub fn with_whole_end(run: &GapLoop, whole: &GapLoop, at_tail: bool) -> GapLoop {
@@ -267,7 +267,7 @@ pub fn with_whole_end(run: &GapLoop, whole: &GapLoop, at_tail: bool) -> GapLoop 
     joined_loop
 }
 
-/// C#'s `Comparer<double>.Default`: NaN sorts below every number.
+/// NaN sorts below every number.
 fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
@@ -277,7 +277,7 @@ fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
     }
 }
 
-/// C# `EndFaceFill.IsConcave`: whether the gap between `left` and `right` is concave - read at the
+/// Whether the gap between `left` and `right` is concave - read at the
 /// run's middle PARAMETER, on the rail edge whose span crosses it (else the nearest), on the first
 /// triangle with area standing on that edge: concave where the vertex of `right` nearest that
 /// parameter stands in front of it.
@@ -329,7 +329,7 @@ pub fn is_concave(mesh: &LevelLineMesh, left: &GapLoop, right: &GapLoop) -> bool
     false
 }
 
-/// C# `EndFaceFill.WithoutEndFaceEdges`: `run` without the edges at either end that stand on the
+/// `run` without the edges at either end that stand on the
 /// end face alone (tag 0); `None` (noting the site) where nothing is left.
 pub fn without_end_face_edges(mesh: &LevelLineMesh, run: &GapLoop) -> Option<GapLoop> {
     let on_the_end_face_alone = |a: i32, b: i32| {
@@ -381,7 +381,7 @@ pub fn without_end_face_edges(mesh: &LevelLineMesh, run: &GapLoop) -> Option<Gap
     Some(trimmed)
 }
 
-/// C# `EndFaceFill.CreaseRun`: the boundary stretch from `from` to `to` along edges standing on
+/// The boundary stretch from `from` to `to` along edges standing on
 /// the end face alone (tag 0), which must pass through `end_vertex`; `None` (noting the site)
 /// where it branches, dead-ends, loops or misses the end vertex.
 pub fn crease_run(
@@ -431,7 +431,7 @@ pub fn crease_run(
 
     let away = |v: i32| (mesh.position(v) - end_vertex).length();
     if !run.iter().any(|&v| away(v) <= mesh.same_place()) {
-        // LINQ's Min: NaN reads as the smallest.
+        // The least, with NaN reading as the smallest.
         let mut least = away(run[0]);
         for &v in &run[1..] {
             let x = away(v);

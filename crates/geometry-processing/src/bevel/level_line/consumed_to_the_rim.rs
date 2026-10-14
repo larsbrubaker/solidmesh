@@ -1,5 +1,5 @@
-//! A side consumed to its rim. Ports `Bevel/LevelLine/ConsumedToTheRim.cs` (a C# static class):
-//! the foreign creases the band at a size ends on exactly ([`rims_the_band_ends_on`]) and whether
+//! A side consumed to its rim: the foreign creases the band at a size ends on exactly
+//! ([`rims_the_band_ends_on`]) and whether
 //! an edge lies on one of them ([`lies_on_a_rim`]).
 
 use std::cell::RefCell;
@@ -10,7 +10,7 @@ use vector_math::Vector3;
 use super::foreign_edge_room;
 use super::{ChainField, LevelLineMesh, WorkError};
 
-/// C# `ConsumedToTheRim.RimsTheBandEndsOn`: the foreign crease segments (of the INPUT mesh, read
+/// The foreign crease segments (of the INPUT mesh, read
 /// before the cut) that the band at this size ends on exactly, when it reaches foreign edges only
 /// there; `None` when it does not - it reaches none on its level line, or it stands over some
 /// foreign edge, at a vertex or part way along it. ON the line is within two snaps: the field

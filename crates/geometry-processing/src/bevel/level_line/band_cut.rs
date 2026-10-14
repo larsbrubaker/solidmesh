@@ -1,11 +1,11 @@
-//! The band cut's records (`Bevel/LevelLine/BandCut.cs`): one run of the level line through the
-//! cut mesh ([`LevelLineChain`]) and what the cut leaves ([`BandCutResult`]), and the cut itself
-//! (C#'s static `BandCut`: [`cut`], [`put_the_root_on_the_line`], [`side_of_triangle`]).
+//! The band cut's records: one run of the level line through the cut mesh ([`LevelLineChain`])
+//! and what the cut leaves ([`BandCutResult`]), and the cut itself ([`cut`],
+//! [`put_the_root_on_the_line`], [`side_of_triangle`]).
 //!
-//! C# hands the cut the mesh and a reading of it; the mesh is always the reading's own, so here
-//! the cut takes the reading and edits its mesh, borrowing it only between the reading's reads.
+//! The mesh the cut edits is always the reading's own, so the cut takes the reading and edits its
+//! mesh, borrowing it only between the reading's reads.
 
-/// C# `LevelLineChain`: one run of the level line through the cut mesh, as mesh vertices in order.
+/// One run of the level line through the cut mesh, as mesh vertices in order.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LevelLineChain {
     /// The vertices of the run in order; a closed run does not repeat its first vertex at the end.
@@ -14,7 +14,7 @@ pub struct LevelLineChain {
     pub closed: bool,
 }
 
-/// C# `BandCutResult`: what the cut leaves - the two halves of the mesh, and the line between
+/// What the cut leaves - the two halves of the mesh, and the line between
 /// them.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BandCutResult {
@@ -28,14 +28,14 @@ pub struct BandCutResult {
 }
 
 impl LevelLineChain {
-    /// C#'s constructor.
+    /// A run of the given mesh vertices, closed or open.
     pub fn new(vertices: Vec<i32>, closed: bool) -> Self {
         LevelLineChain { vertices, closed }
     }
 }
 
 impl BandCutResult {
-    /// C#'s constructor.
+    /// The cut's two halves and the line between them.
     pub fn new(inside: Vec<i32>, outside: Vec<i32>, lines: Vec<LevelLineChain>) -> Self {
         BandCutResult {
             inside_triangles: inside,
@@ -45,7 +45,7 @@ impl BandCutResult {
     }
 }
 
-/// C# `BandCut.Chain`: the level line's crossed edges, as `(low, high)` vertex pairs, joined into
+/// The level line's crossed edges, as `(low, high)` vertex pairs, joined into
 /// chains. Each vertex's neighbours are sorted and the walk starts from the ends first, then in
 /// vertex order, so only the edge set reaches the chains - never a map's own key order.
 pub fn chain(edges: &[(i32, i32)]) -> Vec<LevelLineChain> {
@@ -116,7 +116,7 @@ pub fn chain(edges: &[(i32, i32)]) -> Vec<LevelLineChain> {
     chains
 }
 
-/// C# `BandCut.Neighbours`: `vertex`'s neighbour list, made on first ask.
+/// `vertex`'s neighbour list, made on first ask.
 pub fn neighbours(
     map: &mut std::collections::HashMap<i32, Vec<i32>>,
     vertex: i32,
@@ -124,7 +124,7 @@ pub fn neighbours(
     map.entry(vertex).or_insert_with(|| Vec::with_capacity(2))
 }
 
-/// C# `BandCut.Key`: an edge's `(low, high)` vertex pair.
+/// An edge's `(low, high)` vertex pair.
 pub fn key(a: i32, b: i32) -> (i32, i32) {
     if a < b {
         (a, b)
@@ -133,15 +133,14 @@ pub fn key(a: i32, b: i32) -> (i32, i32) {
     }
 }
 
-/// Why the cut could not be taken (C#'s exceptions, and the work budget's).
+/// Why the cut could not be taken.
 #[derive(Debug, Clone)]
 pub enum BandCutError {
     /// The work budget ran out, the build was cancelled, or the mesh refused a split.
     Mesh(super::LevelLineMeshError),
-    /// A root's edge is no longer in the mesh (C#'s `ArgumentException` message).
+    /// A root's edge is no longer in the mesh.
     RootEdgeGone(String),
-    /// A triangle still straddles the line after the cut (C#'s `InvalidOperationException`
-    /// message).
+    /// A triangle still straddles the line after the cut, with the message saying which.
     Straddles(String),
 }
 
@@ -170,7 +169,7 @@ impl std::fmt::Display for BandCutError {
 
 impl std::error::Error for BandCutError {}
 
-/// C# `BandCut.PutTheRootOnTheLine`: splits an edge at a root and reads the vertex there onto the
+/// Splits an edge at a root and reads the vertex there onto the
 /// line, leaving the edge with a vertex on it however the mesh answered. An INTERIOR vertex the
 /// mesh already carried (a T-vertex through a needle) divided nothing, so the edge's triangles are
 /// re-tiled through it: nothing is minted and no position moves.
@@ -194,7 +193,7 @@ pub fn put_the_root_on_the_line(
     Ok(())
 }
 
-/// C# `BandCut.Cut`: splits every root into the reading's mesh and reads off the partition and the
+/// Splits every root into the reading's mesh and reads off the partition and the
 /// line, threaded from the mesh's canonical edges.
 pub fn cut(
     reading: &super::VertexFieldReading,
@@ -248,7 +247,7 @@ pub fn cut(
     Ok(BandCutResult::new(inside, outside, chain(&line_edges)))
 }
 
-/// C# `BandCut.SideOfTriangle`: which half a triangle belongs to. Any inside corner puts it inside,
+/// Which half a triangle belongs to. Any inside corner puts it inside,
 /// any outside corner outside (after the cut it cannot have both); one entirely on the line is
 /// placed by its centroid - on a known cut, by the chain's own value there.
 pub fn side_of_triangle(

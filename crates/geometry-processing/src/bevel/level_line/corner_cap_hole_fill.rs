@@ -1,5 +1,4 @@
-//! The corner cap's hole fill. Ports `Bevel/LevelLine/CornerCap.HoleFill.cs` (a partial of the C#
-//! static class `CornerCap`): so far its geometry readings - a row's cross-tangent
+//! The corner cap's hole fill: its geometry readings - a row's cross-tangent
 //! ([`arc_cross_tangent`]), the direction away from a triangle's third corner
 //! ([`away_from_third_corner`]), a facet normal ([`triangle_normal`]), the removed triangles on a
 //! loop ([`removed_triangles_on_the_loop`]) and the fill vertex standing furthest through the faces
@@ -31,17 +30,18 @@ use super::{
 pub type WatchCornerHoles =
     Arc<dyn Fn(&LevelLineMesh, &[Vector3], &[CornerCapLastRow], Vector3) + Send + Sync>;
 
-/// C# `CornerCap.WatchCornerHoles` (a plain static): the test hook handed every hole
-/// [`fill_one`] reads BEFORE any refusal. Process-wide, as the C#'s is; `None` (the default) costs
+/// The test hook handed every hole
+/// [`fill_one`] reads BEFORE any refusal. Process-wide, so a test sees holes filled on any
+/// thread; `None` (the default) costs
 /// nothing.
 pub static WATCH_CORNER_HOLES: Mutex<Option<WatchCornerHoles>> = Mutex::new(None);
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerCap.LastHoleFillFailure`.
+    /// Why this thread's last hole fill failed, for the refusal to name.
     static LAST_HOLE_FILL_FAILURE: Cell<HoleFillFailure> = const { Cell::new(HoleFillFailure::None) };
 }
 
-/// C# `CornerCap.LastHoleFillFailure`: the filler's own failure behind the last
+/// The filler's own failure behind the last
 /// [`GapFillRefusal::HoleFillFailed`] on this thread - `None` where no cross-tangent could be read.
 pub fn last_hole_fill_failure() -> HoleFillFailure {
     LAST_HOLE_FILL_FAILURE.with(|f| f.get())
@@ -156,7 +156,7 @@ type NearFace = (Vector3, Vector3, Vector3, Vector3, Vector3);
 /// A face plane as (origin, unit normal).
 type FacePlane = (Vector3, Vector3);
 
-/// C#'s `Comparer<double>.Default`: NaN sorts below every number.
+/// NaN sorts below every number.
 fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
@@ -181,7 +181,7 @@ pub fn bulging_fill_vertex(
     }
 
     let mean = points.iter().fold(Vector3::ZERO, |s, &p| s + p) / points.len() as f64;
-    // C#'s `Enumerable.Max`: a NaN is displaced by any number.
+    // A NaN is displaced by any number.
     let reach = 2.0
         * points
             .iter()
@@ -249,7 +249,7 @@ pub fn bulging_fill_vertex(
                 )
             })
             .collect();
-        // C#'s `Enumerable.Min`: any NaN makes the least NaN.
+        // Any NaN makes the least NaN.
         let nearest = under.iter().map(|u| u.1).fold(f64::INFINITY, |least, x| {
             if x.is_nan() || least.is_nan() {
                 f64::NAN
@@ -315,12 +315,12 @@ pub fn bulging_fill_vertex(
     at
 }
 
-/// C# `CornerCap.CreaseDegrees`: a loop edge that is a crease of the part - the live triangle on
+/// A loop edge that is a crease of the part - the live triangle on
 /// it and the removed one across it turn by more than this - keeps its crease: the fill leaves
 /// along the removed face, not the live one.
 pub const CREASE_DEGREES: f64 = 20.0;
 
-/// C# `CornerCap.LeavesThroughConvexCrease`: true when a fill leaving an arc end along the row's
+/// True when a fill leaving an arc end along the row's
 /// cross-tangent `along`, signed toward the hole (`into_hole`, from the end toward the loop's
 /// centroid), heads out through a face - its outward normal `outward` - by more than
 /// [`CREASE_DEGREES`]. False where the chain runs square to the hole's side, since then neither
@@ -338,7 +338,7 @@ pub fn leaves_through_convex_crease(along: Vector3, into_hole: Vector3, outward:
     leaving.dot(outward) > (CREASE_DEGREES * std::f64::consts::PI / 180.0).sin()
 }
 
-/// C# `CornerCap.InsideTheCreases`: the cross-tangent at arc point `index` of a row of `count`
+/// The cross-tangent at arc point `index` of a row of `count`
 /// points, laid into the planes of the convex crease faces at its ends with a weight fading from 1
 /// at the crease end to 0 at the far end - or at the row's middle where both ends have creases - so
 /// the far end keeps its own cross-tangent, and its own face's plane, whatever the angle.
@@ -375,7 +375,7 @@ pub fn inside_the_creases(
     faded_tangent
 }
 
-/// C# `CornerCap.Faded`: `cross_tangent` moved `weight` of the way to its direction out of the
+/// `cross_tangent` moved `weight` of the way to its direction out of the
 /// crease planes ([`out_of_the_planes`]), and renormalised; unchanged where there is none.
 pub fn faded(cross_tangent: Vector3, creases: &[Vector3], weight: f64) -> Vector3 {
     if weight <= 0.0 || creases.is_empty() {
@@ -390,7 +390,7 @@ pub fn faded(cross_tangent: Vector3, creases: &[Vector3], weight: f64) -> Vector
     }
 }
 
-/// C# `CornerCap.OutOfThePlanes`: the unit direction left of `cross_tangent` once every crease
+/// The unit direction left of `cross_tangent` once every crease
 /// normal's component is taken out JOINTLY - the normals orthonormalised first, so two faces at a
 /// slant (n1.n2 = 0.5) leave a direction in both planes, their line n1 x n2, where removing them
 /// one after the other would put the first back. Zero where the faces leave no direction (the
@@ -420,12 +420,12 @@ pub fn out_of_the_planes(cross_tangent: Vector3, creases: &[Vector3]) -> Vector3
     }
 }
 
-/// C# `CornerCap.RunsForward`: true when the triangle runs its edge a to b in that direction.
+/// True when the triangle runs its edge a to b in that direction.
 pub fn runs_forward(face: LevelLineTriangle, a: i32, b: i32) -> bool {
     (face.a == a && face.b == b) || (face.b == a && face.c == b) || (face.c == a && face.a == b)
 }
 
-/// C# `CornerCap.OnTheBall`: the filler's patch laid on the rolling ball where the hole's whole rim
+/// The filler's patch laid on the rolling ball where the hole's whole rim
 /// is one: every row a convex arc about the same centre at the same radius, and every loop point on
 /// that sphere - three equal fillets meeting at a cube corner, whose true blend is the ball's
 /// octant, tangent to each fillet along its end circle. The filler is fair, not a sphere (it held a
@@ -483,7 +483,7 @@ pub fn on_the_ball(
     }
 }
 
-/// C# `CornerCap.CoversTheBallOnce`: whether a patch on a ball, its first `loop_count` vertices the
+/// Whether a patch on a ball, its first `loop_count` vertices the
 /// hole's loop, covers the loop's cap once: every triangle turns the same way seen from `centre` as
 /// the loop does about its mean direction. A triangle turning the other way is a fold, which the
 /// radial placement on the ball would keep (it never changes a triangle's turn seen from the
@@ -512,7 +512,7 @@ pub fn covers_the_ball_once(
         return false;
     }
 
-    // C#'s Math.Sign: -1, 0 or 1 as an int (loop_turn is neither 0 nor NaN here).
+    // The turn's sign (loop_turn is neither 0 nor NaN here).
     let sign = if loop_turn > 0.0 { 1.0 } else { -1.0 };
     for t in triangles {
         let a = vertices[t.a as usize] - centre;
@@ -527,7 +527,7 @@ pub fn covers_the_ball_once(
     true
 }
 
-/// C# `CornerCap.FillOne`: one corner hole closed by the hole filler. The cycle is walked the way
+/// One corner hole closed by the hole filler. The cycle is walked the way
 /// the cap lays each edge, which is the order the filler winds from. Each loop vertex's
 /// cross-tangent is the sum of its rows' arc cross-tangents (laid inside their convex creases) and
 /// the in-face cross-tangents of its loop edges that are not arc steps; its edge length is the
@@ -681,7 +681,7 @@ pub fn fill_one(
     Ok((GapFillRefusal::None, -1))
 }
 
-/// C# `CornerCap.ConvexCreasesAtTheArcEnds`: at each end of `row`'s arc, the outward normals of
+/// At each end of `row`'s arc, the outward normals of
 /// the live faces on its non-arc loop edges that the row's cross-tangent leaves through by more than
 /// [`CREASE_DEGREES`] (signed toward the hole by the loop's `centroid`). Empty where the row meets
 /// its faces smoothly.
@@ -733,7 +733,7 @@ pub fn convex_creases_at_the_arc_ends(
     (at_end(row.arc[0]), at_end(row.arc[row.arc.len() - 1]))
 }
 
-/// C# `CornerCap.InFaceCrossTangent`: the cross-tangent of the loop edge `a` to `b` - in the plane
+/// The cross-tangent of the loop edge `a` to `b` - in the plane
 /// of the one live triangle standing on it, square to the edge, away from its third corner (into
 /// the hole); at a convex crease against a removed triangle running the edge the other way, in
 /// that removed triangle's plane instead. Zero where not exactly one live triangle stands.

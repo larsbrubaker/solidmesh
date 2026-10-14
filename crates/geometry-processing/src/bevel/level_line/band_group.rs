@@ -1,16 +1,15 @@
 //! One SIDE GROUP of a level-line pick: the triangles one topological region of the input holds,
-//! the chains that seed it, and which side of each of those chains it is. Ports
-//! `Bevel/LevelLine/BandGroup.cs` (its field builder, `BandGroupFields`, lands with the cyclic
-//! core).
+//! the chains that seed it, and which side of each of those chains it is. Its field builder is
+//! `band_group_fields.rs`.
 
 use indexmap::IndexMap;
 
-/// C# `BandGroup`, whose init-only properties are public fields here. The tag a group's triangles
+/// One side group, as plain public fields. The tag a group's triangles
 /// carry is its `tag`, and chain 0's left is always 1 and its right always 2, so a pick of one
 /// chain tags exactly what the two-sided build always tagged.
 ///
-/// The maps are [`IndexMap`]s because C# iterates its `Dictionary`s in insertion order and the
-/// level-line build reads `carried_ends`' keys in that order.
+/// The maps are [`IndexMap`]s because the level-line build reads `carried_ends`' keys in
+/// insertion order, and that order must be the same on every run for the result to be.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BandGroup {
     /// The tag this group's triangles carry.
@@ -58,9 +57,8 @@ pub struct BandGroup {
 }
 
 impl Default for BandGroup {
-    /// C#'s property initialisers: `end_of` is -1 and every list and map starts empty (C# leaves
-    /// `Tag` 0 and `Members`/`SideOfChain` null until an initialiser sets them; empty stands for
-    /// unset here).
+    /// An unset group: `end_of` is -1, `tag` 0, and every list and map starts empty (empty
+    /// stands for unset).
     fn default() -> Self {
         BandGroup {
             tag: 0,

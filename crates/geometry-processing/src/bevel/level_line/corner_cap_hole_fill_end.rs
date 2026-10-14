@@ -1,6 +1,4 @@
-//! The corner cap's end hole closed by the one filler. Ports `CornerCap.EndHoleByTheOneFiller`
-//! from `Bevel/LevelLine/CornerCap.HoleFill.cs` (a partial of the C# static class `CornerCap`):
-//! an end hole [`super::corner_cap_zip_end::zip_end`] cannot zip about V, closed flat where it is
+//! The corner cap's end hole closed by the one filler: an end hole [`super::corner_cap_zip_end::zip_end`] cannot zip about V, closed flat where it is
 //! planar and faired by [`super::corner_cap_hole_fill::fill_one`] otherwise
 //! ([`end_hole_by_the_one_filler`]).
 
@@ -11,7 +9,7 @@ use super::corner_cap_hole_fill::fill_one;
 use super::corner_cap_hole_fill_switch::use_hole_fill;
 use super::{GapFillRefusal, LevelLineMesh, LevelLineMeshError};
 
-/// C# `CornerCap.EndHoleByTheOneFiller`: an end hole [`super::corner_cap_zip_end::zip_end`] cannot
+/// An end hole [`super::corner_cap_zip_end::zip_end`] cannot
 /// zip about V - the end run turns back round it - closed by the one filler instead of refused:
 /// flat where the hole is planar, faired by [`fill_one`] otherwise. The loop is the row forward
 /// then the run back from T to S, the way the cap lays its edges. Where the band flowed over an

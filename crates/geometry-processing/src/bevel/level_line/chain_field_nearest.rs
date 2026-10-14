@@ -1,17 +1,14 @@
-//! The chain field's nearest-point walk: its constants (C#'s `ChainField` static fields, from every
-//! partial), one segment's least reading from a point, the box-tree walk that finds the nearest
-//! chain point, the mitre rays offered to it, and the unclipped readings built on it. Ports
-//! `ChainField.LeastOverSegmentFromPoint` and `VisitNearest` (`ChainField.cs`),
-//! `NearestOverExtensions` and the ray's reading (`ChainField.Mitre.cs`), and
-//! `UnclippedParameterAt` / `ValueInTheEndPlane` / `UnclippedValueAt` (`ChainField.EndClip.cs`).
-//! The type lives in `chain_field.rs`.
+//! The chain field's nearest-point walk: the chain field's constants, one segment's least reading
+//! from a point, the box-tree walk that finds the nearest chain point, the mitre rays offered to
+//! it and a ray's reading, and the unclipped readings built on it (the unclipped parameter and
+//! value, and the value in an end plane). The type lives in `chain_field.rs`.
 
 use vector_math::Vector3;
 
 use super::segment_box_tree;
 use super::{ChainField, ChainFieldExtension, LevelLineWork, WorkError};
 
-/// The best reading a nearest-point walk has found so far (C#'s four `ref` locals).
+/// The best reading a nearest-point walk has found so far.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChainFieldNearest {
     /// The least reading, +infinity before any.
@@ -43,7 +40,7 @@ impl ChainFieldNearest {
     }
 }
 
-/// C#'s `Math.Sign` as a number: -1, 0 or 1.
+/// The sign of `value` as a number: -1, 0 or 1 (0 for NaN as well as zero).
 fn sign(value: f64) -> f64 {
     if value > 0.0 {
         1.0
@@ -133,7 +130,7 @@ impl ChainField {
             let foot = from + (along * u0);
             let a = (q - foot).length();
             let offset = sign(k) * k.abs() * a / (length * (length_squared - (k * k)).sqrt());
-            // NaN passes through the clamp, as C#'s two comparisons let it.
+            // NaN passes through the clamp, so a broken reading stays visible downstream.
             let stationary = (u0 + offset).clamp(0.0, 1.0);
             let (inside, inside_point, inside_distance) = value_at_u(stationary);
             if inside < best {
@@ -238,7 +235,8 @@ impl ChainField {
 }
 
 impl ChainFieldExtension {
-    /// C#'s constructor (its optional `parameterSlope = 0` passed explicitly).
+    /// A ray from `origin` along `direction`, kept on the `keep` side and reaching `reach`, with
+    /// the setback and parameter at its start and how fast the parameter moves along it.
     pub fn new(
         origin: Vector3,
         direction: Vector3,

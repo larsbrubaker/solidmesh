@@ -1,5 +1,5 @@
-//! How the band flows over a chain's end face. Ports `Bevel/LevelLine/EndFaceFlow.cs` (a C# static
-//! class): so far its constants, the facet normal ([`normal_of`]), the side-turn test
+//! How the band flows over a chain's end face: its constants, the facet normal ([`normal_of`]),
+//! the side-turn test
 //! ([`turns_along_a_side`]), the end-face bend ([`bends`]) and whether the end region's flood
 //! crosses a soft bend ([`crosses_a_soft_bend`]) and a flat patch of the end region
 //! ([`flat_patch`]), and the flow over a narrow end face ([`flow_over_a_narrow_end_face`]) and
@@ -30,12 +30,12 @@ pub const ROUND_RUN_SPREAD: f64 = 1.25;
 pub const END_FACE_BEND_DEGREES: f64 = 0.5;
 
 /// The joins of one round turn about one axis (the cylinder's): within about 10 degrees, as a
-/// cosine (C# `static readonly RoundRunAxisCosine`).
+/// cosine.
 pub fn round_run_axis_cosine() -> f64 {
     (10.0 * std::f64::consts::PI / 180.0).cos()
 }
 
-/// [`END_FACE_BEND_DEGREES`] as a cosine (C# `static readonly EndFaceBendCosine`).
+/// [`END_FACE_BEND_DEGREES`] as a cosine.
 fn end_face_bend_cosine() -> f64 {
     (END_FACE_BEND_DEGREES * std::f64::consts::PI / 180.0).cos()
 }
@@ -93,7 +93,7 @@ pub fn bends(
     let first = normal_of(on[0]);
     let second = normal_of(on[1]);
     let lengths = first.length() * second.length();
-    // A NaN length reads as no bend, as C#'s `!(lengths > 0)` does.
+    // A NaN length reads as no bend: a degenerate edge cannot bend the face.
     if lengths.is_nan() || lengths <= 0.0 {
         return false;
     }
@@ -101,7 +101,7 @@ pub fn bends(
     first.dot(second) < end_face_bend_cosine() * lengths
 }
 
-/// C# `EndFaceFlow.CrossesASoftBend`: whether an end region's flood carries on across the soft bend
+/// Whether an end region's flood carries on across the soft bend
 /// `a`-`b`. A round from the end on carries on while the band at this size reaches it (to within
 /// `margin`, the model-scale join margin) - or, size-free, until it comes round to face away from or
 /// with a side; past the end it carries on only while the band reaches it, or size-free until it
@@ -137,10 +137,10 @@ pub fn crosses_a_soft_bend(
 /// A flat patch of triangles and the soft bends on its rim.
 pub type FlatPatch = (IndexSet<i32>, Vec<(i32, i32)>);
 
-/// C# `EndFaceFlow.FlatPatch`: the triangles reached from `seeds` without crossing a chain edge, a
+/// The triangles reached from `seeds` without crossing a chain edge, a
 /// fold or a bend (a bend at `end_vertex` is crossed, as the end flood crosses it), and the soft
-/// bends on the patch's rim that do not lead back into `previous`. Both keep C#'s `HashSet`
-/// insertion order.
+/// bends on the patch's rim that do not lead back into `previous`. Both keep insertion order, so
+/// the walk is the same on every run.
 #[allow(clippy::too_many_arguments)]
 pub fn flat_patch(
     positions: &[Vector3],
@@ -187,7 +187,7 @@ pub fn flat_patch(
     Ok((patch, soft_bends.into_iter().collect()))
 }
 
-/// C# `EndFaceFlow.FlowOverANarrowEndFace`: the Flow decision at an END - an end face narrower than
+/// The Flow decision at an END - an end face narrower than
 /// the setback is not an end the band stops at. Where the band at this size (`end_reach`'s level
 /// line) cuts across a far crease of the end region (a crease not at the end vertex), the region
 /// carries on over that crease onto the next face, so the end cut lands there and the creases
@@ -270,7 +270,7 @@ pub fn flow_over_a_narrow_end_face(
     }
 }
 
-/// C# `EndFaceFlow.RoundsFromTheEnd`: true when the END FACE is a ROUND FROM THE END ON: from the
+/// True when the END FACE is a ROUND FROM THE END ON: from the
 /// end vertex on, a run of soft bends bounding [`ROUND_RUN_JOINS`] full facets as wide as each
 /// other, all turning by as much, about the same axis - and the part of a facet the end vertex
 /// stands on no wider than they are, wherever in that facet the vertex sits. A D prism's flat edge
@@ -321,7 +321,7 @@ pub fn rounds_from_the_end(
             (offset - (entry_along * offset.dot(entry_along))).length()
         };
 
-        // C#'s OrderBy(..).First(): the first nearest, NaN ordering first.
+        // The first nearest, NaN ordering first, so a tie picks the same exit on every run.
         let mut exit = exits[0];
         for &candidate in &exits[1..] {
             let (d, best) = (from_entry(candidate), from_entry(exit));
@@ -332,7 +332,7 @@ pub fn rounds_from_the_end(
 
         let width = from_entry(exit);
         let on = &standing[&exit];
-        // C#'s List.Find: the first match, or 0 where none.
+        // The first match, or 0 where none.
         let inside = on.iter().copied().find(|t| area.contains(t)).unwrap_or(0);
         let across = on.iter().copied().find(|t| !area.contains(t)).unwrap_or(0);
         let in_normal = normal_of(positions, indices[inside as usize]);

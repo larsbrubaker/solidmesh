@@ -1,5 +1,5 @@
 //! The side tagging of the band: which side of the chain each triangle stands on, and the end
-//! regions. Ports `Bevel/LevelLine/BandSideTagging.cs` (a C# static class): so far its tags, the
+//! regions: its tags, the
 //! both-sided-members switch, the model's scale, the outward direction at a chain end and a facet
 //! normal, the flood out from seeds ([`flood`]) and the connected regions ([`connected_regions`]);
 //! which side of a chain a point lies on ([`side_of`]) and the first both-sided member at a mixed
@@ -26,8 +26,8 @@ pub const SECOND_END_TAG: i32 = 4;
 /// to the end flood but where it stands past the end.
 pub const ANOTHER_PICKS_SIDE: i32 = -1;
 
-/// Whether a both-sided member of a pick is built (C# `BothSidedMembersBuild`, an `AsyncLocal`
-/// flow switch, so here a field of the budget in force): on by default and with no budget in force;
+/// Whether a both-sided member of a pick is built (a switch that travels with the build, so a
+/// field of the budget in force): on by default and with no budget in force;
 /// off - a test's way back to the old answer - the band and the pair room refuse such a member as
 /// `ChainDoesNotDivideItsSides`.
 pub fn both_sided_members_build() -> bool {
@@ -95,7 +95,7 @@ pub fn normal_of(positions: &[Vector3], t: (i32, i32, i32)) -> Vector3 {
         .get_normal()
 }
 
-/// C# `BandSideTagging.Flood`: tags with `tag` every untagged triangle reachable from `seeds`
+/// Tags with `tag` every untagged triangle reachable from `seeds`
 /// (taken in ascending order) without crossing a chain edge or a feature edge, and that `can_enter`
 /// allows. The answer is the TAG ARRAY - a set of triangles - which does not depend on the order it
 /// was filled in, so the neighbour lists may be read in the order the mesh holds them.
@@ -128,7 +128,8 @@ pub fn flood(
                 continue;
             }
 
-            // C#'s indexer: every edge of a triangle stands in the map built from the same list.
+            // Every edge of a triangle stands in the map built from the same list, so the lookup
+            // always finds it.
             for &neighbour in standing.get(&key).map_or(&[][..], |n| n.as_slice()) {
                 if tags[neighbour as usize] == 0 && can_enter.is_none_or(|can| can(neighbour)) {
                     tags[neighbour as usize] = tag;
@@ -141,7 +142,7 @@ pub fn flood(
     Ok(())
 }
 
-/// C# `BandSideTagging.ConnectedRegions`: every triangle's CONNECTED REGION - the triangles
+/// Every triangle's CONNECTED REGION - the triangles
 /// reachable from it without crossing a chain edge or a feature edge, numbered from 1. One region
 /// is one piece of surface, so two triangles share a number only when a path on the part joins them.
 pub fn connected_regions(
@@ -171,7 +172,7 @@ pub fn connected_regions(
     Ok(region_of)
 }
 
-/// C# `BandSideTagging.SideOf`: which side of the chain (1 left, 2 right, as
+/// Which side of the chain (1 left, 2 right, as
 /// `chain_on_the_mesh::sides_of` names them) `point` lies on, read from the geometry: at the chain
 /// edge nearest the point, the side whose triangle runs away from the edge the way the point does.
 /// What names the side of a loop of a both-sided member, whose two sides carry one tag.
@@ -215,11 +216,11 @@ pub fn side_of(
     Ok(side)
 }
 
-/// C# `BandSideTagging.FirstBothSidedAtAMixedCorner`: the lowest both-sided member that meets
+/// The lowest both-sided member that meets
 /// another chain at a MIXED corner - a vertex where the picked edges do not all fold the same way
 /// (a pocket rim with its inner edge, an L's re-entrant corner) - or -1. At a mixed corner the
 /// both-sided blend came back self-intersecting or its room read small, so such a member is still
-/// read as a chain that does not divide its sides. No positions (C#'s null) reads none.
+/// read as a chain that does not divide its sides. No positions reads none.
 pub fn first_both_sided_at_a_mixed_corner(
     positions: Option<&[Vector3]>,
     indices: &[(i32, i32, i32)],

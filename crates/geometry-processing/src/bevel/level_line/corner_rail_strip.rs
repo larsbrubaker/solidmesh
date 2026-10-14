@@ -1,8 +1,8 @@
-//! The corner fill's zip of one chain's two rail pieces into the strip between them. Ports
-//! `Bevel/LevelLine/CornerRailStrip.cs` (a C# static class): so far the chain parameter a
+//! The corner fill's zip of one chain's two rail pieces into the strip between them: the chain
+//! parameter a
 //! jump-end spoke's arc is drawn about ([`spoke_centre_parameter`]) and the rail vertex nearest an
 //! end ([`nearest`]), and a strip end set back to where its chain ties another ([`set_back`]);
-//! the strip itself lands with later packages.
+//! the strip itself is in `corner_rail_strip_zip.rs`.
 
 /// The chain parameter a jump-end spoke's arc is drawn about: the mean of its two ends, each TIE
 /// vertex (a span wider than `tie`) read at the end of its span nearest its partner - on the
@@ -67,13 +67,13 @@ pub fn nearest(parameters: &[f64], inside: i32, end: f64, outward: i32) -> i32 {
 pub type WatchSetbacks = std::rc::Rc<dyn Fn(bool)>;
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerRailStrip.WatchSetbacks`: told `true` for each rail end a setback
+    /// Told `true` for each rail end a setback
     /// densified and `false` for each that stops short of it. Per thread; `None` by default.
     pub static WATCH_SETBACKS: std::cell::RefCell<Option<WatchSetbacks>> =
         const { std::cell::RefCell::new(None) };
 }
 
-/// C# `CornerRailStrip.SetBack`: where an end of either rail piece (`av`/`ap`, `bv`/`bp`) ties
+/// Where an end of either rail piece (`av`/`ap`, `bv`/`bp`) ties
 /// another chain's field, the strip end is set back to the tie's parameter reaching INTO the chain
 /// (the greatest of the tied ends at its first end, `low`, the least at its last): a rail running
 /// past it is given a station there ([`super::rail_stations::densify`], one other vertex). Answers
@@ -129,7 +129,7 @@ pub fn set_back(
     }
 
     // The setback reaches INTO the chain: the greater parameter at its first end, the lesser at
-    // its last (C#'s LINQ Max / Min).
+    // its last.
     let setback = if low {
         tied_ends
             .iter()

@@ -1,7 +1,7 @@
 //! Where the level line crosses one mesh edge ([`EdgeRoot`]): found once, shared by both
-//! triangles on that edge. Ports the record of `Bevel/LevelLine/EdgeRoot.cs` with the bisection's
-//! constants ([`BISECTION_STEPS`], [`BRACKET_TOLERANCE`]) and the bracketed search that finds the
-//! roots (`EdgeRoots`: [`find`], [`find_over`], [`root_on`]).
+//! triangles on that edge, with the bisection's constants ([`BISECTION_STEPS`],
+//! [`BRACKET_TOLERANCE`]) and the bracketed search that finds the roots ([`find`], [`find_over`],
+//! [`root_on`]).
 
 use vector_math::Vector3;
 
@@ -9,7 +9,7 @@ use super::{
     FieldCounters, LevelLineMesh, LevelLineWork, VertexFieldReading, VertexSide, WorkError,
 };
 
-/// C# `EdgeRoot`: where the level line crosses one mesh edge, keyed by the edge's two vertex
+/// Where the level line crosses one mesh edge, keyed by the edge's two vertex
 /// indices in ascending order.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct EdgeRoot {
@@ -22,22 +22,22 @@ pub struct EdgeRoot {
 }
 
 impl EdgeRoot {
-    /// C#'s constructor.
+    /// The root at `point` on the edge from `a` to `b`.
     pub fn new(a: i32, b: i32, point: Vector3) -> Self {
         Self { a, b, point }
     }
 }
 
-/// C# `EdgeRoots.BisectionSteps`: the worst case, so a pathological field still stops - 60
+/// The worst case, so a pathological field still stops - 60
 /// halvings take any edge below 1e-18 of its length.
 pub const BISECTION_STEPS: i32 = 60;
 
-/// C# `EdgeRoots.BracketTolerance`: how tight the bracket round the root is taken, as a fraction
+/// How tight the bracket round the root is taken, as a fraction
 /// of the segment's length. Fixed rather than adaptive so the same input always gives the same
 /// bits, and far below the 1e-9 the module's answers are held to.
 pub const BRACKET_TOLERANCE: f64 = 1e-13;
 
-/// C# `EdgeRoots.Find(mesh, reading)`: every crossed edge's root over the whole mesh.
+/// Every crossed edge's root over the whole mesh.
 pub fn find(
     mesh: &LevelLineMesh,
     reading: &VertexFieldReading,
@@ -45,7 +45,7 @@ pub fn find(
     find_over(mesh, reading, mesh.edges())
 }
 
-/// C# `EdgeRoots.Find(mesh, reading, overEdges)`: every crossed edge's root over a named set of
+/// Every crossed edge's root over a named set of
 /// edges, after settling which vertices the line passes exactly through. Promoting an end to
 /// on-the-line can uncross its other edges, so the pass repeats until nothing more is promoted -
 /// which terminates because each pass promotes at least one vertex and never demotes one.
@@ -95,12 +95,12 @@ pub fn find_over(
     }
 }
 
-/// The memo key: the exact ordered points' bits, -0.0 read as 0.0 as C#'s double equality has it.
+/// The memo key: the exact ordered points' bits, -0.0 read as 0.0 since the two are equal.
 fn root_key(from: Vector3, to: Vector3) -> [u64; 6] {
     [from.x, from.y, from.z, to.x, to.y, to.z].map(|c| (c + 0.0).to_bits())
 }
 
-/// C# `EdgeRoots.RootOn`: the root of the field on the segment from one point to another, by a
+/// The root of the field on the segment from one point to another, by a
 /// bracketed (Illinois secant) search that never leaves the bracket. Remembered per reading, keyed
 /// on the exact ordered points; the work units the first search charged are charged again on
 /// every hit, so the budget sees exactly what it saw before the memo.
@@ -127,7 +127,7 @@ pub fn root_on(
     Ok(root)
 }
 
-/// C# `EdgeRoots.RootInTheEndPlane`: the root on an edge lying in a bounded end's plane, where the
+/// The root on an edge lying in a bounded end's plane, where the
 /// chain's own value crosses 0, by halving - or `None` where that value does not change sign.
 fn root_in_the_end_plane(
     from: Vector3,
@@ -159,7 +159,7 @@ fn root_in_the_end_plane(
     Ok(Some(Vector3::lerp(from, to, 0.5 * (lo + hi))))
 }
 
-/// C# `EdgeRoots.SearchRootOn`: the bracketed search [`root_on`] remembers the answer of.
+/// The bracketed search [`root_on`] remembers the answer of.
 fn search_root_on(
     from: Vector3,
     to: Vector3,

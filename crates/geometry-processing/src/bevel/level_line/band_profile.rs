@@ -1,7 +1,7 @@
 //! Which profile a level-line band is cut for - the only thing the size means differently between
-//! the two. Ports `Bevel/LevelLine/BandProfile.cs`.
+//! the two.
 
-/// C# `BandProfile`.
+/// The profile a band is cut for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum BandProfile {
     /// The size is a radius, and the setback is `radius * tan(phi / 2)` at the edge's own angle.

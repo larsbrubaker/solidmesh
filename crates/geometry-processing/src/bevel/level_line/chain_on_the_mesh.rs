@@ -1,7 +1,6 @@
 //! A picked chain read on the mesh it was picked from: its edges in its own direction and the two
-//! triangles each stands between. Ports `Bevel/LevelLine/ChainOnTheMesh.cs` (a C# static class,
-//! so a module of functions), with the setback-step fraction ([`SETBACK_STEP_FRACTION`]); the
-//! setback steps and unit setbacks land with their method package.
+//! triangles each stands between, with the setback-step fraction ([`SETBACK_STEP_FRACTION`]), the
+//! setback steps and unit setbacks.
 
 use super::triangle_edges::{self, StandingMap};
 use super::ChainEdgeNotOnTwoTriangles;
@@ -24,8 +23,7 @@ pub fn chain_edges(chain: &[i32], is_closed: bool) -> Vec<(i32, i32)> {
 
 /// The two triangles a chain edge `from -> to` stands between, as (left, right): the left one
 /// traverses the edge in the chain's direction. Errors where the edge does not stand on exactly
-/// two triangles, or its two triangles do not wind it consistently (C# throws
-/// `ChainEdgeNotOnTwoTrianglesException`, with the same messages).
+/// two triangles, or its two triangles do not wind it consistently.
 pub fn sides_of(
     indices: &[(i32, i32, i32)],
     standing: &StandingMap,
@@ -59,12 +57,12 @@ pub fn sides_of(
     Ok((left, if left == pair[0] { pair[1] } else { pair[0] }))
 }
 
-/// C# `ChainOnTheMesh.SetbackStepFraction`: how much two neighbouring edges' setbacks may differ,
+/// How much two neighbouring edges' setbacks may differ,
 /// as a fraction of the larger, and still share a sharp turn of one chain. Below it the vertex
 /// takes their mean; above it the chain is split there.
 pub const SETBACK_STEP_FRACTION: f64 = 0.05;
 
-/// C# `ChainOnTheMesh.PerEdgeUnitSetbacks`: each chain edge's setback at size 1 - the chamfer's
+/// Each chain edge's setback at size 1 - the chamfer's
 /// own, or the fillet's at the edge's dihedral between its two triangles.
 pub fn per_edge_unit_setbacks(
     positions: &[vector_math::Vector3],
@@ -91,7 +89,7 @@ pub fn per_edge_unit_setbacks(
     Ok(per_edge)
 }
 
-/// C# `ChainOnTheMesh.UnitSetbacks`: each chain vertex's setback at size 1, the mean of the
+/// Each chain vertex's setback at size 1, the mean of the
 /// edges either side of it (the one edge at an open chain's end).
 pub fn unit_setbacks(
     positions: &[vector_math::Vector3],
@@ -128,7 +126,7 @@ pub fn unit_setbacks(
     Ok(setbacks)
 }
 
-/// C# `ChainOnTheMesh.SplitAtSetbackSteps`: each chain cut into pieces at its STEPS - sharp
+/// Each chain cut into pieces at its STEPS - sharp
 /// turns (past `sharp_turn_degrees`) where the unit setback jumps by more than
 /// [`SETBACK_STEP_FRACTION`] and an unpicked crease runs into the vertex (always, without an
 /// `is_feature_edge`). A closed chain needs two steps to be cut, and its pieces wrap past its

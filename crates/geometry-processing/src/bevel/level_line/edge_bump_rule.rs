@@ -1,7 +1,7 @@
 //! The refinement's BUMP rule, rule (i) mirrored: an edge of a band triangle whose ends read inside
 //! (or one inside and one on the line) while the edge between them stands outside hides a pair of
-//! crossings no end reading shows, and is split at its peak. Ports
-//! `Bevel/LevelLine/EdgeBumpRule.cs`; the refinement that asks it is `band_refinement_asking`.
+//! crossings no end reading shows, and is split at its peak. The refinement that asks it is
+//! `band_refinement_asking`.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -17,7 +17,7 @@ use super::{
 };
 
 /// What [`ask`] did: split an edge at its peak, refused because the triangle is too small to
-/// divide further, or found nothing to do (C#'s `bool` answer and `out bool refused`).
+/// divide further, or found nothing to do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BumpAnswer {
     /// No edge of the triangle bumps across the line.
@@ -28,7 +28,7 @@ pub enum BumpAnswer {
     Refused,
 }
 
-/// C# `EdgeBumpRule.Ask`: for each edge of `triangle` whose ends read inside (or inside and on)
+/// For each edge of `triangle` whose ends read inside (or inside and on)
 /// while the edge rises above the line between them, splits it ONCE at its peak - which reads
 /// Outside, leaving two plainly crossed halves - or bisects the longest-edge path where that split
 /// would thin a child. Read on the reading's own mesh.

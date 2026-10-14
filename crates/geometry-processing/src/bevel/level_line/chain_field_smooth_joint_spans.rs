@@ -1,5 +1,5 @@
-//! The chain field's smooth-joint spans. Ports `Bevel/LevelLine/ChainField.SmoothJointSpans.cs` (a
-//! partial of `ChainField`; the type lives in `chain_field.rs`): inside the smooth-joints scope an
+//! The chain field's smooth-joint spans (the type lives in `chain_field.rs`): inside the
+//! smooth-joints scope an
 //! open chain's interior smooth joint is given a SPAN of parameter - squeezing the half-segments
 //! either side - so the parameter read near the joint moves continuously across it, and the
 //! readings are carried into and out of that span. Outside the scope nothing changes.
@@ -26,9 +26,8 @@ impl ChainField {
             && (k as usize) + 1 < self.points.len()
     }
 
-    /// The smooth joints in ascending order - the order C#'s `HashSet<int>` hands them back in,
-    /// since they are added ascending and never removed; where two spans touch at a shared end the
-    /// lower joint answers.
+    /// The smooth joints in ascending order - the order they are added in, never removed; where
+    /// two spans touch at a shared end the lower joint answers.
     fn smooth_joints_in_order(&self) -> Vec<i32> {
         let mut joints: Vec<i32> = self
             .smooth_joints

@@ -1,11 +1,11 @@
 //! The refinement that splits the band's triangles until the level line runs through them as
-//! chords. Ports `Bevel/LevelLine/BandRefinement.cs` (a C# static class): its depth bound, a
+//! chords: its depth bound, a
 //! triangle's span, the meter's nearness readings, [`refine`] with the Lipschitz halving and the
 //! readings it asks ([`line_points_of`], [`wants_splitting`], [`hides_the_line`]). The refinement
 //! by asking is `band_refinement_asking`, its mixed edge rule `band_refinement_mixed_edge`.
 //!
-//! C# hands the refinement the mesh and a reading of it; the mesh is always the reading's own, so
-//! here the refinement takes the reading and edits its mesh, borrowing it only between reads.
+//! The mesh the refinement edits is always the reading's own, so the refinement takes the reading
+//! and edits its mesh, borrowing it only between reads.
 
 use vector_math::{cs_math, Vector3};
 
@@ -44,16 +44,16 @@ pub fn farthest_from_the_line3(chord_tolerance: f64, a: f64, b: f64, c: f64) -> 
     cs_math::max_f64(a.abs(), cs_math::max_f64(b.abs(), c.abs())) / (20.0 * chord_tolerance)
 }
 
-/// Why the refinement could not run (C#'s exceptions, and the work budget's).
+/// Why the refinement could not run.
 #[derive(Debug, Clone)]
 pub enum RefineError {
     /// The work budget ran out, the build was cancelled, or the mesh refused an edit.
     Mesh(super::LevelLineMeshError),
-    /// The chord tolerance or the Lipschitz constant is not positive (C#'s
-    /// `ArgumentOutOfRangeException` message).
+    /// The chord tolerance or the Lipschitz constant is not positive, with the message saying
+    /// which.
     OutOfRange(String),
-    /// The halving was asked to split an edge no live triangle stands on (C#'s LINQ `Max` over
-    /// no parents).
+    /// The halving was asked to split an edge no live triangle stands on, so there is no parent
+    /// depth to read.
     NoParents(String),
 }
 
@@ -82,14 +82,14 @@ impl std::fmt::Display for RefineError {
 
 impl std::error::Error for RefineError {}
 
-/// C# `BandRefinement.Refine`'s optional arguments, at C#'s defaults.
+/// The optional arguments of [`refine`], defaulting to the usual values.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RefineOptions {
-    /// The field's Lipschitz constant (C# default 1).
+    /// The field's Lipschitz constant (default 1).
     pub lipschitz: f64,
-    /// Read by the Lipschitz halving only (C# default [`DEFAULT_MAX_DEPTH`]).
+    /// Read by the Lipschitz halving only (default [`DEFAULT_MAX_DEPTH`]).
     pub max_depth: i32,
-    /// Switches OFF the chord accuracy rule, and only that one (C# default false).
+    /// Switches OFF the chord accuracy rule, and only that one (default false).
     pub topology_only: bool,
 }
 
@@ -103,7 +103,7 @@ impl Default for RefineOptions {
     }
 }
 
-/// C# `BandRefinement.Refine`: refines the candidate triangles of the reading's mesh in place.
+/// Refines the candidate triangles of the reading's mesh in place.
 /// Answers `(true, -1)` when every triangle settled, and `(false, triangle)` - naming the triangle
 /// that would not settle - rather than looping or quietly accepting a triangle it could not make
 /// good. A field that can be asked where it runs is refined by asking
@@ -193,7 +193,7 @@ pub fn refine(
     Ok((true, -1))
 }
 
-/// C# `BandRefinement.LinePointsOf`: the line points of a crossed triangle of the reading's mesh -
+/// The line points of a crossed triangle of the reading's mesh -
 /// each corner on the line, then each crossed edge's root. Fewer or more than two means the cut's
 /// own table handles it, and the chord test stands aside.
 pub fn line_points_of(
@@ -227,7 +227,7 @@ pub fn line_points_of(
     Ok(points)
 }
 
-/// C# `BandRefinement.WantsSplitting`: the Lipschitz halving's test - an uncrossed edge longer
+/// The Lipschitz halving's test - an uncrossed edge longer
 /// than its ends' reach (and than the chord tolerance) may hide a pair of crossings; a triangle the
 /// line touches nowhere may hide a loop ([`hides_the_line`]); a crossed triangle's chord midpoint
 /// stands off the line by more than the tolerance.
@@ -268,7 +268,7 @@ pub fn wants_splitting(
         && (points[0] - points[1]).length() > chord_tolerance)
 }
 
-/// C# `BandRefinement.HidesTheLine`: whether a triangle that touches the line nowhere on its
+/// Whether a triangle that touches the line nowhere on its
 /// boundary could still hide it in its middle. The field is 1-Lipschitz, so a corner reading
 /// further from the line than the triangle reaches from it proves the triangle clear; otherwise it
 /// is halved while its longest side is over the chord tolerance.

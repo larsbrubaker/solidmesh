@@ -1,11 +1,10 @@
-//! The convex piece of the mesh a least-value query is asked about ([`ChainFieldMeshPiece`]), from
-//! `Bevel/LevelLine/ChainField.Queries.cs`, with its constructors and closest point, the chain's
+//! The convex piece of the mesh a least-value query is asked about ([`ChainFieldMeshPiece`]), with
+//! its constructors and closest point, the chain's
 //! parameter wrap ([`ChainField::wrapped`]), the spoke test across a turn
 //! ([`ChainField::spoke_gives_way_across_a_turn`]), the bounded maximum queries
 //! ([`ChainField::max_along_segment`], [`ChainField::max_over_triangle`],
 //! [`ChainField::island_peak`], with the segment cell bound) and the field seam ([`ScalarField`] for
-//! `ChainField`, saying it is a chain's field). The other queries - the `ChainField` methods of
-//! that partial - land with their method package.
+//! `ChainField`, saying it is a chain's field). The least queries are in `chain_field_least.rs`.
 
 use std::rc::Rc;
 
@@ -17,10 +16,10 @@ use super::{
     WorkError,
 };
 
-/// An opaque closest-point function on a piece (C# `Func<Vector3, Vector3>`).
+/// An opaque closest-point function on a piece.
 pub type ClosestOnPiece = Rc<dyn Fn(Vector3) -> Vector3>;
 
-/// C# `ChainField.MeshPiece`: the convex piece of the mesh a least-value query is asked about - a
+/// The convex piece of the mesh a least-value query is asked about - a
 /// segment, a triangle, or - for the exhaustive reference alone - an opaque closest-point
 /// function, which has no closed form to reach for.
 #[derive(Clone, Default)]
@@ -52,7 +51,7 @@ impl std::fmt::Debug for ChainFieldMeshPiece {
 }
 
 impl ChainFieldMeshPiece {
-    /// C#'s private constructor.
+    /// A piece from its corners.
     pub fn new(
         a: Vector3,
         b: Vector3,
@@ -69,23 +68,23 @@ impl ChainFieldMeshPiece {
         }
     }
 
-    /// C# `MeshPiece.HasClosedForm`: true when the piece's own geometry is known, so a constant
+    /// True when the piece's own geometry is known, so a constant
     /// setback can be answered outright.
     pub fn has_closed_form(&self) -> bool {
         self.closest_on_piece.is_none()
     }
 
-    /// C# `MeshPiece.Segment`: the segment a-b.
+    /// The segment a-b.
     pub fn segment(a: Vector3, b: Vector3) -> Self {
         Self::new(a, b, Vector3::default(), false, None)
     }
 
-    /// C# `MeshPiece.Triangle`: the triangle a, b, c.
+    /// The triangle a, b, c.
     pub fn triangle(a: Vector3, b: Vector3, c: Vector3) -> Self {
         Self::new(a, b, c, true, None)
     }
 
-    /// C# `MeshPiece.Custom`: a piece known only by its closest-point function.
+    /// A piece known only by its closest-point function.
     pub fn custom(closest_on_piece: ClosestOnPiece) -> Self {
         Self::new(
             Vector3::default(),
@@ -112,14 +111,15 @@ impl ChainFieldMeshPiece {
 }
 
 impl ChainField {
-    /// C# `ChainField.Wrapped`: a parameter read onto the chain: round the loop of a closed chain,
+    /// A parameter read onto the chain: round the loop of a closed chain,
     /// held to the ends of an open one.
     pub fn wrapped(&self, parameter: f64) -> f64 {
         if !self.is_closed {
             return parameter.clamp(0.0, self.length);
         }
 
-        // C#'s `%` on doubles is the truncating remainder, as Rust's.
+        // `%` on doubles is the truncating remainder, so a negative parameter stays negative here
+        // and is wrapped below.
         let parameter = parameter % self.length;
         if parameter < 0.0 {
             parameter + self.length
@@ -139,7 +139,7 @@ impl ChainField {
 }
 
 impl ChainField {
-    /// C# `ChainField.SpokeGivesWayAcrossATurn`: whether the usual spoke between two rails' next
+    /// Whether the usual spoke between two rails' next
     /// readings (`advances_left` says which rail moves) gives way to the other because it would
     /// cut ACROSS A TURN of the chain: its chord falls short of the path along the chain by a tenth
     /// of the setback - the scale at which a row drawn about the mean chain point leaves the
@@ -171,7 +171,7 @@ impl ChainField {
 }
 
 impl ChainField {
-    /// C# `ChainField.MaxAlongSegment(a, b, tolerance)`: the greatest field value along a segment,
+    /// The greatest field value along a segment,
     /// by bounded search (see `bounded_maximum`), from no floor.
     pub fn max_along_segment(
         &self,
@@ -182,7 +182,7 @@ impl ChainField {
         self.max_along_segment_at_least(a, b, tolerance, f64::NEG_INFINITY)
     }
 
-    /// C# `ChainField.MaxAlongSegment(a, b, tolerance, atLeast)`: the same search given a floor
+    /// The same search given a floor
     /// `at_least` to prune against from its first step - a value fixed by the caller BEFORE the
     /// search and never raised by it. Nothing beating it, the answer is `at_least` itself at a
     /// MEANINGLESS point. A caller whose test on the answer is a threshold T should pass
@@ -207,7 +207,7 @@ impl ChainField {
         )
     }
 
-    /// C# `ChainField.MaxOverTriangle(a, b, c, tolerance)`: the greatest field value over a
+    /// The greatest field value over a
     /// triangle, interior included, by bounded search.
     pub fn max_over_triangle(
         &self,
@@ -219,7 +219,7 @@ impl ChainField {
         self.max_over_triangle_bounded(a, b, c, tolerance, f64::INFINITY, f64::NEG_INFINITY)
     }
 
-    /// C# `ChainField.MaxOverTriangle(a, b, c, tolerance, stopAbove, atLeast)`: the greatest field
+    /// The greatest field
     /// value over a triangle, giving up as soon as it is known to stand above `stop_above` and
     /// pruning against a value `at_least` already attained elsewhere (`at_least` itself, at a
     /// meaningless point, when the triangle does not beat it).
@@ -248,7 +248,7 @@ impl ChainField {
         )
     }
 
-    /// C# `ChainField.IslandPeak`: the island rule's search over the triangle abc, sharpened by
+    /// The island rule's search over the triangle abc, sharpened by
     /// the chain's segment cell bound (see `bounded_maximum::island_peak`).
     pub fn island_peak(
         &self,
@@ -273,7 +273,7 @@ impl ChainField {
         )
     }
 
-    /// C# `ChainField.SegmentCellBound`: a sound upper bound on this field over a cell, from the
+    /// A sound upper bound on this field over a cell, from the
     /// chain SEGMENTS its corners' samples of chain `chain` name - the island search's sharper
     /// bound. Over one segment the reading `min over u of (|q - c(u)| - s(u))` is CONVEX in q, the
     /// field is the least over every segment, and a convex function's greatest value over a cell is
@@ -330,7 +330,7 @@ impl ScalarField for ChainField {
         Some(self)
     }
 
-    /// C# `ChainField.ValueAt`: [`ChainField::evaluate`]'s value, as the bare field seam asks.
+    /// [`ChainField::evaluate`]'s value, as the bare field seam asks.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         Ok(self.evaluate(point)?.value)
     }

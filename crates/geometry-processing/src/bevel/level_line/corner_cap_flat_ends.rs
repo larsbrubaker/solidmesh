@@ -1,7 +1,6 @@
 //! The flat-ends switch of the corner cap: an END FACE end closed flat by the flat hole filler
-//! instead of the zips and fans, on by default. Ports the switch of
-//! `Bevel/LevelLine/CornerCap.FlatEnds.cs` (a partial of the C# static class `CornerCap`; its
-//! hole-fill switch is in `corner_cap_hole_fill_switch.rs`) and its two closes, the flat fill
+//! instead of the zips and fans, on by default (the hole-fill switch is in
+//! `corner_cap_hole_fill_switch.rs`), and its two closes, the flat fill
 //! ([`closes_flat`]) and the fan from an end vertex on the run
 //! ([`fans_from_the_end_vertex_on_the_run`]).
 
@@ -15,7 +14,7 @@ use super::level_line_routing::reads_as_off;
 use super::{corner_fill, flat_hole_fill};
 use super::{HoleFillTriangle, LevelLineMesh, LevelLineMeshError, LevelLineWork};
 
-/// C# `CornerCap.DefaultSnap`: the flat fill's snap on a mesh with no `SamePlace` of its own.
+/// The flat fill's snap on a mesh with no `SamePlace` of its own.
 const DEFAULT_SNAP: f64 = 1e-9;
 
 /// A watcher of each end hole closed flat: the mesh, the hole's loop (as laid) and the fill's
@@ -23,16 +22,16 @@ const DEFAULT_SNAP: f64 = 1e-9;
 pub type WatchFlatEnds = Rc<dyn Fn(&LevelLineMesh, &[i32], &[HoleFillTriangle])>;
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerCap.WatchFlatEnds`: a read-only observer of each end hole closed
+    /// A read-only observer of each end hole closed
     /// flat. Per thread; `None` by default.
     pub static WATCH_FLAT_ENDS: RefCell<Option<WatchFlatEnds>> = const { RefCell::new(None) };
 }
 
-/// C# `CornerCap.UseFlatEndsVariable`: the environment variable that turns [`use_flat_ends`] off
+/// The environment variable that turns [`use_flat_ends`] off
 /// ("0" or "false"); unset or anything else leaves it on.
 pub const USE_FLAT_ENDS_VARIABLE: &str = "MATTERCAD_BEVEL_FLATENDS";
 
-/// C# `CornerCap.FlatEndsFromTheEnvironment`: read once, when first asked - the developer opt-out.
+/// Read once, when first asked - the developer opt-out.
 /// On by default since the owner files built no worse with it and the kernel suite is green on
 /// it. The browser has no process environment, so there it is always on.
 fn flat_ends_from_the_environment() -> bool {
@@ -42,24 +41,23 @@ fn flat_ends_from_the_environment() -> bool {
 }
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerCap.UseFlatEndsOverride`: a per-thread override of the
+    /// A per-thread override of the
     /// environment's answer - `None` leaves it to the variable. Per thread so a test that turns
     /// flat ends off never changes what a parallel test builds.
     static USE_FLAT_ENDS_OVERRIDE: Cell<Option<bool>> = const { Cell::new(None) };
 }
 
-/// Sets (or, with `None`, clears) this thread's override of [`use_flat_ends`] (C#'s
-/// `UseFlatEndsOverride` setter).
+/// Sets (or, with `None`, clears) this thread's override of [`use_flat_ends`].
 pub fn set_use_flat_ends_override(value: Option<bool>) {
     USE_FLAT_ENDS_OVERRIDE.with(|o| o.set(value));
 }
 
-/// This thread's override of [`use_flat_ends`] (C#'s `UseFlatEndsOverride` getter).
+/// This thread's override of [`use_flat_ends`].
 pub fn use_flat_ends_override() -> Option<bool> {
     USE_FLAT_ENDS_OVERRIDE.with(|o| o.get())
 }
 
-/// C# `CornerCap.UseFlatEnds`: whether an end-face hole is closed by the flat hole filler (and its
+/// Whether an end-face hole is closed by the flat hole filler (and its
 /// end ray bounded at the end plane).
 pub fn use_flat_ends() -> bool {
     use_flat_ends_override().unwrap_or_else(flat_ends_from_the_environment)
@@ -79,7 +77,7 @@ fn end_hole_loop(row: &[i32], run: &[i32]) -> Vec<i32> {
         .collect()
 }
 
-/// C# `CornerCap.ClosesFlat`: the end hole between `row` (walked the way the cap lays it) and
+/// The end hole between `row` (walked the way the cap lays it) and
 /// `run` (walked the way the kept surface does, sharing the row's two ends) closed flat, or false
 /// with nothing laid where the hole is not planar within the cut's snap - the caller keeps its own
 /// close for that.
@@ -119,7 +117,7 @@ pub fn closes_flat(
     Ok(true)
 }
 
-/// C# `CornerCap.FansFromTheEndVertexOnTheRun`: the end hole fanned from the end vertex `v` where
+/// The end hole fanned from the end vertex `v` where
 /// `v` is itself a vertex of the run, inside a straight stretch of the rim. Every loop edge not at
 /// `v` is fanned to it, and only where each such triangle turns the loop's way (Newell's normal) is
 /// anything laid; false with nothing laid otherwise.
@@ -186,7 +184,7 @@ pub fn fans_from_the_end_vertex_on_the_run(
     Ok(true)
 }
 
-/// C# `CornerCap.WithTheEndFaceTriangleTaken`: a flat hole `hole_loop` whose corner is fanned by
+/// A flat hole `hole_loop` whose corner is fanned by
 /// end-face triangles lying in the hole's plane and holding the whole hole - those triangles taken
 /// out of the mesh and the loop rerouted along the fan's far path, so the end face's piece at the
 /// chain's end is closed with the hole. Only where the fan borders no other hole and the rerouted
@@ -373,7 +371,7 @@ pub fn with_the_end_face_triangle_taken(
     hole_loop.to_vec()
 }
 
-/// C# `CornerCap.ClosesFlatHole`: a hole, walked the way the cap lays its edges, closed flat by the
+/// A hole, walked the way the cap lays its edges, closed flat by the
 /// flat hole fill; false with nothing laid where it is not planar within the cut's snap.
 pub fn closes_flat_hole(
     mesh: &mut LevelLineMesh,

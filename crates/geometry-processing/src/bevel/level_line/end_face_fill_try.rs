@@ -1,6 +1,6 @@
-//! The end-face fill itself: C# `EndFaceFill.TryEndFaces` and `EndFaceFill.TryGrowingEndFaces`
-//! (in `Bevel/LevelLine/EndFaceFill.cs`, a C# static class). Its own file because
-//! `end_face_fill.rs` holds the rest of that C# file's readings and would pass the 800-line limit;
+//! The end-face fill itself: the end faces tried, and the growing end faces tried. Its own file
+//! because `end_face_fill.rs` holds the rest of the end-face fill's readings and would pass the
+//! 800-line limit;
 //! both are re-exported from there. It reads each end's run - the cut's run on the end face
 //! (`end_face_fill::run`), a growing end face's crease stretch (`end_face_fill::crease_run`), the
 //! end-plane trim's section (`end_plane_trim_run::trim_end`), a mixed pick's nose or a hull end
@@ -21,7 +21,7 @@ use super::{
     LevelLineMeshError,
 };
 
-/// C# `bool.ToString()`, as the refusal sites print it.
+/// A flag as the refusal sites print it: `True` or `False`.
 fn cs_bool(value: bool) -> &'static str {
     if value {
         "True"
@@ -30,8 +30,8 @@ fn cs_bool(value: bool) -> &'static str {
     }
 }
 
-/// The one loop on `side`, or `None` where there is not exactly one (C#'s `Single` throws there;
-/// the hull's carried rails are one per side by construction).
+/// The one loop on `side`, or `None` where there is not exactly one (the hull's carried rails are
+/// one per side by construction).
 fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
     let mut on_side = loops.iter().filter(|l| l.side == side);
     match (on_side.next(), on_side.next()) {
@@ -40,7 +40,7 @@ fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
     }
 }
 
-/// C# `TryEndFaces`' local `Trims`: whether the chain's `last` (or first) end is closed by the
+/// Whether the chain's `last` (or first) end is closed by the
 /// END-PLANE TRIM. A convex chain's end carrying the END RAY stands on a same-sense end face left
 /// whole for the trim (flow rung 3); a concave chain's rayed end is trimmed the same way where its
 /// end face folds the chain's way too and is bounded (`any_bounded_end`) or both rails run past
@@ -83,7 +83,7 @@ fn trims(
                 && (any_bounded_end || runs_end_past_the_end(mesh, chain, left, right, last))))
 }
 
-/// C# `TryEndFaces`' local `OffTheVirtualRail`: a rail carried VIRTUALLY past the crease
+/// Where a rail's crease run starts: a rail carried VIRTUALLY past the crease
 /// (`virtual_rail_past_the_end`) ends on a minted point in the air of the growing end face, so its
 /// crease run starts at the vertex before it; the rail's end itself otherwise.
 fn off_the_virtual_rail(minted: Option<&HashSet<i32>>, vertices: &[i32], at_tail: bool) -> i32 {
@@ -104,13 +104,13 @@ fn off_the_virtual_rail(minted: Option<&HashSet<i32>>, vertices: &[i32], at_tail
     }
 }
 
-/// C# `EndFaceFill.TryEndFaces`: the fill of an open chain that ends on END FACES - the strip
+/// The fill of an open chain that ends on END FACES - the strip
 /// between the two side runs, and at each end the hole between the end run (the cut's run on the
 /// end face, the crease stretch of a growing end face, the end-plane trim's section, the nose of
 /// a mixed pick, or a hull end) and the strip's last row. `None` (noting the site in
 /// `open_gap_fill::ends_site`) where the runs do not chain into one cycle; the caller refuses the
-/// open-chain ends by name. `minted` is the set of vertices the virtual rail minted (C# `minted =
-/// null`), `hull_minted` the list a hull end's carried rails mint into (C# `hullMinted = null`).
+/// open-chain ends by name. `minted` is the set of vertices the virtual rail minted (`None` for
+/// none), `hull_minted` the list a hull end's carried rails mint into.
 #[allow(clippy::too_many_arguments)]
 pub fn try_end_faces(
     gap: &BandGapResult,
@@ -121,8 +121,8 @@ pub fn try_end_faces(
     minted: Option<&HashSet<i32>>,
     hull_minted: Option<&mut Vec<i32>>,
 ) -> Result<Option<GapFillResult>, LevelLineMeshError> {
-    // C# reads `gap.Mesh` without a null check: only a built gap is filled, so a gap with no mesh
-    // answers null here rather than being dereferenced.
+    // A guard against a gap with no mesh: only a built gap is filled, so a gap with no mesh
+    // answers no fill.
     let Some(mesh_handle) = gap.mesh.as_ref() else {
         return Ok(None);
     };
@@ -520,7 +520,7 @@ pub fn try_end_faces(
     }))
 }
 
-/// C# `EndFaceFill.TryGrowingEndFaces`: the fill of an open chain whose end faces are of the
+/// The fill of an open chain whose end faces are of the
 /// OPPOSITE sense: the end face was never cut, so each end run is the CREASE STRETCH the cut
 /// uncovered, and the cap between it and the last row lies in the end face's plane, grown over the
 /// bead's section. `None` when either end has no such stretch.

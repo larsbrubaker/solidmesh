@@ -1,7 +1,6 @@
 //! Pass B of a rounds-first pick, read on the rounds' mesh: the concave creases joined over the
-//! round at each knife tip, and the feature edges the second pass floods by. Ports
-//! `BandGap.CreasesAfterTheRounds` and `BandGap.FeatureEdgesAfterTheRounds` from
-//! `Bevel/LevelLine/BandGap.RoundsFirst.cs`; the helpers they read are in `band_gap_rounds_first`.
+//! round at each knife tip, and the feature edges the second pass floods by; the helpers they
+//! read are in `band_gap_rounds_first`.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -17,7 +16,7 @@ use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges;
 use super::{GapFillResult, LevelLineMesh};
 
-/// C# `BandGap.CreasesAfterTheRounds` (the public overload): the concave creases read again on
+/// The concave creases read again on
 /// the rounds' mesh, or `None` where a tip cannot be read so.
 pub fn creases_after_the_rounds(
     positions: &[Vector3],
@@ -29,7 +28,7 @@ pub fn creases_after_the_rounds(
     creases_after_the_rounds_closed(positions, indices, chains, closed, rounds, None)
 }
 
-/// C# `BandGap.CreasesAfterTheRounds` with `resultClosed`: at each knife tip, the two concave
+/// The creases after the rounds, with whether each is closed: at each knife tip, the two concave
 /// chains ending there are joined into one chain over the round - the first chain's surviving
 /// piece up to where it enters the rounds' band, the crease where the band meets the tip's end
 /// face, and the second chain's surviving piece out to its far end. Concave chains at no tip are
@@ -112,7 +111,8 @@ pub fn creases_after_the_rounds_closed(
         }
 
         let first = &pieces[0];
-        // C# indexes `pieces[0][^2]` and throws on a one-vertex piece; that tip is not read.
+        // A one-vertex piece has no second-to-last vertex to read the tip's direction from; that
+        // tip is not read.
         if first.len() < 2 {
             return None;
         }
@@ -148,11 +148,11 @@ pub fn creases_after_the_rounds_closed(
     Some(result)
 }
 
-/// C# `BandGap.FeatureEdgesAfterTheRounds`: the feature edges of pass B, on the rounds' mesh. The
+/// The feature edges of pass B, on the rounds' mesh. The
 /// input's own edges keep their word. The rounds' band is NOT a feature inside or along its rails
 /// (where it meets a convex chain's side face); where the band meets any other face it IS one. Any
 /// other edge the rounds made is a feature where its two faces are not coplanar. `None` where the
-/// rounds carry no mesh or a rounds chain's edge stands on no triangle (C# throws there). The
+/// rounds carry no mesh or a rounds chain's edge stands on no triangle. The
 /// reading owns what it reads, so it can be handed to the pass-B build as its feature test.
 pub fn feature_edges_after_the_rounds(
     positions: &[Vector3],

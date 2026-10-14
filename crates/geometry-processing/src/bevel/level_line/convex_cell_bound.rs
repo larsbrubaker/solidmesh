@@ -1,7 +1,6 @@
 //! An upper bound on a 1-Lipschitz union-of-balls field over one cell of a bounded search, read
 //! from the CHAIN POINTS the cell's own corner samples already named rather than from the
-//! Lipschitz reach. Ports `Bevel/LevelLine/ConvexCellBound.cs` (an `internal static class`, free
-//! functions here). Reads [`FieldSample`]s; the chain and pick fields' ridge searches call it.
+//! Lipschitz reach. Reads [`FieldSample`]s; the chain and pick fields' ridge searches call it.
 //!
 //! The field is `f(q) = min over chain points c of (|q - c| - s(c))` (see `ChainField`). Fix ONE
 //! chain point c. Then `g_c(q) = |q - c| - s(c)` is CONVEX in q (a norm of an affine map less a
@@ -38,7 +37,7 @@
 //! inside the search at its first step. Measured 2026-09-22: 0 of 15,715 empty searches retired on the Many Holes
 //! witness, and 0 on the grid plate at 5, 17 and 37 loops.
 //!
-//! C#'s optional `Func<int, Vector3, double> endPlaneAt = null` is an `Option<&dyn Fn>` here.
+//! The end-plane reading (chain index, point) is optional: `None` where no end is clipped.
 
 use vector_math::{cs_math, Vector3};
 

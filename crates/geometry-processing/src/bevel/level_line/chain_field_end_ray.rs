@@ -1,7 +1,6 @@
-//! The END RAY's bound ([`EndRayBound`]), from `Bevel/LevelLine/ChainField.EndRay.cs`: an open
-//! chain's line carried on past an end whose end face is oblique to the chain. The ray's reading
-//! and the other `ChainField` methods of that partial land with their method package; the point
-//! carried on along the ray is here ([`super::ChainField::point_on_the_ray`]).
+//! The END RAY's bound ([`EndRayBound`]): an open chain's line carried on past an end whose end
+//! face is oblique to the chain. The point carried on along the ray is here
+//! ([`super::ChainField::point_on_the_ray`]).
 //!
 //! The plain field clamps its parameter at an open chain's end, and the clamp is the end vertex's
 //! ball, so a rail that runs past the end vertex curls round it on its side face - the rounded
@@ -20,14 +19,14 @@
 
 use vector_math::Vector3;
 
-/// C# `EndRayBound`: how far an end ray must run - until every point of the round's row at the end
+/// How far an end ray must run - until every point of the round's row at the end
 /// vertex, carried along the chain, has met the end face's plane.
 ///
 /// [`EndRayBound::same_sense`]: the end face folds the chain's own way at the side creases, so the
 /// fill trims it to the round's section (`EndPlaneTrim`) rather than growing it.
 /// [`EndRayBound::crease_room`]: the largest size a square crease end's section stays on its crease
-/// (`SquareCreaseEndClip.SquareCreaseEndClips`). `Default` is written out because C#'s record
-/// parameter defaults are not zero (`CreaseRoom = +infinity`).
+/// (`square_crease_end_clip`). `Default` is written out because not every default is zero
+/// (`crease_room` is +infinity: no bound).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EndRayBound {
     /// How far the ray runs, as a multiple of the end's setback (the `EndPlaneTrim.FarthestOut`
@@ -36,10 +35,9 @@ pub struct EndRayBound {
     pub reach_per_setback: f64,
     /// The end face's plane through the end vertex, faced on along the ray.
     pub plane_normal: Vector3,
-    /// True when the end face folds the chain's own way at the side creases (C# default false).
+    /// True when the end face folds the chain's own way at the side creases (default false).
     pub same_sense: bool,
-    /// The largest size a square crease end's section stays on its crease (C# default
-    /// +infinity).
+    /// The largest size a square crease end's section stays on its crease (default +infinity).
     pub crease_room: f64,
 }
 
@@ -55,7 +53,7 @@ impl Default for EndRayBound {
 }
 
 impl super::ChainField {
-    /// C# `ChainField.PointOnTheRay`: the chain's point at `parameter`, carried on along the END
+    /// The chain's point at `parameter`, carried on along the END
     /// RAY past an end that has one; clamped to the chain as [`super::ChainField::point_at`] is
     /// past an end that has none. Returns the parameter the point stands at (the clamped one where
     /// there is no ray) and the point.

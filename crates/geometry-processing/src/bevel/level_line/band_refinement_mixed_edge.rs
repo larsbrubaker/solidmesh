@@ -1,7 +1,6 @@
 //! The refinement's MIXED edge rule, rule (i)'s third face: an edge whose ends read DIFFERENT
 //! sides, which neither the dip nor the bump rule asks about and which can still hide a PAIR of
-//! crossings past its first root. Ports `Bevel/LevelLine/BandRefinement.MixedEdge.cs`; the
-//! refinement that asks it is `band_refinement_asking`.
+//! crossings past its first root. The refinement that asks it is `band_refinement_asking`.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -20,7 +19,7 @@ use super::{
     LevelLineWork, VertexFieldReading, VertexSide, WorkError,
 };
 
-/// C# `BandRefinement.AskMixedEdges`: the mixed edge rule, with the work units it spends charged
+/// The mixed edge rule, with the work units it spends charged
 /// to it on the meter (and nothing else done) when the meter is on. Answers as the bump rule does.
 #[allow(clippy::too_many_arguments)]
 pub fn ask_mixed_edges(
@@ -58,12 +57,12 @@ pub fn ask_mixed_edges(
         pending,
         depth,
     );
-    // C#'s `finally`: noted on an error too.
+    // Noted on an error too.
     FieldCounters::note_units(LevelLineRule::MixedEdge, spent() - before);
     answer
 }
 
-/// C# `BandRefinement.AskMixedEdgesBody`: for each edge with one end Inside and the other Outside
+/// For each edge with one end Inside and the other Outside
 /// not already answered clean, splits it ONCE where a hidden crossing pair stands past its first
 /// root - or answers it clean on the mesh where the edge is too short to hide a pair or none was
 /// found.
@@ -179,7 +178,7 @@ pub fn ask_mixed_edges_body(
     Ok(BumpAnswer::Nothing)
 }
 
-/// C# `BandRefinement.TryHiddenCrossing`: where past the first root of a mixed edge a hidden pair
+/// Where past the first root of a mixed edge a hidden pair
 /// of crossings stands - a bump above the line between the inside end and the root, or a dip below
 /// it between the root and the outside end - read exactly at the point before it is answered;
 /// `None` where there is neither. `(inside, outside, root)` are the edge's inside end, its outside

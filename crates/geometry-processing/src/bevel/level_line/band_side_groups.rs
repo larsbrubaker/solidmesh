@@ -1,7 +1,6 @@
 //! A pick's SIDE GROUPS: one topological flood over the input from every chain's two seeds, with
-//! seeds that reach the same triangles merged into one group, then the end floods. Ports
-//! `BandSideTagging.GroupSides` and `BandSideTagging.HasABothSidedMember` from
-//! `Bevel/LevelLine/BandSideTagging.cs`; the floods it runs are in `band_side_tagging` and
+//! seeds that reach the same triangles merged into one group, then the end floods. The floods it
+//! runs are in `band_side_tagging` and
 //! `band_side_tagging_ends`, a pick's end groups in `pick_end_floods`.
 
 use std::collections::{BTreeMap, HashSet};
@@ -17,12 +16,12 @@ use super::{chain_on_the_mesh, BandGroup, ChainField};
 
 /// What [`group_sides`] reads: the tag of every triangle, the groups, and `undivided` - the first
 /// chain one connected region of which reaches both its sides, or -1 when every chain divides its
-/// own (C#'s two `out` parameters).
+/// own.
 pub type GroupedSides = (Vec<i32>, Vec<BandGroup>, i32);
 
-/// C# `BandSideTagging.HasABothSidedMember`: true when a pick of several chains builds with a
+/// True when a pick of several chains builds with a
 /// `both_sided` member - a chain whose two sides fall in one group only through another chain.
-/// False with the both-sided build off. `chains` `None` is C#'s null.
+/// False with the both-sided build off. `chains` `None` is no chains given.
 pub fn has_a_both_sided_member(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -54,11 +53,11 @@ pub fn has_a_both_sided_member(
     Ok(groups.iter().any(|group| !group.both_sided.is_empty()))
 }
 
-/// C# `BandSideTagging.GroupSides`: one topological flood over the input from every chain's two
+/// One topological flood over the input from every chain's two
 /// seeds, not crossing a chain edge or a feature edge, with seeds that reach the same triangles
 /// merged into one group. Groups are numbered in seed order - chain 0's left is 1 and its right is
 /// 2 - so everything that reads tags 1 and 2 of a single chain reads the same thing. `positions`,
-/// `end_rays` and `end_face_reaches` are `None` where C# passes null.
+/// `end_rays` and `end_face_reaches` are `None` where the caller has none.
 pub fn group_sides(
     indices: &[(i32, i32, i32)],
     chain_edges: &[Vec<(i32, i32)>],

@@ -1,10 +1,8 @@
 //! The chain field's end clips: whether two ends stand on one plane, the greatest end plane's
 //! reading at a point, the clipped point sample, the end-plane reader handed to the convex cell
 //! bound, and the convex searches the clipped least runs (along a line, over a triangle, of one
-//! clipped term). Ports `OnePlane`, `ClipAt`, `Clipped`, `EndPlaneReader`, `EndPlaneAt`,
-//! `LeastOfClippedTerm`, `LeastAlongLine` and `LeastOverTriangleByTernary` from
-//! `Bevel/LevelLine/ChainField.EndClip.cs`, `ClipToKeep` from `ChainField.Mitre.cs`, and `Offer`
-//! and `MeshPiece.Corners` from `ChainField.Queries.cs`. The type lives in `chain_field.rs`.
+//! clipped term), with the mitre's clip to keep, the best-so-far offer and a mesh piece's corners.
+//! The type lives in `chain_field.rs`.
 
 use std::rc::Rc;
 
@@ -170,7 +168,7 @@ impl ChainField {
 
         let (plane, clip) = self.clip_at(point);
         let threshold = sample.value - (Self::END_PLANE_TIE_RELATIVE * (1.0 + sample.value.abs()));
-        // C#'s `!(plane > threshold)`: a NaN on either side keeps the sample.
+        // A NaN on either side keeps the sample.
         if plane.is_nan() || threshold.is_nan() || plane <= threshold {
             return sample;
         }
@@ -187,7 +185,7 @@ impl ChainField {
 
     /// The greatest end plane's reading at a point, or `None` for a field no end plane clips -
     /// what the convex cell bound needs to bound the plane's part of the field over a cell. Made
-    /// once (C# `endPlaneReader ??=`); it carries its own copy of the clips, which never change.
+    /// once; it carries its own copy of the clips, which never change.
     pub fn end_plane_reader(&self) -> Option<super::ChainFieldEndPlaneReader> {
         let clips = self.end_clips.as_ref()?;
         Some(Rc::clone(self.end_plane_reader.get_or_init(|| {

@@ -1,5 +1,4 @@
-//! The END-FACE cap of the corner cap. Ports `CornerCap.ZipEnd` from `Bevel/LevelLine/CornerCap.cs`
-//! (a C# static partial class): the hole between a strip's last row and the end run the cut left
+//! The END-FACE cap of the corner cap: the hole between a strip's last row and the end run the cut left
 //! on the end face, both running from S to T, zipped by ANGLE about the chain's end vertex V
 //! ([`zip_end`]), with its row/run watcher ([`WATCH_END_HOLE`]); the mesh-and-V watcher is
 //! [`super::corner_cap::WATCH_END_HOLE_AT`].
@@ -20,17 +19,17 @@ use super::{corner_fill, GapFillRefusal, LevelLineMesh, LevelLineMeshError, Leve
 pub type WatchEndHole = Rc<dyn Fn(&[i32], &[i32])>;
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerCap.WatchEndHole`: a read-only observer of the end holes, handed
+    /// A read-only observer of the end holes, handed
     /// the (row, run) pair [`zip_end`] receives, before it reads them. Per thread, so a measuring
     /// test never sees another test's fills. `None` by default.
     pub static WATCH_END_HOLE: RefCell<Option<WatchEndHole>> = const { RefCell::new(None) };
 }
 
-/// C# `CornerCap.PlacementTieSnaps`: how many snaps of placement an angle tie in [`zip_end`]
+/// How many snaps of placement an angle tie in [`zip_end`]
 /// allows for (see `placed_tie` there).
 const PLACEMENT_TIE_SNAPS: f64 = 8.0;
 
-/// C# `CornerCap.ZipEnd`: the END-FACE cap - the hole between a strip's last row and the end run
+/// The END-FACE cap - the hole between a strip's last row and the end run
 /// the cut left on the end face, both running from S to T, zipped by ANGLE about the chain's end
 /// vertex V. No vertex is added, so the end face's plane is kept: the angles are measured in the
 /// plane of V, S and T, which is planar, since the rails end on that face's edges and V is its
@@ -39,7 +38,7 @@ const PLACEMENT_TIE_SNAPS: f64 = 8.0;
 /// must lay it and `run` in the direction the KEPT surface walks it; either not rising in angle
 /// from S to T refuses [`GapFillRefusal::CornerCapNotStarShaped`] - unless the run turns the other
 /// way round V to close the full turn, which [`fans_about_the_end`] takes. Answers the refusal and
-/// the offending vertex (-1 on success). `flowed` (C#'s default `false`) sends a refused hole of a
+/// the offending vertex (-1 on success). `flowed` sends a refused hole of a
 /// flowed band to [`end_hole_by_the_one_filler`].
 #[allow(clippy::too_many_arguments)]
 pub fn zip_end(

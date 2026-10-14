@@ -1,7 +1,6 @@
 //! Which of a side's triangles the build has to look at: the ones the level line can reach, the
-//! edges its roots may be found on, and the band the cut then takes out. Ports
-//! `Bevel/LevelLine/BandTriangles.cs` (a C# static class, so a module of functions), with the
-//! reach test ([`candidates`]).
+//! edges its roots may be found on, and the band the cut then takes out, with the reach test
+//! ([`candidates`]).
 
 use std::collections::HashSet;
 
@@ -35,7 +34,7 @@ pub fn edges_of_side(mesh: &LevelLineMesh, side: i32) -> Vec<(i32, i32)> {
     edges
 }
 
-/// C# `BandTriangles.Candidates`: the side's triangles the line can reach - exactly those whose
+/// The side's triangles the line can reach - exactly those whose
 /// least field value over the WHOLE triangle, interior included, is at or below `snap`. Seeding by
 /// the corners plus one ring of neighbours misses a long triangle whose corners all stand outside
 /// the line while its middle dips across it; the exact minimum answers it once. Two boxes say "no"
@@ -70,7 +69,7 @@ pub fn candidates(
     Ok(near)
 }
 
-/// C# `BandTriangles.BandOfSide`: the band of one side - its inside triangles that reach the chain
+/// The band of one side - its inside triangles that reach the chain
 /// through inside triangles of that same side - read on the reading's own mesh. A vertex ON the
 /// chain reads the field as minus its setback, so it is inside by the field's own rule.
 #[allow(clippy::needless_range_loop)]

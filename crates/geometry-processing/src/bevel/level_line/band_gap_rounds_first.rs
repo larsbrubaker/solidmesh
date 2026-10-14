@@ -1,5 +1,5 @@
-//! The band built rounds first. Ports `Bevel/LevelLine/BandGap.RoundsFirst.cs` (a partial of the C#
-//! static class `BandGap`): so far the kept triangles as index triples ([`kept`]), the concave
+//! The band built rounds first (a part of the band gap, whose main module is `band_gap.rs`): the
+//! kept triangles as index triples ([`kept`]), the concave
 //! chain's surviving piece ([`surviving_piece`]), the crease walk on the end face
 //! ([`crease_on_the_end_face`]), a triangle's oriented plane ([`plane_of`], [`same_plane`]), the
 //! chains' senses ([`chain_senses`]), the knife tips that make a pick build rounds first
@@ -40,11 +40,11 @@ pub fn kept(mesh: &LevelLineMesh) -> Vec<(i32, i32, i32)> {
         .collect()
 }
 
-/// C# `BandGap.SurvivingPiece`: a concave chain oriented to end at its knife tip, carried onto the
+/// A concave chain oriented to end at its knife tip, carried onto the
 /// rounds' mesh: from its far end, through any vertices the rounds' cut laid on its edges, to the
 /// vertex where it enters the rounds' band (the band took the tip). `None` where the piece cannot
-/// be walked, or the band never reached the chain. A vertex missing from `neighbours` (where C#'s
-/// indexer throws) is a walk that cannot be made, as in [`super::band_gap_in_turn::walk_along`].
+/// be walked, or the band never reached the chain. A vertex missing from `neighbours` is a walk
+/// that cannot be made, as in [`super::band_gap_in_turn::walk_along`].
 pub fn surviving_piece(
     to_tip: &[i32],
     at: &[Vector3],
@@ -101,10 +101,10 @@ pub fn surviving_piece(
     None
 }
 
-/// C# `BandGap.CreaseOnTheEndFace`: the crease from `start` to `end` along edges where a triangle
+/// The crease from `start` to `end` along edges where a triangle
 /// on the end face meets one off it, leaving `start` away from `came_from`: the vertices after
 /// `start`, ending with `end`. `None` where the walk forks or stops short (or reaches a vertex
-/// missing from `neighbours`, where C#'s indexer throws).
+/// missing from `neighbours`).
 pub fn crease_on_the_end_face(
     start: i32,
     came_from: i32,
@@ -134,11 +134,10 @@ pub fn crease_on_the_end_face(
     Some(walk)
 }
 
-/// A triangle's oriented plane: its unit normal, the normal's offset and the centroid (C#'s
-/// `(Vector3 Normal, double Offset, Vector3 Point)`).
+/// A triangle's oriented plane: its unit normal, the normal's offset and the centroid.
 pub type OrientedPlane = (Vector3, f64, Vector3);
 
-/// C# `BandGap.PlaneOf`: the plane of triangle `t` over the positions `at`, through its centroid.
+/// The plane of triangle `t` over the positions `at`, through its centroid.
 pub fn plane_of(at: &[Vector3], t: (i32, i32, i32)) -> OrientedPlane {
     let (a, b, c) = (at[t.0 as usize], at[t.1 as usize], at[t.2 as usize]);
     let normal = (b - a).cross(c - a).get_normal();
@@ -146,7 +145,7 @@ pub fn plane_of(at: &[Vector3], t: (i32, i32, i32)) -> OrientedPlane {
     (normal, normal.dot(centroid), centroid)
 }
 
-/// C# `BandGap.SamePlane`: the same oriented plane, to the catalogue's float noise
+/// The same oriented plane, to the catalogue's float noise
 /// ([`COPLANAR_TOLERANCE`]): the facings agree and `q`'s centroid stands on `p`. Not the two
 /// offsets: a triangle tilted by float noise 115 from the origin moves its offset by the tilt times
 /// that distance - a wall triangle of the rounds' run-out tilted 2.5e-5 read 1.2e-3 off the wall,
@@ -157,7 +156,7 @@ pub fn same_plane(p: OrientedPlane, q: OrientedPlane) -> bool {
         && (p.0.dot(q.2) - p.1).abs() <= COPLANAR_TOLERANCE * cs_math::max_f64(1.0, p.1.abs())
 }
 
-/// C# `BandGap.ChainSenses`: each chain's fold, read edge by edge off the two triangles standing on
+/// Each chain's fold, read edge by edge off the two triangles standing on
 /// it: `Some(true)` convex, `Some(false)` concave, `None` where the chain's edges fold both ways or an
 /// edge does not stand on exactly two triangles. `closed` `None` reads every chain open.
 pub fn chain_senses(
@@ -206,7 +205,7 @@ pub fn chain_senses(
     senses
 }
 
-/// C# `BandGap.TakesRoundsFirst`: true where the pick is built rounds first: some vertex is an end
+/// True where the pick is built rounds first: some vertex is an end
 /// of an open convex chain and of at least one open concave chain. A chain that folds both ways
 /// takes no part (it is neither).
 pub fn takes_rounds_first(
@@ -218,7 +217,7 @@ pub fn takes_rounds_first(
     !rounds_first_tips(positions, indices, chains, closed).is_empty()
 }
 
-/// C# `BandGap.RoundsFirstTips`: the knife tips - each vertex that ends an open convex chain and at
+/// The knife tips - each vertex that ends an open convex chain and at
 /// least one open concave chain - with the concave chains ending there, in the order met. Only what
 /// the rounds-first creases can read: every tip has exactly two concave chains, and they end on one
 /// face; otherwise none.
@@ -299,7 +298,7 @@ pub fn rounds_first_tips(
     tips
 }
 
-/// C# `BandGap.TheTipsEndFace`: the face a knife tip's concave chains end on: of the two triangles
+/// The face a knife tip's concave chains end on: of the two triangles
 /// on each chain's end edge, the one standing on no convex chain edge. `None` where a chain has not
 /// exactly one such, or the chains disagree.
 pub fn the_tips_end_face(
@@ -337,7 +336,7 @@ pub fn the_tips_end_face(
     end_face
 }
 
-/// C# `BandGap.TheRoundsChains`: the chains pass A builds - each open convex chain ending at a
+/// The chains pass A builds - each open convex chain ending at a
 /// knife tip. Every other member of the pick (a face's rim, a convex chain at no tip) is built in
 /// pass B with the joined creases, on the part the rounds left.
 pub fn the_rounds_chains(
@@ -360,10 +359,9 @@ pub fn the_rounds_chains(
         .collect()
 }
 
-/// C# `BandGap.TheRoundsBand`: the rounds' mesh as kept triangles, and which of them are the
+/// The rounds' mesh as kept triangles, and which of them are the
 /// round's band - the rounds' own (added) triangles on no face the input had: a facet of the round,
-/// not a piece of a face the fill tiled again. Empty where the rounds carry no mesh (C# reads
-/// through a null there).
+/// not a piece of a face the fill tiled again. Empty where the rounds carry no mesh.
 pub fn the_rounds_band(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -391,7 +389,7 @@ pub fn the_rounds_band(
     (triangles, band)
 }
 
-/// C# `BandGap.SmoothJointsOverTheRounds`: the joined creases' vertices that are pass B's SMOOTH
+/// The joined creases' vertices that are pass B's SMOOTH
 /// joints - an interior vertex whose two crease edges both border the rounds' band. There the
 /// crease is the round's section, a sampled smooth curve, so its turns are sampling and not
 /// corners.
@@ -426,7 +424,7 @@ pub fn smooth_joints_over_the_rounds(
     smooth
 }
 
-/// C# `BandGap.BuildTheRounds`: pass A of a rounds-first pick - the convex chains at its knife
+/// Pass A of a rounds-first pick - the convex chains at its knife
 /// tips alone ([`the_rounds_chains`]), cut pick-wide and filled, each end running out through its
 /// end face as a chain alone does. Refused as the cut or the fill refused.
 #[allow(clippy::too_many_arguments)]
@@ -490,7 +488,7 @@ pub fn build_the_rounds(
     )?)
 }
 
-/// C# `BandGap.BuildRoundsFirst`: a rounds-first pick built whole - the convex chains
+/// A rounds-first pick built whole - the convex chains
 /// ([`build_the_rounds`]), then the concave creases read again on what they left
 /// ([`creases_after_the_rounds_closed`]), cut pick-wide and filled with the band flooding over the
 /// round ([`feature_edges_after_the_rounds`]). Refused as the first pass that refused;
@@ -498,7 +496,7 @@ pub fn build_the_rounds(
 /// unread here: each pass reads its own, since neither pass is the pick.
 ///
 /// The feature reading is `None` only where a rounds chain's edge stands on no triangle, which the
-/// built pass A rules out; C# throws there, and it is refused here as the unreadable creases are.
+/// built pass A rules out; should it happen, the pick is refused as the unreadable creases are.
 #[allow(clippy::too_many_arguments)]
 pub fn build_rounds_first(
     positions: &[Vector3],
@@ -653,7 +651,7 @@ fn the_creases_cannot_be_read(rounds: &GapFillResult) -> GapFillResult {
     }
 }
 
-/// C#'s `RoomSource.ToString()` (a `readonly record struct`), which the diagnostic site prints:
+/// A room source as the diagnostic site prints it, in record form:
 /// `RoomSource { Kind = Foreign, Chain = 0, OtherChain = -1, CreaseAt =  }`, an unset `CreaseAt`
 /// printing nothing.
 fn room_source_text(source: &RoomSource) -> String {

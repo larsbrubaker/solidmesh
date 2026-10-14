@@ -1,11 +1,11 @@
 //! The hole round a corner vertex V after the strips are laid: k last rows (one per chain end at
 //! V) alternating with k short rail pieces, possibly a single tie vertex each, closed about the
 //! corner's AXIS - the normalised sum of the distinct face normals round V: a chamfer's by a fan, a
-//! fillet's by rings. Ports the nested type of `Bevel/LevelLine/CornerCap.cs` (a C# static partial
-//! class): a strip's end spoke ([`CornerCapLastRow`], with its constructor and material centre),
+//! fillet's by rings. Here are a strip's end spoke ([`CornerCapLastRow`], with its constructor and
+//! material centre),
 //! the corner's axis ([`axis`]), the angle between two directions ([`angle`]) and the turn from one
 //! to the other ([`toward`]), and the close of a corner's holes ([`close`], with
-//! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]). Its end-face cap `ZipEnd` is in
+//! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]). Its end-face cap is in
 //! `corner_cap_zip_end.rs`.
 
 use vector_math::{cs_math, Vector3};
@@ -13,7 +13,7 @@ use vector_math::{cs_math, Vector3};
 use super::gap_fill::FILL_TAG;
 use super::{corner_fill, LevelLineMesh, LevelLineMeshError, LevelLineWork};
 
-/// C# `CornerCap.LastRow`: a strip's end spoke as a fillet lays it - the arc's vertices, and the
+/// A strip's end spoke as a fillet lays it - the arc's vertices, and the
 /// circle it is drawn on, its radius the mean of the two legs.
 ///
 /// The round's centre is where the sides' normals at the arc's two ends meet: on the bisector of
@@ -45,7 +45,7 @@ pub struct CornerCapLastRow {
 }
 
 impl CornerCapLastRow {
-    /// C# `LastRow.MaterialCentre`: the centre on the MATERIAL side: a concave row's centre
+    /// The centre on the MATERIAL side: a concave row's centre
     /// mirrored through its chain point, the centre the same row would be rolled by were its edge
     /// convex; a convex row's own centre.
     pub fn material_centre(&self) -> Vector3 {
@@ -57,7 +57,7 @@ impl CornerCapLastRow {
     }
 
     /// The spoke whose arc is `arc` (its first and last vertices on the two sides), drawn from
-    /// `chain_point`; C#'s optional `concave = false` and `axis = default` are passed explicitly.
+    /// `chain_point`; `concave` (normally false) and `axis` (normally zero) are passed explicitly.
     pub fn new(
         arc: Vec<i32>,
         chain_point: Vector3,
@@ -140,22 +140,23 @@ pub fn axis(mesh: &LevelLineMesh, v: Vector3) -> Vector3 {
 pub type WatchEndHoleAt = std::rc::Rc<dyn Fn(&LevelLineMesh, &[i32], &[i32], Vector3)>;
 
 thread_local! {
-    /// C# `[ThreadStatic] CornerCap.WatchEndHoleAt`: a read-only observer of the end holes, with
+    /// A read-only observer of the end holes, with
     /// the mesh and the chain's end vertex, so a measuring test can read the hole's shape. Per
     /// thread; `None` by default.
     pub static WATCH_END_HOLE_AT: std::cell::RefCell<Option<WatchEndHoleAt>> =
         const { std::cell::RefCell::new(None) };
 }
 
-/// C# `CornerCap.AxisAngleNoise`: the angle by which a run may step back about the row's axis and
+/// The angle by which a run may step back about the row's axis and
 /// still be read as rising (float noise in the angles).
 const AXIS_ANGLE_NOISE: f64 = 1e-6;
 
-/// C# `CornerCap.OnTheRound`: how near the row's radius, as a fraction of it, a run vertex must
+/// How near the row's radius, as a fraction of it, a run vertex must
 /// stand from the row's axis to be read as on the round.
 const ON_THE_ROUND: f64 = 1e-4;
 
-/// C# `Math.IEEERemainder`, as .NET computes it.
+/// The IEEE 754 remainder: `x` less the nearest multiple of `y` (ties to even), so the result
+/// lies in [-y/2, y/2].
 fn ieee_remainder(x: f64, y: f64) -> f64 {
     if x.is_nan() {
         return x;
@@ -197,7 +198,7 @@ fn ieee_remainder(x: f64, y: f64) -> f64 {
     }
 }
 
-/// C# `CornerCap.ZipsAboutTheRowsAxis`: a fillet's end hole zipped by angle about the row's own
+/// A fillet's end hole zipped by angle about the row's own
 /// axis - the line through the last row's circle centre normal to its plane - rather than about the
 /// end vertex. True (and laid) when the row has an arc to read a centre from, the run lies on the
 /// round's cylinder and rises from the row's start to its end about that axis; false (nothing laid)
@@ -295,7 +296,7 @@ pub fn zips_about_the_rows_axis(
     Ok(true)
 }
 
-/// C# `CornerCap.FansAboutTheEnd`: the end face that wraps the end vertex `v` - the hole surrounds
+/// The end face that wraps the end vertex `v` - the hole surrounds
 /// `v`, star-shaped about it - fanned to a new vertex at `v` when the row (angles `a`) rises
 /// strictly, the run (angles `b`) falls strictly to the row's end angle less one full turn, and
 /// both lie in the end face's plane (`normal`). False (nothing laid) otherwise.
@@ -312,7 +313,8 @@ pub fn fans_about_the_end(
     added_vertices: &mut Vec<i32>,
 ) -> Result<bool, LevelLineMeshError> {
     // A fan to V is flat only if its boundary is (relative 1e-6: walls are flat to float noise).
-    // LINQ's Max: NaN reads as the smallest; an empty boundary throws (as the C# does).
+    // The most, with NaN reading as the smallest; a boundary is never empty, so an empty one is a
+    // bug and panics.
     let mut reach: Option<f64> = None;
     for &i in row.iter().chain(run) {
         let x = (mesh.position(i) - v).length();
@@ -367,12 +369,12 @@ pub fn fans_about_the_end(
     Ok(true)
 }
 
-/// C# `CornerCap.Angle`: the angle between two directions, by atan2 of their cross and dot.
+/// The angle between two directions, by atan2 of their cross and dot.
 pub fn angle(a: Vector3, b: Vector3) -> f64 {
     a.cross(b).length().atan2(a.dot(b))
 }
 
-/// C# `CornerCap.Toward`: the point `t` of the way from `from` to `to` about the origin, turning in
+/// The point `t` of the way from `from` to `to` about the origin, turning in
 /// their common plane, its length running linearly between theirs.
 pub fn toward(from: Vector3, to: Vector3, angle: f64, t: f64) -> Vector3 {
     let length = ((1.0 - t) * from.length()) + (t * to.length());
@@ -386,7 +388,7 @@ pub fn toward(from: Vector3, to: Vector3, angle: f64, t: f64) -> Vector3 {
     direction.get_normal() * length
 }
 
-/// C# `CornerCap.MitreDepth`: the average depth along `n` from `v` of the planes of the strip
+/// The average depth along `n` from `v` of the planes of the strip
 /// triangles standing one each on the edges of `cycle` - `None` where an edge stands on anything
 /// but exactly one triangle of `added`, or a triangle is degenerate or edge-on to `n`.
 pub fn mitre_depth(
@@ -422,7 +424,7 @@ pub fn mitre_depth(
         depths.push((a - v).dot(normal) / n.dot(normal));
     }
 
-    // C#'s `Average()` throws on an empty cycle; an empty one has no depth here.
+    // An empty cycle has no average depth, so it is not read.
     if depths.is_empty() {
         return None;
     }
@@ -430,7 +432,7 @@ pub fn mitre_depth(
     Some(depths.iter().sum::<f64>() / depths.len() as f64)
 }
 
-/// C# `CornerCap.Close`: walks the open edges (`open`, each directed the way the hole runs) into
+/// Walks the open edges (`open`, each directed the way the hole runs) into
 /// cycles and closes each: a fillet's hole (with `last_rows`) under the hole fill is closed flat
 /// where it lies in one plane and faired otherwise ([`super::corner_cap_hole_fill::fill_one`]);
 /// any other by [`close_one`]. A chamfer hole that does not turn about its corner closes flat where
@@ -536,7 +538,7 @@ pub fn close(
     Ok((GapFillRefusal::None, -1))
 }
 
-/// C# `CornerCap.ClosesPlanarFilletHole`: a fillet's hole closed flat where it lies in one plane
+/// A fillet's hole closed flat where it lies in one plane
 /// and the flat fill keeps every one of the loop's own edges; false with nothing laid otherwise.
 pub fn closes_planar_fillet_hole(
     mesh: &mut LevelLineMesh,
@@ -579,7 +581,7 @@ pub fn closes_planar_fillet_hole(
     Ok(true)
 }
 
-/// C# `CornerCap.CloseOne`: the hole belongs to the corner nearest its boundary's mean; it must
+/// The hole belongs to the corner nearest its boundary's mean; it must
 /// turn once about that corner's axis, strictly forward at every step. A fillet's is closed by
 /// [`rings`]; a chamfer's by a fan to a centre on the axis at the strips' mitre depth.
 pub fn close_one(
@@ -603,8 +605,8 @@ pub fn close_one(
         return Ok((GapFillRefusal::FillWouldNotClose, cycle[0]));
     }
 
-    // The hole belongs to the corner it surrounds: the nearest one to its boundary's mean (C#'s
-    // stable `OrderBy(...).First()`, NaN first).
+    // The hole belongs to the corner it surrounds: the nearest one to its boundary's mean (the
+    // first nearest on a tie, NaN first, so the pick is the same on every run).
     let key = |c: &Vector3| (*c - mean).length_squared();
     let mut v = corners[0];
     for c in &corners[1..] {
@@ -677,7 +679,7 @@ pub fn close_one(
     Ok((GapFillRefusal::None, -1))
 }
 
-/// C# `CornerCap.Rings`: a fillet's corner hole closed by rings up a ball - centred on the mean of
+/// A fillet's corner hole closed by rings up a ball - centred on the mean of
 /// the hole's rows' material centres, its radius their mean - from the boundary to the top on the
 /// corner's axis (at a MIXED corner, the bisector of its chains), one ring per quarter-arc step of
 /// the fillet's segments.
@@ -728,7 +730,7 @@ pub fn rings(
         .iter()
         .map(|&b| angle(mesh.position(b) - o, top))
         .collect();
-    // C#'s LINQ `Max` (NaN lowest) and the first index holding it.
+    // The most (NaN lowest) and the first index holding it.
     let max = angles
         .iter()
         .copied()
@@ -739,7 +741,7 @@ pub fn rings(
         return Ok((GapFillRefusal::CornerCapNotStarShaped, cycle[index]));
     }
 
-    // C#'s `(int)Math.Ceiling(...)` truncates toward zero; `as` saturates where it would not.
+    // The ceiling is a whole number already; `as` saturates should it be out of range.
     let rings = std::cmp::max(
         1,
         ((max * 2.0 * fillet_segments as f64 / std::f64::consts::PI) - 1e-9).ceil() as i32,

@@ -1,6 +1,5 @@
 //! The GREATEST value a 1-Lipschitz field takes over a segment or a triangle, found by bounded
-//! search over ANY evaluator - one chain's field or a whole pick's. Ports the nested types of
-//! `Bevel/LevelLine/BoundedMaximum.cs` (a C# static class): the further cell bound a search may be
+//! search over ANY evaluator - one chain's field or a whole pick's: the further cell bound a search may be
 //! handed ([`BoundedMaximumCellBound`]) and the tolerant best-so-far
 //! ([`BoundedMaximumCanonicalMaximum`], with its tolerant offer), the depth that ends a search and
 //! the tie-tolerant longest-edge test ([`not_shorter`]), and the searches: over a segment
@@ -13,7 +12,7 @@
 //! is discarded; otherwise it is halved and both halves recurse. Nothing is sampled, so a bump as
 //! narrow as the tolerance is still found, and the same piece always gives the same answer. The
 //! Lipschitz bound is joined by the convex cell bound (`convex_cell_bound.rs`); both are SOUND and
-//! the lesser is taken. Turning this into an EXISTENCE search was tried twice in C# and got the
+//! the lesser is taken. Turning this into an EXISTENCE search was tried twice and got the
 //! wrong answer both times on a peak that barely clears the threshold; the one early-out that
 //! holds is `stop_above`, which stops on a value already FOUND, never on a bound.
 
@@ -24,10 +23,10 @@ use vector_math::{cs_math, Vector3};
 use super::convex_cell_bound::{self, EndPlaneAt};
 use super::{FieldCounters, FieldMaximum, FieldSample, LevelLineWork, WorkError};
 
-/// A point query a search runs over (C# `Func<Vector3, FieldSample>`); it may charge the budget.
+/// A point query a search runs over; it may charge the budget.
 pub type Evaluate<'a> = &'a dyn Fn(Vector3) -> Result<FieldSample, WorkError>;
 
-/// A further cell bound as the searches take it (C#'s `CellBound` delegate, by reference).
+/// A further cell bound as the searches take it.
 pub type CellBound<'a> = &'a dyn Fn(
     &FieldSample,
     &FieldSample,
@@ -37,7 +36,7 @@ pub type CellBound<'a> = &'a dyn Fn(
     Vector3,
 ) -> Result<f64, WorkError>;
 
-/// C#'s `ArgumentOutOfRangeException` for a non-positive tolerance: a search with no tolerance
+/// Panics on a non-positive tolerance: a search with no tolerance
 /// would never retire a cell and halve to `MAX_DEPTH` everywhere, so it is a caller's bug, not an
 /// input to refuse.
 fn require_positive(tolerance: f64) {
@@ -47,7 +46,7 @@ fn require_positive(tolerance: f64) {
     );
 }
 
-/// C# `BoundedMaximum.OverSegment`: the greatest value along the segment ab, to within
+/// The greatest value along the segment ab, to within
 /// `tolerance`, pruning from its first step against a value `at_least` the answer must beat to be
 /// of any use - a search nothing beats returns `at_least` itself at a MEANINGLESS point (`a`).
 pub fn over_segment(
@@ -96,7 +95,7 @@ pub fn over_segment(
     Ok(FieldMaximum::new(found.best, found.best_point))
 }
 
-/// C# `BoundedMaximum.OverTriangle`: the greatest value over the triangle abc, interior included,
+/// The greatest value over the triangle abc, interior included,
 /// to within `tolerance`, giving up once it is known to stand above `stop_above` and pruning from
 /// its first step against a value `at_least` already attained elsewhere.
 #[allow(clippy::too_many_arguments)]
@@ -204,7 +203,7 @@ pub fn over_triangle(
     Ok(FieldMaximum::new(found.best, found.best_point))
 }
 
-/// C# `BoundedMaximum.IslandPeak`: the island rule's question and answer over the triangle abc:
+/// The island rule's question and answer over the triangle abc:
 /// does the field rise above `snap` anywhere inside it, and if so, where the split vertex goes.
 ///
 /// The answer is a peak only to within the tolerance, and WHICH sample within it the search holds
@@ -253,7 +252,7 @@ pub fn island_peak(
     )
 }
 
-/// C# `BoundedMaximum.Sharpen`: the bound this cell is judged by - the LESSER of the Lipschitz
+/// The bound this cell is judged by - the LESSER of the Lipschitz
 /// reach bound and the convex union-of-balls bound, with the measurement of what the sharper one
 /// buys taken on the way past. Both are upper bounds, so taking the lesser keeps the search sound.
 /// The convex bound is charged one work unit - the same charge one `Evaluate` takes for a walk of
@@ -267,7 +266,7 @@ pub fn sharpen(lipschitz: f64, convex: f64, retire_at: f64, depth: i32) -> Resul
     Ok(cs_math::min_f64(lipschitz, convex))
 }
 
-/// C# `BoundedMaximum.CellBound`: a further SOUND upper bound on a triangle cell's greatest value,
+/// A further SOUND upper bound on a triangle cell's greatest value,
 /// read from the cell's three corner samples and corners - taken with the search's own bounds by
 /// the lesser, so it can only retire cells sooner.
 /// The bound may charge the work budget (a chain's segment bound does), so it answers a `Result`.
@@ -282,7 +281,7 @@ pub type BoundedMaximumCellBound = Rc<
     ) -> Result<f64, WorkError>,
 >;
 
-/// C# `BoundedMaximum.CanonicalMaximum`: the greatest value a bounded search has found, kept by a
+/// The greatest value a bounded search has found, kept by a
 /// TOLERANT update so that a tie is settled by the search's canonical order rather than by the last
 /// bit of a float.
 ///

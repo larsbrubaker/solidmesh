@@ -1,20 +1,20 @@
-//! A fillet's RUN-OUT along a crease nobody picked ([`CreaseRunOut`]). Ports the type of
-//! `Bevel/LevelLine/CreaseRunOut.cs`: the type, its constructor and closed-form readings along the
+//! A fillet's RUN-OUT along a crease nobody picked ([`CreaseRunOut`]): the type, its constructor
+//! and closed-form readings along the
 //! dual spine ([`CreaseRunOut::centre_at`], [`CreaseRunOut::wall_contact_at`],
 //! [`CreaseRunOut::tube_contact_at`]), the turn it ends at, the reading at one corner
-//! ([`CreaseRunOut::read`]) and an edge's sense ([`CreaseRunOut::sense`]); the finder over a pick
-//! lands with later packages.
+//! ([`CreaseRunOut::read`]), an edge's sense ([`CreaseRunOut::sense`]) and the finder over a pick
+//! ([`CreaseRunOut::find`]).
 
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
 
-/// C# `CreaseRunOut.Flat`: the sine below which two faces read as one plane, or an edge reads as
+/// The sine below which two faces read as one plane, or an edge reads as
 /// neither convex nor concave - dimensionless, so it does not grow with the part.
 pub const FLAT: f64 = 1e-6;
 
-/// C# `CreaseRunOut`: a fillet's RUN-OUT along a crease nobody picked. At a pick corner where a
+/// A fillet's RUN-OUT along a crease nobody picked. At a pick corner where a
 /// convex chain meets a concave one, the convex chain's round does not stop on the unpicked concave
 /// crease its side face ends on - the concave chain's void ball keeps rolling round the round and
 /// dies tangentially on that crease, a way along it (4.5846 radii on the Top Center Face nose).
@@ -81,7 +81,7 @@ pub struct CreaseRunOut {
 }
 
 impl CreaseRunOut {
-    /// C#'s private constructor: the run-out at `corner` along the crease to `crease_end`, before
+    /// The run-out at `corner` along the crease to `crease_end`, before
     /// the turn it ends at is read.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -119,12 +119,12 @@ impl CreaseRunOut {
         }
     }
 
-    /// C# `CreaseRunOut.End`: the run-out's end on the crease, P*.
+    /// The run-out's end on the crease, P*.
     pub fn end(&self) -> Vector3 {
         self.corner_point + (self.crease_direction * self.reach)
     }
 
-    /// C# `CreaseRunOut.CentreAt`: where the void ball's centre stands at `turn`: on the dual
+    /// Where the void ball's centre stands at `turn`: on the dual
     /// spine E.
     pub fn centre_at(&self, turn: f64) -> Vector3 {
         self.rail_centre
@@ -132,32 +132,32 @@ impl CreaseRunOut {
             + (self.out_of_the_axis(turn) * (2.0 * self.size))
     }
 
-    /// C# `CreaseRunOut.WallContactAt`: where the ball touches the wall at `turn`: T(theta).
+    /// Where the ball touches the wall at `turn`: T(theta).
     pub fn wall_contact_at(&self, turn: f64) -> Vector3 {
         self.centre_at(turn) - (self.out_of_the_wall * self.size)
     }
 
-    /// C# `CreaseRunOut.TubeContactAt`: where the ball touches the round's tube at `turn`.
+    /// Where the ball touches the round's tube at `turn`.
     pub fn tube_contact_at(&self, turn: f64) -> Vector3 {
         self.rail_centre
             + (self.axis_direction * self.slide_at(turn))
             + (self.out_of_the_axis(turn) * self.size)
     }
 
-    /// C# `CreaseRunOut.OutOfTheAxis`: the unit direction square to the axis at `turn`, from the
+    /// The unit direction square to the axis at `turn`, from the
     /// shared face's side toward the side face's.
     pub fn out_of_the_axis(&self, turn: f64) -> Vector3 {
         (self.towards_the_shared_face * turn.cos()) + (self.towards_the_side_square * turn.sin())
     }
 
-    /// C# `CreaseRunOut.SlideAt`: how far along the axis the centre slides to stay r outside the
+    /// How far along the axis the centre slides to stay r outside the
     /// wall at `turn`.
     pub fn slide_at(&self, turn: f64) -> f64 {
         (self.size - (2.0 * self.size * self.out_of_the_wall.dot(self.out_of_the_axis(turn))))
             / self.along_the_axis_out_of_the_wall
     }
 
-    /// C# `CreaseRunOut.TryTheTurnItEndsAt`: the first turn past the canal's end at which the
+    /// The first turn past the canal's end at which the
     /// wall contact comes back onto the crease's line, or `None`.
     ///
     /// The contact leaves the crease early in the turn - it crosses the side face's root and comes
@@ -196,7 +196,7 @@ impl CreaseRunOut {
         None
     }
 
-    /// C# `CreaseRunOut.Read`: the run-out at `corner` along the crease to `crease_end`, the
+    /// The run-out at `corner` along the crease to `crease_end`, the
     /// convex round running from the corner toward `along_the_round` between the shared and side
     /// faces, against the wall; `None` where the round lies in the wall, the faces are one plane,
     /// or the contact never returns to the crease ahead of the corner.
@@ -270,7 +270,7 @@ impl CreaseRunOut {
         Some(run_out)
     }
 
-    /// C# `CreaseRunOut.Sense`: +1 for a concave edge, -1 for a convex one, 0 for flat, not
+    /// +1 for a concave edge, -1 for a convex one, 0 for flat, not
     /// two-sided or not in the mesh.
     pub fn sense(
         positions: &[Vector3],
@@ -305,8 +305,8 @@ impl CreaseRunOut {
         }
     }
 
-    /// C# `CreaseRunOut.Add`: appends `key` to `vertex`'s list in `map`, making the list where
-    /// there is none (insertion order kept, as C#'s `Dictionary`).
+    /// Appends `key` to `vertex`'s list in `map`, making the list where
+    /// there is none (insertion order kept, so the corners are read in the same order every run).
     pub fn add(map: &mut IndexMap<i32, Vec<(i32, i32)>>, vertex: i32, key: (i32, i32)) {
         map.entry(vertex).or_default().push(key);
     }
@@ -319,11 +319,11 @@ impl CreaseRunOut {
 }
 
 impl CreaseRunOut {
-    /// C# `CreaseRunOut.Find`: every run-out at a corner where a picked convex chain edge and a
+    /// Every run-out at a corner where a picked convex chain edge and a
     /// picked concave one share a face and an unpicked concave feature crease leaves the corner
     /// between the convex edge's side face and the concave edge's wall. `chains` are the picked
     /// chains as vertex lists (`closed` per chain); `is_feature_edge` says whether a mesh edge is a
-    /// crease at all. Corners are visited in vertex order; C#'s `samples` default is 16.
+    /// crease at all. Corners are visited in vertex order; `samples` is normally 16.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn find(
         positions: &[Vector3],

@@ -1,9 +1,8 @@
-//! The band between two offsets of a pick's chains (`Bevel/LevelLine/BandGap.cs`, the main file of
-//! the C# static partial class `BandGap`: free functions here; its other partials are
-//! `band_gap_in_turn.rs` and `band_gap_rounds_first.rs`). The size refusal, the chain ceiling, the
-//! chord tolerance, the needle floor and the closed chains turned to start at a corner
+//! The band between two offsets of a pick's chains (the band gap's main module; its other parts
+//! are `band_gap_in_turn.rs` and `band_gap_rounds_first.rs`). The size refusal, the chain ceiling,
+//! the chord tolerance, the needle floor and the closed chains turned to start at a corner
 //! ([`start_closed_chains_at_a_corner`]) and the build's funnel ([`build_unvalidated`]); the
-//! build proper is `band_gap_build_within.rs` and the public overloads `band_gap_entry_points.rs`.
+//! build proper is `band_gap_build_within.rs` and the public builds `band_gap_entry_points.rs`.
 
 use vector_math::{cs_math, Vector3};
 
@@ -22,22 +21,22 @@ use super::{
     BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges, WorkBudget, WorkError,
 };
 
-/// How a band gap build leaves without a result: C#'s exceptions a caller sees. A refusal (the
+/// How a band gap build leaves without a result: the errors a caller sees. A refusal (the
 /// part said no) and a build that ran out of work are a [`BandGapResult`]; these are a caller's
-/// bug, the caller's own cancel, or a defect C# throws uncaught.
+/// bug, the caller's own cancel, or a defect in the build.
 #[derive(Debug, Clone)]
 pub enum BandGapBuildError {
-    /// The pick's arguments are malformed (C# `ArgumentException`).
+    /// The pick's arguments are malformed.
     Arguments(PickArgumentError),
-    /// The size is not a positive length (C# `ArgumentOutOfRangeException`).
+    /// The size is not a positive length.
     SizeNotPositive(f64),
-    /// The caller cancelled (C# `OperationCanceledException`).
+    /// The caller cancelled.
     Cancelled,
-    /// A chain's polyline builds no field (C# `ArgumentException` from `ChainField.FromPolyline`).
+    /// A chain's polyline builds no field.
     ChainField(ChainFieldArgumentError),
-    /// The mesh is malformed or refused an edit (C# `ArgumentException`).
+    /// The mesh is malformed or refused an edit.
     Mesh(LevelLineMeshError),
-    /// Any other exception C# lets out of the build, by its message.
+    /// Any other fault out of the build, by its message.
     Defect(String),
 }
 
@@ -65,12 +64,12 @@ impl From<PickArgumentError> for BandGapBuildError {
     }
 }
 
-/// C# `BandGap.Build(..., WorkBudget budget, bool topologyOnly, ...)` (the internal overload every
-/// build funnels through): the pick split where its setbacks step, its closed chains started at a
+/// The build every public entry point funnels through, with its work budget and topology-only
+/// switch: the pick split where its setbacks step, its closed chains started at a
 /// corner, its seams no longer features, a size over a KNOWN room refused before anything is paid
-/// for, and the build's own faults turned into C#'s outcomes - a cancel leaves as
+/// for, and the build's own faults turned into the caller's outcomes - a cancel leaves as
 /// [`BandGapBuildError::Cancelled`], a chain edge not on two triangles and a budget that ran out
-/// as refusals carrying the working mesh as it stood. No input validation: the public overloads
+/// as refusals carrying the working mesh as it stood. No input validation: the public builds
 /// (`band_gap_entry_points`) validate first.
 #[allow(clippy::too_many_arguments)]
 pub fn build_unvalidated(
@@ -248,7 +247,7 @@ pub fn chain_ceiling(chain_points: &[Vector3]) -> f64 {
     self_room::chain_ceiling(chain_points)
 }
 
-/// C# `BandGap.ChordToleranceOf`: the chord tolerance a build at this size uses: the one asked
+/// The chord tolerance a build at this size uses: the one asked
 /// for, or size / 20 when none was.
 pub fn chord_tolerance_of(size: f64, chord_tolerance: f64) -> f64 {
     if chord_tolerance > 0.0 {
@@ -258,18 +257,18 @@ pub fn chord_tolerance_of(size: f64, chord_tolerance: f64) -> f64 {
     }
 }
 
-/// C# `BandGap.NeedleFloorOf`: the height under which a build's working mesh calls a triangle a
+/// The height under which a build's working mesh calls a triangle a
 /// needle (`LevelLineMesh::needle_floor`). Named so a measurement can read the very floor a build
 /// uses.
 pub fn needle_floor_of(snap: f64, tolerance: f64) -> f64 {
     cs_math::max_f64(4.0 * snap, 1e-3 * tolerance)
 }
 
-/// C# `StartClosedChainsAtACorner`: each closed chain holding a corner of the pick, rotated to
+/// Each closed chain holding a corner of the pick, rotated to
 /// START there. A closed chain's rail parameter runs from its first vertex round to it, so its seam
 /// sits at that vertex; a seam anywhere but a corner lies INSIDE a stretch of the rails, which then
 /// reads `RailIsNotMonotone`. Only the start moves - the chain, its direction and its index do not.
-/// A chain with no `closed` entry (C# would throw indexing past the list) is read as open.
+/// A chain with no `closed` entry is read as open.
 pub fn start_closed_chains_at_a_corner(
     chains: &[Vec<i32>],
     closed: Option<&[bool]>,

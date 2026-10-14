@@ -1,14 +1,14 @@
 //! The MITRE POINT rule of a pick with corners: on every band triangle where two member chains of
 //! the group both reach the line, the point where BOTH read zero (where their two level lines meet)
-//! is made a mesh vertex before the refinement runs. Ports `Bevel/LevelLine/CornerTiePoints.cs`
-//! (a C# static class): the Newton solve for that point inside a triangle ([`try_mitre`],
+//! is made a mesh vertex before the refinement runs: the Newton solve for that point inside a
+//! triangle ([`try_mitre`],
 //! [`try_mitre_from`]) and the insertion over a band's candidates ([`insert`]).
 
 use vector_math::{cs_math, Vector3};
 
 use super::{ChainField, LevelLineWork, WorkError};
 
-/// C# `CornerTiePoints.TryMitre`: the point of the triangle abc where both chains read zero, by
+/// The point of the triangle abc where both chains read zero, by
 /// Newton from a fixed list of starts (centroid, corners, edge midpoints, and the corners pulled a
 /// little inside); `None` where no start converges inside the triangle.
 ///
@@ -45,7 +45,7 @@ pub fn try_mitre(
     Ok(None)
 }
 
-/// C# `CornerTiePoints.TryMitreFrom`: Newton on (first, second) = (0, 0) over the triangle's
+/// Newton on (first, second) = (0, 0) over the triangle's
 /// barycentric (s, t) from one start, with a forward-difference Jacobian; at most 40 steps, each
 /// charged. `None` where the Jacobian is singular, the iterate runs off, or the root lands outside
 /// the triangle (by more than a slack).
@@ -101,7 +101,7 @@ pub fn try_mitre_from(
     Ok(None)
 }
 
-/// C# `CornerTiePoints.Insert`: inserts every mitre point the candidate triangles hold - where two
+/// Inserts every mitre point the candidate triangles hold - where two
 /// chains owning parts of a triangle both read zero and no third member reads lower - and hands
 /// back the candidates with every triangle a split made in place of a divided one (first-seen
 /// order, removed triangles dropped). A pick of fewer than two members has no mitre.
@@ -156,7 +156,8 @@ pub fn insert(
                 let second = &pick.chains()[owners[j] as usize];
                 // On the line only if no third member reads lower there.
                 if let Some(point) = try_mitre(first, second, a, b, c)? {
-                    // C#'s `> snap` skip, so a NaN reading is inserted as C# inserts it.
+                    // Only a reading clearly off the line (`> snap`) is skipped, so a NaN reading
+                    // is inserted.
                     #[allow(clippy::neg_cmp_op_on_partial_ord)]
                     if !(pick.value_at(point)?.abs() > snap) {
                         super::refinement_splits_enqueue::insert_on_the_line(

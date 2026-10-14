@@ -1,5 +1,5 @@
-//! The corners where a clipped end plane meets the creases leaving its zero plateau. Ports
-//! `Bevel/LevelLine/EndClipCorners.cs` (a C# static class): its constants and [`insert`].
+//! The corners where a clipped end plane meets the creases leaving its zero plateau: the
+//! constants and [`insert`].
 
 /// Bisection steps along a crease edge to the last point still reading zero.
 pub const BISECTION_STEPS: i32 = 60;
@@ -9,7 +9,7 @@ pub const BISECTION_STEPS: i32 = 60;
 /// vertex.
 pub const ON_THE_PLANE: f64 = 1e-5;
 
-/// C# `EndClipCorners.Insert`: on every candidate SIDE triangle's edge lying in a member's
+/// On every candidate SIDE triangle's edge lying in a member's
 /// same-sense end plane (the side-to-end crease), the one point between the field's zero plateau
 /// and its rise, found by bisection and put on the line - so the refinement roots no second vertex
 /// microns from it. A crease edge has ONE corner: the edges a split leaves it as are not asked
@@ -81,7 +81,7 @@ pub fn insert<'a>(
 
             let a = position(from);
             let b = position(to);
-            // C#'s `FirstOrDefault`: the first plane holding both ends, a zero normal read as none.
+            // The first plane holding both ends, a zero normal read as none.
             let Some(&(vertex, normal)) = planes.iter().find(|p| {
                 (a - p.0).dot(p.1).abs() <= ON_THE_PLANE && (b - p.0).dot(p.1).abs() <= ON_THE_PLANE
             }) else {

@@ -1,12 +1,12 @@
-//! The extra fields a band's gap reads beyond its pick (`LevelLine/BandGapExtraFields.cs`, a
-//! static class): the crease run-outs ([`band_group_run_outs`](super::band_group_run_outs)) and
+//! The extra fields a band's gap reads beyond its pick: the crease run-outs
+//! ([`band_group_run_outs`](super::band_group_run_outs)) and
 //! the mitred pair corners' end-face fields ([`PairCornerEndFaceField::find`]), gathered by group.
 
 use vector_math::Vector3;
 
 use super::{band_group_run_outs, triangle_edges, BandGroupExtraFields, PairCornerEndFaceField};
 
-/// C# `BandGapExtraFields.Gather`: the run-outs' fields by group, with the pair corners' end-face
+/// The run-outs' fields by group, with the pair corners' end-face
 /// fields appended to each group's list - `None` where neither found anything.
 #[allow(clippy::too_many_arguments)]
 pub fn gather(

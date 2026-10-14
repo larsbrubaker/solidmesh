@@ -1,12 +1,11 @@
-//! The end face's plane at an open chain's end as the rails meet it. Ports
-//! `Bevel/LevelLine/EndFaceCreasePlane.cs` (a C# static class), read by
+//! The end face's plane at an open chain's end as the rails meet it, read by
 //! `end_face_sense::end_ray_bounds`.
 
 use vector_math::Vector3;
 
 use super::end_face_sense::{shared_corners, Corners, COPLANAR_TOLERANCE};
 
-/// C# `EndFaceCreasePlane.Through`: the plane through the end vertex and BOTH side-to-end creases
+/// The plane through the end vertex and BOTH side-to-end creases
 /// there, where exactly two creases leave the end vertex and are not in line; otherwise `fallback`
 /// (the largest end-face triangle's normal), which also orients the answer.
 ///
@@ -26,8 +25,8 @@ pub fn through(
     end_triangles: &[Corners],
     fallback: Vector3,
 ) -> Vector3 {
-    // C#'s HashSet<int> keeps insertion order here (it is only added to), so a Vec without repeats
-    // reads its two members in the same order.
+    // A Vec without repeats keeps the crease ends in the order they are met, so the two members
+    // are read in the same order on every run.
     let mut crease_ends: Vec<i32> = Vec::new();
     for &side in side_triangles {
         for &other in end_triangles {

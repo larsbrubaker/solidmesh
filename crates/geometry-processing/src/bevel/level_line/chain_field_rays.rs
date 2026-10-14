@@ -1,7 +1,6 @@
-//! The rays a chain field's segments also answer for: the MITRE rays at sharp vertices
-//! (`FindMitres`, `Bevel/LevelLine/ChainField.Mitre.cs`) and the END RAYS run on past an open
-//! chain's ends (`WithEndRays`, `ChainField.EndRay.cs`). The type lives in `chain_field.rs`; a ray's
-//! reading is in `chain_field_nearest.rs`.
+//! The rays a chain field's segments also answer for: the MITRE rays at sharp vertices and the
+//! END RAYS run on past an open chain's ends. The type lives in `chain_field.rs`; a ray's reading
+//! is in `chain_field_nearest.rs`.
 
 use vector_math::{cs_math, Vector3};
 

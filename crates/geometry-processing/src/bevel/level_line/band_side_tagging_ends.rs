@@ -1,8 +1,8 @@
 //! The END floods of the side tagging: each open chain end's end region, flooded out from the
-//! triangles round the end vertex. Ports `FloodEnds` of `Bevel/LevelLine/BandSideTagging.cs` (a
-//! C# static class; its tags, floods and side readings are in `band_side_tagging.rs`), with the
-//! error the tagging hands back ([`SideTaggingError`]: the build's own exit, or a chain edge not on
-//! two triangles, where C# throws), and the taggings that call them: the sides and their ends
+//! triangles round the end vertex (the tags, floods and side readings are in
+//! `band_side_tagging.rs`), with the error the tagging hands back ([`SideTaggingError`]: the
+//! build's own exit, or a chain edge not on two triangles), and the taggings that call them: the
+//! sides and their ends
 //! ([`tag_sides`]), the band reached at a size ([`tag_band`]) and one chain's end regions on a
 //! tagged pick ([`end_regions_of`]).
 //!
@@ -27,7 +27,7 @@ use super::{chain_on_the_mesh, ChainDistanceField};
 use super::{ChainEdgeNotOnTwoTriangles, ChainField, WorkError};
 
 /// Why a side tagging stopped: the build's own exit, or a chain edge that does not stand on two
-/// consistently wound triangles (C#'s `ChainEdgeNotOnTwoTrianglesException`).
+/// consistently wound triangles.
 #[derive(Debug, Clone)]
 pub enum SideTaggingError {
     /// The work budget ran out or the build was cancelled.
@@ -59,8 +59,8 @@ impl std::fmt::Display for SideTaggingError {
 
 impl std::error::Error for SideTaggingError {}
 
-/// The fields an end flood reads at a size: the band's reach and the end face's (C#'s optional
-/// `endReach` / `endFaceReach`, the end face's defaulting to the band's).
+/// The fields an end flood reads at a size: the band's reach and the end face's (both optional,
+/// the end face's defaulting to the band's).
 #[derive(Clone, Copy, Default)]
 pub struct EndReach<'a> {
     /// The chain's field at the size being built; `None` for a size-free tagging.
@@ -69,7 +69,7 @@ pub struct EndReach<'a> {
     pub end_face_reach: Option<&'a ChainField>,
 }
 
-/// C# `BandSideTagging.FloodEnds`: floods each open chain end's END REGION (tag 3 at the first
+/// Floods each open chain end's END REGION (tag 3 at the first
 /// end, 4 at the last) from the untagged triangles round its end vertex, where that vertex has a
 /// fold of its own. With `opens_another_picks_side`, another pick's side the end runs into is
 /// opened to the flood only where it stands PAST the end (none of its corners behind the end's
@@ -141,7 +141,7 @@ pub fn flood_ends(
             past_tolerance,
         );
 
-        // C#'s finally: what was opened and stayed untagged closes again either way.
+        // On success or error alike, what was opened and stayed untagged closes again.
         for i in opened {
             if tags[i] == 0 {
                 tags[i] = ANOTHER_PICKS_SIDE;
@@ -154,7 +154,7 @@ pub fn flood_ends(
     Ok(())
 }
 
-/// C#'s local `FloodOneEnd` of `FloodEnds`.
+/// Floods one chain end's end region.
 #[allow(clippy::too_many_arguments)]
 fn flood_one_end(
     positions: &[Vector3],
@@ -323,7 +323,7 @@ fn side_seeds(
     Ok((left_seeds, right_seeds))
 }
 
-/// The fields a side tagging reads at a size (C#'s optional arguments of `TagSides`).
+/// The fields a side tagging reads at a size.
 #[derive(Clone, Copy, Default)]
 pub struct SideReach<'a> {
     /// The end floods' band and end-face reach.
@@ -332,7 +332,7 @@ pub struct SideReach<'a> {
     pub side_reach: Option<&'a ChainField>,
 }
 
-/// C# `BandSideTagging.TagSides`: floods the two sides out from the chain, stopping at chain edges
+/// Floods the two sides out from the chain, stopping at chain edges
 /// and feature edges - tag 1 left, tag 2 right, 0 everywhere else - and, where the chain divides
 /// its sides (`divides`, false when one region reaches both) and `end_floods` with positions,
 /// floods its end regions. With a side reach, a gentle convex crease the band reaches does not stop
@@ -432,7 +432,7 @@ pub fn tag_sides(
     Ok((tags, divides))
 }
 
-/// C# `BandSideTagging.TagBand`: the sides flooded as [`tag_sides`] floods them, but entering only
+/// The sides flooded as [`tag_sides`] floods them, but entering only
 /// triangles the band at this size reaches (least field value over the triangle at or below
 /// `snap`, with the box pre-check), and the end regions flooded with the field as the end reach.
 #[allow(clippy::too_many_arguments)]
@@ -529,7 +529,7 @@ pub fn tag_band(
     Ok((tags, divides))
 }
 
-/// C# `BandSideTagging.EndRegionsOf`: one chain's end regions read on a pick's tagging: its own
+/// One chain's end regions read on a pick's tagging: its own
 /// sides (tags `seeds` accepts) read as a picked side, another chain's sides as another pick's side
 /// (closed to the end flood but where it stands past the end), untagged as untagged.
 #[allow(clippy::too_many_arguments)]

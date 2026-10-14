@@ -1,5 +1,5 @@
-//! The room two chains of one pick leave each other. Ports `Bevel/LevelLine/BandRoom.PairRoom.cs`
-//! (a partial of the C# static class `BandRoom`, whose main file is `band_room.rs`): so far its
+//! The room two chains of one pick leave each other (a part of the band room, whose main module is
+//! `band_room.rs`): its
 //! readings over plain positions - the uniform-setback test ([`is_uniform`]), a point's distance to
 //! a chain ([`distance_to_polyline`]), a vertex's place in a chain ([`index_in`]), two bounding
 //! spheres' gap ([`sphere_gap`]), the pair-prune bound ([`pair_cannot_lower_the_room`]), the edges
@@ -17,12 +17,12 @@ use super::{chain_setback, ChainField, EndRayBound, ForeignEdgeRegions, LevelLin
 
 pub use super::band_room_pair_room_pick::{room_of_pick, PickRoom};
 
-/// C# `BandRoom.PairPruneSlack`: the relative slack the pair-prune bound must clear the least room
+/// The relative slack the pair-prune bound must clear the least room
 /// by, so a pair whose bound TIES the least cannot be pruned or kept by which way the last bit of
 /// the division rounded.
 pub const PAIR_PRUNE_SLACK: f64 = 1e-9;
 
-/// C#'s `Enumerable.Min` over doubles: NaN where any value is NaN.
+/// The least of `values`: NaN where any value is NaN, so a broken reading is never hidden.
 pub fn linq_min(values: &[f64]) -> f64 {
     let mut least = values[0];
     for &v in values {
@@ -38,7 +38,7 @@ pub fn linq_min(values: &[f64]) -> f64 {
     least
 }
 
-/// C#'s `Enumerable.Max` over doubles: NaN only where every value is NaN.
+/// The most of `values`: NaN only where every value is NaN (a NaN never beats a number).
 pub fn linq_max(values: &[f64]) -> f64 {
     let mut most = values[0];
     for &v in &values[1..] {
@@ -50,7 +50,7 @@ pub fn linq_max(values: &[f64]) -> f64 {
     most
 }
 
-/// C# `BandRoom.IsUniform`: whether a chain asks ONE setback per unit of size - every
+/// Whether a chain asks ONE setback per unit of size - every
 /// square-cornered rim, and every chamfer. The same test `ForeignEdgeRoom.RoomFor` makes before
 /// reading a room in one pass instead of bisecting for it, so a candidate calls its reading exact
 /// exactly when that reading was.
@@ -62,7 +62,7 @@ pub fn is_uniform(unit_setback: &[f64]) -> bool {
     chain_setback::is_uniform(linq_min(unit_setback), linq_max(unit_setback))
 }
 
-/// C# `BandRoom.DistanceToPolyline`: the distance from a point to a chain's polyline.
+/// The distance from a point to a chain's polyline.
 pub fn distance_to_polyline(
     positions: &[Vector3],
     chain: &[i32],
@@ -93,7 +93,7 @@ pub fn distance_to_polyline(
     best
 }
 
-/// C# `BandRoom.IndexIn`: where `vertex` first stands in `chain`, or -1.
+/// Where `vertex` first stands in `chain`, or -1.
 pub fn index_in(chain: &[i32], vertex: i32) -> i32 {
     chain
         .iter()
@@ -101,13 +101,13 @@ pub fn index_in(chain: &[i32], vertex: i32) -> i32 {
         .map_or(-1, |i| i as i32)
 }
 
-/// C# `BandRoom.SphereGap`: the gap between two bounding spheres - zero where they overlap - which
+/// The gap between two bounding spheres - zero where they overlap - which
 /// is a lower bound on the distance between anything the two spheres contain.
 pub fn sphere_gap(centre_k: Vector3, radius_k: f64, centre_j: Vector3, radius_j: f64) -> f64 {
     cs_math::max_f64(0.0, (centre_k - centre_j).length() - radius_k - radius_j)
 }
 
-/// C# `BandRoom.PairCannotLowerTheRoom`: true when the ordered pair (k, j) provably cannot be the
+/// True when the ordered pair (k, j) provably cannot be the
 /// least reading of the pick, so the pair room may skip its `ForeignEdgeRoom.RoomFor` call
 /// outright.
 ///
@@ -145,7 +145,7 @@ pub fn pair_cannot_lower_the_room(
     gap / denominator > least_so_far * (1.0 + PAIR_PRUNE_SLACK)
 }
 
-/// C# `BandRoom.EdgesRunningOutOfCorners`: the edges of chain j (indices into its chain edges) that
+/// The edges of chain j (indices into its chain edges) that
 /// run out of a corner j shares with chain k: the edge on the corner itself, and every edge after
 /// it, walking away from the corner, while both its ends stay BEHIND the corner as k sees it - no
 /// nearer any edge of k at the corner than the corner vertex is - or while it runs AWAY from k.
@@ -155,7 +155,7 @@ pub fn pair_cannot_lower_the_room(
 /// Should be Union"). The run stops at the first edge that comes round in front of the corner, so a
 /// chain that turns back and does approach k across the face is still read.
 ///
-/// The corners are walked in their set's order (C#'s `HashSet`, only added to, so insertion order),
+/// The corners are walked in their set's order,
 /// which matters: a later corner's walk stops at an edge an earlier one skipped.
 pub fn edges_running_out_of_corners(
     positions: &[Vector3],
@@ -244,10 +244,10 @@ pub fn edges_running_out_of_corners(
     skipped
 }
 
-/// C# `BandRoom.PiecesOfOneChain`: for each chain, the chains it was ONE chain with before the
+/// For each chain, the chains it was ONE chain with before the
 /// split at setback steps: every chain reached from it end to end through a vertex of
 /// `step_corners`, itself included (in the order they were reached; the pieces of one chain share
-/// one list in C#, the same list here for each).
+/// one list, so each piece carries the same list).
 pub fn pieces_of_one_chain(
     chains: &[Vec<i32>],
     closed: &[bool],
@@ -293,7 +293,7 @@ pub fn pieces_of_one_chain(
     pieces.into_iter().map(Option::unwrap_or_default).collect()
 }
 
-/// C# `BandRoom.EndsWithAnEndRegion`: the ends of chains k and j that stop at an END FACE (an end
+/// The ends of chains k and j that stop at an END FACE (an end
 /// region, see [`ForeignEdgeRegions::runs_out`]) - `None` unless both chains have one, the only
 /// case in which the end-to-end approach test can leave a pair's approach unread. An end whose ray
 /// is bounded on a same-sense end face stops ON that face (the end-plane trim), as an end region's
@@ -333,11 +333,11 @@ pub fn ends_with_an_end_region(
     }
 }
 
-/// C# `BandRoom.EndToEndTolerance`: how near, relative to the approach, a closest point must stand
+/// How near, relative to the approach, a closest point must stand
 /// to a chain end to be that end.
 const END_TO_END_TOLERANCE: f64 = 1e-9;
 
-/// C# `BandRoom.ApproachIsEndToEnd`: true when chain j's edge approaches chain k closest END TO END
+/// True when chain j's edge approaches chain k closest END TO END
 /// across both chains' end regions: the edge's nearest point to k is an end of j that stops at an
 /// end face, and k's nearest point to it is an end of k that does too. Each band stops at its own
 /// end face there, so the beads never meet and the approach is no pinch (Center Flows Through: two

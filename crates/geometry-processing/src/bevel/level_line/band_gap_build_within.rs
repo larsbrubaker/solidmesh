@@ -1,8 +1,9 @@
-//! The band gap's build proper: C# `BandGap.BuildWithin` (`Bevel/LevelLine/BandGap.cs`, split
-//! out of `band_gap.rs` for size). Steps 1 to 7 of the level line construction - setback, sides,
+//! The band gap's build proper (split out of `band_gap.rs` for size). Steps 1 to 7 of the level
+//! line construction - setback, sides,
 //! refinement and roots per group, the band's delete, the room, the gap loops and the pinch -
 //! leaving nothing to do but fill. Its faults travel as [`BuildFault`] (`band_gap_build_fault.rs`), which
-//! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into C#'s outcomes.
+//! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
+//! outcomes.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -32,7 +33,7 @@ use super::{
     RoomSource, ScalarField, VertexFieldReading,
 };
 
-/// C# `BandGap.BuildWithin`'s arguments that are not the pick itself.
+/// The build's arguments that are not the pick itself.
 pub struct BuildWithinArgs<'a> {
     pub size: f64,
     pub profile: BandProfile,
@@ -56,9 +57,10 @@ fn one_chain_group(tag: i32) -> BandGroup {
     }
 }
 
-/// C# `BandGap.BuildWithin`. `working` receives the working mesh as soon as it is made, so a
-/// refusal thrown out of the middle of the build can still hand it back; `unflowed_room` is C#'s
-/// `ref` of the same name (see `NarrowFaceFlow.TagFlowedWhereItBuilds`).
+/// The build proper. `working` receives the working mesh as soon as it is made, so a refusal out
+/// of the middle of the build can still hand it back; `unflowed_room` receives the plain
+/// tagging's room where the flowed tagging is cut instead (see
+/// [`tag_flowed_where_it_builds`](super::narrow_face_flow::tag_flowed_where_it_builds)).
 #[allow(clippy::too_many_arguments)]
 pub fn build_within(
     positions: &[Vector3],
@@ -605,8 +607,8 @@ pub fn build_within(
         None
     };
 
-    // C#'s SideOf throws a chain edge not on two triangles out of the walk; the walk's callback
-    // cannot, so the first such fault is held and leaves once the walk returns.
+    // Reading a side can find a chain edge not on two triangles mid-walk; the walk's callback
+    // cannot return it, so the first such fault is held and leaves once the walk returns.
     let side_fault: RefCell<Option<ChainEdgeNotOnTwoTriangles>> = RefCell::new(None);
     let standing = if groups.iter().any(|g| !g.both_sided.is_empty()) {
         Some(triangle_edges::standing_map(indices))

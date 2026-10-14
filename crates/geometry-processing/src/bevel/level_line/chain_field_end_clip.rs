@@ -1,17 +1,17 @@
-//! One bounded end's clipping plane ([`ChainFieldEndClip`]), from
-//! `Bevel/LevelLine/ChainField.EndClip.cs`. The clip readings, the clipped sample, the end-plane
+//! One bounded end's clipping plane ([`ChainFieldEndClip`]). The clip readings, the clipped
+//! sample, the end-plane
 //! reader and the clipped term's searches are in `chain_field_clip.rs`. Here too the clips a
 //! chain's end-ray bounds give ([`ChainField::find_end_clips`]) and whether an edge lies in a
 //! knife end's plane ([`ChainField::lies_in_an_end_plane`]) and the known-cut reading
-//! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece lands with its
-//! method package.
+//! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece is in
+//! `chain_field_least.rs`.
 
 use vector_math::Vector3;
 
 use super::super::float_grid;
 use super::{ChainField, EndRayBound, ScalarField, WorkError};
 
-/// C# `ChainField.EndClip`: one bounded end's plane - through its vertex, unit normal faced on past
+/// One bounded end's plane - through its vertex, unit normal faced on past
 /// the end.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct ChainFieldEndClip {
@@ -24,7 +24,7 @@ pub struct ChainFieldEndClip {
 }
 
 impl ChainField {
-    /// C# `ChainField.FindEndClips`: the clip planes of the chain's bounded ends - through its first
+    /// The clip planes of the chain's bounded ends - through its first
     /// point at parameter 0 and its last at `length`, each faced along its bound's plane normal;
     /// `None` where neither end is bounded.
     pub fn find_end_clips(
@@ -56,7 +56,7 @@ impl ChainField {
         Some(clips)
     }
 
-    /// C# `ChainField.LiesInAnEndPlane`: whether the segment a-b lies in one of the chain's end
+    /// Whether the segment a-b lies in one of the chain's end
     /// planes, both ends within a few float steps of it (the plane stands through a float-stored
     /// vertex). Along such an edge the clipped field reads 0 wherever the chain is within its
     /// setback, so its band boundary is where the chain's OWN value crosses 0 (EdgeRoot).
@@ -99,7 +99,7 @@ impl ChainField {
 }
 
 impl ChainField {
-    /// C# `ChainField.ValueAcrossTheKnownCut`: the reading that treats every bounded end's plane as
+    /// The reading that treats every bounded end's plane as
     /// a KNOWN CUT (flat ends): strictly past a plane the plane's reading (outside by construction),
     /// otherwise the chain's own unclipped value. Only the band's classification of a triangle
     /// lying wholly on the line asks this - never the refinement or a root search, which need the

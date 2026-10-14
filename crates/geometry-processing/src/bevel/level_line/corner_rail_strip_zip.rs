@@ -1,6 +1,5 @@
 //! The corner fill's zip of one chain's two rail pieces into the strip between them, with the
-//! last rows it hands the corner caps. Ports `CornerRailStrip.Strip` from
-//! `Bevel/LevelLine/CornerRailStrip.cs`; the spoke centre, the nearest station and the setback are
+//! last rows it hands the corner caps. The spoke centre, the nearest station and the setback are
 //! in `corner_rail_strip`, the knife end overrun in `knife_end_overrun`.
 
 use std::collections::HashMap;
@@ -20,7 +19,7 @@ use super::{
     ChainField, CornerFillPiece, GapFillRefusal, LevelLineMesh, LevelLineMeshError, LevelLineWork,
 };
 
-/// C#'s `Distinct` over doubles: first occurrences, NaN equal to NaN and 0 to -0.
+/// Each value once, in first-occurrence order, NaN equal to NaN and 0 to -0.
 fn distinct(values: impl IntoIterator<Item = f64>) -> Vec<f64> {
     let mut kept: Vec<f64> = Vec::new();
     for v in values {
@@ -32,7 +31,7 @@ fn distinct(values: impl IntoIterator<Item = f64>) -> Vec<f64> {
     kept
 }
 
-/// C# `List.FindIndex` / `FindLastIndex` as an i32, -1 where nothing matches.
+/// The first (or, with `last`, the last) index whose value passes `test`, -1 where none does.
 fn find_index(values: &[f64], test: impl Fn(f64) -> bool, last: bool) -> i32 {
     let found = if last {
         values.iter().rposition(|&v| test(v))
@@ -42,13 +41,13 @@ fn find_index(values: &[f64], test: impl Fn(f64) -> bool, last: bool) -> i32 {
     found.map_or(-1, |i| i as i32)
 }
 
-/// C# `CornerRailStrip.Strip`: zips the chain `own`'s two rail pieces (`first`, `second`, which
+/// Zips the chain `own`'s two rail pieces (`first`, `second`, which
 /// must run opposite ways) into the strip between them - densified so each rail has a station at
 /// every place the other stands for, set back where the chain ties another (`set_back`), clipped
 /// to `within` - laying each cell as quads between matching spokes or an uneven cell, the knife
 /// end overruns, and handing the caps one last row at each end. The climbing piece is densified
-/// (and read by the overrun) in place, the falling one before its setback, as C#'s aliases leave
-/// them. Answers the refusal and the offending vertex.
+/// (and read by the overrun) in place, the falling one before its setback. Answers the refusal
+/// and the offending vertex.
 #[allow(clippy::too_many_arguments)]
 pub fn strip(
     mesh: &mut LevelLineMesh,
@@ -129,7 +128,7 @@ pub fn strip(
         )?;
     }
 
-    // The climbing piece IS `av`/`ap` in C#: its densified lists stand.
+    // The climbing piece takes `av`/`ap`: its densified lists stand.
     a.vertices = av.clone();
     a.parameters = ap.clone();
     if offending >= 0 {

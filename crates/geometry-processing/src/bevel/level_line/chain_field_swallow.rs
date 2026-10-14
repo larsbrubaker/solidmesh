@@ -1,6 +1,5 @@
-//! The least size at which a chain's band reaches a point - its SWALLOW SCALE. Ports `SwallowScale`
-//! of `Bevel/LevelLine/ChainField.Swallow.cs` (a partial of the C# `ChainField`), with the pick's and
-//! the room field's readings of it (`PickField.SwallowScale`, `RoomField.SwallowScale`).
+//! The least size at which a chain's band reaches a point - its SWALLOW SCALE - with the pick's
+//! and the room field's readings of it.
 //!
 //! At scale s every setback is s times its unit value, so the band reaches q once
 //! `|q - c(u)| <= s * setback(u)` for some u: the least s is the least over the chain of
@@ -15,7 +14,7 @@ use vector_math::{cs_math, Vector3};
 use super::{ChainField, LevelLineWork, PickField, RoomField, WorkError};
 
 impl ChainField {
-    /// C# `ChainField.SwallowScale`: the least size at which this chain's band reaches `point`;
+    /// The least size at which this chain's band reaches `point`;
     /// +infinity where no setback is positive.
     pub fn swallow_scale(&self, point: Vector3) -> Result<f64, WorkError> {
         LevelLineWork::charge(1)?;
@@ -47,7 +46,7 @@ impl ChainField {
             let at_the_foot = s0 + (k * u0);
             if at_the_foot > 0.0 {
                 let a = (point - (from + (along * u0))).length();
-                // C#'s two-sided ternary clamp, NaN through as NaN as f64::clamp passes it.
+                // A two-sided clamp that lets NaN through, so a broken reading stays visible.
                 let stationary =
                     (u0 + (k * a * a / (length_squared * at_the_foot))).clamp(0.0, 1.0);
                 best = cs_math::min_f64(best, ratio_at(stationary));
@@ -59,7 +58,7 @@ impl ChainField {
 }
 
 impl PickField {
-    /// C# `PickField.SwallowScale`: the least size at which any member's band reaches the point -
+    /// The least size at which any member's band reaches the point -
     /// a point is swallowed by whichever chain reaches it first.
     pub fn swallow_scale(&self, point: Vector3) -> Result<f64, WorkError> {
         let mut best = f64::INFINITY;
@@ -72,7 +71,7 @@ impl PickField {
 }
 
 impl RoomField {
-    /// C# `RoomField.SwallowScale`: the least size at which this field's band reaches the point.
+    /// The least size at which this field's band reaches the point.
     pub fn swallow_scale(&self, point: Vector3) -> Result<f64, WorkError> {
         match (&self.one, &self.several) {
             (Some(one), _) => one.swallow_scale(point),

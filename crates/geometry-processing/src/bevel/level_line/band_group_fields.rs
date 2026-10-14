@@ -1,13 +1,12 @@
 //! The ONE field each side group of a band cut reads: the pick field of the chains that seed it -
 //! and, where a `CreaseRunOut` leaves one of its corners across that group's faces, the least of
-//! that and the run-out's own field (`RunOutField`). Ports the nested types of
-//! `Bevel/LevelLine/BandGroupFields.cs` (a C# static class): the run-out gate ([`run_outs_on`],
+//! that and the run-out's own field (`RunOutField`). Here are the run-out gate ([`run_outs_on`],
 //! [`turn_run_outs_on`] and its scope [`BandGroupFieldsRunOutsScope`], kept on the build's
-//! [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the wrapped field
+//! [`WorkBudget`](super::WorkBudget) so it travels with the build) and the wrapped field
 //! ([`BandGroupFieldsWithRunOuts`], with its constructor, inner field, point query, bounded maxima
 //! least queries, field seam and `ChainDistanceField` impl) and the pick under it
-//! ([`unwrapped`]), and each group's field ([`of`]). The static class's run-out finder lands with
-//! a later package.
+//! ([`unwrapped`]), and each group's field ([`of`]). The run-out finder is
+//! [`band_group_run_outs`](super::band_group_run_outs).
 
 use std::rc::Rc;
 
@@ -22,10 +21,10 @@ use super::{
     LevelLineWork, ScalarField, WorkError,
 };
 
-/// C# `BandGroupFields.RunOutsOn`: whether the side groups read their crease run-outs' fields for
-/// the build in force (off wherever no budget is, as C#'s flow default is).
+/// Whether the side groups read their crease run-outs' fields for
+/// the build in force (off wherever no budget is).
 ///
-/// C# keeps the gate per ASYNC FLOW rather than per thread: no options object reaches from the
+/// The gate belongs to the BUILD rather than to a thread: no options object reaches from the
 /// app's bevel build down to here, and the app builds on the thread pool, so a thread-static gate
 /// could not be turned on by an app-level test. Here it travels with the build, on its
 /// [`WorkBudget`](super::WorkBudget).
@@ -34,8 +33,8 @@ pub fn run_outs_on() -> bool {
 }
 
 thread_local! {
-    /// The flow's own setting, for a scope opened before the build that will read it exists
-    /// (C#'s `AsyncLocal` flows into whatever the opening flow starts). The thread the scope was
+    /// The flow's own setting, for a scope opened before the build that will read it exists.
+    /// The thread the scope was
     /// opened on stands for the flow: a build that runs inline on it - an app-level test's
     /// rebuild - captures the setting when its budget is created ([`flow_run_outs_on`]).
     static FLOW_RUN_OUTS_ON: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -47,13 +46,13 @@ pub fn flow_run_outs_on() -> bool {
     FLOW_RUN_OUTS_ON.with(std::cell::Cell::get)
 }
 
-/// C# `BandGroupFields.TurnRunOutsOn`: turns run-outs on for the build in force until the returned
+/// Turns run-outs on for the build in force until the returned
 /// scope is dropped, which puts back what was there before.
 pub fn turn_run_outs_on() -> BandGroupFieldsRunOutsScope {
     BandGroupFieldsRunOutsScope::new()
 }
 
-/// C# `BandGroupFields.RunOutsScope`: turns run-outs on for the build in force until it is
+/// Turns run-outs on for the build in force until it is
 /// dropped, which puts back what was there before. With no budget in force the scope sets the
 /// flow's setting, which the next build started on this flow captures in its budget.
 #[derive(Debug)]
@@ -66,7 +65,7 @@ pub struct BandGroupFieldsRunOutsScope {
 }
 
 impl BandGroupFieldsRunOutsScope {
-    /// C#'s `RunOutsScope()`: remembers the setting and turns run-outs on.
+    /// Remembers the setting and turns run-outs on.
     pub fn new() -> Self {
         let was = LevelLineWork::current().is_some_and(|budget| budget.run_outs_on.replace(true));
         let was_in_flow = FLOW_RUN_OUTS_ON.with(|flow| flow.replace(true));
@@ -81,7 +80,7 @@ impl Default for BandGroupFieldsRunOutsScope {
 }
 
 impl Drop for BandGroupFieldsRunOutsScope {
-    /// C#'s `Dispose`: puts back what was there before.
+    /// Puts back what was there before.
     fn drop(&mut self) {
         if let Some(budget) = LevelLineWork::current() {
             budget.run_outs_on.set(self.was);
@@ -90,7 +89,7 @@ impl Drop for BandGroupFieldsRunOutsScope {
     }
 }
 
-/// C# `BandGroupFields.Unwrapped`: the pick field under a group's field: a wrapped group's inner
+/// The pick field under a group's field: a wrapped group's inner
 /// pick, any other field itself. What asks about the pick's own CHAINS - where two tie, where a
 /// bounded end is a known cut - reads this; the run-out has no chain, tie or end plane.
 pub fn unwrapped(field: &Rc<dyn ChainDistanceField>) -> Rc<dyn ChainDistanceField> {
@@ -100,26 +99,26 @@ pub fn unwrapped(field: &Rc<dyn ChainDistanceField>) -> Rc<dyn ChainDistanceFiel
     }
 }
 
-/// C# `BandGroupFields.WithRunOuts`: the least of a group's pick field and its run-outs.
+/// The least of a group's pick field and its run-outs.
 ///
 /// A reading the run-out wins keeps the pick's chain and parameter (the loop walk needs an owner;
 /// `CornerFill.TrimOffTheLine` hands the run back to the corner hole, since the chain's own field
 /// reads it off its line), and is marked [`FieldSample::clipped`] so `ConvexCellBound` takes no
 /// union-of-balls term from it - its `distance - value` is no setback.
 pub struct BandGroupFieldsWithRunOuts {
-    /// The pick field the run-outs are read beside (C# `Inner`).
+    /// The pick field the run-outs are read beside.
     pub pick: Rc<dyn ChainDistanceField>,
     /// The pick field's sampler.
     pub pick_sample: Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>,
     /// The pick's end planes: the signed reading of a chain's end plane at a point; `None` where no
-    /// member is clipped (C#'s null reader).
+    /// member is clipped.
     pub end_planes: Option<Rc<dyn Fn(i32, Vector3) -> f64>>,
     /// The run-out fields read beside the pick.
     pub run_outs: Vec<Rc<dyn ChainDistanceField>>,
 }
 
 impl BandGroupFieldsWithRunOuts {
-    /// C#'s constructor.
+    /// A pick field wrapped with its run-outs.
     pub fn new(
         pick: Rc<dyn ChainDistanceField>,
         pick_sample: Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>,
@@ -134,7 +133,7 @@ impl BandGroupFieldsWithRunOuts {
         }
     }
 
-    /// C# `WithRunOuts.Inner`: the pick field the run-outs are read beside.
+    /// The pick field the run-outs are read beside.
     pub fn inner(&self) -> &Rc<dyn ChainDistanceField> {
         &self.pick
     }
@@ -151,8 +150,8 @@ impl BandGroupFieldsWithRunOuts {
 }
 
 impl BandGroupFieldsWithRunOuts {
-    /// C# `WithRunOuts.RunOutValueAt`: the least of the run-outs alone at `point` (NaN where any
-    /// reads NaN, as C#'s `Enumerable.Min`).
+    /// The least of the run-outs alone at `point` (NaN where any
+    /// reads NaN, so a broken reading is never hidden by a good one).
     pub fn run_out_value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         let mut least: Option<f64> = None;
         for run_out in &self.run_outs {
@@ -166,11 +165,11 @@ impl BandGroupFieldsWithRunOuts {
             }
         }
 
-        // C# throws on no run-outs; a wrapper is made only with some (`BandGroupFields.Of`).
+        // No run-outs reads NaN; a wrapper is made only with some (`of`).
         Ok(least.unwrap_or(f64::NAN))
     }
 
-    /// C# `WithRunOuts.Evaluate`: the pick's sample, lowered to any run-out that reads below it -
+    /// The pick's sample, lowered to any run-out that reads below it -
     /// keeping the pick's chain and parameter and marked clipped (see the type's remarks); a
     /// run-out that cannot reach below the sample is skipped unread.
     pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
@@ -193,7 +192,7 @@ impl BandGroupFieldsWithRunOuts {
         Ok(sample)
     }
 
-    /// C# `WithRunOuts.MaxAlongSegment(a, b, tolerance)`.
+    /// The wrapped field's maximum along the segment from `a` to `b`, to `tolerance`.
     pub fn max_along_segment(
         &self,
         a: Vector3,
@@ -203,7 +202,7 @@ impl BandGroupFieldsWithRunOuts {
         self.max_along_segment_at_least(a, b, tolerance, f64::NEG_INFINITY)
     }
 
-    /// C# `WithRunOuts.MaxAlongSegment(a, b, tolerance, atLeast)`: the bounded search over the
+    /// The bounded search over the
     /// wrapped field, clipped by the pick's end planes.
     pub fn max_along_segment_at_least(
         &self,
@@ -224,7 +223,7 @@ impl BandGroupFieldsWithRunOuts {
         )
     }
 
-    /// C# `WithRunOuts.MaxOverTriangle(a, b, c, tolerance)`.
+    /// The wrapped field's maximum over the triangle `a`, `b`, `c`, to `tolerance`.
     pub fn max_over_triangle(
         &self,
         a: Vector3,
@@ -235,7 +234,8 @@ impl BandGroupFieldsWithRunOuts {
         self.max_over_triangle_bounded(a, b, c, tolerance, f64::INFINITY, f64::NEG_INFINITY)
     }
 
-    /// C# `WithRunOuts.MaxOverTriangle(a, b, c, tolerance, stopAbove, atLeast)`.
+    /// The wrapped field's maximum over a triangle, stopping once a value above `stop_above` is
+    /// found and reading nothing below `at_least`.
     pub fn max_over_triangle_bounded(
         &self,
         a: Vector3,
@@ -266,7 +266,7 @@ impl ScalarField for BandGroupFieldsWithRunOuts {
         Some(self)
     }
 
-    /// C# `WithRunOuts.ValueAt`: [`BandGroupFieldsWithRunOuts::evaluate`]'s value.
+    /// [`BandGroupFieldsWithRunOuts::evaluate`]'s value.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         Ok(self.evaluate(point)?.value)
     }
@@ -281,7 +281,7 @@ impl ScalarField for BandGroupFieldsWithRunOuts {
 }
 
 impl BandGroupFieldsWithRunOuts {
-    /// C# `WithRunOuts.MinAlongSegment`: the pick's least along a segment, lowered to any run-out
+    /// The pick's least along a segment, lowered to any run-out
     /// that could reach below it and does.
     pub fn min_along_segment(&self, a: Vector3, b: Vector3) -> Result<FieldMinimum, WorkError> {
         let mut best = self.pick.min_along_segment(a, b)?;
@@ -298,7 +298,7 @@ impl BandGroupFieldsWithRunOuts {
         Ok(best)
     }
 
-    /// C# `WithRunOuts.MinOverTriangle`: the pick's least over a triangle, lowered to any
+    /// The pick's least over a triangle, lowered to any
     /// run-out that could reach below it and does.
     pub fn min_over_triangle(
         &self,
@@ -384,16 +384,16 @@ impl ChainDistanceField for BandGroupFieldsWithRunOuts {
     }
 }
 
-/// A group's point query (C#'s `Func<Vector3, FieldSample>`).
+/// A group's point query.
 pub type GroupSampler = Rc<dyn Fn(Vector3) -> Result<FieldSample, WorkError>>;
 
-/// C# `BandGroupFields.Of`: each group's field and its sampler, keyed by group tag in the groups'
+/// Each group's field and its sampler, keyed by group tag in the groups'
 /// order. A pick of ONE chain (`only`) reads the bare chain field, so nothing moves under it; a
 /// larger pick reads the [`PickField`] of the group's members that CUT (a grow-over member owns its
 /// pieces - the loop walk's sample, over every member - but does not cut the face), which for a
 /// group seeded by one chain answers bit for bit what that chain answers. A group named in
 /// `run_outs` reads the least of that and its run-outs. A pick field refused for its arguments
-/// (C# throws) is the error.
+/// is the error.
 #[allow(clippy::type_complexity)]
 pub fn of(
     groups: &[BandGroup],
@@ -458,11 +458,11 @@ pub fn of(
     Ok((group_fields, samples))
 }
 
-/// Per group tag, the extra chain-distance fields its band reads (C#'s
-/// `Dictionary<int, List<IChainDistanceField>>`, in the order the tags were first met).
+/// Per group tag, the extra chain-distance fields its band reads, in the order the tags were
+/// first met.
 pub type BandGroupExtraFields = indexmap::IndexMap<i32, Vec<Rc<dyn ChainDistanceField>>>;
 
-/// C# `BandGroupFields.RunOuts`: every crease run-out at the picks' corners as a field, filed
+/// Every crease run-out at the picks' corners as a field, filed
 /// under each group a triangle of its crease belongs to - or `None` with run-outs off or none
 /// found. `standing` is the input's standing map where the caller already has one.
 #[allow(clippy::too_many_arguments)]

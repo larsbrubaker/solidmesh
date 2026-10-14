@@ -1,6 +1,6 @@
 //! What the band's removal leaves ([`BandGapResult`]): the mesh with a gap in it, the field it was
-//! cut to, and the gap's boundaries. Ports the type of `Bevel/LevelLine/BandGapResult.cs`, with
-//! its derived readings ([`BandGapResult::built`], [`BandGapResult::chain`]).
+//! cut to, and the gap's boundaries, with its derived readings ([`BandGapResult::built`],
+//! [`BandGapResult::chain`]).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -13,9 +13,9 @@ use super::{
     RoomSource,
 };
 
-/// C# `BandGapResult`: what the band's removal leaves - the mesh with a gap in it, the field it was
-/// cut to, and the gap's boundaries. The `-1` and `RoomSource.Nothing` defaults are C#'s
-/// initializers, which is why `Default` is written out rather than derived.
+/// What the band's removal leaves - the mesh with a gap in it, the field it was
+/// cut to, and the gap's boundaries. Unset indices are `-1` and an unset room source is
+/// `RoomSource.Nothing`, which is why `Default` is written out rather than derived.
 #[derive(Debug, Clone)]
 pub struct BandGapResult {
     /// Why the build refused, or [`BandGapRefusal::None`] when the band came out.
@@ -137,13 +137,13 @@ impl Default for BandGapResult {
 }
 
 impl BandGapResult {
-    /// C# `BandGapResult.Built`: true when the band came out; false when the build refused, and
+    /// True when the band came out; false when the build refused, and
     /// then `refusal` says why.
     pub fn built(&self) -> bool {
         self.refusal == BandGapRefusal::None
     }
 
-    /// C# `BandGapResult.Chain`: the first chain's field - what every single-chain caller means by
+    /// The first chain's field - what every single-chain caller means by
     /// "the chain"; `None` where there is none.
     pub fn chain(&self) -> Option<Rc<ChainField>> {
         self.chains.first().cloned()

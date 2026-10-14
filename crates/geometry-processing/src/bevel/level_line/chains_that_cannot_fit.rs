@@ -1,10 +1,10 @@
 //! Who has to be dropped from a pick of several chains for the REST of it to build at a size,
-//! read from ONE [`RoomReading`] ([`ChainsThatCannotFit`], [`ChainCannotFit`]). Ports
-//! `Bevel/LevelLine/ChainsThatCannotFit.cs`. It reads the candidates the pick's room reading
+//! read from ONE [`RoomReading`] ([`ChainsThatCannotFit`], [`ChainCannotFit`]). It reads the
+//! candidates the pick's room reading
 //! gathered ([`RoomCandidate`], `band_gap_reading::read_room_of_pick`); `PickThatFits` is the
 //! read-drop-re-read loop around it.
 
-// C#'s negated comparisons (`!(room < size)`, `!(x > 0)`) are kept as written: they are what
+// The negated comparisons (`!(room < size)`, `!(x > 0)`) are written that way on purpose: they are what
 // decides which way a NaN reading falls.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::{RoomReading, RoomReadingKind, RoomSource};
 
-/// C# `ChainCannotFit`: one chain the pick cannot keep at the size asked, and the reading that
+/// One chain the pick cannot keep at the size asked, and the reading that
 /// says so.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChainCannotFit {
@@ -32,7 +32,7 @@ pub struct ChainCannotFit {
 }
 
 impl ChainCannotFit {
-    /// C#'s constructor with its default round of 1.
+    /// A chain that cannot fit, dropped in round 1.
     pub fn new(chain: i32, because: RoomSource, room: f64) -> Self {
         ChainCannotFit {
             chain,
@@ -43,7 +43,7 @@ impl ChainCannotFit {
     }
 }
 
-/// C# `ChainsThatCannotFit`: who has to be dropped from a pick of several chains for the REST of
+/// Who has to be dropped from a pick of several chains for the REST of
 /// it to build at a size, read from ONE [`RoomReading`] rather than one chain per rebuild.
 ///
 /// A fifty-loop face rim at a size two of its loops cannot take used to cost a pass each: the
@@ -81,8 +81,8 @@ pub struct ChainsThatCannotFit {
     pub unresolved: Vec<Vec<i32>>,
 }
 
-/// C#'s `Comparer<double>.Default`, which `OrderBy` sorts by: NaN equals NaN and sorts below
-/// every number.
+/// The order candidates sort by: NaN equals NaN and sorts below every number, so the order is
+/// total and the same on every run.
 fn compare_like_csharp(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -101,7 +101,7 @@ impl ChainsThatCannotFit {
         self.dropped.is_empty() && self.unresolved.is_empty()
     }
 
-    /// C# `Read`: reads a pick's room table for the chains that cannot stay at `size`.
+    /// Reads a pick's room table for the chains that cannot stay at `size`.
     ///
     /// Three rules, in this order, so the answer is the same whatever order the candidates were
     /// read in:
@@ -122,8 +122,6 @@ impl ChainsThatCannotFit {
     /// reads a chain INDEX except as the last resort between two chains of exactly equal length,
     /// which is a genuinely symmetric pick - two identical holes tight against each other - where
     /// either answer is the same to a user.
-    ///
-    /// C# throws `ArgumentNullException` on a null reading; the borrow cannot be null here.
     pub fn read(reading: &RoomReading, size: f64) -> ChainsThatCannotFit {
         let mut dropped: HashMap<i32, ChainCannotFit> = HashMap::new();
         let mut unresolved: Vec<Vec<i32>> = Vec::new();
@@ -179,8 +177,8 @@ impl ChainsThatCannotFit {
         }
 
         // The ordered pair rows, by (chain, other), so a pair can be asked what EITHER of its two
-        // would have if the other left. (C# also keeps the under-read per pair; nothing reads it,
-        // as condemnation reads only the optimistic bound below.)
+        // would have if the other left. (Only the optimistic bound is kept per pair: condemnation
+        // reads nothing else.)
         let mut at_most_without_the_other: HashMap<(i32, i32), f64> = HashMap::new();
         let mut tight_pairs: HashSet<(i32, i32)> = HashSet::new();
         for candidate in &reading.candidates {
@@ -325,7 +323,7 @@ fn pair_room_of(reading: &RoomReading, low: i32, high: i32) -> f64 {
             least = if least.is_nan() {
                 candidate.room
             } else {
-                // C#'s Math.Min: NaN wins.
+                // The least, with NaN winning so a broken reading is never hidden.
                 if candidate.room.is_nan() {
                     f64::NAN
                 } else {

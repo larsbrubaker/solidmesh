@@ -1,6 +1,5 @@
 //! Whether a chain's end face is a facet of a ROUND rather than a flat face - the test the
-//! level-line end-face sense asks before it stands an end ray on the face's plane. Ports
-//! `Bevel/LevelLine/CurvedEndFace.cs`.
+//! level-line end-face sense asks before it stands an end ray on the face's plane.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -8,7 +7,7 @@ use vector_math::Vector3;
 
 const COPLANAR_TOLERANCE: f64 = 1e-6;
 
-/// One triangle by its three corner indices into the positions (C#'s `(int A, int B, int C)`).
+/// One triangle by its three corner indices into the positions.
 pub type Corners = (i32, i32, i32);
 
 /// Whether the plane of `normal` grown from `seeds` over edge neighbours in that plane meets,

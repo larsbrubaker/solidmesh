@@ -1,7 +1,6 @@
 //! How far back from a chain edge a size reaches - the one place a bevel's size becomes a distance
 //! in the level-line field, read from the angle between the two sides rather than from any
-//! per-station construction. Ports `Bevel/LevelLine/ChainSetback.cs` (a static class; free
-//! functions here).
+//! per-station construction.
 
 use vector_math::Vector3;
 
@@ -10,7 +9,7 @@ use vector_math::Vector3;
 /// square (90 degree) edge asks for exactly the radius; a blunt edge asks less and a sharp one
 /// more, which is what lets an arc of that radius meet both sides tangentially at the boundary.
 pub fn for_fillet(radius: f64, n_left: Vector3, n_right: Vector3) -> f64 {
-    // C#'s explicit clamp, which passes NaN through as `f64::clamp` does.
+    // An explicit clamp, which passes NaN through so a broken normal stays visible.
     let cos_phi = n_left
         .get_normal()
         .dot(n_right.get_normal())

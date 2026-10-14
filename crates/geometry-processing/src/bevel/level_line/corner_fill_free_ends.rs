@@ -1,6 +1,5 @@
-//! A corner loop's pieces split round a chain's FREE end. Ports the piece helpers of
-//! `Bevel/LevelLine/CornerFill.FreeEnds.cs` (a partial of the C# static class `CornerFill`, whose
-//! piece type is in `corner_fill.rs`): the rails kept past an end ([`rails_past_an_end`]), a closed
+//! A corner loop's pieces split round a chain's FREE end (the piece type is in `corner_fill.rs`):
+//! the rails kept past an end ([`rails_past_an_end`]), a closed
 //! loop's piece turned to start inside an end arc ([`start_inside_an_end_arc`]), a piece's slice
 //! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]).
 
@@ -11,7 +10,7 @@ use std::rc::Rc;
 use super::corner_fill::same;
 use super::{ChainField, CornerFillPiece};
 
-/// C# `CornerFill.RailsPastAnEnd`: the rails of `piece` with its run(s) at one free end's
+/// The rails of `piece` with its run(s) at one free end's
 /// `parameter` taken off. A piece wholly at the end (or not at it at all) has no rail to keep and
 /// comes back as it was.
 pub fn rails_past_an_end(
@@ -59,7 +58,7 @@ pub fn rails_past_an_end(
     ]
 }
 
-/// C# `CornerFill.StartInsideAnEndArc`: turns a one-owner closed loop's piece to start INSIDE an
+/// Turns a one-owner closed loop's piece to start INSIDE an
 /// arc round one of its open chain's ends (a vertex at an end's parameter whose predecessor is
 /// too), so no rail runs across the loop's seam and the free-end split reads the arcs as runs at
 /// the piece's ends or inside it. False, the piece untouched, where no such vertex exists.
@@ -80,7 +79,7 @@ pub fn start_inside_an_end_arc(field: &ChainField, piece: &mut CornerFillPiece) 
     true
 }
 
-/// C# `CornerFill.Slice`: the vertices of `piece` from index `first` to `last`, inclusive, with
+/// The vertices of `piece` from index `first` to `last`, inclusive, with
 /// the same owner.
 pub fn slice(piece: &CornerFillPiece, first: usize, last: usize) -> CornerFillPiece {
     CornerFillPiece {
@@ -90,12 +89,12 @@ pub fn slice(piece: &CornerFillPiece, first: usize, last: usize) -> CornerFillPi
     }
 }
 
-/// C# `CornerFill.SplitRoundAFreeEnd`: a piece's stretches ROUND a free end of its open chain taken
+/// A piece's stretches ROUND a free end of its open chain taken
 /// off, leaving only its rails ([`rails_past_an_end`] at each end no other chain's point stands
 /// on). They happen where no end region of the chain's own was carved: the end face is a side
 /// region of the pick. Each rail keeps one vertex at the end's parameter; the arc beyond it is left
 /// open for the cap, as a carved end region's run is. Every other piece - a closed chain's, or one
-/// with no free end - comes back as it was. (C#'s unused mesh argument is not taken.)
+/// with no free end - comes back as it was.
 pub fn split_round_a_free_end(
     chains: &[Rc<ChainField>],
     piece: &CornerFillPiece,

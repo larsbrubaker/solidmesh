@@ -1,5 +1,5 @@
-//! The band gap's room reading. Ports `Bevel/LevelLine/BandGap.Reading.cs` (a partial of the C#
-//! static class `BandGap`, free functions here): the half of the band gap that READS and builds
+//! The band gap's room reading (a part of the band gap, whose main module is `band_gap.rs`): the
+//! half of the band gap that READS and builds
 //! nothing - what room a pick has, before any band is cut ([`room_of`], [`room_of_pick`],
 //! [`read_room`], [`read_room_of_pick`]) and the margin a room reading keeps under the room
 //! ([`room_margin`]). The readings themselves are `band_room.rs` (one chain) and
@@ -17,17 +17,17 @@ use super::seam_edges::FeatureEdgeTest;
 use super::{band_room_read_pick, chain_on_the_mesh};
 use super::{BandProfile, RoomReading, SeamEdges, WorkBudget, WorkError};
 
-/// Why a room reading has no reading at all: C#'s exceptions. A refusal or a reading that ran out
+/// Why a room reading has no reading at all. A refusal or a reading that ran out
 /// of work is a [`RoomReading`]; these are a caller's bug or the caller's own cancel.
 #[derive(Debug, Clone)]
 pub enum ReadRoomError {
-    /// The pick's arguments are malformed (C# `ArgumentException` from `CheckPickArguments`).
+    /// The pick's arguments are malformed.
     Arguments(PickArgumentError),
-    /// The caller cancelled (C# `OperationCanceledException`).
+    /// The caller cancelled.
     Cancelled,
-    /// The chain's polyline builds no field (C# `ArgumentException` from `ChainField.FromPolyline`).
+    /// The chain's polyline builds no field.
     ChainField(ChainFieldArgumentError),
-    /// The mesh is malformed (C# `ArgumentException` from `LevelLineMesh.FromTriangles`).
+    /// The mesh is malformed.
     Mesh(LevelLineMeshError),
 }
 
@@ -37,7 +37,7 @@ impl From<PickArgumentError> for ReadRoomError {
     }
 }
 
-/// C# `BandGap.RoomOf(chain)`: the room, without building anything: the largest size the picked
+/// The room, without building anything: the largest size the picked
 /// sides' WIDTH allows.
 ///
 /// The room is a statement about the PART and the PICK - the foreign features bounding the picked
@@ -55,8 +55,8 @@ impl From<PickArgumentError> for ReadRoomError {
 /// (2.29167 against 2.34229 on an L face of arm 4).
 ///
 /// Returns the largest size the width allows, positive infinity where nothing bounds the sides, or
-/// zero when the chain does not divide its sides - the one refusal that is not about size. C#'s
-/// optional `snap = 1e-9` is passed explicitly.
+/// zero when the chain does not divide its sides - the one refusal that is not about size. The
+/// snap (normally 1e-9) is passed explicitly.
 #[allow(clippy::too_many_arguments)]
 pub fn room_of(
     positions: &[Vector3],
@@ -82,7 +82,7 @@ pub fn room_of(
     .room)
 }
 
-/// C# `BandGap.RoomOf(chains)`: the room of a PICK - one chain or several - without building
+/// The room of a PICK - one chain or several - without building
 /// anything. Positive infinity where nothing bounds the sides, or zero for every refusal that is
 /// not about size (the chain not dividing its sides, a chain edge not standing on two triangles,
 /// two chains touching).
@@ -112,7 +112,7 @@ pub fn room_of_pick(
     .room)
 }
 
-/// C# `BandGap.ReadRoom(chain)`: the room, spending no more than the given work - see
+/// The room, spending no more than the given work - see
 /// [`WorkBudget`]. A reading that ran out of work refuses BY NAME (`read` false) rather than
 /// failing or spinning, and its room is NaN, which no size compares above. `budget` `None` takes
 /// the default for the input's size.
@@ -145,7 +145,7 @@ pub fn read_room(
     )
 }
 
-/// C# `BandGap.ReadRoom(chains)`: the room of a PICK - one chain or several - spending no more than
+/// The room of a PICK - one chain or several - spending no more than
 /// the given work. A pick of one chain reads exactly what that chain reads, to the bit; a pick of
 /// several reads ONE number for the whole pick - see `band_room_pair_room::room_of_pick` for the
 /// three readings it is the least of.
@@ -258,7 +258,7 @@ pub fn read_room_of_pick(
     )
 }
 
-/// C# `BandGap.RoomMargin`: how much of the geometric room is not usable: the size that moves the
+/// How much of the geometric room is not usable: the size that moves the
 /// level line by TWO snaps, one for each side of the ridge of kept surface the strip closes on. A
 /// strip narrower than that is not a strip - its two boundaries fall onto each other within the
 /// snap and the side leaves no loop to fill.
@@ -267,8 +267,8 @@ pub fn read_room_of_pick(
 /// field is the setback: a size s moves the line back s * unitSetback, so a length of two snaps is
 /// worth 2 * snap / unitSetback of size. Where the setback varies along the chain the LARGEST is
 /// used, which is the smallest margin - the room is the largest size that builds, and taking more
-/// off it than the geometry asks for would refuse sizes that do build. C#'s optional
-/// `snap = 1e-9` is passed explicitly; zero for a pick with no setback.
+/// off it than the geometry asks for would refuse sizes that do build. The snap (normally 1e-9)
+/// is passed explicitly; zero for a pick with no setback.
 pub fn room_margin(largest_unit_setback: f64, snap: f64) -> f64 {
     if largest_unit_setback > 0.0 {
         2.0 * snap / largest_unit_setback

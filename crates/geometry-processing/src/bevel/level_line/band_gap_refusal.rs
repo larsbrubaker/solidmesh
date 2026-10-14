@@ -1,7 +1,7 @@
 //! Why a level-line gap was not built. A size refusal names the room; the others are about the
-//! pick or the mesh under it. Ports `Bevel/LevelLine/BandGapRefusal.cs`.
+//! pick or the mesh under it.
 
-/// C# `BandGapRefusal`. The discriminants keep C#'s declaration order.
+/// Why a gap was not built. The discriminants keep their declaration order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum BandGapRefusal {
     /// The gap was built.
