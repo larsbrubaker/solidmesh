@@ -1,5 +1,4 @@
-//! An END FACE end's hole closed FLAT - the Ends decision's cut into the face. Ports
-//! `Bevel/LevelLine/FlatHoleFill.cs` (an `internal static class`, free functions here). The loop
+//! An END FACE end's hole closed FLAT - the Ends decision's cut into the face. The loop
 //! is triangulated in its own plane by ear clipping, so no star-shaped test applies (the fan's
 //! [`GapFillRefusal::CornerCapNotStarShaped`](super::GapFillRefusal) cannot arise), and a triangle
 //! standing less than the snap off its longest edge is dropped rather than laid. Its triangles are
@@ -14,8 +13,8 @@ pub type ForbiddenEar<'a> = &'a dyn Fn(i32, i32, i32) -> bool;
 
 /// The triangles closing `loop_points` flat, their corners indices into the loop, with the plane's
 /// unit normal on the side the loop faces - or `None` where the loop does not lie in one plane
-/// within `snap` (hand it to the faired filler), has no area, or crosses itself (C# returns null
-/// and a zero `out normal`). Every triangle winds the way the loop is walked - as `HoleFill.Fill`
+/// within `snap` (hand it to the faired filler), has no area, or crosses itself. Every triangle
+/// winds the way the loop is walked - as `HoleFill.Fill`
 /// does, each loop edge i -> i+1 that is laid runs that way in its triangle - so a loop walked as
 /// the cap lays its edges faces out of the part.
 ///

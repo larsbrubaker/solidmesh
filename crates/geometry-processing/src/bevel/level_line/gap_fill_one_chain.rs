@@ -1,8 +1,7 @@
 //! The gap fill of ONE closed chain's band: its two rails paired to run opposite ways, merged into
 //! spokes, the spokes drawn as the fillet's arcs and the cells between them laid as strips - and
-//! taken back out if the shell does not close. Ports `GapFill.FillOneChain` from
-//! `Bevel/LevelLine/GapFill.cs`; the senses, the pairing, the merge, the arcs and the strip are in
-//! `gap_fill`, the rails in `zip_rail`.
+//! taken back out if the shell does not close. The senses, the pairing, the merge, the arcs and
+//! the strip are in `gap_fill`, the rails in `zip_rail`.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -16,7 +15,7 @@ use super::{
     LevelLineWork, ZipRail,
 };
 
-/// C# `GapFill.FillOneChain`: fills the band of one closed chain between its side-1 and side-2
+/// Fills the band of one closed chain between its side-1 and side-2
 /// loops, appending the laid triangles to `laid`. Refuses (with nothing left laid) where a rail is
 /// not monotone, the rails run the same way, or the strip does not close the shell.
 pub fn fill_one_chain(
@@ -30,7 +29,7 @@ pub fn fill_one_chain(
     let start = laid.len();
     let slack = monotone_slack(chain);
 
-    // C#'s `Single`: exactly one loop per side is the caller's promise.
+    // Exactly one loop per side is the caller's promise.
     let of_side = |side: i32| {
         let mut found = loops.iter().filter(|l| l.side == side);
         let one = found.next().expect("one loop on each side");
@@ -91,8 +90,8 @@ pub fn fill_one_chain(
         length,
         chain.max_setback,
     );
-    // C# compares by reference: `start_nearest` hands back the rail itself where it does not re-cut
-    // it, and a re-cut rail differs from it.
+    // `start_nearest` hands back the rail unchanged where it does not re-cut it, and a re-cut rail
+    // differs from it; only a re-cut rail needs its spans read again.
     if started != left {
         left = started;
         left_spans = spans(&left)?;

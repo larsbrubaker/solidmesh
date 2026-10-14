@@ -1,9 +1,8 @@
-//! Walking the loops a band gap leaves, side by side (`Bevel/LevelLine/GapLoopWalk.cs`, a static
-//! class: free functions here). The tests the walk's verdict is made of land here first - which
-//! side a both-sided loop is, which open pieces are a member's own, what each chain side left, and
-//! whether each side closed, and the corner groups' test
-//! ([`every_corner_group_leaves_one_loop`]) - and the boundary step that follows another
-//! ([`follows`], [`one_of`]) - and the walk itself ([`loops_of_side`]).
+//! Walking the loops a band gap leaves, side by side. Here are the tests the walk's verdict is made
+//! of - which side a both-sided loop is, which open pieces are a member's own, what each chain side
+//! left, and whether each side closed, and the corner groups' test
+//! ([`every_corner_group_leaves_one_loop`]) - the boundary step that follows another
+//! ([`follows`], [`one_of`]) and the walk itself ([`loops_of_side`]).
 
 use std::collections::{HashMap, HashSet};
 
@@ -57,7 +56,7 @@ pub fn without_open_members_own_pieces(
             && !end_members.contains(&l.owners[0])
     };
 
-    // How many own pieces each member has, in first-seen order (C#'s GroupBy).
+    // How many own pieces each member has, in first-seen order.
     let own_pieces_of = |pieces: &mut dyn Iterator<Item = &GapLoop>| {
         let mut counts: Vec<(i32, usize)> = Vec::new();
         for piece in pieces {
@@ -104,8 +103,8 @@ pub fn without_open_members_own_pieces(
         return theirs;
     }
 
-    // C#'s `rest.AddRange(theirs.Where(.. !rest.Any(..)))` reads `rest` as it grows, so a member's
-    // second own piece is not added once its first is.
+    // The membership test reads `rest` as it grows, so a member's second own piece is not added
+    // once its first is.
     for piece in &theirs {
         if is_own_piece(piece) && !rest.iter().any(|r| r.owners.contains(&piece.owners[0])) {
             rest.push(piece.clone());
@@ -168,8 +167,8 @@ pub fn is_one_piece_per_end(pieces: &[GapLoop], member: i32, group: &BandGroup) 
         })
 }
 
-/// The walk's answer where it failed at a corner: false, and that it failed at a corner (C#'s
-/// `out bool`, here the second of the pair).
+/// The walk's answer where it failed at a corner: false, and that it failed at a corner (the
+/// second of the pair).
 pub fn failed_at_a_corner() -> (bool, bool) {
     (false, true)
 }
@@ -237,7 +236,7 @@ pub fn each_side_leaves_one_closed_loop(loops: &[GapLoop]) -> bool {
 /// members that meet at corners - closed where the cluster rings the face - with each member's
 /// stretch one run of the loop and the members meeting at corners in the order their stretches
 /// start; an end group must leave its own open pieces. Returns the verdict and whether it failed AT
-/// A CORNER (C#'s `out bool failedAtACorner`), which the caller reads as a pinch there.
+/// A CORNER, which the caller reads as a pinch there.
 ///
 /// Two members are joined, and a change of owner between them allowed, when they hold a corner
 /// vertex together ANYWHERE; tying each transition to a corner on this face is the fill's work. An
@@ -309,7 +308,8 @@ pub fn every_corner_group_leaves_one_loop(
             }
         }
 
-        // The cores, as C#'s GroupBy groups them: by first appearance of each cluster's key.
+        // The cores, grouped by first appearance of each cluster's key, so their order is the same
+        // on every run.
         let mut cores: IndexMap<i32, Vec<i32>> = IndexMap::new();
         for &k in members {
             cores.entry(cluster_of[&k]).or_default().push(k);
@@ -461,7 +461,7 @@ pub fn every_corner_group_leaves_one_loop(
                 return failed_at_a_corner();
             }
 
-            // Stable, as C#'s OrderBy is; the starts are distinct, so nothing ties.
+            // Stable; the starts are distinct, so nothing ties.
             starts.sort_by_key(|&(start, _)| start);
             let runs: Vec<i32> = starts.iter().map(|&(_, chain)| chain).collect();
             let steps = if lp.is_closed {
@@ -480,9 +480,9 @@ pub fn every_corner_group_leaves_one_loop(
     (true, false)
 }
 
-/// C# `GapLoopWalk.Follows`: the boundary step that follows `step` (from, to), found by rotating
+/// The boundary step that follows `step` (from, to), found by rotating
 /// round its end vertex through the kept triangles until the fan runs out - or `None` where it does
-/// not (or a triangle does not leave the vertex, where C#'s `First` throws).
+/// not (or a triangle does not leave the vertex).
 pub fn follows(mesh: &LevelLineMesh, step: (i32, i32)) -> Option<(i32, i32)> {
     let v = step.1;
     let t = one_of(mesh, step.0, v)?;
@@ -513,7 +513,7 @@ pub fn follows(mesh: &LevelLineMesh, step: (i32, i32)) -> Option<(i32, i32)> {
     None
 }
 
-/// C# `GapLoopWalk.OneOf`: the one live triangle traversing the edge `from` -> `to` that way, or
+/// The one live triangle traversing the edge `from` -> `to` that way, or
 /// `None`.
 pub fn one_of(mesh: &LevelLineMesh, from: i32, to: i32) -> Option<i32> {
     mesh.triangles_on(from, to).iter().copied().find(|&i| {
@@ -523,7 +523,7 @@ pub fn one_of(mesh: &LevelLineMesh, from: i32, to: i32) -> Option<i32> {
     })
 }
 
-/// C# `GapLoopWalk.LoopsOfSide`: the gap's boundary on one side, walked with the kept surface on
+/// The gap's boundary on one side, walked with the kept surface on
 /// the left. After the removal a gap edge stands on exactly one triangle, so the steps are read
 /// straight off the mesh: each open edge whose remaining triangle belongs to this side, in that
 /// triangle's own direction - and, across a KNIFE the band reached (or along a side consumed
@@ -661,7 +661,7 @@ pub fn loops_of_side(
 
             let owner = samples[0].chain;
             let mixed = samples.iter().any(|x| x.chain != owner);
-            // A loop's owner is a member of its group (C#'s indexer throws otherwise).
+            // A loop's owner is a member of its group.
             let chain_side = if mixed {
                 side
             } else if let (Some(side_of), true) =
@@ -724,7 +724,7 @@ pub fn loops_of_side(
     Ok(loops)
 }
 
-/// C# `EveryChainSideLeavesOneOwnedLoop(groups, closed, loops, chains = null)`: the short form,
+/// The short form,
 /// with the cut fronts set aside and the corner failure unread.
 pub fn every_chain_side_leaves_one_owned_loop(
     groups: &[BandGroup],
@@ -735,7 +735,7 @@ pub fn every_chain_side_leaves_one_owned_loop(
     every_chain_side_leaves_one_owned_loop_at(groups, closed, loops, chains, true).0
 }
 
-/// C# `EveryChainSideLeavesOneOwnedLoop(..., out failedAtACorner, setAsideCutFronts)`: whether
+/// Whether
 /// every chain side the groups read left exactly one loop of its own (closed for a closed chain),
 /// an end group its open pieces, and no mixed-owner loop outside an end group - read per corner
 /// group where the chains meet at corners. Returns `(holds, failed at a corner)`.

@@ -2,12 +2,12 @@
 //! meets the chain's two sides fold the same way as the chain itself (a cube's edge onto its end
 //! face: convex-convex; a pocket's floor edge onto the end walls: concave-concave) or the opposite
 //! way (an L block's inner, concave, edge onto its L-shaped top, which meets the inner walls at
-//! CONVEX creases). Ports `Bevel/LevelLine/EndFaceSense.cs` (a C# static class): so far its
-//! readings over plain positions and triangles - the fold test ([`is_convex`]), the crease sense
+//! CONVEX creases). Its readings over plain positions and triangles - the fold test
+//! ([`is_convex`]), the crease sense
 //! ([`is_opposite_sense_crease`]), which ends take an end ray ([`oblique_ends`]), the rays' bounds
 //! ([`end_ray_bounds`]), the convex ends' planes ([`convex_end_faces`]) and whether an end face is
-//! the opposite sense on a tagged triangle list ([`is_opposite_sense`]); the readings over a
-//! tagged `LevelLineMesh` land with later packages.
+//! the opposite sense on a tagged triangle list ([`is_opposite_sense`]) - and the crease sense over
+//! a tagged `LevelLineMesh`.
 //!
 //! The sense is read exactly as `ForeignEdgeRoom.IsAKnife` reads a fold: an edge is convex where
 //! the far triangle's opposite corner lies behind the near triangle's plane. An OPPOSITE-SENSE end
@@ -24,14 +24,14 @@ use super::{
     ChainEdgeNotOnTwoTriangles, EndRayBound,
 };
 
-/// One triangle by its three corner indices into the positions (C#'s `(int A, int B, int C)`).
+/// One triangle by its three corner indices into the positions.
 pub type Corners = (i32, i32, i32);
 
-/// C# `EndFaceSense.CoplanarTolerance`: relative 1e-6 - the catalogue's faces are flat only to
+/// Relative 1e-6 - the catalogue's faces are flat only to
 /// float noise.
 pub const COPLANAR_TOLERANCE: f64 = 1e-6;
 
-/// C# `EndFaceSense.SeparateEndFaceDegrees`: the fold, off a side, past which a face at the
+/// The fold, off a side, past which a face at the
 /// chain's end is a SEPARATE end face that takes the end ray. Under it the face is the side
 /// carrying on and the end fades. 30 degrees reads a faceted curve of 12 or more facets per circle
 /// as one wall (a 24-facet boss's next facet folds 15 degrees off, and read at a tighter bend
@@ -39,7 +39,7 @@ pub const COPLANAR_TOLERANCE: f64 = 1e-6;
 /// prism's fold 69.3 and 110.7, Fillet Thin Front's 66.9, Center Flows Through's 66.9 and 90).
 pub const SEPARATE_END_FACE_DEGREES: f64 = 30.0;
 
-/// C# `EndFaceSense.BackFacingWallLeanDegrees`: the lean off square past which a wall facing BACK
+/// The lean off square past which a wall facing BACK
 /// over a chain it meets the opposite way takes the end ray. Under it the wall is read as square
 /// and grows (flow rung 1): Top & Round's rim end stands 4.5 degrees off square and builds only
 /// that way, while Fillet Thin Front's walls lean 45 degrees. The number is measured between
@@ -56,7 +56,7 @@ fn has(t: Corners, v: i32) -> bool {
     t.0 == v || t.1 == v || t.2 == v
 }
 
-/// C#'s `new[] { a.A, a.B, a.C }.Intersect(new[] { b.A, b.B, b.C })`: the distinct corners of `a`
+/// The distinct corners of `a`
 /// that are also corners of `b`, in `a`'s order.
 pub fn shared_corners(a: Corners, b: Corners) -> Vec<i32> {
     let mut shared = Vec::with_capacity(3);
@@ -69,14 +69,14 @@ pub fn shared_corners(a: Corners, b: Corners) -> Vec<i32> {
     shared
 }
 
-/// C# `EndFaceSense.FaceNormal`: the triangle's unit normal by its winding.
+/// The triangle's unit normal by its winding.
 pub fn face_normal(positions: &[Vector3], t: Corners) -> Vector3 {
     (at(positions, t.1) - at(positions, t.0))
         .cross(at(positions, t.2) - at(positions, t.0))
         .get_normal()
 }
 
-/// C# `EndFaceSense.IsConvex`: whether the fold from `near` to `far` across their shared edge (one
+/// Whether the fold from `near` to `far` across their shared edge (one
 /// end of which is `on_edge`) is convex: the far triangle's corners lie behind the near plane.
 pub fn is_convex(positions: &[Vector3], near: Corners, far: Corners, on_edge: i32) -> bool {
     let a = at(positions, near.0);
@@ -92,7 +92,7 @@ pub fn is_convex(positions: &[Vector3], near: Corners, far: Corners, on_edge: i3
     off < 0.0
 }
 
-/// C# `EndFaceSense.IsOppositeSenseCrease` (the positions overload): whether a side's bounding
+/// Whether a side's bounding
 /// crease folds the OPPOSITE way to the chain - the neighbour across it GROWS under the blend
 /// rather than being trimmed (flow rung 2: a rib standing on a convex edge's side meets it at
 /// concave creases). `chain_near` and `chain_far` are the two sides' triangles on a chain edge
@@ -118,21 +118,21 @@ pub fn is_opposite_sense_crease(
     crease_is_convex != is_convex(positions, chain_near, chain_far, chain_vertex)
 }
 
-/// C# `EndFaceSense.LeansOffSquare`: facing is the wall normal . the chain's outward direction,
+/// Facing is the wall normal . the chain's outward direction,
 /// below zero here; square is -1.
 pub fn leans_off_square(facing: f64) -> bool {
     (-facing).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI > BACK_FACING_WALL_LEAN_DEGREES
 }
 
-/// Whether `normal` lies in the plane of one of `sides` (C#'s
-/// `sides.Any(s => s.Dot(normal) >= 1 - CoplanarTolerance)`).
+/// Whether `normal` lies in the plane of one of `sides`: its dot with a side's normal is within
+/// the coplanar tolerance of 1.
 fn in_a_side_plane(sides: &[Vector3], normal: Vector3) -> bool {
     sides
         .iter()
         .any(|s| s.dot(normal) >= 1.0 - COPLANAR_TOLERANCE)
 }
 
-/// C# `EndFaceSense.SideRunsPastTheEndPlane`: whether either side's own face carries on past the
+/// Whether either side's own face carries on past the
 /// end plane along its rail: the rail's direction from the end vertex V (`rails` at unit setback),
 /// carried along the chain just past where it meets the end face's plane, still lies on a triangle
 /// in that side's plane. Near V the faces are planar, so the test point is taken a thousandth of
@@ -200,7 +200,7 @@ pub fn side_runs_past_the_end_plane(
     false
 }
 
-/// C# `EndFaceSense.EndRayBounds`: the bound on each rayed end's ray (see [`EndRayBound`]): how far
+/// The bound on each rayed end's ray (see [`EndRayBound`]): how far
 /// along the chain the round's row at the end vertex must be carried for every point of it to meet
 /// the end face's plane, per unit of setback. `None` at an end with no ray, or whose sides or end
 /// face cannot be read.
@@ -228,7 +228,7 @@ pub fn end_ray_bounds(
     (first, last)
 }
 
-/// C#'s local `BoundAt` of `EndRayBounds`.
+/// The bound on one end's ray, for [`end_ray_bounds`]; `None` where the end cannot be read.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn end_ray_bound_at(
     positions: &[Vector3],
@@ -252,8 +252,8 @@ fn end_ray_bound_at(
         let normal = face_normal(positions, t);
         if has(t, next) {
             // The side's direction away from the chain, square to it: where its rail runs at unit
-            // setback. C#'s `First` throws on a triangle with no third corner; such a triangle
-            // has no side to read, so the end cannot be read.
+            // setback. A triangle with no third corner has no side to read, so the end cannot
+            // be read.
             let third = [t.0, t.1, t.2]
                 .into_iter()
                 .find(|&c| c != end && c != next)?;
@@ -370,10 +370,10 @@ fn end_ray_bound_at(
     })
 }
 
-/// A plane as a point on it and its unit normal (C#'s `(Vector3 Point, Vector3 Normal)`).
+/// A plane as a point on it and its unit normal.
 pub type PointPlane = (Vector3, Vector3);
 
-/// C# `EndFaceSense.ConvexEndFaces`: the end face's plane at each CONVEX rayed end - the end vertex
+/// The end face's plane at each CONVEX rayed end - the end vertex
 /// and the face's normal faced on along the chain - for the room reading alone
 /// (`BandRoom.RoomOfCutMesh`): a convex ray keeps its full reach ([`end_ray_bounds`] bounds concave
 /// rays only), but the convex band is clipped at this plane, so a foreign edge wholly beyond it
@@ -442,7 +442,7 @@ pub fn convex_end_faces(
     (first, last)
 }
 
-/// C# `EndFaceSense.ObliqueEnds`: which ends of an open chain end on ONE flat end face that is
+/// Which ends of an open chain end on ONE flat end face that is
 /// OBLIQUE to the chain - the ends whose field carries an end ray (see `ChainField.EndRay`). An end
 /// square to the chain, an end with no end face (a crease dying out) or with several faces past the
 /// two sides reads false, so its field is the plain one, bit for bit.
@@ -468,7 +468,7 @@ pub fn oblique_ends(
     )
 }
 
-/// C# `EndFaceSense.IsOppositeSenseCrease(mesh, chainEdge, edge)`: the working-mesh form - the
+/// The working-mesh form - the
 /// chain edge's two triangles, and the crease's filled triangle as its side and the other as its
 /// far face. `false` where either edge is not two triangles or the crease is not between a filled
 /// and an unfilled one.
@@ -507,11 +507,11 @@ pub fn is_opposite_sense_crease_on(
     )
 }
 
-/// C# `EndFaceSense.IsOppositeSense`: true when EVERY crease incident to `end` between a picked side
+/// True when EVERY crease incident to `end` between a picked side
 /// (tag 1 or 2) and an untagged triangle folds the opposite way to `chain_edge`, and there is at
 /// least one. Since flow rung 3 an oblique end face is taken too: its end carries the end ray, so
 /// the rows run on square to the chain until the end face's plane clips them. The chain edge not
-/// standing on two triangles is the error C# throws.
+/// standing on two triangles is an error.
 pub fn is_opposite_sense(
     positions: &[Vector3],
     indices: &[Corners],
@@ -558,7 +558,7 @@ pub fn is_opposite_sense(
     Ok(creases > 0)
 }
 
-/// C# `EndFaceSense.GrowingCreaseStretch`: at each growing end of the chain (`first_grows`,
+/// At each growing end of the chain (`first_grows`,
 /// `last_grows`), the side-to-end-face creases running from it along the end face's one plane -
 /// the stretch a growing crease runs along. A crease is an edge between one of the chain's own
 /// sides and an end face, with a real fold between them; `own_side` says which tags are the

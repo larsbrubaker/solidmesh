@@ -1,6 +1,5 @@
-//! The pinch ladder: halving the size down from one that pinched until a probe builds. Ports the
-//! nested record struct of `Bevel/LevelLine/PinchLadderSearch.cs` (a C# static class): what a ladder
-//! found ([`PinchLadderSearchPinchLadder`]), with the answer for a ladder that ran out
+//! The pinch ladder: halving the size down from one that pinched until a probe builds. What a
+//! ladder found ([`PinchLadderSearchPinchLadder`]), with the answer for a ladder that ran out
 //! ([`ladder_ran_out`]), who a pinch is charged to ([`who_pinched`]), and the search itself
 //! ([`pinch_room_below`], each probe [`leaves_one_loop_per_side`]).
 
@@ -16,7 +15,7 @@ use super::{
     LevelLineWorkPhase, RoomSource, WorkBudget, WorkError,
 };
 
-/// C# `PinchLadderSearch.PinchLadder`: what a pinch ladder found - the room, how many probes it
+/// What a pinch ladder found - the room, how many probes it
 /// cost, whether every size it tried pinched, and - when the search ran out of work before ANY size
 /// was proven - the allowance it ran out of.
 ///
@@ -45,11 +44,11 @@ pub const PINCH_BISECTIONS: i32 = 3;
 
 /// The answer for a ladder that ran out of work before ANY size was proven: refused for the
 /// budget, with the phase and totals of the allowance it ran out of, the loops and side loops so
-/// far (C#'s nulls are `None`, read as none), and how many probes it got through - so a caller
+/// far (`None` read as none), and how many probes it got through - so a caller
 /// looking at why has the count without running the search again.
 ///
-/// Only asked of a ladder that did run out, which always carries its budget (C# reads it
-/// unguarded; a ladder without one here is a defect and panics as C#'s null dereference would).
+/// Only asked of a ladder that did run out, which always carries its budget; a ladder without one
+/// here is a defect and panics.
 pub fn ladder_ran_out(
     ladder: &PinchLadderSearchPinchLadder,
     loops: Option<Vec<GapLoop>>,
@@ -90,12 +89,11 @@ pub fn who_pinched(side_loops: Option<&[ChainSideLoops]>) -> RoomSource {
     RoomSource::nothing()
 }
 
-/// C# `PinchLadderSearch.PinchRoomBelow`: the largest size below `pinching_size` (a size that
+/// The largest size below `pinching_size` (a size that
 /// pinched) at which the pick's sides each leave their one loop - halving down until a probe
 /// builds, then bisecting the bracket - on ONE allowance for the whole search carrying the
-/// caller's cancellation. A probe that cannot be built at all (C# would throw out of the build)
-/// reads as one that pinched: it left no loop. The caller's cancel leaves as
-/// [`WorkError::Cancelled`], as C#'s `OperationCanceledException` leaves the probe.
+/// caller's cancellation. A probe that cannot be built at all (a fault out of the build) reads as
+/// one that pinched: it left no loop. The caller's cancel leaves as [`WorkError::Cancelled`].
 #[allow(clippy::too_many_arguments)]
 pub fn pinch_room_below(
     positions: &[Vector3],
@@ -225,12 +223,11 @@ pub fn pinch_room_below(
     })
 }
 
-/// C# `PinchLadderSearch.LeavesOneLoopPerSide`: one probe - a topology-only build at `size` on the
+/// One probe - a topology-only build at `size` on the
 /// search's allowance. `None` where the probe ran out of work (it says nothing about the part),
 /// `Some(false)` where it refused or (one chain) a side left other than its one loop.
 ///
-/// A cancel leaves the probe as [`WorkError::Cancelled`] (C#'s `OperationCanceledException`),
-/// ending the whole build.
+/// A cancel leaves the probe as [`WorkError::Cancelled`], ending the whole build.
 #[allow(clippy::too_many_arguments)]
 pub fn leaves_one_loop_per_side(
     positions: &[Vector3],

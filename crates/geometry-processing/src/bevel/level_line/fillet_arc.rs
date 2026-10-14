@@ -1,11 +1,10 @@
-//! A fillet's arc across the band. Ports `Bevel/LevelLine/FilletArc.cs` (a C# static class): so far
-//! its collinear angle, the whole-leg test ([`on_a_whole_leg`]), a sharp joint's seam row
+//! A fillet's arc across the band: its collinear angle, the whole-leg test ([`on_a_whole_leg`]), a
+//! sharp joint's seam row
 //! ([`seam_row`]) and its tolerance, the carried skew arc ([`carried`]) with its rigid turn
 //! ([`turn`]), the smooth step, the bend threshold's cosine, the joint search and the carry's
 //! weight ([`carry_weight`]), and a row end on a joint's seam re-read on its partner's leg
-//! ([`on_the_partners_leg`]); the arcs that
-//! read the level-line mesh land with later packages. The arc point itself is
-//! [`super::gap_fill::arc_point`].
+//! ([`on_the_partners_leg`]); the arcs that read the level-line mesh are in `fillet_arc_rows`. The
+//! arc point itself is [`super::gap_fill::arc_point`].
 
 use vector_math::Vector3;
 
@@ -79,7 +78,7 @@ pub fn on_a_whole_leg(chain: &ChainField, parameter: f64) -> bool {
     sharp_or_end(start) && sharp_or_end(end)
 }
 
-/// C# `FilletArc.SeamRow`: the seam row's points (index 0 and `segments` are `p` and `q`): the
+/// The seam row's points (index 0 and `segments` are `p` and `q`): the
 /// incoming leg's fillet section through the two ends - the arc about the leg's axis through the
 /// apex - each point slid along that leg onto the joint's bisector plane.
 pub fn seam_row(
@@ -111,7 +110,7 @@ pub fn seam_row(
     row
 }
 
-/// C# `FilletArc.SeamTolerance`: how far off a sharp joint's bisector plane (or mitre line) a rail
+/// How far off a sharp joint's bisector plane (or mitre line) a rail
 /// vertex may stand and still be on it: a millionth of the joint's setback plus a millionth of how
 /// far the joint is from the origin.
 ///
@@ -124,16 +123,16 @@ pub fn seam_tolerance(apex: Vector3, setback: f64) -> f64 {
     1e-6 * (setback + apex.length())
 }
 
-/// C# `FilletArc.SmoothStep`: 0 at or below 0, 1 at or above 1, and a smooth cubic between.
+/// 0 at or below 0, 1 at or above 1, and a smooth cubic between.
 pub fn smooth_step(x: f64) -> f64 {
     let x = x.clamp(0.0, 1.0);
     x * x * (3.0 - (2.0 * x))
 }
 
-/// A chain point and the chain's unit direction there (C#'s `(Vector3 Point, Vector3 Tangent)`).
+/// A chain point and the chain's unit direction there (point, tangent).
 pub type ChainSection = (Vector3, Vector3);
 
-/// C# `FilletArc.Carried`: a skew spoke's arc points across a turn of the chain (index 0 and
+/// A skew spoke's arc points across a turn of the chain (index 0 and
 /// `segments` are the ends): as the translating overload, but each end's section is given as a
 /// chain point and the chain's direction there, and is carried to the mean section by the rigid
 /// turn taking its direction onto the mean's. Where all three directions agree it is that
@@ -162,14 +161,14 @@ pub fn carried(
     arc
 }
 
-/// C# `FilletArc.SharpCosine`: the cosine of the chain's bend threshold: a joint whose segments'
+/// The cosine of the chain's bend threshold: a joint whose segments'
 /// directions dot below it is sharp. Asked only of a finite threshold (`AlongTheChain` carries
 /// nothing under an infinite one).
 pub fn sharp_cosine(chain: &ChainField) -> f64 {
     (chain.sharp_turn_degrees * std::f64::consts::PI / 180.0).cos()
 }
 
-/// C# `FilletArc.FirstJointAtOrPast`: the index of the first joint (sorted by parameter) at or
+/// The index of the first joint (sorted by parameter) at or
 /// past `parameter`, by binary search; the count where there is none.
 pub fn first_joint_at_or_past(joints: &[(f64, f64)], parameter: f64) -> usize {
     let mut low = 0;
@@ -186,7 +185,7 @@ pub fn first_joint_at_or_past(joints: &[(f64, f64)], parameter: f64) -> usize {
     low
 }
 
-/// C# `FilletArc.Turn`: `vector` turned by the rotation taking unit `from` onto unit `to`.
+/// `vector` turned by the rotation taking unit `from` onto unit `to`.
 pub fn turn(from: Vector3, to: Vector3, vector: Vector3) -> Vector3 {
     let mut axis = from.cross(to);
     let sin = axis.length();
@@ -199,7 +198,7 @@ pub fn turn(from: Vector3, to: Vector3, vector: Vector3) -> Vector3 {
     (vector * cos) + (axis.cross(vector) * sin) + (axis * (axis.dot(vector) * (1.0 - cos)))
 }
 
-/// C# `FilletArc.CarryWeight`: how much of the carried drawing a row takes: 1 well inside a gentle
+/// How much of the carried drawing a row takes: 1 well inside a gentle
 /// run, falling smoothly to 0 within one setback of a sharp joint - that joint's own setback, so one
 /// steep spot does not widen every window - measured from the span `low` to `high` (unwrapped
 /// parameters), and falling from half the bend threshold to 0 at it as the turn between the row's
@@ -224,7 +223,7 @@ pub fn carry_weight(
     let reach = 2.0 * chain.max_setback;
     let length = chain.length;
     let mut away_from_joints: f64 = 1.0;
-    // C#'s (int)Math.Floor: the laps are small counts.
+    // Floored, then cast: the laps are small counts, so the cast never saturates.
     let first_lap = if chain.is_closed {
         ((low - reach) / length).floor() as i32
     } else {
@@ -263,7 +262,7 @@ pub fn carry_weight(
     gentle * away_from_joints
 }
 
-/// C# `FilletArc.TangentAt`: the chain's unit tangent at `parameter`, blended across each joint
+/// The chain's unit tangent at `parameter`, blended across each joint
 /// between the two segments' midpoints so it turns smoothly - except at a sharp joint, where it
 /// keeps its own segment's direction (the bisector exactly at the vertex).
 pub fn tangent_at(chain: &ChainField, parameter: f64) -> Vector3 {
@@ -309,11 +308,10 @@ pub fn tangent_at(chain: &ChainField, parameter: f64) -> Vector3 {
     ((own * (1.0 - share)) + (other * share)).get_normal()
 }
 
-/// A row end as the carry reads it: its vertex, chain parameter, tie span and lap (C#'s
-/// `(int Vertex, double At, (double Low, double High) Span, double Lap)`).
+/// A row end as the carry reads it: its vertex, chain parameter, tie span (low, high) and lap.
 pub type RowEnd = (i32, f64, (f64, f64), f64);
 
-/// C# `FilletArc.OnThePartnersLeg`: a row end standing on a sharp joint's SEAM - equidistant from
+/// A row end standing on a sharp joint's SEAM - equidistant from
 /// the joint's two legs, so either leg's fillet passes through it - re-read on the leg its partner
 /// stands nearer, at its foot on that leg; any other end as it was.
 ///
@@ -333,7 +331,7 @@ pub fn on_the_partners_leg(
     let length = chain.length;
     let position = mesh.position(end.0);
     let partner = mesh.position(partner_end.0);
-    // The joint's own wrap, round the loop whatever the chain (C#'s local `Wrapped`).
+    // The joint's own wrap, round the loop whatever the chain.
     let wrapped = |parameter: f64| {
         let parameter = parameter % length;
         if parameter < 0.0 {

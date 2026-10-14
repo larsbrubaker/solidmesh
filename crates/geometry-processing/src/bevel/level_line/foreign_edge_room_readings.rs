@@ -1,6 +1,6 @@
-//! The room foreign features leave a chain: the readings over the foreign edges. Ports the room
-//! readings of `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class; its constants, knife test and
-//! edge lists are in `foreign_edge_room.rs`): whether every edge's value stands above zero at a
+//! The room foreign features leave a chain: the readings over the foreign edges (the constants,
+//! knife test and edge lists are in `foreign_edge_room.rs`): whether every edge's value stands
+//! above zero at a
 //! trial size ([`every_value_is_above_zero`]), the bisection every room reading ends in
 //! ([`bisect`]) and where the edge that sets the room comes nearest the chain
 //! ([`where_the_room_is_set`]), and the bracket read off one pass of the bare field
@@ -21,10 +21,11 @@ use super::{foreign_room_counters, ChainField, LevelLineMesh, LevelLineWork, Wor
 /// A foreign edge as (low, high, the other chain's extra unit setback taken off it).
 pub type ForeignEdge = (i32, i32, f64);
 
-/// The field at a trial size (C#'s `Func<double, ChainField>`).
+/// The field at a trial size.
 pub type FieldAt<'a> = &'a dyn Fn(f64) -> ChainField;
 
-/// C#'s `Enumerable.Min` / `Max` over doubles: (least, NaN if any is; greatest, NaN only if all).
+/// The least and greatest of `values`: the least is NaN if any value is (a broken reading is
+/// never hidden), the greatest only if all are.
 fn least_and_greatest(values: &[f64]) -> (f64, f64) {
     let mut least = values[0];
     let mut most = values[0];
@@ -43,7 +44,7 @@ fn least_and_greatest(values: &[f64]) -> (f64, f64) {
     (least, most)
 }
 
-/// C# `ForeignEdgeRoom.WhereTheRoomIsSet`: where the edge that sets `room` comes nearest the
+/// Where the edge that sets `room` comes nearest the
 /// chain: ranked as the room reading ranks, by closest approach over its setback where the setback
 /// is one number, and otherwise by the least field value at the room itself, where that edge is the
 /// one the band has just reached. Read only once the room is known, so it costs a room nothing.
@@ -76,7 +77,7 @@ pub fn where_the_room_is_set(
     Ok(at)
 }
 
-/// C# `ForeignEdgeRoom.EveryValueIsAboveZero`: whether EVERY foreign edge's field value stands
+/// Whether EVERY foreign edge's field value stands
 /// above zero at one trial size - the only thing a bisection or doubling step asks of the least
 /// value, so the reading stops at the first edge that answers it. The other chain's own setback is
 /// taken off at the largest it reads over the edge. "Not above" rather than "at or below", so a
@@ -103,7 +104,7 @@ pub fn every_value_is_above_zero(
     Ok(true)
 }
 
-/// C# `ForeignEdgeRoom.Bisect`: the fixed bisection every room reading ends in - the size between
+/// The fixed bisection every room reading ends in - the size between
 /// `lo` and `hi` at which the least value is zero.
 pub fn bisect(
     mesh: &LevelLineMesh,
@@ -131,7 +132,7 @@ pub struct BarePassBracket {
     /// True where the bracket holds; false sends the room reading down its doubling path.
     pub bracketed: bool,
     /// The edges the bisection still has to read (those whose lower end stands at or below the
-    /// bracket's upper end); `None` where nothing was bracketed (C# leaves its `ref` untouched).
+    /// bracket's upper end); `None` where nothing was bracketed.
     pub searched: Option<Vec<ForeignEdge>>,
     /// The bracket's low end: a size at which every value is still at or above zero.
     pub lo: f64,
@@ -141,7 +142,7 @@ pub struct BarePassBracket {
     pub touches_the_chain: bool,
 }
 
-/// C# `ForeignEdgeRoom.BracketFromOneBarePass`: brackets the room from ONE pass of the BARE field
+/// Brackets the room from ONE pass of the BARE field
 /// (setback zero) over the foreign edges: with every unit setback in [`lowest_unit`,
 /// `highest_unit`] and positive, each edge's critical size lies in
 /// [approach / (highest + extra), approach / (lowest + extra)], so the room lies between the least
@@ -205,7 +206,7 @@ pub fn bracket_from_one_bare_pass(
     Ok(answer)
 }
 
-/// C# `ForeignEdgeRoom.RoomFor`: the room the `foreign` edges leave the chain - the size at which
+/// The room the `foreign` edges leave the chain - the size at which
 /// the band first reaches one of them; +infinity with none. Where the chain asks ONE setback per
 /// unit of size the room is read in one pass of the bare field (each edge's closest approach over
 /// its share of the setback - the two bands close on each other from both ends of the approach).
@@ -284,7 +285,7 @@ pub fn room_for(
     bisect(mesh, &searched, field_at, lo, hi)
 }
 
-/// C# `ForeignEdgeRoom.RoomFromIndex`: the same room as [`room_for`], read off a SPATIAL INDEX of
+/// The same room as [`room_for`], read off a SPATIAL INDEX of
 /// the pick's foreign edges rather than a pass over all of them: the chain's own edges (`exempt`)
 /// aside, the answer is the same number. The nearest-first search reads each edge's bare approach
 /// once, the uniform setback answers outright, and otherwise the bracket [least / highest,
@@ -372,7 +373,7 @@ pub fn room_from_index(
 
     let lo = found.least / highest_unit;
     let hi = found.least / lowest_unit;
-    // Unreachable with a positive least approach and a positive unit setback (C# throws).
+    // Unreachable with a positive least approach and a positive unit setback.
     assert!(
         lo > 0.0 && !hi.is_infinite(),
         "a positive approach and unit setback did not bracket"

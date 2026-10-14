@@ -1,6 +1,6 @@
 // A multiply-and-rotate hasher for the small integer keys the level line files edges under (the
-// FxHash scheme), in place of std's SipHash. C#'s `Dictionary<(int, int), ...>` hashes a pair of
-// ints with a couple of arithmetic operations; SipHash costs several times that and its DoS
+// FxHash scheme), in place of std's SipHash. A pair of ints hashes with a couple of arithmetic
+// operations this way; SipHash costs several times that and its DoS
 // resistance means nothing for keys the kernel makes itself. Used only with `IndexMap`, whose
 // iteration order is insertion order whatever the hash, so no output can depend on the hasher.
 

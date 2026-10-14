@@ -1,11 +1,11 @@
-//! What a room reading found, and what it cost ([`RoomReading`]). Ports
-//! `Bevel/LevelLine/RoomReading.cs`: the type (its field initializers are `Default`) and its
+//! What a room reading found, and what it cost ([`RoomReading`]): the type (its initial values
+//! are `Default`) and its
 //! derived readings ([`RoomReading::unbounded`], [`RoomReading::is_a_size_statement`]).
 
 use super::{LevelLineWorkPhase, RoomCandidate, RoomSource};
 
-/// C# `RoomReading`: what a room reading found, and what it cost. The `true`, `-1` and
-/// `RoomSource.Nothing` defaults are C#'s initializers, which is why `Default` is written out
+/// What a room reading found, and what it cost. The `true`, `-1` and
+/// `RoomSource::nothing()` defaults mean "nothing read yet", which is why `Default` is written out
 /// rather than derived.
 ///
 /// The room answers "how big may this bevel be" only when the reading got through and every named

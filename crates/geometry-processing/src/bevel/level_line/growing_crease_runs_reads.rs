@@ -1,5 +1,5 @@
-//! The readings of [`GrowingCreaseRuns`] (`LevelLine/GrowingCreaseRuns.cs`, its methods past the
-//! constructor): whether a crease grows, the straight run it belongs to and that run's far end,
+//! The readings of [`GrowingCreaseRuns`] past its constructor: whether a crease grows, the
+//! straight run it belongs to and that run's far end,
 //! the far creases that bound a growing run, the ridges off the chain's crease, and the size at
 //! which a ridge first pierces the round (the fillet pierce room). Split from
 //! `growing_crease_runs.rs` by responsibility.
@@ -17,7 +17,7 @@ use super::{
 pub type ChainSides = (Vector3, Vector3, Vector3, Vector3, Vector3);
 
 impl GrowingCreaseRuns {
-    /// C# `FilletPierceRoom`: the least size at which a ridge rising out of the chain's crease
+    /// The least size at which a ridge rising out of the chain's crease
     /// pierces the round (as built of `fillet_segments` chords, or the true round for 0), over every
     /// unit setback the chain carries - infinity where no ridge does.
     pub fn fillet_pierce_room(&self, unit_setback: &[f64], fillet_segments: i32) -> f64 {
@@ -94,7 +94,7 @@ impl GrowingCreaseRuns {
         room
     }
 
-    /// C# `Least`: `room`, lowered for a fillet to every growing run's pierce room.
+    /// `room`, lowered for a fillet to every growing run's pierce room.
     pub fn least(
         room: f64,
         growing: &[GrowingCreaseRuns],
@@ -111,7 +111,7 @@ impl GrowingCreaseRuns {
         })
     }
 
-    /// C# `ChainSides`: the chain edge's two sides (one triangle tagged 1, one tagged 2), or
+    /// The chain edge's two sides (one triangle tagged 1, one tagged 2), or
     /// `None` where it has not exactly one of each.
     pub fn chain_sides(&self, chain_edge: (i32, i32)) -> Option<ChainSides> {
         let mesh = self.mesh.borrow();
@@ -148,12 +148,12 @@ impl GrowingCreaseRuns {
         Some((a0, along, n1, t1, self.normal(second)))
     }
 
-    /// C# `Grows`: whether `edge` is a crease of the opposite sense to the chain's first leg.
+    /// Whether `edge` is a crease of the opposite sense to the chain's first leg.
     pub fn grows(&self, edge: (i32, i32)) -> bool {
         end_face_sense::is_opposite_sense_crease_on(&self.mesh.borrow(), self.chain_edge, edge)
     }
 
-    /// C# `FarEnd`: the end of `edge`'s straight growing run farther from the chain, cached for
+    /// The end of `edge`'s straight growing run farther from the chain, cached for
     /// every piece of the run.
     pub fn far_end(&self, edge: (i32, i32)) -> Result<i32, WorkError> {
         let key = triangle_edges::key(edge.0, edge.1);
@@ -183,7 +183,7 @@ impl GrowingCreaseRuns {
         Ok(far)
     }
 
-    /// C# `Bounds`: the far creases bounding `edge`'s growing run (cached, `None` included), each
+    /// The far creases bounding `edge`'s growing run (cached, `None` included), each
     /// noted as a far bound.
     pub fn bounds_of(
         &self,
@@ -205,7 +205,7 @@ impl GrowingCreaseRuns {
         Ok(result)
     }
 
-    /// C# `ReadBounds`: for a growing crease on one of the chain's own sides whose run ends at no
+    /// For a growing crease on one of the chain's own sides whose run ends at no
     /// chain end, the boundary creases of the far triangle's coplanar untagged region - less the
     /// run itself, the ridges out of its NEAR end (noted as ridges instead) and creases at a chain
     /// end.
@@ -320,7 +320,7 @@ impl GrowingCreaseRuns {
         ))
     }
 
-    /// C# `IsRidgeOffTheChainsCrease`: whether `edge` is a noted ridge whose near end stands on
+    /// Whether `edge` is a noted ridge whose near end stands on
     /// the chain's crease (an edge between sides 1 and 2).
     pub fn is_ridge_off_the_chains_crease(&self, edge: (i32, i32)) -> bool {
         let key = triangle_edges::key(edge.0, edge.1);
@@ -350,7 +350,7 @@ impl GrowingCreaseRuns {
         false
     }
 
-    /// C# `Walk`: from `at` (arrived at from `from`), on along growing creases that run straight
+    /// From `at` (arrived at from `from`), on along growing creases that run straight
     /// on, adding each to `pieces`; the vertex it stops at.
     pub fn walk(
         &self,
@@ -404,7 +404,7 @@ impl GrowingCreaseRuns {
         }
     }
 
-    /// C# `Adjacency`: every vertex's neighbours along the mesh's edges, each edge charged.
+    /// Every vertex's neighbours along the mesh's edges, each edge charged.
     pub fn adjacency(mesh: &super::LevelLineMesh) -> Result<HashMap<i32, Vec<i32>>, WorkError> {
         let mut neighbours = HashMap::new();
         for (low, high) in mesh.edges() {
@@ -416,7 +416,7 @@ impl GrowingCreaseRuns {
         Ok(neighbours)
     }
 
-    /// C#'s `neighbours ??= Adjacency(mesh)`.
+    /// Builds the vertex-to-edge adjacency the first time a walk needs it, and only then.
     fn ensure_adjacency(&self) -> Result<(), WorkError> {
         if self.neighbours.borrow().is_none() {
             let built = GrowingCreaseRuns::adjacency(&self.mesh.borrow())?;

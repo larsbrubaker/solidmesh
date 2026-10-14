@@ -1,13 +1,13 @@
 //! What is wrong with a pick ([`PickFault`]), carried from the validation to whichever entry
-//! point asked. Ports `Bevel/LevelLine/PickFault.cs`: the record (its initializers are `Default`) and its
+//! point asked: the record (its initial values are `Default`) and its
 //! conversions to a [`BandGapResult`] and a [`RoomReading`], which read the budget's totals but
 //! charge nothing.
 
 use super::{BandGapRefusal, BandGapResult, RoomReading, WorkBudget};
 
-/// C# `PickFault`: a refusal and the chains, vertex or edge it is about. Never thrown: every fault
+/// A refusal and the chains, vertex or edge it is about. Never thrown: every fault
 /// here is a statement about the pick and the mesh under it, which leaves by name. The `-1`
-/// defaults are C#'s initializers, which is why `Default` is written out rather than derived.
+/// defaults mean "none named", which is why `Default` is written out rather than derived.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PickFault {
     /// Why the pick was refused.

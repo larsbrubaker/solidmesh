@@ -1,6 +1,6 @@
 //! The end regions of a pick of SEVERAL chains, read after the side tagging has grouped their
 //! sides: each free end's region becomes a group of its own (`BandGroup::end_of`), or joins the
-//! side group it lands on. Ports `Bevel/LevelLine/PickEndFloods.cs`.
+//! side group it lands on.
 
 use std::collections::HashSet;
 
@@ -11,12 +11,12 @@ use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::band_side_tagging_ends::{end_regions_of, SideTaggingError};
 use super::{BandGroup, ChainField};
 
-/// C# `PickEndFloods.FloodPickEnds`: every FREE end of an open chain (an end no other chain of the
+/// Every FREE end of an open chain (an end no other chain of the
 /// pick reaches) that stands on an end face gets that face's region flooded exactly as the chain
 /// alone would flood it, tagged as a new group after the side groups with the one chain as its
 /// member and `end_of` naming it; a free end whose end face is another chain's side joins that
 /// side group instead (`join_the_side_it_ends_on`). `end_rays` and `end_face_reaches` are `None`
-/// where C# passes null.
+/// where the caller has none to give.
 #[allow(clippy::too_many_arguments)]
 pub fn flood_pick_ends(
     positions: &[Vector3],
@@ -94,7 +94,7 @@ pub fn flood_pick_ends(
                 continue;
             }
 
-            // C# `groups.FindIndex(sides, ...)`: the first end group the region already carries.
+            // The first end group the region already carries.
             let shared =
                 (sides..groups.len()).find(|&g| region.iter().any(|&t| tags[t] == groups[g].tag));
             if let Some(s) = shared {
@@ -106,7 +106,7 @@ pub fn flood_pick_ends(
                     members.push(k as i32);
                 }
                 members.sort();
-                // C#'s initialiser names only these four, so the rest return to their defaults.
+                // Only these four carry over; the rest return to their defaults.
                 groups[s] = BandGroup {
                     tag: joined.tag,
                     members,
@@ -145,7 +145,7 @@ pub fn flood_pick_ends(
     Ok(())
 }
 
-/// C# `PickEndFloods.JoinTheSideItEndsOn`: a free end whose end face is ANOTHER chain's side
+/// A free end whose end face is ANOTHER chain's side
 /// region, so the end flood carved nothing: the end region is flooded again reading the other
 /// chains' sides as open, and the chain joins each side group that region lies in as an end
 /// member. An OBLIQUE end (one carrying the end ray) floods nothing; it joins every side group
@@ -226,7 +226,7 @@ fn join_the_side_it_ends_on(
             .map(|t| side_tags[t])
             .collect()
     };
-    // C# `Distinct().OrderBy(t => t)`: the order is the sort's, so the dedup after it is the same.
+    // The order is the sort's, so the dedup after it is the same.
     landed.sort();
     landed.dedup();
 
@@ -249,7 +249,7 @@ fn join_the_side_it_ends_on(
         };
         let mut side_of = joined.side_of_chain.clone();
         side_of.insert(k, joined.tag);
-        // C#'s initialiser leaves out `CarriedEnds`, so it returns to its default.
+        // Every field but `carried_ends` carries over; that one returns to its default.
         groups[index] = BandGroup {
             tag: joined.tag,
             members: with_k(&joined.members),

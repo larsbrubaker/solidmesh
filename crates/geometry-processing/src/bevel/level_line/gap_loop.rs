@@ -1,8 +1,7 @@
-//! One boundary of a level-line gap: where the kept surface ends, on one side of the chain. Ports
-//! `Bevel/LevelLine/GapLoop.cs`.
+//! One boundary of a level-line gap: where the kept surface ends, on one side of the chain.
 
-/// C# `GapLoop`. The get-only properties are public fields here; C#'s internal init-only ones
-/// (`VertexOwners`, `GroupTag`, `VertexTies`) are too, set after [`GapLoop::new`].
+/// One gap boundary. Every field is public; the vertex owners, group tag and vertex ties are set
+/// after [`GapLoop::new`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct GapLoop {
     /// The chain of the pick this loop is OWNED by: the chain that is the field's minimiser at
@@ -55,8 +54,8 @@ pub struct GapLoop {
 }
 
 impl GapLoop {
-    /// C#'s constructor. C#'s optional arguments (`chain = 0`, `hasMixedOwners = false`,
-    /// `owners = null`) are explicit here; `owners: None` reads as `[chain]`, as in C#.
+    /// A loop from its side, closure, vertices and parameters. The usual call passes chain 0, no
+    /// mixed owners and no owners; `owners: None` reads as `[chain]`.
     pub fn new(
         side: i32,
         is_closed: bool,

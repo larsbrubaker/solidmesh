@@ -1,13 +1,13 @@
-//! Point mode's build (`Bevel/LevelLine/PointBevel.cs`: `PointBevel`, `PointBevelKind`,
-//! `PointBevelRefusal`, `PointBevelResult`, `PointBevelBuild` and the private `PointShape`): a
+//! Point mode's build (`PointBevelKind`, `PointBevelRefusal`, `PointBevelResult`,
+//! `PointBevelBuild` and the private `PointShape`): a
 //! picked vertex bevelled on its own, the one-hole design with no chains. The kernel's level-line
 //! cut runs a [`PointField`] (sphere for a fillet, plane for a chamfer), removes the cap, and the
 //! one boundary loop it leaves is closed by [`hole_fill`] (fillet, cross-tangents down the surface
 //! toward the point) or [`flat_hole_fill`] (chamfer). The star each point is read from is
 //! [`PointStar`].
 //!
-//! C#'s exceptions out of the cut (the work budget, a cancel, a mesh that refused an edit) leave
-//! as [`PointBevelFault`].
+//! Faults out of the cut (the work budget, a cancel, a mesh that refused an edit) leave as
+//! [`PointBevelFault`].
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -24,14 +24,14 @@ use super::{
     LevelLineMeshError, PointField, ScalarField, VertexFieldReading, WorkError,
 };
 
-/// C# `PointBevelKind`: a point bevel's profile.
+/// A point bevel's profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PointBevelKind {
     Fillet,
     Chamfer,
 }
 
-/// C# `PointBevelRefusal`: why a point bevel refused; `None` when it built.
+/// Why a point bevel refused; `None` when it built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PointBevelRefusal {
     #[default]
@@ -48,7 +48,7 @@ pub enum PointBevelRefusal {
     DidNotClose,
 }
 
-/// C# `PointBevelResult`: what a point bevel built, or why it refused.
+/// What a point bevel built, or why it refused.
 #[derive(Debug, Clone)]
 pub struct PointBevelResult {
     /// Why it refused, by name; `None` when built.
@@ -80,13 +80,13 @@ impl PointBevelResult {
         }
     }
 
-    /// C# `Built`.
+    /// Whether the point was bevelled: no refusal.
     pub fn is_built(&self) -> bool {
         self.refusal.is_none()
     }
 }
 
-/// C# `PointBevelBuild`: what a several-point [`build`] made.
+/// What a several-point [`build`] made.
 #[derive(Debug, Clone)]
 pub struct PointBevelBuild {
     /// The part with every built point bevelled, or `None` when none built.
@@ -95,12 +95,12 @@ pub struct PointBevelBuild {
     pub points: Vec<PointBevelResult>,
 }
 
-/// How a point bevel leaves by a fault: C#'s exceptions out of the cut.
+/// How a point bevel leaves by a fault out of the cut.
 #[derive(Debug, Clone)]
 pub enum PointBevelFault {
-    /// C# `WorkBudgetExceededException` / `WorkCanceledException`.
+    /// The work budget ran out, or the caller cancelled.
     Work(WorkError),
-    /// Anything else C# would throw, named by its message.
+    /// Any other fault, named by its message.
     Defect(String),
 }
 
@@ -158,7 +158,7 @@ impl From<NegativeSnap> for PointBevelFault {
 /// ball: a faceted cone's ring leaves each facet's tangent point by a few percent at 40 sides.
 const BALL_FIT: f64 = 0.05;
 
-/// C# `Build(positions, triangles, vertex, size, ...)`: bevels `vertex` of the welded mesh at
+/// Bevels `vertex` of the welded mesh at
 /// `size` - the ball radius for a fillet, the setback along the vertex's edges for a chamfer.
 /// `segments` sets the fillet's density.
 pub fn build_one(
@@ -181,7 +181,7 @@ pub fn build_one(
     Ok(built.points.swap_remove(0))
 }
 
-/// C# `Build(positions, triangles, points, ...)`: bevels every one of `points` (a vertex of the
+/// Bevels every one of `points` (a vertex of the
 /// welded mesh and its size) in one build, each read on the mesh as given - so no point is looked
 /// for on another's cut. A point whose ring would reach another point's ring is refused by size
 /// (`TooLarge`), with the room beside the other's ring, and so is the other: neither is built first
@@ -225,7 +225,7 @@ pub fn build(
         };
 
         let room = star.room(kind, per_size, inward);
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(size > 0)`, NaN included.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(size > 0)` refuses a NaN size too.
         if !(size > 0.0) {
             results[i] = Some(PointBevelResult::refused(
                 PointBevelRefusal::NoShape,
@@ -345,12 +345,12 @@ impl Default for PointBevelResult {
     }
 }
 
-/// C# `Snap`.
+/// The snap a point bevel's cut reads by: a billionth of the setback, never under 1e-9.
 fn snap(setback: f64) -> f64 {
     1e-9 * setback.max(1.0)
 }
 
-/// C# `Cut`: cuts one point's ring into `mesh` and fills it; the refusal in words, or `None` when
+/// Cuts one point's ring into `mesh` and fills it; the refusal in words, or `None` when
 /// built.
 fn cut(
     mesh: &Rc<RefCell<LevelLineMesh>>,
@@ -484,7 +484,7 @@ fn cut(
     Ok(None)
 }
 
-/// C# `Room`: the largest size `vertex` takes - where the ring first reaches a feature.
+/// The largest size `vertex` takes - where the ring first reaches a feature.
 pub fn room(
     positions: &[Vector3],
     triangles: &[(i32, i32, i32)],
@@ -499,7 +499,7 @@ pub fn room(
     }
 }
 
-/// C# `FillOrder`: the ring in the order the fill wants - the kept surface runs its boundary one
+/// The ring in the order the fill wants - the kept surface runs its boundary one
 /// way, and the fills want it walked the other way.
 fn fill_order(mesh: &LevelLineMesh, ring: &[i32]) -> Result<Vec<i32>, PointBevelFault> {
     let mut ring = ring.to_vec();
@@ -519,7 +519,7 @@ fn fill_order(mesh: &LevelLineMesh, ring: &[i32]) -> Result<Vec<i32>, PointBevel
     Ok(ring)
 }
 
-/// C# `KeptNormalAt`.
+/// The unit normal of the one kept triangle on boundary edge `a b`.
 fn kept_normal_at(mesh: &LevelLineMesh, a: i32, b: i32) -> Result<Vector3, PointBevelFault> {
     let t = mesh.triangles()[the_single_triangle_on(mesh, a, b)? as usize];
     let p = mesh.position(t.a);
@@ -528,8 +528,8 @@ fn kept_normal_at(mesh: &LevelLineMesh, a: i32, b: i32) -> Result<Vector3, Point
         .get_normal())
 }
 
-/// C#'s `TrianglesOn(a, b).Single()`: the one kept triangle on a boundary edge, or the fault C#'s
-/// LINQ throws (divergence 5036).
+/// The one kept triangle on a boundary edge, or a [`PointBevelFault::Defect`] where the edge is
+/// not on exactly one: an error the caller sees, never a panic.
 fn the_single_triangle_on(mesh: &LevelLineMesh, a: i32, b: i32) -> Result<i32, PointBevelFault> {
     match mesh.triangles_on(a, b) {
         [only] => Ok(*only),
@@ -539,7 +539,7 @@ fn the_single_triangle_on(mesh: &LevelLineMesh, a: i32, b: i32) -> Result<i32, P
     }
 }
 
-/// C# `PointShape`: a point read for the build - where it is, its size, its star's shape and its
+/// A point read for the build - where it is, its size, its star's shape and its
 /// room.
 #[derive(Debug, Clone)]
 struct PointShape {

@@ -1,9 +1,8 @@
 //! The part of a picked edge's round that runs out through its END FACE at a mitred pair corner
 //! ([`PairCornerEndFaceField`]), and the scope that turns it off for a flow
-//! ([`PairCornerEndFaceFieldScope`]). Ports the types of
-//! `Bevel/LevelLine/PairCornerEndFaceField.cs`, with the bridges of a vertex graph ([`bridges`]); the
-//! construction and field queries are in `pair_corner_end_face_field_queries.rs`, and the finder
-//! lands with a later package. The per-flow gate is a switch on the build's [`WorkBudget`](super::WorkBudget).
+//! ([`PairCornerEndFaceFieldScope`]): the types, with the bridges of a vertex graph ([`bridges`]);
+//! the construction and field queries are in `pair_corner_end_face_field_queries.rs`. The per-flow
+//! gate is a switch on the build's [`WorkBudget`](super::WorkBudget).
 
 use std::collections::{HashMap, HashSet};
 
@@ -11,7 +10,7 @@ use vector_math::Vector3;
 
 use super::{triangle_edges, LevelLineWork};
 
-/// C# `PairCornerEndFaceField`: the part of a picked edge's round that runs out through its END
+/// The part of a picked edge's round that runs out through its END
 /// FACE at a mitred pair corner - negative in the prism the round's cylinder leaves in front of it
 /// (between the two tangent planes through the round's axis, outside the cylinder), so a group
 /// holding that end face reads the least of it and its pick field (`BandGroupFields`) and cuts the
@@ -43,10 +42,11 @@ pub struct PairCornerEndFaceField {
     pub planes: Vec<(Vector3, f64)>,
 }
 
-/// C# `PairCornerEndFaceField.Scope`: turns the end-face field off for the build in force until
+/// Turns the end-face field off for the build in force until
 /// it is dropped, which puts back what was there before. The switch lives on the build's
-/// [`WorkBudget`](super::WorkBudget) (C#'s `AsyncLocal`, per the bevel-core decision that per-flow switches travel
-/// with the build); with no budget in force there is no build to switch and the scope does nothing.
+/// [`WorkBudget`](super::WorkBudget), so the switch travels with the build and never reaches
+/// another build running beside it; with no budget in force there is no build to switch and the
+/// scope does nothing.
 #[derive(Debug)]
 #[must_use = "the field stays off only while the scope is alive"]
 pub struct PairCornerEndFaceFieldScope {
@@ -55,7 +55,7 @@ pub struct PairCornerEndFaceFieldScope {
 }
 
 impl PairCornerEndFaceFieldScope {
-    /// C#'s `Scope()`: remembers the setting and turns the field off.
+    /// Remembers the setting and turns the field off.
     pub fn new() -> Self {
         let was = LevelLineWork::current()
             .is_some_and(|budget| budget.pair_corner_end_face_field_off.replace(true));
@@ -70,7 +70,7 @@ impl Default for PairCornerEndFaceFieldScope {
 }
 
 impl Drop for PairCornerEndFaceFieldScope {
-    /// C#'s `Dispose`: puts back what was there before.
+    /// Puts back what was there before.
     fn drop(&mut self) {
         if let Some(budget) = LevelLineWork::current() {
             budget.pair_corner_end_face_field_off.set(self.was);
@@ -134,8 +134,8 @@ pub fn bridges(neighbours: &HashMap<i32, Vec<i32>>) -> HashSet<(i32, i32)> {
 }
 
 impl PairCornerEndFaceField {
-    /// Whether the end-face field is on for the build in force (on wherever no budget is, as C#'s
-    /// flow default is).
+    /// Whether the end-face field is on for the build in force (on wherever no budget is: on is
+    /// the default).
     pub fn on() -> bool {
         LevelLineWork::current().is_none_or(|budget| !budget.pair_corner_end_face_field_off.get())
     }
@@ -164,7 +164,7 @@ impl PairCornerEndFaceField {
 }
 
 impl PairCornerEndFaceField {
-    /// C# `PairCornerEndFaceField.Find`: at every corner where exactly two picked chain edges meet
+    /// At every corner where exactly two picked chain edges meet
     /// on a bridge of the pick graph, share one face and turn CONVEX across an unpicked feature
     /// crease between their own faces, the end-face field of each edge whose round runs out
     /// through the other's face - filed under every group a triangle of that end face at the

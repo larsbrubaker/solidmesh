@@ -1,7 +1,6 @@
-//! The room past a GROWING neighbour, in closed form ([`GrowingCreaseRuns`]). Ports the type of
-//! `Bevel/LevelLine/GrowingCreaseRuns.cs`, with its constructor, constants and adjacency helper
-//! ([`GrowingCreaseRuns::add`]); the run walks, the bounds and the fillet pierce room land with the
-//! room-reading method package.
+//! The room past a GROWING neighbour, in closed form ([`GrowingCreaseRuns`]): the type, its
+//! constructor, constants and adjacency helper ([`GrowingCreaseRuns::add`]); the run walks, the
+//! bounds and the fillet pierce room are in `growing_crease_runs_reads.rs`.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -12,17 +11,17 @@ use vector_math::Vector3;
 use super::triangle_edges;
 use super::{LevelLineMesh, LevelLineTriangle};
 
-/// The distance from a point to the chain (C# `Func<Vector3, double>`).
+/// The distance from a point to the chain.
 pub type DistanceToChain = Rc<dyn Fn(Vector3) -> f64>;
 
-/// Whether a triangle tag is one of a chain's own sides (C# `Func<int, bool>`).
+/// Whether a triangle tag is one of a chain's own sides.
 pub type IsOwnSide = Rc<dyn Fn(i32) -> bool>;
 
 /// Per walked crease piece, the edges that bound the room past it, as (low, high) edges - `None`
-/// where the piece bounds nothing (C# caches its null too).
+/// where the piece bounds nothing (cached too, so it is not walked again).
 pub type CreaseBounds = HashMap<(i32, i32), Option<Vec<(i32, i32)>>>;
 
-/// C# `GrowingCreaseRuns`: the room past a GROWING neighbour C (flow rung 2), in closed form. An
+/// The room past a GROWING neighbour C (flow rung 2), in closed form. An
 /// opposite-sense crease does not bound the room where the band first reaches it: the rows run on
 /// virtually past it and C's plane clips them (`VirtualRail`, `StripClip`). What bounds it is C's
 /// cap reaching a SECOND crease of C.
@@ -30,9 +29,9 @@ pub type CreaseBounds = HashMap<(i32, i32), Option<Vec<(i32, i32)>>>;
 /// The refinement splits creases, so the run is walked over collinear opposite-sense pieces, once
 /// per crease, on a vertex-to-edge adjacency built once per room read and only when a growing
 /// crease is met; every piece on a walked run is cached with its answer. Each step of a walk is
-/// charged to the work budget. The C# fills those caches from its queries through whatever
-/// reference the caller holds (`ForeignEdgeRegions.GrowingFor` hands the same runs to every
-/// reader), so the caches are interior-mutable here and the runs are shared through `Rc`.
+/// charged to the work budget. The queries fill those caches through whatever reference the
+/// caller holds (`ForeignEdgeRegions::growing_for` hands the same runs to every reader), so the
+/// caches are interior-mutable and the runs are shared through `Rc`.
 pub struct GrowingCreaseRuns {
     /// The working mesh the runs are walked on.
     pub mesh: Rc<RefCell<LevelLineMesh>>,
@@ -77,15 +76,15 @@ impl std::fmt::Debug for GrowingCreaseRuns {
 }
 
 impl GrowingCreaseRuns {
-    /// C# `GrowingCreaseRuns.GrazingMargin`: how much faster than the radius the ridge's distance
+    /// How much faster than the radius the ridge's distance
     /// from the axis must grow for its exit root to be read.
     pub const GRAZING_MARGIN: f64 = 1e-6;
 
-    /// C# `GrowingCreaseRuns.RootFloor`: a root below this fraction of the chain edge's length is
+    /// A root below this fraction of the chain edge's length is
     /// rounding, not a size.
     pub const ROOT_FLOOR: f64 = 1e-9;
 
-    /// C#'s constructor (with the field initializers: empty caches, no adjacency yet). `None` for
+    /// The runs with empty caches and no adjacency yet. `None` for
     /// `chain_edges` (or an empty list) reads as the one `chain_edge`; `None` for `is_own_side`
     /// reads the one-chain tagging, sides 1 and 2.
     pub fn new(
@@ -111,7 +110,7 @@ impl GrowingCreaseRuns {
         }
     }
 
-    /// C# `GrowingCreaseRuns.Add`: appends `to` to `from`'s neighbour list, making the list where
+    /// Appends `to` to `from`'s neighbour list, making the list where
     /// there is none.
     pub fn add(neighbours: &mut HashMap<i32, Vec<i32>>, from: i32, to: i32) {
         neighbours.entry(from).or_default().push(to);

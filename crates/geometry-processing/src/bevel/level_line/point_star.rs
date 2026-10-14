@@ -1,17 +1,18 @@
-//! A picked point and the faces around it, read for [`super::point_bevel`] (`Bevel/LevelLine/PointStar.cs`,
-//! C# `internal sealed class PointStar`): the bevel's shape per unit of size (the fillet's
+//! A picked point and the faces around it, read for [`super::point_bevel`]: the bevel's shape per
+//! unit of size (the fillet's
 //! inscribed ball, the chamfer's plane) and its room (the size at which the ring first reaches a
 //! feature edge - dihedral over the bend threshold - never a triangulation diagonal).
 //!
-//! The edge map is an `IndexMap` because C# walks its `Dictionary` in insertion order, and the
-//! order reaches the answer: the neighbour and feature-end lists are summed and averaged in it.
+//! The edge map is an `IndexMap` because it is walked in insertion order, and the order reaches
+//! the answer: the neighbour and feature-end lists are summed and averaged in it.
 
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use super::point_bevel::PointBevelKind;
 
-/// C# `PointStar`.
+/// A picked point's star: the point, its faces' normals and angles, its neighbours and the feature
+/// edges round it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointStar {
     point: Vector3,
@@ -28,7 +29,7 @@ pub struct PointStar {
 }
 
 impl PointStar {
-    /// C#'s constructor: the star of `vertex` read off the whole mesh.
+    /// The star of `vertex` read off the whole mesh.
     pub fn new(
         positions: &[Vector3],
         triangles: &[(i32, i32, i32)],
@@ -91,18 +92,18 @@ impl PointStar {
         }
     }
 
-    /// C# `HasSharpEdges`: true when a feature edge (dihedral over the bend threshold) meets the
+    /// True when a feature edge (dihedral over the bend threshold) meets the
     /// point.
     pub fn has_sharp_edges(&self) -> bool {
         !self.feature_ends.is_empty()
     }
 
-    /// C# `BallOffset`: the fillet ball's centre offset from the point per unit of radius.
+    /// The fillet ball's centre offset from the point per unit of radius.
     pub fn ball_offset(&self) -> Vector3 {
         self.ball_offset
     }
 
-    /// C# `TryShape`: the bevel's shape per unit of size, as `(per_size, inward)`, or the refusal in
+    /// The bevel's shape per unit of size, as `(per_size, inward)`, or the refusal in
     /// words. A fillet's `per_size` is the setback per unit of ball radius: the ball's centre offset
     /// c solves c . n = -1 over the distinct face planes (least squares - exact on a right cone or a
     /// cube corner, a fair approximation where no single ball touches every face), and the tangent
@@ -157,7 +158,7 @@ impl PointStar {
                 .iter()
                 .map(|&n| (n - self.point).get_normal().dot(inward)),
         );
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(perSize > 0)`, NaN included.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(per_size > 0)` refuses a NaN too.
         if !(per_size > 0.0) {
             return Err("this point is not convex".to_string());
         }
@@ -165,7 +166,7 @@ impl PointStar {
         Ok((per_size, inward))
     }
 
-    /// C# `Room`: the size at which the ring first reaches a feature - a far feature edge or the
+    /// The size at which the ring first reaches a feature - a far feature edge or the
     /// end of the point's own.
     pub fn room(&self, kind: PointBevelKind, per_size: f64, inward: Vector3) -> f64 {
         let mut reach = f64::INFINITY;
@@ -197,7 +198,7 @@ impl PointStar {
         reach / per_size
     }
 
-    /// C# `RingReach`: how far from the point, per unit of size, the ring reaches at most - what
+    /// How far from the point, per unit of size, the ring reaches at most - what
     /// another point's ring must stay clear of. A fillet's ring is the sphere of radius `per_size`.
     /// A chamfer's plane crosses each of the point's faces where the depth runs out, farthest along
     /// the edge least steep into the plane.
@@ -206,8 +207,8 @@ impl PointStar {
             return per_size;
         }
 
-        // C#'s LINQ `Min` throws on an empty star; a point with no neighbours has no ring to
-        // reach anything, which the infinity below says (divergence 5036).
+        // A point with no neighbours (a vertex no triangle uses) has no ring to reach anything,
+        // which the infinity below says.
         let least = self
             .neighbours
             .iter()
@@ -227,8 +228,8 @@ impl PointStar {
     }
 }
 
-/// C# `Enumerable.Average` over doubles: the sum in order, over the count. An empty sequence is
-/// NaN here (C# throws; divergence 5036), which the caller's `!(x > 0)` refuses.
+/// The mean of `values`: the sum in order, over the count. An empty sequence (a star with no
+/// neighbours) is NaN, which the caller's `!(x > 0)` refuses as not convex.
 fn average(values: impl Iterator<Item = f64>) -> f64 {
     let mut sum = 0.0;
     let mut count = 0usize;
@@ -244,7 +245,7 @@ fn average(values: impl Iterator<Item = f64>) -> f64 {
     }
 }
 
-/// C# `DistanceToSegment`: the 3D distance from `p` to the segment ab. Not agg's
+/// The 3D distance from `p` to the segment ab. Not agg's
 /// `Vector3.DistanceToSegment`: that one measures across the segment against a perpendicular taken
 /// with +Z, so it reads short in 3D.
 fn distance_to_segment(p: Vector3, a: Vector3, b: Vector3) -> f64 {
@@ -253,7 +254,7 @@ fn distance_to_segment(p: Vector3, a: Vector3, b: Vector3) -> f64 {
     (p - (a + ab * t)).length()
 }
 
-/// C# `Solve`: least squares for x in rows . x = 1 (rhs = sum of rows) or the fillet's -1 (rhs =
+/// Least squares for x in rows . x = 1 (rhs = sum of rows) or the fillet's -1 (rhs =
 /// -sum): (sum r r^T) x = rhs.
 fn solve(rows: &[Vector3], rhs: Vector3) -> Option<Vector3> {
     let mut c0 = Vector3::ZERO;

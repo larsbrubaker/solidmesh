@@ -1,13 +1,11 @@
-//! A picked point's field for the kernel's level-line cut ([`PointField`]). Ports the type of
-//! `Bevel/LevelLine/PointField.cs` with its constructors and field queries. Its
-//! `MinOverTriangle` is listed under R2.P04 by the call-graph packing, but a Rust trait impl is one
-//! block and it calls only the ported closest-point form, so it lands here with the rest.
+//! A picked point's field for the kernel's level-line cut ([`PointField`]): the type with its
+//! constructors and field queries, the least over a triangle included.
 
 use vector_math::Vector3;
 
 use super::{ChainDistanceField, ChainField, FieldMaximum, FieldMinimum, ScalarField, WorkError};
 
-/// C# `PointField`: a picked point's field for the kernel's level-line cut - negative on the cap
+/// A picked point's field for the kernel's level-line cut - negative on the cap
 /// the bevel removes, zero on the ring where it starts.
 ///
 /// A fillet's is the straight-line distance to the point less the setback (a sphere - its ring is

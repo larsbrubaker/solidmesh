@@ -1,9 +1,7 @@
-//! The open gap fill's cut sections. Ports the nested record of
-//! `Bevel/LevelLine/OpenGapFill.CutSection.cs` (a partial of the C# static class `OpenGapFill`): a
-//! run-out's flat region ([`OpenGapFillFlatRunOutRegion`]) and the region a run-out's flat cut
+//! The open gap fill's cut sections: a run-out's flat region ([`OpenGapFillFlatRunOutRegion`]) and
+//! the region a run-out's flat cut
 //! rows close ([`flat_run_out`]), and whether a spoke fans from a run-out rail vertex
-//! ([`fans_from_a_rail_run_out`]), and the cut section's row ([`cut_section_arc`]). The other
-//! functions land with later packages.
+//! ([`fans_from_a_rail_run_out`]), and the cut section's row ([`cut_section_arc`]).
 
 use std::collections::HashSet;
 
@@ -17,7 +15,7 @@ use super::{
     OpenGapFillOpenRail, WorkError,
 };
 
-/// C# `OpenGapFill.FlatRunOutRegion`: a run-out's flat region - its loop of mesh vertices, the
+/// A run-out's flat region - its loop of mesh vertices, the
 /// triangles closing it (loop indices), and the last cut row.
 #[derive(Debug, Clone, PartialEq)]
 pub struct OpenGapFillFlatRunOutRegion {
@@ -95,7 +93,7 @@ pub fn fans_from_a_rail_run_out(
         && spokes.iter().filter(|spoke| spoke.0 == l).count() > 1
 }
 
-/// C# `OpenGapFill.LayBesideACutRow`: the cell between two rows on one left vertex `a` where either
+/// The cell between two rows on one left vertex `a` where either
 /// starts on the face `a` ran out onto (a cut row), read from their right ends as the
 /// right-advancing strip reads them, with the rows' first edge laid too. Beside an in-plane row (a
 /// straight row onto its far end B) the cut row fans onto B. Where no flat region takes the face's
@@ -154,7 +152,7 @@ pub struct CutSectionArc {
     pub cut_at: f64,
 }
 
-/// C#'s `Math.Sign(double)` (its NaN throw is not reachable from finite rails).
+/// The sign of a double: -1, 0 or 1 (never handed a NaN: the rails are finite).
 fn sign(value: f64) -> i32 {
     if value > 0.0 {
         1
@@ -165,7 +163,7 @@ fn sign(value: f64) -> i32 {
     }
 }
 
-/// C# `OpenGapFill.CutSectionArc`: the row for a spoke fanning from the run-out left vertex A
+/// The row for a spoke fanning from the run-out left vertex A
 /// (`left`'s vertex `l`), as a point at fraction f from A (0) to the right vertex B (`right`'s
 /// vertex `r`, 1): the square section of the round at B's parameter, cut by the plane of the face A
 /// ran out onto, the cut part replaced by the straight line in that plane back to A. B itself in

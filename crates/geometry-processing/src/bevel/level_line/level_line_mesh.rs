@@ -1,9 +1,10 @@
 //! The level-line build's own working triangle mesh ([`LevelLineMesh`]) and its triangle
-//! ([`LevelLineTriangle`]). Ports the types of `Bevel/LevelLine/LevelLineMesh.cs` with the fields
-//! of every partial (`LevelLineMesh.InputStrips.cs`, `.InsertPolyline.cs`, `.Needles.cs`), with
-//! the triangle's corner indexer and the mesh's read accessors (triangles, edges, positions,
-//! lengths, the same-place backstop, a triangle's apex, the needles left standing); the splits,
-//! needle repair and polyline insertion land with their method packages. Its holders keep it as
+//! ([`LevelLineTriangle`]): the types with the fields every half of the mesh uses (input strips,
+//! polyline insertion, needles), the triangle's corner indexer and the mesh's read accessors
+//! (triangles, edges, positions, lengths, the same-place backstop, a triangle's apex, the needles
+//! left standing); the edits, needle repair and polyline insertion are in
+//! `level_line_mesh_edits.rs`, `level_line_mesh_needles.rs` and
+//! `level_line_mesh_insert_polyline.rs`. Its holders keep it as
 //! `Rc<RefCell<LevelLineMesh>>` (one `RefCell` round the whole mesh), since the build mutates it.
 
 use std::collections::{HashMap, HashSet};
@@ -13,10 +14,10 @@ use vector_math::Vector3;
 
 use super::FieldCounters;
 
-/// Says of a vertex pair whether it is an edge of the pick (C# `Func<int, int, bool>`).
+/// Says of a vertex pair whether it is an edge of the pick.
 pub type IsChainEdge = Rc<dyn Fn(i32, i32) -> bool>;
 
-/// C# `LevelLineTriangle`: one triangle of the working mesh - three vertex indices in winding
+/// One triangle of the working mesh - three vertex indices in winding
 /// order, and the tag it carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct LevelLineTriangle {
@@ -31,7 +32,7 @@ pub struct LevelLineTriangle {
     pub tag: i32,
 }
 
-/// C# `LevelLineMesh`: this module's own working triangle mesh - positions, index triples, and
+/// This module's own working triangle mesh - positions, index triples, and
 /// edge adjacency, with exactly one mutation, the conforming edge split.
 ///
 /// Kept deliberately small and separate from the kernel's `Mesh`. The level line construction
@@ -46,9 +47,9 @@ pub struct LevelLineTriangle {
 /// it is invisible to the edge queries, but NOT to a reader walking the triangle list: every such
 /// walk has to ask whether it is removed for itself.
 ///
-/// The needle half (`LevelLineMesh.Needles.cs`) finds triangles with no height, mends the ones
+/// The needle half (`level_line_mesh_needles.rs`) finds triangles with no height, mends the ones
 /// that are really T-vertices, and keeps the counters that say what a build met. The input-strip
-/// half (`LevelLineMesh.InputStrips.cs`) takes a strip of needles the tessellator handed in out
+/// half (`level_line_mesh_input_strips.rs`) takes a strip of needles the tessellator handed in out
 /// ONCE, before the build reads the mesh: on a CAD mesh whose flat faces carry a row of nearly
 /// collinear vertices the per-needle repair can cascade (the Many Holes witness ran from 62 MB to
 /// 2.2 GB that way), so the strip together with the ring across its edges is re-tiled by an ear
@@ -75,7 +76,7 @@ pub struct LevelLineMesh {
     /// instead of minting a vertex, as a length; zero means exact coincidence only. Set by whoever
     /// builds the mesh for a cut, to the SNAP that cut reads by, and left small on purpose: it is a
     /// backstop under the refinement's routing, and a backstop must never be WIDER than what a
-    /// legitimate caller can need. Never negative or NaN (C#'s setter refuses both).
+    /// legitimate caller can need. Never negative or NaN (the setter refuses both).
     pub same_place: f64,
     /// True when the input vertices came from float storage: the vertex reading then reads an
     /// input vertex within its own float step of the line as ON it. Off (exact) by default,
@@ -139,8 +140,7 @@ impl std::fmt::Debug for LevelLineMesh {
 }
 
 impl LevelLineTriangle {
-    /// The vertex index at corner 0, 1 or 2 (C# indexer `this[int]`; any other corner reads the
-    /// third, as C#'s does).
+    /// The vertex index at corner 0, 1 or 2 (any other corner reads the third).
     pub fn corner(&self, corner: i32) -> i32 {
         if corner == 0 {
             self.a
@@ -152,8 +152,7 @@ impl LevelLineTriangle {
     }
 }
 
-/// The refusal [`LevelLineMesh::set_same_place`] gives a negative or NaN length (C# throws
-/// `ArgumentOutOfRangeException`).
+/// The refusal [`LevelLineMesh::set_same_place`] gives a negative or NaN length.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SamePlaceNotALength(pub f64);
 
@@ -235,8 +234,7 @@ impl LevelLineMesh {
 }
 
 impl LevelLineMesh {
-    /// The corner opposite a triangle's longest side - the first of a tie (C#
-    /// `LevelLineMesh.InputStrips.ApexOf`).
+    /// The corner opposite a triangle's longest side - the first of a tie.
     pub fn apex_of(&self, t: LevelLineTriangle) -> i32 {
         let mut corner = 0;
         let mut longest = -1.0;
@@ -251,16 +249,14 @@ impl LevelLineMesh {
         t.corner((corner + 2) % 3)
     }
 
-    /// Records a needle the repair leaves standing, counted once however often it is looked at
-    /// (C# `LevelLineMesh.Needles.LeaveTheNeedle`).
+    /// Records a needle the repair leaves standing, counted once however often it is looked at.
     pub fn leave_the_needle(&mut self, needle: i32) {
         if self.left_alone.insert(needle) {
             FieldCounters::note_needle(false);
         }
     }
 
-    /// Records a needle left standing because its long edge is a chain edge (C#
-    /// `LevelLineMesh.Needles.LeaveTheNeedleOnItsChain`).
+    /// Records a needle left standing because its long edge is a chain edge.
     pub fn leave_the_needle_on_its_chain(&mut self, needle: i32) {
         if !self.left_alone.insert(needle) {
             return;
@@ -272,14 +268,14 @@ impl LevelLineMesh {
 }
 
 impl LevelLineTriangle {
-    /// C#'s constructor: three corners in winding order and the tag.
+    /// A triangle from three corners in winding order and the tag.
     pub fn new(a: i32, b: i32, c: i32, tag: i32) -> Self {
         Self { a, b, c, tag }
     }
 }
 
 impl LevelLineMesh {
-    /// An empty mesh (C#'s private constructor; the builders fill it).
+    /// An empty mesh (the builders fill it).
     pub fn new() -> Self {
         Self::default()
     }
@@ -437,7 +433,7 @@ impl LevelLineMesh {
         self.detach_edge(index, t.c, t.a);
     }
 
-    /// Takes triangle `index` off edge `a b` (its first entry, as C#'s `List.Remove`); an edge left
+    /// Takes triangle `index` off edge `a b` (its first entry only); an edge left
     /// standing on nothing leaves the mesh.
     pub fn detach_edge(&mut self, index: i32, a: i32, b: i32) {
         let key = Self::key(a, b);

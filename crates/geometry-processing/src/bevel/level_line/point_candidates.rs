@@ -1,4 +1,4 @@
-//! Point mode's candidates (`Bevel/LevelLine/PointCandidates.cs`): the vertices a point bevel is
+//! Point mode's candidates: the vertices a point bevel is
 //! offered at. A vertex qualifies when its angle defect - 360 degrees less the sum of its incident
 //! face angles - exceeds the bend threshold, so a cone's tip and a cube's corner qualify while a
 //! vertex on a smooth tessellated surface or along a tessellated rim (a few degrees) does not.
@@ -11,7 +11,7 @@ use vector_math::Vector3;
 
 use super::point_star::PointStar;
 
-/// C# `PointCandidate`: a vertex point mode offers, and whether a fillet is offered there as well
+/// A vertex point mode offers, and whether a fillet is offered there as well
 /// as a chamfer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointCandidate {
@@ -24,7 +24,7 @@ pub struct PointCandidate {
     pub allows_fillet: bool,
 }
 
-/// C# `PointCandidates.Find`: the vertices whose angle defect exceeds `bend_threshold_degrees`, on
+/// The vertices whose angle defect exceeds `bend_threshold_degrees`, on
 /// the welded mesh.
 pub fn find(
     positions: &[Vector3],
@@ -43,7 +43,7 @@ pub fn find(
     candidates
 }
 
-/// C# `PointCandidates.Describe`: the candidates with what each allows: every candidate takes a
+/// The candidates with what each allows: every candidate takes a
 /// chamfer, a fillet only where no sharp edge meets it.
 pub fn describe(
     positions: &[Vector3],
@@ -67,13 +67,13 @@ pub fn describe(
     described
 }
 
-/// C# `PointCandidates.AngleDefect`: the angle defect at `vertex` in degrees. Positions are welded
+/// The angle defect at `vertex` in degrees. Positions are welded
 /// first (exact coincidence), so a mesh whose faces do not share vertices still reads its corners.
 pub fn angle_defect(positions: &[Vector3], triangles: &[(i32, i32, i32)], vertex: i32) -> f64 {
     angle_defects(positions, triangles)[vertex as usize].0
 }
 
-/// C# `AngleDefects`: each vertex's defect in degrees, and whether any triangle references it.
+/// Each vertex's defect in degrees, and whether any triangle references it.
 fn angle_defects(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> Vec<(f64, bool)> {
     let welded = weld(positions);
     // Only looked up by key, never iterated, so a `HashMap` cannot reach an output.
@@ -87,7 +87,7 @@ fn angle_defects(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> Vec<(f
             let angle = u.cross(w).length().atan2(u.dot(w));
             let key = welded[corners[k] as usize];
             let sum = sums.entry(key).or_insert(0.0);
-            // C# stores `angle` on first sight and `sum + angle` after; 0 + angle == angle exactly.
+            // Starting from 0 is exact: 0 + angle == angle.
             *sum += angle;
         }
     }
@@ -100,7 +100,7 @@ fn angle_defects(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> Vec<(f
         .collect()
 }
 
-/// C# `PointCandidates.Weld`: each vertex's representative, the first vertex at exactly the same
+/// Each vertex's representative, the first vertex at exactly the same
 /// position.
 pub fn weld(positions: &[Vector3]) -> Vec<i32> {
     let mut first: HashMap<[u64; 3], i32> = HashMap::new();
@@ -112,8 +112,8 @@ pub fn weld(positions: &[Vector3]) -> Vec<i32> {
     welded
 }
 
-/// The key C#'s `Dictionary<Vector3, int>` compares by: exact coordinates, with -0 equal to 0 as
-/// C#'s `double` equality has it (adding +0.0 turns -0.0 into +0.0 and leaves every other value).
+/// The key positions are welded by: exact coordinates, with -0 equal to 0 as `==` on doubles has
+/// it (adding +0.0 turns -0.0 into +0.0 and leaves every other value).
 fn exact_key(p: Vector3) -> [u64; 3] {
     [
         (p.x + 0.0).to_bits(),

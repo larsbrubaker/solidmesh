@@ -1,5 +1,5 @@
-//! A rail's stations. Ports `Bevel/LevelLine/RailStations.cs` (a C# static class): so far the
-//! pieces an edge was split into ([`pieces`]), the edge key ([`key`]) and the parameters each
+//! A rail's stations: the pieces an edge was split into ([`pieces`]), the edge key ([`key`]) and
+//! the parameters each
 //! rail vertex stands for ([`tie_spans`], with [`jump_near`]), and the stations a long rail edge
 //! is given where it spans several of the other rail's vertices ([`densify`]).
 
@@ -31,7 +31,7 @@ pub fn key(a: i32, b: i32) -> (i32, i32) {
     }
 }
 
-/// C# `RailStations.TieSpans`: per rail vertex, the parameters it stands for - its own, widened
+/// Per rail vertex, the parameters it stands for - its own, widened
 /// to the reading just inside each edge it ends ([`on_the_edge`]) and to where the reading jumps
 /// near that end ([`jump_near`]). A closed rail (`closed_length` > 0) also reads its wrap edge,
 /// which climbs from the last parameter to the first a lap on: the chain reads its ends in
@@ -117,7 +117,7 @@ pub fn tie_spans(
     Ok(spans)
 }
 
-/// C# `RailStations.JumpNear`: where the chain's reading jumps just off p along the edge p -> q
+/// Where the chain's reading jumps just off p along the edge p -> q
 /// (read `sense` +1 forward, -1 backward in parameter), found by bisection within the first
 /// twentieth of the edge: a reading that climbs past twice the distance walked (plus a tie) has
 /// jumped. `at_p` where nothing jumps there, or the jump overshoots `at_q`. On a closed chain each
@@ -176,14 +176,14 @@ pub fn jump_near(
     })
 }
 
-/// C# `RailStations.Densify`: adds a station to every edge of the rail (`vertices`, climbing
+/// Adds a station to every edge of the rail (`vertices`, climbing
 /// `parameters`) whose parameter span holds at least `fewest` of `others` - the point ON the edge
 /// whose chain parameter is the other rail's vertex parameter, split through the mesh's own split -
 /// inserting each into the rail's lists in order and recording each split in `splits` (the split
 /// edge, undirected, to its new vertex), and each far end standing for a jump in `jump_ends` (at
 /// the jump's foot). Answers -1, or the rail vertex starting an edge whose parameter FALLS along it
 /// where stations were asked for - they would come out of order, so the caller refuses.
-/// `fewest` is C#'s default 2 for the zip's pairing, 1 where a strip end is set back.
+/// `fewest` is 2 for the zip's pairing, 1 where a strip end is set back.
 #[allow(clippy::too_many_arguments)]
 pub fn densify(
     mesh: &mut LevelLineMesh,
@@ -211,7 +211,7 @@ pub fn densify(
             continue;
         }
 
-        // Values strictly inside a span, so never NaN: the total order is C#'s default one.
+        // Values strictly inside a span, so never NaN: the total order is the plain numeric one.
         inside.sort_by(f64::total_cmp);
         let a = vertices[i];
         let b = vertices[i + 1];

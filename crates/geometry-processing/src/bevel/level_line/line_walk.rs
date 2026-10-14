@@ -1,5 +1,5 @@
-//! The walk along the level line. Ports `Bevel/LevelLine/LineWalk.cs` (a C# static class):
-//! whether a point stands in a triangle ([`in_triangle`]) and the walk to the line near a point
+//! The walk along the level line: whether a point stands in a triangle ([`in_triangle`]) and the
+//! walk to the line near a point
 //! ([`try_find_line_point_near`]).
 
 use vector_math::Vector3;
@@ -20,7 +20,7 @@ pub fn in_triangle(a: Vector3, b: Vector3, c: Vector3, p: Vector3) -> bool {
     u >= -SLACK && v >= -SLACK && w >= -SLACK
 }
 
-/// C# `LineWalk.TryFindLinePointNear`: the true line's point near a chord midpoint - step from the
+/// The true line's point near a chord midpoint - step from the
 /// point along the field's steepest direction in the triangle's own plane (read by central
 /// differences) and bisect the field there; the opposite direction second. `None` where the
 /// triangle has no area, the point stands on a crease (the one-sided slopes disagree) or a ridge
@@ -82,7 +82,7 @@ pub fn try_find_line_point_near(
     try_along(reading, (a, b, c), from, here, -downhill)
 }
 
-/// C# `LineWalk.TryAlong`: walks from a point of a triangle in one direction to the triangle's
+/// Walks from a point of a triangle in one direction to the triangle's
 /// boundary and bisects for the line if the field changes sign on the way; `None` when the line is
 /// not reached in this triangle.
 fn try_along(

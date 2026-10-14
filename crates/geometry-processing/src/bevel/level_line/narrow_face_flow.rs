@@ -1,8 +1,7 @@
 //! The side tagging of ONE open chain flowed over a face narrower than the size's setback onto the
 //! next face (an end face, by the side tagging's end flow, or a side onto its gentle convex
 //! neighbour), taken only where the plain tagging refuses the size and the flowed one takes it.
-//! Ports `Bevel/LevelLine/NarrowFaceFlow.cs` (a C# static class split from `BandGap`); the rooms it
-//! compares are read by `band_room::room_of_cut_mesh`.
+//! Split from the band gap; the rooms it compares are read by `band_room::room_of_cut_mesh`.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -20,7 +19,7 @@ use super::seam_edges::FeatureEdgeTest;
 use super::triangle_edges;
 use super::{BandProfile, ChainField, LevelLineMesh};
 
-/// C# `NarrowFaceFlow.TagFlowedWhereItBuilds`: the tagging the build cuts: the flowed one where it
+/// The tagging the build cuts: the flowed one where it
 /// holds a size the plain `tags` refuse, setting `unflowed_room` to the plain tagging's room;
 /// otherwise `tags`.
 #[allow(clippy::too_many_arguments)]
@@ -109,7 +108,8 @@ pub fn tag_flowed_where_it_builds(
     // through the part's whole thickness there (the apex prism of EndFaceRoomTests at 1.1x its
     // end-face room, 0.33 of setback on a part 0.3 thick - one end region took the back wall and
     // the far cap, and the cut split the part in two). That stays a refusal by size, naming the end
-    // face's room. C#'s `&&` chain reads each room only when the tests before it pass.
+    // face's room. The `&&` chain reads each room only when the tests before it pass, so no room
+    // is paid for that cannot matter.
     let mut room_unflowed = f64::NAN;
     if flowed != tags && !an_end_flows_to_the_other(&flowed) {
         room_unflowed = room_on_the_tagging(&tags)?;

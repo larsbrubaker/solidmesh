@@ -1,5 +1,5 @@
-//! Filing a pick's foreign creases into [`ForeignEdgeRegions`] (`LevelLine/ForeignEdgeRegions.cs`:
-//! `Over`, `PerChain` and both `ForChain`s): every crease between two different tags, grouped by
+//! Filing a pick's foreign creases into [`ForeignEdgeRegions`] (`over`, `per_chain` and both
+//! `for_chain`s): every crease between two different tags, grouped by
 //! the tag pair, each growing crease of a one-chain pick replaced by the far creases bounding its
 //! run, and on a pick of several open chains each chain's own growth read. Split from
 //! `foreign_edge_regions.rs` by responsibility.
@@ -17,16 +17,17 @@ use super::{
     ForeignEdgeRegionsChainGrowth, GrowingCreaseRuns, LevelLineMesh, WorkError,
 };
 
-/// C# `Func<int, int[]>` naming each chain's end tags per triangle.
+/// Each chain's end tags, per triangle.
 pub type EndTagsOf<'a> = &'a dyn Fn(i32) -> Vec<i32>;
 
-/// C# `Func<int, int, bool>`: whether a tag is chain `k`'s own side. Shared (`Rc`) because each
-/// chain's growing runs keep it, live, as C#'s delegate is kept: the build adds tags as it goes.
+/// Whether a tag is chain `k`'s own side. Shared (`Rc`) because each
+/// chain's growing runs keep it, live: the build adds tags as it goes.
 pub type Seeds = Rc<dyn Fn(i32, i32) -> bool>;
 
 impl ForeignEdgeRegions {
-    /// C# `ForeignEdgeRegions.Over`. `chain_keys` keeps C#'s `HashSet` insertion order (its
-    /// `First()` names the one-chain growth's edge where no open chain is given).
+    /// Files the pick's foreign creases by tag pair. `chain_keys` keeps insertion order (its
+    /// first key names the one-chain growth's edge where no open chain is given), so the edge
+    /// picked is the same on every run.
     pub fn over(
         mesh: Rc<RefCell<LevelLineMesh>>,
         chain_keys: &IndexSet<(i32, i32)>,
@@ -142,7 +143,7 @@ impl ForeignEdgeRegions {
         Ok(regions)
     }
 
-    /// C# `ForeignEdgeRegions.PerChain`: each open chain's growth - its runs, its two ends, the
+    /// Each open chain's growth - its runs, its two ends, the
     /// end face's stretch at each end that has no end face of its own, and its end regions read.
     pub fn per_chain(
         mesh: &Rc<RefCell<LevelLineMesh>>,
@@ -173,7 +174,7 @@ impl ForeignEdgeRegions {
 
             let distance_mesh = mesh.clone();
             let distance_keys = keys.clone();
-            // The runs keep the delegate itself, live, as C#'s do.
+            // The runs keep the closure itself, live, so tags the build adds later still count.
             let own_for_runs: Option<super::IsOwnSide> = seeds.map(|seeds| {
                 let seeds = seeds.clone();
                 Rc::new(move |tag: i32| seeds(tag, chain)) as super::IsOwnSide
@@ -206,12 +207,12 @@ impl ForeignEdgeRegions {
         Ok(per_chain)
     }
 
-    /// C# `ForChain(seeds)`: [`ForeignEdgeRegions::for_chain_k`] with no chain of its own.
+    /// [`ForeignEdgeRegions::for_chain_k`] with no chain of its own.
     pub fn for_chain(&self, seeds: &dyn Fn(i32) -> bool) -> Vec<Rc<ForeignEdgeIndex>> {
         self.for_chain_k(-1, seeds)
     }
 
-    /// C# `ForChain(chain, seeds)`: the indexes of every crease that bounds this pick - the
+    /// The indexes of every crease that bounds this pick - the
     /// chain's own growth's bounds first (indexed once), then every tag pair the seeds tell apart,
     /// each indexed once and kept.
     pub fn for_chain_k(

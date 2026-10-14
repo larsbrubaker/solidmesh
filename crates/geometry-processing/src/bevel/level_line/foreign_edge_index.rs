@@ -1,15 +1,15 @@
 //! A box tree over one set of foreign edges ([`ForeignEdgeIndex`], with its node
 //! [`ForeignEdgeIndexNode`]) and what a nearest-first search over it comes back with
-//! ([`ForeignApproach`]). Ports `Bevel/LevelLine/ForeignEdgeIndex.cs`: the types, their
-//! constructors, the edge count and list, and the tree's object-median build step
-//! ([`ForeignEdgeIndex::add`]), and the nearest-first search ([`ForeignEdgeIndex::least_approach`],
-//! [`ForeignEdgeIndex::search`]); building over a mesh lands with the room-reading method package.
+//! ([`ForeignApproach`]): the types, their constructors, the edge count and list, the tree's
+//! object-median build step ([`ForeignEdgeIndex::add`]), the build over a mesh
+//! ([`ForeignEdgeIndex::over`]) and the nearest-first search
+//! ([`ForeignEdgeIndex::least_approach`], [`ForeignEdgeIndex::search`]).
 
 use vector_math::{cs_math, Vector3};
 
 use super::{foreign_room_counters, segment_box_tree, ChainField, WorkError};
 
-/// C# `ForeignApproach`: what a nearest-first search over foreign edges came back with - the least
+/// What a nearest-first search over foreign edges came back with - the least
 /// closest approach to the chain, and every edge whose approach is within the factor the search
 /// was given of it.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -25,7 +25,7 @@ pub struct ForeignApproach {
     pub read: i32,
 }
 
-/// C# `ForeignEdgeIndex`: a box tree over ONE set of foreign edges - the edges bounding one pair of
+/// A box tree over ONE set of foreign edges - the edges bounding one pair of
 /// region sides - so a chain can find the nearest of them without reading them all.
 ///
 /// Built once per room reading and searched once per chain. The set is the thing that makes this
@@ -49,7 +49,7 @@ pub struct ForeignEdgeIndex {
     pub nodes: Vec<ForeignEdgeIndexNode>,
 }
 
-/// C# `ForeignEdgeIndex.Node`: one node of the tree - a run of edges and their box.
+/// One node of the tree - a run of edges and their box.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct ForeignEdgeIndexNode {
     /// The first edge of the run.
@@ -67,14 +67,14 @@ pub struct ForeignEdgeIndexNode {
 }
 
 impl ForeignApproach {
-    /// C#'s constructor.
+    /// An approach from its least distance, the edges near it and how many edges were read.
     pub fn new(least: f64, near: Vec<((i32, i32), f64)>, read: i32) -> Self {
         ForeignApproach { least, near, read }
     }
 }
 
 impl ForeignEdgeIndexNode {
-    /// C#'s constructor.
+    /// A node over `count` edges from `start`, its children and its box.
     pub fn new(start: i32, count: i32, left: i32, right: i32, min: Vector3, max: Vector3) -> Self {
         ForeignEdgeIndexNode {
             start,
@@ -87,17 +87,17 @@ impl ForeignEdgeIndexNode {
     }
 }
 
-/// C# `Double.CompareTo`: NaN orders below every number and equal to itself.
+/// NaN orders below every number and equal to itself.
 fn compare_f64(a: f64, b: f64) -> std::cmp::Ordering {
     a.partial_cmp(&b)
         .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()).reverse())
 }
 
 impl ForeignEdgeIndex {
-    /// C# `ForeignEdgeIndex.LeafEdges`: the most edges a leaf holds.
+    /// The most edges a leaf holds.
     pub const LEAF_EDGES: i32 = 4;
 
-    /// C#'s private constructor.
+    /// An index from its parts; [`ForeignEdgeIndex::over`] builds one over a mesh.
     pub fn new(
         edges: Vec<(i32, i32)>,
         ends: Vec<Vector3>,
@@ -106,17 +106,17 @@ impl ForeignEdgeIndex {
         ForeignEdgeIndex { edges, ends, nodes }
     }
 
-    /// C# `ForeignEdgeIndex.Count`: how many edges the index holds.
+    /// How many edges the index holds.
     pub fn count(&self) -> i32 {
         self.edges.len() as i32
     }
 
-    /// C# `ForeignEdgeIndex.Edges`: the edges, in the tree's order.
+    /// The edges, in the tree's order.
     pub fn edges(&self) -> &[(i32, i32)] {
         &self.edges
     }
 
-    /// C# `ForeignEdgeIndex.Add`: builds the node over `order[start .. start + count]` (indices
+    /// Builds the node over `order[start .. start + count]` (indices
     /// into the edges, whose ends are `ends[2 i]` and `ends[2 i + 1]`) into `built`, and returns
     /// its index. Splits the run at the median of the longest axis of its box - the ordinary
     /// object-median build, so a node's box shrinks with its depth even where the edges are
@@ -162,7 +162,7 @@ impl ForeignEdgeIndex {
             };
 
             // The index is the tie-break, so the split is the same one every time this set is
-            // built (and the order is total, so any sort gives C#'s Array.Sort's answer).
+            // built (and the order is total, so any sort, stable or not, gives the same answer).
             order[start as usize..(start + count) as usize]
                 .sort_by(|&i, &j| compare_f64(centre(i), centre(j)).then(i.cmp(&j)));
 
@@ -177,7 +177,7 @@ impl ForeignEdgeIndex {
 }
 
 impl ForeignEdgeIndex {
-    /// C# `ForeignEdgeIndex.LeastApproach`: the least closest approach of the bare chain field to
+    /// The least closest approach of the bare chain field to
     /// the edges of `indexes` (less nothing: its value), and every edge read with its approach.
     /// A box is skipped when its gap to the chain's box exceeds `best * factor` - `factor` 1 for a
     /// caller wanting only the least, above 1 for one that also needs the edges near it - which can
@@ -212,7 +212,7 @@ impl ForeignEdgeIndex {
         Ok(ForeignApproach::new(best, near, read))
     }
 
-    /// C# `ForeignEdgeIndex.Search`: the tree's walk for [`ForeignEdgeIndex::least_approach`],
+    /// The tree's walk for [`ForeignEdgeIndex::least_approach`],
     /// nearest child first so the prune has the best bound it can before the far side is tried.
     #[allow(clippy::too_many_arguments)]
     pub fn search(
@@ -292,7 +292,7 @@ impl ForeignEdgeIndex {
 }
 
 impl ForeignEdgeIndex {
-    /// C# `ForeignEdgeIndex.Over`: the index over `edges` of `mesh` - the box tree built once, and
+    /// The index over `edges` of `mesh` - the box tree built once, and
     /// the edges and their ends sorted into tree order so a node's run is contiguous.
     pub fn over(mesh: &super::LevelLineMesh, edges: &[(i32, i32)]) -> ForeignEdgeIndex {
         let mut ends = Vec::with_capacity(edges.len() * 2);

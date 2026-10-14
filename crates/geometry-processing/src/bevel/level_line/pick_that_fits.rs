@@ -1,6 +1,6 @@
 //! The largest part of a pick that can be built at a size ([`PickThatFits`]): read the pick, drop
 //! every chain the reading names, RE-READ what is left, and go round again until a reading names
-//! nobody. Ports `Bevel/LevelLine/PickThatFits.cs`. Each round is one pick reading
+//! nobody. Each round is one pick reading
 //! (`band_gap_reading::read_room_of_pick`) and one naming of it ([`ChainsThatCannotFit`]).
 //!
 //! The re-reading is not belt and braces. Dropping a chain RE-TAGS the sides: the dropped chain's
@@ -34,7 +34,7 @@ use super::{
     RoomReadingKind, RoomSource, WorkBudget,
 };
 
-/// C# `PickThatFits`: what is left of a pick once every chain that cannot be built at the size
+/// What is left of a pick once every chain that cannot be built at the size
 /// has been dropped, round after round.
 #[derive(Debug, Clone)]
 pub struct PickThatFits {
@@ -54,7 +54,7 @@ pub struct PickThatFits {
 }
 
 impl PickThatFits {
-    /// C#'s private constructor: `fits` is decided here, from what was kept and the last reading.
+    /// The settled pick: `fits` is decided here, from what was kept and the last reading.
     fn new(
         chains: Vec<i32>,
         dropped: Vec<ChainCannotFit>,
@@ -79,7 +79,7 @@ impl PickThatFits {
         }
     }
 
-    /// C# `Read`: reads the pick, drops what cannot be built at `size`, and repeats on the
+    /// Reads the pick, drops what cannot be built at `size`, and repeats on the
     /// survivors until a reading names nobody. Takes a `budget` and honours its cancellation
     /// exactly as `read_room_of_pick` does - the budget is SHARED across the rounds, so a pick that
     /// cannot be settled inside it comes back with an unread last reading rather than spending
@@ -88,9 +88,8 @@ impl PickThatFits {
     /// `seam_epsilon` is the same number the BUILD is given - see `SeamEdges`. It must be, and this
     /// is the one place it can be forgotten unseen: a settling reads, condemns and its verdict is
     /// memoised as the build's known room, so a settling blind to a doubled loop drops it and pins
-    /// the build to a room the build itself would never have read. Zero (C#'s default) is the
-    /// reading as it was before the seam rule existed; C#'s default `sharp_turn_degrees` is
-    /// infinity.
+    /// the build to a room the build itself would never have read. Zero (the usual value) reads
+    /// with no seam rule; the usual `sharp_turn_degrees` is infinity.
     #[allow(clippy::too_many_arguments)]
     pub fn read(
         positions: &[Vector3],
@@ -223,7 +222,7 @@ impl PickThatFits {
             rounds += 1;
         }
 
-        // C#'s `OrderBy` is stable, as is `sort_by_key`: drops of one chain index keep their order.
+        // `sort_by_key` is stable: drops of one chain index keep their order.
         dropped.sort_by_key(|d| d.chain);
 
         Ok(PickThatFits::new(
@@ -232,7 +231,7 @@ impl PickThatFits {
     }
 }
 
-/// C# `InTermsOfThePick`: a reason a round stated in ITS OWN chain numbering, put back into the
+/// A reason a round stated in ITS OWN chain numbering, put back into the
 /// caller's. A round reads a pick of the survivors, so every chain index in a [`RoomSource`] it
 /// produces - the chain and, for a pair, the other chain - is a position in `alive` and means
 /// nothing to the caller until it is looked up there.

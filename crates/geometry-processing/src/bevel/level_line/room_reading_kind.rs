@@ -1,7 +1,6 @@
-//! Which of the level-line room's three readings named it. Ports
-//! `Bevel/LevelLine/RoomReadingKind.cs`.
+//! Which of the level-line room's three readings named it.
 
-/// C# `RoomReadingKind`.
+/// Which reading named the room, or `None` where nothing did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum RoomReadingKind {
     /// Nothing bounded the pick, or the room was handed in rather than read.
@@ -11,7 +10,7 @@ pub enum RoomReadingKind {
     /// A foreign feature edge the band would reach - the room source's chain is whose.
     Foreign,
 
-    /// C# `Self` (a Rust keyword): a side running out of itself - the room source's chain is a
+    /// A side running out of itself (`Self` is a Rust keyword) - the room source's chain is a
     /// chain that seeds it.
     SelfRoom,
 

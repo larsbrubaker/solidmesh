@@ -1,13 +1,11 @@
 //! One of the readings the room is the least of, as a SIZE - the margin already taken off, so the
 //! room is exactly the least candidate and a test or a message can say why it is that and not
-//! something larger. Ports `Bevel/LevelLine/RoomCandidate.cs` (a C# `readonly record struct`).
-//! Leans on [`RoomSource`] for which reading it is; the readings that produce one land with the
-//! cyclic bevel core.
+//! something larger. Leans on [`RoomSource`] for which reading it is.
 //!
 //! [`RoomCandidate::room_without_the_other`] is derived, never re-measured, and is deliberately
 //! an UNDER-read where the setback varies along either chain: it is taken as
 //! `pair room * (1 + least u_j / greatest u_k)`, and since the pair room is itself an under-read
-//! (`ForeignEdgeRoom.RoomFor`) and the smallest possible ratio is used, the product can only fall
+//! (the foreign-edge room) and the smallest possible ratio is used, the product can only fall
 //! short of the room k truly gains. A uniform setback - every square-cornered rim, and every
 //! chamfer - makes it exact, and [`RoomCandidate::room_without_the_other_at_most`] is then the
 //! same number; where a setback varies the two part company and the over-read is simply not
@@ -18,14 +16,13 @@
 //! survivor; see `ChainsThatCannotFit` and `PickThatFits`, which re-reads until a reading names
 //! nobody.
 //!
-//! No `PartialEq`: C#'s record equality compares the doubles with NaN equal to itself and the
-//! member list by reference, neither of which a derived Rust equality would reproduce, and
-//! nothing compares candidates whole.
+//! No `PartialEq`: a derived equality would read a NaN room as unequal to itself, which is not
+//! what two copies of one candidate are, and nothing compares candidates whole.
 
 use super::RoomSource;
 
-/// C# `RoomCandidate`. The public fields are the record's positional members; [`Self::new`]
-/// gives the optional ones C#'s defaults, and a caller sets the others with struct update syntax.
+/// One room candidate. [`Self::new`] gives the optional fields their usual values, and a caller
+/// sets the others with struct update syntax.
 #[derive(Debug, Clone)]
 pub struct RoomCandidate {
     /// Which reading this is, and the chain or pair it is about.
@@ -53,13 +50,13 @@ pub struct RoomCandidate {
 
     /// For a `RoomReadingKind::SelfRoom` reading only: every chain that seeds the group this
     /// reading is about. A group of ONE names the chain that must go when the reading is under the
-    /// size; a group of several cannot be blamed from one reading at all. `None` (C# null) on
+    /// size; a group of several cannot be blamed from one reading at all. `None` on
     /// every other kind.
     pub group_members: Option<Vec<i32>>,
 }
 
 impl RoomCandidate {
-    /// A candidate with C#'s defaults for the optional members: no room without the other (NaN),
+    /// A candidate with the usual values for the optional fields: no room without the other (NaN),
     /// an unknown most (positive infinity) and no group.
     pub fn new(source: RoomSource, room: f64) -> Self {
         Self {

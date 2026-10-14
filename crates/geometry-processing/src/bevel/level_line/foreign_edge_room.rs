@@ -1,6 +1,6 @@
 //! The room foreign features leave a chain: the size at which the band first reaches an edge that
-//! is not the chain's own. Ports `Bevel/LevelLine/ForeignEdgeRoom.cs` (a C# static class): its
-//! constants and switch, the knife test ([`is_a_knife`]), the foreign edges themselves
+//! is not the chain's own: the constants and switch, the knife test ([`is_a_knife`]), the foreign
+//! edges themselves
 //! ([`foreign_edges`]), whether an edge meets the chain at an end ([`meets_the_chain_at_an_end`]),
 //! the clusters of short edges at a chain's ends ([`cluster_at_the_ends`]) and the unindexed edge
 //! list ([`every_edge`]); the room readings over those edges are in `foreign_edge_room_readings.rs`.
@@ -34,7 +34,7 @@ pub const PRUNE_SLACK: f64 = 1e-9;
 pub const RIGHT_ANGLE_NOISE: f64 = 1e-9;
 
 thread_local! {
-    /// C# `[ThreadStatic] ReadEveryForeignEdge`: makes the indexed room read EVERY foreign edge,
+    /// Makes the indexed room read EVERY foreign edge,
     /// exactly as the unindexed one does - per thread, so one test cannot turn it on under another.
     static READ_EVERY_FOREIGN_EDGE: Cell<bool> = const { Cell::new(false) };
 }
@@ -79,16 +79,16 @@ pub fn is_a_knife(
     convex && side_normal.dot(normal_of(far)) < -RIGHT_ANGLE_NOISE
 }
 
-/// C# `ForeignEdgeRoom.ForeignEdges`: the foreign feature edges - where a side's region ends on
+/// The foreign feature edges - where a side's region ends on
 /// something that is not the chain, and not at the chain's own ends. A region only ever ends at a
 /// chain edge (which puts the other side across it) or at a feature edge (which leaves untagged
 /// material across it), so an edge onto tag 0 is exactly a foreign feature edge, and it stays one
 /// through every split, since a split's children inherit their parent's tag. A crease a growing
 /// neighbour grows over is replaced by what it grows into; the growing runs read along the way are
-/// handed to `growing_runs` when given (C#'s optional list, and `seam_epsilon` 0 is C#'s default).
+/// handed to `growing_runs` when given (`seam_epsilon` 0 is the usual value).
 ///
-/// The mesh and the field are shared (`Rc`) because the growing runs keep both, live, as C#'s
-/// do: the runs walk the working mesh and read the field's distance after this returns. The
+/// The mesh and the field are shared (`Rc`) because the growing runs keep both, live: the runs
+/// walk the working mesh and read the field's distance after this returns. The
 /// runs' distance delegate cannot return the field's work error, so it is held aside and handed
 /// up here once the walk that met it is done.
 pub fn foreign_edges(
@@ -184,8 +184,9 @@ pub fn foreign_edges(
                 Rc::new(move |p| match field.evaluate(p) {
                     Ok(sample) => sample.distance,
                     Err(error) => {
-                        // C#'s delegate throws here; the first error is handed up by whoever
-                        // checks `failed`, and the budget stays spent (or cancelled) meanwhile.
+                        // The closure answers only a distance, so it keeps the first error and
+                        // answers NaN; whoever checks `failed` hands the error up, and the budget
+                        // stays spent (or cancelled) meanwhile.
                         failed.borrow_mut().get_or_insert(error);
                         f64::NAN
                     }
@@ -282,8 +283,7 @@ pub fn join(neighbours: &mut HashMap<i32, Vec<i32>>, from: i32, to: i32) {
 
 /// True when `edge` is a piece of an input edge through one of the chain's run-out ends (the first
 /// end while `first_runs_out`, the last while `last_runs_out`), or lies wholly inside ONE end's
-/// cluster of short edges. C#'s optional arguments (`endCluster = null`, both run-outs true) are
-/// passed explicitly.
+/// cluster of short edges. The usual call passes no end cluster and both run-outs true.
 pub fn meets_the_chain_at_an_end(
     mesh: &LevelLineMesh,
     chain_edges: &[(i32, i32)],
@@ -317,7 +317,7 @@ pub fn meets_the_chain_at_an_end(
         .any(|at_one_end| at_one_end.contains(&edge.0) && at_one_end.contains(&edge.1))
 }
 
-/// C# `ForeignEdgeRoom.EveryEdge`: every edge the indexes hold that the chain is not exempt from -
+/// Every edge the indexes hold that the chain is not exempt from -
 /// the unindexed edge list, as (low, high, extra unit setback 0).
 pub fn every_edge(
     indexes: &[std::rc::Rc<ForeignEdgeIndex>],
@@ -335,7 +335,7 @@ pub fn every_edge(
     every
 }
 
-/// C# `ForeignEdgeRoom.IsAKnife(mesh, edge)`: whether a mesh edge between a tagged (filled)
+/// Whether a mesh edge between a tagged (filled)
 /// triangle and an untagged one is a knife - read with the tagged one as the side.
 pub fn is_a_knife_edge(mesh: &LevelLineMesh, edge: (i32, i32)) -> bool {
     let standing = mesh.triangles_on(edge.0, edge.1);

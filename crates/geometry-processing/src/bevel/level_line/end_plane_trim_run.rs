@@ -1,8 +1,7 @@
 //! The trim of a chain's two rails to its end plane and the section laid in that plane between
-//! them. Ports `EndPlaneTrim.TrimEnd` and `EndPlaneTrim.Run` from
-//! `Bevel/LevelLine/EndPlaneTrim.cs`; the geometry they read (the end plane, the corner, the
+//! them ([`trim_end`] and [`run`]); the geometry they read (the end plane, the corner, the
 //! farthest reach, the section, the cut) is in `end_plane_trim`. Each refusal notes why on the open
-//! gap fill's ends site, as C# does.
+//! gap fill's ends site, so a failed end can be diagnosed from the trace.
 
 use vector_math::number_format::format_f64_max_decimals;
 use vector_math::{cs_math, Vector3};
@@ -13,12 +12,12 @@ use super::end_plane_trim::{
 use super::open_gap_fill::append_ends_site;
 use super::{BandProfile, ChainField, GapLoop, LevelLineMesh, LevelLineMeshError};
 
-/// C#'s `{0:0.###}`.
+/// A number in the ends-site notes: at most three decimals, trailing zeros dropped.
 fn three(value: f64) -> String {
     format_f64_max_decimals(value, 3)
 }
 
-/// C#'s bool interpolation.
+/// A flag in the ends-site notes, as `True` or `False`.
 fn cs_bool(value: bool) -> &'static str {
     if value {
         "True"
@@ -27,7 +26,7 @@ fn cs_bool(value: bool) -> &'static str {
     }
 }
 
-/// C#'s `{0:G3}`: three significant digits, scientific (`E+00`) where the exponent is below -5 or
+/// Three significant digits, scientific (`E+00`) where the exponent is below -5 or
 /// at least 3, trailing zeros dropped.
 fn g3(value: f64) -> String {
     if !value.is_finite() {
@@ -64,7 +63,8 @@ fn g3(value: f64) -> String {
     trim(format!("{rounded:.decimals$}"))
 }
 
-/// LINQ `Min` / `Max` over a run's parameters (NaN first for `Min`, NaN only if all for `Max`).
+/// The least and greatest of a run's parameters (the least is NaN if any is, the greatest only if
+/// all are).
 fn least(values: &[f64]) -> f64 {
     values[1..].iter().fold(values[0], |m, &v| {
         if m.is_nan() || v.is_nan() {
@@ -95,13 +95,13 @@ fn end_and_outward(chain: &ChainField, last: bool) -> (Vector3, Vector3) {
     (end, outward)
 }
 
-/// C# `EndPlaneTrim.TrimEnd`: trims the two rails (`left`, `right`) to the chain's end plane at
+/// Trims the two rails (`left`, `right`) to the chain's end plane at
 /// its first or `last` end - to the corners where a bounded end's rails meet the plane, then cut
 /// where either rail end pokes out past the section's reach - and lays the section between them in
 /// the end face ([`run`]). Answers the run round the end: the first rail's cut-off stretch out to
 /// its end, the section, the other's stretch back; `None` with the reason on the ends site where
 /// it cannot. The rails are updated in place; where a rail has no corner it is left as it was
-/// (C# leaves the null it read).
+/// (an absent corner stays absent).
 pub fn trim_end(
     mesh: &mut LevelLineMesh,
     chain: &ChainField,
@@ -256,7 +256,7 @@ pub fn trim_end(
     Ok(Some(result))
 }
 
-/// C# `EndPlaneTrim.Run`: the section from rail end `from` to rail end `to` inserted into the end
+/// The section from rail end `from` to rail end `to` inserted into the end
 /// face (`end_face_tag`'s triangles in the chain's end plane, to the float input's noise) as a
 /// chain of edges, and the end face's part it encloses round the end vertex taken out. `None`
 /// with the reason on the ends site where there is no end plane or the section does not insert
@@ -304,7 +304,7 @@ pub fn run(
         profile,
         fillet_segments,
     );
-    // The region test reads the mesh as it stands at each ask, as C#'s closure does.
+    // The region test reads the mesh as it stands at each ask, so the section's own edits count.
     let inserted = mesh.insert_polyline(&points, normal, &in_face)?;
     let inserted = match inserted {
         Some(chain_of_edges)

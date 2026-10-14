@@ -1,8 +1,7 @@
 //! The one field a room reading asks ([`RoomField`]): a single chain's, or a side group's
-//! [`PickField`] over several. Ports the type of `Bevel/LevelLine/RoomField.cs` with its
-//! constructors, setback readings, the conversion from a chain's field and its field readings
-//! ([`RoomField::evaluate`], [`RoomField::setback_of`], [`RoomField::max_over_triangle`]); the
-//! swallow scale lands with its method package.
+//! [`PickField`] over several: the type with its constructors, setback readings, the conversion
+//! from a chain's field and its field readings ([`RoomField::evaluate`], [`RoomField::setback_of`],
+//! [`RoomField::max_over_triangle`]); the swallow scale is in `chain_field_swallow.rs`.
 
 use std::rc::Rc;
 
@@ -11,7 +10,7 @@ use vector_math::Vector3;
 use super::chain_setback;
 use super::{ChainField, FieldMaximum, FieldSample, PickField, WorkError};
 
-/// C# `RoomField`: the one field a room reading asks - a single chain's, or a side group's
+/// The one field a room reading asks - a single chain's, or a side group's
 /// [`PickField`] over several. Only what the self-room reading needs, so a group's side is read by
 /// the very code a single chain's side is. Exactly one of the two is set.
 #[derive(Debug, Clone, Default)]
@@ -39,8 +38,7 @@ impl RoomField {
         }
     }
 
-    /// The smallest setback the field asks for. Panics on an empty room field, where C# reads
-    /// through a null.
+    /// The smallest setback the field asks for. Panics on an empty room field, a caller's bug.
     pub fn min_setback(&self) -> f64 {
         match (&self.one, &self.several) {
             (Some(one), _) => one.min_setback,
@@ -69,7 +67,7 @@ impl RoomField {
         }
     }
 
-    /// C# `RoomField.Evaluate`: the point query of whichever field this holds.
+    /// The point query of whichever field this holds.
     pub fn evaluate(&self, point: Vector3) -> Result<FieldSample, WorkError> {
         match self.either() {
             Ok(one) => one.evaluate(point),
@@ -77,7 +75,7 @@ impl RoomField {
         }
     }
 
-    /// C# `RoomField.SetbackOf`: the setback a sample stands at - the MINIMISING chain's, where
+    /// The setback a sample stands at - the MINIMISING chain's, where
     /// several are read.
     pub fn setback_of(&self, sample: &FieldSample) -> f64 {
         match self.either() {
@@ -86,7 +84,7 @@ impl RoomField {
         }
     }
 
-    /// C# `RoomField.MaxOverTriangle`: the bounded maximum over a triangle of whichever field this
+    /// The bounded maximum over a triangle of whichever field this
     /// holds.
     pub fn max_over_triangle(
         &self,
@@ -111,7 +109,8 @@ impl RoomField {
     }
 }
 
-/// C#'s `implicit operator RoomField(ChainField)`.
+/// A single chain's field is a room field, so a chain's reading can be handed wherever a room
+/// field is asked for.
 impl From<Rc<ChainField>> for RoomField {
     fn from(field: Rc<ChainField>) -> Self {
         Self::from_chain(field)
@@ -119,7 +118,7 @@ impl From<Rc<ChainField>> for RoomField {
 }
 
 impl RoomField {
-    /// C# `RoomField.WithSetbacksScaled`: the same room with its chain's - or its group's member
+    /// The same room with its chain's - or its group's member
     /// chains' - setbacks times `factor`.
     pub fn with_setbacks_scaled(&self, factor: f64) -> Result<RoomField, WorkError> {
         Ok(match (&self.one, &self.several) {

@@ -1,7 +1,6 @@
 //! The input-strip half of the working mesh: a strip of needles the tessellator handed in, taken
-//! out ONCE by an ear cut before the build reads the mesh. Ports
-//! `Bevel/LevelLine/LevelLineMesh.InputStrips.cs` (a partial of `LevelLineMesh`): so far the ear
-//! cut ([`LevelLineMesh::ear_cut`]), its charge ([`LevelLineMesh::charge_strip_work`]) and small
+//! out ONCE by an ear cut before the build reads the mesh: the ear cut
+//! ([`LevelLineMesh::ear_cut`]), its charge ([`LevelLineMesh::charge_strip_work`]) and small
 //! readings - the first key of a map ([`first_key`]), whether an edge stands outside
 //! the region ([`LevelLineMesh::edge_outside_region`]) and a triangle's least height
 //! ([`LevelLineMesh::least_height`]) - and the strip removal itself

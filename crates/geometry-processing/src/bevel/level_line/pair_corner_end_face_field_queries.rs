@@ -1,6 +1,6 @@
-//! The pair-corner end-face field's construction and queries. Ports the constructor, `Of`, the
-//! field queries and their exact candidate sets from `Bevel/LevelLine/PairCornerEndFaceField.cs`;
-//! the type lives in `pair_corner_end_face_field.rs`. Every query is EXACT: the field is the max of
+//! The pair-corner end-face field's construction and queries: the constructor, `of`, the field
+//! queries and their exact candidate sets; the type lives in `pair_corner_end_face_field.rs`.
+//! Every query is EXACT: the field is the max of
 //! six linear pieces and `size - r` (r the distance off the round's axis), so its least over a
 //! piece stands at a corner, where two pieces tie along an edge, or where three tie inside a
 //! triangle, and its greatest at a corner or the point nearest the axis.
@@ -13,7 +13,7 @@ use super::{
 };
 
 impl PairCornerEndFaceField {
-    /// C#'s private constructor.
+    /// The field from its parts; `of` reads one off a pair corner.
     pub fn new(
         axis_point: Vector3,
         axis_direction: Vector3,

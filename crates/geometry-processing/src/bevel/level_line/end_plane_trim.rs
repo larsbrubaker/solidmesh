@@ -1,9 +1,9 @@
-//! The trim of a rail to a chain's end plane. Ports `Bevel/LevelLine/EndPlaneTrim.cs` (a C# static
-//! class): so far a run trimmed to the end-face corner ([`to_the_corner`]), a run vertex read at
+//! The trim of a rail to a chain's end plane: a run trimmed to the end-face corner
+//! ([`to_the_corner`]), a run vertex read at
 //! its end-ray parameter ([`at_ray_parameter`]) and the end face's plane at the chain's end
 //! ([`end_plane`]), the row's reach past a plane ([`farthest_out`]) and the round's section in the
-//! end plane ([`section`]), and a run cut at an end parameter ([`cut_at`]); the trim itself
-//! lands with later packages.
+//! end plane ([`section`]), and a run cut at an end parameter ([`cut_at`]); the trim itself is in
+//! `end_plane_trim_run`.
 
 use vector_math::{cs_math, Vector3};
 
@@ -14,7 +14,7 @@ use super::{BandProfile, GapLoop, LevelLineMesh};
 /// its tail (or head), stopping at the end-face corner - the last vertex on the end plane before
 /// the rail leaves it - with whether the vertex it stopped at is inside; `None` when fewer than two
 /// vertices are left.
-#[allow(clippy::too_many_arguments)] // C#'s signature, `out cornerInside` returned.
+#[allow(clippy::too_many_arguments)] // Every input the corner needs; `corner_inside` returned.
 pub fn to_the_corner(
     mesh: &LevelLineMesh,
     run: &GapLoop,
@@ -159,7 +159,7 @@ pub fn end_plane(
     (plane, end_vertex)
 }
 
-/// C# `EndPlaneTrim.FarthestOut`: the greatest of `(q - end) . normal` over the row at the end
+/// The greatest of `(q - end) . normal` over the row at the end
 /// vertex: the fillet's arc tangent to both sides at the square rail points (its greatest is at an
 /// end or at its point along the normal's direction in the section), a chamfer's chord (at an
 /// end).
@@ -196,7 +196,7 @@ pub fn farthest_out(
     best
 }
 
-/// C# `EndPlaneTrim.Section`: the round's section in the end plane from `a` to `b` (both on the
+/// The round's section in the end plane from `a` to `b` (both on the
 /// plane): the row at the end vertex - the arc tangent to both sides at the rail points - sampled
 /// at equal angles and each point carried along the chain onto the plane. The ends are `a` and `b`
 /// themselves, to the bit.
@@ -241,7 +241,7 @@ pub fn section(
     result
 }
 
-/// C# `EndPlaneTrim.CutAt`: the run cut at chain parameter `t`, keeping the part away from its
+/// The run cut at chain parameter `t`, keeping the part away from its
 /// head end (`at_head`) or its tail - the cut a vertex ON the end plane (an exact split, never a
 /// neighbour a float step off it, or a rail vertex within placement noise of `t`) - with the cut
 /// off stretch from the cut back to the end. `None` where `t` falls on no edge of the run, or on a

@@ -1,12 +1,12 @@
-//! What the fill left behind ([`GapFillResult`]). Ports the type of
-//! `Bevel/LevelLine/GapFillResult.cs`, with its derived reading ([`GapFillResult::filled`]).
+//! What the fill left behind ([`GapFillResult`]), with its derived reading
+//! ([`GapFillResult::filled`]).
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::{GapFillRefusal, LevelLineMesh, LevelLineWorkPhase};
 
-/// C# `GapFillResult`: what the fill left behind. The `-1` defaults are C#'s initializers, which is
+/// What the fill left behind. The `-1` defaults mean "no vertex, edge or chain named", which is
 /// why `Default` is written out rather than derived.
 #[derive(Debug, Clone)]
 pub struct GapFillResult {
@@ -64,7 +64,7 @@ impl Default for GapFillResult {
 }
 
 impl GapFillResult {
-    /// C# `GapFillResult.Filled`: true when the fill went in.
+    /// True when the fill went in.
     pub fn filled(&self) -> bool {
         self.refusal == GapFillRefusal::None
     }

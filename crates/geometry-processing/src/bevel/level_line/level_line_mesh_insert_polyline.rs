@@ -1,6 +1,5 @@
-//! The polyline insertion half of the working mesh. Ports
-//! `Bevel/LevelLine/LevelLineMesh.InsertPolyline.cs` (a partial of `LevelLineMesh`): the
-//! insertion of a polyline through a flat region as a chain of edges
+//! The polyline insertion half of the working mesh: the insertion of a polyline through a flat
+//! region as a chain of edges
 //! ([`LevelLineMesh::insert_polyline`]) and the removal of the region it cuts off
 //! ([`LevelLineMesh::remove_enclosed`]).
 //!
@@ -15,8 +14,8 @@ use vector_math::Vector3;
 
 use super::{LevelLineMesh, LevelLineMeshError};
 
-/// C#'s `Math.Sign` on a double: -1, 0 or 1. Never handed a NaN: `insert_polyline` refuses a
-/// polyline or plane that is not finite before any orientation is read (divergence 1073).
+/// The sign of a double: -1, 0 or 1. Never handed a NaN: `insert_polyline` refuses a polyline or
+/// plane that is not finite before any orientation is read.
 fn sign(x: f64) -> i32 {
     if x > 0.0 {
         1
@@ -33,15 +32,16 @@ fn orient(a: (f64, f64), b: (f64, f64), c: (f64, f64)) -> f64 {
 }
 
 impl LevelLineMesh {
-    /// C# `LevelLineMesh.InsertPolyline`: inserts `points` as a chain of edges through the flat
-    /// region of kept triangles `in_region` accepts (asked of the mesh as it stands, as C#'s
-    /// closure over it reads it), all in the plane of `plane_normal`; answers
+    /// Inserts `points` as a chain of edges through the flat
+    /// region of kept triangles `in_region` accepts (asked of the mesh as it stands, so the
+    /// insertion's own splits count), all in the plane of `plane_normal`; answers
     /// the chain's vertices in order (every point of the polyline and every crossing), or `None`
     /// where it cannot. Each segment's first point is made a vertex, then every region edge the
     /// open segment crosses is split where it crosses, nearest first, then its last point.
     ///
     /// An empty polyline, or one whose points or plane are not finite, is refused (`None`) with
-    /// the mesh untouched (divergence 1073: C#'s `Math.Sign` threw on the NaN orientations).
+    /// the mesh untouched: a guard against NaN orientations, which would otherwise crash the
+    /// build or insert a NaN vertex.
     pub fn insert_polyline(
         &mut self,
         points: &[Vector3],

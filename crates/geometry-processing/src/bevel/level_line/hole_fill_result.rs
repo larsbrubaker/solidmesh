@@ -1,5 +1,5 @@
-//! What the level line's one hole filler hands back: a filled hole, or why it gave no fill. Ports
-//! `Bevel/LevelLine/HoleFillResult.cs` (`HoleFillFailure`, `HoleFillTriangle`, `HoleFillResult`).
+//! What the level line's one hole filler hands back: a filled hole, or why it gave no fill
+//! ([`HoleFillFailure`], [`HoleFillTriangle`], [`HoleFillResult`]).
 
 use vector_math::Vector3;
 
@@ -41,7 +41,7 @@ pub struct HoleFillTriangle {
 }
 
 impl HoleFillTriangle {
-    /// C#'s positional record constructor.
+    /// A triangle from its three corners.
     pub fn new(a: i32, b: i32, c: i32) -> Self {
         HoleFillTriangle { a, b, c }
     }
@@ -58,7 +58,7 @@ pub struct HoleFillResult {
 }
 
 impl HoleFillResult {
-    /// C#'s constructor.
+    /// A result from its parts.
     pub fn new(
         failure: HoleFillFailure,
         vertices: Vec<Vector3>,

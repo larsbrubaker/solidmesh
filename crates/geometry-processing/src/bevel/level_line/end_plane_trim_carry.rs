@@ -1,5 +1,4 @@
-//! The flat ends' carry of a strip on to the end plane's section. Ports
-//! `Bevel/LevelLine/EndPlaneTrim.Carry.cs` (a partial of the C# static class `EndPlaneTrim`).
+//! The flat ends' carry of a strip on to the end plane's section, split from `end_plane_trim`.
 
 use std::collections::HashSet;
 
@@ -9,7 +8,7 @@ use super::corner_cap::WATCH_END_HOLE_AT;
 use super::{corner_fill, flat_hole_fill};
 use super::{BandProfile, ChainField, LevelLineMesh, LevelLineMeshError, LevelLineWork};
 
-/// C# `EndPlaneTrim.Carry`: the strip carried from its last row on to the section in the end
+/// The strip carried from its last row on to the section in the end
 /// plane. The hole between that row and the trimmed run lies on the round itself, so it is
 /// UNROLLED - each vertex to (distance round the row's arc, distance along the chain) - and the
 /// flat hole fill triangulates it there; the triangles are laid on the real vertices. No ear may

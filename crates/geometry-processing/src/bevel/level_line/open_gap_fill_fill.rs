@@ -1,6 +1,5 @@
-//! The open fill itself: C# `OpenGapFill.Fill` (in `Bevel/LevelLine/OpenGapFill.cs`, the primary
-//! file of the C# static partial class `OpenGapFill`). Its own file because `open_gap_fill.rs`
-//! holds the rest of that C# file and would pass the 800-line limit. It reads both runs as rails
+//! The open fill itself. Its own file because `open_gap_fill.rs` holds the rest of the open fill
+//! and would pass the 800-line limit. It reads both runs as rails
 //! (`open_gap_fill::try_rail`), gives each rail the other's stations
 //! (`open_gap_fill_stations::with_stations_of`), lays the rows (`open_gap_fill::arcs`) and the
 //! cells between them, closes the ends (`corner_cap_zip_end::zip_end`,
@@ -20,27 +19,25 @@ use super::{
     GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError, LevelLineWork,
 };
 
-/// What `Fill` is asked beyond the two runs - C#'s optional parameters, with C#'s defaults in
-/// [`Default`].
+/// What the fill is asked beyond the two runs, with the usual values in [`Default`].
 #[derive(Debug, Clone, Copy, Default)]
 pub struct OpenFillEnds<'a> {
-    /// The end runs on the end faces at end 0 and end 1; `None` for a fade (C# `endRuns = null`).
+    /// The end runs on the end faces at end 0 and end 1; `None` for a fade.
     pub end_runs: Option<&'a [Vec<i32>]>,
-    /// Rows laid on the end ray (C# `rowsOnTheRay`).
+    /// Rows laid on the end ray.
     pub rows_on_the_ray: bool,
-    /// The ends are clipped on the growing neighbour rather than zipped (C# `clipEnds`).
+    /// The ends are clipped on the growing neighbour rather than zipped.
     pub clip_ends: bool,
-    /// Which ends are HULL ends (C# `hullEnds`, null reading as both false).
+    /// Which ends are HULL ends (`None` reading as both false).
     pub hull_ends: Option<[bool; 2]>,
-    /// Which ends are carried on to their section in the end plane (C# `carriedEnds`).
+    /// Which ends are carried on to their section in the end plane.
     pub carried_ends: Option<[bool; 2]>,
-    /// The fill is laid where the flow builds (C# `flowed`).
+    /// The fill is laid where the flow builds.
     pub flowed: bool,
 }
 
-/// Takes back every triangle laid from `start`: C#'s refusal tail
-/// (`foreach (var triangle in laid.GetRange(start, ..)) mesh.RemoveTriangle(triangle);
-/// laid.RemoveRange(start, ..)`).
+/// Takes back every triangle laid from `start`, off the mesh and off the laid list: what a
+/// refusal does before it hands the mesh back.
 fn take_back(mesh: &mut LevelLineMesh, laid: &mut Vec<i32>, start: usize) {
     for &triangle in &laid[start..] {
         mesh.remove_triangle(triangle);
@@ -49,7 +46,7 @@ fn take_back(mesh: &mut LevelLineMesh, laid: &mut Vec<i32>, start: usize) {
     laid.truncate(start);
 }
 
-/// C# `OpenGapFill.Fill`: lays the fade's strip between the two open runs. The runs are walked with
+/// Lays the fade's strip between the two open runs. The runs are walked with
 /// the kept surface on the left of each, so together they traverse the whole gap boundary one way
 /// round; the fill traverses every one of those edges backwards, which is what orients each
 /// triangle it lays.

@@ -1,6 +1,6 @@
 //! The fairing step of the hole fill: places the interior vertices by least squares on the uniform
 //! Laplacian (the discrete thin plate, whose normal equations are the bi-Laplacian), with the loop
-//! pinned. Ports `Bevel/LevelLine/HoleFillFairing.cs` (a C# static class).
+//! pinned.
 //!
 //! The tangent condition takes the place of Botsch and Kobbelt's pinned second ring. At each loop
 //! point the surface across the loop is taken as the mirror image of the fill's own one-ring in the
@@ -20,7 +20,7 @@ use super::{HoleFillTriangle, LevelLineWork, WorkError};
 /// A 3x3 matrix, row-major.
 type Matrix3 = [[f64; 3]; 3];
 
-/// The identity (C# `static readonly Identity`).
+/// The 3x3 identity.
 const IDENTITY: Matrix3 = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 /// Moves every vertex from index `loop_count` on; the loop's own points stay. `Ok(false)` when the
@@ -36,7 +36,7 @@ pub fn fair(
         return Ok(true);
     }
 
-    // C#'s SortedSet: each one-ring read in ascending vertex order.
+    // Each one-ring read in ascending vertex order, so the system's rows are the same every run.
     let mut neighbours: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); vertices.len()];
     for t in triangles {
         let (a, b, c) = (t.a as usize, t.b as usize, t.c as usize);
@@ -150,7 +150,7 @@ pub fn solve_symmetric_positive_definite(
             diagonal -= a[at(j, k)] * a[at(j, k)];
         }
 
-        // Negated so a NaN reads as singular, as C#'s `!(diagonal > 1e-14)` does.
+        // A NaN diagonal reads as singular too, so a broken system is never solved.
         if diagonal.is_nan() || diagonal <= 1e-14 {
             return Ok(false);
         }

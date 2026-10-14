@@ -1,9 +1,9 @@
-//! The mesh edits the refinement makes and the bookkeeping that goes with them. Ports
-//! `Bevel/LevelLine/RefinementSplits.cs`: where a point stands in a triangle ([`PointPlace`],
+//! The mesh edits the refinement makes and the bookkeeping that goes with them: where a point
+//! stands in a triangle ([`PointPlace`],
 //! [`where_the_point_stands`]) the triangle-size readings the refinement splits by
 //! ([`cannot_be_divided_further`], [`longest_edge_length`], [`longest_edge`], [`aspect`],
-//! [`is_new_sliver`]) and the queue bookkeeping ([`enqueue`]); the splits themselves land with later
-//! packages.
+//! [`is_new_sliver`]) and the queue bookkeeping ([`enqueue`]); the splits themselves are in
+//! `refinement_splits_enqueue`.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -33,7 +33,7 @@ pub fn neighbours_of_vertex(
     around
 }
 
-/// C# `PointPlace`: where a point stands in a triangle - the three answers, and they are not
+/// Where a point stands in a triangle - the three answers, and they are not
 /// overlapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PointPlace {
@@ -102,7 +102,7 @@ pub fn where_the_point_stands(
             continue;
         }
 
-        // NaN passes through the clamp, as C#'s two comparisons let it.
+        // NaN passes through the clamp, so a broken reading stays visible.
         let s = ((point - a).dot(along) / length_squared).clamp(0.0, 1.0);
         if (point - (a + (along * s))).length() <= 1e-6 * size {
             return (PointPlace::OnAnEdge, v, w);
@@ -155,7 +155,8 @@ pub fn longest_edge(mesh: &LevelLineMesh, triangle: i32) -> (i32, i32) {
 /// What a split that has nothing to insert reports in place of a vertex.
 pub const NOTHING_TO_INSERT: i32 = -1;
 
-/// Queues each of `triangles` once (in first-seen order, as C#'s `Distinct` keeps it) at
+/// Queues each of `triangles` once (in first-seen order, so the refinement runs the same way every
+/// time) at
 /// refinement depth `at`.
 pub fn enqueue(
     triangles: impl IntoIterator<Item = i32>,
@@ -193,14 +194,14 @@ pub fn aspect(a: Vector3, b: Vector3, c: Vector3) -> f64 {
     }
 }
 
-/// C# `RefinementSplits.LongSide`: an edge at least this share of its triangle's longest is a long
+/// An edge at least this share of its triangle's longest is a long
 /// side, the only kind a split is allowed to thin.
 pub const LONG_SIDE: f64 = 0.9;
 
-/// C# `RefinementSplits.LongestEdgePathCap`: how far a longest-edge path is followed.
+/// How far a longest-edge path is followed.
 pub const LONGEST_EDGE_PATH_CAP: i32 = 32;
 
-/// C# `WouldThinAChild(mesh, v, w, point, ...)`: whether splitting edge `v`-`w` at `point` would
+/// Whether splitting edge `v`-`w` at `point` would
 /// leave a new sliver in a triangle standing on it.
 pub fn would_thin_a_child_on_edge(
     mesh: &LevelLineMesh,
@@ -213,7 +214,7 @@ pub fn would_thin_a_child_on_edge(
     triangle_thinned_by_on_edge(mesh, v, w, point, aspect_limit, shortest_guarded, None) >= 0
 }
 
-/// C# `TriangleThinnedBy(mesh, v, w, point, ..., tag)`: the first triangle on edge `v`-`w` (of
+/// The first triangle on edge `v`-`w` (of
 /// `tag`, where one is named) that splitting the edge at `point` would thin, or `-1`.
 pub fn triangle_thinned_by_on_edge(
     mesh: &LevelLineMesh,
@@ -266,7 +267,7 @@ pub fn triangle_thinned_by_on_edge(
     -1
 }
 
-/// C# `WouldThinAChild(mesh, triangle, point, ...)`: whether splitting `triangle` at `point`
+/// Whether splitting `triangle` at `point`
 /// would leave a new sliver.
 pub fn would_thin_a_child(
     mesh: &LevelLineMesh,
@@ -278,7 +279,7 @@ pub fn would_thin_a_child(
     triangle_thinned_by(mesh, triangle, point, aspect_limit, shortest_guarded, false) >= 0
 }
 
-/// C# `TriangleThinnedBy(mesh, triangle, point, ..., ownTagOnly)`: the triangle a split at
+/// The triangle a split at
 /// `point` would thin - `triangle` itself for an interior point, a triangle on the edge for a
 /// point on one (only of `triangle`'s own tag when `own_tag_only`) - or `-1`.
 pub fn triangle_thinned_by(
@@ -331,7 +332,7 @@ pub fn triangle_thinned_by(
     -1
 }
 
-/// C# `MeterWouldThin(rule, mesh, v, w, point, chordTolerance)`: under the meter, which of the
+/// Under the meter, which of the
 /// would-thin limits splitting edge `v`-`w` at `point` would trip, counted against `rule`.
 pub fn meter_would_thin_on_edge(
     rule: super::field_counters::LevelLineRule,
@@ -354,7 +355,7 @@ pub fn meter_would_thin_on_edge(
     }
 }
 
-/// C# `MeterWouldThin(rule, mesh, triangle, point, chordTolerance)`: the same for a split of
+/// The same for a split of
 /// `triangle` at `point`.
 pub fn meter_would_thin(
     rule: super::field_counters::LevelLineRule,
@@ -376,7 +377,7 @@ pub fn meter_would_thin(
     }
 }
 
-/// C# `TerminalEdge`: the edge the longest-edge path from `start` ends on - where two
+/// The edge the longest-edge path from `start` ends on - where two
 /// triangles share their longest edge, or the path meets a boundary or another tag's fold -
 /// or `None` where it runs onto a non-manifold or chain edge or past
 /// [`LONGEST_EDGE_PATH_CAP`] steps.

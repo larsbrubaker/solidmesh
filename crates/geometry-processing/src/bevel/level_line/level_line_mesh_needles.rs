@@ -1,9 +1,8 @@
 //! The needle half of the working mesh: triangles with no height, the T-vertices among them, and
-//! the counters that say what a build met. Ports `Bevel/LevelLine/LevelLineMesh.Needles.cs` (a
-//! partial of `LevelLineMesh`, whose fields live in `level_line_mesh.rs`): its constant, the
-//! no-height test, the left-alone count, the silent discard, the chain-edge test, the re-tiling
-//! through a T-vertex, and the repair passes - over the whole mesh (`RepairNeedles`) and around a
-//! split's children (`RepairNeedlesAround`).
+//! the counters that say what a build met (the mesh's fields live in `level_line_mesh.rs`): its
+//! constant, the no-height test, the left-alone count, the silent discard, the chain-edge test,
+//! the re-tiling through a T-vertex, and the repair passes - over the whole mesh
+//! (`repair_needles`) and around a split's children (`repair_needles_around`).
 
 use std::collections::VecDeque;
 
@@ -26,7 +25,7 @@ impl LevelLineMesh {
         self.left_alone.len() as i32
     }
 
-    /// C# `LevelLineMesh.RepairNeedles`: repairs every NEEDLE in the mesh - a triangle under the
+    /// Repairs every NEEDLE in the mesh - a triangle under the
     /// needle floor whose apex projects strictly inside its own long edge is a T-VERTEX, so the
     /// neighbour across that edge is re-tiled through the apex and the needle is dropped. Answers
     /// with the triangles made or changed, so a caller mid-refinement can put them on its worklist.
@@ -54,7 +53,7 @@ impl LevelLineMesh {
         Ok(touched)
     }
 
-    /// C# `LevelLineMesh.RepairNeedlesAround`: repairs any needle among the triangles handed in
+    /// Repairs any needle among the triangles handed in
     /// (a split's children) and answers with the triangles the repair made or changed - what goes
     /// back on the refinement's worklist in place of the needles. Nothing at all without a needle
     /// floor; only the triangles handed in are read on entry.
@@ -201,7 +200,7 @@ impl LevelLineMesh {
 
         NeedleMeter::start_call();
         let result = self.repair_from(pending, touched);
-        // C#'s `finally`: the call is closed whether or not the pass ran out its budget.
+        // The call is closed whether or not the pass ran out its budget.
         NeedleMeter::end_call(around);
         result
     }

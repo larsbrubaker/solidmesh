@@ -1,8 +1,7 @@
 //! The one filler for every end and corner hole: Liepa's minimum-weight triangulation of the loop,
 //! Liepa's refinement to the strips' edge length, then a discrete bi-Laplacian for the interior
 //! with the loop pinned and each loop point's cross-tangent fixing the fill's tangent plane there
-//! (`hole_fill_fairing`). Pure: plain points in, plain triangles out, no mesh. Ports
-//! `Bevel/LevelLine/HoleFill.cs` (a C# static class).
+//! (`hole_fill_fairing`). Pure: plain points in, plain triangles out, no mesh.
 
 use std::collections::{HashMap, HashSet};
 
@@ -12,7 +11,7 @@ use super::hole_fill_fairing;
 use super::{HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineWork, WorkError};
 
 /// Liepa's density factor: a triangle is split when its centroid is this far past both scales
-/// (C# `static readonly Density = Math.Sqrt(2)`).
+/// (the square root of 2).
 pub fn density() -> f64 {
     2f64.sqrt()
 }

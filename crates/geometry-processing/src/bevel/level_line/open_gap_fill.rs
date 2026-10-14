@@ -1,12 +1,11 @@
-//! The gap fill for an OPEN run. Ports the nested type of `Bevel/LevelLine/OpenGapFill.cs` (the
-//! primary file of the C# static partial class `OpenGapFill`): one open run read as a rail
-//! ([`OpenGapFillOpenRail`]), the class's constants, the thread's refusal site ([`ends_site`]), the
+//! The gap fill for an OPEN run: one open run read as a rail ([`OpenGapFillOpenRail`]), the open
+//! fill's constants, the thread's refusal site ([`ends_site`]), the
 //! straight-row test ([`is_straight_row`]) and the small pieces of the fill: the hole between two
 //! runs ([`hole_between`]), a result carrying the minted vertices ([`with_minted`]), a run end's
 //! meeting point ([`meeting_point_of`]), a reversed arc ([`backwards`]), a run read as a rail
 //! ([`try_rail`]), the extended parameter past an end ([`extended`]) and the rows laid along the
 //! spokes ([`arcs`]), and the entry points that route an open chain's gap ([`try_open`]) and fill
-//! the fade ([`try_fade`]). The fill itself (`Fill`) is in `open_gap_fill_fill.rs`, kept apart for
+//! the fade ([`try_fade`]). The fill itself is in `open_gap_fill_fill.rs`, kept apart for
 //! the file-size limit.
 
 use std::cell::RefCell;
@@ -26,12 +25,12 @@ use super::{
 pub type WatchFadeHole = Rc<dyn Fn(&[(i32, i32)])>;
 
 thread_local! {
-    /// C# `[ThreadStatic] OpenGapFill.EndsSite`: which open-end site last refused the open-chain
+    /// Which open-end site last refused the open-chain
     /// ends - or, for a refused growing-neighbour clip, which strip-clip stage - on this thread, for
     /// the route the app reports; set just before each such refusal.
     static ENDS_SITE: RefCell<Option<String>> = const { RefCell::new(None) };
 
-    /// C# `[ThreadStatic] OpenGapFill.WatchFadeHole`: a read-only observer of the fade's hole - the
+    /// A read-only observer of the fade's hole - the
     /// directed edges round the two runs that meet at both ends, handed over just before the fill
     /// closes them. Per thread; `None` (the default) costs nothing.
     pub static WATCH_FADE_HOLE: RefCell<Option<WatchFadeHole>> = const { RefCell::new(None) };
@@ -47,8 +46,7 @@ pub fn set_ends_site(site: Option<String>) {
     ENDS_SITE.with(|cell| *cell.borrow_mut() = site);
 }
 
-/// Appends to this thread's open-end refusal site (C# `EndsSite += ...`, where a null site reads
-/// as empty).
+/// Appends to this thread's open-end refusal site (an unset site reads as empty).
 pub fn append_ends_site(more: &str) {
     ENDS_SITE.with(|cell| {
         let mut site = cell.borrow_mut();
@@ -72,7 +70,7 @@ pub fn is_straight_row(arc: &[i32]) -> bool {
     arc.len() > 2 && (arc[1] == arc[arc.len() - 1] || arc[arc.len() - 2] == arc[0])
 }
 
-/// C# `OpenGapFill.OpenRail`: one open run read as a rail running from the meeting point at end 0
+/// One open run read as a rail running from the meeting point at end 0
 /// to the one at end 1, every vertex carrying the extended parameter. Its init-only properties are
 /// public fields here.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -90,7 +88,7 @@ impl OpenGapFillOpenRail {
     }
 }
 
-/// C# `OpenGapFill.TryOpen`: an open chain's gap, routed by WHAT THE CUT LEFT: one closed loop
+/// An open chain's gap, routed by WHAT THE CUT LEFT: one closed loop
 /// round the whole chain is a crease that DIES OUT at both ends
 /// (`dying_crease_fill::try_die_out`), and two open runs meeting on a continuing ridge is the fade
 /// ([`try_fade`]).
@@ -122,8 +120,8 @@ pub fn hole_between(one: &super::GapLoop, other: &super::GapLoop) -> Vec<(i32, i
         .collect()
 }
 
-/// The one loop on `side`, or `None` where there is not exactly one (C#'s `Single` throws there;
-/// every caller has counted the sides first).
+/// The one loop on `side`, or `None` where there is not exactly one (every caller has counted the
+/// sides first).
 fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
     let mut on_side = loops.iter().filter(|l| l.side == side);
     match (on_side.next(), on_side.next()) {
@@ -132,7 +130,7 @@ fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
     }
 }
 
-/// C# `OpenGapFill.TryFade`: the open gap this rung builds: one chain, one open run per side, and
+/// The open gap this rung builds: one chain, one open run per side, and
 /// the runs' ends meeting on the continuing ridge. Runs on the END regions too go to the end-face
 /// fill, runs ending apart to the growing end faces' fill; anything else about an open gap is
 /// refused by name ([`ends_site`]).
@@ -183,8 +181,7 @@ pub fn try_fade(
         return Ok(with_minted(filled.unwrap_or(refused), &minted));
     }
 
-    // C# reads `gap.Mesh` without a null check: only a built gap is filled, so a gap with no mesh
-    // is refused here rather than dereferenced.
+    // Only a built gap is filled, so a gap with no mesh is refused here rather than read.
     let Some(mesh_handle) = gap.mesh.as_ref() else {
         return Ok(refused);
     };
@@ -288,9 +285,9 @@ pub fn with_minted(result: super::GapFillResult, minted: &[i32]) -> super::GapFi
     super::GapFillResult {
         added_vertices: vertices,
         vertices_of_chain,
-        // C# rebuilds the result naming each property but `EndsCappedByEndFaces`, so a fade
-        // capped by `TryEndFaces` lost its flag; every other field is kept, and so is that one
-        // (divergence 4850).
+        // Every other field is kept, the end-faces-capped flag included: the build reads it to
+        // tell the user a run stops square on its end faces, so a fade capped by its end faces
+        // keeps that note when its rail minted vertices.
         ..result
     }
 }
@@ -315,7 +312,7 @@ pub fn backwards(arc: &[i32]) -> Vec<i32> {
     arc.iter().rev().copied().collect()
 }
 
-/// C# `OpenGapFill.TryRail`: one open run read as a rail running from the meeting point at end 0
+/// One open run read as a rail running from the meeting point at end 0
 /// to the one at end 1 (`reversed` reads it from its far end), every vertex carrying the extended
 /// parameter, and the reading taken as its MONOTONE ENVELOPE - which the merge needs. A backward
 /// reading is flattened onto the envelope only as far as a concave turn can explain it
@@ -360,7 +357,7 @@ pub fn try_rail(
     })
 }
 
-/// C# `OpenGapFill.Extended`: the chain parameter, carried on past each end by the angle the
+/// The chain parameter, carried on past each end by the angle the
 /// point stands at about the end vertex - the reading a rail's CLAMPED stretch needs, since every
 /// vertex of it reads the same raw parameter.
 pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
@@ -402,12 +399,11 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
     }
 }
 
-/// C# `OpenGapFill.Arcs`: one arc per spoke, from the left rail's vertex to the right rail's
+/// One arc per spoke, from the left rail's vertex to the right rail's
 /// through the chain's own point at the mean of the two extended parameters - clamped into the
 /// chain, so a spoke past an end takes the END VERTEX as its control point and the nose is the
 /// profile swept round that vertex. Every vertex minted is appended to `added_vertices`; each
-/// spoke charged. `rows_on_the_ray` and `meets_on_the_crease` are C#'s defaulted `false`
-/// parameters.
+/// spoke charged. `rows_on_the_ray` and `meets_on_the_crease` are usually `false`.
 #[allow(clippy::too_many_arguments)]
 pub fn arcs(
     mesh: &mut LevelLineMesh,
@@ -547,7 +543,7 @@ pub fn arcs(
     Ok(arcs)
 }
 
-/// C# `OpenGapFill.EndsMeet`: whether two open gap loops meet end to end - the left's start the
+/// Whether two open gap loops meet end to end - the left's start the
 /// right's end and the left's end the right's start - each on the ridge between their two sides.
 pub fn ends_meet(
     mesh: &super::LevelLineMesh,
@@ -572,7 +568,7 @@ pub fn ends_meet(
     Ok(true)
 }
 
-/// C# `OpenGapFill.OnTheRidgeBetween`: whether some edge at `vertex` stands between a triangle
+/// Whether some edge at `vertex` stands between a triangle
 /// tagged `left_tag` and one tagged `right_tag`. Each edge looked at is charged.
 pub fn on_the_ridge_between(
     mesh: &super::LevelLineMesh,

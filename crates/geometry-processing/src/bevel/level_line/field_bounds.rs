@@ -1,6 +1,5 @@
 //! What the values already in hand say a piece of the mesh CANNOT do, so an exact question is never
-//! asked where its answer could not have mattered. Ports `Bevel/LevelLine/FieldBounds.cs` (a static
-//! class; free functions here).
+//! asked where its answer could not have mattered.
 //!
 //! The field is exactly 1-Lipschitz - it is the signed distance to the union of the chain's balls -
 //! so from a point p reading v, any point q has `v - |q - p| <= value(q) <= v + |q - p|`, whatever

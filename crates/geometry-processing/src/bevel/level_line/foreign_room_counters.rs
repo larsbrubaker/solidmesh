@@ -1,5 +1,4 @@
-//! The foreign-room reading's meter. Ports `Bevel/LevelLine/ForeignRoomCounters.cs` (a C# static
-//! class): its per-thread tallies ([`ForeignRoomTally`], C#'s `[ThreadStatic]` fields in one
+//! The foreign-room reading's meter: its per-thread tallies ([`ForeignRoomTally`], one
 //! `thread_local!`, as `field_counters.rs` keeps `FieldCounters`'), its clock read
 //! ([`clock_now`]), the edge charge ([`read`]), the ticks since a reading began ([`since`]), the
 //! zeroing ([`reset`]) and the one-line report ([`report`]).
@@ -13,7 +12,7 @@ thread_local! {
     static TALLY: RefCell<ForeignRoomTally> = RefCell::new(ForeignRoomTally::default());
 }
 
-/// C# `ForeignRoomCounters`'s `[ThreadStatic]` fields: what the FOREIGN reading of a pick costs,
+/// One thread's tally of what the FOREIGN reading of a pick costs,
 /// split off the whole reading's work total - instrumentation for the many-chain cost work,
 /// zeroed by a test.
 ///
@@ -41,8 +40,8 @@ pub struct ForeignRoomTally {
     pub pair_units: i64,
     /// Work units spent in the self reading.
     pub self_units: i64,
-    /// How many foreign edges each PER-CHAIN reading was handed, one entry per chain (`None`, C#'s
-    /// null, until the first [`reset`]).
+    /// How many foreign edges each PER-CHAIN reading was handed, one entry per chain (`None` until
+    /// the first [`reset`]).
     pub edges_per_chain: Option<Vec<i32>>,
     /// Of `edges_read`, the ones read by the nearest-first SEARCH over the index rather than by a
     /// trial size of the bisection that follows it.
@@ -66,7 +65,7 @@ pub fn with<R>(f: impl FnOnce(&mut ForeignRoomTally) -> R) -> R {
     TALLY.with(|tally| f(&mut tally.borrow_mut()))
 }
 
-/// C# `ForeignRoomCounters.Read`: one foreign edge asked of the field, charged to whichever
+/// One foreign edge asked of the field, charged to whichever
 /// reading is running.
 pub fn read() {
     with(|tally| {
@@ -86,7 +85,7 @@ pub fn clock_now() -> i64 {
     }
 }
 
-/// C# `ForeignRoomCounters.Since`: the ticks since `started_at`, or zero with the meter off (a
+/// The ticks since `started_at`, or zero with the meter off (a
 /// start of zero).
 pub fn since(started_at: i64) -> i64 {
     if started_at == 0 {
@@ -96,7 +95,7 @@ pub fn since(started_at: i64) -> i64 {
     }
 }
 
-/// C# `ForeignRoomCounters.Reset`: zeroes this thread's tally, with an empty per-chain list.
+/// Zeroes this thread's tally, with an empty per-chain list.
 pub fn reset() {
     with(|tally| {
         *tally = ForeignRoomTally {
@@ -106,7 +105,7 @@ pub fn reset() {
     });
 }
 
-/// C# `ForeignRoomCounters.Report`: the calls and edges in one line.
+/// The calls and edges in one line.
 pub fn report() -> String {
     with(|tally| {
         format!(

@@ -1,8 +1,5 @@
 //! The refinement's splits that put their children back on the worklist, and the sliver guard's
-//! longest-edge bisection (Rivara). Ports `SplitEdgeAndEnqueue`, `SplitTriangleAndEnqueue`,
-//! `InsertOnTheLine`, `InsertWhereItStands`, both
-//! `BisectInsteadOfThinning`s, `Bisect` and `BisectAlongLongestEdgePath` from
-//! `Bevel/LevelLine/RefinementSplits.cs`; the read-only geometry they ask (longest edges, terminal
+//! longest-edge bisection (Rivara). The read-only geometry they ask (longest edges, terminal
 //! edges, the thinning tests) is in `refinement_splits`.
 
 use std::collections::{HashMap, VecDeque};
@@ -16,11 +13,11 @@ use super::refinement_splits::{
 };
 use super::{FieldCounters, LevelLineMesh, LevelLineMeshError, LevelLineRule, WorkError};
 
-/// C# `RefinementSplits.SliverAspectLimit`: the aspect past which a split's child is a sliver the
+/// The aspect past which a split's child is a sliver the
 /// guard bisects instead of making.
 pub const SLIVER_ASPECT_LIMIT: f64 = 64.0;
 
-/// C# `RefinementSplits.SplitEdgeAndEnqueue`: splits a mesh edge at a point and puts every child
+/// Splits a mesh edge at a point and puts every child
 /// back on the worklist at ITS OWN parent's depth plus one, then whatever repairing a needle among
 /// them made in their place. Answers the vertex now at the point; one under the vertex count from
 /// before is a vertex the mesh already carried, and nothing was divided.
@@ -66,7 +63,7 @@ pub fn split_edge_and_enqueue(
     Ok(mid)
 }
 
-/// C# `RefinementSplits.SplitTriangleAndEnqueue`: divides a triangle about a point and puts the
+/// Divides a triangle about a point and puts the
 /// three children back on the worklist one deeper than the parent - or, where the mesh refused to
 /// mint on top of a corner it already carries, answers with that corner and enqueues nothing.
 pub fn split_triangle_and_enqueue(
@@ -83,7 +80,7 @@ pub fn split_triangle_and_enqueue(
         return Ok(inserted);
     }
 
-    // C# `NeighboursOfVertex`: the triangles round the inserted vertex - its three children.
+    // The triangles round the inserted vertex - its three children.
     let mut children: Vec<i32> = Vec::new();
     for corner in [t.a, t.b, t.c] {
         children.extend_from_slice(mesh.triangles_on(corner, inserted));
@@ -94,7 +91,7 @@ pub fn split_triangle_and_enqueue(
     Ok(inserted)
 }
 
-/// C# `RefinementSplits.BisectInsteadOfThinning(mesh, asking, v, w, ...)`: where a rule's split of
+/// Where a rule's split of
 /// edge `v`-`w` at `point` would thin a child of the asking triangle's tag, bisects that child's
 /// longest-edge path instead; true when it did.
 #[allow(clippy::too_many_arguments)]
@@ -126,7 +123,7 @@ pub fn bisect_instead_of_thinning_on_edge(
     bisect(mesh, thinned, &asking_on_the_edge, pending, depth)
 }
 
-/// C# `RefinementSplits.BisectInsteadOfThinning(mesh, triangle, point, ...)`: the same guard for a
+/// The same guard for a
 /// point a rule hands to `InsertWhereItStands`; `triangle` is the triangle the rule fired on.
 pub fn bisect_instead_of_thinning(
     mesh: &mut LevelLineMesh,
@@ -151,7 +148,7 @@ pub fn bisect_instead_of_thinning(
     bisect(mesh, thinned, &[triangle], pending, depth)
 }
 
-/// C# `RefinementSplits.Bisect`: bisects the thinned triangle along its longest-edge path, and
+/// Bisects the thinned triangle along its longest-edge path, and
 /// puts the asking triangles still standing exactly as they were back on the worklist: the
 /// crossing the rule found has to be asked again of whatever now carries it.
 fn bisect(
@@ -185,7 +182,7 @@ fn bisect(
     Ok(true)
 }
 
-/// C# `RefinementSplits.BisectAlongLongestEdgePath`: Rivara's longest-edge-propagation-path
+/// Rivara's longest-edge-propagation-path
 /// bisection - removes a triangle's longest edge by bisecting, at their midpoints, the terminal
 /// edges its path leads to, until the triangle's own longest edge is split. True once that edge is
 /// gone; false where it had to stop (a chain or non-manifold terminal edge, the path cap, or a
@@ -228,7 +225,7 @@ pub fn bisect_along_longest_edge_path(
     Ok(mesh.triangles_on(a, b).is_empty())
 }
 
-/// C# `RefinementSplits.InsertOnTheLine`: puts a point of the line into the mesh - at the corner
+/// Puts a point of the line into the mesh - at the corner
 /// it already stands on (asked at the SNAP, since the caller's `put_on_the_line` on the answer
 /// moves a side, decided at the snap everywhere), on an edge when it stands within the snap of
 /// one, otherwise inside the triangle. [`NOTHING_TO_INSERT`] where the point is off every corner
@@ -265,7 +262,7 @@ pub fn insert_on_the_line(
         } else {
             0.0
         };
-        // C#'s `s < 0 ? 0 : (s > 1 ? 1 : s)`, which lets NaN through as `clamp` does.
+        // `clamp` lets NaN through, so a broken reading stays visible.
         let s = s.clamp(0.0, 1.0);
         let on_edge = mesh.position(v) + (along * s);
         if (on_edge - point).length() <= snap {
@@ -278,7 +275,7 @@ pub fn insert_on_the_line(
     )?)
 }
 
-/// C# `RefinementSplits.InsertWhereItStands`: puts the point a RULE asked for into the mesh,
+/// Puts the point a RULE asked for into the mesh,
 /// wherever it stands - at an existing corner nothing is minted and the corner is answered with,
 /// on an edge both triangles there are split together, otherwise the triangle is divided about
 /// it. `same_place` `None` is the triangle's own millionth, what the field rules ask by.

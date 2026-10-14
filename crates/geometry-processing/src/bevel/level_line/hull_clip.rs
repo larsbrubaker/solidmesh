@@ -1,8 +1,8 @@
 //! The HULL mode of the strip clip: where a concave bead's rows are run on past the part itself, no
 //! neighbour face stands there to grow, so the part's own SUPPORTING planes bound it instead - every
 //! plane of a kept face with the whole kept surface on its inner side - and every piece of the
-//! strip OUTSIDE any of them is dropped. Ports the nested type of `Bevel/LevelLine/HullClip.cs` (a
-//! C# static class): one supporting plane ([`HullClipPlane`]), the kept surface's supporting
+//! strip OUTSIDE any of them is dropped. One supporting plane ([`HullClipPlane`]), the kept
+//! surface's supporting
 //! planes the strip crosses ([`crossed_supporting_planes`]), the face-directed edge ([`directed`])
 //! and the thread's last outcome ([`note`], [`last_outcome`], [`set_last_outcome`]), the clip back
 //! to the hull ([`clip`], splitting along each plane with [`split_along`]) and the hull end of a fill
@@ -18,10 +18,10 @@ use super::{FieldCounters, LevelLineMesh, LevelLineMeshError, LevelLineTriangle}
 
 thread_local! {
     /// Where the last hull end on this thread stopped - "done" or the stage that refused - for a
-    /// test to name (C# `[ThreadStatic] LastOutcome`). Written only while the meter is on.
+    /// test to name, per thread. Written only while the meter is on.
     static LAST_OUTCOME: RefCell<Option<String>> = const { RefCell::new(None) };
 
-    /// C# `[ThreadStatic] HullClip.WatchCapHole`: a read-only observer of each plane's cap
+    /// A read-only observer of each plane's cap
     /// outline (its directed edges) before it is closed. Per thread; `None` by default.
     pub static WATCH_CAP_HOLE: RefCell<Option<WatchCapHole>> = const { RefCell::new(None) };
 }
@@ -42,13 +42,13 @@ pub fn last_outcome() -> Option<String> {
     LAST_OUTCOME.with(|last| last.borrow().clone())
 }
 
-/// C# `HullClip.LastOutcome = value`: sets (or, with `None`, clears) this thread's outcome, as a
+/// Sets (or, with `None`, clears) this thread's outcome, as a
 /// test does before a fill whose hull end it means to read.
 pub fn set_last_outcome(outcome: Option<String>) {
     LAST_OUTCOME.with(|last| *last.borrow_mut() = outcome);
 }
 
-/// C# `HullClip.Plane`: a supporting plane - a point on it, its outward normal, and the vertices
+/// A supporting plane - a point on it, its outward normal, and the vertices
 /// on it by bookkeeping. A vertex of the kept surface in the plane, or one minted on an edge
 /// crossing it, is ON the plane by bookkeeping; every other vertex reads its computed distance.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -83,7 +83,7 @@ pub fn crossed_supporting_planes(mesh: &LevelLineMesh, strip: &HashSet<i32>) -> 
         let face = mesh.triangles()[t as usize];
         [face.a, face.b, face.c]
     };
-    // C# `Distinct()`: first-appearance order.
+    // First-appearance order.
     let kept_vertices: Vec<i32> = kept_triangles
         .iter()
         .flat_map(|&t| corners_of(t))
@@ -175,7 +175,7 @@ pub fn crossed_supporting_planes(mesh: &LevelLineMesh, strip: &HashSet<i32>) -> 
     planes
 }
 
-/// C# `Clip`'s local `Distance`: a vertex ON plane `plane` by bookkeeping reads zero, every other
+/// A vertex ON plane `plane` by bookkeeping reads zero, every other
 /// its computed signed distance.
 fn plane_distance(mesh: &LevelLineMesh, planes: &[HullClipPlane], plane: i32, vertex: i32) -> f64 {
     let plane = &planes[plane as usize];
@@ -186,7 +186,7 @@ fn plane_distance(mesh: &LevelLineMesh, planes: &[HullClipPlane], plane: i32, ve
     }
 }
 
-/// C# `HullClip.Clip`: splits `strip` along each plane where it bounds the hull and drops every
+/// Splits `strip` along each plane where it bounds the hull and drops every
 /// piece outside any plane. False, with the strip as far as it got, where a crossing lies on an
 /// edge the kept surface stands on or a piece is left straddling a plane.
 pub fn clip(
@@ -292,8 +292,7 @@ pub fn clip(
 
     // What is left must lie inside every plane: a piece still straddling one was never split
     // because its crossing lay outside another plane, and the pieces that are left would be in
-    // the air in part. (Sorted, so the note names the same first piece every run; C# names the
-    // set's first.)
+    // the air in part. (Sorted, so the note names the same first piece every run.)
     let mut straddling: Vec<i32> = strip
         .iter()
         .copied()
@@ -333,7 +332,7 @@ pub fn clip(
     Ok(true)
 }
 
-/// C# `HullClip.TryClipAndCap`: the hull end of a fill - clips the strip laid from `start` on the
+/// The hull end of a fill - clips the strip laid from `start` on the
 /// part's supporting planes it crosses, drops the air, and caps the hole in each plane, bounded
 /// there by the clip curve and the part's own edges round the mouth. The kept edges round the hole
 /// become the end's closing run in `kept`, and the rails' virtual edges leave it. False when the
@@ -353,7 +352,7 @@ pub fn try_clip_and_cap(
             .collect();
         format!("planes {}: {}", planes.len(), named.join(" "))
     });
-    // C#'s `&&` short-circuits: the cap runs only on a clip that held.
+    // `&&` short-circuits: the cap runs only on a clip that held.
     let result = !planes.is_empty()
         && clip(mesh, &mut strip, &mut planes)?
         && cap(mesh, &mut strip, &planes, kept)?;
@@ -372,7 +371,7 @@ pub fn try_clip_and_cap(
     Ok(result)
 }
 
-/// C# `HullClip.EarClip`: closes one planar outline, traversed the way its cap runs, by ear
+/// Closes one planar outline, traversed the way its cap runs, by ear
 /// clipping in the plane's own frame. An ear is a corner turning the outline's own way with no
 /// other outline vertex in or on it; a zero-area corner is no ear. The faces laid join `strip`;
 /// false where no ear is left.
@@ -420,7 +419,7 @@ pub fn ear_clip(
     } else {
         0.0
     };
-    // LINQ's Max: NaN reads as the smallest.
+    // The greatest length, NaN reading as the smallest.
     let mut scale: Option<f64> = None;
     for &p in &polygon {
         let x = at(mesh, p).length();
@@ -479,7 +478,7 @@ pub fn ear_clip(
     Ok(true)
 }
 
-/// C# `HullClip.Cap`: caps the open boundary lying in the hull planes, one plane at a time - each
+/// Caps the open boundary lying in the hull planes, one plane at a time - each
 /// plane's outline (its clip curve, the part's edges round the mouth, and the part's edge it shares
 /// with the next plane's cap) closed on its own by [`ear_clip`]. The kept edges of the outline
 /// become the end's closing run in `kept`.
@@ -640,11 +639,11 @@ pub fn cap(
     Ok(true)
 }
 
-/// The signed distance of a vertex from a plane, by index (C#'s `Func<int, int, double>` over
-/// `Clip`'s locals): handed the mesh and planes it reads, since [`split_along`] changes both.
+/// The signed distance of a vertex from a plane, by index: handed the mesh and planes it reads,
+/// since [`split_along`] changes both.
 pub type PlaneDistance<'a> = &'a dyn Fn(&LevelLineMesh, &[HullClipPlane], i32, i32) -> f64;
 
-/// C# `HullClip.SplitAlong`: splits the strip's edges crossing plane `f` where the crossing lies
+/// Splits the strip's edges crossing plane `f` where the crossing lies
 /// inside every other plane, until none is left; the count made, or -1 where a kept edge crosses
 /// or a corner already stands at the crossing.
 pub fn split_along(

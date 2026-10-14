@@ -1,8 +1,6 @@
 //! The working mesh's edits: building it from a triangle list, the conforming edge split and the
-//! interior split, adding a free vertex and a face, and the triangle bookkeeping under them. Ports
-//! `FromTriangles`, `SplitEdge`, `SplitTriangle`, `AddVertex`, `AddFace`, `AddTriangle` and
-//! `ReplaceTriangle` of `Bevel/LevelLine/LevelLineMesh.cs`; the type and its readings are in
-//! `level_line_mesh.rs`.
+//! interior split, adding a free vertex and a face, and the triangle bookkeeping under them. The
+//! type and its readings are in `level_line_mesh.rs`.
 
 use vector_math::{cs_math, Vector3};
 
@@ -12,16 +10,16 @@ use super::{
     WorkError,
 };
 
-/// Why a working-mesh edit refused (C# throws `ArgumentException`), or the build's own exit.
+/// Why a working-mesh edit refused, or the build's own exit.
 #[derive(Debug, Clone)]
 pub enum LevelLineMeshError {
     /// The work budget ran out or the build was cancelled.
     Work(WorkError),
-    /// An edge split was asked of a vertex pair that is no edge (C#'s message).
+    /// An edge split was asked of a vertex pair that is no edge (with its message).
     NoEdge(String),
-    /// A triangle repeats a vertex (C#'s message).
+    /// A triangle repeats a vertex (with its message).
     RepeatsAVertex(String),
-    /// A tag list that is not one tag per triangle (C#'s message).
+    /// A tag list that is not one tag per triangle (with its message).
     TagCount(String),
 }
 
@@ -263,7 +261,7 @@ impl LevelLineMesh {
         index
     }
 
-    /// Adds a triangle (C#'s optional `tag = 0` passed explicitly); returns its index. Refuses one
+    /// Adds a triangle with its tag (0 for an untagged one); returns its index. Refuses one
     /// that repeats a vertex.
     pub fn add_face(
         &mut self,

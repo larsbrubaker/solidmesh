@@ -1,5 +1,4 @@
-//! The open fill's sunk arc. Ports `Bevel/LevelLine/OpenGapFill.SunkArc.cs` (a partial of the C#
-//! static class `OpenGapFill`): so far a triangle's doubled area ([`area2`]), the planes of a side's
+//! The open fill's sunk arc: a triangle's doubled area ([`area2`]), the planes of a side's
 //! removed triangles ([`planes`]), whether a spoke stands past an end ([`past_an_end`]) and whether
 //! a step turns into the left side's nearest plane ([`concave`]), and the first sunk arc point
 //! ([`sunk_arc_point`]).
@@ -50,7 +49,7 @@ pub fn past_an_end(
 }
 
 /// True when the step from `p` to `q` runs into the left side's plane nearest `p` (the first of a
-/// tie, as C#'s `MinBy`); false with no planes.
+/// tie); false with no planes.
 pub fn concave(left_planes: &[(Vector3, Vector3)], p: Vector3, q: Vector3) -> bool {
     let mut nearest: Option<((Vector3, Vector3), f64)> = None;
     for &plane in left_planes {
@@ -63,7 +62,7 @@ pub fn concave(left_planes: &[(Vector3, Vector3)], p: Vector3, q: Vector3) -> bo
     nearest.is_some_and(|((_, normal), _)| normal.dot(q - p) > 0.0)
 }
 
-/// C# `SunkArcPoint`: the first arc point of a CONCAVE chain's strip that stands inside the solid -
+/// The first arc point of a CONCAVE chain's strip that stands inside the solid -
 /// behind every plane of the triangles the band removed on one side - or -1. Exact for a flat side
 /// and a convex curved one; on a concave curved side it can only miss, never refuse wrongly. It
 /// catches an arc whose rail stands far round a convex boss (at 0.9 of the room at a radius-5
@@ -92,7 +91,7 @@ pub fn sunk_arc_point(
             continue;
         }
 
-        // C# reads `arc[0]` and `arc[^1]` unguarded; an empty spoke has neither and is skipped.
+        // An empty spoke has no first or last point and is skipped.
         let (Some(&first), Some(&last)) = (arc.first(), arc.last()) else {
             continue;
         };
@@ -112,7 +111,7 @@ pub fn sunk_arc_point(
                 }
 
                 // How far behind the LEAST-behind plane: positive only when behind every one.
-                // C#'s `Min` over doubles, which a NaN would win.
+                // A NaN depth wins, so a broken plane is never read as behind.
                 let depth = side_planes
                     .iter()
                     .map(|&(origin, normal)| normal.dot(origin - point))

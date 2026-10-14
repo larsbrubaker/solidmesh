@@ -1,5 +1,4 @@
-//! The open fill's row stations. Ports `Bevel/LevelLine/OpenGapFill.Stations.cs` (a partial of the
-//! C# static class `OpenGapFill`): each rail split at the other's parameters
+//! The open fill's row stations: each rail split at the other's parameters
 //! ([`with_stations_of`]), the row-spacing share, the mitred-turn test ([`is_mitred_turn_at`]), the
 //! parameters each rail vertex stands for ([`tie_spans`], [`on_the_edge`]), the thinning of rows to
 //! where the round needs them ([`rows_where_the_round_needs_them`]) and the zipper that pairs the
@@ -13,7 +12,7 @@ use crate::bevel::float_grid;
 /// The least spacing between kept rows, as a share of the row's own width.
 pub const MIN_ROW_SPACING_SHARE: f64 = 1.0 / 8.0;
 
-/// C# `OpenGapFill.WithStationsOf`: `rail` with a vertex split into its edge at every parameter
+/// `rail` with a vertex split into its edge at every parameter
 /// where `other` has one strictly inside that edge. The split point is the edge's point at that
 /// parameter, read linearly along the edge, so it lies on the level line the edge already is.
 ///
@@ -272,7 +271,7 @@ pub fn rows_where_the_round_needs_them(
     kept
 }
 
-/// C# `OpenGapFill.TieSpans`: per rail vertex, the parameters it stands for: its own, widened to
+/// Per rail vertex, the parameters it stands for: its own, widened to
 /// the reading just inside each edge it ends ([`on_the_edge`]) where that jumps - a vertex
 /// equidistant from two legs of a turning chain stands for the whole jump between them. Low = High
 /// = its own parameter everywhere else.
@@ -304,7 +303,7 @@ pub fn tie_spans(
     Ok(spans)
 }
 
-/// C# `OpenGapFill.OnTheEdge`: the parameters the chain reads just inside each end of the rail
+/// The parameters the chain reads just inside each end of the rail
 /// edge p -> q, where they differ from the stored ones (a tie vertex) and still lie within them;
 /// else the stored ones, bit for bit - so an edge past a chain end, whose extended parameters the
 /// chain cannot read, keeps its own. Read 1e-6 of the edge in, a continuous edge moves its
@@ -337,7 +336,7 @@ pub fn on_the_edge(
     Ok((read_from, read_to))
 }
 
-/// C# `OpenGapFill.Spokes`: the pairs of rail stations the fill's rows join, from both rails'
+/// The pairs of rail stations the fill's rows join, from both rails'
 /// starts to both ends - a station both rails carry advancing both at once (when `together`),
 /// otherwise the rail whose next edge's MIDDLE comes first between the chain's ends (the same
 /// order read from either end), or whose next station comes first past them. Each step charged.

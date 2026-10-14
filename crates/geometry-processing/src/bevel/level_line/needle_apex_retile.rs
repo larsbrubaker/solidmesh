@@ -1,5 +1,4 @@
-//! A needle's apex standing inside one of its own edges, re-tiled through. Ports
-//! `Bevel/LevelLine/NeedleApexRetile.cs` (a C# static class): [`try_retile`].
+//! A needle's apex standing inside one of its own edges, re-tiled through: [`try_retile`].
 
 use std::collections::{HashMap, HashSet, VecDeque};
 

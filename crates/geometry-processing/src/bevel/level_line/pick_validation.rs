@@ -1,9 +1,8 @@
-//! What a pick must be before a level-line build will take it. Ports the type of
-//! `Bevel/LevelLine/PickValidation.cs` that is not the C# static class `PickValidation`: a pick
-//! corner ([`PickCorner`]), with the pick's corners ([`corners_of`]) and the unpicked-crease test
-//! ([`an_unpicked_crease_runs_into`]). The argument check ([`check_pick_arguments`],
-//! refusing with [`PickArgumentError`] where C# throws) and the touching-chain pairs
-//! ([`every_touching_pair`]) land here too, with the validation on the input itself
+//! What a pick must be before a level-line build will take it: a pick corner ([`PickCorner`]),
+//! with the pick's corners ([`corners_of`]) and the unpicked-crease test
+//! ([`an_unpicked_crease_runs_into`]), the argument check ([`check_pick_arguments`], refusing with
+//! [`PickArgumentError`]) and the touching-chain pairs ([`every_touching_pair`]), with the
+//! validation on the input itself
 //! ([`validate_on_the_input`], [`touch_is_not_a_corner`]).
 
 use std::collections::{BTreeMap, HashSet};
@@ -12,7 +11,7 @@ use vector_math::Vector3;
 
 use super::{chain_on_the_mesh, triangle_edges, BandGapRefusal, PickFault};
 
-/// C# `PickCorner`: a vertex where picked chains turn into each other - see
+/// A vertex where picked chains turn into each other - see
 /// `PickValidation.CornersOf`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PickCorner {
@@ -23,7 +22,7 @@ pub struct PickCorner {
 }
 
 impl PickCorner {
-    /// C#'s constructor.
+    /// A corner at `vertex`, held by `chains`.
     pub fn new(vertex: i32, chains: Vec<i32>) -> Self {
         Self { vertex, chains }
     }
@@ -37,7 +36,7 @@ pub fn corners_of(
     closed: &[bool],
     setback_steps_are_corners: bool,
 ) -> Vec<PickCorner> {
-    // Read in ascending vertex order (C#'s `OrderBy(h => h.Key)`), so a sorted map.
+    // Read in ascending vertex order, so the corners come out the same on every run: a sorted map.
     let mut holders: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
     for (k, chain) in chains.iter().enumerate() {
         for &v in chain {
@@ -96,18 +95,17 @@ pub fn an_unpicked_crease_runs_into(
     false
 }
 
-/// Where C# `PickValidation.CheckPickArguments` throws an `ArgumentException`: a caller's bug,
-/// reported with C#'s message rather than a panic. (C#'s `ArgumentNullException`s for the
-/// positions and indices have no Rust case.)
+/// Why [`check_pick_arguments`] refused: a caller's bug, reported with a message rather than a
+/// panic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PickArgumentError {
-    /// No chains (C# "a pick is at least one chain").
+    /// No chains: a pick is at least one chain.
     NoChains,
-    /// A closed flag missing or extra (C# "every chain of the pick says whether it is closed").
+    /// A closed flag missing or extra: every chain of the pick says whether it is closed.
     ClosedFlagsDoNotMatch,
-    /// A chain of fewer than two vertices (C# "a chain is at least two vertices").
+    /// A chain of fewer than two vertices.
     ChainTooShort,
-    /// A closed chain of fewer than three (C# "a closed chain is at least three vertices").
+    /// A closed chain of fewer than three.
     ClosedChainTooShort,
 }
 
@@ -161,7 +159,7 @@ pub fn every_touching_pair(chains: &[Vec<i32>]) -> Vec<(i32, i32, i32)> {
     touching_pairs(chains).collect()
 }
 
-/// The pairs of [`every_touching_pair`], lazily (C#'s iterator).
+/// The pairs of [`every_touching_pair`], lazily.
 pub fn touching_pairs(chains: &[Vec<i32>]) -> impl Iterator<Item = (i32, i32, i32)> + '_ {
     (0..chains.len()).flat_map(move |i| {
         ((i + 1)..chains.len()).filter_map(move |j| {
@@ -175,11 +173,11 @@ pub fn touching_pairs(chains: &[Vec<i32>]) -> impl Iterator<Item = (i32, i32, i3
     })
 }
 
-/// C# `ValidateOnTheInput`: the pick's fault on the input mesh, if it has one - a chain that comes
+/// The pick's fault on the input mesh, if it has one - a chain that comes
 /// back to a vertex it has been through, a chain edge not on two triangles, or two chains touching
 /// anywhere but at a corner (or at a corner an unpicked crease runs into) - and otherwise the pick's
 /// corners. `is_feature_edge` `None` means the part has no feature edges but the picked ones.
-/// `_positions` is read by no line of the C#.
+/// `_positions` is not read: the checks need only the topology.
 pub fn validate_on_the_input(
     _positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -243,11 +241,11 @@ pub fn validate_on_the_input(
     (None, found)
 }
 
-/// C# `TouchIsNotACorner`: the fault where chain `i` touches chain `j` other than at a corner
+/// The fault where chain `i` touches chain `j` other than at a corner
 /// (sharing an edge, or at a vertex no corner stands at), or at a corner an unpicked crease runs
 /// into; `None` where every touch is a good corner. `picked_keys` is the picked edges' keys, read
-/// once on first need (C#'s `ref`). `corner_at` holds the corners' vertices (C#'s dictionary is
-/// asked only whether it has one).
+/// once on first need and kept by the caller. `corner_at` holds the corners' vertices (asked only
+/// whether it has one).
 #[allow(clippy::too_many_arguments)]
 pub fn touch_is_not_a_corner(
     indices: &[(i32, i32, i32)],

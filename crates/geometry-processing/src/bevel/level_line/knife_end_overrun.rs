@@ -1,8 +1,7 @@
 //! The corner strip's end at a bounded free end whose END PLANE E is the knife neighbour's own
 //! plane: one rail reaches E inside the chain while the other runs on past the end along the end
 //! ray to E, and the round past the first rail's end is laid as rows clipped by E, so the end hole
-//! left is a flat piece of E. Ports the nested type of `Bevel/LevelLine/KnifeEndOverrun.cs` (a C#
-//! static class): the end read ([`KnifeEndOverrunEnd`]) and the on-the-plane test
+//! left is a flat piece of E. The end read ([`KnifeEndOverrunEnd`]) and the on-the-plane test
 //! ([`on_the_plane`]), the overrun read at one end ([`read`]) and the rows laid past the end
 //! spoke ([`lay`]).
 
@@ -10,7 +9,7 @@ use vector_math::{cs_math, Vector3};
 
 use super::{ChainField, CornerFillPiece, LevelLineMesh, WorkError};
 
-/// C# `KnifeEndOverrun.End`: the end read - which end, its plane, and the direction square to the
+/// The end read - which end, its plane, and the direction square to the
 /// chain, in the stopped rail's face, the rows are drawn toward. Its init-only properties are
 /// public fields here.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -31,7 +30,7 @@ pub fn on_the_plane(p: Vector3, vertex: Vector3, normal: Vector3) -> bool {
     (p - vertex).dot(normal).abs() <= 1e-6 * cs_math::max_f64(1.0, (p - vertex).length())
 }
 
-/// C# `KnifeEndOverrun.Read`: the overrun at one end of the chain (`last`, else its first), or
+/// The overrun at one end of the chain (`last`, else its first), or
 /// `None`. `climbing` is the rail whose walk climbs the parameter, `falling` the other. Where it
 /// applies, the climbing rail's vertices on E at that end are cut back to the innermost one - the
 /// stretch along E is the end hole's - and that one is given its own parameter along the chain
@@ -137,7 +136,7 @@ pub fn read(
     }))
 }
 
-/// C# `KnifeEndOverrun.MeetsThePlane`: the open-edge neighbour of `outermost` (not `inward`) that
+/// The open-edge neighbour of `outermost` (not `inward`) that
 /// stands on the end's plane, or `-1`.
 pub fn meets_the_plane(
     mesh: &super::LevelLineMesh,
@@ -174,7 +173,7 @@ pub fn meets_the_plane(
     -1
 }
 
-/// C# `KnifeEndOverrun.Lay`: lays the rows past the strip's end spoke `end_spoke` (A to B): one at
+/// Lays the rows past the strip's end spoke `end_spoke` (A to B): one at
 /// every station of the running-on rail `bv` beyond index `from`, each the fillet section there
 /// clipped by E, then a fan to the vertex where that rail meets E.
 #[allow(clippy::too_many_arguments)]

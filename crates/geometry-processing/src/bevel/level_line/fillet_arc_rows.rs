@@ -1,9 +1,8 @@
 //! A fillet's arc across the band, drawn into the level-line mesh: the plain and skew rows
 //! ([`build`], [`build_skew`]), a closed chain's zip spoke carried along or round the chain
 //! ([`along_the_chain`]), and the rows on a sharp joint's seam ([`in_the_seam`],
-//! [`on_a_rim_joints_seam`]). Ports the `Build`s, `AlongTheChain`, `InTheSeam` and
-//! `OnARimJointsSeam` of `Bevel/LevelLine/FilletArc.cs`; the geometry they read (the carry, the
-//! seam row, the leg tests) is in `fillet_arc`.
+//! [`on_a_rim_joints_seam`]). The geometry they read (the carry, the seam row, the leg tests) is in
+//! `fillet_arc`.
 
 use vector_math::{cs_math, Vector3};
 
@@ -36,7 +35,7 @@ fn row_of(
     arc
 }
 
-/// C# `FilletArc.Build(mesh, from, to, chainPoint, ...)`: the arc's vertex indices from `from` to
+/// The arc's vertex indices from `from` to
 /// `to` about `chain_point`, `segments + 1` of them; every interior point is a new vertex, recorded
 /// in `added_vertices`. One segment is the chamfer's straight row and adds nothing.
 pub fn build(
@@ -58,7 +57,7 @@ pub fn build(
     })
 }
 
-/// C# `FilletArc.Build(mesh, from, to, fromChainPoint, chainPoint, toChainPoint, ...)`: a SKEW
+/// A SKEW
 /// spoke's arc, whose two rail vertices cross the chain at different points. Both ends are carried
 /// along the chain to the section at `chain_point`, the arc is drawn there, and each point is
 /// carried back by its share of the two offsets - so on a straight chain every point lies on the
@@ -88,7 +87,7 @@ pub fn build_skew(
     })
 }
 
-/// C#'s local `Wrapped`: a parameter round the chain's loop into `[0, length)`.
+/// A parameter round the chain's loop into `[0, length)`.
 fn wrapped(length: f64, parameter: f64) -> f64 {
     let parameter = parameter % length;
     if parameter < 0.0 {
@@ -98,7 +97,7 @@ fn wrapped(length: f64, parameter: f64) -> f64 {
     }
 }
 
-/// C# `FilletArc.AlongTheChain`: a spoke of a closed chain's zip, each end given as its rail
+/// A spoke of a closed chain's zip, each end given as its rail
 /// vertex, unwrapped parameter, tie span and lap. Where both readings lie on one straight leg the
 /// row is carried along the chain (the skew row); across a gentle turn it is carried round the
 /// chain with the chain's direction, fading to the plain row near a sharp joint; at an infinite
@@ -183,7 +182,7 @@ pub fn along_the_chain(
     })
 }
 
-/// C# `FilletArc.InTheSeam`: a closed chain's row whose two ends both stand on a sharp joint's
+/// A closed chain's row whose two ends both stand on a sharp joint's
 /// seam plane, one of them on the MITRE line out of the joint, drawn on the seam
 /// ([`seam_row`]); `None` for any other row.
 pub fn in_the_seam(
@@ -250,7 +249,7 @@ pub fn in_the_seam(
     None
 }
 
-/// C# `FilletArc.OnARimJointsSeam`: an OPEN chain's row across a sharp joint's seam - both ends on
+/// An OPEN chain's row across a sharp joint's seam - both ends on
 /// the seam plane at the setback from both legs, one inside the joint and one outside - drawn on
 /// the seam ([`seam_row`]); `None` for any other row.
 pub fn on_a_rim_joints_seam(

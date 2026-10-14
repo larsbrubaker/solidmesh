@@ -1,12 +1,11 @@
 //! A measurement only: what the per-split needle repair does on each call - how many repairs one
 //! call makes, what made the triangles it repairs (the input, a refinement split, or an earlier
-//! repair), and how thin they were - so a cascade can be read for what it is made of. Ports
-//! `Bevel/LevelLine/NeedleMeter.cs` (a C# static class): what made a triangle
-//! ([`NeedleMeterMadeBy`]) and the meter itself ([`NeedleMeter`]).
+//! repair), and how thin they were - so a cascade can be read for what it is made of: what made a
+//! triangle ([`NeedleMeterMadeBy`]) and the meter itself ([`NeedleMeter`]).
 //!
 //! Off unless a caller calls [`NeedleMeter::begin`] AND `FieldCounters` meter is on; the hooks on
 //! the mesh read the meter switch first, so a build pays one static bool read for them. Not per
-//! thread, like the split meter: one caller turns it on round one build. C#'s plain statics are one
+//! thread, like the split meter: one caller turns it on round one build. Its state is one
 //! process-wide `Mutex`.
 
 use std::collections::{HashMap, HashSet};
@@ -17,7 +16,7 @@ use vector_math::number_format::format_i64_number;
 use super::stopwatch::g4;
 use super::FieldCounters;
 
-/// C# `NeedleMeter.MadeBy` (a `byte` enum): what put a triangle at an index of the mesh, as the
+/// What put a triangle at an index of the mesh, as the
 /// meter last saw it.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -46,7 +45,7 @@ const MADE_BY: [NeedleMeterMadeBy; 3] = [
     NeedleMeterMadeBy::Repair,
 ];
 
-/// The meter's process-wide state (C#'s private statics).
+/// The meter's process-wide state.
 #[derive(Debug, Default)]
 struct NeedleMeterState {
     begun: bool,
@@ -54,7 +53,7 @@ struct NeedleMeterState {
     size: f64,
     made: HashMap<i32, NeedleMeterMadeBy>,
     calls_by: Vec<i64>,
-    /// Per [`NeedleMeterMadeBy`], per height band (C# `long[3, HeightBands.Length]`).
+    /// Per [`NeedleMeterMadeBy`], per height band.
     repaired_by: Vec<[i64; 5]>,
     calls_with_no_needle: i64,
     whole_pass_repairs: i64,
@@ -84,7 +83,7 @@ fn with<R>(f: impl FnOnce(&mut NeedleMeterState) -> R) -> R {
     f(state().get_or_insert_with(NeedleMeterState::default))
 }
 
-/// C# `NeedleMeter`: the needle repair's measurement (see the module docs).
+/// The needle repair's measurement (see the module docs).
 pub struct NeedleMeter;
 
 impl NeedleMeter {
@@ -201,7 +200,7 @@ impl NeedleMeter {
 
     /// One needle about to be repaired, read BEFORE the mesh changes: its index, apex, height and
     /// longest edge.
-    #[allow(clippy::too_many_arguments)] // C#'s signature: one reading per argument.
+    #[allow(clippy::too_many_arguments)] // One reading per argument.
     pub fn note_repair(
         needle: i32,
         apex: i32,
@@ -279,7 +278,7 @@ impl NeedleMeter {
         }
     }
 
-    /// The meter's report. Panics where C# throws: asked before any [`NeedleMeter::begin`].
+    /// The meter's report. Panics when asked before any [`NeedleMeter::begin`], a caller's bug.
     pub fn report() -> String {
         with(|s| {
             let mut lines = vec![

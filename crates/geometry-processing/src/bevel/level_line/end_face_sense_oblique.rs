@@ -1,6 +1,6 @@
-//! The oblique-end reading of `EndFaceSense.ObliqueEnds` (`Bevel/LevelLine/EndFaceSense.cs`): its
-//! local functions `IsObliqueEnd`, `BothCornersPastTheEnd` and `FoldsOppositeAtTheEnd`, split out
-//! of `end_face_sense.rs` (which holds the entry point, `oblique_ends`) for length.
+//! The oblique-end reading behind `oblique_ends`: whether an end is oblique, whether both its
+//! corners lie past the end, and whether its creases fold opposite at the end, split out of
+//! `end_face_sense.rs` (which holds the entry point, `oblique_ends`) for length.
 
 use vector_math::Vector3;
 
@@ -41,13 +41,14 @@ impl ObliqueEndReader<'_> {
         self.positions[i as usize]
     }
 
-    /// C#'s local `IsObliqueEnd`.
+    /// Whether the chain's end at `end` (with `next` its neighbour along the chain) ends on one
+    /// flat, oblique end face.
     pub fn is_oblique_end(&self, end: i32, next: i32) -> bool {
         let outward = (self.at(end) - self.at(next)).get_normal();
         let mut sides = Vec::new();
         let mut side_triangles = Vec::new();
         let mut others = Vec::new();
-        // C#'s HashSet<int>s, only added to and asked membership of.
+        // Corner sets, only added to and asked membership of, so a small Vec does.
         let mut side_corners = Vec::new();
         let mut other_corners = Vec::new();
         let mut other_triangles: Vec<(Vector3, Corners)> = Vec::new();
@@ -120,7 +121,8 @@ impl ObliqueEndReader<'_> {
 
         // A face that folds off a side by less than SeparateEndFaceDegrees is that side CARRYING ON
         // (the next facet of a faceted curve), not an end face: the pick covers part of a longer
-        // crease, which fades. LINQ's Min over doubles answers NaN if any is NaN.
+        // crease, which fades. The least fold is NaN if any is NaN, so a broken normal is never
+        // hidden.
         let folds = sides
             .iter()
             .map(|s| s.dot(end_face).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI);
@@ -216,7 +218,7 @@ impl ObliqueEndReader<'_> {
                     )))
     }
 
-    /// C#'s local `BothCornersPastTheEnd`: where each side's rail meets the end face's plane, both
+    /// Where each side's rail meets the end face's plane, both
     /// on or past the end vertex along the chain: the rail from the end vertex runs square to the
     /// chain into its side, r, and meets the plane at t = -(r . n) / (outward . n) along the chain.
     /// Scale-free, so read at unit setback. An end face leaning back over BOTH rails (Center Flows
@@ -238,7 +240,7 @@ impl ObliqueEndReader<'_> {
         }
 
         for &t in side_triangles.iter().take(2) {
-            // C#'s OrderByDescending(LengthSquared).First(): the first longest, NaN sorting last.
+            // The first longest offset, a NaN length sorting last.
             let mut off: Option<Vector3> = None;
             for c in [t.0, t.1, t.2] {
                 let w = self.at(c) - v;
@@ -271,7 +273,7 @@ impl ObliqueEndReader<'_> {
         true
     }
 
-    /// C#'s local `FoldsOppositeAtTheEnd`: every side-to-end crease through the end folds the other
+    /// Every side-to-end crease through the end folds the other
     /// way to the chain's own fold; at least one. A side FANNED at the end counts with the two
     /// triangles on the chain edge: its crease with the end face is as much a side-to-end crease as
     /// theirs, and which one a side's triangulation puts it on must not decide the ray ("Fillet

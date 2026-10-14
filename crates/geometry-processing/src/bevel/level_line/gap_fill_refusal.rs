@@ -1,6 +1,7 @@
-//! Why a level-line gap was not filled. Ports `Bevel/LevelLine/GapFillRefusal.cs`.
+//! Why a level-line gap was not filled.
 
-/// C# `GapFillRefusal`. The discriminants keep C#'s declaration order.
+/// Why a gap fill refused, or `None` where it filled. The discriminants keep their declaration
+/// order, so a refusal's number never changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum GapFillRefusal {
     /// The gap was filled.

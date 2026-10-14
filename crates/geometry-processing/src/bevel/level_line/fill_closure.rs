@@ -1,13 +1,12 @@
-//! The fill checking the claim it makes: the strip it just laid closes the gap
-//! (`Bevel/LevelLine/FillClosure.cs`, a static class: free functions here). Not a repair pass - it
-//! changes nothing, is linear in the triangles the fill laid, and either confirms the
+//! The fill checking the claim it makes: the strip it just laid closes the gap. Not a repair pass -
+//! it changes nothing, is linear in the triangles the fill laid, and either confirms the
 //! construction's promise or names the first edge that breaks it.
 
 use indexmap::{IndexMap, IndexSet};
 
 use super::{GapLoop, LevelLineMesh};
 
-/// C# `StandsOnKept`: true when more triangles run `edge` A to B than the fill laid that way
+/// True when more triangles run `edge` A to B than the fill laid that way
 /// (`laid_along_it`): the rest are kept. Linear in the triangles on the one edge.
 pub fn stands_on_kept(mesh: &LevelLineMesh, edge: (i32, i32), laid_along_it: i32) -> bool {
     let mut along = 0;
@@ -25,7 +24,7 @@ pub fn stands_on_kept(mesh: &LevelLineMesh, edge: (i32, i32), laid_along_it: i32
     along > laid_along_it
 }
 
-/// C# `FirstOpenEdge(LevelLineMesh, IReadOnlyList<GapLoop>, ..)`: every directed edge of a fill
+/// Every directed edge of a fill
 /// triangle in `added_triangles` must be answered exactly once - by the opposite fill edge inside
 /// the strip, or, along the gap's own boundary (`loops`, as the KEPT surface traverses it), by the
 /// kept triangle that edge stands on. The first edge that is not is handed back; `(-1, -1)` where
@@ -48,12 +47,12 @@ pub fn first_open_edge(
     first_open_edge_of(mesh, &kept, added_triangles)
 }
 
-/// C# `FirstOpenEdge(LevelLineMesh, IEnumerable<(int A, int B)>, ..)`: the same check over a
+/// The same check over a
 /// boundary given directly, which is what an OPEN gap needs - its two runs chain into one cycle
 /// through their shared ends.
 ///
-/// C#'s `Dictionary` and `HashSet` are walked in insertion order to find the FIRST open edge, so
-/// both are insertion-ordered here.
+/// The edge counts and the edge set are walked in insertion order to find the FIRST open edge, so
+/// both are insertion-ordered: the edge named is the same on every run.
 pub fn first_open_edge_of(
     mesh: &LevelLineMesh,
     kept_edges: &[(i32, i32)],

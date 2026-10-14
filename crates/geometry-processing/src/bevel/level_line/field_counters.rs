@@ -1,11 +1,9 @@
-//! How many of each query a level-line build asked, by the refinement rule that asked it. Ports
-//! `Bevel/LevelLine/FieldCounters.cs`: the rules ([`LevelLineRule`]), the per-thread tally
-//! ([`FieldCounterTally`], C#'s `[ThreadStatic]` fields in one `thread_local!`), the two
-//! process-wide switches and the counting methods of the static class ([`FieldCounters`]), with the
-//! bounded searches' step and root-cell tallies ([`FieldCounters::note_step`],
-//! [`FieldCounters::note_root_cell`]). The rule, bucket and reach reports, the rule tallies the
-//! refinement charges (`Fired`, `AskedBy`, ...) and `Reset` land with later packages as further
-//! `impl` blocks.
+//! How many of each query a level-line build asked, by the refinement rule that asked it: the
+//! rules ([`LevelLineRule`]), the per-thread tally ([`FieldCounterTally`], one `thread_local!`),
+//! the two process-wide switches and the counting methods ([`FieldCounters`]), with the bounded
+//! searches' step and root-cell tallies ([`FieldCounters::note_step`],
+//! [`FieldCounters::note_root_cell`]), and, as further `impl` blocks, the rule, bucket and reach
+//! reports, the rule tallies the refinement charges (`fired`, `asked_by`, ...) and `reset`.
 //!
 //! Counted PER THREAD. The kernel never forks a build, so a thread's tally is exactly one caller's
 //! build - where one process-wide tally would count whatever build is running BESIDE it, which is
@@ -20,7 +18,7 @@ use indexmap::IndexMap;
 use super::stopwatch;
 use super::{LevelLineWork, LevelLineWorkPhase};
 
-/// C# `LevelLineRule`: the refinement rules a search can be charged to, by the names the rules
+/// The refinement rules a search can be charged to, by the names the rules
 /// carry in `BandRefinement`'s own remarks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum LevelLineRule {
@@ -57,7 +55,7 @@ pub enum LevelLineRule {
     SliverGuard,
 }
 
-/// Every rule in discriminant order (C# `Enum.GetValues(typeof(LevelLineRule))`).
+/// Every rule in discriminant order, the order the reports list them in.
 pub const ALL_RULES: [LevelLineRule; 9] = [
     LevelLineRule::None,
     LevelLineRule::EdgeDip,
@@ -86,20 +84,20 @@ pub const BUCKET_EDGES: [f64; 6] = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
 /// pieces that only touch it.
 pub const REACH_EDGES: [f64; 4] = [1.0, 2.0, 4.0, 16.0];
 
-/// C# `FieldCounters.MeterOn`: switches on the per-RULE meter. A plain process-wide static in the
-/// C#, not a thread-static; the tallies themselves are per thread.
+/// Switches on the per-RULE meter. A plain process-wide static, not a thread-local, so one switch
+/// meters every thread; the tallies themselves are per thread.
 static METER_ON: AtomicBool = AtomicBool::new(false);
 
-/// C# `FieldCounters.CountBySite`: switches on the per-call-site tally of `Evaluate`.
+/// Switches on the per-call-site tally of `Evaluate`.
 static COUNT_BY_SITE: AtomicBool = AtomicBool::new(false);
 
 thread_local! {
     static TALLY: RefCell<FieldCounterTally> = RefCell::new(FieldCounterTally::default());
 }
 
-/// C# `FieldCounters`'s `[ThreadStatic]` fields: one thread's tally. The public counters are the
-/// ones the field and the mesh charge directly (`FieldCounters.Evaluate++`); the per-rule rows
-/// start empty and are sized on first use (C# `row ??= new long[...]`).
+/// One thread's tally. The public counters are the ones the field and the mesh charge directly
+/// (`evaluate += 1`); the per-rule rows start empty and are sized on first use, so a build with
+/// the meter off pays nothing for them.
 #[derive(Debug, Clone, Default)]
 pub struct FieldCounterTally {
     /// Point queries the chain fields were asked.
@@ -173,7 +171,7 @@ pub struct FieldCounterTally {
     pub by_site: IndexMap<String, i64>,
 }
 
-/// C# `FieldCounters`: how many of each query a build asked - instrumentation for the speed work,
+/// How many of each query a build asked - instrumentation for the speed work,
 /// zeroed by a test. Its state is the thread's [`FieldCounterTally`].
 pub struct FieldCounters;
 
@@ -183,7 +181,7 @@ impl FieldCounters {
         TALLY.with(|tally| f(&mut tally.borrow_mut()))
     }
 
-    /// Whether the per-rule meter is on (C# `FieldCounters.MeterOn`): which rule asked each
+    /// Whether the per-rule meter is on: which rule asked each
     /// search, how many found nothing, and what the bounded searches cost in subdivisions and
     /// depth. One plain static read per subdivision step when it is off, and nothing else.
     pub fn meter_on() -> bool {
@@ -195,7 +193,7 @@ impl FieldCounters {
         METER_ON.store(on, Ordering::Relaxed);
     }
 
-    /// Whether the per-call-site tally of `evaluate` is on (C# `FieldCounters.CountBySite`). Off by
+    /// Whether the per-call-site tally of `evaluate` is on. Off by
     /// default: knowing HOW MANY point queries a build asks says nothing about which code asks them.
     pub fn count_by_site() -> bool {
         COUNT_BY_SITE.load(Ordering::Relaxed)
@@ -243,7 +241,7 @@ impl FieldCounters {
         });
     }
 
-    /// C# `FieldCounters.NoteStep`: one subdivision step of a bounded search, at the depth it
+    /// One subdivision step of a bounded search, at the depth it
     /// stands - charged to the running rule, its span bucket and its two reach bands.
     pub fn note_step(depth: i32) {
         if !Self::meter_on() {
@@ -271,7 +269,7 @@ impl FieldCounters {
         });
     }
 
-    /// C# `FieldCounters.NoteRootCell`: the root cell of one bounded triangle search, read for the
+    /// The root cell of one bounded triangle search, read for the
     /// "no search needed" question: whether the three corners all take their value from the SAME
     /// chain, whether the convex bound alone proves the greatest value over the triangle stands at
     /// a corner, and whether the search's own first step retired the triangle anyway - which is
@@ -329,8 +327,8 @@ impl FieldCounters {
     }
 
     /// How many of a rule's splits would have thinned a child past one of [`WOULD_THIN_LIMITS`].
-    /// A `limit` not in the list indexes one cell early, as C#'s `Array.IndexOf` -1 does (and
-    /// panics for the first rule, where C# throws).
+    /// A `limit` not in the list is read at index -1, one cell early (and panics for the first
+    /// rule, which has no cell before it).
     pub fn would_thin(rule: LevelLineRule, limit: f64) -> i64 {
         Self::with(|t| {
             if t.would_thin.is_empty() {
@@ -439,9 +437,9 @@ impl FieldCounters {
     }
 
     /// Charges one point query to the code that asked it (the caller checks [`FieldCounters::count_by_site`] first).
-    /// control. C# walks the stack to the first frame outside the field; Rust has no
-    /// stack reflection, so the site is the source location this call was made from, carried up
-    /// through every `#[track_caller]` frame (divergence 652).
+    /// The site is the source location this call was made from, carried up through every
+    /// `#[track_caller]` frame: Rust has no stack reflection that names methods in a release or
+    /// wasm build, and a caller location costs nothing while the tally is off.
     #[track_caller]
     pub fn note_site() {
         let at = std::panic::Location::caller();
@@ -475,7 +473,7 @@ impl FieldCounters {
     }
 }
 
-/// A per-rule row, sized on first use (C# `Rows(ref row) => row ??= new long[AllRules.Length]`).
+/// A per-rule row, sized to every rule on first use.
 pub fn rows<T: Clone + Default>(row: &mut Vec<T>) -> &mut Vec<T> {
     if row.is_empty() {
         *row = vec![T::default(); ALL_RULES.len()];
@@ -484,7 +482,7 @@ pub fn rows<T: Clone + Default>(row: &mut Vec<T>) -> &mut Vec<T> {
     row
 }
 
-/// A per-rule-and-bucket row, sized on first use (C# `Cells`).
+/// A per-rule-and-bucket row, sized on first use.
 pub fn cells<T: Clone + Default>(row: &mut Vec<T>) -> &mut Vec<T> {
     if row.is_empty() {
         *row = vec![T::default(); ALL_RULES.len() * FieldCounters::buckets() as usize];
@@ -493,7 +491,7 @@ pub fn cells<T: Clone + Default>(row: &mut Vec<T>) -> &mut Vec<T> {
     row
 }
 
-/// A per-rule-and-reach row, sized on first use (C# `Reach`).
+/// A per-rule-and-reach row, sized on first use.
 pub fn reach(row: &mut Vec<i64>) -> &mut Vec<i64> {
     if row.is_empty() {
         *row = vec![0; ALL_RULES.len() * FieldCounters::reaches() as usize];
@@ -508,7 +506,7 @@ fn n0(value: i64) -> String {
 }
 
 impl FieldCounters {
-    /// C# `Fired`: one search of `rule` found what it looked for - counted by rule, span bucket
+    /// One search of `rule` found what it looked for - counted by rule, span bucket
     /// and both corners' reach bands, when the meter is on.
     pub fn fired(rule: LevelLineRule) {
         if !Self::meter_on() {
@@ -526,17 +524,17 @@ impl FieldCounters {
         });
     }
 
-    /// C# `FiredCount`.
+    /// How many searches of `rule` found what they looked for.
     pub fn fired_count(rule: LevelLineRule) -> i64 {
         Self::with(|t| rows(&mut t.fired)[rule as usize])
     }
 
-    /// C# `TotalSteps`: every rule's subdivision steps.
+    /// Every rule's subdivision steps.
     pub fn total_steps() -> i64 {
         Self::with(|t| rows(&mut t.steps).iter().sum())
     }
 
-    /// C# `StopRuleClock`: the running rule's time banked, and the clock stopped.
+    /// The running rule's time banked, and the clock stopped.
     pub fn stop_rule_clock() {
         let now = stopwatch::get_timestamp();
         Self::with(|t| {
@@ -548,12 +546,12 @@ impl FieldCounters {
         });
     }
 
-    /// C# `Seconds`.
+    /// Stopwatch ticks as seconds.
     pub fn seconds(ticks: i64) -> f64 {
         ticks as f64 / stopwatch::FREQUENCY as f64
     }
 
-    /// C# `RuleReport`: one line per rule that was asked, stepped or timed.
+    /// One line per rule that was asked, stepped or timed.
     pub fn rule_report() -> String {
         Self::with(|t| {
             let mut lines = vec![format!(
@@ -602,7 +600,7 @@ impl FieldCounters {
         })
     }
 
-    /// C# `AskedBy(rule, spanOverSize)`: a search of `rule` begins - the rule clock moved to it
+    /// A search of `rule` begins - the rule clock moved to it
     /// and it made current, and (metered) counted by its span bucket.
     pub fn asked_by(rule: LevelLineRule, span_over_size: f64) {
         if Self::meter_on() {
@@ -623,7 +621,7 @@ impl FieldCounters {
         });
     }
 
-    /// C# `AskedBy(rule, spanOverSize, nearestOverSize, farthestOverSize)`: as
+    /// As
     /// [`FieldCounters::asked_by`], with the corners' reach bands counted too.
     pub fn asked_by_reaching(
         rule: LevelLineRule,
@@ -647,7 +645,7 @@ impl FieldCounters {
         });
     }
 
-    /// C# `NoteRefineStep`: one dequeue of the refinement, with a progress line every 5000.
+    /// One dequeue of the refinement, with a progress line every 5000.
     pub fn note_refine_step(triangle_count: i32, pending_count: i32, split_depth: i32) {
         if !Self::meter_on() {
             return;
@@ -673,7 +671,7 @@ impl FieldCounters {
         });
     }
 
-    /// C# `BucketReport`: one line per rule and span bucket that was asked.
+    /// One line per rule and span bucket that was asked.
     pub fn bucket_report() -> String {
         Self::with(|t| {
             let mut lines = vec![format!(
@@ -714,7 +712,7 @@ impl FieldCounters {
         })
     }
 
-    /// C# `ReachReport`: one line per rule, corner and reach band that was asked.
+    /// One line per rule, corner and reach band that was asked.
     pub fn reach_report() -> String {
         Self::with(|t| {
             let mut lines = vec![format!(
@@ -730,7 +728,7 @@ impl FieldCounters {
                 ] {
                     for b in 0..reaches {
                         let cell = (rule as usize * reaches) + b;
-                        // C#'s null rows are the empty ones here.
+                        // A row never sized reads as all zero.
                         let asked = asked_row.get(cell).copied().unwrap_or(0);
                         if asked == 0 {
                             continue;
@@ -763,7 +761,7 @@ impl FieldCounters {
         })
     }
 
-    /// C# `NoSearchNeededReport`: one line per rule whose root cells were read.
+    /// One line per rule whose root cells were read.
     pub fn no_search_needed_report() -> String {
         Self::with(|t| {
             let mut lines = vec![format!(
@@ -799,7 +797,7 @@ impl FieldCounters {
         })
     }
 
-    /// C# `NoteRefinementStarted`: one line for a group's refinement starting, with what has been
+    /// One line for a group's refinement starting, with what has been
     /// spent so far.
     pub fn note_refinement_started(group_tag: i32, members: &[i32], candidates: i32) {
         if !Self::meter_on() {
@@ -821,12 +819,12 @@ impl FieldCounters {
         });
     }
 
-    /// C# `Reset`: every count, row and report back to nothing.
+    /// Every count, row and report back to nothing.
     pub fn reset() {
         Self::with(|t| *t = FieldCounterTally::default());
     }
 
-    /// C# `SiteReport`: every counted site, most-counted first (ties where C#'s introsort leaves them).
+    /// Every counted site, most-counted first (ties where the introsort leaves them).
     pub fn site_report() -> String {
         Self::with(|t| {
             let mut lines: Vec<(i64, String)> = t
@@ -834,9 +832,9 @@ impl FieldCounters {
                 .iter()
                 .map(|(site, &count)| (count, format!("{count:>10}  {site}")))
                 .collect();
-            // C#'s two `List.Sort`s, both introsort: by line descending (ordinal), then by count
-            // descending - unstable, so ties among equal counts fall where C#'s introsort puts
-            // them, which is what `introspective_sort` reproduces.
+            // Two introsorts: by line descending (ordinal), then by count descending. The sort is
+            // unstable, so ties among equal counts fall where `introspective_sort` puts them -
+            // the same place on every run.
             vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.1.cmp(&a.1));
             vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.0.cmp(&a.0));
             lines

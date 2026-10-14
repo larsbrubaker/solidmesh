@@ -1,5 +1,5 @@
-//! The gap fill's rail readings. Ports the nested type of `Bevel/LevelLine/GapFill.cs` (a C#
-//! static class): a loop read both ways round ([`GapFillRailSenses`]), the class's constants and the
+//! The gap fill's rail readings: a loop read both ways round ([`GapFillRailSenses`]), the fill's
+//! constants and the
 //! rail's monotone slack ([`monotone_slack`]) and the not-monotone refusal ([`not_monotone`]),
 //! the rational-quadratic arc point ([`arc_point`]), an arc reversed ([`backwards`]) and a cycle's
 //! wrap ([`largest_backward_step`]) and the chains' independence check
@@ -51,17 +51,17 @@ pub const MONOTONE_SLACK_OF_SETBACK: f64 = 1e-2;
 /// bound between those two populations.
 pub const MONOTONE_EXCURSION_OF_SETBACK: f64 = 3.0;
 
-/// Why the fill could not run: C#'s exceptions. A budget that runs out is not one of them - the
+/// Why the fill could not run. A budget that runs out is not one of these - the
 /// fill refuses by name ([`GapFillRefusal::WorkBudgetExceeded`]) and hands back a result.
 #[derive(Debug, Clone)]
 pub enum GapFillError {
-    /// The caller cancelled (C#'s `OperationCanceledException`): it says nothing about the part,
+    /// The caller cancelled: it says nothing about the part,
     /// so it is never a refusal.
     Cancelled,
     /// The mesh refused an edit - or, inside [`fill_within`], the work budget's own exit, which
     /// [`fill_with_budget`] turns into a refusal or [`GapFillError::Cancelled`].
     Mesh(LevelLineMeshError),
-    /// A caller's bug C# throws an `ArgumentException` (or `ArgumentOutOfRangeException`) for.
+    /// A caller's bug: an argument that is malformed or out of range.
     Argument(String),
 }
 
@@ -98,9 +98,9 @@ impl std::fmt::Display for GapFillError {
 
 impl std::error::Error for GapFillError {}
 
-/// C# `GapFill.Fill(gap, profile, filletSegments = 4)`: lays the strip between a closed gap's two
+/// Lays the strip between a closed gap's two
 /// loops, spending the default work for the mesh's size - [`fill_with_budget`] with no budget.
-/// C#'s default of four fillet segments is [`DEFAULT_FILLET_SEGMENTS`].
+/// The default of four fillet segments is [`DEFAULT_FILLET_SEGMENTS`].
 pub fn fill(
     gap: &BandGapResult,
     profile: BandProfile,
@@ -109,10 +109,10 @@ pub fn fill(
     fill_with_budget(gap, profile, fillet_segments, None)
 }
 
-/// C# `Fill`'s default `filletSegments`.
+/// How many segments a fillet's arc gets when the caller names none.
 pub const DEFAULT_FILLET_SEGMENTS: i32 = 4;
 
-/// C# `GapFill.Fill(gap, profile, filletSegments, budget)`: fills the gap, spending no more than
+/// Fills the gap, spending no more than
 /// the given work (`None` takes the default for the mesh's size). A fill that runs out refuses by
 /// name and hands back nothing part-built; a cancel leaves as [`GapFillError::Cancelled`].
 pub fn fill_with_budget(
@@ -168,7 +168,7 @@ pub fn fill_with_budget(
     }
 }
 
-/// C# `GapFill.FillWithin`: the fill under the budget [`fill_with_budget`] put in force. Routes a
+/// The fill under the budget [`fill_with_budget`] put in force. Routes a
 /// gap of swallowed runs to `swallowed_side`, an open one to `open_gap_fill`, and otherwise fills
 /// each chain of the pick between its own two loops; one chain's refusal takes the WHOLE pick's
 /// strip back out. The work budget's exit leaves as `Err` with every laid triangle removed.
@@ -298,7 +298,7 @@ pub fn monotone_slack(chain: &ChainField) -> f64 {
     )
 }
 
-/// C# `GapFill.RailSenses`: a loop read both ways round, with what each reading cost in
+/// A loop read both ways round, with what each reading cost in
 /// flattening. Nothing picks a sense here, because only the PAIR of loops can say which sense is
 /// which.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -316,7 +316,7 @@ pub struct GapFillRailSenses {
 }
 
 impl GapFillRailSenses {
-    /// C#'s constructor.
+    /// A loop's two readings, forward and backward.
     pub fn new(
         forward: Option<Rc<ZipRail>>,
         forward_cost: f64,
@@ -334,13 +334,13 @@ impl GapFillRailSenses {
     }
 }
 
-/// C# `GapFill.TryPair`: picks one sense for each loop so that exactly one of the two rails
+/// Picks one sense for each loop so that exactly one of the two rails
 /// reverses its loop, taking the pairing that flattened less (the left forward on a tie); `None`
 /// where neither pairing reads monotone. Where both loops read monotone BOTH ways - a short loop
 /// whose whole parameter range is inside the slack reads either way round - this is the only thing
 /// that decides the sense, and getting it wrong lays every spoke twice the same way and leaves the
-/// shell open. (Only a NaN cost could pick a pairing with a missing sense; C# then answers true
-/// with a null rail, this `None`.)
+/// shell open. (Only a NaN cost could pick a pairing with a missing sense; that answers `None`
+/// rather than a pairing with no rail.)
 pub fn try_pair(
     left: &GapFillRailSenses,
     right: &GapFillRailSenses,
@@ -377,7 +377,7 @@ pub fn not_monotone(mesh: Rc<RefCell<LevelLineMesh>>, offending_vertex: i32) -> 
     }
 }
 
-/// C# `GapFill.ArcPoint`: the point at `t` on the rational quadratic from `p` to `q` with control
+/// The point at `t` on the rational quadratic from `p` to `q` with control
 /// point `c` and middle weight cos(theta / 2), theta being the angle the arc subtends, which is the
 /// supplement of the angle PCQ. Where |P - C| = |Q - C| that is exactly the circular arc tangent
 /// to CP at P and to CQ at Q, centred on P + Q - C.
@@ -403,7 +403,7 @@ pub fn arc_point(p: Vector3, c: Vector3, q: Vector3, t: f64) -> Vector3 {
     ((p * wp) + (c * wc) + (q * wq)) / (wp + wc + wq)
 }
 
-/// C# `GapFill.Strip`: the cell between two arcs that share their far end - rows of quads,
+/// The cell between two arcs that share their far end - rows of quads,
 /// collapsing to one triangle at the shared vertex. `u` starts at the cell's first boundary vertex
 /// and `v` at its second; `base_run`, where it has more than two vertices, is the rail's stretch
 /// from `v[0]` to `u[0]` that the base triangle fans over.
@@ -446,7 +446,7 @@ pub fn strip(
     lay(mesh, u[last - 1], v[last - 1], u[last], added)
 }
 
-/// C# `GapFill.Quads`: the cell between two arcs of one station count whose ends both differ, as a
+/// The cell between two arcs of one station count whose ends both differ, as a
 /// row of quads wound as [`strip`] winds them.
 pub fn quads(
     mesh: &mut LevelLineMesh,
@@ -464,7 +464,7 @@ pub fn quads(
 
 /// Lays one fill triangle `(a, b, c)` into `mesh`, tagged as fill, and records it in `added`. A
 /// triangle with exactly one repeated pair is skipped; one whose three corners are all the same
-/// vertex still reaches [`LevelLineMesh::add_face`], which refuses it (as the C# does).
+/// vertex still reaches [`LevelLineMesh::add_face`], which refuses it.
 pub fn lay(
     mesh: &mut LevelLineMesh,
     a: i32,
@@ -481,12 +481,12 @@ pub fn lay(
     Ok(())
 }
 
-/// C# `GapFill.Backwards`: the arc's vertices in the other order.
+/// The arc's vertices in the other order.
 pub fn backwards(arc: &[i32]) -> Vec<i32> {
     arc.iter().rev().copied().collect()
 }
 
-/// C# `GapFill.LargestBackwardStep`: the index of the LARGEST backward step round the cycle, read
+/// The index of the LARGEST backward step round the cycle, read
 /// in the given sense: that step is the wrap, where the rail comes back round to the chain's start,
 /// and the rail is cut open there. -1 where no step goes backward.
 pub fn largest_backward_step(parameters: &[f64], reversed: bool) -> i32 {
@@ -511,9 +511,9 @@ pub fn largest_backward_step(parameters: &[f64], reversed: bool) -> i32 {
     wrap
 }
 
-/// C# `GapFill.NoTwoChainsShareAVertex` (`[Conditional("DEBUG")]`): the independence the per-chain
+/// The independence the per-chain
 /// fill rests on, asserted rather than assumed: no vertex of one chain's loops stands on
-/// another's. Debug builds only (`debug_assert!`, as C#'s conditional method) - what it checks is
+/// another's. Debug builds only (`debug_assert!`) - what it checks is
 /// a consequence of the cut, so a release build paying for it every fill would learn nothing.
 pub fn no_two_chains_share_a_vertex(loops: &[GapLoop]) {
     if !cfg!(debug_assertions) {
@@ -537,7 +537,7 @@ pub fn no_two_chains_share_a_vertex(loops: &[GapLoop]) {
     }
 }
 
-/// C# `GapFill.WithinExcursion`: the one rule that says whether a backward reading may be flattened
+/// The one rule that says whether a backward reading may be flattened
 /// onto the envelope or the rail refused: an excursion a concave turn can explain, and no deeper
 /// ([`MONOTONE_EXCURSION_OF_SETBACK`] setbacks past the slack). Open mode asks THIS one too -
 /// flattening without a bound would crush a crossing rail monotone, still closed by construction,
@@ -546,7 +546,7 @@ pub fn within_excursion(envelope: f64, reading: f64, chain: &ChainField, slack: 
     envelope - reading <= slack + (MONOTONE_EXCURSION_OF_SETBACK * chain.setback_at(envelope))
 }
 
-/// C# `GapFill.Senses`: re-expresses a loop as a rail BOTH ways round: each sense is cut open at
+/// Re-expresses a loop as a rail BOTH ways round: each sense is cut open at
 /// its own largest backward step and takes its monotone envelope, and reports what that envelope
 /// had to flatten. Nothing is sorted - a loop whose parameter wanders is a fact about the cut, not
 /// something to tidy away - and nothing here picks a sense, because only the PAIR of loops can say
@@ -588,7 +588,7 @@ pub fn senses(gap_loop: &GapLoop, chain: &ChainField, slack: f64) -> GapFillRail
     )
 }
 
-/// C# `GapFill.TryEnvelope`: rotates a cycle to begin just after its `wrap` and takes its
+/// Rotates a cycle to begin just after its `wrap` and takes its
 /// MONOTONE ENVELOPE - each point's parameter is the greatest reading so far - refusing when an
 /// excursion below that envelope is deeper than a concave turn can explain
 /// ([`within_excursion`]). Answers (the rail, or `None` on a refusal; the parameter flattened so
@@ -630,7 +630,7 @@ pub fn try_envelope(
     (Some(rail), flattened, -1)
 }
 
-/// C# `GapFill.Merge`: the zipper itself - for each state, which rail advances next. A state is
+/// The zipper itself - for each state, which rail advances next. A state is
 /// (left advances so far, right advances so far); the walk runs from (0, 0) to (n, m), which is
 /// the very same spoke again. Across a JUMP the spoke the advance makes is the shorter in parameter
 /// of the two it could make; elsewhere the usual advance gives way where its spoke would cut across
@@ -694,7 +694,7 @@ pub fn merge(
     Ok(steps)
 }
 
-/// C# `GapFill.Arcs`: a closed chain's zip's arcs, one per advance - the straight spoke at one
+/// A closed chain's zip's arcs, one per advance - the straight spoke at one
 /// segment, otherwise the fillet's row carried along the chain between the two rails' unwrapped
 /// readings ([`super::fillet_arc_rows::along_the_chain`]) - with the first repeated at the end to
 /// close the loop.
