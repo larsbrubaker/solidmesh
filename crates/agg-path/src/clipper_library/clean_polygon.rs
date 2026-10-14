@@ -1,13 +1,13 @@
-//! agg-sharp's modified Clipper 6.4.2 `Clipper.CleanPolygon(s)` (`clipper_library/clipper.cs`,
-//! Boost Software License 1.0), which Clipper2 does not have. Moved here from polygon-mesh;
-//! the other `Clipper` statics MatterCAD calls are in [`super::clipper_statics`].
+//! A modified Clipper 6.4.2 `Clipper.CleanPolygon(s)` (Boost Software License 1.0), which
+//! Clipper2 does not have; the other `Clipper` statics MatterCAD calls are in [`super::clipper_statics`].
 
 use clipper2_rust::{Path64, Paths64, Point64};
 
-/// C#'s default `CleanPolygon(s)` distance: points closer than this merge.
+/// The usual clean distance, just over sqrt(2) so diagonal grid neighbours merge: points closer
+/// than this merge.
 pub const DEFAULT_CLEAN_DISTANCE: f64 = 1.415;
 
-/// agg-sharp's `Clipper.CleanPolygons`: [`clean_polygon`] on each polygon.
+/// [`clean_polygon`] on each polygon.
 pub fn clean_polygons(polys: &Paths64, distance: f64) -> Paths64 {
     polys
         .iter()
@@ -15,11 +15,11 @@ pub fn clean_polygons(polys: &Paths64, distance: f64) -> Paths64 {
         .collect()
 }
 
-/// agg-sharp's `Clipper.CleanPolygon`: drops vertices within `distance` of a neighbour, then
+/// Drops vertices within `distance` of a neighbour, then
 /// collapses runs of near-collinear vertices - testing each new end against every vertex
 /// already accumulated, so a finely tessellated curve is not flattened one triple at a time.
-/// A result of fewer than three vertices is empty. The C# linked `OutPt` ring is an index ring
-/// here.
+/// A result of fewer than three vertices is empty. The ring is linked by `next`/`prev` index
+/// arrays.
 pub fn clean_polygon(path: &Path64, distance: f64) -> Path64 {
     let mut cnt = path.len();
     if cnt == 0 {
@@ -93,8 +93,8 @@ pub fn clean_polygon(path: &Path64, distance: f64) -> Path64 {
         first = false;
     }
 
-    // remove all the points that were collinear, in the order they were found (a C# HashSet
-    // with no removals enumerates in insertion order)
+    // remove all the points that were collinear, in the order they were found, so the ring's
+    // start point is deterministic
     for remove in remove_points {
         op = exclude_op(remove, &mut next, &mut prev, &mut idx);
         cnt -= 1;
@@ -111,7 +111,7 @@ pub fn clean_polygon(path: &Path64, distance: f64) -> Path64 {
     result
 }
 
-/// Unlinks `op` from the ring and returns its predecessor (C# `ExcludeOp`).
+/// Unlinks `op` from the ring and returns its predecessor.
 fn exclude_op(op: usize, next: &mut [usize], prev: &mut [usize], idx: &mut [u8]) -> usize {
     let result = prev[op];
     next[result] = next[op];

@@ -1,4 +1,4 @@
-//! The float RGBA colour. Ports agg-sharp `agg/Primitives/ColorF.cs`: constructors, HSL
+//! The float RGBA colour: constructors, HSL
 //! conversion, the arithmetic operators, premultiply/demultiply, wavelength colours, tweening
 //! and blending. [`super::color8::Color`] is the 8-bit colour it converts to and from.
 
@@ -7,7 +7,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use super::color8::{uround, Color};
 
-/// .NET `Math.Max(float, float)`: NaN if either argument is NaN (Rust's `f32::max` ignores it).
+/// The larger of two floats, NaN if either argument is NaN (`f32::max` would ignore it).
 fn net_max(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
@@ -18,7 +18,7 @@ fn net_max(a: f32, b: f32) -> f32 {
     }
 }
 
-/// .NET `Math.Min(float, float)`, NaN-propagating.
+/// The smaller of two floats, NaN-propagating.
 fn net_min(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
@@ -29,7 +29,7 @@ fn net_min(a: f32, b: f32) -> f32 {
     }
 }
 
-/// agg-sharp `ColorF`: `f32` RGBA, nominally 0..1 but unclamped.
+/// `f32` RGBA, nominally 0..1 but unclamped.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ColorF {
     pub red: f32,
@@ -38,8 +38,8 @@ pub struct ColorF {
     pub alpha: f32,
 }
 
-/// C# `GetHashCode` (`new { blue, green, red, alpha }.GetHashCode()`): equal colours hash
-/// equal. -0 is folded into 0, which `==` treats as the same value (as .NET's float hash does).
+/// Hashes blue, green, red, alpha: equal colours hash equal. -0 is folded into 0, which `==`
+/// treats as the same value.
 impl Hash for ColorF {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for channel in [self.blue, self.green, self.red, self.alpha] {
@@ -60,7 +60,6 @@ impl ColorF {
     pub const MAGENTA: ColorF = ColorF::new(1.0, 0.0, 1.0, 1.0);
     pub const YELLOW: ColorF = ColorF::new(1.0, 1.0, 0.0, 1.0);
 
-    /// C# `new ColorF(float r, float g, float b, float a)`.
     pub const fn new(red: f32, green: f32, blue: f32, alpha: f32) -> Self {
         Self {
             red,
@@ -70,27 +69,25 @@ impl ColorF {
         }
     }
 
-    /// C# `new ColorF(double r, double g, double b, double a)`: each narrowed to `f32`.
+    /// Each narrowed to `f32`.
     pub fn from_f64(r: f64, g: f64, b: f64, a: f64) -> Self {
         Self::new(r as f32, g as f32, b as f32, a as f32)
     }
 
-    /// C# `new ColorF(double r, double g, double b)`: opaque.
+    /// Opaque.
     pub fn from_f64_rgb(r: f64, g: f64, b: f64) -> Self {
         Self::from_f64(r, g, b, 1.0)
     }
 
-    /// C# `new ColorF(ColorF c, float a)`.
     pub fn with_alpha_of(c: ColorF, a: f32) -> Self {
         Self::new(c.red, c.green, c.blue, a)
     }
 
-    /// C# `new ColorF(Color color)`: `channel / 255f`.
+    /// `channel / 255f`.
     pub fn from_color(color: Color) -> Self {
         color.to_color_f()
     }
 
-    /// C# `new ColorF(float wavelen, float gamma)`.
     pub fn from_wavelength(wl: f32, gamma: f32) -> ColorF {
         let mut t = ColorF::new(0.0, 0.0, 0.0, 1.0);
         let wl64 = wl as f64;
@@ -126,8 +123,8 @@ impl ColorF {
         t
     }
 
-    /// C# `Red0To255` getter (and the other three): note the clamp is to 0..255, not 0..1,
-    /// as in C#; `ToColor`'s constructor clamps the result.
+    /// A channel as 0..255 (all four getters): note the clamp is to 0..255, not 0..1, so a
+    /// value over 1 can exceed 255; `ToColor`'s constructor clamps the result.
     fn channel_0_to_255(v: f32) -> i32 {
         uround((net_max(0.0, net_min(255.0, v)) * Self::BASE_MASK as f32) as f64)
     }
@@ -148,7 +145,7 @@ impl ColorF {
         Self::channel_0_to_255(self.alpha)
     }
 
-    /// C# `FromHSL(h, s, l, alpha = 1)`: all inputs 0..1.
+    /// All inputs 0..1.
     pub fn from_hsl(
         hue0_to_1: f64,
         saturation0_to_1: f64,
@@ -167,7 +164,7 @@ impl ColorF {
             let m = lightness0_to_1 + lightness0_to_1 - v;
             let sv = (v - m) / v;
             let hue = hue0_to_1 * 6.0;
-            // C# (int) truncates toward zero (saturating on .NET 9+, as `as` does).
+            // Truncates toward zero (saturating).
             let sextant = hue as i32;
             let fract = hue - sextant as f64;
             let vsf = v * sv * fract;
@@ -187,7 +184,7 @@ impl ColorF {
         ColorF::from_f64(r, g, b, alpha)
     }
 
-    /// C# `GetHSL(out h, out s, out l)`, returned as `(hue, saturation, lightness)`.
+    /// `(hue, saturation, lightness)`.
     pub fn get_hsl(&self) -> (f64, f64, f64) {
         let max_rgb = net_max(self.red, net_max(self.green, self.blue)) as f64;
         let min_rgb = net_min(self.red, net_min(self.green, self.blue)) as f64;
@@ -223,7 +220,6 @@ impl ColorF {
         (hue, saturation, lightness)
     }
 
-    /// C# `ToColor()`.
     pub fn to_color(self) -> Color {
         Color::new(
             self.red0_to_255(),
@@ -233,29 +229,26 @@ impl ColorF {
         )
     }
 
-    /// C# `clear()`.
     pub fn clear(&mut self) {
         *self = ColorF::default();
     }
 
-    /// C# `transparent()`: zero alpha in place, returning the result.
+    /// Zero alpha in place, returning the result.
     pub fn transparent(&mut self) -> ColorF {
         self.alpha = 0.0;
         *self
     }
 
-    /// C# `opacity(float)`: set alpha clamped to 0..1.
+    /// Set alpha clamped to 0..1.
     pub fn set_opacity(&mut self, a: f32) -> ColorF {
         self.alpha = a.clamp(0.0, 1.0);
         *self
     }
 
-    /// C# `opacity()`.
     pub fn opacity(&self) -> f32 {
         self.alpha
     }
 
-    /// C# `premultiply()`.
     pub fn premultiply(&mut self) -> ColorF {
         self.red *= self.alpha;
         self.green *= self.alpha;
@@ -263,7 +256,6 @@ impl ColorF {
         *self
     }
 
-    /// C# `premultiply(float a)`.
     pub fn premultiply_to(&mut self, a: f32) -> ColorF {
         if self.alpha <= 0.0 || a <= 0.0 {
             *self = ColorF::default();
@@ -277,7 +269,6 @@ impl ColorF {
         *self
     }
 
-    /// C# `ComponentMax(a, b)`.
     pub fn component_max(a: ColorF, b: ColorF) -> ColorF {
         let mut result = a;
         if result.red < b.red {
@@ -295,7 +286,6 @@ impl ColorF {
         result
     }
 
-    /// C# `demultiply()`.
     pub fn demultiply(&mut self) -> ColorF {
         if self.alpha == 0.0 {
             self.red = 0.0;
@@ -310,7 +300,7 @@ impl ColorF {
         *self
     }
 
-    /// C# `gradient(Color c_8, double k)`: float interpolation toward `c_8`, as a `Color`.
+    /// Float interpolation toward `c_8`, as a `Color`.
     pub fn gradient(&self, c_8: Color, k: f64) -> Color {
         let c = c_8.to_color_f();
         let lerp = |a: f32, b: f32| (a as f64 + (b - a) as f64 * k) as f32;
@@ -323,17 +313,15 @@ impl ColorF {
         .to_color()
     }
 
-    /// C# `no_color()`.
     pub fn no_color() -> ColorF {
         ColorF::default()
     }
 
-    /// C# `rgba_pre(float r, float g, float b, float a)`.
     pub fn rgba_pre(r: f32, g: f32, b: f32, a: f32) -> ColorF {
         ColorF::new(r, g, b, a).premultiply()
     }
 
-    /// C# `GetTweenColor(Color1, Color2, RatioOf2)`: the result is opaque unless a ratio is
+    /// The result is opaque unless a ratio is
     /// out of 0..1, when it is a copy of an end colour.
     pub fn get_tween_color(color1: ColorF, color2: ColorF, ratio_of_2: f64) -> ColorF {
         if ratio_of_2 <= 0.0 {
@@ -351,21 +339,20 @@ impl ColorF {
         )
     }
 
-    /// C# `Blend(other, weight)`: `this * (1 - weight) + other * weight`.
+    /// `this * (1 - weight) + other * weight`.
     pub fn blend(self, other: ColorF, weight: f64) -> ColorF {
         self * (1.0 - weight) + other * weight
     }
 
-    /// C# `SumOfDistances(other)`: the RGB L1 distance.
+    /// The RGB L1 distance.
     pub fn sum_of_distances(&self, other: ColorF) -> f64 {
         (self.red - other.red).abs() as f64
             + (self.green - other.green).abs() as f64
             + (self.blue - other.blue).abs() as f64
     }
 
-    /// C# `Clamp0To1()`.
     pub fn clamp_0_to_1(&mut self) {
-        // NaN stays NaN, as in C#.
+        // NaN stays NaN.
         let c = |v: &mut f32| *v = v.clamp(0.0, 1.0);
         c(&mut self.red);
         c(&mut self.green);
@@ -435,7 +422,7 @@ impl Mul<f32> for ColorF {
     }
 }
 
-/// C# `operator *(ColorF, double)`: the factor is narrowed to `f32` first.
+/// The factor is narrowed to `f32` first.
 impl Mul<f64> for ColorF {
     type Output = ColorF;
     fn mul(self, b: f64) -> ColorF {
@@ -450,7 +437,7 @@ impl Div<f32> for ColorF {
     }
 }
 
-/// C# `operator /(ColorF, double)`: the divisor is narrowed to `f32` first.
+/// The divisor is narrowed to `f32` first.
 impl Div<f64> for ColorF {
     type Output = ColorF;
     fn div(self, b: f64) -> ColorF {

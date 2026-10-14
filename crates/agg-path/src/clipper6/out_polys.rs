@@ -1,4 +1,4 @@
-//! Clipper 6's output rings (`clipper.cs`): creating out-records and points (`AddOutPt`,
+//! Clipper 6's output rings: creating out-records and points (`AddOutPt`,
 //! `AddLocalMinPoly`, `AddLocalMaxPoly`), hole state and the lowermost-record tie-breaks,
 //! merging two rings (`AppendPolygon`), the clean-up passes (`FixupOutPolygon`,
 //! `FixupOutPolyline`) and the results (`BuildResult` into paths, `BuildResult2` into a
@@ -14,7 +14,6 @@ use super::types::{
 };
 
 impl Clipper {
-    /// C# `CreateOutRec`.
     pub(super) fn create_out_rec(&mut self) -> usize {
         let index = self.poly_outs.len();
         self.poly_outs.push(OutRec {
@@ -41,8 +40,8 @@ impl Clipper {
         index
     }
 
-    /// The first point of `out_rec`'s ring (C# `outRec.Pts`, which the sweep only reads while
-    /// the ring has points); [`ClipperError::OutRecHasNoPoints`] where the C# would throw.
+    /// The first point of `out_rec`'s ring, which the sweep only reads while the ring has
+    /// points; [`ClipperError::OutRecHasNoPoints`] when it has none.
     pub(super) fn ring_pts(&self, out_rec: usize) -> Result<usize, ClipperError> {
         self.poly_outs[out_rec]
             .pts
@@ -163,7 +162,6 @@ impl Clipper {
         }
     }
 
-    /// C# `GetLastOutPt`.
     pub(super) fn get_last_out_pt(&self, e: usize) -> Result<usize, ClipperError> {
         let pts = self.ring_pts(self.edges[e].out_idx as usize)?;
         Ok(if self.edges[e].side == EdgeSide::Left {
@@ -260,7 +258,7 @@ impl Clipper {
         pp
     }
 
-    /// C# `GetLowermostRec`: work out which polygon fragment has the correct hole state ...
+    /// Work out which polygon fragment has the correct hole state ...
     pub(super) fn get_lowermost_rec(
         &mut self,
         out_rec1: usize,
@@ -290,7 +288,6 @@ impl Clipper {
         })
     }
 
-    /// C# `OutRec1RightOfOutRec2`.
     pub(super) fn out_rec1_right_of_out_rec2(&self, out_rec1: usize, out_rec2: usize) -> bool {
         let mut rec = Some(out_rec1);
         while let Some(r) = rec {
@@ -302,7 +299,7 @@ impl Clipper {
         false
     }
 
-    /// C# `GetOutRec`: follows `Idx` to the record a merged one now lives in.
+    /// Follows `Idx` to the record a merged one now lives in.
     pub(super) fn get_out_rec(&self, idx: i32) -> usize {
         let mut out_rec = idx as usize;
         while out_rec != self.poly_outs[out_rec].idx as usize {
@@ -394,7 +391,6 @@ impl Clipper {
         Ok(())
     }
 
-    /// C# `ReversePolyPtLinks`.
     pub(super) fn reverse_poly_pt_links(&mut self, pp: Option<usize>) {
         let Some(pp) = pp else { return };
         let mut pp1 = pp;
@@ -423,7 +419,7 @@ impl Clipper {
         result
     }
 
-    /// C# `BuildResult`: each ring read backwards from its right-most point.
+    /// Each ring read backwards from its right-most point.
     pub(super) fn build_result(&self, polyg: &mut Paths) {
         polyg.clear();
         for out_rec in &self.poly_outs {
@@ -442,7 +438,7 @@ impl Clipper {
         }
     }
 
-    /// C# `FixHoleLinkage`: skip if an outermost polygon or already already points to the
+    /// Skip if an outermost polygon or already already points to the
     /// correct FirstLeft ...
     fn fix_hole_linkage(&mut self, out_rec: usize) {
         let Some(first_left) = self.poly_outs[out_rec].first_left else {
@@ -465,7 +461,6 @@ impl Clipper {
         self.poly_outs[out_rec].first_left = orfl;
     }
 
-    /// C# `BuildResult2`.
     pub(super) fn build_result2(&mut self, polytree: &mut PolyTree) {
         polytree.clear();
 
@@ -534,7 +529,7 @@ impl Clipper {
         }
     }
 
-    /// C# `FixupOutPolygon`: removes duplicate points and simplifies consecutive parallel
+    /// Removes duplicate points and simplifies consecutive parallel
     /// edges by removing the middle vertex.
     pub(super) fn fixup_out_polygon(&mut self, out_rec: usize) {
         let mut last_ok: Option<usize> = None;
@@ -576,7 +571,6 @@ impl Clipper {
         self.poly_outs[out_rec].pts = Some(pp);
     }
 
-    /// C# `DupOutPt`.
     pub(super) fn dup_out_pt(&mut self, out_pt: usize, insert_after: bool) -> usize {
         let OutPt { idx, pt, .. } = self.out_pts[out_pt];
         let result = self.new_out_pt(idx, pt);
@@ -596,7 +590,7 @@ impl Clipper {
         result
     }
 
-    /// C# `Area(OutPt)` (and `Area(OutRec)` on its `Pts`). Unlike the static `Area`, it sums
+    /// The area of the ring starting at `op`. Unlike the static `Area`, it sums
     /// in 64-bit integers before converting, and is positive for clockwise (y up) rings.
     pub(super) fn area_out_pt(&self, op: Option<usize>) -> f64 {
         let Some(op_first) = op else { return 0.0 };
@@ -615,7 +609,6 @@ impl Clipper {
     }
 }
 
-/// C# `GetDx`.
 fn get_dx(pt1: IntPoint, pt2: IntPoint) -> f64 {
     if pt1.y == pt2.y {
         HORIZONTAL

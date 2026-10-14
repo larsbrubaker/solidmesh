@@ -1,5 +1,5 @@
-//! The static `Clipper` members MatterCAD calls, from agg-sharp's modified Clipper 6.4.2
-//! (`clipper_library/clipper.cs`, Boost Software License 1.0), and the `new Clipper()` +
+//! The static `Clipper` members MatterCAD calls, from a modified Clipper 6.4.2 (Boost Software
+//! License 1.0), and the `new Clipper()` +
 //! `Execute` pattern the extension methods share. Everything runs on the Clipper 6 port in
 //! [`crate::clipper6`]; this module adapts clipper2-rust's types (`Path64`, `FillRule`,
 //! `ClipType`, `PolyTree64`), which agg-path's polygon API speaks, to it. `CleanPolygon(s)` is
@@ -21,7 +21,7 @@ pub fn poly_fill_type(fill_rule: FillRule) -> clipper6::PolyFillType {
 }
 
 /// Clipper2's join type as Clipper 6's. Clipper 6 has no bevel join; its square join (the
-/// corner cut off square to the bisector) is the nearest, and no C# caller can ask for a bevel.
+/// corner cut off square to the bisector) is the nearest, and no caller asks for a bevel.
 pub fn clipper6_join_type(join_type: JoinType) -> clipper6::JoinType {
     match join_type {
         JoinType::Square | JoinType::Bevel => clipper6::JoinType::Square,
@@ -52,8 +52,8 @@ fn new_clipper(subjects: &Paths64, clips: &Paths64) -> Result<clipper6::Clipper,
 }
 
 /// `clipper.AddPaths(subjects, ptSubject, true); clipper.AddPaths(clips, ptClip, true);
-/// clipper.Execute(clipType, solution, fillType)`. Clipper2's `NoClip` (no C# counterpart)
-/// clips nothing and gives an empty solution.
+/// clipper.Execute(clipType, solution, fillType)`. Clipper2's `NoClip` (Clipper 6 has no
+/// counterpart) clips nothing and gives an empty solution.
 pub fn execute(
     clip_type: ClipType,
     subjects: &Paths64,
@@ -117,24 +117,24 @@ pub fn offset_closed_polygons(
     Ok(solution)
 }
 
-/// C# `Clipper.Area`: the signed area, positive when the polygon is counter-clockwise (y up).
+/// The signed area, positive when the polygon is counter-clockwise (y up).
 /// Fewer than three points is 0.
 pub fn area(poly: &Path64) -> f64 {
     clipper6::area(poly)
 }
 
-/// C# `Clipper.Orientation`: true when [`area`] is not negative.
+/// True when [`area`] is not negative.
 pub fn orientation(poly: &Path64) -> bool {
     clipper6::orientation(poly)
 }
 
-/// C# `Clipper.PointInPolygon`: 0 outside, +1 inside, -1 on the boundary (Hormann & Agathos,
+/// 0 outside, +1 inside, -1 on the boundary (Hormann & Agathos,
 /// "The Point in Polygon Problem for Arbitrary Polygons").
 pub fn point_in_polygon(pt: clipper2_rust::Point64, path: &Path64) -> i32 {
     clipper6::point_in_polygon(pt, path)
 }
 
-/// C# `Clipper.GetBounds(Paths)`: Clipper's `IntRect` (`top` is the smallest y), all zero when
+/// Clipper's `IntRect` (`top` is the smallest y), all zero when
 /// every path is empty.
 pub fn get_bounds(paths: &Paths64) -> Rect64 {
     let r = clipper6::get_bounds(paths);
@@ -146,26 +146,26 @@ pub fn get_bounds(paths: &Paths64) -> Rect64 {
     }
 }
 
-/// C# `Clipper.SimplifyPolygon(poly, fillType)`: the polygon unioned with itself under
+/// The polygon unioned with itself under
 /// `fill_rule` with `StrictlySimple` set, which splits a self-intersecting polygon, or one that
 /// touches itself at a vertex, into simple ones.
 pub fn simplify_polygon(poly: &Path64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
     clipper6::simplify_polygon(poly, poly_fill_type(fill_rule)).map_err(ClipperError)
 }
 
-/// C# `Clipper.SimplifyPolygons(polys, fillType)`: as [`simplify_polygon`] for many.
+/// As [`simplify_polygon`] for many.
 pub fn simplify_polygons(polys: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError> {
     clipper6::simplify_polygons(polys, poly_fill_type(fill_rule)).map_err(ClipperError)
 }
 
-/// C# `Clipper.ClosedPathsFromPolyTree`: every non-empty contour, parents before children.
+/// Every non-empty contour, parents before children.
 pub fn closed_paths_from_poly_tree(poly_tree: &PolyTree64) -> Paths64 {
     let mut result = Paths64::new();
     add_node_paths(poly_tree, 0, &mut result);
     result
 }
 
-/// C# `AddPolyNodeToPaths(polynode, ntClosed, paths)` (every node of a closed clip is closed).
+/// Every non-empty contour under `node` (every node of a closed clip is closed).
 fn add_node_paths(poly_tree: &PolyTree64, node: usize, paths: &mut Paths64) {
     let polygon = poly_tree.nodes[node].polygon();
     if !polygon.is_empty() {

@@ -1,4 +1,4 @@
-//! Clipper 6's `ClipperBase` (`clipper.cs`): turning input paths into edge bounds and local
+//! Clipper 6's `ClipperBase`: turning input paths into edge bounds and local
 //! minima (`AddPath`, `ProcessBound`, `FindNextLocMin`), the local-minima and scanbeam lists,
 //! `Reset`, and the active and sorted edge lists (AEL/SEL) the sweep in [`super::engine`] walks.
 
@@ -8,12 +8,10 @@ use super::types::{
     HORIZONTAL, LO_RANGE, SKIP, UNASSIGNED,
 };
 
-/// C# `IsHorizontal`.
 pub(super) fn is_horizontal(e: &TEdge) -> bool {
     e.delta.y == 0
 }
 
-/// C# `SlopesEqual(TEdge, TEdge, UseFullRange)`.
 pub(super) fn slopes_equal_edges(e1: &TEdge, e2: &TEdge, use_full_range: bool) -> bool {
     if use_full_range {
         int128_mul(e1.delta.y, e2.delta.x) == int128_mul(e1.delta.x, e2.delta.y)
@@ -22,7 +20,6 @@ pub(super) fn slopes_equal_edges(e1: &TEdge, e2: &TEdge, use_full_range: bool) -
     }
 }
 
-/// C# `SlopesEqual(pt1, pt2, pt3, UseFullRange)`.
 pub(super) fn slopes_equal3(
     pt1: IntPoint,
     pt2: IntPoint,
@@ -39,7 +36,6 @@ pub(super) fn slopes_equal3(
     }
 }
 
-/// C# `SlopesEqual(pt1, pt2, pt3, pt4, UseFullRange)`.
 pub(super) fn slopes_equal4(
     pt1: IntPoint,
     pt2: IntPoint,
@@ -57,7 +53,6 @@ pub(super) fn slopes_equal4(
     }
 }
 
-/// C# `Pt2IsBetweenPt1AndPt3`.
 pub(super) fn pt2_is_between_pt1_and_pt3(pt1: IntPoint, pt2: IntPoint, pt3: IntPoint) -> bool {
     if pt1 == pt3 || pt1 == pt2 || pt3 == pt2 {
         false
@@ -68,7 +63,6 @@ pub(super) fn pt2_is_between_pt1_and_pt3(pt1: IntPoint, pt2: IntPoint, pt3: IntP
     }
 }
 
-/// C# `RangeTest`.
 fn range_test(pt: IntPoint, use_full_range: &mut bool) -> Result<(), ClipperError> {
     if *use_full_range {
         if pt.x > HI_RANGE || pt.y > HI_RANGE || -pt.x > HI_RANGE || -pt.y > HI_RANGE {
@@ -82,7 +76,7 @@ fn range_test(pt: IntPoint, use_full_range: &mut bool) -> Result<(), ClipperErro
 }
 
 impl Clipper {
-    /// C# `AddPath(pg, polyType, Closed)`: false when the path has too few distinct points.
+    /// False when the path has too few distinct points.
     pub fn add_path(
         &mut self,
         pg: &[IntPoint],
@@ -311,7 +305,7 @@ impl Clipper {
         Ok(true)
     }
 
-    /// C# `AddPaths`: true when any path was added.
+    /// True when any path was added.
     pub fn add_paths(
         &mut self,
         ppg: &[Vec<IntPoint>],
@@ -349,7 +343,7 @@ impl Clipper {
         edge.poly_typ = poly_type;
     }
 
-    /// C# `RemoveEdge`: unlinks `e` from its ring (the arena keeps it) and returns its next.
+    /// Unlinks `e` from its ring (the arena keeps it) and returns its next.
     fn remove_edge(&mut self, e: usize) -> usize {
         let (prev, next) = (self.edges[e].prev, self.edges[e].next);
         self.edges[prev].next = next;
@@ -561,7 +555,6 @@ impl Clipper {
         }
     }
 
-    /// C# `PopLocalMinima`.
     pub(super) fn pop_local_minima(&mut self, y: i64) -> Option<LocalMinima> {
         let current = self.current_lm?;
         if self.minima[current].y == y {
@@ -571,7 +564,7 @@ impl Clipper {
         None
     }
 
-    /// C# `ReverseHorizontal`: swap horizontal edges' top and bottom x's so they follow the
+    /// Swap horizontal edges' top and bottom x's so they follow the
     /// natural progression of the bounds - ie so their xbots will align with the adjoining
     /// lower edge. [Helpful in the ProcessHorizontal() method.]
     fn reverse_horizontal(&mut self, e: usize) {
@@ -579,7 +572,6 @@ impl Clipper {
         std::mem::swap(&mut edge.top.x, &mut edge.bot.x);
     }
 
-    /// C# `Reset`.
     pub(super) fn reset(&mut self) {
         self.current_lm = self.minima_list;
         if self.current_lm.is_none() {
@@ -605,7 +597,7 @@ impl Clipper {
         self.active_edges = None;
     }
 
-    /// C# `InsertScanbeam`: single-linked list sorted descending, ignoring dups.
+    /// Single-linked list sorted descending, ignoring dups.
     pub(super) fn insert_scanbeam(&mut self, y: i64) {
         let new_index = self.scanbeams.len();
         match self.scanbeam_list {
@@ -641,19 +633,17 @@ impl Clipper {
         }
     }
 
-    /// C# `PopScanbeam`.
     pub(super) fn pop_scanbeam(&mut self) -> Option<i64> {
         let head = self.scanbeam_list?;
         self.scanbeam_list = self.scanbeams[head].next;
         Some(self.scanbeams[head].y)
     }
 
-    /// C# `LocalMinimaPending`.
     pub(super) fn local_minima_pending(&self) -> bool {
         self.current_lm.is_some()
     }
 
-    /// C# `UpdateEdgeIntoAEL`: replaces `e` in the AEL with the next edge of its bound and
+    /// Replaces `e` in the AEL with the next edge of its bound and
     /// returns that edge.
     pub(super) fn update_edge_into_ael(&mut self, e: usize) -> Result<usize, ClipperError> {
         let Some(next_in_lml) = self.edges[e].next_in_lml else {
@@ -685,7 +675,6 @@ impl Clipper {
         Ok(next_in_lml)
     }
 
-    /// C# `SwapPositionsInAEL`.
     pub(super) fn swap_positions_in_ael(&mut self, edge1: usize, edge2: usize) {
         //check that one or other edge hasn't already been removed from AEL ...
         if self.edges[edge1].next_in_ael == self.edges[edge1].prev_in_ael
@@ -748,7 +737,6 @@ impl Clipper {
         }
     }
 
-    /// C# `DeleteFromAEL`.
     pub(super) fn delete_from_ael(&mut self, e: usize) {
         let ael_prev = self.edges[e].prev_in_ael;
         let ael_next = self.edges[e].next_in_ael;
@@ -767,7 +755,6 @@ impl Clipper {
     }
 }
 
-/// C# `SetDx`.
 fn set_dx(e: &mut TEdge) {
     e.delta.x = e.top.x - e.bot.x;
     e.delta.y = e.top.y - e.bot.y;

@@ -1,5 +1,4 @@
-//! Curve flattening tolerance scaled to a shape's size. Ports agg-sharp
-//! `agg/VertexSource/CurveTolerance.cs`: tolerances tuned for desk-sized parts (up to 300 units)
+//! Curve flattening tolerance scaled to a shape's size: tolerances tuned for desk-sized parts (up to 300 units)
 //! stay as they are; larger shapes scale them up so they are not over-tessellated.
 
 /// The largest size the base tolerances are tuned for.

@@ -1,7 +1,7 @@
-//! Clipper 6's `ClipperOffset` (`clipper.cs`): grows or shrinks closed polygons and open lines
+//! Clipper 6's `ClipperOffset`: grows or shrinks closed polygons and open lines
 //! by a distance with square, round or mitred corners, then unions the raw offset rings with
-//! [`Clipper`] to clean up the corners. `Execute(ref PolyTree, delta)` is not ported (nothing
-//! in MatterCAD or agg-sharp calls it).
+//! [`Clipper`] to clean up the corners. There is no offset into a `PolyTree` (nothing
+//! calls it).
 
 use std::f64::consts::PI;
 
@@ -15,14 +15,13 @@ use super::types::{
 const TWO_PI: f64 = PI * 2.0;
 const DEF_ARC_TOLERANCE: f64 = 0.25;
 
-/// C# `DoublePoint`.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct DoublePoint {
     x: f64,
     y: f64,
 }
 
-/// One added path (C#'s child `PolyNode` of `m_polyNodes`).
+/// One added path.
 #[derive(Clone, Debug)]
 struct OffsetNode {
     polygon: Path,
@@ -30,7 +29,6 @@ struct OffsetNode {
     end_type: EndType,
 }
 
-/// C# `ClipperOffset`.
 #[derive(Clone, Debug)]
 pub struct ClipperOffset {
     dest_polys: Paths,
@@ -43,7 +41,7 @@ pub struct ClipperOffset {
     cos: f64,
     miter_lim: f64,
     steps_per_rad: f64,
-    /// (child, point) of the lowest point of all closed polygons (C#'s `m_lowest`, X = -1
+    /// (child, point) of the lowest point of all closed polygons (`None`
     /// when unset).
     lowest: Option<(usize, usize)>,
     poly_nodes: Vec<OffsetNode>,
@@ -58,7 +56,6 @@ impl Default for ClipperOffset {
 }
 
 impl ClipperOffset {
-    /// C# `ClipperOffset(miterLimit = 2.0, arcTolerance = 0.25)`.
     pub fn new(miter_limit: f64, arc_tolerance: f64) -> Self {
         ClipperOffset {
             dest_polys: Paths::new(),
@@ -78,13 +75,11 @@ impl ClipperOffset {
         }
     }
 
-    /// C# `Clear`.
     pub fn clear(&mut self) {
         self.poly_nodes.clear();
         self.lowest = None;
     }
 
-    /// C# `AddPath`.
     pub fn add_path(&mut self, path: &[IntPoint], join_type: JoinType, end_type: EndType) {
         let mut high_i = path.len() as i32 - 1;
         if high_i < 0 {
@@ -136,7 +131,6 @@ impl ClipperOffset {
         }
     }
 
-    /// C# `AddPaths`.
     pub fn add_paths(&mut self, paths: &[Path], join_type: JoinType, end_type: EndType) {
         for p in paths {
             self.add_path(p, join_type, end_type);
@@ -332,7 +326,7 @@ impl ClipperOffset {
     }
 
     /// `m_destPoly.Add(new IntPoint(Round(src[j].X + normals[n].X * sign * delta), ...))`;
-    /// the C#'s open-butt ends write `X - normal.X * delta` as `sign = -1`, which rounds the
+    /// Clipper 6's open-butt ends write `X - normal.X * delta` as `sign = -1`, which rounds the
     /// same because negating a double is exact.
     fn push_along_normal(&mut self, j: usize, n: usize, sign: f64) {
         let (src, normal) = (self.src_poly[j], self.normals[n]);
@@ -350,7 +344,6 @@ impl ClipperOffset {
         self.dest_poly.push(pt);
     }
 
-    /// C# `Execute(ref Paths solution, delta)`.
     pub fn execute(&mut self, solution: &mut Paths, delta: f64) -> Result<(), ClipperError> {
         solution.clear();
         self.fix_orientations();
@@ -453,7 +446,7 @@ impl ClipperOffset {
     fn do_round(&mut self, j: usize, k: usize) {
         let (nj, nk, src) = (self.normals[j], self.normals[k], self.src_poly[j]);
         let a = self.sin_a.atan2(nk.x * nj.x + nk.y * nj.y);
-        // C# `(int)Round(...)`: Round gives a long, the cast keeps its low 32 bits.
+        // Round gives a long, the cast keeps its low 32 bits.
         let steps = std::cmp::max(round(self.steps_per_rad * a.abs()) as i32, 1);
 
         let (mut x, mut y) = (nk.x, nk.y);
@@ -473,7 +466,6 @@ impl ClipperOffset {
     }
 }
 
-/// C# `GetUnitNormal`.
 fn get_unit_normal(pt1: IntPoint, pt2: IntPoint) -> DoublePoint {
     let mut dx = (pt2.x - pt1.x) as f64;
     let mut dy = (pt2.y - pt1.y) as f64;

@@ -1,5 +1,5 @@
-//! Rust-only checks of the clipper_library helpers MatterCAD calls but agg-sharp's tests do not
-//! cover: Clipper 6's area sign and point-in-polygon, the PolyTree walks, and
+//! Rust-only checks of the clipper_library helpers MatterCAD calls that the ported tests do
+//! not cover: Clipper 6's area sign and point-in-polygon, the PolyTree walks, and
 //! DataConverters2D's winding correction and round trip.
 
 use clipper2_rust::{make_path64, FillRule, Paths64};
@@ -107,8 +107,8 @@ fn rust_only_booleans_drop_collinear_points_as_clipper_6_does() -> Result<(), Cl
 
 #[test]
 fn rust_only_coordinates_beyond_clipper_6s_range_are_an_error() {
-    // C# `RangeTest` throws "Coordinate outside allowed range" past +/-0x3FFFFFFFFFFFFFFF; the
-    // extension methods let it escape, so the Rust returns it rather than an empty result.
+    // Clipper 6 refuses coordinates past +/-0x3FFFFFFFFFFFFFFF ("Coordinate outside allowed
+    // range"); the helpers return that error rather than an empty result.
     let huge = 0x4000_0000_0000_0000_i64;
     let square: Paths64 = vec![make_path64(&[0, 0, huge, 0, huge, huge, 0, huge])];
     let small: Paths64 = vec![make_path64(&[0, 0, 10, 0, 10, 10, 0, 10])];

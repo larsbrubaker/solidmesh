@@ -1,13 +1,12 @@
-//! The colour interface and its extension methods. Ports agg-sharp `IColorType` (in
-//! `agg/Primitives/Color.cs`'s neighbour `IColorType.cs`) as the [`ColorType`] trait, and
+//! The colour interface and its extension methods: the [`ColorType`] trait, with
 //! `ColorExtensionMethods` (`WithContrast`, `AdjustSaturation`, `Luminance0To1`, `OverlayOn`,
 //! `Contrast`, `WithLightness`, `AdjustLightness`) as its provided methods. `WithAlpha` lives on
-//! [`Color`] since C# defines it only for `Color`.
+//! [`Color`] because only the 8-bit colour has it.
 
 use super::color8::Color;
 use super::color_f::ColorF;
 
-/// C# `IColorType`: the 0..1 channel view both colour types share. Setters store the way each
+/// The 0..1 channel view both colour types share. Setters store the way each
 /// type does (`Color` truncates to a byte, `ColorF` keeps the float).
 pub trait ColorType: Copy {
     fn red0_to_1(&self) -> f32;
@@ -20,10 +19,10 @@ pub trait ColorType: Copy {
     fn set_alpha0_to_1(&mut self, value: f32);
     fn to_color(&self) -> Color;
     fn to_color_f(&self) -> ColorF;
-    /// Stores a `Color` as this type (C# assigning a `Color` to an `IColorType` variable).
+    /// Stores a `Color` as this type.
     fn from_color(color: Color) -> Self;
 
-    /// C# `Luminance0To1`: WCAG relative luminance.
+    /// WCAG relative luminance.
     fn luminance0_to_1(&self) -> f64 {
         let channel = |c: f32| {
             let c = c as f64;
@@ -38,7 +37,7 @@ pub trait ColorType: Copy {
             + 0.0722 * channel(self.blue0_to_1())
     }
 
-    /// C# `OverlayOn(color)`: this colour composited over `color`.
+    /// This colour composited over `color`.
     fn overlay_on<C: ColorType>(&self, color: &C) -> Self {
         let mut overlaid = *self;
         let alpha = self.alpha0_to_1();
@@ -54,14 +53,14 @@ pub trait ColorType: Copy {
         overlaid
     }
 
-    /// C# `Contrast(color)`: the WCAG contrast ratio, 1 to 21, rounded to one decimal (two
+    /// The WCAG contrast ratio, 1 to 21, rounded to one decimal (two
     /// when this colour is semi-transparent).
     fn contrast<C: ColorType>(&self, color: &C) -> f64 {
         let mut boxed = *color;
         self.contrast_boxed(&mut boxed)
     }
 
-    /// `Contrast` as C# runs it: `color` is an `IColorType` box, and `OverlayOn` writes into
+    /// The WCAG contrast ratio, where `color` is a box and `OverlayOn` writes into
     /// the box it is called on, so `color` comes back overlaid when it was semi-transparent.
     /// Callers that pass the same box again (`WithContrast`, the semi-transparent branch here)
     /// see that change; this keeps it.
@@ -84,9 +83,9 @@ pub trait ColorType: Copy {
         // If we're here, it means we have a semi-transparent background. The text color may or
         // may not be semi-transparent, but that doesn't matter.
         //
-        // C# calls `OverlayOn` through the boxed `IColorType`, which writes the overlaid
-        // channels back into `thisA`'s box: by the time `onWhite` is computed, `thisA` already
-        // is `onBlack` (and opaque), so `onWhite` equals `onBlack`. Reproduced here.
+        // `on_white` is the already-opaque `on_black` overlaid on white, so it equals
+        // `on_black`: the overlay writes back into the colour it is called on. The contrast
+        // values the theme's text colours are chosen by are pinned to this.
         let on_black = self.overlay_on(&Color::BLACK);
         let on_white = on_black.overlay_on(&Color::WHITE);
         let contrast_on_black = on_black.contrast_boxed(color);
@@ -102,7 +101,7 @@ pub trait ColorType: Copy {
         round_digits((min + max) / 2.0, 2)
     }
 
-    /// C# `WithContrast(fixedColor, minimumRequiredContrast = 3)`: lighten or darken by 5%
+    /// Lighten or darken by 5%
     /// steps (at most 30) until the contrast with `fixed_color` is reached.
     fn with_contrast<C: ColorType>(&self, fixed_color: &C, minimum_required_contrast: f64) -> Self {
         // `fixedColor` is one box for the whole loop, so `Contrast` may overlay it in place.
@@ -126,32 +125,29 @@ pub trait ColorType: Copy {
         color_to_adjust
     }
 
-    /// C# `AdjustSaturation(saturationMultiplier)`.
     fn adjust_saturation(&self, saturation_multiplier: f64) -> ColorF {
         let (h, s, l) = self.to_color_f().get_hsl();
         ColorF::from_hsl(h, s * saturation_multiplier, l, 1.0)
     }
 
-    /// C# `WithLightness(lightness)`.
     fn with_lightness(&self, lightness: f64) -> ColorF {
         let (h, s, _) = self.to_color_f().get_hsl();
         ColorF::from_hsl(h, s, lightness, 1.0)
     }
 
-    /// C# `AdjustLightness(lightnessMultiplier)`.
     fn adjust_lightness(&self, lightness_multiplier: f64) -> ColorF {
         let (h, s, l) = self.to_color_f().get_hsl();
         ColorF::from_hsl(h, s, l * lightness_multiplier, 1.0)
     }
 }
 
-/// .NET `Math.Round(value, digits)`: scale, round half to even, unscale.
+/// Rounds to `digits` decimals: scale, round half to even, unscale.
 fn round_digits(value: f64, digits: i32) -> f64 {
     let power10 = 10f64.powi(digits);
     (value * power10).round_ties_even() / power10
 }
 
-/// C# `Color.Red0To1` setter: `(byte)Math.Max(0, Math.Min((int)(value * 255), 255))`.
+/// A 0..1 channel as a byte: `value * 255` truncated, then clamped to 0..=255.
 fn to_byte(value: f32) -> u8 {
     ((value * 255.0) as i32).clamp(0, 255) as u8
 }

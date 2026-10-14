@@ -1,11 +1,9 @@
 //! The extension methods on a list of ClipperLib polygons (`List<List<IntPoint>>`,
-//! clipper2-rust's `Paths64`) that MatterCAD and agg-sharp's PolygonMesh call. Ports agg-sharp
-//! `clipper_library/PolygonsExtensions.cs`: the booleans (`CombinePolygons`, `Union`,
+//! clipper2-rust's `Paths64`) that MatterCAD and PolygonMesh call: the booleans (`CombinePolygons`, `Union`,
 //! `Subtract`, `Intersect`), the size-aware offsets (`ArcToleranceFor`, `Offset`), the
 //! transforms, `CreateFromString`, and the PolyTree walks that split polygons into outlines
 //! with their holes. The booleans and offsets run on the Clipper 6 port ([`crate::clipper6`])
-//! and return its exceptions as [`ClipperError`].
-//! Not ported (no caller): `GetBoundsLong`.
+//! and return its failures as [`ClipperError`].
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, PolyTree64};
 
@@ -25,8 +23,7 @@ pub const DEFAULT_CLIPPER_UNITS_PER_UNIT: f64 = 1000.0;
 /// Clipper 6's `ClipperOffset` default miter limit.
 pub const DEFAULT_MITER_LIMIT: f64 = 2.0;
 
-/// One polygon of [`PolygonsExtensions::describe_all_polygons`] (the C# tuple
-/// `(polygon, group, count, path, depth)`).
+/// One polygon of [`PolygonsExtensions::describe_all_polygons`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct PolygonDescription {
     pub polygon: Path64,
@@ -39,9 +36,9 @@ pub struct PolygonDescription {
     pub depth: i32,
 }
 
-/// C# `PolygonsExtensions`, on a list of polygons.
+/// Helpers on a list of polygons.
 pub trait PolygonsExtensions {
-    /// C# `CombinePolygons(bPolys, clipType, fillType)`: `self` as subject, `b` as clip.
+    /// `self` as subject, `b` as clip.
     fn combine_polygons(
         &self,
         b: &Paths64,
@@ -52,19 +49,18 @@ pub trait PolygonsExtensions {
     /// The union of every polygon's bounds ([`RectangleDouble::ZERO_INTERSECTION`] when empty).
     fn get_bounds(&self) -> RectangleDouble;
 
-    /// C# `Length(areClosed)`: the sum of each polygon's [`PolygonExtensions::length`].
+    /// The sum of each polygon's [`PolygonExtensions::length`].
     fn length(&self, are_closed: bool) -> f64;
 
-    /// C# `ArcToleranceFor(clipperUnitsPerUnit)`: [`DEFAULT_ARC_TOLERANCE`] at or under
+    /// [`DEFAULT_ARC_TOLERANCE`] at or under
     /// [`curve_tolerance::DESK_SIZE`], grown in proportion above it. No points leaves the
     /// bounds inverted, a negative size, which reads as desk size.
     fn arc_tolerance_for(&self, clipper_units_per_unit: f64) -> f64;
 
-    /// C# `Offset(distance, joinType)`: offset by `distance` clipper units with the arc
+    /// Offset by `distance` clipper units with the arc
     /// tolerance cut by the polygons' own size.
     fn offset(&self, distance: f64, join_type: JoinType) -> Result<Paths64, ClipperError>;
 
-    /// C# `Offset(distance, joinType, arcTolerance)`.
     fn offset_with_arc_tolerance(
         &self,
         distance: f64,
@@ -72,39 +68,35 @@ pub trait PolygonsExtensions {
         arc_tolerance: f64,
     ) -> Result<Paths64, ClipperError>;
 
-    /// C# `Rotate(radians)`.
     fn rotate(&self, radians: f64) -> Paths64;
 
-    /// C# `Scale(scaleX, scaleY)`.
     fn scale(&self, scale_x: f64, scale_y: f64) -> Paths64;
 
-    /// C# `SeparatePolygonGroups`: the even-odd union, one set per outline (the outline, its
+    /// The even-odd union, one set per outline (the outline, its
     /// holes), a hole's islands' sets before their outline's.
     fn separate_polygon_groups(&self) -> Result<Vec<Paths64>, ClipperError>;
 
-    /// C# `DescribeAllPolygons`: every polygon of the even-odd union, outline then holes.
+    /// Every polygon of the even-odd union, outline then holes.
     fn describe_all_polygons(&self) -> Result<Vec<PolygonDescription>, ClipperError>;
 
-    /// C# `SeparateIntoOutlinesAndContainedHoles`: the even-odd union as outlines, each
+    /// The even-odd union as outlines, each
     /// followed by its holes.
     fn separate_into_outlines_and_contained_holes(&self) -> Result<Vec<Paths64>, ClipperError>;
 
-    /// C# `Subtract(Polygons other)`: even-odd difference.
+    /// Even-odd difference.
     fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Subtract(Polygon other)`.
     fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Translate(x, y, scale)`.
     fn translate(&self, x: f64, y: f64, scale: f64) -> Paths64;
 
-    /// C# `Union(other, fillType)` (the C# default fill is even-odd).
+    /// The union with `other` under `fill_rule`.
     fn union(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError>;
 
-    /// C# `Union(Polygon other)`: even-odd.
+    /// Even-odd.
     fn union_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Intersect(other, fillType)` (the C# default fill is even-odd).
+    /// The intersection with `other` under `fill_rule`.
     fn intersect(&self, other: &Paths64, fill_rule: FillRule) -> Result<Paths64, ClipperError>;
 }
 
@@ -230,7 +222,7 @@ fn union_tree(polygons: &Paths64) -> Result<PolyTree64, ClipperError> {
     )
 }
 
-/// C# `PolyTreeToPolygonSets(node, ret)`: for each child, the child and its children's
+/// For each child, the child and its children's
 /// contours as one set, pushed after the sets of those grandchildren's subtrees.
 pub fn poly_tree_to_polygon_sets(poly_tree: &PolyTree64, node: usize, ret: &mut Vec<Paths64>) {
     for &child in poly_tree.nodes[node].children() {
@@ -243,9 +235,9 @@ pub fn poly_tree_to_polygon_sets(poly_tree: &PolyTree64, node: usize, ret: &mut 
     }
 }
 
-/// C# `DescribeAllPolygons(PolyNode, group, path, depth)`. `group`, `path` and `depth` are C#
-/// value parameters: a child's counting does not reach its siblings. Every node of a closed
-/// union is closed, so C#'s `IsOpen` tests are always false here.
+/// Every polygon under `node`, outline then holes. `group`, `path` and `depth` are passed by
+/// value: a child's counting does not reach its siblings. Every node of a closed union is
+/// closed, so no node is skipped as open.
 pub fn describe_all_polygons_in(
     poly_tree: &PolyTree64,
     node: usize,
@@ -294,7 +286,7 @@ pub fn describe_all_polygons_in(
     }
 }
 
-/// C# `PolyTreeToOutlinesAndContainedHoles`: each outline (a non-hole node) with its hole
+/// Each outline (a non-hole node) with its hole
 /// children, outlines in tree order.
 pub fn poly_tree_to_outlines_and_contained_holes(
     poly_tree: &PolyTree64,
@@ -324,9 +316,9 @@ pub fn poly_tree_to_outlines_and_contained_holes(
     }
 }
 
-/// Parses `"x:1000, y:0,x:0, y:1000,|..."` into polygons, scaling each value
-/// (C# `PolygonsExtensions.CreateFromString`). Each value is read after an optional `x:`/`y:`
-/// label; a value that is not a number is an error, as C#'s `double.Parse` throws.
+/// Parses `"x:1000, y:0,x:0, y:1000,|..."` into polygons, scaling each value.
+/// Each value is read after an optional `x:`/`y:` label; a value that is not a number is an
+/// error rather than a silent zero.
 pub fn create_from_string(
     polygons_packed_string: &str,
     scale: f64,
@@ -350,7 +342,7 @@ pub fn create_from_string(
     Ok(output)
 }
 
-/// C# `PolygonsExtensions.GetDouble`: the number after the `:`, times `scale`.
+/// The number after the `:`, times `scale`.
 fn get_double(number_string: &str, scale: f64) -> Result<f64, std::num::ParseFloatError> {
     let value = match number_string.find(':') {
         Some(colon) => &number_string[colon + 1..],

@@ -1,4 +1,4 @@
-//! Clipper 6's ring joining and splitting (`clipper.cs`): `JoinCommonEdges` with
+//! Clipper 6's ring joining and splitting: `JoinCommonEdges` with
 //! `JoinPoints`/`JoinHorz` (rings that share an edge are merged, or one ring is split in two),
 //! the FirstLeft fix-ups that keep a PolyTree's nesting right afterwards, point-in-ring tests on
 //! output rings, and `DoSimplePolygons` (`StrictlySimple`: split rings that touch at a vertex).
@@ -7,7 +7,7 @@ use super::clipper_base::slopes_equal3;
 use super::engine::Clipper;
 use super::types::{ClipperError, Direction, IntPoint};
 
-/// C# `GetOverlap`: the overlap of two x ranges, if any.
+/// The overlap of two x ranges, if any.
 fn get_overlap(a1: i64, a2: i64, b1: i64, b2: i64) -> Option<(i64, i64)> {
     let (left, right) = if a1 < a2 {
         if b1 < b2 {
@@ -264,7 +264,7 @@ impl Clipper {
     }
 
     /// The next distinct point from `op` running up toward `off_pt`, forwards if that works,
-    /// else backwards (reversed); `None` when neither direction does (C#'s `return false`).
+    /// else backwards (reversed); `None` when neither direction does.
     fn oriented_partner(&self, op: usize, off_pt: IntPoint) -> Option<(usize, bool)> {
         let pts = &self.out_pts;
         let mut opb = pts[op].next;
@@ -287,7 +287,7 @@ impl Clipper {
         Some((opb, reverse))
     }
 
-    /// C# `PointInPolygon(IntPoint, OutPt)`: 0 outside, +1 inside, -1 on the boundary.
+    /// 0 outside, +1 inside, -1 on the boundary.
     fn point_in_out_polygon(&self, pt: IntPoint, mut op: usize) -> i32 {
         let pts = &self.out_pts;
         let mut result = 0;

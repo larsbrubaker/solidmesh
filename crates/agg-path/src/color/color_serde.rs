@@ -1,9 +1,6 @@
 //! `Color`'s JSON shape, shared by theme files, the themeset and `.mcx` (`Object3D.Color`).
-//! Writing: C# `ColorJsonConverter.CanWrite` is false, so Newtonsoft falls back to the
-//! `[TypeConverter(typeof(ColorTypeConverter))]` string contract, whose `ConvertTo(string)` is
-//! `ToString()` = `GetAsHTMLString()`: `"#RRGGBB"` when opaque, `"#RRGGBBAA"` otherwise (the
-//! form MatterCAD's theme files and test scenes hold). Reading ports
-//! `ColorJsonConverter.ReadJson`: a string through the `Html` setter (empty or unrecognized is
+//! Writing: an HTML string, `"#RRGGBB"` when opaque, `"#RRGGBBAA"` otherwise (the form
+//! MatterCAD's theme files and test scenes hold). Reading: a string through the `Html` setter (empty or unrecognized is
 //! transparent), an object through its `Html` property, and null or anything else transparent.
 
 use std::fmt;
@@ -63,7 +60,7 @@ impl<'de> Visitor<'de> for ColorVisitor {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Color, A::Error> {
-        // C# reader.Skip(): consume the whole container.
+        // Consume the whole container; an array is not a colour.
         while seq.next_element::<IgnoredAny>()?.is_some() {}
         Ok(Color::TRANSPARENT)
     }
@@ -85,8 +82,8 @@ impl<'de> Visitor<'de> for ColorVisitor {
     }
 }
 
-/// An `Html` property's value: its text when a string, `None` for anything else (C#
-/// `Value<string>()` of a number or bool never parses as a colour either).
+/// An `Html` property's value: its text when a string, `None` for anything else (a
+/// number or bool never parses as a colour).
 struct HtmlValue(Option<String>);
 
 impl<'de> Deserialize<'de> for HtmlValue {

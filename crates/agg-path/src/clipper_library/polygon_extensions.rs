@@ -1,8 +1,6 @@
 //! The extension methods on one ClipperLib polygon (`List<IntPoint>`, clipper2-rust's `Path64`)
-//! that MatterCAD and agg-sharp's PolygonMesh call. Ports agg-sharp
-//! `clipper_library/PolygonExtensions.cs`; the many-polygon helpers are in
-//! [`super::polygons_extensions`]. Not ported (no caller): `GetBoundsLong` (no `RectangleLong`),
-//! `GetWindingDirection2`, `PositionAllongPath` and `IntRect.ExpandToInclude`.
+//! that MatterCAD and PolygonMesh call; the many-polygon helpers are in
+//! [`super::polygons_extensions`].
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, Point64};
 
@@ -12,57 +10,55 @@ use super::int_point_extensions::{calc_intersection, get_intersection, int_point
 use super::polygons_extensions::PolygonsExtensions;
 use crate::rectangle_double::RectangleDouble;
 
-/// C# `PolygonExtensions`, on a single polygon.
+/// Helpers on a single polygon.
 pub trait PolygonExtensions {
     /// The bounds of every point ([`RectangleDouble::ZERO_INTERSECTION`] when empty).
     fn get_bounds(&self) -> RectangleDouble;
 
     /// Every edge of the closed polygon the segment `start`-`end` meets: the edge's start
-    /// index, how it meets, and where (C# `GetIntersections`). Where the lines are parallel the
-    /// position is C#'s `default(IntPoint)`, the origin.
+    /// index, how it meets, and where. Where the lines are parallel the
+    /// position is the origin.
     fn get_intersections(
         &self,
         start: Point64,
         end: Point64,
     ) -> Vec<(usize, Intersection, Point64)>;
 
-    /// C# `GetWindingDirection`: 1 if counter-clockwise (y up), -1 if clockwise or degenerate,
-    /// from the signed area (divergence 1172: the C# sum cannot tell the two apart).
+    /// 1 if counter-clockwise (y up), -1 if clockwise or degenerate, from the signed area.
+    /// Callers keep the polygons that return 1 as outer outlines and drop the holes.
     fn get_winding_direction(&self) -> i32;
 
-    /// C# `Length(isClosed)`: the sum of the edge lengths (with the closing edge when
-    /// `is_closed`). C# takes the square root of [`PolygonExtensions::length_squared`]
-    /// instead (divergence 1173).
+    /// The sum of the edge lengths (with the closing edge when
+    /// `is_closed`): the perimeter, not the root of
+    /// [`PolygonExtensions::length_squared`].
     fn length(&self, is_closed: bool) -> f64;
 
-    /// C# `LengthSquared(isClosed)`: the sum of each edge's squared length (with the closing
+    /// The sum of each edge's squared length (with the closing
     /// edge when `is_closed`).
     fn length_squared(&self, is_closed: bool) -> f64;
 
-    /// C# `Offset(distance)`: offset by `distance` clipper units with round joins, the arc
+    /// Offset by `distance` clipper units with round joins, the arc
     /// tolerance cut by the polygon's own size ([`PolygonsExtensions::arc_tolerance_for`]).
     fn offset(&self, distance: f64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Offset(distance, arcTolerance)`: round joins at a fixed arc tolerance.
+    /// Round joins at a fixed arc tolerance.
     fn offset_with_arc_tolerance(
         &self,
         distance: f64,
         arc_tolerance: f64,
     ) -> Result<Paths64, ClipperError>;
 
-    /// C# `Rotate(radians)`: each point rotated about the origin and rounded back to the grid.
+    /// Each point rotated about the origin and rounded back to the grid.
     fn rotate(&self, radians: f64) -> Path64;
 
-    /// C# `Scale(scaleX, scaleY)`.
     fn scale(&self, scale_x: f64, scale_y: f64) -> Path64;
 
-    /// C# `Subtract(Polygons other)`: even-odd difference.
+    /// Even-odd difference.
     fn subtract(&self, other: &Paths64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Subtract(Polygon other)`.
     fn subtract_polygon(&self, other: &Path64) -> Result<Paths64, ClipperError>;
 
-    /// C# `Translate(x, y, scale)`: each point moved by `(x, y) * scale`.
+    /// Each point moved by `(x, y) * scale`.
     fn translate(&self, x: f64, y: f64, scale: f64) -> Path64;
 }
 
@@ -96,9 +92,8 @@ impl PolygonExtensions for Path64 {
     }
 
     fn get_winding_direction(&self) -> i32 {
-        // C# sums `(x2 + x1) * (y2 + y1)`, which is the same for a polygon and its reverse
-        // (and positive for any polygon in the positive quadrant), so it cannot tell the
-        // orientation it is named for (divergence 1172). The signed (shoelace) area does.
+        // The signed (shoelace) area tells the orientation. A sum of
+        // `(x2 + x1) * (y2 + y1)` would not: it is the same for a polygon and its reverse.
         if super::clipper_statics::area(self) > 0.0 {
             1
         } else {
@@ -107,8 +102,8 @@ impl PolygonExtensions for Path64 {
     }
 
     fn length(&self, is_closed: bool) -> f64 {
-        // C# returns the square root of the summed squared edges, which is not the path's
-        // length for more than one edge (divergence 1173). Sum the edge lengths.
+        // Sum the edge lengths: the root of the summed squared edges is not the path's length
+        // once it has more than one edge.
         let mut length = 0.0;
         if self.len() > 1 {
             let mut previous_point = if is_closed {

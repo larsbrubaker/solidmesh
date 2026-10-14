@@ -1,13 +1,13 @@
-//! A port of agg-sharp's ClipperLib 6.4.2 (`clipper_library/clipper.cs`, Angus Johnson, Boost
-//! Software License 1.0; see THIRD_PARTY_NOTICES.md), the polygon clipper and offsetter
-//! MatterCAD's 2D geometry runs on. It exists so ring starts, ring order, collinear handling and
-//! simplification match the C# bit for bit, which Clipper2 does not.
+//! ClipperLib 6.4.2 (Angus Johnson, Boost Software License 1.0; see THIRD_PARTY_NOTICES.md), the
+//! polygon clipper and offsetter MatterCAD's 2D geometry runs on. It exists so ring starts, ring
+//! order, collinear handling and simplification are exactly Clipper 6's, which saved designs'
+//! geometry depends on and Clipper2 does not reproduce.
 //!
-//! The C# classes are reference graphs (edges, output points, output records, poly nodes); here
+//! Clipper 6's classes are reference graphs (edges, output points, output records, poly nodes); here
 //! each kind lives in an arena `Vec` inside [`Clipper`] and the links are indices. Integer points
 //! are clipper2-rust's `Point64` (`x`/`y` as `i64`), which is what agg-path's `clipper_library`
 //! API already speaks; Clipper 6's `Int128` math is `i128`. Built with `use_lines` (open paths)
-//! and without `use_xyz`/`use_int32`, as agg-sharp builds it.
+//! and without `use_xyz`/`use_int32`.
 //!
 //! Files by responsibility: [`types`] (edges, out-records, enums, errors), [`clipper_base`]
 //! (`ClipperBase`: AddPath, bounds, local minima, scanbeams, the AEL), [`engine`] (`Clipper`:
@@ -15,7 +15,8 @@
 //! [`out_polys`] (output points and records, results, PolyTree), [`joins`] (common-edge joins
 //! and strictly-simple splitting), [`poly_tree`], [`offset`] (`ClipperOffset`), [`statics`]
 //! (`Area`, `PointInPolygon`, `SimplifyPolygon(s)`, Minkowski, PolyTree walks). The
-//! intersection list is ordered with `vector_math::cs_sort` (.NET's unstable `List.Sort`).
+//! intersection list is ordered with `vector_math::cs_sort`, an unstable introspective sort
+//! whose order for equal keys is fixed.
 
 mod clipper_base;
 mod engine;

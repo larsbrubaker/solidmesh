@@ -1,13 +1,12 @@
-//! The error the `clipper_library` helpers return where agg-sharp's throw: a `ClipperException`
+//! The error the `clipper_library` helpers return: a failure
 //! out of Clipper 6 ([`crate::clipper6::ClipperError`]) - coordinates beyond +/-2^62, or an
-//! internal invariant of the sweep failing. C#'s extension methods let the exception escape to
-//! their caller; here it comes back as `Err` for the caller to propagate.
+//! internal invariant of the sweep failing. It comes back as `Err` for the caller to propagate.
 
 use std::fmt;
 
 use crate::clipper6;
 
-/// A Clipper 6 failure reaching a `clipper_library` caller (C# `ClipperException`).
+/// A Clipper 6 failure reaching a `clipper_library` caller.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClipperError(pub clipper6::ClipperError);
 

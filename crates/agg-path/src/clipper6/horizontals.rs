@@ -1,4 +1,4 @@
-//! Clipper 6's horizontal edges and scanbeam tops (`clipper.cs`): `ProcessHorizontal(s)`, the
+//! Clipper 6's horizontal edges and scanbeam tops: `ProcessHorizontal(s)`, the
 //! maxima list `StrictlySimple` uses, `ProcessEdgesAtTopOfScanbeam` (maxima, promoting
 //! intermediate vertices and horizontals), `DoMaxima` and the maxima-pair lookups.
 
@@ -6,7 +6,7 @@ use super::clipper_base::{is_horizontal, slopes_equal4, slopes_equal_edges};
 use super::engine::{horz_segments_overlap, top_x, Clipper};
 use super::types::{ip, ClipperError, Direction, Maxima, TEdge, SKIP, UNASSIGNED};
 
-/// C# `GetHorzDirection`: (direction, left, right).
+/// (direction, left, right).
 fn get_horz_direction(horz_edge: &TEdge) -> (Direction, i64, i64) {
     if horz_edge.bot.x < horz_edge.top.x {
         (Direction::LeftToRight, horz_edge.bot.x, horz_edge.top.x)
@@ -16,7 +16,7 @@ fn get_horz_direction(horz_edge: &TEdge) -> (Direction, i64, i64) {
 }
 
 impl Clipper {
-    /// C# `InsertMaxima`: double-linked list sorted ascending, ignoring dups.
+    /// Double-linked list sorted ascending, ignoring dups.
     fn insert_maxima(&mut self, x: i64) {
         let new_index = self.maxima.len();
         match self.maxima_list {
@@ -34,7 +34,7 @@ impl Clipper {
                     next: Some(head),
                     prev: None,
                 });
-                // The C# never repoints the old head's Prev here; neither does this.
+                // Clipper 6 never repoints the old head's Prev here, and nothing reads it.
                 self.maxima_list = Some(new_index);
             }
             Some(head) => {
@@ -64,7 +64,6 @@ impl Clipper {
         }
     }
 
-    /// C# `ProcessHorizontals`.
     pub(super) fn process_horizontals(&mut self) -> Result<(), ClipperError> {
         while let Some(horz_edge) = self.pop_edge_from_sel() {
             self.process_horizontal(horz_edge)?;
@@ -72,8 +71,8 @@ impl Clipper {
         Ok(())
     }
 
-    /// The edges of the SEL that overlap `horz_edge` get a join to `op1` (C# loop shared by
-    /// two places in `ProcessHorizontal`).
+    /// The edges of the SEL that overlap `horz_edge` get a join to `op1` (the loop
+    /// two places in `ProcessHorizontal` share).
     fn join_overlapping_horizontals(
         &mut self,
         horz_edge: usize,
@@ -311,7 +310,6 @@ impl Clipper {
         self.edges[e].top.y as f64 == y && self.edges[e].next_in_lml.is_some()
     }
 
-    /// C# `GetMaximaPair`.
     pub(super) fn get_maxima_pair(&self, e: usize) -> Option<usize> {
         let (next, prev) = (self.edges[e].next, self.edges[e].prev);
         if self.edges[next].top == self.edges[e].top && self.edges[next].next_in_lml.is_none() {
@@ -325,7 +323,7 @@ impl Clipper {
         }
     }
 
-    /// C# `GetMaximaPairEx`: as above but returns null if MaxPair isn't in AEL (unless it's
+    /// As above but returns null if MaxPair isn't in AEL (unless it's
     /// horizontal).
     fn get_maxima_pair_ex(&self, e: usize) -> Option<usize> {
         let result = self.get_maxima_pair(e)?;
@@ -336,7 +334,6 @@ impl Clipper {
         Some(result)
     }
 
-    /// C# `ProcessEdgesAtTopOfScanbeam`.
     pub(super) fn process_edges_at_top_of_scanbeam(
         &mut self,
         top_y: i64,
@@ -443,7 +440,7 @@ impl Clipper {
     }
 
     /// Step 4's test of a neighbour of a just-promoted edge: a contributing closed edge at the
-    /// promoted edge's bottom with the same slope (C#'s inline conditions, `op != null` aside).
+    /// promoted edge's bottom with the same slope.
     fn continues_beside(&self, cur: &TEdge, other: &TEdge) -> bool {
         other.curr.x == cur.bot.x
             && other.curr.y == cur.bot.y

@@ -1,10 +1,9 @@
-//! Colour naming and CIE LAB conversion. Ports the `ColorToName`, `CalculateColorDistance`,
-//! `FromLab`, `RgbToLab`, `XyzToLab` part of agg-sharp `agg/Primitives/Color.cs` with its
-//! named-colour table (`DetailedColorDictionary`, in C#'s insertion order, which decides ties).
+//! Colour naming and CIE LAB conversion (`ColorToName`, `CalculateColorDistance`, `FromLab`,
+//! `RgbToLab`, `XyzToLab`) with the named-colour table, whose order decides ties.
 
 use super::color8::Color;
 
-/// C# `DetailedColorDictionary`, in declaration order.
+/// The named colours, in a fixed order: the first of equally close names wins.
 const DETAILED_COLORS: &[(&str, Color)] = &[
     ("Red", Color::rgb(255, 0, 0)),
     ("Green", Color::rgb(0, 255, 0)),
@@ -75,7 +74,7 @@ const DETAILED_COLORS: &[(&str, Color)] = &[
     ("LimeGreen", Color::rgb(50, 205, 50)),
 ];
 
-/// C# `CalculateColorDistance(double[], double[])` (with `Math.Pow(d, 2)`).
+/// The Euclidean distance between two LAB colours (squares taken with `powf(2.0)`).
 fn lab_distance(lab1: &[f64; 3], lab2: &[f64; 3]) -> f64 {
     ((lab1[0] - lab2[0]).powf(2.0) + (lab1[1] - lab2[1]).powf(2.0) + (lab1[2] - lab2[2]).powf(2.0))
         .sqrt()
@@ -107,7 +106,6 @@ fn saturation_description(saturation: f64) -> &'static str {
     }
 }
 
-/// C# `RgbToXyz`.
 fn rgb_to_xyz(color: Color) -> [f64; 3] {
     let lin = |c: u8| {
         let v = c as f64 / 255.0;
@@ -126,7 +124,7 @@ fn rgb_to_xyz(color: Color) -> [f64; 3] {
     ]
 }
 
-/// C# `XyzToRgb`: to sRGB 0..255, rounded half to even.
+/// To sRGB 0..255, rounded half to even.
 fn xyz_to_rgb(xyz: [f64; 3]) -> [f64; 3] {
     let x = xyz[0] / 100.0;
     let y = xyz[1] / 100.0;
@@ -151,8 +149,8 @@ fn xyz_to_rgb(xyz: [f64; 3]) -> [f64; 3] {
     ]
 }
 
-/// C# `LabToXyz`. C# computes `eps = 216 / 24389` and `kap = 24389 / 27` in integer
-/// arithmetic, so they are 0 and 903; kept.
+/// LAB to XYZ. `eps` and `kap` are the integer quotients of `216 / 24389` and `24389 / 27`,
+/// 0 and 903, not the CIE constants; the named-colour results are pinned to them.
 fn lab_to_xyz(lab: [f64; 3]) -> [f64; 3] {
     // d65 standard illuminant in XYZ
     let d65 = [95.05, 100.0, 108.9];
@@ -182,7 +180,7 @@ fn lab_to_xyz(lab: [f64; 3]) -> [f64; 3] {
 }
 
 impl Color {
-    /// C# `ColorToName`: the closest named colour, prefixed with lightness and saturation
+    /// The closest named colour, prefixed with lightness and saturation
     /// words when it is not a near match.
     pub fn color_to_name(&self) -> String {
         let lab = Self::rgb_to_lab(*self);
@@ -200,7 +198,7 @@ impl Color {
         format!("{lightness_desc}{saturation_desc}{name}")
     }
 
-    /// C# `CalculateColorDistance(Color color2)`: Euclidean distance in LAB.
+    /// Euclidean distance in LAB.
     pub fn calculate_color_distance(&self, color2: Color) -> f64 {
         let lab1 = Self::rgb_to_lab(*self);
         let lab2 = Self::rgb_to_lab(color2);
@@ -210,20 +208,17 @@ impl Color {
         (l_diff * l_diff + a_diff * a_diff + b_diff * b_diff).sqrt()
     }
 
-    /// C# `FromLab(l, a, b)`.
     pub fn from_lab(l: f64, a: f64, b: f64) -> Color {
         let rgb = xyz_to_rgb(lab_to_xyz([l, a, b]));
-        // C# `(int)` of the rounded doubles, then the clamping constructor.
+        // Truncate the rounded doubles to integers, then the constructor clamps them.
         Color::new_rgb(rgb[0] as i32, rgb[1] as i32, rgb[2] as i32)
     }
 
-    /// C# `RgbToLab(color)`.
     pub fn rgb_to_lab(color: Color) -> [f64; 3] {
         let xyz = rgb_to_xyz(color);
         Self::xyz_to_lab(xyz[0], xyz[1], xyz[2])
     }
 
-    /// C# `XyzToLab(x, y, z)`.
     pub fn xyz_to_lab(x: f64, y: f64, z: f64) -> [f64; 3] {
         let f = |v: f64| {
             if v > 0.008856 {
@@ -243,7 +238,7 @@ impl Color {
     }
 }
 
-/// C# `FindClosestNamedColor`: `MinBy` keeps the first of equal distances.
+/// `MinBy` keeps the first of equal distances.
 fn find_closest_named_color(lab: &[f64; 3]) -> (&'static str, Color) {
     let mut best = DETAILED_COLORS[0];
     let mut best_distance = lab_distance(lab, &Color::rgb_to_lab(best.1));

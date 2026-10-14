@@ -1,4 +1,4 @@
-//! Clipper 6's `Clipper` class (`clipper.cs`): the state of one clipper, `Execute` into paths
+//! Clipper 6's `Clipper` class: the state of one clipper, `Execute` into paths
 //! or a [`PolyTree`], the sweep loop (`ExecuteInternal`), inserting local minima into the
 //! active edge list, and the fill-rule logic that decides which edges contribute
 //! (`IsContributing`, `SetWindingCount`). The rest of the sweep is in [`super::horizontals`];
@@ -11,8 +11,8 @@ use super::types::{
     PolyFillType, PolyType, Scanbeam, TEdge,
 };
 
-/// C# `Clipper` (with its base `ClipperBase`). Every record the C# allocates lives in one of
-/// the arenas here and is named by its index.
+/// The clipper (Clipper 6's `Clipper` with its base `ClipperBase`). Every record it allocates
+/// lives in one of the arenas here and is named by its index.
 pub struct Clipper {
     pub(super) edges: Vec<TEdge>,
     pub(super) minima: Vec<LocalMinima>,
@@ -35,11 +35,10 @@ pub struct Clipper {
     pub(super) clip_type: ClipType,
     pub(super) subj_fill_type: PolyFillType,
     pub(super) clip_fill_type: PolyFillType,
-    /// C# `PreserveCollinear` (default false: collinear vertices are dropped).
+    /// Default false: collinear vertices are dropped.
     pub preserve_collinear: bool,
-    /// C# `ReverseSolution`.
     pub reverse_solution: bool,
-    /// C# `StrictlySimple`: also split rings that touch at a vertex.
+    /// Also split rings that touch at a vertex.
     pub strictly_simple: bool,
 }
 
@@ -50,7 +49,7 @@ impl Default for Clipper {
 }
 
 impl Clipper {
-    /// C# `new Clipper()`: no init options.
+    /// No init options.
     pub fn new() -> Self {
         Clipper {
             edges: Vec::new(),
@@ -80,7 +79,7 @@ impl Clipper {
         }
     }
 
-    /// C# `Clear`: forgets every added path.
+    /// Forgets every added path.
     pub fn clear(&mut self) {
         self.minima.clear();
         self.minima_list = None;
@@ -90,7 +89,7 @@ impl Clipper {
         self.has_open_paths = false;
     }
 
-    /// C# `Execute(clipType, solution, subjFillType, clipFillType)`. False (and an empty
+    /// Clips the added paths into `solution`. False (and an empty
     /// solution) when there was nothing to clip or the intersections could not be ordered.
     pub fn execute(
         &mut self,
@@ -115,7 +114,6 @@ impl Clipper {
         result
     }
 
-    /// C# `Execute(clipType, polytree, subjFillType, clipFillType)`.
     pub fn execute_tree(
         &mut self,
         clip_type: ClipType,
@@ -135,7 +133,6 @@ impl Clipper {
         result
     }
 
-    /// C# `DisposeAllPolyPts`.
     fn dispose_all_poly_pts(&mut self) {
         self.poly_outs.clear();
         self.out_pts.clear();
@@ -395,7 +392,7 @@ impl Clipper {
         }
     }
 
-    /// The edge's own and the other poly type's fill rules (C#'s `pft`, `pft2`).
+    /// The edge's own and the other poly type's fill rules.
     pub(super) fn fill_types(&self, edge: usize) -> (PolyFillType, PolyFillType) {
         if self.edges[edge].poly_typ == PolyType::Subject {
             (self.subj_fill_type, self.clip_fill_type)
@@ -586,7 +583,6 @@ impl Clipper {
         }
     }
 
-    /// C# `AddJoin`.
     pub(super) fn add_join(&mut self, op1: usize, op2: usize, off_pt: super::IntPoint) {
         self.joins.push(Join {
             out_pt1: op1,
@@ -595,7 +591,6 @@ impl Clipper {
         });
     }
 
-    /// C# `AddGhostJoin`.
     pub(super) fn add_ghost_join(&mut self, op: usize, off_pt: super::IntPoint) {
         self.ghost_joins.push(Join {
             out_pt1: op,
@@ -605,7 +600,6 @@ impl Clipper {
     }
 }
 
-/// C# `HorzSegmentsOverlap`.
 pub(super) fn horz_segments_overlap(
     mut seg1a: i64,
     mut seg1b: i64,
@@ -621,7 +615,6 @@ pub(super) fn horz_segments_overlap(
     (seg1a < seg2b) && (seg2a < seg1b)
 }
 
-/// C# `TopX`.
 pub(super) fn top_x(edge: &TEdge, current_y: i64) -> i64 {
     if current_y == edge.top.y {
         return edge.top.x;

@@ -1,14 +1,12 @@
-//! Clipper 6's value types and internal records (`clipper.cs`: `IntPoint`, `IntRect`, the
+//! Clipper 6's value types and internal records (`IntPoint`, `IntRect`, the
 //! enums, `TEdge`, `IntersectNode`, `LocalMinima`, `OutRec`, `OutPt`, `Join`, `Int128Mul`,
 //! `ClipperException`). Links between records are arena indices into [`super::Clipper`].
 
 use std::fmt;
 
-/// C# `IntPoint`: clipper2-rust's `Point64`, the type agg-path's clipper API already uses.
+/// Clipper2-rust's `Point64`, the type agg-path's clipper API already uses.
 pub type IntPoint = clipper2_rust::Point64;
-/// C# `Path` (`List<IntPoint>`).
 pub type Path = Vec<IntPoint>;
-/// C# `Paths` (`List<List<IntPoint>>`).
 pub type Paths = Vec<Path>;
 
 /// `new IntPoint(cInt x, cInt y)`.
@@ -16,7 +14,7 @@ pub fn ip(x: i64, y: i64) -> IntPoint {
     IntPoint::new(x, y)
 }
 
-/// C# `IntRect`: `top` is the smallest y.
+/// `top` is the smallest y.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct IntRect {
     pub left: i64,
@@ -39,7 +37,6 @@ pub enum PolyType {
     Clip,
 }
 
-/// C# `PolyFillType`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PolyFillType {
     EvenOdd,
@@ -64,7 +61,7 @@ pub enum EndType {
     OpenRound,
 }
 
-/// C# `ClipperException`, one variant per message the C# throws.
+/// A clipper failure, one variant per message Clipper 6 raises.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ClipperError {
     /// "AddPath: Open paths must be subject."
@@ -77,8 +74,8 @@ pub enum ClipperError {
     UpdateEdgeIntoAelInvalidCall,
     /// "DoMaxima error"
     DoMaximaError,
-    /// An output ring the sweep is still building has no points. Clipper 6 dereferences
-    /// `OutRec.Pts` here and would throw a `NullReferenceException`; the port reports it.
+    /// An output ring the sweep is still building has no points: an internal invariant
+    /// broken, reported rather than read through.
     OutRecHasNoPoints,
 }
 
@@ -117,8 +114,8 @@ pub(super) fn near_zero(val: f64) -> bool {
     val > -TOLERANCE && val < TOLERANCE
 }
 
-/// `Clipper.Round` / `ClipperOffset.Round`: half away from zero, then C#'s truncating `(long)`
-/// cast (`as` saturates where C# would be undefined; never reached inside `HI_RANGE`).
+/// `Clipper.Round` / `ClipperOffset.Round`: half away from zero, then truncated to
+/// `i64` (`as` saturates out of range, which is never reached inside `HI_RANGE`).
 pub(super) fn round(value: f64) -> i64 {
     if value < 0.0 {
         (value - 0.5) as i64
@@ -144,7 +141,7 @@ pub(super) enum Direction {
     LeftToRight,
 }
 
-/// C# `TEdge`. `next`/`prev` link the path's edge ring; the rest are optional links.
+/// An edge of an input path. `next`/`prev` link the path's edge ring; the rest are optional links.
 #[derive(Clone, Debug)]
 pub(super) struct TEdge {
     pub bot: IntPoint,
@@ -203,7 +200,7 @@ pub(super) struct IntersectNode {
     pub pt: IntPoint,
 }
 
-/// C# `LocalMinima`, a singly linked list sorted by descending `y`.
+/// A local minimum, in a singly linked list sorted by descending `y`.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct LocalMinima {
     pub y: i64,
@@ -212,14 +209,14 @@ pub(super) struct LocalMinima {
     pub next: Option<usize>,
 }
 
-/// C# `Scanbeam`, a singly linked list sorted descending without duplicates.
+/// A scanbeam, in a singly linked list sorted descending without duplicates.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Scanbeam {
     pub y: i64,
     pub next: Option<usize>,
 }
 
-/// C# `Maxima`, a doubly linked list sorted ascending without duplicates.
+/// A maximum, in a doubly linked list sorted ascending without duplicates.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Maxima {
     pub x: i64,
@@ -227,8 +224,8 @@ pub(super) struct Maxima {
     pub prev: Option<usize>,
 }
 
-/// C# `OutRec`: a path in the clipping solution. Its arena index is its identity; `idx` is the
-/// C# `Idx` field, which merging repoints at the surviving record.
+/// A path in the clipping solution. Its arena index is its identity; `idx` is the
+/// record it now lives in, which merging repoints at the surviving record.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct OutRec {
     pub idx: i32,
@@ -241,7 +238,7 @@ pub(super) struct OutRec {
     pub poly_node: Option<usize>,
 }
 
-/// C# `OutPt`, a vertex of an output ring.
+/// A vertex of an output ring.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct OutPt {
     pub idx: i32,
@@ -250,7 +247,7 @@ pub(super) struct OutPt {
     pub prev: usize,
 }
 
-/// C# `Join`. A ghost join has no `out_pt2` (the C# leaves it null and never reads it).
+/// A pending join of two output points. A ghost join has no `out_pt2` (nothing reads it).
 #[derive(Clone, Copy, Debug)]
 pub(super) struct Join {
     pub out_pt1: usize,

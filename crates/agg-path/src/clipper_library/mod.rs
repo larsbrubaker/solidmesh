@@ -1,15 +1,13 @@
-//! agg-sharp's `clipper_library` as MatterCAD and PolygonMesh use it, on the Clipper 6 port in
+//! The integer polygon helpers MatterCAD and PolygonMesh use, on the Clipper 6 port in
 //! [`crate::clipper6`].
 //!
-//! C#'s ClipperLib integer polygons map to clipper2-rust's types: `IntPoint` → `Point64`,
+//! ClipperLib's integer polygons map to clipper2-rust's types: `IntPoint` → `Point64`,
 //! `Polygon` (`List<IntPoint>`) → `Path64`, `Polygons` → `Paths64`, `PolyFillType` →
-//! `FillRule`, `ClipType`/`JoinType` → clipper2's own, `PolyTree` → `PolyTree64`. The modules
-//! follow the C# files: `IntPointExtensions.cs` ([`int_point_extensions`]),
-//! `PolygonExtensions.cs` ([`polygon_extensions`]), `PolygonsExtensions.cs`
-//! ([`polygons_extensions`]), and from agg-sharp's modified Clipper 6.4.2 `clipper.cs` the
-//! statics ([`clipper_statics`], which adapts those types to [`crate::clipper6`]) and
+//! `FillRule`, `ClipType`/`JoinType` → clipper2's own, `PolyTree` → `PolyTree64`. The modules:
+//! point helpers ([`int_point_extensions`]), one polygon ([`polygon_extensions`]), many
+//! polygons ([`polygons_extensions`]), and from a modified Clipper 6.4.2 the statics ([`clipper_statics`], which adapts those types to [`crate::clipper6`]) and
 //! `CleanPolygon(s)` ([`clean_polygon`]). Every helper that runs Clipper 6 returns
-//! `Result<_, `[`ClipperError`]`>`, where the C# would throw.
+//! `Result<_, `[`ClipperError`]`>`.
 
 pub mod clean_polygon;
 pub mod clipper_error;
@@ -19,7 +17,7 @@ pub mod polygon_extensions;
 pub mod polygons_extensions;
 
 pub use clean_polygon::{clean_polygon, clean_polygons, DEFAULT_CLEAN_DISTANCE};
-/// The join kinds the offset helpers take (C# `ClipperLib.JoinType`): clipper2-rust's enum,
+/// The join kinds the offset helpers take: clipper2-rust's enum,
 /// which callers should name through here. Clipper 6 has no bevel join; `Bevel` offsets as
 /// `Square` ([`clipper_statics::clipper6_join_type`]).
 pub use clipper2_rust::JoinType;

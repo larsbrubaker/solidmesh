@@ -1,4 +1,4 @@
-//! Clipper 6's edge crossings (`clipper.cs`): the sorted edge list (SEL), building, ordering and
+//! Clipper 6's edge crossings: the sorted edge list (SEL), building, ordering and
 //! processing each scanbeam's intersection list, `IntersectPoint`, and `IntersectEdges`, which
 //! swaps winding counts where two edges cross and starts, extends or closes output rings.
 
@@ -11,7 +11,7 @@ use super::types::{
 use vector_math::cs_sort::introspective_sort;
 
 impl Clipper {
-    /// C# `AddEdgeToSEL`. SEL pointers in PEdge are use to build transient lists of horizontal
+    /// SEL pointers in PEdge are use to build transient lists of horizontal
     /// edges. However, since we don't need to worry about processing order, all additions are
     /// made to the front of the list ...
     pub(super) fn add_edge_to_sel(&mut self, edge: usize) {
@@ -30,7 +30,7 @@ impl Clipper {
         }
     }
 
-    /// C# `PopEdgeFromSEL`: pop edge from front of SEL (ie SEL is a FILO list).
+    /// Pop edge from front of SEL (ie SEL is a FILO list).
     pub(super) fn pop_edge_from_sel(&mut self) -> Option<usize> {
         let e = self.sorted_edges?;
         self.sorted_edges = self.edges[e].next_in_sel;
@@ -114,7 +114,7 @@ impl Clipper {
         }
     }
 
-    /// C# `ProcessIntersections`: false when the crossings cannot be ordered so that only
+    /// False when the crossings cannot be ordered so that only
     /// adjacent edges swap.
     pub(super) fn process_intersections(&mut self, top_y: i64) -> Result<bool, ClipperError> {
         if self.active_edges.is_none() {
@@ -189,7 +189,8 @@ impl Clipper {
         //pre-condition: intersections are sorted bottom-most first.
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need adjusting ...
-        // MyIntersectNodeSort: descending Y, through .NET's unstable List.Sort.
+        // MyIntersectNodeSort: descending Y, through the unstable introspective sort, which
+        // fixes the order equal-Y crossings come out in.
         introspective_sort(&mut self.intersect_list, &mut |node1, node2| {
             node2.pt.y.cmp(&node1.pt.y)
         });
@@ -287,7 +288,7 @@ impl Clipper {
         ip
     }
 
-    /// C# `IntersectEdges`. e1 will be to the left of e2 BELOW the intersection. Therefore e1
+    /// e1 will be to the left of e2 BELOW the intersection. Therefore e1
     /// is before e2 in AEL except when e1 is being inserted at the intersection point ...
     pub(super) fn intersect_edges(
         &mut self,
@@ -450,7 +451,7 @@ impl Clipper {
     }
 }
 
-/// The winding count as a fill rule reads it (C#'s `e1Wc`/`e1Wc2` switches).
+/// The winding count as a fill rule reads it.
 fn wind_count_for(fill_type: PolyFillType, wind_cnt: i32) -> i32 {
     match fill_type {
         PolyFillType::Positive => wind_cnt,

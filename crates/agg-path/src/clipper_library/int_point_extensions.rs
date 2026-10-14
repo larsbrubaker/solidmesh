@@ -1,12 +1,11 @@
-//! ClipperLib's `IntPoint` helpers. Ports agg-sharp `clipper_library/IntPointExtensions.cs`
-//! (segment orientation, on-segment, intersection kind and point) and ClipperLib's
-//! `new IntPoint(double, double)`, on clipper2-rust's `Point64` (C#'s `IntPoint`). Moved here
-//! from polygon-mesh, which slices and stitches with them; the polygon helpers are in
+//! ClipperLib's `IntPoint` helpers (segment orientation, on-segment, intersection kind and
+//! point) and ClipperLib's `new IntPoint(double, double)`, on clipper2-rust's `Point64`.
+//! Polygon-mesh slices and stitches with them; the polygon helpers are in
 //! [`super::polygon_extensions`].
 
 use clipper2_rust::Point64;
 
-/// How two segments meet (C# `ClipperLib.Intersection`).
+/// How two segments meet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Intersection {
     None,
@@ -28,12 +27,11 @@ fn dot(a: Point64, b: Point64) -> i64 {
     a.x * b.x + a.y * b.y
 }
 
-/// C# `IntPoint.LengthSquared()`.
 pub fn length_squared(point: Point64) -> i64 {
     point.x * point.x + point.y * point.y
 }
 
-/// C# `IntPoint.Length()`: the length truncated to a whole unit.
+/// The length truncated to a whole unit.
 pub fn length(point: Point64) -> i64 {
     (length_squared(point) as f64).sqrt() as i64
 }
@@ -51,8 +49,7 @@ pub fn orientation(start: Point64, end: Point64, test: Point64) -> i32 {
     }
 }
 
-/// Whether `test_position` lies on the segment `start`-`end`, measured in whole units
-/// (C# `IntPoint.OnSegment`).
+/// Whether `test_position` lies on the segment `start`-`end`, measured in whole units.
 pub fn on_segment(test_position: Point64, start: Point64, end: Point64) -> bool {
     if start == end {
         return test_position == start;
@@ -74,7 +71,7 @@ pub fn on_segment(test_position: Point64, start: Point64, end: Point64) -> bool 
     false
 }
 
-/// How segment A meets segment B (C# `IntPointExtensions.GetIntersection`).
+/// How segment A meets segment B.
 pub fn get_intersection(
     start_a: Point64,
     end_a: Point64,
@@ -109,7 +106,7 @@ pub fn get_intersection(
 }
 
 /// Where the lines through A and B cross, or `None` when they are parallel to within a unit
-/// (C# `IntPointExtensions.CalcIntersection`; integer division truncates as in C#).
+/// (integer division truncates toward zero).
 pub fn calc_intersection(a1: Point64, a2: Point64, b1: Point64, b2: Point64) -> Option<Point64> {
     let intersection_epsilon = 1;
     let num = (a1.y - b1.y) * (b2.x - b1.x) - (a1.x - b1.x) * (b2.y - b1.y);

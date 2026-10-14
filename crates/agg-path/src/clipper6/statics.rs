@@ -1,6 +1,6 @@
-//! Clipper 6's static members (`clipper.cs`): `Area`, `Orientation`, `PointInPolygon`,
+//! Clipper 6's static members: `Area`, `Orientation`, `PointInPolygon`,
 //! `GetBounds`, `ReversePaths`, `SimplifyPolygon(s)`, `MinkowskiSum`/`MinkowskiDiff`, and the
-//! PolyTree-to-paths walks. `CleanPolygon(s)` (agg-sharp's modified version) is ported in
+//! PolyTree-to-paths walks. `CleanPolygon(s)` (a modified version) lives in
 //! `crate::clipper_library::clean_polygon`.
 
 use super::engine::Clipper;
@@ -9,7 +9,7 @@ use super::types::{
     ip, ClipType, ClipperError, IntPoint, IntRect, Path, Paths, PolyFillType, PolyType,
 };
 
-/// C# `Clipper.Area`: the signed area, positive when the polygon is counter-clockwise (y up).
+/// The signed area, positive when the polygon is counter-clockwise (y up).
 /// Fewer than three points is 0.
 pub fn area(poly: &[IntPoint]) -> f64 {
     let cnt = poly.len();
@@ -25,19 +25,18 @@ pub fn area(poly: &[IntPoint]) -> f64 {
     -a * 0.5
 }
 
-/// C# `Clipper.Orientation`: true when [`area`] is not negative.
+/// True when [`area`] is not negative.
 pub fn orientation(poly: &[IntPoint]) -> bool {
     area(poly) >= 0.0
 }
 
-/// C# `Clipper.ReversePaths`.
 pub fn reverse_paths(polys: &mut Paths) {
     for poly in polys {
         poly.reverse();
     }
 }
 
-/// C# `Clipper.PointInPolygon`: 0 outside, +1 inside, -1 on the boundary (Hormann & Agathos,
+/// 0 outside, +1 inside, -1 on the boundary (Hormann & Agathos,
 /// "The Point in Polygon Problem for Arbitrary Polygons").
 pub fn point_in_polygon(pt: IntPoint, path: &[IntPoint]) -> i32 {
     let mut result = 0;
@@ -81,7 +80,7 @@ pub fn point_in_polygon(pt: IntPoint, path: &[IntPoint]) -> i32 {
     result
 }
 
-/// C# `ClipperBase.GetBounds(Paths)`: all zero when every path is empty.
+/// All zero when every path is empty.
 pub fn get_bounds(paths: &[Path]) -> IntRect {
     let mut points = paths.iter().flatten();
     let Some(first) = points.next() else {
@@ -108,7 +107,7 @@ pub fn get_bounds(paths: &[Path]) -> IntRect {
     result
 }
 
-/// C# `Clipper.SimplifyPolygon(poly, fillType)`: a strictly simple union of the polygon with
+/// A strictly simple union of the polygon with
 /// itself, which splits a self-intersecting polygon (or one touching itself at a vertex) into
 /// simple ones.
 pub fn simplify_polygon(poly: &[IntPoint], fill_type: PolyFillType) -> Result<Paths, ClipperError> {
@@ -120,7 +119,6 @@ pub fn simplify_polygon(poly: &[IntPoint], fill_type: PolyFillType) -> Result<Pa
     Ok(result)
 }
 
-/// C# `Clipper.SimplifyPolygons(polys, fillType)`.
 pub fn simplify_polygons(polys: &[Path], fill_type: PolyFillType) -> Result<Paths, ClipperError> {
     let mut result = Paths::new();
     let mut c = Clipper::new();
@@ -130,7 +128,7 @@ pub fn simplify_polygons(polys: &[Path], fill_type: PolyFillType) -> Result<Path
     Ok(result)
 }
 
-/// C# `Clipper.Minkowski`: the quads swept by `pattern` along `path`.
+/// The quads swept by `pattern` along `path`.
 fn minkowski(pattern: &[IntPoint], path: &[IntPoint], is_sum: bool, is_closed: bool) -> Paths {
     let delta = usize::from(is_closed);
     let poly_cnt = pattern.len();
@@ -172,7 +170,6 @@ fn minkowski(pattern: &[IntPoint], path: &[IntPoint], is_sum: bool, is_closed: b
     quads
 }
 
-/// C# `Clipper.MinkowskiSum(pattern, path, pathIsClosed)`.
 pub fn minkowski_sum(
     pattern: &[IntPoint],
     path: &[IntPoint],
@@ -190,7 +187,6 @@ pub fn minkowski_sum(
     Ok(paths)
 }
 
-/// C# `Clipper.MinkowskiSum(pattern, paths, pathIsClosed)`.
 pub fn minkowski_sum_paths(
     pattern: &[IntPoint],
     paths: &[Path],
@@ -218,7 +214,6 @@ pub fn minkowski_sum_paths(
     Ok(solution)
 }
 
-/// C# `Clipper.MinkowskiDiff(poly1, poly2)`.
 pub fn minkowski_diff(poly1: &[IntPoint], poly2: &[IntPoint]) -> Result<Paths, ClipperError> {
     let mut paths = minkowski(poly1, poly2, false, true);
     let mut c = Clipper::new();
@@ -232,7 +227,7 @@ pub fn minkowski_diff(poly1: &[IntPoint], poly2: &[IntPoint]) -> Result<Paths, C
     Ok(paths)
 }
 
-/// C# `AddPolyNodeToPaths`: `closed_only` is `ntClosed`, otherwise `ntAny`.
+/// `closed_only` is `ntClosed`, otherwise `ntAny`.
 fn add_poly_node_to_paths(tree: &PolyTree, node: usize, closed_only: bool, paths: &mut Paths) {
     let match_ = !closed_only || !tree.nodes[node].is_open;
     if !tree.nodes[node].polygon.is_empty() && match_ {
@@ -243,21 +238,21 @@ fn add_poly_node_to_paths(tree: &PolyTree, node: usize, closed_only: bool, paths
     }
 }
 
-/// C# `Clipper.PolyTreeToPaths`: every contour, parents before children.
+/// Every contour, parents before children.
 pub fn poly_tree_to_paths(polytree: &PolyTree) -> Paths {
     let mut result = Paths::new();
     add_poly_node_to_paths(polytree, PolyTree::ROOT, false, &mut result);
     result
 }
 
-/// C# `Clipper.ClosedPathsFromPolyTree`: every closed contour, parents before children.
+/// Every closed contour, parents before children.
 pub fn closed_paths_from_poly_tree(polytree: &PolyTree) -> Paths {
     let mut result = Paths::new();
     add_poly_node_to_paths(polytree, PolyTree::ROOT, true, &mut result);
     result
 }
 
-/// C# `Clipper.OpenPathsFromPolyTree`: the open contours (all top level).
+/// The open contours (all top level).
 pub fn open_paths_from_poly_tree(polytree: &PolyTree) -> Paths {
     polytree
         .childs(PolyTree::ROOT)
