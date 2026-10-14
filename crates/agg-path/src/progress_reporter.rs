@@ -1,15 +1,14 @@
-//! agg-sharp `agg/ProgressReporter.cs`: the progress channel a long running job reports through,
+//! The progress channel a long running job reports through,
 //! a synchronous [`ProgressReporter::report`] that is safe from anywhere plus a throttled
 //! [`ProgressReporter::yield_to_ui`] that only costs something on a host where the job and the UI
 //! share one thread. [`ProgressReporter::scaled`] carves a job's 0..1 budget into phases that
 //! share one throttle.
 //!
-//! C# reads the host's yield from the process-global `ProgressReporter.UiYield`. Here the host
-//! hands its yield to each `yield_to_ui` call instead (divergence 4252), the way the model holds
-//! its yield hook per document (`mattercad_model::objects3d::ui_yield`): nothing process-wide to
-//! install or restore, and a reporter decides only whether this report is worth a hop. C#'s
-//! implicit conversions to and from `Action<double, string>` have no counterpart; a reporter is
-//! built from a closure with [`ProgressReporter::new`].
+//! The host hands its yield to each `yield_to_ui` call, the way the model holds its yield hook
+//! per document (`mattercad_model::objects3d::ui_yield`): there is no process-wide hook to
+//! install or restore, so tests that bring their own yield run in parallel, and a reporter
+//! decides only whether this report is worth a hop. A reporter is built from a closure with
+//! [`ProgressReporter::new`].
 
 use std::sync::{Arc, Mutex, OnceLock};
 use web_time::{Duration, Instant};
@@ -17,7 +16,7 @@ use web_time::{Duration, Instant};
 /// What a reporter delivers to: the ratio (0 to 1) and what the job is doing now.
 pub type ReportTarget = Arc<dyn Fn(f64, &str) + Send + Sync>;
 
-/// C# `YieldThrottleMs`: the shortest gap between two real UI yields.
+/// The shortest gap between two real UI yields.
 ///
 /// A yield is not free: on the browser it is a two idle turn hop back to the event loop, so it
 /// costs on the order of one to two frames. Jobs report far more often than that - some per
@@ -27,7 +26,7 @@ pub type ReportTarget = Arc<dyn Fn(f64, &str) + Send + Sync>;
 /// interesting length.
 pub const YIELD_THROTTLE_MS: u64 = 50;
 
-/// C# `ProgressReporter`. Cloning shares the reporter (C#'s reference): a clone reports to the
+/// A job's progress channel. Cloning shares the reporter: a clone reports to the
 /// same target and spends the same throttle.
 #[derive(Clone)]
 pub struct ProgressReporter {
@@ -39,18 +38,18 @@ struct Inner {
     /// The reporter this one yields through, for a child made by `scaled`; `None` for a reporter
     /// that owns its own throttle.
     yield_parent: Option<ProgressReporter>,
-    /// When the last real yield happened. `None` to start (C# starts its tick stamp at zero), so
+    /// When the last real yield happened. `None` to start, so
     /// the first yield of a job always goes through and the bar paints before the work begins.
     last_yield: Mutex<Option<Instant>>,
 }
 
 impl ProgressReporter {
-    /// C# `new ProgressReporter(target)`; a `None` target reports nowhere and never yields.
+    /// A reporter delivering to `target`; a `None` target reports nowhere and never yields.
     pub fn new(target: Option<ReportTarget>) -> Self {
         Self::with_parent(target, None)
     }
 
-    /// A reporter delivering to `target` (C#'s conversion from an `Action`).
+    /// A reporter delivering to the closure `target`.
     pub fn from_fn(target: impl Fn(f64, &str) + Send + Sync + 'static) -> Self {
         Self::new(Some(Arc::new(target)))
     }
@@ -65,19 +64,19 @@ impl ProgressReporter {
         }
     }
 
-    /// C# `ProgressReporter.Null`: the one reporter that swallows every report and never yields,
+    /// The one reporter that swallows every report and never yields,
     /// so callers do not have to carry an `Option`. Every call hands back the same reporter.
     pub fn null() -> Self {
         static NULL: OnceLock<ProgressReporter> = OnceLock::new();
         NULL.get_or_init(|| ProgressReporter::new(None)).clone()
     }
 
-    /// Whether `self` and `other` are the same reporter (C# `ReferenceEquals`).
+    /// Whether `self` and `other` are the same reporter (by reference).
     pub fn ptr_eq(&self, other: &ProgressReporter) -> bool {
         Arc::ptr_eq(&self.inner, &other.inner)
     }
 
-    /// C# `HasTarget`: whether anything is actually listening. False for [`Self::null`] and for
+    /// Whether anything is actually listening. False for [`Self::null`] and for
     /// any reporter built around no target - the two shapes "nobody is watching" arrives in.
     /// Callers that have to tell a watched job from an unwatched one test this rather than
     /// comparing against the null reporter, which `ProgressReporter::new(None)` would slip past.
@@ -85,7 +84,7 @@ impl ProgressReporter {
         self.inner.target.is_some()
     }
 
-    /// C# `Scaled(amount, offset)`: a reporter that maps a 0..1 ratio into a slice of this one's
+    /// A reporter that maps a 0..1 ratio into a slice of this one's
     /// budget - `offset + ratio * amount` - what a phase of a job is handed so it can report 0..1
     /// of its own work without knowing where in the whole it sits. The message is the child's,
     /// untouched.
@@ -110,7 +109,7 @@ impl ProgressReporter {
         Self::with_parent(Some(target), Some(self.clone()))
     }
 
-    /// C# `Report`: reports progress to whatever this reporter wraps. Synchronous and safe from
+    /// Reports progress to whatever this reporter wraps. Synchronous and safe from
     /// any thread.
     pub fn report(&self, ratio: f64, message: &str) {
         if let Some(target) = &self.inner.target {
@@ -118,7 +117,7 @@ impl ProgressReporter {
         }
     }
 
-    /// C# `YieldToUi`, with the host's yield passed in (`None` on a host that needs none - the
+    /// Yields to the UI with the host's yield passed in (`None` on a host that needs none - the
     /// desktop path). Runs `ui_yield` and returns what it gave back (the hop to await, for an
     /// async host) when this host yields, this reporter has a target, and a full
     /// [`YIELD_THROTTLE_MS`] window has passed since the job's last real yield; `None` otherwise,
@@ -160,7 +159,7 @@ impl ProgressReporter {
         Some(ui_yield())
     }
 
-    /// C# `ReportAndYield`: [`Self::report`] followed by [`Self::yield_to_ui`] - the usual shape
+    /// [`Self::report`] followed by [`Self::yield_to_ui`] - the usual shape
     /// at a job's progress points.
     pub fn report_and_yield<T>(
         &self,

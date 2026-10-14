@@ -1,5 +1,5 @@
-//! Axis-aligned rectangle in ints (y up). Ports agg-sharp `agg/Primitives/RectangleInt.cs`.
-//! C# `int` arithmetic is unchecked, so sums wrap here too.
+//! Axis-aligned rectangle in ints (y up). Sums wrap rather than panic: a rectangle far out of
+//! range gives a wrong box, never a crash.
 
 use crate::rectangle_double::RectangleDouble;
 
@@ -11,7 +11,8 @@ pub struct RectangleInt {
     pub top: i32,
 }
 
-/// C# `ClipRects` throws when the source and destination differ in size along a clipped axis.
+/// [`RectangleInt::clip_rects`] fails when the source and destination differ in size along a
+/// clipped axis.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ClipRectsError {
     /// "source and dest rects must have the same height"
@@ -30,8 +31,7 @@ impl RectangleInt {
         }
     }
 
-    /// Floors left/bottom and ceils right/top (`(int)` of an out-of-range double saturates
-    /// here; it is unspecified in C#).
+    /// Floors left/bottom and ceils right/top (an out-of-range double saturates).
     pub fn from_rectangle_double(rect: RectangleDouble) -> Self {
         Self::new(
             rect.left.floor() as i32,
@@ -49,7 +49,8 @@ impl RectangleInt {
         self.right.wrapping_sub(self.left)
     }
 
-    /// C# `ClipRect` (its top/bottom tests read as a y-down rectangle, kept as written).
+    /// Clips `dest` to `bounding`; false when nothing is left. Note: its top/bottom tests read as
+    /// a y-down rectangle.
     pub fn clip_rect(bounding: RectangleInt, dest: &mut RectangleInt) -> bool {
         if dest.top < bounding.top {
             dest.top = bounding.top;
@@ -78,7 +79,8 @@ impl RectangleInt {
         true
     }
 
-    /// C# `ClipRects`.
+    /// Clips `dest` to `bounding`, moving `source`'s sides by the same amounts (as `clip_rect`,
+    /// y-down).
     pub fn clip_rects(
         bounding: RectangleInt,
         source: &mut RectangleInt,
@@ -234,7 +236,7 @@ impl RectangleInt {
         self.init(left, bottom, right, top);
     }
 
-    /// C# `unite_rectangles`, kept exactly (it assigns `Right = r1.Top`; see RectangleDouble).
+    /// The union of `r1` and `r2` (it assigns `right = r1.top`; see RectangleDouble).
     pub fn unite_rectangles(&mut self, r1: RectangleInt, r2: RectangleInt) {
         self.left = r1.left;
         self.bottom = r1.bottom;

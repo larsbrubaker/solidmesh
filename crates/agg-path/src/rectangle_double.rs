@@ -1,6 +1,5 @@
-//! Axis-aligned rectangle in doubles (y up: bottom < top). Ports agg-sharp
-//! `agg/Primitives/RectangleDouble.cs`. `Inflate`/`Deflate(BorderDouble)` and
-//! `Contains(Point2D)` take GUI/raster types and are not here (agg-gui owns borders).
+//! Axis-aligned rectangle in doubles (y up: bottom < top). Inflating by a border and containing
+//! a raster point take GUI/raster types and are not here (agg-gui owns borders).
 
 use crate::rectangle_int::RectangleInt;
 use std::fmt;
@@ -18,9 +17,7 @@ pub struct RectangleDouble {
     pub top: f64,
 }
 
-/// C# `GetHashCode` (`new { x1 = Left, x2 = Right, y1 = Bottom, y2 = Top }.GetHashCode()`):
-/// equal rectangles hash equal. -0 is folded into 0, which `==` treats as the same value (as
-/// .NET's double hash does).
+/// Equal rectangles hash equal. -0 is folded into 0, which `==` treats as the same value.
 impl Hash for RectangleDouble {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for side in [self.left, self.right, self.bottom, self.top] {
@@ -29,7 +26,7 @@ impl Hash for RectangleDouble {
     }
 }
 
-/// C# `RectangleDouble.OutCode` (Cohen-Sutherland), a `[Flags]` enum.
+/// Which sides of a rectangle a point lies beyond (Cohen-Sutherland), as combinable bits.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct OutCode(pub u32);
 
@@ -61,7 +58,7 @@ impl BitAnd for OutCode {
 }
 
 impl RectangleDouble {
-    /// C# `ZeroIntersection`: inverted so the first `expand_to_include` sets every side.
+    /// An inverted rectangle, so the first `expand_to_include` sets every side.
     pub const ZERO_INTERSECTION: RectangleDouble =
         RectangleDouble::new(f64::MAX, f64::MAX, f64::MIN, f64::MIN);
 
@@ -101,7 +98,7 @@ impl RectangleDouble {
         *self = Self::new(left, bottom, right, top);
     }
 
-    /// C# `Equals(RectangleDouble, double epsilon)`.
+    /// Whether every side is within `epsilon` of `other`'s.
     pub fn equals_eps(&self, other: &RectangleDouble, epsilon: f64) -> bool {
         (self.left - other.left).abs() <= epsilon
             && (self.bottom - other.bottom).abs() <= epsilon
@@ -192,8 +189,8 @@ impl RectangleDouble {
         self.left < self.right && self.bottom < self.top
     }
 
-    /// C# `unite_rectangles`, kept exactly: it assigns `Right = r1.Top` where `Top = r1.Top`
-    /// was meant, so `top` starts from this rectangle's own top.
+    /// The union of `r1` and `r2`. Note: it assigns `right = r1.top` where `top = r1.top` was
+    /// meant, so `top` starts from this rectangle's own top.
     pub fn unite_rectangles(&mut self, r1: RectangleDouble, r2: RectangleDouble) {
         self.left = r1.left;
         self.bottom = r1.bottom;
@@ -370,7 +367,7 @@ impl Mul<RectangleDouble> for f64 {
     }
 }
 
-/// C# `ToString()`: `L:{Left}, B:{Bottom}, R:{Right}, T:{Top}`.
+/// `L:{Left}, B:{Bottom}, R:{Right}, T:{Top}`.
 impl fmt::Display for RectangleDouble {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
