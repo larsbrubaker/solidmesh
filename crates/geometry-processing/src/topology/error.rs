@@ -1,15 +1,15 @@
-//! The errors the topology module reports where C# throws: `ArgumentOutOfRangeException` for an
-//! index that does not belong to the mesh or set it was given, and `ArgumentException` for a
-//! non-finite pick or an empty tolerance ladder. Each keeps the C# message text.
+//! The errors the topology module reports: an index that does not belong to the mesh or set it was
+//! given, a non-finite pick, an empty tolerance ladder, and the like. Each carries the message the
+//! caller shows.
 
 use std::fmt;
 
 /// Why a topology call refused its input.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TopologyError {
-    /// A face index that is not a face of the mesh (C# `ArgumentOutOfRangeException`).
+    /// A face index that is not a face of the mesh.
     FaceIndexOutOfRange {
-        /// The parameter that was out of range, by its C# name.
+        /// The name of the parameter that was out of range.
         parameter: &'static str,
         /// The index given.
         index: i32,
@@ -23,32 +23,32 @@ pub enum TopologyError {
         /// How many edges the set has.
         edge_count: usize,
     },
-    /// A non-finite argument (C# `ArgumentException`), with C#'s message.
+    /// A non-finite argument, with its message.
     NotFinite {
-        /// The parameter, by its C# name.
+        /// The parameter's name.
         parameter: &'static str,
-        /// C#'s message.
+        /// The message.
         message: String,
     },
-    /// An edge that bounds none of a face group's faces (C# `ArgumentException` from
-    /// `BevelEdgeGroupResolver.CreateFromFaceGroup`), with C#'s message.
+    /// An edge that bounds none of a face group's faces (from
+    /// `bevel_edge_group_resolver::create_from_face_group`), with its message.
     EdgeDoesNotBoundFaceGroup {
-        /// C#'s message.
+        /// The message.
         message: String,
     },
-    /// A tolerance ladder with no rungs (C# `ArgumentException` from
-    /// `BevelEdgeReadings.ForGroup`), so there is no angle to read a group at.
+    /// A tolerance ladder with no rungs (from `bevel_edge_readings::for_group`), so there is no
+    /// angle to read a group at.
     EmptyLadder,
-    /// An index that is not into the list of readings it was given (C#
-    /// `ArgumentOutOfRangeException` from `BevelEdgeReadings.Label`).
+    /// An index that is not into the list of readings it was given (from
+    /// `bevel_edge_readings::label`).
     ReadingIndexOutOfRange {
         /// The index given.
         index: i32,
         /// How many readings the list has.
         reading_count: usize,
     },
-    /// A corner index that is not into the path corner set (C# `ArgumentOutOfRangeException`
-    /// from `BevelCornerGroupResolver.CreateFromCorner`).
+    /// A corner index that is not into the path corner set (from
+    /// `bevel_corner_group_resolver::create_from_corner`).
     CornerIndexOutOfRange {
         /// The index given.
         index: i32,

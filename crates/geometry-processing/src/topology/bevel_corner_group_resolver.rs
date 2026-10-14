@@ -1,6 +1,5 @@
 //! Making [`BevelCornerGroup`] anchors, and finding them again on a path that has been rebuilt,
-//! renumbered or parametrically changed. Ports `Topology/BevelCornerGroupResolver.cs`
-//! (`BevelCornerGroupResolution`, `BevelCornerGroupResolver`).
+//! renumbered or parametrically changed ([`BevelCornerGroupResolution`]).
 //!
 //! The 2D reading of [`super::bevel_edge_group_resolver`] and the same three stages: hard gates
 //! (drift within a fraction of the path's extent, both edge directions within a tolerance under
@@ -23,7 +22,7 @@ pub const DEFAULT_DRIFT_FRACTION_OF_EXTENT: f64 = 0.25;
 /// A best score at or above this fraction of the runner-up's is two matches, not one.
 pub const DEFAULT_AMBIGUITY_RATIO: f64 = 0.8;
 
-/// What a stored [`BevelCornerGroup`] came to on one path (C# `BevelCornerGroupResolution`).
+/// What a stored [`BevelCornerGroup`] came to on one path.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelCornerGroupResolution {
     /// The group that was resolved.
@@ -61,8 +60,8 @@ impl BevelCornerGroupResolution {
     }
 }
 
-/// Snapshots a corner as the anchor of a new group (C# `CreateFromCorner`). Errors where C#
-/// throws `ArgumentOutOfRangeException`.
+/// Snapshots a corner as the anchor of a new group. Errors where `corner_index` is not a corner
+/// of the set.
 pub fn create_from_corner(
     corners: &PathCornerSet,
     corner_index: i32,
@@ -93,7 +92,7 @@ pub fn resolve(group: &BevelCornerGroup, corners: &PathCornerSet) -> BevelCorner
     )
 }
 
-/// Finds a stored group's corner on a path (C# `Resolve` with explicit tolerances).
+/// Finds a stored group's corner on a path, with explicit tolerances.
 pub fn resolve_with(
     group: &BevelCornerGroup,
     corners: &PathCornerSet,

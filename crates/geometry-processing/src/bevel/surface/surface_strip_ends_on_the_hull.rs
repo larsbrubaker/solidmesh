@@ -1,11 +1,10 @@
 //! Where a strip leaves the PART at one of its ends ([`SurfaceStripEndsOnTheHull`]): which of the
 //! part's own hull planes ([`SurfaceStripEndsOnTheHullSupportingPlane`]) each rail goes out
 //! through, at what parameter along the edge, and the one point the end turns at where the rails
-//! change from one plane to the other. Ports the fields of
-//! `Bevel/Surface/SurfaceStripEndsOnTheHull.cs`, its constructor, the part's supporting planes
-//! ([`SurfaceStripEndsOnTheHull::supporting_planes_of`]) and the readings the end is built from (the
-//! turning point between two planes, the ties settled, a face on a plane, the apex on a knife edge);
-//! the reading ([`SurfaceStripEndsOnTheHull::try_read`]) and the closing
+//! change from one plane to the other. Here are its fields, its constructor, the part's supporting
+//! planes ([`SurfaceStripEndsOnTheHull::supporting_planes_of`]) and the readings the end is built
+//! from (the turning point between two planes, the ties settled, a face on a plane, the apex on a
+//! knife edge); the reading ([`SurfaceStripEndsOnTheHull::try_read`]) and the closing
 //! ([`SurfaceStripEndsOnTheHull::try_close`]).
 
 use vector_math::Vector3;
@@ -22,7 +21,7 @@ use super::{
     SurfaceStripStation, SurfaceVertexPool,
 };
 
-/// C# `SurfaceStripEndsOnTheHull`: where a strip leaves the part at one of its ends.
+/// Where a strip leaves the part at one of its ends.
 ///
 /// A strip whose band ran off the face it landed on (`SurfaceBandRunsOffOverAStretch`) has no face
 /// left to end on at that end of the edge: the bead carries on past the last of the wall and out of
@@ -67,7 +66,7 @@ pub struct SurfaceStripEndsOnTheHull {
     pub apex: i32,
 }
 
-/// C# `SurfaceStripEndsOnTheHull.SupportingPlane` (a readonly struct): one plane the part is
+/// One plane the part is
 /// bounded by, with every one of its vertices on the inner side - the six faces of the cube the
 /// recess is cut into, and nothing of the recess itself. That is the definition a hull has, read on
 /// the mesh rather than built as one, and it is what makes "where does this rail leave the part" a
@@ -81,13 +80,13 @@ pub struct SurfaceStripEndsOnTheHullSupportingPlane {
     pub normal: Vector3,
 }
 
-/// The end's turning point between two hull planes (C# `TryBetween`, `TryThreePlanes`).
+/// The end's turning point between two hull planes (`try_between`, `try_three_planes`).
 impl SurfaceStripEndsOnTheHull {
-    /// C# `TryBetween`: where the end turns from one plane to the other - the line the two planes
+    /// Where the end turns from one plane to the other - the line the two planes
     /// meet in, crossed with the CHORD between the two rails either side of the change. `None` where
     /// the two planes do not meet in a line at all, or where they meet the band outside that chord -
-    /// which is the corner being crossed somewhere the rails do not rule. `exit_at` is C#'s unused
-    /// rail parameters, kept out of the signature.
+    /// which is the corner being crossed somewhere the rails do not rule. The rails' exit parameters
+    /// play no part in the answer, so they are not taken.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_between(
         strip: &SurfaceStrip,
@@ -124,7 +123,7 @@ impl SurfaceStripEndsOnTheHull {
             .then_some(between)
     }
 
-    /// C# `TryThreePlanes`: where three planes meet, by Cramer's rule - `None` where they do not meet
+    /// Where three planes meet, by Cramer's rule - `None` where they do not meet
     /// at a point.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_three_planes(
@@ -149,12 +148,12 @@ impl SurfaceStripEndsOnTheHull {
 }
 
 impl SurfaceStripEndsOnTheHullSupportingPlane {
-    /// C#'s constructor.
+    /// The plane through `at` facing `normal`.
     pub fn new(at: Vector3, normal: Vector3) -> Self {
         SurfaceStripEndsOnTheHullSupportingPlane { at, normal }
     }
 
-    /// Whether this is a plane at all (C#'s default value is none).
+    /// Whether this is a plane at all (the default value is none).
     pub fn exists(&self) -> bool {
         self.normal.length_squared() > 0.0
     }
@@ -166,7 +165,7 @@ impl SurfaceStripEndsOnTheHullSupportingPlane {
 }
 
 impl SurfaceStripEndsOnTheHull {
-    /// C#'s private constructor.
+    /// An end from its readings, as [`Self::try_read`] makes it.
     pub fn new(
         at_the_start: bool,
         exit_at: Vec<f64>,
@@ -188,7 +187,7 @@ impl SurfaceStripEndsOnTheHull {
     /// The part's supporting planes: every face plane that has the whole part on its inner side
     /// (within `near`), each plane once - keyed on the plane itself, rounded to `near`, so a wall
     /// drawn as a hundred triangles is measured once.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)`, which refuses a NaN as well.
     pub fn supporting_planes_of(
         mesh: &Mesh,
         near: f64,
@@ -196,7 +195,8 @@ impl SurfaceStripEndsOnTheHull {
         let mut supporting = Vec::new();
         let mut seen: HashSet<(i64, i64, i64, i64)> = HashSet::new();
         let step = vector_math::cs_math::max_f64(near, 1e-9);
-        // C#'s `(long)Math.Round(reading / step)`; `as` saturates where C# would be undefined.
+        // Banker's rounding to the nearest step; `as` saturates a reading too large for an `i64`,
+        // so even that gets a key instead of an undefined one.
         let key = |reading: f64| (reading / step).round_ties_even() as i64;
 
         for face in mesh.faces.iter() {
@@ -315,7 +315,7 @@ impl SurfaceStripEndsOnTheHull {
     /// The part's own vertex at the corner planes `a` and `b` make on the `knife_line`, where the
     /// knife edge passes through that corner; `None` where it runs along both planes or meets one
     /// off the other, or no vertex stands there.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)`, which refuses a NaN as well.
     pub fn try_the_apex(
         pool: &SurfaceVertexPool,
         a: SurfaceStripEndsOnTheHullSupportingPlane,
@@ -349,12 +349,12 @@ impl SurfaceStripEndsOnTheHull {
 }
 
 impl SurfaceStripEndsOnTheHull {
-    /// C# `TryRead`: where each rail of `strip` leaves the part at this end of `edge` - the
+    /// Where each rail of `strip` leaves the part at this end of `edge` - the
     /// supporting plane (of `planes`) its walk goes out through first, at what parameter - with ties
     /// settled, at most two runs of planes, the turning point between them and, on a knife edge
     /// (`knife_line`), the part's vertex both planes meet it at. `Err` names why the end is not one
     /// the hull can close.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)`, which refuses a NaN as well.
     pub fn try_read(
         pool: &SurfaceVertexPool,
         strip: &SurfaceStrip,
@@ -493,13 +493,13 @@ impl SurfaceStripEndsOnTheHull {
 }
 
 impl SurfaceStripEndsOnTheHull {
-    /// C# `TryClose`: a band that RAN OFF its wall over `stretch` closed where it leaves the part -
+    /// A band that RAN OFF its wall over `stretch` closed where it leaves the part -
     /// read on the hull ([`Self::try_read`], on the stretch's knife line), the ring standing on the
     /// two seams' end vertices, and the end cap in two pieces either side of the turn between the
     /// planes: the run-off side's fanned from the knife edge's apex, the far side's from the chain's
     /// corner. Returns the station the stitch sews to, or why the end is not one the hull closes.
-    /// `seams` is C#'s `List<(int, double)>[,]` indexed by `edge_index`; a missing or empty run
-    /// there, where C# would throw, is refused as an end not supported.
+    /// `seams` is the `[edge, side]` table of seam runs indexed by `edge_index`; a missing or empty
+    /// run there is refused as an end not supported rather than a panic.
     #[allow(clippy::too_many_arguments)]
     pub fn try_close(
         pool: &mut SurfaceVertexPool,
@@ -629,8 +629,8 @@ impl SurfaceStripEndsOnTheHull {
             return Err(not_supported());
         }
 
-        // C#'s array of the two pieces is built whole before either is laid, so the corner is pooled
-        // here, before the run-off piece's cap.
+        // Both pieces are assembled before either is laid, so the corner is pooled here, before the
+        // run-off piece's cap: the pool's order is the order of the mesh's vertices.
         let corner_vertex = pool.add(corner);
         let pieces = [
             (

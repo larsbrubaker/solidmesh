@@ -1,6 +1,5 @@
-//! One candidate reading of a pick and what kind of reading it is. Ports the
-//! `PickInterpretationKind` enum and `PickInterpretation` class from the top of
-//! `Topology/PickInterpretations.cs`; [`super::pick_interpretations`] builds them and
+//! One candidate reading of a pick ([`PickInterpretation`]) and what kind of reading it is
+//! ([`PickInterpretationKind`]); [`super::pick_interpretations`] builds them and
 //! [`super::bevel_edge_readings`] rebuilds them from a stored group.
 
 use std::sync::Arc;
@@ -40,9 +39,9 @@ pub struct PickInterpretation {
 }
 
 impl PickInterpretation {
-    /// C#'s internal constructor (public here because the tests that pin how a list of readings
-    /// labels itself build lists the pick never would); `stops_where_the_shape_does` defaults to
-    /// true as its `init` property does, and [`Self::with_stops_where_the_shape_does`] sets it.
+    /// A reading (public because the tests that pin how a list of readings labels itself build
+    /// lists the pick never would); `stops_where_the_shape_does` defaults to true, and
+    /// [`Self::with_stops_where_the_shape_does`] sets it.
     pub fn new(
         kind: PickInterpretationKind,
         features: Arc<FeatureEdgeSet>,
@@ -64,7 +63,7 @@ impl PickInterpretation {
         }
     }
 
-    /// C#'s `internal init` of [`Self::stops_where_the_shape_does`].
+    /// The reading with [`Self::stops_where_the_shape_does`] set, as it is built.
     pub(crate) fn with_stops_where_the_shape_does(mut self, stops: bool) -> Self {
         self.stops_where_the_shape_does = stops;
         self

@@ -1,8 +1,6 @@
 //! The standing features the walkback withholds, reconciled: the ONE record made of the two
 //! readings a feature standing out of two regions arrives as, and the check that no facet
-//! withheld with a feature is also inside a region a band is being cut on. Ports
-//! `Bevel/Surface/SurfaceWalkbackStandingFeatures.cs` (C# `internal static class`; free functions
-//! here).
+//! withheld with a feature is also inside a region a band is being cut on, as free functions.
 //!
 //! Split out of the face walkback (`SurfaceFaceWalkback`), whose proper work is the two-pass cut
 //! of the mesh; this is the bookkeeping that has to be right BEFORE that cut runs, because

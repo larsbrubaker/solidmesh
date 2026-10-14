@@ -1,8 +1,7 @@
 //! Rounds (bevels) the corners of a 2D path, sharing edge space fairly between corners that
-//! compete for it. Ports `Path/PathBevel.cs` (`PathBevelSizeMode`, `PathBevel`,
-//! `PathBevel.Contour`).
+//! compete for it ([`PathBevelSizeMode`], [`bevel`], [`Contour`]).
 //!
-//! Ported in C# from NodeDesigner's bevel-path-utils.js: candidates chosen by a selection
+//! The method: candidates chosen by a selection
 //! predicate and a bend threshold, per-corner radii settled by damped relaxation, then one
 //! inscribed tangent arc per surviving corner. Open contours are handled (a polyline's ends are
 //! never rounded), and the relaxation solves a whole pass at a time so the radii depend on the
@@ -12,11 +11,10 @@
 //! [`PathBevelSizeMode::TangentDistance`]); a setback `d` is turned into the radius
 //! `r = d * tan(theta / 2)` before anything else runs.
 //!
-//! C#'s `Func<int, int, Vector2, bool> vertexSelection` (null selects all) is
-//! `Option<&dyn Fn(usize, usize, Vector2) -> bool>`: contour ordinal, index within that contour,
-//! position. A null `source`/`contour` is not representable here, so those C# guards go.
+//! A vertex selection is `Option<&dyn Fn(usize, usize, Vector2) -> bool>` (`None` selects all):
+//! contour ordinal, index within that contour, position.
 
-// C#'s "the long way round": `!(x > 0)` is true for NaN where `x <= 0` is not, and that is
+// The long way round: `!(x > 0)` is true for NaN where `x <= 0` is not, and that is
 // how a NaN size, radius or angle declines a corner instead of slipping through.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
@@ -25,7 +23,7 @@ use vector_math::{cs_math, math_helper, Vector2};
 
 use super::path_bevel_arcs;
 
-/// What the size handed to a bevel measures (C# `PathBevelSizeMode`).
+/// What the size handed to a bevel measures.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum PathBevelSizeMode {
     /// The radius of the arc inscribed in each corner: every corner comes out the same
@@ -37,11 +35,10 @@ pub enum PathBevelSizeMode {
     TangentDistance,
 }
 
-/// A vertex selection: contour ordinal, index within that contour and position (C#
-/// `Func<int, int, Vector2, bool>`).
+/// A vertex selection: contour ordinal, index within that contour and position.
 pub type VertexSelection<'a> = Option<&'a dyn Fn(usize, usize, Vector2) -> bool>;
 
-/// One contour of a path, plus whether it closed back on itself (C# `PathBevel.Contour`).
+/// One contour of a path, plus whether it closed back on itself.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Contour {
     /// The points of the contour, in the order the path draws them.
@@ -70,7 +67,7 @@ pub const MINIMUM_INTERIOR_ANGLE: f64 = 1e-6;
 /// pipeline uses, rather than agg's default of 1 (half a millimetre of chord error).
 const FLATTENING_RESOLUTION_SCALE: f64 = 1000.0;
 
-/// Bevels the corners of every contour in the source (C# `PathBevel.Bevel`).
+/// Bevels the corners of every contour in the source.
 ///
 /// `size` is the arc radius in Radius mode and the setback in TangentDistance mode; corners get
 /// less where there is not room. `segments` is line segments per corner (one gives the chamfer
@@ -118,7 +115,7 @@ pub fn bevel(
     output
 }
 
-/// Bevels one contour (C# `PathBevel.BevelContour`). `closed` false is a polyline, whose two
+/// Bevels one contour. `closed` false is a polyline, whose two
 /// ends are never rounded. `contour_index` is only passed on to the selection.
 #[allow(clippy::too_many_arguments)]
 pub fn bevel_contour(
@@ -293,7 +290,7 @@ fn share_of_run(run_length: f64, tangent_dist: f64, neighbor_tangent_dist: f64) 
 }
 
 /// The contours of a path exactly as a bevel sees them: flattened, with the vertices that carry
-/// no geometry taken out (C# `PathBevel.CleanedContours`). One entry per contour, including
+/// no geometry taken out. One entry per contour, including
 /// those too short to have a corner, because the position in this list is the contour ordinal
 /// the selection is told.
 pub fn cleaned_contours(source: &dyn VertexSource) -> Vec<Contour> {
@@ -335,7 +332,7 @@ fn clean_contour(contour: &[Vector2], closed: bool) -> Vec<Vector2> {
 }
 
 /// Settles a radius for every candidate by repeatedly asking each corner what fits given what
-/// its neighbours currently take (C# `PathBevel.RelaxRadii`).
+/// its neighbours currently take.
 ///
 /// Every corner is solved against the previous pass's radii and the whole array replaced at the
 /// end of the pass, so equal demands stay equal and the answer is a function of the shape alone
@@ -432,8 +429,8 @@ fn measurable_or_none(value: f64) -> f64 {
     }
 }
 
-/// Flags the vertices that pass the selection and bend enough to be worth rounding (C#
-/// `PathBevel.IdentifyBevelCandidates`, shared with [`crate::topology::PathCornerSet`]).
+/// Flags the vertices that pass the selection and bend enough to be worth rounding (shared with
+/// [`crate::topology::PathCornerSet`]).
 pub(crate) fn identify_bevel_candidates(
     working: &[Vector2],
     closed: bool,
@@ -484,7 +481,8 @@ pub(crate) fn interior_angle(working: &[Vector2], i: usize, closed: bool) -> f64
     cs_clamp(to_prev.dot(to_next), -1.0, 1.0).acos()
 }
 
-/// C# `Math.Clamp`, which passes NaN through.
+/// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
+/// NaN bound) so the NaN guards downstream still see it.
 fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min

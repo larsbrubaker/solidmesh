@@ -1,5 +1,5 @@
-//! The walk across a curved wall a rolled edge was planned from ([`SurfaceWallSection`]). Ports
-//! `Bevel/Surface/SurfaceWallSection.cs`; it is carried on a [`SurfaceEdgePlan`] and read by the
+//! The walk across a curved wall a rolled edge was planned from ([`SurfaceWallSection`]). It is
+//! carried on a [`SurfaceEdgePlan`] and read by the
 //! mixed corner, so the corner stays pure - it reads plans and asks the mesh nothing.
 //!
 //! [`SurfaceEdgePlan`]: super::SurfaceEdgePlan
@@ -8,7 +8,7 @@ use vector_math::Vector3;
 
 use super::{SurfaceLine, SurfaceRunAcrossSectionStep};
 
-/// C# `SurfaceWallSection` (a sealed class): the WALK across a curved wall that a rolled edge was
+/// The WALK across a curved wall that a rolled edge was
 /// planned from - every facet the section crossed, in order from the chain edge outward, with
 /// where the section entered and left each of them.
 ///
@@ -52,7 +52,7 @@ pub struct SurfaceWallSection {
 }
 
 impl SurfaceWallSection {
-    /// C#'s constructor.
+    /// The section from its walk.
     pub fn new(
         along: Vector3,
         touched_facet: i32,

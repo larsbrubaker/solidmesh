@@ -1,10 +1,9 @@
 //! What a reading calls itself in a chooser, as the facts the label is made of rather than the
-//! label. Ports `Topology/BevelReadingLabel.cs`; the application puts them into words
-//! (`BevelAdvisoryText.Format`), which keeps the kernel free of localization.
+//! label. The application puts them into words, which keeps the kernel free of localization.
 
 use super::bevel_edge_group::BevelSelectionKind;
 
-/// The facts a reading's chooser label is made of (C# `record struct BevelReadingLabel`).
+/// The facts a reading's chooser label is made of.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BevelReadingLabel {
     /// What the reading would store - [`super::BevelEdgeGroup::selection_kind`].
@@ -19,7 +18,7 @@ pub struct BevelReadingLabel {
 }
 
 impl BevelReadingLabel {
-    /// The label's four facts, in the C# positional record's order.
+    /// The label's four facts, in field order.
     pub fn new(
         kind: BevelSelectionKind,
         count: i32,

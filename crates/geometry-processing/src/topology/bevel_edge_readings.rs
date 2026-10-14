@@ -1,6 +1,6 @@
 //! The readings of a group that is already stored: the same list
 //! [`super::pick_interpretations`] offers a hover, reached from the group rather than from the
-//! cursor. Ports `Topology/BevelEdgeReadings.cs`.
+//! cursor.
 //!
 //! Cycling readings is a viewport gesture - hover an edge, press Tab - which means a selection
 //! can only be re-read while the mouse is on it. The property panel shows a row for a group
@@ -41,8 +41,7 @@ use super::pick_interpretations;
 /// [`BevelSelectionKind::FaceGroup`] group is re-read like any other: a pick offers the rim of
 /// each face its edge divides, so the list contains the region the group is on.
 ///
-/// Errors where C# throws `ArgumentException` for a ladder with no rungs. (C#'s null-rung check
-/// has no Rust counterpart: a rung cannot be null.)
+/// Errors for a ladder with no rungs, which has no angle to read a group at.
 pub fn for_group(
     mesh: &Arc<Mesh>,
     graph: Option<&MeshEdgeGraph>,
@@ -103,7 +102,7 @@ pub fn for_group(
     )
 }
 
-/// The same readings where the caller has only the mesh (C#'s two-argument `ForGroup`). This
+/// The same readings where the caller has only the mesh. This
 /// detects the whole default tolerance ladder - the expensive part of picking, a full feature
 /// scan per rung - so it is for tests and for callers with nothing better; anything on the UI
 /// thread should be handing in the pick data's own snapshot.
@@ -161,7 +160,7 @@ pub fn index_of_current_reading(
 /// [single edge, one chain] list. Here the question is asked of the readings themselves: more
 /// than one CHAIN, which is the only thing the number tells apart.
 ///
-/// Errors where C# throws `ArgumentOutOfRangeException` for an `index` not into `readings`.
+/// Errors for an `index` not into `readings`.
 pub fn label(
     readings: &[PickInterpretation],
     index: i32,
@@ -186,8 +185,8 @@ pub fn label(
 ///
 /// Named by what the reading would STORE - [`BevelEdgeGroup::selection_kind`] - rather than by
 /// [`super::PickInterpretationKind`], because that is the axis that already knows about face
-/// rims. C# `internal` (the panel calls [`label`], which derives the flag); kept as its own
-/// function because tests pin both labels of the chain reading directly.
+/// rims. The panel calls [`label`], which derives the flag; this is its own function because
+/// tests pin both labels of the chain reading directly.
 pub fn label_reading(
     reading: &PickInterpretation,
     ladder_offers_more_than_one_chain: bool,
@@ -206,7 +205,7 @@ pub fn label_reading(
 }
 
 /// The tightest rung of a ladder - the one a pick runs in, and the only angle a bevel's snapshot
-/// carries. The first of equal rungs, as C#'s strict `<` scan keeps it. `None` for no rungs.
+/// carries. The first of equal rungs, as a strict `<` scan keeps it. `None` for no rungs.
 fn finest_rung(ladder: &[Arc<FeatureEdgeSet>]) -> Option<Arc<FeatureEdgeSet>> {
     let mut finest = ladder.first()?;
 

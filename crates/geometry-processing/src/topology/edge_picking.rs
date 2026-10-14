@@ -1,5 +1,5 @@
-//! Turns "the user clicked here" into "they meant this edge". Ports `Topology/EdgePicking.cs`
-//! (`FeatureEdgePick`, `EdgePicking`). Picks against a [`FeatureEdgeSet`] built from the mesh the
+//! Turns "the user clicked here" into "they meant this edge" (a [`FeatureEdgePick`]). Picks
+//! against a [`FeatureEdgeSet`] built from the mesh the
 //! ray was cast at.
 
 use polygon_mesh::Mesh;

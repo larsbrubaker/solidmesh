@@ -1,5 +1,5 @@
 //! Where a roll across a curved wall RUNS OUT of wall before the profile fits
-//! (`Bevel/Surface/SurfaceWallRanOut.cs`, a static class: free functions here): the bound one
+//! (free functions): the bound one
 //! linear condition puts on the size, each facet's window of sizes ([`try_window_on`]) and the
 //! advisory that names the largest size that fits ([`advisory`]).
 
@@ -19,7 +19,7 @@ use super::SurfaceRunAcrossSectionStep;
 /// Narrows the window `lowest..highest` of sizes to where the linear condition
 /// `per_size * size + at_nothing >= 0` holds: a condition that does not move with the size either
 /// always holds or never does (then the window closes).
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)`, which refuses a NaN as well.
 pub fn bound(per_size: f64, at_nothing: f64, lowest: &mut f64, highest: &mut f64) {
     if !(per_size.abs() > 1e-12) {
         // The condition does not move with the size: it either always holds or never does.
@@ -39,7 +39,7 @@ pub fn bound(per_size: f64, at_nothing: f64, lowest: &mut f64, highest: &mut f64
     }
 }
 
-/// C# `TheProfileCanRestOnTheCrease`: whether the crease between `near` and `far` turns the way a
+/// Whether the crease between `near` and `far` turns the way a
 /// profile can rest on it - the far facet heading back against the near facet's outward side.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn the_profile_can_rest_on_the_crease(
@@ -64,7 +64,7 @@ pub fn the_profile_can_rest_on_the_crease(
     far_trace.dot(towards_the_near) < 0.0
 }
 
-/// C# `TryFeetAt`: for the circle of radius `offset` tangent to the flat plane and to `step`'s
+/// For the circle of radius `offset` tangent to the flat plane and to `step`'s
 /// facet, how far along the facet's trace its wall foot falls and how far into the flat face its
 /// flat foot does - `(along_the_trace, into_the_flat_face)`, or `None` where there is no centre.
 #[allow(clippy::too_many_arguments)]
@@ -96,7 +96,7 @@ pub fn try_feet_at(
     }
 }
 
-/// C# `TryWindowOn`: the window of sizes (`lowest`, `highest`) one facet of the walk can hold the
+/// The window of sizes (`lowest`, `highest`) one facet of the walk can hold the
 /// profile's tangency for - a chamfer's from where the section entered it to where it leaves, a
 /// round's where the wall foot stays on the facet and the flat foot has not walked back behind the
 /// edge. `None` where the facet holds no size.
@@ -116,7 +116,7 @@ pub fn try_window_on(
     }
 
     let trace = step.to - step.from;
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` so a NaN refuses too
     let no_trace = !(trace.length_squared() > 0.0);
     if no_trace {
         return None;
@@ -164,7 +164,7 @@ pub fn try_window_on(
     (highest > lowest && is_finite(highest) && highest > 0.0).then_some((lowest, highest))
 }
 
-/// C# `Advisory`: what to tell the reader when a roll across the wall ran out of wall - the
+/// What to tell the reader when a roll across the wall ran out of wall - the
 /// largest size every section's walk holds, contiguous from the edge outward
 /// (`SizeExceedsFaceWidth` with the size, where and what fits), or that the corner itself has no
 /// room (`BevelDoesNotFitCorner`).
@@ -225,7 +225,7 @@ pub fn advisory(
         fits = cs_math::min_f64(fits, here);
     }
 
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > y)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` so a NaN refuses too
     let no_room = !is_finite(fits) || !(fits > on_the_trace) || fits >= size;
     if no_room {
         // The corner itself is what has no room in it.

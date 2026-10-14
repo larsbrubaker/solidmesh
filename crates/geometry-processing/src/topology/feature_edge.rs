@@ -1,5 +1,5 @@
-//! One manifold edge of a mesh with the geometry a bevel needs. Ports
-//! `Topology/FeatureEdge.cs` (`EdgeConvexity`, `FeatureEdge`). [`super::FeatureEdgeSet`] keeps
+//! One manifold edge of a mesh with the geometry a bevel needs ([`FeatureEdge`], with its
+//! [`EdgeConvexity`]). [`super::FeatureEdgeSet`] keeps
 //! the ones that are edges of the shape; chains and face groups are built from them.
 
 use polygon_mesh::{Face, Mesh, MeshEdgeGraph};
@@ -35,7 +35,7 @@ pub enum EdgeConvexity {
 /// that the mesh is wound consistently outward - a mesh turned inside out reports every convex
 /// edge as concave.
 ///
-/// `Default` is C#'s `default(FeatureEdge)`: every index 0, every vector zero, flat.
+/// `Default` is every index 0, every vector zero, flat.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct FeatureEdge {
     /// The index of this edge in the [`MeshEdgeGraph`] it was classified from.
@@ -89,7 +89,7 @@ impl FeatureEdge {
     /// line it already runs along. It deliberately keeps the original vertices and mesh edge
     /// index - no vertex of the mesh stands at the cut, so there is nothing truer to name -
     /// which is why anything that needs one edge per mesh edge must not be handed a subdivided
-    /// chain. Crate-internal for that reason (C# `internal`): the bevel is the one caller.
+    /// chain. Crate-internal for that reason: the bevel is the one caller.
     pub(crate) fn over_part_of_its_length(&self, start: Vector3, end: Vector3) -> FeatureEdge {
         FeatureEdge {
             start,
@@ -202,7 +202,7 @@ fn try_get_face_normal(mesh: &Mesh, face_index: i32) -> Option<Vector3> {
 
     let cross = (position1 - position0).cross(position2 - position0);
     let length_squared = cross.length_squared();
-    // NaN is refused too, as C#'s `!(lengthSquared > 0)` refuses it.
+    // NaN is refused too, as `!(length_squared > 0)` would refuse it.
     if length_squared.is_nan() || length_squared <= 0.0 || length_squared.is_infinite() {
         return None;
     }

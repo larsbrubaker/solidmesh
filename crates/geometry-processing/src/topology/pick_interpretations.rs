@@ -1,6 +1,6 @@
-//! The candidate readings of one pick, for the user to cycle through before committing. Ports the
-//! `PickInterpretations` static class of `Topology/PickInterpretations.cs`; the reading type
-//! itself is [`super::pick_interpretation`], and [`super::bevel_edge_readings`] reaches the same
+//! The candidate readings of one pick, for the user to cycle through before committing, as free
+//! functions. The reading type itself is [`super::pick_interpretation`], and
+//! [`super::bevel_edge_readings`] reaches the same
 //! list from a stored group.
 //!
 //! An edge is only an edge relative to a flat tolerance, and the same click legitimately means a
@@ -31,7 +31,7 @@ use super::pick_interpretation::{PickInterpretation, PickInterpretationKind};
 /// edges and so is a corner, and the rim chains to one edge.
 ///
 /// Not what a 3D pick runs at. A bevel's pick set is built at the operation's own bend threshold
-/// (`BevelFeatureObject3D.BendThresholdDegrees`, twenty degrees by default), and the ladder
+/// (the operation's `bend_threshold_degrees`, twenty degrees by default), and the ladder
 /// starts there - so on a wall whose facets turn less than that this rung is not offered at all,
 /// and a click cannot land on a facet join the user has said is not an edge. It stays the
 /// DETECTION default, and the rung a caller with no threshold of its own - construction plane
@@ -64,7 +64,7 @@ pub fn default_flat_angle_ladder_degrees() -> [f64; 3] {
 const SAME_RUNG_DEGREES: f64 = 1e-9;
 
 /// Builds the readings of a pick at the default tolerance ladder and the default tangent
-/// tolerance (C#'s three-argument `Build`).
+/// tolerance.
 pub fn build_default(
     mesh: &Arc<Mesh>,
     pick_features: &Arc<FeatureEdgeSet>,
@@ -148,8 +148,8 @@ pub fn build_at_angles(
 /// The same readings, built from feature edge sets the caller already has - one per rung of the
 /// ladder, in any order. Every set must have been built over the same mesh and edge graph as
 /// `pick_features`, because the readings are matched and deduplicated by mesh edge index across
-/// them. `regions` is the face region cache to flood the face rims in (C#'s optional
-/// `FaceRegionCache regions = null`); `None` makes one at the pick's tolerance.
+/// them. `regions` is the face region cache to flood the face rims in; `None` makes one at the
+/// pick's tolerance.
 ///
 /// This exists for the viewport, where detecting the whole ladder again on every pick is the
 /// expensive part and the mesh has not changed between picks. It also makes the ladder explicit:
@@ -319,7 +319,7 @@ pub fn index_of_preferred_chain(readings: &[PickInterpretation]) -> i32 {
 
 /// Whether a walk that stopped here stopped at a corner of the SHAPE. Any stop that is not a
 /// junction is one; a junction is one only while it is still a junction at the ladder's coarsest
-/// rung. (C# `internal`, visible to MatterCADLib.)
+/// rung.
 pub fn stop_is_a_corner_of_the_shape(features: &FeatureEdgeSet, end: ChainEnd) -> bool {
     end.reason != ChainStopReason::Corner
         || is_a_junction_at_the_coarsest_rung(features, end.vertex)
@@ -327,7 +327,7 @@ pub fn stop_is_a_corner_of_the_shape(features: &FeatureEdgeSet, end: ChainEnd) -
 
 /// Whether three or more of the feature edges meeting at a vertex would still be feature edges at
 /// the ladder's coarsest rung - the same test `FeatureEdgeChain`'s walk stops on, asked of the
-/// coarser reading. (C# `internal`.)
+/// coarser reading.
 pub fn is_a_junction_at_the_coarsest_rung(features: &FeatureEdgeSet, vertex: i32) -> bool {
     let survivors = features
         .edges_at_vertex(vertex)
@@ -341,7 +341,7 @@ pub fn is_a_junction_at_the_coarsest_rung(features: &FeatureEdgeSet, vertex: i32
 /// Whether an edge is still a feature edge when the part is read at the ladder's coarsest rung.
 /// The turn angle is signed - positive convex, negative concave - and a flat tolerance is
 /// compared against its magnitude, which is how [`FeatureEdge::try_classify`] decides the same
-/// thing. (C# `internal`.)
+/// thing.
 pub fn survives_the_coarsest_rung(edge: &FeatureEdge) -> bool {
     edge.turn_angle_degrees.abs() > COARSE_FLAT_ANGLE_DEGREES
 }
@@ -354,8 +354,8 @@ pub fn survives_the_coarsest_rung(edge: &FeatureEdge) -> bool {
 /// readings to be built from. There is exactly one thing such a click can mean, so there is one
 /// reading and nothing to cycle through.
 ///
-/// Also hands back the region that was flooded, whether or not it had a rim to offer (C#'s
-/// `out FaceGroup region`) - what the viewport shades to show which face is being read. Handed
+/// Also hands back the region that was flooded, whether or not it had a rim to offer - what the
+/// viewport shades to show which face is being read. Handed
 /// back rather than asked for again, because the flood is the expensive part and the highlight
 /// and the reading have to be describing the same region. `None` only where the flood itself
 /// could not run.
@@ -408,7 +408,7 @@ pub fn build_for_face(
 /// The picked edge's index in another set built over the same mesh, or -1 if that set does not
 /// hold it - which means the edge is flat at that set's tolerance. Shared with
 /// [`super::bevel_edge_readings`], which asks the same question of the same ladder, so the two
-/// cannot come to differ. (C# `internal`.)
+/// cannot come to differ.
 pub fn index_of_mesh_edge(features: &FeatureEdgeSet, mesh_edge_index: i32) -> i32 {
     // A scan rather than a binary search over the set's mesh edge order: it costs nothing against
     // the detection pass that just built the set, and it does not depend on that order.
@@ -424,7 +424,7 @@ pub fn index_of_mesh_edge(features: &FeatureEdgeSet, mesh_edge_index: i32) -> i3
 /// The viewport's click needs it to tell "the reading already stored" from "another reading of
 /// an edge that reading holds": the first is the toggle off, the second replaces the group.
 /// Comparing the edges rather than the kind and the tolerance is what makes a loop the same loop
-/// wherever on it the user clicked. (C# `internal`; C#'s null-as-empty has no Rust counterpart.)
+/// wherever on it the user clicked.
 pub fn select_the_same_edges(left: &[FeatureEdge], right: &[FeatureEdge]) -> bool {
     mesh_edge_signature(left) == mesh_edge_signature(right)
 }
@@ -541,7 +541,7 @@ fn add_collinear_run(
     Ok(())
 }
 
-/// C#'s `ArgumentOutOfRangeException(nameof(seedEdgeIndex))`.
+/// Refuses a seed edge index that is not an edge of the set.
 fn check_seed(features: &FeatureEdgeSet, seed_edge_index: i32) -> Result<(), TopologyError> {
     if seed_edge_index < 0 || seed_edge_index as usize >= features.count() {
         return Err(TopologyError::EdgeIndexOutOfRange {
@@ -573,8 +573,8 @@ fn ascending_angles(flat_angle_ladder_degrees: &[f64]) -> Vec<f64> {
 
 /// The same ordering over sets that have already been detected: increasing tolerance, one set
 /// per rung. Two sets at the same tolerance are the same rung whichever instances they are, so
-/// the first of them is the one offered. C# sorts with the unstable `List.Sort`; this sort is
-/// stable, so "the first" is the caller's first - a tie-break C# leaves unspecified.
+/// the first of them is the one offered. The sort is stable, so "the first" is the caller's
+/// first, and which instance is offered never depends on the sort's algorithm.
 fn ascending_sets(rung_features: &[Arc<FeatureEdgeSet>]) -> Vec<Arc<FeatureEdgeSet>> {
     let mut sorted = rung_features.to_vec();
     sorted.sort_by(|a, b| a.flat_angle_degrees().total_cmp(&b.flat_angle_degrees()));

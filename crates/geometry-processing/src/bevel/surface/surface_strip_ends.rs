@@ -1,7 +1,6 @@
 //! Where a strip STOPS: the ring at an open end and the notch it cuts in the face beyond, and the
-//! gathering of every free end of every chain into the corners they stand at. Ports
-//! `Bevel/Surface/SurfaceStripEnds.cs` (C# `internal static class`; a module of free functions
-//! here): the one ruler every end reads its seam with ([`meets_the_seam`]), the gathering of every
+//! gathering of every free end of every chain into the corners they stand at. A module of free
+//! functions: the one ruler every end reads its seam with ([`meets_the_seam`]), the gathering of every
 //! free end into the corners it stands at ([`try_close_the_ends`]), the run-off stretch at an end
 //! ([`try_the_stretch_at`]), the junction at a vertex ([`the_junction_at`]) and its closing
 //! ([`try_close_the_junction`]), and the open end ([`try_open_end`]). The third way a strip stops -
@@ -25,7 +24,7 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `MeetsTheSeam`: how near two points of the seam have to come to be the same point - the
+/// How near two points of the seam have to come to be the same point - the
 /// pool's own [`SurfaceVertexPool::near_enough`], which is ten times its weld because these are
 /// float positions read back and crossed with planes, and follows the part's size because a float's
 /// ulp does. A seam that is a rounding out is a crack either way.
@@ -33,7 +32,7 @@ pub fn meets_the_seam(pool: &SurfaceVertexPool) -> f64 {
     pool.near_enough()
 }
 
-/// One free end of one chain, as [`try_close_the_ends`] gathers them (C#'s tuple).
+/// One free end of one chain, as [`try_close_the_ends`] gathers them.
 #[derive(Debug, Clone, Copy)]
 struct ChainEndAt {
     /// Which plan of the pass the chain is.
@@ -50,15 +49,15 @@ struct ChainEndAt {
     the_cut_is_further_along: bool,
 }
 
-/// C# `TryCloseTheEnds`: every free end of every open chain, closed - alone against the face beyond
+/// Every free end of every open chain, closed - alone against the face beyond
 /// it, or three at a time into a corner patch. Every arrival at a vertex is a chain end, a chain
 /// that ran through one having been cut there before it was planned.
 ///
-/// The C# arrays map as: `strips` one per build edge (`None` where a blend swallowed it), `seams`
-/// C#'s `[edge, side]` runs, `start_rings`/`end_rings` the stations each end is handed (`None`, C#'s
-/// null, until closed), and `trimmed`/`ran_off`/`notched`/`over_a_stretch` C#'s `[edge, side]`
-/// arrays, `None` where the build has none. Where C# would throw on a missing seam, the end is
-/// refused as a corner not supported.
+/// The tables are: `strips` one per build edge (`None` where a blend swallowed it), `seams` the
+/// `[edge, side]` runs, `start_rings`/`end_rings` the stations each end is handed (`None` until
+/// closed), and `trimmed`/`ran_off`/`notched`/`over_a_stretch` the `[edge, side]` readings, `None`
+/// where the build has none. A missing seam is refused as a corner not supported rather than a
+/// panic.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close_the_ends(
     pool: &mut SurfaceVertexPool,
@@ -402,7 +401,8 @@ pub fn try_close_the_ends(
                 // `SurfaceBevelBuilder` gives every edge it did not swallow both seams before this
                 // runs (picked over the edge, the run-off's own seam, or the shared corner
                 // `SurfaceMitreConsumesTheRail::try_fill_the_seams` lays on a consumed side) - which
-                // is why C# indexes them unguarded. Kept as a refusal rather than a panic.
+                // is why this cannot happen. Library code does not panic on its own input, so it is
+                // a refusal.
                 return Err(BevelAdvisory::new(
                     BevelAdvisoryCode::SurfaceCornerNotSupported,
                     vec![end.corner.into()],
@@ -456,7 +456,7 @@ pub fn try_close_the_ends(
 }
 
 /// The one run-off stretch at edge `edge_index`'s start (or end) - from either side's entry of
-/// `over_a_stretch` (`None`, C#'s null, is none) - or `None` where neither side runs off there.
+/// `over_a_stretch` (`None` is none) - or `None` where neither side runs off there.
 /// Refused (at `corner`) where both sides run off at that end.
 pub fn try_the_stretch_at(
     over_a_stretch: Option<&[[Option<super::SurfaceBandRunsOffOverAStretch>; 2]]>,
@@ -502,7 +502,7 @@ pub fn the_junction_at(
         .cloned()
 }
 
-/// C# `TryCloseTheJunction`: closes a junction's three ends with the one torus patch between its
+/// Closes a junction's three ends with the one torus patch between its
 /// two cuts ([`surface_mixed_junction_patch::try_close`]), and hands each strip back its own end
 /// ring. WHICH three ends they are is the junction's own answer
 /// ([`SurfaceMixedJunction::the_arriving_ends`]), because it differs by kind.
@@ -557,12 +557,12 @@ pub fn try_close_the_junction(
     Ok(())
 }
 
-/// C# `TryOpenEnd`: a strip that stops at a chain's free end - the ring where every rail crosses
+/// A strip that stops at a chain's free end - the ring where every rail crosses
 /// the end plane through `corner` and the two seams' end vertices (rail 0 and the last standing on
 /// those vertices), and the notch that ring cuts out of the face beyond
 /// ([`surface_end_cut::try_cut`], with no die point). Returns the station the stitch sews to.
-/// `seams` is C#'s `List<(int, double)>[,]` indexed by `edge_index`; a missing or empty run there,
-/// where C# would throw, is refused as an end not supported.
+/// `seams` is the `[edge, side]` table of seam runs, indexed by `edge_index`; a missing or empty run
+/// there is refused as an end not supported rather than a panic.
 #[allow(clippy::too_many_arguments)]
 pub fn try_open_end(
     pool: &mut SurfaceVertexPool,
@@ -596,7 +596,7 @@ pub fn try_open_end(
 
     let normal =
         (pool.position_of(on_the_left) - corner).cross(pool.position_of(on_the_right) - corner);
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` so a NaN normal refuses too
     let no_plane = !(normal.length_squared() > 0.0);
     if no_plane {
         return Err(not_supported());

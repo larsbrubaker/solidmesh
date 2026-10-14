@@ -1,6 +1,6 @@
 //! Runs of feature edges: the tangent run, the collinear run and the crease run a picked edge
-//! extends into. Ports `Topology/FeatureEdgeChain.cs` (`ChainStopReason`, `ChainEnd`,
-//! `ChainEdge`, `FeatureEdgeChain`). Walks a [`FeatureEdgeSet`]; the bevel sweeps the result.
+//! extends into ([`FeatureEdgeChain`], made of [`ChainEdge`]s, with a [`ChainEnd`] and its
+//! [`ChainStopReason`] at each end). Walks a [`FeatureEdgeSet`]; the bevel sweeps the result.
 
 use std::collections::HashSet;
 
@@ -616,7 +616,7 @@ fn continues(
 /// The angle between two unit vectors in degrees, clamped against the rounding that can push a
 /// dot product just outside acos's domain.
 fn angle_between_degrees(a: Vector3, b: Vector3) -> f64 {
-    // C# Math.Clamp: a NaN dot stays NaN, as f64::clamp does.
+    // A NaN dot stays NaN through `f64::clamp`, so a degenerate edge reads as NaN degrees.
     let dot = a.dot(b).clamp(-1.0, 1.0);
 
     math_helper::radians_to_degrees(dot.acos())

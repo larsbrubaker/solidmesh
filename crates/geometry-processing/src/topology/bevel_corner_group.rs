@@ -1,5 +1,5 @@
 //! One selected corner of a path on a fillet or chamfer, stored as the geometry the corner had
-//! when it was picked. Ports `Topology/BevelCornerGroup.cs`.
+//! when it was picked.
 //!
 //! The 2D analog of [`super::BevelEdgeGroup`]: a vertex index does not survive a rebuild, so a
 //! group carries a geometric anchor in the operation's own 2D space and
@@ -7,15 +7,15 @@
 //! edge directions say which corner. There is deliberately no stored bend tolerance: which
 //! vertices are corners is decided live by the operation's `BendThresholdDegrees`.
 //!
-//! JSON is Newtonsoft's shape for the C# get/set properties: PascalCase names in declaration
-//! order, every member optional on load.
+//! The JSON is the shape saved designs already hold: PascalCase names in declaration order, every
+//! member optional on load.
 
 use serde::{Deserialize, Serialize};
 use vector_math::Vector2;
 
 use super::bevel_group::BevelGroup;
 
-/// A path corner anchored by where it was and the two edges meeting at it (C# `BevelCornerGroup`).
+/// A path corner anchored by where it was and the two edges meeting at it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct BevelCornerGroup {

@@ -1,6 +1,6 @@
 //! Grows a seed segment of a polyline contour into the run of neighbouring segments that are
-//! curved but close. Ports `Path/PathSegmentRun.cs` (`RunStopReason`, `SegmentRun`,
-//! `PathSegmentRun`).
+//! curved but close ([`walk`], giving a [`SegmentRun`] and why each end stopped,
+//! [`RunStopReason`]).
 //!
 //! The 2D prototype of a mesh walk rule between `FeatureEdgeChain::propagate_collinear` and
 //! `FeatureEdgeChain::propagate`: each END of the run gets its own TOTAL turning budget, spent on
@@ -9,14 +9,13 @@
 //! left. The ends are grown turn and turn about, so a closed contour's last segments divide
 //! evenly between them.
 //!
-//! C#'s `ArgumentNullException`/`ArgumentException`/`ArgumentOutOfRangeException` are
-//! [`PathSegmentRunError`]; a null `points` is not representable.
+//! Arguments [`walk`] cannot work with are refused as a [`PathSegmentRunError`].
 
 use std::fmt;
 
 use vector_math::{math_helper, Vector2};
 
-/// Why a segment run stopped growing at one of its ends (C# `RunStopReason`).
+/// Why a segment run stopped growing at one of its ends.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RunStopReason {
     /// The next vertex bends by at least the corner angle all on its own.
@@ -29,7 +28,7 @@ pub enum RunStopReason {
     Loop,
 }
 
-/// A run of contour segments that are curved but close (C# `SegmentRun`): [`SegmentRun::count`]
+/// A run of contour segments that are curved but close: [`SegmentRun::count`]
 /// of them walking forward from [`SegmentRun::first_segment`], wrapping on a closed contour.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SegmentRun {
@@ -64,18 +63,18 @@ impl SegmentRun {
 /// Why [`walk`] refused its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathSegmentRunError {
-    /// C# `ArgumentException`: fewer than two points.
+    /// Fewer than two points.
     TooFewPoints,
-    /// C# `ArgumentOutOfRangeException` for `seedSegmentIndex`.
+    /// The seed segment index is not a segment of the contour.
     SeedOutOfRange {
         /// The seed given.
         seed_segment_index: i32,
         /// How many segments the contour has.
         segment_count: usize,
     },
-    /// C# `ArgumentOutOfRangeException` for an angle that is negative or NaN.
+    /// An angle that is negative or NaN.
     NotAnAngle {
-        /// The parameter, by its C# name.
+        /// The parameter's name (`turningBudgetDegrees` or `cornerDegrees`).
         parameter: &'static str,
         /// The value given.
         degrees: f64,
@@ -112,8 +111,8 @@ const BUDGET_SLACK: f64 = 1e-9;
 /// A segment shorter than this has no direction to measure.
 const ZERO_LENGTH: f64 = 1e-9;
 
-/// Grows the seed segment into the run of segments around it that are curved but close (C#
-/// `PathSegmentRun.Walk`). Each end may turn `turning_budget_degrees` away from the seed; a
+/// Grows the seed segment into the run of segments around it that are curved but close. Each end
+/// may turn `turning_budget_degrees` away from the seed; a
 /// vertex bending `corner_degrees` or more stops an end.
 pub fn walk(
     points: &[Vector2],

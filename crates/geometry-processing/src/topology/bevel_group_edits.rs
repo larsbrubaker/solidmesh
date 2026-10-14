@@ -1,12 +1,12 @@
 //! The edits the property panel's group list makes to a fillet or chamfer's selection, as plain
-//! list arithmetic. Ports `Topology/BevelGroupEdits.cs`.
+//! list arithmetic.
 //!
 //! Every function returns a NEW list and leaves the one it was handed - and every group in it -
 //! exactly as it found them: a rebuild reads the selection on a worker while the panel keeps
-//! editing it, so assigning a whole new list is what cannot be seen half done. C# compares slots
-//! by reference (`ReferenceEquals`); here the lists hold `Arc`s and a slot "holds" a group when
-//! it is the same allocation (`Arc::ptr_eq`). Generic over the kind of group so both legs share
-//! one set of rules.
+//! editing it, so assigning a whole new list is what cannot be seen half done. Slots compare by
+//! identity, not value: the lists hold `Arc`s and a slot "holds" a group when it is the same
+//! allocation (`Arc::ptr_eq`), so two equal groups stay two rows. Generic over the kind of group
+//! so both legs share one set of rules.
 
 use std::sync::Arc;
 

@@ -1,7 +1,6 @@
-//! The face regions of one mesh at one tolerance, flooded once each and kept. Ports
-//! `Topology/FaceRegionCache.cs`. Each region is a [`FaceGroup`]; picking asks for them at
-//! mouse-move rate. A reader that keeps answers per cache (the bevel's chain-end reading, C#'s
-//! `ConditionalWeakTable` keyed by a cache) keeps them here, with the cache
+//! The face regions of one mesh at one tolerance, flooded once each and kept. Each region is a
+//! [`FaceGroup`]; picking asks for them at mouse-move rate. A reader that keeps answers per cache
+//! (the bevel's chain-end reading) keeps them here, with the cache
 //! ([`FaceRegionCache::attached`]).
 
 use std::any::{Any, TypeId};
@@ -22,7 +21,7 @@ use super::face_group::FaceGroup;
 /// every pixel the mouse travels across one flat face.
 ///
 /// Cached against a SNAPSHOT of a mesh: the cache shares ownership of the mesh (`Arc`), so the
-/// mesh it floods cannot change underneath it (C# asks the caller to promise that).
+/// mesh it floods cannot change underneath it.
 ///
 /// Safe to use from more than one thread. Two threads racing for the same region flood it twice
 /// and keep the first answer, which costs a flood and cannot give a wrong one.
@@ -114,9 +113,8 @@ impl FaceRegionCache {
     }
 
     /// The one `T` kept WITH this cache: made (`T::default()`) on the first ask and handed to
-    /// every later one, for as long as the cache lives. C# keys answers it reads off a cache by
-    /// the cache's identity in a static `ConditionalWeakTable`, so they go when the cache does;
-    /// kept on the cache itself, they do the same with no table that outlives it. `T` guards its
+    /// every later one, for as long as the cache lives. Kept on the cache itself, answers read off
+    /// a cache go when the cache does, with no global table that outlives it. `T` guards its
     /// own contents (a `Mutex`) when readers on more than one thread fill it.
     pub fn attached<T: Any + Default + Send + Sync>(&self) -> Arc<T> {
         let mut attached = self.attached.lock().unwrap_or_else(|e| e.into_inner());
@@ -150,8 +148,8 @@ impl FaceRegionCache {
 
         self.floods.fetch_add(1, Ordering::SeqCst);
 
-        // Flooded outside the lock, as C# floods outside the ConcurrentDictionary: two threads
-        // may both flood, and the first to publish names the region.
+        // Flooded outside the lock so a flood never blocks other readers: two threads may both
+        // flood, and the first to publish names the region.
         let flooded = FaceGroup::create_fenced(
             &self.mesh,
             &self.graph,

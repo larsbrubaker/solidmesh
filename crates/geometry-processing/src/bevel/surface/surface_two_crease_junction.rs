@@ -1,6 +1,5 @@
-//! A junction where TWO creases meet one bead at one corner
-//! (`Bevel/Surface/SurfaceTwoCreaseJunction.cs`, a static class: free functions here): the
-//! reading ([`try_read`]), the tests it is made of, and the bead edge that carries its ring.
+//! A junction where TWO creases meet one bead at one corner, as free functions: the reading
+//! ([`try_read`]), the tests it is made of, and the bead edge that carries its ring.
 
 use std::rc::Rc;
 
@@ -20,7 +19,7 @@ pub const SAME_TURN: f64 = 1e-6;
 /// two unit vectors. Dimensionless, so fixed rather than the part's own ruler.
 pub const SAME_WALL: f64 = 1e-6;
 
-/// C# `TryRead`: reads the junction one cut and two creases make at `corner` (the welded mesh's
+/// Reads the junction one cut and two creases make at `corner` (the welded mesh's
 /// `vertex`), or says why it cannot be read - always named AT the corner. Pure: it asks the plans
 /// and nothing else. `ends` are the three chain ends the gathering found, in the plans' own order;
 /// `creases` says which two of them are the creases (exactly two, which is what picks this

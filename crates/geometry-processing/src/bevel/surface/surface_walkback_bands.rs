@@ -1,14 +1,13 @@
 //! The two questions the face walkback (`SurfaceFaceWalkback`) asks about a BAND - how far across
 //! its region one cut is allowed to reach ([`limit_each_cut_to_the_band_its_own_edge_reaches`]),
 //! and whether anything is standing where it is about to reach
-//! ([`try_check_nothing_is_standing_in_the_band`]). Ports the band half of
-//! `Bevel/Surface/SurfaceWalkbackBands.cs`; the reading it takes afterwards of what each cut left
-//! behind as a boundary to sew to (`GatherTangentRuns` and its helpers) is
+//! ([`try_check_nothing_is_standing_in_the_band`]). The reading it takes afterwards of what each
+//! cut left behind as a boundary to sew to (`gather_tangent_runs` and its helpers) is
 //! `surface_walkback_tangent_runs`. A region under the knife is [`SurfaceRegionWalkback`].
 //!
 //! The regions' face sets are walked in the REGION's own face order rather than over the
-//! `HashSet` [`SurfaceRegionWalkback::faces`]: C#'s `HashSet<int>` built from that list iterates
-//! in insertion order, and the order reaches a float sum ([`normal_of`]).
+//! `HashSet` [`SurfaceRegionWalkback::faces`], whose iteration order is arbitrary: the order
+//! reaches a float sum ([`normal_of`]), so it has to be one fixed order.
 
 use std::collections::{HashMap, HashSet};
 
@@ -21,7 +20,7 @@ use super::{SurfaceFacetCut, SurfaceLine, SurfaceRegionWalkback, SurfaceVertexPo
 use crate::bevel::bevel_chain_linker;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
 
-/// C# `LimitEachCutToTheBandItsOwnEdgeReaches`: which of a region's facets each cut is allowed to
+/// Which of a region's facets each cut is allowed to
 /// take material off - the ones the band starting at the chain edge itself can spread to across
 /// material the cut removes - appended to each walkback's `reaches` in cut order.
 ///
@@ -100,7 +99,7 @@ pub fn limit_each_cut_to_the_band_its_own_edge_reaches(
 
             if let Some(may_touch) = &cut.may_touch {
                 // A rolled cut says which facets of the wall are its own; the flood can only take
-                // material off those (SurfaceFacetCut.MayTouch).
+                // material off those (`SurfaceFacetCut::may_touch`).
                 reaches.retain(|face| may_touch.contains(face));
             }
 
@@ -111,7 +110,7 @@ pub fn limit_each_cut_to_the_band_its_own_edge_reaches(
     }
 }
 
-/// C# `TheFacetsTheBandsFarSideRunsThrough`: the facets of the region the band's FAR SIDE runs
+/// The facets of the region the band's FAR SIDE runs
 /// across - the stretch of the cut's tangent line between its two band end planes - which are
 /// seeded into the flood beside `SurfaceFacetCut::seed_face`.
 ///
@@ -148,7 +147,7 @@ fn the_facets_the_bands_far_side_runs_through(
         .collect()
 }
 
-/// C# `TryTheStretchBetweenTheBandEnds`: the window of the cut's tangent line that lies inside
+/// The window of the cut's tangent line that lies inside
 /// every one of its band ends, or `None` where there is no such window or it runs off to infinity
 /// at either end.
 fn try_the_stretch_between_the_band_ends(
@@ -183,10 +182,10 @@ fn try_the_stretch_between_the_band_ends(
     (!from.is_infinite() && !to.is_infinite() && to > from).then_some((from, to))
 }
 
-/// C# `TheStretchCrossesTheFacet`: whether the stretch `from`..`to` of `line` passes through a
+/// Whether the stretch `from`..`to` of `line` passes through a
 /// facet - the segment clipped by the facet's three sides in the facet's own plane, with what
 /// survives required to lie in that plane.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)`, which refuses a NaN as well.
 fn the_stretch_crosses_the_facet(
     face: &Face,
     line: &SurfaceLine,
@@ -257,7 +256,7 @@ fn the_stretch_crosses_the_facet(
     (middle - corners[0]).dot(normal).abs() <= pool.near_enough()
 }
 
-/// C# `TryCheckNothingIsStandingInTheBand`: whether anything is STANDING on a face where its band
+/// Whether anything is STANDING on a face where its band
 /// is about to be taken off - a boss, a rib, the mouth of a bore. The footprint of such a feature is
 /// a hole in the region, an inner loop of its rim, and a band that reaches that loop takes away the
 /// material the feature's walls stand on. Refused rather than handled (rung 9 of the plan).
@@ -341,7 +340,7 @@ pub fn try_check_nothing_is_standing_in_the_band(
     Ok(())
 }
 
-/// C# `StandsOnAChainBeingBevelled`: whether a whole rim edge lies along one chain edge of the
+/// Whether a whole rim edge lies along one chain edge of the
 /// plan `reaching` was made for - the exemption a boss's foot needs, its wall being the chain's
 /// other face walked back and sewn to the same strip. Of the SAME PLAN, so another plan's band
 /// into the foot is not excused; and one chain edge holds BOTH ends, so the answer is about the
@@ -360,8 +359,8 @@ fn stands_on_a_chain_being_bevelled(
     })
 }
 
-/// C# `NormalOf`: the region's own facing, as the sum of its faces' normals, `faces` in the order
-/// C#'s set iterates them.
+/// The region's own facing, as the sum of its faces' normals, `faces` in the region's own
+/// order so the sum is the same every run.
 pub fn normal_of(mesh: &Mesh, faces: &[i32], pool: &SurfaceVertexPool) -> Vector3 {
     let mut summed = Vector3::ZERO;
 
@@ -379,7 +378,7 @@ pub fn normal_of(mesh: &Mesh, faces: &[i32], pool: &SurfaceVertexPool) -> Vector
     }
 }
 
-/// C# `AreaOf`: how much a closed rim loop encloses, seen along `normal`.
+/// How much a closed rim loop encloses, seen along `normal`.
 pub fn area_of(chain: &BevelSweptChain, normal: Vector3) -> f64 {
     let mut summed = Vector3::ZERO;
 
@@ -390,7 +389,7 @@ pub fn area_of(chain: &BevelSweptChain, normal: Vector3) -> f64 {
     summed.dot(normal).abs() / 2.0
 }
 
-/// C# `CornerPairs`: the three corner pairs of a face, in its own winding.
+/// The three corner pairs of a face, in its own winding.
 pub fn corner_pairs(face: &Face) -> [(i32, i32); 3] {
     [(face.v0, face.v1), (face.v1, face.v2), (face.v2, face.v0)]
 }

@@ -1,5 +1,5 @@
-//! The two-pass rewrite of the mesh the walkback cuts (`Bevel/Surface/SurfaceWalkbackRewrite.cs`,
-//! C# `internal static class`, free functions here): every crossing of a tangent plane with a facet
+//! The two-pass rewrite of the mesh the walkback cuts, as free functions: every crossing of a
+//! tangent plane with a facet
 //! edge, welded into the pool and listed against that edge ([`try_find_crossings`]); the ring each
 //! face is rebuilt from with those crossings inserted ([`ring_of`]); and the finished mesh,
 //! renumbered with the vertices no face uses any more dropped ([`assemble`]).
@@ -20,11 +20,10 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// The vertices split into each mesh edge, keyed by the edge's `(low, high)` vertex pair (C#'s
-/// `splitsOnEdge`).
+/// The vertices split into each mesh edge, keyed by the edge's `(low, high)` vertex pair.
 pub type SurfaceSplitsOnEdge = IndexMap<(i32, i32), Vec<i32>>;
 
-/// C# `TryFindCrossings`: every point where a region's cut crosses one of its own facet edges,
+/// Every point where a region's cut crosses one of its own facet edges,
 /// welded into the pool and listed against that mesh edge so that BOTH faces on it are rebuilt
 /// through the same vertex.
 ///
@@ -51,9 +50,8 @@ pub fn try_find_crossings(
     }
 
     for walkback in walkbacks.values() {
-        // C# iterates the walkback's `HashSet` of faces, which (built from the region's faces and
-        // never changed) yields them in the region's own order; the Rust set does not keep an
-        // order, so the region is read instead, filtered to the set.
+        // The faces are taken in the region's own order, filtered to the walkback's set: the set
+        // keeps no order, and the order here decides vertex indices.
         for &face_index in walkback.region.faces() {
             if !walkback.faces.contains(&face_index) {
                 continue;
@@ -154,11 +152,11 @@ fn inside_the_ends(cut: &SurfaceFacetCut, at: Vector3, on_the_cut: f64) -> bool 
 /// denominator and not a rounding a weld can be widened to cover. Two vertices then stand where the
 /// construction has one place, the seam the strip sews to and the face the cap left carry one each,
 /// and the shell comes out open along the tangent line. So the memo is read before anything is
-/// minted, the same rule `SurfaceSplitsOnASegment` keeps for a stretch and `SurfaceCutClip.ClipBy`
-/// for a cut's own profile. The ruler and not the weld, because what is being asked is whether a
-/// point that has been through a plane crossing still lies where another plane crossing put it; and
-/// two splits of ONE edge nearer than the ruler are a crack whichever planes drew them, since every
-/// reading downstream calls them one place.
+/// minted, the same rule `SurfaceSplitsOnASegment` keeps for a stretch and
+/// `surface_cut_clip::clip_by` for a cut's own profile. The ruler and not the weld, because what is
+/// being asked is whether a point that has been through a plane crossing still lies where another
+/// plane crossing put it; and two splits of ONE edge nearer than the ruler are a crack whichever
+/// planes drew them, since every reading downstream calls them one place.
 fn the_split_on_the_edge(
     splits_on_edge: &SurfaceSplitsOnEdge,
     edge: (i32, i32),
@@ -199,7 +197,7 @@ fn remember(splits_on_edge: &mut SurfaceSplitsOnEdge, edge: (i32, i32), vertex: 
     }
 }
 
-/// C# `RingOf`: a face as a ring of vertices with whatever was split into its edges inserted, each
+/// A face as a ring of vertices with whatever was split into its edges inserted, each
 /// in its place along the edge. Three vertices for a face nothing crossed, which is nearly all.
 pub fn ring_of(
     mesh: &Mesh,
@@ -240,8 +238,8 @@ pub fn ring_of(
             }
         }
 
-        // C#'s `List.Sort` on the place alone; two splits at exactly one place are one vertex in
-        // every fixture, and the vertex index breaks the tie so the order never depends on it.
+        // Sorted on the place; two splits at exactly one place are one vertex in every fixture,
+        // and the vertex index breaks the tie so the order never depends on the sort.
         along.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
 
         for (_, vertex) in along {
@@ -252,7 +250,7 @@ pub fn ring_of(
     surface_ring::without_repeats(&ring)
 }
 
-/// C# `Assemble`: the new mesh, with the vertices no face uses any more dropped and everything
+/// The new mesh, with the vertices no face uses any more dropped and everything
 /// renumbered - the walked-back corners of the gap are nobody's now, and an unused vertex still
 /// counts in a bounding box. No `CleanAndMerge`: every vertex the rewrite shares was shared by
 /// index as it was made (`SurfaceVertexPool`), so there is nothing left to weld and nothing to
@@ -356,12 +354,12 @@ pub fn assemble(
 
     // The borrowed-rail continuations are read off the same pool and have to be carried over the
     // same way, or they would name the mesh by vertices that are not the ones they mean
-    // (SurfaceWalkbackResult.RailContinuations).
+    // (`SurfaceWalkbackResult::rail_continuations`).
     if let Some(rail_continuations) = rail_continuations {
         into_the_meshs_own_numbering(rail_continuations);
     }
 
-    // And the band corners, for the same reason (SurfaceWalkbackResult.BandCorners).
+    // And the band corners, for the same reason (`SurfaceWalkbackResult::band_corners`).
     if let Some(band_corners) = band_corners {
         into_the_meshs_own_numbering(band_corners);
     }

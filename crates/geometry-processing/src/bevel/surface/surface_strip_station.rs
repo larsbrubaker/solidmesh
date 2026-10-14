@@ -1,7 +1,7 @@
-//! One cross section of a strip ([`SurfaceStripStation`]). Ports
-//! `Bevel/Surface/SurfaceStripStation.cs`: its fields, its constructor and the clean station.
+//! One cross section of a strip ([`SurfaceStripStation`]): its fields, its constructor and the
+//! clean station.
 
-/// C# `SurfaceStripStation`: one cross section of a strip - the vertex on each rail, and whatever
+/// One cross section of a strip - the vertex on each rail, and whatever
 /// else already stands between two consecutive rails there. Only an end ring has anything between:
 /// the end face's own triangulation can cross the profile, and the strip sews to those points too.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -17,7 +17,7 @@ pub struct SurfaceStripStation {
 }
 
 impl SurfaceStripStation {
-    /// C#'s constructor: the station's rails, their parameters, and what stands between each pair.
+    /// The station's rails, their parameters, and what stands between each pair.
     pub fn new(rail: Vec<i32>, param: Vec<f64>, between: Vec<Vec<i32>>) -> Self {
         Self {
             rail,
@@ -26,7 +26,7 @@ impl SurfaceStripStation {
         }
     }
 
-    /// C# `Clean`: a station with nothing between its rails, which is every station but an end.
+    /// A station with nothing between its rails, which is every station but an end.
     pub fn clean(rail: Vec<i32>, param: Vec<f64>) -> Self {
         let between = vec![Vec::new(); rail.len().saturating_sub(1)];
 

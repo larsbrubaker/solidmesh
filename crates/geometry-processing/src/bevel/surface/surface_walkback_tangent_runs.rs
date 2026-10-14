@@ -1,14 +1,13 @@
 //! What each cut of the face walkback left of its tangent line as a boundary to sew to: the
 //! region's own CUT EDGES chained into contiguous runs ([`gather_tangent_runs`], [`runs_along`]),
 //! and the stretches standing on a rail the cut BORROWED from a sibling
-//! ([`continuations_along`]). Ports the run half of `Bevel/Surface/SurfaceWalkbackBands.cs`
-//! (`GatherTangentRuns`, `ContinuationsAlong`, `TheRimTheBandConsumed`, `RunsAlong`, `RunsOn`,
-//! `OneStationPerPooledPoint`); the band's reach and its standing-feature guard are
+//! ([`continuations_along`]), with their helpers (`the_rim_the_band_consumed`, `runs_on`,
+//! `one_station_per_pooled_point`); the band's reach and its standing-feature guard are
 //! `surface_walkback_bands`.
 //!
-//! C#'s `List.Sort` with a comparison is .NET's unstable introsort, and vertices standing at one
-//! distance along the line tie; the sorts here run [`introspective_sort`] so ties land where .NET
-//! leaves them.
+//! Vertices standing at one distance along the line tie, and an unstable sort leaves ties
+//! wherever its algorithm puts them; the sorts here run [`introspective_sort`], whose tie placement
+//! is fixed, so the runs (and the bevel's expected meshes) come out the same every time.
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -25,7 +24,7 @@ use crate::topology::FaceGroup;
 /// One region's kept triangles, as the walkback emitted them.
 pub type KeptFaces = Vec<(i32, i32, i32)>;
 
-/// C# `GatherTangentRuns`: what each cut left of its tangent line as a boundary of the region it
+/// What each cut left of its tangent line as a boundary of the region it
 /// cut - the region's own CUT EDGES (edges of kept triangles with both ends standing on the line)
 /// chained into contiguous runs, each ordered the way the chain walks the line - keyed by
 /// `(edge index, left)`.
@@ -35,7 +34,7 @@ pub type KeptFaces = Vec<(i32, i32, i32)>;
 /// that merely GRAZES the line is in no edge and so in no run.
 ///
 /// `beveled_mesh_edges` and `chain_vertices` are the mesh edges this pass is beveling and their
-/// ends (`SurfaceFaceWalkback.TheChainsOwn`). Where `kept_range_of_facet` and
+/// ends (`surface_face_walkback::the_chains_own`). Where `kept_range_of_facet` and
 /// `rail_continuations` are both given, each cut's borrowed-rail stretches are written into
 /// `rail_continuations` as well.
 pub fn gather_tangent_runs(
@@ -81,13 +80,13 @@ pub fn gather_tangent_runs(
     tangent_runs
 }
 
-/// C# `ContinuationsAlong`: the stretches of a cut's rim that stand on a BORROWED rail rather than
+/// The stretches of a cut's rim that stand on a BORROWED rail rather than
 /// on the cut's own tangent line, one run per contiguous stretch, in the cut's own walk order.
 ///
-/// At a facet the cut reached across a crease, `SurfaceBandOutline.AsDrawnOn` draws the band's far
-/// side along the SIBLING cut's line, so the rim the cut left there stands on that line and on no
-/// line of the cut's own - and [`runs_along`] has no way to see it. That is the segment a mitre at
-/// the end of such a cut has to meet. The band ENDS are still the cut's, so a continuation stops
+/// At a facet the cut reached across a crease, `surface_band_outline::as_drawn_on` draws the band's
+/// far side along the SIBLING cut's line, so the rim the cut left there stands on that line and on
+/// no line of the cut's own - and [`runs_along`] has no way to see it. That is the segment a mitre
+/// at the end of such a cut has to meet. The band ENDS are still the cut's, so a continuation stops
 /// where the cut's own band does.
 pub fn continuations_along(
     walkback: &SurfaceRegionWalkback,
@@ -155,12 +154,12 @@ pub fn continuations_along(
     continuations
 }
 
-/// C# `TheRimTheBandConsumed`: the region's own rim, where this cut CONSUMED the region to it - and
+/// The region's own rim, where this cut CONSUMED the region to it - and
 /// `None` everywhere else. A band that reaches exactly as far as its face does leaves no triangle
 /// of that face standing, so what stands where the tangent line would have been cut is the rim
 /// itself, already in the pool as the part's own (`consumes_the_face_to_its_rim`). The whole rim is
 /// handed over: [`runs_on`] keeps only the segments standing on the line and inside the band.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)`, which refuses a NaN as well.
 fn the_rim_the_band_consumed(
     region: &FaceGroup,
     cut: &SurfaceFacetCut,
@@ -177,7 +176,7 @@ fn the_rim_the_band_consumed(
         return None;
     }
 
-    // C# passes its optional sets through as null, which the reading takes as empty.
+    // The optional sets are absent here, which the reading takes as empty.
     let none = HashSet::new();
     let band = BandSpan {
         from: cut.chain_from,
@@ -206,7 +205,7 @@ fn the_rim_the_band_consumed(
     )
 }
 
-/// C# `RunsAlong`: the contiguous runs of one cut's line through one region's kept triangles.
+/// The contiguous runs of one cut's line through one region's kept triangles.
 /// `consumed_rim` is the region's own rim where the band consumed the face to it, whose segments
 /// stand in for the kept triangles' edges there, or `None` in the ordinary case.
 pub fn runs_along(
@@ -218,7 +217,7 @@ pub fn runs_along(
     runs_on(cut, &cut.tangent_line, kept, pool, consumed_rim)
 }
 
-/// C# `RunsOn`: the same reading, taken along a line that need not be the cut's own: the cut still
+/// The same reading, taken along a line that need not be the cut's own: the cut still
 /// says where the band ENDS and which way along the run is forward, and `line` says which edges
 /// stand on the rail.
 fn runs_on(
@@ -238,7 +237,7 @@ fn runs_on(
     };
 
     // Inside the band's own ends, not merely on the line. Where the tangent line lands ON A CREASE
-    // of the mesh (SurfaceWallSection.RestsOnTheCrease) the crease is an edge of the part for its
+    // of the mesh (`SurfaceWallSection::rests_on_the_crease`) the crease is an edge of the part for its
     // whole length, and the stretch of it past the band's end is the rim of the piece the corner's
     // own blend bites away, not the strip's seam. Asked of the two VERTICES rather than of the
     // middle between them, so the choice is made the same way every time and the way the strip is
@@ -324,7 +323,7 @@ fn runs_on(
         .collect()
 }
 
-/// C#'s local `Join`: notes that `from` is joined to `to` along the line.
+/// Notes that `from` is joined to `to` along the line.
 fn join(next_to: &mut IndexMap<i32, Vec<i32>>, from: i32, to: i32) {
     let neighbours = next_to.entry(from).or_insert_with(|| Vec::with_capacity(2));
 
@@ -333,7 +332,7 @@ fn join(next_to: &mut IndexMap<i32, Vec<i32>>, from: i32, to: i32) {
     }
 }
 
-/// C# `OneStationPerPooledPoint`: one station per POOLED point - where two vertices of a run stand
+/// One station per POOLED point - where two vertices of a run stand
 /// closer together than the pool's `near_enough`, they are one point as far as everything
 /// downstream is concerned, and the station kept is the one NEAREST the line, which is the one the
 /// cut crossed at. Two vertices the pool would have minted as one otherwise have the end cut's cap
@@ -364,7 +363,7 @@ fn one_station_per_pooled_point(
     stations
 }
 
-/// C#'s `double.CompareTo`, which orders a NaN before every number.
+/// A total order on doubles that puts a NaN before every number, so a NaN cannot break the sort.
 fn cs_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,

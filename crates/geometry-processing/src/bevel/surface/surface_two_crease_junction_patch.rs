@@ -1,10 +1,10 @@
 //! Closes a TWO-crease junction - one cut and two beads - with the one sweep of the canal between
-//! the two beads' own end rings (`Bevel/Surface/SurfaceTwoCreaseJunctionPatch.cs`, a static class;
-//! `SurfaceTwoCreaseJunction` reads it, `SurfaceTwoCreaseJunctionRings` lays its grid). ONE sweep,
+//! the two beads' own end rings (`surface_two_crease_junction` reads it,
+//! `surface_two_crease_junction_rings` lays its grid). ONE sweep,
 //! not two half patches: its columns run from the upper bead's end ring round to the lower's, the
-//! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Only
-//! its nested record (with its constructor), the ring positions ([`positions_of`]) and the three
-//! end rings won from the pool ([`try_the_end_rings`]) land here, one strip's end ring being a
+//! cut's ring is the last row, and every seam of it is a curve somebody else already minted. Here
+//! are its nested record (with its constructor), the ring positions ([`positions_of`]) and the three
+//! end rings won from the pool ([`try_the_end_rings`]), one strip's end ring being a
 //! [`SurfaceTwoCreaseJunctionPatchEndRing`], with the patch's driver ([`try_close`]), its grid
 //! ([`try_the_grid`]) and its quads ([`emit`]).
 
@@ -18,7 +18,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceTwoCreaseJunctionPatch.EndRing` (a private readonly struct): one strip's end ring at
+/// One strip's end ring at
 /// the corner, in BOTH of the orders it is wanted in.
 ///
 /// The two are kept apart because they are answers to different questions and the answer is not
@@ -40,7 +40,7 @@ pub struct SurfaceTwoCreaseJunctionPatchEndRing {
 }
 
 impl SurfaceTwoCreaseJunctionPatchEndRing {
-    /// C#'s constructor.
+    /// One strip's end ring, where its rails meet it, and the ring turned the way the grid runs.
     pub fn new(ring: Vec<i32>, meets_at: Vec<f64>, as_the_grid_wants_it: Vec<i32>) -> Self {
         Self {
             ring,
@@ -50,7 +50,7 @@ impl SurfaceTwoCreaseJunctionPatchEndRing {
     }
 }
 
-/// C# `TryClose`: closes the junction - the three end rings, the grid between them and what the
+/// Closes the junction - the three end rings, the grid between them and what the
 /// wall gives up under it. `arriving` is the three strips in the order this patch wants them: the
 /// CUT, then the first arm's bead, then the second's (`SurfaceMixedJunction::the_arriving_ends`).
 /// Returns one end ring per strip, in the order they were handed in.
@@ -92,7 +92,7 @@ pub fn try_close(
 
     // ONCE, and after everything: every crossing this made, sewn into whatever face now carries it
     // part way along an edge (`surface_mixed_corner_patch` says why it is not carried in the
-    // rings). C# calls the overload that drops the verdict.
+    // rings). The unchecked form: the close carries no refusal of its own for the sewing to report.
     surface_split_sewing::sew_in_the_splits_since_unchecked(pool, faces, split_from);
 
     surface_mixed_corner_patch::nothing_covers_nothing(pool, faces)?;
@@ -109,16 +109,15 @@ pub fn positions_of(pool: &super::SurfaceVertexPool, ring: &[i32]) -> Vec<vector
     ring.iter().map(|&index| pool.position_of(index)).collect()
 }
 
-/// C# `TryTheEndRings`: the three end rings - the cut's, the first arm's bead's and the second's -
+/// The three end rings - the cut's, the first arm's bead's and the second's -
 /// WON FROM THE POOL: every rail a vertex the build already has, and the two outer rails of each the
 /// very vertices the walkback's own tangent runs end at. As `(cut, first, last)`.
 ///
 /// The CUT's ring is cut on the canal's leaning plane rather than on a band's stop plane, because a
 /// two-crease junction's cut is bounded on NEITHER face. Each BEAD's is its own square section. All
 /// three are then turned the way the grid runs, so that nothing below has to ask which way round a
-/// strip's own rails went. `arriving` is the cut's strip then the two beads' (C# reads the three
-/// unguarded, and the arm's dual as well; fewer, or no dual, is no two-crease junction and is
-/// refused by name).
+/// strip's own rails went. `arriving` is the cut's strip then the two beads' (fewer, or an arm with
+/// no dual, is no two-crease junction and is refused by name rather than a panic).
 pub fn try_the_end_rings(
     pool: &mut SurfaceVertexPool,
     junction: &SurfaceMixedJunction,
@@ -186,7 +185,7 @@ pub fn try_the_end_rings(
     ))
 }
 
-/// C# `TryTheGrid`: the patch's grid, station by station and rail by rail - the first and last
+/// The patch's grid, station by station and rail by rail - the first and last
 /// rows the two beads' end rings, the last rail the cut's ring, and every other vertex minted at the
 /// rings' own position - refused where the closing column does not stand, or a bead's tube contact
 /// is not the cut ring's own end rail.
@@ -221,7 +220,7 @@ pub fn try_the_grid(
     }
 
     let mut grid = Vec::with_capacity(stations);
-    #[allow(clippy::needless_range_loop)] // C#'s station-by-rail grid, read by index
+    #[allow(clippy::needless_range_loop)] // a station-by-rail grid, read by index
     for station in 0..stations {
         let mut row = Vec::with_capacity(rails);
         for rail in 0..rails {
@@ -242,7 +241,7 @@ pub fn try_the_grid(
     Ok(grid)
 }
 
-/// C# `Emit`: the grid's quads, each fanned facing the junction's outward sum.
+/// The grid's quads, each fanned facing the junction's outward sum.
 pub fn emit(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

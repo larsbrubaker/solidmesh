@@ -1,6 +1,5 @@
 //! The vertex list of a mesh being rewritten, with a point-to-index lookup over it: ask for a
 //! position and get back the index of the vertex already standing there, or a new one appended.
-//! Ports `Bevel/Surface/SurfaceVertexPool.cs`.
 //!
 //! The walkback's whole no-crack guarantee is index sharing, and the same point is arrived at by
 //! more than one road: two faces either side of a rim edge each cut that edge, and two tangent lines
@@ -19,7 +18,8 @@
 //! sew to. [`super::surface_mesh_closure`] is the reading that checks the result.
 //!
 //! The buckets are only ever looked up by cell, never iterated, so a `HashMap`'s order cannot reach
-//! a result; within a cell candidates keep their insertion order, as C#'s lists do.
+//! a result; within a cell candidates keep their insertion order, so ties resolve the same way
+//! every run.
 
 use std::collections::HashMap;
 
@@ -28,7 +28,7 @@ use vector_math::{Vector3, Vector3Float};
 /// A bucket key: a cell `near_enough` across.
 type Cell = (i64, i64, i64);
 
-/// C# `SurfaceVertexPool`.
+/// The pool: the vertex list and its lookup by cell.
 #[derive(Debug, Clone)]
 pub struct SurfaceVertexPool {
     vertices: Vec<Vector3Float>,
@@ -85,8 +85,8 @@ impl SurfaceVertexPool {
     /// ALONG the side while the ruler is across the cut: where a side runs nearly along the
     /// cutting plane, a point a ruler away along it stands a small fraction of one off the plane,
     /// and the plane is what it is really on. Two rulers is enough for that and far short of
-    /// anything that is a second point rather than the same one (`SurfaceCutClip.ClipBy`,
-    /// `SurfaceEndNotch.SnappedToTheProfile`).
+    /// anything that is a second point rather than the same one (`surface_cut_clip::clip_by`,
+    /// `surface_end_notch::snapped_to_the_profile`).
     pub fn snap_near(&self) -> f64 {
         self.near_enough() * 2.0
     }
@@ -160,19 +160,20 @@ impl SurfaceVertexPool {
     /// The vertex NEAREST `position` standing within `how_near` of it, or `None` where none does.
     /// Unlike [`Self::add`] this asks about the ruler rather than the weld: what it is for is the
     /// clip, which has to call one place one point or leave a crack between two pieces bounded by
-    /// vertices nothing downstream can tell apart (`SurfaceCutClip.ClipBy`).
+    /// vertices nothing downstream can tell apart (`surface_cut_clip::clip_by`).
     ///
     /// `qualifies` says what makes a vertex an answer at all, or `None` for any of them. It is
     /// asked of every candidate rather than of the nearest one afterwards: the nearest vertex and
     /// the nearest one the caller can USE are not the same vertex, and a reading that finds the
     /// first and then rejects it would answer differently as the pool grows under it - which is
     /// exactly what happens when one side is clipped twice over
-    /// (`SurfaceEndGivesUpTheSection.PiecesOutsideOf`).
+    /// (`surface_end_gives_up_the_section::pieces_outside_of`).
     ///
     /// The buckets are [`Self::near_enough`] across, so a `how_near` of one bucket is the 27
     /// cells round the point and anything more is a wider box: two buckets' reach is 125 cells.
     /// Looking too far costs candidates to measure and nothing else, since the distance is what
-    /// decides. A later candidate at exactly the nearest distance so far replaces it, as in C#.
+    /// decides. A later candidate at exactly the nearest distance so far replaces it, so a tie
+    /// always goes the same way.
     pub fn try_find_near(
         &self,
         position: Vector3,
@@ -183,8 +184,8 @@ impl SurfaceVertexPool {
         let cell = self.cell_of(stored);
         let mut nearest = how_near;
         let mut index = -1;
-        // C# `(int)Math.Ceiling(...)`; `as` saturates where C# would be undefined, which only a
-        // `how_near` billions of rulers wide could reach.
+        // `as` saturates a reach too large for an `i32`, which only a `how_near` billions of rulers
+        // wide could ask for.
         let reach = (how_near / self.near_enough()).ceil() as i32;
 
         for x in -reach..=reach {
@@ -255,7 +256,8 @@ impl SurfaceVertexPool {
     fn cell_of(&self, position: Vector3Float) -> Cell {
         let near_enough = self.near_enough();
 
-        // C# `(long)Math.Floor(float / double)`: the float coordinate widens before the divide.
+        // The stored float coordinate widens to f64 before the divide, so the cell is worked out
+        // at full precision.
         (
             (f64::from(position.x) / near_enough).floor() as i64,
             (f64::from(position.y) / near_enough).floor() as i64,

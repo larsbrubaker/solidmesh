@@ -1,6 +1,5 @@
 //! The arc-generation half of the path bevel: how much room a corner has along the path, and the
-//! arc inscribed in it once the relaxation has settled how much of that room it may take. Ports
-//! `Path/PathBevelArcs.cs`.
+//! arc inscribed in it once the relaxation has settled how much of that room it may take.
 //!
 //! The fillet center is searched for along the offset of the forward run (its segments pushed
 //! over by the radius, joined by arcs of the radius about its vertices) for the place where the
@@ -9,7 +8,7 @@
 //! arc lands tangent to the curve. If no center of the requested radius fits in what the corner
 //! was given, the radius is halved down to the largest that does.
 
-// C#'s "the long way round": `!(x > 0)` is true for NaN where `x <= 0` is not, and that is
+// The long way round: `!(x > 0)` is true for NaN where `x <= 0` is not, and that is
 // how a NaN size, radius or angle declines a corner instead of slipping through.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
@@ -42,7 +41,7 @@ const ALLOWANCE_SLACK: f64 = 1e-9;
 const SWEEP_DIRECTION_TOLERANCE: f64 = 1e-9;
 
 thread_local! {
-    /// C# `[ThreadStatic] PathBevelArcs.RunPlacesMeasured`: how many places on a run the
+    /// Per thread, how many places on a run the
     /// construction has measured against since the last reset, so a test can read the growth of
     /// the work instead of the time it took.
     static RUN_PLACES_MEASURED: Cell<u64> = const { Cell::new(0) };
@@ -63,8 +62,7 @@ pub fn reset_run_places_measured() {
 }
 
 /// The points of the arc that rounds the corner at `vertex`, marking the vertices it reaches past
-/// in `eaten`. A single point back at the vertex when no arc can be built (C#
-/// `PathBevelArcs.GenerateBevelArc`).
+/// in `eaten`. A single point back at the vertex when no arc can be built.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn generate_bevel_arc(
     working: &[Vector2],
@@ -134,7 +132,7 @@ pub(crate) fn generate_bevel_arc(
     sample_arc(&fillet, interior_sign, segments)
 }
 
-/// Where the fillet of one corner ended up (C# `PathBevelArcs.Fillet`). The interior sign is
+/// Where the fillet of one corner ended up. The interior sign is
 /// passed to [`sample_arc`] alongside rather than stored.
 #[derive(Debug, Clone, Copy, Default)]
 struct Fillet {
@@ -353,7 +351,7 @@ fn sample_arc(fillet: &Fillet, interior_sign: f64, segments: usize) -> Vec<Vecto
 }
 
 /// The stretch of path a corner has to itself in one direction, with the arc length to each
-/// vertex along the way (C# `PathBevelArcs.PathRun`).
+/// vertex along the way.
 #[derive(Debug, Default)]
 struct PathRun {
     indices: Vec<usize>,
@@ -586,7 +584,7 @@ fn collect_run(
 
 /// Walks from `from` in `direction` to the next candidate corner, returning that corner (or -1
 /// off the end of an open contour or at a vertex that cannot be measured) and the arc length
-/// covered (C# `PathBevelArcs.FindNeighborCandidate`).
+/// covered.
 pub(crate) fn find_neighbor_candidate(
     working: &[Vector2],
     closed: bool,
@@ -658,7 +656,8 @@ fn rotate(vector: Vector2, angle: f64) -> Vector2 {
     )
 }
 
-/// C# `Math.Clamp`, which passes NaN through.
+/// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
+/// NaN bound) so the NaN guards downstream still see it.
 fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min

@@ -1,7 +1,6 @@
 //! Whether a wall that a section walk calls CURVED need not be rolled along after all, because the
 //! plain two-plane ball - tangent to the flat face and to the chain edge's OWN facet's plane -
-//! already stands clear of the whole wall. Ports `Bevel/Surface/SurfaceWallStandsClear.cs` (C#
-//! `internal static class`; a module of free functions here). It asks its questions of the wall's
+//! already stands clear of the whole wall, as free functions. It asks its questions of the wall's
 //! [`SurfaceRegionFaceGrid`] and reads the walk's first step ([`SurfaceRunAcrossSectionStep`]);
 //! `SurfaceRollAcrossTheWall` decides whether to roll with it.
 //!
@@ -17,23 +16,24 @@
 //! meets the chain edge's facet and ask whether anything on the wall comes nearer than the radius.
 //! **Rounds only** - a chamfer has no ball to stand clear.
 //!
-//! C#'s `OfThePlainBall(mesh, wallRegion, ..)` fetches the region's grid from its memo
-//! (`SurfaceRegionFaceGrid.For`); here the caller hands in the grid it keeps (divergence 650), and
-//! `None` stands for C#'s null mesh or region.
+//! The caller hands in the region's grid it keeps beside the region: there is no process-wide memo
+//! of grids, because one shared between rebuild workers would be shared mutable state, and the
+//! grid's answers depend only on the mesh and region it was laid from. `None` stands for no mesh or
+//! region.
 
 use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceRegionFaceGrid, SurfaceRunAcrossSectionStep};
 use crate::topology::FeatureEdge;
 
-/// C# `FlatEnough`: how far off a plane a point may stand per unit of its reach and still be taken
+/// How far off a plane a point may stand per unit of its reach and still be taken
 /// as on it - the sine of the angle at which the topology itself stops calling two faces coplanar
 /// ([`FeatureEdge::COPLANAR_FACE_DOT`]), which is 0.51 degrees.
 fn flat_enough() -> f64 {
     (1.0 - (FeatureEdge::COPLANAR_FACE_DOT * FeatureEdge::COPLANAR_FACE_DOT)).sqrt()
 }
 
-/// C# `OfThePlainBall`: whether the plain ball clears the wall, so that the roll should not run and
+/// Whether the plain ball clears the wall, so that the roll should not run and
 /// the edge is planned between two planes as it would be if nothing curved.
 ///
 /// `grid` is the curved region the roll was about to walk, `steps` that walk (whose first step is the
@@ -100,9 +100,9 @@ pub fn of_the_plain_ball(
     true
 }
 
-/// C# `TryTheStretchTheFootMeetsItsFacetOver`: the stretch of the foot's own line that really lies
+/// The stretch of the foot's own line that really lies
 /// inside the chain edge's facet, as parameters along the edge from the foot itself (`(from, to)`).
-/// C#'s unused `mesh` parameter is dropped; the grid carries the faces.
+/// The grid carries the faces, so no mesh is taken.
 ///
 /// The facet is every face of the region lying in the first step's own plane - taken by the plane
 /// rather than by flooding neighbours, because a facet split into triangles by a mesher is one plane

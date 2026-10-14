@@ -1,4 +1,4 @@
-//! The edges of a mesh that are edges of the shape. Ports `Topology/FeatureEdgeSet.cs`. Built
+//! The edges of a mesh that are edges of the shape. Built
 //! from [`FeatureEdge::try_classify`]; walked by [`super::FeatureEdgeChain`] and
 //! [`super::edge_picking`].
 
@@ -17,7 +17,7 @@ use super::feature_edge::{EdgeConvexity, FeatureEdge};
 /// so nothing here goes stale-but-plausible after the mesh changes; rebuild it instead.
 ///
 /// A set is safe to read from several threads at once: the only mutable thing in here is the
-/// vertex incidence cache, and it is a `OnceLock` (C#'s `Lazy` with `ExecutionAndPublication`).
+/// vertex incidence cache, and it is a `OnceLock`, filled once by whichever thread asks first.
 #[derive(Debug)]
 pub struct FeatureEdgeSet {
     edges: Vec<FeatureEdge>,

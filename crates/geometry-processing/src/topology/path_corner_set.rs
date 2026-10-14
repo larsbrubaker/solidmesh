@@ -1,5 +1,5 @@
-//! Every corner of a path that a bevel would round, at one bend threshold. Ports
-//! `Topology/PathCornerSet.cs` (`PathCorner`, `PathCornerSet`).
+//! Every corner of a path that a bevel would round, at one bend threshold ([`PathCornerSet`] of
+//! [`PathCorner`]s).
 //!
 //! The 2D analog of [`super::FeatureEdgeSet`]. Built from
 //! [`crate::path::path_bevel::cleaned_contours`] and decided by the bevel's own candidate test,
@@ -11,8 +11,7 @@ use vector_math::{cs_math, math_helper, Vector2};
 
 use crate::path::path_bevel::{self, Contour};
 
-/// One corner of a path: where it is, and the unit directions of the two edges that meet there
-/// (C# `PathCorner`).
+/// One corner of a path: where it is, and the unit directions of the two edges that meet there.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PathCorner {
     /// Which contour the corner is on, indexing [`PathCornerSet::contours`].
@@ -38,7 +37,7 @@ impl PathCorner {
     }
 }
 
-/// The corners of a path at a bend threshold (C# `PathCornerSet`).
+/// The corners of a path at a bend threshold.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathCornerSet {
     /// The threshold the corners were selected at, in degrees.
@@ -58,7 +57,7 @@ impl PathCornerSet {
         self.corners.len()
     }
 
-    /// Finds the corners of a path at a bend threshold (C# `PathCornerSet.Create`).
+    /// Finds the corners of a path at a bend threshold.
     pub fn create(source: &dyn VertexSource, bend_threshold_degrees: f64) -> PathCornerSet {
         let contours = path_bevel::cleaned_contours(source);
         let mut corners = Vec::new();
@@ -139,7 +138,8 @@ impl PathCornerSet {
     }
 }
 
-/// C# `Math.Clamp`, which passes NaN through.
+/// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
+/// NaN bound) so the NaN guards downstream still see it.
 fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min

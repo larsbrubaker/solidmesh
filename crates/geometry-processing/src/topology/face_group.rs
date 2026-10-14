@@ -1,5 +1,5 @@
-//! The logical surface a face belongs to, and every face's surface label at once. Ports
-//! `Topology/FaceGroup.cs`. Flooded over a [`MeshEdgeGraph`] with
+//! The logical surface a face belongs to, and every face's surface label at once. Flooded over a
+//! [`MeshEdgeGraph`] with
 //! [`FeatureEdge::try_classify`]; cached per mesh by [`super::FaceRegionCache`].
 
 use std::collections::VecDeque;
@@ -213,7 +213,7 @@ impl FaceGroup {
 
         // Mesh order rather than discovery order, so the same mesh and seed always describe the
         // group the same way - callers persist these and compare them across rebuilds. Indices
-        // are unique, so the unstable C# sort has no ties to order.
+        // are unique, so the unstable sort has no ties to order.
         faces.sort_unstable();
         boundary_edges.sort_by_key(|e: &FeatureEdge| e.mesh_edge_index);
         open_boundary_mesh_edges.sort_unstable();

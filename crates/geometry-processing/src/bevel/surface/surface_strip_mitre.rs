@@ -1,14 +1,14 @@
-//! The MITRE (`Bevel/Surface/SurfaceStripMitre.cs`, `TryMitre`): the ring two consecutive strips of
+//! The MITRE ([`try_mitre`]): the ring two consecutive strips of
 //! one chain share where they meet, cut from the plane their two walk directions are mirror images
 //! in. Its rail-by-rail machinery - where each rail crosses that plane and where the two beads'
 //! tangent lines cross on the face they share - is `surface_strip_mitre_rails`; the corners that
 //! are not one plain ring are [`super::SurfaceMitreOverTheFaceBeyond`] (the tip past the shared
 //! face's rim), [`SurfaceMitreSliver`] (the feet past the far rims), `surface_mitre_chorded_apart`
 //! (two arcs chorded at different steps) and [`super::surface_mitre_sector`] (the far face giving up
-//! a sector). C# split this out of `SurfaceStripEnds`, the three ways a strip STOPS; the mitre is
-//! the one of the three with a machine behind it.
+//! a sector). It stands apart from `surface_strip_ends`, the three ways a strip STOPS, because the
+//! mitre is the one of the three with a machine behind it.
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are deliberate: each is false for NaN, which is the point.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use vector_math::{math_helper, Vector3};
@@ -29,7 +29,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// difference that means something.
 const TURNS_THE_SAME: f64 = 1e-9;
 
-/// What [`try_mitre`] cut: C#'s six `out` parameters.
+/// What [`try_mitre`] cut: the six readings it hands back.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceStripMitreRing {
     /// The leaving strip's end ring, one vertex per rail.
@@ -46,12 +46,12 @@ pub struct SurfaceStripMitreRing {
     pub between_arriving: Vec<Vec<i32>>,
 }
 
-/// The two strips meeting at a mitre and their plans and edge indices (C#'s positional parameters).
+/// The two strips meeting at a mitre and their plans and edge indices.
 #[derive(Clone, Copy)]
 pub struct SurfaceStripMitrePair<'a> {
-    /// The strip the walk carries the chain into the corner along (C#'s `strip`).
+    /// The strip the walk carries the chain into the corner along.
     pub strip: &'a SurfaceStrip,
-    /// The strip after it, C#'s `next`.
+    /// The strip after it.
     pub next: &'a SurfaceStrip,
     /// `strip`'s plan.
     pub leaving: &'a SurfaceEdgePlan,
@@ -63,7 +63,7 @@ pub struct SurfaceStripMitrePair<'a> {
     pub next_index: i32,
 }
 
-/// C# `TryMitre`: the ring where two consecutive strips meet - each rail cut at the mitre plane,
+/// The ring where two consecutive strips meet - each rail cut at the mitre plane,
 /// which is the plane the two walk directions are mirror images in. Built from the first strip and
 /// CHECKED against the second, so the two share the ring's vertices rather than arriving at two of
 /// them a rounding apart - and so that a corner where they genuinely do not meet is a refusal.
@@ -77,10 +77,10 @@ pub struct SurfaceStripMitrePair<'a> {
 /// Wherever the two beads set back by the SAME amount on that face - two 90 degree edges of a cube,
 /// which is every mitre in the corpus so far - that crossing stands at the same distance along each
 /// tangent line and the plane through it is the plane through the CORNER VERTEX
-/// (`SurfaceCornerTests.AnEqualSetbackMitreIsUnchanged` pins that they remain one plane). They part
-/// company as soon as the two wedges differ: a 45 degree knife tip sets its line back r/tan(22.5)
-/// where a 90 degree edge sets its own back r, and a plane through the corner then misses the other
-/// strip entirely.
+/// (`surface_corner_tests::an_equal_setback_mitre_is_unchanged` pins that they remain one plane).
+/// They part company as soon as the two wedges differ: a 45 degree knife tip sets its line back
+/// r/tan(22.5) where a 90 degree edge sets its own back r, and a plane through the corner then
+/// misses the other strip entirely.
 #[allow(clippy::too_many_arguments)]
 pub fn try_mitre(
     pool: &mut SurfaceVertexPool,
@@ -115,10 +115,10 @@ pub fn try_mitre(
     let mut normal = strip.along() + next.along();
 
     // How far the chain turns at this corner, bounded by the same angle the plan bounds a wedge by
-    // (SurfaceBevelPlan.MinimumWedgeAngleDegrees). A length test here would be no test at all: the
-    // sum is 2 cos(turn / 2) long, so a chain doubling back through 179.99 degrees still leaves a
-    // vector 1.7e-4 long - far above any epsilon, and a mitre plane so nearly along the rails that
-    // the ring it cuts lands metres from the part.
+    // (`SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES`). A length test here would be no test at
+    // all: the sum is 2 cos(turn / 2) long, so a chain doubling back through 179.99 degrees still
+    // leaves a vector 1.7e-4 long - far above any epsilon, and a mitre plane so nearly along the
+    // rails that the ring it cuts lands metres from the part.
     let turn_degrees =
         math_helper::radians_to_degrees(strip.along().dot(next.along()).clamp(-1.0, 1.0).acos());
 

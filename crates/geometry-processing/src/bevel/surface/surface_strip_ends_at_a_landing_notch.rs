@@ -1,8 +1,7 @@
 //! The end of a band that LANDED on its face, with a standing feature's extension notching it: the
 //! ring the ordinary open end would have stood on, cut back to a cross section clear of the notch,
 //! the tail past that section sewn band by band, and the section the end gives up split around the
-//! extension. Ports `Bevel/Surface/SurfaceStripEndsAtALandingNotch.cs` (C# `internal static class`;
-//! a module of free functions here): which way the cap is walked ([`try_the_walk`]), the notched
+//! extension. A module of free functions: which way the cap is walked ([`try_the_walk`]), the notched
 //! ring ([`try_the_ring`]) and the close itself ([`try_close_the_landing_end`]).
 //!
 //! Nothing here is a second composition: the three pieces are the very ones the RUN-OFF end already
@@ -26,8 +25,8 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryTheWalk`: the order the cap walks the ring's rails in, from the CORNER's side, so the
-/// cap's head is the corner fan and its tail the sliver. `Err` is C#'s `failure`.
+/// The order the cap walks the ring's rails in, from the CORNER's side, so the
+/// cap's head is the corner fan and its tail the sliver. `Err` is the refusal.
 ///
 /// A landing end has both ring ends standing on the rim and nothing about the rails' numbering says
 /// which of them the corner's piece is on: the chain's own walk decides it, and the same part read as
@@ -92,7 +91,7 @@ pub fn try_the_walk(
     Ok(walked(low_is_the_sliver))
 }
 
-/// C# `TheCreaseStandsOnTheStraightSide`: whether `crease` stands on the straight side running
+/// Whether `crease` stands on the straight side running
 /// from one end of the ring to the corner - its PERPENDICULAR distance from that line, against the
 /// same ruler every other meeting of two readings is held to, and inside the side's own two ends.
 /// Perpendicular rather than "the two legs come to the whole", whose difference is QUADRATIC in the
@@ -123,11 +122,11 @@ pub fn the_crease_stands_on_the_straight_side(
         && (on - at).cross(side / side.length()).length() < near
 }
 
-/// C# `TryTheRing`: the ring at a notched landing end - the open end's own ring, with every rail
+/// The ring at a notched landing end - the open end's own ring, with every rail
 /// the feature took pulled back to the cross section (`section`) instead of reaching the end plane -
-/// and where each rail meets it (C#'s `ring` and `meetsAt`). `seams` is C#'s
-/// `List<(int, double)>[,]` table indexed by `edge_index`; a missing or empty run there, where C#
-/// would throw, is refused as an end not supported.
+/// and where each rail meets it. `seams` is the `[edge, side]` table of seam runs indexed by
+/// `edge_index`; a missing or empty run there is refused as an end not supported rather than a
+/// panic.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_the_ring(
     pool: &mut SurfaceVertexPool,
@@ -250,10 +249,10 @@ pub fn try_the_ring(
     Ok((ring, meets_at))
 }
 
-/// C# `TryCloseTheLandingEnd`: a landed band's end notched by a standing feature's extension -
+/// A landed band's end notched by a standing feature's extension -
 /// the ring cut back to a cross section clear of the notch (measured against `the_other_end`), the
 /// section the end gives up capped around the feature, and the tail past it sewn band by band.
-/// Returns the station the stitch's last band sews to (C#'s `out station`), or why the end could
+/// Returns the station the stitch's last band sews to, or why the end could
 /// not be closed.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close_the_landing_end(

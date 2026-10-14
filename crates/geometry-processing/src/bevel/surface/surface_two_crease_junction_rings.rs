@@ -1,6 +1,5 @@
 //! The three end rings a TWO-crease junction's patch is sewn to, and the grid between them
-//! ([`SurfaceTwoCreaseJunctionRings`]). Ports the record of
-//! `Bevel/Surface/SurfaceTwoCreaseJunctionRings.cs`, its reading from the three rings and its grid
+//! ([`SurfaceTwoCreaseJunctionRings`]): the record, its reading from the three rings and its grid
 //! accessors, and the reading from the three strips
 //! ([`SurfaceTwoCreaseJunctionRings::try_read_strips`]).
 
@@ -16,7 +15,7 @@ use super::{
     SurfaceVertexPool,
 };
 
-/// C# `SurfaceTwoCreaseJunctionRings` (a sealed class): the three end rings a two-crease
+/// The three end rings a two-crease
 /// junction's patch is sewn to, and the grid between them - read, not emitted. What the patch has
 /// left to do with this is win its vertices from the pool and wind its quads
 /// (`SurfaceTwoCreaseJunction` reads the canal itself).
@@ -100,7 +99,7 @@ impl SurfaceTwoCreaseJunctionRings {
     /// fixed.
     pub const ONE_STATION: f64 = 1e-5;
 
-    /// C#'s private constructor.
+    /// The rings and grid from their readings, as the two readings below make them.
     fn new(
         canal: Rc<SurfaceMixedCornerDualFrame>,
         cut_ring: Vec<Vector3>,
@@ -134,8 +133,8 @@ impl SurfaceTwoCreaseJunctionRings {
         self.rows.at(rail, self.stations[station])
     }
 
-    /// C# `TryRead(SurfaceMixedJunction, SurfaceStrip, SurfaceStrip, SurfaceStrip, ..)`: reads the
-    /// rings and the grid from the one cut's strip and the two arms' beads' strips. The CUT's ring is
+    /// Reads the rings and the grid from the one cut's strip and the two arms' beads' strips. The
+    /// CUT's ring is
     /// cut on the canal's own plane - both of its ends stand on a tangency, one per arm, because both
     /// of the cut's faces are shared here - and each bead's on its own square section.
     pub fn try_read_strips(
@@ -210,8 +209,8 @@ impl SurfaceTwoCreaseJunctionRings {
             return Err(not_supported());
         }
 
-        // A two-crease junction's arms always carry their dual (C# reads it unguarded); an arm
-        // without one is no two-crease junction, refused in the same words.
+        // A two-crease junction's arms always carry their dual; an arm without one is no two-crease
+        // junction, refused in the same words rather than a panic.
         let Some(canal) = junction.first.dual.clone() else {
             return Err(not_supported());
         };
@@ -267,7 +266,7 @@ impl SurfaceTwoCreaseJunctionRings {
     /// They have to march ONE way and span the WHOLE turn: a ring that doubled back would fold the
     /// grid over itself, and one that stopped short would leave the patch's own edge standing off
     /// the bead it hands over to.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)`, which refuses a NaN as well.
     pub fn try_the_stations_of(
         junction: &SurfaceMixedJunction,
         canal: &SurfaceMixedCornerDualFrame,
@@ -300,7 +299,7 @@ impl SurfaceTwoCreaseJunctionRings {
             }
         }
 
-        // C# indexes the ends unguarded; an empty ring reads as a ring that found no ends.
+        // An empty ring reads as a ring that found no ends, rather than a panic.
         let (Some(&first), Some(&last)) = (stations.first(), stations.last()) else {
             return Err(not_supported());
         };

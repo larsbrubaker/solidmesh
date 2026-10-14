@@ -1,7 +1,6 @@
 //! A band's strip cut short at the curve a mixed corner's RUN-OUT crosses it in
-//! ([`SurfaceStripTrimmedAtTheCrossing`]). Ports
-//! `Bevel/Surface/SurfaceStripTrimmedAtTheCrossing.cs`: its fields, its constructor and its rail
-//! questions, and the reading itself ([`SurfaceStripTrimmedAtTheCrossing::try_read`]).
+//! ([`SurfaceStripTrimmedAtTheCrossing`]): its fields, its constructor and its rail questions, and
+//! the reading itself ([`SurfaceStripTrimmedAtTheCrossing::try_read`]).
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -9,11 +8,11 @@ use std::rc::Rc;
 use super::{SurfaceCrossingAtTheMitre, SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceStripTrimmedAtTheCrossing`: which rails the crossing stands on, how far along the
+/// Which rails the crossing stands on, how far along the
 /// edge each of them is cut, and the one point on the profile between two rails where the run-out's
 /// own foot dies.
 ///
-/// The curve is the run-out's own section (`SurfaceMixedCornerRunOut.TryColumns`): a corner for
+/// The curve is the run-out's own section (`surface_mixed_corner_run_out::try_columns`): a corner for
 /// every row of the torus that left the band's material, in row order from the cap face inward, and
 /// then the foot. Each row corner stands ON the rail its row was paired with - the two carry the
 /// same offset at the same height, which is what makes the crossing one shared vertex rather than
@@ -27,12 +26,12 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 ///
 /// The builder and the strip ends settle its `set` properties after it is read, through the handles
 /// the crossing's holders share, so those are `Cell`/`RefCell`. The `-1` default of
-/// [`SurfaceStripTrimmedAtTheCrossing::the_die_vertex`] is C#'s initializer, which is why `Default`
-/// is written out.
+/// [`SurfaceStripTrimmedAtTheCrossing::the_die_vertex`] means "no die vertex yet", which is why
+/// `Default` is written out.
 #[derive(Debug)]
 pub struct SurfaceStripTrimmedAtTheCrossing {
     /// The corners the curve carries BETWEEN the crossings on rails `k` and `k + 1`, entry `k`, in
-    /// the chord's own order (C# `TheBetweensOnTheChordFrom`). A run-out stationed by the OTHER
+    /// the chord's own order (`the_betweens_on_the_chord_from`). A run-out stationed by the OTHER
     /// band of a mitred pair ends columns at turns that are not this band's rails', and the points
     /// it leaves there stand on the chord between two rail crossings rather than on a rail of their
     /// own; both surfaces walk that chord, so the staircase carries them as its between points.
@@ -98,16 +97,16 @@ impl Default for SurfaceStripTrimmedAtTheCrossing {
     }
 }
 
-/// C#'s `SurfaceStripTrimmedAtTheCrossing[,]`: per strip, the trim at its start (`[0]`) and at its
-/// end (`[1]`), `None` where that end is not crossed. C#'s null table is `None` at the call sites.
+/// Per strip, the trim at its start (`[0]`) and at its end (`[1]`), `None` where that end is not
+/// crossed. A build with no crossings at all passes `None` for the whole table at the call sites.
 pub type SurfaceStripTrims = Vec<[Option<Rc<SurfaceStripTrimmedAtTheCrossing>>; 2]>;
 
-/// The trim's constructor and its rail questions (C# `<init>`, the private constructor,
-/// `TheBetweensOnTheChordFrom`, `TheBandIsAlreadyCrossed`, `StandingAt`, `Crosses`, `VertexOn`,
-/// `ParamOn`, `LowestRailCrossed`, `HighestRailCrossed`, `StandsOnTheChord`, `TryTheRailUnder`).
+/// The trim's constructor and its rail questions (`the_betweens_on_the_chord_from`,
+/// `the_band_is_already_crossed`, `standing_at`, `crosses`, `vertex_on`, `param_on`,
+/// `lowest_rail_crossed`, `highest_rail_crossed`, `stands_on_the_chord`, `try_the_rail_under`).
 impl SurfaceStripTrimmedAtTheCrossing {
-    /// C#'s private constructor, with the field initializers (`<init>`: not closed, no mitre, the
-    /// foot not on the rim, no die vertex).
+    /// A trim from its readings, starting not closed, with no mitre, the foot not on the rim and no
+    /// die vertex: the builder and the strip ends settle those later.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         strip: i32,
@@ -132,7 +131,7 @@ impl SurfaceStripTrimmedAtTheCrossing {
         }
     }
 
-    /// C# `TheBetweensOnTheChordFrom`: the corners the curve carries BETWEEN the crossings on rails
+    /// The corners the curve carries BETWEEN the crossings on rails
     /// `rail` and `rail + 1`, in the chord's own order, or empty where it carries none.
     ///
     /// A run-out stationed by the OTHER band of a mitred pair ends columns at turns that are not this
@@ -164,7 +163,7 @@ impl SurfaceStripTrimmedAtTheCrossing {
         Vec::new()
     }
 
-    /// C# `TheBandIsAlreadyCrossed`: whether `already` has claimed the same END of `strip` before
+    /// Whether `already` has claimed the same END of `strip` before
     /// this crossing did. One end of a band cut back at two curves at once is two corners' work and
     /// one staircase's, which is a construction of its own rather than the later crossing quietly
     /// replacing the earlier - but the two ENDS of one band are two staircases and are each other's
@@ -177,7 +176,7 @@ impl SurfaceStripTrimmedAtTheCrossing {
         Self::standing_at(already, strip, at_the_start).is_some()
     }
 
-    /// C# `StandingAt`: the trim standing at one end of one strip, or `None` where that end is not
+    /// The trim standing at one end of one strip, or `None` where that end is not
     /// crossed.
     pub fn standing_at(
         trims: Option<&SurfaceStripTrims>,
@@ -193,41 +192,40 @@ impl SurfaceStripTrimmedAtTheCrossing {
         trims[strip as usize][if at_the_start { 0 } else { 1 }].clone()
     }
 
-    /// C# `Crosses`: whether `rail` is cut back by the crossing rather than by the end.
+    /// Whether `rail` is cut back by the crossing rather than by the end.
     pub fn crosses(&self, rail: i32) -> bool {
         self.rail_of.contains(&rail)
     }
 
-    /// C# `VertexOn`: the crossing corner standing on `rail`, or `None` for a rail the crossing does
-    /// not reach (where C#'s `At[Array.IndexOf(..)]` would throw; callers ask [`Self::crosses`]
-    /// first).
+    /// The crossing corner standing on `rail`, or `None` for a rail the crossing does
+    /// not reach (callers ask [`Self::crosses`] first).
     pub fn vertex_on(&self, rail: i32) -> Option<i32> {
         self.index_of(rail).map(|index| self.at[index])
     }
 
-    /// C# `ParamOn`: how far along the edge the crossing corner on `rail` stands, or `None` as for
+    /// How far along the edge the crossing corner on `rail` stands, or `None` as for
     /// [`Self::vertex_on`].
     pub fn param_on(&self, rail: i32) -> Option<f64> {
         self.index_of(rail).map(|index| self.param_of[index])
     }
 
-    /// C# `LowestRailCrossed`: the lowest rail the crossing reaches - the one the FOOT is carried just
+    /// The lowest rail the crossing reaches - the one the FOOT is carried just
     /// under - so that the rails beneath it close as they always did.
     pub fn lowest_rail_crossed(&self) -> i32 {
         self.rail_of.iter().copied().fold(self.rail_of[0], i32::min)
     }
 
-    /// C# `HighestRailCrossed`: the highest rail the crossing reaches.
+    /// The highest rail the crossing reaches.
     pub fn highest_rail_crossed(&self) -> i32 {
         self.rail_of.iter().copied().fold(self.rail_of[0], i32::max)
     }
 
-    /// C# `Array.IndexOf(RailOf, rail)`, `None` for C#'s -1.
+    /// The first index of `rail` in `rail_of`, `None` where it is not there.
     fn index_of(&self, rail: i32) -> Option<usize> {
         self.rail_of.iter().position(|&on| on == rail)
     }
 
-    /// C# `StandsOnTheChord`: whether `carried` stands on the segment from `from` to `to`, inside
+    /// Whether `carried` stands on the segment from `from` to `to`, inside
     /// its span and to the part's own ruler.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn stands_on_the_chord(pool: &SurfaceVertexPool, from: i32, to: i32, carried: i32) -> bool {
@@ -247,7 +245,7 @@ impl SurfaceStripTrimmedAtTheCrossing {
                 <= pool.near_enough()
     }
 
-    /// C# `TryTheRailUnder`: which rail of the strip `vertex` stands on, and how far along the edge -
+    /// Which rail of the strip `vertex` stands on, and how far along the edge -
     /// `None` where it stands on none of them, which is a corner of the curve the strip cannot carry.
     pub fn try_the_rail_under(
         pool: &SurfaceVertexPool,
@@ -276,11 +274,11 @@ impl SurfaceStripTrimmedAtTheCrossing {
 }
 
 impl SurfaceStripTrimmedAtTheCrossing {
-    /// C# `TryRead`: the strip `strip_index` cut short where the run-out's `crossing` (its rows,
+    /// The strip `strip_index` cut short where the run-out's `crossing` (its rows,
     /// then its foot) crosses it - each row on the rail it stands on (a row on none is carried onto
     /// the chord between the two rails either side), at the end of the band the crossing stands at
-    /// (or at `at_the_mitre`). `Ok(None)` (C#'s false with no failure) where there is nothing to
-    /// read; `Err` where the profiles do not match, or the crossing leaves the band.
+    /// (or at `at_the_mitre`). `Ok(None)` where there is nothing to read; `Err` where the profiles
+    /// do not match, or the crossing leaves the band.
     #[allow(clippy::too_many_arguments)]
     pub fn try_read(
         pool: Option<&SurfaceVertexPool>,

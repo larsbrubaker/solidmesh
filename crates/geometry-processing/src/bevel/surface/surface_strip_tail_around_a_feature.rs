@@ -1,7 +1,6 @@
 //! The tail of a band's end that a standing feature's extension notches: where the strip stops,
-//! clear of the notch, and the rings that close what lies past that cross section. Ports
-//! `Bevel/Surface/SurfaceStripTailAroundAFeature.cs` (C# `internal static class`; a module of free
-//! functions here). What is here are the cross section ([`try_the_section`],
+//! clear of the notch, and the rings that close what lies past that cross section. A module of free
+//! functions: the cross section ([`try_the_section`],
 //! [`try_the_section_clear_of_the_notch`]), the rings past it ([`try_the_rings`]) and the sewing
 //! itself ([`try_sew`]). Every corner of a ring is a vertex already in the
 //! pool - a corner that cannot be found is a refusal by name, never a new vertex.
@@ -13,7 +12,7 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use vector_math::Vector3;
 
-/// C# `TryTheSection`: where the strip STOPS - a parameter standing strictly clear of the notch's
+/// Where the strip STOPS - a parameter standing strictly clear of the notch's
 /// deepest point (`exit`) on one side and of everything the strip's OTHER end reaches on the other,
 /// which is half way between the two because that is the furthest it can stand from both at once.
 ///
@@ -49,7 +48,7 @@ pub fn try_the_section(exit: f64, the_other_end: &[f64], near: f64) -> Option<f6
     Some((furthest + exit) / 2.0)
 }
 
-/// C# `TryTheSectionClearOfTheNotch`: where the strip stops, read for one notched END - the guards
+/// Where the strip stops, read for one notched END - the guards
 /// that say the notch is a single hole with the exit at the bottom of it, and then
 /// [`try_the_section`] against everything the strip's OTHER end reaches (`the_other_end_on`, rail by
 /// rail, plus a crossing's own parameter where another chain's run-out took the same rails).
@@ -87,7 +86,7 @@ pub fn try_the_section_clear_of_the_notch(
     let mut the_other_end = Vec::with_capacity(notch.rail_of.len() * 2);
 
     for (index, &rail) in notch.rail_of.iter().enumerate() {
-        // C# `ParamOn(rail)`: the first entry for this rail, which is this one or an earlier one.
+        // `param_on(rail)`: the first entry for this rail, which is this one or an earlier one.
         let param = notch.param_on(rail).unwrap_or(notch.param_of[index]);
 
         if param < deepest - pool.near_enough() || param > shallowest + pool.near_enough() {
@@ -107,7 +106,7 @@ pub fn try_the_section_clear_of_the_notch(
         .ok_or_else(|| does_not_extend(notch.rail_of[0], notch.exit.param))
 }
 
-/// C# `TryTheRings`: the rings that close what lies past the cross section, chord by chord - each
+/// The rings that close what lies past the cross section, chord by chord - each
 /// pair of neighbouring rails runs from the station up the higher rail, along the far rim, and back
 /// down the lower rail. Four shapes come out of that: both rails un-notched (no ring); both notched
 /// (the trace runs straight from one crossing to the other); both notched AND the ridge leaves
@@ -117,7 +116,7 @@ pub fn try_the_section_clear_of_the_notch(
 /// `station` is the cross section rail by rail, `notched` which rails the feature took, `crossing`
 /// each notched rail's crossing (or -1), `straddle` the lower rail of the pair the RIDGE leaves
 /// between, `exit` where it leaves, and `q_on` the Q on each chord of the end ring by lower rail (or
-/// -1). `Err` is the rail the reading gave up at (C#'s `refusedAt`).
+/// -1). `Err` is the rail the reading gave up at.
 pub fn try_the_rings(
     station: &[i32],
     notched: &[bool],
@@ -172,7 +171,7 @@ pub fn try_the_rings(
     Ok(rings)
 }
 
-/// C# `TrySew`: the tail past the cross section `station` (rail by rail) closed around the
+/// The tail past the cross section `station` (rail by rail) closed around the
 /// feature's notch - each notched rail's crossing found in the pool (the crease rail's by identity,
 /// the notch's own seam vertex), each standing Q on its chord of the end ring - as the rings
 /// [`try_the_rings`] reads, fanned the way the rest of the strip faces. Every corner is a vertex

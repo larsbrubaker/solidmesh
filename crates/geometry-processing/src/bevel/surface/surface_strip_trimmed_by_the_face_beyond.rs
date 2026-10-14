@@ -1,6 +1,5 @@
 //! A band's strip cut back along the FACE BEYOND the region it landed on
-//! ([`SurfaceStripTrimmedByTheFaceBeyond`]). Ports
-//! `Bevel/Surface/SurfaceStripTrimmedByTheFaceBeyond.cs`: its fields, its constructor, the corner
+//! ([`SurfaceStripTrimmedByTheFaceBeyond`]): its fields, its constructor, the corner
 //! beyond (three planes met) and its ring, rim and profile questions, and the reading itself
 //! ([`SurfaceStripTrimmedByTheFaceBeyond::try_read`]).
 
@@ -9,7 +8,7 @@ use vector_math::Vector3;
 use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceStripTrimmedByTheFaceBeyond`: which rails the face beyond's plane crosses inside the
+/// Which rails the face beyond's plane crosses inside the
 /// edge's span, where each of them is cut, and the one point the rails it never crosses all
 /// collapse to.
 ///
@@ -27,7 +26,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// and the end face's at the other end of the edge - three rims through one vertex. **The corner
 /// beyond** the section turns down at is a vertex the part already has, looked up rather than
 /// minted, and carried at the head of the profile as the section's DIE POINT
-/// (`SurfaceEndCut.TryCut`).
+/// (`surface_end_cut::try_cut`).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SurfaceStripTrimmedByTheFaceBeyond {
     /// Which side of the strip ran off - 0 for rail zero's, 1 for the last rail's.
@@ -91,7 +90,7 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
     }
 
     /// Where three planes meet, by Cramer's rule - `None` where they do not meet at a point.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)`, which refuses a NaN as well.
     pub fn try_three_planes(
         point_a: Vector3,
         normal_a: Vector3,
@@ -115,10 +114,10 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
     }
 }
 
-/// The trim's constructor and its ring, rim and profile questions (C# constructor, `RailAt`,
-/// `RingAt`, `WalkOfTheRim`, `ProfileOf`).
+/// The trim's constructor and its ring, rim and profile questions (`rail_at`, `ring_at`,
+/// `walk_of_the_rim`, `profile_of`).
 impl SurfaceStripTrimmedByTheFaceBeyond {
-    /// C#'s private constructor. The seam starts empty; the reading sets it once the trim is made.
+    /// A trim from its readings. The seam starts empty; the reading sets it once the trim is made.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         side: i32,
@@ -145,7 +144,7 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
         }
     }
 
-    /// C# `RailAt`: which rail stands `steps_in` in from the side that ran off.
+    /// Which rail stands `steps_in` in from the side that ran off.
     pub fn rail_at(side: i32, rail_count: i32, steps_in: i32) -> i32 {
         if side == 0 {
             steps_in
@@ -154,9 +153,9 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
         }
     }
 
-    /// C# `RingAt`: the ring at one end of the strip, with the collapsed rails standing on the
+    /// The ring at one end of the strip, with the collapsed rails standing on the
     /// shared point - the STAIRCASE at the end the trim cuts back, and the square end's own ring at
-    /// the other - and where each rail meets it (C#'s `meetsAt`). `on_the_seam` is the vertex the
+    /// the other - and where each rail meets it. `on_the_seam` is the vertex the
     /// rail on the OTHER side of the strip stands at, the one the walkback left on that side's
     /// tangent line, which the ring has to be built from rather than minting its own a rounding away.
     pub fn ring_at(
@@ -195,7 +194,7 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
         (ring, meets_at)
     }
 
-    /// C# `WalkOfTheRim`: which rails the section's rim is walked over, in profile order - from the
+    /// Which rails the section's rim is walked over, in profile order - from the
     /// run-off side in, starting one step OUTSIDE the first kept rail so that the collapsed point the
     /// profile turns down at is on the walk. Read off here rather than inside the cap, so that a cap
     /// standing at a LANDING end can be the same construction (`SurfaceEndCapAroundAFeature`).
@@ -207,7 +206,7 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
             .collect()
     }
 
-    /// C# `ProfileOf`: the ring read as the PROFILE a section is bounded by - the part's corner
+    /// The ring read as the PROFILE a section is bounded by - the part's corner
     /// beyond, then the ring from the run-off side in, with the collapsed rails' repeated point said
     /// once.
     pub fn profile_of(&self, ring: &[i32]) -> Vec<i32> {
@@ -227,8 +226,8 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
 }
 
 impl SurfaceStripTrimmedByTheFaceBeyond {
-    /// The trim standing on side `side` of strip `strip` in `trims` (C#'s `[,]`), or `None` where
-    /// there is none or no such strip.
+    /// The trim standing on side `side` of strip `strip` in `trims` (per strip, per side), or
+    /// `None` where there is none or no such strip.
     pub fn standing_on(
         trims: Option<&[[Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>; 2]]>,
         strip: i32,
@@ -244,7 +243,7 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
 }
 
 impl SurfaceStripTrimmedByTheFaceBeyond {
-    /// C# `TryRead`: the strip cut back along the face beyond (the plane `plane_point`,
+    /// The strip cut back along the face beyond (the plane `plane_point`,
     /// `plane_normal`) where its band ran off at `side` - each rail's crossing, clamped into the span
     /// only for the rails the run-off collapsed; the point the surface ends on at the far end, minted
     /// once; and the part's corner the three planes meet at. `Err` names where the run-off reading and

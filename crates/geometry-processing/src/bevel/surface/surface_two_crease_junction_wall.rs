@@ -1,17 +1,17 @@
 //! What the WALL gives up under a two-crease junction's patch, and what it is owed back
-//! (`Bevel/Surface/SurfaceTwoCreaseJunctionWall.cs`, a static class): the one face the patch's row
+//! (free functions): the one face the patch's row
 //! zero runs across, made to end exactly where that row runs - two bites and one fill, and no
 //! repair. Here are its nested record, where row zero leaves one crease
 //! ([`SurfaceTwoCreaseJunctionWallCrossing`]) and how it is found ([`try_the_crossing`]), the bead's
-//! foot ([`try_the_foot`]) and the fill ([`try_fill_the_notch`]); the bites land with later
-//! packages.
+//! foot ([`try_the_foot`]), the fill ([`try_fill_the_notch`]) and the bites
+//! ([`try_give_up_the_notch`], [`try_bite`]).
 
 use vector_math::Vector3;
 
 use super::{surface_fan, SurfaceMixedCorner, SurfaceMixedJunctionArm, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceTwoCreaseJunctionWall.Crossing` (a private readonly struct): where row zero leaves
+/// Where row zero leaves
 /// one crease - the two stations it happens between, and the point.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceTwoCreaseJunctionWallCrossing {
@@ -24,8 +24,8 @@ pub struct SurfaceTwoCreaseJunctionWallCrossing {
     pub at: Vector3,
 }
 
-/// C# `TryFillTheNotch`: the notch between the two crossings, fanned from the CORNER over row
-/// zero. `grid` is C#'s `int[][]`, station by station, row zero first; `Err` is C#'s `failure`.
+/// The notch between the two crossings, fanned from the CORNER over row
+/// zero. `grid` is station by station, row zero first; `Err` is the refusal.
 ///
 /// From the corner because both creases end there, so the fan's two straight sides are the creases
 /// themselves and its arc is row zero: every side of it is a curve the part or the patch already
@@ -99,7 +99,7 @@ pub fn try_fill_the_notch(
 }
 
 impl SurfaceTwoCreaseJunctionWallCrossing {
-    /// C#'s constructor: row zero leaves the crease between stations `before` and `after`, at `at`.
+    /// Row zero leaves the crease between stations `before` and `after`, at `at`.
     pub fn new(before: i32, after: i32, at: Vector3) -> Self {
         SurfaceTwoCreaseJunctionWallCrossing { before, after, at }
     }
@@ -108,7 +108,7 @@ impl SurfaceTwoCreaseJunctionWallCrossing {
 /// Where row zero (`on_the_wall`, walked from its start where `from_the_start`, else from its end)
 /// crosses `arm`'s crease - the line through `corner` along the bead, in the wall facing
 /// `out_of_the_wall` - as the two stations it falls between and the point between them.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < 0)`, which a NaN also passes.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < 0)`, which a NaN also passes.
 pub fn try_the_crossing(
     arm: &SurfaceMixedJunctionArm,
     corner: Vector3,
@@ -177,7 +177,7 @@ pub fn try_the_foot(
     Ok(corner + (away * ((stops_at.point - corner).dot(stops_at.inward) / leaning)))
 }
 
-/// C# `SurfaceTwoCreaseJunctionWall.TryGiveUpTheNotch`: rail zero of the junction's grid crossed
+/// Rail zero of the junction's grid crossed
 /// with each arm's bead crease (the first from the grid's start, the second from its end), each
 /// arm's bite taken, and the notch between the crossings fanned from the corner where it is not
 /// already closed. An arm whose wall is an unpicked section is refused.
@@ -257,7 +257,7 @@ pub fn try_give_up_the_notch(
     )
 }
 
-/// C# `TryBite`: the wall bitten from the arm's own end of rail zero, round the bead's foot on its
+/// The wall bitten from the arm's own end of rail zero, round the bead's foot on its
 /// crease and the crossing, back along the rail to that end.
 #[allow(clippy::too_many_arguments)]
 pub fn try_bite(

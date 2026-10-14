@@ -1,6 +1,5 @@
 //! Unit tests of `surface_strip_bitten_by_a_feature`'s private tip reading (`TryTheTip`), which
-//! needs private access: where a refusal is named when the ridge runs along the quad (divergence
-//! 4957).
+//! needs private access: where a refusal is named when the ridge runs along the quad.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -96,7 +95,7 @@ fn rust_only_a_ridge_along_the_quad_is_refused_at_the_last_rail() {
         SurfaceStripBittenByAFeature::try_the_tip(&mut pool, &strip, &edge, &feature, 0, 1, 1e-9)
             .expect_err("a ridge along the quad never leaves it");
 
-    // C# named this refusal at the origin; it is named on the strip, at the last covered rail.
+    // The refusal names a place on the strip, at the last covered rail, never the world origin.
     assert_eq!(refused_at, strip.point_on(0, 0.0));
     assert_ne!(refused_at, Vector3::ZERO);
 }

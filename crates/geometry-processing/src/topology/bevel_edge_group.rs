@@ -1,6 +1,6 @@
 //! One selected set of edges on a fillet or chamfer, stored the only way a parametric operation
 //! can store a selection: as the geometry of one edge plus the rule that grows the rest from it.
-//! Ports `Topology/BevelEdgeGroup.cs` (`BevelSelectionKind`, `BevelEdgeGroup`).
+//! The rule is a [`BevelSelectionKind`].
 //!
 //! Mesh indices do not survive a rebuild (Manifold renumbers everything), so a group carries a
 //! geometric anchor in the source's own local space and [`super::bevel_edge_group_resolver`]
@@ -8,10 +8,9 @@
 //! segment count belong to the operation.
 //!
 //! **Contract.** The MCP edge tools and `BevelPickCandidates` rely on this group's JSON shape,
-//! which is exactly Newtonsoft's: PascalCase property names in declaration order,
-//! `SelectionKind` by name (`StringEnumConverter`), `SourceItemID` left out when null
-//! (`NullValueHandling.Ignore`), and every member optional on load with the C# initializers as
-//! defaults.
+//! which is exactly the one saved designs hold: PascalCase property names in declaration order,
+//! `SelectionKind` by name, `SourceItemID` left out when null, and every member optional on load
+//! with the field defaults as defaults.
 
 use serde::{Deserialize, Serialize};
 use vector_math::{Matrix4X4, Vector3};
@@ -39,8 +38,7 @@ pub enum BevelSelectionKind {
     Point,
 }
 
-/// A mesh edge selection: the anchored edge's geometry plus the rule that grows the rest
-/// (C# `BevelEdgeGroup`).
+/// A mesh edge selection: the anchored edge's geometry plus the rule that grows the rest.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct BevelEdgeGroup {

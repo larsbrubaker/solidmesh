@@ -1,5 +1,5 @@
 //! The BITE a feature standing part way ALONG a band takes out of the middle of its strip
-//! ([`SurfaceStripBittenByAFeature`]). Ports `Bevel/Surface/SurfaceStripBittenByAFeature.cs`: its
+//! ([`SurfaceStripBittenByAFeature`]): its
 //! fields, its reading ([`SurfaceStripBittenByAFeature::try_read`]) and the tip and seam readings
 //! that reading is made of. Its sibling, the notch at a band's END, is
 //! `SurfaceStripNotchedByAFeature`, whose readings off the strip this one shares.
@@ -50,7 +50,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 type Face = SurfaceStandingFeatureWithheldFace;
 
-/// C# `SurfaceStripBittenByAFeature`: which rails the feature's wedge passes clean through, where
+/// Which rails the feature's wedge passes clean through, where
 /// it enters and leaves each of them, the one TIP the bite closes on, and the two points on the
 /// band's own seam the hole is bounded by at the other end.
 #[derive(Debug, Clone, PartialEq)]
@@ -108,7 +108,7 @@ pub struct SurfaceStripBittenByAFeature {
     pub far_seam_param: f64,
 }
 
-/// The seam a bite leaves and its two corners (C# `TryTheSeam`'s outs).
+/// The seam a bite leaves and its two corners, as `try_the_seam` reads them.
 struct TheSeam {
     seam: Vec<(i32, f64)>,
     near_seam: (i32, f64),
@@ -116,19 +116,19 @@ struct TheSeam {
 }
 
 impl SurfaceStripBittenByAFeature {
-    /// C# `SeamRail`: the rail the bite opens onto the seam at.
+    /// The rail the bite opens onto the seam at.
     pub fn seam_rail(&self) -> i32 {
         self.rail_of[0]
     }
 
-    /// C# `TryRead`: the bite one standing feature takes out of the middle of one strip; `Ok(None)`
+    /// The bite one standing feature takes out of the middle of one strip; `Ok(None)`
     /// where this feature takes none, which is an END case the notch reader owns
     /// (`SurfaceStripNotchedByAFeature::try_read`).
     ///
     /// `ran_off` is the run-off trim on either side of this strip, whose collapsed rails are air
     /// (`None` where a side did not run off). `runs` are the walkback's own runs of the tangent line
     /// on the side the feature stands on, which the hole's two corners at the seam are taken from
-    /// (`None` for C#'s null).
+    /// (`None` where there are none).
     #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_read(
         pool: &mut SurfaceVertexPool,
@@ -283,7 +283,7 @@ impl SurfaceStripBittenByAFeature {
         }))
     }
 
-    /// C# `TryTheTip`: the TIP the bite closes on - the feature's ridge read against the plane of
+    /// The TIP the bite closes on - the feature's ridge read against the plane of
     /// the quad between the last covered rail and the first uncovered one, and standing BETWEEN the
     /// two of them. `Err` carries where to name a refusal: the point that would not do, or the last
     /// covered rail where there is no such point (no ridge, or one running along the quad).
@@ -308,8 +308,8 @@ impl SurfaceStripBittenByAFeature {
         let Some(at) = SurfaceStripNotchedByAFeature::try_the_ridge_on_the_chord(
             strip, edge, from, along, below,
         ) else {
-            // Named where the reading stood, at the last covered rail (divergence 4957): C# set
-            // `at` there first and then let this call's `out` overwrite it with the origin.
+            // Named where the reading stood, at the last covered rail: a refusal names a place for
+            // the user to look at, and only a point on the strip is related to this bevel.
             return Err(strip.point_on(last, 0.0));
         };
 
@@ -332,7 +332,7 @@ impl SurfaceStripBittenByAFeature {
         ))
     }
 
-    /// C# `TryTheSeam`: the seam the bite leaves behind - the walkback's two runs of the tangent
+    /// The seam the bite leaves behind - the walkback's two runs of the tangent
     /// line joined in order along the edge, and the two vertices of the break between them, which
     /// are the hole's own corners. `Err` carries where to name the refusal.
     ///
@@ -407,7 +407,7 @@ impl SurfaceStripBittenByAFeature {
     }
 }
 
-/// C# `Refused`: one refusal, named at the point on the strip the reading gave up at.
+/// One refusal, named at the point on the strip the reading gave up at.
 fn refused(strip: &SurfaceStrip, rail: i32, param: f64) -> BevelAdvisory {
     BevelAdvisory::new(
         BevelAdvisoryCode::SurfaceBiteDoesNotRead,

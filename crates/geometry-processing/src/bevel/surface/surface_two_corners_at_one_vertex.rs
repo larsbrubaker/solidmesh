@@ -1,6 +1,5 @@
-//! The vertex TWO plans both turn a corner at, refused by name before anything is walked back.
-//! Ports `Bevel/Surface/SurfaceTwoCornersAtOneVertex.cs` (C# `internal static class`; one free
-//! function here).
+//! The vertex TWO plans both turn a corner at, refused by name before anything is walked back: one
+//! free function.
 //!
 //! Read off the plans alone ([`super::SurfaceBevelPlan`]), at the top of the build, so that a pick
 //! nothing here can close is named at the vertex rather than found out as a seam that would not
@@ -19,7 +18,7 @@ use vector_math::Vector3;
 use super::SurfaceBevelPlan;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
-/// C# `TrySurvey`: whether the pass can be built at all, as far as its corners go - `Err` only
+/// Whether the pass can be built at all, as far as its corners go - `Err` only
 /// where one vertex of the part carries two plans' corners, naming where.
 pub fn try_survey(plans: &[Rc<SurfaceBevelPlan>]) -> Result<(), BevelAdvisory> {
     // By the mesh's own vertex INDEX, which is exact: the mesh the plans were made on is welded,

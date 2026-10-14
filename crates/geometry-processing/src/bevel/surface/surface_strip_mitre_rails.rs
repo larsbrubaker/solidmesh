@@ -1,11 +1,11 @@
-//! The rail-by-rail machinery of the MITRE (`Bevel/Surface/SurfaceStripMitre.cs`, everything but
-//! `TryMitre`): which rail of a strip stands on the face two strips share, where the mitre plane
+//! The rail-by-rail machinery of the MITRE (everything but `surface_strip_mitre::try_mitre`):
+//! which rail of a strip stands on the face two strips share, where the mitre plane
 //! stands, one rail or one pair of rails cut on that plane, the rails the narrower strip has no
 //! partner for, and the between-station lists the two end rings carry. `surface_strip_mitre` puts
 //! them together into the ring; [`super::surface_mitre_chorded_apart`] and the staircase mitre cut
 //! their own rings with [`try_one_rail_of_the_mitre`] and [`try_one_pair_of_the_mitre`].
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are deliberate: each is false for NaN, which is the point.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use std::sync::Arc;
@@ -17,7 +17,7 @@ use super::{surface_mitre_seam, surface_strip_ends};
 use super::{SurfaceEdgePlan, SurfaceMitreSliver, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfacePlane`: a point and a normal, named so the far landing plane can be passed about as
+/// A point and a normal, named so the far landing plane can be passed about as
 /// one thing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SurfacePlane {
@@ -35,7 +35,7 @@ fn do_not_mitre(corner: Vector3) -> BevelAdvisory {
     )
 }
 
-/// C# `Merge`: two readings of what stands along one ring's chords, laid together. The sector's
+/// Two readings of what stands along one ring's chords, laid together. The sector's
 /// leavings and the union's foreign crossings never share a chord - the sector runs along the
 /// UNPAIRED rails and the union along the paired ones - so this is a choice per chord rather than an
 /// ordering of two lists.
@@ -54,7 +54,7 @@ pub fn merge(mut sector: Vec<Vec<i32>>, union: Option<&[Vec<i32>]>) -> Vec<Vec<i
     sector
 }
 
-/// C# `Beside`: puts one vertex on a chord BESIDE what it already carries, at the end the caller
+/// Puts one vertex on a chord BESIDE what it already carries, at the end the caller
 /// names - leading where the point stands nearer the chord's lower rail and following where it
 /// stands nearer the higher, which is the order a station's own list is read in.
 pub fn beside(between: &mut [Vec<i32>], chord: i32, vertex: i32, leading: bool) {
@@ -71,7 +71,7 @@ pub fn beside(between: &mut [Vec<i32>], chord: i32, vertex: i32, leading: bool) 
     }
 }
 
-/// C# `TryOneRailApart`: ONE strip's rail of a pair the sliver has broken, cut on the mitre plane
+/// ONE strip's rail of a pair the sliver has broken, cut on the mitre plane
 /// alone. A claimed foot takes the vertex its walkback left at the rim; its partner at that angle is
 /// an interior rail of the wider run - the run with rails to spare - and is minted like any other
 /// crossing.
@@ -104,7 +104,7 @@ pub fn try_one_rail_apart(
     Ok(())
 }
 
-/// C# `OnTheChord`: puts one vertex on the chord leaving `rail` in the direction the rails were
+/// Puts one vertex on the chord leaving `rail` in the direction the rails were
 /// counted out in - which is the chord BEFORE it where they were counted down.
 pub fn on_the_chord(between: &mut [Vec<i32>], rail: i32, step: i32, vertex: i32) {
     let chord = if step > 0 { rail } else { rail - 1 };
@@ -114,7 +114,7 @@ pub fn on_the_chord(between: &mut [Vec<i32>], rail: i32, step: i32, vertex: i32)
     }
 }
 
-/// C# `TryTheRailsWithNoPartner`: the rails of the wider strip that the narrower one has none to
+/// The rails of the wider strip that the narrower one has none to
 /// pair with. Nothing of the narrower bead stands over them - it swept a smaller turn and its own
 /// surface stopped - so what they end on is the part's face BEYOND the mitre, which is the narrower
 /// edge's far landing plane still standing where it always did.
@@ -157,9 +157,8 @@ pub fn try_the_rails_with_no_partner(
             };
             let side = if mine == 0 { 0 } else { 1 };
 
-            // C# indexes the seam unguarded; a missing or empty one (which the builder never hands
-            // in) is refused as the seam not meeting, which is what an unmatched one is (divergence
-            // 5060).
+            // A missing or empty seam (which the builder never hands in) is refused as the seam not
+            // meeting, which is what an unmatched one is: library code does not panic on its input.
             let Some(run) = seams
                 .get(edge_index as usize)
                 .and_then(|seam| seam[side].as_deref())
@@ -203,7 +202,7 @@ pub fn try_the_rails_with_no_partner(
     Ok(())
 }
 
-/// C# `TryTheSharedRail`: which of a strip's two outermost rails stands on the face it shares with
+/// Which of a strip's two outermost rails stands on the face it shares with
 /// its neighbour - rail 0 where that region is the plan's left, the last rail where it is its right
 /// - or `None` where the two share no region.
 pub fn try_the_shared_rail(
@@ -226,7 +225,7 @@ pub fn try_the_shared_rail(
     None
 }
 
-/// C# `TryTheSeamPoint`: where the mitre plane stands, as a refusal rather than as a fallback: two
+/// Where the mitre plane stands, as a refusal rather than as a fallback: two
 /// runs that turn on no one face have no pair of tangent lines to cross, and two whose lines never
 /// meet double back rather than turn a corner. Either way the two sides of the chain are not one
 /// face each here, which is what `SurfaceStripsDoNotMitre` already says.
@@ -260,7 +259,7 @@ pub fn try_the_seam_point(
     Err(do_not_mitre(corner))
 }
 
-/// C# `TryOneRailOfTheMitre`: ONE rail of a mitre - the vertex the two strips share where that rail
+/// ONE rail of a mitre - the vertex the two strips share where that rail
 /// crosses the plane, and the parameter each of them meets it at, as `(vertex, leaving_at,
 /// arriving_at)`. Rail 0 and the last rail take the vertex the walkback already left on the seam
 /// rather than minting a second one there; the rails between are new points.
@@ -288,7 +287,7 @@ pub fn try_one_rail_of_the_mitre(
     )
 }
 
-/// C# `TryOnePairOfTheMitre`: ONE PAIR of rails of a mitre - one of each strip, which are the same
+/// ONE PAIR of rails of a mitre - one of each strip, which are the same
 /// rail only where the two beads swept the same turn - as `(vertex, leaving_at, arriving_at)`. They
 /// are paired by their ANGLE from the shared face, counted in steps out from each strip's own foot on
 /// it, and the two are checked to arrive at one point: reflection in the seam plane carries one
@@ -347,9 +346,8 @@ pub fn try_one_pair_of_the_mitre(
         let side = if rail == 0 { 0 } else { 1 };
         let their_side = if their_rail == 0 { 0 } else { 1 };
 
-        // C# indexes the two seams unguarded; a missing or empty one (which the builder never
-        // hands in) is refused as the seam not meeting, which is what an unmatched one is
-        // (divergence 5060).
+        // A missing or empty seam (which the builder never hands in) is refused as the seam not
+        // meeting, which is what an unmatched one is: library code does not panic on its input.
         let run_of = |edge: i32, side: usize| {
             seams
                 .get(edge as usize)
@@ -377,7 +375,8 @@ pub fn try_one_pair_of_the_mitre(
     // like any interior rail rather than taken off the walkback. It stands ON the narrower bead's
     // far tangent line, but not at the END of it: that band is no longer stopped by the mitre at all
     // - the face it lies on is not the one the two edges share, so it runs on to its region's own
-    // rim (SurfacePlanBandEnds.TheMitreBoundsThisSide) - and the walkback's vertices there are at
-    // the rim, past this point. What lies between the two is the sector the face gives up.
+    // rim (`surface_plan_band_ends::the_mitre_bounds_this_side`) - and the walkback's vertices
+    // there are at the rim, past this point. What lies between the two is the sector the face gives
+    // up.
     Ok((pool.add(at), leaving_at, arriving_at))
 }

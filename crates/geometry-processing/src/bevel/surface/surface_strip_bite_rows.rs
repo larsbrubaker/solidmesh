@@ -1,5 +1,5 @@
-//! The rows of strip that stand ACROSS a bite ([`SurfaceStripBiteRows`],
-//! `Bevel/Surface/SurfaceStripBiteRows.cs`): the two cross sections the strip stops and resumes at,
+//! The rows of strip that stand ACROSS a bite ([`SurfaceStripBiteRows`]): the two cross sections
+//! the strip stops and resumes at,
 //! and the surface between them, which is the whole width of the strip less the hole itself. Built
 //! from a [`SurfaceStripBittenByAFeature`] reading; the builder stitches the strip in two sections
 //! between the rows this hands back.
@@ -30,7 +30,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceStripBiteRows` (a sealed class).
+/// The rows across one bite: the two sections the strip stops and resumes at.
 #[derive(Debug, Clone)]
 pub struct SurfaceStripBiteRows {
     /// The cross section the strip stops at, which is the section the stitch ends on.
@@ -50,7 +50,7 @@ fn does_not_read(at: vector_math::Vector3) -> BevelAdvisory {
 }
 
 impl SurfaceStripBiteRows {
-    /// C# `TryBuild`: lays the rows across one bite and hands back the two sections the strip is
+    /// Lays the rows across one bite and hands back the two sections the strip is
     /// stitched between. `start_ring` is the ring the strip starts on, which the section before has
     /// to stand clear of; `end_ring` the ring it ends on, which the section after has to stand clear
     /// of.
@@ -164,8 +164,8 @@ impl SurfaceStripBiteRows {
         // zero-area lobe off a face it splits; tolerated here only because of that box, and it would
         // not be if the sewing were ever handed a wider set of points.
         //
-        // C# discards the sewing's answer (its SewInTheSplits overload has none), so the unchecked
-        // form is the faithful one.
+        // The unchecked form: the bite carries no refusal of its own for the sewing to report, and
+        // the box above is what makes that safe.
         let far_seam_rail = if seam_rail == 0 { rails - 1 } else { 0 } as usize;
 
         surface_split_sewing::sew_in_the_splits_unchecked(
@@ -205,9 +205,9 @@ impl SurfaceStripBiteRows {
         })
     }
 
-    /// C# `TryTheSeams`: the seams for ONE of the two sections the strip is stitched in - each
+    /// The seams for ONE of the two sections the strip is stitched in - each
     /// side's own run cut at the section, with the section's own row point standing at its end.
-    /// `Ok` is C#'s `sliced`: every edge's slot empty except `edge_index`'s.
+    /// `Ok` is the sliced table: every edge's slot empty except `edge_index`'s.
     ///
     /// The slice is what keeps `SurfaceBevelStitch` ignorant of the hole. It sews between two rings
     /// and clamps any seam vertex outside their window onto whichever ring it is past - so handed the
@@ -292,7 +292,7 @@ impl SurfaceStripBiteRows {
         Ok(sliced)
     }
 
-    /// C# `TheRings`: the rings between the two sections, one or two per pair of neighbouring rails.
+    /// The rings between the two sections, one or two per pair of neighbouring rails.
     /// Pure, so what is laid over the bite can be read off its answer rather than off the mesh
     /// afterwards.
     ///

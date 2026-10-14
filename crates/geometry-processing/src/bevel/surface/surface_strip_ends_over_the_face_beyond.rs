@@ -1,9 +1,9 @@
-//! The end of a band that RAN OFF its landing face, closed over the face beyond. Ports
-//! `Bevel/Surface/SurfaceStripEndsOverTheFaceBeyond.cs` (C# `internal static class`; a module of
-//! free functions here). What is here is the end ring at a NOTCHED run-off end
+//! The end of a band that RAN OFF its landing face, closed over the face beyond: a module of free
+//! functions. What is here is the end ring at a NOTCHED run-off end
 //! ([`try_the_notched_ring`]), which side ran off ([`try_the_run_off_on`]) and the close itself
-//! ([`try_close_over_the_face_beyond`]). The trim it reads is [`SurfaceStripTrimmedByTheFaceBeyond`], the cross section comes
-//! from [`super::surface_strip_tail_around_a_feature`].
+//! ([`try_close_over_the_face_beyond`]). The trim it reads is
+//! [`SurfaceStripTrimmedByTheFaceBeyond`], the cross section comes from
+//! [`super::surface_strip_tail_around_a_feature`].
 
 use vector_math::Vector3;
 
@@ -19,9 +19,9 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `TryTheNotchedRing`: the strip's end ring at a NOTCHED end - every rail the feature took
+/// The strip's end ring at a NOTCHED end - every rail the feature took
 /// pulled back to a cross section standing CLEAR of the notch, and every other rail standing where it
-/// always did, on the end plane - with where each rail meets it (C#'s `ring` and `meetsAt`).
+/// always did, on the end plane - with where each rail meets it.
 ///
 /// The stitch ends a strip on a ring of CHORDS, and the notch's own rim is not one: between the two
 /// rails the ridge leaves through, the rim dips back to the exit, which is deeper than either rail's
@@ -103,14 +103,14 @@ pub fn try_the_run_off_on(
     Ok(left.or(right))
 }
 
-/// C# `TryCloseOverTheFaceBeyond`: a band that RAN OFF its landing face closed over the face
+/// A band that RAN OFF its landing face closed over the face
 /// beyond (`off_the_face`) - the end ring (cut back clear of a standing feature's `notch`, where one
 /// stands at this end, and capped and sewn around it), the run-off reading checked against the
 /// edge's own end, the section cut out of the face beyond ([`surface_end_cut::try_cut`], with the
 /// corner beyond as its die point), and the shared point sewn into whatever stands on it. Returns
-/// the station the stitch sews to. `seams` is C#'s `List<(int, double)>[,]` indexed by
-/// `edge_index`; a missing or empty run there, where C# would throw, is refused as an end not
-/// supported.
+/// the station the stitch sews to. `seams` is the `[edge, side]` table of seam runs indexed by
+/// `edge_index`; a missing or empty run there is refused as an end not supported rather than a
+/// panic.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close_over_the_face_beyond(
     pool: &mut SurfaceVertexPool,

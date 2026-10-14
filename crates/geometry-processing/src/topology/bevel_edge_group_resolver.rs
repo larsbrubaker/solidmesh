@@ -1,6 +1,5 @@
 //! Turning a stored [`BevelEdgeGroup`] back into edges of a rebuilt mesh, and making one from a
-//! pick. Ports `Topology/BevelEdgeGroupResolver.cs` (`BevelEdgeGroupResolution`,
-//! `BevelEdgeGroupResolver`).
+//! pick ([`BevelEdgeGroupResolution`]).
 //!
 //! An anchor is matched by gates (midpoint drift within a fraction of the feature extent,
 //! sign-insensitive direction, both face normals under either pairing) and the survivors scored
@@ -32,7 +31,7 @@ pub const DEFAULT_DRIFT_FRACTION_OF_FEATURE_EXTENT: f64 = 0.25;
 /// A best score at or above this fraction of the runner-up's is two matches, not one.
 pub const DEFAULT_AMBIGUITY_RATIO: f64 = 0.8;
 
-/// The matching tolerances, defaulted as C#'s optional parameters are.
+/// The matching tolerances, with the defaults a caller gets without asking.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MatchTolerances {
     /// See [`DEFAULT_DIRECTION_TOLERANCE_DEGREES`].
@@ -143,10 +142,10 @@ pub type IncludeEdge<'a> = &'a dyn Fn(&FeatureEdgeSet, i32) -> bool;
 /// `flat_angle_degrees`, not one per mesh edge. A crease a boolean cut into several mesh edges
 /// would otherwise be swept once per piece, from rows of the panel that select the same edges.
 /// Each group is anchored on the first edge of its collinear run, and every feature edge lands in
-/// exactly one run. `include` (C#'s optional predicate) skips a seed it answers `false` for.
+/// exactly one run. `include`, where given, skips a seed it answers `false` for.
 ///
-/// Ports C# `BevelFeatureObject3D.CreateGroupsForAllEdges`, hosted here because it is pure
-/// topology; the operation object calls it when it is ported.
+/// It lives here rather than with the bevel operation because it is pure topology; the
+/// operation's node form calls it.
 pub fn create_groups_for_all_edges(
     mesh: &Mesh,
     flat_angle_degrees: f64,
@@ -227,7 +226,7 @@ pub fn resolve_with(
 
 /// Resolves every group, building one feature set per distinct flat tolerance and one edge
 /// graph, and only when a group asks for it: no groups builds nothing, so the graph handed back
-/// is `None` there (C#'s `out graph`).
+/// is `None` there.
 pub fn resolve_all(
     groups: &[BevelEdgeGroup],
     mesh: &Mesh,
@@ -243,7 +242,7 @@ pub fn resolve_all_with(
 ) -> (Vec<BevelEdgeGroupResolution>, Option<MeshEdgeGraph>) {
     let mut graph: Option<MeshEdgeGraph> = None;
     let mut resolutions = Vec::with_capacity(groups.len());
-    // keyed by the tolerance's bits: C#'s Dictionary<double> compares by double.Equals
+    // keyed by the tolerance's value, so groups at one tolerance share one set of candidates
     let mut by_flat_angle: HashMap<u64, MatchCandidates> = HashMap::new();
 
     for group in groups {
@@ -605,7 +604,7 @@ fn midpoint(edge: &FeatureEdge) -> Vector3 {
     (edge.start + edge.end) / 2.0
 }
 
-/// C# `Dictionary<double, _>` key: `double.Equals`, so 0.0 and -0.0 are one key.
+/// A map key for a tolerance that compares as the value does, so 0.0 and -0.0 are one key.
 fn flat_angle_key(value: f64) -> u64 {
     if value == 0.0 {
         0
