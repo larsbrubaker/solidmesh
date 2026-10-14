@@ -1,7 +1,6 @@
-//! A mixed corner that hands over on a MITRE ring the chain already had
-//! (`Bevel/Surface/SurfaceMixedCornerHandsOverAtTheMitre.cs`, a static class: free functions
-//! here): the plane the band stops on where an edge meets its neighbour ([`mitre_with`]) and the
-//! reading of which chord carries the corner's ring ([`try_read`]).
+//! A mixed corner that hands over on a MITRE ring the chain already had: the plane the band stops
+//! on where an edge meets its neighbour ([`mitre_with`]) and the reading of which chord carries the
+//! corner's ring ([`try_read`]).
 
 use super::{surface_handover_leaves_a_strip, surface_plan_band_ends};
 use super::{SurfaceBandEnd, SurfaceEdgePlan, SurfaceMixedCorner};
@@ -38,10 +37,10 @@ pub fn mitre_with(
     }
 }
 
-/// C# `TryRead`: whether the chord that touches the bead (`touching`, the edge standing `2r` from
-/// the bead's axis) can carry the corner's ring itself, and where the ring goes when it cannot - as
+/// Whether the chord that touches the bead (`touching`, the edge standing `2r` from the bead's
+/// axis) can carry the corner's ring itself, and where the ring goes when it cannot - as
 /// `(carries_the_ring, ring_stops_at)`, the second `Some` only where the ring is the mitre ring.
-/// C#'s answer is always true, so this is no `Result`. `towards_the_corner` is whether the corner
+/// The reading always succeeds, so this is no `Result`. `towards_the_corner` is whether the corner
 /// lies FORWARD along the chain from the touching chord (so the chord before it has a lower index);
 /// `read` is the corner as read with the touching chord.
 ///
@@ -74,8 +73,8 @@ pub fn try_read(
 
     let before = before as usize;
 
-    // The touching chord's band on the face it does NOT share with the bead - the cap - which is the
-    // side a handover end is written on and so the side that can be left with nothing.
+    // The touching chord's band on the face it does NOT share with the bead - the cap - which is
+    // the side a handover end is written on and so the side that can be left with nothing.
     let side = planned[touching].left_region_key() != read.shared_region_key;
     let line = if side {
         planned[touching].left_tangent_line

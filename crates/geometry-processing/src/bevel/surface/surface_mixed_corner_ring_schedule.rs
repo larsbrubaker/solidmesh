@@ -1,5 +1,5 @@
-//! A MITRE hand-over's patch, turned rigidly round the bead's axis station by station
-//! (`Bevel/Surface/SurfaceMixedCornerRingSchedule.cs`, a static class: free functions here).
+//! A MITRE hand-over's patch, turned rigidly round the bead's axis station by station station by
+//! station.
 
 use vector_math::Vector3;
 
@@ -16,7 +16,7 @@ const ANGLE_RULER: f64 = 1e-5;
 /// shared face is `turns` (the bead's own end ring, from the shared face round to the wall), both
 /// by reuse. `slack` is how far the ring is allowed to stand off the ideal torus - the shared
 /// face's own chord sagitta, which is the error the reused row absorbs.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_turn_the_ring_round(
     pool: &mut SurfaceVertexPool,
     corner: &SurfaceMixedCorner,
@@ -54,10 +54,9 @@ pub fn try_turn_the_ring_round(
     let on_the_shared_face = profile.len() - 1;
 
     // The schedule: the bead's rails, as fractions of the sweep the ring's own rail on the shared
-    // face has to make. A rail the ring has already passed is not a station - on an ordinary
-    // corner the ring's rail IS the bead's first one, and this is what keeps that corner one
-    // station shorter rather than starting it with a row of no width. Station zero (C#'s -1) is
-    // the ring itself.
+    // face has to make. A rail the ring has already passed is not a station - on an ordinary corner
+    // the ring's rail IS the bead's first one, and this is what keeps that corner one station
+    // shorter rather than starting it with a row of no width. Station zero is the ring itself.
     let mut stations: Vec<Option<usize>> = vec![None];
 
     for (j, &turn) in turns.iter().enumerate() {

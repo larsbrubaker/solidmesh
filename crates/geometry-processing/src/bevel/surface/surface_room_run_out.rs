@@ -1,9 +1,9 @@
 //! The footprints a mixed corner's run-out lays on the room - the skirt on the cap it runs across
-//! and the bite out of the wall it turns against (`Bevel/Surface/SurfaceRoomRunOut.cs`, a static
-//! class: free functions here): the skirt as a cut ([`try_cut`]), the wall bite as a cut
-//! ([`try_wall_cut`]), and how far the run-out's arc reaches across a direction ([`span_across`]).
+//! and the bite out of the wall it turns against: the skirt as a cut ([`try_cut`]), the wall bite
+//! as a cut ([`try_wall_cut`]), and how far the run-out's arc reaches across a direction
+//! ([`span_across`]).
 //!
-//! Every other cut `SurfaceRoomMeasure.Measure` makes belongs to a chain EDGE; a mixed corner's
+//! Every other cut `surface_room_measure::measure` makes belongs to a chain EDGE; a mixed corner's
 //! run-out belongs to none, so it is read as a cut of its own: the corner is the origin, the way
 //! the ball's touch point travels across the face is the inward direction, and the reach per unit
 //! of size is its setback. Its ROOM is deliberately infinite - a run-out may carry on past the
@@ -19,11 +19,11 @@ use super::{
     SurfaceRoomFootprint,
 };
 
-/// C# `TryCut`: the run-out's footprint on the cap face as a cut, told which corner laid it
-/// (`corner_key`, C#'s optional argument defaulting to [`SurfaceRoomCut::NO_CORNER`]), or `None`
-/// where this corner has no readable run-out - a wall that cannot be read, or a rail that never
-/// meets it - or where the skirt stands no width.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+/// The run-out's footprint on the cap face as a cut, told which corner laid it (`corner_key`,
+/// [`SurfaceRoomCut::NO_CORNER`] where no corner is named), or `None` where this corner has no
+/// readable run-out - a wall that cannot be read, or a rail that never meets it - or where the
+/// skirt stands no width.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<SurfaceRoomCut> {
     if !(corner.size > 0.0) {
         return None;
@@ -94,12 +94,12 @@ pub fn try_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<Surfa
     (high - low > 0.0).then_some(cut)
 }
 
-/// C# `TryWallCut`: the run-out's footprint on the WALL it turns against - the bite the scallop
-/// takes between the sharp edge and the trim curve - as a cut told which corner laid it, or `None`
-/// where the wall cannot be read. Read exactly: along one facet of the wall the trim point's reach
-/// is monotone in the turn, so the furthest the bite gets stands at an end of the turn or at a
-/// crease between two facets.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+/// The run-out's footprint on the WALL it turns against - the bite the scallop takes between the
+/// sharp edge and the trim curve - as a cut told which corner laid it, or `None` where the wall
+/// cannot be read. Read exactly: along one facet of the wall the trim point's reach is monotone in
+/// the turn, so the furthest the bite gets stands at an end of the turn or at a crease between two
+/// facets.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_wall_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<SurfaceRoomCut> {
     if !(corner.size > 0.0) {
         return None;

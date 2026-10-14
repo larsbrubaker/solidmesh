@@ -1,10 +1,10 @@
 //! Closes a JUNCTION - two cuts and a bead at one vertex - with the single torus patch between the
-//! two cuts' end rings, and the sector it takes out of the cap face
-//! (`Bevel/Surface/SurfaceMixedJunctionPatch.cs`, a static class). Its nested record lands
-//! here, one strip standing at the junction ([`SurfaceMixedJunctionPatchArrival`]), with the
-//! patch's driver ([`try_close`]), the walls under the blend ([`try_bite_the_strips_under_the_blend`]),
-//! the closing ring's check ([`the_closing_rail_stands`]), the patch's schedule ([`try_schedule`]),
-//! the cap's sector ([`try_bite_the_cap_face`]) and the grid's quads ([`emit`]).
+//! two cuts' end rings, and the sector it takes out of the cap face (the module's free functions).
+//! Its record lands here, one strip standing at the junction
+//! ([`SurfaceMixedJunctionPatchArrival`]), with the patch's driver ([`try_close`]), the walls under
+//! the blend ([`try_bite_the_strips_under_the_blend`]), the closing ring's check
+//! ([`the_closing_rail_stands`]), the patch's schedule ([`try_schedule`]), the cap's sector
+//! ([`try_bite_the_cap_face`]) and the grid's quads ([`emit`]).
 
 use std::rc::Rc;
 
@@ -21,8 +21,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedJunctionPatch.Arrival` (a readonly struct): one strip standing at the junction,
-/// as the strip ends hand it over.
+/// One strip standing at the junction, as the strip ends hand it over.
 #[derive(Debug, Clone)]
 pub struct SurfaceMixedJunctionPatchArrival {
     /// The strip itself.
@@ -33,11 +32,11 @@ pub struct SurfaceMixedJunctionPatchArrival {
     pub ends_here: bool,
 }
 
-/// C# `TryClose`: closes the junction - the three end rings, the grid between them and the cap's
-/// sector. `arriving` is the three strips at the corner: the first cut, the second cut and the bead
-/// (for a TWO-crease junction, the cut and then both beads - that corner is a patch of its own,
+/// Closes the junction - the three end rings, the grid between them and the cap's sector.
+/// `arriving` is the three strips at the corner: the first cut, the second cut and the bead (for a
+/// TWO-crease junction, the cut and then both beads - that corner is a patch of its own,
 /// [`surface_two_crease_junction_patch::try_close`]). Returns one end ring per strip, in the order
-/// they were handed in. C# reads the three arrivals unguarded; fewer is refused by name.
+/// they were handed in. Fewer than three arrivals are refused by name.
 pub fn try_close(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -46,9 +45,9 @@ pub fn try_close(
     seams: &[SideSeams],
 ) -> Result<Vec<SurfaceStripStation>, BevelAdvisory> {
     if junction.kind == SurfaceJunctionKind::TwoCreases {
-        // One cut and two beads: the grid below is written about ONE bead's axis, and the canal this
-        // corner really is turns about the CUT's - so it is a patch of its own rather than a case of
-        // this one, and the arrivals it is handed are the cut once and both beads.
+        // One cut and two beads: the grid below is written about ONE bead's axis, and the canal
+        // this corner really is turns about the CUT's - so it is a patch of its own rather than a
+        // case of this one, and the arrivals it is handed are the cut once and both beads.
         return surface_two_crease_junction_patch::try_close(
             pool, faces, junction, arriving, seams,
         );
@@ -75,8 +74,8 @@ pub fn try_close(
     }
 
     // Unreachable from real input: the only caller (`surface_strip_ends::try_close_the_junction`)
-    // builds `arriving` from `the_arriving_ends()`, a fixed three, and refuses before calling if any
-    // of their strips is missing - so C#'s unguarded reads of the three never see fewer.
+    // builds `arriving` from `the_arriving_ends()`, a fixed three, and refuses before calling if
+    // any of their strips is missing - so the three reads below never see fewer.
     let [first_arrival, second_arrival, bead_arrival, ..] = arriving else {
         return Err(not_supported());
     };
@@ -153,7 +152,7 @@ pub fn try_close(
     emit(pool, faces, lead, &grid);
 
     // ONCE, and after everything: every crossing the bites made, sewn into whatever face now
-    // carries it part way along an edge. C# calls the overload that drops the verdict.
+    // carries it part way along an edge. The sewing's verdict is not needed here.
     surface_split_sewing::sew_in_the_splits_since_unchecked(pool, faces, split_from);
 
     surface_mixed_corner_patch::nothing_covers_nothing(pool, faces)?;
@@ -169,9 +168,9 @@ pub fn try_close(
     })
 }
 
-/// C# `TryBiteTheStripsUnderTheBlend`: the wall each arm stands over, where it stands over any -
-/// the stretch of the face it shares with the bead between the bead's own stop plane and the cap,
-/// facet by facet ([`SurfaceMixedCornerWall::strip_under_the_blend`]).
+/// The wall each arm stands over, where it stands over any - the stretch of the face it shares with
+/// the bead between the bead's own stop plane and the cap, facet by facet
+/// ([`SurfaceMixedCornerWall::strip_under_the_blend`]).
 ///
 /// Owed exactly where the arm hands over on a MITRE ring, which is where the bead's band stops at
 /// its own height on that face rather than running out to the cap rim - the same reading the plan's
@@ -263,7 +262,7 @@ pub fn the_same_vertex(
 }
 
 impl SurfaceMixedJunctionPatchArrival {
-    /// C#'s constructor.
+    /// One strip standing at the junction, on edge `edge_index`, ending here or starting here.
     pub fn new(strip: Rc<SurfaceStrip>, edge_index: i32, ends_here: bool) -> Self {
         SurfaceMixedJunctionPatchArrival {
             strip,
@@ -273,7 +272,7 @@ impl SurfaceMixedJunctionPatchArrival {
     }
 }
 
-/// C# `Emit`: the patch's grid of quads, each fanned facing the corner's outward sum.
+/// The patch's grid of quads, each fanned facing the corner's outward sum.
 pub fn emit(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -294,11 +293,11 @@ pub fn emit(
     }
 }
 
-/// C# `TrySchedule`: the patch's grid, profile row by row: each row swept from its `profile`
-/// vertex round `lead`'s axis to its `closing` vertex, with a station at every one of the shared
-/// face's `turns` strictly inside its sweep - minted on the other rows, the turn's own vertex on the
-/// shared face (within `slack`). Refused where a row does not sweep forward, a ring's end is not the
-/// turn's own vertex (unless that corner hands over at a mitre), or a closing rail does not stand.
+/// The patch's grid, profile row by row: each row swept from its `profile` vertex round `lead`'s
+/// axis to its `closing` vertex, with a station at every one of the shared face's `turns` strictly
+/// inside its sweep - minted on the other rows, the turn's own vertex on the shared face (within
+/// `slack`). Refused where a row does not sweep forward, a ring's end is not the turn's own vertex
+/// (unless that corner hands over at a mitre), or a closing rail does not stand.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_schedule(
     pool: &mut SurfaceVertexPool,
@@ -400,8 +399,8 @@ pub fn try_schedule(
     Ok(grid)
 }
 
-/// C# `SurfaceMixedJunctionPatch.TryBiteTheCapFace`: the cap face bitten out from the sector's
-/// apex (between `corner` and the corner it `closes` on) round the grid's outer rail.
+/// The cap face bitten out from the sector's apex (between `corner` and the corner it `closes` on)
+/// round the grid's outer rail.
 pub fn try_bite_the_cap_face(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

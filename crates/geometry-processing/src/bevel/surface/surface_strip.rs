@@ -1,7 +1,6 @@
-//! The bevel surface over ONE chain edge, as the lines it is ruled by ([`SurfaceStrip`]). Ports
-//! `Bevel/Surface/SurfaceStrip.cs`: its fields and its construction from a plan
-//! ([`SurfaceStrip::try_create`]), and its rail readings ([`SurfaceStrip::point_on`],
-//! [`SurfaceStrip::param_of`], [`SurfaceStrip::try_cross`]).
+//! The bevel surface over ONE chain edge, as the lines it is ruled by ([`SurfaceStrip`]): its
+//! fields and its construction from a plan ([`SurfaceStrip::try_create`]), and its rail readings
+//! ([`SurfaceStrip::point_on`], [`SurfaceStrip::param_of`], [`SurfaceStrip::try_cross`]).
 
 use vector_math::{math_helper, Vector3};
 
@@ -9,9 +8,9 @@ use super::{SurfaceBevelPlan, SurfaceEdgePlan};
 use crate::bevel::{bevel_arc_chording, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `SurfaceStrip`: the bevel surface over ONE chain edge, as the lines it is ruled by - one rail
-/// per profile sample, each a line parallel to the edge, the first lying on the left tangent line
-/// and the last on the right. A chamfer has two rails and a round has one per arc sample.
+/// The bevel surface over ONE chain edge, as the lines it is ruled by - one rail per profile
+/// sample, each a line parallel to the edge, the first lying on the left tangent line and the last
+/// on the right. A chamfer has two rails and a round has one per arc sample.
 ///
 /// **Rails rather than points.** The surface over a straight edge between two planar faces is
 /// ruled: every cross section is the same profile, carried along. Saying so in lines rather than in
@@ -27,7 +26,7 @@ use crate::topology::EdgeConvexity;
 /// that leaves the circular segment under each chord as material, which is why a tessellated cut
 /// takes a little more than the closed form; on a concave edge the same construction leaves it as
 /// void, and the bead adds a little more. One formula, two readings, and
-/// `SurfaceEdgePlan.Convexity` read by nothing here.
+/// `SurfaceEdgePlan::convexity` read by nothing here.
 ///
 /// **Which way is out.** The bisector of the two INWARD directions the plan used, read outward
 /// ([`SurfaceStrip::outward_reference`]). Every sample's own outward normal lies in the sector
@@ -52,8 +51,8 @@ pub struct SurfaceStrip {
     /// carries along the edge.
     pub rail_points: Vec<Vector3>,
     /// The angle between one rail and the next, in degrees - the strip's own sweep divided by the
-    /// chord count `BevelArcChording.SegmentsFor` gave it, and zero for a chamfer, whose one chord
-    /// sweeps no arc at all.
+    /// chord count `bevel_arc_chording::segments_for` gave it, and zero for a chamfer, whose one
+    /// chord sweeps no arc at all.
     ///
     /// Read by the MITRE, which pairs the two strips' rails by their ANGLE from the face they
     /// share: two beads of the same radius tangent to one face carry their rail at angle theta in
@@ -68,7 +67,7 @@ pub struct SurfaceStrip {
 }
 
 impl SurfaceStrip {
-    /// C#'s private constructor.
+    /// Builds the strip from its parts; [`Self::try_create`] makes one.
     fn new(
         origin: Vector3,
         along: Vector3,
@@ -89,9 +88,9 @@ impl SurfaceStrip {
     /// per arc sample from the left tangent line round the centre line to the right for a round,
     /// chorded at `segments_per_quarter` per quarter turn of arc ([`bevel_arc_chording`]) so that
     /// an edge's chording is decided by how much arc it actually sweeps. Fails on a wedge too sharp
-    /// or too flat for the plan's one floor ([`SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES`]), or a
-    /// profile with no radius.
-    // The negated comparisons are C#'s `!(x > y)`, which refuse a NaN as well.
+    /// or too flat for the plan's one floor ([`SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES`]), or
+    /// a profile with no radius.
+    // The negated comparisons are `!(x > y)` on purpose: they refuse a NaN as well.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_create(
         edge: &SurfaceEdgePlan,
@@ -160,7 +159,7 @@ impl SurfaceStrip {
         // from the vectors themselves rather than from the wedge so that the last sample lands ON
         // the right tangent line to the bit, which is what the strip has to sew to.
         let cosine = from_center.dot(to_center) / (from_center.length() * to_center.length());
-        // C#'s Math.Min(1, Math.Max(-1, x)), which passes a NaN through.
+        // Clamped to [-1, 1] in a way that passes a NaN through.
         let sweep = (if cosine.is_nan() {
             cosine
         } else {
@@ -232,32 +231,31 @@ impl SurfaceStrip {
     }
 }
 
-/// The strip's readings (C# `RailCount`, `Along`, `PointOn`, `ParamOf`, `TryCross`).
+/// The strip's readings.
 impl SurfaceStrip {
-    /// C# `RailCount`: how many rails the strip is ruled by - one more than the number of quad
-    /// columns.
+    /// How many rails the strip is ruled by - one more than the number of quad columns.
     pub fn rail_count(&self) -> i32 {
         self.rail_points.len() as i32
     }
 
-    /// C# `Along`: the unit direction the rails run in, which is the chain's own walk direction.
+    /// The unit direction the rails run in, which is the chain's own walk direction.
     pub fn along(&self) -> Vector3 {
         self.along
     }
 
-    /// C# `PointOn`: the point on one rail at `param` along the edge from its start.
+    /// The point on one rail at `param` along the edge from its start.
     pub fn point_on(&self, rail: i32, param: f64) -> Vector3 {
         self.rail_points[rail as usize] + (self.along * param)
     }
 
-    /// C# `ParamOf`: how far along the edge `point` stands, measured from the edge's start.
+    /// How far along the edge `point` stands, measured from the edge's start.
     pub fn param_of(&self, point: Vector3) -> f64 {
         (point - self.origin).dot(self.along)
     }
 
-    /// C# `TryCross`: where one rail crosses the plane through `plane_point` with `plane_normal`, as
-    /// a parameter along the edge. `None` on a plane the rails run along, which is a mitre or an end
-    /// face the strip cannot be cut at.
+    /// Where one rail crosses the plane through `plane_point` with `plane_normal`, as a parameter
+    /// along the edge. `None` on a plane the rails run along, which is a mitre or an end face the
+    /// strip cannot be cut at.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn try_cross(&self, rail: i32, plane_point: Vector3, plane_normal: Vector3) -> Option<f64> {
         let slope = plane_normal.dot(self.along);

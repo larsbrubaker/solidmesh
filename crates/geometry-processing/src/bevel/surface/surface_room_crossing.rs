@@ -1,8 +1,7 @@
 //! Where a mixed corner's RUN-OUT skirt and another chain's BAND land on one another over the same
 //! region, and the two footprints are sewn together rather than refused ([`SurfaceRoomCrossing`]).
-//! Ports the record of `Bevel/Surface/SurfaceRoomCrossing.cs`, its derived readings, the test
-//! that finds one ([`SurfaceRoomCrossing::try_cross`]) and the gathering of every crossing of a pass
-//! ([`SurfaceRoomCrossing::gather`]).
+//! Its record, its derived readings, the test that finds one ([`SurfaceRoomCrossing::try_cross`])
+//! and the gathering of every crossing of a pass ([`SurfaceRoomCrossing::gather`]).
 
 use polygon_mesh::CancelToken;
 
@@ -10,9 +9,9 @@ use super::{SurfaceRoomCut, SurfaceRoomFootprint};
 use crate::bevel::level_line::WorkError;
 use vector_math::cs_math;
 
-/// C# `SurfaceRoomCrossing` (a sealed record): a run-out skirt and a band crossing over one region.
+/// A run-out skirt and a band crossing over one region.
 ///
-/// Every other pair `SurfaceRoom.LargestFitting` solves is two cuts facing each other across a
+/// Every other pair `surface_room::largest_fitting` solves is two cuts facing each other across a
 /// region, each the other's far rim, and the two of them share the gap:
 /// `size * (k_a + k_b) <= gap`. A skirt over a band is not that. Both footprints are REMOVALS from
 /// one face, so where they overlap the face is simply taken twice and what is left is the lower
@@ -30,7 +29,7 @@ use vector_math::cs_math;
 /// work.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceRoomCrossing {
-    /// The region both footprints land on (`SurfaceBevelPlan.KeyOf`).
+    /// The region both footprints land on (`SurfaceBevelPlan::key_of`).
     pub region_key: i32,
     /// The band being crossed: its plan, its edge's span and the side it takes off that edge.
     pub band: SurfaceRoomCut,
@@ -41,7 +40,7 @@ pub struct SurfaceRoomCrossing {
     /// How far the two reach into each other at this size: `size * (k_band + k_skirt) - gap`, which
     /// is exactly the amount the old pair rule would have refused the size over.
     pub overlap: f64,
-    /// Whether the band's own END NOTCH stands under this skirt as well (C# default `false`). One
+    /// Whether the band's own END NOTCH stands under this skirt as well (`false` unless set). One
     /// band's removal is its strip on the face it stands on AND the section its end takes out of
     /// the face beyond (`SurfaceRoomEndCut`), so a run-out crossing that band walks off its strip
     /// and onto that section rather than meeting a second footprint there - and the two are sewn as
@@ -87,8 +86,8 @@ impl SurfaceRoomCrossing {
         self.skirt.the_wall_bite
     }
 
-    /// Whether any of `crossings` (C#'s null is `None`) is a wall bite of corner `corner_key` of
-    /// plan `plan`.
+    /// Whether any of `crossings` (`None` has none) is a wall bite of corner `corner_key` of plan
+    /// `plan`.
     pub fn any_stands_on_the_wall(
         crossings: Option<&[SurfaceRoomCrossing]>,
         plan: i32,
@@ -103,10 +102,10 @@ impl SurfaceRoomCrossing {
         })
     }
 
-    /// Every crossing among `cuts` (C#'s null is `None`, which has none) at `size`, each pair
-    /// asked once in order; a crossing whose band's own end notch is among the cuts also takes the
-    /// cap notch. Polls `cancellation_token` before each pair, leaving with
-    /// [`WorkError::Cancelled`] as C#'s `ThrowIfCancellationRequested` does.
+    /// Every crossing among `cuts` (`None` has none) at `size`, each pair asked once in order; a
+    /// crossing whose band's own end notch is among the cuts also takes the cap notch. Polls
+    /// `cancellation_token` before each pair, leaving with [`WorkError::Cancelled`] once a cancel
+    /// is asked for.
     pub fn gather(
         cuts: Option<&[SurfaceRoomCut]>,
         size: f64,
@@ -212,7 +211,7 @@ impl SurfaceRoomCrossing {
     /// region at `size`, where the run-out's touch row really reaches the strip, the band leaves
     /// the run-out ground to stand on, and the two do not both fit in the gap. `None` for any
     /// other pair, or where they meet nowhere or fit.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
     pub fn try_cross(
         here: &SurfaceRoomCut,
         other: &SurfaceRoomCut,

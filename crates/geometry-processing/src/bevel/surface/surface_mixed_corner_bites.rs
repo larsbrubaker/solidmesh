@@ -1,5 +1,4 @@
-//! What a mixed corner's run-out bites out of the faces it runs across and turns against
-//! (`Bevel/Surface/SurfaceMixedCornerBites.cs`, a static class: free functions here). Where the
+//! What a mixed corner's run-out bites out of the faces it runs across and turns against. Where the
 //! touch row leaves the face it runs across, the point under the cap ([`under_the_cap`]), and the
 //! two bites themselves: the cap face's sectors ([`try_bite_the_cap_face`], each a [`try_sector`])
 //! and the wall's strip and scallop ([`try_bite_the_wall`]).
@@ -16,7 +15,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// cap - crosses the plane the face it runs across ends on (`ends_on`): of the two crossings, the
 /// one nearer `reached_so_far`. `None` where the circle never reaches that plane, or the plane
 /// lies in the cap.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_where_the_touch_row_leaves_the_face(
     corner: &SurfaceMixedCorner,
     ends_on: SurfaceBandEnd,
@@ -73,14 +72,14 @@ pub fn the_corner_the_wall_ends_at(
     )
 }
 
-/// C# `UnderTheCap`: the point on the cap's own plane straight above `at`, which stays in the wall
+/// The point on the cap's own plane straight above `at`, which stays in the wall
 /// - carried along the axis, measured against the corner vertex.
 pub fn under_the_cap(corner: &SurfaceMixedCorner, at: Vector3) -> Vector3 {
     corner.up_into_the_cap_through(at, corner.corner)
 }
 
-/// C# `SurfaceMixedCornerBites.TrySector`: the cap face's sector from `apex` round `stations`
-/// bitten out (snapped to the cap corner and the stations); nothing with fewer than two stations.
+/// The cap face's sector from `apex` round `stations` bitten out (snapped to the cap corner and the
+/// stations); nothing with fewer than two stations.
 #[allow(clippy::too_many_arguments)]
 pub fn try_sector(
     pool: &mut super::SurfaceVertexPool,
@@ -115,11 +114,11 @@ pub fn try_sector(
     )
 }
 
-/// C# `TryBiteTheCapFace`: the cap face gives up the SECTOR the ball's touch point traces across
-/// it, all the way round - through the patch's own turn and on through the runout, to the point on
-/// the sharp edge where the ball clears the wall. Its apex is the bead's axis, which stands in the
-/// void rather than on the face: the bite is read as the half planes its sides name, so an apex off
-/// the material costs it nothing.
+/// The cap face gives up the SECTOR the ball's touch point traces across it, all the way round -
+/// through the patch's own turn and on through the runout, to the point on the sharp edge where the
+/// ball clears the wall. Its apex is the bead's axis, which stands in the void rather than on the
+/// face: the bite is read as the half planes its sides name, so an apex off the material costs it
+/// nothing.
 ///
 /// TWO bites, split at the turn the bead's rim ends at, and not one sector: a convex bite is the
 /// intersection of the half planes its sides name, which is the ring itself only while the ring is
@@ -225,10 +224,10 @@ pub fn try_bite_the_cap_face(
     )
 }
 
-/// C# `TryBiteTheWall`: the wall gives up the strip the bead's stop plane left standing at the
-/// corner - between the concave edge, the cap face, the meridian plane at the last turn and that
-/// stop plane - and then the SCALLOP the runout takes out of it, one trapezoid per station between
-/// the trim chord and the cap.
+/// The wall gives up the strip the bead's stop plane left standing at the corner - between the
+/// concave edge, the cap face, the meridian plane at the last turn and that stop plane - and then
+/// the SCALLOP the runout takes out of it, one trapezoid per station between the trim chord and the
+/// cap.
 ///
 /// Facet by facet, because a wall the bead ROLLED along is not one plane and a bite finds only the
 /// faces lying in the one plane it is written in; a flat wall is one facet and gets exactly the

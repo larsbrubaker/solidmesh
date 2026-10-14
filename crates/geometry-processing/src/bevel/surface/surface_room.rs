@@ -1,9 +1,9 @@
-//! How much ROOM the surface construction has, and the largest size that fits in it
-//! (`Bevel/Surface/SurfaceRoom.cs`, a static class): the 3D reading of the 2D bevel's relaxation
-//! (`PathBevel.RelaxRadii`), where a corner's room is the run of path beside it and the corners
-//! sharing that run negotiate it between them. Its nested types - what kind of footprint a cut is
-//! ([`SurfaceRoomFootprint`]) and one side of one chain edge ([`SurfaceRoomCut`]) - the fit of a
-//! whole pass ([`try_fit`]) and the pair rule ([`largest_fitting`]).
+//! How much ROOM the surface construction has, and the largest size that fits in it: the 3D reading
+//! of the 2D bevel's relaxation (`path_bevel::relax_radii`), where a corner's room is the run of
+//! path beside it and the corners sharing that run negotiate it between them. Its nested types -
+//! what kind of footprint a cut is ([`SurfaceRoomFootprint`]) and one side of one chain edge
+//! ([`SurfaceRoomCut`]) - the fit of a whole pass ([`try_fit`]) and the pair rule
+//! ([`largest_fitting`]).
 //!
 //! Room is a distance ACROSS a face region: from a chain edge, in the region's own plane, along the
 //! inward direction the bevel sets back along, to the first piece of that region's rim standing in
@@ -24,8 +24,8 @@ use super::{SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan};
 use crate::bevel::level_line::WorkError;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceRoom.Footprint`: what a cut IS, which is what the pair rule has to know about it - a
-/// band laid along an edge, or one of the footprints that stand at a CORNER instead.
+/// What a cut IS, which is what the pair rule has to know about it - a band laid along an edge, or
+/// one of the footprints that stand at a CORNER instead.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SurfaceRoomFootprint {
     /// The band one side of one chain edge takes off one region.
@@ -52,11 +52,11 @@ pub enum SurfaceRoomFootprint {
     MitreTip,
 }
 
-/// C# `SurfaceRoom.Cut` (a readonly struct): one side of one chain edge - the band it wants to take
-/// off one region, and how much of that region there is to take.
+/// One side of one chain edge - the band it wants to take off one region, and how much of that
+/// region there is to take.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceRoomCut {
-    /// Which region this cut lands on (`SurfaceBevelPlan.KeyOf`).
+    /// Which region this cut lands on (`SurfaceBevelPlan::key_of`).
     pub region_key: i32,
     /// Where the chain edge starts, which is the origin of the frame room is measured in.
     pub from: Vector3,
@@ -83,9 +83,9 @@ pub struct SurfaceRoomCut {
     pub plan_index: i32,
     /// How far past [`SurfaceRoomCut::from`] this band's own material reaches, per unit of SIZE:
     /// the overhang the mitre at that end of the edge carries it by
-    /// (`SurfaceRoomMitre.OverhangPerSetback`), and zero where the mitre cuts the band back instead
-    /// or where the chain simply ends there. The edge's span is where the band is MEASURED from;
-    /// where its material really stands is that span widened by these two.
+    /// (`surface_room_mitre::overhang_per_setback`), and zero where the mitre cuts the band back
+    /// instead or where the chain simply ends there. The edge's span is where the band is MEASURED
+    /// from; where its material really stands is that span widened by these two.
     pub overhang_before_from: f64,
     /// The same past [`SurfaceRoomCut::to`].
     pub overhang_past_to: f64,
@@ -96,11 +96,11 @@ pub struct SurfaceRoomCut {
     /// by measuring.
     pub edge_index: i32,
     /// Which side of that edge this band takes - 0 for the left region and 1 for the right, the
-    /// order `SurfaceRoomMeasure.Measure` walks them in - or -1 where it is not a band.
+    /// order `surface_room_measure::measure` walks them in - or -1 where it is not a band.
     pub side: i32,
-    /// Which MIXED CORNER of the plan's chain laid this skirt (`SurfaceBevelPlan.MixedCornerKeys`:
-    /// the index of the edge the chain arrives on, or a junction sentinel), or C#'s `NoCorner`
-    /// (`i32::MIN`) where this cut is not a run-out's skirt.
+    /// Which MIXED CORNER of the plan's chain laid this skirt
+    /// (`SurfaceBevelPlan::mixed_corner_keys`: the index of the edge the chain arrives on, or a
+    /// junction sentinel), or `NO_CORNER` (`i32::MIN`) where this cut is not a run-out's skirt.
     pub corner_key: i32,
     /// Whether this footprint is the bite a run-out takes out of the WALL it turns against rather
     /// than the skirt it lays on the cap it runs across (`SurfaceRoomRunOut`). One mixed corner
@@ -123,11 +123,9 @@ impl SurfaceRoomCut {
     /// at the start of a chain is keyed -1.
     pub const NO_CORNER: i32 = i32::MIN;
 
-    /// C#'s constructor with its optional arguments left at their defaults: a [`SurfaceRoomFootprint::Band`]
-    /// on no plan, edge or side, with no overhang, no corner, not the wall bite, and no section
-    /// sides. Callers that name an optional argument set that field with struct-update syntax
-    /// (`SurfaceRoomCut { edge_index, ..SurfaceRoomCut::new(..) }`), which names it as the C# call
-    /// sites do.
+    /// A [`SurfaceRoomFootprint::Band`] on no plan, edge or side, with no overhang, no corner, not
+    /// the wall bite, and no section sides. Callers that need another value set that field with
+    /// struct-update syntax (`SurfaceRoomCut { edge_index, ..SurfaceRoomCut::new(..) }`).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         region_key: i32,
@@ -186,14 +184,13 @@ impl SurfaceRoomCut {
     }
 }
 
-/// C# `SurfaceRoom.FitTolerance`: how near the request the largest fitting size has to come to
-/// count as the request.
+/// How near the request the largest fitting size has to come to count as the request.
 pub const FIT_TOLERANCE: f64 = 1e-9;
 
-/// What [`try_fit`] reads (C#'s return and its three `out`s).
+/// What [`try_fit`] reads.
 #[derive(Debug, Clone)]
 pub struct SurfaceRoomFit {
-    /// C#'s return: whether every plan fits at the requested size.
+    /// Whether every plan fits at the requested size.
     pub fits: bool,
     /// The request where it fits, and the size that would have fitted where it does not (the
     /// request again where a reading refused by NAME).
@@ -205,10 +202,10 @@ pub struct SurfaceRoomFit {
     pub crossings: Vec<SurfaceRoomCrossing>,
 }
 
-/// C# `TryFit`: the largest size every one of `plans` (drawn at `requested_size`) fits at, and -
-/// where that is smaller than the request - the refusal to say so with, the size named settled by
-/// [`surface_room_fixed_point::settled`]. `stretches` (C#'s optional list) collects every band that
-/// runs off PART of its own span. A cancel passes up as [`WorkError::Cancelled`].
+/// The largest size every one of `plans` (drawn at `requested_size`) fits at, and - where that is
+/// smaller than the request - the refusal to say so with, the size named settled by
+/// [`surface_room_fixed_point::settled`]. `stretches` (when given) collects every band that runs
+/// off PART of its own span. A cancel passes up as [`WorkError::Cancelled`].
 pub fn try_fit(
     plans: &[Rc<SurfaceBevelPlan>],
     requested_size: f64,
@@ -308,11 +305,11 @@ pub fn the_edge_that_answered(plans: &[Rc<SurfaceBevelPlan>], blame: &[SurfaceRo
 }
 
 /// The gap across a band's region to a CORNER footprint standing in front of it, and how far the
-/// corner reaches toward the band per unit of size - `(gap, reaches at the band)` - where the corner
-/// stands in front of the band within its material along the edge at the size the two would meet
-/// at. `None` for a band that is itself a corner footprint, a band against its own plan's end
+/// corner reaches toward the band per unit of size - `(gap, reaches at the band)` - where the
+/// corner stands in front of the band within its material along the edge at the size the two would
+/// meet at. `None` for a band that is itself a corner footprint, a band against its own plan's end
 /// notch, or a corner off to the side, behind, or reaching nothing toward the band.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_gap_to_the_corner(band: &SurfaceRoomCut, corner: &SurfaceRoomCut) -> Option<(f64, f64)> {
     use vector_math::cs_math::{max_f64, min_f64};
 
@@ -375,19 +372,18 @@ pub fn try_gap_to_the_corner(band: &SurfaceRoomCut, corner: &SurfaceRoomCut) -> 
     Some((offset, reaches_at_the_band))
 }
 
-/// C# `SurfaceRoom.OpposingCosine`: how nearly two cuts' inward directions must oppose for the pair
-/// to face each other across one region.
+/// How nearly two cuts' inward directions must oppose for the pair to face each other across one
+/// region.
 pub const OPPOSING_COSINE: f64 = -0.999;
 
-/// What [`largest_fitting`] reads (C#'s return and its two `out`s): the largest size every cut
-/// and every facing pair has room for, where the worst limit stands, and whether it is a collision
-/// between two cuts.
+/// What [`largest_fitting`] reads: the largest size every cut and every facing pair has room for,
+/// where the worst limit stands, and whether it is a collision between two cuts.
 pub type SurfaceRoomLargestFitting = (f64, Vector3, bool);
 
-/// C# `LargestFitting`: the largest size from `starting_from` down that every cut's own room and
-/// every pair of cuts facing each other across one region allows - a skirt the pass sews across a
-/// band (gathered at `measured_at_size`, else `starting_from`, into `crossings` where given) is no
-/// collision. `blame`, where given, is left holding the cut (or pair) that set the limit.
+/// The largest size from `starting_from` down that every cut's own room and every pair of cuts
+/// facing each other across one region allows - a skirt the pass sews across a band (gathered at
+/// `measured_at_size`, else `starting_from`, into `crossings` where given) is no collision.
+/// `blame`, where given, is left holding the cut (or pair) that set the limit.
 pub fn largest_fitting(
     cuts: &[SurfaceRoomCut],
     starting_from: f64,

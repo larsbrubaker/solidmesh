@@ -1,8 +1,7 @@
-//! Reading a mixed corner's frame off the two edge plans that meet there
-//! (`Bevel/Surface/SurfaceMixedCornerReadOffTheEdgePlans.cs`, a static class: free functions
-//! here). The questions the reading is made of land here first: which region the two edges
-//! share, whether the bead rests on a crease of it, which side's normal and tangent line to
-//! read, and where two skew lines touch. The reading itself lands with a later package.
+//! Reading a mixed corner's frame off the two edge plans that meet there. The questions the reading
+//! is made of land here first: which region the two edges share, whether the bead rests on a crease
+//! of it, which side's normal and tangent line to read, and where two skew lines touch. The reading
+//! itself lands with a later package.
 
 use vector_math::Vector3;
 
@@ -87,7 +86,7 @@ pub fn tangent_line_of(plan: &SurfaceEdgePlan, shared_key: i32, shared: bool) ->
 /// Where two skew lines standing `apart` from each other touch - the midpoint of their common
 /// perpendicular - provided that perpendicular really is `apart` long, within `tolerance`;
 /// `None` where they are parallel or stand another distance apart.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_touch_at(
     first: SurfaceLine,
     second: SurfaceLine,
@@ -117,8 +116,8 @@ pub fn try_touch_at(
     Some((on_first + on_second) / 2.0)
 }
 
-/// C# `SurfaceMixedCornerReadOffTheEdgePlans.TryRead(arriving, leaving, ...)`: the ordinary
-/// corner, whose ring is carried by - and touches the bead along - the convex edge's own plan.
+/// The ordinary corner, whose ring is carried by - and touches the bead along - the convex edge's
+/// own plan.
 pub fn try_read(
     arriving: &SurfaceEdgePlan,
     leaving: &SurfaceEdgePlan,
@@ -144,11 +143,10 @@ pub fn try_read(
     )
 }
 
-/// C# `SurfaceMixedCornerReadOffTheEdgePlans.TryRead(ringCarriedBy, touchingTheBead,
-/// ringStopsAt, ...)`: a mixed corner read off its convex cut's and concave bead's edge plans -
-/// where the cut's ring touches the bead, the bead's axis and its two feet, the cap face and the
-/// spine the ball rolls round - or `SurfaceCornerNotSupported` (or
-/// `SurfaceMixedCornerBeadRingCrossesNoRail` where no spine stands).
+/// A mixed corner read off its convex cut's and concave bead's edge plans - where the cut's ring
+/// touches the bead, the bead's axis and its two feet, the cap face and the spine the ball rolls
+/// round - or `SurfaceCornerNotSupported` (or `SurfaceMixedCornerBeadRingCrossesNoRail` where no
+/// spine stands).
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_read_carried(
     ring_carried_by: &SurfaceEdgePlan,

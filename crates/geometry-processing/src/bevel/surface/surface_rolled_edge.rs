@@ -1,6 +1,5 @@
-//! One chain edge as the roll across a curved wall read it ([`SurfaceRolledEdge`]). Ports
-//! `Bevel/Surface/SurfaceRolledEdge.cs`: the record and its `AsPlan`, the reading turned into a
-//! [`SurfaceEdgePlan`].
+//! One chain edge as the roll across a curved wall read it ([`SurfaceRolledEdge`]): the record and
+//! its `as_plan`, the reading turned into a [`SurfaceEdgePlan`].
 //!
 //! [`SurfaceEdgePlan`]: super::SurfaceEdgePlan
 
@@ -14,10 +13,9 @@ use std::sync::Arc;
 use super::{SurfaceEdgePlan, SurfaceLine, SurfaceWallSection};
 use crate::topology::{ChainEdge, FaceGroup};
 
-/// C# `SurfaceRolledEdge` (a readonly struct): one chain edge as `SurfaceRollAcrossTheWall` read
-/// it - which side was the wall, which facet of it the profile touches, and the lines and setbacks
-/// that follow - the whole of what a rolled edge tells a plan that the unrolled construction would
-/// have said differently.
+/// One chain edge as `SurfaceRollAcrossTheWall` read it - which side was the wall, which facet of
+/// it the profile touches, and the lines and setbacks that follow - the whole of what a rolled edge
+/// tells a plan that the unrolled construction would have said differently.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceRolledEdge {
     /// Whether the curved side is the left of the chain's walk.
@@ -54,7 +52,7 @@ pub struct SurfaceRolledEdge {
 }
 
 impl SurfaceRolledEdge {
-    /// C#'s constructor.
+    /// Builds the reading from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         wall_on_the_left: bool,

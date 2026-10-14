@@ -1,5 +1,4 @@
-//! Which edge of a mixed corner is really the CUT where the bead rolled along a chorded wall
-//! (`Bevel/Surface/SurfaceMixedCornerCutEdge.cs`, a static class: free functions here). The
+//! Which edge of a mixed corner is really the CUT where the bead rolled along a chorded wall. The
 //! sagitta guard of the wall's chords, how far apart two skew lines stand, and the cut edge's walk
 //! ([`try_find`], [`try_find_for_the_bead`], [`try_walk`]).
 
@@ -26,7 +25,7 @@ pub const ONE_CHORDS_FACETS: f64 = 1.0 - 1e-6;
 /// By CHORD and not by facet. A chorded wall is triangulated, so one chord of it is two facets of
 /// the same normal and one step of the section is half a chord; measured facet by facet the circle
 /// would come out half the size it is.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 {
     let mut sagitta = 0.0;
 
@@ -70,7 +69,7 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
 
 /// How far apart two skew lines stand - the length of their common perpendicular - or `None`
 /// where they are parallel and have no single one.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_apart(first: SurfaceLine, second: SurfaceLine) -> Option<f64> {
     let between = second.point - first.point;
     let direction_dot = first.direction.dot(second.direction);
@@ -91,10 +90,9 @@ pub fn try_apart(first: SurfaceLine, second: SurfaceLine) -> Option<f64> {
     )
 }
 
-/// C# `TryFind(planned, isClosed, cornerIndex, cutIsArriving, ..)`: the cut edge of the corner
-/// between `planned[corner_index]` and the next, walking from the cut's side away from the bead
-/// (the leaving edge where the cut arrives, else the arriving one). Returns the cut's index and
-/// the edges swallowed before it.
+/// The cut edge of the corner between `planned[corner_index]` and the next, walking from the cut's
+/// side away from the bead (the leaving edge where the cut arrives, else the arriving one). Returns
+/// the cut's index and the edges swallowed before it.
 pub fn try_find(
     planned: &[SurfaceEdgePlan],
     is_closed: bool,
@@ -127,8 +125,7 @@ pub fn try_find(
     )
 }
 
-/// C# `TryFind(planned, isClosed, cornerIsAtTheStart, bead, ..)`: the same walk for a `bead` of
-/// another chain meeting this run at its start (or end).
+/// The same walk for a `bead` of another chain meeting this run at its start (or end).
 pub fn try_find_for_the_bead(
     planned: &[SurfaceEdgePlan],
     is_closed: bool,
@@ -153,11 +150,11 @@ pub fn try_find_for_the_bead(
     )
 }
 
-/// C# `TryWalk`: walks the run from `at` by `step` until an edge's centre line stands 2r from the
-/// bead's (the cut), or - for a bead resting on a crease - past the local maximum of that distance
-/// (the chord before is the cut, within the wall chords' sagitta of 2r). `None` where the walk
-/// meets a concave or centre-less edge, clears the bead without touching, runs off an open end or
-/// comes back to the bead. Returns the cut's index and the edges swallowed before it.
+/// Walks the run from `at` by `step` until an edge's centre line stands 2r from the bead's (the
+/// cut), or - for a bead resting on a crease - past the local maximum of that distance (the chord
+/// before is the cut, within the wall chords' sagitta of 2r). `None` where the walk meets a concave
+/// or centre-less edge, clears the bead without touching, runs off an open end or comes back to the
+/// bead. Returns the cut's index and the edges swallowed before it.
 #[allow(clippy::too_many_arguments)]
 pub fn try_walk(
     planned: &[SurfaceEdgePlan],

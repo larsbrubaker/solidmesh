@@ -1,7 +1,6 @@
 //! The surface construction's answer to an edge two groups both name, and the counterpart of
 //! `BevelSharedEdges`: groups that share an edge are linked as ONE selection rather than one of
-//! them losing the edge. Ports `Bevel/Surface/SurfaceSharedEdgeNetwork.cs` (C# `internal static
-//! class`; free functions here): [`link_together`] and the union-find it is read with.
+//! them losing the edge: [`link_together`] and the union-find it is read with.
 //!
 //! **Why the award cannot be consumed here.** One edge, one tool is a rule about SOLIDS - two
 //! coincident swept beads cannot be unioned - so the boolean path gives each doubly named edge to
@@ -32,9 +31,9 @@ use crate::bevel::bevel_chain_linker::{link, link_resolution};
 use crate::bevel::BevelSweptChain;
 use crate::topology::{BevelEdgeGroupResolution, FeatureEdge};
 
-/// C# `LinkTogether`: the runs to plan for a whole pass - every group's edges, with the groups that
-/// name an edge in common linked together. `resolutions` are the groups this pass is building, in
-/// the operation's own order.
+/// The runs to plan for a whole pass - every group's edges, with the groups that name an edge in
+/// common linked together. `resolutions` are the groups this pass is building, in the operation's
+/// own order.
 pub fn link_together(resolutions: &[BevelEdgeGroupResolution]) -> Vec<BevelSweptChain> {
     let mut chains = Vec::new();
 
@@ -64,9 +63,8 @@ pub fn link_together(resolutions: &[BevelEdgeGroupResolution]) -> Vec<BevelSwept
     chains
 }
 
-/// C# `Components`: the groups gathered into the sets that have to be linked as one - two groups
-/// are in the same set when they name a common mesh edge, or are joined through a third group that
-/// does.
+/// The groups gathered into the sets that have to be linked as one - two groups are in the same set
+/// when they name a common mesh edge, or are joined through a third group that does.
 fn components(resolutions: &[BevelEdgeGroupResolution]) -> Vec<Vec<usize>> {
     // Union-find over the groups, joined through the edges they name. Each group starts as its own
     // set and meets the first group that named each of its edges.
@@ -100,7 +98,7 @@ fn components(resolutions: &[BevelEdgeGroupResolution]) -> Vec<Vec<usize>> {
     components
 }
 
-/// C# `RootOf`, with C#'s path halving.
+/// The root of `index`'s set, halving the path as it walks.
 fn root_of(of: &mut [usize], mut index: usize) -> usize {
     while of[index] != index {
         of[index] = of[of[index]];
@@ -110,7 +108,7 @@ fn root_of(of: &mut [usize], mut index: usize) -> usize {
     index
 }
 
-/// C# `Join`.
+/// Joins the sets of `left` and `right`.
 fn join(of: &mut [usize], left: usize, right: usize) {
     let left_root = root_of(of, left);
     let right_root = root_of(of, right);

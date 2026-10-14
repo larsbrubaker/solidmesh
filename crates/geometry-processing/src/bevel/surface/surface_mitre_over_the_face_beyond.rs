@@ -1,43 +1,44 @@
-//! A MITRE WHOSE TIP STANDS PAST THE FACE'S OWN RIM ([`SurfaceMitreOverTheFaceBeyond`],
-//! `Bevel/Surface/SurfaceMitreOverTheFaceBeyond.cs`): the outermost rails of the two strips run off the
-//! face the two beads share, out over the edge beyond it, and are cut on the face BEYOND that edge
-//! instead of on the mitre plane - which the face beyond pays for by gaining the lens between the two
-//! exit curves, standing outside its own old rim. The planes it reads are the part's hull
+//! A MITRE WHOSE TIP STANDS PAST THE FACE'S OWN RIM ([`SurfaceMitreOverTheFaceBeyond`]): the
+//! outermost rails of the two strips run off the face the two beads share, out over the edge beyond
+//! it, and are cut on the face BEYOND that edge instead of on the mitre plane - which the face
+//! beyond pays for by gaining the lens between the two exit curves, standing outside its own old
+//! rim. The planes it reads are the part's hull
 //! ([`SurfaceStripEndsOnTheHull::supporting_planes_of`]) and its corners are crossed by
 //! [`surface_mitre_sector::try_three_planes`]; `SurfaceBevelBuilder`'s mitre asks it.
 //!
-//! **What makes a tip leave the part.** A mitre carries each rail by its own offset from the edge over
-//! the cosine of half the chain's turn, so a corner that turns far enough throws the rails standing on
-//! the shared face a long way out along that face's own surface - 1.5495 times the radius at the
-//! 154.75 degree ridge ends of "5mm Bevel Around Center", where the face itself reaches only 7.0711.
-//! Past that the point the mitre wants is off the solid altogether, and the two strips have nothing out
-//! there to meet along.
+//! **What makes a tip leave the part.** A mitre carries each rail by its own offset from the edge
+//! over the cosine of half the chain's turn, so a corner that turns far enough throws the rails
+//! standing on the shared face a long way out along that face's own surface - 1.5495 times the
+//! radius at the 154.75 degree ridge ends of "5mm Bevel Around Center", where the face itself
+//! reaches only 7.0711. Past that the point the mitre wants is off the solid altogether, and the
+//! two strips have nothing out there to meet along.
 //!
 //! **The furthest cut back wins.** Per rail, the mitre plane is read as one cutting plane among the
-//! part's own supporting planes, and the one that cuts the rail back FURTHEST from its end is the one
-//! that really ends it - the same rule the hull reading uses, and the same reason: past that crossing
-//! the rail is outside the part whatever the others say. The rails it takes are a contiguous run from
-//! the shared face outward, because that is the side the mitre throws them out on; anything else is an
-//! end this does not build and is named.
+//! part's own supporting planes, and the one that cuts the rail back FURTHEST from its end is the
+//! one that really ends it - the same rule the hull reading uses, and the same reason: past that
+//! crossing the rail is outside the part whatever the others say. The rails it takes are a
+//! contiguous run from the shared face outward, because that is the side the mitre throws them out
+//! on; anything else is an end this does not build and is named.
 //!
-//! **Where the end turns.** On the CHORD between the last rail the face beyond cut and the first the
-//! mitre did, which is [`SurfaceStripEndsOnTheHull`]'s own rule - the band between two rails is a
-//! plane, so the turn is the one point three planes meet at. The two strips' turn points both lie on
-//! the line where the mitre plane meets the face beyond, and where the two beads set back by the same
-//! amount they are the SAME point; that they meet is checked rather than assumed, within the pool's
-//! ruler.
+//! **Where the end turns.** On the CHORD between the last rail the face beyond cut and the first
+//! the mitre did, which is [`SurfaceStripEndsOnTheHull`]'s own rule - the band between two rails is
+//! a plane, so the turn is the one point three planes meet at. The two strips' turn points both lie
+//! on the line where the mitre plane meets the face beyond, and where the two beads set back by the
+//! same amount they are the SAME point; that they meet is checked rather than assumed, within the
+//! pool's ruler.
 //!
-//! **And the lens.** The two strips' run-off rails land on the face beyond along two exit curves, which
-//! run from the rim out to the turn point and back. Between them the face beyond gains a lens that lies
-//! OUTSIDE its old rim - the bead bulges a hair past the part where the exact cylinder would - and
-//! swallows the piece of the rim between the two exits. That piece carries one vertex of the part,
-//! where the mitre plane crosses the edge the shared face and the face beyond meet along, so the lens
-//! is fanned from it and the rim's own two halves keep the triangles they had.
+//! **And the lens.** The two strips' run-off rails land on the face beyond along two exit curves,
+//! which run from the rim out to the turn point and back. Between them the face beyond gains a lens
+//! that lies OUTSIDE its old rim - the bead bulges a hair past the part where the exact cylinder
+//! would - and swallows the piece of the rim between the two exits. That piece carries one vertex
+//! of the part, where the mitre plane crosses the edge the shared face and the face beyond meet
+//! along, so the lens is fanned from it and the rim's own two halves keep the triangles they had.
 //!
-//! **What it assumes.** That the face beyond is one plane of the part's own hull, and that the vertex
-//! the lens is fanned from is really there - both refused by name rather than built around. And that
-//! nothing else stands in the sector between the two exit curves, which is true wherever the two beads
-//! swallowed the corner between them, as they must have to have thrown their tips out past it at all.
+//! **What it assumes.** That the face beyond is one plane of the part's own hull, and that the
+//! vertex the lens is fanned from is really there - both refused by name rather than built around.
+//! And that nothing else stands in the sector between the two exit curves, which is true wherever
+//! the two beads swallowed the corner between them, as they must have to have thrown their tips out
+//! past it at all.
 //!
 //! [`SurfaceStripEndsOnTheHull::supporting_planes_of`]: super::SurfaceStripEndsOnTheHull::supporting_planes_of
 //! [`SurfaceStripEndsOnTheHull`]: super::SurfaceStripEndsOnTheHull
@@ -51,12 +52,11 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C#'s `Func<IReadOnlyList<SurfaceStripEndsOnTheHull.SupportingPlane>>`: the part's supporting
-/// planes, read only when they are wanted.
+/// The part's supporting planes, read only when they are wanted.
 pub type SurfaceMitreHull<'a> = &'a dyn Fn() -> Vec<SurfaceStripEndsOnTheHullSupportingPlane>;
 
-/// C# `SurfaceMitreOverTheFaceBeyond` (a sealed class): a mitre whose tip stands past the shared
-/// face's rim, and what ends each of the rails it threw out there.
+/// A mitre whose tip stands past the shared face's rim, and what ends each of the rails it threw
+/// out there.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMitreOverTheFaceBeyond {
     leaving_at: Vec<f64>,
@@ -76,7 +76,7 @@ pub struct SurfaceMitreOverTheFaceBeyond {
 type RunOff = (i32, Vec<f64>, SurfaceStripEndsOnTheHullSupportingPlane);
 
 impl SurfaceMitreOverTheFaceBeyond {
-    /// C#'s private constructor.
+    /// Builds the reading from its parts; only [`Self::try_read`] makes one.
     fn new(
         run_off: i32,
         leaving_at: Vec<f64>,
@@ -95,22 +95,23 @@ impl SurfaceMitreOverTheFaceBeyond {
         }
     }
 
-    /// C# `LeavingAt`: where the LEAVING strip's rail meets the face beyond, along its own edge.
+    /// Where the LEAVING strip's rail meets the face beyond, along its own edge.
     pub fn leaving_at(&self, step: i32) -> f64 {
         self.leaving_at[step as usize]
     }
 
-    /// C# `ArrivingAt`: where the ARRIVING strip's does.
+    /// Where the ARRIVING strip's does.
     pub fn arriving_at(&self, step: i32) -> f64 {
         self.arriving_at[step as usize]
     }
 
-    /// C# `TryRead`: reads whether this mitre's tip stands past the shared face's rim, and if it does,
-    /// what ends each of the rails it threw out there. `Ok(None)` is C#'s `true` with no reading.
+    /// Reads whether this mitre's tip stands past the shared face's rim, and if it does, what ends
+    /// each of the rails it threw out there. `Ok(None)` is a mitre that reads no tip past the rim.
     ///
     /// `hull` is the part's supporting planes, read only when they are wanted: the cheap reading
-    /// below - has the mitre's own outermost rail left the seam the walkback laid on the shared face? - is
-    /// false at every ordinary mitre, and an ordinary mitre must not pay for a hull nothing asks of it.
+    /// below - has the mitre's own outermost rail left the seam the walkback laid on the shared
+    /// face? - is false at every ordinary mitre, and an ordinary mitre must not pay for a hull
+    /// nothing asks of it.
     #[allow(clippy::too_many_arguments)]
     pub fn try_read(
         pool: &SurfaceVertexPool,
@@ -253,9 +254,10 @@ impl SurfaceMitreOverTheFaceBeyond {
             ));
         }
 
-        // The rim the lens eats a piece of: the edge the shared face and the face beyond meet along,
-        // cut by the mitre plane. The part has a vertex there - the walkback split the rim on that
-        // plane when it took the two bands off either side of it - and the lens is fanned from it.
+        // The rim the lens eats a piece of: the edge the shared face and the face beyond meet
+        // along, cut by the mitre plane. The part has a vertex there - the walkback split the rim
+        // on that plane when it took the two bands off either side of it - and the lens is fanned
+        // from it.
         let shared = leaving.edge.direction().cross(if mine_on_the_face == 0 {
             leaving.left_inward_at_the_edge
         } else {
@@ -271,7 +273,7 @@ impl SurfaceMitreOverTheFaceBeyond {
             normal,
         );
 
-        // C#'s `out onTheRim` is the zero vector where the three planes do not meet.
+        // A zero `on_the_rim` means the three planes do not meet.
         let apex = on_the_rim
             .and_then(|on_the_rim| pool.try_find_near(on_the_rim, pool.snap_near(), None));
 
@@ -292,9 +294,8 @@ impl SurfaceMitreOverTheFaceBeyond {
         )))
     }
 
-    /// C# `TryTheRails`: both strips' rails at one step out from the shared face, cut on the face
-    /// beyond: each takes its OWN vertex there, which is the whole difference from a mitre - the two
-    /// no longer meet.
+    /// Both strips' rails at one step out from the shared face, cut on the face beyond: each takes
+    /// its OWN vertex there, which is the whole difference from a mitre - the two no longer meet.
     #[allow(clippy::too_many_arguments)]
     pub fn try_the_rails(
         &self,
@@ -337,10 +338,10 @@ impl SurfaceMitreOverTheFaceBeyond {
         )
     }
 
-    /// C# `TryGainTheLens`: the lens the face beyond gains - the two exit curves, the turn point they
-    /// meet at, and the piece of rim between their two landings, fanned from the part's own vertex on
-    /// that rim and wound to face the way the face beyond faces. Hands back the turn's vertex (C#'s
-    /// `out turnVertex`; it never refuses).
+    /// The lens the face beyond gains - the two exit curves, the turn point they meet at, and the
+    /// piece of rim between their two landings, fanned from the part's own vertex on that rim and
+    /// wound to face the way the face beyond faces. Hands back the turn's vertex (it never
+    /// refuses).
     #[allow(clippy::too_many_arguments)]
     pub fn try_gain_the_lens(
         &self,
@@ -378,7 +379,7 @@ impl SurfaceMitreOverTheFaceBeyond {
             outline.reverse();
         }
 
-        // C#'s `IndexOf`: the first place the apex stands; it is always in the outline.
+        // The first place the apex stands; it is always in the outline.
         let from = outline
             .iter()
             .position(|&vertex| vertex == self.apex)
@@ -398,7 +399,7 @@ impl SurfaceMitreOverTheFaceBeyond {
         turn_vertex
     }
 
-    /// C# `TheAreaOf`: twice the polygon's area as a vector, which is its normal times its area.
+    /// Twice the polygon's area as a vector, which is its normal times its area.
     fn the_area_of(pool: &SurfaceVertexPool, outline: &[i32]) -> Vector3 {
         let mut area = Vector3::ZERO;
         let first = pool.position_of(outline[0]);
@@ -411,9 +412,9 @@ impl SurfaceMitreOverTheFaceBeyond {
         area
     }
 
-    /// C# `TheSharedRailsStillMeet`: whether both strips' outermost rails on the SHARED face land on
-    /// the one vertex the walkback left there for them. True at every mitre that stands on the face it
-    /// is cut against, which is what makes this the cheap reading the hull is only read past.
+    /// Whether both strips' outermost rails on the SHARED face land on the one vertex the walkback
+    /// left there for them. True at every mitre that stands on the face it is cut against, which is
+    /// what makes this the cheap reading the hull is only read past.
     #[allow(clippy::too_many_arguments)]
     fn the_shared_rails_still_meet(
         pool: &SurfaceVertexPool,
@@ -450,9 +451,9 @@ impl SurfaceMitreOverTheFaceBeyond {
                 <= surface_strip_ends::meets_the_seam(pool)
     }
 
-    /// C# `TryTheRunOff`: how many rails out from the shared face are cut by a plane of the part
-    /// rather than by the mitre, and where. `None` where the two do not divide the strip into two
-    /// contiguous runs, which is an end with no one turn point in it.
+    /// How many rails out from the shared face are cut by a plane of the part rather than by the
+    /// mitre, and where. `None` where the two do not divide the strip into two contiguous runs,
+    /// which is an end with no one turn point in it.
     #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
     fn try_the_run_off(
         strip: &SurfaceStrip,
@@ -490,7 +491,7 @@ impl SurfaceMitreOverTheFaceBeyond {
             let mut found = SurfaceStripEndsOnTheHullSupportingPlane::default();
 
             for plane in planes {
-                // C#'s `!(x > 1e-9)`, which passes a NaN over as well.
+                // Negated on purpose: a NaN passes over as well.
                 if !(plane.normal.dot(walk) > 1e-9) {
                     continue;
                 }
@@ -513,8 +514,9 @@ impl SurfaceMitreOverTheFaceBeyond {
             }
 
             if !still_running_off {
-                // A rail cut by the part after a rail the mitre cut: the end does not divide into one
-                // run on the face beyond and one on the mitre plane, and there is no turn point in it.
+                // A rail cut by the part after a rail the mitre cut: the end does not divide into
+                // one run on the face beyond and one on the mitre plane, and there is no turn point
+                // in it.
                 return None;
             }
 
@@ -534,9 +536,9 @@ impl SurfaceMitreOverTheFaceBeyond {
         Some((run_off, at, beyond))
     }
 
-    /// C# `TryTheTurn`: where the end turns from the face beyond onto the mitre plane - the two of them
-    /// crossed with the plane of the chord between the last rail the one cut and the first the other
-    /// did, which has to stand ON that chord.
+    /// Where the end turns from the face beyond onto the mitre plane - the two of them crossed with
+    /// the plane of the chord between the last rail the one cut and the first the other did, which
+    /// has to stand ON that chord.
     #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
     fn try_the_turn(
         strip: &SurfaceStrip,
@@ -570,9 +572,9 @@ impl SurfaceMitreOverTheFaceBeyond {
         (sideways >= -near && sideways <= 1.0 + near).then_some(turn)
     }
 
-    /// C# `TryOneRail`: one rail cut on the face beyond. The strip's own outermost rail takes the
-    /// vertex the walkback already left where its tangent line ran off that face's rim, as every outer
-    /// rail does; the rails inside it are new points, standing on the face and on nothing else.
+    /// One rail cut on the face beyond. The strip's own outermost rail takes the vertex the
+    /// walkback already left where its tangent line ran off that face's rim, as every outer rail
+    /// does; the rails inside it are new points, standing on the face and on nothing else.
     #[allow(clippy::too_many_arguments)]
     fn try_one_rail(
         pool: &mut SurfaceVertexPool,
@@ -600,8 +602,8 @@ impl SurfaceMitreOverTheFaceBeyond {
 
         let side = if rail == 0 { 0 } else { 1 };
 
-        // C# indexes the seam unguarded; a missing or empty one (which the builder never hands in)
-        // is refused as the seam not meeting, which is what an unmatched one is.
+        // A missing or empty seam (which the builder never hands in) is refused as the seam not
+        // meeting, which is what an unmatched one is, rather than read out of range.
         let Some(run) = seams[edge_index as usize][side]
             .as_deref()
             .filter(|run| !run.is_empty())

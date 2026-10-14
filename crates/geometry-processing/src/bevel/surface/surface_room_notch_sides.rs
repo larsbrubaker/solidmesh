@@ -1,7 +1,6 @@
-//! The two SIDES of the section a chain end's notch takes out of the face beyond its corner, as
-//! the room reads them (`Bevel/Surface/SurfaceRoomNotchSides.cs`, a static class: free functions
-//! here). A notch's reach is DIRECTIONAL: the end plane is rarely square to the chain, so the
-//! section leans to one side of the corner, and the two sides are what bound it.
+//! The two SIDES of the section a chain end's notch takes out of the face beyond its corner, as the
+//! room reads them. A notch's reach is DIRECTIONAL: the end plane is rarely square to the chain, so
+//! the section leans to one side of the corner, and the two sides are what bound it.
 
 use vector_math::Vector3;
 
@@ -19,7 +18,7 @@ const THE_FURTHEST_A_SECTION_MAY_REACH: f64 = 10.0;
 /// relative to the corner and per unit of `size`: where `edge`'s left and right tangent lines
 /// cross the plane `beyond` stands in. `None` where `beyond` is not one plane (the
 /// omnidirectional reach `reach_per_size` is kept), or a side cannot be named.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_the_sides(
     edge: &SurfaceEdgePlan,
     corner: Vector3,

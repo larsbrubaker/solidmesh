@@ -1,9 +1,8 @@
-//! A feature standing inside a band's footprint, EXTENDED through the corner the band took: each
-//! of its withheld faces emitted as ONE ring - the whole coplanar REGION as the part had it, with
-//! the crease run it lost its footing on replaced by the trace it now runs out on. Ports
-//! `Bevel/Surface/SurfaceStandingFeatureFaces.cs` (C# `internal static class`; free functions
-//! here): [`try_emit`], [`no_apex_covers_it`], [`is_carried`] and the ring readings they are
-//! built from. The notch it fills is `SurfaceStripNotchedByAFeature`'s.
+//! A feature standing inside a band's footprint, EXTENDED through the corner the band took: each of
+//! its withheld faces emitted as ONE ring - the whole coplanar REGION as the part had it, with the
+//! crease run it lost its footing on replaced by the trace it now runs out on: [`try_emit`],
+//! [`no_apex_covers_it`], [`is_carried`] and the ring readings they are built from. The notch it
+//! fills is `SurfaceStripNotchedByAFeature`'s.
 //!
 //! Lars's ruling, and what the Onshape control builds. The face used to die on a crease standing on
 //! the landing face; the band removed the material under that crease, so the face is carried on in
@@ -40,7 +39,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 type Face = SurfaceStandingFeatureWithheldFace;
 
-/// C# `TryEmit`: emits every face of one notched feature, extended out to the strip.
+/// Emits every face of one notched feature, extended out to the strip.
 pub fn try_emit(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -95,8 +94,8 @@ fn does_not_extend(at: Vector3) -> BevelAdvisory {
     )
 }
 
-/// C# `TryTheRing`: one face's ring - round the face the long way from the crease's END-PLANE end
-/// to its RIDGE end, then back along the trace the extension runs out on.
+/// One face's ring - round the face the long way from the crease's END-PLANE end to its RIDGE end,
+/// then back along the trace the extension runs out on.
 fn try_the_ring(
     pool: &mut SurfaceVertexPool,
     faces: &[(i32, i32, i32)],
@@ -184,7 +183,7 @@ fn try_the_ring(
             return Err(does_not_extend(pool.position_of(on_the_ridge)));
         }
 
-        // C#'s `List.Remove`: the first occurrence only.
+        // The first occurrence only.
         if let Some(at) = kept.iter().position(|&vertex| vertex == on_the_ridge) {
             kept.remove(at);
         }
@@ -195,8 +194,7 @@ fn try_the_ring(
     Ok(kept)
 }
 
-/// C# `NoApexCoversIt`: whether NO corner of a ring sees the whole of it - which is the ring a fan
-/// cannot cover once.
+/// Whether NO corner of a ring sees the whole of it - which is the ring a fan cannot cover once.
 ///
 /// Asked by trying every corner as the apex and reading the sign of each triangle the fan would
 /// lay against the plane the ring is to face. A corner that gives every one of them a forward face
@@ -230,10 +228,9 @@ pub fn no_apex_covers_it(ring: &[i32], pool: &SurfaceVertexPool, facing: Vector3
     true
 }
 
-/// C# `TryTheOneFacedRing`: the extended face's ring where the band undercut ONE of the feature's
-/// faces - the region's own outline with the stretch of crease the band took (from the crease's
-/// CROSSING out to its end in the band's end plane) replaced by the trace, and the rest of the
-/// crease left standing.
+/// The extended face's ring where the band undercut ONE of the feature's faces - the region's own
+/// outline with the stretch of crease the band took (from the crease's CROSSING out to its end in
+/// the band's end plane) replaced by the trace, and the rest of the crease left standing.
 ///
 /// The difference from the two-faced ring is that the crease is only PART gone. The band reached
 /// the crease's end-plane end and ran back along it as far as the crossing; from there to the
@@ -296,8 +293,7 @@ fn try_the_one_faced_ring(
     Ok(ring)
 }
 
-/// C# `TheRunReaches`: whether one corner of an outline is reached from another within so many
-/// steps.
+/// Whether one corner of an outline is reached from another within so many steps.
 fn the_run_reaches(outline: &[i32], from: i32, to: i32, most_steps: usize) -> bool {
     let Some(at) = outline.iter().position(|&vertex| vertex == from) else {
         return false;
@@ -306,14 +302,14 @@ fn the_run_reaches(outline: &[i32], from: i32, to: i32, most_steps: usize) -> bo
     (1..=most_steps).any(|step| outline[(at + step) % outline.len()] == to)
 }
 
-/// Whether the face a `Between` carries is `face` itself (C#'s `ReferenceEquals`).
+/// Whether the face a `Between` carries is `face` itself, by identity.
 fn is_the_face(carried: &Option<Rc<Face>>, face: &Rc<Face>) -> bool {
     carried
         .as_ref()
         .is_some_and(|carried| Rc::ptr_eq(carried, face))
 }
 
-/// C# `TheTraceRunsUp`: which way along the rails a two-faced notch's trace runs out from its exit.
+/// Which way along the rails a two-faced notch's trace runs out from its exit.
 fn the_trace_runs_up(notch: &SurfaceStripNotchedByAFeature, face: &Rc<Face>) -> bool {
     let q = if is_the_face(&notch.at_the_low_rail.face, face) {
         &notch.at_the_low_rail
@@ -324,9 +320,8 @@ fn the_trace_runs_up(notch: &SurfaceStripNotchedByAFeature, face: &Rc<Face>) -> 
     q.below >= notch.exit.below
 }
 
-/// C# `TheTrace`: the trace one face's extension runs out on, inner end first - the notch's own
-/// inner point, then that face's rail crossings outward, then the Q where it meets the band's end
-/// ring.
+/// The trace one face's extension runs out on, inner end first - the notch's own inner point, then
+/// that face's rail crossings outward, then the Q where it meets the band's end ring.
 fn the_trace(
     pool: &mut SurfaceVertexPool,
     strip: &SurfaceStrip,
@@ -365,17 +360,16 @@ fn the_trace(
     trace
 }
 
-/// C# `IsCarried`: whether anything already emitted stands on one vertex - asked before a corner
-/// the extension no longer needs is dropped, since a corner something else still names is a T
-/// junction if it goes.
+/// Whether anything already emitted stands on one vertex - asked before a corner the extension no
+/// longer needs is dropped, since a corner something else still names is a T junction if it goes.
 pub fn is_carried(faces: &[(i32, i32, i32)], vertex: i32) -> bool {
     faces
         .iter()
         .any(|face| face.0 == vertex || face.1 == vertex || face.2 == vertex)
 }
 
-/// C# `TheCreaseRunGoes`: whether the crease RUN goes this way round the outline - from `first`
-/// onward through the run's own between points (`within`), and through nothing else, to `second`.
+/// Whether the crease RUN goes this way round the outline - from `first` onward through the run's
+/// own between points (`within`), and through nothing else, to `second`.
 ///
 /// A run rather than an edge because a face whose root line is cut into several mesh edges stands
 /// on several creases, and all of them are replaced by the one trace. With no between points this
@@ -402,10 +396,9 @@ fn the_crease_run_goes(ring: &[i32], first: i32, second: i32, within: &[i32]) ->
     false
 }
 
-/// C# `TheFaceWithoutItsCrease`: the region's own outline walked from `from` the LONG way to `to` -
-/// the way that goes round the far side of the face - so the crease run itself, and every between
-/// point of it, is left off and becomes interior to the extended face. `None` where the two are not
-/// both on the ring.
+/// The region's own outline walked from `from` the LONG way to `to` - the way that goes round the
+/// far side of the face - so the crease run itself, and every between point of it, is left off and
+/// becomes interior to the extended face. `None` where the two are not both on the ring.
 fn the_face_without_its_crease(outline: &[i32], from: i32, to: i32) -> Option<Vec<i32>> {
     let start = outline.iter().position(|&vertex| vertex == from)?;
     let finish = outline.iter().position(|&vertex| vertex == to)?;
@@ -429,8 +422,7 @@ fn the_face_without_its_crease(outline: &[i32], from: i32, to: i32) -> Option<Ve
     None
 }
 
-/// C# `Share`: the part's own vertex at one point where it has one, and a new one only where it
-/// has not.
+/// The part's own vertex at one point where it has one, and a new one only where it has not.
 fn share(pool: &mut SurfaceVertexPool, at: Vector3) -> i32 {
     let near = SurfaceVertexPool::near_enough_for(pool.vertices());
 

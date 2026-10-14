@@ -1,8 +1,7 @@
 //! Whether the ROOM and the BUILD read the same partial run-offs on one pass of plans - the guard
-//! that keeps a size allowed for an end nobody then closes from being built. Ports
-//! `Bevel/Surface/SurfaceRunOffAgreement.cs` (C# `internal static class`; a free function here):
-//! [`the_same_on_both_readings`]. Lifted out of `SurfaceBevelBuilder`; the reading is the
-//! builder's own and reads nothing else of it.
+//! that keeps a size allowed for an end nobody then closes from being built:
+//! [`the_same_on_both_readings`]. Lifted out of `SurfaceBevelBuilder`; the reading is the builder's
+//! own and reads nothing else of it.
 
 use std::collections::HashSet;
 
@@ -12,10 +11,10 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// One partial run-off by NAME: which plan, which edge of that plan, which side, which end.
 type Named = (i32, i32, i32, bool);
 
-/// C# `TheSameOnBothReadings`: whether the partial run-offs this build read (`over_a_stretch`,
-/// C#'s `[edge, side]` table) are the ones the ROOM read (`the_rooms_own`), side for side and end
-/// for end. Where the caller did not hand its own reading over (`None`) there is nothing to compare
-/// and the build goes on with its own. `Err` names the first edge whose reading differs.
+/// Whether the partial run-offs this build read (`over_a_stretch`, an `[edge][side]` table) are the
+/// ones the ROOM read (`the_rooms_own`), side for side and end for end. Where the caller did not
+/// hand its own reading over (`None`) there is nothing to compare and the build goes on with its
+/// own. `Err` names the first edge whose reading differs.
 ///
 /// The two are the same call on the same plans, so they can only differ where one of them never
 /// asks: this build SKIPS a side whose strip a blend swallowed, and one whose rail the mitres have
@@ -25,7 +24,6 @@ type Named = (i32, i32, i32, bool);
 ///
 /// Compared by NAME rather than by geometry - which plan, which edge of that plan, which side and
 /// which end - because that is what the build looks the stretch up by when it closes the end.
-/// C#'s `plans` parameter, which the body never reads, is dropped.
 pub fn the_same_on_both_readings(
     first_of_plan: &[i32],
     over_a_stretch: &[[Option<SurfaceBandRunsOffOverAStretch>; 2]],
@@ -36,14 +34,14 @@ pub fn the_same_on_both_readings(
         return Ok(());
     };
 
-    // Insertion-ordered sets (C#'s `HashSet` enumerates in insertion order while nothing is
-    // removed), so the edge a disagreement is named at is the one C# names.
+    // Insertion-ordered sets, so the edge a disagreement is named at is the first one either
+    // reading met, the same on every run.
     let mut mine: Vec<Named> = Vec::new();
     let mut theirs: Vec<Named> = Vec::new();
     let mut mine_set: HashSet<Named> = HashSet::new();
     let mut theirs_set: HashSet<Named> = HashSet::new();
 
-    // C#'s `foreach` over a `T?[,]` walks it row by row: edge by edge, side by side.
+    // Walked edge by edge, side by side.
     for stretch in over_a_stretch.iter().flatten().flatten() {
         let named = (
             stretch.plan_index,

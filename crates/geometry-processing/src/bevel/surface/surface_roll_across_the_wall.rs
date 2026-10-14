@@ -1,11 +1,11 @@
-//! A bevel ROLLED along a polygonal wall (`Bevel/Surface/SurfaceRollAcrossTheWall.cs`, a static
-//! class): the profile is tangent to the flat face and to the one facet of the wall it actually
-//! touches, so the centre moves with the curvature and the setback on the curved side is measured
-//! ALONG the surface rather than across a chord of it. What lands here is the file's types - what a
-//! chain edge's two landing surfaces turned out to be ([`SurfaceRollReading`]), which side is the
-//! wall and what the roll reads of the two ([`SurfaceRollAcrossTheWallSides`]), and where one
-//! facet's solve put the wall foot ([`SurfaceRollAcrossTheWallLanding`]) - and the roll itself,
-//! facet by facet ([`try_touch`], [`try_roll`]), and the reading that chooses to roll ([`read`]).
+//! A bevel ROLLED along a polygonal wall: the profile is tangent to the flat face and to the one
+//! facet of the wall it actually touches, so the centre moves with the curvature and the setback on
+//! the curved side is measured ALONG the surface rather than across a chord of it. What lands here
+//! is the file's types - what a chain edge's two landing surfaces turned out to be
+//! ([`SurfaceRollReading`]), which side is the wall and what the roll reads of the two
+//! ([`SurfaceRollAcrossTheWallSides`]), and where one facet's solve put the wall foot
+//! ([`SurfaceRollAcrossTheWallLanding`]) - and the roll itself, facet by facet ([`try_touch`],
+//! [`try_roll`]), and the reading that chooses to roll ([`read`]).
 //!
 //! A fillet flows across a smooth mating surface staying tangent to it, and on a tessellated wall
 //! "tangent to it" has to mean tangent to ONE facet: the facet k of the section walk where the
@@ -39,14 +39,13 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup};
 use polygon_mesh::Mesh;
 
-/// C# `TheMiddle`: where along the chain edge the section the roll is drawn in is taken.
+/// Where along the chain edge the section the roll is drawn in is taken.
 pub const THE_MIDDLE: f64 = 0.5;
 
-/// C# `SectionsAlongTheEdge` (this class's own copy): the sections the band is gathered over.
+/// The sections the band is gathered over.
 pub const SECTIONS_ALONG_THE_EDGE: [f64; 3] = [0.25, 0.5, 0.75];
 
-/// C# `SurfaceRollReading`: what a chain edge's two landing surfaces turned out to be, and so how
-/// it was planned.
+/// What a chain edge's two landing surfaces turned out to be, and so how it was planned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SurfaceRollReading {
     /// Neither side curves along its section, so the plan's own two-plane construction is exact.
@@ -60,8 +59,7 @@ pub enum SurfaceRollReading {
     Refused,
 }
 
-/// C# `SurfaceRollAcrossTheWall.Sides` (a readonly struct): which side of the edge is the wall, and
-/// everything about the two of them the roll reads.
+/// Which side of the edge is the wall, and everything about the two of them the roll reads.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceRollAcrossTheWallSides {
     /// The chain edge being rolled along.
@@ -82,8 +80,7 @@ pub struct SurfaceRollAcrossTheWallSides {
     pub flat_inward: Vector3,
 }
 
-/// C# `SurfaceRollAcrossTheWall.Landing` (private): where one facet's own solve put the profile's
-/// wall foot, against that facet's two ends.
+/// Where one facet's own solve put the profile's wall foot, against that facet's two ends.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SurfaceRollAcrossTheWallLanding {
     /// There is no circle to place at all - the two traces are parallel, or the flat foot is behind
@@ -102,7 +99,7 @@ pub enum SurfaceRollAcrossTheWallLanding {
 }
 
 impl SurfaceRollAcrossTheWallSides {
-    /// C#'s constructor.
+    /// Builds the sides' reading from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         chain_edge: ChainEdge,
@@ -126,19 +123,19 @@ impl SurfaceRollAcrossTheWallSides {
         }
     }
 
-    /// C# `Origin`: where the section the construction is drawn in meets the chain edge.
+    /// Where the section the construction is drawn in meets the chain edge.
     pub fn origin(&self) -> Vector3 {
         self.steps[0].from
     }
 
-    /// C# `Midpoint`: the middle of the chain edge, which is where a refusal is reported at.
+    /// The middle of the chain edge, which is where a refusal is reported at.
     pub fn midpoint(&self) -> Vector3 {
         (self.chain_edge.from() + self.chain_edge.to()) / 2.0
     }
 }
 
-/// C# `CurvesAlongItsSection`: the middle section's walk across `region` when that walk turns at
-/// all, or `None` when every facet lies in the one plane or the walk stays flat.
+/// The middle section's walk across `region` when that walk turns at all, or `None` when every
+/// facet lies in the one plane or the walk stays flat.
 pub fn curves_along_its_section(
     mesh: &Mesh,
     region: &FaceGroup,
@@ -168,8 +165,8 @@ pub fn curves_along_its_section(
     }
 }
 
-/// C# `TryTouchTheCrease`: the profile resting on the crease between `near` and `far` instead of
-/// on either facet - `(foot, flat_foot, centre)`, or `None` when no such circle stands on both.
+/// The profile resting on the crease between `near` and `far` instead of on either facet - `(foot,
+/// flat_foot, centre)`, or `None` when no such circle stands on both.
 #[allow(clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
 pub fn try_touch_the_crease(
     side: &SurfaceRollAcrossTheWallSides,
@@ -236,8 +233,8 @@ pub fn try_touch_the_crease(
     None
 }
 
-/// C# `TheReading`: the rolled edge a landing on `facet` reads as - the wall and flat tangent lines,
-/// the centre line, the band the setback covers and the section it was drawn in.
+/// The rolled edge a landing on `facet` reads as - the wall and flat tangent lines, the centre
+/// line, the band the setback covers and the section it was drawn in.
 #[allow(clippy::too_many_arguments)]
 pub fn the_reading(
     mesh: &Mesh,
@@ -284,14 +281,13 @@ pub fn the_reading(
     )
 }
 
-/// C# `InTheSection(Vector3 point, Vector3 origin, Vector3 along)`: `point` carried along the edge
-/// into the section plane through `origin`.
+/// `point` carried along the edge into the section plane through `origin`.
 pub fn in_the_section(point: Vector3, origin: Vector3, along: Vector3) -> Vector3 {
     point - (along * (point - origin).dot(along))
 }
 
-/// C# `TryCentre`: the centre of the circle of radius `offset` tangent to the flat plane and to
-/// the facet's plane, drawn in the section plane, or `None` when the planes are parallel.
+/// The centre of the circle of radius `offset` tangent to the flat plane and to the facet's plane,
+/// drawn in the section plane, or `None` when the planes are parallel.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_centre(
     along: Vector3,
@@ -322,8 +318,8 @@ pub fn try_centre(
     }
 }
 
-/// C# `BandAcross`: every wall facet a section walk crosses before it has run `setback` along the
-/// surface, over all of [`sections_of`]'s sections.
+/// Every wall facet a section walk crosses before it has run `setback` along the surface, over all
+/// of [`sections_of`]'s sections.
 pub fn band_across(
     mesh: &Mesh,
     side: &SurfaceRollAcrossTheWallSides,
@@ -359,8 +355,8 @@ pub fn band_across(
     band
 }
 
-/// C# `OutOfTheFacet`: the unit direction square to the edge and to `trace` that leans the same
-/// way as the facet's normal (the normal itself when the two are parallel).
+/// The unit direction square to the edge and to `trace` that leans the same way as the facet's
+/// normal (the normal itself when the two are parallel).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn out_of_the_facet(along: Vector3, trace: Vector3, facet_normal: Vector3) -> Vector3 {
     let mut outward = along.cross(trace);
@@ -378,8 +374,8 @@ pub fn out_of_the_facet(along: Vector3, trace: Vector3, facet_normal: Vector3) -
     }
 }
 
-/// C# `InTheSection(Vector3 normal, Vector3 along)`: `normal` with its component along the edge
-/// taken out, re-normalised (the normal itself when nothing is left).
+/// `normal` with its component along the edge taken out, re-normalised (the normal itself when
+/// nothing is left).
 pub fn in_the_section_of_the_normal(normal: Vector3, along: Vector3) -> Vector3 {
     let in_it = normal - (along * normal.dot(along));
 
@@ -390,8 +386,8 @@ pub fn in_the_section_of_the_normal(normal: Vector3, along: Vector3) -> Vector3 
     }
 }
 
-/// C# `SectionsOf`: where along the chain edge the band's sections are taken - nudged in from
-/// both ends, plus the run-across's own three.
+/// Where along the chain edge the band's sections are taken - nudged in from both ends, plus the
+/// run-across's own three.
 pub fn sections_of(side: &SurfaceRollAcrossTheWallSides, _on_the_trace: f64) -> Vec<f64> {
     let length = (side.chain_edge.to() - side.chain_edge.from()).length();
 
@@ -407,34 +403,34 @@ pub fn sections_of(side: &SurfaceRollAcrossTheWallSides, _on_the_trace: f64) -> 
     sections
 }
 
-/// C# `AtTheEdgeStart`: `point` carried along the edge into the section through its start.
+/// `point` carried along the edge into the section through its start.
 pub fn at_the_edge_start(point: Vector3, side: &SurfaceRollAcrossTheWallSides) -> Vector3 {
     point - (side.along * (point - side.chain_edge.from()).dot(side.along))
 }
 
-/// C# `DistanceFromTheEdge`: how far `point` stands from the chain edge's line.
+/// How far `point` stands from the chain edge's line.
 pub fn distance_from_the_edge(point: Vector3, side: &SurfaceRollAcrossTheWallSides) -> f64 {
     (at_the_edge_start(point, side) - side.chain_edge.from()).length()
 }
 
-/// C# `ToleranceOn`: the mesh's own weld distance.
+/// The mesh's own weld distance.
 pub fn tolerance_on(mesh: &Mesh) -> f64 {
     SurfaceVertexPool::weld_distance_for(&mesh.vertices)
 }
 
-/// C# `IsFinite(double)`.
+/// Whether `value` is finite.
 pub fn is_finite(value: f64) -> bool {
     !value.is_nan() && !value.is_infinite()
 }
 
-/// C# `IsFinite(Vector3)`.
+/// Whether every component of `value` is finite.
 pub fn is_finite_vector(value: Vector3) -> bool {
     is_finite(value.x) && is_finite(value.y) && is_finite(value.z)
 }
 
-/// C# `TryTouch`: where one facet's solve puts the profile - the wall foot, the flat foot and the
-/// centre (all `origin` where it lands nowhere) - and whether that wall foot is on the facet, before
-/// its near end or past its far one. A chamfer's foot is its own size along the section.
+/// Where one facet's solve puts the profile - the wall foot, the flat foot and the centre (all
+/// `origin` where it lands nowhere) - and whether that wall foot is on the facet, before its near
+/// end or past its far one. A chamfer's foot is its own size along the section.
 #[allow(clippy::too_many_arguments)]
 pub fn try_touch(
     side: &SurfaceRollAcrossTheWallSides,
@@ -500,9 +496,9 @@ pub fn try_touch(
     (landing, foot, flat_foot, centre)
 }
 
-/// C# `TryRoll`: the profile rolled along the wall side's section walk to the one facet it
-/// touches (or the crease between two it rests on), read as the rolled edge; where it runs out of
-/// wall first, the advisory naming the size that fits ([`super::surface_wall_ran_out::advisory`]).
+/// The profile rolled along the wall side's section walk to the one facet it touches (or the crease
+/// between two it rests on), read as the rolled edge; where it runs out of wall first, the advisory
+/// naming the size that fits ([`super::surface_wall_ran_out::advisory`]).
 pub fn try_roll(
     mesh: &Mesh,
     side: &SurfaceRollAcrossTheWallSides,
@@ -524,7 +520,7 @@ pub fn try_roll(
     for k in 0..side.steps.len() {
         let step = &side.steps[k];
         let trace = step.to - step.from;
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN skips, as the C#'s `!(x > 0)` does
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN skips
         let no_trace = !(trace.length_squared() > 0.0);
         if no_trace {
             continue;
@@ -613,15 +609,15 @@ pub fn try_roll(
     ))
 }
 
-/// The face grid of a region, from whoever keeps it (divergence 650): asked only for a curved
-/// side of a round profile, where C#'s `OfThePlainBall` fetches it from its memo.
+/// The face grid of a region, from whoever keeps it beside the region: asked only for a curved side
+/// of a round profile.
 pub type RegionGridSource<'a> =
     &'a mut dyn FnMut(&FaceGroup) -> Option<Rc<super::SurfaceRegionFaceGrid>>;
 
-/// C# `Read`: what the chain edge's two landing surfaces are - two planes (`NotCurved`), one side
-/// curving along its section that the profile rolls across (`Rolled`, with the rolled edge), or a
-/// refusal (both curved, or the roll ran out of wall). A curved side the plain ball already stands
-/// clear of is planned as the plane its own facet is.
+/// What the chain edge's two landing surfaces are - two planes (`NotCurved`), one side curving
+/// along its section that the profile rolls across (`Rolled`, with the rolled edge), or a refusal
+/// (both curved, or the roll ran out of wall). A curved side the plain ball already stands clear of
+/// is planned as the plane its own facet is.
 #[allow(clippy::too_many_arguments)]
 pub fn read(
     mesh: Option<&Mesh>,

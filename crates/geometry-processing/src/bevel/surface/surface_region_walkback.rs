@@ -1,7 +1,6 @@
-//! One face region and the cuts the chain asks of it ([`SurfaceRegionWalkback`]). Ports
-//! `Bevel/Surface/SurfaceRegionWalkback.cs`: its constructor and its fields, which the walkback
-//! (`SurfaceWalkbackBands`, `SurfaceBandOutline`) fills in as it reads each chain edge reaching the
-//! region.
+//! One face region and the cuts the chain asks of it ([`SurfaceRegionWalkback`]): its constructor
+//! and its fields, which the walkback (`SurfaceWalkbackBands`, `SurfaceBandOutline`) fills in as it
+//! reads each chain edge reaching the region.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -11,7 +10,7 @@ use indexmap::IndexMap;
 use super::SurfaceFacetCut;
 use crate::topology::FaceGroup;
 
-/// C# `SurfaceRegionWalkback`: one face region and the cuts the chain asks of it.
+/// One face region and the cuts the chain asks of it.
 #[derive(Debug, Clone)]
 pub struct SurfaceRegionWalkback {
     /// The region's lowest face index, which is what names it here.
@@ -28,13 +27,13 @@ pub struct SurfaceRegionWalkback {
     /// For each of [`Self::cuts`] in the same order, the facets it reaches across a CREASE and the
     /// sibling cut whose own rail lies in each of those facets' planes - the line it draws its
     /// band's far side along there instead of its own (`SurfaceBandOutline`). `None` for a cut with
-    /// nothing to borrow, which is every cut of a planar region. An `IndexMap` because C#'s
-    /// `Dictionary` iterates in insertion order and a reader may walk it.
+    /// nothing to borrow, which is every cut of a planar region. An `IndexMap` because a reader may
+    /// walk it, and insertion order keeps that walk the same on every run.
     pub rail_borrowed_on: Vec<Option<IndexMap<i32, i32>>>,
 }
 
 impl SurfaceRegionWalkback {
-    /// C#'s constructor: the region named by `key`, with its faces gathered and nothing cut yet.
+    /// The region named by `key`, with its faces gathered and nothing cut yet.
     pub fn new(key: i32, region: Arc<FaceGroup>) -> Self {
         let faces = region.faces().iter().copied().collect();
 

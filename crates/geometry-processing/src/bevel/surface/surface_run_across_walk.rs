@@ -1,8 +1,7 @@
-//! The WALK across a curved landing surface (`Bevel/Surface/SurfaceRunAcross.cs`, the static
-//! class's functions): how far it is across a curved region from a chain edge, measured ALONG the
-//! surface by sections square to the edge ([`try_across_a_curved_region`]), and one such section's
-//! facets ([`try_walk_one_section`]). The records, the region's maps and the mesh helpers are in
-//! `surface_run_across.rs`.
+//! The WALK across a curved landing surface: how far it is across a curved region from a chain
+//! edge, measured ALONG the surface by sections square to the edge
+//! ([`try_across_a_curved_region`]), and one such section's facets ([`try_walk_one_section`]). The
+//! records, the region's maps and the mesh helpers are in `surface_run_across.rs`.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -101,7 +100,7 @@ pub fn try_walk_one_section(
 
 /// Where a walk across `region` from the chain edge `from`..`to` begins: the facet carrying the
 /// edge (by position first, by measuring after), its normal and the edge's key.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_start_at_the_edge(
     mesh: &Mesh,
     region: &FaceGroup,
@@ -267,7 +266,7 @@ pub fn try_step_on(
 
 /// Where the section from `point` running `direction` leaves `face` - the nearest crossing of one
 /// of its edges ahead (not the `entry` edge) - as `(exit edge, exit point, length crossed)`.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_cross_the_facet(
     mesh: &Mesh,
     face: i32,
@@ -330,7 +329,7 @@ pub fn try_cross_the_facet(
 
 /// The section's direction in `face`: square to the edge (`along`) in the facet's plane, the way
 /// the section was `coming`; zero for a facet of no area or one square to the edge.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn section_direction(mesh: &Mesh, face: i32, along: Vector3, coming: Vector3) -> Vector3 {
     let normal = normal_of(mesh, face);
 

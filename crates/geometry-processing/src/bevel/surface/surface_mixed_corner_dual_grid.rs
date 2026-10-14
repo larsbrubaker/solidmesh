@@ -1,6 +1,6 @@
-//! The grid a LEANING one-crease mixed corner's patch is sewn over ([`SurfaceMixedCornerDualGrid`]).
-//! Ports the record of `Bevel/Surface/SurfaceMixedCornerDualGrid.cs`, its reading from the two
-//! rings, its grid accessors, and the reading from the two strips
+//! The grid a LEANING one-crease mixed corner's patch is sewn over
+//! ([`SurfaceMixedCornerDualGrid`]). Its record, its reading from the two rings, its grid
+//! accessors, and the reading from the two strips
 //! ([`SurfaceMixedCornerDualGrid::try_read_strips`]).
 
 use std::rc::Rc;
@@ -14,11 +14,10 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedCornerDualGrid` (a sealed class): the grid a LEANING one-crease mixed corner's
-/// patch is sewn over - read, not emitted. Two end rings and a canal that runs past both of them:
-/// the BEAD's own square section at station zero, the CUT's end ring along the far rail while that
-/// strip lasts, and then the run-out, which owns every rail of its own and closes on a single
-/// point.
+/// The grid a LEANING one-crease mixed corner's patch is sewn over - read, not emitted. Two end
+/// rings and a canal that runs past both of them: the BEAD's own square section at station zero,
+/// the CUT's end ring along the far rail while that strip lasts, and then the run-out, which owns
+/// every rail of its own and closes on a single point.
 ///
 /// **The same transpose a two-crease junction's grid is.** The canal turns about the CUT's centre
 /// line, so the stations run along the cut's ring and each station's row runs from the ball's
@@ -83,7 +82,7 @@ impl SurfaceMixedCornerDualGrid {
     /// How near a read station has to come to where it belongs - an angle, so fixed.
     pub const ONE_STATION: f64 = 1e-5;
 
-    /// C#'s private constructor.
+    /// Builds the grid from its parts; the readings make one.
     fn new(
         canal: Rc<SurfaceMixedCornerDualCanal>,
         cut_ring: Vec<Vector3>,
@@ -130,11 +129,10 @@ impl SurfaceMixedCornerDualGrid {
         self.rows.at(rail, self.stations[station])
     }
 
-    /// C# `TryRead(SurfaceMixedCornerDualCanal, SurfaceStrip, SurfaceStrip, ..)`: reads the grid from
-    /// the two strips themselves, cutting each one's end ring where this corner ends it - the CUT's
-    /// on the canal's own LEANING plane, because a cut running into this blend has no square stop of
-    /// its own out there, and the BEAD's on its own square section, because the canal's first ball
-    /// is a ball of the bead and the two meet G1 with nothing between them.
+    /// Reads the grid from the two strips themselves, cutting each one's end ring where this corner
+    /// ends it - the CUT's on the canal's own LEANING plane, because a cut running into this blend
+    /// has no square stop of its own out there, and the BEAD's on its own square section, because
+    /// the canal's first ball is a ball of the bead and the two meet G1 with nothing between them.
     pub fn try_read_strips(
         canal: Rc<SurfaceMixedCornerDualCanal>,
         cut: &SurfaceStrip,
@@ -193,7 +191,7 @@ impl SurfaceMixedCornerDualGrid {
     /// makes round the cut's centre line in the canal's frame IS its station. The run-out's are
     /// spread evenly over what is left, at the ring's own MEAN step, so the last station lands
     /// exactly on the turn the blend dies at.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
     pub fn try_the_stations_of(
         canal: &SurfaceMixedCornerDualCanal,
         cut_ring: &[Vector3],
@@ -240,7 +238,7 @@ impl SurfaceMixedCornerDualGrid {
 
         let left = canal.dies_at - canal.the_cut_strip_ends_at();
         let step = canal.the_cut_strip_ends_at() / (cut_ring.len() - 1) as f64;
-        // C#'s `(int)Math.Ceiling(..)`; `as` saturates where C# would be undefined.
+        // Rounded up to a whole count; `as` saturates on a value too large for an `i32`.
         let more = i32::max(1, (left / step).ceil() as i32);
 
         let mut all = read;

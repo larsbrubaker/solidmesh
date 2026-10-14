@@ -1,14 +1,14 @@
-//! The records of the walk across a CURVED landing surface (`Bevel/Surface/SurfaceRunAcross.cs`):
-//! one facet a section crossed ([`SurfaceRunAcrossSectionStep`]), where a walk begins
-//! ([`SurfaceRunAcrossSectionStart`]) and the region's facets indexed the two ways the walk asks
-//! for them ([`SurfaceRunAcrossRegionMaps`]). C#'s `SurfaceRunAcross` is a static class - how far
-//! it is across a curved region from a chain edge, measured ALONG the surface by sections square
-//! to the edge. Here are its constants, the records' constructors and readings, and the mesh
-//! helpers; the walk itself is in `surface_run_across_walk.rs`.
+//! The records of the walk across a CURVED landing surface: one facet a section crossed
+//! ([`SurfaceRunAcrossSectionStep`]), where a walk begins ([`SurfaceRunAcrossSectionStart`]) and
+//! the region's facets indexed the two ways the walk asks for them
+//! ([`SurfaceRunAcrossRegionMaps`]). The walk measures how far it is across a curved region from a
+//! chain edge, ALONG the surface by sections square to the edge. Here are its constants, the
+//! records' constructors and readings, and the mesh helpers; the walk itself is in
+//! `surface_run_across_walk.rs`.
 //!
-//! C#'s per-region memo (a static `ConditionalWeakTable` keyed by the `FaceGroup`) is no global
-//! table here (the bevel-core README's per-cache rule): the caller's cache
-//! ([`SurfaceRunAcrossRegionMapsCache`]) is the only memo, keyed by the region's face list.
+//! There is no process-wide memo of a region's maps, which would be shared mutable state across
+//! rebuild workers: the caller's cache ([`SurfaceRunAcrossRegionMapsCache`]) is the only memo,
+//! keyed by the region's face list.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -18,11 +18,11 @@ use vector_math::Vector3;
 
 use crate::topology::FaceGroup;
 
-/// C# `SurfaceRunAcross.SectionStep` (a readonly struct): one facet a section crossed, as the
-/// stretch of the section that lies in it. What the ROLLING construction needs of the same walk
-/// the run is measured by: a fillet on a polygonal wall is tangent to the facet it actually
-/// touches, so the plan has to know which facets the section passes through, where it enters and
-/// leaves each of them, and how far along the surface that is (`SurfaceRollAcrossTheWall`).
+/// One facet a section crossed, as the stretch of the section that lies in it. What the ROLLING
+/// construction needs of the same walk the run is measured by: a fillet on a polygonal wall is
+/// tangent to the facet it actually touches, so the plan has to know which facets the section
+/// passes through, where it enters and leaves each of them, and how far along the surface that is
+/// (`SurfaceRollAcrossTheWall`).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceRunAcrossSectionStep {
     /// The facet, by index into the mesh.
@@ -37,8 +37,7 @@ pub struct SurfaceRunAcrossSectionStep {
     pub run_to_entry: f64,
 }
 
-/// C# `SurfaceRunAcross.SectionStart` (a private readonly struct): where a walk across a region
-/// begins - the facet the chain edge lies in, and the region's maps.
+/// Where a walk across a region begins - the facet the chain edge lies in, and the region's maps.
 #[derive(Debug, Clone)]
 pub struct SurfaceRunAcrossSectionStart {
     /// The region's facet maps, built once per region and shared by every cut of one reading.
@@ -55,8 +54,7 @@ pub struct SurfaceRunAcrossSectionStart {
     pub near_enough: f64,
 }
 
-/// C# `SurfaceRunAcross.RegionMaps` (a sealed class): the region's facets, indexed the two ways a
-/// walk across them asks for them.
+/// The region's facets, indexed the two ways a walk across them asks for them.
 ///
 /// Built over the region's OWN facets only, so an edge with one facet on it IS the region's rim and
 /// the walk stops there with nothing else to ask. Built once per region and shared by every cut of
@@ -72,9 +70,8 @@ pub struct SurfaceRunAcrossRegionMaps {
     /// Each of the region's vertices' positions, by vertex index.
     pub positions: HashMap<i32, Vector3>,
     /// The region's facets standing at each corner POSITION, so two vertices welded in space but
-    /// not in index still find each other. C# keys this by `Vector3` value equality; here the key
-    /// is the position's three coordinates as bits, built with `-0.0` read as `0.0` so the two
-    /// agree.
+    /// not in index still find each other. The key is the position's three coordinates as bits,
+    /// built with `-0.0` read as `0.0` so the two zeros are one position.
     pub facets_at_corner: HashMap<(u64, u64, u64), Vec<i32>>,
     /// Whether the region lies flat enough that no section across it can read as curved, so the
     /// answer is known without walking one. What that saves is the whole walk: a cut landing on a
@@ -111,12 +108,11 @@ pub const SECTIONS_ALONG_THE_EDGE: [f64; 3] = [0.25, 0.5, 0.75];
 /// No edge (a walk entering through a vertex).
 pub const NO_EDGE: i64 = -1;
 
-/// The caller's memo of each region's maps, keyed by the region's face list (C#'s cache dictionary
-/// keyed by the `FaceGroup`).
+/// The caller's memo of each region's maps, keyed by the region's face list.
 pub type SurfaceRunAcrossRegionMapsCache = HashMap<Vec<i32>, Rc<SurfaceRunAcrossRegionMaps>>;
 
 impl SurfaceRunAcrossSectionStep {
-    /// C#'s constructor.
+    /// One facet a section crossed, with where along the run it was entered.
     pub fn new(face: i32, from: Vector3, to: Vector3, normal: Vector3, run_to_entry: f64) -> Self {
         SurfaceRunAcrossSectionStep {
             face,
@@ -129,7 +125,7 @@ impl SurfaceRunAcrossSectionStep {
 }
 
 impl SurfaceRunAcrossSectionStart {
-    /// C#'s constructor.
+    /// Where a walk begins.
     pub fn new(
         maps: Rc<SurfaceRunAcrossRegionMaps>,
         face: i32,
@@ -147,7 +143,7 @@ impl SurfaceRunAcrossSectionStart {
     }
 }
 
-/// A position as a hashable key, `-0.0` read as `0.0` so it agrees with C#'s `Vector3` equality.
+/// A position as a hashable key, `-0.0` read as `0.0` so the two zeros are one position.
 fn corner_key(position: Vector3) -> (u64, u64, u64) {
     (
         (position.x + 0.0).to_bits(),
@@ -161,7 +157,7 @@ impl SurfaceRunAcrossRegionMaps {
     /// whether every facet lies on one plane (so nothing across it can curve), and stands the
     /// whole reading down (`usable` false) where a third facet of the region shares one of its
     /// edges.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
     pub fn new(mesh: &Mesh, region: &FaceGroup) -> Self {
         let capacity = region.faces().len() * 3;
         let mut by_edge: HashMap<i64, (i32, i32)> = HashMap::with_capacity(capacity);

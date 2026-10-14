@@ -1,8 +1,7 @@
 //! Which of a cut's new vertices stand along a stretch of a mesh ([`SurfaceSplitsOnASegment`]) -
 //! asked of the stretch's two END VERTICES and of nothing else, so that every face meeting along
-//! one stretch is told the same thing about it. Ports the fields of
-//! `Bevel/Surface/SurfaceSplitsOnASegment.cs` and its stretch readings (`between`, refined to a
-//! standstill); its constructor lands with a later package as a further `impl` block.
+//! one stretch is told the same thing about it: its fields, its constructor and its stretch
+//! readings (`between`, refined to a standstill).
 
 use std::collections::{HashMap, HashSet};
 
@@ -10,8 +9,8 @@ use vector_math::Vector3;
 
 use super::{surface_split_sewing, SurfaceVertexPool};
 
-/// C# `SurfaceSplitsOnASegment`: the splits standing along each stretch, refined to a standstill
-/// and remembered by the stretch's two end vertices.
+/// The splits standing along each stretch, refined to a standstill and remembered by the stretch's
+/// two end vertices.
 ///
 /// The sewing reads each side of a face for the splits standing on it (`SurfaceSplitSewing`). Read
 /// against the straight chord between the side's two corners that misses points: the splits are
@@ -28,9 +27,8 @@ use super::{surface_split_sewing, SurfaceVertexPool};
 /// across the line saw the same row between a split and a CORNER and did not - six open edges at
 /// each of two places.
 ///
-/// Lives for one `SewInTheSplits` pass, which only READS the pool while it does, so the pool is
-/// borrowed rather than shared. C#'s initializers - `Settled = true`, an empty memo - are the
-/// constructor's to set, as there is no default pool to borrow.
+/// Lives for one `sew_in_the_splits` pass, which only READS the pool while it does, so the pool is
+/// borrowed rather than shared. The constructor sets the rest: nothing known yet, settled.
 #[derive(Debug, Clone)]
 pub struct SurfaceSplitsOnASegment<'a> {
     /// The pool the stretches' vertices are read from.
@@ -40,23 +38,23 @@ pub struct SurfaceSplitsOnASegment<'a> {
     /// What has been read so far, keyed by the stretch's two end vertices, low first. Only ever
     /// looked up by key, never iterated, so a `HashMap`'s order cannot reach an output.
     pub known: HashMap<(i32, i32), Vec<i32>>,
-    /// Whether every stretch read so far settled (C# initializer `true`). A reading that did not
-    /// settle has handed back a stretch that is CUT SHORT of the refinement, and what is built on
-    /// it is not to be published: see [`SurfaceSplitsOnASegment::the_stretch_that_did_not_settle`]
-    /// and the refusal in `SurfaceSplitSewing.SewInTheSplits`.
+    /// Whether every stretch read so far settled (`true` until one does not). A reading that did
+    /// not settle has handed back a stretch that is CUT SHORT of the refinement, and what is built
+    /// on it is not to be published: see
+    /// [`SurfaceSplitsOnASegment::the_stretch_that_did_not_settle`] and the refusal in
+    /// `surface_split_sewing::sew_in_the_splits`.
     pub settled: bool,
     /// The ends of the first stretch whose refinement did not settle, for the advisory to point at.
     pub the_stretch_that_did_not_settle: Option<(i32, i32)>,
 }
 
-/// The stretch readings (C# `Between`, `Refine`, `StandingOn`).
+/// The stretch readings (`between`, `refine`, `standing_on`).
 ///
-/// C# keeps each stretch's list in `known` BY REFERENCE while its refinement runs, so a piece read
-/// part way through sees what the stretch carries so far. Here the refinement works on its own
-/// copy and writes it back into `known` after every change, which hands a nested reading of the
-/// same key the same contents at the same moment.
+/// A piece read part way through a stretch's refinement must see what the stretch carries so far.
+/// The refinement works on its own copy and writes it back into `known` after every change, which
+/// hands a nested reading of the same key the same contents at the same moment.
 impl<'a> SurfaceSplitsOnASegment<'a> {
-    /// C#'s constructor (with its field initializers: nothing known yet, settled).
+    /// Nothing known yet, settled.
     pub fn new(pool: &'a SurfaceVertexPool, candidates: Vec<i32>) -> Self {
         SurfaceSplitsOnASegment {
             pool,
@@ -69,18 +67,18 @@ impl<'a> SurfaceSplitsOnASegment<'a> {
 }
 
 impl SurfaceSplitsOnASegment<'_> {
-    /// C# `Between`: the candidates standing along the stretch from `from` to `to`, in order from
-    /// one to the other, neither end included.
+    /// The candidates standing along the stretch from `from` to `to`, in order from one to the
+    /// other, neither end included.
     pub fn between(&mut self, from: i32, to: i32) -> Vec<i32> {
         let key = (from.min(to), from.max(to));
 
         let along = match self.known.get(&key) {
             Some(along) => along.clone(),
             None => {
-                // Written down BEFORE the refinement runs, and empty: a piece of a stretch cannot be a
-                // piece of itself, but two points nearer than the ruler can each read as standing on
-                // the other's stretch, and an empty answer breaks that walk rather than following it
-                // round.
+                // Written down BEFORE the refinement runs, and empty: a piece of a stretch cannot
+                // be a piece of itself, but two points nearer than the ruler can each read as
+                // standing on the other's stretch, and an empty answer breaks that walk rather than
+                // following it round.
                 self.known.insert(key, Vec::new());
 
                 self.refine(key.0, key.1);
@@ -100,8 +98,8 @@ impl SurfaceSplitsOnASegment<'_> {
         back
     }
 
-    /// C# `Refine`: the stretch read to a standstill - what stands on it directly, then what stands
-    /// on each piece between two neighbours, until no piece gains a point.
+    /// The stretch read to a standstill - what stands on it directly, then what stands on each
+    /// piece between two neighbours, until no piece gains a point.
     ///
     /// It stops BY CONSTRUCTION: every take-in puts on the stretch at least one candidate the
     /// stretch was not already carrying, and there are only so many candidates, so the loop runs at
@@ -152,8 +150,9 @@ impl SurfaceSplitsOnASegment<'_> {
                 }
 
                 for &point in &inside {
-                    // Already on the stretch, or an end of it: the piece is handing back what it was
-                    // cut out of, which is the crowd closing on itself rather than a finer reading.
+                    // Already on the stretch, or an end of it: the piece is handing back what it
+                    // was cut out of, which is the crowd closing on itself rather than a finer
+                    // reading.
                     if point == from || point == to || !carried.insert(point) {
                         self.settled = false;
                         if self.the_stretch_that_did_not_settle.is_none() {
@@ -164,8 +163,8 @@ impl SurfaceSplitsOnASegment<'_> {
                     }
                 }
 
-                // C# `along.IndexOf(walk[step]) + 1`: IndexOf is -1 for `from`, which is not in
-                // `along`, so the piece goes in at the front.
+                // The piece goes in after `walk[step]`; `from` is not in `along`, so for it the
+                // piece goes in at the front.
                 let at = along
                     .iter()
                     .position(|&vertex| vertex == walk[step])
@@ -178,10 +177,10 @@ impl SurfaceSplitsOnASegment<'_> {
         }
     }
 
-    /// C# `StandingOn`: the candidates standing within the ruler of the straight stretch between two
-    /// points, strictly between its ends, appended in order along it. C#'s `List.Sort` is unstable;
-    /// this sort is stable, so candidates at one place keep the candidates' order (two welded
-    /// vertices are never two candidates at one place, so the tie does not arise).
+    /// The candidates standing within the ruler of the straight stretch between two points,
+    /// strictly between its ends, appended in order along it. The sort is stable, so candidates at
+    /// one place keep the candidates' order (two welded vertices are never two candidates at one
+    /// place, so the tie does not arise).
     fn standing_on(
         &self,
         from: Vector3,

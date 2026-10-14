@@ -1,7 +1,6 @@
-//! The fixed point the room's largest size is stepped down to (`Bevel/Surface/SurfaceRoomFixedPoint.cs`,
-//! a static class: free functions here): the named size settled ([`settled`]) by planning every
-//! chain again at each candidate and measuring it, then checked ([`accepted`]) and stepped down a
-//! ruler while the fit still refuses it. Only ever reached on a refusal.
+//! The fixed point the room's largest size is stepped down to: the named size settled ([`settled`])
+//! by planning every chain again at each candidate and measuring it, then checked ([`accepted`])
+//! and stepped down a ruler while the fit still refuses it. Only ever reached on a refusal.
 
 use std::rc::Rc;
 
@@ -16,10 +15,10 @@ pub const MOST_STEPS: i32 = 5;
 /// How near a size has to fit to count as fitting.
 pub const FIT_TOLERANCE: f64 = 1e-9;
 
-/// C# `Settled`: the size `named` settled - a size that, planned at and measured again, fits.
-/// `plans` are the pass as drawn at the requested size; `named` is what the first measurement
-/// named, where the walk starts and the most it can return. A cancel of a measurement passes up.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+/// The size `named` settled - a size that, planned at and measured again, fits. `plans` are the
+/// pass as drawn at the requested size; `named` is what the first measurement named, where the walk
+/// starts and the most it can return. A cancel of a measurement passes up.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn settled(
     plans: &[Rc<SurfaceBevelPlan>],
     named: f64,
@@ -65,9 +64,9 @@ pub fn settled(
     )
 }
 
-/// C# `Accepted`: the stepped-down size CHECKED - planned at and measured - and stepped down again
-/// by the ruler while the fit still refuses it, at most [`MOST_STEPS`] times more.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < y)`, which reads a NaN as fitting.
+/// The stepped-down size CHECKED - planned at and measured - and stepped down again by the ruler
+/// while the fit still refuses it, at most [`MOST_STEPS`] times more.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < y)` on purpose: it reads a NaN as fitting.
 pub fn accepted(
     plans: &[Rc<SurfaceBevelPlan>],
     mut size: f64,
@@ -95,9 +94,9 @@ pub fn accepted(
     Ok(size)
 }
 
-/// C# `LargestAt`: the largest size the pass, as planned at `size`, leaves room for - read against
-/// infinity, so it may come back LARGER than `size`, which every caller here reads as "fits"
-/// exactly as a truthful answer would.
+/// The largest size the pass, as planned at `size`, leaves room for - read against infinity, so it
+/// may come back LARGER than `size`, which every caller here reads as "fits" exactly as a truthful
+/// answer would.
 pub fn largest_at(
     planned: &[Rc<SurfaceBevelPlan>],
     size: f64,
@@ -119,8 +118,8 @@ pub fn stepped_down(size: f64, ruler: f64) -> f64 {
     }
 }
 
-/// C# `TryPlanAll`: the whole pass planned again at `size`, or `None` where any chain of it cannot
-/// be, or the pass is empty.
+/// The whole pass planned again at `size`, or `None` where any chain of it cannot be, or the pass
+/// is empty.
 pub fn try_plan_all(
     plans: &[Rc<SurfaceBevelPlan>],
     size: f64,

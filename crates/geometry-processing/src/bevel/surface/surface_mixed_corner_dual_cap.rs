@@ -1,20 +1,19 @@
 //! What the CAP gives up under a leaning one-crease corner's run-out - the face the row's far rail
-//! lies on once the cut's own strip has ended. Ports `Bevel/Surface/SurfaceMixedCornerDualCap.cs`
-//! (C# `internal static class`; free functions here): [`try_give_up_the_cap`] and the cap's own
-//! corner and faces it is read from.
+//! lies on once the cut's own strip has ended: [`try_give_up_the_cap`] and the cap's own corner and
+//! faces it is read from.
 //!
 //! **Only the run-out takes any of it.** While the cut's strip is still there the row ends on that
 //! strip's tube and the cap is nobody's business: whatever of it the cut wanted, the cut's own band
 //! already took. Past the changeover the row ends ON the cap's plane
-//! (`SurfaceMixedCornerDualCanal.RowRunsTo`), so the curve the far rail traces from there round to
-//! the point the blend dies on is where the cap now ends, and what stands between that curve and
+//! (`SurfaceMixedCornerDualCanal::row_runs_to`), so the curve the far rail traces from there round
+//! to the point the blend dies on is where the cap now ends, and what stands between that curve and
 //! the cap's own corner is what it gives up.
 //!
 //! **The section hangs off ONE corner, and it is not the part's.** The cut's band on this face was
-//! walked back to the canal's own leaning plane (`SurfaceMixedCorner.BandEndFor`), so what the cap
-//! has left at this end is bounded by that plane's trace and by the crease - and the corner between
-//! those two, where the trace crosses the crease, is what the run-out's section hangs off. The
-//! part's own corner is not it: the leaning plane does not pass through that vertex, and on the
+//! walked back to the canal's own leaning plane (`SurfaceMixedCorner::band_end_for`), so what the
+//! cap has left at this end is bounded by that plane's trace and by the crease - and the corner
+//! between those two, where the trace crosses the crease, is what the run-out's section hangs off.
+//! The part's own corner is not it: the leaning plane does not pass through that vertex, and on the
 //! nose fixture it stands 0.1738 mm clear of it.
 //!
 //! **And the section is NOT convex**, which is why this is a bounded subtraction and not a bite.
@@ -35,8 +34,8 @@ use super::SurfaceVertexPool;
 use super::{SurfaceMixedCorner, SurfaceMixedCornerDualCanal, SurfaceMixedCornerDualGrid};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryGiveUpTheCap`: takes the run-out's section out of the cap, or says why it cannot be
-/// taken. `read` is the corner's grid, read, and `grid` its vertices, by station and then rail.
+/// Takes the run-out's section out of the cap, or says why it cannot be taken. `read` is the
+/// corner's grid, read, and `grid` its vertices, by station and then rail.
 pub fn try_give_up_the_cap(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -50,10 +49,9 @@ pub fn try_give_up_the_cap(
     let mut profile: Vec<i32> = Vec::new();
 
     // From the changeover - the cut ring's own last rail, which stands on the cut's tube and on the
-    // cap's plane at once - round to the dying point.
-    // The cut ring always carries its changeover station; `saturating_sub` only keeps an empty cut
-    // ring (where C# would index station -1 and throw) from wrapping; the grid refuses a cut ring
-    // of fewer than two points before one reaches here (divergence 4958).
+    // cap's plane at once - round to the dying point. The cut ring always carries its changeover
+    // station; `saturating_sub` only keeps an empty cut ring from wrapping to a station before the
+    // first, a guard: the grid refuses a cut ring of fewer than two points before one reaches here.
     let from = read.stations_the_cut_carries().saturating_sub(1);
     for row in &grid[from..read.station_count()] {
         if profile.last() != Some(&row[last]) {
@@ -88,8 +86,8 @@ pub fn try_give_up_the_cap(
     .map(|_| ())
 }
 
-/// C# `TryTheCapsOwnCorner`: the corner of the cap the section hangs off - where the plane the
-/// cut's band was stopped on crosses the crease the cap and the wall meet in.
+/// The corner of the cap the section hangs off - where the plane the cut's band was stopped on
+/// crosses the crease the cap and the wall meet in.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn try_the_caps_own_corner(canal: &SurfaceMixedCornerDualCanal) -> Option<Vector3> {
     let stop = canal.dual.cut_ring_plane();
@@ -106,8 +104,7 @@ fn try_the_caps_own_corner(canal: &SurfaceMixedCornerDualCanal) -> Option<Vector
     )
 }
 
-/// C# `InTheCap`: which of the faces stand IN the cap's plane - the ones the subtraction is
-/// entitled to rewrite.
+/// Which of the faces stand IN the cap's plane - the ones the subtraction is entitled to rewrite.
 ///
 /// Read by the plane and not by a flood from the corner, because the section hangs off a corner
 /// that is not a vertex of the mesh at all: it is a point on the crease the cut's own band left
@@ -132,7 +129,7 @@ fn in_the_cap(
     in_the_cap
 }
 
-/// C# `StandsInTheCap`.
+/// Whether `vertex` stands in the cap face's plane.
 fn stands_in_the_cap(pool: &SurfaceVertexPool, corner: &SurfaceMixedCorner, vertex: i32) -> bool {
     (pool.position_of(vertex) - corner.corner)
         .dot(corner.out_of_the_cap_face)

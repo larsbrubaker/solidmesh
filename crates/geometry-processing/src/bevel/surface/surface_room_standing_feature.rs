@@ -1,7 +1,6 @@
 //! The one reading of "a feature is STANDING on this region here, rather than the region ending
 //! here": a rim edge whose far face leans back OUT over the region, so that the material behind
-//! that rim is hanging above the landing plane instead of walling it off. Ports
-//! `Bevel/Surface/SurfaceRoomStandingFeature.cs`.
+//! that rim is hanging above the landing plane instead of walling it off.
 //!
 //! Shared by the two halves of the same fact. The room reading (`SurfaceRoomMeasure`) must not take
 //! such a rim for a wall - the band runs UNDER the overhang and on across the region, and what it
@@ -14,7 +13,7 @@
 //! RISING out of the region: a wall square to the landing plane (a rib's foot, a boss's foot, the
 //! crease where two slopes meet) has nothing hanging over the region at all, so no band can pass
 //! beneath it and no cross-section is uncovered. Those stay walls here and stay refused by
-//! `SurfaceWalkbackBands.TryCheckNothingIsStandingInTheBand` further on.
+//! `surface_walkback_bands::try_check_nothing_is_standing_in_the_band` further on.
 //!
 //! **The two exclusions are part of the predicate, not of either caller.** What the island will not
 //! close must go on bounding the room, or the room grants a setback for a root nothing closes and
@@ -30,14 +29,14 @@ use vector_math::{math_helper, Vector3};
 
 use crate::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
 
-/// How much of the region's own normal the far face has to carry before it is leaning out over
-/// the region rather than standing square on it: the sine of the same angle at which the pass
-/// stops telling two faces apart at all ([`FeatureEdge::default_flat_angle_degrees`], about half a
+/// How much of the region's own normal the far face has to carry before it is leaning out over the
+/// region rather than standing square on it: the sine of the same angle at which the pass stops
+/// telling two faces apart at all ([`FeatureEdge::default_flat_angle_degrees`], about half a
 /// degree). A wall built square is square, and a wall drawn a fraction off square is a wall too -
 /// reading one of those as a feature to pass under would have the band shave out from beneath it.
 /// Nothing near the threshold is a feature in practice: the shapes this is for lean out by tenths
-/// (0.39 for the nose in the chevron notch, 0.58 for a fin), and a wall stands at 0. (C# `static
-/// readonly`; a function because `sin` is not `const`.)
+/// (0.39 for the nose in the chevron notch, 0.58 for a fin), and a wall stands at 0. (A function
+/// because `sin` is not `const`.)
 fn rises_out_of_the_plane() -> f64 {
     math_helper::degrees_to_radians(FeatureEdge::default_flat_angle_degrees()).sin()
 }

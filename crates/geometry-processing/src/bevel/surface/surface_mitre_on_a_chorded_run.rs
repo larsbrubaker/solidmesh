@@ -1,5 +1,4 @@
-//! A mitre landing on a CHORDED run of a chain - several collinear pieces of one crease
-//! (`Bevel/Surface/SurfaceMitreOnAChordedRun.cs`, a static class: free functions here). The
+//! A mitre landing on a CHORDED run of a chain - several collinear pieces of one crease. The
 //! neighbour walks, the collinearity test, the starvation test, and the point itself
 //! ([`try_the_point`], [`where_the_neighbours_plane_crosses`]).
 //!
@@ -22,7 +21,7 @@ pub const ALONG_ENOUGH_TO_CROSS: f64 = 1e-6;
 /// Whether a piece of the run between `low` and `high` (along a run `whole` long, with the joint
 /// at `at_the_joint` between `before_the_joint` and `after_the_joint`) stands outside the run and
 /// so starves one of the two pieces either side of the joint of any length at all.
-#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < y)`.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)] // `!(x < y)`: a NaN passes.
 pub fn starves_a_piece_by_standing_outside_the_run(
     low: f64,
     high: f64,
@@ -36,7 +35,7 @@ pub fn starves_a_piece_by_standing_outside_the_run(
         return false;
     }
 
-    // C#'s Math.Min / Math.Max, which pass a NaN through.
+    // These min / max pass a NaN through rather than picking the other side.
     cs_math::min_f64(at_the_joint, high) <= cs_math::max_f64(before_the_joint, low)
         || cs_math::min_f64(after_the_joint, high) <= cs_math::max_f64(at_the_joint, low)
 }
@@ -74,11 +73,11 @@ pub fn try_the_previous(edges: &[SurfaceEdgePlan], is_closed: bool, edge: usize)
     (is_closed && edges.len() > 1).then(|| edges.len() - 1)
 }
 
-/// C# `TryThePoint`: the point the mitre plane between `leaving` (the edge arriving at the joint)
-/// and the edge after it passes through, where the two are collinear AND the corner between them
-/// stands off the pair's own band - `None` everywhere else, which leaves every other corner reading
-/// exactly as it did. `near_enough` is the PART's ruler for two tangent lines being one line.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+/// The point the mitre plane between `leaving` (the edge arriving at the joint) and the edge after
+/// it passes through, where the two are collinear AND the corner between them stands off the pair's
+/// own band - `None` everywhere else, which leaves every other corner reading exactly as it did.
+/// `near_enough` is the PART's ruler for two tangent lines being one line.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_the_point(
     edges: &[SurfaceEdgePlan],
     is_closed: bool,
@@ -118,10 +117,10 @@ pub fn try_the_point(
     let from = edges[first].from();
     let direction = edges[first].edge.direction();
 
-    // The stretch the run's band really covers, read on EACH of its two tangent lines - kept side by
-    // side, because whether a piece is starved is a question about one side, and taken together as
-    // well, since the one point the plane is put through has to stand inside both stretches. The two
-    // sides do not agree on their own: a neighbour's mitre plane leans by half the turn.
+    // The stretch the run's band really covers, read on EACH of its two tangent lines - kept side
+    // by side, because whether a piece is starved is a question about one side, and taken together
+    // as well, since the one point the plane is put through has to stand inside both stretches. The
+    // two sides do not agree on their own: a neighbour's mitre plane leans by half the turn.
     let mut lowest = f64::NEG_INFINITY;
     let mut highest = f64::INFINITY;
     let (mut left_low, mut left_high, mut right_low, mut right_high) = (0.0, 0.0, 0.0, 0.0);
@@ -188,11 +187,11 @@ pub fn try_the_point(
     Some(from + (direction * (lowest + ((highest - lowest) * (at_the_joint / whole)))))
 }
 
-/// C# `WhereTheNeighboursPlaneCrosses`: where the plane bounding one end of the run (at the start
-/// of `edge` when `at_the_start`, else at its end) crosses one of its tangent lines, as a parameter
-/// along `direction` from `from` - the run's own corner where there is no neighbour to be bounded
-/// by, or where that neighbour's plane runs along the line.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > tolerance)`.
+/// Where the plane bounding one end of the run (at the start of `edge` when `at_the_start`, else at
+/// its end) crosses one of its tangent lines, as a parameter along `direction` from `from` - the
+/// run's own corner where there is no neighbour to be bounded by, or where that neighbour's plane
+/// runs along the line.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > tolerance)` on purpose: a NaN passes.
 pub fn where_the_neighbours_plane_crosses(
     edges: &[SurfaceEdgePlan],
     is_closed: bool,

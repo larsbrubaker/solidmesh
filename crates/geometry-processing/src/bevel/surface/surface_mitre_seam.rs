@@ -1,7 +1,6 @@
-//! Where two consecutive edges' bands meet on the face they share - the mitre SEAM's point
-//! (`Bevel/Surface/SurfaceMitreSeam.cs`, a static class: free functions here): the crossing of
-//! the two tangent lines on that face, read on every face the two share rather than on the left
-//! alone, so the walk's own direction never tells two readings apart.
+//! Where two consecutive edges' bands meet on the face they share - the mitre SEAM's point: the
+//! crossing of the two tangent lines on that face, read on every face the two share rather than on
+//! the left alone, so the walk's own direction never tells two readings apart.
 
 use std::sync::Arc;
 
@@ -50,8 +49,8 @@ pub fn they_are_parallel(mine: SurfaceLine, theirs: SurfaceLine) -> bool {
     (mine.direction.dot(theirs.direction).abs() - 1.0).abs() < PARALLEL_WITHIN
 }
 
-/// `mine`'s tangent lines on the faces it shares with `theirs`, each with whether it is
-/// `mine`'s left one - left first, as C#'s iterator yields them.
+/// `mine`'s tangent lines on the faces it shares with `theirs`, each with whether it is `mine`'s
+/// left one - left first.
 pub fn the_tangent_lines_on_the_shared_faces(
     mine: &SurfaceEdgePlan,
     theirs: &SurfaceEdgePlan,
@@ -70,8 +69,7 @@ pub fn the_tangent_lines_on_the_shared_faces(
 }
 
 /// `theirs`' tangent line on the face `mine`'s left (or right) one lies on, or `None` where
-/// `theirs` does not stand on that face. Faces are the same face by identity (C#'s
-/// `ReferenceEquals`, here `Arc::ptr_eq`).
+/// `theirs` does not stand on that face. Faces are the same face by identity (`Arc::ptr_eq`).
 pub fn the_theirs_on_the_same_face(
     mine: &SurfaceEdgePlan,
     theirs: &SurfaceEdgePlan,

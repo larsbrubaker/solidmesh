@@ -1,8 +1,7 @@
 //! What is left of a run-out's column at each of its turns ([`SurfaceRunOutColumnWindow`]): the
 //! WINDOW between the cut that eats the rows from the cap inward and the cut that eats them from
-//! the wall outward. Ports the fields of `Bevel/Surface/SurfaceRunOutColumnWindow.cs`, its
-//! constructor and readings, the carry of a band's staircase onto the column ends, and the window's
-//! own reading ([`SurfaceRunOutColumnWindow::try_read`]).
+//! the wall outward: its fields, its constructor and readings, the carry of a band's staircase onto
+//! the column ends, and the window's own reading ([`SurfaceRunOutColumnWindow::try_read`]).
 
 use vector_math::Vector3;
 
@@ -16,7 +15,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceRunOutColumnWindow`: the window each run-out column is drawn in.
+/// The window each run-out column is drawn in.
 ///
 /// A column of the run-out is the rows of the patch's profile still standing in the material at one
 /// turn about the bead's axis. Two things can take rows off it, and they take them from opposite
@@ -36,21 +35,20 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// wall's own, and the switch turn is where the single cut's FOOT leaves the material.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SurfaceRunOutColumnWindow {
-    /// Per row, the turn past the bead that row leaves the material at under the upper cut
-    /// (C# `WhereTheRowCrosses`).
+    /// Per row, the turn past the bead that row leaves the material at under the upper cut.
     pub crosses_at: Vec<f64>,
     /// Per row, whether the WALL had already taken that row by the turn it crosses at: such a row
     /// leaves material the part does not carry there, so its crossing is not a place the plane
     /// starts cutting the surface.
     pub the_wall_has_it: Vec<bool>,
-    /// Per station, how far out of the bead's axis the lower cut stands there (C# `StandsOffAt`).
+    /// Per station, how far out of the bead's axis the lower cut stands there.
     pub stands_off_at: Vec<f64>,
-    /// Per station, where the column ends on the lower cut (C# `ScallopAt`).
+    /// Per station, where the column ends on the lower cut.
     pub scallops: Vec<Vector3>,
-    /// Per station, whether it is a BAND that ends the column there (C# `TheBandEndsThem`).
+    /// Per station, whether it is a BAND that ends the column there.
     pub the_band_ends_them: Vec<bool>,
     /// Per station, how far out of the bead's axis the band's FAR side stands inside the LENS - the
-    /// stretch of turn between the cap exit and the band's own hairpin (C# `TryTheLensTop`).
+    /// stretch of turn between the cap exit and the band's own hairpin.
     pub lens_radii: Vec<f64>,
     /// The turns past the bead the columns are drawn at, in order.
     pub stations: Vec<f64>,
@@ -68,7 +66,7 @@ pub struct SurfaceRunOutColumnWindow {
     pub the_cap_exit: i32,
     /// The turn past the bead the cap exit stands at, or infinity where there is none. Past it the
     /// touch row runs over cap the BAND has already taken, so the sector the cap gives up ends
-    /// there (`SurfaceMixedCornerBites.TryBiteTheCapFace`) however far the stations run on.
+    /// there (`surface_mixed_corner_bites::try_bite_the_cap_face`) however far the stations run on.
     pub the_cap_exits_turn: f64,
 }
 
@@ -154,7 +152,7 @@ impl SurfaceRunOutColumnWindow {
 }
 
 impl SurfaceRunOutColumnWindow {
-    /// C#'s private constructor, in C#'s argument order.
+    /// Builds the window from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         stations: Vec<f64>,
@@ -184,7 +182,7 @@ impl SurfaceRunOutColumnWindow {
         }
     }
 
-    /// A turn that needs no settling: `turn` itself (C#'s `Settled(turn, out at)` returning true).
+    /// A turn that needs no settling: `turn` itself.
     pub fn settled(turn: f64) -> Option<f64> {
         Some(turn)
     }
@@ -223,10 +221,11 @@ impl SurfaceRunOutColumnWindow {
 }
 
 impl SurfaceRunOutColumnWindow {
-    /// C# `TryRead`: reads both cuts and the turns to draw them at. The three alternatives are as
-    /// `SurfaceMixedCornerRunOut.TryColumns` has them: `ends_on` the plane across a wall that runs
-    /// out, `meets_the_band` a band on the cap, `meets_a_wall_band` a band on the wall - and, where
-    /// BOTH of the last two stand at one mitred corner, `at_the_mitre`, the turn they meet at.
+    /// Reads both cuts and the turns to draw them at. The three alternatives are as
+    /// `surface_mixed_corner_run_out::try_columns` has them: `ends_on` the plane across a wall that
+    /// runs out, `meets_the_band` a band on the cap, `meets_a_wall_band` a band on the wall - and,
+    /// where BOTH of the last two stand at one mitred corner, `at_the_mitre`, the turn they meet
+    /// at.
     #[allow(clippy::too_many_arguments)]
     pub fn try_read(
         pool: &mut SurfaceVertexPool,
@@ -244,9 +243,9 @@ impl SurfaceRunOutColumnWindow {
             |code: BevelAdvisoryCode| BevelAdvisory::new(code, vec![corner.corner.into()]);
         let mut the_die_point = -1;
 
-        // The SNAP rather than the plain ruler: whether two stations are one place is the reading the
-        // cut itself makes when it decides whether a crossing is a new vertex. And with the patch's
-        // own touch row named: it is the point this turn CARRIES round the cap.
+        // The SNAP rather than the plain ruler: whether two stations are one place is the reading
+        // the cut itself makes when it decides whether a crossing is a new vertex. And with the
+        // patch's own touch row named: it is the point this turn CARRIES round the cap.
         let touches_the_cap_at = last_column.first().map(|&v| pool.position_of(v));
 
         let mut stations = surface_mixed_corner_run_out::try_turns_past_the_bead(
@@ -304,8 +303,9 @@ impl SurfaceRunOutColumnWindow {
                     the_cap_exit = pool.add(exit);
                     the_cap_exits_turn = exits_at;
 
-                    // And where the run-out would have died had nothing crossed it - unless the FACE
-                    // ends before that reach does, and then it dies on the face's own far edge.
+                    // And where the run-out would have died had nothing crossed it - unless the
+                    // FACE ends before that reach does, and then it dies on the face's own far
+                    // edge.
                     if let Some(mut dies_on_the_edge) =
                         surface_mixed_corner_run_out::try_scallop_point(
                             corner,
@@ -373,8 +373,8 @@ impl SurfaceRunOutColumnWindow {
                         surface_mixed_corner_wall_ends::where_it_crosses(corner, seat, ends);
                 }
 
-                // Whether the WALL had already taken that row by the turn it crosses at, read at the
-                // row's OWN crossing turn.
+                // Whether the WALL had already taken that row by the turn it crosses at, read at
+                // the row's OWN crossing turn.
                 the_wall_has_it[row] = crosses_at[row] == f64::INFINITY
                     || match wall.try_out_of_the_axis(corner.turn_radians() + crosses_at[row]) {
                         None => true,

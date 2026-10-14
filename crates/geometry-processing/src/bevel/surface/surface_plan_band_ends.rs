@@ -1,7 +1,6 @@
 //! Where a chain edge's band stops at a corner of the chain - the mitre plane between two edges -
-//! as the plan writes it (`Bevel/Surface/SurfacePlanBandEnds.cs`, a static class: free functions
-//! here): the direction-only forms, the overloads that read two edge plans (through the mitre
-//! seam), and the side test.
+//! as the plan writes it: the direction-only forms, the forms that read two edge plans (through the
+//! mitre seam), and the side test.
 
 use vector_math::Vector3;
 
@@ -33,8 +32,7 @@ pub fn the_mitre_bounds_this_side(
 
 /// The band end at the corner an edge STARTS at, where the chain arrived along `arriving` and goes
 /// on along `here`: the mitre plane between the two, with its normal pointing the way this edge
-/// lies, which is into its own band. (C#'s `BandEndWhereTheChainArrives(Vector3, Vector3,
-/// Vector3)` overload.)
+/// lies, which is into its own band.
 pub fn band_end_where_the_chain_arrives_along(
     corner: Vector3,
     arriving: Vector3,
@@ -45,7 +43,7 @@ pub fn band_end_where_the_chain_arrives_along(
 
 /// The band end at the corner an edge ENDS at, where the chain runs along `here` and leaves along
 /// `leaving`: the same mitre plane, with its normal turned to point BACK along this edge, which is
-/// again into its own band. (C#'s `BandEndWhereTheChainLeaves(Vector3, Vector3, Vector3)`.)
+/// again into its own band.
 ///
 /// The square-to fallback is `here` and not its negative, for all that this is the end that
 /// negates: what the fallback names is the plane's own facing, taken before the turn, so negating
@@ -78,12 +76,12 @@ pub fn crosses_within(one: &SurfaceEdgePlan, other: &SurfaceEdgePlan) -> f64 {
     vector_math::cs_math::max_f64(one.setback(), other.setback()) * 1e-6
 }
 
-/// C# `BandEndWhereTheChainArrives(SurfaceEdgePlan, SurfaceEdgePlan, Vector3?)`: the same, with the
-/// two PLANS rather than their directions - which lets the band stop on the plane through the
-/// crossing of the two tangent lines (`SurfaceMitreSeam`) rather than on the corner, so that the
-/// band the walkback takes off and the ring the strips are cut on are one surface wherever the two
-/// beads set back by different amounts. `through_instead` is where the plane stands when the two
-/// are two pieces of one chord (`SurfaceMitreOnAChordedRun`), `None` at every ordinary corner.
+/// The same, with the two PLANS rather than their directions - which lets the band stop on the
+/// plane through the crossing of the two tangent lines (`SurfaceMitreSeam`) rather than on the
+/// corner, so that the band the walkback takes off and the ring the strips are cut on are one
+/// surface wherever the two beads set back by different amounts. `through_instead` is where the
+/// plane stands when the two are two pieces of one chord (`SurfaceMitreOnAChordedRun`), `None` at
+/// every ordinary corner.
 pub fn band_end_where_the_chain_arrives(
     arrived_on: &SurfaceEdgePlan,
     here: &SurfaceEdgePlan,
@@ -109,8 +107,7 @@ pub fn band_end_where_the_chain_arrives(
     )
 }
 
-/// C# `BandEndWhereTheChainLeaves(SurfaceEdgePlan, SurfaceEdgePlan, Vector3?)`: the same as
-/// [`band_end_where_the_chain_arrives`], at the far end.
+/// The same as [`band_end_where_the_chain_arrives`], at the far end.
 pub fn band_end_where_the_chain_leaves(
     here: &SurfaceEdgePlan,
     leaving_for: &SurfaceEdgePlan,

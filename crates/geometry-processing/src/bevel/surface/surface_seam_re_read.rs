@@ -1,15 +1,15 @@
 //! The seams read again, from the mesh as it stands once the corners and the ends have cut it
-//! about. Ports `Bevel/Surface/SurfaceSeamReRead.cs` (C# `internal static class`; free functions
-//! here): [`take_in_the_later_splits`], [`later_splits_carried_by_a_face`] and
+//! about: [`take_in_the_later_splits`], [`later_splits_carried_by_a_face`] and
 //! [`try_find_one_standing_off_the_seam`].
 //!
 //! A strip's two seams are picked from the walkback's tangent runs, before any corner bite or end
-//! cut has run (`SurfaceBevelBuilder.TryPickTheRunOverTheEdge`). Those stages CUT faces, and a cut
-//! lands new vertices wherever its plane crosses a side - including a side that is another chain's
-//! tangent line, when the two chains' bands share a face. The sewing knits those vertices into
-//! every face that carries one (`surface_split_sewing::sew_in_the_splits`), so the face beside the
-//! line is split at them while the strip across the line, stitched from the walkback-time run,
-//! spans them in one go: a row of T junctions along the seam, and a surface that does not close.
+//! cut has run (`surface_seam_over_the_edge::try_pick_the_run_over_the_edge`). Those stages CUT
+//! faces, and a cut lands new vertices wherever its plane crosses a side - including a side that is
+//! another chain's tangent line, when the two chains' bands share a face. The sewing knits those
+//! vertices into every face that carries one (`surface_split_sewing::sew_in_the_splits`), so the
+//! face beside the line is split at them while the strip across the line, stitched from the
+//! walkback-time run, spans them in one go: a row of T junctions along the seam, and a surface that
+//! does not close.
 //!
 //! So before the stitch every seam is read again: every vertex now standing on that side's run,
 //! strictly between the run's own two ends, is taken into it in its place along the strip. The
@@ -23,8 +23,8 @@ use super::surface_mitre_joint_step::SideSeams;
 use super::surface_split_sewing::stands_on_the_side;
 use super::{SurfaceStrip, SurfaceVertexPool};
 
-/// C# `TakeInTheLaterSplits(pool, candidates, strips, seams)`: takes into every seam of `seams`
-/// (indexed edge by side) the vertices that landed on its run after the walkback read it.
+/// Takes into every seam of `seams` (indexed edge by side) the vertices that landed on its run
+/// after the walkback read it.
 ///
 /// `candidates` are the vertices to look at - the ones a later stage made and a face now carries
 /// ([`later_splits_carried_by_a_face`]). Per seam rather than per face, so the whole re-read costs
@@ -59,9 +59,8 @@ pub fn take_in_the_later_splits(
     }
 }
 
-/// C# `LaterSplitsCarriedByAFace`: the vertices standing on faces that a stage after the walkback
-/// made - everything numbered `made_from` or above that `faces` uses, each once, in the order the
-/// faces first use them.
+/// The vertices standing on faces that a stage after the walkback made - everything numbered
+/// `made_from` or above that `faces` uses, each once, in the order the faces first use them.
 ///
 /// A vertex no face carries is not on any face's boundary either, so sewing the seam to it would
 /// put a station where nothing meets it. Only the ones a face kept can be the far side of a T
@@ -81,8 +80,7 @@ pub fn later_splits_carried_by_a_face(faces: &[(i32, i32, i32)], made_from: i32)
     carried
 }
 
-/// C#'s private `TakeInTheLaterSplits(pool, candidates, strip, seam)`: one seam, with everything
-/// now standing between its ends taken into it in order.
+/// One seam, with everything now standing between its ends taken into it in order.
 fn take_in_the_later_splits_of_one(
     pool: &SurfaceVertexPool,
     candidates: &[i32],
@@ -114,14 +112,13 @@ fn take_in_the_later_splits_of_one(
 
     // The run reads along the strip's own parameter, so sorting by it puts every new vertex where
     // it stands on the line - and leaves the two ends the ends, since everything taken in is
-    // strictly between them. C#'s `List.Sort` is unstable; two seam points at one parameter would
-    // be one point welded twice, so the stable sort here decides nothing C# decides differently.
+    // strictly between them. Two seam points at one parameter would be one point welded twice, so
+    // the stable sort decides no tie that can arise.
     seam.sort_by(|first, second| first.1.total_cmp(&second.1));
 }
 
-/// C# `TryFindOneStandingOffTheSeam`: the first of `candidates` standing part way along `seam` with
-/// no station of the seam at it, where there is one - which is a T junction about to be stitched
-/// over.
+/// The first of `candidates` standing part way along `seam` with no station of the seam at it,
+/// where there is one - which is a T junction about to be stitched over.
 ///
 /// The same reading [`take_in_the_later_splits`] makes, asked again at the stitch so that a vertex
 /// the re-read could not take in refuses by name (`SurfaceStripSeamDidNotMeet`) rather than
@@ -144,7 +141,7 @@ pub fn try_find_one_standing_off_the_seam(
     })
 }
 
-/// C# `Carries`: whether the seam already has this vertex.
+/// Whether the seam already has this vertex.
 fn carries(seam: &[(i32, f64)], vertex: i32) -> bool {
     seam.iter().any(|on| on.0 == vertex)
 }

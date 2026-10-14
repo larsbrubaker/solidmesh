@@ -1,9 +1,8 @@
-//! A mixed corner's RUN-OUT: the blend carried on past the bead's own turn until the ball's
-//! touch row dies into the sharp edge the part keeps (`Bevel/Surface/SurfaceMixedCornerRunOut.cs`,
-//! a static class: free functions here): its constant, the one-place test, and where a station's
-//! arc meets the wall ([`try_scallop_point`], [`try_scallop_on_the_ring`]), and the turns its
-//! stations stand at ([`try_turns_past_the_bead`]), its columns ([`try_columns`]), and the run-out
-//! drawn station by station ([`try_emit`]).
+//! A mixed corner's RUN-OUT: the blend carried on past the bead's own turn until the ball's touch
+//! row dies into the sharp edge the part keeps: its constant, the one-place test, and where a
+//! station's arc meets the wall ([`try_scallop_point`], [`try_scallop_on_the_ring`]), and the turns
+//! its stations stand at ([`try_turns_past_the_bead`]), its columns ([`try_columns`]), and the
+//! run-out drawn station by station ([`try_emit`]).
 
 use std::cmp::Ordering;
 use std::rc::Rc;
@@ -37,11 +36,10 @@ pub fn is_one_place_with(
     (other_trim - trim).length() <= near_enough || (other_rail - rail).length() <= near_enough
 }
 
-/// C# `TryScallopPoint`: where station `past`'s arc crosses the wall's plane - out of the axis by
-/// the wall's own radius there, and down from the cap by as much of the ball as is left over it.
-/// Where the bead's ring leans it is the station's own ring met with the wall
-/// ([`try_scallop_on_the_ring`]); the square corner keeps the closed form so none of its numbers
-/// moves in the last bits.
+/// Where station `past`'s arc crosses the wall's plane - out of the axis by the wall's own radius
+/// there, and down from the cap by as much of the ball as is left over it. Where the bead's ring
+/// leans it is the station's own ring met with the wall ([`try_scallop_on_the_ring`]); the square
+/// corner keeps the closed form so none of its numbers moves in the last bits.
 pub fn try_scallop_point(
     corner: &SurfaceMixedCorner,
     wall: &SurfaceMixedCornerWall,
@@ -53,7 +51,7 @@ pub fn try_scallop_point(
 
     let (out_of_the_axis, _) = wall.try_out_of_the_axis(corner.turn_radians() + past)?;
 
-    // C#'s `Math.Pow(x, 2)`, which is the correctly rounded square, as `x * x` is.
+    // Squared as `x * x`, which is the correctly rounded square.
     let left_over = (2.0 * corner.size) - out_of_the_axis;
     let under_the_cap = corner.size
         - cs_math::max_f64(0.0, (corner.size * corner.size) - (left_over * left_over)).sqrt();
@@ -65,11 +63,11 @@ pub fn try_scallop_point(
     )
 }
 
-/// C# `TryScallopOnTheRing`: the same point read as the STATION'S OWN RING met with the wall's
-/// facet. The ring is `C + r(u cos psi + across sin psi)` - the ball's centre, the way to the face
-/// it rides, and the arm across it the rows lay their rails in - so met with the facet's plane it
-/// is `A cos psi + B sin psi = K`, and the root taken is the FIRST at or past `psi = 0`, the cap
-/// contact. On a square cap it is the closed form of [`try_scallop_point`] to a nanometre.
+/// The same point read as the STATION'S OWN RING met with the wall's facet. The ring is `C + r(u
+/// cos psi + across sin psi)` - the ball's centre, the way to the face it rides, and the arm across
+/// it the rows lay their rails in - so met with the facet's plane it is `A cos psi + B sin psi =
+/// K`, and the root taken is the FIRST at or past `psi = 0`, the cap contact. On a square cap it is
+/// the closed form of [`try_scallop_point`] to a nanometre.
 pub fn try_scallop_on_the_ring(
     corner: &SurfaceMixedCorner,
     wall: &SurfaceMixedCornerWall,
@@ -96,7 +94,7 @@ pub fn try_scallop_on_the_ring(
     )
 }
 
-/// C#'s `double.CompareTo`: a NaN before every number, and two NaNs equal.
+/// A NaN before every number, and two NaNs equal.
 fn compare_turns(first: f64, second: f64) -> Ordering {
     match (first.is_nan(), second.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -106,16 +104,16 @@ fn compare_turns(first: f64, second: f64) -> Ordering {
     }
 }
 
-/// C# `TryTurnsPastTheBead`: the turns past the patch's last, in order - one on every crease of
-/// the wall the curve runs over, the caller's own angular `step` wherever a crease has not already
-/// stationed it, and one last station EXACTLY where the ball clears the wall (the point the trim
-/// curve dies at, named rather than stepped to). `near_enough` is the part's ruler; nearer the end
-/// than that a station is not worth standing on. `touches_the_cap_at` is where the ball touches the
-/// cap at the patch's own last turn (`None` for the ideal rail's point), and `carry` the run-out's
-/// carry where the column is laid on the spine.
+/// The turns past the patch's last, in order - one on every crease of the wall the curve runs over,
+/// the caller's own angular `step` wherever a crease has not already stationed it, and one last
+/// station EXACTLY where the ball clears the wall (the point the trim curve dies at, named rather
+/// than stepped to). `near_enough` is the part's ruler; nearer the end than that a station is not
+/// worth standing on. `touches_the_cap_at` is where the ball touches the cap at the patch's own
+/// last turn (`None` for the ideal rail's point), and `carry` the run-out's carry where the column
+/// is laid on the spine.
 ///
 /// A step that is not positive asks for no stations at all.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)` / `!(x < y)`, which a NaN passes.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` / `!(x < y)` on purpose: a NaN passes.
 pub fn try_turns_past_the_bead(
     corner: &SurfaceMixedCorner,
     wall: &SurfaceMixedCornerWall,
@@ -178,16 +176,17 @@ pub fn try_turns_past_the_bead(
 
     asking.push((clears, true));
 
-    // C#'s `List.Sort` (an introsort) by `double.CompareTo`, so tied turns land where C# leaves them.
+    // An introsort by `f64` order: the one deterministic order every run lands tied turns in.
     cs_sort::introspective_sort(&mut asking, &mut |first, second| {
         compare_turns(first.0, second.0)
     });
 
     // And then the ones that would stand on top of each other are COLLAPSED - measured by where
     // their trim points and rail points STAND rather than by the angle between them, since the two
-    // run at opposite speeds. Collapsed, not thinned: where two stations are one place ONE comes out
-    // and the other is re-measured against the station before it, however many that takes. A step
-    // always gives way; between two that must stand the END wins, otherwise the earlier one stays.
+    // run at opposite speeds. Collapsed, not thinned: where two stations are one place ONE comes
+    // out and the other is re-measured against the station before it, however many that takes. A
+    // step always gives way; between two that must stand the END wins, otherwise the earlier one
+    // stays.
     let from_the_bead = try_scallop_point(corner, wall, 0.0).ok_or_else(not_supported)?;
 
     let mut at = vec![from_the_bead];
@@ -279,7 +278,7 @@ pub fn try_turns_past_the_bead(
     }
 }
 
-/// What [`try_columns`] draws (C#'s `out` parameters, by name).
+/// What [`try_columns`] draws, by name.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMixedCornerRunOutColumns {
     /// The columns, in station order, the patch's own last column first.
@@ -294,8 +293,8 @@ pub struct SurfaceMixedCornerRunOutColumns {
     pub section_on_the_wall: Option<Vec<i32>>,
     /// Where the run-out would have died on the sharp edge had nothing crossed it, or -1.
     pub the_die_point: i32,
-    /// The last column whose top the CAP's own sector may be drawn to (C#'s `int.MaxValue` where
-    /// there are no columns to name).
+    /// The last column whose top the CAP's own sector may be drawn to (`i32::MAX` where there are
+    /// no columns to name).
     pub the_sector_runs_to: i32,
     /// Where the crossing curve reaches the touch row and dies on the cap, or -1.
     pub the_cap_exit: i32,
@@ -303,12 +302,12 @@ pub struct SurfaceMixedCornerRunOutColumns {
     pub top_rims: Vec<Option<Vec<i32>>>,
 }
 
-/// C# `TryColumns`: the runout's columns, station by station, each one the rows of the patch's
-/// profile that still stand in the material at that turn and then the point where the arc meets the
-/// wall. WHICH rows is the window's to say ([`SurfaceRunOutColumnWindow::try_read`]) and the drawing
-/// the walk's ([`SurfaceRunOutColumnWalk::try_walk`]); what is here is the carry they share, how
-/// far the cap's sector may run, and the SECTION each crossed band (or the plane across the wall's
-/// end) is cut back by. `rows` are the rows the patch's grid was laid with on the spine, or `None`.
+/// The runout's columns, station by station, each one the rows of the patch's profile that still
+/// stand in the material at that turn and then the point where the arc meets the wall. WHICH rows
+/// is the window's to say ([`SurfaceRunOutColumnWindow::try_read`]) and the drawing the walk's
+/// ([`SurfaceRunOutColumnWalk::try_walk`]); what is here is the carry they share, how far the cap's
+/// sector may run, and the SECTION each crossed band (or the plane across the wall's end) is cut
+/// back by. `rows` are the rows the patch's grid was laid with on the spine, or `None`.
 #[allow(clippy::too_many_arguments)]
 pub fn try_columns(
     pool: &mut SurfaceVertexPool,
@@ -452,9 +451,9 @@ pub fn try_columns(
     Ok(drawn)
 }
 
-/// C# `TryEmit`: the run-out drawn as a strip between each pair of neighbouring stations' columns
-/// (with each station's top rim), facing the corner's outward sum; refused, naming the first piece
-/// that covers a face already drawn, where the corner came in clean and a piece makes it fold.
+/// The run-out drawn as a strip between each pair of neighbouring stations' columns (with each
+/// station's top rim), facing the corner's outward sum; refused, naming the first piece that covers
+/// a face already drawn, where the corner came in clean and a piece makes it fold.
 pub fn try_emit(
     pool: &mut super::SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

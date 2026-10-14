@@ -1,19 +1,18 @@
-//! Sewing a cut's new vertices into the faces whose sides they stand on. Ports
-//! `Bevel/Surface/SurfaceSplitSewing.cs` (C# `internal static class`; a module of free functions
-//! here): the sewing itself ([`sew_in_the_splits`] and its overloads), the one reading of "on this side" that the whole build shares ([`stands_on_the_side`]),
-//! which the fan ([`super::surface_fan`]) asks of its diagonals too, and the two per-face readings
-//! the sewing is built from ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]), and
-//! the lobes a ring that revisits a vertex falls into ([`lobes`]).
+//! Sewing a cut's new vertices into the faces whose sides they stand on: the sewing itself
+//! ([`sew_in_the_splits`] and its overloads), the one reading of "on this side" that the whole
+//! build shares ([`stands_on_the_side`]), which the fan ([`super::surface_fan`]) asks of its
+//! diagonals too, and the two per-face readings the sewing is built from
+//! ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]), and the lobes a ring that
+//! revisits a vertex falls into ([`lobes`]).
 
 use vector_math::Vector3;
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_fan, surface_ring, SurfaceSplitsOnASegment, SurfaceVertexPool};
 
-/// C# `StandsOnTheSide`: whether `point` stands part way along the side from `from` to `to` -
-/// strictly between its two ends, and within the pool's ruler of the line through them - and
-/// where along it if so (C#'s `out double where`, which is written - zero where the side has no
-/// length - whatever the answer).
+/// Whether `point` stands part way along the side from `from` to `to` - strictly between its two
+/// ends, and within the pool's ruler of the line through them - and where along it, which is
+/// written whatever the answer (zero where the side has no length).
 ///
 /// The one reading of "on this side" the build has: the sewing asks it of a face's edge, and the
 /// seam re-read asks it of a strip's tangent run (`SurfaceSeamReRead`). They have to agree,
@@ -41,9 +40,8 @@ pub fn stands_on_the_side(
     )
 }
 
-/// C# `TheNeighboursCarryItsMiddle`: whether the faces either side of a lobe that covers nothing
-/// already carry its middle corners - which is what decides whether dropping the lobe closes a
-/// seam or opens one.
+/// Whether the faces either side of a lobe that covers nothing already carry its middle corners -
+/// which is what decides whether dropping the lobe closes a seam or opens one.
 ///
 /// A zero-area lobe [a, b, c] with b on the line from a to c emits a-b, b-c and c-a. Dropping it
 /// pairs its neighbours only if the face across the long side a-c is split at b as well, so that
@@ -67,8 +65,9 @@ pub fn the_neighbours_carry_its_middle(
     standing_on: &mut SurfaceSplitsOnASegment<'_>,
     lobe: &[i32],
 ) -> bool {
-    // The SAME pair CoversNothing measured the lobe's flatness against (SurfaceFan.FarthestApart),
-    // so the stretch asked about here is the line the lobe was found to lie along.
+    // The SAME pair `covers_nothing` measured the lobe's flatness against
+    // (surface_fan::farthest_apart), so the stretch asked about here is the line the lobe was found
+    // to lie along.
     let (one, two, _) = surface_fan::farthest_apart(lobe, pool);
 
     let named = standing_on.between(lobe[one], lobe[two]);
@@ -86,9 +85,8 @@ pub fn the_neighbours_carry_its_middle(
     true
 }
 
-/// C# `RingWithTheSplitsIn`: one face as a ring with every split standing part way along one of
-/// its sides inserted, each in its place along that side. (C#'s unused `pool` parameter is
-/// dropped; the reading carries the pool it measures with.)
+/// One face as a ring with every split standing part way along one of its sides inserted, each in
+/// its place along that side. (The reading carries the pool it measures with.)
 ///
 /// A side is read as a STRETCH between its two corners ([`SurfaceSplitsOnASegment`]), so the
 /// answer is the same one the face across that stretch gets. A split that is already a corner of
@@ -145,9 +143,8 @@ pub fn lobes(ring: &[i32]) -> Vec<Vec<i32>> {
     lobes
 }
 
-/// C# `SewInTheSplits(pool, faces, splitFrom, out failure)`: every face carrying one of the cut's
-/// own new vertices (every pool vertex from `split_from` on) part way along an edge rebuilt
-/// through it; `Err` (C#'s false with its failure) where the readings did not settle.
+/// Every face carrying one of the cut's own new vertices (every pool vertex from `split_from` on)
+/// part way along an edge rebuilt through it; `Err` where the readings did not settle.
 pub fn sew_in_the_splits_since(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -162,8 +159,7 @@ pub fn sew_in_the_splits_since(
     sew_in_the_splits(pool, faces, &splits)
 }
 
-/// C# `SewInTheSplits(pool, faces, splitFrom)`: the same sewing for callers that do not carry a
-/// refusal of their own.
+/// The same sewing for callers that do not carry a refusal of their own.
 pub fn sew_in_the_splits_since_unchecked(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -172,8 +168,8 @@ pub fn sew_in_the_splits_since_unchecked(
     let _ = sew_in_the_splits_since(pool, faces, split_from);
 }
 
-/// C# `SewInTheSplits(pool, faces, splits)`: the same sewing, for vertices NAMED rather than
-/// counted from a watermark, for callers that do not carry a refusal of their own.
+/// The same sewing, for vertices NAMED rather than counted from a watermark, for callers that do
+/// not carry a refusal of their own.
 pub fn sew_in_the_splits_unchecked(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -188,14 +184,14 @@ enum Sewn {
     Lobes(Vec<Vec<i32>>),
 }
 
-/// C# `SewInTheSplits(pool, faces, splits, out failure)`: every face with one of `splits` part way
-/// along a side is rebuilt through it, lobe by lobe (a lobe the part cannot tell from one straight
-/// line, whose neighbours already carry its middle, is dropped); `Err` where splits crowd closer
-/// together than the ruler, so a side's readings did not settle.
+/// Every face with one of `splits` part way along a side is rebuilt through it, lobe by lobe (a
+/// lobe the part cannot tell from one straight line, whose neighbours already carry its middle, is
+/// dropped); `Err` where splits crowd closer together than the ruler, so a side's readings did not
+/// settle.
 ///
 /// The faces are read first and laid after: the stretch readings borrow the pool while the fan may
-/// add a middle vertex to it. The fans run in the C#'s order over the same pool, and the readings
-/// never touch a vertex a fan adds, so the faces and vertices are the C#'s.
+/// add a middle vertex to it. The fans run in a fixed order over the same pool, and the readings
+/// never touch a vertex a fan adds, so the result does not depend on that split.
 pub fn sew_in_the_splits(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

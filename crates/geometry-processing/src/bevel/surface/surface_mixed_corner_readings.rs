@@ -1,5 +1,5 @@
 //! Every corner of one chain where the convexity turns over, read once when the chain is planned.
-//! Ports `Bevel/Surface/SurfaceMixedCornerReadings.cs` (a C# static class): [`try_read_all`].
+//! [`try_read_all`] reads them.
 
 use std::rc::Rc;
 
@@ -13,10 +13,10 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryReadAll`: reads every corner of the chain `planned` (closed or not) where the convexity
-/// turns over - which edge the corner's CUT is, the corner's reading, and where it hands over -
-/// into the plan's mixed corners (keyed by the edge the chain ARRIVES on, in walk order) and the
-/// edges' roles. `Err` is C#'s `failureReason`: a corner the reading cannot place.
+/// Reads every corner of the chain `planned` (closed or not) where the convexity turns over - which
+/// edge the corner's CUT is, the corner's reading, and where it hands over - into the plan's mixed
+/// corners (keyed by the edge the chain ARRIVES on, in walk order) and the edges' roles. `Err` is a
+/// corner the reading cannot place.
 pub fn try_read_all(
     planned: &[SurfaceEdgePlan],
     is_closed: bool,

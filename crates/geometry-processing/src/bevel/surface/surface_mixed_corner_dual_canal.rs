@@ -1,6 +1,6 @@
-//! A LEANING one-crease mixed corner's canal, read WHOLE ([`SurfaceMixedCornerDualCanal`]).
-//! Ports the record of `Bevel/Surface/SurfaceMixedCornerDualCanal.cs` with the turn it dies at, its
-//! crease and its row accessors, and the reading itself ([`SurfaceMixedCornerDualCanal::try_read`]).
+//! A LEANING one-crease mixed corner's canal, read WHOLE ([`SurfaceMixedCornerDualCanal`]): its
+//! record with the turn it dies at, its crease and its row accessors, and the reading itself
+//! ([`SurfaceMixedCornerDualCanal::try_read`]).
 
 use std::rc::Rc;
 
@@ -9,13 +9,13 @@ use vector_math::{cs_math, Vector3};
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedCornerDualCanal` (a sealed class): the dual's void ball rolling from the bead's
-/// own end ring round until it dies on the crease the cap and the wall meet in - which is further
-/// than the cut's own strip goes, and is the whole of why this corner needed a reading of its own.
+/// The dual's void ball rolling from the bead's own end ring round until it dies on the crease the
+/// cap and the wall meet in - which is further than the cut's own strip goes, and is the whole of
+/// why this corner needed a reading of its own.
 ///
 /// **The canal does not stop where the cut does.** Measured against the Onshape control of
-/// `NoseInNotchTestMeshes`, the blend KEEPS TURNING past the cut strip's end - 112.62 degrees to
-/// 158.5036 at `r = 1` - and every vertex out there stands one radius off the SAME spine
+/// `nose_in_notch_test_meshes`, the blend KEEPS TURNING past the cut strip's end - 112.62 degrees
+/// to 158.5036 at `r = 1` - and every vertex out there stands one radius off the SAME spine
 /// (`BevelTopCenterFaceRegressionTests`). So the run-out is this canal turned further, and what
 /// this adds to the frame is only WHERE it stops and WHAT bounds each row once the cut's strip has
 /// ended.
@@ -53,7 +53,7 @@ impl SurfaceMixedCornerDualCanal {
     /// How many steps that scan takes before bisecting the one that brackets the death.
     pub const SCAN_STEPS: i32 = 512;
 
-    /// C#'s private constructor.
+    /// Builds the canal from its parts; [`Self::try_read`] reads one.
     pub fn new(
         corner: Rc<SurfaceMixedCorner>,
         dual: Rc<SurfaceMixedCornerDualFrame>,
@@ -83,7 +83,7 @@ impl SurfaceMixedCornerDualCanal {
         self.dual.turn_radians
     }
 
-    /// The corner the canal is read of (C#'s `Corner` accessor).
+    /// The corner the canal is read of.
     pub fn corner(&self) -> &Rc<SurfaceMixedCorner> {
         &self.corner
     }
@@ -127,7 +127,7 @@ impl SurfaceMixedCornerDualCanal {
     /// The crease the dual canal runs out along, from the corner outwards: the cap's plane met
     /// with the wall's, signed by where the ball's wall contact stands at the end of the cut's
     /// sweep. `None` where a cap and a wall in one plane meet in no line.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
     pub fn try_the_crease(
         corner: &SurfaceMixedCorner,
         dual: &SurfaceMixedCornerDualFrame,
@@ -156,7 +156,7 @@ impl SurfaceMixedCornerDualCanal {
     /// canal dies - found by a scan of [`Self::SCAN_STEPS`] up to
     /// [`Self::THE_FURTHEST_THE_TURN_MAY_RUN`] times the sweep and a bisection of the bracketing
     /// step; `None` where it never crosses in that range.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
     pub fn try_the_turn_it_dies_at(&self) -> Option<f64> {
         let off_the_cap = |turn: f64| {
             (self.dual.spine.t_contact_at(turn) - self.corner.corner)
@@ -188,7 +188,7 @@ impl SurfaceMixedCornerDualCanal {
 
     /// The angle round the ring at `turn` where it crosses the cap's plane - the larger of its two
     /// crossings - or `None` where the ring stands wholly on one side of that plane.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
     pub fn try_the_cap_crossing(&self, turn: f64) -> Option<f64> {
         let cap = self.corner.out_of_the_cap_face;
         let height = (self.dual.spine.centre_at(turn) - self.corner.corner).dot(cap);
@@ -242,10 +242,10 @@ impl SurfaceMixedCornerDualCanal {
 }
 
 impl SurfaceMixedCornerDualCanal {
-    /// C# `TryRead`: reads the whole canal of a leaning one-crease mixed corner, or says why it has
-    /// none. `how_far_the_crease_runs` is how far the edge between the cap and the wall actually
-    /// runs from the corner: a blend that would die past the end of it is larger than the edge it
-    /// is dying on (`SurfaceMixedCornerRunOutPastTheCrease`); pass infinity to ask only for the
+    /// Reads the whole canal of a leaning one-crease mixed corner, or says why it has none.
+    /// `how_far_the_crease_runs` is how far the edge between the cap and the wall actually runs
+    /// from the corner: a blend that would die past the end of it is larger than the edge it is
+    /// dying on (`SurfaceMixedCornerRunOutPastTheCrease`); pass infinity to ask only for the
     /// geometry.
     pub fn try_read(
         corner: &Rc<SurfaceMixedCorner>,

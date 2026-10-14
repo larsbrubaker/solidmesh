@@ -1,34 +1,33 @@
 //! WHAT THE NARROWER BEAD'S FAR FACE GIVES UP at a mitre of two UNEQUAL setbacks: the sector
 //! between the wider strip's unpaired rails and the corner, which is that strip's ordinary end cut
-//! on that face clipped by the narrower band's own end line (`Bevel/Surface/SurfaceMitreSector.cs`,
-//! a C# `internal static class`, so a module here). The cut itself is
+//! on that face clipped by the narrower band's own end line. The cut itself is
 //! [`super::surface_end_cut::try_cut`]; the mitre that leaves the unpaired rails is
-//! `SurfaceStripMitre.TryMitre`.
+//! `surface_strip_mitre::try_mitre`.
 //!
 //! **Why there is anything to give up.** Two beads of one radius mitred on a face they share sweep
 //! DIFFERENT turns where their wedges differ - a 45 degree knife tip turns 135 where a 90 degree
-//! edge turns 90 - so the wider of the two has rails the narrower has none to pair with. Those rails
-//! are not stopped by the mitre at all: nothing of the narrower bead stands over them, and what they
-//! end on is the part's own face beyond it - the narrower edge's FAR landing face, still standing
-//! where it always did. That face therefore has to be opened for them, exactly as an ordinary end
-//! cut opens the face a chain stops against.
+//! edge turns 90 - so the wider of the two has rails the narrower has none to pair with. Those
+//! rails are not stopped by the mitre at all: nothing of the narrower bead stands over them, and
+//! what they end on is the part's own face beyond it - the narrower edge's FAR landing face, still
+//! standing where it always did. That face therefore has to be opened for them, exactly as an
+//! ordinary end cut opens the face a chain stops against.
 //!
 //! **And why it is not the ordinary cut itself.** The wider strip's end on that face is a
-//! STAIRCASE: its unpaired rails land on the face, and its paired ones stand on the mitre plane, off
-//! the face altogether. So the section is the polygon the strip would take alone - between its
+//! STAIRCASE: its unpaired rails land on the face, and its paired ones stand on the mitre plane,
+//! off the face altogether. So the section is the polygon the strip would take alone - between its
 //! profile and the corner - CLIPPED by the narrower band's end line, which is where the mitre plane
 //! meets that face. Past the clip the face is already gone: the narrower band was taken off up to
-//! that line and no further. The clip adds one vertex wherever the line crosses an edge bounding the
-//! face, and at a three-face corner those edges are the two other faces of the corner - the one the
-//! beads SHARE and the wider bead's own other face - so each crossing is one point three planes meet
-//! at.
+//! that line and no further. The clip adds one vertex wherever the line crosses an edge bounding
+//! the face, and at a three-face corner those edges are the two other faces of the corner - the one
+//! the beads SHARE and the wider bead's own other face - so each crossing is one point three planes
+//! meet at.
 //!
 //! **The tip is void, and that is right.** The piece of the far face between the two crossings and
-//! the corner comes away with the section and nothing replaces it: its other two edges run along the
-//! shared face and along the wider bead's other face, and both of those are bands that have already
-//! gone. It is a corner of the solid the two beads between them removed entirely, so after the cut
-//! its edges are the edges of no face at all, and the shell closes because nothing is left standing
-//! on either side of them.
+//! the corner comes away with the section and nothing replaces it: its other two edges run along
+//! the shared face and along the wider bead's other face, and both of those are bands that have
+//! already gone. It is a corner of the solid the two beads between them removed entirely, so after
+//! the cut its edges are the edges of no face at all, and the shell closes because nothing is left
+//! standing on either side of them.
 //!
 //! **What it assumes.** That the far landing face is ONE planar region holding the whole profile,
 //! which `SurfaceEndCut` reads for itself and refuses as `SurfaceStripEndNotSupported` where it is
@@ -47,20 +46,20 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// corner of a part and far over the rounding of three normals read off the same mesh.
 const THREE_PLANES_REALLY_CROSS: f64 = 1e-6;
 
-/// C# `TryGiveUpTheSector`: opens the narrower bead's far landing face for the wider strip's
-/// unpaired rails, and says what the cut left standing part way along each chord of them - for
-/// the strip's station, empty on every chord but the unpaired ones, which are the only ones this
-/// cut runs along.
+/// Opens the narrower bead's far landing face for the wider strip's unpaired rails, and says what
+/// the cut left standing part way along each chord of them - for the strip's station, empty on
+/// every chord but the unpaired ones, which are the only ones this cut runs along.
 ///
 /// `plan` is the WIDER strip's edge plan, whose two regions name the shared face and its other one;
 /// `away_from_the_corner` runs along that edge away from the corner (the edge's own direction
 /// reversed where the walk LEAVES by this strip, the direction itself where it arrives); `ring` is
-/// its end ring at this mitre, rail by rail (the staircase); `shared_rail` which of its rails stands
-/// on the face the two beads share (0 or the last); `paired` how many of its rails the narrower bead
-/// had one each to pair with; `through`/`normal` the mitre plane; `beyond_point`/`beyond_normal` the
-/// narrower edge's far landing plane; and `turn_vertex` where this strip really leaves the mitre
-/// plane for the face beyond when that is not one of its own rails - the NARROWER bead's outermost
-/// rail crossing, which only a mitre whose two arcs were CHORDED APART has - or -1.
+/// its end ring at this mitre, rail by rail (the staircase); `shared_rail` which of its rails
+/// stands on the face the two beads share (0 or the last); `paired` how many of its rails the
+/// narrower bead had one each to pair with; `through`/`normal` the mitre plane;
+/// `beyond_point`/`beyond_normal` the narrower edge's far landing plane; and `turn_vertex` where
+/// this strip really leaves the mitre plane for the face beyond when that is not one of its own
+/// rails - the NARROWER bead's outermost rail crossing, which only a mitre whose two arcs were
+/// CHORDED APART has - or -1.
 #[allow(clippy::too_many_arguments)]
 pub fn try_give_up_the_sector(
     pool: &mut SurfaceVertexPool,
@@ -94,8 +93,8 @@ pub fn try_give_up_the_sector(
     let far = shared_rail + (step * (ring_length - 1));
 
     // The two faces of the corner the far face is bounded by here: the one the beads share, on the
-    // shared rail's side, and this bead's own other face on the far rail's side. Both hold the whole
-    // edge, so both pass through the corner.
+    // shared rail's side, and this bead's own other face on the far rail's side. Both hold the
+    // whole edge, so both pass through the corner.
     let shared = plan.edge.direction().cross(if shared_rail == 0 {
         plan.left_inward_at_the_edge
     } else {
@@ -155,8 +154,9 @@ pub fn try_give_up_the_sector(
     profile.push(die_point);
 
     // The chord into the last crossing runs ALONG the section's own straight side - that side is
-    // the edge between the far face and this bead's other face, and the far rail's landing stands on
-    // it too - so it names no half plane and is the cut's die point rather than a cut of its own.
+    // the edge between the far face and this bead's other face, and the far rail's landing stands
+    // on it too - so it names no half plane and is the cut's die point rather than a cut of its
+    // own.
     let along_the_profile = surface_end_cut::try_cut(
         pool,
         faces,
@@ -203,7 +203,7 @@ pub fn try_give_up_the_sector(
     Ok(between)
 }
 
-/// C# `Leading`: one vertex put in front of what a chord already carries.
+/// One vertex put in front of what a chord already carries.
 fn leading(vertex: i32, rest: &[i32]) -> Vec<i32> {
     let mut whole = Vec::with_capacity(rest.len() + 1);
     whole.push(vertex);
@@ -211,18 +211,17 @@ fn leading(vertex: i32, rest: &[i32]) -> Vec<i32> {
     whole
 }
 
-/// C# `NothingAlong`: nothing on any chord, which is what every station but this one carries.
+/// Nothing on any chord, which is what every station but this one carries.
 pub fn nothing_along(rails: i32) -> Vec<Vec<i32>> {
     vec![Vec::new(); (rails - 1).max(0) as usize]
 }
 
-/// C# `TryThreePlanes`: the one point three planes meet at, or `None` where they meet in a line or
-/// not at all.
+/// The one point three planes meet at, or `None` where they meet in a line or not at all.
 ///
 /// The normals are taken as given rather than as unit vectors, so they are normalised here: the
 /// determinant below is the volume the three span, and only against unit normals does a small one
 /// mean a shallow crossing rather than a short input.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)` refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_three_planes(
     first_point: Vector3,
     first_normal: Vector3,

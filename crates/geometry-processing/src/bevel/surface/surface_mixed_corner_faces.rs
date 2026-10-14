@@ -1,7 +1,7 @@
 //! The two faces a mixed corner's footprint comes off, told apart ([`SurfaceMixedCornerFaces`]).
-//! Ports the record of `Bevel/Surface/SurfaceMixedCornerFaces.cs` with its constructor and the strips
-//! under the blend ([`SurfaceMixedCornerFaces::strips_under_the_blend`]), and its reading off a
-//! corner ([`SurfaceMixedCornerFaces::try_read`]).
+//! Its record with its constructor and the strips under the blend
+//! ([`SurfaceMixedCornerFaces::strips_under_the_blend`]), and its reading off a corner
+//! ([`SurfaceMixedCornerFaces::try_read`]).
 
 use std::rc::Rc;
 
@@ -10,9 +10,9 @@ use vector_math::Vector3;
 use super::{SurfaceMixedCorner, SurfaceMixedCornerWall};
 use crate::bevel::BevelAdvisory;
 
-/// C# `SurfaceMixedCornerFaces` (a sealed class): the face the bead ROLLED along, which the strip
-/// under the blend is cut from, and the face NOBODY PICKED, which the runout is trimmed against.
-/// Most of the time they are one face and this says so - the two fields are then the same `Rc`.
+/// The face the bead ROLLED along, which the strip under the blend is cut from, and the face NOBODY
+/// PICKED, which the runout is trimmed against. Most of the time they are one face and this says
+/// so - the two fields are then the same `Rc`.
 ///
 /// **Why they are two questions and not one.** The strip under the blend lies on the face the
 /// bead's profile is TANGENT to, which is the face it rolled along. The runout's scallop lies on
@@ -37,8 +37,8 @@ pub struct SurfaceMixedCornerFaces {
 }
 
 impl SurfaceMixedCornerFaces {
-    /// C#'s private constructor: the wall the round's section rolls on, the unpicked face's, and
-    /// whether the two are one face.
+    /// The wall the round's section rolls on, the unpicked face's, and whether the two are one
+    /// face.
     pub fn new(
         rolled: Rc<SurfaceMixedCornerWall>,
         unpicked: Rc<SurfaceMixedCornerWall>,
@@ -51,8 +51,8 @@ impl SurfaceMixedCornerFaces {
         }
     }
 
-    /// C# `TryRead`: reads both faces of one mixed corner, or says why it cannot - each of them is
-    /// a run of facets in the cap's own plane ([`SurfaceMixedCornerWall`]).
+    /// Reads both faces of one mixed corner, or says why it cannot - each of them is a run of
+    /// facets in the cap's own plane ([`SurfaceMixedCornerWall`]).
     pub fn try_read(corner: &Rc<SurfaceMixedCorner>) -> Result<Self, BevelAdvisory> {
         let unpicked = Rc::new(SurfaceMixedCornerWall::try_read(corner)?);
 
@@ -71,9 +71,9 @@ impl SurfaceMixedCornerFaces {
         Ok(Self::new(rolled, unpicked, false))
     }
 
-    /// C# `StripsUnderTheBlend`: every piece of wall the blend stands over between the bead's stop
-    /// plane and the cap - the rolled face's, facet by facet, and the unpicked face's as well where
-    /// that is a face of its own.
+    /// Every piece of wall the blend stands over between the bead's stop plane and the cap - the
+    /// rolled face's, facet by facet, and the unpicked face's as well where that is a face of its
+    /// own.
     pub fn strips_under_the_blend(&self) -> Vec<([Vector3; 4], Vector3)> {
         let mut pieces = self.rolled_section.strip_under_the_blend();
 

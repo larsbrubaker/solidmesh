@@ -1,8 +1,7 @@
-//! Pacing out the room a cut has on its region (`Bevel/Surface/SurfaceRoomMeasure.cs`, a static
-//! class: free functions here). The rulers and the exact offset of a rim segment in front of the
-//! chain edge land here first, with the bands a pass takes off a region, the free end, the corner
-//! a wall shares and its measure, the room across one region ([`room_across`]), and the whole
-//! measure of a pass ([`measure`]).
+//! Pacing out the room a cut has on its region. The rulers and the exact offset of a rim segment in
+//! front of the chain edge land here first, with the bands a pass takes off a region, the free end,
+//! the corner a wall shares and its measure, the room across one region ([`room_across`]), and the
+//! whole measure of a pass ([`measure`]).
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -37,7 +36,7 @@ pub const RELATIVE_TOLERANCE: f64 = 1e-7;
 pub const VERTEX_TOLERANCE: f64 = 1e-5;
 
 /// What a region no band of this pass lands on has, so that the reading needs no null case: one
-/// shared empty set, as C#'s static instance is.
+/// shared empty set.
 static NO_BANDS: LazyLock<HashSet<i32>> = LazyLock::new(HashSet::new);
 
 /// Which edges the pass is beveling take a band off `region`, or an empty set where none does.
@@ -84,7 +83,7 @@ pub fn offset_to_segment(
     let offset_a = (a - from).dot(inward);
     let offset_b = (b - from).dot(inward);
 
-    // C#'s Math.Max/Math.Min: NaN in either argument gives NaN.
+    // These max / min give NaN when either argument is NaN.
     let low = cs_math::max_f64(cs_math::min_f64(along_a, along_b), 0.0);
     let high = cs_math::min_f64(cs_math::max_f64(along_a, along_b), length);
 
@@ -174,7 +173,7 @@ pub fn shares_the_corner(
 /// Measures a wall leg meeting the chain edge at its corner: a leg running in front of the band
 /// (`inward`) and past the corner's own reach `corner` along the edge raises the share it `taken`
 /// (reach over offset), and lowers the `nearest` room where its offset is read.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn measure_corner(
     leg: Vector3,
     along: Vector3,
@@ -203,12 +202,12 @@ pub fn measure_corner(
     }
 }
 
-/// C# `Measure`: every cut every plan makes, with the room each has. One entry per chain edge per
-/// side, in plan order (a side whose region or geometry cannot be measured is left out rather than
-/// guessed at), then each plan's run-out skirts and wall bites, its end notches and its mitre tips.
-/// `named` collects what a room reading has to REFUSE by name (C#'s optional list, `None` for
-/// null); `stretches` collects every band that runs off PART of its own span.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+/// Every cut every plan makes, with the room each has. One entry per chain edge per side, in plan
+/// order (a side whose region or geometry cannot be measured is left out rather than guessed at),
+/// then each plan's run-out skirts and wall bites, its end notches and its mitre tips. `named`
+/// collects what a room reading has to REFUSE by name (when given); `stretches` collects every band
+/// that runs off PART of its own span.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn measure(
     plans: &[Rc<SurfaceBevelPlan>],
     mut named: Option<&mut Vec<BevelAdvisory>>,
@@ -260,7 +259,8 @@ pub fn measure(
 
             let along = span / length;
 
-            // Which way the chain carries on past each end of this edge, which mitres the band there.
+            // Which way the chain carries on past each end of this edge, which mitres the band
+            // there.
             let past_the_start = surface_room_mitre::chains_direction_past(plan, edge_index, false);
             let past_the_end = surface_room_mitre::chains_direction_past(plan, edge_index, true);
 
@@ -348,8 +348,8 @@ pub fn measure(
             }
         }
 
-        // The cuts no EDGE owns: each two-edge mixed corner's run-out skirt on the cap, and the bite
-        // it takes out of the wall. A junction (a negative key) has none.
+        // The cuts no EDGE owns: each two-edge mixed corner's run-out skirt on the cap, and the
+        // bite it takes out of the wall. A junction (a negative key) has none.
         for key in plan.mixed_corner_keys() {
             if key < 0 {
                 continue;
@@ -390,13 +390,13 @@ pub fn measure(
     cuts
 }
 
-/// C# `RoomAcross`: how far a cut along the chain edge `from`-`to` can reach into `region` before
-/// it meets a wall - infinite where the band runs OFF the region whole; paced out along a curved
-/// landing's own surface where that walk answers; the rim it runs off over a stretch charged only
-/// over the rest of the span; every other rim read as a corner wall at either end (summed into what
-/// the two mitres take from the edge's length) or as a wall straight across. Refusals the run-off
-/// readings name are added to `named` on `mesh_edge_index`. Returns the room and the stretch the
-/// band runs off over, if any (C#'s `out ranOffOverAStretch`).
+/// How far a cut along the chain edge `from`-`to` can reach into `region` before it meets a wall -
+/// infinite where the band runs OFF the region whole; paced out along a curved landing's own
+/// surface where that walk answers; the rim it runs off over a stretch charged only over the rest
+/// of the span; every other rim read as a corner wall at either end (summed into what the two
+/// mitres take from the edge's length) or as a wall straight across. Refusals the run-off readings
+/// name are added to `named` on `mesh_edge_index`. Returns the room and the stretch the band runs
+/// off over, if any.
 #[allow(clippy::too_many_arguments)]
 pub fn room_across(
     mesh: Option<&Mesh>,
@@ -445,8 +445,7 @@ pub fn room_across(
         }
     }
 
-    // A CURVED landing is paced out along its own surface instead.
-    // C# returns false on a null mesh; `None` here reads the same.
+    // A CURVED landing is paced out along its own surface instead. No mesh reads as no run.
     let run = mesh.and_then(|mesh| {
         surface_run_across_walk::try_across_a_curved_region(
             mesh,

@@ -1,9 +1,8 @@
-//! Where the wall nobody picked runs OUT under a mixed corner's blend
-//! (`Bevel/Surface/SurfaceMixedCornerWallEnds.cs`, a static class: free functions here). The
-//! questions the reading is made of land here first - whether what stands past the wall is one
-//! plane, where a rim edge crosses the travel line, and the turn at which a row of the runout
-//! crosses the plane the wall ends on - and the turn the run-out's foot crosses it at
-//! ([`try_where_the_foot_crosses`]) - and the reading itself ([`try_read`]).
+//! Where the wall nobody picked runs OUT under a mixed corner's blend. The questions the reading is
+//! made of land here first - whether what stands past the wall is one plane, where a rim edge
+//! crosses the travel line, and the turn at which a row of the runout crosses the plane the wall
+//! ends on - and the turn the run-out's foot crosses it at ([`try_where_the_foot_crosses`]) - and
+//! the reading itself ([`try_read`]).
 
 use std::f64::consts::PI;
 
@@ -44,7 +43,7 @@ pub fn the_material_past_it_is_one_plane(
         return true;
     }
 
-    // C# `regions.Region(...)` on a null cache would throw; no cache reads as no region.
+    // No cache reads as no region.
     let Some(region) = regions.and_then(|r| r.region(face_past_it)) else {
         return false;
     };
@@ -59,8 +58,8 @@ pub fn the_material_past_it_is_one_plane(
 }
 
 /// Whether every facet of a region stands in the one plane `facing` names. `None` for either the
-/// cache or the region (C#'s nulls) is not one plane.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+/// cache or the region is not one plane.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn it_is_all_one_plane(
     regions: Option<&FaceRegionCache>,
     region: Option<&FaceGroup>,
@@ -92,7 +91,7 @@ pub fn it_is_all_one_plane(
 /// The turn at which one row of the runout's seed (`at`) crosses the plane the wall ends on,
 /// measured from the seed itself; `f64::INFINITY` where that row's own circle never reaches the
 /// plane at all, which is a row the wall swallows before the plane could have cut it.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn where_it_crosses(corner: &SurfaceMixedCorner, at: Vector3, across: SurfaceBandEnd) -> f64 {
     if !(across.signed_distance(at) > 0.0) {
         // Already past the plane where it starts, so there is no turn at which it LEAVES the
@@ -106,7 +105,7 @@ pub fn where_it_crosses(corner: &SurfaceMixedCorner, at: Vector3, across: Surfac
 
 /// The turn at which `at`, carried round the bead's axis, crosses `across` - the first one at or
 /// after `after`. Its circle's own frame makes this one arc cosine rather than a search.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_turn_onto(
     corner: &SurfaceMixedCorner,
     at: Vector3,
@@ -173,7 +172,7 @@ pub fn try_turn_onto(
 /// `(how far along the line, the outward normal of the face standing across it, that face)`: the
 /// face of the two on that edge that is not the wall the line runs along. `None` where the edge
 /// does not cross the line ahead, runs along it, or its face across is one the line is leaving.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_crossing(
     edge: &FeatureEdge,
     from: Vector3,
@@ -242,7 +241,7 @@ pub fn stands_in_the_material(across: SurfaceBandEnd, at: Vector3) -> bool {
 
 /// Where three planes (each a point and its normal) meet, or `None` where two of them are
 /// parallel.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_where_the_three_meet(
     first_point: Vector3,
     first_normal: Vector3,
@@ -265,13 +264,12 @@ pub fn try_where_the_three_meet(
     )
 }
 
-/// C# `TryWhereTheFootCrosses`: the turn at which the run-out's FOOT (its scallop point on the
-/// wall) crosses `across` and leaves the material, or `None` where it never does: a wall that does
-/// not run out under this blend after all. The curve is the meridian arc met with the wall facet by
-/// facet, so it is walked to the crossing between the bead's own end and `clears` (the turn the
-/// rail would have cleared the wall at), halving sixty times, which is the double's own precision
-/// on a part of any size.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+/// The turn at which the run-out's FOOT (its scallop point on the wall) crosses `across` and leaves
+/// the material, or `None` where it never does: a wall that does not run out under this blend after
+/// all. The curve is the meridian arc met with the wall facet by facet, so it is walked to the
+/// crossing between the bead's own end and `clears` (the turn the rail would have cleared the wall
+/// at), halving sixty times, which is the double's own precision on a part of any size.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_where_the_foot_crosses(
     corner: &SurfaceMixedCorner,
     wall: &SurfaceMixedCornerWall,
@@ -307,15 +305,15 @@ pub fn try_where_the_foot_crosses(
     Some((low + high) / 2.0)
 }
 
-/// C# `TryRead`: the plane the blend is trimmed by where the wall nobody picked runs out under it -
-/// the face across the wall's rim, as the half space its material is on - or `Ok(None)` where that
-/// wall carries on as far as the runout goes (the ordinary corner; also where there are no
-/// `regions`, C#'s null). `Err` only where the wall DOES run out under the blend and what stands
-/// past it is not one plane the trim can be taken in.
+/// The plane the blend is trimmed by where the wall nobody picked runs out under it - the face
+/// across the wall's rim, as the half space its material is on - or `Ok(None)` where that wall
+/// carries on as far as the runout goes (the ordinary corner; also where there are no `regions`,
+/// `None`). `Err` only where the wall DOES run out under the blend and what stands past it is not
+/// one plane the trim can be taken in.
 ///
 /// Read from the region's own rim: the runout travels along the line the wall and the cap meet in,
 /// so the question is which boundary edge of the wall's region that line crosses first.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_read(
     regions: Option<&FaceRegionCache>,
     corner: &SurfaceMixedCorner,
@@ -386,10 +384,9 @@ pub fn try_read(
     Ok(Some(across))
 }
 
-/// C# `SurfaceMixedCornerWallEnds.TryBiteTheSection`: the wall's section between the cap, the
-/// wall and the band end `across` bitten out one triangle at a time - each pair of section
-/// stations with the point the three planes meet at. Refused for a section of fewer than two
-/// stations or planes that do not meet at a point.
+/// The wall's section between the cap, the wall and the band end `across` bitten out one triangle
+/// at a time - each pair of section stations with the point the three planes meet at. Refused for a
+/// section of fewer than two stations or planes that do not meet at a point.
 pub fn try_bite_the_section(
     pool: &mut super::SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

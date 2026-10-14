@@ -1,7 +1,6 @@
-//! The wedge two bands mitre into at a REFLEX corner of one region, as the room reads it
-//! (`Bevel/Surface/SurfaceRoomMitre.cs`, a static class: free functions here). The tip of that
-//! wedge is a footprint of its own ([`SurfaceRoomFootprint::MitreTip`]); the overhang a mitre
-//! carries a band by is read here too, and every tip of a plan is added ([`add_to`]).
+//! The wedge two bands mitre into at a REFLEX corner of one region, as the room reads it. The tip
+//! of that wedge is a footprint of its own ([`SurfaceRoomFootprint::MitreTip`]); the overhang a
+//! mitre carries a band by is read here too, and every tip of a plan is added ([`add_to`]).
 
 use vector_math::{cs_math, Vector3};
 
@@ -170,7 +169,7 @@ pub fn chains_direction_past(
 /// How far past the corner a band's material reaches per unit of setback, where the mitre between
 /// `into_the_edge` (the way into this edge from the corner) and `past_the_corner` (the way the
 /// chain runs on) carries it - zero where nothing carries on, or the mitre cuts the band back.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn overhang_per_setback(
     into_the_edge: Vector3,
     past_the_corner: Vector3,
@@ -203,7 +202,7 @@ pub fn overhang_per_setback(
 
 /// The unit inward direction at the edge and the setback one side of `edge` gives up, as the
 /// room measure reads them; `None` where either is missing or not a finite positive length.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn try_band(
     _plan: &SurfaceBevelPlan,
     edge: &SurfaceEdgePlan,
@@ -220,7 +219,7 @@ pub fn try_band(
         edge.right_setback
     };
 
-    // C#'s null region check has no Rust case: a plan's regions are always present.
+    // A plan's regions are always present, so there is no missing-region case to refuse.
     if !(inward.length_squared() > 0.0)
         || !(setback > 0.0)
         || setback.is_infinite()
@@ -232,11 +231,11 @@ pub fn try_band(
     Some((inward.get_normal(), setback))
 }
 
-/// C# `AddTo`: every mitre tip this plan's corners lay on the regions they turn across - one per
-/// corner per SHARED region, and only where that corner is reflex in it - added to `cuts`. A MIXED
-/// corner is left out: the convexity turns over there, so the two bands do not mitre at all and
-/// what stands past the corner is the run-out, read as its own cut.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+/// Every mitre tip this plan's corners lay on the regions they turn across - one per corner per
+/// SHARED region, and only where that corner is reflex in it - added to `cuts`. A MIXED corner is
+/// left out: the convexity turns over there, so the two bands do not mitre at all and what stands
+/// past the corner is the run-out, read as its own cut.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn add_to(cuts: &mut Vec<SurfaceRoomCut>, plan: Option<&SurfaceBevelPlan>) {
     let Some(plan) = plan else {
         return;

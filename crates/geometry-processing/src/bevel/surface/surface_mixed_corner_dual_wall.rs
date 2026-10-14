@@ -1,18 +1,15 @@
 //! What the WALL gives up and gains under a leaning one-crease corner's patch - the face rail zero
-//! runs across, made to end exactly where that rail runs. Ports
-//! `Bevel/Surface/SurfaceMixedCornerDualWall.cs`, a static class (free functions here): its record,
-//! where rail zero leaves one crease ([`SurfaceMixedCornerDualWallCrossing`]), how it is found
-//! ([`try_the_crossing`]), the bead's foot on its crease ([`try_the_foot`]), a rim's positions
-//! ([`rim_of`]) and the root's fan ([`try_fill_the_root`], [`try_fan`]). The rest
-//! of the wall's reading lands with later packages.
+//! runs across, made to end exactly where that rail runs: its record, where rail zero leaves one
+//! crease ([`SurfaceMixedCornerDualWallCrossing`]), how it is found ([`try_the_crossing`]), the
+//! bead's foot on its crease ([`try_the_foot`]), a rim's positions ([`rim_of`]) and the root's fan
+//! ([`try_fill_the_root`], [`try_fan`]). The rest of the wall's reading lands with later packages.
 
 use vector_math::Vector3;
 
 use super::{surface_fan, SurfaceLine, SurfaceMixedCorner, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedCornerDualWall.Crossing` (a private readonly struct): where rail zero leaves
-/// one crease - the two stations it happens between, and the point.
+/// Where rail zero leaves one crease - the two stations it happens between, and the point.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceMixedCornerDualWallCrossing {
     /// The last station standing on the side the walk started from.
@@ -43,9 +40,9 @@ pub fn try_the_foot(corner: &SurfaceMixedCorner) -> Result<Vector3, BevelAdvisor
     Ok(corner.corner + (away * ((stops_at.point - corner.corner).dot(stops_at.inward) / leaning)))
 }
 
-/// C# `TryFillTheRoot`: the nose's ROOT between the two crossings, fanned from the CORNER over rail
-/// zero - the wall the ball scooped the feature's own tip away from, which nobody has drawn.
-/// `grid` is C#'s `int[][]`, station by station, rail zero first.
+/// The nose's ROOT between the two crossings, fanned from the CORNER over rail zero - the wall the
+/// ball scooped the feature's own tip away from, which nobody has drawn. `grid` is the patch's
+/// vertex grid, station by station, rail zero first.
 ///
 /// From the corner because both creases end there, so the fan's two straight sides are the
 /// creases themselves and its arc is rail zero: every side of it is a curve the part or the patch
@@ -77,9 +74,8 @@ pub fn try_fill_the_root(
     try_fan(pool, faces, apex, corner, out_of_the_wall, &rails)
 }
 
-/// C# `TryFan`: a fan from `apex` over `rails`, refused where it doubles back (C#'s `failure`).
-/// What it emitted before the refusal stays in `faces`, as in C#; the caller refuses the whole
-/// corner.
+/// A fan from `apex` over `rails`, refused where it doubles back. What it emitted before the
+/// refusal stays in `faces`; the caller refuses the whole corner.
 pub fn try_fan(
     pool: &SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -121,8 +117,7 @@ pub fn try_fan(
 }
 
 impl SurfaceMixedCornerDualWallCrossing {
-    /// C#'s constructor: rail zero leaves the crease between stations `before` and `after`, at
-    /// `at`.
+    /// Rail zero leaves the crease between stations `before` and `after`, at `at`.
     pub fn new(before: i32, after: i32, at: Vector3) -> Self {
         SurfaceMixedCornerDualWallCrossing { before, after, at }
     }
@@ -131,7 +126,7 @@ impl SurfaceMixedCornerDualWallCrossing {
 /// Where rail zero (`on_the_wall`, walked on from station `from`) crosses `crease` in the wall
 /// facing `out_of_the_wall`, as the two stations it falls between and the point between them.
 /// Refused where it never does: a wall with no mouth, which is not this corner drawn differently.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < 0)`, which a NaN also passes.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < 0)` on purpose: a NaN passes.
 pub fn try_the_crossing(
     crease: SurfaceLine,
     out_of_the_wall: Vector3,
@@ -173,10 +168,9 @@ pub fn rim_of(pool: &SurfaceVertexPool, snap_to: &[i32]) -> Vec<Vector3> {
         .collect()
 }
 
-/// C# `SurfaceMixedCornerDualWall.TryGiveUpTheWall`: rail zero of the dual grid crossed with the
-/// bead's crease and then the canal's, and the wall given up in three parts - the bead's bite,
-/// the root fanned from the corner between the two crossings, and the lune past the canal's.
-/// A corner whose wall is an unpicked section is refused.
+/// Rail zero of the dual grid crossed with the bead's crease and then the canal's, and the wall
+/// given up in three parts - the bead's bite, the root fanned from the corner between the two
+/// crossings, and the lune past the canal's. A corner whose wall is an unpicked section is refused.
 pub fn try_give_up_the_wall(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -245,8 +239,8 @@ pub fn try_give_up_the_wall(
     )
 }
 
-/// C# `TryTheBeadsBite`: the wall bitten from rail zero's start, round the bead's foot on its
-/// crease and the crossing, back down the rail to its start.
+/// The wall bitten from rail zero's start, round the bead's foot on its crease and the crossing,
+/// back down the rail to its start.
 #[allow(clippy::too_many_arguments)]
 pub fn try_the_beads_bite(
     pool: &mut SurfaceVertexPool,
@@ -278,8 +272,8 @@ pub fn try_the_beads_bite(
     )
 }
 
-/// C# `TryTheLune`: the wall bitten from the canal's crossing along rail zero to the grid's end -
-/// nothing where fewer than three distinct points are left.
+/// The wall bitten from the canal's crossing along rail zero to the grid's end - nothing where
+/// fewer than three distinct points are left.
 #[allow(clippy::too_many_arguments)]
 pub fn try_the_lune(
     pool: &mut SurfaceVertexPool,

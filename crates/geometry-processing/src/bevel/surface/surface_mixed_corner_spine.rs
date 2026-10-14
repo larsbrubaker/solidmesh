@@ -1,9 +1,8 @@
-//! Where a rolling ball's CENTRE runs between a mixed corner's two strips, and where it touches
-//! the face it rides and the cylinder it is pressed against as it goes - the one source of all
-//! three, so that no two readings of the corner can drift apart. Ports
-//! `Bevel/Surface/SurfaceMixedCornerSpine.cs`. Built on [`SurfaceLine`] (the bead's axis) and
-//! [`SurfaceBandEnd`] (the tube's ring plane); `SurfaceMixedCorner` and its wall, rows and
-//! run-out read it.
+//! Where a rolling ball's CENTRE runs between a mixed corner's two strips, and where it touches the
+//! face it rides and the cylinder it is pressed against as it goes - the one source of all three,
+//! so that no two readings of the corner can drift apart. Built on [`SurfaceLine`] (the bead's
+//! axis) and [`SurfaceBandEnd`] (the tube's ring plane); `SurfaceMixedCorner` and its wall, rows
+//! and run-out read it.
 //!
 //! **Two conditions, and they name a curve.** Read the ordinary way, the ball sits inside the
 //! material touching the cap face `T` and the bead's void cylinder, so its centre stands a radius
@@ -16,7 +15,7 @@
 //! **And a cap square to the axis is the case that had no slide.** Where the axis stands square to
 //! `T` the plane cuts the cylinder square and the ellipse is the circle of radius `2r` the torus
 //! was written about: the slide is the same radius at every station, so it cancels into the one
-//! constant offset `SurfaceMixedCorner.OuterRailCentre` already carried. That is not an
+//! constant offset `SurfaceMixedCorner::outer_rail_centre` already carried. That is not an
 //! approximation of the old reading, it is the old reading - which is why the square corner's
 //! numbers come out as they were at every station and every published face, to the rounding the
 //! identity hash is taken at (`SurfaceObliqueMixedCornerReadingTests`). Not to the last BIT: the
@@ -33,12 +32,12 @@
 //! **And the two conditions do not say WHOSE ball it is.** A canal between two round strips can be
 //! read from either strip, and this type is the reading, not the choice: name the cap, the axis and
 //! which side of the cap the centre keeps its radius on, and the rest is the same algebra. The
-//! corner of `NoseInNotchTestMeshes` is where that matters. Read as the material ball riding the
-//! cap, the canal fits the Onshape control only on the sub-band the two readings happen to share -
-//! its cap rail is 0.48 mm out by mid turn. Read as the DUAL - the BEAD's VOID ball, a radius
-//! OUTSIDE the wall and `2r` from the CUT's centre line - one canal fits the whole corner to 2.6e-6
-//! mm (`SurfaceObliqueMixedCornerWallSpineTests`). So the cap-riding canal is the SQUARE corner's
-//! own torus, and a sub-band of an oblique corner's surface rather than the whole of it.
+//! corner of `nose_in_notch_test_meshes` is where that matters. Read as the material ball riding
+//! the cap, the canal fits the Onshape control only on the sub-band the two readings happen to
+//! share - its cap rail is 0.48 mm out by mid turn. Read as the DUAL - the BEAD's VOID ball, a
+//! radius OUTSIDE the wall and `2r` from the CUT's centre line - one canal fits the whole corner to
+//! 2.6e-6 mm (`SurfaceObliqueMixedCornerWallSpineTests`). So the cap-riding canal is the SQUARE
+//! corner's own torus, and a sub-band of an oblique corner's surface rather than the whole of it.
 //!
 //! **What this type does not decide.** It says where the ball is; it does not say WHICH of the two
 //! duals a corner is, how the patch between the two rings is gridded, where the cap's bite is
@@ -51,8 +50,8 @@ use vector_math::{math_helper, Vector3};
 
 use super::{SurfaceBandEnd, SurfaceLine};
 
-/// The three arms of the cap-contact curve: `t_contact_at(turn)` is
-/// `middle + cosine cos(turn) + sine sin(turn)` (C#'s three `out` parameters).
+/// The three arms of the cap-contact curve: `t_contact_at(turn)` is `middle + cosine cos(turn) +
+/// sine sin(turn)`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ContactArms {
     pub middle: Vector3,
@@ -60,7 +59,7 @@ pub struct ContactArms {
     pub sine: Vector3,
 }
 
-/// C# `internal sealed class SurfaceMixedCornerSpine`.
+/// The rolling ball's centre line and its two contact curves at one mixed corner.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMixedCornerSpine {
     axis: SurfaceLine,
@@ -112,7 +111,7 @@ impl SurfaceMixedCornerSpine {
     ) -> Option<SurfaceMixedCornerSpine> {
         // An axis lying IN the cap meets the offset plane in two straight lines or in nothing at
         // all, and the slide below would divide by that nothing. The cap-riding reading refuses it
-        // before asking, by SurfaceMixedCorner.TryRead's own SquareEnough guard; the DUAL has no
+        // before asking, by SurfaceMixedCorner::try_read's own SQUARE_ENOUGH guard; the DUAL has no
         // production caller yet, so this is the arithmetic's own floor standing under a reading
         // that has nobody to refuse it for it - not a second opinion about the geometry, which is
         // the caller's to name.
@@ -146,12 +145,12 @@ impl SurfaceMixedCornerSpine {
             normal = -normal;
         }
 
-        // And THAT is why the one thing that can fail here is a near miss rather than an exact
-        // one: the component along the axis is r^2 over the plane's own arm lengths, and those grow
-        // as the cap leans, so the ring plane turns to run ALONG the bead only in the sliver of
-        // lean just inside the one SurfaceMixedCorner.TryRead already refuses an axis lying in the
-        // cap at. Refused rather than cut, because a plane parallel to every rail of the bead names
-        // no ring at all.
+        // And THAT is why the one thing that can fail here is a near miss rather than an exact one:
+        // the component along the axis is r^2 over the plane's own arm lengths, and those grow as
+        // the cap leans, so the ring plane turns to run ALONG the bead only in the sliver of lean
+        // just inside the one SurfaceMixedCorner::try_read already refuses an axis lying in the cap
+        // at. Refused rather than cut, because a plane parallel to every rail of the bead names no
+        // ring at all.
         let across = normal.dot(axis.direction).abs();
         if across.is_nan() || across <= square_enough {
             return None;
@@ -159,8 +158,8 @@ impl SurfaceMixedCornerSpine {
 
         // The ring stands at turn zero, which is the point the two cylinders touch at. Written out
         // here rather than asked of the spine, so that no spine can exist without its own ring
-        // plane: it is BeadContactAt(0) with the turn's cosine and sine substituted, and the two
-        // agree to the bit.
+        // plane: it is `bead_contact_at(0)` with the turn's cosine and sine substituted, and the
+        // two agree to the bit.
         let slide_at_zero = (offset_from_the_cap
             - (2.0 * size * out_of_the_cap_face.dot(towards_the_shared_face)))
             / along_the_axis_out_of_the_cap;
@@ -208,10 +207,10 @@ impl SurfaceMixedCornerSpine {
     ///
     /// **Which ring it is depends on which reading built the spine.** On the cap-riding one it is
     /// the BEAD's contact ring - which is not what stops the bead's band, since the bead's band
-    /// stops on its own square section (`SurfaceMixedCorner.BeadStopsAt`). On the DUAL it is the
-    /// CUT's own end ring, the design's `CutRingPlane`: planar, leaning 63.43 degrees across the
-    /// cut, and square-ended at both ends of the turn
-    /// (`SurfaceObliqueMixedCornerWallSpineTests.TheCutsEndRingIsPlanarAndLeansAcrossTheCut`).
+    /// stops on its own square section (`SurfaceMixedCorner::bead_stops_at`). On the DUAL it is the
+    /// CUT's own end ring, `SurfaceMixedCornerDualFrame::cut_ring_plane`: planar, leaning 63.43
+    /// degrees across the cut, and square-ended at both ends of the turn
+    /// (`surface_oblique_mixed_corner_wall_spine_tests::the_cuts_end_ring_is_planar_and_leans_across_the_cut`).
     pub fn tube_ring_plane(&self) -> SurfaceBandEnd {
         self.tube_ring_plane
     }
@@ -267,9 +266,10 @@ impl SurfaceMixedCornerSpine {
     ///
     /// So that a question about WHERE that curve meets a plane is one closed form rather than a
     /// search: substituted into a plane's own equation the three arms give `A cos + B sin = K`,
-    /// whose roots are an arc cosine (`SurfaceMixedCornerWall.TryWhereTheContactMeetsTheWall`). On
-    /// a square cap the two slide arms are zero and what is left is the circle of radius `2r` about
-    /// where the axis meets the cap, which is the curve the run-out was written about.
+    /// whose roots are an arc cosine
+    /// (`SurfaceMixedCornerWall::try_where_the_contact_meets_the_wall`). On a square cap the two
+    /// slide arms are zero and what is left is the circle of radius `2r` about where the axis meets
+    /// the cap, which is the curve the run-out was written about.
     pub fn the_contact_arms(&self) -> ContactArms {
         let slide_cosine_arm =
             -2.0 * self.size * self.out_of_the_cap_face.dot(self.towards_the_shared_face)

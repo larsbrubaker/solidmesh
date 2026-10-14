@@ -1,7 +1,7 @@
-//! One region's faces, laid out once in a uniform grid of cells so that a question asked of a
-//! small part of the region does not have to walk the whole of it. Ports
-//! `Bevel/Surface/SurfaceRegionFaceGrid.cs`. Reads a [`FaceGroup`]'s faces off its mesh and the
-//! part's weld distance off [`SurfaceVertexPool`]; `SurfaceWallStandsClear` asks it its questions.
+//! One region's faces, laid out once in a uniform grid of cells so that a question asked of a small
+//! part of the region does not have to walk the whole of it. Reads a [`FaceGroup`]'s faces off its
+//! mesh and the part's weld distance off [`SurfaceVertexPool`]; `SurfaceWallStandsClear` asks it
+//! its questions.
 //!
 //! **Why it exists.** `SurfaceWallStandsClear` asks two questions of a region PER CHAIN EDGE - what
 //! stands within a radius of a point, and which of its faces the foot's line crosses - and a face
@@ -19,9 +19,10 @@
 //! Both callers take a minimum or a span over what they are given, so a repeat costs time and
 //! nothing else.
 //!
-//! C#'s `For(mesh, region)` memoises one grid per region in a `ConditionalWeakTable`; here the
-//! grid is built by [`SurfaceRegionFaceGrid::new`] and kept by whoever owns the region
-//! (divergence 650).
+//! The grid is built by [`SurfaceRegionFaceGrid::new`] and kept by whoever owns the region, beside
+//! it, for as long as it asks questions of it: a process-wide cache would be shared mutable state
+//! across rebuild workers, and the grid's answers depend only on the mesh and region it was laid
+//! from.
 
 use polygon_mesh::Mesh;
 use vector_math::{cs_math, Vector3};
@@ -35,7 +36,7 @@ const FACES_TO_A_CELL: f64 = 2.0;
 /// No region is worth more cells than this, however oddly shaped it is.
 const MOST_CELLS: i64 = 1 << 20;
 
-/// C# `internal sealed class SurfaceRegionFaceGrid`.
+/// A region's faces bucketed into a uniform grid of cells.
 #[derive(Debug, Clone)]
 pub struct SurfaceRegionFaceGrid {
     faces: Vec<i32>,
@@ -192,7 +193,7 @@ impl SurfaceRegionFaceGrid {
 
     /// Every face the line through `through` along `along` could cross, with its three corners -
     /// the cells the line passes through, walked from one end of the region to the other. `visit`
-    /// is handed the face index and its corners (C#'s `OnAFace` delegate).
+    /// is handed the face index and its corners.
     pub fn each_face_the_line_could_cross(
         &self,
         through: Vector3,
@@ -327,9 +328,9 @@ impl SurfaceRegionFaceGrid {
         Some((through + (along * enters), through + (along * leaves)))
     }
 
-    /// Which cell a point falls in, clamped to the grid's own edges. C#'s `(int)` cast of an
-    /// out-of-range or NaN quotient is clamped straight after, so Rust's saturating `as` gives the
-    /// same cell.
+    /// Which cell a point falls in, clamped to the grid's own edges. An out-of-range or NaN
+    /// quotient saturates in the `as` cast and is clamped straight after, so it lands in an edge
+    /// cell.
     fn cell_of(&self, point: Vector3) -> (i32, i32, i32) {
         let clamp = |at: f64, count: i32| (count - 1).min((at.trunc() as i32).max(0));
         (
@@ -420,7 +421,7 @@ fn nearest_on_the_side(at: Vector3, from: Vector3, to: Vector3) -> Vector3 {
 }
 
 fn steps(span: f64, side: f64) -> i32 {
-    // C#'s `(int)Math.Ceiling(...)`; a span over int range saturates here where C# would wrap,
-    // which no region's span over its own cell side reaches.
+    // Rounded up to a whole count; a span over `i32` range saturates, which no region's span over
+    // its own cell side reaches.
     1.max((span / side).ceil() as i32)
 }

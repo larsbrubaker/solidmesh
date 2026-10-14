@@ -1,7 +1,6 @@
-//! The two rings a CONSUMED chord and its two neighbours meet on
-//! (`Bevel/Surface/SurfaceStaircaseMitre.cs`, C# `internal static class`; free functions here).
-//! The chord is read by [`SurfaceMitreConsumesTheRail`]; each ring here is a staircase: the rails
-//! the mitre did not eat end on the real corner as any mitre's do
+//! The two rings a CONSUMED chord and its two neighbours meet on. The chord is read by
+//! [`SurfaceMitreConsumesTheRail`]; each ring here is a staircase: the rails the mitre did not eat
+//! end on the real corner as any mitre's do
 //! ([`surface_strip_mitre_rails::try_one_rail_of_the_mitre`]), and the rails it ate end on the
 //! VIRTUAL corner the two neighbours' lines meet at, which both rings share - so the consumed side
 //! of the chord's own strip stands still between its two ends and collapses to nothing, and the
@@ -30,9 +29,8 @@ use super::surface_strip_mitre_rails;
 use super::{SurfaceMitreConsumesTheRail, SurfaceStrip, SurfaceStripStation, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// The strip at `index`, refused as the mitre that does not meet where it is missing. C# indexes
-/// the array and would throw on a null strip; unreachable, because the consumed-chord survey reads
-/// only chords whose two neighbours have strips (divergence 5070).
+/// The strip at `index`, refused as the mitre that does not meet where it is missing: a guard,
+/// since the consumed-chord survey reads only chords whose two neighbours have strips.
 fn strip_at<'a>(
     strips: &'a [Option<Rc<SurfaceStrip>>],
     index: i32,
@@ -49,8 +47,8 @@ fn strip_at<'a>(
         })
 }
 
-/// C# `TryBuild`: the four strip ends around one consumed chord - the previous strip's end, both
-/// of the consumed strip's, and the next strip's start.
+/// The four strip ends around one consumed chord - the previous strip's end, both of the consumed
+/// strip's, and the next strip's start.
 pub fn try_build(
     pool: &mut SurfaceVertexPool,
     strips: &[Option<Rc<SurfaceStrip>>],
@@ -100,8 +98,9 @@ pub fn try_build(
         // The plane point is the corner itself at both of these, which is what a staircase's two
         // real mitres have always cut on. Every chord a mitre can consume stands between two edges
         // of one rim turning on one face at one wedge, so the two setbacks there agree and the
-        // crossing of the tangent lines IS the corner (SurfaceStripMitre.TryTheSeamPoint). Told
-        // apart here only if a consumed chord is ever found between two edges of different wedges.
+        // crossing of the tangent lines IS the corner
+        // (surface_strip_mitre_rails::try_the_seam_point). Told apart here only if a consumed chord
+        // is ever found between two edges of different wedges.
         let (vertex, previous_end, here_start) =
             surface_strip_mitre_rails::try_one_rail_of_the_mitre(
                 pool,
@@ -147,11 +146,11 @@ pub fn try_build(
     Ok(())
 }
 
-/// C# `TryTheVirtualRail`: one consumed rail - where the two NEIGHBOURS' rails cross the mitre
-/// plane through the virtual corner, as the one vertex both of them end on and the parameter each
-/// meets it at (`(vertex, previous_ends, next_starts)`). The two are checked to arrive at one
-/// point, because a staircase that stepped between two points a rounding apart would be a crack
-/// along the whole of the consumed side.
+/// One consumed rail - where the two NEIGHBOURS' rails cross the mitre plane through the virtual
+/// corner, as the one vertex both of them end on and the parameter each meets it at (`(vertex,
+/// previous_ends, next_starts)`). The two are checked to arrive at one point, because a staircase
+/// that stepped between two points a rounding apart would be a crack along the whole of the
+/// consumed side.
 fn try_the_virtual_rail(
     pool: &mut SurfaceVertexPool,
     strips: &[Option<Rc<SurfaceStrip>>],

@@ -1,13 +1,12 @@
-//! The WALK that draws a run-out's columns ([`SurfaceRunOutColumnWalk`]). Ports the fields of
-//! `Bevel/Surface/SurfaceRunOutColumnWalk.cs`, its constructor, the test of a column topped by a
-//! chord between two crossings, and the walk itself ([`SurfaceRunOutColumnWalk::try_walk`]). Kept
-//! apart from `SurfaceMixedCornerRunOut`, which reads the turns and
-//! emits the surface, and from [`super::SurfaceRunOutColumnWindow`], which reads what ends the
-//! columns from above and below.
+//! The WALK that draws a run-out's columns ([`SurfaceRunOutColumnWalk`]): its fields, its
+//! constructor, the test of a column topped by a chord between two crossings, and the walk itself
+//! ([`SurfaceRunOutColumnWalk::try_walk`]). Kept apart from `SurfaceMixedCornerRunOut`, which reads
+//! the turns and emits the surface, and from [`super::SurfaceRunOutColumnWindow`], which reads what
+//! ends the columns from above and below.
 
-/// C# `SurfaceRunOutColumnWalk`: the walk that draws a run-out's columns - one column per station,
-/// from the rows the window leaves standing there down to the point the surface ends on, and the
-/// curve those ends make where a band is what ended them.
+/// The walk that draws a run-out's columns - one column per station, from the rows the window
+/// leaves standing there down to the point the surface ends on, and the curve those ends make where
+/// a band is what ended them.
 ///
 /// This is the drawing itself: which rows a column holds, what tops it, what it ends on, and what
 /// each of those is worth to the surfaces the run-out meets. Every column is a run of the profile's
@@ -57,7 +56,7 @@ pub struct SurfaceRunOutColumnWalk {
 }
 
 impl SurfaceRunOutColumnWalk {
-    /// C#'s private constructor, in C#'s argument order.
+    /// Builds the walk from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         columns: Vec<Vec<i32>>,
@@ -111,10 +110,10 @@ impl SurfaceRunOutColumnWalk {
 }
 
 impl SurfaceRunOutColumnWalk {
-    /// C# `TryWalk`: walks the stations of `window` and draws the columns - from the patch's own
-    /// `last_column`, which is the run-out's first, each station's rows the window leaves standing
-    /// carried there by `carry`, down to the point the surface ends on. `at_the_mitre` is the
-    /// hand-over where a mitred pair is crossed. A shape this construction refuses is named.
+    /// Walks the stations of `window` and draws the columns - from the patch's own `last_column`,
+    /// which is the run-out's first, each station's rows the window leaves standing carried there
+    /// by `carry`, down to the point the surface ends on. `at_the_mitre` is the hand-over where a
+    /// mitred pair is crossed. A shape this construction refuses is named.
     #[allow(clippy::too_many_arguments)]
     pub fn try_walk(
         pool: &mut SurfaceVertexPool,
@@ -148,7 +147,7 @@ impl SurfaceRunOutColumnWalk {
         let mut the_curve = Vec::new();
         let mut on_the_plane = vec![-1; last_column.len()];
 
-        // The last row the upper cut takes before the two cuts meet (C#'s -1 as `None`).
+        // The last row the upper cut takes before the two cuts meet (`None` before any).
         let mut the_last_crossed: Option<usize> = None;
 
         for (row, &crossing) in crosses_at.iter().enumerate() {
@@ -188,10 +187,10 @@ impl SurfaceRunOutColumnWalk {
             };
 
             if window.the_band_ends_them(station) && station == stations.len() - 1 {
-                // The HAIRPIN: at the band's own furthest turn its two sides meet, so the column there
-                // is that one point and the run-out closes on it - built BEFORE any row is turned, so
-                // no orphan vertex is left a hundredth off the rim. Where a band on the CAP closes the
-                // window, the two sides meet AT the hand-over on the mitre.
+                // The HAIRPIN: at the band's own furthest turn its two sides meet, so the column
+                // there is that one point and the run-out closes on it - built BEFORE any row is
+                // turned, so no orphan vertex is left a hundredth off the rim. Where a band on the
+                // CAP closes the window, the two sides meet AT the hand-over on the mitre.
                 if let Some(at_the_mitre) = at_the_mitre {
                     the_curve.push(at_the_mitre.vertex.get());
                     columns.push(vec![at_the_mitre.vertex.get()]);
@@ -207,8 +206,8 @@ impl SurfaceRunOutColumnWalk {
                 columns.push(vec![at_the_hairpin]);
                 station_turns.push(past);
 
-                // Where NOTHING stood in the lens, the touch row ends between the station before this
-                // one and the hairpin itself, so this piece carries the exit.
+                // Where NOTHING stood in the lens, the touch row ends between the station before
+                // this one and the hairpin itself, so this piece carries the exit.
                 top_rims.push(if the_lens_columns == 0 && the_cap_exit >= 0 {
                     Some(vec![the_cap_exit])
                 } else {
@@ -222,8 +221,8 @@ impl SurfaceRunOutColumnWalk {
             }
 
             // Where the WALL has reached the outer rail the column is the trim point and NOTHING
-            // else: the turn the run-out dies at. Read off the wall's own radius rather than off the
-            // rows, which disagree in the last thousandth.
+            // else: the turn the run-out dies at. Read off the wall's own radius rather than off
+            // the rows, which disagree in the last thousandth.
             if stands_off >= carry.the_touch_row_stands_off_at(past) - pool.near_enough()
                 && !window.the_band_ends_them(station)
             {
@@ -240,8 +239,8 @@ impl SurfaceRunOutColumnWalk {
             let mut column: Vec<i32> = Vec::with_capacity(last_column.len());
 
             // Past the LAST row the upper cut takes, the column's top stands on the upper cut's own
-            // chord between the last crossed row and the hand-over, read at this turn - a point of the
-            // band's rim as much as of the run-out's.
+            // chord between the last crossed row and the hand-over, read at this turn - a point of
+            // the band's rim as much as of the run-out's.
             if let (Some(at_the_mitre), Some(last_crossed)) = (at_the_mitre, the_last_crossed) {
                 let crosses = window.where_the_row_crosses(last_crossed);
 
@@ -278,7 +277,7 @@ impl SurfaceRunOutColumnWalk {
                     &on_the_plane,
                     past,
                 ),
-                // C#'s `firstRow <= -1` is never true, so with no row crossed nothing tops it.
+                // With no row crossed nothing tops the column.
                 _ => (false, false),
             };
 
@@ -335,8 +334,8 @@ impl SurfaceRunOutColumnWalk {
                 column.push(at);
 
                 if (crosses_at[row] - past).abs() <= HAIR {
-                    // This station IS that row's crossing, so this vertex stands on the plane and is
-                    // a corner of the section the face across gives up.
+                    // This station IS that row's crossing, so this vertex stands on the plane and
+                    // is a corner of the section the face across gives up.
                     on_the_plane[row] = at;
                 }
             }

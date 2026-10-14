@@ -1,18 +1,18 @@
-//! Where a mixed corner's cap sector closes (`Bevel/Surface/SurfaceMixedCornerSector.cs`, a static
-//! class): the apex the cap's fan is drawn from - the outer rail's centre, or, where the corner
-//! hands over at a mitre, the crossing of the handover plane's trace with the cap's radius.
+//! Where a mixed corner's cap sector closes: the apex the cap's fan is drawn from - the outer
+//! rail's centre, or, where the corner hands over at a mitre, the crossing of the handover plane's
+//! trace with the cap's radius.
 
 use vector_math::Vector3;
 
 use super::SurfaceMixedCorner;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `OnTheAxis`: how near the axis, relative to the radius, a crossing is taken as the axis.
+/// How near the axis, relative to the radius, a crossing is taken as the axis.
 pub const ON_THE_AXIS: f64 = 1e-9;
 
-/// C# `TryApex(corner, ringOnTheCap, lastOnTheCap)`: the crossing of the radius through the last
-/// station on the cap with the trace of the plane the ring is cut at, through the ring's own cap
-/// vertex. A crossing within [`ON_THE_AXIS`] of the axis is the axis itself.
+/// The crossing of the radius through the last station on the cap with the trace of the plane the
+/// ring is cut at, through the ring's own cap vertex. A crossing within [`ON_THE_AXIS`] of the axis
+/// is the axis itself.
 pub fn try_apex(
     corner: &SurfaceMixedCorner,
     ring_on_the_cap: Vector3,
@@ -39,9 +39,9 @@ pub fn try_apex(
     Ok(apex)
 }
 
-/// C# `TryApex(first, last, firstOnTheCap, lastOnTheCap)`: the apex of a sector between two
-/// corners - the first corner's rail centre unless either hands over at a mitre, then the crossing
-/// of each mitre's trace (or the radius, for the one that does not).
+/// The apex of a sector between two corners - the first corner's rail centre unless either hands
+/// over at a mitre, then the crossing of each mitre's trace (or the radius, for the one that does
+/// not).
 pub fn try_apex_between(
     first: &SurfaceMixedCorner,
     last: &SurfaceMixedCorner,
@@ -77,14 +77,14 @@ pub fn try_apex_between(
     )
 }
 
-/// C# `TheTrace`: the handover plane's trace on the cap face.
+/// The handover plane's trace on the cap face.
 pub fn the_trace(corner: &SurfaceMixedCorner) -> Vector3 {
     corner.out_of_the_cap_face.cross(corner.cut_stops_at.inward)
 }
 
-/// C# `TryCross`: where the line from `from_here` along `along_here` crosses the one from
-/// `from_there` along `along_there`, both in the cap's plane; `SurfaceCornerNotSupported` at the
-/// corner where they are parallel.
+/// Where the line from `from_here` along `along_here` crosses the one from `from_there` along
+/// `along_there`, both in the cap's plane; `SurfaceCornerNotSupported` at the corner where they are
+/// parallel.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_cross(
     corner: &SurfaceMixedCorner,

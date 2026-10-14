@@ -1,9 +1,8 @@
-//! Two polylines sewn into one band of triangles: the ZIPPER. Ports
-//! `Bevel/Surface/SurfaceRowZip.cs` (C# `internal static class`; a module of free functions here).
-//! Neither polyline has to carry the same number of points as the other, and every point of both
-//! ends up in the band exactly once, which is what lets a row of three chords hand over to a row of
-//! four with no vertex left on an edge it does not end. The corner patch's rows
-//! (`SurfaceCornerPatchRows`) sew with it; [`super::surface_fan`] winds what it collects.
+//! Two polylines sewn into one band of triangles: the ZIPPER. Neither polyline has to carry the
+//! same number of points as the other, and every point of both ends up in the band exactly once,
+//! which is what lets a row of three chords hand over to a row of four with no vertex left on an
+//! edge it does not end. The corner patch's rows (`SurfaceCornerPatchRows`) sew with it;
+//! [`super::surface_fan`] winds what it collects.
 //!
 //! **Which one advances.** Each polyline is read by its own INDEX FRACTION - point `i` of a line of
 //! `M` chords stands at `i / M` - and the step taken is whichever line's next point comes first,
@@ -25,9 +24,8 @@ use vector_math::Vector3;
 use super::surface_fan;
 use super::SurfaceVertexPool;
 
-/// C# `Sew`: sews the band between two polylines, both running the same way, and both of whose
-/// ends are meant to meet - `upper`'s first point pairs with `lower`'s first and its last with
-/// `lower`'s last.
+/// Sews the band between two polylines, both running the same way, and both of whose ends are meant
+/// to meet - `upper`'s first point pairs with `lower`'s first and its last with `lower`'s last.
 ///
 /// The triangles are collected UNWOUND - in the order the zipper reads them, rather than turned to
 /// face out of the material - because the patch is not finished when the last band is sewn: it is
@@ -69,16 +67,16 @@ pub fn sew(band: &mut Vec<(i32, i32, i32)>, upper: &[i32], lower: &[i32]) {
     }
 }
 
-/// C# `EmitOutward`: one triangle wound to face out of the MATERIAL, which for a patch on a sphere
-/// is away from `centre` where the solid is inside that sphere and towards it where the solid is
-/// outside it. Each triangle is wound by ITS OWN outward direction - its centroid seen from the
-/// centre - rather than by one normal for the whole patch, which at an oblique corner is no longer
-/// within a right angle of every triangle of it.
+/// One triangle wound to face out of the MATERIAL, which for a patch on a sphere is away from
+/// `centre` where the solid is inside that sphere and towards it where the solid is outside it.
+/// Each triangle is wound by ITS OWN outward direction - its centroid seen from the centre - rather
+/// than by one normal for the whole patch, which at an oblique corner is no longer within a right
+/// angle of every triangle of it.
 ///
 /// `material_outside_the_ball` says which side of the sphere the solid is on, and so which way
 /// "out" is: false at a convex corner, where the ball is buried in the material and the surface
-/// faces AWAY from `centre`; true at the inside corner of a pocket, where the ball is at rest in the
-/// VOID and the same surface faces TOWARDS it.
+/// faces AWAY from `centre`; true at the inside corner of a pocket, where the ball is at rest in
+/// the VOID and the same surface faces TOWARDS it.
 pub fn emit_outward(
     pool: &SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

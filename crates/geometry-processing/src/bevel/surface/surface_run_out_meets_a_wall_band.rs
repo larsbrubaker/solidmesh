@@ -1,6 +1,5 @@
 //! Where a mixed corner's RUN-OUT meets a band standing on the WALL it turns against
-//! ([`SurfaceRunOutMeetsAWallBand`]). Ports the record of
-//! `Bevel/Surface/SurfaceRunOutMeetsAWallBand.cs` with its readings of the band's profile (where a
+//! ([`SurfaceRunOutMeetsAWallBand`]): its record with its readings of the band's profile (where a
 //! rail stands, the near and far sides the ray meets, the cap exit) and the reading itself
 //! ([`SurfaceRunOutMeetsAWallBand::try_read`]).
 
@@ -11,9 +10,8 @@ use vector_math::{cs_math, Vector3};
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_mixed_corner_run_out, SurfaceMixedCorner, SurfaceStrip};
 
-/// C# `SurfaceRunOutMeetsAWallBand` (a sealed class): where a mixed corner's run-out meets a band
-/// standing on the wall it turns against, read as the radius out of the bead's axis at which that
-/// band ENDS each column of the run-out.
+/// Where a mixed corner's run-out meets a band standing on the wall it turns against, read as the
+/// radius out of the bead's axis at which that band ENDS each column of the run-out.
 ///
 /// **The band ends the column, exactly as the wall does.** A band laid on the wall takes the wall
 /// away for its own setback and puts its strip in its place, so from the turn the two first meet
@@ -81,8 +79,8 @@ impl SurfaceRunOutMeetsAWallBand {
         turns[rail] > before && turns[rail] > after
     }
 
-    /// The rail whose own turn stands `past` the bead's, or -1 where none does. (`_flat` is C#'s
-    /// unused argument, kept so the reading's call reads as the C# one.)
+    /// The rail whose own turn stands `past` the bead's, or -1 where none does. (`_flat` is not
+    /// read.)
     pub fn the_rail_at(
         _flat: &[Vector3],
         turns: &[f64],
@@ -310,7 +308,7 @@ impl SurfaceRunOutMeetsAWallBand {
 
     /// Where the chord `from`..`to` crosses the circle of `radius` about the origin - the root
     /// further along the chord first - or `None` where it does not within the chord.
-    #[allow(clippy::manual_range_contains)] // C#'s comparisons, which let a NaN through.
+    #[allow(clippy::manual_range_contains)] // Written out so a NaN gets through.
     pub fn try_across(from: Vector3, to: Vector3, radius: f64) -> Option<Vector3> {
         let along = to - from;
         let a = along.length_squared();
@@ -338,7 +336,7 @@ impl SurfaceRunOutMeetsAWallBand {
 }
 
 impl SurfaceRunOutMeetsAWallBand {
-    /// C#'s private constructor.
+    /// Builds the reading from its parts.
     pub fn new(
         corner: Rc<SurfaceMixedCorner>,
         flat_rails: Vec<Vector3>,
@@ -377,11 +375,11 @@ impl SurfaceRunOutMeetsAWallBand {
 }
 
 impl SurfaceRunOutMeetsAWallBand {
-    /// C# `TryRead`: where the mixed corner's run-out meets `band`, a band standing on the wall it
-    /// turns against - each rail flattened into the cap's plane, its turn about the run-out's centre,
-    /// and the turns past the bead of the rails that cross the run-out's own quarter of the torus.
-    /// `Ok(None)` (C#'s false with no failure) where there is nothing to sew; `Err` names a crossing
-    /// of another shape. `_hands_over_at_a_mitre` is read by no line of the C#.
+    /// Where the mixed corner's run-out meets `band`, a band standing on the wall it turns
+    /// against - each rail flattened into the cap's plane, its turn about the run-out's centre, and
+    /// the turns past the bead of the rails that cross the run-out's own quarter of the torus.
+    /// `Ok(None)` where there is nothing to sew; `Err` names a crossing of another shape.
+    /// `_hands_over_at_a_mitre` is not read.
     pub fn try_read(
         corner: Option<&Rc<SurfaceMixedCorner>>,
         band: Option<&SurfaceStrip>,
@@ -390,7 +388,7 @@ impl SurfaceRunOutMeetsAWallBand {
         let (Some(corner), Some(band)) = (corner, band) else {
             return Ok(None);
         };
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN declines
         let no_size = !(corner.size > 0.0);
         if band.rail_count() < 2 || no_size {
             return Ok(None);
@@ -446,7 +444,8 @@ impl SurfaceRunOutMeetsAWallBand {
             ));
         }
 
-        // C#'s `List<double>.Sort` (no NaN reaches here; equal values are indistinguishable).
+        // No NaN reaches here, and equal values are indistinguishable, so any sort order is the
+        // same.
         crossings.sort_by(|a: &f64, b: &f64| a.partial_cmp(b).expect("finite crossings"));
 
         let last = crossings[crossings.len() - 1];

@@ -1,5 +1,4 @@
-//! The patch that closes a mixed corner between the cut's end ring and the bead's
-//! (`Bevel/Surface/SurfaceMixedCornerPatch.cs`, a static class: free functions here). The ring
+//! The patch that closes a mixed corner between the cut's end ring and the bead's. The ring
 //! readers, the shared face's chord sagitta, the grid's last column and the patch's closure check
 //! ([`nothing_covers_nothing`]), each strip's end ring ([`try_ring`], [`try_cut_the_ring`]), the
 //! patch's grid and quads ([`try_turn_the_ring_round`], [`emit`]), and the close itself
@@ -29,7 +28,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// Read off the section the bead's own roll walked, so it is that wall's chording and not a
 /// constant. A roll that never happened has no section and no sagitta, and the part's own ruler
 /// is what is left.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn the_shared_faces_own_sagitta(
     corner: &super::SurfaceMixedCorner,
     pool: &super::SurfaceVertexPool,
@@ -110,8 +109,8 @@ pub fn nothing_covers_nothing(
         )
     };
 
-    // Iterated below, so in insertion order as C#'s Dictionary is; the other two are looked up
-    // only.
+    // Iterated below, so kept in insertion order to make the output the same on every run; the
+    // other two are looked up only.
     let mut uses: IndexMap<(i32, i32), i32> = IndexMap::with_capacity(faces.len() * 3);
     let mut directed: HashMap<(i32, i32), i32> = HashMap::with_capacity(faces.len() * 3);
     let mut standing: HashSet<(i32, i32, i32)> = HashSet::new();
@@ -154,17 +153,17 @@ pub fn nothing_covers_nothing(
     Ok(())
 }
 
-/// C# `TryRing`: one strip's end ring at the corner, as vertices - every rail crossed with the
-/// plane that strip stops on ([`try_cut_the_ring`]), with the two outer rails taken from the
-/// walkback's own tangent runs (`seams[edge_index]`, the run's last vertex where the strip
-/// `ends_here`, its first otherwise) rather than made again. As `(ring, meets_at)`.
+/// One strip's end ring at the corner, as vertices - every rail crossed with the plane that strip
+/// stops on ([`try_cut_the_ring`]), with the two outer rails taken from the walkback's own tangent
+/// runs (`seams[edge_index]`, the run's last vertex where the strip `ends_here`, its first
+/// otherwise) rather than made again. As `(ring, meets_at)`.
 ///
 /// The rail on the face the two edges share has to land on the tangent point - except where the
 /// CUT hands over on a mitre ring, which stands short of the tangency by design and is checked
 /// against its own seam alone. `cut_on` is as [`try_cut_the_ring`]'s.
 ///
-/// A tangent run that is missing or empty, where C# would throw reading it, is refused as the
-/// seam not meeting.
+/// A tangent run that is missing or empty is refused as the seam not meeting rather than read out
+/// of range.
 #[allow(clippy::too_many_arguments)]
 pub fn try_ring(
     pool: &mut SurfaceVertexPool,
@@ -232,10 +231,10 @@ pub fn try_ring(
     Ok((ring, meets_at))
 }
 
-/// C# `TryCutTheRing`: one strip's end ring at the corner - where every rail of it crosses the
-/// plane that strip stops on, the handover plane for the cut (`is_the_cut`), the plane the bead's
-/// own ring stands on for the bead - as `(meets_at, at)`: where along its own edge each rail meets
-/// the plane, and where in space. A rail running along the plane is refused by name.
+/// One strip's end ring at the corner - where every rail of it crosses the plane that strip stops
+/// on, the handover plane for the cut (`is_the_cut`), the plane the bead's own ring stands on for
+/// the bead - as `(meets_at, at)`: where along its own edge each rail meets the plane, and where in
+/// space. A rail running along the plane is refused by name.
 ///
 /// Ordinarily the ring is cut at the SAME plane the band it ends was cut at. A TWO-crease junction
 /// parts them: its one cut is bounded on neither face, and the ring it really ends on LEANS
@@ -272,8 +271,8 @@ pub fn try_cut_the_ring(
     Ok((meets, points))
 }
 
-/// C# `SurfaceMixedCornerPatch.Emit`: the patch's grid of pool vertices emitted as quads, each
-/// facing the corner's summed outward direction.
+/// The patch's grid of pool vertices emitted as quads, each facing the corner's summed outward
+/// direction.
 pub fn emit(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -299,10 +298,10 @@ pub fn emit(
     }
 }
 
-/// C# `SurfaceMixedCornerPatch.TryTurnTheRingRound`: the cut's ring `profile` turned round the
-/// corner's axis through `turns` stations - row `p` of the grid is rail `p` at each turn, the
-/// first column the ring itself and the last rail (on the shared face) the turns already laid
-/// there, which the turned rail has to meet. Hands back the grid and the rows read off the ring.
+/// The cut's ring `profile` turned round the corner's axis through `turns` stations - row `p` of
+/// the grid is rail `p` at each turn, the first column the ring itself and the last rail (on the
+/// shared face) the turns already laid there, which the turned rail has to meet. Hands back the
+/// grid and the rows read off the ring.
 pub fn try_turn_the_ring_round(
     pool: &mut SurfaceVertexPool,
     corner: &SurfaceMixedCorner,
@@ -354,8 +353,8 @@ pub fn try_turn_the_ring_round(
     Ok((grid, rows))
 }
 
-/// What [`try_close`] hands back (C#'s `out` parameters): each strip's end ring for the stitch to
-/// sew it up to, the curve each crossed band is cut back by, and where the run-out would have died.
+/// What [`try_close`] hands back: each strip's end ring for the stitch to sew it up to, the curve
+/// each crossed band is cut back by, and where the run-out would have died.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMixedCornerPatchClosed {
     /// The cut's end ring.
@@ -370,9 +369,9 @@ pub struct SurfaceMixedCornerPatchClosed {
     pub the_die_point: i32,
 }
 
-/// C# `TryClose`: closes the corner - the two end rings, the bites the blend's footprint takes out
-/// of the faces nobody picked, the torus patch between the rings, and the runout that carries it
-/// on past the end of the bead's rim to the sharp edge.
+/// Closes the corner - the two end rings, the bites the blend's footprint takes out of the faces
+/// nobody picked, the torus patch between the rings, and the runout that carries it on past the end
+/// of the bead's rim to the sharp edge.
 ///
 /// `cut_index` / `bead_index` say which edge of the build each strip is (its tangent runs in
 /// `seams`), `cut_ends_here` / `bead_ends_here` whether the corner is the END of that strip's own
@@ -515,12 +514,11 @@ pub fn try_close(
     )?;
 
     // And where the wall RAN OUT under the blend, the face across its end gives up the section the
-    // blend leaves in that face's own plane (SurfaceMixedCornerWallEnds). C# reads
-    // `wallEndsAt.Value` unguarded, and that is sound: with neither band crossing, the run-out only
-    // draws a section once the window has a finite switch turn, and that turn is read off
-    // `wall_ends_at` alone (`SurfaceRunOutColumnWindow::try_read`), so a section here always comes
-    // with a plane. The `else` cannot be reached from real input; it is kept as a refusal rather
-    // than an `expect`.
+    // blend leaves in that face's own plane (SurfaceMixedCornerWallEnds). Reading `wall_ends_at` is
+    // sound here: with neither band crossing, the run-out only draws a section once the window has
+    // a finite switch turn, and that turn is read off `wall_ends_at` alone
+    // (`SurfaceRunOutColumnWindow::try_read`), so a section here always comes with a plane. The
+    // `else` cannot be reached from real input; it is kept as a refusal rather than an `expect`.
     if let Some(section) = run_out.section.as_deref() {
         if meets_the_band.is_none() && meets_a_wall_band.is_none() {
             let Some(across) = wall_ends_at else {

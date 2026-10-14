@@ -1,9 +1,9 @@
 //! Where a mixed corner's RUN-OUT and another chain's BAND land on one another
 //! ([`SurfaceRunOutMeetsTheBand`]), read as the turns the run-out's own rows and its foot leave the
-//! band's material at. Ports the fields of `Bevel/Surface/SurfaceRunOutMeetsTheBand.cs`, its
-//! constructor and its questions (where a row crosses, whether a row is taken, whether a point
-//! stands in the section, which rail a row is sewn to, and the turn its foot enters the section
-//! at), and the reading itself ([`SurfaceRunOutMeetsTheBand::try_read`]).
+//! band's material at: its fields, its constructor and its questions (where a row crosses, whether
+//! a row is taken, whether a point stands in the section, which rail a row is sewn to, and the turn
+//! its foot enters the section at), and the reading itself
+//! ([`SurfaceRunOutMeetsTheBand::try_read`]).
 
 use std::rc::Rc;
 
@@ -14,7 +14,7 @@ use super::{surface_mixed_corner_wall_ends, SurfaceBandEnd};
 use super::{SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceStrip};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceRunOutMeetsTheBand`: a run-out and a band crossing, read per row of the run-out.
+/// A run-out and a band crossing, read per row of the run-out.
 ///
 /// **One arc, swept two ways.** The band's strip is the r-arc swept along a straight line and the
 /// run-out's rings are the same r-arc turned about the bead's axis, so at every height the two
@@ -52,7 +52,7 @@ impl SurfaceRunOutMeetsTheBand {
     /// How many steps the reading takes across the run-out's sweep.
     pub const STEPS_ACROSS_THE_SWEEP: i32 = 240;
 
-    /// C#'s private constructor.
+    /// Builds the reading from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         crosses_at: Vec<f64>,
@@ -158,14 +158,14 @@ impl SurfaceRunOutMeetsTheBand {
 }
 
 impl SurfaceRunOutMeetsTheBand {
-    /// C# `TryWhereTheFootCrosses`: the turn at which the run-out's own foot ENTERS the section the
-    /// band's end cut takes out of the wall, or `None` where it never does (a run-out that dies on
-    /// the wall as it always did) - or where it is inside already at the bead's end, which is a band
-    /// under the blend itself and a corner of another shape.
+    /// The turn at which the run-out's own foot ENTERS the section the band's end cut takes out of
+    /// the wall, or `None` where it never does (a run-out that dies on the wall as it always did) -
+    /// or where it is inside already at the bead's end, which is a band under the blend itself and
+    /// a corner of another shape.
     ///
     /// Where it enters need not be where it stays: a section is a bounded polygon the foot can pass
-    /// right through, so the sweep is walked in [`Self::STEPS_ACROSS_THE_SWEEP`] steps to bracket the
-    /// FIRST entry and halved sixty times from there.
+    /// right through, so the sweep is walked in [`Self::STEPS_ACROSS_THE_SWEEP`] steps to bracket
+    /// the FIRST entry and halved sixty times from there.
     pub fn try_where_the_foot_crosses(
         &self,
         corner: &SurfaceMixedCorner,
@@ -183,7 +183,7 @@ impl SurfaceRunOutMeetsTheBand {
         let mut entered = false;
 
         for step in 1..=Self::STEPS_ACROSS_THE_SWEEP {
-            // C#'s `clears * step / StepsAcrossTheSweep`, in doubles left to right.
+            // Multiplied then divided, left to right, so every station lands on the same value.
             let at = clears * step as f64 / Self::STEPS_ACROSS_THE_SWEEP as f64;
             let here = surface_mixed_corner_run_out::try_scallop_point(corner, wall, at)?;
 
@@ -216,11 +216,11 @@ impl SurfaceRunOutMeetsTheBand {
 }
 
 impl SurfaceRunOutMeetsTheBand {
-    /// C# `TryRead`: where the mixed corner's run-out rows (`rows`, one per rail of the band's
-    /// section) cross another chain's `band` - each row sewn to its own rail, read against one plane
-    /// standing in that rail's line facing the band's material: where it crosses and whether the band
-    /// already has it at the seed. `Ok(None)` (C#'s false with no failure) where there is nothing to
-    /// read; `Err` where the two profiles do not match.
+    /// Where the mixed corner's run-out rows (`rows`, one per rail of the band's section) cross
+    /// another chain's `band` - each row sewn to its own rail, read against one plane standing in
+    /// that rail's line facing the band's material: where it crosses and whether the band already
+    /// has it at the seed. `Ok(None)` where there is nothing to read; `Err` where the two profiles
+    /// do not match.
     pub fn try_read(
         corner: Option<&SurfaceMixedCorner>,
         band: Option<&Rc<SurfaceStrip>>,
@@ -242,7 +242,7 @@ impl SurfaceRunOutMeetsTheBand {
 
         let up = -corner.out_of_the_cap_face;
         let across = band.along().cross(up);
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN declines
         let square = !(across.length_squared() > 0.0);
         if square {
             // The band runs square to the cap it is crossed on.

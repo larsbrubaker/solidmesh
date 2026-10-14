@@ -1,7 +1,7 @@
-//! What a band finds when it passes UNDER a feature standing on the face it lands on: the
-//! feature's creases across the region, linked end to end into the one thing they belong to
+//! What a band finds when it passes UNDER a feature standing on the face it lands on: the feature's
+//! creases across the region, linked end to end into the one thing they belong to
 //! ([`SurfaceStandingFeatureStretch`]), and the feature's faces held BACK from the walkback
-//! ([`try_withhold`]). Ports `Bevel/Surface/SurfaceStandingFeatureStretch.cs`.
+//! ([`try_withhold`]).
 //!
 //! The room reading (`surface_room_standing_feature`) is what lets the band get there at all - such
 //! a feature bounds nothing, because the region goes on behind it. What the band then leaves is a
@@ -14,9 +14,8 @@
 //! feature is one thing: the nose in the chevron notch has one crease inside the band and one only
 //! grazed by it, and reading those as two stretches asks each half to stand on its own.
 //!
-//! C#'s `HashSet<int>` and `Dictionary` iterate in insertion order, and the stretch's facets and
-//! the rim's ends are walked here (the first normal found is the landing), so those are
-//! `IndexSet`/`IndexMap`.
+//! The stretch's facets and the rim's ends are walked here (the first normal found is the landing),
+//! so they are `IndexSet`/`IndexMap`: insertion order keeps the landing the same on every run.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -34,9 +33,9 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{FaceGroup, FeatureEdge};
 
-/// C# `SurfaceStandingFeatureStretch.Stretch`: one feature's creases across the region - the
-/// vertices of the stretch in order along it, the region's own facets and normal there, the creases
-/// themselves with the facets standing across them, and what the walk found the shape of it to be.
+/// One feature's creases across the region - the vertices of the stretch in order along it, the
+/// region's own facets and normal there, the creases themselves with the facets standing across
+/// them, and what the walk found the shape of it to be.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceStandingFeatureStretch {
     /// The stretch's vertices, in order along it.
@@ -56,8 +55,8 @@ pub struct SurfaceStandingFeatureStretch {
     pub is_branching: bool,
 }
 
-/// C# `TryWithhold`: the standing features every band passes under, with their own facets held
-/// BACK rather than carried over - each has to be extended through the corner its band took.
+/// The standing features every band passes under, with their own facets held BACK rather than
+/// carried over - each has to be extended through the corner its band took.
 ///
 /// One reading of the rim for the whole region: the features standing on it are the region's own
 /// business, not each cut's, and a feature reached by two cuts has to be RECOGNISED as one thing
@@ -84,7 +83,7 @@ pub fn try_withhold(
                 // feature's facets at all; the CREASE reading says the feature's root line really
                 // stands in the footprint the band takes. A feature the band only grazes is left
                 // exactly as it was, which keeps the room's predicate and the walkback agreeing.
-                // (C# indexes `Reaches[cut]`, which the walkback has filled for every cut.)
+                // (The walkback has filled `reaches` for every cut.)
                 let overlaps = walkback
                     .reaches
                     .get(cut)
@@ -127,8 +126,8 @@ pub fn try_withhold(
     Ok(withheld)
 }
 
-/// C# `TryTheFacesOfIt`: the feature's FACES along one stretch - one per coplanar region standing
-/// across its creases, each with the run of crease its region stands on.
+/// The feature's FACES along one stretch - one per coplanar region standing across its creases,
+/// each with the run of crease its region stands on.
 ///
 /// The region and not the facet: a face fanned from a point inside itself (what a boolean leaves,
 /// and what "15mm Bevel Top Edge.mcx" carries) has only ONE of its triangles across the crease.
@@ -196,8 +195,8 @@ fn try_the_faces_of_it(
     Ok(faces)
 }
 
-/// C# `TryTheRegionOf`: the whole coplanar region one facet belongs to - the FACE of the part it is
-/// a triangle of - or a refusal where what the flood reached is not one plane after all.
+/// The whole coplanar region one facet belongs to - the FACE of the part it is a triangle of - or a
+/// refusal where what the flood reached is not one plane after all.
 ///
 /// The flood is `FaceGroup`'s at the flat angle the rest of the pass reads faces by. What it cannot
 /// say on its own is that the face is FLAT: it crosses each edge on its own account, so a finely
@@ -217,8 +216,8 @@ pub fn try_the_region_of(
         )
     };
 
-    // The seed is always a facet of `mesh` here (a rim edge's far face); C# would throw on one
-    // that is not, and it is refused instead, named at the origin for want of a facet to name.
+    // The seed is always a facet of `mesh` here (a rim edge's far face); one that is not is refused
+    // as a guard, named at the origin for want of a facet to name.
     let region =
         FaceGroup::create_with_graph(mesh, graph, seed, FeatureEdge::default_flat_angle_degrees())
             .map_err(|_| does_not_extend(Vector3::ZERO))?
@@ -240,11 +239,11 @@ pub fn try_the_region_of(
     Ok(region)
 }
 
-/// C# `TheCreaseIsInTheBand`: whether the feature's ROOT LINE has a point inside the band - past
-/// the tangent line and between the band's ends - which is what makes this a feature the band
-/// undercut rather than one it passed beside. The same question the room's predicate answers for
-/// the region as a whole, so room and walkback never disagree.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < y)`, which keeps a NaN out as well.
+/// Whether the feature's ROOT LINE has a point inside the band - past the tangent line and between
+/// the band's ends - which is what makes this a feature the band undercut rather than one it passed
+/// beside. The same question the room's predicate answers for the region as a whole, so room and
+/// walkback never disagree.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < y)` on purpose: it keeps a NaN out as well.
 fn the_crease_is_in_the_band(
     cut: &SurfaceFacetCut,
     stretch: &SurfaceStandingFeatureStretch,
@@ -264,10 +263,10 @@ fn the_crease_is_in_the_band(
     })
 }
 
-/// C# `TryRead`: the three things a stretch has to be before its faces can be extended as flat
-/// planes, each named rather than worked around - not BRANCHING (a forked rim has no order to walk
-/// it in), on ONE PLANE (the region is cut as a plane), and under ONE band (two bands' extensions
-/// would overlap, the same triangle emitted twice).
+/// The three things a stretch has to be before its faces can be extended as flat planes, each named
+/// rather than worked around - not BRANCHING (a forked rim has no order to walk it in), on ONE
+/// PLANE (the region is cut as a plane), and under ONE band (two bands' extensions would overlap,
+/// the same triangle emitted twice).
 pub fn try_read(
     stretch: &SurfaceStandingFeatureStretch,
     under_two_cuts: bool,
@@ -290,9 +289,9 @@ pub fn try_read(
     Ok(())
 }
 
-/// C# `StandingStretches`: the stretches of standing feature on one region, linked from the rim
-/// edges `surface_room_standing_feature::stands_on` names. Open stretches first, each from an END
-/// so that one walk covers it; what is left after that is rings, started wherever first met.
+/// The stretches of standing feature on one region, linked from the rim edges
+/// `surface_room_standing_feature::stands_on` names. Open stretches first, each from an END so that
+/// one walk covers it; what is left after that is rings, started wherever first met.
 pub fn standing_stretches(
     walkback: &SurfaceRegionWalkback,
     beveled_mesh_edges: &HashSet<i32>,
@@ -381,7 +380,7 @@ pub fn standing_stretches(
     found
 }
 
-/// C# `Ordered`: one crease named the same way whichever end of it is read first.
+/// One crease named the same way whichever end of it is read first.
 fn ordered(a: i32, b: i32) -> (i32, i32) {
     if a < b {
         (a, b)
@@ -390,7 +389,7 @@ fn ordered(a: i32, b: i32) -> (i32, i32) {
     }
 }
 
-/// C# `FacesAlong`: the region's own facets along one stretch.
+/// The region's own facets along one stretch.
 fn faces_along(path: &[i32], faces_at: &HashMap<i32, Vec<i32>>) -> IndexSet<i32> {
     let mut faces = IndexSet::new();
 
@@ -403,9 +402,9 @@ fn faces_along(path: &[i32], faces_at: &HashMap<i32, Vec<i32>>) -> IndexSet<i32>
     faces
 }
 
-/// C# `NormalAlong`: the region's outward normal along one stretch (its facets `faces`), and
-/// whether every facet along it agrees with the first to within the angle the pass calls one
-/// plane (`FeatureEdge::COPLANAR_FACE_DOT`).
+/// The region's outward normal along one stretch (its facets `faces`), and whether every facet
+/// along it agrees with the first to within the angle the pass calls one plane
+/// (`FeatureEdge::COPLANAR_FACE_DOT`).
 fn normal_along(faces: &IndexSet<i32>, normal_of: &HashMap<i32, Vector3>) -> (Vector3, bool) {
     let mut landing = Vector3::ZERO;
     let mut is_on_one_plane = true;
@@ -425,9 +424,9 @@ fn normal_along(faces: &IndexSet<i32>, normal_of: &HashMap<i32, Vector3>) -> (Ve
     (landing, is_on_one_plane)
 }
 
-/// C# `Walk`: the stretch from one of its vertices to the far end of it, marking what it covers,
-/// and whether the rim FORKED anywhere on the way - at a fork there is no "the far end" and the
-/// walk's own order means nothing, so the caller refuses.
+/// The stretch from one of its vertices to the far end of it, marking what it covers, and whether
+/// the rim FORKED anywhere on the way - at a fork there is no "the far end" and the walk's own
+/// order means nothing, so the caller refuses.
 fn walk(ends: &IndexMap<i32, Vec<i32>>, start: i32, walked: &mut HashSet<i32>) -> (Vec<i32>, bool) {
     let mut path = vec![start];
 
@@ -448,7 +447,7 @@ fn walk(ends: &IndexMap<i32, Vec<i32>>, start: i32, walked: &mut HashSet<i32>) -
     }
 }
 
-/// C# `Note`: notes which of the region's facets a vertex of the stretch stands on.
+/// Notes which of the region's facets a vertex of the stretch stands on.
 fn note(faces_at: &mut HashMap<i32, Vec<i32>>, vertex: i32, face: i32) {
     let faces = faces_at
         .entry(vertex)
@@ -459,7 +458,7 @@ fn note(faces_at: &mut HashMap<i32, Vec<i32>>, vertex: i32, face: i32) {
     }
 }
 
-/// C# `Join`: notes that two vertices of the rim are joined by one standing crease.
+/// Notes that two vertices of the rim are joined by one standing crease.
 fn join(ends: &mut IndexMap<i32, Vec<i32>>, from: i32, to: i32) {
     let neighbours = ends.entry(from).or_insert_with(|| Vec::with_capacity(2));
 

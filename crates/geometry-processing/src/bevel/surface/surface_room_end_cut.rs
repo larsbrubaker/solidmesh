@@ -1,7 +1,6 @@
-//! The notch a chain END cuts into the faces standing across its corner, as the room reads it
-//! (`Bevel/Surface/SurfaceRoomEndCut.cs`, a static class: free functions here). Which surfaces
-//! stand across a region's rim at a corner, the face beyond ([`try_the_face_beyond`]) and the end
-//! cut itself ([`try_cut`]).
+//! The notch a chain END cuts into the faces standing across its corner, as the room reads it.
+//! Which surfaces stand across a region's rim at a corner, the face beyond
+//! ([`try_the_face_beyond`]) and the end cut itself ([`try_cut`]).
 
 use std::sync::Arc;
 
@@ -15,9 +14,9 @@ use super::{
 use crate::topology::EdgeConvexity;
 use crate::topology::{FaceGroup, FaceRegionCache};
 
-/// The surfaces standing on the far side of `region`'s rim at `corner` (within `tolerance`),
-/// keyed by region key, less the chain edge's own two (`left`, `right`) and the chain edge itself
-/// (`picked_mesh_edge`). In the order the rim names them (C#'s `Dictionary`, so an `IndexMap`).
+/// The surfaces standing on the far side of `region`'s rim at `corner` (within `tolerance`), keyed
+/// by region key, less the chain edge's own two (`left`, `right`) and the chain edge itself
+/// (`picked_mesh_edge`). In the order the rim names them (an `IndexMap`, so the order is fixed).
 #[allow(clippy::too_many_arguments)]
 pub fn across_the_rim(
     regions: &FaceRegionCache,
@@ -69,14 +68,14 @@ pub fn try_key_of(regions: &FaceRegionCache, face_index: i32) -> Option<(i32, Ar
 /// (at least 1).
 pub const VERTEX_TOLERANCE: f64 = 1e-5;
 
-/// C# `TryCut`: the notch a chain's open END cuts into the face standing across its corner, as a
-/// room cut of the face beyond - reaching the further of the profile's two setbacks out of the
-/// corner, leaning the way the section really leans where that can be read, and keyed back to the
-/// end edge it was taken off. `None` for a closed, sizeless or empty plan, an end that runs out or
-/// meets a junction, a concave or region-less end edge, or no single face beyond.
+/// The notch a chain's open END cuts into the face standing across its corner, as a room cut of the
+/// face beyond - reaching the further of the profile's two setbacks out of the corner, leaning the
+/// way the section really leans where that can be read, and keyed back to the end edge it was taken
+/// off. `None` for a closed, sizeless or empty plan, an end that runs out or meets a junction, a
+/// concave or region-less end edge, or no single face beyond.
 pub fn try_cut(plan: Option<&SurfaceBevelPlan>, at_the_start: bool) -> Option<SurfaceRoomCut> {
     let plan = plan?;
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN declines
     let no_size = !(plan.size > 0.0);
     if plan.is_closed
         || no_size
@@ -107,7 +106,7 @@ pub fn try_cut(plan: Option<&SurfaceBevelPlan>, at_the_start: bool) -> Option<Su
     // The profile's reach out of the corner: the further of its two tangent points.
     let reach = vector_math::cs_math::max_f64(edge.left_setback, edge.right_setback);
 
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN declines, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN declines
     let no_reach = !(reach > 0.0);
     if no_reach {
         return None;
@@ -148,8 +147,8 @@ pub fn try_cut(plan: Option<&SurfaceBevelPlan>, at_the_start: bool) -> Option<Su
     Some(cut)
 }
 
-/// C# `TryTheFaceBeyond`: the one surface standing across BOTH of the end edge's faces' rims at
-/// `corner` - its region key and region; `None` where there is none, or more than one.
+/// The one surface standing across BOTH of the end edge's faces' rims at `corner` - its region key
+/// and region; `None` where there is none, or more than one.
 pub fn try_the_face_beyond(
     plan: &SurfaceBevelPlan,
     edge: &SurfaceEdgePlan,

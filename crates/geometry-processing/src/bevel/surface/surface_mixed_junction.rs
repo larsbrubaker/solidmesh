@@ -1,8 +1,8 @@
 //! The corner where THREE picked edges meet and their convexity is mixed
 //! ([`SurfaceMixedJunction`]), which shape of junction it is ([`SurfaceJunctionKind`]), one cut's
 //! side of it ([`SurfaceMixedJunctionArm`]) and a free chain end the gathering found
-//! ([`SurfaceMixedJunctionChainEnd`]). Ports `Bevel/Surface/SurfaceMixedJunction.cs`: the
-//! records, the reading of one junction and of a whole pass's, and the hand-over to the plans.
+//! ([`SurfaceMixedJunctionChainEnd`]): the records, the reading of one junction and of a whole
+//! pass's, and the hand-over to the plans.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -17,8 +17,8 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `SurfaceJunctionKind`: which shape of junction a [`SurfaceMixedJunction`] is - which of the
-/// three picked edges at the vertex are the creases.
+/// Which shape of junction a [`SurfaceMixedJunction`] is - which of the three picked edges at the
+/// vertex are the creases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SurfaceJunctionKind {
     /// Two cuts and ONE bead - the corner [`SurfaceMixedJunction`] was written about.
@@ -30,8 +30,7 @@ pub enum SurfaceJunctionKind {
     TwoCreases = 1,
 }
 
-/// C# `SurfaceMixedJunction.ChainEnd` (a readonly struct): a free end of one chain, as the
-/// gathering found it.
+/// A free end of one chain, as the gathering found it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct SurfaceMixedJunctionChainEnd {
     /// Which plan of the pass the chain is.
@@ -42,8 +41,7 @@ pub struct SurfaceMixedJunctionChainEnd {
     pub at_the_start: bool,
 }
 
-/// C# `SurfaceMixedJunction.Arm` (a readonly struct): one cut's side of the junction, with
-/// everything the plan and the patch need to quote.
+/// One cut's side of the junction, with everything the plan and the patch need to quote.
 #[derive(Debug, Clone)]
 pub struct SurfaceMixedJunctionArm {
     /// Which plan of the pass this cut's chain is.
@@ -67,7 +65,7 @@ pub struct SurfaceMixedJunctionArm {
     /// The bead's chords between the corner and [`SurfaceMixedJunctionArm::bead_end`] - the ones
     /// the blend reaches over, which owe no strip of their own, exactly as
     /// [`SurfaceMixedJunctionArm::swallowed`] is for the cut. Empty at a one-crease junction, which
-    /// does not read the bead this way (C# defaults a null argument to the empty array).
+    /// does not read the bead this way.
     pub bead_swallowed: Vec<i32>,
     /// The canal the blend really is at a TWO-crease junction - the bead's void ball rolling along
     /// the wall both creases stand against, pressed against the cut's tube - or `None` at a
@@ -76,11 +74,11 @@ pub struct SurfaceMixedJunctionArm {
     pub dual: Option<Rc<SurfaceMixedCornerDualFrame>>,
 }
 
-/// C# `SurfaceMixedJunction` (a sealed class): the corner where THREE picked edges meet and their
-/// convexity is mixed, read as the two mixed corners it really is rather than as a corner of a
-/// third kind. With ONE crease among the three that is two cuts and a bead; with TWO it is one cut
-/// and two beads, and the arms are read the same way but the canal between them is another shape
-/// altogether (`SurfaceTwoCreaseJunction`, which this hands over to).
+/// The corner where THREE picked edges meet and their convexity is mixed, read as the two mixed
+/// corners it really is rather than as a corner of a third kind. With ONE crease among the three
+/// that is two cuts and a bead; with TWO it is one cut and two beads, and the arms are read the
+/// same way but the canal between them is another shape altogether (`SurfaceTwoCreaseJunction`,
+/// which this hands over to).
 ///
 /// **Why it is not the octant.** The three-convex corner is closed by the ball that touches all
 /// three faces at once (`SurfaceCornerPatch`). With a crease among the three there is no such
@@ -142,7 +140,7 @@ impl SurfaceMixedJunction {
 }
 
 impl SurfaceMixedJunctionChainEnd {
-    /// C#'s constructor.
+    /// The free end of edge `edge` of plan `plan`, at its start or its end.
     pub fn new(plan: i32, edge: i32, at_the_start: bool) -> Self {
         SurfaceMixedJunctionChainEnd {
             plan,
@@ -153,7 +151,7 @@ impl SurfaceMixedJunctionChainEnd {
 }
 
 impl SurfaceMixedJunctionArm {
-    /// C#'s constructor; `bead_swallowed` is `None` for C#'s default (none).
+    /// Builds one cut's side of the junction; `bead_swallowed` is `None` for none.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         plan: i32,
@@ -182,7 +180,7 @@ impl SurfaceMixedJunction {
     /// How near the two arms' readings of the same turn have to agree - an angle, so fixed.
     pub const SAME_TURN: f64 = 1e-6;
 
-    /// C#'s private constructor.
+    /// Builds the junction from its parts; the reading makes one.
     pub fn new(
         corner: Vector3,
         vertex: i32,
@@ -281,9 +279,10 @@ impl SurfaceMixedJunction {
         (touching == 3 && ends.len() == 3).then_some(ends)
     }
 
-    /// C# `TryGatherTheEnds`' walk: the free chain ends standing at `vertex`, and how many picked
-    /// edge ends stand there however they are chained - which is what tells a CROWDED corner from
-    /// one of three that simply does not end there, the two being refused under different names.
+    /// The walk that gathers the ends: the free chain ends standing at `vertex`, and how many
+    /// picked edge ends stand there however they are chained - which is what tells a CROWDED corner
+    /// from one of three that simply does not end there, the two being refused under different
+    /// names.
     fn gather_the_ends(
         plans: &[Rc<SurfaceBevelPlan>],
         vertex: i32,
@@ -334,10 +333,10 @@ impl SurfaceMixedJunction {
 }
 
 impl SurfaceMixedJunction {
-    /// C# `TryReadTheArm`: one cut's side of the junction - which edge of its chain the cut really
-    /// is, the chords the blend swallows before it, and the mixed corner it makes with the bead.
-    /// The error is C#'s nullable failure reason: `None` where the cut could not be found, which
-    /// the caller answers with its own default sentence.
+    /// One cut's side of the junction - which edge of its chain the cut really is, the chords the
+    /// blend swallows before it, and the mixed corner it makes with the bead. The error is the
+    /// failure reason, if any: `None` where the cut could not be found, which the caller answers
+    /// with its own default sentence.
     pub fn try_read_the_arm(
         plans: &[Rc<SurfaceBevelPlan>],
         end: SurfaceMixedJunctionChainEnd,
@@ -415,9 +414,9 @@ impl SurfaceMixedJunction {
         ))
     }
 
-    /// C# `TryRead`: reads the junction three chain ends make at `vertex` (standing at `corner`),
-    /// or says why it cannot be read - always named AT the corner. Pure: it asks the plans and
-    /// nothing else. `near_enough` is the part's own ruler (`SurfaceVertexPool::near_enough`).
+    /// Reads the junction three chain ends make at `vertex` (standing at `corner`), or says why it
+    /// cannot be read - always named AT the corner. Pure: it asks the plans and nothing else.
+    /// `near_enough` is the part's own ruler (`SurfaceVertexPool::near_enough`).
     pub fn try_read(
         plans: &[Rc<SurfaceBevelPlan>],
         vertex: i32,
@@ -454,7 +453,7 @@ impl SurfaceMixedJunction {
 
         if creases.len() > 1 {
             // Two creases at one vertex is a corner read by its own reading, which answers the two
-            // arms it really has. THREE creases never arrives here (TryReadAll passes over a
+            // arms it really has. THREE creases never arrives here (`try_read_all` passes over a
             // vertex whose tally has no convex arm), so the count is dead defence, kept so that
             // the hand-over states the shape it answers.
             if creases.len() != 2 {
@@ -540,10 +539,10 @@ impl SurfaceMixedJunction {
         ))
     }
 
-    /// C# `TryReadAll`: every junction of a pass, read and handed to the plans that meet at it -
-    /// or the first vertex where three or more picked edges of mixed convexity meet and CANNOT be
-    /// read as one, named there. Vertices are gathered by the welded mesh's own index and walked
-    /// in the plans' own order, so a part with two such corners always names the same one first.
+    /// Every junction of a pass, read and handed to the plans that meet at it - or the first vertex
+    /// where three or more picked edges of mixed convexity meet and CANNOT be read as one, named
+    /// there. Vertices are gathered by the welded mesh's own index and walked in the plans' own
+    /// order, so a part with two such corners always names the same one first.
     ///
     /// **The plans are written to as this goes, and a later refusal leaves the earlier ones
     /// written.** That is the contract: the builder aborts the whole pass on a refusal here, and a
@@ -592,10 +591,10 @@ impl SurfaceMixedJunction {
         Ok(junctions)
     }
 
-    /// C# `TryApplyTo`: hands the junction to the three plans that meet at it, so that the
-    /// walkback and the strip ends read one corner rather than three loose chain ends. The bead is
-    /// given BOTH arms' readings, and each cut its own: which arm answers on the bead is the face's
-    /// own question (`SurfaceBevelPlan::band_ends_of`).
+    /// Hands the junction to the three plans that meet at it, so that the walkback and the strip
+    /// ends read one corner rather than three loose chain ends. The bead is given BOTH arms'
+    /// readings, and each cut its own: which arm answers on the bead is the face's own question
+    /// (`SurfaceBevelPlan::band_ends_of`).
     pub fn try_apply_to(&self, plans: &[Rc<SurfaceBevelPlan>]) -> Result<(), BevelAdvisory> {
         if self.kind == SurfaceJunctionKind::TwoCreases {
             // One cut and two beads, so the roles are the other way about: the CUT is the chain

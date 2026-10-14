@@ -1,6 +1,5 @@
-//! The mixed corner's OTHER canal ([`SurfaceMixedCornerDualFrame`]): the bead's VOID ball,
-//! rolling along the wall and pressed against the cut's tube. Ports the record of
-//! `Bevel/Surface/SurfaceMixedCornerDualFrame.cs` with its reading
+//! The mixed corner's OTHER canal ([`SurfaceMixedCornerDualFrame`]): the bead's VOID ball, rolling
+//! along the wall and pressed against the cut's tube: its record with its reading
 //! ([`SurfaceMixedCornerDualFrame::try_read_the_dual`]) and its rail accessors.
 
 use vector_math::Vector3;
@@ -8,10 +7,9 @@ use vector_math::Vector3;
 use super::{SurfaceBandEnd, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedCornerDualFrame` (a sealed class): the mixed corner's OTHER canal, read - the
-/// bead's VOID ball, rolling along the wall and pressed against the cut's tube, where the reading
-/// proper carries the material ball riding the cap. Shared by a junction's arm and the rings sewn
-/// over it, hence held through `Rc`.
+/// The mixed corner's OTHER canal, read - the bead's VOID ball, rolling along the wall and pressed
+/// against the cut's tube, where the reading proper carries the material ball riding the cap.
+/// Shared by a junction's arm and the rings sewn over it, hence held through `Rc`.
 ///
 /// **The same spine, with its roles swapped.** [`SurfaceMixedCornerSpine`] says where a ball
 /// stands that keeps a fixed offset from one plane and a fixed distance from one line; which plane
@@ -21,13 +19,14 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 /// the cut strip's own sweep.
 ///
 /// **Who asks for it, and what is still not known.** Measured against the Onshape control, the
-/// oblique corner of `NoseInNotchTestMeshes` IS this canal and not the cap-riding one, to 2.6e-6 mm
-/// against 0.48 mm (`SurfaceObliqueMixedCornerWallSpineTests`). `SurfaceTwoCreaseJunction` asks
-/// for it by NAME: at a junction of one cut and two creases the blend is this canal by
-/// construction. What is NOT known is the rule for a corner where both canals read and only one is
-/// right: on a SQUARE corner both span the same two end rings, and no test written on the two
-/// faces' PLANES separates them - the one that does is whether the contact rail stays on the face's
-/// own EXTENT, which this reading cannot see (`SurfaceMixedCornerDualOnASquareCornerTests`).
+/// oblique corner of `nose_in_notch_test_meshes` IS this canal and not the cap-riding one, to
+/// 2.6e-6 mm against 0.48 mm (`SurfaceObliqueMixedCornerWallSpineTests`).
+/// `SurfaceTwoCreaseJunction` asks for it by NAME: at a junction of one cut and two creases the
+/// blend is this canal by construction. What is NOT known is the rule for a corner where both
+/// canals read and only one is right: on a SQUARE corner both span the same two end rings, and no
+/// test written on the two faces' PLANES separates them - the one that does is whether the contact
+/// rail stays on the face's own EXTENT, which this reading cannot see
+/// (`SurfaceMixedCornerDualOnASquareCornerTests`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMixedCornerDualFrame {
     /// The axis the void ball is pressed against: the CUT's own centre line.
@@ -46,7 +45,7 @@ pub struct SurfaceMixedCornerDualFrame {
 }
 
 impl SurfaceMixedCornerDualFrame {
-    /// C#'s private constructor.
+    /// Builds the frame from its parts; [`Self::try_read_the_dual`] reads one.
     fn new(
         axis: SurfaceLine,
         rail_centre: Vector3,
@@ -68,7 +67,7 @@ impl SurfaceMixedCornerDualFrame {
     /// Reads the dual of `corner` (already read the ordinary way), or says why it has none.
     /// `square_enough` is how far from lying IN the wall the cut must stand, as a cosine - the
     /// same dimensionless floor the reading proper keeps its own angles at.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
     pub fn try_read_the_dual(
         corner: &SurfaceMixedCorner,
         square_enough: f64,

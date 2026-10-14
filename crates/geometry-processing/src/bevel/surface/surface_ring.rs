@@ -1,33 +1,30 @@
 //! What is done to a RING of pool vertices once the clipping is over: tidying a ring the clip left
 //! with a point repeated, and knitting the pieces one facet was cut into so that none of them is
-//! bounded part way along an edge another one carries whole. Ports
-//! `Bevel/Surface/SurfaceRing.cs` (C# `internal static class`; a module of free functions here).
+//! bounded part way along an edge another one carries whole.
 //!
 //! Kept apart from `SurfaceFacetCut` because neither reading needs a cut at all - they are about
 //! the rings a cut leaves behind, and every caller that cuts a facet by hand (the end cut's wedge
 //! sides, the mixed corner's bites) wants them without having a `SurfaceFacetCut` in hand.
 //!
-//! The directed-edge set and the onward map are only looked up and counted, never iterated into
-//! an output: the boundary is started from the rings' own order, so a `HashSet`/`HashMap` cannot
-//! leak its order here (C# says the same of its dictionary).
+//! The directed-edge set and the onward map are only looked up and counted, never iterated into an
+//! output: the boundary is started from the rings' own order, so a `HashSet`/`HashMap` cannot leak
+//! its order here.
 
 use std::collections::{HashMap, HashSet};
 
 use super::SurfaceVertexPool;
 
-/// The boundary of the UNION of several rings, as one ring: the edges used by exactly one of
-/// them, linked end to end in the rings' own direction. `None` (C# false) where that boundary is
-/// not a single simple loop - two rings winding against each other, a region shaped like a figure
-/// of eight, or one pinched to a point - because there is then no one outline for the caller to
-/// stand a face on.
+/// The boundary of the UNION of several rings, as one ring: the edges used by exactly one of them,
+/// linked end to end in the rings' own direction. `None` where that boundary is not a single simple
+/// loop - two rings winding against each other, a region shaped like a figure of eight, or one
+/// pinched to a point - because there is then no one outline for the caller to stand a face on.
 ///
 /// What a face of the part cut into triangles looks like from outside: the triangulation's own
 /// diagonals are each used twice, once each way, and cancel, leaving the face's outline. The rings
 /// have to be wound the same way round for that to be true, which every facet of one mesh face is.
 pub fn try_boundary_of_the_union<R: AsRef<[i32]>>(rings: &[R]) -> Option<Vec<i32>> {
     let mut used: HashSet<(i32, i32)> = HashSet::new();
-    // The same edges in insertion order, so the onward map is filled in the order C#'s
-    // HashSet enumerates (insertion order where nothing was removed).
+    // The same edges in insertion order, so the onward map is filled in a fixed order on every run.
     let mut used_in_order: Vec<(i32, i32)> = Vec::new();
 
     for ring in rings {
@@ -104,11 +101,11 @@ pub fn try_boundary_of_the_union<R: AsRef<[i32]>>(rings: &[R]) -> Option<Vec<i32
 /// the end knows nothing of the point where it did. Left alone that is a T junction in the middle
 /// of a face.
 ///
-/// The vertices found along one edge are ordered by where they fall along it. C# sorts them with
-/// the unstable `List.Sort`; two distinct pool vertices at the same parameter would have to sit
-/// within a weld of each other, which the pool welds into one, so ties do not arise - the stable
-/// sort here keeps first-standing order should they ever.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+/// The vertices found along one edge are ordered by where they fall along it. Two distinct pool
+/// vertices at the same parameter would have to sit within a weld of each other, which the pool
+/// welds into one, so ties do not arise - the stable sort here keeps first-standing order should
+/// they ever.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn knit(pieces: Vec<Vec<i32>>, pool: &SurfaceVertexPool) -> Vec<Vec<i32>> {
     if pieces.len() < 2 {

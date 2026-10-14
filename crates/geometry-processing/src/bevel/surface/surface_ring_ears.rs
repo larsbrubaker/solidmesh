@@ -1,7 +1,6 @@
 //! Any planar ring cut into triangles by clipping EARS off it: the triangulation anything needs
 //! where no single vertex of the ring sees the whole of it and [`super::surface_fan`]'s fan
-//! therefore cannot cover it once. Ports `Bevel/Surface/SurfaceRingEars.cs` (C# `internal static
-//! class`; a module of free functions here).
+//! therefore cannot cover it once.
 //!
 //! Written for `SurfaceEndFollowsTheWalkedChords`: a rolled concave section caves in both ways at
 //! once - the arc one way, and on a boss the wall's chords the other - so it is star shaped about
@@ -18,9 +17,9 @@ use vector_math::Vector3;
 use super::surface_fan;
 use super::SurfaceVertexPool;
 
-/// C# `TryTriangulateTheRing`: the ring as triangles, by clipping EARS off it, or false where it
-/// is no ring this can finish - which the caller has to read as a refusal rather than publish what
-/// was emitted. C#'s optional `roundTipsFirst` defaults to false.
+/// The ring as triangles, by clipping EARS off it, or false where it is no ring this can finish -
+/// which the caller has to read as a refusal rather than publish what was emitted.
+/// `round_tips_first` is false unless a caller asks for it.
 ///
 /// A fan will not do here and [`super::surface_fan`] says why: it covers a ring exactly once only
 /// from a vertex that sees the whole of it. A rolled concave section has two sides that cave in -
@@ -84,9 +83,9 @@ pub fn try_triangulate_the_ring(
         }
 
         if !clipped {
-            // No ear at all. On a ring that is still SIMPLE and still lying the way it started, that
-            // is not a ring with no triangulation - it is a remainder every corner of which is a
-            // sliver, under the ears' own floor or with a convexity that reads as noise. Fan it.
+            // No ear at all. On a ring that is still SIMPLE and still lying the way it started,
+            // that is not a ring with no triangulation - it is a remainder every corner of which is
+            // a sliver, under the ears' own floor or with a convexity that reads as noise. Fan it.
             return the_remainder_fans_from_its_own_first_vertex(
                 &left,
                 pool,
@@ -101,9 +100,8 @@ pub fn try_triangulate_the_ring(
     true
 }
 
-/// C# `TheRemainderFansFromItsOwnFirstVertex`: the last resort where the ear walk runs out - a
-/// remainder whose every corner is a sliver is covered by a FAN from one of its own vertices, or
-/// refused where there is nothing to cover.
+/// The last resort where the ear walk runs out - a remainder whose every corner is a sliver is
+/// covered by a FAN from one of its own vertices, or refused where there is nothing to cover.
 ///
 /// A ring that is simple and wound the way it started is a region with a triangulation whatever
 /// its area - a slit thin quad is two triangles - and the ears can still fail to find it, because
@@ -120,9 +118,10 @@ pub fn try_triangulate_the_ring(
 ///
 /// What is refused is a ring with NO AREA TO THE LATTICE - four points collinear to the float grid
 /// the pool keeps its positions on. There the ring is a line, not a region, and every fanned
-/// triangle would be noise (`SurfaceRingEarsBridgedRingTests.ARingCollinearToTheLatticeIsStillRefused`).
-/// A repeated vertex is refused for the same reason the caller cares: a bridge's two ends left in
-/// one remainder would have the fan use one directed edge twice, which is a fold.
+/// triangle would be noise
+/// (`SurfaceRingEarsBridgedRingTests.ARingCollinearToTheLatticeIsStillRefused`). A repeated vertex
+/// is refused for the same reason the caller cares: a bridge's two ends left in one remainder would
+/// have the fan use one directed edge twice, which is a fold.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn the_remainder_fans_from_its_own_first_vertex(
     left: &[i32],
@@ -174,8 +173,7 @@ fn the_remainder_fans_from_its_own_first_vertex(
     true
 }
 
-/// C# `ItRepeatsAVertex`: whether any pool index stands in the ring twice - the two sides of a
-/// bridge, say.
+/// Whether any pool index stands in the ring twice - the two sides of a bridge, say.
 fn it_repeats_a_vertex(ring: &[i32]) -> bool {
     for at in 0..ring.len() {
         for other in at + 1..ring.len() {
@@ -188,10 +186,9 @@ fn it_repeats_a_vertex(ring: &[i32]) -> bool {
     false
 }
 
-/// C# `TwiceTheSmallestAreaTheLatticeCanHold`: twice the area below which a ring is a LINE rather
-/// than a region - its own extent squared taken down to the round off of the arithmetic that
-/// measured it. A sliver is NOT a line - a remainder thinner than the ears' floor still has to be
-/// covered - so this floor sits far below that floor.
+/// Twice the area below which a ring is a LINE rather than a region - its own extent squared taken
+/// down to the round off of the arithmetic that measured it. A sliver is NOT a line - a remainder
+/// thinner than the ears' floor still has to be covered - so this floor sits far below that floor.
 fn twice_the_smallest_area_the_lattice_can_hold(ring: &[i32], pool: &SurfaceVertexPool) -> f64 {
     let mut low = pool.position_of(ring[0]);
     let mut high = low;
@@ -204,16 +201,16 @@ fn twice_the_smallest_area_the_lattice_can_hold(ring: &[i32], pool: &SurfaceVert
 
     let extent = (high - low).length();
 
-    // Only what ROUNDING can manufacture is refused, not everything thin: the remainder this fallback
-    // was written for is thinner than the ears' own floor and is still a region the result needs
-    // covered. Double arithmetic over a reach of this extent carries about fifteen figures, so an
-    // area below that is a line read through round off and nothing else.
+    // Only what ROUNDING can manufacture is refused, not everything thin: the remainder this
+    // fallback was written for is thinner than the ears' own floor and is still a region the result
+    // needs covered. Double arithmetic over a reach of this extent carries about fifteen figures,
+    // so an area below that is a line read through round off and nothing else.
     extent * extent * 1e-15
 }
 
-/// C# `ItIsSimple`: whether a ring crosses nothing of itself - every pair of sides that do not
-/// share an end stands clear of the other, READ IN THE RING'S OWN PLANE. Over a handful of sides,
-/// so the pairwise walk costs nothing worth saving.
+/// Whether a ring crosses nothing of itself - every pair of sides that do not share an end stands
+/// clear of the other, READ IN THE RING'S OWN PLANE. Over a handful of sides, so the pairwise walk
+/// costs nothing worth saving.
 ///
 /// A ring may be WEAKLY simple - a bridged one is. A flat piece whose outline was several rings is
 /// threaded onto one by running out to each inner ring along the piece's own edges and back along
@@ -227,7 +224,7 @@ fn twice_the_smallest_area_the_lattice_can_hold(ring: &[i32], pool: &SurfaceVert
 /// whatever the ring stands off flat by is then the whole of it. A ring here is only NEARLY flat
 /// (a mouth cut through a tessellated wall stands a twentieth of a millimetre off its piece's
 /// plane), so the pair's own normal is not a plane at all, and the one the caller already named
-/// is (`TwoSidesFacingOneAnotherAcrossANearlyFlatRingDoNotCross`).
+/// is (`two_sides_facing_one_another_across_a_nearly_flat_ring_do_not_cross`).
 fn it_is_simple(ring: &[i32], pool: &SurfaceVertexPool, plane_normal: Vector3) -> bool {
     let count = ring.len();
 
@@ -261,12 +258,11 @@ fn it_is_simple(ring: &[i32], pool: &SurfaceVertexPool, plane_normal: Vector3) -
     true
 }
 
-/// C# `TheyCrossIn`: whether two segments that share no end cross, READ IN THE PLANE THE CALLER
-/// NAMES - each straddles the other's line by more than a hair, which is the reading that lets two
-/// sides TOUCH along a rounding without being read as crossing. The plane is always the caller's
-/// own - a plane made of the two segments' own directions is useless where they run all but
-/// parallel, since then it is made of their noise and a plain rectangle can read as self-crossing
-/// (see `it_is_simple`).
+/// Whether two segments that share no end cross, READ IN THE PLANE THE CALLER NAMES - each
+/// straddles the other's line by more than a hair, which is the reading that lets two sides TOUCH
+/// along a rounding without being read as crossing. The plane is always the caller's own - a plane
+/// made of the two segments' own directions is useless where they run all but parallel, since then
+/// it is made of their noise and a plain rectangle can read as self-crossing (see `it_is_simple`).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn they_cross_in(
     plane_normal: Vector3,
@@ -292,8 +288,7 @@ pub fn they_cross_in(
         && straddles(other_from, other_along, from, to, facing, near_enough)
 }
 
-/// C# `Straddles`: whether the two ends stand on opposite sides of the line, both by more than a
-/// hair.
+/// Whether the two ends stand on opposite sides of the line, both by more than a hair.
 fn straddles(
     from: Vector3,
     along: Vector3,
@@ -309,11 +304,10 @@ fn straddles(
     (at_first > reach && at_second < -reach) || (at_first < -reach && at_second > reach)
 }
 
-/// C# `ItStandsOffItsChord`: whether the corner at `at` is a corner the ring's OWN RULER can see -
-/// its tip stands further off the chord its two neighbours span than the nearness everything else
-/// here is read with. A tip that does not is FLAT, and which way a flat tip points is float noise:
-/// the same corner of the same ring reads convex where the part was made and reflex once the part
-/// is moved.
+/// Whether the corner at `at` is a corner the ring's OWN RULER can see - its tip stands further off
+/// the chord its two neighbours span than the nearness everything else here is read with. A tip
+/// that does not is FLAT, and which way a flat tip points is float noise: the same corner of the
+/// same ring reads convex where the part was made and reflex once the part is moved.
 fn it_stands_off_its_chord(ring: &[i32], at: usize, pool: &SurfaceVertexPool) -> bool {
     let before = pool.position_of(ring[(at + ring.len() - 1) % ring.len()]);
     let tip = pool.position_of(ring[at]);
@@ -322,8 +316,8 @@ fn it_stands_off_its_chord(ring: &[i32], at: usize, pool: &SurfaceVertexPool) ->
     (tip - before).cross(after - tip).length() > pool.near_enough() * (after - before).length()
 }
 
-/// C# `IsAnEar`: whether the corner at `at` can be cut off - its triangle has area, points the way
-/// the ring lies, and holds no other vertex of the ring.
+/// Whether the corner at `at` can be cut off - its triangle has area, points the way the ring lies,
+/// and holds no other vertex of the ring.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn is_an_ear(ring: &[i32], at: usize, pool: &SurfaceVertexPool, facing: Vector3) -> bool {
     let count = ring.len();
@@ -338,8 +332,8 @@ fn is_an_ear(ring: &[i32], at: usize, pool: &SurfaceVertexPool, facing: Vector3)
     }
 
     // By IDENTITY, not by place in the ring: on a spliced ring the ear's own vertices stand in the
-    // ring more than once - the two sides of the slit - and that second occurrence is the same point,
-    // not a foreign one standing on the ear.
+    // ring more than once - the two sides of the slit - and that second occurrence is the same
+    // point, not a foreign one standing on the ear.
     for &other in ring {
         if other == ring[at]
             || other == ring[(at + count - 1) % count]
@@ -356,9 +350,8 @@ fn is_an_ear(ring: &[i32], at: usize, pool: &SurfaceVertexPool, facing: Vector3)
     true
 }
 
-/// C# `IsInsideOrOnTheRim`: whether a point of the plane stands inside the triangle OR ON ITS
-/// RIM, read with no ruler at all, so only a point exactly on an edge to the arithmetic counts as
-/// on it.
+/// Whether a point of the plane stands inside the triangle OR ON ITS RIM, read with no ruler at
+/// all, so only a point exactly on an edge to the arithmetic counts as on it.
 ///
 /// On the rim counts as inside because of the SLIT. A spliced ring runs out to an inner ring along
 /// a zero width slit and back along the same edge, and the slit's vertices come to stand exactly on
@@ -392,7 +385,7 @@ fn is_inside_or_on_the_rim(
     true
 }
 
-/// C# `NewellNormalOf` (this class's own, a fan sum from the first vertex rather than
+/// This module's own Newell normal (a fan sum from the first vertex rather than
 /// [`surface_fan::newell_normal_of`]'s edge sum): the direction a ring as a whole lies in - the sum
 /// of its own triangles' contributions.
 fn newell_normal_of(ring: &[i32], pool: &SurfaceVertexPool) -> Vector3 {

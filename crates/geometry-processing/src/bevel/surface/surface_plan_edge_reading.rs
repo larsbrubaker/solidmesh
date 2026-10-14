@@ -1,6 +1,5 @@
-//! The surface plan's reading of one picked edge. Ports `Bevel/Surface/SurfacePlanEdgeReading.cs`:
-//! its finiteness tests ([`is_finite`], [`is_finite_vector`]) and the reading itself
-//! ([`try_plan_edge`]).
+//! The surface plan's reading of one picked edge: its finiteness tests ([`is_finite`],
+//! [`is_finite_vector`]) and the reading itself ([`try_plan_edge`]).
 
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::Vector3;
@@ -17,16 +16,16 @@ pub fn is_finite(value: f64) -> bool {
     !value.is_nan() && !value.is_infinite()
 }
 
-/// True when every component of the vector is finite (C#'s `IsFinite(Vector3)` overload).
+/// True when every component of the vector is finite.
 pub fn is_finite_vector(value: Vector3) -> bool {
     is_finite(value.x) && is_finite(value.y) && is_finite(value.z)
 }
 
-/// C# `TryPlanEdge`: the plan of one picked chain edge - refused where its faces are coplanar, its
-/// wedge too sharp or too flat, its directions not finite, a face has no region, or both faces are
-/// one region; ROLLED along a wall that curves along its section ([`surface_roll_across_the_wall::read`],
-/// asking `grid_of` for a curved region's face grid); otherwise the two-plane construction: the
-/// setback on each face and, for a round profile, the centre line on the wedge's bisector.
+/// The plan of one picked chain edge - refused where its faces are coplanar, its wedge too sharp or
+/// too flat, its directions not finite, a face has no region, or both faces are one region; ROLLED
+/// along a wall that curves along its section ([`surface_roll_across_the_wall::read`], asking
+/// `grid_of` for a curved region's face grid); otherwise the two-plane construction: the setback on
+/// each face and, for a round profile, the centre line on the wedge's bisector.
 pub fn try_plan_edge(
     chain_edge: &ChainEdge,
     regions: &FaceRegionCache,
@@ -47,7 +46,7 @@ pub fn try_plan_edge(
     }
 
     let wedge_angle_degrees = profile_wedge_angle_degrees(edge);
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > y)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: NaN refuses
     let too_sharp = !(wedge_angle_degrees > SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES);
     if too_sharp {
         return Err(BevelAdvisory::new(
@@ -56,7 +55,7 @@ pub fn try_plan_edge(
         ));
     }
 
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x < y)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < y)` on purpose: NaN refuses
     let too_flat = !(wedge_angle_degrees < SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES);
     if too_flat {
         return Err(BevelAdvisory::new(
@@ -143,7 +142,7 @@ pub fn try_plan_edge(
     if round_profile {
         // The bisector of the two in-face inward directions, which is the bisector of the wedge.
         let bisector = left_inward + right_inward;
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN refuses
         let no_bisector = !(bisector.length_squared() > 0.0) || !is_finite_vector(bisector);
         if no_bisector {
             return Err(does_not_fit());

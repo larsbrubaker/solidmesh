@@ -1,10 +1,10 @@
 //! WHAT THE NARROWER RUN'S ARC GOES ON TO COVER at a mitre whose feet are cut PAST the far landing
-//! face's own rim ([`SurfaceMitreSliver`], `Bevel/Surface/SurfaceMitreSliver.cs`): at a REFLEX corner
-//! the two runs' far faces are the two walls of the inside corner and they meet along a crease, and
-//! a mitre of unequal setbacks cuts each strip's foot rail past that crease rather than on it - so
-//! the narrower run's arc continues past its own far tangent line to the wider run's sweep, and the
-//! little patch it covers there is this. This file reads the patch and hands its feet and crossings
-//! to the mitre; sewing it is `surface_mitre_sliver_sew`.
+//! face's own rim ([`SurfaceMitreSliver`]): at a REFLEX corner the two runs' far faces are the two
+//! walls of the inside corner and they meet along a crease, and a mitre of unequal setbacks cuts
+//! each strip's foot rail past that crease rather than on it - so the narrower run's arc continues
+//! past its own far tangent line to the wider run's sweep, and the little patch it covers there is
+//! this. This file reads the patch and hands its feet and crossings to the mitre; sewing it is
+//! `surface_mitre_sliver_sew`.
 //!
 //! **Why the feet stand past the rim at all.** Each bead sets its tangent line back on the shared
 //! face by its own wedge, so the mitre plane - the one through the crossing of those two lines -
@@ -20,29 +20,29 @@
 //! cylinders, and past the narrower run's own tangent line that is still the narrower run's
 //! cylinder - its lower branch, standing where the wall it was tangent to has ended and the
 //! partner's band has taken the material beside it away. The patch is bounded by four things and
-//! closes exactly: the narrower foot's own step from its rim out to its crossing, the mitre polyline
-//! over the angles the narrower run has no rails at, the wider foot's step back to ITS rim, and the
-//! crease between the two rims. Its far corner is one point three surfaces meet at - the mitre
-//! plane, the wider run's far landing plane and the narrower run's cylinder - and that point IS the
-//! wider foot's own crossing, which is checked rather than assumed.
+//! closes exactly: the narrower foot's own step from its rim out to its crossing, the mitre
+//! polyline over the angles the narrower run has no rails at, the wider foot's step back to ITS
+//! rim, and the crease between the two rims. Its far corner is one point three surfaces meet at -
+//! the mitre plane, the wider run's far landing plane and the narrower run's cylinder - and that
+//! point IS the wider foot's own crossing, which is checked rather than assumed.
 //!
 //! **And the far landing face gives up nothing.** [`super::surface_mitre_sector`] is the other
 //! reading of a mitre of unequal setbacks - the knife tip, where the narrower edge's far landing
-//! face is a face of the part nobody touched and the wider strip's surplus rails LAND on it, so that
-//! face hands over a sector. Here that face is the partner's own wall, banded to the crease already,
-//! and the surplus rails do not land on it at all: they are cut on the mitre plane like every other
-//! rail. No sector is taken, and the two readings never both fire - the sector wants the feet inside
-//! the far tangent line and this wants them past it.
+//! face is a face of the part nobody touched and the wider strip's surplus rails LAND on it, so
+//! that face hands over a sector. Here that face is the partner's own wall, banded to the crease
+//! already, and the surplus rails do not land on it at all: they are cut on the mitre plane like
+//! every other rail. No sector is taken, and the two readings never both fire - the sector wants
+//! the feet inside the far tangent line and this wants them past it.
 //!
 //! **What it assumes, and refuses by name where it cannot have it.** That the narrower run's rim
 //! stands ON the wider run's far landing plane - which is what makes the crease the one rim both
 //! bands end at - refused as `SurfaceStripEndNotSupported`; and that the wider foot's crossing
 //! stands a radius from the narrower run's own centre line, which is the two ends turning at one
-//! point, refused as `SurfaceStripSeamDidNotMeet`. Two runs of ONE sweep are left alone, so a corner
-//! where both feet overrun by the same amount is not this reading and keeps whatever complaint it
-//! already had.
+//! point, refused as `SurfaceStripSeamDidNotMeet`. Two runs of ONE sweep are left alone, so a
+//! corner where both feet overrun by the same amount is not this reading and keeps whatever
+//! complaint it already had.
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are deliberate: each is false for NaN, which is the point.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use vector_math::Vector3;
@@ -53,8 +53,7 @@ use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// One run of a sliver read: the strip, its plan, where its rails count from, which edge and which
-/// end of that edge's band the corner is, and the way along its edge away from the corner. C#
-/// passes these as seven positional parameters per run.
+/// end of that edge's band the corner is, and the way along its edge away from the corner.
 #[derive(Clone, Copy)]
 pub struct SurfaceMitreSliverRun<'a> {
     /// The run's strip.
@@ -67,14 +66,14 @@ pub struct SurfaceMitreSliverRun<'a> {
     pub step: i32,
     /// The run's edge index.
     pub edge: i32,
-    /// Which END of the run's own band this corner is - 0 where the chain arrives at that edge and 1
-    /// where it leaves it - which is the only end whose corners this foot may take.
+    /// Which END of the run's own band this corner is - 0 where the chain arrives at that edge and
+    /// 1 where it leaves it - which is the only end whose corners this foot may take.
     pub end: usize,
     /// Along the run's edge, away from the corner.
     pub away_from_the_corner: Vector3,
 }
 
-/// C# `SurfaceMitreSliver`: the patch the narrower run's arc covers past its far rim.
+/// The patch the narrower run's arc covers past its far rim.
 #[derive(Debug, Clone)]
 pub struct SurfaceMitreSliver {
     pub(super) narrower_edge: i32,
@@ -117,15 +116,15 @@ struct FootOverrun {
 }
 
 impl SurfaceMitreSliver {
-    /// C# `TryRead`: whether this mitre's two feet stand past their runs' far rims, and where
-    /// everything the patch is bounded by stands. `Ok(None)` at every mitre this is not, so the
-    /// ordinary reading keeps its own complaint.
+    /// Whether this mitre's two feet stand past their runs' far rims, and where everything the
+    /// patch is bounded by stands. `Ok(None)` at every mitre this is not, so the ordinary reading
+    /// keeps its own complaint.
     ///
     /// `outward` is which way the patch faces, to within a right angle: the narrower run's own
     /// [`SurfaceStrip::outward_reference`], which is what every triangle of that run is wound by.
-    /// Read from the strip rather than from its far landing plane, whose normal is the walk direction
-    /// crossed into the face and so turns over with the direction the chain happened to be walked -
-    /// the plane is the same plane either way and the winding is not.
+    /// Read from the strip rather than from its far landing plane, whose normal is the walk
+    /// direction crossed into the face and so turns over with the direction the chain happened to
+    /// be walked - the plane is the same plane either way and the winding is not.
     #[allow(clippy::too_many_arguments)]
     pub fn try_read(
         pool: &mut SurfaceVertexPool,
@@ -168,8 +167,8 @@ impl SurfaceMitreSliver {
         };
 
         // One of the two feet landing where the walkback left its seam, or short of it, or on no
-        // crossing at all, is none of this reading. (C# reads the wider foot only when the
-        // narrower one overran; `&&`-style short circuit kept.)
+        // crossing at all, is none of this reading. (The wider foot is read only when the narrower
+        // one overran.)
         let Some(n) = read(&narrower, narrower_foot) else {
             return Ok(None);
         };
@@ -191,22 +190,24 @@ impl SurfaceMitreSliver {
             ));
         }
 
-        // The narrower run's own radius, read off its foot rail rather than off the plan: every rail
-        // of a round stands a radius from the center line, and the plan's own CenterDistance is the
-        // distance to the EDGE along the bisector (r / sin(wedge / 2)) rather than the radius.
+        // The narrower run's own radius, read off its foot rail rather than off the plan: every
+        // rail of a round stands a radius from the center line, and the plan's own CenterDistance
+        // is the distance to the EDGE along the bisector (r / sin(wedge / 2)) rather than the
+        // radius.
         let radius = narrower
             .plan
             .center_line
             .distance_to(narrower.strip.point_on(narrower_foot, 0.0));
 
-        // THE CROSSING'S IDENTITY, read before anything is minted. A foot overrun is a step of a few
-        // welds, so a crossing can stand a ruler's width from the very rim vertex its own run ended
-        // at and still be the SAME PLACE as it: minting it then gives the patch a twin of a vertex
-        // the wall's own faces are sewn to, the patch bounds itself by the twin and the stitch by
-        // the wall's, and between them they lay one triangle twice. Where the crossing is within the
-        // pool's ruler of that rim vertex it IS that vertex - identity, not a fresh mint - and the
-        // reach is that vertex alone: taking the NEAREST pooled vertex anywhere closes the same rows
-        // but drags in a vertex off the crossing's own rim, which collapses the patch.
+        // THE CROSSING'S IDENTITY, read before anything is minted. A foot overrun is a step of a
+        // few welds, so a crossing can stand a ruler's width from the very rim vertex its own run
+        // ended at and still be the SAME PLACE as it: minting it then gives the patch a twin of a
+        // vertex the wall's own faces are sewn to, the patch bounds itself by the twin and the
+        // stitch by the wall's, and between them they lay one triangle twice. Where the crossing is
+        // within the pool's ruler of that rim vertex it IS that vertex - identity, not a fresh
+        // mint - and the reach is that vertex alone: taking the NEAREST pooled vertex anywhere
+        // closes the same rows but drags in a vertex off the crossing's own rim, which collapses
+        // the patch.
         let narrower_is_its_rim = the_crossing_is_its_rim(pool, n.rim, n.crossing);
         let mut wider_is_its_rim = the_crossing_is_its_rim(pool, w.rim, w.crossing);
 
@@ -221,7 +222,8 @@ impl SurfaceMitreSliver {
         {
             // Declined at this corner: the rim vertex is within the ruler of the crossing but the
             // patch's far corner read at it no longer turns where the narrower run's own arc would,
-            // and a corner that built on the crossing may not be refused for the sake of an identity.
+            // and a corner that built on the crossing may not be refused for the sake of an
+            // identity.
             wider_is_its_rim = false;
         }
 
@@ -232,9 +234,9 @@ impl SurfaceMitreSliver {
         };
 
         if !turns_where_the_narrowers_arc_would(pool, narrower.plan, radius, wider_corner) {
-            // The wider foot's crossing does not stand a radius from the narrower run's centre line,
-            // so it is not where that run's own arc, carried on to this sweep, would have met the
-            // mitre - the patch's two ends turn at two different points and bound nothing.
+            // The wider foot's crossing does not stand a radius from the narrower run's centre
+            // line, so it is not where that run's own arc, carried on to this sweep, would have met
+            // the mitre - the patch's two ends turn at two different points and bound nothing.
             return Err(BevelAdvisory::new(
                 BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
                 vec![wider_corner.into()],
@@ -277,17 +279,15 @@ impl SurfaceMitreSliver {
         }))
     }
 
-    /// C# `ClaimsTheFoot`: whether this patch has claimed one strip's foot rail, which stands at
-    /// its rim.
+    /// Whether this patch has claimed one strip's foot rail, which stands at its rim.
     pub fn claims_the_foot(&self, edge_index: i32, rail: i32) -> bool {
         (edge_index == self.narrower_edge && rail == self.narrower_foot)
             || (edge_index == self.wider_edge && rail == self.wider_foot)
     }
 
-    /// C# `TakeTheFoot`: the claimed foot's ring vertex, which is the one the walkback left at the
-    /// rim: the stitch sews a strip to EVERY vertex of its two seams, so a foot that minted its
-    /// crossing instead would leave the rim's own vertex standing part way along the strip's own
-    /// edge.
+    /// The claimed foot's ring vertex, which is the one the walkback left at the rim: the stitch
+    /// sews a strip to EVERY vertex of its two seams, so a foot that minted its crossing instead
+    /// would leave the rim's own vertex standing part way along the strip's own edge.
     pub fn take_the_foot(&self, edge_index: i32, ring: &mut [i32], at: &mut [f64]) {
         if edge_index == self.narrower_edge {
             ring[self.narrower_foot as usize] = self.narrower_rim;
@@ -300,8 +300,8 @@ impl SurfaceMitreSliver {
         at[self.wider_foot as usize] = self.wider_rim_param;
     }
 
-    /// C# `TheCrossingOf`: the crossing a claimed foot steps out to, which its end ring carries
-    /// BETWEEN two rails - the same staircase an end cut's own leavings travel by.
+    /// The crossing a claimed foot steps out to, which its end ring carries BETWEEN two rails - the
+    /// same staircase an end cut's own leavings travel by.
     pub fn the_crossing_of(&self, edge_index: i32) -> i32 {
         if edge_index == self.narrower_edge {
             self.narrower_crossing
@@ -310,8 +310,7 @@ impl SurfaceMitreSliver {
         }
     }
 
-    /// C# `TheStepChordOf`: which of a strip's chords that step stands on - the one bounded by the
-    /// foot rail.
+    /// Which of a strip's chords that step stands on - the one bounded by the foot rail.
     pub fn the_step_chord_of(&self, edge_index: i32) -> i32 {
         let foot = if edge_index == self.narrower_edge {
             self.narrower_foot
@@ -326,9 +325,8 @@ impl SurfaceMitreSliver {
         }
     }
 
-    /// C# `TheStepLeads`: whether that step's own crossing leads the chord it stands on. It stands
-    /// beside the FOOT, so it leads where the foot is the chord's lower rail and follows where it is
-    /// the higher.
+    /// Whether that step's own crossing leads the chord it stands on. It stands beside the FOOT, so
+    /// it leads where the foot is the chord's lower rail and follows where it is the higher.
     pub fn the_step_leads(&self, edge_index: i32) -> bool {
         (if edge_index == self.narrower_edge {
             self.narrower_foot
@@ -337,10 +335,9 @@ impl SurfaceMitreSliver {
         }) == 0
     }
 
-    /// C# `TryTheRailsOverTheNarrowersArc`: the wider run's rails over the angles the narrower run
-    /// has none at, cut on the MITRE PLANE like every other rail rather than landed on the far face:
-    /// that face is the partner's own wall and the band beside it ended at the crease, so there is
-    /// nothing out there to land on.
+    /// The wider run's rails over the angles the narrower run has none at, cut on the MITRE PLANE
+    /// like every other rail rather than landed on the far face: that face is the partner's own
+    /// wall and the band beside it ended at the crease, so there is nothing out there to land on.
     #[allow(clippy::too_many_arguments)]
     pub fn try_the_rails_over_the_narrowers_arc(
         &mut self,
@@ -389,9 +386,8 @@ impl SurfaceMitreSliver {
     }
 }
 
-/// C# `TheNamedCorner`: a named band corner kept only where it is a THIRD place: a corner that is
-/// the foot's own rim, or the very vertex the crossing was taken as, says nothing the patch does not
-/// already draw.
+/// A named band corner kept only where it is a THIRD place: a corner that is the foot's own rim, or
+/// the very vertex the crossing was taken as, says nothing the patch does not already draw.
 fn the_named_corner(named: i32, rim: i32, crossing: i32) -> i32 {
     if named == rim || named == crossing {
         -1
@@ -400,17 +396,17 @@ fn the_named_corner(named: i32, rim: i32, crossing: i32) -> i32 {
     }
 }
 
-/// C# `TheCrossingIsItsRim`: whether a foot's crossing and the rim vertex its own run ended at are
-/// ONE POINT, asked against the pool's near-enough ruler rather than its weld. The overrun itself is
-/// read against the WELD - that is what makes it an overrun at all - so this is the coarser question
-/// of whether the wall already carries a vertex where the patch wants its corner.
+/// Whether a foot's crossing and the rim vertex its own run ended at are ONE POINT, asked against
+/// the pool's near-enough ruler rather than its weld. The overrun itself is read against the WELD -
+/// that is what makes it an overrun at all - so this is the coarser question of whether the wall
+/// already carries a vertex where the patch wants its corner.
 fn the_crossing_is_its_rim(pool: &SurfaceVertexPool, rim: i32, crossing: Vector3) -> bool {
     (pool.position_of(rim) - crossing).length() <= pool.near_enough()
 }
 
-/// C# `TurnsWhereTheNarrowersArcWould`: whether a point stands a radius from the narrower run's
-/// centre line, which is the patch's two ends turning at ONE point: where the narrower run's own
-/// arc, carried on to the wider run's sweep, would have met the mitre.
+/// Whether a point stands a radius from the narrower run's centre line, which is the patch's two
+/// ends turning at ONE point: where the narrower run's own arc, carried on to the wider run's
+/// sweep, would have met the mitre.
 fn turns_where_the_narrowers_arc_would(
     pool: &SurfaceVertexPool,
     narrower_plan: &SurfaceEdgePlan,
@@ -421,12 +417,12 @@ fn turns_where_the_narrowers_arc_would(
         && (narrower_plan.center_line.distance_to(at) - radius).abs() <= pool.near_enough()
 }
 
-/// C# `TheFootOverruns`: whether one strip's foot rail is cut PAST the rim its walkback ended at,
-/// and where both stand - `None` at an ordinary foot, which lands on that rim itself, and at one cut
-/// short of it (a foot stopped inside its own band is a different fault and keeps its own name).
-/// `band_corners` are the walkback's own band corners per rail AND per end, or `None` where none
-/// were published; `end` is which end of this edge's band the mitre stands at - 0 arriving, 1
-/// leaving - the only end of it whose corners this foot may take.
+/// Whether one strip's foot rail is cut PAST the rim its walkback ended at, and where both stand -
+/// `None` at an ordinary foot, which lands on that rim itself, and at one cut short of it (a foot
+/// stopped inside its own band is a different fault and keeps its own name). `band_corners` are the
+/// walkback's own band corners per rail AND per end, or `None` where none were published; `end` is
+/// which end of this edge's band the mitre stands at - 0 arriving, 1 leaving - the only end of it
+/// whose corners this foot may take.
 #[allow(clippy::too_many_arguments)]
 fn the_foot_overruns(
     pool: &SurfaceVertexPool,
@@ -463,15 +459,15 @@ fn the_foot_overruns(
 
     let (rim, rim_param) = standing;
 
-    // Read against the WELD distance and not against SurfaceStripEnds.MeetsTheSeam, which is ten of
-    // them. What is asked here is whether the crossing and the rim are ONE POINT, which is the
-    // weld's own question, and the seam ruler answers a coarser one - whether the build could tell a
-    // strip's end from the seam it was sewn to. The two part company on a big part, because both are
-    // read off the box round it: the picture hanger's raked mouth carries a foot that overruns its
-    // rim by 7.4999e-4, which is 9.76 welds and a real step, and the seam ruler of 7.6843e-4 calls
-    // it nothing - so the patch declines, a sector is asked of a face beyond that holds no profile,
-    // and the corner refuses SurfaceStripEndNotSupported. The same bore in a plate a third the size
-    // builds, which is the whole of the difference.
+    // Read against the WELD distance and not against surface_strip_ends::meets_the_seam, which is
+    // ten of them. What is asked here is whether the crossing and the rim are ONE POINT, which is
+    // the weld's own question, and the seam ruler answers a coarser one - whether the build could
+    // tell a strip's end from the seam it was sewn to. The two part company on a big part, because
+    // both are read off the box round it: the picture hanger's raked mouth carries a foot that
+    // overruns its rim by 7.4999e-4, which is 9.76 welds and a real step, and the seam ruler of
+    // 7.6843e-4 calls it nothing - so the patch declines, a sector is asked of a face beyond that
+    // holds no profile, and the corner refuses SurfaceStripEndNotSupported. The same bore in a
+    // plate a third the size builds, which is the whole of the difference.
     if !((pool.position_of(rim) - crossing).length() > pool.weld_distance()
         && (crossing - pool.position_of(rim)).dot(away_from_the_corner) < 0.0)
     {
@@ -488,10 +484,11 @@ fn the_foot_overruns(
     // polyline instead of two.
     //
     // Four gates. Three of them are IDENTITY: THE END is the foot's own - a corner of the cut's
-    // other end is a different place entirely - and then two planes, the MITRE plane, which says the
-    // corner stands at this corner at all, and THIS CUT'S OWN TANGENT PLANE, which says it is a
-    // corner of THIS foot's rail and not of a neighbouring rim that shares the mitre. The fourth, the
-    // pool's nearness of the straight crossing, is NOT identity and is not here to name the corner.
+    // other end is a different place entirely - and then two planes, the MITRE plane, which says
+    // the corner stands at this corner at all, and THIS CUT'S OWN TANGENT PLANE, which says it is a
+    // corner of THIS foot's rail and not of a neighbouring rim that shares the mitre. The fourth,
+    // the pool's nearness of the straight crossing, is NOT identity and is not here to name the
+    // corner.
     //
     // The tangent plane names it, and it names it by orders of magnitude rather than by a hair: at
     // the hanger stand-off exactly one corner of each foot's own end stands within a hundredth of a
@@ -503,15 +500,16 @@ fn the_foot_overruns(
     // leave at most one candidate per foot and the nearness names nothing.
     //
     // What the nearness is, now that it names nothing, is the BUDGET on how far this take may move
-    // the crossing. The corner the stand-off's forked rim wants stands 0.00 welds from its own cut's
-    // tangent plane - it IS a tangent-clip vertex of that cut, minted where the band was drawn on a
-    // borrowed rail across a crease, 10.94 welds off the tangent LINE and on the tangent PLANE
-    // exactly - and 10.95 welds from the straight crossing. Admitting it, and it alone, by widening
-    // this ruler a fifth refuses the stand-off's own build as SurfaceStripSeamDidNotMeet: a crossing
-    // moved eleven welds is past what the seam either strip was sewn with will still meet. So the
-    // corner is correctly NAMED here and cannot be TAKEN here; carrying it is the patch emitter's to
-    // do, not this crossing's.
-    // An edge index past the table reads as no corners published (divergence 5060).
+    // the crossing. The corner the stand-off's forked rim wants stands 0.00 welds from its own
+    // cut's tangent plane - it IS a tangent-clip vertex of that cut, minted where the band was
+    // drawn on a borrowed rail across a crease, 10.94 welds off the tangent LINE and on the tangent
+    // PLANE exactly - and 10.95 welds from the straight crossing. Admitting it, and it alone, by
+    // widening this ruler a fifth refuses the stand-off's own build as SurfaceStripSeamDidNotMeet:
+    // a crossing moved eleven welds is past what the seam either strip was sewn with will still
+    // meet. So the corner is correctly NAMED here and cannot be TAKEN here; carrying it is the
+    // patch emitter's to do, not this crossing's. An edge index past the table reads as no corners
+    // published: a guard, since the builder publishes a table entry for every edge it hands a
+    // mitre.
     let of_this_end = band_corners
         .and_then(|corners| corners.get(edge_index as usize))
         .and_then(|corners| corners[side][end].as_deref());

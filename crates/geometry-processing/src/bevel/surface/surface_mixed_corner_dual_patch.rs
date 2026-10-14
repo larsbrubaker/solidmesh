@@ -1,8 +1,7 @@
-//! Closes a LEANING one-crease mixed corner on its DUAL canal. Ports
-//! `Bevel/Surface/SurfaceMixedCornerDualPatch.cs`: one grid from the bead's own end ring round to
-//! the point the blend dies on the crease the cap and the wall meet in, with what the wall
-//! (`surface_mixed_corner_dual_wall`) and the cap (`surface_mixed_corner_dual_cap`) give up under
-//! it. The grid itself is laid by [`SurfaceMixedCornerDualGrid`] and its reach is
+//! Closes a LEANING one-crease mixed corner on its DUAL canal: one grid from the bead's own end
+//! ring round to the point the blend dies on the crease the cap and the wall meet in, with what the
+//! wall (`surface_mixed_corner_dual_wall`) and the cap (`surface_mixed_corner_dual_cap`) give up
+//! under it. The grid itself is laid by [`SurfaceMixedCornerDualGrid`] and its reach is
 //! [`SurfaceMixedCornerDualCanal`]'s; what is left here is winning the two end rings from the pool
 //! so that the seams the walkback already minted are REUSED rather than made again, winding the
 //! quads, and fanning the last band to the one point the blend dies on.
@@ -27,11 +26,11 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceMixedCornerDualPatch.TryClose`: closes the corner, or says why it could not be
-/// closed. `seams` are every edge's two tangent runs, by edge index and side; `cut_edge` and
-/// `bead_edge` which edges of the pass the cut and the bead are; `cut_ends_here`/`bead_ends_here`
-/// whether each one's own edge ENDS at this corner rather than starting. As
-/// `(cut_station, bead_station)`: the rings the cut and the bead are left standing on.
+/// Closes the corner, or says why it could not be closed. `seams` are every edge's two tangent
+/// runs, by edge index and side; `cut_edge` and `bead_edge` which edges of the pass the cut and the
+/// bead are; `cut_ends_here`/`bead_ends_here` whether each one's own edge ENDS at this corner
+/// rather than starting. As `(cut_station, bead_station)`: the rings the cut and the bead are left
+/// standing on.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close(
     pool: &mut SurfaceVertexPool,
@@ -105,9 +104,9 @@ pub fn try_close(
     ))
 }
 
-/// C# `TryTheGrid`: the grid's vertices - its interior minted, and every point of its two REUSED
-/// sides taken from the ring that already owns it: station zero the bead's ring, and the far rail
-/// of every station the cut carries that ring's own rail.
+/// The grid's vertices - its interior minted, and every point of its two REUSED sides taken from
+/// the ring that already owns it: station zero the bead's ring, and the far rail of every station
+/// the cut carries that ring's own rail.
 ///
 /// The closing station is ONE vertex repeated across the row, which is what makes the last band a
 /// fan rather than a row of slivers: the row's own extent has closed to nothing there, so every
@@ -119,8 +118,8 @@ fn try_the_grid(
     bead_ring: &[i32],
 ) -> Result<Vec<Vec<i32>>, BevelAdvisory> {
     // The corner the two rings SHARE - the bead's own tube contact is the cut ring's first rail -
-    // is one vertex or the patch has two surfaces at a tangency rather than one. (C# would throw
-    // indexing an empty ring; an empty one is refused the same way here.)
+    // is one vertex or the patch has two surfaces at a tangency rather than one. An empty ring is
+    // refused the same way rather than read out of range.
     let (Some(&bead_last), Some(&cut_first)) = (bead_ring.last(), cut_ring.first()) else {
         return Err(BevelAdvisory::new(
             BevelAdvisoryCode::SurfaceStripSeamDidNotMeet,
@@ -139,7 +138,7 @@ fn try_the_grid(
 
     let dies = pool.add(read.canal.dies_on());
 
-    // `station` reads the grid, the cut ring and the read grid alike, as C#'s loop does.
+    // `station` reads the grid, the cut ring and the read grid alike.
     #[allow(clippy::needless_range_loop)]
     for station in 0..read.station_count() {
         let mut row = vec![0; read.rails_per_row()];
@@ -167,9 +166,9 @@ fn canal_corner(read: &SurfaceMixedCornerDualGrid) -> Vector3 {
     read.canal.corner.corner
 }
 
-/// C# `Emit`: the patch's quads, wound to face the sum of the corner's outward normals rather than
-/// to follow its grid, which is built from carried points and has no winding of its own. The last
-/// band is a FAN, because its far station is one point.
+/// The patch's quads, wound to face the sum of the corner's outward normals rather than to follow
+/// its grid, which is built from carried points and has no winding of its own. The last band is a
+/// FAN, because its far station is one point.
 fn emit(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -196,7 +195,7 @@ fn emit(
     }
 }
 
-/// C# `PositionsOf`: where each of a ring's pooled rails stands.
+/// Where each of a ring's pooled rails stands.
 fn positions_of(pool: &SurfaceVertexPool, ring: &[i32]) -> Vec<Vector3> {
     ring.iter().map(|&rail| pool.position_of(rail)).collect()
 }

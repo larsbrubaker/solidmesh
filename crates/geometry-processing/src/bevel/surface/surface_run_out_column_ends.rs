@@ -1,6 +1,6 @@
 //! Where a run-out's columns END - the stations a cut across the run-out is read at, and the slot
-//! the top of a column takes (`Bevel/Surface/SurfaceRunOutColumnEnds.cs`, a static class: free
-//! functions here), and the wall's own leftover test ([`it_laps_over_the_walls_own_leftover`]).
+//! the top of a column takes, and the wall's own leftover test
+//! ([`it_laps_over_the_walls_own_leftover`]).
 
 use std::cmp::Ordering;
 
@@ -120,7 +120,7 @@ pub fn try_first_row_standing(crosses_at: &[f64], past: f64) -> Option<usize> {
 /// How far short of where the run-out clears the wall a station stops being worth a column: the
 /// turn at which the touch row stands within `near_enough` of the wall, at `size`. Zero for no
 /// size.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn too_close_to_the_end(near_enough: f64, size: f64) -> f64 {
     if !(size > 0.0) {
         return 0.0;
@@ -130,7 +130,7 @@ pub fn too_close_to_the_end(near_enough: f64, size: f64) -> f64 {
         - cs_math::min_f64(1.0, 1.0 / (2.0 - cs_math::min_f64(1.0, near_enough / size))).acos()
 }
 
-/// C#'s `double.CompareTo`, which orders a NaN before every number (`List<double>.Sort`).
+/// A total order on `f64` that puts a NaN before every number, so a sort never panics on one.
 fn cs_compare(a: &f64, b: &f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -140,17 +140,17 @@ fn cs_compare(a: &f64, b: &f64) -> Ordering {
     }
 }
 
-/// C# `ItLapsOverTheWallsOwnLeftover`: whether `at` stands past the trim chord at `station`, on the
-/// side of it the wall keeps - read in the plane of the facet the piece between the two stations is
-/// bitten from, the chord to the next station dividing the scallop the wall gives up from the
-/// material it does not. The chord to the NEXT station (at the last, the one before, read
-/// backwards); a single station has no chord and nothing laps.
+/// Whether `at` stands past the trim chord at `station`, on the side of it the wall keeps - read in
+/// the plane of the facet the piece between the two stations is bitten from, the chord to the next
+/// station dividing the scallop the wall gives up from the material it does not. The chord to the
+/// NEXT station (at the last, the one before, read backwards); a single station has no chord and
+/// nothing laps.
 ///
 /// Only over the chord's own span ahead - a row PAST its far end is the next piece's business -
 /// but NOT exempt behind its start: a row high on the station's profile projects behind the trim
 /// point at the same turn, and those are exactly the rows this reading is for (exempting them was
 /// measured to open every fixture whose wall the runout dies into).
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 pub fn it_laps_over_the_walls_own_leftover(
     at: Vector3,
     trims: &[Vector3],

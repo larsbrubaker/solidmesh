@@ -1,7 +1,6 @@
-//! The mixed-corner patch's rows laid ALONG THE SPINE ([`SurfaceMixedCornerRows`]). Ports
-//! `Bevel/Surface/SurfaceMixedCornerRows.cs`: the record, its two readings and its rail accessor.
-//! C#'s overloads are named apart here: `TryRead(SurfaceMixedCorner, ..)` is
-//! [`SurfaceMixedCornerRows::try_read_corner`], and the per-turn `AcrossAt`/`SweepAt` are
+//! The mixed-corner patch's rows laid ALONG THE SPINE ([`SurfaceMixedCornerRows`]): the record, its
+//! two readings and its rail accessor. The reading from a corner is
+//! [`SurfaceMixedCornerRows::try_read_corner`], and the per-turn row readings are
 //! `across_at_turn`/`sweep_at_turn` beside the static `across_at`/`sweep_at`.
 
 use std::rc::Rc;
@@ -11,12 +10,11 @@ use vector_math::Vector3;
 use super::{SurfaceMixedCorner, SurfaceMixedCornerSpine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// How far the row at a turn RUNS, as an angle at the ball's centre (C# `Func<double, double>`).
+/// How far the row at a turn RUNS, as an angle at the ball's centre.
 pub type SurfaceMixedCornerRowRunsTo = Rc<dyn Fn(f64) -> f64>;
 
-/// C# `SurfaceMixedCornerRows` (a sealed class): the patch's rows, laid ALONG THE SPINE - the ring
-/// at station zero carried from station to station on the rolling ball rather than turned rigidly
-/// about an axis.
+/// The patch's rows, laid ALONG THE SPINE - the ring at station zero carried from station to
+/// station on the rolling ball rather than turned rigidly about an axis.
 ///
 /// **Which canal, though - the CALLER's to say.** Told a corner, these rows are laid on the
 /// CAP-RIDING canal: exact for a square corner, and a sub-band of an oblique one, which the build's
@@ -26,7 +24,7 @@ pub type SurfaceMixedCornerRowRunsTo = Rc<dyn Fn(f64) -> f64>;
 ///
 /// **What a station's ring is.** A canal of CONSTANT radius meets each of its balls in the circle
 /// of radius `r` lying in the plane NORMAL TO THE SPINE'S TANGENT. The two contacts the ball is
-/// defined by - `TContactAt` at `+u` and `BeadContactAt` at `-e(phi)` - are the two ENDS of the
+/// defined by - `t_contact_at` at `+u` and `bead_contact_at` at `-e(phi)` - are the two ENDS of the
 /// station's own ring, and the ring is the arc between them.
 ///
 /// **And the arc SHRINKS along the spine, which is the whole of what leaning costs.** On the
@@ -52,7 +50,7 @@ pub struct SurfaceMixedCornerRows {
 }
 
 impl SurfaceMixedCornerRows {
-    /// C#'s private constructor.
+    /// Builds the rows from their parts; the readings make them.
     fn new(
         spine: SurfaceMixedCornerSpine,
         towards_the_plate: Vector3,
@@ -86,9 +84,9 @@ impl SurfaceMixedCornerRows {
     /// Reads station zero's rails (`station_zero`) in the frame of `spine` at turn zero - each
     /// rail's angle, radius and offset off the profile plane about the ball's centre, the plate
     /// being the plane `towards_the_plate` faces out of - so every later station can lay the same
-    /// rails at its own turn. `runs_to` is the sweep each turn's row runs to (C#'s optional
-    /// argument; `None` reads it off the spine). Refused (at `corner`) for a ring of one rail.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    /// rails at its own turn. `runs_to` is the sweep each turn's row runs to (`None` reads it off
+    /// the spine). Refused (at `corner`) for a ring of one rail.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
     pub fn try_read(
         spine: SurfaceMixedCornerSpine,
         towards_the_plate: Vector3,
@@ -156,7 +154,7 @@ impl SurfaceMixedCornerRows {
             + (along.cross(across) * off_the_plane)
     }
 
-    /// The row's in-plane direction across the profile at `turn` (C#'s private `AcrossAt(double)`).
+    /// The row's in-plane direction across the profile at `turn`.
     pub fn across_at_turn(&self, turn: f64) -> Vector3 {
         Self::across_at(self.towards_the_plate, self.spine.out_of_the_axis(turn))
     }
@@ -172,13 +170,13 @@ impl SurfaceMixedCornerRows {
         across.get_normal()
     }
 
-    /// The sweep from the plate round to the bead at `turn` (C#'s private `SweepAt(double)`).
+    /// The sweep from the plate round to the bead at `turn`.
     pub fn sweep_at_turn(&self, turn: f64) -> f64 {
         Self::sweep_at(self.towards_the_plate, self.spine.out_of_the_axis(turn))
     }
 
     /// What the row at `turn` runs to: the caller's `runs_to` where there is one, and the sweep
-    /// otherwise (C#'s private `RunsTo`).
+    /// otherwise.
     pub fn runs_to_at(&self, turn: f64) -> f64 {
         match &self.runs_to {
             Some(runs_to) => runs_to(turn),
