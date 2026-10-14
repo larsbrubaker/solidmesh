@@ -1,8 +1,7 @@
-// Ports agg-sharp `Tests/Agg.Tests/Other/InvariantCultureTests.cs`, its packed polygon string
-// case: `PolygonsExtensions.CreateFromString` reads '.' decimals. C# runs it under de-DE, where a
-// culture-sensitive read made "1.5" 15; Rust parses numbers with no culture at all, so the test is
-// the same check without the culture scope. The vector parse is in vector-math's tests/other, the
-// ASCII STL case in polygon-mesh's tests/polygon_mesh.
+// The packed polygon string case: `create_from_string` reads '.' decimals whatever the user's
+// locale (a locale-sensitive read under a ',' decimal locale such as de-DE would make "1.5" 15).
+// Rust parses numbers with no locale at all, so the test checks the result directly. The vector
+// parse is in vector-math's tests/other, the ASCII STL case in polygon-mesh's tests/polygon_mesh.
 
 use agg_path::clipper_library::polygons_extensions::create_from_string;
 

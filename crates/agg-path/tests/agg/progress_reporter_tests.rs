@@ -1,8 +1,6 @@
-// agg-sharp `Tests/Agg.Tests/Agg/ProgressReporterTests.cs` (with `ProgressThrottleWait.cs`, its
-// throttle wait). C# installs a counting hook on the process-global `ProgressReporter.UiYield`;
-// here the host's yield is handed to each `yield_to_ui` call, so each test passes its counting
-// hook and nothing has to be restored. The no-hook, ValueTask and Action-conversion tests are
-// recorded skips in docs/PORTING_PLAN.md.
+// ProgressReporter's reports and its throttled yield to the UI. The host's yield is handed to
+// each `yield_to_ui` call rather than set process-wide, so each test passes its own counting hook
+// and nothing has to be restored.
 
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -14,8 +12,8 @@ fn no_op() -> ProgressReporter {
     ProgressReporter::from_fn(|_ratio, _message| {})
 }
 
-/// C# `ProgressThrottleWait.WaitOutTheWindowAsync`: returns once the throttle's own clock says a
-/// full window has passed since this was called, re-reading it rather than trusting one sleep.
+/// Returns once the throttle's own clock says a full window has passed since this was called,
+/// re-reading it rather than trusting one sleep.
 fn wait_out_the_window() {
     let start = Instant::now();
     std::thread::sleep(Duration::from_millis(YIELD_THROTTLE_MS));

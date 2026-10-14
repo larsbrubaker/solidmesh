@@ -1,6 +1,4 @@
-// Port of agg-sharp `Tests/Agg.Tests/Other/ClipperTests.cs`: agg-sharp's `Clipper.CleanPolygon`
-// (`agg_path::clipper_library::clean_polygon`). The C#'s `WriteSvg` debug helper is only called
-// from commented-out lines and is not ported.
+// Cleaning a polygon with `agg_path::clipper_library::clean_polygon`.
 
 use agg_path::clipper_library::{clean_polygon, int_point, length as point_length};
 use clipper2_rust::{Path64, Point64};
@@ -28,7 +26,7 @@ fn clean_polygons_test() {
             cleaned_polygon[i + 1].x + cleaned_polygon[i].x,
             cleaned_polygon[i + 1].y + cleaned_polygon[i].y,
         );
-        // C# `IntPoint / int` divides each coordinate as a long (truncating).
+        // Integer division of each coordinate, truncating toward zero.
         let center_point = Point64::new(sum.x / 2, sum.y / 2);
         let dist_to_center = point_length(center_point);
         assert!((length - dist_to_center).abs() <= 3);

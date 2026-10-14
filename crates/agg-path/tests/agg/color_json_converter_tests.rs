@@ -1,8 +1,8 @@
-// Ports agg-sharp `Tests/Agg.Tests/Agg/ColorJsonConverterTests.cs`: Color's JSON reader takes
-// every shape a Color has ever been written in (the "#RRGGBB" string, a named color, the object
-// with an Html property) and the degenerate values real customer files carry (an empty string,
-// a null, an array). The After property pins reader positioning: if the reader leaves the
-// stream partway inside the value it just read, the next property does not survive.
+// Color's JSON reader takes every shape a Color has ever been written in (the "#RRGGBB" string, a
+// named color, the object with an Html property) and the degenerate values real customer files
+// carry (an empty string, a null, an array). The After property pins reader positioning: if the
+// reader leaves the stream partway inside the value it just read, the next property does not
+// survive.
 
 use agg_path::Color;
 use serde::Deserialize;

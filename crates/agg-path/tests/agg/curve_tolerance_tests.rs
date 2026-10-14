@@ -1,5 +1,4 @@
-// Port of agg-sharp `Tests/Agg.Tests/Agg/CurveToleranceTests.cs`: the size rule every curve
-// tolerance scales by.
+// The size rule every curve tolerance scales by.
 
 use agg_path::curve_tolerance::{for_size, scale_for};
 
