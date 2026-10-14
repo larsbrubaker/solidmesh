@@ -1,10 +1,10 @@
-//! Port of `SectionInnerFaceTests.cs`: "Inner Face Should Bevel.mcx" on the part's own mesh
+//! "Inner Face Should Bevel.mcx" on the part's own mesh
 //! ([`crate::inner_face_test_mesh`]) - the bore wall's two mouths, each riding over a convex edge of
 //! the cube with two ninety degree turns, routed to the sections and built.
 //!
 //! The turn is not what sends it to legacy: the mouth riding over the cube's edge reads as the mitre
 //! it is (`SectionCorner`'s shared side need only be one SURFACE). Built through the shared
-//! `SurfaceTestBuild` port with the sections flag pinned on.
+//! `surface_test_build` with the sections flag pinned on.
 
 use std::rc::Rc;
 
@@ -50,7 +50,7 @@ fn the_bore_wall_is_routed_through_the_sections() {
     }
 }
 
-/// THE READING of the two turning vertices the router names. Every number in the C# class remarks
+/// THE READING of the two turning vertices the router names. Every number the reading quotes
 /// is asserted here.
 #[test]
 fn the_turning_vertices_are_a_mouth_running_over_a_convex_part_edge() {
@@ -232,7 +232,7 @@ fn the_bore_wall_takes_its_fillet_with_the_split_vertices_absorbed() {
     let found = section_split_blend::absorb_split_vertices();
     section_split_blend::set_absorb_split_vertices(true);
 
-    // C#'s `finally`: put the flag back even when the build's assertions fail.
+    // Put the flag back even when the build's assertions fail, so later tests see the default.
     struct PutBack(bool);
     impl Drop for PutBack {
         fn drop(&mut self) {
@@ -244,15 +244,14 @@ fn the_bore_wall_takes_its_fillet_with_the_split_vertices_absorbed() {
     the_bore_wall_builds(fixture::SIZE);
 }
 
-/// C# `TheBoreWallBuilds`.
 fn the_bore_wall_builds(size: f64) {
     let _sections = pinned_to_the_sections();
 
     the_closed_readable_mesh(&the_bore_wall_at(size));
 }
 
-/// C# `TheBoreWallAt`: the bore wall alone, built the part builder's own way - see
-/// `SurfaceTestBuild`.
+/// The bore wall alone, built the part builder's own way - see
+/// `surface_test_build`.
 fn the_bore_wall_at(size: f64) -> TryBevelOutcome {
     let part = fixture::the_part();
 
@@ -266,7 +265,6 @@ fn the_bore_wall_at(size: f64) -> TryBevelOutcome {
     )
 }
 
-/// C# `TheRim`.
 fn the_rim(part: &polygon_mesh::Mesh) -> BevelEdgeGroupResolution {
     let (mut resolutions, _) =
         bevel_edge_group_resolver::resolve_all(&[fixture::the_bore_wall()], part);

@@ -1,4 +1,4 @@
-//! Port of `LevelLine/SelfCrossingChainTests.cs`: single-chain fillet picks at 0.05 that Boolean
+//! Single-chain fillet picks at 0.05 that Boolean
 //! builds clean but the level line refused in the sweep with "the level line's mesh intersects
 //! itself" (`BooleanKernelGate` reads the answer SelfIntersecting). Each builds as the app takes a
 //! single chain: the band, then the gap fill, flat ends at their default. Two (c7, c17) were a

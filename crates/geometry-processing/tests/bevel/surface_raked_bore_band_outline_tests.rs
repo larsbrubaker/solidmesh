@@ -1,4 +1,4 @@
-//! Port of `SurfaceRakedBoreBandOutlineTests.cs` (a partial of `SurfaceBoreMouthTests`): THE
+//! One part of the bore mouth tests: THE
 //! BAND'S OUTLINE at a chorded wall's mitre - how deep the walkback (`surface_face_walkback`) is
 //! allowed to cut into the bore's wall, read facet by facet against that facet's OWN rail, on the
 //! straight control and on the raked bore. The bore and its walkback are

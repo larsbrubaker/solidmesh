@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerRunOutBookkeepingTests.cs`: the runout's own BOOKKEEPING, asked of the
+//! The runout's own BOOKKEEPING, asked of the
 //! readings themselves rather than of a part - which rows the plane across the wall's end has
 //! already taken at a station, which crossings may name the turn the stations stop chording at, and
 //! how far along its own chord a row is the lap test's business.

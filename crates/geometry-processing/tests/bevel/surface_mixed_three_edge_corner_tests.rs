@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedThreeEdgeCornerTests.cs`: the JUNCTION, READ - the L prism's top reflex
+//! The JUNCTION, READ - the L prism's top reflex
 //! corner with both of its top rims picked as well as the crease, where three selected edges meet
 //! at one vertex and exactly one of them is concave. These pin the geometry the blend there is
 //! built from, off the shipped plan; what the build publishes is

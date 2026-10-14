@@ -1,4 +1,4 @@
-//! Port of `SurfaceMitreWithUnequalSetbacksTests.cs`: a mitre between two beads of ONE radius that
+//! A mitre between two beads of ONE radius that
 //! set back by DIFFERENT amounts on the face they share - the right knife tip of the nose-in-notch
 //! part, where the tip's own 45 degree vertical edge is mitred against the 90 degree top edge along
 //! x = 20.

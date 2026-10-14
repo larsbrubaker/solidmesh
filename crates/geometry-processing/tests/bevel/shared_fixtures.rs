@@ -1,7 +1,7 @@
-//! The shared fixture builders of the `bevel` test area: `R/Tests/GeometryProcessingTests/Fixtures/*.cs`
-//! ported one module each, plus the private helpers several C# test classes each carry a copy of
-//! (bead sequence, kernel cuts, the bevel meter lock, thread CPU time). The `bevel.rs` root
-//! re-exports every member, so test files in any group reach them as `crate::<module>`.
+//! The shared fixture builders of the `bevel` test area, one module each, plus the helpers several
+//! test files share (bead sequence, kernel cuts, the bevel meter lock, thread CPU time). The
+//! `bevel.rs` root re-exports every member, so test files in any group reach them as
+//! `crate::<module>`.
 
 #[path = "bead_sequence.rs"]
 pub(crate) mod bead_sequence;

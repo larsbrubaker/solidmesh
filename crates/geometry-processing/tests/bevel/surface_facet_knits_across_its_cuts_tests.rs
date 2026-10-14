@@ -1,4 +1,4 @@
-//! Port of `SurfaceFacetKnitsAcrossItsCutsTests.cs`: one facet cut by more than one of its region's
+//! One facet cut by more than one of its region's
 //! cuts, which is where the pieces have to be knitted ACROSS the cuts and not just within each one
 //! (`surface_face_walkback`). Read on a cylinder's WALL facet, which is flat: an L chain of the top
 //! rim edge and the vertical crease below its start gives that one facet two cuts, and with a round

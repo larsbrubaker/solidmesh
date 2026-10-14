@@ -1,9 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/StairStepChainTests.cs`: the owner file
+//! The owner file
 //! `Stair Step Chain.mcx` as the app route hands it to the kernel - five step edges picked as five
 //! open one-edge chains, every chain ending on the two end faces - and the corner fixtures `Inner
 //! Right Sides and Center.mcx` (three open chains meeting at one mixed corner) and `Center Right
-//! and Left Side.mcx` (that corner with a face rim beside it). C# `[Arguments]` rows are loops over
-//! the same-named test.
+//! and Left Side.mcx` (that corner with a face rim beside it). Each parameter row is one pass of
+//! a loop in the test of the same name.
 
 use std::rc::Rc;
 
@@ -31,7 +31,6 @@ const CORNER_FIXTURE: &str = "inner-right-sides-and-center-op0";
 
 const FRACTIONS: [f64; 4] = [0.1, 0.5, 0.9, 1.0];
 
-/// C# `AnEdgeBetweenTwoChainsEndsStaysAFeature`.
 #[test]
 fn an_edge_between_two_chains_ends_stays_a_feature() {
     let fixture = Rc::new(LevelLineFixture::load(FIXTURE));
@@ -50,7 +49,6 @@ fn an_edge_between_two_chains_ends_stays_a_feature() {
     assert!(feature(4, 5));
 }
 
-/// C# `TheStairsFiveStepEdgesBuildAtEveryFractionOfTheRoom`.
 #[test]
 fn the_stairs_five_step_edges_build_at_every_fraction_of_the_room() {
     for fraction in FRACTIONS {
@@ -113,7 +111,6 @@ fn the_stairs_five_step_edges_build_at_every_fraction_of_the_room() {
     }
 }
 
-/// C# `ThreeOpenChainsAtOneMixedCornerCutTheirBandBelowTheirRoom`.
 #[test]
 fn three_open_chains_at_one_mixed_corner_cut_their_band_below_their_room() {
     for fraction in FRACTIONS {
@@ -135,7 +132,6 @@ fn three_open_chains_at_one_mixed_corner_cut_their_band_below_their_room() {
     }
 }
 
-/// C# `ThreeOpenChainsAtOneMixedCornerBuild`.
 #[test]
 fn three_open_chains_at_one_mixed_corner_build() {
     for fraction in FRACTIONS {
@@ -208,7 +204,6 @@ fn three_open_chains_at_one_mixed_corner_build() {
     }
 }
 
-/// C# `Math.Sign`.
 fn sign(v: f64) -> i32 {
     if v > 0.0 {
         1
@@ -219,7 +214,7 @@ fn sign(v: f64) -> i32 {
     }
 }
 
-/// C# `FillAsTheAppDoes`: the pick filled as the app fills it, with the corner filler on; `None`
+/// The pick filled as the app fills it, with the corner filler on; `None`
 /// when the band does not build.
 fn fill_as_the_app_does(
     fixture: &Rc<LevelLineFixture>,
@@ -243,8 +238,8 @@ fn fill_as_the_app_does(
     Some(filled)
 }
 
-/// C# `BandGap.BuildOpenChainsInTurn(..., fixture.Segments, room, snap: 1e-9, seamEpsilon,
-/// sharpTurnDegrees)`.
+/// The open chains built one after another at `size` within the known `room`, with a 1e-9 snap
+/// and the fixture's own segments, seam epsilon and sharp turn.
 fn in_turn(
     fixture: &Rc<LevelLineFixture>,
     positions: &[Vector3],
@@ -269,7 +264,7 @@ fn in_turn(
     .expect("the pick fills or refuses by name")
 }
 
-/// One chain built alone and filled (C#'s `GapFill.Fill(BandGap.Build(...new[] { chain }...))`).
+/// One chain built alone, as a pick of one, and filled.
 fn fill_alone(fixture: &Rc<LevelLineFixture>, chain: usize, size: f64) -> GapFillResult {
     let gap = band_gap_entry_points::build_pick(
         &fixture.positions,
@@ -286,7 +281,6 @@ fn fill_alone(fixture: &Rc<LevelLineFixture>, chain: usize, size: f64) -> GapFil
         .expect("the fill fills or refuses by name")
 }
 
-/// C# `Move`.
 fn move_it(p: Vector3) -> Vector3 {
     const ANGLE: f64 = 0.7;
     let (sin, cos) = ANGLE.sin_cos();
@@ -297,7 +291,6 @@ fn move_it(p: Vector3) -> Vector3 {
     )
 }
 
-/// C# `ARimBesideTheCornerRefusesByNameNotBySize`.
 #[test]
 fn a_rim_beside_the_corner_refuses_by_name_not_by_size() {
     let fixture = Rc::new(LevelLineFixture::load("center-right-and-left-side-op0"));
@@ -314,7 +307,7 @@ fn a_rim_beside_the_corner_refuses_by_name_not_by_size() {
     assert_eq!(gap.room, 0.0);
 }
 
-/// C# `RoomOf`: the pick's room, read as the app reads it.
+/// The pick's room, read as the app reads it.
 fn room_of(fixture: &Rc<LevelLineFixture>) -> f64 {
     band_gap_reading::read_room_of_pick(
         &fixture.positions,
@@ -333,7 +326,7 @@ fn room_of(fixture: &Rc<LevelLineFixture>) -> f64 {
     .room
 }
 
-/// C# `Build`: the whole pick at `size` on `positions`, with the given known room.
+/// The whole pick at `size` on `positions`, with the given known room.
 fn build(
     fixture: &Rc<LevelLineFixture>,
     positions: &[Vector3],

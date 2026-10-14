@@ -1,4 +1,4 @@
-//! Port of `SurfaceMitreOfRoundsChordedApartTests.cs`: TWO ARCS THAT WERE NOT CHORDED THE SAME
+//! TWO ARCS THAT WERE NOT CHORDED THE SAME
 //! WAY, mitred anyway. The mitre polyline is the UNION of both strips' rail crossings ordered by
 //! their angle from the face the two beads share, and each strip's end station carries the OTHER's
 //! crossings as points BETWEEN two of its own rails.
@@ -12,8 +12,8 @@
 //!
 //! **The two cases here.** Concave: the corner "Center And Right Face.mcx" dies at, 15 chords of
 //! exactly 6 degrees against 11 of 6.0824. Convex: the x = 0 face rim walked at 15 segments, where
-//! 90 and 135 degrees take 15 and 23 chords of 6 and 5.8696 and do not pair. C# `[Arguments]` rows
-//! are a loop.
+//! 90 and 135 degrees take 15 and 23 chords of 6 and 5.8696 and do not pair. The parameter rows are
+//! a loop.
 
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::topology::{

@@ -1,8 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SlantedFaceRimTests.cs`: the centre feature's
+//! The centre feature's
 //! one-facet slanted face f0 of "Bottom Center Edge.mcx", picked as a face so its rim is a closed
 //! chain of three sharp corners, and the two-facet face f1 above it. At 0.05 both must build
-//! closed, in one shell, without crossing (the C# summary names the rail turn-back and the
-//! bulging-fill check each one guards).
+//! closed, in one shell, without crossing (they guard the rail turn-back and the
+//! bulging-fill check).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -17,7 +17,7 @@ use crate::level_line_fixture::LevelLineFixture;
 use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures::{is_closed_and_consistent, kept, shell_count};
 
-/// Both C# tests: build the fixture as saved on the default budget, fill, and hold the result to
+/// Both tests: build the fixture as saved on the default budget, fill, and hold the result to
 /// a closed, consistent, one-shell solid that stands no more than half r off the input.
 fn builds_closed_without_crossing(name: &str) {
     let fixture = Rc::new(LevelLineFixture::load(name));
@@ -82,13 +82,11 @@ fn builds_closed_without_crossing(name: &str) {
     assert!(worst <= size * 0.5);
 }
 
-/// C# `F0BuildsClosedWithoutCrossing`.
 #[test]
 fn f0_builds_closed_without_crossing() {
     builds_closed_without_crossing("bottom-center-edge-f0-r005");
 }
 
-/// C# `F1BuildsClosedWithoutCrossing`.
 #[test]
 fn f1_builds_closed_without_crossing() {
     builds_closed_without_crossing("bottom-center-edge-f1-r005");

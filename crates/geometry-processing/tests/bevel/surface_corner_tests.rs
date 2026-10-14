@@ -1,4 +1,4 @@
-//! Port of `SurfaceCornerTests.cs`: rung 3 of the polygon-space bevel plan, bevels that meet at a
+//! Rung 3 of the polygon-space bevel plan, bevels that meet at a
 //! VERTEX of the part. Two edges of a cube corner first, which is one chain mitred at its interior
 //! corner, and then all three, which is three chains handing over to one corner patch.
 //!
@@ -9,7 +9,7 @@
 //!
 //! **Three edges is where a patch is owed.** There the three strips cannot meet each other pairwise
 //! and close, so each strip ends on the plane a radius in from the third face and the spherical
-//! octant about the ball centre fills what is left. C# `[Arguments]` rows are a loop.
+//! octant about the ball centre fills what is left. The parameter rows are a loop.
 
 use std::sync::Arc;
 
@@ -137,7 +137,7 @@ fn an_equal_setback_mitre_is_unchanged() {
         Vector3::new(7.0, -7.0, 10.0),
     ];
 
-    // C#'s `Distinct()` keeps first occurrences; its `OrderBy(Z).ThenBy(X)` is a stable sort.
+    // First occurrences kept, then a stable sort by z then x, so ties keep their walked order.
     let mut on_the_plane: Vec<Vector3> = Vec::new();
     for vertex in built
         .vertices
@@ -345,7 +345,7 @@ fn a_row_whose_ends_stand_opposite_on_the_ball_refuses_the_corner() {
     }
 }
 
-/// C# `TheFilletedCubeCorner`: the cube corner filleted at this class's own size and sample count -
+/// The cube corner filleted at this class's own size and sample count -
 /// the SQUARE corner, whose patch is a sphere octant - for the oblique corner's rows to be held to
 /// leaving it exactly as it was.
 pub fn the_filleted_cube_corner() -> Mesh {
@@ -601,7 +601,8 @@ fn build(
 
 /// The fillet's removed section as the tessellation cuts it, in the (across, down) frame whose
 /// origin is the corner the bevel takes off.
-// C#'s rotation of (0, -1) is kept term by term, multiplications by -1 included.
+// The rotation of (0, -1) is written term by term, multiplications by -1 included, so the
+// profile's floats round the same way on every platform.
 #[allow(clippy::neg_multiply)]
 pub fn fillet_profile(radius: f64, wedge_radians: f64, segments: i32) -> Vec<Vector2> {
     let sweep = std::f64::consts::PI - wedge_radians;

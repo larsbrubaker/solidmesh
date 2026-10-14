@@ -1,4 +1,4 @@
-//! Ports `GeometryProcessingTests/LevelLine/SpokeCentreParameterTests.cs`: a corner strip's
+//! A corner strip's
 //! jump-end spoke is drawn about one chain point (`corner_rail_strip::spoke_centre_parameter`), and
 //! that point must not turn on which leg float noise made a tie vertex's own reading name. Outer
 //! faces' wedge tip on the 135-degree joint at 57.03 read 57.995 on one source and 56.064 on

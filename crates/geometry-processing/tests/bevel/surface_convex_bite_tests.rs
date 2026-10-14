@@ -1,4 +1,4 @@
-//! Port of `SurfaceConvexBiteTests.cs`: a convex bite takes its own ring out of the faces and
+//! A convex bite takes its own ring out of the faces and
 //! nothing else, a ring that turns back is refused, a face wound against the plane keeps its
 //! facing, and the ring's own clean-ups keep the part's corners.
 
@@ -32,7 +32,6 @@ fn square_rim() -> Vec<Vector3> {
     ]
 }
 
-/// C# `ASquareBiteTakesItsOwnRingOutOfTheFaceAndNothingElse`.
 #[test]
 fn a_square_bite_takes_its_own_ring_out_of_the_face_and_nothing_else() {
     let (mut pool, mut faces) = cube_and_pool();
@@ -54,7 +53,6 @@ fn a_square_bite_takes_its_own_ring_out_of_the_face_and_nothing_else() {
     assert!((area_on(&pool, &faces, |at| (at.z + 10.0).abs() < 1e-6) - 400.0).abs() <= MEASURED);
 }
 
-/// C# `ARingThatTurnsBackOnItselfIsRefusedRatherThanBitten`.
 #[test]
 fn a_ring_that_turns_back_on_itself_is_refused_rather_than_bitten() {
     let (mut pool, mut faces) = cube_and_pool();
@@ -85,7 +83,6 @@ fn a_ring_that_turns_back_on_itself_is_refused_rather_than_bitten() {
     );
 }
 
-/// C# `AFaceWoundAgainstTheBitesPlaneKeepsItsOwnFacing`.
 #[test]
 fn a_face_wound_against_the_bites_plane_keeps_its_own_facing() {
     let (mut pool, mut faces) = cube_and_pool();
@@ -115,7 +112,6 @@ fn a_face_wound_against_the_bites_plane_keeps_its_own_facing() {
     );
 }
 
-/// C# `AnOriginalCornerOfThePartIsKeptWhereACrossingWouldBeDropped`.
 #[test]
 fn an_original_corner_of_the_part_is_kept_where_a_crossing_would_be_dropped() {
     let mut pool = SurfaceVertexPool::new(&to_storage(&[
@@ -137,7 +133,6 @@ fn an_original_corner_of_the_part_is_kept_where_a_crossing_would_be_dropped() {
     );
 }
 
-/// C# `ACornerTheRingStopsCarryingGoesBackIn`.
 #[test]
 fn a_corner_the_ring_stops_carrying_goes_back_in() {
     let mut pool = SurfaceVertexPool::new(&to_storage(&[
@@ -160,7 +155,6 @@ fn a_corner_the_ring_stops_carrying_goes_back_in() {
     );
 }
 
-/// C# `AVertexTheTwoSidesOfACornerBothCarryGoesInOnce`.
 #[test]
 fn a_vertex_the_two_sides_of_a_corner_both_carry_goes_in_once() {
     let mut pool = SurfaceVertexPool::new(&to_storage(&[

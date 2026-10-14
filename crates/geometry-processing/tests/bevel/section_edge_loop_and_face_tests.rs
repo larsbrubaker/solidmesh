@@ -1,4 +1,4 @@
-//! Port of `SectionEdgeLoopAndFaceTests.cs`: THE THREE ROWS OF "Edge Loop And Face Should Match.mcx",
+//! THE THREE ROWS OF "Edge Loop And Face Should Match.mcx",
 //! on the part's own mesh ([`crate::edge_loop_and_face_test_mesh`]) - the face group pick and the
 //! Edge-plus-TangentChain pair, both routed to the sections and both built, and the corner where
 //! the 20 mm diameter meets the arc's 1.6516 mm first chord, read.
@@ -6,7 +6,7 @@
 //! The corner's setback of 2 reaches past the station at the far end of that chord, whose flat-side
 //! boundary stands 0.686 BEHIND the corner's offset-meet; that station is ABSORBED by the corner
 //! (`SectionAbsorbedSplits`), which is what lets both picks build. Built through the shared
-//! `SurfaceTestBuild` port with the sections flag pinned on.
+//! `surface_test_build` with the sections flag pinned on.
 
 use std::rc::Rc;
 
@@ -83,7 +83,7 @@ fn both_picks_are_routed_to_the_sections_and_build() {
     }
 }
 
-/// THE READING of the corner both refusals named. Every number in the C# class remarks is asserted
+/// THE READING of the corner both refusals named. Every number the reading quotes is asserted
 /// here.
 #[test]
 fn the_corner_is_the_diameter_meeting_the_arc_inside_one_flat_face() {
@@ -328,8 +328,8 @@ fn both_picks_build_through_the_sections() {
     }
 }
 
-/// C# `Build`: the picks built the part builder's own way - see `SurfaceTestBuild` - as the mesh
-/// or the advisory (C#'s `false` with `reason`, `None` where nothing was named), with the plans
+/// The picks built the part builder's own way - see `surface_test_build` - as the mesh
+/// or the advisory (`Err` with the reason, `None` where nothing was named), with the plans
 /// made.
 #[allow(clippy::type_complexity)]
 fn build(

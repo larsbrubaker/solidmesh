@@ -1,13 +1,12 @@
-//! Port of `SurfaceEdgeBoreMouthTests.cs`: the mouth DRAPED OVER A CONVEX EDGE - a 20 mm block
+//! The mouth DRAPED OVER A CONVEX EDGE - a 20 mm block
 //! with a 40 sided bore of radius 5 drilled at 45 degrees through its own corner
 //! (`bore_test_meshes_edge_bore`), so each mouth crosses the block's 90 degree crease twice. The
 //! chain's two neighbours at a crossing land on faces 90 degrees apart while the rim goes on being
 //! a chorded curve, and the crossing carries the LONGEST chord of the loop and the SHALLOWEST
 //! setback on it - so the drape is not what stops "Inner Face Should Bevel.mcx".
 //!
-//! `TheDrapedMouthTakesTheFillet` is `[Skip]` in C# (the claim: it plans and publishes, and the
-//! answer is open in 24 places down the wall below the mouth) and is not ported. C# `[Arguments]`
-//! rows are a loop.
+//! `TheDrapedMouthTakesTheFillet` is not run, still open: it plans and publishes, but the
+//! answer is open in 24 places down the wall below the mouth. The parameter rows are a loop.
 
 use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceEdgePlan};
 use geometry_processing::topology::{
@@ -146,7 +145,7 @@ fn the_draped_mouths_crossing_carries_its_longest_chord() {
     }
 }
 
-/// C#'s `Math.Sign` as a double: -1, 0 or 1.
+/// The sign as a double: -1, 0 or 1.
 fn sign(value: f64) -> f64 {
     if value > 0.0 {
         1.0

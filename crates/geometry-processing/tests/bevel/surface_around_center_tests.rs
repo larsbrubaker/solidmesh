@@ -1,4 +1,4 @@
-//! Port of `SurfaceAroundCenterTests.cs`: "5mm Bevel Around Center.mcx" asked of Surface mode - the
+//! "5mm Bevel Around Center.mcx" asked of Surface mode - the
 //! FOUR concave creases where the nose's two faces die on the two slopes of the chevron notch, picked
 //! together and rounded in one pass, measured on the nose-in-notch fixture.
 //!
@@ -9,7 +9,7 @@
 //! **What decides which CONSTRUCTION each ridge end takes is where the mitre TIP lands.** The tip
 //! stands `1.5495 * radius` from the corner along the slope's own line, which leaves the part at
 //! radius 4.5634: below that every rail is mitred; above it the outermost rail of each strip is cut
-//! on the face BEYOND the knife-tip edge instead. C# `[Arguments]` rows are a loop.
+//! on the face BEYOND the knife-tip edge instead. The parameter rows are a loop.
 
 use std::sync::Arc;
 

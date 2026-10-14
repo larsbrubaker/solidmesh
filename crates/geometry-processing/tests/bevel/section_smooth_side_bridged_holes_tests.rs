@@ -1,4 +1,4 @@
-//! Port of `SectionSmoothSideBridgedHolesTests.cs`: a FACET WITH HOLES IN IT, CUT.
+//! A FACET WITH HOLES IN IT, CUT.
 //! [`crate::two_mouths_in_one_facet_mesh`] is Many Holes' refused facet at a size that can be worked
 //! on - two bore mouths standing wholly inside one flat piece of a tessellated wall - and the smooth
 //! side's cut has to take that piece, which is a disc with holes rather than a disc.

@@ -1,4 +1,4 @@
-//! Port of `SurfaceRakedBoreRollingBallTests.cs`: where the rolling ball really runs round the
+//! Where the rolling ball really runs round the
 //! RAKED bore's mouth (`bore_test_meshes::create_the_raked_fixture`), read against the wall itself
 //! and contrasted with the straight bore. Nothing here reads the plan: the wall is taken straight
 //! off the fixture's own geometry - forty half strips ruled down the drill's axis - and the ball is
@@ -440,7 +440,7 @@ fn the_rolling_ball_round_the_raked_mouth_rests_on_a_crease_over_a_fifth_of_the_
     );
 }
 
-/// C# `Bore`: one bore's mouth - its corners wound the way the loop goes, the drill's own
+/// One bore's mouth - its corners wound the way the loop goes, the drill's own
 /// direction, and the face the mouth is cut in.
 struct Bore {
     corners: Vec<Vector3>,
@@ -448,7 +448,8 @@ struct Bore {
     top: f64,
 }
 
-/// C# `ToTheRakedWall`'s answer and its three `out`s.
+/// How far the ball reaches to the raked wall, the facet and foot it reaches, and whether it rests
+/// on a crease there.
 struct WallReading {
     reach: f64,
     facet: usize,
@@ -471,7 +472,7 @@ fn the_chords_direction(bore: &Bore, chord: usize) -> Vector3 {
 }
 
 /// Where two neighbouring centre lines cross, which is the apex today's mitre is cut at.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 fn where_the_two_centre_lines_cross(bore: &Bore, before: usize, after: usize) -> Vector3 {
     let from = the_centre_line_of(bore, before);
     let along = the_chords_direction(bore, before);
@@ -489,7 +490,7 @@ fn where_the_two_centre_lines_cross(bore: &Bore, before: usize, after: usize) ->
 
 /// Where `chord`'s centre line touches the cylinder of a radius about `crease` - the point on it
 /// nearest that crease line, which is where the strip hands over to the pivot's arc.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 fn the_tangency_on(bore: &Bore, chord: usize, crease: usize) -> Vector3 {
     let from = the_centre_line_of(bore, chord);
     let along = the_chords_direction(bore, chord);
@@ -647,7 +648,7 @@ fn the_raked_facets_normal(bore: &Bore, j: usize) -> Vector3 {
 
 /// Where the perpendicular foot of a point onto facet j's PLANE stands, in that facet's own two
 /// directions: how far along its mouth chord, and how far down the drill's axis - with the chord's
-/// length (C#'s three `out`s).
+/// length.
 fn the_foot_on_the_facets_plane(bore: &Bore, facet: usize, at: Vector3) -> (f64, f64, f64) {
     let next = (facet + 1) % bore.corners.len();
     let chord = bore.corners[next] - bore.corners[facet];

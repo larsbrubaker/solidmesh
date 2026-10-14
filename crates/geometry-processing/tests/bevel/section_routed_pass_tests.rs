@@ -1,7 +1,7 @@
-//! Port of `SectionRoutedPassTests.cs`: WHOLE PASSES THROUGH THE ROUTER on the straight bore's
+//! WHOLE PASSES THROUGH THE ROUTER on the straight bore's
 //! plate: both mouths routed in one pass and assembled closed, a pass mixing the mouth with an open rim
 //! edge left to the legacy construction untouched, and a routed pass refused by its OWN room reading
-//! past the land with the most that fits. Built through the shared `SurfaceTestBuild` port, except
+//! past the land with the most that fits. Built through the shared `surface_test_build`, except
 //! the room row, which calls `surface_bevel_builder::try_build` directly so the legacy room does not
 //! answer first.
 
@@ -161,7 +161,7 @@ fn the_plate() -> Mesh {
     create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, LAND)
 }
 
-/// C# `TryBevelBothMouths`: both mouth loops handed to ONE build, picked through `resolve_crease`,
+/// Both mouth loops handed to ONE build, picked through `resolve_crease`,
 /// which at 24 sides chooses among the three feature edges meeting at every mouth vertex.
 fn try_bevel_both_mouths(part: &Mesh, size: f64) -> Result<SurfaceBuilt, SurfaceBuildFailure> {
     let features = Arc::new(FeatureEdgeSet::create_with_graph(
@@ -186,7 +186,7 @@ fn try_bevel_both_mouths(part: &Mesh, size: f64) -> Result<SurfaceBuilt, Surface
     .result
 }
 
-/// C# `TryBevelTheMouthAndOneRimEdge`: the bore's upper mouth and one edge of the plate's top rim,
+/// The bore's upper mouth and one edge of the plate's top rim,
 /// in one pass.
 fn try_bevel_the_mouth_and_one_rim_edge(size: f64) -> Result<SurfaceBuilt, SurfaceBuildFailure> {
     let part = the_plate();
@@ -220,8 +220,8 @@ fn try_bevel_the_mouth_and_one_rim_edge(size: f64) -> Result<SurfaceBuilt, Surfa
     .result
 }
 
-/// C# `TryBevelTheUpperMouthPastTheLegacyRoom`: the upper mouth alone, built through
-/// `surface_bevel_builder` DIRECTLY rather than through `SurfaceTestBuild` - the legacy room
+/// The upper mouth alone, built through
+/// `surface_bevel_builder` DIRECTLY rather than through `surface_test_build` - the legacy room
 /// (`surface_room::try_fit`) runs ahead of the builder there and would refuse a size past the land
 /// before the router was ever asked, and what is read here is the ROUTED pass's own refusal.
 fn try_bevel_the_upper_mouth_past_the_legacy_room(
@@ -279,7 +279,7 @@ fn try_bevel_the_upper_mouth_past_the_legacy_room(
     )
 }
 
-/// C# `TheMouth`: the mouth loop at `height`, resolved as a crease so it walks all 24 sides.
+/// The mouth loop at `height`, resolved as a crease so it walks all 24 sides.
 fn the_mouth(features: &Arc<FeatureEdgeSet>, height: f64) -> BevelEdgeGroupResolution {
     for (i, edge) in features.edges().iter().enumerate() {
         if !on_the_mouth(edge.start, height) || !on_the_mouth(edge.end, height) {
@@ -314,7 +314,7 @@ fn the_mouth(features: &Arc<FeatureEdgeSet>, height: f64) -> BevelEdgeGroupResol
     panic!("the fixture has no mouth at {height}");
 }
 
-/// C# `TheRimEdge`: an edge of the plate's top rim - the outer boundary of the land.
+/// An edge of the plate's top rim - the outer boundary of the land.
 fn the_rim_edge(features: &FeatureEdgeSet) -> i32 {
     for (i, edge) in features.edges().iter().enumerate() {
         if on_the_rim(edge.start) && on_the_rim(edge.end) {
@@ -335,7 +335,7 @@ fn on_the_rim(at: Vector3) -> bool {
         && (Vector3::new(at.x, at.y, 0.0).length() - (BORE_RADIUS + LAND)).abs() < 1e-3
 }
 
-/// C# `TheSameMesh`: bit for bit - the same points in the same order making the same faces in the
+/// Bit for bit - the same points in the same order making the same faces in the
 /// same order.
 fn the_same_mesh(left: &Mesh, right: &Mesh) -> bool {
     left.vertices.len() == right.vertices.len()

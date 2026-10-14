@@ -1,4 +1,4 @@
-//! Port of `SectionPiercedFaceTests.cs`: THE OWNER FILE "Top Face Should stil bevel.mcx", on the
+//! THE OWNER FILE "Top Face Should stil bevel.mcx", on the
 //! part's own mesh - the raked bore cube of [`crate::inner_face_test_mesh`] with its TOP (+Z) face
 //! picked. One closed chain of 45 edges whose two JUNCTIONS (vertices 19 and 59, where the straight
 //! -X edge meets the mouth arc, turning 86.81 degrees) share one flat side at UNEQUAL WEDGES (90 and
@@ -8,8 +8,8 @@
 //! [`crate::section_pierced_face_readings`]; its other parts (`.Junction`, `.Pass`, `.Seam`,
 //! `.Takeover`, `.TopJoin`) are their own files.
 //!
-//! `TheTopFaceTakesItsFilletThroughTheSections` is `[Skip]` in C# (the junction's wedge is laid
-//! twice) and is recorded as skipped in `docs/PORTING_PLAN.md`.
+//! `TheTopFaceTakesItsFilletThroughTheSections` is not run: the junction's wedge is still laid
+//! twice.
 
 use geometry_processing::bevel::sections::section_corner;
 use vector_math::math_helper::degrees_to_radians;
@@ -99,7 +99,7 @@ fn the_junction_is_one_flat_side_at_two_wedges() {
 
         assert!(
             !section_corner::looks_like_a_corner(&arriving, &leaving),
-            "and the wedge screen turns the pair away - see the class remarks for what the \
+            "and the wedge screen turns the pair away - see the file header for what the \
              measured construction then says"
         );
     }
@@ -410,7 +410,7 @@ fn the_leaving_canal_cuts_no_notch_into_the_wall() {
     let fold = the_fold_at(&part, &arriving, &leaving);
     let mut clearance = f64::MAX;
 
-    // C#'s `for (double s = 0; s <= 1; s += 1e-4)`, accumulating the same way.
+    // Steps of 1e-4 accumulated by addition, so the samples land on the same values every run.
     let mut s = 0.0;
     while s <= 1.0 {
         clearance = clearance.min(distance_to_line(station + (fold * s), axis, along) - RADIUS);

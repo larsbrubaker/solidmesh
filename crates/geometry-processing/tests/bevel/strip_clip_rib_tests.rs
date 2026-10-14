@@ -1,4 +1,4 @@
-//! Port of `LevelLine/StripClipRibTests.cs`: Flow rung 2, the strip clipped on a neighbour's plane.
+//! Flow rung 2, the strip clipped on a neighbour's plane.
 //! A 20 mm box's top front edge (convex, 90 degrees) is filleted past a wedge rib standing on the
 //! top face: the rib's tip T (10, 3, 10) is 3 from the edge, its two flank faces meet the top
 //! along CONCAVE creases T-P and T-Q (opposite sense to the chain), and its ridge T-R rises steeply
@@ -388,7 +388,7 @@ fn encroaching_side_builds_with_the_lens_tip_on_the_control() {
         .iter()
         .map(|&p| (p - lens_tip).length())
         .fold(f64::INFINITY, f64::min);
-    // LINQ OrderBy(...).First(): the first of the least.
+    // The first of the least, so a tie names the same point every run.
     let mut nearest_at = all[0];
     for &p in &all {
         if (p - lens_tip).length() < (nearest_at - lens_tip).length() {
@@ -509,8 +509,8 @@ fn tie_on_the_cylinder(r: f64) -> Vector3 {
     Vector3::new(10.0, 3.0 - (5.0 * s), 10.0 - (10.0 * s))
 }
 
-/// C# `BandGap.Build(positions, indices, Chain, false, FeatureEdgesOver(positions, indices, 20),
-/// size, Fillet, filletSegments: Segments)`.
+/// The rib chain's open band at `size`: a fillet of [`SEGMENTS`], over feature edges past 20
+/// degrees.
 fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> BandGapResult {
     let options = BandGapBuildOptions {
         fillet_segments: SEGMENTS,
@@ -529,12 +529,12 @@ fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> BandG
     .expect("a valid pick")
 }
 
-/// C# `Fill(indices, size, motion)`.
+/// The fill on the rib's positions, moved by `motion` where given.
 fn fill(indices: &[(i32, i32, i32)], size: f64, motion: Option<Matrix4X4>) -> GapFillResult {
     fill_at(&positions(motion), indices, size)
 }
 
-/// C# `Fill(positions, indices, size)`: a refused cut is a test failure (C# throws).
+/// The band built and filled: a refused cut is a test failure.
 fn fill_at(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> GapFillResult {
     let gap = build(positions, indices, size);
 

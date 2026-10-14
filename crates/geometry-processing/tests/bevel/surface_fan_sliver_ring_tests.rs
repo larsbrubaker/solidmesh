@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceFanSliverRingTests.cs` 1:1: the fan's sliver
+//! The fan's sliver
 //! rings. A pinched sliver of the lobe wall and a three-corner ring of one line emit nothing, a fan
 //! takes no diagonal through a corner of its own ring, a collinear ring is fanned from a farthest
 //! corner, and a collapsed strip quad is emitted as needles along its own chord (or nothing, where

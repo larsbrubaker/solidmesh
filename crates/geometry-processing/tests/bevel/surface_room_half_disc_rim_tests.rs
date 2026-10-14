@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomHalfDiscRimTests.cs`: A RIM IS NOT ITS OWN WALL. The flat end of a half
+//! A RIM IS NOT ITS OWN WALL. The flat end of a half
 //! disc prism has one closed rim - the diameter and the nineteen chords of the arc. Picked whole,
 //! every chord is one the same pass is beveling, so none of them is a wall the diameter's band
 //! could run off at; what the two sides take out of the face between them is the pair

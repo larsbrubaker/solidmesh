@@ -1,7 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SeveralChainsFillTests.cs`: rung 6 of the
+//! Rung 6 of the
 //! several-chains design - what the FILL lays into the gap a pick of several chains leaves, on the
-//! fixtures of `several_chains_fixtures.rs` (the cut itself is `several_chains_tests.rs`). C#
-//! `[Arguments]` rows are loops over the same-named test.
+//! fixtures of `several_chains_fixtures.rs` (the cut itself is `several_chains_tests.rs`).
+//! Each parameter row is one pass of a loop in the test of the same name.
 
 use std::rc::Rc;
 
@@ -17,7 +17,7 @@ use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of, winding_number};
 use crate::several_chains_fixtures::{motion, named, FOLD_DEGREES};
 
-/// C# `Rungs`: the rungs of the pick's own room every fill claim below is held at.
+/// The rungs of the pick's own room every fill claim below is held at.
 const RUNGS: [f64; 4] = [0.1, 0.5, 0.9, 1.0];
 
 const BOTH: [(&str, BandProfile); 6] = [
@@ -33,7 +33,6 @@ fn mesh_of(fill: &GapFillResult) -> std::cell::Ref<'_, LevelLineMesh> {
     fill.mesh.as_ref().expect("a filled mesh").borrow()
 }
 
-/// C# `EveryFixtureFillsToAClosedOneShellSolid`.
 #[test]
 fn every_fixture_fills_to_a_closed_one_shell_solid() {
     for (fixture, profile) in BOTH {
@@ -80,7 +79,7 @@ fn every_fixture_fills_to_a_closed_one_shell_solid() {
     }
 }
 
-/// C# `TheVolumeMovesTheWayTheRimsShapeSaysItMust`: convex rims (A, C) lose material, the
+/// Convex rims (A, C) lose material, the
 /// concave base rims of B gain it.
 #[test]
 fn the_volume_moves_the_way_the_rims_shape_says_it_must() {
@@ -116,7 +115,6 @@ fn the_volume_moves_the_way_the_rims_shape_says_it_must() {
     }
 }
 
-/// C# `TheOrderOfThePickDoesNotMoveOneTriangleOfTheFill`.
 #[test]
 fn the_order_of_the_pick_does_not_move_one_triangle_of_the_fill() {
     for (fixture, profile) in [
@@ -146,7 +144,6 @@ fn the_order_of_the_pick_does_not_move_one_triangle_of_the_fill() {
     }
 }
 
-/// C# `TheFillIsTheSameWhereverThePartStands`.
 #[test]
 fn the_fill_is_the_same_wherever_the_part_stands() {
     for (fixture, profile) in [
@@ -171,7 +168,7 @@ fn the_fill_is_the_same_wherever_the_part_stands() {
     }
 }
 
-/// C# `ARefusedFillLeavesNoTriangleOfAnyChainBehind`: forced by a budget too small to finish in.
+/// Forced by a budget too small to finish in.
 #[test]
 fn a_refused_fill_leaves_no_triangle_of_any_chain_behind() {
     for fixture in ["A", "B"] {
@@ -203,7 +200,7 @@ fn a_refused_fill_leaves_no_triangle_of_any_chain_behind() {
     }
 }
 
-/// C# `LiveFillTriangles`: how many triangles of the fill's own tag are still standing.
+/// How many triangles of the fill's own tag are still standing.
 fn live_fill_triangles(mesh: &LevelLineMesh) -> i32 {
     let mut live = 0;
     for t in 0..mesh.triangle_count() {
@@ -215,8 +212,8 @@ fn live_fill_triangles(mesh: &LevelLineMesh) -> i32 {
     live
 }
 
-/// C# `Centroids`: every live triangle's centroid, in one canonical order. The keys are C#'s
-/// `Math.Round(_, 9)` (banker's rounding); `sort_by` is stable like `OrderBy`.
+/// Every live triangle's centroid, in one canonical order. The keys are rounded to 9
+/// places (banker's rounding) so float noise cannot reorder them; `sort_by` is stable.
 fn centroids(mesh: &LevelLineMesh) -> Vec<Vector3> {
     let mut centroids = Vec::new();
     for t in 0..mesh.triangle_count() {
@@ -238,7 +235,6 @@ fn centroids(mesh: &LevelLineMesh) -> Vec<Vector3> {
     centroids
 }
 
-/// C# `RoomOf`.
 fn room_of(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -258,7 +254,7 @@ fn room_of(
     .expect("the pick reads")
 }
 
-/// C# `Build`: a small size costs the CUT a great deal of work on these fixtures, and the claims
+/// A small size costs the CUT a great deal of work on these fixtures, and the claims
 /// here are about the FILL, so the build is given fifty default budgets to finish in.
 fn build(
     positions: &[Vector3],
@@ -286,7 +282,7 @@ fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `Fill`: `None` for an honest refusal by size, which only the very top rung ever meets.
+/// `None` for an honest refusal by size, which only the very top rung ever meets.
 fn fill(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

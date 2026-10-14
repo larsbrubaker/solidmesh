@@ -1,11 +1,11 @@
-//! Port of `SurfaceRibFootJunctionTests.cs`: THE TWO-CREASE JUNCTION ON A SQUARE RIB - the free foot
+//! THE TWO-CREASE JUNCTION ON A SQUARE RIB - the free foot
 //! of the rib-on-plate fixture at (8, 5, 5), where the rib's own vertical CUT runs into the two BEADS
 //! its walls make with the plate, all three picked and all three square to one another.
 //!
 //! Asked of the kernel rather than of the operation because that is where the answer can be read:
 //! the part builder's own closure survey refuses the pass in words and publishes nothing, so a
 //! Standard test can say THAT it did not close and this one can say WHERE. Built through the shared
-//! `SurfaceTestBuild` port.
+//! `surface_test_build`.
 
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::topology::bevel_edge_group_resolver;

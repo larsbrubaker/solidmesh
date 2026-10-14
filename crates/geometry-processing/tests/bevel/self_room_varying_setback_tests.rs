@@ -1,9 +1,9 @@
-//! Port of `LevelLine/SelfRoomVaryingSetbackTests.cs`: where a chain's unit setback VARIES along
+//! Where a chain's unit setback VARIES along
 //! it, a side's self room must never read HIGH - a room that reads above the size the side really
 //! survives to is a size the user is allowed and that then fails. The reading turns the field's
 //! greatest point into a room by the swallow size `g(p) = min over c of |p - c| / u(c)` and climbs,
 //! rather than dividing by the unit of the additive problem's minimiser (which answered 1.289 and
-//! refused its own room). C# `[Arguments]` rows are loops over the same-named test.
+//! refused its own room). Each parameter row is one pass of a loop in the test of the same name.
 
 use geometry_processing::bevel::level_line::chain_on_the_mesh;
 use geometry_processing::bevel::level_line::gap_fill;

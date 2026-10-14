@@ -1,9 +1,9 @@
-//! Port of `SectionWholeFaceRemeshTests.cs`: THE WHOLE FLAT FACE handed to the re-mesh, on a
+//! THE WHOLE FLAT FACE handed to the re-mesh, on a
 //! chamfered L shelf whose top face is the long thin fan a boolean leaves, with a turn-zero split
 //! vertex part way along its long bottom edge. The top rim's 0.4 fillet builds through the sections
 //! closed, manifold and one shell, no face of the answer stands outside the shelf, and every rigid
 //! motion answers with the same topology. The rim is reached through the FACE GROUP pick's own plan,
-//! made through the shared `SurfaceTestBuild` port.
+//! made through the shared `surface_test_build`.
 
 use std::rc::Rc;
 
@@ -122,7 +122,7 @@ fn the_answer_is_the_same_under_every_rigid_motion() {
     }
 }
 
-/// C# `TheOutline`: the shelf's top outline, counter clockwise seen from +z - an L whose outer
+/// The shelf's top outline, counter clockwise seen from +z - an L whose outer
 /// corner is chamfered at 45 degrees, with one turn-zero split vertex sitting part way along the
 /// long bottom edge, the mark a boolean leaves where another body's wall broke through.
 fn the_outline() -> [Vector2; 8] {
@@ -138,7 +138,7 @@ fn the_outline() -> [Vector2; 8] {
     ]
 }
 
-/// C# `TheTopTriangles`: how the top face is cut up - a long thin fan off the outline's first point,
+/// How the top face is cut up - a long thin fan off the outline's first point,
 /// with the one pair of triangles at the split vertex taken off the fan.
 ///
 /// The split vertex (8, 0) stands COLLINEAR with the fan's apex (0, 0) and with (24, 0), so the fan
@@ -155,7 +155,7 @@ fn the_top_triangles() -> [(i32, i32, i32); 6] {
     ]
 }
 
-/// C# `CreateChamferedEllShelf`: the outline lofted down by [`HEIGHT`], its top and bottom drawn as
+/// The outline lofted down by [`HEIGHT`], its top and bottom drawn as
 /// ONE fan off the outline's first point, which is how a boolean leaves a face it did not have to
 /// re-cut.
 fn create_chamfered_ell_shelf() -> Mesh {
@@ -195,7 +195,7 @@ fn create_chamfered_ell_shelf() -> Mesh {
     mesh
 }
 
-/// C# `TheTopRim`: the whole top rim as one plan, reached through the FACE GROUP pick and not
+/// The whole top rim as one plan, reached through the FACE GROUP pick and not
 /// through a tangent walk - three feature edges meet at every corner of an L prism, so a tangent
 /// walk stops at the first corner whatever tolerance it is given.
 fn the_top_rim(mesh: &Mesh, features: &FeatureEdgeSet, motion: Matrix4X4) -> Rc<SurfaceBevelPlan> {
@@ -228,7 +228,7 @@ fn the_top_rim(mesh: &Mesh, features: &FeatureEdgeSet, motion: Matrix4X4) -> Rc<
     Rc::clone(&outcome.plans_built[0])
 }
 
-/// C# `TheSeedRimEdge`: an edge of the shelf's top rim - both ends on the top plane, wherever the
+/// An edge of the shelf's top rim - both ends on the top plane, wherever the
 /// part stands.
 fn the_seed_rim_edge(features: &FeatureEdgeSet, motion: Matrix4X4) -> i32 {
     let was_the_top = Vector3::new(0.0, 0.0, HEIGHT).transform_position(motion);
@@ -244,7 +244,7 @@ fn the_seed_rim_edge(features: &FeatureEdgeSet, motion: Matrix4X4) -> i32 {
     panic!("the fixture has no feature edge on its top plane");
 }
 
-/// C# `TryBuildTheTopRim`: the shelf's top rim built and assembled through the sections path.
+/// The shelf's top rim built and assembled through the sections path.
 fn try_build_the_top_rim(part: &Mesh, motion: Matrix4X4) -> Result<Mesh, SectionBuildRefusal> {
     let graph = part.get_mesh_edge_graph();
     let features = FeatureEdgeSet::create_with_graph(part, &graph, BEND_THRESHOLD_DEGREES);
@@ -264,20 +264,20 @@ fn try_build_the_top_rim(part: &Mesh, motion: Matrix4X4) -> Result<Mesh, Section
     section_assembly::try_assemble(part, &graph, &run, &mut pool)
 }
 
-/// C# `Up`: the way the shelf's top plane faces after a motion.
+/// The way the shelf's top plane faces after a motion.
 fn up(motion: Matrix4X4) -> Vector3 {
     (Vector3::new(0.0, 0.0, 1.0).transform_position(motion)
         - Vector3::new(0.0, 0.0, 0.0).transform_position(motion))
     .get_normal()
 }
 
-/// C# `IsInsideTheOutline`: whether a point stands inside the shelf's outline in xy, read with a
+/// Whether a point stands inside the shelf's outline in xy, read with a
 /// small slack. The outline is CONCAVE at the L's inner corner, so this is the winding number.
 fn is_inside_the_outline(outline: &[Vector2], at: Vector3) -> bool {
     winding_of(outline, Vector2::new(at.x, at.y)) != 0
 }
 
-/// C# `WindingOf`: the winding number of the outline about a point, with points on the outline
+/// The winding number of the outline about a point, with points on the outline
 /// counted in.
 fn winding_of(outline: &[Vector2], at: Vector2) -> i32 {
     const SLACK: f64 = 1e-4;

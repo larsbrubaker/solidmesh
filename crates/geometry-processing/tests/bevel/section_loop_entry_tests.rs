@@ -1,4 +1,4 @@
-//! Port of `SectionLoopEntryTests.cs`: the run built from a loop of vertices equals the run built
+//! The run built from a loop of vertices equals the run built
 //! from the chain, and a ring that is not a chain of creases is refused.
 
 use geometry_processing::bevel::sections::section_builder_run::{try_build_chain, try_build_loop};
@@ -16,7 +16,6 @@ const RADIUS: f64 = 0.4;
 const SEGMENTS: i32 = 8;
 const BEND_THRESHOLD_DEGREES: f64 = 20.0;
 
-/// C# `TheRunFromTheLoopEqualsTheRunFromTheChain`.
 #[test]
 fn the_run_from_the_loop_equals_the_run_from_the_chain() {
     let part = create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0);
@@ -78,7 +77,6 @@ fn the_run_from_the_loop_equals_the_run_from_the_chain() {
     assert!(worst < 1e-12, "{worst}");
 }
 
-/// C# `ARingThatIsNotAChainOfCreasesIsRefused`.
 #[test]
 fn a_ring_that_is_not_a_chain_of_creases_is_refused() {
     let part = create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0);

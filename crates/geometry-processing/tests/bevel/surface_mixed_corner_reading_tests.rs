@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerReadingTests.cs`: `SurfaceMixedCorner` read off the L prism's top
+//! `SurfaceMixedCorner` read off the L prism's top
 //! corner, number by number. At `V = (10, 10, 10)` the cap `T` (`z = 10`), the shared step wall
 //! `S` (`x = 10`) and the void wall `W` (`y = 10`) meet; the picked convex edge is `T inter S` out
 //! to `(10, 20, 10)`, the picked concave edge `S inter W` down to `(10, 10, 0)`. At `r = 1` the

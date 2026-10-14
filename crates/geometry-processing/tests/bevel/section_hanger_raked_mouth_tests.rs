@@ -1,8 +1,8 @@
-//! Port of `SectionHangerRakedMouthTests.cs`: THE PICTURE HANGER'S RAKED MOUTH, on the hanger's own
+//! THE PICTURE HANGER'S RAKED MOUTH, on the hanger's own
 //! mesh ([`crate::picture_hanger_test_mesh`]) - the 48 edge tangent chain of group 0, whose room is
 //! millimetres rather than a split vertex's own facet, taking its 0.4 fillet through the sections
 //! alone and together with the top rim, with the split vertices blended and absorbed. Built through
-//! the shared `SurfaceTestBuild` port with the sections flag pinned on.
+//! the shared `surface_test_build` with the sections flag pinned on.
 
 use geometry_processing::bevel::sections::{section_room, section_routing, section_split_blend};
 use geometry_processing::bevel::BevelAdvisory;
@@ -92,7 +92,7 @@ fn both_picks_together_build_in_one_pass() {
 /// barrel alone.
 #[test]
 fn both_picks_together_build_with_the_split_vertices_absorbed() {
-    // C#'s `finally`: put the flag back even when an assertion fails.
+    // Put the flag back even when an assertion fails, so later tests see the default.
     struct PutBack(bool);
     impl Drop for PutBack {
         fn drop(&mut self) {
@@ -123,14 +123,14 @@ fn both_picks() -> TryBevelOutcome {
     )
 }
 
-/// C# `TheMouth`: the mouth as the file picks it - 48 edges of a tangent chain.
+/// The mouth as the file picks it - 48 edges of a tangent chain.
 fn the_mouth(part: &Mesh) -> BevelEdgeGroupResolution {
     let (mut resolutions, _) =
         bevel_edge_group_resolver::resolve_all(&[fixture::the_raked_mouth()], part);
     resolutions.remove(0)
 }
 
-/// C# `TheMouthChain`: the same mouth as a feature chain, which is what the room measures - walked
+/// The same mouth as a feature chain, which is what the room measures - walked
 /// out from the feature edge standing where the group's first resolved edge stands.
 fn the_mouth_chain(part: &Mesh, graph: &MeshEdgeGraph) -> FeatureEdgeChain {
     let picked = the_mouth(part);
@@ -155,7 +155,7 @@ fn the_mouth_chain(part: &Mesh, graph: &MeshEdgeGraph) -> FeatureEdgeChain {
     panic!("no feature edge stands where the mouth's first picked edge does");
 }
 
-/// C# `StandsIn`: whether any vertex of a mesh stands at a given position.
+/// Whether any vertex of a mesh stands at a given position.
 fn stands_in(mesh: &Mesh, at: Vector3) -> bool {
     mesh.vertices
         .iter()

@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueCornerTests.cs`: three chamfers mitring at a corner that is NOT square -
+//! Three chamfers mitring at a corner that is NOT square -
 //! `skew_ridge_solid`'s two skew ends, where the three faces stand at 112, 142 and 146 degrees to
 //! each other and the point their chamfer planes meet at is nowhere near the middle of the strip it
 //! bends.

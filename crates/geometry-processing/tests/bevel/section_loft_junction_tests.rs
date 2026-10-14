@@ -1,4 +1,4 @@
-//! Port of `SectionLoftJunctionTests.cs`: THE LOFT'S JUNCTION DUTY - a junction rung stands LONGER
+//! THE LOFT'S JUNCTION DUTY - a junction rung stands LONGER
 //! than the strip's other rung, and the ladder (`section_loft::try_emit`) closes that difference by
 //! FANNING the extra samples onto the far row's wall end, never by resampling the rung; the loft
 //! reads the seam's crossings by STATION (`section_loft::crossings_on`); and an absorbed gap row

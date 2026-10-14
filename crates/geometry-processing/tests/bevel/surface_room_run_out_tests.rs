@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomRunOutTests.cs`: the room a mixed corner's RUN-OUT takes on the cap face,
+//! The room a mixed corner's RUN-OUT takes on the cap face,
 //! negotiated against another chain's band - the lobed prism's barrel picked together with the flat
 //! side 10.228 mm away from the seam, which is "Every Chamfer Works.mcx"'s wall and its cube side
 //! rim (`lobed_prism_meshes`).

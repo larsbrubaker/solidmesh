@@ -1,4 +1,4 @@
-//! Port of `SectionAssemblyTests.cs`: the vertex-centric construction as ONE mesh - the part's
+//! The vertex-centric construction as ONE mesh - the part's
 //! faces rebuilt onto the sections' boundaries and the strips lofted between the sections, laid into
 //! one face list over one pool and published (`section_assembly`).
 //!
@@ -234,7 +234,6 @@ fn it_removes_the_same_material_as_the_construction_it_replaces() {
     );
 }
 
-/// C# `TheSameBoreByTheLegacyConstruction`.
 fn the_same_bore_by_the_legacy_construction() -> Mesh {
     let part = create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0);
     let graph = part.get_mesh_edge_graph();

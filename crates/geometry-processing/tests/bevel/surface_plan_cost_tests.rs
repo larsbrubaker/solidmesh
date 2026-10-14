@@ -1,12 +1,12 @@
-//! Port of `SurfacePlanCostTests.cs`: what a plan COSTS, as a sanity rung rather than a benchmark.
+//! What a plan COSTS, as a sanity rung rather than a benchmark.
 //! Planning one chain reads the mesh twice at each free end - once for the edges standing at the
 //! corner and once for the surfaces its faces belong to - and the obvious reading of each is a walk
 //! of the whole mesh. Both readings are COUNTED, so the rung says the same thing on any machine and
 //! under any load: the surfaces as the FLOOD COUNT (`FaceRegionCache::flood_count`), and the edges
-//! as the GRAPH SCAN COUNT (`FaceRegionCache::graph_scan_count`), one scan for the cache as C#'s
-//! one reading per cache makes. C#'s clock stays as the loose net for the costs neither count can
-//! see, with C#'s bound (two seconds for work that takes a fraction of one), read on the test
-//! thread's own CPU clock rather than the wall (`thread_cpu_time`, divergence 3130): planning runs
+//! as the GRAPH SCAN COUNT (`FaceRegionCache::graph_scan_count`), one scan for the cache, since
+//! every plan read against one cache shares its index. A clock stays as the loose net for the
+//! costs neither count can see (two seconds for work that takes a fraction of one), read on the
+//! test thread's own CPU clock rather than the wall (`thread_cpu_time`): planning runs
 //! on the calling thread, and a wall clock read beside the rest of the suite counts the time it
 //! waited for a core.
 
@@ -95,7 +95,7 @@ fn planning_three_hundred_rim_edges_does_not_walk_the_whole_mesh_each_time() {
     );
 
     // Every one of these chains asks at its ends which edges stand at the corner, and every plan
-    // reads the cache's one index of them (C#'s one reading per cache, divergence 656): a scan of
+    // reads the cache's one index of them (the memos live on the cache): a scan of
     // every edge in the graph per end, or per plan, is the walk this rung is about.
     assert_eq!(
         scans,

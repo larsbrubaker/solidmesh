@@ -1,4 +1,4 @@
-//! Port of `SurfaceLeaningCornerCanalSelectorTests.cs`: WHICH CANAL a LEANING mixed corner draws,
+//! WHICH CANAL a LEANING mixed corner draws,
 //! read off the sheared L prism (`topology_test_meshes::create_sheared_l_shaped_grid_prism`).
 //!
 //! Both canals die on the SAME line - the cap's plane met with the wall's - and they travel

@@ -1,4 +1,4 @@
-//! Port of `SurfaceInterruptedCreaseTests.cs`: "Center Flows Through.mcx" in SURFACE mode - the
+//! "Center Flows Through.mcx" in SURFACE mode - the
 //! notch's centre crease picked BOTH sides of the nose welded over it, which is two selected pieces
 //! of ONE crease rather than two creases.
 //!
@@ -10,7 +10,7 @@
 //!
 //! What is still named is the size that would make the bead pass UNDER the nose instead of into its
 //! faces - feet further from the crease than the nose's own root. On this fixture that starts
-//! between 7 and 7.5 mm, the ridge standing 7.071 from the crease. C# `[Arguments]` rows are a loop.
+//! between 7 and 7.5 mm, the ridge standing 7.071 from the crease. The parameter rows are a loop.
 
 use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{BevelEdgeGroup, FeatureEdgeSet};

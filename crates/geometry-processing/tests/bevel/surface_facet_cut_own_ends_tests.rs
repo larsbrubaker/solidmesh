@@ -1,4 +1,4 @@
-//! Port of `R/Tests/GeometryProcessingTests/SurfaceFacetCutOwnEndsTests.cs`: a cut drawn along a
+//! A cut drawn along a
 //! chord the ring it is cutting ALREADY CARRIES - the chord's two ends are corners of the ring, so
 //! the boundary is drawn and there is nothing on it to find (`surface_cut_clip::clip_by`).
 //!

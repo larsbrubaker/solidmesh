@@ -1,4 +1,4 @@
-//! Port of `SurfaceConcaveCornerTests.cs`: the inside corner of a pocket, THREE concave edges
+//! The inside corner of a pocket, THREE concave edges
 //! meeting at one vertex, all three selected. No junction reading sees it - `SurfaceMixedJunction`
 //! passes over a vertex with no convex arm to press a ball against - so the three chain ends arrive
 //! together at the corner patch, which reads it as the ball at REST on the three faces and closes
@@ -12,7 +12,7 @@
 //! **Both profiles, and only three concave arms.** A chamfer's three planes meet at a point
 //! wherever they lean, so the same three arms MITRE and close without a patch at all. And a corner
 //! with a crease among convex arms never reaches this patch: it is read as a mixed junction, which
-//! is what the third case pins. C# `[Arguments]` rows are a loop.
+//! is what the third case pins. The parameter rows are a loop.
 
 use std::sync::Arc;
 
@@ -440,7 +440,7 @@ fn count_at(mesh: &Mesh, at: Vector3) -> usize {
         .count()
 }
 
-/// The faces' corners, each once, in the order C#'s `SelectMany(...).Distinct()` meets them.
+/// The faces' corners, each once, in the order the faces meet them.
 fn distinct_corners(faces: &[(i32, i32, i32)]) -> Vec<i32> {
     let mut seen = Vec::new();
 

@@ -1,4 +1,4 @@
-//! Port of `LevelLine/SliverSplitGuardTests.cs`: the refinement rules' sliver guard
+//! The refinement rules' sliver guard
 //! (`refinement_splits::would_thin_a_child*`, `refinement_splits_enqueue::bisect_instead_of_thinning*`):
 //! a split that would leave a child far thinner than its parent bisects that child's longest-edge
 //! path instead.
@@ -197,7 +197,7 @@ fn the_guard_leaves_a_triangle_of_another_tag_alone() {
     assert_eq!(from_above.vertex_count(), 5);
 }
 
-/// Switches the per-rule meter back off however the test leaves (C#'s `finally`).
+/// Switches the per-rule meter back off however the test leaves.
 struct MeterOff;
 
 impl Drop for MeterOff {
@@ -308,7 +308,7 @@ fn the_guard_would_fire_on_the_land_and_nowhere_on_the_pinned_fixtures() {
     }
 }
 
-/// C# `Builds`: the builds the meter reads, each the way the test that pins or reproduces it
+/// The builds the meter reads, each the way the test that pins or reproduces it
 /// builds it. Only the meter is read, so each build's own result is dropped.
 fn builds() -> Vec<(String, Box<dyn Fn()>)> {
     let mut builds: Vec<(String, Box<dyn Fn()>)> = vec![
@@ -432,7 +432,7 @@ fn builds() -> Vec<(String, Box<dyn Fn()>)> {
     builds
 }
 
-/// C# `Trio`: three chains of a captured Many Holes pick, built as the capture records.
+/// Three chains of a captured Many Holes pick, built as the capture records.
 fn trio(capture: &str, picked: &[usize]) {
     let fixture = Rc::new(LevelLineFixture::load(capture));
     let mut budget = WorkBudget::new(WorkBudget::default_limit(fixture.indices.len() as i32))

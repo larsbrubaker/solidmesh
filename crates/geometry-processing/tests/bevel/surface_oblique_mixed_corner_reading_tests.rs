@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueMixedCornerReadingTests.cs`: the mixed corner of the nose-in-notch
+//! The mixed corner of the nose-in-notch
 //! part's left ridge end, which is OBLIQUE in both of the ways the torus reading used to refuse -
 //! the handover plane leans 39.76 degrees off square to the cut, and the bead's axis stands 44.80
 //! degrees off square to the cap. It reads, and this is what it reads.
@@ -578,7 +578,7 @@ fn the_square_corner_is_unchanged() {
     }
 }
 
-/// C# `TheReadingNumbersOf`: every frame vector, both stopping planes, and the ball's centre, cap
+/// Every frame vector, both stopping planes, and the ball's centre, cap
 /// contact and rigid turn at thirty-three stations, rounded to a nanometre and hashed.
 pub fn the_reading_numbers_of(corner: &SurfaceMixedCorner) -> String {
     let mut said = String::new();
@@ -641,7 +641,7 @@ pub fn the_reading_numbers_of(corner: &SurfaceMixedCorner) -> String {
         .collect()
 }
 
-/// C# `TheObliqueCorner`: the corner the nose's ridge and its upper left crease make.
+/// The corner the nose's ridge and its upper left crease make.
 pub fn the_oblique_corner() -> Rc<SurfaceMixedCorner> {
     the_oblique_corner_at(the_corner())
 }

@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceGivingUpTheSectionSewsByIndexTests.cs` 1:1: every
+//! Every
 //! point the subtraction leaves standing on the profile is reported, even where the rim sew
 //! renumbers the faces that hold them.
 
@@ -156,7 +156,8 @@ fn the_end_face() -> Vec<(Vector3, Vector3, Vector3, bool)> {
         }
     }
 
-    // Nearest the profile first (C#'s unstable List.Sort).
+    // Nearest the profile first, by the same unstable sort the build uses, so ties fall the same
+    // way.
     introspective_sort(&mut cells, &mut |first: &Cell, second: &Cell| {
         first.0.partial_cmp(&second.0).expect("finite")
     });

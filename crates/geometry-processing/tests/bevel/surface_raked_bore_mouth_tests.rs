@@ -1,13 +1,12 @@
-//! Port of `SurfaceRakedBoreMouthTests.cs`, the RAKED half of the partial class
-//! `SurfaceBoreMouthTests`: a 1.5 radius bore drilled at 45 degrees through a 3 thick plate
-//! (`bore_test_meshes::create_plate_with_a_raked_bore`), and everything measured on its mouth's
-//! walkback (`surface_face_walkback`) - the wall left unrolled, a run of tangent line on every
-//! chord, each strip finding its run (`surface_seam_over_the_edge`) and the mitre point read on
-//! the shared face whose lines cross (`surface_mitre_seam`).
+//! The bore mouth tests, RAKED half: a 1.5 radius bore drilled at 45 degrees through a 3 thick
+//! plate (`bore_test_meshes::create_plate_with_a_raked_bore`), and everything measured on its
+//! mouth's walkback (`surface_face_walkback`) - the wall left unrolled, a run of tangent line on
+//! every chord, each strip finding its run (`surface_seam_over_the_edge`) and the mitre point read
+//! on the shared face whose lines cross (`surface_mitre_seam`).
 //!
 //! Also holds the class's shared constants and the raked mouth's walkback
-//! ([`the_raked_mouth_walked_back`]), which the other raked-bore classes read. The straight bore's
-//! half (`SurfaceBoreMouthTests.cs`) is `surface_bore_mouth_tests.rs`, which also holds this half's
+//! ([`the_raked_mouth_walked_back`]), which the other raked-bore tests read. The straight bore's
+//! half is `surface_bore_mouth_tests.rs`, which also holds this half's
 //! build-side readings (`AssertNothingStandsInTheBore`,
 //! `AssertEveryRakedBlendVertexStandsARadiusFromItsOwnCentreLine` and the raked mouth's edges).
 
@@ -59,7 +58,7 @@ pub fn raked_axis() -> Vector3 {
     Vector3::new(rake.sin(), 0.0, rake.cos())
 }
 
-/// The raked part at this class's dimensions, with C#'s default land of 6.
+/// The raked part at this file's dimensions, with the fixture's default land of 6.
 pub fn the_raked_part() -> Mesh {
     bore_test_meshes::create_plate_with_a_raked_bore(
         SIDES,
@@ -107,7 +106,7 @@ fn a_raked_bore_is_drilled_clean_through_the_plate() {
 /// The rolling ball keeps to its own chord's facet over the whole of that strip's own extent; a
 /// section square to a chord of a LEANED bore leaves that facet's span without leaving its PLANE,
 /// and `SurfaceWallStandsClear` asks the ball's own question before the roll runs.
-// `!(z > 0.9)` is C#'s reading, which takes a NaN normal as the wall.
+// `!(z > 0.9)` on purpose: a NaN normal counts as the wall.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 #[test]
 fn the_raked_mouths_wall_is_not_rolled_and_every_chord_leaves_a_run() {
@@ -424,10 +423,10 @@ pub fn the_raked_mouth_walked_back() -> (SurfaceWalkbackResult, Rc<SurfaceBevelP
     a_bores_mouth_walked_back(RAKE_DEGREES)
 }
 
-/// C# `ABoresMouthWalkedBack` (`SurfaceRakedBoreBandOutlineTests.cs`): a bore of the raked
+/// A bore of the raked
 /// fixture's own size, drilled at the rake asked for, planned and walked back by the build's own
-/// steps. At a rake of zero it is the straight control; at [`RAKE_DEGREES`] it is C#'s
-/// `TheRakedMouthWalkedBack`, whose seed edge (the first on the upper mouth) is the same one.
+/// steps. At a rake of zero it is the straight control; at [`RAKE_DEGREES`] it is
+/// [`the_raked_mouth_walked_back`], whose seed edge (the first on the upper mouth) is the same one.
 pub fn a_bores_mouth_walked_back(
     rake_degrees: f64,
 ) -> (SurfaceWalkbackResult, Rc<SurfaceBevelPlan>) {

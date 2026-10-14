@@ -1,9 +1,9 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/StepCornerRimTests.cs`: face rims the split at a
+//! Face rims the split at a
 //! setback step (`ChainOnTheMesh.SplitAtSetbackSteps`) cuts into pieces meeting end to end, dumped
 //! from the app's own hand-over. Each must build closed, in one shell, and (as the app requires)
-//! without crossing itself. C# `[Arguments]` rows are loops over the same-named test.
+//! without crossing itself. Each parameter row is one pass of a loop in the test of the same name.
 //!
-//! Not ported, `[Skip]` in C# (RED there): `AFaceRimCutAtItsStepsWithTheEndCreaseDoesNotCrossItself`
+//! Not run, still open: `AFaceRimCutAtItsStepsWithTheEndCreaseDoesNotCrossItself`
 //! ("fifteen-mm-f4-c27-r005": the pick-wide build lays c27's own strip rows along its end crease
 //! 12-78, row vertices ON the crease line, crossing the kept triangle 622-12-78).
 
@@ -19,7 +19,6 @@ use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::sweep_mesh_measures::{intersects_itself, is_closed_and_consistent, kept, shell_count};
 
-/// C# `AFaceRimCutAtItsStepsBuildsClosed`.
 #[test]
 fn a_face_rim_cut_at_its_steps_builds_closed() {
     for name in [
@@ -31,7 +30,7 @@ fn a_face_rim_cut_at_its_steps_builds_closed() {
     }
 }
 
-/// C# `AFaceRimCutAtItsStepsDoesNotCrossItself`: the app refuses an answer that crosses itself
+/// The app refuses an answer that crosses itself
 /// (`BevelSurfacePartBuilder.LevelLine`), so a build is held to it here too.
 #[test]
 fn a_face_rim_cut_at_its_steps_does_not_cross_itself() {
@@ -40,7 +39,6 @@ fn a_face_rim_cut_at_its_steps_does_not_cross_itself() {
     }
 }
 
-/// C# `AFacetedRoundRimIsNotCutIntoPiecesThatPinchEachOther`.
 #[test]
 fn a_faceted_round_rim_is_not_cut_into_pieces_that_pinch_each_other() {
     let fixture = Rc::new(LevelLineFixture::load("inner-face-bore-r2"));
@@ -52,7 +50,6 @@ fn a_faceted_round_rim_is_not_cut_into_pieces_that_pinch_each_other() {
     assert!(gap.built());
 }
 
-/// C# `TheCreaseRunningIntoAStepIsNotAForeignWall`.
 #[test]
 fn the_crease_running_into_a_step_is_not_a_foreign_wall() {
     let fixture = Rc::new(LevelLineFixture::load("every-chamfer-side-face-rim"));
@@ -84,7 +81,6 @@ fn build_whole(
     )
 }
 
-/// C# `BuildsWithoutCrossing`.
 fn builds_without_crossing(name: &str) {
     let (mesh, kept) = build(name);
     let mesh = mesh.borrow();
@@ -99,7 +95,7 @@ fn builds_without_crossing(name: &str) {
 /// The filled mesh, as the fill result holds it.
 type SharedMesh = Rc<RefCell<LevelLineMesh>>;
 
-/// C# `Build`: the fixture's pick built and filled, held closed and one shell.
+/// The fixture's pick built and filled, held closed and one shell.
 fn build(name: &str) -> (SharedMesh, Vec<(i32, i32, i32)>) {
     let fixture = Rc::new(LevelLineFixture::load(name));
     let gap = build_whole(&fixture, fixture.known_room);
@@ -128,7 +124,7 @@ fn build(name: &str) -> (SharedMesh, Vec<(i32, i32, i32)>) {
     (shared, kept)
 }
 
-/// C# `PrintCrossings`: prints the kept triangle pairs, sharing no vertex, where an edge of one
+/// Prints the kept triangle pairs, sharing no vertex, where an edge of one
 /// pierces the other.
 fn print_crossings(mesh: &LevelLineMesh, kept: &[(i32, i32, i32)]) {
     let pierces = |p: Vector3, q: Vector3, a: Vector3, b: Vector3, c: Vector3| {

@@ -1,10 +1,8 @@
-//! Port of `SectionRoutingTests.cs`: WHICH PASSES THE ROUTER SENDS TO THE SECTIONS, read off
-//! `section_routing::last_route` after a whole build through the shared `SurfaceTestBuild` port -
+//! WHICH PASSES THE ROUTER SENDS TO THE SECTIONS, read off
+//! `section_routing::last_route` after a whole build through the shared `surface_test_build` -
 //! the straight forty-side bore mouth wherever the part stands, a box's top rim with its four
 //! corners, the raked bore cube's open top mouth arc, a plain cube edge alone, a chamfer, and the
-//! flag left off. C# `[Arguments]` rows are loops over the same-named test.
-//!
-//! C#'s private `TheSameMesh` is not ported: no test of the class calls it.
+//! flag left off. Each parameter row is one pass of a loop in the test of the same name.
 
 use geometry_processing::bevel::sections::{section_end, section_routing};
 use geometry_processing::bevel::surface::surface_mesh_closure;
@@ -209,7 +207,7 @@ fn with_the_flag_off_the_bore_mouth_does_not_route_either() {
     );
 }
 
-/// C# `TryBevelTheTopMouthArc`: the top mouth arc picked as a tangent chain and built through the
+/// The top mouth arc picked as a tangent chain and built through the
 /// part builder's pipeline.
 fn try_bevel_the_top_mouth_arc(part: &Mesh, features: &FeatureEdgeSet, size: f64) {
     let picked = the_chain_of(part, features, 40, Vector3::new(-18.94, -34.0, 20.0));
@@ -224,7 +222,7 @@ fn try_bevel_the_top_mouth_arc(part: &Mesh, features: &FeatureEdgeSet, size: f64
     );
 }
 
-/// C# `TheChainOf`: the resolved tangent-chain pick of `edges` edges standing at `lowest` - the same
+/// The resolved tangent-chain pick of `edges` edges standing at `lowest` - the same
 /// geometric naming `SectionEveryPickMatrixTests` gives its rows, so a pick is named by where it is
 /// on the part and not by an index.
 pub fn the_chain_of(
@@ -262,7 +260,7 @@ pub fn the_chain_of(
     panic!("no {edges} edge chain stands at {lowest:?}");
 }
 
-/// C# `TryBevelTheBoreMouth`: the bore fixtures' own mouth build, stood by `motion` and picked by
+/// The bore fixtures' own mouth build, stood by `motion` and picked by
 /// the geometric question `SurfaceBevelRobustnessTests.TheUpperMouth` asks, so the pick does not
 /// depend on an index surviving the move. The mesh, or the advisory (`None` where nothing was
 /// named).
@@ -272,7 +270,7 @@ fn try_bevel_the_bore_mouth(
     size: f64,
     round_profile: bool,
 ) -> Result<Mesh, Option<BevelAdvisory>> {
-    // C#'s `land` defaults to 6.
+    // The fixture's default land is 6.
     let mut part =
         create_plate_with_a_raked_bore(sides, robustness::RADIUS, robustness::THICKNESS, 0.0, 6.0);
 
@@ -308,7 +306,7 @@ fn try_bevel_the_bore_mouth(
     .map_err(|failure| failure.advisory().cloned())
 }
 
-/// C# `TryBevelTheBoxTopRim`: "Bevel the top of this box" - one face pick, four rim edges, four
+/// "Bevel the top of this box" - one face pick, four rim edges, four
 /// square corners.
 fn try_bevel_the_box_top_rim() -> Result<Mesh, Option<BevelAdvisory>> {
     let part = platonic_solids::create_cube(20.0, 20.0, 20.0);
@@ -336,7 +334,7 @@ fn try_bevel_the_box_top_rim() -> Result<Mesh, Option<BevelAdvisory>> {
     .map_err(|failure| failure.advisory().cloned())
 }
 
-/// C# `TheTopRim`: an edge of the cube's top rim - both ends on the top face.
+/// An edge of the cube's top rim - both ends on the top face.
 fn the_top_rim(features: &FeatureEdgeSet) -> i32 {
     for (i, edge) in features.edges().iter().enumerate() {
         if edge.start.z > 10.0 - 1e-6 && edge.end.z > 10.0 - 1e-6 {

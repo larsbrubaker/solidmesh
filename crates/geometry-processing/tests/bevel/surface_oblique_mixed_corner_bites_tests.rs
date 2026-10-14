@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueMixedCornerBitesTests`: what the two faces nobody picked give up at the
+//! What the two faces nobody picked give up at the
 //! OBLIQUE mixed corner of the nose-in-notch part, and the one fact about that fixture that says
 //! how far the ladder can climb on it - the CAP FACE RUNS OUT under the blend, a third of the way
 //! through the turn. Both tests are measurements of the fixture, not of a wish.
@@ -229,7 +229,7 @@ fn stands_on_a_face_of(mesh: &Mesh, at: Vector3) -> bool {
         let c = Vector3::from_vector3_float(mesh.vertices[f.v2 as usize]);
         let normal = (b - a).cross(c - a);
 
-        // C#'s `!(x > 0)`, which skips a NaN too.
+        // Not `<= 0`: a NaN length is skipped too.
         if normal.length().partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
             continue;
         }

@@ -1,4 +1,4 @@
-//! Port of `SectionRoomSmoothSideTests.cs`: the section room (`section_room::try_fit_edges`) read
+//! The section room (`section_room::try_fit_edges`) read
 //! with the OPERATION's feature reading, so a smooth wall's room is walked along the surface to a
 //! real feature of the part instead of flooded across one facet of its tessellation - the tapered
 //! barrel's wall pick (`tapered_barrel_test_meshes`) and "Many Holes"' fifty loops

@@ -1,5 +1,5 @@
-//! The geometry of `LevelLine/StripClipRibTests.cs` (its `Box`, `Ribbed`, `FlatRib`, `Plain`, `Chain`
-//! and `Positions`), as a fixture module so other test classes can read the rib: a 20 mm box whose
+//! The geometry of the strip clip rib tests (`Box`, `Ribbed`, `FlatRib`, `Plain`, `Chain` and
+//! `Positions`), as a fixture module so other test files can read the rib: a 20 mm box whose
 //! top front edge is picked past a wedge rib standing on the top face - the rib's tip T (10, 3, 10),
 //! base corners P (9, 8, 10) and Q (11, 8, 10), ridge top R (10, 8, 20).
 
@@ -49,16 +49,15 @@ const RIBBED_TOP: [(i32, i32, i32); 7] = [
     (4, 8, 9),
 ];
 
-/// C# `StripClipRibTests.RibFaces`: the two flanks (T R P facing -x, T Q R facing +x) and the back
+/// The two flanks (T R P facing -x, T Q R facing +x) and the back
 /// face y = 8.
 pub const RIB_FACES: [(i32, i32, i32); 3] = [(8, 11, 9), (8, 10, 11), (9, 11, 10)];
 
 const PLAIN_TOP: [(i32, i32, i32); 2] = [(4, 5, 6), (4, 6, 7)];
 
-/// C# `StripClipRibTests.Chain`: the box's top front edge.
+/// The box's top front edge.
 pub const CHAIN: [i32; 2] = [4, 5];
 
-/// C# `StripClipRibTests.Ribbed`.
 pub fn ribbed() -> Vec<(i32, i32, i32)> {
     BOX_FACES
         .iter()
@@ -68,7 +67,7 @@ pub fn ribbed() -> Vec<(i32, i32, i32)> {
         .collect()
 }
 
-/// C# `StripClipRibTests.FlatRib`: the rib flattened into the top, its base split at the midpoint M
+/// The rib flattened into the top, its base split at the midpoint M
 /// (index 11).
 pub fn flat_rib() -> Vec<(i32, i32, i32)> {
     BOX_FACES
@@ -79,19 +78,18 @@ pub fn flat_rib() -> Vec<(i32, i32, i32)> {
         .collect()
 }
 
-/// C# `StripClipRibTests.FlatRibPositions`.
 pub fn flat_rib_positions() -> Vec<Vector3> {
     let mut positions: Vec<Vector3> = the_box().into_iter().take(11).collect();
     positions.push(Vector3::new(10.0, 8.0, 10.0));
     positions
 }
 
-/// C# `StripClipRibTests.Plain`: the box without the rib.
+/// The box without the rib.
 pub fn plain() -> Vec<(i32, i32, i32)> {
     BOX_FACES.iter().chain(PLAIN_TOP.iter()).copied().collect()
 }
 
-/// C# `StripClipRibTests.Positions`: the box and rib, moved by `motion` when one is given.
+/// The box and rib, moved by `motion` when one is given.
 pub fn positions(motion: Option<Matrix4X4>) -> Vec<Vector3> {
     match motion {
         Some(m) => the_box().into_iter().map(|p| p.transform(m)).collect(),

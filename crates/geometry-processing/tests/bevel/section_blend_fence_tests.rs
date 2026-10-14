@@ -1,8 +1,8 @@
-//! Port of `SectionBlendFenceTests.cs`: THE BLEND FACES a sections build names, and the FENCE they
+//! THE BLEND FACES a sections build names, and the FENCE they
 //! make for a second pick. On the straight bore's mouth the blend is the loft and nothing else; on
 //! the picture hanger's raked mouth the blend comes out of the built mesh along two closed rows; and
 //! a 10 degree flood from the bore wall of that build leaks over the fillet unless the blend fences
-//! it. The hanger is built through the shared `SurfaceTestBuild` port with the sections flag pinned
+//! it. The hanger is built through the shared `surface_test_build` with the sections flag pinned
 //! on.
 
 use std::collections::{HashMap, HashSet};
@@ -26,7 +26,7 @@ const FLAT_ANGLE_DEGREES: f64 = 10.0;
 /// fillet's two boundary rows and the only places the blend was ever joined to the part.
 #[test]
 fn the_straight_bores_blend_faces_are_the_loft_and_nothing_else() {
-    // C#'s `land` defaults to 6.
+    // The fixture's default land is 6.
     let part = create_plate_with_a_round_bore(24, 3.0, 10.0, 6.0);
     let graph = part.get_mesh_edge_graph();
 
@@ -149,7 +149,7 @@ fn a_wall_region_on_the_built_mesh_leaks_over_the_blend_unless_it_is_fenced() {
     assert_eq!(rim_loops, 3, "the fenced region's rim closes - {why_not}");
 }
 
-/// C# `TheMouthAssembled`: the bore mouth of the plate fixture, sectioned and assembled, blend faces
+/// The bore mouth of the plate fixture, sectioned and assembled, blend faces
 /// and all.
 fn the_mouth_assembled(part: &Mesh, graph: &MeshEdgeGraph) -> (Mesh, Vec<i32>) {
     let features = FeatureEdgeSet::create_with_graph(part, graph, 20.0);
@@ -165,7 +165,7 @@ fn the_mouth_assembled(part: &Mesh, graph: &MeshEdgeGraph) -> (Mesh, Vec<i32>) {
         .unwrap_or_else(|failure| panic!("the bore's mouth assembles - instead {failure:?}"))
 }
 
-/// C#'s local `TheUpperMouth`.
+/// The index of the bore's upper mouth among the feature edges.
 fn the_upper_mouth(set: &FeatureEdgeSet) -> i32 {
     for (i, edge) in set.edges().iter().enumerate() {
         if (edge.start.z - 5.0).abs() < 1e-9
@@ -179,7 +179,7 @@ fn the_upper_mouth(set: &FeatureEdgeSet) -> i32 {
     panic!("the fixture has no upper mouth");
 }
 
-/// C# `TheHangersMouthBuilt`: the hanger's raked mouth alone, built through the sections route,
+/// The hanger's raked mouth alone, built through the sections route,
 /// with the blend faces the build names.
 fn the_hangers_mouth_built() -> (Mesh, Vec<i32>) {
     let _sections = pinned_to_the_sections();
@@ -206,7 +206,7 @@ fn the_hangers_mouth_built() -> (Mesh, Vec<i32>) {
     }
 }
 
-/// C# `AWallFaceBesideTheBlend`: a face of the BORE WALL standing against the blend - the first
+/// A face of the BORE WALL standing against the blend - the first
 /// non-blend face sharing an edge with a blend face whose own plane is not the plate's flat top.
 /// The raked wall's facets lean at most 45 degrees off vertical, so their normals never reach the
 /// plate's.
@@ -234,7 +234,7 @@ fn a_wall_face_beside_the_blend(mesh: &Mesh, graph: &MeshEdgeGraph, blend: &Hash
     panic!("no wall face stands against the blend");
 }
 
-/// C# `AnyCornerStandsOnThePart`: whether any corner of a face of the built mesh stands where a
+/// Whether any corner of a face of the built mesh stands where a
 /// vertex of the part does.
 fn any_corner_stands_on_the_part(built: &Mesh, face_index: i32, part: &Mesh) -> bool {
     let face = &built.faces[face_index as usize];
@@ -248,10 +248,10 @@ fn any_corner_stands_on_the_part(built: &Mesh, face_index: i32, part: &Mesh) -> 
     })
 }
 
-/// C# `OpenLoopsWithout`: how many closed loops the mesh is left open along when `removed` is taken
+/// How many closed loops the mesh is left open along when `removed` is taken
 /// out of it - zero where what is left open does not close, with why.
 fn open_loops_without(mesh: &Mesh, removed: &HashSet<i32>) -> (i32, String) {
-    // C#'s Dictionary enumerates in insertion order; the open edges are kept in first-met order.
+    // The open edges are kept in first-met order, so the listing reads the same on every run.
     let mut order: Vec<(i32, i32)> = Vec::new();
     let mut used: HashMap<(i32, i32), i32> = HashMap::new();
 
@@ -277,14 +277,14 @@ fn open_loops_without(mesh: &Mesh, removed: &HashSet<i32>) -> (i32, String) {
     closed_loops(&open)
 }
 
-/// C# `ClosedLoops`: how many closed loops a set of undirected edges makes, or zero where any vertex
+/// How many closed loops a set of undirected edges makes, or zero where any vertex
 /// of it is not stood on by exactly two of them - which is a rim that does not close.
 fn closed_loops(edges: &[(i32, i32)]) -> (i32, String) {
     if edges.is_empty() {
         return (0, "there are no edges at all".to_string());
     }
 
-    // Insertion-ordered, as C#'s Dictionary enumerates.
+    // Insertion-ordered, so the walk visits vertices the same way on every run.
     let mut order: Vec<i32> = Vec::new();
     let mut neighbours: HashMap<i32, Vec<i32>> = HashMap::new();
 

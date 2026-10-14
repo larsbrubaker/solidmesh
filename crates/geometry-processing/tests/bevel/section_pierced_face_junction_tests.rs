@@ -1,11 +1,11 @@
-//! Port of `SectionPiercedFaceTests.Junction.cs`, one part of the partial class
-//! `SectionPiercedFaceTests`: THE SECTION THE JUNCTION IS DRAWN AS (`section_junction_build`) on the
-//! very geometry the class's main file measures - the junction predicate, the corner deferring to
-//! it, one mitre ellipse used twice with both wall ends on it, the patch of wall across the fold,
-//! the ledger closing by identity, the reading under the rigid motions and the refusals that mint
-//! nothing. The class's helpers are [`crate::section_pierced_face_readings`]; the junction's place
-//! in a whole RUN (the builder, the rebuild, the smooth side's cut) is
-//! [`crate::section_pierced_face_junction_run_tests`], split from this file only for length.
+//! One part of the pierced face tests: THE SECTION THE JUNCTION IS DRAWN AS
+//! (`section_junction_build`) on the very geometry [`crate::section_pierced_face_tests`] measures -
+//! the junction predicate, the corner deferring to it, one mitre ellipse used twice with both wall
+//! ends on it, the patch of wall across the fold, the ledger closing by identity, the reading under
+//! the rigid motions and the refusals that mint nothing. The class's helpers are
+//! [`crate::section_pierced_face_readings`]; the junction's place in a whole RUN (the builder, the
+//! rebuild, the smooth side's cut) is [`crate::section_pierced_face_junction_run_tests`], split
+//! from this file only for length.
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -126,7 +126,7 @@ fn the_corner_defers_the_junction_rather_than_refusing_it() {
             Some(&*is_a_feature_edge),
         );
 
-        // C#'s `false` with a null section and a null failure: the junction is handled elsewhere.
+        // Refused as a junction, with no section and no failure: the junction is handled elsewhere.
         match built {
             Err(CornerRefusal::AJunction) => {}
             Ok(_) => panic!("the mitre cannot draw two wall ends"),
@@ -272,7 +272,7 @@ fn the_junctions_samples_stand_on_both_canals() {
 }
 
 /// THE READING'S OWN NUMBERS at vertex 19 and `r = 0.5`: the offset-meet, P1 on the -X wall, P2 on
-/// the bore facet 0.0278 beyond it, and F1 on the fold - the four points the class remarks name.
+/// the bore facet 0.0278 beyond it, and F1 on the fold - the four points the file header names.
 #[test]
 fn the_junctions_points_are_the_ones_the_reading_names() {
     let part = inner_face_test_mesh::the_part();
@@ -634,7 +634,7 @@ fn the_chain_edge(mesh: &Mesh, graph: &MeshEdgeGraph, from: Vector3, to: Vector3
     panic!("no feature edge from {from} to {to}");
 }
 
-/// C# `IsTheTangencyOf`: whether a sample is the tangency of one edge's canal with its OWN wall.
+/// Whether a sample is the tangency of one edge's canal with its OWN wall.
 fn is_the_tangency_of(
     pool: &SectionPool,
     sample: i32,

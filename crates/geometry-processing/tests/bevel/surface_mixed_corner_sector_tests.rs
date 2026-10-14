@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerSectorTests.cs`: the blend's sector on the cap face is bounded by the
+//! The blend's sector on the cap face is bounded by the
 //! plane the cut's band STOPS on, whatever the corner hands over on (`surface_mixed_corner_sector`) -
 //! and not only where the ring was read as a mitre.
 //!

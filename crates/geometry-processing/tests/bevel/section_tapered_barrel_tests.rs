@@ -1,11 +1,11 @@
-//! Port of `SectionTaperedBarrelTests.cs`: many holes at a workable size - the two-bore tapered
+//! Many holes at a workable size - the two-bore tapered
 //! barrel ([`crate::tapered_barrel_test_meshes`]), its wall picked as a face group. Every reading
 //! is taken on the working part, the form the app hands the kernel; the raw boolean appears once,
 //! as the row this fixture's size is stated against. The routed rows pin the sections router on
 //! (`pinned_to_the_sections`) and the legacy rows off, around their own builds.
 //!
-//! `TheWallTakesItsFilletThroughTheSections` is `[Skip]` in C# ("OPEN: SectionAssembly refuses
-//! the routed pass SurfaceResultNotClosed ... SIX SEAMS CUTTING ONE WALL") and is not ported.
+//! `TheWallTakesItsFilletThroughTheSections` is not run: the section assembly still refuses the
+//! routed pass as not closed, six seams cutting one wall.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -78,7 +78,7 @@ fn the_wall_pick_is_six_closed_loops() {
 fn a_mouth_cannot_be_named_by_tangent_propagation() {
     let part = tapered_barrel_test_meshes::the_working_part();
     let resolution = tapered_barrel_test_meshes::the_wall(&part);
-    // C#'s `OrderBy(..).First()`: a stable sort, so the FIRST smallest closed loop.
+    // A stable sort, so the FIRST smallest closed loop.
     let mouth = link(&resolution.edges)
         .into_iter()
         .filter(|chain| chain.is_closed)
@@ -252,7 +252,7 @@ fn every_loop_of_the_wall_pick_plans() {
     );
 }
 
-/// C#'s `Build`: the wall pick through `SurfaceTestBuild.TryBevel`, carrying the pick's own
+/// The wall pick through `surface_test_build::try_bevel`, carrying the pick's own
 /// feature reading down the plan path.
 fn build(part: &Mesh, resolution: &BevelEdgeGroupResolution, size: f64) -> TryBevelOutcome {
     try_bevel_resolutions(
@@ -268,7 +268,7 @@ fn build(part: &Mesh, resolution: &BevelEdgeGroupResolution, size: f64) -> TryBe
     )
 }
 
-/// C#'s `why?.Code.ToString()`.
+/// The refusal's code as text, `None` where the build did not refuse.
 fn code_of(outcome: &TryBevelOutcome) -> Option<String> {
     outcome.reason().map(|why| format!("{:?}", why.code()))
 }

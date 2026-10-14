@@ -1,8 +1,7 @@
-//! Port of `SurfaceRoomPartialRunOffTests.cs`: the room a band has where the face it lands on DIES
+//! The room a band has where the face it lands on DIES
 //! AWAY at one end of the edge and stands as usual past that - "UpperLeftInner should bevel.mcx"'s
 //! upper left crease at 3 mm, whose left wall is 0.053 mm wide where the crease reaches the
-//! recess's mouth and widens at 1.118 mm per millimetre along it. C# `[Arguments]` rows are loops
-//! over the same-named test.
+//! recess's mouth and widens at 1.118 mm per millimetre along it. The parameter rows are a loop.
 //!
 //! The rim is not a wall: the bevel eats the sliver of wall over the first 1.887 mm and runs off the
 //! knife edge there onto the cube's left face, which is recorded as a
@@ -507,7 +506,7 @@ fn along(edge: &FeatureEdge, z: f64) -> bool {
         && (edge.end.z - z).abs() < 1e-9
 }
 
-/// LINQ `Single` over the feature edges.
+/// The one feature edge that matches; fails on none or several.
 fn single(features: &FeatureEdgeSet, is_it: impl Fn(&FeatureEdge) -> bool) -> FeatureEdge {
     let found: Vec<FeatureEdge> = features
         .edges()

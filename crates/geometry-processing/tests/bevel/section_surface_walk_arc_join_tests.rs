@@ -1,8 +1,8 @@
-//! Port of `SectionSurfaceWalkArcJoinTests.cs`: EVERY JOIN OF THE OPEN MOUTH ARC'S BORE-WALL
+//! EVERY JOIN OF THE OPEN MOUTH ARC'S BORE-WALL
 //! BOUNDARY LANDS, and lands the same wherever the part stands ([`crate::rigid_motion_meshes`]). The
 //! joins are the straight surface lines between one station's wall-side landing and the next, and
 //! each is laid ONE WAY, from the earlier station to the later - there is no second attempt
-//! backwards. C# `[Arguments]` rows are loops over the same-named test.
+//! backwards. Each parameter row is one pass of a loop in the test of the same name.
 //!
 //! This is the rung `SectionSurfaceWalk.TryJoin`'s converging strip was written for: the strip is
 //! re-read from the faces the walk actually crossed until the line and its own unfolding agree,
@@ -362,7 +362,7 @@ fn the_two_end_joins_of_the_arc_land_wherever_the_part_stands() {
     }
 }
 
-/// C# `TheFacesOf`: the faces a boundary point may be read as lying in - the one face a walked
+/// The faces a boundary point may be read as lying in - the one face a walked
 /// landing ended in, or, for a point that slid onto a fold, both of the faces that fold joins.
 fn the_faces_of(graph: &MeshEdgeGraph, place: &SmoothSidePlace) -> Vec<i32> {
     if place.face >= 0 {
@@ -378,7 +378,7 @@ fn vertex(part: &Mesh, index: i32) -> Vector3 {
     Vector3::from_vector3_float(part.vertices[index as usize])
 }
 
-/// C# `OffTheSegment`: how far a point stands from the SEGMENT of one mesh edge - not from its
+/// How far a point stands from the SEGMENT of one mesh edge - not from its
 /// infinite line.
 fn off_the_segment(part: &Mesh, graph: &MeshEdgeGraph, edge: i32, point: Vector3) -> f64 {
     let a = vertex(part, graph.get_vertex0(edge));
@@ -392,7 +392,7 @@ fn off_the_segment(part: &Mesh, graph: &MeshEdgeGraph, edge: i32, point: Vector3
     (a + (along * t) - point).length()
 }
 
-/// C# `OffThePart`: how far a point stands from the nearest of the part's triangles.
+/// How far a point stands from the nearest of the part's triangles.
 fn off_the_part(part: &Mesh, point: Vector3) -> f64 {
     let mut nearest = f64::MAX;
 

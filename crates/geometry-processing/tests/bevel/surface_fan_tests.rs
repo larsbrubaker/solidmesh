@@ -1,11 +1,11 @@
-//! Ports `GeometryProcessingTests/SurfaceFanTests.cs`: the one triangulator the surface bevel
+//! The one triangulator the surface bevel
 //! uses, on the rings that are hard to fan. Everything else in the construction leans on this
 //! doing two things: covering the ring exactly, and USING every point of it - a point the fan drops
 //! is a point the walkback carefully shared with a neighbour and then abandoned, which is a T
 //! junction on the very seam the sharing was for.
 //!
-//! The `[Arguments(0.001)]`/`[Arguments(1000.0)]` pair of
-//! `AReflexRingIsFannedTheSameWayWhateverSizeItIs` runs both cases inside the one test.
+//! `a_reflex_ring_is_fanned_the_same_way_whatever_size_it_is` runs both sizes (0.001 and 1000)
+//! inside the one test.
 
 use std::collections::HashSet;
 
@@ -36,7 +36,7 @@ fn a_triangle_with_a_point_on_every_edge_uses_all_six_of_them() {
 
     surface_fan::emit(&ring, &mut pool, &mut faces);
 
-    // The fan covers the triangle exactly, no more and no less (C# `12 * 9 / 2` is integer 54).
+    // The fan covers the triangle exactly, no more and no less (`12 * 9 / 2` = 54).
     assert!((area_of(&pool, &faces) - 54.0).abs() <= 1e-9);
 
     let mut used = HashSet::new();

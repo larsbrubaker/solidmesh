@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceCutRulerTests.cs`: the two rulers a facet cut
+//! The two rulers a facet cut
 //! reads a band end with - the WELD its removal test uses and the pool's NEARNESS its clip uses -
 //! and the facet that stands in the gap between them, removed by one and kept whole by the other
 //! (held as a measurement, a queue entry rather than a fix).

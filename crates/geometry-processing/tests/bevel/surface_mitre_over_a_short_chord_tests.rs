@@ -1,4 +1,4 @@
-//! Port of `SurfaceMitreOverAShortChordTests.cs`: the whole rim of a flat top whose straight edge
+//! The whole rim of a flat top whose straight edge
 //! runs into a chorded arc. The corner where they meet is REFLEX in the top face's own plan - the
 //! arc bulges out past the straight edge's line - and the chord it meets is a part chord, shorter
 //! than the fillet itself.

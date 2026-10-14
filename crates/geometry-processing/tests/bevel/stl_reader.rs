@@ -1,13 +1,12 @@
 //! The one thing the Thingi10K sweep needs that the kernel has no business owning: an STL out of a
-//! zip, welded into the positions and index triples `BandGap::build` asks for. Ports
-//! `Tests/GeometryProcessingTests/LevelLine/StlReader.cs`.
+//! zip, welded into the positions and index triples `BandGap::build` asks for.
 //!
 //! The weld is by EXACT position - the doubles are widened from the file's own floats, so two
 //! corners that were written as the same three floats compare equal and nothing else is merged.
 //! That is what makes a facet soup manifold again without moving a single point, and it is why a
 //! model whose author wrote one corner twice with a one-ulp difference comes out NOT closed and is
-//! recorded as such rather than quietly healed. As .NET's `float` equality does, +0 and -0 weld and
-//! every NaN welds to every NaN.
+//! recorded as such rather than quietly healed. +0 and -0 weld, being the same point, and every NaN
+//! welds to every NaN so a broken corner reads as one vertex rather than many.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -114,7 +113,7 @@ fn ascii_facets(text: &str) -> Result<Vec<[Corner; 3]>, Thrown> {
     Ok(facets)
 }
 
-/// The bits a corner is welded by: .NET's float equality, with every NaN one value and -0 as 0.
+/// The bits a corner is welded by: exact float equality, with every NaN one value and -0 as 0.
 fn weld_key(corner: Corner) -> (u32, u32, u32) {
     let bits = |v: f32| {
         if v.is_nan() {

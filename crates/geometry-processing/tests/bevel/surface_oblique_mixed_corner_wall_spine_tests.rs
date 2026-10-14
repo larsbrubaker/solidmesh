@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueMixedCornerWallSpineTests`: the SAME oblique corner of the nose-in-notch
+//! The SAME oblique corner of the nose-in-notch
 //! part read the other way round - the ball is the BEAD's void ball, rolling along the WALL and
 //! pressed against the CUT's tube, and the canal it sweeps is the whole of the corner the Onshape
 //! control draws. Read through production's own `SurfaceMixedCorner::try_read_the_dual_canal`.
@@ -21,7 +21,7 @@ const AS_MEASURED: f64 = 5e-5;
 
 const EXACT: f64 = 1e-9;
 
-/// C#'s own rounded cos 45, kept so the tolerance means what it does there.
+/// Cos 45 rounded to five places: the tolerances below were set against this value.
 #[allow(clippy::approx_constant)]
 const CS_COS_45: f64 = 0.70711;
 

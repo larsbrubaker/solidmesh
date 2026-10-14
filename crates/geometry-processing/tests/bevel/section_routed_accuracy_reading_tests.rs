@@ -1,4 +1,4 @@
-//! Port of `SectionRoutedAccuracyReadingTests.cs`: what the ACCURACY readings that move when
+//! What the ACCURACY readings that move when
 //! `section_routing::use_sections` is on actually read, measured on the routed build. Two are pins
 //! of the routed triangulation (the raked mouth's vertex counts); the others were one fault read
 //! several ways - the routed blend standing proud of the rolling ball's canal, a station's profile
@@ -6,8 +6,8 @@
 //! cut - and read as near zero as a float mesh holds now that `SectionBuilder` places the interior
 //! samples on that ellipse.
 //!
-//! Every test pins the sections router ON (`pinned_to_the_sections`), as C#'s `try` blocks set it.
-//! The bore readings are in `surface_bore_mouth_tests.rs`, the eaten chord's build in
+//! Every test pins the sections router ON (`pinned_to_the_sections`), and puts it back however it
+//! leaves. The bore readings are in `surface_bore_mouth_tests.rs`, the eaten chord's build in
 //! `surface_mitre_consumes_a_chord_tests.rs`.
 
 use std::sync::Arc;
@@ -85,8 +85,8 @@ fn the_straight_bores_routed_blend_stands_proud_of_the_canal_by_a_per_row_consta
     );
 
     // Per ROW, not per vertex: a row's forty radii agree to 1e-6, so any miss would be the whole
-    // row's and the reading is of the profile's placement, not of the loft between stations. C#'s
-    // GroupBy(Math.Round(z, 5)) keeps first-seen order; only the grouping matters here.
+    // row's and the reading is of the profile's placement, not of the loft between stations. Rows
+    // group by z rounded to 5 places, in first-seen order; only the grouping matters here.
     let mut rows: Vec<(f64, Vec<f64>)> = Vec::new();
 
     for at in &blend {
@@ -304,7 +304,7 @@ fn nearest(lines: &[SurfaceLine], at: Vector3) -> &SurfaceLine {
         .expect("the mouth has centre lines")
 }
 
-/// C#'s `Math.Round(value, digits)`: banker's rounding at a decimal place.
+/// Banker's rounding at a decimal place, so a value exactly halfway rounds to the even digit.
 fn round_to(value: f64, digits: i32) -> f64 {
     let scale = 10f64.powi(digits);
 

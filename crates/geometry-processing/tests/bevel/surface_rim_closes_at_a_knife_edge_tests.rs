@@ -1,4 +1,4 @@
-//! Port of `SurfaceRimClosesAtAKnifeEdgeTests.cs`: a face region whose rim folds back on itself at
+//! A face region whose rim folds back on itself at
 //! a knife edge still closes. The walkback will not cut a region it cannot see the whole rim of,
 //! and asks the chain linker that over the region's own boundary edges. The shape is the nose in
 //! the notch, whose slopes' rims turn through the nose's knife edge at the ridge end.
@@ -40,7 +40,7 @@ fn a_slope_whose_rim_turns_through_the_noses_knife_edge_still_closes() {
             .iter()
             .map(|r| SurfaceBevelPlan::key_of(r))
             .collect();
-        // C#'s `Distinct`; only the count is read.
+        // Distinct keys; only the count is read.
         keys.sort_unstable();
         keys.dedup();
 

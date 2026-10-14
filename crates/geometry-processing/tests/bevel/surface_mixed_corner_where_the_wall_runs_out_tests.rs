@@ -1,14 +1,14 @@
-//! Port of `SurfaceMixedCornerWhereTheWallRunsOutTests.cs`: the mixed corner whose runout RUNS OFF
+//! The mixed corner whose runout RUNS OFF
 //! THE END of the wall it dies into - the lobed prism with its right-hand side brought in so only
 //! 8 mm of flat wall stands past the seam where the runout asks for 9.7
 //! (`lobed_prism_meshes::create_with_a_short_wall`).
 //!
 //! Why 9.7: the ball's touch point runs `2r` out of the bead's axis and the axis stands a radius
-//! off the wall, so a flat wall is cleared sixty degrees past the bead whatever the wedge, at
-//! `2r sin 60` along the wall from the bead's own foot. "Every Chamfer Works.mcx" has exactly this.
-//! The blend is TRIMMED by the plane of the face across the wall's own edge, and that face gives
-//! up the section (`surface_mixed_corner_wall_ends`). The rim reading is the one
-//! `surface_mixed_corner_section_stands_on_the_plane_tests.rs` shares. C# `[Arguments]` rows are a
+//! off the wall, so a flat wall is cleared sixty degrees past the bead whatever the wedge, at `2r
+//! sin 60` along the wall from the bead's own foot. "Every Chamfer Works.mcx" has exactly this. The
+//! blend is TRIMMED by the plane of the face across the wall's own edge, and that face gives up the
+//! section (`surface_mixed_corner_wall_ends`). The rim reading is the one
+//! `surface_mixed_corner_section_stands_on_the_plane_tests.rs` shares. The parameter rows are a
 //! loop.
 
 use geometry_processing::bevel::surface::{
@@ -47,7 +47,7 @@ type Read = (
 /// and comes back on it: the side is asked for at 37.772292 and the part carries it at 37.772.
 fn the_far_side() -> f64 {
     let at = lobed_prism_meshes::right_crossing().x + lobed_prism_meshes::SHORT_WALL_LENGTH;
-    // C# Math.Round(x, 3): banker's rounding at the third place.
+    // Banker's rounding at the third place.
     (at * 1000.0).round_ties_even() / 1000.0
 }
 

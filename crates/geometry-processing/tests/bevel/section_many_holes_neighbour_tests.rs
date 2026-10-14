@@ -1,4 +1,4 @@
-//! Port of `SectionManyHolesNeighbourTests.cs`: ONE MOUTH OF "Many Holes" AND ITS NEIGHBOUR, read
+//! ONE MOUTH OF "Many Holes" AND ITS NEIGHBOUR, read
 //! off the same fixture the loop table does ([`crate::many_holes_test_mesh`]) but asked a
 //! different question: not what the loop answers, but whether what it emits leaves the mouth
 //! BESIDE it whole.

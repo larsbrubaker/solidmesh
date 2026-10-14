@@ -1,8 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SkewRowCrossTangentTests.cs`: the rib foot's
+//! The rib foot's
 //! mixed corner (`SurfaceTestMeshes.CreateRibOnPlate`, fillet r 1). The filler's cross-tangent on
 //! each concave foot row must be the fillet's ruling - the chain's direction, x or y - not the
 //! normal of the plane through the row's ends, which leaned 35 degrees off it while the rows were
-//! skew. C#'s per-flow `CornerCap.WatchHoleFills` rides on the fill's budget
+//! skew. The corner cap's hole-fill watch rides on the fill's budget
 //! (`hole_fill_corner_tests::fill_with_the_filler_watched`).
 
 use std::cell::RefCell;
@@ -18,7 +18,6 @@ use crate::level_line_feature_edges::feature_edges_over;
 use crate::several_chains_fixtures::FOLD_DEGREES;
 use crate::topology_test_meshes::create_rib_on_plate;
 
-/// C# `ASkewLastRowsCrossTangentFollowsTheChain`.
 #[test]
 fn a_skew_last_rows_cross_tangent_follows_the_chain() {
     let source = create_rib_on_plate();

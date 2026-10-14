@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerDualOnASquareCornerTests.cs`: what the DUAL canal does on the L
+//! What the DUAL canal does on the L
 //! prism's SQUARE mixed corner, measured and recorded - not judged. The cap-riding canal's ball
 //! centres run on the circle of radius 2 about (11, 11, 9) in z = 9; the dual's on the circle of
 //! radius 2 about (9, 11, 9) in y = 11. Both span the same two end rings; they differ by up to a
@@ -301,7 +301,7 @@ fn the_volumes_each_canal_sweeps() {
     let mut wall_riding_in_the_part = 0i64;
     let mut in_both = 0i64;
 
-    // C#'s `for (var x = 8 + Cell / 2; x < 12; x += Cell)`, accumulated the same way.
+    // Steps of `CELL` accumulated by addition, so the samples land on the same values every run.
     let mut x = 8.0 + (CELL / 2.0);
     while x < 12.0 {
         let mut y = 8.0 + (CELL / 2.0);

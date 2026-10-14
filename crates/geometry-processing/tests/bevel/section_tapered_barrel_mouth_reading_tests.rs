@@ -1,4 +1,4 @@
-//! Port of `SectionTaperedBarrelMouthReadingTests.cs`: THE WHOLE RIM of the tapered barrel
+//! THE WHOLE RIM of the tapered barrel
 //! ([`crate::tapered_barrel_test_meshes`]) at 0.5 - four bore mouths and two end rims - read
 //! through the loop entry `section_builder_run::try_build_loop` and then through
 //! `section_assembly::try_assemble`, on the part as the APP would hand it over: through the
@@ -315,7 +315,7 @@ fn read() -> Vec<LoopReading> {
         .into_iter()
         .filter(|chain| chain.is_closed)
         .collect();
-    // C#'s OrderBy is stable, as sort_by_key is.
+    // A stable sort, so loops of equal length keep their walked order.
     loops.sort_by_key(|chain| chain.edges.len());
 
     loops

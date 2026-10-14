@@ -1,14 +1,13 @@
-//! Port of `SurfaceRakedBoreSplitChordTests.cs`: the picture hanger's raked mouth at its own numbers
+//! The picture hanger's raked mouth at its own numbers
 //! (forty facets, 1.5 radius, 45 degrees through a 4 mm wall) with the eight chord splits the part's
 //! own boolean left (`bore_test_meshes::create_plate_with_a_raked_bore_whose_mouth_chords_are_split`),
 //! built at the origin and at the hanger's own stand-off, where the float lattice is thirty-two
 //! times coarser and the split pieces' tangent lines become two parallel lines a few
 //! ten-millionths apart. The stand-off's remaining open edges are pinned rather than asserted away.
 //!
-//! Legacy-only: every test pins the sections router off, as C# does.
-//! `TheRimOnABorrowedRailIsEmittedAsAContinuation` is `[Skip]` in C# ("RED: the emitter is built,
-//! but the stand-off's corner is not among the ten cuts that borrowed a rail") and is not ported,
-//! nor its only helper `TheSplitMouthWalkedBack`.
+//! Legacy-only: every test pins the sections router off.
+//! `TheRimOnABorrowedRailIsEmittedAsAContinuation` is not run, still open: the emitter is built,
+//! but the stand-off's corner is not among the ten cuts that borrowed a rail.
 
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::topology::{

@@ -1,4 +1,4 @@
-//! Port of `SurfaceOneCrossingPerFacetEdgeTests.cs`: TWO CUTS CROSSING ONE MESH EDGE AT ONE PLACE
+//! TWO CUTS CROSSING ONE MESH EDGE AT ONE PLACE
 //! MAKE ONE VERTEX. Where a closed chain turns, the two bands either side of the corner are cut off
 //! on tangent planes that meet at the corner's mitre point, and where that point stands on a
 //! facet's own edge - the fan edge of a half disc's cap, at an odd chord count - each band used to
@@ -7,7 +7,7 @@
 //! On the three chord half disc the two land (8.2679367, 0.9999780) and (8.2678986, 1.0000000),
 //! 4.4e-5 apart where the part's weld is 2.96e-5, and the shell came out OPEN along the tangent
 //! line. A split on a mesh edge is a function of the EDGE and not of which plane asked for it
-//! (`surface_walkback_rewrite::try_find_crossings`). C# `[Arguments]` rows are a loop.
+//! (`surface_walkback_rewrite::try_find_crossings`). The parameter rows are a loop.
 
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBuildOptions,

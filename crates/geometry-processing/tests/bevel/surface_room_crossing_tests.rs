@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceRoomCrossingTests.cs`: what makes a skirt over a
+//! What makes a skirt over a
 //! band a CROSSING to sew rather than a collision to refuse, read on the pair of cuts alone - the
 //! numbers "Every Chamfer Works.mcx" measures at its (-1, 40, 0) mixed corner, where the run-out
 //! reaches 9.719 mm across a cap that runs 8 mm. The question is whether the run-out's touch row,

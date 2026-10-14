@@ -1,5 +1,5 @@
 //! The corner readings the `Section*` owner-file classes share (`SectionEdgeLoopAndFaceTests`,
-//! `SectionInnerFaceTests`), each a private copy in C#: the sharp turns of the plans a build made,
+//! `SectionInnerFaceTests`): the sharp turns of the plans a build made,
 //! the creases standing on a vertex, and the dihedral angle of a feature or chain edge. One copy
 //! here, so the classes read their corners the same way.
 
@@ -11,7 +11,7 @@ use geometry_processing::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::Mesh;
 use vector_math::math_helper::radians_to_degrees;
 
-/// C# `TheSharpTurnsOf`: every vertex of the plans where the chain turns sharper than the curve
+/// Every vertex of the plans where the chain turns sharper than the curve
 /// tolerance, as its arriving and leaving edges.
 pub fn the_sharp_turns_of(plans: &[Rc<SurfaceBevelPlan>]) -> Vec<(ChainEdge, ChainEdge)> {
     let mut turns = Vec::new();
@@ -32,7 +32,7 @@ pub fn the_sharp_turns_of(plans: &[Rc<SurfaceBevelPlan>]) -> Vec<(ChainEdge, Cha
     turns
 }
 
-/// C# `TheCreasesAt`: every feature edge of the part that stands on a vertex, read at the
+/// Every feature edge of the part that stands on a vertex, read at the
 /// operation's bend threshold.
 pub fn the_creases_at(part: &Mesh, vertex: i32, bend_threshold_degrees: f64) -> Vec<FeatureEdge> {
     let features = FeatureEdgeSet::create_with_graph(
@@ -49,7 +49,7 @@ pub fn the_creases_at(part: &Mesh, vertex: i32, bend_threshold_degrees: f64) -> 
         .collect()
 }
 
-/// C# `DihedralDegrees(FeatureEdge)`: the angle between an edge's two faces.
+/// The angle between a feature edge's two faces, in degrees.
 pub fn feature_dihedral_degrees(edge: &FeatureEdge) -> f64 {
     radians_to_degrees(
         edge.normal0
@@ -60,7 +60,7 @@ pub fn feature_dihedral_degrees(edge: &FeatureEdge) -> f64 {
     )
 }
 
-/// C# `DihedralDegrees(ChainEdge)`.
+/// The angle between a chain edge's two faces, in degrees.
 pub fn chain_dihedral_degrees(edge: &ChainEdge) -> f64 {
     radians_to_degrees(
         edge.left_normal()

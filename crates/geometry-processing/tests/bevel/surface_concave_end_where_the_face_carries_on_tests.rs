@@ -1,4 +1,4 @@
-//! Port of `SurfaceConcaveEndWhereTheFaceCarriesOnTests.cs`: the concave mirror of the end where
+//! The concave mirror of the end where
 //! the face carries on - a bead whose crease stops at the REFLEX corner of the very face it is
 //! being beaded against, with no single face standing across that corner to cut it off. The plan
 //! refuses that chain and names the corner; the control (one face across the corner, which

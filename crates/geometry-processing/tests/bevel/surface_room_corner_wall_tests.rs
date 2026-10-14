@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomCornerWallTests.cs`: what a rim edge leaving the chain edge's own END
+//! What a rim edge leaving the chain edge's own END
 //! CORNER is worth to the room across the face (`surface_room_measure::measure_corner`). At a
 //! square corner it is worth nothing. The block is a plain box whose one vertical rim carries an
 //! extra vertex 0.4 below the top - the way a boolean leaves one where another solid's face arrived

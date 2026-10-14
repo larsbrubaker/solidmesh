@@ -1,4 +1,4 @@
-//! Port of `SurfaceConcaveLoopTests.cs`: a CLOSED concave loop - the foot of a square boss standing
+//! A CLOSED concave loop - the foot of a square boss standing
 //! on a plate - walked back, mitred and sewn. Rung 6 of the polygon-space bevel plan at the
 //! kernel's own level, where the loop can be handed over as the four edges it is rather than named
 //! through a selection kind.
@@ -9,7 +9,7 @@
 //! meet on the same `d1 + d2` bisector plane a convex rim's do. The outward offset of a square of
 //! side `a` by `w` is a square of side `a + 2w`, so the band's area is `4 a w + 4 w^2`; integrated
 //! over the depth of the section that is `S L + (sum tan(gamma / 2)) M`, with `S = d^2 / 2` and
-//! `M = d^3 / 3` for a chamfer. C# `[Arguments]` rows are a loop over the same-named test.
+//! `M = d^3 / 3` for a chamfer. The parameter rows are a loop.
 
 use std::rc::Rc;
 use std::sync::Arc;

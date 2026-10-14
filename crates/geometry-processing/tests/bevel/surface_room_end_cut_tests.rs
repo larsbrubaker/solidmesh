@@ -1,13 +1,13 @@
-//! Port of `SurfaceRoomEndCutTests.cs`: the room a chain's END takes on the face beyond its corner,
+//! The room a chain's END takes on the face beyond its corner,
 //! negotiated against another chain's run-out - the lobed prism's barrel picked together with the
 //! single vertical edge at the flat side's far corner, 10.228 mm away across the bottom cap
 //! (`lobed_prism_meshes`).
 //!
 //! An END is a cut too: the face beyond the corner gives up the section the strip's end profile
-//! takes out of it (`SurfaceEndCut`), a notch reaching the profile's own reach from the corner.
-//! The pair rule could not see it even in principle - the colliding chain has NO cut on the
-//! run-out's region - so the region key short circuits the pair before the geometry is read. C#
-//! `[Arguments]` rows are a loop.
+//! takes out of it (`SurfaceEndCut`), a notch reaching the profile's own reach from the corner. The
+//! pair rule could not see it even in principle - the colliding chain has NO cut on the run-out's
+//! region - so the region key short circuits the pair before the geometry is read. The parameter
+//! rows are a loop.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -351,7 +351,7 @@ fn the_far_corners_edge_picked_alone_is_unaffected() {
     );
 }
 
-/// C#'s LINQ `Single`: the one cut that matches.
+/// The one cut that matches; fails on none or several.
 pub(crate) fn single(
     cuts: &[SurfaceRoomCut],
     matches: impl Fn(&SurfaceRoomCut) -> bool,

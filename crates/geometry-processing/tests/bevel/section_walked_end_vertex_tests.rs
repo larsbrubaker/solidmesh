@@ -1,4 +1,4 @@
-//! Port of `SectionWalkedEndVertexTests.cs`: a station whose reach runs out exactly on a corner of
+//! A station whose reach runs out exactly on a corner of
 //! the mesh names that corner - walked, or placed along the split blend's join.
 
 use std::rc::Rc;
@@ -83,13 +83,11 @@ fn a_station_names_the_corner(blend_split_vertices: bool) {
     assert!(graph.get_vertex0(edge) == corner || graph.get_vertex1(edge) == corner);
 }
 
-/// C# `AStationWhoseReachRunsOutOnACornerNamesIt`.
 #[test]
 fn a_station_whose_reach_runs_out_on_a_corner_names_it() {
     a_station_names_the_corner(false);
 }
 
-/// C# `AJoinPlacedEndStandingOnACornerNamesIt`.
 #[test]
 fn a_join_placed_end_standing_on_a_corner_names_it() {
     a_station_names_the_corner(true);
@@ -175,13 +173,14 @@ fn the_chain(features: &FeatureEdgeSet) -> Vec<ChainEdge> {
         })
         .map(|(i, edge)| ChainEdge::new(i as i32, *edge, edge.start.x > edge.end.x))
         .collect();
-    // C#'s List.Sort on distinct keys: the order is the keys' own.
+    // The keys are distinct, so the order is the keys' own whatever the sort.
     chain.sort_by(|left, right| left.from().x.total_cmp(&right.from().x));
     chain
 }
 
 /// With the split blend off, no station is split, so none is placed along a join: each is laid
-/// from its own station. C# read every station as split there (divergence 1070).
+/// from its own station. A placement left unset must read as unsplit; read as split, every station
+/// would be laid as a join between station 0 and itself.
 #[test]
 fn rust_only_with_the_blend_off_no_station_is_join_placed() {
     let part = the_ledge();

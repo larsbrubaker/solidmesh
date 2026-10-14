@@ -1,7 +1,5 @@
 //! The reduced "Unexpected Gap In Fillet" part: a tessellated post standing in a flat wall, whose
-//! crease runs PARALLEL to the post's own axis. Ports
-//! `Tests/GeometryProcessingTests/Fixtures/SourceRoundTestMeshes.cs`; read by
-//! `bevel_source_round_tests.rs`.
+//! crease runs PARALLEL to the post's own axis. Read by `bevel_source_round_tests.rs`.
 
 use std::f64::consts::TAU;
 
@@ -44,8 +42,7 @@ pub fn create_polygon_prism(sides: i32, radius: f64, height: f64) -> Mesh {
 /// slivers on them - which is what the fixture is about. `axis` is where the post's axis runs, in
 /// x and y.
 ///
-/// C# passes `ProcessingModes.Polygons` and `ProcessingResolution._64`, which the manifold kernel
-/// path ignores; polygon-mesh's `do_array` does not take them.
+/// The union runs on the manifold kernel, which needs no processing mode or resolution.
 pub fn create_post_in_a_wall(sides: i32, radius: f64, axis: Vector2, wall_y: f64) -> Mesh {
     let mut post = create_polygon_prism(sides, radius, 40.0);
 

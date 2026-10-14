@@ -1,9 +1,9 @@
-//! Port of `LevelLine/SeededSearchCostTests.cs`: what the BUMP rule's and the ISLAND rule's
+//! What the BUMP rule's and the ISLAND rule's
 //! searches are allowed to COST, and that paying less for them does not buy a different mesh - the
 //! same move `RidgeSearchCostTests` pins for rule (v), on rules (i, mirrored) and (iv). Both are
 //! seeded one chord tolerance BELOW `reading.Snap`, so the searches that find nothing stop being
 //! paid for in full. The numbers are work units from `WorkBudget.Spent`, exact integers decided by
-//! the algorithm. C# `[Arguments]` rows are loops over the same-named test.
+//! the algorithm. Each parameter row is one pass of a loop in the test of the same name.
 
 use std::rc::Rc;
 
@@ -19,8 +19,9 @@ use crate::several_chains_fixtures::plate_with_two_bosses;
 const FOLD_DEGREES: f64 = 45.0;
 
 /// What a build may spend, in work units: three geometries at two sizes each, the second size a
-/// quarter of the first. Each ceiling sits midway between C#'s before/after pair. The two bosses
-/// are one PICK of two chains, so its rows read the seeds through `PickField`.
+/// quarter of the first. Each ceiling sits midway between the cost before the seeds and the cost
+/// after. The two bosses are one PICK of two chains, so its rows read the seeds through
+/// `PickField`.
 #[test]
 fn the_bump_and_island_rules_cost_far_less_than_they_did() {
     for (which, size, ceiling) in [
@@ -40,8 +41,8 @@ fn the_bump_and_island_rules_cost_far_less_than_they_did() {
 }
 
 /// The seeds change the COST, never the answer: every fixture comes back with the mesh it came
-/// back with before them, vertex for vertex (the hourglass rows re-recorded in C# when
-/// `ConvexCellBound` joined the cell bound). The last row is the cube picked on its top rim - rule
+/// back with before them, vertex for vertex (the hourglass rows recorded with
+/// `ConvexCellBound` in the cell bound). The last row is the cube picked on its top rim - rule
 /// (iv)'s own case.
 #[test]
 fn seeding_the_searches_leaves_the_same_mesh() {

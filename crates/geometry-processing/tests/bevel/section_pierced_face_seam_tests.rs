@@ -1,10 +1,9 @@
-//! Port of `SectionPiercedFaceTests.Seam.cs`, one part of the partial class
-//! `SectionPiercedFaceTests`: THE SEAM AT THE JUNCTION PATCH - the assembly's three stages (the
-//! smooth side's cut, the face rebuild, the loft) run by hand over the pierced top face's one run
-//! at 2 * Radius, so each face keeps the name of the construction that laid it, and every directed
-//! edge nothing lays back is named. Nothing is open. Its point-naming reader (`TheNamesOfThePoints`)
-//! is shared with [`crate::section_pierced_face_pass_tests`]; the class's helpers are
-//! [`crate::section_pierced_face_readings`].
+//! One part of the pierced face tests: THE SEAM AT THE JUNCTION PATCH - the assembly's three stages
+//! (the smooth side's cut, the face rebuild, the loft) run by hand over the pierced top face's one
+//! run at 2 * Radius, so each face keeps the name of the construction that laid it, and every
+//! directed edge nothing lays back is named. Nothing is open. Its point-naming reader
+//! (`TheNamesOfThePoints`) is shared with [`crate::section_pierced_face_pass_tests`]; the class's
+//! helpers are [`crate::section_pierced_face_readings`].
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
@@ -22,7 +21,7 @@ use crate::section_pierced_face_readings::RADIUS;
 /// the name of the construction that laid it, and every unmatched directed edge is reported with
 /// both of its ends read out of the junction's own ledger and the cut's places.
 ///
-/// MEASURED in C# (2026-09-18) on the top face's pick at 2 * Radius: NOTHING IS OPEN. The two
+/// MEASURED on the top face's pick at 2 * Radius: NOTHING IS OPEN. The two
 /// patches that used to be owed - the takeover triangle at vertex 19 (fanned by the loft's
 /// `TryFanTheTakeover`) and its mirror at vertex 59 (`TryFanTheArrivingTakeover`, once the split
 /// station beside the junction was laid on the carried wall end) - were the same wedge read from
@@ -41,7 +40,7 @@ fn the_open_edges_of_the_seam_are_named() {
     assert!(rings.is_empty(), "{said}");
 }
 
-/// C# `TheRingsOf`: the cycles a set of directed edges falls into - each open edge followed by its
+/// The cycles a set of directed edges falls into - each open edge followed by its
 /// successor.
 fn the_rings_of(open: &[(i32, i32)]) -> Vec<Vec<(i32, i32)>> {
     let mut rings = Vec::new();
@@ -77,7 +76,7 @@ fn the_rings_of(open: &[(i32, i32)]) -> Vec<Vec<(i32, i32)>> {
     rings
 }
 
-/// C# `TheAssemblysOpenEdges`: runs the assembly's three stages by hand and writes out every open
+/// Runs the assembly's three stages by hand and writes out every open
 /// directed edge with the construction that laid it and the name of each end.
 fn the_assemblys_open_edges() -> (String, Vec<(i32, i32)>) {
     let part = inner_face_test_mesh::the_part();
@@ -202,7 +201,7 @@ fn the_assemblys_open_edges() -> (String, Vec<(i32, i32)>) {
     (said, open)
 }
 
-/// C# `TheNamesOfThePoints`: what minted each pool index the run and its cut use - for a reading's
+/// What minted each pool index the run and its cut use - for a reading's
 /// message only. A run with no smooth side has no cut at all, handed in as `None`.
 pub(crate) fn the_names_of_the_points(
     run: &SectionRun,

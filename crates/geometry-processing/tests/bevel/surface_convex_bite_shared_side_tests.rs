@@ -1,12 +1,11 @@
-//! Port of `SurfaceConvexBiteSharedSideTests.cs`: a side SHARED by two of the pieces one bite leaves
+//! A side SHARED by two of the pieces one bite leaves
 //! has to come out of the bite with the same vertex sequence on both of them.
 //!
 //! Each piece used to decide for itself which of its own corners stood straight through a side and
 //! could be left for `surface_split_sewing` to put back. On a side carrying two points a thousandth
 //! apart that gives two different answers to one question: each piece keeps the point the other
 //! dropped, and the two of them then walk one directed edge the same way, which is a fold the corner
-//! patch reports hundreds of faces away from the bite that made it. C# `[Arguments]` rows are a loop
-//! over the same-named test.
+//! patch reports hundreds of faces away from the bite that made it. The parameter rows are a loop.
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{

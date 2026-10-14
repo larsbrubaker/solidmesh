@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceEndGainsTheSectionReadingTests.cs`: whether the end
+//! Whether the end
 //! face HOLDS a chamfer's section or stands BESIDE it
 //! (`surface_end_gains_the_section::how_the_face_stands_to_it`), read off what of the face the
 //! section's chords take - so a far lobe of the same coplanar patch inside the wedge extended counts

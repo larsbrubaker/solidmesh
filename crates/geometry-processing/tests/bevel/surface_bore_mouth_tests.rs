@@ -1,14 +1,13 @@
-//! Port of `SurfaceBoreMouthTests.cs`, the STRAIGHT half of the partial class
-//! `SurfaceBoreMouthTests`: the mouth of a straight round bore, rounded all the way round - the
-//! first convex INNER loop the surface corpus builds, whose band grows outward across the face from
-//! a hole in it. The blend is a rolling ball's surface facet by facet: each rim edge has its own
-//! centre line, parallel to its own chord, a radius below the top face and a radius outward from its
-//! own facet's plane.
+//! The bore mouth tests, STRAIGHT half: the mouth of a straight round bore, rounded all the way
+//! round - the first convex INNER loop the surface corpus builds, whose band grows outward across
+//! the face from a hole in it. The blend is a rolling ball's surface facet by facet: each rim edge
+//! has its own centre line, parallel to its own chord, a radius below the top face and a radius
+//! outward from its own facet's plane.
 //!
-//! Also holds the class's build-side readings that the raked half declares
+//! Also holds the build-side readings the raked half uses
 //! (`AssertNothingStandsInTheBore`, `TheRakedBoresFacetPlanes`,
 //! `AssertEveryRakedBlendVertexStandsARadiusFromItsOwnCentreLine`, `RakedCentreLines`,
-//! `TheUpperRakedMouth`), which the other raked-bore classes call. The class's constants and the
+//! `TheUpperRakedMouth`), which the other raked-bore tests call. The raked constants and the
 //! raked mouth's walkback are in `surface_raked_bore_mouth_tests.rs`.
 
 #![allow(dead_code)]
@@ -161,7 +160,7 @@ pub fn assert_every_blend_vertex_stands_a_radius_from_its_own_centre_line(
     }
 }
 
-/// How far the best of the lines misses a radius at `at`: C#'s `lines.Min(|DistanceTo - Size|)`.
+/// How far the best of the lines misses a radius at `at`: the least `|distance - size|`.
 fn best_miss(lines: &[SurfaceLine], at: Vector3) -> f64 {
     lines
         .iter()

@@ -1,4 +1,4 @@
-//! Port of `SectionRoomTests.cs`: the closed-form room reading - the largest fillet radius the
+//! The closed-form room reading - the largest fillet radius the
 //! sections construction can build on a closed chain, read off the part without building
 //! anything, and TIGHT: the build succeeds just under the number and is refused just over it.
 
@@ -168,7 +168,7 @@ fn stands(part: &Mesh, graph: &MeshEdgeGraph, chain: &FeatureEdgeChain, radius: 
     }
 }
 
-/// C#'s `(double)refusal.Args[i]`.
+/// An advisory argument read as a number.
 fn the_double(arg: &BevelAdvisoryArg) -> f64 {
     match arg {
         BevelAdvisoryArg::Double(value) => *value,

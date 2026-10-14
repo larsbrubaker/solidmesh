@@ -1,8 +1,8 @@
-//! Port of `SectionHangerTopRimTests.cs`: ROW G1 OF THE PICTURE HANGER, on the hanger's own mesh
+//! ROW G1 OF THE PICTURE HANGER, on the hanger's own mesh
 //! ([`crate::picture_hanger_test_mesh`]) - the top face's ten edge rim at z = 20, the face that rim
 //! goes round, and the eleventh corner standing a tenth of a millimetre inside it - taking its 0.4
 //! fillet through the sections, closed, manifold and in one shell, built through the shared
-//! `SurfaceTestBuild` port with the sections flag pinned on.
+//! `surface_test_build` with the sections flag pinned on.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
@@ -165,9 +165,10 @@ fn the_top_face_carries_a_point_a_tenth_of_a_millimetre_from_its_own_rim() {
     }
 }
 
-/// C# `TheTopFace`: the part's upward triangles at z = 20 - the face the row's rim goes round.
+/// The part's upward triangles at z = 20 - the face the row's rim goes round.
 fn the_top_face(part: &Mesh) -> Vec<usize> {
-    // C# reads the float coordinates and subtracts the int 20 in float, so the test does too.
+    // The mesh stores f32 coordinates; the subtraction happens in f32 so the 1e-4 band reads them
+    // at their own precision.
     let at_twenty = |vertex: i32| ((part.vertices[vertex as usize].z - 20.0) as f64).abs() < 1e-4;
     let mut face = Vec::new();
 
@@ -184,8 +185,8 @@ fn the_top_face(part: &Mesh) -> Vec<usize> {
     face
 }
 
-/// C# `TheOnceUsedEdgesOf`: the boundary of a set of triangles - the edges exactly one of them uses,
-/// in the order they were first met (C#'s `Dictionary` enumerates in insertion order here).
+/// The boundary of a set of triangles - the edges exactly one of them uses,
+/// in the order they were first met, so the rim reads the same on every run.
 fn the_once_used_edges_of(part: &Mesh, face: &[usize]) -> Vec<(i32, i32)> {
     let mut order: Vec<(i32, i32)> = Vec::new();
     let mut uses: HashMap<(i32, i32), i32> = HashMap::new();
@@ -208,7 +209,7 @@ fn the_once_used_edges_of(part: &Mesh, face: &[usize]) -> Vec<(i32, i32)> {
     order.into_iter().filter(|key| uses[key] == 1).collect()
 }
 
-/// C# `DistanceToTheSegment`: how far a corner stands from a boundary edge, in the face's own
+/// How far a corner stands from a boundary edge, in the face's own
 /// plane.
 fn distance_to_the_segment(part: &Mesh, corner: i32, from: i32, to: i32) -> f64 {
     let flat = |vertex: i32| {
@@ -231,7 +232,7 @@ fn distance_to_the_segment(part: &Mesh, corner: i32, from: i32, to: i32) -> f64 
     (at - (start + (along * t))).length()
 }
 
-/// C# `TheTopRimAt`: the rim alone, built the part builder's own way - see `SurfaceTestBuild`.
+/// The rim alone, built the part builder's own way - see `surface_test_build`.
 fn the_top_rim_at(size: f64) -> TryBevelOutcome {
     let part = fixture::the_part();
 
@@ -245,7 +246,7 @@ fn the_top_rim_at(size: f64) -> TryBevelOutcome {
     )
 }
 
-/// C# `TheRim`: the top face's rim, resolved off the fixture's stored group.
+/// The top face's rim, resolved off the fixture's stored group.
 fn the_rim(part: &Mesh) -> BevelEdgeGroupResolution {
     let (mut resolutions, _) =
         bevel_edge_group_resolver::resolve_all(&[fixture::the_top_face_rim()], part);

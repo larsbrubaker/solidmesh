@@ -1,25 +1,24 @@
-//! Port of the test fixture `LevelLine/SeveralChainsFixtures.cs`: the three several-chain picks A, B
+//! The test fixture of the several-chains tests: the three several-chain picks A, B
 //! and C, and the two settings every claim about them is read under. Also carries the two geometry
-//! builders it calls from `LevelLine/LevelLineTestGeometry.cs` (`PlateWithOffsetSquareHole` and
-//! `PlateWithTwoBosses`).
+//! builders it calls (`PlateWithOffsetSquareHole` and `PlateWithTwoBosses`).
 
 #![allow(dead_code)]
 
 use crate::level_line_room_geometry::{SolidWithChains, SolidWithTwoChains};
 use vector_math::{Matrix4X4, Vector3};
 
-/// C# `FoldDegrees`: a fold threshold that reads a 90 degree corner as a feature and a 16-sided
+/// A fold threshold that reads a 90 degree corner as a feature and a 16-sided
 /// cylinder as smooth.
 pub const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Motion`: the same rigid motion the room's invariance is held to - a general rotation and a
+/// The same rigid motion the room's invariance is held to - a general rotation and a
 /// translation.
 pub fn motion() -> Matrix4X4 {
     Matrix4X4::create_rotation(Vector3::new(0.3, -0.7, 1.1))
         * Matrix4X4::create_translation_vector(Vector3::new(11.5, -3.25, 7.125))
 }
 
-/// C# `Named`: fixture "A", "B" or "C" - positions, triangles and the pick's chains.
+/// Fixture "A", "B" or "C" - positions, triangles and the pick's chains.
 pub fn named(fixture: &str) -> SolidWithChains {
     match fixture {
         "A" | "C" => {
@@ -35,7 +34,7 @@ pub fn named(fixture: &str) -> SolidWithChains {
     }
 }
 
-/// C# `LevelLineTestGeometry.PlateWithOffsetSquareHole`: FIXTURE A (and, at a smaller gap, FIXTURE C)
+/// FIXTURE A (and, at a smaller gap, FIXTURE C)
 /// - a 10 x 10 x 2 plate with a 2 x 2 square hole straight through it, the hole's nearest side
 ///   standing `gap_to_edge` from the plate's +x edge. Answers the top face's outer rim and hole rim,
 ///   both counter-clockwise seen from +z.
@@ -90,7 +89,7 @@ pub fn plate_with_offset_square_hole(gap_to_edge: f64) -> SolidWithTwoChains {
     (positions, indices, vec![0, 1, 2, 3], vec![4, 5, 6, 7])
 }
 
-/// C# `LevelLineTestGeometry.PlateWithTwoBosses`: FIXTURE B - a 12 x 8 x 1 plate carrying two
+/// FIXTURE B - a 12 x 8 x 1 plate carrying two
 /// 2 x 2 x 2 square bosses whose facing walls stand 3 apart. Answers both bosses' base rims, each
 /// counter-clockwise seen from +z.
 pub fn plate_with_two_bosses() -> SolidWithTwoChains {

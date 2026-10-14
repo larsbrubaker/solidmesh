@@ -1,4 +1,4 @@
-//! Port of `SurfaceFaceWalkbackTests.cs`: the face walkback (`surface_face_walkback`), checked
+//! The face walkback (`surface_face_walkback`), checked
 //! against areas and boundaries worked out on paper. Every case says the same three things in a
 //! different shape: the band between the chain edge and the tangent line is gone, exactly and no
 //! more; what is left still meets its neighbours vertex for vertex; and the vertices the strip will

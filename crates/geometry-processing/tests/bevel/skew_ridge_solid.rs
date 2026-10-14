@@ -1,4 +1,4 @@
-//! Port of `Fixtures/SkewRidgeSolid.cs`: a ROOF with two skew ends - one ridge running along x, the
+//! A ROOF with two skew ends - one ridge running along x, the
 //! two roof faces falling away from it, and an end face at either end leaning so that the three
 //! faces meeting at each end of the ridge do so at wedges of the caller's choosing. It stands on a
 //! flat bottom, and every one of its five faces is a plane, so `half_space_solids` both builds it

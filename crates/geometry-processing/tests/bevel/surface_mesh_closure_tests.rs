@@ -1,4 +1,4 @@
-//! Ports `GeometryProcessingTests/SurfaceMeshClosureTests.cs`: the gate the surface
+//! The gate the surface
 //! construction's answer has to pass before anything is published - every edge used by exactly two
 //! faces. It is read on the built mesh because no step of the build can see it - a step knows the
 //! ring it emitted, not whether the ring next door emitted the other side of it.

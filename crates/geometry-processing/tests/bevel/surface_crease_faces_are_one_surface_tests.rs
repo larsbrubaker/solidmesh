@@ -1,4 +1,4 @@
-//! Port of `SurfaceCreaseFacesAreOneSurfaceTests.cs`: a 90 degree crease whose two faces are
+//! A 90 degree crease whose two faces are
 //! nevertheless ONE surface, and the sentence the refusal owes it. An L prism's inner corner that
 //! fades into a cone blend half way up has its two walls joined round the far side of that blend
 //! in steps of 3.75 and 7.5 degrees, so a flood at the picker's 10 degree smooth-wall tolerance

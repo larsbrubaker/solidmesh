@@ -1,4 +1,4 @@
-//! Port of `SurfaceResultImportsIntoManifoldTests.cs`: a Surface bevel result is only finished when
+//! A Surface bevel result is only finished when
 //! the boolean kernel will take it. A fillet is normally followed by a Combine, and the kernel is the
 //! next thing to read the mesh after the builder publishes it. Every other Surface test measures with
 //! `mesh_measurements`, which reads the triangles the way the builder wrote them; this one hands the
@@ -12,8 +12,8 @@
 //! position. The volume is checked against the mesh's own signed volume so a mesh that imports as
 //! some OTHER solid does not read as a pass.
 //!
-//! C# imports with `Manifold.FromMeshGL64Robust(AsMeshGL64(..))`; here that is
-//! `manifold_import::import_strict` - the same marshalling, with no weld-and-retry. The kernel status
+//! The import is `manifold_import::import_strict`, with no weld-and-retry, so a seam the build
+//! left open is not healed on the way in. The kernel status
 //! is read by its `Debug` name, as `manifold_rust_backend_tests` reads it.
 
 use std::collections::HashMap;
@@ -181,7 +181,7 @@ fn diagnosis(mesh: &Mesh) -> String {
     let mut duplicates = 0;
 
     for (i, vertex) in mesh.vertices.iter().enumerate() {
-        // C# keys on the float triple; the bit patterns are the same key, NaN aside.
+        // Keyed on the float triple's bits: the same as float equality, NaN aside.
         let key = (vertex.x.to_bits(), vertex.y.to_bits(), vertex.z.to_bits());
 
         let first = match at_position.get(&key) {

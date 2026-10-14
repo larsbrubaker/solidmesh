@@ -1,4 +1,4 @@
-//! Port of `SurfaceJoinedRingTests.cs`: chains picked one at a time that turn out to be a whole
+//! Chains picked one at a time that turn out to be a whole
 //! RIM - joined end to end they come back to where they started, and `SurfaceChainJoin` has to
 //! publish that as the CLOSED loop it is.
 //!

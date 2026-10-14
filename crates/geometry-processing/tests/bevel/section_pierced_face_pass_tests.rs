@@ -1,5 +1,4 @@
-//! Port of `SectionPiercedFaceTests.Pass.cs`, one part of the partial class
-//! `SectionPiercedFaceTests`: THE WHOLE PASS'S EDGES - the seam part's ledger
+//! One part of the pierced face tests: THE WHOLE PASS'S EDGES - the seam part's ledger
 //! ([`crate::section_pierced_face_seam_tests`]) run over every run the routed PASS builds and
 //! counted the way the OPERATION counts, which is undirected. The class's helpers are
 //! [`crate::section_pierced_face_readings`].
@@ -55,7 +54,7 @@ fn the_whole_pass_runs_its_rim_chord_four_times_at_each_junction() {
 /// An undirected edge of the pass, with how many faces run it.
 type EdgeUses = ((i32, i32), usize);
 
-/// C# `ThePasssOpenEdges`: runs the pass's three stages by hand over EVERY run and names every
+/// Runs the pass's three stages by hand over EVERY run and names every
 /// directed edge nothing lays back, and every undirected edge some number of faces other than two
 /// runs.
 fn the_passs_open_edges() -> (String, Vec<(i32, i32)>, Vec<EdgeUses>) {
@@ -213,8 +212,8 @@ fn the_passs_open_edges() -> (String, Vec<(i32, i32)>, Vec<EdgeUses>) {
         .map(|(edge, by)| (*edge, by.len()))
         .collect();
 
-    // C# orders by the low end only (a stable sort); the high end breaks a tie here, which can only
-    // reorder the message.
+    // Ordered by the low end, the high end breaking a tie, so the message lists edges the same way
+    // every run.
     not_two.sort();
 
     for (edge, _) in &not_two {

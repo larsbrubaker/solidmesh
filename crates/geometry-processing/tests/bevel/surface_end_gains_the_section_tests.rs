@@ -1,4 +1,4 @@
-//! Port of `SurfaceEndGainsTheSectionTests.cs`: a CONVEX end whose corner is a reentrant vertex of
+//! A CONVEX end whose corner is a reentrant vertex of
 //! the face beyond it gains the section as a cap (`surface_end_gains_the_section`). The
 //! nose-in-notch part's ridge rounded at 2 is the fixture: both of its ends die where the nose
 //! bites into a slope, the section stands in that bite rather than in the slope, and the cut that

@@ -1,4 +1,4 @@
-//! Port of `SectionRobustnessTests.cs`: THE SAME sixty builds `SurfaceBevelRobustnessTests`
+//! THE SAME sixty builds `SurfaceBevelRobustnessTests`
 //! measures the edge-centric construction by, run through the vertex-centric one -
 //! `SectionAssembly` - and read by the same invariants plus the one the new path owns: every
 //! profile point stands a radius from its own section's canal.
@@ -8,15 +8,14 @@
 //! reference, so a case cannot drift between the two tables. Only the build and the reading are
 //! this class's own.
 //!
-//! **The sections ratchet is EMPTY** (C# measured 2026-09-17): every one of the twelve cases
+//! **The sections ratchet is EMPTY** (measured): every one of the twelve cases
 //! closes at all five motions - closed, manifold, one shell, no needle - with the identical
 //! topology signature, and every profile point stands a radius from its own section's canal
 //! inside the tolerance below. The table is kept empty rather than deleted so a regression names
 //! itself the same way a ratchet row always did; regenerate it by running with
 //! `BEVEL_SECTIONS_BASELINE` pointed at a file.
 //!
-//! C#'s `[MethodDataSource]` runs each case as its own test; here the one test walks the twelve
-//! cases and reports every disagreement together.
+//! The one test walks the twelve cases and reports every disagreement together.
 
 use std::sync::Arc;
 
@@ -111,7 +110,7 @@ fn the_sections_build_the_same_bore_mouth_wherever_the_part_stands() {
     );
 }
 
-/// C# `HowItDiffersFrom` (both robustness classes carry it): the moved build's signature against
+/// Shared by both robustness files: the moved build's signature against
 /// the identity build's, as the numbers that differ.
 pub fn how_it_differs_from(moved: &TopologySignature, at_the_origin: &TopologySignature) -> String {
     let mut differences = Vec::new();
@@ -288,7 +287,7 @@ fn what_is_broken_by(
     (broken, signature, worst_reach)
 }
 
-/// C# `reason?.Code.ToString() ?? "with no code"`.
+/// A refusal's code as text, or "with no code" where there is none.
 pub fn code_of(
     reason: &geometry_processing::bevel::sections::section_builder_walked_side::SectionBuildRefusal,
 ) -> String {

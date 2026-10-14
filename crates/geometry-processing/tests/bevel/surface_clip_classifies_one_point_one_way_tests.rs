@@ -1,4 +1,4 @@
-//! Port of `SurfaceClipClassifiesOnePointOneWayTests.cs`: a clip reads each point one way only -
+//! A clip reads each point one way only -
 //! the second bite takes the vertex the first left on the edge, and a crossing where a vertex,
 //! a ring corner or a profile vertex already stands is that vertex.
 
@@ -10,7 +10,6 @@ use vector_math::{Vector3, Vector3Float};
 const TALL: f64 = 20.0;
 const WIDE: f64 = 0.15;
 
-/// C# `TheSecondBiteTakesTheVertexTheFirstLeftOnTheEdgeRatherThanOneBesideIt`.
 #[test]
 fn the_second_bite_takes_the_vertex_the_first_left_on_the_edge_rather_than_one_beside_it() {
     let corners = [
@@ -82,7 +81,6 @@ fn the_second_bite_takes_the_vertex_the_first_left_on_the_edge_rather_than_one_b
     assert_eq!(on_the_diagonal, 1);
 }
 
-/// C# `ACrossingWhereAVertexAlreadyStandsIsThatVertex`.
 #[test]
 fn a_crossing_where_a_vertex_already_stands_is_that_vertex() {
     let (mut pool, ring) = the_side_crossed_at_the_origin();
@@ -100,7 +98,6 @@ fn a_crossing_where_a_vertex_already_stands_is_that_vertex() {
     assert_eq!(standing_near(&pool, Vector3::ZERO), 1);
 }
 
-/// C# `ACrossingWhereACornerOfTheRingAlreadyStandsAddsNothing`.
 #[test]
 fn a_crossing_where_a_corner_of_the_ring_already_stands_adds_nothing() {
     let (mut pool, ring) = the_side_crossed_at_the_origin();
@@ -136,7 +133,6 @@ fn a_crossing_where_a_corner_of_the_ring_already_stands_adds_nothing() {
     assert!(too_near.is_empty(), "{}", too_near.join("; "));
 }
 
-/// C# `ACrossingLandingOnTheCutsOwnProfileIsThatProfileVertex`.
 #[test]
 fn a_crossing_landing_on_the_cuts_own_profile_is_that_profile_vertex() {
     let (mut pool, ring) = the_side_crossed_at_the_origin();
@@ -154,7 +150,6 @@ fn a_crossing_landing_on_the_cuts_own_profile_is_that_profile_vertex() {
     assert_eq!(standing_near(&pool, Vector3::ZERO), 0);
 }
 
-/// C# `ACrossingALittleWayAlongTheCutFromASidesOwnEndIsThatEnd`.
 #[test]
 fn a_crossing_a_little_way_along_the_cut_from_a_sides_own_end_is_that_end() {
     let (mut pool, ring) = the_side_crossed_at_the_origin();
@@ -174,7 +169,6 @@ fn a_crossing_a_little_way_along_the_cut_from_a_sides_own_end_is_that_end() {
     assert_eq!(pool.vertices().len(), was);
 }
 
-/// C# `ACrossingALittleWayAcrossTheCutFromASidesOwnEndIsANewPoint`.
 #[test]
 fn a_crossing_a_little_way_across_the_cut_from_a_sides_own_end_is_a_new_point() {
     let (mut pool, ring) = the_side_crossed_at_the_origin();

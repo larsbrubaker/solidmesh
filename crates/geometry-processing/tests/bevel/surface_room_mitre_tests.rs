@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomMitreTests.cs`: the room two bands take between them where they MITRE at a
+//! The room two bands take between them where they MITRE at a
 //! REFLEX corner of the cap they share - a 40 by 20 prism with a V notched into one side, whose
 //! apex stands at 296 degrees of material and 12 mm from the far side.
 //!

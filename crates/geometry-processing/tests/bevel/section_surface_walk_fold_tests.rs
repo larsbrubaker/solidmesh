@@ -1,4 +1,4 @@
-//! Port of `SectionSurfaceWalkFoldTests.cs`: the surface walk ON A FOLD - a direction or a walk
+//! The surface walk ON A FOLD - a direction or a walk
 //! running along an edge between two facets, leaning off it by float noise. A fold is where a
 //! direction computed from single-precision vertices lands outside BOTH faces' wedges at once.
 
@@ -48,7 +48,7 @@ fn a_direction_along_a_fold_leaning_off_it_by_float_noise_is_held() {
 }
 
 /// SETTING OUT ALONG THE FOLD FROM A POINT ON IT, leaning off the surface by float noise: either
-/// panel holds it, and a walk set out that way runs down the hinge. (C#'s four `[Arguments]`.)
+/// panel holds it, and a walk set out that way runs down the hinge. Run at four leans.
 fn a_direction_along_the_fold_from_a_point_on_it_leaning_off_by_float_noise_is_held(lean: f64) {
     let roof = a_roof();
     let frame = frame(&roof);
@@ -123,7 +123,7 @@ fn a_walk_up_a_fold_ending_on_a_feature_vertex_stops_there_as_a_crease() {
         .collect();
 
     let at = |i: usize| Vector3::from_vector3_float(part.vertices[i]);
-    // C#'s `OrderBy(..).First()`: the nearest, the first of any tie.
+    // The nearest, the first of any tie, so a tie picks the same vertex every run.
     let nearest = |to: Vector3| {
         let mut best = 0;
         for i in 1..part.vertices.len() {
@@ -178,7 +178,7 @@ fn a_walk_up_a_fold_ending_on_a_feature_vertex_stops_there_as_a_crease() {
 
 /// WALKING DOWN A FOLD OF LONG, NARROW PANELS (30 long, 2 wide), set out from its end with a
 /// direction leaning off the surface by float noise: the walk runs along the fold rather than being
-/// refused for an exit the panel's length amplified past its own lattice. (C#'s four `[Arguments]`.)
+/// refused for an exit the panel's length amplified past its own lattice. Run at four leans.
 fn a_walk_down_a_fold_of_narrow_panels_leaning_off_it_by_float_noise_runs_along_it(lean: f64) {
     let mut roof = Mesh::new();
     let drop = 2.0 * math_helper::degrees_to_radians(3.75).tan();

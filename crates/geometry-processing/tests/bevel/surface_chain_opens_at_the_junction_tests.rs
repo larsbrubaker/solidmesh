@@ -1,4 +1,4 @@
-//! Port of `SurfaceChainOpensAtTheJunctionTests.cs`: the pass that cuts a CLOSED chain open where
+//! The pass that cuts a CLOSED chain open where
 //! another chain ends on it, read on a cube - a face rim taken whole with one vertical edge picked
 //! beside it is three edges meeting at a corner, and the junction readings want three chain ENDS
 //! there whichever way the three were picked.
@@ -30,7 +30,7 @@ fn a_rim_nobody_ends_on_stays_closed() {
 
     assert_eq!(opened.len(), 1);
     assert!(opened[0].is_closed);
-    // C# `IsSameReferenceAs`: a chain is a value here, so "the chain that arrived, not a copy" is
+    // A chain is a value, so "the chain that arrived, not a copy" is
     // the chain handed back unchanged - every edge, in order, walked the same way.
     assert_eq!(
         opened[0], chains[0],
@@ -181,7 +181,7 @@ fn assert_it_is_the_same_walk_rotated(ring: &BevelSweptChain, run: &BevelSweptCh
     }
 }
 
-/// LINQ `Single`: the one chain matching, failing on none or several.
+/// The one chain matching, failing on none or several.
 fn single(
     chains: &[BevelSweptChain],
     matches: impl Fn(&BevelSweptChain) -> bool,

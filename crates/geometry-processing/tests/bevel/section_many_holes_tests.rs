@@ -1,4 +1,4 @@
-//! Port of `SectionManyHolesTests.cs`: THE ONE ROW OF "Many Holes.mcx", on the part's own mesh - a
+//! THE ONE ROW OF "Many Holes.mcx", on the part's own mesh - a
 //! ported barrel picked as one FaceGroup whose rim is fifty closed loops, asked for a 0.5 mm fillet.
 //! What the KERNEL answers for it, loop by loop, is read here off [`crate::many_holes_test_mesh`]
 //! through [`crate::many_holes_rim_reading`] instead of through a MatterCADLib build and an .mcx
@@ -21,9 +21,9 @@
 //! its mesh, after `BevelWorkingMesh.CreateFrom`, and nothing is re-conditioned here.
 //!
 //! `TheRoomRefusesThePickBeforeTheRouterIsReached` reads the barrel's outer wall through the shared
-//! `SurfaceTestBuild` port (C#'s `TheOuterWallAt`).
+//! surface test build (`the_outer_wall_at`).
 //!
-//! Skipped as in C# (`[Skip]`):
+//! Not run (each still open):
 //! - `EveryHoleTakesItsFilletThroughTheSections`: "RED: read loop by loop, FORTY of the fifty loops
 //!   take 0.5 soundly - 10 still refuse, one of them on the smooth side's cut in the assembly
 //!   (ARingWillNotTriangulate)".
@@ -56,7 +56,7 @@ use crate::surface_test_build::{
 /// WHERE THE KERNEL STOPS TODAY on the whole pick in ONE pass, with the flag on: the room refuses
 /// it `SizeExceedsFaceWidth` before any plan is routed, so the router never speaks. The app reaches
 /// the router because `BevelSurfacePartBuilder`'s drop-and-retry takes the refusing loops out and
-/// bisects for a size that fits; `SurfaceTestBuild` is one flat call and does none of that.
+/// bisects for a size that fits; `surface_test_build` is one flat call and does none of that.
 #[test]
 fn the_room_refuses_the_pick_before_the_router_is_reached() {
     let _sections = pinned_to_the_sections();
@@ -260,7 +260,7 @@ fn every_mouth_is_a_ring_on_the_barrels_tapered_wall_and_one_touches_the_top_rim
             .filter(|run| run.edges.len() == 65),
     );
 
-    // C#'s OrderByDescending(..).First(): the first of the highest, in the run's own order.
+    // The first of the highest, in the run's own order, so a tie names the same vertex every run.
     let mut highest = odd_run.vertices[0];
     for &vertex in &odd_run.vertices {
         if part.vertices[vertex as usize].z > part.vertices[highest as usize].z {
@@ -306,7 +306,7 @@ fn every_loop_of_the_pick_read_alone_is_forty_sound_mouths_and_ten_refusals() {
         .collect();
     let mut wanted: Vec<String> = THE_RATCHET.iter().map(|row| row.to_string()).collect();
 
-    // C#'s IsEquivalentTo: the same rows, in any order.
+    // The same rows, in any order.
     rows.sort();
     wanted.sort();
     assert_eq!(rows, wanted);
@@ -385,7 +385,7 @@ fn the_touching_mouth_and_the_top_rim_both_refuse_at_their_shared_vertex() {
 /// an outer ring round a patch holding TWO WHOLE BORE MOUTHS, one of which is the chain being
 /// filleted. The facet is cut from its rings AS THEY STAND, each untouched mouth handed to the
 /// region whose ring encloses it and a kept region with holes spliced back to a single ring
-/// (`SectionSmoothSide.Holes.cs`), and the ears take that spliced ring now that they read its
+/// (the smooth side's hole splicing), and the ears take that spliced ring now that they read its
 /// crossings in the ring's own plane (`SurfaceRingEars.ItIsSimple`). So this row's claim is that THE
 /// FACET CUTS.
 #[test]
@@ -532,13 +532,13 @@ fn the_assembly_refusals_are_one_ring_and_no_join() {
     .map(|row| row.to_string())
     .collect();
 
-    // C#'s IsEquivalentTo: the same rows, in any order.
+    // The same rows, in any order.
     read.sort();
     wanted.sort();
     assert_eq!(read, wanted);
 }
 
-/// The cut's answer as C#'s `out refusal`: `None` where it cut. A NaN point is C#'s throw.
+/// The cut's answer as a refusal: `None` where it cut. A NaN point fails the test outright.
 fn refusal_of(done: Result<(), SmoothSideFailure>, what: &str) -> SmoothSideRefusal {
     match done {
         Ok(()) => SmoothSideRefusal::None,
@@ -564,8 +564,8 @@ fn the_loop_table() -> Vec<LoopAnswer> {
     )
 }
 
-/// C# `TheOuterWallAt`: the barrel's outer wall, built the part builder's own way - see
-/// `SurfaceTestBuild`.
+/// The barrel's outer wall, built the part builder's own way - see
+/// `surface_test_build`.
 fn the_outer_wall_at(size: f64) -> TryBevelOutcome {
     let part = many_holes_test_mesh::the_part();
 
@@ -586,7 +586,7 @@ fn the_rim(part: &Mesh) -> BevelEdgeGroupResolution {
     resolutions.remove(0)
 }
 
-/// C#'s `Single`: the one item, failing on none or several.
+/// The one item, failing on none or several.
 fn single<T>(mut items: impl Iterator<Item = T>) -> T {
     let first = items.next().expect("one item, not none");
     assert!(items.next().is_none(), "one item, not several");

@@ -1,4 +1,4 @@
-//! Port of `SurfaceConeRimTests.cs`: a curved region that is NOT a cylinder. A truncated cone's
+//! A curved region that is NOT a cylinder. A truncated cone's
 //! wall facets are each tilted about their own chord, so the per-facet tangent planes do not
 //! coincide the way a cylinder's vertical ones do, and a construction that read a curved wall as
 //! one plane would pass every cylinder test and fail here.
@@ -11,7 +11,7 @@
 //! vertex is the axial one through it, so the slice at depth `v` is the ring between two concentric
 //! regular polygons - `n tan(pi / n) [(a + k v)^2 - (a - U)^2]` - and `U` is linear in `v` along
 //! each chord of the tessellated profile, which makes Simpson's rule exact. The fixture helpers are
-//! `pub` for `section_routed_accuracy_reading_tests.rs`. C# `[Arguments]` rows are a loop.
+//! `pub` for `section_routed_accuracy_reading_tests.rs`. The parameter rows are a loop.
 
 use std::sync::Arc;
 
@@ -236,7 +236,7 @@ pub fn frustum_volume() -> f64 {
             + (TOP_RADIUS * TOP_RADIUS))
 }
 
-/// C# `Build`: the frustum's whole top rim through the plan and the surface builder.
+/// The frustum's whole top rim through the plan and the surface builder.
 pub fn build(size: f64, round_profile: bool, segments_per_quarter: i32) -> Mesh {
     let cone = create_frustum(BOTTOM_RADIUS, TOP_RADIUS, HEIGHT, SIDES);
     let features = FeatureEdgeSet::create(&cone);

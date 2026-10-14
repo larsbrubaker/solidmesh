@@ -1,4 +1,4 @@
-//! Port of `SectionFaceRebuildTests.cs`: the part's own faces REBUILT by VERTEX SUBSTITUTION on the
+//! The part's own faces REBUILT by VERTEX SUBSTITUTION on the
 //! mouth of a straight round bore - nothing cut, only the mouth moved, no triangle inverted, every
 //! triangle in its own plane, the two boundary rings the only open edges, and a size that folds a
 //! face refused at the station.
@@ -31,7 +31,6 @@ struct Built {
     faces: Vec<Triple>,
 }
 
-/// C# `TheRebuildCutsNothingAndMovesOnlyTheMouth`.
 #[test]
 fn the_rebuild_cuts_nothing_and_moves_only_the_mouth() {
     let built = build();
@@ -63,7 +62,7 @@ fn the_rebuild_cuts_nothing_and_moves_only_the_mouth() {
     }
 }
 
-/// C# `NoTriangleInverted`: no rewritten triangle turned itself inside out or lost its area.
+/// No rewritten triangle turned itself inside out or lost its area.
 #[test]
 fn no_triangle_inverted() {
     let built = build();
@@ -83,7 +82,7 @@ fn no_triangle_inverted() {
     }
 }
 
-/// C# `EveryTriangleStaysInItsOwnPlane`: the OFFSET on the top plane and the SLIDE in each of the
+/// The OFFSET on the top plane and the SLIDE in each of the
 /// two wall facets its crease separates.
 #[test]
 fn every_triangle_stays_in_its_own_plane() {
@@ -122,7 +121,6 @@ fn every_triangle_stays_in_its_own_plane() {
     assert!(on_the_top > 0, "the fixture has a top face to have checked");
 }
 
-/// C# `TheOnlyOpenEdgesAreTheTwoBoundaryRings`.
 #[test]
 fn the_only_open_edges_are_the_two_boundary_rings() {
     let built = build();
@@ -187,7 +185,6 @@ fn the_only_open_edges_are_the_two_boundary_rings() {
     }
 }
 
-/// C# `ASizeThatFoldsAFaceIsRefusedAtTheStation`.
 #[test]
 fn a_size_that_folds_a_face_is_refused_at_the_station() {
     let part = create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0);

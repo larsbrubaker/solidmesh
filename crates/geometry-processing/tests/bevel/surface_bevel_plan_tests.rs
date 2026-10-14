@@ -1,4 +1,4 @@
-//! Port of `SurfaceBevelPlanTests.cs`: the surface bevel's plan, checked against numbers worked
+//! The surface bevel's plan, checked against numbers worked
 //! on paper. Every case here is one the 2D bevel already answers at a corner - setback
 //! r/tan(half the wedge), center r/sin(half the wedge), the tangent points the feet of that
 //! center - read in 3D as lines along an edge, so what these tests really pin is that the 3D
@@ -527,7 +527,7 @@ fn apex_edge(features: &FeatureEdgeSet) -> usize {
     })
 }
 
-/// C#'s `Enumerable.Single` over the feature edges' indices.
+/// The one feature edge index that matches; fails on none or several.
 fn single(features: &FeatureEdgeSet, is_it: impl Fn(&FeatureEdge) -> bool) -> usize {
     let found: Vec<usize> = (0..features.count())
         .filter(|&i| is_it(&features.edges()[i]))

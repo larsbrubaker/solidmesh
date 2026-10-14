@@ -1,10 +1,9 @@
-//! Port of `SurfaceRakedBoreCornerTwinTests.cs`: the one row of `SectionEveryPickMatrixTests` that is
-//! not a refusal - the raked bore cube's -Z/-Y cube edge (`inner_face_test_mesh`), picked ALONE. At
-//! 0.5 the legacy construction leaves it open because the +X face's re-mesh and the band each land
-//! their own point at the pick's corner, two vertices 1.4e-4 apart where one belongs; at 2 the two
-//! agree inside the weld and it closes. Both halves: the contract the user is owed (closed, or
-//! refused by name as the app's own closure gate has it), and the twin as a ratchet. C#
-//! `[Arguments]` rows are a loop.
+//! The one row of `SectionEveryPickMatrixTests` that is not a refusal - the raked bore cube's -Z/-Y
+//! cube edge (`inner_face_test_mesh`), picked ALONE. At 0.5 the legacy construction leaves it open
+//! because the +X face's re-mesh and the band each land their own point at the pick's corner, two
+//! vertices 1.4e-4 apart where one belongs; at 2 the two agree inside the weld and it closes. Both
+//! halves: the contract the user is owed (closed, or refused by name as the app's own closure gate
+//! has it), and the twin as a ratchet. The parameter rows are a loop.
 
 use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceVertexPool};
 use geometry_processing::topology::{

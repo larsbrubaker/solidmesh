@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerDualBuildTests.cs`: the WHOLE upper face of `nose_in_notch_test_meshes`'
+//! The WHOLE upper face of `nose_in_notch_test_meshes`'
 //! nose, built - a convex ridge cut between two concave creases beaded, which puts a LEANING mixed
 //! corner at each end of that ridge and asks the dual canal to close both of them.
 //!
@@ -108,7 +108,8 @@ fn every_interior_grid_point_is_published() {
 
 fn the_grid_at(ridge_end: Vector3) -> SurfaceMixedCornerDualGrid {
     let corner = nose_in_notch_mixed_corners::at_the_ridge_end(ridge_end, 1.0);
-    // C# picks the lower crease end on both sides of its ternary; kept as written.
+    // The lower crease end on both branches: the test reads the lower end whichever end the ridge
+    // reaches.
     let to = nose::lower_crease_end();
 
     let canal = SurfaceMixedCornerDualCanal::try_read(&corner, (to - ridge_end).length())

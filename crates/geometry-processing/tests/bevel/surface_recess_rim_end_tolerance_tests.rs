@@ -1,4 +1,4 @@
-//! Port of `SurfaceRecessRimEndToleranceTests.cs`: the size boundary at the pyramidal recess's rim
+//! The size boundary at the pyramidal recess's rim
 //! end - below it the surface construction closes, above it the end cut refuses the profile by
 //! name, and NOWHERE may it publish a mesh that is open.
 //!
@@ -7,7 +7,7 @@
 //! only 0.0008 below z = 20, so as the size grows the end profile straddles the top face as well as
 //! the left wall, and from 0.0335 up `surface_end_cut` refuses by `SurfaceStripEndNotSupported`. At
 //! 0.0325 the build once returned a mesh with two open edges; a result is either closed and
-//! manifold or refused BY NAME. C# `[Arguments]` rows are a loop.
+//! manifold or refused BY NAME. The parameter rows are a loop.
 
 use std::sync::Arc;
 

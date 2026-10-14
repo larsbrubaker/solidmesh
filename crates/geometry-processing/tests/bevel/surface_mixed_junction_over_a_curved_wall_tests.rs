@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedJunctionOverACurvedWallTests.cs`: the JUNCTION on a CHORDED seam - the
+//! The JUNCTION on a CHORDED seam - the
 //! lobed prism's own, where the flat side's top rim, the barrel's top rim and the seam between
 //! them all meet at one vertex and all three are picked.
 //!

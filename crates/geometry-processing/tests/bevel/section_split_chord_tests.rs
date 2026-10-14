@@ -1,12 +1,12 @@
-//! Port of `SectionSplitChordTests.cs`: the one case `SectionRobustnessTests` measured down to its
+//! The one case `SectionRobustnessTests` measured down to its
 //! cause - a RAKED chord carrying a collinear SPLIT vertex, where an independently placed offset
 //! boundary is overtaken by its neighbours' sliding ones and the wall facet between them turns
 //! over. The rule that answers it is `section_split_blend`, and these claims are what it owes: the
 //! raked split bore builds, and the unraked one it must not disturb is unchanged.
 //!
-//! C# marks the class `NotInParallel` because one test moves the static
-//! `SectionSplitBlend.AbsorbSplitVertices`; it sets the switch to its default (on) and puts back
-//! what it found, so a test running beside it reads the same value either way.
+//! One test moves the shared absorb switch (`section_split_blend`); it sets the switch to its
+//! default (on) and puts back what it found, so a test running beside it reads the same value
+//! either way.
 
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ struct Built {
     worst_reach: f64,
 }
 
-/// Puts the absorb switch back to what it was found at, however the test leaves (C#'s `finally`).
+/// Puts the absorb switch back to what it was found at, however the test leaves.
 struct AbsorbSwitchRestored(bool);
 
 impl Drop for AbsorbSwitchRestored {

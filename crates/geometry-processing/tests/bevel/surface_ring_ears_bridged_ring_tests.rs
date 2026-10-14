@@ -1,4 +1,4 @@
-//! Ports `GeometryProcessingTests/SurfaceRingEarsBridgedRingTests.cs`: a ring that has been
+//! A ring that has been
 //! BRIDGED - a flat piece whose outline was several rings, an outer one holding inner ones,
 //! threaded onto one ring by running out to each inner ring and back along the same edge, a zero
 //! width slit. The classical ear clipping of a polygon with holes, and what `SurfaceRingEars` has
@@ -151,7 +151,7 @@ fn a_hole_vertex_standing_on_an_ears_edge_is_no_ear() {
 
     assert!((area - 14.0).abs() <= 1e-9);
 
-    // C#'s `ring.Distinct()`, first occurrences in order.
+    // The ring's distinct vertices, first occurrences in order.
     let mut distinct = Vec::new();
     for vertex in ring {
         if !distinct.contains(&vertex) {

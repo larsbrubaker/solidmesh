@@ -1,7 +1,7 @@
-//! Port of `SectionPiercedFaceTests.Takeover.cs`, one part of the partial class
-//! `SectionPiercedFaceTests`: THE RIM TAKES OVER AT THE CREASE - what the smooth side's boundary does
-//! where a junction's wall end was CARRIED onto a facet that stands past a feature crease from the
-//! station beside it. The class's helpers are [`crate::section_pierced_face_readings`].
+//! One part of the pierced face tests: THE RIM TAKES OVER AT THE CREASE - what the smooth side's
+//! boundary does where a junction's wall end was CARRIED onto a facet that stands past a feature
+//! crease from the station beside it. The class's helpers are
+//! [`crate::section_pierced_face_readings`].
 
 use std::collections::{BTreeSet, HashSet};
 use std::fmt::Write;
@@ -23,7 +23,7 @@ use crate::section_pierced_face_readings::RADIUS;
 /// every join that touches it is tried here, so a refusal is named at the JOIN it stands on and not
 /// only at the one point the cut reports.
 ///
-/// MEASURED in C# (2026-09-18) at the operation's own size, 2 * Radius. Each junction carries ONE
+/// MEASURED at the operation's own size, 2 * Radius. Each junction carries ONE
 /// wall end onto a facet past the bore's mouth - station 1's P2 onto face 37, station 41's P1 onto
 /// face 70 - and the boundary takes that crease over at a minted point 0.1159 from the carried end.
 /// The groups are then `[P1, F1, P2, C]` where the crease is crossed LEAVING and `[C, P1, F1, P2]`
@@ -116,7 +116,7 @@ fn the_boundary_joins_round_both_junctions() {
             "it stands where the carried end's own wall meets the bore - {said}"
         );
 
-        // C#'s `IndexOf`: -1 where the group's first point is not on the boundary at all.
+        // -1 where the group's first point is not on the boundary at all.
         let first = cut
             .station_boundary
             .iter()
@@ -169,7 +169,7 @@ fn the_boundary_joins_round_both_junctions() {
     assert_eq!(refused, 0, "{said}");
 }
 
-/// C# `Where`: a boundary point's position and the place it was written with, for a reading's
+/// A boundary point's position and the place it was written with, for a reading's
 /// message.
 fn where_(cut: &SmoothSideCut, pool: &SectionPool, point: i32) -> String {
     let place = &cut.places[&point];
@@ -182,7 +182,7 @@ fn where_(cut: &SmoothSideCut, pool: &SectionPool, point: i32) -> String {
     )
 }
 
-/// C# `TheFacesOfThePlace`: the faces a place may be read in - one for a face place, both of an
+/// The faces a place may be read in - one for a face place, both of an
 /// edge's for an edge.
 fn the_faces_of_the_place(graph: &MeshEdgeGraph, place: &SmoothSidePlace) -> Vec<i32> {
     if place.face >= 0 {

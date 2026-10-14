@@ -1,4 +1,4 @@
-//! Port of `SurfaceBandEndAlongAFacetEdgeTests.cs`: A BAND'S END PLANE LYING ALONG A FACET'S OWN
+//! A BAND'S END PLANE LYING ALONG A FACET'S OWN
 //! EDGE DOES NOT CUT THAT FACET IN TWO. The flat end of a half disc prism is fanned into triangles
 //! from the corner where the diameter meets the arc, and for an ODD number of chords one of those
 //! fan edges lies exactly in the plane the diameter's band ends on at that corner - the mitre plane
@@ -9,7 +9,7 @@
 //! 1.2e-4 on the removed side at nineteen chords, the clip kept a zero-area sliver beyond it, and
 //! the edge came out with three faces on it - a fold refused as `SurfaceResultNotClosed`. It fell
 //! on 3, 7, 9, 11 and 19 chords, the signature of a rounding deciding a side rather than of a
-//! shape. C# `[Arguments]` rows are a loop over the same-named test.
+//! shape. The parameter rows are a loop.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -167,7 +167,7 @@ fn an_odd_chord_count_puts_a_fan_edge_in_the_bands_end_plane() {
 }
 
 /// The whole rim of the flat end, planned as the one closed chain it is. Shared with
-/// `surface_one_crossing_per_facet_edge_tests` (the same C# helper in both classes).
+/// `surface_one_crossing_per_facet_edge_tests`.
 pub fn plan_of_the_rim(
     mesh: &Mesh,
     facets: i32,

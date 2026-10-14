@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueMixedCornerRowsTests.cs`: the patch's rows at the OBLIQUE mixed corner of
+//! The patch's rows at the OBLIQUE mixed corner of
 //! the nose-in-notch part's left ridge end, laid along the spine (`SurfaceMixedCornerRows`) rather
 //! than turned rigidly about the bead's axis.
 //!
@@ -244,7 +244,7 @@ fn swept_at(
     math_helper::radians_to_degrees(first.cross(last).length().atan2(first.dot(last)))
 }
 
-/// C# `ThePlansOfTheLeftRidgeEnd`: the ridge and the upper left crease, as the one chain they make
+/// The ridge and the upper left crease, as the one chain they make
 /// at the left ridge end.
 pub fn the_plans_of_the_left_ridge_end(
     features: &FeatureEdgeSet,

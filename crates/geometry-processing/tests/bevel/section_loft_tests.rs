@@ -1,4 +1,4 @@
-//! Port of `SectionLoftTests.cs`: an edge's STRIP is the quad ladder between its two end sections'
+//! An edge's STRIP is the quad ladder between its two end sections'
 //! profiles, and nothing else (`section_loft::try_emit`). On a closed run `end_of(i)` and
 //! `start_of(i + 1)` are one object, so the seam between two strips is the same integers read twice
 //! and the "used exactly twice, in opposite directions" reading walks across it with no tolerance;

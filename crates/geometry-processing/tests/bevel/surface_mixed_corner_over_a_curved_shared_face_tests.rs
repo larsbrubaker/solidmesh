@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerOverACurvedSharedFaceTests.cs`: the mixed corner the other way round,
+//! The mixed corner the other way round,
 //! where the face the two edges SHARE is the chorded wall and the wall nobody picked is the flat face.
 //! That is the LOBE's own wall picked as a face, "Every Chamfer Works.mcx"'s cylinder barrel, read
 //! off the merged outline alone (`lobed_prism_meshes`), whose rim turns over at each seam.
@@ -8,7 +8,7 @@
 //! tangent to facet `k`, so the cut is the chord standing on THAT facet and the chords between are
 //! swallowed by the blend (`surface_mixed_corner_cut_edge`). The blend is the same torus about the
 //! same axis, the turn still 67.5 degrees. The rim reading is the one
-//! `surface_mixed_corner_resting_on_a_crease_tests.rs` shares. C# `[Arguments]` rows are a loop.
+//! `surface_mixed_corner_resting_on_a_crease_tests.rs` shares. The parameter rows are a loop.
 
 use std::rc::Rc;
 

@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerRestingOnACreaseTests.cs`: the mixed corner over a chorded shared
+//! The mixed corner over a chorded shared
 //! face at a size whose bead RESTS ON A CREASE of it - the profile is tangent to neither facet's
 //! plane, so no chord's cylinder stands exactly `2r` from the bead's axis and the point the two
 //! cylinders touch at is on the crease line rather than on a facet.

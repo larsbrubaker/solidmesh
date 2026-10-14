@@ -1,9 +1,9 @@
-//! Port of `SectionCornerTests.cs`: THE CORNER SECTION on a box's top rim - four ninety degree
+//! THE CORNER SECTION on a box's top rim - four ninety degree
 //! corners, each one mitre both its strips read, symmetric whichever edge's canal draws it, ending
 //! at the offset-meet in the shared flat face and a setback down the fold; the strips between still
 //! the rolling ball's quarter cylinder; the whole rim assembled closed, one shell, removing what the
 //! legacy construction removes, wherever the box stands. The rim is reached through the FACE GROUP
-//! pick's own plan, built through the shared `SurfaceTestBuild` port.
+//! pick's own plan, built through the shared `surface_test_build`.
 
 use std::rc::Rc;
 
@@ -30,8 +30,8 @@ const RADIUS: f64 = 1.0;
 
 const SEGMENTS: i32 = 8;
 
-/// C# `TheRimRun`'s `out`s: the box, the run of sections the top face pick's own plan draws on it,
-/// and the mesh the construction this replaces builds from that same plan.
+/// What [`the_rim_run`] hands back: the box, the run of sections the top face pick's own plan draws
+/// on it, and the mesh the construction this replaces builds from that same plan.
 struct RimRun {
     part: Mesh,
     graph: MeshEdgeGraph,
@@ -296,7 +296,7 @@ fn the_rim_now_routes_to_the_sections() {
     );
 }
 
-/// C# `AwayInTheFlatFace`: the direction in the SHARED flat face, square to one chain edge and
+/// The direction in the SHARED flat face, square to one chain edge and
 /// pointing away from it - the rule's own `g = (c n - nOther) / sqrt(1 - c^2)`, written out here so
 /// the offset-meet is read against the formula and not against the builder's arithmetic.
 fn away_in_the_flat_face(edge: &ChainEdge, flat: Vector3, flat_on_the_left: bool) -> Vector3 {
@@ -312,7 +312,6 @@ fn away_in_the_flat_face(edge: &ChainEdge, flat: Vector3, flat_on_the_left: bool
     ((cosine * flat) - wall) / across
 }
 
-/// C# `Assemble`.
 fn assemble(motion: Matrix4X4) -> Mesh {
     let mut rim = the_rim_run(motion);
 
@@ -321,7 +320,7 @@ fn assemble(motion: Matrix4X4) -> Mesh {
     )
 }
 
-/// C# `TheRimRun`: the box, the run of sections the top face PICK's own plan draws on it, and the
+/// The box, the run of sections the top face PICK's own plan draws on it, and the
 /// mesh the construction this replaces builds from that same plan.
 ///
 /// The rim is reached through the FACE GROUP pick and not through a bare chain walk: three feature
@@ -388,7 +387,7 @@ fn the_rim_run(motion: Matrix4X4) -> RimRun {
     }
 }
 
-/// C# `TheTopRim`: an edge of the box's top rim - both ends on the top face.
+/// An edge of the box's top rim - both ends on the top face.
 fn the_top_rim(features: &FeatureEdgeSet) -> i32 {
     for (i, edge) in features.edges().iter().enumerate() {
         if edge.start.z > (SIDE / 2.0) - 1e-6 && edge.end.z > (SIDE / 2.0) - 1e-6 {

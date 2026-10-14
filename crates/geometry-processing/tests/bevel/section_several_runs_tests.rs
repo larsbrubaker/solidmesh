@@ -1,4 +1,4 @@
-//! Port of `SectionSeveralRunsTests.cs`: SEVERAL closed chains filleted in ONE pass of the
+//! SEVERAL closed chains filleted in ONE pass of the
 //! vertex-centric construction - both mouths of a bore, which is the smallest part where two runs'
 //! substitutions have to meet inside one triangle.
 //!

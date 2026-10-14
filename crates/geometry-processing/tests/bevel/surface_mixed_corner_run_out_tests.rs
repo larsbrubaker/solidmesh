@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerRunOutTests.cs`: the mixed corner's RUN-OUT on the L prism - past the
+//! The mixed corner's RUN-OUT on the L prism - past the
 //! bead's last turn the rolling ball goes on across the cap until it clears the wall nobody picked
 //! (sixty degrees on a flat wall, `acos(1/2)`), and its trim curve on that wall is the scallop.
 //!
@@ -337,7 +337,7 @@ fn the_turn_that_would_have_been(
     regions: &std::sync::Arc<FaceRegionCache>,
 ) -> f64 {
     let concave = one_planned_edge(regions, features, fixture::the_concave_edge(features));
-    // C# plans the convex edge on its own as well, and refuses the test if it does not plan.
+    // The convex edge must plan on its own as well; the test fails if it does not.
     let _convex = one_planned_edge(regions, features, the_sharp_notches_top_rim(features));
 
     (180.0 - concave.wedge_angle_degrees).to_radians()

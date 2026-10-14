@@ -1,4 +1,4 @@
-//! Port of `SurfaceFadingCreaseReadingTests.cs`: what an L prism whose inner corner fades into a
+//! What an L prism whose inner corner fades into a
 //! cone above its apex (`topology_test_meshes::create_l_prism_with_fading_inner_corner`) reads as -
 //! ONE 90 degree crease up to the apex, a flood that crosses the corner because every turn round the
 //! apex is under the 10 degree rung, a strip that narrows linearly to nothing where the wall's rim

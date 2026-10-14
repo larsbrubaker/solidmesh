@@ -1,4 +1,4 @@
-//! Port of `SurfaceMitreConsumesAChordTests.cs`: A MITRE THAT EATS A WHOLE CHORD ON SOME RAILS STILL
+//! A MITRE THAT EATS A WHOLE CHORD ON SOME RAILS STILL
 //! BUILDS. The half disc prism's rim turns 85.26 degrees where the diameter meets the arc, and the
 //! arc's first chord is only 1.6516 long, so from about 1.41 mm up the two mitres have crossed over
 //! on the rails nearest the flat face and the chord's strip is EATEN there. The two rings either
@@ -8,8 +8,8 @@
 //!
 //! From about 2.2 mm the diameter's band reaches past the SECOND chord as well, which is a
 //! construction of its own and still refused. Legacy-only: every test pins the sections router off
-//! (`pinned_to_the_legacy_construction`). C# `[Arguments]` rows are a loop. `half_disc_prism` is
-//! this class's (C# `internal`), shared with `surface_room_half_disc_rim_tests.rs`.
+//! (`pinned_to_the_legacy_construction`). The parameter rows are a loop. `half_disc_prism` is
+//! this file's, shared with `surface_room_half_disc_rim_tests.rs`.
 
 use std::sync::Arc;
 
@@ -124,7 +124,7 @@ fn two_chords_in_a_row_are_still_refused() {
     );
 }
 
-/// C# `TheEatenChordBuilt`: the size 2 answer, for the kernel to read
+/// The size 2 answer, for the kernel to read
 /// (`SurfaceResultImportsIntoManifoldTests`).
 pub fn the_eaten_chord_built() -> Mesh {
     let (_, built) = build(2.0);
@@ -136,7 +136,7 @@ pub fn the_eaten_chord_built() -> Mesh {
         .mesh
 }
 
-/// C# `AssertOneClosedSolid`: the gates every surface answer is held to, whatever it was built out
+/// The gates every surface answer is held to, whatever it was built out
 /// of.
 pub fn assert_one_closed_solid(result: &Mesh, mesh: &Mesh, size: f64) {
     let (closed, open_at) = surface_mesh_closure::is_closed(result);
@@ -169,7 +169,7 @@ pub fn assert_one_closed_solid(result: &Mesh, mesh: &Mesh, size: f64) {
     );
 }
 
-/// C# `Build`: the whole rim of the flat end built as the one closed chain it is - the source mesh
+/// The whole rim of the flat end built as the one closed chain it is - the source mesh
 /// and the builder's own answer.
 pub fn build(size: f64) -> (Mesh, Result<SurfaceBuilt, SurfaceBuildFailure>) {
     let mesh = half_disc_prism(FACETS, RADIUS, HEIGHT);
@@ -222,7 +222,7 @@ pub fn build(size: f64) -> (Mesh, Result<SurfaceBuilt, SurfaceBuildFailure>) {
     (mesh, result)
 }
 
-/// C# `HalfDiscPrism`: a half disc, drawn with `facets` chords on its arc and closed by its
+/// A half disc, drawn with `facets` chords on its arc and closed by its
 /// diameter, extruded along z. The corpus fixture's half cylinder in the kernel's own terms.
 pub fn half_disc_prism(facets: i32, radius: f64, height: f64) -> Mesh {
     let mut path = VertexStorage::new();

@@ -1,4 +1,4 @@
-//! Port of `SurfaceConcaveRunStopsSquareTests.cs`: the concave mirror of
+//! The concave mirror of
 //! `SurfacePartialRimRunTests` - a bead on ONE facet of a boss's foot, whose crease carries straight
 //! on past both of its ends in edges nobody picked. There is no face beyond either corner - the slab
 //! top's neighbour is the slab top and the wall's neighbour is the next wall facet a few degrees
@@ -7,8 +7,7 @@
 //!
 //! Measured on a chamfer, whose section is `d^2 / 2` exactly, and swept along one chord with two
 //! square ends - so what the bead adds is the prism `section x chord` and nothing else. No mitre
-//! term anywhere: a single facet has no corner of its own. C# `[Arguments]` rows are a loop over the
-//! same-named test.
+//! term anywhere: a single facet has no corner of its own. The parameter rows are a loop.
 
 use std::sync::Arc;
 

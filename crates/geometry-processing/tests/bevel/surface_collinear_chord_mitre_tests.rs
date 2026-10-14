@@ -1,4 +1,4 @@
-//! Port of `SurfaceCollinearChordMitreTests.cs`: ONE CREASE THE SOURCE'S OWN BOOLEAN CHORDED,
+//! ONE CREASE THE SOURCE'S OWN BOOLEAN CHORDED,
 //! beaded as the two mesh edges it really is - the upper right crease of the nose-in-notch part
 //! split at (12, 8, 12), picked whole, and met at that split as a corner the chain turns through
 //! NOTHING at. This is what "Center And Right Face.mcx" dies on.
@@ -7,7 +7,7 @@
 //! is where the two beads' tangent lines cross on the face they SHARE, and two pieces of ONE straight
 //! crease between the SAME two faces put both lines in the same place - so the corner itself is the
 //! point, and the normal is the sum of two equal walk directions: the square cut a straight run
-//! wants. C# `[Arguments]` rows are a loop.
+//! wants. The parameter rows are a loop.
 
 use std::sync::Arc;
 
@@ -58,7 +58,7 @@ fn a_crease_chorded_in_two_builds_what_the_whole_crease_builds() {
 
         assert!(
             (chorded_volume - whole_volume).abs() <= 1e-4,
-            "the two builds are of one solid - measured 4.2e-06 apart in C#: {chorded_volume} \
+            "the two builds are of one solid - measured 4.2e-06 apart: {chorded_volume} \
              against {whole_volume} (radius {radius})"
         );
 

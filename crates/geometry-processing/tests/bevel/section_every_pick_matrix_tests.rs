@@ -1,10 +1,10 @@
-//! Port of `SectionEveryPickMatrixTests.cs`: every pick a user could make on the raked bore cube
+//! Every pick a user could make on the raked bore cube
 //! (`inner_face_test_mesh`) - each coplanar face region, each distinct tangent chain, each straight
 //! edge between two axis-aligned faces - built at sizes 2 and 0.5 with the sections router off and
 //! on, and every failure held to a QUEUE: a queued pick that now builds must leave the queue, a pick
 //! outside it may not fail, and a queued pick failing a new way is a regression. Each corner's rows
 //! are also appended table-ready to `every-pick-matrix.txt` in `BEVEL_MATRIX_DIR` (or the temp
-//! directory), as C# writes them. C# `[Arguments]` rows are a loop.
+//! directory). The parameter rows are a loop inside one test.
 
 use std::collections::{HashMap, HashSet};
 
@@ -312,7 +312,7 @@ fn shape(resolution: &BevelEdgeGroupResolution) -> String {
     )
 }
 
-// `!(volume < source)` is C#'s reading, which takes a NaN volume as wrong.
+// `!(volume < source)` on purpose: a NaN volume counts as wrong.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn complaint_about(mesh: &Mesh, resolution: &BevelEdgeGroupResolution) -> Option<String> {
     let mut complaints = Vec::new();
@@ -445,7 +445,7 @@ pub(crate) fn show(value: &BevelAdvisoryArg) -> String {
     }
 }
 
-/// C#'s `({0:0.##}, {1:0.##}, {2:0.##})`, InvariantCulture - "-0" kept, as .NET writes it.
+/// A point as `(x, y, z)` with at most two decimals each, "-0" kept, for the matrix table.
 pub(crate) fn point(at: Vector3) -> String {
     format!(
         "({}, {}, {})",
@@ -463,7 +463,7 @@ fn cases(part: &Mesh) -> Vec<Pick> {
     picks.extend(chain_picks(part, &features));
     picks.extend(edge_picks(&features));
 
-    // C#'s OrderBy is stable, and StringComparer.Ordinal is byte order.
+    // A stable sort by the names' bytes, so the table's row order never depends on the platform.
     picks.sort_by(|a, b| a.name.cmp(&b.name));
 
     picks

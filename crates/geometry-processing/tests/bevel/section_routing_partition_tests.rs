@@ -1,8 +1,8 @@
-//! Port of `SectionRoutingPartitionTests.cs`: which PLANS of a pass the sections accept
+//! Which PLANS of a pass the sections accept
 //! (`partition`), where `is_simple` only answers for the pass as a whole. The plate with a round
 //! bore is the cheapest shape with both cases: the bore's mouth is closed, and a single edge of the
-//! plate's outer rim is an open run. C#'s `NotInParallel` guarded the static last route, which
-//! these tests do not read.
+//! plate's outer rim is an open run. These tests do not read the shared last route, so they run
+//! in parallel with the rest.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ const THICKNESS: f64 = 10.0;
 const SIZE: f64 = 0.4;
 const SEGMENTS: i32 = 8;
 
-/// C# `AClosedMouthIsAcceptedBesideAnOpenRunThatIsDeclined`: the mouth and one open rim edge in
+/// The mouth and one open rim edge in
 /// one pass - the partition takes the mouth and names the rim run's own clause, while the pass
 /// verdict is still a flat no carrying that same sentence.
 #[test]
@@ -56,7 +56,7 @@ fn a_closed_mouth_is_accepted_beside_an_open_run_that_is_declined() {
     assert_eq!(pass.why_not(), Some("a chain is not closed"));
 }
 
-/// C# `APassOfSimplePlansIsAcceptedWhole`: a pass every plan of which is simple is accepted whole,
+/// A pass every plan of which is simple is accepted whole,
 /// and says the same thing `is_simple` says about it.
 #[test]
 fn a_pass_of_simple_plans_is_accepted_whole() {
@@ -82,7 +82,7 @@ fn a_pass_of_simple_plans_is_accepted_whole() {
     );
 }
 
-/// C# `TwoChainsSharingTheirVerticesAreBothDeclined`: two chains that touch are BOTH declined, not
+/// Two chains that touch are BOTH declined, not
 /// one of them accepted - a vertex where another plan's picked edge arrives is a junction on the
 /// part, and the sections have no treatment for one. The mouth handed twice is the cheapest way to
 /// make every vertex such a vertex.
@@ -117,7 +117,7 @@ fn two_chains_sharing_their_vertices_are_both_declined() {
 }
 
 fn the_plate() -> Mesh {
-    // C#'s `land` defaults to 6.
+    // The fixture's default land is 6.
     create_plate_with_a_round_bore(SIDES, BORE_RADIUS, THICKNESS, 6.0)
 }
 
@@ -179,7 +179,7 @@ fn the_open_rim_edge_plan(
     plan_of(&chain, regions)
 }
 
-/// C#'s LINQ `Single()`.
+/// The one chain; fails on none or several.
 fn single(mut chains: Vec<BevelSweptChain>) -> BevelSweptChain {
     assert_eq!(chains.len(), 1, "exactly one chain");
     chains.remove(0)

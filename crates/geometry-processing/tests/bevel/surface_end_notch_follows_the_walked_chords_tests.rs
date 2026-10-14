@@ -1,4 +1,4 @@
-//! Port of `SurfaceEndNotchFollowsTheWalkedChordsTests.cs`: the END of a chain whose bevel ROLLED
+//! The END of a chain whose bevel ROLLED
 //! along a polygonal wall. The section the end cap gives up is not a wedge with two straight sides,
 //! because on the wall side the cap's own rim runs along the facets the walkback took off - whole
 //! chords of them - before it reaches the foot the strip stands on.

@@ -1,9 +1,9 @@
-//! The case pieces of `Tests/GeometryProcessingTests/SurfaceBevelRobustnessTests.cs` that
-//! `SectionRobustnessTests` takes by reference (C# widened them to `internal` for exactly this):
+//! The case pieces of the surface bevel robustness tests that `section_robustness_tests` reads
+//! too:
 //! the twelve-case matrix, the hanger's own splits, the bore's numbers, the case names and the
 //! upper-mouth pick. Kept in one place so a case cannot drift between the two tables.
 //!
-//! Also the class's own test, `ABoreMouthBevelsTheSameWhereverThePartStands`, which reads the
+//! Also this file's own test, `ABoreMouthBevelsTheSameWhereverThePartStands`, which reads the
 //! LEGACY construction (pinned through `pinned_to_the_legacy_construction`): each case built where
 //! it was made and at each rigid motion, every invariant read, and the answers held to the recorded
 //! ratchet table of today's construction.
@@ -83,7 +83,7 @@ pub fn splits_within(sides: i32) -> Vec<(i32, f64)> {
     taken
 }
 
-/// C# `NameOf`: `rake{rake:0} sides{sides} size{size:0.0} split|whole`.
+/// `rake{rake:0} sides{sides} size{size:0.0} split|whole`.
 pub fn name_of(rake: f64, sides: i32, size: f64, split: bool) -> String {
     format!(
         "rake{rake:.0} sides{sides} size{size:.1} {}",
@@ -279,8 +279,8 @@ const THE_FAILURES_OF_TODAYS_CONSTRUCTION: &[(&str, &str)] = &[
 ];
 
 /// Each case, built where it was made and at each of `rigid_motion_meshes::the_motions`, with
-/// every invariant read on each and the answers held to the recorded table. C#'s
-/// `[MethodDataSource]` rows are a loop; every motion of every case is read before anything is
+/// every invariant read on each and the answers held to the recorded table. The
+/// cases are a loop; every motion of every case is read before anything is
 /// asserted, so one row's disagreement does not hide the ones behind it.
 #[test]
 fn a_bore_mouth_bevels_the_same_wherever_the_part_stands() {
@@ -342,7 +342,7 @@ fn a_bore_mouth_bevels_the_same_wherever_the_part_stands() {
     );
 }
 
-/// C# `WhatIsBrokenBy`: builds one case stood by one motion through the legacy construction and
+/// Builds one case stood by one motion through the legacy construction and
 /// reads every invariant of the answer, with the answer's topology signature.
 fn what_is_broken_by(
     rake: f64,

@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerFixture.cs`: the L prism's mixed corner as every test of it asks for
+//! The L prism's mixed corner as every test of it asks for
 //! it - the two picked edges as one chain, the plan they make, the build, and the two numbers the
 //! corner's own closed form is written in.
 //!

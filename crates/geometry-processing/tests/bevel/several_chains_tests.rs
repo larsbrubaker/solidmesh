@@ -1,8 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SeveralChainsTests.cs`: a pick is a LIST of
-//! chains - the list of one is the single-chain call to the bit, every chain is read on the input
-//! mesh before anything is cut, two chains that touch refuse by name, and a pick of several valid
-//! chains is cut in one pass, its room read across the chains. The fixtures are
-//! `several_chains_fixtures.rs`. C# `[Arguments]` rows are loops over the same-named test.
+//! A pick is a LIST of chains - the list of one is the single-chain call to the bit, every chain is
+//! read on the input mesh before anything is cut, two chains that touch refuse by name, and a pick
+//! of several valid chains is cut in one pass, its room read across the chains. The fixtures are
+//! `several_chains_fixtures.rs`. Each parameter row is one pass of a loop in the test of the same
+//! name.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -26,11 +26,10 @@ use crate::several_chains_support::{
     room_of, shared_groups, to_chain,
 };
 
-/// C# `NeedleMovement`: how far a needle repair may move this fixture's volume - the one thing in
+/// How far a needle repair may move this fixture's volume - the one thing in
 /// the build that is not a split.
 const NEEDLE_MOVEMENT: f64 = 1e-3;
 
-/// C# `TheListOfOneAnswersBitForBitWhatTheChainAnswers`.
 #[test]
 fn the_list_of_one_answers_bit_for_bit_what_the_chain_answers() {
     for pick in ["cube top rim", "cylinder rim"] {
@@ -85,7 +84,6 @@ fn the_list_of_one_answers_bit_for_bit_what_the_chain_answers() {
     }
 }
 
-/// C# `TheListOfOneReadsTheSameRoom`.
 #[test]
 fn the_list_of_one_reads_the_same_room() {
     let (positions, indices, rim) = box_with_square_hole(2.0, 0.5, 1.0);
@@ -114,7 +112,6 @@ fn the_list_of_one_reads_the_same_room() {
     assert_eq!(as_list, one);
 }
 
-/// C# `TheFixturesAreClosedConsistentlyWoundSolids`.
 #[test]
 fn the_fixtures_are_closed_consistently_wound_solids() {
     for fixture in ["A", "B", "C"] {
@@ -145,7 +142,6 @@ fn the_fixtures_are_closed_consistently_wound_solids() {
     }
 }
 
-/// C# `EveryFixtureChainValidatesOnItsOwnMesh`.
 #[test]
 fn every_fixture_chain_validates_on_its_own_mesh() {
     for fixture in ["A", "B", "C"] {
@@ -166,7 +162,7 @@ fn every_fixture_chain_validates_on_its_own_mesh() {
     }
 }
 
-/// C# `ChainsThatShareAVertexAtACornerBuild`: the top rim and the side edge 4-0 meet at a CORNER,
+/// The top rim and the side edge 4-0 meet at a CORNER,
 /// so the pick is not refused as chains that touch; with `BandSideTagging.BothSidedMembersBuild`
 /// off (carried on the build's budget here) it refuses by its old name.
 #[test]
@@ -220,7 +216,6 @@ fn chains_that_share_a_vertex_at_a_corner_build() {
     assert!(!reading.chain_divides_sides);
 }
 
-/// C# `ChainsMeetingEndToEndRefuseByNameAndNameBoth`.
 #[test]
 fn chains_meeting_end_to_end_refuse_by_name_and_name_both() {
     let (positions, indices) = cube_solid(1.0);
@@ -258,7 +253,6 @@ fn chains_meeting_end_to_end_refuse_by_name_and_name_both() {
     assert_eq!(reading.offending_vertex, 6);
 }
 
-/// C# `AChainEdgeThatIsNotInTheMeshNamesItsChain`.
 #[test]
 fn a_chain_edge_that_is_not_in_the_mesh_names_its_chain() {
     let (positions, indices) = cube_solid(1.0);
@@ -284,7 +278,6 @@ fn a_chain_edge_that_is_not_in_the_mesh_names_its_chain() {
     assert_eq!(built.room, 0.0);
 }
 
-/// C# `ASingleChainsBadEdgeNamesChainZero`.
 #[test]
 fn a_single_chains_bad_edge_names_chain_zero() {
     let (positions, indices) = cube_solid(1.0);
@@ -305,8 +298,8 @@ fn a_single_chains_bad_edge_names_chain_zero() {
     assert_eq!(built.offending_chain, 0);
 }
 
-/// C# `EveryPickedSideLeavesItsOwnOneClosedLoop`: a pick of several chains is CUT, in one pass.
-/// See the C# remark for where [`NEEDLE_MOVEMENT`] comes from.
+/// A pick of several chains is CUT, in one pass.
+/// [`NEEDLE_MOVEMENT`] bounds the one volume change that is not a split.
 #[test]
 fn every_picked_side_leaves_its_own_one_closed_loop() {
     for (fixture, size) in [("A", 0.3), ("B", 0.5)] {
@@ -372,7 +365,6 @@ fn every_picked_side_leaves_its_own_one_closed_loop() {
     }
 }
 
-/// C# `TheSidesThatShareAFaceAreOneGroup`.
 #[test]
 fn the_sides_that_share_a_face_are_one_group() {
     let (positions, indices, chains) = named("A");
@@ -409,7 +401,6 @@ fn the_sides_that_share_a_face_are_one_group() {
         .all(|&v| (mesh.position(v).z - highest).abs() < 1e-9)));
 }
 
-/// C# `TwoBossesShareThePlatesFaceAndTravelWithThePart`.
 #[test]
 fn two_bosses_share_the_plates_face_and_travel_with_the_part() {
     let (positions, indices, chains) = named("B");
@@ -464,7 +455,6 @@ fn two_bosses_share_the_plates_face_and_travel_with_the_part() {
     }
 }
 
-/// C# `PermutingTheChainsPermutesNothingButTheirIndices`.
 #[test]
 fn permuting_the_chains_permutes_nothing_but_their_indices() {
     let (positions, indices, chains) = named("A");
@@ -491,7 +481,6 @@ fn permuting_the_chains_permutes_nothing_but_their_indices() {
     assert_eq!(point_set(&swapped), point_set(&as_picked));
 }
 
-/// C# `TheRefusalsAreTheSameWhereverThePartStands`.
 #[test]
 fn the_refusals_are_the_same_wherever_the_part_stands() {
     let (positions, indices, chains) = named("A");
@@ -533,7 +522,7 @@ fn the_refusals_are_the_same_wherever_the_part_stands() {
     assert_eq!(moved_touch.other_chain, still_touch.other_chain);
 }
 
-/// C# `TwoRimsCloseOnEachOtherAndThatSetsTheRoom`: fixture C's two rims close on EACH OTHER.
+/// Fixture C's two rims close on EACH OTHER.
 #[test]
 fn two_rims_close_on_each_other_and_that_sets_the_room() {
     let (positions, indices, chains) = named("C");
@@ -550,7 +539,6 @@ fn two_rims_close_on_each_other_and_that_sets_the_room() {
     assert_eq!(least, reading.room);
 }
 
-/// C# `TheRoomAsOfferedBuildsAndAHairAboveTheRoomRefusesBySize`.
 #[test]
 fn the_room_as_offered_builds_and_a_hair_above_the_room_refuses_by_size() {
     let (positions, indices, chains) = named("C");
@@ -591,7 +579,6 @@ fn the_room_as_offered_builds_and_a_hair_above_the_room_refuses_by_size() {
     assert_eq!(above.room_set_by, RoomSource::chain_to_chain(0, 1));
 }
 
-/// C# `TheReadingAndTheBuildNameTheSameRoom`.
 #[test]
 fn the_reading_and_the_build_name_the_same_room() {
     for fixture in ["A", "B", "C"] {
@@ -631,7 +618,6 @@ fn the_reading_and_the_build_name_the_same_room() {
     }
 }
 
-/// C# `TheRoomDoesNotDependOnTheOrderOfThePick`.
 #[test]
 fn the_room_does_not_depend_on_the_order_of_the_pick() {
     for fixture in ["A", "B", "C"] {
@@ -655,7 +641,6 @@ fn the_room_does_not_depend_on_the_order_of_the_pick() {
     }
 }
 
-/// C# `TheRoomIsTheSameWhereverThePartStands`.
 #[test]
 fn the_room_is_the_same_wherever_the_part_stands() {
     for fixture in ["A", "B", "C"] {
@@ -670,7 +655,6 @@ fn the_room_is_the_same_wherever_the_part_stands() {
     }
 }
 
-/// C# `TwoBossesAreBoundedByTheGapBetweenThem`.
 #[test]
 fn two_bosses_are_bounded_by_the_gap_between_them() {
     let (positions, indices, chains) = named("B");
@@ -680,7 +664,6 @@ fn two_bosses_are_bounded_by_the_gap_between_them() {
     assert_eq!(reading.room_set_by.kind, RoomReadingKind::ChainToChain);
 }
 
-/// C# `TheStripBetweenTheRimsSetsFixtureAsRoom`.
 #[test]
 fn the_strip_between_the_rims_sets_fixture_as_room() {
     let (positions, indices, chains) = named("A");
@@ -700,7 +683,6 @@ fn the_strip_between_the_rims_sets_fixture_as_room() {
     }
 }
 
-/// C# `AChainsForeignRoomIsTheSamePickedAloneOrTogether`.
 #[test]
 fn a_chains_foreign_room_is_the_same_picked_alone_or_together() {
     for chain in [0, 1] {
@@ -722,7 +704,7 @@ fn a_chains_foreign_room_is_the_same_picked_alone_or_together() {
             .iter()
             .filter(|c| c.source == RoomSource::foreign(chain))
             .collect();
-        assert_eq!(together.len(), 1, "C#'s Single");
+        assert_eq!(together.len(), 1, "exactly one");
 
         assert_eq!(together[0].room, alone);
     }

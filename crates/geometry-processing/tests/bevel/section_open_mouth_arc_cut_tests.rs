@@ -1,4 +1,4 @@
-//! Port of `SectionOpenMouthArcCutTests.cs`: THE OPEN ARC'S SMOOTH SIDE IS CUT. The 40-edge top
+//! THE OPEN ARC'S SMOOTH SIDE IS CUT. The 40-edge top
 //! mouth arc of [`crate::inner_face_test_mesh`] (read through [`crate::open_mouth_arc_walk`]) runs
 //! between two `SectionKind::End` sections, so its boundary is a PATH and not a cycle: it starts at
 //! one end's wall-side landing and stops at the other's, and the band is closed off by the creases

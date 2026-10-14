@@ -1,4 +1,4 @@
-//! Port of `SectionHandoverCornerTests.cs`: THE MIXED HANDOVER CORNER of "Every Chamfer Works.mcx"
+//! THE MIXED HANDOVER CORNER of "Every Chamfer Works.mcx"
 //! on the part's own mesh ([`crate::handover_corner_test_mesh`]) - the mitred side and the barrel
 //! picked together, whose rims hand over at (-10.77, 28, 0) where the bottom cap's rim chord turns
 //! straight up the concave seam.
@@ -6,9 +6,9 @@
 //! The router declines that corner (unequal wedges on a shared smooth side, convex into concave) and
 //! legacy builds the pair; the two canals' axes meet in a plane 1.26 radii off the vertex, so the
 //! corner is not a mitre; legacy answers it with the cap-riding run-out and refuses the dual canal.
-//! Built through the shared `SurfaceTestBuild` port with the sections flag pinned on.
+//! Built through the shared `surface_test_build` with the sections flag pinned on.
 //!
-//! Skipped as in C# (`[Skip]`):
+//! Not run (each still open):
 //! - `ThePairIsRoutedToTheSectionsAndBuildsClosed`: "RED: the sections have no mixed handover
 //!   corner - unequal wedges on a shared smooth side, convex into concave, and no run-out past it
 //!   (SurfaceMixedCornerRunOut for legacy)".
@@ -61,7 +61,7 @@ fn the_router_declines_the_handover_corner_and_legacy_builds_the_pair() {
     }
 }
 
-/// THE READING of the corner the app's refusal names - every number in the class remarks is
+/// THE READING of the corner the app's refusal names - every number the file header quotes is
 /// asserted here.
 #[test]
 fn the_corner_is_a_mixed_handover_on_the_barrels_own_facet() {
@@ -299,8 +299,8 @@ fn the_two_canals_axes_meet_and_the_mitre_is_nowhere_near_the_corner() {
 
 /// WHAT LEGACY ACTUALLY DRAWS at the handover corner, read through its own corner reading rather
 /// than guessed from the class names: the cap-riding corner with a 60 degree run-out, the dual canal
-/// readable and refused. Every number in the class remarks' three legacy paragraphs is asserted
-/// here.
+/// readable and refused. Every number the file header's three legacy paragraphs quote is
+/// asserted here.
 #[test]
 fn legacy_answers_the_corner_with_a_cap_riding_run_out_and_refuses_the_dual_canal() {
     let part = fixture::the_part();
@@ -394,7 +394,7 @@ fn legacy_answers_the_corner_with_a_cap_riding_run_out_and_refuses_the_dual_cana
     );
 }
 
-/// What C#'s `BuildWithTheFlagOn` hands back through its `out`s.
+/// What [`build_with_the_flag_on`] hands back.
 struct FlagOnBuild {
     plans: Vec<Rc<SurfaceBevelPlan>>,
     /// The mesh, or the advisory (`None` where nothing was named).
@@ -402,7 +402,7 @@ struct FlagOnBuild {
     route: Option<String>,
 }
 
-/// C# `BuildWithTheFlagOn`: the two picks built the part builder's own way, with the sections flag
+/// The two picks built the part builder's own way, with the sections flag
 /// on.
 fn build_with_the_flag_on() -> FlagOnBuild {
     let part = fixture::the_part();
@@ -428,7 +428,7 @@ fn build_with_the_flag_on() -> FlagOnBuild {
     }
 }
 
-/// C# `TheBarrelPlanAndTheHandoverIndex`: the barrel's own plan and the index of the turn that
+/// The barrel's own plan and the index of the turn that
 /// stands on the handover corner.
 fn the_barrel_plan_and_the_handover_index(
     plans: &[Rc<SurfaceBevelPlan>],
@@ -450,7 +450,7 @@ fn the_barrel_plan_and_the_handover_index(
     );
 }
 
-/// C# `TheTurnAtTheHandoverCorner`: the one planned turn that stands on the station the app's
+/// The one planned turn that stands on the station the app's
 /// refusals name.
 fn the_turn_at_the_handover_corner(plans: &[Rc<SurfaceBevelPlan>]) -> (ChainEdge, ChainEdge) {
     for plan in plans {

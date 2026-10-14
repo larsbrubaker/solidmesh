@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedJunctionBuildTests.cs`: the L prism's JUNCTION, BUILT - the mesh the two
+//! The L prism's JUNCTION, BUILT - the mesh the two
 //! cuts, the bead and the torus between them publish, measured against the closed forms the
 //! reading derives (`surface_mixed_three_edge_corner_tests`, whose plan and strip helpers these
 //! share). The reading's tests are pure; these run the whole pass at three samplings and measure

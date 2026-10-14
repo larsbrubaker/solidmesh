@@ -1,4 +1,4 @@
-//! Port of `SurfaceRollAcrossTheWallTests.cs`: the bevel ROLLED along a polygonal wall, on the half
+//! The bevel ROLLED along a polygonal wall, on the half
 //! disc's upright seam - the fillet is tangent to the chord face and to the one facet of the arc it
 //! actually touches, which past the first facet is not the facet the seam is on
 //! (`SurfaceRollAcrossTheWall`).
@@ -555,7 +555,7 @@ fn the_wall_foot_moves_forward_through_every_size_across_a_crease() {
     let mut reached = 0.0;
     let mut rested = 0;
 
-    // C#'s own accumulating step, so the radii are the same doubles.
+    // An accumulating step, so the radii are the same doubles on every run.
     let mut size = 1.0;
     while size <= 5.0001 {
         let plan = try_lobe_seam_plan_of(&prism, size).unwrap_or_else(|reason| {
@@ -786,7 +786,7 @@ fn at_the_seam(point: Vector3) -> bool {
 }
 
 /// The facet of the mesh the point stands INSIDE, or -1 where it stands on none of them.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: it refuses a NaN as well.
 fn facet_under(mesh: &Mesh, point: Vector3) -> i32 {
     for face in 0..mesh.faces.len() as i32 {
         let corners = corners_of(mesh, face);

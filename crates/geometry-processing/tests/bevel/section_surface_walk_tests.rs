@@ -1,4 +1,4 @@
-//! Port of `SectionSurfaceWalkTests.cs`, its ROOF half: `section_surface_walk` - a straight line
+//! The surface walk's ROOF tests: `section_surface_walk` - a straight line
 //! laid ON a faceted surface - read against a closed form. Two 10 x 10 panels hinged along the y
 //! axis with 7.5 degrees between their normals (the tapered barrel's own fold angle,
 //! `section_surface_walk_roof`); unfolded, the pair is one flat plane, so a walk of distance d from
@@ -525,7 +525,7 @@ fn a_join_from_a_point_on_the_hinge_into_the_other_panel_is_laid() {
     }
 }
 
-/// A walk C# reads as `true`, failing with its refusal otherwise.
+/// A walk that must succeed, failing the test with its refusal otherwise.
 fn walk_or_say(
     roof: &Mesh,
     graph: &MeshEdgeGraph,

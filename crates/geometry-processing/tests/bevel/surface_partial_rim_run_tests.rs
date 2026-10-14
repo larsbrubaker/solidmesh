@@ -1,4 +1,4 @@
-//! Port of `SurfacePartialRimRunTests.cs`: rung 5 of the polygon-space bevel plan, the partial rim
+//! Rung 5 of the polygon-space bevel plan, the partial rim
 //! run - two and four contiguous rim edges of a 64 sided cylinder, where the chain stops in the
 //! middle of a run at BOTH ends and turns a corner in between.
 //!
@@ -10,7 +10,7 @@
 //! `w L - w^2 tan(gamma/2)` per interior vertex, so integrating over the profile gives
 //! `V = S L - (k - 1) tan(gamma / 2) M`, with `S = integral w dy` the section and
 //! `M = integral w^2 dy`. Both are read off the CHORDED profile, so the tessellation is in the
-//! expectation rather than in the tolerance. C# `[Arguments]` rows are a loop.
+//! expectation rather than in the tolerance. The parameter rows are a loop.
 
 use std::sync::Arc;
 
@@ -282,8 +282,7 @@ fn build(edges: i32, size: f64, round_profile: bool, segments_per_quarter: i32) 
 }
 
 /// A run of `count` rim edges at height `top` that join end to end, walked off the rim from
-/// wherever the first one happens to be (C#'s `ContiguousRimEdges`, and the same walk
-/// `BuildOnACube` makes inline).
+/// wherever the first one happens to be (the same walk the cube builds make).
 fn contiguous_run(features: &FeatureEdgeSet, top: f64, count: usize) -> Vec<FeatureEdge> {
     let rim: Vec<FeatureEdge> = features
         .edges()

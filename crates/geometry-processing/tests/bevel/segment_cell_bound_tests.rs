@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SegmentCellBoundTests.cs`: the island search's
+//! The island search's
 //! chain-segment cell bound is SOUND - over seeded random cells it never stands under a value the
 //! field really takes inside the cell - and it bites: it stands below the Lipschitz bound often.
 

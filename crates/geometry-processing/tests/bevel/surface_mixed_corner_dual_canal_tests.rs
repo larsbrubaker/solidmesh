@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerDualCanalTests.cs`: the leaning one-crease mixed corner of the
+//! The leaning one-crease mixed corner of the
 //! nose-in-notch part read WHOLE - the canal carried past the end of the cut's own strip until it
 //! dies on the crease the cap and the wall meet in.
 

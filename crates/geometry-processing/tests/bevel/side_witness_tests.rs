@@ -1,4 +1,4 @@
-//! Port of `LevelLine/SideWitnessTests.cs`: a side's survival is decided by a VERTEX, not inside a
+//! A side's survival is decided by a VERTEX, not inside a
 //! search tolerance - right up against its room a pick still builds one closed loop a side, and a
 //! pick with room to spare never takes the path at all.
 
@@ -19,7 +19,7 @@ use crate::{raked_box_fixture, several_chains_fixtures};
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Pick`: one pick, built at any size and with the room either read or handed in.
+/// One pick, built at any size and with the room either read or handed in.
 struct Pick {
     name: String,
     build_with: Box<dyn Fn(f64, Option<f64>) -> BandGapResult>,
@@ -28,7 +28,6 @@ struct Pick {
     probe: f64,
 }
 
-/// C# `PickNamed`.
 fn pick_named(name: &str, motion: Option<Matrix4X4>, scale: f64) -> Pick {
     match name {
         "cube-top-rim" => {
@@ -91,7 +90,7 @@ fn pick_named(name: &str, motion: Option<Matrix4X4>, scale: f64) -> Pick {
     }
 }
 
-/// C# `Moved`: the same pick on the same part, optionally turned and scaled - the part moves, not
+/// The same pick on the same part, optionally turned and scaled - the part moves, not
 /// the pick.
 #[allow(clippy::too_many_arguments)]
 fn moved(
@@ -133,13 +132,12 @@ fn moved(
         }),
         profile,
         segments,
-        // The size the room is first read at scales with the part (C#'s note on the span-over-size
-        // cost law).
+        // The size the room is first read at scales with the part, because the search's cost grows
+        // with the part's span over the size.
         probe: scale,
     }
 }
 
-/// C# `EverySizeUnderTheRoomKeepsItsLoop`.
 #[test]
 fn every_size_under_the_room_keeps_its_loop() {
     for name in [
@@ -153,7 +151,6 @@ fn every_size_under_the_room_keeps_its_loop() {
     }
 }
 
-/// C# `ATurnedOrScaledPartKeepsTheSamePromise`.
 #[test]
 fn a_turned_or_scaled_part_keeps_the_same_promise() {
     for name in ["internal-fillet-face8-r1", "cube-top-rim"] {
@@ -167,7 +164,6 @@ fn a_turned_or_scaled_part_keeps_the_same_promise() {
     }
 }
 
-/// C# `ABuildWithRoomToSpareNeverLooksForAWitness`.
 #[test]
 fn a_build_with_room_to_spare_never_looks_for_a_witness() {
     for name in [
@@ -190,7 +186,6 @@ fn a_build_with_room_to_spare_never_looks_for_a_witness() {
     }
 }
 
-/// C# `ABoxRimAtItsRoomIsStillOneLoopASide`.
 #[test]
 fn a_box_rim_at_its_room_is_still_one_loop_a_side() {
     let pick = pick_named("cube-top-rim", None, 1.0);
@@ -213,7 +208,7 @@ fn a_box_rim_at_its_room_is_still_one_loop_a_side() {
     }
 }
 
-/// C# `BuildsUpAgainstItsRoom`: builds at the fractions of the room where a side is at its
+/// Builds at the fractions of the room where a side is at its
 /// thinnest, both ways round.
 fn builds_up_against_its_room(pick: &Pick) {
     let read = (pick.build_with)(pick.probe, None);

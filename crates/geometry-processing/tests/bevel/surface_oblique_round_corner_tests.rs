@@ -1,4 +1,4 @@
-//! Port of `SurfaceObliqueRoundCornerTests.cs`: a ROUND corner where the three wedges are all
+//! A ROUND corner where the three wedges are all
 //! different. `skew_ridge_solid`'s skew ends at 112, 142 and 146 degrees, whose three rim arcs sweep
 //! 68, 38 and 34 degrees and so are chorded 6, 3 and 3 times at eight segments to the quarter. The
 //! square corner's grid needs all three counts equal; this corner has no such grid and is built as
@@ -8,7 +8,7 @@
 //! zipper, which lets a row of three chords hand over to a row of four without a sliver.
 //! `surface_corner_tests.rs` holds the square corner, which this construction has to leave exactly
 //! as it was, and `the_octant_is_unchanged` is that promise written down as the octant's own face
-//! list. C# `[Arguments]` rows are a loop.
+//! list. The parameter rows are a loop.
 
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -146,7 +146,7 @@ fn no_face_is_emitted_twice() {
     for segments_per_quarter in [2, 8, 16] {
         let built = rounded(RIDGE_LENGTH, segments_per_quarter);
 
-        // C#'s GroupBy keeps the groups in the order their first face was met.
+        // Groups kept in the order their first face was met, so the listing is stable.
         let mut order: Vec<(i32, i32, i32)> = Vec::new();
         let mut groups: HashMap<(i32, i32, i32), Vec<&Face>> = HashMap::new();
 
@@ -191,8 +191,7 @@ fn the_rounded_skew_ridge_is_one_closed_shell_the_kernel_takes() {
     assert!(built.is_manifold());
     assert_eq!(shell_count(&built), 1);
 
-    // C# imports with `Manifold.FromMeshGL64Robust` on `SurfaceResultImportsIntoManifoldTests
-    // .AsMeshGL64`: the strict import, the same marshalling with no weld-and-retry.
+    // The strict import, with no weld-and-retry, so a seam the build left open is not healed here.
     let imported = manifold_import::import_strict(&built).unwrap_or_else(|rejected| {
         panic!(
             "the kernel is the next thing to read a fillet after the builder publishes it - \
@@ -237,7 +236,7 @@ fn it_keeps_exactly_what_its_own_chord_planes_keep() {
     }
 }
 
-/// C# `TheFaceListOf`: the mesh's faces as one string - each face's three corners in published
+/// The mesh's faces as one string - each face's three corners in published
 /// order, rounded to a nanometre - hashed, with the face count after a slash.
 pub fn the_face_list_of(mesh: &Mesh) -> String {
     let mut said = String::new();

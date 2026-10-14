@@ -1,4 +1,4 @@
-//! Port of `SurfaceRakedBoreBlendSeamTests.cs`, a part of the partial class `SurfaceBoreMouthTests`:
+//! One part of the bore mouth tests:
 //! THE BLEND'S OWN SEAM at the raked mouth - no edge of the built mouth is used by two faces walking
 //! it the SAME way round, which is a piece laid alongside its neighbour rather than sewn to it, a
 //! different fault from a hole and counted apart from one. The raked fixture's constants are in

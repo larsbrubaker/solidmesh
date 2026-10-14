@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomBarrelWallReadingTests.cs`: A FOOTPRINT ON THE FAR SIDE OF A CURVED WALL IS
+//! A FOOTPRINT ON THE FAR SIDE OF A CURVED WALL IS
 //! NOT IN FRONT OF A BAND. The legacy room (`surface_room::largest_fitting`) once read across the
 //! tapered barrel and refused the wall's own 0.5 fillet, quoting 0.4098, for a pair of cuts a
 //! quarter turn apart: a BAND off one bore mouth on the +x side paired against another plan's

@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomMitreWindowTests.cs`: the window a band really occupies along its own edge -
+//! The window a band really occupies along its own edge -
 //! not the edge's span, but the span its MITRES leave it - read on a cap with a V notched into one
 //! side and a tongue hanging over the other, whose foot stands 10 mm short of the notch's apex.
 //!
@@ -9,7 +9,7 @@
 //! past the tongue's foot with nothing leaning towards it, so the cap takes 5 mm and closes.
 //!
 //! Legacy-only: every test pins the sections router off (`pinned_to_the_legacy_construction`).
-//! C# `[Arguments]` rows are a loop.
+//! The parameter rows are a loop.
 
 use std::rc::Rc;
 use std::sync::Arc;

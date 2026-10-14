@@ -1,10 +1,9 @@
-//! Port of the second half of `SectionPiercedFaceTests.Junction.cs` (the partial class
-//! `SectionPiercedFaceTests`), split from [`crate::section_pierced_face_junction_tests`] only for
-//! length: the junction's place in a whole RUN of the pierced top face's 45 edge chain - the builder
-//! keeping both junctions and every other station untouched, the face rebuild and loft closing
-//! round them, each wall end placed in (and standing on) its own wall, and the split station beside
-//! a junction laid on the carried wall end. The class's helpers are
-//! [`crate::section_pierced_face_readings`].
+//! The second half of the pierced face's junction tests, split from
+//! [`crate::section_pierced_face_junction_tests`] only for length: the junction's place in a whole
+//! RUN of the pierced top face's 45 edge chain - the builder keeping both junctions and every other
+//! station untouched, the face rebuild and loft closing round them, each wall end placed in (and
+//! standing on) its own wall, and the split station beside a junction laid on the carried wall end.
+//! The class's helpers are [`crate::section_pierced_face_readings`].
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -26,15 +25,15 @@ use crate::section_pierced_face_readings::{
 
 /// The index-weighted sums of every ORDINARY station's profile points, pinned so that a later change
 /// to the junction wiring cannot move a point the junction does not own. Measured at
-/// `Radius = 0.5` with 8 segments on the pierced top face (re-measured in C# on 2026-09-18 when a
-/// split station beside a junction was given a walk of its own).
+/// `Radius = 0.5` with 8 segments on the pierced top face (measured with the split station beside a
+/// junction walking on its own).
 const ORDINARY_STATIONS_DIGEST_X: f64 = -576078.6491500206;
 
 const ORDINARY_STATIONS_DIGEST_Y: f64 = -1642863.3466091815;
 
 const ORDINARY_STATIONS_DIGEST_Z: f64 = 884771.0926676003;
 
-/// C# `TheSameWallDot`: how nearly a place's face must lie with the wall it is claimed to be in. A
+/// How nearly a place's face must lie with the wall it is claimed to be in. A
 /// wall may be TESSELLATED - the bore at this part's junctions steps 7.5 degrees a facet, and P2's
 /// walk lands one facet round from the wall the junction names, reading 0.9877 - while the FOLD to
 /// the other wall turns 87 degrees, reading 0.0555. This sits in the wide gap between the two.
@@ -396,8 +395,8 @@ fn each_junctions_wall_ends_are_placed_in_their_own_walls() {
 /// The far - tessellated - wall's end is the tangency on the canal's IDEAL wall; the whole far
 /// stretch is carried OUT onto the facet that holds it
 /// (`SectionJunction.TryCarryTheFarStretchOntoTheFacets`), each sample keeping its sweep parameter
-/// and its direction from the far canal's axis. C#'s `[Arguments(Radius)]` and
-/// `[Arguments(2 * Radius)]` rows are a loop.
+/// and its direction from the far canal's axis. Read at `RADIUS` and at `2 * RADIUS`, in a
+/// loop.
 #[test]
 fn each_junctions_wall_ends_stand_on_the_parts_surface() {
     for radius in [RADIUS, 2.0 * RADIUS] {
@@ -522,7 +521,7 @@ fn a_split_station_beside_a_junction_is_laid_on_the_carried_wall_end() {
 }
 
 /// The run the builder draws for the pierced face's plan through vertex 19, with the operation's
-/// own feature reading - C#'s `SectionBuilder.TryBuild(plan, ..., features)`, asserted to build.
+/// own feature reading, asserted to build.
 pub(crate) fn the_run(part: &Mesh, radius: f64, segments: i32) -> (SectionRun, SectionPool) {
     let graph = part.get_mesh_edge_graph();
     let (plans, _, _) = the_plans(part, None);
@@ -549,7 +548,7 @@ pub(crate) fn the_run(part: &Mesh, radius: f64, segments: i32) -> (SectionRun, S
     (run, pool)
 }
 
-/// C#'s `plans.Single(one => one.Edges.Any(edge => edge.Edge.FromVertex == 19))`.
+/// The one plan with an edge leaving vertex 19; fails on none or several.
 pub(crate) fn the_plan_through_19(plans: &[Rc<SurfaceBevelPlan>]) -> Rc<SurfaceBevelPlan> {
     let found: Vec<&Rc<SurfaceBevelPlan>> = plans
         .iter()
@@ -561,7 +560,7 @@ pub(crate) fn the_plan_through_19(plans: &[Rc<SurfaceBevelPlan>]) -> Rc<SurfaceB
     Rc::clone(found[0])
 }
 
-/// C# `TheNormalOfThePlace`: the unit normal of the face a place names - or, where the place is on a
+/// The unit normal of the face a place names - or, where the place is on a
 /// mesh EDGE, of whichever of that edge's two faces stands nearest the wall asked about.
 fn the_normal_of_the_place(
     part: &Mesh,
@@ -586,7 +585,7 @@ fn the_normal_of_the_place(
     best
 }
 
-/// C# `TheShellCountOf`: how many connected pieces a face list falls into, joined by shared corner
+/// How many connected pieces a face list falls into, joined by shared corner
 /// index.
 fn the_shell_count_of(faces: &Faces) -> usize {
     let mut up_from: HashMap<i32, i32> = HashMap::new();
@@ -633,7 +632,7 @@ fn the_shell_count_of(faces: &Faces) -> usize {
     roots.len()
 }
 
-/// C# `TheDirectedEdgesOf`: every directed edge of a face list, with how many faces lay it.
+/// Every directed edge of a face list, with how many faces lay it.
 fn the_directed_edges_of(faces: &Faces) -> HashMap<(i32, i32), i32> {
     let mut laid = HashMap::with_capacity(3 * faces.len());
 
@@ -646,7 +645,7 @@ fn the_directed_edges_of(faces: &Faces) -> HashMap<(i32, i32), i32> {
     laid
 }
 
-/// C# `TheSameTriangle`: whether one face is the given triangle of pool indices, up to rotation but
+/// Whether one face is the given triangle of pool indices, up to rotation but
 /// not winding.
 fn the_same_triangle(face: (i32, i32, i32), triangle: &[i32; 3]) -> bool {
     (face.0 == triangle[0] && face.1 == triangle[1] && face.2 == triangle[2])
@@ -654,7 +653,7 @@ fn the_same_triangle(face: (i32, i32, i32), triangle: &[i32; 3]) -> bool {
         || (face.2 == triangle[0] && face.0 == triangle[1] && face.1 == triangle[2])
 }
 
-/// C# `TheJunctionStationsOf`: the stations of a run whose vertex the junction predicate reads as a
+/// The stations of a run whose vertex the junction predicate reads as a
 /// junction.
 fn the_junction_stations_of(run: &SectionRun) -> Vec<i32> {
     (0..run.count())
@@ -665,7 +664,7 @@ fn the_junction_stations_of(run: &SectionRun) -> Vec<i32> {
         .collect()
 }
 
-/// C# `TheDistanceToThePartsSurface`: how far a point stands off the part's skin, read as the
+/// How far a point stands off the part's skin, read as the
 /// nearest face whose own triangle holds the point's projection.
 fn the_distance_to_the_parts_surface(part: &Mesh, at: Vector3) -> f64 {
     let mut nearest = f64::MAX;
@@ -694,7 +693,7 @@ fn the_distance_to_the_parts_surface(part: &Mesh, at: Vector3) -> f64 {
     nearest
 }
 
-/// C# `TheDepthInsideThePart`: how far INTO the material a point stands, read as the faces whose
+/// How far INTO the material a point stands, read as the faces whose
 /// own triangle holds its projection; a point standing proud of the skin reads 0.
 fn the_depth_inside_the_part(part: &Mesh, at: Vector3) -> f64 {
     let mut nearest_signed = f64::MIN;
@@ -717,7 +716,7 @@ fn the_depth_inside_the_part(part: &Mesh, at: Vector3) -> f64 {
     }
 }
 
-/// C# `TheDistanceToThePlaneOf`: how far a point stands off one face's own plane.
+/// How far a point stands off one face's own plane.
 fn the_distance_to_the_plane_of(part: &Mesh, face: i32, at: Vector3) -> f64 {
     let a = Vector3::from_vector3_float(part.vertices[part.faces[face as usize].v0 as usize]);
 

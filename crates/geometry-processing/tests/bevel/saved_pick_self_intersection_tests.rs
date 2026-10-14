@@ -1,8 +1,8 @@
-//! Port of `LevelLine/SavedPickSelfIntersectionTests.cs`: whole saved picks the app's level-line
+//! Whole saved picks the app's level-line
 //! route built closed and then dropped for the existing Surface construction because the answer
 //! intersects itself where the source did not (`BevelSurfacePartBuilder`'s
 //! `TheAnswerIntersectsItselfWhereTheSourceDidNot`). Each fixture is the pick the route hands the
-//! kernel. C# `[Arguments]` rows are loops over the same-named test.
+//! kernel. Each parameter row is one pass of a loop in the test of the same name.
 
 use std::rc::Rc;
 
@@ -14,8 +14,8 @@ use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::sweep_mesh_measures;
 
-/// C#'s `BandGap.Build(fixture..., 0, 1e-9, null, SeamEpsilon, SharpTurnDegrees, Segments)` on the
-/// whole pick, then `GapFill.Fill`; the band's refusal is checked where C# checks it.
+/// The band built over the whole pick at the fixture's size, then filled; with `check_band` the
+/// band must not have refused, so a refusal fails here rather than as an empty fill.
 fn build_and_fill(fixture: &Rc<LevelLineFixture>, check_band: bool) -> GapFillResult {
     let all: Vec<usize> = (0..fixture.chains.len()).collect();
     let gap = build_chains(fixture, &all, fixture.size, &as_saved(fixture, None));
@@ -59,8 +59,8 @@ fn at_the_saved_size_the_whole_pick_does_not_intersect_itself() {
     }
 }
 
-/// The distinct vertices of the fill's kept triangles, in first-use order (C#'s
-/// `Kept(...).SelectMany(...).Distinct()`).
+/// The distinct vertices of the fill's kept triangles, in first-use order, so the
+/// listing reads the same on every run.
 fn used_vertices(kept: &[(i32, i32, i32)]) -> Vec<i32> {
     let mut seen = std::collections::HashSet::new();
     kept.iter()

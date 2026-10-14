@@ -1,4 +1,4 @@
-//! Port of `SurfaceEndWhereTheFaceCarriesOnTests.cs`: the chain end that finishes at the REFLEX
+//! The chain end that finishes at the REFLEX
 //! corner of an L shaped face, where the face the bevel is walking back carries straight on past
 //! the corner instead of stopping there.
 //!

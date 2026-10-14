@@ -1,13 +1,13 @@
-//! Port of `SurfaceMixedCornerSectionStandsOnThePlaneTests.cs`: the SECTION the face across gives up
+//! The SECTION the face across gives up
 //! where the wall runs out has to stand ON that face's plane - not a ruler outside the part, which is
 //! where the crossing turn used to put it.
 //!
 //! A row of the runout is carried round to the turn its own circle crosses that plane at
 //! (`surface_mixed_corner_wall_ends::where_it_crosses`), solved in the circle's own frame. That
 //! frame once leaned half a hundredth of a radian off the tangent, the turn came out short, and the
-//! row landed up to a ruler past the plane - the speckle of radii the short wall would not close at.
-//! Read here as the surface's own statement rather than as a closed mesh. C# `[Arguments]` rows are
-//! a loop.
+//! row landed up to a ruler past the plane - the speckle of radii the short wall would not close
+//! at. Read here as the surface's own statement rather than as a closed mesh. The parameter rows
+//! are a loop.
 
 use std::f64::consts::PI;
 use std::rc::Rc;

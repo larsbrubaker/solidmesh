@@ -1,4 +1,4 @@
-//! Ports `GeometryProcessingTests/SurfaceCrossedEndCarriesWhatStandsBeforeTheFootTests.cs`: a band
+//! A band
 //! whose end stands over a run-out's crossing sews its last chord to the crossing's FOOT, and the
 //! stretch of the section's rim between that foot and the rail beside it is a chord like any other:
 //! the end face's own triangulation crosses it, and the end cut leaves a vertex where it does. The
@@ -6,8 +6,8 @@
 //! carries it split - a T junction on the seam, and an open cap
 //! (`SurfaceEndCutAboveTheCrossing.TheBetweens`).
 //!
-//! The numbers are the ones measured on "Every Chamfer Works.mcx" at r = 3.756. C#'s
-//! `IsEquivalentTo` is checked here as exact equality, which holds the order the strip sews in too.
+//! The numbers are the ones measured on "Every Chamfer Works.mcx" at r = 3.756. They
+//! are checked as exact equality, which holds the order the strip sews in too.
 
 use geometry_processing::bevel::surface::surface_end_cut_above_the_crossing::{
     the_betweens, THE_FOOT,

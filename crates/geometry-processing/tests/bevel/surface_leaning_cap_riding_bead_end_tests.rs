@@ -1,4 +1,4 @@
-//! Port of `SurfaceLeaningCapRidingBeadEndTests.cs`: the first rung of the LEANING CAP-RIDING
+//! The first rung of the LEANING CAP-RIDING
 //! corner. The bead's own end stands on the ring the rolling ball really traces on it, and the
 //! strip of wall under the blend follows that ring down - so the patch's grid, the two rings it is
 //! sewn to and the faces under it all close over the turn.
@@ -10,7 +10,7 @@
 //! up to 0.197 mm off its own strip at 5.625 degrees of lean and 0.297 at 8.4375. The strip of wall
 //! under the blend follows the leaning plane down the axis (`down_to_the_beads_end`). A square cap
 //! drops by the radius as the constant and ends on its own square section, so every number of the
-//! square case is unmoved. C# `[Arguments]` rows are a loop over the same-named test.
+//! square case is unmoved. The parameter rows are a loop.
 
 use std::rc::Rc;
 

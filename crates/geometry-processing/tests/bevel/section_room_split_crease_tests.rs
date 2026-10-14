@@ -1,4 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SectionRoomSplitCreaseTests.cs` 1:1: a crease split in two
+//! A crease split in two
 //! is read to its far end and not to the first mesh edge - splitting a bore's wall folds into two
 //! collinear mesh edges moves no geometry, so it may not move the room.
 

@@ -1,4 +1,4 @@
-//! Port of `LevelLine/SecondColumnLandJoinTests.cs`: two trios of Many Holes' ports - pass A's
+//! Two trios of Many Holes' ports - pass A's
 //! chains 2, 3 and 9 and the face rim's 2, 3 and 8, each a few millimetres apart on the same 15,214
 //! triangles - that must build at 0.5. Both falsely refused Size at 0.469 on a ChainToChain join
 //! across the land between the ports. The join was not in the input but MINTED by the refinement:

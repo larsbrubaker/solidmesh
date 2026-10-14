@@ -1,6 +1,6 @@
-//! The helpers `several_chains_tests.rs` reads (C# `SeveralChainsTests`' private `Read`,
-//! `PickNamed`, `PointSet`, `TagUnder` and `ToChain`, plus the `BandGap.Build`/`RoomOf`/`ReadRoom`
-//! calls its tests repeat), kept apart so the class's own file holds its tests.
+//! The helpers `several_chains_tests.rs` reads (`read`, `pick_named`, `point_set`, `tag_under` and
+//! `to_chain`, plus the band build, room and room-reading calls its tests repeat), kept apart so
+//! that file holds only its tests.
 
 use std::rc::Rc;
 
@@ -25,7 +25,7 @@ pub fn never() -> Option<FeatureEdgeTest> {
     Some(Rc::new(|_, _| false))
 }
 
-/// C# `BandGap.Build(positions, indices, chains, closed, feature, size, profile)`.
+/// The band of a pick of chains at `size`, failing the test unless it builds or refuses by name.
 pub fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -67,7 +67,7 @@ pub fn build_with(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `BandGap.RoomOf(positions, indices, chains, closed, feature, profile)`.
+/// The room a pick of chains has: the largest size its band can take.
 pub fn room_of(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -86,7 +86,7 @@ pub fn room_of(
     .expect("the pick reads")
 }
 
-/// C# `BandGap.ReadRoom(positions, indices, chains, closed, feature, Chamfer, 1e-9, null)`.
+/// The full room reading of a pick of chains, as a chamfer with a 1e-9 snap.
 pub fn read_room(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -111,7 +111,7 @@ pub fn read_room(
     .expect("the pick reads")
 }
 
-/// C# `Read`: the reading of a two-chain closed pick.
+/// The reading of a two-chain closed pick.
 pub fn read(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -127,12 +127,11 @@ pub fn read(
     )
 }
 
-/// C# `BandGap.RoomMargin(1)`.
+/// The margin kept below the room for a largest unit setback of 1 and a 1e-9 snap.
 pub fn room_margin() -> f64 {
     band_gap_reading::room_margin(1.0, 1e-9)
 }
 
-/// C# `PickNamed`.
 pub fn pick_named(pick: &str) -> SolidWithChain {
     match pick {
         "cube top rim" => {
@@ -148,7 +147,6 @@ pub fn pick_named(pick: &str) -> SolidWithChain {
     }
 }
 
-/// C# `PointSet`.
 pub fn point_set(built: &BandGapResult) -> Vec<String> {
     let mesh = built.mesh.as_ref().expect("a mesh").borrow();
     let mut points: Vec<String> = built
@@ -161,8 +159,7 @@ pub fn point_set(built: &BandGapResult) -> Vec<String> {
     points
 }
 
-/// The groups (C# `GroupBy(TagUnder).Where(g => g.Count() > 1)`) of loops standing on one tag, in
-/// first-seen order.
+/// The groups of more than one loop standing on one tag, in first-seen order.
 pub fn shared_groups<'a>(mesh: &LevelLineMesh, loops: &'a [GapLoop]) -> Vec<Vec<&'a GapLoop>> {
     let mut groups: Vec<(i32, Vec<&GapLoop>)> = Vec::new();
     for gap_loop in loops {
@@ -179,7 +176,7 @@ pub fn shared_groups<'a>(mesh: &LevelLineMesh, loops: &'a [GapLoop]) -> Vec<Vec<
         .collect()
 }
 
-/// C# `TagUnder`: the tag of the triangle the loop's first step keeps.
+/// The tag of the triangle the loop's first step keeps.
 pub fn tag_under(mesh: &LevelLineMesh, gap_loop: &GapLoop) -> i32 {
     let standing = mesh.triangles_on(
         gap_loop.vertices[0].min(gap_loop.vertices[1]),
@@ -188,7 +185,7 @@ pub fn tag_under(mesh: &LevelLineMesh, gap_loop: &GapLoop) -> i32 {
     mesh.triangles[standing[0] as usize].tag
 }
 
-/// C# `ToChain`: the distance from a point to a closed chain read on the INPUT positions.
+/// The distance from a point to a closed chain read on the INPUT positions.
 pub fn to_chain(point: Vector3, positions: &[Vector3], chain: &[i32]) -> f64 {
     let mut best = f64::INFINITY;
     for i in 0..chain.len() {

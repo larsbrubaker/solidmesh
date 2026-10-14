@@ -1,4 +1,4 @@
-//! Port of `SurfaceEveryFaceSubsetSurveyTests.cs`: ON ANY FACE, EVERY SINGLE EDGE AND ANY TWO OR
+//! ON ANY FACE, EVERY SINGLE EDGE AND ANY TWO OR
 //! THREE OF ITS EDGES HAVE TO BEVEL - the claim "Every 1, 2 and 3 Face Selection Should Bevel.mcx"
 //! makes, surveyed on the kernel's own copy of that part (`nose_in_notch_test_meshes`, the chevron
 //! notch with the knife-edge nose in it).
@@ -375,7 +375,7 @@ fn is_on_the_queue(
         now_passing.join("; ")
     );
 
-    // In case order, as C#'s Dictionary enumerates its insertions.
+    // In case order, so the report reads the same on every run.
     let newly_failing: Vec<String> = names
         .iter()
         .filter(|name| said.contains_key(**name))
@@ -410,7 +410,7 @@ fn is_on_the_queue(
 
 /// One build of one selection, as one sentence, or `None` if it built a closed manifold single
 /// shell that moved the volume the way its picks allow.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x < y)`, which a NaN volume fails as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x < y)` on purpose: a NaN volume fails as well.
 fn complaint_about(
     part: &Mesh,
     groups: &[BevelEdgeGroup],

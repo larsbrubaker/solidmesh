@@ -1,8 +1,8 @@
-//! Port of `SectionOpenMouthArcTests.cs`: THE TOP MOUTH ARC of `InnerFaceTestMesh` - the part of
-//! the raked bore's top mouth that lies on the cube's TOP face, 40 edges, an OPEN chain whose two
-//! ends sit where the mouth crosses the cube's top/-X edge. The arc readers the class shares with
-//! its neighbours (`TheTopMouthArc`, `TheTopMouthArcWalk`, `TheSameArcOn`) live in
-//! [`crate::open_mouth_arc_walk`]. C# `[Arguments]` rows are loops over the same-named test.
+//! THE TOP MOUTH ARC of `InnerFaceTestMesh` - the part of the raked bore's top mouth that lies on
+//! the cube's TOP face, 40 edges, an OPEN chain whose two ends sit where the mouth crosses the
+//! cube's top/-X edge. The arc readers the class shares with its neighbours (`TheTopMouthArc`,
+//! `TheTopMouthArcWalk`, `TheSameArcOn`) live in [`crate::open_mouth_arc_walk`]. Each parameter row
+//! is one pass of a loop in the test of the same name.
 //!
 //! **The reading** (measured, not assumed). The arc's two ends are `(-19, -44, 20)` and
 //! `(-19, -34, 20)`, both ON the -X wall's plane `x = -19` to the precision the fixture's float
@@ -12,7 +12,7 @@
 //! nearly square (86.81 degrees to the -X plane), so the profile slid onto that plane is barely
 //! stretched.
 //!
-//! Skipped as in C# (`[Skip]`):
+//! Not run (each still open):
 //! - `TheEndSectionsDieOnTheWall` (both rows): "the transverse face has no rebuild: at 0.5 the mesh
 //!   is open along the -X wall, at 2 the smooth cut refuses first".
 //! - `TheOpenArcAssemblesAtTwo`: "far alone still mints the twin" - the station's offset direction
@@ -558,7 +558,7 @@ fn off_the_triangle(a: Vector3, b: Vector3, c: Vector3, point: Vector3) -> f64 {
     let mut normal = ab.cross(ac);
     let area = normal.length();
 
-    // C#'s `!(area > 0)`: a NaN area falls here too.
+    // Not `area <= 0`: a NaN area falls here too.
     if area.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
         return (point - a).length();
     }

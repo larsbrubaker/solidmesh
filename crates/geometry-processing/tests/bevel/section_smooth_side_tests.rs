@@ -1,4 +1,4 @@
-//! Port of `SectionSmoothSideTests.cs`: `SectionSmoothSide` - the fillet's boundary laid on a smooth
+//! `SectionSmoothSide` - the fillet's boundary laid on a smooth
 //! tessellated side and every facet it crosses cut in two - read on the tapered barrel's bore mouths
 //! ([`crate::tapered_barrel_test_meshes`]).
 //!
@@ -334,14 +334,14 @@ fn every_stations_place_names_the_face_its_point_is_in() {
     );
 }
 
-/// C# `OffTheFace`: how far a point stands from a face of the part, clamped onto the triangle.
+/// How far a point stands from a face of the part, clamped onto the triangle.
 fn off_the_face(part: &Mesh, face: i32, at: Vector3) -> f64 {
     let (a, b, c) = corners(part, face);
 
     (mesh_surface_distance::closest_point_on_triangle(at, a, b, c) - at).length()
 }
 
-/// C# `OffTheEdge`: how far a point stands from the SEGMENT of one mesh edge - not from its infinite
+/// How far a point stands from the SEGMENT of one mesh edge - not from its infinite
 /// line.
 fn off_the_edge(part: &Mesh, graph: &MeshEdgeGraph, edge: i32, at: Vector3) -> f64 {
     let a = vertex(part, graph.get_vertex0(edge));
@@ -355,7 +355,7 @@ fn off_the_edge(part: &Mesh, graph: &MeshEdgeGraph, edge: i32, at: Vector3) -> f
     (a + (along * t) - at).length()
 }
 
-/// C# `MeasureTheBoundaryIsTheRuns`: how far each wall-side boundary point stands from the facet the
+/// How far each wall-side boundary point stands from the facet the
 /// run says it is in, and whether the cut used the run's own pool index for it.
 fn measure_the_boundary_is_the_runs(
     part: &Mesh,
@@ -433,7 +433,7 @@ fn left_is_smooth(run: &SectionRun) -> bool {
             .count()
 }
 
-/// C# `TheMouths`: every closed loop of the wall's rim that is not one of the two 48-edge rims, cut.
+/// Every closed loop of the wall's rim that is not one of the two 48-edge rims, cut.
 fn the_mouths() -> Vec<MouthCut> {
     let part = tapered_barrel_test_meshes::the_working_part();
     let resolution = tapered_barrel_test_meshes::the_wall(&part);
@@ -457,7 +457,7 @@ fn the_mouths() -> Vec<MouthCut> {
         .collect()
 }
 
-/// C# `CutMouth`: one mouth's run built and its smooth side cut and measured.
+/// One mouth's run built and its smooth side cut and measured.
 fn cut_mouth(
     part: &Mesh,
     resolution: &BevelEdgeGroupResolution,
@@ -537,7 +537,7 @@ fn cut_mouth(
     read
 }
 
-/// C# `Measure`: the invariants of one cut, accumulated into `read`.
+/// The invariants of one cut, accumulated into `read`.
 fn measure(
     part: &Mesh,
     graph: &MeshEdgeGraph,
@@ -623,7 +623,7 @@ fn measure(
     measure_the_crossings(graph, cut, read);
 }
 
-/// C# `OnAFoldBetweenCutFacets`: whether a ring edge runs along a fold that two CUT facets share -
+/// Whether a ring edge runs along a fold that two CUT facets share -
 /// the only place a T junction could be left. An edge on the outer rim of the cut region has nothing
 /// on the other side to match.
 fn on_a_fold_between_cut_facets(
@@ -663,7 +663,7 @@ fn on_a_fold_between_cut_facets(
     false
 }
 
-/// C# `MeasureTheCrossings`: every boundary vertex that stands on a fold between two cut facets must
+/// Every boundary vertex that stands on a fold between two cut facets must
 /// be carried by BOTH of them and by no others.
 fn measure_the_crossings(graph: &MeshEdgeGraph, cut: &SmoothSideCut, read: &mut MouthCut) {
     let mut facet_of: HashMap<i32, usize> = HashMap::new();
@@ -710,7 +710,7 @@ fn measure_the_crossings(graph: &MeshEdgeGraph, cut: &SmoothSideCut, read: &mut 
     }
 }
 
-/// C# `Flatness`: how far a facet's OWN corners already stand off the plane of its first face. A
+/// How far a facet's OWN corners already stand off the plane of its first face. A
 /// flat piece is gathered across edges the half-degree coplanarity test calls flat, over vertices
 /// the mesh stores in SINGLE precision, so it is not exactly planar and there is no 1e-9 to hold
 /// the new triangles to. What must hold is that the cut adds nothing.
@@ -747,7 +747,7 @@ pub(crate) fn ring_area(pool: &SectionPool, ring: &[i32], normal: Vector3) -> f6
     twice.dot(normal) / 2.0
 }
 
-/// C# `MouthCut`: one mouth's cut and every reading taken of it.
+/// One mouth's cut and every reading taken of it.
 #[derive(Default)]
 struct MouthCut {
     stations: usize,

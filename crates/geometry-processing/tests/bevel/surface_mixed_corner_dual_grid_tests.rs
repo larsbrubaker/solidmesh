@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerDualGridTests.cs`: the grid the leaning one-crease mixed corner's
+//! The grid the leaning one-crease mixed corner's
 //! patch is sewn over, read off the fixture's own strips - the bead's ring at station zero, the
 //! cut's ring along the far rail while that strip lasts, the run-out's own rows past it, and one
 //! point at the end.

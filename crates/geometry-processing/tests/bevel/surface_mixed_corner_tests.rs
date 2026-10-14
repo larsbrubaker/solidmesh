@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerTests.cs`: rung 7 of the polygon-space bevel plan, measured rather
+//! Rung 7 of the polygon-space bevel plan, measured rather
 //! than argued - the corner of the L where the CONVEX cut along the top of the step wall runs into
 //! the CONCAVE bead along its inner edge.
 //!

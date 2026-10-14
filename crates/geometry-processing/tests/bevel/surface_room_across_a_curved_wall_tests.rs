@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomAcrossACurvedWallTests.cs`: the room on the CURVED side of a crease - a half
+//! The room on the CURVED side of a crease - a half
 //! disc's vertical seam, where the flat chord face meets the tessellated wall. The wall turns 9
 //! degrees a facet, under the 10 degree bend threshold this is read at, so it is one smooth surface,
 //! and the room across it is the run along that surface to the seam at the other end of the arc,

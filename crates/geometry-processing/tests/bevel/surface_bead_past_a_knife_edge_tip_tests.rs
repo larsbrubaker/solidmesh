@@ -1,4 +1,4 @@
-//! Port of `SurfaceBeadPastAKnifeEdgeTipTests.cs`: the bead of "Bottom Center Edge.mcx" - one
+//! The bead of "Bottom Center Edge.mcx" - one
 //! concave crease of the nose-in-notch part beaded at radius 6, whose far end is the knife-edge
 //! ridge tip where the picked crease hairpins into the UNSELECTED upper crease beside it.
 //!

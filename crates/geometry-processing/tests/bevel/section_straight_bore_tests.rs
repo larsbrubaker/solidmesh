@@ -1,4 +1,4 @@
-//! Port of `SectionStraightBoreTests.cs`: the sections of a straight bore's mouth - once per vertex,
+//! The sections of a straight bore's mouth - once per vertex,
 //! shared between neighbouring strips, the top's boundary offset by the setback, the wall's riding
 //! the vertical crease, every profile point a radius off the canal's axis.
 
@@ -64,7 +64,6 @@ fn build() -> Built {
     }
 }
 
-/// C# `AStraightBoresMouthSectionsOncePerVertex`.
 #[test]
 fn a_straight_bores_mouth_sections_once_per_vertex() {
     let built = build();
@@ -79,7 +78,6 @@ fn a_straight_bores_mouth_sections_once_per_vertex() {
     }
 }
 
-/// C# `EachStripsEndIsItsNeighboursStartByReference`.
 #[test]
 fn each_strips_end_is_its_neighbours_start_by_reference() {
     let run = build().run;
@@ -89,7 +87,6 @@ fn each_strips_end_is_its_neighbours_start_by_reference() {
     }
 }
 
-/// C# `TheTopFacesBoundaryIsOffsetByTheSetback`.
 #[test]
 fn the_top_faces_boundary_is_offset_by_the_setback() {
     let built = build();
@@ -117,7 +114,6 @@ fn the_top_faces_boundary_is_offset_by_the_setback() {
     }
 }
 
-/// C# `TheWallsBoundaryRidesTheVerticalCrease`.
 #[test]
 fn the_walls_boundary_rides_the_vertical_crease() {
     let built = build();
@@ -149,7 +145,6 @@ fn the_walls_boundary_rides_the_vertical_crease() {
     }
 }
 
-/// C# `EveryProfilePointStandsARadiusFromTheCanalsAxis`.
 #[test]
 fn every_profile_point_stands_a_radius_from_the_canals_axis() {
     let built = build();
@@ -169,7 +164,6 @@ fn every_profile_point_stands_a_radius_from_the_canals_axis() {
     }
 }
 
-/// C# `TheCentreSitsInsideTheMaterialOfAConvexEdge`.
 #[test]
 fn the_centre_sits_inside_the_material_of_a_convex_edge() {
     let built = build();
@@ -185,7 +179,6 @@ fn the_centre_sits_inside_the_material_of_a_convex_edge() {
     }
 }
 
-/// C# `ThePoolAlwaysAppends`.
 #[test]
 fn the_pool_always_appends() {
     let mut built = build();

@@ -1,4 +1,4 @@
-//! Port of `SurfaceRimOpensAtAnEndTests.cs`: a CLOSED rim taken whole, with one more edge standing
+//! A CLOSED rim taken whole, with one more edge standing
 //! at one of its corners. Three convex edges meet at that vertex, which is the ball's octant - what
 //! the build makes of them whenever the three arrive as three chains (`surface_corner_tests`). Two
 //! of them arriving as one plan's consecutive pair may not change the answer: the rim is CUT OPEN
@@ -9,7 +9,7 @@
 //! end, and the mitre was refused (`SurfaceStripSeamDidNotMeet`) - Lars's own five-edge case on
 //! "Every Chamfer Works.mcx" measured down to a cube. The control is the SAME FIVE EDGES linked as
 //! the app links a hand-picked set: one pick is a ring and one is a run, and the solid is the same.
-//! C# `[Arguments]` rows are a loop.
+//! The parameter rows are a loop.
 
 use std::rc::Rc;
 use std::sync::Arc;

@@ -1,4 +1,4 @@
-//! Port of `SectionFanRemeshTests.cs`: the fixture the ears re-mesh exists for - the same straight
+//! The fixture the ears re-mesh exists for - the same straight
 //! round bore `SectionFaceRebuildTests` rebuilds, with its top face re-triangulated so that ONE
 //! mouth vertex stands behind a chord its own boundary walks straight past.
 //!

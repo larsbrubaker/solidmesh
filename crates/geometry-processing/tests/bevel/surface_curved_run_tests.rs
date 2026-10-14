@@ -1,4 +1,4 @@
-//! Port of `SurfaceCurvedRunTests.cs`: rung 4 of the polygon-space bevel plan - ONE rim facet edge
+//! Rung 4 of the polygon-space bevel plan - ONE rim facet edge
 //! of a 64 sided cylinder, where the chain stops in the middle of a run that goes on without it.
 //! Neither end has a face to notch - the cap's neighbours are the cap, and the wall's neighbour is
 //! another wall facet five degrees round - so the bevel has to run out against a wall it makes

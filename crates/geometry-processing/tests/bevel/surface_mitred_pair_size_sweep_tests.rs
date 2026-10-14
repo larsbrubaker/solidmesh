@@ -1,4 +1,4 @@
-//! Port of `SurfaceMitredPairSizeSweepTests.cs`: the mitred-pair pick of
+//! The mitred-pair pick of
 //! `surface_run_out_crosses_a_mitred_pair_tests` swept across every size from 2.00 to 5.20 in
 //! hundredths of two, as a RATCHET - at every one of the 161 sizes the kernel either builds a
 //! closed manifold shell or refuses by a NAMED code. A size that comes back with the generic
@@ -212,8 +212,7 @@ fn build(size: f64) -> (String, Vector3) {
         Err(SurfaceBuildFailure::Refused(reason)) => {
             return (format!("{:?}", reason.code()), at(&reason))
         }
-        // C# dereferences a null failure here; the Rust reading names it, and it is neither a
-        // build nor a named refusal.
+        // Any other failure is named as it is, being neither a build nor a named refusal.
         Err(other) => return (format!("{other:?}"), Vector3::ZERO),
     };
 

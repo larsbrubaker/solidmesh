@@ -1,4 +1,4 @@
-//! Port of `SurfaceBiteMovesOnlyItsOwnVerticesTests.cs`: a snap taken after a piece is cut may only
+//! A snap taken after a piece is cut may only
 //! move vertices the pass that cut it MINTED - an older vertex is a vertex some face outside this
 //! pass still uses, and moving it off that face's corner opens the seam between them
 //! (`surface_end_notch::snapped_to_the_profile`).

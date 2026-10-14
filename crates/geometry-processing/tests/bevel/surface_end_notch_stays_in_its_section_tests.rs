@@ -1,4 +1,4 @@
-//! Port of `SurfaceEndNotchStaysInItsSectionTests.cs`: the end notch cut into a cap that CARRIES
+//! The end notch cut into a cap that CARRIES
 //! ON past the corner's own rim - a square prism with a tab stuck on one side, filleted on the
 //! vertical edge at the far corner of that side.
 //!

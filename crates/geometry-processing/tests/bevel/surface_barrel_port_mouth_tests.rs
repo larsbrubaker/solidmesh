@@ -1,12 +1,12 @@
-//! Port of `SurfaceBarrelPortMouthTests.cs`: the mouth of a radial PORT through a barrel - the
+//! The mouth of a radial PORT through a barrel - the
 //! shape "Many Holes.mcx" carries forty one of - at the part's own numbers
 //! (`bore_test_meshes_barrel_port`), the first loop in the corpus with a CURVED surface on both
 //! sides of it. The plain two-plane ball stands clear of the whole BORE and is cut into by the
 //! BARREL, so a port mouth is the one-curved-side case the roll already builds; what stops it at
 //! each size is one named fault, pinned here.
 //!
-//! Legacy-only: every test pins the sections router off (`pinned_to_the_legacy_construction`), as
-//! C# does. C# `[Arguments]` rows are a loop.
+//! Legacy-only: every test pins the sections router off
+//! (`pinned_to_the_legacy_construction`). The parameter rows are a loop.
 
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::bevel::BevelAdvisoryCode;
@@ -280,7 +280,7 @@ fn inside(at: Vector3, from: Vector3, to: Vector3, third: Vector3, normal: Vecto
     (at - from).dot(side) * (third - from).dot(side) >= 0.0
 }
 
-// `!(x > 0)` is C#'s reading, which takes a NaN length as degenerate.
+// `!(x > 0)` on purpose: a NaN length counts as degenerate.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn nearest_on_the_side(at: Vector3, from: Vector3, to: Vector3) -> Vector3 {
     let run = to - from;

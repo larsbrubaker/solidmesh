@@ -1,5 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceEndCutLeavesTheDiePointsChordAloneTests.cs` 1:1:
-//! a die point on the section's straight side (or nudged just outside the ruler of it) cuts the
+//! A die point on the section's straight side (or nudged just outside the ruler of it) cuts the
 //! section and only the section - its chord takes nothing of the end face the bead stands over.
 
 use geometry_processing::bevel::surface::{surface_end_cut, SurfaceVertexPool};

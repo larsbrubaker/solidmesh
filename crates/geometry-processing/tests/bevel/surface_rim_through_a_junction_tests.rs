@@ -1,4 +1,4 @@
-//! Port of `SurfaceRimThroughAJunctionTests.cs`: the lobed prism's junction picked the way a user
+//! The lobed prism's junction picked the way a user
 //! picks it - the WHOLE top cap as one face and the seam beside it. Three edges meet at the seam's
 //! top vertex and one of them is concave, which is the junction
 //! `surface_mixed_junction_over_a_curved_wall_tests` builds - but the cap's rim is one CLOSED chain
@@ -236,8 +236,8 @@ fn the_whole_cap_rim(features: &FeatureEdgeSet) -> Vec<FeatureEdge> {
         .collect()
 }
 
-/// The concave seam where the flat wall runs into the lobe at the crossing `seam_x` (C#'s
-/// `TheLeftSeam` and `TheRightSeam`, which differ only in the crossing).
+/// The concave seam where the flat wall runs into the lobe at the crossing `seam_x`; the
+/// left and right seams differ only in the crossing.
 fn the_seam_at(features: &FeatureEdgeSet, seam_x: f64) -> Vec<FeatureEdge> {
     features
         .edges()

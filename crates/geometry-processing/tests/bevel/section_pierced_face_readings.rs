@@ -1,11 +1,11 @@
-//! The private helpers of the partial class `SectionPiercedFaceTests` (`SectionPiercedFaceTests.cs`
-//! and its `.Junction`/`.Pass`/`.Seam`/`.Takeover` parts): the top face's pick and the plans it
+//! The shared helpers of the pierced face tests (`section_pierced_face_tests.rs` and its
+//! junction, pass, seam and takeover parts): the top face's pick and the plans it
 //! opens into through the sections (`ThePlans`, `TheTopFace`, `TheTopFaceAt`), the junction's
 //! geometric readings (`Wedge`, `TheFoldAt`, `TheCreaseAt`, `TheAxisAt`, `DistanceToLine`,
 //! `SlidOntoThePlane`, `MeetOfLines`), the junction section built through the production rule
 //! (`TheJunctionAt`), and the face readings the junction parts share (`TheOperationsFeatureReading`,
 //! `TheNormalOf`, `TheTriangleHolds`). One copy here, so every part of the class reads the pick the
-//! same way, as C#'s one class does. `TheSharpTurnsOf` is [`crate::section_turn_readings`]'s.
+//! same way. `TheSharpTurnsOf` is [`crate::section_turn_readings`]'s.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -26,10 +26,10 @@ use crate::inner_face_test_mesh;
 use crate::section_turn_readings::the_sharp_turns_of;
 use crate::surface_test_build::{pinned_to_the_sections, try_bevel, TryBevelOptions};
 
-/// C# `Radius`: the radius the junction is read at - half the 1 mm the reading is quoted for.
+/// The radius the junction is read at - half the 1 mm the reading is quoted for.
 pub const RADIUS: f64 = 0.5;
 
-/// C# `ThePlans`: the plans the top face's pick opens into, built through the sections, with the
+/// The plans the top face's pick opens into, built through the sections, with the
 /// route the router took and the advisory the build named. `up` picks the top face of a moved part.
 pub fn the_plans(
     part: &Mesh,
@@ -65,7 +65,7 @@ pub fn the_plans(
     (outcome.plans_built, route, reason)
 }
 
-/// C# `TheTopFace`: the cube's TOP face as a face-group pick, flooded the way a click on it would
+/// The cube's TOP face as a face-group pick, flooded the way a click on it would
 /// be.
 pub fn the_top_face(part: &Mesh, up: Option<Vector3>) -> BevelEdgeGroup {
     let graph = part.get_mesh_edge_graph();
@@ -104,7 +104,7 @@ pub fn the_top_face(part: &Mesh, up: Option<Vector3>) -> BevelEdgeGroup {
     panic!("the part has no top face");
 }
 
-/// The sharp turn whose leaving edge starts at `vertex` - C#'s `TheSharpTurnsOf(plans).Single(...)`.
+/// The sharp turn whose leaving edge starts at `vertex`; fails on none or several.
 pub fn the_turn_at(plans: &[Rc<SurfaceBevelPlan>], vertex: i32) -> (ChainEdge, ChainEdge) {
     let turns: Vec<_> = the_sharp_turns_of(plans)
         .into_iter()
@@ -116,7 +116,7 @@ pub fn the_turn_at(plans: &[Rc<SurfaceBevelPlan>], vertex: i32) -> (ChainEdge, C
     turns[0]
 }
 
-/// C# `Wedge`: the wedge one chain edge stands at, in degrees.
+/// The wedge one chain edge stands at, in degrees.
 pub fn wedge(edge: &ChainEdge) -> f64 {
     radians_to_degrees(
         edge.left_normal()
@@ -127,7 +127,7 @@ pub fn wedge(edge: &ChainEdge) -> f64 {
     )
 }
 
-/// C# `TheFoldAt`: the one crease leaving the junction that is not the chain - the mouth's
+/// The one crease leaving the junction that is not the chain - the mouth's
 /// continuation down the -X wall - as a unit direction pointing away from the vertex.
 pub fn the_fold_at(part: &Mesh, arriving: &ChainEdge, leaving: &ChainEdge) -> Vector3 {
     let station = leaving.from();
@@ -143,7 +143,7 @@ pub fn the_fold_at(part: &Mesh, arriving: &ChainEdge, leaving: &ChainEdge) -> Ve
     }
 }
 
-/// C# `TheCreaseAt`: the fold as the part's own feature edge, which carries the TWO FACES it joins:
+/// The fold as the part's own feature edge, which carries the TWO FACES it joins:
 /// the cube's -X wall and the bore facet that abuts it, which are the two planes bounding the part
 /// at the junction. The bore facet the mouth CHORD stands on is a different one, 6.36 degrees
 /// round.
@@ -171,7 +171,7 @@ pub fn the_crease_at(part: &Mesh, arriving: &ChainEdge, leaving: &ChainEdge) -> 
     *creases[0]
 }
 
-/// C# `TheAxisAt`: where one edge's canal axis stands abreast of the vertex.
+/// Where one edge's canal axis stands abreast of the vertex.
 pub fn the_axis_at(edge: &ChainEdge, station: Vector3, radius: f64) -> Vector3 {
     let one = edge.left_normal().get_normal();
     let other = edge.right_normal().get_normal();
@@ -179,14 +179,14 @@ pub fn the_axis_at(edge: &ChainEdge, station: Vector3, radius: f64) -> Vector3 {
     station - (radius * (one + other) / (1.0 + one.dot(other)))
 }
 
-/// C# `DistanceToLine`: how far a point stands off a line.
+/// How far a point stands off a line.
 pub fn distance_to_line(point: Vector3, from: Vector3, along: Vector3) -> f64 {
     let offset = point - from;
 
     (offset - (offset.dot(along) * along)).length()
 }
 
-/// C# `SlidOntoThePlane`: one edge's own straight-edge profile at the station, slid along that edge
+/// One edge's own straight-edge profile at the station, slid along that edge
 /// onto a plane - `SectionCorner.SlidProfile`'s rule, taken through a point that need not be the
 /// vertex.
 pub fn slid_onto_the_plane(
@@ -216,8 +216,8 @@ pub fn slid_onto_the_plane(
         .collect()
 }
 
-/// C# `MeetOfLines`: the point two lines meet at, taken as the midpoint of their closest approach,
-/// with C#'s `out skew` - how far apart the two closest points stand.
+/// The point two lines meet at, taken as the midpoint of their closest approach,
+/// with the skew - how far apart the two closest points stand.
 pub fn meet_of_lines(
     from0: Vector3,
     along0: Vector3,
@@ -235,7 +235,7 @@ pub fn meet_of_lines(
     ((one + other) / 2.0, (one - other).length())
 }
 
-/// C# `TheJunctionAt`: the junction section at one of the two vertices, built through the
+/// The junction section at one of the two vertices, built through the
 /// production rule with the fold read off the part the way the builder will have to read it, and
 /// the pool it was minted into.
 pub fn the_junction_at(
@@ -263,7 +263,7 @@ pub fn the_junction_at(
     (section, pool)
 }
 
-/// C# `TheOperationsFeatureReading`: the OPERATION's own reading of which mesh edges are features,
+/// The OPERATION's own reading of which mesh edges are features,
 /// which is what the junction's fold has to be read with - on this part's tessellated bore the
 /// fallback coplanarity test calls a facet fold a crease, and the wall-side fan then reads two.
 pub fn the_operations_feature_reading(
@@ -284,7 +284,7 @@ pub fn the_operations_feature_reading(
     Rc::new(move |edge| edges.contains(&edge))
 }
 
-/// C# `TheNormalOf`: one face's plane normal, taken from its own corners rather than the stored
+/// One face's plane normal, taken from its own corners rather than the stored
 /// float.
 pub fn the_normal_of(part: &Mesh, face: i32) -> Vector3 {
     let drawn = &part.faces[face as usize];
@@ -295,7 +295,7 @@ pub fn the_normal_of(part: &Mesh, face: i32) -> Vector3 {
         .get_normal()
 }
 
-/// C# `TheTriangleHolds`: whether a point's projection onto a face's plane stands inside that
+/// Whether a point's projection onto a face's plane stands inside that
 /// face's triangle, to within a DISTANCE - the reading the carry-out itself makes, asked here of
 /// the part.
 pub fn the_triangle_holds(part: &Mesh, face: i32, at: Vector3, slack: f64) -> bool {

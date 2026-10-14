@@ -1,9 +1,8 @@
-//! Port of `SectionSurfaceWalkTests.cs`, its BARREL and CORNER half (the roof half is
-//! `section_surface_walk_tests`). The tapered barrel's high bore mouth (32 stations) had its
-//! wall-side 0.5 offset taken in ONE plane, the worst point standing 0.0446 mm off the faceted
-//! wall; walked along the surface from the same station for the same setback, the worst is under
-//! 1e-9, and joining consecutive walked points lays the whole boundary on the wall. All four bore
-//! mouths read the same.
+//! The surface walk's BARREL and CORNER tests (the roof tests are `section_surface_walk_tests`).
+//! The tapered barrel's high bore mouth (32 stations) had its wall-side 0.5 offset taken in ONE
+//! plane, the worst point standing 0.0446 mm off the faceted wall; walked along the surface from
+//! the same station for the same setback, the worst is under 1e-9, and joining consecutive walked
+//! points lays the whole boundary on the wall. All four bore mouths read the same.
 //!
 //! WHAT STOPS A WALK is the OPERATION's own feature reading - the `FeatureEdgeSet` built for this
 //! pick - and never the half-degree coplanarity test, which would call every 7.5 degree fold of the
@@ -264,7 +263,6 @@ fn a_walk_running_out_alongside_a_corners_fold_records_the_corner() {
     }
 }
 
-/// C# `HighMouthReading`.
 #[derive(Default)]
 struct MouthReading {
     stations: Vec<Vector3>,
@@ -286,7 +284,7 @@ struct MouthReading {
     no_fan_face: i32,
 }
 
-/// C#'s `GroupBy(c => c).OrderBy(g => g.Key)` of the crossing counts, as `NxM` pairs.
+/// The crossing counts grouped and listed in ascending order, as `NxM` pairs.
 fn crossings_histogram(counts: &[usize]) -> String {
     let mut keys: Vec<usize> = counts.to_vec();
     keys.sort_unstable();
@@ -461,7 +459,7 @@ fn what_it_met(
     let mut best = -1;
     let mut nearest = f64::MAX;
 
-    // Ascending, so a tie names the same edge every run (C#'s HashSet order is insertion order).
+    // Ascending, so a tie names the same edge every run (a hash set has no stable order).
     let mut edges: Vec<i32> = feature_edges.iter().copied().collect();
     edges.sort_unstable();
 
@@ -604,7 +602,8 @@ fn a_pyramid() -> Mesh {
 
 /// The pyramid's apex - the one vertex four faces meet at, read topologically.
 fn the_apex(mesh: &Mesh) -> i32 {
-    // C#'s Dictionary in first-seen order, then OrderByDescending (stable) and First.
+    // Fans counted in first-seen order, then the first of the largest, so a tie names the same
+    // apex every run.
     let mut fans: Vec<(i32, i32)> = Vec::new();
 
     for face in mesh.faces.iter() {

@@ -1,10 +1,9 @@
-//! Port of `SurfaceRakedBoreMouthClaimTests.cs`, a part of the partial class
-//! `SurfaceBoreMouthTests`: the raked bore's claim - a 0.4 round on the whole upper mouth of a bore
-//! leaned 45 degrees through a 3 mm plate is closed, manifold, one shell, stands nowhere inside the
-//! drilled hole, and every blend vertex stands a radius from its own chord's centre line. The C#
-//! file's two handoff comments (the order of the two crossings on one chord, the patch fanned from
-//! the far corner, a fan wound once for its whole ring) record how the mouth closed; the readings
-//! are in `surface_bore_mouth_tests.rs`, the constants in `surface_raked_bore_mouth_tests.rs`.
+//! One part of the bore mouth tests: the raked bore's claim - a 0.4 round on the whole upper mouth
+//! of a bore leaned 45 degrees through a 3 mm plate is closed, manifold, one shell, stands nowhere
+//! inside the drilled hole, and every blend vertex stands a radius from its own chord's centre
+//! line. The mouth closed through the order of the two crossings on one chord, the patch fanned
+//! from the far corner, and a fan wound once for its whole ring; the readings are in
+//! `surface_bore_mouth_tests.rs`, the constants in `surface_raked_bore_mouth_tests.rs`.
 
 use geometry_processing::bevel::surface::surface_mesh_closure;
 use geometry_processing::topology::{

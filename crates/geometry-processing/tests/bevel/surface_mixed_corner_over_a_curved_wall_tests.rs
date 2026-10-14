@@ -1,4 +1,4 @@
-//! Port of `SurfaceMixedCornerOverACurvedWallTests.cs`: the mixed corner where the wall nobody
+//! The mixed corner where the wall nobody
 //! picked is CURVED - the rim of the flat side the lobe pokes through, whose concave seam is a
 //! bead ROLLED onto the lobe's facets (`SurfaceRollAcrossTheWall`).
 //!
@@ -404,7 +404,7 @@ fn the_seam() -> Vector2 {
     lobed_prism_meshes::left_crossing()
 }
 
-/// C#'s `TheRim` tuple.
+/// What [`the_rim`] hands back.
 struct TheRim {
     prism: Mesh,
     regions: Arc<FaceRegionCache>,

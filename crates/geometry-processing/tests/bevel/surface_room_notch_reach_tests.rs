@@ -1,4 +1,4 @@
-//! Port of `SurfaceRoomNotchReachTests.cs`: a chain end's notch reaches out of its corner in a
+//! A chain end's notch reaches out of its corner in a
 //! DIRECTION, not every way at once (`SurfaceRoomNotchSides`). The nose-in-notch part's ridge
 //! picked together with the cube's knife edge at the origin is the pair that proves it: the ridge's
 //! end notch on the left slope and the knife's band on the same slope are 2.24 mm clear of each
@@ -37,7 +37,7 @@ fn the_lower_side() -> Vector3 {
     Vector3::new(2.4962, 2.4962, -1.6641)
 }
 
-/// C#'s literal for 1 + sqrt 2, kept as written.
+/// 1 + sqrt 2 as a literal, so the expected value does not depend on how `sqrt` rounds.
 #[allow(clippy::excessive_precision)]
 const ONE_PLUS_ROOT_TWO: f64 = 2.414_213_562_373_095_1;
 
