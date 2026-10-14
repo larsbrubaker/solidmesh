@@ -1,5 +1,5 @@
-//! How much room a chain's sections have on the part (`Bevel/Sections/SectionRoom.cs`, a C#
-//! `internal static class`, so a module here): where one side's boundary goes per unit of radius
+//! How much room a chain's sections have on the part: where one side's boundary goes per unit of
+//! radius
 //! ([`Boundary`]), a region of the surface as one flood read it ([`Region`]), and everything a room
 //! reading knows about the PART rather than about a chain ([`SectionRoomCache`]). Here are the
 //! region and crease readings (the flood, its rim and planarity, the reach across a face and the
@@ -20,7 +20,7 @@ use crate::bevel::bevel_split_chords;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeChain};
 
-/// C# `SectionRoom.Boundary`: where one side's boundary goes per unit of radius,
+/// Where one side's boundary goes per unit of radius,
 /// `V + r * reach * along`, with [`Boundary::largest_that_fits`] the radius at which it runs out
 /// of the part it is standing on.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -36,7 +36,7 @@ pub struct Boundary {
     pub is_offset: bool,
 }
 
-/// C# `SectionRoom.Region`: a region of the surface as one flood read it.
+/// A region of the surface as one flood read it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Region {
     /// The edges the flood stopped at.
@@ -46,12 +46,12 @@ pub struct Region {
     pub is_one_plane: bool,
 }
 
-/// C# `SectionRoomCache`: everything a room reading knows about the PART rather than about a
+/// Everything a room reading knows about the PART rather than about a
 /// chain, so a pass measuring several chains reads it once - the edge table the fan walk is
 /// handed, the part's lattice, and the flat regions' rims as they are flooded.
 ///
-/// The C# `Dictionary`s are [`IndexMap`]s here, filled in the C# order, except the pair table,
-/// which is only ever looked up and is the fan walk's own [`EdgeAtPair`].
+/// The tables are [`IndexMap`]s, so their order is the order they were filled in, except the
+/// pair table, which is only ever looked up and is the fan walk's own [`EdgeAtPair`].
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SectionRoomCache {
     /// The mesh edge filed under each vertex pair.
@@ -80,11 +80,9 @@ pub struct SectionRoomCache {
 /// all (false for an open rim, whose normals are then zero).
 pub type TwoSides = (Vector3, Vector3, bool);
 
-/// The region and crease readings of the room (C# `PairKey`, `TheTwoSides`, `SameTwoSides`,
-/// `IsACrease`, `EveryFaceIsInTheSeedsPlane`, `Region`'s constructor, `FacesOfTheFlatRegion`,
-/// `RegionOfTheFace`, `TheRegionIsOnePlane`, `ReachAcrossTheFace`, `LengthOfTheCrease`).
+/// The region and crease readings of the room.
 impl Region {
-    /// C#'s `Region` constructor: the edges the flood stopped at, and whether every face of the
+    /// The edges the flood stopped at, and whether every face of the
     /// region lies in the seed face's plane - the only case in which a straight ray drawn in that
     /// plane is a path along the surface.
     pub fn new(rim: Vec<i32>, is_one_plane: bool) -> Self {
@@ -92,7 +90,7 @@ impl Region {
     }
 }
 
-/// C# `PairKey`: the key `SectionFanWalk.EdgesByVertexPair` files a mesh edge under - the same one,
+/// The key the fan walk's edge table files a mesh edge under - the same one,
 /// so the flood reads the same table the fan walk was handed.
 pub fn pair_key(one: i32, other: i32) -> i64 {
     if one < other {
@@ -102,7 +100,7 @@ pub fn pair_key(one: i32, other: i32) -> i64 {
     }
 }
 
-/// C# `TheTwoSides`: the normals of the two faces a crease divides, or nothing where it is an open
+/// The normals of the two faces a crease divides, or nothing where it is an open
 /// rim.
 pub fn the_two_sides(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> TwoSides {
     if graph.get_face_count(edge) != 2 {
@@ -116,7 +114,7 @@ pub fn the_two_sides(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> TwoSides 
     )
 }
 
-/// C# `SameTwoSides`: whether two creases fold the same two flat sides of the part, in either order.
+/// Whether two creases fold the same two flat sides of the part, in either order.
 pub fn same_two_sides(here: TwoSides, there: TwoSides) -> bool {
     if !here.2 || !there.2 {
         return false;
@@ -128,7 +126,7 @@ pub fn same_two_sides(here: TwoSides, there: TwoSides) -> bool {
         || (here.0.dot(there.1) >= flat && here.1.dot(there.0) >= flat)
 }
 
-/// C# `IsACrease`: whether a crossed edge is a crease - a fold the part itself has, which a boundary
+/// Whether a crossed edge is a crease - a fold the part itself has, which a boundary
 /// may not pass - read by the OPERATION's own feature set where one is in hand, and by coplanarity
 /// only where there is none. Non-manifold either way: an edge with anything but two faces is a rim.
 /// The same reading the build's `TryCreasesInTheFan` makes, so the room and the build cannot drift
@@ -145,7 +143,7 @@ pub fn is_a_crease(
     }
 }
 
-/// C# `EveryFaceIsInTheSeedsPlane`: whether every face of a flooded region lies in the seed face's
+/// Whether every face of a flooded region lies in the seed face's
 /// plane. One fold inside it, however small, and a ray drawn in the seed face's plane is not a path
 /// along this surface.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -161,14 +159,14 @@ pub fn every_face_is_in_the_seeds_plane<'a>(
         .all(|&member| !(face_normal(mesh, member).dot(normal) < FeatureEdge::COPLANAR_FACE_DOT))
 }
 
-/// C# `FacesOfTheFlatRegion`: the FLAT REGION one face stands in - itself and every face reachable
+/// The FLAT REGION one face stands in - itself and every face reachable
 /// from it across edges that are not folds of the part, and, where `held_back` is given, not picked
 /// chain edges either (by pair key), so a region never floods over the very crease the fillet is
 /// being built on. `rim` is appended with the edges the flood stopped at, where wanted.
 /// `is_a_feature_edge` makes this the SMOOTH region rather than the flat one.
 ///
-/// The faces come back as an [`IndexSet`] in the order the flood reached them, which is C#'s
-/// `HashSet<int>` enumeration order (nothing is removed).
+/// The faces come back as an [`IndexSet`] in the order the flood reached them, so the order never
+/// depends on hashing.
 pub fn faces_of_the_flat_region(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -218,7 +216,7 @@ pub fn faces_of_the_flat_region(
     in_the_region
 }
 
-/// C# `RegionOfTheFace`: the region `face` belongs to - its rim, and whether the whole of it lies in
+/// The region `face` belongs to - its rim, and whether the whole of it lies in
 /// one plane - flooded across the edges that are not creases and cached in `regions_by_face` for
 /// every face of the region at once.
 pub fn region_of_the_face(
@@ -255,7 +253,7 @@ pub fn region_of_the_face(
     region
 }
 
-/// C# `TheRegionIsOnePlane`: whether the region `seed` stands in lies wholly in one plane - the same
+/// Whether the region `seed` stands in lies wholly in one plane - the same
 /// flood and measure [`region_of_the_face`] makes, for readers that want the planarity and not the
 /// rim. `answer_by_face` is appended with the answer for EVERY face of the region.
 pub fn the_region_is_one_plane(
@@ -286,7 +284,7 @@ pub fn the_region_is_one_plane(
     is_one_plane
 }
 
-/// C# `ReachAcrossTheFace`: how far the ray from `station` along `away` reaches before it leaves
+/// How far the ray from `station` along `away` reaches before it leaves
 /// the FLAT REGION the fan stands in - the nearest crossing of one of that region's own rim edges,
 /// read in the region's plane. The honest limit is the region's rim rather than the fan's outline,
 /// because a fan whose substitution folded it is re-meshed in its own plane. A ray that crosses no
@@ -333,7 +331,7 @@ pub fn reach_across_the_face(
     nearest
 }
 
-/// C# `LengthOfTheCrease`: how far along `along` from `station` the crease the slide rides on
+/// How far along `along` from `station` the crease the slide rides on
 /// carries on - the fold edge, then onward crease by crease while each one runs on along the same
 /// line (within `lattice`) and folds the same two flat sides of the part. What counts as a crease
 /// onward is the OPERATION's own feature reading where one is in hand.
@@ -413,13 +411,13 @@ fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])
 }
 
-/// C# `SmallestWedgeCosine`: how nearly two normals may line up before the vertex has no wedge to draw
+/// How nearly two normals may line up before the vertex has no wedge to draw
 /// a section in - the same bound `SectionBuilder` refuses at, because a radius the section rule cannot
 /// draw at all is not a question of room.
 pub const SMALLEST_WEDGE_COSINE: f64 = -0.999999;
 
 impl Boundary {
-    /// C#'s `Boundary` constructor: where one side's boundary goes per unit of radius (`along`,
+    /// Where one side's boundary goes per unit of radius (`along`,
     /// `reach`), the largest radius that fits it, and whether the side is an offset.
     pub fn new(along: Vector3, reach: f64, largest_that_fits: f64, is_offset: bool) -> Self {
         Self {
@@ -430,13 +428,13 @@ impl Boundary {
         }
     }
 
-    /// C# `PerRadius`: where the boundary moves per unit of radius.
+    /// Where the boundary moves per unit of radius.
     pub fn per_radius(&self) -> Vector3 {
         self.along * self.reach
     }
 }
 
-/// C# `TheChordCarriesItsRoom`: whether station `i` is a split vertex the blend will redraw from its
+/// Whether station `i` is a split vertex the blend will redraw from its
 /// neighbours - both sides offsets, standing on the straight chord between them on the blend's own
 /// ruler - so that its room is the chord's rather than its own.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -463,7 +461,7 @@ pub fn the_chord_carries_its_room(
     )
 }
 
-/// C# `KeepsItsDirection`: the largest radius at which the boundary segment from one station's side
+/// The largest radius at which the boundary segment from one station's side
 /// to the next keeps the chain edge's own direction, or `f64::MAX` where it keeps it at every radius.
 /// `(span + r (u_next - u_here)) . d > 0` is linear in `r`: where the bracket's dot is not negative
 /// the segment only ever lengthens along the edge, and where it is negative the root is the radius at
@@ -484,8 +482,8 @@ pub fn keeps_its_direction(
 }
 
 impl SectionRoomCache {
-    /// C#'s `SectionRoomCache` constructor, with its initializers (`<init>`: empty region caches):
-    /// the mesh's edges by vertex pair and by vertex, its own lattice - eight float steps of its
+    /// A cache with empty region tables: the mesh's edges by vertex pair and by vertex, its own
+    /// lattice - eight float steps of its
     /// bounding diagonal - and the ruler the split blend reads a split vertex with.
     pub fn new(mesh: &Mesh, graph: &MeshEdgeGraph) -> Self {
         let span = mesh.get_axis_aligned_bounding_box().size().length();
@@ -514,12 +512,12 @@ impl SectionRoomCache {
     }
 }
 
-/// What a room reading answers (C#'s `bool` with `out largestThatFits` and `out failure`): whether
+/// What a room reading answers: whether
 /// `radius` fits, the largest radius that does (read even where the asked one does not), and why
 /// not.
 pub type SectionRoomFit = (bool, f64, Option<BevelAdvisory>);
 
-/// C# `TryFit(mesh, graph, chain, radius, ..)`: the room of a closed chain, counting creases by
+/// The room of a closed chain, counting creases by
 /// coplanarity.
 pub fn try_fit(
     mesh: Option<&Mesh>,
@@ -530,7 +528,7 @@ pub fn try_fit(
     try_fit_with(mesh, graph, chain, radius, None)
 }
 
-/// C# `TryFit(mesh, graph, chain, radius, isAFeatureEdge, ..)`: the same, with the operation's own
+/// The same, with the operation's own
 /// feature reading deciding which crossed edges are creases.
 pub fn try_fit_with(
     mesh: Option<&Mesh>,
@@ -550,11 +548,10 @@ pub fn try_fit_with(
     )
 }
 
-/// C# `TryFit(mesh, graph, edges, isClosed, radius, cache, isAFeatureEdge, ..)`: the largest radius
+/// The largest radius
 /// a closed chain's sections have room for - each station's two sides' own limits (a station the
 /// chord carries is stepped over), and along the chain each side's boundary keeping its edge's
-/// direction - and whether `radius` is within it. `cache` (C#'s nullable `SectionRoomCache`) is
-/// built here when not handed in.
+/// direction - and whether `radius` is within it. `cache` is built here when not handed in.
 pub fn try_fit_edges(
     mesh: Option<&Mesh>,
     graph: Option<&MeshEdgeGraph>,
@@ -722,7 +719,7 @@ pub fn try_fit_edges(
     (true, largest_that_fits, None)
 }
 
-/// C# `TryReadVertex`: the station at `leaving`'s start and its two sides' boundaries, read
+/// The station at `leaving`'s start and its two sides' boundaries, read
 /// across the wedge the two chain edges' averaged face normals make there; refused where the faces
 /// are coplanar or fold back.
 #[allow(clippy::too_many_arguments)]
@@ -793,7 +790,7 @@ pub fn try_read_vertex(
     Ok((station, left, right))
 }
 
-/// C# `TrySide`: one side's boundary at a station - an OFFSET where the fan crosses no crease (the
+/// One side's boundary at a station - an OFFSET where the fan crosses no crease (the
 /// limit where the reach leaves the part), a SLIDE down the one crease it crosses (the limit where
 /// that crease ends); refused at a corner of more than one crease, or a crease that does not lean
 /// away.

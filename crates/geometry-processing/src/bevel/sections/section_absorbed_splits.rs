@@ -1,5 +1,5 @@
-//! A run's split vertices read as POINTS OF ITS STRIPS rather than as stations of their own
-//! (`Bevel/Sections/SectionAbsorbedSplits.cs`): the per-gap, per-side table
+//! A run's split vertices read as POINTS OF ITS STRIPS rather than as stations of their own: the
+//! per-gap, per-side table
 //! ([`SectionAbsorbedSplits`]) and one absorbed point in it ([`AbsorbedPoint`]), with its reading
 //! off a run ([`SectionAbsorbedSplits::from`]); and the corner pass that swallows the stations a corner's
 //! setback reaches past ([`SectionAbsorbedSplits::behind_the_corners`]).
@@ -15,7 +15,7 @@ use super::section_split_blend::SplitPlacement;
 use super::{section_corner, BevelSection, SectionPool, SectionSide};
 use crate::topology::ChainEdge;
 
-/// C# `SectionAbsorbedSplits`: for each gap between two consecutive unsplit stations, and for
+/// For each gap between two consecutive unsplit stations, and for
 /// each side, the boundary points the split vertices in that gap contribute to that strip's
 /// boundary row, in chain order.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -31,7 +31,7 @@ pub struct SectionAbsorbedSplits {
     pub is_closed: bool,
 }
 
-/// C# `SectionAbsorbedSplits.AbsorbedPoint`: one absorbed split vertex on one side of one gap -
+/// One absorbed split vertex on one side of one gap -
 /// where its boundary point already stands in the pool, which mesh chain vertex it replaces, and
 /// how far along the gap it is.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -49,7 +49,7 @@ pub struct AbsorbedPoint {
 }
 
 impl AbsorbedPoint {
-    /// C#'s `AbsorbedPoint` constructor.
+    /// An absorbed point from its parts.
     pub fn new(pool_index: i32, chain_vertex: i32, parameter: f64, is_join_placed: bool) -> Self {
         Self {
             pool_index,
@@ -60,11 +60,10 @@ impl AbsorbedPoint {
     }
 }
 
-/// The table's constructor, its reading off a run and its questions (C# constructor, `From`,
-/// `Count`, `GapCount`, `LeftOf`, `RightOf`, `PointAt`, `Next`). The corner pass
-/// (`BehindTheCorners`) lands with a later package.
+/// The table's constructor, its reading off a run and its questions. The corner pass is the next
+/// `impl` block.
 impl SectionAbsorbedSplits {
-    /// C#'s private constructor.
+    /// A table over `stations` with its per-gap rows.
     pub fn new(
         stations: Vec<i32>,
         is_closed: bool,
@@ -79,12 +78,12 @@ impl SectionAbsorbedSplits {
         }
     }
 
-    /// C# `Count`: how many unsplit stations there are.
+    /// How many unsplit stations there are.
     pub fn count(&self) -> i32 {
         self.stations.len() as i32
     }
 
-    /// C# `GapCount`: how many gaps there are - one per unsplit station on a closed run, one FEWER on
+    /// How many gaps there are - one per unsplit station on a closed run, one FEWER on
     /// an open one, whose first and last stations are its two end sections.
     pub fn gap_count(&self) -> i32 {
         if self.is_closed {
@@ -94,17 +93,17 @@ impl SectionAbsorbedSplits {
         }
     }
 
-    /// C# `LeftOf`: the points absorbed into gap `gap`'s LEFT boundary row, in chain order.
+    /// The points absorbed into gap `gap`'s LEFT boundary row, in chain order.
     pub fn left_of(&self, gap: i32) -> &[AbsorbedPoint] {
         &self.on_the_left[gap as usize]
     }
 
-    /// C# `RightOf`: the points absorbed into gap `gap`'s RIGHT boundary row, in chain order.
+    /// The points absorbed into gap `gap`'s RIGHT boundary row, in chain order.
     pub fn right_of(&self, gap: i32) -> &[AbsorbedPoint] {
         &self.on_the_right[gap as usize]
     }
 
-    /// C# `From`: reads the finished sections and the blend's placements as gaps and absorbed points,
+    /// Reads the finished sections and the blend's placements as gaps and absorbed points,
     /// or `None` where nothing is split (in which case every pass downstream keeps today's plain
     /// path).
     ///
@@ -192,7 +191,7 @@ impl SectionAbsorbedSplits {
         Some(Self::new(stations, is_closed, left, right))
     }
 
-    /// C# `PointAt`: the pool index the station at `chain_vertex` takes on one side where it was
+    /// The pool index the station at `chain_vertex` takes on one side where it was
     /// absorbed, or -1 where that vertex is not an absorbed station at all.
     pub fn point_at(&self, chain_vertex: i32, is_left: bool) -> i32 {
         let rows = if is_left {
@@ -207,15 +206,15 @@ impl SectionAbsorbedSplits {
             .map_or(-1, |point| point.pool_index)
     }
 
-    /// C# `Next`: the station after `at` round a run of `count`.
+    /// The station after `at` round a run of `count`.
     fn next(at: i32, count: i32) -> i32 {
         (at + 1) % count
     }
 }
 
-/// The corner pass (C# `BehindTheCorners`, `Swallow`, `IsACorner`).
+/// The corner pass: the stations a corner's setback reaches past.
 impl SectionAbsorbedSplits {
-    /// C# `BehindTheCorners`: which stations a CORNER's setback reaches past, and what their boundary
+    /// Which stations a CORNER's setback reaches past, and what their boundary
     /// point becomes there - walking out along the chain from each corner, a station whose boundary
     /// on the corner's shared FLAT (offset) side stands BEHIND the corner's offset-meet is swallowed,
     /// and its point on that side becomes the corner's own by index. The walk stops at the first
@@ -268,7 +267,7 @@ impl SectionAbsorbedSplits {
         any.then_some((left, right))
     }
 
-    /// C# `Swallow`: walks one way out of a corner swallowing stations while they stand behind its
+    /// Walks one way out of a corner swallowing stations while they stand behind its
     /// reach, and says whether it swallowed any. A station swallowed only on the right still marks its
     /// LEFT entry, by its own point, since the reading marks an absorbed station there.
     #[allow(clippy::too_many_arguments)]
@@ -345,7 +344,7 @@ impl SectionAbsorbedSplits {
         any
     }
 
-    /// C# `IsACorner`: whether the chain turns sharply enough at station `at` to be a corner.
+    /// Whether the chain turns sharply enough at station `at` to be a corner.
     fn is_a_corner(edges: &[ChainEdge], at: usize) -> bool {
         let count = edges.len();
 

@@ -1,7 +1,6 @@
-//! Laying a run's OFFSET sides along the surface (`Sections/SectionBuilderWalkedSide.cs`:
-//! `LayTheOffsetsAlongTheSurface`): every station's offset boundaries walked over the faces they
-//! reach past, and a split blend's join stations laid from the join's own point where it has
-//! one. Split from `section_builder_walked_side.rs` by responsibility.
+//! Laying a run's OFFSET sides along the surface: every station's offset boundaries walked over the
+//! faces they reach past, and a split blend's join stations laid from the join's own point where it
+//! has one. Split from `section_builder_walked_side.rs` by responsibility.
 
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -14,7 +13,7 @@ use super::section_split_blend::SplitPlacement;
 use super::{section_surface_walk, BevelSection, JunctionSection, SectionPool};
 use crate::topology::ChainEdge;
 
-/// C# `SectionBuilder.LayTheOffsetsAlongTheSurface`: each interior (or, closed, every) station's
+/// Each interior (or, closed, every) station's
 /// two sides laid along the surface; then each split station's sides laid at the join's own
 /// point, or from its own station where it has none and may be (an open run, or beside a
 /// junction). Nothing to lay without a feature-edge test.

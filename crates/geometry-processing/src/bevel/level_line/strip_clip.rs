@@ -1,8 +1,7 @@
 //! Flow rung 2: the strip clipped on a GROWING neighbour's planes, and the neighbour's caps. Rows
 //! laid whole across a virtual rail overlap the neighbour that stands past the reached crease;
 //! each of its faces on that crease clips the strip, the strip where EVERY face's distance is below
-//! zero is dropped, and the neighbour grows a cap in each face's plane. Ports
-//! `Bevel/LevelLine/StripClip.cs` (a C# static class, so a module of functions): the
+//! zero is dropped, and the neighbour grows a cap in each face's plane. Here: the
 //! directed edge, the opposite corner, the cap snap and the last outcome note ([`note`],
 //! [`last_outcome`]), and the clip's mesh work: the ties ([`insert_ties`]), the split along a plane
 //! ([`split_along`], [`crosses_at_a_needles_apex`]), the cap ([`cap`]), and the part the neighbour
@@ -20,43 +19,43 @@ use super::strip_clip_valley::other_says;
 use super::{flat_hole_fill, triangle_edges};
 use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle, LevelLineWork, WorkError};
 
-/// One of the neighbour's face planes the strip is clipped on: C#'s
-/// `(Vector3 Origin, Vector3 Normal, HashSet<int> On)`.
+/// One of the neighbour's face planes the strip is clipped on: its origin, its normal and the
+/// vertices that are on it by bookkeeping.
 pub type ClipPlane = (Vector3, Vector3, HashSet<i32>);
 
-/// The signed distance of a vertex from a plane, by index (C#'s `Func<int, int, double>` over
-/// `TryClipAndCap`'s locals): handed the mesh and planes it reads, since the clip changes both.
+/// The signed distance of a vertex from a plane, by index: handed the mesh and planes it reads,
+/// since the clip changes both.
 pub type ClipDistance<'a> = &'a dyn Fn(&LevelLineMesh, &[ClipPlane], i32, i32) -> f64;
 
 /// A watcher of the strip clip's caps: the drop's outline as directed edges.
 pub type WatchCapHole = std::rc::Rc<dyn Fn(&[(i32, i32)])>;
 
-/// C# `StripClip.CapSnap`: the snap a cap's outline is read flat by: the build's own (BandGap's
+/// The snap a cap's outline is read flat by: the build's own (BandGap's
 /// 1e-9), so a cap whose outline is off its plane by more keeps the fan it always had.
 pub const CAP_SNAP: f64 = 1e-9;
 
 thread_local! {
-    /// C# `[ThreadStatic] StripClip.LastOutcome`.
+    /// What the last clip on this thread did ([`last_outcome`]).
     static LAST_OUTCOME: RefCell<Option<String>> = const { RefCell::new(None) };
 
-    /// C# `[ThreadStatic] StripClip.WatchCapHole`: a read-only observer of the strip clip's caps.
+    /// A read-only observer of the strip clip's caps.
     /// Per thread; `None` (the default) costs nothing.
     pub static WATCH_CAP_HOLE: RefCell<Option<WatchCapHole>> = const { RefCell::new(None) };
 }
 
-/// C# `StripClip.LastOutcome`: what the last clip on this thread did, for the sweep's no-result
+/// What the last clip on this thread did, for the sweep's no-result
 /// rows (`None` before any clip).
 pub fn last_outcome() -> Option<String> {
     LAST_OUTCOME.with(|o| o.borrow().clone())
 }
 
-/// C# `StripClip.LastOutcome = value`: sets (or, with `None`, clears) this thread's outcome, as a
+/// Sets (or, with `None`, clears) this thread's outcome, as a
 /// caller does before a fill whose clip it means to read.
 pub fn set_last_outcome(outcome: Option<String>) {
     LAST_OUTCOME.with(|o| *o.borrow_mut() = outcome);
 }
 
-/// C# `StripClip.Note`: records the clip's outcome. Written always, not only under the meter: the
+/// Records the clip's outcome. Written always, not only under the meter: the
 /// sweep classifies no-result rows by the refusing site, and a clip runs a handful of times per
 /// fill, so the string costs nothing beside the mesh work.
 pub fn note(outcome: impl FnOnce() -> String) {
@@ -64,7 +63,7 @@ pub fn note(outcome: impl FnOnce() -> String) {
     LAST_OUTCOME.with(|o| *o.borrow_mut() = Some(text));
 }
 
-/// C# `StripClip.OppositeCorner`: the corner of `face` that is neither `a` nor `b`.
+/// The corner of `face` that is neither `a` nor `b`.
 pub fn opposite_corner(face: LevelLineTriangle, a: i32, b: i32) -> i32 {
     if face.a != a && face.a != b {
         face.a
@@ -86,14 +85,14 @@ pub fn directed(face: LevelLineTriangle, low: i32, high: i32) -> (i32, i32) {
     (high, low)
 }
 
-/// The strip's triangles in index order (C#'s `strip.OrderBy(t => t)`).
+/// The strip's triangles in index order, so the set's own order never reaches the result.
 fn ordered(strip: &HashSet<i32>) -> Vec<i32> {
     let mut all: Vec<i32> = strip.iter().copied().collect();
     all.sort_unstable();
     all
 }
 
-/// C# `StripClip.InsertTies`: mints the TIE where two faces' zeros meet inside a strip triangle -
+/// Mints the TIE where two faces' zeros meet inside a strip triangle -
 /// the neighbour's ridge piercing the strip - so both clip curves end on one shared vertex. Solved
 /// in the triangle's barycentric frame, where both distances are linear. False where the tie would
 /// split an edge the kept surface stands on.
@@ -145,7 +144,7 @@ pub fn insert_ties(
                 let a0 = mesh.position(face.a);
                 let point =
                     a0 + ((mesh.position(face.b) - a0) * u0) + ((mesh.position(face.c) - a0) * v0);
-                // LINQ's Min: NaN reads as the smallest.
+                // The least reach, a NaN reading as the smallest.
                 let mut reach = f64::INFINITY;
                 for (k, &s0) in starts.iter().enumerate() {
                     let x = (s0 - point).length();
@@ -221,7 +220,7 @@ pub fn insert_ties(
     Ok(true)
 }
 
-/// C# `StripClip.SplitAlong`: splits the strip along plane `f`'s zero where it bounds the
+/// Splits the strip along plane `f`'s zero where it bounds the
 /// neighbour - where every OTHER face's distance says so too (a valley splits at every crossing) -
 /// one crossed edge at a time, until no such crossing is left. The count made, or -1 where a
 /// crossing is on an edge the kept surface stands on or the mesh refused the split.
@@ -316,7 +315,7 @@ pub fn split_along(
     }
 }
 
-/// C# `StripClip.CrossesAtANeedlesApex`: where the edge's crossing of plane `f` stands within a
+/// Where the edge's crossing of plane `f` stands within a
 /// float step of the far corner of a strip triangle on that edge, and that corner is already ON the
 /// plane, the edge is split at that corner instead - the needle goes and the triangle across the
 /// edge becomes two on the corner. False where no such corner stands, or the edge is not two strip
@@ -383,12 +382,13 @@ pub fn crosses_at_a_needles_apex(
     Ok(false)
 }
 
-/// C#'s custom numeric format `0.###e0` (the outcome notes' distances).
+/// A number in the format `0.###e0`: up to three decimals and an exponent (the outcome notes'
+/// distances).
 pub(super) fn format_e0(value: f64) -> String {
     vector_math::number_format::format_f64_scientific_e0(value, 3)
 }
 
-/// C# `StripClip.Cap`: closes the hole the drop left. Its outline is the crease stretch plus the
+/// Closes the hole the drop left. Its outline is the crease stretch plus the
 /// clip curve, split at the vertices on two planes into one polygon per plane, each closed flat
 /// where it lies flat (else fanned from its first vertex) in its plane; the faces laid join
 /// `strip`.
@@ -554,7 +554,7 @@ pub fn cap(
     Ok(true)
 }
 
-/// C#'s `bool.ToString()`.
+/// A boolean as the outcome notes write it: `True` or `False`.
 fn cs_bool(value: bool) -> &'static str {
     if value {
         "True"
@@ -564,7 +564,7 @@ fn cs_bool(value: bool) -> &'static str {
 }
 
 /// Whether input vertex `v` stands inside the neighbour: below zero on ANY face for a valley, on
-/// EVERY face otherwise (C#'s local `Inside`).
+/// EVERY face otherwise.
 fn inside(
     mesh: &LevelLineMesh,
     planes: &[ClipPlane],
@@ -579,7 +579,7 @@ fn inside(
     }
 }
 
-/// C# `Attached`: the strip triangles the neighbour grows into FROM THE REACHED CREASE - flooded
+/// The strip triangles the neighbour grows into FROM THE REACHED CREASE - flooded
 /// from the rows that start on the virtual stretch (`virtual_edges`), across shared edges, through
 /// triangles with a corner inside the neighbour (`distance(face, vertex)` against each of `planes`).
 /// A second part inside the faces, where the neighbour's ridge leaves the round again further on, is
@@ -607,7 +607,7 @@ pub fn attached(
         })
         .collect();
 
-    // C#'s `attached.OrderBy(t => t)`: the flood is seeded ascending, so the set's own order never
+    // The flood is seeded ascending, so the set's own order never
     // reaches it.
     let mut seeded: Vec<i32> = attached.iter().copied().collect();
     seeded.sort_unstable();
@@ -633,7 +633,7 @@ pub fn attached(
     Ok(attached)
 }
 
-/// C# `Grow`: grows the attached part across shared edges into every strip triangle the
+/// Grows the attached part across shared edges into every strip triangle the
 /// neighbour reaches into - a corner strictly inside every face, or an edge crossing a face where
 /// every other face is below zero (a piece whose corners all sit on the clip curves or outside,
 /// with the lens running through its edge).

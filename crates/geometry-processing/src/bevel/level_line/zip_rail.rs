@@ -1,5 +1,5 @@
-//! A loop re-read as a cycle running in increasing chain parameter ([`ZipRail`]). Ports the type of
-//! `Bevel/LevelLine/ZipRail.cs` with its count, its canonical reading at tie vertices and its
+//! A loop re-read as a cycle running in increasing chain parameter ([`ZipRail`]), with its count,
+//! its canonical reading at tie vertices and its
 //! reading past the wrap, whether a step is a jump ([`ZipRail::is_a_jump`]) and the rail re-cut to
 //! start nearest the other's start ([`ZipRail::start_nearest`]).
 
@@ -7,8 +7,8 @@ use vector_math::cs_math;
 
 use super::{gap_fill, LevelLineMesh};
 
-/// C# `ZipRail`: a loop re-read as a cycle running in increasing chain parameter - one of the two
-/// rails `GapFill`'s per-chain zip merges. Its init-only properties are public fields here.
+/// A loop re-read as a cycle running in increasing chain parameter - one of the two
+/// rails `GapFill`'s per-chain zip merges. Its properties are set once, as public fields.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ZipRail {
     /// The rail's mesh vertices, in increasing parameter.
@@ -50,7 +50,7 @@ impl ZipRail {
 }
 
 impl ZipRail {
-    /// C# `ZipRail.IsAJump`: whether the rail's step from vertex `at` to the next climbs more chain
+    /// Whether the rail's step from vertex `at` to the next climbs more chain
     /// parameter than twice its own length (plus a tie): a jump is the inside of a concave turn, or a
     /// small region between legs - Around Center's inner diamond is four rail vertices each reading
     /// a different leg. Across a jump the merge takes the shorter of the two spokes it could make.
@@ -64,7 +64,7 @@ impl ZipRail {
                 + (gap_fill::PARAMETER_TIE_RELATIVE * length)
     }
 
-    /// C# `ZipRail.StartNearest`: the rail rotated to begin at its vertex nearest `other_start` in
+    /// The rail rotated to begin at its vertex nearest `other_start` in
     /// chain parameter (round the wrap), when its own start is further than `margin` beyond that -
     /// else the rail as it was, so a rail that begins beside the other is never re-cut. Each vertex
     /// is measured by the whole span it stands for (`spans`), as the merge's jump rule is, and the

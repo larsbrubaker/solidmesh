@@ -1,5 +1,5 @@
-//! The room a side of the band has in ITSELF (`Bevel/LevelLine/SelfRoom.cs`, a static class: free
-//! functions here, in C# order). Its tolerances, the reading of a side's own room
+//! The room a side of the band has in ITSELF, as free functions. Its tolerances, the reading of a
+//! side's own room
 //! ([`self_room_of_side`]) with its bounded peak search ([`peak_over_side`]) and a varying side's
 //! climb ([`climb_from_varying_peak`]), the side's last surviving point
 //! ([`last_surviving_point_of_side`]), the chain's ceiling, the corner bound over a triangle
@@ -23,7 +23,7 @@ pub const CEILING_PAIR_LIMIT: usize = 3000;
 /// How many times a VARYING side's room is re-read at the size it has just proved.
 pub const VARYING_STEPS: i32 = 6;
 
-/// C# `SelfRoom.SelfRoomOfSide`: the room a side has in ITSELF - the greatest field distance
+/// The room a side has in ITSELF - the greatest field distance
 /// standing anywhere inside it, read as the size at which the band swallows the side rather than
 /// meeting anything foreign. Positive infinity for a side with no triangles, for a side standing
 /// at no positive setback, and for a room past `ceiling` (this side is not what limits the pick).
@@ -72,8 +72,8 @@ pub fn self_room_of_side(
     })
 }
 
-/// C#'s `double.CompareTo`: a total order in which NaN stands below every number and equal to
-/// itself.
+/// A total order in which NaN stands below every number and equal to itself, so a NaN reading
+/// never wins a search.
 fn compare_to(x: f64, y: f64) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     if x < y {
@@ -93,7 +93,7 @@ fn compare_to(x: f64, y: f64) -> std::cmp::Ordering {
     }
 }
 
-/// C# `SelfRoom.PeakOverSide`: the greatest the field stands anywhere inside the side, and where -
+/// The greatest the field stands anywhere inside the side, and where -
 /// the bounded search [`self_room_of_side`] rests on, and the one a varying side's climb repeats
 /// at each size it proves. `(negative infinity, origin)` for a side with no live triangles.
 ///
@@ -237,7 +237,7 @@ pub fn peak_over_side(
     search(coarse_distance * PEAK_RELATIVE_TOLERANCE, coarse, coarse_at)
 }
 
-/// C# `SelfRoom.ClimbFromVaryingPeak`: the room of a side whose units VARY, from the point a
+/// The room of a side whose units VARY, from the point a
 /// search at one size found - that point's own swallow size, then the same search again at THAT
 /// size, and again (at most [`VARYING_STEPS`] times), while any point of the side still stands
 /// above the tolerance where it was read. Returns the size proved and the point proving it.
@@ -308,7 +308,7 @@ pub fn climb_from_varying_peak(
     Ok((proved, proved_at))
 }
 
-/// C# `SelfRoom.LastSurvivingPointOfSide`: the side's LAST SURVIVING POINT - the search a room is
+/// The side's LAST SURVIVING POINT - the search a room is
 /// made from, run for its POINT rather than its number, so a build under that room can put the
 /// point into the mesh (see the side witness). `None` for a side with no live triangles.
 ///
@@ -366,7 +366,7 @@ pub fn chain_ceiling(chain_points: &[Vector3]) -> f64 {
     }
 }
 
-/// C# `SelfRoom.GreatestPossibleOver`: an upper bound on the field over a whole triangle, from its
+/// An upper bound on the field over a whole triangle, from its
 /// three corners alone: the distance field is 1-Lipschitz, so no point of the triangle stands
 /// farther from the chain than a corner does plus the corner's farthest reach into the triangle,
 /// and the setback taken off anywhere is at least the chain's least. Exactly the bounded maximum's
@@ -394,7 +394,7 @@ pub fn greatest_possible_over(
     Ok(bound)
 }
 
-/// C# `SelfRoom.ReachOfSide`: a ceiling for a side that is TRUE of the side itself rather than of
+/// A ceiling for a side that is TRUE of the side itself rather than of
 /// the pick: how far the side can reach from the chain at all, as a size - what an OPEN chain's
 /// reading uses, since a fade's band runs far past the pick it was asked for.
 ///
@@ -441,7 +441,7 @@ pub fn reach_of_side(
     Ok((farthest + longest_edge) * size / field.min_setback())
 }
 
-/// C# `SelfRoom.SampleAt`: the field at a vertex, read once per build - a vertex stands in every
+/// The field at a vertex, read once per build - a vertex stands in every
 /// triangle round it. A vertex outside the cache is read afresh.
 pub fn sample_at(
     field: &RoomField,
@@ -462,7 +462,7 @@ pub fn sample_at(
     field.evaluate(position)
 }
 
-/// C# `SelfRoom.SelfRoomCeiling`: [`chain_ceiling`] over the chain edges' vertices, each once, in
+/// [`chain_ceiling`] over the chain edges' vertices, each once, in
 /// the order they are first met.
 pub fn self_room_ceiling(mesh: &LevelLineMesh, chain_edges: &[(i32, i32)]) -> f64 {
     let mut seen = std::collections::HashSet::new();

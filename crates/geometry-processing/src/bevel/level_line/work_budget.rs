@@ -1,13 +1,13 @@
-//! The level-line build's work accounting (`Bevel/LevelLine/WorkBudget.cs`): which phase was
+//! The level-line build's work accounting: which phase was
 //! running ([`LevelLineWorkPhase`]), how far a build has got ([`LevelLineProgress`]), the
 //! deterministic allowance a build spends ([`WorkBudget`]) with its cancellation and progress
 //! report, the way out of a build it gives ([`WorkError`]: cancelled, or the budget exceeded) and
-//! the budget in force on this thread ([`LevelLineWork`], C#'s `[ThreadStatic]` slot, set by a
+//! the budget in force on this thread ([`LevelLineWork`], a thread-local slot, set by a
 //! [`LevelLineWorkScope`] guard), with the budget's default size, its progress-bar arithmetic
 //! (phase weights and starts, the fraction now, the report), the charging and cancel poll, its
 //! constructors, the side-group and refinement-queue notes, the per-phase tally and its report. It also carries
-//! the build's per-flow switches (C#'s `AsyncLocal` gates). The phase changes and the nested-search
-//! slice land with later packages as further `impl` blocks.
+//! the build's per-flow switches, which travel with the build rather than the thread. The phase
+//! changes and the nested-search slice are further `impl` blocks.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -17,7 +17,7 @@ use vector_math::{cs_math, number_format};
 
 use super::stopwatch;
 
-/// C# `LevelLineWorkPhase`: which part of the construction was running when the work budget ran
+/// Which part of the construction was running when the work budget ran
 /// out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum LevelLineWorkPhase {
@@ -56,7 +56,7 @@ pub enum LevelLineWorkPhase {
     CutRoom,
 }
 
-/// C# `LevelLineProgress`: how far a level line build has got - what is running, the work it has
+/// How far a level line build has got - what is running, the work it has
 /// spent, and a 0..1 fraction of the whole call. Reported for the bar in front of the user;
 /// nothing in the construction reads it.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -69,15 +69,14 @@ pub struct LevelLineProgress {
     pub fraction: f64,
 }
 
-/// How many phases [`LevelLineWorkPhase`] has: the length of the budget's per-phase tables (C#
-/// `Enum.GetValues<LevelLineWorkPhase>().Length`).
+/// How many phases [`LevelLineWorkPhase`] has: the length of the budget's per-phase tables.
 pub const LEVEL_LINE_WORK_PHASE_COUNT: usize = 10;
 
-/// The progress callback a [`WorkBudget`] reports to (C# `Action<LevelLineProgress>`).
+/// The progress callback a [`WorkBudget`] reports to.
 pub type LevelLineProgressReport = Rc<dyn Fn(LevelLineProgress)>;
 
-/// A watcher of the corner cap's hole fills (C#'s `Action<LevelLineMesh, IReadOnlyList<Vector3>,
-/// int, IReadOnlyList<HoleFillTriangle>, IReadOnlyList<LastRow>>`).
+/// A watcher of the corner cap's hole fills: the mesh, the fill's vertices, how many of them are
+/// the hole's own points, its triangles and the rows it closed.
 pub type WatchHoleFills = Rc<
     dyn Fn(
         &super::LevelLineMesh,
@@ -88,7 +87,7 @@ pub type WatchHoleFills = Rc<
     ),
 >;
 
-/// C# `WorkBudget`: a deterministic allowance of WORK - field queries, mesh splits and loop steps -
+/// A deterministic allowance of WORK - field queries, mesh splits and loop steps -
 /// that a level line build may spend before it refuses.
 ///
 /// Counted work, never wall clock: the same input spends the same units on any machine, so a
@@ -98,7 +97,7 @@ pub type WatchHoleFills = Rc<
 /// a tiny fraction of it, and only a loop that is not bounded by the input at all can reach it.
 ///
 /// The build charges it through the shared handle the ambient slot ([`LevelLineWork`]) holds, so
-/// everything the C# mutates in place is interior-mutable here.
+/// everything a charge updates is interior-mutable.
 pub struct WorkBudget {
     /// The caller's cancellation, read as the build spends work (every `CancelCheckEvery` charges).
     pub cancellation_token: CancelToken,
@@ -112,27 +111,26 @@ pub struct WorkBudget {
     /// every pinch-ladder probe, already receives.
     pub input_is_float_stored: bool,
     /// The shortest gap between two progress reports, in milliseconds of wall clock. Settable only
-    /// so a test can see every charge's report without racing the clock (C# default 50).
+    /// so a test can see every charge's report without racing the clock (default 50).
     pub report_throttle_ms: i64,
-    /// Whether the pair corner's end-face field is turned OFF for this build (C#'s per-flow
-    /// `PairCornerEndFaceField.OffInFlow`): a per-flow switch travels with the build, not the
+    /// Whether the pair corner's end-face field is turned OFF for this build (a per-flow
+    /// switch, on by default): a per-flow switch travels with the build, not the
     /// thread, so whoever creates the budget captures the caller's setting here, and
     /// `PairCornerEndFaceField::turn_off` flips it for the budget in force.
     pub pair_corner_end_face_field_off: Cell<bool>,
-    /// Whether a pick's both-sided members are turned OFF for this build (C#'s per-flow
-    /// `BandSideTagging.BothSidedMembersBuild`, an `AsyncLocal` defaulting to on), carried the same
-    /// way.
+    /// Whether a pick's both-sided members are turned OFF for this build (a per-flow switch,
+    /// on by default), carried the same way.
     pub both_sided_members_off: Cell<bool>,
-    /// Whether the side groups read their crease run-outs' fields for this build (C#'s per-flow
-    /// `BandGroupFields.RunOutsOnInFlow`, off by default); `BandGroupFields::turn_run_outs_on`
+    /// Whether the side groups read their crease run-outs' fields for this build (a per-flow
+    /// switch, off by default); `BandGroupFields::turn_run_outs_on`
     /// flips it for the budget in force, and a budget created inside a scope starts on.
     pub run_outs_on: Cell<bool>,
-    /// Whether the square-crease end clips are turned OFF for this build (C#'s per-flow
-    /// `SquareCreaseEndClip.SquareCreaseClipsOffInFlow`, on by default);
+    /// Whether the square-crease end clips are turned OFF for this build (a per-flow switch,
+    /// on by default);
     /// `square_crease_end_clip::turn_square_crease_clips_off` flips it for the budget in force.
     pub square_crease_clips_off: Cell<bool>,
-    /// Who watches each corner hole the cap closes with the hole fill for this build (C#'s per-flow
-    /// `CornerCap.WatchHoleFills`, an `AsyncLocal` defaulting to null): the mesh, the fill's
+    /// Who watches each corner hole the cap closes with the hole fill for this build (a per-flow
+    /// watcher, none by default): the mesh, the fill's
     /// vertices, how many of them are the hole's own points, its triangles and the rows it closed.
     /// `None` (the default) costs nothing.
     pub watch_hole_fills: RefCell<Option<WatchHoleFills>>,
@@ -184,9 +182,8 @@ impl std::fmt::Debug for WorkBudget {
     }
 }
 
-/// How a level-line build leaves early (C#'s `WorkCanceledException` and
-/// `WorkBudgetExceededException`): returned by every function that charges the budget or polls
-/// for a cancel and passed up with `?`; the build's entry points turn it into C#'s outcome - the
+/// How a level-line build leaves early: returned by every function that charges the budget or polls
+/// for a cancel and passed up with `?`; the build's entry points turn it into the outcome - the
 /// caller's cancellation, or a refusal by name. Two cases, so no handler of the budget's refusal
 /// can mistake a cancel for a build that ran away.
 #[derive(Debug, Clone)]
@@ -215,11 +212,11 @@ impl std::fmt::Display for WorkError {
 impl std::error::Error for WorkError {}
 
 thread_local! {
-    /// C# `LevelLineWork.current` (`[ThreadStatic]`): the budget in force on this thread.
+    /// The budget in force on this thread.
     static CURRENT: RefCell<Option<Rc<WorkBudget>>> = const { RefCell::new(None) };
 }
 
-/// C# `LevelLineWork`: the budget the work being done right now is charged to.
+/// The budget the work being done right now is charged to.
 ///
 /// Ambient and per-thread rather than a parameter on every private helper: the places that charge
 /// are the field's own query counters, the mesh's splits and a handful of worklists, all of them
@@ -242,7 +239,7 @@ impl LevelLineWork {
     }
 }
 
-/// C# `LevelLineWork.Scope`: holds the budget that was in force before
+/// Holds the budget that was in force before
 /// [`LevelLineWork::begin`], and puts it back when dropped.
 #[derive(Debug)]
 #[must_use = "the budget stays in force only while the scope is alive"]
@@ -258,7 +255,7 @@ impl Drop for LevelLineWorkScope {
 }
 
 impl LevelLineProgress {
-    /// C#'s constructor.
+    /// A report of `phase`, the work spent and the fraction done.
     pub fn new(phase: LevelLineWorkPhase, work_spent: i64, fraction: f64) -> Self {
         Self {
             phase,
@@ -289,7 +286,7 @@ pub const PHASE_ORDER: [LevelLineWorkPhase; 8] = [
     LevelLineWorkPhase::Fill,
 ];
 
-/// C# `Environment.TickCount64`: milliseconds of wall clock, for the progress throttle alone (no
+/// Milliseconds of wall clock, for the progress throttle alone (no
 /// result depends on it). Read off the meters' clock.
 pub fn tick_count_ms() -> i64 {
     stopwatch::get_timestamp() / (stopwatch::FREQUENCY / 1000)
@@ -305,7 +302,7 @@ impl WorkBudget {
     }
 
     /// How far each phase carries the bar, summing to 1 over one loop of the route (band cut then
-    /// fill), by phase discriminant (C# `PhaseWeights = TheWeights()`).
+    /// fill), by phase discriminant.
     pub fn the_weights() -> [f64; LEVEL_LINE_WORK_PHASE_COUNT] {
         let mut weights = [0.0; LEVEL_LINE_WORK_PHASE_COUNT];
         weights[LevelLineWorkPhase::None as usize] = 0.0;
@@ -328,8 +325,7 @@ impl WorkBudget {
         weights
     }
 
-    /// Where each phase starts on the bar - the weights ahead of it in [`PHASE_ORDER`], added up
-    /// (C# `PhaseStarts = TheStarts()`).
+    /// Where each phase starts on the bar - the weights ahead of it in [`PHASE_ORDER`], added up.
     pub fn the_starts() -> [f64; LEVEL_LINE_WORK_PHASE_COUNT] {
         let weights = Self::the_weights();
         let mut starts = [0.0; LEVEL_LINE_WORK_PHASE_COUNT];
@@ -493,8 +489,8 @@ impl WorkBudget {
 }
 
 impl LevelLineWork {
-    /// Charges units of work to the budget in force; nothing when there is none (C#'s default
-    /// `units = 1` is passed explicitly).
+    /// Charges units of work to the budget in force; nothing when there is none (callers pass
+    /// `units = 1` for a single step).
     pub fn charge(units: i64) -> Result<(), WorkError> {
         // The common charge touches two counters and nothing else, so it is answered from the
         // slot without cloning the budget's `Rc`; the charge that reaches the limit or the
@@ -536,8 +532,7 @@ impl LevelLineWork {
     }
 }
 
-/// C#'s `ArgumentOutOfRangeException` from the `WorkBudget` constructor: a limit that is not a
-/// positive count of work.
+/// The refusal from the `WorkBudget` constructors: a limit that is not a positive count of work.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NonPositiveWorkLimit(pub i64);
 
@@ -554,19 +549,19 @@ impl std::fmt::Display for NonPositiveWorkLimit {
 impl std::error::Error for NonPositiveWorkLimit {}
 
 impl WorkBudget {
-    /// C# `WorkBudget(long limit)`: an allowance with no cancellation and no progress report.
+    /// An allowance with no cancellation and no progress report.
     pub fn new(limit: i64) -> Result<WorkBudget, NonPositiveWorkLimit> {
         Self::with_cancellation(limit, CancelToken::default(), None)
     }
 
-    /// C# `WorkBudget(long, CancellationToken, Action<LevelLineProgress>)`: an allowance that also
+    /// An allowance that also
     /// carries the caller's cancellation and, where it wants one, a progress report. The token is
     /// read every `CancelCheckEvery` charges, so a cancel lands within a few milliseconds of work
     /// wherever the build has got to; the report is called on every phase change and at most every
     /// [`WorkBudget::report_throttle_ms`] between. Wall clock is allowed there alone: it only
-    /// decides how often the bar is told, and no result depends on it. C#'s `init` properties
-    /// (`InputIsFloatStored`, `ReportThrottleMs`) are the public fields, set before the budget is
-    /// shared. The per-flow switches start at C#'s flow defaults.
+    /// decides how often the bar is told, and no result depends on it. The settable options
+    /// (`input_is_float_stored`, `report_throttle_ms`) are the public fields, set before the budget
+    /// is shared. The per-flow switches start at their defaults.
     pub fn with_cancellation(
         limit: i64,
         cancellation_token: CancelToken,
@@ -606,13 +601,13 @@ impl WorkBudget {
         })
     }
 
-    /// C# `WorkBudget.Exhausted`: true once the budget has run out; the build that owns it has
+    /// True once the budget has run out; the build that owns it has
     /// refused by then.
     pub fn exhausted(&self) -> bool {
         self.exhausted_in.get() != LevelLineWorkPhase::None
     }
 
-    /// C# `WorkBudget.ASliceForANestedSearch`: a progress hook for a search this build runs on an
+    /// A progress hook for a search this build runs on an
     /// allowance of its own (the pinch ladder): the search's fraction is mapped into what is left of
     /// the phase running now, so the bar moves through the search and never past the phase's end.
     /// `None` when nobody is watching this build.
@@ -655,14 +650,14 @@ impl WorkBudget {
         }))
     }
 
-    /// C# `WorkBudget.EnterSideGroup`: says which side group the refinement and edge roots about to
+    /// Says which side group the refinement and edge roots about to
     /// run belong to, of how many, so the bar walks across the groups.
     pub fn enter_side_group(&self, index: i32, count: i32) {
         self.side_group_count.set(0.max(count));
         self.side_group_index.set(0.max(index.min(count - 1)));
     }
 
-    /// C# `WorkBudget.NoteRefinementQueue`: the refinement's own worklist - how many triangles it
+    /// Notes the refinement's own worklist - how many triangles it
     /// has taken and how many are waiting. Only the bar reads it: nothing is charged and no result
     /// depends on it.
     pub fn note_refinement_queue(&self, taken: i64, left: i64) {
@@ -670,7 +665,7 @@ impl WorkBudget {
         self.refinement_left.set(left);
     }
 
-    /// C# `WorkBudget.TallyPhase`: adds the units and stopwatch ticks spent since the last tally
+    /// Adds the units and stopwatch ticks spent since the last tally
     /// to the running phase (the per-phase meter, kept only under `FieldCounters.MeterOn`).
     pub fn tally_phase(&self) {
         let now = stopwatch::get_timestamp();
@@ -687,7 +682,7 @@ impl WorkBudget {
 }
 
 impl LevelLineWork {
-    /// C# `LevelLineWork.EnterSideGroup`: names the side group whose refinement runs next on the
+    /// Names the side group whose refinement runs next on the
     /// budget in force ([`WorkBudget::enter_side_group`]).
     pub fn enter_side_group(index: i32, count: i32) {
         if let Some(budget) = Self::current() {
@@ -695,7 +690,7 @@ impl LevelLineWork {
         }
     }
 
-    /// C# `LevelLineWork.NoteRefinementQueue`: tells the budget in force how far the refinement's
+    /// Tells the budget in force how far the refinement's
     /// worklist has got ([`WorkBudget::note_refinement_queue`]).
     pub fn note_refinement_queue(taken: i64, left: i64) {
         if let Some(budget) = Self::current() {
@@ -704,7 +699,7 @@ impl LevelLineWork {
     }
 }
 
-/// Every phase in declaration (C# `Enum.GetValues`) order.
+/// Every phase in declaration order.
 pub const LEVEL_LINE_WORK_PHASES: [LevelLineWorkPhase; LEVEL_LINE_WORK_PHASE_COUNT] = [
     LevelLineWorkPhase::None,
     LevelLineWorkPhase::Sides,
@@ -719,14 +714,12 @@ pub const LEVEL_LINE_WORK_PHASES: [LevelLineWorkPhase; LEVEL_LINE_WORK_PHASE_COU
 ];
 
 impl WorkBudget {
-    /// C# `WorkBudget.PhaseReport`: units and wall seconds per phase of the builds this budget
+    /// Units and wall seconds per phase of the builds this budget
     /// metered (only with `FieldCounters.MeterOn`); closes the phase running now, so read it once
     /// the build is done.
     ///
-    /// C# formats with the current culture; this writes InvariantCulture's text (`N0`, `P1` as
-    /// "12.3 %", `F2`), which is what C# writes under it.
-    /// MatterCAD sets the thread culture from its number-format setting
-    /// (`SettingsManagement/NumberFormatSetting.cs`); once that setting is ported, this follows it.
+    /// The numbers are written in the invariant format (`N0`, `P1` as "12.3 %", `F2`), so the
+    /// report reads the same on every machine.
     pub fn phase_report(&self) -> String {
         self.tally_phase();
         let units = *self.phase_units.borrow();
@@ -765,7 +758,7 @@ impl WorkBudget {
 }
 
 impl WorkBudget {
-    /// C# `WorkBudget.Enter`: the build moves to `phase` - the old phase's meter tallied and the
+    /// Moves the build to `phase` - the old phase's meter tallied and the
     /// rule clock stopped (when metered), the phase's start noted, the refinement's queue cleared
     /// on entering it, the side groups forgotten on leaving the per-group loop, and the bar told.
     pub fn enter(&self, phase: LevelLineWorkPhase) {
@@ -795,7 +788,7 @@ impl WorkBudget {
 }
 
 impl LevelLineWork {
-    /// C# `LevelLineWork.Enter`: moves the budget in force, if any, to `phase`
+    /// Moves the budget in force, if any, to `phase`
     /// ([`WorkBudget::enter`]).
     pub fn enter(phase: LevelLineWorkPhase) {
         if let Some(budget) = Self::current() {

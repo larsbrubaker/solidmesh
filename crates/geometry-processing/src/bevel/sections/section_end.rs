@@ -1,9 +1,7 @@
-//! The section at the END of an open run (`Bevel/Sections/SectionEnd.cs`, a C# `internal static
-//! class`, so a module here): what is read off the part at one such end ([`EndReading`],
-//! [`try_read`], [`can_end_at`]) - the transverse face the run dies on and the two creases its
-//! sides slide down - and the walk of a profile end down its crease
-//! ([`walk_the_boundary_onto_the_crease`]). The section built from the reading lands with a later
-//! package.
+//! The section at the END of an open run: what is read off the part at one such end
+//! ([`EndReading`], [`try_read`], [`can_end_at`]) - the transverse face the run dies on and the two
+//! creases its sides slide down - and the walk of a profile end down its crease
+//! ([`walk_the_boundary_onto_the_crease`]), and the section built from the reading.
 
 use std::collections::{HashMap, HashSet};
 
@@ -15,7 +13,7 @@ use super::{NanSectionPoint, SectionPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup, FeatureEdge};
 
-/// C# `SectionEnd.EndReading`: what `TryRead` reads off the part at one end of an open run.
+/// What `try_read` reads off the part at one end of an open run.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct EndReading {
     /// The chain's end vertex.
@@ -57,7 +55,7 @@ pub const SMALLEST_LEAN: f64 = 1e-9;
 pub const THE_LONGEST_CREASE_WALK: i32 = 64;
 
 impl EndReading {
-    /// C#'s constructor.
+    /// A reading from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         vertex: i32,
@@ -335,7 +333,8 @@ pub fn is_the_regions_fold(
 }
 
 /// The graph edges at each vertex, over the edges `edge_at_pair` names, each listed once. Taken
-/// in the order C#'s `Dictionary.Values` gives them: each vertex pair at its first edge's place,
+/// in first-met order, so the result never depends on hashing: each vertex pair at its first
+/// edge's place,
 /// carrying the edge the index kept for it.
 pub fn the_edges_at_each_vertex(
     graph: &MeshEdgeGraph,
@@ -446,7 +445,7 @@ pub fn the_crease_between(
     found
 }
 
-/// C# `SectionEnd.TryBuild`: the END section at a run's open end - the profile swept between the
+/// The END section at a run's open end - the profile swept between the
 /// two faces' feet, slid onto the end's own (leaning) plane, and each boundary walked onto the
 /// crease it slides along.
 #[allow(clippy::too_many_arguments)]

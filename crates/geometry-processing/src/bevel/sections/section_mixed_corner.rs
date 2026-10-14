@@ -1,8 +1,7 @@
 //! THE READING of a MIXED corner - two chain edges sharing one smooth side but meeting it at
 //! different wedges, convex on one side of the vertex and concave on the other - and the measured
-//! reason it is NOT the mitre [`section_corner`] draws. Ports
-//! `Bevel/Sections/SectionMixedCorner.cs` (C# `internal static class`, free functions here). It
-//! reads each canal's axis with [`section_corner::the_axis_at`]; nothing is built here yet - what
+//! reason it is NOT the mitre [`section_corner`] draws. It reads each canal's axis with
+//! [`section_corner::the_axis_at`]; nothing is built here yet - what
 //! is here is what the next reader needs so as not to measure it twice.
 //!
 //! **The corner read.** The handover corner of "Every Chamfer Works" at `(-10.7723, 28, 0)`, at the
@@ -82,8 +81,8 @@
 //! cannot be built before a corner section for unequal wedges exists to continue - which is why
 //! nothing is built here yet.
 
-// C#'s negated comparisons (`!(room < size)`, `!(x > 0)`) are kept as written: they are what
-// decides which way a NaN reading falls.
+// The negated comparisons (`!(room < size)`, `!(x > 0)`) are written that way on purpose: they
+// are what decides which way a NaN reading falls.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use vector_math::{math_helper, Vector3};
@@ -98,7 +97,7 @@ fn smooth_surface_dot() -> f64 {
 }
 
 /// One mixed corner's sides: each edge's normal on the side the two share, and on its own other
-/// one (C#'s four `out` parameters).
+/// one.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct MixedCornerSides {
     pub shared_of_arriving: Vector3,
@@ -107,7 +106,7 @@ pub struct MixedCornerSides {
     pub other_of_leaving: Vector3,
 }
 
-/// C# `TryReadTheSharedSide`: whether the two edges share one smooth side - the thing that makes a
+/// Whether the two edges share one smooth side - the thing that makes a
 /// turn a MIXED corner rather than something with no section at all - handing back each edge's
 /// normal on that side and on its own other one.
 pub fn try_read_the_shared_side(
@@ -141,7 +140,7 @@ pub fn try_read_the_shared_side(
     None
 }
 
-/// C# `HowSkewTheAxesAre`: how far the two canals' axes stand out of one another's plane at the
+/// How far the two canals' axes stand out of one another's plane at the
 /// vertex - zero when they meet, which is what makes their intersection a PLANE curve. Both axes
 /// stand a radius inside the shared side, so on a genuinely shared side this is always zero to
 /// float noise; it is measured rather than assumed because the assumption is the whole reason the
@@ -163,7 +162,7 @@ pub fn how_skew_the_axes_are(arriving: &ChainEdge, leaving: &ChainEdge, radius: 
     (from1 - from0).dot(across.get_normal()).abs()
 }
 
-/// C# `TryWhereTheSharedSideBoundariesMeet`: where the two canals' contact lines on the SHARED side
+/// Where the two canals' contact lines on the SHARED side
 /// meet - the one point of that side both strips end at - and how far apart the two lines pass
 /// there. `None` where the two lines do not actually meet, which cannot happen while
 /// [`how_skew_the_axes_are`] reads zero.
@@ -190,7 +189,7 @@ pub fn try_where_the_shared_side_boundaries_meet(
     Some(((on0 + on1) / 2.0, (on1 - on0).length()))
 }
 
-/// C# `TryWhereEachEndsOnTheFold`: how far along the FOLD - the crease where each edge's own other
+/// How far along the FOLD - the crease where each edge's own other
 /// side meets the other's, running out of the vertex - each canal ends its contact on that side,
 /// as `(fold, arriving_reach, leaving_reach)`. The two answers differ whenever the wedges do, and
 /// the difference is the patch of wall a mixed corner still owes (0.9018 mm on the handover corner,

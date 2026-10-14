@@ -1,8 +1,7 @@
-//! The TRANSVERSE face's own rebuild (`Bevel/Sections/SectionEndSplice.cs`, C# `internal static
-//! class`, free functions here): the flat face an OPEN run dies on - the wall that cuts the chain
-//! off - drawn again with the end section's PROFILE spliced into its rim where the chain's end
-//! vertex stood ([`try_rebuild_the_transverse_faces`]). The rim is read and the spliced ring drawn
-//! by `section_fan_remesh` ([`super::section_fan_remesh::try_the_outline`],
+//! The TRANSVERSE face's own rebuild: the flat face an OPEN run dies on - the wall that cuts the
+//! chain off - drawn again with the end section's PROFILE spliced into its rim where the chain's
+//! end vertex stood ([`try_rebuild_the_transverse_faces`]). The rim is read and the spliced ring
+//! drawn by `section_fan_remesh` ([`super::section_fan_remesh::try_the_outline`],
 //! [`super::section_fan_remesh::try_draw_the_ring`]); the face's flat region is
 //! [`super::section_room::faces_of_the_flat_region`].
 //!
@@ -44,7 +43,7 @@ fn refused(code: BevelAdvisoryCode, at: Vector3) -> BevelAdvisory {
     BevelAdvisory::new(code, vec![at.into()])
 }
 
-/// C# `TryRebuildTheTransverseFaces`: draws the transverse face of every OPEN run again, with each
+/// Draws the transverse face of every OPEN run again, with each
 /// end's profile spliced into its rim.
 ///
 /// `mesh` is the part the chains were picked on and `graph` its edge graph; `edge_at_pair` the
@@ -176,7 +175,7 @@ pub fn try_rebuild_the_transverse_faces(
     Ok(())
 }
 
-/// C# `TrySplice`: puts one end's profile into the rim in place of its end vertex and the crease
+/// Puts one end's profile into the rim in place of its end vertex and the crease
 /// vertices its two landings slid past.
 fn try_splice(
     mesh: &Mesh,
@@ -277,16 +276,16 @@ fn try_splice(
     Ok(())
 }
 
-/// C# `SwallowedAlong`: how many rim points one landing swallows going one way round from the end
+/// How many rim points one landing swallows going one way round from the end
 /// vertex - the projection walk steps chord by chord and stops at the first chord whose span holds
 /// the landing, and every point stepped over is swallowed. -1 where the rim ran out before the
 /// landing did.
 ///
-/// Also -1 where the walk reaches a rim point that is not a mesh vertex (divergence 4955): the
-/// rim is ring indices into the section POOL, and once one end has been spliced into a region the
-/// rim carries that end's profile, which the pool minted past the mesh. C# reads every rim point
-/// from `mesh.Vertices` and throws there; a landing that slides into the other end's profile is
-/// two splices claiming one stretch of rim, which is the same refusal as a rim that ran out.
+/// Also -1 where the walk reaches a rim point that is not a mesh vertex: the rim is ring indices
+/// into the section POOL, and once one end has been spliced into a region the rim carries that
+/// end's profile, which the pool minted past the mesh. Reading those as mesh vertices would run
+/// off the end; a landing that slides into the other end's profile is two splices claiming one
+/// stretch of rim, which is the same refusal as a rim that ran out.
 pub(super) fn swallowed_along(
     mesh: &Mesh,
     ring: &[i32],
@@ -324,7 +323,7 @@ pub(super) fn swallowed_along(
     -1
 }
 
-/// C# `FarVertexOf`: the end of a mesh edge that is not `vertex`.
+/// The end of a mesh edge that is not `vertex`.
 fn far_vertex_of(graph: &MeshEdgeGraph, edge: i32, vertex: i32) -> i32 {
     if graph.get_vertex0(edge) == vertex {
         graph.get_vertex1(edge)
@@ -333,7 +332,7 @@ fn far_vertex_of(graph: &MeshEdgeGraph, edge: i32, vertex: i32) -> i32 {
     }
 }
 
-/// C# `TheFaceStillOn`: a face of the rebuilt list that still stands on `vertex`, or -1.
+/// A face of the rebuilt list that still stands on `vertex`, or -1.
 fn the_face_still_on(rebuilt: &[Triple], dropped: &HashSet<i32>, vertex: i32) -> i32 {
     for (face, drawn) in rebuilt.iter().enumerate() {
         let face = face as i32;

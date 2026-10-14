@@ -1,7 +1,6 @@
 //! The index-ordered binary box tree a chain field query walks, and the box-to-box gap every one of
 //! its bounds is read from: built once from the chain's points and setbacks, and thereafter only
 //! visited, so the whole of "which segments could still beat what I have" lives in one place.
-//! Ports `Bevel/LevelLine/SegmentBoxTree.cs` (`SegmentNode`, `SegmentBoxTree`).
 
 use vector_math::{cs_math, Vector3};
 

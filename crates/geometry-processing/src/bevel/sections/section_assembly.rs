@@ -1,6 +1,5 @@
-//! The whole vertex-centric build for one or several chains (`Bevel/Sections/SectionAssembly.cs`,
-//! the static class `SectionAssembly`): sections, rebuilt faces, strips, and the mesh they make
-//! together.
+//! The whole vertex-centric build for one or several chains: sections, rebuilt faces, strips, and
+//! the mesh they make together.
 //!
 //! **One pool, one face list.** The rebuilt faces ([`super::section_face_rebuild`]) and the strips
 //! ([`super::section_loft`]) are laid into the SAME list over the SAME [`SectionPool`], so the rail
@@ -18,8 +17,8 @@
 //! vertices are used by nothing. So exactly here, once, at the end, the used points are gathered in
 //! first-seen order and the faces rewritten onto them.
 //!
-//! C#'s `out failure` pairs become [`SectionBuildRefusal`]: a named refusal, a decline with no
-//! advisory (the builder's null failure), or a NaN point (C# throws there).
+//! A build that fails says why with [`SectionBuildRefusal`]: a named refusal, a decline with no
+//! advisory, or a NaN point.
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Vector3Float;
@@ -31,8 +30,8 @@ use crate::bevel::surface::surface_mesh_closure;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::FeatureEdgeChain;
 
-/// C# `TryBuild`: the filleted mesh for one simple closed chain, built from the chain itself.
-/// A missing mesh, graph or chain is C#'s `SurfaceConstructionNotBuilt`.
+/// The filleted mesh for one simple closed chain, built from the chain itself.
+/// A missing mesh, graph or chain is refused as `SurfaceConstructionNotBuilt`.
 pub fn try_build(
     mesh: Option<&Mesh>,
     graph: Option<&MeshEdgeGraph>,
@@ -61,7 +60,7 @@ pub fn try_build(
     try_assemble(mesh, graph, &run, &mut pool)
 }
 
-/// C# `TryAssemble(mesh, graph, run, pool, ...)`: the same from a run that has already been built.
+/// The same from a run that has already been built.
 pub fn try_assemble(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -71,7 +70,7 @@ pub fn try_assemble(
     try_assemble_runs(mesh, graph, std::slice::from_ref(run), pool)
 }
 
-/// C# `TryAssemble(mesh, graph, runs, pool, ...)`: the whole build for SEVERAL chains at once,
+/// The whole build for SEVERAL chains at once,
 /// every run built over the ONE `pool` against the ORIGINAL mesh.
 pub fn try_assemble_runs(
     mesh: &Mesh,
@@ -82,7 +81,7 @@ pub fn try_assemble_runs(
     assemble(mesh, graph, runs, pool).map(|(mesh, _)| mesh)
 }
 
-/// C# `TryAssemble(..., out blendFaces, ...)`: the several-run build, saying as well WHICH of the
+/// The several-run build, saying as well WHICH of the
 /// published faces the fillet itself is - the indices, into the result's own face list, of the
 /// faces the LOFT laid. What they are FOR is fencing: a second bevel pass floods its picked face
 /// regions at the row's flat angle, and a fillet's facets turn less than that.
@@ -95,7 +94,7 @@ pub fn try_assemble_with_blend(
     assemble(mesh, graph, runs, pool)
 }
 
-/// C# `Assemble`: the one body both several-run entries run.
+/// The one body both several-run entries run.
 fn assemble(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -148,13 +147,13 @@ fn assemble(
     Ok((published, blend_faces))
 }
 
-/// C# `SeamOf`: the seam of the run at `run` (an index into the runs, as
+/// The seam of the run at `run` (an index into the runs, as
 /// [`SectionSmoothSeam::run`] is), or `None` where neither of its sides is smooth.
 fn seam_of(seams: &[SectionSmoothSeam], run: usize) -> Option<&SectionSmoothSeam> {
     seams.iter().find(|seam| seam.run as usize == run)
 }
 
-/// C# `Publish`: the pool and the face list as a mesh, keeping only the points some face uses and
+/// The pool and the face list as a mesh, keeping only the points some face uses and
 /// renumbering them once, in face order - so the numbering is a fact about the face list, which is
 /// itself pure topology over the run.
 fn publish(pool: &SectionPool, faces: &[(i32, i32, i32)]) -> Mesh {

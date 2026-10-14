@@ -1,7 +1,6 @@
-//! The clauses the sections router asks of a pass's PLANS (`Bevel/Sections/SectionRouting.cs`:
-//! `TheFeatureTest`, `Reads`, `ReadsPlan`, `IsARoundClosedChain`, `BothEndsCanBeBuilt`,
-//! `PickedEdgesByVertex`, `CarriesTwoEdgesAtEveryVertex`, `TurnsUnderTheCurveTolerance`,
-//! `IsOneConvexity`, `NoCornerIsMixedAndNoEndIsAJunction`). Each answers with the sentence the
+//! The clauses the sections router asks of a pass's PLANS (the feature test, round closed chains,
+//! buildable ends, two edges at every vertex, turns under the curve tolerance, one convexity, no
+//! mixed corner or junction). Each answers with the sentence the
 //! route log and the tests read; [`super::section_routing`] asks them clause-major for a whole
 //! pass and plan-major for its partition.
 
@@ -17,11 +16,10 @@ use crate::bevel::level_line::stopwatch::g4;
 use crate::bevel::surface::SurfaceBevelPlan;
 use crate::topology::{EdgeConvexity, FaceGroup, FeatureEdgeSet};
 
-/// A clause's answer: `Ok` where the plan passes it, the first failing sentence otherwise (C#'s
-/// `bool` with `out whyNot`).
+/// A clause's answer: `Ok` where the plan passes it, the first failing sentence otherwise.
 pub type Clause = Result<(), String>;
 
-/// C# `TheFeatureTest`: the OPERATION's own reading of which mesh edges are features, as the
+/// The OPERATION's own reading of which mesh edges are features, as the
 /// junction screen wants it - `None` where the pass carries no feature set, which leaves the
 /// reading to the coplanarity fallback exactly as it was before this was carried at all.
 ///
@@ -41,7 +39,7 @@ pub fn the_feature_test(features: Option<&FeatureEdgeSet>) -> Option<IsAFeatureE
     Some(Rc::new(move |edge| mesh_edges.contains(&edge)))
 }
 
-/// C# `Reads`: every clause the PLANS and the mesh can answer on their own, in the order the plan
+/// Every clause the PLANS and the mesh can answer on their own, in the order the plan
 /// states them.
 ///
 /// The loops are CLAUSE-major and not plan-major: the sentence a failing pass carries is the first
@@ -53,7 +51,7 @@ pub fn reads(
     graph: &MeshEdgeGraph,
     is_a_feature_edge: Option<&dyn Fn(i32) -> bool>,
 ) -> Clause {
-    // C#'s null mesh and graph answer with the same sentence; the caller asks that first.
+    // A missing mesh or graph answers with the same sentence; the caller asks that first.
     if plans.is_empty() {
         return Err("there is nothing to route".to_string());
     }
@@ -83,7 +81,7 @@ pub fn reads(
     Ok(())
 }
 
-/// C# `ReadsPlan`: every clause of one plan, in the order [`reads`] asks them of the pass.
+/// Every clause of one plan, in the order [`reads`] asks them of the pass.
 pub fn reads_plan(
     plan: &SurfaceBevelPlan,
     mesh: &Mesh,
@@ -98,7 +96,7 @@ pub fn reads_plan(
     no_corner_is_mixed_and_no_end_is_a_junction(plan)
 }
 
-/// C# `IsARoundClosedChain`: a round profile, a closed chain, and at least three edges to close it
+/// A round profile, a closed chain, and at least three edges to close it
 /// with.
 pub fn is_a_round_closed_chain(
     plan: &SurfaceBevelPlan,
@@ -123,7 +121,7 @@ pub fn is_a_round_closed_chain(
     Ok(())
 }
 
-/// C# `BothEndsCanBeBuilt`: whether an OPEN plan's two ends are both ones `SectionEnd` can draw -
+/// Whether an OPEN plan's two ends are both ones `SectionEnd` can draw -
 /// the side beyond each end one flat region, and one crease shared with each side for the boundary
 /// to slide down ([`section_end::can_end_at`]). An open chain is routed exactly when both answer
 /// yes.
@@ -134,7 +132,7 @@ pub fn is_a_round_closed_chain(
 /// plain cube corner, where the chain edge's own two sides are ALL the faces at the vertex and
 /// there is no transverse region at all, is one of them.
 ///
-/// C#'s null mesh and graph checks are the callers' here: every caller has both.
+/// The mesh and graph are required: every caller has both.
 pub fn both_ends_can_be_built(plan: &SurfaceBevelPlan, mesh: &Mesh, graph: &MeshEdgeGraph) -> bool {
     if plan.edges.len() < 3 {
         return false;
@@ -154,7 +152,7 @@ pub fn both_ends_can_be_built(plan: &SurfaceBevelPlan, mesh: &Mesh, graph: &Mesh
         .is_ok()
 }
 
-/// C# `PickedEdgesByVertex`: how many picked edges of the PASS end at each vertex - the one
+/// How many picked edges of the PASS end at each vertex - the one
 /// reading the router makes across plans rather than within one. Only looked up, never iterated.
 pub fn picked_edges_by_vertex(plans: &[Rc<SurfaceBevelPlan>]) -> HashMap<i32, i32> {
     let mut carried: HashMap<i32, i32> = HashMap::new();
@@ -169,7 +167,7 @@ pub fn picked_edges_by_vertex(plans: &[Rc<SurfaceBevelPlan>]) -> HashMap<i32, i3
     carried
 }
 
-/// C# `CarriesTwoEdgesAtEveryVertex`: exactly two picked edges at every vertex of this chain,
+/// Exactly two picked edges at every vertex of this chain,
 /// counted across ALL the plans - a vertex three picked edges meet at is a junction whatever chain
 /// each of them came from, and one edge is a free end. Version 1 has no treatment for either.
 pub fn carries_two_edges_at_every_vertex(
@@ -209,7 +207,7 @@ pub fn carries_two_edges_at_every_vertex(
     Ok(())
 }
 
-/// C# `TurnsUnderTheCurveTolerance`: the turn between consecutive chain edges, under the curve
+/// The turn between consecutive chain edges, under the curve
 /// tolerance at every vertex - OR a turn that reads as a CORNER, which has its own section
 /// (`SectionCorner`). The reading here is the cheap half, the one the two chain edges can answer
 /// alone: the same flat side at the same wedge. Whether the fold leaving the vertex lets both edges
@@ -275,13 +273,13 @@ pub fn turns_under_the_curve_tolerance(
     Ok(())
 }
 
-/// C# `IsOneConvexity`: one convexity per chain, and CONVEX. `SectionBuilder`'s centre is the
+/// One convexity per chain, and CONVEX. `SectionBuilder`'s centre is the
 /// convex formula and a concave stretch reaching the loft is refused by its winding check, so a
 /// concave chain is named here rather than found out there.
 pub fn is_one_convexity(plan: &SurfaceBevelPlan) -> Clause {
     for planned in &plan.edges {
         if planned.convexity() != EdgeConvexity::Convex {
-            // C#'s enum `ToString()` is the member's name, which is what `Debug` writes.
+            // The sentence names the convexity by its member name, which is what `Debug` writes.
             return Err(format!(
                 "edge at vertex {} is {:?}",
                 planned.edge.from_vertex(),
@@ -293,7 +291,7 @@ pub fn is_one_convexity(plan: &SurfaceBevelPlan) -> Clause {
     Ok(())
 }
 
-/// C# `NoCornerIsMixedAndNoEndIsAJunction`: no mixed corner and no junction. Both are readings the
+/// No mixed corner and no junction. Both are readings the
 /// legacy construction makes its own geometry for, and neither has a section.
 ///
 /// **A ROLLED WALL is no longer one of them.** This clause used to decline any plan carrying a

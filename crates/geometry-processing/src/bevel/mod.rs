@@ -46,7 +46,7 @@
 //! - **Constructions.** The level-line build ([`level_line`]), the vertex-centric sections
 //!   ([`sections`]) and the surface construction ([`surface`]).
 //!
-//! C# `internal static class` helpers are modules of free functions here.
+//! Stateless helpers are modules of free functions.
 
 mod bevel_advisory;
 mod bevel_advisory_code;

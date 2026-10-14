@@ -1,6 +1,5 @@
 //! A chain vertex where the chain turns SHARPLY - a corner of the outline, where the two edges' canals
-//! cannot share one section by a smooth sweep (`Bevel/Sections/SectionCorner.cs`, a C# `internal
-//! static class`; a module of free functions here). What is here are the corner's tolerances and the
+//! cannot share one section by a smooth sweep. What is here are the corner's tolerances and the
 //! reading of a turn ([`turn_degrees`], [`is_sharp_turn`]); the mitre plane ([`try_the_mitre_plane`]);
 //! the reading of the two sides ([`try_read_the_sides`]) and the slid profile each edge's canal cuts
 //! in the bisector ([`slid_profile`]); the fold and shared side the section ends on
@@ -18,34 +17,34 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup, FeatureEdge};
 
-/// C# `SameToWithin`: how nearly two wedges, two slide distances or two directions must agree to be
+/// How nearly two wedges, two slide distances or two directions must agree to be
 /// read as the same. The corner is a SYMMETRIC construction; a pair that is only nearly symmetric is
 /// refused rather than split the difference.
 pub const SAME_TO_WITHIN: f64 = 1e-9;
 
-/// C# `SameWedgeToWithin`: how nearly two wedges - or two slide distances down the fold - must agree
+/// How nearly two wedges - or two slide distances down the fold - must agree
 /// to be read as the same wedge. Only the CHEAP SCREEN the router can ask off the two chain edges
 /// alone; wider than [`SAME_TO_WITHIN`] because both are read off FACE NORMALS of float vertices.
 pub const SAME_WEDGE_TO_WITHIN: f64 = 1e-4;
 
-/// C# `ProfilesMeetToWithinThisMuchOfTheRadius`: how far apart the two edges' profiles, each slid onto
+/// How far apart the two edges' profiles, each slid onto
 /// the bisector plane, may stand and still be read as ONE curve, as a fraction of the radius.
 pub const PROFILES_MEET_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS: f64 = 1e-3;
 
-/// C# `SmoothSurfaceDot`: how nearly two faces must line up to be read as ONE SMOOTH SURFACE rather than
+/// How nearly two faces must line up to be read as ONE SMOOTH SURFACE rather than
 /// two sides of a feature - the cosine of the same curve tolerance [`is_sharp_turn`] reads turns at.
 pub fn smooth_surface_dot() -> f64 {
     math_helper::degrees_to_radians(FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES).cos()
 }
 
-/// C# `IsSharpTurn`: whether the chain turns past the curve tolerance between two consecutive edges,
+/// Whether the chain turns past the curve tolerance between two consecutive edges,
 /// which is what makes the vertex a corner rather than a point of a curve. The builder and the router
 /// read the same question here so that neither can route what the other would not draw.
 pub fn is_sharp_turn(arriving: &ChainEdge, leaving: &ChainEdge) -> bool {
     turn_degrees(arriving, leaving) > FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES
 }
 
-/// C# `TurnDegrees`: the turn between two consecutive chain edges, in degrees.
+/// The turn between two consecutive chain edges, in degrees.
 pub fn turn_degrees(arriving: &ChainEdge, leaving: &ChainEdge) -> f64 {
     let cosine = direction(arriving)
         .get_normal()
@@ -59,7 +58,7 @@ fn direction(edge: &ChainEdge) -> Vector3 {
     edge.direction()
 }
 
-/// C# `TryTheMitrePlane`: THE PLANE THE MITRE IS CUT BY, for two edges standing at any two wedges on
+/// THE PLANE THE MITRE IS CUT BY, for two edges standing at any two wedges on
 /// their shared flat - square to the sum of the two edges' directions, through the point where their
 /// canal axes come nearest (the midpoint of the two nearest points) - as `(through, normal)`. `None`
 /// where the chain turns straight back or the two axes run parallel.
@@ -98,7 +97,7 @@ pub fn try_the_mitre_plane(
     Some((through, normal))
 }
 
-/// C# `TheAxisAt`: the point of an edge's canal axis level with `station` - a radius clear of both
+/// The point of an edge's canal axis level with `station` - a radius clear of both
 /// of its faces.
 pub fn the_axis_at(edge: &ChainEdge, station: Vector3, radius: f64) -> Vector3 {
     let one = edge.left_normal().get_normal();
@@ -107,13 +106,13 @@ pub fn the_axis_at(edge: &ChainEdge, station: Vector3, radius: f64) -> Vector3 {
     station - ((one + other) * radius / (1.0 + one.dot(other)))
 }
 
-/// C# `LooksLikeACorner`: whether two edges' sides read as a corner the section can be shared across
+/// Whether two edges' sides read as a corner the section can be shared across
 /// ([`try_read_the_sides`]).
 pub fn looks_like_a_corner(arriving: &ChainEdge, leaving: &ChainEdge) -> bool {
     try_read_the_sides(arriving, leaving).is_some()
 }
 
-/// C# `SharedKind`: a side that rides a shared fold slides; one that does not offsets.
+/// A side that rides a shared fold slides; one that does not offsets.
 pub fn shared_kind(shared_fold: i32) -> SectionSide {
     if shared_fold >= 0 {
         SectionSide::Slide
@@ -122,7 +121,7 @@ pub fn shared_kind(shared_fold: i32) -> SectionSide {
     }
 }
 
-/// C# `TryReadTheSides`: which side two edges SHARE (the same surface either side of the turn - read
+/// Which side two edges SHARE (the same surface either side of the turn - read
 /// at the curve tolerance, since a tessellated wall hands it a different facet each side) and the
 /// wedge they stand at, as `(flat_on_the_left, cosine, wedge)`. `None` where both sides or neither are
 /// shared, or the two wedges differ past [`SAME_WEDGE_TO_WITHIN`], or the wedge is flat or folds
@@ -169,7 +168,7 @@ pub fn try_read_the_sides(arriving: &ChainEdge, leaving: &ChainEdge) -> Option<(
     ))
 }
 
-/// C# `AwayInTheWall`: the direction across the WALL face away from the edge - in the wall's plane,
+/// The direction across the WALL face away from the edge - in the wall's plane,
 /// square to the edge - for an edge whose faces meet at `cosine`.
 pub fn away_in_the_wall(edge: &ChainEdge, wall_on_the_left: bool, cosine: f64) -> Vector3 {
     let (wall, flat) = if wall_on_the_left {
@@ -182,7 +181,7 @@ pub fn away_in_the_wall(edge: &ChainEdge, wall_on_the_left: bool, cosine: f64) -
     ((wall.get_normal() * cosine) - flat.get_normal()) / across
 }
 
-/// C# `SlidProfile`: an edge's own profile of `points` samples at `station`, each slid along the edge
+/// An edge's own profile of `points` samples at `station`, each slid along the edge
 /// onto the bisector plane through the station - the curve that edge's canal cuts in that plane.
 pub fn slid_profile(
     edge: &ChainEdge,
@@ -210,7 +209,7 @@ pub fn slid_profile(
         .collect()
 }
 
-/// C# `TryTheFold`: the one crease the WALL side's fan crosses at a corner - the fold the wall
+/// The one crease the WALL side's fan crosses at a corner - the fold the wall
 /// boundary slides down - checked to lean out along both edges' walls by the same slide distance
 /// (within [`SAME_WEDGE_TO_WITHIN`] of the setback). No fold, several, or a fold the two edges would
 /// slide down different distances is refused.
@@ -273,7 +272,7 @@ pub fn try_the_fold(
     Ok(fold)
 }
 
-/// C# `TryTheSharedSide`: the shared FLAT side's fan at a corner - no crease (an offset), or one
+/// The shared FLAT side's fan at a corner - no crease (an offset), or one
 /// SMOOTH fold of a tessellated surface to slide along - as the shared fold or -1. Several creases, or
 /// one that is a real feature, are refused.
 #[allow(clippy::too_many_arguments)]
@@ -307,7 +306,7 @@ pub fn try_the_shared_side(
     Ok(creases.first().copied().unwrap_or(-1))
 }
 
-/// C# `IsASmoothFold`: whether a manifold edge's two faces line up within the curve tolerance - one
+/// Whether a manifold edge's two faces line up within the curve tolerance - one
 /// smooth surface folded by its tessellation rather than a feature of the part.
 pub fn is_a_smooth_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
     if graph.get_face_count(edge) != 2 {
@@ -322,9 +321,9 @@ pub fn is_a_smooth_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
     one.dot(other) > smooth_surface_dot()
 }
 
-/// Why [`try_build`] drew no corner. C# answers `false` with an advisory, or - at a JUNCTION, which
-/// `SectionJunction` draws - `false` with NO advisory ("handled elsewhere", never a refusal to
-/// publish); a point that is not a number is where C# throws.
+/// Why [`try_build`] drew no corner: a refusal with an advisory, or - at a JUNCTION, which
+/// `SectionJunction` draws - a decline with NO advisory ("handled elsewhere", never a refusal to
+/// publish), or a point that is not a number.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CornerRefusal {
     /// The station is a junction: not this rule's to draw, and nothing named.
@@ -341,7 +340,7 @@ impl From<NanSectionPoint> for CornerRefusal {
     }
 }
 
-/// C# `TryBuild`: the mitre section at the vertex `leaving` starts from - the arriving edge's own
+/// The mitre section at the vertex `leaving` starts from - the arriving edge's own
 /// section slid onto the bisector plane, shared by both strips - or why there is none. The
 /// operation's `is_a_feature_edge` is read ONLY to tell a junction from a corner this rule cannot
 /// draw; the mitre's own fold reading keeps its fallback.

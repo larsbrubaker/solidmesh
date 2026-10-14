@@ -1,5 +1,4 @@
-//! The strip clip's VALLEY mode. Ports `Bevel/LevelLine/StripClip.Valley.cs` (a partial of the C#
-//! static class `StripClip`): which side of a plane the other face says is kept
+//! The strip clip's VALLEY mode: which side of a plane the other face says is kept
 //! ([`other_says`]), the one run of a loop lying in a single plane ([`one_plane_run`]) and the fan
 //! from a corner facing the wall ([`fan_facing`]), the valley's cap ([`valley_cap`]), the two walls
 //! ([`valley_planes`]) and the valley's two ties ([`insert_valley_ties`]). The clip that picks
@@ -62,7 +61,7 @@ pub fn one_plane_run(
     found
 }
 
-/// C# `StripClip.FanFacing`: fans the polygon from the first corner whose every fan triangle faces
+/// Fans the polygon from the first corner whose every fan triangle faces
 /// along the wall's `normal` (a triangle on a straight stretch of the outline has no area and faces
 /// nowhere); the faces laid join `strip`. False where no corner sees the whole polygon.
 pub fn fan_facing(
@@ -72,7 +71,7 @@ pub fn fan_facing(
     normal: Vector3,
 ) -> Result<bool, LevelLineMeshError> {
     let n = polygon.len();
-    // LINQ's Max: NaN reads as the smallest; an empty polygon throws (as the C# does).
+    // The largest corner distance, a NaN reading as the smallest; a polygon always has corners.
     let mut scale: Option<f64> = None;
     for &v in polygon {
         let x = (mesh.position(v) - mesh.position(polygon[0])).length();
@@ -110,7 +109,7 @@ pub fn fan_facing(
     Ok(false)
 }
 
-/// C# `StripClip.ValleyCap`: closes a valley's hole. The drop leaves the walls' crease ring and
+/// Closes a valley's hole. The drop leaves the walls' crease ring and
 /// the kept round's clip loop; each wall's cap is its stretch of the ring, the shared crease on to
 /// the tie beside the stretch's end, its clip curve, and the shared crease back from the other tie
 /// - fanned in the wall's plane by [`fan_facing`]. The faces laid join `strip`.
@@ -233,7 +232,7 @@ pub fn valley_cap(
 /// One wall of a valley: a point of its plane, its unit normal, and the mesh vertices on it.
 pub type ValleyWall = (Vector3, Vector3, HashSet<i32>);
 
-/// C# `StripClip.ValleyPlanes`: the two planes the edges of `part` stand on, where they are
+/// The two planes the edges of `part` stand on, where they are
 /// exactly two, share a vertex, and each stands in front of the other (a V, not a ridge) - or
 /// `None`.
 pub fn valley_planes(mesh: &LevelLineMesh, part: &[(i32, i32)]) -> Option<Vec<ValleyWall>> {
@@ -281,7 +280,7 @@ pub fn valley_planes(mesh: &LevelLineMesh, part: &[(i32, i32)]) -> Option<Vec<Va
     }
 }
 
-/// C# `StripClip.InsertValleyTies`: both ties of a valley. The shared crease pierces the kept
+/// Inserts both ties of a valley. The shared crease pierces the kept
 /// round once beside each of its old ends, so each end on the crease stretch (`crease_vertices`)
 /// takes the crossing nearest it - the ridge's rule ([`insert_ties`]), read once per end, ends in
 /// ascending order. False where a tie would split an edge the kept surface stands on.

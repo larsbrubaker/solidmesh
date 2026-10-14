@@ -1,4 +1,4 @@
-//! One chain's worth of sections ([`SectionRun`], `Bevel/Sections/SectionRun.cs`): the section
+//! One chain's worth of sections ([`SectionRun`]): the section
 //! standing at each vertex an edge leaves, together with the chain they were computed from, with
 //! its constructor and accessors (`count`, `start_of`, `end_of`).
 
@@ -10,11 +10,11 @@ use super::{BevelSection, JunctionSection, SectionAbsorbedSplits};
 use crate::bevel::surface::SurfaceBevelPlan;
 use crate::topology::ChainEdge;
 
-/// C#'s `Func<int, bool>` naming which mesh edges are features: the operation's own reading, the
+/// The predicate naming which mesh edges are features: the operation's own reading, the
 /// predicate a run's offsets were walked along the surface with.
 pub type IsAFeatureEdge = Rc<dyn Fn(i32) -> bool>;
 
-/// C# `SectionRun` (a sealed class). There is no strip here, on purpose: edge `i`'s strip is the
+/// One chain's sections. There is no strip here, on purpose: edge `i`'s strip is the
 /// loft between `start_of(i)` and `end_of(i)`, and on a closed run `end_of(i)` and
 /// `start_of(i + 1)` are the SAME section - shared through `Rc`, so the seam closes by identity
 /// rather than by two copies that have to be re-matched at every joint.
@@ -36,13 +36,12 @@ pub struct SectionRun {
     pub absorbed: Option<SectionAbsorbedSplits>,
     /// The run's JUNCTION STATIONS by station index - the one place a station owns TWO sections.
     /// `sections[station]` holds the junction's leaving section, and `end_of` of the edge
-    /// arriving there hands back its arriving section instead. Empty on every run without one
-    /// (C#'s shared empty dictionary); iterated in insertion order.
+    /// arriving there hands back its arriving section instead. Empty on every run without one;
+    /// iterated in insertion order.
     pub junctions: IndexMap<i32, JunctionSection>,
 }
 
-/// The refusal [`SectionRun::end_of`] gives an open run's last edge (C# throws
-/// `InvalidOperationException`, with this message).
+/// The refusal [`SectionRun::end_of`] gives an open run's last edge, with this message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NoSectionPastTheLastEdge;
 
@@ -55,8 +54,8 @@ impl std::fmt::Display for NoSectionPastTheLastEdge {
 impl std::error::Error for NoSectionPastTheLastEdge {}
 
 impl SectionRun {
-    /// C#'s constructor; its optional arguments (`isAFeatureEdge`, `absorbed`, `junctions`, each
-    /// null by default, junctions then empty) are passed explicitly.
+    /// A run over `chain`; the feature-edge predicate, absorbed vertices and junctions are passed
+    /// explicitly (`None` or empty where the run has none).
     pub fn new(
         sections: Vec<Rc<BevelSection>>,
         is_closed: bool,

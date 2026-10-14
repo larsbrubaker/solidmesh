@@ -1,4 +1,4 @@
-//! One station's section (`Sections/SectionBuilder.cs`: `TrySection`): a junction, a corner's
+//! One station's section: a junction, a corner's
 //! mitre, or the ordinary section square to the chain - its two boundaries, its profile's samples
 //! between them and its centres. Split from `section_builder.rs` by responsibility.
 
@@ -37,7 +37,7 @@ impl From<CornerRefusal> for SectionBuildRefusal {
     }
 }
 
-/// C# `SectionBuilder.TrySection`: the section at the vertex `leaving` starts from, and the
+/// The section at the vertex `leaving` starts from, and the
 /// junction where that station is one - or why there is none.
 #[allow(clippy::too_many_arguments)]
 pub fn try_section(

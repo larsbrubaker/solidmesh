@@ -1,8 +1,7 @@
 //! The fallback for the faces that substitution alone would fold: the REGION they stand in is
 //! drawn again from its own moved OUTLINE with the ear clipper
 //! ([`crate::bevel::surface::surface_ring_ears`]), and the region's faces are replaced by the
-//! ears'. Ports `Bevel/Sections/SectionFanRemesh.cs` (C# `internal static class`, free functions
-//! here). `SectionFaceRebuild` gathers the regions it is handed; `SectionEndSplice` draws its
+//! ears'. `SectionFaceRebuild` gathers the regions it is handed; `SectionEndSplice` draws its
 //! rewritten rings through [`try_draw_the_ring`]. Crease reading is [`section_fan_walk::is_a_crease`].
 //!
 //! **Why the outline is the right thing to keep.** A region of this kind is a disc of triangles
@@ -62,7 +61,7 @@ fn corner_not_supported(at: Vector3) -> BevelAdvisory {
     )
 }
 
-/// C# `TryRemeshTheRegion`: replaces every face of one region with the ears' triangulation of its
+/// Replaces every face of one region with the ears' triangulation of its
 /// moved outline, one flat piece of the region at a time.
 ///
 /// `mesh` is the part, for the planes the region's faces were drawn in; `graph` its edge graph,
@@ -132,7 +131,7 @@ fn flat_pieces_of(mesh: &Mesh, graph: &MeshEdgeGraph, region: &[i32]) -> Vec<Vec
         joined.insert(from, to);
     }
 
-    // Insertion ordered, as C#'s Dictionary iterates: the pieces come out in region order.
+    // Insertion ordered, so the pieces come out in region order.
     let mut pieces: IndexMap<i32, Vec<i32>> = IndexMap::new();
 
     for &face in region {
@@ -181,7 +180,7 @@ fn try_remesh_one_flat_piece(
     )
 }
 
-/// C# `TryDrawTheRing`: draws one flat piece again from a ring already in hand - the outline as
+/// Draws one flat piece again from a ring already in hand - the outline as
 /// read, or one an end's SPLICE has rewritten (`SectionEndSplice`) - and puts back the interior
 /// points that still stand inside it.
 ///
@@ -346,15 +345,15 @@ fn holds(pool: &SectionPool, face: Triple, at: Vector3, plane: Vector3) -> bool 
     true
 }
 
-/// C# `TryTheOutline`: the boundary ring of one flat piece - its once-used edges, read off the
+/// The boundary ring of one flat piece - its once-used edges, read off the
 /// REBUILT faces and chained up, wound the way those faces are. More than one ring, or a point the
 /// outline leaves two ways, is not a disc and is refused by the caller.
 ///
-/// The error is C#'s `pinchedAt`: the pool point the outline left two ways, so the caller can
+/// The error is the pool point the outline left two ways, so the caller can
 /// name where the walk stuck; -1 where it stuck on something with no one point to it, such as more
 /// than one ring.
 pub fn try_the_outline(rebuilt: &[Triple], piece: &[i32]) -> Result<Vec<i32>, i32> {
-    // Insertion ordered, as C#'s HashSet iterates when nothing is removed: which once-used edge
+    // Insertion ordered, because which once-used edge
     // comes first decides where the ring starts, and so how the ears cut it.
     let mut drawn: IndexSet<(i32, i32)> = IndexSet::new();
 
@@ -407,7 +406,7 @@ pub fn try_the_outline(rebuilt: &[Triple], piece: &[i32]) -> Result<Vec<i32>, i3
         walked.push(here);
         // Every once-used edge's end has a once-used edge out of it (each face adds one way in and
         // one way out at each corner, and a cancelled pair removes one of each), so this lookup
-        // always answers; C# indexes it outright.
+        // always answers; a miss is refused rather than trusted.
         let Some(&step) = next.get(&here) else {
             return Err(-1);
         };

@@ -1,11 +1,11 @@
 //! A cell between two arcs of DIFFERENT segment counts: zipped by arc-length share, so no
-//! triangle spans more of one arc than the other. Ports `Bevel/LevelLine/UnevenStrip.cs`; the even
-//! strip and the triangle lay are `gap_fill`'s.
+//! triangle spans more of one arc than the other. The even strip and the triangle lay are
+//! `gap_fill`'s.
 
 use super::gap_fill::{lay, strip};
 use super::{LevelLineMesh, LevelLineMeshError};
 
-/// C# `UnevenStrip.Cell`: the cell between arcs `u` and `v` - the ordinary strip where they have
+/// The cell between arcs `u` and `v` - the ordinary strip where they have
 /// the same count, the zip ([`zip`]) where they do not.
 pub fn cell(
     mesh: &mut LevelLineMesh,
@@ -20,7 +20,7 @@ pub fn cell(
     }
 }
 
-/// C# `UnevenStrip.Zip`: advances along whichever arc's next vertex has the smaller share of its
+/// Advances along whichever arc's next vertex has the smaller share of its
 /// arc's length, ties broken by the shorter diagonal, laying one triangle per step.
 pub fn zip(
     mesh: &mut LevelLineMesh,

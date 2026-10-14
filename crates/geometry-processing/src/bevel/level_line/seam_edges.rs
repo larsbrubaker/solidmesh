@@ -1,7 +1,6 @@
 //! A crease DOUBLED by a ribbon microns wide is the same crease, not a wall beside one
-//! ([`SeamEdges`]). Ports the type of `Bevel/LevelLine/SeamEdges.cs`, its constructor and the
-//! readings of a point beside the chain, the seam test ([`SeamEdges::is_seam`]) and the wrapped
-//! feature-edge test ([`SeamEdges::not_the_chains_seam`]).
+//! ([`SeamEdges`]): its constructor and the readings of a point beside the chain, the seam test
+//! ([`SeamEdges::is_seam`]) and the wrapped feature-edge test ([`SeamEdges::not_the_chains_seam`]).
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -11,10 +10,10 @@ use vector_math::{cs_math, Vector3};
 
 use super::{chain_on_the_mesh, triangle_edges};
 
-/// A feature-edge test over two vertex indices (C#'s `Func<int, int, bool>`).
+/// A feature-edge test over two vertex indices.
 pub type FeatureEdgeTest = Rc<dyn Fn(i32, i32) -> bool>;
 
-/// C# `SeamEdges`: says which feature edges are a doubling ribbon's, so the whole construction can
+/// Says which feature edges are a doubling ribbon's, so the whole construction can
 /// stop reading them as features.
 ///
 /// Measured on `Issue with even a single edge.mcx` (2026-09-21): 149 of its 179 size refusals at
@@ -60,7 +59,7 @@ pub struct SeamEdges {
 }
 
 impl SeamEdges {
-    /// C#'s private constructor (with its field initializer: nothing yet read beside).
+    /// The seams over `positions`, with nothing yet read beside.
     pub fn new(
         positions: Vec<Vector3>,
         polylines: Vec<Vec<Vector3>>,
@@ -108,7 +107,7 @@ impl SeamEdges {
 
     /// Where `point` projects onto the segment `from`..`to`, clamped to it (zero for a segment of
     /// no length).
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
     pub fn parameter_on_segment(point: Vector3, from: Vector3, to: Vector3) -> f64 {
         let along = to - from;
         let length_squared = along.length_squared();
@@ -123,10 +122,10 @@ impl SeamEdges {
 }
 
 impl SeamEdges {
-    /// C# `NotTheChainsSeam`: the caller's feature test with the pick's own seams taken out of it -
+    /// The caller's feature test with the pick's own seams taken out of it -
     /// or the caller's test itself, unwrapped, where there is no epsilon to apply (or nothing to
     /// read it against) and the answer must not move by so much as a bit.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
     pub fn not_the_chains_seam(
         positions: Option<&[Vector3]>,
         chains: Option<&[Vec<i32>]>,
@@ -186,7 +185,8 @@ impl SeamEdges {
         Some(Rc::new(move |a, b| test(a, b) && !seams.is_seam(a, b)))
     }
 
-    /// C# `IsSeam`: a doubling edge runs BESIDE the chain and is the chain's seam; a cluster of
+    /// Whether an edge is the chain's seam: a doubling edge runs BESIDE the chain and is the
+    /// chain's seam; a cluster of
     /// near-coincident vertices sits AT one of its ends and is not (crossing one floods round the
     /// chain's end, so it is left a feature here and taken instead by
     /// `ForeignEdgeRoom.MeetsTheChainAtAnEnd`). The cluster's shape is an edge lying wholly within

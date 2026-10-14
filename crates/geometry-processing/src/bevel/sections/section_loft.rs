@@ -1,6 +1,5 @@
-//! An edge's STRIP (`Bevel/Sections/SectionLoft.cs`, C# `internal static class`, free functions
-//! here): the quad ladder between the profiles of the two sections its ends stand at, laid as
-//! triangles into a face list. This file holds the entry point ([`try_emit`]), the plain
+//! An edge's STRIP: the quad ladder between the profiles of the two sections its ends stand at,
+//! laid as triangles into a face list. This file holds the entry point ([`try_emit`]), the plain
 //! station-to-station ladder, the smooth side's fan over the boundary polyline and the winding and
 //! degeneracy checks every triangle passes; the ladder of a run whose split vertices were absorbed
 //! - gap to gap, with the takeover wedges at a junction - is `section_loft_gaps`.
@@ -38,13 +37,13 @@ use super::section_smooth_seam::SectionSmoothSeam;
 use super::{section_split_blend, BevelSection, SectionKind, SectionPool, SectionRun};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// One rung's quad, `Q0 Q1 Q2 Q3` (C#'s `(int Q0, int Q1, int Q2, int Q3)`).
+/// One rung's quad, `Q0 Q1 Q2 Q3`.
 pub(super) type Quad = (i32, i32, i32, i32);
 
 /// The face list the strips are appended to.
 pub(super) type Faces = Vec<(i32, i32, i32)>;
 
-/// C# `SmallestRelativeCross`: how small a triangle's cross product may be, RELATIVE to its own
+/// How small a triangle's cross product may be, RELATIVE to its own
 /// longest edge squared, before it is called degenerate. Relative because an absolute area would
 /// mean one thing at the origin and another thirty times coarser at a hanger's stand-off, and then
 /// where a part stood would decide whether its loft was refused.
@@ -61,9 +60,9 @@ pub(super) fn not_built(chain_vertex: Option<i32>) -> BevelAdvisory {
     )
 }
 
-/// C# `TryEmit`: lofts every strip of `run` into `faces`, appending and minting nothing - every
+/// Lofts every strip of `run` into `faces`, appending and minting nothing - every
 /// corner is a pool index a section already published. `seam` is the run's smooth side and its
-/// cut, or `None` where it has neither (C#'s two-argument overload).
+/// cut, or `None` where it has neither.
 ///
 /// With a seam, the run's SMOOTH side's last row is lofted to the boundary the cut actually ran
 /// along. On a smooth side the part's edge between two stations is not the chord `B(i) -> B(i+1)`
@@ -80,7 +79,7 @@ pub(super) fn not_built(chain_vertex: Option<i32>) -> BevelAdvisory {
 /// crossing and is lofted as the plain quad it is.
 ///
 /// On a refusal nothing this call laid is left in `faces`. An open run whose section list stops
-/// short of its last edge (C#'s `InvalidOperationException` out of `EndOf`) is refused the same way
+/// short of its last edge (`end_of`'s refusal) is refused the same way
 /// as any other run that cannot loft.
 pub fn try_emit(
     run: &SectionRun,
@@ -148,8 +147,8 @@ pub fn try_emit(
     outcome
 }
 
-/// The station-to-station ladders of a run without absorbed splits (the body of C#'s `TryEmit`
-/// past the winding). The caller takes back what this laid on a refusal.
+/// The station-to-station ladders of a run without absorbed splits ([`try_emit`]'s body past the
+/// winding). The caller takes back what this laid on a refusal.
 fn try_emit_ladders(
     run: &SectionRun,
     pool: &SectionPool,
@@ -221,7 +220,7 @@ pub(super) fn split_by_parity(quad: Quad, parity: i32) -> ((i32, i32, i32), (i32
     }
 }
 
-/// C# `StepsOf`: how many intervals the run's ladders are drawn in - read off a rung that is NOT a
+/// How many intervals the run's ladders are drawn in - read off a rung that is NOT a
 /// [`SectionKind::Junction`], because a junction rung stands longer than the ladder it closes and
 /// so is the exception, never the measure. A run of nothing but junctions has only its own first
 /// rung to go by.
@@ -235,7 +234,7 @@ fn steps_of(run: &SectionRun) -> i32 {
     run.start_of(0).segments()
 }
 
-/// C# `RungStands`: whether one rung can stand at the end of a ladder drawn in `steps` intervals:
+/// Whether one rung can stand at the end of a ladder drawn in `steps` intervals:
 /// an ordinary section has to be drawn in exactly those, and a junction rung may stand LONGER - and
 /// only longer - because the samples it carries past the near wall end are the arriving strip's
 /// own, shared by identity, and the tail fan closes them without moving any of them.
@@ -247,7 +246,7 @@ fn rung_stands(section: &BevelSection, steps: i32) -> bool {
     }
 }
 
-/// C# `TryFanTheJunctionExtras`: closes the ladder whose rung is a junction drawn in more samples
+/// Closes the ladder whose rung is a junction drawn in more samples
 /// than the other: the samples past the near wall end are fanned onto the OTHER row's own WALL
 /// end, so that the seam stays shut with nothing resampled and no point moved.
 ///
@@ -312,7 +311,7 @@ pub(super) fn try_fan_the_junction_extras(
     Ok(())
 }
 
-/// C# `HeadExtrasOf`: how many of one station's profile samples stand at the HEAD of it rather
+/// How many of one station's profile samples stand at the HEAD of it rather
 /// than the tail - the extras a junction rung carries past the near wall end, where that
 /// junction's flat side is on the RIGHT and so its profile is written wall-end first. Zero
 /// everywhere else, junction or not.
@@ -332,7 +331,7 @@ pub(super) fn head_extras_of(
     }
 }
 
-/// C# `CrossingsOn`: the fold crossings the part's edge runs through between station `i` and the
+/// The fold crossings the part's edge runs through between station `i` and the
 /// next, where quad `k` is the one whose outer edge that is - which is quad 0 on the LEFT side and
 /// the last quad on the RIGHT. `None` everywhere else.
 ///
@@ -354,7 +353,7 @@ pub fn crossings_on(
     seam.cut.crossings_after_station(i)
 }
 
-/// C# `TryFan`: lays the last row of a smooth side as a fan over the boundary polyline - see
+/// Lays the last row of a smooth side as a fan over the boundary polyline - see
 /// [`try_emit`].
 #[allow(clippy::too_many_arguments)]
 pub(super) fn try_fan(
@@ -447,14 +446,14 @@ pub(super) fn try_fan(
     Ok(())
 }
 
-/// C# `SplitNearestTheMiddle`: the interior point of a polyline of `segments` segments that is
+/// The interior point of a polyline of `segments` segments that is
 /// nearest its middle - the one the fan hands over from one apex to the other.
 fn split_nearest_the_middle(segments: usize) -> usize {
-    // C#: Math.Max(1, Math.Min(segments - 1, segments / 2)), with segments >= 1 here.
+    // Between 1 and segments - 1, with segments >= 1 here.
     1.max((segments - 1).min(segments / 2))
 }
 
-/// C# `TryWindingOfTheRun`: which way round the whole run is laid (`true` for flipped), read from
+/// Which way round the whole run is laid (`true` for flipped), read from
 /// its FIRST quad against the ball that swept it - once, so that every strip of the run agrees by
 /// construction rather than by each triangle separately reaching the same conclusion. The first
 /// quad is the first one the run actually lays, which on an absorbed run is the first GAP's rather
@@ -481,7 +480,7 @@ fn try_winding_of_the_run(
     Ok(normal.dot(outward) < 0.0)
 }
 
-/// C# `OutwardAcross`: the way OUT of the material across one rung of the ladder - the sum of the
+/// The way OUT of the material across one rung of the ladder - the sum of the
 /// four corners' own outward directions, each the way from the centre that corner was swung about
 /// to the corner.
 pub(super) fn outward_across(
@@ -498,7 +497,7 @@ pub(super) fn outward_across(
         + outward_at(end, pool, k + end_head)
 }
 
-/// C# `OutwardAt`: where profile sample `k` stands relative to the ball's centre AT that sample -
+/// Where profile sample `k` stands relative to the ball's centre AT that sample -
 /// the centre segment read at the sample's own parameter, which is what the section's own
 /// construction guarantees the sample is a radius from.
 fn outward_at(section: &BevelSection, pool: &SectionPool, k: i32) -> Vector3 {
@@ -512,7 +511,7 @@ fn outward_at(section: &BevelSection, pool: &SectionPool, k: i32) -> Vector3 {
     pool.position_of(section.profile[k as usize]) - centre
 }
 
-/// C# `QuadAt`: rung `k` of the ladder, each row read from its own FLAT-side anchor: a junction row
+/// Rung `k` of the ladder, each row read from its own FLAT-side anchor: a junction row
 /// drawn with the flat side on the RIGHT carries its extra samples at the HEAD of its profile (see
 /// [`head_extras_of`]), and `start_head` / `end_head` step past them so that rung k still means the
 /// same parameter on both rows. Both are zero on every ladder without a junction.
@@ -531,7 +530,7 @@ pub(super) fn quad_at(
     )
 }
 
-/// C# `Newell`: the quad's normal by Newell's rule, which needs no choice of diagonal.
+/// The quad's normal by Newell's rule, which needs no choice of diagonal.
 fn newell(pool: &SectionPool, quad: Quad) -> Vector3 {
     let corners = [
         pool.position_of(quad.0),
@@ -578,7 +577,7 @@ pub(super) fn cross_unless_degenerate(
     }
 }
 
-/// C# `TryLay`: appends one triangle the run's way round, having checked that it has an area at all
+/// Appends one triangle the run's way round, having checked that it has an area at all
 /// and that it agrees with the run's winding.
 pub(super) fn try_lay(
     triangle: (i32, i32, i32),

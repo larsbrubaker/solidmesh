@@ -1,6 +1,5 @@
 //! The ONE walk of a side's fan at a chain vertex: from the face the ARRIVING chain edge carries
 //! on that side, face to face across the edges that meet at the vertex, to the LEAVING chain edge.
-//! Ports `Bevel/Sections/SectionFanWalk.cs`.
 //!
 //! **Why it is one box.** `SectionBuilder` walks the fan to find the crease a boundary slides down
 //! and `SectionFaceRebuild` walks it to rewrite the vertex; the boundary has to be used on exactly
@@ -20,12 +19,12 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge};
 
 /// Every mesh edge by the pair of vertices it joins ([`edges_by_vertex_pair`], [`pair_key`]).
-/// An [`IndexMap`] in C#'s `Dictionary<long, int>` insertion order (edge-index order, a repeated
-/// pair keeping its first place and taking the later edge), because some readers walk its values
-/// (`SectionSmoothSide.TheCreasesAtEachVertex`) and that order reaches what they build.
+/// An [`IndexMap`] in insertion order (edge-index order, a repeated pair keeping its first place
+/// and taking the later edge), because some readers walk its values (the creases at each vertex)
+/// and that order reaches what they build.
 pub type EdgeAtPair = IndexMap<i64, i32>;
 
-/// A fan turned through (C#'s two `out` lists).
+/// A fan turned through: the faces and the edges crossed.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FanWalk {
     /// The fan's faces, in the order they were turned through.
@@ -41,8 +40,8 @@ pub struct FanWalk {
 /// looked up by the pair of vertices each joins. `vertex` is the chain vertex the fan turns about,
 /// `arriving` the chain edge that ends there and `leaving` the one that starts there; `on_the_left`
 /// which side of the walk to turn through; `station` where to name a refusal, on the part. The
-/// error is why not, where the faces at the vertex do not form a fan at all. (C# also hands back
-/// the partial lists on a refusal; none of its callers reads them.)
+/// error is why not, where the faces at the vertex do not form a fan at all; a refusal hands back
+/// no partial lists, since no caller would read them.
 #[allow(clippy::too_many_arguments)]
 pub fn try_walk(
     mesh: &Mesh,
@@ -145,7 +144,7 @@ pub fn is_a_crease(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
 }
 
 /// Every mesh edge, looked up by the pair of vertices it joins. Where two edges join the same pair
-/// the later one wins, as C#'s indexer assignment does.
+/// the later one wins.
 pub fn edges_by_vertex_pair(graph: &MeshEdgeGraph) -> EdgeAtPair {
     let mut found = IndexMap::with_capacity(graph.edge_count().max(0) as usize);
 
@@ -162,7 +161,7 @@ pub fn edges_by_vertex_pair(graph: &MeshEdgeGraph) -> EdgeAtPair {
 /// The other of the two edges of `face` that meet at `vertex` - the one that is not `walked`. Read
 /// off the ORIGINAL mesh, because the fan is a walk over the part's own topology and a
 /// substitution changes none of it. Where both qualify (a face naming the vertex twice), the later
-/// corner's edge is the answer, as in C#.
+/// corner's edge is the answer.
 fn try_the_other_edge_at(
     mesh: &Mesh,
     face: i32,
@@ -191,7 +190,7 @@ fn try_the_other_edge_at(
 }
 
 /// The key a vertex pair is looked up by, the same whichever way round it is named: the smaller
-/// index in the high 32 bits, the larger's bit pattern (C# `(uint)`) in the low.
+/// index in the high 32 bits, the larger's bit pattern (as `u32`) in the low.
 pub fn pair_key(one: i32, other: i32) -> i64 {
     let (smaller, larger) = if one < other {
         (one, other)

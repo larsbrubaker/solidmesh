@@ -1,5 +1,4 @@
-//! A side the band swallows whole: the tests and the made-up runs. Ports the swallow readings of
-//! `Bevel/LevelLine/SwallowedSide.cs` (a C# static class; its mesh readings are in
+//! A side the band swallows whole: the tests and the made-up runs (its mesh readings are in
 //! `swallowed_side.rs`): the growing end walls ([`growing_walls`], [`back_facing_wall`]), whether a
 //! side is swallowed ([`is_swallowed`]), the run made up off the mesh ([`virtual_run`],
 //! [`virtual_run_over`]), the span the rows must cover ([`row_span`]), the room where the two ties
@@ -18,7 +17,7 @@ pub type Wall = (Vector3, Vector3);
 /// A made-up run: rail points with the chain parameter each stands at.
 pub type VirtualRun = Vec<(Vector3, f64)>;
 
-/// C# `SwallowedSide.IsSwallowed`: true when `side` of the single open `chain` lies wholly inside
+/// True when `side` of the single open `chain` lies wholly inside
 /// the strip at the chain's setback, both chain ends stand on growing (back-facing) walls that are
 /// not parallel, every vertex of the side stands on or in front of both wall planes, and the side
 /// reaches the crease where the two walls meet (a vertex off the chain on both planes) - so the
@@ -57,7 +56,7 @@ pub fn is_swallowed(
     Ok(reaches_the_shared_crease)
 }
 
-/// C# `SwallowedSide.VirtualRun(mesh, chain, side)`: the swallowed side's run, made up off the
+/// The swallowed side's run, made up off the
 /// mesh: the rail - each chain point carried the setback away from the chain in the side's own
 /// plane, square to the chain - between where it crosses the first end's wall plane and where it
 /// crosses the last end's, in ascending chain parameter, with a point at every chain vertex
@@ -68,7 +67,7 @@ pub fn virtual_run(mesh: &LevelLineMesh, chain: &ChainField, side: i32) -> Optio
     virtual_run_over(mesh, chain, side, None)
 }
 
-/// C# `SwallowedSide.VirtualRun(mesh, chain, side, span)`: [`virtual_run`] over the given parameter
+/// [`virtual_run`] over the given parameter
 /// span (the rows' [`row_span`]) in place of the rail's own crossings of the wall planes, with
 /// stations a quarter setback apart at most: the strip's rows stand only at the run's points, and
 /// one cell spanning the whole run laid the round flat between its end rows, so the wall clip's
@@ -153,15 +152,15 @@ pub fn virtual_run_over(
     }
 
     if span.is_some() {
-        // C#'s (int)Math.Ceiling: a small count of stations.
+        // Rounded up, then truncated: a small count of stations.
         let n = ((to - from) / (PAST_THE_LAST_TOUCH * chain.max_setback)).ceil() as i32;
         for k in 1..n {
             let t = from + ((to - from) * k as f64 / n as f64);
             run.push((rail_on(segment_of(t), t), t));
         }
 
-        // C#'s List.Sort by parameter: its introspective sort, so equal parameters (a chain corner
-        // standing on a station) come out in C#'s order. Double.CompareTo orders NaN first.
+        // Sorted by parameter with the introspective sort, so equal parameters (a chain corner
+        // standing on a station) come out in one fixed order. NaN orders first.
         vector_math::cs_sort::introspective_sort(&mut run, &mut |p, q| {
             p.1.partial_cmp(&q.1)
                 .unwrap_or_else(|| q.1.is_nan().cmp(&p.1.is_nan()))
@@ -172,7 +171,7 @@ pub fn virtual_run_over(
     Some(run)
 }
 
-/// C# `SwallowedSide.RowSpan`: the parameters the swallowed strip's rows must span: every row
+/// The parameters the swallowed strip's rows must span: every row
 /// that reaches the air in front of both walls, carried [`PAST_THE_LAST_TOUCH`] setbacks past the
 /// last row to touch each wall, so the end rows stand wholly behind a wall. Read on a STRAIGHT
 /// chain only, where each row is the last translated; `None` otherwise. Each wall's reading is
@@ -224,7 +223,8 @@ pub fn row_span(
         touches.push(chain.length * f0 / (f0 - f1));
     }
 
-    // C#'s Enumerable.Min / Max over the two touches.
+    // The least of the two touches (NaN if either is) and the greatest (a NaN displaced by a
+    // number).
     let least = if touches[0].is_nan() || touches[1].is_nan() {
         f64::NAN
     } else {
@@ -239,7 +239,7 @@ pub fn row_span(
     Some((least - margin, most + margin))
 }
 
-/// C# `SwallowedSide.TiesMergeRoom`: the room of a swallowed side, read in place of its self
+/// The room of a swallowed side, read in place of its self
 /// room: the size at which the round stops reaching the crease the two walls share - the two ties
 /// on it merge, and past that the fin goes whole. Read on a straight fillet chain (the round a
 /// cylinder about the rows' centres, radius setback * tan(half angle)); the crease line's distance
@@ -316,7 +316,7 @@ pub fn ties_merge_room(
     Ok(best)
 }
 
-/// C# `SwallowedSide.RunsIfBothSwallowed`: both sides' made-up runs over the rows' [`row_span`]
+/// Both sides' made-up runs over the rows' [`row_span`]
 /// when BOTH sides are swallowed - read on the cut's mesh before its triangles are removed, since
 /// the side's plane is read off the side; `None` otherwise (a side with a run of its own goes the
 /// ordinary way).
@@ -343,7 +343,7 @@ pub fn runs_if_both_swallowed(
     })
 }
 
-/// C# `SwallowedSide.GrowingWalls`: the two end walls, each as a point on it and its outward
+/// The two end walls, each as a point on it and its outward
 /// (air-side) face normal, when the chain is open, both ends carry the end ray, neither is a
 /// same-sense bounded end, both walls face BACK over the chain (they grow) and they are not
 /// parallel (they meet at a crease); otherwise `None`.
@@ -366,7 +366,7 @@ pub fn growing_walls(mesh: &LevelLineMesh, chain: &ChainField) -> Option<(Wall, 
     Some((first, last))
 }
 
-/// C# `SwallowedSide.BackFacingWall`: the end face at one chain end - a kept, untagged triangle at
+/// The end face at one chain end - a kept, untagged triangle at
 /// the end vertex that is not square to the chain's direction there (the same reading the virtual
 /// rail takes) - when its outward normal faces back over the chain.
 pub fn back_facing_wall(mesh: &LevelLineMesh, chain: &ChainField, last: bool) -> Option<Wall> {

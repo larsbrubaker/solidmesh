@@ -1,7 +1,6 @@
 //! The inside corner of one chain's own SHARP JOINT, made a mesh vertex before the refinement
 //! runs: on a face holding both of the joint's legs, the point standing the joint's setback from
-//! each leg - where the level line turns. Ports `Bevel/LevelLine/SharpJointCorners.cs` (a C#
-//! static class, so a module of functions): the corner itself ([`the_inside_corner`]), its tests
+//! each leg - where the level line turns: the corner itself ([`the_inside_corner`]), its tests
 //! and the insertion over a band's candidates ([`insert`]).
 //!
 //! Without it the cut meets that corner only when the face's own edges pass through it: on the
@@ -59,7 +58,7 @@ pub fn holds(mesh: &LevelLineMesh, triangle: i32, point: Vector3, legs_plane: Ve
     side(a, b) > clear && side(b, c) > clear && side(c, a) > clear
 }
 
-/// C# `SharpJointCorners.TheInsideCorner`: the point on the bisector of the joint's inside angle,
+/// The point on the bisector of the joint's inside angle,
 /// in the plane of its two legs, standing `setback` from each leg's line, with that plane's unit
 /// normal; `None` where the legs do not turn or reverse.
 pub fn the_inside_corner(chain: &ChainField, at: f64, setback: f64) -> Option<(Vector3, Vector3)> {
@@ -82,7 +81,7 @@ pub fn the_inside_corner(chain: &ChainField, at: f64, setback: f64) -> Option<(V
     ))
 }
 
-/// C# `SharpJointCorners.Insert`: inserts every member chain's sharp-joint inside corner that a
+/// Inserts every member chain's sharp-joint inside corner that a
 /// candidate triangle of the reading's mesh holds - on the group's line only - putting each on the
 /// line, and hands back the candidates with every triangle a split made in place of a divided one
 /// (first-seen order, removed triangles dropped).

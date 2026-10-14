@@ -1,5 +1,4 @@
-//! Opens the room the fillet will stand in by REWRITING the part's own faces
-//! (`Bevel/Sections/SectionFaceRebuild.cs`, C# `internal static class`, free functions here): at
+//! Opens the room the fillet will stand in by REWRITING the part's own faces: at
 //! every chain vertex, each of the two fans around it has that vertex replaced by the boundary
 //! point the section handed that side ([`try_rebuild`]). The junction station's wall side, whose
 //! fan the fold cuts in two, is [`super::section_face_rebuild_fold`]; a fan that folds is drawn
@@ -46,16 +45,15 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge};
 
 /// One side's fan as it was walked, kept so a fan that folds can be drawn again from its outline.
-/// C#'s tuple also carries the edges crossed and the boundary point; nothing reads either, so they
-/// are not kept here.
+/// The edges crossed and the boundary point are not kept: nothing reads either.
 #[derive(Debug, Clone)]
 pub(super) struct WalkedFan {
     pub faces: Vec<i32>,
     pub station: Vector3,
 }
 
-/// The rebuild's state as the substitutions write it (C#'s `rebuilt`, `touched`, `fans`,
-/// `junctionRims` and `swallowedFaces`), with the part they read.
+/// The rebuild's state as the substitutions write it (the rebuilt faces, the touched faces, the
+/// fans, the junction rims and the swallowed faces), with the part they read.
 pub(super) struct Rebuild<'a> {
     pub mesh: &'a Mesh,
     pub graph: &'a MeshEdgeGraph,
@@ -81,7 +79,7 @@ pub(super) fn corner_not_supported(station: Vector3) -> BevelAdvisory {
     )
 }
 
-/// Rewrites the part's faces for one run of sections (C#'s single-run overload).
+/// Rewrites the part's faces for one run of sections.
 pub fn try_rebuild_run(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -91,7 +89,7 @@ pub fn try_rebuild_run(
     try_rebuild(mesh, graph, std::slice::from_ref(run), pool, None)
 }
 
-/// C# `TryRebuild`: the whole mesh's faces as pool indices with the substitutions applied, for
+/// The whole mesh's faces as pool indices with the substitutions applied, for
 /// SEVERAL runs at once - both mouths of a bore, or every port mouth of a barrel - in ONE pass over
 /// the face list, with the SMOOTH sides already cut (`seams`, one per run that has a smooth side,
 /// `None` where none has): a seam's side is not substituted at all - the cut has replaced every
@@ -110,8 +108,6 @@ pub fn try_rebuild_run(
 /// The fold check, the region re-mesh and the drop are all over the UNION: a region growing out of
 /// one run's folded fan may take in faces another run has rewritten, and re-meshing them one run
 /// at a time would read the second one's outline out of faces the first had already replaced.
-///
-/// (C#'s list may hold a null run, refused as `SurfaceConstructionNotBuilt`; a Rust slice cannot.)
 pub fn try_rebuild(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -390,7 +386,7 @@ fn boundary_of(run: &SectionRun, section: &BevelSection, is_left: bool) -> i32 {
 
 /// Which side of the run at `run_index` a cut has already replaced - `Some(true)` for the LEFT,
 /// `Some(false)` for the RIGHT, `None` where neither side is smooth and both are substituted.
-/// (C# compares the seam's run by reference; a seam names its run by index here.)
+/// (A seam names its run by index.)
 fn smooth_side_of(seams: Option<&[SectionSmoothSeam]>, run_index: usize) -> Option<bool> {
     seams?
         .iter()

@@ -1,5 +1,5 @@
 //! The gate between the legacy edge-centric Surface construction and the vertex-centric sections
-//! one (`Bevel/Sections/SectionRouting.cs`, the static class `SectionRouting`): whether a whole
+//! one: whether a whole
 //! pass of plans is SIMPLE in the sections' sense, and the run to build it from when it is. The
 //! clauses it asks of each plan are in [`super::section_routing_clauses`].
 //!
@@ -29,9 +29,9 @@
 //! construction: the two paths refuse at different numbers, so falling back would build a mesh the
 //! panel has just told the user does not fit.
 //!
-//! C#'s statics (`UseSections`, `LastRoute`, `RouteObserved`) stay process-wide here (the
-//! bevel-core decision on process-wide settings), thread-safe because the kernel runs on worker
-//! threads: an atomic for the switch, mutexes for the route and its observer.
+//! The switch, the last route and its observer are process-wide, so a test or the app sets them
+//! once for every build, and thread-safe because the kernel runs on worker threads: an atomic for
+//! the switch, mutexes for the route and its observer.
 
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -48,10 +48,10 @@ use crate::bevel::surface::{SurfaceBevelPlan, SurfaceBevelPlanlessLoop};
 use crate::bevel::BevelAdvisory;
 use crate::topology::FeatureEdgeSet;
 
-/// C# `SectionRouting.UseSectionsVariable`: the environment variable naming the opt-in.
+/// The environment variable naming the opt-in.
 pub const USE_SECTIONS_VARIABLE: &str = "MATTERCAD_BEVEL_SECTIONS";
 
-/// C# `SectionRouting.UseSections` (static field). Its initial value is a DEVELOPER OPT-IN read
+/// The sections switch. Its initial value is a DEVELOPER OPT-IN read
 /// from [`USE_SECTIONS_VARIABLE`] ("1" or "true", case-insensitive), so the new construction can be
 /// tried in the running app before the default flips. It is read ONCE, when first touched (never
 /// set in the browser, which has no process environment), and stays plainly settable so tests can
@@ -62,13 +62,13 @@ static USE_SECTIONS: LazyLock<AtomicBool> = LazyLock::new(|| {
     ))
 });
 
-/// A route observer (C#'s `Action<string>`).
+/// A route observer, told each route as it is written.
 pub type RouteObserver = Arc<dyn Fn(Option<&str>) + Send + Sync>;
 
-/// C#'s `lastRoute`.
+/// The last route written ([`last_route`]).
 static LAST_ROUTE: Mutex<Option<String>> = Mutex::new(None);
 
-/// C#'s `RouteObserved`.
+/// The route observer ([`route_observed`]).
 static ROUTE_OBSERVED: Mutex<Option<RouteObserver>> = Mutex::new(None);
 
 fn locked<T>(mutex: &'static Mutex<T>) -> MutexGuard<'static, T> {
@@ -79,19 +79,19 @@ fn locked<T>(mutex: &'static Mutex<T>) -> MutexGuard<'static, T> {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// C# `SectionRouting.UseSections`: whether simple passes go through the sections at all. Off
+/// Whether simple passes go through the sections at all. Off
 /// until the one-cut-per-facet item in the Sections plan lands; the kernel tests turn it on around
 /// one build and put it back afterwards.
 pub fn use_sections() -> bool {
     USE_SECTIONS.load(Ordering::SeqCst)
 }
 
-/// Sets [`use_sections`] (C#'s field write).
+/// Sets [`use_sections`].
 pub fn set_use_sections(on: bool) {
     USE_SECTIONS.store(on, Ordering::SeqCst);
 }
 
-/// C# `SectionRouting.ReadsAsOn`: whether an environment variable's value asks for the sections:
+/// Whether an environment variable's value asks for the sections:
 /// "1" or "true" in any casing, and nothing else - an unset variable arrives here as `None` and
 /// reads as off. Split out from the switch so the reading is testable without touching the
 /// process environment, which a parallel test run shares with every other test.
@@ -99,7 +99,7 @@ pub fn reads_as_on(value: Option<&str>) -> bool {
     value == Some("1") || value.is_some_and(|value| value.eq_ignore_ascii_case("true"))
 }
 
-/// C# `SectionRouting.LastRoute` (getter): which way the last pass through [`is_simple`] went -
+/// Which way the last pass through [`is_simple`] went -
 /// "sections", or "legacy: " and the first clause that failed. A test seam: routing is invisible
 /// in the answer (that is the point of the switch being off by default), so without it a test
 /// could only read the mesh and guess.
@@ -107,7 +107,7 @@ pub fn last_route() -> Option<String> {
     locked(&LAST_ROUTE).clone()
 }
 
-/// C# `SectionRouting.LastRoute` (setter): records the route and tells [`route_observed`]'s
+/// Records the route and tells [`route_observed`]'s
 /// observer.
 pub fn set_last_route(value: Option<String>) {
     *locked(&LAST_ROUTE) = value.clone();
@@ -119,7 +119,7 @@ pub fn set_last_route(value: Option<String>) {
     }
 }
 
-/// C# `SectionRouting.RouteObserved`: told every time the last route is written, so that a caller
+/// Told every time the last route is written, so that a caller
 /// which builds MANY passes - the app's own drop-and-retry, which runs `SurfaceBevelBuilder.TryBuild`
 /// once per turn - can keep each pass's route instead of only the last one's. `None` in
 /// production; a test seam. Every `TryBuild` opens by writing "legacy: the flag is off", so that
@@ -128,7 +128,7 @@ pub fn route_observed() -> Option<RouteObserver> {
     locked(&ROUTE_OBSERVED).clone()
 }
 
-/// Sets (or clears) [`route_observed`] (C#'s field write).
+/// Sets (or clears) [`route_observed`].
 pub fn set_route_observed(observer: Option<RouteObserver>) {
     *locked(&ROUTE_OBSERVED) = observer;
 }
@@ -147,7 +147,7 @@ pub struct SectionRoute {
     pub pool: SectionPool,
 }
 
-/// C#'s `bool IsSimple(..)` with its `out` parameters: the routed pass, or the first failing
+/// What [`is_simple`] answers: the routed pass, or the first failing
 /// clause (for the log and for the tests) and - for a declined plan-less loop - the advisory to
 /// answer the pass with.
 pub enum SectionRouteAnswer {
@@ -163,12 +163,12 @@ pub enum SectionRouteAnswer {
 }
 
 impl SectionRouteAnswer {
-    /// Whether the pass is simple (C#'s return value).
+    /// Whether the pass is simple.
     pub fn is_simple(&self) -> bool {
         matches!(self, SectionRouteAnswer::Sections(_))
     }
 
-    /// The first failing clause (C#'s `whyNot`); `None` where the pass is simple.
+    /// The first failing clause; `None` where the pass is simple.
     pub fn why_not(&self) -> Option<&str> {
         match self {
             SectionRouteAnswer::Sections(_) => None,
@@ -184,7 +184,7 @@ impl SectionRouteAnswer {
     }
 }
 
-/// The sentence C# builds from a refused run: `failure?.Code.ToString() ?? "with no code"`.
+/// The sentence for a refused run: its advisory code by name, or "with no code".
 fn code_of(failure: &SectionBuildRefusal) -> String {
     failure
         .advisory()
@@ -192,8 +192,8 @@ fn code_of(failure: &SectionBuildRefusal) -> String {
         .unwrap_or_else(|| "with no code".to_string())
 }
 
-/// C# `SectionRouting.IsSimple(plans, mesh, graph, segmentsPerQuarter, ..., features)`: whether
-/// this pass of plans (already known to be one size and one profile, planned on the welded `mesh`)
+/// Whether this pass of plans (already known to be one size and one profile, planned on the
+/// welded `mesh`)
 /// is one the sections can build, and the runs and pool to build it from.
 ///
 /// `features` is the feature set the PICK was resolved in, carried down the plan path so a planned
@@ -201,7 +201,7 @@ fn code_of(failure: &SectionBuildRefusal) -> String {
 /// rather than stopping at every fold of a tessellated wall. `None` leaves a planned run with no
 /// reading.
 ///
-/// A section point that is not a number is an error here, as C#'s build throws there.
+/// A section point that is not a number is an error here.
 pub fn is_simple(
     plans: &[Rc<SurfaceBevelPlan>],
     mesh: Option<&Mesh>,
@@ -209,8 +209,8 @@ pub fn is_simple(
     segments_per_quarter: i32,
     features: Option<&FeatureEdgeSet>,
 ) -> Result<SectionRouteAnswer, NanSectionPoint> {
-    // C#'s `Reads` opens with this null check; asked first here so the clauses take the mesh
-    // and graph as they are, with the same sentence.
+    // A missing mesh or graph is asked first, so the clauses take the mesh and graph as they
+    // are, with the same sentence.
     let (Some(mesh), Some(graph)) = (mesh, graph) else {
         let why_not = "there is nothing to route".to_string();
         route(format!("legacy: {why_not}"));
@@ -260,7 +260,7 @@ pub fn is_simple(
     }))
 }
 
-/// C# `SectionRouting.IsSimple(plans, planless, ...)`: the same pass, with loops the PLANNER would
+/// The same pass, with loops the PLANNER would
 /// not make a plan for carried alongside the plans (see [`SurfaceBevelPlanlessLoop`]), built after
 /// the planned ones, in their own order.
 ///
@@ -348,10 +348,10 @@ pub fn is_simple_with_planless(
     }))
 }
 
-/// C# `SectionRouting.HasRoom`: whether the pass's size fits every one of its chains, read in
+/// Whether the pass's size fits every one of its chains, read in
 /// closed form off the part (`SectionRoom`) before anything is assembled. `Err` carries the
 /// refusal of the first chain that has no room - the legacy size advisory, already carrying the
-/// most that fits (C#'s `failure`, which the room reading always names).
+/// most that fits (the room reading always names it).
 pub fn has_room(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -390,7 +390,7 @@ pub fn has_room(
     Ok(())
 }
 
-/// C# `SectionRouting.Partition`'s answer: the indices into the plans the sections accept, in the
+/// [`partition`]'s answer: the indices into the plans the sections accept, in the
 /// plans' own order, and one entry per remaining plan - its index and the first clause it fails,
 /// the same sentence [`is_simple`] would name for it.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -401,7 +401,7 @@ pub struct SectionPartition {
     pub declined: Vec<(usize, String)>,
 }
 
-/// C# `SectionRouting.Partition`: which plans of the pass the sections can build and which cannot,
+/// Which plans of the pass the sections can build and which cannot,
 /// read one plan at a time.
 ///
 /// **Why a partition at all.** [`is_simple`] answers for the whole pass, so one open run in a face

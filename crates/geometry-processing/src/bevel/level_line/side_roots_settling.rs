@@ -1,7 +1,6 @@
 //! Puts each side's level line onto the mesh: every edge of the side that crosses the line gets
-//! its root as a vertex, so no triangle of the side straddles it when the band is deleted. Ports
-//! `Bevel/LevelLine/SideRootsSettling.cs`; the roots come from `edge_root`, the split from
-//! `band_cut`.
+//! its root as a vertex, so no triangle of the side straddles it when the band is deleted. The
+//! roots come from `edge_root`, the split from `band_cut`.
 
 use std::collections::HashMap;
 
@@ -10,7 +9,7 @@ use super::band_triangles::edges_of_side;
 use super::edge_root::find_over;
 use super::{LevelLineMeshError, VertexFieldReading};
 
-/// C# `SideRootsSettling.RootTheSide`: roots every crossed edge of side `tag` on the reading's
+/// Roots every crossed edge of side `tag` on the reading's
 /// mesh; true when any root was put.
 pub fn root_the_side(reading: &VertexFieldReading, tag: i32) -> Result<bool, LevelLineMeshError> {
     let roots = {
@@ -26,7 +25,7 @@ pub fn root_the_side(reading: &VertexFieldReading, tag: i32) -> Result<bool, Lev
     Ok(rooted)
 }
 
-/// C# `SideRootsSettling.SettleEverySide`: takes the cut on the FINAL mesh of a pick of several
+/// Takes the cut on the FINAL mesh of a pick of several
 /// sides - each side is rooted again, until a whole pass roots nothing. A root put on one side's
 /// line can split an edge it shares with another side in turn, which is why the pass repeats.
 /// Every reading reads the one mesh being cut.

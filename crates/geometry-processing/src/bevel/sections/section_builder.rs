@@ -1,14 +1,13 @@
-//! Building a run's sections chain vertex by chain vertex (`Bevel/Sections/SectionBuilder.cs`, the
-//! un-dotted file of the C# `internal static partial class SectionBuilder`; a module of free
-//! functions here, with the walked-side partial in [`super::section_builder_walked_side`]). What is
+//! Building a run's sections chain vertex by chain vertex, as free functions (the walked sides are
+//! in [`super::section_builder_walked_side`]). What is
 //! here are the readings the build starts from: the operation's own feature test
 //! ([`the_feature_test`]), the feature edge between two chain vertices
 //! ([`try_feature_edge_between`]) and the vertex-pair index of the mesh's edges
 //! ([`edges_by_vertex_pair`]); the creases a side's fan crosses ([`try_creases_in_the_fan`]); and the
 //! profile's interior samples on the canals' circle or corner ellipse
 //! ([`place_the_interior_samples`], [`try_the_canals_corner`]); and one side's boundary
-//! ([`try_boundary`]); and the junction drawn at a station read as one ([`try_junction`]). The build
-//! itself (`TryBuild`) lands with a later package.
+//! ([`try_boundary`]); and the junction drawn at a station read as one ([`try_junction`]). The
+//! build itself is `section_builder_run`'s.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -25,7 +24,7 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
-/// C# `TheFeatureTest`: the operation's OWN reading of which mesh edges are features - never a
+/// The operation's OWN reading of which mesh edges are features - never a
 /// coplanarity test, which on a tessellated wall calls every fold a feature and stops a surface walk
 /// at the first one (see `SectionSurfaceWalk`). The set is only looked up, so its order cannot
 /// reach an output.
@@ -39,7 +38,7 @@ pub fn the_feature_test(features: &FeatureEdgeSet) -> IsAFeatureEdge {
     Rc::new(move |edge| mesh_edges.contains(&edge))
 }
 
-/// C# `TryFeatureEdgeBetween`: the feature edge joining two mesh vertices, oriented to walk from
+/// The feature edge joining two mesh vertices, oriented to walk from
 /// `from` to `to`.
 pub fn try_feature_edge_between(
     features: &FeatureEdgeSet,
@@ -61,16 +60,16 @@ pub fn try_feature_edge_between(
     None
 }
 
-/// C# `EdgesByVertexPair`: every mesh edge, looked up by the pair of vertices it joins.
+/// Every mesh edge, looked up by the pair of vertices it joins.
 pub fn edges_by_vertex_pair(graph: &MeshEdgeGraph) -> EdgeAtPair {
     section_fan_walk::edges_by_vertex_pair(graph)
 }
 
-/// C# `SmallestWedgeCosine`: how nearly two normals may line up before the vertex has no wedge to
+/// How nearly two normals may line up before the vertex has no wedge to
 /// draw a section in. Below this the centre and setback formulas both blow up.
 pub const SMALLEST_WEDGE_COSINE: f64 = -0.999999;
 
-/// C# `TryCreasesInTheFan` (the overload with no feature test): the creases among the edges one side
+/// The creases among the edges one side
 /// of the vertex's fan crosses, read by coplanarity.
 #[allow(clippy::too_many_arguments)]
 pub fn try_creases_in_the_fan(
@@ -95,7 +94,7 @@ pub fn try_creases_in_the_fan(
     .map(|(creases, _)| creases)
 }
 
-/// C# `TryCreasesInTheFan` (with the feature test): the fan one side of the vertex turns through
+/// The fan one side of the vertex turns through
 /// ([`section_fan_walk::try_walk`]) and the creases among the edges it crosses - by the operation's
 /// own feature reading where one is in hand (any edge without two faces counting), by coplanarity
 /// where none is - as `(creases, fan)`.
@@ -134,12 +133,12 @@ pub fn try_creases_in_the_fan_reading(
     Ok((creases, walked.faces))
 }
 
-/// C# `PlaceTheInteriorSamples`: the profile's interior samples (all but its two ends), added to the
+/// The profile's interior samples (all but its two ends), added to the
 /// pool. Where the two canals meet at a corner ([`try_the_canals_corner`]) the arc is the ELLIPSE the
 /// corner's leaning canal cuts in the section's plane - the arms squashed across the lean, slerped,
 /// and stretched back - with the two boundaries' along-chain drift riding the axis; elsewhere it is
 /// the circle about the centres, slerped from `left` to `right` through `wedge`. `Err` where a sample
-/// is not a number (where C# throws).
+/// is not a number.
 #[allow(clippy::too_many_arguments)]
 pub fn place_the_interior_samples(
     arriving: &ChainEdge,
@@ -196,7 +195,7 @@ pub fn place_the_interior_samples(
     Ok(())
 }
 
-/// C# `TryTheCanalsCorner`: where the two edges' canal AXES come nearest - the corner the section's
+/// Where the two edges' canal AXES come nearest - the corner the section's
 /// ellipse is drawn about - with the unit direction the arriving axis leans off the section's normal
 /// (`across`) and the cosine of that lean (`squash`). `None` where the chain does not turn here, turns
 /// back on itself, an edge has no axis, or the two axes run parallel.
@@ -242,7 +241,7 @@ pub fn try_the_canals_corner(
     Some((corner, across, squash))
 }
 
-/// C# `TryTheAxisAt`: a point of one edge's canal axis - a radius clear of both of its faces, at the
+/// A point of one edge's canal axis - a radius clear of both of its faces, at the
 /// edge's start - or `None` where the edge's faces are one plane or fold back on each other.
 pub fn try_the_axis_at(edge: &ChainEdge, radius: f64) -> Option<Vector3> {
     let cosine = edge.left_normal().dot(edge.right_normal());
@@ -254,12 +253,12 @@ pub fn try_the_axis_at(edge: &ChainEdge, radius: f64) -> Option<Vector3> {
     Some(edge.from() - ((edge.left_normal() + edge.right_normal()) * radius / (1.0 + cosine)))
 }
 
-/// C# `Squashed`: `arm` with its component `across` scaled by `by`.
+/// `arm` with its component `across` scaled by `by`.
 pub fn squashed(arm: Vector3, across: Vector3, by: f64) -> Vector3 {
     arm + (across * ((by - 1.0) * arm.dot(across)))
 }
 
-/// C# `SectionBuilder.Slerp`: the direction `along` of the way round from `from` to `to`, `wedge`
+/// The direction `along` of the way round from `from` to `to`, `wedge`
 /// apart, on the great circle between them; `from` itself where the wedge is no turn at all.
 pub fn slerp(from: Vector3, to: Vector3, along: f64, wedge: f64) -> Vector3 {
     let spread = wedge.sin();
@@ -281,7 +280,7 @@ pub struct SideBoundary {
     pub slide_edge: i32,
 }
 
-/// C# `TryBoundary`: one side's boundary at a chain vertex. With no crease running into the face on
+/// One side's boundary at a chain vertex. With no crease running into the face on
 /// this side it is the setback straight out along `away` (an OFFSET); with one, it SLIDES down that
 /// crease until it reaches the setback; with more than one there is no one edge to ride and the side
 /// is refused (not routed in v1), as is a crease that leaves square to or back across `away`. The
@@ -367,7 +366,7 @@ pub fn try_boundary(
     })
 }
 
-/// C# `TryJunction`: draws the JUNCTION at a station the predicate has already read as one, and hands
+/// Draws the JUNCTION at a station the predicate has already read as one, and hands
 /// back its LEAVING section as the station's section, with the junction itself, as
 /// `(section, junction)`.
 ///

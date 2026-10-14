@@ -1,6 +1,6 @@
 //! Every point the section construction will ever publish, in one append-only list whose indices
 //! never move: the source mesh's own vertices first, at their own indices, and then one entry for
-//! each point a section mints. Ports `Bevel/Sections/SectionPool.cs`.
+//! each point a section mints.
 //!
 //! The one thing this is NOT is the surface vertex pool. That pool answers "is there already a
 //! vertex near here?", and every crack the surface construction has left had the same shape: two
@@ -16,7 +16,7 @@ use std::fmt;
 
 use vector_math::{Vector3, Vector3Float};
 
-/// The refusal [`SectionPool::add`] gives a NaN point (C# throws `ArgumentOutOfRangeException`).
+/// The refusal [`SectionPool::add`] gives a NaN point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NanSectionPoint;
 
@@ -28,7 +28,7 @@ impl fmt::Display for NanSectionPoint {
 
 impl std::error::Error for NanSectionPoint {}
 
-/// C# `SectionPool`.
+/// The append-only point pool the sections share: mesh vertices first, then minted points.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SectionPool {
     at: Vec<Vector3>,

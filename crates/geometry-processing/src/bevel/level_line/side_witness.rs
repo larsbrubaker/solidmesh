@@ -1,9 +1,9 @@
 //! The last point of a side to survive the cut, made a VERTEX of the mesh so that the side's
-//! survival is decided exactly instead of inside a search tolerance. Ports
-//! `Bevel/LevelLine/SideWitness.cs` (a C# static class): its constants, its per-thread tally
-//! ([`SideWitnessTally`], [`reset`]), the side's live triangles, the reading's own last surviving
-//! point ([`from_the_reading`]), the triangle holding a point, the decision search ([`search`]) and
-//! the witness's insertion, and giving a side its witness ([`give_the_side_a_witness`]).
+//! survival is decided exactly instead of inside a search tolerance: its constants, its per-thread
+//! tally ([`SideWitnessTally`], [`reset`]), the side's live triangles, the reading's own last
+//! surviving point ([`from_the_reading`]), the triangle holding a point, the decision search
+//! ([`search`]) and the witness's insertion, and giving a side its witness
+//! ([`give_the_side_a_witness`]).
 //!
 //! The refinement's rules find the level line by bounded search, and every such search answers
 //! only to within its own accuracy. Where the last surviving scrap of a side is a small island
@@ -34,7 +34,7 @@ pub const WITNESS_ACCURACY: f64 = 1.0 / 1000.0;
 /// calls a point on an EDGE.
 pub const ON_THE_TRIANGLE: f64 = 1e-6;
 
-/// C# `SideWitness`'s `[ThreadStatic]` counters: one thread's tally, counted per thread for the
+/// The side witness's counters: one thread's tally, counted per thread for the
 /// reason the field counters give.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SideWitnessTally {
@@ -79,16 +79,14 @@ pub fn reset() {
     TALLY.with(|cell| cell.set(SideWitnessTally::default()));
 }
 
-/// C# `SideWitness.GiveTheSideAWitness`: gives a side that refinement has left with no Outside
+/// Gives a side that refinement has left with no Outside
 /// vertex its last surviving point as a vertex, and refines round it, so that the cut sees the
 /// loop the room promised.
 ///
-/// The mesh is the reading's own (as in [`super::band_refinement::refine`], which C# hands the
-/// mesh beside the reading); it is borrowed only between reads. C#'s `bool` with its
-/// `out offendingTriangle` is the inner result: `Ok(())` when the side survives (or is left as it
-/// stands - C#'s `true`, whose `out` is always -1), `Err(triangle)` only when the second
-/// refinement meets a triangle it cannot settle. The work budget's exits and C#'s exceptions are
-/// the outer `Err`.
+/// The mesh is the reading's own (as in [`super::band_refinement::refine`]); it is borrowed only
+/// between reads. The inner result is `Ok(())` when the side survives (or is left as it stands),
+/// `Err(triangle)` only when the second refinement meets a triangle it cannot settle. The work
+/// budget's exits and the refinement's errors are the outer `Err`.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn give_the_side_a_witness(
     reading: &super::VertexFieldReading,
@@ -167,7 +165,7 @@ pub fn live_triangles_of_side(mesh: &LevelLineMesh, side: i32) -> Vec<i32> {
         .collect()
 }
 
-/// C# `SideWitness.FromTheReading`: the reading's own last surviving point for this side, read at
+/// The reading's own last surviving point for this side, read at
 /// the size being built, with the side's triangle holding it - the first line. `None` when the
 /// reading has no such point for this side, when the field is not one a room can be read from (a
 /// chain's or a pick's), when the point does NOT stand above the snap (a side genuinely swallowed
@@ -242,7 +240,7 @@ pub fn triangle_holding(mesh: &LevelLineMesh, triangles: &[i32], point: Vector3)
     }
 }
 
-/// C# `SideWitness.Search`: the first point of the side found standing above the snap, and the
+/// The first point of the side found standing above the snap, and the
 /// triangle holding it - the decision search, the second line. `None` when no triangle of the side
 /// holds one.
 ///
@@ -271,8 +269,8 @@ pub fn search(
     Ok(None)
 }
 
-/// C# `SideWitness.HoldsAnOutsideVertex`: whether anything of the side is already known to
-/// survive. Stops at the first Outside vertex, reading corners in C#'s short-circuit order.
+/// Whether anything of the side is already known to survive. Stops at the first Outside vertex,
+/// reading each triangle's corners in order and stopping at the first that answers.
 pub fn holds_an_outside_vertex(
     mesh: &LevelLineMesh,
     reading: &super::VertexFieldReading,
@@ -290,7 +288,7 @@ pub fn holds_an_outside_vertex(
     Ok(false)
 }
 
-/// C# `SideWitness.Insert`: puts the witness into the mesh the way the Island rule puts its peak
+/// Puts the witness into the mesh the way the Island rule puts its peak
 /// in - on an edge when it stands on one, inside the triangle otherwise, nothing at an existing
 /// corner. "At a corner" is asked at the reading's SNAP, not the triangle's millionth: the last
 /// surviving scrap of a side is about two snaps wide, and a millionth would swallow it.

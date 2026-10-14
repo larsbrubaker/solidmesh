@@ -1,8 +1,7 @@
-//! The strip clip's driver. Ports the entry points of `Bevel/LevelLine/StripClip.cs` (the C# static
-//! class `StripClip`): `TryClipAndCap` on the laid list ([`try_clip_and_cap`]) and on the strip
-//! itself ([`try_clip_and_cap_strip`]), which split the growing neighbour's open edges into one
-//! neighbour per connected run, and `ClipOnOneNeighbour` ([`clip_on_one_neighbour`]), which reads
-//! one neighbour's planes, ties, splits, drops and caps. The mesh work it drives is in
+//! The strip clip's driver: the clip and cap on the laid list ([`try_clip_and_cap`]) and on the
+//! strip itself ([`try_clip_and_cap_strip`]), which split the growing neighbour's open edges into
+//! one neighbour per connected run, and the one-neighbour clip ([`clip_on_one_neighbour`]), which
+//! reads one neighbour's planes, ties, splits, drops and caps. The mesh work it drives is in
 //! `strip_clip` (the ridge clip) and `strip_clip_valley` (the valley clip).
 
 use std::collections::HashSet;
@@ -19,7 +18,7 @@ use super::strip_clip_valley::{insert_valley_ties, valley_cap, valley_planes};
 use super::triangle_edges;
 use super::{LevelLineMesh, LevelLineMeshError, LevelLineTriangle, LevelLineWork};
 
-/// C# `TryClipAndCap(mesh, laid, start, kept)`: clips and caps where the fill ran a rail past a
+/// Clips and caps where the fill ran a rail past a
 /// growing neighbour; true with nothing changed when no loop edge of `kept` is virtual (stands on
 /// no kept triangle), which is every fill that reached no opposite-sense crease. False when the
 /// clip cannot close. The strip is `laid[start..]`.
@@ -44,7 +43,7 @@ pub fn try_clip_and_cap(
     Ok(result)
 }
 
-/// C# `TryClipAndCap(mesh, strip, kept, out changed)`: the clip on the strip's triangles itself.
+/// The clip on the strip's triangles itself.
 /// `changed` is set once any neighbour's clip has begun changing the mesh. On success the virtual
 /// edges of `kept` are replaced by the neighbours' crease stretches.
 pub fn try_clip_and_cap_strip(
@@ -84,8 +83,8 @@ pub fn try_clip_and_cap_strip(
     // max (its ridge), but two neighbours apart - a fin's two end walls, each growing at its own
     // end (Fillet Thin Front) - are clipped each on its own; read as one, no piece is inside both
     // and nothing is dropped.
-    // C#'s HashSet only loses entries here, so it iterates in insertion order: an order-keeping
-    // set with order-keeping removal.
+    // The set only loses entries here, and its order reaches the result: an order-keeping set
+    // with order-keeping removal.
     let mut neighbours: Vec<Vec<(i32, i32)>> = Vec::new();
     let mut unseen: IndexSet<(i32, i32)> = open.iter().copied().collect();
     for &seed in &open {
@@ -130,7 +129,7 @@ pub fn try_clip_and_cap_strip(
                     )
                 })
                 .collect();
-            // LINQ's GroupBy: groups in the order each key first appears.
+            // Grouped in the order each key first appears, so the report's order is stable.
             let mut by_tag: IndexMap<i32, usize> = IndexMap::new();
             for (low, high) in mesh.edges() {
                 let on = mesh.triangles_on(low, high);
@@ -163,7 +162,7 @@ pub fn try_clip_and_cap_strip(
     Ok(true)
 }
 
-/// The fixed vertex rule (C#'s local `Distance`): a vertex's distance to a plane is ZERO by
+/// The fixed vertex rule: a vertex's distance to a plane is ZERO by
 /// bookkeeping - a vertex on the plane's list - and its computed signed distance otherwise.
 fn plane_distance(mesh: &LevelLineMesh, planes: &[ClipPlane], plane: i32, vertex: i32) -> f64 {
     let plane = &planes[plane as usize];
@@ -174,7 +173,7 @@ fn plane_distance(mesh: &LevelLineMesh, planes: &[ClipPlane], plane: i32, vertex
     }
 }
 
-/// C# `StripClip.ClipOnOneNeighbour`: clips the strip on one growing neighbour (`part`, its
+/// Clips the strip on one growing neighbour (`part`, its
 /// connected run of open edges) and caps it - a ridge or, where its walls meet at a concave
 /// crease, a valley. The neighbour's crease stretch joins `creases` on success; `changed` is set
 /// once the mesh may have changed.

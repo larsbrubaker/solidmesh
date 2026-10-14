@@ -1,6 +1,5 @@
-//! One run's SMOOTH side and the reading of which side that is (`Bevel/Sections/SectionSmoothSeam.cs`:
-//! the sealed class `SectionSmoothSeam` and the static class `SectionSmoothSeamReading`, a module of
-//! free functions here). The cut itself is [`super::section_smooth_side`]'s; this reads which side of
+//! One run's SMOOTH side ([`SectionSmoothSeam`]) and the reading of which side that is. The cut
+//! itself is [`super::section_smooth_side`]'s; this reads which side of
 //! each run the cut is asked of, and cuts every run's side that is ([`try_cut_every_smooth_side`]).
 //!
 //! The seam is the object the three stages of the assembly agree over. The face rebuild leaves this
@@ -38,11 +37,11 @@ use super::section_smooth_side_boundary::SmoothSideFailure;
 use super::{NanSectionPoint, SectionPool, SectionRun};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SectionSmoothSeam`: one run's SMOOTH side - which side of it is smooth, and the cut that side
+/// One run's SMOOTH side - which side of it is smooth, and the cut that side
 /// made in the part.
 pub struct SectionSmoothSeam {
     /// The run whose side this is, by its index in the runs [`try_cut_every_smooth_side`] was handed
-    /// (C# holds the run and its readers match it by reference).
+    /// (its readers match it by that index).
     pub run: i32,
     /// Whether the smooth side is the LEFT of the chain's walk.
     pub is_left: bool,
@@ -51,23 +50,23 @@ pub struct SectionSmoothSeam {
 }
 
 impl SectionSmoothSeam {
-    /// C#'s constructor.
+    /// The seam of run `run`, smooth on the left or right, with its cut.
     pub fn new(run: i32, is_left: bool, cut: SmoothSideCut) -> Self {
         SectionSmoothSeam { run, is_left, cut }
     }
 }
 
-/// Why [`try_cut_every_smooth_side`] cut nothing: the refusal it answers with (C#'s `out failure`), or
-/// a point the cut minted that came out not a number, which C#'s pool throws on.
+/// Why [`try_cut_every_smooth_side`] cut nothing: the refusal it answers with, or a point the cut
+/// minted that came out not a number, which the pool refuses.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SmoothSeamFailure {
     /// A side would not cut, named by [`BevelAdvisoryCode::SurfaceSmoothSideNotCut`].
     Refused(BevelAdvisory),
-    /// A point minted into the pool was NaN (C# `SectionPool.Add` throws).
+    /// A point minted into the pool was NaN.
     NotANumber(NanSectionPoint),
 }
 
-/// C# `SideIsSmooth`: whether the named side of `run` is smooth, read BY ITS REGION where the
+/// Whether the named side of `run` is smooth, read BY ITS REGION where the
 /// operation has a feature reading in hand, and by the walks' fold crossings where it has none.
 ///
 /// A side whose region is not one plane CAN be cut and cannot be substituted onto, whatever this run's
@@ -97,7 +96,7 @@ pub fn side_is_smooth(
             ))
 }
 
-/// C# `SideStandsOnOnePlane`: whether every region the named side stands in lies in one plane.
+/// Whether every region the named side stands in lies in one plane.
 fn side_stands_on_one_plane(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -127,7 +126,7 @@ fn side_stands_on_one_plane(
     true
 }
 
-/// C# `TheSidesSeedFaces`: the side face of every chain edge - the faces the side's region is
+/// The side face of every chain edge - the faces the side's region is
 /// flooded out from.
 fn the_sides_seed_faces(run: &SectionRun, on_the_left: bool) -> Vec<i32> {
     let mut seeds = Vec::new();
@@ -147,7 +146,7 @@ fn the_sides_seed_faces(run: &SectionRun, on_the_left: bool) -> Vec<i32> {
     seeds
 }
 
-/// C# `AWalkCrossedAFold`: whether any station's reach on that side crossed a fold. This is the whole
+/// Whether any station's reach on that side crossed a fold. This is the whole
 /// reading where the operation has no feature set, and the SEED of it where it has one: a side that
 /// folded is cut, and its region is then what promotes the sides of other runs standing on it.
 pub fn a_walk_crossed_a_fold(run: &SectionRun, on_the_left: bool) -> bool {
@@ -164,11 +163,11 @@ pub fn a_walk_crossed_a_fold(run: &SectionRun, on_the_left: bool) -> bool {
     false
 }
 
-/// C# `TryCutEverySmoothSide`: cuts every run's smooth side, where it has one. A run smooth on BOTH
+/// Cuts every run's smooth side, where it has one. A run smooth on BOTH
 /// sides is not built: the fillet would then stand between two cuts and neither side's fan is the
 /// rebuild's to keep, which is a shape this construction has no reading for yet.
 ///
-/// The seams come back only on success, which is the only time C#'s callers read its `out seams`.
+/// The seams come back only on success, the only time a caller reads them.
 pub fn try_cut_every_smooth_side(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -243,7 +242,7 @@ pub fn try_cut_every_smooth_side(
     Ok(seams)
 }
 
-/// C# `SideIsCut`: whether the named side is CUT: it must be smooth, and some run's seam must run on
+/// Whether the named side is CUT: it must be smooth, and some run's seam must run on
 /// the region it stands in.
 ///
 /// THE COLLISION THIS ANSWERS (measured on the conditioned tapered barrel's wall pick, 2026-09-17). A
@@ -289,9 +288,9 @@ fn side_is_cut(
     false
 }
 
-/// C# `TheRegionsSomeSeamCuts`: every face of every region a run's own fold-crossing walks already
+/// Every face of every region a run's own fold-crossing walks already
 /// send to the cut. Read before any side is settled, because the side that must join them may belong
-/// to a run read later. (C# passes its memo here without reading it; so does this.)
+/// to a run read later. (The memo is passed through unread.)
 fn the_regions_some_seam_cuts(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -332,7 +331,7 @@ fn the_regions_some_seam_cuts(
     cut
 }
 
-/// C# `Refused`: the advisory a refused smooth side answers - the place the application points at,
+/// The advisory a refused smooth side answers - the place the application points at,
 /// and the cut's OWN reason by name.
 ///
 /// These used to be collapsed into `SurfaceCornerNotSupported` with the refusal dropped into a
@@ -343,8 +342,8 @@ fn the_regions_some_seam_cuts(
 fn refused(place: Vector3, refusal: SmoothSideRefusal) -> BevelAdvisory {
     BevelAdvisory::new(
         BevelAdvisoryCode::SurfaceSmoothSideNotCut,
-        // C#'s `refusal.ToString()`: the enum member's name, which the derived `Debug` writes for
-        // these field-less variants exactly as C# names them.
+        // The refusal by its member name, which the derived `Debug` writes for these field-less
+        // variants; the advisory text names the reason that way.
         vec![place.into(), format!("{refusal:?}").into()],
     )
 }

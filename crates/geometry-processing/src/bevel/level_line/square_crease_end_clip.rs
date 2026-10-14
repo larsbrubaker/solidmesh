@@ -1,8 +1,8 @@
 //! The end-face clip at the unrayed end of an open convex chain that stops on an unpicked concave
-//! crease against one flat end face square to it. Ports `Bevel/LevelLine/SquareCreaseEndClip.cs`
-//! (a C# static class): the per-flow gate ([`square_crease_clips_on`],
+//! crease against one flat end face square to it: the per-flow gate ([`square_crease_clips_on`],
 //! [`turn_square_crease_clips_off`] and its scope [`SquareCreaseEndClipSquareCreaseClipsOffScope`],
-//! kept on the build's [`WorkBudget`](super::WorkBudget) as C#'s `AsyncLocal`) and the clips read
+//! kept on the build's [`WorkBudget`](super::WorkBudget) so it travels with the build) and the
+//! clips read
 //! off plain positions ([`square_crease_end_clips`]), and the clips over a pick with the room they
 //! leave ([`square_crease_end_clips_of_pick`], [`square_crease_end_room`], [`cap_room`]). Reads the
 //! end-face sense (`end_face_sense.rs`).
@@ -16,20 +16,20 @@ use super::{end_face_sense, pick_validation, RoomSource};
 use super::end_face_sense::{face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE};
 use super::{EndRayBound, LevelLineWork};
 
-/// C# `SquareCreaseEndClip.SquareCreaseClipsOn`: whether [`square_crease_end_clips`] reads any
+/// Whether [`square_crease_end_clips`] reads any
 /// clip: on unless a test turns it off with [`turn_square_crease_clips_off`] to read the unclipped
-/// ball end. Per build, as `BandGroupFields.RunOutsOn` (on wherever no budget is in force).
+/// ball end. Per build, as the run-outs switch is (on wherever no budget is in force).
 pub fn square_crease_clips_on() -> bool {
     LevelLineWork::current().is_none_or(|budget| !budget.square_crease_clips_off.get())
 }
 
-/// C# `SquareCreaseEndClip.TurnSquareCreaseClipsOff`: turns the clips off for the build in force
+/// Turns the clips off for the build in force
 /// until the returned scope is dropped.
 pub fn turn_square_crease_clips_off() -> SquareCreaseEndClipSquareCreaseClipsOffScope {
     SquareCreaseEndClipSquareCreaseClipsOffScope::new()
 }
 
-/// C# `SquareCreaseEndClip.SquareCreaseClipsOffScope`: turns the square-crease clips off for the
+/// Turns the square-crease clips off for the
 /// build in force until it is dropped, which puts back what was there before - so a test can read
 /// the unclipped ball end. With no budget in force there is no build to switch and the scope does
 /// nothing.
@@ -41,7 +41,7 @@ pub struct SquareCreaseEndClipSquareCreaseClipsOffScope {
 }
 
 impl SquareCreaseEndClipSquareCreaseClipsOffScope {
-    /// C#'s `SquareCreaseClipsOffScope()`: remembers the setting and turns the clips off.
+    /// Remembers the setting and turns the clips off.
     pub fn new() -> Self {
         let was = LevelLineWork::current()
             .is_some_and(|budget| budget.square_crease_clips_off.replace(true));
@@ -56,7 +56,7 @@ impl Default for SquareCreaseEndClipSquareCreaseClipsOffScope {
 }
 
 impl Drop for SquareCreaseEndClipSquareCreaseClipsOffScope {
-    /// C#'s `Dispose`: puts back what was there before.
+    /// Puts back what was there before.
     fn drop(&mut self) {
         if let Some(budget) = LevelLineWork::current() {
             budget.square_crease_clips_off.set(self.was);
@@ -71,7 +71,7 @@ fn has(t: Corners, v: i32) -> bool {
 /// Square to well under a degree: an oblique end carries a ray and its own bound.
 const SQUARE_COSINE: f64 = 1.0 - 1e-6;
 
-/// C# `SquareCreaseEndClip.SquareCreaseEndClips`: the end-face clip (`ChainField.EndClip`, no ray)
+/// The end-face clip (`ChainField.EndClip`, no ray)
 /// at each UNRAYED end of an open CONVEX chain that stops on an unpicked concave crease against one
 /// flat end face square to it, where a side's flat face runs on past the end across a flat edge
 /// lying in the end face's plane. `None` at every other end.
@@ -118,7 +118,8 @@ pub fn square_crease_end_clips(
     (first, last)
 }
 
-/// C#'s local `ClipAt` of `SquareCreaseEndClips`.
+/// The clip at chain end `end`, whose next chain vertex is `next`, or `None` where it does not
+/// clip.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> Option<EndRayBound> {
     let v = positions[end as usize];
@@ -225,7 +226,7 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
     }
 }
 
-/// C# `SquareCreaseEndClipsOfPick`: [`square_crease_end_clips`] over a pick, as the build reads
+/// [`square_crease_end_clips`] over a pick, as the build reads
 /// them - an end at a CORNER of the pick is the corner's business (as for the end rays), and an end
 /// already carrying a ray's bound keeps it. Each entry is `(None, None)` where no end clips.
 pub fn square_crease_end_clips_of_pick(
@@ -268,7 +269,7 @@ pub fn square_crease_end_clips_of_pick(
         .collect()
 }
 
-/// C# `SquareCreaseEndRoom`: the least [`EndRayBound::crease_room`] over a pick's square crease
+/// The least [`EndRayBound::crease_room`] over a pick's square crease
 /// end clips - infinity where none clips - and the chain it is read at (-1 with none), as
 /// `(room, chain)`. The build takes it, so a size past the crease is refused by size.
 pub fn square_crease_end_room(
@@ -301,7 +302,7 @@ pub fn square_crease_end_room(
     (room, chain)
 }
 
-/// C# `CapRoom`: lowers `room` to [`square_crease_end_room`] where that is less, naming the chain
+/// Lowers `room` to [`square_crease_end_room`] where that is less, naming the chain
 /// it is read at in `room_set_by`. A square crease end's section stays on its crease only so far
 /// down it - past the crease's far vertex the arc's foot leaves the crease and no cap exists (the
 /// fill refused `ArcSinksIntoTheSolid` at 7 on 15mm Bevel Top Edge) - and the build's foreign

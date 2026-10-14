@@ -1,40 +1,39 @@
 //! The only thing the level-line cut knows about the bevel: one number per point in space, and the
-//! chain field that can be ASKED where it runs. Ports `Bevel/LevelLine/ScalarField.cs`
-//! (`IScalarField`, `FieldMinimum`, `FieldMaximum`, `IChainDistanceField`).
+//! chain field that can be ASKED where it runs ([`ScalarField`], [`FieldMinimum`],
+//! [`FieldMaximum`], [`ChainDistanceField`]).
 //!
-//! C#'s overloads take distinct names here: `MaxAlongSegment(a, b, tolerance, atLeast)` is
-//! [`ChainDistanceField::max_along_segment_at_least`] and the six-argument `MaxOverTriangle` is
-//! [`ChainDistanceField::max_over_triangle_bounded`] (its `atLeast` default of negative infinity
-//! passed explicitly).
+//! The searches with a floor take their own names: the segment search with `at_least` is
+//! [`ChainDistanceField::max_along_segment_at_least`] and the triangle search with `at_least` and
+//! `stop_above` is [`ChainDistanceField::max_over_triangle_bounded`] (an `at_least` of negative
+//! infinity is no floor).
 //!
 //! Every query may charge the work budget in force, so each answers `Result<_, WorkError>` and a
-//! caller passes a cancel or an exhausted budget up with `?` (C# throws through them).
+//! caller passes a cancel or an exhausted budget up with `?`.
 //!
-//! Where C# tests a field's concrete type (`field is ChainField`, `is PickField`,
-//! `is BandGroupFields.WithRunOuts`), the trait says it instead: [`ScalarField::kind`] and the
-//! typed accessors, `None` by default and overridden by those types (the bevel-core decision on
-//! field type tests).
+//! Where a reader needs a field's concrete type (a chain's field, a pick's field, a group's field
+//! with its run-outs), the trait says it: [`ScalarField::kind`] and the typed accessors, `None` by
+//! default and overridden by those types, so no reader downcasts.
 
 use vector_math::Vector3;
 
 use super::{BandGroupFieldsWithRunOuts, ChainField, PickField, WorkError};
 
-/// Which of the fields C# tests for by type a field is ([`ScalarField::kind`]).
+/// Which of the fields a reader asks for by type a field is ([`ScalarField::kind`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum FieldKind {
     /// Any other field (a point, a plane, a run-out, a test's field).
     #[default]
     Other,
-    /// One chain's field (C# `ChainField`).
+    /// One chain's field.
     ChainField,
-    /// A group of chains' field (C# `PickField`).
+    /// A group of chains' field.
     PickField,
-    /// A group's pick field read with its run-outs (C# `BandGroupFields.WithRunOuts`).
+    /// A group's pick field read with its run-outs.
     WithRunOuts,
 }
 
 /// One number per point in space, negative in the band that is to be deleted, positive outside
-/// it, zero on the level line the cut follows (C# `IScalarField`).
+/// it, zero on the level line the cut follows.
 ///
 /// Deliberately this narrow so the cut can be built and proven against fields with an exact
 /// answer (distance to a plane, a point, a segment) before the chain's own field exists.
@@ -44,28 +43,27 @@ pub trait ScalarField {
     /// The field value at a point: negative inside the band, positive outside, zero on the line.
     fn value_at(&self, point: Vector3) -> Result<f64, WorkError>;
 
-    /// Which field this is, where C# asks by type; [`FieldKind::Other`] unless overridden.
+    /// Which field this is, for a reader that asks by type; [`FieldKind::Other`] unless overridden.
     fn kind(&self) -> FieldKind {
         FieldKind::Other
     }
 
-    /// This field as a chain's field (C# `field as ChainField`); `None` unless overridden.
+    /// This field as a chain's field; `None` unless overridden.
     fn as_chain_field(&self) -> Option<&ChainField> {
         None
     }
 
-    /// This field as a pick's field (C# `field as PickField`); `None` unless overridden.
+    /// This field as a pick's field; `None` unless overridden.
     fn as_pick_field(&self) -> Option<&PickField> {
         None
     }
 
-    /// This field as a group's field with its run-outs (C# `field as BandGroupFields.WithRunOuts`);
-    /// `None` unless overridden.
+    /// This field as a group's field with its run-outs; `None` unless overridden.
     fn as_with_run_outs(&self) -> Option<&BandGroupFieldsWithRunOuts> {
         None
     }
 
-    /// This field as one that can be ASKED where it runs (C# `field is IChainDistanceField`);
+    /// This field as one that can be ASKED where it runs;
     /// `None` unless overridden - every [`ChainDistanceField`] implementation overrides it.
     fn as_chain_distance_field(&self) -> Option<&dyn ChainDistanceField> {
         None
@@ -82,7 +80,7 @@ pub struct FieldMinimum {
 }
 
 impl FieldMinimum {
-    /// C#'s constructor.
+    /// The least `value` and the `point` it stands at.
     pub fn new(value: f64, point: Vector3) -> Self {
         FieldMinimum { value, point }
     }
@@ -98,7 +96,7 @@ pub struct FieldMaximum {
 }
 
 impl FieldMaximum {
-    /// C#'s constructor.
+    /// The greatest `value` and the `point` it stands at.
     pub fn new(value: f64, point: Vector3) -> Self {
         FieldMaximum { value, point }
     }
@@ -106,7 +104,7 @@ impl FieldMaximum {
 
 /// A field that can be ASKED where it runs, rather than hunted by halving: as well as a value at a
 /// point it answers its least value over a whole segment or triangle, and where that least value
-/// stands (C# `IChainDistanceField`).
+/// stands.
 ///
 /// The field is convex over each chain segment (a norm of an affine map less a linear term), so
 /// these minima are found deterministically. That is what lets the refinement split an edge ONCE
@@ -174,7 +172,7 @@ pub trait ChainDistanceField: ScalarField {
 
     /// The same search, told a value `at_least` the answer must beat to be of any use - so every
     /// part of the triangle whose bound cannot beat it is discarded from the first step - and a
-    /// `stop_above` past which it may stop early. C# defaults `at_least` to negative infinity.
+    /// `stop_above` past which it may stop early. An `at_least` of negative infinity is no floor.
     ///
     /// The threshold is ABSOLUTE - fixed before the search and never raised by it. With `M` the
     /// true peak: when `M > at_least + tolerance` the answer beats the threshold exactly as it

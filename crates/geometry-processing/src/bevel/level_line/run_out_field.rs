@@ -1,7 +1,6 @@
-//! The field of one `CreaseRunOut` ([`RunOutField`]). Ports the type of
-//! `Bevel/LevelLine/RunOutField.cs`, with its constructors (a bare cone, the field of a run-out,
-//! the wedge under a contact profile), its reading, the golden-section least and its field
-//! queries ([`ScalarField`], [`ChainDistanceField`]).
+//! The field of one `CreaseRunOut` ([`RunOutField`]), with its constructors (a bare cone, the field
+//! of a run-out, the wedge under a contact profile), its reading, the golden-section least and its
+//! field queries ([`ScalarField`], [`ChainDistanceField`]).
 
 use std::cmp::Ordering;
 
@@ -20,12 +19,12 @@ pub const MAX_SLOPE: f64 = 1.0;
 /// ends.
 pub const SEARCH_STEPS: i32 = 80;
 
-/// The golden-section ratio, (sqrt 5 - 1) / 2 (C# `static readonly Golden`).
+/// The golden-section ratio, (sqrt 5 - 1) / 2.
 pub fn golden() -> f64 {
     (5f64.sqrt() - 1.0) / 2.0
 }
 
-/// C# `RunOutField`: the field of one `CreaseRunOut` - negative in a thin tapering wedge along the
+/// The field of one `CreaseRunOut` - negative in a thin tapering wedge along the
 /// unpicked crease, from the pick corner to P*, zero width at P* - the sliver the round's void ball
 /// takes off both crease faces as it runs out. Read as the least of it and the pick's own field
 /// (`BandGroupFields`), so the band cut carries the round on past the crease the side flood stopped
@@ -49,7 +48,7 @@ pub struct RunOutField {
     pub corner: Vector3,
     /// The unit direction along the crease, away from the corner.
     pub direction: Vector3,
-    /// How far along the crease the wedge ends, P* (C# `Reach`).
+    /// How far along the crease the wedge ends, P*.
     pub reach: f64,
     /// `sqrt(1 + slope^2)`: what the cone's reading is divided by to be 1-Lipschitz.
     pub norm: f64,
@@ -68,7 +67,7 @@ pub struct RunOutField {
 }
 
 impl RunOutField {
-    /// C#'s constructor: a wedge from `corner` along the unit `direction` to P* at `reach`, with
+    /// A wedge from `corner` along the unit `direction` to P* at `reach`, with
     /// the concave profile's lines `off <= a + b s` (each kept with its normalisation sqrt(1 + b^2)).
     pub fn new(
         corner: Vector3,
@@ -94,8 +93,8 @@ impl RunOutField {
         }
     }
 
-    /// A bare wedge from `corner` along the unit `direction` to P* at `reach` (C#'s optional
-    /// `width` is +infinity there).
+    /// A bare wedge from `corner` along the unit `direction` to P* at `reach` (`width` is
+    /// +infinity for an unbounded wedge).
     pub fn cone(corner: Vector3, direction: Vector3, reach: f64, slope: f64, width: f64) -> Self {
         Self::new(corner, direction, reach, slope, width, &[])
     }
@@ -139,7 +138,7 @@ impl RunOutField {
             .copied()
             .filter(|p| p.0 < reach - hair)
             .collect();
-        // C#'s OrderBy: a stable sort (the filter has let no NaN s through).
+        // A stable sort, so ties keep their order (the filter has let no NaN s through).
         kept.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(Ordering::Equal));
         let mut profile: Vec<(f64, f64)> = Vec::new();
         for sample in kept {
@@ -159,7 +158,7 @@ impl RunOutField {
 
         profile.push((reach, 0.0));
         let hull = Self::upper_hull(&profile);
-        // C#'s `Enumerable.Max`: a NaN is displaced by any number.
+        // The largest width; a NaN is displaced by any number.
         let width = hull.iter().map(|p| p.1).fold(f64::NAN, |best, x| {
             if x > best || best.is_nan() {
                 x
@@ -400,7 +399,7 @@ impl ChainDistanceField for RunOutField {
 }
 
 impl RunOutField {
-    /// How far along the crease the wedge ends, P* (C#'s `Reach`).
+    /// How far along the crease the wedge ends, P*.
     pub fn reach(&self) -> f64 {
         self.reach
     }

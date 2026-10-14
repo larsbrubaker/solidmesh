@@ -1,16 +1,15 @@
 //! A measurement only: every vertex the cut ADDS to a `LevelLineMesh`, and whether it lands on top
-//! of one already there. Ports the nested types of `Bevel/LevelLine/SplitMeter.cs` (a C# static
-//! class): what added a vertex ([`SplitMeterSplitKind`]) and the record kept of it
+//! of one already there: what added a vertex ([`SplitMeterSplitKind`]) and the record kept of it
 //! ([`SplitMeterSplitRecord`]), and the meter's state, switch, report and vertex grid
 //! ([`SplitMeter`]) with the record it makes of an added vertex, and
-//! the record's text ([`SplitMeterSplitRecord::describe`]); the hooks that note a vertex land
-//! with later packages.
+//! the record's text ([`SplitMeterSplitRecord::describe`]); the hooks that note a vertex are in
+//! `level_line_mesh_edits`.
 //!
 //! Costs one static bool read per vertex added when it is off: [`SplitMeter::on`] is false until a
 //! caller calls [`SplitMeter::begin`] AND the field counters' meter is on. It changes nothing the
 //! kernel builds. Not per thread, unlike the field counters: one caller turns it on round one
 //! build and reads it back on the same thread, and the seeding is keyed on the mesh INSTANCE, so a
-//! second mesh under the meter starts the grid again. C#'s plain statics are one process-wide
+//! second mesh under the meter starts the grid again. The meter's state is one process-wide
 //! `Mutex`.
 
 use std::collections::HashMap;
@@ -23,7 +22,7 @@ use super::refinement_splits;
 use super::stopwatch::e3;
 use super::{FieldCounters, LevelLineMesh, LevelLineRule, PointPlace};
 
-/// C# `SplitMeter.SplitKind`: what a vertex was added BY - the three ways a position enters the
+/// What a vertex was added BY - the three ways a position enters the
 /// mesh.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SplitMeterSplitKind {
@@ -38,7 +37,7 @@ pub enum SplitMeterSplitKind {
     Free,
 }
 
-/// C# `SplitMeter.SplitRecord`: one added vertex, kept so a later coincidence can say what the
+/// One added vertex, kept so a later coincidence can say what the
 /// vertex it landed on was.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SplitMeterSplitRecord {
@@ -84,7 +83,7 @@ pub struct SplitMeterSplitRecord {
 }
 
 impl SplitMeterSplitRecord {
-    /// C# `SplitRecord.Describe`: the record as one line of text - what added the vertex, the rule,
+    /// The record as one line of text - what added the vertex, the rule,
     /// the context triangle and its corners, the point's distances off the triangle's edges
     /// against the tolerance (`E3`), the placement's verdict and the point (`F6`,
     /// InvariantCulture).
@@ -120,8 +119,8 @@ impl SplitMeterSplitRecord {
         )
     }
 
-    /// Builds a record (C#'s positional constructor).
-    #[allow(clippy::too_many_arguments)] // C#'s constructor: one field per argument.
+    /// Builds a record.
+    #[allow(clippy::too_many_arguments)] // One field per argument.
     pub fn new(
         vertex: i32,
         point: Vector3,
@@ -168,7 +167,7 @@ impl SplitMeterSplitRecord {
 /// The first this many coincidences are recorded in full; the rest are only counted.
 pub const SPLIT_METER_CAP: usize = 40;
 
-/// The split meter's process-wide state (C#'s private statics).
+/// The split meter's process-wide state.
 #[derive(Debug, Default)]
 pub struct SplitMeterState {
     /// Within this of a vertex already there is a coincidence; 0 when the meter is off.
@@ -177,7 +176,7 @@ pub struct SplitMeterState {
     pub middling: f64,
     /// The outer edge of the near misses, and the grid's cell size.
     pub near: f64,
-    /// The address of the mesh the grid was seeded from (C# `ReferenceEquals` on the instance);
+    /// The address of the mesh the grid was seeded from (compared by identity, not contents);
     /// `None` until the first vertex is noted.
     pub mesh_under_the_meter: Option<usize>,
     /// The vertices by grid cell.
@@ -194,7 +193,7 @@ pub struct SplitMeterState {
 
 static STATE: Mutex<Option<SplitMeterState>> = Mutex::new(None);
 
-/// C# `SplitMeter` (see the module docs).
+/// The split meter (see the module docs).
 pub struct SplitMeter;
 
 impl SplitMeter {
@@ -264,7 +263,7 @@ impl SplitMeter {
     /// same triangle and point - not a copy of its arithmetic, so the meter cannot disagree with
     /// the code that took the decision. Asked by the field rules' length, since that is the one
     /// the counters are filed by. A `triangle` not in the mesh records no context.
-    #[allow(clippy::too_many_arguments)] // C#'s signature: one reading per argument.
+    #[allow(clippy::too_many_arguments)] // One reading per argument.
     pub fn describe(
         mesh: &LevelLineMesh,
         vertex: i32,
@@ -344,7 +343,7 @@ impl SplitMeter {
         }
 
         let s = (point - a).dot(along) / length_squared;
-        // NaN passes through, as C#'s two comparisons let it.
+        // NaN passes through the clamp, so a degenerate reading stays visible as NaN.
         let s = s.clamp(0.0, 1.0);
         (point - (a + (along * s))).length()
     }
@@ -398,7 +397,7 @@ impl SplitMeter {
 
     /// The grid cell holding `point`. One cell per NEAR radius, so the 27 cells round a point
     /// cover every near miss as well as every coincidence - one grid answers both questions.
-    /// (`as` saturates where C#'s `(long)` of an out-of-range value is unspecified.)
+    /// (`as` saturates an out-of-range value, so a point far off still gets a cell.)
     pub fn cell(state: &SplitMeterState, point: Vector3) -> (i64, i64, i64) {
         (
             (point.x / state.near).floor() as i64,
@@ -463,7 +462,7 @@ impl SplitMeter {
     /// everything on it before the first add (an input vertex is as much "one already there" as a
     /// split is), a coincidence is recorded in full up to [`SPLIT_METER_CAP`], and a near miss is
     /// counted in its band.
-    #[allow(clippy::too_many_arguments)] // C#'s signature.
+    #[allow(clippy::too_many_arguments)] // One reading per argument.
     pub fn note(
         mesh: &LevelLineMesh,
         vertex: i32,

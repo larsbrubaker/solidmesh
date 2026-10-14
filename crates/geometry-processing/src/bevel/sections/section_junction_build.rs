@@ -1,5 +1,4 @@
-//! The junction's construction (`Bevel/Sections/SectionJunction.cs`, the C# `internal static class
-//! SectionJunction`; free functions here): whether a chain vertex is a junction at all
+//! The junction's construction: whether a chain vertex is a junction at all
 //! ([`is_a_junction_station`]), the junction section itself - one row of samples on the mitre
 //! ellipse the two canals share, carrying both wall ends - ([`try_build`]), and the far stretch of that
 //! row carried out onto the facets of the tessellated wall ([`try_carry_the_far_stretch_onto_the_facets`]).
@@ -20,8 +19,7 @@ use super::{section_builder, section_corner, JunctionSection, NanSectionPoint, S
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::ChainEdge;
 
-/// Why a junction could not be built: the corner refusal C# names, or a point that is not a number
-/// (where C# throws).
+/// Why a junction could not be built: the named corner refusal, or a point that is not a number.
 #[derive(Debug, Clone, PartialEq)]
 pub enum JunctionRefusal {
     Refused(BevelAdvisory),
@@ -34,10 +32,10 @@ impl From<NanSectionPoint> for JunctionRefusal {
     }
 }
 
-/// C# `IsAJunctionStation`: whether the chain's turn at `vertex` is a JUNCTION - a sharp turn the
+/// Whether the chain's turn at `vertex` is a JUNCTION - a sharp turn the
 /// corner's mitre declines for its WEDGE, with one flat side shared, two canal axes that meet, and
-/// exactly one crease (the fold the patch stands on) leaving the vertex into the wall side. C#'s
-/// optional `isAFeatureEdge` and `edgeAtPair` are `Option`s; a missing pair table is built here.
+/// exactly one crease (the fold the patch stands on) leaving the vertex into the wall side. The
+/// feature test and the edge pair table are optional; a missing pair table is built here.
 pub fn is_a_junction_station(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -91,7 +89,7 @@ pub fn is_a_junction_station(
     .is_ok_and(|(creases, _)| creases.len() == 1)
 }
 
-/// C# `TryBuild`: the junction section at the vertex where `arriving` hands over to `leaving`, its
+/// The junction section at the vertex where `arriving` hands over to `leaving`, its
 /// patch standing on `fold`. Both canals have the same radius and ride the shared flat side, so they
 /// cut the mitre plane in ONE ellipse; what unequal wedges break is only the wall end. One row of
 /// samples is drawn on the ARRIVING canal's sweep, in equal steps out to the NEAR wall end and on in
@@ -287,7 +285,7 @@ pub fn try_build(
     ))
 }
 
-/// C# `TryCarryTheFarStretchOntoTheFacets`: each sample past the near wall end (`near_end`) carried
+/// Each sample past the near wall end (`near_end`) carried
 /// out along its own ray from the far canal's axis onto the nearest facet of the part that holds the
 /// crossing - so the far stretch lies on the tessellated wall rather than its ideal cylinder - with
 /// the facet it was carried onto recorded in `carried`. A sample off the far canal, or one no facet

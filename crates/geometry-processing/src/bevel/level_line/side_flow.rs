@@ -1,5 +1,4 @@
-//! Whether the band flows from a side onto a gentle neighbour. Ports
-//! `Bevel/LevelLine/SideFlow.cs` (a C# static class): its constant and the flow test
+//! Whether the band flows from a side onto a gentle neighbour: its constant and the flow test
 //! ([`flows_onto_a_gentle_neighbour`]).
 
 use vector_math::Vector3;
@@ -13,7 +12,7 @@ use super::{ChainField, WorkError};
 /// room's knife test.
 pub const RIGHT_ANGLE_NOISE: f64 = 1e-9;
 
-/// C# `SideFlow.FlowsOntoAGentleNeighbour`: whether a side's flood carries on over the crease
+/// Whether a side's flood carries on over the crease
 /// `a`-`b`: the band at this size (`side_reach`'s level line) reaches it, and the face across turns
 /// away CONVEXLY by less than a right angle. A knife (past a right angle) takes the flow with zero
 /// width, and a concave crease grows over the blend; both keep stopping the flood.

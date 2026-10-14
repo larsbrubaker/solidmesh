@@ -1,7 +1,7 @@
 //! The band side of a STEP CORNER: two CONVEX pieces of one picked chain meeting end to end where
 //! their setbacks step. The piece with the LARGER setback carries its band past the step onto the
 //! other piece's side faces, out to its own reach, so its band cuts those faces round the corner
-//! as its round does. Ports `Bevel/LevelLine/StepCornerCarry.cs`; the groups it joins come from
+//! as its round does. The groups it joins come from
 //! `band_side_groups`.
 
 use std::collections::HashSet;
@@ -12,7 +12,7 @@ use super::band_gap_rounds_first::chain_senses;
 use super::chain_on_the_mesh::SETBACK_STEP_FRACTION;
 use super::BandGroup;
 
-/// C# `StepCornerCarry.JoinTheLargerSetbackPiece`: joins each step corner's larger-setback piece
+/// Joins each step corner's larger-setback piece
 /// to the other piece's side groups at that corner, counting the carried end in `carried_ends`.
 /// Only where both pieces are convex: a concave piece's bead grows over its faces instead.
 pub fn join_the_larger_setback_piece(

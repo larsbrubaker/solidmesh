@@ -1,6 +1,5 @@
-//! Laying an OFFSET side's reach along the surface rather than straight off the chain
-//! (`Bevel/Sections/SectionBuilderWalkedSide.cs`, part of the C# `internal static partial class
-//! SectionBuilder`): where one such reach ended ([`WalkedEnd`]), the neighbour's end a split
+//! Laying an OFFSET side's reach along the surface rather than straight off the chain: where one
+//! such reach ended ([`WalkedEnd`]), the neighbour's end a split
 //! station is joined from ([`the_neighbours_end`], [`the_faces_the_end_lies_in`]) and the place a
 //! join-placed point lands on ([`try_along_the_join`], [`name_the_place`] and their helpers). And the
 //! split station's own point placed on that join ([`the_joins_own_point`]), and a section with its
@@ -18,7 +17,7 @@ use super::{
     SurfaceWalkCrossing,
 };
 
-/// C# `SectionBuilder.WalkedEnd`: where one OFFSET side's reach ended when it was laid along the
+/// Where one OFFSET side's reach ended when it was laid along the
 /// surface - what `BevelSection`'s `left_walk_*` / `right_walk_*` fields are filled from.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct WalkedEnd {
@@ -43,8 +42,8 @@ pub struct WalkedEnd {
 }
 
 impl WalkedEnd {
-    /// C#'s `WalkedEnd` constructor (its optional arguments default to not join-placed, no fold
-    /// crossed, no edge, parameter 0 and no vertex: pass `false, false, -1, 0.0, -1`).
+    /// A walked end from its parts (for an end that is not join-placed, crossed no fold and stands
+    /// on no edge or vertex, pass `false, false, -1, 0.0, -1`).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         boundary: i32,
@@ -69,9 +68,9 @@ impl WalkedEnd {
     }
 }
 
-/// Where a join-placed point stands (C# `TryAlongTheJoin`'s outs): the point, the face of the piece
-/// it falls on, the join's direction there, and the mesh edge (`fold_edge`, or -1), where along it
-/// (`along`) and the mesh vertex (`corner`, or -1) it stands ON.
+/// Where a join-placed point stands ([`try_along_the_join`]'s answer): the point, the face of the
+/// piece it falls on, the join's direction there, and the mesh edge (`fold_edge`, or -1), where
+/// along it (`along`) and the mesh vertex (`corner`, or -1) it stands ON.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AlongTheJoin {
     pub point: Vector3,
@@ -82,7 +81,7 @@ pub struct AlongTheJoin {
     pub corner: i32,
 }
 
-/// C# `TheNeighboursEnd`: the neighbour station `at`'s boundary point on one side, and the faces it
+/// The neighbour station `at`'s boundary point on one side, and the faces it
 /// may be read as lying in. At a JUNCTION's wall side the end the join touches is the wall end on the
 /// join's own edge (the LEAVING end where the join leaves the junction, the ARRIVING end where it
 /// arrives), carried onto the facet the junction recorded; everywhere else it is the section's own
@@ -137,7 +136,7 @@ pub fn the_neighbours_end(
     )
 }
 
-/// C# `TheFacesTheEndLiesIn`: every face a neighbour's boundary point may be read as lying in - the
+/// Every face a neighbour's boundary point may be read as lying in - the
 /// one face its walk ended in, or BOTH faces of the fold a slide rides, since a point on a fold is in
 /// each of them. Where the point was neither walked nor slid there is no face to set out from.
 ///
@@ -205,7 +204,7 @@ pub fn the_faces_the_end_lies_in(
         .collect()
 }
 
-/// C# `TryAlongTheJoin`: the point a fraction `parameter` of the way along a surface polyline - its
+/// The point a fraction `parameter` of the way along a surface polyline - its
 /// two ends and the fold crossings between them - and the PLACE of the piece it falls on: the face,
 /// and where the point stands on a fold or a corner of that face, the edge and vertex too
 /// ([`name_the_place`]). A point landing on a crossing IS that crossing, by the crossing's own
@@ -253,7 +252,7 @@ pub fn try_along_the_join(
                 0.0
             };
 
-            // C# `Math.Max(0, Math.Min(1, fraction))`.
+            // Clamped to 0..1; a NaN fraction stays NaN.
             let fraction = cs_math::max_f64(0.0, cs_math::min_f64(1.0, fraction));
 
             let mut point = points[k - 1] + (step * fraction);
@@ -286,7 +285,7 @@ pub fn try_along_the_join(
     None
 }
 
-/// C# `NameThePlace`: names what a join-placed point stands on - and stands it exactly there - as
+/// Names what a join-placed point stands on - and stands it exactly there - as
 /// `(fold_edge, along, corner)`. A point on one of the join's own crossings takes that crossing's
 /// edge and parameter; a point on a CORNER of its face takes the corner, is moved onto it, and takes
 /// one of that corner's own folds beside it. Which fold that is, is rounding - the corner is the
@@ -341,12 +340,12 @@ pub fn name_the_place(
     (fold_edge, along, corner)
 }
 
-/// C# `IsACornerOf`: whether a mesh edge has the given vertex for one of its two ends.
+/// Whether a mesh edge has the given vertex for one of its two ends.
 pub fn is_a_corner_of(graph: &MeshEdgeGraph, edge: i32, vertex: i32) -> bool {
     graph.get_vertex0(edge) == vertex || graph.get_vertex1(edge) == vertex
 }
 
-/// C# `TheFaceEdgeAt`: one edge of a face meeting at the given corner of it, or -1. Two of the three
+/// One edge of a face meeting at the given corner of it, or -1. Two of the three
 /// do; which one comes back is the face's own winding order and so does not move with the part's
 /// placement.
 pub fn the_face_edge_at(mesh: &Mesh, edge_at_pair: &EdgeAtPair, face: i32, corner: i32) -> i32 {
@@ -367,7 +366,7 @@ pub fn the_face_edge_at(mesh: &Mesh, edge_at_pair: &EdgeAtPair, face: i32, corne
     -1
 }
 
-/// C# `TryTheCornerUnder`: the corner of a face a point stands on, within the given lattice - the
+/// The corner of a face a point stands on, within the given lattice - the
 /// nearest such, the later on a tie - or `None` where it stands on none.
 pub fn try_the_corner_under(mesh: &Mesh, face: i32, at: Vector3, lattice: f64) -> Option<i32> {
     let drawn = &mesh.faces[face as usize];
@@ -386,7 +385,7 @@ pub fn try_the_corner_under(mesh: &Mesh, face: i32, at: Vector3, lattice: f64) -
     (corner >= 0).then_some(corner)
 }
 
-/// C# `TheOtherFace`: the face on the far side of an edge from the one given, or that one where
+/// The face on the far side of an edge from the one given, or that one where
 /// there is none.
 pub fn the_other_face(graph: &MeshEdgeGraph, edge: i32, face: i32) -> i32 {
     (0..graph.get_face_count(edge))
@@ -395,7 +394,7 @@ pub fn the_other_face(graph: &MeshEdgeGraph, edge: i32, face: i32) -> i32 {
         .unwrap_or(face)
 }
 
-/// C# `TheJoinsOwnPoint`: a SPLIT station's boundary point on one OFFSET side, placed ON the join
+/// A SPLIT station's boundary point on one OFFSET side, placed ON the join
 /// between its two unsplit neighbours' ends - the line along the surface the neighbours' cut runs
 /// along - at the blend's own `placement.parameter` along it, so the split point stands on that cut
 /// rather than a rounding off it. The neighbour's end is each face it may be read as lying in, tried
@@ -500,7 +499,7 @@ pub fn the_joins_own_point(
     Ok(none)
 }
 
-/// C# `Rewritten`: a section with its offset sides' WALKED ends put in - each walked side's boundary
+/// A section with its offset sides' WALKED ends put in - each walked side's boundary
 /// point as its profile's end, and the walk's face, direction, placement, fold, edge, parameter and
 /// vertex recorded on the section. A section neither of whose sides was walked comes back as it was.
 pub fn rewritten(section: &BevelSection, left: &WalkedEnd, right: &WalkedEnd) -> BevelSection {
@@ -541,21 +540,19 @@ pub fn rewritten(section: &BevelSection, left: &WalkedEnd, right: &WalkedEnd) ->
     }
 }
 
-/// Why a section's side could not be laid: refused by name, or a point that is not a number (C#
-/// throws there).
+/// Why a section's side could not be laid: refused by name, or a point that is not a number.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SectionBuildRefusal {
     /// Refused, with the advisory the user is shown.
     Refused(crate::bevel::BevelAdvisory),
     /// A section point that is not a number.
     NotANumber(NanSectionPoint),
-    /// Declined with nothing named - C#'s `false` with a null advisory, where another rule (a
-    /// junction) draws the station.
+    /// Declined with nothing named, where another rule (a junction) draws the station.
     Declined,
 }
 
 impl SectionBuildRefusal {
-    /// The advisory C# hands back as its `failure` (`None` for a decline or a NaN).
+    /// The advisory the refusal names (`None` for a decline or a NaN).
     pub fn advisory(&self) -> Option<&crate::bevel::BevelAdvisory> {
         match self {
             SectionBuildRefusal::Refused(advisory) => Some(advisory),
@@ -570,7 +567,7 @@ impl From<NanSectionPoint> for SectionBuildRefusal {
     }
 }
 
-/// C# `SectionBuilder.TryLayOneSide`: an OFFSET side's boundary walked along the surface from the
+/// An OFFSET side's boundary walked along the surface from the
 /// station, through the face of the chain vertex's fan that holds it - the walked end, or the
 /// unwalked one (`WalkedEnd(-1, -1, 0)`) where the side is not an offset or no walk starts.
 /// Refused (`SizeExceedsFaceWidth`) where the walk meets a crease before it has gone the reach.

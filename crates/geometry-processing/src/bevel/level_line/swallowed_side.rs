@@ -1,8 +1,7 @@
-//! A side the band swallows whole. Ports `Bevel/LevelLine/SwallowedSide.cs` (a C# static class):
-//! so far its mesh readings - whether a triangle touches a point ([`touches`]), a side's vertices
-//! ([`side_vertices`]), the direction away from a segment on a side ([`away_on_side`]) and the
-//! planes' tolerance ([`tolerance`]) - and the swallowed strip's fill ([`fill`]); the swallow
-//! tests and the made-up runs are in `swallowed_side_runs.rs`.
+//! A side the band swallows whole: its mesh readings - whether a triangle touches a point
+//! ([`touches`]), a side's vertices ([`side_vertices`]), the direction away from a segment on a
+//! side ([`away_on_side`]) and the planes' tolerance ([`tolerance`]) - and the swallowed strip's
+//! fill ([`fill`]); the swallow tests and the made-up runs are in `swallowed_side_runs.rs`.
 
 use indexmap::IndexSet;
 
@@ -21,8 +20,8 @@ pub fn touches(mesh: &LevelLineMesh, tri: LevelLineTriangle, point: Vector3) -> 
         || (mesh.position(tri.c) - point).length() <= mesh.same_place()
 }
 
-/// The vertices of a side's live triangles, in the order first met (C#'s `HashSet`, only added
-/// to, iterates in insertion order, and the crease search takes the first that qualifies).
+/// The vertices of a side's live triangles, in the order first met (the crease search takes the
+/// first that qualifies, so the order decides the result).
 pub fn side_vertices(mesh: &LevelLineMesh, side: i32) -> IndexSet<i32> {
     let mut vertices = IndexSet::new();
     for t in 0..mesh.triangle_count() {
@@ -76,21 +75,21 @@ pub fn away_on_side(
     None
 }
 
-/// C# `SwallowedSide.OnPlanePerLength`: the planes' tolerance per unit of length: the fixture's
+/// The planes' tolerance per unit of length: the fixture's
 /// walls are float (a few 1e-7 off).
 pub const ON_PLANE_PER_LENGTH: f64 = 1e-5;
 
-/// C# `SwallowedSide.Tolerance`: the planes' tolerance for this chain, scaled by its largest
+/// The planes' tolerance for this chain, scaled by its largest
 /// setback (at least 1).
 pub fn tolerance(chain: &super::ChainField) -> f64 {
     ON_PLANE_PER_LENGTH * vector_math::cs_math::max_f64(1.0, chain.max_setback)
 }
 
-/// C# `SwallowedSide.Fill`: the swallowed strip - each side's made-up run minted as the rail (side
+/// The swallowed strip - each side's made-up run minted as the rail (side
 /// 1 walked ascending, side 2 descending, as the cut walks a side's run with the kept surface on
 /// its left), the rows laid whole between them, and the valley clip (`strip_clip`) dropping what
 /// is behind either wall and growing both walls to the round. Asked only of a gap with swallowed
-/// runs (C#'s caller, `GapFill.Fill`, checks first); a gap without them, or without a mesh, has no
+/// runs (the gap fill checks first); a gap without them, or without a mesh, has no
 /// strip to lay and is refused as open chain ends rather than dereferenced.
 pub fn fill(
     gap: &BandGapResult,

@@ -1,13 +1,13 @@
 //! Flow rung 2: a side's rail carried on VIRTUALLY past a neighbour that grows under the blend.
-//! Where the band has run past an opposite-sense crease (a rib standing on the side), the cut leaves
-//! the side's rail as two runs that stop on the crease, one each side of the neighbour. The rail
-//! between them is laid in the side's own plane at the setback from the chain - for a fillet, the
-//! tangent point of the row's circle on that plane - as points that were never on the mesh, minted
-//! as new vertices so the fill's rails stay lists of vertex ids. The rows laid on them overlap the
-//! neighbour until its plane clips the strip (the next rung). Ports `Bevel/LevelLine/VirtualRail.cs`
-//! (a C# static class, so a module of functions): the joined loops ([`joined_sides`]), the other
-//! side's run matched at the virtual points ([`matched_at`]), the join itself ([`join`]), and the
-//! opposite-sense crease it is taken behind ([`opposite_sense_crease_vertices`], [`chain_pair`]).
+//! Where the band has run past an opposite-sense crease (a rib standing on the side), the cut
+//! leaves the side's rail as two runs that stop on the crease, one each side of the neighbour. The
+//! rail between them is laid in the side's own plane at the setback from the chain - for a fillet,
+//! the tangent point of the row's circle on that plane - as points that were never on the mesh,
+//! minted as new vertices so the fill's rails stay lists of vertex ids. The rows laid on them
+//! overlap the neighbour until its plane clips the strip (the next rung). The joined loops
+//! ([`joined_sides`]), the other side's run matched at the virtual points ([`matched_at`]), the
+//! join itself ([`join`]), and the opposite-sense crease it is taken behind
+//! ([`opposite_sense_crease_vertices`], [`chain_pair`]).
 //!
 //! The representation: a joined run is an ordinary [`GapLoop`] whose middle vertices are minted,
 //! reported in the caller's list, and carry the chain parameter they were laid at - so nothing
@@ -25,7 +25,7 @@ use super::{
     WorkError,
 };
 
-/// C# `VirtualRail.JoinedSides`: the gap's loops with each picked side's pair of runs joined where
+/// The gap's loops with each picked side's pair of runs joined where
 /// a growing neighbour cut the rail in two; the loops themselves, untouched, wherever no side has
 /// two runs that join. Every vertex minted on the way is appended to `minted`.
 ///
@@ -48,8 +48,8 @@ pub fn joined_sides(
 
     let mut loops = gap.loops.clone();
     for side in [1, 2] {
-        // C#'s OrderBy is stable, as `sort_by` is; the loops are matched by place (C# by
-        // reference), so the runs are held as indices into `loops`.
+        // A stable sort, so ties keep their order; the loops are matched by place, so the runs
+        // are held as indices into `loops`.
         let mut runs: Vec<usize> = (0..loops.len())
             .filter(|&i| loops[i].side == side)
             .collect();
@@ -101,7 +101,7 @@ pub fn joined_sides(
     Ok(loops)
 }
 
-/// C# `VirtualRail.MatchedAt`: the run with a vertex at each of `parameters`, split into the rail
+/// The run with a vertex at each of `parameters`, split into the rail
 /// edge that spans it (a conforming split: the kept triangle on that edge is split with it). A
 /// parameter at an existing vertex or outside the run leaves the run as it was there.
 pub fn matched_at(
@@ -150,7 +150,7 @@ pub fn matched_at(
     ))
 }
 
-/// C# `VirtualRail.Join`: joins `before` (ending on the neighbour's crease) to `after` (starting
+/// Joins `before` (ending on the neighbour's crease) to `after` (starting
 /// on it) through virtual points at the parameters of the neighbour's crease vertices between the
 /// two ends. `None` when the two ends are not both on an opposite-sense crease of the side - the
 /// path is taken only behind the sense test.
@@ -176,8 +176,8 @@ pub fn join(
     let away = (away - (along * away.dot(along))).get_normal();
 
     let (low, high) = (cs_math::min_f64(ta, tb), cs_math::max_f64(ta, tb));
-    // C#'s Select / Where / Distinct (first of each value kept, double.Equals: NaN equals NaN) /
-    // stable OrderBy.
+    // The parameters strictly between the ends, each value once (the first kept; NaN equals NaN),
+    // in a stable sort.
     let mut between: Vec<f64> = Vec::new();
     for &v in &crease_vertices {
         let t = chain.evaluate(mesh.position(v))?.parameter;
@@ -213,7 +213,7 @@ pub fn join(
     )))
 }
 
-/// C#'s `Comparer<double>.Default`: NaN sorts below every number.
+/// A total order on doubles in which NaN sorts below every number.
 fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
@@ -223,12 +223,12 @@ fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
     }
 }
 
-/// C#'s `double.Equals`, what `Distinct` compares by: NaN equals NaN, and 0 equals -0.
+/// The equality the parameter list is made distinct by: NaN equals NaN, and 0 equals -0.
 fn cs_equals(a: f64, b: f64) -> bool {
     a == b || (a.is_nan() && b.is_nan())
 }
 
-/// C#'s `Enumerable.Min` over doubles: NaN where any value is NaN.
+/// The least of the values: NaN where any value is NaN.
 fn linq_min(values: &[f64]) -> f64 {
     let mut least = values[0];
     for &v in values {
@@ -280,12 +280,12 @@ pub fn chain_pair(mesh: &LevelLineMesh) -> Option<(i32, i32, i32)> {
     best
 }
 
-/// C# `OppositeSenseCreaseVertices`: every vertex on a crease between a removed triangle of `side`
+/// Every vertex on a crease between a removed triangle of `side`
 /// and a kept untagged one that folds opposite to the chain. The side's triangles there are gone
 /// after the cut, so the sense is read off the removed triangles themselves, and the chain's off
 /// its two sides' triangles on the chain's fold ([`chain_pair`]), removed or not. Only looked up.
 ///
-/// An `IndexSet`, so its order is C#'s `HashSet<int>` insertion order (no removals).
+/// An `IndexSet`, so its order is the order the vertices were first met in.
 pub fn opposite_sense_crease_vertices(mesh: &LevelLineMesh, side: i32) -> IndexSet<i32> {
     let corners = |t: LevelLineTriangle| (t.a, t.b, t.c);
     let mut found = IndexSet::new();

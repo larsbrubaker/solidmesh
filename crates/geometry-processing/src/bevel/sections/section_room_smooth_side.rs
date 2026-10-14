@@ -1,6 +1,5 @@
 //! How far an OFFSET side's boundary may reach across a smooth side, read along the surface
-//! (`Bevel/Sections/SectionRoom.SmoothSide.cs`, part of the C# `internal static partial class
-//! SectionRoom`; a free function here beside [`super::section_room`]'s region readings). Where the
+//! (a free function beside [`super::section_room`]'s region readings). Where the
 //! side's region is one plane the ray across the face is exact ([`section_room::reach_across_the_face`]);
 //! across a curved region it is the surface walk ([`super::section_surface_walk_try::try_walk`]).
 
@@ -14,7 +13,7 @@ use super::section_surface_walk_faces::try_face_holding;
 use super::section_surface_walk_try::try_walk;
 use super::SurfaceWalkRefusal;
 
-/// C# `ReachOfAnOffsetSide`: how far the boundary from `station` along `away` may reach before it
+/// How far the boundary from `station` along `away` may reach before it
 /// leaves the part, for the side whose `fan` of faces stands at `vertex`.
 ///
 /// ONE PLANE (or nothing asked): the ray drawn in the seed face's plane is a path along the part, and

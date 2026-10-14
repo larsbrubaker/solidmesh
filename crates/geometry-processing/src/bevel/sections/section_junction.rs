@@ -1,8 +1,6 @@
-//! The section at a JUNCTION, where two chain edges share one FLAT side at DIFFERENT wedges
-//! (`Bevel/Sections/SectionJunction.cs`): the section itself ([`JunctionSection`]), which piece of
-//! its neighbourhood one directed edge belongs to ([`JunctionPiece`]) and one chain edge's canal
-//! there ([`Canal`], nested in the C# `static class SectionJunction`, whose functions land in this
-//! module with the core's section packages).
+//! The section at a JUNCTION, where two chain edges share one FLAT side at DIFFERENT wedges: the
+//! section itself ([`JunctionSection`]), which piece of its neighbourhood one directed edge belongs
+//! to ([`JunctionPiece`]) and one chain edge's canal there ([`Canal`]).
 //!
 //! Both canals have the same radius and ride the shared flat side, so their axes meet and the
 //! mitre is still ONE plane cutting both in ONE ellipse. What unequal wedges break is only the
@@ -16,7 +14,7 @@ use vector_math::Vector3;
 
 use super::bevel_section::BevelSection;
 
-/// C# `JunctionPiece`: which piece of the junction's neighbourhood one directed edge belongs to.
+/// Which piece of the junction's neighbourhood one directed edge belongs to.
 /// The junction closes BY IDENTITY - every directed edge it lists is used exactly twice, once
 /// each way - so the piece is what the wiring reads to know who must lay that edge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -36,7 +34,7 @@ pub enum JunctionPiece {
     FarWallRim,
 }
 
-/// C# `JunctionSection`: one ellipse, used twice, plus the patch of wall that bridges the two
+/// One ellipse, used twice, plus the patch of wall that bridges the two
 /// strips' different wall ends. Points are indices into the run's `SectionPool`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct JunctionSection {
@@ -74,13 +72,13 @@ pub struct JunctionSection {
     /// The leaving edge's, which at a junction is a DIFFERENT number.
     pub setback_leaving: f64,
     /// The section the strip ARRIVING at the junction ends on - samples `[meet..P1]`. Shared with
-    /// the run that holds it, as C# holds sections by reference.
+    /// the run that holds it, so both read the one section.
     pub arriving_section: Rc<BevelSection>,
     /// The section the strip LEAVING it starts on - samples `[meet..P2]`.
     pub leaving_section: Rc<BevelSection>,
 }
 
-/// C# `SectionJunction.Canal`: one chain edge's canal at the junction, read in the sweep
+/// One chain edge's canal at the junction, read in the sweep
 /// parameter the junction shares - 0 at the SHARED FLAT side, 1 at that edge's OWN wall, and
 /// carried on past 1 for the stretch of ellipse no wall contact reaches.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

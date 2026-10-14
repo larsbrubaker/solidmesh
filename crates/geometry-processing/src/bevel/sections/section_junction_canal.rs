@@ -1,11 +1,10 @@
-//! The junction's geometry readings (`Bevel/Sections/SectionJunction.cs`, the C# `internal static
-//! class SectionJunction`; free functions and `impl` blocks here): one chain edge's canal at the
-//! junction ([`Canal`]'s constructor and readings), the junction's tolerances and lattice, where two
-//! lines meet, a facet's normal and whether it holds a point, the strip's own section at the junction,
-//! which side of the turn is the shared flat one, and the junction section's readings of its own
-//! samples (its wall ends, patch triangles and directed edges). Split from [`super::section_junction`], which
-//! keeps the junction's types, by responsibility; the junction's construction lands with a later
-//! run of this package.
+//! The junction's geometry readings (free functions and `impl` blocks): one chain edge's canal at
+//! the junction ([`Canal`]'s constructor and readings), the junction's tolerances and lattice,
+//! where two lines meet, a facet's normal and whether it holds a point, the strip's own section at
+//! the junction, which side of the turn is the shared flat one, and the junction section's readings
+//! of its own samples (its wall ends, patch triangles and directed edges). Split from
+//! [`super::section_junction`], which keeps the junction's types, by responsibility; the junction's
+//! construction lands with a later run of this package.
 
 use polygon_mesh::Mesh;
 use vector_math::{cs_math, Vector3};
@@ -16,21 +15,21 @@ use super::{section_builder, section_corner, BevelSection, SectionKind, SectionS
 use crate::bevel::float_grid;
 use crate::topology::ChainEdge;
 
-/// C# `SameToWithin`: how nearly two lengths or directions must agree to be read as the same.
+/// How nearly two lengths or directions must agree to be read as the same.
 pub const SAME_TO_WITHIN: f64 = 1e-9;
 
-/// C# `FlatSideDot`: how nearly two normals must line up to be ONE flat side of a junction.
+/// How nearly two normals must line up to be ONE flat side of a junction.
 pub const FLAT_SIDE_DOT: f64 = 1.0 - 1e-9;
 
-/// C# `OnBothCanalsToWithinThisMuchOfTheRadius`: how far a point may stand off both canals, as a
+/// How far a point may stand off both canals, as a
 /// fraction of the radius, and still be read as on both.
 pub const ON_BOTH_CANALS_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS: f64 = 1e-9;
 
-/// C# `GridUlps`: how many float steps the lattice of a junction's own points is read as.
+/// How many float steps the lattice of a junction's own points is read as.
 const GRID_ULPS: f64 = 4.0;
 
 impl Canal {
-    /// C#'s `Canal` constructor: one chain edge's canal of `radius` at `station`, its flat and wall
+    /// One chain edge's canal of `radius` at `station`, its flat and wall
     /// faces by which side is flat, its axis a radius clear of both, and the direction across the
     /// wall square to the flat face.
     pub fn new(
@@ -66,14 +65,15 @@ impl Canal {
         }
     }
 
-    /// C# `PointAt(v, through, normal)`: [`Canal::point_at_distance`] at the canal's own radius.
+    /// [`Canal::point_at_distance`] at the canal's own radius.
     pub fn point_at(&mut self, v: f64, through: Vector3, normal: Vector3) -> Vector3 {
         self.point_at_distance(v, self.radius, through, normal)
     }
 
-    /// C# `PointAt(v, distance, through, normal)`: the point a fraction `v` round the canal's arc
+    /// The point a fraction `v` round the canal's arc
     /// from its flat face to its wall, `distance` from the axis, slid along the edge onto the plane
-    /// through `through` square to `normal`. Sets the canal's lean for that plane, as C# does.
+    /// through `through` square to `normal`. Sets the canal's lean for that plane, so later
+    /// readings in the same plane need not set it again.
     pub fn point_at_distance(
         &mut self,
         v: f64,
@@ -89,14 +89,14 @@ impl Canal {
         swept - (self.along * ((swept - through).dot(normal) / self.lean))
     }
 
-    /// C# `DistanceFromTheAxis`: how far a point stands from the canal's axis.
+    /// How far a point stands from the canal's axis.
     pub fn distance_from_the_axis(&self, point: Vector3) -> f64 {
         let offset = point - self.axis;
 
         (offset - (self.along * offset.dot(self.along))).length()
     }
 
-    /// C# `TryParameterOf`: how far round the canal's arc a point on the canal stands, as a fraction
+    /// How far round the canal's arc a point on the canal stands, as a fraction
     /// of the wedge - `None` where the point is off the canal (read against the lattice as well as
     /// the radius, for a part stood far from the origin) or the canal has no wedge.
     pub fn try_parameter_of(&self, point: Vector3) -> Option<f64> {
@@ -115,13 +115,13 @@ impl Canal {
         Some(direction.dot(self.across).atan2(direction.dot(self.flat)) / self.wedge)
     }
 
-    /// C# `SetLeanFor`: how far the canal's own direction leans onto `normal`.
+    /// Sets how far the canal's own direction leans onto `normal`.
     pub fn set_lean_for(&mut self, normal: Vector3) {
         self.lean = self.along.dot(normal);
     }
 }
 
-/// C# `LatticeOf`: the lattice of a junction's own points - a few float steps at the largest of
+/// The lattice of a junction's own points - a few float steps at the largest of
 /// their coordinates, and never under [`SAME_TO_WITHIN`].
 pub fn lattice_of(points: &[Vector3]) -> f64 {
     let mut largest = 0.0f32;
@@ -136,7 +136,7 @@ pub fn lattice_of(points: &[Vector3]) -> f64 {
     cs_math::max_f64(SAME_TO_WITHIN, GRID_ULPS * ulp)
 }
 
-/// C# `TheNormalOf`: a facet's unit normal, read off its corners.
+/// A facet's unit normal, read off its corners.
 pub fn the_normal_of(mesh: &Mesh, face: i32) -> Vector3 {
     let drawn = &mesh.faces[face as usize];
     let a = position(mesh, drawn.v0);
@@ -146,7 +146,7 @@ pub fn the_normal_of(mesh: &Mesh, face: i32) -> Vector3 {
     (b - a).cross(c - a).get_normal()
 }
 
-/// C# `TheTriangleHolds`: whether a point of the facet's plane stands inside the facet, or outside
+/// Whether a point of the facet's plane stands inside the facet, or outside
 /// it by no more than `lattice`; a facet with a side of no length holds nothing.
 pub fn the_triangle_holds(
     mesh: &Mesh,
@@ -180,11 +180,12 @@ pub fn the_triangle_holds(
     true
 }
 
-/// C# `TheStripsSection`: the section one strip ends on at a junction - the junction's samples from
+/// The section one strip ends on at a junction - the junction's samples from
 /// the flat side (sample 0) to this edge's own wall end, read from the LEFT side's end to the right's.
 /// Both ends are offsets: the flat side's is the offset-meet in the shared plane, the wall side's this
 /// edge's own canal tangency, which at a junction rides nothing - the fold leaving the vertex is
-/// taken by the PATCH. (C#'s constructor cannot refuse this profile; the `Result` is its check.)
+/// taken by the PATCH. (The section constructor's check is the `Result`; it never refuses this
+/// profile.)
 #[allow(clippy::too_many_arguments)]
 pub fn the_strips_section(
     vertex: i32,
@@ -226,7 +227,7 @@ pub fn the_strips_section(
     })
 }
 
-/// C# `TryReadTheFlatSide`: which side of the turn two edges share as ONE flat plane, `None` where
+/// Which side of the turn two edges share as ONE flat plane, `None` where
 /// both do (a chain that does not turn) or neither (a corner with four faces).
 pub fn try_read_the_flat_side(arriving: &ChainEdge, leaving: &ChainEdge) -> Option<bool> {
     let left_is_shared = arriving
@@ -243,8 +244,8 @@ pub fn try_read_the_flat_side(arriving: &ChainEdge, leaving: &ChainEdge) -> Opti
     (left_is_shared != right_is_shared).then_some(left_is_shared)
 }
 
-/// C# `MeetOfLines`: the midpoint of the two nearest points of two lines, and how far apart those
-/// are (C#'s `skew`) - `from0` and `f64::MAX` where the lines run parallel.
+/// The midpoint of the two nearest points of two lines, and how far apart those
+/// are (the skew) - `from0` and `f64::MAX` where the lines run parallel.
 pub fn meet_of_lines(
     from0: Vector3,
     along0: Vector3,
@@ -268,7 +269,7 @@ pub fn meet_of_lines(
 }
 
 impl JunctionSection {
-    /// C#'s `JunctionSection` constructor.
+    /// A junction section from its parts.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         chain_vertex: i32,
@@ -314,32 +315,31 @@ fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])
 }
 
-/// The junction section's readings of its own samples (C# `NearWallEnd`, `FarWallEnd`,
-/// `LiesInTheArrivingWall`, `LongStripRunsUpTheSamples`, `PatchTriangles`, `DirectedEdges`).
+/// The junction section's readings of its own samples.
 impl JunctionSection {
-    /// C# `NearWallEnd`: the nearer of the two wall ends along the samples.
+    /// The nearer of the two wall ends along the samples.
     pub fn near_wall_end(&self) -> i32 {
         self.arriving_wall_end.min(self.leaving_wall_end)
     }
 
-    /// C# `FarWallEnd`: the farther of the two wall ends along the samples.
+    /// The farther of the two wall ends along the samples.
     pub fn far_wall_end(&self) -> i32 {
         self.arriving_wall_end.max(self.leaving_wall_end)
     }
 
-    /// C# `LiesInTheArrivingWall`: whether a facet with `face_normal` belongs to the arriving edge's
+    /// Whether a facet with `face_normal` belongs to the arriving edge's
     /// wall rather than the leaving edge's.
     pub fn lies_in_the_arriving_wall(&self, face_normal: Vector3) -> bool {
         face_normal.dot(self.arriving_wall) >= face_normal.dot(self.leaving_wall)
     }
 
-    /// C# `LongStripRunsUpTheSamples`: whether the strip that walks out to the FAR wall end walks the
+    /// Whether the strip that walks out to the FAR wall end walks the
     /// samples upwards.
     pub fn long_strip_runs_up_the_samples(&self) -> bool {
         self.flat_on_the_left == (self.far_wall_end() == self.leaving_wall_end)
     }
 
-    /// C# `PatchTriangles`: the patch of wall between the two wall ends, fanned from the fold point,
+    /// The patch of wall between the two wall ends, fanned from the fold point,
     /// wound the way [`Self::long_strip_runs_up_the_samples`] says.
     pub fn patch_triangles(&self) -> Vec<[i32; 3]> {
         let up = self.long_strip_runs_up_the_samples();
@@ -357,7 +357,7 @@ impl JunctionSection {
             .collect()
     }
 
-    /// C# `DirectedEdges`: every directed edge the junction's pieces lay, with the piece that lays it -
+    /// Every directed edge the junction's pieces lay, with the piece that lays it -
     /// the long strip out to the far wall end and the short one to the near one in the opposite sense
     /// (so the stretch they share cancels), the patch's triangles, and the two rebuilt rims' chords
     /// onto and off the fold point.

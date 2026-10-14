@@ -1,6 +1,5 @@
-//! Which reading set a band's room, and which chain or pair of chains it was about. Ports
-//! `Bevel/LevelLine/RoomSource.cs`. Leans on [`RoomReadingKind`] for the kind; the room readings
-//! that produce one land with the cyclic bevel core.
+//! Which reading set a band's room, and which chain or pair of chains it was about. Leans on
+//! [`RoomReadingKind`] for the kind; the room readings produce one.
 
 use vector_math::Vector3;
 
@@ -8,8 +7,8 @@ use super::RoomReadingKind;
 
 /// Which reading set the room, and which chain or pair of chains it was about. Useful to a message
 /// a user reads ("the hole's rim is only 0.3 from the plate's edge"), and to a test that means to
-/// pin WHY a room is what it is and not merely its number (C# `readonly record struct`; equality
-/// compares every field, `crease_at` included, as the record's does).
+/// pin WHY a room is what it is and not merely its number (a plain value; equality compares every
+/// field, `crease_at` included).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomSource {
     /// Which reading named the room.
@@ -27,7 +26,8 @@ pub struct RoomSource {
 }
 
 impl RoomSource {
-    /// C#'s positional record constructor (`crease_at` left unset, as C#'s `init` property is).
+    /// A source with no crease position (`crease_at` is set afterwards by the one reading that has
+    /// one).
     pub fn new(kind: RoomReadingKind, chain: i32, other_chain: i32) -> Self {
         RoomSource {
             kind,

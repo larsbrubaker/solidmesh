@@ -1,6 +1,4 @@
-//! The loft of a run whose split vertices were absorbed (`Bevel/Sections/SectionLoft.cs`:
-//! `TryEmitGaps`, `BoundaryRowOf`, `TheGroupsTailPast`, `TheGroupsHeadBefore`,
-//! `TryFanTheArrivingTakeover`, `RowEndAt`, `BoundaryOf`, `TryFanTheTakeover`, `LaysTheEdge`): one
+//! The loft of a run whose split vertices were absorbed: one
 //! ladder per GAP between consecutive unsplit stations, each gap's two boundary rows fanned over
 //! the polyline that runs A's boundary, the gap's absorbed boundary points and the seam's fold
 //! crossings between them, to B's boundary. Split out of `section_loft`, which holds the entry
@@ -28,7 +26,8 @@ use super::section_smooth_side::SmoothSideCut;
 use super::{BevelSection, SectionAbsorbedSplits, SectionPool, SectionRun};
 use crate::bevel::BevelAdvisory;
 
-/// C# `TryEmitGaps`. The caller takes back what this laid on a refusal.
+/// Lays the loft across each gap of absorbed split vertices. The caller takes back what this laid
+/// on a refusal.
 pub(super) fn try_emit_gaps(
     run: &SectionRun,
     absorbed: &SectionAbsorbedSplits,
@@ -171,7 +170,7 @@ pub(super) fn try_emit_gaps(
     Ok(())
 }
 
-/// C# `BoundaryRowOf`: the points between gap `gap`'s two ends on one side, in CHAIN order: the
+/// The points between gap `gap`'s two ends on one side, in CHAIN order: the
 /// absorbed split boundaries and, where that side carries the seam, the fold crossings of each
 /// full-length station pair the gap spans. Empty where the gap absorbs nothing and crosses nothing,
 /// which is the plain quad row.
@@ -235,7 +234,7 @@ fn boundary_row_of(
     row
 }
 
-/// C# `TheGroupsTailPast`: station `station`'s cut group past `row_end`, in walk order - the
+/// Station `station`'s cut group past `row_end`, in walk order - the
 /// points the cut's boundary carries after the very point the loft's row stands on, which is empty
 /// for every station whose group ends at its boundary point (that is, all of them but a junction
 /// the rim takes over at).
@@ -252,7 +251,7 @@ fn the_groups_tail_past(cut: Option<&SmoothSideCut>, station: i32, row_end: i32)
     }
 }
 
-/// C# `TheGroupsHeadBefore`: station `station`'s cut group BEFORE `row_end`, in walk order - the
+/// Station `station`'s cut group BEFORE `row_end`, in walk order - the
 /// points the cut's boundary carries before it reaches the very point the loft's row stands on,
 /// which is empty for every station whose group starts at the row's own point (that is, all of them
 /// but a junction the gap ARRIVES at, where the rim's takeover is minted ahead of the wall ends).
@@ -268,7 +267,7 @@ fn the_groups_head_before(cut: &SmoothSideCut, station: i32, row_end: i32) -> &[
     }
 }
 
-/// C# `TryFanTheArrivingTakeover`: the MIRROR of [`try_fan_the_takeover`] - the wedge between the
+/// The MIRROR of [`try_fan_the_takeover`] - the wedge between the
 /// chord a gap's row laid into the station it ARRIVES at and the points that station's cut group
 /// carries BEFORE that chord's end.
 ///
@@ -344,7 +343,7 @@ fn try_fan_the_arriving_takeover(
     Ok(())
 }
 
-/// C# `RowEndAt`: the pool index the gap's boundary row STANDS on at its start section - the corner
+/// The pool index the gap's boundary row STANDS on at its start section - the corner
 /// of the row's own quad that lies on the boundary, which is the profile's head on the LEFT and its
 /// tail on the RIGHT. At a junction this is the near WALL end and not the station's boundary point,
 /// the extras standing between the two.
@@ -356,7 +355,7 @@ fn row_end_at(start: &BevelSection, start_head: i32, steps: i32, is_left: bool) 
     }
 }
 
-/// C# `BoundaryOf`: the section's own boundary point on one side - the end of its profile that side
+/// The section's own boundary point on one side - the end of its profile that side
 /// lies at.
 fn boundary_of(section: &BevelSection, is_left: bool) -> i32 {
     if is_left {
@@ -366,7 +365,7 @@ fn boundary_of(section: &BevelSection, is_left: bool) -> i32 {
     }
 }
 
-/// C# `TryFanTheTakeover`: lays the wedge between a junction's boundary point, the points its cut
+/// Lays the wedge between a junction's boundary point, the points its cut
 /// group runs on to and the other row's own boundary - the TAKEOVER, where the rim takes over from a
 /// feature crease past the carried wall end and the cut's boundary carries a point the loft's rows
 /// never reach.
@@ -375,7 +374,7 @@ fn boundary_of(section: &BevelSection, is_left: bool) -> i32 {
 /// in which the row cannot carry the tail itself: the extras are fanned onto the other row's
 /// boundary point by `try_fan_the_junction_extras`, so the stretch from the junction's boundary to
 /// the takeover and on to that same point is one triangle per tail point, wound the way that fan
-/// is. (C#'s `endHead` and `flipped` parameters are not read; they are not taken here.)
+/// is.
 #[allow(clippy::too_many_arguments)]
 fn try_fan_the_takeover(
     start: &BevelSection,
@@ -437,7 +436,7 @@ fn try_fan_the_takeover(
     Ok(())
 }
 
-/// C# `LaysTheEdge`: whether any face laid so far runs the directed edge `from -> to`.
+/// Whether any face laid so far runs the directed edge `from -> to`.
 fn lays_the_edge(faces: &Faces, from: i32, to: i32) -> bool {
     faces.iter().any(|&(v0, v1, v2)| {
         (v0 == from && v1 == to) || (v1 == from && v2 == to) || (v2 == from && v0 == to)

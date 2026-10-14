@@ -1,5 +1,4 @@
-//! A side's rail carried on past a chain's end until the whole row has left the end plane. Ports
-//! `Bevel/LevelLine/VirtualRailPastTheEnd.cs` (a C# static class, so a module of functions): the
+//! A side's rail carried on past a chain's end until the whole row has left the end plane: the
 //! loops carried past each rayed end ([`extended`], [`extend_both`]), where a run leaves the rail
 //! at the end ([`to_the_rail`]) and where the row last touches the end plane ([`last_to_leave`]).
 //!
@@ -25,10 +24,10 @@ use super::{BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh, Work
 /// How far past the last row's touch of the end plane the rail is carried, in setbacks.
 pub const PAST_THE_LAST_TOUCH: f64 = 0.25;
 
-/// C# `VirtualRailPastTheEnd.Extended`: the loops with each side's run carried past each rayed end
+/// The loops with each side's run carried past each rayed end
 /// where the row has not yet left the end plane at P; the loops themselves wherever nothing is
-/// carried. Every vertex minted is appended to `minted`. C#'s optional `backFacingOnly = false` is
-/// explicit here.
+/// carried. Every vertex minted is appended to `minted`. `back_facing_only` carries only past ends
+/// whose end face faces away, as asked.
 ///
 /// The gap's mesh is borrowed mutably while the runs are carried. A gap with no mesh (a refusal
 /// raised before the working mesh existed - never handed here, since only a built gap is filled)
@@ -95,7 +94,7 @@ pub fn extended(
         .collect())
 }
 
-/// C# `VirtualRailPastTheEnd.ExtendBoth`: both sides' runs carried past the `last` (or first) end
+/// Both sides' runs carried past the `last` (or first) end
 /// to where the row last leaves the end plane, as (left, right); `None` where that end is bounded,
 /// has no end face facing as asked, a run has no rail end there, or the row has already left the
 /// end plane at P.
@@ -288,7 +287,7 @@ pub struct ToTheRail {
     pub at_tail: bool,
 }
 
-/// C# `VirtualRailPastTheEnd.ToTheRail`: where the run leaves the rail at the end: the run is cut
+/// Where the run leaves the rail at the end: the run is cut
 /// back to its last vertex ON the rail (P, where the rail meets the side-to-end crease), dropping
 /// the crease stretch beyond it. `None` where nothing stands beyond P - the run already stops on
 /// the rail (or has no rail at all) - unless `may_end_at_p`: a back-facing wall's side run ends AT

@@ -1,8 +1,8 @@
-//! The WALL side of a junction station in the face rebuild (`Bevel/Sections/SectionFaceRebuild.cs`,
-//! its fold half): the fan the fold cuts in two is substituted either side of the fold
-//! ([`try_substitute_either_side_of_the_fold`]), the fold's run of collinear mesh edges is walked
-//! down to F1 ([`try_the_folds_run`]), and every mesh vertex the fillet swallows on the way is
-//! dropped from the part ([`try_swallow_the_folds_vertices`]). The rest of the rebuild is
+//! The WALL side of a junction station in the face rebuild (its fold half): the fan the fold cuts
+//! in two is substituted either side of the fold ([`try_substitute_either_side_of_the_fold`]), the
+//! fold's run of collinear mesh edges is walked down to F1 ([`try_the_folds_run`]), and every mesh
+//! vertex the fillet swallows on the way is dropped from the part
+//! ([`try_swallow_the_folds_vertices`]). The rest of the rebuild is
 //! [`super::section_face_rebuild`], whose state ([`Rebuild`]) these write into.
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};

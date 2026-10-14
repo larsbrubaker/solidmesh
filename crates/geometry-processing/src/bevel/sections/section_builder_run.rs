@@ -1,5 +1,5 @@
-//! Building a whole run's sections (`Sections/SectionBuilder.cs`: the `TryBuild` overloads,
-//! `TryBuildRun`, `TryBuildLoop`): an end section at each open end, a section at every vertex
+//! Building a whole run's sections (for a chain, a run, a plan or a closed loop): an end section
+//! at each open end, a section at every vertex
 //! between, the split vertices blended, the offsets laid along the surface, the junctions'
 //! leaving sections put in and the absorbed splits read - the run the sweep is built from.
 
@@ -28,7 +28,7 @@ fn not_built(args: Vec<crate::bevel::BevelAdvisoryArg>) -> SectionBuildRefusal {
     ))
 }
 
-/// C# `TryBuild(FeatureEdgeChain chain, ...)`.
+/// The sections along one feature-edge chain.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_chain(
     chain: Option<&FeatureEdgeChain>,
@@ -53,7 +53,7 @@ pub fn try_build_chain(
     )
 }
 
-/// C# `TryBuildRun`.
+/// The sections along one run of feature edges.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_run(
     edges: &[ChainEdge],
@@ -80,7 +80,7 @@ pub fn try_build_run(
     )
 }
 
-/// C# `TryBuild(SurfaceBevelPlan plan, ...)`.
+/// The sections along a surface bevel plan.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_plan(
     plan: Option<Rc<SurfaceBevelPlan>>,
@@ -110,7 +110,7 @@ pub fn try_build_plan(
     )
 }
 
-/// C# `TryBuildLoop`: the closed run round `loop_vertices`, each step a feature edge.
+/// The closed run round `loop_vertices`, each step a feature edge.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build_loop(
     loop_vertices: &[i32],
@@ -156,13 +156,13 @@ pub fn try_build_loop(
     )
 }
 
-/// C# `TheFeatureTest`: whether a mesh edge is one of `features`.
+/// Whether a mesh edge is one of `features`.
 pub fn the_feature_test(features: &FeatureEdgeSet) -> IsAFeatureEdge {
     let mesh_edges: HashSet<i32> = features.edges().iter().map(|f| f.mesh_edge_index).collect();
     Rc::new(move |edge| mesh_edges.contains(&edge))
 }
 
-/// C# `TryFeatureEdgeBetween`: the feature edge from `from` to `to`, walked that way.
+/// The feature edge from `from` to `to`, walked that way.
 pub fn try_feature_edge_between(
     features: &FeatureEdgeSet,
     from: i32,
@@ -182,7 +182,7 @@ pub fn try_feature_edge_between(
     None
 }
 
-/// C#'s private `TryBuild(edges, isClosed, plan, ...)`: the run, or why it was not built.
+/// The run over `edges` (closed or not), or why it was not built.
 #[allow(clippy::too_many_arguments)]
 pub fn try_build(
     edges: Option<&[ChainEdge]>,
@@ -268,8 +268,8 @@ pub fn try_build(
     let placed = if blend_split_vertices {
         section_split_blend::apply(&mut sections, mesh, pool)?
     } else {
-        // No blend: no station is split (divergence 1070; C# left the struct default (0, 0, 0),
-        // which its `IsSplit` read as split at every station).
+        // No blend: no station is split. The unsplit placement is (-1, -1, 0), the value the blend
+        // gives an unsplit station; anything else would lay every station as a join.
         vec![section_split_blend::SplitPlacement::new(-1, -1, 0.0); sections.len()]
     };
 
