@@ -1,7 +1,7 @@
-//! Port of `SurfaceStandingFeatureStretchTests.cs`: what the standing-feature reader will not read,
-//! each refused by name - a root that FORKS (`surface_standing_feature_stretch::try_read`), a
-//! feature under two bands of one region, a finely tessellated CURVED wall that is not one face
-//! (`try_the_region_of`) and a face of the feature that another band is cutting
+//! What the standing-feature reader will not read, each refused by name - a root that FORKS
+//! (`surface_standing_feature_stretch::try_read`), a feature under two bands of one region, a
+//! finely tessellated CURVED wall that is not one face (`try_the_region_of`) and a face of the
+//! feature that another band is cutting
 //! (`surface_walkback_standing_features::none_of_the_feature_is_also_being_cut`) - and the one
 //! feature two CHAINS' bands both reach, withheld once with both reaches (`surface_face_walkback`).
 
@@ -370,7 +370,7 @@ fn a_strip_of_wall(turn_per_facet_degrees: f64) -> Mesh {
     mesh
 }
 
-/// C# `PlanOf`: one picked edge, planned on both the regions it lands on.
+/// One picked edge, planned on both the regions it lands on.
 pub fn plan_of(
     regions: &Arc<FaceRegionCache>,
     features: &FeatureEdgeSet,
@@ -386,7 +386,7 @@ pub fn plan_of(
         .unwrap_or_else(|reason| panic!("the plan refused the edge: {reason}"))
 }
 
-/// C# `TopEdgeOf`: the edge between two named points, whichever way round the mesh happens to hold
+/// The edge between two named points, whichever way round the mesh happens to hold
 /// it.
 pub fn top_edge_of(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> usize {
     let found: Vec<usize> = (0..features.count())

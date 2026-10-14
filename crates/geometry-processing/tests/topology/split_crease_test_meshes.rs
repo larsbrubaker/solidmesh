@@ -1,7 +1,6 @@
-//! Fixture builders ported from `GeometryProcessingTests/Fixtures/SplitCreaseTestMeshes.cs`:
-//! meshes whose straight crease is CUT INTO SEVERAL mesh edges by vertices that are not corners
-//! of the shape - what a boolean, or one solid stood against another, leaves behind. The
-//! fixtures for the collinear run and the face rim readings of a pick.
+//! Fixture builders: meshes whose straight crease is CUT INTO SEVERAL mesh edges by vertices that
+//! are not corners of the shape - what a boolean, or one solid stood against another, leaves
+//! behind. The fixtures for the collinear run and the face rim readings of a pick.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -123,8 +122,8 @@ pub fn create_flush_brick_stack(brick_yaw_degrees: &[f64]) -> Mesh {
 /// second starts at `x = 8`); both are flush at `y = 0` and `z = 10`, so the union's top front
 /// crease is one straight 20 mm edge of the SHAPE from `(0, 0, 10)` to `(20, 0, 10)`.
 ///
-/// C# passes `ProcessingModes.Polygons` and `ProcessingResolution._64`, which the manifold
-/// kernel path ignores; polygon-mesh's `do_array` does not take them yet.
+/// The boolean takes the default options: the manifold kernel has no processing mode or
+/// resolution to set.
 pub fn create_booleaned_flush_bricks() -> Mesh {
     let mut first = platonic_solids::create_cube(10.0, 10.0, 10.0);
     first.transform(Matrix4X4::create_translation(5.0, 5.0, 5.0));
@@ -148,8 +147,7 @@ pub fn create_booleaned_flush_bricks() -> Mesh {
 /// a plane with a hole in it. The rim of that face is both boundaries, the outside and the
 /// hole, and its perimeter is 52 mm: 40 round the outside, 12 round the hole. Punched through
 /// rather than blind so that the hole's wall is not part of the top region at any tolerance.
-/// C# passes `ProcessingModes.Polygons` and `ProcessingResolution._64`, which `do_array` does
-/// not take yet (as [`create_booleaned_flush_bricks`]).
+/// The boolean takes the default options, as in [`create_booleaned_flush_bricks`].
 pub fn create_cube_with_a_post_punched_through() -> Mesh {
     let mut cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     cube.transform(Matrix4X4::create_translation(5.0, 5.0, 5.0));

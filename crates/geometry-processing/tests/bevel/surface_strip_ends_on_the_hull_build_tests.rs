@@ -1,10 +1,9 @@
-//! Port of `SurfaceStripEndsOnTheHullBuildTests.cs`: a strip ENDED on the part's own hull, built -
-//! the tapered slab's block foot filleted at 1.5 mm, where the ledge the fillet lands on is only
-//! 1 mm wide at the far end, so the last millimetre of the band runs off it and the strip leaves
-//! the part instead of stopping on a face (`SurfaceStripEndsOnTheHull`). The volume is checked
-//! against a numeric integral of the section the fillet really adds, and the cap areas against the
-//! closed-form polygons the end reading's own points bound. The reading itself is
-//! `surface_strip_ends_on_the_hull_tests`.
+//! A strip ENDED on the part's own hull, built - the tapered slab's block foot filleted at 1.5 mm,
+//! where the ledge the fillet lands on is only 1 mm wide at the far end, so the last millimetre of
+//! the band runs off it and the strip leaves the part instead of stopping on a face
+//! (`SurfaceStripEndsOnTheHull`). The volume is checked against a numeric integral of the section
+//! the fillet really adds, and the cap areas against the closed-form polygons the end reading's own
+//! points bound. The reading itself is `surface_strip_ends_on_the_hull_tests`.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -177,8 +176,8 @@ fn nothing_is_minted_twice() {
     );
 
     // And nothing EXTRA is minted where the end closes: the plane the block ends in carries the
-    // seven rails that leave through it, the one point the end turns at, the part's own corner where
-    // the knife edge dies, the chain's own corner, and the block's own top corner - eleven.
+    // seven rails that leave through it, the one point the end turns at, the part's own corner
+    // where the knife edge dies, the chain's own corner, and the block's own top corner - eleven.
     let length = length_of();
     let standing = built
         .mesh
@@ -370,8 +369,8 @@ fn the_slab(size: f64, mirrored: bool) -> TheSlab {
     let mut run_off = vec![apex];
     let mut far = Vec::new();
 
-    // Each rail put on the piece whose PLANE the reading says it leaves through, walked out from the
-    // run-off's own rail: asked of the reading rather than partitioned again here.
+    // Each rail put on the piece whose PLANE the reading says it leaves through, walked out from
+    // the run-off's own rail: asked of the reading rather than partitioned again here.
     for step in 0..rail_count {
         for (from, piece) in [(run_off_rail, &mut run_off), (far_rail, &mut far)] {
             let rail = if from == 0 {

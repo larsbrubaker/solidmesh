@@ -1,9 +1,7 @@
-//! Ports `PathSegmentRunTests`: growing a seed segment of a contour into its run of
-//! curved-but-close neighbours, under a per-end turning budget and a corner threshold.
+//! Growing a seed segment of a contour into its run of curved-but-close neighbours, under a per-end
+//! turning budget and a corner threshold.
 //!
-//! C#'s `Throws<ArgumentException>` / `Throws<ArgumentOutOfRangeException>` read as the matching
-//! `PathSegmentRunError`; the `null` points case is not representable in Rust and is dropped
-//! from `a_budget_or_corner_angle_that_is_not_a_number_is_refused`.
+//! Arguments out of range or not numbers are refused with the matching `PathSegmentRunError`.
 
 use std::collections::HashSet;
 

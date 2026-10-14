@@ -1,7 +1,7 @@
-//! Port of the test fixture `Fixtures/TwoMouthsInOneFacetMesh.cs`: Many Holes' refused facet at a size
-//! that can be worked on - a 48-facet tapered barrel with two small radial bores close enough above and
-//! below z = 0 that their near mouths stand wholly inside ONE flat piece of the wall. The wall is picked
-//! as [`crate::tapered_barrel_test_meshes::the_wall`] picks it.
+//! Many Holes' refused facet at a size that can be worked on - a 48-facet tapered barrel with two
+//! small radial bores close enough above and below z = 0 that their near mouths stand wholly inside
+//! ONE flat piece of the wall. The wall is picked as
+//! [`crate::tapered_barrel_test_meshes::the_wall`] picks it.
 
 #![allow(dead_code)]
 
@@ -32,7 +32,7 @@ pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 /// How far above and below z = 0 the two bores stand, close enough to share one flat piece.
 pub const BORE_SPACING: f64 = 3.0;
 
-/// C# `ThePart`: the barrel with both bores through the same stretch of its wall.
+/// The barrel with both bores through the same stretch of its wall.
 pub fn the_part() -> Mesh {
     let barrel = topology_test_meshes::create_frustum(BOTTOM_RADIUS, TOP_RADIUS, HEIGHT, FACETS);
     let upper = a_radial_bore(BORE_SPACING);
@@ -51,13 +51,13 @@ pub fn the_part() -> Mesh {
     .expect("the bores cut the barrel")
 }
 
-/// C# `TheWorkingPart`: the part as the operation sees it - the working mesh, weld and repair passes
+/// The part as the operation sees it - the working mesh, weld and repair passes
 /// and all.
 pub fn the_working_part() -> Mesh {
     create_from(&the_part(), &mut StampedVerdict::default())
 }
 
-/// C# `TheWall`: the wall as a face pick resolves it, exactly as the tapered barrel's.
+/// The wall as a face pick resolves it, exactly as the tapered barrel's.
 pub fn the_wall(part: &Mesh) -> BevelEdgeGroupResolution {
     let graph = part.get_mesh_edge_graph();
     let features = FeatureEdgeSet::create_with_graph(part, &graph, BEND_THRESHOLD_DEGREES);
@@ -78,9 +78,9 @@ pub fn the_wall(part: &Mesh) -> BevelEdgeGroupResolution {
     bevel_edge_group_resolver::resolve(&group, part)
 }
 
-/// C# `TheMouths`: the two mouths on the bores' NEAR side, lowest first. Each bore runs clean through
-/// the barrel, so the wall's rim carries four mouths; the two at positive x are the pair that shares
-/// one flat piece.
+/// The two mouths on the bores' NEAR side, lowest first. Each bore runs clean through the barrel,
+/// so the wall's rim carries four mouths; the two at positive x are the pair that shares one flat
+/// piece.
 pub fn the_mouths(part: &Mesh, resolution: &BevelEdgeGroupResolution) -> Vec<BevelSweptChain> {
     let average = |chain: &BevelSweptChain, read: &dyn Fn(i32) -> f64| {
         chain
@@ -99,15 +99,15 @@ pub fn the_mouths(part: &Mesh, resolution: &BevelEdgeGroupResolution) -> Vec<Bev
         .filter(|chain| average(chain, &x) > 0.0)
         .collect();
 
-    // C# `OrderBy` is stable; so is `sort_by`.
+    // A stable sort, so mouths at equal heights keep their order.
     mouths.sort_by(|a, b| average(a, &z).total_cmp(&average(b, &z)));
 
     mouths
 }
 
-/// C# `ARadialBore`: one bore, laid on its side and lifted, long enough to pass clean through both
-/// walls. It is turned HALF A FACET off zero because the frustum carries a crease at turn zero: bored
-/// there, each mouth would straddle that crease and belong to two flat pieces.
+/// One bore, laid on its side and lifted, long enough to pass clean through both walls. It is
+/// turned HALF A FACET off zero because the frustum carries a crease at turn zero: bored there,
+/// each mouth would straddle that crease and belong to two flat pieces.
 fn a_radial_bore(at_height: f64) -> Mesh {
     let mut drill =
         topology_test_meshes::create_cylinder(BORE_RADIUS, 4.0 * BOTTOM_RADIUS, BORE_SIDES);

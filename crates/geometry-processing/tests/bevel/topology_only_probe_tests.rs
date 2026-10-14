@@ -1,9 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TopologyOnlyProbeTests.cs`: the pinch probe's
-//! licence - a cut made with the refinement's chord ACCURACY rule switched off leaves each side
-//! exactly the loops a full build leaves, checked at five sizes on each of four picks, including
-//! sizes either side of the hourglass neck's pinch. C# `[Arguments]` rows are loops over the
-//! same-named test; its `[NotInParallel]` guards no shared state here (nextest gives every test a
-//! process of its own).
+//! The pinch probe's licence - a cut made with the refinement's chord ACCURACY rule switched off
+//! leaves each side exactly the loops a full build leaves, checked at five sizes on each of four
+//! picks, including sizes either side of the hourglass neck's pinch.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
@@ -18,7 +15,7 @@ use crate::usable_room_tests::strip_solid;
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `ATopologyOnlyCutLeavesTheLoopsAFullBuildLeaves`.
+/// A topology only cut leaves the loops a full build leaves.
 #[test]
 fn a_topology_only_cut_leaves_the_loops_a_full_build_leaves() {
     for pick in [
@@ -44,7 +41,7 @@ fn a_topology_only_cut_leaves_the_loops_a_full_build_leaves() {
     }
 }
 
-/// C# `Cut`: one cut at one size, with the room handed in as infinite so no size is refused for
+/// One cut at one size, with the room handed in as infinite so no size is refused for
 /// WIDTH.
 fn cut(
     positions: &[Vector3],
@@ -74,7 +71,7 @@ fn cut(
     .expect("the cut builds or refuses by name")
 }
 
-/// C# `Describe`: the refusal, and per side how many loops it left and whether they closed.
+/// The refusal, and per side how many loops it left and whether they closed.
 fn describe(cut: &BandGapResult) -> String {
     // A pinch refusal carries the loops that were read to refuse; only a refusal that never got as
     // far as cutting is described by its name.
@@ -104,7 +101,7 @@ type Pick = (
     Vec<f64>,
 );
 
-/// C# `PickNamed`.
+/// The pick a test row names.
 fn pick_named(name: &str) -> Pick {
     match name {
         "hourglass-face" => {

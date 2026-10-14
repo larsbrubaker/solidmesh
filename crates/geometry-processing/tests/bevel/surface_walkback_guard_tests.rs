@@ -1,8 +1,8 @@
-//! Port of `SurfaceWalkbackGuardTests.cs`: what the walkback (`surface_face_walkback`) turns DOWN -
-//! a band that would take the material out from under something standing on the face (a boss, a
-//! bore's mouth, a foot edge crossing the band with both ends outside it, a foot another chain is
-//! bevelling), and a region whose rim runs out so its neighbours cannot be split to match - and
-//! the holes it does not: one behind the band, or one the band stops short of.
+//! What the walkback (`surface_face_walkback`) turns DOWN - a band that would take the material out
+//! from under something standing on the face (a boss, a bore's mouth, a foot edge crossing the band
+//! with both ends outside it, a foot another chain is bevelling), and a region whose rim runs out
+//! so its neighbours cannot be split to match - and the holes it does not: one behind the band, or
+//! one the band stops short of.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -53,8 +53,8 @@ fn count_vertices(mesh: &Mesh, is_it: impl Fn(Vector3) -> bool) -> usize {
 /// The refusal for something STANDING on the face being walked back. A square boss on a plate makes
 /// the plate's top a ring with an 8 mm square hole in it, and the boss's four walls stand on that
 /// hole's rim. Walk the plate's front rim back by 7 and the band reaches the hole, so the walkback
-/// says so and cuts nothing; a setback that keeps clear of the boss is the same cut on the same ring
-/// face and goes through.
+/// says so and cuts nothing; a setback that keeps clear of the boss is the same cut on the same
+/// ring face and goes through.
 #[test]
 fn a_band_that_reaches_a_feature_standing_on_the_face_is_refused() {
     let plate = Arc::new(topology_test_meshes::create_square_boss_on_plate());
@@ -187,8 +187,9 @@ fn a_hole_behind_the_band_is_no_part_of_it() {
 }
 
 /// And a hole INSIDE the band is still refused. The band now on the near rim of the first bore,
-/// walking towards the second: at a 5 mm setback the tangent line is drawn through the second bore's
-/// mouth at `y = 20.5`. At 3 it stops two short of it and the same face cuts without complaint.
+/// walking towards the second: at a 5 mm setback the tangent line is drawn through the second
+/// bore's mouth at `y = 20.5`. At 3 it stops two short of it and the same face cuts without
+/// complaint.
 #[test]
 fn a_hole_inside_the_band_is_still_refused() {
     let slab = Arc::new(twice_bored_slab());
@@ -415,7 +416,7 @@ fn the_foot_loop(features: &FeatureEdgeSet) -> BevelSweptChain {
     chains.remove(0)
 }
 
-/// C#'s `Enumerable.Single` over the feature edges' indices.
+/// The index of the one feature edge that matches; a test failure if there is not exactly one.
 fn single(features: &FeatureEdgeSet, is_it: impl Fn(&FeatureEdge) -> bool) -> i32 {
     let found: Vec<i32> = (0..features.count() as i32)
         .filter(|&i| is_it(&features.edges()[i as usize]))

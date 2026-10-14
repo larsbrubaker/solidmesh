@@ -1,7 +1,6 @@
-//! Port of `LevelLine/WorkBudgetTests.cs`: the requirement a hang breaks - no build may run away.
-//! Every build, room reading and fill spends counted work, and when the count runs out it refuses
-//! BY NAME, saying what was running - it never spins, never throws at its caller and never hands
-//! back a mesh it did not finish.
+//! Work budget tests: the requirement a hang breaks - no build may run away. Every build, room
+//! reading and fill spends counted work, and when the count runs out it refuses BY NAME, saying
+//! what was running - it never spins, never panics and never hands back a mesh it did not finish.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -32,7 +31,7 @@ const FOLD_DEGREES: f64 = 45.0;
 
 type Rim = (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<i32>);
 
-/// C# `CylinderRim`: the module's own speed fixture - a 32-sided cylinder's top rim, filleted.
+/// The module's own speed fixture - a 32-sided cylinder's top rim, filleted.
 fn cylinder_rim() -> Rim {
     let (positions, indices) = cylinder_solid(32, 1.0, 2.0);
     (positions, indices, (32..64).collect())
@@ -56,8 +55,8 @@ fn watched(
     Rc::new(budget)
 }
 
-/// C# `BandGap.Build(positions, indices, chain, true, features, size, profile, chordTolerance,
-/// snap, null, budget)`.
+/// One band-gap build of a closed chain, with the part's feature edges at the fold angle and the
+/// given budget to spend.
 #[allow(clippy::too_many_arguments)]
 fn build_one(
     positions: &[Vector3],
@@ -87,7 +86,7 @@ fn build_one(
     )
 }
 
-/// C# `BuildTheRim`: the cylinder rim's build, with whatever budget the caller wants to watch or
+/// The cylinder rim's build, with whatever budget the caller wants to watch or
 /// stop it by.
 fn build_the_rim(rim: &Rim, budget: Rc<WorkBudget>) -> Result<BandGapResult, BandGapBuildError> {
     build_one(
@@ -106,7 +105,7 @@ fn built_rim(rim: &Rim, budget: Rc<WorkBudget>) -> BandGapResult {
     build_the_rim(rim, budget).expect("the rim builds or refuses by name")
 }
 
-/// C# `ATinyBudgetRefusesByNameAndIsNotBuilt`.
+/// A tiny budget refuses by name and is not built.
 #[test]
 fn a_tiny_budget_refuses_by_name_and_is_not_built() {
     let rim = cylinder_rim();
@@ -124,7 +123,7 @@ fn a_tiny_budget_refuses_by_name_and_is_not_built() {
     assert!(result.work_spent <= 110, "spent {}", result.work_spent);
 }
 
-/// C# `ATinyBudgetRefusesARoomReadingToo`.
+/// A tiny budget refuses a room reading too.
 #[test]
 fn a_tiny_budget_refuses_a_room_reading_too() {
     let (positions, indices, rim) = cylinder_rim();
@@ -147,7 +146,7 @@ fn a_tiny_budget_refuses_a_room_reading_too() {
     assert_eq!(reading.phase, LevelLineWorkPhase::Room);
 }
 
-/// C# `AnOrdinaryBuildSpendsFarUnderItsDefaultBudget`.
+/// An ordinary build spends far under its default budget.
 #[test]
 fn an_ordinary_build_spends_far_under_its_default_budget() {
     let rim = cylinder_rim();
@@ -185,7 +184,7 @@ fn an_ordinary_build_spends_far_under_its_default_budget() {
     assert!(fill_budget.spent.get() * 10 < fill_budget.limit);
 }
 
-/// C# `ARefinementThatWouldNotSettleIsStoppedInTheRefinement`.
+/// A refinement that would not settle is stopped in the refinement.
 #[test]
 fn a_refinement_that_would_not_settle_is_stopped_in_the_refinement() {
     let (positions, indices, rim) = cylinder_rim();
@@ -209,7 +208,7 @@ fn a_refinement_that_would_not_settle_is_stopped_in_the_refinement() {
     assert!(result.mesh.is_some());
 }
 
-/// C# `ALadderTooPoorForItsFirstProbeSaysItRanOutAndRefusesByWorkBudget`.
+/// A ladder too poor for its first probe says it ran out and refuses by work budget.
 #[test]
 fn a_ladder_too_poor_for_its_first_probe_says_it_ran_out_and_refuses_by_work_budget() {
     let (positions, indices, rim) = hourglass_solid(10.0, 2.0, 4.0, 4.0);
@@ -267,7 +266,7 @@ fn a_ladder_too_poor_for_its_first_probe_says_it_ran_out_and_refuses_by_work_bud
     assert_eq!(refused.work_limit, 1);
 }
 
-/// C# `ALadderThatRunsOutOfWorkRefusesByWorkBudgetAndNotBySize`.
+/// A ladder that runs out of work refuses by work budget and not by size.
 #[test]
 fn a_ladder_that_runs_out_of_work_refuses_by_work_budget_and_not_by_size() {
     let (positions, indices, rim) = hourglass_solid(10.0, 0.1, 4.0, 4.0);
@@ -298,7 +297,7 @@ fn a_ladder_that_runs_out_of_work_refuses_by_work_budget_and_not_by_size() {
 
         if probed.pinch_probes == 0 {
             last_without_probes = limit;
-            // C#: `limit = (long)(limit * 1.15) + 1` - a truncation of a positive value.
+            // Grow the limit by 15% plus one; the cast truncates a positive value.
             limit = (limit as f64 * 1.15) as i64 + 1;
             continue;
         }
@@ -352,7 +351,7 @@ fn a_ladder_that_runs_out_of_work_refuses_by_work_budget_and_not_by_size() {
     );
 }
 
-/// C# `ADefaultBudgetIsProportionalToTheInput`.
+/// A default budget is proportional to the input.
 #[test]
 fn a_default_budget_is_proportional_to_the_input() {
     assert_eq!(WorkBudget::default_limit(0), DEFAULT_FLOOR);
@@ -362,7 +361,7 @@ fn a_default_budget_is_proportional_to_the_input() {
     );
 }
 
-/// C# `ATokenCancelledBeforeTheCallThrowsAtOnce`.
+/// A token cancelled before the call stops the build at once.
 #[test]
 fn a_token_cancelled_before_the_call_throws_at_once() {
     let rim = cylinder_rim();
@@ -381,7 +380,7 @@ fn a_token_cancelled_before_the_call_throws_at_once() {
     assert_eq!(budget.spent.get(), 0);
 }
 
-/// C# `CancellingFromAProgressReportThrowsAndLeavesTheInputAlone`.
+/// Cancelling from a progress report stops the build and leaves the input alone.
 #[test]
 fn cancelling_from_a_progress_report_throws_and_leaves_the_input_alone() {
     let rim = cylinder_rim();
@@ -414,8 +413,7 @@ fn cancelling_from_a_progress_report_throws_and_leaves_the_input_alone() {
     assert_eq!(rim.1, indices_before);
 }
 
-/// C# `CancelReachesALargeHoleFillWithinAFifthOfASecond` (C# `[NotInParallel]`: the 200 ms is wall
-/// clock).
+/// A cancel reaches a large hole fill within a fifth of a second (of wall-clock time).
 #[test]
 fn cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second() {
     const N: usize = 800;
@@ -433,8 +431,8 @@ fn cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second() {
     let token = CancelToken::new();
     let theirs = token.clone();
     let fill = std::thread::spawn(move || {
-        // The budget is the thread's own (C# hands the same object over; ours is not `Send`), so
-        // only the token crosses - which is the whole of what the cancel needs.
+        // The budget is the thread's own (it is not `Send`), so only the token crosses - which is
+        // the whole of what the cancel needs.
         let budget = Rc::new(
             WorkBudget::with_cancellation(i64::MAX, theirs, None).expect("a positive limit"),
         );
@@ -464,7 +462,7 @@ fn cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second() {
     );
 }
 
-/// C# `AnUncancelledTokenChangesNoResult`.
+/// An uncancelled token changes no result.
 #[test]
 fn an_uncancelled_token_changes_no_result() {
     let rim = cylinder_rim();
@@ -485,7 +483,7 @@ fn an_uncancelled_token_changes_no_result() {
     }
 }
 
-/// C# `WatchingABuildCostsAlmostNothing` (C# `[NotInParallel]`).
+/// Watching a build costs almost nothing (a timing test).
 #[test]
 fn watching_a_build_costs_almost_nothing() {
     let rim = cylinder_rim();
@@ -533,7 +531,7 @@ fn watching_a_build_costs_almost_nothing() {
     assert!(watched_ms < f64::max(20.0, plain * 2.0));
 }
 
-/// C# `ProgressRunsForwardThroughThePhases`.
+/// Progress runs forward through the phases.
 #[test]
 fn progress_runs_forward_through_the_phases() {
     let rim = cylinder_rim();
@@ -575,7 +573,7 @@ fn listed(fractions: &[f64]) -> String {
         .join(", ")
 }
 
-/// C# `Enumerable.Distinct` over doubles, in first-seen order.
+/// The distinct fractions, in first-seen order.
 fn distinct(fractions: &[f64]) -> Vec<f64> {
     let mut out: Vec<f64> = Vec::new();
     for &f in fractions {
@@ -586,7 +584,7 @@ fn distinct(fractions: &[f64]) -> Vec<f64> {
     out
 }
 
-/// C# `EverySideGroupMovesTheBarThroughItsOwnSlice`.
+/// Every side group moves the bar through its own slice.
 #[test]
 fn every_side_group_moves_the_bar_through_its_own_slice() {
     let rim = cylinder_rim();
@@ -634,9 +632,9 @@ fn every_side_group_moves_the_bar_through_its_own_slice() {
         listed(&refinement_distinct)
     );
 
-    // The LAST group's refinement moves the bar too. C# finds the last report that is not the
-    // refinement and is followed by one that is, through `IndexOf` - which finds the FIRST report
-    // equal to it (a record compares by value), so that is the index this reads.
+    // The LAST group's refinement moves the bar too. Find the last report that is not the
+    // refinement and is followed by one that is, through its first index - the FIRST report equal
+    // to it (reports compare by value), so that is the index this reads.
     let index_of = |i: usize| reports.iter().position(|r| *r == reports[i]).unwrap_or(i);
     let last_entry = (0..reports.len())
         .rev()
@@ -668,7 +666,7 @@ fn every_side_group_moves_the_bar_through_its_own_slice() {
     );
 }
 
-/// C# `TheRefinementIsWhereTheWorkGoes`.
+/// The refinement is where the work goes.
 #[test]
 fn the_refinement_is_where_the_work_goes() {
     let rim = cylinder_rim();
@@ -722,7 +720,7 @@ fn the_refinement_is_where_the_work_goes() {
     }
 }
 
-/// C# `TheBarRisesDuringTheRoomReading`.
+/// The bar rises during the room reading.
 #[test]
 fn the_bar_rises_during_the_room_reading() {
     let (positions, indices, rim) = cylinder_rim();
@@ -765,7 +763,7 @@ fn the_bar_rises_during_the_room_reading() {
     assert!(room_fractions[room_fractions.len() - 1] < 1.0);
 }
 
-/// C# `ACutNeverReportsTheRoomPhaseOnceItHasBegun`.
+/// A cut never reports the room phase once it has begun.
 #[test]
 fn a_cut_never_reports_the_room_phase_once_it_has_begun() {
     let rim = cylinder_rim();

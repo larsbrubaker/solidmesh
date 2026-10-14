@@ -1,8 +1,8 @@
-//! Ports `PathBevelTests`: the geometry of the path bevel pinned directly - arcs tangent to their
-//! edges, and corners that share an edge agreeing on how to split it.
+//! The geometry of the path bevel pinned directly - arcs tangent to their edges, and corners that
+//! share an edge agreeing on how to split it.
 //!
-//! The `[Arguments(false)]`/`[Arguments(true)]` pair of
-//! `AReflexCornerIsFilletedOnTheOutsideOfTheTurn` runs both cases inside the one test.
+//! `a_reflex_corner_is_filleted_on_the_outside_of_the_turn` runs both windings inside
+//! the one test.
 
 use agg_path::{FlagsAndCommand, VertexSource, VertexStorage};
 use geometry_processing::path::path_bevel::{bevel, bevel_contour};
@@ -20,7 +20,7 @@ fn square(side: f64) -> Vec<Vector2> {
     ]
 }
 
-/// C# `BevelContour` with its defaults: no selection, Radius mode, contour 0.
+/// A contour bevel with the defaults: no selection, Radius mode, contour 0.
 fn bevel_plain(
     contour: &[Vector2],
     closed: bool,

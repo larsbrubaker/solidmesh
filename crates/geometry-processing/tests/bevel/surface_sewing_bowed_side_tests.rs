@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceSewingBowedSideTests.cs` 1:1: a side with several
-//! of a cut's vertices standing along it is no longer the straight line its two corners draw, so
-//! the ones still to be taken in are read against the side AS DRAWN; and two faces meeting along
-//! one stretch come out of the sewing with the same sequence along it.
+//! A side with several of a cut's vertices standing along it is no longer the straight line
+//! its two corners draw, so the ones still to be taken in are read against the side AS DRAWN; and
+//! two faces meeting along one stretch come out of the sewing with the same sequence along it.
 
 use std::collections::HashSet;
 

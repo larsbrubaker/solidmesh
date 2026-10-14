@@ -1,7 +1,6 @@
-//! Ports `MatterCADTests/Standard/BevelEdgeGroupCollinearTests.cs`: what a stored
-//! `BevelSelectionKind::Edge` group comes to on a mesh whose crease is cut into several mesh
-//! edges: all of it. The walk itself is `FeatureEdgeChain::propagate_collinear`, pinned by
-//! `feature_edge_collinear_run_tests.rs`; this is the resolver end of it.
+//! What a stored `BevelSelectionKind::Edge` group comes to on a mesh whose crease is cut into
+//! several mesh edges: all of it. The walk itself is `FeatureEdgeChain::propagate_collinear`,
+//! pinned by `feature_edge_collinear_run_tests.rs`; this is the resolver end of it.
 
 use std::collections::HashMap;
 

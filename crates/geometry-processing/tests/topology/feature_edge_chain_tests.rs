@@ -1,5 +1,5 @@
-//! Ports `MatterCADTests/Standard/FeatureEdgeChainTests.cs`: tangent-chain propagation, extending
-//! one picked feature edge into the run of edges a CAD package would treat as one selection.
+//! Tangent-chain propagation, extending one picked feature edge into the run of edges a CAD package
+//! would treat as one selection.
 
 use geometry_processing::topology::{
     ChainStopReason, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet,

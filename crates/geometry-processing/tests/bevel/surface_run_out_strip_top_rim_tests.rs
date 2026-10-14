@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceRunOutStripTopRimTests.cs` 1:1: the run-out strip's
-//! top rim - an extra top point is sewn into the piece, a quad naming one vertex twice is drawn as
-//! the triangle it is, and an empty top rim is no top rim at all.
+//! The run-out strip's top rim - an extra top point is sewn into the piece, a quad naming one
+//! vertex twice is drawn as the triangle it is, and an empty top rim is no top rim at all.
 
 use std::collections::HashMap;
 
@@ -129,7 +128,7 @@ fn without_a_top_rim_the_piece_is_unchanged() {
         OUTWARD,
     );
 
-    // C#'s IsEquivalentTo: the same faces, in any order.
+    // The same faces, in any order.
     let mut a = with_empty.clone();
     let mut b = with_none.clone();
     a.sort_unstable();

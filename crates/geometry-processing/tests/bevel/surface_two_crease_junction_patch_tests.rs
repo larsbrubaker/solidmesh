@@ -1,6 +1,6 @@
-//! Port of `SurfaceTwoCreaseJunctionPatchTests.cs`: the patch that closes a TWO-crease junction -
-//! one cut and two beads (`surface_two_crease_junction_patch`), read on the nose-in-notch fixture
-//! the rest of the two-crease reading is measured on (`surface_two_crease_junction_reading_tests`,
+//! The patch that closes a TWO-crease junction - one cut and two beads
+//! (`surface_two_crease_junction_patch`), read on the nose-in-notch fixture the rest of the
+//! two-crease reading is measured on (`surface_two_crease_junction_reading_tests`,
 //! `surface_two_crease_junction_rings_tests`).
 
 use std::collections::HashMap;
@@ -64,9 +64,9 @@ fn the_arrivals_are_the_cut_once_and_both_beads() {
 }
 
 /// Under each arm the wall gave up exactly the stretch the patch now covers: the wedge between the
-/// bead's own band end, its foot on the crease and row zero. Its inside is gone, and the two corners
-/// of the outline it was bounded by - the band end's own edge and the crease beyond the crossing -
-/// are gone with it.
+/// bead's own band end, its foot on the crease and row zero. Its inside is gone, and the two
+/// corners of the outline it was bounded by - the band end's own edge and the crease beyond the
+/// crossing - are gone with it.
 #[test]
 fn the_wall_gives_up_one_convex_bite_under_each_arm() {
     let built = the_build(None);
@@ -123,9 +123,9 @@ fn the_noses_root_is_filled_from_the_apex() {
         .collect();
 
     // The fan's own triangles are the wall faces at the corner whose other two corners BOTH stand
-    // on row zero - on the CHORDED row and not merely near one of its rails, because the two ends of
-    // the fan are the crossings, which stand part way along a chord. The rest of the wall's faces at
-    // the corner run away across the part.
+    // on row zero - on the CHORDED row and not merely near one of its rails, because the two ends
+    // of the fan are the crossings, which stand part way along a chord. The rest of the wall's
+    // faces at the corner run away across the part.
     let fanned: Vec<[Vector3; 3]> = the_wall_faces_at(&built, apex)
         .into_iter()
         .filter(|face| {
@@ -180,9 +180,9 @@ fn the_noses_root_is_filled_from_the_apex() {
 
 /// A crease CHORDED beside the corner - two mesh edges where this fixture has one, which is what
 /// the boolean under the corpus parts leaves - answers exactly what the whole crease answers: the
-/// canal's first ball stands 5.002 mm along the crease and the chord runs out at 4.690, so the chord
-/// has no band left to carry the ring and is SWALLOWED, the way a mixed corner's cut swallows the
-/// chords between it and its corner.
+/// canal's first ball stands 5.002 mm along the crease and the chord runs out at 4.690, so the
+/// chord has no band left to carry the ring and is SWALLOWED, the way a mixed corner's cut swallows
+/// the chords between it and its corner.
 ///
 /// Vertex for vertex, because chording a crease is a triangulation of the same solid and not a
 /// different part: the chord's own point stands inside the band the walkback takes off, so it is
@@ -218,8 +218,8 @@ fn the_creases_chord_beside_the_corner_is_swallowed() {
 
     // A ten-thousandth of a mm^3 out of 6042.76, which is 2e-8 of it. Not zero, and it should not
     // be: the chorded slope leaves the walkback a few extra tangent vertices, the strip puts a
-    // station at every one of them, and a round chorded at more stations encloses a hair more of its
-    // own arc. Measured, the two stand 3.8e-5 apart.
+    // station at every one of them, and a round chorded at more stations encloses a hair more of
+    // its own arc. Measured, the two stand 3.8e-5 apart.
     assert!(
         (chorded_volume - wholly_volume).abs() <= 1e-4,
         "instead the chorded answer measures {chorded_volume:.6} against {wholly_volume:.6}"
@@ -228,8 +228,8 @@ fn the_creases_chord_beside_the_corner_is_swallowed() {
     // And the same SURFACE, both ways round. Not the same vertices: the chorded slope's own fan
     // leaves the walkback tangent vertices the whole one has not, a strip puts a station at every
     // one of them, and neither set of points contains the other. What has to hold is that every
-    // point of each answer lies ON the other answer, which is what says the blend landed in the same
-    // place and was chorded differently rather than drawn differently.
+    // point of each answer lies ON the other answer, which is what says the blend landed in the
+    // same place and was chorded differently rather than drawn differently.
     for (name, from, onto) in [
         ("the whole crease's", &here, &chorded),
         ("the chorded one's", &there, &whole),
@@ -264,8 +264,9 @@ fn off_the_surface(at: Vector3, mesh: &Mesh) -> f64 {
 }
 
 /// How far a point stands off one triangle: its distance to the nearest point of the closed
-/// triangle, which is either inside the face or on one of its three edges. (C#'s own measure, which
-/// reads a degenerate triangle by its edges rather than skipping it as `mesh_surface_distance` does.)
+/// triangle, which is either inside the face or on one of its three edges. (This test's own
+/// measure, which reads a degenerate triangle by its edges rather than skipping it as
+/// `mesh_surface_distance` does.)
 fn off_the_triangle(at: Vector3, first: Vector3, second: Vector3, third: Vector3) -> f64 {
     let mut normal = (second - first).cross(third - first);
 
@@ -397,7 +398,7 @@ fn the_wall_faces_at(built: &Mesh, at: Vector3) -> Vec<[Vector3; 3]> {
 
 /// What the wall ENDS on near the tip: the edges used by exactly one face of the wall's own plane,
 /// both ends of which stand within reach of the corner. Corners are keyed rounded to six places,
-/// as C#'s `Math.Round(x, 6)` (banker's rounding) keys them.
+/// with banker's rounding (ties to even).
 fn the_walls_outline_near_the_tip(built: &Mesh) -> Vec<(Vector3, Vector3)> {
     type Key = (i64, i64, i64);
     let rounded = |at: Vector3| -> Key {
@@ -409,7 +410,7 @@ fn the_walls_outline_near_the_tip(built: &Mesh) -> Vec<(Vector3, Vector3)> {
     };
     let back = |key: Key| Vector3::new(key.0 as f64 / 1e6, key.1 as f64 / 1e6, key.2 as f64 / 1e6);
 
-    // Insertion order, as C#'s Dictionary iterates.
+    // Kept in insertion order, so the outline reads the same on every run.
     let mut order: Vec<(Key, Key)> = Vec::new();
     let mut used: HashMap<(Key, Key), i32> = HashMap::new();
 

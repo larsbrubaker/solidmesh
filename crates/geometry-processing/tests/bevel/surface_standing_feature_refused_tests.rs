@@ -1,8 +1,7 @@
-//! Port of `SurfaceStandingFeatureRefusedTests.cs`: the shapes a standing feature's extension is
-//! REFUSED for, each by name. The C# class was split out of `SurfaceStandingFeatureExtensionTests`:
-//! that class is the solids the extension builds, and this one is the parts it will not build,
-//! which is the other half of the same ruling. C# `[Arguments]` rows are loops over the same-named
-//! test.
+//! The shapes a standing feature's extension is REFUSED for, each by name. Its sibling,
+//! `surface_standing_feature_extension_tests.rs`, is the solids the extension builds, and this one
+//! is the parts it will not build, which is the other half of the same ruling. A test that covers
+//! several shapes loops over them.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -71,18 +70,18 @@ fn the_fin_is_refused_by_name_because_its_trace_leaves_through_the_other_seam() 
 /// a notch in, so it says so rather than capping into the middle of one.
 ///
 /// The fixture is the same nose moved onto a cube's front face, running off through the band's end
-/// at the cube's own corner (20, 0, 20) - `nose_on_a_cube_corner_test_meshes`. The part's right face
-/// stands square across that end and holds the whole profile, so the end is not a run-out at all
-/// and this is the refusal.
+/// at the cube's own corner (20, 0, 20) - `nose_on_a_cube_corner_test_meshes`. The part's right
+/// face stands square across that end and holds the whole profile, so the end is not a run-out at
+/// all and this is the refusal.
 ///
 /// **What this fixture was built for, and could not reach.** Three convex edges meet at that
 /// corner, so it is the one place a notched end could gather into a corner PATCH - which closes all
 /// three ends at once and never reads the notch, so the extension would go in and the patch would
-/// cap over it. `SurfaceBuilderStandingFeatures.TheNotchedEndCanBeClosed` refuses that by name now.
-/// It is asserted below only as "nothing is published", because the shape cannot be built to ask
-/// it properly: the feature's creases have to die IN the band's end plane, that plane is the right
-/// face's own, and so the crease ends land on one of the other two edges at the corner - which
-/// makes that edge SHORTER than the radius the notch needs, and one size serves the whole
+/// cap over it. `surface_builder_standing_features::the_notched_end_can_be_closed` refuses that by
+/// name. It is asserted below only as "nothing is published", because the shape cannot be built to
+/// ask it properly: the feature's creases have to die IN the band's end plane, that plane is the
+/// right face's own, and so the crease ends land on one of the other two edges at the corner -
+/// which makes that edge SHORTER than the radius the notch needs, and one size serves the whole
 /// operation. A corner that is not a right angle might get round that; this one cannot.
 #[test]
 fn a_notch_at_an_end_with_a_face_beyond_it_is_refused_by_name() {
@@ -384,11 +383,10 @@ fn a_wall_whose_crease_and_crossing_are_not_one_side_is_refused_by_name() {
 /// back as a false with nothing in it.
 ///
 /// The split cap asks the feature which end of the crease stands on the ridge, so that it knows
-/// which vertex its piece turns down at. A feature with one wall has no ridge to ask about - and
-/// the answer used to be returned straight out of the cap with the advisory left null, which
-/// downstream is not a refusal at all: the app head formats the advisory to say what happened and
-/// is handed nothing to format. Every other way out of this reading names itself; this one does
-/// now too.
+/// which vertex its piece turns down at. A feature with one wall has no ridge to ask about, and an
+/// answer with no advisory would not be a refusal downstream at all: the app head formats the
+/// advisory to say what happened and would be handed nothing to format. So this way out of the
+/// reading names itself, as every other one does.
 #[test]
 fn a_cap_with_no_ridge_to_read_refuses_by_name_rather_than_with_nothing() {
     let mut read = OneFacedReading::of(7.0, 16, true);
@@ -414,7 +412,7 @@ fn a_cap_with_no_ridge_to_read_refuses_by_name_rather_than_with_nothing() {
     let corner = read.corner();
     let runs_out_facing = -read.strip.along();
 
-    // C#'s refusal IsNotNull: the Err carries the advisory, which a null could not.
+    // The cap refuses, and the error carries the advisory naming why.
     let refusal = surface_end_cap_around_a_feature::try_cap(
         &mut read.pool,
         &mut faces,
@@ -440,8 +438,8 @@ fn a_cap_with_no_ridge_to_read_refuses_by_name_rather_than_with_nothing() {
 /// drawn for - but the part says so earlier and more plainly: one face of it cannot be carried out
 /// two ways at once.
 ///
-/// Red before, and not by an advisory: the second feature's facet was never handed its ring, and
-/// the walkback read that ring anyway - a null reference thrown out of the middle of the build.
+/// A guard against the walkback reading a ring the second feature's facet was never handed, which
+/// fails in the middle of the build instead of refusing with an advisory.
 #[test]
 fn one_facet_reached_by_two_bands_is_refused_by_name() {
     let part = Arc::new(nose_in_notch_test_meshes::create());
@@ -486,13 +484,12 @@ fn one_facet_reached_by_two_bands_is_refused_by_name() {
     );
 }
 
-/// C#'s `false` with a failure: the advisory a refused build names, `None` if it built (or was
-/// refused with nothing named).
+/// The advisory a refused build names, `None` if it built (or was refused with nothing named).
 fn refusal_of(built: Result<Mesh, SurfaceBuildFailure>) -> Option<BevelAdvisory> {
     built.err().and_then(|failure| failure.advisory().cloned())
 }
 
-/// C#'s `(Vector3)reason.Args[0]`: the point an advisory names.
+/// The point an advisory names, its first argument.
 fn named_at(reason: &BevelAdvisory) -> Vector3 {
     match reason.args().first() {
         Some(BevelAdvisoryArg::Vector3(at)) => *at,
@@ -603,7 +600,7 @@ impl OneFacedReading {
         *self.feature.faces[0].ring.borrow_mut() = Some(ring);
     }
 
-    /// C#'s `TryRead(seams, out notch, out failure) && notch != null`: the notch, or why not.
+    /// The notch the seams read, or the advisory saying why there is none.
     fn try_read(
         &mut self,
         seams: SideSeams,

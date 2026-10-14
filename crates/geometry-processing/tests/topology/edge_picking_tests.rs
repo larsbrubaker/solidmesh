@@ -1,6 +1,5 @@
-//! Ports `MatterCADTests/Standard/EdgePickingTests.cs`: edge picking - turning a ray hit on a face
-//! into the feature edge the user meant, and turning that edge into the candidate readings the
-//! viewport lets them cycle through.
+//! Edge picking - turning a ray hit on a face into the feature edge the user meant, and turning
+//! that edge into the candidate readings the viewport lets them cycle through.
 
 use std::collections::HashSet;
 use std::sync::Arc;

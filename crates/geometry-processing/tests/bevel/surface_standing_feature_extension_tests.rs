@@ -1,10 +1,9 @@
-//! Port of `SurfaceStandingFeatureExtensionTests.cs`: a feature STANDING inside a band's footprint,
-//! carried out over the corner the band took until it meets the fillet - Lars's ruling, and what
-//! the Onshape control builds. The fixture is the nose in its notch: at fifteen the band takes the
-//! whole top face and runs off the x = 0 rim, undercutting the nose's two left creases, so the
-//! nose's facets are held back by the walkback, notched into the strip and extended to the trace
-//! where they meet it. The exact solid at fifteen is 5563.424, and a chorded strip closes on it
-//! from below. C# `[Arguments]` rows are a loop over the same-named test.
+//! A feature STANDING inside a band's footprint, carried out over the corner the band took until it
+//! meets the fillet - Lars's ruling, and what the Onshape control builds. The fixture is the nose
+//! in its notch: at fifteen the band takes the whole top face and runs off the x = 0 rim,
+//! undercutting the nose's two left creases, so the nose's facets are held back by the walkback,
+//! notched into the strip and extended to the trace where they meet it. The exact solid at fifteen
+//! is 5563.424, and a chorded strip closes on it from below.
 
 use std::sync::Arc;
 
@@ -46,7 +45,7 @@ fn qs_at(segments_per_quarter: i32) -> [Vector3; 2] {
     }
 }
 
-/// Closed, manifold, one shell and taken by the boolean kernel, with C#'s reasons.
+/// Closed, manifold, one shell and taken by the boolean kernel, each failure saying which.
 fn assert_closes(built: &Mesh, open_because: &str) {
     let (folded, folded_at) = surface_mesh_closure::folded_edge_count(&faces_of(built));
     assert_eq!(folded, 0, "nothing may double back - instead {folded_at:?}");
@@ -121,7 +120,7 @@ fn the_nose_is_carried_out_over_the_corner_the_band_took() {
 
 /// The same notch at a size the band does NOT run off the top face's far rim at, so its end LANDS
 /// on the face: 13.5 and 14, the two sizes between the nose and the 14.142 the face measures. The
-/// exact volumes are the closed form C# sets out: 5636.041 at 13.5 and 5611.816 at 14.
+/// exact volumes, worked out in closed form, are 5636.041 at 13.5 and 5611.816 at 14.
 #[test]
 fn the_nose_is_carried_out_over_a_landing_end_as_well() {
     for (size, segments_per_quarter, volume, exact, exit_x, upper_qx, lower_qx) in [
@@ -162,8 +161,8 @@ fn the_nose_is_carried_out_over_a_landing_end_as_well() {
             Vector3::new(upper_qx, 20.0 - upper_qx, 0.0),
             Vector3::new(lower_qx, 20.0 - lower_qx, 0.0),
         ] {
-            // The Qs stand ON the band's end plane x + y = 20, so the z the trace meets it at is the
-            // plane's own reading: the nose's upper wall is z = (2y + 20)/3 and its lower wall
+            // The Qs stand ON the band's end plane x + y = 20, so the z the trace meets it at is
+            // the plane's own reading: the nose's upper wall is z = (2y + 20)/3 and its lower wall
             // z = (40 - 2y)/3.
             let at = Vector3::new(
                 q.x,
@@ -334,8 +333,8 @@ fn the_band_that_undercuts_one_wall_carries_that_wall_out_alone() {
 
         assert_the_kernel_takes_it(&built);
 
-        // Where the crease runs out of strip, on the crease's own line: it climbs two in z for every
-        // three along the slope from the ridge end at (5, 5, 10).
+        // Where the crease runs out of strip, on the crease's own line: it climbs two in z for
+        // every three along the slope from the ridge end at (5, 5, 10).
         let crossing = Vector3::new(
             crease_crossing_x,
             crease_crossing_x,
@@ -390,7 +389,7 @@ fn the_band_that_undercuts_one_wall_carries_that_wall_out_alone() {
 
 /// How many vertices of the built mesh stand on the nose's RIDGE LINE, y = 5 and z = 10.
 fn on_the_ridge_line(built: &Mesh) -> usize {
-    // C# reads the float coordinates in float arithmetic, then compares as a double.
+    // The float coordinates are read in float arithmetic, then compared as a double.
     built
         .vertices
         .iter()

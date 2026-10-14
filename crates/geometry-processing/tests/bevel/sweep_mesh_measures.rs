@@ -1,7 +1,7 @@
 //! What the Thingi10K sweep measures a mesh by - the same questions asked of the input and of
-//! every result. Ports `Tests/GeometryProcessingTests/LevelLine/SweepMeshMeasures.cs`, the shared
-//! measures the sweep, `SwallowedSideTests`, `StripClipRibTests` and `GapFillTests` read; the
-//! level-line mesh readings the older tests use are in `level_line_test_geometry.rs`.
+//! every result. The shared measures the sweep, `swallowed_side_tests.rs`,
+//! `strip_clip_rib_tests.rs` and `gap_fill_tests.rs` read; the level-line mesh readings the older
+//! tests use are in `level_line_test_geometry.rs`.
 
 #![allow(dead_code)]
 
@@ -136,11 +136,11 @@ pub fn shell_count(vertex_count: i32, indices: &[(i32, i32, i32)]) -> i32 {
     roots.len() as i32
 }
 
-/// Whether a result intersects itself where its source did not, by the check the app's
-/// level-line route makes before it keeps a build
-/// (`LevelLineSelfIntersectionCheck.TheAnswerIntersectsItselfWhereTheSourceDidNot`): where it
-/// does, the app quietly takes the existing construction instead, so a kernel test that asks only
-/// closure passes a build the app never shows.
+/// Whether a result intersects itself where its source did not, by the check the app's level-line
+/// route makes before it keeps a build
+/// (`level_line_self_intersection_check::the_answer_intersects_itself_where_the_source_did_not`):
+/// where it does, the app quietly takes the existing construction instead, so a kernel test that
+/// asks only closure passes a build the app never shows.
 pub fn intersects_itself_where_the_source_did_not(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

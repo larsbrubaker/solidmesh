@@ -1,17 +1,17 @@
-//! Port of `SurfaceSplitsOnASegmentTests.cs`: the reading of a stretch has to STOP, and a cluster of
-//! splits finer than the ruler must come back saying it did not settle.
+//! The reading of a stretch has to STOP, and a cluster of splits finer than the ruler must come
+//! back saying it did not settle.
 //!
-//! C#'s two nested test classes are the two modules below, with C#'s test names.
+//! The two cases are the two modules below.
 
-/// C# `SurfaceSplitsOnASegmentTests.ACrowdedClusterOfSplits`.
+/// A crowded cluster of splits, finer than the ruler.
 mod a_crowded_cluster_of_splits {
     use std::collections::HashSet;
 
     use geometry_processing::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
     use vector_math::Vector3Float;
 
-    /// Three splits in a cluster finer than the ruler, on a long side: the reading must come back, and
-    /// must say it did not settle rather than handing out a stretch that repeats a vertex.
+    /// Three splits in a cluster finer than the ruler, on a long side: the reading must come back,
+    /// and must say it did not settle rather than handing out a stretch that repeats a vertex.
     #[test]
     fn the_reading_comes_back_and_says_it_did_not_settle() {
         // A part a metre across, so the ruler is a hundredth of a millimetre.
@@ -50,13 +50,13 @@ mod a_crowded_cluster_of_splits {
     }
 }
 
-/// C# `SurfaceSplitsOnASegmentTests.SplitsWellApart`.
+/// Splits well apart.
 mod splits_well_apart {
     use geometry_processing::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
     use vector_math::Vector3Float;
 
-    /// The ordinary reading, kept beside the crowded one: splits comfortably apart on a side are handed
-    /// back in order along it, and the reading says it settled.
+    /// The ordinary reading, kept beside the crowded one: splits comfortably apart on a side are
+    /// handed back in order along it, and the reading says it settled.
     #[test]
     fn are_handed_back_in_order_and_the_reading_settles() {
         let vertices = vec![

@@ -1,8 +1,7 @@
-//! Port of `SurfaceRunOutCrossesABandTests.cs`: a mixed corner's RUN-OUT crossing another chain's
-//! BAND on the same cap, sewn along the curve where the two meet instead of refused - the lobed
-//! prism's barrel rim and seam picked together with the ONE bottom edge of the flat side 10.228 mm
-//! away, which is "Every Chamfer Works.mcx"'s own seam with its cube's `(-21, 38, 0)` edge
-//! (`lobed_prism_meshes`).
+//! A mixed corner's RUN-OUT crossing another chain's BAND on the same cap, sewn along the curve
+//! where the two meet instead of refused - the lobed prism's barrel rim and seam picked together
+//! with the ONE bottom edge of the flat side 10.228 mm away, which is "Every Chamfer Works.mcx"'s
+//! own seam with its cube's `(-21, 38, 0)` edge (`lobed_prism_meshes`).
 //!
 //! A single FREE ENDED band: the band's strip ends in the plane of the wall the run-out's own foot
 //! travels in, so the three corners of the crossing curve - the touch row's, the row below it, and
@@ -10,7 +9,7 @@
 //! bead, the row below it at 41.65, no row below that reaches the band before the wall has
 //! swallowed it, and the foot enters the section the band's end cut takes out of the wall at 53.18
 //! degrees - well before the 60 the run-out would otherwise die at. `the_crossing_built` is shared
-//! with `surface_result_imports_into_manifold_tests.rs` (C# `internal`).
+//! with `surface_result_imports_into_manifold_tests.rs`.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -265,7 +264,8 @@ fn every_corner_of_the_crossing_is_one_vertex_both_surfaces_meet_at() {
 
     // Every edge of the curve used by exactly two faces is what "sewn" means, and the shell's own
     // closure says it of every edge at once - so what is left to say here is that the curve's
-    // corners are used by faces on BOTH sides, which a vertex only one surface reached would not be.
+    // corners are used by faces on BOTH sides, which a vertex only one surface reached would not
+    // be.
     for corner in [Vector3::new(3.756, 2.7404, 0.0), the_foot[0]] {
         let around = built
             .faces
@@ -473,7 +473,7 @@ fn trimming_a_seam_at_the_crossing_keeps_what_stands_a_hair_on_the_kept_side() {
     );
 }
 
-/// C# `TheCrossingBuilt`: the crossing's own shell, which the boolean kernel is asked to take as
+/// The crossing's own shell, which the boolean kernel is asked to take as
 /// well.
 pub fn the_crossing_built() -> Mesh {
     let prism = lobed_prism_meshes::create();
@@ -655,7 +655,7 @@ fn the_ideal_seed_rows(corner: &SurfaceMixedCorner, band: &SurfaceStrip) -> Vec<
         .collect();
 
     // From the cap face inward, which is the order a column is read in. Every rail stands at its
-    // own height, so C#'s unstable sort has no ties to order.
+    // own height, so the sort has no ties to order.
     rows.sort_by(|first, second| {
         (*first - corner.outer_rail_centre)
             .dot(up)

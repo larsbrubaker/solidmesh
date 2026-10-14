@@ -1,6 +1,5 @@
-//! Ports `MatterCADTests/Standard/FaceGroupTests.cs`: face-group flood fill - the "logical
-//! surface" a click on a face selects, and the feature edges that bound it, which is what a bevel
-//! is actually applied to.
+//! Face-group flood fill - the "logical surface" a click on a face selects, and the feature edges
+//! that bound it, which is what a bevel is actually applied to.
 
 use geometry_processing::topology::{EdgeConvexity, FaceGroup, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids;

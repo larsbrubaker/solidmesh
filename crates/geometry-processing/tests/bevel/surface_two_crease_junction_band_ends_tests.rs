@@ -1,13 +1,12 @@
-//! Port of `SurfaceTwoCreaseJunctionBandEndsTests.cs`: what the faces give up at the two-crease
-//! junction of `surface_two_crease_junction_reading_tests` - which bands are bounded there, and what
-//! the walk back to the tangent lines leaves standing.
+//! What the faces give up at the two-crease junction of `surface_two_crease_junction_reading_tests` -
+//! which bands are bounded there, and what the walk back to the tangent lines leaves standing.
 //!
-//! **One rule, read off the face.** A band is bounded at a junction by its edge's own stopping plane
-//! unless the face it lies on is the face some arm SHARES (`surface_junction_band_ends`). Here that
-//! turns the one-crease junction's answer over: the CUT's two faces are BOTH shared - one with each
-//! crease - so the cut is bounded on neither and the two beads' bands are what end it; and each bead
-//! is bounded only on the wall the two creases stand against, which is nobody's shared face, on its
-//! own square section.
+//! **One rule, read off the face.** A band is bounded at a junction by its edge's own stopping
+//! plane unless the face it lies on is the face some arm SHARES (`surface_junction_band_ends`).
+//! Here that turns the one-crease junction's answer over: the CUT's two faces are BOTH shared - one
+//! with each crease - so the cut is bounded on neither and the two beads' bands are what end it;
+//! and each bead is bounded only on the wall the two creases stand against, which is nobody's
+//! shared face, on its own square section.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -275,7 +274,7 @@ fn the_walls_outline_near_the_apex(walked: &SurfaceWalkbackResult) -> Vec<(Vecto
         (at.x + at.y - nose_in_notch_test_meshes::SIZE).abs() < 1e-5
     };
 
-    // Insertion order, as C#'s Dictionary iterates; only the count reaches an assertion.
+    // Kept in insertion order; only the count reaches an assertion.
     let mut order: Vec<(i32, i32)> = Vec::new();
     let mut used: HashMap<(i32, i32), i32> = HashMap::new();
 

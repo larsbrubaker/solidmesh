@@ -1,10 +1,8 @@
 //! How the Thingi10K sweep chooses what to build on a mesh: face rims taken off the smooth
-//! regions, and feature chains walked from a feature edge. Ports
-//! `Tests/GeometryProcessingTests/LevelLine/SweepPick.cs` (`SweepPick` and `SweepPicks`).
+//! regions, and feature chains walked from a feature edge.
 //!
-//! C#'s `Dictionary` and lazy `yield return` iterators become `IndexMap` (insertion order, which is
-//! what C# enumerates) and eager vectors; every `Random.Next` is drawn in C#'s order from
-//! `DotNetRandom`, so a seed names the same picks.
+//! Maps are `IndexMap` (insertion order) and every random draw comes from `DotNetRandom` in a
+//! fixed order, so a seed names the same picks on every run.
 
 use std::collections::{HashMap, HashSet};
 
@@ -153,8 +151,8 @@ fn face_rim_picks(
 ) -> Vec<SweepPick> {
     let standing = standing(indices);
     let region = regions(indices, is_feature, &standing);
-    // Regions are numbered in order of their lowest triangle, which is also the order C#'s
-    // dictionary first meets them in.
+    // Regions are numbered in order of their lowest triangle, which is also the order a walk over
+    // the triangles first meets them in.
     let mut members: Vec<Vec<i32>> = Vec::new();
     for (t, &tag) in region.iter().enumerate() {
         if tag as usize == members.len() {

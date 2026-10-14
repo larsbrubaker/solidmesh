@@ -1,6 +1,5 @@
-//! Ported test classes for `Topology/`, one file each (CLAUDE.md net 1): the
-//! `R/Tests/GeometryProcessingTests` ones and the `MatterCADTests/Standard` ones that exercise
-//! only topology, with the C# fixture builders they need (`Fixtures/*.cs`) as Rust modules.
+//! The topology test binary: the tests of `topology/`, one file per test class, with the fixture
+//! builders they need as modules of their own.
 
 #[path = "topology/bevel_edge_group_collinear_tests.rs"]
 mod bevel_edge_group_collinear_tests;

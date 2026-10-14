@@ -1,6 +1,6 @@
-//! Port of `Fixtures/SurfaceTestBuild.cs`: a surface-mode build of one part's groups, by the part
-//! builder's own steps in the part builder's own order - `BevelSurfacePartBuilder.BuildTheGroupsTogether`,
-//! which lives above the kernel crate.
+//! A surface-mode build of one part's groups, by the part builder's own steps in the part
+//! builder's own order - `BevelSurfacePartBuilder::build_the_groups_together`, which lives above
+//! the kernel crate.
 //!
 //! One copy for every kernel test that needs the whole pipeline rather than one stage of it. It is
 //! the ORDER that matters and is easy to get wrong - the interrupted-crease reading before the
@@ -10,9 +10,9 @@
 //! **Two of the part builder's gates are left out, on purpose.** It short-circuits on no plans -
 //! nothing here ever has no plan, and a test that did would want to see the advisory rather than
 //! nothing - and it reads `surface_mesh_closure::is_closed` on the ANSWER, turning an open result
-//! into `SurfaceResultNotClosed`. That last one is deliberately not taken here: closure is what most
-//! of these tests are about, and a helper that refused an open mesh would hand them a code where
-//! they want the mesh and the place it is open. Every caller asserts closure itself.
+//! into `SurfaceResultNotClosed`. That last one is deliberately not taken here: closure is what
+//! most of these tests are about, and a helper that refused an open mesh would hand them a code
+//! where they want the mesh and the place it is open. Every caller asserts closure itself.
 
 // The kernel tests that build through here land a class at a time.
 #![allow(dead_code)]
@@ -35,19 +35,18 @@ use crate::mesh_measurements::shell_count;
 use crate::surface_test_chains::join_and_open;
 
 /// Pins `section_routing::use_sections` for as long as the handle lives, then puts back the value
-/// it found - C# `LegacyConstructionPin`, and the `try { UseSections = true; ... } finally { ... }`
-/// the routing classes write out by hand.
+/// it found, even when the test fails part way.
 ///
 /// The flag is process-wide, so a test pinning it must not run beside one that sets it the other
-/// way - nextest runs each test in its own process, as C#'s `[NotInParallel]` classes ask.
+/// way - nextest runs each test in its own process, which keeps them apart.
 pub struct UseSectionsPin {
     found_use_sections: bool,
 }
 
-/// C# `LegacyConstructionPin`'s type name, for the classes that read the legacy construction.
+/// The pin's name in the classes that read the legacy construction.
 pub type LegacyConstructionPin = UseSectionsPin;
 
-/// C# `PinnedToTheLegacyConstruction`: the flag OFF, for the classes that read the LEGACY
+/// The flag OFF, for the classes that read the LEGACY
 /// construction - their passes are cases the sections would route if the flag were on, so what
 /// they assert is only true of the legacy path and they must not route.
 pub fn pinned_to_the_legacy_construction() -> LegacyConstructionPin {
@@ -72,8 +71,7 @@ impl Drop for UseSectionsPin {
     }
 }
 
-/// C# `Station(reason)` the section classes each carry: where an advisory says it went wrong, for
-/// the message of an assertion that is not met.
+/// Where an advisory says the build went wrong, for the message of an assertion that is not met.
 pub fn station(reason: Option<&BevelAdvisory>) -> String {
     match reason.and_then(|reason| reason.args().first()) {
         Some(BevelAdvisoryArg::Vector3(at)) => format!("{at:?}"),
@@ -81,12 +79,12 @@ pub fn station(reason: Option<&BevelAdvisory>) -> String {
     }
 }
 
-/// C#'s optional parameters of `TryBevel`.
+/// The optional settings of a test build.
 #[derive(Clone, Copy)]
 pub struct TryBevelOptions {
-    /// C#'s `roundProfile`: a fillet where true, a chamfer where false.
+    /// A fillet where true, a chamfer where false.
     pub round_profile: bool,
-    /// C#'s `carryTheFeatureReading`: hands the pick's own feature set down the PLAN path. A seam
+    /// Hands the pick's own feature set down the PLAN path. A seam
     /// of the ladder, off by default.
     pub carry_the_feature_reading: bool,
 }
@@ -100,8 +98,8 @@ impl Default for TryBevelOptions {
     }
 }
 
-/// What a build that ran hands back besides its answer: C#'s `plansBuilt` list, filled with the
-/// plans the build made (before the builder ran), for a test that has to read what was planned.
+/// What a build that ran hands back besides its answer: the plans the build made (before the
+/// builder ran), for a test that has to read what was planned.
 pub struct TryBevelOutcome {
     /// The plans made, whether or not the build then succeeded.
     pub plans_built: Vec<Rc<SurfaceBevelPlan>>,
@@ -109,7 +107,7 @@ pub struct TryBevelOutcome {
     pub result: Result<SurfaceBuilt, SurfaceBuildFailure>,
 }
 
-/// C# `TryBevel(part, groups, ...)`: the build from GROUPS.
+/// The build from GROUPS.
 pub fn try_bevel(
     part: &Mesh,
     groups: &[BevelEdgeGroup],
@@ -130,7 +128,7 @@ pub fn try_bevel(
     )
 }
 
-/// C# `TryBevel(part, resolutions, ...)`: the same build from RESOLUTIONS rather than groups - for
+/// The same build from RESOLUTIONS rather than groups - for
 /// a test that has to hand one group more than one edge, which only the resolution carries.
 pub fn try_bevel_resolutions(
     part: &Mesh,
@@ -158,12 +156,12 @@ pub fn try_bevel_resolutions(
 }
 
 impl TryBevelOutcome {
-    /// C#'s `bool` answer: whether the build succeeded.
+    /// Whether the build succeeded.
     pub fn built(&self) -> bool {
         self.result.is_ok()
     }
 
-    /// C#'s `out reason`: the advisory a refused build names, `None` where it built or declined
+    /// The advisory a refused build names, `None` where it built or declined
     /// with nothing named.
     pub fn reason(&self) -> Option<&BevelAdvisory> {
         self.result
@@ -172,8 +170,8 @@ impl TryBevelOutcome {
             .and_then(|failure| failure.advisory())
     }
 
-    /// C#'s `bool` and its two `out`s: the built mesh, or the advisory the build named (`None` for
-    /// a decline, a cancel or a NaN - C#'s `false` with a null `reason`).
+    /// The built mesh, or the advisory the build named (`None` for a decline, a cancel or a NaN -
+    /// a failed build that names no reason).
     pub fn mesh_or_reason(&self) -> Result<&Mesh, Option<&BevelAdvisory>> {
         match &self.result {
             Ok(built) => Ok(&built.mesh),
@@ -182,8 +180,8 @@ impl TryBevelOutcome {
     }
 }
 
-/// The assertions the section owner-file classes make of every build they expect to publish: built, closed, at most two faces on an edge, one
-/// shell, and readable by a second pass.
+/// The assertions the section owner-file classes make of every build they expect to publish: built,
+/// closed, at most two faces on an edge, one shell, and readable by a second pass.
 pub fn the_closed_readable_mesh(outcome: &TryBevelOutcome) -> &Mesh {
     let mesh = match outcome.mesh_or_reason() {
         Ok(mesh) => mesh,
@@ -209,8 +207,8 @@ pub fn the_closed_readable_mesh(outcome: &TryBevelOutcome) -> &Mesh {
     mesh
 }
 
-/// The mesh a build that has to succeed hands back - C#'s `IsTrue().Because(...)` on `TryBevel`
-/// followed by its `out built` - or the failure, named, with `because`.
+/// The mesh a build that has to succeed hands back, or a test failure that names the reason,
+/// with `because`.
 pub fn expect_built(outcome: TryBevelOutcome, because: &str) -> Mesh {
     match outcome.result {
         Ok(built) => built.mesh,
@@ -218,8 +216,8 @@ pub fn expect_built(outcome: TryBevelOutcome, because: &str) -> Mesh {
     }
 }
 
-/// The three checks nearly every built answer is held to: closed (`SurfaceMeshClosure.IsClosed`),
-/// manifold, and one shell.
+/// The three checks nearly every built answer is held to: closed
+/// (`surface_mesh_closure::is_closed`), manifold, and one shell.
 pub fn assert_sound(mesh: &Mesh) {
     let (closed, open_at) = surface_mesh_closure::is_closed(mesh);
 

@@ -1,6 +1,6 @@
-//! Port of `LevelLine/TopAndRoundCornerRoomTests.cs`: "Top & Round Should be Union.mcx", its
-//! second fillet as the app route hands it to the kernel - three open chains that all run between
-//! the same two corners. Size 3.756, which the old construction built cleanly.
+//! "Top & Round Should be Union.mcx", its second fillet as the app route hands it to the kernel -
+//! three open chains that all run between the same two corners. Size 3.756, which the old
+//! construction built cleanly.
 
 use std::rc::Rc;
 

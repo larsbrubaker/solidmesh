@@ -1,7 +1,7 @@
-//! Port of `SurfaceRunOutLensReadingsTests.cs`: the two arithmetics the LENS is read by, each on
-//! its own - which row slot a column's own top takes (`surface_run_out_column_ends`), and where
-//! the touch row leaves the face it runs across (`surface_mixed_corner_bites`). The second reads
-//! the L prism's mixed corner from `surface_mixed_corner_reading_tests::the_mixed_corner`.
+//! The two arithmetics the LENS is read by, each on its own - which row slot a column's own top
+//! takes (`surface_run_out_column_ends`), and where the touch row leaves the face it runs across
+//! (`surface_mixed_corner_bites`). The second reads the L prism's mixed corner from
+//! `surface_mixed_corner_reading_tests::the_mixed_corner`.
 
 use geometry_processing::bevel::surface::surface_mixed_corner_bites::try_where_the_touch_row_leaves_the_face;
 use geometry_processing::bevel::surface::surface_run_out_column_ends::try_the_slot_the_top_takes;

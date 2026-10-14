@@ -1,11 +1,10 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/UnstoppableBuildTests.cs`: a build the caller can
-//! always STOP - the pinch search included. The pinch ladder once built its probes on a budget of
-//! its OWN, made per probe and carrying no token, so the stop button had nothing to stop; the
-//! hourglass pinches in milliseconds and runs exactly that ladder, so the requirement is stated on
-//! it, with no wall clock in any assert.
+//! A build the caller can always STOP - the pinch search included. The pinch ladder once built its
+//! probes on a budget of its OWN, made per probe and carrying no token, so the stop button had
+//! nothing to stop; the hourglass pinches in milliseconds and runs exactly that ladder, so the
+//! requirement is stated on it, with no wall clock in any assert.
 //!
-//! C#'s `Task.Run` plus `Task.WhenAny(build, Task.Delay(Watchdog))` is a worker thread and a
-//! channel read with the watchdog as its timeout; the build's `Rc` state lives on that thread.
+//! The build runs on a worker thread, and the test reads its channel with the watchdog as the
+//! timeout; the build's `Rc` state lives on that thread.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -25,7 +24,7 @@ use crate::level_line_room_geometry::hourglass_solid;
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Watchdog`: the watchdog for a build that never comes back. Never a timing rule.
+/// The watchdog for a build that never comes back. Never a timing rule.
 const WATCHDOG: Duration = Duration::from_secs(60);
 
 /// Whether `now` is a budget in force that is not `budget`.
@@ -33,7 +32,7 @@ fn another_budget(now: &Option<Rc<WorkBudget>>, budget: &Rc<WorkBudget>) -> bool
     now.as_ref().is_some_and(|now| !Rc::ptr_eq(now, budget))
 }
 
-/// C# `ACancelDuringAPinchProbeEndsTheBuild`: a cancel asked for while a PINCH PROBE is running
+/// A cancel asked for while a PINCH PROBE is running
 /// ends the whole build, as cancellation and not as a refusal.
 #[test]
 fn a_cancel_during_a_pinch_probe_ends_the_build() {
@@ -113,7 +112,7 @@ fn a_cancel_during_a_pinch_probe_ends_the_build() {
     );
 }
 
-/// C# `ThePinchSearchSpendsOneBuildsAllowanceInAll`.
+/// The pinch search spends one builds allowance in all.
 #[test]
 fn the_pinch_search_spends_one_builds_allowance_in_all() {
     let (positions, indices, rim) = hourglass_solid(10.0, 2.0, 4.0, 4.0);

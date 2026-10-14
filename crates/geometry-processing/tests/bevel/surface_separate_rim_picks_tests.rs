@@ -1,4 +1,4 @@
-//! Port of `SurfaceSeparateRimPicksTests.cs`: a run of a tessellated rim picked ONE EDGE AT A TIME
+//! Separate rim picks tests: a run of a tessellated rim picked ONE EDGE AT A TIME
 //! against the same edges picked as one selection, and what the surface construction leaves at the
 //! two ends of a run that stops part way round.
 //!
@@ -7,9 +7,9 @@
 //! the run one whole-run pick would have made, down to the vertex; picked all the way round, the
 //! same joint has to come back as one CLOSED loop. The second is what an OPEN run does at its two
 //! free ends: the surface construction stops SQUARE in the plane through the picked vertex and says
-//! so (`SurfaceRunStopsSquareAtBothEnds`). What is pinned is read off closed forms - the band is the
-//! size asked for at every station, it never crosses the end plane, and the unpicked neighbour is
-//! untouched. The fixture is a 24 sided cylinder. C# `[Arguments]` rows are a loop. The fixture
+//! so (`SurfaceRunStopsSquareAtBothEnds`). What is pinned is read off closed forms - the band is
+//! the size asked for at every station, it never crosses the end plane, and the unpicked neighbour
+//! is untouched. The fixture is a 24 sided cylinder; a test over several cases loops. The fixture
 //! helpers are `pub` for `surface_cone_rim_tests.rs` and the routed-accuracy readings.
 
 use std::rc::Rc;
@@ -277,7 +277,7 @@ pub fn the_top_rim(features: &FeatureEdgeSet) -> Vec<FeatureEdge> {
         .copied()
         .collect();
 
-    // C#'s OrderBy is stable, as `sort_by` is.
+    // A stable sort, so edges at equal angles keep their mesh order.
     rim.sort_by(|a, b| {
         angle_of(a)
             .partial_cmp(&angle_of(b))
@@ -312,7 +312,7 @@ pub fn each_on_its_own(features: &FeatureEdgeSet, run: &[FeatureEdge]) -> Vec<Be
 }
 
 /// The same edges as ONE selection - a resolution carrying all of them, which is the shape a
-/// single pick that read the whole run hands the kernel (C#'s `BevelEdgeGroupResolution.Succeeded`).
+/// single pick that read the whole run hands the kernel (a succeeded `BevelEdgeGroupResolution`).
 pub fn one_selection_of(
     features: &Arc<FeatureEdgeSet>,
     run: &[FeatureEdge],
@@ -335,7 +335,7 @@ fn options(round: bool) -> TryBevelOptions {
     }
 }
 
-/// C# `Built(part, groups, ...)`: the build from groups, which has to succeed, and its plans.
+/// The build from groups, which has to succeed, and its plans.
 pub fn built(
     part: &Mesh,
     groups: &[BevelEdgeGroup],
@@ -353,7 +353,7 @@ pub fn built(
     finish(outcome)
 }
 
-/// C# `Built(part, resolutions, ...)`.
+/// The build from resolutions, which has to succeed, and its plans.
 pub fn built_resolutions(
     part: &Mesh,
     resolutions: &[BevelEdgeGroupResolution],
@@ -413,8 +413,8 @@ pub fn farthest_vertex_from(from: &Mesh, to: &Mesh) -> (f64, Vector3) {
 
 /// The two ends of the run - the rim vertices only one picked edge stands on.
 pub fn free_ends(run: &[FeatureEdge]) -> Vec<Vector3> {
-    // C#'s GroupBy keeps the groups in the order their first point was met; Math.Round(x, 6) is
-    // banker's rounding.
+    // The groups keep the order their first point was met; rounding to six places is banker's
+    // rounding (ties to even).
     let key = |point: Vector3| {
         (
             (point.x * 1e6).round_ties_even() as i64,
@@ -482,7 +482,7 @@ pub fn the_bands_own_vertices(part: &Mesh, built: &Mesh, run: &[FeatureEdge]) ->
         .map(|&vertex| Vector3::from_vector3_float(vertex))
         .collect();
 
-    // C#'s Distinct: exact equality, first occurrence kept, in order.
+    // Distinct by exact equality, first occurrence kept, in order.
     let mut distinct: Vec<Vector3> = Vec::new();
     for vertex in built
         .vertices

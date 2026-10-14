@@ -1,6 +1,5 @@
-//! Rust-only checks of the gp2 records that have no C# test class of their own: the
-//! Newtonsoft-shaped JSON of `BevelEdgeGroup`, the advisory equality rules, and the
-//! copy-not-mutate contract of `bevel_group_edits`.
+//! Rust-only checks of the gp2 records: the saved JSON shape of `BevelEdgeGroup`, the advisory
+//! equality rules, and the copy-not-mutate contract of `bevel_group_edits`.
 
 use std::sync::Arc;
 

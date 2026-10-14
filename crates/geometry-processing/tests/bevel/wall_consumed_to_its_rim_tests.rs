@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/WallConsumedToItsRimTests.cs`: a fillet on the
-//! top edge of a wall exactly as tall as the fillet - the ball's tangent line on the wall is the
-//! wall's own bottom rim, so the wall is consumed down to that rim. It must build, and just above
-//! it must not.
+//! A fillet on the top edge of a wall exactly as tall as the fillet - the ball's tangent line on
+//! the wall is the wall's own bottom rim, so the wall is consumed down to that rim. It must build,
+//! and just above it must not.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
@@ -17,7 +16,7 @@ use crate::sweep_mesh_measures::{is_closed_and_consistent, kept, shell_count};
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Plate`: a 20 x 20 x 2 plate, the cube scaled in x and y; its top front edge [7, 6] is the
+/// A 20 x 20 x 2 plate, the cube scaled in x and y; its top front edge [7, 6] is the
 /// pick.
 fn plate() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     let (cube, indices) = cube_solid(1.0);
@@ -29,7 +28,7 @@ fn plate() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     )
 }
 
-/// C# `Build`: the top front edge at `size`, and its fill where the band built.
+/// The top front edge at `size`, and its fill where the band built.
 fn build(size: f64) -> (BandGapResult, Option<GapFillResult>) {
     let (positions, indices) = plate();
     let gap = band_gap_entry_points::build(
@@ -54,7 +53,7 @@ fn build(size: f64) -> (BandGapResult, Option<GapFillResult>) {
     (gap, fill)
 }
 
-/// C# `AFilletAsTallAsTheWallBuildsDownToTheRim`.
+/// A fillet as tall as the wall builds down to the rim.
 #[test]
 fn a_fillet_as_tall_as_the_wall_builds_down_to_the_rim() {
     let (positions, indices) = plate();
@@ -89,9 +88,9 @@ fn a_fillet_as_tall_as_the_wall_builds_down_to_the_rim() {
     });
     assert!(!wall_left);
 
-    // The profile the fill lays is four facets through GapFill.ArcPoint's stations, and the fillet
-    // runs straight between two flat end faces, so the solid taken is exactly that polygon along
-    // 20 mm. Read in the (y, z) section.
+    // The profile the fill lays is four facets through `gap_fill::arc_point`'s stations, and the
+    // fillet runs straight between two flat end faces, so the solid taken is exactly that polygon
+    // along 20 mm. Read in the (y, z) section.
     const FACETS: i32 = 4;
     let corner = Vector3::new(0.0, 10.0, 1.0);
     let on_top = Vector3::new(0.0, 8.0, 1.0);
@@ -113,7 +112,7 @@ fn a_fillet_as_tall_as_the_wall_builds_down_to_the_rim() {
     assert!((removed - (20.0 * f64::abs(area) / 2.0)).abs() <= 1e-9);
 }
 
-/// C# `UnderTheWallBuildsAndAboveIsRefused`.
+/// Under the wall builds and above is refused.
 #[test]
 fn under_the_wall_builds_and_above_is_refused() {
     let (under, under_fill) = build(1.5);
@@ -127,7 +126,7 @@ fn under_the_wall_builds_and_above_is_refused() {
     assert_eq!(above.refusal, BandGapRefusal::Size);
 }
 
-/// C# `EverySizeBetweenTheRoomAndTheRimBuilds`.
+/// Every size between the room and the rim builds.
 #[test]
 fn every_size_between_the_room_and_the_rim_builds() {
     let margin = band_gap_reading::room_margin(1.0, 1e-9);
@@ -150,7 +149,7 @@ fn every_size_between_the_room_and_the_rim_builds() {
     }
 }
 
-/// C# `AClosedRimAtTheWallsHeightIsTheSameFreshAndHandedItsRoom`.
+/// A closed rim at the wall's height reads the same fresh and handed its room.
 #[test]
 fn a_closed_rim_at_the_walls_height_is_the_same_fresh_and_handed_its_room() {
     let (positions, indices) = plate();

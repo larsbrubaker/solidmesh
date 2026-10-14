@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/SurfaceRunOutColumnTopTests.cs`: what tops a run-out's
-//! column at a station standing BETWEEN two of the cap band's row crossings
+//! What tops a run-out's column at a station standing BETWEEN two of the cap band's row crossings
 //! (`SurfaceRunOutColumnWalk::the_chord_between_two_crossings_tops_it`), and what it does when
-//! everything about the station says the band's chord tops it but the chord has no start. Driven
-//! on its own numbers rather than through a build, as the C# is.
+//! everything about the station says the band's chord tops it but the chord has no start. Driven on
+//! its own numbers rather than through a build.
 
 use geometry_processing::bevel::surface::SurfaceRunOutColumnWalk;
 

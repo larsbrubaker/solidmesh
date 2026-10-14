@@ -1,16 +1,18 @@
-//! Port of `SurfaceRunOutCrossesAWallBandTests.cs`: a mixed corner's RUN-OUT crossing a band
-//! standing on the WALL it turns against, sewn along the curve the two meet in - the lobed prism's
-//! barrel rim and seam picked together with the single VERTICAL edge of the flat side, which is
-//! "Every Chamfer Works.mcx"'s own seam with the cube's (-21, 28, z) edge (`lobed_prism_meshes`).
+//! A mixed corner's RUN-OUT crossing a band standing on the WALL it turns against, sewn along the
+//! curve the two meet in - the lobed prism's barrel rim and seam picked together with the single
+//! VERTICAL edge of the flat side, which is "Every Chamfer Works.mcx"'s own seam with the cube's
+//! (-21, 28, z) edge (`lobed_prism_meshes`).
 //!
 //! The dual of `surface_run_out_crosses_a_band_tests`. A band on the CAP the run-out travels across
-//! ends its ROWS, each at its own turn; a band on the WALL it turns against ends its COLUMNS, each at
-//! its own radius - the band simply stands in front of the wall from the turn the two first meet,
-//! and the column ends on it instead. Measured: the band's rails cross the torus at 45.12, 49.64,
-//! 52.19 and 53.16 degrees past the bead, at heights 0.7037, 0.3579, 0.1140 and 0.0049 over the cap,
-//! and the curve leaves the patch through the CAP at about 53.2. The first of them, on the rail that
-//! stands in the wall itself, is [3.756, 0, 0.7037] - exactly where the run-out's own foot crosses
-//! that band's tangent line. The lobed prism's picks are shared with the cap band's class.
+//! ends its ROWS, each at its own turn; a band on the WALL it turns against ends its COLUMNS, each
+//! at its own radius - the band simply stands in front of the wall from the turn the two first
+//! meet, and the column ends on it instead. Measured: the band's rails cross the torus at 45.12,
+//! 49.64,
+//! 52.19 and 53.16 degrees past the bead, at heights 0.7037, 0.3579, 0.1140 and 0.0049 over the
+//! cap, and the curve leaves the patch through the CAP at about 53.2. The first of them, on the
+//! rail that stands in the wall itself, is [3.756, 0, 0.7037] - exactly where the run-out's own
+//! foot crosses that band's tangent line. The lobed prism's picks are shared with the cap band's
+//! class.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -124,7 +126,8 @@ fn a_band_across_the_axis_is_refused_by_name() {
 /// run-out's columns are prefixes by construction.
 ///
 /// The numbers on this fixture: the profile's furthest turn is the last crossed rail's own, 53.162
-/// degrees past the bead, where the two crossings of the ray meet at radius 7.3205 - well inside the
+/// degrees past the bead, where the two crossings of the ray meet at radius 7.3205 - well inside
+/// the
 /// 7.512 the touch row stands at. The far crossing comes inside that circle at 53.099, so the lens
 /// is the 0.064 degrees between them. It is not a chording artefact: the ideal circle turns back at
 /// 53.2 with its crossings meeting near 7.6, which leaves the same lens 0.03 degrees wide.
@@ -212,7 +215,8 @@ fn a_wall_that_runs_out_under_the_blend_does_not_restation_the_bands_own_crossin
     let seed = the_seed_column(&mut pool, &corner);
     let step = corner.turn_radians() / 8.0;
 
-    // The plane across a wall's own end, put far enough along the turn to have crossings of its own.
+    // The plane across a wall's own end, put far enough along the turn to have crossings of its
+    // own.
     let ends_on = SurfaceBandEnd::new(
         corner.outer_rail_point(
             corner.turn_radians() + (surface_mixed_corner_run_out::clears_the_wall() / 2.0),
@@ -295,9 +299,9 @@ fn the_seed_column(pool: &mut SurfaceVertexPool, corner: &SurfaceMixedCorner) ->
         .collect()
 }
 
-/// The far side of the band's profile is only the SAME as the near side at the one rail the
-/// profile turns back at. At every other crossed rail the ray meets the profile twice and the far
-/// side is a real crossing of its own - which is what says whether the touch row still stands there.
+/// The far side of the band's profile is only the SAME as the near side at the one rail the profile
+/// turns back at. At every other crossed rail the ray meets the profile twice and the far side is a
+/// real crossing of its own - which is what says whether the touch row still stands there.
 ///
 /// Answered from the rail itself at the turn-back, because there the ray touches the profile
 /// without crossing it and a crossing test reads no crossing at all. Answered from the rail
@@ -345,10 +349,9 @@ fn the_far_side_is_the_near_one_only_where_the_profile_turns_back() {
 }
 
 /// The whole shell: the run-out's columns ended on the band and the band's strip cut back to the
-/// same curve, so the part closes. C# `[Arguments(3.756)]`, one row.
+/// same curve, so the part closes, at a size of 3.756.
 #[test]
 fn the_run_out_and_the_walls_band_are_sewn_along_the_curve_they_cross_in() {
-    // C#'s one `[Arguments]` row.
     let size = 3.756;
     let built = the_crossing_built(size);
 
@@ -636,7 +639,7 @@ fn meets_of(corner: &Rc<SurfaceMixedCorner>, band: &SurfaceStrip) -> SurfaceRunO
         .expect("the band stands on the wall the run-out turns against")
 }
 
-/// C# `TheCrossingBuilt`: the crossing's own shell.
+/// The crossing's own shell.
 fn the_crossing_built(size: f64) -> Mesh {
     let prism = lobed_prism_meshes::create();
     let regions = lobed_regions(&prism);

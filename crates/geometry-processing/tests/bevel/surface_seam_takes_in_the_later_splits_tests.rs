@@ -1,14 +1,13 @@
-//! Port of `SurfaceSeamTakesInTheLaterSplitsTests.cs`: two chains picked at once whose bands share
-//! a face. A corner of one chain bites that face, and the bite's clip lands NEW vertices on the
-//! OTHER chain's tangent line. The sewing knits those vertices into the face that keeps them, so the
-//! strip across that line has to sew to them too - and the strip's seam was read from the walkback,
-//! before the bite happened.
+//! Two chains picked at once whose bands share a face. A corner of one chain bites that face, and
+//! the bite's clip lands NEW vertices on the OTHER chain's tangent line. The sewing knits those
+//! vertices into the face that keeps them, so the strip across that line has to sew to them too -
+//! and the strip's seam was read from the walkback, before the bite happened.
 //!
 //! The fixture is the lobed prism's barrel wall and its `x = 0` end wall, both picked as faces:
 //! "Every Chamfer Works.mcx"'s own cube-and-cylinder, and its own two picks. At the fixture's own
-//! 3.756 the two bands also OVERLAP where the chains meet at the prism's corner, which leaves a hole
-//! of its own; 2.5 is the largest of the sizes tried that is clear of that second cause and still
-//! bites the shared face, so it is what this test measures.
+//! 3.756 the two bands also OVERLAP where the chains meet at the prism's corner, which leaves a
+//! hole of its own; 2.5 is the largest of the sizes tried that is clear of that second cause and
+//! still bites the shared face, so it is what this test measures.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -57,7 +56,7 @@ fn the_barrel_and_the_side_rim_together_close_over_their_shared_face() {
 
 /// How many (vertex, face edge) pairs have the vertex standing strictly inside the edge - the
 /// signature of a seam stitched as the walkback left it rather than as the mesh now stands.
-// The negated comparison is C#'s `!(x > 0)`, which skips a NaN as well.
+// The negated comparison `!(x > 0)` skips a NaN as well as zero.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn t_junctions(mesh: &Mesh) -> i32 {
     let mut found = 0;
@@ -71,7 +70,7 @@ fn t_junctions(mesh: &Mesh) -> i32 {
                 Vector3::from_vector3_float(mesh.vertices[corners[(corner + 1) % 3] as usize])
                     - from;
 
-            // C#'s `!(run.LengthSquared > 0)`, which skips a NaN as well.
+            // Skips a zero-length edge, and a NaN as well.
             if !(run.length_squared() > 0.0) {
                 continue;
             }

@@ -1,7 +1,7 @@
-//! Port of `LevelLine/VirtualRailTests.cs`: flow rung 2, the unclipped strip - on the rib
-//! synthetic (`StripClipRibTests`) with the rib's opposite-sense creases bounding the room only at
-//! their far ends (`GrowingCreaseRuns`), the top side's rail runs on in the top's plane at the
-//! setback where the band has passed the rib's creases.
+//! Flow rung 2, the unclipped strip - on the rib synthetic (`strip_clip_rib_tests.rs`) with the
+//! rib's opposite-sense creases bounding the room only at their far ends (`GrowingCreaseRuns`), the
+//! top side's rail runs on in the top's plane at the setback where the band has passed the rib's
+//! creases.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::end_face_fill_try;
@@ -34,7 +34,7 @@ fn least(l: &GapLoop) -> f64 {
     l.parameters.iter().copied().fold(f64::INFINITY, f64::min)
 }
 
-/// C# `TheTopsRailRunsOnVirtuallyPastTheRib`.
+/// The tops rail runs on virtually past the rib.
 #[test]
 fn the_tops_rail_runs_on_virtually_past_the_rib() {
     let positions = strip_clip_rib_meshes::positions(None);
@@ -42,7 +42,7 @@ fn the_tops_rail_runs_on_virtually_past_the_rib() {
     let gap = build(&positions, &indices);
 
     let mut runs: Vec<GapLoop> = gap.loops.iter().filter(|l| l.side == 1).cloned().collect();
-    // C# `OrderBy` is stable.
+    // A stable sort, so loops with equal keys keep their order.
     runs.sort_by(|a, b| least(a).total_cmp(&least(b)));
     let mut minted = Vec::new();
     let joined = if runs.len() == 2 {
@@ -92,10 +92,7 @@ fn the_tops_rail_runs_on_virtually_past_the_rib() {
     // (StripClip): the fill closes with no open edge left anywhere.
     let mut sides_two = gap.loops.iter().filter(|l| l.side == 2);
     let side_two = sides_two.next().expect("one side-2 loop").clone();
-    assert!(
-        sides_two.next().is_none(),
-        "C# `Single`: exactly one side-2 loop"
-    );
+    assert!(sides_two.next().is_none(), "exactly one side-2 loop");
     let rows = end_face_fill_try::try_end_faces(
         &gap,
         joined,
@@ -119,7 +116,7 @@ fn the_tops_rail_runs_on_virtually_past_the_rib() {
     assert_eq!(plain.loops.iter().filter(|l| l.side == 1).count(), 1);
 }
 
-/// C# `AFillAnsweringAnEdgeNothingKeptStandsOnIsRefused`: the closure check sees an unclosed hole.
+/// The closure check sees an unclosed hole.
 #[test]
 fn a_fill_answering_an_edge_nothing_kept_stands_on_is_refused() {
     let positions = vec![

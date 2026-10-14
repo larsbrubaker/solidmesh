@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TopCenterFaceTests.cs`: "Top Center Face.mcx"'s
-//! top face (f6 in the app sweep), three facets at z = 20 whose rim turns in at a reflex corner
-//! (-10, -108.5, 20). Filleted at 0.1 the level line once left a vertex 0.88 r off the source
-//! surface, out of reach of any fillet band. The class's `ToTriangle` lives in
+//! "Top Center Face.mcx"'s top face (f6 in the app sweep), three facets at z = 20 whose rim turns
+//! in at a reflex corner (-10, -108.5, 20). Filleted at 0.1 the level line once left a vertex 0.88
+//! r off the source surface, out of reach of any fillet band. The class's `ToTriangle` lives in
 //! `end_face_measures.rs`, which the other classes reading it share.
 
 use std::collections::HashSet;
@@ -16,7 +15,7 @@ use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::sweep_mesh_measures::{is_closed_and_consistent, kept, shell_count};
 
-/// C# `TheTopFaceFilletStaysOnTheBand`.
+/// The top face fillet stays on the band.
 #[test]
 fn the_top_face_fillet_stays_on_the_band() {
     let fixture = Rc::new(LevelLineFixture::load("top-center-face-f6-r01"));

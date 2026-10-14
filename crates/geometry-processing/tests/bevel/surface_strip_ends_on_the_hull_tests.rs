@@ -1,7 +1,6 @@
-//! Port of `SurfaceStripEndsOnTheHullTests.cs`: where the strip over "UpperLeftInner should
-//! bevel.mcx"'s upper left crease leaves the PART at its rim end - the seven rails of a 3 mm round
-//! at 8 segments, read against the six planes the cube is bounded by. C# `[Arguments]` rows are
-//! loops over the same-named test.
+//! Where the strip over "UpperLeftInner should bevel.mcx"'s upper left crease leaves the PART at
+//! its rim end - the seven rails of a 3 mm round at 8 segments, read against the six planes the
+//! cube is bounded by.
 //!
 //! The band on the left wall runs off it over the last 1.8866 mm of the crease, so there is no face
 //! left at that end for the strip to be cut back against: what ends it is the part's own outside.

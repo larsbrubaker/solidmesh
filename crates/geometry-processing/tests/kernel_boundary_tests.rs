@@ -1,11 +1,9 @@
-//! Ports `KernelBoundaryTests`: the kernel stays free of scene, UI and app code. C# reads the
-//! assembly's references; here the crate's own `Cargo.toml` `[dependencies]` table is the same
-//! fact.
+//! Kernel boundary tests: the kernel stays free of scene, UI and app code, read off the crate's own
+//! `Cargo.toml` `[dependencies]` table.
 //!
-//! The C# forbidden assemblies map to the Rust crates that carry them: `Gui` to `agg-gui*`,
-//! `Localizations`/`MatterCAD.Common`/`MatterCADLib` to the app and settings crates,
-//! `DataConverters3D` to `mattercad-model`. The required ones are `PolygonMesh`, `VectorMath`
-//! and `Agg`, the path model the `Path/` folder uses (here `agg-path`).
+//! Forbidden are the UI (`agg-gui*`), the app, settings, renderer and static-data crates, and the
+//! scene model (`mattercad-model`). Required are `polygon-mesh`, `vector-math` and `agg-path`, the
+//! path model the `path/` module uses.
 
 const FORBIDDEN_PREFIXES: [&str; 6] = [
     "agg-gui",

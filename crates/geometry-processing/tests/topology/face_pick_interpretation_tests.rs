@@ -1,8 +1,7 @@
-//! Ports `GeometryProcessingTests/FacePickInterpretationTests.cs`: face regions as readings of a
-//! pick - "bevel the top of this box" said by pointing at the box. A pick offers the rim of each
-//! of the two faces its edge divides, and a click in the middle of a face offers that face's rim
-//! and nothing else. The region is flooded at the pick's FLAT tolerance, not at the thirty degree
-//! curve tolerance a chain walks with.
+//! Face regions as readings of a pick - "bevel the top of this box" said by pointing at the box. A
+//! pick offers the rim of each of the two faces its edge divides, and a click in the middle of a
+//! face offers that face's rim and nothing else. The region is flooded at the pick's FLAT
+//! tolerance, not at the thirty degree curve tolerance a chain walks with.
 
 use std::collections::HashSet;
 use std::sync::Arc;

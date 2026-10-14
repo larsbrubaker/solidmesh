@@ -1,11 +1,10 @@
-//! Port of the test fixture `LevelLine/TwoHoleBridgeFixture.cs`: a stadium plate with TWO round
-//! through-holes side by side whose facing rims stand `GAP_IN_SIZES` sizes apart, and whose top
-//! face between them is tiled by triangles that SPAN the two rims - the small stand-in for the
-//! Many Holes bridge, the shape of input triangulation the witness has and `grid_hole_plate_fixture`
-//! does not. Built as five tiled regions (a middle strip, a cap strip round each hole's outer arc,
-//! a quad above and below) so nothing is ear-clipped and no edge carries a T-vertex; the bottom is
-//! the same tiling wound the other way and the walls are one quad per rim edge, so the part is a
-//! closed solid. Read by `bridge_fixture_tests`.
+//! Test fixture: a stadium plate with TWO round through-holes side by side whose facing rims stand
+//! `GAP_IN_SIZES` sizes apart, and whose top face between them is tiled by triangles that SPAN the
+//! two rims - the small stand-in for the Many Holes bridge, the shape of input triangulation the
+//! witness has and `grid_hole_plate_fixture` does not. Built as five tiled regions (a middle strip,
+//! a cap strip round each hole's outer arc, a quad above and below) so nothing is ear-clipped and
+//! no edge carries a T-vertex; the bottom is the same tiling wound the other way and the walls are
+//! one quad per rim edge, so the part is a closed solid. Read by `bridge_fixture_tests`.
 
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -37,13 +36,13 @@ pub const MARGIN_IN_SIZES: f64 = 6.0;
 /// Thick enough that no chain's own wall bounds it at `SIZE`.
 const THICKNESS: f64 = 3.0;
 
-/// C# `Pick(radiusInSizes: ...)` with every other argument its default (32 ring segments, the
-/// default gap and size).
+/// The pick with holes of the given radius (in sizes) and every other setting its default (32 ring
+/// segments, the default gap and size).
 pub fn pick_with_radius(radius_in_sizes: f64) -> SolidWithChains {
     pick(32, radius_in_sizes, GAP_IN_SIZES, SIZE)
 }
 
-/// C# `Pick`: the plate and the two hole rims, hole A (at -x) first, both walked
+/// The plate and the two hole rims, hole A (at -x) first, both walked
 /// counter-clockwise seen from +z. `ring_segments` must be a multiple of four (at least 8) so the
 /// four quadrant points are ring vertices.
 pub fn pick(
@@ -182,7 +181,7 @@ pub fn pick(
     (welder.positions, indices, chains)
 }
 
-/// C#'s local `At`: the positions so far, welded by rounding to a nanometre.
+/// The positions so far, welded by rounding to a nanometre.
 #[derive(Default)]
 struct Welder {
     positions: Vec<Vector3>,
@@ -192,8 +191,8 @@ struct Welder {
 impl Welder {
     /// The index of the point at (x, y, z), added if no point is there yet. Rounding to a
     /// nanometre welds the pieces that meet; the regions share their boundary points by
-    /// construction, so nothing that should stay apart is ever within it. C#'s `Math.Round` is
-    /// banker's rounding.
+    /// construction, so nothing that should stay apart is ever within it. The rounding is
+    /// banker's rounding (ties to even).
     fn at(&mut self, x: f64, y: f64, z: f64) -> i32 {
         let key = (
             (x * 1e6).round_ties_even() as i64,
@@ -208,13 +207,13 @@ impl Welder {
     }
 }
 
-/// C#'s local `Quad`: one quad as two triangles, (a, b, c) and (a, c, d).
+/// One quad as two triangles, (a, b, c) and (a, c, d).
 fn quad(indices: &mut Vec<(i32, i32, i32)>, [a, b, c, d]: [i32; 4]) {
     indices.push((a, b, c));
     indices.push((a, c, d));
 }
 
-/// C# `OuterLoop`: the plate's outer boundary counter-clockwise seen from +z - the top edge right
+/// The plate's outer boundary counter-clockwise seen from +z - the top edge right
 /// to left, hole A's outer arc, the bottom edge left to right, then hole B's outer arc.
 fn outer_loop(d: f64, outer: f64, ring_segments: i32, step: f64, quarter: f64) -> Vec<(f64, f64)> {
     let half = ring_segments / 2;
@@ -234,12 +233,12 @@ fn outer_loop(d: f64, outer: f64, ring_segments: i32, step: f64, quarter: f64) -
     points
 }
 
-/// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
+/// The pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }
 
-/// C# `Build` (chamfer, its default profile): one JOINT band build of both rims - the build the
+/// One chamfer (the default profile) JOINT band build of both rims - the build the
 /// bridge defect shows up in.
 pub fn build(
     positions: &[Vector3],

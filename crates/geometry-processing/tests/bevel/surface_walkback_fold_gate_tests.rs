@@ -1,7 +1,7 @@
-//! Port of `SurfaceWalkbackFoldGateTests.cs`: the walkback's own output is read for FOLDS before
-//! anything is built on it - an edge two of its faces walk the same way, or an edge three of them
-//! use at all (`surface_mesh_closure::folded_edge_count`) - and the lobe wall's walkback really is
-//! fold-free at every size the sweep reads it at (`surface_face_walkback::try_apply_one`).
+//! The walkback's own output is read for FOLDS before anything is built on it - an edge two of its
+//! faces walk the same way, or an edge three of them use at all
+//! (`surface_mesh_closure::folded_edge_count`) - and the lobe wall's walkback really is fold-free
+//! at every size the sweep reads it at (`surface_face_walkback::try_apply_one`).
 
 use std::sync::Arc;
 
@@ -59,7 +59,7 @@ fn a_pair_and_an_open_rim_are_not() {
 
 /// And the walkback of the lobe wall's rim really is fold-free, at every size the sweep reads it
 /// at - including the ones whose BUILD refuses later, which is how the refusal is known not to be
-/// the walkback's. (C#'s `[Arguments]` cases, one loop.)
+/// the walkback's.
 #[test]
 fn the_lobe_walls_walkback_has_no_fold_in_it() {
     for radius in [0.02, 0.04, 0.05, 0.09, 0.1, 0.11, 0.25] {

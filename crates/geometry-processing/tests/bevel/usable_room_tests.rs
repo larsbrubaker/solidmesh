@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/UsableRoomTests.cs`: what the room a refusal
-//! names MEANS - it is the largest size that builds, so asking for exactly it is answered with a
-//! solid and not with the same refusal again. C# `[Arguments]` rows are loops over the same-named
-//! test.
+//! Usable room tests: what the room a refusal names MEANS - it is the largest size that builds, so
+//! asking for exactly it is answered with a solid and not with the same refusal again. A test that
+//! covers several picks loops over them.
 
 use std::rc::Rc;
 
@@ -21,7 +20,7 @@ use crate::level_line_test_geometry::{cube_solid, open_edges};
 
 const FOLD_DEGREES: f64 = 45.0;
 
-/// C# `Pick`: one pick - the solid, its chain and feature edges - built at a size with or without
+/// One pick - the solid, its chain and feature edges - built at a size with or without
 /// a known room, or asked its room without building.
 struct Pick {
     positions: Vec<Vector3>,
@@ -33,7 +32,7 @@ struct Pick {
 }
 
 impl Pick {
-    /// C# `BuildWith`.
+    /// The build of this pick at `size`, handed `room` where the caller already read it.
     fn build_with(&self, size: f64, room: Option<f64>) -> BandGapResult {
         band_gap_entry_points::build(
             &self.positions,
@@ -51,12 +50,12 @@ impl Pick {
         .expect("the pick builds or refuses by name")
     }
 
-    /// C# `Build`: a build that reads its own room.
+    /// A build that reads its own room.
     fn build(&self, size: f64) -> BandGapResult {
         self.build_with(size, None)
     }
 
-    /// C# `Room`.
+    /// The room this pick reads.
     fn room(&self) -> f64 {
         band_gap_reading::room_of(
             &self.positions,
@@ -83,7 +82,7 @@ fn solid_pick(positions: Vec<Vector3>, indices: Vec<(i32, i32, i32)>, chain: Vec
     }
 }
 
-/// C# `PickNamed`.
+/// The pick a test row names.
 fn pick_named(name: &str) -> Pick {
     match name {
         "cube-top-rim" => {
@@ -123,9 +122,8 @@ fn pick_named(name: &str) -> Pick {
     }
 }
 
-/// C# `StripSolid`: the same 4 by 20 by 4 box `RidgeSurvivesTests` uses - a top face of two
-/// triangles; `RidgeSurvivesTests` and `RoomRigidMotionTests` (which each carry a copy in C#) read
-/// this one.
+/// The 4 by 20 by 4 box with a top face of two triangles; the ridge-survives and room rigid
+/// motion tests read this one too.
 pub fn strip_solid() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     let positions = vec![
         Vector3::new(-2.0, -10.0, -2.0),
@@ -154,12 +152,12 @@ pub fn strip_solid() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     (positions, indices)
 }
 
-/// C# `Math.BitIncrement` for a positive finite value.
+/// The next representable double above a positive finite value.
 fn bit_increment(value: f64) -> f64 {
     f64::from_bits(value.to_bits() + 1)
 }
 
-/// C# `TheRoomNamedIsASizeThatBuilds`: for every pick that has a bounded room, the size EQUAL to
+/// For every pick that has a bounded room, the size EQUAL to
 /// the room builds, closes and takes volume; and for a room read off WIDTH, a BIT above it refuses
 /// by size naming that very same room. A room a PINCH refusal named is a size KNOWN to fit and not
 /// the largest, so a size well above it is asked instead.
@@ -231,7 +229,7 @@ fn the_room_named_is_a_size_that_builds() {
     }
 }
 
-/// C# `ARoomAskedForIsTheRoomABuildReadsAndBuildsTheSameMesh`: ONE reading. The room a build reads
+/// ONE reading. The room a build reads
 /// for itself and the room asked for without building must be the same number to the bit, and a
 /// build handed that room must make exactly the mesh a build that read it itself made.
 #[test]
@@ -309,7 +307,7 @@ fn a_room_asked_for_is_the_room_a_build_reads_and_builds_the_same_mesh() {
     }
 }
 
-/// C# `TheRoomNeverReadsNegative`: a room is a SIZE, so it never reads below zero, even where the
+/// A room is a SIZE, so it never reads below zero, even where the
 /// margin a kept strip needs (two snaps' worth) stands above the geometric room.
 #[test]
 fn the_room_never_reads_negative() {
@@ -337,7 +335,7 @@ fn the_room_never_reads_negative() {
     );
 }
 
-/// C# `ARefusalNeverNamesARoomAtOrAboveTheSizeItRefused`: whatever size is refused, the number the
+/// Whatever size is refused, the number the
 /// refusal offers instead is strictly smaller.
 #[test]
 fn a_refusal_never_names_a_room_at_or_above_the_size_it_refused() {

@@ -1,6 +1,5 @@
 //! One row's worth of work in the Thingi10K sweep: the pick built and filled at one size behind the
-//! watchdog, and the answer it gave read against what that size fraction promised. Ports
-//! `Tests/GeometryProcessingTests/LevelLine/SweepBuild.cs` and `SweepAttempt.cs`.
+//! watchdog, and the answer it gave read against what that size fraction promised.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -42,7 +41,7 @@ pub const OPEN_ENDS_OUTCOME: &str = "NotBuiltYet:EndsOnAnEndFace";
 /// sense the kernel promised.
 pub const PINCH_ROOM_SLACK: f64 = 9.0 / 8.0;
 
-/// What one guarded build of one pick at one size came back with (C# `SweepAttempt`).
+/// What one guarded build of one pick at one size came back with.
 #[derive(Debug, Clone)]
 pub struct SweepAttempt {
     pub refusal: BandGapRefusal,
@@ -104,7 +103,7 @@ impl PickInput {
     }
 }
 
-/// The C# exception type a build error stands for.
+/// The error-kind name a build error is reported under in the sweep's rows.
 pub fn build_error(error: BandGapBuildError) -> Thrown {
     let name = match &error {
         BandGapBuildError::SizeNotPositive(_) => "ArgumentOutOfRangeException",
@@ -115,7 +114,7 @@ pub fn build_error(error: BandGapBuildError) -> Thrown {
     Thrown::new(name, error.to_string())
 }
 
-/// The C# exception type a fill error stands for.
+/// The error-kind name a fill error is reported under in the sweep's rows.
 pub fn fill_error(error: GapFillError) -> Thrown {
     match error {
         GapFillError::Cancelled => {
@@ -370,9 +369,9 @@ pub fn classify(
 
         // A WIDTH room cannot land here any more: the build no longer reads a room of its own off
         // the refined mesh at the size asked, it reads the very number this caller read (see
-        // BandRoom.RoomOfCutMesh). The check stays as a GUARD - a second reading creeping back in
-        // is exactly what it would catch - and what can still reach it is a room named by a PINCH
-        // ladder, which is not a width at all.
+        // `band_room::room_of_cut_mesh`). The check stays as a GUARD - a second reading creeping
+        // back in is exactly what it would catch - and what can still reach it is a room named by a
+        // PINCH ladder, which is not a width at all.
         let named = attempt.room;
         return if (named - room).abs() <= 1e-9 * room.abs().max(1.0) {
             "RefusedBySize".to_string()
@@ -437,7 +436,7 @@ pub fn classify(
     "BuiltClosed".to_string()
 }
 
-/// C# `Math.Sign` of a double: -1, 0 or 1 (it throws on NaN, which a sound mesh never reads).
+/// The sign of a double: -1, 0 or 1 (0 for a NaN, which a sound mesh never reads).
 fn sign(value: f64) -> i32 {
     if value > 0.0 {
         1

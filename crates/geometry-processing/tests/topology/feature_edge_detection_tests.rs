@@ -1,5 +1,5 @@
-//! Ports `MatterCADTests/Standard/FeatureEdgeDetectionTests.cs`: feature-edge detection and
-//! dihedral classification, the topology foundation the fillet and chamfer operations stand on.
+//! Feature-edge detection and dihedral classification, the topology foundation the fillet and
+//! chamfer operations stand on.
 
 use geometry_processing::topology::{EdgeConvexity, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids;

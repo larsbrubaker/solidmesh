@@ -1,9 +1,8 @@
-//! Port of `SurfaceTwoCreaseJunctionRingsTests.cs`: the three end rings the two-crease junction of
-//! `surface_two_crease_junction_reading_tests` is sewn to, and the grid between them
-//! (`SurfaceTwoCreaseJunctionRings`). The CUT's ring is cut on the plane the canal's ball traces on
-//! the cut's own tube; each BEAD's ring is square; and the grid is TRANSPOSED - the stations run
-//! along the cut's ring and every row runs from the wall's contact to the cut's tube. Nothing here
-//! is emitted: these are readings, driven directly.
+//! The three end rings the two-crease junction of `surface_two_crease_junction_reading_tests` is
+//! sewn to, and the grid between them (`SurfaceTwoCreaseJunctionRings`). The CUT's ring is cut on
+//! the plane the canal's ball traces on the cut's own tube; each BEAD's ring is square; and the
+//! grid is TRANSPOSED - the stations run along the cut's ring and every row runs from the wall's
+//! contact to the cut's tube. Nothing here is emitted: these are readings, driven directly.
 
 use std::sync::Arc;
 
@@ -96,7 +95,7 @@ fn the_cuts_ring_is_cut_on_the_canals_own_leaning_plane() {
     );
 
     // Mid turn is where the ring crosses the ridge's own plane, which is the canal's tube contact
-    // rail. C#'s OrderBy(...).First() keeps the first of equal keys, as min_by does.
+    // rail. Of equal keys, `min_by` keeps the first.
     let at_the_ridge = rings
         .cut_ring
         .iter()
@@ -428,7 +427,7 @@ fn the_grids_four_sides_are_the_curves_it_is_sewn_to() {
 }
 
 /// The rings and grid of the two-crease junction, read from the fixture's own strips, with the
-/// junction and the mesh (C#'s two `out` parameters).
+/// junction and the mesh.
 pub fn the_rings() -> (
     SurfaceTwoCreaseJunctionRings,
     SurfaceMixedJunction,

@@ -1,8 +1,7 @@
-//! Port of `SurfaceWallConsumedToItsRimTests.cs`: the equality crack between a LANDING and a
-//! RUN-OFF - a band whose setback is exactly the width of the face it lands on. One top edge of a
-//! 20 x 20 x 2 plate filleted at radius 2: the rolling ball's tangent line on the side wall IS the
-//! wall's own bottom rim, and the face is CONSUMED TO ITS RIM - it gives up whole, and the rim's own
-//! vertices are the seam.
+//! The equality crack between a LANDING and a RUN-OFF - a band whose setback is exactly the width
+//! of the face it lands on. One top edge of a 20 x 20 x 2 plate filleted at radius 2: the rolling
+//! ball's tangent line on the side wall IS the wall's own bottom rim, and the face is CONSUMED TO
+//! ITS RIM - it gives up whole, and the rim's own vertices are the seam.
 //!
 //! A landing would fail the seam pick in the middle of the edge; a run-off has nothing to cross.
 //! Only the third reading has a mesh in it, and it mints no vertex on that side. The two guards
@@ -279,7 +278,7 @@ fn on_the_consumed_walls_rim(built: &Mesh) -> Vec<Vector3> {
 }
 
 /// The plate's +x top edge filleted by the surface construction, or whatever refused it (`None`
-/// for a build that declined without naming anything - C#'s null `refusal` and null mesh).
+/// for a build that declined without naming anything).
 fn bevel(plate: &Mesh, radius: f64) -> Result<Mesh, Option<BevelAdvisory>> {
     let features = FeatureEdgeSet::create(plate);
 
@@ -320,7 +319,7 @@ fn top_edge_at_plus_x(features: &FeatureEdgeSet) -> i32 {
         })
         .collect();
 
-    assert_eq!(found.len(), 1, "C#'s Single: one top edge at +x");
+    assert_eq!(found.len(), 1, "exactly one top edge at +x");
 
     found[0] as i32
 }

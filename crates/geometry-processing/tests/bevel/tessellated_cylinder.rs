@@ -1,6 +1,5 @@
-//! Port of `ChainFieldSpeedTests.TessellatedCylinder` (`LevelLine/ChainFieldSpeedTests.cs`): a
-//! closed cylinder with fan caps, shared by the classes that pick its top rim
-//! (`TopologyOnlyProbeTests` among them); the class's own tests are ported separately.
+//! A closed cylinder with fan caps, shared by the tests that pick its top rim
+//! (`topology_only_probe_tests.rs` and `chain_field_speed_tests.rs` among them).
 
 #![allow(dead_code)]
 
@@ -8,7 +7,7 @@ use vector_math::Vector3;
 
 use crate::level_line_room_geometry::SolidWithChain;
 
-/// C# `TessellatedCylinder`: a closed cylinder with fan caps; the returned rim is the top cap's
+/// A closed cylinder with fan caps; the returned rim is the top cap's
 /// edge, in order.
 pub fn tessellated_cylinder(sides: i32, stacks: i32, radius: f64, height: f64) -> SolidWithChain {
     let mut positions = Vec::new();

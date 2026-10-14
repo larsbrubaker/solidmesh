@@ -1,27 +1,29 @@
-//! Port of `LevelLine/Thingi10KSweep.cs` (with `Thingi10KCorpus.cs`, `StlReader.cs`, `SweepPick.cs`,
-//! `SweepBuild.cs`, `SweepWatchdog.cs`, `SweepRow.cs`, `SweepReport.cs` and `SweepFailureDumps.cs`,
-//! each its own file beside this one): the level line's second scoreboard, the bevel built at the
-//! KERNEL level on the local Thingi10K corpus - no app, no .mcx, no pick UI. Seeded random models,
-//! feature edges by bend angle, random face rims and feature chains, and sizes taken as fractions of
-//! the room the construction itself names.
+//! The Thingi10K sweep (with `thingi10k_corpus.rs`, `stl_reader.rs`, `sweep_pick.rs`,
+//! `sweep_build.rs`, `sweep_watchdog.rs`, `sweep_row.rs` and `sweep_report.rs` beside it): the
+//! level line's second scoreboard, the bevel built at the KERNEL level on the local Thingi10K
+//! corpus - no app, no .mcx, no pick UI. Seeded random models, feature edges by bend angle, random
+//! face rims and feature chains, and sizes taken as fractions of the room the construction itself
+//! names.
 //!
-//! Gated on `THINGI_SWEEP=1` and on the dataset being present, because it is an instrument and not a
-//! requirement: it reports, it does not assert geometry. The dataset is READ IN PLACE from
+//! Gated on `THINGI_SWEEP=1` and on the dataset being present, because it is an instrument and not
+//! a requirement: it reports, it does not assert geometry. The dataset is READ IN PLACE from
 //! `THINGI10K_ROOT` (default `~/Development/rust-apps/Thingi10K`) and nothing is copied into this
-//! repository. The knobs are C#'s: `THINGI_SEED`, `THINGI_MAX_FACES`, `THINGI_MODELS`,
-//! `THINGI_PICKS`, `THINGI_BEND_DEGREES`, `THINGI_BUILD_SECONDS`, `THINGI_MAX_HUNG` and
-//! `THINGI_ONLY` (model ids). The report and the failing rows' kernel-fixture dumps go under
-//! `TestResults/` in cargo's target tmp directory, outside the repository.
+//! repository. The knobs: `THINGI_SEED`, `THINGI_MAX_FACES`, `THINGI_MODELS`, `THINGI_PICKS`,
+//! `THINGI_BEND_DEGREES`, `THINGI_BUILD_SECONDS`, `THINGI_MAX_HUNG` and `THINGI_ONLY` (model ids).
+//! The report and the failing rows' kernel-fixture dumps go under `TestResults/` in cargo's target
+//! tmp directory, outside the repository.
 //!
-//! The harness shape is `BevelRobustnessSweep`'s, for the same reasons: a build runs on its own
-//! thread under a hard wall-clock watchdog, because a kernel defect shows up as a build that never
-//! returns; the hang budget is spent once per PICK, so one wedged pick does not burn the budget at
-//! five sizes; rows go to disk as they are made, so an early stop keeps everything already learned;
-//! and a self-check at the end requires the rows counted to equal the rows written.
+//! The harness shape is the app-level bevel robustness sweep's, for the same reasons: a build runs
+//! on its own thread under a hard wall-clock watchdog, because a kernel defect shows up as a build
+//! that never returns; the hang budget is spent once per PICK, so one wedged pick does not burn the
+//! budget at five sizes; rows go to disk as they are made, so an early stop keeps everything
+//! already learned; and a self-check at the end requires the rows counted to equal the rows
+//! written.
 //!
 //! A long run needs `--profile measure` (`.config/nextest.toml`), which lets it run for an hour:
 //! `THINGI_SWEEP=1 cargo nextest run --workspace --test bevel --profile measure --no-capture
-//! thingi10k_sweep`. C#'s `[NotInParallel]` is a `threads-required` override there.
+//! thingi10k_sweep`. A `threads-required` override there keeps it from sharing the machine with
+//! other tests.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -40,7 +42,7 @@ const RUN_VARIABLE: &str = "THINGI_SWEEP";
 /// How long to wait for abandoned builds to finish before ending the run early.
 const WAIT_FOR_ABANDONED: Duration = Duration::from_secs(60);
 
-/// The sweep's knobs (C#'s `Number` and `Real` environment reads, with their defaults).
+/// The sweep's knobs, read from the environment with their defaults.
 #[derive(Debug, Clone)]
 pub struct SweepSettings {
     pub seed: i32,
@@ -96,7 +98,7 @@ pub struct SweepRun {
     pub summary: String,
 }
 
-/// `yyyyMMdd-HHmmss` of now, in UTC (C# writes local time).
+/// `yyyyMMdd-HHmmss` of now, in UTC.
 fn stamp() -> String {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -1,9 +1,9 @@
-//! Port of `SurfaceTangentRunEndsTests.cs`: where a cut's TANGENT RUN stops. The run is the stretch
-//! of the cut's own line the region's kept triangles hold (`surface_walkback_tangent_runs::runs_along`),
-//! and it has to stop at the band's ends rather than carry on down a line that happens to be an
-//! edge of the part for its whole length - the crease a profile RESTING on one lands on. The cut
-//! never split that edge, so the reading is made at the VERTICES: an edge is in the run while both
-//! of its ends are inside the band.
+//! Where a cut's TANGENT RUN stops. The run is the stretch of the cut's own line the region's kept
+//! triangles hold (`surface_walkback_tangent_runs::runs_along`), and it has to stop at the band's
+//! ends rather than carry on down a line that happens to be an edge of the part for its whole
+//! length - the crease a profile RESTING on one lands on. The cut never split that edge, so the
+//! reading is made at the VERTICES: an edge is in the run while both of its ends are inside the
+//! band.
 
 use geometry_processing::bevel::surface::surface_walkback_tangent_runs::runs_along;
 use geometry_processing::bevel::surface::{

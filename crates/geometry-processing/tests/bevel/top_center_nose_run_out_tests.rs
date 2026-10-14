@@ -1,12 +1,12 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TopCenterNoseRunOutTests.cs`: the nose's upper
-//! face of Top Center Face.mcx filleted at 1, handed straight to the kernel with run-outs read
-//! (`RunOutField`). The band cut follows the unpicked lower crease to the control's P* and the one
-//! corner hole runs down to it from both ridge ends; the build must still close as one oriented
-//! shell with no zero-area triangle, reaching along that crease as far as the control's blend.
+//! The nose's upper face of Top Center Face.mcx filleted at 1, handed straight to the kernel with
+//! run-outs read (`RunOutField`). The band cut follows the unpicked lower crease to the control's
+//! P* and the one corner hole runs down to it from both ridge ends; the build must still close as
+//! one oriented shell with no zero-area triangle, reaching along that crease as far as the
+//! control's blend.
 //!
-//! C#'s `using (BandGroupFields.TurnRunOutsOn())` scope covers the build and the fill; here the
-//! switch rides on each one's budget, so the build's budget is put in force before the scope turns
-//! it on, and the fill's default-sized budget carries it too.
+//! Run-outs are turned on for both the build and the fill; the switch rides on each one's budget,
+//! so the build's budget is put in force before the scope turns it on, and the fill's default-sized
+//! budget carries it too.
 
 use std::rc::Rc;
 
@@ -22,18 +22,18 @@ use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::sweep_mesh_measures::{is_closed_and_consistent, kept, shell_count};
 
-/// C# `Offset`: where the fixture's part sits relative to the regression test's box frame.
+/// Where the fixture's part sits relative to the regression test's box frame.
 fn offset() -> Vector3 {
     Vector3::new(-20.0, -118.5, 0.0)
 }
 
-/// C# `ControlRunOut`: how far along the unpicked lower crease the control's blend reaches.
+/// How far along the unpicked lower crease the control's blend reaches.
 const CONTROL_RUN_OUT: f64 = 4.5846;
 
-/// C# `ChordTolerance`: what two chordings of one surface may differ by.
+/// What two chordings of one surface may differ by.
 const CHORD_TOLERANCE: f64 = 0.05;
 
-/// C# `TheRidgeRoundRunsOutAlongTheUnpickedLowerCreaseLikeTheControl`.
+/// The ridge round runs out along the unpicked lower crease like the control.
 #[test]
 fn the_ridge_round_runs_out_along_the_unpicked_lower_crease_like_the_control() {
     let fixture = Rc::new(LevelLineFixture::load("top-center-face-nose-r1"));
@@ -120,7 +120,7 @@ fn the_ridge_round_runs_out_along_the_unpicked_lower_crease_like_the_control() {
     }
 }
 
-/// C# `ReachAlong`: how far along the crease from `start` the fill's triangles touch it.
+/// How far along the crease from `start` the fill's triangles touch it.
 fn reach_along(filled: &GapFillResult, start: Vector3, direction: Vector3) -> f64 {
     let mesh = filled.mesh.as_ref().expect("a filled mesh").borrow();
     let mut reach = 0.0f64;

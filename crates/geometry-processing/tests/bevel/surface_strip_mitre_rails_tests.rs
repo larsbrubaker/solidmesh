@@ -1,8 +1,7 @@
-//! Rust-only tests of the mitre's between-station bookkeeping (`surface_strip_mitre_rails`, C#
-//! `SurfaceStripMitre.Merge`, `Beside` and `OnTheChord`) and of point mode's exact weld
-//! (`point_candidates::weld`, C# `PointCandidates.Weld`). C# has no test class of its own for these
-//! helpers; the surface tests that reach them through `SurfaceTestBuild.TryBevel` land with the
-//! builder.
+//! Rust-only tests of the mitre's between-station bookkeeping (`surface_strip_mitre_rails`:
+//! `merge`, `beside` and `on_the_chord`) and of point mode's exact weld (`point_candidates::weld`),
+//! pinned directly; the surface tests also reach them through a whole build
+//! (`surface_test_build.rs`).
 
 use geometry_processing::bevel::level_line::point_candidates;
 use geometry_processing::bevel::surface::surface_strip_mitre_rails::{beside, merge, on_the_chord};

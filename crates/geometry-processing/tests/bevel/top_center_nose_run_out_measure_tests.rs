@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TopCenterNoseRunOutMeasureTests.cs`: a
-//! MEASUREMENT of the Top Center Face nose pick (`top-center-face-nose-r1`) at its two ridge ends,
-//! where the ridge round's rail stops on the unpicked lower crease - the side groups and tags of
-//! the triangles there, the room and what set it, how far along that crease the band cut's rail
+//! A MEASUREMENT of the Top Center Face nose pick (`top-center-face-nose-r1`) at its two ridge
+//! ends, where the ridge round's rail stops on the unpicked lower crease - the side groups and tags
+//! of the triangles there, the room and what set it, how far along that crease the band cut's rail
 //! reaches, and the corner hole the corner fill leaves open.
 //!
 //! Asserts nothing. Returns at once unless `BEVEL_NOSE_RUNOUT_MEASURE=1`; writes its reading to the
@@ -29,7 +28,7 @@ fn p(v: Vector3) -> String {
     format!("({:.4}, {:.4}, {:.4})", v.x, v.y, v.z)
 }
 
-/// Clears the corner fill's open-hole watcher on drop (C#'s `finally`).
+/// Clears the corner fill's open-hole watcher on drop, so a failing test leaves it cleared too.
 struct WatchGuard;
 
 impl Drop for WatchGuard {
@@ -38,7 +37,7 @@ impl Drop for WatchGuard {
     }
 }
 
-/// C# `TheRidgeEndsReadAsTheRunOutWillSeeThem`.
+/// The ridge ends read as the run out will see them.
 #[test]
 fn the_ridge_ends_read_as_the_run_out_will_see_them() {
     if std::env::var("BEVEL_NOSE_RUNOUT_MEASURE").as_deref() != Ok("1") {

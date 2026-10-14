@@ -1,8 +1,8 @@
-//! Port of `LevelLine/SwallowedSideTests.cs`: Flow rung 3's swallowed side, on Fillet Thin Front's
-//! fin (see `ObliqueEndFaceOwnerTests.FilletThinFrontsFinRoundsToTheCylinderCutBackByTheWalls`):
+//! Flow rung 3's swallowed side, on Fillet Thin Front's fin (see
+//! `oblique_end_face_owner_tests::fillet_thin_fronts_fin_rounds_to_the_cylinder_cut_back_by_the_walls`):
 //! both fin faces are 6.01 along the slope, the fillet's setback is 1.5 r, so at 4.9 (7.35) each
 //! face lies wholly in the strip, its far corner on the V crease where the two growing walls meet;
-//! at 3 (4.5) it does not. C# `[Arguments]` rows are loops over the same-named test.
+//! at 3 (4.5) it does not.
 
 use std::rc::Rc;
 
@@ -30,7 +30,7 @@ const BEND_DEGREES: f64 = 20.0;
 const CORNER: Vector3 = Vector3::new(-20.0, -118.5, 0.0);
 
 fn sign(x: f64) -> f64 {
-    // C# Math.Sign: 0 for 0.
+    // The sign, 0 for 0.
     if x > 0.0 {
         1.0
     } else if x < 0.0 {

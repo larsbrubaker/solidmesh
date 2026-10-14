@@ -1,9 +1,9 @@
-//! Port of `SurfaceTwoCreaseJunctionReadingTests.cs`: the junction at the RIGHT ridge end of
-//! `nose_in_notch_test_meshes` - one cut and TWO creases (`SurfaceJunctionKind::TwoCreases`,
-//! `surface_mixed_junction`) - measured against the Onshape control of "Center Right and Left
-//! Side" at r = 2. ONE canal, whose ball is the beads' void ball, swept from the upper bead's
-//! square end ring round to the lower bead's; each arm is an ordinary mixed corner of the ridge
-//! against one crease, and the canal is that corner's dual (`SurfaceMixedCornerDualFrame`).
+//! The junction at the RIGHT ridge end of `nose_in_notch_test_meshes` - one cut and TWO creases
+//! (`SurfaceJunctionKind::TwoCreases`, `surface_mixed_junction`) - measured against the Onshape
+//! control of "Center Right and Left Side" at r = 2. ONE canal, whose ball is the beads' void ball,
+//! swept from the upper bead's square end ring round to the lower bead's; each arm is an ordinary
+//! mixed corner of the ridge against one crease, and the canal is that corner's dual
+//! (`SurfaceMixedCornerDualFrame`).
 //!
 //! Also holds the class's shared helpers ([`the_junction`], [`the_plans_of_the_right_ridge_end`],
 //! [`the_vertex_at`], [`RADIUS`], [`the_corner`]), which `surface_two_crease_junction_rings_tests`
@@ -64,14 +64,15 @@ fn the_right_ridge_end_reads_as_a_junction_of_two_creases() {
         assert!(arm.dual.is_some());
     }
 
-    // A bead per arm, each its own chain's one edge - the upper crease arrives at the corner and the
-    // lower one leaves it, which is what the walkback has to know to bound the right end.
+    // A bead per arm, each its own chain's one edge - the upper crease arrives at the corner and
+    // the lower one leaves it, which is what the walkback has to know to bound the right end.
     assert_eq!(junction.first.bead_end.plan, 1);
     assert!(!junction.first.bead_end.at_the_start);
     assert_eq!(junction.second.bead_end.plan, 2);
     assert!(junction.second.bead_end.at_the_start);
 
-    // Two different shared faces - the nose's two - and ONE wall, the slope they both stand against.
+    // Two different shared faces - the nose's two - and ONE wall, the slope they both stand
+    // against.
     assert_ne!(
         junction.first.mixed.shared_region_key,
         junction.second.mixed.shared_region_key
@@ -260,9 +261,9 @@ fn the_wall_rail_crosses_both_creases_and_runs_across_the_noses_root() {
     let at_the_upper = the_turn_where_the_wall_rail_crosses(dual, &junction.first.mixed.bead);
     let at_the_lower = the_turn_where_the_wall_rail_crosses(dual, &junction.second.mixed.bead);
 
-    // Quoted against the CONTROL's own model at a thousandth of a degree, not against this
-    // reading: the part's vertices are stored as floats, and the frame each arm is read in comes off
-    // them, so the crossings land 0.0002 degrees from the exactly computed ones.
+    // Quoted against the CONTROL's own model at a thousandth of a degree, not against this reading:
+    // the part's vertices are stored as floats, and the frame each arm is read in comes off them,
+    // so the crossings land 0.0002 degrees from the exactly computed ones.
     let upper_degrees = math_helper::radians_to_degrees(at_the_upper);
     assert!(
         (upper_degrees - 45.8836).abs() <= 1e-3,
@@ -460,7 +461,7 @@ pub fn assert_named_at_the_corner(arg: &BevelAdvisoryArg) {
 }
 
 /// The junction at the right ridge end, read from a pass over the ridge and its two creases: the
-/// junction, the mesh and the plans (C#'s two `out` parameters).
+/// junction, the mesh and the plans.
 pub fn the_junction() -> (SurfaceMixedJunction, Arc<Mesh>, Vec<Rc<SurfaceBevelPlan>>) {
     let mesh = Arc::new(nose_in_notch_test_meshes::create());
     let (regions, features) = regions_of(&mesh);

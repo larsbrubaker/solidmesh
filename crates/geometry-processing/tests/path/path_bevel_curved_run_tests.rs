@@ -1,9 +1,9 @@
-//! Ports `PathBevelCurvedRunTests`: what a bevel does where the path is not a polygon - curves
-//! flattened finely enough to stay smooth, corners beside a curved run, and the room two such
-//! corners share along it.
+//! What a bevel does where the path is not a polygon - curves flattened finely enough to stay
+//! smooth, corners beside a curved run, and the room two such corners share along it.
 //!
-//! `ARadiusThatCannotFitIsFoundQuicklyOnALongRun` reads `path_bevel_arcs::run_places_measured`,
-//! which is per thread (C# `[ThreadStatic]`), so it needs no `[NotInParallel]` here.
+//! `a_radius_that_cannot_fit_is_found_quickly_on_a_long_run` reads
+//! `path_bevel_arcs::run_places_measured`, which is per thread, so other tests running beside it
+//! cannot disturb the count.
 
 use agg_path::{FlagsAndCommand, VertexSource, VertexStorage};
 use geometry_processing::path::path_bevel::{bevel, bevel_contour, cleaned_contours};

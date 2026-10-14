@@ -1,16 +1,15 @@
-//! Port of `SurfaceStripBittenByAFeatureTests.cs`: the READING of the bite a nose standing part way
-//! along a band takes out of the middle of its strip ("Encroaching Side.mcx" at its own 3.4) -
-//! `SurfaceStripBittenByAFeature::try_read` over the walkback (`surface_face_walkback`) - against
-//! the closed form of the wedge, z = 10 +/- 2(y - 5)/3, and the refusal of a side with no seam
-//! (`SurfaceStripBiteRows::try_the_seams`).
+//! The READING of the bite a nose standing part way along a band takes out of the middle of its
+//! strip ("Encroaching Side.mcx" at its own 3.4) - `SurfaceStripBittenByAFeature::try_read` over
+//! the walkback (`surface_face_walkback`) - against the closed form of the wedge, z = 10 +/- 2(y -
+//! 5)/3, and the refusal of a side with no seam (`SurfaceStripBiteRows::try_the_seams`).
 //!
 //! The pick is the chevron's right knife tip, the vertical edge at (20, 0) of
 //! `nose_in_notch_test_meshes`; the arc dips below the ridge at its middle and rises back above
 //! it at both ends, so the wedge passes through two runs of rails and only the one at the
 //! feature's own seam is the bite.
 //!
-//! The build half - the tip band alone, the left tip mirrored, the ball corner, both tips, the mitre
-//! and all five groups of "Bevel to Center Feature.mcx" - runs the whole surface pipeline
+//! The build half - the tip band alone, the left tip mirrored, the ball corner, both tips, the
+//! mitre and all five groups of "Bevel to Center Feature.mcx" - runs the whole surface pipeline
 //! (`surface_test_build::try_bevel`) and holds the answer to a closed solid that carries the lens's
 //! tip.
 
@@ -336,17 +335,16 @@ fn a_feature_under_the_bands_end_is_not_a_bite() {
 
 /// AND A REFUSAL SAYS SOMETHING. A side with no run of tangent line on it at all is named rather
 /// than handed back as a bare false: the pass formats whatever comes back
-/// (`BevelSurfacePartBuilder`), and a refusal with no advisory behind it throws there instead of
-/// telling anyone what was wrong.
+/// (`BevelSurfacePartBuilder`), and a refusal with no advisory behind it would fail there instead
+/// of telling anyone what was wrong.
 ///
 /// Driven at the slice itself rather than through a part, because no fixture reaches it - a strip
 /// whose seam was never picked is refused long before a bite is read. The station is built by hand
 /// for the same reason: all the slice asks of one is the vertex and parameter on the rail it cuts
-/// at.
-/// AND THE BUILD. The reading above turned into surface: the round runs the whole height of the tip
-/// with the nose's lens-shaped hole in the middle of it, and the nose's own two faces trimmed on it.
-/// The nose's OLD ridge end is gone - the two extended faces carry the ridge straight on past it to
-/// the tip - and the lens's tip is in it.
+/// at. AND THE BUILD. The reading above turned into surface: the round runs the whole height of the
+/// tip with the nose's lens-shaped hole in the middle of it, and the nose's own two faces trimmed
+/// on it. The nose's OLD ridge end is gone - the two extended faces carry the ridge straight on
+/// past it to the tip - and the lens's tip is in it.
 #[test]
 fn the_tip_band_builds_with_the_bite_in_it() {
     let part = nose::create();
@@ -571,7 +569,7 @@ fn a_side_with_no_seam_at_all_is_named() {
     let rail = vec![bite.near_seam_vertex; count];
     let param = vec![bite.near_seam_param; count];
 
-    // C#'s `new List<(int Vertex, double Param)>[1, 2]`: one chain's two sides, neither filled.
+    // One chain's two sides, neither filled.
     let seams: Vec<SideSeams> = vec![[None, None]];
 
     let read = SurfaceStripBiteRows::try_the_seams(
@@ -585,7 +583,7 @@ fn a_side_with_no_seam_at_all_is_named() {
     );
 
     // There is nothing on that side to stitch either section to, and a refusal with nothing to
-    // say throws where the pass formats it.
+    // say would fail where the pass formats it.
     let failure = read.expect_err("there is nothing on that side to stitch either section to");
 
     assert_eq!(
@@ -635,9 +633,10 @@ fn the_tip_edge(features: &FeatureEdgeSet) -> usize {
     found[0]
 }
 
-/// C# `TheBandOn`. The builder's own steps in the builder's own order, less the ones nothing here
-/// needs - a single-edge chain has no junction to read and no room to fit, and both of those stand
-/// between the plan and the walkback in `SurfaceBevelBuilder` without feeding it.
+/// The band on one picked edge, by the builder's own steps in the builder's own order, less the
+/// ones nothing here needs - a single-edge chain has no junction to read and no room to fit, and
+/// both of those stand between the plan and the walkback in `surface_bevel_builder` without
+/// feeding it.
 fn the_band_on(
     part: Mesh,
     pick: impl Fn(&FeatureEdgeSet) -> usize,

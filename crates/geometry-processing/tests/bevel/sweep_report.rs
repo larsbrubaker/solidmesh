@@ -1,7 +1,6 @@
 //! The Thingi10K sweep's rows on their way to disk and the totals read back off them, and the
-//! failing rows' input dumps. Ports `Tests/GeometryProcessingTests/LevelLine/SweepReport.cs` and
-//! `SweepFailureDumps.cs`. Rows go out as they are made, so an early stop keeps everything already
-//! learned.
+//! failing rows' input dumps. Rows go out as they are made, so an early stop keeps everything
+//! already learned.
 
 use std::collections::HashSet;
 use std::fmt::Write as _;
@@ -26,7 +25,7 @@ pub fn write(
     Ok(1)
 }
 
-/// Groups in first-appearance order, as LINQ's `GroupBy` does.
+/// Groups in first-appearance order, so the totals list in the order the rows met them.
 fn group_by<'a, K: std::hash::Hash + Eq>(
     rows: impl IntoIterator<Item = &'a SweepRow>,
     key: impl Fn(&SweepRow) -> K,
@@ -179,8 +178,7 @@ pub fn keep(path: Option<&Path>, triangles: usize, limit: usize) {
 /// A failing row as a kernel fixture in `LevelLineFixture`'s own format, written OUTSIDE the
 /// repository. Carrying one into the tests' fixtures is a deliberate act: it makes the defect a
 /// red requirement test, and that is where it gets fixed. The feature edges are written sorted:
-/// C# writes its set in insertion order, which here is a hash map's order and would change run to
-/// run.
+/// they are held in a hash set, whose order would change run to run.
 #[allow(clippy::too_many_arguments)]
 pub fn dump(
     failure_root: &Path,

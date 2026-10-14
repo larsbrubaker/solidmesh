@@ -1,7 +1,7 @@
-//! The CPU time the calling thread has used, for the cost rungs that port a C# `Stopwatch` bound
-//! (`SurfacePlanCostTests`): a wall clock read beside the rest of the suite counts the time the
-//! thread spent waiting for a core, so it fails on a loaded machine with the work unchanged; the
-//! thread's own CPU time counts only the work. Test support only, not a C# port. Unix reads
+//! The CPU time the calling thread has used, for the cost rungs that bound a build's time
+//! (`surface_plan_cost_tests.rs`): a wall clock read beside the rest of the suite counts the time
+//! the thread spent waiting for a core, so it fails on a loaded machine with the work unchanged;
+//! the thread's own CPU time counts only the work. Test support only. Unix reads
 //! `clock_gettime(CLOCK_THREAD_CPUTIME_ID)` (libc), Windows `GetThreadTimes` (windows-sys).
 
 use std::time::Duration;

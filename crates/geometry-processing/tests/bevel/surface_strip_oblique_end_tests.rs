@@ -1,8 +1,8 @@
-//! Port of `SurfaceStripObliqueEndTests.cs`: the strip against an OBLIQUE end cut, where the middle
-//! rails meet the end further along than the flanks do. A column clamped to zero width still owes
-//! the points the end cut left on its chord, and they have to be carried to the first column that
-//! has width rather than covered where the chord is not there. Exercises
-//! `surface_bevel_stitch::try_stitch` on "Center Flows Through.mcx"'s shape at the size of a cube.
+//! The strip against an OBLIQUE end cut, where the middle rails meet the end further along than the
+//! flanks do. A column clamped to zero width still owes the points the end cut left on its chord,
+//! and they have to be carried to the first column that has width rather than covered where the
+//! chord is not there. Exercises `surface_bevel_stitch::try_stitch` on "Center Flows Through.mcx"'s
+//! shape at the size of a cube.
 
 use std::sync::Arc;
 
@@ -227,14 +227,14 @@ fn a_column_collapsed_all_the_way_through_is_still_closed_through() {
     );
 }
 
-/// C# `ObliqueEndReading`: the two rings and the seams of one crafted strip.
+/// The two rings and the seams of one crafted strip.
 struct ObliqueEndReading {
     start: SurfaceStripStation,
     end: SurfaceStripStation,
     seams: Vec<SideSeams>,
 }
 
-/// C# `SurfaceStripTests.RegionsOf`.
+/// The part's feature edges and its region cache at their flat angle.
 fn regions_of(mesh: &Arc<Mesh>) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
     let features = FeatureEdgeSet::create(mesh);
     let regions = FaceRegionCache::new(
@@ -246,7 +246,7 @@ fn regions_of(mesh: &Arc<Mesh>) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
     (Arc::new(regions), features)
 }
 
-/// C# `AStripWithAnObliqueEnd`: one cube edge's fillet strip, with an OBLIQUE start ring - the two
+/// One cube edge's fillet strip, with an OBLIQUE start ring - the two
 /// middle rails reaching a whole station further along than the flanks - and a left seam whose one
 /// interior vertex stands behind that ring on both of them. Stationed there, the two middle rails
 /// are clamped and the column between them collapses; the flanking columns keep their width.
@@ -272,11 +272,11 @@ fn a_strip_with_an_oblique_end(
         })
         .collect();
 
-    assert_eq!(matching.len(), 1, "C#'s Single(): one top edge at y = -10");
+    assert_eq!(matching.len(), 1, "exactly one top edge at y = -10");
 
     let mut chains = bevel_chain_linker::link(&[features.edges()[matching[0]]]);
 
-    assert_eq!(chains.len(), 1, "C#'s Single(): one chain");
+    assert_eq!(chains.len(), 1, "exactly one chain");
 
     let chain = chains.remove(0);
 
@@ -322,7 +322,7 @@ fn a_strip_with_an_oblique_end(
     (ObliqueEndReading { start, end, seams }, pool, strip)
 }
 
-/// C# `RingAt`: a station on every rail at its own parameter, with nothing between the rails yet.
+/// A station on every rail at its own parameter, with nothing between the rails yet.
 fn ring_at(
     pool: &mut SurfaceVertexPool,
     strip: &SurfaceStrip,

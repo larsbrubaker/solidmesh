@@ -1,7 +1,7 @@
-//! Port of `SurfaceRoomTests.cs`: rung 8's room, measured against numbers anybody can pace out on
-//! the fixture - how far it is across a face from the edge being beveled to the far side of that
-//! face, what two bevels landing on one face leave each other, and the largest size that fits in
-//! what is left. This is the 2D relaxation's model (`PathBevel.RelaxRadii`) read in 3D.
+//! Rung 8's room, measured against numbers anybody can pace out on the fixture - how far it is
+//! across a face from the edge being beveled to the far side of that face, what two bevels landing
+//! on one face leave each other, and the largest size that fits in what is left. This is the 2D
+//! relaxation's model (`path_bevel::relax_radii`) read in 3D.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -57,7 +57,8 @@ fn one_picked_edge_of_a_cube_has_the_whole_face_on_both_sides_of_it() {
     assert!((fit.largest_fitting_size - 3.0).abs() <= NEAR);
 }
 
-/// The same cube edge at a radius the face cannot hold: refused, with the 20 that would have fitted.
+/// The same cube edge at a radius the face cannot hold: refused, with the 20 that would have
+/// fitted.
 #[test]
 fn a_radius_wider_than_its_face_is_refused_with_the_width_of_the_face() {
     let cube = platonic_solids::create_cube(20.0, 20.0, 20.0);
@@ -315,7 +316,7 @@ fn nothing_the_pass_is_beveling_onto_the_face_is_a_wall_on_it() {
     );
 }
 
-/// C# `SurfaceRoom.TryFit`, with a token nothing cancels.
+/// The room fit of the plans at `size`, with a token nothing cancels.
 fn try_fit(plans: &[Rc<SurfaceBevelPlan>], size: f64) -> surface_room::SurfaceRoomFit {
     surface_room::try_fit(plans, size, &CancelToken::new(), None).expect("nothing cancels")
 }
@@ -353,7 +354,7 @@ fn plan_of(
     })
 }
 
-/// C#'s `Enumerable.Single` over the feature edges' indices.
+/// The index of the one feature edge that matches; a test failure if there is not exactly one.
 fn single(features: &FeatureEdgeSet, is_it: impl Fn(&FeatureEdge) -> bool) -> usize {
     let found: Vec<usize> = (0..features.count())
         .filter(|&i| is_it(&features.edges()[i]))

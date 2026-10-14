@@ -1,6 +1,5 @@
-//! Ports `GeometryProcessingTests/FeatureEdgeCollinearRunTests.cs`: the collinear run, what one
-//! picked edge means in a CAD package - the whole straight crease it lies in, not the one mesh
-//! edge the triangulation happened to cut it into.
+//! The collinear run, what one picked edge means in a CAD package - the whole straight crease it
+//! lies in, not the one mesh edge the triangulation happened to cut it into.
 
 use std::sync::Arc;
 

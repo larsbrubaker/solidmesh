@@ -1,9 +1,8 @@
-//! Port of the test fixture `LevelLine/TrebledEndGeometry.cs`: the two shapes a real exported
-//! part carries AT a chain's end, built as closed manifold geometry - a vertex SPLIT into
-//! coincident-to-epsilon copies joined by degenerate slivers, and a small real feature standing
-//! microns from that end but joined to the part by ordinary edges. `trebled_end_seam_tests.rs`
-//! reads both. Both are built by rewriting a plain block, never by moving a vertex of one: the
-//! topology is the whole subject.
+//! The two shapes a real exported part carries AT a chain's end, built as closed manifold geometry -
+//! a vertex SPLIT into coincident-to-epsilon copies joined by degenerate slivers, and a small
+//! real feature standing microns from that end but joined to the part by ordinary edges.
+//! `trebled_end_seam_tests.rs` reads both. Both are built by rewriting a plain block, never by
+//! moving a vertex of one: the topology is the whole subject.
 
 use std::collections::HashMap;
 
@@ -12,7 +11,7 @@ use vector_math::{Vector2, Vector3};
 /// A triangle list's positions and index triples.
 pub type Solid = (Vec<Vector3>, Vec<(i32, i32, i32)>);
 
-/// C# `PlainBlock`: a block `half` either side of the origin, cut into `slices` bands along x, so
+/// A block `half` either side of the origin, cut into `slices` bands along x, so
 /// the top-front crease is a run of edges that can be picked one at a time.
 pub fn plain_block(half: f64, slices: i32) -> Solid {
     // The cross-section in (y, z), counter-clockwise seen down -x, from the top-front crease round.
@@ -60,7 +59,7 @@ struct FanStep {
     into: i32,
 }
 
-/// C# `SplitVertexAtSpokes`: splits `vertex` into one copy per arc of its triangle fan, the arcs
+/// Splits `vertex` into one copy per arc of its triangle fan, the arcs
 /// cut at `spokes`, and sews the slits shut with degenerate slivers and one cap triangle - so the
 /// result is still closed, still consistently wound, and still manifold. The arc holding `anchor`
 /// keeps the ORIGINAL vertex index and position; the remaining arcs take `offsets` in fan order.
@@ -97,10 +96,7 @@ pub fn split_vertex_at_spokes(
                     into,
                 },
             );
-            assert!(
-                previous.is_none(),
-                "C#'s Dictionary.Add: one fan step per spoke"
-            );
+            assert!(previous.is_none(), "one fan step per spoke");
         }
     }
 
@@ -164,7 +160,7 @@ pub fn split_vertex_at_spokes(
     (points, triangles)
 }
 
-/// C# `TentInside`: raises a tiny tent inside one triangle - three points inside it, lifted along
+/// Raises a tiny tent inside one triangle - three points inside it, lifted along
 /// its normal, with the triangle retriangulated as an annulus around them. The tent's base edges
 /// are real feature edges joined to the rest of the part by ORDINARY edges. `corners` are turned
 /// round if they are not wound as the triangle is.

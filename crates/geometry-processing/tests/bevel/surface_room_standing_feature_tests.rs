@@ -1,11 +1,10 @@
-//! Port of `SurfaceRoomStandingFeatureTests.cs`: a feature HANGING over the face a band lands on is
-//! not the far side of that face (`surface_room_standing_feature::stands_on`). The room across a
-//! region stops at a wall - a convex rim it runs off, or a wall standing square on it - and runs on
-//! underneath anything leaning out over it. The nose in the chevron notch
-//! (`nose_in_notch_test_meshes`) leans out over both slopes; the rib on the plate
-//! (`topology_test_meshes::create_rib_on_plate`) stands square on it. The chorded fixture is the
-//! same nose-in-notch solid with its upper right crease cut in two, as the boolean behind "Center
-//! Flows Through.mcx" leaves it.
+//! A feature HANGING over the face a band lands on is not the far side of that face
+//! (`surface_room_standing_feature::stands_on`). The room across a region stops at a wall - a
+//! convex rim it runs off, or a wall standing square on it - and runs on underneath anything
+//! leaning out over it. The nose in the chevron notch (`nose_in_notch_test_meshes`) leans out over
+//! both slopes; the rib on the plate (`topology_test_meshes::create_rib_on_plate`) stands square on
+//! it. The chorded fixture is the same nose-in-notch solid with its upper right crease cut in two,
+//! as the boolean behind "Center Flows Through.mcx" leaves it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -209,7 +208,7 @@ fn only_a_rim_leaning_out_over_the_region_reads_as_standing_on_it() {
 /// The one predicate answers the room and the walkback alike, exclusions and all: a crease that
 /// MEETS the chain at a corner is not a feature the island will close, so it is not let off in the
 /// room either. The nose's upper right crease at the ridge end is that case whenever the LOWER
-/// right one is the thing being beaded (`SurfaceBeadPastAKnifeEdgeTipTests`).
+/// right one is the thing being beaded (`surface_bead_past_a_knife_edge_tip_tests.rs`).
 #[test]
 fn a_feature_meeting_the_chain_goes_on_bounding_the_room() {
     let part = Arc::new(nose_in_notch_test_meshes::create());
@@ -353,9 +352,9 @@ fn a_crease_chorded_in_two_still_meets_the_chain_at_its_corner() {
 }
 
 /// The mirror, on the same chorded part: a run that reaches no chain vertex goes on standing. With
-/// only the piece of crease BELOW the nose picked, the chain ends at (10, 10, 0) and (10, 10, 6.667)
-/// and the upper right crease meets neither - so both of its chords are features hanging over the
-/// slope, as the whole crease is when it is one edge.
+/// only the piece of crease BELOW the nose picked, the chain ends at (10, 10, 0) and (10, 10,
+/// 6.667) and the upper right crease meets neither - so both of its chords are features hanging
+/// over the slope, as the whole crease is when it is one edge.
 #[test]
 fn a_chorded_crease_that_reaches_no_chain_vertex_goes_on_standing() {
     let part =

@@ -1,7 +1,6 @@
-//! Port of the test helper `SurfaceWalkbackChecks.cs`: what the walkback's tests read off a
-//! rewritten mesh and what they hold it to - areas and boundaries, the soundness checks every case
-//! ends with, and the fixtures more than one case is cut from. C#'s `async Task` assertions are
-//! plain functions that panic with the C# `Because` text.
+//! Test helper: what the walkback's tests read off a rewritten mesh and what they hold it to -
+//! areas and boundaries, the soundness checks every case ends with, and the fixtures more than one
+//! case is cut from. Each check is a plain function that panics with a message saying what failed.
 
 #![allow(dead_code)]
 
@@ -208,7 +207,7 @@ pub fn t_junctions_in(mesh: &Mesh) -> HashSet<String> {
     found
 }
 
-/// C# `Math.Round(x, 4)`: banker's rounding to four places.
+/// Banker's rounding to four places.
 fn round4(value: f64) -> f64 {
     (value * 10000.0).round_ties_even() / 10000.0
 }
@@ -365,7 +364,7 @@ pub fn area_of(mesh: &Mesh) -> f64 {
     area_of_where(mesh, |_| true)
 }
 
-/// C# `AreaOf(mesh, include)`.
+/// The area of the faces `include` accepts.
 pub fn area_of_where(mesh: &Mesh, include: impl Fn(i32) -> bool) -> f64 {
     let mut area = 0.0;
 
@@ -431,7 +430,7 @@ pub fn tangent_line_in(plan: &SurfaceEdgePlan, face_index: i32) -> SurfaceLine {
     }
 }
 
-/// C# `RegionsOf(mesh, out features)`: the regions and the feature edges they were read with.
+/// The regions and the feature edges they were read with.
 pub fn regions_of(mesh: &Arc<Mesh>) -> (FaceRegionCache, FeatureEdgeSet) {
     let features = FeatureEdgeSet::create(mesh);
     let regions = FaceRegionCache::new(

@@ -1,13 +1,12 @@
-//! Port of `SurfaceRoomSkirtMeetsItsOwnChainsNotchTests.cs`: a mixed corner's RUN-OUT meeting an
-//! END's notch of the SAME chain, on one cap - the lobed prism picked as one chain that starts at the
-//! far corner's vertical edge, climbs it, crosses the flat wall's top rim, comes back down the seam
-//! and runs away round the lobe's bottom rim (`lobed_prism_meshes`).
+//! A mixed corner's RUN-OUT meeting an END's notch of the SAME chain, on one cap - the lobed prism
+//! picked as one chain that starts at the far corner's vertical edge, climbs it, crosses the flat
+//! wall's top rim, comes back down the seam and runs away round the lobe's bottom rim
+//! (`lobed_prism_meshes`).
 //!
 //! A notch is never charged against its own plan's bands, because the section it takes is bounded
-//! by the two tangent points standing ON those bands; the skirt carried its plan's index too, so the
-//! exemption swallowed it. The skirt is no band of an edge, and telling it apart is the whole of the
-//! fix: it is a footprint of its own (`SurfaceRoomFootprint::RunOutSkirt`). C# `[Arguments]` rows
-//! are a loop.
+//! by the two tangent points standing ON those bands; the skirt carried its plan's index too, so
+//! the exemption swallowed it. The skirt is no band of an edge, and telling it apart is the whole
+//! of the fix: it is a footprint of its own (`SurfaceRoomFootprint::RunOutSkirt`).
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -170,7 +169,7 @@ fn under_the_crossing_the_chain_closes_and_over_it_the_shell_would_be_open() {
             fit.crossings.len()
         );
 
-        // Asked WITHOUT the crossing (C#'s `TryBuild` with no options), the build has nothing to
+        // Asked WITHOUT the crossing (a plain `try_build`), the build has nothing to
         // refuse either way.
         let built = surface_bevel_builder::try_build(
             &prism,
@@ -201,7 +200,7 @@ fn under_the_crossing_the_chain_closes_and_over_it_the_shell_would_be_open() {
     }
 }
 
-/// C#'s LINQ `Single`: the one cut that matches.
+/// The one cut that matches; a test failure if there is not exactly one.
 fn single(cuts: &[SurfaceRoomCut], matches: impl Fn(&SurfaceRoomCut) -> bool) -> SurfaceRoomCut {
     let found: Vec<&SurfaceRoomCut> = cuts.iter().filter(|cut| matches(cut)).collect();
 

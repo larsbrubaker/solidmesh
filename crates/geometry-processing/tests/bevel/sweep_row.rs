@@ -1,9 +1,8 @@
 //! One line of the Thingi10K sweep's report: what was asked of the kernel, and what it answered.
-//! Ports `Tests/GeometryProcessingTests/LevelLine/SweepRow.cs`.
 
 use crate::sweep_build;
 
-/// C# `SweepRow`. The defaults are C#'s initializers (`Pick` -1, `Kind` "-").
+/// One row. The defaults are `pick` -1 and `kind` "-", which read as "no pick" in the report.
 #[derive(Debug, Clone)]
 pub struct SweepRow {
     pub model: i32,
@@ -15,7 +14,7 @@ pub struct SweepRow {
     pub seconds: f64,
     /// Work units the kernel spent on the row, beside the seconds it took.
     pub work: i64,
-    /// What a throw said, or which phase ran out of work; empty otherwise.
+    /// What an error said, or which phase ran out of work; empty otherwise.
     pub detail: Option<String>,
     /// Which reading of the pick's room named it - see `RoomSource`.
     pub set_by: Option<String>,
@@ -96,7 +95,7 @@ impl SweepRow {
     }
 }
 
-/// C#'s custom format `0.######`: up to six decimals, trailing zeros dropped.
+/// Up to six decimals, trailing zeros dropped (`0.######`).
 fn hashes(value: f64) -> String {
     if !value.is_finite() {
         return format!("{value}");

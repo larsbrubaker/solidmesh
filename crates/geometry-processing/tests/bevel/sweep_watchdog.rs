@@ -1,14 +1,12 @@
-//! The hard wall-clock guard every kernel call in the Thingi10K sweep runs behind. Ports
-//! `Tests/GeometryProcessingTests/LevelLine/SweepWatchdog.cs` (with its `Guarded<T>`): a kernel
-//! defect shows up as a build that never returns, and no cancellation token can reach inside a
-//! loop that never charges work.
+//! The hard wall-clock guard every kernel call in the Thingi10K sweep runs behind: a kernel defect
+//! shows up as a build that never returns, and no cancellation token can reach inside a loop that
+//! never charges work.
 //!
-//! Beside C#'s abandon-on-overrun this also cancels the overrun build's token (a build that
-//! charges work, which is every build that runs away through the budgeted loops, then ends on its
-//! own within a few milliseconds) and waits two seconds for it, so a Hung row can carry the work it
-//! spent: C# reads `budget.Spent` off the live thread, but a Rust `WorkBudget` is single-threaded
-//! (`Rc`/`Cell`) and is read only on the thread that owns it. A build that does not end is
-//! abandoned exactly as in C# and its row reads 0 work.
+//! Besides abandoning a build that overruns, this also cancels the overrun build's token (a build
+//! that charges work, which is every build that runs away through the budgeted loops, then ends on
+//! its own within a few milliseconds) and waits two seconds for it, so a Hung row can carry the
+//! work it spent: a `WorkBudget` is single-threaded (`Rc`/`Cell`) and is read only on the thread
+//! that owns it. A build that does not end is abandoned and its row reads 0 work.
 
 use std::any::Any;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -30,10 +28,10 @@ const GRACE: Duration = Duration::from_secs(2);
 /// Abandoned builds still spinning.
 static HUNG_ALIVE: AtomicI32 = AtomicI32::new(0);
 
-/// Wall-clock milliseconds one build may take before it is abandoned as Hung (C# default 30 s).
+/// Wall-clock milliseconds one build may take before it is abandoned as Hung (30 s by default).
 static BUILD_CAP_MS: AtomicU64 = AtomicU64::new(30_000);
 
-/// A C# exception thrown out of a guarded call: its type's name and what it said.
+/// An error or panic out of a guarded call: its kind's name and what it said.
 #[derive(Debug, Clone)]
 pub struct Thrown {
     pub name: String,

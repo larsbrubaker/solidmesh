@@ -1,10 +1,9 @@
-//! Port of `SurfaceStripRunsOffAConvexEdgeTests.cs`: rung 10 (b), a band that takes the WHOLE of
-//! the face it lands on and runs OFF its convex rim onto the plane beyond. The nose fixture's top
-//! edge at radius 15 is the shape: the top face is 14.142 across off that edge, the tangent rail
-//! stands at 15 and so never touches the face over the edge's own span, and the strip is cut
-//! instead along the ellipse the x = 0 plane draws on it. Plus the run-off reading's refusals on
-//! two bench solids (a tent and a chorded arc beyond the rim). C# `[Arguments]` rows are a loop
-//! over the same-named test.
+//! Rung 10 (b), a band that takes the WHOLE of the face it lands on and runs OFF its convex rim
+//! onto the plane beyond. The nose fixture's top edge at radius 15 is the shape: the top face is
+//! 14.142 across off that edge, the tangent rail stands at 15 and so never touches the face over
+//! the edge's own span, and the strip is cut instead along the ellipse the x = 0 plane draws on it.
+//! Plus the run-off reading's refusals on two bench solids (a tent and a chorded arc beyond the
+//! rim).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -368,8 +367,8 @@ fn running_off_onto_two_flats_at_a_corner_is_named_a_corner() {
 }
 
 /// The same bench with its far side drawn as a chorded ARC instead of a tent - thirteen facets of
-/// one r = 17 circle - keeps the curved name: the surface beyond the rim floods through those facets
-/// and what it floods to is not one plane.
+/// one r = 17 circle - keeps the curved name: the surface beyond the rim floods through those
+/// facets and what it floods to is not one plane.
 #[test]
 fn running_off_onto_a_chorded_curve_keeps_the_curved_name() {
     let bench = run_off_bench(&the_chorded_arc());

@@ -1,8 +1,8 @@
-//! Port of the test fixture `Fixtures/TaperedBarrelTestMeshes.cs`: a 48-facet tapered barrel (16
-//! at the bottom to 12 at the top, 30 tall) with two radial bores through its wall at different
-//! heights and a quarter turn apart, and the wall picked as the app picks it. Laid out with the
-//! exact Pi, and once with agg's old float Pi (`ThePartAsFloatPiLaidItOut`), the raw boolean the
-//! working-mesh prologue's own test reads.
+//! Test fixture: a 48-facet tapered barrel (16 at the bottom to 12 at the top, 30 tall) with two
+//! radial bores through its wall at different heights and a quarter turn apart, and the wall picked
+//! as the app picks it. Laid out with the exact Pi, and once with Pi rounded to a float
+//! (`the_part_as_float_pi_laid_it_out`), the raw boolean the working-mesh prologue's own test
+//! reads.
 
 #![allow(dead_code)]
 
@@ -28,25 +28,23 @@ pub const SIZE: f64 = 0.5;
 pub const SEGMENTS: i32 = 8;
 pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
-/// C# `ThePart`: the barrel with both bores through it.
+/// The barrel with both bores through it.
 pub fn the_part() -> Mesh {
     the_boolean(std::f64::consts::PI)
 }
 
-/// C# `FloatPi` (`3.1415927f`): Pi as agg's `MathHelper` held it until it became exact - a
-/// float, 8.7e-8 over.
+/// Pi rounded to a float (`3.1415927`), 8.7e-8 over: enough to leave a revolve's steps a hair long.
 pub const FLOAT_PI: f64 = std::f32::consts::PI as f64;
 
-/// C# `ThePartAsFloatPiLaidItOut`: [`the_part`] as it came out while agg's Pi was [`FLOAT_PI`] -
-/// every revolve step and the quarter turn that lays each drill on its side a hair long, so the
-/// boolean cut the wall's folds twice a fraction of a micron apart and left DOUBLED fold vertices and
-/// zero-area slivers: the raw output the working-mesh prologue exists to clean up. Only the
-/// prologue's own test reads this.
+/// [`the_part`] laid out with Pi as [`FLOAT_PI`] - every revolve step and the quarter turn that
+/// lays each drill on its side a hair long, so the boolean cut the wall's folds twice a fraction of
+/// a micron apart and left DOUBLED fold vertices and zero-area slivers: the raw output the
+/// working-mesh prologue exists to clean up. Only the prologue's own test reads this.
 pub fn the_part_as_float_pi_laid_it_out() -> Mesh {
     the_boolean(FLOAT_PI)
 }
 
-/// C# `TheBoolean`: the barrel and both bores laid out with `pi`, the bores subtracted.
+/// The barrel and both bores laid out with `pi`, the bores subtracted.
 fn the_boolean(pi: f64) -> Mesh {
     let barrel = revolved_with(
         pi,
@@ -68,7 +66,7 @@ fn the_boolean(pi: f64) -> Mesh {
     .expect("the bores cut the barrel")
 }
 
-/// C# `RevolvedWith`: a mesh revolved about z moved to where a revolve under `pi` would have put
+/// A mesh revolved about z moved to where a revolve under `pi` would have put
 /// it - every vertex's angle round the axis scaled by `pi / PI`, as each step of 2 pi / n was.
 fn revolved_with(pi: f64, mut revolved: Mesh) -> Mesh {
     if pi == std::f64::consts::PI {
@@ -95,18 +93,18 @@ fn revolved_with(pi: f64, mut revolved: Mesh) -> Mesh {
     revolved
 }
 
-/// C# `TheWorkingPart`: [`the_part`] through the working-mesh prologue, the only form any bevel
+/// [`the_part`] through the working-mesh prologue, the only form any bevel
 /// ever reads.
 pub fn the_working_part() -> Mesh {
     create_from(&the_part(), &mut StampedVerdict::default())
 }
 
-/// C# `TheBlank`: the barrel with NO bores.
+/// The barrel with NO bores.
 pub fn the_blank() -> Mesh {
     topology_test_meshes::create_frustum(BOTTOM_RADIUS, TOP_RADIUS, HEIGHT, FACETS)
 }
 
-/// C# `TheWall`: the wall as the app picks it - the smooth region flooded off one of its facets,
+/// The wall as the app picks it - the smooth region flooded off one of its facets,
 /// the group anchored on one of that region's boundary edges.
 pub fn the_wall(part: &Mesh) -> BevelEdgeGroupResolution {
     let graph = part.get_mesh_edge_graph();
@@ -124,7 +122,7 @@ pub fn the_wall(part: &Mesh) -> BevelEdgeGroupResolution {
     bevel_edge_group_resolver::resolve(&group, part)
 }
 
-/// C# `AWallFace`: a face of the tapered WALL, read off the mesh - its normal leans off z by the
+/// A face of the tapered WALL, read off the mesh - its normal leans off z by the
 /// taper's own angle and points away from the axis.
 pub fn a_wall_face(part: &Mesh) -> i32 {
     (0..part.faces.len())
@@ -135,7 +133,7 @@ pub fn a_wall_face(part: &Mesh) -> i32 {
         .expect("the barrel has a wall face") as i32
 }
 
-/// C# `TheWallsNormalZ`: the z every facet of the tapered wall's outward normal carries.
+/// The z every facet of the tapered wall's outward normal carries.
 pub fn the_walls_normal_z() -> f64 {
     Vector2::new(HEIGHT, BOTTOM_RADIUS - TOP_RADIUS)
         .get_normal()
@@ -158,7 +156,7 @@ fn away_from_the_axis(part: &Mesh, face: usize) -> f64 {
     }
 }
 
-/// C# `ARadialBore`: a cylinder laid on its side, long enough to pass through both walls, turned
+/// A cylinder laid on its side, long enough to pass through both walls, turned
 /// `turn_degrees` about the axis and lifted to `at_height`, laid out with `pi`.
 fn a_radial_bore(turn_degrees: f64, at_height: f64, pi: f64) -> Mesh {
     let mut drill = revolved_with(
@@ -166,8 +164,8 @@ fn a_radial_bore(turn_degrees: f64, at_height: f64, pi: f64) -> Mesh {
         topology_test_meshes::create_cylinder(BORE_RADIUS, 4.0 * BOTTOM_RADIUS, BORE_SIDES),
     );
 
-    // The quarter turn is in the layout's own Pi, as MathHelper.Tau / 4 was; the turn about the
-    // axis is DegreesToRadians, which always used the exact Math.PI.
+    // The quarter turn is in the layout's own Pi; the turn about the
+    // axis is in degrees, converted with the exact Pi.
     drill.transform(
         Matrix4X4::create_rotation_y(pi / 2.0)
             * Matrix4X4::create_rotation_z(math_helper::degrees_to_radians(turn_degrees))

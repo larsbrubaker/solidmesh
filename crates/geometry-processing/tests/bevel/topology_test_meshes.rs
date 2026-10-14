@@ -1,7 +1,7 @@
-//! Fixture builders ported from `GeometryProcessingTests/Fixtures/TopologyTestMeshes.cs`, added
-//! one builder at a time as the test classes that use them land. So far:
-//! `CreateIsoscelesPrism` (`BevelArcChordingTests`), `CreateArcPrism` (`BevelSweepBackDepthTests`)
-//! and `CreateFrustum` (`TaperedBarrelTestMeshes`), among others below.
+//! Fixture builders for the topology and bevel tests: prisms, grids, frustums, plates with bosses,
+//! ribs and walls, each a small closed solid whose creases a test picks. Among them
+//! `create_isosceles_prism` (arc chording), `create_arc_prism` (sweep-back depth) and
+//! `create_frustum` (`tapered_barrel_test_meshes.rs`).
 
 use polygon_mesh::Mesh;
 use vector_math::{math_helper, Vector2, Vector3};
@@ -68,7 +68,7 @@ pub fn create_arc_prism(radius: f64, height: f64, segments: i32) -> Mesh {
         .expect("a half disc extrudes")
 }
 
-/// C# `TopologyTestMeshes.CreateGridSolid`: the solid cells of an axis-aligned grid, each exposed
+/// The solid cells of an axis-aligned grid, each exposed
 /// cell face one quad.
 pub fn create_grid_solid(
     xs: &[f64],
@@ -117,12 +117,12 @@ pub fn create_grid_solid(
     mesh
 }
 
-/// C# `SurfaceTestMeshes.CreateThinWallBetweenLedges`: a 28 x 30 x 5 plate carrying a 4 x 30 x 20
+/// A 28 x 30 x 5 plate carrying a 4 x 30 x 20
 /// wall, 30 mm of it, from x = 12 to x = 16 and up to z = 25. Its two feet are a pair of concave
 /// creases - (12, y, 5) and (16, y, 5) - facing away from each other across a wall thinner than
 /// the radius they are filleted at. The ledges are 12 mm so a radius-8 setback has face to land on
 /// at both feet.
-// Used by the thin wall bead clip port in mattercad-model; the kernel `bevel` binary has no user.
+// Used by the thin wall bead clip tests in mattercad-model; the kernel `bevel` binary has no user.
 #[allow(dead_code)]
 pub fn create_thin_wall_between_ledges() -> Mesh {
     // The whole base, and above it only the middle column, which is the wall
@@ -134,7 +134,7 @@ pub fn create_thin_wall_between_ledges() -> Mesh {
     )
 }
 
-/// C# `SurfaceTestMeshes.CreateSquareBossOnPlate`: a 20 x 20 x 4 plate with an 8 x 8 boss standing
+/// A 20 x 20 x 4 plate with an 8 x 8 boss standing
 /// 8 tall on its middle.
 pub fn create_square_boss_on_plate() -> Mesh {
     create_grid_solid(
@@ -150,7 +150,7 @@ pub fn create_square_boss_on_plate() -> Mesh {
     )
 }
 
-/// C# `TopologyTestMeshes.CreateTwoAlignedBlocksOnAPlate`: two 12 x 12 blocks on (or sunk into) a
+/// Two 12 x 12 blocks on (or sunk into) a
 /// 4 mm plate, `land` of plate between them, their near foot creases collinear along `y = 4`.
 ///
 /// **Sunk**: each pocket's floor is a region of its own, the two blocks' footprints lying between
@@ -180,13 +180,13 @@ pub fn create_two_aligned_blocks_on_a_plate(standing_proud: bool, land: f64) -> 
     })
 }
 
-/// C# `TopologyTestMeshes.TheFirstBlocksNearCrease`: where the first block's foot crease runs,
+/// Where the first block's foot crease runs,
 /// along the near side of the plate.
 pub fn the_first_blocks_near_crease() -> (Vector3, Vector3) {
     (Vector3::new(4.0, 4.0, 6.0), Vector3::new(16.0, 4.0, 6.0))
 }
 
-/// C# `TopologyTestMeshes.TheSecondBlocksNearCrease`: and the second's, collinear with it across
+/// And the second's, collinear with it across
 /// the land.
 pub fn the_second_blocks_near_crease(land: f64) -> (Vector3, Vector3) {
     (
@@ -195,7 +195,7 @@ pub fn the_second_blocks_near_crease(land: f64) -> (Vector3, Vector3) {
     )
 }
 
-/// C# `TopologyTestMeshes.CreateCornerPocketBlock`: a `size` cube with a `pocket` cube bitten out
+/// A `size` cube with a `pocket` cube bitten out
 /// of its far corner.
 pub fn create_corner_pocket_block(size: f64, pocket: f64) -> Mesh {
     let split = size - pocket;
@@ -208,7 +208,7 @@ pub fn create_corner_pocket_block(size: f64, pocket: f64) -> Mesh {
     })
 }
 
-/// C# `SurfaceTestMeshes.CreateRibOnPlate`: a 20 x 20 x 5 plate with a rib 4 wide standing 10 on
+/// A 20 x 20 x 5 plate with a rib 4 wide standing 10 on
 /// it, its walls at x = 8 and 12 and its free end at y = 5.
 pub fn create_rib_on_plate() -> Mesh {
     create_grid_solid(
@@ -224,7 +224,7 @@ pub fn create_rib_on_plate() -> Mesh {
     )
 }
 
-/// C# `TopologyTestMeshes.CreateCylinder`: a `sides`-sided cylinder of `radius` and `height` about
+/// A `sides`-sided cylinder of `radius` and `height` about
 /// z, centred on the origin.
 pub fn create_cylinder(radius: f64, height: f64, sides: i32) -> Mesh {
     let mut path = agg_path::vertex_storage::VertexStorage::new();
@@ -242,7 +242,7 @@ pub fn create_cylinder(radius: f64, height: f64, sides: i32) -> Mesh {
     .expect("the cylinder revolves")
 }
 
-/// C# `TopologyTestMeshes.CreateBoreBlockWithChordWall`: a 40 x 40 x 20 block with a bore of
+/// A 40 x 40 x 20 block with a bore of
 /// radius 8 through it and a flat-walled lobe cut across the bore's side.
 pub fn create_bore_block_with_chord_wall(sides: i32) -> Mesh {
     use polygon_mesh::csg::boolean_processing::do_array;
@@ -275,7 +275,7 @@ pub fn create_bore_block_with_chord_wall(sides: i32) -> Mesh {
     .expect("the bore and lobe cut the block")
 }
 
-/// C# `TopologyTestMeshes.CreateShallowRidgeBlock`: a 20 x 20 block whose top is two triangles
+/// A 20 x 20 block whose top is two triangles
 /// folded `step_degrees` along a diagonal ridge, one of them flat.
 pub fn create_shallow_ridge_block(step_degrees: f64) -> Mesh {
     let half = 10.0;
@@ -306,7 +306,7 @@ pub fn create_shallow_ridge_block(step_degrees: f64) -> Mesh {
     mesh
 }
 
-/// C# `TopologyTestMeshes.CreatePyramidPocketPrism`: a `sides`-sided prism of circumradius
+/// A `sides`-sided prism of circumradius
 /// `radius` and `height` whose top is a pyramid pocket sunk to `apex`.
 pub fn create_pyramid_pocket_prism(sides: i32, radius: f64, height: f64, apex: Vector3) -> Mesh {
     let rim: Vec<Vector3> = (0..sides)
@@ -332,7 +332,7 @@ pub fn create_pyramid_pocket_prism(sides: i32, radius: f64, height: f64, apex: V
     mesh
 }
 
-/// C# `TopologyTestMeshes.CreateFrustum`: a `sides`-sided frustum about z, `bottom_radius` at
+/// A `sides`-sided frustum about z, `bottom_radius` at
 /// z = -height / 2 tapering to `top_radius` at +height / 2, closed at both ends.
 pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i32) -> Mesh {
     let mut path = agg_path::vertex_storage::VertexStorage::new();
@@ -350,7 +350,7 @@ pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i
     .expect("the frustum revolves")
 }
 
-/// C# `LPrismTestMeshes.CreateLShapedGridPrism`: an L of three 10 mm cells, 10 tall - one concave
+/// An L of three 10 mm cells, 10 tall - one concave
 /// edge up its inside corner, meeting the top's convex rim at (10, 10, 10).
 pub fn create_l_shaped_grid_prism() -> Mesh {
     let across = [0.0, 10.0, 20.0];
@@ -359,7 +359,7 @@ pub fn create_l_shaped_grid_prism() -> Mesh {
     })
 }
 
-/// C# `LPrismTestMeshes.CreateShearedLShapedGridPrism`: the same L prism LEANED OVER as it rises,
+/// The same L prism LEANED OVER as it rises,
 /// about its own top face - that face is still `z = 10` and its rim is exactly where it was, but
 /// every vertical edge, the concave one included, now runs `lean_degrees` off square to it. Leaning
 /// in x tilts the face the two picked edges SHARE and leaves the unpicked wall the plane `y = 10`;
@@ -391,7 +391,7 @@ pub fn create_sheared_l_shaped_grid_prism(lean_degrees: f64, along_the_rim: bool
     mesh
 }
 
-/// C# `LPrismTestMeshes.CreateLShapedPrism`: an L cross section extruded 10 in z - five square
+/// An L cross section extruded 10 in z - five square
 /// corners and one reflex corner at (10, 10), which is the one concave edge of the solid.
 pub fn create_l_shaped_prism() -> Mesh {
     let mut path = agg_path::vertex_storage::VertexStorage::new();
@@ -407,7 +407,7 @@ pub fn create_l_shaped_prism() -> Mesh {
         .expect("the L outline extrudes")
 }
 
-/// C# `TopologyTestMeshes.CreateNotchedPrism`: a square prism with a triangular notch cut into its
+/// A square prism with a triangular notch cut into its
 /// +x side. The notch's apex at (16, 10) is a reflex corner, so the vertical edge there is concave
 /// and its VOID wedge is 2 atan(1.5) = 112.62 degrees, at an angle chosen so every outline
 /// coordinate is an integer and nothing rounds on the way through Clipper.
@@ -426,14 +426,14 @@ pub fn create_notched_prism() -> Mesh {
         .expect("the notched outline extrudes")
 }
 
-/// C# `TopologyTestMeshes.CreateShallowReflexPrism`: a square prism whose top edge is kinked INWARD
+/// A square prism whose top edge is kinked INWARD
 /// by a hair, so the vertical edge at the kink is concave but folds by only `turn_degrees`. The
 /// fixture for the band between the two tolerances that matter: a fold of more than
-/// `FeatureEdge.DefaultFlatAngleDegrees` is a feature edge and can be selected, and a fold of
+/// `FeatureEdge::default_flat_angle_degrees()` is a feature edge and can be selected, and a fold of
 /// less than a degree is too little for a blend to be carried round. The kink is
 /// `10 tan(turn / 2)` deep over a 10 mm run, which at 0.8 degrees is 70 microns - seventy of
-/// agg's own 0.001 mm grid steps, so the extrusion does not round it away. C#'s `height`
-/// defaults to 10.
+/// agg's own 0.001 mm grid steps, so the extrusion does not round it away. The usual `height` is
+/// 10.
 // Read by mattercad-model's mixed corner tests; the geometry-processing binaries that mount this
 // file do not use it.
 #[allow(dead_code)]
@@ -452,7 +452,7 @@ pub fn create_shallow_reflex_prism(turn_degrees: f64, height: f64) -> Mesh {
         .expect("the shallow reflex outline extrudes")
 }
 
-/// C# `LPrismTestMeshes.CreateLPrismWithFadingInnerCorner`: the L prism whose inner corner FADES -
+/// The L prism whose inner corner FADES -
 /// sharp for the bottom half, then opened out into a fillet that grows from nothing at the middle
 /// to `top_radius` at the top face. The blend is the exact rolling-ball surface, which for a
 /// linearly growing radius is a CONE: each of the `blend_facets` sectors is one planar triangle
@@ -556,7 +556,7 @@ pub fn create_l_prism_with_fading_inner_corner(
     mesh
 }
 
-/// C# `TopologyTestMeshes.CreateRakedLBlock`: a 40 x 40 x 20 block with one quadrant cut out of it
+/// A 40 x 40 x 20 block with one quadrant cut out of it
 /// so two walls meet at the origin, the `x = 0` wall square and the other raked `rake_degrees`
 /// under the part. The two walls present their top edges to the top face at DIFFERENT angles, and
 /// the two fillets there have different setbacks and different overshoots.
@@ -591,7 +591,7 @@ pub fn create_raked_l_block(rake_degrees: f64) -> Mesh {
     .expect("the quadrant cuts the block")
 }
 
-/// C# `SurfaceTestMeshes.CreateBossOnSlab`: the classic boss fillet fixture - a cylinder standing
+/// The classic boss fillet fixture - a cylinder standing
 /// on a slab, unioned into one solid, so the circle where the two meet is a closed CONCAVE loop.
 /// The post runs well down into the slab rather than resting on its face, because two coincident
 /// faces are a boolean's worst input and the fixture is not what is under test.
@@ -614,7 +614,7 @@ pub fn create_boss_on_slab(post_radius: f64, sides: i32, slab_top: f64) -> Mesh 
     .expect("the post and slab union")
 }
 
-/// C# `SurfaceTestMeshes.AStepsShell`: everything of the step that neither fin fixture changes -
+/// Everything of the step that neither fin fixture changes -
 /// the two sides, the bottom, the riser's top and back, and the tread's own front.
 fn a_steps_shell(mesh: &mut Mesh) {
     // The two sides, each an L fanned from its own reflex corner - the corner that makes the
@@ -682,7 +682,7 @@ fn a_steps_shell(mesh: &mut Mesh) {
     );
 }
 
-/// C# `SurfaceTestMeshes.CreateForkedFinsOnASlab`: the step with a riser fin narrowed to (2, 10)..
+/// The step with a riser fin narrowed to (2, 10)..
 /// (6, 10) and its apex at (4, 5, 20), and a second, four-sided tent on (4, 5), (5, 1), (9, 1),
 /// (8, 4) sharing that apex and nothing else - so four standing creases meet there, the tread's
 /// rim pinches, and a walk of the rim that starts down the fin's own tail leaves the tent's ring
@@ -762,7 +762,7 @@ pub fn create_forked_fins_on_a_slab() -> Mesh {
     mesh
 }
 
-/// C# `SurfaceTestMeshes.CreateFinOnASlab`: a step with ONE fin standing on its tread, against the riser. The step
+/// A step with ONE fin standing on its tread, against the riser. The step
 /// is 20 wide: the tread is `y` in [0, 10] at `z` = 20 and the riser stands behind it to `z` = 30.
 /// The fin is the tetrahedron on `(2, 10, 20)`, `(10, 10, 20)`, `(6, 5, 20)` and the peak
 /// `(6, 10, 24)`, standing on the tread and buried in the riser behind it. The solid is
@@ -820,7 +820,7 @@ pub fn create_fin_on_a_slab() -> Mesh {
     mesh
 }
 
-/// C# `SurfaceTestMeshes.CreatePlateWithABossFootSpanningTheRim`: a 30 x 30 plate, its top at z = 20 with the front
+/// A 30 x 30 plate, its top at z = 20 with the front
 /// rim broken at x = 8 and 22, and a triangular boss on `(5, 6)`, `(25, 6)`, `(15, 20)` standing to
 /// z = 28 - its long foot edge running alongside the picked middle third of the front rim.
 pub fn create_plate_with_a_boss_foot_spanning_the_rim() -> Mesh {

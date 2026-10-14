@@ -1,8 +1,8 @@
-//! Port of `Fixtures/TaperedLedgeTestMeshes.cs`: a slab whose LEDGE narrows - a block standing on a
-//! plate, with the strip of plate in front of the block (the ledge the foot crease's band lands on)
-//! tapering to a pinch, either along the block or to the middle of it and out again. Built for the
-//! partial run-off readings (`SurfaceRoomPartialRunOffTests`): a band that eats the ledge whole over
-//! a stretch and runs off its rim onto the plate's tapering side.
+//! A slab whose LEDGE narrows - a block standing on a plate, with the strip of plate in front of
+//! the block (the ledge the foot crease's band lands on) tapering to a pinch, either along the
+//! block or to the middle of it and out again. Built for the partial run-off readings
+//! (`surface_room_partial_run_off_tests.rs`): a band that eats the ledge whole over a stretch and
+//! runs off its rim onto the plate's tapering side.
 
 #![allow(dead_code)]
 
@@ -27,12 +27,12 @@ pub const TAPER_RATE: f64 = 0.5;
 /// The width the ledge narrows to.
 pub const PINCH: f64 = 1.0;
 
-/// C# `LengthOf` with its default arguments.
+/// How long the block is, with the default sizes.
 pub fn length_of() -> f64 {
     length_of_with(WIDTH_AT_THE_RIM, TAPER_RATE, PINCH, false)
 }
 
-/// C# `LengthOf`: how long the block is - as long as the taper takes to reach the pinch, twice that
+/// How long the block is - as long as the taper takes to reach the pinch, twice that
 /// where it is pinched in the middle.
 pub fn length_of_with(
     width_at_the_rim: f64,
@@ -43,7 +43,7 @@ pub fn length_of_with(
     (width_at_the_rim - pinch) / taper_rate * (if pinched_in_the_middle { 2.0 } else { 1.0 })
 }
 
-/// C# `WidthAt`: the ledge's width at `x`.
+/// The ledge's width at `x`.
 pub fn width_at(
     x: f64,
     width_at_the_rim: f64,
@@ -62,7 +62,7 @@ pub fn width_at(
             }))
 }
 
-/// C# `CreateWallTaperingToAKnifeEdge` with its default sizes.
+/// The wall tapering to a knife edge, with the default sizes.
 pub fn create_wall_tapering_to_a_knife_edge(pinched_in_the_middle: bool) -> Mesh {
     create_wall_tapering_to_a_knife_edge_with(
         WIDTH_AT_THE_RIM,
@@ -72,7 +72,7 @@ pub fn create_wall_tapering_to_a_knife_edge(pinched_in_the_middle: bool) -> Mesh
     )
 }
 
-/// C# `CreateWallTaperingToAKnifeEdge`: the ledge narrowing from `width_at_the_rim` to `pinch`
+/// The ledge narrowing from `width_at_the_rim` to `pinch`
 /// along the block, or to the middle of it and out again.
 pub fn create_wall_tapering_to_a_knife_edge_with(
     width_at_the_rim: f64,
@@ -93,7 +93,7 @@ pub fn create_wall_tapering_to_a_knife_edge_with(
     }
 }
 
-/// C# `CreateWallOfWidths`: the slab with its ledge `(at, width)` wide at each station, linear
+/// The slab with its ledge `(at, width)` wide at each station, linear
 /// between them; the block runs from the first station to the last.
 pub fn create_wall_of_widths(stations: &[(f64, f64)]) -> Mesh {
     let mut mesh = Mesh::new();
@@ -179,7 +179,8 @@ pub fn create_wall_of_widths(stations: &[(f64, f64)]) -> Mesh {
         }
 
         // A station on the side of the strip that does NOT follow the taper is no corner of it, and
-        // a point in the middle of a straight edge is a point the face BEYOND that edge has not got.
+        // a point in the middle of a straight edge is a point the face BEYOND that edge has not
+        // got.
         for at in (0..points.len()).rev() {
             let before = points[(at + points.len() - 1) % points.len()];
             let after = points[(at + 1) % points.len()];

@@ -1,6 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TopCenterNoseControlMeasureTests.cs`: how near the
-//! kernel's Top Center Face nose lands to the Onshape control, with run-outs off and on - the
-//! kernel-side reading of `BevelTopCenterFaceRegressionTests`.
+//! Top center nose control measure tests: how near the kernel's Top Center Face nose lands to the
+//! Onshape control, with run-outs off and on - the kernel-side reading of
+//! `bevel_top_center_face_regression_tests.rs` in mattercad-model.
 //!
 //! The control, `top-center-face-control-nose.txt`, is the control mesh that regression test
 //! dumps, in its box frame, cut to the triangles with a corner near the nose. Distances are vertex
@@ -11,9 +11,8 @@
 //! the two crease faces, where the control's blend stands 0.57 wide and 0.12 deep at s = 3. The
 //! target is the regression test's chord tolerance, 0.05, in every region.
 //!
-//! Skipped as in C# (`[Skip]`): `TheNoseIsWithinTheChordToleranceOfTheControlWithRunOutsOn` ("R4
-//! target: the run-out does not yet land within the chord tolerance; the measured deviations are
-//! printed").
+//! There is no test that the nose is within the chord tolerance of the control with run-outs on:
+//! the run-out does not yet land within it, so the measured deviations are printed instead.
 
 use std::collections::{BTreeMap, HashSet};
 use std::rc::Rc;
@@ -49,7 +48,7 @@ const REACHED_WITH_RUN_OUTS_ON: f64 = 0.205;
 
 type Triangle = (Vector3, Vector3, Vector3);
 
-/// C# `MeasureTheNoseAgainstTheControlWithRunOutsOffAndOn`: prints both readings; asserts that
+/// Prints both readings; asserts that
 /// each builds, and that what is reached today, off (the live path) and on, is not lost - not the
 /// target, which is the skipped test.
 #[test]
@@ -86,12 +85,12 @@ fn said(worst: &[(String, f64)]) -> String {
         .join("; ")
 }
 
-/// C# `Measure`: the worst distance per region and way, and whether the nose built and filled.
+/// The worst distance per region and way, and whether the nose built and filled.
 fn measure(run_outs: bool) -> (Vec<(String, f64)>, bool) {
     let fixture = Rc::new(LevelLineFixture::load("top-center-face-nose-r1"));
     let filled = {
-        // C#'s `using (runOuts ? BandGroupFields.TurnRunOutsOn() : null)` round the build and the
-        // fill: the gate rides on the budget in force.
+        // Run-outs are turned on (when asked) round both the build and the fill: the gate rides on
+        // the budget in force.
         let budget = default_budget(&fixture, false);
         let _work = LevelLineWork::begin(Some(Rc::clone(&budget)));
         let _run_outs = run_outs.then(turn_run_outs_on);
@@ -136,7 +135,7 @@ fn measure(run_outs: bool) -> (Vec<(String, f64)>, bool) {
         .collect();
     let control = load_control();
 
-    // Ordered by key, as C#'s `OrderBy(pair => pair.Key)`.
+    // Ordered by key, so the report reads the same on every run.
     let mut worst: BTreeMap<String, (f64, Vector3)> = BTreeMap::new();
     let mut take = |from: &[Triangle], to: &[Triangle], way: &str| {
         let mut seen = HashSet::new();
@@ -190,7 +189,7 @@ fn region_of(v: Vector3) -> &'static str {
     }
 }
 
-/// C# `LoadControl`: nine numbers a line, a triangle's three corners.
+/// Nine numbers a line, a triangle's three corners.
 fn load_control() -> Vec<Triangle> {
     let path = format!(
         "{}/tests/bevel/level_line_fixtures/top-center-face-control-nose.txt",

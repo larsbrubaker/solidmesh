@@ -1,7 +1,7 @@
-//! Port of `SurfaceStandingFeatureTailAndCapTests.cs`: the readings the notched end is sewn from,
-//! asked ON THEIR OWN rather than through a part - where the strip stops, the bands the tail draws
-//! past it, what the split cap leaves on the ring's own chords, and how an extended face that no
-//! fan covers is cut up (`surface_strip_tail_around_a_feature`, `surface_end_cap_around_a_feature`,
+//! The readings the notched end is sewn from, asked ON THEIR OWN rather than through a part - where
+//! the strip stops, the bands the tail draws past it, what the split cap leaves on the ring's own
+//! chords, and how an extended face that no fan covers is cut up
+//! (`surface_strip_tail_around_a_feature`, `surface_end_cap_around_a_feature`,
 //! `surface_standing_feature_faces`, `surface_ring_ears`).
 
 use std::collections::HashSet;

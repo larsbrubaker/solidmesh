@@ -1,6 +1,5 @@
 //! One model of the Thingi10K sweep: its picks, each read for its room and then built at the five
-//! size fractions. Ports `Thingi10KSweep.SweepModel` from
-//! `Tests/GeometryProcessingTests/LevelLine/Thingi10KSweep.cs`.
+//! size fractions.
 
 use std::collections::HashSet;
 use std::io::Write;
@@ -107,9 +106,9 @@ pub fn sweep_model<W: Write>(
         move |a: i32, b: i32| features.contains(&key(a, b))
     };
 
-    // Mixed by hand rather than by HashCode.Combine, which is SALTED PER PROCESS in .NET: the same
-    // model with the same seed drew a different set of faces in every run, so "model N pick K"
-    // named a different face each time and no row of any report could ever be found again.
+    // Mixed by hand rather than by a salted hash: a hash SALTED PER PROCESS would draw a different
+    // set of faces for the same model and seed on every run, so "model N pick K" would name a
+    // different face each time and no row of any report could ever be found again.
     let mixed = seed.wrapping_mul(397) ^ model.id;
     let mut random = DotNetRandom::new(mixed);
 
@@ -325,12 +324,12 @@ fn sweep_pick<W: Write>(
     let mut set_by = sweep_build::said(&reading.room_set_by);
 
     // An OPEN pick's room can read infinite or NaN - at a FADE end nothing yet limits the size, a
-    // known hole in BandGap.ReadRoom - and infinity times a fraction is no size at all. Such a
-    // pick's sizes come off a stated fallback ladder instead: the reference size is the SMALLER of
-    // an eighth of the pick's own length (its edges added up) and a twentieth of the mesh's
-    // bounding diagonal, whichever is the tighter statement about this part. The row says so, and
-    // the "1.1 must refuse by size" expectation is off for it, because 1.1 of a fallback is not
-    // over any room the kernel named.
+    // known hole in `band_gap_reading::read_room` - and infinity times a fraction is no size at
+    // all. Such a pick's sizes come off a stated fallback ladder instead: the reference size is the
+    // SMALLER of an eighth of the pick's own length (its edges added up) and a twentieth of the
+    // mesh's bounding diagonal, whichever is the tighter statement about this part. The row says
+    // so, and the "1.1 must refuse by size" expectation is off for it, because 1.1 of a fallback is
+    // not over any room the kernel named.
     let mut room_not_finite = open_pick && !room.is_finite();
     let fallback = if room_not_finite {
         (pick_length(positions, &pick.loops, &pick.closed) / 8.0).min(model_diagonal * 0.05)
@@ -366,8 +365,9 @@ fn sweep_pick<W: Write>(
     let mut hung = false;
 
     // A pick whose side PINCHES has a true room BELOW the one the width reading names, and only a
-    // build finds it - see BandGap.Build. When one does, the room it names is taken as this pick's
-    // room and the fractions are walked again from the top against it, so the pick still gets its
+    // build finds it - see `band_gap_entry_points::build`. When one does, the room it names is
+    // taken as this pick's room and the fractions are walked again from the top against it, so the
+    // pick still gets its
     // 0.1 to 1.0 builds and its 1.1 refusal against a room that is true. Bounded, because each
     // re-reading is strictly smaller than the last.
     let mut rederivations = 0;

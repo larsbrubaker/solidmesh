@@ -1,13 +1,12 @@
-//! Port of `SurfaceStripTests.cs`: the strip and its ends, phase 3 of the polygon-space bevel plan,
-//! measured on the one shape whose every number can be worked out on paper. The walkback left a gap
-//! bounded by the two tangent lines and by a step round the cube's own corner at each end; what is
-//! checked here is that the strip fills exactly that gap - the right surface, in the right place,
-//! sewn to the vertices already standing there - and that the end faces gave up exactly the section
-//! the strip's end profile cuts out of them.
+//! The strip and its ends, phase 3 of the polygon-space bevel plan, measured on the one shape whose
+//! every number can be worked out on paper. The walkback left a gap bounded by the two tangent
+//! lines and by a step round the cube's own corner at each end; what is checked here is that the
+//! strip fills exactly that gap - the right surface, in the right place, sewn to the vertices
+//! already standing there - and that the end faces gave up exactly the section the strip's end
+//! profile cuts out of them.
 //!
 //! Everything is measured rather than counted wherever a count would pin a triangulation: area,
-//! volume and distance are what the construction promises. C# `[Arguments]` rows are a loop over
-//! the same-named test.
+//! volume and distance are what the construction promises.
 
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -69,8 +68,8 @@ fn a_chamfered_cube_edge_is_filled_by_one_flat_band_and_notches_both_end_faces()
 
     // What the triangle count was standing in for, said directly: the strip's cross sections stand
     // at the union of the two tangent lines' own vertices, and the end profile carries whatever the
-    // end face's triangulation left on it, so that no vertex anywhere ends up part way along another
-    // triangle's edge.
+    // end face's triangulation left on it, so that no vertex anywhere ends up part way along
+    // another triangle's edge.
     assert_nothing_stands_part_way_along_an_edge(&built);
 
     for &face in &strip {
@@ -191,9 +190,9 @@ fn the_top_rim_of_a_cube_mitres_its_four_corners_into_the_analytic_solid() {
 
 /// The same rim FILLETED, with one vertex of the front wall standing inside a mitre's setback
 /// window: on the wall's own tangent line, 1.5 mm short of the corner, where the setback is 3. A
-/// station the wall's seam asks for there is already PAST the end of the rails nearer the top, and a
-/// cross section taken at it steps backward on them while it steps forward on the rest - which came
-/// back as a doubled-over flap. So it is measured by AREA and by that pair rather than by
+/// station the wall's seam asks for there is already PAST the end of the rails nearer the top, and
+/// a cross section taken at it steps backward on them while it steps forward on the rest - which
+/// came back as a doubled-over flap. So it is measured by AREA and by that pair rather than by
 /// manifoldness, which the fold satisfies.
 #[test]
 fn a_vertex_inside_a_mitres_setback_window_does_not_double_the_strip_back_over_itself() {
@@ -215,7 +214,8 @@ fn a_vertex_inside_a_mitres_setback_window_does_not_double_the_strip_back_over_i
     );
 
     // The rails: the arc about the centre line at (y, z) = (-7, 7), swung from the foot on the top
-    // face to the foot on the wall, and each one reaching -2 y along the edge between its two mitres.
+    // face to the foot on the wall, and each one reaching -2 y along the edge between its two
+    // mitres.
     let mut expected = 0.0;
 
     for chord in 0..SEGMENTS {
@@ -234,11 +234,11 @@ fn a_vertex_inside_a_mitres_setback_window_does_not_double_the_strip_back_over_i
     );
 }
 
-/// What a whole cylinder rim comes to TODAY: 64 facet edges and 64 wall facets, each planned against
-/// its own flat wall, mitred facet to facet. The faceted answer IS the analytic one for the solid it
-/// builds - Pappus on the inradius, because every mitre plane of a regular rim passes through the
-/// axis - and the tolerance is left at 2 per cent because what this test is FOR is noticing when
-/// rung 5 changes the answer.
+/// What a whole cylinder rim comes to TODAY: 64 facet edges and 64 wall facets, each planned
+/// against its own flat wall, mitred facet to facet. The faceted answer IS the analytic one for the
+/// solid it builds - Pappus on the inradius, because every mitre plane of a regular rim passes
+/// through the axis - and the tolerance is left at 2 per cent because what this test is FOR is
+/// noticing when rung 5 changes the answer.
 #[test]
 fn a_cylinder_rim_builds_facet_to_facet_today() {
     const RADIUS: f64 = 10.0;
@@ -282,10 +282,10 @@ fn a_cylinder_rim_builds_facet_to_facet_today() {
 }
 
 /// The same one cube edge chamfered at a tenth of the cube, on a 20 mm cube, a 200 mm one and a
-/// 2000 mm one. Nothing about the construction is scale dependent, but the arithmetic underneath is:
-/// a mesh stores floats, and any tolerance written as a fixed micron stops meaning anything there.
-/// The setbacks are deliberately not round numbers, so the tangent lines land where a float cannot
-/// hold them exactly.
+/// 2000 mm one. Nothing about the construction is scale dependent, but the arithmetic underneath
+/// is: a mesh stores floats, and any tolerance written as a fixed micron stops meaning anything
+/// there. The setbacks are deliberately not round numbers, so the tangent lines land where a float
+/// cannot hold them exactly.
 #[test]
 fn a_chamfered_cube_edge_closes_at_every_scale() {
     for (across, setback) in [
@@ -640,7 +640,7 @@ fn corners(mesh: &Mesh, face_index: usize) -> [Vector3; 3] {
     ]
 }
 
-/// C# `RegionsOf`: the part's feature edges and its region cache at their flat angle.
+/// The part's feature edges and its region cache at their flat angle.
 pub fn regions_of(mesh: &Mesh) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
     let features = FeatureEdgeSet::create(mesh);
     let regions = Arc::new(FaceRegionCache::new(

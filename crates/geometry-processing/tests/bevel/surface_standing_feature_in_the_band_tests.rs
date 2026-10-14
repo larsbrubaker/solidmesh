@@ -1,5 +1,5 @@
-//! Port of `SurfaceStandingFeatureInTheBandTests.cs`: "Encroaching Side.mcx" in SURFACE mode - a
-//! CONVEX band whose footprint on the wall it lands on CONTAINS the foot of a feature standing there.
+//! "Encroaching Side.mcx" in SURFACE mode - a CONVEX band whose footprint on the wall it lands on
+//! CONTAINS the foot of a feature standing there.
 //!
 //! The pick is the chevron's right knife tip - the vertical edge at (20, 0) where the flat face
 //! `x = 20` meets the right slope at 45 degrees - and what stands on that slope is the nose, whose
@@ -39,7 +39,8 @@ fn the_tip_edge_top() -> Vector3 {
 }
 
 /// THE SIZE THAT COVERS THE FOOT BUILDS: what used to be named there
-/// (`SurfaceStandingFeatureInTheBand`) is now the bite the nose takes out of the middle of the strip.
+/// (`SurfaceStandingFeatureInTheBand`) is now the bite the nose takes out of the middle of the
+/// strip.
 #[test]
 fn a_nose_foot_inside_a_convex_band_is_built_rather_than_named() {
     let part = nose_in_notch::create();

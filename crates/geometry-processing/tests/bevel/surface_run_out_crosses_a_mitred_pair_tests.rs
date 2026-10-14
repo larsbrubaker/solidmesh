@@ -1,8 +1,7 @@
-//! Port of `SurfaceRunOutCrossesAMitredPairTests.cs`: a mixed corner's RUN-OUT crossing BOTH bands
-//! of one mitred corner - the lobed prism's barrel rim and seam picked together with the whole
-//! CLOSED rim of the flat side, which is what a FACE pick of that side resolves to. That rim puts a
-//! band on the bottom cap and a band on the wall the run-out turns against, and the two mitre at the
-//! part's own corner between them.
+//! A mixed corner's RUN-OUT crossing BOTH bands of one mitred corner - the lobed prism's barrel rim
+//! and seam picked together with the whole CLOSED rim of the flat side, which is what a FACE pick
+//! of that side resolves to. That rim puts a band on the bottom cap and a band on the wall the
+//! run-out turns against, and the two mitre at the part's own corner between them.
 //!
 //! The cap band cuts the run-out's columns from the CAP inward and the wall band cuts them from the
 //! WALL outward, so every column is the window between them - and the turn the two cuts meet at is
@@ -212,7 +211,7 @@ fn a_chord_clear_only_because_its_turn_is_past_the_sweep_is_no_hand_over() {
 
     let wall = SurfaceMixedCornerWall::try_read(&corner)
         .unwrap_or_else(|why| panic!("the wall has to read - {:?}", why.code()));
-    // C# reads `meetsTheWall` through an `out` it never checks, so a miss leaves it 0.
+    // The reading is not checked: a rail that misses the wall reads as 0.
     let meets_the_wall = wall.try_where_the_rail_meets_the_wall().unwrap_or(0.0);
 
     let clears = f64::min(

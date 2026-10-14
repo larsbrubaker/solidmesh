@@ -1,6 +1,5 @@
-//! Which models the Thingi10K sweep draws from the corpus, and where each one's mesh lives. Ports
-//! `Tests/GeometryProcessingTests/LevelLine/Thingi10KCorpus.cs`. The dataset is read IN PLACE and
-//! nothing is copied into this repository.
+//! Which models the Thingi10K sweep draws from the corpus, and where each one's mesh lives. The
+//! dataset is read IN PLACE and nothing is copied into this repository.
 
 use std::path::{Path, PathBuf};
 

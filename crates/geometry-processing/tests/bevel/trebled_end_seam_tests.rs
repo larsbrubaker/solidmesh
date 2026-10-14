@@ -1,8 +1,8 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/TrebledEndSeamTests.cs`: the END half of the
-//! seam rule, as real manifold geometry - a picked crease whose end vertex the file carries as
-//! THREE copies microns apart, stitched by triangles of no area. The room must read the part, not
-//! the microns at its end, while a real feature joined by ordinary edges microns away is still a
-//! wall. The block and its rewrites are `trebled_end_geometry.rs`.
+//! Trebled end seam tests: the END half of the seam rule, as real manifold geometry - a picked
+//! crease whose end vertex the file carries as THREE copies microns apart, stitched by triangles of
+//! no area. The room must read the part, not the microns at its end, while a real feature joined by
+//! ordinary edges microns away is still a wall. The block and its rewrites are
+//! `trebled_end_geometry.rs`.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::{
@@ -21,34 +21,34 @@ const RING: i32 = 4;
 
 const SLICES: i32 = 8;
 
-/// C# `Diagonal`: the block is 10 across, so its diagonal is this.
+/// The block is 10 across, so its diagonal is this.
 const DIAGONAL: f64 = 17.320508075688775;
 
-/// C# `SeamEpsilon`: the app's number for this block, 5e-4 of the diagonal.
+/// The app's number for this block, 5e-4 of the diagonal.
 const SEAM_EPSILON: f64 = 5e-4 * DIAGONAL;
 
-/// C# `Split`: how far apart the copies stand - 2.5e-4 of the diagonal.
+/// How far apart the copies stand - 2.5e-4 of the diagonal.
 const SPLIT: f64 = 2.5e-4 * DIAGONAL;
 
 const FILLET: f64 = 0.1;
 
 const FOLD_DEGREES: f64 = 10.0;
 
-/// C# `EndSlice`: the slice the picked crease run ends at, mid-block.
+/// The slice the picked crease run ends at, mid-block.
 const END_SLICE: i32 = SLICES / 2;
 
-/// C# `Chain`: one edge of the top-front crease, an open chain.
+/// One edge of the top-front crease, an open chain.
 fn chain() -> Vec<i32> {
     vec![(END_SLICE - 1) * RING, END_SLICE * RING]
 }
 
-/// C# `ContinuingCrease`: the crease's continuation past the chain's end.
+/// The crease's continuation past the chain's end.
 const CONTINUING_CREASE: i32 = (END_SLICE + 1) * RING;
 
-/// C# `TentSize`: the tent's base, microns across - and so its distance from the chain's end.
+/// The tent's base, microns across - and so its distance from the chain's end.
 const TENT_SIZE: f64 = 0.002;
 
-/// C# `ATrebledEndReadsThePartsRoomAndNotTheMicronsAtItsEnd`.
+/// A trebled end reads the part's room and not the microns at its end.
 #[test]
 fn a_trebled_end_reads_the_parts_room_and_not_the_microns_at_its_end() {
     let (positions, indices) = trebled_end_block();
@@ -75,7 +75,7 @@ fn a_trebled_end_reads_the_parts_room_and_not_the_microns_at_its_end() {
     );
 }
 
-/// C# `ATrebledEndBuildsAtTheAskedSize`.
+/// A trebled end builds at the asked size.
 #[test]
 fn a_trebled_end_builds_at_the_asked_size() {
     let (positions, indices) = trebled_end_block();
@@ -108,7 +108,7 @@ fn a_trebled_end_builds_at_the_asked_size() {
     assert_eq!(shell_count(points.len() as i32, &kept), 1);
 }
 
-/// C# `TheTrebledEndIsMonotoneInTheSize`.
+/// The trebled end is monotone in the size.
 #[test]
 fn the_trebled_end_is_monotone_in_the_size() {
     let (positions, indices) = trebled_end_block();
@@ -127,7 +127,7 @@ fn the_trebled_end_is_monotone_in_the_size() {
     }
 }
 
-/// C# `TheTrebledEndReadsTheSameMoved`.
+/// The trebled end reads the same moved.
 #[test]
 fn the_trebled_end_reads_the_same_moved() {
     let (positions, indices) = trebled_end_block();
@@ -144,7 +144,7 @@ fn the_trebled_end_reads_the_same_moved() {
     assert!((there.room - here.room).abs() <= 1e-9 * here.room.max(1.0));
 }
 
-/// C# `AShortFeatureEdgeNearTheEndButNotJoinedToItIsStillAWall`.
+/// A short feature edge near the end but not joined to it is still a wall.
 #[test]
 fn a_short_feature_edge_near_the_end_but_not_joined_to_it_is_still_a_wall() {
     let (positions, indices) = trebled_end_block_with_a_tent_beside_it();
@@ -182,7 +182,7 @@ fn a_short_feature_edge_near_the_end_but_not_joined_to_it_is_still_a_wall() {
     );
 }
 
-/// C# `Read`.
+/// The room reading of the picked chain, with the given seam epsilon.
 fn read(positions: &[Vector3], indices: &[(i32, i32, i32)], seam_epsilon: f64) -> RoomReading {
     band_gap_reading::read_room(
         positions,
@@ -199,7 +199,7 @@ fn read(positions: &[Vector3], indices: &[(i32, i32, i32)], seam_epsilon: f64) -
     .expect("the chain reads")
 }
 
-/// C# `Build`.
+/// The fillet build of the picked chain at `size`, with the block's seam epsilon.
 fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> BandGapResult {
     band_gap_entry_points::build(
         positions,
@@ -217,7 +217,7 @@ fn build(positions: &[Vector3], indices: &[(i32, i32, i32)], size: f64) -> BandG
     .expect("the chain builds or refuses by name")
 }
 
-/// C# `TrebledEndBlock`: the block with its picked crease's END vertex split into three copies.
+/// The block with its picked crease's END vertex split into three copies.
 fn trebled_end_block() -> Solid {
     let (positions, indices) = plain_block(HALF, SLICES);
     split_vertex_at_spokes(
@@ -237,7 +237,7 @@ fn trebled_end_block() -> Solid {
     )
 }
 
-/// C# `TrebledEndBlockWithATentBesideIt`.
+/// The trebled end block with a micron-sized tent standing on the top face beside its end vertex.
 fn trebled_end_block_with_a_tent_beside_it() -> Solid {
     let (positions, indices) = trebled_end_block();
     let end = positions[(END_SLICE * RING) as usize];
@@ -251,7 +251,7 @@ fn trebled_end_block_with_a_tent_beside_it() -> Solid {
                 && names(t, (END_SLICE * RING) + 3)
                 && !names(t, ((END_SLICE + 1) * RING) + 3)
         })
-        .expect("C#'s First");
+        .expect("a top-face triangle at the end vertex");
 
     tent_inside(
         &positions,
@@ -266,7 +266,7 @@ fn trebled_end_block_with_a_tent_beside_it() -> Solid {
     )
 }
 
-/// C# `Names`.
+/// Whether the triangle uses the vertex.
 fn names(triangle: (i32, i32, i32), vertex: i32) -> bool {
     triangle.0 == vertex || triangle.1 == vertex || triangle.2 == vertex
 }

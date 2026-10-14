@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/UnionOfBallsFieldTests.cs`: the field is the
-//! signed distance to the UNION OF BALLS round the chain - `min over chain points c of
-//! (|q - c| - setback(c))` - exactly 1-Lipschitz even where the setback varies, so a bounded
+//! The field is the signed distance to the UNION OF BALLS round the chain - `min over chain points
+//! c of (|q - c| - setback(c))` - exactly 1-Lipschitz even where the setback varies, so a bounded
 //! search closes on its tolerance.
 
 use std::rc::Rc;

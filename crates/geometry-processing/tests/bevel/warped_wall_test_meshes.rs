@@ -1,5 +1,5 @@
-//! Port of the test fixture `Fixtures/WarpedWallTestMeshes.cs`: a block whose front wall is a
-//! gently twisted (hyperbolic) sheet of quads, and an L with such a wall in its inside corner.
+//! A block whose front wall is a gently twisted (hyperbolic) sheet of quads, and an L with such a
+//! wall in its inside corner.
 
 #![allow(dead_code)]
 
@@ -33,7 +33,7 @@ fn back(i: i32, j: i32) -> Vector3 {
     Vector3::new(x(i), BACK_Y, z(j))
 }
 
-/// C# `CreateWarpedWallBlock`.
+/// The block, 40 wide and 20 tall, its front wall the twisted sheet of quads.
 pub fn create_warped_wall_block() -> Mesh {
     let mut mesh = Mesh::new();
     emit_warped_block(&mut mesh, COLUMNS, true);
@@ -41,7 +41,7 @@ pub fn create_warped_wall_block() -> Mesh {
     mesh
 }
 
-/// C# `CreateWarpedWallL`.
+/// The L: the block extended in x, with the twisted wall in its inside corner.
 pub fn create_warped_wall_l() -> Mesh {
     const EXTENDED: i32 = 15;
     const FRONT_Y: f64 = 30.0;

@@ -1,8 +1,7 @@
-//! Port of `SurfaceSeamWindowTests.cs`: the WINDOW `surface_seam_over_the_edge` picks a run
-//! against - the stretch of the strip its own band covers, read where each band end plane crosses
-//! the outermost rail. Two ways of reading it wrong are pinned here, both of them arithmetic rather
-//! than geometry. Built on one edge of a cube because the window is a question about numbers along a
-//! line and nothing else.
+//! The WINDOW `surface_seam_over_the_edge` picks a run against - the stretch of the strip its own
+//! band covers, read where each band end plane crosses the outermost rail. Two ways of reading it
+//! wrong are pinned here, both of them arithmetic rather than geometry. Built on one edge of a cube
+//! because the window is a question about numbers along a line and nothing else.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -34,7 +33,8 @@ fn a_band_end_almost_along_the_rail_does_not_open_the_window_to_infinity() {
     let (read, mut pool, strip) = a_strip_on_a_cube_edge();
 
     // A plane a hundredth of a millionth off square to the rail, standing a millimetre off it: the
-    // slope clears TryCross's guard by an order of magnitude and the crossing it names is 1e8 along.
+    // slope clears TryCross's guard by an order of magnitude and the crossing it names is 1e8
+    // along.
     let askew = ((strip.along() * 1e-8) + read.across).get_normal();
 
     let ends = vec![SurfaceBandEnd::new(
@@ -108,7 +108,7 @@ fn two_band_ends_on_one_side_keep_the_tighter_of_them() {
     );
 }
 
-/// C# `RunOver`: one run of a tangent line, as two pooled vertices on the left rail.
+/// One run of a tangent line, as two pooled vertices on the left rail.
 fn run_over(
     pool: &mut SurfaceVertexPool,
     strip: &SurfaceStrip,
@@ -121,13 +121,13 @@ fn run_over(
     ]]
 }
 
-/// C# `CubeEdgeReading`: the one edge's plan and the in-face direction away from it.
+/// The one edge's plan and the in-face direction away from it.
 struct CubeEdgeReading {
     edge: SurfaceEdgePlan,
     across: Vector3,
 }
 
-/// C# `AStripOnACubeEdge`: one top edge of a twenty cube planned and ruled - the plan whose window
+/// One top edge of a twenty cube planned and ruled - the plan whose window
 /// is being read, the strip it rules, and a direction square to the rail in the face it lies in, to
 /// stand a plane off by.
 fn a_strip_on_a_cube_edge() -> (CubeEdgeReading, SurfaceVertexPool, SurfaceStrip) {
@@ -147,11 +147,11 @@ fn a_strip_on_a_cube_edge() -> (CubeEdgeReading, SurfaceVertexPool, SurfaceStrip
         })
         .collect();
 
-    assert_eq!(matching.len(), 1, "C#'s Single(): one top edge at y = -10");
+    assert_eq!(matching.len(), 1, "exactly one top edge at y = -10");
 
     let mut chains = bevel_chain_linker::link(&[features.edges()[matching[0]]]);
 
-    assert_eq!(chains.len(), 1, "C#'s Single(): one chain");
+    assert_eq!(chains.len(), 1, "exactly one chain");
 
     let chain = chains.remove(0);
 
@@ -173,7 +173,7 @@ fn a_strip_on_a_cube_edge() -> (CubeEdgeReading, SurfaceVertexPool, SurfaceStrip
     )
 }
 
-/// C# `SurfaceStripTests.RegionsOf`.
+/// The part's feature edges and its region cache at their flat angle.
 fn regions_of(mesh: &Arc<Mesh>) -> (Arc<FaceRegionCache>, FeatureEdgeSet) {
     let features = FeatureEdgeSet::create(mesh);
     let regions = FaceRegionCache::new(
