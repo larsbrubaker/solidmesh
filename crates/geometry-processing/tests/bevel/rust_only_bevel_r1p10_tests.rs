@@ -1,6 +1,6 @@
 //! Rust-only checks of bevel-core package R1.P10's working-mesh conditioning: the folded-flap drop,
-//! the seam readings, openness, the signed volume and the inside-out test. Their C# coverage comes
-//! through the whole-bevel test classes of later packages.
+//! the seam readings, openness, the signed volume and the inside-out test. The whole-build tests
+//! also cover them.
 
 use geometry_processing::bevel::bevel_working_mesh::{
     folded_flaps_dropped, is_inside_out, is_usable_operand, open_edge_count,

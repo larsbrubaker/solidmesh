@@ -1,5 +1,5 @@
-//! Rust-only checks of the bevel core's R1.P09 package pieces no C# test class reaches alone:
-//! a run's squared-off ends and their cap-clip retries, the interrupted crease's leaning, and the
+//! Rust-only checks of the bevel core's R1.P09 package pieces no other test reaches alone: a run's
+//! squared-off ends and their cap-clip retries, the interrupted crease's leaning, and the
 //! valley-fold mitre.
 
 use geometry_processing::bevel::bevel_cap_clip::attempts_for;

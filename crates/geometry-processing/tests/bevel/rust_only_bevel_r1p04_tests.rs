@@ -1,12 +1,12 @@
-//! Rust-only tests for the bevel-core package R1.P04's methods that no ported C# test class covers:
-//! the strip's rail readings (`SurfaceStrip`), the strip station (`SurfaceStripStation`), the
+//! Rust-only tests for the bevel-core package R1.P04's methods that no other test covers on its
+//! own: the strip's rail readings (`SurfaceStrip`), the strip station (`SurfaceStripStation`), the
 //! chamfer mitre (`SurfaceCornerMitre`), a band's trim at a run-out's crossing
 //! (`SurfaceStripTrimmedAtTheCrossing`) and the mitre hand-over's staircases
-//! (`SurfaceCrossingAtTheMitre`), the corner patch's end cut (`SurfaceCornerPatch.TryCutTheEnd`), the
-//! end cut above a crossing (`SurfaceEndCutAboveTheCrossing`), the trim by the face beyond's rings
-//! (`SurfaceStripTrimmedByTheFaceBeyond`) and the tail and landing-notch readings. The corner
+//! (`SurfaceCrossingAtTheMitre`), the corner patch's end cut (`SurfaceCornerPatch.TryCutTheEnd`),
+//! the end cut above a crossing (`SurfaceEndCutAboveTheCrossing`), the trim by the face beyond's
+//! rings (`SurfaceStripTrimmedByTheFaceBeyond`) and the tail and landing-notch readings. The corner
 //! closings use the square edge plan R1.P06's tests build; the standing-feature and notch readings
-//! are in `rust_only_bevel_r1p04_notch_tests.rs`. Each pins the C# rule on a hand-built case.
+//! are in `rust_only_bevel_r1p04_notch_tests.rs`. Each pins the rule on a hand-built case.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

@@ -1,10 +1,10 @@
-//! Rust-only tests for the bevel-core package R1.P11's junction and corner fold readings, split from
-//! `rust_only_bevel_r1p11_tests.rs` by responsibility: one canal at a junction (`SectionJunction.Canal`),
-//! the junction section's samples (`JunctionSection`), the junction's line and facet readings, a side's
-//! boundary sliding down a crease (`SectionBuilder.TryBoundary`), the corner's smooth-fold reading
-//! (`SectionCorner.IsASmoothFold`), and a box's top corner built as a mitre (`SectionCorner.TryBuild`,
-//! its fold readings) and refused as a junction (`SectionBuilder.TryJunction`). Each pins the C# rule
-//! on a hand-built case.
+//! Rust-only tests for the bevel-core package R1.P11's junction and corner fold readings, split
+//! from `rust_only_bevel_r1p11_tests.rs` by responsibility: one canal at a junction
+//! (`SectionJunction.Canal`), the junction section's samples (`JunctionSection`), the junction's
+//! line and facet readings, a side's boundary sliding down a crease (`SectionBuilder.TryBoundary`),
+//! the corner's smooth-fold reading (`SectionCorner.IsASmoothFold`), and a box's top corner built
+//! as a mitre (`SectionCorner.TryBuild`, its fold readings) and refused as a junction
+//! (`SectionBuilder.TryJunction`). Each pins the rule on a hand-built case.
 
 use std::rc::Rc;
 

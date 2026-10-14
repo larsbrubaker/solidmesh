@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/NoDuplicateVertexTests.cs`: no split - by a rule,
-//! the chord rule, or the mesh's own edge and triangle splits - mints a vertex where the mesh
-//! already stands one.
+//! No split - by a rule, the chord rule, or the mesh's own edge and triangle splits - mints a
+//! vertex where the mesh already stands one.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};

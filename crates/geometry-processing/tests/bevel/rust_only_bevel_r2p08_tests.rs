@@ -1,6 +1,6 @@
-//! Rust-only checks of the bevel core's R2.P08 package: split chords put back together, the
-//! growing runs' live seeds (in the R2.P05 crease tests), and the pieces whose C# test classes
-//! wait on the rest of the package.
+//! Rust-only checks of the bevel core's R2.P08 package: split chords put back together, the growing
+//! runs' live seeds (in the R2.P05 crease tests), and the pieces the whole-build tests reach only
+//! through the rest of the build.
 
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::Mesh;

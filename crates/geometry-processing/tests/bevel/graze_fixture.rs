@@ -1,9 +1,9 @@
-//! Port of the test fixture `LevelLine/GrazeFixture.cs`: an ANNULUS plate - one round hole through
-//! the middle of a round plate, both rims picked - carrying ONE mesh edge that runs from a vertex of
-//! the outer rim, across the plate, GRAZING the hole's band on the way, and ending at a vertex out
-//! in the clear. The field along that edge reads -, +, -, +: three crossings on a single edge whose
-//! two ends are an ordinary Inside/Outside pair - the small, seconds-long stand-in for the Many
-//! Holes BRIDGE that `graze_fixture_tests.rs` builds over.
+//! An ANNULUS plate - one round hole through the middle of a round plate, both rims picked -
+//! carrying ONE mesh edge that runs from a vertex of the outer rim, across the plate, GRAZING the
+//! hole's band on the way, and ending at a vertex out in the clear. The field along that edge reads
+//! -, +, -, +: three crossings on a single edge whose two ends are an ordinary Inside/Outside pair -
+//! the small, seconds-long stand-in for the Many Holes BRIDGE that `graze_fixture_tests.rs`
+//! builds over.
 //!
 //! The construction is a chord TANGENT to a circle of radius r + graze * setback: it never enters
 //! the hole, so it is all on material, but at its closest approach it stands less than a setback
@@ -61,7 +61,7 @@ pub fn needle_for(size: f64) -> f64 {
     1e-5 / size
 }
 
-/// C# `GrazePick`: the pick, and the three corners of the triangle the grazing chord is an edge
+/// The pick, and the three corners of the triangle the grazing chord is an edge
 /// of: `rim_end` on the outer rim (Inside), `clear_end` out in the clear (Outside) and `apex` the
 /// hole-rim vertex the chord passes over.
 pub struct GrazePick {
@@ -74,11 +74,12 @@ pub struct GrazePick {
     pub graze_radius: f64,
 }
 
-/// C# `Pick`: the annulus plate, the hole rim (chain 0) and the plate rim (chain 1), both walked
+/// The annulus plate, the hole rim (chain 0) and the plate rim (chain 1), both walked
 /// counter-clockwise seen from +z, with the grazing chord built in as an edge of the input.
 /// `graze_in_setbacks` is how far clear of the hole rim the chord's closest approach stands, in
 /// setbacks: under 1 the chord dips into the hole's band; over 0 it stays out of the hole itself.
-/// C#'s defaults are `GRAZE_WITH_HEIGHT`, `RING_SEGMENTS` and `SIZE`; its argument checks panic.
+/// The usual arguments are `GRAZE_WITH_HEIGHT`, `RING_SEGMENTS` and `SIZE`; arguments out of range
+/// panic.
 pub fn pick(graze_in_setbacks: f64, ring_segments: i32, size: f64) -> GrazePick {
     assert!(
         ring_segments >= 16 && ring_segments % 4 == 0,
@@ -138,7 +139,7 @@ pub fn pick(graze_in_setbacks: f64, ring_segments: i32, size: f64) -> GrazePick 
     // the chord.
     let clear_at = b.positions[clear_end as usize];
     let angle_of_clear_end = clear_at.y.atan2(clear_at.x);
-    // C# `(int)Math.Ceiling(...)`.
+    // Rounded up, so the fan reaches the clear end.
     let fan_span = ((angle_of_clear_end - angle_of_rim_end) / step).ceil() as i32 + 1;
     for j in 0..fan_span {
         let r0 = b.rim(j);
@@ -173,7 +174,7 @@ pub fn pick(graze_in_setbacks: f64, ring_segments: i32, size: f64) -> GrazePick 
     }
 }
 
-/// C# `StripBetween`: walked greedily between the two arcs, the shorter diagonal first.
+/// Walked greedily between the two arcs, the shorter diagonal first.
 fn strip_between(b: &mut AnnulusPlateBuilder, arc_a: &[i32], arc_b: &[i32]) {
     let (mut i, mut j) = (0, 0);
     while i + 1 < arc_a.len() || j + 1 < arc_b.len() {
@@ -194,12 +195,12 @@ fn strip_between(b: &mut AnnulusPlateBuilder, arc_a: &[i32], arc_b: &[i32]) {
     }
 }
 
-/// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
+/// The pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }
 
-/// C# `Build` (defaults `SIZE`, chamfer): one JOINT band build of both rims - the build the graze
+/// One JOINT band build of both rims - the build the graze
 /// defect shows up in.
 pub fn build(pick: &GrazePick, size: f64, profile: BandProfile) -> BandGapResult {
     let closed = vec![true; pick.chains.len()];
@@ -216,7 +217,7 @@ pub fn build(pick: &GrazePick, size: f64, profile: BandProfile) -> BandGapResult
     .expect("the pick is well formed")
 }
 
-/// C# `FieldOf` (default `SIZE`): the pick's own field - the production `PickField` over both
+/// The pick's own field - the production `PickField` over both
 /// rims at the chamfer setback - so a test can read what the refinement reads along an edge rather
 /// than a copy of it.
 pub fn field_of(chains: &[Vec<i32>], positions: &[Vector3], size: f64) -> PickField {

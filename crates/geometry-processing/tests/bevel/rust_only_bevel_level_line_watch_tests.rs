@@ -1,6 +1,6 @@
 //! Rust-only pins of `LevelLineRouting.Watch` and `WatchRoom` (`level_line_routing::watch`,
 //! `watch_room`): the two process-wide test seams the app route hands its pick and its known room
-//! to. Process-wide like C#'s statics, so a watch set on one thread sees a pass run on another.
+//! to. Process-wide, so a watch set on one thread sees a pass run on another.
 
 use std::sync::{Arc, Mutex};
 

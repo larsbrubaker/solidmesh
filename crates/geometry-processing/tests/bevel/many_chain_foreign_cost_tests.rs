@@ -1,7 +1,6 @@
-//! Port of `LevelLine/ManyChainForeignCostTests.cs`: what the FOREIGN reading of a face rim costs as
-//! the rim gains loops, over `GridHolePlateFixture`. The reading is per chain, and a chain's own
-//! reading must be about the part near that chain, not about how many other loops were picked with
-//! it.
+//! What the FOREIGN reading of a face rim costs as the rim gains loops, over
+//! `grid_hole_plate_fixture`. The reading is per chain, and a chain's own reading must be about the
+//! part near that chain, not about how many other loops were picked with it.
 
 use std::rc::Rc;
 
@@ -73,7 +72,7 @@ fn measure(holes: i32) -> Measured {
     }
 }
 
-/// C# `TheForeignReadingCostIsMeasuredOverAGrowingRim`: the table, written where a run can read it.
+/// The table, written where a run can read it.
 /// Not an assertion on the numbers - the requirement is the RATIO below.
 #[test]
 fn the_foreign_reading_cost_is_measured_over_a_growing_rim() {
@@ -112,7 +111,7 @@ fn the_foreign_reading_cost_is_measured_over_a_growing_rim() {
     assert_eq!(rows.len(), 3);
 }
 
-/// C# `AChainsForeignReadingDoesNotGrowWithTheRestOfThePick`: a chain's foreign reading must not
+/// A chain's foreign reading must not
 /// grow with how many OTHER chains were picked.
 #[test]
 fn a_chains_foreign_reading_does_not_grow_with_the_rest_of_the_pick() {

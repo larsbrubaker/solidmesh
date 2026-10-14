@@ -1,9 +1,7 @@
-//! Port of the test fixture `Fixtures/ManyHolesTestMesh.cs`: the working mesh "Many Holes.mcx"
-//! hands the bevel construction, in the space the size is quoted in, with the one pick the app
-//! resolved on it - read from `fixtures/ManyHolesWorkingMesh.txt` (copied from C#'s
-//! `Fixtures/ManyHolesWorkingMesh.txt`) instead of loading the `.mcx` on every turn. Read by
-//! `section_many_holes_tests` and `section_many_holes_neighbour_tests` through
-//! [`crate::many_holes_rim_reading`].
+//! The working mesh "Many Holes.mcx" hands the bevel construction, in the space the size is quoted
+//! in, with the one pick the app resolved on it - read from `fixtures/ManyHolesWorkingMesh.txt`
+//! instead of loading the `.mcx` on every turn. Read by `section_many_holes_tests` and
+//! `section_many_holes_neighbour_tests` through [`crate::many_holes_rim_reading`].
 
 #![allow(dead_code)]
 
@@ -20,18 +18,18 @@ pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
 pub const RESOLVED_EDGE_COUNT: i32 = 3301;
 
-/// C# `ThePart`: a fresh copy of the working mesh each time - the sections build rewrites what it
+/// A fresh copy of the working mesh each time - the sections build rewrites what it
 /// is handed.
 pub fn the_part() -> Mesh {
     read().0
 }
 
-/// C# `ThePickedEdges`: the edges of the one resolved pick, as vertex pairs.
+/// The edges of the one resolved pick, as vertex pairs.
 pub fn the_picked_edges() -> Vec<(i32, i32)> {
     read().1
 }
 
-/// C# `TheOuterWall`: the face-group pick of the barrel's outer wall, as the app saved it.
+/// The face-group pick of the barrel's outer wall, as the app saved it.
 pub fn the_outer_wall() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::FaceGroup,
@@ -51,7 +49,7 @@ pub fn the_outer_wall() -> BevelEdgeGroup {
     }
 }
 
-/// C# `Read`: a count line names what follows - `v` vertices, `f` faces, `e` the edges of one
+/// A count line names what follows - `v` vertices, `f` faces, `e` the edges of one
 /// resolved pick - and `#` lines are comments.
 fn read() -> (Mesh, Vec<(i32, i32)>) {
     let path = format!(

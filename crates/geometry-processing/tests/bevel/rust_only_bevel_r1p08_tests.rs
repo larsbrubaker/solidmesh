@@ -1,9 +1,9 @@
-//! Rust-only tests for the bevel-core package R1.P08's methods that no ported C# test class covers
-//! yet: a run's absorbed split vertices (`SectionAbsorbedSplits`), the section builder's starting
+//! Rust-only tests for the bevel-core package R1.P08's methods that no other test covers on its
+//! own: a run's absorbed split vertices (`SectionAbsorbedSplits`), the section builder's starting
 //! readings (`SectionBuilder`), the room's region and crease readings (`SectionRoom`), the smooth
 //! side's crease walk (`SectionSmoothSide`) and the builder's walked-side readings, on a cube. The
-//! surface walk's own tests are in `rust_only_bevel_r1p08_walk_tests.rs`.
-//! Each pins the C# rule on a hand-built case.
+//! surface walk's own tests are in `rust_only_bevel_r1p08_walk_tests.rs`. Each pins the rule on a
+//! hand-built case.
 
 use indexmap::IndexMap;
 use polygon_mesh::solids::platonic_solids;

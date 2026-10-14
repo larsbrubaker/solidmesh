@@ -1,7 +1,7 @@
-//! Ports `GeometryProcessingTests/LevelLine/HoleFillTests.cs`: the hole filler (`hole_fill`) on its
-//! own, before any bevel uses it - plain loops with known cross-tangents, held to closure,
-//! orientation and shape. The cube corner is the classic vertex blend whose exact answer is the
-//! rolling ball's sphere, so its deviation is measured, not assumed.
+//! The hole filler (`hole_fill`) on its own, before any bevel uses it - plain loops with known
+//! cross-tangents, held to closure, orientation and shape. The cube corner is the classic vertex
+//! blend whose exact answer is the rolling ball's sphere, so its deviation is measured, not
+//! assumed.
 
 use std::collections::{HashMap, HashSet};
 use std::f64::consts::PI;

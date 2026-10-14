@@ -1,8 +1,7 @@
-//! Ports `GeometryProcessingTests/LevelLine/FacetedBossFadeTests.cs`: a pick covering part of a
-//! faceted boss's foot crease fades past its ends (Lars's decision): the next facet folds only 15
-//! degrees off the picked one, so it is the wall carrying on, not an oblique end face - even where
-//! the operation's bend threshold (10 degrees) is tighter than the facet step and so does not call
-//! the foot a carrying crease. The Standard test
+//! A pick covering part of a faceted boss's foot crease fades past its ends (Lars's decision): the
+//! next facet folds only 15 degrees off the picked one, so it is the wall carrying on, not an
+//! oblique end face - even where the operation's bend threshold (10 degrees) is tighter than the
+//! facet step and so does not call the foot a carrying crease. The Standard test
 //! TheOverlapAtASharedVertexIsNotWarnedAboutEvenWhenFacesBoundIt is this boss; with rays at its
 //! ends the room refused at about 0.401.
 

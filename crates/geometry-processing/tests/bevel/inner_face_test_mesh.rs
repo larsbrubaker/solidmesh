@@ -1,7 +1,7 @@
-//! Port of the test fixture `Fixtures/InnerFaceTestMesh.cs`: the inner face of
-//! "Inner Face Should Bevel.mcx", cut out of its own owner file - the welded working mesh the file
-//! hands the bevel construction (164 vertices, 320 triangles), in the space the size is quoted in,
-//! with the one pick the file carries as the anchored group the app resolves it from.
+//! The inner face of "Inner Face Should Bevel.mcx", cut out of its own owner file - the welded
+//! working mesh the file hands the bevel construction (164 vertices, 320 triangles), in the space
+//! the size is quoted in, with the one pick the file carries as the anchored group the app resolves
+//! it from.
 //!
 //! The part is a raked bore through a cube; the pick is the bore WALL's face group, whose rim
 //! resolves to 152 edges in 2 loops - the bore's two mouths. The size the file asks is 2 at 8
@@ -24,12 +24,12 @@ pub const SEGMENTS: i32 = 8;
 /// The operation's bend threshold, which the group is read at.
 pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
-/// C# `ThePart`: the welded working mesh, 164 vertices and 320 triangles.
+/// The welded working mesh, 164 vertices and 320 triangles.
 pub fn the_part() -> Mesh {
     Mesh::from_arrays(COORDINATES, TRIANGLES)
 }
 
-/// C# `TheBoreWall`: the bore wall, as the app resolves it - a face group off its anchors.
+/// The bore wall, as the app resolves it - a face group off its anchors.
 pub fn the_bore_wall() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::FaceGroup,

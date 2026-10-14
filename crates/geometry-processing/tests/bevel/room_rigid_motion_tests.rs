@@ -1,9 +1,9 @@
-//! Port of `LevelLine/RoomRigidMotionTests.cs`: the room is a statement about the PART, so it may not
-//! depend on where in the world the part is standing - the same pick, rigidly moved, reads the same
-//! room, says the same things about it, and builds at every size it built at, removing the same
-//! volume. This is the requirement the dented prism of `RailMonotoneTests` broke: it built at 0.1,
-//! 0.2, 0.4 and 0.8 where it stood and refused BY SIZE at all four after a rotation and a
-//! translation. C# `[Arguments]` rows are loops over the same-named test.
+//! The room is a statement about the PART, so it may not depend on where in the world the part is
+//! standing - the same pick, rigidly moved, reads the same room, says the same things about it, and
+//! builds at every size it built at, removing the same volume. This is the requirement the dented
+//! prism of `RailMonotoneTests` broke: it built at 0.1, 0.2, 0.4 and 0.8 where it stood and refused
+//! BY SIZE at all four after a rotation and a translation. Parameter rows are loops over the
+//! same-named test.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading;

@@ -1,7 +1,7 @@
-//! Ports `GeometryProcessingTests/LevelLine/OppositeSenseCreaseTests.cs`: flow rung 2's sense test,
-//! `EndFaceSense.IsOppositeSenseCrease`: a side's crease folding the other way to the chain grows
-//! under the blend; folding the same way it is trimmed; a knife stays the knife rule's. The chain is
-//! convex throughout: the unit cube's edge along x at y = 0, z = 1, between the top and the front.
+//! Flow rung 2's sense test, `EndFaceSense.IsOppositeSenseCrease`: a side's crease folding the
+//! other way to the chain grows under the blend; folding the same way it is trimmed; a knife stays
+//! the knife rule's. The chain is convex throughout: the unit cube's edge along x at y = 0, z = 1,
+//! between the top and the front.
 
 use geometry_processing::bevel::level_line::end_face_sense;
 use vector_math::Vector3;

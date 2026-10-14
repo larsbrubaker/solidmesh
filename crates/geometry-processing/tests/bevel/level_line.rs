@@ -1,7 +1,7 @@
-//! The `R/Tests/GeometryProcessingTests/LevelLine/*.cs` test classes of the `bevel` test area, one
-//! file each, with the fixture builders and helpers that folder defines (the level-line fixture
-//! reader, test geometry, feature edges, end-face builds). The `bevel.rs` root re-exports every
-//! member, so test files in any group reach them as `crate::<module>`.
+//! The level-line tests of the `bevel` test area, one file per class, with the fixture builders and
+//! helpers that folder defines (the level-line fixture reader, test geometry, feature edges,
+//! end-face builds). The `bevel.rs` root re-exports every member, so test files in any group reach
+//! them as `crate::<module>`.
 
 #[path = "annulus_plate_builder.rs"]
 pub(crate) mod annulus_plate_builder;

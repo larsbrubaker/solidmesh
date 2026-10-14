@@ -1,7 +1,6 @@
-//! Port of `LevelLine/FlatEndsCombinationTests.cs`: combination rows of
-//! `BevelLevelLineCombinationTests.EveryMemberBuildingAloneBuildsTogether` that build with flat
-//! ends off and left the part open with them on (plan stage 2), dumped from the app's own
-//! hand-over. C# `[Arguments]` rows are a loop.
+//! Combination rows of `BevelLevelLineCombinationTests.EveryMemberBuildingAloneBuildsTogether` that
+//! build with flat ends off and left the part open with them on (plan stage 2), dumped from the
+//! app's own hand-over. Parameter rows are a loop.
 
 use std::collections::HashSet;
 use std::rc::Rc;

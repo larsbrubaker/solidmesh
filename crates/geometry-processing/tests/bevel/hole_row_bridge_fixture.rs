@@ -1,11 +1,11 @@
-//! Port of the test fixture `LevelLine/HoleRowBridgeFixture.cs`: a ROW of round through-holes in
-//! one stadium plate, every adjacent pair joined by a strip of triangles that SPAN the two rims.
-//! It is `two_hole_bridge_fixture` grown along the three knobs the Many Holes witness has and the
-//! two-hole part does not: MORE chains on the one face (a row of four or six, so a middle hole is
-//! spanned from BOTH sides at once), ASYMMETRY (a ring rotated by half a segment, two rings of
-//! different segment counts, a hole shifted off the row's pitch, so no spanning chord is horizontal
-//! and the strip's triangles are lopsided slivers), and the plate's OUTER RIM picked as a chain of
-//! its own - the witness's chain 0, which the biggest mixed loop of the witness ran through.
+//! A ROW of round through-holes in one stadium plate, every adjacent pair joined by a strip of
+//! triangles that SPAN the two rims. It is `two_hole_bridge_fixture` grown along the three knobs
+//! the Many Holes witness has and the two-hole part does not: MORE chains on the one face (a row of
+//! four or six, so a middle hole is spanned from BOTH sides at once), ASYMMETRY (a ring rotated by
+//! half a segment, two rings of different segment counts, a hole shifted off the row's pitch, so no
+//! spanning chord is horizontal and the strip's triangles are lopsided slivers), and the plate's
+//! OUTER RIM picked as a chain of its own - the witness's chain 0, which the biggest mixed loop of
+//! the witness ran through.
 //!
 //! The row is tiled with no ear clipping and no T-vertex: each hole's ring is cut at the vertex
 //! nearest +90 degrees and the one nearest -90, which leaves a LEFT arc and a RIGHT arc; the region
@@ -44,7 +44,7 @@ pub const MARGIN_IN_SIZES: f64 = 6.0;
 /// Thick enough that no chain's own wall bounds it at `SIZE`.
 const THICKNESS: f64 = 3.0;
 
-/// C# `HoleVariation`: how one hole of the row differs from the plain ring the others carry.
+/// How one hole of the row differs from the plain ring the others carry.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct HoleVariation {
     pub hole: i32,
@@ -85,7 +85,7 @@ impl HoleVariation {
     }
 }
 
-/// C# `Pick(holes, variations: ..., includeOuterRim: ...)` with the default 32 ring segments,
+/// The pick with the default 32 ring segments,
 /// radius, gap and size: the plate and the chains of its top face - one per hole rim, left to
 /// right, and, when `include_outer_rim`, the plate's own outer boundary LAST.
 pub fn pick(holes: i32, variations: &[HoleVariation], include_outer_rim: bool) -> SolidWithChains {
@@ -206,7 +206,7 @@ pub fn pick(holes: i32, variations: &[HoleVariation], include_outer_rim: bool) -
     (builder.positions, builder.indices, chains)
 }
 
-/// C# `Build` (chamfer, its default profile): one JOINT band build of every picked chain - the
+/// One chamfer JOINT band build of every picked chain - the
 /// build the bridge defect shows up in. The same build as the two-hole fixture's.
 pub fn build(
     positions: &[Vector3],
@@ -217,8 +217,8 @@ pub fn build(
     two_hole_bridge_fixture::build(positions, indices, chains, size)
 }
 
-/// The welded vertex list and triangles the pick is built into (C#'s locals `positions`,
-/// `byPosition`, `indices` and the local functions over them).
+/// The welded vertex list and triangles the pick is built into, with the helpers that add to
+/// them.
 #[derive(Default)]
 struct Builder {
     positions: Vec<Vector3>,
@@ -227,10 +227,11 @@ struct Builder {
 }
 
 impl Builder {
-    /// C# `At`: rounding to a nanometre welds the pieces that meet; every region shares its
+    /// Rounding to a nanometre welds the pieces that meet; every region shares its
     /// boundary points by construction, so nothing that should stay apart is ever within it.
     fn at(&mut self, x: f64, y: f64, z: f64) -> i32 {
-        // C#'s `(long)Math.Round(...)`: banker's rounding, then a cast (in range here).
+        // Banker's rounding, then a cast (in range here), so the same point always welds to one
+        // key.
         let key = (
             (x * 1e6).round_ties_even() as i64,
             (y * 1e6).round_ties_even() as i64,
@@ -255,7 +256,7 @@ impl Builder {
         self.at(ring.x(j), ring.y(j), 0.0)
     }
 
-    /// C# `StripBetween`.
+    /// Strips the gap between two rings' arcs, walked greedily, the shorter diagonal first.
     fn strip_between(&mut self, ring_a: &Ring, arc_a: &[i32], ring_b: &Ring, arc_b: &[i32]) {
         let (mut i, mut j) = (0usize, 0usize);
         while i + 1 < arc_a.len() || j + 1 < arc_b.len() {
@@ -285,7 +286,7 @@ impl Builder {
         }
     }
 
-    /// C# `Cap`.
+    /// Joins a ring's arc to its copy `outer` farther out, one quad per segment.
     fn cap(&mut self, ring: &Ring, arc: &[i32], outer: f64) {
         for j in 0..arc.len() - 1 {
             let o0 = ring.outer(arc[j], outer);
@@ -301,7 +302,7 @@ impl Builder {
     }
 }
 
-/// C# `OuterLoop`: the plate's outer boundary, walked the way the two-hole fixture walks its own -
+/// The plate's outer boundary, walked the way the two-hole fixture walks its own -
 /// the top edge right to left, the first hole's cap arc, the bottom edge left to right, the last
 /// hole's cap arc.
 fn outer_loop(rings: &[Ring], outer: f64) -> Vec<(f64, f64)> {
@@ -332,7 +333,7 @@ fn outer_loop(rings: &[Ring], outer: f64) -> Vec<(f64, f64)> {
     points
 }
 
-/// C# `Ring`: one hole's ring - its centre on the row, its radius, how many segments it carries
+/// One hole's ring - its centre on the row, its radius, how many segments it carries
 /// and how far it is turned off the plain start at angle zero.
 struct Ring {
     centre_x: f64,

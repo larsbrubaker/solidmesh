@@ -1,7 +1,6 @@
-//! Port of the test fixture `Fixtures/NoseOnACubeCornerTestMeshes.cs`: a 20 mm cube with a
-//! knife-edge NOSE standing proud of its front face, placed so that the band on the top front edge
-//! runs UNDER the nose's root and the extension has to run off through the band's end at the cube's
-//! own corner (20, 0, 20) - where three convex edges meet.
+//! A 20 mm cube with a knife-edge NOSE standing proud of its front face, placed so that the band on
+//! the top front edge runs UNDER the nose's root and the extension has to run off through the
+//! band's end at the cube's own corner (20, 0, 20) - where three convex edges meet.
 //!
 //! The same standing feature `nose_in_notch_test_meshes` carries, moved to a corner three chains can
 //! gather at. That is the whole point of it: the nose fixture's notch runs off at (10, 10, 20), where

@@ -1,9 +1,8 @@
-//! Port of `LevelLine/HoleFillOneLoopCornerTests.cs`: the corner filler for the picks whose band
-//! leaves ONE loop but whose chains do not each keep one rail piece per side - with the filler on,
-//! `CornerFill` lays the strips it can and hands everything else open to the hole filler. Each row
-//! is held to the requirement set across the room and under a rigid motion. C# `[Arguments]` cases
-//! of one fixture are one test each, suffixed with the argument; the cases that range over several
-//! fixtures run as one loop.
+//! The corner filler for the picks whose band leaves ONE loop but whose chains do not each keep one
+//! rail piece per side - with the filler on, `CornerFill` lays the strips it can and hands
+//! everything else open to the hole filler. Each row is held to the requirement set across the room
+//! and under a rigid motion. Parameter cases of one fixture are one test each, suffixed with the
+//! argument; the cases that range over several fixtures run as one loop.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -28,7 +27,7 @@ use crate::level_line_test_geometry::signed_volume;
 use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures;
 
-/// C# `InnerRightSidesCornerBuilds(0.1)`. Inner Right Sides and Center's mixed corner: with each
+/// At 0.1 of the room. Inner Right Sides and Center's mixed corner: with each
 /// strip end set back to its field tie every row at the corner is flat at radius r and the filler's
 /// patch is small, so it builds across the room and at the size the user picked.
 #[test]
@@ -36,31 +35,31 @@ fn inner_right_sides_corner_builds_0_1() {
     meets_the_requirement("inner-right-sides-and-center-op0", Some(0.1));
 }
 
-/// C# `InnerRightSidesCornerBuilds(0.5)`.
+/// The same corner at 0.5 of the room.
 #[test]
 fn inner_right_sides_corner_builds_0_5() {
     meets_the_requirement("inner-right-sides-and-center-op0", Some(0.5));
 }
 
-/// C# `InnerRightSidesCornerBuilds(0.9)`.
+/// The same corner at 0.9 of the room.
 #[test]
 fn inner_right_sides_corner_builds_0_9() {
     meets_the_requirement("inner-right-sides-and-center-op0", Some(0.9));
 }
 
-/// C# `InnerRightSidesCornerBuilds(1.0)`.
+/// The same corner at the whole room.
 #[test]
 fn inner_right_sides_corner_builds_1_0() {
     meets_the_requirement("inner-right-sides-and-center-op0", Some(1.0));
 }
 
-/// C# `InnerRightSidesCornerBuilds(null)`: at the size the user picked.
+/// The same corner at the size the user picked.
 #[test]
 fn inner_right_sides_corner_builds_null() {
     meets_the_requirement("inner-right-sides-and-center-op0", None);
 }
 
-/// C# `InnerRightSidesCornerBuildsTheSameTurned`: at half its room it builds the same wherever the
+/// At half its room it builds the same wherever the
 /// part sits (turned 2.45 rad about Z and moved, as Windows' round-off reached with the part
 /// unmoved).
 #[test]
@@ -103,26 +102,26 @@ fn inner_right_sides_corner_builds_the_same_turned() {
     assert!((moved_volume - volume).abs() <= 1e-6 * source.abs());
 }
 
-/// C# `MeetingEdgeRoundClosesByTheFiller("meeting-edge-round-op0", 0.1)`: with the knife read past
-/// round-off it builds the same at every placement.
+/// Meeting Edge Round at 0.1 of the room: with the knife read past round-off it builds the same at
+/// every placement.
 #[test]
 fn meeting_edge_round_closes_by_the_filler_0_1() {
     meets_the_requirement("meeting-edge-round-op0", Some(0.1));
 }
 
-/// C# `MeetingEdgeRoundClosesByTheFiller("meeting-edge-round-op0", 0.5)`.
+/// Meeting Edge Round at 0.5 of the room.
 #[test]
 fn meeting_edge_round_closes_by_the_filler_0_5() {
     meets_the_requirement("meeting-edge-round-op0", Some(0.5));
 }
 
-/// C# `MeetingEdgeRoundClosesByTheFiller("meeting-edge-round-op0", 0.9)`.
+/// Meeting Edge Round at 0.9 of the room.
 #[test]
 fn meeting_edge_round_closes_by_the_filler_0_9() {
     meets_the_requirement("meeting-edge-round-op0", Some(0.9));
 }
 
-/// C# `ARailRunningPastItsEndToTheEndPlaneBuilds`, every case: with the turned-back stop vertex
+/// Every case: with the turned-back stop vertex
 /// handed to the corner hole the rail zips and the pick builds.
 #[test]
 fn a_rail_running_past_its_end_to_the_end_plane_builds() {
@@ -136,19 +135,19 @@ fn a_rail_running_past_its_end_to_the_end_plane_builds() {
     }
 }
 
-/// C# `BottomCenterFlowsIntoCenterDoesNotCrossItselfAtItsSavedSize`.
+/// Bottom center flows into center does not cross itself at its saved size.
 #[test]
 fn bottom_center_flows_into_center_does_not_cross_itself_at_its_saved_size() {
     does_not_cross_itself_at_its_saved_size("bottom-center-flows-into-center-op0");
 }
 
-/// C# `FiveMmCenterBottomDoesNotCrossItselfAtItsSavedSize`.
+/// Five mm center bottom does not cross itself at its saved size.
 #[test]
 fn five_mm_center_bottom_does_not_cross_itself_at_its_saved_size() {
     does_not_cross_itself_at_its_saved_size("five-mm-center-bottom-op0");
 }
 
-/// C# `TheRailMeetsTheEndPlaneCreaseAtTheSetback`: where each round's rail on the slanted face
+/// Where each round's rail on the slanted face
 /// reaches crease 1-9 it stands at the setback from its chain.
 #[test]
 fn the_rail_meets_the_end_plane_crease_at_the_setback() {
@@ -206,7 +205,7 @@ fn the_rail_meets_the_end_plane_crease_at_the_setback() {
     }
 }
 
-/// C# `TheMirroredHolesAreMirrored`: Five mm Center Bottom is mirror-symmetric about x = -10, and
+/// Five mm Center Bottom is mirror-symmetric about x = -10, and
 /// so is what the strips leave to the caps - both end holes close flat, and the corner hole at the
 /// junction is its own mirror image to float noise.
 #[test]
@@ -288,7 +287,7 @@ fn the_mirrored_holes_are_mirrored() {
     assert!(worst <= 1e-6);
 }
 
-/// C# `TheThreeConcaveBeadsMeetOnTheBall`: Five mm Center Bottom's three concave beads meet at the
+/// Five mm Center Bottom's three concave beads meet at the
 /// junction with one ball, and the patch is laid on it as a convex corner's is.
 #[test]
 fn the_three_concave_beads_meet_on_the_ball() {
@@ -326,7 +325,7 @@ fn the_three_concave_beads_meet_on_the_ball() {
         "the junction's patch stands at most {:e} off the ball",
         worst.get()
     );
-    // C#'s `IsLessThanOrEqualTo` fails on NaN, as this does.
+    // A NaN fails this comparison, so an unmeasured worst is a failure.
     assert!(worst.get() <= 1e-6);
 }
 
@@ -469,7 +468,7 @@ fn meets_the_requirement(name: &str, fraction_of_room: Option<f64>) {
     );
 }
 
-/// C# `Math.Sign`.
+/// The sign of `x`: -1, 0 or 1, zero for either zero.
 fn sign(x: f64) -> i32 {
     if x > 0.0 {
         1
@@ -480,7 +479,7 @@ fn sign(x: f64) -> i32 {
     }
 }
 
-/// C# `SensesAndCornerAllowance`: each chain's sense (+1 convex, -1 concave, read off its first
+/// Each chain's sense (+1 convex, -1 concave, read off its first
 /// edge), and the corner allowance BevelShapeVerdict grants a pick: 3.375 s^3 at every vertex two
 /// or more chains share, s the largest setback of any chain edge there.
 fn senses_and_corner_allowance(fixture: &LevelLineFixture, size: f64) -> (Vec<i32>, f64) {
@@ -521,7 +520,7 @@ fn senses_and_corner_allowance(fixture: &LevelLineFixture, size: f64) -> (Vec<i3
     };
 
     let mut senses = Vec::new();
-    // Insertion-ordered, as C#'s Dictionary iterates; the sum below does not depend on the order
+    // Insertion-ordered; the sum below does not depend on the order
     // beyond floating-point association, which this keeps.
     let mut setback_at: indexmap::IndexMap<i32, (i32, f64)> = indexmap::IndexMap::new();
     for (k, chain) in fixture.chains.iter().enumerate() {
@@ -551,7 +550,7 @@ fn senses_and_corner_allowance(fixture: &LevelLineFixture, size: f64) -> (Vec<i3
     (senses, allowance)
 }
 
-/// C# `RoomOf`: the room the fixture records, or - when it records none - the room its build
+/// The room the fixture records, or - when it records none - the room its build
 /// reads.
 fn room_of(fixture: &Rc<LevelLineFixture>) -> f64 {
     if let Some(known) = fixture.known_room {
@@ -600,7 +599,7 @@ fn build_at(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `BuildAndFill`: `None` where the band refuses, with the band's refusal.
+/// `None` where the band refuses, with the band's refusal.
 fn build_and_fill(
     fixture: &Rc<LevelLineFixture>,
     positions: &[Vector3],
@@ -629,7 +628,7 @@ fn build_and_fill(
     )
 }
 
-/// C# `Move`.
+/// Carries a point by a fixed rigid motion.
 fn move_point(p: Vector3) -> Vector3 {
     const ANGLE: f64 = 0.7;
     let (sin, cos) = ANGLE.sin_cos();

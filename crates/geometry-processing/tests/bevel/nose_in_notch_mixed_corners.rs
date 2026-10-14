@@ -1,6 +1,6 @@
-//! Port of the test fixture `Fixtures/NoseInNotchMixedCorners.cs`: the mixed corner at either end
-//! of the nose-in-notch part's ridge, read off the two edge plans that meet there - the ridge's cut
-//! and the upper crease's bead - as the rim pick itself hands them over.
+//! The mixed corner at either end of the nose-in-notch part's ridge, read off the two edge plans
+//! that meet there - the ridge's cut and the upper crease's bead - as the rim pick itself hands
+//! them over.
 
 #![allow(dead_code)]
 
@@ -16,7 +16,7 @@ use vector_math::Vector3;
 
 use crate::nose_in_notch_test_meshes;
 
-/// C# `AtTheRidgeEnd`: the corner the nose's ridge and its upper crease make at `ridge_end`.
+/// The corner the nose's ridge and its upper crease make at `ridge_end`.
 pub fn at_the_ridge_end(ridge_end: Vector3, radius: f64) -> Rc<SurfaceMixedCorner> {
     let mesh = Arc::new(nose_in_notch_test_meshes::create());
     let features = FeatureEdgeSet::create(&mesh);
@@ -49,7 +49,7 @@ pub fn at_the_ridge_end(ridge_end: Vector3, radius: f64) -> Rc<SurfaceMixedCorne
     Rc::new(corner)
 }
 
-/// C# `PlanOf`: the plan of the one feature edge between `from` and `to`, as a chain of that edge
+/// The plan of the one feature edge between `from` and `to`, as a chain of that edge
 /// alone.
 fn plan_of(
     regions: &Arc<FaceRegionCache>,

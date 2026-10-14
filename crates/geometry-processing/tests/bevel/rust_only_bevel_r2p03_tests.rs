@@ -1,7 +1,7 @@
-//! Rust-only checks of bevel-core package R2.P03's working-mesh edits: building from triangles,
-//! the conforming edge split (and its answer at an existing vertex), the interior split, a free
-//! vertex and a face, and the needle repair re-tiling a neighbour through an apex. Their C#
-//! coverage comes through the whole-build test classes of later packages.
+//! Rust-only checks of bevel-core package R2.P03's working-mesh edits: building from triangles, the
+//! conforming edge split (and its answer at an existing vertex), the interior split, a free vertex
+//! and a face, and the needle repair re-tiling a neighbour through an apex. The whole-build tests
+//! also cover them.
 
 use std::collections::VecDeque;
 

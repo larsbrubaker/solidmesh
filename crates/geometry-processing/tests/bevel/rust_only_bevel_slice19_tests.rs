@@ -1,8 +1,8 @@
-//! Rust-only tests for slice 19's units that have no C# test class of their own in
-//! `GeometryProcessingTests`: the mixed-corner blends a selection asks for (`BevelMixedBlends`,
-//! whose C# tests are app-level), and the walkback's reconciling of the standing features two
-//! bands reach (`SurfaceWalkbackStandingFeatures`), and the survey that refuses two plans turning
-//! a corner at one vertex (`SurfaceTwoCornersAtOneVertex`).
+//! Rust-only tests for slice 19's units that have no test class of their own: the mixed-corner
+//! blends a selection asks for (`BevelMixedBlends`, whose other tests are app-level), and the
+//! walkback's reconciling of the standing features two bands reach
+//! (`SurfaceWalkbackStandingFeatures`), and the survey that refuses two plans turning a corner at
+//! one vertex (`SurfaceTwoCornersAtOneVertex`).
 
 use std::rc::Rc;
 use std::sync::Arc;

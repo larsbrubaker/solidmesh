@@ -1,6 +1,6 @@
-//! Port of `LevelLineTestGeometry.BoxWithSquareHole` (test helper `LevelLine/LevelLineTestGeometry.cs`)
-//! and `OneRoomReadingTests.LPrism`, the solids the room-reading tests build from. The several-chain
-//! plates are in `several_chains_fixtures.rs` and `FeatureEdgesOver` in `level_line_feature_edges.rs`.
+//! The box with a square hole and the L prism, the solids the room-reading tests build from. The
+//! several-chain plates are in `several_chains_fixtures.rs` and the feature edges in
+//! `level_line_feature_edges.rs`.
 
 #![allow(dead_code)]
 
@@ -19,7 +19,7 @@ pub type SolidWithChain = (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<i32>);
 /// indices.
 pub type SolidWithTwoChains = (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<i32>, Vec<i32>);
 
-/// C# `BoxWithSquareHole`: a closed box with a square hole straight through it in z. The mouth rim
+/// A closed box with a square hole straight through it in z. The mouth rim
 /// on the top face (4, 5, 6, 7) is a closed chain.
 pub fn box_with_square_hole(outer_half: f64, hole_half: f64, half_height: f64) -> SolidWithChain {
     let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)];
@@ -68,7 +68,7 @@ fn picture_frame() -> Vec<(i32, i32, i32)> {
     indices
 }
 
-/// C# `OneRoomReadingTests.LPrism`: the L-shaped prism whose room is the narrow arm's own width.
+/// The L-shaped prism whose room is the narrow arm's own width.
 pub fn l_prism() -> SolidWithChain {
     let outline = [
         (0.0, 0.0),
@@ -113,10 +113,10 @@ pub fn l_prism() -> SolidWithChain {
     (positions, indices, top)
 }
 
-/// C# `LevelLineTestGeometry.HourglassSolid`: a flat top face whose outline is two square lobes
+/// A flat top face whose outline is two square lobes
 /// joined by a narrow neck, extruded down to a closed solid; the top face's whole rim is the chain.
-/// The true room is half `neck_width`. C#'s defaults are lobe 10, neck width 2, neck length 4,
-/// half height 4.
+/// The true room is half `neck_width`. The usual sizes are lobe 10, neck width 2, neck
+/// length 4, half height 4.
 pub fn hourglass_solid(
     lobe: f64,
     neck_width: f64,

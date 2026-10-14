@@ -1,8 +1,7 @@
 //! Rust-only checks of the sixth bevel slice (`BevelRoundFaces`, `ConvexCellBound`, `RoomSource`,
-//! `SurfaceMixedCornerSpine`, `SurfaceRegionFaceGrid`). The C# test classes that exercise them
-//! read whole bevels (`SurfaceMixedCornerDualOnASquareCornerTests` reads the spine through
-//! `SurfaceMixedCorner`), so they land with the core; these pin each piece alone.
-//! `FlatHoleFill` has its own ported class (`flat_hole_fill_tests`).
+//! `SurfaceMixedCornerSpine`, `SurfaceRegionFaceGrid`). The tests that exercise them in context
+//! read whole bevels; these pin each piece alone. `FlatHoleFill` has its own ported class
+//! (`flat_hole_fill_tests`).
 
 use std::collections::HashSet;
 use std::f64::consts::{FRAC_PI_2, PI};

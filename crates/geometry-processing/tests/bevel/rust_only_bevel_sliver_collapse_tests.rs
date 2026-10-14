@@ -1,6 +1,6 @@
-//! Rust-only checks of `Bevel/BevelSliverCollapse.cs`'s port ([`bevel_sliver_collapse`]), which
-//! the C# tests only reach through `BevelPublishedMesh`: a sliver lying on its neighbour's edge is
-//! recut away, and a mesh with none is left alone.
+//! Rust-only checks of [`bevel_sliver_collapse`], which the other tests only reach through the
+//! published mesh: a sliver lying on its neighbour's edge is recut away, and a mesh with none is
+//! left alone.
 
 use geometry_processing::bevel::bevel_sliver_collapse::{altitude_of, collapse};
 use polygon_mesh::{CancelToken, FaceList, Mesh};

@@ -1,8 +1,8 @@
-//! Port of `LevelLine/FlatEndsClipTests.cs`: the end plane with flat ends on (plan stage 2) is a
-//! KNOWN CUT where the band decides sides. Where the end face and a side's crease with it lie IN
-//! that plane (a concave chain's apex end on a leaning end face), on the plane the chain's own
-//! value places a vertex, negative in the band, so the end vertex leaves the kept mesh and no side
-//! sliver is kept whose three corners all read 0. C# `[Arguments]` rows are a loop.
+//! The end plane with flat ends on (plan stage 2) is a KNOWN CUT where the band decides sides.
+//! Where the end face and a side's crease with it lie IN that plane (a concave chain's apex end on
+//! a leaning end face), on the plane the chain's own value places a vertex, negative in the band,
+//! so the end vertex leaves the kept mesh and no side sliver is kept whose three corners all read 0.
+//! Parameter rows are a loop.
 
 use std::rc::Rc;
 

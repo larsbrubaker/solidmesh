@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/HullClipTests.cs` 1:1: the hull mode of the strip
-//! clip (`hull_clip`) - a strip run on past the part is cut back by the part's supporting planes,
-//! the part as UpperLeftInner's rim end meets it, out through a front plane and a top plane that
-//! meet at a corner. C# `[Arguments]` rows are a loop over the same rows.
+//! The hull mode of the strip clip (`hull_clip`) - a strip run on past the part is cut back by the
+//! part's supporting planes, the part as UpperLeftInner's rim end meets it, out through a front
+//! plane and a top plane that meet at a corner. Parameter rows are a loop over the same rows.
 
 use std::collections::HashSet;
 
@@ -58,7 +57,7 @@ fn a_strip_past_a_front_and_a_top_is_cut_back_to_the_box() {
                 mesh.position(face.c) - shift,
             );
             area += (b - a).cross(c - a).length() / 2.0;
-            // C# `new[] { a, b, c }.Max(p => Math.Max(Math.Max(p.Y, p.Z) - 1, worst))`.
+            // How far any corner stands past the y = 1 or z = 1 plane, kept as the worst so far.
             worst = [a, b, c]
                 .iter()
                 .map(|p| f64::max(f64::max(p.y, p.z) - 1.0, worst))

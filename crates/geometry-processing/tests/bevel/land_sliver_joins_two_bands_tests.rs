@@ -1,9 +1,8 @@
-//! Port of `LevelLine/LandSliverJoinsTwoBandsTests.cs`: Many Holes' touching-split pass A (37 port
-//! mouths and the cut end's rim, fillet 0.5) was refused by a PINCH at 0.234 the part does not
-//! have. The smallest pick that shows it is three chains: the cut end's rim (chain 0) and the two
-//! ports of one column (chains 4 and 5). The land between the ports is a fan of float-stored
-//! slivers; `LevelLineMesh::split_edge` reading a vertex within the float step as ON the edge, and
-//! the needle apex re-tile before rooting, keep the two bands apart.
+//! Many Holes' touching-split pass A (37 port mouths and the cut end's rim, fillet 0.5) was refused
+//! by a PINCH at 0.234 the part does not have. The smallest pick that shows it is three chains: the
+//! cut end's rim (chain 0) and the two ports of one column (chains 4 and 5). The land between the
+//! ports is a fan of float-stored slivers; `LevelLineMesh::split_edge` reading a vertex within the
+//! float step as ON the edge, and the needle apex re-tile before rooting, keep the two bands apart.
 
 use std::rc::Rc;
 

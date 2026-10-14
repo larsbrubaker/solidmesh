@@ -1,8 +1,8 @@
-//! Port of `LevelLine/InputNeedleStripTests.cs`: `LevelLineMesh::remove_input_needle_strips` on a
-//! plate whose top face carries a STRIP of needles - a row of nearly collinear vertices
-//! zigzag-tiled the way a CAD tessellator leaves one, each needle's apex standing on the next
-//! one's long edge - the shape that made the per-needle repair cascade on Many Holes. C#'s
-//! `[NotInParallel]` is a `threads-required` override in `.config/nextest.toml`.
+//! `LevelLineMesh::remove_input_needle_strips` on a plate whose top face carries a STRIP of needles -
+//! a row of nearly collinear vertices zigzag-tiled the way a CAD tessellator leaves one, each
+//! needle's apex standing on the next one's long edge - the shape that made the per-needle repair
+//! cascade on Many Holes. The tests share the process-wide meter, so a `threads-required` override
+//! in `.config/nextest.toml` keeps them apart.
 
 use std::collections::HashSet;
 use std::rc::Rc;

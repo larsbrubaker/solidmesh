@@ -1,7 +1,6 @@
-//! Port of `LevelLine/HoleFillFreeEndTests.cs`: three filleted edges at one cube corner, each
-//! chain running from the corner's hole to a free end on the far end face, filled with the filler
-//! on - the removed volume held to the closed form: three straight sections swept to the corner
-//! cell's wall, plus the cell less its ball octant.
+//! Three filleted edges at one cube corner, each chain running from the corner's hole to a free end
+//! on the far end face, filled with the filler on - the removed volume held to the closed form:
+//! three straight sections swept to the corner cell's wall, plus the cell less its ball octant.
 
 use std::f64::consts::PI;
 
@@ -14,7 +13,7 @@ use crate::level_line_test_geometry::{cube_solid, signed_volume};
 use crate::several_chains_fixtures::FOLD_DEGREES;
 use crate::sweep_mesh_measures;
 
-/// C# `ThreeFilletedCubeEdgesRemoveTheirStraightSectionsWithTheFillerOn`.
+/// Three filleted cube edges remove their straight sections with the filler on.
 #[test]
 fn three_filleted_cube_edges_remove_their_straight_sections_with_the_filler_on() {
     const HALF: f64 = 10.0;
@@ -68,7 +67,7 @@ fn three_filleted_cube_edges_remove_their_straight_sections_with_the_filler_on()
     assert!((removed - expected).abs() <= 1.0);
 }
 
-/// C# `Section`: the area of the mesh's cut by the plane through `origin` with `normal`.
+/// The area of the mesh's cut by the plane through `origin` with `normal`.
 fn section_area(
     positions: &[Vector3],
     triangles: &[(i32, i32, i32)],

@@ -1,8 +1,8 @@
-//! The gate the C# `LevelLine` measure classes (`BridgeDiagnosisTests`, `ManyHolesRimCostTests`,
-//! `PassOnePinchTests`, `NeedleCascadeMeterTests`) each repeat as private members: `Asked`
-//! (`LEVELLINE_COST=1`), `Cap` (`LEVELLINE_COST_CAP`, default three million), `Fixture` (the one
-//! Many Holes face-rim witness) and `Say` (console plus `LEVELLINE_COST_LOG`). Held once here so
-//! the four ports share one copy.
+//! The gate the level-line measurement tests (bridge diagnosis, Many Holes rim cost, pass-one
+//! pinch, needle cascade meter) share: whether a measurement is asked for (`LEVELLINE_COST=1`), its
+//! cap (`LEVELLINE_COST_CAP`, default three million), the one Many Holes face-rim witness fixture
+//! and where a line is said (console plus `LEVELLINE_COST_LOG`). Held once here so the four share
+//! one copy.
 
 #![allow(dead_code)]
 
@@ -12,20 +12,20 @@ use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 
-/// C# `Asked`: the measurement runs only when `LEVELLINE_COST=1`.
+/// The measurement runs only when `LEVELLINE_COST=1`.
 pub fn asked() -> bool {
     std::env::var("LEVELLINE_COST").as_deref() == Ok("1")
 }
 
-/// C# `Cap` of the classes whose default is three million.
+/// The cap of the measurements whose default is three million.
 pub const DEFAULT_CAP: i64 = 3_000_000;
 
-/// C# `Cap`: `LEVELLINE_COST_CAP` where it parses to a positive count, [`DEFAULT_CAP`] otherwise.
+/// `LEVELLINE_COST_CAP` where it parses to a positive count, [`DEFAULT_CAP`] otherwise.
 pub fn cap() -> i64 {
     cap_or(DEFAULT_CAP)
 }
 
-/// C# `Cap` of a class with its own default (`ManyHolesRimCostTests` reads five million).
+/// The cap of a measurement with its own default (the Many Holes rim cost reads five million).
 pub fn cap_or(default: i64) -> i64 {
     std::env::var("LEVELLINE_COST_CAP")
         .ok()
@@ -44,7 +44,7 @@ pub fn budget_of(limit: i64) -> Rc<WorkBudget> {
     Rc::new(WorkBudget::new(limit).expect("a positive cap"))
 }
 
-/// C# `Fixture`: the name (without extension) of the one `many-holes-facerim-*chains-r05.txt`
+/// The name (without extension) of the one `many-holes-facerim-*chains-r05.txt`
 /// witness fixture.
 pub fn witness_name() -> String {
     let directory = format!(
@@ -61,7 +61,7 @@ pub fn witness_name() -> String {
     names[0].trim_end_matches(".txt").to_string()
 }
 
-/// C# `fixture.Profile`.
+/// The fixture's profile.
 pub fn profile(fixture: &LevelLineFixture) -> BandProfile {
     if fixture.chamfer {
         BandProfile::Chamfer
@@ -70,7 +70,7 @@ pub fn profile(fixture: &LevelLineFixture) -> BandProfile {
     }
 }
 
-/// C# `fixture.IsFeatureEdge` as the kernel's feature-edge test.
+/// The fixture's feature-edge list as the kernel's feature-edge test.
 pub fn feature_test(
     fixture: &Rc<LevelLineFixture>,
 ) -> Option<geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest> {
@@ -78,7 +78,7 @@ pub fn feature_test(
     Some(Rc::new(move |a, b| features.is_feature_edge(a, b)))
 }
 
-/// C# `Say`: the line on the console, and appended to `LEVELLINE_COST_LOG` where one is named (a
+/// The line on the console, and appended to `LEVELLINE_COST_LOG` where one is named (a
 /// test host swallows the console).
 pub fn say(line: &str) {
     println!("{line}");
@@ -95,7 +95,7 @@ pub fn say(line: &str) {
     }
 }
 
-/// C#'s `{n:N0}`: an integer with thousands separators.
+/// An integer with thousands separators, so the cost tables read at a glance.
 pub fn n0(value: i64) -> String {
     let digits = value.unsigned_abs().to_string();
     let mut grouped = String::new();

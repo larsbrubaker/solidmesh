@@ -1,8 +1,7 @@
-//! Port of the arc readers `SectionOpenMouthArcTests.cs` shares with its neighbours
-//! (`TheTopMouthArc`, `TheTopMouthArcWalk`, `TheSameArcOn` and their `WalkedOpen`): the inner face's
-//! top mouth arc - the 40 feature edges of the bore's top mouth that lie in the top face's plane -
-//! walked end to end as an open chain, and the same arc found again by vertex pair on a moved copy
-//! of the part ([`crate::inner_face_test_mesh`], [`crate::rigid_motion_meshes`]).
+//! The arc readers the open-mouth arc section tests share: the inner face's top mouth arc - the 40
+//! feature edges of the bore's top mouth that lie in the top face's plane - walked end to end as an
+//! open chain, and the same arc found again by vertex pair on a moved copy of the part
+//! ([`crate::inner_face_test_mesh`], [`crate::rigid_motion_meshes`]).
 
 #![allow(dead_code)]
 
@@ -17,7 +16,7 @@ use crate::inner_face_test_mesh;
 /// The plane of the cube's -X wall, which the fillet's two ends must die on.
 pub const MINUS_X_PLANE: f64 = -19.0;
 
-/// C# `TheSameArcOn`: the walk's vertex pairs found again among `features`, each oriented the way
+/// The walk's vertex pairs found again among `features`, each oriented the way
 /// the walk runs.
 pub fn the_same_arc_on(features: &FeatureEdgeSet, walk: &[(i32, i32)]) -> Vec<ChainEdge> {
     let mut by_pair: HashMap<(i32, i32), i32> = HashMap::new();
@@ -49,7 +48,7 @@ pub fn the_same_arc_on(features: &FeatureEdgeSet, walk: &[(i32, i32)]) -> Vec<Ch
     chain
 }
 
-/// C# `TheTopMouthArcWalk`: the arc's vertex pairs in order, read on the fixture where it was made.
+/// The arc's vertex pairs in order, read on the fixture where it was made.
 pub fn the_top_mouth_arc_walk() -> Vec<(i32, i32)> {
     let part = inner_face_test_mesh::the_part();
     let graph = part.get_mesh_edge_graph();
@@ -65,7 +64,7 @@ pub fn the_top_mouth_arc_walk() -> Vec<(i32, i32)> {
         .collect()
 }
 
-/// C# `TheTopMouthArc`: the 40 feature edges of the top mouth that lie in the top face's plane,
+/// The 40 feature edges of the top mouth that lie in the top face's plane,
 /// walked end to end as an open chain. Found by geometry rather than by index so the fixture may be
 /// re-tessellated.
 pub fn the_top_mouth_arc(_part: &Mesh, features: &FeatureEdgeSet) -> Vec<ChainEdge> {
@@ -84,7 +83,7 @@ pub fn the_top_mouth_arc(_part: &Mesh, features: &FeatureEdgeSet) -> Vec<ChainEd
     walked_open(&on_top, features)
 }
 
-/// C# `WalkedOpen`: the given feature edges ordered end to end, starting from the lowest-numbered
+/// The given feature edges ordered end to end, starting from the lowest-numbered
 /// end that has one neighbour.
 fn walked_open(indices: &[i32], features: &FeatureEdgeSet) -> Vec<ChainEdge> {
     let mut by_vertex: BTreeMap<i32, Vec<i32>> = BTreeMap::new();
@@ -97,7 +96,8 @@ fn walked_open(indices: &[i32], features: &FeatureEdgeSet) -> Vec<ChainEdge> {
         }
     }
 
-    // C# orders the ends by vertex and takes the first; the BTreeMap is already in that order.
+    // The lowest-numbered end starts the walk, so it is the same every run; the BTreeMap is
+    // already in that order.
     let start = *by_vertex
         .iter()
         .find(|(_, at)| at.len() == 1)

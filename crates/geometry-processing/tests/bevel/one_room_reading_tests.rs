@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/OneRoomReadingTests.cs`: ONE reading of the room,
-//! of the part and the pick - never of the size it was asked at. C# `[MethodDataSource]` rows are
-//! loops over the same-named test. `LPrism` is `level_line_room_geometry::l_prism`.
+//! ONE reading of the room, of the part and the pick - never of the size it was asked at. Parameter
+//! rows are loops over the same-named test. `LPrism` is `level_line_room_geometry::l_prism`.
 
 use std::rc::Rc;
 
@@ -18,7 +17,7 @@ use crate::level_line_room_geometry::l_prism;
 use crate::open_chain_fixtures;
 use crate::raked_box_fixture;
 
-/// C# `Pick`: what to read the room of, and how to build it at a size.
+/// What to read the room of, and how to build it at a size.
 struct Pick {
     positions: Vec<Vector3>,
     indices: Vec<(i32, i32, i32)>,
@@ -45,17 +44,17 @@ impl Pick {
         .expect("the room reads")
     }
 
-    /// C# `Room`.
+    /// The room the reading names.
     fn room(&self) -> f64 {
         self.read().room
     }
 
-    /// C# `RoomSetBy`.
+    /// What set the room.
     fn room_set_by(&self) -> RoomSource {
         self.read().room_set_by
     }
 
-    /// C# `Build`.
+    /// One band build at `size`, under `known_room` when given.
     fn build(&self, size: f64, known_room: Option<f64>) -> BandGapResult {
         band_gap_entry_points::build(
             &self.positions,
@@ -76,7 +75,7 @@ impl Pick {
     }
 }
 
-/// C# `Names`.
+/// The fixtures the room reading is run on.
 const NAMES: [&str; 7] = [
     "internal-fillet-face8-r1",
     "internal-fillet-face8-r2",
@@ -87,7 +86,7 @@ const NAMES: [&str; 7] = [
     "fade-three-edges",
 ];
 
-/// C# `PickNamed`.
+/// The pick a test row names.
 fn pick_named(name: &str) -> Pick {
     match name {
         "cylinder-rim" => {
@@ -118,7 +117,7 @@ fn pick_named(name: &str) -> Pick {
         }
         "raked-box-rim" => {
             let (positions, indices, rim) = raked_box_fixture::pick(false, None);
-            // C# `RakedBoxFixture.FeatureEdges`.
+            // The raked box's feature edges, at its own fold threshold.
             let feature = feature_edges_over(&positions, &indices, raked_box_fixture::FOLD_DEGREES);
             Pick {
                 positions,
@@ -162,7 +161,7 @@ fn pick_named(name: &str) -> Pick {
     }
 }
 
-/// C# `TheBuildDecidesOnTheRoomThatWasRead`: every size under the room read is not refused by SIZE,
+/// Every size under the room read is not refused by SIZE,
 /// and a size above it is, naming that very number to the bit.
 #[test]
 fn the_build_decides_on_the_room_that_was_read() {
@@ -196,7 +195,7 @@ fn the_build_decides_on_the_room_that_was_read() {
     }
 }
 
-/// C# `ABuildsOwnReadingCarriesTheReadingsFields`: a build that reads its own room reports the same
+/// A build that reads its own room reports the same
 /// room, and the same thing setting it, as the reading asked for on its own.
 #[test]
 fn a_builds_own_reading_carries_the_readings_fields() {
@@ -214,7 +213,7 @@ fn a_builds_own_reading_carries_the_readings_fields() {
     }
 }
 
-/// C# `HandedTheRoomOrReadingItTheAnswerIsTheSame`: a build handed the room and a build that reads
+/// A build handed the room and a build that reads
 /// it for itself answer the same number.
 #[test]
 fn handed_the_room_or_reading_it_the_answer_is_the_same() {

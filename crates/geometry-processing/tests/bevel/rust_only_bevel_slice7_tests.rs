@@ -1,8 +1,8 @@
 //! Rust-only checks of the seventh bevel slice (`SurfaceRing`, `BevelCornerHandover`,
-//! `BevelEdgeToolBuilder`, `BevelMixedBlend`) and of slice 8's `RoomCandidate`. The C# classes
-//! that exercise them read whole bevels (`BevelToolPlaneAccuracyTests` through `BevelGroupTools`,
-//! `SurfaceMixedCornerTests` through the surface builder), so they land with the core; these pin
-//! each piece alone. `BevelVoidWedgeSectionTests` has its own ported class.
+//! `BevelEdgeToolBuilder`, `BevelMixedBlend`) and of slice 8's `RoomCandidate`. The tests that
+//! exercise them in context read whole bevels (the tool-plane accuracy tests through the group
+//! tools, the mixed-corner tests through the surface builder); these pin each piece alone. The
+//! void-wedge section has its own test file.
 
 use std::collections::HashSet;
 

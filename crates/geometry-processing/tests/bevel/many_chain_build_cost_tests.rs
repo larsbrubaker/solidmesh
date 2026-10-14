@@ -1,10 +1,9 @@
-//! Port of `LevelLine/ManyChainBuildCostTests.cs`: what a band build of a pick of MANY loops costs
-//! PER LOOP, on the n x n hole plate of `grid_hole_plate_fixture` at 5, 17 and 37 chains, and
-//! what it costs as the face's triangles grow in sizes across. The cost rows assert only that the
-//! pick builds - the numbers are the point, printed and appended to `LEVELLINE_COST_LOG` when it is
-//! set, as C# does; the digest rows pin the built mesh to the bit. C#'s `[NotInParallel]` holds
-//! through the nextest override in `.config/nextest.toml`. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! What a band build of a pick of MANY loops costs PER LOOP, on the n x n hole plate of
+//! `grid_hole_plate_fixture` at 5, 17 and 37 chains, and what it costs as the face's triangles grow
+//! in sizes across. The cost rows assert only that the pick builds - the numbers are the point,
+//! printed and appended to `LEVELLINE_COST_LOG` when it is set; the digest rows pin the built mesh
+//! to the bit. The rows share the process-wide meter, so a nextest override in
+//! `.config/nextest.toml` keeps them apart. Parameter rows are loops over the same-named test.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,7 +18,7 @@ use polygon_mesh::CancelToken;
 use crate::convex_cell_bound_tests::digest;
 use crate::grid_hole_plate_fixture;
 
-/// C# `Measurement`: what one build of the pick cost, with enough of the counters to say where
+/// What one build of the pick cost, with enough of the counters to say where
 /// the work went.
 struct Measurement {
     loops: i32,
@@ -84,7 +83,7 @@ impl std::fmt::Display for Measurement {
     }
 }
 
-/// Switches `FieldCounters`' meter off when dropped (C#'s `finally`): the meter outlives the test,
+/// Switches `FieldCounters`' meter off when dropped (even on a panic): the meter outlives the test,
 /// so a build that throws must not leave it on for whatever runs next.
 struct MeterOff;
 
@@ -94,7 +93,7 @@ impl Drop for MeterOff {
     }
 }
 
-/// C# `Measure`: one whole-rim build of the n x n hole plate, with the work budget's phase reports
+/// One whole-rim build of the n x n hole plate, with the work budget's phase reports
 /// gathered so the spend can be split between the room, the refinement, the cut and the fill.
 fn measure(holes: i32, span: f64, size: f64) -> Measurement {
     let (positions, indices, chains) = grid_hole_plate_fixture::pick_with_span(holes, span);
@@ -176,7 +175,7 @@ fn measure(holes: i32, span: f64, size: f64) -> Measurement {
         .filter(|(phase, _)| **phase != LevelLineWorkPhase::None)
         .map(|(&phase, &spent)| (phase, spent))
         .collect();
-    // C# OrderByDescending is stable: equal spends keep their first-reported order.
+    // A stable sort: equal spends keep their first-reported order.
     phases.sort_by_key(|p| std::cmp::Reverse(p.1));
 
     let mesh = built.mesh.as_ref().expect("a built mesh").borrow();
@@ -213,7 +212,7 @@ fn report(line: &str) {
     }
 }
 
-/// The table C#'s remarks quote, re-measured. It asserts only that the pick builds.
+/// The cost table, re-measured. It asserts only that the pick builds.
 #[test]
 fn the_cost_of_a_whole_rim_pick() {
     for holes in [2, 4, 6] {

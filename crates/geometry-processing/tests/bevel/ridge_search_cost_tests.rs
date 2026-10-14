@@ -1,11 +1,10 @@
-//! Port of `LevelLine/RidgeSearchCostTests.cs`: what the peak/ridge rule's search is allowed to
-//! COST, and that paying less for it does not buy a different answer. Rule (v) of
-//! `BandRefinement` hands its firing threshold `max(snap, highestCorner + chordTolerance)` to the
-//! bounded search as `atLeast`, so the search discards from its first step every part of the
-//! triangle whose Lipschitz bound cannot beat it. The numbers pinned are work units from
-//! `WorkBudget.Spent`, which are load-independent; the mesh digests are an empirical pin against
-//! drift (re-recorded in C# when `ConvexCellBound` joined the cell bound). C# `[Arguments]` rows are
-//! loops over the same-named test.
+//! What the peak/ridge rule's search is allowed to COST, and that paying less for it does not buy a
+//! different answer. Rule (v) of `BandRefinement` hands its firing threshold `max(snap,
+//! highestCorner + chordTolerance)` to the bounded search as `atLeast`, so the search discards from
+//! its first step every part of the triangle whose Lipschitz bound cannot beat it. The numbers
+//! pinned are work units from `WorkBudget.Spent`, which are load-independent; the mesh digests are
+//! an empirical pin against drift (re-recorded when the convex cell bound joined the cell bound).
+//! Parameter rows are loops over the same-named test.
 
 use std::rc::Rc;
 
@@ -29,8 +28,8 @@ fn part(which: &str) -> SolidWithChain {
 
 /// What a build may spend, in work units, on each proof - two geometries at two sizes each, the
 /// second size a quarter of the first because the rule's cost is what grows as the size falls.
-/// Each ceiling sits midway between C#'s before/after pair, so every row is RED on the old code
-/// and GREEN with room.
+/// Each ceiling sits midway between the measured before/after pair, so every row is RED on the
+/// old code and GREEN with room.
 #[test]
 fn the_ridge_rule_costs_far_less_than_it_did() {
     for (which, size, ceiling) in [
@@ -128,7 +127,7 @@ fn note(what: &str, built: &(BandGapResult, i64), extra: &str) {
     append_to_cost_log(&line);
 }
 
-/// C#'s `File.AppendAllText(LEVELLINE_COST_LOG, line)` with every write failure swallowed: a test
+/// Appends the line to `LEVELLINE_COST_LOG`, every write failure swallowed: a test
 /// runner swallows the console, and these numbers are the whole point of the fixture
 /// (`SeededSearchCostTests` writes through it too).
 pub fn append_to_cost_log(line: &str) {

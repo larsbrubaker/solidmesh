@@ -1,7 +1,6 @@
 //! Rust-only checks of the second bevel leaf cluster (`BevelProfilePolygon`,
 //! `BevelMixedCornerEnds`, `BevelPairCornerCrease`, `BevelPartnerTube`, `BevelRoundDescriptor`).
-//! Their C# coverage comes through the whole-bevel test classes of later slices; these pin the
-//! leaf behaviour now.
+//! The whole-build tests also cover them; these pin the leaf behaviour alone.
 
 use std::f64::consts::{FRAC_PI_2, PI};
 

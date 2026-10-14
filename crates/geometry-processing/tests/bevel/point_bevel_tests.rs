@@ -1,10 +1,9 @@
-//! Port of `R/Tests/GeometryProcessingTests/LevelLine/PointBevelTests.cs`: point mode's kernel -
-//! which vertices are offered (`point_candidates`) and the one-hole build at a picked point
-//! (`point_bevel`) - a cone's tip and a cube's corner, filleted and chamfered across the room, each
-//! held to the requirement: closed, consistently oriented, one shell, no zero-area triangle,
-//! material removed; the fillet near the exact ball, the chamfer's cap flat, a size past the room
-//! refused - and a fillet at a point where sharp edges meet (a cube corner) refused by name. C#
-//! `[Arguments]` rows are loops over the same-named test.
+//! Point mode's kernel - which vertices are offered (`point_candidates`) and the one-hole build at
+//! a picked point (`point_bevel`) - a cone's tip and a cube's corner, filleted and chamfered across
+//! the room, each held to the requirement: closed, consistently oriented, one shell, no zero-area
+//! triangle, material removed; the fillet near the exact ball, the chamfer's cap flat, a size past
+//! the room refused - and a fillet at a point where sharp edges meet (a cube corner) refused by
+//! name. Parameter rows are loops over the same-named test.
 
 use std::collections::{HashMap, HashSet};
 
@@ -332,7 +331,7 @@ fn a_cone_fillet_is_the_same_under_a_rigid_motion() {
     );
 }
 
-/// C# `...SelectMany(t => new[] { t.A, t.B, t.C }).Distinct()`: live vertices in first-seen order.
+/// The live triangles' vertices, each once, in first-seen order.
 fn live_vertices(mesh: &LevelLineMesh) -> Vec<i32> {
     let mut seen = HashSet::new();
     let mut vertices = Vec::new();
@@ -434,7 +433,7 @@ fn volume_of(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> f64 {
         / 6.0
 }
 
-/// C# `BuildForMeter`: builds the cone's apex (at half its room) or the cube's corner 1 (at 0.8)
+/// Builds the cone's apex (at half its room) or the cube's corner 1 (at 0.8)
 /// as the tests above do, for SliverSplitGuardTests' meter to read whether the sliver guard fires
 /// on a point bevel.
 pub(crate) fn build_for_meter(is_cone: bool, kind: PointBevelKind) {

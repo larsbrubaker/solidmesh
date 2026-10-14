@@ -2,8 +2,8 @@
 //! from `rust_only_bevel_r1p04_tests.rs` by responsibility: the feature's ridge, crease and wedge
 //! (`SurfaceStandingFeatureWithheld`), the end cap's walk round a notch
 //! (`SurfaceEndCapAroundAFeature.TryWalkAround`), the notch's own readings off the strip
-//! (`SurfaceStripNotchedByAFeature`) and the hull end's turning point (`SurfaceStripEndsOnTheHull`).
-//! Each pins the C# rule on a hand-built case.
+//! (`SurfaceStripNotchedByAFeature`) and the hull end's turning point
+//! (`SurfaceStripEndsOnTheHull`). Each pins the rule on a hand-built case.
 
 use std::cell::RefCell;
 use std::rc::Rc;

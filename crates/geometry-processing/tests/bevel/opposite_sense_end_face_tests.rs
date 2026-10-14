@@ -1,8 +1,7 @@
-//! Port of `LevelLine/OppositeSenseEndFaceTests.cs`: flow rung 1 - a CONCAVE chain whose end face
-//! meets the chain's sides at CONVEX creases (an L block's inner vertical edge, ending on the
-//! L-shaped top and bottom). The end face is an OPPOSITE-SENSE neighbour: it grows flat over the
-//! bead's section, is not cut, does not bound the room, and each end cap lies in its plane.
-//! C# `[Arguments]` rows are a loop.
+//! Flow rung 1 - a CONCAVE chain whose end face meets the chain's sides at CONVEX creases (an L
+//! block's inner vertical edge, ending on the L-shaped top and bottom). The end face is an
+//! OPPOSITE-SENSE neighbour: it grows flat over the bead's section, is not cut, does not bound the
+//! room, and each end cap lies in its plane. Parameter rows are a loop.
 
 use std::rc::Rc;
 

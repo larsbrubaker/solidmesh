@@ -1,10 +1,10 @@
-//! Port of `LevelLine/ObliqueEndFaceTests.cs`: flow rung 3 - an open chain whose end faces are
-//! OBLIQUE to it. A triangular prism's top edge (a right angle, sides at 45 degrees), sheared so
-//! both end caps lean 30 degrees off square. The end ray runs the rails straight past the chain's
-//! end to the end plane, and the end plane clips the strip. C# `[Arguments]` rows are loops.
+//! Flow rung 3 - an open chain whose end faces are OBLIQUE to it. A triangular prism's top edge (a
+//! right angle, sides at 45 degrees), sheared so both end caps lean 30 degrees off square. The end
+//! ray runs the rails straight past the chain's end to the end plane, and the end plane clips the
+//! strip. Parameter rows are loops.
 //!
-//! C#'s `ASheardPrismsTopEdgeFilletsStraightToItsObliqueEndFaces` and its `...NearTheRoom` rows are
-//! `[Skip]` in C# ("flow rung 3 open") and are not ported.
+//! A sheared prism's top edge filleting straight to its oblique end faces (and its near-the-room
+//! rows) is open work ("flow rung 3 open") and is not tested here.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::{gap_fill, virtual_rail_past_the_end};

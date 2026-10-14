@@ -1,8 +1,6 @@
-//! Port of the test fixture `Fixtures/NoseInNotchTestMeshes.cs` (its `Create` with the upper face
-//! whole, chorded on its right crease or fanned from inside, the named points and normals, and the
-//! crease and group picks the tests make on it): a
-//! 20 mm cube with a triangular notch cut down its
-//! back, and a two-faced nose standing in the notch.
+//! A 20 mm cube with a triangular notch cut down its back, and a two-faced nose standing in the
+//! notch: the solid with the upper face whole, chorded on its right crease or fanned from inside,
+//! the named points and normals, and the crease and group picks the tests make on it.
 
 #![allow(dead_code)]
 
@@ -65,17 +63,17 @@ pub fn lower_nose_normal() -> Vector3 {
     Vector3::new(0.0, -2.0, -3.0).get_normal()
 }
 
-/// C# `Create()` with its defaults (unscaled, the upper face one triangle).
+/// The solid unscaled, the upper face one triangle.
 pub fn create() -> Mesh {
     create_scaled(1.0)
 }
 
-/// C# `Create(scale)`, the upper face one triangle.
+/// The solid at `scale`, the upper face one triangle.
 pub fn create_scaled(scale: f64) -> Mesh {
     create_full(scale, false, None)
 }
 
-/// C# `Create(theUpperRightCreaseSplitAt: split)`: the same solid with the upper right crease - the
+/// The same solid with the upper right crease - the
 /// run from [`right_ridge_end`] to [`upper_crease_end`] - CHORDED into two mesh edges through
 /// `split`, which is what the boolean behind "Center Flows Through.mcx" leaves on that crease (at
 /// (12, 8, 12), its t = 0.6). Both faces that meet along the crease are cut at the same point, so
@@ -85,8 +83,7 @@ pub fn create_with_upper_right_crease_split_at(split: Vector3) -> Mesh {
     create_full(1.0, false, Some(split))
 }
 
-/// C# `Create(scale, theUpperFaceFannedFromInside: false, theUpperRightCreaseSplitAt)`.
-/// C# `Create(theUpperFaceFannedFromInside: true)`: the same solid with the nose's UPPER face cut
+/// The same solid with the nose's UPPER face cut
 /// into three triangles about a point strictly inside it - which is what a boolean leaves, and the
 /// shape of what "15mm Bevel Top Edge.mcx" carries. Only the facet across the upper left crease is
 /// the one a band on the top left edge reaches, and it shares no EDGE with the lower face.
@@ -94,8 +91,8 @@ pub fn create_with_the_upper_face_fanned_from_inside() -> Mesh {
     create_full(1.0, true, None)
 }
 
-/// C#'s `Create` with all its options. C# refuses asking for the fan and the split together; the
-/// public constructors above never ask for both.
+/// The solid with all its options. The fan and the split together are not a shape any test
+/// needs, and the public constructors above never ask for both.
 fn create_full(
     scale: f64,
     upper_face_fanned_from_inside: bool,
@@ -232,13 +229,13 @@ fn slope(mesh: &mut Mesh, mirrored: bool, crease_split_at: Option<Vector3>) {
     }
 }
 
-/// C# `Creases(part, out names)` at scale 1: the nose's four creases, each a one-edge run from
+/// At scale 1: the nose's four creases, each a one-edge run from
 /// its ridge end to its crease end, with their names.
 pub fn creases(part: &Mesh) -> (Vec<BevelSweptChain>, Vec<String>) {
     creases_scaled(part, 1.0)
 }
 
-/// C# `Creases(part, out names, scale)`.
+/// The nose's four creases and their names at `scale`.
 pub fn creases_scaled(part: &Mesh, scale: f64) -> (Vec<BevelSweptChain>, Vec<String>) {
     let features = FeatureEdgeSet::create(part);
 
@@ -305,7 +302,7 @@ pub fn creases_scaled(part: &Mesh, scale: f64) -> (Vec<BevelSweptChain>, Vec<Str
     (runs, names)
 }
 
-/// C# `CentreBottomGroups(features, out names)` at scale 1: the three creases "5mm Bevel Center
+/// At scale 1: the three creases "5mm Bevel Center
 /// Bottom.mcx" picks, as groups a rebuild can resolve - the notch's own centre crease from the floor
 /// up to [`lower_crease_end`], and the two LOWER nose creases that die on the same point. All three
 /// meet at that one concave junction, which is what makes this selection the inside-corner mirror
@@ -328,7 +325,7 @@ pub fn centre_bottom_groups(features: &FeatureEdgeSet) -> (Vec<BevelEdgeGroup>, 
     )
 }
 
-/// C# `CentreFlowsThroughGroups(features, out names)` at scale 1: the two creases "Center Flows
+/// At scale 1: the two creases "Center Flows
 /// Through.mcx" picks, as groups a rebuild can resolve - the two pieces the nose leaves of the
 /// notch's own centre crease, from the floor up to [`lower_crease_end`], and from
 /// [`upper_crease_end`] on up to the ceiling.
@@ -351,7 +348,7 @@ pub fn centre_flows_through_groups(
     )
 }
 
-/// The shared body of C#'s two group lists: one edge group seeded on the feature edge running
+/// The shared body of the two group lists: one edge group seeded on the feature edge running
 /// between each named pair of points (either way round), at `scale`.
 fn groups_on(
     features: &FeatureEdgeSet,

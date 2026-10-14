@@ -1,6 +1,5 @@
-//! Port of the test fixture `Fixtures/MeshSurfaceDistance.cs`: how far a point is from a mesh's
-//! SURFACE - the measurement a bevel test makes when it wants to know how far the part retreated
-//! from a corner, rather than where the nearest vertex ended up.
+//! How far a point is from a mesh's SURFACE - the measurement a bevel test makes when it wants to
+//! know how far the part retreated from a corner, rather than where the nearest vertex ended up.
 //!
 //! Brute force over every triangle. The fixtures here are a few hundred faces and a handful of probe
 //! points, so an acceleration structure would only be something else to be wrong.
@@ -10,7 +9,7 @@
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
-/// C# `From`: the distance from `point` to the nearest point of any triangle.
+/// The distance from `point` to the nearest point of any triangle.
 pub fn from(mesh: &Mesh, point: Vector3) -> f64 {
     let mut best = f64::INFINITY;
 
@@ -29,7 +28,7 @@ pub fn from(mesh: &Mesh, point: Vector3) -> f64 {
     best
 }
 
-/// C# `ClosestPointOnTriangle`: the Voronoi region walk from Ericson, Real-Time Collision
+/// The Voronoi region walk from Ericson, Real-Time Collision
 /// Detection, 5.1.5.
 pub fn closest_point_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
     let ab = b - a;
@@ -81,7 +80,7 @@ pub fn closest_point_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3)
     a + (ab * (vb * denominator)) + (ac * (vc * denominator))
 }
 
-/// C# `FarthestFrom`, which the section classes comparing two builds each carry: the farthest any
+/// The farthest-from reading the section tests comparing two builds share: the farthest any
 /// vertex of `one` stands from the surface of `other`.
 pub fn farthest_from(one: &Mesh, other: &Mesh) -> f64 {
     one.vertices.iter().fold(0.0, |farthest: f64, vertex| {

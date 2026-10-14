@@ -1,6 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ParallelEdgesRoomTests.cs`: "Parallel Edges Too
-//! Close.mcx" at the kernel - the two top edges of a 20 x 6 x 20 bar, chamfered. The room is half
-//! the 6 mm face less only the room margin, and a build AT the room builds.
+//! "Parallel Edges Too Close.mcx" at the kernel - the two top edges of a 20 x 6 x 20 bar,
+//! chamfered. The room is half the 6 mm face less only the room margin, and a build AT the room
+//! builds.
 
 use std::rc::Rc;
 
@@ -11,7 +11,7 @@ use vector_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 
-/// C# `TheRoomIsHalfTheFaceAndBuildsAtExactlyThatSize`.
+/// The room is half the face and builds at exactly that size.
 #[test]
 fn the_room_is_half_the_face_and_builds_at_exactly_that_size() {
     let positions = vec![

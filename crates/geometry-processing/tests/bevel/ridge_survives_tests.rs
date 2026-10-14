@@ -1,11 +1,11 @@
-//! Port of `LevelLine/RidgeSurvivesTests.cs`: the narrowest statement of the ridge defect - a face
-//! coarse enough that the level line runs THROUGH the middle of its triangles rather than across
-//! their corners. A 4 x 20 strip face made of two triangles, its whole rim picked, inset by 1. Every
-//! corner of both triangles stands on the chain and so reads inside, while the long diagonal between
-//! them rises a whole millimetre above the line in its middle - the ridge of kept surface that ought
-//! to survive down the strip. Classified by its corners alone each triangle is removed whole, and
-//! what should be one inset rectangle comes apart. Nothing about the strip is special: it is the
-//! L-shaped top face of "Simple Internal Fillet" with the L straightened out.
+//! The narrowest statement of the ridge defect - a face coarse enough that the level line runs
+//! THROUGH the middle of its triangles rather than across their corners. A 4 x 20 strip face made
+//! of two triangles, its whole rim picked, inset by 1. Every corner of both triangles stands on the
+//! chain and so reads inside, while the long diagonal between them rises a whole millimetre above
+//! the line in its middle - the ridge of kept surface that ought to survive down the strip.
+//! Classified by its corners alone each triangle is removed whole, and what should be one inset
+//! rectangle comes apart. Nothing about the strip is special: it is the L-shaped top face of
+//! "Simple Internal Fillet" with the L straightened out.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::gap_fill;

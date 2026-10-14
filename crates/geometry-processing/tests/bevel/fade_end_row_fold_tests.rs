@@ -1,12 +1,12 @@
-//! Port of `LevelLine/FadeEndRowFoldTests.cs`: Many Holes single-chain fillet picks at 0.25 that
-//! the Boolean kernel read as self-intersecting. Each pick is ONE facet edge of a crease that
-//! carries on, so the fill fades out past both ends; the rows past the chain's end shared one end
-//! vertex on ONE tangent and folded in single precision. c904, c1915 and c3066 meet at the crease
-//! and lay those rows straight; c563 refuses by size at 0.25 and is built at 0.9 of its room.
-//! C# `[Arguments]` rows are a loop over the same-named test.
+//! Many Holes single-chain fillet picks at 0.25 that the Boolean kernel read as self-intersecting.
+//! Each pick is ONE facet edge of a crease that carries on, so the fill fades out past both ends;
+//! the rows past the chain's end shared one end vertex on ONE tangent and folded in single
+//! precision. c904, c1915 and c3066 meet at the crease and lay those rows straight; c563 refuses by
+//! size at 0.25 and is built at 0.9 of its room. Parameter rows are a loop over the same-named
+//! test.
 //!
-//! Not ported, `[Skip]` in C# (measured 2026-09-25, the cause is in the band refinement, not the
-//! fill): `SliverFanRootsBuildClean` (`issue-single-edge-c3243-r025`).
+//! Not run here (measured 2026-09-25, the cause is in the band refinement, not the fill):
+//! `SliverFanRootsBuildClean` (`issue-single-edge-c3243-r025`).
 
 use std::rc::Rc;
 

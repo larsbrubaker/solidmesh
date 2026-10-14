@@ -1,7 +1,7 @@
-//! Rust-only tests for the bevel-core package R1.P11's methods that no ported C# test class covers
-//! yet: the section's constructor (`BevelSection`), a chain's sharp turns (`SectionCorner`), the
+//! Rust-only tests for the bevel-core package R1.P11's methods that no other test covers on its
+//! own: the section's constructor (`BevelSection`), a chain's sharp turns (`SectionCorner`), the
 //! corner pass over a run's stations (`SectionAbsorbedSplits.BehindTheCorners`) and the split
-//! blend's small readings (`SectionSplitBlend`). Each pins the C# rule on a hand-built case.
+//! blend's small readings (`SectionSplitBlend`). Each pins the rule on a hand-built case.
 
 use vector_math::Vector3;
 
@@ -227,7 +227,7 @@ fn rust_only_a_vertex_on_a_straight_crease_is_a_split_chord() {
 
     // Past the crease's far end the vertex is on its line but not BETWEEN its ends: both sides are
     // still flat and the two creases are still the edges along the line, so the line is what
-    // declines it - C#'s own text, numbers in its `0.#########`.
+    // declines it - the refusal's own text, numbers to at most nine decimals.
     let past_the_end = build(Vector3::new(3.0, 0.0, 0.0));
     assert_eq!(
         bevel_split_chords::would_remove(&past_the_end, 0),

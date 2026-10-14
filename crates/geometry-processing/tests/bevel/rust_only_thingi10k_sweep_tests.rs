@@ -14,7 +14,7 @@ use crate::sweep_watchdog;
 use crate::thingi10k_corpus;
 use crate::thingi10k_sweep::{run_sweep, SweepSettings};
 
-/// The watchdog's build cap and count of abandoned builds are process-wide, as in C#; the two tests
+/// The watchdog's build cap and count of abandoned builds are process-wide; the two tests
 /// that move them take turns (nextest gives each test a process of its own).
 static WATCHDOG: Mutex<()> = Mutex::new(());
 

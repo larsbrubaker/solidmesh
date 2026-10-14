@@ -1,9 +1,8 @@
-//! Port of `LevelLine/OpenChainFadeTests.cs`: Stage 2's first rung - a bevel on PART of a crease
-//! that carries on past both ends FADES OUT. The pick is a run of top-rim facet edges of a faceted
-//! cylinder; the crease continues either side of it, so the two sides' level lines curl round each
-//! end vertex and meet at one point on the continuing ridge, about a setback past the end. The two
-//! open runs therefore chain into ONE cycle, and the fill zips them in open mode. C#
-//! `[MethodDataSource]`/`[Arguments]` rows are loops over the same-named test.
+//! Stage 2's first rung - a bevel on PART of a crease that carries on past both ends FADES OUT. The
+//! pick is a run of top-rim facet edges of a faceted cylinder; the crease continues either side of
+//! it, so the two sides' level lines curl round each end vertex and meet at one point on the
+//! continuing ridge, about a setback past the end. The two open runs therefore chain into ONE
+//! cycle, and the fill zips them in open mode. Parameter rows are loops over the same-named test.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::gap_fill::DEFAULT_FILLET_SEGMENTS;
@@ -18,7 +17,7 @@ use crate::open_chain_fixtures;
 use crate::several_chains_fixtures;
 use crate::sweep_mesh_measures;
 
-/// C# `Ladder`: a size that builds means every smaller size builds - under a rim facet's 1.5643
+/// A size that builds means every smaller size builds - under a rim facet's 1.5643
 /// length and well over it, 2 being the size in Lars's owner file, where the fade reaches past the
 /// neighbouring rim vertex.
 fn ladder() -> Vec<(i32, BandProfile, f64)> {

@@ -1,8 +1,8 @@
-//! Port of `LevelLine/FillClosesOrRefusesTests.cs`: the fill's own promise, held to on every
-//! input this project can build - what comes back is either a CLOSED, consistently wound mesh or a
-//! named refusal, never an open solid. The two loops of a gap run opposite ways round the chain, so
-//! exactly one rail is reversed; the pair is chosen opposite by construction, and the fill counts
-//! its own edges before it returns. C# `[Arguments]` cases run as one loop per test.
+//! The fill's own promise, held to on every input this project can build - what comes back is
+//! either a CLOSED, consistently wound mesh or a named refusal, never an open solid. The two loops
+//! of a gap run opposite ways round the chain, so exactly one rail is reversed; the pair is chosen
+//! opposite by construction, and the fill counts its own edges before it returns. Parameter cases
+//! run as one loop per test.
 
 use std::rc::Rc;
 
@@ -20,7 +20,7 @@ use crate::level_line_test_geometry::{cube_solid, cylinder_solid, open_edges};
 
 const FOLD_DEGREES: f64 = 30.0;
 
-/// C# `CylinderRimFillsClosedOrRefuses`: a cylinder's top rim at a ladder of sizes, ending well
+/// A cylinder's top rim at a ladder of sizes, ending well
 /// past the room.
 #[test]
 fn cylinder_rim_fills_closed_or_refuses() {
@@ -43,7 +43,7 @@ fn cylinder_rim_fills_closed_or_refuses() {
     }
 }
 
-/// C# `CubeRimFillsClosedOrRefuses`: a cube's top rim, the same ladder.
+/// A cube's top rim, the same ladder.
 #[test]
 fn cube_rim_fills_closed_or_refuses() {
     let (positions, indices) = cube_solid(5.0);
@@ -73,7 +73,7 @@ fn cube_rim_fills_closed_or_refuses() {
     }
 }
 
-/// C# `PyramidBaseRimFillsClosedOrRefuses`: as the size approaches the slant height the level line
+/// As the size approaches the slant height the level line
 /// on the sloping faces collapses onto the APEX.
 #[test]
 fn pyramid_base_rim_fills_closed_or_refuses() {
@@ -104,7 +104,7 @@ fn pyramid_base_rim_fills_closed_or_refuses() {
     }
 }
 
-/// C# `Pyramid`: a square pyramid, base rim first in index order and wound so the outside is out.
+/// A square pyramid, base rim first in index order and wound so the outside is out.
 fn pyramid(half: f64, height: f64) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     let positions = vec![
         Vector3::new(-half, -half, 0.0),
@@ -124,7 +124,7 @@ fn pyramid(half: f64, height: f64) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     (positions, indices)
 }
 
-/// C# `FixtureFillsClosedOrRefuses`: every fixture this project carries, at its own size and at a
+/// Every fixture this project carries, at its own size and at a
 /// ladder around it.
 #[test]
 fn fixture_fills_closed_or_refuses() {
@@ -154,7 +154,7 @@ fn fixture_fills_closed_or_refuses() {
     }
 }
 
-/// C# `ClosedOrRefused`: the one claim - a fill that returns has laid a closed, consistently wound
+/// The one claim - a fill that returns has laid a closed, consistently wound
 /// strip.
 #[allow(clippy::too_many_arguments)]
 fn closed_or_refused(
@@ -198,7 +198,7 @@ fn closed_or_refused(
     );
 }
 
-/// C# `TopRim`: the rim of the top face - every vertex at the greatest z, wound round the centre,
+/// The rim of the top face - every vertex at the greatest z, wound round the centre,
 /// which is the order the rim is picked in (a chain is a walk, not a set).
 fn top_rim(positions: &[Vector3]) -> Vec<i32> {
     let top = positions
@@ -218,7 +218,7 @@ fn top_rim(positions: &[Vector3]) -> Vec<i32> {
     let angle =
         |i: i32| (positions[i as usize].y - centre.y).atan2(positions[i as usize].x - centre.x);
     let mut ordered = rim;
-    // C#'s OrderBy is a stable sort.
+    // A stable sort, so ties keep their order.
     ordered.sort_by(|&a, &b| angle(a).partial_cmp(&angle(b)).expect("finite angles"));
     ordered
 }

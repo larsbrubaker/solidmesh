@@ -1,8 +1,8 @@
-//! Port of `LevelLine/MixedEndFadeTests.cs`: a MIXED open pick, "Top Face Should stil bevel.mcx"'s
-//! c68 - one end cut into its end face and the other where the crease carries on past the pick.
-//! In the app at the small sweep sizes the two side runs meet at one nose vertex on that end, and
-//! the end-face fill refused OpenChainEnds until it took the nose as that end's run
-//! (`EndFaceFill.TryEndFaces`). C# `[Arguments]` rows are loops over the same-named test.
+//! A MIXED open pick, "Top Face Should stil bevel.mcx"'s c68 - one end cut into its end face and
+//! the other where the crease carries on past the pick. In the app at the small sweep sizes the two
+//! side runs meet at one nose vertex on that end, and the end-face fill refused OpenChainEnds until
+//! it took the nose as that end's run (`EndFaceFill.TryEndFaces`). Parameter rows are loops over
+//! the same-named test.
 
 use std::rc::Rc;
 

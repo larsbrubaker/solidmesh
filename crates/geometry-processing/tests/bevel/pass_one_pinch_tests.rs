@@ -1,6 +1,6 @@
-//! Port of `LevelLine/PassOnePinchTests.cs`: WHY the witness pick does not stand up on its FIRST
-//! pass - which picked (chain, side) the cut failed to leave one owned loop, whether those chains
-//! close alone at the same size, and what room each of them reads. A measurement, not a contract.
+//! WHY the witness pick does not stand up on its FIRST pass - which picked (chain, side) the cut
+//! failed to leave one owned loop, whether those chains close alone at the same size, and what room
+//! each of them reads. A measurement, not a contract.
 //!
 //! Gated on `LEVELLINE_COST=1` beside `many_holes_rim_cost_tests`, whose fixture and cap it
 //! shares (`level_line_cost_gate`), because one pass of this pick is tens of seconds: a pick that
@@ -113,7 +113,7 @@ fn options(budget: &Rc<WorkBudget>) -> BandGapBuildOptions {
     }
 }
 
-/// C# `Pass1SaysWhichSidesFail`: the survivors built ONCE at the size the room reading passed,
+/// The survivors built ONCE at the size the room reading passed,
 /// with the per-side reading printed for every picked side that did not leave its one owned loop.
 #[test]
 fn pass1_says_which_sides_fail() {
@@ -288,7 +288,7 @@ fn first_line(text: &str) -> String {
     text.split('\n').next().unwrap_or_default().to_string()
 }
 
-/// C# `EachChainAloneIsMeasured`: is a failing side a real pinch at the size asked, or only what
+/// Is a failing side a real pinch at the size asked, or only what
 /// the whole pick's refinement makes of it? Every survivor is built ALONE at the same size, its
 /// own room printed beside the candidates the WHOLE pick's reading names about it.
 #[test]
@@ -371,7 +371,7 @@ fn each_chain_alone_is_measured() {
                     || c.group_members.as_ref().is_some_and(|m| m.contains(&k))
             })
             .collect();
-        // C#'s OrderBy is stable, so equal rooms keep the reading's order.
+        // A stable sort, so equal rooms keep the reading's order.
         mine.sort_by(|a, b| a.room.total_cmp(&b.room));
         let mine: Vec<String> = mine
             .iter()

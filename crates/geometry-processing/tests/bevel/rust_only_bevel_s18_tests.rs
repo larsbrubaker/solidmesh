@@ -1,6 +1,6 @@
-//! Rust-only checks on slice 18's pass bookkeeping that no ported C# test reaches until the chain
-//! join and the surface builder land: groups sharing edges linked as one network
-//! (`surface_shared_edge_network`) and the seam re-read's candidates (`surface_seam_re_read`).
+//! Rust-only checks on slice 18's pass bookkeeping that no other test reaches on its own: groups
+//! sharing edges linked as one network (`surface_shared_edge_network`) and the seam re-read's
+//! candidates (`surface_seam_re_read`).
 
 use geometry_processing::bevel::bevel_chain_linker::link_resolution;
 use geometry_processing::bevel::surface::{surface_seam_re_read, surface_shared_edge_network};

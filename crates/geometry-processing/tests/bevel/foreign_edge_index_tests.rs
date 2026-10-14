@@ -1,7 +1,7 @@
-//! Port of `LevelLine/ForeignEdgeIndexTests.cs`: the per-chain FOREIGN reading is about the part
-//! NEAR that chain, not about the whole region its chains bound - and it answers the same numbers
-//! with the nearest-first index as with a plain pass over every foreign edge. C# `[Arguments]` rows
-//! are a loop over the same-named test; every row is run and the failing rows are named together.
+//! The per-chain FOREIGN reading is about the part NEAR that chain, not about the whole region its
+//! chains bound - and it answers the same numbers with the nearest-first index as with a plain pass
+//! over every foreign edge. Parameter rows are a loop over the same-named test; every row is run
+//! and the failing rows are named together.
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -23,7 +23,7 @@ use crate::several_chains_fixtures;
 
 type Pick = (Vec<Vector3>, Vec<(i32, i32, i32)>, Vec<Vec<i32>>);
 
-/// C# `HolesOnly`: the holes of the grid plate WITHOUT its outer rim, so the plate's outer boundary
+/// The holes of the grid plate WITHOUT its outer rim, so the plate's outer boundary
 /// is foreign to every hole chain.
 fn holes_only(holes: i32) -> Pick {
     let (positions, indices, chains) = grid_hole_plate_fixture::pick(holes);
@@ -48,7 +48,7 @@ fn read(pick: &Pick, name_every_candidate_under: f64) -> RoomReading {
     .expect("the reading")
 }
 
-/// Runs `f` with the index turned off (C# `ForeignEdgeRoom.ReadEveryForeignEdge = true`), turning
+/// Runs `f` with the index turned off (every foreign edge read), turning
 /// it back on afterwards even if `f` panics.
 fn reading_every_foreign_edge<R>(f: impl FnOnce() -> R) -> R {
     struct Restore;
@@ -75,7 +75,7 @@ fn foreign_read_and_offered() -> (i64, i64) {
     })
 }
 
-/// C# `AChainsForeignReadingIsAboutItsOwnNeighbourhood`.
+/// A chain's foreign reading is about its own neighbourhood.
 #[test]
 fn a_chains_foreign_reading_is_about_its_own_neighbourhood() {
     let pick = holes_only(4);
@@ -109,7 +109,7 @@ fn a_chains_foreign_reading_is_about_its_own_neighbourhood() {
     );
 }
 
-/// C# `TheWitnessDoesNotReadTheWholeBoundaryPerChain`: the real Many Holes rim (25 chains on
+/// The real Many Holes rim (25 chains on
 /// 15,214 triangles) held to three ceilings. With `LEVELLINE_COST=1` the reading is run with the
 /// index off as well and both are compared.
 #[test]
@@ -196,7 +196,7 @@ fn the_witness_does_not_read_the_whole_boundary_per_chain() {
     assert!(units < 400_000, "foreign units {units}");
 }
 
-/// C# `TheIndexedReadingIsTheUnindexedReading`: every number of the reading is the same with the
+/// Every number of the reading is the same with the
 /// index as without it - the room, which reading named it, and every candidate row in order.
 #[test]
 fn the_indexed_reading_is_the_unindexed_reading() {
@@ -314,7 +314,7 @@ fn check(holds: bool, why: impl FnOnce() -> String) -> Result<(), String> {
     }
 }
 
-/// C# `Rows`: the whole candidate table as one string, every number in its exact form.
+/// The whole candidate table as one string, every number in its exact form.
 fn rows(reading: &RoomReading) -> String {
     reading
         .candidates
@@ -335,7 +335,7 @@ fn rows(reading: &RoomReading) -> String {
         .join("\n")
 }
 
-/// C# `Members`: a group's members as one string, so "no group" and "these members in this order"
+/// A group's members as one string, so "no group" and "these members in this order"
 /// compare.
 fn members(group: &Option<Vec<i32>>) -> String {
     match group {
@@ -348,7 +348,7 @@ fn members(group: &Option<Vec<i32>>) -> String {
     }
 }
 
-/// C# `ShearedHoles`: the grid plate's holes SHEARED, so a FILLET's unit setback varies along every
+/// The grid plate's holes SHEARED, so a FILLET's unit setback varies along every
 /// rim chain; only the holes are picked.
 fn sheared_holes(moved: bool) -> Pick {
     let pick = holes_only(2);

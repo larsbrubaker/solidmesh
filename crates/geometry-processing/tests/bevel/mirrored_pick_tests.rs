@@ -1,9 +1,9 @@
-//! Port of `LevelLine/MirroredPickTests.cs`: the plan's consistency requirement on a pick that is
-//! its own mirror image. The wedge of "Selected Side Edges Should Work" is symmetric across
-//! z = 10, and so is its pick - one open chain turning at the front vertex. What is built must be
-//! too, whichever way the chain is walked. The bar is the app's (0.05): what is left is row
-//! faceting across the quads, not placement. C# `[Arguments]` rows are loops over the same-named
-//! test. Also holds the app-route build and the mirror measure `MirroredHipsAndRidgeTests` repeats.
+//! The plan's consistency requirement on a pick that is its own mirror image. The wedge of
+//! "Selected Side Edges Should Work" is symmetric across z = 10, and so is its pick - one open
+//! chain turning at the front vertex. What is built must be too, whichever way the chain is walked.
+//! The bar is the app's (0.05): what is left is row faceting across the quads, not placement.
+//! Parameter rows are loops over the same-named test. Also holds the app-route build and the mirror
+//! measure `mirrored_hips_and_ridge_tests` repeats.
 
 #![allow(dead_code)]
 
@@ -105,12 +105,12 @@ pub fn mirror_distances(mesh: &LevelLineMesh) -> Vec<(Vector3, f64)> {
             (p, d)
         })
         .collect();
-    // C# OrderByDescending is stable: equal distances keep the used order.
+    // A stable sort: equal distances keep the used order.
     worst.sort_by(|x, y| y.1.total_cmp(&x.1));
     worst
 }
 
-/// The five worst, as C#'s `Because` text lists them.
+/// The five worst, as the failure message lists them.
 pub fn describe(worst: &[(Vector3, f64)]) -> String {
     worst
         .iter()

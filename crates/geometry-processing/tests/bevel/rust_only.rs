@@ -1,6 +1,6 @@
 //! The Rust-only bevel kernel tests (`rust_only_bevel_*`): the per-slice and per-step pins of the
-//! ported kernel that have no C# test class of their own, one file each. The `bevel.rs` root
-//! re-exports every member, so test files in any group reach them as `crate::<module>`.
+//! kernel that have no test class of their own, one file each. The `bevel.rs` root re-exports every
+//! member, so test files in any group reach them as `crate::<module>`.
 
 #[path = "rust_only_bevel_core_leaf_tests.rs"]
 pub(crate) mod rust_only_bevel_core_leaf_tests;

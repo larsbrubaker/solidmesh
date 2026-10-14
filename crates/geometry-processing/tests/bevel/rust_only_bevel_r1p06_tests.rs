@@ -1,6 +1,6 @@
 //! Rust-only checks of the bevel core's R1.P06 package (the edge plan's constructor, the rows and
-//! canal frames of a mixed corner, mitre seams). No C# test class is runnable on these methods
-//! alone, so these pin the closed forms the C# remarks state. They also give `SurfaceStrip`'s
+//! canal frames of a mixed corner, mitre seams). No other test reaches these methods alone, so
+//! these pin the closed forms the code's comments state. They also give `SurfaceStrip`'s
 //! construction (R1.P03) the hand-built edge plan it was waiting on.
 
 use std::sync::Arc;
@@ -196,7 +196,7 @@ fn rust_only_a_chain_end_reading_indexes_the_vertices_once() {
     use geometry_processing::bevel::surface::SurfaceChainEndReading;
     use geometry_processing::topology::FaceRegionCache;
 
-    // No cache, no reading (C#'s null).
+    // No cache, no reading.
     assert!(SurfaceChainEndReading::for_regions(None).is_none());
 
     let mesh = Arc::new(create_isosceles_prism(90.0, 10.0, 5.0));

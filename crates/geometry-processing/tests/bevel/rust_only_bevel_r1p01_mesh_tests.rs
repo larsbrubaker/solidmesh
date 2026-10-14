@@ -1,7 +1,6 @@
-//! Rust-only checks of the bevel-core round-1 mesh readings (package R1.P01, run 3): where a
-//! point stands in a triangle, the longest edge, the end-face bend, the needle bookkeeping and the
-//! open fill's small tests. Their C# coverage comes through the whole-build test classes of later
-//! packages.
+//! Rust-only checks of the bevel-core round-1 mesh readings (package R1.P01, run 3): where a point
+//! stands in a triangle, the longest edge, the end-face bend, the needle bookkeeping and the open
+//! fill's small tests. The whole-build tests also cover them.
 
 use geometry_processing::bevel::level_line::{
     corner_fill, end_face_flow, open_gap_fill, refinement_splits, triangle_edges, LevelLineMesh,

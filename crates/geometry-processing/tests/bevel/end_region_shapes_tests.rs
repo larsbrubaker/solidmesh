@@ -1,6 +1,6 @@
-//! Port of `LevelLine/EndRegionShapesTests.cs`: end faces of shapes the other end-face tests do
-//! not reach - a flat end face carrying export noise, a CURVED end face (the round of a D prism)
-//! and an edge running into the inner corner of an L prism. C# `[Arguments]` rows are loops.
+//! End faces of shapes the other end-face tests do not reach - a flat end face carrying export
+//! noise, a CURVED end face (the round of a D prism) and an edge running into the inner corner of
+//! an L prism. Parameter rows are loops.
 
 use std::collections::HashMap;
 
@@ -65,9 +65,8 @@ fn room_of_solid(solid: &SolidWithChain) -> f64 {
     .expect("the room reads")
 }
 
-/// C#'s `BandGap.Build(positions, indices, chain, chainIsClosed: false, feature, size, Fillet)`
-/// then `GapFill.Fill(built, Fillet)`: asserts both and that the result is closed; hands back the
-/// kept triangles and the filled positions.
+/// An open band build of the chain at the size as a fillet, then its gap fill: asserts both and
+/// that the result is closed; hands back the kept triangles and the filled positions.
 fn builds_and_fills_closed(
     solid: &SolidWithChain,
     size: f64,
@@ -185,7 +184,7 @@ fn an_edge_into_the_inner_corner_builds_closed() {
 
 /// A curved end face must not cap the room at one facet: each end's region is the round up to
 /// where it comes to face away from the flat (45 degrees round), so the room is cos 45 = 0.7071 at
-/// any facet count. A TRADE, not the right answer (see the C# remarks).
+/// any facet count. A TRADE, not the right answer.
 #[test]
 fn a_curved_end_face_room_does_not_shrink_with_its_facets() {
     let coarse = room_of_solid(&d_prism(24));

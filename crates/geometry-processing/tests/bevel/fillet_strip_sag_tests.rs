@@ -1,9 +1,9 @@
-//! Port of `LevelLine/FilletStripSagTests.cs`: a fillet on a straight cube edge is a quarter
-//! cylinder about the edge's offset axis - every strip vertex lies on it, and every strip triangle
-//! within one chord's sag of it. The cube's faces are two triangles each, so the two rails'
-//! stations fall at different places along the edge; a strip whose rows were drawn straight about
-//! the mean chain point of a SKEW spoke cut inside the round (0.023 at r 0.2 on rim 0-1-2-3 with
-//! edge 0-4) - twisted, faceted shading on a straight round.
+//! A fillet on a straight cube edge is a quarter cylinder about the edge's offset axis - every
+//! strip vertex lies on it, and every strip triangle within one chord's sag of it. The cube's faces
+//! are two triangles each, so the two rails' stations fall at different places along the edge; a
+//! strip whose rows were drawn straight about the mean chain point of a SKEW spoke cut inside the
+//! round (0.023 at r 0.2 on rim 0-1-2-3 with edge 0-4) - twisted, faceted shading on a straight
+//! round.
 
 use std::collections::BTreeSet;
 use std::rc::Rc;
@@ -119,7 +119,7 @@ fn sag_allowance() -> f64 {
     (RADIUS * (1.0 - (widest / 2.0).cos())) + 1e-9
 }
 
-/// C# `Math.Sign(double)`: -1, 0 or 1 (zero for either zero, unlike `f64::signum`).
+/// -1, 0 or 1 (zero for either zero, unlike `f64::signum`).
 fn sign(x: f64) -> i32 {
     if x > 0.0 {
         1

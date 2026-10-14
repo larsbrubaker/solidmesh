@@ -1,8 +1,8 @@
-//! Port of `LevelLine/RoundsFirstGrowOverEndTests.cs`: Center Right and Left Side built rounds first
-//! (`BandGap.BuildRoundsFirst`): pass B's joined concave crease 5 - ... - 8 ends at v5 (-10, -108.5,
-//! 6.667) and v8 (-10, -108.5, 13.333) on the notch wall x - y = 98.5, a side of the picked rim. A
-//! concave bead's end is grown over, not cut: it closes against the wall with the round's section
-//! lying in the wall plane, so the crease's end vertex is not left in the part.
+//! Center Right and Left Side built rounds first (`BandGap.BuildRoundsFirst`): pass B's joined
+//! concave crease 5 - ... - 8 ends at v5 (-10, -108.5, 6.667) and v8 (-10, -108.5, 13.333) on the
+//! notch wall x - y = 98.5, a side of the picked rim. A concave bead's end is grown over, not cut:
+//! it closes against the wall with the round's section lying in the wall plane, so the crease's end
+//! vertex is not left in the part.
 
 use std::collections::HashSet;
 use std::rc::Rc;

@@ -1,12 +1,11 @@
-//! Port of `LevelLine/NeedleCascadeMeterTests.cs`: WHAT the Many Holes witness's needle cascade
-//! is made of - how thin the input triangles are against the floor the build repairs at, and,
-//! over one metered build, how many repairs each per-split repair call makes and whether the
-//! needles it repairs came in with the part, from a split, or from an earlier repair. A
-//! measurement, not a contract.
+//! WHAT the Many Holes witness's needle cascade is made of - how thin the input triangles are
+//! against the floor the build repairs at, and, over one metered build, how many repairs each
+//! per-split repair call makes and whether the needles it repairs came in with the part, from a
+//! split, or from an earlier repair. A measurement, not a contract.
 //!
 //! Gated on `LEVELLINE_COST=1` beside `pass_one_pinch_tests`, whose fixture and build this shares
-//! (`level_line_cost_gate`): the build is minutes long. C#'s `[NotInParallel]` (the needle meter
-//! and the field counters are static) is a `threads-required` override in `.config/nextest.toml`.
+//! (`level_line_cost_gate`): the build is minutes long. The needle meter and the field counters are
+//! process-wide, so a `threads-required` override in `.config/nextest.toml` keeps the rows apart.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -22,7 +21,7 @@ use vector_math::Vector3;
 use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;
 
-/// C#'s `Cap` default for this class.
+/// The cap for this file: the cascade's build is long, so it gets more room than the default.
 const DEFAULT_CAP: i64 = 30_000_000;
 
 /// The floor the witness's build repairs needles at - the build's own expression, not a copy.
@@ -107,7 +106,7 @@ fn aspect(s: &(f64, f64, i32, i32, i32)) -> f64 {
     }
 }
 
-/// C# `InputHeightsAgainstTheFloor`: the input alone, no build - every triangle's height against
+/// The input alone, no build - every triangle's height against
 /// the floor and its aspect, the ten thinnest, and how many triangles have a corner standing
 /// inside a NEIGHBOUR's edge (a T-vertex in waiting).
 #[test]
@@ -147,7 +146,7 @@ fn input_heights_against_the_floor() {
 
     say("  thinnest 10 by aspect:");
     let mut order: Vec<usize> = (0..tris.len()).collect();
-    // C#'s OrderBy is stable; so is sort_by.
+    // A stable sort, so ties keep their order.
     order.sort_by(|&i, &j| aspect(&shapes[i]).total_cmp(&aspect(&shapes[j])));
     for &i in order.iter().take(10) {
         let s = shapes[i];
@@ -221,7 +220,7 @@ fn input_heights_against_the_floor() {
     }
 }
 
-/// C# `TheCascadeIsMetered`: the build `pass_one_pinch_tests::pass1_says_which_sides_fail` runs,
+/// The build `pass_one_pinch_tests::pass1_says_which_sides_fail` runs,
 /// with the needle meter on - repairs per per-split call, what made each repaired needle, how thin
 /// it was, and the first repairs.
 #[test]

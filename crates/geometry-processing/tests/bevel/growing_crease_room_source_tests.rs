@@ -1,8 +1,7 @@
-//! Port of `LevelLine/GrowingCreaseRoomSourceTests.cs`: a room set by a growing neighbour's FAR
-//! crease - away from the picked face - is told apart from one set by the face itself, so the user
-//! reads which crease the bevel runs into and not "the face is wide". The rib of
-//! `StripClipRibTests`: each flank's far crease with the back face, P R (x = 9) or Q R (x = 11),
-//! bounds a chamfer's room.
+//! A room set by a growing neighbour's FAR crease - away from the picked face - is told apart from
+//! one set by the face itself, so the user reads which crease the bevel runs into and not "the face
+//! is wide". The rib of `StripClipRibTests`: each flank's far crease with the back face, P R (x = 9)
+//! or Q R (x = 11), bounds a chamfer's room.
 
 use geometry_processing::bevel::level_line::band_gap_reading;
 use geometry_processing::bevel::level_line::band_room;
@@ -18,7 +17,7 @@ const Q: Vector3 = Vector3::new(11.0, 8.0, 10.0);
 
 const R: Vector3 = Vector3::new(10.0, 8.0, 20.0);
 
-/// C# `TheRibsFarCreaseNamesTheChamfersRoom`.
+/// The rib's far crease names the chamfer's room.
 #[test]
 fn the_ribs_far_crease_names_the_chamfers_room() {
     let reading = read(BandProfile::Chamfer);
@@ -35,7 +34,7 @@ fn the_ribs_far_crease_names_the_chamfers_room() {
     );
 }
 
-/// C# `SplittingTheFarCreasesOffLeavesTheRoom`: the far creases' foot, P and Q, stands 8 from the
+/// The far creases' foot, P and Q, stands 8 from the
 /// chain across the top, and a 90-degree chamfer's setback is its size (less the reading's margin
 /// of two snaps, 2e-9).
 #[test]
@@ -50,7 +49,7 @@ fn splitting_the_far_creases_off_leaves_the_room() {
     );
 }
 
-/// C# `ALowerPierceRoomStaysPlainForeign`: the rib's FILLET room is the ridge leaving the round
+/// The rib's FILLET room is the ridge leaving the round
 /// (the pierce room), which is no crease.
 #[test]
 fn a_lower_pierce_room_stays_plain_foreign() {
@@ -65,7 +64,7 @@ fn a_lower_pierce_room_stays_plain_foreign() {
     );
 }
 
-/// C# `OnlyAFarCreaseAloneUnderTheRoomNamesTheCrease`.
+/// Only a far crease alone under the room names the crease.
 #[test]
 fn only_a_far_crease_alone_under_the_room_names_the_crease() {
     let at = || P;

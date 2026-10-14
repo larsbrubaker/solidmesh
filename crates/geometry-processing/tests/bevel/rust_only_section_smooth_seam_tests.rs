@@ -1,7 +1,6 @@
-//! Rust-only tests of `section_smooth_seam` (`SectionSmoothSeam.cs`), whose C# test classes
-//! (`SectionManyHolesTests`, `SectionOpenMouthArcCutTests`) wait on fixtures and later slices: the
-//! seam reading on [`crate::two_mouths_in_one_facet_mesh`]'s lower mouth, whose smooth side
-//! `SectionSmoothSideBridgedHolesTests` cuts directly.
+//! Rust-only tests of `section_smooth_seam`, which the Many Holes and open-mouth arc cut section
+//! tests reach only in context: the seam reading on [`crate::two_mouths_in_one_facet_mesh`]'s lower
+//! mouth, whose smooth side `SectionSmoothSideBridgedHolesTests` cuts directly.
 
 use std::rc::Rc;
 
@@ -61,7 +60,7 @@ fn rust_only_the_mouth_is_cut_on_the_one_side_that_folds() {
 }
 
 /// A run whose walks fold on BOTH sides is refused by name, at its first station, with the refusal
-/// carried as the advisory's second argument (C#'s `refusal.ToString()`).
+/// carried as the advisory's second argument (the refusal's text).
 #[test]
 fn rust_only_a_run_smooth_on_both_sides_is_refused_by_name() {
     let part = fixture::the_working_part();

@@ -1,8 +1,7 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/FadeEndRoomTests.cs`: the room at a FADE end is a
-//! number, and it is the part's number. A pick of one or three top-rim facet edges of a faceted
-//! cylinder fades out at both ends, and what limits it is the cap running out of itself (or, on a
-//! short cylinder, the FOREIGN bottom rim). C# `[MethodDataSource]` rows are loops over the
-//! same-named test.
+//! The room at a FADE end is a number, and it is the part's number. A pick of one or three top-rim
+//! facet edges of a faceted cylinder fades out at both ends, and what limits it is the cap running
+//! out of itself (or, on a short cylinder, the FOREIGN bottom rim). Parameter rows are loops over
+//! the same-named test.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading;
@@ -20,13 +19,13 @@ use crate::sweep_mesh_measures;
 /// Low enough that the bottom rim is nearer the pick than anything else on the part.
 const SHORT_HEIGHT: f64 = 3.0;
 
-/// C# `RungsFor`: the rungs of the room a fade is held to build and fill at - the room itself
+/// The rungs of the room a fade is held to build and fill at - the room itself
 /// among them, for a chain that turns as well as for a straight one.
 fn rungs_for(_edges: i32) -> [f64; 4] {
     [0.1, 0.5, 0.9, 1.0]
 }
 
-/// C# `Picks`.
+/// Every pick the tests run: one and three edges, each as a chamfer and as a fillet.
 fn picks() -> Vec<(i32, BandProfile)> {
     let mut picks = Vec::new();
     for edges in [1, 3] {
@@ -38,7 +37,7 @@ fn picks() -> Vec<(i32, BandProfile)> {
     picks
 }
 
-/// C# `Read`.
+/// One room reading of the fade pick.
 fn read(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -64,7 +63,7 @@ fn read(
     .expect("the room reads")
 }
 
-/// C# `Build`.
+/// One band build of the pick at a size.
 fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -89,7 +88,7 @@ fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C# `FillsClosed`.
+/// Whether a build at the size fills closed.
 fn fills_closed(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -128,7 +127,7 @@ fn fills_closed(
     );
 }
 
-/// C# `AFadeEndReadsAFiniteRoomSetByTheForeignRim`: the reading itself - finite, positive, and
+/// The reading itself - finite, positive, and
 /// named by the CAP running out of itself.
 #[test]
 fn a_fade_end_reads_a_finite_room_set_by_the_foreign_rim() {
@@ -167,7 +166,7 @@ fn a_fade_end_reads_a_finite_room_set_by_the_foreign_rim() {
     }
 }
 
-/// C# `AFadeBuildsAndFillsAtEveryRungOfItsRoom`: every rung of the room builds and fills closed,
+/// Every rung of the room builds and fills closed,
 /// one shell, wound as the input.
 #[test]
 fn a_fade_builds_and_fills_at_every_rung_of_its_room() {
@@ -181,7 +180,7 @@ fn a_fade_builds_and_fills_at_every_rung_of_its_room() {
     }
 }
 
-/// C# `OverTheRoomAFadeIsRefusedBySizeNamingIt`: a hair over the room is refused BY SIZE, and the
+/// A hair over the room is refused BY SIZE, and the
 /// refusal names that very room.
 #[test]
 fn over_the_room_a_fade_is_refused_by_size_naming_it() {
@@ -203,7 +202,7 @@ fn over_the_room_a_fade_is_refused_by_size_naming_it() {
     }
 }
 
-/// C# `TheRoomAndEveryRungAreUnchangedByARigidMotion`: the same part standing somewhere else reads
+/// The same part standing somewhere else reads
 /// the same room and does the same thing at every rung.
 #[test]
 fn the_room_and_every_rung_are_unchanged_by_a_rigid_motion() {
@@ -227,7 +226,7 @@ fn the_room_and_every_rung_are_unchanged_by_a_rigid_motion() {
     }
 }
 
-/// C# `AShortCylinderReadsTheBottomRimAsItsRoom`: a FOREIGN edge is what limits a fade where
+/// A FOREIGN edge is what limits a fade where
 /// nothing else is near - the bottom rim of a cylinder only 3 tall, less the margin the surviving
 /// strip needs.
 #[test]

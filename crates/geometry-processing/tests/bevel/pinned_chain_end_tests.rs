@@ -1,9 +1,8 @@
-//! Port of `LevelLine/PinnedChainEndTests.cs`: what it takes for an open chain's two sides to meet
-//! ROUND its END vertex, measured. A crease that simply RAMPS out of a flat top does NOT do it: the
-//! ramp's own fan edges at the end vertex are features, and they are the wall that keeps the two
-//! sides two. The red shape (pick c564 of "Issue with even a single edge.mcx") also wants the crease
-//! DOUBLED over its length; these rows record the ramp alone - its reading divides the sides, is
-//! rigid, and is monotone in the size.
+//! What it takes for an open chain's two sides to meet ROUND its END vertex, measured. A crease
+//! that simply RAMPS out of a flat top does NOT do it: the ramp's own fan edges at the end vertex
+//! are features, and they are the wall that keeps the two sides two. The red shape (pick c564 of
+//! "Issue with even a single edge.mcx") also wants the crease DOUBLED over its length; these rows
+//! record the ramp alone - its reading divides the sides, is rigid, and is monotone in the size.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading;

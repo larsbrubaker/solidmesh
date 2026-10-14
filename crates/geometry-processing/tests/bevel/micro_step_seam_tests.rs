@@ -1,7 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/LevelLine/MicroStepSeamTests.cs`: a picked crease
-//! doubled by a step a few microns wide - a seam, not a wall - reads the part's room and builds at
-//! the asked size when the seam epsilon is given (`SeamEdges`), while a step outside the epsilon
-//! is still a wall; and the read-drop-re-read loop ([`PickThatFits`]) honours the same epsilon.
+//! A picked crease doubled by a step a few microns wide - a seam, not a wall - reads the part's
+//! room and builds at the asked size when the seam epsilon is given (`SeamEdges`), while a step
+//! outside the epsilon is still a wall; and the read-drop-re-read loop ([`PickThatFits`]) honours
+//! the same epsilon.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::band_gap_reading::read_room;
@@ -269,7 +269,7 @@ fn the_settling_condemns_nobody_over_a_seam() {
     assert!(seeing.last.as_ref().expect("a last reading").room > FILLET);
 }
 
-/// C# `SteppedBlock(step)`: a 10 mm block along x whose top-front crease is doubled by a step
+/// A 10 mm block along x whose top-front crease is doubled by a step
 /// `step` wide, as a prism of `SLICES` slices with both ends fanned from the section's first point.
 fn stepped_block(step: f64) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     // The cross-section in (y, z), counter-clockwise seen down -x, from the top-front crease round.

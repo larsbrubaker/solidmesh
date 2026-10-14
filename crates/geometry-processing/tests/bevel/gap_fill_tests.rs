@@ -1,7 +1,7 @@
-//! Port of `LevelLine/GapFillTests.cs`: the fill, held to the requirement - what comes out is a
-//! closed, consistently oriented, single-shell solid with a bevel in it; the volume it lost is
-//! positive, grows with the size, matches the closed form where there is one, and moves only a
-//! little when the size does. C# `[Arguments]` rows are loops over the same-named test.
+//! The fill, held to the requirement - what comes out is a closed, consistently oriented,
+//! single-shell solid with a bevel in it; the volume it lost is positive, grows with the size,
+//! matches the closed form where there is one, and moves only a little when the size does.
+//! Parameter rows are loops over the same-named test.
 
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
@@ -361,7 +361,7 @@ fn mesh(fill: &GapFillResult) -> std::cell::Ref<'_, LevelLineMesh> {
     fill.mesh.as_ref().expect("the filled mesh").borrow()
 }
 
-/// C# `BandGap.Build(positions, indices, chain, closed, FeatureEdgesOver(...), size, profile)`.
+/// One band build of the chain at the size, with the solid's own feature edges.
 fn band_gap(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -383,7 +383,7 @@ fn band_gap(
     .expect("a valid pick")
 }
 
-/// C# `SolidOf`.
+/// The solid a named pick stands on.
 fn solid_of(pick: &str) -> Solid {
     match pick {
         "cube top rim" => cube_solid(1.0),
@@ -396,7 +396,7 @@ fn solid_of(pick: &str) -> Solid {
     }
 }
 
-/// C# `ChainOf`.
+/// The chain a named pick takes.
 fn chain_of(pick: &str) -> Vec<i32> {
     match pick {
         "cube top rim" => vec![4, 5, 6, 7],
@@ -406,7 +406,7 @@ fn chain_of(pick: &str) -> Vec<i32> {
     }
 }
 
-/// C# `Build`.
+/// Builds a named pick at a size and fills its gap.
 fn build(pick: &str, size: f64, profile: BandProfile, fillet_segments: i32) -> GapFillResult {
     let (positions, indices) = solid_of(pick);
     let gap = band_gap(&positions, &indices, &chain_of(pick), true, size, profile);
@@ -419,7 +419,7 @@ fn removed(fill: &GapFillResult, solid: &Solid) -> f64 {
     signed_volume_of(&solid.0, &solid.1) - signed_volume(&mesh(fill))
 }
 
-/// C# `LiveTriangles`.
+/// Every triangle of the mesh that is not removed.
 fn live_triangles(mesh: &LevelLineMesh) -> Vec<LevelLineTriangle> {
     (0..mesh.triangle_count())
         .filter(|&t| !mesh.is_removed(t))
@@ -427,7 +427,7 @@ fn live_triangles(mesh: &LevelLineMesh) -> Vec<LevelLineTriangle> {
         .collect()
 }
 
-/// C# `SmallestLiveArea` (LINQ `Min`).
+/// The smallest area of any triangle not removed.
 fn smallest_live_area(mesh: &LevelLineMesh) -> f64 {
     live_triangles(mesh)
         .iter()

@@ -1,9 +1,8 @@
-//! Port of `LevelLine/FaceRimCornerMirrorTests.cs`: Center Right and Left Side's x = -20 face rim
-//! (chain 2 - 0 - 3 - 7) built alone. The part is mirror-symmetric about z = 10 but its
-//! triangulation is not: the face is split along 2 - 3, which passes through the bottom-back corner
-//! v3 (-20, -98.5, 0) and not the top-back corner v7 (-20, -98.5, 20), and the bottom face's
-//! diagonal 0 - 6 crosses the front corner hole at v0 (-20, -118.5, 0) where nothing crosses v2's
-//! (-20, -118.5, 20).
+//! Center Right and Left Side's x = -20 face rim (chain 2 - 0 - 3 - 7) built alone. The part is
+//! mirror-symmetric about z = 10 but its triangulation is not: the face is split along 2 - 3, which
+//! passes through the bottom-back corner v3 (-20, -98.5, 0) and not the top-back corner
+//! v7 (-20, -98.5, 20), and the bottom face's diagonal 0 - 6 crosses the front corner hole at
+//! v0 (-20, -118.5, 0) where nothing crosses v2's (-20, -118.5, 20).
 
 use std::rc::Rc;
 

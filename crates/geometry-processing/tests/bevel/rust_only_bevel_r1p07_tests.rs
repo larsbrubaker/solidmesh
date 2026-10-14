@@ -1,7 +1,7 @@
 //! Rust-only checks of the bevel core's R1.P07 package (the facet cut, the room crossing, the end
-//! section readings and the run-out's column ends). The C# classes R1.P07 unlocks
-//! (`SurfaceCutRulerTests`, `SurfaceEndGainsTheSectionReadingTests`, `SurfaceRunOutColumnTopTests`)
-//! need the whole package; these pin the pieces alone.
+//! section readings and the run-out's column ends). The tests that read them in context (the cut
+//! ruler, the end gaining the section reading, the run-out column top) need the whole build; these
+//! pin the pieces alone.
 
 use geometry_processing::bevel::surface::surface_end_gains_the_section::{area_of, kept_by};
 use geometry_processing::bevel::surface::surface_run_out_column_ends::{

@@ -1,8 +1,8 @@
-//! Ports `GeometryProcessingTests/LevelLine/FlatHoleFillTests.cs`: the flat end-face fill
-//! (`flat_hole_fill`) on its own, before an end hands it a hole: each loop is held to lying flat to
-//! 1e-9, covering exactly the loop's area with no zero-area triangle, winding the loop's way and
-//! laying every loop edge that has length once in the walked direction - so the closed surface is
-//! manifold. Loops are placed on a tilted plane so no axis-aligned shortcut can pass.
+//! The flat end-face fill (`flat_hole_fill`) on its own, before an end hands it a hole: each loop
+//! is held to lying flat to 1e-9, covering exactly the loop's area with no zero-area triangle,
+//! winding the loop's way and laying every loop edge that has length once in the walked direction -
+//! so the closed surface is manifold. Loops are placed on a tilted plane so no axis-aligned
+//! shortcut can pass.
 
 use std::collections::HashMap;
 use std::f64::consts::PI;

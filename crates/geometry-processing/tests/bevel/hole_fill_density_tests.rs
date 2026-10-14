@@ -1,7 +1,6 @@
-//! Port of `LevelLine/HoleFillDensityTests.cs`: the filler's interior matches the strips' density.
-//! Read against the same pick closed by the older rings, whose corners are laid at the strips' own
-//! spacing: the whole fill with the filler may carry at most a tenth more triangles. C#
-//! `[Arguments]` cases run as one loop per test.
+//! The filler's interior matches the strips' density. Read against the same pick closed by the
+//! older rings, whose corners are laid at the strips' own spacing: the whole fill with the filler
+//! may carry at most a tenth more triangles. Parameter cases run as one loop per test.
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -20,7 +19,7 @@ use crate::several_chains_fixtures::FOLD_DEGREES;
 
 const ALL_OPEN: [bool; 3] = [false, false, false];
 
-/// C# `TheCubeCornerFillsAtTheStripsDensity`.
+/// The cube corner fills at the strips' density.
 #[test]
 fn the_cube_corner_fills_at_the_strips_density() {
     for (profile, size) in [
@@ -45,7 +44,7 @@ fn the_cube_corner_fills_at_the_strips_density() {
     }
 }
 
-/// C# `OuterFacesFillAtTheStripsDensity`.
+/// Outer faces fill at the strips' density.
 #[test]
 fn outer_faces_fill_at_the_strips_density() {
     for (profile, fraction_of_room) in [(BandProfile::Fillet, 0.42), (BandProfile::Chamfer, 0.5)] {
@@ -79,7 +78,7 @@ fn outer_faces_fill_at_the_strips_density() {
     }
 }
 
-/// C# `HoldsTheStripsDensity`. Measured 2026-09-23 (C# Debug): the cube fillet 162 triangles with
+/// Holds the strips' density. Measured 2026-09-23: the cube fillet 162 triangles with
 /// the filler against 246 with rings, the cube chamfer 20 against 24, outer-faces' fillet at 0.42
 /// of room 23,539 against 24,643 and its chamfer 1,538 against 1,544. `added_triangles` is the
 /// whole band - strips and caps.
@@ -104,7 +103,7 @@ fn holds_the_strips_density(
     );
     assert_eq!(filled.refusal, GapFillRefusal::None, "{label}");
     assert_eq!(rings.refusal, GapFillRefusal::None, "{label}");
-    // C#'s `(int)(1.1 * count)` truncates.
+    // The allowance truncates to a whole triangle count.
     assert!(
         filled.added_triangles.len() as i32 <= (1.1 * rings.added_triangles.len() as f64) as i32,
         "{label}"

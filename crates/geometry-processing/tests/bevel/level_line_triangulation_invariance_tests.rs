@@ -1,9 +1,8 @@
-//! Port of `LevelLine/LevelLineTriangulationInvarianceTests.cs`: the level line must build the
-//! same part whatever the diagonals across the source's flat faces are (docs/modeling/bevel_plan.md,
-//! "Triangulation-independent level line"). Each saved pick is built on its source as stored and
-//! again with every flippable coplanar diagonal flipped (`coplanar_diagonal_flip`) - what a source
-//! rebuilt by the kernel's batch boolean route hands over - and the two builds must agree. C#
-//! `[Arguments]` rows are loops over the same-named test.
+//! The level line must build the same part whatever the diagonals across the source's flat faces
+//! are (docs/modeling/bevel_plan.md, "Triangulation-independent level line"). Each saved pick is
+//! built on its source as stored and again with every flippable coplanar diagonal flipped
+//! (`coplanar_diagonal_flip`) - what a source rebuilt by the kernel's batch boolean route hands
+//! over - and the two builds must agree. Parameter rows are loops over the same-named test.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -98,7 +97,7 @@ fn flipping_builds_the_same_part(name: &str) {
     );
 }
 
-/// C#'s `Built` record.
+/// What one build left: the mesh and the readings the two builds are compared on.
 #[derive(Clone)]
 struct Built {
     route: String,

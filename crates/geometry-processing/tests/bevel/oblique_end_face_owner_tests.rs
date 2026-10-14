@@ -1,6 +1,6 @@
-//! Port of `LevelLine/ObliqueEndFaceOwnerTests.cs`: flow rung 3's owner rows - catalogue picks
-//! whose open chain ends on an OBLIQUE end face, each held to its Onshape control within size / 50.
-//! The fin's control (`AssertTheFinRoundsToTheControl`) lives in `fillet_thin_front_fin.rs`, which
+//! Flow rung 3's owner rows - catalogue picks whose open chain ends on an OBLIQUE end face, each
+//! held to its Onshape control within size / 50. The fin's control
+//! (`assert_the_fin_rounds_to_the_control`) lives in `fillet_thin_front_fin.rs`, which
 //! `swallowed_side_tests.rs` shares.
 
 use std::cell::RefCell;

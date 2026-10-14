@@ -1,4 +1,3 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/EndPlaneTrimCornerTests.cs` 1:1:
 //! `EndPlaneTrim.ToTheCorner` at an OBLIQUE end - the chain runs along +x from its end at the
 //! origin, the end plane is -x + 0.8y = 0 (about 39 degrees off square), and the setback is 2. The
 //! rail runs along the plane to its corner B, still within the setback of the end ray, then leaves

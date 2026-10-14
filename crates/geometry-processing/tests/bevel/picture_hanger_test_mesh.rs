@@ -1,7 +1,7 @@
-//! Port of the test fixture `Fixtures/PictureHangerTestMesh.cs`: the picture hanger of
-//! "Chain and Face Should Both work.mcx", cut out of its own owner file - the welded working mesh the
-//! file hands the bevel construction (216 vertices, 430 triangles), in the space the size is quoted
-//! in, with the two picks the file carries as the anchored groups the app resolves them from.
+//! The picture hanger of "Chain and Face Should Both work.mcx", cut out of its own owner file - the
+//! welded working mesh the file hands the bevel construction (216 vertices, 430 triangles), in the
+//! space the size is quoted in, with the two picks the file carries as the anchored groups the app
+//! resolves them from.
 //!
 //! Group 0 is the 48 edge raked mouth (TangentChain, curve tolerance 30); group 1 is the top face's
 //! 10 edge rim (FaceGroup, curve tolerance 10). The size the file asks is 0.4 at 8 segments, round
@@ -26,12 +26,12 @@ pub const SEGMENTS: i32 = 8;
 /// The operation's bend threshold, which both groups are read at.
 pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
-/// C# `ThePart`: the welded working mesh, 216 vertices and 430 triangles.
+/// The welded working mesh, 216 vertices and 430 triangles.
 pub fn the_part() -> Mesh {
     Mesh::from_arrays(COORDINATES, TRIANGLES)
 }
 
-/// C# `TheTopFaceRim`: the top face's rim at z = 20, as the app resolves it - a face group off its
+/// The top face's rim at z = 20, as the app resolves it - a face group off its
 /// anchors.
 pub fn the_top_face_rim() -> BevelEdgeGroup {
     BevelEdgeGroup {
@@ -48,7 +48,7 @@ pub fn the_top_face_rim() -> BevelEdgeGroup {
     }
 }
 
-/// C# `TheRakedMouth`: the raked mouth on the hanger's back, picked as a tangent chain of 48 edges.
+/// The raked mouth on the hanger's back, picked as a tangent chain of 48 edges.
 pub fn the_raked_mouth() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::TangentChain,

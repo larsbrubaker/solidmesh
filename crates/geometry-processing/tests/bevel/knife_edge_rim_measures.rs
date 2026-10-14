@@ -1,7 +1,7 @@
-//! The measuring half of `R/Tests/GeometryProcessingTests/BevelKnifeEdgeRimTests.cs`, split out
-//! of `bevel_knife_edge_rim_tests.rs` by responsibility: the prism and box parts, and the readings
-//! that slice a cut part square to an edge (or read every vertex of a corner box) and say how far
-//! its surface is off the arc, chord or pair of rounds that edge should carry.
+//! The measuring half of the knife-edge rim tests, split out of `bevel_knife_edge_rim_tests.rs` by
+//! responsibility: the prism and box parts, and the readings that slice a cut part square to an
+//! edge (or read every vertex of a corner box) and say how far its surface is off the arc, chord or
+//! pair of rounds that edge should carry.
 
 use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};

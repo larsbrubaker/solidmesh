@@ -1,8 +1,7 @@
-//! Port of `LevelLine/InnerFaceBoreCarryTests.cs`: Inner Face Should Bevel's raked bore, both
-//! mouths as the app hands them to the kernel. Each mouth crosses two of the cube's convex edges,
-//! where its rim turns 90 degrees (a mitre); with the skew rows' carry switched hard every size
-//! read self-intersecting, and the carry now fades (`fillet_arc`'s along-the-chain carry). C#
-//! `[Arguments]` rows are a loop over the same-named test.
+//! Inner Face Should Bevel's raked bore, both mouths as the app hands them to the kernel. Each
+//! mouth crosses two of the cube's convex edges, where its rim turns 90 degrees (a mitre); with the
+//! skew rows' carry switched hard every size read self-intersecting, and the carry now fades
+//! (`fillet_arc`'s along-the-chain carry). Parameter rows are a loop over the same-named test.
 
 use std::rc::Rc;
 

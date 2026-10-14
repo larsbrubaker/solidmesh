@@ -1,8 +1,7 @@
-//! Port of `Fixtures/PyramidRecessTestMeshes.cs`: the part behind "UpperLeftInner should
-//! bevel.mcx" - a 20 mm cube with a four sided PYRAMIDAL RECESS sunk into its front face, closing to
-//! a horizontal ridge - with the fixture's own 0.0316 pinch, built either as a clean solid from its
-//! planes or from the fixture's own fourteen vertices, optionally mirrored in z and optionally
-//! moved to where the rebuild has it.
+//! The part behind "UpperLeftInner should bevel.mcx" - a 20 mm cube with a four sided PYRAMIDAL
+//! RECESS sunk into its front face, closing to a horizontal ridge - with the fixture's own 0.0316
+//! pinch, built either as a clean solid from its planes or from the fixture's own fourteen
+//! vertices, optionally mirrored in z and optionally moved to where the rebuild has it.
 //!
 //! **The shape.** The recess is the whole of the front face y = 0 at the mouth and closes to the
 //! ridge at y = 10, z = 10.0316, x from 5 to 15. Its walls are the upper slope y + z = 20.0316, the
@@ -81,7 +80,7 @@ pub fn left_wall_normal() -> Vector3 {
     Vector3::new(2.0, -1.0, 0.0).get_normal()
 }
 
-/// C# `Create`: the solid from its planes - ten polygons, each handed over with its outward normal
+/// The solid from its planes - ten polygons, each handed over with its outward normal
 /// so the winding is checked rather than trusted. `Vector3::ZERO` offset builds it in the box frame.
 pub fn create(mirror: bool, offset: Vector3) -> Mesh {
     let mut mesh = Mesh::new();
@@ -217,7 +216,7 @@ pub fn create(mirror: bool, offset: Vector3) -> Mesh {
     mesh
 }
 
-/// C# `CreateFromTheFixturesOwnTriangles`: the fixture's own source mesh - the 14 vertices and 24
+/// The fixture's own source mesh - the 14 vertices and 24
 /// triangles the boolean that cut the recess left behind - carried into the box frame, so that a
 /// reading can be taken on exactly the topology the rebuild reads: its diagonals run from the apex
 /// to the cube's top-left corner across the left wall and to the mouth's top RIGHT corner across

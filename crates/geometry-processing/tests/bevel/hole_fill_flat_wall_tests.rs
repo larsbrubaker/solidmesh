@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/HoleFillFlatWallTests.cs`: a fillet's corner
-//! hole on a flat-faceted wall closed by the hole fill, kept inside the wall facets its rail runs
-//! on, and the crease readings the fill turns its cross-tangents by.
+//! A fillet's corner hole on a flat-faceted wall closed by the hole fill, kept inside the wall
+//! facets its rail runs on, and the crease readings the fill turns its cross-tangents by.
 
 use std::collections::HashSet;
 
@@ -72,7 +71,7 @@ fn the_fill_stays_inside_the_flat_wall_facets_its_rail_runs_on() {
     for (from_degrees, to_degrees) in [(198.0, 207.0), (207.0, 216.0)] {
         let from = rim_vertex(from_degrees);
         let outward = wall_outward(from_degrees, to_degrees);
-        // C#'s `OrderByDescending(...).First()`: the first of the farthest out.
+        // The first of the farthest out, so ties keep the earliest vertex.
         let mut worst = mesh.position(added_vertices[0]);
         for &v in &added_vertices[1..] {
             let p = mesh.position(v);

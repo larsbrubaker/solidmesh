@@ -1,8 +1,8 @@
-//! Port of `LevelLine/HoleFillCornerTests.cs`: the corner picks with `CornerCap.UseHoleFill` on,
-//! so every corner hole closes by the one hole filler, each held to the requirement set - closed,
-//! consistently oriented, one shell, no zero-area triangle, wound as the input, the volume moved
-//! the right way. Also carries C#'s shared `FillWithTheFiller`, which the other hole-fill test
-//! classes call. C# `[Arguments]` cases run as one loop per test.
+//! The corner picks with `CornerCap.UseHoleFill` on, so every corner hole closes by the one hole
+//! filler, each held to the requirement set - closed, consistently oriented, one shell, no
+//! zero-area triangle, wound as the input, the volume moved the right way. Also carries the shared
+//! `fill_with_the_filler`, which the other hole-fill test files call. Parameter cases run as one
+//! loop per test.
 
 #![allow(dead_code)]
 
@@ -26,7 +26,7 @@ use crate::level_line_test_geometry::{cube_solid, signed_volume};
 use crate::several_chains_fixtures::FOLD_DEGREES;
 use crate::sweep_mesh_measures;
 
-/// C# `TwoFaces`: the top-front edge 4-5, the rest of the top rim and the rest of the front rim.
+/// The top-front edge 4-5, the rest of the top rim and the rest of the front rim.
 pub fn two_faces() -> Vec<Vec<i32>> {
     vec![vec![4, 5], vec![5, 6, 7, 4], vec![5, 1, 0, 4]]
 }
@@ -35,8 +35,7 @@ const ALL_OPEN: [bool; 3] = [false, false, false];
 
 const CUBE_VOLUME: f64 = 8.0;
 
-/// C#'s `BandGap.Build(positions, indices, chains, closed, feature, size, profile)` with every
-/// optional argument at its default.
+/// One band build of the chains at the size, every optional setting at its default.
 pub fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -59,7 +58,7 @@ pub fn build(
     .expect("the pick builds or refuses by name")
 }
 
-/// C#'s `BandGap.RoomOf(positions, indices, chains, closed, feature, profile)`.
+/// The room of the chains: the largest size their band builds at.
 pub fn room_of(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -86,7 +85,7 @@ pub fn fixture_feature(fixture: &Rc<LevelLineFixture>) -> FeatureEdgeTest {
     Rc::new(move |a, b| fixture.is_feature_edge(a, b))
 }
 
-/// C# `LevelLineFixture.Profile`.
+/// The fixture's profile.
 pub fn fixture_profile(fixture: &LevelLineFixture) -> BandProfile {
     if fixture.chamfer {
         BandProfile::Chamfer
@@ -95,7 +94,7 @@ pub fn fixture_profile(fixture: &LevelLineFixture) -> BandProfile {
     }
 }
 
-/// C# `FillWithTheFiller`: fills with the filler on for this call only, on this thread.
+/// Fills with the filler on for this call only, on this thread.
 pub fn fill_with_the_filler(
     gap: &BandGapResult,
     profile: BandProfile,
@@ -104,7 +103,7 @@ pub fn fill_with_the_filler(
     fill_with_the_filler_watched(gap, profile, segments, None)
 }
 
-/// [`fill_with_the_filler`] with C#'s per-flow `CornerCap.WatchHoleFills` set: the watcher rides
+/// [`fill_with_the_filler`] with the per-flow hole-fill watcher set: the watcher rides
 /// on the fill's budget (the default one for the mesh's size, as `GapFill.Fill` takes).
 pub fn fill_with_the_filler_watched(
     gap: &BandGapResult,
@@ -126,7 +125,7 @@ pub fn fill_with_the_filler_watched(
     filled.expect("the fill fills or refuses by name")
 }
 
-/// C# `TwoAdjacentCubeFacesCloseByTheFiller`.
+/// Two adjacent cube faces close by the filler.
 #[test]
 fn two_adjacent_cube_faces_close_by_the_filler() {
     for (profile, fraction_of_room) in [
@@ -175,7 +174,7 @@ fn two_adjacent_cube_faces_close_by_the_filler() {
     }
 }
 
-/// C# `EveryEdgeOfTheCubeChamfersClosedByTheFiller`.
+/// Every edge of the cube chamfers closed by the filler.
 #[test]
 fn every_edge_of_the_cube_chamfers_closed_by_the_filler() {
     for fraction_of_room in [0.1, 0.5, 0.9, 0.99] {
@@ -227,7 +226,7 @@ pub fn every_edge() -> Vec<Vec<i32>> {
     ]
 }
 
-/// C# `AChamfersCornerHolesAreNeverFaired`: a chamfer's corner is FLAT - its strips are planes,
+/// A chamfer's corner is FLAT - its strips are planes,
 /// so a corner they meet at is mitred flat by the fan to the corner's axis, and the filler is never
 /// handed a chamfer's hole, even with the filler on.
 #[test]
@@ -268,7 +267,7 @@ fn a_chamfers_corner_holes_are_never_faired() {
     }
 }
 
-/// C# `OuterFacesCloseByTheFiller`.
+/// Outer faces close by the filler.
 #[test]
 fn outer_faces_close_by_the_filler() {
     for (profile, fraction_of_room) in [
@@ -319,7 +318,7 @@ fn outer_faces_close_by_the_filler() {
     }
 }
 
-/// C# `TheCubeCornerStaysNearTheRollingBall`: at a cube corner of the two-face pick every edge is
+/// At a cube corner of the two-face pick every edge is
 /// rounded at one radius, so the true blend is the rolling ball's octant; the filler is fair, not
 /// exact, and is held within 5% of that radius. Also prints the cost per hole in this build.
 #[test]
@@ -382,7 +381,7 @@ fn the_cube_corner_stays_near_the_rolling_ball() {
     }
 }
 
-/// C# `Math.Sign` as a double.
+/// The sign of `x` as a double: -1, 0 or 1, zero for either zero.
 pub fn sign(x: f64) -> f64 {
     if x > 0.0 {
         1.0
@@ -393,7 +392,8 @@ pub fn sign(x: f64) -> f64 {
     }
 }
 
-/// C# `MeetsTheRequirement`.
+/// Holds a fill to the requirement: filled, one closed and consistent shell, no zero-area
+/// triangle, and wound as the input (a convex pick takes material).
 fn meets_the_requirement(
     filled: &GapFillResult,
     label: &str,
@@ -437,7 +437,7 @@ fn meets_the_requirement(
     }
 }
 
-/// C#'s `kept.Min(t => |(B - A) x (C - A)| / 2)`.
+/// The smallest area of the kept triangles.
 pub fn smallest_kept_area(
     mesh: &geometry_processing::bevel::level_line::LevelLineMesh,
     kept: &[(i32, i32, i32)],

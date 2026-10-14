@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/ExactRefinementTests.cs`: the refinement by
-//! asking the chain field where its line runs - the exact least queries against brute-force
-//! sampling, and whole cuts on a cube and on a big face. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! The refinement by asking the chain field where its line runs - the exact least queries against
+//! brute-force sampling, and whole cuts on a cube and on a big face. Parameter rows are loops over
+//! the same-named test.
 
 use std::rc::Rc;
 use std::time::Instant;
@@ -305,7 +304,7 @@ fn two_runs_of_the_same_cut_agree_exactly() {
         assert!(second.position(v) == first.position(v));
     }
 
-    // C#'s `IsEquivalentTo`: the same lines, in any order.
+    // The same lines, in any order.
     let names = |lines: &[geometry_processing::bevel::level_line::LevelLineChain]| {
         let mut names: Vec<String> = lines
             .iter()
@@ -386,7 +385,7 @@ fn random_chain(random: &mut DotNetRandom, one_setback_all_along: bool) -> Chain
         });
     }
 
-    // C# evaluates `count > 2 && random.Next(2) == 0` with short-circuit: no draw for two points.
+    // Short-circuit: no random draw for two points, so the sequence stays the recorded one.
     let closed = count > 2 && random.next(2) == 0;
     ChainField::from_polyline(&points, closed, &setbacks).expect("a chain")
 }

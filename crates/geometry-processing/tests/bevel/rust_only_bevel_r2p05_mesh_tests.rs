@@ -214,7 +214,7 @@ fn rust_only_unit_setbacks_read_each_edges_dihedral_and_average_at_the_vertices(
     .unwrap();
     assert_eq!(at_vertices, vec![1.0, 1.0]);
 
-    // An edge on one triangle only is refused, as C# throws.
+    // An edge on one triangle only is refused: a chain edge needs a triangle on each side.
     let open = chain_on_the_mesh::chain_edges(&[1, 2], false);
     assert!(chain_on_the_mesh::per_edge_unit_setbacks(
         &positions,
@@ -483,7 +483,7 @@ fn rust_only_run_outs_are_filed_under_their_creases_groups_when_on() {
         )
     };
 
-    // Off - no budget in force, so C#'s flow default.
+    // Off - no budget in force, so the flow default.
     assert!(read().is_none());
 
     let budget = Rc::new(WorkBudget::new(1_000_000_000).unwrap());

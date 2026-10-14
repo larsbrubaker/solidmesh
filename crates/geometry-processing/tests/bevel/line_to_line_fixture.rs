@@ -1,7 +1,7 @@
-//! Port of the test fixture `LevelLine/LineToLineFixture.cs`: the Many Holes BRIDGE in the two
-//! shapes `graze_fixture.rs` does not reach - a single mesh edge that runs clean across the plate
-//! from ONE chain's level line to ANOTHER's, and the same run of surface carried by an edge whose
-//! two ends are both rim vertices with a NEEDLE on either side of it.
+//! The Many Holes BRIDGE in the two shapes `graze_fixture.rs` does not reach - a single mesh edge
+//! that runs clean across the plate from ONE chain's level line to ANOTHER's, and the same run of
+//! surface carried by an edge whose two ends are both rim vertices with a NEEDLE on either side of
+//! it.
 //!
 //! The part is the same annulus plate as the graze fixture - one round hole through a round plate,
 //! both rims picked - but tiled sector by sector so that one sector can carry the defect without
@@ -35,7 +35,7 @@ pub const RING_SEGMENTS: i32 = 48;
 /// and twenty times what a test reads two vertices as coincident at.
 pub const NEEDLE_HEIGHT: f64 = 1e-5;
 
-/// C# `Defect`: which of the two unasked edge shapes the pick carries.
+/// Which of the two unasked edge shapes the pick carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Defect {
     /// Two inserted vertices standing ON two different chains' level lines, joined by an edge.
@@ -48,7 +48,7 @@ pub enum Defect {
     OnToOnNeedle,
 }
 
-/// C# `LinePick`: the pick and the two ends of the bad edge - `near` on or at chain 0, and `far` on
+/// The pick and the two ends of the bad edge - `near` on or at chain 0, and `far` on
 /// or at chain 1.
 pub struct LinePick {
     pub positions: Vec<Vector3>,
@@ -58,8 +58,9 @@ pub struct LinePick {
     pub far: i32,
 }
 
-/// C# `Pick` (defaults `RING_SEGMENTS`, `SIZE`): the annulus plate carrying one bad edge of the
-/// shape asked for, both rims picked. C#'s argument check panics.
+/// The annulus plate carrying one bad edge of the
+/// shape asked for, both rims picked. Arguments out of range panic.
+/// The usual arguments are `RING_SEGMENTS` and `SIZE`.
 pub fn pick(defect: Defect, ring_segments: i32, size: f64) -> LinePick {
     assert!(
         ring_segments >= 16 && ring_segments % 4 == 0,
@@ -171,7 +172,7 @@ pub fn pick(defect: Defect, ring_segments: i32, size: f64) -> LinePick {
     }
 }
 
-/// C# `Build` (defaults `SIZE`, chamfer): one JOINT band build of both rims - the build the bridge
+/// One chamfer JOINT band build of both rims - the build the bridge
 /// shows up in.
 pub fn build(pick: &LinePick, size: f64, profile: BandProfile) -> BandGapResult {
     let closed = vec![true; pick.chains.len()];
@@ -188,7 +189,7 @@ pub fn build(pick: &LinePick, size: f64, profile: BandProfile) -> BandGapResult 
     .expect("the pick is well formed")
 }
 
-/// C# `FieldOf` (default `SIZE`): the pick's own field - the production `PickField` over both
+/// The pick's own field - the production `PickField` over both
 /// rims at the chamfer setback.
 pub fn field_of(pick: &LinePick, size: f64) -> PickField {
     graze_fixture::field_of(&pick.chains, &pick.positions, size)

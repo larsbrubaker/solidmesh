@@ -1,7 +1,6 @@
-//! Port of the test fixture `LevelLine/HourglassBesideSquareFixture.cs`: a plate carrying TWO
-//! bosses - one an hourglass in plan, one a square - and the pick is both bosses' rims at the top
-//! of their walls. One chain of the pick pinches WELL BELOW the room the pick reads, so the size
-//! refusal can only name a size a probe actually built at.
+//! A plate carrying TWO bosses - one an hourglass in plan, one a square - and the pick is both
+//! bosses' rims at the top of their walls. One chain of the pick pinches WELL BELOW the room the
+//! pick reads, so the size refusal can only name a size a probe actually built at.
 
 #![allow(dead_code)]
 
@@ -17,26 +16,26 @@ use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChains;
 use crate::several_chains_fixtures;
 
-/// C# `FoldDegrees`: a fold threshold that reads a 90 degree corner as a feature.
+/// A fold threshold that reads a 90 degree corner as a feature.
 pub const FOLD_DEGREES: f64 = several_chains_fixtures::FOLD_DEGREES;
 
-/// C# `NeckHalfWidth`: half the width of the hourglass's neck - the size at which its face is cut
+/// Half the width of the hourglass's neck - the size at which its face is cut
 /// in two.
 pub const NECK_HALF_WIDTH: f64 = 1.0;
 
-/// C# `BossHeight`: the plate's top is at z = 0, the bosses stand this high above it.
+/// The plate's top is at z = 0, the bosses stand this high above it.
 const BOSS_HEIGHT: f64 = 3.0;
 
 const PLATE_THICKNESS: f64 = 1.0;
 
-/// C# `Xs`: the plate's two edges, the hourglass's four (lobe, neck, neck, lobe) and the square
+/// The plate's two edges, the hourglass's four (lobe, neck, neck, lobe) and the square
 /// boss's two.
 const XS: [f64; 8] = [-14.0, -11.0, -7.0, -5.0, -1.0, 5.0, 9.0, 14.0];
 
-/// C# `Ys`: the plate's two, the hourglass's lobe and neck lines, the square's two.
+/// The plate's two, the hourglass's lobe and neck lines, the square's two.
 const YS: [f64; 8] = [-6.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 6.0];
 
-/// C# `HourglassCells`: both lobes over the full height of their columns, and the neck between.
+/// Both lobes over the full height of their columns, and the neck between.
 const HOURGLASS_CELLS: [(usize, usize); 11] = [
     (1, 1),
     (1, 2),
@@ -51,10 +50,10 @@ const HOURGLASS_CELLS: [(usize, usize); 11] = [
     (3, 5),
 ];
 
-/// C# `SquareCells`: the square boss, 4 x 4.
+/// The square boss, 4 x 4.
 const SQUARE_CELLS: [(usize, usize); 3] = [(5, 2), (5, 3), (5, 4)];
 
-/// C# `HourglassCorners`: the hourglass's plan, counter-clockwise seen from +z.
+/// The hourglass's plan, counter-clockwise seen from +z.
 const HOURGLASS_CORNERS: [(f64, f64); 12] = [
     (-11.0, -3.0),
     (-7.0, -3.0),
@@ -70,7 +69,7 @@ const HOURGLASS_CORNERS: [(f64, f64); 12] = [
     (-11.0, 3.0),
 ];
 
-/// C# `SquareCorners`: the square boss's plan, counter-clockwise seen from +z.
+/// The square boss's plan, counter-clockwise seen from +z.
 const SQUARE_CORNERS: [(f64, f64); 4] = [(5.0, -2.0), (9.0, -2.0), (9.0, 2.0), (5.0, 2.0)];
 
 /// The welding vertex list `Pick`'s local `At` and `Quad` build into, in insertion order.
@@ -105,12 +104,12 @@ impl Builder {
     }
 }
 
-/// C# `Pick()` with its default arguments: `square_first` and `moved` both false.
+/// The pick with `square_first` and `moved` both false.
 pub fn pick() -> SolidWithChains {
     pick_with(false, false)
 }
 
-/// C# `Pick`: the plate with both bosses on it, and the two bosses' top rims as one pick, the
+/// The plate with both bosses on it, and the two bosses' top rims as one pick, the
 /// hourglass first unless `square_first` asks for the other order.
 pub fn pick_with(square_first: bool, moved: bool) -> SolidWithChains {
     let mut g = Builder {
@@ -205,7 +204,7 @@ pub fn pick_with(square_first: bool, moved: bool) -> SolidWithChains {
     (placed, g.indices, chains)
 }
 
-/// C# `HourglassChain`: which chain of the pick is the hourglass, in the order `pick` was asked for.
+/// Which chain of the pick is the hourglass, in the order `pick` was asked for.
 pub fn hourglass_chain(square_first: bool) -> i32 {
     if square_first {
         1
@@ -214,7 +213,7 @@ pub fn hourglass_chain(square_first: bool) -> i32 {
     }
 }
 
-/// C# `Boss`: one boss - its walls from the plate's top up to its face, and its face. Answers the
+/// One boss - its walls from the plate's top up to its face, and its face. Answers the
 /// face's rim, counter-clockwise seen from +z.
 fn boss(corners: &[(f64, f64)], cells: &[(usize, usize)], g: &mut Builder) -> Vec<i32> {
     let plan = subdivide_on_the_grid(corners);
@@ -248,7 +247,7 @@ fn boss(corners: &[(f64, f64)], cells: &[(usize, usize)], g: &mut Builder) -> Ve
     plan.iter().map(|p| g.at(p.0, p.1, BOSS_HEIGHT)).collect()
 }
 
-/// C# `SubdivideOnTheGrid`: a rectilinear plan with a vertex wherever a grid line crosses it - what
+/// A rectilinear plan with a vertex wherever a grid line crosses it - what
 /// keeps the wall's quads and the neighbouring cells edge for edge.
 fn subdivide_on_the_grid(corners: &[(f64, f64)]) -> Vec<(f64, f64)> {
     let mut plan = Vec::new();
@@ -263,7 +262,7 @@ fn subdivide_on_the_grid(corners: &[(f64, f64)]) -> Vec<(f64, f64)> {
                 .copied()
                 .filter(|&y| (y - from.1) * (y - to.1) < 0.0)
                 .collect();
-            // C# OrderBy is a stable sort.
+            // A stable sort, so ties keep their order.
             ys.sort_by(|a, b| {
                 ((a - from.1) * (to.1 - from.1))
                     .partial_cmp(&((b - from.1) * (to.1 - from.1)))
@@ -292,12 +291,12 @@ fn subdivide_on_the_grid(corners: &[(f64, f64)]) -> Vec<(f64, f64)> {
     plan
 }
 
-/// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
+/// The pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }
 
-/// C# `Read`: the whole pick's room, read on the input mesh.
+/// The whole pick's room, read on the input mesh.
 pub fn read(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -321,7 +320,7 @@ pub fn read(
     .expect("the pick reads")
 }
 
-/// C# `Build`: a build of the whole pick at one size.
+/// A build of the whole pick at one size.
 pub fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

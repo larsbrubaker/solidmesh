@@ -1,10 +1,9 @@
-//! Port of `LevelLine/OwnSetbackPerEdgeTests.cs`: a fillet's setback is r tan(phi / 2) for its
-//! edge's turn phi, so edges of different turn on ONE chain ask for different setbacks. Each edge
-//! keeps its own along its whole length - the round is r everywhere away from the vertex, and the
-//! step between two setbacks is that vertex's hole. C#'s `TheRimWithTwoTurnsAddsNothing` is
-//! `[Skip]` in C# (the step's hole at v0 is closed 3.6e-3 proud of the leaning front face, a filler
-//! rung) and is not ported until C# un-skips it. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! A fillet's setback is r tan(phi / 2) for its edge's turn phi, so edges of different turn on ONE
+//! chain ask for different setbacks. Each edge keeps its own along its whole length - the round is
+//! r everywhere away from the vertex, and the step between two setbacks is that vertex's hole. A
+//! rim with two turns adding nothing is open work (the step's hole at v0 is closed 3.6e-3 proud of
+//! the leaning front face, a filler rung) and is not tested here yet. Parameter rows are loops over
+//! the same-named test.
 
 use std::rc::Rc;
 

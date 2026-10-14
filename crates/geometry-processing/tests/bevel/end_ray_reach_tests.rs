@@ -1,8 +1,7 @@
-//! Port of `LevelLine/EndRayReachTests.cs`: a chain built alone adds its exact prism, however its
-//! end ray runs. Inner Right Sides and Center's concave chains 5-9 and 9-11-8 end at 9, the tip of
-//! a tent standing on a flat floor; an unbounded ray ran the floor's rail 8.4 mm straight past the
-//! tip. Built alone, each must now add its exact prism (2.40) within 0.3. C# `[Arguments]` rows
-//! are a loop.
+//! A chain built alone adds its exact prism, however its end ray runs. Inner Right Sides and
+//! Center's concave chains 5-9 and 9-11-8 end at 9, the tip of a tent standing on a flat floor; an
+//! unbounded ray ran the floor's rail 8.4 mm straight past the tip. Built alone, each must now add
+//! its exact prism (2.40) within 0.3. Parameter rows are a loop.
 
 use std::rc::Rc;
 

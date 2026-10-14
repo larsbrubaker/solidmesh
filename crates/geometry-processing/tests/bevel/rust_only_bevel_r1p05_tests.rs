@@ -1,7 +1,6 @@
-//! Rust-only checks of bevel-core package R1.P05's first leaves: the working mesh's edge
-//! adjacency, removal and ancestry, the work budget's bar arithmetic and default size, and the
-//! run-out field's hull, reading and golden-section least. Their C# coverage comes through the
-//! whole-build test classes that land with later packages.
+//! Rust-only checks of bevel-core package R1.P05's first leaves: the working mesh's edge adjacency,
+//! removal and ancestry, the work budget's bar arithmetic and default size, and the run-out field's
+//! hull, reading and golden-section least. The whole-build tests also cover them.
 
 use geometry_processing::bevel::level_line::run_out_field::RunOutField;
 use geometry_processing::bevel::level_line::work_budget::{DEFAULT_FLOOR, PHASE_ORDER};

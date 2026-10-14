@@ -1,8 +1,7 @@
-//! Port of the test fixture `LevelLine/GridHolePlateFixture.cs`: a plate whose top face carries an
-//! n x n GRID of square through-holes, the pick being that face's whole rim - the outer loop plus one
-//! chain per hole, so n = 2, 4, 6 give 5, 17 and 37 chains. The scalable stand-in for Many Holes,
-//! built as one rectilinear grid of cells so nothing is hand-triangulated and no edge carries a
-//! T-vertex.
+//! A plate whose top face carries an n x n GRID of square through-holes, the pick being that face's
+//! whole rim - the outer loop plus one chain per hole, so n = 2, 4, 6 give 5, 17 and 37 chains. The
+//! scalable stand-in for Many Holes, built as one rectilinear grid of cells so nothing is
+//! hand-triangulated and no edge carries a T-vertex.
 
 #![allow(dead_code)]
 
@@ -40,12 +39,12 @@ pub fn chain_count(holes: i32) -> i32 {
     1 + (holes * holes)
 }
 
-/// C# `Pick(holes)` at the default span.
+/// The pick at the default span.
 pub fn pick(holes: i32) -> SolidWithChains {
     pick_with_span(holes, DEFAULT_SPAN)
 }
 
-/// C# `Pick(holes, span)`: the plate and the chains of its top face's rim, the outer loop first,
+/// The plate and the chains of its top face's rim, the outer loop first,
 /// then the holes in row-major order.
 pub fn pick_with_span(holes: i32, span: f64) -> SolidWithChains {
     assert!(holes >= 1, "holes out of range");
@@ -179,7 +178,7 @@ pub fn pick_with_span(holes: i32, span: f64) -> SolidWithChains {
     (positions, indices, chains)
 }
 
-/// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
+/// The pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }

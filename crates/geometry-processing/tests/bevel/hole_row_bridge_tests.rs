@@ -1,13 +1,12 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/HoleRowBridgeTests.cs`: the hunt for the Many
-//! Holes BRIDGE beyond the two-hole part - a row of four or six spanned rims, a ring turned or
-//! re-segmented or slid off the pitch, and the plate's outer boundary picked as a chain of its own.
-//! Every one of them is a joint band build that must leave each picked side its own closed loop
-//! and must not leave the refined mesh with two vertices in the same place.
+//! The hunt for the Many Holes BRIDGE beyond the two-hole part - a row of four or six spanned rims,
+//! a ring turned or re-segmented or slid off the pitch, and the plate's outer boundary picked as a
+//! chain of its own. Every one of them is a joint band build that must leave each picked side its
+//! own closed loop and must not leave the refined mesh with two vertices in the same place.
 //!
 //! `bridge_fixture_tests` builds two spanned rims and stays clean at every radius tried, so
-//! something the witness has is missing from it. These are that something, one knob at a time,
-//! each run at two sizes. The fixture is `hole_row_bridge_fixture`. C# `[Arguments]` rows are a
-//! loop over the same-named test.
+//! something the witness has is missing from it. These are that something, one knob at a time, each
+//! run at two sizes. The fixture is `hole_row_bridge_fixture`. Parameter rows are a loop over the
+//! same-named test.
 
 use std::time::Instant;
 
@@ -17,7 +16,7 @@ use crate::level_line_room_geometry::SolidWithChains;
 use crate::level_line_test_geometry::coincident_vertices;
 use geometry_processing::bevel::level_line::BandGapRefusal;
 
-/// C# `Row`: the variants of the row, in the order they were tried.
+/// The variants of the row, in the order they were tried.
 #[derive(Debug, Clone, Copy)]
 enum Variant {
     /// Four plain rings in a row: a middle hole is spanned from BOTH sides at once.
@@ -36,7 +35,7 @@ enum Variant {
     EveryKnobAtOnce,
 }
 
-/// C# `ARowOfSpannedRimsLeavesEachSideItsOwnLoop`: every row variant, at the size the witness
+/// Every row variant, at the size the witness
 /// failed at and at half of it. Both sizes, because the bridge is a story about how far the field
 /// climbs over a long spanning edge, and halving the size doubles every length the field is
 /// measured in.
@@ -134,7 +133,7 @@ fn a_row_of_spanned_rims_leaves_each_side_its_own_loop_row(row: Variant, size: f
     );
 }
 
-/// C# `EveryRowSpansItsRimsWithLongEdges` (rows FourInARow, EveryKnobAtOnce): what each variant's
+/// Every row spans its rims with long edges (rows FourInARow, EveryKnobAtOnce): what each variant's
 /// triangulation actually is - the spanning edges it carries and how long they are - so a change to
 /// the fixture that quietly stops it spanning fails here rather than going unnoticed in a green
 /// build above.
@@ -171,7 +170,7 @@ fn every_row_spans_its_rims_with_long_edges() {
     }
 }
 
-/// C# `Build(row)`: the pick each variant names. The geometry is always quoted in the fixture's
+/// The pick each variant names. The geometry is always quoted in the fixture's
 /// own size.
 fn build(row: Variant) -> SolidWithChains {
     match row {

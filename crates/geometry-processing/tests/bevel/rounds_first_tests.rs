@@ -1,8 +1,8 @@
-//! Port of `LevelLine/RoundsFirstTests.cs`: Inner Right Sides and Center's knife tip built rounds
-//! first (`BandGap.RoundsFirst`): the convex ridge 9 - 1 alone (pass A), then its two concave beads
-//! 5 - 9 and 9 - 11 - 8 read again on what that left. In the kernel's frame the notch wall is the
-//! plane x - y = 98.5 (v0, v1, v2, v5, v8) and the slope x + y = -118.5 (v4, v5, v9, v11, v8); the
-//! ridge runs from v1 on the wall to v9 on the slope, and the part is symmetric about z = 10.
+//! Inner Right Sides and Center's knife tip built rounds first (`BandGap.RoundsFirst`): the convex
+//! ridge 9 - 1 alone (pass A), then its two concave beads 5 - 9 and 9 - 11 - 8 read again on what
+//! that left. In the kernel's frame the notch wall is the plane x - y = 98.5 (v0, v1, v2, v5, v8)
+//! and the slope x + y = -118.5 (v4, v5, v9, v11, v8); the ridge runs from v1 on the wall to v9 on
+//! the slope, and the part is symmetric about z = 10.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -57,13 +57,13 @@ fn profile(fixture: &LevelLineFixture) -> BandProfile {
     }
 }
 
-/// C# `fixture.IsFeatureEdge` as the build's feature test.
+/// The fixture's feature-edge list as the build's feature test.
 fn feature_of(fixture: &Rc<LevelLineFixture>) -> FeatureEdgeTest {
     let fixture = Rc::clone(fixture);
     Rc::new(move |a, b| fixture.is_feature_edge(a, b))
 }
 
-/// C# `TheRounds`.
+/// Builds the fixture's rounds.
 fn the_rounds(fixture: &Rc<LevelLineFixture>) -> GapFillResult {
     build_the_rounds(
         &fixture.positions,
@@ -82,7 +82,7 @@ fn the_rounds(fixture: &Rc<LevelLineFixture>) -> GapFillResult {
     .expect("pass A runs")
 }
 
-/// C# `BandGap.BuildRoundsFirst(..., null, 1e-9, ..., null, fixture.Closed)`.
+/// The rounds-first build of the fixture, closed as the fixture records.
 fn rounds_first(fixture: &Rc<LevelLineFixture>) -> GapFillResult {
     build_rounds_first(
         &fixture.positions,
@@ -611,7 +611,7 @@ fn altitude(a: Vector3, b: Vector3, c: Vector3) -> f64 {
     }
 }
 
-/// C# `DistanceToMesh`: the distance from `p` to the nearest of `triangles`.
+/// The distance from `p` to the nearest of `triangles`.
 pub fn distance_to_mesh(p: Vector3, at: &[Vector3], triangles: &[(i32, i32, i32)]) -> f64 {
     let mut best = f64::INFINITY;
     for &(a, b, c) in triangles {
@@ -668,7 +668,7 @@ fn closest_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector
     a + (ab * (vb * denom)) + (ac * (vc * denom))
 }
 
-/// C# `Plane`: the unit normal and offset of the plane through three fixture vertices.
+/// The unit normal and offset of the plane through three fixture vertices.
 fn plane(fixture: &LevelLineFixture, a: usize, b: usize, c: usize) -> (Vector3, f64) {
     let p = &fixture.positions;
     let normal = (p[b] - p[a]).cross(p[c] - p[a]).get_normal();

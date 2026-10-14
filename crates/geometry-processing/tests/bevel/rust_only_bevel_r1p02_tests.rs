@@ -1,14 +1,15 @@
-//! Rust-only tests for the bevel-core package R1.P02's methods that no ported C# test class covers
-//! yet: the row zipper (`SurfaceRowZip`), the end cut's run readings (`SurfaceEndCut`), the rolled
-//! section's concave cap (`SurfaceEndFollowsTheWalkedChords.TryCapWithTheSection`), the shared
-//! side reading and the per-face sewing readings (`SurfaceSplitSewing`), the stretch readings
+//! Rust-only tests for the bevel-core package R1.P02's methods that no other test covers on its
+//! own: the row zipper (`SurfaceRowZip`), the end cut's run readings (`SurfaceEndCut`), the rolled
+//! section's concave cap (`SurfaceEndFollowsTheWalkedChords.TryCapWithTheSection`), the shared side
+//! reading and the per-face sewing readings (`SurfaceSplitSewing`), the stretch readings
 //! (`SurfaceSplitsOnASegment`), the rim sewing of a section given up
-//! (`SurfaceEndGivesUpTheSection.SewTheRim`) and the bite's side readings (`SurfaceBiteSharedSides`,
-//! `SurfaceConvexBite.WithTheVerticesStandingOnIt`) and the corner fans (`SurfaceMixedCornerDualWall`,
-//! `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`, `SurfaceMixedCornerRunOutStrip.Draw`), the patch
-//! refinement (`BevelPatchRefinement`), the corner rows (`SurfaceCornerPatchRows`) and the corner
-//! patch's two solids (`BevelCornerPatchMesher`) and one corner's tool (`BevelCornerPatches.TryBuild`,
-//! `TryGetInsetPoint`) and the plan's constructor and accessors (`SurfaceBevelPlan`). Each pins the C# rule on a hand-built case.
+//! (`SurfaceEndGivesUpTheSection.SewTheRim`) and the bite's side readings
+//! (`SurfaceBiteSharedSides`, `SurfaceConvexBite.WithTheVerticesStandingOnIt`) and the corner fans
+//! (`SurfaceMixedCornerDualWall`, `SurfaceTwoCreaseJunctionWall.TryFillTheNotch`,
+//! `SurfaceMixedCornerRunOutStrip.Draw`), the patch refinement (`BevelPatchRefinement`), the corner
+//! rows (`SurfaceCornerPatchRows`) and the corner patch's two solids (`BevelCornerPatchMesher`) and
+//! one corner's tool (`BevelCornerPatches.TryBuild`, `TryGetInsetPoint`) and the plan's constructor
+//! and accessors (`SurfaceBevelPlan`). Each pins the rule on a hand-built case.
 
 use std::collections::HashMap;
 

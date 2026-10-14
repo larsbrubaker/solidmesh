@@ -1,10 +1,10 @@
-//! Port of `Fixtures/GussetTestMeshes.cs`: the plate a gusset pokes through, kept as the triangles
-//! the boolean actually left, and the sliver seam it leaves on the top face.
+//! The plate a gusset pokes through, kept as the triangles the boolean actually left, and the
+//! sliver seam it leaves on the top face.
 
 use polygon_mesh::{Face, Mesh};
 use vector_math::{Vector3, Vector3Float};
 
-/// C# `CreatePlateWithGussetPokingThrough`: the plate-and-gusset union of "Chain and Face Should
+/// The plate-and-gusset union of "Chain and Face Should
 /// Both work.mcx", as the kernel's own boolean left it - a 55 x 4 x 20 plate with a 5 x 5 x 20
 /// triangular gusset beside it, and the gusset POKING 0.1 mm THROUGH the plate's y = -6 face.
 /// Eighteen vertices and 32 triangles, every coordinate the float the boolean wrote.
@@ -91,7 +91,7 @@ pub fn create_plate_with_gusset_poking_through() -> Mesh {
     mesh
 }
 
-/// C# `TheGussetSeam`: the sliver the poke-through leaves on z = 20, by the corners it is known by
+/// The sliver the poke-through leaves on z = 20, by the corners it is known by
 /// - `(buried tip, where the hypotenuse leaves the plate)`.
 pub fn the_gusset_seam() -> (Vector3, Vector3) {
     (

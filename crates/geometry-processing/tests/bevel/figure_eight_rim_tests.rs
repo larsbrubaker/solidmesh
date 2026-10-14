@@ -1,9 +1,8 @@
-//! Port of `LevelLine/FigureEightRimTests.cs`: a rim that touches ITSELF. On a real part
-//! (Thingi10K 1458669, pick 0) a face's boundary loop came back as a figure eight - two lobes of one
-//! face meeting at a single vertex, so the loop names that vertex TWICE - and the argument check
-//! threw "chain 0 names vertex 139 twice". A crash where a refusal belongs: picks are COLLECTED off
-//! a mesh, not typed by a programmer, so a figure-eight rim is a statement about the part and leaves
-//! by name.
+//! A rim that touches ITSELF. On a real part (Thingi10K 1458669, pick 0) a face's boundary loop
+//! came back as a figure eight - two lobes of one face meeting at a single vertex, so the loop
+//! names that vertex TWICE - and the argument check threw "chain 0 names vertex 139 twice". A crash
+//! where a refusal belongs: picks are COLLECTED off a mesh, not typed by a programmer, so a
+//! figure-eight rim is a statement about the part and leaves by name.
 
 use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};

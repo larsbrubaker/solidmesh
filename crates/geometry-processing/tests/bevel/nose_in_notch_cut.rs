@@ -1,7 +1,6 @@
-//! Port of the test fixture `Fixtures/NoseInNotchCut.cs`: the nose-in-notch part with its ridge
-//! ROUNDED - the first pass of a mixed bevel, cut exactly as the rebuild cuts it - and the two
-//! concave picks whose creases die on that ridge. The second pass's tests re-read those creases on
-//! the cut part.
+//! The nose-in-notch part with its ridge ROUNDED - the first pass of a mixed bevel, cut exactly as
+//! the rebuild cuts it - and the two concave picks whose creases die on that ridge. The second
+//! pass's tests re-read those creases on the cut part.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -19,7 +18,7 @@ use vector_math::{Matrix4X4, Vector3};
 use crate::kernel_cut_helpers::{boolean, edge_group};
 use crate::nose_in_notch_test_meshes as meshes;
 
-/// C# `CutRidgeAsync`'s answer: the boolean's own result, the tidied and welded part the second
+/// The ridge cut's answer: the boolean's own result, the tidied and welded part the second
 /// pass reads, and the upper and lower concave picks.
 pub struct RidgeCut {
     /// What the boolean returned, before it was tidied and welded; only the tests of what the tidy
@@ -30,7 +29,7 @@ pub struct RidgeCut {
     pub lower: BevelEdgeGroup,
 }
 
-/// C# `CutRidgeAsync`: the part with its ridge rounded at `radius` in `segments`, as the rebuild
+/// The part with its ridge rounded at `radius` in `segments`, as the rebuild
 /// would cut it, and the two concave picks.
 pub fn cut_ridge(radius: f64, segments: i32) -> RidgeCut {
     let part = meshes::create();
@@ -124,7 +123,7 @@ pub fn cut_ridge(radius: f64, segments: i32) -> RidgeCut {
     }
 }
 
-/// C# `Anchor`: a group anchored on the feature edge running between `from` and `to`, either way
+/// A group anchored on the feature edge running between `from` and `to`, either way
 /// round - the same helper as the shadow and seam classes' `Group`, so it is that one.
 pub fn anchor(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> BevelEdgeGroup {
     edge_group(features, from, to)

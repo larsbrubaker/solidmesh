@@ -1,5 +1,5 @@
-//! Rust-only checks of the bevel core's R3.P03 fill pieces on hand-built meshes: the uneven
-//! strip's zip. The C# classes this package unlocks are ported 1:1 in their own files.
+//! Rust-only checks of the bevel core's R3.P03 fill pieces on hand-built meshes: the uneven strip's
+//! zip. The tests that read these pieces in a whole build are in their own files.
 
 use geometry_processing::bevel::level_line::uneven_strip::cell;
 use geometry_processing::bevel::level_line::LevelLineMesh;

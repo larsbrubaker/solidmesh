@@ -1,11 +1,11 @@
-//! Port of `LevelLine/GrazeFixtureTests.cs`: the Many Holes BRIDGE as a single bad EDGE, in under
-//! a second - one mesh edge whose two ends are an ordinary Inside/Outside pair but which crosses
-//! the line THREE times, because it grazes a second chain's band on the way across. The joint build
-//! of both rims must still leave each picked side its own closed loop. Both ways the edge can reach
-//! the rules are swept: a graze with HEIGHT under it, at two depths, and one so shallow the triangle
-//! on it is a needle below the refinement's no-height floor. The line-to-line shapes
-//! (`line_to_line_fixture.rs`) are the same claim for an edge that runs from one chain's band to
-//! the other's. C# `[Arguments]` rows are loops over the same-named test.
+//! The Many Holes BRIDGE as a single bad EDGE, in under a second - one mesh edge whose two ends are
+//! an ordinary Inside/Outside pair but which crosses the line THREE times, because it grazes a
+//! second chain's band on the way across. The joint build of both rims must still leave each picked
+//! side its own closed loop. Both ways the edge can reach the rules are swept: a graze with HEIGHT
+//! under it, at two depths, and one so shallow the triangle on it is a needle below the
+//! refinement's no-height floor. The line-to-line shapes (`line_to_line_fixture.rs`) are the same
+//! claim for an edge that runs from one chain's band to the other's. Parameter rows are loops over
+//! the same-named test.
 
 use std::time::Instant;
 
@@ -19,7 +19,7 @@ use crate::graze_fixture::{self, GrazePick, GRAZE_AS_NEEDLE, GRAZE_WITH_HEIGHT};
 use crate::level_line_test_geometry::{coincident_vertices, open_edges, signed_volume_of};
 use crate::line_to_line_fixture::{self, Defect, LinePick};
 
-/// C# `Math.Sign(double)`.
+/// The sign of `x`: -1, 0 or 1, zero for either zero.
 fn sign(x: f64) -> i32 {
     if x > 0.0 {
         1
@@ -187,7 +187,7 @@ fn a_build_over_a_grazing_edge_leaves_each_side_its_own_loop_at(graze_in_setback
     );
 }
 
-/// The claims both joint builds make, with C#'s report.
+/// The claims both joint builds make, with the report that names what failed.
 fn each_side_its_own_loop(built: &BandGapResult, size: f64, name: &str, started: Instant) {
     println!(
         "{name}: {:?}, {} loops, {:.2} s",

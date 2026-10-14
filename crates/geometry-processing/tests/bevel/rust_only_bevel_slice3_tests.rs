@@ -1,8 +1,7 @@
 //! Rust-only checks of the third bevel leaf cluster (`BevelSeamRing`, `BevelSharedEdges`,
 //! `BevelSurfaceLabels`, `BevelSurfaceWalk`, `FloatGrid`, and the level line's `ChainSetback`,
-//! `CurvedEndFace` and `BandGroup`). Their C# coverage comes through whole-bevel test classes of
-//! the cyclic core (`HoleRowBridgeTests` and friends need the level-line build); these pin the
-//! leaf behaviour now.
+//! `CurvedEndFace` and `BandGroup`). The whole-bevel tests (the hole-row bridge tests and friends,
+//! which need the level-line build) also cover them; these pin the leaf behaviour alone.
 
 use geometry_processing::bevel::bevel_seam_ring::{points, slerp};
 use geometry_processing::bevel::bevel_shared_edges::award_once;

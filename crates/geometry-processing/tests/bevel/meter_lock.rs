@@ -1,6 +1,6 @@
-//! The process-wide lock every test that switches or reads `FieldCounters`' global meter takes:
-//! the meter is one static for the whole test process (as C#'s), so two such tests running at
-//! once would see each other's switch.
+//! The process-wide lock every test that switches or reads `FieldCounters`' global meter takes: the
+//! meter is one static for the whole test process, so two such tests running at once would see each
+//! other's switch.
 
 use std::sync::{Mutex, MutexGuard};
 

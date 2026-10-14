@@ -98,7 +98,7 @@ fn rust_only_the_site_report_puts_the_busiest_site_first() {
     assert_eq!(lines[0], "         7  b.rs:9");
     assert_eq!(
         lines[1], "         2  c.rs:3",
-        "tied counts keep the first sort's order (C#'s introsort is an insertion sort this small)"
+        "tied counts keep the first sort's order"
     );
     assert_eq!(lines[2], "         2  a.rs:1");
     FieldCounters::reset();

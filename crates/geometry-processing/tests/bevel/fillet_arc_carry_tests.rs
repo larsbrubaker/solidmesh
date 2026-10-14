@@ -1,6 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/FilletArcCarryTests.cs`: a closed chain's zip
-//! row carried round a gentle turn, kept to the mean drawing at a mitre or under an infinite bend
-//! threshold, the carry's fade into a mitre's window, and the chain's direction at its seam.
+//! A closed chain's zip row carried round a gentle turn, kept to the mean drawing at a mitre or
+//! under an infinite bend threshold, the carry's fade into a mitre's window, and the chain's
+//! direction at its seam.
 
 use geometry_processing::bevel::level_line::fillet_arc::{carry_weight, tangent_at};
 use geometry_processing::bevel::level_line::fillet_arc_rows::{along_the_chain, build};

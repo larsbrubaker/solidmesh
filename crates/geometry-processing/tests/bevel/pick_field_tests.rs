@@ -1,7 +1,6 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/PickFieldTests.cs`: one field over a GROUP of
-//! chains. The pick's value is the least of its members', it is still exactly 1-Lipschitz, a tie
-//! between chains is settled by a RULE, and a pick of ONE answers what that one chain answers to
-//! the bit.
+//! One field over a GROUP of chains. The pick's value is the least of its members', it is still
+//! exactly 1-Lipschitz, a tie between chains is settled by a RULE, and a pick of ONE answers what
+//! that one chain answers to the bit.
 
 use std::rc::Rc;
 

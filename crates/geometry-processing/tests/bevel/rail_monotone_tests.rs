@@ -1,13 +1,12 @@
-//! Port of `LevelLine/RailMonotoneTests.cs`: the rail the fill zips by chain parameter must stay
-//! monotone on a chain whose nearest-point reading barely moves - a finely tessellated convex arc and
-//! a shallow concave corner. On 77930 the cut left NINE pairs of vertices at identical positions,
-//! whose parameters - computed from two different roots - differ in the last bits; on 65394 the rail
-//! curves round the far side of a boss, where the nearest chain point barely moves and the parameter
-//! wobbles by a thousandth of the setback. Read with an exact comparison each wobble is a second
-//! wrap, and the fill refused `RailIsNotMonotone` on a loop that goes round the chain exactly once.
-//! The prism below reproduces that shape of input synthetically. C# `[Arguments]` rows are loops
-//! over the same-named test. `room_rigid_motion_tests.rs` reads the prism too
-//! (`rounded_dented_prism_solid`).
+//! The rail the fill zips by chain parameter must stay monotone on a chain whose nearest-point
+//! reading barely moves - a finely tessellated convex arc and a shallow concave corner. On 77930
+//! the cut left NINE pairs of vertices at identical positions, whose parameters - computed from two
+//! different roots - differ in the last bits; on 65394 the rail curves round the far side of a
+//! boss, where the nearest chain point barely moves and the parameter wobbles by a thousandth of
+//! the setback. Read with an exact comparison each wobble is a second wrap, and the fill refused
+//! `RailIsNotMonotone` on a loop that goes round the chain exactly once. The prism below reproduces
+//! that shape of input synthetically. Parameter rows are loops over the same-named test.
+//! `room_rigid_motion_tests.rs` reads the prism too (`rounded_dented_prism_solid`).
 
 #![allow(dead_code)]
 

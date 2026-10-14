@@ -1,6 +1,5 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/KnownRoomRefusesFirstTests.cs`: a build handed a
-//! room it cannot fit in refuses BEFORE it does any work - the caller already holds the answer for
-//! any size above it. C# `[Arguments]` rows are loops over the same-named test.
+//! A build handed a room it cannot fit in refuses BEFORE it does any work - the caller already
+//! holds the answer for any size above it. Parameter rows are loops over the same-named test.
 
 use std::rc::Rc;
 
@@ -19,7 +18,7 @@ const FOLD_DEGREES: f64 = 45.0;
 /// anything that touches the MESH still fails it.
 const SMALL_CEILING: i64 = 5000;
 
-/// C# `Math.BitIncrement` for a positive finite value.
+/// The next representable value above a positive finite value.
 fn bit_increment(value: f64) -> f64 {
     f64::from_bits(value.to_bits() + 1)
 }
@@ -31,7 +30,7 @@ fn known(room: f64) -> BandGapBuildOptions {
     }
 }
 
-/// C# `ASizeOverAKnownRoomRefusesWithoutReadingTheModel`: the same rim on a coarse and a fine
+/// The same rim on a coarse and a fine
 /// tessellation of one cylinder refuses with the same sentence at the same handful of work units.
 #[test]
 fn a_size_over_a_known_room_refuses_without_reading_the_model() {
@@ -89,7 +88,7 @@ fn a_size_over_a_known_room_refuses_without_reading_the_model() {
     }
 }
 
-/// C# `APickOfSeveralChainsRefusesOverItsKnownRoomWithoutBuilding`: the same for a pick of several
+/// The same for a pick of several
 /// chains, handed the pick's one room and asked for half again as much.
 #[test]
 fn a_pick_of_several_chains_refuses_over_its_known_room_without_building() {
@@ -145,11 +144,11 @@ fn a_pick_of_several_chains_refuses_over_its_known_room_without_building() {
     }
 }
 
-/// C# `TheCheapRefusalSaysWhatTheFullBuildSays`: a build handed the room says at once what a
+/// A build handed the room says at once what a
 /// build that reads its own room spends the whole band build to say, field for field.
 #[test]
 fn the_cheap_refusal_says_what_the_full_build_says() {
-    // C# `[Arguments(32)]`, its one row.
+    // Its one row: 32 ring segments.
     {
         let sides = 32;
         let (positions, indices) = cylinder_solid(sides, 5.0, 4.0);
@@ -197,7 +196,7 @@ fn the_cheap_refusal_says_what_the_full_build_says() {
     }
 }
 
-/// C# `TheKnownRoomItselfStillBuilds`: a size EQUAL to the room builds, and one bit above it
+/// A size EQUAL to the room builds, and one bit above it
 /// refuses - nothing is rounded off in the early refusal.
 #[test]
 fn the_known_room_itself_still_builds() {
@@ -241,7 +240,7 @@ fn the_known_room_itself_still_builds() {
     assert_eq!(above.room, room);
 }
 
-/// C# `AReadingThatIsNotAboutSizeIsNotOneToHandIn`: a chain across a face with nothing counted as
+/// A chain across a face with nothing counted as
 /// a fold has no crease to bevel, so its reading is not a statement about size, and the build says
 /// what is wrong BY NAME.
 #[test]
@@ -289,7 +288,7 @@ fn a_reading_that_is_not_about_size_is_not_one_to_hand_in() {
     );
 }
 
-/// C# `AGoodPicksReadingIsASizeStatement`: a reading of a pick that CAN be built is a size
+/// A reading of a pick that CAN be built is a size
 /// statement, and a room to hand in.
 #[test]
 fn a_good_picks_reading_is_a_size_statement() {
@@ -314,7 +313,7 @@ fn a_good_picks_reading_is_a_size_statement() {
     assert!(reading.room > 0.0);
 }
 
-/// C# `PickValidationStillWinsOverTheSizeRefusal`: a pick whose chains share a vertex is refused
+/// A pick whose chains share a vertex is refused
 /// by name on the input mesh before any size is looked at.
 #[test]
 fn pick_validation_still_wins_over_the_size_refusal() {

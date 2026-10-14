@@ -1,8 +1,8 @@
 //! Rust-only tests for the bevel-core package R1.P08's join and the readings built on it: the line
 //! along the surface between two points (`SectionSurfaceWalk.TryJoin`, `TryLayTheLine`), a split
 //! station's point placed on it (`SectionBuilder.TheJoinsOwnPoint`), an offset side's reach
-//! (`SectionRoom.ReachOfAnOffsetSide`), and the walk setting out from a corner (`TryWalk`), all on a
-//! cube. Each pins the C# rule on a hand-built case.
+//! (`SectionRoom.ReachOfAnOffsetSide`), and the walk setting out from a corner (`TryWalk`), all on
+//! a cube. Each pins the rule on a hand-built case.
 
 use indexmap::IndexMap;
 use polygon_mesh::solids::platonic_solids;

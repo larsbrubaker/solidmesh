@@ -1,7 +1,7 @@
-//! Rust-only checks of the bevel core's R1.P13 package pieces no ported C# test reaches on its own:
-//! the end-face sense's ray bounds and convex end planes, the crease plane, the end-plane trim's
-//! reach and section, the fillet arc's helpers, the arc point, the corner cap's switches, the band
-//! gap's small readings, the band room's rounding and pair bounds and the corner cap's geometry.
+//! Rust-only checks of the bevel core's R1.P13 package pieces no other test reaches on its own: the
+//! end-face sense's ray bounds and convex end planes, the crease plane, the end-plane trim's reach
+//! and section, the fillet arc's helpers, the arc point, the corner cap's switches, the band gap's
+//! small readings, the band room's rounding and pair bounds and the corner cap's geometry.
 
 use std::collections::HashMap;
 

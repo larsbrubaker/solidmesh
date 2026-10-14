@@ -1,4 +1,4 @@
-//! Rust-only checks on slice 17's production units that no ported C# test reaches yet: the join
+//! Rust-only checks on slice 17's production units that no other test reaches on its own: the join
 //! closing a ring it assembled from single picks, the three-plane point the mitre sector cuts with,
 //! the empty chord table, and the interrupted-crease reading's quick answers.
 

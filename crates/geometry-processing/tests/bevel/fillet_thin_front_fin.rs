@@ -1,4 +1,3 @@
-//! Port of `ObliqueEndFaceOwnerTests.AssertTheFinRoundsToTheControl` (`LevelLine/ObliqueEndFaceOwnerTests.cs`):
 //! Fillet Thin Front's fin built at a size (under a handed room, when given) and held to its
 //! control - the cylinder cut back by the walls. Shared by `swallowed_side_tests.rs`.
 
@@ -17,10 +16,10 @@ use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::signed_volume;
 use crate::sweep_mesh_measures;
 
-/// C# `ObliqueEndFaceOwnerTests.BendDegrees`.
+/// The sharp-turn angle, in degrees, the fin is built under.
 pub const BEND_DEGREES: f64 = 20.0;
 
-/// The fixture's profile (C# `LevelLineFixture.Profile`).
+/// The fixture's profile.
 pub fn profile_of(fixture: &LevelLineFixture) -> BandProfile {
     if fixture.chamfer {
         BandProfile::Chamfer
@@ -29,7 +28,7 @@ pub fn profile_of(fixture: &LevelLineFixture) -> BandProfile {
     }
 }
 
-/// C# `AssertTheFinRoundsToTheControl`: builds the fin at the size (under a handed room, when
+/// Builds the fin at the size (under a handed room, when
 /// given) and holds it to the control.
 pub fn assert_the_fin_rounds_to_the_control(size: f64, removed: f64, known_room: Option<f64>) {
     let fixture = Rc::new(LevelLineFixture::load("fillet-thin-front-op0"));

@@ -1,6 +1,6 @@
 //! Rust-only checks of the bevel core's R3.P02 cut pieces on a hand-built square: the vertex
 //! reading's per-vertex cache, the edge roots, the band cut's partition and line, and the side
-//! roots' settling. The C# classes this package unlocks are ported 1:1 in their own files.
+//! roots' settling. The tests that read these pieces in a whole build are in their own files.
 
 use std::cell::RefCell;
 use std::collections::HashMap;

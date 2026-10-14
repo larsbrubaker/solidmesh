@@ -1,6 +1,6 @@
-//! Port of the test helper `LevelLine/LevelLineTestGeometry.cs` (the parts the band cut and
-//! refinement tests read): the analytic fields, the hand-built meshes, `RunCut` and the mesh
-//! measures, with `DistanceToSurface`; plus `BridgeFixtureTests.CoincidentVertices`, which the degenerate-triangle test reads.
+//! The level-line test geometry the band cut and refinement tests read: the analytic fields, the
+//! hand-built meshes, `run_cut` and the mesh measures, with the distance to a surface; plus the
+//! coincident-vertex reading the degenerate-triangle test uses.
 
 #![allow(dead_code)]
 
@@ -16,7 +16,7 @@ use geometry_processing::bevel::level_line::{
 };
 use vector_math::{cs_math, Matrix4X4, Vector3};
 
-/// C# `PlaneField`: the signed distance to a plane.
+/// The signed distance to a plane.
 pub struct PlaneField {
     normal: Vector3,
     offset: f64,
@@ -37,7 +37,7 @@ impl ScalarField for PlaneField {
     }
 }
 
-/// C# `BallField`: the signed distance to a sphere.
+/// The signed distance to a sphere.
 pub struct BallField {
     centre: Vector3,
     radius: f64,
@@ -55,7 +55,7 @@ impl ScalarField for BallField {
     }
 }
 
-/// C# `CapsuleField`: the signed distance to a capsule round a segment.
+/// The signed distance to a capsule round a segment.
 pub struct CapsuleField {
     from: Vector3,
     to: Vector3,
@@ -81,7 +81,7 @@ impl ScalarField for CapsuleField {
     }
 }
 
-/// C# `MovedField`: a field carried along by a rigid motion.
+/// A field carried along by a rigid motion.
 pub struct MovedField {
     field: Rc<dyn ScalarField>,
     inverse: Matrix4X4,
@@ -224,7 +224,7 @@ pub fn cylinder_solid(
     (positions, indices)
 }
 
-/// C# `RunCut`: refines every triangle, finds the roots and cuts. The mesh is the reading's.
+/// Refines every triangle, finds the roots and cuts. The mesh is the reading's.
 pub fn run_cut(
     mesh: LevelLineMesh,
     field: Rc<dyn ScalarField>,
@@ -269,7 +269,8 @@ pub fn signed_volume(mesh: &LevelLineMesh) -> f64 {
     total / 6.0
 }
 
-/// C# `SurfaceArea`: over EVERY triangle in the list, removed ones included, as C# reads it.
+/// Over EVERY triangle in the list, removed ones included, so a removal that leaves its
+/// triangle's area behind shows.
 pub fn surface_area(mesh: &LevelLineMesh) -> f64 {
     mesh.triangles()
         .iter()
@@ -285,7 +286,7 @@ pub fn triangle_area(mesh: &LevelLineMesh, t: LevelLineTriangle) -> f64 {
         / 2.0
 }
 
-/// C# `SmallestTriangleArea` (LINQ `Min`, NaN-first).
+/// The smallest area of any triangle; a NaN area wins, so a degenerate one is never hidden.
 pub fn smallest_triangle_area(mesh: &LevelLineMesh) -> f64 {
     mesh.triangles()
         .iter()
@@ -306,7 +307,7 @@ pub fn shortest_side(mesh: &LevelLineMesh) -> f64 {
         .fold(f64::INFINITY, cs_math::min_f64)
 }
 
-/// C# `LinePoints`: every point the level line stands on - its vertices, and the midpoint of each
+/// Every point the level line stands on - its vertices, and the midpoint of each
 /// of its segments.
 pub fn line_points(mesh: &LevelLineMesh, result: &BandCutResult) -> Vec<Vector3> {
     let mut points = Vec::new();
@@ -324,7 +325,7 @@ pub fn line_points(mesh: &LevelLineMesh, result: &BandCutResult) -> Vec<Vector3>
     points
 }
 
-/// C# `BridgeFixtureTests.CoincidentVertices`: every pair of vertices within `snap` of each other,
+/// Every pair of vertices within `snap` of each other,
 /// found by a bucket per snap cube.
 pub fn coincident_vertices(mesh: &LevelLineMesh, snap: f64) -> Vec<(i32, i32, Vector3)> {
     let mut found = Vec::new();
@@ -357,7 +358,7 @@ pub fn coincident_vertices(mesh: &LevelLineMesh, snap: f64) -> Vec<(i32, i32, Ve
     found
 }
 
-/// C# `OpenEdges`: every edge of the mesh with only one triangle on it.
+/// Every edge of the mesh with only one triangle on it.
 pub fn open_edges(mesh: &LevelLineMesh) -> Vec<(i32, i32)> {
     mesh.edges()
         .into_iter()
@@ -365,7 +366,7 @@ pub fn open_edges(mesh: &LevelLineMesh) -> Vec<(i32, i32)> {
         .collect()
 }
 
-/// C# `VolumeOfEveryTriangleEvenRemoved`: the volume counting EVERY triangle the mesh holds, the
+/// The volume counting EVERY triangle the mesh holds, the
 /// band's removed ones included - the reading a refinement test wants, where the claim is that the
 /// cut only SPLIT. Never the reading for a fill test.
 pub fn volume_of_every_triangle_even_removed(mesh: &LevelLineMesh) -> f64 {
@@ -380,7 +381,7 @@ pub fn volume_of_every_triangle_even_removed(mesh: &LevelLineMesh) -> f64 {
     total / 6.0
 }
 
-/// C# `SignedVolume(positions, indices)`: the enclosed volume of bare positions and index triples.
+/// The enclosed volume of bare positions and index triples.
 pub fn signed_volume_of(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> f64 {
     let mut total = 0.0;
     for &(a, b, c) in indices {
@@ -390,7 +391,7 @@ pub fn signed_volume_of(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> f
     total / 6.0
 }
 
-/// C# `WindingNumber`: how many turns the triangles subtend at a point - one inside a closed solid,
+/// How many turns the triangles subtend at a point - one inside a closed solid,
 /// none outside, a half on its surface. Needs nothing of the solid but its own triangles, so it
 /// reads a box with a hole through it as readily as a cube.
 pub fn winding_number(positions: &[Vector3], indices: &[(i32, i32, i32)], point: Vector3) -> f64 {
@@ -417,7 +418,7 @@ pub fn winding_number(positions: &[Vector3], indices: &[(i32, i32, i32)], point:
     total / (4.0 * std::f64::consts::PI)
 }
 
-/// C# `DistanceToSurface`: how far a point stands from the nearest of the given triangles.
+/// How far a point stands from the nearest of the given triangles.
 pub fn distance_to_surface(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

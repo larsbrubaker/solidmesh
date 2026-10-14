@@ -1,7 +1,7 @@
 //! Rust-only checks of bevel-core package R1.P15's leaves: the point field's exact queries, the
 //! room field's setbacks, the canonical maximum's tolerant offer and the tie-tolerant edge test,
-//! the zip rail's canonical and unwrapped readings, and the corner strip's nearest rail vertex.
-//! Their C# coverage comes through the whole-build test classes of later packages.
+//! the zip rail's canonical and unwrapped readings, and the corner strip's nearest rail vertex. The
+//! whole-build tests also cover them.
 
 use geometry_processing::bevel::level_line::bounded_maximum::not_shorter;
 use geometry_processing::bevel::level_line::corner_rail_strip::nearest;

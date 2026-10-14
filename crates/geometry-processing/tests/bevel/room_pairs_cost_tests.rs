@@ -1,7 +1,7 @@
-//! Port of `LevelLine/RoomPairsCostTests.cs`: a pick of several chains reads an ordered pair of
-//! chains only where that pair could be the narrowest thing on the part. The fixture is the
-//! two-boss plate (several-chains fixture B) stretched threefold in x, so neither pair can be the
-//! least reading; the count of `ChainToChain` candidate rows is the call count the tests hold.
+//! A pick of several chains reads an ordered pair of chains only where that pair could be the
+//! narrowest thing on the part. The fixture is the two-boss plate (several-chains fixture B)
+//! stretched threefold in x, so neither pair can be the least reading; the count of `ChainToChain`
+//! candidate rows is the call count the tests hold.
 
 use std::rc::Rc;
 
@@ -23,7 +23,7 @@ fn motion() -> Matrix4X4 {
         * Matrix4X4::create_translation_vector(Vector3::new(11.5, -3.25, 7.125))
 }
 
-/// C# `BossesFarApart`: fixture B stretched threefold in x.
+/// Fixture B stretched threefold in x.
 fn bosses_far_apart(moved: bool) -> SolidWithChains {
     let (raw, indices, first, second) = plate_with_two_bosses();
     let stretched = raw.iter().map(|p| Vector3::new(p.x * 3.0, p.y, p.z));
@@ -59,7 +59,7 @@ fn budget() -> Rc<WorkBudget> {
     Rc::new(WorkBudget::new(5_000_000).expect("a positive limit"))
 }
 
-/// C# `PairsThatCannotBeTheLeastAreNotPaidFor`, one test per C# case.
+/// Pairs that cannot be the least are not paid for; one test per case.
 fn pairs_that_cannot_be_the_least_are_not_paid_for(moved: bool) {
     let reading = read(moved, budget());
 

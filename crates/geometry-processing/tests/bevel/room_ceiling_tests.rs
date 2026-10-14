@@ -1,6 +1,6 @@
-//! Port of `LevelLine/RoomCeilingTests.cs`: what a room reading may COST. A side whose own room
-//! stands above the pick's ceiling (its own span) is reported as unbounded from its vertices
-//! alone, and reading it never costs what the surface behind it happens to measure.
+//! What a room reading may COST. A side whose own room stands above the pick's ceiling (its own
+//! span) is reported as unbounded from its vertices alone, and reading it never costs what the
+//! surface behind it happens to measure.
 
 use std::rc::Rc;
 
@@ -12,7 +12,7 @@ use vector_math::{Matrix4X4, Vector3};
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::box_with_square_hole;
 
-/// C# `RoomOfMouthInPlate`: a rim of half-width 0.5 in a plate of half-width `plate_half`, and
+/// A rim of half-width 0.5 in a plate of half-width `plate_half`, and
 /// the budget's limit.
 fn room_of_mouth_in_plate(plate_half: f64) -> (RoomReading, i64) {
     let (positions, indices, rim) = box_with_square_hole(plate_half, 0.5, 1.0);

@@ -1,6 +1,6 @@
-//! Port of `LevelLine/FifteenMmRoomReadingTests.cs`: what refuses "15mm Bevel Top Edge" at its saved
-//! 15 - not the top face's width, as the refusal's words suggest, but the buried nose's concave
-//! crease on the slope, 20/3 below the top at the pick's crease end.
+//! What refuses "15mm Bevel Top Edge" at its saved 15 - not the top face's width, as the refusal's
+//! words suggest, but the buried nose's concave crease on the slope, 20/3 below the top at the
+//! pick's crease end.
 
 use std::rc::Rc;
 
@@ -16,7 +16,7 @@ const RIDGE_FOOT: (f64, f64, f64) = (-15.0, -113.5, 10.0);
 
 const UPPER_CREASE_TOP: (f64, f64, f64) = (-10.0, -108.5, 13.3333);
 
-/// C# `TheSavedFifteenIsRefusedByTheNosesCreaseOnTheSlope`.
+/// The saved fifteen is refused by the nose's crease on the slope.
 #[test]
 fn the_saved_fifteen_is_refused_by_the_noses_crease_on_the_slope() {
     let fixture = Rc::new(LevelLineFixture::load("fifteen-mm-top-edge-r659"));

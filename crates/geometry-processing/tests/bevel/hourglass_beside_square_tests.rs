@@ -1,11 +1,10 @@
-//! Port of `LevelLine/HourglassBesideSquareTests.cs`: RUNG 5 over a pick of SEVERAL chains, on a
-//! fixture built for it (`hourglass_beside_square_fixture.rs`) - when the pick's topology does not
-//! stand at the size asked, the pinch ladder runs over the WHOLE pick, so the size the refusal
-//! names is a size every chain of the pick built at, and building there really does come back a
-//! closed solid. A chain which never pinches (the square boss) is picked alongside one that does
-//! (the hourglass), so a ladder that probed only the offending chain, or that stopped at the room,
-//! would name a size the pick cannot be built at. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! RUNG 5 over a pick of SEVERAL chains, on a fixture built for it
+//! (`hourglass_beside_square_fixture.rs`) - when the pick's topology does not stand at the size
+//! asked, the pinch ladder runs over the WHOLE pick, so the size the refusal names is a size every
+//! chain of the pick built at, and building there really does come back a closed solid. A chain
+//! which never pinches (the square boss) is picked alongside one that does (the hourglass), so a
+//! ladder that probed only the offending chain, or that stopped at the room, would name a size the
+//! pick cannot be built at. Parameter rows are loops over the same-named test.
 
 use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
 use geometry_processing::bevel::level_line::gap_fill;

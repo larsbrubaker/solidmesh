@@ -1,10 +1,9 @@
-//! Port of `LevelLine/NeedleRepairTests.cs`: what `LevelLineMesh::repair_needles` does to a needle,
-//! and what it deliberately does not. A needle is a triangle with no height whose apex lies ON its
-//! long edge - a T-VERTEX the tessellation wrote as a triangle. Repair re-tiles the NEIGHBOUR
-//! through the apex instead, which costs no vertex and leaves that run belonging to triangles that
-//! have height. C#'s `[NotInParallel]` holds for the one test that switches the process-wide meter
-//! (it takes `meter_lock`); nextest runs every test in its own process. The meter row writes its
-//! report to `LEVELLINE_COST_LOG` when set, as C# does.
+//! What `LevelLineMesh::repair_needles` does to a needle, and what it deliberately does not. A
+//! needle is a triangle with no height whose apex lies ON its long edge - a T-VERTEX the
+//! tessellation wrote as a triangle. Repair re-tiles the NEIGHBOUR through the apex instead, which
+//! costs no vertex and leaves that run belonging to triangles that have height. The one test that
+//! switches the process-wide meter takes `meter_lock`; nextest runs every test in its own process.
+//! The meter row writes its report to `LEVELLINE_COST_LOG` when set.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -365,7 +364,7 @@ fn the_needle_counts_of_every_fixture_that_carries_one() {
     let mut measure = |what: String, build: &dyn Fn()| {
         FieldCounters::reset();
         FieldCounters::set_meter_on(true);
-        // C#'s `finally`: the meter is switched off even when the build throws.
+        // The meter is switched off even when the build panics.
         struct Off;
         impl Drop for Off {
             fn drop(&mut self) {

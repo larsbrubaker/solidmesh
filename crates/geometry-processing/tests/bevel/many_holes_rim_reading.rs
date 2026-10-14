@@ -1,9 +1,8 @@
-//! Port of the test helper `ManyHolesRimReading.cs`: Many Holes' rim pick read as plain data - its
-//! edges chained into runs on vertex indices (`chain`), each closed loop's shape (`shape`), and
-//! every closed loop of a resolved pick filleted ALONE through the sections - room, build,
-//! assembly - and measured (`read_every_loop`). Read by `section_many_holes_tests` and
-//! `section_many_holes_neighbour_tests` on [`crate::many_holes_test_mesh`]. C#'s
-//! `CancellationToken` parameter is left out: nothing here cancels.
+//! Many Holes' rim pick read as plain data - its edges chained into runs on vertex indices
+//! (`chain`), each closed loop's shape (`shape`), and every closed loop of a resolved pick filleted
+//! ALONE through the sections - room, build, assembly - and measured (`read_every_loop`). Read by
+//! `section_many_holes_tests` and `section_many_holes_neighbour_tests` on
+//! [`crate::many_holes_test_mesh`]. Nothing here cancels.
 
 #![allow(dead_code)]
 
@@ -24,7 +23,7 @@ use geometry_processing::topology::{BevelEdgeGroupResolution, FeatureEdgeSet};
 
 use crate::mesh_measurements;
 
-/// C# `Run`: one walk of the chained edges.
+/// One walk of the chained edges.
 #[derive(Debug, Default, Clone)]
 pub struct Run {
     pub vertices: Vec<i32>,
@@ -42,7 +41,7 @@ impl Run {
     }
 }
 
-/// C# `Census`: every run, split into closed loops and open runs, with the vertex degrees.
+/// Every run, split into closed loops and open runs, with the vertex degrees.
 #[derive(Debug, Default)]
 pub struct Census {
     pub runs: Vec<Run>,
@@ -52,10 +51,10 @@ pub struct Census {
     pub loose_edge_count: i32,
 }
 
-/// C# `Chain`: the edges chained on vertex indices - open runs first, walked from an end of
+/// The edges chained on vertex indices - open runs first, walked from an end of
 /// degree one so a run is never entered in its middle, then whatever is left as loops.
 pub fn chain(edges: &[(i32, i32)]) -> Census {
-    // Insertion order, as C#'s Dictionary iterates.
+    // Insertion order, so the walk is the same on every run.
     let mut incident: IndexMap<i32, Vec<usize>> = IndexMap::new();
 
     for (i, &(start, end)) in edges.iter().enumerate() {
@@ -139,7 +138,7 @@ fn walk(
     run
 }
 
-/// C# `LoopShape`.
+/// One loop's shape: its centre, normal, planarity, radii and perimeter.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LoopShape {
     pub edge_count: i32,
@@ -151,7 +150,7 @@ pub struct LoopShape {
     pub perimeter: f64,
 }
 
-/// C# `Shape`: a run's centre, Newell normal, planarity, radii and perimeter.
+/// A run's centre, Newell normal, planarity, radii and perimeter.
 pub fn shape(mesh: &Mesh, run: &Run) -> LoopShape {
     let take = run.vertices.len() - usize::from(run.is_closed);
     let points: Vec<Vector3> = run.vertices[..take]
@@ -210,7 +209,7 @@ pub fn shape(mesh: &Mesh, run: &Run) -> LoopShape {
     result
 }
 
-/// C# `MeshEdges`: each undirected mesh edge with the faces on it.
+/// Each undirected mesh edge with the faces on it.
 pub fn mesh_edges(mesh: &Mesh) -> IndexMap<(i32, i32), Vec<i32>> {
     let mut map: IndexMap<(i32, i32), Vec<i32>> = IndexMap::new();
 
@@ -224,7 +223,7 @@ pub fn mesh_edges(mesh: &Mesh) -> IndexMap<(i32, i32), Vec<i32>> {
     map
 }
 
-/// C# `DihedralDegrees`: the angle between an edge's two faces' normals, NaN unless it has two.
+/// The angle between an edge's two faces' normals, NaN unless it has two.
 pub fn dihedral_degrees(mesh: &Mesh, faces: &[i32]) -> f64 {
     if faces.len() != 2 {
         return f64::NAN;
@@ -236,7 +235,7 @@ pub fn dihedral_degrees(mesh: &Mesh, faces: &[i32]) -> f64 {
     math_helper::radians_to_degrees(a.dot(b).clamp(-1.0, 1.0).acos())
 }
 
-/// C# `Text(double)`: `0.#####` - at most five decimals, trailing zeros dropped.
+/// At most five decimals, trailing zeros dropped.
 pub fn text(value: f64) -> String {
     let fixed = format!("{value:.5}");
     let trimmed = fixed.trim_end_matches('0').trim_end_matches('.');
@@ -248,12 +247,12 @@ pub fn text(value: f64) -> String {
     }
 }
 
-/// C# `Text(Vector3)`.
+/// A vector as its three components through [`text`].
 pub fn text_of(value: Vector3) -> String {
     format!("({}, {}, {})", text(value.x), text(value.y), text(value.z))
 }
 
-/// C# `Describe`: the census as lines of text.
+/// The census as lines of text.
 pub fn describe(mesh: &Mesh, census: &Census) -> String {
     let mut out = String::new();
 
@@ -294,7 +293,7 @@ pub fn describe(mesh: &Mesh, census: &Census) -> String {
     out
 }
 
-/// C# `LoopAnswer`: what one loop read alone answered.
+/// What one loop read alone answered.
 #[derive(Debug, Default)]
 pub struct LoopAnswer {
     pub name: String,
@@ -320,7 +319,7 @@ impl LoopAnswer {
         self.build_milliseconds + self.assembly_milliseconds + self.room_milliseconds
     }
 
-    /// C# `Outcome`: `build:<code>`, `assembly:<code>`, `unsound` or `sound`.
+    /// `build:<code>`, `assembly:<code>`, `unsound` or `sound`.
     pub fn outcome(&self) -> String {
         if !self.built {
             format!("build:{}", Self::code(self.build_why.as_ref()))
@@ -356,7 +355,7 @@ impl LoopAnswer {
     }
 }
 
-/// C# `ReadEveryLoop`: every closed loop of the resolution, ordered by centre (z, then y, then x)
+/// Every closed loop of the resolution, ordered by centre (z, then y, then x)
 /// so the row order is the part's own geometry, read alone; `only` names the indices to read.
 pub fn read_every_loop(
     part: &Mesh,
@@ -400,8 +399,8 @@ pub fn read_every_loop(
     answers
 }
 
-/// The closed loops of a resolution in the loop table's order: by centre z, then y, then x (C#'s
-/// stable `OrderBy(..).ThenBy(..).ThenBy(..)`).
+/// The closed loops of a resolution in the loop table's order: by centre z, then y, then x (a
+/// stable sort, so ties keep their order).
 pub fn the_loops_in_order(
     part: &Mesh,
     resolution: &BevelEdgeGroupResolution,
@@ -421,7 +420,7 @@ pub fn the_loops_in_order(
     loops
 }
 
-/// C# `Centre`: the mean of a chain's from-vertices.
+/// The mean of a chain's from-vertices.
 pub fn centre(part: &Mesh, chain: &BevelSweptChain) -> Vector3 {
     let mut sum = Vector3::ZERO;
 
@@ -546,7 +545,7 @@ fn measure(result: &Mesh, answer: &mut LoopAnswer) {
     answer.shells = mesh_measurements::shell_count(result);
 }
 
-/// C# `Row`: one line of the loop table.
+/// One line of the loop table.
 pub fn row(answer: &LoopAnswer) -> String {
     format!(
         "{:<26} {:<34} room {:>6.3} {:<24} {:>5.0}+{:>5.0}+{:>4.0} ms  {}",

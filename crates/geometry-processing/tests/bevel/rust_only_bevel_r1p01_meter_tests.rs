@@ -1,7 +1,7 @@
 //! Rust-only checks of the bevel-core round-1 meters and witnesses (package R1.P01, run 2): the
 //! report number formats, the field counters' bands and switches, the needle meter's tallies, the
 //! split meter's edge distance, the hull clip's supporting planes and the side witness's triangle
-//! lookup. Their C# coverage comes through the whole-build test classes of later packages.
+//! lookup. The whole-build tests also cover them.
 
 use std::collections::HashSet;
 

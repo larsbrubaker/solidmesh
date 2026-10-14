@@ -1,5 +1,6 @@
-//! Rust-only checks of bevel package R4.P01 where Rust fixes a C# bug: the virtual rail's minted
-//! vertices joining a fill keep its end-face capping (divergence 4850).
+//! Rust-only checks of bevel package R4.P01 the virtual rail's minted vertices joining a fill keep
+//! its end-face capping. A guard against a fill result rebuilt field by field losing its
+//! capped-by-end-faces flag, which would send a capped fade back to be capped again.
 
 use geometry_processing::bevel::level_line::open_gap_fill::with_minted;
 use geometry_processing::bevel::level_line::{GapFillRefusal, GapFillResult};

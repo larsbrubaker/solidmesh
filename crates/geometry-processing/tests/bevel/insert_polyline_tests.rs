@@ -1,5 +1,4 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/InsertPolylineTests.cs`: a polyline inserted
-//! into a flat region as a chain of edges, and the part it encloses taken out.
+//! A polyline inserted into a flat region as a chain of edges, and the part it encloses taken out.
 
 use geometry_processing::bevel::level_line::LevelLineMesh;
 use vector_math::Vector3;
@@ -86,8 +85,8 @@ fn area(mesh: &LevelLineMesh) -> f64 {
     kept(mesh).into_iter().map(|t| triangle_area(mesh, t)).sum()
 }
 
-/// A polyline with a point that is not a number is refused and the mesh is left as it was. C#'s
-/// `Math.Sign` threw on the NaN orientations (divergence 1073).
+/// A polyline with a point that is not a number is refused and the mesh is left as it was: a guard
+/// against reading the orientation sign of a NaN, which has none.
 #[test]
 fn rust_only_a_polyline_with_a_nan_point_is_refused_and_the_mesh_untouched() {
     let mut mesh = LevelLineMesh::from_triangles(&square(), &HALVES, None).expect("a square");

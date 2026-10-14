@@ -1,8 +1,7 @@
-//! Port of `LevelLine/NameEveryTightChainTests.cs`: a pick of several chains says in ONE reading
-//! which of them cannot be built at a size, so the app drops them together instead of learning one
-//! per rebuild. What a user sees is unchanged - every chain that fits builds, every one that does
-//! not is named with its reason - and only the number of passes moves. C# `[Arguments]` cases are
-//! one test each, suffixed with the argument.
+//! A pick of several chains says in ONE reading which of them cannot be built at a size, so the app
+//! drops them together instead of learning one per rebuild. What a user sees is unchanged - every
+//! chain that fits builds, every one that does not is named with its reason - and only the number
+//! of passes moves. Parameter cases are one test each, suffixed with the argument.
 
 use std::collections::HashSet;
 
@@ -19,8 +18,7 @@ use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::cube_solid;
 use crate::several_chains_fixtures::{self, FOLD_DEGREES};
 
-/// C#'s `BandGap.ReadRoom(positions, indices, chains, closed, feature, BandProfile.Chamfer, 1e-9,
-/// null)`, every chain closed.
+/// One chamfer room reading of the chains, every chain closed.
 fn read_room(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -274,7 +272,7 @@ fn the_answer_does_not_move_with_chain_order_or_a_rigid_motion() {
     );
 }
 
-/// A ChainToChain row with its two optional rooms (C#'s positional record arguments).
+/// A ChainToChain row with its two optional rooms (in the record's field order).
 fn pair_row(chain: i32, other: i32, room: f64, without: f64, at_most: f64) -> RoomCandidate {
     RoomCandidate {
         room_without_the_other: without,

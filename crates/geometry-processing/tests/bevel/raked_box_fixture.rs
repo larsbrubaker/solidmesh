@@ -1,7 +1,6 @@
-//! Port of the test fixture `LevelLine/RakedBoxFixture.cs` (the pick, its constants, its room
-//! reading and build, and the unit setbacks its rim carries): a long
-//! box whose one long wall is raked so its fold is 45 degrees, its other long wall square - so the
-//! rim asks two different unit setbacks, and the room has a closed form.
+//! A long box whose one long wall is raked so its fold is 45 degrees, its other long wall square -
+//! so the rim asks two different unit setbacks, and the room has a closed form. Holds the pick, its
+//! constants, its room reading and build, and the unit setbacks its rim carries.
 
 #![allow(dead_code)]
 
@@ -20,22 +19,23 @@ pub const LENGTH: f64 = 20.0;
 pub const HEIGHT: f64 = 10.0;
 pub const FOLD_DEGREES: f64 = 30.0;
 
-/// C# `SquareUnit`: tan(45 degrees).
+/// Tan(45 degrees).
 pub fn square_unit() -> f64 {
     (std::f64::consts::PI / 4.0).tan()
 }
 
-/// C# `RakedUnit`: tan(22.5 degrees).
+/// Tan(22.5 degrees).
 pub fn raked_unit() -> f64 {
     (std::f64::consts::PI / 8.0).tan()
 }
 
-/// C# `TrueRoom`: the width over the two setbacks the strip spends across it.
+/// The width over the two setbacks the strip spends across it.
 pub fn true_room() -> f64 {
     WIDTH / (square_unit() + raked_unit())
 }
 
-/// C# `Pick(squareFirst, motion)`.
+/// The rim pick, starting on the square wall's side when `square_first`, carried by `motion` when
+/// given.
 pub fn pick(square_first: bool, motion: Option<Matrix4X4>) -> SolidWithChain {
     let half_length = LENGTH / 2.0;
     let half_width = WIDTH / 2.0;
@@ -95,13 +95,13 @@ pub fn pick(square_first: bool, motion: Option<Matrix4X4>) -> SolidWithChain {
     (positions, indices, rim)
 }
 
-/// C# `FeatureEdges`: the pick's feature edges - every fold of 30 degrees or more, which is all
+/// The pick's feature edges - every fold of 30 degrees or more, which is all
 /// eight of them.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }
 
-/// C# `Read`: the rim's room, read on the input mesh.
+/// The rim's room, read on the input mesh.
 pub fn read(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -123,7 +123,7 @@ pub fn read(
     .expect("the rim reads")
 }
 
-/// C# `Build`: a build of the rim at one size, optionally handed a room already read.
+/// A build of the rim at one size, optionally handed a room already read.
 pub fn build(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -148,7 +148,7 @@ pub fn build(
     .expect("a valid pick")
 }
 
-/// C# `UnitSetbacks`: the two unit setbacks the rim's field really carries, read from the
+/// The two unit setbacks the rim's field really carries, read from the
 /// production `ChainSetback` and the part's own face normals - so a fixture that quietly stopped
 /// varying is caught rather than assumed.
 pub fn unit_setbacks(

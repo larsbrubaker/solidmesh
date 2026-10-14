@@ -1,14 +1,13 @@
-//! Port of `LevelLine/GoesToSidesEndTests.cs`: "Fillet Should go to Sides and Stay Within
-//! Bounds.mcx" (and its twin "UpperLeftInner should bevel.mcx") - a 14-vertex part whose long
-//! straight edges end on SLIVER end faces: the end face y = 95 under c13 is 0.032 tall, from the
-//! chain at z = -20 up to a crease at z = -19.968 where slanted faces begin. The Boolean
-//! construction builds these picks closed at every size the sweep asks. C# `[Arguments]` rows are
-//! loops over the same-named test.
+//! "Fillet Should go to Sides and Stay Within Bounds.mcx" (and its twin "UpperLeftInner should
+//! bevel.mcx") - a 14-vertex part whose long straight edges end on SLIVER end faces: the end face y
+//! = 95 under c13 is 0.032 tall, from the chain at z = -20 up to a crease at z = -19.968 where
+//! slanted faces begin. The Boolean construction builds these picks closed at every size the sweep
+//! asks. Parameter rows are loops over the same-named test.
 //!
-//! Not ported, `[Skip]` in C# (WIP there, with the measured reason in the marker):
-//! `TheChainOnTheEndKnotBuildsClosed` (fixture c11: EndPlaneTrim refuses "trim 1: no end plane" at
-//! a nose where the rails meet at one vertex) and `TheSideFaceRimBuildsClosed` (fixtures f0 and f5:
-//! room 0 set by Foreign at the rim corner the groove's lower wall touches at the vertex alone).
+//! Not run here (open work, with the measured reason): `TheChainOnTheEndKnotBuildsClosed` (fixture
+//! c11: EndPlaneTrim refuses "trim 1: no end plane" at a nose where the rails meet at one vertex)
+//! and `TheSideFaceRimBuildsClosed` (fixtures f0 and f5: room 0 set by Foreign at the rim corner
+//! the groove's lower wall touches at the vertex alone).
 
 use std::rc::Rc;
 
@@ -30,8 +29,8 @@ fn profile_of(fixture: &LevelLineFixture) -> BandProfile {
     }
 }
 
-/// C#'s `BandGap.Build(..., 0, 1e-9, fixture.KnownRoom, new WorkBudget(...), fixture.SeamEpsilon,
-/// fixture.SharpTurnDegrees, fixture.Segments)` at `size`.
+/// One band build of the fixture at `size`, under its known room, seam epsilon, sharp-turn angle
+/// and segment count.
 fn build(fixture: &Rc<LevelLineFixture>, size: f64) -> BandGapResult {
     let options = BandGapBuildOptions {
         chord_tolerance: 0.0,

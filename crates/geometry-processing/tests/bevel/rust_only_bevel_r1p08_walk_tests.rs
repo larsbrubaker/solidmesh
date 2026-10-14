@@ -1,8 +1,8 @@
 //! Rust-only tests for the bevel-core package R1.P08's surface walk, split from
 //! `rust_only_bevel_r1p08_tests.rs` by responsibility: the walk's small readings and face readings
 //! (`SectionSurfaceWalk`), the turn through a vertex (`SectionWalkVertexTurn`), the join's strip
-//! readings (`SectionSurfaceWalk.Join`) and the walk itself (`TryWalk`), all on a cube. Each pins the
-//! C# rule on a hand-built case.
+//! readings (`SectionSurfaceWalk.Join`) and the walk itself (`TryWalk`), all on a cube. Each pins
+//! the rule on a hand-built case.
 
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::MeshEdgeGraph;

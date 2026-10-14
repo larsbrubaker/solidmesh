@@ -1,7 +1,7 @@
-//! Port of `LevelLine/RunOutFieldTests.cs`: `RunOutField` read through `BandGroupFields` on the Top
-//! Center Face nose - with run-outs on, the band cut carries the ridge round down the unpicked
-//! lower crease to where the control's blend dies on it (4.5846 along), instead of stopping 1.95
-//! along where the side flood stops. C# `[Arguments]` rows are loops over the same-named test.
+//! `RunOutField` read through `BandGroupFields` on the Top Center Face nose - with run-outs on, the
+//! band cut carries the ridge round down the unpicked lower crease to where the control's blend
+//! dies on it (4.5846 along), instead of stopping 1.95 along where the side flood stops. Parameter
+//! rows are loops over the same-named test.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -28,7 +28,7 @@ const LOWER_CREASE_END: usize = 5;
 fn the_nose_band_runs_out_along_the_lower_crease_from_both_ridge_ends() {
     let fixture = Rc::new(LevelLineFixture::load("top-center-face-nose-r1"));
     let gap = {
-        // C#'s `using (BandGroupFields.TurnRunOutsOn())` round the build: here the gate rides on the
+        // Run-outs are turned on for the build only: the gate rides on the
         // build's budget, so the budget is put in force first and the scope turns it on there.
         let budget = default_budget(&fixture, false);
         let _work = LevelLineWork::begin(Some(Rc::clone(&budget)));
@@ -227,7 +227,7 @@ fn nothing_reaches_below_never_denies_a_reading_at_the_margin() {
     }
 }
 
-/// C#'s union-find `Find` with path halving over `parent`.
+/// Union-find's find with path halving over `parent`.
 fn find(parent: &mut HashMap<i32, i32>, mut v: i32) -> i32 {
     while parent[&v] != v {
         let grand = parent[&parent[&v]];

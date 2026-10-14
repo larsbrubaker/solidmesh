@@ -1,7 +1,6 @@
-//! Port of the test fixture `LevelLine/FiveHolePlateFixture.cs`: a plate whose top face carries a
-//! ROW OF FIVE square through-holes, the pick being that face's whole rim - the outer loop plus one
-//! chain per hole, six chains. Two of the holes stand 0.6 from the plate's edge, too near for
-//! `SIZE`; the other three have room to spare.
+//! A plate whose top face carries a ROW OF FIVE square through-holes, the pick being that face's
+//! whole rim - the outer loop plus one chain per hole, six chains. Two of the holes stand 0.6 from
+//! the plate's edge, too near for `SIZE`; the other three have room to spare.
 
 #![allow(dead_code)]
 
@@ -16,35 +15,35 @@ use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChains;
 use crate::several_chains_fixtures;
 
-/// C# `FoldDegrees`: the several-chain fold threshold, so a 90 degree corner is a feature edge.
+/// The several-chain fold threshold, so a 90 degree corner is a feature edge.
 pub const FOLD_DEGREES: f64 = several_chains_fixtures::FOLD_DEGREES;
 
-/// C# `Size`: over the 0.3 the two end holes' shared gap buys, under the 0.6 either side of that
+/// Over the 0.3 the two end holes' shared gap buys, under the 0.6 either side of that
 /// gap buys alone, and well under everything the other three holes have.
 pub const SIZE: f64 = 0.5;
 
-/// C# `Thickness`: thick enough that no chain's own wall bounds it at `SIZE`.
+/// Thick enough that no chain's own wall bounds it at `SIZE`.
 const THICKNESS: f64 = 3.0;
 
-/// C# `Xs`: the plate's two edges and each hole's two, the end holes 0.6 inside the edge and the
+/// The plate's two edges and each hole's two, the end holes 0.6 inside the edge and the
 /// middle three at least 3 from their neighbours.
 const XS: [f64; 12] = [
     -12.0, -11.4, -9.4, -6.0, -4.0, -1.0, 1.0, 4.0, 6.0, 9.4, 11.4, 12.0,
 ];
 
-/// C# `Ys`: the plate's two and the holes' two, every hole spanning y in [-1, 1].
+/// The plate's two and the holes' two, every hole spanning y in [-1, 1].
 const YS: [f64; 4] = [-4.0, -1.0, 1.0, 4.0];
 
-/// C# `HoleColumns`: the grid columns a hole stands in, left to right.
+/// The grid columns a hole stands in, left to right.
 const HOLE_COLUMNS: [usize; 5] = [1, 3, 5, 7, 9];
 
-/// C# `HoleRow`: the row every hole stands in.
+/// The row every hole stands in.
 const HOLE_ROW: usize = 1;
 
-/// C# `TooNearTheEdge`: which chains of `pick` cannot be built at `SIZE` - the two end holes.
+/// Which chains of `pick` cannot be built at `SIZE` - the two end holes.
 pub const TOO_NEAR_THE_EDGE: [i32; 2] = [1, 5];
 
-/// C# `TooNearTheEdgeWhenHolesComeFirst`: the same two holes when the holes are given FIRST.
+/// The same two holes when the holes are given FIRST.
 pub const TOO_NEAR_THE_EDGE_WHEN_HOLES_COME_FIRST: [i32; 2] = [0, 4];
 
 /// The welding vertex list `Pick`'s local `At` and `Quad` build into, in insertion order.
@@ -79,12 +78,12 @@ impl Builder {
     }
 }
 
-/// C# `Pick()` with its default arguments: `holes_first` and `moved` both false.
+/// The pick with `holes_first` and `moved` both false.
 pub fn pick() -> SolidWithChains {
     pick_with(false, false)
 }
 
-/// C# `Pick`: the plate and the six chains of its top face's rim - the outer loop first, then the
+/// The plate and the six chains of its top face's rim - the outer loop first, then the
 /// five holes left to right, unless `holes_first` asks for the holes before the outer loop.
 pub fn pick_with(holes_first: bool, moved: bool) -> SolidWithChains {
     let mut g = Builder {
@@ -203,7 +202,7 @@ pub fn pick_with(holes_first: bool, moved: bool) -> SolidWithChains {
     (placed, g.indices, chains)
 }
 
-/// C# `OuterLoop`: the plate's outer boundary counter-clockwise seen from +z, carrying a vertex at
+/// The plate's outer boundary counter-clockwise seen from +z, carrying a vertex at
 /// every grid line that meets it so the rim's edges are exactly the top face's cell edges.
 fn outer_loop() -> Vec<(f64, f64)> {
     let (low, high, left, right) = (YS[0], YS[YS.len() - 1], XS[0], XS[XS.len() - 1]);
@@ -227,13 +226,13 @@ fn outer_loop() -> Vec<(f64, f64)> {
     out
 }
 
-/// C# `FeatureEdges`: the pick's feature edges, read at the several-chain fold threshold.
+/// The pick's feature edges, read at the several-chain fold threshold.
 pub fn feature_edges(positions: &[Vector3], indices: &[(i32, i32, i32)]) -> FeatureEdgeTest {
     feature_edges_over(positions, indices, FOLD_DEGREES)
 }
 
-/// C# `Read`: one room reading of the pick, optionally asked to name every candidate under a size
-/// (C#'s default is `NaN`, naming none).
+/// One room reading of the pick, optionally asked to name every candidate under a size
+/// (`NaN` names none).
 pub fn read(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],

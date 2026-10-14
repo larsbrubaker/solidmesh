@@ -1,7 +1,7 @@
 //! Rust-only checks of the fifth bevel slice (`SurfaceVertexPool`, `SurfaceMitreJointStep`,
 //! `SurfaceRoomStandingFeature`, `BevelBlendSeam`, `BevelCornerSeam`, and
-//! `SurfaceMeshClosure.FoldedEdgeCount`). The C# test classes that exercise them build whole
-//! surface bevels (`SurfaceTestBuild`), so they land with the builder; these pin each piece alone.
+//! `SurfaceMeshClosure.FoldedEdgeCount`). The tests that exercise them in context build whole
+//! surface bevels; these pin each piece alone.
 
 use std::collections::HashSet;
 

@@ -1,8 +1,6 @@
-//! The private helpers several C# bevel test classes each carry a copy of (`Boolean`, `Cut`,
-//! `EdgeIndex`, `Group` - BevelShadowClipTests, BevelShadowBodyTests, BevelSeamRingTests,
-//! BevelThreeRunCornerTests), shared here once: the n-ary boolean at C#'s `Polygons` settings, the
-//! part with a shadow-clipped cutter taken out of it, the feature edge between two known
-//! positions, and the one-edge group picked there.
+//! The helpers the shadow clip, shadow body, seam ring and three-run corner tests share: the n-ary
+//! boolean in polygon mode, the part with a shadow-clipped cutter taken out of it, the feature edge
+//! between two known positions, and the one-edge group picked there.
 
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
@@ -14,7 +12,7 @@ use geometry_processing::topology::{
     BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
 
-/// C# `Boolean`: `BooleanProcessing.DoArray` over `meshes` in polygon mode.
+/// `BooleanProcessing.DoArray` over `meshes` in polygon mode.
 pub fn boolean(meshes: &[&Mesh], mode: CsgModes) -> Mesh {
     let items: Vec<(&Mesh, Matrix4X4)> = meshes.iter().map(|&m| (m, Matrix4X4::IDENTITY)).collect();
 
@@ -27,7 +25,7 @@ pub fn boolean(meshes: &[&Mesh], mode: CsgModes) -> Mesh {
     .unwrap_or_else(|error| panic!("the boolean was refused: {error:?}"))
 }
 
-/// C# `Cut`: the part with the clipped cutter taken out of it, which is what a rebuild publishes.
+/// The part with the clipped cutter taken out of it, which is what a rebuild publishes.
 /// `shadows` are the columns (and bodies) the cutter must not reach into.
 pub fn cut(part: &Mesh, cutter: &Mesh, shadows: &[Mesh]) -> Mesh {
     let clipped;
@@ -43,7 +41,7 @@ pub fn cut(part: &Mesh, cutter: &Mesh, shadows: &[Mesh]) -> Mesh {
     boolean(&[part, cutter], CsgModes::Subtract)
 }
 
-/// C# `EdgeIndex`: the feature edge running between two known positions, whichever way round the
+/// The feature edge running between two known positions, whichever way round the
 /// mesh stores it, matched `within` that distance at both ends.
 pub fn edge_index(features: &FeatureEdgeSet, from: Vector3, to: Vector3, within: f64) -> i32 {
     for (i, edge) in features.edges().iter().enumerate() {
@@ -57,7 +55,7 @@ pub fn edge_index(features: &FeatureEdgeSet, from: Vector3, to: Vector3, within:
     panic!("the fixture has no feature edge from {from:?} to {to:?}");
 }
 
-/// C# `Group`: the edge pick of the feature edge running between two known positions (matched
+/// The edge pick of the feature edge running between two known positions (matched
 /// within 1e-5).
 pub fn edge_group(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> BevelEdgeGroup {
     bevel_edge_group_resolver::create_from_edge(

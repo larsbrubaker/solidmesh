@@ -1,6 +1,5 @@
-//! Port of the test fixture loader `LevelLine/LevelLineFixture.cs`: a captured level-line case -
-//! positions, triangles, the picked chains, the feature edges and the band's size - read from the
-//! C# fixture files (copied into `tests/bevel/level_line_fixtures/`).
+//! A captured level-line case - positions, triangles, the picked chains, the feature edges and the
+//! band's size - read from the fixture files in `tests/bevel/level_line_fixtures/`.
 
 #![allow(dead_code)]
 
@@ -24,12 +23,12 @@ pub struct LevelLineFixture {
 }
 
 impl LevelLineFixture {
-    /// C# `IsFeatureEdge`: whether the fixture lists the edge `a`-`b` (either way round).
+    /// Whether the fixture lists the edge `a`-`b` (either way round).
     pub fn is_feature_edge(&self, a: i32, b: i32) -> bool {
         self.features.contains(&if a < b { (a, b) } else { (b, a) })
     }
 
-    /// C# `Load`: the named fixture.
+    /// Loads the named fixture.
     pub fn load(name: &str) -> LevelLineFixture {
         let path = format!(
             "{}/tests/bevel/level_line_fixtures/{name}.txt",
@@ -99,11 +98,10 @@ impl LevelLineFixture {
     }
 }
 
-/// Every fixture in the fixture folder, by name, in ordinal order (C#'s
-/// `Directory.GetFiles(directory, "*.txt").OrderBy(p => p, StringComparer.Ordinal)` in the
-/// measurements that sweep it), less `top-center-face-control-nose`: a control mesh of bare
-/// triangles in another format, which C#'s sweeps read as a fixture and throw on
-/// (`docs/CSHARP_DIVERGENCES.md` 5015).
+/// Every fixture in the fixture folder, by name, in ordinal order (every `*.txt`, so the
+/// measurements that sweep it see a stable order), less `top-center-face-control-nose`: a control
+/// mesh of bare triangles in another format, which is not a fixture and would stop the sweep on
+/// its first line.
 pub fn fixture_names() -> Vec<String> {
     let directory = format!(
         "{}/tests/bevel/level_line_fixtures",

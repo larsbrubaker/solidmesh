@@ -1,9 +1,8 @@
-//! Port of `LevelLine/MirroredHipsAndRidgeTests.cs`: "Full Front Edges Should Work" - a hip roof's
-//! ridge picked with the two hips at one of its ends, as the app hands it to the kernel. The part
-//! and the pick are mirror-symmetric across z = 10, so the rounded result must be too; each hip's
-//! end stays on the part's side of the base it meets obliquely; and the Boolean kernel does not
-//! read the answer SelfIntersecting. The app-route build and the mirror measure are
-//! `mirrored_pick_tests`'.
+//! "Full Front Edges Should Work" - a hip roof's ridge picked with the two hips at one of its ends,
+//! as the app hands it to the kernel. The part and the pick are mirror-symmetric across z = 10, so
+//! the rounded result must be too; each hip's end stays on the part's side of the base it meets
+//! obliquely; and the Boolean kernel does not read the answer SelfIntersecting. The app-route build
+//! and the mirror measure are `mirrored_pick_tests`'.
 
 use std::cell::RefCell;
 use std::rc::Rc;

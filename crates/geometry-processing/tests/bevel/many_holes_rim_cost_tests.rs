@@ -1,12 +1,12 @@
-//! Port of `LevelLine/ManyHolesRimCostTests.cs`: THE WITNESS - the app's own dear pick (Many
-//! Holes' 3,925-facet face at size 0.5, captured where the route hands the whole pick over) read
-//! with the kernel's meters: one room reading, one settling, one build of the survivors.
+//! THE WITNESS - the app's own dear pick (Many Holes' 3,925-facet face at size 0.5, captured where
+//! the route hands the whole pick over) read with the kernel's meters: one room reading, one
+//! settling, one build of the survivors.
 //!
-//! Gated on `LEVELLINE_COST=1` (`level_line_cost_gate`): a reading of this pick is tens of
-//! seconds, which has no place in the ordinary run. The table goes to `LEVELLINE_COST_LOG`. C#'s
-//! remarks keep the measured tables (2026-09-21) this class was written to produce: the reading is
-//! the per-chain FOREIGN reading (92% of the units), and the build is the Ridge rule's sheer number
-//! of askings on triangles sixteen sizes across and bigger.
+//! Gated on `LEVELLINE_COST=1` (`level_line_cost_gate`): a reading of this pick is tens of seconds,
+//! which has no place in the ordinary run. The table goes to `LEVELLINE_COST_LOG`. The measured
+//! tables (2026-09-21) this file was written to produce found that the reading is the per-chain
+//! FOREIGN reading (92% of the units), and the build is the Ridge rule's sheer number of askings on
+//! triangles sixteen sizes across and bigger.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -24,7 +24,7 @@ use geometry_processing::bevel::level_line::{FieldCounters, PickThatFits, WorkBu
 use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;
 
-/// C#'s `Cap` default for this class: a cap, not a budget - at it the reading stops and says where
+/// The cap for this file: a cap, not a budget - at it the reading stops and says where
 /// it stood, so a measurement can never run away inside the suite.
 const DEFAULT_CAP: i64 = 5_000_000;
 
@@ -112,7 +112,7 @@ fn settle(fixture: &Rc<LevelLineFixture>, budget: Rc<WorkBudget>) -> PickThatFit
     .expect("the settling")
 }
 
-/// C# `TheRimsReadingIsMeasured`: ONE room reading of the whole pick, asked (the size the
+/// ONE room reading of the whole pick, asked (the size the
 /// settling names candidates under) and unasked, with the foreign / chain-to-chain split.
 #[test]
 fn the_rims_reading_is_measured() {
@@ -176,7 +176,7 @@ fn the_rims_reading_is_measured() {
     }
 }
 
-/// C# `TheSettlingIsMeasured`: ONE settling of the pick - what the app does per rebuild - with
+/// ONE settling of the pick - what the app does per rebuild - with
 /// the rounds it takes and what each round spends.
 #[test]
 fn the_settling_is_measured() {
@@ -213,7 +213,7 @@ fn the_settling_is_measured() {
     ));
 }
 
-/// C# `TheSurvivorsBuildIsMeasured`: ONE build of the survivors with the per-rule meter, capped
+/// ONE build of the survivors with the per-rule meter, capped
 /// so a build that cannot finish says where it stood rather than running away.
 #[test]
 fn the_survivors_build_is_measured() {

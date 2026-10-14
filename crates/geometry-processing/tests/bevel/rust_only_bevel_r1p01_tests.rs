@@ -1,7 +1,7 @@
 //! Rust-only checks of the first bevel-core round-1 leaves (package R1.P01): the chain field's
 //! closest points, the closed-form chain approach, the edge plumbing (`TriangleEdges`,
-//! `ChainOnTheMesh`, `BandTriangles`, `VirtualRail`) and the working mesh's accessors. Their C#
-//! coverage comes through the whole-build test classes that land with later packages.
+//! `ChainOnTheMesh`, `BandTriangles`, `VirtualRail`) and the working mesh's accessors. The
+//! whole-build tests also cover them.
 
 use geometry_processing::bevel::level_line::{
     band_triangles, chain_approach, chain_on_the_mesh, sharp_joint_corners, triangle_edges,

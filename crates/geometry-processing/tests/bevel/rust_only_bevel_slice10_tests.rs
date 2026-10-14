@@ -1,8 +1,7 @@
 //! Rust-only checks of the tenth bevel slice (`BevelMixedBlendTool`, `BevelPairCornerReach`). The
-//! C# classes that exercise them (`BevelMixedBlendTests`, `BevelConcaveTests`,
-//! `BevelPairCornerTrimTests`) read whole bevels through `BevelMixedBlends` and the chain sweep, so
-//! they land with those; these pin each piece alone, against the closed forms the C# remarks state.
-//! The last check pins a slice-11 round-0 record whose C# initializers are not Rust defaults.
+//! tests that exercise them in context read whole bevels through the mixed blends and the chain
+//! sweep; these pin each piece alone, against the closed forms the code's comments state. The last
+//! check pins a record whose initial values are not its field types' defaults.
 
 use std::collections::{HashMap, HashSet};
 
@@ -298,7 +297,7 @@ fn rust_only_no_corner_no_selection_or_partners_behind_reach_nothing() {
 fn rust_only_a_pick_fault_defaults_to_naming_nothing() {
     use geometry_processing::bevel::level_line::{BandGapRefusal, PickFault};
 
-    // C#'s initializers: every index -1, the refusal its first member.
+    // Its initial values: every index -1 (none yet), the refusal its first member.
     let fault = PickFault::default();
     assert_eq!(fault.refusal, BandGapRefusal::default());
     assert_eq!(

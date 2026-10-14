@@ -1,6 +1,5 @@
-//! Port of `LevelLine/RoomReadCostTests.cs`: what a room reading is allowed to COST on a chain
-//! whose setback varies along it (the Many Holes 243-facet face at r0.25), and that making it
-//! cheaper did not move the number it answers.
+//! What a room reading is allowed to COST on a chain whose setback varies along it (the Many Holes
+//! 243-facet face at r0.25), and that making it cheaper did not move the number it answers.
 
 use std::rc::Rc;
 
@@ -9,7 +8,8 @@ use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 
-/// The room this pick has always answered, read off the pre-bracket C# code (2026-09-19).
+/// The room this pick has always answered, read off the code before the bracketed search
+/// (2026-09-19).
 const KNOWN_ROOM: f64 = 1.06568702132;
 
 /// The ceiling on the reading's work: a "the whole shape of this changed" catch, well above the

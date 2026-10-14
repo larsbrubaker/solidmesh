@@ -1,9 +1,8 @@
 //! Rust-only checks of R2.P08's mixed corner on a REAL corner - the L prism's convex rim meeting
 //! its concave inside edge, each planned off the mesh by `SurfaceBevelPlan::try_create`, and the
 //! two planned as one chain so the plan reads the corner itself: `SurfaceMixedCorner::try_read`'s
-//! success path, either way round, and on a LEANING cap (C# `SurfaceMixedCornerReadingTests.
-//! ACapThatLeansIsReadAsAnEllipseAtEveryScale`'s construction); and the patch's ring turned round
-//! the corner and emitted.
+//! success path, either way round, and on a LEANING cap (the leaning cap the mixed-corner reading
+//! tests build); and the patch's ring turned round the corner and emitted.
 
 use std::sync::Arc;
 

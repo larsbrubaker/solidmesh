@@ -308,7 +308,7 @@ fn rust_only_a_chains_growing_runs_keep_the_seeds_delegate_live() {
     assert!((runs.is_own_side)(1));
     assert!(!(runs.is_own_side)(7));
 
-    // A tag the build adds later is read through the same delegate, as C#'s is.
+    // A tag the build adds later is read through the same closure, so the reading stays live.
     own_tag.set(7);
     assert!((runs.is_own_side)(7));
     assert!(!(runs.is_own_side)(1));

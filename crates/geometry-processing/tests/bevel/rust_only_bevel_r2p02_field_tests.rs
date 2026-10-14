@@ -63,7 +63,7 @@ fn rust_only_a_chain_field_reads_the_nearest_point_less_its_setback() {
     let expected = 9.6f64.sqrt() - (1.0 + (2.0 + 0.6f64.sqrt()) / 4.0);
     assert!((value - expected).abs() <= 1e-12);
     assert_eq!(chain.value_across_the_known_cut(at).ok(), Some(value));
-    // No bend threshold: C#'s Math.Cos(+infinity) is NaN, as Rust's.
+    // No bend threshold: the cosine of +infinity is NaN.
     assert!(fillet_arc::sharp_cosine(&chain).is_nan());
     assert_eq!(swallowed_side::tolerance(&chain), 2e-5);
 }

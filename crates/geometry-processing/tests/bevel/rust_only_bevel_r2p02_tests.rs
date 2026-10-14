@@ -1,5 +1,5 @@
-//! Rust-only checks of the bevel core's R2.P02 package pieces no ported C# test reaches on its own:
-//! the bounded searches over a segment and a triangle, their bound and their meter.
+//! Rust-only checks of the bevel core's R2.P02 package pieces no other test reaches on its own: the
+//! bounded searches over a segment and a triangle, their bound and their meter.
 
 use geometry_processing::bevel::level_line::bounded_maximum;
 use geometry_processing::bevel::level_line::{FieldCounters, FieldSample, WorkError};

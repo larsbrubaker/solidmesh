@@ -1,9 +1,8 @@
-//! Port of `LevelLine/OuterFacesCornerTests.cs`: the owner file "Outer faces should still do the
-//! bevel" as the app route hands it to the kernel (size 0.4, 10 chains: an L-shaped top face, the
-//! -X end face and the +X wall, four hole mouths, and one MIXED corner at (-24.5, -6, 20) where
-//! chain 4's first edge is concave). Built through the corner path it published MORE volume than
-//! the source; every convex pick must take material. C# `[Arguments]` rows are loops over the
-//! same-named test.
+//! The owner file "Outer faces should still do the bevel" as the app route hands it to the kernel
+//! (size 0.4, 10 chains: an L-shaped top face, the -X end face and the +X wall, four hole mouths,
+//! and one MIXED corner at (-24.5, -6, 20) where chain 4's first edge is concave). Built through
+//! the corner path it published MORE volume than the source; every convex pick must take material.
+//! Parameter rows are loops over the same-named test.
 
 use std::rc::Rc;
 

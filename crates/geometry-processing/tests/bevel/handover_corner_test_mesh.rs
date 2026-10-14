@@ -1,8 +1,7 @@
-//! Port of the test fixture `Fixtures/HandoverCornerTestMesh.cs`: the cube-and-cylinder of
-//! "Every Chamfer Works.mcx", cut out of its own owner file - the welded working mesh the bevel
-//! construction is handed (71 vertices, 138 triangles), in the space the size is quoted in, with the
-//! TWO face picks whose rims hand over to each other at the mitre: the two facet mitred side and the
-//! 58 facet barrel.
+//! The cube-and-cylinder of "Every Chamfer Works.mcx", cut out of its own owner file - the welded
+//! working mesh the bevel construction is handed (71 vertices, 138 triangles), in the space the
+//! size is quoted in, with the TWO face picks whose rims hand over to each other at the mitre: the
+//! two facet mitred side and the 58 facet barrel.
 //!
 //! The part: a 20 mm cube spanning x -21..-1, y 28..48, z 0..10, unioned with a 40 sided cylinder of
 //! the same height whose axis stands at (-1, 30) with radius 10. The cube's x = -21 / y = 28 corner is
@@ -27,15 +26,15 @@ pub const SEGMENTS: i32 = 8;
 /// The operation's bend threshold, which both groups are read at.
 pub const BEND_THRESHOLD_DEGREES: f64 = 10.0;
 
-/// C# `TheHandoverCorner`: the station all three Standard refusals name.
+/// The station all three Standard refusals name.
 pub const THE_HANDOVER_CORNER: Vector3 = Vector3::new(-10.77, 28.0, 0.0);
 
-/// C# `ThePart`: the welded working mesh, 71 vertices and 138 triangles.
+/// The welded working mesh, 71 vertices and 138 triangles.
 pub fn the_part() -> Mesh {
     Mesh::from_arrays(COORDINATES, TRIANGLES)
 }
 
-/// C# `TheMitredSide`: the mitred corner's two facet plane, named the way the face subset ratchet
+/// The mitred corner's two facet plane, named the way the face subset ratchet
 /// names it - "face region of 2 facets, rim (-21, 28, 10)".
 pub fn the_mitred_side() -> BevelEdgeGroup {
     BevelEdgeGroup {
@@ -52,7 +51,7 @@ pub fn the_mitred_side() -> BevelEdgeGroup {
     }
 }
 
-/// C# `TheBarrel`: the cylinder's exposed wall - "face region of 58 facets, rim (-10.21, 26.18, 0)".
+/// The cylinder's exposed wall - "face region of 58 facets, rim (-10.21, 26.18, 0)".
 pub fn the_barrel() -> BevelEdgeGroup {
     BevelEdgeGroup {
         selection_kind: BevelSelectionKind::FaceGroup,

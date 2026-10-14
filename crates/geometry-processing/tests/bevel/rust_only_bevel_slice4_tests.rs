@@ -1,7 +1,7 @@
 //! Rust-only checks of the fourth bevel leaf cluster (`FieldBounds`, `SegmentBoxTree`,
 //! `ScalarField`, `GapLoop`, `SectionPool`, `SurfaceBandEnd`, `SurfaceBandRunsOffOverAStretch`,
-//! `SurfaceEdgeRoles`, `SurfaceLine`). No C# test class exercises them directly; their coverage
-//! comes through the level-line and surface test classes of later slices.
+//! `SurfaceEdgeRoles`, `SurfaceLine`). No other test reaches them directly; the level-line and
+//! surface tests cover them in context.
 
 use std::collections::HashSet;
 use std::sync::Arc;

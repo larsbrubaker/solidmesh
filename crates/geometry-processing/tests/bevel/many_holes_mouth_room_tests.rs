@@ -1,6 +1,6 @@
-//! Port of `LevelLine/ManyHolesMouthRoomTests.cs`: Many Holes' port mouths refused
-//! SizeExceedsFaceWidth at 0.5 on the face-rim pick, read one at a time off the face rim's own dump -
-//! the room is honest (the part really has less land there), not read low.
+//! Many Holes' port mouths refused SizeExceedsFaceWidth at 0.5 on the face-rim pick, read one at a
+//! time off the face rim's own dump - the room is honest (the part really has less land there), not
+//! read low.
 
 use std::rc::Rc;
 
@@ -16,7 +16,7 @@ const FACE_RIM: &str = "many-holes-facerim-25chains-r05";
 /// The z of the ring crease the top row of mouths stands under.
 const RING_Z: f64 = -51.687;
 
-/// C# `ATopRowMouthsRoomIsTheLandUnderTheRing`: a top-row mouth (chain 18, centre z -53.33): its
+/// A top-row mouth (chain 18, centre z -53.33): its
 /// room is the land between the mouth's top and the ring above it - about 0.17 mm on the part.
 #[test]
 fn a_top_row_mouths_room_is_the_land_under_the_ring() {
@@ -48,7 +48,7 @@ fn a_top_row_mouths_room_is_the_land_under_the_ring() {
     );
 }
 
-/// C# `AMouthACreaseRunsIntoHasNoRoom`: chain 16 reads a room of zero - a 7.2 mm crease of the
+/// Chain 16 reads a room of zero - a 7.2 mm crease of the
 /// picked face's own rim (edge 6081-7095) runs up the barrel and ends ON this mouth.
 #[test]
 fn a_mouth_a_crease_runs_into_has_no_room() {

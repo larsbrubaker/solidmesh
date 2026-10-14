@@ -1,9 +1,8 @@
-//! Port of `LevelLine/RoundMouthFilletTests.cs` (its test and its `Tube`): a densely faceted round
-//! mouth - Many Holes' port mouths in proportion, a 64-gon rim whose segments (~0.145) are much
-//! shorter than the fillet's rows are across (r 0.5). Rows carried along a single short segment
-//! there fell out of step with their neighbours and the strip crossed itself; this guards that the
-//! round's fill stays closed and free of self-intersection. The class's shared `CrossingPairs` lives
-//! in `round_mouth_fillet_crossings.rs`.
+//! A densely faceted round mouth - Many Holes' port mouths in proportion, a 64-gon rim whose
+//! segments (~0.145) are much shorter than the fillet's rows are across (r 0.5). Rows carried along
+//! a single short segment there fell out of step with their neighbours and the strip crossed
+//! itself; this guards that the round's fill stays closed and free of self-intersection. The shared
+//! crossing-pair count lives in `round_mouth_fillet_crossings.rs`.
 
 use std::rc::Rc;
 

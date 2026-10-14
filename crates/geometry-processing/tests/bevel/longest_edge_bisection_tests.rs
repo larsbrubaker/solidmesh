@@ -1,4 +1,3 @@
-//! Ports `Tests/GeometryProcessingTests/LevelLine/LongestEdgeBisectionTests.cs`:
 //! `refinement_splits_enqueue::bisect_along_longest_edge_path` - the bisection the sliver guard
 //! takes instead of a rule's thinning split - on hand-built strips.
 

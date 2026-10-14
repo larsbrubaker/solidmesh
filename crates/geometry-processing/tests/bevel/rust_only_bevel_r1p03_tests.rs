@@ -1,6 +1,6 @@
 //! Rust-only checks of the bevel core's R1.P03 package (surface plan read-throughs, band ends at a
-//! mitre, ring readers). No C# test class is runnable on these methods alone - the classes that
-//! exercise them read whole planned chains - so these pin the closed forms the C# remarks state.
+//! mitre, ring readers). The tests that exercise these methods read whole planned chains, so these
+//! pin, method by method, the closed forms the code's comments state.
 
 use geometry_processing::bevel::surface::{
     surface_plan_band_ends, SurfaceBevelPlan, SurfaceMixedCornerDualGrid,

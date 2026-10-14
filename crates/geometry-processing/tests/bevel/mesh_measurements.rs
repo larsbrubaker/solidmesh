@@ -1,7 +1,7 @@
-//! Port of `Fixtures/MeshMeasurements.cs`: whole-mesh measurements that tests use as shape
-//! assertions. They read the mesh the production code actually produced rather than its
-//! tessellation, so they stay honest across geometry changes. (`sweep_mesh_measures` holds the
-//! same readings over a level-line mesh's raw positions and indices.)
+//! Whole-mesh measurements that tests use as shape assertions. They read the mesh the production
+//! code actually produced rather than its tessellation, so they stay honest across geometry
+//! changes. (`sweep_mesh_measures` holds the same readings over a level-line mesh's raw positions
+//! and indices.)
 
 #![allow(dead_code)]
 
@@ -11,7 +11,7 @@ use geometry_processing::topology::FeatureEdge;
 use polygon_mesh::Mesh;
 use vector_math::{Vector3, Vector3Float};
 
-/// C# `SignedVolume`: the signed volume of a closed mesh from the divergence theorem. Positive
+/// The signed volume of a closed mesh from the divergence theorem. Positive
 /// means the faces face out; zero or negative means the mesh is inside out or folds through itself.
 pub fn signed_volume(mesh: &Mesh) -> f64 {
     let mut total = 0.0;
@@ -27,7 +27,7 @@ pub fn signed_volume(mesh: &Mesh) -> f64 {
     total / 6.0
 }
 
-/// C# `UnclassifiableEdges`: how many edges of a mesh `FeatureEdge::try_classify` can say NOTHING
+/// How many edges of a mesh `FeatureEdge::try_classify` can say NOTHING
 /// about - a boundary or non-manifold edge, a zero length edge, or an edge with a face that has no
 /// area to take a normal from - with where the first refused edge stands, for an assertion's
 /// message.
@@ -77,7 +77,7 @@ pub fn unclassifiable_edges(mesh: Option<&Mesh>) -> (i32, String) {
     (refused, first_at)
 }
 
-/// C# `ShellCount`: how many separate connected pieces a mesh is in. One is a single solid; more
+/// How many separate connected pieces a mesh is in. One is a single solid; more
 /// means an operation cut the part apart.
 ///
 /// Connectivity is judged by vertex POSITION rather than vertex index, because the boolean kernel
@@ -87,7 +87,7 @@ pub fn shell_count(mesh: &Mesh) -> i32 {
     let mut canonical_of_position: HashMap<(u32, u32, u32), usize> = HashMap::new();
     let mut parent: Vec<usize> = Vec::new();
 
-    // C# keys by the float values; `+ 0.0` folds -0 onto 0 as C#'s float equality does.
+    // Keyed by the float values; `+ 0.0` folds -0 onto 0, so a point at -0 joins its +0 twin.
     let mut canonical = |position: Vector3Float, parent: &mut Vec<usize>| {
         let key = (
             (position.x + 0.0).to_bits(),

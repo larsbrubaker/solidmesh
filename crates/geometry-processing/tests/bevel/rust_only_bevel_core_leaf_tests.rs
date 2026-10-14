@@ -1,6 +1,6 @@
 //! Rust-only checks of the first leaf cluster of the bevel core (`BevelCornerFaceRing`,
-//! `BevelCreaseMerge`, `BevelEndCap`, `BevelConstructionMode`). Their C# coverage comes through
-//! the whole-bevel test classes that land with later slices; these pin the leaf behaviour now.
+//! `BevelCreaseMerge`, `BevelEndCap`, `BevelConstructionMode`). The whole-build tests also cover
+//! them; these pin the leaf behaviour alone.
 
 use geometry_processing::bevel::bevel_corner_face_ring::{try_order, try_order_at_vertex};
 use geometry_processing::bevel::bevel_crease_merge::merge;

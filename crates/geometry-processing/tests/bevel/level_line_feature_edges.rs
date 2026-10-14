@@ -1,6 +1,6 @@
-//! Port of the test helper `LevelLineTestGeometry.FeatureEdgesOver` (`LevelLine/LevelLineTestGeometry.cs`):
-//! an edge is a feature where it is not two triangles meeting within a fold threshold. Shared by the
-//! several-chain fixtures and the room-reading tests that read their feature edges.
+//! The feature edges of a test mesh: an edge is a feature where it is not two triangles meeting
+//! within a fold threshold. Shared by the several-chain fixtures and the room-reading tests that
+//! read their feature edges.
 
 #![allow(dead_code)]
 
@@ -10,7 +10,7 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
 use vector_math::Vector3;
 
-/// C# `LevelLineTestGeometry.FeatureEdgesOver`: an edge is a feature where it is not two triangles
+/// An edge is a feature where it is not two triangles
 /// meeting within `degrees`.
 pub fn feature_edges_over(
     positions: &[Vector3],

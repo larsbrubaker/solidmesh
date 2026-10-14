@@ -1,8 +1,7 @@
-//! Port of `R/Tests/GeometryProcessingTests/LevelLine/FiveHolePlateTests.cs`: the requirement for
-//! naming every too-tight chain in ONE reading, on a real pick of six chains - a plate whose top
-//! face carries five holes, two of them too near the plate's edge for the size. One reading names
-//! both of those two, and what is left builds and fills closed in ONE build; the read-drop-re-read
-//! loop ([`PickThatFits`]) settles on chains that really fit.
+//! The requirement for naming every too-tight chain in ONE reading, on a real pick of six chains -
+//! a plate whose top face carries five holes, two of them too near the plate's edge for the size.
+//! One reading names both of those two, and what is left builds and fills closed in ONE build; the
+//! read-drop-re-read loop ([`PickThatFits`]) settles on chains that really fit.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -23,7 +22,7 @@ use crate::level_line_room_geometry::SolidWithChains;
 use crate::level_line_test_geometry::{cube_solid, signed_volume_of};
 use crate::several_chains_fixtures;
 
-/// C#'s `IsEquivalentTo`: the same members, in any order.
+/// The same members, in any order.
 fn same_members(a: &[i32], b: &[i32]) -> bool {
     let mut a = a.to_vec();
     let mut b = b.to_vec();

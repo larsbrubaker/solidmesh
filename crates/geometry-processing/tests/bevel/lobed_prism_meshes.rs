@@ -1,6 +1,5 @@
-//! The lobed prism: a box whose front wall is bitten by a disc of `SIDES` chords, extruded along
-//! z. Ports `Tests/GeometryProcessingTests/Fixtures/LobedPrismMeshes.cs`; read by
-//! `surface_fan_sliver_ring_tests.rs`.
+//! The lobed prism: a box whose front wall is bitten by a disc of `SIDES` chords, extruded along z.
+//! Read by `surface_fan_sliver_ring_tests.rs`.
 
 #![allow(dead_code)] // the fixture's whole surface, for the classes that read it
 

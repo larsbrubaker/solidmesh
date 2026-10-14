@@ -1,8 +1,7 @@
-//! Port of `LevelLine/FlatEndsEveryChamferSeamTests.cs`: flat ends (plan stage 2) on "Every Chamfer
-//! Works.mcx": the seam, the vertical edge and the 29 chord bottom rim build at the file's own
-//! 3.756 with the flag off, so they must build with it on. The rim ends at (-1, 40, 0) on the
-//! x = -1 wall, which faces back across the convex chain's end nearly square. C# `[Arguments]`
-//! rows are a loop.
+//! Flat ends (plan stage 2) on "Every Chamfer Works.mcx": the seam, the vertical edge and the 29
+//! chord bottom rim build at the file's own 3.756 with the flag off, so they must build with it on.
+//! The rim ends at (-1, 40, 0) on the x = -1 wall, which faces back across the convex chain's end
+//! nearly square. Parameter rows are a loop.
 
 use std::rc::Rc;
 

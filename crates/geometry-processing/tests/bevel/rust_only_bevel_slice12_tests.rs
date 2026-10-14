@@ -1,8 +1,7 @@
-//! Rust-only tests for slice 12's units that have no C# test class of their own in
-//! `GeometryProcessingTests` (`BevelCornerVoids`, `BevelMixedCorners`,
-//! `BevelPartneredBead.ConcaveRunsAcrossGroups`): the corner void's memo and refusals, the
-//! crowded mixed corner's warning and its count by mesh edge, and the concave runs a rebuild's
-//! partners are read from.
+//! Rust-only tests for slice 12's units that have no test class of their own (`BevelCornerVoids`,
+//! `BevelMixedCorners`, `BevelPartneredBead.ConcaveRunsAcrossGroups`): the corner void's memo and
+//! refusals, the crowded mixed corner's warning and its count by mesh edge, and the concave runs a
+//! rebuild's partners are read from.
 
 use std::rc::Rc;
 use std::sync::Arc;

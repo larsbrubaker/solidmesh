@@ -1,7 +1,7 @@
-//! Port of `Fixtures/HalfSpaceSolids.cs`: convex solids described the way a chamfer is, as the
-//! walls that keep a region rather than as a tessellation. A list of half spaces goes in and the
-//! polytope they bound comes out, either as a mesh to bevel or as a volume to measure a bevel
-//! against. `skew_ridge_solid.rs` builds its fixture with it.
+//! Convex solids described the way a chamfer is, as the walls that keep a region rather than as a
+//! tessellation. A list of half spaces goes in and the polytope they bound comes out, either as a
+//! mesh to bevel or as a volume to measure a bevel against. `skew_ridge_solid.rs` builds its
+//! fixture with it.
 //!
 //! **Built by brute force, which is what keeps it honest.** Every triple of walls is solved for its
 //! point and kept when every other wall keeps it too - the definition of a vertex of an
@@ -127,7 +127,7 @@ fn corners(walls: &[Wall]) -> Vec<Vector3> {
     found
 }
 
-// C#'s `!(Math.Abs(determinant) > 1e-9)`, which refuses a NaN as well.
+// Written as a negated `>` so a NaN determinant is refused as well.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 /// The one point on three walls, by Cramer, or nothing for three that share a direction.
 fn try_meet(first: Wall, second: Wall, third: Wall) -> Option<Vector3> {
@@ -159,7 +159,7 @@ fn turned(on: &[Vector3], facing: Vector3) -> Vec<(Vector3, Vector3, Vector3)> {
     let across = (on[0] - middle).get_normal();
     let up = facing.cross(across);
 
-    // C#'s OrderBy is a stable sort; so is sort_by.
+    // A stable sort, so ties keep their order.
     let mut ordered = on.to_vec();
     ordered.sort_by(|a, b| {
         let angle = |at: &Vector3| ((*at - middle).dot(up)).atan2((*at - middle).dot(across));

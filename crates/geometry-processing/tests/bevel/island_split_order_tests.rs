@@ -1,7 +1,7 @@
-//! Ports `GeometryProcessingTests/LevelLine/IslandSplitOrderTests.cs`: the island rule's split
-//! vertex must not depend on how hard its search prunes - a sharper sound bound retires cells sooner
-//! and so changes which sample the search happens to hold as its best, and a vertex taken from that
-//! sample moves by up to the tolerance, enough to flip a room at its limit into a pinch.
+//! The island rule's split vertex must not depend on how hard its search prunes - a sharper sound
+//! bound retires cells sooner and so changes which sample the search happens to hold as its best,
+//! and a vertex taken from that sample moves by up to the tolerance, enough to flip a room at its
+//! limit into a pinch.
 
 use geometry_processing::bevel::level_line::bounded_maximum;
 use geometry_processing::bevel::level_line::{FieldSample, WorkError};

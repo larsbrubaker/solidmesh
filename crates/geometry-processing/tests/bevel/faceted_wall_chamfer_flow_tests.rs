@@ -1,8 +1,7 @@
-//! Port of `LevelLine/FacetedWallChamferFlowTests.cs`: a 2 mm chamfer on one wall crease of a
-//! 40-sided radius-10 prism - the setback is wider than the 1.57 facet, so by decision 4 it FLOWS
-//! onto the next gently turning facet, as Onshape does. The level line refused it "the most that
-//! fits is about 1.55" - the facet width, with no other bevel anywhere. C# `[Arguments]` rows are a
-//! loop over the same-named test.
+//! A 2 mm chamfer on one wall crease of a 40-sided radius-10 prism - the setback is wider than the
+//! 1.57 facet, so by decision 4 it FLOWS onto the next gently turning facet, as Onshape does. The
+//! level line refused it "the most that fits is about 1.55" - the facet width, with no other bevel
+//! anywhere. Parameter rows are a loop over the same-named test.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::gap_fill;

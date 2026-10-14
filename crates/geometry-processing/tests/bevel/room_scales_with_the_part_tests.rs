@@ -1,5 +1,5 @@
-//! Port of `LevelLine/RoomScalesWithThePartTests.cs`: the room is a property of the part's SHAPE -
-//! scale the part by k and the room scales by k - and the app's fixed snap only ever reads it low.
+//! The room is a property of the part's SHAPE - scale the part by k and the room scales by k - and
+//! the app's fixed snap only ever reads it low.
 
 use geometry_processing::bevel::level_line::band_gap_reading::{
     read_room, read_room_of_pick, room_margin,
@@ -24,7 +24,7 @@ const SCALES: [f64; 3] = [0.01, 1.0, 100.0];
 /// The app's own snap, which does NOT scale with the part.
 const APP_SNAP: f64 = 1e-9;
 
-/// C# `Part`: one part and one pick, with the room's TRUTH where the shape names it exactly.
+/// One part and one pick, with the room's TRUTH where the shape names it exactly.
 struct Part {
     positions: Vec<Vector3>,
     indices: Vec<(i32, i32, i32)>,
@@ -85,17 +85,17 @@ fn part_named(name: &str) -> Part {
     }
 }
 
-/// C# `RoomAtScale(part, scale)`: the snap scaled with the part.
+/// The room at `scale`, the snap scaled with the part.
 fn room_at_scale(part: &Part, scale: f64) -> f64 {
     room_at_scale_with_snap(part, scale, APP_SNAP * scale)
 }
 
-/// C# `RoomAtScale(part, scale, snap)`.
+/// The room at `scale` under a given snap.
 fn room_at_scale_with_snap(part: &Part, scale: f64, snap: f64) -> f64 {
     reading_at_scale(part, scale, snap).room
 }
 
-/// C# `ReadingAtScale`: the whole reading.
+/// The whole reading.
 fn reading_at_scale(part: &Part, scale: f64, snap: f64) -> RoomReading {
     let scaled: Vec<Vector3> = part.positions.iter().map(|&p| p * scale).collect();
     let feature = feature_edges_over(&scaled, &part.indices, 30.0);
@@ -114,7 +114,7 @@ fn reading_at_scale(part: &Part, scale: f64, snap: f64) -> RoomReading {
     .expect("a valid pick")
 }
 
-/// C# `SmallestUnitSetbackOf`.
+/// The smallest unit setback along the chain at `scale`.
 fn smallest_unit_setback_of(part: &Part, scale: f64) -> f64 {
     let scaled: Vec<Vector3> = part.positions.iter().map(|&p| p * scale).collect();
     let edges = chain_on_the_mesh::chain_edges(&part.chain, true);
@@ -130,7 +130,7 @@ fn smallest_unit_setback_of(part: &Part, scale: f64) -> f64 {
     units.into_iter().fold(f64::INFINITY, f64::min)
 }
 
-/// C# `TheRoomScalesWithThePart`, one test per C# case.
+/// The room scales with the part; one test per case.
 fn the_room_scales_with_the_part(name: &str) {
     let part = part_named(name);
     let unscaled = room_at_scale(&part, 1.0);
@@ -174,7 +174,7 @@ fn the_room_scales_with_the_part_internal_fillet_face8_r1() {
     the_room_scales_with_the_part("internal-fillet-face8-r1");
 }
 
-/// C# `TheAppsFixedSnapOnlyEverReadsTheRoomLOW`, one test per C# case: the scaled room give or
+/// The app's fixed snap only ever reads the room LOW; one test per case: the scaled room give or
 /// take the margin `room_margin` takes off, and never above it when scaled down.
 fn the_apps_fixed_snap_only_ever_reads_the_room_low(name: &str) {
     let part = part_named(name);
@@ -223,7 +223,7 @@ fn the_apps_fixed_snap_only_ever_reads_the_room_low_internal_fillet_face8_r1() {
     the_apps_fixed_snap_only_ever_reads_the_room_low("internal-fillet-face8-r1");
 }
 
-/// C# `TheForeignAndChainToChainRoomsScaleWithThePartToo`, one test per C# case: a FOREIGN room
+/// One test per case: a FOREIGN room
 /// (an open-chain fade on a short cylinder) and a CHAIN-TO-CHAIN room (fixture C) scale too.
 fn the_foreign_and_chain_to_chain_rooms_scale_with_the_part_too(name: &str, kind: RoomReadingKind) {
     let read = |scale: f64| -> RoomReading {
@@ -306,7 +306,7 @@ fn the_foreign_and_chain_to_chain_rooms_scale_with_the_part_too_two_chains_acros
     );
 }
 
-/// C# `TheRoomIsUnderTheTruthByTheStatedAccuracy`, one test per C# case: within the stated
+/// One test per case: within the stated
 /// RELATIVE accuracy of the truth, and UNDER it at every scale.
 fn the_room_is_under_the_truth_by_the_stated_accuracy(name: &str) {
     let part = part_named(name);

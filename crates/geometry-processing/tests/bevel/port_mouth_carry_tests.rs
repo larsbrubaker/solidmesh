@@ -1,11 +1,10 @@
-//! Port of `LevelLine/PortMouthCarryTests.cs`: one 64-edge port mouth of Many Holes at 0.375, as the
-//! app handed it to the kernel (sweep watch 20 of
-//! `BevelManyHolesRegressionTests.EveryPortMouthTakesTheHalfMillimetreFilletLarsAsked`). Its skew
-//! rows are carried round the mouth (`FilletArc.AlongTheChain`), and each end's turn is the chain's
-//! tangent change from its reading to the row's mean. With the tangent read piecewise, the row
-//! reading ON a mouth vertex turned a half-joint (2.8 degrees) while its neighbour 0.0005 before the
-//! vertex did not turn, the two rows folded through each other, and the Boolean kernel read the
-//! answer SelfIntersecting.
+//! One 64-edge port mouth of Many Holes at 0.375, as the app handed it to the kernel (sweep watch
+//! 20 of `BevelManyHolesRegressionTests.EveryPortMouthTakesTheHalfMillimetreFilletLarsAsked`). Its
+//! skew rows are carried round the mouth (`FilletArc.AlongTheChain`), and each end's turn is the
+//! chain's tangent change from its reading to the row's mean. With the tangent read piecewise, the
+//! row reading ON a mouth vertex turned a half-joint (2.8 degrees) while its neighbour 0.0005
+//! before the vertex did not turn, the two rows folded through each other, and the Boolean kernel
+//! read the answer SelfIntersecting.
 
 use std::rc::Rc;
 
