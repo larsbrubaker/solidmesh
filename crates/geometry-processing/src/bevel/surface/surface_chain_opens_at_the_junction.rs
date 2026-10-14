@@ -1,14 +1,13 @@
 //! A chain that runs THROUGH a vertex where another chain ENDS, published as the open runs it is
-//! from the junction's point of view (`Bevel/Surface/SurfaceChainOpensAtTheJunction.cs`, a C#
-//! `internal static class`, so a module here). Runs after [`super::surface_chain_join::join`] and
+//! from the junction's point of view. Runs after [`super::surface_chain_join::join`] and
 //! before any plan is drawn; [`super::surface_interrupted_crease`] and the junction readings
 //! ([`super::SurfaceMixedJunction`]) read the pieces it leaves.
 //!
-//! A junction is read off chain ENDS: `SurfaceMixedJunction.TryGatherTheEnds` wants three of them
-//! at the vertex, because an end is what an arm of the patch is handed over at. A face rim taken
-//! whole is one closed chain, and a closed chain has no ends anywhere - so the same three picked
-//! edges that close a junction when they arrive as three runs were refused when one of them was
-//! picked as a face. A pick is a set of edges however it was made, and this is where the two
+//! A junction is read off chain ENDS: `SurfaceMixedJunction::try_gather_the_ends` wants three of
+//! them at the vertex, because an end is what an arm of the patch is handed over at. A face rim
+//! taken whole is one closed chain, and a closed chain has no ends anywhere - so the same three
+//! picked edges that close a junction when they arrive as three runs were refused when one of them
+//! was picked as a face. A pick is a set of edges however it was made, and this is where the two
 //! readings are made one.
 //!
 //! Cutting is safe because nothing has been planned yet. What a chain buys at a joint is a MITRE -
@@ -34,9 +33,9 @@ use std::collections::HashMap;
 use crate::bevel::BevelSweptChain;
 use crate::topology::ChainEdge;
 
-/// C# `SurfaceChainOpensAtTheJunction.Open`: the same chains, each cut open at every junction
+/// The same chains, each cut open at every junction
 /// vertex it passes through rather than stops at. A chain that passes through none of them comes
-/// back exactly as it arrived (C# hands back the same reference; here the same value, moved).
+/// back exactly as it arrived, the same value moved through.
 pub fn open(chains: Vec<BevelSweptChain>) -> Vec<BevelSweptChain> {
     // How many picked edges stand at each vertex of the part, over ALL the chains: an interior
     // vertex of a run counts two, a run's own end counts one, and a vertex a second chain arrives at
@@ -99,7 +98,7 @@ pub fn open(chains: Vec<BevelSweptChain>) -> Vec<BevelSweptChain> {
     answer
 }
 
-/// C# `Run`: one run of a chain, `length` edges from `from`, wrapping round the end for a ring, in
+/// One run of a chain, `length` edges from `from`, wrapping round the end for a ring, in
 /// the order and the direction the chain walked them.
 fn run(chain: &BevelSweptChain, from: usize, length: usize) -> BevelSweptChain {
     let mut run: Vec<ChainEdge> = Vec::with_capacity(length);
@@ -111,7 +110,7 @@ fn run(chain: &BevelSweptChain, from: usize, length: usize) -> BevelSweptChain {
     BevelSweptChain::new(run, false)
 }
 
-/// C# `Bump`.
+/// Counts one more chain edge at `vertex`.
 fn bump(degree: &mut HashMap<i32, i32>, vertex: i32) {
     *degree.entry(vertex).or_insert(0) += 1;
 }

@@ -2,9 +2,8 @@
 //! region's rim standing in front of the chain edge, over the edge's own span, lies nearer than the
 //! setback, and what is beyond that rim is one plane. The band then has no landing left to walk
 //! back to - it gives up the region entire, with no seam on it at all - and the strip's tangent
-//! rail stands in the air over the whole edge, to be trimmed away against the plane beyond. Ports
-//! `Bevel/Surface/SurfaceBandRunsOffTheFaceBeyond.cs` (C# `internal static class`; a module of free
-//! functions here).
+//! rail stands in the air over the whole edge, to be trimmed away against the plane beyond. A
+//! module of free functions.
 //!
 //! Shared by the two halves of the same fact, as [`surface_room_standing_feature`] is. The room
 //! reading must not take such a rim for a WALL: a wall is a place the setback runs out of face, and
@@ -31,8 +30,8 @@
 //! different constructions - a trim along a curve, and a trim that turns a corner - so they are
 //! refused with different sentences rather than one that guesses.
 //!
-//! C#'s `bool Try...(..., out failure)` shape is `Result<Option<_>, BevelAdvisory>` here: `Err` is
-//! the refusal by name, `Ok(None)` is "not this reading" (C# false with a null failure).
+//! The readings answer `Result<Option<_>, BevelAdvisory>`: `Err` is the refusal by name,
+//! `Ok(None)` is "not this reading", so another reading may still take the band.
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -55,7 +54,7 @@ const VERTEX_TOLERANCE: f64 = 1e-5;
 const RULERS_TO_BE_A_STRETCH: f64 = 10.0;
 
 /// Where a whole-span run-off goes: the plane beyond and which end the trim cuts back from - the
-/// `out` values of C# `TryRead`.
+/// answer of a reading that takes the band.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TheFaceBeyond {
     /// A point on the plane beyond.
@@ -71,8 +70,8 @@ pub struct TheFaceBeyond {
     pub trims_the_start: bool,
 }
 
-/// The chain edge and the band read against a region: C#'s shared `from, along, length, inward,
-/// setback` parameters, gathered so the three readings take them the same way.
+/// The chain edge and the band read against a region: `from, along, length, inward, setback`,
+/// gathered so the three readings take them the same way.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BandSpan {
     /// The chain edge's start.
@@ -93,8 +92,8 @@ impl BandSpan {
         self.from + (self.along * distance)
     }
 
-    /// C#'s guard `!(length > 0) || !(setback > 0)`, NaN reading as no span.
-    // C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+    /// The guard `!(length > 0) || !(setback > 0)`, NaN reading as no span.
+    // `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn is_empty(&self) -> bool {
         !(self.length > 0.0) || !(self.setback > 0.0)
@@ -218,7 +217,7 @@ pub fn try_read(
     let foot = span.from + (span.inward * span.setback);
     let slope = plane_normal.dot(span.along);
 
-    // C#'s `!(Math.Abs(slope) > 1e-9)`, NaN reading as parallel.
+    // Not steeper than 1e-9, NaN reading as parallel.
     if slope.abs().partial_cmp(&1e-9) != Some(Ordering::Greater) {
         return Ok(None);
     }
@@ -283,12 +282,12 @@ pub fn try_read(
 ///
 /// **The ruler is the pool's, not this file's.** Every other reading here measures with
 /// `VERTEX_TOLERANCE` against the edge's length, but what settles this one is whether the build
-/// could tell the seam from the rim if it tried - the very question `SurfaceStripEnds.MeetsTheSeam`
-/// asks, and its answer is the pool's `near_enough`. A wall that keeps less than that of itself
-/// leaves a sliver the run reader would sweep the rim into anyway (`SurfaceWalkbackBands.RunsAlong`
-/// reads vertices within the same nearness OF THE LINE), so the two readings would disagree about
-/// the same two points. On a 20 x 20 x 2 plate that ruler is about 2.8e-4, which is the width of
-/// the crack.
+/// could tell the seam from the rim if it tried - the very question
+/// `surface_strip_ends::meets_the_seam` asks, and its answer is the pool's `near_enough`. A wall
+/// that keeps less than that of itself leaves a sliver the run reader would sweep the rim into
+/// anyway (`surface_walkback_tangent_runs::runs_along` reads vertices within the same nearness OF
+/// THE LINE), so the two readings would disagree about the same two points. On a 20 x 20 x 2 plate
+/// that ruler is about 2.8e-4, which is the width of the crack.
 pub fn consumes_the_face_to_its_rim(
     region: Option<&FaceGroup>,
     span: &BandSpan,
@@ -333,8 +332,8 @@ pub fn consumes_the_face_to_its_rim(
     (farthest_of_all - span.setback).abs() <= near_enough
 }
 
-/// What a chain is at the two ends of the edge a stretch is read on (C# `chainConvexity`,
-/// `freeAtTheStart`, `freeAtTheEnd`).
+/// What a chain is at the two ends of the edge a stretch is read on: its convexity and whether each
+/// end is free.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChainAtTheSpan {
     /// Which way the chain edge folds, which is what tells a fillet from a cut.
@@ -425,12 +424,12 @@ pub fn try_read_a_stretch(
 
         if shares_a_corner(rim, span.from, near) || shares_a_corner(rim, span.at(span.length), near)
         {
-            // A rim MEETING the chain edge at a corner, which is the corner rule's business and
-            // not this one: its offset is zero there by construction rather than because the face
-            // ran out, so every acute corner there is - the altitude of a triangular face, the
-            // recess's own lower crease at the apex - would read as a stretch of run-off at that
-            // end of the span. What the corner really takes is how much of the edge's LENGTH the
-            // mitre there eats (SurfaceRoomMeasure.MeasureCorner), which is a reading of its own.
+            // A rim MEETING the chain edge at a corner, which is the corner rule's business and not
+            // this one: its offset is zero there by construction rather than because the face ran
+            // out, so every acute corner there is - the altitude of a triangular face, the recess's
+            // own lower crease at the apex - would read as a stretch of run-off at that end of the
+            // span. What the corner really takes is how much of the edge's LENGTH the mitre there
+            // eats (surface_room_measure::measure_corner), which is a reading of its own.
             continue;
         }
 
@@ -438,7 +437,7 @@ pub fn try_read_a_stretch(
             continue;
         };
 
-        // C#'s `!(until > under + ...)`, NaN reading as too short.
+        // Not past `under + ...`, NaN reading as too short.
         if in_front
             .under_to
             .partial_cmp(&(in_front.under_from + (near * RULERS_TO_BE_A_STRETCH)))
@@ -464,8 +463,8 @@ pub fn try_read_a_stretch(
     // and those join into the one stretch they are; two stretches with face standing between them
     // is the band running off in two places, which is the mid-span case under another name.
     //
-    // C#'s `List.Sort` is unstable, but no tie can reach an output: windows starting at the same
-    // place give the same `lowest`, pass the same gap test and fold into the same `highest`
+    // The sort's tie order does not matter: no tie can reach an output, as windows starting at the
+    // same place give the same `lowest`, pass the same gap test and fold into the same `highest`
     // whichever comes first.
     let mut order: Vec<usize> = (0..windows.len()).collect();
     order.sort_by(|&left, &right| cs_compare(windows[left].0, windows[right].0));
@@ -669,8 +668,8 @@ fn the_surface_beyond_is_one_plane(
 }
 
 /// The part of a rim in front of the chain edge within its span: how far back the farthest of it
-/// reaches, and the window along the span where it stands NEARER than the setback (C#'s `out`
-/// values; `under_to < under_from` where there is none).
+/// reaches, and the window along the span where it stands NEARER than the setback
+/// (`under_to < under_from` where there is none).
 #[derive(Debug, Clone, Copy)]
 struct InFront {
     farthest: f64,
@@ -731,7 +730,8 @@ fn try_in_front_over_the_span(rim: &FeatureEdge, span: &BandSpan, near: f64) -> 
     //
     // Everywhere else the crossing is solved exactly, so that the station the stretch ends at is
     // the one where the wall really is a setback across - which is what lets the rest of the span
-    // go on being charged at exactly the size that was asked for (SurfaceRoomMeasure.RoomAcross).
+    // go on being charged at exactly the size that was asked for
+    // (surface_room_measure::room_across).
     let it_rises = (end_in - start_in).abs() > near;
 
     if if it_rises {
@@ -779,7 +779,7 @@ fn narrow(at_start: f64, at_end: f64, floor: f64, low: &mut f64, high: &mut f64)
     *low <= *high
 }
 
-/// C# `double.CompareTo`: NaN sorts first, and equal values (0.0 and -0.0 included) are equal.
+/// NaN sorts first, and equal values (0.0 and -0.0 included) are equal.
 fn cs_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,

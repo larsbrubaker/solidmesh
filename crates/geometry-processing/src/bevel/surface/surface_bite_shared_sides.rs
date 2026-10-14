@@ -1,29 +1,29 @@
 //! The pieces ONE bite leaves, read as neighbours of each other ([`SurfaceBiteSharedSides`]): what
-//! a piece's side looks like from the piece on the other side of it. Ports the fields of
-//! `Bevel/Surface/SurfaceBiteSharedSides.cs` its constructor
-//! ([`SurfaceBiteSharedSides::new`]) and its chain-across reading
+//! a piece's side looks like from the piece on the other side of it: the fields, the constructor
+//! ([`SurfaceBiteSharedSides::new`]) and the chain-across reading
 //! ([`SurfaceBiteSharedSides::try_the_chain_across`]).
 
 use std::collections::HashMap;
 
 use super::{surface_split_sewing, SurfaceVertexPool};
 
-/// C# `SurfaceBiteSharedSides`: the pieces one bite leaves, read as neighbours of each other.
+/// The pieces one bite leaves, read as neighbours of each other.
 ///
 /// A side two pieces share has to leave the bite with the same vertex sequence on both of them, or
 /// the two walk one directed edge the same way and that is a fold - reported by
-/// `SurfaceMixedCornerPatch.NothingCoversNothing` hundreds of faces later, at a place the bite had
-/// nothing to do with. Read PIECE BY PIECE that cannot be guaranteed: whether a vertex stands on a
-/// side is a measurement against the part's own ruler, and on a sliver whose two sides are one line
-/// to within that ruler a vertex the neighbour carries as a corner of some OTHER side measures as
-/// standing on this one. Put in here and not there, it claims an edge the neighbour does not have.
+/// `surface_mixed_corner_patch::nothing_covers_nothing` hundreds of faces later, at a place the
+/// bite had nothing to do with. Read PIECE BY PIECE that cannot be guaranteed: whether a vertex
+/// stands on a side is a measurement against the part's own ruler, and on a sliver whose two sides
+/// are one line to within that ruler a vertex the neighbour carries as a corner of some OTHER side
+/// measures as standing on this one. Put in here and not there, it claims an edge the neighbour
+/// does not have.
 ///
 /// So where the piece across a side is one of this bite's own, the side's sequence is READ OFF IT
 /// rather than measured: two pieces wound the same way walk their shared boundary opposite ways, so
 /// the chain the neighbour walks from this side's far end back to its near end IS this side,
-/// exactly and with no tolerance in it (`SurfaceConvexBite.WithTheVerticesStandingOnIt`). Where no
-/// piece of this bite names both of the side's ends - the face across it was never cut - there is
-/// nothing to read and the measurement is still the answer.
+/// exactly and with no tolerance in it (`surface_convex_bite::with_the_vertices_standing_on_it`).
+/// Where no piece of this bite names both of the side's ends - the face across it was never cut -
+/// there is nothing to read and the measurement is still the answer.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SurfaceBiteSharedSides {
     /// The bite's pieces, each a ring of pool vertices.
@@ -33,11 +33,11 @@ pub struct SurfaceBiteSharedSides {
     pub carried_by: HashMap<i32, Vec<i32>>,
 }
 
-/// The chain-across reading (C# `TryTheChainAcross`, `TryTheChainIn`, `TryTheWalk`).
+/// The chain-across reading: the chain across a side, the chain into a piece, and the walk between.
 impl SurfaceBiteSharedSides {
-    /// C# `TryTheChainAcross`: the vertices standing along the side from `from` to `to` of piece
+    /// The vertices standing along the side from `from` to `to` of piece
     /// `of_piece`, as the piece on the other side of it has them - in this side's own order - with
-    /// the piece they were read off (C#'s `across`), or `None` where no piece of this bite names
+    /// the piece they were read off, or `None` where no piece of this bite names
     /// both of its ends.
     ///
     /// The chain is taken only while every vertex of it really stands part way along the side, on
@@ -49,7 +49,7 @@ impl SurfaceBiteSharedSides {
     /// What the piece across does NOT name is as much of the answer as what it does: a corner of
     /// ITS that this side measures as standing on it, and that the chain left out, is a corner of
     /// some other side of that same piece - and taken in here it claims an edge the neighbour has
-    /// not got (`SurfaceConvexBite.WithTheVerticesStandingOnIt`).
+    /// not got (`surface_convex_bite::with_the_vertices_standing_on_it`).
     pub fn try_the_chain_across(
         &self,
         pool: &SurfaceVertexPool,
@@ -74,7 +74,7 @@ impl SurfaceBiteSharedSides {
         None
     }
 
-    /// C# `TryTheChainIn`: one neighbour's own walk between the side's two ends, in this side's
+    /// One neighbour's own walk between the side's two ends, in this side's
     /// order, where that walk is the side itself.
     ///
     /// Walked BOTH ways round the neighbour. Two pieces wound the same way share their boundary
@@ -107,7 +107,7 @@ impl SurfaceBiteSharedSides {
         }
     }
 
-    /// C# `TryTheWalk`: the neighbour's walk from `starting` round to `ending`, where every vertex
+    /// The neighbour's walk from `starting` round to `ending`, where every vertex
     /// it passes stands part way along the side between them.
     fn try_the_walk(
         pool: &SurfaceVertexPool,

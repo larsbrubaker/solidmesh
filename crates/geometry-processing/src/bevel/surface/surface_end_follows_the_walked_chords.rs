@@ -1,12 +1,11 @@
 //! A chain end whose section the walk rolled along a curved wall: the cap follows the chords the
-//! walk passed rather than one straight line. Ports
-//! `Bevel/Surface/SurfaceEndFollowsTheWalkedChords.cs` (C# `internal static class`; a module of free
-//! functions here). What is here is the concave reading - the section added as the bead's own end
-//! cap ([`try_cap_with_the_section`]), ear clipped by [`super::surface_ring_ears`]; the walk
-//! of the chords the cap follows ([`the_chords_the_cap_follows`]) and the rim, wedge and bulge
-//! readings the convex section is made of, and the convex reading itself
-//! ([`try_take_the_section`]). The rim is an `IndexMap` and every set an `IndexSet`, because which
-//! neighbour the walk tries first and which corner it starts at follow C#'s insertion order.
+//! walk passed rather than one straight line. A module of free functions. What is here is the
+//! concave reading - the section added as the bead's own end cap ([`try_cap_with_the_section`]),
+//! ear clipped by [`super::surface_ring_ears`]; the walk of the chords the cap follows
+//! ([`the_chords_the_cap_follows`]) and the rim, wedge and bulge readings the convex section is
+//! made of, and the convex reading itself ([`try_take_the_section`]). The rim is an `IndexMap` and
+//! every set an `IndexSet`, because which neighbour the walk tries first and which corner it starts
+//! at follow insertion order, which must be the same on every run.
 
 use indexmap::{IndexMap, IndexSet};
 use vector_math::{cs_math, Vector3};
@@ -17,10 +16,10 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryCapWithTheSection`: the section added as the bead's own end cap, bounded on the wall
+/// The section added as the bead's own end cap, bounded on the wall
 /// side by the chords the walk passed - the concave reading of the same section the convex end
-/// gives up. `Ok` carries C#'s `alongTheProfile` (nothing stands part way along any chord, so one
-/// empty list per chord); `Err` is C#'s `failure`, with `faces` as it was handed in.
+/// gives up. `Ok` carries what stands along the profile (nothing stands part way along any chord,
+/// so one empty list per chord); `Err` is why not, with `faces` as it was handed in.
 ///
 /// `profile` is the strip's end ring, rail by rail, already in the pool; `wall_end` names which end
 /// of it stands on the wall; `corner` is where the chain ends; `plane_normal` is the end face's
@@ -239,7 +238,7 @@ pub fn try_the_corners_own_rim(
 
 /// The half planes, in the plane facing `plane_normal`, each side of the closed `outline` bounds,
 /// facing its middle; `None` where a side has no length or its middle stands on one.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn try_the_wedge(
     outline: &[Vector3],
     plane_normal: Vector3,
@@ -283,7 +282,7 @@ pub fn try_the_wedge(
 
 /// Whether every point of `outline` stands inside every half plane of `the_wedge`, to the pool's
 /// ruler.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // Negated, so a NaN distance passes.
 pub fn it_is_convex(
     outline: &[Vector3],
     the_wedge: &[(Vector3, Vector3)],
@@ -309,7 +308,7 @@ pub fn the_corner_is_outside_the_bulge(
 
 /// Whether every vertex of `profile` stands inside every half plane of `the_wedge`, to the
 /// pool's ruler.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // Negated, so a NaN distance passes.
 pub fn it_holds_the_profile(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -328,7 +327,7 @@ pub fn it_holds_the_profile(
 /// profile's own middle - or, for a profile with no bulge to it (a chamfer's one chord, whose
 /// middle is ON it), facing away from `corner`, which leaves the whole polygon as the section.
 /// Chords of no length, or along the normal, are skipped.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn the_bulge(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -439,7 +438,7 @@ pub fn the_section_swallows_it(
     true
 }
 
-/// C# `TryTakeTheSection`: the convex reading - the section, bounded on the wall side by the
+/// The convex reading - the section, bounded on the wall side by the
 /// chords the walk passed (`walked`, the rim vertices between the corner and the wall foot), taken
 /// out of the end cap (`in_the_end` names its faces) as the polygon its outline names less the bulge
 /// the arc puts back. Returns what the cut left standing part way along each chord of the profile,

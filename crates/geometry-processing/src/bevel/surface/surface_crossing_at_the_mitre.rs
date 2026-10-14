@@ -1,6 +1,6 @@
 //! Where a run-out that crosses BOTH bands of one mitred corner hands over from the one to the
 //! other ([`SurfaceCrossingAtTheMitre`]): the single point standing on all three surfaces at once.
-//! Ports `Bevel/Surface/SurfaceCrossingAtTheMitre.cs`: its fields, its turn readings and the
+//! Here are its fields, its turn readings and the
 //! staircases it hands the two trims ([`SurfaceCrossingAtTheMitre::try_the_staircases`]), and the
 //! reading off the mitre ring ([`SurfaceCrossingAtTheMitre::try_read`]).
 
@@ -15,7 +15,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceCrossingAtTheMitre`: where a run-out that crosses BOTH bands of one mitred corner
+/// Where a run-out that crosses BOTH bands of one mitred corner
 /// hands over from the one to the other.
 ///
 /// A closed rim picked as a face puts two bands at every corner of it, and a run-out reaching
@@ -26,9 +26,9 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 ///
 /// **That meeting point is on the mitre ring.** The point the window closes at lies on the cap
 /// band's surface and on the wall band's surface at once - and the one curve both of those surfaces
-/// hold is their MITRE, the ring `SurfaceStripMitre.TryMitre` already cuts rail by rail and checks
-/// the two strips agree on to a weld. So the meeting point is not a new point to be arrived at
-/// twice and welded: it is a point ON a chord the two strips already share, found once, pooled
+/// hold is their MITRE, the ring `surface_strip_mitre::try_mitre` already cuts rail by rail and
+/// checks the two strips agree on to a weld. So the meeting point is not a new point to be arrived
+/// at twice and welded: it is a point ON a chord the two strips already share, found once, pooled
 /// once, and handed to both. Asking it of the ring rather than of a chord of the crossing curve is
 /// what makes the answer exact rather than a chording error's worth off (measured: 0.31 mm out of
 /// 3.76 on the lobed prism, which is a quarter of a chord and nothing a weld would close).
@@ -50,8 +50,8 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 ///
 /// Built once and handed to BOTH trims (`SurfaceStripTrimmedAtTheCrossing::at_the_mitre`), and its
 /// settable parts are filled in afterwards through those shared handles by the builder and the
-/// run-out - hence `Rc` at its holders and `Cell`/`RefCell` on the C# `set` properties. The `-1`
-/// defaults are C#'s initializers, which is why `Default` is written out.
+/// run-out - hence `Rc` at its holders and `Cell`/`RefCell` on the parts filled in later. Those
+/// parts start at `-1` (not yet known), which is why `Default` is written out.
 #[derive(Debug)]
 pub struct SurfaceCrossingAtTheMitre {
     /// Per rail of the ring, whether the run-out has given it up (it stands under the run-out).
@@ -172,9 +172,10 @@ impl SurfaceCrossingAtTheMitre {
     }
 }
 
-/// The hand-over's staircases (C# `TheFirstRailUnder`, `TryTheStaircases`, `TheStaircase`).
+/// The hand-over's staircases: the first rail under the crossing, and the staircase each trim
+/// takes.
 impl SurfaceCrossingAtTheMitre {
-    /// C# `TheFirstRailUnder`: the first rail of the ring standing under the run-out, walking from
+    /// The first rail of the ring standing under the run-out, walking from
     /// the end that is clear.
     pub fn the_first_rail_under(&self) -> i32 {
         if self.given_up[0] {
@@ -184,12 +185,12 @@ impl SurfaceCrossingAtTheMitre {
         }
     }
 
-    /// C# `TryTheStaircases`: the two end stations the mitre becomes - each band's own staircase,
-    /// cut back to its crossings on the rails the run-out took and standing on the shared ring
-    /// everywhere else, with the hand-over carried between the two rails of the chord it splits.
-    /// `leaving` is the trim at the end of the edge the chain ARRIVES on, `arriving` the trim at the
-    /// start of the one it leaves on (C#'s nulls are `None`); `Ok` holds their staircases in the same
-    /// order, and both trims are marked closed.
+    /// The two end stations the mitre becomes - each band's own staircase, cut back to its
+    /// crossings on the rails the run-out took and standing on the shared ring everywhere else,
+    /// with the hand-over carried between the two rails of the chord it splits. `leaving` is the
+    /// trim at the end of the edge the chain ARRIVES on, `arriving` the trim at the start of the
+    /// one it leaves on (either may be `None`); `Ok` holds their staircases in the same order, and
+    /// both trims are marked closed.
     ///
     /// A mitre is ordinarily ONE ring both strips stop on. Here the run-out has taken the rails below
     /// the hand-over out of both, so along those rails the two strips do NOT meet: each stops at its
@@ -301,7 +302,7 @@ impl SurfaceCrossingAtTheMitre {
         }
     }
 
-    /// C# `TheStaircase`: one band's staircase - its own crossing on every rail the run-out took, the
+    /// One band's staircase - its own crossing on every rail the run-out took, the
     /// shared ring on the rest, and the hand-over between the two rails of the chord it splits.
     fn the_staircase(
         &self,
@@ -364,7 +365,7 @@ impl SurfaceCrossingAtTheMitre {
 }
 
 impl SurfaceCrossingAtTheMitre {
-    /// C#'s private constructor, with the settable properties at their initializers (`-1` for the
+    /// A crossing with its later-filled parts not yet known (`-1` for the
     /// bands, the vertex and the chord's start; no run along the chord yet).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -409,12 +410,12 @@ impl SurfaceCrossingAtTheMitre {
 }
 
 impl SurfaceCrossingAtTheMitre {
-    /// C# `TryRead`: reads the hand-over of one run-out across the two bands of one mitred corner -
+    /// Reads the hand-over of one run-out across the two bands of one mitred corner -
     /// `corner` the run-out comes out of, `wall` its reading of the wall it turns against,
     /// `on_the_cap` / `on_the_wall` the strips of the band on the cap it travels across and on the
-    /// wall it turns against (`None` where C#'s is null), `the_mitre_corner` the part's own corner
+    /// wall it turns against (`None` where there is none), `the_mitre_corner` the part's own corner
     /// the two bands mitre at, `near_enough` the part's ruler.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
     pub fn try_read(
         corner: &SurfaceMixedCorner,
         wall: &SurfaceMixedCornerWall,
@@ -438,12 +439,12 @@ impl SurfaceCrossingAtTheMitre {
             return Err(misses(the_mitre_corner));
         }
 
-        // The mitre plane. Its NORMAL is named exactly as `SurfaceStripMitre.TryMitre` names it, so
-        // the ring read here and the ring built there are one curve. Its POINT is the CORNER, and it
-        // stays the corner even though an ordinary chain mitre's plane has moved to the crossing of
-        // the two beads' tangent lines (`SurfaceMitreSeam`): this is a MIXED corner, where that
-        // crossing is a different point and the wrong one - MEASURED: reading it through the seam
-        // fails five of the C# run-out tests.
+        // The mitre plane. Its NORMAL is named exactly as `surface_strip_mitre::try_mitre` names
+        // it, so the ring read here and the ring built there are one curve. Its POINT is the
+        // CORNER, and it stays the corner even though an ordinary chain mitre's plane has moved to
+        // the crossing of the two beads' tangent lines (`SurfaceMitreSeam`): this is a MIXED
+        // corner, where that crossing is a different point and the wrong one - MEASURED: reading it
+        // through the seam fails five of the run-out tests.
         let mut mitre_normal = on_the_cap.along() + on_the_wall.along();
 
         if !(mitre_normal.length_squared() > 0.0) {

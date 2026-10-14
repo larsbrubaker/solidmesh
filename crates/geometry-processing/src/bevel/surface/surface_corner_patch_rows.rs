@@ -1,9 +1,8 @@
 //! The spherical triangle between three rim arcs, laid as PARAMETRIC ROWS and sewn band by band -
 //! which is what a corner of three UNEQUAL wedges needs, its three arcs sweeping three different
-//! angles and so being chorded three different numbers of times. Ports
-//! `Bevel/Surface/SurfaceCornerPatchRows.cs` (C# `internal static class`; a module of free
-//! functions here). The bands are sewn with [`super::surface_row_zip`] and the interior refined
-//! with [`crate::bevel::bevel_patch_refinement`].
+//! angles and so being chorded three different numbers of times. Free functions. The bands are sewn
+//! with [`super::surface_row_zip`] and the interior refined with
+//! [`crate::bevel::bevel_patch_refinement`].
 //!
 //! **Where the rows run.** The apex is the corner opposite the LONGEST side, so the side carrying
 //! the most chords is the one the rows run down to and no row ever has to be coarser than the arc
@@ -26,7 +25,7 @@
 //! two rim ends, and the sewn bands are refined once on the INTERIOR before they are published -
 //! rim arcs untouched, since they are three strips' own end rings (`refined`).
 //!
-//! C# `Math.Round(.., MidpointRounding.AwayFromZero)` is `f64::round`.
+//! Row counts round half away from zero (`f64::round`, not banker's rounding).
 
 use std::collections::HashMap;
 
@@ -42,7 +41,7 @@ use crate::bevel::{bevel_patch_refinement, bevel_seam_ring};
 /// where a NaN quietly dropped by the area check would hide it.
 const ROW_ENDS_STAND_OPPOSITE: f64 = -0.999999;
 
-/// C# `TryEmit`: lays the rows and sews them. False where the rim is not on one sphere about
+/// Lays the rows and sews them. False where the rim is not on one sphere about
 /// `centre`, or where the three sides do not make a triangle to put rows in.
 ///
 /// `sides` are the three rim arcs, each running on from where the last left off; `size` is the
@@ -158,7 +157,7 @@ pub fn try_emit(
     true
 }
 
-/// C# `Refined`: the rows cut once more on the INSIDE - every edge that is not on one of the three
+/// The rows cut once more on the INSIDE - every edge that is not on one of the three
 /// rim arcs split at its great-circle midpoint, which is
 /// [`bevel_patch_refinement::refine`]'s own rule and code, read here in the pool's indices.
 ///
@@ -238,8 +237,8 @@ fn refined(
         .collect()
 }
 
-/// C# `RowAcross`: one row - its two ends are rim vertices the strips already own, and its interior
-/// is the GREAT CIRCLE between those two ends, sampled in equal angles. `None` (C# null) where the
+/// One row - its two ends are rim vertices the strips already own, and its interior
+/// is the GREAT CIRCLE between those two ends, sampled in equal angles. `None` where the
 /// row's two ends stand OPPOSITE on the ball and there is no one arc between them
 /// ([`ROW_ENDS_STAND_OPPOSITE`]), which the caller turns into the corner's own refusal.
 ///
@@ -281,7 +280,7 @@ fn row_across(
     Some(row)
 }
 
-/// C# `WithTheSurplus`: a row with the long side's own rim vertices between this row's end and the
+/// A row with the long side's own rim vertices between this row's end and the
 /// next row's end put on the end of it, so that the band below carries every one of them.
 fn with_the_surplus(row: &[i32], long_side: &[i32], from: i32, to: i32) -> Vec<i32> {
     if to <= from + 1 {
@@ -299,7 +298,7 @@ fn with_the_surplus(row: &[i32], long_side: &[i32], from: i32, to: i32) -> Vec<i
     carried
 }
 
-/// C# `TheRimIsOnTheBall`: whether every rim vertex stands the radius from the centre. It does
+/// Whether every rim vertex stands the radius from the centre. It does
 /// whenever each strip's rails lie on a cylinder about an axis through the centre; rails ROLLED
 /// along a curved wall lie on no such cylinder, and there the rim is three curves the sphere does
 /// not carry - which is a corner this patch cannot be, rather than one it may lid badly.
@@ -320,7 +319,7 @@ fn the_rim_is_on_the_ball(
     true
 }
 
-/// C# `Turned`: a side read the other way round.
+/// A side read the other way round.
 fn turned(side: &[i32]) -> Vec<i32> {
     side.iter().rev().copied().collect()
 }

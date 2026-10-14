@@ -1,11 +1,10 @@
 //! Clipping a ring of pooled vertices by a half space: the one piece of arithmetic every cut in
 //! the construction is drawn with, written once so the tangent cut and the end splits classify a
-//! point the same way. Ports `Bevel/Surface/SurfaceCutClip.cs` (C# `internal static class`; a
-//! module of free functions here).
+//! point the same way. A module of free functions.
 //!
 //! It owns no state on purpose - a cut hands it a plane and its own profile, and what comes back
 //! is named by vertex index, so two facets cut at the same place come back with the same index.
-//! `SurfaceFacetCut.Clip` and `SurfaceFacetCut.ClipToPieces` are this module read through one
+//! `SurfaceFacetCut::clip` and `SurfaceFacetCut::clip_to_pieces` are this module read through one
 //! cut's planes. It works on the welding [`SurfaceVertexPool`] and tidies what it leaves with
 //! [`surface_ring::without_repeats`].
 
@@ -40,14 +39,14 @@ pub fn on_the_cut(pool: &SurfaceVertexPool) -> f64 {
 /// profile - the rim of the bite being taken, whose vertices this very clip is drawing the piece
 /// out to - is handed in as `snap_to`, and a crossing landing within
 /// [`SurfaceVertexPool::snap_near`] of one of those vertices IS that vertex. Read here, at the
-/// crossing, rather than over the finished piece afterwards (`SurfaceEndNotch.SnappedToTheProfile`):
-/// a snap that runs after the vertex is in the pool leaves the orphan behind for the sewing pass
-/// to find, and the sliver it sews on is the defect. The gap this closes is a chord's SAGITTA and
-/// not rounding - a point the construction stood on an edge, met again as the crossing of that
-/// edge with a chord of the curve it came off - so it is a ruler or two wide, which is why the
-/// reach is the snap and not the ruler. It is what takes a 9 mm fillet of "Round Side Does not
-/// bevel attached edges.mcx"'s barrel off the radius sweep's queue (`BevelRadiusSweepTests`,
-/// `SurfaceClipClassifiesOnePointOneWayTests`).
+/// crossing, rather than over the finished piece afterwards
+/// (`surface_end_notch::snapped_to_the_profile`): a snap that runs after the vertex is in the pool
+/// leaves the orphan behind for the sewing pass to find, and the sliver it sews on is the defect.
+/// The gap this closes is a chord's SAGITTA and not rounding - a point the construction stood on an
+/// edge, met again as the crossing of that edge with a chord of the curve it came off - so it is a
+/// ruler or two wide, which is why the reach is the snap and not the ruler. It is what takes a 9 mm
+/// fillet of "Round Side Does not bevel attached edges.mcx"'s barrel off the radius sweep's queue
+/// (`BevelRadiusSweepTests`, `SurfaceClipClassifiesOnePointOneWayTests`).
 ///
 /// `the_cuts_own_ends` are the two ends of the chord the cut is drawn along, where the caller
 /// knows them by index (`SurfaceFacetCutOwnEndsTests`).
@@ -212,7 +211,8 @@ fn is_the_crossing(pool: &SurfaceVertexPool, at: Vector3, end: Vector3, across: 
 /// of a tight one two of them can both stand within the snap. Taking the first would answer
 /// differently depending on which way the caller happened to have listed them, and the two clips a
 /// bite makes of one side would then be bounded by different vertices - the very crack this is
-/// for. A later vertex at exactly the nearest distance so far replaces it, as in C#.
+/// for. A later vertex at exactly the nearest distance so far replaces it, so a tie always lands
+/// on the same vertex.
 fn the_profile_vertex_nearest(
     pool: &SurfaceVertexPool,
     profile: Option<&[i32]>,
@@ -237,7 +237,7 @@ fn the_profile_vertex_nearest(
 /// Whether `at` stands ON the segment from `from` to `to` - within `near` of it, and between its
 /// two ends. What it is for is the snap above: a vertex near the crossing is only the crossing
 /// when it lies on the side being cut, and not when it merely stands near it in space.
-// C#'s `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
+// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn on_the_side(at: Vector3, from: Vector3, to: Vector3, near: f64) -> bool {
     let run = to - from;

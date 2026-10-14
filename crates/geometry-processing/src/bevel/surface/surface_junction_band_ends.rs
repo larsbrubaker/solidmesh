@@ -1,6 +1,6 @@
 //! Where the bands stop at a JUNCTION - three picked edges at one vertex with one crease among them
 //! (`SurfaceMixedJunction`) - which is the one corner whose rules are not the plan's own
-//! (`Bevel/Surface/SurfaceJunctionBandEnds.cs`, a static class: a free function here). Its own file
+//! (a free function). Its own file
 //! rather than the plan's: the plan's job is the setbacks and the chain's own corners, and this is a
 //! reading of a corner that spans three chains.
 
@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use super::{SurfaceBandEnd, SurfaceEdgePlan, SurfaceMixedCorner};
 
-/// C# `Add`: what bounds one side of one edge's band at this corner, added to `ends` (the band ends
+/// What bounds one side of one edge's band at this corner, added to `ends` (the band ends
 /// gathered so far for this side of this edge). `arms` is the corner as each arm that bounds THIS
 /// edge read it - one arm on a chain the other two meet at the end of, both arms on the chain shared
 /// with each of them; `region_key` is which of the edge's two faces the band lies on.
@@ -27,8 +27,7 @@ use super::{SurfaceBandEnd, SurfaceEdgePlan, SurfaceMixedCorner};
 /// what closes the chain is the corner rather than a face beyond it, and the faces the junction
 /// leaves unbounded end on the crease the bead is drawn on.
 ///
-/// `arms` is never empty where C# calls this (C# would throw on `arms[0]`); an empty list adds
-/// nothing.
+/// `arms` is never empty where the plan calls this; an empty list adds nothing.
 pub fn add(
     ends: &mut Vec<SurfaceBandEnd>,
     arms: &[Rc<SurfaceMixedCorner>],

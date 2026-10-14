@@ -1,7 +1,6 @@
 //! The STEP at a joint: the one triangle nobody lays where two consecutive cuts of a chain meet on
 //! a side no sliver was sewn on - the near terminal of one cut's tangent run, the band corner the
-//! neighbour's rim starts at, and the corner the two rims converge on at the far end. Ports
-//! `Bevel/Surface/SurfaceMitreJointStep.cs`.
+//! neighbour's rim starts at, and the corner the two rims converge on at the far end.
 //!
 //! Ground no phase claims: the run belongs to one cut, the corner list to its neighbour, and the
 //! strip stitch sews a column to a run rather than across a joint, so the little wedge between the
@@ -26,11 +25,11 @@
 
 use std::collections::HashMap;
 
-/// One chain edge's tangent run on each side: C# `List<(int Vertex, double Param)>[count, 2]`,
-/// indexed `[edge][side]`, each run possibly absent (C# null).
+/// One chain edge's tangent run on each side as `(vertex, parameter)` pairs, indexed
+/// `[edge][side]`, each run possibly absent.
 pub type SideSeams = [Option<Vec<(i32, f64)>>; 2];
 
-/// One chain edge's band corners: C# `IReadOnlyList<int>[count, 2, 2]`, indexed
+/// One chain edge's band corners, indexed
 /// `[edge][side][end]` where end 0 is the arriving end and 1 the leaving one.
 pub type SideBandCorners = [[Option<Vec<i32>>; 2]; 2];
 
@@ -38,7 +37,7 @@ type DirectedUses = HashMap<(i32, i32), i32>;
 
 /// Lays the joint's step on each side of the joint between `edge_index` and `next_index` that
 /// still has one open. Silent where there is none - which is every joint whose side a sliver's
-/// patch and ear already closed - and where either table is absent (C# null).
+/// patch and ear already closed - and where either table is absent.
 pub fn sew(
     faces: &mut Vec<(i32, i32, i32)>,
     seams: Option<&[SideSeams]>,
@@ -134,11 +133,11 @@ fn try_sew_one(
 ///
 /// Where a sliver's patch stood the joint's step is a triangle, because the patch owns one of the
 /// two run terminals. Where the patch is DECLINED - both its crossings taken as their own rims, so
-/// the whole of it stands on the crease and there is nothing to sew (`SurfaceMitreSliver.TrySew`) -
-/// nobody owns either terminal and the hole is the four sided one between them: at the hanger
-/// stand-off, joint 25/26 walks terminal, corner, corner, terminal all one way round. The gate is
-/// the triangle's, one side longer, and the two triangles are laid across the diagonal wound
-/// opposite that walk.
+/// the whole of it stands on the crease and there is nothing to sew
+/// (`surface_mitre_sliver_sew::try_sew`) - nobody owns either terminal and the hole is the four
+/// sided one between them: at the hanger stand-off, joint 25/26 walks terminal, corner, corner,
+/// terminal all one way round. The gate is the triangle's, one side longer, and the two triangles
+/// are laid across the diagonal wound opposite that walk.
 fn try_sew_the_quad(
     faces: &mut Vec<(i32, i32, i32)>,
     used: &DirectedUses,

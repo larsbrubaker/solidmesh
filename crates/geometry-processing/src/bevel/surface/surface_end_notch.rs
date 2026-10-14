@@ -1,5 +1,5 @@
 //! The NOTCH a chain end's section takes out of the face beyond its corner
-//! (`Bevel/Surface/SurfaceEndNotch.cs`, a static class: free functions here). The section's sides,
+//! (free functions). The section's sides,
 //! reach and wedge tests, the snap of a cut ring onto the profile, and the cap
 //! ([`try_cap_with_the_section`]); the notch itself lands with a later package.
 
@@ -16,7 +16,7 @@ pub type SurfaceEndNotchSide = (Vector3, Vector3, Vec<i32>);
 /// The section's two straight sides - from the `corner` to each end of the `profile`, in the plane
 /// facing `plane_normal` - each facing the other end. A side the other lies along, or one of no
 /// length, is left out.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn the_sides_of_the_section(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -74,7 +74,7 @@ pub fn the_reach_of_the_section(pool: &SurfaceVertexPool, profile: &[i32], corne
 }
 
 /// Whether every profile vertex stands inside both of the section's `sides`, to the pool's ruler.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `x < y` refusal, which a NaN passes.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // A negated `x < y` refusal, which a NaN passes.
 pub fn the_section_stands_in_the_wedge(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -141,7 +141,7 @@ pub fn snapped_to_the_profile(
     surface_ring::without_repeats(&snapped)
 }
 
-/// C# `TryCapWithTheSection`: the section laid as the cap that closes the strip's end, fanned from
+/// The section laid as the cap that closes the strip's end, fanned from
 /// a new vertex at `corner` and wound to face `plane_normal`. The two end triangles go as rings with
 /// whatever the walkback's end cut left on the section's straight sides, so every such point gets a
 /// triangle with area. Returns what stands part way along each chord of the profile (nothing,

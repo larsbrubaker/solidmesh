@@ -1,5 +1,5 @@
 //! What a feature STANDING inside a band's footprint takes out of the strip that band ruled
-//! (`Bevel/Surface/SurfaceBuilderStandingFeatures.cs`, a static class; free functions here): a closed
+//! (free functions): a closed
 //! hole where the feature stands part way along it ([`SurfaceStripBittenByAFeature`]), an open notch
 //! where it stands at an end ([`SurfaceStripNotchedByAFeature`]), and the feature's own faces carried
 //! out over the corner the band took in the notched case ([`surface_standing_feature_faces`]).
@@ -20,20 +20,19 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// What [`try_read`] reads: per strip and per end, the open notch a feature takes there (C#'s
-/// `out notched`), and per strip, the one closed hole a feature takes out of its middle (C#'s
-/// `out bitten`).
+/// What [`try_read`] reads: per strip and per end, the open notch a feature takes there, and per
+/// strip, the one closed hole a feature takes out of its middle.
 pub type SurfaceStandingFeatureReading = (
     SurfaceStripNotches,
     Vec<Option<Rc<SurfaceStripBittenByAFeature>>>,
 );
 
-/// C# `TryRead`: every withheld feature read against the strip its band reached, into the bite or the
+/// Every withheld feature read against the strip its band reached, into the bite or the
 /// notch it takes there, or refused by name where the two readings cannot both stand.
 ///
-/// The C# arrays map as `SurfaceBevelBuilder` hands them to its other steps: `strips` one per build
-/// edge (`None` where a blend swallowed it), `seams` C#'s `[edge, side]` runs (a bitten strip's seam on
-/// the bitten side is replaced here), and `ran_off` C#'s `[edge, side]` run-off trims.
+/// The tables are the ones the builder hands its other steps: `strips` one per build edge (`None`
+/// where a blend swallowed it), `seams` the `[edge][side]` runs (a bitten strip's seam on the
+/// bitten side is replaced here), and `ran_off` the `[edge][side]` run-off trims.
 #[allow(clippy::too_many_arguments)]
 pub fn try_read(
     pool: &mut SurfaceVertexPool,
@@ -200,7 +199,7 @@ pub fn try_read(
     Ok((notched, bitten))
 }
 
-/// C# `TheNotchedEndCanBeClosed`: whether the end a notch runs off through is one the pass closes
+/// Whether the end a notch runs off through is one the pass closes
 /// ALONE - a free end of an open chain, with no junction standing at it and no other chain ending
 /// there - which is the only end the split cap and the tail are drawn for.
 fn the_notched_end_can_be_closed(
@@ -250,7 +249,7 @@ fn the_notched_end_can_be_closed(
     false
 }
 
-/// C# `EndsGatheringAt`: how many free ends of open chains stand at one vertex of the part - one for
+/// How many free ends of open chains stand at one vertex of the part - one for
 /// an end the pass closes on its own, three for a corner.
 fn ends_gathering_at(
     plans: &[Rc<SurfaceBevelPlan>],

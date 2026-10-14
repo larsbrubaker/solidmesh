@@ -1,6 +1,5 @@
 //! Redrawing a run's SPLIT stations - vertices on the straight chain between two unsplit
-//! neighbours - from those neighbours rather than from their own fans
-//! (`Bevel/Sections/SectionSplitBlend.cs`, a C# `internal static class`, so a module here): what
+//! neighbours - from those neighbours rather than from their own fans: what
 //! the blend did at one station ([`SplitPlacement`]) and whether it split it, the switch that turns
 //! absorbing split vertices on and off, and the blend's small readings (the nearest unsplit
 //! neighbour, a point or number part way between two). And the blend itself
@@ -14,7 +13,7 @@ use vector_math::Vector3;
 use super::{BevelSection, NanSectionPoint, SectionKind, SectionPool, SectionSide};
 use crate::bevel::bevel_split_chords;
 
-/// C# `SectionSplitBlend.SplitPlacement`: what the blend did at one station, kept so the passes
+/// What the blend did at one station, kept so the passes
 /// AFTER it do not have to read the split a second time. A later pass that treats a split vertex
 /// differently - the surface walk, which may not walk one from its own station - asks this rather
 /// than re-deriving the reading. A station is split exactly where both neighbours are set.
@@ -30,15 +29,15 @@ pub struct SplitPlacement {
 }
 
 impl SplitPlacement {
-    /// C# `IsSplit`: whether the blend redrew this station as a split vertex.
+    /// Whether the blend redrew this station as a split vertex.
     pub fn is_split(&self) -> bool {
         self.before >= 0 && self.after >= 0
     }
 }
 
-/// C# `AbsorbSplitVertices` (a static property, initializer `true`): whether a run's split vertices
-/// are absorbed into their neighbours' strips. A process-wide switch, as C#'s static is, kept
-/// thread-safe because the kernel runs on worker threads (bevel README, "Decided").
+/// Whether a run's split vertices are absorbed into their neighbours' strips. A process-wide
+/// switch, so tests and tools can turn it for every bevel at once, kept thread-safe because the
+/// kernel runs on worker threads (bevel README, "Decided").
 static ABSORB_SPLIT_VERTICES: AtomicBool = AtomicBool::new(true);
 
 /// Reads [`ABSORB_SPLIT_VERTICES`].
@@ -52,7 +51,8 @@ pub fn set_absorb_split_vertices(absorb: bool) {
 }
 
 impl SplitPlacement {
-    /// C#'s `SplitPlacement` constructor.
+    /// What the blend did at one station: the unsplit neighbours either side and how far between
+    /// them.
     pub fn new(before: i32, after: i32, parameter: f64) -> Self {
         Self {
             before,
@@ -62,7 +62,7 @@ impl SplitPlacement {
     }
 }
 
-/// C# `NearestThatIsNotSplit`: the nearest station `step` (±1) round the run from `from` that is not
+/// The nearest station `step` (±1) round the run from `from` that is not
 /// split, or -1 where every other station is.
 pub fn nearest_that_is_not_split(is_split: &[bool], from: i32, step: i32) -> i32 {
     let count = is_split.len() as i32;
@@ -83,26 +83,26 @@ pub fn nearest_that_is_not_split(is_split: &[bool], from: i32, step: i32) -> i32
     -1
 }
 
-/// C# `HowFarAlong`: how far along the chain's `tangent` the `wanted` point stands from the `drawn`
+/// How far along the chain's `tangent` the `wanted` point stands from the `drawn`
 /// one.
 pub fn how_far_along(wanted: Vector3, drawn: Vector3, tangent: Vector3) -> f64 {
     (wanted - drawn).dot(tangent)
 }
 
-/// C# `Between` (points): the point `parameter` of the way from `from` to `to`.
+/// The point `parameter` of the way from `from` to `to`.
 pub fn between(from: Vector3, to: Vector3, parameter: f64) -> Vector3 {
     from + ((to - from) * parameter)
 }
 
-/// C# `Between` (numbers): the number `parameter` of the way from `from` to `to`.
+/// The number `parameter` of the way from `from` to `to`.
 pub fn between_values(from: f64, to: f64, parameter: f64) -> f64 {
     from + ((to - from) * parameter)
 }
 
-/// C# `Apply`: rewrites in place every section that reads as a split vertex, blended from its
-/// nearest unsplit neighbours either side, and says what it did at each station (C#'s `placed`;
-/// `SplitPlacement::new(-1, -1, 0.0)` where it did nothing). A run of under three stations, or a mesh
-/// with no lattice, is left alone. `Err` where a blended point is not a number (where C# throws).
+/// Rewrites in place every section that reads as a split vertex, blended from its nearest unsplit
+/// neighbours either side, and says what it did at each station (`SplitPlacement::new(-1, -1, 0.0)`
+/// where it did nothing). A run of under three stations, or a mesh with no lattice, is left alone.
+/// `Err` where a blended point is not a number.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn apply(
     sections: &mut [BevelSection],
@@ -161,7 +161,7 @@ pub fn apply(
     Ok(placed)
 }
 
-/// C# `ReadsAsASplitVertex(BevelSection[], int, double)`: whether the SMOOTH section at `i` stands
+/// Whether the SMOOTH section at `i` stands
 /// on the straight line between its two neighbours' stations with both its sides offsets.
 pub fn reads_as_a_split_vertex_at(sections: &[BevelSection], i: usize, lattice: f64) -> bool {
     let section = &sections[i];
@@ -184,7 +184,7 @@ pub fn reads_as_a_split_vertex_at(sections: &[BevelSection], i: usize, lattice: 
     )
 }
 
-/// C# `ReadsAsASplitVertex(bool, bool, ..)`: a station with both sides offsets standing on the
+/// A station with both sides offsets standing on the
 /// straight line between its neighbours. A side that SLIDES has a fold of the part to ride and its
 /// own placement is the right one; blending it would take its boundary off the very edge the
 /// substitution keeps.
@@ -201,7 +201,7 @@ pub fn reads_as_a_split_vertex(
         && bevel_split_chords::stands_on_the_line_between(station, before, after, lattice)
 }
 
-/// C# `TryBlend`: the split section redrawn from its two neighbours - each end slid ALONG the chain
+/// The split section redrawn from its two neighbours - each end slid ALONG the chain
 /// to stand where the line between the neighbours' boundaries stands at the split's own parameter,
 /// every sample between moved by the share of that slide its place across the profile gives it - with
 /// that parameter. `Ok(None)` where the profiles differ in length or the split does not stand strictly

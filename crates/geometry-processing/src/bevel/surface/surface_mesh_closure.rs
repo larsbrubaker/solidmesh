@@ -1,5 +1,5 @@
 //! Whether a rewritten surface still closes: every edge of it used by exactly two triangles, one
-//! running each way along it. Ports `Bevel/Surface/SurfaceMeshClosure.cs`.
+//! running each way along it.
 //!
 //! It is the one thing the surface construction promises that cannot be read off any single step
 //! of it, so it is read off the answer, in production, before anything is published.
@@ -23,8 +23,8 @@
 //! that a group the construction cannot close is refused in words
 //! ([`crate::bevel::BevelAdvisoryCode::SurfaceResultNotClosed`]) rather than published with a hole.
 //!
-//! C# reports the FIRST offending edge in `Dictionary` insertion order, so the uses are counted in
-//! an [`IndexMap`]. C#'s null mesh / face list (answering 0) is not representable here.
+//! The FIRST offending edge in the order edges were first used is reported, so the uses are counted
+//! in an [`IndexMap`] and the report is the same on every run.
 
 use indexmap::IndexMap;
 use polygon_mesh::Mesh;

@@ -1,6 +1,6 @@
 //! What the surface construction has to know about ONE edge of a chain ([`SurfaceEdgePlan`]).
-//! Ports the record of `Bevel/Surface/SurfaceEdgePlan.cs`, its constructor and its
-//! read-throughs (convexity, dihedral, the region keys, the two ends).
+//! The record, its constructor and its read-throughs (convexity, dihedral, the region keys, the
+//! two ends).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -11,7 +11,7 @@ use vector_math::Vector3;
 use super::{SurfaceBevelPlan, SurfaceLine, SurfaceWallSection};
 use crate::topology::{ChainEdge, EdgeConvexity, FaceGroup};
 
-/// C# `SurfaceEdgePlan` (a readonly struct): which two face regions meet at one chain edge, how
+/// Which two face regions meet at one chain edge, how
 /// far back into each of them the bevel reaches, the two lines it reaches back TO, and - for a
 /// round - the line the rolling ball's center runs along.
 ///
@@ -24,8 +24,8 @@ use crate::topology::{ChainEdge, EdgeConvexity, FaceGroup};
 ///
 /// Convex and concave edges are NOT two cases. The wedge the profile is drawn in is the material
 /// wedge on a convex edge and the void wedge on a concave one
-/// (`BevelEdgeToolBuilder.ProfileWedgeAngleDegrees`, `180 - |turn|` on both), and with that one
-/// substitution every line below comes out right without a branch: the bisector points into the
+/// (`bevel_edge_tool_builder::profile_wedge_angle_degrees`, `180 - |turn|` on both), and with that
+/// one substitution every line below comes out right without a branch: the bisector points into the
 /// material one way round and into the void the other, which is exactly the difference between
 /// cutting the strip in and bulging it out. The convexity is recorded (on the edge) so a later
 /// phase can say which it was; nothing here reads it.
@@ -105,8 +105,8 @@ pub struct SurfaceEdgePlan {
 }
 
 impl SurfaceEdgePlan {
-    /// C#'s constructor, every field named in C#'s order; `wall_section` is C#'s optional last
-    /// argument (pass `None` for its default).
+    /// An edge plan with every field named in the struct's order; `wall_section` is `None` where
+    /// the edge has no wall section.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         edge: ChainEdge,

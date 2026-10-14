@@ -1,8 +1,7 @@
 //! The corner where THREE CHAMFER strips meet at one vertex of the part: the three strip planes
-//! meet at one point, and each strip ends in a bent ring that runs to it. Ports
-//! `Bevel/Surface/SurfaceCornerMitre.cs` (C# `internal static class`; a module of free functions
-//! here). The arriving strips are [`SurfaceCornerPatchArrival`]s, as at a round corner
-//! (`SurfaceCornerPatch`); what is handed back is each strip's end station
+//! meet at one point, and each strip ends in a bent ring that runs to it. Free functions. The
+//! arriving strips are [`SurfaceCornerPatchArrival`]s, as at a round corner
+//! ([`super::surface_corner_patch`]); what is handed back is each strip's end station
 //! ([`SurfaceStripStation`]), with the meeting point standing between its two rails.
 
 use vector_math::Vector3;
@@ -15,10 +14,10 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// drawn with and far over the rounding of a plane crossing.
 const WITHIN_THE_BAND: f64 = 1e-3;
 
-/// C# `TryClose`: closes a three-chamfer corner - finds the point the three strip planes meet at
-/// and ends each strip in the bent ring that runs to it. `Ok` carries each arrival's end station in
-/// the arrivals' own order; `Err` is C#'s `failure`. The meeting point is added to `pool` once, and
-/// shared.
+/// Closes a three-chamfer corner - finds the point the three strip planes meet at and ends each
+/// strip in the bent ring that runs to it. `Ok` carries each arrival's end station in the arrivals'
+/// own order; `Err` is why the corner would not close. The meeting point is added to `pool` once,
+/// and shared.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_close(
     pool: &mut SurfaceVertexPool,
@@ -89,7 +88,7 @@ pub fn try_close(
     Ok(stations)
 }
 
-/// C# `RailEndsPairUp`: whether the strips' rail ends are vertices shared two at a time, each strip
+/// Whether the strips' rail ends are vertices shared two at a time, each strip
 /// leaving off where a neighbour takes up - given as each strip's left end followed by its right.
 ///
 /// The round path has had this check from the start: `SurfaceCornerPatch`'s `TryOrderTheSides`
@@ -120,7 +119,7 @@ pub fn rail_ends_pair_up(rail_ends: &[i32]) -> bool {
     true
 }
 
-/// C# `TryFindWhereTheyMeet`: the one point on all three planes - Cramer over the three normals,
+/// The one point on all three planes - Cramer over the three normals,
 /// which is the same solve `SurfaceCornerPatch` does for a ball centre and fails the same way when
 /// the three planes have no point between them.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -144,7 +143,7 @@ fn try_find_where_they_meet(points: &[Vector3], normals: &[Vector3]) -> Option<V
     Some(((first * wanted.x) + (second * wanted.y) + (third * wanted.z)) / determinant)
 }
 
-/// C# `TryEndTheStrip`: one strip's bent end - its two rails stop at the vertices the walkback left
+/// One strip's bent end - its two rails stop at the vertices the walkback left
 /// on their own tangent lines, which are where the two neighbouring planes cross those rails, and
 /// the meeting point stands between them as a point the stitch sews the last quad to.
 ///
@@ -195,7 +194,7 @@ fn try_end_the_strip(
     ))
 }
 
-/// C# `IsWithinTheBand`: whether a point stands on the strip's plane and between its two rails -
+/// Whether a point stands on the strip's plane and between its two rails -
 /// taken in the strip's own frame, across and along, which are independent but not square to each
 /// other on an oblique corner.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]

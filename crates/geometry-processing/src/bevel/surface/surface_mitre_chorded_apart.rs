@@ -1,8 +1,8 @@
-//! THE MITRE OF TWO ARCS THAT WERE NOT CHORDED THE SAME WAY (`Bevel/Surface/SurfaceMitreChordedApart.cs`,
-//! a static class: free functions here): the ring each strip meets the mitre plane on is still one
-//! vertex per rail, and the OTHER strip's crossings are carried as points BETWEEN two of its rails,
-//! so the two ends sew to one polyline - the union of both strips' crossings, ordered by their angle
-//! from the face the two beads share. `surface_strip_mitre::try_mitre` asks it.
+//! THE MITRE OF TWO ARCS THAT WERE NOT CHORDED THE SAME WAY (free functions): the ring each strip
+//! meets the mitre plane on is still one vertex per rail, and the OTHER strip's crossings are
+//! carried as points BETWEEN two of its rails, so the two ends sew to one polyline - the union of
+//! both strips' crossings, ordered by their angle from the face the two beads share.
+//! `surface_strip_mitre::try_mitre` asks it.
 //!
 //! **Why the two rings normally are one ring.** Two beads of one radius tangent to the face they
 //! share carry their rail at angle theta in the same plane `r (1 - cos theta)` above that face, so
@@ -31,7 +31,8 @@
 //! edge's far face exactly as they did (`surface_strip_mitre`'s rails with no partner,
 //! [`super::surface_mitre_sector`]).
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are deliberate: the comparison inside each is false for NaN, so a NaN
+// takes the negated branch.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use vector_math::Vector3;
@@ -48,7 +49,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 const ANGLE_RULER: f64 = 1e-6;
 
 /// One strip's side of a chorded-apart mitre: the strip, its edge index, the rail standing on the
-/// shared face and the direction its rails count out from there (C#'s positional parameters).
+/// shared face and the direction its rails count out from there.
 #[derive(Clone, Copy)]
 pub struct ChordedApartSide<'a> {
     /// The strip.
@@ -82,7 +83,7 @@ pub struct ChordedApartRails {
     pub transition_on_theirs: i32,
 }
 
-/// C# `TryTheRails`: both strips' rails over the angle the two beads SHARE, where the two arcs were
+/// Both strips' rails over the angle the two beads SHARE, where the two arcs were
 /// chorded at different angular steps. Every pair that does land at one angle is left to the
 /// ordinary pair reading, so a corner whose steps agree on some rails is built there exactly as it
 /// always was. `through` is a point the mitre plane passes through, `normal` its normal; `ring`,
@@ -232,26 +233,25 @@ pub fn try_the_rails(
     })
 }
 
-/// C# `SweepOf`: how far a strip's arc turns in all - its step times the chords it was cut into.
+/// How far a strip's arc turns in all - its step times the chords it was cut into.
 pub fn sweep_of(strip: &SurfaceStrip) -> f64 {
     (strip.rail_count() - 1) as f64 * strip.rail_step_degrees
 }
 
-/// C# `StepsWithin`: how many of a strip's rails stand within `overlap` of the shared face - the
+/// How many of a strip's rails stand within `overlap` of the shared face - the
 /// ones the other bead has surface over and the mitre therefore stops. Never more rails than it has.
 fn steps_within(strip: &SurfaceStrip, overlap: f64) -> i32 {
     if !(strip.rail_step_degrees > 0.0) {
         return strip.rail_count();
     }
 
-    // C# `(int)Math.Floor(...)`: a floor of a finite, bounded ratio, so the cast cannot saturate
-    // where C# would wrap.
+    // A floor of a finite, bounded ratio, so the cast never saturates.
     strip
         .rail_count()
         .min(((overlap / strip.rail_step_degrees) + ANGLE_RULER).floor() as i32 + 1)
 }
 
-/// C# `TheStepAt`: which of a strip's first `paired` steps stands at `angle`, or -1 where none
+/// Which of a strip's first `paired` steps stands at `angle`, or -1 where none
 /// does. Read by dividing rather than by walking, because the rails are evenly spaced and the answer
 /// has to be the same whichever of the two strips asks it.
 fn the_step_at(strip: &SurfaceStrip, angle: f64, paired: i32) -> i32 {
@@ -260,7 +260,7 @@ fn the_step_at(strip: &SurfaceStrip, angle: f64, paired: i32) -> i32 {
     }
 
     let steps = angle / strip.rail_step_degrees;
-    // C# `(int)Math.Round(steps)`: banker's rounding.
+    // Banker's rounding.
     let nearest = steps.round_ties_even() as i32;
 
     if nearest >= 0 && nearest < paired && (steps - nearest as f64).abs() < ANGLE_RULER {
@@ -270,7 +270,7 @@ fn the_step_at(strip: &SurfaceStrip, angle: f64, paired: i32) -> i32 {
     }
 }
 
-/// C# `ThePairingByIndexMisses`: whether the ordinary pairing - rail `k` of one against rail `k` of
+/// Whether the ordinary pairing - rail `k` of one against rail `k` of
 /// the other, counted out from the face they share - leaves any pair standing apart. Read rather
 /// than assumed from the two arcs' steps: two pieces of ONE crease have sweeps that agree to their
 /// last bits and not always to every bit, and a corner whose rails do meet must go on being built
@@ -312,7 +312,7 @@ pub fn the_pairing_by_index_misses(
     false
 }
 
-/// C# `TryOneRail`: one rail's crossing of the mitre plane, as a vertex and a parameter along the
+/// One rail's crossing of the mitre plane, as a vertex and a parameter along the
 /// edge.
 #[allow(clippy::too_many_arguments)]
 fn try_one_rail(
@@ -344,7 +344,7 @@ fn try_one_rail(
     Ok((vertex, at))
 }
 
-/// C# `TryTheVertex`: the pool vertex one rail's crossing stands at. An OUTERMOST rail stands on a
+/// The pool vertex one rail's crossing stands at. An OUTERMOST rail stands on a
 /// tangent line the walkback already left a vertex on, and takes that one rather than minting a
 /// second a rounding away from it - which would split the seam down the strip's whole length. Every
 /// other rail is a point of the mitre and nothing else's, so it is minted here.
@@ -368,9 +368,9 @@ fn try_the_vertex(
     }
 
     // Which end of that seam's run the mitre is at is which way the strip was walked, so both are
-    // tried - the same two-sided reading the rails with no partner take. C# indexes the seam
-    // unguarded; a missing or empty one (which the builder never hands in) is refused as the seam
-    // not meeting, which is what an unmatched one is (divergence 5060).
+    // tried - the same two-sided reading the rails with no partner take. A missing or empty seam
+    // (which the builder never hands in) is refused as the seam not meeting, which is what an
+    // unmatched one is, rather than panic.
     let side = if rail == 0 { 0 } else { 1 };
     let Some(run) = seams
         .get(edge_index as usize)
@@ -393,7 +393,7 @@ fn try_the_vertex(
     Ok(standing)
 }
 
-/// C# `Spread`: one strip's chords with the other's crossings laid along them, and the transition.
+/// One strip's chords with the other's crossings laid along them, and the transition.
 /// Each foreign point goes on the chord whose two rails bracket it by ANGLE, and the points on one
 /// chord are ordered the way the stitch reads them - from the lower rail INDEX to the higher, which
 /// is out from the shared face where the rails were counted up and back toward it where they were
@@ -417,7 +417,7 @@ fn spread(
         vec![None; (strip.rail_count() - 1).max(0) as usize];
 
     for &point in foreign {
-        // Which of this strip's steps the angle falls after. C# `(int)Math.Floor(...)`.
+        // Which of this strip's steps the angle falls after, floored.
         let mut below = ((point.0 / strip.rail_step_degrees) + ANGLE_RULER).floor() as i32;
 
         if below > paired - 2 {
@@ -446,9 +446,7 @@ fn spread(
                 return Vec::new();
             };
 
-            // C# `List.Sort` is unstable; Rust's stable sort keeps two foreign points of one angle
-            // in the order they were laid, which is what C#'s insertion sort does on the few points
-            // one chord carries.
+            // A stable sort keeps two foreign points of one angle in the order they were laid.
             points.sort_by(|left, right| left.0.total_cmp(&right.0));
 
             // Counted DOWN from the shared face, the rail index runs against the angle, so the

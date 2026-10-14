@@ -1,5 +1,5 @@
-//! Whether a handover between two band ends still leaves a strip of band between them. Ports
-//! `Bevel/Surface/SurfaceHandoverLeavesAStrip.cs` (a C# static class): the check of a whole plan
+//! Whether a handover between two band ends still leaves a strip of band between them: the check
+//! of a whole plan
 //! ([`try_check`]), the band test along a line ([`leaves_a_band`]) and its plan form
 //! ([`leaves_a_band_of`]).
 
@@ -8,16 +8,16 @@ use vector_math::cs_math;
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceLine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryCheck`: checks every corner of `plan` that swallows an edge - that the edge carrying the
+/// Checks every corner of `plan` that swallows an edge - that the edge carrying the
 /// corner's ring still has a band to hand over on both its sides. A plan that swallows nothing is
-/// not measured at all. `Err` is C#'s `failureReason`, named at the corner.
+/// not measured at all. `Err` is the refusal, named at the corner.
 pub fn try_check(plan: &SurfaceBevelPlan) -> Result<(), BevelAdvisory> {
     if plan.roles().swallowed_count() == 0 {
         return Ok(());
     }
 
     // The plan's OWN corner keys and not 0..edges: a junction's corner stands at an end of the
-    // chain and is named by a sentinel no edge index can be (SurfaceBevelPlan.JunctionKey).
+    // chain and is named by a sentinel no edge index can be (SurfaceBevelPlan::junction_key).
     for corner in plan.mixed_corner_keys() {
         let Some(cut) = plan.roles().try_the_edge_carrying_the_ring_at(corner) else {
             continue;
@@ -82,7 +82,7 @@ pub fn leaves_a_band(ends: &[SurfaceBandEnd], line: &SurfaceLine) -> bool {
     from < to
 }
 
-/// C# `LeavesABand(SurfaceBevelPlan, int, bool, SurfaceLine)`: whether the band ends of one side of
+/// Whether the band ends of one side of
 /// one edge of `plan` ([`SurfaceBevelPlan::band_ends_of`]) leave any of `line` standing.
 pub fn leaves_a_band_of(
     plan: &SurfaceBevelPlan,

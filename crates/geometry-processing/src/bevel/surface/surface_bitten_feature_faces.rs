@@ -1,7 +1,6 @@
 //! The two faces of a feature that BIT a strip, each carried on past the landing face it used to
 //! die on and trimmed against the round - the other half of the hole
-//! [`super::SurfaceStripBiteRows`] leaves in the strip. Ports
-//! `Bevel/Surface/SurfaceBittenFeatureFaces.cs` (C# `internal static class`; free functions here).
+//! [`super::SurfaceStripBiteRows`] leaves in the strip. Free functions.
 //!
 //! The same ruling as [`super::surface_standing_feature_faces`], which does this where the feature
 //! stands under an END of the band, and a great deal less work than it: a feature standing part way
@@ -32,7 +31,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 type Face = SurfaceStandingFeatureWithheldFace;
 
-/// C# `TryEmit`: emits every face of one bitten feature ONCE, extended out to EVERY hole bitten out
+/// Emits every face of one bitten feature ONCE, extended out to EVERY hole bitten out
 /// of it.
 ///
 /// Every bite of the feature together, and not one call per bite, because what is emitted is the
@@ -70,7 +69,7 @@ pub fn try_emit(
     Ok(())
 }
 
-/// C# `TryTheRing`: one face's ring - its own outline with the side running from the hole's corner
+/// One face's ring - its own outline with the side running from the hole's corner
 /// on the seam to the feature's ridge end replaced by the trace the extension now runs out on.
 fn try_the_ring(
     pool: &SurfaceVertexPool,
@@ -173,7 +172,7 @@ fn try_the_ring(
     Ok(ring)
 }
 
-/// C# `Emit`: one ring, fanned the way the face faces - or cut into ears where no corner of it sees
+/// One ring, fanned the way the face faces - or cut into ears where no corner of it sees
 /// the whole.
 fn emit(
     pool: &mut SurfaceVertexPool,

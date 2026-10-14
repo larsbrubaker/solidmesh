@@ -1,11 +1,11 @@
-//! Cutting the SMOOTH side of a run away from the part (`Bevel/Sections/SectionSmoothSide.cs`, the
-//! main file of the C# `internal static partial class SectionSmoothSide`; a module of free functions
-//! here). What is here is the cut's own types - why a side would not cut ([`SmoothSideRefusal`]),
-//! where a boundary vertex lies ([`SmoothSidePlace`]), one cut facet ([`SmoothSideFacetCut`]) and
-//! what the whole cut came to ([`SmoothSideCut`]) - the cut itself ([`try_cut_the_smooth_side`]), and
-//! the readings of the side the cut is laid on: its faces, its flat pieces and the facets each
-//! boundary vertex stands on. The boundary is laid in [`super::section_smooth_side_boundary`] (a
-//! junction's rim in [`super::section_smooth_side_junction_rim`]), the facet split is in
+//! Cutting the SMOOTH side of a run away from the part: the main module of the smooth-side cut, a
+//! set of free functions. What is here is the cut's own types - why a side would not cut
+//! ([`SmoothSideRefusal`]), where a boundary vertex lies ([`SmoothSidePlace`]), one cut facet
+//! ([`SmoothSideFacetCut`]) and what the whole cut came to ([`SmoothSideCut`]) - the cut itself
+//! ([`try_cut_the_smooth_side`]), and the readings of the side the cut is laid on: its faces, its
+//! flat pieces and the facets each boundary vertex stands on. The boundary is laid in
+//! [`super::section_smooth_side_boundary`] (a junction's rim in
+//! [`super::section_smooth_side_junction_rim`]), the facet split is in
 //! [`super::section_smooth_side_facets`], the kept rings' triangulation in
 //! [`super::section_smooth_side_triangulate`], and a piece with holes is read as one ring in
 //! [`super::section_smooth_side_holes`].
@@ -29,7 +29,7 @@ use super::section_smooth_side_boundary::{try_lay_the_boundary, SmoothSideFailur
 use super::section_smooth_side_facets::try_cut_one_facet;
 use super::{SectionKind, SectionPool, SectionRun};
 
-/// C# `SmoothSideRefusal`: why a smooth side would not cut.
+/// Why a smooth side would not cut.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SmoothSideRefusal {
     /// It did.
@@ -70,7 +70,7 @@ pub enum SmoothSideRefusal {
     ACollinearRunHasNoTriangleToFan = 15,
 }
 
-/// C# `SmoothSidePlace` (a readonly struct): where one boundary vertex lies on the part.
+/// Where one boundary vertex lies on the part.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SmoothSidePlace {
     /// The face the point lies strictly inside, or -1 where it lies on a mesh edge.
@@ -87,7 +87,7 @@ pub struct SmoothSidePlace {
 }
 
 impl SmoothSidePlace {
-    /// C#'s constructor; its optional `vertex` (-1 by default) is passed explicitly.
+    /// A place on `face`; `vertex` is -1 where the place is not on a vertex of the part.
     pub fn new(face: i32, edge: i32, parameter: f64, vertex: i32) -> Self {
         Self {
             face,
@@ -98,7 +98,7 @@ impl SmoothSidePlace {
     }
 }
 
-/// C# `SmoothSideFacetCut`: one flat piece of the smooth side, cut by the boundary that crosses it.
+/// One flat piece of the smooth side, cut by the boundary that crosses it.
 #[derive(Debug, Clone, Default)]
 pub struct SmoothSideFacetCut {
     /// The facet's own mesh faces - every one of them is replaced.
@@ -113,7 +113,7 @@ pub struct SmoothSideFacetCut {
     pub triangles: Vec<(i32, i32, i32)>,
 }
 
-/// C# `SmoothSideCut`: what cutting one smooth side of a run came to.
+/// What cutting one smooth side of a run came to.
 #[derive(Debug, Clone)]
 pub struct SmoothSideCut {
     /// Station `i`'s own boundary points, in walk order - ONE for every ordinary station, and THREE
@@ -139,7 +139,7 @@ pub struct SmoothSideCut {
     /// is on this side. This is the reading a join out of that station is offered, and it is kept so
     /// that a join can be laid from outside this module exactly as the cut lays it.
     pub station_faces: Vec<Vec<i32>>,
-    /// Where each boundary vertex lies on the part (insertion order, as C#'s dictionary iterates).
+    /// Where each boundary vertex lies on the part, in the order the vertices were placed.
     pub places: IndexMap<i32, SmoothSidePlace>,
     /// The station boundary points the BUILDER placed along the join between their two neighbours
     /// (`BevelSection::left_boundary_is_join_placed`) rather than walking from their own station.
@@ -167,7 +167,7 @@ impl Default for SmoothSideCut {
             station_boundary: Vec::new(),
             crossings_after: Vec::new(),
             boundary: Vec::new(),
-            // C#: `BoundaryIsClosed { get; set; } = true`.
+            // A boundary is closed until an open run's cut says otherwise.
             boundary_is_closed: true,
             station_faces: Vec::new(),
             places: IndexMap::new(),
@@ -181,9 +181,9 @@ impl Default for SmoothSideCut {
 }
 
 impl SmoothSideCut {
-    /// C# `CrossingsAfterStation`: the crossings of the join the LOFT's row between `station` and the
+    /// The crossings of the join the LOFT's row between `station` and the
     /// next runs through - the join from this station's LAST boundary point to the next station's
-    /// FIRST. `None` (C#'s null) where the run is open and this is its last station.
+    /// FIRST. `None` where the run is open and this is its last station.
     ///
     /// The loft is indexed on STATIONS and `crossings_after` on the FLATTENED boundary, so the two
     /// agree only while every station hands one point. A junction hands three, so this maps the
@@ -198,7 +198,7 @@ impl SmoothSideCut {
         }
     }
 
-    /// C# `InternalCrossingsOf`: the crossings of a junction station's OWN rim joins - P1 -> F1 and
+    /// The crossings of a junction station's OWN rim joins - P1 -> F1 and
     /// F1 -> P2 - in walk order. Empty for an ordinary station, which has one point and so no internal
     /// join.
     ///
@@ -220,7 +220,7 @@ impl SmoothSideCut {
         internal_joins
     }
 
-    /// C# `FirstPointOf`: where `station`'s first point sits in the FLATTENED boundary.
+    /// Where `station`'s first point sits in the FLATTENED boundary.
     fn first_point_of(&self, station: i32) -> i32 {
         let mut at = 0;
 
@@ -231,7 +231,7 @@ impl SmoothSideCut {
         at
     }
 
-    /// C# `PointsAt`: how many boundary points `station` handed. A cut assembled without the station
+    /// How many boundary points `station` handed. A cut assembled without the station
     /// map reads as one point per station, which is what the flattened boundary then is.
     fn points_at(&self, station: i32) -> i32 {
         if station < self.station_points.len() as i32 {
@@ -242,8 +242,9 @@ impl SmoothSideCut {
     }
 }
 
-/// C# `TryCutTheSmoothSide`: lays the smooth side's boundary on the surface and cuts every facet it
-/// crosses. The cut comes back whether or not it was made (C#'s `out cut`), beside `Ok` or why not.
+/// Lays the smooth side's boundary on the surface and cuts every facet it
+/// crosses. The cut comes back whether or not it was made, beside `Ok` or why not, so a caller can
+/// read how far a refused cut got.
 ///
 /// `is_a_feature_edge` is the OPERATION's own feature reading - never a coplanarity test, which would
 /// call every fold of a tessellated wall a feature and stop the boundary at the first one.
@@ -383,7 +384,7 @@ fn cut_the_smooth_side(
     Ok(())
 }
 
-/// C# `BothEndsAreEndSections`: whether an open run stops at an [`SectionKind::End`] section at BOTH
+/// Whether an open run stops at an [`SectionKind::End`] section at BOTH
 /// ends. Only then does the boundary start and stop on a crease of the part, which is what an open
 /// band is closed off by.
 pub fn both_ends_are_end_sections(run: &SectionRun) -> bool {
@@ -392,7 +393,7 @@ pub fn both_ends_are_end_sections(run: &SectionRun) -> bool {
         && run.sections[run.sections.len() - 1].kind == SectionKind::End
 }
 
-/// C# `TheSidesFaces`: the faces of the smooth side - the side face of every chain edge, grown over
+/// The faces of the smooth side - the side face of every chain edge, grown over
 /// the part across every edge the operation does NOT call a feature. The features bound the side,
 /// so this is the whole of the surface the boundary may be laid on and no more.
 pub fn the_sides_faces(
@@ -420,7 +421,7 @@ pub fn the_sides_faces(
     })
 }
 
-/// C# `TheFlatPiece`: one flat piece of the side - the faces around `from` that are coplanar with it.
+/// One flat piece of the side - the faces around `from` that are coplanar with it.
 pub fn the_flat_piece(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -435,9 +436,9 @@ pub fn the_flat_piece(
     .collect()
 }
 
-/// C# `Flood`: the faces reached from `seeds` across every two-faced edge `barred` lets through,
-/// staying `within` the given faces where there are any - in the order the flood reached them (C#'s
-/// `HashSet`, which nothing is removed from, iterates in that order).
+/// The faces reached from `seeds` across every two-faced edge `barred` lets through,
+/// staying `within` the given faces where there are any - in the order the flood reached them, so
+/// the faces come back the same on every run.
 pub fn flood(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -476,7 +477,7 @@ pub fn flood(
     reached
 }
 
-/// C# `TheFacetsEachVertexIsOn`: which facets each boundary vertex stands on - two where it lies on a
+/// Which facets each boundary vertex stands on - two where it lies on a
 /// fold between them. Keyed in the boundary's order.
 pub fn the_facets_each_vertex_is_on(
     graph: &MeshEdgeGraph,
@@ -486,8 +487,8 @@ pub fn the_facets_each_vertex_is_on(
     let mut on = IndexMap::new();
 
     for &vertex in &cut.boundary {
-        // C# indexes the dictionary, which throws on a vertex with no place; every boundary vertex
-        // is given one where it is laid, so a missing one is a broken cut and reads as no facet.
+        // Every boundary vertex is given a place where it is laid, so a missing one is a broken cut
+        // and reads as no facet.
         let mut facets = Vec::new();
 
         if let Some(place) = cut.places.get(&vertex) {
@@ -512,7 +513,7 @@ pub fn the_facets_each_vertex_is_on(
     on
 }
 
-/// C# `EdgesOf`: the graph edges of a face's three sides, in corner order, each looked up by its
+/// The graph edges of a face's three sides, in corner order, each looked up by its
 /// vertex pair (a side with no edge is skipped).
 pub fn edges_of(mesh: &Mesh, edge_at_pair: &EdgeAtPair, face: i32) -> Vec<i32> {
     let corners = corners(mesh, face);
@@ -527,13 +528,13 @@ pub fn edges_of(mesh: &Mesh, edge_at_pair: &EdgeAtPair, face: i32) -> Vec<i32> {
     edges
 }
 
-/// C# `Corners`: a face's three corners in its own order.
+/// A face's three corners in its own order.
 pub fn corners(mesh: &Mesh, face: i32) -> [i32; 3] {
     let drawn = &mesh.faces[face as usize];
     [drawn.v0, drawn.v1, drawn.v2]
 }
 
-/// C# `NormalOf`: a face's normal read off its corners (not its stored normal).
+/// A face's normal read off its corners (not its stored normal).
 pub fn normal_of(mesh: &Mesh, face: i32) -> Vector3 {
     let drawn = &mesh.faces[face as usize];
     let a = Vector3::from_vector3_float(mesh.vertices[drawn.v0 as usize]);

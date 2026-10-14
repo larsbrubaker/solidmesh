@@ -1,6 +1,5 @@
-//! Splitting the facets a smooth-side boundary crosses (`Bevel/Sections/SectionSmoothSide.Facets.cs`,
-//! part of the C# `internal static partial class SectionSmoothSide`; free functions here beside
-//! [`super::section_smooth_side`]'s types). A facet's outline rings are read off the mesh
+//! Splitting the facets a smooth-side boundary crosses: free functions beside
+//! [`super::section_smooth_side`]'s types. A facet's outline rings are read off the mesh
 //! ([`the_outline_rings`]), the boundary's pieces across the facet are found ([`the_pieces`]), each
 //! piece end is inserted into the ring edge it lies on ([`try_insert_into_the_rings`]), each piece
 //! splits the ring holding both its ends ([`try_split`]), and which side of the boundary each ring is
@@ -25,13 +24,13 @@ use super::SectionPool;
 /// The boundary's own directed edges, `(from, to)`.
 pub type BoundaryEdges = IndexSet<(i32, i32)>;
 
-/// A refusal and where on the part it stands (C#'s `out refusal, out where` pair).
+/// A refusal and where on the part it stands.
 pub type RefusedAt = (SmoothSideRefusal, Vector3);
 
-/// C# `TryCutOneFacet`: cuts one facet - its outline ring is read, the boundary vertices that lie ON
+/// Cuts one facet - its outline ring is read, the boundary vertices that lie ON
 /// that ring are inserted into it in order, and each piece of the boundary that runs across the
-/// facet splits a ring in two. `Ok(None)` (C#'s true with a null cut) where no piece crosses it.
-// `!(area > 0.0)` keeps C#'s reading of a NaN area as not holding material.
+/// facet splits a ring in two. `Ok(None)` where no piece crosses it.
+// `!(area > 0.0)` reads a NaN area as not holding material.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_cut_one_facet(
     mesh: &Mesh,
@@ -157,7 +156,7 @@ pub fn try_cut_one_facet(
             // rim faces and puts nothing back. Refuse by name rather than emit the open rim.
             cut.rings_of_the_refused_facet.clear();
             let mut sizes: Vec<i32> = rings.iter().map(|ring_of| ring_of.len() as i32).collect();
-            // C# `OrderByDescending` (stable; equal sizes are indistinguishable anyway).
+            // Largest first; equal sizes are indistinguishable, so the sort's tie order is moot.
             sizes.sort_by(|a, b| b.cmp(a));
             cut.rings_of_the_refused_facet.extend(sizes);
 
@@ -223,7 +222,7 @@ pub fn try_cut_one_facet(
     Ok(Some(facet_cut))
 }
 
-/// C# `ThePieces`: the pieces of the boundary that cross one facet - each a maximal run of
+/// The pieces of the boundary that cross one facet - each a maximal run of
 /// consecutive boundary vertices standing on it. A run of one is the boundary touching a fold and
 /// turning back, which cuts nothing, and is not a piece.
 ///
@@ -287,7 +286,7 @@ pub fn the_pieces(
 /// The points inserted into one ring edge, each with how far along that edge it stands.
 type EdgeInserts = Vec<(f64, i32)>;
 
-/// C# `TryInsertIntoTheRings`: the facet's outline rings with every piece end inserted into the ring
+/// The facet's outline rings with every piece end inserted into the ring
 /// edge it lies on, in order along that edge; `None` where an end is on no ring's edge at all, which
 /// is not a cut this facet can take.
 ///
@@ -306,7 +305,7 @@ pub fn try_insert_into_the_rings(
         .collect();
 
     for &end in ends {
-        // C# indexes the dictionary (a throw on a missing place); every boundary vertex has one.
+        // Every boundary vertex has a place; a missing one is a broken cut.
         let place = cut.places.get(&end)?;
 
         if place.edge < 0 {
@@ -358,7 +357,7 @@ pub fn try_insert_into_the_rings(
                 continue;
             };
 
-            // C# `OrderBy` is a STABLE sort, so equal parameters keep their insertion order.
+            // A STABLE sort, so equal parameters keep their insertion order.
             let mut ordered = here.clone();
             ordered.sort_by(|a, b| a.0.total_cmp(&b.0));
 
@@ -373,7 +372,7 @@ pub fn try_insert_into_the_rings(
     Some(rings)
 }
 
-/// C# `TrySplit`: splits whichever ring holds both ends of `piece` into the two rings that path
+/// Splits whichever ring holds both ends of `piece` into the two rings that path
 /// makes - one running the path forward, one running it backward. Which of those the part keeps is
 /// read off the direction afterwards, by [`try_side`].
 pub fn try_split(rings: &mut Vec<Vec<i32>>, piece: &[i32]) -> bool {
@@ -410,7 +409,7 @@ pub fn try_split(rings: &mut Vec<Vec<i32>>, piece: &[i32]) -> bool {
     false
 }
 
-/// C# `Arc`: the ring from one index to another, going the way the ring is wound, both ends included.
+/// The ring from one index to another, going the way the ring is wound, both ends included.
 pub fn arc(ring: &[i32], from: usize, to: usize) -> Vec<i32> {
     let mut arc = Vec::new();
     let mut i = from;
@@ -426,7 +425,7 @@ pub fn arc(ring: &[i32], from: usize, to: usize) -> Vec<i32> {
     }
 }
 
-/// C# `TheBoundarysOwnEdges`: the boundary's own directed edges, in chain order - wrapping only where
+/// The boundary's own directed edges, in chain order - wrapping only where
 /// the boundary is closed.
 pub fn the_boundarys_own_edges(cut: &SmoothSideCut) -> BoundaryEdges {
     let mut edges = IndexSet::new();
@@ -451,20 +450,20 @@ pub enum RingSide {
     Kept,
     /// The ring is the band the fillet replaces (`kept` false).
     Band,
-    /// The ring carries no boundary edge at all and that is allowed (C#'s `untouched`).
+    /// The ring carries no boundary edge at all and that is allowed.
     Untouched,
 }
 
-/// Why [`try_side`] could not side a ring (C#'s false return, `kept` telling the two apart).
+/// Why [`try_side`] could not side a ring.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RingSideRefusal {
-    /// The ring runs boundary edges both ways (C#'s `kept` true alongside false).
+    /// The ring runs boundary edges both ways.
     BothWays,
-    /// The ring runs no boundary edge at all (C#'s `kept` false alongside false).
+    /// The ring runs no boundary edge at all.
     NoBoundaryEdge,
 }
 
-/// C# `TrySide`: which side of the boundary a ring is. The facet's outline is wound counter-clockwise
+/// Which side of the boundary a ring is. The facet's outline is wound counter-clockwise
 /// about its normal, so a ring's inside is to the LEFT of every edge it runs. A ring that runs a
 /// boundary edge in the boundary's own order therefore holds what stands to the boundary's left,
 /// which is the part the fillet keeps when the smooth side is the chain's left, and the band when it
@@ -511,7 +510,7 @@ pub fn try_side(
     })
 }
 
-/// C# `TheOutlineRings`: the boundary rings of one flat piece - its once-used edges, chained up,
+/// The boundary rings of one flat piece - its once-used edges, chained up,
 /// wound the way its faces are. A disc has ONE; a piece with a hole in it - a bore mouth standing
 /// wholly inside the flat piece - has its outer ring and one more per hole. `None` where the piece is
 /// not a surface at all (a side drawn twice, or a vertex the outline pinches through).
@@ -519,8 +518,8 @@ pub fn try_side(
 /// This mirrors `SectionFanRemesh`'s own outline walk, which reads the REBUILT faces; this one reads
 /// the mesh, because nothing has been rebuilt when the smooth side is cut.
 pub fn the_outline_rings(mesh: &Mesh, piece: &[i32]) -> Option<Vec<Vec<i32>>> {
-    // Insertion-ordered sets and maps: C#'s HashSet and Dictionary iterate in insertion order here
-    // (nothing is removed), and that order decides which ring comes first.
+    // Insertion-ordered sets and maps: their order decides which ring comes first, so it must be
+    // the same on every run.
     let mut drawn: IndexSet<(i32, i32)> = IndexSet::new();
 
     for &face in piece {
@@ -572,7 +571,7 @@ pub fn the_outline_rings(mesh: &Mesh, piece: &[i32]) -> Option<Vec<Vec<i32>>> {
         while walked.insert(here) {
             ring.push(here);
             // Every `to` is some `from` of a closed outline; one that is not is an open outline,
-            // where C#'s dictionary lookup would throw - read here as not a surface.
+            // read here as not a surface.
             here = *next.get(&here)?;
         }
 

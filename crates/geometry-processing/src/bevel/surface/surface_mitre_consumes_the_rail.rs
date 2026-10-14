@@ -1,5 +1,5 @@
 //! A short chord whose two mitres have CROSSED OVER on some of its rails
-//! ([`SurfaceMitreConsumesTheRail`], `Bevel/Surface/SurfaceMitreConsumesTheRail.cs`): the setback
+//! ([`SurfaceMitreConsumesTheRail`]): the setback
 //! each neighbour's mitre takes grows with the rail's own offset from the edge, so a chord shorter
 //! than the two setbacks together is eaten from one side of the profile inward while the rails
 //! nearer the other face still have room. The strip is not gone - it is gone on rails 0 through
@@ -20,7 +20,8 @@
 //! neighbour lines that do not meet have no virtual corner to stand on; and a turn between the
 //! neighbours past the plan's own bound is a mitre nothing may be cut at.
 
-// The C#'s negated comparisons are kept as written: each is false for NaN, which is the point.
+// The negated comparisons are deliberate: the comparison inside each is false for NaN, so a NaN
+// takes the negated branch.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use std::rc::Rc;
@@ -32,7 +33,7 @@ use super::{surface_bevel_stitch, surface_strip_ends};
 use super::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceMitreConsumesTheRail` (a sealed class): one chord's consumed rails and the virtual
+/// One chord's consumed rails and the virtual
 /// corner they end on.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceMitreConsumesTheRail {
@@ -75,7 +76,7 @@ fn strip_at(strips: &[Option<Rc<SurfaceStrip>>], index: i32) -> Option<&SurfaceS
 }
 
 impl SurfaceMitreConsumesTheRail {
-    /// C# `ConsumesRail`: whether `rail` of a strip of `rail_count` is consumed.
+    /// Whether `rail` of a strip of `rail_count` is consumed.
     pub fn consumes_rail(&self, rail: i32, rail_count: i32) -> bool {
         if self.side == 0 {
             rail < self.through
@@ -84,7 +85,7 @@ impl SurfaceMitreConsumesTheRail {
         }
     }
 
-    /// C# `TrySurvey`: every consumed strip across every chain, indexed as the builder indexes its
+    /// Every consumed strip across every chain, indexed as the builder indexes its
     /// edges, with `None` wherever the ordinary mitre stands. Read once, before any seam is picked,
     /// because a seam on a consumed side is not a run of the tangent line at all.
     ///
@@ -135,7 +136,7 @@ impl SurfaceMitreConsumesTheRail {
         Ok(consumed)
     }
 
-    /// C# `TryFillTheSeams`: the seam of every consumed side - the ONE vertex the two neighbours'
+    /// The seam of every consumed side - the ONE vertex the two neighbours'
     /// tangent lines already meet at, taken by index from the neighbours' own seams rather than made
     /// again. Run after every ordinary seam is picked, because it is those two seams' last and first
     /// vertex.
@@ -158,7 +159,7 @@ impl SurfaceMitreConsumesTheRail {
         Ok(())
     }
 
-    /// C# `TryTheSharedCorner`: the vertex both neighbours' seams end and begin on, checked to be
+    /// The vertex both neighbours' seams end and begin on, checked to be
     /// one vertex and to stand where the two neighbours' rails on this side really cross. Two
     /// different vertices there would be the walkback having read the corner some other way, which
     /// is a contradiction and not a rounding.
@@ -202,9 +203,9 @@ impl SurfaceMitreConsumesTheRail {
         }
     }
 
-    /// C# `TryOne`: one edge read - whether its two mitres have crossed over on some rail, and if so
-    /// the block of rails that is and the virtual corner they end on. `Ok(None)` is C#'s `true` with
-    /// no reading.
+    /// One edge read - whether its two mitres have crossed over on some rail, and if so
+    /// the block of rails that is and the virtual corner they end on. `Ok(None)` is an edge read
+    /// with nothing crossed over.
     fn try_one(
         pool: &SurfaceVertexPool,
         edges: &[SurfaceEdgePlan],
@@ -226,11 +227,12 @@ impl SurfaceMitreConsumesTheRail {
         }
 
         // The CORNER, not the point the mitre plane really passes through
-        // (SurfaceMitreSeam.ThePointOr): where the two beads set back by different amounts those are
-        // not the same place, and on a loop whose setback steps round it they can be half a chord
-        // apart. Left as it is on purpose - this survey bails above on any rail count mismatch, which
-        // is every case where the two readings differ by enough to matter - and written down here so
-        // that the next reader knows it is a known difference rather than an oversight.
+        // (surface_mitre_seam::the_point_or): where the two beads set back by different amounts
+        // those are not the same place, and on a loop whose setback steps round it they can be half
+        // a chord apart. Left as it is on purpose - this survey bails above on any rail count
+        // mismatch, which is every case where the two readings differ by enough to matter - and
+        // written down here so that the next reader knows it is a known difference rather than an
+        // oversight.
         let corner_before = edges[edge_index as usize].from();
         let corner_after = edges[edge_index as usize].to();
         let before_plane = (previous.along() + here.along()).get_normal();
@@ -288,9 +290,9 @@ impl SurfaceMitreConsumesTheRail {
             return Err(consumes_the_strip(middle));
         };
 
-        // The mitre the consumed rails really end on is the one between the two NEIGHBOURS, so it is
-        // bounded by the same turn any mitre is (SurfaceBevelPlan.MaximumWedgeAngleDegrees): a plane
-        // so nearly along the rails cuts them metres from the part.
+        // The mitre the consumed rails really end on is the one between the two NEIGHBOURS, so it
+        // is bounded by the same turn any mitre is (SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES):
+        // a plane so nearly along the rails cuts them metres from the part.
         let turn_degrees = math_helper::radians_to_degrees(
             previous.along().dot(next.along()).clamp(-1.0, 1.0).acos(),
         );
@@ -325,7 +327,7 @@ impl SurfaceMitreConsumesTheRail {
         }))
     }
 
-    /// C# `IsOneBlockAgainst`: how deep the consumed rails reach where they are one unbroken block
+    /// How deep the consumed rails reach where they are one unbroken block
     /// against `side` of the profile, and `None` where they are not.
     fn is_one_block_against(inverted: &[bool], side: i32) -> Option<i32> {
         let count = inverted.len();
@@ -350,7 +352,7 @@ impl SurfaceMitreConsumesTheRail {
         Some(through as i32)
     }
 
-    /// C# `TryTheVirtualCorner`: where the two neighbours' own edge lines cross. Taken as the middle
+    /// Where the two neighbours' own edge lines cross. Taken as the middle
     /// of their closest approach and refused when that is a gap rather than a point, so that a chain
     /// bending out of one plane is named rather than given a corner neither line stands on.
     fn try_the_virtual_corner(

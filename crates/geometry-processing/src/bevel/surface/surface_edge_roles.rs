@@ -1,5 +1,5 @@
 //! What part each edge of one chain plays in the surface build: it has a STRIP of its own, or the
-//! blend at a mixed corner SWALLOWS it and it has none. Ports `Bevel/Surface/SurfaceEdgeRoles.cs`.
+//! blend at a mixed corner SWALLOWS it and it has none.
 //!
 //! Every corner but one is read off the two edges that meet at it, and then every edge of the chain
 //! has a strip and every corner joins two of them. The exception is the corner over a chorded
@@ -16,8 +16,8 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-/// C# `SurfaceEdgeRoles`. Its maps are only looked up, never iterated, so a `HashMap`'s order
-/// cannot leak out.
+/// The roles of one chain's edges. Its maps are only looked up, never iterated, so a `HashMap`'s
+/// order cannot leak out.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SurfaceEdgeRoles {
     swallowed_by: HashMap<i32, i32>,
@@ -34,8 +34,8 @@ static EVERY_EDGE_HAS_A_STRIP: LazyLock<SurfaceEdgeRoles> =
     LazyLock::new(SurfaceEdgeRoles::default);
 
 impl SurfaceEdgeRoles {
-    /// What a chain with no mixed corner at all asks for: every edge has a strip (C#'s shared
-    /// static instance).
+    /// What a chain with no mixed corner at all asks for: every edge has a strip (one shared
+    /// instance, built once).
     pub fn every_edge_has_a_strip() -> &'static SurfaceEdgeRoles {
         &EVERY_EDGE_HAS_A_STRIP
     }

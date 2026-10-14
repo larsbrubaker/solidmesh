@@ -1,6 +1,6 @@
-//! The strips and their seams: the part of `SurfaceBevelBuilder.TryBuild`
-//! (`Bevel/Surface/SurfaceBevelBuilder.cs`) between the walkback and the corners, split out of
-//! [`super::surface_bevel_builder`] to keep each file under the length limit. In C#'s order: the
+//! The strips and their seams: the part of the surface bevel's build
+//! between the walkback and the corners, split out of
+//! [`super::surface_bevel_builder`] to keep each file under the length limit. In order: the
 //! band corners per rail and per end ([`read_the_band_corners`]), one strip per edge the blend does
 //! not swallow ([`try_create_the_strips`]), and each strip's two seams - the run the walkback left
 //! on the landing face, the plane beyond where the band ran off the face whole, or nothing where a
@@ -22,15 +22,15 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C#'s `ranOff` array: which sides RAN OFF their landing face altogether, cut back along the
+/// Which sides RAN OFF their landing face altogether, cut back along the
 /// plane beyond it instead of sewn to a seam on it, indexed `[edge][side]`.
 pub type SideRunOffs = [Option<Rc<SurfaceStripTrimmedByTheFaceBeyond>>; 2];
 
-/// C#'s `overAStretch` array: which sides ran off only PART of their span, indexed `[edge][side]`.
+/// Which sides ran off only PART of their span, indexed `[edge][side]`.
 pub type SideStretches = [Option<SurfaceBandRunsOffOverAStretch>; 2];
 
-/// The walkback's band corners per rail AND PER END (`SurfaceWalkbackResult.BandCorners`): a mitre
-/// reads the corner of the foot's own end, so the two ends are kept apart here rather than
+/// The walkback's band corners per rail AND PER END (`SurfaceWalkbackResult::band_corners`): a
+/// mitre reads the corner of the foot's own end, so the two ends are kept apart here rather than
 /// flattened and told apart afterwards by where they stand. The last index is 0 where the chain
 /// ARRIVES at the edge and 1 where it LEAVES it.
 ///
@@ -118,15 +118,15 @@ pub fn try_create_the_strips(
 
 /// What the seam pick leaves for the corners and the ends.
 pub struct PickedSeams {
-    /// C#'s `seams`, `[edge][side]`.
+    /// The seam each side is sewn to, `[edge][side]`.
     pub seams: Vec<SideSeams>,
-    /// C#'s `ranOff`.
+    /// Which sides ran off their landing face altogether.
     pub ran_off: Vec<SideRunOffs>,
-    /// C#'s `overAStretch`.
+    /// Which sides ran off over part of their span.
     pub over_a_stretch: Vec<SideStretches>,
 }
 
-/// The two seams of every strip (the C# loop over `i` and `left` after the run-out survey).
+/// The two seams of every strip, each edge and each side in turn, after the run-out survey.
 #[allow(clippy::too_many_arguments)]
 pub fn try_pick_the_seams(
     mesh: &Mesh,
@@ -286,7 +286,7 @@ pub fn try_pick_the_seams(
             // own HULL rather than any face of it. Read here beside the whole-span run-off and off
             // the same reading, and under the same gate the ROOM reads it under - a landing paced
             // out across its own curved surface is not one this closed form answers for on either
-            // side of the pass (SurfaceRoomMeasure.RoomAcross).
+            // side of the pass (surface_room_measure::room_across).
             if surface_run_across_walk::try_across_a_curved_region(
                 mesh,
                 landing,

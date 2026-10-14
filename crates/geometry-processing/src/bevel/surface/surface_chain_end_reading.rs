@@ -1,9 +1,9 @@
 //! The one question a chain's free END asks of the mesh that its own two faces cannot answer
 //! ([`SurfaceChainEndReading`]): does the crease it stops at carry on past that corner, in an edge
-//! nobody picked? Ports the instance fields of `Bevel/Surface/SurfaceChainEndReading.cs`, its
-//! constructor and its surface and vertex indexes; C#'s per-cache table (`For`), whose memos are
-//! kept on the cache itself here ([`SurfaceChainEndReading::for_regions`],
-//! [`FaceRegionCache::attached`], divergence 656); and the reading itself
+//! nobody picked? The reading's fields, its constructor and its surface and vertex indexes; the
+//! reading per cache, whose memos are kept on the cache itself
+//! ([`SurfaceChainEndReading::for_regions`], [`FaceRegionCache::attached`]) so they live exactly as
+//! long as the cache; and the reading itself
 //! ([`SurfaceChainEndReading::runs_out_at`]).
 
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use super::SurfaceBevelPlan;
 use crate::topology::{ChainEdge, FaceRegionCache};
 
-/// C# `SurfaceChainEndReading`: whether a chain's end corner is one where the crease carries on.
+/// Whether a chain's end corner is one where the crease carries on.
 ///
 /// This is what decides what the end of a bevel IS. A cube's picked top edge ends at a corner where
 /// the crease genuinely finishes - every other edge there is between a different pair of faces -
@@ -34,23 +34,21 @@ use crate::topology::{ChainEdge, FaceRegionCache};
 /// floods of the whole wall. Recording the answer for every face of a region as it comes back turns
 /// those into one.
 ///
-/// A cache may be read from more than one thread, so the two memos sit behind one `Mutex` - C#'s
-/// `readingLock`, held across a whole reading - and every reading of one cache shares them, as
-/// every caller of C#'s `For` shares one reading: they are kept on the cache
-/// ([`FaceRegionCache::attached`]). C#'s `graph` field is the cache's own graph
-/// (`curveRegions.Graph`), which the Rust cache owns, so it is reached through
+/// A cache may be read from more than one thread, so the two memos sit behind one `Mutex`, held
+/// across a whole reading, and every reading of one cache shares them: they are kept on the cache
+/// ([`FaceRegionCache::attached`]). The graph is the cache's own, so it is reached through
 /// [`SurfaceChainEndReading::curve_regions`] rather than held twice.
 #[derive(Debug)]
 pub struct SurfaceChainEndReading {
     /// The CURVE tolerance regions the reading floods, shared with every other reader of the mesh.
     pub curve_regions: Arc<FaceRegionCache>,
-    /// The two memos, guarded together (C# `readingLock`) and shared by every reading of
+    /// The two memos, guarded together and shared by every reading of
     /// [`Self::curve_regions`].
     pub memos: Arc<Mutex<SurfaceChainEndReadingMemos>>,
 }
 
-/// The two memos a [`SurfaceChainEndReading`] keeps, guarded together by its `Mutex` as C#'s
-/// `readingLock` guards them.
+/// The two memos a [`SurfaceChainEndReading`] keeps, guarded together by its `Mutex` so a reading
+/// sees both in step.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SurfaceChainEndReadingMemos {
     /// Which surface each face belongs to, by region key, filled a whole region at a time. Only
@@ -64,7 +62,7 @@ pub struct SurfaceChainEndReadingMemos {
 impl SurfaceChainEndReading {
     /// The two surfaces an edge lies between, as their region keys in a fixed order (low, high),
     /// or `None` where either face has no region or where both are one surface - which is no
-    /// crease to carry on. Called with the memos locked (C# under `readingLock`).
+    /// crease to carry on. Called with the memos locked.
     pub fn try_surface_pair(
         &self,
         memos: &mut SurfaceChainEndReadingMemos,
@@ -103,7 +101,7 @@ impl SurfaceChainEndReading {
 }
 
 impl SurfaceChainEndReading {
-    /// C#'s private constructor (with its field initializers): a reading of `curve_regions`,
+    /// A reading of `curve_regions`,
     /// with the memos the cache keeps for its readings - empty the first time it is read.
     pub fn new(curve_regions: Arc<FaceRegionCache>) -> Self {
         let memos = curve_regions.attached::<Mutex<SurfaceChainEndReadingMemos>>();
@@ -114,8 +112,7 @@ impl SurfaceChainEndReading {
     }
 
     /// The graph edges standing at `vertex`, indexed on the first ask. A chain that never asks -
-    /// every closed one - pays nothing for it. Called with the memos locked (C# under
-    /// `readingLock`).
+    /// every closed one - pays nothing for it. Called with the memos locked.
     pub fn edges_at<'m>(
         &self,
         memos: &'m mut SurfaceChainEndReadingMemos,
@@ -151,19 +148,19 @@ impl SurfaceChainEndReading {
 }
 
 impl SurfaceChainEndReading {
-    /// The reading of `curve_regions`, or `None` where there is no cache (C#'s `null`). C# hands
-    /// out ONE reading per cache from a static `ConditionalWeakTable`; here every reading of a
+    /// The reading of `curve_regions`, or `None` where there is no cache. Every reading of a
     /// cache shares the memos the cache keeps ([`FaceRegionCache::attached`]), so they are
-    /// filled once per cache however many plans are read against it (divergence 656).
+    /// filled once per cache however many plans are read against it, and live exactly as long as
+    /// the cache, with no process-wide table shared between rebuild workers.
     pub fn for_regions(curve_regions: Option<&Arc<FaceRegionCache>>) -> Option<Self> {
         curve_regions.map(|cache| Self::new(cache.clone()))
     }
 }
 
 impl SurfaceChainEndReading {
-    /// C# `RunsOutAt`: whether the chain merely STOPS at `corner_vertex` - another edge stands
+    /// Whether the chain merely STOPS at `corner_vertex` - another edge stands
     /// there, between the same two surfaces as `chain_edge`, carrying the crease on past the end of
-    /// what was picked. Asked with the memos locked for the whole reading (C#'s `readingLock`); a
+    /// what was picked. Asked with the memos locked for the whole reading; a
     /// lock another reader panicked under still holds memos that are only ever added to, so it is
     /// taken as it stands.
     pub fn runs_out_at(&self, chain_edge: &ChainEdge, corner_vertex: i32) -> bool {
@@ -175,7 +172,7 @@ impl SurfaceChainEndReading {
         self.asks_the_mesh(&mut memos, chain_edge, corner_vertex)
     }
 
-    /// C# `AsksTheMesh`: the reading itself, with the memos locked.
+    /// The reading itself, with the memos locked.
     pub fn asks_the_mesh(
         &self,
         memos: &mut SurfaceChainEndReadingMemos,

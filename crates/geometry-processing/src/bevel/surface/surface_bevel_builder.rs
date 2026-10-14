@@ -1,5 +1,5 @@
 //! Phase 3 of the surface bevel, and the whole of it seen from outside
-//! (`Bevel/Surface/SurfaceBevelBuilder.cs`, C# `internal static class`; free functions here): a
+//! (free functions): a
 //! mesh, a chain and a size in, the bevelled mesh out, with no kernel call anywhere between. The
 //! walkback opens the gap, the strip fills it, and the end faces give up the section the profile
 //! cuts out of them. [`try_build`] is the entry point the part builder and the kernel tests call.
@@ -26,8 +26,8 @@
 //!
 //! The pass is split by stage for the file-length limit: the strips and their seams are
 //! [`super::surface_bevel_builder_seams`], the corner loop [`super::surface_bevel_builder_corners`]
-//! and the last pass, the stitches, [`super::surface_builder_bitten_strips`]. C#'s three `TryBuild`
-//! overloads are one function here taking [`SurfaceBuildOptions`]; its `out` pair is
+//! and the last pass, the stitches, [`super::surface_builder_bitten_strips`]. The build is one
+//! function taking [`SurfaceBuildOptions`] for what a caller may leave out, answering
 //! `Result<SurfaceBuilt, SurfaceBuildFailure>`.
 
 use std::cell::OnceCell;
@@ -53,7 +53,7 @@ use crate::bevel::sections::{section_assembly, NanSectionPoint};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{FaceRegionCache, FeatureEdgeSet};
 
-/// What a pass that built hands back: C#'s `out result` and `out blendFaces`.
+/// What a pass that built hands back: the bevelled mesh and the faces of its blend.
 #[derive(Debug, Clone)]
 pub struct SurfaceBuilt {
     /// The bevelled mesh.
@@ -71,24 +71,23 @@ pub struct SurfaceBuilt {
     pub blend_faces: Vec<i32>,
 }
 
-/// Why a pass built nothing: C#'s `false` with its `out failure`, and the two ways C# leaves by
-/// exception instead.
+/// Why a pass built nothing: a refusal (named or not), a cancellation, or a point that came out not
+/// a number.
 #[derive(Debug, Clone)]
 pub enum SurfaceBuildFailure {
-    /// Refused, with the advisory the user is shown (C#'s `false` with a failure).
+    /// Refused, with the advisory the user is shown.
     Refused(BevelAdvisory),
-    /// Refused with nothing named - C#'s `false` with a null failure, which only the sections
+    /// Refused with nothing named, which only the sections
     /// route answers (its assembly declining, or its room with no advisory).
     Declined,
-    /// The caller's cancellation token was cancelled between two stages (C#'s
-    /// `ThrowIfCancellationRequested`).
+    /// The caller's cancellation token was cancelled between two stages.
     Cancelled,
-    /// A section point that is not a number (C#'s sections throw there).
+    /// A section point that is not a number.
     NotANumber(NanSectionPoint),
 }
 
 impl SurfaceBuildFailure {
-    /// The advisory C# hands back as its `failure` (`None` for a decline, a cancel or a NaN).
+    /// The advisory the user is shown (`None` for a decline, a cancel or a NaN).
     pub fn advisory(&self) -> Option<&BevelAdvisory> {
         match self {
             SurfaceBuildFailure::Refused(advisory) => Some(advisory),
@@ -119,10 +118,10 @@ impl From<SectionBuildRefusal> for SurfaceBuildFailure {
     }
 }
 
-/// C#'s optional parameters of `TryBuild`.
+/// What a caller may hand the build beyond the mesh, the chain and the size; all optional.
 #[derive(Clone, Copy, Default)]
 pub struct SurfaceBuildOptions<'a> {
-    /// Where another room's band crosses one of these, when any does (C#'s `crossings`).
+    /// Where another room's band crosses one of these, when any does.
     pub crossings: Option<&'a [SurfaceRoomCrossing]>,
     /// The partial run-offs the ROOM read on these same plans (`SurfaceRoom::try_fit`), for this
     /// build to check its own reading against: the two are the same call and must answer the
@@ -142,12 +141,12 @@ pub struct SurfaceBuildOptions<'a> {
     pub features: Option<&'a FeatureEdgeSet>,
 }
 
-/// C# `IsOneOperation`: whether every plan of the pass was made at the same size and the same
-/// profile, which is what the rest of the pass assumes: a corner reads the size and the profile
-/// off whichever of the three chains happened to seed it (`SurfaceStripEnds.TryCloseTheEnds`), so a
-/// pass carrying a 3 mm fillet and a 1 mm chamfer would build one of them at the other's corner
-/// without ever saying so. One operation is one size and one profile; a set that is not is refused
-/// here, at the top, rather than found out at a vertex.
+/// Whether every plan of the pass was made at the same size and the same profile, which is what the
+/// rest of the pass assumes: a corner reads the size and the profile off whichever of the three
+/// chains happened to seed it (`surface_strip_ends::try_close_the_ends`), so a pass carrying a 3 mm
+/// fillet and a 1 mm chamfer would build one of them at the other's corner without ever saying so.
+/// One operation is one size and one profile; a set that is not is refused here, at the top, rather
+/// than found out at a vertex.
 fn is_one_operation(plans: &[Rc<SurfaceBevelPlan>]) -> bool {
     plans.iter().all(|plan| {
         !(plan.round_profile != plans[0].round_profile
@@ -163,7 +162,7 @@ fn cancelled(cancellation_token: &CancelToken) -> Result<(), SurfaceBuildFailure
     }
 }
 
-/// C# `TryBuild(mesh, graph, regions, plan, ...)`: bevels one planned chain.
+/// Bevels one planned chain.
 pub fn try_build_one(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -184,7 +183,7 @@ pub fn try_build_one(
     .map(|built| built.mesh)
 }
 
-/// C# `TryBuild(mesh, graph, regions, plans, ...)`: bevels every planned chain of one part in ONE
+/// Bevels every planned chain of one part in ONE
 /// pass - every chain is planned on the original mesh, every cut of every chain is walked back
 /// together, and then the strips, the mitres, the ends and the corner patches are stitched into the
 /// one gap that leaves.
@@ -299,7 +298,7 @@ pub fn try_build(
     })
 }
 
-/// The legacy construction: everything in C#'s `TryBuild` after the routing.
+/// The legacy construction: everything the build does after the routing.
 fn try_build_the_legacy_pass(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -362,7 +361,7 @@ fn try_build_the_legacy_pass(
     // read HERE rather than in the corner loop: the same overshoot that refuses the corner also
     // takes the tangent run a neighbouring seam would have been sewn to, so a seam picked first
     // answers first and names the boolean's triangulation instead of the size
-    // (SurfaceBuilderMixedCorners.TrySurveyTheRunOuts).
+    // (surface_builder_mixed_corners::try_survey_the_run_outs).
     surface_builder_mixed_corners::try_survey_the_run_outs(
         Some(regions),
         plans,
@@ -523,7 +522,7 @@ fn try_build_the_legacy_pass(
     Ok(assemble(pool.vertices(), &faces))
 }
 
-/// C# `IsSwallowed`: whether the blend swallows edge `edge_index` of the one numbering.
+/// Whether the blend swallows edge `edge_index` of the one numbering.
 pub fn is_swallowed(
     plans: &[Rc<SurfaceBevelPlan>],
     first_of_plan: &[i32],
@@ -537,7 +536,7 @@ pub fn is_swallowed(
             .is_swallowed(edge_index - first_of_plan[plan as usize])
 }
 
-/// C# `TheHullIsNeeded`: whether any side of any strip ran off part of its landing, which is the
+/// Whether any side of any strip ran off part of its landing, which is the
 /// only reading that asks what the part's hull planes are - and they cost a pass of the mesh per
 /// distinct face plane, so a pass with no such end does not pay for them.
 fn the_hull_is_needed(over_a_stretch: &[seams::SideStretches]) -> bool {
@@ -547,7 +546,7 @@ fn the_hull_is_needed(over_a_stretch: &[seams::SideStretches]) -> bool {
         .any(|stretch| stretch.is_some())
 }
 
-/// C# `TheStripsOwnEdgeIsToBlame`: a refusal raised while one strip was being read, told which
+/// A refusal raised while one strip was being read, told which
 /// picked edge that strip is. A refusal that already named an edge keeps the one it named.
 ///
 /// Reporting only: nothing about what is built or refused changes here, only WHOSE the answer is.
@@ -556,7 +555,7 @@ fn the_hull_is_needed(over_a_stretch: &[seams::SideStretches]) -> bool {
 /// every group in the pass - which is how a chain round one end of a part came to carry a sentence
 /// about a strip at the other end that it never touched ("Chain and Face Should Both work.mcx").
 /// The strip loop is per picked edge, so the edge is simply to hand; the caller maps it back to the
-/// group that picked it and drops that group alone (`BevelSurfacePartBuilder.BuildTheGroupsTogether`).
+/// group that picked it and drops that group alone, so the groups it did not touch still build.
 pub fn the_strips_own_edge_is_to_blame(
     edges: &[SurfaceEdgePlan],
     edge_index: usize,
@@ -569,7 +568,7 @@ pub fn the_strips_own_edge_is_to_blame(
     }
 }
 
-/// C# `PlanOf`: which plan of the pass an edge of the one numbering belongs to, or -1 where none
+/// Which plan of the pass an edge of the one numbering belongs to, or -1 where none
 /// does.
 pub fn plan_of(first_of_plan: &[i32], edge_index: i32) -> i32 {
     for p in (0..first_of_plan.len()).rev() {
@@ -581,7 +580,7 @@ pub fn plan_of(first_of_plan: &[i32], edge_index: i32) -> i32 {
     -1
 }
 
-/// C# `Assemble`: the new mesh, with the vertices no face uses any more dropped and everything
+/// The new mesh, with the vertices no face uses any more dropped and everything
 /// renumbered - the corner the end cut took off is nobody's now. No `CleanAndMerge`: every vertex
 /// shared was shared by index as it was made.
 fn assemble(pool_vertices: &[Vector3Float], faces: &[(i32, i32, i32)]) -> Mesh {

@@ -1,8 +1,7 @@
 //! Chains from DIFFERENT groups that run into each other end to end, joined into one chain before
-//! anything is planned (`Bevel/Surface/SurfaceChainJoin.cs`, a C# `internal static class`, so a
-//! module here). Its answer goes on to [`super::surface_chain_opens_at_the_junction::open`].
+//! anything is planned. Its answer goes on to [`super::surface_chain_opens_at_the_junction::open`].
 //!
-//! The linker works one group at a time (`BevelChainLinker.Link(BevelEdgeGroupResolution)`),
+//! The linker works one group at a time (`bevel_chain_linker::link(BevelEdgeGroupResolution)`),
 //! because a group is what a user picked; but two edges of a cube corner picked one at a time are
 //! two groups and one RUN, and the bevel over them is one strip mitred at the corner rather than
 //! two strips that have to find each other there. Joining first means the mitre is the mitre a
@@ -42,9 +41,9 @@ use crate::bevel::bevel_chain_linker;
 use crate::bevel::BevelSweptChain;
 use crate::topology::ChainEdge;
 
-/// C# `SurfaceChainJoin.Join`: the same chains with every end-to-end pair joined, repeatedly, until
+/// The same chains with every end-to-end pair joined, repeatedly, until
 /// no two ends meet at a vertex on their own. Chains that join nothing come back unchanged, closed
-/// ones untouched (and after the open ones, as in C#).
+/// ones untouched (and after the open ones).
 pub fn join(chains: &[BevelSweptChain]) -> Vec<BevelSweptChain> {
     let mut joined: Vec<Vec<ChainEdge>> = Vec::new();
     let mut closed: Vec<BevelSweptChain> = Vec::new();
@@ -70,7 +69,7 @@ pub fn join(chains: &[BevelSweptChain]) -> Vec<BevelSweptChain> {
 
         // Which chain ends stand at each vertex. A vertex with exactly two of them is a joint; with
         // one it is a run's own end; with three or more it is the corner patch's junction. Walked
-        // in the order the ends were met, as C#'s Dictionary is, since the first joint found is
+        // in the order the ends were met, since the first joint found is
         // the one joined.
         let mut ends_at: IndexMap<i32, Vec<(usize, bool)>> = IndexMap::new();
 
@@ -133,8 +132,8 @@ pub fn join(chains: &[BevelSweptChain]) -> Vec<BevelSweptChain> {
 
     for (chain, edges) in joined.into_iter().enumerate() {
         // The closing joint gets the side test every other joint of a run gets
-        // (BevelChainLinker.ClosesOnItself applies the same one): a run that meets itself with its
-        // two surfaces swapped is one the sweep cannot carry a frame round, and it is published
+        // (bevel_chain_linker::closes_on_itself applies the same one): a run that meets itself with
+        // its two surfaces swapped is one the sweep cannot carry a frame round, and it is published
         // open - which is what the linker hands back for those same edges picked as ONE group.
         let last = &edges[edges.len() - 1];
         let closes = assembled[chain]
@@ -150,12 +149,12 @@ pub fn join(chains: &[BevelSweptChain]) -> Vec<BevelSweptChain> {
     answer
 }
 
-/// C# `Count`.
+/// Counts one more chain end at `vertex`.
 fn count(ends_left: &mut HashMap<i32, i32>, vertex: i32) {
     *ends_left.entry(vertex).or_insert(0) += 1;
 }
 
-/// C# `Remember`.
+/// Remembers which chain end stands at `vertex`.
 fn remember(ends_at: &mut IndexMap<i32, Vec<(usize, bool)>>, vertex: i32, end: (usize, bool)) {
     ends_at
         .entry(vertex)
@@ -163,7 +162,7 @@ fn remember(ends_at: &mut IndexMap<i32, Vec<(usize, bool)>>, vertex: i32, end: (
         .push(end);
 }
 
-/// C# `Turned`: the chain walked the other way.
+/// The chain walked the other way.
 fn turned(chain: &[ChainEdge]) -> Vec<ChainEdge> {
     chain.iter().rev().map(ChainEdge::reversed).collect()
 }

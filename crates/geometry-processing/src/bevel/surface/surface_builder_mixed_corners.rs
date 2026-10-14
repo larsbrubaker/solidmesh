@@ -1,14 +1,11 @@
-//! The corner loop's MIXED corner, lifted whole out of `SurfaceBevelBuilder`: a corner the
+//! The corner loop's MIXED corner, lifted whole out of the builder: a corner the
 //! convexity turns over at is not a mitre at all, so everything the build does with one - the lean
 //! gate, the wall's run-out, the bands the run-out crosses, the patch and the two end rings it
-//! leaves - stands here rather than in the middle of the loop that finds it. Ports
-//! `Bevel/Surface/SurfaceBuilderMixedCorners.cs` (C# `internal static class`; free functions here):
+//! leaves - stands here rather than in the middle of the loop that finds it. Free functions:
 //! [`try_survey_the_run_outs`] and [`try_close`], over the corner's patch
 //! ([`super::surface_mixed_corner_patch`]) or, for a leaning corner, its dual
-//! ([`super::surface_mixed_corner_dual_patch`]).
-//!
-//! C#'s private `TheCapIsSquareEnough` constant is not carried: nothing in the class reads it
-//! (`SurfaceMixedCorner::the_cap_leans` holds the test the corner loop asks).
+//! ([`super::surface_mixed_corner_dual_patch`]). Whether a corner leans is
+//! `SurfaceMixedCorner::the_cap_leans`, the test the corner loop asks.
 
 use std::rc::Rc;
 
@@ -28,7 +25,7 @@ use crate::topology::{EdgeConvexity, FaceRegionCache};
 
 use super::SurfaceMitreConsumesTheRail;
 
-/// C# `TrySurveyTheRunOuts`: READ BEFORE THE SEAMS - every leaning mixed corner asked whether its
+/// READ BEFORE THE SEAMS - every leaning mixed corner asked whether its
 /// run-out would die PAST the end of the crease it dies on, which is a refusal about the SIZE and
 /// has to be said before any reading that the same overshoot makes fail downstream of it.
 ///
@@ -118,7 +115,7 @@ pub fn try_survey_the_run_outs(
     Ok(())
 }
 
-/// C# `TryClose`: closes one mixed corner - the cut's end ring carried round the bead's axis, with
+/// Closes one mixed corner - the cut's end ring carried round the bead's axis, with
 /// the two bites its footprint takes out of the faces nobody picked, every band its run-out crosses
 /// cut back to the curve they meet in, and each strip left standing on the ring the patch cut it
 /// at. `p` is the plan the corner is in, `i` which corner of it (the one after edge `i`), `here`
@@ -126,8 +123,9 @@ pub fn try_survey_the_run_outs(
 /// `trimmed`, and each strip's ring at the start and end of its edge into `start_rings` and
 /// `end_rings`.
 ///
-/// A cut or bead with no strip (C# hands the patch a null and throws there) is refused as
-/// `SurfaceCornerNotSupported` at the corner (divergence 5035).
+/// A cut or bead with no strip is refused as `SurfaceCornerNotSupported` at the corner: a
+/// swallowed edge has no ring to close, so the corner is refused as every corner the builder has
+/// no reading for is.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close(
     pool: &mut SurfaceVertexPool,
@@ -157,7 +155,7 @@ pub fn try_close(
     // different surfaces, and measured against the Onshape control of "Top Center Face" it is the
     // dual the corner draws: 1.3e-5 mm over 500 blend vertices at each end, where the cap-riding
     // reading stands 0.648 off
-    // (BevelTopCenterFaceRegressionTests.TheControlsBlendLiesOnTheDualCanalNotTheCapRidingOne).
+    // (`bevel_top_center_face_canal_tests::the_controls_blend_lies_on_the_dual_canal_not_the_cap_riding_one`).
     // Until a square control arrives the square corner keeps the rows below, unchanged to the bit.
     let the_cap_is_square = !mixed.the_cap_leans();
 
@@ -337,7 +335,7 @@ pub fn try_close(
     Ok(())
 }
 
-/// C# `TryCloseOnTheDual`: closes a LEANING corner on its DUAL canal - the one the control draws -
+/// Closes a LEANING corner on its DUAL canal - the one the control draws -
 /// carried past the end of the cut's own strip until it dies on the crease the cap and the wall
 /// meet in. A separate path and not a flag through [`try_close`], because almost nothing of that
 /// block applies: the wall does not run out under this blend, there is no mitre handover, the cap's
@@ -413,9 +411,8 @@ fn try_close_on_the_dual(
     Ok(())
 }
 
-/// The cut's and the bead's strips. C# hands the patch whatever the array holds and a null throws
-/// there; a corner whose strip the blend swallowed has no ring to close, so it is refused by name
-/// at the corner instead (divergence 5035).
+/// The cut's and the bead's strips. A corner whose strip the blend swallowed has no ring to close,
+/// so it is refused by name at the corner rather than handed to the patch.
 fn the_two_strips(
     strips: &[Option<Rc<SurfaceStrip>>],
     cut: usize,
@@ -432,7 +429,7 @@ fn the_two_strips(
 }
 
 /// Each strip left standing on the ring the corner cut it at, at the end of its own edge that
-/// faces the corner (the tail both of C#'s close paths share).
+/// faces the corner (the tail both close paths share).
 fn leave_the_strips_standing(
     cut_is_arriving: bool,
     (cut, bead): (usize, usize),
@@ -450,7 +447,7 @@ fn leave_the_strips_standing(
     }
 }
 
-/// C# `TryHowFarTheCreaseRuns`: how far the crease the cap and the wall meet in actually runs THE
+/// How far the crease the cap and the wall meet in actually runs THE
 /// WAY THE DUAL TRAVELS, or `None` where the part carries no edge that way out of this corner -
 /// which is what says whether the dual is this corner's canal at all. The region cache is asked
 /// for nothing but its presence: a pass handed no cache at all was handed no regions to read a rim

@@ -1,5 +1,5 @@
-//! The corner where THREE ROUND strips meet at one vertex of the part
-//! (`Bevel/Surface/SurfaceCornerPatch.cs`, a static class): each one ends on the plane through the
+//! The corner where THREE ROUND strips meet at one vertex of the part:
+//! each one ends on the plane through the
 //! ball centre square to its own edge, and the spherical triangle between the three end rings is
 //! stitched in as the patch - the rung 3 reading of `BevelCornerPatches`, built as surface and
 //! shared by vertex rather than built as a solid and subtracted. Here are its nested record, one
@@ -17,14 +17,14 @@ use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `SurfaceCornerPatch.Arrival` (a readonly struct): one strip arriving at the corner - which
+/// One strip arriving at the corner - which
 /// strip, what it was planned as, and the two vertices the walkback left where its own two tangent
 /// lines ended.
 #[derive(Debug, Clone)]
 pub struct SurfaceCornerPatchArrival {
     /// The strip arriving.
     pub strip: Rc<SurfaceStrip>,
-    /// The edge plan the strip was built from (a C# struct, so held by value).
+    /// The edge plan the strip was built from, held by value.
     pub edge: SurfaceEdgePlan,
     /// The last vertex of the left face's tangent run - rail 0 of the end ring.
     pub on_the_left: i32,
@@ -32,9 +32,9 @@ pub struct SurfaceCornerPatchArrival {
     pub on_the_right: i32,
 }
 
-/// C# `TryCutTheEnd`: one strip cut at the plane through the ball centre square to its own edge,
-/// as the ring of vertices across it and where along the edge each rail meets that plane (C#'s
-/// `ring` and `meetsAt`); `Err` is C#'s `failure`. The ring's two outer rails have to land on the
+/// One strip cut at the plane through the ball centre square to its own edge,
+/// as the ring of vertices across it and where along the edge each rail meets that plane; `Err` is
+/// why it would not cut. The ring's two outer rails have to land on the
 /// vertices the walkback left at the ends of that strip's tangent runs - the ball's own touch points
 /// on the two faces - or the patch would not be rimmed by the faces it stands between. The inner
 /// rails' points are added to `pool`.
@@ -89,7 +89,7 @@ pub fn try_cut_the_end(
 pub const FACE_NORMALS_AGREE: f64 = 1e-6;
 
 impl SurfaceCornerPatchArrival {
-    /// C#'s constructor.
+    /// A strip arriving at the corner, with the edge plan it was built from.
     pub fn new(
         strip: Rc<SurfaceStrip>,
         edge: SurfaceEdgePlan,
@@ -110,7 +110,7 @@ impl SurfaceCornerPatchArrival {
 /// the normals face out of the material and the centre is inside it). Refused where two edges end
 /// on one face at different setbacks, where the arrivals name other than three faces, or where the
 /// three do not cut a point out between them.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
 pub fn try_find_the_ball_centre(
     arrivals: &[SurfaceCornerPatchArrival],
     corner: Vector3,
@@ -224,7 +224,7 @@ pub fn try_order_the_sides(rings: &[Vec<i32>]) -> Option<Vec<Vec<i32>>> {
     Some(sides)
 }
 
-/// C# `TryClose`: the corner where three strips meet - a chamfer's closed by the mitre
+/// The corner where three strips meet - a chamfer's closed by the mitre
 /// ([`surface_corner_mitre::try_close`]); a round's each cut at the plane through the ball's
 /// centre (mirrored through the corner where all three are concave), the three end rings ordered
 /// round the patch and the spherical triangle stitched in. Returns each strip's station, or why

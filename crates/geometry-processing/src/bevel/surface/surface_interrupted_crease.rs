@@ -1,8 +1,8 @@
 //! Whether the selection is two pieces of ONE crease that something standing on it interrupts,
-//! rather than two creases that each end where they stop (`Bevel/Surface/SurfaceInterruptedCrease.cs`,
-//! a C# `internal static class`, so a module here). A PLAN-stage reading over every chain of the
-//! pass at once, asked after [`super::surface_chain_opens_at_the_junction::open`]; its readings are
-//! the boolean leg's own ([`crate::bevel::bevel_interrupted_crease`]), shared rather than copied.
+//! rather than two creases that each end where they stop. A PLAN-stage reading over every chain of
+//! the pass at once, asked after [`super::surface_chain_opens_at_the_junction::open`]; its readings
+//! are the boolean leg's own ([`crate::bevel::bevel_interrupted_crease`]), shared rather than
+//! copied.
 //!
 //! **The shape.** "Center Flows Through.mcx" is the nose-in-notch part with the notch's concave
 //! centre crease picked both sides of the knife-edge nose welded over it - the piece below the nose
@@ -61,7 +61,7 @@ use crate::bevel::bevel_interrupted_crease::{self, Leaning};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
 use crate::topology::{ChainEdge, EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
 
-/// C# `SurfaceInterruptedCrease.TryRead`: the refusal for a selection whose two pieces of one
+/// The refusal for a selection whose two pieces of one
 /// crease would have to run UNDER what interrupts it, or `None` where every end of it is an end the
 /// strip can die on - which is every end a feature spanning the strip closes, and every end that is
 /// really an end.
@@ -145,7 +145,7 @@ pub fn try_read(
     None
 }
 
-/// C# `IsACreaseThroughout`: whether every edge of a run is a crease, which is what makes it a run
+/// Whether every edge of a run is a crease, which is what makes it a run
 /// a crease can resume in.
 fn is_a_crease_throughout(chain: &BevelSweptChain) -> bool {
     chain
@@ -154,11 +154,11 @@ fn is_a_crease_throughout(chain: &BevelSweptChain) -> bool {
         .all(|edge| edge.edge.convexity == EdgeConvexity::Concave)
 }
 
-/// C# `IsInterrupted`: whether one end of one chain is where something INTERRUPTED the crease
+/// Whether one end of one chain is where something INTERRUPTED the crease
 /// rather than where the crease ended - the readings the module docs list, in the order that turns
 /// the most ends down soonest.
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)` is true for NaN too.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` is true for NaN too.
 fn is_interrupted(
     edge: &ChainEdge,
     vertex: i32,
@@ -270,7 +270,7 @@ fn is_interrupted(
     )
 }
 
-/// C# `EndScan`: what one end's incidence says - which way the faces bounding it lean against the
+/// What one end's incidence says - which way the faces bounding it lean against the
 /// run, whether another pick departs there, and the ONE face plane that closes over the run.
 #[derive(Debug, Clone, Copy, Default)]
 struct EndScan {
@@ -295,7 +295,7 @@ fn the_same_plane_agreement() -> f64 {
     (1.0 * std::f64::consts::PI / 180.0).cos()
 }
 
-/// C# `ScanTheEnd`: one end's incidence read once - the faces gathered exactly as
+/// One end's incidence read once - the faces gathered exactly as
 /// `BevelChainEndPlane` gathers them: every face of an edge here that is not one of the run's own
 /// two, with the run's own edge passed over.
 fn scan_the_end(
@@ -362,7 +362,7 @@ fn scan_the_end(
     scan
 }
 
-/// C# `TheFeatureSpansTheStrip`: whether what stands between the two pieces SPANS the strip -
+/// Whether what stands between the two pieces SPANS the strip -
 /// whether, for every point of the profile, the rail through that point meets the NEAR piece's end
 /// face before the far piece's.
 ///
@@ -377,7 +377,7 @@ fn scan_the_end(
 /// section they are planned as; a strip that would instead ROLL onto the face it lands on is not
 /// seen here.
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)` is true for NaN too.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` is true for NaN too.
 fn the_feature_spans_the_strip(
     edge: &ChainEdge,
     position: Vector3,
@@ -460,10 +460,10 @@ fn the_feature_spans_the_strip(
     worst > 0.0
 }
 
-/// C# `HowMuchFurtherTheFarFaceIs`: how much further along the run the FAR face stands than the
+/// How much further along the run the FAR face stands than the
 /// near one, on the rail through one profile point. Positive is the near strip dying on its own
 /// face with the far one still ahead of it; zero or less is the two strips overlapping inside the
-/// feature. (C#'s unused `outward` parameter is left out.)
+/// feature.
 fn how_much_further_the_far_face_is(
     profile_point: Vector3,
     position: Vector3,
@@ -479,15 +479,15 @@ fn how_much_further_the_far_face_is(
     to_the_far - to_the_near
 }
 
-/// C# `TheSameTwoRegions`: whether two crease ends ride the same two surfaces - the reading that
+/// Whether two crease ends ride the same two surfaces - the reading that
 /// tells one crease something interrupts from two creases that merely lie on one line.
 ///
 /// A region is flooded over CONNECTED faces at the operation's own bend threshold: two pockets'
 /// floors are the same plane but two regions, while a slope the nose bites into is still ONE region
 /// above the nose and below it. Unordered, because which surface a run calls left is which way it
 /// happens to be walked. Named by [`SurfaceBevelPlan::key_of`]. A face the cache holds no region
-/// for (where C# would throw on the null) matches nothing; a chain edge's two faces are always
-/// mesh faces, so the builder never asks that (divergence 4958).
+/// for matches nothing, a guard rather than a panic; a chain edge's two faces are always mesh
+/// faces, so the builder never asks that.
 fn the_same_two_regions(run: &ChainEdge, other: &ChainEdge, regions: &FaceRegionCache) -> bool {
     let key = |face: i32| {
         regions

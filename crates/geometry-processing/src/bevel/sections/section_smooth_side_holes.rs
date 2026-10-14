@@ -1,10 +1,9 @@
-//! A flat piece WITH HOLES read as one ring (`Bevel/Sections/SectionSmoothSide.Holes.cs`, part of the
-//! C# `internal static partial class SectionSmoothSide`; free functions here beside
-//! [`super::section_smooth_side_facets`], which calls them). Two ways in: every inner ring BRIDGED out
-//! to the outer one along the piece's OWN mesh edges ([`try_bridge_the_holes`]), and - where the cut's
-//! own boundary bars every such edge, as it does round an enclosed bore mouth - each UNTOUCHED ring
-//! handed to the region enclosing it and a kept region spliced back to one ring along a VISIBLE
-//! STRAIGHT SEGMENT of the facet's plane ([`try_place_the_loose_rings`]).
+//! A flat piece WITH HOLES read as one ring: free functions beside
+//! [`super::section_smooth_side_facets`], which calls them. Two ways in: every inner ring BRIDGED
+//! out to the outer one along the piece's OWN mesh edges ([`try_bridge_the_holes`]), and - where
+//! the cut's own boundary bars every such edge, as it does round an enclosed bore mouth - each
+//! UNTOUCHED ring handed to the region enclosing it and a kept region spliced back to one ring
+//! along a VISIBLE STRAIGHT SEGMENT of the facet's plane ([`try_place_the_loose_rings`]).
 //!
 //! Either bridge adds no vertex and no geometry: it is a zero width slit whose two directed edges
 //! cancel, so the ring encloses exactly the area the piece does and every triangle the ears cut is a
@@ -28,7 +27,7 @@ use crate::bevel::surface::SurfaceVertexPool;
 /// Undirected mesh edges as sorted vertex pairs.
 pub type VertexPairs = IndexSet<(i32, i32)>;
 
-/// C# `TryBridgeTheHoles`: the facet's outline rings - one outer, the rest holes - read as ONE ring by
+/// The facet's outline rings - one outer, the rest holes - read as ONE ring by
 /// bridging every hole out to the outer ring along the piece's own edges, the bridge run there and
 /// back; `None` where the rings are not one outer with holes, or a hole cannot be reached.
 ///
@@ -99,7 +98,7 @@ pub fn try_bridge_the_holes(
     Some(ring)
 }
 
-/// C# `TheEdgesTheCrossingsStandOn`: the mesh edges the boundary's ends on this facet stand on, as
+/// The mesh edges the boundary's ends on this facet stand on, as
 /// sorted vertex pairs - the edges no bridge may run along, because a crossing is inserted into one
 /// position of the ring.
 pub fn the_edges_the_crossings_stand_on(
@@ -127,7 +126,7 @@ pub fn the_edges_the_crossings_stand_on(
     barred
 }
 
-/// C# `BarTheEdgesThatCrossTheOutline`: bars every edge of the facet that CROSSES a wall of the piece,
+/// Bars every edge of the facet that CROSSES a wall of the piece,
 /// so no bridge can be drawn through one. The walls are the facet's outline rings - outer and inner
 /// alike - and the open chains the CUT runs across the facet on, which the outline knows nothing of
 /// yet and which a facet corner's shortest path to a bore mouth walks straight through. An edge that
@@ -212,7 +211,7 @@ pub fn bar_the_edges_that_cross_the_outline(
     }
 }
 
-/// C# `ItStandsOnTheInterior`: whether a wall point stands ON the INTERIOR of an edge - near the
+/// Whether a wall point stands ON the INTERIOR of an edge - near the
 /// segment, and near neither of its two ends. Such an edge is barred exactly as a crossing bars one.
 ///
 /// A wall that passes from one side of an edge to the other AT ONE OF ITS OWN VERTICES straddles that
@@ -240,7 +239,7 @@ pub fn it_stands_on_the_interior(
     (at - (from + (along * how_far))).length() <= near_enough
 }
 
-/// C# `TheEdgesOfThePiece`: the piece's own undirected edges as an adjacency, with the `barred` edges
+/// The piece's own undirected edges as an adjacency, with the `barred` edges
 /// left out. Neighbour lists are sorted, so a walk that takes the lowest index first is the same every
 /// run.
 pub fn the_edges_of_the_piece(
@@ -281,7 +280,7 @@ pub fn the_edges_of_the_piece(
         .collect()
 }
 
-/// C# `TryTheShortestBridge`: the shortest path in edge count from `ring` - what has been bridged so
+/// The shortest path in edge count from `ring` - what has been bridged so
 /// far - to `hole`, given outer end first. Ties go to the lowest vertex index, at the end it reaches
 /// and at every step back, so the bridge is a property of the mesh and not of the walk.
 pub fn try_the_shortest_bridge(
@@ -346,8 +345,8 @@ pub fn try_the_shortest_bridge(
 
     while steps[&walk] > 0 {
         let wanted = steps[&walk] - 1;
-        // A vertex `steps` reached at n > 0 was reached FROM a neighbour at n - 1 (C#'s `First()`
-        // never throws here), and its neighbour lists are symmetric.
+        // A vertex `steps` reached at n > 0 was reached FROM a neighbour at n - 1, so one is always
+        // found, and its neighbour lists are symmetric.
         let nearer = neighbours
             .get(&walk)?
             .iter()
@@ -368,12 +367,12 @@ pub fn try_the_shortest_bridge(
     Some(back)
 }
 
-/// C# `Splice`: slits the ring open at the bridge's outer end and threads the hole onto it - out along
+/// Slits the ring open at the bridge's outer end and threads the hole onto it - out along
 /// the bridge, once round the hole its own way, and back along the bridge. The two ends of the bridge
 /// each stand in the ring twice afterwards, which is what a zero width slit is.
 pub fn splice(ring: &mut Vec<i32>, hole: &[i32], path: &[i32]) {
-    // C# `IndexOf`: -1 where missing, and `InsertRange(0, ..)` then; both ends are always found (the
-    // path was walked from the ring to the hole).
+    // A missing end would insert at the ring's start; both ends are always found (the path was
+    // walked from the ring to the hole).
     let at = ring
         .iter()
         .position(|&v| v == path[0])
@@ -403,7 +402,7 @@ pub fn splice(ring: &mut Vec<i32>, hole: &[i32], path: &[i32]) {
     ring.splice(at..at, threaded);
 }
 
-/// C# `TryPlaceTheLooseRings`: hands every UNTOUCHED ring of a facet - a bore mouth the cut never
+/// Hands every UNTOUCHED ring of a facet - a bore mouth the cut never
 /// reached - to the region whose ring encloses it, and splices the kept regions that gained one back
 /// to a single ring; false where a loose ring holds material of its own or no region encloses it.
 ///
@@ -411,7 +410,7 @@ pub fn splice(ring: &mut Vec<i32>, hole: &[i32], path: &[i32]) {
 /// enclosure: the smallest region ring that contains the hole's own first point takes it. A band
 /// region simply carries its hole (a band ring is never triangulated); a kept one is spliced by
 /// [`try_splice_the_kept_region`] so the ears see one ring.
-// `!(area > 0.0)` keeps C#'s reading of a NaN area as not holding material.
+// `!(area > 0.0)` reads a NaN area as not holding material.
 #[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
 pub fn try_place_the_loose_rings(
     pool: &SectionPool,
@@ -482,10 +481,10 @@ pub fn try_place_the_loose_rings(
     true
 }
 
-/// C# `ItStandsInside`: whether a point of the facet's plane stands inside a ring - the ring's winding
+/// Whether a point of the facet's plane stands inside a ring - the ring's winding
 /// about it, counted by the angle it turns through, is a whole turn rather than none. The angle sum
 /// needs no axis chosen in the plane and no special case for a ray grazing a vertex.
-// `!(x > 0.0)` keeps C#'s reading of a NaN length as nothing to turn through.
+// `!(x > 0.0)` reads a NaN length as nothing to turn through.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn it_stands_inside(pool: &SectionPool, ring: &[i32], at: Vector3, normal: Vector3) -> bool {
     let facing = normal.get_normal();
@@ -505,7 +504,7 @@ pub fn it_stands_inside(pool: &SectionPool, ring: &[i32], at: Vector3, normal: V
     f64::abs(turned) > std::f64::consts::PI
 }
 
-/// C# `TrySpliceTheKeptRegion`: a KEPT REGION - an outer ring with inner rings standing in it - taken
+/// A KEPT REGION - an outer ring with inner rings standing in it - taken
 /// back to ONE ring by splicing each inner ring into the outer along a VISIBLE STRAIGHT SEGMENT of the
 /// facet's plane: a zero width slit drawn where no mesh edge can reach.
 ///
@@ -552,7 +551,7 @@ pub fn try_splice_the_kept_region(
         .filter(|&(i, _)| i != outer)
         .map(|(_, ring)| ring)
         .collect();
-    // C# `OrderBy(ring => ring.Min())` is stable; `sort_by_key` is too.
+    // Holes in order of their lowest vertex; `sort_by_key` is stable, so ties keep their order.
     holes.sort_by_key(|ring| ring.iter().copied().min().unwrap_or(i32::MAX));
 
     let mut merged = region[outer].clone();
@@ -570,7 +569,7 @@ pub fn try_splice_the_kept_region(
             walls.push(the_ring_without_its_collinear_runs(cut, along_the_boundary, other).0);
         }
 
-        // C# `Min()` throws on an empty ring; a ring of a region is never empty.
+        // A ring of a region is never empty, so it always has a lowest vertex.
         let inner = walls[1].iter().copied().min()?;
 
         let mut candidates: Vec<i32> = walls[0]
@@ -591,7 +590,7 @@ pub fn try_splice_the_kept_region(
     Some(merged)
 }
 
-/// C# `TheSegmentIsVisible`: whether the straight segment between two ring vertices runs clear of
+/// Whether the straight segment between two ring vertices runs clear of
 /// every wall - crossing no side of any of them, and with no wall vertex other than its own two ends
 /// standing on its interior.
 pub fn the_segment_is_visible(
@@ -638,7 +637,7 @@ pub fn the_segment_is_visible(
     true
 }
 
-/// C# `SignedArea(SectionPool, ..)`: twice the ring's area about `normal` - positive where it holds
+/// Twice the ring's area about `normal` - positive where it holds
 /// material.
 pub fn signed_area_of_pool_ring(pool: &SectionPool, ring: &[i32], normal: Vector3) -> f64 {
     let mut twice = Vector3::ZERO;
@@ -652,7 +651,7 @@ pub fn signed_area_of_pool_ring(pool: &SectionPool, ring: &[i32], normal: Vector
     twice.dot(normal)
 }
 
-/// C# `SignedArea(Mesh, ..)`: twice the ring's area about `normal` - positive where it holds material.
+/// Twice the ring's area about `normal` - positive where it holds material.
 pub fn signed_area_of_mesh_ring(mesh: &Mesh, ring: &[i32], normal: Vector3) -> f64 {
     let mut twice = Vector3::ZERO;
 

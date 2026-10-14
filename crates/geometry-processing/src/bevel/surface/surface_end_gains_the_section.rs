@@ -1,11 +1,10 @@
-//! The mirror of `SurfaceEndGivesUpTheSection` (`Bevel/Surface/SurfaceEndGainsTheSection.cs`, a
-//! static class): a CONVEX end whose face beyond the corner GAINS the section rather than giving it
-//! up, because the corner is a REENTRANT vertex of that face and the section stands in the bite
-//! beside it rather than in the face at all. Its nested reading lands here
-//! ([`SurfaceEndGainsTheSectionReading`]) with the measure that makes it
+//! The mirror of [`super::surface_end_gives_up_the_section`]: a CONVEX end whose face beyond the
+//! corner GAINS the section rather than giving it up, because the corner is a REENTRANT vertex of
+//! that face and the section stands in the bite beside it rather than in the face at all. Its
+//! nested reading lands here ([`SurfaceEndGainsTheSectionReading`]) with the measure that makes it
 //! ([`how_the_face_stands_to_it`]), and the cap ([`try_gain_it`]).
 
-/// C# `SurfaceEndGainsTheSection.Reading`: which of the two the end face is - it holds some of the
+/// Which of the two the end face is - it holds some of the
 /// section and is CUT, or it holds none of it and GAINS it.
 ///
 /// Read as the area of the section the face covers, and not the corner's angle: a reentrant vertex
@@ -35,8 +34,8 @@ pub enum SurfaceEndGainsTheSectionReading {
 /// take off, against a sliver one ruler wide over the section's whole reach. With fewer than two
 /// sides there is no wedge, and the face holds it as it always did.
 ///
-/// The faces are summed in the order the end was flooded (`IndexSet`, C#'s insertion-ordered
-/// `HashSet`), so the float sum is C#'s.
+/// The faces are summed in the order the end was flooded (an `IndexSet`), so the float sum is the
+/// same on every run.
 pub fn how_the_face_stands_to_it(
     pool: &SurfaceVertexPool,
     faces: &[(i32, i32, i32)],
@@ -121,7 +120,7 @@ pub fn how_the_face_stands_to_it(
 /// The section's chords as half planes: each chord of `profile` (in the plane facing
 /// `plane_normal`) with the unit direction AWAY from the `corner`; chords of no length, or that
 /// pass within the pool's ruler of the corner, are left out.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn the_chords_of_the_section(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -192,7 +191,7 @@ pub fn area_of(polygon: &[Vector3]) -> f64 {
     twice.length() / 2.0
 }
 
-/// C# `TryGainIt`: the section, which the end face does not hold, laid as the cap that closes the
+/// The section, which the end face does not hold, laid as the cap that closes the
 /// strip's end - [`surface_end_notch::try_cap_with_the_section`].
 pub fn try_gain_it(
     pool: &mut SurfaceVertexPool,

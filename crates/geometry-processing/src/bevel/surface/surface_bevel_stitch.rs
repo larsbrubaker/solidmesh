@@ -1,6 +1,5 @@
-//! The SURFACE of one strip (`Bevel/Surface/SurfaceBevelStitch.cs`, a static class; free functions
-//! here): its quads, from the ring at one end to the ring at the other, through a station at every
-//! interior tangent vertex of either of its two seams.
+//! The SURFACE of one strip, as free functions: its quads, from the ring at one end to the ring at
+//! the other, through a station at every interior tangent vertex of either of its two seams.
 //!
 //! Kept apart from `SurfaceBevelBuilder`, which decides WHAT to build - which chains, which corners,
 //! which crossings, and which rings each strip is to run between. This is the one thing that happens
@@ -22,17 +21,17 @@ use super::{surface_fan, surface_ring, surface_seam_re_read};
 use super::{SurfaceStrip, SurfaceStripStation, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `OneStation`: parameters along an edge nearer than this are one station - the pool's weld, read
+/// Parameters along an edge nearer than this are one station - the pool's weld, read
 /// along the edge rather than across space, so that two stations a weld apart are not asked to be two.
 pub fn one_station(pool: &SurfaceVertexPool) -> f64 {
     pool.weld_distance()
 }
 
-/// C# `TryStitch`: the quads of one strip, from its start ring to its end ring, through a station at
+/// The quads of one strip, from its start ring to its end ring, through a station at
 /// every interior tangent vertex of either of its two seams.
 ///
-/// `seams` is C#'s `List<(int Vertex, double Param)>[,]`, indexed by `edge_index`. A seam missing
-/// there (C# would throw on it) is refused as the seam not meeting: `SurfaceBevelBuilder` lays both
+/// `seams` holds each strip's two seams as `(vertex, parameter)` runs, indexed by `edge_index`. A
+/// seam missing there is refused as the seam not meeting: the builder lays both
 /// seams of every strip it stitches, so no real input reaches that.
 #[allow(clippy::too_many_arguments)]
 pub fn try_stitch(
@@ -238,7 +237,7 @@ pub fn try_stitch(
     Ok(())
 }
 
-/// C# `OnTheChord`: the points standing on one station's chord between two rails, in the order they
+/// The points standing on one station's chord between two rails, in the order they
 /// stand along it - what earlier collapsed columns handed on, or what this station carries of its own.
 ///
 /// Never both. Only an END ring has anything between its rails - every station the stitch lays is
@@ -253,7 +252,7 @@ fn on_the_chord<'a>(carried: &'a [i32], here: &'a [i32]) -> &'a [i32] {
     }
 }
 
-/// C# `InteriorStations`: the parameters a cross section is needed at between the two end rings:
+/// The parameters a cross section is needed at between the two end rings:
 /// every tangent vertex of either seam that is not one of its own ends, in order, with two at the
 /// same place counted once.
 fn interior_stations(left: &[(i32, f64)], right: &[(i32, f64)], one_station: f64) -> Vec<f64> {
@@ -266,7 +265,7 @@ fn interior_stations(left: &[(i32, f64)], right: &[(i32, f64)], one_station: f64
         }
     }
 
-    // C#'s `List<double>.Sort()`: `double.CompareTo`, which orders NaN before every number. Equal
+    // A total order with NaN before every number, so a NaN parameter cannot break the sort. Equal
     // parameters are indistinguishable, so the unstable sort's tie order cannot reach the output.
     found.sort_unstable_by(|a, b| compare_as_csharp(*a, *b));
 
@@ -281,7 +280,7 @@ fn interior_stations(left: &[(i32, f64)], right: &[(i32, f64)], one_station: f64
     stations
 }
 
-/// C# `Carrying`: which vertex of a seam the strip is still on at `param` - the last one it has
+/// Which vertex of a seam the strip is still on at `param` - the last one it has
 /// reached. A station the other seam asked for does not put a new point on this one, which is what
 /// keeps the walked back face's boundary edges whole.
 fn carrying(seam: &[(i32, f64)], param: f64, one_station: f64) -> i32 {
@@ -296,7 +295,7 @@ fn carrying(seam: &[(i32, f64)], param: f64, one_station: f64) -> i32 {
     carrying
 }
 
-/// How two parameters order under C#'s `double.CompareTo`: NaN before every number.
+/// How two parameters order: NaN before every number, so the order is total.
 fn compare_as_csharp(a: f64, b: f64) -> Ordering {
     a.partial_cmp(&b)
         .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()).reverse())

@@ -1,4 +1,4 @@
-//! The corner loop of `SurfaceBevelBuilder.TryBuild` (`Bevel/Surface/SurfaceBevelBuilder.cs`),
+//! The corner loop of the surface bevel's build,
 //! split out of [`super::surface_bevel_builder`] to keep each file under the length limit: every
 //! corner between two consecutive edges of a chain, closed as the construction it is - the
 //! staircase a consumed chord stands on ([`super::surface_staircase_mitre`], built before the loop),
@@ -44,16 +44,15 @@ pub struct CornerLoopInputs<'a> {
     pub crossings: Option<&'a [SurfaceRoomCrossing]>,
     /// Lifts THE LEAN GATE (a test seam).
     pub lay_the_oblique_rows_anyway: bool,
-    /// The part's hull planes, read once and only if asked (C#'s `theHull`).
+    /// The part's hull planes, read once and only if asked.
     pub hull: &'a dyn Fn() -> Vec<SurfaceStripEndsOnTheHullSupportingPlane>,
 }
 
-/// The planes the part is bounded by, read ONCE and only if somebody asks (C#'s `hullPlanes ??=`
-/// local function). Two readings want them - a strip whose band ran off part of its landing
-/// (`SurfaceStripEndsOnTheHull`) and a mitre whose tip stands past the shared face's rim
-/// (`SurfaceMitreOverTheFaceBeyond`) - and the second cannot say whether it wants them without a
-/// cheap reading of its own, so the answer is handed down as something to ask rather than as
-/// something already paid for.
+/// The planes the part is bounded by, read ONCE and only if somebody asks. Two readings want them -
+/// a strip whose band ran off part of its landing (`SurfaceStripEndsOnTheHull`) and a mitre whose
+/// tip stands past the shared face's rim (`SurfaceMitreOverTheFaceBeyond`) - and the second cannot
+/// say whether it wants them without a cheap reading of its own, so the answer is handed down as
+/// something to ask rather than as something already paid for.
 pub fn the_hull_once<'a>(
     cell: &'a OnceCell<Vec<SurfaceStripEndsOnTheHullSupportingPlane>>,
     read: impl Fn() -> Vec<SurfaceStripEndsOnTheHullSupportingPlane> + 'a,
@@ -61,7 +60,8 @@ pub fn the_hull_once<'a>(
     move || cell.get_or_init(&read).clone()
 }
 
-/// The consumed chords' staircases and then every corner of every chain, in C#'s two passes.
+/// The consumed chords' staircases and then every corner of every chain, in two passes: the
+/// staircases first, so the corners beside them see them built.
 pub fn try_close_the_corners(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,
@@ -210,8 +210,9 @@ pub fn try_close_the_corners(
                     inputs.strips[here].as_deref(),
                     inputs.strips[next].as_deref(),
                 ) else {
-                    // A strip that is neither swallowed nor built is a contradiction C# would
-                    // throw on; refused as the mitre that does not meet (divergence 5070).
+                    // A strip that is neither swallowed nor built is a contradiction the builder
+                    // never produces (an edge the loop mitres is not swallowed, so has its strip);
+                    // a guard that refuses it as the mitre that does not meet rather than panic.
                     return Err(BevelAdvisory::new(
                         BevelAdvisoryCode::SurfaceStripsDoNotMitre,
                         vec![inputs.edges[here].to().into()],

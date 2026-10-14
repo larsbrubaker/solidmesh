@@ -1,10 +1,10 @@
 //! A CONVEX bite taken out of one flat face of the part, bounded by a ring of points lying in that
-//! face rather than by a single tangent line. Ports `Bevel/Surface/SurfaceConvexBite.cs` (C#
-//! `internal static class`; a module of free functions here). What is here are the readings
-//! that put the vertices standing on a piece's sides into it ([`with_the_vertices_standing_on_it`],
-//! which reads the pieces across its sides off [`SurfaceBiteSharedSides`]) and take the ones lying
-//! straight through back out ([`without_the_straight_through`]), and the tests a bite is guarded
-//! by; the bite itself (`TryTake`) lands with a later package.
+//! face rather than by a single tangent line. A module of free functions: what is here are the
+//! readings that put the vertices standing on a piece's sides into it
+//! ([`with_the_vertices_standing_on_it`], which reads the pieces across its sides off
+//! [`SurfaceBiteSharedSides`]) and take the ones lying straight through back out
+//! ([`without_the_straight_through`]), and the tests a bite is guarded by, and the bite itself
+//! ([`try_take`]).
 //!
 //! The walkback's own cut is a half space through a straight tangent line, which is all a strip
 //! along one edge ever needs (`SurfaceFacetCut`). A mixed corner's blend needs more: its footprint
@@ -18,11 +18,11 @@ use vector_math::{cs_math, Vector3};
 
 use super::{SurfaceBiteSharedSides, SurfaceVertexPool};
 
-/// C# `WithTheVerticesStandingOnIt`: one piece with the vertices that STAND ON its sides put into
+/// One piece with the vertices that STAND ON its sides put into
 /// it - any vertex the faces this bite cuts already carry, lying within the ruler of one of the
 /// piece's sides and strictly between that side's ends, becomes a corner of the ring at that place.
-/// C#'s optional `shared` (null) and `ofPiece` (-1) are `None` and `-1` here; `carried` is an
-/// [`IndexSet`] so it is walked in the order C#'s `HashSet<int>` enumerates.
+/// `shared` and `of_piece` are `None` and `-1` where there is no other piece; `carried` is an
+/// [`IndexSet`] so it is walked in the order its vertices were added.
 ///
 /// Which is the T junction this class would otherwise leave. A cut line is drawn where the bite's
 /// own rim says, and nothing stops it running through a vertex the part already had: the face on
@@ -36,7 +36,7 @@ use super::{SurfaceBiteSharedSides, SurfaceVertexPool};
 /// a vertex that stands on a side of a piece cut out of a face is a vertex of that face or of one
 /// beside it in the same plane, and all of those are among the faces the bite is already walking.
 ///
-/// C# orders each side's finds with `List.Sort`, which is unstable; this sort is stable, so finds
+/// Each side's finds are sorted stably, so finds
 /// at one place keep `carried`'s order (two of them would be one weld, so the tie does not arise).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn with_the_vertices_standing_on_it(
@@ -128,7 +128,7 @@ pub fn with_the_vertices_standing_on_it(
     grown
 }
 
-/// C# `NamedBy`: whether a piece names `vertex` as one of its own corners.
+/// Whether a piece names `vertex` as one of its own corners.
 fn named_by(piece: &[i32], vertex: i32) -> bool {
     piece.contains(&vertex)
 }
@@ -195,7 +195,7 @@ pub fn without_the_straight_through(
 
 /// Whether `corner` lies strictly between its two standing neighbours, within the pool's ruler of
 /// the side they span.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn on_the_side_between(
     pool: &SurfaceVertexPool,
     piece: &[i32],
@@ -243,7 +243,7 @@ pub fn standing(piece: &[i32], dropped: &[bool], corner: usize, step: i64) -> Op
 
 /// Whether `piece` covers nothing: fewer than three corners, or every corner within the pool's
 /// ruler of the line through its two furthest-apart corners.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn covers_nothing(pool: &SurfaceVertexPool, piece: &[i32]) -> bool {
     if piece.len() < 3 {
         return true;
@@ -336,7 +336,7 @@ pub fn is_in_the_bites_way(
         || lowest.z > high.z)
 }
 
-/// C# `SurfaceConvexBite.TryTake`: the convex region `rim` (in the plane of `plane_normal`
+/// The convex region `rim` (in the plane of `plane_normal`
 /// through `plane_point`) bitten out of `faces` - every face in the bite's way clipped to what
 /// lies outside the region, its pieces snapped to `snap_to` (the profile, for pool vertices from
 /// `split_from` on), the vertices standing on their sides carried in, straight-through vertices

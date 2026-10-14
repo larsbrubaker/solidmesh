@@ -1,10 +1,10 @@
-//! The boundary of a SMOOTH side - one the cut is laid on the surface for rather than drawn straight
-//! off the chain (`Bevel/Sections/SectionSmoothSide.Boundary.cs`, part of the C# `internal static
-//! partial class SectionSmoothSide`; a module of free functions here). The boundary is laid station by
-//! station ([`try_lay_the_boundary`]) and joined along the surface ([`try_the_join`]), with the
-//! crossings a join need not mint dropped; an end section's landing is found by walking down its crease
-//! to the chord that holds it ([`try_the_crease_chord_under`]). A junction station's rim and the
-//! crease takeovers beside it are in [`super::section_smooth_side_junction_rim`].
+//! The boundary of a SMOOTH side - one the cut is laid on the surface for rather than drawn
+//! straight off the chain; a set of free functions beside [`super::section_smooth_side`]. The
+//! boundary is laid station by station ([`try_lay_the_boundary`]) and joined along the surface
+//! ([`try_the_join`]), with the crossings a join need not mint dropped; an end section's landing is
+//! found by walking down its crease to the chord that holds it ([`try_the_crease_chord_under`]). A
+//! junction station's rim and the crease takeovers beside it are in
+//! [`super::section_smooth_side_junction_rim`].
 
 use indexmap::{IndexMap, IndexSet};
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -21,24 +21,24 @@ use super::{
     NanSectionPoint, SectionKind, SectionPool, SectionRun, SectionSide, SurfaceWalkCrossing,
 };
 
-/// C# `LatticeFraction`: how near an end of a ring edge an inserted point may not be taken as a new
+/// How near an end of a ring edge an inserted point may not be taken as a new
 /// point.
 pub const LATTICE_FRACTION: f64 = 1e-9;
 
-/// C# `TheLongestCreaseWalk`: how many chords of a crease a slide may run down before the walk gives
+/// How many chords of a crease a slide may run down before the walk gives
 /// it up.
 const THE_LONGEST_CREASE_WALK: i32 = 64;
 
 /// The FEATURE edges leaving each vertex.
 pub type CreasesAtEachVertex = IndexMap<i32, Vec<i32>>;
 
-/// Why a smooth side's boundary or cut failed: a named refusal and where on the part it stands
-/// (C#'s `out refusal, out where`), or a point that came out not a number, which C#'s pool throws on.
+/// Why a smooth side's boundary or cut failed: a named refusal and where on the part it stands,
+/// or a point that came out not a number, which the section pool refuses to hold.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SmoothSideFailure {
     /// The cut refused, by name, at that point.
     Refused(SmoothSideRefusal, Vector3),
-    /// A point minted into the pool was NaN (C# `SectionPool.Add` throws).
+    /// A point minted into the pool was NaN, which the pool refuses.
     NotANumber(NanSectionPoint),
 }
 
@@ -48,7 +48,7 @@ impl From<NanSectionPoint> for SmoothSideFailure {
     }
 }
 
-/// C# `TryLayTheBoundary`: the boundary, laid on the surface - every station's own point, and the
+/// The boundary, laid on the surface - every station's own point, and the
 /// fold crossings between consecutive points. An OFFSET station's point is its setback WALKED along
 /// the surface; a SLIDE station's is the point it already slid to, which lies on a fold. A JUNCTION
 /// station hands THREE points - its own rim P1, F1, P2
@@ -353,7 +353,7 @@ pub fn try_lay_the_boundary(
     Ok(())
 }
 
-/// C# `DropTheCrossingsInsideOneFacet`: drops every crossing of a mesh edge whose two faces lie in
+/// Drops every crossing of a mesh edge whose two faces lie in
 /// the SAME flat piece. Such an edge is a diagonal inside one facet, not a fold between two of them:
 /// the point minted there is collinear with the join's own ends by construction and adds nothing to
 /// the cut but a ring vertex the ears must step over - of the barrel mouth's 47 crossings, 41 are such
@@ -375,7 +375,7 @@ pub fn drop_the_crossings_inside_one_facet(
     });
 }
 
-/// C# `DropTheEndsOwnFold`: drops a join's crossing of the fold one of its OWN ends stands on. A
+/// Drops a join's crossing of the fold one of its OWN ends stands on. A
 /// SLIDE station's boundary point lies on a fold, so the straight join arriving there meets that fold
 /// at the landing point itself - not a crossing to mint: the polyline vertex there IS the station's
 /// point. This is IDENTITY and not tolerance.
@@ -388,7 +388,7 @@ pub fn drop_the_ends_own_fold(
     from: i32,
     to: i32,
 ) {
-    // C# indexes the places; every station point is placed before its joins are laid.
+    // Every station point is placed before its joins are laid.
     if let (Some(first), Some(place)) = (crossings.first(), cut.places.get(&from)) {
         if is_the_ends_own_point(mesh, graph, lattice, place, first) {
             crossings.remove(0);
@@ -402,7 +402,7 @@ pub fn drop_the_ends_own_fold(
     }
 }
 
-/// C# `IsTheEndsOwnPoint`: whether a join's first or last crossing is the point its own END already
+/// Whether a join's first or last crossing is the point its own END already
 /// is. On a fold that is the edge's identity. At a CORNER a point stands on every fold of that
 /// vertex's fan at once, so a vertex end owns a crossing of ANY edge incident to that vertex that lands
 /// AT the vertex within the mesh's lattice.
@@ -427,7 +427,7 @@ pub fn is_the_ends_own_point(
     place.edge >= 0 && crossing.edge == place.edge
 }
 
-/// C# `TryTheJoin`: the join between two boundary points, tried over every face either end may be
+/// The join between two boundary points, tried over every face either end may be
 /// read as lying in - a point on a fold lies in both of the faces that fold joins, and only one of
 /// them may reach the other end without leaving the side. A join is laid from the first point to the
 /// second, ONE WAY, always.
@@ -463,9 +463,9 @@ pub fn try_the_join(
     None
 }
 
-/// C# `TryTheCreaseChordUnder`: which CHORD of a crease an end section's landing (`at`) lies on,
+/// Which CHORD of a crease an end section's landing (`at`) lies on,
 /// walked for from the chain's end vertex - `Ok` where a crease leaving `from_vertex` holds it, and
-/// `Err(first_chord)` (C#'s false with the chord left at the first one) where none does.
+/// `Err(first_chord)`, the crease's first chord, where none does.
 ///
 /// `SectionEnd` records only the crease's first chord leaving that vertex, and on a tessellated wall
 /// that chord is far shorter than the slide: the raked bore's mouth starts with a chord 0.1214 long
@@ -515,14 +515,14 @@ pub fn try_the_crease_chord_under(
     Ok(chord)
 }
 
-/// C# `TryTheCreaseChordDown`: the walk itself, down ONE crease leaving the vertex, to the first chord
+/// The walk itself, down ONE crease leaving the vertex, to the first chord
 /// whose span holds the landing's projection - and how far the landing stands OFF that chord, which
 /// is what tells one crease leaving the vertex from another. At each far vertex the walk takes the
 /// feature edge that most nearly carries on the way it is going (the first such on a tie), and gives
 /// up where nothing carries on.
 ///
-/// C# builds the creases-at-each-vertex table lazily inside the walk; it is handed in here, built
-/// once by the caller - the same table either way.
+/// The creases-at-each-vertex table is handed in, built once by the caller, so repeated walks share
+/// it.
 pub fn try_the_crease_chord_down(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -583,8 +583,8 @@ pub fn try_the_crease_chord_down(
     None
 }
 
-/// C# `TheCreasesAtEachVertex`: the FEATURE edges leaving each vertex, read off the edges-by-pair
-/// table the operation already built, walked in that table's own order (C#'s insertion order - see
+/// The FEATURE edges leaving each vertex, read off the edges-by-pair
+/// table the operation already built, walked in that table's own order (insertion order - see
 /// [`EdgeAtPair`]). Nothing where there is no feature test.
 pub fn the_creases_at_each_vertex(
     graph: &MeshEdgeGraph,
@@ -614,7 +614,7 @@ pub fn the_creases_at_each_vertex(
     at
 }
 
-/// C# `TheFacesOn`: the faces of one edge that are on the given side.
+/// The faces of one edge that are on the given side.
 pub fn the_faces_on(graph: &MeshEdgeGraph, edge: i32, side: &IndexSet<i32>) -> Vec<i32> {
     let mut faces = Vec::new();
 
@@ -627,7 +627,7 @@ pub fn the_faces_on(graph: &MeshEdgeGraph, edge: i32, side: &IndexSet<i32>) -> V
     faces
 }
 
-/// C# `ParameterOn`: where `at` projects along `edge`, 0 at the graph's vertex 0 and 1 at its vertex
+/// Where `at` projects along `edge`, 0 at the graph's vertex 0 and 1 at its vertex
 /// 1, kept [`LATTICE_FRACTION`] clear of either end (0 on a degenerate edge).
 pub fn parameter_on(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32, at: Vector3) -> f64 {
     let a = position(mesh, graph.get_vertex0(edge));

@@ -1,6 +1,5 @@
-//! One tangent line read as the half space a face region is kept in ([`SurfaceFacetCut`]). Ports
-//! `Bevel/Surface/SurfaceFacetCut.cs`: the fields, the three constructors (C#'s overloads are
-//! [`SurfaceFacetCut::new`], [`SurfaceFacetCut::with_own_ends`] and
+//! One tangent line read as the half space a face region is kept in ([`SurfaceFacetCut`]): the
+//! fields, the three constructors ([`SurfaceFacetCut::new`], [`SurfaceFacetCut::with_own_ends`] and
 //! [`SurfaceFacetCut::with_ends`]) and the clipping and removal readings.
 
 use std::collections::HashSet;
@@ -10,7 +9,7 @@ use vector_math::{cs_math, Vector3};
 
 use super::{surface_cut_clip, surface_ring, SurfaceBandEnd, SurfaceLine, SurfaceVertexPool};
 
-/// C# `SurfaceFacetCut` (a readonly struct): one tangent line read as the half space a face region
+/// One tangent line read as the half space a face region
 /// is kept in - the plane that stands square to the region through the tangent line, with the
 /// material side named.
 ///
@@ -41,10 +40,10 @@ pub struct SurfaceFacetCut {
     ///
     /// One region holds the cuts of every plan that reaches it, and the standing-feature guard's
     /// chain exemption is a thing one plan may claim only of its OWN chain
-    /// (`SurfaceWalkbackBands.TryCheckNothingIsStandingInTheBand`): a boss's foot being bevelled
-    /// excuses the boss's own band, not a rim edge's band that happens to run into the same foot.
-    /// [`SurfaceFacetCut::edge_index`] cannot answer it, since that numbers the plans' edges end to
-    /// end and says nothing about where one plan stops.
+    /// (`surface_walkback_bands::try_check_nothing_is_standing_in_the_band`): a boss's foot being
+    /// bevelled excuses the boss's own band, not a rim edge's band that happens to run into the
+    /// same foot. [`SurfaceFacetCut::edge_index`] cannot answer it, since that numbers the plans'
+    /// edges end to end and says nothing about where one plan stops.
     pub plan_index: i32,
     /// Which edge of the plan this cut belongs to, as an index into its edges.
     pub edge_index: i32,
@@ -69,11 +68,11 @@ pub struct SurfaceFacetCut {
     /// swallows the facets coming back round the far side of a wall that turns more than half a
     /// circle, and those are joined to the band by material all the way round. So the roll names
     /// the facets its own sections paced out, and the band's flood is kept inside them
-    /// (`SurfaceWalkbackBands.LimitEachCutToTheBandItsOwnEdgeReaches`).
+    /// (`surface_walkback_bands::limit_each_cut_to_the_band_its_own_edge_reaches`).
     pub may_touch: Option<Rc<HashSet<i32>>>,
     /// The two vertices the chord this cut is drawn along runs between, where it was drawn along
     /// one the construction had already stood, or `None`. A ring corner that IS one of them stands
-    /// on the cut by identity (`SurfaceCutClip.ClipBy`).
+    /// on the cut by identity (`surface_cut_clip::clip_by`).
     pub the_cuts_own_ends: Option<Vec<i32>>,
     /// Where the chain edge this cut belongs to begins, in the mesh's own space.
     pub chain_from: Vector3,
@@ -106,8 +105,7 @@ impl SurfaceFacetCut {
         )
     }
 
-    /// A cut belonging to no edge, whose clip snaps onto `the_cuts_own_ends` (C#'s
-    /// `SurfaceFacetCut(SurfaceLine, Vector3, IReadOnlyList<int>)`).
+    /// A cut belonging to no edge, whose clip snaps onto `the_cuts_own_ends`.
     pub fn with_own_ends(
         tangent_line: SurfaceLine,
         inward: Vector3,
@@ -130,7 +128,7 @@ impl SurfaceFacetCut {
         }
     }
 
-    /// C#'s full constructor: the band `ends` the cut stops at, the chain edge's span
+    /// A cut with everything named: the band `ends` the cut stops at, the chain edge's span
     /// (`chain_from`..`chain_to`), the plan it belongs to and the facets it may touch (`None`
     /// for any).
     #[allow(clippy::too_many_arguments)]
@@ -162,8 +160,7 @@ impl SurfaceFacetCut {
     }
 
     /// The same cut - its band ends, chain span, plan and facets - drawn along another `rail`
-    /// facing `inward`; the clip's own snap ends are not carried, as C#'s copy does not carry
-    /// them.
+    /// facing `inward`; the clip's own snap ends are not carried over to the new rail.
     pub fn drawn_along(&self, rail: SurfaceLine, inward: Vector3) -> SurfaceFacetCut {
         Self::with_ends(
             self.edge_index,
@@ -210,7 +207,7 @@ impl SurfaceFacetCut {
 
     /// The plane through the chain edge's start the band stands behind - its own BACK - or `None`
     /// where the cut has no chain span.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
     pub fn try_the_bands_own_back(&self) -> Option<SurfaceBandEnd> {
         if !((self.chain_to - self.chain_from).length_squared() > 0.0) {
             return None;
@@ -243,7 +240,7 @@ impl SurfaceFacetCut {
     }
 
     /// Whether `point` stands within `near` of the chain edge's own span.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
     pub fn stands_on_the_chain_edge(&self, point: Vector3, near: f64) -> bool {
         let run = self.chain_to - self.chain_from;
 
@@ -278,9 +275,8 @@ impl SurfaceFacetCut {
         self.try_find_removed_point_also_inside(from, to, on_the_cut, None)
     }
 
-    /// [`SurfaceFacetCut::try_find_removed_point`], kept inside `also_inside` as well (C#'s
-    /// private overload with a `SurfaceBandEnd?`).
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+    /// [`SurfaceFacetCut::try_find_removed_point`], kept inside `also_inside` as well.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
     pub fn try_find_removed_point_also_inside(
         &self,
         from: Vector3,

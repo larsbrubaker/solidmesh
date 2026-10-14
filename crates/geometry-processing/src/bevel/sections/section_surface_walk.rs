@@ -1,5 +1,5 @@
-//! Laying a straight reach ALONG the surface, unfolding across the edges it crosses
-//! (`Bevel/Sections/SectionSurfaceWalk.cs`): why a walk stopped short ([`SurfaceWalkRefusal`]),
+//! Laying a straight reach ALONG the surface, unfolding across the edges it crosses:
+//! why a walk stopped short ([`SurfaceWalkRefusal`]),
 //! where it crossed one mesh edge ([`SurfaceWalkCrossing`]) and what it came to
 //! ([`SurfaceWalkResult`]), with the walk's small readings (the mesh's grid, folds, feet along an
 //! edge, a refusal). The walk itself (`TryWalk`) and its face-holding readings land with later runs
@@ -12,7 +12,7 @@ use crate::bevel::float_grid;
 use crate::bevel::surface::SurfaceVertexPool;
 use crate::topology::FeatureEdge;
 
-/// C# `SurfaceWalkRefusal`: why a surface walk stopped short of what was asked of it.
+/// Why a surface walk stopped short of what was asked of it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SurfaceWalkRefusal {
     /// It did not.
@@ -32,7 +32,7 @@ pub enum SurfaceWalkRefusal {
     NothingToWalk,
 }
 
-/// C# `SurfaceWalkCrossing`: where a walk crossed one mesh edge.
+/// Where a walk crossed one mesh edge.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceWalkCrossing {
     /// The mesh edge crossed.
@@ -43,8 +43,8 @@ pub struct SurfaceWalkCrossing {
     pub at: Vector3,
 }
 
-/// C# `SurfaceWalkResult`: what a walk laid on the surface came to. `Default` is C#'s field
-/// initializers: no end edge or vertex (-1), no refusal.
+/// What a walk laid on the surface came to. `Default` is a walk that
+/// came to nothing yet: no end edge or vertex (-1), no refusal.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceWalkResult {
     /// Where the walk ended, on [`SurfaceWalkResult::end_face`].
@@ -91,7 +91,7 @@ impl Default for SurfaceWalkResult {
 }
 
 impl SurfaceWalkCrossing {
-    /// C#'s `SurfaceWalkCrossing` constructor.
+    /// The walk crossing `edge` at `parameter` along it, at the point `at`.
     pub fn new(edge: i32, parameter: f64, at: Vector3) -> Self {
         Self {
             edge,
@@ -102,8 +102,8 @@ impl SurfaceWalkCrossing {
 }
 
 impl SurfaceWalkResult {
-    /// C#'s `SurfaceWalkResult` constructor, with its `init` properties at their initializers (`<init>`:
-    /// no end edge or vertex, nothing travelled, no refusal).
+    /// A walk that ended at `end`, with everything else at its default (no end edge or vertex,
+    /// nothing travelled, no refusal).
     pub fn new(
         end: Vector3,
         end_face: i32,
@@ -120,21 +120,21 @@ impl SurfaceWalkResult {
     }
 }
 
-/// C# `LatticeFraction`: the fraction of a reach under which two points are one, and a crossing
+/// The fraction of a reach under which two points are one, and a crossing
 /// parameter within which of an end of its edge is snapped to that end.
 pub const LATTICE_FRACTION: f64 = 1e-9;
 
-/// C# `AlongAnArm`: how nearly a direction has to run along a face's arm to be read as running along
+/// How nearly a direction has to run along a face's arm to be read as running along
 /// it.
 pub const ALONG_AN_ARM: f64 = 1e-6;
 
-/// C# `GridUlps`: how many of the mesh's own float steps its grid is read as.
+/// How many of the mesh's own float steps its grid is read as.
 const GRID_ULPS: f64 = 4.0;
 
-/// C# `JoinIterations`: how many times the join re-aims before it gives up.
+/// How many times the join re-aims before it gives up.
 pub const JOIN_ITERATIONS: i32 = 8;
 
-/// C# `GridOf`: the mesh's own grid - the larger of the part's weld distance and a few float steps
+/// The mesh's own grid - the larger of the part's weld distance and a few float steps
 /// at its largest coordinate - which a walk's landing on a corner or an edge is read to.
 pub fn grid_of(mesh: &Mesh) -> f64 {
     let mut largest = 0.0f32;
@@ -151,20 +151,20 @@ pub fn grid_of(mesh: &Mesh) -> f64 {
     )
 }
 
-/// C# `IsTheSamePoint`: whether two points are one, to [`LATTICE_FRACTION`] of a reach of `over`
+/// Whether two points are one, to [`LATTICE_FRACTION`] of a reach of `over`
 /// (at least one).
 pub fn is_the_same_point(one: Vector3, other: Vector3, over: f64) -> bool {
     (one - other).length() <= LATTICE_FRACTION * cs_math::max_f64(1.0, over)
 }
 
-/// C# `FootOn`: the point `parameter` of the way along `edge` from the graph's vertex 0.
+/// The point `parameter` of the way along `edge` from the graph's vertex 0.
 pub fn foot_on(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32, parameter: f64) -> Vector3 {
     let from = position(mesh, graph.get_vertex0(edge));
 
     from + ((position(mesh, graph.get_vertex1(edge)) - from) * parameter)
 }
 
-/// C# `AlongFrom`: how far along `edge` (from the graph's vertex 0) the point `at` projects,
+/// How far along `edge` (from the graph's vertex 0) the point `at` projects,
 /// clamped to the edge; zero on an edge of no length.
 pub fn along_from(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32, at: Vector3) -> f64 {
     let from = position(mesh, graph.get_vertex0(edge));
@@ -177,8 +177,8 @@ pub fn along_from(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32, at: Vector3) ->
     }
 }
 
-/// C# `Refused`: a walk that stopped short, where it stopped and why - on `stopped_on_edge` at
-/// `stopped_at_parameter` where it stopped on an edge (C# defaults -1 and 0).
+/// A walk that stopped short, where it stopped and why - on `stopped_on_edge` at
+/// `stopped_at_parameter` where it stopped on an edge (-1 and 0 where it did not).
 #[allow(clippy::too_many_arguments)]
 pub fn refused(
     at: Vector3,
@@ -199,7 +199,7 @@ pub fn refused(
     }
 }
 
-/// C# `NormalOf`: a face's unit normal, read off its corners rather than its stored normal.
+/// A face's unit normal, read off its corners rather than its stored normal.
 pub fn normal_of(mesh: &Mesh, face: i32) -> Vector3 {
     let drawn = &mesh.faces[face as usize];
     let a = position(mesh, drawn.v0);
@@ -209,7 +209,7 @@ pub fn normal_of(mesh: &Mesh, face: i32) -> Vector3 {
         .get_normal()
 }
 
-/// C# `CrossedAFold`: whether any of a walk's crossings is a fold.
+/// Whether any of a walk's crossings is a fold.
 pub fn crossed_a_fold(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -222,7 +222,7 @@ pub fn crossed_a_fold(
     })
 }
 
-/// C# `IsAFold`: whether an edge is a fold of the surface - not two faces, or two whose normals are
+/// Whether an edge is a fold of the surface - not two faces, or two whose normals are
 /// further apart than the topology's coplanar reading.
 pub fn is_a_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
     if graph.get_face_count(edge) != 2 {
@@ -233,7 +233,7 @@ pub fn is_a_fold(mesh: &Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
         < FeatureEdge::COPLANAR_FACE_DOT
 }
 
-/// C# `ParameterOn`: a parameter `along` an edge measured from `from`, turned to the graph's own
+/// A parameter `along` an edge measured from `from`, turned to the graph's own
 /// direction (from its vertex 0).
 pub fn parameter_on(graph: &MeshEdgeGraph, edge: i32, from: i32, along: f64) -> f64 {
     if graph.get_vertex0(edge) == from {
@@ -243,8 +243,8 @@ pub fn parameter_on(graph: &MeshEdgeGraph, edge: i32, from: i32, along: f64) -> 
     }
 }
 
-/// C# `PairKey`: the key a mesh edge is filed under by its two vertices (the same key
-/// `SectionFanWalk.EdgesByVertexPair` uses).
+/// The key a mesh edge is filed under by its two vertices (the same key
+/// `section_fan_walk::edges_by_vertex_pair` uses).
 pub fn pair_key(one: i32, other: i32) -> i64 {
     if one < other {
         ((one as i64) << 32) | (other as u32 as i64)

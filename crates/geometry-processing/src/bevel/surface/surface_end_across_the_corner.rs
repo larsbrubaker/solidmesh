@@ -1,5 +1,5 @@
 //! A CONCAVE bead's end cut off by the plane of the face standing across its corner
-//! (`Bevel/Surface/SurfaceEndAcrossTheCorner.cs`, a static class: free functions here). Its two
+//! (free functions). Its two
 //! rulers and reading the plane ([`try_read`]).
 
 use std::collections::HashSet;
@@ -23,13 +23,13 @@ pub fn square_enough() -> f64 {
     math_helper::degrees_to_radians(BevelChainEnds::MAXIMUM_CAP_PLANE_ANGLE_DEGREES).cos()
 }
 
-/// C# `TryRead`: the plane the bead of chain end `end` is cut off by at `corner` (mesh vertex
+/// The plane the bead of chain end `end` is cut off by at `corner` (mesh vertex
 /// `corner_vertex`), where one stands - the single face there that is neither of the two the bevel
 /// walks back, read as the half space its material is on. `None` where `end` is not a concave bead,
 /// there are no `regions`, no such face stands there, two surfaces do (cutting the bead off on
 /// either would leave it open against the other), or the face is not square ENOUGH to `outward`,
 /// the way the chain would go on past the corner.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > y)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
 pub fn try_read(
     regions: Option<&FaceRegionCache>,
     end: &SurfaceEdgePlan,

@@ -1,6 +1,5 @@
-//! Triangulating the rings a smooth-side cut keeps (`Bevel/Sections/SectionSmoothSide.Triangulate.cs`,
-//! part of the C# `internal static partial class SectionSmoothSide`; free functions here beside
-//! [`super::section_smooth_side`]'s types). A kept ring goes to the ears
+//! Triangulating the rings a smooth-side cut keeps: free functions beside
+//! [`super::section_smooth_side`]'s types. A kept ring goes to the ears
 //! ([`crate::bevel::surface::surface_ring_ears::try_triangulate_the_ring`]) once every run of points
 //! KNOWN to lie on the straight segment between its own neighbours is lifted out, and each such run is
 //! put back afterwards as a fan.
@@ -32,7 +31,7 @@ pub type PolylineNeighbours = IndexMap<i32, (i32, i32)>;
 /// One collinear run lifted out of a ring: its two standing ends and the points between them.
 pub type CollinearRun = (i32, i32, Vec<i32>);
 
-/// C# `TryTriangulateAKeptRing`: triangulates one kept ring into `triangles`, having first lifted out
+/// Triangulates one kept ring into `triangles`, having first lifted out
 /// every run of points known to lie on the straight segment between the ring's own neighbours of that
 /// run; the reduced ring is ear-clipped and the one triangle running the directed edge each run
 /// spanned is replaced by a fan from its third vertex over the run, same winding. Those fan triangles
@@ -76,8 +75,9 @@ pub fn try_triangulate_a_kept_ring(
     Ok(())
 }
 
-/// C# `ThePolylineNeighbours`: each boundary vertex's two neighbours along the boundary polyline, in
-/// chain order (wrapping, as C# does whether the boundary is closed or not).
+/// Each boundary vertex's two neighbours along the boundary polyline, in
+/// chain order, wrapping whether the boundary is closed or not (an open boundary's two ends are
+/// each other's neighbours).
 pub fn the_polyline_neighbours(cut: &SmoothSideCut) -> PolylineNeighbours {
     let mut along = IndexMap::new();
     let count = cut.boundary.len();
@@ -95,7 +95,7 @@ pub fn the_polyline_neighbours(cut: &SmoothSideCut) -> PolylineNeighbours {
     along
 }
 
-/// C# `TheRingWithoutItsCollinearRuns`: the ring with every collinear run lifted out of it, leaving
+/// The ring with every collinear run lifted out of it, leaving
 /// each run's two ends adjacent, and the runs themselves for [`try_fan_over_the_run`] to put back.
 pub fn the_ring_without_its_collinear_runs(
     cut: &SmoothSideCut,
@@ -159,7 +159,7 @@ pub fn the_ring_without_its_collinear_runs(
     (reduced, runs)
 }
 
-/// C# `LiesOnTheSegmentBetweenItsNeighbours`: whether a ring vertex is a join-placed point whose two
+/// Whether a ring vertex is a join-placed point whose two
 /// RING neighbours are exactly its two POLYLINE neighbours - the one reading under which it is known,
 /// without measuring, to stand on the straight segment between them.
 pub fn lies_on_the_segment_between_its_neighbours(
@@ -185,7 +185,7 @@ pub fn lies_on_the_segment_between_its_neighbours(
         || (before == neighbour_after && after == neighbour_before)
 }
 
-/// C# `TryFanOverTheRun`: replaces the one triangle running the directed edge `end0` to `end1` by a
+/// Replaces the one triangle running the directed edge `end0` to `end1` by a
 /// fan from its third vertex over the run that edge stands in place of.
 pub fn try_fan_over_the_run(
     drawn: &mut Vec<(i32, i32, i32)>,
@@ -227,7 +227,7 @@ pub fn try_fan_over_the_run(
     false
 }
 
-/// C# `TryTriangulate`: ear-clips one ring of pool points in `plane`, appending pool-index triangles.
+/// Ear-clips one ring of pool points in `plane`, appending pool-index triangles.
 ///
 /// One local vertex per DISTINCT vertex of the ring rather than one per POSITION in it: a bridged
 /// ring walks the vertices of its slit twice, and the only thing telling that slit from a ring that

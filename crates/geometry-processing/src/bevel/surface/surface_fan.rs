@@ -1,8 +1,8 @@
-//! Turning a ring of vertices into triangles, and turning three vertices into a triangle that
-//! faces a given way. Ports `Bevel/Surface/SurfaceFan.cs` (C# `internal static class`; a module of
-//! free functions here). What phase 3 needs of a triangulator, and no more: every ring it is
-//! handed is a convex facet, or a convex facet cut by half spaces, with points added along its
-//! edges. [`super::surface_ring_ears`] covers the rings no single apex can see whole.
+//! Turning a ring of vertices into triangles, and turning three vertices into a triangle that faces
+//! a given way. A module of free functions. What phase 3 needs of a triangulator, and no more:
+//! every ring it is handed is a convex facet, or a convex facet cut by half spaces, with points
+//! added along its edges. [`super::surface_ring_ears`] covers the rings no single apex can see
+//! whole.
 //!
 //! WHICH vertex the fan runs from is the whole difficulty. A ring carries points that were clipped
 //! into its edges, and those are collinear with the corners either side of them: fan from a corner
@@ -14,10 +14,9 @@
 //! The walkback fans its cut facets from here too: a fan that drops a point the other keeps is a T
 //! junction on a seam both of them sew, so there is one copy of the rule.
 //!
-//! C#'s overloads get their own names: `Emit(ring, ..)` is [`emit`], `EmitFacing(ring, ..)` is
-//! [`emit_facing`], the private `Emit(ring, .., Vector3? facing)` is `emit_with`, and the
-//! three-vertex `EmitFacing(pool, faces, first, second, third, reference)` is
-//! [`emit_triangle_facing`].
+//! [`emit`] fans a ring, [`emit_facing`] fans it facing a given way, both through the private
+//! `emit_with`, and [`emit_triangle_facing`] lays one triangle of three vertices facing a
+//! reference.
 
 use vector_math::Vector3;
 
@@ -39,14 +38,14 @@ const SQUARE_TO_THE_REFERENCE: f64 = 0.01;
 /// tenth-millimetre ring folded and none of a metre-wide one.
 const AGREES_WITH_THE_RING: f64 = 1e-9;
 
-/// C# `Emit(ring, pool, faces)`: triangles for `ring`, in its own order, appended to `faces`.
+/// Triangles for `ring`, in its own order, appended to `faces`.
 /// Takes the pool mutably because a ring no vertex of which can fan it is fanned from a new
 /// middle vertex (`fan_from_the_middle`).
 pub fn emit(ring: &[i32], pool: &mut SurfaceVertexPool, faces: &mut Vec<(i32, i32, i32)>) {
     emit_with(ring, pool, faces, None);
 }
 
-/// C# `EmitFacing(ring, pool, faces, facing)`: the same, with every triangle wound to face
+/// The same, with every triangle wound to face
 /// `facing` rather than to follow the ring. What the strip needs: its rings are built rail by rail
 /// from lines, with no winding of their own to follow, and every triangle of one lies in the same
 /// plane.
@@ -59,7 +58,7 @@ pub fn emit_facing(
     emit_with(ring, pool, faces, Some(facing));
 }
 
-/// C# `EmitCoveringNothing`: a ring the CALLER knows covers nothing, emitted as needles whose
+/// A ring the CALLER knows covers nothing, emitted as needles whose
 /// edges are exactly the ring's - see `fan_from_a_farthest_corner` for why that closes rather than
 /// opens a seam.
 ///
@@ -93,7 +92,7 @@ pub fn emit_covering_nothing(
     fan_from_a_farthest_corner(ring, pool, faces);
 }
 
-/// C#'s private `Emit(ring, pool, faces, Vector3? facing)`, which both public emits forward to.
+/// The fan both public emits forward to, facing `facing` where one is given.
 fn emit_with(
     ring: &[i32],
     pool: &mut SurfaceVertexPool,
@@ -170,7 +169,7 @@ fn emit_with(
     }
 }
 
-/// C# `CoversNothing`: whether a ring covers nothing - every corner of it standing within the
+/// Whether a ring covers nothing - every corner of it standing within the
 /// ruler of the line through its two farthest apart, which is three points of one straight rim
 /// however many of them there are.
 ///
@@ -206,7 +205,7 @@ pub fn covers_nothing(ring: &[i32], pool: &SurfaceVertexPool) -> bool {
     true
 }
 
-/// C# `FanFromAFarthestCorner`: a ring that covers nothing, fanned from one of its two farthest
+/// A ring that covers nothing, fanned from one of its two farthest
 /// apart corners - zero-area triangles, every side of the ring used exactly once, and no vertex
 /// minted.
 ///
@@ -251,7 +250,7 @@ fn fan_from_a_farthest_corner(
     }
 }
 
-/// C# `FarthestApart`: the two corners of a ring that stand farthest apart, as their places in
+/// The two corners of a ring that stand farthest apart, as their places in
 /// it and how far apart they are - the pair that names the line a ring covering nothing lies
 /// along.
 ///
@@ -278,7 +277,7 @@ pub fn farthest_apart(ring: &[i32], pool: &SurfaceVertexPool) -> (usize, usize, 
     (from, to, apart)
 }
 
-/// C# `EmitFacing(pool, faces, first, second, third, reference)`: the triangle on three vertices,
+/// The triangle on three vertices,
 /// wound so that it faces the same way as `reference`, appended to `faces`. Nothing is appended for
 /// three vertices with no area between them.
 pub fn emit_triangle_facing(
@@ -303,7 +302,7 @@ pub fn emit_triangle_facing(
     });
 }
 
-/// C# `IsWorthKeeping`: whether three vertices make a triangle with area in it rather than a flat
+/// Whether three vertices make a triangle with area in it rather than a flat
 /// nothing.
 pub fn is_worth_keeping(pool: &SurfaceVertexPool, first: i32, second: i32, third: i32) -> bool {
     if first == second || second == third || third == first {
@@ -317,7 +316,7 @@ pub fn is_worth_keeping(pool: &SurfaceVertexPool, first: i32, second: i32, third
     )
 }
 
-/// C# `ApexToFanFrom`: which vertex to fan from - of those that see the whole ring with area in
+/// Which vertex to fan from - of those that see the whole ring with area in
 /// every triangle, the one whose THINNEST triangle is the fattest; -1 where none does.
 ///
 /// The area test alone is not enough, and a cut band on a curved run is where that shows. Three
@@ -383,7 +382,7 @@ fn apex_to_fan_from(ring: &[i32], pool: &SurfaceVertexPool) -> i32 {
     best
 }
 
-/// C# `NoDiagonalCarriesACorner`: whether a fan from this apex takes no diagonal with another
+/// Whether a fan from this apex takes no diagonal with another
 /// corner of the ring standing on it. Only the diagonals are asked about - the fan's other sides
 /// are sides of the ring itself, and a corner standing on one of those was put there by the sewing
 /// on purpose.
@@ -412,7 +411,7 @@ fn no_diagonal_carries_a_corner(ring: &[i32], pool: &SurfaceVertexPool, apex: us
     true
 }
 
-/// C# `NewellNormalOf`: which way a ring lies as a whole, by Newell's sum over its edges - exact
+/// Which way a ring lies as a whole, by Newell's sum over its edges - exact
 /// for a planar ring however it is wound, and nothing (a zero vector) for one that covers no area
 /// at all.
 pub fn newell_normal_of(ring: &[i32], pool: &SurfaceVertexPool) -> Vector3 {
@@ -427,7 +426,7 @@ pub fn newell_normal_of(ring: &[i32], pool: &SurfaceVertexPool) -> Vector3 {
     summed
 }
 
-/// C# `LiesTheWayTheRingDoes`: whether a fan triangle faces the same way as the ring it came
+/// Whether a fan triangle faces the same way as the ring it came
 /// from. A ring with no direction of its own answers yes, which leaves the area test on its own
 /// where there is nothing better - and so does a triangle whose agreement is too small to be about
 /// anything but rounding, since a triangle that really is folded back disagrees by the whole of
@@ -450,7 +449,7 @@ fn lies_the_way_the_ring_does(
     facing.dot(ring_faces) > -(facing.length() * ring_faces.length() * AGREES_WITH_THE_RING)
 }
 
-/// C# `Thinness`: how far a triangle is from a needle, as its smallest altitude over its longest
+/// How far a triangle is from a needle, as its smallest altitude over its longest
 /// edge - zero for three points on a line and about 0.87 for an equilateral one, and free of the
 /// part's scale.
 fn thinness(pool: &SurfaceVertexPool, first: i32, second: i32, third: i32) -> f64 {
@@ -469,7 +468,7 @@ fn thinness(pool: &SurfaceVertexPool, first: i32, second: i32, third: i32) -> f6
     }
 }
 
-/// C# `FanFromTheMiddle`: the ring fanned from a new vertex at its own middle, which every ring
+/// The ring fanned from a new vertex at its own middle, which every ring
 /// can be seen entirely from.
 ///
 /// Only reached by a ring no vertex of which can fan it, and that takes a collinear triple at
@@ -523,7 +522,7 @@ fn fan_from_the_middle(
     }
 }
 
-/// C# `HasArea`: whether three positions have area between them rather than standing on one line.
+/// Whether three positions have area between them rather than standing on one line.
 fn has_area(first: Vector3, second: Vector3, third: Vector3) -> bool {
     (second - first).cross(third - first).length() > SMALLEST_TRIANGLE
 }

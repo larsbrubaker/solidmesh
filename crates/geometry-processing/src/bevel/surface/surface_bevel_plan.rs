@@ -1,5 +1,5 @@
 //! The geometry one chain's bevel is built from, worked out before anything is cut or stitched
-//! ([`SurfaceBevelPlan`], `Bevel/Surface/SurfaceBevelPlan.cs`): its constructor, accessors, band
+//! ([`SurfaceBevelPlan`]): its constructor, accessors, band
 //! ends, mixed corners, per-region setbacks, and where each edge's band stops
 //! ([`SurfaceBevelPlan::band_ends_of`]), recording a junction
 //! ([`SurfaceBevelPlan::try_record_junction`]) and planning a chain
@@ -28,7 +28,7 @@ use crate::bevel::bevel_chain_linker::BevelSweptChain;
 use crate::bevel::{bevel_edge_tool_builder, BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{EdgeConvexity, FaceGroup, FaceRegionCache};
 
-/// C# `SurfaceBevelPlan` (a sealed class): per chain edge, the two face regions, the wedge they
+/// Per chain edge, the two face regions, the wedge they
 /// open, the setback into each of them, the two tangent lines the faces are walked back to, and a
 /// round's center line ([`SurfaceEdgePlan`]). It decides WHERE the bevel lies and nothing else: it
 /// cuts no triangles, builds no strip, and does not decide whether there is room for what it
@@ -40,14 +40,15 @@ use crate::topology::{EdgeConvexity, FaceGroup, FaceRegionCache};
 #[derive(Debug)]
 pub struct SurfaceBevelPlan {
     /// The regions the plan was read against, so a reading that has to name a face NOT on the
-    /// chain can ask which surface it belongs to; `None` (C# null) where it had none.
+    /// chain can ask which surface it belongs to; `None` where it had none.
     pub regions: Option<Arc<FaceRegionCache>>,
     /// The widest setback the plan asks of each region, by the region's key (its lowest face
     /// index). Only looked up.
     pub setback_by_region: HashMap<i32, f64>,
     /// The corners where the chain's convexity turns over, keyed by the index of the edge the
     /// chain ARRIVES on (a closed chain's last corner at the last edge's own key), plus a junction
-    /// at either END under its sentinel key. Iterated in insertion order (C#'s `Dictionary`).
+    /// at either END under its sentinel key. Iterated in insertion order, so every run reads the
+    /// corners the same way.
     pub mixed_corners: RefCell<IndexMap<i32, Rc<SurfaceMixedCorner>>>,
     /// Every reading of the corner standing at one END of this chain, by the sentinel naming that
     /// end: one on a cut's chain, both on the bead's. Only looked up.
@@ -64,7 +65,7 @@ pub struct SurfaceBevelPlan {
     /// The fillet radius or chamfer setback the plan was drawn at.
     pub size: f64,
     /// Remembers `NearEnoughOnThePart`, the weld ruler read off the part's own vertices; `None`
-    /// until first asked (C#'s `double?`).
+    /// until first asked.
     pub near_enough_on_the_part: Cell<Option<f64>>,
     /// Whether the profile is a round's arc rather than a chamfer's straight cut.
     pub round_profile: bool,
@@ -158,12 +159,11 @@ impl SurfaceBevelPlan {
     }
 }
 
-/// The plan's constructor and its plain accessors (C# `<init>`, the private constructor,
-/// `Regions`, `MixedCornerCount`, `MixedCornerKeys`, `Roles`). The other C# properties are the
-/// public fields themselves.
+/// The plan's constructor and its plain accessors (the regions, the mixed corners and their keys,
+/// the roles). Everything else is read off the public fields themselves.
 impl SurfaceBevelPlan {
-    /// C#'s private constructor, with the field initializers (`<init>`: no junction arms yet, and
-    /// the part's ruler not read yet). Called by the planner once it has read the chain.
+    /// A plan with no junction arms yet and the part's ruler not read yet. Called by the planner
+    /// once it has read the chain.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         edges: Vec<SurfaceEdgePlan>,
@@ -199,26 +199,26 @@ impl SurfaceBevelPlan {
         }
     }
 
-    /// C# `Regions`: the regions this plan was read against, so that a reading which has to name a
+    /// The regions this plan was read against, so that a reading which has to name a
     /// face NOT on the chain can ask which surface it belongs to - the face beyond a chain's end
     /// (`SurfaceRoomEndCut`).
     pub fn regions(&self) -> Option<&Arc<FaceRegionCache>> {
         self.regions.as_ref()
     }
 
-    /// C# `MixedCornerCount`: how many corners of this chain turn the convexity over.
+    /// How many corners of this chain turn the convexity over.
     pub fn mixed_corner_count(&self) -> i32 {
         self.mixed_corners.borrow().len() as i32
     }
 
-    /// C# `MixedCornerKeys`: what names each of them - the index of the edge the chain ARRIVES on
+    /// What names each of them - the index of the edge the chain ARRIVES on
     /// for a corner inside the chain, and a sentinel for a JUNCTION standing at one of its ends - in
     /// the order they were recorded. A copy, since recording a junction later changes the map.
     pub fn mixed_corner_keys(&self) -> Vec<i32> {
         self.mixed_corners.borrow().keys().copied().collect()
     }
 
-    /// C# `Roles`: what part each of this chain's edges plays - which of them have strips of their
+    /// What part each of this chain's edges plays - which of them have strips of their
     /// own, which a blend swallows, and which edge each mixed corner's CUT is.
     pub fn roles(&self) -> Ref<'_, SurfaceEdgeRoles> {
         self.roles.borrow()
@@ -266,11 +266,11 @@ impl SurfaceBevelPlan {
 
 /// Where each edge's band stops.
 impl SurfaceBevelPlan {
-    /// C# `TryRecordJunction`: records the corner a JUNCTION reading found at one end of this
+    /// Records the corner a JUNCTION reading found at one end of this
     /// chain (`at_the_start` or its end) - `readings` is the corner as each arm read it (one on a
     /// cut's chain, both on the bead's), `edge_index` the edge of this chain that meets it, and
     /// `swallowed` the chords between, which owe no strip. The handover check is made again, since
-    /// the band ends it reads are the ones that have just changed. `Err` is C#'s `failureReason`:
+    /// the band ends it reads are the ones that have just changed. `Err` is why it would not:
     /// that end already carries a corner of its own, or the handover leaves no strip.
     pub fn try_record_junction(
         &self,
@@ -308,7 +308,7 @@ impl SurfaceBevelPlan {
 }
 
 impl SurfaceBevelPlan {
-    /// C# `BandEndsOf`: the planes the band on one face of edge `edge_index` (`left` or right) stops
+    /// The planes the band on one face of edge `edge_index` (`left` or right) stops
     /// at, one per end that has one.
     ///
     /// At an interior corner that is the mitre plane with the neighbour (through the chorded run's
@@ -320,8 +320,8 @@ impl SurfaceBevelPlan {
     ///
     /// Which corner stands at an end is the ROLES' answer and not the neighbour's index: where a
     /// blend swallows an edge, the corner's cut is further along the chain than the corner is.
-    /// C#'s note that the mixed-corner path reads only `readings[0]` (a second junction arm owed at
-    /// an interior two-crease corner, which no fixture reaches) is kept as it is.
+    /// The mixed-corner path reads only `readings[0]`: a second junction arm owed at an interior
+    /// two-crease corner is not read, and no fixture reaches one.
     pub fn band_ends_of(&self, edge_index: usize, left: bool) -> Vec<SurfaceBandEnd> {
         let mut ends = Vec::with_capacity(2);
         let last = self.edges.len() - 1;
@@ -402,7 +402,7 @@ impl SurfaceBevelPlan {
         ends
     }
 
-    /// C# `TheChordedRunsJointAfter`: where the mitre plane between edge `leaving` and the one after
+    /// Where the mitre plane between edge `leaving` and the one after
     /// it stands, when the two are two pieces of ONE chord a boolean split and the corner between
     /// them is not where the plane goes - `None` at every ordinary corner
     /// (`SurfaceMitreOnAChordedRun`). Read here because it is the RUN's reading: it needs the two
@@ -418,7 +418,7 @@ impl SurfaceBevelPlan {
 }
 
 impl SurfaceBevelPlan {
-    /// C# `TryCreate(BevelSweptChain, FaceRegionCache, double, bool, ...)`: plans one resolved
+    /// Plans one resolved
     /// chain with no curve-tolerance reading, so no end of it runs out on a crease carrying on.
     pub fn try_create(
         chain: &BevelSweptChain,
@@ -429,15 +429,16 @@ impl SurfaceBevelPlan {
         Self::try_create_with_curve_regions(chain, regions, None, size, round_profile)
     }
 
-    /// C# `TryCreate(BevelSweptChain, FaceRegionCache, FaceRegionCache, double, bool, ...)`: plans
+    /// Plans
     /// one resolved chain, told as well how the mesh reads as SURFACES (`curve_regions`), which is
     /// read for the chain's free ENDS only - whether the crease it stops at goes on without it.
-    /// Refuses (C#'s `failureReason`) a chain with no edges, a size that removes nothing, an edge
+    /// Refuses, by name, a chain with no edges, a size that removes nothing, an edge
     /// the plan cannot read, a mixed corner it cannot place, a concave end that runs out with
     /// nothing to cut its bead off by, or a handover that leaves no strip.
     ///
     /// The region face grids a round's curved side asks for are kept by this call, one per region
-    /// for the whole chain (divergence 650), as C#'s memo would hand back one per region.
+    /// for the whole chain: a grid's answers depend only on the mesh and the region, so one laid
+    /// grid serves every edge, with no process-wide cache shared between rebuild workers.
     pub fn try_create_with_curve_regions(
         chain: &BevelSweptChain,
         regions: &Arc<FaceRegionCache>,

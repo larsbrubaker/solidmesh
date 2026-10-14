@@ -1,6 +1,5 @@
 //! Where the build takes a crossing the room reading found - a mixed corner's RUN-OUT lying over
-//! another chain's BAND - and cuts that band back to the curve the two meet in
-//! (`Bevel/Surface/SurfaceBevelCrossings.cs`, a C# `internal static class`, so a module here).
+//! another chain's BAND - and cuts that band back to the curve the two meet in.
 //!
 //! The room measures the pair ([`super::SurfaceRoomCrossing`]) and the corner draws the curve, but
 //! only the builder holds both the strips and the corners in one scope, so this is where the two
@@ -24,11 +23,11 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `TryTheBandCrossedBy`: which strip this corner's run-out crosses on the CAP it runs across
+/// Which strip this corner's run-out crosses on the CAP it runs across
 /// and which on the WALL it turns against, `(crossed, crossed_on_the_wall)`, each -1 where it
 /// crosses none. BOTH is the mitred pair, which is two curves meeting at one point rather than one
-/// curve, and is read by [`try_the_hand_over_at_the_mitre`]. Never refuses; C#'s `bool`/`failure`
-/// shape is kept as a `Result` for its callers.
+/// curve, and is read by [`try_the_hand_over_at_the_mitre`]. Never refuses; it answers a `Result`
+/// so its callers read it as they read every other step.
 #[allow(clippy::too_many_arguments)]
 pub fn try_the_band_crossed_by(
     crossings: Option<&[SurfaceRoomCrossing]>,
@@ -61,7 +60,7 @@ pub fn try_the_band_crossed_by(
     Ok((crossed, crossed_on_the_wall))
 }
 
-/// C# `TryTheHandOverAtTheMitre`: where a run-out crosses BOTH bands at once, the corner those two
+/// Where a run-out crosses BOTH bands at once, the corner those two
 /// bands MITRE at - and the hand-over on it, which is the one point all three surfaces share and
 /// the turn the run-out's window shuts at.
 ///
@@ -122,7 +121,7 @@ pub fn try_the_hand_over_at_the_mitre(
     Ok(Rc::new(at_the_mitre))
 }
 
-/// C# `TryCutTheBandBack`: the crossed band cut back to the curve, or the reason it could not be:
+/// The crossed band cut back to the curve, or the reason it could not be:
 /// a band crossed by TWO corners' run-outs would have to be cut at two curves at once, which is
 /// named rather than left to the later crossing to overwrite the earlier. `crossing` is the curve
 /// the corner drew on that strip, `None` where it crossed nothing.
@@ -158,8 +157,8 @@ pub fn try_cut_the_band_back(
 
     // No trim is read only where the strip is gone or the curve has fewer than two corners, which
     // no crossing the build hands over has: a crossing comes back from the patch only where the
-    // run-out met this band's strip, and it is a column of the run-out's profile (divergence 4958).
-    // C# answers that state with a false that carries no failure.
+    // run-out met this band's strip, and it is a column of the run-out's profile. A guard, so a
+    // future caller cannot reach a panic: that state cuts nothing and refuses nothing.
     let Some(trim) = trim else {
         return Ok(());
     };
@@ -189,7 +188,7 @@ pub fn try_cut_the_band_back(
     Ok(())
 }
 
-/// C# `TheBandCrossedBy`: which strip a corner's run-out crosses, or -1: the room reading names
+/// Which strip a corner's run-out crosses, or -1: the room reading names
 /// the band by its plan, its edge and the corner the skirt came out of, so nothing here is
 /// recognised by where it stands.
 #[allow(clippy::too_many_arguments)]
@@ -231,18 +230,18 @@ fn the_band_crossed_by(
     -1
 }
 
-/// C# `TrimTheSeamsAtTheCrossings`: every crossed strip's seam cut back to the crossing itself, so
+/// Every crossed strip's seam cut back to the crossing itself, so
 /// the last vertex the stitch has to reach on that tangent line is the crossing's own.
 pub fn trim_the_seams_at_the_crossings(
     strips: &[Option<Rc<SurfaceStrip>>],
     trimmed: &SurfaceStripTrims,
     seams: &mut [SideSeams],
 ) {
-    // C#'s row-major walk of the [strip, end] table: strip by strip, its start before its end.
+    // A row-major walk of the [strip, end] table: strip by strip, its start before its end.
     for (strip, ends) in trimmed.iter().enumerate() {
         for crossing in ends.iter().flatten() {
             for side in [0usize, 1] {
-                // A trimmed strip always has its strip; C# would throw on a missing one.
+                // A trimmed strip always has its strip; a missing one is skipped rather than panic.
                 let Some(the_strip) = strips[strip].as_deref() else {
                     continue;
                 };

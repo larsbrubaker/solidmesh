@@ -1,7 +1,6 @@
 //! The surface walk itself: a straight reach laid ALONG the surface from a point of one face,
 //! unfolding across every edge it crosses, until the reach runs out, a crease or boundary stops it,
-//! or no face holds the direction (`SectionSurfaceWalk.TryWalk`, in
-//! `Bevel/Sections/SectionSurfaceWalk.cs`). In its own file because it is the walk's one long method;
+//! or no face holds the direction. In its own file because it is the walk's one long function;
 //! the walk's types and small readings are in [`super::section_surface_walk`], its face readings in
 //! [`super::section_surface_walk_faces`], and the turn through a vertex in
 //! [`super::section_walk_vertex_turn`].
@@ -21,10 +20,10 @@ use super::section_walk_vertex_turn::{
 };
 use super::{SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult};
 
-/// C# `TryWalk`: the reach of `distance` from `start` in `start_face` along `direction_in_face`, laid
+/// The reach of `distance` from `start` in `start_face` along `direction_in_face`, laid
 /// along the surface. `Ok` is a walk that ran its whole reach (its end classified onto a fold or a
 /// corner it lands within the mesh's lattice of); `Err` is the walk that stopped short, saying where
-/// and why - C#'s false with its `out walk`.
+/// and why, with the walk as far as it got.
 ///
 /// **Setting out.** A start on an edge lies in both its faces, so where the named face has no exit
 /// ahead of the line the DIRECTION picks its face (by the fold's own rotation), and a start on a mesh
@@ -100,7 +99,8 @@ pub fn try_walk(
 
     if let Some(set_out_from) = set_out_from {
         // A point ON a mesh vertex is the vertex's own question: the face that holds the direction may
-        // be any face of the fan. C#'s `out` direction is read whether or not the face held it.
+        // be any face of the fan. The direction it hands back is used whether or not the face held
+        // it, so a walk always sets out along the best reading there is.
         let holding = try_face_holding(mesh, set_out_from, direction, &[face]);
         let held_at_the_corner = match holding {
             Ok((_, held)) | Err(Some((_, held))) => held,

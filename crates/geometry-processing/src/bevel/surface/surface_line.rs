@@ -1,6 +1,6 @@
 //! An infinite line in space, as a point on it and a unit direction along it. The surface bevel's
 //! plan is written in these: a tangent line is where a face is walked back to, and a round's
-//! center line is where the rolling ball's center runs. Ports `Bevel/Surface/SurfaceLine.cs`.
+//! center line is where the rolling ball's center runs.
 //!
 //! Lines rather than segments on purpose. The plan says WHERE the fillet's tangency lies for one
 //! chain edge; where along it the strip starts and stops is the neighbouring edge's business,
@@ -8,7 +8,7 @@
 
 use vector_math::Vector3;
 
-/// C# `SurfaceLine` (a readonly struct).
+/// A line in space: a point on it and the direction it runs in.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceLine {
     /// A point the line passes through.
@@ -18,7 +18,7 @@ pub struct SurfaceLine {
 }
 
 impl SurfaceLine {
-    /// C#'s constructor.
+    /// The line through `point` running along `direction`.
     pub fn new(point: Vector3, direction: Vector3) -> Self {
         SurfaceLine { point, direction }
     }
@@ -58,7 +58,7 @@ impl SurfaceLine {
         let between = other.point - self.point;
         let direction_dot = self.direction.dot(other.direction);
         let determinant = 1.0 - (direction_dot * direction_dot);
-        // C# `!(Math.Abs(determinant) > 1e-12)`, which a NaN determinant also fails.
+        // Parallel where the determinant is within 1e-12 of zero, and where it is NaN.
         if determinant.abs() <= 1e-12 || determinant.is_nan() {
             return None;
         }

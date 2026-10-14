@@ -1,7 +1,6 @@
 //! What one side of one chain edge runs off over PART of its own span: the stretch at one end of
 //! the edge where the face it lands on has already died away under the setback, and the knife edge
-//! it runs off there onto the one plane beyond. Ports
-//! `Bevel/Surface/SurfaceBandRunsOffOverAStretch.cs`.
+//! it runs off there onto the one plane beyond.
 //!
 //! The partial half of the whole-span run-off. There the band takes the WHOLE of the region over
 //! the edge's span; here the face runs out only over a stretch - the pyramidal recess's left wall,
@@ -18,8 +17,8 @@ use vector_math::Vector3;
 
 use crate::topology::FeatureEdge;
 
-/// C# `SurfaceBandRunsOffOverAStretch` (a readonly struct). The rim set is shared, as C#'s
-/// `IReadOnlySet` reference is, so [`SurfaceBandRunsOffOverAStretch::on`] copies no set.
+/// A side's run-off over a stretch of its span. The rim set is shared, never mutated, so
+/// [`SurfaceBandRunsOffOverAStretch::on`] copies no set.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceBandRunsOffOverAStretch {
     /// Which end of the chain edge's span the stretch is anchored at - true for the edge's own
@@ -59,7 +58,7 @@ pub struct SurfaceBandRunsOffOverAStretch {
 }
 
 impl SurfaceBandRunsOffOverAStretch {
-    /// C#'s constructor with its defaults: not yet stamped onto a band (`plan_index`,
+    /// A run-off not yet stamped onto a band (`plan_index`,
     /// `edge_index` and `side` all -1).
     pub fn new(
         at_the_start: bool,

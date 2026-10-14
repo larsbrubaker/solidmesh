@@ -1,7 +1,6 @@
 //! The surface walk's face readings: which face holds a direction at a vertex or across an edge,
-//! where a line leaves a face, and a direction carried across a fold
-//! (`Bevel/Sections/SectionSurfaceWalk.cs`, part of the C# `internal static partial class
-//! SectionSurfaceWalk`; free functions here). Split from [`super::section_surface_walk`], which keeps
+//! where a line leaves a face, and a direction carried across a fold, as free functions. Split from
+//! [`super::section_surface_walk`], which keeps
 //! the walk's types and small readings, by responsibility: these are the questions the walk asks of
 //! ONE face (or the faces round one vertex or edge) at each step.
 
@@ -11,7 +10,7 @@ use vector_math::{cs_math, Vector3};
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{is_a_fold, normal_of, pair_key, ALONG_AN_ARM, LATTICE_FRACTION};
 
-/// Where a line leaves a face (C# `TryExit`'s tuple): the mesh edge it crosses, how far along the
+/// Where a line leaves a face: the mesh edge it crosses, how far along the
 /// line, the crossing point, the corner the edge was read from and how far along the edge from it,
 /// and the mesh vertex it passes through where it lands on an end of the edge (or -1).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -24,12 +23,12 @@ pub struct SurfaceWalkExit {
     pub vertex: i32,
 }
 
-/// C# `TryFaceHoldingAtEdge`: the face beside `edge` that holds `direction` - the face whose plane
-/// the direction is already in first (the one it was carried out of), then the others with the
-/// direction carried across the edge - as `Ok((face, direction_in_face))`. Where nothing holds it (a
-/// direction square to the surface, or pointing off a boundary edge), `Err` carries C#'s fallback
-/// outs: the caller's `preferred` face and the direction read in the home face (`None` where there
-/// is no face at all or the home face cannot read it).
+/// The face beside `edge` that holds `direction` - the face whose plane the direction is already in
+/// first (the one it was carried out of), then the others with the direction carried across the
+/// edge - as `Ok((face, direction_in_face))`. Where nothing holds it (a direction square to the
+/// surface, or pointing off a boundary edge), `Err` carries the fallback the caller carries on
+/// with: its `preferred` face and the direction read in the home face (`None` where there is no
+/// face at all or the home face cannot read it).
 pub fn try_face_holding_at_edge(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -87,7 +86,7 @@ pub fn try_face_holding_at_edge(
     Err(Some((preferred, in_home)))
 }
 
-/// C# `TryHeldBy`: `direction` read in `face`'s plane, and how far it turns INTO the face from
+/// `direction` read in `face`'s plane, and how far it turns INTO the face from
 /// `edge` (positive inward) - `None` where the direction stands square to the face or the face has no
 /// corner off the edge.
 pub fn try_held_by(
@@ -124,8 +123,8 @@ pub fn try_held_by(
     Some((in_face, in_face.dot(inward)))
 }
 
-/// C# `TryTheEdgeUnder`: the edge of `face` the point `at` stands on, within `lattice` - the nearest
-/// such, the later on a tie, and only folds where `folds_only` (C# default false).
+/// The edge of `face` the point `at` stands on, within `lattice` - the nearest
+/// such, the later on a tie, and only folds where `folds_only` (callers mostly pass false).
 #[allow(clippy::too_many_arguments)]
 pub fn try_the_edge_under(
     mesh: &Mesh,
@@ -166,9 +165,9 @@ pub fn try_the_edge_under(
     (edge >= 0).then_some(edge)
 }
 
-/// C# `TryFaceHolding`: the face of a vertex's fan whose WEDGE holds `direction` best, and the
-/// direction read in it, as `Ok((face, direction_in_face))`; `Err` carries C#'s outs where the best
-/// face holds it by less than [`LATTICE_FRACTION`] (`None` where no face could read it).
+/// The face of a vertex's fan whose WEDGE holds `direction` best, and the direction read in it, as
+/// `Ok((face, direction_in_face))`; `Err` carries the same pair where the best face holds it by
+/// less than [`LATTICE_FRACTION`] (`None` where no face could read it).
 ///
 /// A direction running ALONG an arm runs along that edge, and the face holds it. Computed from
 /// single-precision vertices it leans off the edge by float noise, and at a convex fold any lean out
@@ -231,7 +230,7 @@ pub fn try_face_holding(
     }
 }
 
-/// C# `TryExit`: where the line from `at` along `direction` leaves `face` - the nearest crossing of
+/// Where the line from `at` along `direction` leaves `face` - the nearest crossing of
 /// one of its edges ahead of `at` (past a lattice of the edge's own length), the crossing landing on
 /// an end of the edge named as the mesh vertex it passes through.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -297,7 +296,7 @@ pub fn try_exit(
     exit
 }
 
-/// C# `Unfold`: a direction in `face` carried across `edge` into the face on its far side - the
+/// A direction in `face` carried across `edge` into the face on its far side - the
 /// piece along the fold left alone, and the piece square to it in this face's plane put back square
 /// to the fold in the NEXT face. Both frames are taken normal-cross-axis, and both normals are
 /// outward, so this IS the dihedral.
@@ -325,7 +324,7 @@ pub fn unfold(
     ((axis * direction.dot(axis)) + (wanted * direction.dot(across))).get_normal()
 }
 
-/// C# `TryWedge`: a face's corner at `vertex` as its normal and its two arms (unit), ordered to turn
+/// A face's corner at `vertex` as its normal and its two arms (unit), ordered to turn
 /// the way the normal says - `None` where the face does not have `vertex` as exactly one corner.
 pub fn try_wedge(mesh: &Mesh, face: i32, vertex: i32) -> Option<(Vector3, Vector3, Vector3)> {
     let normal = normal_of(mesh, face);

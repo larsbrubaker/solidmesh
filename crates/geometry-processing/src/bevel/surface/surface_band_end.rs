@@ -1,6 +1,5 @@
 //! One end of the band a surface cut takes off, as the half space the band is kept INSIDE: a plane
-//! through one corner of the chain edge, with the side the edge itself lies on named. Ports
-//! `Bevel/Surface/SurfaceBandEnd.cs`.
+//! through one corner of the chain edge, with the side the edge itself lies on named.
 //!
 //! Two planes stand at a corner, and which one it is says what the chain is doing there. Where the
 //! chain turns and goes on, it is the MITRE plane the two strips are cut against; where the chain
@@ -13,7 +12,7 @@
 
 use vector_math::Vector3;
 
-/// C# `SurfaceBandEnd` (a readonly struct).
+/// One end of a band: the plane through the corner and the direction that points into the band.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct SurfaceBandEnd {
     /// The corner of the chain the end plane stands at.
@@ -23,7 +22,7 @@ pub struct SurfaceBandEnd {
 }
 
 impl SurfaceBandEnd {
-    /// C#'s constructor.
+    /// The end through `point`, keeping the side `inward` points to.
     pub fn new(point: Vector3, inward: Vector3) -> Self {
         SurfaceBandEnd { point, inward }
     }

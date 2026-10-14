@@ -1,6 +1,5 @@
-//! A JUNCTION station on a smooth side's boundary (`Bevel/Sections/SectionSmoothSide.Boundary.cs`,
-//! the junction half of the C# `internal static partial class SectionSmoothSide`; free functions here
-//! called by [`super::section_smooth_side_boundary::try_lay_the_boundary`]). A junction owns TWO wall
+//! A JUNCTION station on a smooth side's boundary: free functions called by
+//! [`super::section_smooth_side_boundary::try_lay_the_boundary`]. A junction owns TWO wall
 //! ends on two walls with the fold between them, so it hands the boundary its own rim - P1, F1, P2 in
 //! walk order ([`try_lay_the_junctions_rim`]) - and where a wall end was CARRIED past a feature crease,
 //! the point on that crease where the ordinary stations' boundary hands over to the rim is minted into
@@ -22,7 +21,7 @@ use super::section_surface_walk_faces::try_face_holding;
 use super::section_surface_walk_try::try_walk;
 use super::{BevelSection, JunctionSection, SectionPool, SectionRun, SurfaceWalkRefusal};
 
-/// C# `TryLayTheJunctionsRim`: lays a JUNCTION station's own rim on the smooth side - P1, F1, P2 in
+/// Lays a JUNCTION station's own rim on the smooth side - P1, F1, P2 in
 /// walk order, taken from the ledger by pool index so that no point is minted twice and the loft
 /// meets the cut by identity. P1 and P2 are the two canals' wall tangencies, each in its own wall, and
 /// F1 is where the arriving canal's tangency line meets the FOLD between those walls - so each of the
@@ -30,7 +29,7 @@ use super::{BevelSection, JunctionSection, SectionPool, SectionRun, SurfaceWalkR
 /// placed as an EDGE place on the chord of the fold that actually holds it, which on a tessellated
 /// wall is generally not the first chord leaving the vertex.
 ///
-/// The station's points go into `points` (C#'s list, which is already the cut's station entry); its
+/// The station's points go into `points` (already the cut's entry for this station); its
 /// boundary, places and faces into `cut`.
 #[allow(clippy::too_many_arguments)]
 pub fn try_lay_the_junctions_rim(
@@ -199,7 +198,7 @@ pub fn try_lay_the_junctions_rim(
     Ok(())
 }
 
-/// C# `MintTheCreaseTakeovers`: mints, where a junction's wall end was CARRIED past a feature crease,
+/// Mints, where a junction's wall end was CARRIED past a feature crease,
 /// the point on that crease where the boundary leaves the ordinary stations' facets and the
 /// junction's rim takes over.
 ///
@@ -311,7 +310,7 @@ pub fn mint_the_crease_takeovers(
     Ok(())
 }
 
-/// C# `TheFlattenedStartOf`: where a station's first point stands in the flattened boundary as it is
+/// Where a station's first point stands in the flattened boundary as it is
 /// so far.
 pub fn the_flattened_start_of(cut: &SmoothSideCut, station: i32) -> i32 {
     let mut at = 0;
@@ -325,7 +324,7 @@ pub fn the_flattened_start_of(cut: &SmoothSideCut, station: i32) -> i32 {
     at
 }
 
-/// C# `TryTheTakeover`: the point on a feature crease where the join from an ordinary station into a
+/// The point on a feature crease where the join from an ordinary station into a
 /// CARRIED wall end must end, with the faces of that crease on this side - `None` where the walk from
 /// the wall end arrives, or the end was never carried, and the ordinary join stands.
 ///

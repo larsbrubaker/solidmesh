@@ -1,6 +1,5 @@
-//! A convex chain end whose face beyond gives the section up. Ports
-//! `Bevel/Surface/SurfaceEndGivesUpTheSection.cs` (C# `internal static class`; a module of free
-//! functions here). What is here is the sewing of the faces the subtraction did not rebuild to the
+//! A convex chain end whose face beyond gives the section up. A module of free functions. What is
+//! here is the sewing of the faces the subtraction did not rebuild to the
 //! vertices it made ([`sew_the_rim`]), the half planes the section is bounded by and the pieces a
 //! face leaves outside them ([`pieces_outside_of`], [`pieces_left_of`]), and the subtraction
 //! itself ([`try_give_it_up`]).
@@ -14,7 +13,7 @@ use vector_math::Vector3;
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, SurfaceVertexPool};
 
-/// C# `SewTheRim`: splits any face the subtraction did NOT rebuild wherever one of the vertices it
+/// Splits any face the subtraction did NOT rebuild wherever one of the vertices it
 /// made stands part way along an edge of that face, so the rim sews by index rather than by
 /// coincidence. `untouched` names faces of `rebuilt` by index; the vertices the subtraction made are
 /// the pool's from `the_first_new_vertex` on.
@@ -23,8 +22,8 @@ use super::{surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, S
 /// over the rest of it. Two of the three - the wedge's own two sides - run along the face's own rim
 /// and so carry on outside it, where they cost nothing; but a rim that TURNS leaves the line inside
 /// the face again beyond the turn, and there the clip lands a vertex on the face's rim with nothing
-/// on the far side of that rim split to match - on the C# fixture, the lower left crease carried on
-/// past the nose's tip meets the cube's back edge at (0, 0, 13.333): three open edges, measured.
+/// on the far side of that rim split to match - on the test fixture, the lower left crease carried
+/// on past the nose's tip meets the cube's back edge at (0, 0, 13.333): three open edges, measured.
 ///
 /// Splitting the neighbour is safe wherever it fires, wanted or not: a triangle cut at a point that
 /// really is on one of its edges covers the same ground it did, and the face on the other side of
@@ -90,8 +89,8 @@ pub fn sew_the_rim(
     *rebuilt = kept;
 }
 
-/// C# `StandingOn`: the vertices the subtraction made that stand strictly between `from` and
-/// `to`, in order along that run. C#'s `List.Sort` is unstable and this sort is stable; two pool
+/// The vertices the subtraction made that stand strictly between `from` and
+/// `to`, in order along that run, sorted stably; two pool
 /// vertices at one place along one line within the ruler would be one weld, so the tie does not
 /// arise.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -230,7 +229,7 @@ pub fn pieces_outside_of(
 /// The half plane in the plane facing `plane_normal` bounded by the line `from`..`to`, as a point
 /// and the unit inward direction toward `inside`; `None` where the line has no length, lies along
 /// the normal, or `inside` stands on it.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn try_half_plane(
     from: Vector3,
     to: Vector3,
@@ -260,11 +259,11 @@ pub fn try_half_plane(
     Some((from, if reach > 0.0 { inward } else { -inward }))
 }
 
-/// C# `TryGiveItUp`: takes the section between `corner` and `profile` (the strip's end ring, rail
+/// Takes the section between `corner` and `profile` (the strip's end ring, rail
 /// by rail, already in `pool`) out of the end face (`in_the_end` names its faces in `faces`;
 /// `plane_normal` is its outward normal), leaving the profile as that face's boundary. Returns
-/// what the subtraction left standing part way along each chord of the profile (C#'s
-/// `out alongTheProfile`), or why the section could not be taken off.
+/// what the subtraction left standing part way along each chord of the profile, or why the section
+/// could not be taken off.
 pub fn try_give_it_up(
     pool: &mut SurfaceVertexPool,
     faces: &mut Vec<(i32, i32, i32)>,

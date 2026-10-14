@@ -1,6 +1,5 @@
 //! The last pass of the build, where the strips are sewn
-//! (`Bevel/Surface/SurfaceBuilderBittenStrips.cs`, C# `internal static class`; free functions
-//! here): the rows of every hole a standing feature bit out of a strip
+//! (free functions): the rows of every hole a standing feature bit out of a strip
 //! ([`SurfaceStripBiteRows`]), then the features those holes were taken out of
 //! ([`surface_bitten_feature_faces`]), then the stitches ([`surface_bevel_stitch`]) - three passes
 //! where there used to be one, because a feature is emitted once and a feature can be bitten by two
@@ -23,9 +22,9 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// One strip's start or end ring. Every built strip has both by the time the stitch runs - the
-/// mitres, the corners and the ends close every one - so a missing ring is a contradiction; C#
-/// would pass the null on and throw inside the stitch. Refused here as the end ring that does not
-/// land on the seam (divergence 5070).
+/// mitres, the corners and the ends close every one - so a missing ring is a contradiction. A
+/// guard refuses it as the end ring that does not land on the seam, rather than panic inside the
+/// stitch.
 fn ring_of<'a>(
     rings: &'a [Option<SurfaceStripStation>],
     strip: &SurfaceStrip,
@@ -42,7 +41,7 @@ fn ring_of<'a>(
         })
 }
 
-/// C# `TryLayThemAndStitch`: the rows, then the features, then the stitches, over every strip the
+/// The rows, then the features, then the stitches, over every strip the
 /// pass built.
 #[allow(clippy::too_many_arguments)]
 pub fn try_lay_them_and_stitch(
@@ -83,7 +82,7 @@ pub fn try_lay_them_and_stitch(
         )?);
     }
 
-    // C#'s `HashSet<SurfaceStandingFeatureWithheld>` of reference identities.
+    // The withheld features already emitted, compared by identity, so each is emitted once.
     let mut already_emitted = Vec::new();
 
     for i in 0..count {
@@ -158,7 +157,7 @@ pub fn try_lay_them_and_stitch(
     Ok(())
 }
 
-/// C# `TryTheBittenStrip`: one strip a feature took a bite out of, once its rows are laid and its
+/// One strip a feature took a bite out of, once its rows are laid and its
 /// feature emitted - the strip either side of the hole stitched as two.
 ///
 /// The stitch is told nothing about the hole. It sews between two rings, so the strip is handed to

@@ -1,5 +1,5 @@
-//! The section a band's run-out end gives up, SPLIT by a feature standing in it
-//! (`Bevel/Surface/SurfaceEndCapAroundAFeature.cs`, a static class): the upper piece the corner
+//! The section a band's run-out end gives up, SPLIT by a feature standing in it:
+//! the upper piece the corner
 //! still sees, the sliver beyond the feature's far trace, and nothing at all between them - the
 //! extended feature is material there, so that stretch of the end plane is interior and carries no
 //! face. Here are its nested record, where one piece meets the feature
@@ -15,7 +15,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
-/// C# `SurfaceEndCapAroundAFeature.Meeting` (a private readonly struct): where one of the two
+/// Where one of the two
 /// pieces meets the feature - its Q on the strip, and the crease vertex standing in the end plane.
 ///
 /// Every vertex of both pieces is one the notch or the trim already minted - the two Qs, the two
@@ -30,8 +30,8 @@ pub struct SurfaceEndCapAroundAFeatureMeeting {
 }
 
 impl SurfaceEndCapAroundAFeatureMeeting {
-    /// C#'s `Meeting` constructor: the piece's Q on the strip, and the crease vertex standing in the
-    /// end plane.
+    /// Where a piece meets the feature: the piece's Q on the strip, and the crease vertex standing
+    /// in the end plane.
     pub fn new(q: i32, crease: i32) -> Self {
         Self { q, crease }
     }
@@ -48,10 +48,10 @@ pub type SurfaceEndCapWalkAround = (
     SurfaceEndCapAroundAFeatureMeeting,
 );
 
-/// C# `TryWalkAround`: the section's rim read from the run-off side in, broken at the feature - the
+/// The section's rim read from the run-off side in, broken at the feature - the
 /// run of ring vertices before the notch, the run after it, and which Q and crease vertex each of
-/// them ends on. `Err` is C#'s `failure`. A one-faced notch has no tail, and its tail meeting is
-/// the default (C#'s `default(Meeting)`).
+/// them ends on. `Err` is why it would not split. A one-faced notch has no tail, and its tail
+/// meeting is the default.
 ///
 /// Walked in the order the profile is read in, so the head starts where the section's rim starts -
 /// the part's corner beyond at a run-off end, the first rail at a landing one - and the tail ends on
@@ -155,12 +155,12 @@ pub fn try_walk_around(
     Ok((head, head_step, tail, at_the_head, at_the_tail))
 }
 
-/// C# `TheChord`: the chord of the strip the walk crosses between step `at` and the one before it.
+/// The chord of the strip the walk crosses between step `at` and the one before it.
 fn the_chord(walk: &[i32], at: usize) -> i32 {
     walk[at - 1].min(walk[at])
 }
 
-/// C# `TryTheMeeting`: the Q standing on one chord, and the vertex the face that drew it lost its
+/// The Q standing on one chord, and the vertex the face that drew it lost its
 /// footing at in the end plane - which is the end of that face's crease the feature's own RIDGE does
 /// not carry.
 pub fn try_the_meeting(
@@ -186,7 +186,7 @@ pub fn try_the_meeting(
     None
 }
 
-/// C# `Carry`: the same vertex twice over is one corner of the rim, not two - the collapsed rails
+/// The same vertex twice over is one corner of the rim, not two - the collapsed rails
 /// all stand on one point. True where the corner was a new one.
 fn carry(walk: &mut Vec<i32>, vertex: i32) -> bool {
     if walk.last() != Some(&vertex) {
@@ -281,10 +281,10 @@ pub fn is_simple(ring: &[i32]) -> bool {
     true
 }
 
-/// C# `TryCap`: the section of a run-out end (facing `runs_out_facing`) split by the feature
+/// The section of a run-out end (facing `runs_out_facing`) split by the feature
 /// standing in it - the head piece the corner still sees, capped as the section is, and the sliver
 /// past the feature's far trace with whatever the walkback left on its straight side sewn in.
-/// Returns the stitch each chord of the end's ring carries (C#'s `out between`), or why the end
+/// Returns the stitch each chord of the end's ring carries, or why the end
 /// cannot be capped round the feature.
 #[allow(clippy::too_many_arguments)]
 pub fn try_cap(
@@ -304,7 +304,7 @@ pub fn try_cap(
         )
     };
 
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as `!(x > 0)` reads it
     let no_wall = !(runs_out_facing.length_squared() > 0.0);
     if no_wall {
         // The end has a face BEYOND it rather than a wall of its own: named rather than capped.
@@ -352,7 +352,7 @@ pub fn try_cap(
         return Err(does_not_extend(pool.position_of(at_the_tail.q)));
     }
 
-    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as the C#'s `!(x > 0)` does
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN refuses, as `!(x > 0)` reads it
     let covers_nothing = !(the_area_of(&sliver, pool, facing) > 0.0);
     if covers_nothing {
         // A sliver of no area, or wound the other way about, covers nothing.

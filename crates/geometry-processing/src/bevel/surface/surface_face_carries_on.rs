@@ -1,10 +1,10 @@
-//! The reading of the MATERIAL at a chain's end corner (`Bevel/Surface/SurfaceFaceCarriesOn.cs`, a
-//! static class): whether one of the two faces the bevel walks back carries straight on past that
-//! corner, so that the groove has to be closed by a wall of its own rather than notched into a face
-//! beyond it. Its nested reading ([`SurfaceFaceCarriesOnWayOn`]), the reading ([`past`]) and
-//! where the way on falls in one facet ([`where_the_way_on_falls`]).
+//! The reading of the MATERIAL at a chain's end corner: whether one of the two faces the bevel
+//! walks back carries straight on past that corner, so that the groove has to be closed by a wall
+//! of its own rather than notched into a face beyond it. Its nested reading
+//! ([`SurfaceFaceCarriesOnWayOn`]), the reading ([`past`]) and where the way on falls in one facet
+//! ([`where_the_way_on_falls`]).
 
-/// C# `SurfaceFaceCarriesOn.WayOn` (private): where the way on past a corner falls against one
+/// Where the way on past a corner falls against one
 /// facet of the region standing there.
 use std::collections::HashSet;
 
@@ -33,7 +33,7 @@ pub enum SurfaceFaceCarriesOnWayOn {
 /// Whether one of the two faces `end` walks back carries straight on past its corner (vertex
 /// `corner_vertex` at `corner`) the way the chain runs out (`outward`): some facet of either region
 /// at the corner has the way on INSIDE it, or two of its facets both run along an edge to the same
-/// far vertex. `None` regions (C#'s null cache) carry nothing on.
+/// far vertex. `None` regions (no region cache) carry nothing on.
 pub fn past(
     regions: Option<&FaceRegionCache>,
     end: &SurfaceEdgePlan,
@@ -68,7 +68,7 @@ pub fn past(
 /// Where the way on (`outward` squared into the facet's plane) falls in facet `face_index` at its
 /// corner `corner_vertex`: outside it, inside it, or along one of its two edges there - with the
 /// far vertex of that edge (-1 otherwise).
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn where_the_way_on_falls(
     mesh: &Mesh,
     face_index: i32,

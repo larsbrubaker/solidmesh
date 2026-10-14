@@ -1,5 +1,4 @@
-//! Cutting a chain end's profile out of the face beyond its corner. Ports
-//! `Bevel/Surface/SurfaceEndCut.cs` (C# `internal static class`; a module of free functions here).
+//! Cutting a chain end's profile out of the face beyond its corner. A module of free functions.
 //! What is here are the readings the end caps share with the cut: the vertices standing along a
 //! straight run ([`standing_between`]), the vertices a face list uses ([`vertices_of`]), the
 //! vertices standing on each chord of the profile ([`on_the_profile`]) and the end face the profile
@@ -18,9 +17,9 @@ use super::{
     SurfaceVertexPool,
 };
 
-/// C# `StandingBetween`: the vertices standing part way along the straight run from `from` to
+/// The vertices standing part way along the straight run from `from` to
 /// `to`, in order along it - what the walkback's own cut left on one side of the section, gathered
-/// so the cap can sew to it. `standing` is C#'s `IReadOnlyCollection<int>`, read in its own order.
+/// so the cap can sew to it. `standing` is read in its own order.
 ///
 /// Read over the mesh's own vertices rather than off a named few, because the points wanted here
 /// were made by the WALKBACK - in whichever region's facets its end cut crossed - and this step has
@@ -33,7 +32,7 @@ use super::{
 /// is not on its boundary leaves an open edge, and the build is refused at the closure gate
 /// (`BevelSurfacePartBuilder`, [`super::surface_mesh_closure`]) instead of published.
 ///
-/// C# orders the finds with `List.Sort`, which is unstable; this sort is stable, so two finds at
+/// The finds are sorted stably, so two finds at
 /// the same place along the run keep `standing`'s order. Two vertices at one place along one line
 /// within the ruler are one weld, which the pool does not hand out twice, so the tie does not occur.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -83,14 +82,14 @@ pub fn standing_between<'a>(
         }
     }
 
-    // C# `first.Where.CompareTo(second.Where)`: the finds are strictly inside (0, 1), so no NaN.
+    // The finds are strictly inside (0, 1), so no NaN.
     found.sort_by(|first, second| first.0.total_cmp(&second.0));
 
     found.into_iter().map(|(_, vertex)| vertex).collect()
 }
 
-/// C# `VerticesOf`: every vertex the faces use, once each. An [`IndexSet`] keeps C#'s `HashSet<int>`
-/// enumeration order (insertion order, nothing being removed), which reaches
+/// Every vertex the faces use, once each. An [`IndexSet`] keeps the order the vertices were first
+/// met, which reaches
 /// [`standing_between`]'s tie order.
 pub fn vertices_of(faces: &[(i32, i32, i32)]) -> IndexSet<i32> {
     let mut used = IndexSet::new();
@@ -109,7 +108,7 @@ pub const FACE_NORMALS_AGREE: f64 = 1e-6;
 
 /// Whether every vertex of `facet` lies on the plane through `point` facing `inward`, to the
 /// cut's own ruler.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // Negated, so a NaN distance passes.
 pub fn it_lies_along_the_side(
     pool: &SurfaceVertexPool,
     facet: &[i32],
@@ -126,9 +125,9 @@ pub fn it_lies_along_the_side(
 /// For each chord of `profile`, the vertices of the `cut_faces` of `rebuilt` standing strictly
 /// inside it (within the pool's ruler of the chord), ordered along it.
 ///
-/// The candidates are taken in the order the faces name them (C#'s `HashSet<int>` of small ints
-/// iterates in that order), and the sort along the chord is stable where C#'s `List.Sort` is
-/// not: two vertices at one parameter would be one weld apart, which the pool has already merged.
+/// The candidates are taken in the order the faces name them, and the sort along the chord is
+/// stable, though no tie arises: two vertices at one parameter would be one weld apart, which the
+/// pool has already merged.
 pub fn on_the_profile(
     pool: &SurfaceVertexPool,
     rebuilt: &[(i32, i32, i32)],
@@ -177,7 +176,7 @@ pub fn on_the_profile(
 /// the faces of the end (in the order the flood reached them), or `None` where no face at the
 /// corner holds the profile or two that do face different ways - there is no one end face to cut
 /// then, and which was taken would be down to face order.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `!(x > 0)`, which refuses a NaN as well.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` refuses a NaN as well.
 pub fn try_find_the_end_plane(
     pool: &SurfaceVertexPool,
     faces: &[(i32, i32, i32)],
@@ -238,7 +237,7 @@ pub fn try_find_the_end_plane(
         }
     }
 
-    // C#'s Stack seeded with the seeds in order: the last seed is walked first.
+    // A stack seeded with the seeds in order: the last seed is walked first.
     let mut walking = seeds;
     let mut in_the_end = IndexSet::new();
 
@@ -270,7 +269,7 @@ pub fn try_find_the_end_plane(
 
 /// Whether every vertex of `profile` lies on the plane through `corner` facing `normal`, to the
 /// pool's ruler.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // C#'s `>`/`<` tests, written so a NaN reads as C# reads it.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // Negated, so a NaN distance passes.
 pub fn holds_the_profile(
     pool: &SurfaceVertexPool,
     profile: &[i32],
@@ -291,7 +290,7 @@ pub fn corners_of(pool: &SurfaceVertexPool, face: (i32, i32, i32)) -> [Vector3; 
     ]
 }
 
-/// C# `SurfaceEndCut.TryCut`: the notch a chain end's section takes out of the end face beyond its
+/// The notch a chain end's section takes out of the end face beyond its
 /// corner, routed by what the end is: a run-out's cap (`runs_out_facing`), a concave end's
 /// subtraction or cap, the walked chords along a rolled wall (`rolled_wall_end`), a face that gains
 /// the section, or the ordinary notch - the face cut facet by facet by the section's two sides and
@@ -410,7 +409,7 @@ pub fn try_cut(
         let from = pool.position_of(profile[i]);
         let to = pool.position_of(profile[i + 1]);
         let chord = to - from;
-        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN skips, as the C#'s `!(x > 0)` does
+        #[allow(clippy::neg_cmp_op_on_partial_ord)] // NaN skips, as `!(x > 0)` reads it
         let no_chord = !(chord.length_squared() > 0.0);
         if no_chord {
             continue;

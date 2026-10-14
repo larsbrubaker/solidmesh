@@ -1,7 +1,6 @@
 //! A band's end cut where a mixed corner's run-out CROSSES the band before its end: the rails the
-//! crossing took stop on the crossing, and only the rest close against the face beyond. Ports
-//! `Bevel/Surface/SurfaceEndCutAboveTheCrossing.cs` (C# `internal static class`; a module of free
-//! functions here). What is here are the readings the close is built from - the end plane the
+//! crossing took stop on the crossing, and only the rest close against the face beyond. A module
+//! of free functions. What is here are the readings the close is built from - the end plane the
 //! uncrossed rails close against ([`try_the_end_plane`]), whether the crossing's foot stands on it
 //! ([`the_foot_stands_on_the_end_plane`]), the cut back of the section at the run-out's rim
 //! ([`cut_back_at_the_run_out`]), what each chord carries ([`the_betweens`]) and whether a point
@@ -9,9 +8,8 @@
 //! trim it reads is
 //! [`SurfaceStripTrimmedAtTheCrossing`].
 //!
-//! C#'s `IReadOnlyList<int>[] alongTheProfile` is `Option<&[Vec<i32>]>` here: the array may be null,
-//! but every list the end cuts hand over is a list (empty where nothing stands along a chord), so a
-//! null ENTRY - which C# also skips - has no Rust spelling.
+//! What stands along the profile is `Option<&[Vec<i32>]>`: the whole table may be absent, but every
+//! list the end cuts hand over is a list (empty where nothing stands along a chord).
 
 use vector_math::Vector3;
 
@@ -23,17 +21,17 @@ use super::{
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::EdgeConvexity;
 
-/// C# `TheFoot`: what `rail_of` says of the entry that is the crossing's own foot.
+/// What `rail_of` says of the entry that is the crossing's own foot.
 pub const THE_FOOT: i32 = -1;
 
-/// C# `TheDiePoint`: what `rail_of` says of the entry that is the run-out's die point.
+/// What `rail_of` says of the entry that is the run-out's die point.
 const THE_DIE_POINT: i32 = -2;
 
-/// C# `CutBackAtTheRunOut`: drops whatever of the section stands BEYOND the run-out's own rim on
+/// Drops whatever of the section stands BEYOND the run-out's own rim on
 /// this face - the straight side from the crossing's foot to the die point - keeping the side the
 /// band's own far rail stands on. That rail is the one the crossing never reached, so it is the
 /// section's anchor: whatever stands with it is face the run-out left, and whatever stands across
-/// the line is face it took. `the_apex` and `the_die_is_the_apex` are C#'s `ref` parameters.
+/// the line is face it took. `the_apex` and `the_die_is_the_apex` are read and updated in place.
 #[allow(clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
 pub fn cut_back_at_the_run_out(
     pool: &SurfaceVertexPool,
@@ -90,7 +88,7 @@ pub fn cut_back_at_the_run_out(
     }
 }
 
-/// C# `TheFootStandsOnTheEndPlane`: whether the crossing's foot stands on the END PLANE itself
+/// Whether the crossing's foot stands on the END PLANE itself
 /// rather than inside the section - the param the rail beside it meets that plane at, against the
 /// param the foot stands at, read to the chord between those two rails. A foot on the plane is a
 /// corner of the section's own rim; one inside it is a point the curve passes through the section at.
@@ -124,7 +122,7 @@ pub fn the_foot_stands_on_the_end_plane(
     (trimmed.foot_param - param).abs() <= apart * 1e-6
 }
 
-/// C# `TheBetweens`: what each of the strip's own chords carries between its two rails - whatever
+/// What each of the strip's own chords carries between its two rails - whatever
 /// the end cut left standing along it, and on the chord the FOOT stands on, the foot itself - in the
 /// order the chord runs, from the lower rail to the higher.
 ///
@@ -239,7 +237,7 @@ pub fn the_betweens(
     betweens
 }
 
-/// C# `WhatTheRimCarriesToTheFoot`: what the end cut left standing along the one stretch of rim
+/// What the end cut left standing along the one stretch of rim
 /// that runs between the FOOT and the rail beside it, in the order that stretch is walked from the
 /// rail towards the foot. Its own order already runs that way in both cases, so nothing is reversed.
 fn what_the_rim_carries_to_the_foot<'a>(
@@ -272,7 +270,7 @@ fn what_the_rim_carries_to_the_foot<'a>(
         .map_or(&[], |along| along.as_slice())
 }
 
-/// C# `TheRimsOwn`: the vertex a rim corner that is no rail of the strip stands at, or -1.
+/// The vertex a rim corner that is no rail of the strip stands at, or -1.
 fn the_rims_own(rail_of: &[i32], at: usize, foot: i32, the_die_vertex: i32) -> i32 {
     if rail_of[at] == THE_FOOT {
         foot
@@ -283,7 +281,7 @@ fn the_rims_own(rail_of: &[i32], at: usize, foot: i32, the_die_vertex: i32) -> i
     }
 }
 
-/// C# `TryTheEndPlane`: the plane the uncrossed rails close against, as its unit normal - through
+/// The plane the uncrossed rails close against, as its unit normal - through
 /// the corner, square to nothing in particular but holding the tangent line vertex the crossing left
 /// alone and the edge's own direction. `None` where both tangent lines were taken, so nothing of
 /// this end stands against the face beyond it at all.
@@ -345,14 +343,13 @@ pub fn nothing_stands_at(pool: &SurfaceVertexPool, faces: &[(i32, i32, i32)], at
     })
 }
 
-/// C# `TryClose`: a band's end where a mixed corner's run-out crossed it before the end - the
-/// rails the crossing took stop on the crossing (the ring reads their crossing vertices), and the
-/// rest close against the face beyond: the profile across the end plane, with the crossing's foot
-/// and the run-out's die point where they stand on it, cut back at the run-out's rim where nothing
-/// stands at the corner, and cut out of the face beyond ([`surface_end_cut::try_cut`]). Returns
-/// the station the stitch sews to. `seams` is C#'s `List<(int, double)>[,]` indexed by
-/// `edge_index`; a missing or empty run there, where C# would throw, is refused as an end not
-/// supported.
+/// A band's end where a mixed corner's run-out crossed it before the end - the rails the crossing
+/// took stop on the crossing (the ring reads their crossing vertices), and the rest close against
+/// the face beyond: the profile across the end plane, with the crossing's foot and the run-out's
+/// die point where they stand on it, cut back at the run-out's rim where nothing stands at the
+/// corner, and cut out of the face beyond ([`surface_end_cut::try_cut`]). Returns the station the
+/// stitch sews to. `seams` holds each strip's `(vertex, parameter)` runs, indexed by `edge_index`;
+/// a missing or empty run there is refused as an end not supported rather than panic.
 #[allow(clippy::too_many_arguments)]
 pub fn try_close(
     pool: &mut SurfaceVertexPool,

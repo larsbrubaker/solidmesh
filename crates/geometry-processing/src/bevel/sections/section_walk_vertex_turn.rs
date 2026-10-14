@@ -1,6 +1,5 @@
 //! A surface walk that lands ON a mesh vertex turning through that vertex's fan to the face that
-//! carries it on (`Bevel/Sections/SectionWalkVertexTurn.cs`, a C# `internal static class`; a module of
-//! free functions here). The face readings it turns with are
+//! carries it on, as free functions. The face readings it turns with are
 //! [`super::section_surface_walk_faces`]'s.
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -10,7 +9,7 @@ use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::pair_key;
 use super::section_surface_walk_faces::{try_face_holding, unfold};
 
-/// C# `TryTheCornerUnder`: the corner of a face a point stands on, within `lattice` - the nearest
+/// The corner of a face a point stands on, within `lattice` - the nearest
 /// such, the later on a tie - or `None`.
 pub fn try_the_corner_under(mesh: &Mesh, face: i32, at: Vector3, lattice: f64) -> Option<i32> {
     let drawn = &mesh.faces[face as usize];
@@ -29,10 +28,9 @@ pub fn try_the_corner_under(mesh: &Mesh, face: i32, at: Vector3, lattice: f64) -
     (corner >= 0).then_some(corner)
 }
 
-/// C# `TryTurnOutOfTheCorner`: a walk standing on `corner` of `face` turned through the corner's fan,
+/// A walk standing on `corner` of `face` turned through the corner's fan,
 /// starting across each of the face's two arms at the corner in turn, to the first face that holds
-/// the direction. `face` and `direction` (C#'s `ref`s) are changed only where it succeeds. C#'s unused
-/// `at` is dropped.
+/// the direction. `face` and `direction` are changed only where it succeeds.
 #[allow(clippy::too_many_arguments)]
 pub fn try_turn_out_of_the_corner(
     mesh: &Mesh,
@@ -76,11 +74,11 @@ pub fn try_turn_out_of_the_corner(
     false
 }
 
-/// C# `TryTurnThroughTheVertex`: turns face by face round `vertex`, starting past the edge the walk
+/// Turns face by face round `vertex`, starting past the edge the walk
 /// `arrived_across`, carrying the direction across each edge, until a face's wedge holds it. `Err`
-/// carries C#'s `stoppedAt`: the crease or open edge the turn stopped at, or -1 where it came all the
-/// way round or ran out of edges. `face` and `direction` (C#'s `ref`s) are left where the turn got
-/// to, as in C#.
+/// carries the crease or open edge the turn stopped at, or -1 where it came all the
+/// way round or ran out of edges. `face` and `direction` are left where the turn got
+/// to, so the caller can read how far it came.
 #[allow(clippy::too_many_arguments)]
 pub fn try_turn_through_the_vertex(
     mesh: &Mesh,
@@ -125,7 +123,7 @@ pub fn try_turn_through_the_vertex(
     Err(-1)
 }
 
-/// C# `TryTheOtherEdgeAt`: the edge of `face` meeting at `vertex` that is not the one `walked` - the
+/// The edge of `face` meeting at `vertex` that is not the one `walked` - the
 /// later corner's where both qualify.
 pub fn try_the_other_edge_at(
     mesh: &Mesh,

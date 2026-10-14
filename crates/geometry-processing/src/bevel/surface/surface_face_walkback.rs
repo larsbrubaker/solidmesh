@@ -1,9 +1,8 @@
-//! Phase 2 of the surface bevel (`Bevel/Surface/SurfaceFaceWalkback.cs`, C# `internal static
-//! class`, free functions here): every face region the plans touch is walked back to its tangent
-//! lines. The sliver between each line and the chain edge is taken off, what is left is
-//! re-triangulated with vertices standing ON the line, and everything else in the mesh is carried
-//! over unchanged - except the unselected faces the tangent lines ran out across, which are split
-//! at the crossing so no T junction is left behind.
+//! Phase 2 of the surface bevel (free functions): every face region the plans touch is walked back
+//! to its tangent lines. The sliver between each line and the chain edge is taken off, what is left
+//! is re-triangulated with vertices standing ON the line, and everything else in the mesh is
+//! carried over unchanged - except the unselected faces the tangent lines ran out across, which are
+//! split at the crossing so no T junction is left behind.
 //!
 //! This is the decision - which region is cut where, and in what order the pieces are asked for.
 //! The mechanics are its neighbours: the band each cut reaches and the guard against anything
@@ -50,7 +49,7 @@ use super::{
 use crate::bevel::{bevel_chain_linker, BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{FaceGroup, FaceRegionCache};
 
-/// C# `TheChainsOwn`: what the strip's OWN chain is, as `SurfaceRoomStandingFeature.StandsOn`
+/// What the strip's OWN chain is, as `surface_room_standing_feature::stands_on`
 /// wants it - the mesh edges the pass is beveling (first), and the vertices those edges end at
 /// (second). Every reading that has to tell the chain from everything else the bands reach asks
 /// for the same two sets, so they are gathered here once rather than rebuilt at each of them.
@@ -69,7 +68,7 @@ pub fn the_chains_own(plans: &[Rc<SurfaceBevelPlan>]) -> (HashSet<i32>, HashSet<
     (beveled_mesh_edges, chain_vertices)
 }
 
-/// C# `TryApply(Mesh, MeshEdgeGraph, FaceRegionCache, SurfaceBevelPlan, ...)`: walks every
+/// Walks every
 /// region one plan touches back to its tangent lines.
 pub fn try_apply_one(
     mesh: &Mesh,
@@ -80,8 +79,7 @@ pub fn try_apply_one(
     try_apply(mesh, graph, regions, std::slice::from_ref(plan))
 }
 
-/// C# `TryApply(Mesh, MeshEdgeGraph, FaceRegionCache, IReadOnlyList<SurfaceBevelPlan>, ...)`:
-/// walks every region EVERY plan of one part touches back to its tangent lines, in one pass.
+/// Walks every region EVERY plan of one part touches back to its tangent lines, in one pass.
 ///
 /// One pass because a face two chains both reach has to give up both their bands at once: cut for
 /// one chain and then cut again for the other and the second cut is being made against a mesh the
@@ -91,9 +89,8 @@ pub fn try_apply_one(
 /// one tangent run can be named whichever chain asked for it.
 ///
 /// `mesh` is the welded mesh the plans were made on (not modified), `graph` its own edge graph and
-/// `regions` the region cache the plans were made with, at the same tolerance. C#'s null mesh,
-/// graph or cache cannot reach here; an empty plan list (or plans with no edges) is refused as
-/// C# refuses it, `NoEdgesResolved`.
+/// `regions` the region cache the plans were made with, at the same tolerance. An empty plan list
+/// (or plans with no edges) is refused as `NoEdgesResolved`: there is nothing to bevel.
 pub fn try_apply(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,
@@ -120,8 +117,8 @@ pub fn try_apply(
     let mut region_of_face = vec![-1i32; mesh.faces.len()];
 
     for walkback in walkbacks.values() {
-        // C# iterates the walkback's HashSet of faces, built from the region's faces in order and
-        // never changed; the region is read here instead, which is that order.
+        // The walkback's faces are the region's faces in order and never change, so the region is
+        // read here instead.
         for &face in walkback.region.faces() {
             if !walkback.faces.contains(&face) {
                 continue;
@@ -295,7 +292,7 @@ pub fn try_apply(
     // the gap this just opened is rimmed with edges one face stands on, and every one of them gets
     // its second when the strips are sewn in. A fold is the reading that means something here -
     // nothing downstream takes a face away - and read at the end instead it comes back as a corner
-    // refusing at a place the corner never touched (SurfaceMeshClosure.FoldedEdgeCount).
+    // refusing at a place the corner never touched (surface_mesh_closure::folded_edge_count).
     let (folds, folded) = surface_mesh_closure::folded_edge_count(&faces);
 
     if folds > 0 {
@@ -337,7 +334,7 @@ pub fn try_apply(
     ))
 }
 
-/// Indexes every withheld feature's faces by the facets they are made of (C#'s `heldBack`),
+/// Indexes every withheld feature's faces by the facets they are made of,
 /// refusing a facet held back for two features at once.
 fn try_hold_back(
     withheld: &[Rc<super::SurfaceStandingFeatureWithheld>],
@@ -438,7 +435,7 @@ fn clip_the_facet(
     pieces
 }
 
-/// C# `TryCollectRegions`: the regions the plans touch, each with the cuts every chain's edges ask
+/// The regions the plans touch, each with the cuts every chain's edges ask
 /// of it. A region reached from two of its faces is two `FaceGroup` objects with two different
 /// seeds, so they are gathered under the region's lowest face index - the one name a region always
 /// answers to.
@@ -469,9 +466,10 @@ fn try_collect_regions(
             }
 
             // Every edge's band is bounded along its own direction, by the mitre plane where the
-            // chain turns and by the square plane where it runs out (SurfaceBevelPlan.BandEndsOf).
-            // Per side, because at a corner where the convexity turns over the face the two edges
-            // share is bounded by the other edge's band rather than by a plane of its own.
+            // chain turns and by the square plane where it runs out
+            // (SurfaceBevelPlan::band_ends_of). Per side, because at a corner where the convexity
+            // turns over the face the two edges share is bounded by the other edge's band rather
+            // than by a plane of its own.
             let left_ends = plan.band_ends_of(i, true);
             let right_ends = plan.band_ends_of(i, false);
 
@@ -522,7 +520,7 @@ fn try_collect_regions(
     Ok(walkbacks)
 }
 
-/// C# `TryAddCut`: files `cut` under its region, opening the region's walkback (after checking
+/// Files `cut` under its region, opening the region's walkback (after checking
 /// its rim closes) the first time it is reached.
 fn try_add_cut(
     walkbacks: &mut IndexMap<i32, SurfaceRegionWalkback>,
@@ -542,7 +540,7 @@ fn try_add_cut(
     Ok(())
 }
 
-/// C# `TryCheckTheRimCloses`: whether the region is rimmed all the way round by edges two faces
+/// Whether the region is rimmed all the way round by edges two faces
 /// share. An open or non-manifold stretch, or a rim that will not link into closed loops, both say
 /// the same thing: there is a boundary here whose other side the walkback cannot split to match,
 /// so it does not cut.
