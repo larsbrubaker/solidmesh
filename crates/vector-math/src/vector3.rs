@@ -1,15 +1,12 @@
-//! `Vector3`: a 3D f64 vector. Ports agg-sharp `VectorMath/Vector3.cs` (the struct and the
-//! non-matrix parts of `Vector3Ex`: `Dot`, `Cross`, `Abs`, `ToFloatArray`).
+//! `Vector3`: a 3D f64 vector: arithmetic, dot and cross products, absolute value, the float
+//! array form, text and hashing.
 //!
-//! Mapping notes: static `Add`/`Subtract`/`Multiply(v, double)`/`Divide(v, double)` are the
-//! operators; `Multiply`/`Divide` with a vector scale are `multiply_components`/
-//! `divide_components`; static `Normalize(v)` (no zero check, unlike the instance method) is
-//! `normalized`; static `ComponentMax(Vector3)`/`ComponentMin(Vector3)` returning a double are
-//! `component_max_value`/`component_min_value`; `ComponentMax(Vector3, double)` is
-//! `component_max_scalar`; static `GetPerpendicular(a, b)` and instance
-//! `GetPerpendicular(b)` are `get_perpendicular_with`. The C# `IConvertible` members all throw
-//! `NotImplementedException` and are not ported. `Vector3Ex.Transform*` (Matrix4X4,
-//! Quaternion) arrive in Phase 1b.
+//! Adding, subtracting and scaling are the operators; `multiply_components`/
+//! `divide_components` work per component; `normalized` has no zero check, unlike the
+//! in-place `normalize`; `component_max_value`/`component_min_value` return the largest and
+//! smallest component and `component_max_scalar` raises each to at least a value;
+//! `get_perpendicular_with` is perpendicular to this and another vector. The matrix and
+//! quaternion transforms are in `vector_transforms.rs`.
 
 use crate::cs_math::{max_f64, min_f64};
 use crate::number_format::{format_f64_max_decimals, parse_f64};
@@ -19,15 +16,22 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-/// A 3D vector of f64 (C# `MatterHackers.VectorMath.Vector3`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+/// A 3D vector of f64.
+///
+/// Serializes in the shape saved files hold (`{"X":..,"Y":..,"Z":..}`); members missing when
+/// reading keep their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector3 {
+    #[serde(rename = "X")]
     pub x: f64,
+    #[serde(rename = "Y")]
     pub y: f64,
+    #[serde(rename = "Z")]
     pub z: f64,
 }
 
-/// The default epsilon of C# `Vector3.Collinear`.
+/// The epsilon of [`Vector3::collinear`].
 const COLLINEAR_EPSILON: f64 = 0.000001;
 
 impl Vector3 {
@@ -47,7 +51,7 @@ impl Vector3 {
         Vector3 { x, y, z }
     }
 
-    /// `v` with the given z (C# `Vector3(Vector2 v, double z = 0)`).
+    /// `v` with the given z.
     pub fn from_vector2(v: Vector2, z: f64) -> Self {
         Vector3::new(v.x, v.y, z)
     }
@@ -57,7 +61,7 @@ impl Vector3 {
         Vector3::new(f64::from(v.x), f64::from(v.y), f64::from(v.z))
     }
 
-    /// The first three values (C# `Vector3(double[])`; panics on fewer, where C# throws).
+    /// The first three values; panics on fewer (a caller bug).
     pub fn from_slice(double_array: &[f64]) -> Self {
         Vector3::new(double_array[0], double_array[1], double_array[2])
     }
@@ -74,7 +78,7 @@ impl Vector3 {
         self.z = z;
     }
 
-    /// The length of the vector (C# property `Length`).
+    /// The length of the vector.
     pub fn length(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
@@ -92,7 +96,7 @@ impl Vector3 {
         (*self - (start + direction * along_segment)).length()
     }
 
-    /// The squared length (C# property `LengthSquared`).
+    /// The squared length.
     pub fn length_squared(&self) -> f64 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
@@ -130,12 +134,12 @@ impl Vector3 {
         [self.x, self.y, self.z]
     }
 
-    /// Component-wise product (C# static `Multiply(Vector3, Vector3)`).
+    /// Component-wise product.
     pub fn multiply_components(vector: Vector3, scale: Vector3) -> Vector3 {
         Vector3::new(vector.x * scale.x, vector.y * scale.y, vector.z * scale.z)
     }
 
-    /// Component-wise quotient (C# static `Divide(Vector3, Vector3)`).
+    /// Component-wise quotient.
     pub fn divide_components(vector: Vector3, scale: Vector3) -> Vector3 {
         Vector3::new(vector.x / scale.x, vector.y / scale.y, vector.z / scale.z)
     }
@@ -149,7 +153,7 @@ impl Vector3 {
         )
     }
 
-    /// Parses "x, y, z" (InvariantCulture). Unparsable parts are 0; missing parts stay 0.
+    /// Parses "x, y, z" (culture-invariant text). Unparsable parts are 0; missing parts stay 0.
     pub fn parse(s: &str) -> Vector3 {
         let mut result = Vector3::ZERO;
         let values: Vec<f64> = s.split(',').map(parse_f64).collect();
@@ -168,7 +172,7 @@ impl Vector3 {
         )
     }
 
-    /// Each component raised to at least `b` (C# `ComponentMax(Vector3, double)`).
+    /// Each component raised to at least `b`.
     pub fn component_max_scalar(a: Vector3, b: f64) -> Vector3 {
         Vector3::new(
             if a.x > b { a.x } else { b },
@@ -204,13 +208,13 @@ impl Vector3 {
         )
     }
 
-    /// A unit-length copy of `vec` (C# static `Normalize`: NaN for the zero vector).
+    /// A unit-length copy of `vec` (NaN for the zero vector).
     pub fn normalized(vec: Vector3) -> Vector3 {
         let scale = 1.0 / vec.length();
         Vector3::new(vec.x * scale, vec.y * scale, vec.z * scale)
     }
 
-    /// True if `a`, `b` and `c` lie on one line (C#'s default epsilon, 0.000001).
+    /// True if `a`, `b` and `c` lie on one line (epsilon 0.000001).
     pub fn collinear(a: Vector3, b: Vector3, c: Vector3) -> bool {
         Self::collinear_with_epsilon(a, b, c, COLLINEAR_EPSILON)
     }
@@ -221,7 +225,7 @@ impl Vector3 {
         (b - a).cross(c - a).length().abs() < epsilon
     }
 
-    /// Component-wise absolute value (C# static `Abs` and `Vector3Ex.Abs`).
+    /// Component-wise absolute value.
     pub fn abs(self) -> Vector3 {
         Vector3::new(self.x.abs(), self.y.abs(), self.z.abs())
     }
@@ -240,9 +244,8 @@ impl Vector3 {
         }
     }
 
-    /// A vector perpendicular to both this and `b` (C# instance `GetPerpendicular(b)` and
-    /// static `GetPerpendicular(a, b)`); when the two are collinear with the origin, the
-    /// cross product is taken about a far-away point instead.
+    /// A vector perpendicular to both this and `b`; when the two are collinear with the
+    /// origin, the cross product is taken about a far-away point instead.
     pub fn get_perpendicular_with(self, b: Vector3) -> Vector3 {
         let a = self;
         if !Self::collinear(a, b, Vector3::ZERO) {
@@ -285,12 +288,12 @@ impl Vector3 {
         (first.dot(second) / (first.length() * second.length())).acos()
     }
 
-    /// The x and y (C# property `Xy` getter).
+    /// The x and y.
     pub fn xy(&self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
-    /// Sets x and y (C# property `Xy` setter).
+    /// Sets x and y.
     pub fn set_xy(&mut self, value: Vector2) {
         self.x = value.x;
         self.y = value.y;
@@ -308,20 +311,19 @@ impl Vector3 {
         long_hash::of(self.z, hash)
     }
 
-    /// True when every component is strictly within `error_value` of `other`'s (C#
-    /// `Equals(Vector3, double)`).
+    /// True when every component is strictly within `error_value` of `other`'s.
     pub fn equals_within(&self, other: Vector3, error_value: f64) -> bool {
         (self.x < other.x + error_value && self.x > other.x - error_value)
             && (self.y < other.y + error_value && self.y > other.y - error_value)
             && (self.z < other.z + error_value && self.z > other.z - error_value)
     }
 
-    /// The largest component (C# `Math.Max` semantics: NaN wins).
+    /// The largest component (NaN wins, see `cs_math`).
     pub fn component_max_value(vector3: Vector3) -> f64 {
         max_f64(vector3.x, max_f64(vector3.y, vector3.z))
     }
 
-    /// The smallest component (C# `Math.Min` semantics: NaN wins).
+    /// The smallest component (NaN wins, see `cs_math`).
     pub fn component_min_value(vector3: Vector3) -> f64 {
         min_f64(vector3.x, min_f64(vector3.y, vector3.z))
     }
@@ -362,8 +364,8 @@ pub fn to_float_array(list: &[Vector3]) -> Vec<f32> {
     array
 }
 
-/// C# indexer: 0..=2 are x, y, z; reading any other index gives 0, writing one panics (the C#
-/// setter throws).
+/// Indexing: 0..=2 are x, y, z; reading any other index gives 0, writing one is a caller
+/// bug and panics.
 impl Index<usize> for Vector3 {
     type Output = f64;
     fn index(&self, index: usize) -> &f64 {
@@ -408,7 +410,7 @@ impl Neg for Vector3 {
     }
 }
 
-/// Component-wise product (C# `operator *(Vector3, Vector3)`).
+/// Component-wise product.
 impl Mul for Vector3 {
     type Output = Vector3;
     fn mul(self, vec_b: Vector3) -> Vector3 {
@@ -437,7 +439,7 @@ impl Div<Vector3> for f64 {
     }
 }
 
-/// Multiplies by the reciprocal, as the C# operator does (not a true division).
+/// Multiplies by the reciprocal (not a true division), so `v / s` equals `v * (1 / s)`.
 impl Div<f64> for Vector3 {
     type Output = Vector3;
     fn div(self, scale: f64) -> Vector3 {
@@ -476,7 +478,7 @@ impl DivAssign<f64> for Vector3 {
     }
 }
 
-/// "[x, y, z]" with each component as C# `ToString("0.####")` (InvariantCulture).
+/// "[x, y, z]" with each component in the `0.####` format, the form saved text holds.
 impl fmt::Display for Vector3 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -486,5 +488,14 @@ impl fmt::Display for Vector3 {
             format_f64_max_decimals(self.y, 4),
             format_f64_max_decimals(self.z, 4)
         )
+    }
+}
+
+/// Hashes the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector3 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
+        crate::float_hash::hash_f64(self.z, state);
     }
 }

@@ -1,9 +1,9 @@
-//! Common mathematical functions and constants. Ports agg-sharp `VectorMath/MathHelper.cs`
-//! (originally OpenTK's, MIT/X11; see THIRD_PARTY_NOTICES.md). The vector types use `TAU`
-//! and `range_0_to_tau`; later phases use the rest.
+//! Common mathematical functions and constants (originally OpenTK's, MIT/X11; see
+//! THIRD_PARTY_NOTICES.md). The vector types use `TAU` and `range_0_to_tau`; the model and
+//! renderer use the rest.
 //!
-//! Where the C# throws (`ArgumentOutOfRangeException`, `Exception`, `DivideByZeroException`)
-//! the Rust returns `Err(MathError)`.
+//! Input a function cannot handle (an out-of-range argument, an angle outside its range, an
+//! overflowing product) comes back as `Err(MathError)` for the caller to handle.
 
 use crate::cs_math::log_base2;
 use std::fmt;
@@ -22,16 +22,17 @@ pub const PI_OVER_4: f64 = PI / 4.0;
 pub const PI_OVER_6: f64 = PI / 6.0;
 /// Pi multiplied by two.
 pub const TWO_PI: f64 = 2.0 * PI;
-/// Pi multiplied by 3 and divided by two (evaluated as `(3 * Pi) / 2`, as in C#).
+/// Pi multiplied by 3 and divided by two (evaluated as `(3 * Pi) / 2`, which fixes the last
+/// bit).
 pub const THREE_PI_OVER_2: f64 = 3.0 * PI / 2.0;
 /// E.
 pub const E: f64 = std::f64::consts::E;
-/// The base-10 logarithm of E. The C# literal `0.43429448190325182765` is this double.
+/// The base-10 logarithm of E. The literal `0.43429448190325182765` is this double.
 pub const LOG10_E: f64 = std::f64::consts::LOG10_E;
-/// The base-2 logarithm of E. The C# literal `1.44269504088896340736` is this double.
+/// The base-2 logarithm of E. The literal `1.44269504088896340736` is this double.
 pub const LOG2_E: f64 = std::f64::consts::LOG2_E;
 
-/// Why a `MathHelper` function rejected its input (the C# throws instead).
+/// Why a `math_helper` function rejected its input.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MathError {
     /// `NextPowerOfTwo` was given a negative number ("Must be positive.").
@@ -40,9 +41,12 @@ pub enum MathError {
     NotInRange0ToTau(f64),
     /// `GetDeltaAngle` was given an angle that is not already in [0, Tau].
     AngleNotInRange0ToTau(f64),
-    /// `BinomialCoefficient`'s factorial product overflowed to zero (or to -1 under
-    /// `long.MinValue`), which C# reports as a division error.
+    /// `binomial_coefficient`'s factorial product overflowed to zero (or to -1 under
+    /// `i64::MIN`), so the division has no answer.
     DivisionOverflow,
+    /// A matrix builder was given an out-of-range argument, naming the parameter (e.g.
+    /// `create_perspective_field_of_view`'s "fovy").
+    ArgumentOutOfRange(&'static str),
 }
 
 impl fmt::Display for MathError {
@@ -54,14 +58,18 @@ impl fmt::Display for MathError {
                 write!(f, "StartAngle != Range0ToTau(StartAngle)")
             }
             MathError::DivisionOverflow => write!(f, "Attempted to divide by zero."),
+            MathError::ArgumentOutOfRange(name) => write!(
+                f,
+                "Specified argument was out of the range of valid values. (Parameter '{name}')"
+            ),
         }
     }
 }
 
 impl std::error::Error for MathError {}
 
-/// The smallest power of two >= `n` (C# `FirstPowerTowGreaterThanOrEqualTo`). C# `<<=` on an
-/// int wraps; so does this.
+/// The smallest power of two >= `n`. The shift wraps on overflow
+/// rather than panicking.
 pub fn first_power_two_greater_than_or_equal_to(n: i32) -> i32 {
     let mut pow2_size: i32 = 1;
     while pow2_size < n {
@@ -70,7 +78,7 @@ pub fn first_power_two_greater_than_or_equal_to(n: i32) -> i32 {
     pow2_size
 }
 
-/// `2^ceil(log2(n))` (C# `NextPowerOfTwo(long)`). The cast saturates, as .NET 9+ does.
+/// `2^ceil(log2(n))`. The cast saturates, so a result too large for `i64` is `i64::MAX`.
 pub fn next_power_of_two_i64(n: i64) -> Result<i64, MathError> {
     if n < 0 {
         return Err(MathError::MustBePositive);
@@ -78,7 +86,7 @@ pub fn next_power_of_two_i64(n: i64) -> Result<i64, MathError> {
     Ok(2f64.powf(log_base2(n as f64).ceil()) as i64)
 }
 
-/// `2^ceil(log2(n))` (C# `NextPowerOfTwo(int)`).
+/// `2^ceil(log2(n))`.
 pub fn next_power_of_two_i32(n: i32) -> Result<i32, MathError> {
     if n < 0 {
         return Err(MathError::MustBePositive);
@@ -86,7 +94,7 @@ pub fn next_power_of_two_i32(n: i32) -> Result<i32, MathError> {
     Ok(2f64.powf(log_base2(f64::from(n)).ceil()) as i32)
 }
 
-/// `2^ceil(log2(n))` (C# `NextPowerOfTwo(float)`).
+/// `2^ceil(log2(n))`.
 pub fn next_power_of_two_f32(n: f32) -> Result<f32, MathError> {
     if n < 0.0 {
         return Err(MathError::MustBePositive);
@@ -94,7 +102,7 @@ pub fn next_power_of_two_f32(n: f32) -> Result<f32, MathError> {
     Ok(2f64.powf(log_base2(f64::from(n)).ceil()) as f32)
 }
 
-/// `2^ceil(log2(n))` (C# `NextPowerOfTwo(double)`).
+/// `2^ceil(log2(n))`.
 pub fn next_power_of_two_f64(n: f64) -> Result<f64, MathError> {
     if n < 0.0 {
         return Err(MathError::MustBePositive);
@@ -102,7 +110,7 @@ pub fn next_power_of_two_f64(n: f64) -> Result<f64, MathError> {
     Ok(2f64.powf(log_base2(n).ceil()))
 }
 
-/// `test` limited to `[min, max]` (C# `MathHelper.Clamp`; NaN passes through).
+/// `test` limited to `[min, max]` (NaN passes through).
 pub fn clamp(test: f64, min: f64, max: f64) -> f64 {
     if test < min {
         return min;
@@ -113,7 +121,7 @@ pub fn clamp(test: f64, min: f64, max: f64) -> f64 {
     test
 }
 
-/// `n!` (C# `Factorial`). C# `long` multiplication is unchecked, so it wraps past 20!.
+/// `n!`. The multiplication wraps rather than panicking, so results past 20! are wrong.
 pub fn factorial(n: i32) -> i64 {
     let mut result: i64 = 1;
     let mut n = n;
@@ -124,14 +132,14 @@ pub fn factorial(n: i32) -> i64 {
     result
 }
 
-/// `n! / (k! * (n - k)!)` (C# `BinomialCoefficient`).
+/// `n! / (k! * (n - k)!)`.
 pub fn binomial_coefficient(n: i32, k: i32) -> Result<i64, MathError> {
     factorial(n)
         .checked_div(factorial(k).wrapping_mul(factorial(n.wrapping_sub(k))))
         .ok_or(MathError::DivisionOverflow)
 }
 
-/// Brings an angle into `[0, Tau]` (C# `Range0ToTau`). NaN passes through, as in C#.
+/// Brings an angle into `[0, Tau]`. NaN passes through, so a bad angle stays visible.
 pub fn range_0_to_tau(value: f64) -> Result<f64, MathError> {
     let mut value = value;
     if value < 0.0 {
@@ -139,12 +147,12 @@ pub fn range_0_to_tau(value: f64) -> Result<f64, MathError> {
     }
 
     if (value - TAU) > 0.00001 {
-        // `(int)` truncates; out-of-range values saturate, as .NET 9+ does.
+        // The cast truncates; out-of-range values saturate instead of wrapping.
         let num_turns = (value / TAU) as i32;
         value -= TAU * f64::from(num_turns);
     }
 
-    // Not `!(0.0..=TAU).contains(&value)`: NaN must pass, as it does in C#.
+    // Not `!(0.0..=TAU).contains(&value)`: NaN must pass this check (see the doc comment).
     #[allow(clippy::manual_range_contains)]
     if value < 0.0 || value > TAU {
         return Err(MathError::NotInRange0ToTau(value));
@@ -153,10 +161,10 @@ pub fn range_0_to_tau(value: f64) -> Result<f64, MathError> {
     Ok(value)
 }
 
-/// `end_angle - start_angle`, folded into `[-Tau, Tau]` (C# `GetDeltaAngle`). Both angles must
+/// `end_angle - start_angle`, folded into `[-Tau, Tau]`. Both angles must
 /// already be in `[0, Tau]`.
 pub fn get_delta_angle(start_angle: f64, end_angle: f64) -> Result<f64, MathError> {
-    // C# compares with `!=`, so a NaN angle fails here too.
+    // `!=` is true for NaN, so a NaN angle fails here too.
     #[allow(clippy::float_cmp)]
     if start_angle != range_0_to_tau(start_angle)? {
         return Err(MathError::AngleNotInRange0ToTau(start_angle));
@@ -178,29 +186,29 @@ pub fn get_delta_angle(start_angle: f64, end_angle: f64) -> Result<f64, MathErro
     Ok(delta_angle)
 }
 
-/// Degrees to radians (C# `DegreesToRadians`).
+/// Degrees to radians.
 pub fn degrees_to_radians(degrees: f64) -> f64 {
     const DEG_TO_RAD: f64 = PI / 180.0;
     degrees * DEG_TO_RAD
 }
 
-/// Radians to degrees (C# `RadiansToDegrees`).
+/// Radians to degrees.
 pub fn radians_to_degrees(radians: f64) -> f64 {
     const RAD_TO_DEG: f64 = 180.0 / PI;
     radians * RAD_TO_DEG
 }
 
-/// Inches to millimeters (C# `InchesToMm`).
+/// Inches to millimeters.
 pub fn inches_to_mm(inches: f64) -> f64 {
     inches * 25.4
 }
 
-/// Swaps two values (C# `Swap(ref double, ref double)` and `Swap(ref float, ref float)`).
+/// Swaps two values.
 pub fn swap<T>(a: &mut T, b: &mut T) {
     std::mem::swap(a, b);
 }
 
-/// True when `a` is strictly within `difference_allowed` of `b` (C# `AlmostEqual`).
+/// True when `a` is strictly within `difference_allowed` of `b`.
 pub fn almost_equal(a: f64, b: f64, difference_allowed: f64) -> bool {
     a > b - difference_allowed && a < b + difference_allowed
 }

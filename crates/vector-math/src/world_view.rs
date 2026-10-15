@@ -1,19 +1,18 @@
 //! `WorldView`: the 3D view's camera — rotation and translation matrices, the modelview
 //! matrix built from them, and a perspective or orthographic projection — with the conversions
-//! between worldspace, viewspace, NDC and screenspace. Ports agg-sharp `VectorMath/WorldView.cs`.
+//! between worldspace, viewspace, NDC and screenspace.
 //!
-//! Mapping notes: C# properties with private setters are getter methods; `Width`/`Height`
-//! (public setters) are public fields. The `RotationMatrix`/`TranslationMatrix`/`Scale`/
-//! `EyePosition` setters are `set_*` methods that rebuild the modelview matrix exactly when the
-//! C# setter does. The copy constructor is `Clone`. The perspective setters return
-//! `Result` where the C# `CreatePerspectiveOffCenter` would throw (a near plane that sanitising
-//! cannot make finite). `ScreenToWorldSpace` is not ported: the C# body is
-//! `throw new NotImplementedException()`. Projection math is kept term for term.
+//! Values only the view itself may change are getter methods; `width`/`height` are public
+//! fields. The rotation, translation, scale and eye-position setters are `set_*` methods that
+//! rebuild the modelview matrix, so it never goes stale. The perspective setters return an
+//! error for a near plane that sanitising cannot make finite, instead of a NaN projection.
+//! There is no screen-to-world conversion: picking goes through rays instead. The projection
+//! math keeps a fixed term order, so the matrices are identical on every platform.
 
 use crate::cs_math::{max_f64, min_f64};
 use crate::{math_helper, MathError, Matrix4X4, Quaternion, Ray, Vector2, Vector3, Vector4};
 
-/// The camera and projection of a 3D view (C# `MatterHackers.VectorMath.WorldView`).
+/// The camera and projection of a 3D view.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorldView {
     pub height: f64,
@@ -51,8 +50,7 @@ impl WorldView {
     /// everything to, so a degenerate camera behaves exactly as it always has.
     pub const DEGENERATE_WORLD_UNITS_PER_PIXEL: f64 = 5.0;
 
-    /// The orthographic minimum height, derived from the perspective minimum near Z (C# static
-    /// readonly `OrthographicProjectionMinimumHeight`).
+    /// The orthographic minimum height, derived from the perspective minimum near Z.
     pub fn orthographic_projection_minimum_height() -> f64 {
         Self::calc_perspective_height(
             Self::PERSPECTIVE_PROJECTION_MINIMUM_NEAR_Z,
@@ -199,7 +197,7 @@ impl WorldView {
     }
 
     /// Sets a typical perspective projection with an FOV of 45. `z_near`/`z_far` are positive
-    /// positions along the forward axis (C# defaults [`Self::DEFAULT_NEAR_Z`],
+    /// positions along the forward axis (usually [`Self::DEFAULT_NEAR_Z`] and
     /// [`Self::DEFAULT_FAR_Z`]).
     pub fn calculate_perspective_matrix(
         &mut self,
@@ -218,7 +216,7 @@ impl WorldView {
         )
     }
 
-    /// The near and far planes made usable for a perspective projection (C# `ref` pair).
+    /// The near and far planes made usable for a perspective projection.
     pub fn sanitise_perspective_near_far(near: f64, far: f64) -> (f64, f64) {
         let mut near = max_f64(near, Self::PERSPECTIVE_PROJECTION_MINIMUM_NEAR_Z);
         if near.is_nan() {
@@ -265,7 +263,7 @@ impl WorldView {
     }
 
     /// Sets a perspective projection with a center adjustment (`center_offset_x` moves the
-    /// right edge) and FOV (C# defaults: near 0.1, far 100, 45 degrees).
+    /// right edge) and FOV (usually near 0.1, far 100, 45 degrees).
     pub fn calculate_perspective_matrix_off_center(
         &mut self,
         width: f64,
@@ -306,7 +304,7 @@ impl WorldView {
         Ok(())
     }
 
-    /// The near and far planes made usable for an orthographic projection (C# `ref` pair).
+    /// The near and far planes made usable for an orthographic projection.
     pub fn sanitise_orthographic_near_far(near: f64, far: f64) -> (f64, f64) {
         let mut far = max_f64(
             far,
@@ -326,8 +324,8 @@ impl WorldView {
     }
 
     /// Sets an orthographic projection with an explicit height in viewspace; `z_near`/`z_far`
-    /// are signed positions along the forward axis (C# defaults 0.1 and 100). The C# name's
-    /// spelling (`Orthogrphic`) is kept.
+    /// are signed positions along the forward axis (usually 0.1 and 100). The name's spelling
+    /// (`orthogrphic`) is kept so its callers stay unchanged.
     pub fn calculate_orthogrphic_matrix_off_center_with_viewspace_height(
         &mut self,
         width: f64,
@@ -419,7 +417,7 @@ impl WorldView {
 
     /// The ratio a caller multiplies a pixel count by to get a worldspace size at
     /// `world_position`. This is how every 3D handle, gizmo and pick tolerance stays the same
-    /// size on screen at any zoom. `max_ratio` is an optional ceiling (C# default +infinity).
+    /// size on screen at any zoom. `max_ratio` is an optional ceiling (+infinity for none).
     /// Always finite and positive: the absolute value is taken, it is floored at a minimum
     /// derived from the minimum allowed near plane, and a camera or position that produces no
     /// usable number falls back to [`Self::DEGENERATE_WORLD_UNITS_PER_PIXEL`].
@@ -532,8 +530,8 @@ impl WorldView {
         v.xyz() / v.w
     }
 
-    /// `[-1, -1]..[1, 1]` (+Y is up) to `[0, 0]..[Width, Height]` (+Y is down). Unused in the
-    /// C# too; kept with its siblings.
+    /// `[-1, -1]..[1, 1]` (+Y is up) to `[0, 0]..[Width, Height]` (+Y is down). Unused; kept
+    /// with its siblings so the set of conversions is complete.
     #[allow(dead_code)]
     fn ndc_to_top_screenspace(&self, ndc_position: Vector2) -> Vector2 {
         Vector2::multiply_components(

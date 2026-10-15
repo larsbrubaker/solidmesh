@@ -1,25 +1,21 @@
-//! `AxisAlignedBoundingBox`: a box given by its min and max corners. Ports agg-sharp
-//! `VectorMath/AxisAlignedBoundingBox.cs`. `Frustum::get_intersect` and `Ray` test against it;
-//! it transforms through `Matrix4X4` (`new_transformed`).
+//! `AxisAlignedBoundingBox`: a box given by its min and max corners. `Frustum::get_intersect`
+//! and `Ray` test against it; it transforms through `Matrix4X4` (`new_transformed`).
 //!
-//! Mapping notes: the C# class becomes a `Copy` value; `MinXYZ`/`MaxXYZ` are `min_xyz`/
-//! `max_xyz` and serialize as Newtonsoft writes them (`{"MinXYZ":{..},"MaxXYZ":{..}}`).
-//! `Center`/`Size`/`XSize`.. are methods; the indexer (0 = min, 1 = max) is `corner(index)`;
-//! `Equals(bounds, tolerance)` is `equals_within`; `Contains(x, y, z, errorRange = .001)` is
-//! `contains_xyz` and `contains_point` (the `Vector3` overload) with `contains_point_within` for
-//! a custom range; `Union(bounds, vertex)` is `union_point`; `Clamp(ref v)` takes `&mut`; the
-//! `+` operator is `union`. C# `Math.Min`/`Math.Max` (NaN wins) are `cs_math`'s.
+//! The box is a `Copy` value. `min_xyz`/`max_xyz` serialize under the saved-file keys
+//! (`{"MinXYZ":{..},"MaxXYZ":{..}}`). `corner(index)` reads a corner by index (0 = min,
+//! 1 = max); `contains_xyz` and `contains_point` allow .001 of slack, `contains_point_within` a
+//! custom range; `union_point` grows the box to a vertex; the `+` operator is `union`. Min and
+//! max go through `cs_math`, so a NaN coordinate shows in the box instead of being dropped.
 //!
-//! The C# caches `GetVolume`/`GetSurfaceArea` in private fields (recomputed only while the cache
-//! is 0), so a box that is changed after either was read keeps reporting the old value. Rust
-//! computes them on every call; see `docs/CSHARP_DIVERGENCES.md` entry 4.
+//! Volume and surface area are computed on every call rather than cached, so a box changed
+//! after either was read never reports a stale value.
 
 use crate::cs_math::{max_f64, min_f64};
 use crate::{Matrix4X4, Vector3, Vector3Float};
 use std::fmt;
 use std::ops::Add;
 
-/// An axis-aligned box (C# `MatterHackers.VectorMath.AxisAlignedBoundingBox`).
+/// An axis-aligned box.
 #[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct AxisAlignedBoundingBox {
@@ -29,7 +25,8 @@ pub struct AxisAlignedBoundingBox {
     pub max_xyz: Vector3,
 }
 
-/// The default `errorRange` of C# `Contains(Vector3)` and `Contains(x, y, z)`.
+/// The slack `contains_point` and `contains_xyz` allow, so a point on a face a rounding error
+/// outside still counts as inside.
 const CONTAINS_ERROR_RANGE: f64 = 0.001;
 
 impl AxisAlignedBoundingBox {
@@ -61,8 +58,7 @@ impl AxisAlignedBoundingBox {
         )
     }
 
-    /// The bounds of `vertices_points`; an empty list gives the zero box (C#
-    /// `AxisAlignedBoundingBox(IList<Vector3>)`).
+    /// The bounds of `vertices_points`; an empty list gives the zero box.
     pub fn from_points(vertices_points: &[Vector3]) -> Self {
         let mut result = Self::default();
         if let Some(first) = vertices_points.first() {
@@ -95,12 +91,12 @@ impl AxisAlignedBoundingBox {
         Self::new(position - halfsize, position + halfsize)
     }
 
-    /// The center (C# property `Center`: the sum divided by 2).
+    /// The center: the sum of the corners divided by 2.
     pub fn center(&self) -> Vector3 {
         (self.min_xyz + self.max_xyz) / 2.0
     }
 
-    /// The center (C# `GetCenter()`: the sum times .5).
+    /// The center: the sum of the corners times .5 (the same value as [`Self::center`]).
     pub fn get_center(&self) -> Vector3 {
         (self.min_xyz + self.max_xyz) * 0.5
     }
@@ -130,8 +126,8 @@ impl AxisAlignedBoundingBox {
         self.max_xyz.z - self.min_xyz.z
     }
 
-    /// True when both corners are strictly within `equality_tolerance` (C# `Equals(bounds,
-    /// tolerance = 0)`; with the default 0 the strict test is never true).
+    /// True when both corners are strictly within `equality_tolerance` (with a tolerance of 0
+    /// the strict test is never true).
     pub fn equals_within(&self, bounds: &AxisAlignedBoundingBox, equality_tolerance: f64) -> bool {
         self.min_xyz
             .equals_within(bounds.min_xyz, equality_tolerance)
@@ -209,7 +205,7 @@ impl AxisAlignedBoundingBox {
         intersection
     }
 
-    /// Grows the box by `x`, `y` and `z` on the matching sides (C# `Expand(x, y, z)`).
+    /// Grows the box by `x`, `y` and `z` on the matching sides.
     pub fn expand_xyz(&mut self, x: f64, y: f64, z: f64) {
         self.min_xyz.x -= x;
         self.min_xyz.y -= y;
@@ -220,7 +216,7 @@ impl AxisAlignedBoundingBox {
         self.max_xyz.z += z;
     }
 
-    /// Grows the box to include `position` (C# `ExpandToInclude(Vector3)`).
+    /// Grows the box to include `position`.
     pub fn expand_to_include_point(&mut self, position: Vector3) {
         self.min_xyz.x = min_f64(self.min_xyz.x, position.x);
         self.min_xyz.y = min_f64(self.min_xyz.y, position.y);
@@ -298,8 +294,7 @@ impl AxisAlignedBoundingBox {
         front_and_back + left_and_right + top_and_bottom
     }
 
-    /// 0 is the min corner, 1 the max (C# indexer); any other index panics, where C# throws
-    /// `IndexOutOfRangeException`.
+    /// 0 is the min corner, 1 the max; any other index is a caller bug and panics.
     pub fn corner(&self, index: usize) -> Vector3 {
         match index {
             0 => self.min_xyz,
@@ -341,8 +336,8 @@ impl AxisAlignedBoundingBox {
         self.max_xyz = Vector3::new(max_x, max_y, max_z);
     }
 
-    /// The overlap of two boxes; where they do not overlap the max is pulled up to the min (C#
-    /// static `Intersection`, compare [`Self::get_intersection`]).
+    /// The overlap of two boxes; where they do not overlap the max is pulled up to the min
+    /// (compare [`Self::get_intersection`]).
     pub fn intersection(
         bounds_a: &AxisAlignedBoundingBox,
         bounds_b: &AxisAlignedBoundingBox,
@@ -362,7 +357,7 @@ impl AxisAlignedBoundingBox {
         Self::new(min_xyz, max_xyz)
     }
 
-    /// The box grown to include `vertex` (C# `Union(bounds, vertex)`).
+    /// The box grown to include `vertex`.
     pub fn union_point(bounds: &AxisAlignedBoundingBox, vertex: Vector3) -> Self {
         let mut min_xyz = Vector3::ZERO;
         min_xyz.x = min_f64(bounds.min_xyz.x, vertex.x);
@@ -388,12 +383,12 @@ impl AxisAlignedBoundingBox {
         }
     }
 
-    /// True when (x, y, z) is inside, with C#'s default .001 slack.
+    /// True when (x, y, z) is inside, with the default .001 slack.
     pub fn contains_xyz(&self, x: f64, y: f64, z: f64) -> bool {
         self.contains_point_within(Vector3::new(x, y, z), CONTAINS_ERROR_RANGE)
     }
 
-    /// True when `position` is inside, with C#'s default .001 slack.
+    /// True when `position` is inside, with the default .001 slack.
     pub fn contains_point(&self, position: Vector3) -> bool {
         self.contains_point_within(position, CONTAINS_ERROR_RANGE)
     }

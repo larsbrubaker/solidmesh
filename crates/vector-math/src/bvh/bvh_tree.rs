@@ -1,18 +1,15 @@
 //! `BvhTree<T>`: a node of the hierarchy — a leaf holding items, or a branch holding two child
-//! trees split on an axis (agg-sharp `VectorMath/Bvh/BvhTree.cs`).
+//! trees split on an axis.
 //!
-//! Mapping notes: the C# tree is built by its constructors and never changed after, so the
-//! branch's cached bounds stay right; here a leaf is [`BvhTree::from_items`] and a branch
-//! [`BvhTree::from_nodes`]. Searches push references to the items into `results` where the C#
-//! adds the items to a `List<T>`. The C# `Count` property is never assigned (always 0) and
-//! the parameterless constructor builds a tree with no bounds that nothing uses; neither is
-//! ported. `All` visits the children only when present: the C# dereferences them
-//! unconditionally and so throws on every tree (divergence 31).
+//! A tree is never changed after it is built, so a branch's cached bounds stay right; a leaf is
+//! [`BvhTree::from_items`] and a branch [`BvhTree::from_nodes`]. Searches push references to
+//! the items into `results`, so no item is cloned. `All` visits only the children that exist,
+//! so it returns every item of a leaf as well as of a branch.
 
 use super::{BvhTreeItemData, Intersectable, RayHitInfo};
 use crate::{AxisAlignedBoundingBox, IntersectionType, Ray, Vector3};
 
-/// A bounding-volume hierarchy node (C# `BvhTree<T>`).
+/// A bounding-volume hierarchy node.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BvhTree<T> {
     /// any of the items that are in this node
@@ -25,7 +22,8 @@ pub struct BvhTree<T> {
 }
 
 impl<T> BvhTree<T> {
-    /// A leaf holding `items`, bounded by their union. Its `center` stays zero, as in the C#.
+    /// A leaf holding `items`, bounded by their union. Its `center` stays zero: nothing reads a
+    /// leaf's center.
     pub fn from_items(items: impl IntoIterator<Item = BvhTreeItemData<T>>) -> Self {
         let mut aabb = AxisAlignedBoundingBox::empty();
         let mut leaf_items = Vec::new();
@@ -126,8 +124,8 @@ impl<T> BvhTree<T> {
     }
 
     /// The nearest item box the ray hits, carrying that item; `None` when nothing is hit. Each
-    /// hit narrows `ray.max_distance_to_consider`, as the C# does to its shared ray; a shadow
-    /// ray returns the first hit found.
+    /// hit narrows `ray.max_distance_to_consider`, so farther boxes are skipped; a shadow ray
+    /// returns the first hit found.
     pub fn get_closest_intersection<'a>(&'a self, ray: &mut Ray) -> Option<RayHitInfo<&'a T>> {
         let mut best_intersect: Option<RayHitInfo<&'a T>> = None;
         if ray.intersection(&self.aabb) {
@@ -184,7 +182,7 @@ impl<T> BvhTree<T> {
     }
 
     /// The items whose bounds touch `bounds`, found depth-first with an explicit stack (the
-    /// second child is searched before the first, as in the C#).
+    /// second child is searched before the first, which fixes the order of `results`).
     pub fn search_bounds<'a>(&'a self, bounds: &AxisAlignedBoundingBox, results: &mut Vec<&'a T>) {
         let mut stack: Vec<&BvhTree<T>> = vec![self];
         while let Some(current_node) = stack.pop() {
@@ -228,7 +226,8 @@ impl<T> BvhTree<T> {
         );
     }
 
-    /// The items whose bounds contain `position` (within the C# `Contains` tolerance of 0.001).
+    /// The items whose bounds contain `position` (within the box's `contains_point` slack of
+    /// 0.001).
     pub fn search_point<'a>(&'a self, position: Vector3, results: &mut Vec<&'a T>) {
         if self.aabb.contains_point(position) {
             // check all the items that are part of this object
@@ -253,7 +252,7 @@ impl<T> BvhTree<T> {
     }
 }
 
-/// A tree is itself intersectable, so trees can nest (C# `BvhTree<T> : IIntersectable`); the
+/// A tree is itself intersectable, so trees can nest; the
 /// hit carries a clone of the item.
 impl<T: Clone> Intersectable for BvhTree<T> {
     type Hit = T;

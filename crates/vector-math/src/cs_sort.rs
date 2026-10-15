@@ -1,11 +1,11 @@
-//! .NET's unstable introspective sort (`ArraySortHelper<T>.IntrospectiveSort`, the algorithm
-//! behind C# `List<T>.Sort(IComparer)` and `Array.Sort(T[], Comparison)`), ported from the
-//! .NET runtime (MIT). The BVH builders sort items whose keys often tie (agg-sharp never sets
-//! `BvhTreeItemData.Center`, so every key is 0), and the order .NET leaves tied items in decides
-//! the tree's shape and the order searches report items. Rust's sorts order ties differently,
-//! so this keeps the trees identical to MatterCAD's.
+//! An unstable introspective sort with a fixed, documented order for ties (derived from the
+//! .NET runtime's `ArraySortHelper<T>.IntrospectiveSort`, MIT). The BVH builders sort items
+//! whose keys often tie (an item's `center` is left at zero, so every key is 0), and the order
+//! tied items end in decides the tree's shape and the order searches report items. std's
+//! unstable sort promises nothing about ties, so this keeps the trees the same on every
+//! platform and toolchain.
 //!
-//! The .NET code moves elements through a held temporary ("hole" moves) in insertion sort and
+//! The algorithm moves elements through a held temporary ("hole" moves) in insertion sort and
 //! the heap's sift-down; here the same moves are made with adjacent swaps, which leave every
 //! element in the same final place.
 
@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 
 const INTROSORT_SIZE_THRESHOLD: usize = 16;
 
-/// Sorts `keys` exactly as .NET's `Array.Sort(keys, comparer)` does.
+/// Sorts `keys` by `comparer`, leaving tied keys in the introsort's fixed order.
 pub fn introspective_sort<T>(keys: &mut [T], comparer: &mut impl FnMut(&T, &T) -> Ordering) {
     if keys.len() > 1 {
         let depth_limit = 2 * ((keys.len() as u32).ilog2() as i32 + 1);
@@ -138,7 +138,7 @@ fn heap_sort<T>(keys: &mut [T], comparer: &mut impl FnMut(&T, &T) -> Ordering) {
     }
 }
 
-/// Sift-down with 1-based `i`; the .NET version carries the element `d` in a temporary and
+/// Sift-down with 1-based `i`; the algorithm carries the element `d` in a temporary and
 /// compares it against each child, which the swaps below reproduce (the element being sifted is
 /// always at `i - 1`).
 fn down_heap<T>(

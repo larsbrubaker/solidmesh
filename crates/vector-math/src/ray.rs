@@ -1,21 +1,18 @@
 //! `Ray`: an origin, a direction and the distance window a hit must fall in, with the
-//! precomputed reciprocal direction and per-axis signs the slab test uses. Ports agg-sharp
-//! `VectorMath/Ray.cs` (and its `IntersectionType`). `Plane`/`PlaneFloat` intersect it; the
-//! picking BVH (Phase 2) traces it.
+//! precomputed reciprocal direction and per-axis signs the slab test uses, and
+//! [`IntersectionType`]. `Plane`/`PlaneFloat` intersect it; the picking BVH traces it.
 //!
-//! Mapping notes: the C# class becomes a `Clone` value with the same public fields (snake
-//! case). The constructor's optional arguments are `new` (C# defaults: 0, +infinity,
-//! `FrontFace`) and `with_limits`; the copy constructor is `Clone`. `Intersect(bounds, out ..)`
-//! returns `(bool, RayBoundsHit)`. The static mutable `sameSurfaceOffset` is the constant
-//! [`Ray::SAME_SURFACE_OFFSET`] (nothing in MatterCAD assigns it). `PerturbDirection(Random)`
-//! takes the random source as a closure returning C# `NextDouble()` values.
-//! `GetClosestIntersection` returns a [`RayHitInfo`] carrying the box that was hit; the C# never
-//! returns null there (a miss has hit type `None`).
+//! A ray is a `Clone` value with public fields. `new` uses the usual window (0 to +infinity,
+//! front faces) and `with_limits` sets it. `intersect` returns `(bool, RayBoundsHit)`.
+//! [`Ray::SAME_SURFACE_OFFSET`] is a constant, since no caller needs another value.
+//! `perturb_direction` takes the random source as a closure returning values in [0, 1).
+//! `get_closest_intersection` always returns a [`RayHitInfo`] carrying the box that was hit; a
+//! miss has hit type `None`.
 
 use crate::bvh::RayHitInfo;
 use crate::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
-/// Which faces a ray reports hits on (C# `[Flags] enum IntersectionType`).
+/// Which faces a ray reports hits on.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum IntersectionType {
     None = 0,
@@ -26,7 +23,7 @@ pub enum IntersectionType {
 }
 
 /// The sign of a direction component; the value indexes the box corner the slab test starts
-/// from (C# `Ray.Sign`).
+/// from.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Sign {
     Negative = 1,
@@ -44,7 +41,7 @@ pub struct RayBoundsHit {
     pub max_axis: usize,
 }
 
-/// A ray (C# `MatterHackers.VectorMath.Ray`).
+/// A ray.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ray {
     pub origin: Vector3,
@@ -58,7 +55,7 @@ pub struct Ray {
 }
 
 impl Ray {
-    /// How far to step off a surface before tracing again (C# static `sameSurfaceOffset`).
+    /// How far to step off a surface before tracing again.
     pub const SAME_SURFACE_OFFSET: f64 = 0.00001;
 
     /// A front-face ray considering every distance from 0 to infinity.
@@ -105,7 +102,7 @@ impl Ray {
     }
 
     /// The ray moved by `matrix` (origin as a position, direction as a vector; the direction is
-    /// not renormalized). `is_shadow_ray` resets to false, as in the C#.
+    /// not renormalized). `is_shadow_ray` resets to false.
     pub fn transform(ray: &Ray, matrix: Matrix4X4) -> Ray {
         let transformed_origin = ray.origin.transform_position(matrix);
         let transformed_directon = ray.direction_normal.transform_vector(matrix);
@@ -126,8 +123,8 @@ impl Ray {
     }
 
     /// The slab test against `bounds`: true when the entry or exit distance is inside the
-    /// window. The distances and face axes are filled in as far as the test got, as the C#
-    /// `out` parameters are.
+    /// window. The distances and face axes are filled in as far as the test got, even on a
+    /// miss.
     pub fn intersect(&self, bounds: &AxisAlignedBoundingBox) -> (bool, RayBoundsHit) {
         let mut hit = RayBoundsHit::default();
 
@@ -210,8 +207,8 @@ impl Ray {
                 info.closest_hit_object = Some(*bounds);
                 info.hit_position = self.origin + self.direction_normal * dist_found;
                 let mut normal_at_hit = Vector3::default();
-                // you hit the side that is opposite your sign (the C# uses the entry face's
-                // axis for back faces too)
+                // you hit the side that is opposite your sign (the entry face's axis is used
+                // for back faces too)
                 normal_at_hit[found.min_axis] = if self.sign[found.min_axis] == Sign::Negative {
                     1.0
                 } else {
@@ -226,7 +223,7 @@ impl Ray {
     }
 
     /// The slab test against `bounds`: true when the part of the ray inside the box overlaps the
-    /// distance window (C# `Intersection`).
+    /// distance window.
     pub fn intersection(&self, bounds: &AxisAlignedBoundingBox) -> bool {
         match self.slab_window(bounds) {
             Some((min_dist_found, max_dist_found)) => {
@@ -283,9 +280,9 @@ impl Ray {
         Some((min_dist_found, max_dist_found))
     }
 
-    /// Nudges the direction by up to 1e-5 per axis; `next_double` stands in for C#
-    /// `Random.NextDouble()` (a value in [0, 1)). The reciprocal direction and signs are not
-    /// updated, as in the C#.
+    /// Nudges the direction by up to 1e-5 per axis; `next_double` returns a random value in
+    /// [0, 1). The reciprocal direction and signs are not updated, so the slab test keeps
+    /// using the unperturbed direction.
     pub fn perturb_direction(&mut self, mut next_double: impl FnMut() -> f64) {
         self.direction_normal.x += 1e-5 * next_double();
         self.direction_normal.y += 1e-5 * next_double();

@@ -1,11 +1,9 @@
-//! `Vector4`: a 4D f64 vector. Ports agg-sharp `VectorMath/Vector4.cs`, including the static
-//! FNV-1a helpers (`GetLongHashCode(double, ulong)`, `ComputeHash`) every vector's hash uses.
+//! `Vector4`: a 4D f64 vector, including the FNV-1a helpers every vector's long hash uses.
 //!
-//! Mapping notes: static `Add`/`Subtract`/`Multiply(v, double)`/`Divide(v, double)` are the
-//! operators; the vector-scale overloads are `multiply_components`/`divide_components`; static
-//! `Normalize(v)` is `normalized`; `ToString(string format)` is `to_string_with`, taking the
-//! per-component formatter. `Transform(Vector4, Matrix4X4)` and `Transform(Vector4,
-//! Quaternion)` arrive in Phase 1b.
+//! Adding, subtracting and scaling are the operators; `multiply_components`/
+//! `divide_components` work per component; `normalized` returns a unit-length copy;
+//! `to_string_with` takes the per-component formatter. The matrix and quaternion transforms
+//! are in `vector_transforms.rs`.
 
 use crate::number_format::{format_f64, parse_f64};
 use crate::{long_hash, Vector2, Vector3, LONG_HASH_SEED};
@@ -14,7 +12,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-/// A 4D vector of f64 (C# `MatterHackers.VectorMath.Vector4`).
+/// A 4D vector of f64.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Vector4 {
     pub x: f64,
@@ -52,7 +50,7 @@ impl Vector4 {
         Vector4::new(v.x, v.y, v.z, w)
     }
 
-    /// Parses "x, y, z, w" (InvariantCulture). Unparsable parts are 0; missing parts stay 0.
+    /// Parses "x, y, z, w" (culture-invariant text). Unparsable parts are 0; missing parts stay 0.
     pub fn parse(s: &str) -> Vector4 {
         let mut result = Vector4::ZERO;
         let values: Vec<f64> = s.split(',').map(parse_f64).collect();
@@ -62,17 +60,17 @@ impl Vector4 {
         result
     }
 
-    /// The length of the vector (C# property `Length`).
+    /// The length of the vector.
     pub fn length(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w).sqrt()
     }
 
-    /// The squared length (C# property `LengthSquared`).
+    /// The squared length.
     pub fn length_squared(&self) -> f64 {
         self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
     }
 
-    /// Scales this vector to unit length (NaN for the zero vector, as in C#).
+    /// Scales this vector to unit length (NaN for the zero vector).
     pub fn normalize(&mut self) {
         let scale = 1.0 / self.length();
         self.x *= scale;
@@ -88,7 +86,7 @@ impl Vector4 {
             .all(|c| !(c.is_nan() || c.is_infinite()))
     }
 
-    /// Component-wise product (C# static `Multiply(Vector4, Vector4)`).
+    /// Component-wise product.
     pub fn multiply_components(vector: Vector4, scale: Vector4) -> Vector4 {
         Vector4::new(
             vector.x * scale.x,
@@ -98,7 +96,7 @@ impl Vector4 {
         )
     }
 
-    /// Component-wise quotient (C# static `Divide(Vector4, Vector4)`).
+    /// Component-wise quotient.
     pub fn divide_components(vector: Vector4, scale: Vector4) -> Vector4 {
         Vector4::new(
             vector.x / scale.x,
@@ -128,9 +126,9 @@ impl Vector4 {
         )
     }
 
-    /// Each component limited to `[min, max]` — except that, exactly as in the C#, the z and w
-    /// lower-bound tests compare `vec.x` and `vec.y` (not `vec.z`/`vec.w`) against `min.z` and
-    /// `min.w`. Kept for parity; see the Phase 1a report.
+    /// Each component limited to `[min, max]` — except that the z and w lower-bound tests
+    /// compare `vec.x` and `vec.y` (not `vec.z`/`vec.w`) against `min.z` and `min.w`. That is
+    /// a known bug, left unchanged until a caller needs it fixed.
     pub fn clamp(vec: Vector4, min: Vector4, max: Vector4) -> Vector4 {
         let pick = |test: f64, value: f64, min: f64, max: f64| {
             if test < min {
@@ -149,7 +147,7 @@ impl Vector4 {
         )
     }
 
-    /// A unit-length copy of `vec` (C# static `Normalize`).
+    /// A unit-length copy of `vec`.
     pub fn normalized(vec: Vector4) -> Vector4 {
         let scale = 1.0 / vec.length();
         Vector4::new(vec.x * scale, vec.y * scale, vec.z * scale, vec.w * scale)
@@ -175,31 +173,30 @@ impl Vector4 {
         a + u * (b - a) + v * (c - a)
     }
 
-    /// The x and y (C# property `Xy` getter).
+    /// The x and y.
     pub fn xy(&self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
-    /// Sets x and y (C# property `Xy` setter).
+    /// Sets x and y.
     pub fn set_xy(&mut self, value: Vector2) {
         self.x = value.x;
         self.y = value.y;
     }
 
-    /// The x, y and z (C# property `Xyz` getter).
+    /// The x, y and z.
     pub fn xyz(&self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 
-    /// Sets x, y and z (C# property `Xyz` setter).
+    /// Sets x, y and z.
     pub fn set_xyz(&mut self, value: Vector3) {
         self.x = value.x;
         self.y = value.y;
         self.z = value.z;
     }
 
-    /// "x, y, z, w" with each component written by `format` (C# `ToString(string format)`,
-    /// where the format string chose the per-component text).
+    /// "x, y, z, w" with each component written by `format`.
     pub fn to_string_with(&self, format: impl Fn(f64) -> String) -> String {
         format!(
             "{}, {}, {}, {}",
@@ -210,12 +207,12 @@ impl Vector4 {
         )
     }
 
-    /// FNV-1a over the bytes of one double (C# static `GetLongHashCode(double, ulong)`).
+    /// FNV-1a over the bytes of one double.
     pub fn get_long_hash_code_of(data: f64, hash: u64) -> u64 {
         long_hash::of(data, hash)
     }
 
-    /// FNV-1a over `bytes` (C# static `ComputeHash`).
+    /// FNV-1a over `bytes`.
     pub fn compute_hash(bytes: &[u8], hash: u64) -> u64 {
         long_hash::compute_hash(bytes, hash)
     }
@@ -233,8 +230,7 @@ impl Vector4 {
         long_hash::of(self.w, hash)
     }
 
-    /// True when every component is strictly within `error_value` of `other`'s (C#
-    /// `Equals(Vector4, double)`).
+    /// True when every component is strictly within `error_value` of `other`'s.
     pub fn equals_within(&self, other: Vector4, error_value: f64) -> bool {
         (self.x < other.x + error_value && self.x > other.x - error_value)
             && (self.y < other.y + error_value && self.y > other.y - error_value)
@@ -243,8 +239,8 @@ impl Vector4 {
     }
 }
 
-/// C# indexer: 0..=3 are x, y, z, w; reading any other index gives 0, writing one panics (the
-/// C# setter throws).
+/// Indexing: 0..=3 are x, y, z, w; reading any other index gives 0, writing one is a caller
+/// bug and panics.
 impl Index<usize> for Vector4 {
     type Output = f64;
     fn index(&self, index: usize) -> &f64 {
@@ -305,7 +301,7 @@ impl Mul<Vector4> for f64 {
     }
 }
 
-/// Multiplies by the reciprocal, as the C# operator does (not a true division).
+/// Multiplies by the reciprocal (not a true division), so `v / s` equals `v * (1 / s)`.
 impl Div<f64> for Vector4 {
     type Output = Vector4;
     fn div(self, scale: f64) -> Vector4 {
@@ -338,10 +334,20 @@ impl DivAssign<f64> for Vector4 {
     }
 }
 
-/// "x, y, z, w" with each component as C# `double.ToString()` (InvariantCulture); MatterCAD's
+/// "x, y, z, w" with each component in the default double text (`format_f64`); MatterCAD's
 /// vector property editor reads this text back.
 impl fmt::Display for Vector4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_string_with(format_f64))
+    }
+}
+
+/// Hashes the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector4 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
+        crate::float_hash::hash_f64(self.z, state);
+        crate::float_hash::hash_f64(self.w, state);
     }
 }

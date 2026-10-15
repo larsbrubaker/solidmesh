@@ -1,22 +1,21 @@
-//! The surface-area-heuristic builder (agg-sharp `VectorMath/Bvh/TradeOffBvhConstructor.cs`):
+//! The surface-area-heuristic builder:
 //! sorts the items on each axis by `center`, sweeps every split point, and keeps the cheapest
 //! split; groups larger than `do_simple_sort_size` split at the median on a rotating axis.
 //!
-//! Mapping notes: the C# static generic class becomes [`TradeOffBvhConstructor`] with generic
-//! functions. The C# asks each item `is IIntersectable` for its cost and otherwise charges one
-//! box test; [`TradeOffBvhConstructor::create_new_hierarchy`] is the path for plain items and
-//! [`TradeOffBvhConstructor::create_new_hierarchy_intersectable`] the one for [`Intersectable`]
-//! items. The items are taken by value (the C# sorts the caller's list in place). Sorting uses
-//! .NET's introsort ([`crate::cs_sort`]) so tied centers end up where the C# leaves them. As in
-//! the C#, the recursive calls do not pass `do_simple_sort_size` on, so subgroups use the
-//! default of 5000.
+//! A plain item costs one box test; [`TradeOffBvhConstructor::create_new_hierarchy`] is the
+//! path for plain items and [`TradeOffBvhConstructor::create_new_hierarchy_intersectable`] the
+//! one for [`Intersectable`] items, which report their own cost. The items are taken by value,
+//! so the caller's list is never reordered. Sorting uses a fixed introsort
+//! ([`crate::cs_sort`]) so tied centers always end up in the same place and the tree's shape is
+//! the same on every platform. The recursive calls do not pass `do_simple_sort_size` on, so
+//! subgroups use the default of 5000.
 
 use super::{BvhTree, BvhTreeItemData, Intersectable};
 use crate::cs_sort::introspective_sort;
 use crate::{AxisAlignedBoundingBox, Vector3};
 use std::cmp::Ordering;
 
-/// Rotates the axis used for groups too large for the full sweep (C# `SortingAccelerator`).
+/// Rotates the axis used for groups too large for the full sweep.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SortingAccelerator {
     pub next_axis_for_big_groups: usize,
@@ -35,24 +34,24 @@ impl SortingAccelerator {
         Self::default()
     }
 
-    /// Advances to and returns the next axis (C# `NextAxis` getter).
+    /// Advances to and returns the next axis.
     pub fn next_axis(&mut self) -> usize {
         self.next_axis_for_big_groups = (self.next_axis_for_big_groups + 1) % 3;
         self.next_axis_for_big_groups
     }
 }
 
-/// The builder (C# `TradeOffBvhConstructor<T>`).
+/// The builder.
 pub struct TradeOffBvhConstructor;
 
 impl TradeOffBvhConstructor {
-    /// The C# default `maxRecursion` (`int.MaxValue`).
+    /// The default `max_recursion`: no depth limit.
     pub const DEFAULT_MAX_RECURSION: i32 = i32::MAX;
-    /// The C# default `DoSimpleSortSize`.
+    /// The default `do_simple_sort_size`: larger groups split at the median instead of sweeping.
     pub const DEFAULT_DO_SIMPLE_SORT_SIZE: usize = 5000;
 
-    /// Builds a tree over items that each cost one bounds test; `None` for no items. C#
-    /// defaults: `max_recursion` [`Self::DEFAULT_MAX_RECURSION`], `recursion_depth` 0,
+    /// Builds a tree over items that each cost one bounds test; `None` for no items. Usual
+    /// arguments: `max_recursion` [`Self::DEFAULT_MAX_RECURSION`], `recursion_depth` 0,
     /// `accelerator` a new one, `do_simple_sort_size` [`Self::DEFAULT_DO_SIMPLE_SORT_SIZE`].
     pub fn create_new_hierarchy<T>(
         items_to_add: Vec<BvhTreeItemData<T>>,
@@ -94,7 +93,7 @@ impl TradeOffBvhConstructor {
     }
 }
 
-/// The C# `AxisSorter.Compare`: by `center[axis]`, equal when neither is greater (NaN ties).
+/// Sorts by `center[axis]`, equal when neither is greater (so NaN ties with everything).
 fn sort_on_axis<T>(items: &mut [BvhTreeItemData<T>], which_axis: usize) {
     let which_axis = which_axis % 3;
     introspective_sort(items, &mut |a, b| {
@@ -260,8 +259,8 @@ fn build<T>(
                     Some(BvhTree::from_nodes(left_group, right_group, best_axis))
                 }
                 // Only a two-item group split at the median (`do_simple_sort_size` < 2) leaves a
-                // side empty; the C# then throws building the branch. The other side holds
-                // every item, so it is the tree.
+                // side empty, and a branch needs two children. The other side holds every
+                // item, so it is the tree.
                 (Some(group), None) | (None, Some(group)) => Some(group),
                 (None, None) => None,
             }

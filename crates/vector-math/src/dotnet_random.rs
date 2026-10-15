@@ -1,8 +1,8 @@
-//! .NET `System.Random` seeded with a fixed value: the legacy `Net5CompatSeedImpl` (Knuth's
-//! subtractive generator) that `new Random(seed)` runs, so code that seeds a `Random` gets the
-//! numbers MatterCAD and agg-sharp get (`rand(seed)` in expressions, MIConvexHull's starting
-//! simplex, test fixtures). Ports .NET Runtime's `CompatPrng` (MIT, see THIRD_PARTY_NOTICES.md).
-//! The unseeded `Random.Shared` stand-in stays in mattercad-expressions, its only user.
+//! A seeded random generator: Knuth's subtractive generator, derived from the .NET runtime's
+//! `CompatPrng` (MIT, see THIRD_PARTY_NOTICES.md). A given seed always draws the same numbers,
+//! so a saved design that uses `rand(seed)` in an expression rebuilds to the same shape, and
+//! the convex hull's starting simplex and the test fixtures stay fixed. The unseeded generator
+//! lives in mattercad-expressions, its only user.
 
 const MBIG: i32 = i32::MAX;
 const MSEED: i32 = 161803398;
@@ -84,8 +84,8 @@ impl DotNetRandom {
         self.internal_sample() as f64 * (1.0 / MBIG as f64)
     }
 
-    /// `Next(maxValue)`: `(int)(Sample() * maxValue)`, in [0, max_value). The cast truncates, as
-    /// C#'s does; `Sample()` is below 1, so the product never reaches `max_value`.
+    /// A number in [0, max_value): `next_double() * max_value`, truncated. `next_double()` is
+    /// below 1, so the product never reaches `max_value`.
     pub fn next(&mut self, max_value: i32) -> i32 {
         (self.next_double() * max_value as f64) as i32
     }

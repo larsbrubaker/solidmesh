@@ -1,15 +1,13 @@
 //! `TrackBallController`: turns mouse drags into rotation, translation and scale of a
-//! [`WorldView`] (agg-sharp `VectorMath/TrackBallController.cs`, namespace
-//! `MatterHackers.VectorMath.TrackBall`).
+//! [`WorldView`].
 //!
-//! Mapping notes: the C# controller keeps a reference to the `WorldView` it drives; here the
-//! methods that change the view take it as `&mut WorldView`, so the controller holds only its
-//! own drag state. Where the C# `switch` throws `NotImplementedException` (a mouse event while
-//! the tracking type is `None`), the method returns [`TrackBallError::NotTracking`].
+//! The methods that change the view take it as `&mut WorldView`, so the controller holds only
+//! its own drag state and never a reference to the view. A mouse event while the tracking type
+//! is `None` has nothing to drive, so the method returns [`TrackBallError::NotTracking`].
 
 use crate::{Matrix4X4, Quaternion, Vector2, Vector3, WorldView};
 
-/// What a drag does (C# `TrackBallTransformType`).
+/// What a drag does.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum TrackBallTransformType {
     #[default]
@@ -33,7 +31,7 @@ impl std::fmt::Display for TrackBallError {
 
 impl std::error::Error for TrackBallError {}
 
-/// Drag state for a track ball (C# `TrackBallController`).
+/// Drag state for a track ball.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrackBallController {
     local_to_screen_transform: Matrix4X4,
@@ -46,7 +44,7 @@ pub struct TrackBallController {
 }
 
 impl TrackBallController {
-    /// A controller with the given radius (C# default 1).
+    /// A controller with the given radius (usually 1).
     pub fn new(track_ball_radius: f64) -> Self {
         TrackBallController {
             local_to_screen_transform: Matrix4X4::default(),
@@ -98,7 +96,7 @@ impl TrackBallController {
         }
     }
 
-    /// Starts a drag of the given type (C# default `Rotation`).
+    /// Starts a drag of the given type (usually `Rotation`).
     pub fn on_mouse_down(
         &mut self,
         mouse_position: Vector2,

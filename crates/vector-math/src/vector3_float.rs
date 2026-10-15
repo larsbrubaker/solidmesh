@@ -1,16 +1,14 @@
-//! `Vector3Float`: a 3D f32 vector (mesh vertices and normals). Ports agg-sharp
-//! `VectorMath/Vector3Float.cs`: the struct and the non-matrix parts of `Vector3FloatEx`.
+//! `Vector3Float`: a 3D f32 vector (mesh vertices and normals).
 //!
-//! Precision follows the C#: float expressions are computed in f32; `Math.Sqrt`/`Math.Acos`
+//! Float arithmetic is computed in f32, the precision meshes are stored in; `sqrt`/`acos`
 //! widen to f64 and narrow the result.
 //!
-//! Mapping notes: static `Add`/`Subtract`/`Multiply(v, float)`/`Divide(v, float)` give the same
-//! results as the operators and are the operators; the vector-scale overloads are
-//! `multiply_components`/`divide_components`; `ComponentMin()`/`ComponentMax()` returning a
-//! float are `component_min_value`/`component_max_value`; static `Normalize(v)` is
-//! `normalized`. Not ported: the `Xy` setter and the Quaternion/perspective/position
-//! transforms, which throw `NotImplementedException` in C#; `Transform(Matrix4X4)`,
-//! `TransformVector` and `TransformNormal*` arrive with Matrix4X4 (Phase 1b).
+//! Adding, subtracting and scaling are the operators; `multiply_components`/
+//! `divide_components` work per component; `component_min_value`/`component_max_value` return
+//! the smallest and largest component; `normalized` returns a unit-length copy. There is no
+//! `xy` setter and no quaternion, perspective or position transform for float vectors:
+//! nothing needs them. The matrix transforms (`transform`, `transform_vector`,
+//! `transform_normal*`) are in `vector_transforms.rs`.
 
 use crate::cs_math::{max_f32, min_f32};
 use crate::number_format::format_f32;
@@ -20,15 +18,22 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-/// A 3D vector of f32 (C# `MatterHackers.VectorMath.Vector3Float`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+/// A 3D vector of f32.
+///
+/// Serializes in the shape saved files hold (`{"X":..,"Y":..,"Z":..}`); members missing when
+/// reading keep their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector3Float {
+    #[serde(rename = "X")]
     pub x: f32,
+    #[serde(rename = "Y")]
     pub y: f32,
+    #[serde(rename = "Z")]
     pub z: f32,
 }
 
-/// The default epsilon of C# `Vector3FloatEx.Collinear`.
+/// The epsilon of [`Vector3Float::collinear`].
 const COLLINEAR_EPSILON: f32 = 0.000001;
 
 impl Vector3Float {
@@ -44,22 +49,22 @@ impl Vector3Float {
     /// `Marshal.SizeOf(new Vector3Float())`.
     pub const SIZE_IN_BYTES: i32 = 12;
 
-    /// Narrows each value to f32 (C# `Vector3Float(double, double, double)`).
+    /// Narrows each value to f32.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self::new_f32(x as f32, y as f32, z as f32)
     }
 
-    /// C# `Vector3Float(float, float, float)`.
+    /// A vector from three f32 values.
     pub const fn new_f32(x: f32, y: f32, z: f32) -> Self {
         Vector3Float { x, y, z }
     }
 
-    /// `v` with the given z, narrowed (C# `Vector3Float(Vector2 v, double z = 0)`).
+    /// `v` with the given z, narrowed.
     pub fn from_vector2(v: Vector2, z: f64) -> Self {
         Self::new(v.x, v.y, z)
     }
 
-    /// The first three values (C# `Vector3Float(float[])`; panics on fewer, where C# throws).
+    /// The first three values; panics on fewer (a caller bug).
     pub fn from_slice(float_array: &[f32]) -> Self {
         Self::new_f32(float_array[0], float_array[1], float_array[2])
     }
@@ -89,14 +94,14 @@ impl Vector3Float {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    /// A unit-length copy (NaN for the zero vector, as in C#).
+    /// A unit-length copy (NaN for the zero vector).
     pub fn get_normal(&self) -> Vector3Float {
         let mut temp = *self;
         temp.normalize();
         temp
     }
 
-    /// Scales this vector to unit length (NaN for the zero vector, as in C#).
+    /// Scales this vector to unit length (NaN for the zero vector).
     pub fn normalize(&mut self) {
         let scale = 1.0f32 / self.length();
         self.x *= scale;
@@ -109,12 +114,13 @@ impl Vector3Float {
         [self.x, self.y, self.z]
     }
 
-    /// The x and y, widened (C# property `Xy` getter).
+    /// The x and y, widened.
     pub fn xy(&self) -> Vector2 {
         Vector2::new(f64::from(self.x), f64::from(self.y))
     }
 
-    /// FNV-1a over the components (each widened to double, as C# passes them), starting from
+    /// FNV-1a over the components (each widened to double, so a float vector hashes like the
+    /// double vector with the same values), starting from
     /// [`LONG_HASH_SEED`].
     pub fn get_long_hash_code(&self) -> u64 {
         self.get_long_hash_code_with(LONG_HASH_SEED)
@@ -128,7 +134,7 @@ impl Vector3Float {
     }
 
     /// True when every component is strictly within `error_value` of `other`'s, compared in
-    /// double (C# `Equals(Vector3Float, double)`).
+    /// double.
     pub fn equals_within(&self, other: Vector3Float, error_value: f64) -> bool {
         let within = |a: f32, b: f32| {
             let (a, b) = (f64::from(a), f64::from(b));
@@ -152,7 +158,7 @@ impl Vector3Float {
         Self::new_f32(vector.x / scale.x, vector.y / scale.y, vector.z / scale.z)
     }
 
-    /// The smallest component (C# `Math.Min` semantics: NaN wins).
+    /// The smallest component (NaN wins, see `cs_math`).
     pub fn component_min_value(self) -> f32 {
         min_f32(self.x, min_f32(self.y, self.z))
     }
@@ -166,7 +172,7 @@ impl Vector3Float {
         )
     }
 
-    /// The largest component (C# `Math.Max` semantics: NaN wins).
+    /// The largest component (NaN wins, see `cs_math`).
     pub fn component_max_value(self) -> f32 {
         max_f32(self.x, max_f32(self.y, self.z))
     }
@@ -216,7 +222,7 @@ impl Vector3Float {
         )
     }
 
-    /// A unit-length copy of `vec` (C# static `Normalize`).
+    /// A unit-length copy of `vec`.
     pub fn normalized(vec: Vector3Float) -> Vector3Float {
         let scale = 1.0f32 / vec.length();
         Self::new_f32(vec.x * scale, vec.y * scale, vec.z * scale)
@@ -236,7 +242,7 @@ impl Vector3Float {
         )
     }
 
-    /// True if `a`, `b` and `c` lie on one line (C#'s default epsilon, 0.000001f).
+    /// True if `a`, `b` and `c` lie on one line (epsilon 0.000001).
     pub fn collinear(a: Vector3Float, b: Vector3Float, c: Vector3Float) -> bool {
         Self::collinear_with_epsilon(a, b, c, COLLINEAR_EPSILON)
     }
@@ -289,8 +295,8 @@ pub fn to_float_array_f32(list: &[Vector3Float]) -> Vec<f32> {
     array
 }
 
-/// C# indexer: 0..=2 are x, y, z; reading any other index gives 0, writing one panics (the C#
-/// setter throws).
+/// Indexing: 0..=2 are x, y, z; reading any other index gives 0, writing one is a caller
+/// bug and panics.
 impl Index<usize> for Vector3Float {
     type Output = f32;
     fn index(&self, index: usize) -> &f32 {
@@ -335,7 +341,7 @@ impl Neg for Vector3Float {
     }
 }
 
-/// Component-wise product (C# `operator *(Vector3Float, Vector3Float)`).
+/// Component-wise product.
 impl Mul for Vector3Float {
     type Output = Vector3Float;
     fn mul(self, b: Vector3Float) -> Vector3Float {
@@ -366,7 +372,7 @@ impl Div<Vector3Float> for f32 {
     }
 }
 
-/// Multiplies by the f32 reciprocal of the narrowed scale, as the C# operator does.
+/// Multiplies by the f32 reciprocal of the narrowed scale, so the division stays in f32.
 impl Div<f64> for Vector3Float {
     type Output = Vector3Float;
     fn div(self, scale: f64) -> Vector3Float {
@@ -399,9 +405,8 @@ impl DivAssign<f64> for Vector3Float {
     }
 }
 
-/// "[x, y, z]" with each component as C# `float.ToString()`. The C# interpolates with the
-/// current culture; this always writes InvariantCulture text, which differs only under a
-/// culture whose number symbols differ.
+/// "[x, y, z]" with each component in the default float text (`format_f32`). The text is
+/// always culture-invariant, so it reads back the same on every machine.
 impl fmt::Display for Vector3Float {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -411,5 +416,14 @@ impl fmt::Display for Vector3Float {
             format_f32(self.y),
             format_f32(self.z)
         )
+    }
+}
+
+/// Hashes the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector3Float {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f32(self.x, state);
+        crate::float_hash::hash_f32(self.y, state);
+        crate::float_hash::hash_f32(self.z, state);
     }
 }

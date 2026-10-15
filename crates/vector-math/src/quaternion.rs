@@ -1,20 +1,17 @@
-//! `Quaternion`: an f64 rotation quaternion. Ports agg-sharp `VectorMath/Quaternion.cs` (derived
-//! from OpenTK). `Matrix4X4::get_rotation` builds one from a matrix and
-//! `Matrix4X4::create_rotation_quaternion` turns one back; its JSON shape is in `serde_impls.rs`.
+//! `Quaternion`: an f64 rotation quaternion (derived from OpenTK). `Matrix4X4::get_rotation`
+//! builds one from a matrix and `Matrix4X4::create_rotation_quaternion` turns one back; its
+//! JSON shape is in `serde_impls.rs`.
 //!
-//! Mapping notes: the C# keeps a private `xyz` vector plus `w` behind `X`/`Y`/`Z`/`W`/`Xyz`
-//! properties; here `x`/`y`/`z`/`w` are fields and `xyz()`/`set_xyz()` the vector property.
-//! Constructors: `Quaternion(Vector3, double)` is `from_xyz_w`, `Quaternion(Matrix4X4)`
-//! `from_matrix`, `Quaternion(Vector3, Vector3)` `from_directions` and the `Vector3Float` one
-//! `from_directions_f32`. Static `Normalize(q)` (no zero check) is `normalized`, static
-//! `Conjugate(q)` is `conjugated`, `ToAxisAngle(out, out)` is `to_axis_angle_parts`; the
-//! obsolete `Mult` is `multiply`, which is also the `*` operator; `Add`/`Sub` are the operators.
+//! `x`/`y`/`z`/`w` are fields and `xyz()`/`set_xyz()` read and write the vector part.
+//! Constructors: `from_xyz_w`, `from_matrix`, `from_directions` and `from_directions_f32`.
+//! `normalized` (no zero check), `conjugated` and `to_axis_angle_parts` return new values;
+//! `multiply` is also the `*` operator, and `+`/`-` are component-wise.
 
 use crate::{Matrix4X4, Vector3, Vector3Float, Vector4};
 use std::fmt;
 use std::ops::{Add, Mul, Sub};
 
-/// A quaternion of f64 (C# `MatterHackers.VectorMath.Quaternion`).
+/// A quaternion of f64.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Quaternion {
     pub x: f64,
@@ -31,12 +28,12 @@ impl Quaternion {
         Quaternion { x, y, z, w }
     }
 
-    /// The vector part `v` and scalar part `w` (C# `Quaternion(Vector3, double)`).
+    /// The vector part `v` and scalar part `w`.
     pub fn from_xyz_w(v: Vector3, w: f64) -> Self {
         Quaternion::new(v.x, v.y, v.z, w)
     }
 
-    /// The rotation a matrix holds (C# `Quaternion(Matrix4X4)`).
+    /// The rotation a matrix holds.
     pub fn from_matrix(m: Matrix4X4) -> Self {
         m.get_rotation()
     }
@@ -59,7 +56,7 @@ impl Quaternion {
     }
 
     /// [`Quaternion::from_directions`] for f32 directions (the cross product, lengths and dot
-    /// are computed in f32 and widened, as in the C#).
+    /// are computed in f32, the precision of the inputs, and widened).
     pub fn from_directions_f32(
         starting_direction: Vector3Float,
         ending_direction: Vector3Float,
@@ -80,12 +77,12 @@ impl Quaternion {
         result
     }
 
-    /// The vector part (C# property `Xyz` getter).
+    /// The vector part.
     pub fn xyz(&self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 
-    /// Sets the vector part (C# property `Xyz` setter).
+    /// Sets the vector part.
     pub fn set_xyz(&mut self, value: Vector3) {
         self.x = value.x;
         self.y = value.y;
@@ -122,18 +119,18 @@ impl Quaternion {
         axis_angle
     }
 
-    /// The axis and angle (radians) of the rotation (C# `ToAxisAngle(out, out)`).
+    /// The axis and angle (radians) of the rotation.
     pub fn to_axis_angle_parts(&self) -> (Vector3, f64) {
         let result = self.to_axis_angle();
         (result.xyz(), result.w)
     }
 
-    /// The length (C# property `Length`).
+    /// The length.
     pub fn length(&self) -> f64 {
         (self.w * self.w + self.xyz().length_squared()).sqrt()
     }
 
-    /// The squared length (C# property `LengthSquared`).
+    /// The squared length.
     pub fn length_squared(&self) -> f64 {
         self.w * self.w + self.xyz().length_squared()
     }
@@ -153,7 +150,7 @@ impl Quaternion {
         self.set_xyz(-self.xyz());
     }
 
-    /// `left * right`: apply `right`, then `left` (C# `Multiply`).
+    /// `left * right`: apply `right`, then `left`.
     pub fn multiply(left: Quaternion, right: Quaternion) -> Quaternion {
         Quaternion::from_xyz_w(
             right.w * left.xyz() + left.w * right.xyz() + left.xyz().cross(right.xyz()),
@@ -161,7 +158,7 @@ impl Quaternion {
         )
     }
 
-    /// Every component scaled (C# `Multiply(Quaternion, double)`).
+    /// Every component scaled.
     pub fn multiply_scalar(quaternion: Quaternion, scale: f64) -> Quaternion {
         Quaternion::new(
             quaternion.x * scale,
@@ -171,7 +168,7 @@ impl Quaternion {
         )
     }
 
-    /// The conjugate (C# static `Conjugate`).
+    /// The conjugate.
     pub fn conjugated(q: Quaternion) -> Quaternion {
         Quaternion::from_xyz_w(-q.xyz(), q.w)
     }
@@ -187,7 +184,7 @@ impl Quaternion {
         }
     }
 
-    /// A unit-length copy (C# static `Normalize`: no zero check, so zero gives NaN).
+    /// A unit-length copy (no zero check, so zero gives NaN).
     pub fn normalized(q: Quaternion) -> Quaternion {
         let scale = 1.0 / q.length();
         Quaternion::from_xyz_w(q.xyz() * scale, q.w * scale)
@@ -244,7 +241,7 @@ impl Quaternion {
             cos_half_angle = -cos_half_angle;
         }
 
-        // The C# compares against the float literal 0.99f, widened.
+        // The threshold is 0.99 in single precision, widened, which fixes where slerp switches.
         let (blend_a, blend_b) = if cos_half_angle < f64::from(0.99f32) {
             // do proper slerp for big angles
             let half_angle = cos_half_angle.acos();
@@ -306,7 +303,8 @@ impl Mul<Quaternion> for f64 {
     }
 }
 
-/// "V: [x, y, z], W: w" (the vector part as `Vector3`'s text, w as C# `double.ToString()`).
+/// "V: [x, y, z], W: w" (the vector part as `Vector3`'s text, w as
+/// [`crate::number_format::format_f64`]).
 impl fmt::Display for Quaternion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -318,7 +316,7 @@ impl fmt::Display for Quaternion {
     }
 }
 
-/// C# `GetHashCode`: the component bits (see `float_hash`).
+/// Hashes the component bits (see `float_hash`).
 impl std::hash::Hash for Quaternion {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         crate::float_hash::hash_f64(self.x, state);

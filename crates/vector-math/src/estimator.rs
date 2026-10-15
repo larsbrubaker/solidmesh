@@ -1,13 +1,13 @@
-//! Movement-time estimates under a trapezoidal velocity profile (agg-sharp
-//! `VectorMath/Estimator.cs`): accelerate from the "same as stop" velocity, cruise at the lesser
-//! of the requested rate and the maximum, decelerate symmetrically.
+//! Movement-time estimates under a trapezoidal velocity profile: accelerate from the "same as
+//! stop" velocity, cruise at the lesser of the requested rate and the maximum, decelerate
+//! symmetrically.
 //!
-//! Mapping notes: the C# static class becomes free functions; the `Vector3` overload (which uses
-//! the delta's length and each limit's X) is `get_seconds_for_movement_vector`.
+//! `get_seconds_for_movement_vector` takes a 3D move: it uses the delta's length and each
+//! limit's X.
 
 use crate::Vector3;
 
-/// Seconds to move `delta.length()`; only the X of each limit vector is used, as in the C#.
+/// Seconds to move `delta.length()`; only the X of each limit vector is used.
 pub fn get_seconds_for_movement_vector(
     delta: Vector3,
     rate_per_second: f64,
@@ -26,7 +26,7 @@ pub fn get_seconds_for_movement_vector(
     )
 }
 
-/// Seconds to move `delta` (C# `speedMultiplier` defaults to 1).
+/// Seconds to move `delta` (`speed_multiplier` is usually 1).
 pub fn get_seconds_for_movement(
     delta: f64,
     rate_per_second: f64,

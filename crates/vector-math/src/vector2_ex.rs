@@ -1,11 +1,10 @@
-//! Polyline helpers over `Vector2` points. Ports the `Vector2Ex` extension class at the end of
-//! agg-sharp `VectorMath/Vector2.cs`: the `List<Vector2>` extensions become functions over
-//! `&[Vector2]`, and `GetTurnAmount` is `Vector2::get_turn_amount` (below).
+//! Polyline helpers over `Vector2` points: functions over `&[Vector2]`, plus
+//! `Vector2::get_turn_amount` (below).
 
 use crate::Vector2;
 
 /// The length of the polyline; `is_closed` adds the closing segment from the last point back
-/// to the first (C# `PolygonLength`).
+/// to the first.
 pub fn polygon_length(polygon: &[Vector2], is_closed: bool) -> f64 {
     let mut length = 0.0;
     if polygon.len() > 1 {
@@ -25,7 +24,8 @@ pub fn polygon_length(polygon: &[Vector2], is_closed: bool) -> f64 {
 }
 
 /// The length along the polyline from the first point to point `index` (clamped to the
-/// points); C# `LengthTo`, whose `isClosed` argument is unused.
+/// points); `_is_closed` is unused, since the length up to a point never needs the closing
+/// segment.
 pub fn length_to(polygon: &[Vector2], index: i32, _is_closed: bool) -> f64 {
     let mut length = 0.0;
     let last = polygon.len() as i64 - 1;
@@ -37,19 +37,19 @@ pub fn length_to(polygon: &[Vector2], index: i32, _is_closed: bool) -> f64 {
     length
 }
 
-/// The point `length_from_start` along the polyline (C# `GetPositionAt`). A closed polyline
-/// wraps the length around; an open one clamps to its ends. Like the C#, the total it wraps
-/// by is always the closed length.
+/// The point `length_from_start` along the polyline. A closed polyline
+/// wraps the length around; an open one clamps to its ends. The total it wraps by is always
+/// the closed length, even for an open polyline.
 ///
-/// Panics on an empty `polygon` where the C# throws (an open polyline asked for a point past
-/// either end).
+/// Panics on an empty `polygon` (an open polyline asked for a point past either end), a
+/// caller bug.
 pub fn get_position_at(polygon: &[Vector2], length_from_start: f64, closed: bool) -> Vector2 {
     let mut length_from_start = length_from_start;
     let total_length = polygon_length(polygon, true);
     if length_from_start > total_length {
         if closed {
             let ratio = length_from_start / total_length;
-            // `(int)` truncates; it saturates as in .NET 9+.
+            // The cast truncates, and saturates rather than wrapping on overflow.
             let times = ratio as i32;
             let remainder = ratio - f64::from(times);
             length_from_start = remainder * total_length;
@@ -100,7 +100,7 @@ pub fn get_position_at(polygon: &[Vector2], length_from_start: f64, closed: bool
 
 impl Vector2 {
     /// The signed angle the path turns at this point, coming from `prev_point` and going to
-    /// `next_point`; 0 if any two of the points coincide (C# `Vector2Ex.GetTurnAmount`).
+    /// `next_point`; 0 if any two of the points coincide.
     pub fn get_turn_amount(&self, prev_point: Vector2, next_point: Vector2) -> f64 {
         let current_point = *self;
         if prev_point != current_point && current_point != next_point && next_point != prev_point {

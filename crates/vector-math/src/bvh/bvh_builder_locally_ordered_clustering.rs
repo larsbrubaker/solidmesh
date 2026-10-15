@@ -1,22 +1,19 @@
-//! A flat BVH from Morton-ordered box centers (agg-sharp
-//! `VectorMath/Bvh/BvhBuilderLocallyOrderedClustering.cs`): the boxes' centers are mapped into
-//! a 2^21 grid over their joint bounds, sorted by Morton code, and split recursively where the
-//! codes' common prefix changes.
+//! A flat BVH from Morton-ordered box centers: the boxes' centers are mapped into a 2^21 grid
+//! over their joint bounds, sorted by Morton code, and split recursively where the codes'
+//! common prefix changes.
 //!
-//! Mapping notes: the C# builds subtrees of 1000 or more nodes through `Parallel.Invoke`;
-//! each subtree writes its own disjoint index range, so the result equals the recursive build,
-//! which is what runs here (see [`crate::parallel`]). The C# `CalculateBounds` starts from the
-//! caller's first box object and expands it in place, so that box — and the center taken from
-//! it for its Morton code — becomes the bounds of every box. The node array is reproduced
-//! exactly (box 0's code uses the joint bounds' center) without changing the caller's boxes
-//! (divergence 32).
+//! Each subtree writes its own disjoint index range, so building large subtrees in parallel
+//! would give the same result as the recursive build that runs here (see [`crate::parallel`]).
+//! Box 0's Morton code is taken from the joint bounds' center rather than its own, which keeps
+//! the node array identical to the established output; the caller's boxes are read only, never
+//! changed, since a tree build that edits its input is a latent bug.
 
 use super::morton_codes;
 use crate::cs_sort::introspective_sort;
 use crate::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
 /// A node of the flat tree: a leaf when `left == right` (both the box index), else the indices
-/// of its two child nodes (C# `BvhNode`).
+/// of its two child nodes.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct BvhNode {
     pub left: i32,
@@ -35,7 +32,7 @@ struct NodeInfo {
     original_index: i32,
 }
 
-/// The builder (C# `BvhBuilderLocallyOrderedClustering`).
+/// The builder.
 pub struct BvhBuilderLocallyOrderedClustering;
 
 impl BvhBuilderLocallyOrderedClustering {
@@ -55,7 +52,7 @@ impl BvhBuilderLocallyOrderedClustering {
 
         let mut node_infos: Vec<NodeInfo> = (0..aabbs.len())
             .map(|i| {
-                // The C# expanded box 0 to the joint bounds before reading its center.
+                // Box 0's code comes from the joint bounds' center (see the header).
                 let center = if i == 0 {
                     bounds.center()
                 } else {
@@ -114,7 +111,7 @@ fn build_tree_recursive(
     node_index
 }
 
-/// C# `BitOperations.LeadingZeroCount((ulong)(a ^ b)) - 64`.
+/// The leading zero count of `a ^ b` as 64 bits, minus 64.
 fn common_prefix(a: i64, b: i64) -> i32 {
     ((a ^ b) as u64).leading_zeros() as i32 - 64
 }

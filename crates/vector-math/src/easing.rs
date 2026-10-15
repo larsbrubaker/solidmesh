@@ -1,16 +1,14 @@
-//! Easing curves (agg-sharp `VectorMath/Easing.cs`, functions from Tween.js, MIT): the ease
-//! types MatterCAD animates with, their In/Out/InOut variants, and a bisection inverse.
+//! Easing curves (functions from Tween.js, MIT): the ease types MatterCAD animates with, their
+//! In/Out/InOut variants, and a bisection inverse.
 //!
-//! Mapping notes: the C# nested classes (`Easing.Quadratic.In`, ...) become modules
-//! (`easing::quadratic::in_`, since `in` is a Rust keyword). The C# source writes its constants
-//! as `float` literals (`0.1f`, `1.70158f`, `1f / 2.75f`); where a float literal is not exactly
-//! representable the f32 value widened to f64 is kept (`f32_const`), so the curves return the
-//! same doubles as the C#. `EaseType`/`EaseOption` serialize as their names, as the C#
-//! `StringEnumConverter` does.
+//! Each family is a module (`easing::quadratic::in_`, since `in` is a Rust keyword). The
+//! constants are single-precision values (`0.1`, `1.70158`, `1 / 2.75` as f32) widened to f64
+//! (`f32_const`), so the curves return the same doubles the animations and saved settings
+//! were tuned with. `EaseType`/`EaseOption` serialize as their names, the form saved files hold.
 
 use serde::{Deserialize, Serialize};
 
-/// The curve family (C# `Easing.EaseType`).
+/// The curve family.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EaseType {
     #[default]
@@ -22,7 +20,7 @@ pub enum EaseType {
     Sinusoidal,
 }
 
-/// Which end of the curve eases (C# `Easing.EaseOption`).
+/// Which end of the curve eases.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EaseOption {
     #[default]
@@ -31,13 +29,13 @@ pub enum EaseOption {
     InOut,
 }
 
-/// A C# `float` literal as the double it widens to.
+/// A single-precision constant as the double it widens to.
 const fn f32_const(value: f32) -> f64 {
     value as f64
 }
 
 /// Iteratively solves for the input that gives `output` (0 to 1) from a monotonic `function`;
-/// stops once within `error_tolerance` (C# default `.000000001`) or after 128 halvings.
+/// stops once within `error_tolerance` (usually `.000000001`) or after 128 halvings.
 /// Outputs outside [0, 1] answer 0.
 pub fn calculate_inverse_fn(
     function: impl Fn(f64) -> f64,
@@ -101,8 +99,8 @@ pub fn calculate(ease_type: EaseType, ease_option: EaseOption, k: f64) -> f64 {
     get_easing_function(ease_type, ease_option)(k)
 }
 
-/// Given the curve's output `k`, the approximate input that produces it (C# default
-/// `error_tolerance` is `.000000001`).
+/// Given the curve's output `k`, the approximate input that produces it (the usual
+/// `error_tolerance` is [`DEFAULT_INVERSE_TOLERANCE`]).
 pub fn calculate_inverse(
     ease_type: EaseType,
     ease_option: EaseOption,
@@ -120,7 +118,7 @@ pub fn calculate_inverse(
     )
 }
 
-/// The C# default tolerance of [`calculate_inverse`].
+/// The default tolerance of [`calculate_inverse`].
 pub const DEFAULT_INVERSE_TOLERANCE: f64 = 0.000000001;
 
 pub fn linear(k: f64) -> f64 {
@@ -355,7 +353,7 @@ pub mod back {
 pub mod bounce {
     use super::f32_const;
 
-    // The C# divides float literals, so these are float quotients.
+    // Single-precision quotients, widened: the bounce segment edges the curve was tuned with.
     const B1: f64 = f32_const(1.0 / 2.75);
     const B2: f64 = f32_const(2.0 / 2.75);
     const B25: f64 = f32_const(2.5 / 2.75);

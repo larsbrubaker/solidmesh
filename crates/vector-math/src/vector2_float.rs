@@ -1,15 +1,13 @@
-//! `Vector2Float`: a 2D f32 vector. Ports agg-sharp `VectorMath/Vector2Float.cs`.
+//! `Vector2Float`: a 2D f32 vector.
 //!
-//! Precision follows the C# exactly: float-typed C# expressions are computed in f32, and
-//! where C# mixes in a double (`Multiply(v, double)`, `Math.Atan2`, `Math.Sqrt`) the f32 values
-//! are widened first and the result narrowed after.
+//! Precision is fixed per operation: pure float arithmetic is computed in f32, and where a
+//! double enters (`multiply`/`divide` by a double, `atan2`, `sqrt`) the f32 values are widened
+//! first and the result narrowed after, so results are the same on every platform.
 //!
-//! Mapping notes: static `Add`/`Subtract` and the float operators are the Rust operators;
-//! static `Multiply(v, double)`/`Divide(v, double)` compute in double and are
-//! `multiply`/`divide`; the vector-scale overloads are `multiply_components`/
-//! `divide_components`; static `Rotate(v, r)` is `rotated`; static `Normalize(v)` is
-//! `normalized`; the `ref` `BaryCentric` overload (double weights, double arithmetic) is
-//! `bary_centric_f64`. `Transform(Vector2Float, Quaternion)` arrives in Phase 1b.
+//! Adding, subtracting and the f32 scaling are the operators; `multiply`/`divide` scale by a
+//! double, computing in double; `multiply_components`/`divide_components` work per component;
+//! `rotated` and `normalized` return new values; `bary_centric_f64` takes double weights and
+//! computes in double. The quaternion transform is in `vector_transforms.rs`.
 
 use crate::math_helper::{self, MathError};
 use crate::number_format::format_f32;
@@ -19,10 +17,16 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-/// A 2D vector of f32 (C# `MatterHackers.VectorMath.Vector2Float`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+/// A 2D vector of f32.
+///
+/// Serializes in the shape saved files hold (`{"X":..,"Y":..}`); members missing when
+/// reading keep their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector2Float {
+    #[serde(rename = "X")]
     pub x: f32,
+    #[serde(rename = "Y")]
     pub y: f32,
 }
 
@@ -34,7 +38,7 @@ impl Vector2Float {
     /// `Marshal.SizeOf(new Vector2Float())`.
     pub const SIZE_IN_BYTES: i32 = 8;
 
-    /// Narrows both values to f32 (the only C# constructor taking components).
+    /// Narrows both values to f32 (the only constructor taking components).
     pub fn new(x: f64, y: f64) -> Self {
         Vector2Float {
             x: x as f32,
@@ -123,27 +127,26 @@ impl Vector2Float {
         }
     }
 
-    /// A unit-length copy (NaN for the zero vector, as in C#).
+    /// A unit-length copy (NaN for the zero vector).
     pub fn get_normal(&self) -> Vector2Float {
         let mut temp = *self;
         temp.normalize();
         temp
     }
 
-    /// Scales this vector to unit length (NaN for the zero vector, as in C#).
+    /// Scales this vector to unit length (NaN for the zero vector).
     pub fn normalize(&mut self) {
         let scale = 1.0f32 / self.length();
         self.x *= scale;
         self.y *= scale;
     }
 
-    /// Each component times a double, computed in double and narrowed (C# static
-    /// `Multiply(Vector2Float, double)`).
+    /// Each component times a double, computed in double and narrowed.
     pub fn multiply(vector: Vector2Float, scale: f64) -> Vector2Float {
         Self::new(f64::from(vector.x) * scale, f64::from(vector.y) * scale)
     }
 
-    /// C# static `Divide(Vector2Float, double)`: `multiply` by `1 / scale`.
+    /// Divides by a double: `multiply` by `1 / scale`.
     pub fn divide(vector: Vector2Float, scale: f64) -> Vector2Float {
         Self::multiply(vector, 1.0 / scale)
     }
@@ -164,12 +167,12 @@ impl Vector2Float {
         }
     }
 
-    /// Component-wise minimum (C# static `Min`).
+    /// Component-wise minimum.
     pub fn min(a: Vector2Float, b: Vector2Float) -> Vector2Float {
         Self::component_min(a, b)
     }
 
-    /// Component-wise maximum (C# static `Max`).
+    /// Component-wise maximum.
     pub fn max(a: Vector2Float, b: Vector2Float) -> Vector2Float {
         Self::component_max(a, b)
     }
@@ -191,7 +194,7 @@ impl Vector2Float {
         }
     }
 
-    /// A unit-length copy of `vec` (C# static `Normalize`).
+    /// A unit-length copy of `vec`.
     pub fn normalized(vec: Vector2Float) -> Vector2Float {
         let scale = 1.0f32 / vec.length();
         Vector2Float {
@@ -239,8 +242,8 @@ impl Vector2Float {
         a + u * (b - a) + v * (c - a)
     }
 
-    /// The C# `ref` overload of `BaryCentric`: double weights, each scaled difference computed
-    /// in double and narrowed before it is added.
+    /// The barycentric blend with double weights: each scaled difference computed in double and
+    /// narrowed before it is added.
     pub fn bary_centric_f64(
         a: Vector2Float,
         b: Vector2Float,
@@ -272,7 +275,7 @@ impl Vector2Float {
     }
 
     /// True when every component is strictly within `error_range` of `other`'s, compared in
-    /// double (C# `Equals(Vector2Float, double)`).
+    /// double.
     pub fn equals_within(&self, other: Vector2Float, error_range: f64) -> bool {
         let (x, y) = (f64::from(self.x), f64::from(self.y));
         let (ox, oy) = (f64::from(other.x), f64::from(other.y));
@@ -281,8 +284,8 @@ impl Vector2Float {
     }
 }
 
-/// C# indexer: 0 is x, 1 is y; reading any other index gives 0, writing one panics (the C#
-/// setter throws).
+/// Indexing: 0 is x, 1 is y; reading any other index gives 0, writing one is a caller
+/// bug and panics.
 impl Index<usize> for Vector2Float {
     type Output = f32;
     fn index(&self, index: usize) -> &f32 {
@@ -351,7 +354,7 @@ impl Mul<Vector2Float> for f32 {
     }
 }
 
-/// Multiplies by the f32 reciprocal, as the C# operator does (not a true division).
+/// Multiplies by the f32 reciprocal (not a true division), so `v / s` equals `v * (1 / s)`.
 impl Div<f32> for Vector2Float {
     type Output = Vector2Float;
     fn div(self, f: f32) -> Vector2Float {
@@ -397,9 +400,17 @@ impl DivAssign<f32> for Vector2Float {
     }
 }
 
-/// "(x, y)" with each component as C# `float.ToString()` (InvariantCulture).
+/// "(x, y)" with each component in the default float text (`format_f32`).
 impl fmt::Display for Vector2Float {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", format_f32(self.x), format_f32(self.y))
+    }
+}
+
+/// Hashes the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector2Float {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f32(self.x, state);
+        crate::float_hash::hash_f32(self.y, state);
     }
 }

@@ -1,11 +1,10 @@
-//! `Vector2`: a 2D f64 vector. Ports agg-sharp `VectorMath/Vector2.cs` (the struct and its
-//! `Vector2Converter`); the `Vector2Ex` list extensions are in `vector2_ex.rs`.
+//! `Vector2`: a 2D f64 vector and its text conversion; the polyline helpers are in
+//! `vector2_ex.rs`.
 //!
-//! Mapping notes: static `Add`/`Subtract`/`Multiply(v, double)`/`Divide(v, double)` are the
-//! operators (same arithmetic); `Multiply(v, Vector2)`/`Divide(v, Vector2)` are
-//! `multiply_components`/`divide_components`; static `Rotate(v, r)` is `get_rotated`; static
-//! and instance `Dot`/`Cross` are one method; C# `Equals(other, errorRange)` is
-//! `equals_within`. `Transform(Vector2, Quaternion)` arrives with Quaternion (Phase 1b).
+//! Adding, subtracting and scaling are the operators; `multiply_components`/
+//! `divide_components` work per component; `get_rotated` rotates; `dot`/`cross` are methods;
+//! `equals_within` compares with a tolerance. The quaternion transform is in
+//! `vector_transforms.rs`.
 
 use crate::math_helper::{self, MathError};
 use crate::number_format::{format_f64, parse_f64};
@@ -15,10 +14,16 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-/// A 2D vector of f64 (C# `MatterHackers.VectorMath.Vector2`).
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+/// A 2D vector of f64.
+///
+/// Serializes in the shape saved files hold (`{"X":..,"Y":..}`); members missing when
+/// reading keep their default (0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Vector2 {
+    #[serde(rename = "X")]
     pub x: f64,
+    #[serde(rename = "Y")]
     pub y: f64,
 }
 
@@ -79,7 +84,7 @@ impl Vector2 {
         end_angle - start_angle
     }
 
-    /// The length of the vector (C# property `Length`).
+    /// The length of the vector.
     pub fn length(&self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
@@ -89,7 +94,7 @@ impl Vector2 {
         (*self - p).length()
     }
 
-    /// The squared length (C# property `LengthSquared`).
+    /// The squared length.
     pub fn length_squared(&self) -> f64 {
         self.x * self.x + self.y * self.y
     }
@@ -99,7 +104,7 @@ impl Vector2 {
         *self = self.get_rotated(radians);
     }
 
-    /// This vector rotated by `radians` (also C#'s static `Rotate(Vector2, double)`).
+    /// This vector rotated by `radians`.
     pub fn get_rotated(&self, radians: f64) -> Vector2 {
         let cos = radians.cos();
         let sin = radians.sin();
@@ -126,14 +131,14 @@ impl Vector2 {
         Vector2::new(-self.y, self.x)
     }
 
-    /// A unit-length copy (NaN for the zero vector, as in C#).
+    /// A unit-length copy (NaN for the zero vector).
     pub fn get_normal(&self) -> Vector2 {
         let mut temp = *self;
         temp.normalize();
         temp
     }
 
-    /// Scales this vector to unit length (NaN for the zero vector, as in C#).
+    /// Scales this vector to unit length (NaN for the zero vector).
     pub fn normalize(&mut self) {
         let scale = 1.0 / self.length();
         self.x *= scale;
@@ -145,27 +150,27 @@ impl Vector2 {
         !(self.x.is_nan() || self.x.is_infinite() || self.y.is_nan() || self.y.is_infinite())
     }
 
-    /// Component-wise product (C# static `Multiply(Vector2, Vector2)`).
+    /// Component-wise product.
     pub fn multiply_components(vector: Vector2, scale: Vector2) -> Vector2 {
         Vector2::new(vector.x * scale.x, vector.y * scale.y)
     }
 
-    /// Component-wise quotient (C# static `Divide(Vector2, Vector2)`).
+    /// Component-wise quotient.
     pub fn divide_components(vector: Vector2, scale: Vector2) -> Vector2 {
         Vector2::new(vector.x / scale.x, vector.y / scale.y)
     }
 
-    /// Component-wise minimum (C# static `Min`).
+    /// Component-wise minimum.
     pub fn min(a: Vector2, b: Vector2) -> Vector2 {
         Self::component_min(a, b)
     }
 
-    /// Component-wise maximum (C# static `Max`).
+    /// Component-wise maximum.
     pub fn max(a: Vector2, b: Vector2) -> Vector2 {
         Self::component_max(a, b)
     }
 
-    /// Parses "x, y" (InvariantCulture). Unparsable parts are 0; missing parts stay 0.
+    /// Parses "x, y" (culture-invariant text). Unparsable parts are 0; missing parts stay 0.
     pub fn parse(s: &str) -> Vector2 {
         let mut result = Vector2::ZERO;
         let values: Vec<f64> = s.split(',').map(parse_f64).collect();
@@ -195,7 +200,7 @@ impl Vector2 {
         )
     }
 
-    /// A unit-length copy of `vec` (C# static `Normalize`).
+    /// A unit-length copy of `vec`.
     pub fn normalized(vec: Vector2) -> Vector2 {
         let scale = 1.0 / vec.length();
         Vector2::new(vec.x * scale, vec.y * scale)
@@ -267,17 +272,16 @@ impl Vector2 {
         )
     }
 
-    /// True when every component is strictly within `error_range` of `other`'s (C#
-    /// `Equals(Vector2, double)`).
+    /// True when every component is strictly within `error_range` of `other`'s.
     pub fn equals_within(&self, other: Vector2, error_range: f64) -> bool {
         (self.x < other.x + error_range && self.x > other.x - error_range)
             && (self.y < other.y + error_range && self.y > other.y - error_range)
     }
 
-    /// C# `Vector2Converter.ConvertFrom(string)`: drops the first and last character (the
-    /// parentheses of [`Display`](fmt::Display)'s "(x, y)") and parses the rest; one value fills
-    /// both components. `None` where the C# converter does not produce a `Vector2` (empty or
-    /// too-short text, or more than two values).
+    /// Reads a vector from text: drops the first and last character (the parentheses of
+    /// [`Display`](fmt::Display)'s "(x, y)") and parses the rest; one value fills both
+    /// components. `None` where the text is not a vector (empty or too-short text, or more
+    /// than two values).
     pub fn convert_from_string(text: &str) -> Option<Vector2> {
         let chars: Vec<char> = text.chars().collect();
         if chars.len() <= 3 {
@@ -293,8 +297,8 @@ impl Vector2 {
     }
 }
 
-/// C# indexer: 0 is x, 1 is y; reading any other index gives 0, writing one panics (the C#
-/// setter throws).
+/// Indexing: 0 is x, 1 is y; reading any other index gives 0, writing one is a caller
+/// bug and panics.
 impl Index<usize> for Vector2 {
     type Output = f64;
     fn index(&self, index: usize) -> &f64 {
@@ -351,7 +355,7 @@ impl Mul<Vector2> for f64 {
     }
 }
 
-/// Multiplies by the reciprocal, as the C# operator does (not a true division).
+/// Multiplies by the reciprocal (not a true division), so `v / s` equals `v * (1 / s)`.
 impl Div<f64> for Vector2 {
     type Output = Vector2;
     fn div(self, f: f64) -> Vector2 {
@@ -391,9 +395,17 @@ impl DivAssign<f64> for Vector2 {
     }
 }
 
-/// "(x, y)" with each component as C# `double.ToString()` (InvariantCulture).
+/// "(x, y)" with each component in the default double text (`format_f64`).
 impl fmt::Display for Vector2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", format_f64(self.x), format_f64(self.y))
+    }
+}
+
+/// Hashes the components' bits, with -0.0 and 0.0 alike (see `float_hash`).
+impl std::hash::Hash for Vector2 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        crate::float_hash::hash_f64(self.x, state);
+        crate::float_hash::hash_f64(self.y, state);
     }
 }

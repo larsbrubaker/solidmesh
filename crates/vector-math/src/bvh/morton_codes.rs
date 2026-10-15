@@ -1,9 +1,8 @@
-//! A Morton (Z-order) encoder with 21 bits per channel for x, y, z data (agg-sharp
-//! `VectorMath/Bvh/MortonCodes.cs`).
+//! A Morton (Z-order) encoder with 21 bits per channel for x, y, z data.
 
 use crate::Vector3;
 
-/// The number of cells per axis, 2^21 (C# `MortonCodes.Size`).
+/// The number of cells per axis, 2^21.
 pub const SIZE: i64 = 1 << 21;
 
 // method to seperate the bits from a position
@@ -17,9 +16,9 @@ fn split_by_3(position: u32) -> i64 {
     x
 }
 
-/// The code of a position already scaled to [0, 2^21) per axis. Components convert as C#
-/// `(uint)double` does on .NET 9+ (truncate, saturate, NaN to 0); the C# DEBUG-only range
-/// check is not part of the Release behavior.
+/// The code of a position already scaled to [0, 2^21) per axis. Components convert with `as
+/// u32` (truncate, saturate, NaN to 0), so an out-of-range position still gets a code instead
+/// of failing.
 pub fn encode3_position(position: Vector3) -> i64 {
     encode3(position.x as u32, position.y as u32, position.z as u32)
 }

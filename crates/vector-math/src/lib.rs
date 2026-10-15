@@ -1,26 +1,24 @@
-//! vector-math: a port of agg-sharp's `VectorMath` (`R/Submodules/agg-sharp/VectorMath`).
+//! vector-math: the f64 vector math under MatterCAD's geometry, model and renderer.
 //!
-//! Phase 1a: the vector value types and their helpers: `MathHelper` (`math_helper`),
-//! `Vector2`/`Vector3`/`Vector4` (f64), `Vector2Float`/`Vector3Float` (f32), the FNV-1a
-//! `LongHash` used by every `GetLongHashCode`, and the C#-compatible number formatting/parsing
-//! the vectors' `ToString`/`Parse` need (`number_format`, `cs_math`).
-//! Phase 1b: `Matrix4X4` (row-major, row vectors: `p * M`), `Quaternion`,
+//! The value types and their helpers: `math_helper`, `Vector2`/`Vector3`/`Vector4` (f64),
+//! `Vector2Float`/`Vector3Float` (f32), the FNV-1a `long_hash` behind every
+//! `get_long_hash_code`, and the number formatting and parsing the vectors' text form needs
+//! (`number_format`, `cs_math`). `Matrix4X4` (row-major, row vectors: `p * M`), `Quaternion`,
 //! `AxisAlignedBoundingBox`, `Plane`/`PlaneFloat`, `Ray`, `Frustum`, the vectors' matrix and
 //! quaternion transforms (`vector_transforms`), `std::hash::Hash` for the value types
-//! (`float_hash`) and their Newtonsoft-shaped serde JSON (`serde_impls` plus derives).
-//! Phase 1c: `WorldView` (camera and projection), `TrackBallController`, `easing`,
-//! `estimator`, the BVH (`bvh`: `BvhTree`, its two builders, Morton codes, `RayHitInfo`, with
+//! (`float_hash`) and their serde JSON in the shape saved files hold (`serde_impls` plus
+//! derives). `WorldView` (camera and projection), `TrackBallController`, `easing`, `estimator`,
+//! the BVH (`bvh`: `BvhTree`, its two builders, Morton codes, `RayHitInfo`, with
 //! `Ray::get_closest_intersection`), the `parallel` loop wrapper (sequential on every host,
-//! divergence 30) and .NET's introsort (`cs_sort`) the builders need to order ties as the C#
-//! does. `dotnet_random` is .NET's seeded `Random`, shared by the crates above that must draw
-//! the numbers the C# draws. `SmallestEnclosingCircle.cs` is not ported: it is LGPL-3 (Project
-//! Nayuki).
-//! `RectangleDouble`/`RectangleInt` are not in VectorMath (agg-sharp `agg/Primitives`).
+//! since wasm32 has no threads) and the fixed-order introsort (`cs_sort`) the builders need so
+//! ties always land in the same place. `dotnet_random` is the seeded generator shared by the
+//! crates above that must draw the same numbers for the same seed. There is no smallest
+//! enclosing circle here: the known implementation is LGPL-3 (Project Nayuki).
+//! `RectangleDouble` lives with the 2D paths (`agg-path`), not here.
 //!
-//! Conventions: C# static methods are associated functions, C# properties are methods
-//! (`Length` → `length()`), C# `ref`/`out` overloads fold into the value overload when they
-//! compute the same thing, multiple `out` results come back as tuples, and fields are lowercase
-//! `x/y/z/w`.
+//! Conventions: constructors and static helpers are associated functions, read-only values are
+//! methods (`length()`), in-place and by-value variants that compute the same thing are one
+//! function, multiple results come back as tuples, and fields are lowercase `x/y/z/w`.
 
 mod axis_aligned_bounding_box;
 pub mod bvh;
@@ -69,6 +67,5 @@ pub use vector4::Vector4;
 pub use vector_transforms::{transform_array, transform_array_by_quaternion, transform_array_f32};
 pub use world_view::WorldView;
 
-/// The FNV-1a 64-bit offset basis, the default `hash` argument of every C#
-/// `GetLongHashCode(ulong hash = 14695981039346656037)`.
+/// The FNV-1a 64-bit offset basis, the usual starting `hash` of every `get_long_hash_code`.
 pub const LONG_HASH_SEED: u64 = 14695981039346656037;

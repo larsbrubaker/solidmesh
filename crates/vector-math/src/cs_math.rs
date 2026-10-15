@@ -1,9 +1,8 @@
-//! `System.Math` semantics where they differ from Rust's std: `Math.Max`/`Math.Min` propagate
-//! NaN and order -0 below +0 (IEEE 754-2019 maximum/minimum, as .NET Core 3.0+ implements
-//! them), while `f64::max`/`f64::min` ignore NaN. The vector types use these wherever the C#
-//! calls `Math.Max`/`Math.Min`, so a NaN component behaves as it does in MatterCAD.
+//! Max and min that propagate NaN and order -0 below +0 (IEEE 754-2019 maximum/minimum), where
+//! `f64::max`/`f64::min` ignore NaN. The vector types and bounding boxes take their max and min
+//! through these, so a NaN component shows in the result instead of silently disappearing.
 
-/// C# `Math.Max(double, double)`.
+/// The larger of two doubles; NaN if either is NaN, +0 over -0.
 pub fn max_f64(val1: f64, val2: f64) -> f64 {
     if val1 != val2 {
         if !val1.is_nan() {
@@ -18,7 +17,7 @@ pub fn max_f64(val1: f64, val2: f64) -> f64 {
     }
 }
 
-/// C# `Math.Min(double, double)`.
+/// The smaller of two doubles; NaN if either is NaN, -0 under +0.
 pub fn min_f64(val1: f64, val2: f64) -> f64 {
     if val1 != val2 && !val1.is_nan() {
         return if val1 < val2 { val1 } else { val2 };
@@ -30,7 +29,7 @@ pub fn min_f64(val1: f64, val2: f64) -> f64 {
     }
 }
 
-/// C# `Math.Max(float, float)`.
+/// The larger of two floats; NaN if either is NaN, +0 over -0.
 pub fn max_f32(val1: f32, val2: f32) -> f32 {
     if val1 != val2 {
         if !val1.is_nan() {
@@ -45,7 +44,7 @@ pub fn max_f32(val1: f32, val2: f32) -> f32 {
     }
 }
 
-/// C# `Math.Min(float, float)`.
+/// The smaller of two floats; NaN if either is NaN, -0 under +0.
 pub fn min_f32(val1: f32, val2: f32) -> f32 {
     if val1 != val2 && !val1.is_nan() {
         return if val1 < val2 { val1 } else { val2 };
@@ -57,7 +56,8 @@ pub fn min_f32(val1: f32, val2: f32) -> f32 {
     }
 }
 
-/// C# `Math.Log(a, 2)`: `Log(a) / Log(2)`, not `log2`, so results match bit for bit.
+/// The base-2 logarithm as `ln(a) / ln(2)`, not `log2`: the two can differ in the last bit,
+/// and the `next_power_of_two_*` helpers round this value up, so it decides their results.
 pub fn log_base2(a: f64) -> f64 {
     a.ln() / 2f64.ln()
 }
