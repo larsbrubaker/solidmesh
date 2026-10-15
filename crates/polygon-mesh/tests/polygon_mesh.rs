@@ -44,3 +44,5 @@ mod rust_only_stl_tests;
 mod sdf_and_rounded_box_tests;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
 mod stl_parse_yield_tests;
+#[path = "polygon_mesh/transformed_bounds_exact_tests.rs"]
+mod transformed_bounds_exact_tests;

@@ -1,15 +1,21 @@
-//! `TransformedAabbCache`: the bounds of a mesh under a transform, computed from its convex hull
-//! and remembered per transform. The hull is `processors::mesh_convex_hull`, and
+//! `TransformedAabbCache`: the bounds of a mesh under a transform, remembered per transform.
 //! [`crate::Mesh::get_axis_aligned_bounding_box_transformed`] is the entry point.
 //!
-//! `Mesh::mark_as_changed` clears it ([`TransformedAabbCache::changed`]); the hull it reads is
-//! itself keyed on [`crate::Mesh::changed_count`].
+//! The bounds are exactly those of every vertex transformed, whatever the mesh's vertex order or
+//! triangulation. To stay fast they are measured over the vertices on or outside the mesh's
+//! convex hull (`processors::hull_bounds_points`), worked out once per mesh change; a vertex
+//! inside the hull can never be an extreme.
+//!
+//! `Mesh::mark_as_changed` clears it ([`TransformedAabbCache::changed`]); the hull and the point
+//! set are keyed on [`crate::Mesh::changed_count`].
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
 
+use crate::processors::hull_bounds_points::points_on_or_outside_hull;
+use crate::processors::ConvexHull;
 use crate::Mesh;
 
 /// Per-transform bounds of one mesh.
@@ -17,6 +23,8 @@ use crate::Mesh;
 pub struct TransformedAabbCache {
     /// Bounds per transform; at most 101 entries, looked up by `Matrix4X4` equality.
     cache: Mutex<Vec<(Matrix4X4, AxisAlignedBoundingBox)>>,
+    /// The vertices bounds are measured over, tagged with the `changed_count` they were found at.
+    points: Mutex<Option<(i32, Arc<Vec<Vector3Float>>)>>,
 }
 
 impl Clone for TransformedAabbCache {
@@ -32,9 +40,10 @@ impl TransformedAabbCache {
         let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         // set the aabbTransform to a bad value so we detect in needs to be recreated
         cache.clear();
+        self.points.lock().unwrap_or_else(|e| e.into_inner()).take();
     }
 
-    /// The bounds of `mesh` (its convex hull where there is one) under `transform`.
+    /// The bounds of every vertex of `mesh` under `transform`.
     pub fn get_axis_aligned_bounding_box(
         &self,
         mesh: &Mesh,
@@ -51,15 +60,33 @@ impl TransformedAabbCache {
             return *aabb;
         }
 
-        let convex_hull = mesh.get_convex_hull(true);
-        let positions = match &convex_hull {
-            Some(hull) => &hull.mesh().vertices,
-            None => &mesh.vertices,
+        let bounds = match self.bounds_points(mesh) {
+            Some(points) => calculate_bounds(&points, transform),
+            None => calculate_bounds(&mesh.vertices, transform),
         };
-
-        let bounds = calculate_bounds(positions, transform);
         cache.push((transform, bounds));
         bounds
+    }
+}
+
+impl TransformedAabbCache {
+    /// The vertices on or outside the mesh's hull, found once per mesh change. `None` when the
+    /// mesh has no built hull (too few faces, flat, or the hull failed): then every vertex is
+    /// measured.
+    fn bounds_points(&self, mesh: &Mesh) -> Option<Arc<Vec<Vector3Float>>> {
+        let changed_count = mesh.changed_count();
+        let mut points = self.points.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((count, cached)) = &*points {
+            if *count == changed_count {
+                return Some(cached.clone());
+            }
+        }
+        let ConvexHull::Hull(hull) = mesh.get_convex_hull(true)? else {
+            return None;
+        };
+        let found = Arc::new(points_on_or_outside_hull(mesh, &hull));
+        *points = Some((changed_count, found.clone()));
+        Some(found)
     }
 }
 

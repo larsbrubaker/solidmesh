@@ -1,6 +1,7 @@
 //! The convex hull of a mesh's vertices, cached on the mesh, built by
 //! `mi_convex_hull` (derived from MIConvexHull).
-//! `TransformedAabbCache` (`crate::transformed_aabb_cache`) bounds a transformed mesh by its hull.
+//! `TransformedAabbCache` (`crate::transformed_aabb_cache`) measures a transformed mesh's bounds over
+//! the vertices on or outside this hull (`hull_bounds_points`).
 //!
 //! The mesh owns a typed [`ConvexHullCache`] whose entry carries the [`Mesh::changed_count`] it
 //! was built at, so any [`Mesh::mark_as_changed`] makes it stale, without a property bag or an

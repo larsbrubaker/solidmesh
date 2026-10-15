@@ -1,10 +1,12 @@
 //! Mesh processors: STL reading (`stl_processing`) and writing (`stl_writer`) with
 //! `mesh_output_settings`, the face BSP tree (`face_bsp_tree`), the convex hull
-//! (`mesh_convex_hull`, built by `mi_convex_hull`, derived from MIConvexHull),
+//! (`mesh_convex_hull`, built by `mi_convex_hull`, derived from MIConvexHull) and the vertices
+//! on or outside it that transformed bounds are measured over (`hull_bounds_points`),
 //! `planar_region_simplifier` (on manifold-rust's ear clipper), `mesh_helper`'s plane, and
 //! turning 2D paths into meshes (`vertex_source_to_mesh`).
 
 pub mod face_bsp_tree;
+pub(crate) mod hull_bounds_points;
 pub mod mesh_convex_hull;
 pub mod mesh_helper;
 pub mod mesh_output_settings;
