@@ -1,23 +1,25 @@
-//! Spinning a 2D profile into a solid, with its helpers (snapping angles near 0 or a full turn, the
-//! revolved position, the end caps and the strips). The profile goes through agg-path's
-//! clipper conversions (to polygons, corrected winding, back to a vertex storage) so its
-//! winding is normalized and anything left of the axis is mirrored onto the right before it is
-//! swept.
+//! Spinning a 2D profile into a solid: the sweep's angles (snapped onto a full turn when they are
+//! within a hair of one) and the profile's clean-up. The profile goes through agg-path's clipper
+//! conversions (to integer polygons with corrected winding) so its winding is normalized and
+//! anything left of the axis is mirrored onto the right before it is swept. The solid itself is
+//! built from those integer loops in `revolve/revolved_mesh.rs`.
 
 use std::fmt;
 
 use agg_path::clipper_library::{int_point, ClipperError, PolygonsExtensions};
 use agg_path::data_converters_2d::{
-    create_vertex_storage, get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
+    get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
 use agg_path::vertex_source::VertexSource;
 use clipper2_rust::{FillRule, Path64};
 use vector_math::math_helper::{range_0_to_tau, TAU};
-use vector_math::{MathError, Matrix4X4, Vector2, Vector3};
+use vector_math::MathError;
 
-use super::for_each_triangle;
-use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
+
+mod revolved_mesh;
+
+use revolved_mesh::revolved_mesh;
 
 /// What [`revolve`] can fail with: an angle that cannot be brought into `[0, Tau]`, or a
 /// clipper failure in the profile's clean-up.
@@ -63,9 +65,23 @@ fn fix_close_angles(angle: f64) -> f64 {
     angle
 }
 
+/// The sweep's start and end in `[0, Tau]`, an end within 0.001 of 0 or Tau snapped onto it so
+/// a sweep meant as a full turn closes. A sweep narrower than the snap distance keeps its own
+/// angles: snapping both of its ends onto the same place would sweep nothing.
+fn sweep_angles(angle_start: f64, angle_end: f64) -> Result<(f64, f64), MathError> {
+    let angle_start = range_0_to_tau(angle_start)?;
+    let angle_end = range_0_to_tau(angle_end)?;
+    let (snapped_start, snapped_end) = (fix_close_angles(angle_start), fix_close_angles(angle_end));
+    if snapped_start == snapped_end {
+        return Ok((angle_start, angle_end));
+    }
+    Ok((snapped_start, snapped_end))
+}
+
 /// Sweeps the profile (x out from the axis, y along it) from
-/// `angle_start` to `angle_end` in `angle_steps` strips, capping both ends of a partial sweep.
-/// A profile that encloses no area revolves to an empty mesh.
+/// `angle_start` to `angle_end` in `angle_steps` strips (fewer where a strip would be narrower than
+/// the profile's precision), capping both ends of a partial sweep. A profile that encloses no
+/// area, or a sweep of no angle, revolves to an empty mesh.
 ///
 /// The angles are brought into `[0, Tau]` first; one that cannot be (below `-Tau`, or NaN) is
 /// an error; a clipper failure is the other.
@@ -77,18 +93,18 @@ pub fn revolve(
     revolve_around_z: bool,
 ) -> Result<Mesh, RevolveError> {
     let mut angle_steps = angle_steps;
-    let angle_start = range_0_to_tau(angle_start)?;
-    let angle_end = range_0_to_tau(angle_end)?;
-
-    // make sure we close 360 shapes
-    let angle_start = fix_close_angles(angle_start);
-    let angle_end = fix_close_angles(angle_end);
-
-    if angle_start == 0.0 && angle_end == TAU {
-        angle_steps = angle_steps.max(3);
-    } else {
-        angle_steps = angle_steps.max(1);
+    let (angle_start, angle_end) = sweep_angles(angle_start, angle_end)?;
+    // nothing is swept, so there is no solid
+    if angle_start == angle_end {
+        return Ok(Mesh::new());
     }
+
+    let fewest_steps = if angle_start == 0.0 && angle_end == TAU {
+        3
+    } else {
+        1
+    };
+    angle_steps = angle_steps.max(fewest_steps);
 
     // convert to clipper polygons and scale so we can ensure good shapes
     let mut polygons = source.create_polygons(DEFAULT_SCALING);
@@ -144,148 +160,41 @@ pub fn revolve(
         polygons = get_corrected_winding(&polygons)?;
     }
 
-    // convert the data back to PathStorage
-    let cleaned_path = create_vertex_storage(&polygons, DEFAULT_SCALING);
-
-    let mut mesh = Mesh::new();
+    // The profile is placed to the nearest clipper unit, so a strip less than a unit wide at the
+    // profile's outermost point adds no shape, only slivers thinner than the mesh's f32 positions
+    // can tell apart. Only a sweep of a tiny angle or a tiny profile ever has strips that narrow.
+    let outermost = polygons
+        .iter()
+        .flatten()
+        .map(|point| point.x)
+        .max()
+        .unwrap_or(0);
+    // `as` saturates; the arc is far inside i32 for any profile clipper accepts
+    let widest_strips = (outermost as f64 * (angle_end - angle_start).abs()) as i32;
+    angle_steps = angle_steps.min(widest_strips.max(fewest_steps));
 
     let has_start_and_end_faces = angle_start > 0.000001 || angle_end < TAU - 0.000001;
-    // check if we need to make closing faces
-    if has_start_and_end_faces {
-        // make a face for the start
-        add_revolve_cap(
-            &cleaned_path,
-            &mut mesh,
-            angle_start,
-            revolve_around_z,
-            false,
-        );
-    }
+    let wraps = !has_start_and_end_faces;
+    Ok(revolved_mesh(
+        &polygons,
+        &column_angles(angle_start, angle_end, angle_steps, wraps),
+        wraps,
+        revolve_around_z,
+    ))
+}
 
-    // make the outside shell
+/// The angle of every column of the sweep: `angle_steps` strips from `angle_start`, accumulated
+/// one step at a time. A full turn has a column per strip, its last strip closing onto the first
+/// column; a partial sweep has one more, where its end cap sits (the accumulated angle, which is
+/// only approximately `angle_end`).
+fn column_angles(angle_start: f64, angle_end: f64, angle_steps: i32, wraps: bool) -> Vec<f64> {
     let angle_delta = (angle_end - angle_start) / f64::from(angle_steps);
+    let columns = if wraps { angle_steps } else { angle_steps + 1 };
+    let mut angles = Vec::with_capacity(columns.max(0) as usize);
     let mut current_angle = angle_start;
-    if !has_start_and_end_faces {
-        angle_steps -= 1;
-    }
-
-    for _ in 0..angle_steps {
-        add_revolve_strip(
-            &cleaned_path,
-            &mut mesh,
-            current_angle,
-            current_angle + angle_delta,
-            revolve_around_z,
-        );
+    for _ in 0..columns {
+        angles.push(current_angle);
         current_angle += angle_delta;
     }
-
-    if !has_start_and_end_faces {
-        if ((angle_end - angle_start) < 0.0000001 || (angle_end - TAU - angle_start) < 0.0000001)
-            && (angle_end - current_angle) > 0.0000001
-        {
-            // make sure we close the shape exactly
-            add_revolve_strip(
-                &cleaned_path,
-                &mut mesh,
-                current_angle,
-                angle_start,
-                revolve_around_z,
-            );
-        }
-    } else {
-        // The end cap closes against the last strip, so it sits on the angle that strip
-        // actually ended on - the accumulated angle, which is only approximately angle_end.
-        add_revolve_cap(
-            &cleaned_path,
-            &mut mesh,
-            current_angle,
-            revolve_around_z,
-            true,
-        );
-    }
-
-    mesh.clean_and_merge();
-
-    Ok(mesh)
-}
-
-/// The single place a profile point becomes a point on the solid, at
-/// `angle` around the axis. Every part of the solid comes through here, because
-/// `clean_and_merge` welds on exact float equality and a second way of computing a shared
-/// point would leave the seam open.
-fn revolved_position(profile_point: Vector2, angle: f64, revolve_around_z: bool) -> Vector3 {
-    if revolve_around_z {
-        return Vector3::new(profile_point.x, 0.0, profile_point.y)
-            .transform(Matrix4X4::create_rotation_z(angle));
-    }
-
-    Vector3::new(profile_point.x, profile_point.y, 0.0)
-        .transform(Matrix4X4::create_rotation_y(angle))
-}
-
-/// The flat face closing a partial revolve at `angle`, wound outward
-/// (`reverse_winding` flips it for the end of the sweep). It tessellates directly rather than
-/// through `triangulate_faces` so its corners are placed by [`revolved_position`].
-fn add_revolve_cap(
-    profile: &dyn VertexSource,
-    mesh: &mut Mesh,
-    angle: f64,
-    revolve_around_z: bool,
-    reverse_winding: bool,
-) {
-    let mut tesselator = CachedTesselator::new();
-    tesselator.send_vertex_source(profile);
-
-    for_each_triangle(&tesselator, |v0, v1, v2| {
-        let (v0, v2) = if reverse_winding { (v2, v0) } else { (v0, v2) };
-        mesh.create_face(&[
-            revolved_position(v0, angle, revolve_around_z),
-            revolved_position(v1, angle, revolve_around_z),
-            revolved_position(v2, angle, revolve_around_z),
-        ]);
-    });
-}
-
-/// One quad per profile segment between the two angles.
-fn add_revolve_strip(
-    vertex_source: &dyn VertexSource,
-    mesh: &mut Mesh,
-    start_angle: f64,
-    end_angle: f64,
-    revolve_around_z: bool,
-) {
-    let mut last_point = Vector2::ZERO;
-    let mut first_point = Vector2::ZERO;
-
-    for vertex_data in vertex_source.vertices() {
-        if vertex_data.is_stop() {
-            break;
-        }
-
-        if vertex_data.is_move_to() {
-            first_point = vertex_data.position;
-            last_point = first_point;
-        }
-
-        if vertex_data.is_line_to() || vertex_data.is_close() {
-            let current_point = if vertex_data.is_close() {
-                first_point
-            } else {
-                vertex_data.position
-            };
-
-            // a segment lying on the axis sweeps no area
-            if current_point.x != 0.0 || last_point.x != 0.0 {
-                mesh.create_face(&[
-                    revolved_position(current_point, end_angle, revolve_around_z),
-                    revolved_position(current_point, start_angle, revolve_around_z),
-                    revolved_position(last_point, start_angle, revolve_around_z),
-                    revolved_position(last_point, end_angle, revolve_around_z),
-                ]);
-            }
-
-            last_point = current_point;
-        }
-    }
+    angles
 }

@@ -1,6 +1,9 @@
 //! A box with rounded edges and corners, centred on the origin. One segment bevels every edge
 //! and corner flat; more segments project a grid on each face onto spheres around the eight
-//! inner corners.
+//! inner corners. Either way every vertex is created once, under the name of the point it is (a
+//! bevel corner, or a point of the grid), and every face is made of those vertices, so the box is
+//! closed by construction. Points that a zero radius, or a radius using up a whole side, puts in
+//! one place are given one name, and the faces that would have no area there are left out.
 
 use std::collections::HashMap;
 
@@ -13,18 +16,19 @@ pub struct RoundedCornerBox {
     indices: Vec<i32>,
     index_to_verts: HashMap<i32, i32>,
     edge_count: i32,
+    /// Per axis, the grid line each grid line is: lines a zero radius or a used-up side puts in one
+    /// place are one line.
+    grid_lines: [Vec<i32>; 3],
     radius: f64,
     normals: Vec<Vector3>,
     vertices: Vec<Vector3>,
 }
 
 impl RoundedCornerBox {
-    /// The box as a cleaned mesh.
+    /// The box as a mesh.
     pub fn create(segments: i32, size_xyz: Vector3, radius: f64) -> Mesh {
         let round_box = RoundedCornerBox::new(segments, size_xyz, radius);
-        let mut mesh = Mesh::from_vector3_list_and_indices(&round_box.vertices, &round_box.indices);
-        mesh.clean_and_merge();
-        mesh
+        Mesh::from_vector3_list_and_indices(&round_box.vertices, &round_box.indices)
     }
 
     /// The box's vertex and index lists for `segments` segments per rounded edge.
@@ -33,6 +37,7 @@ impl RoundedCornerBox {
             indices: Vec::new(),
             index_to_verts: HashMap::new(),
             edge_count: 0,
+            grid_lines: Default::default(),
             radius: 0.0,
             normals: Vec::new(),
             vertices: Vec::new(),
@@ -51,187 +56,94 @@ impl RoundedCornerBox {
         &self.normals
     }
 
-    fn add_quad(&mut self, corners: [Vector3; 4]) {
-        let first = self.vertices.len() as i32;
-        self.vertices.extend_from_slice(&corners);
-        self.indices
-            .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
-    }
-
-    fn add_tri(&mut self, corners: [Vector3; 3]) {
-        let first = self.vertices.len() as i32;
-        self.vertices.extend_from_slice(&corners);
-        self.indices
-            .extend_from_slice(&[first, first + 1, first + 2]);
-    }
-
     fn build_single_segment_box(&mut self, size_xyz: Vector3, radius: f64) {
         self.vertices = Vec::new();
         self.indices = Vec::new();
 
         let min_size = size_xyz.x.min(size_xyz.y.min(size_xyz.z));
         let r = radius.min(min_size / 2.0);
+        let half = [size_xyz.x / 2.0, size_xyz.y / 2.0, size_xyz.z / 2.0];
+        let mut placed: HashMap<BevelCorner, i32> = HashMap::new();
 
-        let xr = size_xyz.x / 2.0;
-        let yb = size_xyz.y / 2.0;
-        let zt = size_xyz.z / 2.0;
-        let v = Vector3::new;
+        // 1) the six faces, inset by the radius
+        for axis in 0..3 {
+            for sign in [-1, 1] {
+                let (b, c) = ((axis + 1) % 3, (axis + 2) % 3);
+                let corners = [(-1, -1), (1, -1), (1, 1), (-1, 1)].map(|(sb, sc)| {
+                    let mut signs = [0; 3];
+                    (signs[axis], signs[b], signs[c]) = (sign, sb, sc);
+                    BevelCorner::new(signs, Some(axis))
+                });
+                self.add_bevel_polygon(&corners, half, r, &mut placed);
+            }
+        }
 
-        // 1) main faces, inset by the radius: top (wound ccw), bottom, left, right, front, back
-        self.add_quad([
-            v(xr - r, yb - r, zt),
-            v(-xr + r, yb - r, zt),
-            v(-xr + r, -yb + r, zt),
-            v(xr - r, -yb + r, zt),
-        ]);
-        self.add_quad([
-            v(xr - r, yb - r, -zt),
-            v(xr - r, -yb + r, -zt),
-            v(-xr + r, -yb + r, -zt),
-            v(-xr + r, yb - r, -zt),
-        ]);
-        self.add_quad([
-            v(-xr, yb - r, -zt + r),
-            v(-xr, -yb + r, -zt + r),
-            v(-xr, -yb + r, zt - r),
-            v(-xr, yb - r, zt - r),
-        ]);
-        self.add_quad([
-            v(xr, -yb + r, -zt + r),
-            v(xr, yb - r, -zt + r),
-            v(xr, yb - r, zt - r),
-            v(xr, -yb + r, zt - r),
-        ]);
-        self.add_quad([
-            v(-xr + r, -yb, -zt + r),
-            v(xr - r, -yb, -zt + r),
-            v(xr - r, -yb, zt - r),
-            v(-xr + r, -yb, zt - r),
-        ]);
-        self.add_quad([
-            v(-xr + r, yb, -zt + r),
-            v(-xr + r, yb, zt - r),
-            v(xr - r, yb, zt - r),
-            v(xr - r, yb, -zt + r),
-        ]);
+        // 2) the flat bevel along each of the twelve edges, between the two faces it joins
+        for (a, b) in [(0, 1), (1, 2), (2, 0)] {
+            let c = 3 - a - b;
+            for (sa, sb) in [(-1, -1), (1, -1), (1, 1), (-1, 1)] {
+                let on = |face: usize, sc: i8| {
+                    let mut signs = [0; 3];
+                    (signs[a], signs[b], signs[c]) = (sa, sb, sc);
+                    BevelCorner::new(signs, Some(face))
+                };
+                let corners = [on(a, -1), on(a, 1), on(b, 1), on(b, -1)];
+                self.add_bevel_polygon(&corners, half, r, &mut placed);
+            }
+        }
 
-        // 2) edge bridging quads: top front, left front, right front, bottom front, left top,
-        // left bottom, right top, right bottom, back top, back bottom, back left, back right
-        self.add_quad([
-            v(xr - r, -yb, zt - r),
-            v(xr - r, -yb + r, zt),
-            v(-xr + r, -yb + r, zt),
-            v(-xr + r, -yb, zt - r),
-        ]);
-        self.add_quad([
-            v(-xr, -yb + r, zt - r),
-            v(-xr, -yb + r, -zt + r),
-            v(-xr + r, -yb, -zt + r),
-            v(-xr + r, -yb, zt - r),
-        ]);
-        self.add_quad([
-            v(xr, -yb + r, zt - r),
-            v(xr - r, -yb, zt - r),
-            v(xr - r, -yb, -zt + r),
-            v(xr, -yb + r, -zt + r),
-        ]);
-        self.add_quad([
-            v(xr - r, -yb, -zt + r),
-            v(-xr + r, -yb, -zt + r),
-            v(-xr + r, -yb + r, -zt),
-            v(xr - r, -yb + r, -zt),
-        ]);
-        self.add_quad([
-            v(-xr, yb - r, zt - r),
-            v(-xr, -yb + r, zt - r),
-            v(-xr + r, -yb + r, zt),
-            v(-xr + r, yb - r, zt),
-        ]);
-        self.add_quad([
-            v(-xr + r, yb - r, -zt),
-            v(-xr + r, -yb + r, -zt),
-            v(-xr, -yb + r, -zt + r),
-            v(-xr, yb - r, -zt + r),
-        ]);
-        self.add_quad([
-            v(xr - r, yb - r, zt),
-            v(xr - r, -yb + r, zt),
-            v(xr, -yb + r, zt - r),
-            v(xr, yb - r, zt - r),
-        ]);
-        self.add_quad([
-            v(xr, yb - r, -zt + r),
-            v(xr, -yb + r, -zt + r),
-            v(xr - r, -yb + r, -zt),
-            v(xr - r, yb - r, -zt),
-        ]);
-        self.add_quad([
-            v(-xr + r, yb, zt - r),
-            v(-xr + r, yb - r, zt),
-            v(xr - r, yb - r, zt),
-            v(xr - r, yb, zt - r),
-        ]);
-        self.add_quad([
-            v(-xr + r, yb - r, -zt),
-            v(-xr + r, yb, -zt + r),
-            v(xr - r, yb, -zt + r),
-            v(xr - r, yb - r, -zt),
-        ]);
-        self.add_quad([
-            v(-xr, yb - r, zt - r),
-            v(-xr + r, yb, zt - r),
-            v(-xr + r, yb, -zt + r),
-            v(-xr, yb - r, -zt + r),
-        ]);
-        self.add_quad([
-            v(xr, yb - r, zt - r),
-            v(xr, yb - r, -zt + r),
-            v(xr - r, yb, -zt + r),
-            v(xr - r, yb, zt - r),
-        ]);
+        // 3) the triangle cutting off each of the eight corners
+        for sx in [-1, 1] {
+            for sy in [-1, 1] {
+                for sz in [-1, 1] {
+                    let corners = [0, 1, 2].map(|face| BevelCorner::new([sx, sy, sz], Some(face)));
+                    self.add_bevel_polygon(&corners, half, r, &mut placed);
+                }
+            }
+        }
+    }
 
-        // 3) corners: front top right, front bottom right, front top left, front bottom left,
-        // back top right, back bottom right, back top left, back bottom left
-        self.add_tri([
-            v(xr - r, -yb + r, zt),
-            v(xr - r, -yb, zt - r),
-            v(xr, -yb + r, zt - r),
-        ]);
-        self.add_tri([
-            v(xr - r, -yb + r, -zt),
-            v(xr, -yb + r, -zt + r),
-            v(xr - r, -yb, -zt + r),
-        ]);
-        self.add_tri([
-            v(-xr + r, -yb + r, zt),
-            v(-xr, -yb + r, zt - r),
-            v(-xr + r, -yb, zt - r),
-        ]);
-        self.add_tri([
-            v(-xr, -yb + r, -zt + r),
-            v(-xr + r, -yb + r, -zt),
-            v(-xr + r, -yb, -zt + r),
-        ]);
-        self.add_tri([
-            v(xr - r, yb, zt - r),
-            v(xr - r, yb - r, zt),
-            v(xr, yb - r, zt - r),
-        ]);
-        self.add_tri([
-            v(xr, yb - r, -zt + r),
-            v(xr - r, yb - r, -zt),
-            v(xr - r, yb, -zt + r),
-        ]);
-        self.add_tri([
-            v(-xr + r, yb - r, zt),
-            v(-xr + r, yb, zt - r),
-            v(-xr, yb - r, zt - r),
-        ]);
-        self.add_tri([
-            v(-xr + r, yb - r, -zt),
-            v(-xr, yb - r, -zt + r),
-            v(-xr + r, yb, -zt + r),
-        ]);
+    /// Adds one face of the single segment box, wound outward, each corner the one vertex its
+    /// [`BevelCorner`] names. Corners that are the same point once the radius has used up a side
+    /// (or is zero) are the same vertex, so such a face loses them and adds what is left, if that
+    /// still has area.
+    fn add_bevel_polygon(
+        &mut self,
+        corners: &[BevelCorner],
+        half: [f64; 3],
+        r: f64,
+        placed: &mut HashMap<BevelCorner, i32>,
+    ) {
+        // the winding comes from a box with room for every corner, where the faces are the
+        // same polygons, so a face that shrinks keeps its outward winding
+        let roomy = corners.iter().map(|corner| corner.position([2.0; 3], 1.0));
+        let points: Vec<Vector3> = roomy.collect();
+        let mut normal = Vector3::new(0.0, 0.0, 0.0);
+        let mut center = Vector3::new(0.0, 0.0, 0.0);
+        for (i, &point) in points.iter().enumerate() {
+            normal += point.cross(points[(i + 1) % points.len()]);
+            center += point;
+        }
+        let outward = normal.dot(center) > 0.0;
+
+        let mut indices: Vec<i32> = Vec::with_capacity(corners.len());
+        for corner in corners {
+            let corner = corner.collapsed(half, r);
+            let index = *placed.entry(corner).or_insert_with(|| {
+                self.vertices.push(corner.position(half, r));
+                self.vertices.len() as i32 - 1
+            });
+            if !indices.contains(&index) {
+                indices.push(index);
+            }
+        }
+        if !outward {
+            indices.reverse();
+        }
+        for k in 1..indices.len().saturating_sub(1) {
+            self.indices
+                .extend_from_slice(&[indices[0], indices[k], indices[k + 1]]);
+        }
     }
 
     fn build_multi_segment_box(&mut self, segments: i32, size_xyz: Vector3, radius_in: f64) {
@@ -254,6 +166,29 @@ impl RoundedCornerBox {
         };
 
         let face_xyz = (size_xyz / 2.0) - Vector3::new(radius, radius, radius);
+
+        // Grid line i along an axis is at -face - radius + i * dx for i up to `segments` (where it
+        // reaches -face), and the next `segments + 1` lines mirror those from +face out.
+        for axis in 0..3 {
+            self.grid_lines[axis] = (0..self.edge_count)
+                .map(|i| {
+                    let low = i <= segments;
+                    if radius == 0.0 {
+                        // every line of a rounded side is on the flat face's edge
+                        if low || face_xyz[axis] == 0.0 {
+                            segments
+                        } else {
+                            segments + 1
+                        }
+                    } else if face_xyz[axis] == 0.0 && i == segments + 1 {
+                        // the flat face has no width: its two edges are one line
+                        segments
+                    } else {
+                        i
+                    }
+                })
+                .collect();
+        }
 
         // which face of each pair is reversed: xy-planes the bottom, xz-planes the back,
         // yz-planes the left
@@ -375,7 +310,11 @@ impl RoundedCornerBox {
         }
     }
 
+    /// Adds a grid triangle, unless two of its corners are the same point (see `grid_lines`).
     fn add_face(&mut self, i: i32, j: i32, k: i32, inversed: bool) {
+        if i == j || j == k || k == i {
+            return;
+        }
         if inversed {
             self.indices.extend_from_slice(&[i, k, j]);
         } else {
@@ -383,7 +322,8 @@ impl RoundedCornerBox {
         }
     }
 
-    fn grid_index(&self, [i, j, k]: [i32; 3]) -> i32 {
+    fn grid_index(&self, ijk: [i32; 3]) -> i32 {
+        let [i, j, k] = [0, 1, 2].map(|axis| self.grid_lines[axis][ijk[axis] as usize]);
         k * self.edge_count * self.edge_count + j * self.edge_count + i
     }
 
@@ -407,6 +347,48 @@ impl RoundedCornerBox {
 
     fn translate_indices(&self, ijk: [i32; 3]) -> i32 {
         self.index_to_verts[&self.grid_index(ijk)]
+    }
+}
+
+/// A corner of the single segment box's faces: the octant it is in (a sign per axis) and the
+/// face it is on (`None` once the radius is zero and the faces meeting at a box corner share it).
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct BevelCorner {
+    signs: [i8; 3],
+    face: Option<usize>,
+}
+
+impl BevelCorner {
+    fn new(signs: [i8; 3], face: Option<usize>) -> Self {
+        BevelCorner { signs, face }
+    }
+
+    /// The name of the point this corner is for a box of `half` its size with radius `r`: on an
+    /// axis where the radius uses up the whole side the sign no longer moves the point, and with a
+    /// zero radius the face no longer does.
+    fn collapsed(self, half: [f64; 3], r: f64) -> Self {
+        let mut signs = self.signs;
+        for (axis, sign) in signs.iter_mut().enumerate() {
+            if self.face != Some(axis) && half[axis] - r == 0.0 {
+                *sign = 1;
+            }
+        }
+        let face = if r == 0.0 { None } else { self.face };
+        BevelCorner { signs, face }
+    }
+
+    /// Where the corner is: out to the side on the axis of its face, in by the radius on the
+    /// others.
+    fn position(self, half: [f64; 3], r: f64) -> Vector3 {
+        let coordinate = |axis: usize| {
+            let extent = if self.face == Some(axis) || self.face.is_none() {
+                half[axis]
+            } else {
+                half[axis] - r
+            };
+            f64::from(self.signs[axis]) * extent
+        };
+        Vector3::new(coordinate(0), coordinate(1), coordinate(2))
     }
 }
 
