@@ -60,7 +60,7 @@ pub fn lies_inside(hull: Option<&Mesh>, solid: Option<&Mesh>) -> bool {
 }
 
 /// The source's convex hull, each vertex pushed out from the hull's centroid by
-/// [`PAD_FRACTION`] of the source's diagonal and welded into a closed operand; `None` where the
+/// [`PAD_FRACTION`] of the source's diagonal, a closed operand on the hull's shared vertices; `None` where the
 /// source has no hull of its own (flat, tiny or empty), no extent, or the padded hull is no usable
 /// operand.
 pub fn build(source: Option<&Mesh>) -> Option<Mesh> {
@@ -79,12 +79,18 @@ pub fn build(source: Option<&Mesh>) -> Option<Mesh> {
         return None;
     }
 
+    // The centre the padding pushes away from is the mean of every face's three corners, so a
+    // corner many faces meet at weighs more. Any point inside the hull would do; this one keeps
+    // the padded hull, and so every bevel bounded by it, the same as when the hull's faces each
+    // carried their own copies of their corners.
     let mut centroid = Vector3::ZERO;
-    for vertex in &hull.vertices {
-        centroid += Vector3::from_vector3_float(*vertex);
+    for face in hull.faces.iter() {
+        for corner in [face.v0, face.v1, face.v2] {
+            centroid += Vector3::from_vector3_float(hull.vertices[corner as usize]);
+        }
     }
 
-    centroid /= hull.vertices.len() as f64;
+    centroid /= (hull.faces.len() * 3) as f64;
 
     let mut padded = Mesh::new();
     for vertex in &hull.vertices {
@@ -106,8 +112,8 @@ pub fn build(source: Option<&Mesh>) -> Option<Mesh> {
             .add(face.v0, face.v1, face.v2, &padded.vertices);
     }
 
-    // The hull mesh carries three vertices per triangle, so it is a soup until this welds it - and
-    // a soup is not an operand any boolean can take an inside of.
+    // The hull shares its vertices between faces, so the padded copy is a closed solid as built;
+    // the clean-up only acts should the padding round two corners onto one point.
     padded.clean_and_merge();
 
     bevel_working_mesh::is_usable_operand(Some(&padded), None).then_some(padded)

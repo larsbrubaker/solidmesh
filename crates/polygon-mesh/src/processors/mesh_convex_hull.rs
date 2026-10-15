@@ -1,5 +1,6 @@
 //! The convex hull of a mesh's vertices, cached on the mesh, built by
-//! `mi_convex_hull` (derived from MIConvexHull).
+//! `mi_convex_hull` (derived from MIConvexHull). Each hull point is one vertex of the hull mesh and
+//! its faces share them, so the hull is a closed solid by construction.
 //! `TransformedAabbCache` (`crate::transformed_aabb_cache`) measures a transformed mesh's bounds over
 //! the vertices on or outside this hull (`hull_bounds_points`).
 //!
@@ -116,22 +117,22 @@ impl Mesh {
 
         let faces = mi_convex_hull::create(&ch_vertex_list, tollerance)?;
 
-        // create the mesh from the hull data
+        // Create the mesh from the hull data: each hull point becomes one vertex, the first time
+        // a face uses it, and every face is made of those vertices, so neighbouring faces share
+        // their corners and the hull is a closed solid by construction.
         let mut hull_mesh = Mesh::new();
+        let mut vertex_of_point: Vec<Option<i32>> = vec![None; ch_vertex_list.len()];
         for face in faces {
-            let vertex_count = hull_mesh.vertices.len() as i32;
-            for v in face {
-                let p = ch_vertex_list[v];
-                hull_mesh
-                    .vertices
-                    .push(Vector3Float::from_vector3(Vector3::new(p[0], p[1], p[2])));
-            }
-            hull_mesh.faces.add(
-                vertex_count,
-                vertex_count + 1,
-                vertex_count + 2,
-                &hull_mesh.vertices,
-            );
+            let [a, b, c] = face.map(|point| {
+                *vertex_of_point[point].get_or_insert_with(|| {
+                    let p = ch_vertex_list[point];
+                    hull_mesh
+                        .vertices
+                        .push(Vector3Float::from_vector3(Vector3::new(p[0], p[1], p[2])));
+                    hull_mesh.vertices.len() as i32 - 1
+                })
+            });
+            hull_mesh.faces.add(a, b, c, &hull_mesh.vertices);
         }
 
         let hull = Arc::new(hull_mesh);

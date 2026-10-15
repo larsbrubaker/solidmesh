@@ -4,8 +4,12 @@
 //! where a bevel rounds an end), each placed in the mesh once (`extrude/ring_mesh.rs`); the caps,
 //! the straight walls and the bands between rings that differ (`extrude/band.rs`) are all built
 //! on those vertices, so every extrusion is a closed solid by construction. A bevel ring inset by
-//! less than one clipper unit is the profile itself.
+//! less than one clipper unit is the profile itself. A profile that crosses itself is first
+//! resolved into the area it fills (the even-odd area, as the path display fills it) and cut into
+//! loops that never cross or revisit a point, so a bowtie or a figure eight extrudes to a closed
+//! solid of exactly that area.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use agg_path::clipper_library::{ClipperError, JoinType, PolygonsExtensions};
@@ -67,8 +71,10 @@ pub fn extrude_bevelled(
     }
     let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
 
-    // ensure good winding and consistent shapes
-    let bottom_polygons = get_corrected_winding(&bottom_polygons)?;
+    // ensure good winding and consistent shapes: the area the outline fills, as the path
+    // display shows it, cut into loops that never cross or revisit a point, so each loop is
+    // grouped with the holes inside it before any ring is built
+    let bottom_polygons = simple_loops(get_corrected_winding(&bottom_polygons)?);
 
     // the solid's lowest z: every ring is placed this far below the height it is built at
     let base = z_height_top.min(0.0);
@@ -176,7 +182,7 @@ fn build_bevel_rings(
 ) -> Result<Vec<Ring>, ClipperError> {
     let mut rings: Vec<Ring> = Vec::new();
     let arc_tolerance = profile.arc_tolerance_for(DEFAULT_SCALING);
-    let profile = Rc::new(without_straight_points(profile));
+    let profile = Rc::new(simple_loops(profile));
     // An inset of less than one clipper unit cannot move the outline by a representable amount:
     // it only rounds some points a unit inward and leaves the rest where they were, a ring that
     // differs from the profile by rounding alone and pinches the band to nothing all round. Such a
@@ -188,7 +194,7 @@ fn build_bevel_rings(
         }
         profile
             .offset_with_arc_tolerance(delta, join, arc_tolerance)
-            .map(|ring| Rc::new(without_straight_points(ring)))
+            .map(|ring| Rc::new(simple_loops(ring)))
     };
 
     match bottom_bevel {
@@ -223,6 +229,48 @@ fn build_bevel_rings(
     }
 
     Ok(rings)
+}
+
+/// The loops as simple loops a ring can be built on: each loop that passes through one point more
+/// than once split there (see [`split_at_repeated_points`]), then the points that add no area
+/// dropped (see [`without_straight_points`]).
+fn simple_loops(loops: Paths64) -> Paths64 {
+    let mut split = Vec::with_capacity(loops.len());
+    for path in loops {
+        split_at_repeated_points(path, &mut split);
+    }
+    without_straight_points(split)
+}
+
+/// Adds `path` to `out` as loops that each pass through every point once. An outline that crosses
+/// itself (a bowtie, a figure eight, a cross whose wings are wider than its arms are long) comes
+/// back from the clipper clean-up as the area the user sees filled, but drawn as one loop that
+/// runs through each crossing point twice, touching itself there. A cap cannot be filled across
+/// such a loop, so it is cut at the first point it revisits into the part between the two visits
+/// and the rest, each a closed loop, and both are cut again until no point repeats. The pieces
+/// cover exactly the area the loop did and keep its direction, so outlines stay outlines and holes
+/// holes. A loop with no repeated point is passed through unchanged.
+fn split_at_repeated_points(path: Path64, out: &mut Paths64) {
+    // a work list rather than recursion: a traced outline can revisit thousands of points
+    let mut pending = vec![path];
+    while let Some(path) = pending.pop() {
+        let mut first_visit: HashMap<(i64, i64), usize> = HashMap::with_capacity(path.len());
+        let repeat = path
+            .iter()
+            .enumerate()
+            .find_map(|(j, point)| first_visit.insert((point.x, point.y), j).map(|i| (i, j)));
+        match repeat {
+            None => out.push(path),
+            Some((i, j)) => {
+                // from the second visit round to the first, then from the first visit to the
+                // second; the rest is cut first, so the pieces come out in a fixed order
+                let mut rest: Path64 = path[j..].to_vec();
+                rest.extend_from_slice(&path[..i]);
+                pending.push(path[i..j].to_vec());
+                pending.push(rest);
+            }
+        }
+    }
 }
 
 /// The loops with every point that lies exactly on the line through its neighbours removed
