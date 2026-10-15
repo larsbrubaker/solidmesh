@@ -1,10 +1,9 @@
-# geometry-processing: MatterCAD.GeometryProcessing, the bevel/fillet kernel (topology, path bevels,
-# the bevel itself). Pure geometry over polygon-mesh and vector-math with no scene, UI or app
-# dependency, so it builds for wasm32-unknown-unknown and is testable without a GPU. Slices land
-# bottom-up (docs/PORTING_PLAN.md, Phase 5C): Topology first.
+# geometry-processing: the bevel/fillet kernel (topology, path bevels, the bevel itself). Pure
+# geometry over polygon-mesh and vector-math with no scene, UI or app dependency, so it builds for
+# wasm32-unknown-unknown and is testable without a GPU.
 [package]
 name = "geometry-processing"
-description = "Port of MatterCAD.GeometryProcessing: the bevel/fillet kernel for mattercad-rust"
+description = "The bevel/fillet kernel and mesh topology for mattercad-rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -26,9 +25,9 @@ serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 serde_json = "1"
-# C# `SHA256` for the cost tests' mesh digests (ConvexCellBoundTests), as mattercad-model has it.
+# SHA-256 for the cost tests' mesh digests (ConvexCellBoundTests), as mattercad-model has it.
 sha2 = { version = "0.10", default-features = false }
-# `Thingi10KSweep` reads the corpus' meshes out of their zip files (StlReader), as C#'s ZipFile does.
+# `Thingi10KSweep` reads the corpus' meshes straight out of their zip files (StlReader).
 zip = { version = "2.4", default-features = false, features = ["deflate"] }
 
 # The cost rungs time the work on the test thread's own CPU clock (tests/bevel/thread_cpu_time.rs),

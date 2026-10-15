@@ -1,9 +1,9 @@
-# vector-math: agg-sharp's VectorMath (vectors, MathHelper, Matrix4X4, Quaternion,
+# vector-math: VectorMath (vectors, MathHelper, Matrix4X4, Quaternion,
 # AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing, Estimator, BVH).
-# std plus serde (Newtonsoft-shaped JSON for the value types); builds for wasm32-unknown-unknown.
+# std plus serde (the JSON shape `.mcx` files store the value types in); builds for wasm32-unknown-unknown.
 [package]
 name = "vector-math"
-description = "Port of agg-sharp VectorMath: vectors and math helpers for mattercad-rust"
+description = "VectorMath: vectors, matrices and math helpers for mattercad-rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

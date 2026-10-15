@@ -1,10 +1,11 @@
-# polygon-mesh: agg-sharp's PolygonMesh (Mesh, faces, edges, measurements, Platonic solids, STL).
+# polygon-mesh: triangle meshes (Mesh, faces, edges, measurements, Platonic solids, STL).
 # Depends on vector-math, for CSG (`csg`) the sibling manifold-rust checkout, and for slicing the
 # sibling clipper2-rust checkout; builds for wasm32-unknown-unknown. The ray tracer's trace path
-# lives in `ray_tracer`; Sdf/DualContouring and the other processors join in later Phase 2 slices.
+# lives in `ray_tracer`, the signed distance fields in `sdf` and `dual_contouring`, and the mesh
+# processors in `processors`.
 [package]
 name = "polygon-mesh"
-description = "Port of agg-sharp PolygonMesh: triangle meshes for mattercad-rust"
+description = "PolygonMesh: triangle meshes, CSG, slicing and ray tracing for mattercad-rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -19,22 +20,20 @@ path = "src/lib.rs"
 [dependencies]
 vector-math = { path = "../vector-math" }
 # agg-path: the path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`) and the
-# ClipperLib polygon helpers (agg-sharp's clipper_library) slicing and stitching share with
+# ClipperLib polygon helpers (`clipper_library`) slicing and stitching share with
 # DataConverters2D.
 agg-path = { path = "../agg-path" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
 manifold-rust = { path = "../../../manifold-rust" }
-# C#'s ClipperLib integer polygons (`List<IntPoint>`) for slicing: Clipper2's `Path64`/`Paths64`
+# The integer polygons slicing works in: Clipper2's `Path64`/`Paths64`
 # (the union itself runs on agg-path's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust" }
-# agg-sharp's Tesselate (the SGI GLU tessellator) for `CachedTesselator`: tess2-rust is the same
-# SGI algorithm, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
+# The SGI GLU tessellator for `CachedTesselator`: tess2-rust, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
 tess2-rust = { path = "../../../tess2-rust" }
 
-# Native hosts get the kernel's `parallel` feature, as agg-sharp's ManifoldKernel turns
-# ManifoldParallel on everywhere but the browser: wasm32-unknown-unknown has no threads to
-# schedule on. Only determinism-preserving sites are parallel, so the geometry is identical.
+# Native hosts get the kernel's `parallel` feature; the browser does not, because
+# wasm32-unknown-unknown has no threads to schedule on. Only determinism-preserving sites are parallel, so the geometry is identical.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 manifold-rust = { path = "../../../manifold-rust", features = ["parallel"] }
