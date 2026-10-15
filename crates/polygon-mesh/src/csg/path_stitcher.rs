@@ -14,8 +14,15 @@ fn distance_squared(a: Point64, b: Point64) -> i64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y))
 }
 
-fn at_height(point: Point64, height: f64) -> Vector3 {
-    Vector3::new(point.x as f64, point.y as f64, height)
+/// The point in units (`scaling` clipper units to the unit) at `height`, already in units. Every
+/// coordinate is computed once in f64 and rounded to the mesh's f32 once, the same way the caps
+/// (`create_vertex_storage` then `triangulate_faces`) and the extruder's band triangulation place
+/// their points, so a ring this walls lands on exactly the vertices the faces beside it use.
+/// Building in clipper units and scaling the f32 mesh afterwards rounds twice, which moved a ring
+/// at a height such as 0.0999999970 mm to 0.1 here but to 0.099999994 in its neighbours, leaving
+/// the extrusion open along that ring.
+fn at_height(point: Point64, height: f64, scaling: f64) -> Vector3 {
+    Vector3::new(point.x as f64 / scaling, point.y as f64 / scaling, height)
 }
 
 /// A cap facing up when there is only a bottom, one facing down when there is only a top, walls
@@ -40,14 +47,13 @@ pub fn stitch(
             let mut mesh = Mesh::new();
             for (bottom, top) in bottom_loop.iter().zip(top_loop) {
                 let walls = if bottom.len() == top.len() {
-                    create_simple_wall(bottom, bottom_height * 1000.0, top, top_height * 1000.0)
+                    create_simple_wall(bottom, bottom_height, top, top_height, scaling)
                 } else {
-                    stitch_2_single_walls(bottom, bottom_height * 1000.0, top, top_height * 1000.0)
+                    stitch_2_single_walls(bottom, bottom_height, top, top_height, scaling)
                 };
                 mesh.copy_all_faces(&walls, Matrix4X4::IDENTITY);
             }
 
-            mesh.transform(Matrix4X4::create_scale_uniform(1.0 / scaling));
             Some(mesh)
         }
         _ => None,
@@ -96,12 +102,14 @@ pub fn best_start_indices(loop_a: &Path64, loop_b: &Path64) -> (usize, usize) {
 /// Walls two loops that do not have the same number of vertices, by walking both at once and
 /// closing one triangle per step. Each step advances the loop whose candidate diagonal is the
 /// SHORTER, which is what keeps the wall running straight up between the loops; once a loop has
-/// been walked all the way round, every remaining step is taken on the other.
+/// been walked all the way round, every remaining step is taken on the other. The loops are in
+/// clipper units (`scaling` to the unit) and the heights in units; the mesh is in units.
 pub fn stitch_2_single_walls(
     loop_a: &Path64,
     height_a: f64,
     loop_b: &Path64,
     height_b: f64,
+    scaling: f64,
 ) -> Mesh {
     let mut mesh = Mesh::new();
     let (start_index_a, start_index_b) = best_start_indices(loop_a, loop_b);
@@ -120,17 +128,17 @@ pub fn stitch_2_single_walls(
 
         if (!looped_a && diagonal_if_advancing_a <= diagonal_if_advancing_b) || looped_b {
             mesh.create_face(&[
-                at_height(loop_a[cur_index_a], height_a),
-                at_height(loop_a[next_index_a], height_a),
-                at_height(loop_b[cur_index_b], height_b),
+                at_height(loop_a[cur_index_a], height_a, scaling),
+                at_height(loop_a[next_index_a], height_a, scaling),
+                at_height(loop_b[cur_index_b], height_b, scaling),
             ]);
             cur_index_a = next_index_a;
             looped_a = cur_index_a == start_index_a;
         } else {
             mesh.create_face(&[
-                at_height(loop_a[cur_index_a], height_a),
-                at_height(loop_b[next_index_b], height_b),
-                at_height(loop_b[cur_index_b], height_b),
+                at_height(loop_a[cur_index_a], height_a, scaling),
+                at_height(loop_b[next_index_b], height_b, scaling),
+                at_height(loop_b[cur_index_b], height_b, scaling),
             ]);
             cur_index_b = next_index_b;
             looped_b = cur_index_b == start_index_b;
@@ -144,25 +152,27 @@ pub fn stitch_2_single_walls(
     mesh
 }
 
-/// Walls two loops with the same vertex count, two triangles per vertex pair.
+/// Walls two loops with the same vertex count, two triangles per vertex pair. The loops are in
+/// clipper units (`scaling` to the unit) and the heights in units; the mesh is in units.
 pub fn create_simple_wall(
     bottom_loop: &Path64,
     bottom_height: f64,
     top_loop: &Path64,
     top_height: f64,
+    scaling: f64,
 ) -> Mesh {
     let mut mesh = Mesh::new();
     for i in 0..bottom_loop.len() {
         let next = (i + 1) % bottom_loop.len();
         mesh.create_face(&[
-            at_height(bottom_loop[i], bottom_height),
-            at_height(bottom_loop[next], bottom_height),
-            at_height(top_loop[i], top_height),
+            at_height(bottom_loop[i], bottom_height, scaling),
+            at_height(bottom_loop[next], bottom_height, scaling),
+            at_height(top_loop[i], top_height, scaling),
         ]);
         mesh.create_face(&[
-            at_height(bottom_loop[next], bottom_height),
-            at_height(top_loop[next], top_height),
-            at_height(top_loop[i], top_height),
+            at_height(bottom_loop[next], bottom_height, scaling),
+            at_height(top_loop[next], top_height, scaling),
+            at_height(top_loop[i], top_height, scaling),
         ]);
     }
 
