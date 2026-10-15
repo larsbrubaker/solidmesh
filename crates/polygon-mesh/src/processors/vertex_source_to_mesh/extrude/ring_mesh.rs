@@ -81,14 +81,17 @@ impl RingMesh {
 
     /// The straight wall between two placements of the same loops: a quad per edge, walking the
     /// lower ring's edges forward and the upper ring's backward, which is how every band meets
-    /// the rings it joins (see [`RingMesh::cap`]).
+    /// the rings it joins (see [`RingMesh::cap`]). Each quad is split from its lower start corner
+    /// to its upper end corner. Either diagonal makes the same flat wall, but a mesh built from
+    /// the solid (a boolean, a bevel) follows the triangles it is given, and this is the split
+    /// the walls of saved designs were made with.
     pub fn straight_wall(&mut self, lower: &PlacedRing, upper: &PlacedRing) {
         for (lower_loop, upper_loop) in lower.indices.iter().zip(&upper.indices) {
             let count = lower_loop.len();
             for i in 0..count {
                 let next = (i + 1) % count;
-                self.add(lower_loop[i], lower_loop[next], upper_loop[i]);
-                self.add(lower_loop[next], upper_loop[next], upper_loop[i]);
+                self.add(lower_loop[i], lower_loop[next], upper_loop[next]);
+                self.add(lower_loop[i], upper_loop[next], upper_loop[i]);
             }
         }
     }

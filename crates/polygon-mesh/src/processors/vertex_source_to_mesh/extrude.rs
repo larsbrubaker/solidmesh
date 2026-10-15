@@ -1,37 +1,39 @@
 //! Lifting a 2D profile into a prism, square-ended or with bevel rings at either end.
 //!
-//! A bevelled extrusion is a stack of rings (the profile and its insets), each placed in the
-//! mesh once (`extrude/ring_mesh.rs`); the caps, the straight walls and the bands between rings
-//! that differ (`extrude/band.rs`) are all built on those vertices. A bevel ring inset by less
-//! than one clipper unit is the profile itself.
+//! Every extrusion is a stack of rings (the profile at the bottom and the top, and its insets
+//! where a bevel rounds an end), each placed in the mesh once (`extrude/ring_mesh.rs`); the caps,
+//! the straight walls and the bands between rings that differ (`extrude/band.rs`) are all built
+//! on those vertices, so every extrusion is a closed solid by construction. A bevel ring inset by
+//! less than one clipper unit is the profile itself.
 
 use std::rc::Rc;
 
 use agg_path::clipper_library::{ClipperError, JoinType, PolygonsExtensions};
 use agg_path::data_converters_2d::{
-    create_vertex_storage, get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
+    get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
 use agg_path::vertex_source::VertexSource;
 use clipper2_rust::{Path64, Paths64};
-use vector_math::Vector3;
 
-use super::triangulate_faces;
-use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
 use band::add_band;
 use ring_mesh::{PlacedRing, RingMesh};
 
 /// The profile from z = 0 up to `z_height_top` with square ends: [`extrude_bevelled`] with no
-/// bevel at either end. A clipper failure in the profile's clean-up comes back as the error.
+/// bevel at either end, a closed solid by construction. A clipper failure in the profile's
+/// clean-up comes back as the error.
 pub fn extrude(
     vertex_source_in: &dyn VertexSource,
     z_height_top: f64,
 ) -> Result<Mesh, ClipperError> {
-    let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
-
-    // ensure good winding and consistent shapes
-    let bottom_polygons = get_corrected_winding(&bottom_polygons)?;
-    Ok(extrude_square_ended(&bottom_polygons, z_height_top))
+    extrude_bevelled(
+        vertex_source_in,
+        z_height_top,
+        None,
+        JoinType::Miter,
+        None,
+        JoinType::Miter,
+    )
 }
 
 /// Extrudes a closed profile from z = 0 up to `z_height_top`, optionally rounding either end.
@@ -43,10 +45,9 @@ pub fn extrude(
 /// last entry's at `z_height_top`, the profile the top cap is built from. `bottom_bevel` is
 /// its mirror image, ordered from the top of the bevel DOWNWARD, its last inset reached at
 /// z = 0. The join types say how the clipper offset rounds corners while insetting each bevel.
-/// With no bevel at either end the prism is square-ended, built from the profile's fill with a
-/// wall along each of its edges and the seams welded. With a bevel, every ring is placed in the
-/// mesh once and every face is built on its vertices, so the result is a closed solid whatever
-/// the profile.
+/// With no bevel at either end the prism is square-ended: the profile placed at z = 0 and at
+/// `z_height_top`, capped and joined by a straight wall. Every ring is placed in the mesh once
+/// and every face is built on its vertices, so the result is a closed solid whatever the profile.
 /// A clipper failure in the profile's clean-up comes back as the error.
 pub fn extrude_bevelled(
     vertex_source_in: &dyn VertexSource,
@@ -61,9 +62,6 @@ pub fn extrude_bevelled(
     // ensure good winding and consistent shapes
     let bottom_polygons = get_corrected_winding(&bottom_polygons)?;
 
-    if bevel.is_none() && bottom_bevel.is_none() {
-        return Ok(extrude_square_ended(&bottom_polygons, z_height_top));
-    }
     get_loop_mesh(
         z_height_top,
         bevel,
@@ -72,62 +70,6 @@ pub fn extrude_bevelled(
         bottom_bevel,
         bottom_join_type,
     )
-}
-
-/// The square-ended prism: the profile's fill at the top and (reversed) at the bottom, and a
-/// wall quad along every edge of the fill.
-fn extrude_square_ended(bottom_polygons: &Paths64, z_height_top: f64) -> Mesh {
-    let mut bottom_teselated_source = CachedTesselator::new();
-
-    // add the top polygon
-    let vertex_source_bottom = create_vertex_storage(bottom_polygons, DEFAULT_SCALING);
-    let mut mesh = triangulate_faces(
-        &vertex_source_bottom,
-        Some(&mut bottom_teselated_source),
-        Some(Mesh::new()),
-        0.0,
-    );
-    mesh.translate(Vector3::new(0.0, 0.0, z_height_top));
-
-    let cache = &bottom_teselated_source.indices_cache;
-    let position = |i: usize| bottom_teselated_source.vertices_cache[cache[i].index as usize];
-    let num_indicies = cache.len();
-
-    // then the outside edge
-    for i in (0..num_indicies.saturating_sub(2)).step_by(3) {
-        let (v0, v1, v2) = (position(i), position(i + 1), position(i + 2));
-        if v0 == v1 || v1 == v2 || v2 == v0 {
-            continue;
-        }
-
-        let bottom = [v0, v1, v2].map(|v| Vector3::from_vector2(v, 0.0));
-        let top = [v0, v1, v2].map(|v| Vector3::from_vector2(v, z_height_top));
-
-        for corner in 0..3 {
-            if cache[i + corner].is_edge {
-                let next = (corner + 1) % 3;
-                mesh.create_face(&[bottom[corner], bottom[next], top[next], top[corner]]);
-            }
-        }
-    }
-
-    // then the bottom
-    for i in (0..num_indicies.saturating_sub(2)).step_by(3) {
-        let (v0, v1, v2) = (position(i), position(i + 1), position(i + 2));
-        if v0 == v1 || v1 == v2 || v2 == v0 {
-            continue;
-        }
-
-        mesh.create_face(&[
-            Vector3::from_vector2(v2, 0.0),
-            Vector3::from_vector2(v1, 0.0),
-            Vector3::from_vector2(v0, 0.0),
-        ]);
-    }
-
-    mesh.clean_and_merge();
-
-    mesh
 }
 
 /// One profile ring of a bevelled extrusion and the height it sits at. The un-inset profile is
@@ -177,8 +119,22 @@ fn get_loop_mesh(
             continue;
         };
 
-        let mut lower = ring_mesh.place(first_loops, *first_height);
         let all_loops = |ring: &PlacedRing| (0..ring.loops.len()).collect::<Vec<_>>();
+        if let [_, ((top_loops, top_height), _)] = rings.as_slice() {
+            if Rc::ptr_eq(first_loops, top_loops) {
+                // A square-ended prism is built top first: its top cap, its walls, then its
+                // bottom, the order of the faces the prisms of saved designs hold. The solid is
+                // the same in any order, but what is built from it afterwards (a bevel walks
+                // faces in order and keeps the first of equal choices) follows that order.
+                let upper = ring_mesh.place(top_loops, *top_height);
+                ring_mesh.cap(&upper, &all_loops(&upper), true);
+                let lower = ring_mesh.place(first_loops, *first_height);
+                ring_mesh.straight_wall(&lower, &upper);
+                ring_mesh.cap(&lower, &all_loops(&lower), false);
+                continue;
+            }
+        }
+        let mut lower = ring_mesh.place(first_loops, *first_height);
         ring_mesh.cap(&lower, &all_loops(&lower), false);
         for ((loops, height), shrinks) in rings.iter().skip(1) {
             let upper = ring_mesh.place(loops, *height);
