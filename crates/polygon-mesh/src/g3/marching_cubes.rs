@@ -1,13 +1,12 @@
-//! geometry3Sharp's `MarchingCubes` (`mesh_generators/MarchingCubes.cs`, Boost Software License
-//! 1.0): marching cubes over an implicit function, sampling each cell's corners and welding
-//! vertices by exact position. agg-sharp's two-operand implicit boolean
-//! (`BooleanProcessing.Do`) runs it; the n-ary `DoArray` runs `marching_cubes_pro`. Both share
+//! geometry3Sharp's `MarchingCubes` (Boost Software License 1.0): marching cubes over an implicit
+//! function, sampling each cell's corners and welding vertices by exact position. The two-operand
+//! implicit boolean runs it; the n-ary one runs `marching_cubes_pro`. Both share
 //! [`find_iso`], the edge root-finder, and the tables in `sdf::marching_cubes_tables` (g3's two
 //! copies are identical).
 //!
-//! C# polygonizes z-slabs with `gParallel.ForEach` under spin locks, so its vertex and triangle
-//! order varies run to run; here the slabs run in order on one thread (C#'s `generate_basic`).
-//! The vertex positions and the set of triangles are the same either way.
+//! The z-slabs run in order on one thread, so the vertex and triangle order is the same on every
+//! run; polygonizing slabs in parallel would give the same positions and triangles in a varying
+//! order.
 
 use std::collections::HashMap;
 
@@ -17,7 +16,7 @@ use crate::sdf::marching_cubes_tables::{EDGE_INDICES, EDGE_TABLE, TRI_TABLE};
 
 /// g3 `RootfindingModes`: how an edge crossing is converged on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // agg-sharp only selects LerpSteps; the others are g3's API.
+#[allow(dead_code)] // only LerpSteps is selected; the others complete the set of modes.
 pub(crate) enum RootfindingModes {
     SingleLerp,
     LerpSteps,
@@ -105,36 +104,30 @@ pub(crate) fn cell_dimensions(bounds: &AxisAlignedBox3d, cube_size: f64) -> [i32
     ]
 }
 
-/// g3 `MarchingCubes`, configured as agg-sharp sets it.
+/// g3 `MarchingCubes`, configured as the implicit booleans set it.
 pub(crate) struct MarchingCubes<'a> {
-    /// C# `Implicit`.
     pub(crate) implicit: &'a dyn BoundedImplicitFunction3d,
-    /// C# `IsoValue`.
     pub(crate) iso_value: f64,
-    /// C# `Bounds`.
     pub(crate) bounds: AxisAlignedBox3d,
-    /// C# `CubeSize`.
     pub(crate) cube_size: f64,
-    /// C# `RootMode`.
     pub(crate) root_mode: RootfindingModes,
-    /// C# `RootModeSteps`.
     pub(crate) root_mode_steps: i32,
 }
 
-/// A cell's corner positions and field values (C# `GridCell`).
+/// A cell's corner positions and field values.
 struct GridCell {
     p: [[f64; 3]; 8],
     f: [f64; 8],
 }
 
-/// The weld key of a position: exact bits, with -0.0 folded onto 0.0 as .NET's
-/// `double.GetHashCode`/`==` do.
+/// The weld key of a position: exact bits, with -0.0 folded onto 0.0 since the two are equal
+/// positions.
 fn position_key(p: [f64; 3]) -> [u64; 3] {
     p.map(|v| (v + 0.0).to_bits())
 }
 
 impl MarchingCubes<'_> {
-    /// C# `Generate()`: the mesh of the iso surface (C# `Mesh`).
+    /// The mesh of the iso surface.
     pub(crate) fn generate(&self) -> DMesh3 {
         let mut mesh = DMesh3::default();
         let mut vertex_hash: HashMap<[u64; 3], i32> = HashMap::new();
@@ -158,8 +151,9 @@ impl MarchingCubes<'_> {
         mesh
     }
 
-    /// C# `initialize_cell`. Each coordinate is `min + size * index` (never accumulated), so a
-    /// corner shared by several cells gets the same bits in each, which the weld relies on.
+    /// Fills a cell's corners and values. Each coordinate is `min + size * index` (never
+    /// accumulated), so a corner shared by several cells gets the same bits in each, which the weld
+    /// relies on.
     fn initialize_cell(&self, cell: &mut GridCell, idx: [i32; 3]) {
         let min = self.bounds.min;
         let c = self.cube_size;
@@ -184,7 +178,7 @@ impl MarchingCubes<'_> {
         }
     }
 
-    /// C# `shift_cell_x`: slides the cell from `xi - 1` to `xi`, reusing the shared face.
+    /// Slides the cell from `xi - 1` to `xi`, reusing the shared face.
     fn shift_cell_x(&self, cell: &mut GridCell, xi: i32) {
         let x_prev = cell.p[1][0];
         let x1 = self.bounds.min[0] + self.cube_size * (xi + 1) as f64;
@@ -203,7 +197,7 @@ impl MarchingCubes<'_> {
         }
     }
 
-    /// C# `polygonize_cell`: the cell's crossings and triangles.
+    /// The cell's crossings and triangles.
     fn polygonize_cell(
         &self,
         cell: &GridCell,

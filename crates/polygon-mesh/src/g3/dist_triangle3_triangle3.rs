@@ -1,13 +1,11 @@
-//! geometry3Sharp's triangle-triangle distance and the queries it is built from (all ported from
-//! WildMagic 5 in g3): `DistTriangle3Triangle3`, `DistSegment3Triangle3`, `DistLine3Triangle3`
-//! and `DistLine3Segment3`, with `Segment3d`'s centre/direction/extent form and
-//! `Vector3d.GenerateComplementBasis`. The point-triangle query they fall back to is
-//! `tri_distance::distance_sqr_closest`. `DMeshAABBTree3::find_nearest_triangles`
-//! (`dmesh_aabb_tree3_pairs.rs`) measures leaf pairs with it, and `mesh_distance` reads the
-//! closest points of the pair it finds.
+//! The triangle-triangle distance and the queries it is built from (geometry3Sharp's, after
+//! WildMagic 5): triangle-triangle, segment-triangle, line-triangle and line-segment, with
+//! [`Segment3d`]'s centre/direction/extent form and a complement basis for a direction.
+//! The point-triangle query they fall back to is `tri_distance::distance_sqr_closest`.
+//! `DMeshAABBTree3::find_nearest_triangles` (`dmesh_aabb_tree3_pairs.rs`) measures leaf pairs with
+//! it, and `mesh_distance` reads the closest points of the pair it finds.
 //!
-//! Only the distances and closest points are ported; g3's barycentric outputs are read by nothing
-//! this port reaches.
+//! Only the distances and closest points are computed; nothing reads barycentric outputs.
 
 use super::tri_distance::distance_sqr_closest;
 use super::vector3d::{add, cross, dot, length, scale, sub, EPSILON, ZERO_TOLERANCE};
@@ -21,12 +19,11 @@ pub(crate) struct Segment3d {
 }
 
 impl Segment3d {
-    /// C# `new Segment3d(p0, p1)` / `SetEndpoints` (`update_from_endpoints`).
+    /// The segment between two endpoints, in centre/direction/extent form.
     pub(crate) fn new(p0: [f64; 3], p1: [f64; 3]) -> Self {
         let center = scale(add(p0, p1), 0.5);
         let mut direction = sub(p1, p0);
-        // C# `Vector3d.Normalize()`: returns the length, or zeroes the vector and returns 0 at
-        // or under `MathUtil.Epsilon`.
+        // Returns the length, or zeroes the vector and returns 0 at or under `MathUtil.Epsilon`.
         let mut len = length(direction);
         if len > EPSILON {
             let inv_length = 1.0 / len;
@@ -46,12 +43,10 @@ impl Segment3d {
         }
     }
 
-    /// C# `P0`.
     pub(crate) fn p0(&self) -> [f64; 3] {
         sub(self.center, scale(self.direction, self.extent))
     }
 
-    /// C# `P1`.
     pub(crate) fn p1(&self) -> [f64; 3] {
         add(self.center, scale(self.direction, self.extent))
     }
@@ -68,13 +63,11 @@ struct Line3d {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TriTriDistance {
     pub(crate) distance_squared: f64,
-    /// C# `Triangle0Closest`.
     pub(crate) triangle0_closest: [f64; 3],
-    /// C# `Triangle1Closest`.
     pub(crate) triangle1_closest: [f64; 3],
 }
 
-/// C# `new DistTriangle3Triangle3(triangle0, triangle1).GetSquared()`, with its closest points.
+/// The squared distance between two triangles, with its closest points.
 pub(crate) fn dist_triangle3_triangle3(
     triangle0: &[[f64; 3]; 3],
     triangle1: &[[f64; 3]; 3],
@@ -105,8 +98,8 @@ pub(crate) fn dist_triangle3_triangle3(
     }
 
     // Compare edges of triangle1 to the interior of triangle0. Here the segment is triangle1's
-    // edge, so its closest point is triangle1's: g3 stored it as Triangle0Closest (WildMagic 5
-    // swaps them), which put both "closest points" on the wrong triangles (divergence 2830).
+    // edge, so its closest point is triangle1's and is stored as triangle1's; storing it the other
+    // way would put both "closest points" on the wrong triangles.
     let (mut i0, mut i1) = (2, 0);
     while i1 < 3 {
         let edge = Segment3d::new(triangle1[i0], triangle1[i1]);
@@ -136,7 +129,6 @@ struct SegmentTriangle {
     triangle_closest: [f64; 3],
 }
 
-/// C# `DistSegment3Triangle3.GetSquared()`.
 fn dist_segment3_triangle3(segment: &Segment3d, triangle: &[[f64; 3]; 3]) -> SegmentTriangle {
     let line = Line3d {
         origin: segment.center,
@@ -179,13 +171,12 @@ struct LineTriangle {
     triangle_closest: [f64; 3],
 }
 
-/// C# `Vector3d.UnitCross`: the normalized cross product (zero at or under `MathUtil.Epsilon`).
+/// The normalized cross product (zero at or under `MathUtil.Epsilon`).
 fn unit_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     super::vector3d::normalized(cross(a, b))
 }
 
-/// C# `Vector3d.GenerateComplementBasis(ref u, ref v, w)`: `u`, `v` completing the unit `w` to an
-/// orthonormal basis.
+/// `u`, `v` completing the unit `w` to an orthonormal basis.
 fn generate_complement_basis(w: [f64; 3]) -> ([f64; 3], [f64; 3]) {
     let mut u = [0.0; 3];
     let mut v = [0.0; 3];
@@ -211,7 +202,6 @@ fn generate_complement_basis(w: [f64; 3]) -> ([f64; 3], [f64; 3]) {
     (u, v)
 }
 
-/// C# `DistLine3Triangle3.GetSquared()`.
 fn dist_line3_triangle3(line: &Line3d, triangle: &[[f64; 3]; 3]) -> LineTriangle {
     // Test if line intersects triangle.  If so, the squared distance is zero.
     let edge0 = sub(triangle[1], triangle[0]);
@@ -287,7 +277,6 @@ struct LineSegment {
     segment_closest: [f64; 3],
 }
 
-/// C# `DistLine3Segment3.GetSquared()`.
 fn dist_line3_segment3(line: &Line3d, segment: &Segment3d) -> LineSegment {
     let diff = sub(line.origin, segment.center);
     let a01 = -dot(line.direction, segment.direction);
@@ -359,7 +348,7 @@ mod tests {
     }
 
     /// The nearest pair is found from triangle1's edge (its bottom edge over triangle0's middle),
-    /// and each closest point still lies on its own triangle (divergence 2830).
+    /// and each closest point still lies on its own triangle.
     #[test]
     fn rust_only_closest_points_stay_on_their_own_triangles() {
         let a = [[-5.0, -5.0, 0.0], [5.0, -5.0, 0.0], [0.0, 5.0, 0.0]];

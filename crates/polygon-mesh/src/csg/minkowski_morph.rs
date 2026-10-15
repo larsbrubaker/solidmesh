@@ -1,14 +1,12 @@
-//! agg-sharp `Csg/MinkowskiProcessing.cs`'s Minkowski runs: `MinkowskiSum`,
-//! `MinkowskiDifference` (with and without the `ErosionPath` it took), their progress and
-//! cancellation, and the kernel routing (`Run`, `Morph`): the closed form for a convex
-//! erosion, the parallel union tree for a dilation or erosion by a convex tool, the sweep for
-//! the rest. The operand import and shell repair they share live in `minkowski_processing.rs`;
-//! the bar's time weighting is `minkowski_progress_model.rs`.
+//! The Minkowski runs: [`minkowski_sum`], [`minkowski_difference`] (with and without the
+//! [`ErosionPath`] it took), their progress and cancellation, and the kernel routing (`run`,
+//! `morph`): the closed form for a convex erosion, the parallel union tree for a dilation or
+//! erosion by a convex tool, the sweep for the rest. The operand import and shell repair they share
+//! live in `minkowski_processing.rs`; the bar's time weighting is `minkowski_progress_model.rs`.
 //!
-//! C#'s async entry points (`MinkowskiSumAsync`, `MinkowskiDifferenceWithPathAsync`) only put
-//! this same call on a worker and yield around it; a Rust caller runs these on its own worker
-//! (`RebuildCx::compute`), so the synchronous calls with a reporter and token are the port of
-//! both.
+//! There are no async entry points: a caller runs these on its own worker (`RebuildCx::compute`),
+//! so the synchronous calls with a reporter and token serve both the blocking and the
+//! progress-reporting cases.
 
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -24,8 +22,8 @@ use super::{
 };
 use crate::{CancelToken, Mesh};
 
-/// C# `ErosionPath`: which algorithm an erosion actually ran. A cost signal, not a
-/// correctness one - both paths compute the same erosion.
+/// Which algorithm an erosion actually ran. A cost signal, not a correctness one - both paths
+/// compute the same erosion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErosionPath {
     /// The halfspace-intersection closed form: two convex hulls, whatever the triangle count.
@@ -38,23 +36,23 @@ pub enum ErosionPath {
 static DILATION_TREE_RUNS: AtomicI64 = AtomicI64::new(0);
 static EROSION_TREE_RUNS: AtomicI64 = AtomicI64::new(0);
 
-/// C# `DilationTreeRuns`: how many dilations in this process took the kernel's parallel union
-/// tree rather than the sweep. A path signal for tests.
+/// How many dilations in this process took the kernel's parallel union tree rather than the sweep.
+/// A path signal for tests.
 pub fn dilation_tree_runs() -> i64 {
     DILATION_TREE_RUNS.load(Ordering::SeqCst)
 }
 
-/// C# `ErosionTreeRuns`: the erosion counterpart of [`dilation_tree_runs`].
+/// The erosion counterpart of [`dilation_tree_runs`].
 pub fn erosion_tree_runs() -> i64 {
     EROSION_TREE_RUNS.load(Ordering::SeqCst)
 }
 
-/// C# `MinkowskiSum(solid, tool)`: dilation, every point of `solid` swept by `tool`.
+/// Dilation, every point of `solid` swept by `tool`.
 pub fn minkowski_sum(solid: &Mesh, tool: &Mesh) -> Result<Mesh, MinkowskiError> {
     run(solid, tool, false, None, None).map(|(mesh, _)| mesh)
 }
 
-/// C# `MinkowskiSumAsync`: [`minkowski_sum`] reporting to `reporter` and stopping between
+/// [`minkowski_sum`] reporting to `reporter` and stopping between
 /// hulls when `cancel` is signalled (`Err(Cancelled)`; a run that finished first wins).
 pub fn minkowski_sum_with_progress(
     solid: &Mesh,
@@ -65,13 +63,12 @@ pub fn minkowski_sum_with_progress(
     run(solid, tool, false, reporter, Some(cancel)).map(|(mesh, _)| mesh)
 }
 
-/// C# `MinkowskiDifference(solid, tool)`: erosion, the points of `solid` that `tool` still
-/// fits inside. A tool too large erodes the solid away: an empty mesh, not a failure.
+/// Erosion, the points of `solid` that `tool` still fits inside. A tool too large erodes the solid
+/// away: an empty mesh, not a failure.
 pub fn minkowski_difference(solid: &Mesh, tool: &Mesh) -> Result<Mesh, MinkowskiError> {
     run(solid, tool, true, None, None).map(|(mesh, _)| mesh)
 }
 
-/// C# `MinkowskiDifference(solid, tool, out erosionPath)`.
 pub fn minkowski_difference_with_path(
     solid: &Mesh,
     tool: &Mesh,
@@ -79,8 +76,7 @@ pub fn minkowski_difference_with_path(
     run(solid, tool, true, None, None)
 }
 
-/// C# `MinkowskiDifferenceWithPathAsync`: the erosion with progress and cancellation, and the
-/// algorithm that produced it.
+/// The erosion with progress and cancellation, and the algorithm that produced it.
 pub fn minkowski_difference_with_path_and_progress(
     solid: &Mesh,
     tool: &Mesh,
@@ -90,8 +86,8 @@ pub fn minkowski_difference_with_path_and_progress(
     run(solid, tool, true, reporter, Some(cancel))
 }
 
-/// C# `Run`: refuse empty operands, import and shell-repair both, refuse an operand that
-/// imported with no volume, then morph.
+/// Refuse empty operands, import and shell-repair both, refuse an operand that imported with no
+/// volume, then morph.
 fn run(
     solid: &Mesh,
     tool: &Mesh,
@@ -130,9 +126,9 @@ fn run(
     ))
 }
 
-/// C# `Morph`: the kernel call with the token bridged and the phase callback adapted. A
-/// cancelled run (the kernel's `Cancelled` status on an empty result) is `Err(Cancelled)`;
-/// completion wins over a late cancel.
+/// The kernel call with the token bridged and the phase callback adapted. A cancelled run (the
+/// kernel's `Cancelled` status on an empty result) is `Err(Cancelled)`; completion wins over a late
+/// cancel.
 fn morph(
     solid: &Manifold,
     tool: &Manifold,
@@ -167,9 +163,9 @@ fn morph(
         })
     });
 
-    // The union tree counts different units and reports them from worker threads, so it gets
-    // its own time mapping; its hull count is recovered from the phase total the kernel set,
-    // read back through the reporter itself (C# closes over the variable it assigns).
+    // The union tree counts different units and reports them from worker threads, so it gets its
+    // own time mapping; its hull count is recovered from the phase total the kernel set, read back
+    // through the reporter itself.
     let tree_parallelism = if cfg!(target_arch = "wasm32") {
         1
     } else {
@@ -239,7 +235,6 @@ fn morph(
     Ok((result, erosion_path))
 }
 
-/// C# `ThrowIfNoVolume`.
 fn throw_if_no_volume(manifold: &Manifold) -> Result<(), MinkowskiError> {
     if manifold.is_empty() {
         return Err(MinkowskiError::InvalidArgument(

@@ -1,10 +1,9 @@
-//! Two-mesh boolean conveniences: union, subtract, intersect, and both halves of a cut. Port of
-//! agg-sharp `Csg/CsgOperations.cs`; each call is one [`super::boolean_processing::do_boolean`]
-//! with identity transforms and default options.
+//! Two-mesh boolean conveniences: union, subtract, intersect, and both halves of a cut. Each call
+//! is one [`super::boolean_processing::do_boolean`] with identity transforms and default options.
 //!
-//! As in C#, union/subtract/intersect hand back the other operand when one has no faces (so an
-//! intersect with an empty mesh returns the non-empty one here, unlike `do_boolean`), and the
-//! C# `reporter` parameter, which these overloads accept but never forward, is not carried.
+//! Union/subtract/intersect hand back the other operand when one has no faces (so an intersect with
+//! an empty mesh returns the non-empty one here, unlike `do_boolean`). They take no progress
+//! reporter: each is a single quick boolean.
 
 use vector_math::Matrix4X4;
 
@@ -63,7 +62,7 @@ pub fn intersect(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<Mesh, Boole
 }
 
 /// Both halves of cutting `a` with `b`: (`a` minus `b`, `a` intersect `b`). No empty-operand
-/// shortcut, as in C#.
+/// shortcut.
 pub fn intersect_and_subtract(
     a: &Mesh,
     b: &Mesh,

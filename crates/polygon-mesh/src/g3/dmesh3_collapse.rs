@@ -1,15 +1,14 @@
-//! geometry3Sharp `DMesh3.CollapseEdge` and `DMesh3.MergeEdges` (`mesh/DMesh3_edge_operators.cs`):
-//! the two edits that fuse vertices, and so the two the repair's crack closing and degenerate-edge
-//! cleanup rest on. Split from `dmesh3_edge_ops` for size; same rules - C#'s order of list and
-//! refcount updates, and C#'s DEBUG-only `debug_fail` checks dropped.
+//! `DMesh3`'s edge collapse and edge merge: the two edits that fuse vertices, and so the two the
+//! repair's crack closing and degenerate-edge cleanup rest on. Split from `dmesh3_edge_ops` for
+//! size; same rule - a fixed order of list and refcount updates, since it decides id reuse.
 
 use super::dmesh3::{DMesh3, MeshResult, INVALID_ID};
 use super::dmesh3_edge_ops::{EdgeCollapseInfo, MergeEdgesInfo};
 use super::dmesh3_queries::{find_tri_other_vtx, orient_tri_edge};
 
 impl DMesh3 {
-    /// C# `CollapseEdge(vKeep, vRemove, out collapse)`: removes `v_remove`, moving its edges
-    /// and triangles onto `v_keep`; refuses a collapse that would leave the mesh non-manifold.
+    /// Removes `v_remove`, moving its edges and triangles onto `v_keep`; refuses a collapse that
+    /// would leave the mesh non-manifold.
     pub(crate) fn collapse_edge(
         &mut self,
         v_keep: i32,
@@ -219,8 +218,8 @@ impl DMesh3 {
         (MeshResult::Ok, collapse)
     }
 
-    /// C# `MergeEdges(eKeep, eDiscard, out merge_info)`: welds two boundary edges that run in
-    /// opposite directions into one interior edge, fusing their vertices.
+    /// Welds two boundary edges that run in opposite directions into one interior edge, fusing
+    /// their vertices.
     pub(crate) fn merge_edges(
         &mut self,
         e_keep: i32,
@@ -359,8 +358,8 @@ impl DMesh3 {
         (MeshResult::Ok, merge_info)
     }
 
-    /// The C# `MergeEdges` neighbourhood check: does `from` share a neighbour (other than
-    /// `other_v`) with `keep` through an edge that is not a boundary on both sides?
+    /// The edge merge's neighbourhood check: does `from` share a neighbour (other than `other_v`)
+    /// with `keep` through an edge that is not a boundary on both sides?
     fn shares_interior_neighbour(&self, keep: i32, from: i32, other_v: i32) -> bool {
         for nbr in self.vtx_vertices(from) {
             if nbr == other_v {
@@ -377,8 +376,8 @@ impl DMesh3 {
         false
     }
 
-    /// The C# `MergeEdges` vertex move: every edge of `from` but `e_discard` (and the
-    /// triangles on it) re-pointed at `keep`, then `from` freed.
+    /// The edge merge's vertex move: every edge of `from` but `e_discard` (and the triangles on it)
+    /// re-pointed at `keep`, then `from` freed.
     fn move_vertex_onto(&mut self, from: i32, keep: i32, e_discard: i32) {
         for eid in self.vertex_edges.values(from) {
             if eid == e_discard {

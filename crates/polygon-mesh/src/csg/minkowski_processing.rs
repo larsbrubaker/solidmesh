@@ -1,8 +1,7 @@
-//! agg-sharp `Csg/MinkowskiProcessing.cs`'s operand side: `OrientShellsAsSolid` (the
-//! solid exactly as Dilate and Erode read it), with the operand import it shares with the
-//! Minkowski runs (`ImportOperand`, `ImportRewindingABackwardPatch`, `TryImport`,
-//! `ThrowIfEmpty`), and `SphereMesh`. The Minkowski sum and difference themselves (`Run`,
-//! `Morph` and their entry points) are `minkowski_morph.rs`.
+//! The Minkowski operand side: [`orient_shells_as_solid`] (the solid exactly as Dilate and Erode
+//! read it), with the operand import it shares with the Minkowski runs (`import_operand` and its
+//! backward-patch retry, `throw_if_empty`), and [`sphere_mesh`]. The Minkowski sum and difference
+//! themselves are `minkowski_morph.rs`.
 
 use std::fmt;
 
@@ -13,20 +12,19 @@ use super::{consistent_winding, manifold_result_reader, minkowski_shell_orientat
 use super::{BooleanError, KernelStatus};
 use crate::{CancelToken, Mesh};
 
-/// Why a Minkowski-family call produced no mesh. C# throws these as exceptions.
+/// Why a Minkowski-family call produced no mesh.
 #[derive(Debug, Clone)]
 pub enum MinkowskiError {
-    /// An argument was out of range or an operand had no geometry (C# `ArgumentException` /
-    /// `ArgumentOutOfRangeException`).
+    /// An argument was out of range or an operand had no geometry.
     InvalidArgument(String),
-    /// The kernel refused an operand (C# `MeshImportRejectedException`).
+    /// The kernel refused an operand.
     ImportRejected {
         message: String,
         status: KernelStatus,
     },
-    /// The caller's token was cancelled (C# `OperationCanceledException`).
+    /// The caller's token was cancelled.
     Cancelled,
-    /// The kernel could not build the result (C# `InvalidOperationException`).
+    /// The kernel could not build the result.
     Kernel { message: String },
 }
 
@@ -66,8 +64,7 @@ impl From<BooleanError> for MinkowskiError {
     }
 }
 
-/// C# `SphereMesh(radius, segments)`: the kernel's ball as a mesh, centred on the origin; 0
-/// segments asks the kernel to choose.
+/// The kernel's ball as a mesh, centred on the origin; 0 segments asks the kernel to choose.
 pub fn sphere_mesh(radius: f64, segments: i32) -> Result<Mesh, MinkowskiError> {
     if radius.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
         return Err(MinkowskiError::InvalidArgument(
@@ -85,10 +82,9 @@ pub fn sphere_mesh(radius: f64, segments: i32) -> Result<Mesh, MinkowskiError> {
     )?)
 }
 
-/// C# `OrientShellsAsSolid`: the solid imported as Dilate and Erode import it (a backward patch
-/// rewound, split seams joined) with every shell whose winding contradicts its nesting turned
-/// the right way, so an inside-out part comes back as the solid it looks like while a correctly
-/// wound cavity stays a cavity.
+/// The solid imported as Dilate and Erode import it (a backward patch rewound, split seams joined)
+/// with every shell whose winding contradicts its nesting turned the right way, so an inside-out
+/// part comes back as the solid it looks like while a correctly wound cavity stays a cavity.
 pub fn orient_shells_as_solid(solid: &Mesh, cancel: &CancelToken) -> Result<Mesh, MinkowskiError> {
     throw_if_empty(solid)?;
     let oriented = minkowski_shell_orientation::repair(import_operand(solid)?, cancel)
@@ -99,8 +95,8 @@ pub fn orient_shells_as_solid(solid: &Mesh, cancel: &CancelToken) -> Result<Mesh
     )?)
 }
 
-/// C# `ImportOperand`: the import with the backward-patch retry, and for a soup import one
-/// more try with exactly coincident vertices joined, kept only if that pairs up.
+/// The import with the backward-patch retry, and for a soup import one more try with exactly
+/// coincident vertices joined, kept only if that pairs up.
 pub(crate) fn import_operand(mesh: &Mesh) -> Result<Manifold, MinkowskiError> {
     let imported = import_rewinding_a_backward_patch(mesh)?;
     if imported.as_impl().is_soup {
@@ -115,8 +111,8 @@ pub(crate) fn import_operand(mesh: &Mesh) -> Result<Manifold, MinkowskiError> {
     Ok(imported)
 }
 
-/// C# `ImportRewindingABackwardPatch`: a `NotClosed` refusal gets the rewound copy, then the
-/// tolerance-welded rewound copy; failing both, the original refusal stands.
+/// A `NotClosed` refusal gets the rewound copy, then the tolerance-welded rewound copy; failing
+/// both, the original refusal stands.
 fn import_rewinding_a_backward_patch(mesh: &Mesh) -> Result<Manifold, ImportRejected> {
     match manifold_import::import(mesh, false) {
         Ok(imported) => Ok(imported),
@@ -135,12 +131,10 @@ fn import_rewinding_a_backward_patch(mesh: &Mesh) -> Result<Manifold, ImportReje
     }
 }
 
-/// C# `TryImport`.
 fn try_import(mesh: &Mesh) -> Option<Manifold> {
     manifold_import::import(mesh, false).ok()
 }
 
-/// C# `ThrowIfEmpty`.
 pub(crate) fn throw_if_empty(mesh: &Mesh) -> Result<(), MinkowskiError> {
     if mesh.vertices.is_empty() || mesh.faces.is_empty() {
         return Err(MinkowskiError::InvalidArgument(

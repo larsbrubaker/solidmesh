@@ -1,6 +1,5 @@
-//! Cutting one face by a plane: `Face.Split`, `GetCutLine` and the edge-symmetric
-//! `ClipEdgeAtPlane` from agg-sharp `PolygonMesh/Mesh.cs` (`FaceExtensionMethods`), plus the
-//! `Mesh.SplitData` the optional clip predicate receives.
+//! Cutting one face by a plane: the split, the cut line and the edge-symmetric clip of an edge at
+//! the plane, plus the [`SplitData`] the optional clip predicate receives.
 
 use std::cmp::Ordering;
 
@@ -8,16 +7,15 @@ use vector_math::{Plane, Vector3, Vector3Float};
 
 use crate::face::Face;
 
-/// What a `clip_face` predicate sees: the face and its three signed plane distances (C#
-/// `Mesh.SplitData`).
+/// What a `clip_face` predicate sees: the face and its three signed plane distances.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SplitData {
     pub face: Face,
     pub dist: [f64; 3],
 }
 
-/// Orders two positions x, then y, then z, so an edge has one canonical direction whichever
-/// face looks at it (C# `ComparePositions`). NaN components compare as "after".
+/// Orders two positions x, then y, then z, so an edge has one canonical direction whichever face
+/// looks at it. NaN components compare as "after".
 fn compare_positions(a: Vector3Float, b: Vector3Float) -> Ordering {
     for axis in 0..3 {
         if a[axis] != b[axis] {
@@ -32,8 +30,8 @@ fn compare_positions(a: Vector3Float, b: Vector3Float) -> Ordering {
 }
 
 /// The point where the edge `a`-`b` crosses a plane, interpolated from the lexicographically
-/// smaller end so both faces sharing the edge get bit-identical results (C# `ClipEdgeAtPlane`).
-/// Pass the ORIGINAL edge endpoints, never already-subdivided ones.
+/// smaller end so both faces sharing the edge get bit-identical results. Pass the ORIGINAL edge
+/// endpoints, never already-subdivided ones.
 pub fn clip_edge_at_plane(
     a: Vector3Float,
     b: Vector3Float,
@@ -51,12 +49,13 @@ pub fn clip_edge_at_plane(
     start + (end - start) * ratio_to_start
 }
 
-/// `Enumerable.Max(dist) > on_plane_distance` with C#'s NaN handling.
+/// Whether the largest distance is above `on_plane_distance`, with NaN treated as in `linq_max`.
 fn max_above(values: &[f64; 3], on_plane_distance: f64) -> bool {
     linq_max(values) > on_plane_distance
 }
 
-/// C# `Enumerable.Max` over doubles: NaN only wins when every value is NaN.
+/// The largest value, where NaN only wins when every value is NaN, so one bad distance does not
+/// decide which side a face is on.
 fn linq_max(values: &[f64; 3]) -> f64 {
     let mut max = values[0];
     for &v in &values[1..] {
@@ -128,7 +127,7 @@ impl Face {
                     };
                     let vi1 = (vi0 + 1) % 3;
                     let vi2 = (vi0 + 2) % 3;
-                    // NaN counts as not positive, as in the C#
+                    // NaN counts as not positive.
                     let vi0_positive = dist[vi0] > 0.0;
                     let vertex_start = new_vertices.len() as i32;
                     new_vertices.push(v[vi0]);
@@ -172,7 +171,7 @@ impl Face {
                 };
                 let vi1 = (vi0 + 1) % 3;
                 let vi2 = (vi0 + 2) % 3;
-                // NaN counts as not positive, as in the C#
+                // NaN counts as not positive.
                 let vi0_positive = dist[vi0] > 0.0;
                 let vertex_start = new_vertices.len() as i32;
                 new_vertices.push(v[vi0]);
@@ -197,7 +196,7 @@ impl Face {
                 }
                 return true;
             }
-            // This face doesn't cross the plane (NaN maxima count as not above it, as in the C#).
+            // This face doesn't cross the plane (NaN maxima count as not above it).
             0 if discard_faces_on_negative_side && !max_above(&dist, on_plane_distance) => {
                 return true;
             }
@@ -207,9 +206,8 @@ impl Face {
         false
     }
 
-    /// The segment where `plane` cuts the face, wound to respect the face's winding (C#
-    /// `GetCutLine`; the C# `onPlaneDistance` and `clipFace` parameters are unused there and
-    /// are not carried). `None` when the face does not cross the plane.
+    /// The segment where `plane` cuts the face, wound to respect the face's winding. `None` when
+    /// the face does not cross the plane.
     pub fn get_cut_line(
         &self,
         face_vertices: &[Vector3Float],

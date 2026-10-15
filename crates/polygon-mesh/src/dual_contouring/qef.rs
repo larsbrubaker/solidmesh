@@ -1,18 +1,16 @@
-//! The quadratic error function solver dual contouring places its vertices with: a port of
-//! agg-sharp `PolygonMesh/DualContouring/QefData.cs`, `QefSolver.cs`, `SVD.cs`, `Givens.cs`,
-//! `Schur2.cs`, `Mat3.cs`, `SMat3.cs` and `MatUtils.cs`. The first five carry an Unlicense
-//! (public domain) header; the matrix helpers carry none and belong to the same public-domain QEF
-//! library. See `THIRD_PARTY_NOTICES.md`.
+//! The quadratic error function solver dual contouring places its vertices with, derived from a
+//! public-domain QEF library (Unlicense): its QEF data, solver, Jacobi SVD with Givens and Schur
+//! rotations, and the symmetric 3x3 matrix helpers. See `THIRD_PARTY_NOTICES.md`.
 //!
 //! The QEF is accumulated as AᵀA, Aᵀb and bᵀb from (point, normal) planes and solved around the
-//! mass point with a Jacobi-sweep symmetric SVD and a truncated pseudo-inverse, so a
-//! rank-deficient system (a flat patch, a single edge) settles on the point nearest the mass
-//! point. Only what dual contouring reaches is ported (`SVD.SolveLeastSquares`, `MatUtils.Mmul`,
-//! `MmulAta`, `Transpose`, the `Mat3` norms and `CalcError(Mat3, ...)` are not).
+//! mass point with a Jacobi-sweep symmetric SVD and a truncated pseudo-inverse, so a rank-deficient
+//! system (a flat patch, a single edge) settles on the point nearest the mass point. Only what dual
+//! contouring reaches is here: no general least-squares solve, matrix products, transpose, matrix
+//! norms or error over a full matrix.
 
 use vector_math::Vector3;
 
-/// C# `SMat3`: a symmetric 3x3 matrix by its upper triangle.
+/// A symmetric 3x3 matrix by its upper triangle.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct SMat3 {
     m00: f64,
@@ -23,7 +21,6 @@ struct SMat3 {
     m22: f64,
 }
 
-/// C# `Mat3`.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct Mat3 {
     m: [[f64; 3]; 3],
@@ -34,7 +31,6 @@ impl Mat3 {
         m: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
     };
 
-    /// C# `SetSymmetric(SMat3)`.
     fn symmetric(a: &SMat3) -> Mat3 {
         Mat3 {
             m: [
@@ -46,7 +42,7 @@ impl Mat3 {
     }
 }
 
-/// C# `MatUtils.Norm(SMat3)`: the Frobenius norm.
+/// The Frobenius norm.
 fn norm(a: &SMat3) -> f64 {
     ((a.m00 * a.m00)
         + (a.m01 * a.m01)
@@ -60,12 +56,11 @@ fn norm(a: &SMat3) -> f64 {
         .sqrt()
 }
 
-/// C# `MatUtils.off(SMat3)`: the norm of the off-diagonal part.
+/// The norm of the off-diagonal part.
 fn off(a: &SMat3) -> f64 {
     (2.0 * ((a.m01 * a.m01) + (a.m02 * a.m02) + (a.m12 * a.m12))).sqrt()
 }
 
-/// C# `MatUtils.VMul`.
 fn vmul(a: &Mat3, v: Vector3) -> Vector3 {
     let m = &a.m;
     Vector3::new(
@@ -75,7 +70,6 @@ fn vmul(a: &Mat3, v: Vector3) -> Vector3 {
     )
 }
 
-/// C# `MatUtils.VMuSymmetric`.
 fn vmul_symmetric(a: &SMat3, v: Vector3) -> Vector3 {
     Vector3::new(
         (a.m00 * v.x) + (a.m01 * v.y) + (a.m02 * v.z),
@@ -84,7 +78,7 @@ fn vmul_symmetric(a: &SMat3, v: Vector3) -> Vector3 {
     )
 }
 
-/// C# `SVD.CalcSymmetricGivensCoefficients`: the Jacobi rotation zeroing `a_pq`.
+/// The Jacobi rotation zeroing `a_pq`.
 fn symmetric_givens_coefficients(a_pp: f64, a_pq: f64, a_qq: f64) -> (f64, f64) {
     if a_pq == 0.0 {
         return (1.0, 0.0);
@@ -96,7 +90,8 @@ fn symmetric_givens_coefficients(a_pp: f64, a_pq: f64, a_qq: f64) -> (f64, f64) 
     (c, tan * c)
 }
 
-/// C# `Schur2.Rot01` then `Givens.Rot01Post` (`SVD.Rotate01`).
+/// One Jacobi step on the 0-1 pair: the Schur rotation of `vtav`, then the matching Givens rotation
+/// of `v`.
 fn rotate01(vtav: &mut SMat3, v: &mut Mat3) {
     if vtav.m01 == 0.0 {
         return;
@@ -119,7 +114,8 @@ fn rotate01(vtav: &mut SMat3, v: &mut Mat3) {
     }
 }
 
-/// C# `Schur2.Rot02` then `Givens.Rot02Post` (`SVD.Rotate02`).
+/// One Jacobi step on the 0-2 pair: the Schur rotation of `vtav`, then the matching Givens rotation
+/// of `v`.
 fn rotate02(vtav: &mut SMat3, v: &mut Mat3) {
     if vtav.m02 == 0.0 {
         return;
@@ -142,7 +138,8 @@ fn rotate02(vtav: &mut SMat3, v: &mut Mat3) {
     }
 }
 
-/// C# `Schur2.Rot12` then `Givens.Rot12Post` (`SVD.Rotate12`).
+/// One Jacobi step on the 1-2 pair: the Schur rotation of `vtav`, then the matching Givens rotation
+/// of `v`.
 fn rotate12(vtav: &mut SMat3, v: &mut Mat3) {
     if vtav.m12 == 0.0 {
         return;
@@ -165,7 +162,7 @@ fn rotate12(vtav: &mut SMat3, v: &mut Mat3) {
     }
 }
 
-/// C# `SVD.GetSymmetricSvd`: Jacobi sweeps until the off-diagonal part is below `tol` of the norm.
+/// Jacobi sweeps until the off-diagonal part is below `tol` of the norm.
 fn symmetric_svd(a: &SMat3, tol: f64, max_sweeps: i32) -> (SMat3, Mat3) {
     let mut vtav = *a;
     let mut v = Mat3::IDENTITY;
@@ -180,7 +177,7 @@ fn symmetric_svd(a: &SMat3, tol: f64, max_sweeps: i32) -> (SMat3, Mat3) {
     (vtav, v)
 }
 
-/// C# `SVD.PinV`: the truncated reciprocal.
+/// The truncated reciprocal.
 fn pinv(x: f64, tol: f64) -> f64 {
     if x.abs() < tol || (1.0 / x).abs() < tol {
         0.0
@@ -189,7 +186,7 @@ fn pinv(x: f64, tol: f64) -> f64 {
     }
 }
 
-/// C# `SVD.PseudoInverse`: V D⁺ Vᵀ.
+/// V D⁺ Vᵀ.
 fn pseudo_inverse(d: &SMat3, v: &Mat3, tol: f64) -> Mat3 {
     let dd = [pinv(d.m00, tol), pinv(d.m11, tol), pinv(d.m22, tol)];
     let v = &v.m;
@@ -203,7 +200,7 @@ fn pseudo_inverse(d: &SMat3, v: &Mat3, tol: f64) -> Mat3 {
     out
 }
 
-/// C# `SVD.SolveSymmetric`: x = A⁺b and the residual |b - Ax|².
+/// X = A⁺b and the residual |b - Ax|².
 fn solve_symmetric(
     a: &SMat3,
     b: Vector3,
@@ -213,12 +210,11 @@ fn solve_symmetric(
 ) -> (Vector3, f64) {
     let (vtav, v) = symmetric_svd(a, svd_tol, svd_sweeps);
     let x = vmul(&pseudo_inverse(&vtav, &v, pinv_tol), b);
-    // C# `CalcError(SMat3, x, b)`.
     let r = b - vmul(&Mat3::symmetric(a), x);
     (x, r.dot(r))
 }
 
-/// C# `QefData`: the accumulated normal equations of a set of planes.
+/// The accumulated normal equations of a set of planes.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct QefData {
     ata: SMat3,
@@ -229,7 +225,6 @@ pub struct QefData {
 }
 
 impl QefData {
-    /// C# `Add(QefData)`.
     pub fn add(&mut self, rhs: &QefData) {
         self.ata.m00 += rhs.ata.m00;
         self.ata.m01 += rhs.ata.m01;
@@ -243,13 +238,12 @@ impl QefData {
         self.num_points += rhs.num_points;
     }
 
-    /// C# `numPoints`.
     pub fn num_points(&self) -> i32 {
         self.num_points
     }
 }
 
-/// C# `QefSolver`: accumulates planes and finds the point that best fits them.
+/// Accumulates planes and finds the point that best fits them.
 #[derive(Debug, Clone, Default)]
 pub struct QefSolver {
     data: QefData,
@@ -259,22 +253,20 @@ pub struct QefSolver {
 }
 
 impl QefSolver {
-    /// C# `new QefSolver()`.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// C# `QefData`.
     pub fn data(&self) -> &QefData {
         &self.data
     }
 
-    /// C# `GetMassPoint()`: the average point, set by [`QefSolver::solve`].
+    /// The average point, set by [`QefSolver::solve`].
     pub fn mass_point(&self) -> Vector3 {
         self.mass_point
     }
 
-    /// C# `Add(Vector3 p, Vector3 n)`: the plane through `p` with normal `n` (normalized here).
+    /// The plane through `p` with normal `n` (normalized here).
     pub fn add(&mut self, p: Vector3, n: Vector3) {
         self.has_solution = false;
         let normal = n.get_normal();
@@ -293,25 +285,23 @@ impl QefSolver {
         d.num_points += 1;
     }
 
-    /// C# `Add(QefData)`.
     pub fn add_data(&mut self, rhs: &QefData) {
         self.has_solution = false;
         self.data.add(rhs);
     }
 
-    /// C# `GetError(Vector3)`: the sum of squared distances from `pos` to the planes.
+    /// The sum of squared distances from `pos` to the planes.
     pub fn error_at(&self, pos: Vector3) -> f64 {
         let atax = vmul_symmetric(&self.data.ata, pos);
         pos.dot(atax) - 2.0 * pos.dot(self.data.atb) + self.data.btb
     }
 
-    /// C# `GetError()`: the error at the last solution, `None` before one (C# throws).
+    /// The error at the last solution, `None` before one.
     pub fn error(&self) -> Option<f64> {
         self.has_solution.then(|| self.error_at(self.x))
     }
 
-    /// C# `Solve(svd_tol, svd_sweeps, pinv_tol)`: the best-fit point, solved relative to the
-    /// mass point; `None` with no planes (C# throws).
+    /// The best-fit point, solved relative to the mass point; `None` with no planes.
     pub fn solve(&mut self, svd_tol: f64, svd_sweeps: i32, pinv_tol: f64) -> Option<Vector3> {
         if self.data.num_points == 0 {
             return None;

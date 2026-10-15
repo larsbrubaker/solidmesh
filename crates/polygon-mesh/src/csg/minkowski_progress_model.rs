@@ -1,6 +1,6 @@
-//! Port of agg-sharp `Csg/MinkowskiProgressModel.cs`: turns the kernel's Minkowski progress -
-//! which counts work items - into a fraction of the expected running time, so a bar driven by
-//! it moves at a steady rate. Used by the Minkowski runs in `minkowski_processing`.
+//! Turns the kernel's Minkowski progress - which counts work items - into a fraction of the
+//! expected running time, so a bar driven by it moves at a steady rate. Used by the Minkowski runs
+//! in `minkowski_processing`.
 //!
 //! The kernel's nonconvex (+) convex sweep reports one unit per per-triangle hull, one per
 //! 1000-hull batch union and one for the closing merge, all weighted the same. They are not the
@@ -43,8 +43,8 @@ pub fn time_fraction(triangles: i32, kernel_fraction: f64) -> f64 {
         return 0.0;
     }
 
-    // The kernel emits fraction = done / total; rounding recovers the whole unit count it had.
-    // C# Math.Round is banker's rounding.
+    // The kernel emits fraction = done / total; rounding recovers the whole unit count it had. Ties
+    // round to even, so a fraction exactly between two units lands the same way each time.
     let mut units = (kernel_fraction * kernel_units(triangles) as f64).round_ties_even() as i64;
     let mut work = 0.0;
     let mut start = 0;
@@ -179,7 +179,7 @@ pub fn tree_time_fraction(
     let mut nodes = leaves;
     while nodes > 1 {
         let unions = nodes / 2;
-        // Integer rounds of work, as C#'s long division.
+        // Whole rounds of work: a partly filled round of cores still costs a full round.
         let weight = cost * ((unions + cores - 1) / cores) as f64;
         unions_per_level.push(unions);
         weights.push(weight);

@@ -1,7 +1,7 @@
 //! Collecting a boolean's operands: the empty-operand rules, the transformed copy, the import,
 //! the per-operand refusals a union degrades around, and the colour bookkeeping the result is
-//! painted from. Port of agg-sharp `Csg/ManifoldOperandBatch.cs` (and `ManifoldImport.
-//! ImportAsOriginal`); driven by `manifold_kernel`, read back by `manifold_result_reader`.
+//! painted from, including the re-tag that marks an import as an original. Driven by
+//! `manifold_kernel`, read back by `manifold_result_reader`.
 
 use std::collections::HashMap;
 
@@ -111,8 +111,8 @@ impl ManifoldOperandBatch {
         Ok(AddOutcome::Added)
     }
 
-    /// Uploads one already-transformed operand, recording whatever the colour machinery needs
-    /// to paint that operand's triangles in the result (C# `ImportOperand`).
+    /// Uploads one already-transformed operand, recording whatever the colour machinery needs to
+    /// paint that operand's triangles in the result.
     fn import_operand(
         &mut self,
         mesh_copy: &Mesh,
@@ -206,10 +206,10 @@ enum OperandError {
     Cancelled,
 }
 
-/// C# `ManifoldImport.ImportAsOriginal`: the import re-tagged as an original, so its triangles
-/// carry an id of their own through the boolean. A soup manifold (closed but non-manifold
-/// input) cannot be re-tagged - `as_original` hands back an errored empty manifold - so the
-/// plain import is kept; its triangles then lose their face colours rather than the boolean.
+/// The import re-tagged as an original, so its triangles carry an id of their own through the
+/// boolean. A soup manifold (closed but non-manifold input) cannot be re-tagged - `as_original`
+/// hands back an errored empty manifold - so the plain import is kept; its triangles then lose
+/// their face colours rather than the boolean.
 fn import_as_original(
     mesh: &Mesh,
     repair_orientation: bool,
@@ -222,11 +222,10 @@ fn import_as_original(
     Ok(as_original)
 }
 
-/// Splits a mesh with face colors into one sub-manifold per color group and unions them, so
-/// each group's original id carries its colour through the boolean (C#
-/// `TrySplitByFaceColorsRust`). `Ok(None)` when any color group is not a valid manifold on its
-/// own (e.g. a boolean result whose color groups share boundaries) or anything else fails;
-/// cancellation is the one failure passed on.
+/// Splits a mesh with face colors into one sub-manifold per color group and unions them, so each
+/// group's original id carries its colour through the boolean. `Ok(None)` when any color group is
+/// not a valid manifold on its own (e.g. a boolean result whose color groups share boundaries) or
+/// anything else fails; cancellation is the one failure passed on.
 fn try_split_by_face_colors(
     mesh_copy: &Mesh,
     original_id_to_color: &mut HashMap<i32, Color>,
@@ -237,7 +236,7 @@ fn try_split_by_face_colors(
         return Ok(None);
     };
 
-    // Groups in first-seen order (C# Dictionary insertion order).
+    // Groups in first-seen order, so the result's colour runs are deterministic.
     let mut group_of_color: HashMap<Color, usize> = HashMap::new();
     let mut color_groups: Vec<(Color, Vec<usize>)> = Vec::new();
     for face_idx in 0..mesh_copy.faces.len() {

@@ -29,8 +29,7 @@ fn is_internal(node: &OctreeNode) -> bool {
     matches!(node.kind, OctreeNodeKind::Internal(_))
 }
 
-/// C# `Octree.GenerateMeshFromOctree(root)`: the contour of the octree as triangles. Each leaf
-/// vertex used by a face appears once.
+/// The contour of the octree as triangles. Each leaf vertex used by a face appears once.
 pub fn generate_mesh_from_octree(root: &OctreeNode) -> Mesh {
     let mut contour = Contour {
         mesh: Mesh::new(),

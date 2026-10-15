@@ -1,16 +1,13 @@
-//! The topology edits of geometry3Sharp's `DMesh3` (`mesh/DMesh3_edge_operators.cs`): reversing
-//! triangles, removing triangles and vertices, splitting, flipping and collapsing edges, merging
-//! two boundary edges, and poking a triangle. Each follows C#'s order of list and refcount
-//! updates, because that order decides which ids the next allocation reuses and the order every
-//! later one-ring walk sees. C#'s `debug_fail` checks are DEBUG-only and do nothing in the
-//! builds MatterCAD ships, so they have no counterpart.
+//! The topology edits of `DMesh3`: reversing triangles, removing triangles and vertices, splitting,
+//! flipping and collapsing edges, merging two boundary edges, and poking a triangle. Each follows a
+//! fixed order of list and refcount updates, because that order decides which ids the next
+//! allocation reuses and the order every later one-ring walk sees.
 
 use super::dmesh3::{DMesh3, G3Exception, MeshResult, INVALID_ID};
 use super::dmesh3_queries::{
     find_edge_index_in_tri, find_tri_index, find_tri_other_vtx, orient_tri_edge_and_find_other_vtx,
 };
 
-/// C# `DMesh3.EdgeSplitInfo`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct EdgeSplitInfo {
     pub(crate) is_boundary: bool,
@@ -22,7 +19,6 @@ pub(crate) struct EdgeSplitInfo {
     pub(crate) e_new_t3: i32,
 }
 
-/// C# `DMesh3.EdgeFlipInfo`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct EdgeFlipInfo {
     pub(crate) eid: i32,
@@ -34,7 +30,6 @@ pub(crate) struct EdgeFlipInfo {
     pub(crate) t1: i32,
 }
 
-/// C# `DMesh3.EdgeCollapseInfo`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct EdgeCollapseInfo {
     pub(crate) v_kept: i32,
@@ -46,7 +41,6 @@ pub(crate) struct EdgeCollapseInfo {
     pub(crate) e_kept: [i32; 2],
 }
 
-/// C# `DMesh3.MergeEdgesInfo`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct MergeEdgesInfo {
     pub(crate) e_kept: i32,
@@ -57,8 +51,7 @@ pub(crate) struct MergeEdgesInfo {
     pub(crate) e_kept_extra: [i32; 2],
 }
 
-#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-/// C# `DMesh3.PokeTriangleInfo`.
+#[allow(dead_code)] // only the tests call this
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct PokeTriangleInfo {
     pub(crate) new_vid: i32,
@@ -77,7 +70,6 @@ fn lerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 }
 
 impl DMesh3 {
-    /// C# `ReverseTriOrientation`.
     pub(crate) fn reverse_tri_orientation(&mut self, tid: i32) -> MeshResult {
         if !self.is_triangle(tid) {
             return MeshResult::FailedNotATriangle;
@@ -93,8 +85,8 @@ impl DMesh3 {
         self.triangle_edges[tid as usize] = [te[0], te[2], te[1]];
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `ReverseOrientation` (there are no normals to flip here).
+    #[allow(dead_code)] // only the tests call this
+    /// Reverses every triangle (there are no normals to flip here).
     pub(crate) fn reverse_orientation(&mut self) {
         let tids: Vec<i32> = self.triangle_indices().collect();
         for tid in tids {
@@ -102,7 +94,7 @@ impl DMesh3 {
         }
     }
 
-    /// C# `RemoveVertex`: the vertex and (with `remove_all_triangles`) every triangle on it.
+    /// The vertex and (with `remove_all_triangles`) every triangle on it.
     pub(crate) fn remove_vertex(
         &mut self,
         vid: i32,
@@ -146,8 +138,8 @@ impl DMesh3 {
         Ok(MeshResult::Ok)
     }
 
-    /// C# `RemoveTriangle`: also removes edges left with no triangle, and (with
-    /// `remove_isolated_vertices`) vertices left with none.
+    /// Also removes edges left with no triangle, and (with `remove_isolated_vertices`) vertices
+    /// left with none.
     pub(crate) fn remove_triangle(
         &mut self,
         tid: i32,
@@ -201,7 +193,6 @@ impl DMesh3 {
         MeshResult::Ok
     }
 
-    /// C# `SplitEdge(eab, out split, split_t)`.
     pub(crate) fn split_edge(&mut self, eab: i32, split_t: f64) -> (MeshResult, EdgeSplitInfo) {
         let mut split = EdgeSplitInfo::default();
         if !self.is_edge(eab) {
@@ -340,7 +331,6 @@ impl DMesh3 {
         }
     }
 
-    /// C# `triangle_groups.insert(triangle_groups[from], to)`.
     fn copy_triangle_group(&mut self, from: i32, to: i32) {
         if let Some(groups) = &mut self.triangle_groups {
             let g = groups[from as usize];
@@ -348,8 +338,7 @@ impl DMesh3 {
         }
     }
 
-    /// C# `FlipEdge(eab, out flip)`: replaces `[a,b]` between `[a,b,c]` and `[b,a,d]` with
-    /// `[c,d]`.
+    /// Replaces `[a,b]` between `[a,b,c]` and `[b,a,d]` with `[c,d]`.
     pub(crate) fn flip_edge(
         &mut self,
         eab: i32,
@@ -446,9 +435,8 @@ impl DMesh3 {
         Ok((MeshResult::Ok, flip))
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `PokeTriangle(tid, baryCoordinates, out result)`: a new vertex at the barycentric
-    /// point, joined to the three corners.
+    #[allow(dead_code)] // only the tests call this
+    /// A new vertex at the barycentric point, joined to the three corners.
     pub(crate) fn poke_triangle(
         &mut self,
         tid: i32,
@@ -461,7 +449,7 @@ impl DMesh3 {
         let tv = self.get_triangle(tid);
         let te = self.get_tri_edges(tid);
 
-        // create vertex with interpolated vertex attribs (C# `GetTriBaryPoint`)
+        // create vertex with interpolated vertex attribs
         let [va, vb, vc] = [self.vertex(tv[0]), self.vertex(tv[1]), self.vertex(tv[2])];
         let p = std::array::from_fn(|k| bary[0] * va[k] + bary[1] * vb[k] + bary[2] * vc[k]);
         let center = self.append_vertex(p);
@@ -505,7 +493,6 @@ impl DMesh3 {
         (MeshResult::Ok, result)
     }
 
-    /// C# `replace_tri_vertex`.
     pub(super) fn replace_tri_vertex(&mut self, tid: i32, v_old: i32, v_new: i32) -> i32 {
         let t = &mut self.triangles[tid as usize];
         for (j, v) in t.iter_mut().enumerate() {
@@ -517,21 +504,18 @@ impl DMesh3 {
         -1
     }
 
-    /// C# `set_edge_vertices`.
     pub(super) fn set_edge_vertices(&mut self, eid: i32, a: i32, b: i32) {
         let e = &mut self.edges[eid as usize];
         e[0] = a.min(b);
         e[1] = a.max(b);
     }
 
-    /// C# `set_edge_triangles`.
     pub(super) fn set_edge_triangles(&mut self, eid: i32, t0: i32, t1: i32) {
         let e = &mut self.edges[eid as usize];
         e[2] = t0;
         e[3] = t1;
     }
 
-    /// C# `replace_edge_vertex`.
     pub(super) fn replace_edge_vertex(&mut self, eid: i32, v_old: i32, v_new: i32) -> i32 {
         let e = &mut self.edges[eid as usize];
         let (a, b) = (e[0], e[1]);
@@ -548,7 +532,7 @@ impl DMesh3 {
         }
     }
 
-    /// C# `replace_edge_triangle`: removing `t0` moves `t1` into its slot.
+    /// Removing `t0` moves `t1` into its slot.
     pub(super) fn replace_edge_triangle(&mut self, eid: i32, t_old: i32, t_new: i32) -> i32 {
         let e = &mut self.edges[eid as usize];
         let (a, b) = (e[2], e[3]);
@@ -568,7 +552,6 @@ impl DMesh3 {
         }
     }
 
-    /// C# `replace_triangle_edge`.
     pub(super) fn replace_triangle_edge(&mut self, tid: i32, e_old: i32, e_new: i32) -> i32 {
         let te = &mut self.triangle_edges[tid as usize];
         for (j, e) in te.iter_mut().enumerate() {

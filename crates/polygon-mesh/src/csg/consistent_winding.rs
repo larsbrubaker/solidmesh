@@ -1,6 +1,5 @@
 //! Rewinding a surface's backward patch and joining coincident vertices before a kernel import.
-//! Port of agg-sharp `Csg/ConsistentWinding.cs`; called by `minkowski_processing`'s operand
-//! import and by `mesh_repair_rust`.
+//! Called by `minkowski_processing`'s operand import and by `mesh_repair_rust`.
 //!
 //! The kernel import balances directed edges and refuses a surface where two neighbours run a
 //! shared edge the same way (`NotClosed`), though a closed orientable surface with a backward
@@ -16,9 +15,9 @@ use vector_math::Vector3Float;
 use crate::mesh::f32_key;
 use crate::{FaceList, FaceTextureData, Mesh};
 
-/// C# `Rewind`: a copy with each connected surface's minority winding flipped to its majority
-/// and exactly coincident vertices joined, or `None` when there is nothing to flip or no
-/// consistent winding exists (a Möbius-like strip).
+/// A copy with each connected surface's minority winding flipped to its majority and exactly
+/// coincident vertices joined, or `None` when there is nothing to flip or no consistent winding
+/// exists (a Möbius-like strip).
 ///
 /// Only edges with exactly two faces link. Faces that collapse onto a repeated position are
 /// skipped, as the import drops them.
@@ -110,8 +109,7 @@ pub fn rewind(mesh: &Mesh) -> Option<Mesh> {
     Some(shared_vertex_copy(mesh, &positions, &welded, &flip))
 }
 
-/// C# `JoinCoincidentVertices`: a copy with exactly coincident vertices joined, or `None` when
-/// no two vertices share a position.
+/// A copy with exactly coincident vertices joined, or `None` when no two vertices share a position.
 pub(crate) fn join_coincident_vertices(mesh: &Mesh) -> Option<Mesh> {
     let (positions, welded) = weld_by_position(mesh);
     if positions.len() == mesh.vertices.len() {
@@ -126,8 +124,7 @@ pub(crate) fn join_coincident_vertices(mesh: &Mesh) -> Option<Mesh> {
     }
 }
 
-/// C# `WeldByPosition`: one id per distinct position (C# float tuple equality: -0 is 0) and
-/// each vertex's id.
+/// One id per distinct position (float equality, so -0 is 0) and each vertex's id.
 fn weld_by_position(mesh: &Mesh) -> (Vec<Vector3Float>, Vec<i32>) {
     let mut position_ids: HashMap<(u32, u32, u32), i32> = HashMap::new();
     let mut positions = Vec::new();
@@ -143,8 +140,7 @@ fn weld_by_position(mesh: &Mesh) -> (Vec<Vector3Float>, Vec<i32>) {
     (positions, welded)
 }
 
-/// C# `SharedVertexCopy`: the mesh on the welded ids with the flagged faces reversed, faces in
-/// their order.
+/// The mesh on the welded ids with the flagged faces reversed, faces in their order.
 fn shared_vertex_copy(
     mesh: &Mesh,
     positions: &[Vector3Float],

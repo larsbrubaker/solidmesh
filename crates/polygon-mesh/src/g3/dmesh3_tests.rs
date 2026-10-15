@@ -1,6 +1,5 @@
-//! Rust-only tests for the dynamic `DMesh3` (`dmesh3*.rs`). geometry3Sharp ships no tests for
-//! these edits in agg-sharp, so these pin the topology invariants and the C# id-reuse and
-//! one-ring orders the repair depends on.
+//! Rust-only tests for the dynamic `DMesh3` (`dmesh3*.rs`): they pin the topology invariants and
+//! the id-reuse and one-ring orders the repair depends on.
 
 use super::dmesh3::{DMesh3, MeshResult, INVALID_ID, NON_MANIFOLD_ID};
 

@@ -1,5 +1,5 @@
 //! How many boolean evaluations the manifold kernel has run, by kind, for the work a caller is
-//! measuring. Port of agg-sharp `Csg/ManifoldKernelCallCounts.cs`; counted by `manifold_kernel`
+//! measuring. Counted by `manifold_kernel`
 //! (the n-ary combine), `manifold_cancellable_boolean` (each pairwise step) and
 //! `manifold_operand_batch` (the colour group union at import).
 //!

@@ -1,8 +1,7 @@
-//! geometry3Sharp's implicit functions (Boost Software License 1.0) that agg-sharp's implicit
-//! booleans reach: the `BoundedImplicitFunction3d` interface (`implicit/Implicit3d.cs`), the
-//! sampled field `DenseGridTrilinearImplicit` (`implicit/GridImplicits3d.cs`) and the boolean
-//! operators `ImplicitUnion3d`, `ImplicitIntersection3d`, `ImplicitDifference3d` and their n-ary
-//! forms (`Implicit3d.cs`). Negative is inside; the surface is the zero isocontour.
+//! geometry3Sharp's implicit functions (Boost Software License 1.0) that the implicit booleans
+//! reach: the `BoundedImplicitFunction3d` trait, the sampled field `DenseGridTrilinearImplicit` and
+//! the boolean operators `ImplicitUnion3d`, `ImplicitIntersection3d`, `ImplicitDifference3d` and
+//! their n-ary forms. Negative is inside; the surface is the zero isocontour.
 
 use super::dmesh3::AxisAlignedBox3d;
 use super::signed_distance_grid::SignedDistanceGrid;
@@ -10,13 +9,11 @@ use crate::sdf::DenseGrid3f;
 
 /// g3 `BoundedImplicitFunction3d`: a field with a box holding its interesting part.
 pub(crate) trait BoundedImplicitFunction3d {
-    /// C# `Value(ref Vector3d)`.
     fn value(&self, pt: [f64; 3]) -> f64;
-    /// C# `Bounds()`.
     fn bounds(&self) -> AxisAlignedBox3d;
 }
 
-/// A shared, boxed implicit (C#'s interface references).
+/// A boxed implicit, so the operators can nest any field.
 pub(crate) type BoxedImplicit = Box<dyn BoundedImplicitFunction3d>;
 
 /// g3 `DenseGridTrilinearImplicit`: the trilinear interpolant of a grid placed at `grid_origin`.
@@ -24,12 +21,11 @@ pub(crate) struct DenseGridTrilinearImplicit {
     pub(crate) grid: DenseGrid3f,
     pub(crate) cell_size: f64,
     pub(crate) grid_origin: [f64; 3],
-    /// C# `Outside`: the value off the grid (big, but squarable without overflow).
+    /// The value off the grid (big, but squarable without overflow).
     pub(crate) outside: f64,
 }
 
 impl DenseGridTrilinearImplicit {
-    /// C# `new DenseGridTrilinearImplicit(sdf.Grid, sdf.GridOrigin, sdf.CellSize)`.
     pub(crate) fn from_sdf(sdf: SignedDistanceGrid) -> Self {
         DenseGridTrilinearImplicit {
             grid: sdf.grid,
@@ -39,7 +35,6 @@ impl DenseGridTrilinearImplicit {
         }
     }
 
-    /// C# `DenseGrid3f.get_x_pair`.
     fn x_pair(&self, i0: i32, j: i32, k: i32) -> (f64, f64) {
         let offset = self.grid.ni * (j as usize + self.grid.nj * k as usize);
         let i0 = i0 as usize;
@@ -68,9 +63,8 @@ impl BoundedImplicitFunction3d for DenseGridTrilinearImplicit {
         let gy = (pt[1] - self.grid_origin[1]) / self.cell_size;
         let gz = (pt[2] - self.grid_origin[2]) / self.cell_size;
 
-        // C# `(int)` truncates toward zero, so a point less than a cell below the origin reads
-        // cell 0 (`as` truncates the same way and saturates far off the grid, which is outside
-        // either way).
+        // `as` truncates toward zero, so a point less than a cell below the origin reads cell 0,
+        // and saturates far off the grid, which is outside either way.
         let x0 = gx as i32;
         let (y0, z0) = (gy as i32, gz as i32);
         let (y1, z1) = (y0 + 1, z0 + 1);
@@ -109,7 +103,7 @@ impl BoundedImplicitFunction3d for DenseGridTrilinearImplicit {
     }
 }
 
-/// C# `Math.Min(double, double)`: NaN wins, unlike `f64::min`.
+/// NaN wins, unlike `f64::min`.
 fn cs_min(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -118,7 +112,7 @@ fn cs_min(a: f64, b: f64) -> f64 {
     }
 }
 
-/// C# `Math.Max(double, double)`: NaN wins, unlike `f64::max`.
+/// NaN wins, unlike `f64::max`.
 fn cs_max(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -145,7 +139,8 @@ impl BoundedImplicitFunction3d for ImplicitUnion3d {
     }
 }
 
-/// g3 `ImplicitIntersection3d`: A and B (its bounds are the union's, a C# TODO).
+/// g3 `ImplicitIntersection3d`: A and B (its bounds are the union's, looser than needed but never
+/// too small).
 pub(crate) struct ImplicitIntersection3d {
     pub(crate) a: BoxedImplicit,
     pub(crate) b: BoxedImplicit,

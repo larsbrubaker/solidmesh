@@ -1,7 +1,6 @@
-//! Walling two integer polygon loops into a mesh. Port of agg-sharp `Csg/PathStitcher.cs`
-//! (namespace `Processors`): `Stitch`, the start-pair search, the advance rule for an
-//! outer/inner pair and the two wall builders `Stitch` uses. Its top-only and bottom-only cases
-//! cap a loop through `VertexSourceToMesh.TriangulateFaces`.
+//! Walling two integer polygon loops into a mesh: [`stitch`], the start-pair search, the advance
+//! rule for an outer/inner pair and the two wall builders [`stitch`] uses. Its top-only and
+//! bottom-only cases cap a loop through `vertex_source_to_mesh::triangulate_faces`.
 
 use clipper2_rust::{Path64, Paths64, Point64};
 use vector_math::{Matrix4X4, Vector3};
@@ -19,10 +18,9 @@ fn at_height(point: Point64, height: f64) -> Vector3 {
     Vector3::new(point.x as f64, point.y as f64, height)
 }
 
-/// C# `Stitch(bottomLoop, bottomHeight, topLoop, topHeight, scaling = 1000)`: a cap facing up
-/// when there is only a bottom, one facing down when there is only a top, walls when both have
-/// the same number of loops (paired by index, `scaling` clipper units to the unit), and `None`
-/// otherwise. `None` and an empty list are the same absent loop.
+/// A cap facing up when there is only a bottom, one facing down when there is only a top, walls
+/// when both have the same number of loops (paired by index, `scaling` clipper units to the unit),
+/// and `None` otherwise. `None` and an empty list are the same absent loop.
 pub fn stitch(
     bottom_loop: Option<&Paths64>,
     bottom_height: f64,
@@ -56,7 +54,6 @@ pub fn stitch(
     }
 }
 
-/// C# `CreateTop`.
 fn create_top(path: &Paths64, top_height: f64, scaling: f64) -> Mesh {
     triangulate_faces(
         &create_vertex_storage(path, scaling),
@@ -66,7 +63,6 @@ fn create_top(path: &Paths64, top_height: f64, scaling: f64) -> Mesh {
     )
 }
 
-/// C# `CreateBottom`.
 fn create_bottom(path: &Paths64, bottom_height: f64, scaling: f64) -> Mesh {
     let mut mesh = triangulate_faces(
         &create_vertex_storage(path, scaling),
@@ -78,8 +74,7 @@ fn create_bottom(path: &Paths64, bottom_height: f64, scaling: f64) -> Mesh {
     mesh
 }
 
-/// The closest pair of vertices between the two loops, first found on a tie
-/// (C# `BestStartIndices`).
+/// The closest pair of vertices between the two loops, first found on a tie.
 pub fn best_start_indices(loop_a: &Path64, loop_b: &Path64) -> (usize, usize) {
     let mut best_distance = f64::MAX;
     let mut best_index_a = 0;
@@ -101,8 +96,7 @@ pub fn best_start_indices(loop_a: &Path64, loop_b: &Path64) -> (usize, usize) {
 /// Walls two loops that do not have the same number of vertices, by walking both at once and
 /// closing one triangle per step. Each step advances the loop whose candidate diagonal is the
 /// SHORTER, which is what keeps the wall running straight up between the loops; once a loop has
-/// been walked all the way round, every remaining step is taken on the other
-/// (C# `Stitch2SingleWalls`).
+/// been walked all the way round, every remaining step is taken on the other.
 pub fn stitch_2_single_walls(
     loop_a: &Path64,
     height_a: f64,
@@ -150,8 +144,7 @@ pub fn stitch_2_single_walls(
     mesh
 }
 
-/// Walls two loops with the same vertex count, two triangles per vertex pair
-/// (C# `CreateSimpleWall`).
+/// Walls two loops with the same vertex count, two triangles per vertex pair.
 pub fn create_simple_wall(
     bottom_loop: &Path64,
     bottom_height: f64,
@@ -176,9 +169,9 @@ pub fn create_simple_wall(
     mesh
 }
 
-/// Which loop an outer/inner stitch should advance on: 1 for the inner loop, 0 for the outer
-/// (C# `GetPolygonToAdvance`). The inner loop advances unless its new diagonal would cross the
-/// inner loop, or the outer's diagonal is both shorter and does not cross.
+/// Which loop an outer/inner stitch should advance on: 1 for the inner loop, 0 for the outer. The
+/// inner loop advances unless its new diagonal would cross the inner loop, or the outer's diagonal
+/// is both shorter and does not cross.
 pub fn get_polygon_to_advance(
     outer_loop: &Path64,
     outer_index: usize,

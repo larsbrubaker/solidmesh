@@ -1,7 +1,6 @@
 //! Rewinding an operand's shells whose winding contradicts their nesting, so a part saved inside
-//! out reads as the solid it looks like. Port of agg-sharp `Csg/MinkowskiShellOrientation.cs`
-//! (`Repair`, `MayHaveInvertedShell`, `MeshMayNeedRepair`); called by `minkowski_processing` and
-//! `sdf::mesh_sdf_grid`.
+//! out reads as the solid it looks like, with the cheap checks that skip the repair when no shell
+//! can be inverted; called by `minkowski_processing` and `sdf::mesh_sdf_grid`.
 
 use std::collections::HashMap;
 
@@ -10,13 +9,11 @@ use manifold_rust::types::Error as KernelStatus;
 
 use crate::{CancelToken, Mesh};
 
-/// C# `Repair`: the operand with every mis-wound shell rewound (the kernel's
-/// `repair_orientation`), or the operand itself when no shell can be. `None` when cancelled
-/// (C# throws `OperationCanceledException`).
+/// The operand with every mis-wound shell rewound (the kernel's `repair_orientation`), or the
+/// operand itself when no shell can be. `None` when cancelled.
 ///
-/// The repair costs about shells x triangles, so it runs only when a shell may be inverted. C#
-/// passes no kernel token for a caller's token that can never be cancelled; every
-/// [`CancelToken`] can be, so the kernel always polls it.
+/// The repair costs about shells x triangles, so it runs only when a shell may be inverted. Every
+/// [`CancelToken`] can be cancelled, so the kernel always polls it.
 pub(crate) fn repair(imported: Manifold, cancel: &CancelToken) -> Option<Manifold> {
     if !may_have_inverted_shell(&imported) {
         return Some(imported);
@@ -31,9 +28,9 @@ pub(crate) fn repair(imported: Manifold, cancel: &CancelToken) -> Option<Manifol
     }
 }
 
-/// C# `MayHaveInvertedShell`: false only when every edge-connected shell encloses a positive
-/// volume, the case in which the repair provably changes nothing. A soup import, or one with
-/// an unpaired halfedge, always takes the repair.
+/// False only when every edge-connected shell encloses a positive volume, the case in which the
+/// repair provably changes nothing. A soup import, or one with an unpaired halfedge, always takes
+/// the repair.
 pub fn may_have_inverted_shell(manifold: &Manifold) -> bool {
     let imp = manifold.as_impl();
     if imp.is_soup {
@@ -68,10 +65,10 @@ pub fn may_have_inverted_shell(manifold: &Manifold) -> bool {
         .any(|t| parent[t] == t && volume[t].partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater))
 }
 
-/// C# `MeshMayNeedRepair`: `may_have_inverted_shell`'s rule read straight off a mesh, before
-/// any import. False only when the mesh is closed and consistently wound (every directed edge
-/// met exactly once, and its reverse exactly once) and every edge-connected shell encloses a
-/// positive volume; such a mesh imports with nothing to join or rewind. O(triangles).
+/// `may_have_inverted_shell`'s rule read straight off a mesh, before any import. False only when
+/// the mesh is closed and consistently wound (every directed edge met exactly once, and its reverse
+/// exactly once) and every edge-connected shell encloses a positive volume; such a mesh imports
+/// with nothing to join or rewind. O(triangles).
 pub fn mesh_may_need_repair(mesh: &Mesh) -> bool {
     let faces = &mesh.faces;
     let count = faces.len();
@@ -121,7 +118,7 @@ pub fn mesh_may_need_repair(mesh: &Mesh) -> bool {
         .any(|f| parent[f] == f && volume[f].partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater))
 }
 
-/// The union-find root with path halving, as C#'s local `Find`.
+/// The union-find root with path halving.
 fn find(parent: &mut [usize], mut t: usize) -> usize {
     while parent[t] != t {
         parent[t] = parent[parent[t]];
@@ -130,7 +127,7 @@ fn find(parent: &mut [usize], mut t: usize) -> usize {
     t
 }
 
-/// p0 . (p1 x p2), in C#'s operation order.
+/// p0 . (p1 x p2), in a fixed operation order so the sign of a near-flat shell is reproducible.
 fn triple(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3]) -> f64 {
     (p0[0] * ((p1[1] * p2[2]) - (p1[2] * p2[1]))) - (p0[1] * ((p1[0] * p2[2]) - (p1[2] * p2[0])))
         + (p0[2] * ((p1[0] * p2[1]) - (p1[1] * p2[0])))

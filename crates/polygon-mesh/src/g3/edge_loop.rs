@@ -1,7 +1,6 @@
-//! geometry3Sharp's `EdgeLoop` and `EdgeSpan` (`mesh/EdgeLoop.cs`, `mesh/EdgeSpan.cs`) as
-//! `MeshBoundaryLoops` builds them and the hole fillers read them - the vertex and edge lists,
-//! and the conversions between them - plus `MeshValidation.IsBoundaryLoop`
-//! (`queries/MeshValidation.cs`). The geometric helpers of those classes are not reached.
+//! Edge loops and edge spans as the boundary-loop finder builds them and the hole fillers read
+//! them (the vertex and edge lists, and the conversions between them), plus the check that a
+//! loop runs along the boundary.
 
 use super::dmesh3::{DMesh3, INVALID_ID};
 
@@ -14,12 +13,10 @@ pub(crate) struct EdgeLoop {
 }
 
 impl EdgeLoop {
-    /// C# `VertexCount`.
     pub(crate) fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
 
-    /// C# `EdgeLoop.VertexLoopToEdgeLoop`.
     pub(crate) fn vertex_loop_to_edge_loop(mesh: &DMesh3, vertex_loop: &[i32]) -> Vec<i32> {
         let nv = vertex_loop.len();
         (0..nv)
@@ -36,7 +33,6 @@ pub(crate) struct EdgeSpan {
     pub(crate) bowtie_vertices: Vec<i32>,
 }
 
-/// C# `IndexUtil.find_shared_edge_v`.
 fn find_shared_edge_v(ev0: [i32; 2], ev1: [i32; 2]) -> i32 {
     if ev0[0] == ev1[0] || ev0[0] == ev1[1] {
         ev0[0]
@@ -47,7 +43,6 @@ fn find_shared_edge_v(ev0: [i32; 2], ev1: [i32; 2]) -> i32 {
     }
 }
 
-/// C# `IndexUtil.find_edge_other_v`.
 fn find_edge_other_v(ev: [i32; 2], v: i32) -> i32 {
     if ev[0] == v {
         ev[1]
@@ -59,7 +54,7 @@ fn find_edge_other_v(ev: [i32; 2], v: i32) -> i32 {
 }
 
 impl EdgeSpan {
-    /// C# `EdgeSpan.FromEdges`: the vertices recovered from consecutive shared ends.
+    /// The vertices recovered from consecutive shared ends.
     pub(crate) fn from_edges(mesh: &DMesh3, edges: &[i32]) -> EdgeSpan {
         let edges = edges.to_vec();
         let mut vertices = vec![0; edges.len() + 1];
@@ -85,7 +80,6 @@ impl EdgeSpan {
         }
     }
 
-    /// C# `EdgeSpan.VerticesToEdges`.
     pub(crate) fn vertices_to_edges(mesh: &DMesh3, vertex_span: &[i32]) -> Vec<i32> {
         vertex_span
             .windows(2)
@@ -94,7 +88,7 @@ impl EdgeSpan {
     }
 }
 
-#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
+#[allow(dead_code)] // only the tests call this
 /// g3 `ValidationStatus`, the values `IsBoundaryLoop` returns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ValidationStatus {
@@ -105,9 +99,9 @@ pub(crate) enum ValidationStatus {
     IncorrectLoopOrientation,
 }
 
-#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-/// C# `MeshValidation.IsBoundaryLoop`: every vertex on the boundary, and each consecutive pair
-/// a boundary edge running in the loop's direction.
+#[allow(dead_code)] // only the tests call this
+/// Every vertex on the boundary, and each consecutive pair a boundary edge running in the loop's
+/// direction.
 pub(crate) fn is_boundary_loop(mesh: &DMesh3, lp: &EdgeLoop) -> ValidationStatus {
     let n = lp.vertices.len();
     if lp.vertices.iter().any(|&v| !mesh.is_boundary_vertex(v)) {

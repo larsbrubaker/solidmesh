@@ -1,7 +1,6 @@
-//! Reading a kernel result back out as a [`Mesh`]. Port of agg-sharp
-//! `Csg/ManifoldResultReader.cs` (`ReadResult`, `ToMesh`, `BuildMesh`,
-//! `ExtractFaceColorsFromRuns`); called by `manifold_kernel`, with the colour bookkeeping
-//! `manifold_operand_batch` recorded.
+//! Reading a kernel result back out as a [`Mesh`], with per-face colours recovered from the
+//! result's runs; called by `manifold_kernel`, with the colour bookkeeping `manifold_operand_batch`
+//! recorded.
 
 use std::collections::HashMap;
 
@@ -15,7 +14,7 @@ use super::BooleanError;
 use crate::{CentroidColor, Face, Mesh};
 
 /// A finished boolean as a mesh, its faces painted from the run data when the caller asked for
-/// colour tracking (C# `ReadResult`).
+/// colour tracking.
 pub(crate) fn read_result(
     bool_result: &Manifold,
     batch: &ManifoldOperandBatch,
@@ -88,7 +87,7 @@ fn build_mesh(exported: &MeshGL64, operation_name: &str) -> Result<Mesh, Boolean
     Ok(mesh)
 }
 
-/// Per-face colors from a boolean result's run data (C# `ExtractFaceColorsFromRuns`).
+/// Per-face colors from a boolean result's run data.
 ///
 /// Each run is a contiguous span of result triangles that came from one source mesh; the run's
 /// original id says which. A source that had a single color paints its whole run, and one that
@@ -132,7 +131,7 @@ fn extract_face_colors_from_runs(
             face_count
         };
         let end_tri = end_tri.min(face_count);
-        // Signed on the manifold, unsigned in the run data; C# reinterprets (unchecked).
+        // Signed on the manifold, unsigned in the run data; the cast reinterprets the bits.
         let orig_id = original_id as i32;
 
         if let Some(spatial_colors) = original_id_to_spatial_colors.get(&orig_id) {

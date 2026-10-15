@@ -1,6 +1,5 @@
-//! The n-ary combine spelled out as a left fold of binary booleans, for a winding rule the
-//! kernel's batch tree cannot take. Port of agg-sharp `Csg/ManifoldPairwiseFold.cs`
-//! (`CombinePairwise`, `CombinePairwiseAsync`); called by `manifold_kernel`.
+//! The n-ary combine spelled out as a left fold of binary booleans, for a winding rule the kernel's
+//! batch tree cannot take, with a variant that yields between steps; called by `manifold_kernel`.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -50,11 +49,11 @@ pub(crate) fn combine_pairwise(
     Ok(accumulated.unwrap_or_else(|| manifolds[0].clone()))
 }
 
-/// [`combine_pairwise`] with the UI given its thread back between two operands (C#
-/// `CombinePairwiseAsync`). Between, and only between: one pairwise boolean is one call that
-/// cannot hand anything back part way through. The yield comes after the step's own completion
-/// report so the bar has somewhere new to move to before it paints. `sink_reporter` is the
-/// kernel-side form of `yield_reporter` (`None` when nobody watches it).
+/// [`combine_pairwise`] with the UI given its thread back between two operands. Between, and
+/// only between: one pairwise boolean is one call that cannot hand anything back part way
+/// through. The yield comes after the step's own completion report so the bar has somewhere new
+/// to move to before it paints. `sink_reporter` is the kernel-side form of `yield_reporter`
+/// (`None` when nobody watches it).
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn combine_pairwise_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     manifolds: &[Manifold],

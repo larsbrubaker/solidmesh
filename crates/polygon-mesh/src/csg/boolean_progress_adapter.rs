@@ -1,6 +1,5 @@
-//! Maps the kernel's per-boolean phase reports onto a caller's progress window. Port of
-//! agg-sharp `Csg/BooleanProgressAdapter.cs`; used by `manifold_kernel` (the batch combine) and
-//! `manifold_pairwise_fold` (one step per pair).
+//! Maps the kernel's per-boolean phase reports onto a caller's progress window. Used by
+//! `manifold_kernel` (the batch combine) and `manifold_pairwise_fold` (one step per pair).
 //!
 //! The caller owns the window `[ratio_completed, ratio_completed + amount_per_operation]`,
 //! split evenly over `operation_count` booleans. Each boolean restarts its phases at fraction
@@ -46,7 +45,8 @@ impl BooleanProgressAdapter {
         }
     }
 
-    /// [`Self::new`] with C#'s `operationLabel` (Minkowski passes "Dilate" or "Erode").
+    /// [`Self::new`] with an operation label prefixed to each phase (Minkowski passes "Dilate"
+    /// or "Erode").
     pub(crate) fn with_label(
         reporter: BooleanReporter,
         ratio_completed: f64,
@@ -103,15 +103,14 @@ impl BooleanProgressAdapter {
         } else {
             format!("{}: {phase}", self.operation_label)
         };
-        // C# swallows a throwing sink here: this can run inside the kernel, and a progress
-        // sink that fails is not a reason to lose the geometry. A Rust callback that panics
-        // is a bug in the callback and is left to surface.
+        // A progress sink that fails is not a reason to lose the geometry, but this can run inside
+        // the kernel: a callback that panics is a bug in the callback and is left to surface rather
+        // than caught.
         (self.reporter)(state.high_water_ratio, &message);
     }
 }
 
-/// The kernel-side sink that feeds an adapter (C# `ManifoldPairwiseFold.ProgressSinkFor`), or
-/// `None` when nobody is watching.
+/// The kernel-side sink that feeds an adapter, or `None` when nobody is watching.
 pub(crate) fn progress_sink_for(
     adapter: Option<&Arc<BooleanProgressAdapter>>,
 ) -> Option<ProgressReporter> {

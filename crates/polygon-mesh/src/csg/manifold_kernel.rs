@@ -1,9 +1,7 @@
-//! The boolean's driver: the kernel's one-time configuration, the operand loop, and which
-//! combine runs. Port of agg-sharp `Csg/ManifoldKernel.cs` (`RunBoolean`, `CombineAndRead`, and
-//! their yielding variants `RunBooleanAsync`, `CombineAndReadAsync`, with `AnyoneWatching`).
-//! Each stage it drives is its own module:
-//! `manifold_operand_batch`, `manifold_import`, `manifold_cancellable_boolean`,
-//! `manifold_pairwise_fold` and `manifold_result_reader`.
+//! The boolean's driver: the kernel's one-time configuration, the operand loop, and which combine
+//! runs, each with a yielding variant for a caller that hands the UI its thread back. Each stage it
+//! drives is its own module: `manifold_operand_batch`, `manifold_import`,
+//! `manifold_cancellable_boolean`, `manifold_pairwise_fold` and `manifold_result_reader`.
 
 use std::future::Future;
 use std::sync::{Arc, Once};
@@ -31,11 +29,11 @@ static CONFIGURE: Once = Once::new();
 
 /// Selects the kernel's boolean engine once, before the first boolean runs.
 ///
-/// `Auto` keeps the fast exact pipeline for strictly manifold operands and only pays for the
-/// slower rational-arithmetic engine when an operand came in through the robust import as
-/// non-manifold soup. The setting is process-global, so it is made once rather than per call.
-/// (agg-sharp also switches the kernel's parallelism here; in Rust that is the `parallel`
-/// Cargo feature, on for native targets and off for wasm32 in polygon-mesh's Cargo.toml.)
+/// `Auto` keeps the fast exact pipeline for strictly manifold operands and only pays for the slower
+/// rational-arithmetic engine when an operand came in through the robust import as non-manifold
+/// soup. The setting is process-global, so it is made once rather than per call. (The kernel's
+/// parallelism is the `parallel` Cargo feature instead, on for native targets and off for wasm32 in
+/// polygon-mesh's Cargo.toml.)
 pub(crate) fn ensure_configured() {
     CONFIGURE.call_once(|| BooleanConfig::set_default_engine(BooleanEngine::Auto));
 }
@@ -71,7 +69,7 @@ pub(crate) fn run_boolean(
     batch.throw_if_any_skipped(result)
 }
 
-/// [`run_boolean`] for a caller that can hand the UI its thread back (C# `RunBooleanAsync`): the
+/// [`run_boolean`] for a caller that can hand the UI its thread back: the
 /// same boolean, with a yield after every operand's import and around the combine. `reporter`
 /// is the progress sink (`options.reporter` is not read) and the yields go through it, so a
 /// reporter nobody is watching never yields ([`anyone_watching`]).
@@ -120,8 +118,8 @@ pub(crate) async fn run_boolean_async<F: Future<Output = ()>, Y: Fn() -> F + ?Si
 }
 
 /// [`combine_and_read`] with a yield on either side of the batch, or between each pair of a
-/// winding-rule fold (C# `CombineAndReadAsync`). Reading the result back is one export with no
-/// point inside it where handing the frame away would leave the kernel's data half-read.
+/// winding-rule fold. Reading the result back is one export with no point inside it where handing
+/// the frame away would leave the kernel's data half-read.
 async fn combine_and_read_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     batch: &ManifoldOperandBatch,
     operation: CsgModes,
@@ -186,8 +184,8 @@ async fn combine_and_read_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     manifold_result_reader::read_result(bool_result, batch)
 }
 
-/// C# `AnyoneWatching`: whether anything is listening to `reporter`. `ProgressReporter::null()`
-/// and a reporter built around no target are both nobody.
+/// Whether anything is listening to `reporter`. `ProgressReporter::null()` and a reporter built
+/// around no target are both nobody.
 pub(crate) fn anyone_watching(reporter: &ProgressReporter) -> bool {
     reporter.has_target()
 }
@@ -204,8 +202,7 @@ fn boolean_reporter_for(reporter: &ProgressReporter) -> Option<BooleanReporter> 
     }))
 }
 
-/// C# `await reporter.YieldToUi()`: hands the UI its thread when the reporter's throttle lets
-/// the hop through.
+/// Hands the UI its thread when the reporter's throttle lets the hop through.
 pub(crate) async fn yield_to_ui<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     reporter: &ProgressReporter,
     ui_yield: Option<&Y>,
@@ -222,7 +219,6 @@ pub(crate) async fn yield_to_ui<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
     }
 }
 
-/// C# `cancellationToken.ThrowIfCancellationRequested()`.
 pub(crate) fn throw_if_cancelled(cancel: &CancelToken) -> Result<(), BooleanError> {
     if cancel.is_cancelled() {
         return Err(BooleanError::Cancelled);

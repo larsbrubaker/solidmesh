@@ -1,7 +1,6 @@
-//! The part of geometry3Sharp's `DMeshAABBTree3` (`spatial/DMeshAABBTree.cs`) the signed
-//! distance grid and the mesh repair reach: the default top-down midpoint build,
-//! `FindNearestTriangle`, and `FindNearestHitTriangle` with its `TriangleFilterF`. The fast
-//! winding number over the same tree is `fast_winding`.
+//! The part of geometry3Sharp's `DMeshAABBTree3` the signed distance grid and the mesh repair
+//! reach: the default top-down midpoint build, `FindNearestTriangle`, and `FindNearestHitTriangle`
+//! with its `TriangleFilterF`. The fast winding number over the same tree is `fast_winding`.
 //!
 //! The layout is g3's: float box centres and extents per box, `box_to_index` into one
 //! `index_list` whose leading part holds the leaf triangle lists (`[N t1 .. tN]`) and whose tail
@@ -13,7 +12,7 @@ use super::ray_intersection::{is_normalized, ray_box_intersect_t, ray_triangle_i
 
 /// g3 `MathUtil.ZeroTolerance`.
 const ZERO_TOLERANCE: f64 = 1e-08;
-/// g3 `MathUtil.ZeroTolerancef`, widened as C# widens it when adding it to a double.
+/// g3 `MathUtil.ZeroTolerancef`, an f32 constant widened to f64 where it meets a double.
 const ZERO_TOLERANCE_F: f64 = 1e-6f32 as f64;
 /// g3 `MathUtil.Epsilonf`.
 const EPSILON_F: f32 = 1.192_092_9e-7;
@@ -30,13 +29,12 @@ struct Box3f {
 }
 
 impl Box3f {
-    /// C# `AxisAlignedBox3f.Empty`.
     const EMPTY: Box3f = Box3f {
         min: [f32::MAX; 3],
         max: [f32::MIN; 3],
     };
 
-    /// C# `Contain(AxisAlignedBox3f)` / `Contain(AxisAlignedBox3d)` (doubles narrowed first).
+    /// Grows this box to contain `other` (double boxes are narrowed to f32 first).
     fn contain(&mut self, other: &Box3f) {
         for a in 0..3 {
             self.min[a] = self.min[a].min(other.min[a]);
@@ -69,8 +67,8 @@ struct BoxesSet {
     index_list: Vec<i32>,
 }
 
-/// g3 `DMeshAABBTree3`, built with `TopDownMidpoint` (C# `new DMeshAABBTree3(mesh, autoBuild: true)`).
-/// The fields are visible to `fast_winding`, which walks the same layout.
+/// g3 `DMeshAABBTree3`, built with `TopDownMidpoint`. The fields are visible to `fast_winding`,
+/// which walks the same layout.
 pub(crate) struct DMeshAABBTree3<'a> {
     pub(super) mesh: &'a DMesh3,
     pub(super) box_to_index: Vec<i32>,
@@ -82,7 +80,7 @@ pub(crate) struct DMeshAABBTree3<'a> {
 }
 
 impl<'a> DMeshAABBTree3<'a> {
-    /// C# `new DMeshAABBTree3(mesh, autoBuild: true)`: `build_top_down(false)`.
+    /// `build_top_down(false)`.
     pub(crate) fn new(mesh: &'a DMesh3) -> Self {
         let count = mesh.triangle_count();
         // Invalid (non-finite) triangles are skipped but the split still runs over `count`
@@ -145,8 +143,7 @@ impl<'a> DMeshAABBTree3<'a> {
         }
     }
 
-    /// C# `FindNearestTriangle(p, fMaxDist)`: the nearest triangle strictly within `max_dist`
-    /// (`f64::MAX` for no limit), or -1.
+    /// The nearest triangle strictly within `max_dist` (`f64::MAX` for no limit), or -1.
     pub(crate) fn find_nearest_triangle(&self, p: [f64; 3], max_dist: f64) -> i32 {
         let mut nearest_sqr = if max_dist < f64::MAX {
             max_dist * max_dist
@@ -199,9 +196,8 @@ impl<'a> DMeshAABBTree3<'a> {
         }
     }
 
-    /// C# `FindNearestHitTriangle(ray, fMaxDist)` with `TriangleFilterF`: the nearest triangle
-    /// the ray hits (only those `filter` accepts), or -1. `None` where C# throws for a ray whose
-    /// direction is not normalized.
+    /// The nearest triangle the ray hits (only those `filter` accepts), or -1. `None` for a ray
+    /// whose direction is not normalized.
     pub(crate) fn find_nearest_hit_triangle(
         &self,
         ray: &Ray3d,
@@ -283,7 +279,7 @@ impl<'a> DMeshAABBTree3<'a> {
         }
     }
 
-    /// C# `box_ray_intersect_t`: the box widened by `box_eps` (in float), `f64::MAX` on a miss.
+    /// The box widened by `box_eps` (in float), `f64::MAX` on a miss.
     fn box_ray_intersect_t(&self, i_box: i32, ray: &Ray3d) -> f64 {
         let c = self.box_centers[i_box as usize];
         let e = self.box_extents[i_box as usize];
@@ -295,7 +291,7 @@ impl<'a> DMeshAABBTree3<'a> {
         ray_box_intersect_t(ray, &bx).unwrap_or(f64::MAX)
     }
 
-    /// C# `box_distance_sqr`: the box widened by `box_eps` in float, then measured in double.
+    /// The box widened by `box_eps` in float, then measured in double.
     fn box_distance_sqr(&self, i_box: i32, p: [f64; 3]) -> f64 {
         let c = self.box_centers[i_box as usize];
         let e = self.box_extents[i_box as usize];
@@ -317,7 +313,7 @@ struct Builder<'b> {
 }
 
 impl Builder<'_> {
-    /// C# `split_tri_set_midpoint`: returns the box id (a leaf as `-(id + 1)`) and its box.
+    /// Returns the box id (a leaf as `-(id + 1)`) and its box.
     fn split_tri_set_midpoint(&mut self, start: usize, count: usize, depth: usize) -> (i32, Box3f) {
         let mut bx = Box3f::EMPTY;
         if count < TOP_DOWN_LEAF_MAX_TRI_COUNT {

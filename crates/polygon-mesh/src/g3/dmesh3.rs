@@ -1,16 +1,16 @@
-//! geometry3Sharp's `DMesh3` (`mesh/DMesh3.cs`): the dynamic, edge-based triangle mesh the
-//! signed distance grids and the mesh repair (`mesh_auto_repair`) work on. This file holds the
-//! storage - vertices, triangles, edges, each behind a [`RefCountVector`] so freed ids are
-//! reused in C#'s order, and the per-vertex edge lists in a [`SmallListSet`] - with appending,
-//! the per-element getters, `IsClosed`, the compact copy, and agg-sharp's
-//! `MeshExtensions.ToDMesh3` / `ToMesh`. The one-ring and boundary queries are in
+//! geometry3Sharp's `DMesh3`: the dynamic, edge-based triangle mesh the signed distance grids and
+//! the mesh repair (`mesh_auto_repair`) work on. This file holds the storage - vertices, triangles,
+//! edges, each behind a [`RefCountVector`] so freed ids are reused in a fixed order, and the
+//! per-vertex edge lists in a [`SmallListSet`] - with appending, the per-element getters, the
+//! closed test, the compact copy, and the conversions to and from
+//! [`Mesh`]. The one-ring and boundary queries are in
 //! `dmesh3_queries`, the topology edits (remove, reverse, split, flip, collapse, merge, poke) in
 //! `dmesh3_edge_ops`, and the `AxisAlignedBox3d` subset and g3's point-triangle distance here
 //! and in `tri_distance`.
 //!
 //! g3's per-vertex normals, colors and UVs are not stored: nothing that reaches a [`Mesh`] reads
-//! them (`ToMesh` copies positions only), so `MeshNormals.QuickCompute` at the end of a repair
-//! has no observable output.
+//! them (the conversion back copies positions only), so no normals are computed at the end of a
+//! repair.
 
 use crate::Mesh;
 
@@ -18,9 +18,7 @@ use super::ref_count_vector::RefCountVector;
 use super::small_list_set::SmallListSet;
 pub(crate) use super::tri_distance::tri_distance_sqr;
 
-/// C# `DMesh3.InvalidID`.
 pub(crate) const INVALID_ID: i32 = -1;
-/// C# `DMesh3.NonManifoldID`.
 pub(crate) const NON_MANIFOLD_ID: i32 = -2;
 
 /// g3 `MeshResult`, the subset the edits return.
@@ -43,9 +41,9 @@ pub(crate) enum MeshResult {
     FailedWouldCreateBowtie,
 }
 
-/// An exception g3 throws from inside an edit (`FlipEdge`'s broken-topology checks,
-/// `RemoveVertex` on a still-referenced vertex). It unwinds to the nearest C# `catch`, which in
-/// the repair is `repair_cracks`'; the mesh keeps whatever the edit had already changed.
+/// An exception g3 throws from inside an edit (`FlipEdge`'s broken-topology checks, `RemoveVertex`
+/// on a still-referenced vertex). It is passed up to the nearest handler, which in the repair is
+/// `repair_cracks`'; the mesh keeps whatever the edit had already changed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct G3Exception(pub(crate) &'static str);
 
@@ -65,7 +63,7 @@ pub(crate) struct DMesh3 {
     pub(super) edges_refcount: RefCountVector,
 }
 
-/// C# `DVector.insert(value, index)`: sets slot `index`, growing the vector to reach it.
+/// Sets slot `index`, growing the vector to reach it.
 pub(super) fn insert_at<T: Copy + Default>(v: &mut Vec<T>, index: i32, value: T) {
     let index = index as usize;
     if index >= v.len() {
@@ -82,7 +80,7 @@ pub(crate) struct AxisAlignedBox3d {
 }
 
 impl AxisAlignedBox3d {
-    /// C# `DistanceSquared(Vector3d)`: zero inside.
+    /// Zero inside.
     pub(crate) fn distance_squared(&self, v: [f64; 3]) -> f64 {
         let axis = |a: usize| {
             if v[a] < self.min[a] {
@@ -97,33 +95,32 @@ impl AxisAlignedBox3d {
         dx * dx + dy * dy + dz * dz
     }
 
-    /// C# `AxisAlignedBox3d.Empty`: inverted to the extremes, so any point grows it.
+    /// Inverted to the extremes, so any point grows it.
     pub(crate) const EMPTY: AxisAlignedBox3d = AxisAlignedBox3d {
         min: [f64::MAX; 3],
         max: [f64::MIN; 3],
     };
 
-    /// C# `Width` (never negative).
+    /// The extent along x (never negative).
     pub(crate) fn width(&self) -> f64 {
         (self.max[0] - self.min[0]).max(0.0)
     }
 
-    /// C# `Height` (never negative).
+    /// The extent along y (never negative).
     pub(crate) fn height(&self) -> f64 {
         (self.max[1] - self.min[1]).max(0.0)
     }
 
-    /// C# `Depth` (never negative).
+    /// The extent along z (never negative).
     pub(crate) fn depth(&self) -> f64 {
         (self.max[2] - self.min[2]).max(0.0)
     }
 
-    /// C# `MaxDim`.
     pub(crate) fn max_dim(&self) -> f64 {
         self.width().max(self.height().max(self.depth()))
     }
 
-    /// C# `Expand(double)`: grows every side by `radius`.
+    /// Grows every side by `radius`.
     pub(crate) fn expand(&mut self, radius: f64) {
         for a in 0..3 {
             self.min[a] -= radius;
@@ -131,7 +128,7 @@ impl AxisAlignedBox3d {
         }
     }
 
-    /// C# `Contain(AxisAlignedBox3d)`: grows to cover `other`.
+    /// Grows to cover `other`.
     pub(crate) fn contain(&mut self, other: &AxisAlignedBox3d) {
         for a in 0..3 {
             self.min[a] = self.min[a].min(other.min[a]);
@@ -139,8 +136,7 @@ impl AxisAlignedBox3d {
         }
     }
 
-    /// C# `Intersect(AxisAlignedBox3d)`: the overlap, or [`AxisAlignedBox3d::EMPTY`] when it
-    /// has no volume.
+    /// The overlap, or [`AxisAlignedBox3d::EMPTY`] when it has no volume.
     pub(crate) fn intersect(&self, other: &AxisAlignedBox3d) -> AxisAlignedBox3d {
         let overlap = AxisAlignedBox3d {
             min: std::array::from_fn(|a| self.min[a].max(other.min[a])),
@@ -171,7 +167,7 @@ fn bounds_of(mut points: impl Iterator<Item = [f64; 3]>) -> AxisAlignedBox3d {
 }
 
 impl DMesh3 {
-    /// C# `new DMesh3(bWantTriGroups: true)` (`EnableTriangleGroups`).
+    /// Turns on per-triangle groups, every existing triangle in `initial_group`.
     pub(crate) fn enable_triangle_groups(&mut self, initial_group: i32) {
         if self.triangle_groups.is_some() {
             return;
@@ -181,23 +177,20 @@ impl DMesh3 {
         self.max_group_id = 0;
     }
 
-    /// C# `AppendVertex`.
     pub(crate) fn append_vertex(&mut self, v: [f64; 3]) -> i32 {
         let vid = self.vertices_refcount.allocate();
         insert_at(&mut self.vertices, vid, v);
-        // C# `allocate_edges_list`.
         self.vertex_edges.allocate_at(vid);
         vid
     }
 
-    /// C# `AppendTriangle(v0, v1, v2, gid)`: refuses (returns [`INVALID_ID`] or
+    /// Refuses (returns [`INVALID_ID`] or
     /// [`NON_MANIFOLD_ID`]) a triangle with a missing or repeated vertex, or one that would put a
     /// third triangle on an edge.
     pub(crate) fn append_triangle(&mut self, v0: i32, v1: i32, v2: i32) -> i32 {
         self.append_triangle_g(v0, v1, v2, -1)
     }
 
-    /// C# `AppendTriangle(Index3i, gid)`.
     pub(crate) fn append_triangle_g(&mut self, v0: i32, v1: i32, v2: i32, gid: i32) -> i32 {
         if !self.is_vertex(v0) || !self.is_vertex(v1) || !self.is_vertex(v2) {
             return INVALID_ID;
@@ -238,7 +231,6 @@ impl DMesh3 {
         tid
     }
 
-    /// C# `add_tri_edge`.
     pub(super) fn add_tri_edge(&mut self, tid: i32, v0: i32, v1: i32, j: usize, eid: i32) {
         if eid != INVALID_ID {
             self.edges[eid as usize][3] = tid;
@@ -249,7 +241,6 @@ impl DMesh3 {
         }
     }
 
-    /// C# `add_edge`.
     pub(super) fn add_edge(&mut self, va: i32, vb: i32, ta: i32, tb: i32) -> i32 {
         let (va, vb) = if vb < va { (vb, va) } else { (va, vb) };
         let eid = self.edges_refcount.allocate();
@@ -259,7 +250,6 @@ impl DMesh3 {
         eid
     }
 
-    /// C# `add_triangle_only`.
     pub(super) fn add_triangle_only(&mut self, t: [i32; 3], te: [i32; 3]) -> i32 {
         let tid = self.triangles_refcount.allocate();
         insert_at(&mut self.triangles, tid, t);
@@ -267,124 +257,103 @@ impl DMesh3 {
         tid
     }
 
-    /// C# `IsVertex`.
     pub(crate) fn is_vertex(&self, vid: i32) -> bool {
         self.vertices_refcount.is_valid(vid)
     }
 
-    /// C# `IsTriangle`.
     pub(crate) fn is_triangle(&self, tid: i32) -> bool {
         self.triangles_refcount.is_valid(tid)
     }
 
-    /// C# `IsEdge`.
     pub(crate) fn is_edge(&self, eid: i32) -> bool {
         self.edges_refcount.is_valid(eid)
     }
 
-    /// C# `TriangleCount`.
     pub(crate) fn triangle_count(&self) -> usize {
         self.triangles_refcount.count()
     }
 
-    /// C# `VertexCount`.
     pub(crate) fn vertex_count(&self) -> usize {
         self.vertices_refcount.count()
     }
 
-    /// C# `EdgeCount`.
     pub(crate) fn edge_count(&self) -> usize {
         self.edges_refcount.count()
     }
 
-    /// C# `MaxVertexID`.
     pub(crate) fn max_vertex_id(&self) -> i32 {
         self.vertices_refcount.max_index() as i32
     }
 
-    /// C# `MaxTriangleID`.
     pub(crate) fn max_triangle_id(&self) -> i32 {
         self.triangles_refcount.max_index() as i32
     }
 
-    /// C# `MaxEdgeID`.
     pub(crate) fn max_edge_id(&self) -> i32 {
         self.edges_refcount.max_index() as i32
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `IsCompact`.
+    #[allow(dead_code)] // only the tests call this
     pub(crate) fn is_compact(&self) -> bool {
         self.vertices_refcount.is_dense()
             && self.edges_refcount.is_dense()
             && self.triangles_refcount.is_dense()
     }
 
-    /// C# `VertexIndices`.
     pub(crate) fn vertex_indices(&self) -> impl Iterator<Item = i32> + '_ {
         self.vertices_refcount.indices()
     }
 
-    /// C# `TriangleIndices`.
     pub(crate) fn triangle_indices(&self) -> impl Iterator<Item = i32> + '_ {
         self.triangles_refcount.indices()
     }
 
-    /// C# `EdgeIndices`.
     pub(crate) fn edge_indices(&self) -> impl Iterator<Item = i32> + '_ {
         self.edges_refcount.indices()
     }
 
-    /// C# `BoundaryEdgeIndices`.
     pub(crate) fn boundary_edge_indices(&self) -> impl Iterator<Item = i32> + '_ {
         self.edges_refcount
             .indices()
             .filter(|&eid| self.edges[eid as usize][3] == INVALID_ID)
     }
 
-    /// C# `GetVertex`.
     pub(crate) fn vertex(&self, vid: i32) -> [f64; 3] {
         self.vertices[vid as usize]
     }
 
-    /// C# `GetVertex`, by the index the distance grids iterate with.
+    /// A vertex position, by the index the distance grids iterate with.
     pub(crate) fn get_vertex(&self, vid: usize) -> [f64; 3] {
         self.vertices[vid]
     }
 
-    /// C# `SetVertex`.
     pub(crate) fn set_vertex(&mut self, vid: i32, v: [f64; 3]) {
         self.vertices[vid as usize] = v;
     }
 
-    /// C# `GetTriangle`.
     pub(crate) fn get_triangle(&self, tid: i32) -> [i32; 3] {
         self.triangles[tid as usize]
     }
 
-    /// C# `GetTriEdges`.
     pub(crate) fn get_tri_edges(&self, tid: i32) -> [i32; 3] {
         self.triangle_edges[tid as usize]
     }
 
-    /// C# `GetEdge`: `[a, b, t0, t1]`.
+    /// `[a, b, t0, t1]`.
     pub(crate) fn get_edge(&self, eid: i32) -> [i32; 4] {
         self.edges[eid as usize]
     }
 
-    /// C# `GetEdgeV`.
     pub(crate) fn get_edge_v(&self, eid: i32) -> [i32; 2] {
         let e = self.edges[eid as usize];
         [e[0], e[1]]
     }
 
-    /// C# `GetEdgeT`.
     pub(crate) fn get_edge_t(&self, eid: i32) -> [i32; 2] {
         let e = self.edges[eid as usize];
         [e[2], e[3]]
     }
 
-    /// C# `GetTriangleGroup`.
     pub(crate) fn get_triangle_group(&self, tid: i32) -> i32 {
         match &self.triangle_groups {
             None => -1,
@@ -393,8 +362,7 @@ impl DMesh3 {
         }
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `SetTriangleGroup`.
+    #[allow(dead_code)] // only the tests call this
     pub(crate) fn set_triangle_group(&mut self, tid: i32, group_id: i32) {
         if let Some(groups) = &mut self.triangle_groups {
             groups[tid as usize] = group_id;
@@ -402,13 +370,12 @@ impl DMesh3 {
         }
     }
 
-    /// C# `AllocateTriangleGroup`.
     pub(crate) fn allocate_triangle_group(&mut self) -> i32 {
         self.max_group_id += 1;
         self.max_group_id
     }
 
-    /// C# `GetTriVertices`, by the index the distance grids iterate with.
+    /// A triangle's three corner positions, by the index the distance grids iterate with.
     pub(crate) fn get_tri_vertices(&self, tid: usize) -> [[f64; 3]; 3] {
         let [a, b, c] = self.triangles[tid];
         [
@@ -418,7 +385,6 @@ impl DMesh3 {
         ]
     }
 
-    /// C# `GetTriCentroid`.
     pub(crate) fn get_tri_centroid(&self, tid: usize) -> [f64; 3] {
         let [a, b, c] = self.get_tri_vertices(tid);
         let f = 1.0 / 3.0;
@@ -429,13 +395,12 @@ impl DMesh3 {
         ]
     }
 
-    /// C# `GetTriBounds`.
     pub(crate) fn get_tri_bounds(&self, tid: usize) -> AxisAlignedBox3d {
         let corners = self.get_tri_vertices(tid);
         bounds_of(corners.iter().copied())
     }
 
-    /// C# `CachedBounds` (`GetBounds`): the box of every live vertex, zero when there are none.
+    /// The box of every live vertex, zero when there are none.
     pub(crate) fn cached_bounds(&self) -> AxisAlignedBox3d {
         if self.vertex_count() == 0 {
             return AxisAlignedBox3d {
@@ -446,7 +411,7 @@ impl DMesh3 {
         bounds_of(self.vertex_indices().map(|vid| self.vertices[vid as usize]))
     }
 
-    /// C# `IsClosed`: has triangles and no boundary edge.
+    /// Has triangles and no boundary edge.
     pub(crate) fn is_closed(&self) -> bool {
         if self.triangle_count() == 0 {
             return false;
@@ -454,9 +419,9 @@ impl DMesh3 {
         self.boundary_edge_indices().next().is_none()
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `new DMesh3(copy, bCompact: true)` (`CompactCopy`): live vertices re-appended in id
-    /// order, then live triangles; a mesh that is already compact is copied as is.
+    #[allow(dead_code)] // only the tests call this
+    /// Live vertices re-appended in id order, then live triangles; a mesh that is already compact
+    /// is copied as is.
     pub(crate) fn compact_copy(&self) -> DMesh3 {
         if self.is_compact() {
             return self.clone();
@@ -489,8 +454,7 @@ impl DMesh3 {
 }
 
 impl Mesh {
-    /// agg-sharp `MeshExtensions.ToDMesh3`: every vertex, then every face in order (g3 drops
-    /// the ones it refuses).
+    /// Every vertex, then every face in order (faces `DMesh3` refuses are dropped).
     pub(crate) fn to_dmesh3(&self) -> DMesh3 {
         let mut out = DMesh3::default();
         for vertex in &self.vertices {
@@ -504,8 +468,7 @@ impl Mesh {
 }
 
 impl DMesh3 {
-    /// agg-sharp `MeshExtensions.ToMesh(DMesh3)`: live vertices, then live triangles, in id
-    /// order, with the vertex ids compacted.
+    /// Live vertices, then live triangles, in id order, with the vertex ids compacted.
     pub(crate) fn to_mesh(&self) -> Mesh {
         let mut out = Mesh::new();
         let mut map_v = vec![0; self.max_vertex_id() as usize];

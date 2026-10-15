@@ -1,12 +1,11 @@
-//! Getting a [`Mesh`] into the kernel: the robust import, the orientation repair and the
-//! flattening into the kernel's `MeshGL64`. Port of agg-sharp `Csg/ManifoldImport.cs`; called by
-//! `manifold_operand_batch` and `boolean_processing::classify_boolean_operand`.
+//! Getting a [`Mesh`] into the kernel: the robust import, the orientation repair and the flattening
+//! into the kernel's `MeshGL64`. Called by `manifold_operand_batch` and
+//! `boolean_processing::classify_boolean_operand`.
 //!
 //! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld);
 //! [`import_strict`] is the one-shot import with no retry, for callers that must read exactly
-//! what the kernel makes of the mesh as given.
-//! `ImportAsOriginal` (the re-tag that attributes result triangles
-//! to an operand) is only used by face-colour tracking and comes with it in Phase 2f.
+//! what the kernel makes of the mesh as given. The re-tag that attributes result triangles to an
+//! operand is only used by face-colour tracking and lives with it in `manifold_operand_batch`.
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
@@ -16,7 +15,7 @@ use vector_math::Vector3;
 use super::manifold_kernel;
 use crate::Mesh;
 
-/// The kernel refused a mesh (C# `MeshImportRejectedException`).
+/// The kernel refused a mesh.
 #[derive(Debug, Clone)]
 pub struct ImportRejected {
     pub message: String,
@@ -52,8 +51,8 @@ pub fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportR
     Err(rejected)
 }
 
-/// Uploads a mesh exactly as given: C#'s `Manifold.FromMeshGL64Robust` over the same
-/// marshalling, with no weld-and-retry and no orientation repair.
+/// Uploads a mesh exactly as given: the kernel's robust import over the same marshalling, with no
+/// weld-and-retry and no orientation repair.
 ///
 /// For callers that must see the kernel's own reading of the mesh - the bevel tests that check
 /// a built fillet is a solid the kernel takes, where a tolerance weld would close a seam the
@@ -63,8 +62,8 @@ pub fn import_strict(mesh: &Mesh) -> Result<Manifold, ImportRejected> {
     try_import(mesh, false)
 }
 
-/// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide
-/// whether it is worth a retry (C# `TryImport`).
+/// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide whether
+/// it is worth a retry.
 fn try_import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
     let imported = Manifold::from_mesh_gl64_robust(&to_rust_mesh_data(mesh));
     let status = imported.status();
@@ -151,8 +150,8 @@ pub(crate) fn to_rust_mesh_data(mesh: &Mesh) -> MeshGL64 {
         vert_properties.push(f64::from(vertex.z));
     }
 
-    // Face indices are i32 as in C#; a negative one is out of bounds for the kernel either way,
-    // so it is passed as the u64 it wraps to and the import reports VertexOutOfBounds.
+    // Face indices are i32; a negative one is out of bounds for the kernel either way, so it is
+    // passed as the u64 it wraps to and the import reports VertexOutOfBounds.
     let mut tri_verts = Vec::with_capacity(mesh.faces.len() * 3);
     for face in mesh.faces.iter() {
         tri_verts.push(face.v0 as u64);

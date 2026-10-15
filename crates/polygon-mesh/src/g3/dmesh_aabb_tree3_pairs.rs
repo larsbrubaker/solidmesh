@@ -1,7 +1,6 @@
-//! geometry3Sharp `DMeshAABBTree3.FindNearestTriangles` (`spatial/DMeshAABBTree.cs`): the
-//! nearest pair of triangles between two trees, descending both together and pruning box pairs
-//! farther apart than the best pair so far. Only the form `mesh_distance` calls is ported: no
-//! `TransformF` (both meshes already in one space) and no `TriangleFilterF`. The tree and its
+//! The nearest pair of triangles between two `DMeshAABBTree3`s, descending both together and
+//! pruning box pairs farther apart than the best pair so far. Only the form `mesh_distance` calls
+//! exists: no transform (both meshes already in one space) and no triangle filter. The tree and its
 //! layout are `dmesh_aabb_tree3.rs`; leaf pairs are measured with `dist_triangle3_triangle3`.
 
 use super::dist_triangle3_triangle3::dist_triangle3_triangle3;
@@ -9,9 +8,8 @@ use super::dmesh3::AxisAlignedBox3d;
 use super::dmesh_aabb_tree3::{DMeshAABBTree3, BOX_EPS};
 
 impl DMeshAABBTree3<'_> {
-    /// C# `FindNearestTriangles(otherTree, null, out distance)`: the nearest pair (this tree's
-    /// triangle, the other's) and their distance, or `None` (C# `Index2i.Max` and
-    /// `double.MaxValue`) when either tree is empty.
+    /// The nearest pair (this tree's triangle, the other's) and their distance, or `None` when
+    /// either tree is empty.
     pub(crate) fn find_nearest_triangles(
         &self,
         other: &DMeshAABBTree3<'_>,
@@ -166,7 +164,7 @@ impl DMeshAABBTree3<'_> {
         }
     }
 
-    /// C# `get_boxd(iBox)`: the box widened by `box_eps` in float, then held in double.
+    /// The box widened by `box_eps` in float, then held in double.
     fn get_boxd(&self, i_box: i32) -> AxisAlignedBox3d {
         let c = self.box_centers[i_box as usize];
         let e = self.box_extents[i_box as usize];
@@ -178,7 +176,7 @@ impl DMeshAABBTree3<'_> {
     }
 }
 
-/// C# `AxisAlignedBox3d.DistanceSquared(ref box2)`: `lensqr(max(0, |c1 - c2| - (e1 + e2)))`.
+/// `lensqr(max(0, |c1 - c2| - (e1 + e2)))`.
 fn box_box_distance_sqr(a: &AxisAlignedBox3d, b: &AxisAlignedBox3d) -> f64 {
     let delta = |axis: usize| {
         let d = ((b.min[axis] + b.max[axis]) - (a.min[axis] + a.max[axis])).abs()

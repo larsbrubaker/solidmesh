@@ -1,21 +1,19 @@
-//! The geometry of MatterCAD's `RepairObject3D_2.Repair` Advanced path
-//! (`MatterCADLib/DesignTools/Operations/RepairObject3D_2.cs`), exposed as
+//! The geometry of the Repair operation's Advanced path, exposed as
 //! [`Mesh::advanced_repaired`]: an optional vertex weld on the source mesh, then over a `DMesh3`
-//! the face orientation (the kernel's shell-level repair, `csg::mesh_repair_rust`, falling back
-//! to g3's `MeshRepairOrientation`), interior or occluded removal (`remove_occluded_triangles`),
-//! crack repair and hole filling (the helpers `mesh_auto_repair` shares with the default path),
-//! with the retry and erosion rounds and the final cleanup. Face colors are carried across by
-//! face centroid, as C# does.
+//! the face orientation (the kernel's shell-level repair, `csg::mesh_repair_rust`, falling back to
+//! g3's `MeshRepairOrientation`), interior or occluded removal (`remove_occluded_triangles`), crack
+//! repair and hole filling (the helpers `mesh_auto_repair` shares with the default path), with the
+//! retry and erosion rounds and the final cleanup. Face colors are carried across by face centroid,
+//! because the round trip through `DMesh3` renumbers faces.
 //!
-//! [`Mesh::advanced_repaired_with_g3_orientation`] is the same pipeline as MatterCAD's obsolete
-//! `RepairObject3D.Repair` (`DesignTools/Obsolete/RepairObject3D.cs`) runs it: every orientation
-//! pass is geometry3Sharp's `MeshRepairOrientation`, and the face colors are not carried across.
+//! [`Mesh::advanced_repaired_with_g3_orientation`] is the same pipeline as the obsolete Repair
+//! operation runs it, for designs saved with that object: every orientation pass is g3's
+//! `MeshRepairOrientation`, and the face colors are not carried across.
 //!
-//! C#'s `goto repeat_all` / `goto all_done` are a labeled loop and its `break`. C# reads its
-//! cancellation token between phases and inside the hole-filling and edge-collapse loops, and a
-//! cancel hands back the mesh as it stood before the `DMesh3` work (the welded copy, or the
-//! source); here the token is read between phases, with the same result. The progress messages
-//! C# reports are not ported: nothing in the app shows a sub-step of a repair.
+//! The repeat-everything and finish-early jumps are a labeled loop and its `break`. The
+//! cancellation token is read between phases, and a cancel hands back the mesh as it stood before
+//! the `DMesh3` work (the welded copy, or the source). No progress messages are reported: nothing
+//! in the app shows a sub-step of a repair.
 
 use super::dmesh3::{DMesh3, G3Exception};
 use super::mesh_auto_repair::{
@@ -41,7 +39,7 @@ pub enum RemoveModes {
     Occluded,
 }
 
-/// The Advanced options of MatterCAD's `RepairObject3D_2`, with its defaults.
+/// The Advanced options of the Repair operation, with its defaults.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AdvancedRepairOptions {
     /// Align and merge any vertices that are nearly coincident.
@@ -71,8 +69,8 @@ impl Default for AdvancedRepairOptions {
     }
 }
 
-/// Why the pipeline stopped early: C#'s `OperationCanceledException` (caught: the mesh before
-/// the `DMesh3` work comes back) or an exception it lets escape.
+/// Why the pipeline stopped early: a cancel (caught: the mesh before the `DMesh3` work comes back)
+/// or a g3 failure that is passed on.
 enum Stop {
     Cancelled,
     Failed(G3Exception),
@@ -84,7 +82,6 @@ impl From<G3Exception> for Stop {
     }
 }
 
-/// C# `cancellationToken.ThrowIfCancellationRequested()`.
 fn check(cancel: &CancelToken) -> Result<(), Stop> {
     if cancel.is_cancelled() {
         Err(Stop::Cancelled)
@@ -93,8 +90,8 @@ fn check(cancel: &CancelToken) -> Result<(), Stop> {
     }
 }
 
-/// How the pipeline orients faces: `RepairObject3D_2`'s kernel-first passes, or the obsolete
-/// `RepairObject3D`'s geometry3Sharp passes (C# `RepairOrientation(dMesh3, token, true)`).
+/// How the pipeline orients faces: the Repair operation's kernel-first passes, or the obsolete
+/// Repair operation's g3 flood-fill passes.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Orientation {
     PreferKernel,
@@ -109,10 +106,9 @@ enum Outcome {
 }
 
 impl Mesh {
-    /// MatterCAD's `RepairObject3D_2.Repair` with `Advanced = true`. `Err` is an exception C#
-    /// lets escape (from the hole fillers, or an edge collapse over a mesh with no edges); a
-    /// cancel returns the mesh as it stood before the repair work (the welded copy, or a copy
-    /// of `self`).
+    /// The Repair operation with `Advanced = true`. `Err` is a g3 failure (from the hole fillers,
+    /// or an edge collapse over a mesh with no edges); a cancel returns the mesh as it stood before
+    /// the repair work (the welded copy, or a copy of `self`).
     pub fn advanced_repaired(
         &self,
         options: &AdvancedRepairOptions,
@@ -140,10 +136,10 @@ impl Mesh {
         }
     }
 
-    /// MatterCAD's obsolete `RepairObject3D.Repair`: the Advanced pipeline with geometry3Sharp's
-    /// `MeshRepairOrientation` (components, then the global sign) for the FaceOrientation step and
-    /// every global pass, and the result straight from `ToMesh`, without the face colors (the
-    /// obsolete class never saved them). `Err` and a cancel are as [`Self::advanced_repaired`].
+    /// The obsolete Repair operation: the Advanced pipeline with g3's `MeshRepairOrientation`
+    /// (components, then the global sign) for the FaceOrientation step and every global pass, and
+    /// the result converted straight back, without the face colors (the obsolete operation never
+    /// saved them). `Err` and a cancel are as [`Self::advanced_repaired`].
     pub fn advanced_repaired_with_g3_orientation(
         &self,
         options: &AdvancedRepairOptions,
@@ -165,7 +161,7 @@ impl Mesh {
     }
 }
 
-/// The Advanced branch of C# `Repair`. `in_mesh` is C#'s `inMesh` once the weld replaces it.
+/// The Advanced branch of the repair. `in_mesh` is the source mesh until the weld replaces it.
 fn run(
     source: &Mesh,
     options: &AdvancedRepairOptions,
@@ -203,9 +199,9 @@ fn run(
 
     'repeat_all: loop {
         if options.face_orientation {
-            // Shell by shell, with exact containment queries, so nested shells come out right:
-            // the outside wound outward and cavities wound inward. Falls back to the
-            // geometry3Sharp flood fill for anything the kernel cannot take.
+            // Shell by shell, with exact containment queries, so nested shells come out right: the
+            // outside wound outward and cavities wound inward. Falls back to the g3 flood fill for
+            // anything the kernel cannot take.
             dmesh3 = if orientation == Orientation::PreferKernel {
                 repair_orientation_prefer_kernel(dmesh3, cancel)?
             } else {
@@ -318,8 +314,7 @@ fn run(
     Ok(Outcome::Repaired(dmesh3))
 }
 
-/// C# `RemoveInside`: Interior by fast winding number, Occluded by the six-ray test, both per
-/// vertex.
+/// Interior by fast winding number, Occluded by the six-ray test, both per vertex.
 fn remove_inside(dmesh3: &mut DMesh3, remove_mode: RemoveModes) {
     let mode = match remove_mode {
         RemoveModes::None => return,
@@ -331,15 +326,15 @@ fn remove_inside(dmesh3: &mut DMesh3, remove_mode: RemoveModes) {
     remove.apply(dmesh3);
 }
 
-/// C# `GlobalOrientationPass`: the pipeline's trailing global-orientation passes, routed the
-/// same way the FaceOrientation step is.
+/// The pipeline's trailing global-orientation passes, routed the same way the FaceOrientation step
+/// is.
 ///
-/// Crack repair and hole filling can join regions that disagree about winding, so they each
-/// finish with a global orientation pass. Running geometry3Sharp's pass there undoes the kernel
-/// repair the user asked for: its flood fill picks one sign per component and turns cavity
-/// shells outward, so a hollow box comes back solid. When face-orientation repair is on we
-/// therefore re-run the kernel instead. With it off, or for the obsolete `RepairObject3D` (which
-/// predates the kernel pass), geometry3Sharp's pass runs.
+/// Crack repair and hole filling can join regions that disagree about winding, so they each finish
+/// with a global orientation pass. Running g3's flood-fill pass there undoes the kernel repair the
+/// user asked for: its flood fill picks one sign per component and turns cavity shells outward, so
+/// a hollow box comes back solid. When face-orientation repair is on we therefore re-run the kernel
+/// instead. With it off, or for the obsolete Repair operation (which predates the kernel pass), the
+/// g3 pass runs.
 fn global_orientation_pass(
     mut dmesh3: DMesh3,
     face_orientation: bool,
@@ -354,10 +349,10 @@ fn global_orientation_pass(
     Ok(dmesh3)
 }
 
-/// C# `RepairOrientationPreferKernel`: rewinds inside-out shells with the kernel, falling back
-/// to geometry3Sharp's `MeshRepairOrientation` (components, then the global sign) when the kernel
-/// will not take the mesh - most often because it is not closed yet. Returns a new `DMesh3`
-/// when the kernel repaired it, because the round trip rebuilds the mesh.
+/// Rewinds inside-out shells with the kernel, falling back to g3's `MeshRepairOrientation`
+/// (components, then the global sign) when the kernel will not take the mesh - most often because
+/// it is not closed yet. Returns a new `DMesh3` when the kernel repaired it, because the round trip
+/// rebuilds the mesh.
 fn repair_orientation_prefer_kernel(
     mut dmesh3: DMesh3,
     cancel: &CancelToken,

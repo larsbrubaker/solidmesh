@@ -1,8 +1,7 @@
-//! Octree dual contouring, written clean-room from the published algorithm (Ju, Losasso,
-//! Schaefer and Warren, "Dual Contouring of Hermite Data", SIGGRAPH 2002). agg-sharp's
-//! `DualContouring/Octree.cs` is LGPL 2.1 and was not read; only its public shape is followed,
-//! from its call sites: `build_octree(f, min, size, level, threshold)` then
-//! `generate_mesh_from_octree(root)` (see `docs/CSHARP_DIVERGENCES.md`).
+//! Octree dual contouring, written clean-room from the published algorithm (Ju, Losasso, Schaefer
+//! and Warren, "Dual Contouring of Hermite Data", SIGGRAPH 2002). No LGPL implementation was read;
+//! the public shape is two calls, `build_octree(f, min, size, level, threshold)` then
+//! `generate_mesh_from_octree(root)`.
 //!
 //! Building: the field is sampled once on the `2^level` lattice of the box. Each finest cell whose
 //! corners change sign becomes a leaf holding a QEF (`qef`) of its Hermite data - the root on
@@ -29,7 +28,7 @@ const PINV_TOL: f64 = 1e-6;
 /// Bisection steps converging on an edge's root.
 const ROOT_STEPS: i32 = 32;
 
-/// A node of the dual contouring octree (C# `OctreeNode`).
+/// A node of the dual contouring octree.
 #[derive(Debug, Clone)]
 pub struct OctreeNode {
     /// The cell's lowest corner.
@@ -43,7 +42,7 @@ pub struct OctreeNode {
     pub(crate) kind: OctreeNodeKind,
 }
 
-/// What a node holds (C# `OctreeNodeType`).
+/// What a node holds.
 #[derive(Debug, Clone)]
 pub(crate) enum OctreeNodeKind {
     /// No surface: every corner has the same sign.
@@ -162,10 +161,9 @@ fn corner_bits(c: usize) -> [usize; 3] {
     [c & 1, (c >> 1) & 1, (c >> 2) & 1]
 }
 
-/// C# `Octree.BuildOctree(f, min, size, level, threshold)`: the octree of the surface `f = 0`
-/// (negative inside) over the box at `min` of extent `size`, with finest cells `size / 2^level`,
-/// simplified wherever a merged vertex fits its planes within `threshold` (summed squared
-/// distance).
+/// The octree of the surface `f = 0` (negative inside) over the box at `min` of extent `size`, with
+/// finest cells `size / 2^level`, simplified wherever a merged vertex fits its planes within
+/// `threshold` (summed squared distance).
 pub fn build_octree(
     f: &dyn Fn(Vector3) -> f64,
     min: Vector3,

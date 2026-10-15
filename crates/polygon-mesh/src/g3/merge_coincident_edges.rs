@@ -1,8 +1,8 @@
-//! geometry3Sharp `mesh_ops/MergeCoincidentEdges.cs`: closes cracks by welding pairs of
-//! boundary edges whose ends coincide within `MergeDistance`. Edges are found through a
-//! midpoint hash, grouped into equivalence sets, and merged fewest-candidates first through
-//! [`DynamicPriorityQueue`]. Progress reporting is not ported: the repair's reporter has no
-//! consumer in the combine.
+//! Closes cracks by welding pairs of boundary edges whose ends coincide within `MergeDistance`.
+//! Edges are found through a midpoint hash, grouped into equivalence sets, and merged
+//! fewest-candidates first through
+//! [`DynamicPriorityQueue`]. It reports no progress: the repair's reporter has no consumer
+//! here.
 
 use super::dmesh3::{DMesh3, G3Exception, MeshResult};
 use super::dynamic_priority_queue::DynamicPriorityQueue;
@@ -33,9 +33,9 @@ fn distance_squared(a: [f64; 3], b: [f64; 3]) -> f64 {
 }
 
 impl MergeCoincidentEdges {
-    /// C# `Apply`. `Err` is an exception C# throws out of it (a merge radius larger than a
-    /// hash cell, an impossible lone hit, or a candidate with no set of its own), which the
-    /// repair's `repair_cracks` catches.
+    /// Runs the merge. `Err` is a failure inside it (a merge radius larger than a hash cell, an
+    /// impossible lone hit, or a candidate with no set of its own), which the repair's
+    /// `repair_cracks` handles.
     pub(crate) fn apply(&self, mesh: &mut DMesh3) -> Result<bool, G3Exception> {
         let merge_r2 = self.merge_distance * self.merge_distance;
 
@@ -51,8 +51,8 @@ impl MergeCoincidentEdges {
 
         // find "equivalence classes", ie sets of edges that are within merge distance
         let mut equiv_sets: Vec<Option<Vec<i32>>> = vec![None; mesh.max_edge_id() as usize];
-        // C# `HashSet<int>`: additions in boundary-edge order, enumerated before any removal,
-        // so a list plus a membership flag reproduces it.
+        // Additions in boundary-edge order, enumerated before any removal, so a list plus a
+        // membership flag reproduces it.
         let mut remaining_order: Vec<i32> = Vec::new();
         let mut remaining = vec![false; mesh.max_edge_id() as usize];
         let boundary_edges: Vec<i32> = mesh.boundary_edge_indices().collect();
@@ -96,9 +96,8 @@ impl MergeCoincidentEdges {
                 if set_len != 1 {
                     continue;
                 }
-                // C# checks each partner's set here but its `continue` only skips to the next
-                // partner, so the check decides nothing; what it can do is throw, reading the
-                // set of a partner that has none.
+                // Each partner's set is checked here, but the check only skips to the next partner,
+                // so it decides nothing; what it can do is fail, on a partner that has no set.
                 if let Some(set) = &equiv_sets[i as usize] {
                     for &j in set {
                         if equiv_sets[j as usize].is_none() {
@@ -142,7 +141,7 @@ impl MergeCoincidentEdges {
                                 other_set.remove(pos);
                             }
                         }
-                        // C# calls `Remove` on the null set: a NullReferenceException
+                        // A partner with no set to remove it from: an error
                         None => {
                             return Err(G3Exception(
                                 "MergeCoincidentEdges.Apply: partner edge has no equivalence set",
@@ -157,8 +156,8 @@ impl MergeCoincidentEdges {
                 }
             }
 
-            // Whether or not it merged, this edge is done (C# nulls its set and drops it from
-            // `remaining` on both branches).
+            // Whether or not it merged, this edge is done: its set is cleared and it leaves
+            // `remaining` on both branches.
             equiv_sets[eid as usize] = None;
             remaining[eid as usize] = false;
         }
@@ -166,7 +165,7 @@ impl MergeCoincidentEdges {
     }
 }
 
-/// C# `is_same_edge`: the ends coincide pairwise, in either order.
+/// The ends coincide pairwise, in either order.
 fn is_same_edge(merge_r2: f64, a: [f64; 3], b: [f64; 3], c: [f64; 3], d: [f64; 3]) -> bool {
     (distance_squared(a, c) < merge_r2 && distance_squared(b, d) < merge_r2)
         || (distance_squared(a, d) < merge_r2 && distance_squared(b, c) < merge_r2)

@@ -1,14 +1,13 @@
-//! geometry3Sharp `core/IndexPriorityQueue.cs`: a binary min-heap on `float` priorities whose
-//! nodes are integer ids below a fixed maximum, with an id → heap-slot map so a queued id can be
-//! found, re-prioritized or removed in place. The `Reducer` (`reducer.rs`) queues its edges here.
-//! Ties come out in the order this exact heap produces, so C#'s sift-up / sift-down comparisons
-//! (strict `<`) are kept, and slot 0 is unused as in C#.
+//! A binary min-heap on `f32` priorities whose nodes are integer ids below a fixed maximum, with an
+//! id → heap-slot map so a queued id can be found, re-prioritized or removed in place. The
+//! `Reducer` (`reducer.rs`) queues its edges here. Ties come out in the order this exact heap
+//! produces, so the sift-up / sift-down comparisons are strict `<`, and slot 0 is unused so a
+//! node's parent is at half its index.
 //!
-//! `contains` also checks that the slot an id maps to still holds that id (divergence 2795): C#
-//! leaves a removed id's map entry pointing at its old slot, which a later insert reuses, so it
-//! reported a dequeued id as queued and `update` then re-prioritized whichever id sat there.
+//! `contains` also checks that the slot an id maps to still holds that id: a removed id's map entry
+//! still points at its old slot, which a later insert reuses, so without the check a dequeued id
+//! would read as queued and `update` would re-prioritize whichever id sat there.
 
-/// C# `IndexPriorityQueue.QueueNode`.
 #[derive(Debug, Clone, Copy, Default)]
 struct QueueNode {
     /// External id.
@@ -19,11 +18,9 @@ struct QueueNode {
     index: i32,
 }
 
-/// C# `IndexPriorityQueue`.
 #[derive(Debug, Clone)]
 pub(crate) struct IndexPriorityQueue {
-    /// Tree of allocated nodes, stored linearly, active up to `num_nodes` (C# `DVector`, which
-    /// grows on `insert`).
+    /// Tree of allocated nodes, stored linearly, active up to `num_nodes`; grows on `insert`.
     nodes: Vec<QueueNode>,
     /// Count of active nodes.
     num_nodes: i32,
@@ -32,7 +29,7 @@ pub(crate) struct IndexPriorityQueue {
 }
 
 impl IndexPriorityQueue {
-    /// C# `new IndexPriorityQueue(maxID)`: ids must be below `max_id`.
+    /// Ids must be below `max_id`.
     pub(crate) fn new(max_id: i32) -> Self {
         Self {
             nodes: Vec::new(),
@@ -41,14 +38,13 @@ impl IndexPriorityQueue {
         }
     }
 
-    /// C# `Count`.
     pub(crate) fn count(&self) -> i32 {
         self.num_nodes
     }
 
     fn node(&self, i: i32) -> QueueNode {
-        // C# `DVector` reads past its end as default values never arise here: every read index
-        // is at most `num_nodes`, which `insert` has written.
+        // Never reads past the end: every read index is at most `num_nodes`, which `insert` has
+        // written.
         self.nodes[i as usize]
     }
 
@@ -60,18 +56,18 @@ impl IndexPriorityQueue {
         self.nodes[i] = n;
     }
 
-    /// C# `Contains`: constant-time check whether `id` is queued.
+    /// Constant-time check whether `id` is queued.
     pub(crate) fn contains(&self, id: i32) -> bool {
         let i_node = self.id_to_index[id as usize];
         if i_node <= 0 || i_node > self.num_nodes {
             return false;
         }
         let node = self.node(i_node);
-        // divergence 2795: the slot must still hold this id (C# checks only `index > 0`).
+        // The slot must still hold this id: a stale map entry can point at a reused slot.
         node.index > 0 && node.id == id
     }
 
-    /// C# `Insert`: adds `id` with `priority`. Inserting a queued id again is undefined, as in C#.
+    /// Adds `id` with `priority`. Inserting a queued id again is not supported.
     pub(crate) fn insert(&mut self, id: i32, priority: f32) {
         self.num_nodes += 1;
         let node = QueueNode {
@@ -84,21 +80,21 @@ impl IndexPriorityQueue {
         self.move_up(self.node(self.num_nodes).index);
     }
 
-    /// C# `Dequeue`: removes the head of the queue and returns its id.
+    /// Removes the head of the queue and returns its id.
     pub(crate) fn dequeue(&mut self) -> i32 {
         let id = self.node(1).id;
         self.remove_at_index(1);
         id
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `Remove`: removes a queued `id`.
+    #[allow(dead_code)] // only the tests call this
+    /// Removes a queued `id`.
     pub(crate) fn remove(&mut self, id: i32) {
         let i_node = self.id_to_index[id as usize];
         self.remove_at_index(i_node);
     }
 
-    /// C# `Update`: sets a queued `id`'s priority and moves it to its place.
+    /// Sets a queued `id`'s priority and moves it to its place.
     pub(crate) fn update(&mut self, id: i32, priority: f32) {
         let i_node = self.id_to_index[id as usize];
         let mut n = self.node(i_node);
@@ -107,20 +103,19 @@ impl IndexPriorityQueue {
         self.on_node_updated(i_node);
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `GetPriority`.
+    #[allow(dead_code)] // only the tests call this
     pub(crate) fn get_priority(&self, id: i32) -> f32 {
         self.node(self.id_to_index[id as usize]).priority
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `First`: the id at the head of the queue.
+    #[allow(dead_code)] // only the tests call this
+    /// The id at the head of the queue.
     pub(crate) fn first(&self) -> i32 {
         self.node(1).id
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `IsValidQueue` (its `< num_nodes` bounds kept).
+    #[allow(dead_code)] // only the tests call this
+    /// Whether every child's priority is at least its parent's (slots below `num_nodes`).
     pub(crate) fn is_valid_queue(&self) -> bool {
         for i in 1..self.num_nodes {
             let child_left_index = 2 * i;

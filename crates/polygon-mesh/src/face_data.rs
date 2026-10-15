@@ -1,10 +1,8 @@
-//! Per-face colors and textures on a [`Mesh`]. Ports the face-data half of agg-sharp
-//! `PolygonMesh/Mesh.cs`: `FaceTextureData`, `RemapFaceData` and `InterpolateFaceTexture`,
-//! `UncoloredFace`/`UnknownFaceColor`, `SaveFaceCentroidColors`, `FindNearestCentroidColor`,
-//! `RestoreFaceColorsFromCentroids`, and the texture extension methods (`PlaceTextureOnFace`,
-//! `PlaceTextureOnFaces`, `PlaceTexture`, `RemoveTexture`) with an explicit mapping, and the
-//! projection-picking `GetMaxPlaneProjection` and `PlaceTextureOnFaces(face, image)`, which
-//! stretch an image over a face's plane.
+//! Per-face colors and textures on a [`Mesh`]: [`FaceTextureData`], remapping face data when the
+//! face list is rebuilt, interpolating a texture onto split faces, the uncolored and unknown face
+//! colors, saving face colors by centroid and restoring them by nearest centroid, and placing and
+//! removing textures with an explicit mapping, plus the projection picking that stretches an image
+//! over a face's plane.
 //!
 //! The fields themselves (`Mesh::face_colors`, `Mesh::face_textures`) live on `Mesh` in
 //! `mesh.rs`; the operations that rebuild the face list (`mesh.rs`, `mesh_editing.rs`,
@@ -21,10 +19,10 @@ use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3
 use crate::face::FaceList;
 use crate::mesh::Mesh;
 
-/// The texture on one face: the image and the UV of each corner (C# `FaceTextureData`).
+/// The texture on one face: the image and the UV of each corner.
 ///
-/// The image is shared (`Arc`), as C#'s `ImageBuffer` reference is; two entries carry "the same
-/// texture" when their images are the same allocation ([`FaceTextureData::same_image`]).
+/// The image is shared (`Arc`) rather than copied per face; two entries carry "the same texture"
+/// when their images are the same allocation ([`FaceTextureData::same_image`]).
 #[derive(Debug, Clone)]
 pub struct FaceTextureData {
     pub image: Option<Arc<ImageBuffer>>,
@@ -48,7 +46,7 @@ impl FaceTextureData {
         }
     }
 
-    /// C# reference equality of the `image` fields (both null counts as the same).
+    /// Whether the `image` fields are the same allocation (both absent counts as the same).
     pub fn same_image(&self, texture: Option<&Arc<ImageBuffer>>) -> bool {
         match (&self.image, texture) {
             (Some(a), Some(b)) => Arc::ptr_eq(a, b),
@@ -58,11 +56,11 @@ impl FaceTextureData {
     }
 }
 
-/// Lookup by face index into the UVs and image for a face (C# `Dictionary<int,
-/// FaceTextureData>`; ordered by face index, see divergence 510).
+/// Lookup by face index into the UVs and image for a face, ordered by face index: a deterministic
+/// order, the one any writer of per-face data wants.
 pub type FaceTextures = BTreeMap<i32, FaceTextureData>;
 
-/// One saved face color with the face's centroid (C# `(Vector3 centroid, Color color)`).
+/// One saved face color with the face's centroid.
 pub type CentroidColor = (Vector3, Color);
 
 impl Mesh {
@@ -85,8 +83,7 @@ impl Mesh {
     /// turned grey, because it is a colour nothing in the scene is wearing.
     pub const UNKNOWN_FACE_COLOR: Color = Color::rgba(200, 200, 200, 255);
 
-    /// Moves the per-face data (colors and textures) onto a face list that has just been
-    /// rebuilt (C# `RemapFaceData`).
+    /// Moves the per-face data (colors and textures) onto a face list that has just been rebuilt.
     ///
     /// `source_face_index_per_new_face` gives, for each face in the new list, the index it had
     /// before the rebuild, or -1 for a face with no source face. Pass `sources` (the face list
@@ -143,8 +140,8 @@ impl Mesh {
         }
     }
 
-    /// Each face's centroid with its color, or `None` when the mesh has no face colors (C#
-    /// `SaveFaceCentroidColors`). Used to save color data before an operation that loses it.
+    /// Each face's centroid with its color, or `None` when the mesh has no face colors. Used to
+    /// save color data before an operation that loses it.
     pub fn save_face_centroid_colors(&self) -> Option<Vec<CentroidColor>> {
         let face_colors = self.face_colors.as_ref()?;
         let result = self
@@ -162,8 +159,8 @@ impl Mesh {
         Some(result)
     }
 
-    /// The color of the saved centroid nearest `point` (C# `FindNearestCentroidColor`); the
-    /// first of equally near ones. [`Mesh::UNKNOWN_FACE_COLOR`] for an empty list.
+    /// The color of the saved centroid nearest `point`; the first of equally near ones.
+    /// [`Mesh::UNKNOWN_FACE_COLOR`] for an empty list.
     pub fn find_nearest_centroid_color(point: Vector3, saved_colors: &[CentroidColor]) -> Color {
         let mut best_dist_sq = f64::MAX;
         // Only survives an empty saved_colors, the same malformed-data case
@@ -179,8 +176,8 @@ impl Mesh {
         best_color
     }
 
-    /// Restores per-face colors by matching each face's centroid to the nearest saved centroid
-    /// (C# `RestoreFaceColorsFromCentroids`). Does nothing for `None`.
+    /// Restores per-face colors by matching each face's centroid to the nearest saved centroid.
+    /// Does nothing for `None`.
     pub fn restore_face_colors_from_centroids(&mut self, saved_colors: Option<&[CentroidColor]>) {
         let Some(saved_colors) = saved_colors else {
             return;
@@ -196,14 +193,15 @@ impl Mesh {
         self.face_colors = Some(face_colors);
     }
 
-    /// The centroid of a face as C# computes it: summed and divided in f32, then widened.
+    /// The centroid of a face, summed and divided in f32, then widened, so saved and restored
+    /// centroids compare exactly.
     pub(crate) fn face_centroid(&self, v0: i32, v1: i32, v2: i32) -> Vector3 {
         let v = |i: i32| self.vertices[i as usize];
         Vector3::from_vector3_float((v(v0) + v(v1) + v(v2)) / 3.0)
     }
 
     /// Textures face `face` with `texture_to_use`, each corner's UV the x and y of its position
-    /// under `texture_coordinate_mapping` (C# `PlaceTextureOnFace` with a mapping).
+    /// under `texture_coordinate_mapping`.
     pub fn place_texture_on_face(
         &mut self,
         face: usize,
@@ -221,9 +219,8 @@ impl Mesh {
         }
     }
 
-    /// C# `PlaceTextureOnFace(face, textureToUse)`: planar-projects `texture_to_use` along the
-    /// normal of face `face`, stretched to cover that one face
-    /// ([`Mesh::get_max_plane_projection`] over it alone).
+    /// Planar-projects `texture_to_use` along the normal of face `face`, stretched to cover that
+    /// one face ([`Mesh::get_max_plane_projection`] over it alone).
     pub fn place_texture_on_face_projected(
         &mut self,
         face: usize,
@@ -234,9 +231,8 @@ impl Mesh {
         self.place_texture_on_face(face, texture_to_use, mapping, true);
     }
 
-    /// Textures every face in `faces` as [`Mesh::place_texture_on_face`] does, except that a
-    /// face already textured keeps its existing texture (C# `PlaceTextureOnFaces` with a
-    /// mapping: the existing entries are added in last).
+    /// Textures every face in `faces` as [`Mesh::place_texture_on_face`] does, except that a face
+    /// already textured keeps its existing texture (the existing entries are added in last).
     pub fn place_texture_on_faces(
         &mut self,
         faces: &[usize],
@@ -259,7 +255,7 @@ impl Mesh {
         self.mark_as_changed();
     }
 
-    /// Textures every face with the same mapping (C# `PlaceTexture`).
+    /// Textures every face with the same mapping.
     pub fn place_texture(
         &mut self,
         texture_to_use: Option<Arc<ImageBuffer>>,
@@ -276,8 +272,7 @@ impl Mesh {
         self.mark_as_changed();
     }
 
-    /// Removes `texture` from every face that carries it (C# `RemoveTexture(texture, index)`;
-    /// the unused `index` is dropped).
+    /// Removes `texture` from every face that carries it.
     pub fn remove_texture(&mut self, texture: Option<&Arc<ImageBuffer>>) {
         for i in 0..self.faces.len() {
             self.remove_texture_from_face(i, texture);
@@ -301,10 +296,9 @@ impl Mesh {
         }
     }
 
-    /// C# `GetMaxPlaneProjection(faces, textureToUse, initialTransform)`: the mapping that
-    /// rotates the first face's normal onto +Z and then stretches the faces' rotated bounds to the
-    /// unit square, so a texture placed with it covers exactly those faces. The image is not read
-    /// (C# takes it and ignores it), so it is not a parameter here.
+    /// The mapping that rotates the first face's normal onto +Z and then stretches the faces'
+    /// rotated bounds to the unit square, so a texture placed with it covers exactly those faces.
+    /// The image does not affect the mapping, so it is not a parameter.
     pub fn get_max_plane_projection(
         &self,
         faces: &[usize],
@@ -334,9 +328,8 @@ impl Mesh {
         texture_coordinate_mapping * first_transform * centering * scaling
     }
 
-    /// C# `PlaceTextureOnFaces(face, textureToUse)`: planar-projects `texture_to_use` along the
-    /// normal of face `face` over every face coplanar with it, stretched to cover them
-    /// ([`Mesh::get_max_plane_projection`]).
+    /// Planar-projects `texture_to_use` along the normal of face `face` over every face coplanar
+    /// with it, stretched to cover them ([`Mesh::get_max_plane_projection`]).
     pub fn place_texture_on_coplanar_faces(
         &mut self,
         face: usize,

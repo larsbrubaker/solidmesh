@@ -1,18 +1,16 @@
-//! Port of agg-sharp `PolygonMesh/DualContouring/density.cs`: a collection of signed distance
-//! field functions (C# interface `ISdf`, here the [`Sdf`] trait) - primitives, a transform and
-//! the union / intersection / subtraction combinators. Negative is inside.
+//! A collection of signed distance field functions (the [`Sdf`] trait) - primitives, a transform
+//! and the union / intersection / subtraction combinators. Negative is inside.
 //!
-//! The C# `Box` keeps its name, so inside this module the standard library's box is spelled
+//! The box primitive is called [`Box`], so inside this module the standard library's box is spelled
 //! `std::boxed::Box`.
 
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector2, Vector3};
 
-/// C# `ISdf`: a signed distance function and the bounds of its solid.
+/// A signed distance function and the bounds of its solid.
 pub trait Sdf {
     /// The signed distance at `p` (negative inside).
     fn sdf(&self, p: Vector3) -> f64;
 
-    /// C# `Bounds`.
     fn bounds(&self) -> AxisAlignedBoundingBox;
 }
 
@@ -49,7 +47,6 @@ impl Transform {
         }
     }
 
-    /// C# `Input`.
     pub fn input(&self) -> &dyn Sdf {
         self.input.as_ref()
     }
@@ -65,8 +62,8 @@ impl Sdf for Transform {
     }
 }
 
-/// A z-axis cylinder centred on the origin. C# stores half the height behind a `Height`
-/// property; here [`Cylinder::height`] / [`Cylinder::set_height`].
+/// A z-axis cylinder centred on the origin. It stores half the height, which the distance test
+/// uses; [`Cylinder::height`] / [`Cylinder::set_height`] read and write the full height.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Cylinder {
     half_height: f64,
@@ -82,12 +79,12 @@ impl Cylinder {
         }
     }
 
-    /// C# `Height` get.
+    /// The full height.
     pub fn height(&self) -> f64 {
         self.half_height * 2.0
     }
 
-    /// C# `Height` set.
+    /// Sets the full height.
     pub fn set_height(&mut self, value: f64) {
         self.half_height = value / 2.0;
     }
@@ -99,7 +96,7 @@ impl Sdf for Cylinder {
         if z > self.half_height {
             z - self.half_height
         } else if p.z < -self.half_height {
-            // As in C#: unreachable after the `abs` test above, kept so the function reads the same.
+            // Unreachable after the `abs` test above.
             p.z
         } else {
             Vector2::new(p.x, p.y).length() - self.radius
@@ -112,8 +109,8 @@ impl Sdf for Cylinder {
     }
 }
 
-/// An axis-aligned box centred on the origin. C# stores half the size behind a `Size`
-/// property; here [`Box::size`] / [`Box::set_size`].
+/// An axis-aligned box centred on the origin. It stores half the size, which the distance test
+/// uses; [`Box::size`] / [`Box::set_size`] read and write the full size.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Box {
     half_size: Vector3,
@@ -127,12 +124,12 @@ impl Box {
         }
     }
 
-    /// C# `Size` get.
+    /// The full size.
     pub fn size(&self) -> Vector3 {
         self.half_size * 2.0
     }
 
-    /// C# `Size` set.
+    /// Sets the full size.
     pub fn set_size(&mut self, value: Vector3) {
         self.half_size = value / 2.0;
     }
@@ -150,7 +147,7 @@ impl Sdf for Box {
     }
 }
 
-/// The union of `items` (the least distance). C# assumes at least one item.
+/// The union of `items` (the least distance). Needs at least one item.
 #[derive(Default)]
 pub struct Union {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,
@@ -174,7 +171,7 @@ impl Sdf for Union {
     }
 }
 
-/// The intersection of `items` (the greatest distance). C# assumes at least one item.
+/// The intersection of `items` (the greatest distance). Needs at least one item.
 #[derive(Default)]
 pub struct Intersection {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,
@@ -198,7 +195,7 @@ impl Sdf for Intersection {
     }
 }
 
-/// The first item with every later one removed. C# assumes at least one item.
+/// The first item with every later one removed. Needs at least one item.
 #[derive(Default)]
 pub struct Subtraction {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,

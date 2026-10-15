@@ -1,12 +1,11 @@
-//! A tessellator that keeps its output: agg-sharp `DataConverters2D/CachedTesselator.cs`, with
-//! `VertexSourceToTesselator.SendShapeToTesselator` as [`CachedTesselator::send_shape`].
+//! A tessellator that keeps its output, fed a vertex source by [`CachedTesselator::send_shape`].
 //!
-//! C# subclasses the callback-driven GLU port (`Tesselate.Tesselator`): vertices it is handed
-//! and the intersections it combines go into `VerticesCache`, and every triangle corner it
-//! emits goes into `IndicesCache` with the edge flag in force. Here tess2-rust runs the same
-//! SGI algorithm (NonZero winding, C#'s default, triangles only, as C#'s edge-flag callback
-//! forces) and its render order fills the same two caches: C#'s vertex numbering (input
-//! vertices, then combined ones) and C#'s triangle order, corner for corner.
+//! Vertices it is handed and the intersections it combines go into `vertices_cache`, and every
+//! triangle corner it emits goes into `indices_cache` with the edge flag in force. tess2-rust runs
+//! the SGI tessellator (NonZero winding, triangles only, which the edge flags require) and its
+//! render order fills the two caches: input vertices first, then combined ones, and the triangles
+//! in GLU's emit order, corner for corner, so the meshes built from them have a stable vertex and
+//! face order.
 
 use agg_path::vertex_data::VertexData;
 use agg_path::vertex_source::VertexSource;
@@ -14,19 +13,18 @@ use tess2_rust::{ElementType, Tessellator, WindingRule};
 use vector_math::Vector2;
 
 /// One triangle corner: an index into [`CachedTesselator::vertices_cache`] and whether the edge
-/// from this corner to the next one in the triangle is on the outline (C# `RenderIndices`).
+/// from this corner to the next one in the triangle is on the outline.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RenderIndices {
     pub index: i32,
     pub is_edge: bool,
 }
 
-/// C# `CachedTesselator`: the triangulated outline, three [`RenderIndices`] per triangle.
+/// The triangulated outline, three [`RenderIndices`] per triangle.
 #[derive(Clone, Debug, Default)]
 pub struct CachedTesselator {
-    /// C# `VerticesCache` (each `AddedVertex.Position`).
+    /// Every vertex the tessellator was handed or combined, in that order.
     pub vertices_cache: Vec<Vector2>,
-    /// C# `IndicesCache`.
     pub indices_cache: Vec<RenderIndices>,
 }
 
@@ -35,21 +33,18 @@ impl CachedTesselator {
         Self::default()
     }
 
-    /// C# `Clear()`.
     pub fn clear(&mut self) {
         self.vertices_cache.clear();
         self.indices_cache.clear();
     }
 
-    /// C# `VertexSourceToTesselator.SendShapeToTesselator(tesselator, vertexSource)`.
     pub fn send_vertex_source(&mut self, vertex_source: &dyn VertexSource) {
         self.send_shape(&vertex_source.vertices());
     }
 
-    /// C# `VertexSourceToTesselator.SendShapeToTesselator(tesselator, IEnumerable<VertexData>)`:
-    /// a move-to or any end_poly ends the contour, only vertex commands carry a point, NaN
-    /// points are skipped, and a Stop ends the walk. The caches are replaced (C# clears them
-    /// in `BeginPolygon`).
+    /// Tessellates a vertex source: a move-to or any end_poly ends the contour, only vertex
+    /// commands carry a point, NaN points are skipped, and a Stop ends the walk. The caches are
+    /// replaced.
     pub fn send_shape(&mut self, vertex_source: &[VertexData]) {
         self.clear();
 
@@ -91,16 +86,16 @@ impl CachedTesselator {
             }
         }
 
-        // C# swallows a failed tessellation (release builds catch everything) and keeps what
-        // was cached, which for a polygon that never finished is nothing.
+        // A failed tessellation is not an error: the caches keep what was cached, which for a
+        // polygon that never finished is nothing, so the shape simply draws no fill.
         if !tess.tessellate(WindingRule::NonZero, ElementType::Polygons, 3, 2, None) {
             return;
         }
 
         // tess2-rust's render order is the callback GLU port's: every input vertex in order, then
-        // each combined vertex as the sweep made it (C# `AddVertex` and `CallCombine` both append
-        // to `VerticesCache`, so unused and repeated positions are kept), and the triangles in
-        // the order `RenderLonelyTriangles` emits them, with the edge flag in force per corner.
+        // each combined vertex as the sweep made it (both append to `vertices_cache`, so unused and
+        // repeated positions are kept), and the triangles in the order `RenderLonelyTriangles`
+        // emits them, with the edge flag in force per corner.
         let Some(order) = tess.render_order() else {
             return;
         };
@@ -169,10 +164,10 @@ mod tests {
         assert_eq!(edges, 8);
     }
 
-    /// C#'s callback order on the square with a hole: the caches hold the eight input vertices
-    /// in input order and the triangles as agg-sharp's GLU port renders them (the sequence
-    /// tess2-rust's `render_order` tests pin and its lion conformance test checks against
-    /// recorded C# output), so a mesh built from them has C#'s vertex and face order.
+    /// GLU's callback order on the square with a hole: the caches hold the eight input vertices in
+    /// input order and the triangles as GLU renders them (the sequence tess2-rust's `render_order`
+    /// tests pin and its lion conformance test checks), so a mesh built from them has a fixed
+    /// vertex and face order.
     #[test]
     fn rust_only_square_with_hole_caches_in_csharp_render_order() {
         let mut tesselator = CachedTesselator::new();

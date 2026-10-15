@@ -1,42 +1,36 @@
-//! geometry3Sharp `mesh/DSubmesh3.cs`: a copy of a set of a base mesh's triangles as its own
-//! `DMesh3`, with the vertex maps between the two and the region's border vertices on the base
-//! mesh, so `RegionOperator` (`region_operator`) can edit the copy and splice it back.
+//! A copy of a set of a base mesh's triangles as its own `DMesh3`, with the vertex maps between the
+//! two and the region's border vertices on the base mesh, so `RegionOperator` (`region_operator`)
+//! can edit the copy and splice it back.
 //!
-//! The subset `MinimalHoleFill` reaches: `Compute`, `ComputeBoundaryInfo` and the vertex maps.
-//! Nothing ported reads the triangle maps (`ComputeTriMaps`, `BaseToSubT` / `SubToBaseT`) or the
-//! border/boundary edge sets (`BaseBorderE`, `BaseBoundaryE`), so they are not kept; only the
-//! vertex positions are copied, as `DMesh3` stores no normals, colors or UVs.
-//! C#'s dense `IndexMap` / `IndexFlagSet` are `Vec`s (the sparse `IndexMap` variant returns the
-//! same values for every index that is read), its `DVector<int>` a `Vec<i32>`.
+//! The subset the minimal hole fill reaches: the copy, the boundary info and the vertex maps.
+//! Nothing reads triangle maps or border/boundary edge sets, so they are not kept; only the vertex
+//! positions are copied, as `DMesh3` stores no normals, colors or UVs. The index maps and flag sets
+//! are dense `Vec`s.
 
 use std::collections::HashSet;
 
 use super::dmesh3::{DMesh3, G3Exception, INVALID_ID};
 
-/// C# `IndexMap.InvalidIndex`.
 pub(crate) const INVALID_INDEX: i32 = i32::MIN;
 
 /// g3 `DSubmesh3` (subset). The base mesh is passed to each method rather than held, so the
 /// caller can edit the submesh while it reads the base mesh.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DSubmesh3 {
-    /// C# `SubMesh`.
     pub(crate) sub_mesh: DMesh3,
-    /// C# `OverrideGroupID`: when `>= 0`, every submesh triangle gets this group.
+    /// When `>= 0`, every submesh triangle gets this group.
     pub(crate) override_group_id: i32,
-    /// C# `BaseSubmeshV`: base vertices that are in the submesh.
+    /// Base vertices that are in the submesh.
     pub(crate) base_submesh_v: Vec<bool>,
-    /// C# `BaseToSubV` (dense; [`INVALID_INDEX`] where unset).
+    /// Base vertex id to submesh vertex id ([`INVALID_INDEX`] where unset).
     pub(crate) base_to_sub_v: Vec<i32>,
-    /// C# `SubToBaseV`.
     pub(crate) sub_to_base_v: Vec<i32>,
-    /// C# `BaseBorderV`: base vertices on the region's border with the rest of the base mesh
-    /// (not mesh-boundary vertices). `None` until [`DSubmesh3::compute_boundary_info`].
+    /// Base vertices on the region's border with the rest of the base mesh (not mesh-boundary
+    /// vertices). `None` until [`DSubmesh3::compute_boundary_info`].
     pub(crate) base_border_v: Option<HashSet<i32>>,
 }
 
 impl DSubmesh3 {
-    /// C# `new DSubmesh3(mesh)`.
     pub(crate) fn new() -> Self {
         Self {
             override_group_id: -1,
@@ -44,11 +38,10 @@ impl DSubmesh3 {
         }
     }
 
-    /// C# `Compute(int[] subTriangles)` (`compute`): appends the triangles' vertices in first-use
-    /// order and the triangles in the given order. Throws in C# on a dead triangle id, after
-    /// the triangles before it were copied.
+    /// Appends the triangles' vertices in first-use order and the triangles in the given order.
+    /// `Err` on a dead triangle id, after the triangles before it were copied.
     pub(crate) fn compute(&mut self, base: &DMesh3, triangles: &[i32]) -> Result<(), G3Exception> {
-        // C# `new DMesh3(BaseMesh.Components & WantComponents)`: groups if the base has them.
+        // Groups if the base has them.
         self.sub_mesh = DMesh3::default();
         if base.triangle_groups.is_some() {
             self.sub_mesh.enable_triangle_groups(0);
@@ -94,13 +87,12 @@ impl DSubmesh3 {
         Ok(())
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `MapVertexToSubmesh`.
+    #[allow(dead_code)] // only the tests call this
     pub(crate) fn map_vertex_to_submesh(&self, base_vid: i32) -> i32 {
         self.base_to_sub_v[base_vid as usize]
     }
 
-    /// C# `MapVertexToBaseMesh`: [`INVALID_ID`] for a vertex added to the submesh since it was
+    /// [`INVALID_ID`] for a vertex added to the submesh since it was
     /// computed.
     pub(crate) fn map_vertex_to_base_mesh(&self, sub_vid: i32) -> i32 {
         if (sub_vid as usize) < self.sub_to_base_v.len() {
@@ -109,8 +101,7 @@ impl DSubmesh3 {
         INVALID_ID
     }
 
-    /// C# `ComputeBoundaryInfo(int[] subTriangles)`: the base vertices of every base edge with
-    /// exactly one of its two triangles in the region.
+    /// The base vertices of every base edge with exactly one of its two triangles in the region.
     pub(crate) fn compute_boundary_info(&mut self, base: &DMesh3, triangles: &[i32]) {
         // set of base-mesh triangles that are in submesh
         let mut sub_tris = vec![false; base.max_triangle_id() as usize];
@@ -130,7 +121,7 @@ impl DSubmesh3 {
             for eid in tedges {
                 let tris = base.get_edge_t(eid);
                 if tris[1] == INVALID_ID {
-                    // this is a boundary edge (C# `BaseBoundaryE`, not kept)
+                    // this is a boundary edge (not kept)
                 } else if sub_tris[tris[0] as usize] != sub_tris[tris[1] as usize] {
                     // this is a border edge
                     let ve = base.get_edge_v(eid);
@@ -142,7 +133,6 @@ impl DSubmesh3 {
         self.base_border_v = Some(border_v);
     }
 
-    /// C# `BaseBorderV[vid]`.
     pub(crate) fn is_base_border_v(&self, vid: i32) -> bool {
         self.base_border_v
             .as_ref()

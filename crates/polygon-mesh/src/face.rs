@@ -1,9 +1,8 @@
-//! `Face` and `FaceList`: a triangle's three vertex indices plus its normal, and the list of
-//! them a [`crate::Mesh`] holds. Ports agg-sharp `PolygonMesh/Face.cs` and `FaceList.cs`.
+//! `Face` and `FaceList`: a triangle's three vertex indices plus its normal, and the list of them a
+//! [`crate::Mesh`] holds.
 //!
-//! C# `Face` is a class, so several mesh operations edit one in place; here it is a plain
-//! value and the list owns its faces, which gives every copy the independence the C#
-//! constructors deep-copy to get (see `MeshCopyIndependenceTests`).
+//! A `Face` is a plain value and the list owns its faces, so every copy of a mesh is independent of
+//! the original (see `mesh_copy_independence_tests`).
 
 use std::ops::{Deref, DerefMut};
 
@@ -19,7 +18,7 @@ pub struct Face {
 }
 
 impl Face {
-    /// A face whose normal is computed from `vertices` (C# `Face(int, int, int, List)`).
+    /// A face whose normal is computed from `vertices`.
     pub fn new(v0: i32, v1: i32, v2: i32, vertices: &[Vector3Float]) -> Self {
         let mut face = Face {
             normal: Vector3Float::ZERO,
@@ -31,7 +30,7 @@ impl Face {
         face
     }
 
-    /// A face with the given normal (C# `Face(int, int, int, Vector3Float)`).
+    /// A face with the given normal.
     pub fn with_normal(v0: i32, v1: i32, v2: i32, normal: Vector3Float) -> Self {
         Face { normal, v0, v1, v2 }
     }
@@ -70,7 +69,7 @@ impl Face {
     }
 }
 
-/// The faces of a mesh (C# `FaceList : List<Face>`); derefs to `Vec<Face>`.
+/// The faces of a mesh; derefs to `Vec<Face>`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FaceList(Vec<Face>);
 
@@ -98,8 +97,8 @@ impl FaceList {
     }
 
     /// Replaces the list with faces read three indices at a time from `f`. A trailing partial
-    /// triple is dropped (the C# enumerator would repeat its last index there and index past
-    /// the data the caller meant; three-at-a-time input is the contract).
+    /// triple is dropped rather than padded with a repeated index: three-at-a-time input is the
+    /// contract.
     pub fn add_from_int_array(&mut self, f: &[i32], vertices: &[Vector3Float]) {
         self.0.clear();
         for triple in f.as_chunks::<3>().0 {

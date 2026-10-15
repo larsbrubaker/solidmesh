@@ -1,10 +1,9 @@
-//! The two cancellable kernel entry points a boolean combines through: one binary boolean with
-//! an explicit engine and winding rule, and the n-ary batch as a CSG tree. Port of agg-sharp
-//! `Csg/ManifoldCancellableBoolean.cs`; called by `manifold_kernel` and
-//! `manifold_pairwise_fold`.
+//! The two cancellable kernel entry points a boolean combines through: one binary boolean with an
+//! explicit engine and winding rule, and the n-ary batch as a CSG tree. Called by `manifold_kernel`
+//! and `manifold_pairwise_fold`.
 //!
-//! Cancellation comes back from the kernel as an empty manifold with status `Cancelled`; here
-//! it becomes [`BooleanError::Cancelled`] (C# throws `OperationCanceledException`).
+//! Cancellation comes back from the kernel as an empty manifold with status `Cancelled`; here it
+//! becomes [`BooleanError::Cancelled`].
 
 use manifold_rust::csg_tree::CsgNode;
 use manifold_rust::manifold::Manifold;

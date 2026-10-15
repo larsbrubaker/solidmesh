@@ -1,15 +1,12 @@
-//! geometry3Sharp's fast mesh winding number over a `DMeshAABBTree3`: `FastWindingNumber`,
-//! `branch_fast_winding_num`, the per-box far-field cache (`build_fast_winding_cache`,
-//! `can_use_fast_winding_cache`, `make_box_fast_winding_cache`) and `box_contains` from
-//! `spatial/DMeshAABBTree.cs`; `FastTriWinding.ComputeCoeffs` / `EvaluateOrder2Approx` from
-//! `math/FastWindingMath.cs`; `MathUtil.TriSolidAngle`; and `MeshTriInfoCache`
-//! (`mesh/MeshCaches.cs`). `remove_occluded_triangles` is the caller.
+//! geometry3Sharp's fast mesh winding number over a `DMeshAABBTree3`: the branch evaluation, the
+//! per-box far-field cache and its box test, the per-triangle expansion coefficients and their
+//! order-2 evaluation, the triangle solid angle, and a per-triangle info cache.
+//! `remove_occluded_triangles` is the caller.
 //!
-//! The cache is built when the [`FastWinding`] is made, which is when C# builds it (the first
-//! query, which `RemoveOccludedTriangles` makes up front at the origin). C#'s per-box
-//! `HashSet<int>` triangle sets are insertion-ordered lists here: every triangle sits in exactly
-//! one leaf, so there are no duplicates, and a `HashSet<int>` that is only added to iterates in
-//! insertion order - the order the coefficient sums run in.
+//! The cache is built when the [`FastWinding`] is made, before the first query, which
+//! `remove_occluded_triangles` makes up front at the origin. The per-box triangle sets are
+//! insertion-ordered lists: every triangle sits in exactly one leaf, so there are no duplicates,
+//! and insertion order is the order the coefficient sums run in, which keeps them reproducible.
 
 use std::collections::HashMap;
 
@@ -17,18 +14,17 @@ use super::dmesh3::DMesh3;
 use super::dmesh_aabb_tree3::{DMeshAABBTree3, BOX_EPS};
 use super::vector3d::{add, dot, length, scale, sub, EPSILON};
 
-/// C# `MathUtil.FourPI`.
 const FOUR_PI: f64 = 4.0 * std::f64::consts::PI;
-/// C# `FWNBeta`: "is 2.0 in paper".
+/// "is 2.0 in paper".
 const FWN_BETA: f64 = 2.0;
-/// C# `WINDING_CACHE_THRESH` in `build_fast_winding_cache`: "set this to a larger number to
-/// ignore caches if number of triangles is too small".
+/// The fewest triangles a box needs for its far-field cache: "set this to a larger number to ignore
+/// caches if number of triangles is too small".
 const WINDING_CACHE_THRESH: i32 = 1;
 
 /// g3 `Matrix3d`, as its three rows.
 type Matrix3d = [[f64; 3]; 3];
 
-/// C# `new Matrix3d(ref u, ref v)`: the outer product, `Mij = u_i * v_j`.
+/// The outer product, `Mij = u_i * v_j`.
 fn outer(u: [f64; 3], v: [f64; 3]) -> Matrix3d {
     [
         [u[0] * v[0], u[0] * v[1], u[0] * v[2]],
@@ -37,13 +33,12 @@ fn outer(u: [f64; 3], v: [f64; 3]) -> Matrix3d {
     ]
 }
 
-/// C# `Matrix3d.InnerProduct`.
 fn inner_product(m1: &Matrix3d, m2: &Matrix3d) -> f64 {
     dot(m1[0], m2[0]) + dot(m1[1], m2[1]) + dot(m1[2], m2[2])
 }
 
-/// C# `MathUtil.FastNormalArea`: the unit normal and the area (half the cross product's length,
-/// zero when that length is at most `MathUtil.Epsilon`, as `Vector3d.Normalize` returns it).
+/// The unit normal and the area (half the cross product's length, zero when that length is at most
+/// `MathUtil.Epsilon`, as `Vector3d.Normalize` returns it).
 fn fast_normal_area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> ([f64; 3], f64) {
     let edge1 = sub(v2, v1);
     let edge2 = sub(v3, v1);
@@ -57,7 +52,7 @@ fn fast_normal_area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> ([f64; 3], f64)
     }
 }
 
-/// C# `MathUtil.TriSolidAngle(a, b, c, ref p)`: the solid angle triangle `abc` subtends at `p`.
+/// The solid angle triangle `abc` subtends at `p`.
 pub(crate) fn tri_solid_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3], p: [f64; 3]) -> f64 {
     let a = sub(a, p);
     let b = sub(b, p);
@@ -70,8 +65,8 @@ pub(crate) fn tri_solid_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3], p: [f64; 3]
 }
 
 /// g3 `MeshTriInfoCache`: each triangle's centroid, unit normal and area (`DMesh3.GetTriInfo`).
-/// Sized by the largest triangle id, so a mesh with removed triangles indexes it safely (C#
-/// sizes it by the live count; see divergence 2140).
+/// Sized by the largest triangle id rather than the live count, so a mesh with removed triangles
+/// indexes it safely.
 struct MeshTriInfoCache {
     centroids: Vec<[f64; 3]>,
     normals: Vec<[f64; 3]>,
@@ -106,7 +101,7 @@ struct FwnInfo {
     order2_mat: Matrix3d,
 }
 
-/// C# `FastTriWinding.ComputeCoeffs` with a triangle cache.
+/// The far-field expansion coefficients of a set of triangles, from the triangle cache.
 fn compute_coeffs(mesh: &DMesh3, triangles: &[i32], tri_cache: &MeshTriInfoCache) -> FwnInfo {
     let mut p = [0.0; 3];
     let mut order1 = [0.0; 3];
@@ -120,7 +115,7 @@ fn compute_coeffs(mesh: &DMesh3, triangles: &[i32], tri_cache: &MeshTriInfoCache
         sum_area += area;
         p = add(p, scale(tri_cache.centroids[tid as usize], area));
     }
-    // C# `p /= sum_area`: each component divided.
+    // Each component divided.
     p = [p[0] / sum_area, p[1] / sum_area, p[2] / sum_area];
 
     // compute first and second-order coefficients of FWN taylor expansion, as well as
@@ -160,7 +155,6 @@ fn dist_sqr(a: [f64; 3], b: [f64; 3]) -> f64 {
     d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
 }
 
-/// C# `FastTriWinding.EvaluateOrder2Approx`.
 fn evaluate_order2_approx(info: &FwnInfo, q: [f64; 3]) -> f64 {
     let dpq = sub(info.center, q);
     let len = length(dpq);
@@ -196,14 +190,13 @@ fn evaluate_order2_approx(info: &FwnInfo, q: [f64; 3]) -> f64 {
 }
 
 /// g3 `DMeshAABBTree3.FastWindingNumber` with its cache built: the tree and each internal box's
-/// far-field expansion (order 2, C#'s default `FWNApproxOrder`).
+/// far-field expansion (order 2, accurate enough for the inside/outside test it serves).
 pub(crate) struct FastWinding<'t, 'm> {
     tree: &'t DMeshAABBTree3<'m>,
     cache: HashMap<i32, FwnInfo>,
 }
 
 impl<'t, 'm> FastWinding<'t, 'm> {
-    /// C# `build_fast_winding_cache()`.
     pub(crate) fn new(tree: &'t DMeshAABBTree3<'m>) -> Self {
         let tri_cache = MeshTriInfoCache::new(tree.mesh);
         let mut fw = Self {
@@ -221,14 +214,12 @@ impl<'t, 'm> FastWinding<'t, 'm> {
         fw
     }
 
-    /// C# `FastWindingNumber(p)`: fast approximation of winding number using far-field
-    /// approximations.
+    /// Fast approximation of winding number using far-field approximations.
     pub(crate) fn fast_winding_number(&self, p: [f64; 3]) -> f64 {
         self.branch_fast_winding_num(self.tree.root_index, p)
     }
 
-    /// C# `branch_fast_winding_num`: winding number contribution for all triangles below
-    /// `i_box`.
+    /// Winding number contribution for all triangles below `i_box`.
     fn branch_fast_winding_num(&self, i_box: i32, p: [f64; 3]) -> f64 {
         let tree = self.tree;
         let mut branch_sum = 0.0;
@@ -269,14 +260,13 @@ impl<'t, 'm> FastWinding<'t, 'm> {
         self.branch_fast_winding_num(child, p)
     }
 
-    /// C# `can_use_fast_winding_cache`.
     fn usable_cache(&self, i_box: i32, q: [f64; 3]) -> Option<&FwnInfo> {
         let info = self.cache.get(&i_box)?;
         let dist_qp = length(sub(info.center, q));
         (dist_qp > FWN_BETA * info.r).then_some(info)
     }
 
-    /// C# `box_contains`: the box widened by `box_eps` (in float).
+    /// The box widened by `box_eps` (in float).
     fn box_contains(&self, i_box: i32, p: [f64; 3]) -> bool {
         let c = self.tree.box_centers[i_box as usize];
         let e = self.tree.box_extents[i_box as usize];
@@ -287,7 +277,6 @@ impl<'t, 'm> FastWinding<'t, 'm> {
         })
     }
 
-    /// C# `build_fast_winding_cache(iBox, depth, tri_count_thresh, out tri_hash, triCache)`.
     fn build_cache(
         &mut self,
         i_box: i32,
@@ -367,7 +356,6 @@ impl<'t, 'm> FastWinding<'t, 'm> {
         num_tris_1 + num_tris_2
     }
 
-    /// C# `collect_triangles`.
     fn collect_triangles(&self, i_box: i32, triangles: &mut Vec<i32>) {
         let tree = self.tree;
         let idx = tree.box_to_index[i_box as usize];

@@ -1,6 +1,5 @@
-//! The public entry points for booleans over [`Mesh`]es. Port of agg-sharp
-//! `Csg/BooleanProcessing.cs` (polygon mode: `DoArray`, `DoArrayAsync`, `Do`,
-//! `ClassifyBooleanOperand`) and `Csg/BooleanOperandVerdict.cs`.
+//! The public entry points for booleans over [`Mesh`]es: the n-ary boolean, its yielding variant,
+//! the two-operand spelling, and the operand classifier.
 //!
 //! Polygon mode runs on manifold-rust, the one and only boolean kernel (`manifold_kernel`).
 //! There is no second engine behind it: an input the kernel cannot take is an error the caller
@@ -19,8 +18,7 @@ use super::{
 };
 use crate::{CancelToken, Mesh};
 
-/// What the kernel makes of a mesh offered to it as a boolean operand (C#
-/// `BooleanOperandVerdict`).
+/// What the kernel makes of a mesh offered to it as a boolean operand.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BooleanOperandVerdict {
     /// The kernel would not take it at all.
@@ -54,12 +52,13 @@ pub fn do_array(
     manifold_kernel::run_boolean(items, operation, cancel, options)
 }
 
-/// [`do_array`] for a job that can hand the UI its thread back (C# `DoArrayAsync`): the same
+/// [`do_array`] for a job that can hand the UI its thread back: the same
 /// boolean, yielding through `reporter` after each operand's import and around the combine.
 ///
-/// `reporter` is the progress sink and replaces `options.reporter`; the host's yield is
-/// `ui_yield` (divergence 4252: C# reads the process-global `ProgressReporter.UiYield`), and a
-/// hop runs only when `reporter`'s throttle lets it through. Nobody watching -
+/// `reporter` is the progress sink and replaces `options.reporter`; the host's yield is `ui_yield`,
+/// passed in rather than read from a process-global hook so callers and tests running side by side
+/// never share one, and a hop runs only when `reporter`'s throttle lets it through. Nobody
+/// watching -
 /// [`ProgressReporter::null`], or a reporter with no target - never yields, and watched or not
 /// the kernel takes the same n-ary route. The implicit-surface modes report nothing and have no
 /// per-operand boundary to hand a frame back at, so for them this is [`do_array`].
@@ -82,8 +81,8 @@ pub async fn do_array_async<F: Future<Output = ()>, Y: Fn() -> F + ?Sized>(
 }
 
 /// The two-operand spelling of [`do_array`]. In an implicit mode it meshes with plain marching
-/// cubes whichever implicit mode is asked for, as C# `Do` does, and an operand with fewer than
-/// four faces gives back the other operand.
+/// cubes whichever implicit mode is asked for, and an operand with fewer than four faces gives back
+/// the other operand.
 pub fn do_boolean(
     mesh_a: &Mesh,
     matrix_a: Matrix4X4,

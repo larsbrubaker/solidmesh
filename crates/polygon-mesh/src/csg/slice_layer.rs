@@ -1,11 +1,9 @@
-//! Slicing a mesh by a plane into closed integer polygons. Port of agg-sharp `Csg/SliceLayer.cs`
-//! with its helpers `Csg/Segment.cs`, `Csg/SortedIntPoint.cs` and `Csg/IndexAndPosition*.cs`;
-//! ClipperLib's `IntPoint` polygons are clipper2-rust's `Point64`/`Path64`/`Paths64`.
+//! Slicing a mesh by a plane into closed integer polygons, with the segment, sorted-point and index
+//! lookups it chains them through; integer polygons are clipper2-rust's
+//! `Point64`/`Path64`/`Paths64`.
 //!
-//! Not here: the `IBvhItem` accelerator overloads of `CreateSlice`/`GetUnorderdSegments` (and
-//! their `includeBehindThePlane` filter, which only the accelerated path reads) join with the
-//! ray tracer (2d). `IntPointPolygon(s)Extensions.AsVertices` turn polygons back into agg-path
-//! vertices.
+//! Slicing visits every face; there is no bounding-volume-accelerated variant. The `as_vertices`
+//! helpers turn polygons back into agg-path vertices.
 
 use std::collections::HashMap;
 
@@ -20,7 +18,7 @@ use agg_path::clipper_library::{
     clean_polygons, int_point, length, length_squared, ClipperError, PolygonsExtensions,
 };
 
-/// One cut through a face, in the plane's scaled XY space (C# `Segment`).
+/// One cut through a face, in the plane's scaled XY space.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Segment {
     pub start: Point64,
@@ -33,8 +31,8 @@ impl Segment {
     }
 }
 
-/// The slice of `mesh` (placed by `matrix`) at z = 0 of world space, as polygons in XY
-/// (C# `GetPolygonXYLoopsAt0`; its `outputScale` parameter is unused there and is not carried).
+/// The slice of `mesh` (placed by `matrix`) at z = 0 of world space, as polygons in XY (no output
+/// scale: the polygons stay in the slicer's x1000 integer space).
 pub fn get_polygon_xy_loops_at_0(mesh: &Mesh, matrix: Matrix4X4) -> Paths64 {
     let slice_plane = Plane::new(Vector3::UNIT_Z, 0.0);
 
@@ -48,8 +46,7 @@ pub fn get_polygon_xy_loops_at_0(mesh: &Mesh, matrix: Matrix4X4) -> Paths64 {
     create_slice(mesh, plane_in_mesh_space, 1000)
 }
 
-/// The closed polygons where `plane` cuts `mesh`, scaled by `output_scale` into integer XY
-/// (C# `CreateSlice(mesh, plane, outputScale)`).
+/// The closed polygons where `plane` cuts `mesh`, scaled by `output_scale` into integer XY.
 pub fn create_slice(mesh: &Mesh, plane: Plane, output_scale: i32) -> Paths64 {
     let plane_transform_to_xy = get_transform_to_xy(plane, output_scale);
     create_slice_with_transform(mesh, plane, plane_transform_to_xy)
@@ -68,8 +65,8 @@ pub fn create_slice_with_transform(
     find_closed_polygons(&unordered_segments)
 }
 
-/// Unions the polygons, non-zero, the first as subject and the rest as clip
-/// (C# `UnionClosedPolygons`). Clipper's exceptions come back as the error.
+/// Unions the polygons, non-zero, the first as subject and the rest as clip. Clipper's errors come
+/// back as the error.
 pub fn union_closed_polygons(closed_polygons: Paths64) -> Result<Paths64, ClipperError> {
     if closed_polygons.len() > 1 {
         return closed_polygons[0..1]
@@ -80,15 +77,13 @@ pub fn union_closed_polygons(closed_polygons: Paths64) -> Result<Paths64, Clippe
     Ok(closed_polygons)
 }
 
-/// The transform from the plane to a polygon at z = 0, scaled up by `output_scale`
-/// (C# `GetTransformToXy`).
+/// The transform from the plane to a polygon at z = 0, scaled up by `output_scale`.
 pub fn get_transform_to_xy(plane: Plane, output_scale: i32) -> Matrix4X4 {
     let flattened_matrix = get_flattened_matrix(plane);
     flattened_matrix * Matrix4X4::create_scale_uniform(f64::from(output_scale))
 }
 
-/// The rotation taking the plane's normal to +Z, then the shift putting the plane at z = 0
-/// (C# `GetFlattenedMatrix`).
+/// The rotation taking the plane's normal to +Z, then the shift putting the plane at z = 0.
 pub fn get_flattened_matrix(cut_plane: Plane) -> Matrix4X4 {
     let rotation = Quaternion::from_directions(cut_plane.normal, Vector3::UNIT_Z);
     let mut flattened_matrix = Matrix4X4::create_rotation_quaternion(rotation);
@@ -97,7 +92,7 @@ pub fn get_flattened_matrix(cut_plane: Plane) -> Matrix4X4 {
     flattened_matrix
 }
 
-/// Every face's cut by `plane`, in the default (x1000) XY space (C# `GetUnorderdSegments`).
+/// Every face's cut by `plane`, in the default (x1000) XY space.
 pub fn get_unorderd_segments(mesh: &Mesh, plane: Plane) -> Vec<Segment> {
     get_unorderd_segments_with_transform(mesh, plane, get_transform_to_xy(plane, 1000))
 }
@@ -124,8 +119,8 @@ pub fn get_unorderd_segments_with_transform(
 }
 
 /// Chains the segments into polygons: exact end-to-start joins first, then the open chains are
-/// linked closing the smallest gaps first; slivers under .01 perimeter are dropped and the
-/// result is cleaned at 1 unit (C# `FindClosedPolygons`).
+/// linked closing the smallest gaps first; slivers under .01 perimeter are dropped and the result
+/// is cleaned at 1 unit.
 pub fn find_closed_polygons(unordered_segments: &[Segment]) -> Paths64 {
     let start_indexes = create_fast_index_lookup(unordered_segments);
 
@@ -168,9 +163,8 @@ pub fn find_closed_polygons(unordered_segments: &[Segment]) -> Paths64 {
 
                 break;
             }
-            // C# also sets canClose here when the found segment starts back at the polygon's
-            // start, but the next pass through the loop always resets it first, so it is not
-            // carried.
+            // A found segment that starts back at the polygon's start needs no close flag here: the
+            // next pass through the loop resets it first.
         }
 
         if can_close {
@@ -300,7 +294,7 @@ pub fn find_closed_polygons(unordered_segments: &[Segment]) -> Paths64 {
     clean_polygons(&closed_polygons, 1.0)
 }
 
-/// The segments by exact start position (C# `CreateFastIndexLookup`).
+/// The segments by exact start position.
 pub fn create_fast_index_lookup(unordered_segments: &[Segment]) -> HashMap<(i64, i64), Vec<i32>> {
     let mut start_indexes: HashMap<(i64, i64), Vec<i32>> = HashMap::new();
 
@@ -337,8 +331,7 @@ fn get_touching_segment_index(
     lookup_segment_index
 }
 
-/// C# `IntPointPolygonsExtensions.AsVertices(polygons, outputScale = 1000)`: each polygon of
-/// more than two points as a path, divided by `output_scale`.
+/// Each polygon of more than two points as a path, divided by `output_scale`.
 pub fn polygons_as_vertices(polygons: &Paths64, output_scale: f64) -> Vec<VertexData> {
     polygons
         .iter()
@@ -347,8 +340,8 @@ pub fn polygons_as_vertices(polygons: &Paths64, output_scale: f64) -> Vec<Vertex
         .collect()
 }
 
-/// C# `IntPointPolygonExtensions.AsVertices(polygon, outputScale = 1000)`: a move-to the last
-/// point, then a line-to every point in order (so the path ends where it began; no close).
+/// A move-to the last point, then a line-to every point in order (so the path ends where it began;
+/// no close).
 pub fn as_vertices(polygon: &Path64, output_scale: f64) -> Vec<VertexData> {
     let scaled = |p: &Point64| Vector2::new(p.x as f64 / output_scale, p.y as f64 / output_scale);
     let Some(last) = polygon.last() else {
@@ -363,7 +356,7 @@ pub fn as_vertices(polygon: &Path64, output_scale: f64) -> Vec<VertexData> {
         .collect()
 }
 
-/// The area of a polygon, positive for counter-clockwise (C# `IntPointPolygonExtensions.Area`).
+/// The area of a polygon, positive for counter-clockwise.
 pub fn area(polygon: &Path64) -> f64 {
     let count = polygon.len();
     if count < 3 {
@@ -381,8 +374,7 @@ pub fn area(polygon: &Path64) -> f64 {
     -a * 0.5
 }
 
-/// Positions sorted by x for a nearest-point search that walks outwards from a binary-search
-/// hit (C# `SortedIntPoint`).
+/// Positions sorted by x for a nearest-point search that walks outwards from a binary-search hit.
 #[derive(Default)]
 struct SortedIntPoint {
     sorted: Vec<(i32, Point64)>,
@@ -452,8 +444,7 @@ impl SortedIntPoint {
         (self.sorted[best_index].0, best_distance_squared)
     }
 
-    /// .NET `List.BinarySearch` by x: the index of a match, or the complement of the insertion
-    /// point.
+    /// Binary search by x: the index of a match, or the complement of the insertion point.
     fn binary_search(&self, position: Point64) -> i64 {
         let mut lo = 0i64;
         let mut hi = self.sorted.len() as i64 - 1;
@@ -486,7 +477,7 @@ fn distance_squared(a: Point64, b: Point64) -> f64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y)) as f64
 }
 
-/// Orders by x only, as C#'s `IndexAndPositionSorter`.
+/// Orders by x only.
 fn compare_x(a: &Point64, b: &Point64) -> std::cmp::Ordering {
     a.x.cmp(&b.x)
 }

@@ -1,16 +1,15 @@
-//! geometry3Sharp `mesh_ops/MeshAutoRepair.cs`: the Repair tool's default pass. Makes component
-//! orientation consistent (`mesh_repair_orientation`), welds cracks (`merge_coincident_edges`),
-//! collapses degenerate edges, fills holes (`simple_hole_filler`, `minimal_hole_fill`), splits
-//! bowties, and if the mesh is still open retries and then erodes boundary triangles, before a
-//! final degenerate-edge cleanup and global orientation. Also `MathUtil.ModuloIteration`.
+//! geometry3Sharp's `MeshAutoRepair`: the Repair tool's default pass. Makes component orientation
+//! consistent (`mesh_repair_orientation`), welds cracks (`merge_coincident_edges`), collapses
+//! degenerate edges, fills holes (`simple_hole_filler`, `minimal_hole_fill`), splits bowties, and
+//! if the mesh is still open retries and then erodes boundary triangles, before a final
+//! degenerate-edge cleanup and global orientation. Also [`modulo_iteration`].
 //!
-//! Only `RemoveMode = None` is ported here (the Repair tool's default never sets another; the
-//! Advanced path's interior/occluded removal runs `remove_occluded_triangles` itself, from
+//! It never removes interior triangles here (the Repair tool's default never asks; the Advanced
+//! path's interior/occluded removal runs `remove_occluded_triangles` itself, from
 //! `advanced_repair`, which also reuses the hole, crack, collapse and orientation helpers below),
-//! and there is no progress reporter or cancellation: nothing sets them on this path. C#'s final
-//! `Mesh = new DMesh3(Mesh, true)` replaces only the repairer's own reference with a compacted
-//! copy; callers (`RepairObject3D_2.Repair`) read the mesh they passed in, which is the one
-//! edited here. `MeshNormals.QuickCompute` on that copy has no observable output.
+//! and there is no progress reporter or cancellation: nothing sets them on this path. There is no
+//! final compacted copy or normal computation: callers read the mesh they passed in, which is the
+//! one edited here.
 
 use super::dmesh3::{DMesh3, G3Exception, MeshResult};
 use super::merge_coincident_edges::MergeCoincidentEdges;
@@ -23,9 +22,8 @@ use super::minimal_hole_fill::MinimalHoleFill;
 use super::simple_hole_filler::SimpleHoleFiller;
 use super::vector3d::{add, distance, scale, ZERO_TOLERANCEF};
 
-/// C# `MathUtil.ModuloIteration(nMaxExclusive, nPrime)`: `0, p, 2p, ...` modulo `n` until it
-/// comes back to 0. C# yields 0 and then divides by zero when `n == 0`; that is `Err` here (the
-/// lone 0 it yields first names no live edge, so nothing is lost).
+/// `0, p, 2p, ...` modulo `n` until it comes back to 0. `n == 0` is `Err` rather than a division by
+/// zero (a mesh with no edges has nothing to iterate, so nothing is lost).
 pub(crate) fn modulo_iteration(
     n_max_exclusive: i32,
     n_prime: i32,
@@ -39,7 +37,7 @@ pub(crate) fn modulo_iteration(
     let mut i: i32 = 0;
     loop {
         out.push(i);
-        // C# int arithmetic: i + nPrime cannot overflow for an id below i32::MAX - 31337.
+        // i32 arithmetic: i + nPrime cannot overflow for an id below i32::MAX - 31337.
         i = (i + n_prime) % n_max_exclusive;
         if i == 0 {
             break;
@@ -69,8 +67,8 @@ impl Default for MeshAutoRepair {
 }
 
 impl MeshAutoRepair {
-    /// C# `Apply()`: always true without cancellation. `Err` is an exception C# lets escape
-    /// (from the hole fillers, or `ModuloIteration` on a mesh with no edges).
+    /// Always true without cancellation. `Err` is a g3 failure (from the hole fillers, or
+    /// [`modulo_iteration`] on a mesh with no edges).
     pub(crate) fn apply(&self, mesh: &mut DMesh3) -> Result<bool, G3Exception> {
         // Remove parts of the mesh we don't want before we bother with anything else:
         // RemoveMode None removes nothing.
@@ -157,8 +155,7 @@ impl MeshAutoRepair {
     }
 }
 
-/// C# `fill_trivial_holes`: three-vertex loops get one triangle, four-vertex loops a minimal
-/// fill (or a fan if that fails).
+/// Three-vertex loops get one triangle, four-vertex loops a minimal fill (or a fan if that fails).
 pub(crate) fn fill_trivial_holes(mesh: &mut DMesh3) -> Result<(), G3Exception> {
     let loops = MeshBoundaryLoops::new(mesh);
     for lp in &loops.loops {
@@ -174,8 +171,8 @@ pub(crate) fn fill_trivial_holes(mesh: &mut DMesh3) -> Result<(), G3Exception> {
     Ok(())
 }
 
-/// C# `fill_any_holes`: a minimal fill of every loop, a fan where that fails. Returns
-/// `SawOpenSpans` of the loops it filled.
+/// A minimal fill of every loop, a fan where that fails. Returns `SawOpenSpans` of the loops it
+/// filled.
 pub(crate) fn fill_any_holes(mesh: &mut DMesh3) -> Result<bool, G3Exception> {
     let loops = MeshBoundaryLoops::new(mesh);
     for lp in &loops.loops {
@@ -187,8 +184,8 @@ pub(crate) fn fill_any_holes(mesh: &mut DMesh3) -> Result<bool, G3Exception> {
     Ok(loops.saw_open_spans)
 }
 
-/// C# `repair_cracks`: a `MergeCoincidentEdges` pass; anything it throws is caught (and the
-/// mesh keeps whatever it had already changed).
+/// A `MergeCoincidentEdges` pass; anything it throws is caught (and the mesh keeps whatever it had
+/// already changed).
 pub(crate) fn repair_cracks(mesh: &mut DMesh3, unique_only: bool, merge_dist: f64) -> bool {
     let merge = MergeCoincidentEdges {
         merge_distance: merge_dist,
@@ -197,9 +194,9 @@ pub(crate) fn repair_cracks(mesh: &mut DMesh3, unique_only: bool, merge_dist: f6
     merge.apply(mesh).unwrap_or(false)
 }
 
-/// C# `collapse_degenerate_edges`: visits edge ids in [`modulo_iteration`] order ("don't
-/// iterate sequentially because there may be pathological cases") and collapses each edge
-/// shorter than `min_length`, keeping a boundary vertex where there is one.
+/// Visits edge ids in [`modulo_iteration`] order ("don't iterate sequentially because there may be
+/// pathological cases") and collapses each edge shorter than `min_length`, keeping a boundary
+/// vertex where there is one.
 fn collapse_degenerate_edges(
     mesh: &mut DMesh3,
     min_length: f64,
@@ -237,7 +234,7 @@ fn collapse_degenerate_edges(
     Ok(collapse_count)
 }
 
-/// C# `collapse_all_degenerate_edges`: repeats until a pass collapses nothing.
+/// Repeats until a pass collapses nothing.
 pub(crate) fn collapse_all_degenerate_edges(
     mesh: &mut DMesh3,
     min_length: f64,
@@ -247,7 +244,6 @@ pub(crate) fn collapse_all_degenerate_edges(
     Ok(())
 }
 
-/// C# `repair_orientation`.
 pub(crate) fn repair_orientation(mesh: &mut DMesh3, global: bool) {
     let mut orient = MeshRepairOrientation::new();
     orient.orient_components(mesh);
@@ -269,10 +265,10 @@ impl std::fmt::Display for MeshAutoRepairError {
 impl std::error::Error for MeshAutoRepairError {}
 
 impl crate::Mesh {
-    /// The geometry half of MatterCAD's `RepairObject3D_2.Repair` default (non-Advanced) path:
-    /// `ToDMesh3`, geometry3Sharp's `MeshAutoRepair.Apply`, then `ToMesh` of that same `DMesh3`.
-    /// Face colors are not carried (the caller saves and restores them by face centroid, as C#
-    /// does).
+    /// The geometry half of the Repair operation's default (non-Advanced) path: the mesh into a
+    /// `DMesh3`, `MeshAutoRepair::apply`, then back to a [`crate::Mesh`] from that same `DMesh3`.
+    /// Face colors are not carried (the caller saves and restores them by face centroid, since the
+    /// round trip renumbers faces).
     pub fn auto_repaired(&self) -> Result<crate::Mesh, MeshAutoRepairError> {
         let mut dmesh3 = self.to_dmesh3();
         MeshAutoRepair::default()

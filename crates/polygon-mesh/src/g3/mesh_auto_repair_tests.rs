@@ -1,6 +1,5 @@
-//! Rust-only tests for `MeshAutoRepair` (`mesh_auto_repair`) and `MathUtil.ModuloIteration`.
-//! geometry3Sharp ships no tests for them in agg-sharp; the pinned values were printed by
-//! geometry3Sharp itself (MatterCAD's built `geometry3Sharp.dll`, scratch console, same meshes).
+//! Rust-only tests for `MeshAutoRepair` (`mesh_auto_repair`) and `modulo_iteration`. The pinned
+//! values were printed by geometry3Sharp itself on the same meshes.
 
 use super::dmesh3::DMesh3;
 use super::dmesh3_tests::check_valid;

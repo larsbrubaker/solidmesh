@@ -1,21 +1,18 @@
-//! geometry3Sharp `DMesh3.SetTriangle` (`mesh/DMesh3_edge_operators.cs`), the vertex copy
-//! `AppendVertex(DMesh3, int)` and the boundary-edge queries `GetOrientedBoundaryEdgeV` and
-//! `VtxBoundaryEdges` / `VtxAllBoundaryEdges` (`mesh/DMesh3.cs`) - the pieces `MeshEditor`'s
-//! bowtie split and `MeshBoundaryLoops` reach. Split from `dmesh3_edge_ops` for size.
+//! `DMesh3`'s triangle replacement, the vertex copy and the boundary-edge queries (the oriented
+//! boundary edge at a vertex, and all boundary edges at a vertex) - the pieces the mesh editor's
+//! bowtie split and the boundary-loop finder reach. Split from `dmesh3_edge_ops` for size.
 
 use super::dmesh3::{DMesh3, MeshResult, INVALID_ID};
 use super::dmesh3_queries::find_edge_index_in_tri;
 
 impl DMesh3 {
-    /// C# `AppendVertex(DMesh3 from, int fromVID)` with `from == this`: a new vertex at the
-    /// same position (there are no normals, colors or UVs to copy here).
+    /// A new vertex at the same position (there are no normals, colors or UVs to copy here).
     pub(crate) fn append_vertex_copy(&mut self, from_vid: i32) -> i32 {
         let v = self.vertex(from_vid);
         self.append_vertex(v)
     }
 
-    /// C# `SetTriangle(tID, newv, bRemoveIsolatedVertices)`: rewrites a triangle's vertices,
-    /// rebuilding the edges that changed.
+    /// Rewrites a triangle's vertices, rebuilding the edges that changed.
     pub(crate) fn set_triangle(
         &mut self,
         tid: i32,
@@ -105,8 +102,8 @@ impl DMesh3 {
         MeshResult::Ok
     }
 
-    /// C# `GetOrientedBoundaryEdgeV`: a boundary edge's vertices in the order its triangle
-    /// runs them, or `[INVALID_ID; 2]` for anything else.
+    /// A boundary edge's vertices in the order its triangle runs them, or `[INVALID_ID; 2]` for
+    /// anything else.
     pub(crate) fn get_oriented_boundary_edge_v(&self, eid: i32) -> [i32; 2] {
         if self.edges_refcount.is_valid(eid) {
             let [a, b, t0, t1] = self.edges[eid as usize];
@@ -119,8 +116,7 @@ impl DMesh3 {
         [INVALID_ID; 2]
     }
 
-    /// C# `VtxAllBoundaryEdges`: the boundary edges at a vertex, in its edge-list order (the
-    /// first two of these are C# `VtxBoundaryEdges`' `e0`, `e1`, and its count the length).
+    /// The boundary edges at a vertex, in its edge-list order.
     pub(crate) fn vtx_all_boundary_edges(&self, vid: i32) -> Vec<i32> {
         self.vertex_edges
             .iter(vid)

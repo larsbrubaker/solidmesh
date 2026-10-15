@@ -1,6 +1,5 @@
-//! Constructive solid geometry over [`crate::Mesh`]: a port of agg-sharp `PolygonMesh/Csg`'s
-//! polygon-mode booleans, which run on manifold-rust (agg-sharp runs ManifoldSharp, the C# port
-//! of the same Rust source).
+//! Constructive solid geometry over [`crate::Mesh`]: polygon-mode booleans, which run on
+//! manifold-rust.
 //!
 //! [`csg_operations`] is the two-mesh convenience face and [`boolean_processing`] the public
 //! n-ary entry point. Behind it, `manifold_kernel` drives one boolean: `manifold_operand_batch`
@@ -48,8 +47,7 @@ use crate::Mesh;
 pub use boolean_processing::BooleanOperandVerdict;
 pub use manifold_rust::types::{Error as KernelStatus, WindingRule};
 
-/// C# `CsgModes`: which boolean to run. An n-ary `Subtract` removes every later operand from
-/// the first.
+/// Which boolean to run. An n-ary `Subtract` removes every later operand from the first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CsgModes {
     Union,
@@ -57,7 +55,7 @@ pub enum CsgModes {
     Intersect,
 }
 
-/// C# `ProcessingModes`: how a boolean is computed.
+/// How a boolean is computed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ProcessingModes {
     /// "Default CSG processing": the exact polygon kernel (manifold-rust).
@@ -71,8 +69,8 @@ pub enum ProcessingModes {
     DualContouring,
 }
 
-/// C# `ProcessingResolution`: the grid resolution of the implicit modes. The value is the
-/// exponent (`_64 = 6`); the cell count across the largest dimension is `1 << value`.
+/// The grid resolution of the implicit modes. The value is the exponent (`_64 = 6`); the cell count
+/// across the largest dimension is `1 << value`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ProcessingResolution {
     #[default]
@@ -83,24 +81,24 @@ pub enum ProcessingResolution {
 }
 
 impl ProcessingResolution {
-    /// C# `(int)resolution`: the exponent.
+    /// The exponent.
     pub fn exponent(self) -> i32 {
         self as i32
     }
 
-    /// C# `1 << (int)resolution`: the cell count.
+    /// The cell count.
     pub fn cells(self) -> i32 {
         1 << self.exponent()
     }
 }
 
-/// A progress sink: ratio done (0..1) and a status message (C# `Action<double, string>`).
+/// A progress sink: ratio done (0..1) and a status message.
 ///
 /// Shared and thread-safe because the kernel reports from inside the boolean, possibly from a
-/// worker thread. `None` is "nobody is watching" (C# `ManifoldKernel.AnyoneWatching`).
+/// worker thread. `None` is "nobody is watching".
 pub type BooleanReporter = Arc<dyn Fn(f64, &str) + Send + Sync>;
 
-/// The optional half of a boolean call (C# `DoArray`'s defaulted parameters).
+/// The optional half of a boolean call: everything with a sensible default.
 #[derive(Clone)]
 pub struct BooleanOptions {
     /// Progress sink; `None` when nobody is watching.
@@ -116,16 +114,16 @@ pub struct BooleanOptions {
     /// Rewind each operand's inside-out shells before combining - the alternative to
     /// `Nonzero`, fixing the data once instead of redefining "solid".
     pub repair_orientation: bool,
-    /// C# `processingMode`: polygons (the kernel) unless an implicit mode is asked for. The
-    /// implicit modes ignore the reporter, the cancel token, the winding rule and the repair.
+    /// Polygons (the kernel) unless an implicit mode is asked for. The implicit modes ignore the
+    /// reporter, the cancel token, the winding rule and the repair.
     pub processing_mode: ProcessingModes,
-    /// C# `inputResolution`: how finely the implicit modes sample each operand.
+    /// How finely the implicit modes sample each operand.
     pub input_resolution: ProcessingResolution,
-    /// C# `outputResolution`: how finely the implicit modes mesh the result.
+    /// How finely the implicit modes mesh the result.
     pub output_resolution: ProcessingResolution,
-    /// C# `meshColors`: one color per operand, in operand order, to paint the result's faces
-    /// from; `None` asks for no color tracking (the result has no face colors). An operand
-    /// that has face colors of its own is painted from those instead. Polygon mode only.
+    /// One color per operand, in operand order, to paint the result's faces from; `None` asks for
+    /// no color tracking (the result has no face colors). An operand that has face colors of its
+    /// own is painted from those instead. Polygon mode only.
     pub mesh_colors: Option<Vec<agg_path::Color>>,
 }
 
@@ -161,8 +159,7 @@ impl fmt::Debug for BooleanOptions {
     }
 }
 
-/// An operand a union left out because the kernel refused its geometry (C#
-/// `SkippedBooleanOperand`).
+/// An operand a union left out because the kernel refused its geometry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkippedBooleanOperand {
     /// Zero-based position in the operand list.
@@ -171,27 +168,27 @@ pub struct SkippedBooleanOperand {
     pub reason: String,
 }
 
-/// Why a boolean did not produce its whole answer. C# throws these as exceptions.
+/// Why a boolean did not produce its whole answer.
 #[derive(Debug, Clone)]
 pub enum BooleanError {
-    /// The caller's [`crate::CancelToken`] was cancelled (C# `OperationCanceledException`).
+    /// The caller's [`crate::CancelToken`] was cancelled.
     Cancelled,
-    /// The kernel refused an operand's geometry (C# `MeshImportRejectedException`). A union
-    /// skips such operands instead (see [`BooleanError::Partial`]); subtract and intersect are
-    /// defined by every operand, so they fail.
+    /// The kernel refused an operand's geometry. A union skips such operands instead (see
+    /// [`BooleanError::Partial`]); subtract and intersect are defined by every operand, so they
+    /// fail.
     ImportRejected {
         message: String,
         status: KernelStatus,
     },
-    /// A union combined the operands that imported and left the rest out (C#
-    /// `PartialBooleanException`). Still an error, so no caller loses a part quietly; the
-    /// result is carried so a caller that accepts the loss can use it.
+    /// A union combined the operands that imported and left the rest out. Still an error, so no
+    /// caller loses a part quietly; the result is carried so a caller that accepts the loss can use
+    /// it.
     Partial {
         message: String,
         partial_result: Box<Mesh>,
         skipped_operands: Vec<SkippedBooleanOperand>,
     },
-    /// The kernel's result carried an error status (C# `InvalidOperationException`).
+    /// The kernel's result carried an error status.
     Kernel { message: String },
 }
 

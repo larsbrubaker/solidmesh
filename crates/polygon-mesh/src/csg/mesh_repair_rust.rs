@@ -1,8 +1,7 @@
-//! Mesh repairs performed with the boolean kernel's import, for callers that want a repair and
-//! not a boolean. Port of agg-sharp `Csg/MeshRepairRust.cs` (static class `MeshRepair`):
-//! `RewindBackwardPatches`, which the model's boolean operations use to retry an operand the
-//! kernel refused, and `TryRepairOrientation`, the Repair tool's shell-level face orientation
-//! (`g3::advanced_repair`).
+//! Mesh repairs performed with the boolean kernel's import, for callers that want a repair and not
+//! a boolean: [`rewind_backward_patches`], which the model's boolean operations use to retry an
+//! operand the kernel refused, and [`try_repair_orientation`], the Repair tool's shell-level face
+//! orientation (`g3::advanced_repair`).
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::Error as KernelStatus;
@@ -10,10 +9,9 @@ use manifold_rust::types::Error as KernelStatus;
 use super::{consistent_winding, manifold_import, manifold_kernel, manifold_result_reader};
 use crate::Mesh;
 
-/// C# `MeshRepair.RewindBackwardPatches`: a copy of `source_mesh` with the triangles of a
-/// closed surface that are wound against the rest of it rewound - the backward patch the kernel
-/// import refuses as NotClosed although every edge has its two faces - or `None` when there is
-/// nothing to rewind.
+/// A copy of `source_mesh` with the triangles of a closed surface that are wound against the rest
+/// of it rewound - the backward patch the kernel import refuses as NotClosed although every edge
+/// has its two faces - or `None` when there is nothing to rewind.
 ///
 /// Only the minority winding of each connected surface flips, so no shape changes and a shell
 /// that is inside out as a whole stays that way. Surfaces are joined by exact position first,
@@ -33,17 +31,16 @@ pub fn rewind_backward_patches(source_mesh: &Mesh) -> Option<Mesh> {
     consistent_winding::rewind(&welded)
 }
 
-/// C# `MeshRepair.TryRepairOrientation`: rewinds inside-out shells so every body reads as solid
-/// material, using the kernel's exact shell-level orientation repair. `None` when the kernel
-/// could not take the mesh (empty input, an import or repair error status, or an empty result),
-/// in which case the caller uses its own fallback.
+/// Rewinds inside-out shells so every body reads as solid material, using the kernel's exact
+/// shell-level orientation repair. `None` when the kernel could not take the mesh (empty input, an
+/// import or repair error status, or an empty result), in which case the caller uses its own
+/// fallback.
 ///
 /// The kernel decides per shell with exact predicates: outermost shells end up wound outward,
-/// legitimate cavity shells end up wound inward, and coincident or doubled sheets are left
-/// alone. That last point is a real behavioural difference from geometry3Sharp's
-/// `MeshRepairOrientation`, which flood-fills a consistent winding across each connected
-/// component and then picks a global sign: the kernel is deliberately conservative and never
-/// removes or reverses material it has no evidence about, so a single shell whose triangles
+/// legitimate cavity shells end up wound inward, and coincident or doubled sheets are left alone.
+/// That last point is why this is preferred to a flood fill that makes each connected component's
+/// winding consistent and then picks a global sign: the kernel is deliberately conservative and
+/// never removes or reverses material it has no evidence about, so a single shell whose triangles
 /// disagree with each other comes back unchanged rather than guessed at.
 ///
 /// Import is the robust one, so closed-but-non-manifold soup is welded rather than rejected.
