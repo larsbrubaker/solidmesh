@@ -1,7 +1,7 @@
-//! Reading a mixed corner's frame off the two edge plans that meet there. The questions the reading
-//! is made of land here first: which region the two edges share, whether the bead rests on a crease
-//! of it, which side's normal and tangent line to read, and where two skew lines touch. The reading
-//! itself lands with a later package.
+//! Reading a mixed corner's frame off the two edge plans that meet there ([`try_read`] for the
+//! ordinary corner, [`try_read_carried`] where the ring is carried by another plan), with the
+//! questions the reading is made of: which region the two edges share, whether the bead rests on a
+//! crease of it, which side's normal and tangent line to read, and where two skew lines touch.
 
 use vector_math::Vector3;
 

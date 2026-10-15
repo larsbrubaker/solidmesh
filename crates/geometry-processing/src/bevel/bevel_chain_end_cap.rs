@@ -1,7 +1,8 @@
 //! What a run does at each of its two ends: [`BevelChainEnds`], the decision `BevelEndCap` records
-//! one half of. Its constructor, the shared overshoot answer and the squared-off ends land here;
-//! resolving it - the cap plane scan, the 5.3 corner exemption, the bead's square cap and the
-//! overshoot bound - lands with later packages.
+//! one half of: its constructor, the shared overshoot answer, the squared-off ends and the
+//! resolution of both ends ([`BevelChainEnds::resolve`]). The plane an end is capped on is
+//! [`super::bevel_chain_end_plane`]; what an end can afford (the bead's square cap and the
+//! overshoot bound) is [`super::bevel_chain_end_budget`].
 //!
 //! A cutter that finds a face bounding its end vertex stops on that face's plane; one that finds
 //! none overshoots, which costs nothing because what it reaches is material a neighbouring tool

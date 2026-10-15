@@ -4,7 +4,8 @@
 //! runs ([`connectors`]), which cuts it takes ([`takes`], [`corner_points`]) and the tie rule
 //! ([`fields_tie`], [`ties`]) and a closed chain's piece closed round its seam
 //! ([`close_round_the_seam`]), and a group loop split into its chains' pieces ([`pieces`]). The
-//! fill's other functions land with later packages.
+//! fill itself is `corner_fill_fill.rs`; a piece's trims are `corner_fill_pieces.rs` and
+//! `corner_fill_end_ray_trim.rs`, its split round a free end `corner_fill_free_ends.rs`.
 
 use std::collections::{HashMap, HashSet};
 

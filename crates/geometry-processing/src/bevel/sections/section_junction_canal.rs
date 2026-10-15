@@ -4,7 +4,7 @@
 //! the junction, which side of the turn is the shared flat one, and the junction section's readings
 //! of its own samples (its wall ends, patch triangles and directed edges). Split from
 //! [`super::section_junction`], which keeps the junction's types, by responsibility; the junction's
-//! construction lands with a later run of this package.
+//! construction is [`super::section_junction_build`].
 
 use polygon_mesh::Mesh;
 use vector_math::{ieee_math, Vector3};

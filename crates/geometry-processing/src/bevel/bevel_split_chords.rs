@@ -2,8 +2,8 @@
 //! corner of nothing. What is here is the READING of one such vertex - whether it would be removed
 //! ([`would_remove`]) and the re-cut of the two fans either side of it - with the mesh's own
 //! lattice ([`lattice_for`]) and the straight-line test the split blend shares
-//! ([`stands_on_the_line_between`]). The repair pass that takes every such vertex out lands with a
-//! later package.
+//! ([`stands_on_the_line_between`]). Only the reading is built: no pass yet walks a mesh taking
+//! every such vertex out.
 //!
 //! The faces-on-each-edge table is only looked up, so a `HashMap`'s order cannot reach an output; the
 //! vertex's link (`next_round`) is walked for its creases in insertion order, so it is an [`IndexMap`].
