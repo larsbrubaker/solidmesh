@@ -4,8 +4,8 @@
 //! split, or from an earlier repair. A measurement, not a contract.
 //!
 //! Gated on `LEVELLINE_COST=1` beside `pass_one_pinch_tests`, whose fixture and build this shares
-//! (`level_line_cost_gate`): the build is minutes long. The needle meter and the field counters are
-//! process-wide, so a `threads-required` override in `.config/nextest.toml` keeps the rows apart.
+//! (`level_line_cost_gate`): the build is minutes long. The needle meter is process-wide, so a
+//! `threads-required` override in `.config/nextest.toml` keeps the rows apart.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;

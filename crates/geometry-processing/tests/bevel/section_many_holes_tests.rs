@@ -72,9 +72,7 @@ fn the_room_refuses_the_pick_before_the_router_is_reached() {
         reason.map(|reason| reason.code().to_string()).as_deref(),
         Some("SizeExceedsFaceWidth"),
         "in ONE pass the room stops the pick before any plan is routed, so the router never speaks \
-         - the app's sentences come from its drop-and-retry, which this call does not have. \
-         (LastRoute is not asserted: it is a process-wide static another test's pass may have \
-         written.)"
+         - the app's sentences come from its drop-and-retry, which this call does not have."
     );
 }
 

@@ -2,7 +2,7 @@
 //! needle is a triangle with no height whose apex lies ON its long edge - a T-VERTEX the
 //! tessellation wrote as a triangle. Repair re-tiles the NEIGHBOUR through the apex instead, which
 //! costs no vertex and leaves that run belonging to triangles that have height. The one test that
-//! switches the process-wide meter takes `meter_lock`; nextest runs every test in its own process.
+//! meters its build switches the meter for its own thread.
 //! The meter row writes its report to `LEVELLINE_COST_LOG` when set.
 
 use std::cell::RefCell;

@@ -1,6 +1,6 @@
 //! Rust-only tests of `section_routing` beyond the ported routing tests: the room reading over a
 //! routed pass, the plan-less overload falling through to the planned one, and a pass with nothing
-//! to route. None reads the process-wide last route, which parallel tests share.
+//! to route, read off the answers themselves rather than the last route.
 
 use std::rc::Rc;
 use std::sync::Arc;

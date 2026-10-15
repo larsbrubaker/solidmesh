@@ -187,6 +187,25 @@ fn rust_only_the_watchdog_names_a_throw_a_panic_and_a_hang() {
     sweep_watchdog::set_build_cap(Duration::from_secs(30));
 }
 
+/// A build that answered has ended: the count of builds still running never includes one whose
+/// answer is already back, so a sweep that stops at too many abandoned builds counts only those.
+#[test]
+fn a_guarded_build_that_answered_is_no_longer_counted_alive() {
+    let _turn = WATCHDOG.lock().unwrap_or_else(|e| e.into_inner());
+    let before = sweep_watchdog::alive();
+    for round in 0..200 {
+        let answered = sweep_watchdog::run(1000, |_| -> Result<(), _> {
+            Err(sweep_watchdog::Thrown::new("ArgumentException", "no"))
+        });
+        assert_eq!(answered.outcome.as_deref(), Some("Threw:ArgumentException"));
+        assert_eq!(
+            sweep_watchdog::alive(),
+            before,
+            "round {round}: the build answered, so it is not counted alive"
+        );
+    }
+}
+
 #[test]
 fn rust_only_a_sweep_of_a_synthetic_corpus_writes_a_report_that_counts_its_rows() {
     let _turn = WATCHDOG.lock().unwrap_or_else(|e| e.into_inner());

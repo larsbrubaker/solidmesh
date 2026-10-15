@@ -29,12 +29,19 @@
 //! construction: the two paths refuse at different numbers, so falling back would build a mesh the
 //! panel has just told the user does not fit.
 //!
-//! The switch, the last route and its observer are process-wide, so a test or the app sets them
-//! once for every build, and thread-safe because the kernel runs on worker threads: an atomic for
-//! the switch, mutexes for the route and its observer.
+//! The switch, the last route and its observer belong to the thread that set or asked for them,
+//! not the process: tests run on threads of one process, and a test that turns
+//! the sections on for its own build, or reads the route its own build took, must not see another
+//! test's build beside it. The switch's default is process-wide and read once from the developer
+//! variable; a write ([`set_use_sections`]) holds for the writing thread. The last route and its
+//! observer live in a record each thread starts with its own of. Work handed to another thread
+//! carries both along ([`SectionRoutingContext::current`] on the submitting thread,
+//! [`SectionRoutingContext::enter`] on the worker; the model's compute pool does this for every
+//! job), so a build reads the switch its asker set wherever its compute runs, and the route it
+//! takes is written where its asker reads it.
 
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
@@ -51,44 +58,135 @@ use crate::topology::FeatureEdgeSet;
 /// The environment variable naming the opt-in.
 pub const USE_SECTIONS_VARIABLE: &str = "MATTERCAD_BEVEL_SECTIONS";
 
-/// The sections switch. Its initial value is a DEVELOPER OPT-IN read
-/// from [`USE_SECTIONS_VARIABLE`] ("1" or "true", case-insensitive), so the new construction can be
+/// The sections switch's default: a DEVELOPER OPT-IN read from [`USE_SECTIONS_VARIABLE`] ("1" or "true", case-insensitive), so the new construction can be
 /// tried in the running app before the default flips. It is read ONCE, when first touched (never
-/// set in the browser, which has no process environment), and stays plainly settable so tests can
-/// set and restore it around a single build.
-static USE_SECTIONS: LazyLock<AtomicBool> = LazyLock::new(|| {
-    AtomicBool::new(reads_as_on(
-        std::env::var(USE_SECTIONS_VARIABLE).ok().as_deref(),
-    ))
-});
+/// set in the browser, which has no process environment), and is what every thread sees until it
+/// sets the switch itself.
+static DEFAULT_USE_SECTIONS: LazyLock<bool> =
+    LazyLock::new(|| reads_as_on(std::env::var(USE_SECTIONS_VARIABLE).ok().as_deref()));
 
 /// A route observer, told each route as it is written.
 pub type RouteObserver = Arc<dyn Fn(Option<&str>) + Send + Sync>;
 
-/// The last route written ([`last_route`]).
-static LAST_ROUTE: Mutex<Option<String>> = Mutex::new(None);
+/// The last route ([`last_route`]) and its observer ([`route_observed`]), for one thread and the
+/// work it hands on. Shared behind a
+/// mutex because a carried record is written on a worker thread and read on the asking one.
+#[derive(Default)]
+struct RouteRecord {
+    last: Option<String>,
+    observer: Option<RouteObserver>,
+}
 
-/// The route observer ([`route_observed`]).
-static ROUTE_OBSERVED: Mutex<Option<RouteObserver>> = Mutex::new(None);
+type SharedRouteRecord = Arc<Mutex<RouteRecord>>;
 
-fn locked<T>(mutex: &'static Mutex<T>) -> MutexGuard<'static, T> {
-    // Each holds one whole value, complete after any write, so a panic elsewhere cannot leave it
+thread_local! {
+    // This thread's own setting of the switch; `None` follows the default.
+    static USE_SECTIONS: Cell<Option<bool>> = const { Cell::new(None) };
+
+    // The record this thread's routes are written to: its own, or one carried in.
+    static ROUTES: RefCell<SharedRouteRecord> = RefCell::new(SharedRouteRecord::default());
+}
+
+fn routes() -> SharedRouteRecord {
+    ROUTES.with(|routes| Arc::clone(&routes.borrow()))
+}
+
+fn locked(record: &Mutex<RouteRecord>) -> MutexGuard<'_, RouteRecord> {
+    // It holds two whole values, complete after any write, so a panic elsewhere cannot leave it
     // half-made: a poisoned lock's data is still good.
-    mutex
+    record
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Whether simple passes go through the sections at all. Off
 /// until the one-cut-per-facet item in the Sections plan lands; the kernel tests turn it on around
-/// one build and put it back afterwards.
+/// one build and put it back afterwards. Read on this thread: its own [`set_use_sections`], or the
+/// one carried in by a [`SectionRoutingContext`], or else the default.
 pub fn use_sections() -> bool {
-    USE_SECTIONS.load(Ordering::SeqCst)
+    USE_SECTIONS
+        .with(Cell::get)
+        .unwrap_or(*DEFAULT_USE_SECTIONS)
 }
 
-/// Sets [`use_sections`].
+/// Sets [`use_sections`] for this thread and the work it hands the compute
+/// pool, without touching the switch other threads' builds read.
 pub fn set_use_sections(on: bool) {
-    USE_SECTIONS.store(on, Ordering::SeqCst);
+    USE_SECTIONS.with(|choice| choice.set(Some(on)));
+}
+
+/// The switch as one thread has it set and the record its routes go to, captured so work run on
+/// another thread routes, and reports its route, as the thread that asked for it would.
+#[derive(Clone)]
+pub struct SectionRoutingContext {
+    use_sections: Option<bool>,
+    routes: SharedRouteRecord,
+}
+
+impl std::fmt::Debug for SectionRoutingContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SectionRoutingContext")
+            .field("use_sections", &self.use_sections)
+            .finish_non_exhaustive()
+    }
+}
+
+impl SectionRoutingContext {
+    /// This thread's setting and route record right now.
+    pub fn current() -> Self {
+        Self {
+            use_sections: USE_SECTIONS.with(Cell::get),
+            routes: routes(),
+        }
+    }
+
+    /// The same context with the switch set to `on`: entered around one build, it turns the
+    /// sections on or off for that build alone (and the work it hands on), and dropping the scope
+    /// puts back what the thread had even if the build panics.
+    pub fn with_use_sections(mut self, on: bool) -> Self {
+        self.use_sections = Some(on);
+        self
+    }
+
+    /// Reads the captured setting, and writes routes to the captured record, on this thread until
+    /// the returned guard drops.
+    pub fn enter(&self) -> SectionRoutingScope {
+        let outer_use_sections = USE_SECTIONS.with(|choice| choice.replace(self.use_sections));
+        let outer_routes =
+            ROUTES.with(|routes| std::mem::replace(&mut *routes.borrow_mut(), self.routes.clone()));
+        SectionRoutingScope {
+            outer_use_sections,
+            outer_routes: Some(outer_routes),
+            _not_send: std::marker::PhantomData,
+        }
+    }
+}
+
+/// While alive, this thread routes by what a [`SectionRoutingContext`] carried in; dropping it
+/// puts back what the thread had before. It belongs to the thread that made it.
+#[must_use = "the carried routing ends as soon as the scope is dropped"]
+pub struct SectionRoutingScope {
+    outer_use_sections: Option<bool>,
+    outer_routes: Option<SharedRouteRecord>,
+    // A scope moved to another thread would restore that thread's routing wrongly.
+    _not_send: std::marker::PhantomData<*const ()>,
+}
+
+impl std::fmt::Debug for SectionRoutingScope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SectionRoutingScope")
+            .field("outer_use_sections", &self.outer_use_sections)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Drop for SectionRoutingScope {
+    fn drop(&mut self) {
+        USE_SECTIONS.with(|choice| choice.set(self.outer_use_sections));
+        if let Some(outer) = self.outer_routes.take() {
+            ROUTES.with(|routes| *routes.borrow_mut() = outer);
+        }
+    }
 }
 
 /// Whether an environment variable's value asks for the sections:
@@ -99,38 +197,43 @@ pub fn reads_as_on(value: Option<&str>) -> bool {
     value == Some("1") || value.is_some_and(|value| value.eq_ignore_ascii_case("true"))
 }
 
-/// Which way the last pass through [`is_simple`] went -
-/// "sections", or "legacy: " and the first clause that failed. A test seam: routing is invisible
-/// in the answer (that is the point of the switch being off by default), so without it a test
-/// could only read the mesh and guess.
+/// Which way the last pass through [`is_simple`] that this
+/// thread asked for went - "sections", or "legacy: " and the first clause that failed. A test
+/// seam: routing is invisible in the answer (that is the point of the switch being off by
+/// default), so without it a test could only read the mesh and guess.
 pub fn last_route() -> Option<String> {
-    locked(&LAST_ROUTE).clone()
+    locked(&routes()).last.clone()
 }
 
 /// Records the route and tells [`route_observed`]'s
 /// observer.
 pub fn set_last_route(value: Option<String>) {
-    *locked(&LAST_ROUTE) = value.clone();
-
+    let record = routes();
     // Cloned out of the lock so an observer may itself read or write the route.
-    let observer = locked(&ROUTE_OBSERVED).clone();
+    let observer = {
+        let mut record = locked(&record);
+        record.last = value.clone();
+        record.observer.clone()
+    };
     if let Some(observer) = observer {
         observer(value.as_deref());
     }
 }
 
-/// Told every time the last route is written, so that a caller
-/// which builds MANY passes - the app's own drop-and-retry, which runs `SurfaceBevelBuilder.TryBuild`
-/// once per turn - can keep each pass's route instead of only the last one's. `None` in
-/// production; a test seam. Every `TryBuild` opens by writing "legacy: the flag is off", so that
-/// sentence also delimits one call from the next in whatever the observer collects.
+/// Told every time this thread's last route is written, so that
+/// a caller which builds MANY passes - the app's own drop-and-retry, which runs
+/// `SurfaceBevelBuilder.TryBuild` once per turn - can keep each pass's route instead of only the
+/// last one's. `None` in production; a test seam. Every `TryBuild` opens by writing "legacy: the
+/// flag is off", so that sentence also delimits one call from the next in whatever the observer
+/// collects.
 pub fn route_observed() -> Option<RouteObserver> {
-    locked(&ROUTE_OBSERVED).clone()
+    locked(&routes()).observer.clone()
 }
 
-/// Sets (or clears) [`route_observed`].
+/// Sets (or clears) [`route_observed`] for this thread and the work it hands
+/// on.
 pub fn set_route_observed(observer: Option<RouteObserver>) {
-    *locked(&ROUTE_OBSERVED) = observer;
+    locked(&routes()).observer = observer;
 }
 
 fn route(value: String) {

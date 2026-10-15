@@ -28,7 +28,7 @@ use crate::surface_test_build::{
 };
 
 /// A size the bore fixture's 1.5 radius and 4 thickness both leave room for.
-const SIZE: f64 = 0.2;
+pub(crate) const SIZE: f64 = 0.2;
 
 /// The straight forty-side bore's mouth is the router's own case - closed, convex, two edges at
 /// every vertex, nine degrees of turn - so with the flag on the whole pass goes through the
@@ -264,7 +264,7 @@ pub fn the_chain_of(
 /// the geometric question `SurfaceBevelRobustnessTests.TheUpperMouth` asks, so the pick does not
 /// depend on an index surviving the move. The mesh, or the advisory (`None` where nothing was
 /// named).
-fn try_bevel_the_bore_mouth(
+pub(crate) fn try_bevel_the_bore_mouth(
     sides: i32,
     motion: Matrix4X4,
     size: f64,

@@ -1,6 +1,7 @@
 //! Rust-only pins of `LevelLineRouting.Watch` and `WatchRoom` (`level_line_routing::watch`,
-//! `watch_room`): the two process-wide test seams the app route hands its pick and its known room
-//! to. Process-wide, so a watch set on one thread sees a pass run on another.
+//! `watch_room`): the two test seams the app route hands its pick and its known room to. A watch
+//! set on one thread sees the passes that thread's work runs on another, carried there by a
+//! `LevelLineChoice`, and no other thread's.
 
 use std::sync::{Arc, Mutex};
 
@@ -38,8 +39,25 @@ fn rust_only_the_chain_and_room_watches_are_handed_what_the_route_gives_across_t
         seen.lock().unwrap().push(room)
     })));
 
-    // The route runs on a worker thread; the watch was set on this one.
-    std::thread::spawn(|| {
+    // A thread this one handed nothing to has no watch.
+    let elsewhere = std::thread::spawn(|| {
+        (
+            level_line_routing::watch().is_some(),
+            level_line_routing::watch_room().is_some(),
+        )
+    })
+    .join()
+    .unwrap();
+    assert_eq!(
+        elsewhere,
+        (false, false),
+        "another test's builds are not watched"
+    );
+
+    // The route runs on a worker thread; the watch was set on this one and carried there.
+    let choice = level_line_routing::LevelLineChoice::current();
+    std::thread::spawn(move || {
+        let _carried = choice.enter();
         if let Some(watch) = level_line_routing::watch() {
             watch(&one_pick());
         }

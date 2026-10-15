@@ -1,6 +1,6 @@
-//! The process-wide lock every test that switches or reads `FieldCounters`' global meter takes: the
-//! meter is one static for the whole test process, so two such tests running at once would see each
-//! other's switch.
+//! The process-wide lock the metering tests take: the needle and split meters keep one state for
+//! the whole test process, so two such tests running at once would read each other's counts.
+//! (`FieldCounters`' own switches and tallies are per thread and need no lock.)
 
 use std::sync::{Mutex, MutexGuard};
 

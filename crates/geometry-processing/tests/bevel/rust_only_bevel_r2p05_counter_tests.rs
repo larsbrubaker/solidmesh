@@ -1,6 +1,6 @@
 //! Rust-only checks of R2.P05's `FieldCounters` methods: firing, asking by span and reach, steps,
-//! the refinement notes, the reports and the reset. The meter is a process-wide switch, so this
-//! is held through `meter_lock` while it is switched on; the tally itself is per thread.
+//! the refinement notes, the reports and the reset, and the switches holding for the thread that
+//! sets them, as the tallies they fill do.
 
 use geometry_processing::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
 
@@ -152,4 +152,32 @@ fn rust_only_entering_a_phase_resets_what_the_phase_owns() {
         0,
         "out of the per-group loop"
     );
+}
+
+/// Two tests metering side by side each keep the switches they set: one turning the meter off
+/// cannot stop another's build being metered half way.
+#[test]
+fn the_meter_switches_hold_for_the_thread_that_sets_them() {
+    let set = std::sync::Arc::new(std::sync::Barrier::new(2));
+    let threads: Vec<_> = [true, false]
+        .into_iter()
+        .map(|on| {
+            let set = std::sync::Arc::clone(&set);
+            let thread = std::thread::spawn(move || {
+                FieldCounters::set_meter_on(on);
+                FieldCounters::set_count_by_site(on);
+                set.wait();
+                (FieldCounters::meter_on(), FieldCounters::count_by_site())
+            });
+            (on, thread)
+        })
+        .collect();
+    for (on, thread) in threads {
+        let read = thread.join().expect("the metering thread runs");
+        assert_eq!(
+            read,
+            (on, on),
+            "the thread that switched the meter {on} reads it so"
+        );
+    }
 }

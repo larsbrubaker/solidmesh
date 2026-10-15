@@ -37,8 +37,8 @@ use crate::surface_test_chains::join_and_open;
 /// Pins `section_routing::use_sections` for as long as the handle lives, then puts back the value
 /// it found, even when the test fails part way.
 ///
-/// The flag is process-wide, so a test pinning it must not run beside one that sets it the other
-/// way - nextest runs each test in its own process, which keeps them apart.
+/// The flag is set for this thread only, so a test pinning it may run beside one that sets it the
+/// other way.
 pub struct UseSectionsPin {
     found_use_sections: bool,
 }

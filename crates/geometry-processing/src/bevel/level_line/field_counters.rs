@@ -1,6 +1,6 @@
 //! How many of each query a level-line build asked, by the refinement rule that asked it: the
 //! rules ([`LevelLineRule`]), the per-thread tally ([`FieldCounterTally`], one `thread_local!`),
-//! the two process-wide switches and the counting methods ([`FieldCounters`]), with the bounded
+//! the two per-thread switches and the counting methods ([`FieldCounters`]), with the bounded
 //! searches' step and root-cell tallies ([`FieldCounters::note_step`],
 //! [`FieldCounters::note_root_cell`]), and, as further `impl` blocks, the rule, bucket and reach
 //! reports, the rule tallies the refinement charges (`fired`, `asked_by`, ...) and `reset`.
@@ -10,8 +10,7 @@
 //! every other test in a parallel run and made the same build read a different number of queries
 //! from one run to the next.
 
-use std::cell::RefCell;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::cell::{Cell, RefCell};
 
 use indexmap::IndexMap;
 
@@ -84,14 +83,15 @@ pub const BUCKET_EDGES: [f64; 6] = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
 /// pieces that only touch it.
 pub const REACH_EDGES: [f64; 4] = [1.0, 2.0, 4.0, 16.0];
 
-/// Switches on the per-RULE meter. A plain process-wide static, not a thread-local, so one switch
-/// meters every thread; the tallies themselves are per thread.
-static METER_ON: AtomicBool = AtomicBool::new(false);
-
-/// Switches on the per-call-site tally of `Evaluate`.
-static COUNT_BY_SITE: AtomicBool = AtomicBool::new(false);
-
 thread_local! {
+    // Switches on the per-RULE meter for this thread's builds. Per thread like the tallies it
+    // fills: a test that meters its own build must not have another test beside it switch the
+    // meter off half way, and the tally it reads only ever holds this thread's counts.
+    static METER_ON: Cell<bool> = const { Cell::new(false) };
+
+    // Switches on the per-call-site tally of `Evaluate`, per thread for the same reason.
+    static COUNT_BY_SITE: Cell<bool> = const { Cell::new(false) };
+
     static TALLY: RefCell<FieldCounterTally> = RefCell::new(FieldCounterTally::default());
 }
 
@@ -183,25 +183,25 @@ impl FieldCounters {
 
     /// Whether the per-rule meter is on: which rule asked each
     /// search, how many found nothing, and what the bounded searches cost in subdivisions and
-    /// depth. One plain static read per subdivision step when it is off, and nothing else.
+    /// depth. One thread-local read per subdivision step when it is off, and nothing else.
     pub fn meter_on() -> bool {
-        METER_ON.load(Ordering::Relaxed)
+        METER_ON.with(Cell::get)
     }
 
-    /// Switches the per-rule meter on or off for every thread.
+    /// Switches the per-rule meter on or off for this thread's builds.
     pub fn set_meter_on(on: bool) {
-        METER_ON.store(on, Ordering::Relaxed);
+        METER_ON.with(|meter| meter.set(on));
     }
 
     /// Whether the per-call-site tally of `evaluate` is on. Off by
     /// default: knowing HOW MANY point queries a build asks says nothing about which code asks them.
     pub fn count_by_site() -> bool {
-        COUNT_BY_SITE.load(Ordering::Relaxed)
+        COUNT_BY_SITE.with(Cell::get)
     }
 
-    /// Switches the per-call-site tally on or off for every thread.
+    /// Switches the per-call-site tally on or off for this thread's builds.
     pub fn set_count_by_site(on: bool) {
-        COUNT_BY_SITE.store(on, Ordering::Relaxed);
+        COUNT_BY_SITE.with(|count| count.set(on));
     }
 
     /// Charges one needle the mesh looked at, mended or not. A build that repairs thousands is a
