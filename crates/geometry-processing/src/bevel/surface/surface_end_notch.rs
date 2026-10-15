@@ -1,7 +1,8 @@
 //! The NOTCH a chain end's section takes out of the face beyond its corner
 //! (free functions). The section's sides,
 //! reach and wedge tests, the snap of a cut ring onto the profile, and the cap
-//! ([`try_cap_with_the_section`]); the notch itself lands with a later package.
+//! ([`try_cap_with_the_section`]). The notch itself is cut by `surface_end_gives_up_the_section`
+//! and `surface_end_gains_the_section`, which build on these.
 
 use vector_math::{ieee_math, Vector3};
 

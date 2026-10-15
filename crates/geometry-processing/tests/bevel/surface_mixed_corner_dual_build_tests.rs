@@ -108,8 +108,8 @@ fn every_interior_grid_point_is_published() {
 
 fn the_grid_at(ridge_end: Vector3) -> SurfaceMixedCornerDualGrid {
     let corner = nose_in_notch_mixed_corners::at_the_ridge_end(ridge_end, 1.0);
-    // The lower crease end on both branches: the test reads the lower end whichever end the ridge
-    // reaches.
+    // From either ridge end the crease left unpicked runs down to the lower crease end (the
+    // picked legs go up to the upper one), so the canal's reach is that leg's length at both ends.
     let to = nose::lower_crease_end();
 
     let canal = SurfaceMixedCornerDualCanal::try_read(&corner, (to - ridge_end).length())

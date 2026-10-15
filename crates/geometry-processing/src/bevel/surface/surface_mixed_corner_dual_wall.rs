@@ -2,7 +2,8 @@
 //! runs across, made to end exactly where that rail runs: its record, where rail zero leaves one
 //! crease ([`SurfaceMixedCornerDualWallCrossing`]), how it is found ([`try_the_crossing`]), the
 //! bead's foot on its crease ([`try_the_foot`]), a rim's positions ([`rim_of`]) and the root's fan
-//! ([`try_fill_the_root`], [`try_fan`]). The rest of the wall's reading lands with later packages.
+//! ([`try_fill_the_root`], [`try_fan`]). `surface_mixed_corner_dual_patch` puts these together with
+//! the cap's side and the grid.
 
 use vector_math::Vector3;
 

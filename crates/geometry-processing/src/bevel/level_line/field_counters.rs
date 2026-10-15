@@ -327,20 +327,18 @@ impl FieldCounters {
     }
 
     /// How many of a rule's splits would have thinned a child past one of [`WOULD_THIN_LIMITS`].
-    /// A `limit` not in the list is read at index -1, one cell early (and panics for the first
-    /// rule, which has no cell before it).
+    /// A `limit` not in the list was never tallied, so it reads 0 rather than borrowing a
+    /// neighbouring rule's cell.
     pub fn would_thin(rule: LevelLineRule, limit: f64) -> i64 {
         Self::with(|t| {
-            if t.would_thin.is_empty() {
+            let Some(at) = WOULD_THIN_LIMITS.iter().position(|&l| l == limit) else {
                 return 0;
-            }
+            };
 
-            let at = WOULD_THIN_LIMITS
-                .iter()
-                .position(|&l| l == limit)
-                .map_or(-1, |i| i as i64);
-            let cell = (rule as i64 * WOULD_THIN_LIMITS.len() as i64) + at;
-            t.would_thin[usize::try_from(cell).expect("limit is one of WOULD_THIN_LIMITS")]
+            t.would_thin
+                .get((rule as usize * WOULD_THIN_LIMITS.len()) + at)
+                .copied()
+                .unwrap_or(0)
         })
     }
 

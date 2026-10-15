@@ -211,8 +211,11 @@ fn a_chord_clear_only_because_its_turn_is_past_the_sweep_is_no_hand_over() {
 
     let wall = SurfaceMixedCornerWall::try_read(&corner)
         .unwrap_or_else(|why| panic!("the wall has to read - {:?}", why.code()));
-    // The reading is not checked: a rail that misses the wall reads as 0.
-    let meets_the_wall = wall.try_where_the_rail_meets_the_wall().unwrap_or(0.0);
+    // The rail has to meet the wall: a miss read as a turn of 0 would put every point above the
+    // arc's start and let the checks below pass for the wrong reason.
+    let meets_the_wall = wall
+        .try_where_the_rail_meets_the_wall()
+        .expect("the rail meets the wall");
 
     let clears = f64::min(
         meets_the_wall,

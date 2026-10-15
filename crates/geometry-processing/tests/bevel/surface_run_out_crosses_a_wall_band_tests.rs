@@ -108,8 +108,7 @@ fn a_band_across_the_axis_is_refused_by_name() {
         "the cap's own band runs square to the axis, which is the case this refuses"
     );
 
-    let Err(why) = SurfaceRunOutMeetsAWallBand::try_read(Some(&corner), Some(&across), false)
-    else {
+    let Err(why) = SurfaceRunOutMeetsAWallBand::try_read(Some(&corner), Some(&across)) else {
         panic!("refused, with no reading handed back");
     };
 
@@ -447,7 +446,7 @@ fn a_crossing_that_only_reaches_the_run_outs_death_is_refused_by_name() {
     let corner = the_bottom_caps_corner(&prism, SIZE);
     let band = the_wall_bands_strip(&prism, SIZE);
 
-    let Err(why) = SurfaceRunOutMeetsAWallBand::try_read(Some(&corner), Some(&band), false) else {
+    let Err(why) = SurfaceRunOutMeetsAWallBand::try_read(Some(&corner), Some(&band)) else {
         panic!("refused, with no reading handed back");
     };
 
@@ -629,7 +628,7 @@ fn the_corners_of_the_curve() -> Vec<Vector3> {
 
 /// The wall band's reading, which every rung but the refusals expects to read.
 fn meets_of(corner: &Rc<SurfaceMixedCorner>, band: &SurfaceStrip) -> SurfaceRunOutMeetsAWallBand {
-    SurfaceRunOutMeetsAWallBand::try_read(Some(corner), Some(band), false)
+    SurfaceRunOutMeetsAWallBand::try_read(Some(corner), Some(band))
         .unwrap_or_else(|why| {
             panic!(
                 "the band runs along the bead's own axis, so its rails keep their radius - {:?}",

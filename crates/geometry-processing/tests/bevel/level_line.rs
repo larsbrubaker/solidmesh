@@ -207,6 +207,8 @@ pub(crate) mod level_line_cost_gate;
 pub(crate) mod level_line_feature_edges;
 #[path = "level_line_fixture.rs"]
 pub(crate) mod level_line_fixture;
+#[path = "level_line_robustness_tests.rs"]
+pub(crate) mod level_line_robustness_tests;
 #[path = "level_line_room_geometry.rs"]
 pub(crate) mod level_line_room_geometry;
 #[path = "level_line_test_geometry.rs"]

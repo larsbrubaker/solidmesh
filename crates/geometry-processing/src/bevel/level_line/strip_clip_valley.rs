@@ -63,7 +63,8 @@ pub fn one_plane_run(
 
 /// Fans the polygon from the first corner whose every fan triangle faces
 /// along the wall's `normal` (a triangle on a straight stretch of the outline has no area and faces
-/// nowhere); the faces laid join `strip`. False where no corner sees the whole polygon.
+/// nowhere); the faces laid join `strip`. False where no corner sees the whole polygon, and for an
+/// empty polygon, which has no corner to fan from.
 pub fn fan_facing(
     mesh: &mut LevelLineMesh,
     strip: &mut HashSet<i32>,
@@ -71,7 +72,7 @@ pub fn fan_facing(
     normal: Vector3,
 ) -> Result<bool, LevelLineMeshError> {
     let n = polygon.len();
-    // The largest corner distance, a NaN reading as the smallest; a polygon always has corners.
+    // The largest corner distance, a NaN reading as the smallest.
     let mut scale: Option<f64> = None;
     for &v in polygon {
         let x = (mesh.position(v) - mesh.position(polygon[0])).length();
@@ -80,7 +81,9 @@ pub fn fan_facing(
             _ => x,
         });
     }
-    let scale = scale.expect("a polygon has corners");
+    let Some(scale) = scale else {
+        return Ok(false);
+    };
     for apex in 0..n {
         let faces: Vec<(i32, i32, i32)> = (1..n.saturating_sub(1))
             .map(|i| {

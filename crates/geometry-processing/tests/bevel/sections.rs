@@ -82,6 +82,8 @@ pub(crate) mod section_routing_tests;
 pub(crate) mod section_several_runs_tests;
 #[path = "section_smooth_side_bridged_holes_tests.rs"]
 pub(crate) mod section_smooth_side_bridged_holes_tests;
+#[path = "section_smooth_side_neighbour_tests.rs"]
+pub(crate) mod section_smooth_side_neighbour_tests;
 #[path = "section_smooth_side_tests.rs"]
 pub(crate) mod section_smooth_side_tests;
 #[path = "section_split_chord_tests.rs"]

@@ -76,13 +76,19 @@ pub fn try_triangulate_a_kept_ring(
 }
 
 /// Each boundary vertex's two neighbours along the boundary polyline, in
-/// chain order, wrapping whether the boundary is closed or not (an open boundary's two ends are
-/// each other's neighbours).
+/// chain order. A closed boundary wraps round; an open one's two ends have one neighbour each, so
+/// they get no entry: an end never lies on a segment between two neighbours, and reading the far
+/// end as its neighbour would let it be lifted out as part of a straight run it does not belong to.
 pub fn the_polyline_neighbours(cut: &SmoothSideCut) -> PolylineNeighbours {
     let mut along = IndexMap::new();
     let count = cut.boundary.len();
+    let interior = if cut.boundary_is_closed {
+        0..count
+    } else {
+        1..count.saturating_sub(1)
+    };
 
-    for i in 0..count {
+    for i in interior {
         along.insert(
             cut.boundary[i],
             (

@@ -633,16 +633,13 @@ fn every_side_group_moves_the_bar_through_its_own_slice() {
     );
 
     // The LAST group's refinement moves the bar too. Find the last report that is not the
-    // refinement and is followed by one that is, through its first index - the FIRST report equal
-    // to it (reports compare by value), so that is the index this reads.
-    let index_of = |i: usize| reports.iter().position(|r| *r == reports[i]).unwrap_or(i);
-    let last_entry = (0..reports.len())
+    // refinement and is followed by one that is, by its own position: reports compare by value,
+    // so a search for an equal report could land on an earlier entry into the refinement.
+    let last_entry = (0..reports.len().saturating_sub(1))
         .rev()
         .find(|&i| {
-            let at = index_of(i);
             reports[i].phase != LevelLineWorkPhase::Refinement
-                && at + 1 < reports.len()
-                && reports[at + 1].phase == LevelLineWorkPhase::Refinement
+                && reports[i + 1].phase == LevelLineWorkPhase::Refinement
         })
         .map_or(0, |i| i + 1);
     let last_group: Vec<f64> = reports[last_entry..]

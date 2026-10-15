@@ -471,11 +471,7 @@ pub fn try_close(
 
     // And where that band stands on the WALL the corner turns against, the radius out of the axis
     // it ends each column at (SurfaceRunOutMeetsAWallBand).
-    let meets_a_wall_band = SurfaceRunOutMeetsAWallBand::try_read(
-        Some(corner),
-        crossed_wall_band,
-        at_the_mitre.is_some(),
-    )?;
+    let meets_a_wall_band = SurfaceRunOutMeetsAWallBand::try_read(Some(corner), crossed_wall_band)?;
 
     let run_out = surface_mixed_corner_run_out::try_columns(
         pool,

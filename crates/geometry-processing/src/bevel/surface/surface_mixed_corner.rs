@@ -2,7 +2,8 @@
 //! running into a concave edge's bead at one vertex - read off the two edge plans that meet there,
 //! before anything is cut or stitched. Holds the corner's record with its derived frame (axis,
 //! rails, the outward sum), which canal it takes, and the carries into the cap and down to the
-//! bead's end; its reading (`try_read`) lands with the mixed-corner package's methods.
+//! bead's end. Its reading (`try_read`) is in `surface_mixed_corner_read_off_the_edge_plans`, and
+//! its other methods in the neighbouring `surface_mixed_corner_*` files.
 
 use std::cell::Cell;
 use std::rc::Rc;

@@ -79,14 +79,8 @@ impl SurfaceRunOutMeetsAWallBand {
         turns[rail] > before && turns[rail] > after
     }
 
-    /// The rail whose own turn stands `past` the bead's, or -1 where none does. (`_flat` is not
-    /// read.)
-    pub fn the_rail_at(
-        _flat: &[Vector3],
-        turns: &[f64],
-        corner: &SurfaceMixedCorner,
-        past: f64,
-    ) -> i32 {
+    /// The rail whose own turn stands `past` the bead's, or -1 where none does.
+    pub fn the_rail_at(turns: &[f64], corner: &SurfaceMixedCorner, past: f64) -> i32 {
         for (rail, turn) in turns.iter().enumerate() {
             if (turn - corner.turn_radians() - past).abs() <= Self::AT_THE_RAIL {
                 return rail as i32;
@@ -98,7 +92,7 @@ impl SurfaceRunOutMeetsAWallBand {
 
     /// The rail of this band standing at `past` the bead's own turn, or -1 where none does.
     pub fn the_rail_standing_at(&self, past: f64) -> i32 {
-        Self::the_rail_at(&self.flat_rails, &self.rail_turns, &self.corner, past)
+        Self::the_rail_at(&self.rail_turns, &self.corner, past)
     }
 
     /// How far out of the axis the band's profile stands at the NEAR side of the ray at `past`
@@ -231,8 +225,7 @@ impl SurfaceRunOutMeetsAWallBand {
     pub fn try_the_cap_exit(&self) -> Option<(f64, Vector3)> {
         let furthest = *self.rail_turns_past_the_bead.last()?;
         let touch = 2.0 * self.corner.size;
-        let the_turn_back =
-            Self::the_rail_at(&self.flat_rails, &self.rail_turns, &self.corner, furthest);
+        let the_turn_back = Self::the_rail_at(&self.rail_turns, &self.corner, furthest);
 
         if the_turn_back < 0 {
             return None;
@@ -378,12 +371,12 @@ impl SurfaceRunOutMeetsAWallBand {
     /// Where the mixed corner's run-out meets `band`, a band standing on the wall it turns
     /// against - each rail flattened into the cap's plane, its turn about the run-out's centre, and
     /// the turns past the bead of the rails that cross the run-out's own quarter of the torus.
-    /// `Ok(None)` where there is nothing to sew; `Err` names a crossing of another shape.
-    /// `_hands_over_at_a_mitre` is not read.
+    /// `Ok(None)` where there is nothing to sew; `Err` names a crossing of another shape. Whether
+    /// the run-out hands over at a mitre does not change this reading: the column walk takes the
+    /// hand-over itself.
     pub fn try_read(
         corner: Option<&Rc<SurfaceMixedCorner>>,
         band: Option<&SurfaceStrip>,
-        _hands_over_at_a_mitre: bool,
     ) -> Result<Option<SurfaceRunOutMeetsAWallBand>, BevelAdvisory> {
         let (Some(corner), Some(band)) = (corner, band) else {
             return Ok(None);
@@ -449,7 +442,7 @@ impl SurfaceRunOutMeetsAWallBand {
         crossings.sort_by(|a: &f64, b: &f64| a.partial_cmp(b).expect("finite crossings"));
 
         let last = crossings[crossings.len() - 1];
-        if !Self::it_is_the_turn_back_of(&turns, Self::the_rail_at(&flat, &turns, corner, last)) {
+        if !Self::it_is_the_turn_back_of(&turns, Self::the_rail_at(&turns, corner, last)) {
             // The turn the profile folds back at stands outside the run-out's own quarter.
             return Err(BevelAdvisory::new(
                 BevelAdvisoryCode::SurfaceCrossingTurnsBackBeyondTheRunOut,
