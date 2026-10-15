@@ -6,7 +6,7 @@
 
 use std::cell::OnceCell;
 
-use vector_math::cs_math::{max_f64, min_f64};
+use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::Vector3;
 
 use super::chain_field_nearest::ChainFieldNearest;

@@ -18,7 +18,7 @@
 //! - **And the surface is CHORDED where the partner's really is** - see
 //!   [`BevelPartnerTube::around_the_chorded_arc`].
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 /// The tube a partner run's rolling ball sweeps out, as a value.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -202,7 +202,7 @@ impl BevelPartnerTube {
             return depth;
         };
 
-        cs_math::max_f64(
+        ieee_math::max_f64(
             depth,
             (across * (angle - middle).cos()) - self.facet_distance(),
         )

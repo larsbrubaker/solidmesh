@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_run_across::{
     edge_key, maps_of, normal_of, vertices_of, SurfaceRunAcrossRegionMapsCache, FLAT_COSINE,
@@ -53,7 +53,7 @@ pub fn try_across_a_curved_region(
         )?;
 
         curved |= curved_here;
-        nearest = cs_math::min_f64(nearest, section);
+        nearest = ieee_math::min_f64(nearest, section);
     }
 
     if !curved {
@@ -108,7 +108,7 @@ pub fn try_start_at_the_edge(
     to: Vector3,
     cache: Option<&mut SurfaceRunAcrossRegionMapsCache>,
 ) -> Option<SurfaceRunAcrossSectionStart> {
-    let near_enough = cs_math::max_f64((to - from).length(), 1.0) * VERTEX_TOLERANCE;
+    let near_enough = ieee_math::max_f64((to - from).length(), 1.0) * VERTEX_TOLERANCE;
     let maps = maps_of(cache, mesh, region);
 
     if !maps.usable {

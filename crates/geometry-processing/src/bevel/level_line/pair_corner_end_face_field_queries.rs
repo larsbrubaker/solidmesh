@@ -5,7 +5,7 @@
 //! piece stands at a corner, where two pieces tie along an edge, or where three tie inside a
 //! triangle, and its greatest at a corner or the point nearest the axis.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     ChainDistanceField, FieldMaximum, FieldMinimum, LevelLineWork, PairCornerEndFaceField,
@@ -63,8 +63,8 @@ impl PairCornerEndFaceField {
         // nearly along the edge is capped.
         let normal = end_face.get_normal();
         let slope = along.dot(normal).abs();
-        let span = (offset.length() * cs_math::max_f64(0.0, 1.0 - (slope * slope)).sqrt()
-            / cs_math::max_f64(slope, 0.2))
+        let span = (offset.length() * ieee_math::max_f64(0.0, 1.0 - (slope * slope)).sqrt()
+            / ieee_math::max_f64(slope, 0.2))
             + size;
 
         Self::new(
@@ -86,7 +86,7 @@ impl PairCornerEndFaceField {
     pub fn read(&self, point: Vector3) -> f64 {
         let mut value = self.size - self.across(point).length();
         for &(gradient, constant) in &self.planes {
-            value = cs_math::max_f64(value, gradient.dot(point) + constant);
+            value = ieee_math::max_f64(value, gradient.dot(point) + constant);
         }
 
         value
@@ -257,7 +257,7 @@ impl PairCornerEndFaceField {
         let d12 = e1.dot(e2);
         let d22 = e2.dot(e2);
         let determinant = (d11 * d22) - (d12 * d12);
-        if determinant <= 1e-18 * cs_math::max_f64(1.0, d11 * d22) {
+        if determinant <= 1e-18 * ieee_math::max_f64(1.0, d11 * d22) {
             return None;
         }
 

@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{chain_on_the_mesh, triangle_edges};
 
@@ -117,7 +117,7 @@ impl SeamEdges {
 
         let offset = point - from;
         let projected = (offset.x * along.x) + (offset.y * along.y) + (offset.z * along.z);
-        cs_math::min_f64(1.0, cs_math::max_f64(0.0, projected / length_squared))
+        ieee_math::min_f64(1.0, ieee_math::max_f64(0.0, projected / length_squared))
     }
 }
 

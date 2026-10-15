@@ -4,7 +4,7 @@
 use super::*;
 
 #[test]
-fn rust_only_format_fixed6_matches_dotnet_custom_format() {
+fn rust_only_format_fixed6_writes_six_places() {
     assert_eq!(format_fixed6(0.0, 7), "0.000000");
     assert_eq!(format_fixed6(1.0, 7), "1.000000");
     assert_eq!(format_fixed6(10.0, 7), "10.000000");

@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_cap::{fans_about_the_end, zips_about_the_rows_axis, WATCH_END_HOLE_AT};
 use super::corner_cap_flat_ends::{
@@ -158,12 +158,12 @@ pub fn zip_end(
     // a tight tie laid the other diagonal after a translation. A tie is therefore read to the placement
     // accuracy - a few snaps over the nearer vertex's distance from V - and broken by rule: the row first.
     let placed_tie = |mesh: &LevelLineMesh, row_vertex: i32, run_vertex: i32| {
-        let nearer = cs_math::min_f64(
+        let nearer = ieee_math::min_f64(
             (mesh.position(row_vertex) - v).length(),
             (mesh.position(run_vertex) - v).length(),
         );
         if nearer > 0.0 {
-            cs_math::max_f64(tie, PLACEMENT_TIE_SNAPS * mesh.same_place() / nearer)
+            ieee_math::max_f64(tie, PLACEMENT_TIE_SNAPS * mesh.same_place() / nearer)
         } else {
             tie
         }

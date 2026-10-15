@@ -82,7 +82,7 @@ pub const ON_PLANE_PER_LENGTH: f64 = 1e-5;
 /// The planes' tolerance for this chain, scaled by its largest
 /// setback (at least 1).
 pub fn tolerance(chain: &super::ChainField) -> f64 {
-    ON_PLANE_PER_LENGTH * vector_math::cs_math::max_f64(1.0, chain.max_setback)
+    ON_PLANE_PER_LENGTH * vector_math::ieee_math::max_f64(1.0, chain.max_setback)
 }
 
 /// The swallowed strip - each side's made-up run minted as the rail (side

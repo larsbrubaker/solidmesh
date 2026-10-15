@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{cs_math, Vector2, Vector3};
+use vector_math::{ieee_math, Vector2, Vector3};
 
 use super::{FieldCounters, LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
 
@@ -99,18 +99,18 @@ pub fn crossed_supporting_planes(mesh: &LevelLineMesh, strip: &HashSet<i32>) -> 
     for &v in &kept_vertices[1..] {
         let p = mesh.position(v);
         low = Vector3::new(
-            cs_math::min_f64(low.x, p.x),
-            cs_math::min_f64(low.y, p.y),
-            cs_math::min_f64(low.z, p.z),
+            ieee_math::min_f64(low.x, p.x),
+            ieee_math::min_f64(low.y, p.y),
+            ieee_math::min_f64(low.z, p.z),
         );
         high = Vector3::new(
-            cs_math::max_f64(high.x, p.x),
-            cs_math::max_f64(high.y, p.y),
-            cs_math::max_f64(high.z, p.z),
+            ieee_math::max_f64(high.x, p.x),
+            ieee_math::max_f64(high.y, p.y),
+            ieee_math::max_f64(high.z, p.z),
         );
     }
 
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, (high - low).length());
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, (high - low).length());
     let strip_vertices: Vec<i32> = strip
         .iter()
         .flat_map(|&t| corners_of(t))

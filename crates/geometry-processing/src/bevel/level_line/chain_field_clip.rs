@@ -6,7 +6,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{ChainField, ChainFieldEndClip, ChainFieldExtension, ChainFieldMeshPiece, FieldSample};
@@ -16,7 +16,7 @@ use super::{ChainField, ChainFieldEndClip, ChainFieldExtension, ChainFieldMeshPi
 /// noise because the clip then reads the NEARER end's plane rather than the greater.
 pub fn one_plane(a: ChainFieldEndClip, b: ChainFieldEndClip) -> bool {
     let noise = 4.0
-        * cs_math::max_f64(
+        * ieee_math::max_f64(
             float_grid::step_at_point(a.vertex),
             float_grid::step_at_point(b.vertex),
         );
@@ -212,7 +212,7 @@ impl ChainField {
         ray: Option<&ChainFieldExtension>,
         term: &dyn Fn(Vector3) -> f64,
     ) -> (f64, Vector3) {
-        let h = |p: Vector3| cs_math::max_f64(term(p), self.clip_at(p).0);
+        let h = |p: Vector3| ieee_math::max_f64(term(p), self.clip_at(p).0);
 
         let (corners, count) = piece.corners();
         let mut polygon: Vec<Vector3> = corners[..count].to_vec();

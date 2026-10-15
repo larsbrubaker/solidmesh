@@ -9,7 +9,7 @@ use geometry_processing::bevel::level_line::band_refinement::{refine, RefineOpti
 use geometry_processing::bevel::level_line::{
     LevelLineChain, LevelLineMesh, ScalarField, VertexFieldReading, VertexSide,
 };
-use vector_math::{cs_math, Matrix4X4, Vector3};
+use vector_math::{ieee_math, Matrix4X4, Vector3};
 
 use crate::level_line_test_geometry::{
     cube, cylinder, is_watertight, line_points, run_cut, shortest_side, signed_volume,
@@ -128,7 +128,7 @@ fn the_line_and_its_chords_stand_on_the_zero_of_the_field() {
         let worst = line_points(&reading.mesh.borrow(), &cut)
             .into_iter()
             .map(|p| reading.value_at_point(p).expect("no budget").abs())
-            .fold(f64::NEG_INFINITY, cs_math::max_f64);
+            .fold(f64::NEG_INFINITY, ieee_math::max_f64);
         assert!(
             worst <= chord_tolerance,
             "a line vertex is a root of the field, and a chord midpoint is what the chord tolerance bounds"
@@ -183,10 +183,16 @@ fn a_small_loop_hidden_inside_one_triangle_pair_is_found_and_closed() {
         radii
             .iter()
             .copied()
-            .fold(f64::NEG_INFINITY, cs_math::max_f64)
+            .fold(f64::NEG_INFINITY, ieee_math::max_f64)
             <= 0.2 + 1e-9
     );
-    assert!(radii.iter().copied().fold(f64::INFINITY, cs_math::min_f64) >= 0.2 - 1e-9);
+    assert!(
+        radii
+            .iter()
+            .copied()
+            .fold(f64::INFINITY, ieee_math::min_f64)
+            >= 0.2 - 1e-9
+    );
     assert!(
         !cut.inside_triangles.is_empty(),
         "the disc inside the circle is the band the fill will later delete"
@@ -194,7 +200,7 @@ fn a_small_loop_hidden_inside_one_triangle_pair_is_found_and_closed() {
     let worst = line_points(&mesh, &cut)
         .into_iter()
         .map(|p| reading.value_at_point(p).expect("no budget").abs())
-        .fold(f64::NEG_INFINITY, cs_math::max_f64);
+        .fold(f64::NEG_INFINITY, ieee_math::max_f64);
     assert!(worst <= 0.02);
 }
 

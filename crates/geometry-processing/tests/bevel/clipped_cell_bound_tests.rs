@@ -8,8 +8,8 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::{
     convex_cell_bound, ChainField, EndRayBound, PickField, ScalarField,
 };
-use vector_math::dotnet_random::DotNetRandom;
-use vector_math::{cs_math, Vector3};
+use vector_math::seeded_random::SeededRandom;
+use vector_math::{ieee_math, Vector3};
 
 // A chain along -x ending at the origin, setback 1, its last end cut by a plane leaning 80 degrees
 // off the chain's own direction - so at (-2, 1) the plane reads 0.638 against the chain's 0 and the
@@ -72,7 +72,7 @@ fn random_cells_round_a_clipped_end_are_never_bound_under_the_field() {
         .expect("a valid chain"),
     );
     let pick = PickField::new(vec![clipped.clone(), other], &[0, 1]).expect("a valid pick");
-    let mut random = DotNetRandom::new(20260924);
+    let mut random = SeededRandom::new(20260924);
     for _ in 0..400 {
         let a = {
             let x = (random.next_double() * 8.0) - 6.0;
@@ -146,7 +146,7 @@ pub fn greatest_by_sampling(
         for j in 0..=(steps - i) {
             let q =
                 a + ((b - a) * (i as f64 / steps as f64)) + ((c - a) * (j as f64 / steps as f64));
-            greatest = cs_math::max_f64(greatest, value_at(q));
+            greatest = ieee_math::max_f64(greatest, value_at(q));
         }
     }
 

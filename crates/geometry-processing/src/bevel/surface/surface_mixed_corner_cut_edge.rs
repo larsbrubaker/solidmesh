@@ -2,7 +2,7 @@
 //! sagitta guard of the wall's chords, how far apart two skew lines stand, and the cut edge's walk
 //! ([`try_find`], [`try_find_for_the_bead`], [`try_walk`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_mixed_corner_read_off_the_edge_plans::rests_on_the_crease_of_the_face_shared_with;
 use super::{SurfaceEdgePlan, SurfaceLine, SurfaceWallSection};
@@ -53,7 +53,7 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
         let here = chords[chord];
 
         let turn = before.0.dot(here.0).clamp(-1.0, 1.0).acos();
-        let across = cs_math::max_f64(before.1, here.1);
+        let across = ieee_math::max_f64(before.1, here.1);
 
         if !(turn > 0.0) || !(across > 0.0) {
             continue;
@@ -61,7 +61,7 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
 
         let radius = across / (2.0 * (turn / 2.0).sin());
 
-        sagitta = cs_math::max_f64(sagitta, radius * (1.0 - (turn / 2.0).cos()));
+        sagitta = ieee_math::max_f64(sagitta, radius * (1.0 - (turn / 2.0).cos()));
     }
 
     sagitta

@@ -18,7 +18,7 @@ use geometry_processing::bevel::level_line::{
     chain_on_the_mesh, gap_fill, triangle_edges, BandGapRefusal, BandGapResult, ChainDistanceField,
     GapFillRefusal, LevelLineWork, PairCornerEndFaceField,
 };
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::{Vector2, Vector3};
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
@@ -295,7 +295,7 @@ fn the_corner_fields_least_and_greatest_are_exact() {
         Vector3::new(0.0, 0.0, 1.0),
         2.5,
     );
-    let mut random = DotNetRandom::new(7);
+    let mut random = SeededRandom::new(7);
     let mut any = || {
         let x = (random.next_double() * 12.0) - 9.0;
         let y = (random.next_double() * 12.0) - 9.0;

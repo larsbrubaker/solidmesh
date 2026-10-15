@@ -7,7 +7,7 @@
 
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_split_blend::SplitPlacement;
@@ -253,7 +253,7 @@ pub fn try_along_the_join(
             };
 
             // Clamped to 0..1; a NaN fraction stays NaN.
-            let fraction = cs_math::max_f64(0.0, cs_math::min_f64(1.0, fraction));
+            let fraction = ieee_math::max_f64(0.0, ieee_math::min_f64(1.0, fraction));
 
             let mut point = points[k - 1] + (step * fraction);
             let direction = step.get_normal();

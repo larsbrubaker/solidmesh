@@ -22,7 +22,7 @@ use super::{
 };
 
 /// A flag as the refusal sites print it: `True` or `False`.
-fn cs_bool(value: bool) -> &'static str {
+fn title_case_bool(value: bool) -> &'static str {
     if value {
         "True"
     } else {
@@ -355,13 +355,13 @@ pub fn try_end_faces(
     hull_clip::note(|| {
         format!(
             "end faces: grows {}/{}, runs {}/{}, trims {}/{}, concave {}",
-            cs_bool(grows_first),
-            cs_bool(grows_second),
-            cs_bool(first.is_some()),
-            cs_bool(second.is_some()),
-            cs_bool(trims_first),
-            cs_bool(trims_second),
-            cs_bool(is_concave(&mesh_handle.borrow(), &left, &right))
+            title_case_bool(grows_first),
+            title_case_bool(grows_second),
+            title_case_bool(first.is_some()),
+            title_case_bool(second.is_some()),
+            title_case_bool(trims_first),
+            title_case_bool(trims_second),
+            title_case_bool(is_concave(&mesh_handle.borrow(), &left, &right))
         )
     });
     if let Some(hull_minted) = hull_minted {
@@ -444,17 +444,17 @@ pub fn try_end_faces(
             " / EndFaceFill:191 first {} second {}, grows {}/{}, trims {}/{}, concave {}, end runs [{}] [{}], rays {}/{}, meet {}/{}",
             if first_null { "null" } else { "ok" },
             if second_null { "null" } else { "ok" },
-            cs_bool(grows_first),
-            cs_bool(grows_second),
-            cs_bool(trims_first),
-            cs_bool(trims_second),
-            cs_bool(concave),
+            title_case_bool(grows_first),
+            title_case_bool(grows_second),
+            title_case_bool(trims_first),
+            title_case_bool(trims_second),
+            title_case_bool(concave),
             end_runs(FIRST_END_TAG),
             end_runs(SECOND_END_TAG),
-            cs_bool(chain.end_rays.0),
-            cs_bool(chain.end_rays.1),
-            cs_bool(right.vertices[right.vertices.len() - 1] == left.vertices[0]),
-            cs_bool(left.vertices[left.vertices.len() - 1] == right.vertices[0]),
+            title_case_bool(chain.end_rays.0),
+            title_case_bool(chain.end_rays.1),
+            title_case_bool(right.vertices[right.vertices.len() - 1] == left.vertices[0]),
+            title_case_bool(left.vertices[left.vertices.len() - 1] == right.vertices[0]),
         ));
         return Ok(None);
     };

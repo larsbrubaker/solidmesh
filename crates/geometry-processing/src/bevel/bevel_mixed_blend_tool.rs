@@ -10,7 +10,7 @@
 //! refused on ([`bevel_edge_tool_builder`]'s interior-angle bounds).
 
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, math_helper, Vector2, Vector3, Vector3Float};
+use vector_math::{ieee_math, math_helper, Vector2, Vector3, Vector3Float};
 
 use super::bevel_edge_tool_builder;
 use super::BevelEndCap;
@@ -156,7 +156,7 @@ pub fn build(
             // Only the ARC's stations, because the reach this publishes is measured from the bead's
             // own wall and past the arc there is no bead - see the remarks on runout_reach for what
             // the runout's footprint is measured from instead.
-            cap_face_reach = cs_math::max_f64(cap_face_reach, tangent_distance);
+            cap_face_reach = ieee_math::max_f64(cap_face_reach, tangent_distance);
         }
 
         if turning_with_the_edge {
@@ -333,14 +333,14 @@ fn stations(
     let mut reach_from_axis = 0.0;
 
     for point in &at_the_arcs_end {
-        reach_from_axis = cs_math::max_f64(reach_from_axis, point.x / cosine_of_half_step);
+        reach_from_axis = ieee_math::max_f64(reach_from_axis, point.x / cosine_of_half_step);
     }
 
     // That last ring lies IN the plane through the axis square to the void face, so what it reaches
     // past that face is simply how much further from the axis it stands than the face does. It is a
     // reach the tool has always had - it is where the bead's rim meets the other wall - and it is
     // published now because the runout below is measured against the same wall.
-    let void_face_reach = cs_math::max_f64(0.0, reach_from_axis - radius);
+    let void_face_reach = ieee_math::max_f64(0.0, reach_from_axis - radius);
     let arc_only = |directions| {
         Some(Stations {
             directions,
@@ -392,7 +392,7 @@ fn stations(
     // to where it crosses the void face: reach sin(psi_max), and sqrt(reach^2 - r^2) says the same
     // thing without asking for the angle back. About r sqrt 3 at a square rim.
     let runout_reach =
-        cs_math::max_f64(0.0, (reach_from_axis * reach_from_axis) - (radius * radius)).sqrt();
+        ieee_math::max_f64(0.0, (reach_from_axis * reach_from_axis) - (radius * radius)).sqrt();
 
     Some(Stations {
         directions,

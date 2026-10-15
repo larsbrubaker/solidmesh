@@ -9,7 +9,7 @@
 //! There is no screen-to-world conversion: picking goes through rays instead. The projection
 //! math keeps a fixed term order, so the matrices are identical on every platform.
 
-use crate::cs_math::{max_f64, min_f64};
+use crate::ieee_math::{max_f64, min_f64};
 use crate::{math_helper, MathError, Matrix4X4, Quaternion, Ray, Vector2, Vector3, Vector4};
 
 /// The camera and projection of a 3D view.
@@ -326,7 +326,7 @@ impl WorldView {
     /// Sets an orthographic projection with an explicit height in viewspace; `z_near`/`z_far`
     /// are signed positions along the forward axis (usually 0.1 and 100). The name's spelling
     /// (`orthogrphic`) is kept so its callers stay unchanged.
-    pub fn calculate_orthogrphic_matrix_off_center_with_viewspace_height(
+    pub fn calculate_orthographic_matrix_off_center_with_viewspace_height(
         &mut self,
         width: f64,
         height: f64,

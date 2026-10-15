@@ -7,7 +7,7 @@
 use std::rc::Rc;
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_fan_walk::{self, EdgeAtPair};
 use super::section_junction::Canal;
@@ -147,7 +147,7 @@ pub fn try_build(
     let leaving_wall = match arriving_canal.try_parameter_of(wall_end_of_leaving) {
         Some(v)
             if !((v - 1.0).abs() < SAME_TO_WITHIN)
-                && !(v <= lattice / cs_math::max_f64(radius, lattice)) =>
+                && !(v <= lattice / ieee_math::max_f64(radius, lattice)) =>
         {
             v
         }
@@ -156,8 +156,8 @@ pub fn try_build(
         _ => return Err(refused()),
     };
 
-    let near = cs_math::min_f64(1.0, leaving_wall);
-    let far = cs_math::max_f64(1.0, leaving_wall);
+    let near = ieee_math::min_f64(1.0, leaving_wall);
+    let far = ieee_math::max_f64(1.0, leaving_wall);
     let rungs = segments.max(1);
     let step = near / rungs as f64;
     let mut samples: Vec<f64> = (0..=rungs).map(|k| k as f64 * step).collect();
@@ -177,7 +177,7 @@ pub fn try_build(
         let at = arriving_canal.point_at(sample, through, normal);
 
         if (leaving_canal.distance_from_the_axis(at) - radius).abs()
-            > cs_math::max_f64(
+            > ieee_math::max_f64(
                 ON_BOTH_CANALS_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS * radius,
                 lattice,
             )

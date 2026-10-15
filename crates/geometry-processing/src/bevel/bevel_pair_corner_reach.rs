@@ -41,7 +41,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, math_helper, Vector3};
+use vector_math::{ieee_math, math_helper, Vector3};
 
 use super::bevel_edge_tool_builder;
 use crate::topology::{ChainEdge, EdgeConvexity, FeatureEdge, FeatureEdgeSet};
@@ -94,7 +94,7 @@ pub fn to_partner_axis(
             // Along THIS tube's own last chord, because that is the direction its end ring travels.
             // A partner whose axis sits back the way this chain came reads negative and is ignored:
             // there is nothing out there for the tube to reach.
-            furthest = cs_math::max_f64(furthest, to_axis.dot(outward));
+            furthest = ieee_math::max_f64(furthest, to_axis.dot(outward));
         }
     }
 

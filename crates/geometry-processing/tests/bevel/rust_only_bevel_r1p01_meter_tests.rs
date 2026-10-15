@@ -53,7 +53,7 @@ fn square_and_strip() -> LevelLineMesh {
 }
 
 #[test]
-fn rust_only_meter_reports_write_csharp_number_formats() {
+fn rust_only_meter_reports_write_their_pinned_number_formats() {
     assert_eq!(format_i64_number(0), "0");
     assert_eq!(format_i64_number(999), "999");
     assert_eq!(format_i64_number(1234567), "1,234,567");

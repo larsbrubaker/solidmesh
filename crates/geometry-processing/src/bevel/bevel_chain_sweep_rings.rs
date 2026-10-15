@@ -2,7 +2,7 @@
 //! mitred ring at a joint ([`try_build_joint`]), every ring of a run ([`try_build_rings`]) and how
 //! far two segments' profiles differ ([`profile_deviation`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bevel_chain_sweep::MINIMUM_MITER_COSINE;
 use super::bevel_chain_sweep_mesh::SweptSegment;
@@ -46,7 +46,7 @@ pub fn profile_deviation(before: &SweptSegment, after: &SweptSegment) -> f64 {
         .iter()
         .zip(&after.profile)
         .fold(0.0, |largest, (&b, &a)| {
-            cs_math::max_f64(largest, (b - a).length())
+            ieee_math::max_f64(largest, (b - a).length())
         })
 }
 
@@ -194,16 +194,16 @@ pub fn try_build_rings(
         let last_index = segment_count - 1;
 
         // Bounded by what the ends allow, floored by what the caller sweeping a ball asks for.
-        let start_overshoot = cs_math::max_f64(
+        let start_overshoot = ieee_math::max_f64(
             start_minimum_overshoot,
-            cs_math::min_f64(
+            ieee_math::min_f64(
                 bevel_edge_tool_builder::overshoot(size, swept[0].tangent_distance),
                 ends.start_maximum_overshoot,
             ),
         );
-        let end_overshoot = cs_math::max_f64(
+        let end_overshoot = ieee_math::max_f64(
             end_minimum_overshoot,
-            cs_math::min_f64(
+            ieee_math::min_f64(
                 bevel_edge_tool_builder::overshoot(size, swept[last_index].tangent_distance),
                 ends.end_maximum_overshoot,
             ),

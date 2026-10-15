@@ -387,7 +387,7 @@ pub fn build_within(
             let largest = unit_setbacks[0]
                 .iter()
                 .copied()
-                .fold(f64::NEG_INFINITY, vector_math::cs_math::max_f64);
+                .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);
             consumed_to_the_rim::rims_the_band_ends_on(
                 &mesh,
                 &chain_edges[0],

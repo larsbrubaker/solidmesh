@@ -4,7 +4,7 @@
 //! standing less than the snap off its longest edge is dropped rather than laid. Its triangles are
 //! [`HoleFillTriangle`]s, as the faired filler's are.
 
-use vector_math::{cs_math, Vector2, Vector3};
+use vector_math::{ieee_math, Vector2, Vector3};
 
 use super::HoleFillTriangle;
 
@@ -114,9 +114,9 @@ pub fn fill(
             if m > 3 {
                 let before = remaining[(k + m - 2) % m];
                 let after = remaining[(k + 2) % m];
-                angle = cs_math::min_f64(
+                angle = ieee_math::min_f64(
                     angle,
-                    cs_math::min_f64(
+                    ieee_math::min_f64(
                         left_ear(flat[before], flat[a], flat[c]),
                         left_ear(flat[a], flat[c], flat[after]),
                     ),
@@ -165,9 +165,9 @@ pub fn fill(
 /// counter-clockwise in the plane (the loop's way).
 fn height(a: Vector2, b: Vector2, c: Vector2) -> f64 {
     let twice_area = ((b.x - a.x) * (c.y - a.y)) - ((b.y - a.y) * (c.x - a.x));
-    let longest = cs_math::max_f64(
+    let longest = ieee_math::max_f64(
         (b - a).length(),
-        cs_math::max_f64((c - b).length(), (a - c).length()),
+        ieee_math::max_f64((c - b).length(), (a - c).length()),
     );
     if longest == 0.0 {
         0.0
@@ -241,5 +241,5 @@ fn smallest_angle(a: Vector2, b: Vector2, c: Vector2) -> f64 {
         (dot / (x.length() * y.length())).clamp(-1.0, 1.0).acos()
     }
 
-    cs_math::min_f64(at(a, b, c), cs_math::min_f64(at(b, c, a), at(c, a, b)))
+    ieee_math::min_f64(at(a, b, c), ieee_math::min_f64(at(b, c, a), at(c, a, b)))
 }

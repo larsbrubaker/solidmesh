@@ -209,7 +209,7 @@ impl BevelChainEnds {
         let start_minimum = if is_convex_run {
             lean_guard
         } else {
-            vector_math::cs_math::max_f64(
+            vector_math::ieee_math::max_f64(
                 lean_guard,
                 budget::minimum_bead_cap_agreement(size, first),
             )
@@ -217,7 +217,7 @@ impl BevelChainEnds {
         let end_minimum = if is_convex_run {
             lean_guard
         } else {
-            vector_math::cs_math::max_f64(
+            vector_math::ieee_math::max_f64(
                 lean_guard,
                 budget::minimum_bead_cap_agreement(size, last),
             )

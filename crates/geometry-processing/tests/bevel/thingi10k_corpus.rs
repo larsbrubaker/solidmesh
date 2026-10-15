@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 
 /// One record of the Thingi10K metadata: which model, which repository shard, how many faces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +87,7 @@ pub fn chosen(
         }
     }
 
-    let mut random = DotNetRandom::new(seed);
+    let mut random = SeededRandom::new(seed);
     for i in (1..clean.len()).rev() {
         let j = random.next(i as i32 + 1) as usize;
         clean.swap(i, j);

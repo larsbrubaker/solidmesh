@@ -1,13 +1,13 @@
 //! How the Thingi10K sweep chooses what to build on a mesh: face rims taken off the smooth
 //! regions, and feature chains walked from a feature edge.
 //!
-//! Maps are `IndexMap` (insertion order) and every random draw comes from `DotNetRandom` in a
+//! Maps are `IndexMap` (insertion order) and every random draw comes from `SeededRandom` in a
 //! fixed order, so a seed names the same picks on every run.
 
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 use crate::sweep_mesh_measures::{corners_of, key, standing};
@@ -81,9 +81,9 @@ pub fn picks(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     is_feature: &dyn Fn(i32, i32) -> bool,
-    random: &mut DotNetRandom,
+    random: &mut SeededRandom,
     count: i32,
-    open_random: &mut DotNetRandom,
+    open_random: &mut SeededRandom,
     open_count: i32,
 ) -> Vec<SweepPick> {
     let wanted = (count / 2).max(1);
@@ -146,7 +146,7 @@ fn regions(
 fn face_rim_picks(
     indices: &[(i32, i32, i32)],
     is_feature: &dyn Fn(i32, i32) -> bool,
-    random: &mut DotNetRandom,
+    random: &mut SeededRandom,
     wanted: i32,
 ) -> Vec<SweepPick> {
     let standing = standing(indices);
@@ -259,7 +259,7 @@ fn chain_picks(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     is_feature: &dyn Fn(i32, i32) -> bool,
-    random: &mut DotNetRandom,
+    random: &mut SeededRandom,
     wanted: i32,
 ) -> Vec<SweepPick> {
     let (starts, at_vertex) = feature_graph(indices, is_feature);
@@ -295,7 +295,7 @@ fn open_picks(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     is_feature: &dyn Fn(i32, i32) -> bool,
-    random: &mut DotNetRandom,
+    random: &mut SeededRandom,
     wanted: i32,
 ) -> Vec<SweepPick> {
     let (starts, at_vertex) = feature_graph(indices, is_feature);
@@ -334,7 +334,7 @@ fn open_picks(
 
 /// One to three consecutive edges of `run` with at least one edge of the crease left over at EACH
 /// end, or None when the crease is too short to cut into that way.
-fn partial(run: &[i32], closed: bool, random: &mut DotNetRandom) -> Option<Vec<i32>> {
+fn partial(run: &[i32], closed: bool, random: &mut SeededRandom) -> Option<Vec<i32>> {
     if closed {
         // A closed crease of n vertices has n edges; anything shorter than the whole ring carries
         // on past both of its ends, wrapping round the join.

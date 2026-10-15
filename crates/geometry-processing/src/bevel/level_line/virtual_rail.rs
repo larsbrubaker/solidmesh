@@ -17,7 +17,7 @@
 //! side's normal carried along, which no pick asks for yet.
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::{end_face_sense, triangle_edges};
 use super::{
@@ -54,9 +54,9 @@ pub fn joined_sides(
             .filter(|&i| loops[i].side == side)
             .collect();
         runs.sort_by(|&x, &y| {
-            cs_compare(
-                linq_min(&loops[x].parameters),
-                linq_min(&loops[y].parameters),
+            nan_first_compare(
+                min_or_nan(&loops[x].parameters),
+                min_or_nan(&loops[y].parameters),
             )
         });
         if runs.len() != 2 {
@@ -117,8 +117,8 @@ pub fn matched_at(
         let mut i = 0;
         while i + 1 < vertices.len() {
             let (low, high) = (
-                cs_math::min_f64(at[i], at[i + 1]),
-                cs_math::max_f64(at[i], at[i + 1]),
+                ieee_math::min_f64(at[i], at[i + 1]),
+                ieee_math::max_f64(at[i], at[i + 1]),
             );
             if !(t > low && t < high) {
                 i += 1;
@@ -175,20 +175,20 @@ pub fn join(
     let away = mesh.position(a) - chain.point_at(ta);
     let away = (away - (along * away.dot(along))).get_normal();
 
-    let (low, high) = (cs_math::min_f64(ta, tb), cs_math::max_f64(ta, tb));
+    let (low, high) = (ieee_math::min_f64(ta, tb), ieee_math::max_f64(ta, tb));
     // The parameters strictly between the ends, each value once (the first kept; NaN equals NaN),
     // in a stable sort.
     let mut between: Vec<f64> = Vec::new();
     for &v in &crease_vertices {
         let t = chain.evaluate(mesh.position(v))?.parameter;
-        if t > low && t < high && !between.iter().any(|&u| cs_equals(u, t)) {
+        if t > low && t < high && !between.iter().any(|&u| nan_equal(u, t)) {
             between.push(t);
         }
     }
 
     between.sort_by(|&x, &y| {
         let key = |t: f64| if tb >= ta { t } else { -t };
-        cs_compare(key(x), key(y))
+        nan_first_compare(key(x), key(y))
     });
 
     let mut vertices = before.vertices.clone();
@@ -214,7 +214,7 @@ pub fn join(
 }
 
 /// A total order on doubles in which NaN sorts below every number.
-fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
+fn nan_first_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
         (true, false) => std::cmp::Ordering::Less,
@@ -224,12 +224,12 @@ fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
 }
 
 /// The equality the parameter list is made distinct by: NaN equals NaN, and 0 equals -0.
-fn cs_equals(a: f64, b: f64) -> bool {
+fn nan_equal(a: f64, b: f64) -> bool {
     a == b || (a.is_nan() && b.is_nan())
 }
 
 /// The least of the values: NaN where any value is NaN.
-fn linq_min(values: &[f64]) -> f64 {
+fn min_or_nan(values: &[f64]) -> f64 {
     let mut least = values[0];
     for &v in values {
         if v.is_nan() {

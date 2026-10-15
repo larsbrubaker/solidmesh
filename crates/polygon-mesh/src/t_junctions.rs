@@ -4,8 +4,8 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
-use vector_math::cs_math::{max_f32, min_f32};
-use vector_math::cs_sort::introspective_sort;
+use vector_math::fixed_tie_sort::introspective_sort;
+use vector_math::ieee_math::{max_f32, min_f32};
 use vector_math::{AxisAlignedBoundingBox, Vector3Float};
 
 use crate::face::{Face, FaceList};

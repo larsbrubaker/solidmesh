@@ -9,7 +9,7 @@
 use std::collections::{HashSet, VecDeque};
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{LevelLineMesh, LevelLineTriangle, LevelLineWork, WorkError};
 
@@ -42,9 +42,9 @@ impl LevelLineMesh {
         let pa = self.vertices[a as usize];
         let pb = self.vertices[b as usize];
         let pc = self.vertices[c as usize];
-        let longest = cs_math::max_f64(
+        let longest = ieee_math::max_f64(
             (pb - pa).length(),
-            cs_math::max_f64((pc - pb).length(), (pa - pc).length()),
+            ieee_math::max_f64((pc - pb).length(), (pa - pc).length()),
         );
         if longest <= 0.0 {
             0.0

@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bevel_face_fit::{try_get_setback, SAMPLE_FRACTIONS};
 use super::bevel_shadow_clip::Obstruction;
@@ -95,7 +95,7 @@ impl BevelFaceFit {
                         Some(&mut crossed_here),
                     );
                     samples.push((at, stop.travelled, stop.blocking_edge, crossed_here));
-                    widest_on_this_face = cs_math::max_f64(widest_on_this_face, stop.travelled);
+                    widest_on_this_face = ieee_math::max_f64(widest_on_this_face, stop.travelled);
                 }
 
                 for (from, width, blocking_edge, crossed) in samples {

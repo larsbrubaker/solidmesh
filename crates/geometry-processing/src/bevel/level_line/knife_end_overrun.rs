@@ -5,7 +5,7 @@
 //! ([`on_the_plane`]), the overrun read at one end ([`read`]) and the rows laid past the end
 //! spoke ([`lay`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, CornerFillPiece, LevelLineMesh, WorkError};
 
@@ -27,7 +27,7 @@ pub struct KnifeEndOverrunEnd {
 /// True when `p` stands on the plane through `vertex` of normal `normal`, to a millionth of its
 /// distance from the vertex (at least 1).
 pub fn on_the_plane(p: Vector3, vertex: Vector3, normal: Vector3) -> bool {
-    (p - vertex).dot(normal).abs() <= 1e-6 * cs_math::max_f64(1.0, (p - vertex).length())
+    (p - vertex).dot(normal).abs() <= 1e-6 * ieee_math::max_f64(1.0, (p - vertex).length())
 }
 
 /// The overrun at one end of the chain (`last`, else its first), or

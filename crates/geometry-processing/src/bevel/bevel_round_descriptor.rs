@@ -24,7 +24,7 @@
 
 use std::f64::consts::{PI, TAU};
 
-use vector_math::{cs_math, math_helper, Vector3};
+use vector_math::{ieee_math, math_helper, Vector3};
 
 /// How far past either end of its span a point's angle may be and still count, in degrees.
 const SPAN_SLACK_DEGREES: f64 = 5.0;
@@ -99,8 +99,8 @@ impl BevelRoundDescriptor {
             axial_to,
             first: first_radial,
             second,
-            span_low: cs_math::min_f64(0.0, to),
-            span_high: cs_math::max_f64(0.0, to),
+            span_low: ieee_math::min_f64(0.0, to),
+            span_high: ieee_math::max_f64(0.0, to),
         }
     }
 
@@ -185,8 +185,8 @@ impl BevelRoundDescriptor {
             self.first,
             self.span_low,
             self.span_high,
-            cs_math::min_f64(self.axial_from, other.axial_from + shift),
-            cs_math::max_f64(self.axial_to, other.axial_to + shift),
+            ieee_math::min_f64(self.axial_from, other.axial_from + shift),
+            ieee_math::max_f64(self.axial_to, other.axial_to + shift),
             self.segments,
         )
     }
@@ -210,7 +210,7 @@ impl BevelRoundDescriptor {
         // would read the axis itself as being on the round. BevelRoundFaces refuses to describe a
         // round drawn with fewer than four chords at all, so the floor is a belt to that brace
         // rather than the thing doing the work.
-        let inside = cs_math::max_f64(
+        let inside = ieee_math::max_f64(
             self.radius / 2.0,
             self.radius * (PI / self.segments as f64).cos(),
         );
@@ -384,7 +384,7 @@ impl BevelRoundDescriptor {
             let at = self.span_low + ((self.span_high - self.span_low) * i as f64 / SAMPLES as f64);
             let here = distance_to_the_plane(at);
 
-            if cs_sign(here)? != cs_sign(previous)? {
+            if sign_or_none(here)? != sign_or_none(previous)? {
                 let from = self.span_low
                     + ((self.span_high - self.span_low) * (i - 1) as f64 / SAMPLES as f64);
 
@@ -439,7 +439,7 @@ impl BevelRoundDescriptor {
             let middle = (low + high) / 2.0;
             let here = distance_to_the_plane(middle);
 
-            if cs_sign(here)? == cs_sign(at_low)? {
+            if sign_or_none(here)? == sign_or_none(at_low)? {
                 low = middle;
                 at_low = here;
             } else {
@@ -555,7 +555,7 @@ impl BevelRoundDescriptor {
 }
 
 /// -1, 0 or 1, and no answer for NaN, which has no sign.
-fn cs_sign(value: f64) -> Option<i32> {
+fn sign_or_none(value: f64) -> Option<i32> {
     if value.is_nan() {
         None
     } else if value > 0.0 {

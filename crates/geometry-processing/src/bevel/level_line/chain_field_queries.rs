@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bounded_maximum;
 use super::{
@@ -311,14 +311,14 @@ impl ChainField {
 
             done1 = done0;
             done0 = segment;
-            let greatest = cs_math::max_f64(
+            let greatest = ieee_math::max_f64(
                 self.least_over_segment_from_point(segment, v0).0,
-                cs_math::max_f64(
+                ieee_math::max_f64(
                     self.least_over_segment_from_point(segment, v1).0,
                     self.least_over_segment_from_point(segment, v2).0,
                 ),
             );
-            bound = cs_math::min_f64(bound, greatest);
+            bound = ieee_math::min_f64(bound, greatest);
         }
 
         Ok(bound)

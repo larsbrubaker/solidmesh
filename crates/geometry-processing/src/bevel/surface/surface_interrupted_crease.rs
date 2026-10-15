@@ -53,7 +53,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, math_helper, Vector3};
+use vector_math::{ieee_math, math_helper, Vector3};
 
 use super::SurfaceBevelPlan;
 use crate::bevel::bevel_edge_tool_builder;
@@ -419,7 +419,7 @@ fn the_feature_spans_the_strip(
         )
     };
 
-    let mut worst = cs_math::min_f64(further(left_foot), further(right_foot));
+    let mut worst = ieee_math::min_f64(further(left_foot), further(right_foot));
 
     if round_profile {
         let bisector = left_inward + right_inward;
@@ -445,13 +445,13 @@ fn the_feature_spans_the_strip(
         if across.length_squared() > 0.0 {
             let facing = -across.get_normal();
             let mid = (position - centre).get_normal();
-            let half_sweep = cs_math::min_f64(
+            let half_sweep = ieee_math::min_f64(
                 (left_foot - centre).get_normal().dot(mid),
                 (right_foot - centre).get_normal().dot(mid),
             );
 
             if facing.dot(mid) >= half_sweep {
-                worst = cs_math::min_f64(worst, further(centre + (facing * size)));
+                worst = ieee_math::min_f64(worst, further(centre + (facing * size)));
             }
         }
     }

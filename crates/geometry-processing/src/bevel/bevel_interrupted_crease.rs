@@ -5,7 +5,7 @@
 
 /// Which way the faces bounding one end lean against the run, accumulated as the cap plane scan
 /// meets them, and the reading of whether that end is an interruption.
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bevel_chain_end_budget;
 use super::{BevelAdvisory, BevelAdvisoryCode, BevelChainEnds, BevelSweptChain};
@@ -60,7 +60,7 @@ impl Leaning {
         }
 
         if along_outward < 0.0 {
-            self.closes_over_the_run = cs_math::max_f64(self.closes_over_the_run, -along_outward);
+            self.closes_over_the_run = ieee_math::max_f64(self.closes_over_the_run, -along_outward);
         } else {
             self.falls_away_from_the_run = true;
         }

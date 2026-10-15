@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, math_helper, Vector3};
+use vector_math::{ieee_math, math_helper, Vector3};
 
 use super::bevel_chain_sweep_mesh::SweptSegment;
 use super::bevel_chain_sweep_rings::profile_deviation;
@@ -51,7 +51,7 @@ pub fn carries_straight_on(before: &SweptSegment, after: &SweptSegment) -> bool 
     }
 
     let largest = before.profile.iter().fold(0.0, |largest, point| {
-        cs_math::max_f64(largest, point.length())
+        ieee_math::max_f64(largest, point.length())
     });
 
     profile_deviation(before, after) <= largest * SAME_PROFILE_FRACTION

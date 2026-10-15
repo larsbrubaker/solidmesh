@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::LazyLock;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use polygon_mesh::Mesh;
 
@@ -69,14 +69,14 @@ pub fn offset_to_segment(
     a: Vector3,
     b: Vector3,
 ) -> f64 {
-    let tolerance = cs_math::max_f64(length, 1.0) * RELATIVE_TOLERANCE;
+    let tolerance = ieee_math::max_f64(length, 1.0) * RELATIVE_TOLERANCE;
 
     // How much of the span the two have to SHARE before they face each other at all is a CORNER's
     // width and not a rounding: a rim that leaves the chain edge's own corner is written in
     // floats, and the stretch of it below the corner overlaps the span by a millionth or so
     // without standing in front of anything. Read at the finer ruler that overlap is a wall the
     // width of a corner, which on the picture hanger's gusset says a 20 mm face is 0.4 mm wide.
-    let sharing = cs_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
+    let sharing = ieee_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
 
     let along_a = (a - from).dot(along);
     let along_b = (b - from).dot(along);
@@ -84,15 +84,15 @@ pub fn offset_to_segment(
     let offset_b = (b - from).dot(inward);
 
     // These max / min give NaN when either argument is NaN.
-    let low = cs_math::max_f64(cs_math::min_f64(along_a, along_b), 0.0);
-    let high = cs_math::min_f64(cs_math::max_f64(along_a, along_b), length);
+    let low = ieee_math::max_f64(ieee_math::min_f64(along_a, along_b), 0.0);
+    let high = ieee_math::min_f64(ieee_math::max_f64(along_a, along_b), length);
 
     let shared = high - low;
     if shared <= sharing || shared.is_nan() {
         return f64::INFINITY;
     }
 
-    let nearest = cs_math::min_f64(
+    let nearest = ieee_math::min_f64(
         offset_at(along_a, offset_a, along_b, offset_b, low),
         offset_at(along_a, offset_a, along_b, offset_b, high),
     );
@@ -109,7 +109,7 @@ pub fn offset_at(along_a: f64, offset_a: f64, along_b: f64, offset_b: f64, at: f
     let span = along_b - along_a;
 
     if span == 0.0 {
-        return cs_math::min_f64(offset_a, offset_b);
+        return ieee_math::min_f64(offset_a, offset_b);
     }
 
     offset_a + ((offset_b - offset_a) * ((at - along_a) / span))
@@ -195,10 +195,10 @@ pub fn measure_corner(
         return;
     }
 
-    *taken = cs_math::max_f64(*taken, reach / offset);
+    *taken = ieee_math::max_f64(*taken, reach / offset);
 
     if read_the_offset {
-        *nearest = cs_math::min_f64(*nearest, offset);
+        *nearest = ieee_math::min_f64(*nearest, offset);
     }
 }
 
@@ -418,7 +418,7 @@ pub fn room_across(
     free_at_the_end: bool,
 ) -> (f64, Option<SurfaceBandRunsOffOverAStretch>) {
     let mut ran_off_over_a_stretch = None;
-    let corner = cs_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
+    let corner = ieee_math::max_f64(length, 1.0) * VERTEX_TOLERANCE;
     let span = BandSpan {
         from,
         along,
@@ -483,7 +483,7 @@ pub fn room_across(
                 goes_over_these_rims = Some(stretch.rims_it_runs_off.clone());
 
                 // The part of the span the band does NOT run off over: one interval.
-                rest_of_the_span = cs_math::max_f64(length - stretch.until, 0.0);
+                rest_of_the_span = ieee_math::max_f64(length - stretch.until, 0.0);
                 rest_of_the_span_from = if stretch.at_the_start {
                     from + (along * stretch.until)
                 } else {
@@ -599,7 +599,7 @@ pub fn room_across(
 
     let taken = taken_at_from + taken_at_to;
     if taken > 0.0 {
-        nearest = cs_math::min_f64(nearest, length / taken);
+        nearest = ieee_math::min_f64(nearest, length / taken);
     }
 
     (nearest, ran_off_over_a_stretch)

@@ -3,7 +3,7 @@
 //! ([`trim_off_the_line`]) and a one-owner loop split at another chain's tie run
 //! ([`tie_split`]).
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use std::rc::Rc;
 
@@ -14,7 +14,7 @@ use super::{ChainField, CornerFillPiece, GapLoop, LevelLineMesh, WorkError};
 /// and trimmed it would hand a whole round to the hole filler, so that one stays refused by name.
 /// A single stop on an end plane after a run past that same end is dropped too.
 pub fn trim_the_turn_back(field: &ChainField, piece: &mut CornerFillPiece) {
-    let tie = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let tie = 1e-9 * ieee_math::max_f64(1.0, field.length);
     let length = field.length;
     let climbs = piece.parameters[piece.parameters.len() - 1] > piece.parameters[0];
     let back = |from: f64, to: f64| {
@@ -73,7 +73,7 @@ pub fn trim_off_the_line(
     field: &ChainField,
     piece: &mut CornerFillPiece,
 ) -> Result<(), WorkError> {
-    let tie = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let tie = 1e-9 * ieee_math::max_f64(1.0, field.length);
     let off = |vertex: i32| -> Result<bool, WorkError> {
         Ok(field.evaluate(mesh.position(vertex))?.value > tie)
     };

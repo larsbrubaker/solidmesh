@@ -5,7 +5,7 @@
 
 use geometry_processing::bevel::level_line::bounded_maximum;
 use geometry_processing::bevel::level_line::{FieldSample, WorkError};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 const SETBACK: f64 = 1.0;
 
@@ -51,11 +51,11 @@ fn every_chain_point_bound(
 ) -> Result<f64, WorkError> {
     let mut bound = f64::INFINITY;
     for c in CHAIN_POINTS {
-        let farthest = cs_math::max_f64(
+        let farthest = ieee_math::max_f64(
             (v0 - c).length(),
-            cs_math::max_f64((v1 - c).length(), (v2 - c).length()),
+            ieee_math::max_f64((v1 - c).length(), (v2 - c).length()),
         );
-        bound = cs_math::min_f64(bound, farthest - SETBACK);
+        bound = ieee_math::min_f64(bound, farthest - SETBACK);
     }
 
     Ok(bound)

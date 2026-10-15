@@ -1,8 +1,8 @@
-// Rust-only checks for `cs_sort`: the tie order .NET 10's `List<T>.Sort(IComparer)` leaves,
+// Rust-only checks for `fixed_tie_sort`: the tie order .NET 10's `List<T>.Sort(IComparer)` leaves,
 // captured by running that sort on the same inputs (keys `(i * 7) % 3` for several lengths, then
 // 40 equal keys). The BVH builders depend on this order matching.
 
-use vector_math::cs_sort::introspective_sort;
+use vector_math::fixed_tie_sort::introspective_sort;
 
 fn sorted_indices(keys: impl Fn(usize) -> i32, n: usize) -> Vec<usize> {
     let mut items: Vec<(i32, usize)> = (0..n).map(|i| (keys(i), i)).collect();
@@ -11,7 +11,7 @@ fn sorted_indices(keys: impl Fn(usize) -> i32, n: usize) -> Vec<usize> {
 }
 
 #[test]
-fn rust_only_introsort_leaves_ties_where_dotnet_does() {
+fn rust_only_introsort_leaves_ties_in_their_pinned_places() {
     let expected: [&[usize]; 4] = [
         &[0, 3, 1, 4, 2],
         &[0, 12, 3, 9, 6, 15, 13, 10, 16, 4, 1, 7, 5, 11, 2, 14, 8],

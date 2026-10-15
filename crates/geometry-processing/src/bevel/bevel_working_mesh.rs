@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::{Face, FaceList, Mesh};
-use vector_math::{cs_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use vector_math::{ieee_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
 use super::{bevel_t_vertex_slivers, bevel_thin_slivers, BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::FeatureEdgeSet;
@@ -271,7 +271,7 @@ pub fn seam_tolerance_for(mesh: &Mesh) -> f64 {
         return 0.0;
     }
 
-    cs_math::max_f64(diagonal, furthest_from_the_origin(&bounds))
+    ieee_math::max_f64(diagonal, furthest_from_the_origin(&bounds))
         * SEAM_TOLERANCE_OF_THE_PARTICULAR_PART
 }
 
@@ -333,11 +333,11 @@ pub fn minimum_face_area_for(seam_tolerance: f64) -> f64 {
 /// How far the furthest corner of a box is from the origin, on its furthest axis.
 pub fn furthest_from_the_origin(bounds: &AxisAlignedBoundingBox) -> f64 {
     let (min, max) = (bounds.min_xyz, bounds.max_xyz);
-    cs_math::max_f64(
-        cs_math::max_f64(min.x.abs(), max.x.abs()),
-        cs_math::max_f64(
-            cs_math::max_f64(min.y.abs(), max.y.abs()),
-            cs_math::max_f64(min.z.abs(), max.z.abs()),
+    ieee_math::max_f64(
+        ieee_math::max_f64(min.x.abs(), max.x.abs()),
+        ieee_math::max_f64(
+            ieee_math::max_f64(min.y.abs(), max.y.abs()),
+            ieee_math::max_f64(min.z.abs(), max.z.abs()),
         ),
     )
 }

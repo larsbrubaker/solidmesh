@@ -14,8 +14,8 @@ use geometry_processing::bevel::level_line::{
     LevelLineMesh, PickField, RoomField, WorkBudget,
 };
 use sha2::{Digest, Sha256};
-use vector_math::dotnet_random::DotNetRandom;
 use vector_math::number_format::format_f64;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 use crate::grid_hole_plate_fixture;
@@ -207,7 +207,7 @@ fn fields_to_be_sound_over() -> Vec<(&'static str, RoomField)> {
 /// Lipschitz bound the refinement used before it.
 #[test]
 fn the_bound_stands_over_the_field_and_under_the_lipschitz_bound() {
-    let mut random = DotNetRandom::new(20260921);
+    let mut random = SeededRandom::new(20260921);
     for (name, field) in fields_to_be_sound_over() {
         let evaluate = |p: Vector3| field.evaluate(p).expect("no budget in force");
         for _cell in 0..300 {
@@ -254,7 +254,7 @@ fn the_bound_stands_over_the_field_and_under_the_lipschitz_bound() {
 /// `nearest`.
 #[test]
 fn every_sample_says_its_value_is_its_distance_less_its_setback() {
-    let mut random = DotNetRandom::new(4919);
+    let mut random = SeededRandom::new(4919);
     for (name, field) in fields_to_be_sound_over() {
         for _trial in 0..300 {
             let q = somewhere_about(&mut random);
@@ -276,7 +276,7 @@ fn every_sample_says_its_value_is_its_distance_less_its_setback() {
 /// and not its answer.
 #[test]
 fn seeding_a_search_changes_its_cost_and_not_its_answer() {
-    let mut random = DotNetRandom::new(773);
+    let mut random = SeededRandom::new(773);
     let field = fields_to_be_sound_over().remove(0).1;
     const TOLERANCE: f64 = 1e-3;
     let evaluate = |p: Vector3| field.evaluate(p);
@@ -323,7 +323,7 @@ fn seeding_a_search_changes_its_cost_and_not_its_answer() {
 
 /// A point somewhere about the chains above - inside the band, outside it,
 /// and over the gap.
-fn somewhere_about(random: &mut DotNetRandom) -> Vector3 {
+fn somewhere_about(random: &mut SeededRandom) -> Vector3 {
     Vector3::new(
         (random.next_double() * 12.0) - 4.0,
         (random.next_double() * 10.0) - 4.0,
@@ -333,7 +333,7 @@ fn somewhere_about(random: &mut DotNetRandom) -> Vector3 {
 
 /// A cell edge of a size the refinement really works at, from a hundredth up to a
 /// whole chain.
-fn spread(random: &mut DotNetRandom) -> Vector3 {
+fn spread(random: &mut SeededRandom) -> Vector3 {
     let scale = 10f64.powf((random.next_double() * 2.5) - 2.0);
     Vector3::new(
         (random.next_double() - 0.5) * scale,

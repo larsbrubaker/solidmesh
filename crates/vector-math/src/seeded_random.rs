@@ -8,14 +8,14 @@ const MBIG: i32 = i32::MAX;
 const MSEED: i32 = 161803398;
 
 /// `new Random(seed)`.
-pub struct DotNetRandom {
+pub struct SeededRandom {
     seed_array: [i32; 56],
     inext: usize,
     inextp: usize,
 }
 
-impl DotNetRandom {
-    pub fn new(seed: i32) -> DotNetRandom {
+impl SeededRandom {
+    pub fn new(seed: i32) -> SeededRandom {
         let mut seed_array = [0i32; 56];
         let subtraction = if seed == i32::MIN {
             i32::MAX
@@ -50,7 +50,7 @@ impl DotNetRandom {
                 }
             }
         }
-        DotNetRandom {
+        SeededRandom {
             seed_array,
             inext: 0,
             inextp: 21,

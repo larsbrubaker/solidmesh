@@ -5,7 +5,7 @@
 use super::*;
 
 #[test]
-fn rust_only_format_f64_matches_dotnet_round_trip() {
+fn rust_only_format_f64_writes_shortest_round_trip_text() {
     assert_eq!(format_f64(1.0), "1");
     assert_eq!(format_f64(-2.5), "-2.5");
     assert_eq!(format_f64(0.1), "0.1");
@@ -23,7 +23,7 @@ fn rust_only_format_f64_matches_dotnet_round_trip() {
 }
 
 #[test]
-fn rust_only_format_f32_matches_dotnet_round_trip() {
+fn rust_only_format_f32_writes_shortest_round_trip_text() {
     assert_eq!(format_f32(1.1), "1.1");
     assert_eq!(format_f32(1234567.0), "1234567");
     assert_eq!(format_f32(1e7), "1E+07");
@@ -31,7 +31,7 @@ fn rust_only_format_f32_matches_dotnet_round_trip() {
 }
 
 #[test]
-fn rust_only_format_max_decimals_matches_dotnet_custom_format() {
+fn rust_only_format_max_decimals_writes_at_most_that_many_places() {
     assert_eq!(format_f64_max_decimals(1.0, 4), "1");
     assert_eq!(format_f64_max_decimals(1.23456, 4), "1.2346");
     assert_eq!(format_f64_max_decimals(0.00004, 4), "0");
@@ -44,7 +44,7 @@ fn rust_only_format_max_decimals_matches_dotnet_custom_format() {
 }
 
 #[test]
-fn rust_only_parse_f64_matches_dotnet_try_parse() {
+fn rust_only_parse_f64_reads_invariant_number_text() {
     assert_eq!(parse_f64(" 1.5 "), 1.5);
     assert_eq!(parse_f64("-2"), -2.0);
     assert_eq!(parse_f64("+3e2"), 300.0);
@@ -90,7 +90,7 @@ fn rust_only_format_round_trip_ties_round_half_to_even() {
 
 /// Expected text read from .NET 10's `double.ToString("G17", InvariantCulture)`.
 #[test]
-fn rust_only_format_f64_g17_matches_dotnet() {
+fn rust_only_format_f64_g17_writes_17_significant_digits() {
     let cases = [
         (0.1, "0.10000000000000001"),
         (1.0, "1"),
@@ -303,7 +303,7 @@ const STANDARD_ROWS: &[(f64, [&str; 8])] = &[
 ];
 
 #[test]
-fn rust_only_standard_formats_match_dotnet() {
+fn rust_only_standard_formats_write_the_pinned_text() {
     for (value, expected) in STANDARD_ROWS {
         let actual = [
             format_f64_fixed(*value, 20),
@@ -341,7 +341,7 @@ fn rust_only_standard_formats_match_dotnet() {
 }
 
 #[test]
-fn custom_scientific_e0_matches_dotnet() {
+fn custom_scientific_e0_writes_the_pinned_text() {
     // Expected strings from .NET 10's `x.ToString("0.###e0", CultureInfo.InvariantCulture)`.
     for (value, expected) in [
         (0.0, "0e0"),

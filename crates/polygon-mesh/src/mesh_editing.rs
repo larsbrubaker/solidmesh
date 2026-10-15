@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use vector_math::bvh::{BvhTree, BvhTreeItemData, TradeOffBvhConstructor};
-use vector_math::cs_math::{max_f64, min_f64};
+use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
 
 use crate::face::{Face, FaceList};

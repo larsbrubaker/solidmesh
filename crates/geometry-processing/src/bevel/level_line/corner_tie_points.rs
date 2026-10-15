@@ -4,7 +4,7 @@
 //! triangle ([`try_mitre`],
 //! [`try_mitre_from`]) and the insertion over a band's candidates ([`insert`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineWork, WorkError};
 
@@ -61,7 +61,10 @@ pub fn try_mitre_from(
 ) -> Result<Option<Vector3>, WorkError> {
     let e1 = b - a;
     let e2 = c - a;
-    let size = cs_math::max_f64(e1.length(), cs_math::max_f64(e2.length(), (c - b).length()));
+    let size = ieee_math::max_f64(
+        e1.length(),
+        ieee_math::max_f64(e2.length(), (c - b).length()),
+    );
     let h = 1e-7;
     let f_at = |u: f64, v: f64| -> Result<(f64, f64), WorkError> {
         let p = a + (e1 * u) + (e2 * v);

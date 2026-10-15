@@ -184,7 +184,7 @@ fn calculate_crossing_area(
 
     // return whatever side is small as our rating of badness (0 being good)
     (
-        vector_math::cs_math::min_f64(negative_distance, positive_distance),
+        vector_math::ieee_math::min_f64(negative_distance, positive_distance),
         (negative_side_count - positive_side_count).abs(),
     )
 }

@@ -5,8 +5,8 @@
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::{ChainField, LevelLineWork, ScalarField, WorkBudget};
-use vector_math::dotnet_random::DotNetRandom;
-use vector_math::{cs_math, Vector3};
+use vector_math::seeded_random::SeededRandom;
+use vector_math::{ieee_math, Vector3};
 
 /// A closed octagon of radius 10 in Z = 0 whose setback alternates `even` and `odd` round it.
 fn alternating_octagon(even: f64, odd: f64) -> ChainField {
@@ -27,13 +27,13 @@ fn brute_force_value(field: &ChainField, q: Vector3, samples: i32) -> f64 {
     for i in 0..=samples {
         let parameter = field.length * i as f64 / samples as f64;
         let c = field.point_at(parameter);
-        best = cs_math::min_f64(best, (q - c).length() - field.setback_at(parameter));
+        best = ieee_math::min_f64(best, (q - c).length() - field.setback_at(parameter));
     }
 
     best
 }
 
-fn somewhere_about(random: &mut DotNetRandom) -> Vector3 {
+fn somewhere_about(random: &mut SeededRandom) -> Vector3 {
     let x = (random.next_double() * 40.0) - 20.0;
     let y = (random.next_double() * 40.0) - 20.0;
     let z = (random.next_double() * 20.0) - 10.0;
@@ -47,14 +47,14 @@ fn value(field: &ChainField, point: Vector3) -> f64 {
 #[test]
 fn the_field_is_one_lipschitz() {
     let field = alternating_octagon(1.0, 3.0);
-    let mut random = DotNetRandom::new(20260918);
+    let mut random = SeededRandom::new(20260918);
     let mut worst = 0.0;
 
     for _ in 0..2000 {
         let p = somewhere_about(&mut random);
         let q = somewhere_about(&mut random);
         let slack = (value(&field, p) - value(&field, q)).abs() - (p - q).length();
-        worst = cs_math::max_f64(worst, slack);
+        worst = ieee_math::max_f64(worst, slack);
     }
 
     assert!(
@@ -66,7 +66,7 @@ fn the_field_is_one_lipschitz() {
 #[test]
 fn the_closed_form_is_the_minimum_over_the_whole_chain() {
     let field = alternating_octagon(1.0, 3.0);
-    let mut random = DotNetRandom::new(7761);
+    let mut random = SeededRandom::new(7761);
 
     for _ in 0..8 {
         let q = somewhere_about(&mut random);
@@ -81,7 +81,7 @@ fn the_closed_form_is_the_minimum_over_the_whole_chain() {
 #[test]
 fn the_sample_names_the_chain_point_its_value_was_read_at() {
     let field = alternating_octagon(1.0, 3.0);
-    let mut random = DotNetRandom::new(991);
+    let mut random = SeededRandom::new(991);
 
     for _ in 0..200 {
         let q = somewhere_about(&mut random);
@@ -128,7 +128,7 @@ fn a_bounded_search_closes_when_the_setback_varies() {
         "a 1-Lipschitz bound closes on the tolerance; the old bound gave away the setback spread and ran to the depth limit"
     );
     assert!(
-        peak.value >= cs_math::max_f64(value(&field, from), value(&field, to)),
+        peak.value >= ieee_math::max_f64(value(&field, from), value(&field, to)),
         "the greatest value is at least what the ends read"
     );
 }
@@ -153,7 +153,7 @@ fn readings_are_invariant_under_a_rigid_motion() {
     }
 
     let there = ChainField::from_polyline(&moved_points, true, &setbacks).expect("a valid chain");
-    let mut random = DotNetRandom::new(31337);
+    let mut random = SeededRandom::new(31337);
 
     for _ in 0..500 {
         let q = somewhere_about(&mut random);
@@ -168,7 +168,7 @@ fn readings_are_invariant_under_a_rigid_motion() {
 #[test]
 fn a_uniform_setback_reads_as_plain_distance_less_the_setback() {
     let field = alternating_octagon(2.0, 2.0);
-    let mut random = DotNetRandom::new(505);
+    let mut random = SeededRandom::new(505);
 
     for _ in 0..50 {
         let q = somewhere_about(&mut random);

@@ -76,7 +76,7 @@ fn total_area(m: &DMesh3) -> f64 {
 /// the same grid with the same settings: the counts, the one folded corner triangle, and a
 /// position checksum all match bit for bit.
 #[test]
-fn rust_only_remesh_flat_patch_matches_csharp_and_keeps_boundary() {
+fn rust_only_remesh_flat_patch_gives_the_pinned_mesh_and_keeps_boundary() {
     let mut m = grid(2, 1.0);
     let before = boundary_positions(&m);
     {

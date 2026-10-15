@@ -6,12 +6,12 @@
 //! path for plain items and [`TradeOffBvhConstructor::create_new_hierarchy_intersectable`] the
 //! one for [`Intersectable`] items, which report their own cost. The items are taken by value,
 //! so the caller's list is never reordered. Sorting uses a fixed introsort
-//! ([`crate::cs_sort`]) so tied centers always end up in the same place and the tree's shape is
+//! ([`crate::fixed_tie_sort`]) so tied centers always end up in the same place and the tree's shape is
 //! the same on every platform. The recursive calls do not pass `do_simple_sort_size` on, so
 //! subgroups use the default of 5000.
 
 use super::{BvhTree, BvhTreeItemData, Intersectable};
-use crate::cs_sort::introspective_sort;
+use crate::fixed_tie_sort::introspective_sort;
 use crate::{AxisAlignedBoundingBox, Vector3};
 use std::cmp::Ordering;
 

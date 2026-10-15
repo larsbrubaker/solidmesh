@@ -8,7 +8,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use indexmap::IndexSet;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{LevelLineMesh, LevelLineTriangle};
 
@@ -116,7 +116,7 @@ pub fn where_the_point_stands(
 pub fn longest_edge_length(mesh: &LevelLineMesh, t: LevelLineTriangle) -> f64 {
     let mut longest = 0.0;
     for corner in 0..3 {
-        longest = cs_math::max_f64(
+        longest = ieee_math::max_f64(
             longest,
             (mesh.position(t.corner((corner + 1) % 3)) - mesh.position(t.corner(corner))).length(),
         );
@@ -139,8 +139,8 @@ pub fn longest_edge(mesh: &LevelLineMesh, triangle: i32) -> (i32, i32) {
         let low = v.min(w);
         let high = v.max(w);
         let length = mesh.length(v, w);
-        let tie =
-            (length - best_length).abs() <= 1e-12 * cs_math::max_f64(length, f64::abs(best_length));
+        let tie = (length - best_length).abs()
+            <= 1e-12 * ieee_math::max_f64(length, f64::abs(best_length));
         if (length > best_length && !tie)
             || (tie && (low < best.0 || (low == best.0 && high < best.1)))
         {
@@ -181,9 +181,9 @@ pub fn is_new_sliver(child: f64, parent: f64, aspect_limit: f64) -> bool {
 /// The aspect of the triangle abc: its longest edge squared over twice its area - infinity for a
 /// triangle of no area.
 pub fn aspect(a: Vector3, b: Vector3, c: Vector3) -> f64 {
-    let longest = cs_math::max_f64(
+    let longest = ieee_math::max_f64(
         (b - a).length(),
-        cs_math::max_f64((c - b).length(), (a - c).length()),
+        ieee_math::max_f64((c - b).length(), (a - c).length()),
     );
     let twice_area = (b - a).cross(c - a).length();
 

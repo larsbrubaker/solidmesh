@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, AxisAlignedBoundingBox, Vector3};
+use vector_math::{ieee_math, AxisAlignedBoundingBox, Vector3};
 
 use super::bevel_shadow_clip::{self, Obstruction, IN_FRONT_OF_THE_FACE};
 use super::bevel_working_mesh;
@@ -29,12 +29,12 @@ pub const MOST_OF_THE_CUTTER_A_CLIP_MAY_TAKE: f64 = 0.9;
 /// The clearance the body keeps off the faces it is built from, read off the part's scale.
 pub fn clearance(mesh: &Mesh) -> f64 {
     let bounds = mesh.get_axis_aligned_bounding_box();
-    let scale = cs_math::max_f64(bounds.size().length(), furthest_from_the_origin(&bounds));
+    let scale = ieee_math::max_f64(bounds.size().length(), furthest_from_the_origin(&bounds));
     if scale.is_nan() || scale <= 0.0 || scale.is_infinite() {
         return SMALLEST_CLEARANCE;
     }
 
-    cs_math::max_f64(SMALLEST_CLEARANCE, scale * CLEARANCE_OF_THE_PARTICULAR_PART)
+    ieee_math::max_f64(SMALLEST_CLEARANCE, scale * CLEARANCE_OF_THE_PARTICULAR_PART)
 }
 
 /// How far the furthest corner of a box is from the origin, on its furthest axis.
@@ -210,7 +210,7 @@ pub fn add_face_planes(
             if (plane.0 - keep.0).length_squared() < 1e-12
                 && (plane.1 - keep.1).abs() <= obstruction.planar_within
             {
-                plane.1 = cs_math::max_f64(plane.1, keep.1);
+                plane.1 = ieee_math::max_f64(plane.1, keep.1);
                 known = true;
                 break;
             }
@@ -256,8 +256,8 @@ pub fn add_extent_slabs(
             let mesh_face = mesh.faces[face as usize];
             for vertex in [mesh_face.v0, mesh_face.v1, mesh_face.v2] {
                 let at = direction.dot(Vector3::from_vector3_float(mesh.vertices[vertex as usize]));
-                low = cs_math::min_f64(low, at);
-                high = cs_math::max_f64(high, at);
+                low = ieee_math::min_f64(low, at);
+                high = ieee_math::max_f64(high, at);
             }
         }
 
@@ -574,7 +574,7 @@ pub fn round_the_centroid(points: Vec<Vector3>, normal: Vector3, same_spot: f64)
 
     // By descending angle, with an introsort whose tie order is fixed, so the result is
     // reproducible.
-    vector_math::cs_sort::introspective_sort(&mut distinct, &mut |left, right| {
+    vector_math::fixed_tie_sort::introspective_sort(&mut distinct, &mut |left, right| {
         let (a, b) = (angle(*right), angle(*left));
         match (a.is_nan(), b.is_nan()) {
             (true, true) => std::cmp::Ordering::Equal,

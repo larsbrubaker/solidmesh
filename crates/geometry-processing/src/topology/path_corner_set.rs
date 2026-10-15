@@ -7,7 +7,7 @@
 //! will consider. [`super::bevel_corner_group_resolver`] matches stored corner groups in it.
 
 use agg_path::VertexSource;
-use vector_math::{cs_math, math_helper, Vector2};
+use vector_math::{ieee_math, math_helper, Vector2};
 
 use crate::path::path_bevel::{self, Contour};
 
@@ -32,7 +32,7 @@ impl PathCorner {
     pub fn bend_degrees(&self) -> f64 {
         180.0
             - math_helper::radians_to_degrees(
-                cs_clamp(self.to_previous.dot(self.to_next), -1.0, 1.0).acos(),
+                clamp_passing_nan(self.to_previous.dot(self.to_next), -1.0, 1.0).acos(),
             )
     }
 }
@@ -70,12 +70,12 @@ impl PathCornerSet {
 
             for point in points {
                 minimum = Vector2::new(
-                    cs_math::min_f64(minimum.x, point.x),
-                    cs_math::min_f64(minimum.y, point.y),
+                    ieee_math::min_f64(minimum.x, point.x),
+                    ieee_math::min_f64(minimum.y, point.y),
                 );
                 maximum = Vector2::new(
-                    cs_math::max_f64(maximum.x, point.x),
-                    cs_math::max_f64(maximum.y, point.y),
+                    ieee_math::max_f64(maximum.x, point.x),
+                    ieee_math::max_f64(maximum.y, point.y),
                 );
                 any_point = true;
             }
@@ -140,7 +140,7 @@ impl PathCornerSet {
 
 /// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
 /// NaN bound) so the NaN guards downstream still see it.
-fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
+fn clamp_passing_nan(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min
     } else if value > max {

@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::cs_math::max_f64;
+use vector_math::ieee_math::max_f64;
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::Vector3;
 

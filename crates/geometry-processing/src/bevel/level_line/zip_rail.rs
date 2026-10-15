@@ -3,7 +3,7 @@
 //! reading past the wrap, whether a step is a jump ([`ZipRail::is_a_jump`]) and the rail re-cut to
 //! start nearest the other's start ([`ZipRail::start_nearest`]).
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::{gap_fill, LevelLineMesh};
 
@@ -80,7 +80,7 @@ impl ZipRail {
     ) -> ZipRail {
         let apart = |p: f64| {
             let d = (p - other_start).abs() % length;
-            cs_math::min_f64(d, length - d)
+            ieee_math::min_f64(d, length - d)
         };
         let span_apart = |i: usize| {
             let (low, high) = spans[i];
@@ -97,7 +97,7 @@ impl ZipRail {
             if lapped <= high {
                 0.0
             } else {
-                cs_math::min_f64(apart(low), apart(high))
+                ieee_math::min_f64(apart(low), apart(high))
             }
         };
 

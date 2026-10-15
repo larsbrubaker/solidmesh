@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::bevel_chain_sweep::BevelSweptSection;
 use super::bevel_chain_sweep_sections::try_build_segments;
@@ -216,8 +216,8 @@ pub fn sides_agree(current: &ChainEdge, next: &ChainEdge) -> bool {
     let swapped_left = current.left_normal().dot(next.right_normal());
     let swapped_right = current.right_normal().dot(next.left_normal());
 
-    let agreeing_best = cs_math::max_f64(agreeing_left, agreeing_right);
-    let swapped_best = cs_math::max_f64(swapped_left, swapped_right);
+    let agreeing_best = ieee_math::max_f64(agreeing_left, agreeing_right);
+    let swapped_best = ieee_math::max_f64(swapped_left, swapped_right);
 
     if (agreeing_best - swapped_best).abs() > SIDE_EVIDENCE_TIE {
         return agreeing_best > swapped_best;

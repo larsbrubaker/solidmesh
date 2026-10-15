@@ -130,7 +130,8 @@ impl PolygonsExtensions for Paths64 {
         let bounds = self.get_bounds();
         curve_tolerance::for_size(
             DEFAULT_ARC_TOLERANCE,
-            vector_math::cs_math::max_f64(bounds.width(), bounds.height()) / clipper_units_per_unit,
+            vector_math::ieee_math::max_f64(bounds.width(), bounds.height())
+                / clipper_units_per_unit,
         )
     }
 

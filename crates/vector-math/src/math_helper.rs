@@ -5,7 +5,7 @@
 //! Input a function cannot handle (an out-of-range argument, an angle outside its range, an
 //! overflowing product) comes back as `Err(MathError)` for the caller to handle.
 
-use crate::cs_math::log_base2;
+use crate::ieee_math::log_base2;
 use std::fmt;
 
 /// Pi as an f64.

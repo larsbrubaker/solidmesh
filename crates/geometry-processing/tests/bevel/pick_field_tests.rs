@@ -5,11 +5,11 @@
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::{ChainField, PickField, ScalarField};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 /// A three-point open chain in a box round `centre`, with varying setbacks.
-fn random_chain(random: &mut DotNetRandom, centre: Vector3) -> Rc<ChainField> {
+fn random_chain(random: &mut SeededRandom, centre: Vector3) -> Rc<ChainField> {
     let mut points = Vec::new();
     let mut setbacks = Vec::new();
     for _ in 0..4 {
@@ -23,7 +23,7 @@ fn random_chain(random: &mut DotNetRandom, centre: Vector3) -> Rc<ChainField> {
     Rc::new(ChainField::from_polyline(&points, false, &setbacks).expect("a valid chain"))
 }
 
-fn random_point(random: &mut DotNetRandom, half: f64) -> Vector3 {
+fn random_point(random: &mut SeededRandom, half: f64) -> Vector3 {
     let x = (random.next_double() - 0.5) * 2.0 * half;
     let y = (random.next_double() - 0.5) * 2.0 * half;
     let z = (random.next_double() - 0.5) * 2.0 * half;
@@ -31,7 +31,7 @@ fn random_point(random: &mut DotNetRandom, half: f64) -> Vector3 {
 }
 
 /// Three chains far enough apart that each owns a region, near enough that their fields meet.
-fn three_chains(random: &mut DotNetRandom) -> Vec<Rc<ChainField>> {
+fn three_chains(random: &mut SeededRandom) -> Vec<Rc<ChainField>> {
     vec![
         random_chain(random, Vector3::new(-5.0, 0.0, 0.0)),
         random_chain(random, Vector3::new(0.0, 5.0, 0.0)),
@@ -59,7 +59,7 @@ fn brute_force(chains: &[Rc<ChainField>], members: &[i32], point: Vector3) -> (f
             best_chain = k;
             best_parameter = sample.parameter;
         } else {
-            runner_up = vector_math::cs_math::min_f64(runner_up, sample.value);
+            runner_up = vector_math::ieee_math::min_f64(runner_up, sample.value);
         }
     }
 
@@ -72,7 +72,7 @@ fn value(field: &dyn ScalarField, point: Vector3) -> f64 {
 
 #[test]
 fn value_chain_and_local_parameter_agree_with_brute_force() {
-    let mut random = DotNetRandom::new(20260919);
+    let mut random = SeededRandom::new(20260919);
     let chains = three_chains(&mut random);
     let members = [0, 1, 2];
     let field = pick(&chains, &members);
@@ -110,7 +110,7 @@ fn value_chain_and_local_parameter_agree_with_brute_force() {
 
 #[test]
 fn the_field_is_one_lipschitz() {
-    let mut random = DotNetRandom::new(4242);
+    let mut random = SeededRandom::new(4242);
     let field = pick(&three_chains(&mut random), &[0, 1, 2]);
 
     for _ in 0..2000 {
@@ -170,7 +170,7 @@ fn a_tie_between_chains_goes_to_the_lower_index() {
 
 #[test]
 fn exact_minima_over_a_piece_are_the_least_of_the_members() {
-    let mut random = DotNetRandom::new(777);
+    let mut random = SeededRandom::new(777);
     let chains = three_chains(&mut random);
     let field = pick(&chains, &[0, 1, 2]);
 
@@ -219,7 +219,7 @@ fn exact_minima_over_a_piece_are_the_least_of_the_members() {
 
 #[test]
 fn a_pick_of_one_answers_its_chain_to_the_bit() {
-    let mut random = DotNetRandom::new(31415);
+    let mut random = SeededRandom::new(31415);
     for _ in 0..200 {
         let chain = random_chain(&mut random, Vector3::ZERO);
         let field = PickField::of(chain.clone());
@@ -286,7 +286,7 @@ fn a_pick_of_one_answers_its_chain_to_the_bit() {
 
 #[test]
 fn value_and_chain_are_invariant_to_a_rigid_motion() {
-    let mut random = DotNetRandom::new(90210);
+    let mut random = SeededRandom::new(90210);
     let chains = three_chains(&mut random);
     let members = [0, 1, 2];
     let here = pick(&chains, &members);
@@ -348,7 +348,7 @@ fn setbacks_of(chain: &ChainField) -> Vec<f64> {
 
 #[test]
 fn a_group_ignores_every_chain_outside_it() {
-    let mut random = DotNetRandom::new(2468);
+    let mut random = SeededRandom::new(2468);
     let chains = three_chains(&mut random);
     let subset = [0, 2];
     let group = pick(&chains, &subset);

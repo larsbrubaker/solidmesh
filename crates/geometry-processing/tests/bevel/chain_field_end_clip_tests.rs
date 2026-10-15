@@ -3,7 +3,7 @@
 //! setback 1, its last end's plane through (10, 0, 0) leaning 45 degrees: `n = (1, 0, 1) / sqrt 2`.
 
 use geometry_processing::bevel::level_line::{ChainField, EndRayBound};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 const POINTS: [Vector3; 2] = [Vector3::new(0.0, 0.0, 0.0), Vector3::new(10.0, 0.0, 0.0)];
@@ -108,7 +108,7 @@ fn the_least_over_a_triangle_crossing_the_plane_is_the_clipped_least() {
 #[test]
 fn the_least_agrees_with_a_dense_sample_of_the_clipped_field() {
     let field = bounded();
-    let mut random = DotNetRandom::new(20260923);
+    let mut random = SeededRandom::new(20260923);
     let mut somewhere = || {
         let x = 8.0 + (random.next_double() * 8.0);
         let y = (random.next_double() * 6.0) - 3.0;
@@ -169,7 +169,7 @@ fn indexed_and_exhaustive_agree_on_a_bounded_field() {
         (Some(bound(4.0, first)), Some(bound(4.0, last))),
     )
     .expect("a valid chain");
-    let mut random = DotNetRandom::new(20260924);
+    let mut random = SeededRandom::new(20260924);
     let mut near = |end: Vector3| {
         let x = (random.next_double() * 8.0) - 4.0;
         let y = (random.next_double() * 8.0) - 4.0;

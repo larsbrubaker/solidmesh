@@ -5,7 +5,7 @@ use crate::rectangle_int::RectangleInt;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::{BitAnd, BitOr, Mul};
-use vector_math::cs_math::{max_f64, min_f64};
+use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::number_format::format_f64;
 use vector_math::Vector2;
 

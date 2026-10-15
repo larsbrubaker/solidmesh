@@ -14,7 +14,7 @@ use geometry_processing::bevel::level_line::edge_root::find;
 use geometry_processing::bevel::level_line::{
     BandCutResult, LevelLineMesh, LevelLineTriangle, ScalarField, VertexFieldReading, WorkError,
 };
-use vector_math::{cs_math, Matrix4X4, Vector3};
+use vector_math::{ieee_math, Matrix4X4, Vector3};
 
 /// The signed distance to a plane.
 pub struct PlaneField {
@@ -295,7 +295,7 @@ pub fn smallest_triangle_area(mesh: &LevelLineMesh) -> f64 {
             if b.is_nan() || a.is_nan() {
                 f64::NAN
             } else {
-                cs_math::min_f64(a, b)
+                ieee_math::min_f64(a, b)
             }
         })
 }
@@ -304,7 +304,7 @@ pub fn shortest_side(mesh: &LevelLineMesh) -> f64 {
     mesh.edges()
         .iter()
         .map(|e| mesh.length(e.0, e.1))
-        .fold(f64::INFINITY, cs_math::min_f64)
+        .fold(f64::INFINITY, ieee_math::min_f64)
 }
 
 /// Every point the level line stands on - its vertices, and the midpoint of each

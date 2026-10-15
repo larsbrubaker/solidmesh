@@ -4,7 +4,7 @@
 //! where the round needs them ([`rows_where_the_round_needs_them`]) and the zipper that pairs the
 //! two rails ([`spokes`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineMesh, LevelLineMeshError, OpenGapFillOpenRail, WorkError};
 use crate::bevel::float_grid;
@@ -34,7 +34,7 @@ pub fn with_stations_of(
     other: &OpenGapFillOpenRail,
     length: f64,
 ) -> Result<OpenGapFillOpenRail, LevelLineMeshError> {
-    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, length);
     let rail_count = rail.vertices.len();
     let other_count = other.parameters.len();
     let mut vertices = vec![rail.vertices[0]];
@@ -69,11 +69,11 @@ pub fn with_stations_of(
             to,
             tie,
         )?;
-        while j < other_count && other.parameters[j] <= cs_math::max_f64(from, skip_below) + tie {
+        while j < other_count && other.parameters[j] <= ieee_math::max_f64(from, skip_below) + tie {
             j += 1;
         }
 
-        while j < other_count && other.parameters[j] < cs_math::min_f64(to, skip_above) - tie {
+        while j < other_count && other.parameters[j] < ieee_math::min_f64(to, skip_above) - tie {
             let t = other.parameters[j];
             let high = rail.vertices[i + 1];
             let point = mesh.position(low)
@@ -296,8 +296,8 @@ pub fn tie_spans(
             to,
             tie,
         )?;
-        spans[i].1 = cs_math::max_f64(spans[i].1, read_from);
-        spans[i + 1].0 = cs_math::min_f64(spans[i + 1].0, read_to);
+        spans[i].1 = ieee_math::max_f64(spans[i].1, read_from);
+        spans[i + 1].0 = ieee_math::min_f64(spans[i + 1].0, read_to);
     }
 
     Ok(spans)
@@ -346,7 +346,7 @@ pub fn spokes(
     length: f64,
     together: bool,
 ) -> Result<Vec<(i32, i32)>, WorkError> {
-    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let tie = super::open_gap_fill::PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, length);
     let mut steps = Vec::new();
     let (mut a, mut b) = (0usize, 0usize);
     let left_last = left.count() as usize - 1;

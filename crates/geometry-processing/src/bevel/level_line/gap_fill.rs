@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_fill_fill::CornerFillError;
 use super::gap_fill_one_chain::fill_one_chain;
@@ -292,7 +292,7 @@ pub fn fill_within(
 
 /// How far back a rail's parameter may step on this chain and still count as standing still.
 pub fn monotone_slack(chain: &ChainField) -> f64 {
-    cs_math::max_f64(
+    ieee_math::max_f64(
         PARAMETER_TIE_RELATIVE * chain.length,
         MONOTONE_SLACK_OF_SETBACK * chain.min_setback,
     )
@@ -356,7 +356,7 @@ pub fn try_pair(
         f64::INFINITY
     };
 
-    if cs_math::min_f64(forward_backward, backward_forward) == f64::INFINITY {
+    if ieee_math::min_f64(forward_backward, backward_forward) == f64::INFINITY {
         return None;
     }
 
@@ -394,7 +394,7 @@ pub fn arc_point(p: Vector3, c: Vector3, q: Vector3, t: f64) -> Vector3 {
     } else {
         1.0
     };
-    let weight = cs_math::max_f64(0.0, (1.0 - cos_at_c) / 2.0).sqrt();
+    let weight = ieee_math::max_f64(0.0, (1.0 - cos_at_c) / 2.0).sqrt();
 
     let s = 1.0 - t;
     let wp = s * s;

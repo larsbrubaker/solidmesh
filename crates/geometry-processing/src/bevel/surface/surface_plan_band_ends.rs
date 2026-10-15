@@ -73,7 +73,7 @@ pub fn mitre_normal(arriving: Vector3, leaving: Vector3, square_to: Vector3) -> 
 /// How near the two tangent lines have to come to count as crossing, at PLAN time - where there is
 /// no pool and so no part ruler to ask: a millionth of the wider setback of the two edges.
 pub fn crosses_within(one: &SurfaceEdgePlan, other: &SurfaceEdgePlan) -> f64 {
-    vector_math::cs_math::max_f64(one.setback(), other.setback()) * 1e-6
+    vector_math::ieee_math::max_f64(one.setback(), other.setback()) * 1e-6
 }
 
 /// The same, with the two PLANS rather than their directions - which lets the band stop on the

@@ -8,7 +8,7 @@
 //! at follow insertion order, which must be the same on every run.
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, surface_ring,
@@ -115,7 +115,7 @@ pub fn the_chords_the_cap_follows(
     let mut reach = pool.near_enough();
 
     for &vertex in profile {
-        reach = cs_math::max_f64(
+        reach = ieee_math::max_f64(
             reach,
             (pool.position_of(vertex) - corner).length() + pool.near_enough(),
         );

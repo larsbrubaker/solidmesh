@@ -6,7 +6,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::surface_strip_ends;
@@ -51,13 +51,13 @@ pub fn the_shared_faces_own_sagitta(
             continue;
         }
 
-        widest = cs_math::max_f64(
+        widest = ieee_math::max_f64(
             widest,
             walk.facets[facet].crossed() / 2.0 * (turned / 4.0).tan(),
         );
     }
 
-    cs_math::max_f64(pool.near_enough(), widest)
+    ieee_math::max_f64(pool.near_enough(), widest)
 }
 
 /// The cut's ring read from the cap face round to the shared face, whichever way its own rails

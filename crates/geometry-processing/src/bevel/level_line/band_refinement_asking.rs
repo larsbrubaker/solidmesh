@@ -14,7 +14,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::band_refinement::{
     farthest_from_the_line, farthest_from_the_line3, line_points_of, nearest_to_the_line,
@@ -69,7 +69,7 @@ pub fn refine_by_asking(
 ) -> Result<(bool, i32), RefineError> {
     // A split is NOT a halving, so a generation count says nothing; the honest end of the road is
     // geometric: a triangle already smaller than the accuracy asked for cannot be improved.
-    let floor = cs_math::max_f64(4.0 * reading.snap, 1e-3 * chord_tolerance);
+    let floor = ieee_math::max_f64(4.0 * reading.snap, 1e-3 * chord_tolerance);
     let snap = reading.snap;
 
     // The mixed edge rule's memo is only good against the field it was filled for, and a
@@ -360,11 +360,11 @@ pub fn refine_by_asking(
         let value_a = reading.value_at(t.a)?;
         let value_b = reading.value_at(t.b)?;
         let value_c = reading.value_at(t.c)?;
-        let highest_corner = cs_math::max_f64(value_a, cs_math::max_f64(value_b, value_c));
+        let highest_corner = ieee_math::max_f64(value_a, ieee_math::max_f64(value_b, value_c));
 
         // The ridge has to beat BOTH thresholds, so a bound under the higher settles it without
         // the search; the search is handed that same constant threshold and compared strictly.
-        let must_beat = cs_math::max_f64(snap, highest_corner + chord_tolerance);
+        let must_beat = ieee_math::max_f64(snap, highest_corner + chord_tolerance);
         let could_ridge =
             field_bounds::greatest_over_triangle(value_a, value_b, value_c, pa, pb, pc) > must_beat;
         FieldCounters::asked_by_reaching(

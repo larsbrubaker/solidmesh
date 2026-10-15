@@ -10,7 +10,7 @@ use std::time::Instant;
 use geometry_processing::bevel::bevel_working_mesh::seam_epsilon_for_positions;
 use geometry_processing::bevel::level_line::band_gap_reading::{read_room_of_pick, ReadRoomError};
 use geometry_processing::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 
 use crate::stl_reader;
 use crate::sweep_build::{self, PickInput};
@@ -110,13 +110,13 @@ pub fn sweep_model<W: Write>(
     // set of faces for the same model and seed on every run, so "model N pick K" would name a
     // different face each time and no row of any report could ever be found again.
     let mixed = seed.wrapping_mul(397) ^ model.id;
-    let mut random = DotNetRandom::new(mixed);
+    let mut random = SeededRandom::new(mixed);
 
     // The open picks draw from a stream of their OWN so that adding them moved no closed pick: the
     // closed picks are drawn first, from the same numbers they always were, and the open ones are
     // appended after them, so "model N pick K" still names the same closed pick as in earlier
     // reports.
-    let mut open_random = DotNetRandom::new(mixed.wrapping_mul(31).wrapping_add(17));
+    let mut open_random = SeededRandom::new(mixed.wrapping_mul(31).wrapping_add(17));
     let picks = sweep_pick::picks(
         &positions,
         &indices,

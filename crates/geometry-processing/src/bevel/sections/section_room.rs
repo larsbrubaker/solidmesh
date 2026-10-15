@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_builder;
 use super::section_fan_walk::{self, EdgeAtPair};
@@ -324,7 +324,7 @@ pub fn reach_across_the_face(
         let along_the_edge = to_the_edge.cross(away).dot(normal) / divisor;
 
         if along_the_ray > 0.0 && (-1e-9..=1.0 + 1e-9).contains(&along_the_edge) {
-            nearest = cs_math::min_f64(nearest, along_the_ray);
+            nearest = ieee_math::min_f64(nearest, along_the_ray);
         }
     }
 
@@ -706,7 +706,7 @@ pub fn try_fit_edges(
         }
     }
 
-    let largest_that_fits = cs_math::max_f64(least, 0.0);
+    let largest_that_fits = ieee_math::max_f64(least, 0.0);
 
     if radius > largest_that_fits {
         let failure = BevelAdvisory::new(
@@ -752,7 +752,7 @@ pub fn try_read_vertex(
     let wedge = cosine.clamp(-1.0, 1.0).acos();
     let setback = (wedge / 2.0).tan();
 
-    let across = cs_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
+    let across = ieee_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
     let left_away = ((left_normal * cosine) - right_normal) / across;
     let right_away = ((right_normal * cosine) - left_normal) / across;
 
@@ -850,7 +850,7 @@ pub fn try_side(
         return Ok(Boundary::new(
             away,
             setback,
-            cs_math::max_f64(reach - lattice, 0.0) / setback,
+            ieee_math::max_f64(reach - lattice, 0.0) / setback,
             true,
         ));
     }
@@ -890,7 +890,7 @@ pub fn try_side(
     Ok(Boundary::new(
         along,
         setback / lean,
-        cs_math::max_f64(fold_length - lattice, 0.0) * lean / setback,
+        ieee_math::max_f64(fold_length - lattice, 0.0) * lean / setback,
         false,
     ))
 }

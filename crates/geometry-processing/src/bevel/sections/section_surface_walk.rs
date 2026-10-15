@@ -6,7 +6,7 @@
 //! of this package.
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use crate::bevel::float_grid;
 use crate::bevel::surface::SurfaceVertexPool;
@@ -145,7 +145,7 @@ pub fn grid_of(mesh: &Mesh) -> f64 {
 
     let ulp = float_grid::step_at(largest);
 
-    cs_math::max_f64(
+    ieee_math::max_f64(
         SurfaceVertexPool::weld_distance_for(&mesh.vertices),
         GRID_ULPS * ulp,
     )
@@ -154,7 +154,7 @@ pub fn grid_of(mesh: &Mesh) -> f64 {
 /// Whether two points are one, to [`LATTICE_FRACTION`] of a reach of `over`
 /// (at least one).
 pub fn is_the_same_point(one: Vector3, other: Vector3, over: f64) -> bool {
-    (one - other).length() <= LATTICE_FRACTION * cs_math::max_f64(1.0, over)
+    (one - other).length() <= LATTICE_FRACTION * ieee_math::max_f64(1.0, over)
 }
 
 /// The point `parameter` of the way along `edge` from the graph's vertex 0.

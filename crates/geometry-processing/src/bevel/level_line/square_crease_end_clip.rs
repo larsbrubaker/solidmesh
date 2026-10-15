@@ -9,7 +9,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{end_face_sense, pick_validation, RoomSource};
 
@@ -178,7 +178,7 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
             {
                 if let Some(&far) = shared.iter().find(|&&c| c != end) {
                     crease_length =
-                        cs_math::min_f64(crease_length, (positions[far as usize] - v).length());
+                        ieee_math::min_f64(crease_length, (positions[far as usize] - v).length());
                 }
             }
         }

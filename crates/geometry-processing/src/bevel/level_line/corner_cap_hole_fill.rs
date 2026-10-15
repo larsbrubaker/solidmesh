@@ -17,7 +17,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     corner_fill, corner_mitre_patch, hole_fill, ChainField, CornerCapLastRow, GapFillRefusal,
@@ -157,7 +157,7 @@ type NearFace = (Vector3, Vector3, Vector3, Vector3, Vector3);
 type FacePlane = (Vector3, Vector3);
 
 /// NaN sorts below every number.
-fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
+fn nan_first_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
         (true, false) => std::cmp::Ordering::Less,
@@ -254,7 +254,7 @@ pub fn bulging_fill_vertex(
             if x.is_nan() || least.is_nan() {
                 f64::NAN
             } else {
-                cs_math::min_f64(least, x)
+                ieee_math::min_f64(least, x)
             }
         });
         // OrderBy then ThenBy, stable: the first of the least (key1, key2) pair.
@@ -268,7 +268,9 @@ pub fn bulging_fill_vertex(
             let key2 = plane.1.dot(p - plane.0).abs();
             let better = match best {
                 None => true,
-                Some((_, b1, b2)) => cs_compare(key1, b1).then(cs_compare(key2, b2)).is_lt(),
+                Some((_, b1, b2)) => nan_first_compare(key1, b1)
+                    .then(nan_first_compare(key2, b2))
+                    .is_lt(),
             };
             if better {
                 best = Some((plane, key1, key2));
@@ -298,11 +300,12 @@ pub fn bulging_fill_vertex(
             // in front of a face is positive; a convex row's fill must not stand in front, a
             // concave row's must not stand behind
             let sign = if row.concave { -1.0 } else { 1.0 };
-            let by_row = cs_math::max_f64(sign * a.1.dot(point - a.0), sign * b.1.dot(point - b.0));
+            let by_row =
+                ieee_math::max_f64(sign * a.1.dot(point - a.0), sign * b.1.dot(point - b.0));
             through = if mixed {
-                cs_math::min_f64(through, by_row)
+                ieee_math::min_f64(through, by_row)
             } else {
-                cs_math::max_f64(through, by_row)
+                ieee_math::max_f64(through, by_row)
             };
         }
 
@@ -358,14 +361,14 @@ pub fn inside_the_creases(
     let first_weight = if at_first.is_empty() {
         0.0
     } else if both_ends {
-        cs_math::max_f64(0.0, 1.0 - (2.0 * from_first))
+        ieee_math::max_f64(0.0, 1.0 - (2.0 * from_first))
     } else {
         1.0 - from_first
     };
     let last_weight = if at_last.is_empty() {
         0.0
     } else if both_ends {
-        cs_math::max_f64(0.0, (2.0 * from_first) - 1.0)
+        ieee_math::max_f64(0.0, (2.0 * from_first) - 1.0)
     } else {
         from_first
     };
@@ -450,7 +453,7 @@ pub fn on_the_ball(
     // Relative to the coordinates' size as well as the radius: the rows' centres are sums of
     // float-rounded positions, so a corner far from the origin carries errors that grow with its
     // distance from it.
-    let tolerance = 1e-6 * cs_math::max_f64(radius, centre.length());
+    let tolerance = 1e-6 * ieee_math::max_f64(radius, centre.length());
     if !(radius > tolerance)
         || rows.iter().any(|row| {
             (row.centre - centre).length() > tolerance || (row.radius - radius).abs() > tolerance
@@ -555,7 +558,7 @@ pub fn fill_one(
     // OrderBy(...).First(): the first of the least, NaN least.
     let mut v = corners[0];
     for &c in &corners[1..] {
-        if cs_compare((c - mean).length_squared(), (v - mean).length_squared())
+        if nan_first_compare((c - mean).length_squared(), (v - mean).length_squared())
             == std::cmp::Ordering::Less
         {
             v = c;

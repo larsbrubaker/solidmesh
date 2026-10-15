@@ -3,7 +3,7 @@
 //! names a radius the tool's back reach has to stay inside; where it does not, the sweep is
 //! retried at the depth the turn allows.
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::bevel_chain_sweep_mesh::SweptSegment;
 use crate::topology::ChainEdge;
@@ -27,7 +27,7 @@ pub fn back_depth_the_turn_allows(
     back_reach: f64,
     measured_turn_radius: f64,
 ) -> f64 {
-    let allowed = cs_math::min_f64(turn_radius(chain, is_closed), measured_turn_radius)
+    let allowed = ieee_math::min_f64(turn_radius(chain, is_closed), measured_turn_radius)
         * BACK_DEPTH_MARGIN_OF_THE_TURN;
 
     if allowed > 0.0 && back_reach > allowed {
@@ -62,7 +62,7 @@ pub fn measure_back_reach(swept: &[SweptSegment]) -> f64 {
 
     for segment in swept {
         for point in &segment.profile {
-            reach = cs_math::max_f64(reach, point.y);
+            reach = ieee_math::max_f64(reach, point.y);
         }
     }
 
@@ -89,12 +89,12 @@ pub fn turn_radius(chain: &[ChainEdge], is_closed: bool) -> f64 {
             continue;
         }
 
-        let span = cs_math::min_f64(
+        let span = ieee_math::min_f64(
             (before.to() - before.from()).length(),
             (after.to() - after.from()).length(),
         );
 
-        tightest = cs_math::min_f64(tightest, span / turn);
+        tightest = ieee_math::min_f64(tightest, span / turn);
     }
 
     tightest
@@ -119,9 +119,9 @@ pub fn turn_radius_of_the_segments(swept: &[SweptSegment], is_closed: bool) -> f
             continue;
         }
 
-        tightest = cs_math::min_f64(
+        tightest = ieee_math::min_f64(
             tightest,
-            cs_math::min_f64(before.length, after.length) / turn,
+            ieee_math::min_f64(before.length, after.length) / turn,
         );
     }
 

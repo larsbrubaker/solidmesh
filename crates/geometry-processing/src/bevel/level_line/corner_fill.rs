@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use std::rc::Rc;
 
@@ -21,7 +21,7 @@ use super::{
 
 /// True when two positions are the same point, to a billionth of their magnitude (at least 1).
 pub fn same(a: Vector3, b: Vector3) -> bool {
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, cs_math::max_f64(a.length(), b.length()));
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, ieee_math::max_f64(a.length(), b.length()));
     (a - b).length_squared() <= tolerance * tolerance
 }
 
@@ -175,7 +175,7 @@ pub fn ties(
 /// by it, and the band's corner-aware loop test counts a tie vertex as owned by every chain that
 /// ties there by it - one rule, so the two halves never disagree about which vertex is whose.
 pub fn fields_tie(a: &ChainField, b: &ChainField, p: Vector3) -> Result<bool, WorkError> {
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, cs_math::max_f64(a.length, b.length));
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, ieee_math::max_f64(a.length, b.length));
     Ok((a.evaluate(p)?.value - b.evaluate(p)?.value).abs() <= tolerance)
 }
 
@@ -217,7 +217,7 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
     let p = parameters[0];
     let position = mesh.position(vertices[0]);
     let mut across = length - p;
-    let tie = 1e-9 * cs_math::max_f64(1.0, length);
+    let tie = 1e-9 * ieee_math::max_f64(1.0, length);
     if ((position - chain.point_at(p)).length() - (position - chain.point_at(across)).length())
         .abs()
         > tie
@@ -229,8 +229,8 @@ pub fn close_round_the_seam(mesh: &LevelLineMesh, chain: &ChainField, piece: &mu
         };
     }
 
-    let low = cs_math::min_f64(p, across);
-    let high = cs_math::max_f64(p, across);
+    let low = ieee_math::min_f64(p, across);
+    let high = ieee_math::max_f64(p, across);
     parameters[0] = if travel > 0.0 { low } else { high };
     vertices.push(vertices[0]);
     parameters.push(if travel > 0.0 { high } else { low });

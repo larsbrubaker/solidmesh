@@ -18,7 +18,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::convex_cell_bound::{self, EndPlaneAt};
 use super::{FieldCounters, FieldMaximum, FieldSample, LevelLineWork, WorkError};
@@ -75,7 +75,7 @@ pub fn over_segment(
 
         // The field itself is 1-Lipschitz, so a sample's own VALUE plus the reach to the farthest
         // point of the piece bounds it - no setback term of any kind.
-        let mut bound = cs_math::min_f64(at_p.value, at_q.value) + span;
+        let mut bound = ieee_math::min_f64(at_p.value, at_q.value) + span;
         bound = sharpen(
             bound,
             convex_cell_bound::over_segment(&at_p, &at_q, p, q, end_plane_at),
@@ -130,10 +130,10 @@ pub fn over_triangle(
 
             let mut farthest = 0.0;
             for corner in corners {
-                farthest = cs_math::max_f64(farthest, (corner - corners[i]).length());
+                farthest = ieee_math::max_f64(farthest, (corner - corners[i]).length());
             }
 
-            bound = cs_math::min_f64(bound, samples[i].value + farthest);
+            bound = ieee_math::min_f64(bound, samples[i].value + farthest);
         }
 
         if found.best > stop_above {
@@ -152,7 +152,7 @@ pub fn over_triangle(
         );
         bound = sharpen(bound, convex, found.best + tolerance, depth)?;
         if let Some(extra_bound) = extra_bound {
-            bound = cs_math::min_f64(
+            bound = ieee_math::min_f64(
                 bound,
                 extra_bound(&samples[0], &samples[1], &samples[2], p, q, r)?,
             );
@@ -163,9 +163,9 @@ pub fn over_triangle(
             // The "no search needed" question, asked of the WHOLE triangle: three corners reading
             // one chain, and a convex bound that cannot rise above the corners, would together say
             // the greatest value stands at a corner and this search need never have been made.
-            let corner_max = cs_math::max_f64(
+            let corner_max = ieee_math::max_f64(
                 samples[0].value,
-                cs_math::max_f64(samples[1].value, samples[2].value),
+                ieee_math::max_f64(samples[1].value, samples[2].value),
             );
             FieldCounters::note_root_cell(
                 samples[0].chain == samples[1].chain && samples[1].chain == samples[2].chain,
@@ -263,7 +263,7 @@ pub fn sharpen(lipschitz: f64, convex: f64, retire_at: f64, depth: i32) -> Resul
     }
 
     LevelLineWork::charge(1)?;
-    Ok(cs_math::min_f64(lipschitz, convex))
+    Ok(ieee_math::min_f64(lipschitz, convex))
 }
 
 /// A further SOUND upper bound on a triangle cell's greatest value,
@@ -316,7 +316,7 @@ pub const MAX_DEPTH: i32 = 60;
 /// equal - so a tie between two edges of the same piece is settled by the order they are written
 /// in and not by which one rounding made a bit longer.
 pub fn not_shorter(length: f64, other: f64) -> bool {
-    length >= other - (1e-12 * cs_math::max_f64(length.abs(), other.abs()))
+    length >= other - (1e-12 * ieee_math::max_f64(length.abs(), other.abs()))
 }
 
 impl BoundedMaximumCanonicalMaximum {

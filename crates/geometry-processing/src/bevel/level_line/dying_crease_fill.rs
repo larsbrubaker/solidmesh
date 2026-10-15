@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::open_gap_fill;
 use super::open_gap_fill_fill::{self, OpenFillEnds};
@@ -142,13 +142,13 @@ pub fn extreme(
     end_vertex: Vector3,
     greatest: bool,
 ) -> i32 {
-    let tie = open_gap_fill::PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, length);
+    let tie = open_gap_fill::PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, length);
     let mut best = extended[0];
     for &value in &extended[1..] {
         best = if greatest {
-            cs_math::max_f64(best, value)
+            ieee_math::max_f64(best, value)
         } else {
-            cs_math::min_f64(best, value)
+            ieee_math::min_f64(best, value)
         };
     }
 

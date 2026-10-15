@@ -4,7 +4,7 @@
 //! ([`start_closed_chains_at_a_corner`]) and the build's funnel ([`build_unvalidated`]); the
 //! build proper is `band_gap_build_within.rs` and the public builds `band_gap_entry_points.rs`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -261,7 +261,7 @@ pub fn chord_tolerance_of(size: f64, chord_tolerance: f64) -> f64 {
 /// needle (`LevelLineMesh::needle_floor`). Named so a measurement can read the very floor a build
 /// uses.
 pub fn needle_floor_of(snap: f64, tolerance: f64) -> f64 {
-    cs_math::max_f64(4.0 * snap, 1e-3 * tolerance)
+    ieee_math::max_f64(4.0 * snap, 1e-3 * tolerance)
 }
 
 /// Each closed chain holding a corner of the pick, rotated to

@@ -2,7 +2,7 @@
 //! its bounds is read from: built once from the chain's points and setbacks, and thereafter only
 //! visited, so the whole of "which segments could still beat what I have" lives in one place.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 /// One segment per leaf: the convex search over a segment costs hundreds of closest-point
 /// evaluations, so bounding EVERY segment before searching it is worth the extra nodes many times
@@ -44,7 +44,7 @@ pub fn build(
 /// The least distance between two axis-aligned boxes; zero when they touch or overlap.
 pub fn box_gap(a_min: Vector3, a_max: Vector3, b_min: Vector3, b_max: Vector3) -> f64 {
     let gap = |a_low: f64, a_high: f64, b_low: f64, b_high: f64| {
-        cs_math::max_f64(0.0, cs_math::max_f64(a_low - b_high, b_low - a_high))
+        ieee_math::max_f64(0.0, ieee_math::max_f64(a_low - b_high, b_low - a_high))
     };
     let dx = gap(a_min.x, a_max.x, b_min.x, b_max.x);
     let dy = gap(a_min.y, a_max.y, b_min.y, b_max.y);
@@ -70,7 +70,8 @@ fn add_segment_node(
         let to = points[next];
         min = Vector3::component_min(min, Vector3::component_min(from, to));
         max = Vector3::component_max(max, Vector3::component_max(from, to));
-        max_setback = cs_math::max_f64(max_setback, cs_math::max_f64(setbacks[i], setbacks[next]));
+        max_setback =
+            ieee_math::max_f64(max_setback, ieee_math::max_f64(setbacks[i], setbacks[next]));
         if let Some(Some(reaches)) = also_reaches.map(|all| &all[i]) {
             for &reach in reaches {
                 min = Vector3::component_min(min, reach);

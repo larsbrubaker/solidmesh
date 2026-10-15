@@ -7,7 +7,7 @@
 use std::cmp::Ordering;
 use std::rc::Rc;
 
-use vector_math::{cs_math, cs_sort, Vector3};
+use vector_math::{fixed_tie_sort, ieee_math, Vector3};
 
 use super::surface_run_out_column_ends;
 use super::{surface_mixed_corner_patch, surface_mixed_corner_run_out_strip};
@@ -54,7 +54,7 @@ pub fn try_scallop_point(
     // Squared as `x * x`, which is the correctly rounded square.
     let left_over = (2.0 * corner.size) - out_of_the_axis;
     let under_the_cap = corner.size
-        - cs_math::max_f64(0.0, (corner.size * corner.size) - (left_over * left_over)).sqrt();
+        - ieee_math::max_f64(0.0, (corner.size * corner.size) - (left_over * left_over)).sqrt();
 
     Some(
         corner.outer_rail_centre
@@ -155,7 +155,7 @@ pub fn try_turns_past_the_bead(
         }
     }
 
-    let hair = cs_math::max_f64(
+    let hair = ieee_math::max_f64(
         step * 1e-6,
         surface_run_out_column_ends::too_close_to_the_end(near_enough, corner.size),
     );
@@ -177,7 +177,7 @@ pub fn try_turns_past_the_bead(
     asking.push((clears, true));
 
     // An introsort by `f64` order: the one deterministic order every run lands tied turns in.
-    cs_sort::introspective_sort(&mut asking, &mut |first, second| {
+    fixed_tie_sort::introspective_sort(&mut asking, &mut |first, second| {
         compare_turns(first.0, second.0)
     });
 

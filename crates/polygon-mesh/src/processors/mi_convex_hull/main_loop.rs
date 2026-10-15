@@ -253,7 +253,7 @@ impl ConvexHullAlgorithm {
         let (u_offset, v_offset) = (u * DIM, v * DIM);
         for i in 0..DIM {
             let (x, y) = (self.positions[u_offset + i], self.positions[v_offset + i]);
-            let comp = cs_compare(x, y);
+            let comp = nan_first_compare(x, y);
             if comp != std::cmp::Ordering::Equal {
                 return comp;
             }
@@ -343,7 +343,7 @@ impl ConvexHullAlgorithm {
 }
 
 /// A total order with NaN below everything, NaN equal to NaN.
-fn cs_compare(x: f64, y: f64) -> std::cmp::Ordering {
+fn nan_first_compare(x: f64, y: f64) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     if x < y {
         Ordering::Less

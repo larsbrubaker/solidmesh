@@ -6,7 +6,7 @@
 
 use std::cell::{Cell, RefCell};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_mixed_corner_run_out;
 use super::{
@@ -483,7 +483,7 @@ impl SurfaceCrossingAtTheMitre {
             return Err(misses(the_mitre_corner));
         };
 
-        let clears = cs_math::min_f64(
+        let clears = ieee_math::min_f64(
             meets_the_wall,
             corner.turn_radians() + surface_mixed_corner_run_out::clears_the_wall(),
         );

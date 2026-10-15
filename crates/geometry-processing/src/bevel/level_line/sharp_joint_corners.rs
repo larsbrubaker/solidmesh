@@ -8,13 +8,13 @@
 //! whole parameter jump, and the strip fanned the back round's rows from the wrong end of the
 //! chord.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineMesh};
 
 /// The noise allowance a corner is read against at `at`, on a face of size `scale`.
 pub fn off_the_line(at: Vector3, scale: f64) -> f64 {
-    1e-6 * cs_math::max_f64(cs_math::max_f64(1.0, scale), at.length())
+    1e-6 * ieee_math::max_f64(ieee_math::max_f64(1.0, scale), at.length())
 }
 
 /// True when `triangle` lies in the plane of the joint's two legs (`legs_plane`, a unit normal)
@@ -41,9 +41,9 @@ pub fn holds(mesh: &LevelLineMesh, triangle: i32, point: Vector3, legs_plane: Ve
         return false;
     }
 
-    let scale = cs_math::max_f64(
+    let scale = ieee_math::max_f64(
         (b - a).length(),
-        cs_math::max_f64((c - b).length(), (a - c).length()),
+        ieee_math::max_f64((c - b).length(), (a - c).length()),
     );
     if (point - a).dot(normal).abs() > off_the_line(point, scale) {
         return false;
@@ -62,7 +62,7 @@ pub fn holds(mesh: &LevelLineMesh, triangle: i32, point: Vector3, legs_plane: Ve
 /// in the plane of its two legs, standing `setback` from each leg's line, with that plane's unit
 /// normal; `None` where the legs do not turn or reverse.
 pub fn the_inside_corner(chain: &ChainField, at: f64, setback: f64) -> Option<(Vector3, Vector3)> {
-    let step = 1e-3 * cs_math::max_f64(setback, 1e-9);
+    let step = 1e-3 * ieee_math::max_f64(setback, 1e-9);
     let apex = chain.point_at(at);
     let back = (chain.point_at(chain.wrapped(at - step)) - apex).get_normal();
     let ahead = (chain.point_at(chain.wrapped(at + step)) - apex).get_normal();

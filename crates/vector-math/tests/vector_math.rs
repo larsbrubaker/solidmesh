@@ -11,14 +11,14 @@ mod parallel_inline_on_marked_thread_tests;
 mod parallel_sequential_equivalence_tests;
 #[path = "vector_math/rust_only_bvh_tests.rs"]
 mod rust_only_bvh_tests;
-#[path = "vector_math/rust_only_cs_sort_tests.rs"]
-mod rust_only_cs_sort_tests;
-#[path = "vector_math/rust_only_dotnet_random_tests.rs"]
-mod rust_only_dotnet_random_tests;
+#[path = "vector_math/rust_only_fixed_tie_sort_tests.rs"]
+mod rust_only_fixed_tie_sort_tests;
 #[path = "vector_math/rust_only_matrix_tests.rs"]
 mod rust_only_matrix_tests;
 #[path = "vector_math/rust_only_number_format_tests.rs"]
 mod rust_only_number_format_tests;
+#[path = "vector_math/rust_only_seeded_random_tests.rs"]
+mod rust_only_seeded_random_tests;
 #[path = "vector_math/vector2_tests.rs"]
 mod vector2_tests;
 #[path = "vector_math/vector3_tests.rs"]

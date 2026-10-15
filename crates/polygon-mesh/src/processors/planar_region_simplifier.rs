@@ -28,8 +28,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use manifold_rust::linalg::Vec2;
 use manifold_rust::polygon::triangulate_idx;
 use manifold_rust::types::{PolyVert, PolygonsIdx};
-use vector_math::cs_math::max_f64;
-use vector_math::cs_sort::introspective_sort;
+use vector_math::fixed_tie_sort::introspective_sort;
+use vector_math::ieee_math::max_f64;
 use vector_math::Vector3;
 
 use crate::Mesh;
@@ -141,7 +141,9 @@ pub(crate) fn simplify_counting_work(
 
     // Seed from the largest faces first: their normals carry the least rounding noise.
     let mut order: Vec<usize> = (0..face_count).collect();
-    introspective_sort(&mut order, &mut |&a, &b| cs_compare(areas[b], areas[a]));
+    introspective_sort(&mut order, &mut |&a, &b| {
+        nan_first_compare(areas[b], areas[a])
+    });
 
     // Degenerate slivers inside a flat wall have no normal to compare; they join on distance.
     let degenerate_area = distance_tolerance * distance_tolerance;
@@ -307,7 +309,7 @@ fn next(h: usize) -> usize {
 }
 
 /// NaN sorts below every number and equal to itself.
-fn cs_compare(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     match a.partial_cmp(&b) {
         Some(ordering) => ordering,
         None => match (a.is_nan(), b.is_nan()) {

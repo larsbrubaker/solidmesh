@@ -15,7 +15,7 @@ use indexmap::IndexSet;
 use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use std::collections::HashMap;
-use vector_math::{cs_math, Matrix4X4, Vector3, Vector4};
+use vector_math::{ieee_math, Matrix4X4, Vector3, Vector4};
 
 use super::{bevel_shadow_body, bevel_working_mesh};
 
@@ -141,7 +141,7 @@ pub fn clear_of_the_plane(
 pub fn standing_on(obstruction: &Obstruction) -> f64 {
     let reach_from_origin =
         obstruction.origin.length() + obstruction.along_length + obstruction.setback;
-    cs_math::max_f64(
+    ieee_math::max_f64(
         obstruction.planar_within,
         reach_from_origin * IN_FRONT_OF_THE_FACE,
     )
@@ -234,7 +234,7 @@ pub fn build(
                 .collect();
 
             for &vertex in &polygon {
-                highest = cs_math::max_f64(
+                highest = ieee_math::max_f64(
                     highest,
                     obstruction.plane_normal.dot(vertex) - obstruction.plane_distance,
                 );

@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use vector_math::cs_sort::introspective_sort;
+use vector_math::fixed_tie_sort::introspective_sort;
 
 use super::surface_band_runs_off_the_face_beyond::{consumes_the_face_to_its_rim, BandSpan};
 use super::{
@@ -144,7 +144,7 @@ pub fn continuations_along(
     introspective_sort(
         &mut continuations,
         &mut |first: &Vec<i32>, second: &Vec<i32>| {
-            cs_compare(
+            nan_first_compare(
                 pool.position_of(first[0]).dot(direction),
                 pool.position_of(second[0]).dot(direction),
             )
@@ -309,12 +309,12 @@ fn runs_on(
 
     for group in &mut groups {
         introspective_sort(group, &mut |&first: &i32, &second: &i32| {
-            cs_compare(along(first), along(second))
+            nan_first_compare(along(first), along(second))
         });
     }
 
     introspective_sort(&mut groups, &mut |first: &Vec<i32>, second: &Vec<i32>| {
-        cs_compare(along(first[0]), along(second[0]))
+        nan_first_compare(along(first[0]), along(second[0]))
     });
 
     groups
@@ -364,7 +364,7 @@ fn one_station_per_pooled_point(
 }
 
 /// A total order on doubles that puts a NaN before every number, so a NaN cannot break the sort.
-fn cs_compare(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Less,

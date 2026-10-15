@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
@@ -362,7 +362,7 @@ pub fn try_rail(
 /// vertex of it reads the same raw parameter.
 pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
     let length = chain.length;
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, length);
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, length);
     if parameter > tolerance && parameter < length - tolerance {
         return parameter;
     }
@@ -417,7 +417,7 @@ pub fn arcs(
     meets_on_the_crease: bool,
 ) -> Result<Vec<Vec<i32>>, super::WorkError> {
     let mut arcs = Vec::new();
-    let tie = PARAMETER_TIE_RELATIVE * cs_math::max_f64(1.0, chain.length);
+    let tie = PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, chain.length);
     let left_span = open_gap_fill_stations::tie_spans(mesh, chain, left, tie)?;
     let right_span = open_gap_fill_stations::tie_spans(mesh, chain, right, tie)?;
     let row_length = (segments + 1) as usize;
@@ -491,7 +491,7 @@ pub fn arcs(
             && !rows_on_the_ray
             && (mean < 0.0 || mean > chain.length)
             && (q - p).length()
-                < SHORT_PAST_END_SPOKE * cs_math::min_f64((p - c).length(), (q - c).length())
+                < SHORT_PAST_END_SPOKE * ieee_math::min_f64((p - c).length(), (q - c).length())
         {
             let mut straight = vec![b; row_length];
             straight[0] = a;

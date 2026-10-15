@@ -194,7 +194,7 @@ impl SurfaceStripEndsOnTheHull {
     ) -> Vec<SurfaceStripEndsOnTheHullSupportingPlane> {
         let mut supporting = Vec::new();
         let mut seen: HashSet<(i64, i64, i64, i64)> = HashSet::new();
-        let step = vector_math::cs_math::max_f64(near, 1e-9);
+        let step = vector_math::ieee_math::max_f64(near, 1e-9);
         // Banker's rounding to the nearest step; `as` saturates a reading too large for an `i64`,
         // so even that gets a key instead of an undefined one.
         let key = |reading: f64| (reading / step).round_ties_even() as i64;
@@ -397,7 +397,7 @@ impl SurfaceStripEndsOnTheHull {
                     continue;
                 }
 
-                cut_back_by = vector_math::cs_math::max_f64(cut_back_by, back);
+                cut_back_by = vector_math::ieee_math::max_f64(cut_back_by, back);
                 tied[rail].push(plane);
             }
 

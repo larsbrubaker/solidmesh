@@ -9,7 +9,7 @@
 /// wedge and the ball here rather than building a second solid some other way.
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, Matrix4X4};
+use vector_math::{ieee_math, Matrix4X4};
 
 use super::bevel_chain_sweep_mesh::build_mesh;
 use super::bevel_chain_sweep_rings::try_build_rings;
@@ -183,7 +183,7 @@ fn try_create_at_depth(
             if bound.is_infinite() {
                 bound
             } else {
-                cs_math::min_f64(bound, (piece.to() - piece.from()).length() / 2.0)
+                ieee_math::min_f64(bound, (piece.to() - piece.from()).length() / 2.0)
             }
         };
 

@@ -593,7 +593,7 @@ fn world_view_orthographic_projection_tests() {
     assert!(world
         .eye_position()
         .equals_within(Vector3::UNIT_Z * 7.0, 1e-3));
-    world.calculate_orthogrphic_matrix_off_center_with_viewspace_height(
+    world.calculate_orthographic_matrix_off_center_with_viewspace_height(
         680.0, 240.0, -200.0, 128.0, 5.0, 55.0,
     );
     assert!(world

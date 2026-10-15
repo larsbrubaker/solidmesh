@@ -254,7 +254,7 @@ pub fn carry_weight(
             } else {
                 0.0
             };
-            away_from_joints = vector_math::cs_math::min_f64(away_from_joints, weight);
+            away_from_joints = vector_math::ieee_math::min_f64(away_from_joints, weight);
             k += 1;
         }
     }

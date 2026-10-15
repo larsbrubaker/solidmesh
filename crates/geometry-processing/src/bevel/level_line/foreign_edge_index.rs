@@ -5,7 +5,7 @@
 //! ([`ForeignEdgeIndex::over`]) and the nearest-first search
 //! ([`ForeignEdgeIndex::least_approach`], [`ForeignEdgeIndex::search`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{foreign_room_counters, segment_box_tree, ChainField, WorkError};
 
@@ -251,7 +251,7 @@ impl ForeignEdgeIndex {
 
                 // Math.Min and not a comparison, so a NaN approach carries through exactly as the
                 // unindexed reading's least does.
-                *best = cs_math::min_f64(*best, approach);
+                *best = ieee_math::min_f64(*best, approach);
             }
 
             return Ok(());

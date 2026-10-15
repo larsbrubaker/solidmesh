@@ -5,7 +5,7 @@
 //! in the bisector ([`slid_profile`]); the fold and shared side the section ends on
 //! ([`try_the_fold`], [`try_the_shared_side`]); and the corner's construction ([`try_build`]).
 
-use vector_math::{cs_math, math_helper, Vector3};
+use vector_math::{ieee_math, math_helper, Vector3};
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 
@@ -176,7 +176,7 @@ pub fn away_in_the_wall(edge: &ChainEdge, wall_on_the_left: bool, cosine: f64) -
     } else {
         (edge.right_normal(), edge.left_normal())
     };
-    let across = cs_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
+    let across = ieee_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
 
     ((wall.get_normal() * cosine) - flat.get_normal()) / across
 }
@@ -264,7 +264,7 @@ pub fn try_the_fold(
     if arriving_lean < SAME_TO_WITHIN
         || leaving_lean < SAME_TO_WITHIN
         || ((setback / arriving_lean) - (setback / leaving_lean)).abs()
-            > SAME_WEDGE_TO_WITHIN * cs_math::max_f64(1.0, setback)
+            > SAME_WEDGE_TO_WITHIN * ieee_math::max_f64(1.0, setback)
     {
         return Err(not_supported());
     }
@@ -441,7 +441,7 @@ pub fn try_build(
     let mut apart = 0.0;
 
     for k in 0..points {
-        apart = cs_math::max_f64(apart, (drawn[k] - seen_from_the_other_side[k]).length());
+        apart = ieee_math::max_f64(apart, (drawn[k] - seen_from_the_other_side[k]).length());
     }
 
     if apart > PROFILES_MEET_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS * radius {

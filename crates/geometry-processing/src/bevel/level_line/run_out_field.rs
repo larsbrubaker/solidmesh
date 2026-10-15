@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     ChainDistanceField, CreaseRunOut, FieldMaximum, FieldMinimum, LevelLineWork, ScalarField,
@@ -144,7 +144,7 @@ impl RunOutField {
         for sample in kept {
             match profile.last_mut() {
                 Some(last) if sample.0 - last.0 <= hair => {
-                    *last = (last.0, cs_math::max_f64(last.1, sample.1));
+                    *last = (last.0, ieee_math::max_f64(last.1, sample.1));
                 }
                 _ => profile.push(sample),
             }
@@ -182,7 +182,7 @@ impl RunOutField {
             corner,
             direction,
             reach,
-            cs_math::min_f64(slope, MAX_SLOPE),
+            ieee_math::min_f64(slope, MAX_SLOPE),
             width,
             &lines,
         )
@@ -223,9 +223,9 @@ impl RunOutField {
         } else {
             ((x * x) + (off * off)).sqrt()
         };
-        let mut value = cs_math::max_f64(cs_math::max_f64(cone, off - self.width), -along);
+        let mut value = ieee_math::max_f64(ieee_math::max_f64(cone, off - self.width), -along);
         for &(a, b, line_norm) in &self.lines {
-            value = cs_math::max_f64(value, (off - a - (b * along)) / line_norm);
+            value = ieee_math::max_f64(value, (off - a - (b * along)) / line_norm);
         }
 
         value
@@ -337,7 +337,7 @@ impl ChainDistanceField for RunOutField {
     /// `reach / 2 + m` about the centre and radius `slope (reach + m) + m norm`; the ball through
     /// its rims holds it, and the hull lines and the width cap only shrink it further.
     fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {
-        let m = cs_math::max_f64(margin, 0.0);
+        let m = ieee_math::max_f64(margin, 0.0);
         let half_length = (self.reach / 2.0) + m;
         let rim = (self.slope * (self.reach + m)) + (m * self.norm);
         let radius = ((half_length * half_length) + (rim * rim)).sqrt();

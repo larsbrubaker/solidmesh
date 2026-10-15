@@ -6,7 +6,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::cs_math::{max_f32, min_f32};
+use vector_math::ieee_math::{max_f32, min_f32};
 use vector_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Float};
 
 /// How many single-precision steps of the hit distance a hit may fall outside a triangle and
@@ -31,7 +31,7 @@ pub(crate) struct TriangleProjection {
 
 /// A total order on doubles with NaN below everything, so a NaN normal component never wins
 /// the major axis over a number.
-fn cs_compare(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Less,
@@ -58,7 +58,8 @@ impl TriangleProjection {
         ];
         let mut major_axis = 0;
         for axis in 1..3 {
-            if cs_compare(normal_lengths[axis], normal_lengths[major_axis]) != Ordering::Less {
+            if nan_first_compare(normal_lengths[axis], normal_lengths[major_axis]) != Ordering::Less
+            {
                 major_axis = axis;
             }
         }

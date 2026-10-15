@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 
 use indexmap::IndexMap;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector2, Vector3};
+use vector_math::{ieee_math, Vector2, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{is_the_same_point, normal_of, pair_key, JOIN_ITERATIONS};
@@ -297,7 +297,7 @@ pub fn place(
     let square = Vector2::new(-unit.y, unit.x);
     let x =
         ((from_one * from_one) - (from_other * from_other) + (length * length)) / (2.0 * length);
-    let y = cs_math::max_f64(0.0, (from_one * from_one) - (x * x)).sqrt();
+    let y = ieee_math::max_f64(0.0, (from_one * from_one) - (x * x)).sqrt();
     let side = (away - one).dot(square);
     // Zero counts with the positive side.
     let side_of_away_is_not_negative = !(side < 0.0);

@@ -16,7 +16,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::band_refinement::{refine, RefineError, RefineOptions};
 use super::band_room::REFERENCE_SIZE;
@@ -104,7 +104,7 @@ pub fn give_the_side_a_witness(
 
     update_tally(|tally| tally.entered += 1);
     let snap = reading.snap;
-    let tolerance = cs_math::max_f64(size * WITNESS_ACCURACY, snap);
+    let tolerance = ieee_math::max_f64(size * WITNESS_ACCURACY, snap);
     if !(tolerance > 0.0) {
         // A search needs a positive accuracy; with no size and no snap to take one from there is
         // nothing to decide either.
@@ -226,9 +226,9 @@ pub fn triangle_holding(mesh: &LevelLineMesh, triangles: &[i32], point: Vector3)
         if here < nearest {
             nearest = here;
             best = triangle;
-            best_size = cs_math::max_f64(
+            best_size = ieee_math::max_f64(
                 (b - a).length(),
-                cs_math::max_f64((c - b).length(), (a - c).length()),
+                ieee_math::max_f64((c - b).length(), (a - c).length()),
             );
         }
     }

@@ -5,7 +5,7 @@
 use geometry_processing::bevel::level_line::fillet_arc::{carry_weight, tangent_at};
 use geometry_processing::bevel::level_line::fillet_arc_rows::{along_the_chain, build};
 use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 #[test]
 fn a_row_straddling_a_mitre_evenly_keeps_the_mean_drawing() {
@@ -134,5 +134,5 @@ fn gap(a: &[Vector3], b: &[Vector3]) -> f64 {
     a.iter()
         .zip(b)
         .map(|(p, q)| (*p - *q).length())
-        .fold(f64::NEG_INFINITY, cs_math::max_f64)
+        .fold(f64::NEG_INFINITY, ieee_math::max_f64)
 }

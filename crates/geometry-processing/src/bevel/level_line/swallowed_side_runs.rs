@@ -5,7 +5,7 @@
 //! merge ([`ties_merge_room`]) and both sides' runs ([`runs_if_both_swallowed`]). The swallowed
 //! strip's fill is `swallowed_side::fill`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::swallowed_side::{away_on_side, side_vertices, tolerance, touches};
 use super::virtual_rail_past_the_end::{last_to_leave, PAST_THE_LAST_TOUCH};
@@ -132,8 +132,8 @@ pub fn virtual_run_over(
 
     let a = crossing(first, false)?;
     let b = crossing(last, true)?;
-    let from = span.map_or(cs_math::min_f64(a, b), |s| s.0);
-    let to = span.map_or(cs_math::max_f64(a, b), |s| s.1);
+    let from = span.map_or(ieee_math::min_f64(a, b), |s| s.0);
+    let to = span.map_or(ieee_math::max_f64(a, b), |s| s.1);
     let segment_of = |t: f64| {
         let mut i = 0;
         while i < aways.len() - 1 && t > starts[i + 1] {
@@ -161,7 +161,7 @@ pub fn virtual_run_over(
 
         // Sorted by parameter with the introspective sort, so equal parameters (a chain corner
         // standing on a station) come out in one fixed order. NaN orders first.
-        vector_math::cs_sort::introspective_sort(&mut run, &mut |p, q| {
+        vector_math::fixed_tie_sort::introspective_sort(&mut run, &mut |p, q| {
             p.1.partial_cmp(&q.1)
                 .unwrap_or_else(|| q.1.is_nan().cmp(&p.1.is_nan()))
         });

@@ -7,7 +7,7 @@
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{SurfaceMixedCorner, SurfaceWallSection};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
@@ -424,7 +424,7 @@ impl SurfaceMixedCornerWall {
             // Read as a piece, that is a rim with a side of no length, which no bite can name a
             // half plane for - and one piece fewer, not a refusal.
             if !((to - from).length()
-                > 1e-9 * cs_math::max_f64(1.0, (each.to - each.from).length()))
+                > 1e-9 * ieee_math::max_f64(1.0, (each.to - each.from).length()))
             {
                 continue;
             }

@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::open_gap_fill_stations::on_the_edge;
 use super::{ChainField, LevelLineMesh, WorkError};
@@ -63,7 +63,7 @@ pub fn tie_spans(
             1,
             closed_length,
         )?;
-        spans[i].1 = cs_math::max_f64(spans[i].1, cs_math::max_f64(read_from, near_p));
+        spans[i].1 = ieee_math::max_f64(spans[i].1, ieee_math::max_f64(read_from, near_p));
         let near_q = jump_near(
             chain,
             q,
@@ -74,7 +74,7 @@ pub fn tie_spans(
             -1,
             closed_length,
         )?;
-        spans[i + 1].0 = cs_math::min_f64(spans[i + 1].0, cs_math::min_f64(read_to, near_q));
+        spans[i + 1].0 = ieee_math::min_f64(spans[i + 1].0, ieee_math::min_f64(read_to, near_q));
     }
 
     let last = vertices.len().saturating_sub(1);
@@ -105,11 +105,12 @@ pub fn tie_spans(
                 to
             };
             let near_p = jump_near(chain, p, q, from, to, tie, 1, closed_length)?;
-            spans[last].1 = cs_math::max_f64(spans[last].1, cs_math::max_f64(read_from, near_p));
+            spans[last].1 =
+                ieee_math::max_f64(spans[last].1, ieee_math::max_f64(read_from, near_p));
             let near_q = jump_near(chain, q, p, to, from, tie, -1, closed_length)?;
-            spans[0].0 = cs_math::min_f64(
+            spans[0].0 = ieee_math::min_f64(
                 spans[0].0,
-                cs_math::min_f64(read_to, near_q) - closed_length,
+                ieee_math::min_f64(read_to, near_q) - closed_length,
             );
         }
     }
@@ -223,7 +224,7 @@ pub fn densify(
         let mut near = a;
         let note_jump = |jump_ends: &mut HashMap<i32, f64>, foot: f64| {
             let entry = jump_ends.entry(b).or_insert(foot);
-            *entry = cs_math::min_f64(*entry, foot);
+            *entry = ieee_math::min_f64(*entry, foot);
         };
         for target in inside {
             super::LevelLineWork::charge(1)?;

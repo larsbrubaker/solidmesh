@@ -10,7 +10,7 @@
 //! joint bounds are a fresh value, so building never changes an item's own box.
 
 use vector_math::bvh::morton_codes;
-use vector_math::cs_sort::introspective_sort;
+use vector_math::fixed_tie_sort::introspective_sort;
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
 use super::{BoundingVolumeHierarchy, TraceableRef};

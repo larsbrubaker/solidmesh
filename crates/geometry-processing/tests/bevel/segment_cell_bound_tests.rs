@@ -5,7 +5,7 @@
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::{field_bounds, ChainField, FieldSample, PickField};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 use crate::clipped_cell_bound_tests::greatest_by_sampling;
@@ -107,7 +107,7 @@ fn fields_to_be_sound_over() -> Vec<(&'static str, Evaluate, Bound)> {
 
 #[test]
 fn the_bound_stands_over_the_field() {
-    let mut random = DotNetRandom::new(20260924);
+    let mut random = SeededRandom::new(20260924);
     for (name, evaluate, bound) in fields_to_be_sound_over() {
         let mut biting = 0;
         for _ in 0..300 {
@@ -152,7 +152,7 @@ fn the_bound_stands_over_the_field() {
     }
 }
 
-fn offset(random: &mut DotNetRandom, spread: f64) -> Vector3 {
+fn offset(random: &mut SeededRandom, spread: f64) -> Vector3 {
     let x = (random.next_double() - 0.5) * spread;
     let y = (random.next_double() - 0.5) * spread;
     let z = (random.next_double() - 0.5) * spread * 0.3;

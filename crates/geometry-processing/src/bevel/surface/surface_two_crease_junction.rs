@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerDualFrame, SurfaceMixedJunction,
@@ -202,7 +202,7 @@ pub fn try_the_bead_edge_carrying_the_ring(
         // How far down the axis this edge reaches. Both ends are asked and the further taken, so
         // which way the edge's own From and To run is nobody's business here.
         let reaches =
-            cs_math::max_f64((edge.from() - foot).dot(away), (edge.to() - foot).dot(away));
+            ieee_math::max_f64((edge.from() - foot).dot(away), (edge.to() - foot).dot(away));
 
         if station <= reaches + near_enough {
             return Some((at, passed));

@@ -19,7 +19,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use agg_path::{FlagsAndCommand, FlattenCurves, VertexSource, VertexStorage};
-use vector_math::{cs_math, math_helper, Vector2};
+use vector_math::{ieee_math, math_helper, Vector2};
 
 use super::path_bevel_arcs;
 
@@ -393,11 +393,11 @@ fn relax_radii(
             let max_radius_from_next_space = (room_to_next - neighbor_next_tangent_dist) * tan_half;
 
             // one arc, so it has to fit on both of its edges
-            let target_radius = cs_math::max_f64(
+            let target_radius = ieee_math::max_f64(
                 0.0,
-                cs_math::min_f64(
+                ieee_math::min_f64(
                     desired,
-                    cs_math::min_f64(max_radius_from_prev_space, max_radius_from_next_space),
+                    ieee_math::min_f64(max_radius_from_prev_space, max_radius_from_next_space),
                 ),
             );
 
@@ -478,12 +478,12 @@ pub(crate) fn interior_angle(working: &[Vector2], i: usize, closed: bool) -> f64
     let to_prev = normalize(working[prev_index(i, vertex_count, closed) as usize] - working[i]);
     let to_next = normalize(working[next_index(i, vertex_count, closed) as usize] - working[i]);
 
-    cs_clamp(to_prev.dot(to_next), -1.0, 1.0).acos()
+    clamp_passing_nan(to_prev.dot(to_next), -1.0, 1.0).acos()
 }
 
 /// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
 /// NaN bound) so the NaN guards downstream still see it.
-fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
+fn clamp_passing_nan(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min
     } else if value > max {

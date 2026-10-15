@@ -14,7 +14,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_fan, surface_ring, surface_seam_re_read};
@@ -137,8 +137,8 @@ pub fn try_stitch(
             // and hand SurfaceFan a quad wound the other way, which EmitFacing dutifully re-winds
             // into a surface doubled over on itself. Clamped, the rail simply stands still there and
             // the quad collapses to a triangle, which is what the seam actually looks like.
-            at[rail] = cs_math::min_f64(
-                cs_math::max_f64(param, start_ring.param[rail]),
+            at[rail] = ieee_math::min_f64(
+                ieee_math::max_f64(param, start_ring.param[rail]),
                 end_ring.param[rail],
             );
 
@@ -267,7 +267,7 @@ fn interior_stations(left: &[(i32, f64)], right: &[(i32, f64)], one_station: f64
 
     // A total order with NaN before every number, so a NaN parameter cannot break the sort. Equal
     // parameters are indistinguishable, so the unstable sort's tie order cannot reach the output.
-    found.sort_unstable_by(|a, b| compare_as_csharp(*a, *b));
+    found.sort_unstable_by(|a, b| nan_first_compare(*a, *b));
 
     let mut stations = Vec::new();
 
@@ -296,7 +296,7 @@ fn carrying(seam: &[(i32, f64)], param: f64, one_station: f64) -> i32 {
 }
 
 /// How two parameters order: NaN before every number, so the order is total.
-fn compare_as_csharp(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     a.partial_cmp(&b)
         .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()).reverse())
 }

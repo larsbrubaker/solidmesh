@@ -7,7 +7,7 @@
 //! check that the winner actually won, so repeated geometry (a row of teeth) whose anchored corner
 //! was deleted is refused rather than resolved onto a sibling.
 
-use vector_math::{cs_math, math_helper};
+use vector_math::{ieee_math, math_helper};
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -140,15 +140,15 @@ pub fn resolve_with(
 
         // both pairings, because a contour wound the other way swaps the two directions; the
         // worse edge within a pairing is what scores
-        let straight_pairing = cs_math::min_f64(
+        let straight_pairing = ieee_math::min_f64(
             candidate.to_previous.dot(to_previous),
             candidate.to_next.dot(to_next),
         );
-        let swapped_pairing = cs_math::min_f64(
+        let swapped_pairing = ieee_math::min_f64(
             candidate.to_next.dot(to_previous),
             candidate.to_previous.dot(to_next),
         );
-        let agreement = cs_math::max_f64(straight_pairing, swapped_pairing);
+        let agreement = ieee_math::max_f64(straight_pairing, swapped_pairing);
 
         if agreement < minimum_agreement {
             continue;

@@ -8,7 +8,7 @@
 //! `get_perpendicular_with` is perpendicular to this and another vector. The matrix and
 //! quaternion transforms are in `vector_transforms.rs`.
 
-use crate::cs_math::{max_f64, min_f64};
+use crate::ieee_math::{max_f64, min_f64};
 use crate::number_format::{format_f64_max_decimals, parse_f64};
 use crate::{long_hash, math_helper, Vector2, Vector3Float, Vector4, LONG_HASH_SEED};
 use std::fmt;
@@ -318,12 +318,12 @@ impl Vector3 {
             && (self.z < other.z + error_value && self.z > other.z - error_value)
     }
 
-    /// The largest component (NaN wins, see `cs_math`).
+    /// The largest component (NaN wins, see `ieee_math`).
     pub fn component_max_value(vector3: Vector3) -> f64 {
         max_f64(vector3.x, max_f64(vector3.y, vector3.z))
     }
 
-    /// The smallest component (NaN wins, see `cs_math`).
+    /// The smallest component (NaN wins, see `ieee_math`).
     pub fn component_min_value(vector3: Vector3) -> f64 {
         min_f64(vector3.x, min_f64(vector3.y, vector3.z))
     }

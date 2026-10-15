@@ -15,7 +15,7 @@ use polygon_mesh::csg::{
 };
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
 const NOT_CLOSED: &str = "NotClosed";
@@ -628,7 +628,7 @@ fn split_corners(cube: &Mesh, mut perturbed: impl FnMut(Vector3Float) -> Vector3
 fn cube_with_split_seams(size: f64, jitter: f32) -> Mesh {
     let cube = create_cube(size, size, size);
     // Deterministic, so a failure here is always the same failure.
-    let mut random = DotNetRandom::new(12345);
+    let mut random = SeededRandom::new(12345);
     let mut nudge = move || ((random.next_double() - 0.5) * 2.0 * f64::from(jitter)) as f32;
     split_corners(&cube, |p| {
         let x = p.x + nudge();
@@ -643,7 +643,7 @@ fn cube_with_split_seams(size: f64, jitter: f32) -> Mesh {
 fn cube_with_seams_split_by_float_spacing(size: f64, at: Vector3, ulps: i32) -> Mesh {
     let mut cube = create_cube(size, size, size);
     cube.transform(Matrix4X4::create_translation_vector(at));
-    let mut random = DotNetRandom::new(12345);
+    let mut random = SeededRandom::new(12345);
     let mut nudged = move |mut value: f32| {
         match random.next(3) {
             0 => {

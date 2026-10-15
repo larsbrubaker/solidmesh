@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 
 use indexmap::IndexSet;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{chain_setback, ChainField, EndRayBound, ForeignEdgeRegions, LevelLineMesh, WorkError};
 
@@ -23,7 +23,7 @@ pub use super::band_room_pair_room_pick::{room_of_pick, PickRoom};
 pub const PAIR_PRUNE_SLACK: f64 = 1e-9;
 
 /// The least of `values`: NaN where any value is NaN, so a broken reading is never hidden.
-pub fn linq_min(values: &[f64]) -> f64 {
+pub fn min_or_nan(values: &[f64]) -> f64 {
     let mut least = values[0];
     for &v in values {
         if v.is_nan() {
@@ -39,7 +39,7 @@ pub fn linq_min(values: &[f64]) -> f64 {
 }
 
 /// The most of `values`: NaN only where every value is NaN (a NaN never beats a number).
-pub fn linq_max(values: &[f64]) -> f64 {
+pub fn max_or_nan(values: &[f64]) -> f64 {
     let mut most = values[0];
     for &v in &values[1..] {
         if v > most || most.is_nan() {
@@ -59,7 +59,7 @@ pub fn is_uniform(unit_setback: &[f64]) -> bool {
         return false;
     }
 
-    chain_setback::is_uniform(linq_min(unit_setback), linq_max(unit_setback))
+    chain_setback::is_uniform(min_or_nan(unit_setback), max_or_nan(unit_setback))
 }
 
 /// The distance from a point to a chain's polyline.
@@ -80,14 +80,14 @@ pub fn distance_to_polyline(
         let b = positions[chain[(i + 1) % chain.len()] as usize];
         let along = b - a;
         let t = if along.length_squared() > 0.0 {
-            cs_math::min_f64(
+            ieee_math::min_f64(
                 1.0,
-                cs_math::max_f64(0.0, (point - a).dot(along) / along.length_squared()),
+                ieee_math::max_f64(0.0, (point - a).dot(along) / along.length_squared()),
             )
         } else {
             0.0
         };
-        best = cs_math::min_f64(best, (point - (a + (along * t))).length());
+        best = ieee_math::min_f64(best, (point - (a + (along * t))).length());
     }
 
     best
@@ -104,7 +104,7 @@ pub fn index_in(chain: &[i32], vertex: i32) -> i32 {
 /// The gap between two bounding spheres - zero where they overlap - which
 /// is a lower bound on the distance between anything the two spheres contain.
 pub fn sphere_gap(centre_k: Vector3, radius_k: f64, centre_j: Vector3, radius_j: f64) -> f64 {
-    cs_math::max_f64(0.0, (centre_k - centre_j).length() - radius_k - radius_j)
+    ieee_math::max_f64(0.0, (centre_k - centre_j).length() - radius_k - radius_j)
 }
 
 /// True when the ordered pair (k, j) provably cannot be the
@@ -132,11 +132,11 @@ pub fn pair_cannot_lower_the_room(
         return false;
     }
 
-    if unit_setback_k.is_empty() || !(linq_min(unit_setback_k) > 0.0) {
+    if unit_setback_k.is_empty() || !(min_or_nan(unit_setback_k) > 0.0) {
         return false;
     }
 
-    let highest_unit = linq_max(unit_setback_k);
+    let highest_unit = max_or_nan(unit_setback_k);
     let denominator = highest_unit + most_extra;
     if !(denominator > 0.0) {
         return false;
@@ -364,7 +364,7 @@ pub fn approach_is_end_to_end(
     let at_end = bare_of_k.evaluate(mesh.position(end_of_j))?;
     let least =
         bare_of_k.min_along_segment(mesh.position(edge_of_j.0), mesh.position(edge_of_j.1))?;
-    let tolerance = END_TO_END_TOLERANCE * cs_math::max_f64(at_end.distance, 1e-300);
+    let tolerance = END_TO_END_TOLERANCE * ieee_math::max_f64(at_end.distance, 1e-300);
     if (least.point - mesh.position(end_of_j)).length() > tolerance {
         return Ok(false);
     }

@@ -12,7 +12,7 @@
 //! Inverting a singular matrix (|det| below the smallest subnormal) returns the input matrix
 //! unchanged, so a degenerate transform never fills a scene with NaN.
 
-use crate::cs_math::max_f64;
+use crate::ieee_math::max_f64;
 use crate::{Quaternion, Vector3, Vector4, LONG_HASH_SEED};
 use std::fmt;
 use std::ops::{Index, IndexMut, Mul};

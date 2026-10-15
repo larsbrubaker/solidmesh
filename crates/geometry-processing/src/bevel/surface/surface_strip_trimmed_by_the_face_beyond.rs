@@ -293,8 +293,8 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
             }
 
             // Only the COLLAPSED rails are ever clamped.
-            trimmed_at[r] = vector_math::cs_math::min_f64(
-                vector_math::cs_math::max_f64(trimmed_at[r], 0.0),
+            trimmed_at[r] = vector_math::ieee_math::min_f64(
+                vector_math::ieee_math::max_f64(trimmed_at[r], 0.0),
                 length,
             );
         }

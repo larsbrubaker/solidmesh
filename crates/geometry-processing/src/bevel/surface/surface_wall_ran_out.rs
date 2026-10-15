@@ -3,7 +3,7 @@
 //! linear condition puts on the size, each facet's window of sizes ([`try_window_on`]) and the
 //! advisory that names the largest size that fits ([`advisory`]).
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 use vector_math::Vector3;
 
 use polygon_mesh::Mesh;
@@ -33,9 +33,9 @@ pub fn bound(per_size: f64, at_nothing: f64, lowest: &mut f64, highest: &mut f64
     let crosses_at = -at_nothing / per_size;
 
     if per_size > 0.0 {
-        *lowest = cs_math::max_f64(*lowest, crosses_at);
+        *lowest = ieee_math::max_f64(*lowest, crosses_at);
     } else {
-        *highest = cs_math::min_f64(*highest, crosses_at);
+        *highest = ieee_math::min_f64(*highest, crosses_at);
     }
 }
 
@@ -219,10 +219,10 @@ pub fn advisory(
                 break;
             }
 
-            here = cs_math::max_f64(here, highest);
+            here = ieee_math::max_f64(here, highest);
         }
 
-        fits = cs_math::min_f64(fits, here);
+        fits = ieee_math::min_f64(fits, here);
     }
 
     #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` so a NaN refuses too

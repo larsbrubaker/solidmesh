@@ -104,7 +104,7 @@ impl BoundedImplicitFunction3d for DenseGridTrilinearImplicit {
 }
 
 /// NaN wins, unlike `f64::min`.
-fn cs_min(a: f64, b: f64) -> f64 {
+fn min_or_nan(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
@@ -113,7 +113,7 @@ fn cs_min(a: f64, b: f64) -> f64 {
 }
 
 /// NaN wins, unlike `f64::max`.
-fn cs_max(a: f64, b: f64) -> f64 {
+fn max_or_nan(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
@@ -129,7 +129,7 @@ pub(crate) struct ImplicitUnion3d {
 
 impl BoundedImplicitFunction3d for ImplicitUnion3d {
     fn value(&self, pt: [f64; 3]) -> f64 {
-        cs_min(self.a.value(pt), self.b.value(pt))
+        min_or_nan(self.a.value(pt), self.b.value(pt))
     }
 
     fn bounds(&self) -> AxisAlignedBox3d {
@@ -148,7 +148,7 @@ pub(crate) struct ImplicitIntersection3d {
 
 impl BoundedImplicitFunction3d for ImplicitIntersection3d {
     fn value(&self, pt: [f64; 3]) -> f64 {
-        cs_max(self.a.value(pt), self.b.value(pt))
+        max_or_nan(self.a.value(pt), self.b.value(pt))
     }
 
     fn bounds(&self) -> AxisAlignedBox3d {
@@ -166,7 +166,7 @@ pub(crate) struct ImplicitDifference3d {
 
 impl BoundedImplicitFunction3d for ImplicitDifference3d {
     fn value(&self, pt: [f64; 3]) -> f64 {
-        cs_max(self.a.value(pt), -self.b.value(pt))
+        max_or_nan(self.a.value(pt), -self.b.value(pt))
     }
 
     fn bounds(&self) -> AxisAlignedBox3d {
@@ -183,7 +183,7 @@ impl BoundedImplicitFunction3d for ImplicitNaryUnion3d {
     fn value(&self, pt: [f64; 3]) -> f64 {
         let mut f = self.children[0].value(pt);
         for child in &self.children[1..] {
-            f = cs_min(f, child.value(pt));
+            f = min_or_nan(f, child.value(pt));
         }
         f
     }
@@ -206,7 +206,7 @@ impl BoundedImplicitFunction3d for ImplicitNaryIntersection3d {
     fn value(&self, pt: [f64; 3]) -> f64 {
         let mut f = self.children[0].value(pt);
         for child in &self.children[1..] {
-            f = cs_max(f, child.value(pt));
+            f = max_or_nan(f, child.value(pt));
         }
         f
     }
@@ -234,9 +234,9 @@ impl BoundedImplicitFunction3d for ImplicitNaryDifference3d {
         };
         let mut fb = first.value(pt);
         for b in rest {
-            fb = cs_min(fb, b.value(pt));
+            fb = min_or_nan(fb, b.value(pt));
         }
-        cs_max(fa, -fb)
+        max_or_nan(fa, -fb)
     }
 
     fn bounds(&self) -> AxisAlignedBox3d {

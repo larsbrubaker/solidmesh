@@ -6,7 +6,7 @@
 //! ([`greatest_possible_over`]), a side's reach ([`reach_of_side`]) and the per-vertex sample cache
 //! ([`sample_at`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{FieldSample, LevelLineMesh, LevelLineTriangle, LevelLineWork, RoomField, WorkError};
 
@@ -158,8 +158,8 @@ pub fn peak_over_side(
                 vertex_peak_at = at;
             }
 
-            farthest_corner = cs_math::max_f64(farthest_corner, here.distance);
-            longest_edge = cs_math::max_f64(
+            farthest_corner = ieee_math::max_f64(farthest_corner, here.distance);
+            longest_edge = ieee_math::max_f64(
                 longest_edge,
                 (mesh.position(indices[(i + 1) % 3]) - at).length(),
             );
@@ -348,7 +348,7 @@ pub fn chain_ceiling(chain_points: &[Vector3]) -> f64 {
         for i in 0..chain_points.len() {
             for j in (i + 1)..chain_points.len() {
                 let apart = (chain_points[j] - chain_points[i]).length();
-                greatest = cs_math::max_f64(greatest, apart);
+                greatest = ieee_math::max_f64(greatest, apart);
             }
         }
     } else {
@@ -385,10 +385,10 @@ pub fn greatest_possible_over(
         let sample = sample_at(field, samples, indices[i], corners[i])?;
         let mut farthest = 0.0;
         for corner in corners {
-            farthest = cs_math::max_f64(farthest, (corner - corners[i]).length());
+            farthest = ieee_math::max_f64(farthest, (corner - corners[i]).length());
         }
 
-        bound = cs_math::min_f64(bound, sample.distance + farthest - field.min_setback());
+        bound = ieee_math::min_f64(bound, sample.distance + farthest - field.min_setback());
     }
 
     Ok(bound)
@@ -425,12 +425,12 @@ pub fn reach_of_side(
         let corners = [mesh.position(t.a), mesh.position(t.b), mesh.position(t.c)];
         let vertices = [t.a, t.b, t.c];
         for i in 0..3 {
-            farthest = cs_math::max_f64(
+            farthest = ieee_math::max_f64(
                 farthest,
                 sample_at(field, samples, vertices[i], corners[i])?.distance,
             );
             longest_edge =
-                cs_math::max_f64(longest_edge, (corners[(i + 1) % 3] - corners[i]).length());
+                ieee_math::max_f64(longest_edge, (corners[(i + 1) % 3] - corners[i]).length());
         }
     }
 

@@ -6,13 +6,13 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::IndexSet;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::band_gap_reading::room_margin;
 use super::band_room::{is_past_an_end_face, present, steady_down};
 use super::band_room_pair_room::approach_is_end_to_end;
 use super::band_room_pair_room::{
-    edges_running_out_of_corners, ends_with_an_end_region, is_uniform, linq_max, linq_min,
+    edges_running_out_of_corners, ends_with_an_end_region, is_uniform, max_or_nan, min_or_nan,
     pair_cannot_lower_the_room, pieces_of_one_chain, sphere_gap,
 };
 use super::band_side_groups::group_sides;
@@ -380,7 +380,7 @@ pub fn room_of_pick(
         offer(
             &mut read,
             &mut room,
-            cs_math::min_f64(from_index, past),
+            ieee_math::min_f64(from_index, past),
             RoomSource::foreign(k32),
             f64::NAN,
             f64::NAN,
@@ -419,10 +419,10 @@ pub fn room_of_pick(
             centre += point;
         }
 
-        centre /= cs_math::max_f64(1.0, chain_points[k].len() as f64);
+        centre /= ieee_math::max_f64(1.0, chain_points[k].len() as f64);
         let mut radius = 0.0;
         for &point in &chain_points[k] {
-            radius = cs_math::max_f64(radius, (point - centre).length());
+            radius = ieee_math::max_f64(radius, (point - centre).length());
         }
 
         chain_centre[k] = centre;
@@ -432,10 +432,10 @@ pub fn room_of_pick(
     // The margin every candidate carries, needed HERE: the prune works in raw readings.
     let mut largest_unit = 0.0;
     for setbacks in &unit_setbacks {
-        largest_unit = cs_math::max_f64(
+        largest_unit = ieee_math::max_f64(
             largest_unit,
             if !setbacks.is_empty() {
-                linq_max(setbacks)
+                max_or_nan(setbacks)
             } else {
                 0.0
             },
@@ -449,7 +449,7 @@ pub fn room_of_pick(
         if name_every_candidate_under.is_nan() {
             room
         } else {
-            cs_math::max_f64(room, name_every_candidate_under + margin)
+            ieee_math::max_f64(room, name_every_candidate_under + margin)
         }
     };
 
@@ -515,8 +515,8 @@ pub fn room_of_pick(
                         }
                     }
 
-                    let extra = cs_math::max_f64(us[e], us[(e + 1) % us.len()]);
-                    most_extra = cs_math::max_f64(most_extra, extra);
+                    let extra = ieee_math::max_f64(us[e], us[(e + 1) % us.len()]);
+                    most_extra = ieee_math::max_f64(most_extra, extra);
                     let key = triangle_edges::key(from, to);
                     theirs.push((key.0, key.1, extra));
                 }
@@ -555,11 +555,11 @@ pub fn room_of_pick(
                     pair_room,
                     RoomSource::chain_to_chain(k32, j32),
                     if !unit_setbacks[k].is_empty() {
-                        linq_max(&unit_setbacks[k])
+                        max_or_nan(&unit_setbacks[k])
                     } else {
                         0.0
                     },
-                    if !us.is_empty() { linq_min(us) } else { 0.0 },
+                    if !us.is_empty() { min_or_nan(us) } else { 0.0 },
                     is_uniform(&unit_setbacks[k]) && is_uniform(us),
                     None,
                 );
@@ -607,7 +607,7 @@ pub fn room_of_pick(
             group.tag,
             1.0,
             &mut samples,
-            cs_math::min_f64(pick_ceiling, pair_threshold(room)),
+            ieee_math::min_f64(pick_ceiling, pair_threshold(room)),
         )?;
         offer(
             &mut read,

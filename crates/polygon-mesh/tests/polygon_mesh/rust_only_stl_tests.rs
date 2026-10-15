@@ -29,7 +29,7 @@ fn rust_only_ascii_stl_round_trips_a_cube() {
 }
 
 #[test]
-fn rust_only_ascii_stl_text_matches_csharp_layout() {
+fn rust_only_ascii_stl_text_keeps_its_layout() {
     let tetrahedron = platonic_solids::create_tetrahedron(1.0);
     let settings = MeshOutputSettings::with_output_type(OutputType::Ascii, &[], None);
     let mut bytes = Vec::new();

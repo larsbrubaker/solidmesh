@@ -10,7 +10,7 @@
 //! nothing needs them. The matrix transforms (`transform`, `transform_vector`,
 //! `transform_normal*`) are in `vector_transforms.rs`.
 
-use crate::cs_math::{max_f32, min_f32};
+use crate::ieee_math::{max_f32, min_f32};
 use crate::number_format::format_f32;
 use crate::{long_hash, Vector2, Vector3, Vector4, LONG_HASH_SEED};
 use std::fmt;
@@ -158,7 +158,7 @@ impl Vector3Float {
         Self::new_f32(vector.x / scale.x, vector.y / scale.y, vector.z / scale.z)
     }
 
-    /// The smallest component (NaN wins, see `cs_math`).
+    /// The smallest component (NaN wins, see `ieee_math`).
     pub fn component_min_value(self) -> f32 {
         min_f32(self.x, min_f32(self.y, self.z))
     }
@@ -172,7 +172,7 @@ impl Vector3Float {
         )
     }
 
-    /// The largest component (NaN wins, see `cs_math`).
+    /// The largest component (NaN wins, see `ieee_math`).
     pub fn component_max_value(self) -> f32 {
         max_f32(self.x, max_f32(self.y, self.z))
     }

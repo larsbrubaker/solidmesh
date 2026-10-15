@@ -12,7 +12,7 @@
 //! and the bound is consulted only to prove it cannot, so the questions skipped are exactly the ones
 //! whose answers could not have changed anything and the refinement's result is identical.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 /// The greatest value the field can take anywhere on an edge of length L whose ends read va, vb.
 /// From either end the value rises at most one per unit of length, so along the edge it lies under
@@ -54,20 +54,20 @@ pub fn greatest_over_triangle(
     c: Vector3,
 ) -> f64 {
     let mut bound = va + reach(a, b, c);
-    bound = cs_math::min_f64(bound, vb + reach(b, a, c));
-    bound = cs_math::min_f64(bound, vc + reach(c, a, b));
+    bound = ieee_math::min_f64(bound, vb + reach(b, a, c));
+    bound = ieee_math::min_f64(bound, vc + reach(c, a, b));
     bound
 }
 
 /// The least value the field can take anywhere on a triangle whose corners read va, vb, vc.
 pub fn least_over_triangle(va: f64, vb: f64, vc: f64, a: Vector3, b: Vector3, c: Vector3) -> f64 {
     let mut bound = va - reach(a, b, c);
-    bound = cs_math::max_f64(bound, vb - reach(b, a, c));
-    bound = cs_math::max_f64(bound, vc - reach(c, a, b));
+    bound = ieee_math::max_f64(bound, vb - reach(b, a, c));
+    bound = ieee_math::max_f64(bound, vc - reach(c, a, b));
     bound
 }
 
 /// How far a triangle reaches from one of its corners: the longer of the two edges leaving it.
 fn reach(from: Vector3, other: Vector3, third: Vector3) -> f64 {
-    cs_math::max_f64((other - from).length(), (third - from).length())
+    ieee_math::max_f64((other - from).length(), (third - from).length())
 }

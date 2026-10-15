@@ -10,13 +10,13 @@ use vector_math::Vector3;
 
 /// A seeded Knuth subtractive random generator: the same seed gives the same sequence on every
 /// platform.
-struct DotNetRandom {
+struct SeededRandom {
     seed_array: [i32; 56],
     inext: usize,
     inextp: usize,
 }
 
-impl DotNetRandom {
+impl SeededRandom {
     fn new(seed: i32) -> Self {
         const MSEED: i32 = 161_803_398;
         let mut seed_array = [0i32; 56];
@@ -45,7 +45,7 @@ impl DotNetRandom {
                 }
             }
         }
-        DotNetRandom {
+        SeededRandom {
             seed_array,
             inext: 0,
             inextp: 21,
@@ -94,7 +94,7 @@ fn random_fields_give_closed_manifold_surfaces() {
     let mut failures = Vec::new();
     for mode in 0..4 {
         for seed in 0..75 {
-            let mut random = DotNetRandom::new(seed * 7 + mode);
+            let mut random = SeededRandom::new(seed * 7 + mode);
             let mut grid = DenseGrid3f::new(N, N, N, 1.0);
             for k in 1..N - 1 {
                 for j in 1..N - 1 {

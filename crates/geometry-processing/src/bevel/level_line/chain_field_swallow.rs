@@ -9,7 +9,7 @@
 //! least stands at an END. The ends are offered in every case. Every segment is read - one pass
 //! for one point, asked a handful of times per room reading.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineWork, PickField, RoomField, WorkError};
 
@@ -36,7 +36,7 @@ impl ChainField {
                 }
             };
 
-            best = cs_math::min_f64(best, cs_math::min_f64(ratio_at(0.0), ratio_at(1.0)));
+            best = ieee_math::min_f64(best, ieee_math::min_f64(ratio_at(0.0), ratio_at(1.0)));
             if length_squared <= 0.0 {
                 continue;
             }
@@ -49,7 +49,7 @@ impl ChainField {
                 // A two-sided clamp that lets NaN through, so a broken reading stays visible.
                 let stationary =
                     (u0 + (k * a * a / (length_squared * at_the_foot))).clamp(0.0, 1.0);
-                best = cs_math::min_f64(best, ratio_at(stationary));
+                best = ieee_math::min_f64(best, ratio_at(stationary));
             }
         }
 
@@ -63,7 +63,7 @@ impl PickField {
     pub fn swallow_scale(&self, point: Vector3) -> Result<f64, WorkError> {
         let mut best = f64::INFINITY;
         for &k in &self.members {
-            best = cs_math::min_f64(best, self.chains[k as usize].swallow_scale(point)?);
+            best = ieee_math::min_f64(best, self.chains[k as usize].swallow_scale(point)?);
         }
 
         Ok(best)

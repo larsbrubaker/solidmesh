@@ -4,7 +4,7 @@
 //! [`on_a_rim_joints_seam`]). The geometry they read (the carry, the seam row, the leg tests) is in
 //! `fillet_arc`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::fillet_arc::{
     carried, carry_weight, on_a_whole_leg, on_the_partners_leg, seam_row, seam_tolerance,
@@ -152,13 +152,13 @@ pub fn along_the_chain(
     let from_tangent = tangent_at(chain, wrapped(length, from_reads));
     let mean_tangent = tangent_at(chain, mean_reads);
     let to_tangent = tangent_at(chain, wrapped(length, to_reads));
-    let low = cs_math::min_f64(
-        cs_math::min_f64(from_reads, to_reads),
-        cs_math::min_f64(from.2 .0 + from.3, to.2 .0 + to.3),
+    let low = ieee_math::min_f64(
+        ieee_math::min_f64(from_reads, to_reads),
+        ieee_math::min_f64(from.2 .0 + from.3, to.2 .0 + to.3),
     );
-    let high = cs_math::max_f64(
-        cs_math::max_f64(from_reads, to_reads),
-        cs_math::max_f64(from.2 .1 + from.3, to.2 .1 + to.3),
+    let high = ieee_math::max_f64(
+        ieee_math::max_f64(from_reads, to_reads),
+        ieee_math::max_f64(from.2 .1 + from.3, to.2 .1 + to.3),
     );
     let carry = carry_weight(chain, low, high, from_tangent, to_tangent);
     let mean_point = chain.point_at(wrapped(length, (from.1 + to.1) / 2.0));
@@ -270,9 +270,9 @@ pub fn on_a_rim_joints_seam(
         let apex = chain.point_at(joint_at);
         let tolerance = seam_tolerance(apex, joint_setback);
         let step = 1e-3 * joint_setback;
-        let into = (apex - chain.point_at(cs_math::max_f64(0.0, joint_at - step))).get_normal();
+        let into = (apex - chain.point_at(ieee_math::max_f64(0.0, joint_at - step))).get_normal();
         let out_of =
-            (chain.point_at(cs_math::min_f64(chain.length, joint_at + step)) - apex).get_normal();
+            (chain.point_at(ieee_math::min_f64(chain.length, joint_at + step)) - apex).get_normal();
         let normal = (into + out_of).get_normal();
         if (p - apex).dot(normal).abs() > tolerance || (q - apex).dot(normal).abs() > tolerance {
             continue;

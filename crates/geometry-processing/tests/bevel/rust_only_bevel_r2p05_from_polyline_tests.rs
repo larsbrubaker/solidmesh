@@ -88,7 +88,7 @@ fn rust_only_from_polyline_builds_the_hand_assembled_open_field() {
 }
 
 #[test]
-fn rust_only_from_polyline_refuses_what_csharp_throws_on() {
+fn rust_only_from_polyline_refuses_bad_arguments() {
     let one = [Vector3::new(0.0, 0.0, 0.0)];
     assert_eq!(
         ChainField::from_polyline(&one, false, &[1.0]).err(),

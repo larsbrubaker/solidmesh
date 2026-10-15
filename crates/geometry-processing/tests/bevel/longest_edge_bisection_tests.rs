@@ -7,7 +7,7 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::refinement_splits::LONGEST_EDGE_PATH_CAP;
 use geometry_processing::bevel::level_line::refinement_splits_enqueue::bisect_along_longest_edge_path;
 use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 #[test]
 fn a_thin_strip_loses_its_longest_edge_and_stays_conforming_and_shaped() {
@@ -220,7 +220,7 @@ fn smallest_angle(mesh: &LevelLineMesh) -> f64 {
             let at = mesh.position(t.corner(corner));
             let u = (mesh.position(t.corner((corner + 1) % 3)) - at).get_normal();
             let v = (mesh.position(t.corner((corner + 2) % 3)) - at).get_normal();
-            smallest = cs_math::min_f64(smallest, u.dot(v).clamp(-1.0, 1.0).acos());
+            smallest = ieee_math::min_f64(smallest, u.dot(v).clamp(-1.0, 1.0).acos());
         }
     }
 

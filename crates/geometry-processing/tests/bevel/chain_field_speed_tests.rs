@@ -13,7 +13,7 @@ use geometry_processing::bevel::level_line::band_gap_reading;
 use geometry_processing::bevel::level_line::{
     gap_fill, BandGapRefusal, BandProfile, ChainField, FieldCounters, WorkBudget,
 };
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
@@ -50,7 +50,7 @@ fn within(actual: f64, expected: f64, tolerance: f64) -> bool {
 /// the module is pinned to.
 #[test]
 fn indexed_queries_answer_what_the_exhaustive_search_answers() {
-    let mut random = DotNetRandom::new(20260918);
+    let mut random = SeededRandom::new(20260918);
     let mut points = Vec::new();
     let mut setbacks = Vec::new();
     for i in 0..40 {
@@ -68,7 +68,7 @@ fn indexed_queries_answer_what_the_exhaustive_search_answers() {
 
     let field = ChainField::from_polyline(&points, true, &setbacks).expect("a chain");
 
-    let somewhere = |random: &mut DotNetRandom| {
+    let somewhere = |random: &mut SeededRandom| {
         let x = (random.next_double() * 30.0) - 15.0;
         let y = (random.next_double() * 30.0) - 15.0;
         let z = (random.next_double() * 10.0) - 5.0;
@@ -249,8 +249,8 @@ fn the_closed_form_answers_what_the_convex_search_answers() {
     }
 
     // And the general case, where a random piece's minimum is unique with probability one.
-    let mut random = DotNetRandom::new(20260918);
-    let somewhere = |random: &mut DotNetRandom| {
+    let mut random = SeededRandom::new(20260918);
+    let somewhere = |random: &mut SeededRandom| {
         let x = (random.next_double() * 24.0) - 7.0;
         let y = (random.next_double() * 24.0) - 7.0;
         let z = (random.next_double() * 12.0) - 6.0;

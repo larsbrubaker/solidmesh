@@ -2,7 +2,7 @@
 //! of that wedge is a footprint of its own ([`SurfaceRoomFootprint::MitreTip`]); the overhang a
 //! mitre carries a band by is read here too, and every tip of a plan is added ([`add_to`]).
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceRoomCut, SurfaceRoomFootprint};
 
@@ -48,7 +48,7 @@ pub fn try_cut(
     let corner = arriving.to();
 
     if (leaving.from() - corner).length()
-        > cs_math::max_f64((arriving.to() - arriving.from()).length(), 1.0) * VERTEX_TOLERANCE
+        > ieee_math::max_f64((arriving.to() - arriving.from()).length(), 1.0) * VERTEX_TOLERANCE
     {
         // Not one corner at all: the chain's own order says these two edges meet, and where they
         // do not there is no crossing to read.
@@ -156,7 +156,7 @@ pub fn chains_direction_past(
 
     let square = away.length_squared();
     if (meets - corner).length()
-        > cs_math::max_f64((edge.to() - edge.from()).length(), 1.0) * VERTEX_TOLERANCE
+        > ieee_math::max_f64((edge.to() - edge.from()).length(), 1.0) * VERTEX_TOLERANCE
         || square.is_nan()
         || square <= 0.0
     {
@@ -197,7 +197,7 @@ pub fn overhang_per_setback(
         return 0.0;
     }
 
-    cs_math::max_f64(0.0, inward.dot(normal) / along_the_edge)
+    ieee_math::max_f64(0.0, inward.dot(normal) / along_the_edge)
 }
 
 /// The unit inward direction at the edge and the setback one side of `edge` gives up, as the

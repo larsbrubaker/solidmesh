@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_cap::CornerCapLastRow;
 use super::corner_fill_end_ray_trim::TrimSections;
@@ -65,7 +65,7 @@ pub fn strip(
     within: Option<(f64, f64)>,
 ) -> Result<(GapFillRefusal, i32), LevelLineMeshError> {
     let chain = &chains[own];
-    let tie = 1e-9 * cs_math::max_f64(1.0, chain.length);
+    let tie = 1e-9 * ieee_math::max_f64(1.0, chain.length);
     let climbs = |p: &CornerFillPiece| p.parameters[p.parameters.len() - 1] > p.parameters[0];
     let first_climbs = climbs(first);
     if first_climbs == climbs(second) {
@@ -138,8 +138,8 @@ pub fn strip(
     b.vertices = bv.iter().rev().copied().collect();
     b.parameters = bp.iter().rev().copied().collect();
 
-    let mut lo = cs_math::max_f64(ap[0], bp[0]) - tie;
-    let mut hi = cs_math::min_f64(ap[ap.len() - 1], bp[bp.len() - 1]) + tie;
+    let mut lo = ieee_math::max_f64(ap[0], bp[0]) - tie;
+    let mut hi = ieee_math::min_f64(ap[ap.len() - 1], bp[bp.len() - 1]) + tie;
     if with_set_back {
         lo = set_back(
             mesh,
@@ -175,8 +175,8 @@ pub fn strip(
     }
 
     if let Some((low, high)) = within {
-        lo = cs_math::max_f64(lo, low - tie);
-        hi = cs_math::min_f64(hi, high + tie);
+        lo = ieee_math::max_f64(lo, low - tie);
+        hi = ieee_math::min_f64(hi, high + tie);
     }
 
     let i0 = nearest(&ap, find_index(&ap, |p| p >= lo, false), lo, -1);
@@ -200,7 +200,7 @@ pub fn strip(
         |mesh: &LevelLineMesh, a_vertex: i32, a_reads: f64, b_vertex: i32, b_reads: f64| {
             let a_width = (mesh.position(a_vertex) - chain.point_at(a_reads)).length();
             let b_width = (mesh.position(b_vertex) - chain.point_at(b_reads)).length();
-            (a_width - b_width).abs() <= 0.1 * cs_math::max_f64(a_width, b_width)
+            (a_width - b_width).abs() <= 0.1 * ieee_math::max_f64(a_width, b_width)
         };
     let jumps = |vertex: i32, span: (f64, f64), reads: f64| {
         (jump_ends.contains_key(&vertex) || span.1 - span.0 > tie)
@@ -250,7 +250,7 @@ pub fn strip(
         };
 
     let order = |vertices: &[i32], parameters: &[f64], k: usize| match jump_ends.get(&vertices[k]) {
-        Some(&foot) => cs_math::min_f64(foot, parameters[k]),
+        Some(&foot) => ieee_math::min_f64(foot, parameters[k]),
         None => parameters[k],
     };
 

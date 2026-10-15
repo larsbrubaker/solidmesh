@@ -19,7 +19,7 @@ fn down_ray() -> Ray {
 }
 
 #[test]
-fn rust_only_ray_tracer_and_scene_defaults_match_csharp() {
+fn rust_only_ray_tracer_and_scene_defaults_are_pinned() {
     let tracer = RayTracer::new();
     assert_eq!(tracer.anti_aliasing, AntiAliasing::Medium);
     assert_eq!(AntiAliasing::VeryHigh as i32, 32);

@@ -5,7 +5,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_mixed_corner_run_out, SurfaceMixedCorner, SurfaceStrip};
@@ -210,7 +210,7 @@ impl SurfaceRunOutMeetsAWallBand {
     pub fn point_at(&self, past: f64, radius: f64) -> Vector3 {
         let size = self.corner.size;
         let under_the_cap =
-            size - cs_math::max_f64(0.0, (size * size) - ((2.0 * size) - radius).powi(2)).sqrt();
+            size - ieee_math::max_f64(0.0, (size * size) - ((2.0 * size) - radius).powi(2)).sqrt();
 
         self.corner.outer_rail_centre
             + (self

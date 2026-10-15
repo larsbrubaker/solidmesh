@@ -24,7 +24,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use vector_math::cs_math::{max_f64, min_f64};
+use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::Vector3;
 
 use super::surface_run_across::{

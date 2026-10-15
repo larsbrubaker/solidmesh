@@ -181,7 +181,7 @@ pub fn split_at_setback_steps(
             sharp
                 && (per_edge[before] - per_edge[after]).abs()
                     > SETBACK_STEP_FRACTION
-                        * vector_math::cs_math::max_f64(per_edge[before], per_edge[after])
+                        * vector_math::ieee_math::max_f64(per_edge[before], per_edge[after])
                 && a_crease_runs_in(edges[before].0, edges[after].0, edges[after].1)
         };
 

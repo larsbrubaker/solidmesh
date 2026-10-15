@@ -136,7 +136,7 @@ fn rust_only_small_level_line_readings() {
 }
 
 #[test]
-fn rust_only_the_last_r1p15_pieces_read_as_csharp() {
+fn rust_only_the_last_r1p15_pieces_read_their_pinned_text() {
     use geometry_processing::bevel::level_line::band_refinement::{
         farthest_from_the_line3, nearest_to_the_line, span,
     };

@@ -216,7 +216,7 @@ pub(crate) fn disconnect_bowtie(mesh: &mut DMesh3, vid: i32) {
         return; // not a bowtie!
     }
 
-    dotnet_sort_by_size_descending(&mut sets);
+    sort_by_size_descending_fixed_ties(&mut sets);
     for tris in sets.iter().skip(1) {
         let copy_vid = mesh.append_vertex_copy(vid);
         for &tid in tris {
@@ -256,7 +256,7 @@ pub(crate) fn disconnect_all_bowties(mesh: &mut DMesh3, max_iters: i32) -> usize
 /// through an insertion sort (which keeps them). Which fan keeps the original vertex decides
 /// the repaired mesh's vertex ids, so this order is pinned exactly; more than 16 fans on one
 /// vertex is rare enough that the insertion sort simply continues there.
-fn dotnet_sort_by_size_descending(sets: &mut [Vec<i32>]) {
+fn sort_by_size_descending_fixed_ties(sets: &mut [Vec<i32>]) {
     let greater = |sets: &[Vec<i32>], i: usize, j: usize| sets[i].len() < sets[j].len();
     let swap_if_greater = |sets: &mut [Vec<i32>], i: usize, j: usize| {
         if greater(sets, i, j) {

@@ -7,7 +7,7 @@
 use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use vector_math::{ieee_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
 use super::bevel_bead_clip::CombineMeshes;
 use super::bevel_chain_sweep::{self, BevelSweptSection};
@@ -191,7 +191,7 @@ impl Withdrawal {
 pub fn half_space(cap: &BevelEndCap, bounds: &AxisAlignedBoundingBox) -> Mesh {
     // A degenerate box would be an operand the kernel refuses rather than a clip that does
     // nothing, so the span has a floor under it however small the cutter turns out to be.
-    let diagonal = cs_math::max_f64(bounds.size().length(), 1e-6);
+    let diagonal = ieee_math::max_f64(bounds.size().length(), 1e-6);
     let span = SPAN_IN_DIAGONALS * diagonal;
 
     // The cutter's centre dropped onto the plane, which is where the box's near face is put.

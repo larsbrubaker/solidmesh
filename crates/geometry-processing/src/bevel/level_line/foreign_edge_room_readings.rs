@@ -183,9 +183,9 @@ pub fn bracket_from_one_bare_pass(
         }
 
         low_ends[i] = approach / (highest_unit + extra_unit);
-        bracket_low = vector_math::cs_math::min_f64(bracket_low, low_ends[i]);
+        bracket_low = vector_math::ieee_math::min_f64(bracket_low, low_ends[i]);
         bracket_high =
-            vector_math::cs_math::min_f64(bracket_high, approach / (lowest_unit + extra_unit));
+            vector_math::ieee_math::min_f64(bracket_high, approach / (lowest_unit + extra_unit));
     }
 
     if !(bracket_low > 0.0) || bracket_high.is_infinite() {
@@ -244,7 +244,7 @@ pub fn room_for(
             let approach = bare
                 .min_along_segment(mesh.position(low), mesh.position(high))?
                 .value;
-            best = vector_math::cs_math::min_f64(best, approach / (highest_unit + extra_unit));
+            best = vector_math::ieee_math::min_f64(best, approach / (highest_unit + extra_unit));
         }
 
         return Ok(best);

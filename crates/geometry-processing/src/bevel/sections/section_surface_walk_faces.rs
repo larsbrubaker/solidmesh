@@ -5,7 +5,7 @@
 //! ONE face (or the faces round one vertex or edge) at each step.
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{is_a_fold, normal_of, pair_key, ALONG_AN_ARM, LATTICE_FRACTION};
@@ -212,7 +212,7 @@ pub fn try_face_holding(
             along_arm = second;
         }
 
-        let held = cs_math::min_f64(off_first, off_second);
+        let held = ieee_math::min_f64(off_first, off_second);
 
         if held > best {
             best = held;

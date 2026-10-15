@@ -13,7 +13,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use polygon_mesh::CancelToken;
-use vector_math::{cs_math, number_format};
+use vector_math::{ieee_math, number_format};
 
 use super::stopwatch;
 
@@ -347,7 +347,7 @@ impl WorkBudget {
 
     /// Holds the bar's fraction monotone and at most 1.
     pub fn clamped(&self, fraction: f64) -> f64 {
-        let held = cs_math::min_f64(1.0, cs_math::max_f64(self.last_fraction.get(), fraction));
+        let held = ieee_math::min_f64(1.0, ieee_math::max_f64(self.last_fraction.get(), fraction));
         self.last_fraction.set(held);
         held
     }
@@ -377,7 +377,7 @@ impl WorkBudget {
             0.0
         };
 
-        group_start + (group_weight * refinement_share * cs_math::min_f64(1.0, within))
+        group_start + (group_weight * refinement_share * ieee_math::min_f64(1.0, within))
     }
 
     /// How far through the call the bar stands now, never going backwards. Nothing knows how much
@@ -412,7 +412,7 @@ impl WorkBudget {
             };
         }
 
-        self.clamped(start + (weight * cs_math::min_f64(1.0, cs_math::max_f64(0.0, within))))
+        self.clamped(start + (weight * ieee_math::min_f64(1.0, ieee_math::max_f64(0.0, within))))
     }
 
     /// Tells the progress callback where the build stands now; nothing when nobody is watching.
@@ -632,13 +632,13 @@ impl WorkBudget {
                     / f64::from(self.side_group_count.get()));
         }
 
-        let to = cs_math::max_f64(from, end);
+        let to = ieee_math::max_f64(from, end);
         let budget = Rc::clone(self);
         Some(Rc::new(move |progress: LevelLineProgress| {
             budget.last_report_ms.set(tick_count_ms());
             let fraction = budget.clamped(
                 from + ((to - from)
-                    * cs_math::min_f64(1.0, cs_math::max_f64(0.0, progress.fraction))),
+                    * ieee_math::min_f64(1.0, ieee_math::max_f64(0.0, progress.fraction))),
             );
             if let Some(report) = budget.progress.as_ref() {
                 report(LevelLineProgress::new(

@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_cap::WATCH_END_HOLE_AT;
 use super::{corner_fill, flat_hole_fill};
@@ -81,7 +81,7 @@ pub fn carry(
     // at the rails' own distance round the arc) - every section edge is answered by a triangle
     // reaching a row or rail vertex.
     let u_end = round(mesh.position(row[row.len() - 1]));
-    let rail_snap = 1e-6 * cs_math::max_f64(1.0, u_end.abs());
+    let rail_snap = 1e-6 * ieee_math::max_f64(1.0, u_end.abs());
     let mut first = 0;
     while first + 1 < run.len() && round(mesh.position(run[first + 1])).abs() <= rail_snap {
         first += 1;

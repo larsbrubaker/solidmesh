@@ -1,5 +1,5 @@
 // Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection`, the
-// estimator and the track ball. The expected values of the `*_matches_csharp` tests are recorded
+// estimator and the track ball. The expected values of the `*_pinned_*` tests are recorded
 // output for these 30 boxes, with `BvhTreeItemData::center` left at zero as every caller leaves
 // it; they pin tree shape, search order and hits, so any change to them shows up here.
 
@@ -47,7 +47,7 @@ fn copied(results: Vec<&i32>) -> Vec<i32> {
 }
 
 #[test]
-fn rust_only_trade_off_tree_matches_csharp() {
+fn rust_only_trade_off_tree_has_the_pinned_shape() {
     let tree = test_tree();
     assert_eq!(tree.count_branches(), 7);
 
@@ -76,7 +76,7 @@ fn rust_only_trade_off_tree_matches_csharp() {
 }
 
 #[test]
-fn rust_only_closest_intersection_matches_csharp() {
+fn rust_only_closest_intersection_is_the_pinned_hit() {
     let tree = test_tree();
     let expected = [
         (Vector3::new(3.2, 2.5, 10.0), None),
@@ -102,7 +102,7 @@ fn rust_only_closest_intersection_matches_csharp() {
 }
 
 #[test]
-fn rust_only_locally_ordered_clustering_matches_csharp() {
+fn rust_only_locally_ordered_clustering_builds_the_pinned_tree() {
     let boxes = test_boxes();
     let nodes = BvhBuilderLocallyOrderedClustering::build_bvh(&boxes);
     let described: Vec<String> = nodes

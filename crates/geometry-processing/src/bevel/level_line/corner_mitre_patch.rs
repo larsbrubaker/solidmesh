@@ -2,7 +2,7 @@
 //! the two rounds make ([`on_the_mitre`]).
 
 use indexmap::IndexSet;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{CornerCapLastRow, HoleFillResult, HoleFillTriangle};
 
@@ -36,7 +36,7 @@ pub fn on_the_mitre(
     }
 
     let radius = rows[0].radius;
-    let tolerance = 1e-6 * cs_math::max_f64(radius, rows[0].centre.length());
+    let tolerance = 1e-6 * ieee_math::max_f64(radius, rows[0].centre.length());
     if !(radius > tolerance) || (rows[1].radius - radius).abs() > tolerance {
         return filled;
     }
@@ -95,7 +95,7 @@ pub fn on_the_mitre(
     let on_the_mitre = 1e-3 * radius;
     if points
         .iter()
-        .any(|&q| cs_math::max_f64(read(0, q).0, read(1, q).0).abs() > on_the_mitre)
+        .any(|&q| ieee_math::max_f64(read(0, q).0, read(1, q).0).abs() > on_the_mitre)
     {
         return filled;
     }
@@ -114,7 +114,7 @@ pub fn on_the_mitre(
                 .acos()
                 / (row.arc.len() - 1) as f64
         })
-        .fold(f64::NEG_INFINITY, cs_math::max_f64);
+        .fold(f64::NEG_INFINITY, ieee_math::max_f64);
     let chord_sag = radius * (1.0 - (segment_angle / 2.0).cos());
 
     let placed = |q: Vector3| {
@@ -164,7 +164,7 @@ pub fn on_the_mitre(
     let on_the_loop = |a: usize, b: usize| a < n && b < n && ((a + 1) % n == b || (b + 1) % n == a);
 
     let off_the_crease =
-        |q: Vector3| cs_math::max_f64(read(0, q).0.abs(), read(1, q).0.abs()) > chord_sag;
+        |q: Vector3| ieee_math::max_f64(read(0, q).0.abs(), read(1, q).0.abs()) > chord_sag;
 
     // Read once: the splits grow the triangle list, and a bound read off it each step would grow
     // with them.
@@ -252,7 +252,7 @@ pub fn on_the_mitre(
     let longest = long_edges(&owner, &vertices, &triangles)
         .iter()
         .map(|&(a, b)| (vertices[a as usize] - vertices[b as usize]).length())
-        .fold(0.0, cs_math::max_f64);
+        .fold(0.0, ieee_math::max_f64);
     let passes = if target > 0.0 && longest > target {
         // The ceiling is a whole number; `as` saturates should it be out of range.
         i32::min(4, (longest / target).log2().ceil() as i32)

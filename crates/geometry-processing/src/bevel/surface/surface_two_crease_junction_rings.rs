@@ -5,7 +5,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
@@ -82,7 +82,7 @@ impl SurfaceTwoCreaseJunctionRings {
     /// wider taken. The closing column is a ring the BEAD's strip already minted, and that strip
     /// stands on whatever chording the faces it was rolled along have.
     pub fn closing_slack(junction: &SurfaceMixedJunction, pool: &SurfaceVertexPool) -> f64 {
-        cs_math::max_f64(
+        ieee_math::max_f64(
             surface_mixed_corner_patch::the_shared_faces_own_sagitta(&junction.first.mixed, pool),
             surface_mixed_corner_patch::the_shared_faces_own_sagitta(&junction.second.mixed, pool),
         )

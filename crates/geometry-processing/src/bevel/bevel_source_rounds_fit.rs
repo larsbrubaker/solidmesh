@@ -4,7 +4,7 @@
 
 use std::f64::consts::TAU;
 
-use vector_math::{cs_math, Vector2, Vector3};
+use vector_math::{ieee_math, Vector2, Vector3};
 
 use super::bevel_source_rounds::ONE_NORMAL_RADIANS;
 
@@ -168,8 +168,8 @@ pub(super) fn angular_span(points: &[Vector2], centre: Vector2) -> f64 {
     let mut widest = (angles[0] + TAU) - angles[angles.len() - 1];
 
     for pair in angles.windows(2) {
-        widest = cs_math::max_f64(widest, pair[1] - pair[0]);
+        widest = ieee_math::max_f64(widest, pair[1] - pair[0]);
     }
 
-    cs_math::max_f64(0.0, TAU - widest)
+    ieee_math::max_f64(0.0, TAU - widest)
 }

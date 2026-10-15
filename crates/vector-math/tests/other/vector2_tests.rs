@@ -1,10 +1,10 @@
 // Vector2 basics: arithmetic, length, polyline lengths and positions (`vector2_ex`), and
 // cross/dot agreeing with Vector3.
 //
-// The inputs are random but drawn from a seeded `DotNetRandom`, so a failure reproduces. The
+// The inputs are random but drawn from a seeded `SeededRandom`, so a failure reproduces. The
 // assertions hold for any inputs.
 
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::vector2_ex::{get_position_at, polygon_length};
 use vector_math::{Vector2, Vector3};
 
@@ -96,7 +96,7 @@ fn scaler_operations() {
     assert!(5.0 * scalar_multiplication_argument == Vector2::new(25.0, 20.0));
 }
 
-fn random_vector(rand: &mut DotNetRandom) -> Vector2 {
+fn random_vector(rand: &mut SeededRandom) -> Vector2 {
     let x = rand.next_double() * 1000.0;
     let y = rand.next_double() * 1000.0;
     Vector2::new(x, y)
@@ -104,7 +104,7 @@ fn random_vector(rand: &mut DotNetRandom) -> Vector2 {
 
 #[test]
 fn cross_product() {
-    let mut rand = DotNetRandom::new(1);
+    let mut rand = SeededRandom::new(1);
     let test_vector_2d1 = random_vector(&mut rand);
     let test_vector_2d2 = random_vector(&mut rand);
     let cross_2d = test_vector_2d1.cross(test_vector_2d2);
@@ -118,7 +118,7 @@ fn cross_product() {
 
 #[test]
 fn dot_product() {
-    let mut rand = DotNetRandom::new(2);
+    let mut rand = SeededRandom::new(2);
     let test_vector_2d1 = random_vector(&mut rand);
     let test_vector_2d2 = random_vector(&mut rand);
     let cross_2d = test_vector_2d1.dot(test_vector_2d2);
@@ -132,7 +132,7 @@ fn dot_product() {
 
 #[test]
 fn length_and_distance() {
-    let mut rand = DotNetRandom::new(3);
+    let mut rand = SeededRandom::new(3);
     let test1 = random_vector(&mut rand);
     let test2 = random_vector(&mut rand);
     let test3 = test1 + test2;

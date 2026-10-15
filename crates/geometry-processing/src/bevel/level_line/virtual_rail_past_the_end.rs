@@ -17,7 +17,7 @@
 //! end does not stand on a ray end, or whose section passes the end plane before P, is returned as
 //! it was.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh, WorkError};
 
@@ -241,7 +241,7 @@ pub fn last_to_leave(
     profile: BandProfile,
 ) -> f64 {
     let behind = |q: Vector3| -(q - end).dot(normal);
-    let mut best = cs_math::max_f64(behind(rail_left), behind(rail_right));
+    let mut best = ieee_math::max_f64(behind(rail_left), behind(rail_right));
     if profile != BandProfile::Fillet {
         return best;
     }
@@ -268,7 +268,7 @@ pub fn last_to_leave(
     // On the arc when it stands on the end vertex's side of the chord between the rail points.
     let chord_mid = (rail_left + rail_right) / 2.0;
     if (top - chord_mid).dot(end - chord_mid) >= 0.0 {
-        best = cs_math::max_f64(best, behind(top));
+        best = ieee_math::max_f64(best, behind(top));
     }
 
     best
@@ -306,7 +306,7 @@ pub fn to_the_rail(
         ordered.reverse();
     }
 
-    let on_rail = 1e-9 * cs_math::max_f64(1.0, setback) + (4.0 * mesh.same_place);
+    let on_rail = 1e-9 * ieee_math::max_f64(1.0, setback) + (4.0 * mesh.same_place);
     let mut keep = ordered.len();
     while keep > 1
         && chain

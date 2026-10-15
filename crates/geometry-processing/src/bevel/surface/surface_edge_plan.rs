@@ -186,6 +186,6 @@ impl SurfaceEdgePlan {
 impl SurfaceEdgePlan {
     /// The widest setback either face gives up.
     pub fn setback(&self) -> f64 {
-        vector_math::cs_math::max_f64(self.left_setback, self.right_setback)
+        vector_math::ieee_math::max_f64(self.left_setback, self.right_setback)
     }
 }

@@ -21,7 +21,7 @@
 //! grid's answers depend only on the mesh and region it was laid from. `None` stands for no mesh or
 //! region.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{SurfaceRegionFaceGrid, SurfaceRunAcrossSectionStep};
 use crate::topology::FeatureEdge;
@@ -173,8 +173,8 @@ pub fn try_the_stretch_the_foot_meets_its_facet_over(
                 least = at;
                 most = at;
             } else {
-                least = cs_math::min_f64(least, at);
-                most = cs_math::max_f64(most, at);
+                least = ieee_math::min_f64(least, at);
+                most = ieee_math::max_f64(most, at);
             }
         }
     });

@@ -4,7 +4,7 @@
 use std::time::Instant;
 
 use geometry_processing::bevel::level_line::{chain_setback, ChainField, ScalarField};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::Vector3;
 
 /// A straight chain along X, so the right answer can be written down by hand.
@@ -253,7 +253,7 @@ fn the_zero_set_on_a_straight_edge_is_the_parallel_line_at_the_setback() {
 }
 
 fn random_point(
-    random: &mut DotNetRandom,
+    random: &mut SeededRandom,
     xy: f64,
     xy_offset: f64,
     z: f64,
@@ -268,7 +268,7 @@ fn random_point(
 #[test]
 fn the_field_is_one_lipschitz_in_distance() {
     let field = closed_square(&[1.0, 1.0, 1.0, 1.0]);
-    let mut random = DotNetRandom::new(20260918);
+    let mut random = SeededRandom::new(20260918);
 
     for _ in 0..2000 {
         let a = random_point(&mut random, 30.0, 10.0, 20.0, 10.0);
@@ -344,7 +344,7 @@ fn distance_is_invariant_under_a_rigid_motion() {
     let here = ChainField::from_polyline(&points, true, &setbacks).expect("a valid chain");
     let moved: Vec<Vector3> = points.iter().map(|&p| rigidly_moved(p)).collect();
     let there = ChainField::from_polyline(&moved, true, &setbacks).expect("a valid chain");
-    let mut random = DotNetRandom::new(4711);
+    let mut random = SeededRandom::new(4711);
 
     for _ in 0..500 {
         let query = random_point(&mut random, 30.0, 10.0, 20.0, 10.0);
@@ -381,7 +381,7 @@ fn evaluating_a_hundred_thousand_points_against_a_sixty_four_segment_loop_is_rec
     }
 
     let field = ChainField::from_polyline(&ring, true, &setbacks).expect("a valid chain");
-    let mut random = DotNetRandom::new(1234);
+    let mut random = SeededRandom::new(1234);
     let queries: Vec<Vector3> = (0..QUERIES)
         .map(|_| random_point(&mut random, 30.0, 15.0, 10.0, 5.0))
         .collect();
@@ -428,7 +428,7 @@ fn the_greatest_value_over_a_triangle_agrees_with_brute_force() {
     )
     .expect("a valid chain");
 
-    let mut random = DotNetRandom::new(20260918);
+    let mut random = SeededRandom::new(20260918);
     for _ in 0..20 {
         let mut corner = || {
             let x = random.next_double() * 10.0;
@@ -448,7 +448,7 @@ fn the_greatest_value_over_a_triangle_agrees_with_brute_force() {
                 let value = chain
                     .value_at(a + ((b - a) * u) + ((c - a) * v))
                     .expect("no budget");
-                sampled = vector_math::cs_math::max_f64(sampled, value);
+                sampled = vector_math::ieee_math::max_f64(sampled, value);
             }
         }
 

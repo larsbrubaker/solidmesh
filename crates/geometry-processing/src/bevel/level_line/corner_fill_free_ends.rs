@@ -3,7 +3,7 @@
 //! loop's piece turned to start inside an end arc ([`start_inside_an_end_arc`]), a piece's slice
 //! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]).
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use std::rc::Rc;
 
@@ -64,7 +64,7 @@ pub fn rails_past_an_end(
 /// the piece's ends or inside it. False, the piece untouched, where no such vertex exists.
 pub fn start_inside_an_end_arc(field: &ChainField, piece: &mut CornerFillPiece) -> bool {
     let n = piece.vertices.len();
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, field.length);
     let at_end = |i: usize, parameter: f64| (piece.parameters[i] - parameter).abs() <= tolerance;
     let start = (0..n).find(|&i| {
         (at_end(i, 0.0) && at_end((i + n - 1) % n, 0.0))
@@ -104,7 +104,7 @@ pub fn split_round_a_free_end(
         return vec![piece.clone()];
     }
 
-    let tolerance = 1e-9 * cs_math::max_f64(1.0, field.length);
+    let tolerance = 1e-9 * ieee_math::max_f64(1.0, field.length);
     let mut result = vec![piece.clone()];
     let ends = [
         (field.points[0], 0.0),

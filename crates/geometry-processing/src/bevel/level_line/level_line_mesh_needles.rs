@@ -6,7 +6,7 @@
 
 use std::collections::VecDeque;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     FieldCounters, LevelLineMesh, LevelLineTriangle, LevelLineWork, NeedleMeter, WorkError,
@@ -100,9 +100,9 @@ impl LevelLineMesh {
         let a = self.vertices[t.a as usize];
         let b = self.vertices[t.b as usize];
         let c = self.vertices[t.c as usize];
-        let longest = cs_math::max_f64(
+        let longest = ieee_math::max_f64(
             (b - a).length(),
-            cs_math::max_f64((c - b).length(), (a - c).length()),
+            ieee_math::max_f64((c - b).length(), (a - c).length()),
         );
 
         // Twice the area over the longest edge is the least of the three heights.

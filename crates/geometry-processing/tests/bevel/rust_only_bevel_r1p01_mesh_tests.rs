@@ -86,7 +86,7 @@ fn rust_only_an_end_face_bends_only_past_half_a_degree() {
 }
 
 #[test]
-fn rust_only_small_fill_tests_read_as_csharp() {
+fn rust_only_small_fill_tests_read_their_pinned_text() {
     assert!(open_gap_fill::is_straight_row(&[3, 7, 7, 7]));
     assert!(open_gap_fill::is_straight_row(&[3, 3, 3, 9]));
     assert!(!open_gap_fill::is_straight_row(&[3, 7]));

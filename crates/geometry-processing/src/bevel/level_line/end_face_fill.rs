@@ -9,7 +9,7 @@
 //! `TryGrowingEndFaces`) is in `end_face_fill_try.rs`, kept apart for the file-size limit and
 //! re-exported here.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 pub use super::end_face_fill_try::{try_end_faces, try_growing_end_faces};
 use super::open_gap_fill;
@@ -203,8 +203,9 @@ pub fn is_planar(mesh: &LevelLineMesh, run: &[i32]) -> bool {
     }
 
     let normal = best.get_normal();
-    run.iter()
-        .all(|&v| (mesh.position(v) - o).dot(normal).abs() <= 1e-9 * cs_math::max_f64(1.0, extent))
+    run.iter().all(|&v| {
+        (mesh.position(v) - o).dot(normal).abs() <= 1e-9 * ieee_math::max_f64(1.0, extent)
+    })
 }
 
 /// The vertices of the gap's one open run on side `tag`, running `from` to `to`; `None` (noting the
@@ -268,7 +269,7 @@ pub fn with_whole_end(run: &GapLoop, whole: &GapLoop, at_tail: bool) -> GapLoop 
 }
 
 /// NaN sorts below every number.
-fn cs_compare(a: f64, b: f64) -> std::cmp::Ordering {
+fn nan_first_compare(a: f64, b: f64) -> std::cmp::Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => std::cmp::Ordering::Equal,
         (true, false) => std::cmp::Ordering::Less,
@@ -288,7 +289,7 @@ pub fn is_concave(mesh: &LevelLineMesh, left: &GapLoop, right: &GapLoop) -> bool
     // OrderBy(..).First(): the first of the least.
     let mut nearest = 0;
     for i in 1..right.vertices.len() {
-        if cs_compare(
+        if nan_first_compare(
             (right.parameters[i] - at).abs(),
             (right.parameters[nearest] - at).abs(),
         ) == std::cmp::Ordering::Less
@@ -302,13 +303,13 @@ pub fn is_concave(mesh: &LevelLineMesh, left: &GapLoop, right: &GapLoop) -> bool
     let mut edges: Vec<usize> = (0..left.vertices.len().saturating_sub(1)).collect();
     let spans = |i: usize| {
         let (p, q) = (parameters[i], parameters[i + 1]);
-        cs_math::min_f64(p, q) <= at && at <= cs_math::max_f64(p, q)
+        ieee_math::min_f64(p, q) <= at && at <= ieee_math::max_f64(p, q)
     };
     edges.sort_by(|&i, &j| {
         let key_i = if spans(i) { 0 } else { 1 };
         let key_j = if spans(j) { 0 } else { 1 };
         key_i.cmp(&key_j).then_with(|| {
-            cs_compare(
+            nan_first_compare(
                 ((parameters[i] + parameters[i + 1]) / 2.0 - at).abs(),
                 ((parameters[j] + parameters[j + 1]) / 2.0 - at).abs(),
             )

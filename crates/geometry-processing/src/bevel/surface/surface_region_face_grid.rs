@@ -25,7 +25,7 @@
 //! from.
 
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::SurfaceVertexPool;
 use crate::topology::FaceGroup;
@@ -88,11 +88,11 @@ impl SurfaceRegionFaceGrid {
         let low = least;
 
         let span = most - least;
-        let mut side = cs_math::max_f64(
+        let mut side = ieee_math::max_f64(
             1e-9,
             (span.x + span.y + span.z)
                 / 3.0
-                / cs_math::max_f64(1.0, (faces.len() as f64 / FACES_TO_A_CELL).cbrt()),
+                / ieee_math::max_f64(1.0, (faces.len() as f64 / FACES_TO_A_CELL).cbrt()),
         );
 
         let mut across = steps(span.x, side);
@@ -107,9 +107,9 @@ impl SurfaceRegionFaceGrid {
         }
 
         let cell = Vector3::new(
-            cs_math::max_f64(span.x / across as f64, 1e-9),
-            cs_math::max_f64(span.y / deep as f64, 1e-9),
-            cs_math::max_f64(span.z / tall as f64, 1e-9),
+            ieee_math::max_f64(span.x / across as f64, 1e-9),
+            ieee_math::max_f64(span.y / deep as f64, 1e-9),
+            ieee_math::max_f64(span.z / tall as f64, 1e-9),
         );
 
         let mut grid = SurfaceRegionFaceGrid {
@@ -173,7 +173,7 @@ impl SurfaceRegionFaceGrid {
                     for entry in self.starts_at[of]..self.starts_at[of + 1] {
                         let slot = self.bucketed[entry] * 3;
 
-                        nearest = cs_math::min_f64(
+                        nearest = ieee_math::min_f64(
                             nearest,
                             (at - nearest_on_the_triangle(
                                 at,
@@ -311,8 +311,8 @@ impl SurfaceRegionFaceGrid {
             let one = (least - at) / run;
             let other = (most - at) / run;
 
-            enters = cs_math::max_f64(enters, cs_math::min_f64(one, other));
-            leaves = cs_math::min_f64(leaves, cs_math::max_f64(one, other));
+            enters = ieee_math::max_f64(enters, ieee_math::min_f64(one, other));
+            leaves = ieee_math::min_f64(leaves, ieee_math::max_f64(one, other));
         }
 
         if enters > leaves {
@@ -412,9 +412,9 @@ fn nearest_on_the_side(at: Vector3, from: Vector3, to: Vector3) -> Vector3 {
         return from;
     }
 
-    let along = cs_math::min_f64(
+    let along = ieee_math::min_f64(
         1.0,
-        cs_math::max_f64(0.0, (at - from).dot(run) / run.length_squared()),
+        ieee_math::max_f64(0.0, (at - from).dot(run) / run.length_squared()),
     );
 
     from + (run * along)

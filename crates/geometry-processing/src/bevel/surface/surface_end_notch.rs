@@ -3,7 +3,7 @@
 //! reach and wedge tests, the snap of a cut ring onto the profile, and the cap
 //! ([`try_cap_with_the_section`]); the notch itself lands with a later package.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_end_cut, surface_fan, surface_ring, SurfaceVertexPool};
@@ -67,7 +67,7 @@ pub fn the_reach_of_the_section(pool: &SurfaceVertexPool, profile: &[i32], corne
 
     for &vertex in profile {
         let here = (pool.position_of(vertex) - corner).length();
-        reach = cs_math::max_f64(reach, here);
+        reach = ieee_math::max_f64(reach, here);
     }
 
     reach

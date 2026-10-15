@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::{FieldKind, LevelLineMesh, ScalarField};
@@ -177,12 +177,12 @@ impl VertexFieldReading {
         let run_out = self.run_out_value_at(point)?;
         let pick = self.pick();
         if let Some(chain) = pick.as_chain_field() {
-            Ok(cs_math::min_f64(
+            Ok(ieee_math::min_f64(
                 chain.value_in_the_end_plane(point)?,
                 run_out,
             ))
         } else if let Some(pick) = pick.as_pick_field() {
-            Ok(cs_math::min_f64(
+            Ok(ieee_math::min_f64(
                 pick.value_in_the_end_plane(point, a, b)?,
                 run_out,
             ))
@@ -200,14 +200,14 @@ impl VertexFieldReading {
             let run_out = self.run_out_value_at(point)?;
             let pick = self.pick();
             if let Some(chain) = pick.as_chain_field() {
-                return Ok(cs_math::min_f64(
+                return Ok(ieee_math::min_f64(
                     chain.value_across_the_known_cut(point)?,
                     run_out,
                 ));
             }
 
             if let Some(pick) = pick.as_pick_field() {
-                return Ok(cs_math::min_f64(
+                return Ok(ieee_math::min_f64(
                     pick.value_across_the_known_cut(point)?,
                     run_out,
                 ));

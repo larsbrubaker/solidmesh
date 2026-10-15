@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::flat_hole_fill;
 use super::gap_fill::{self, arc_point};
@@ -70,7 +70,7 @@ pub fn flat_run_out(
 
     let points: Vec<_> = r#loop.iter().map(|&v| mesh.position(v)).collect();
     let (triangles, _) =
-        flat_hole_fill::fill(&points, 1e-6 * cs_math::max_f64(1.0, chain.length), None)?;
+        flat_hole_fill::fill(&points, 1e-6 * ieee_math::max_f64(1.0, chain.length), None)?;
     Some(OpenGapFillFlatRunOutRegion {
         r#loop,
         triangles,
@@ -192,7 +192,7 @@ pub fn cut_section_arc(
     }
 
     // straight between the two parameters, so the round there is a prism along the chain
-    let scale = cs_math::max_f64(1.0, chain.length);
+    let scale = ieee_math::max_f64(1.0, chain.length);
     if ((c_b - c_a).length() - (t_b - t_a)).abs() > 1e-6 * scale {
         return Ok(none(false));
     }

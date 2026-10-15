@@ -4,7 +4,7 @@
 //! either side - so the parameter read near the joint moves continuously across it, and the
 //! readings are carried into and out of that span. Outside the scope nothing changes.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::ChainField;
 
@@ -60,13 +60,14 @@ impl ChainField {
             // hair either side of it. How far past each segment's end the point's UNCLAMPED least
             // lies is read instead - 0 exactly where the segment's own least reaches the joint,
             // which is the region's edge, so the span joins the squeezed half-segments continuously.
-            if (parameter - at).abs() <= Self::JOINT_READ_TIE * cs_math::max_f64(1.0, self.length) {
-                let past = cs_math::max_f64(
+            if (parameter - at).abs() <= Self::JOINT_READ_TIE * ieee_math::max_f64(1.0, self.length)
+            {
+                let past = ieee_math::max_f64(
                     0.0,
                     (self.unclamped_least_on(k - 1, point) - 1.0) * 2.0 * before,
                 );
                 let short_of =
-                    cs_math::max_f64(0.0, -self.unclamped_least_on(k, point) * 2.0 * after);
+                    ieee_math::max_f64(0.0, -self.unclamped_least_on(k, point) * 2.0 * after);
                 let f = if past + short_of > 0.0 {
                     past / (past + short_of)
                 } else {

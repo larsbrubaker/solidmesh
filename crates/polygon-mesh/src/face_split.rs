@@ -49,14 +49,14 @@ pub fn clip_edge_at_plane(
     start + (end - start) * ratio_to_start
 }
 
-/// Whether the largest distance is above `on_plane_distance`, with NaN treated as in `linq_max`.
+/// Whether the largest distance is above `on_plane_distance`, with NaN treated as in `max_or_nan`.
 fn max_above(values: &[f64; 3], on_plane_distance: f64) -> bool {
-    linq_max(values) > on_plane_distance
+    max_or_nan(values) > on_plane_distance
 }
 
 /// The largest value, where NaN only wins when every value is NaN, so one bad distance does not
 /// decide which side a face is on.
-fn linq_max(values: &[f64; 3]) -> f64 {
+fn max_or_nan(values: &[f64; 3]) -> f64 {
     let mut max = values[0];
     for &v in &values[1..] {
         if v > max || max.is_nan() {

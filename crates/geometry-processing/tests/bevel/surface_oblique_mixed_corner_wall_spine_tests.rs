@@ -23,7 +23,7 @@ const EXACT: f64 = 1e-9;
 
 /// Cos 45 rounded to five places: the tolerances below were set against this value.
 #[allow(clippy::approx_constant)]
-const CS_COS_45: f64 = 0.70711;
+const COS_45_FIVE_PLACES: f64 = 0.70711;
 
 /// The ball at turn zero is a ball of the BEAD: its centre stands on the bead's own axis, so the
 /// canal leaves the bead's SQUARE end section tangentially.
@@ -84,7 +84,7 @@ fn the_centre_path_is_the_ellipse_the_wall_cuts_the_cuts_cylinder_in() {
     }
 
     assert!(
-        (longest - 2.0 * RADIUS / CS_COS_45).abs() <= 1e-4,
+        (longest - 2.0 * RADIUS / COS_45_FIVE_PLACES).abs() <= 1e-4,
         "the long semi-axis is 2r over how square the cut stands to the wall - instead {longest}"
     );
     assert!(

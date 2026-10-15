@@ -6,8 +6,8 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh, ScalarField};
-use vector_math::dotnet_random::DotNetRandom;
-use vector_math::{cs_math, Matrix4X4, Vector3};
+use vector_math::seeded_random::SeededRandom;
+use vector_math::{ieee_math, Matrix4X4, Vector3};
 
 use crate::level_line_test_geometry::{
     cube, is_watertight, run_cut, signed_volume, subdivided_plane, surface_area,
@@ -19,7 +19,7 @@ const SNAP: f64 = 1e-9;
 #[test]
 fn the_least_value_over_a_segment_and_over_a_triangle_agrees_with_brute_force_sampling() {
     for one_setback_all_along in [true, false] {
-        let mut random = DotNetRandom::new(20260918);
+        let mut random = SeededRandom::new(20260918);
         for _ in 0..12 {
             let field = random_chain(&mut random, one_setback_all_along);
             let a = random_point(&mut random);
@@ -30,7 +30,7 @@ fn the_least_value_over_a_segment_and_over_a_triangle_agrees_with_brute_force_sa
             let mut sampled_segment = f64::INFINITY;
             const STEPS: i32 = 2000;
             for i in 0..=STEPS {
-                sampled_segment = cs_math::min_f64(
+                sampled_segment = ieee_math::min_f64(
                     sampled_segment,
                     field
                         .value_at(Vector3::lerp(a, b, i as f64 / STEPS as f64))
@@ -45,7 +45,7 @@ fn the_least_value_over_a_segment_and_over_a_triangle_agrees_with_brute_force_sa
                 for j in 0..=(ROWS - i) {
                     let u = i as f64 / ROWS as f64;
                     let v = j as f64 / ROWS as f64;
-                    sampled_triangle = cs_math::min_f64(
+                    sampled_triangle = ieee_math::min_f64(
                         sampled_triangle,
                         field
                             .value_at(a + ((b - a) * u) + ((c - a) * v))
@@ -371,7 +371,7 @@ fn square_rim(centre: Vector3, half: f64, setback: f64) -> Rc<dyn ScalarField> {
     Rc::new(ChainField::from_polyline(&points, true, &[setback; 4]).expect("a chain"))
 }
 
-fn random_chain(random: &mut DotNetRandom, one_setback_all_along: bool) -> ChainField {
+fn random_chain(random: &mut SeededRandom, one_setback_all_along: bool) -> ChainField {
     let count = 2 + random.next(3);
     let only = 0.2 + (random.next_double() * 0.8);
     let mut points = Vec::new();
@@ -390,7 +390,7 @@ fn random_chain(random: &mut DotNetRandom, one_setback_all_along: bool) -> Chain
     ChainField::from_polyline(&points, closed, &setbacks).expect("a chain")
 }
 
-fn random_point(random: &mut DotNetRandom) -> Vector3 {
+fn random_point(random: &mut SeededRandom) -> Vector3 {
     let x = (random.next_double() * 4.0) - 2.0;
     let y = (random.next_double() * 4.0) - 2.0;
     let z = (random.next_double() * 4.0) - 2.0;

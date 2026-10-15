@@ -11,7 +11,7 @@
 //! (`SurfaceStripSeamDidNotMeet`). **So the plane divides the RUN's band as the corner divides the
 //! run**, and only where the corner stands outside the stretch.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{surface_mitre_seam, surface_plan_band_ends, SurfaceEdgePlan, SurfaceLine};
 
@@ -36,8 +36,8 @@ pub fn starves_a_piece_by_standing_outside_the_run(
     }
 
     // These min / max pass a NaN through rather than picking the other side.
-    cs_math::min_f64(at_the_joint, high) <= cs_math::max_f64(before_the_joint, low)
-        || cs_math::min_f64(after_the_joint, high) <= cs_math::max_f64(at_the_joint, low)
+    ieee_math::min_f64(at_the_joint, high) <= ieee_math::max_f64(before_the_joint, low)
+        || ieee_math::min_f64(after_the_joint, high) <= ieee_math::max_f64(at_the_joint, low)
 }
 
 /// Whether edges `arrived_on` and `goes_on` are pieces of one straight crease: their tangent
@@ -138,8 +138,8 @@ pub fn try_the_point(
         let finishes = where_the_neighbours_plane_crosses(
             edges, is_closed, last, false, from, direction, line,
         );
-        let low = cs_math::min_f64(starts, finishes);
-        let high = cs_math::max_f64(starts, finishes);
+        let low = ieee_math::min_f64(starts, finishes);
+        let high = ieee_math::max_f64(starts, finishes);
 
         if left {
             (left_low, left_high) = (low, high);
@@ -147,8 +147,8 @@ pub fn try_the_point(
             (right_low, right_high) = (low, high);
         }
 
-        lowest = cs_math::max_f64(lowest, low);
-        highest = cs_math::min_f64(highest, high);
+        lowest = ieee_math::max_f64(lowest, low);
+        highest = ieee_math::min_f64(highest, high);
     }
 
     // How far along the run the joint's own corner stands, and how long the whole run is - the two

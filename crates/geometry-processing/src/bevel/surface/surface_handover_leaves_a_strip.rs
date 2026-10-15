@@ -3,7 +3,7 @@
 //! ([`try_check`]), the band test along a line ([`leaves_a_band`]) and its plan form
 //! ([`leaves_a_band_of`]).
 
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceLine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
@@ -73,9 +73,9 @@ pub fn leaves_a_band(ends: &[SurfaceBandEnd], line: &SurfaceLine) -> bool {
         let at = standing / slope;
 
         if slope > 0.0 {
-            from = cs_math::max_f64(from, at);
+            from = ieee_math::max_f64(from, at);
         } else {
-            to = cs_math::min_f64(to, at);
+            to = ieee_math::min_f64(to, at);
         }
     }
 

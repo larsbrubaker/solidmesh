@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use polygon_mesh::{Face, Mesh};
-use vector_math::{cs_math, number_format, Vector3};
+use vector_math::{ieee_math, number_format, Vector3};
 
 /// The step between neighbouring floats at magnitude one, which is how a mesh stores a point.
 const FLOAT_STORAGE_EPSILON: f64 = 1.1920929e-7;
@@ -31,11 +31,11 @@ pub type FacesOnEachEdge = HashMap<(i32, i32), Vec<i32>>;
 pub fn lattice_for(mesh: &Mesh) -> f64 {
     let bounds = mesh.get_axis_aligned_bounding_box();
 
-    let furthest = cs_math::max_f64(
-        cs_math::max_f64(bounds.min_xyz.x.abs(), bounds.max_xyz.x.abs()),
-        cs_math::max_f64(
-            cs_math::max_f64(bounds.min_xyz.y.abs(), bounds.max_xyz.y.abs()),
-            cs_math::max_f64(bounds.min_xyz.z.abs(), bounds.max_xyz.z.abs()),
+    let furthest = ieee_math::max_f64(
+        ieee_math::max_f64(bounds.min_xyz.x.abs(), bounds.max_xyz.x.abs()),
+        ieee_math::max_f64(
+            ieee_math::max_f64(bounds.min_xyz.y.abs(), bounds.max_xyz.y.abs()),
+            ieee_math::max_f64(bounds.min_xyz.z.abs(), bounds.max_xyz.z.abs()),
         ),
     );
 
@@ -286,9 +286,9 @@ fn is_an_ear(
         return None;
     }
 
-    let longest = cs_math::max_f64(
+    let longest = ieee_math::max_f64(
         (b - a).length(),
-        cs_math::max_f64((c - b).length(), (a - c).length()),
+        ieee_math::max_f64((c - b).length(), (a - c).length()),
     );
 
     if !(longest > 0.0) || twice_area / longest <= lattice {
@@ -465,7 +465,7 @@ fn is_flat(mesh: &Mesh, vertex: i32, path: &[i32], lattice: f64) -> (bool, f64) 
     let mut worst_out_of_plane = 0.0;
 
     for &corner in path {
-        worst_out_of_plane = cs_math::max_f64(
+        worst_out_of_plane = ieee_math::max_f64(
             worst_out_of_plane,
             (position(mesh, corner) - through).dot(normal).abs(),
         );

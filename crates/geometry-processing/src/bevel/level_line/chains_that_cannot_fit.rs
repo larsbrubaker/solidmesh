@@ -83,7 +83,7 @@ pub struct ChainsThatCannotFit {
 
 /// The order candidates sort by: NaN equals NaN and sorts below every number, so the order is
 /// total and the same on every run.
-fn compare_like_csharp(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Less,
@@ -200,12 +200,12 @@ impl ChainsThatCannotFit {
         // was typed. The four keys make the order total, so the set's own order never shows.
         let mut tight: Vec<(i32, i32)> = tight_pairs.into_iter().collect();
         tight.sort_by(|p, q| {
-            compare_like_csharp(
+            nan_first_compare(
                 pair_room_of(reading, p.0, p.1),
                 pair_room_of(reading, q.0, q.1),
             )
             .then_with(|| {
-                compare_like_csharp(
+                nan_first_compare(
                     length_of(reading, q.0).max(length_of(reading, q.1)),
                     length_of(reading, p.0).max(length_of(reading, p.1)),
                 )

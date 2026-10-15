@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::band_gap_after_the_rounds::{
     creases_after_the_rounds_closed, feature_edges_after_the_rounds,
@@ -153,7 +153,7 @@ pub fn plane_of(at: &[Vector3], t: (i32, i32, i32)) -> OrientedPlane {
 /// (RoundsFirstTests.TheWallStaysOffTheCreasesSide).
 pub fn same_plane(p: OrientedPlane, q: OrientedPlane) -> bool {
     1.0 - p.0.dot(q.0) < COPLANAR_TOLERANCE
-        && (p.0.dot(q.2) - p.1).abs() <= COPLANAR_TOLERANCE * cs_math::max_f64(1.0, p.1.abs())
+        && (p.0.dot(q.2) - p.1).abs() <= COPLANAR_TOLERANCE * ieee_math::max_f64(1.0, p.1.abs())
 }
 
 /// Each chain's fold, read edge by edge off the two triangles standing on

@@ -2,7 +2,7 @@
 //! END RAYS run on past an open chain's ends. The type lives in `chain_field.rs`; a ray's reading
 //! is in `chain_field_nearest.rs`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{ChainField, ChainFieldExtension, EndRayBound};
 
@@ -126,7 +126,7 @@ impl ChainField {
         let reach = |bound: Option<EndRayBound>, setback: f64| {
             let unbounded = diagonal + (4.0 * setback);
             match bound {
-                Some(bound) => cs_math::min_f64(
+                Some(bound) => ieee_math::min_f64(
                     unbounded,
                     bound.reach_per_setback * setback * (1.0 + Self::END_RAY_SLACK),
                 ),

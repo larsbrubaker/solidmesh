@@ -8,7 +8,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use super::color8::{uround, Color};
 
 /// The larger of two floats, NaN if either argument is NaN (`f32::max` would ignore it).
-fn net_max(a: f32, b: f32) -> f32 {
+fn max_or_nan(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
     } else if a > b {
@@ -19,7 +19,7 @@ fn net_max(a: f32, b: f32) -> f32 {
 }
 
 /// The smaller of two floats, NaN-propagating.
-fn net_min(a: f32, b: f32) -> f32 {
+fn min_or_nan(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
     } else if a < b {
@@ -126,7 +126,7 @@ impl ColorF {
     /// A channel as 0..255 (all four getters): note the clamp is to 0..255, not 0..1, so a
     /// value over 1 can exceed 255; `ToColor`'s constructor clamps the result.
     fn channel_0_to_255(v: f32) -> i32 {
-        uround((net_max(0.0, net_min(255.0, v)) * Self::BASE_MASK as f32) as f64)
+        uround((max_or_nan(0.0, min_or_nan(255.0, v)) * Self::BASE_MASK as f32) as f64)
     }
 
     pub fn red0_to_255(&self) -> i32 {
@@ -186,8 +186,8 @@ impl ColorF {
 
     /// `(hue, saturation, lightness)`.
     pub fn get_hsl(&self) -> (f64, f64, f64) {
-        let max_rgb = net_max(self.red, net_max(self.green, self.blue)) as f64;
-        let min_rgb = net_min(self.red, net_min(self.green, self.blue)) as f64;
+        let max_rgb = max_or_nan(self.red, max_or_nan(self.green, self.blue)) as f64;
+        let min_rgb = min_or_nan(self.red, min_or_nan(self.green, self.blue)) as f64;
         let delta_max_to_min = max_rgb - min_rgb;
 
         let mut hue = 0.0; // default to black

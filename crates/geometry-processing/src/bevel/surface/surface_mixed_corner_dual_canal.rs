@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
@@ -104,7 +104,7 @@ impl SurfaceMixedCornerDualCanal {
         }
 
         match self.try_the_cap_crossing(turn) {
-            Some(crossing) => cs_math::min_f64(crossing, sweep),
+            Some(crossing) => ieee_math::min_f64(crossing, sweep),
             None => 0.0,
         }
     }

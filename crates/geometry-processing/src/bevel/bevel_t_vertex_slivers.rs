@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use polygon_mesh::{Face, FaceList, Mesh};
-use vector_math::{cs_sort, Vector3};
+use vector_math::{fixed_tie_sort, Vector3};
 
 use super::bevel_working_mesh;
 
@@ -135,7 +135,7 @@ pub fn try_plan_the_splits(
         // Met in the order they stand along the edge, so the fan lays one triangle per span and
         // none of them crosses another. Sorted with an introsort, whose tie order is fixed.
         let (x, y) = (split.x, split.y);
-        cs_sort::introspective_sort(&mut split.middles, &mut |first, second| {
+        fixed_tie_sort::introspective_sort(&mut split.middles, &mut |first, second| {
             let a = along_the_edge(mesh, x, y, *first);
             let b = along_the_edge(mesh, x, y, *second);
             match (a.is_nan(), b.is_nan()) {

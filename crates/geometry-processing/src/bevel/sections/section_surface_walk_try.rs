@@ -6,7 +6,7 @@
 //! [`super::section_walk_vertex_turn`].
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{
@@ -184,7 +184,7 @@ pub fn try_walk(
         if exit.distance >= remaining {
             // The reach ran out exactly where the face ends: the end is ON that edge.
             let landed_on_the_exit =
-                exit.distance - remaining <= LATTICE_FRACTION * cs_math::max_f64(1.0, distance);
+                exit.distance - remaining <= LATTICE_FRACTION * ieee_math::max_f64(1.0, distance);
 
             // LANDING ON A FOLD: a reach running out within the mesh's lattice SHORT of a fold is
             // classified onto it. Only folds - a flat edge's two faces are one surface.

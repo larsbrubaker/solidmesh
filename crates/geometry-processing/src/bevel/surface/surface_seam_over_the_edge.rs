@@ -74,7 +74,7 @@ pub fn try_pick_the_run_over_the_edge(
             .map(|&vertex| (vertex, strip.param_of(pool.position_of(vertex))))
             .collect();
 
-        let overlap = c_sharp_min(found[found.len() - 1].1, ends) - c_sharp_max(found[0].1, starts);
+        let overlap = min_or_nan(found[found.len() - 1].1, ends) - max_or_nan(found[0].1, starts);
 
         if overlap > most_overlap {
             most_overlap = overlap;
@@ -146,9 +146,9 @@ pub fn the_bands_span(
         // that runs with the walk bounds the band's start and one that runs against it the finish.
         // These max / min answer NaN where either argument is NaN.
         if slope > 0.0 {
-            the_start = Some(the_start.map_or(at, |start| c_sharp_max(start, at)));
+            the_start = Some(the_start.map_or(at, |start| max_or_nan(start, at)));
         } else {
-            the_finish = Some(the_finish.map_or(at, |finish| c_sharp_min(finish, at)));
+            the_finish = Some(the_finish.map_or(at, |finish| min_or_nan(finish, at)));
         }
     }
 
@@ -159,7 +159,7 @@ pub fn the_bands_span(
 }
 
 /// The larger of two numbers, NaN where either argument is (Rust's `f64::max` ignores it).
-fn c_sharp_max(a: f64, b: f64) -> f64 {
+fn max_or_nan(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {
@@ -168,7 +168,7 @@ fn c_sharp_max(a: f64, b: f64) -> f64 {
 }
 
 /// The smaller of two numbers, NaN where either argument is (Rust's `f64::min` ignores it).
-fn c_sharp_min(a: f64, b: f64) -> f64 {
+fn min_or_nan(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else {

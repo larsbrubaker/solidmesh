@@ -311,7 +311,7 @@ pub fn the_edge_that_answered(plans: &[Rc<SurfaceBevelPlan>], blame: &[SurfaceRo
 /// notch, or a corner off to the side, behind, or reaching nothing toward the band.
 #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` on purpose: it refuses a NaN as well.
 pub fn try_gap_to_the_corner(band: &SurfaceRoomCut, corner: &SurfaceRoomCut) -> Option<(f64, f64)> {
-    use vector_math::cs_math::{max_f64, min_f64};
+    use vector_math::ieee_math::{max_f64, min_f64};
 
     if band.corner_footprint()
         || (corner.shape == SurfaceRoomFootprint::EndNotch

@@ -432,8 +432,8 @@ pub fn cap(
                     .map(|p| {
                         format!(
                             "{}{}:{},{}",
-                            cs_bool(p.2.contains(&low)),
-                            cs_bool(p.2.contains(&high)),
+                            title_case_bool(p.2.contains(&low)),
+                            title_case_bool(p.2.contains(&high)),
                             format_e0(reading(p, low)),
                             format_e0(reading(p, high))
                         )
@@ -555,7 +555,7 @@ pub fn cap(
 }
 
 /// A boolean as the outcome notes write it: `True` or `False`.
-fn cs_bool(value: bool) -> &'static str {
+fn title_case_bool(value: bool) -> &'static str {
     if value {
         "True"
     } else {

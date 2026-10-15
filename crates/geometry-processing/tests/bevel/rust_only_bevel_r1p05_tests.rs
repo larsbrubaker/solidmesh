@@ -521,7 +521,7 @@ fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
 }
 
 #[test]
-fn rust_only_the_last_small_pieces_read_as_csharp() {
+fn rust_only_the_last_small_pieces_read_their_pinned_text() {
     use geometry_processing::bevel::level_line::level_line_routing::reads_as_on;
     use geometry_processing::bevel::level_line::open_gap_fill::{
         backwards, hole_between, meeting_point_of, with_minted,

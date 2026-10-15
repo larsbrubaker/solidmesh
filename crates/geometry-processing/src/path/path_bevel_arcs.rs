@@ -15,7 +15,7 @@
 use std::cell::Cell;
 use std::f64::consts::PI;
 
-use vector_math::{cs_math, Vector2};
+use vector_math::{ieee_math, Vector2};
 
 use super::path_bevel::{interior_angle, next_index, prev_index};
 
@@ -157,13 +157,13 @@ fn try_find_center(
         return None;
     }
 
-    let reach_limit = cs_math::min_f64(
+    let reach_limit = ieee_math::min_f64(
         run_to_next.length(),
         allowance_to_next + slack(allowance_to_next),
     );
 
     // the run behind is only this corner's as far as its share of it
-    let prev_limit = cs_math::min_f64(
+    let prev_limit = ieee_math::min_f64(
         run_to_prev.length(),
         allowance_to_prev + slack(allowance_to_prev),
     );
@@ -444,7 +444,7 @@ impl PathRun {
         self.tabulate_offset(radius);
 
         let end = self.element_starts[self.element_starts.len() - 1];
-        let parameter = cs_clamp(offset_parameter, 0.0, end);
+        let parameter = clamp_passing_nan(offset_parameter, 0.0, end);
         let element = self.element_at(parameter);
         let segment = element / 2;
         let into = parameter - self.element_starts[element];
@@ -510,7 +510,7 @@ impl PathRun {
             count_run_place();
 
             let segment_length = self.cumulative[segment + 1].min(limit) - self.cumulative[segment];
-            let along = cs_clamp(
+            let along = clamp_passing_nan(
                 (from - self.points[segment]).dot(self.directions[segment]),
                 0.0,
                 segment_length,
@@ -658,7 +658,7 @@ fn rotate(vector: Vector2, angle: f64) -> Vector2 {
 
 /// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a
 /// NaN bound) so the NaN guards downstream still see it.
-fn cs_clamp(value: f64, min: f64, max: f64) -> f64 {
+fn clamp_passing_nan(value: f64, min: f64, max: f64) -> f64 {
     if value < min {
         min
     } else if value > max {

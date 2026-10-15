@@ -14,7 +14,7 @@
 //! face is not trimmed by the bead but GROWS over its section, so it is not an end region of the
 //! band: it is not refined, rooted or cut, and it does not bound the room.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::end_face_sense_oblique::ObliqueEndReader;
@@ -163,7 +163,7 @@ pub fn side_runs_past_the_end_plane(
         if has(t, end) {
             for c in [t.0, t.1, t.2] {
                 if c != end {
-                    shortest = cs_math::min_f64(shortest, (at(positions, c) - v).length());
+                    shortest = ieee_math::min_f64(shortest, (at(positions, c) - v).length());
                 }
             }
         }
@@ -180,7 +180,7 @@ pub fn side_runs_past_the_end_plane(
         let away = rails[s] - v;
         // where the rail meets the end plane, then as far again past it along the chain
         let to_the_plane = -n.dot(away) / slant;
-        let past = v + ((away + (outward * (cs_math::max_f64(0.0, to_the_plane) + 1.0))) * scale);
+        let past = v + ((away + (outward * (ieee_math::max_f64(0.0, to_the_plane) + 1.0))) * scale);
         let normal = side_normals[s];
         for &t in indices {
             let a = at(positions, t.0);
@@ -341,7 +341,7 @@ fn end_ray_bound_at(
     }
 
     // Either way out of the plane: a row point behind it is carried on to it, one before it was met.
-    let farthest = cs_math::max_f64(
+    let farthest = ieee_math::max_f64(
         end_plane_trim::farthest_out(rails[0], rails[1], v, n, BandProfile::Fillet),
         end_plane_trim::farthest_out(rails[0], rails[1], v, -n, BandProfile::Fillet),
     );
@@ -363,7 +363,7 @@ fn end_ray_bound_at(
     same_sense &= creases > 0;
 
     Some(EndRayBound {
-        reach_per_setback: cs_math::max_f64(0.0, farthest) / slant,
+        reach_per_setback: ieee_math::max_f64(0.0, farthest) / slant,
         plane_normal: n,
         same_sense,
         ..EndRayBound::default()

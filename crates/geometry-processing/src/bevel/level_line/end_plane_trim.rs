@@ -5,7 +5,7 @@
 //! end plane ([`section`]), and a run cut at an end parameter ([`cut_at`]); the trim itself is in
 //! `end_plane_trim_run`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{BandProfile, GapLoop, LevelLineMesh};
@@ -42,7 +42,7 @@ pub fn to_the_corner(
     let on_the_plane = |v: i32| {
         (mesh.position(v) - end).dot(normal).abs()
             <= 2.0
-                * cs_math::max_f64(
+                * ieee_math::max_f64(
                     float_grid::step_at_point(end),
                     float_grid::step_at_point(mesh.position(v)),
                 )
@@ -171,7 +171,7 @@ pub fn farthest_out(
     profile: BandProfile,
 ) -> f64 {
     let out = |q: Vector3| (q - end).dot(normal);
-    let mut best = cs_math::max_f64(out(rail_left), out(rail_right));
+    let mut best = ieee_math::max_f64(out(rail_left), out(rail_right));
     if profile != BandProfile::Fillet {
         return best;
     }
@@ -190,7 +190,7 @@ pub fn farthest_out(
     let top = centre + (in_section.get_normal() * radius);
     let chord_mid = (rail_left + rail_right) / 2.0;
     if (top - chord_mid).dot(end - chord_mid) >= 0.0 {
-        best = cs_math::max_f64(best, out(top));
+        best = ieee_math::max_f64(best, out(top));
     }
 
     best
@@ -267,8 +267,8 @@ pub fn cut_at(
     // Now the end being cut is at index 0.
     for i in 0..vertices.len().saturating_sub(1) {
         let (low, high) = (
-            cs_math::min_f64(parameters[i], parameters[i + 1]),
-            cs_math::max_f64(parameters[i], parameters[i + 1]),
+            ieee_math::min_f64(parameters[i], parameters[i + 1]),
+            ieee_math::max_f64(parameters[i], parameters[i + 1]),
         );
         let along = (t - parameters[i]) / (parameters[i + 1] - parameters[i]);
 

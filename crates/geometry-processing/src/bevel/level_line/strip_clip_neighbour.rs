@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::super::float_grid;
 use super::strip_clip::{
@@ -207,7 +207,7 @@ pub fn clip_on_one_neighbour(
             p.1.dot(normal) >= 1.0 - 1e-9
                 && (origin - p.0).dot(p.1).abs()
                     <= 4.0
-                        * cs_math::max_f64(
+                        * ieee_math::max_f64(
                             float_grid::step_at_point(origin),
                             float_grid::step_at_point(p.0),
                         )

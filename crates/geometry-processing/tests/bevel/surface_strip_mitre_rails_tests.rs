@@ -38,7 +38,7 @@ fn rust_only_on_the_chord_is_the_chord_before_the_rail_when_counted_down() {
 }
 
 #[test]
-fn rust_only_the_weld_joins_negative_zero_to_zero_as_csharp_equality_does() {
+fn rust_only_the_weld_joins_negative_zero_to_zero() {
     let positions = [
         Vector3::new(0.0, 1.0, 2.0),
         Vector3::new(-0.0, 1.0, 2.0),

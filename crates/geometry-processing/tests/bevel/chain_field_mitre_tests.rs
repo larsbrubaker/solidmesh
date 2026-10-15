@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::{gap_fill, ChainField, LevelLineMesh};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::{Matrix4X4, Vector3};
 
 use crate::end_face_builds::feature_of;
@@ -121,7 +121,7 @@ fn a_turn_below_the_threshold_is_bit_identical() {
     let thresholded =
         ChainField::from_polyline_sharp(&rim, true, &setbacks, THRESHOLD).expect("a chain");
 
-    let mut random = DotNetRandom::new(7);
+    let mut random = SeededRandom::new(7);
     for _ in 0..400 {
         let x = (random.next_double() * 60.0) - 30.0;
         let y = (random.next_double() * 60.0) - 30.0;
@@ -281,7 +281,7 @@ fn around_center_rounded_through_floats_far_from_the_origin_reads_the_same_worst
 fn around_center_rotated_and_moved_through_floats_builds_the_same_fill() {
     let (worst, _, _, triangles) = around_center_worst_off_the_control(&|p| p, false);
     for seed in 1..=4 {
-        let mut random = DotNetRandom::new(seed);
+        let mut random = SeededRandom::new(seed);
         let axis = unit_from(&mut random).get_normal();
         let angle = random_angle(&mut random);
         let shift = unit_from(&mut random) * 2000.0;
@@ -299,12 +299,12 @@ fn around_center_rotated_and_moved_through_floats_builds_the_same_fill() {
 }
 
 /// A seeded random angle in [0, 2 pi).
-fn random_angle(random: &mut DotNetRandom) -> f64 {
+fn random_angle(random: &mut SeededRandom) -> f64 {
     random.next_double() * 2.0 * std::f64::consts::PI
 }
 
 /// A seeded random unit direction.
-fn unit_from(random: &mut DotNetRandom) -> Vector3 {
+fn unit_from(random: &mut SeededRandom) -> Vector3 {
     let x = random.next_double() - 0.5;
     let y = random.next_double() - 0.5;
     let z = random.next_double() - 0.5;

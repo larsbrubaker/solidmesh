@@ -224,9 +224,9 @@ impl ChainField {
             }
 
             let mut lo =
-                vector_math::cs_math::max_f64(0.0, (scan_best - 1) as f64 / scan_steps as f64);
+                vector_math::ieee_math::max_f64(0.0, (scan_best - 1) as f64 / scan_steps as f64);
             let mut hi =
-                vector_math::cs_math::min_f64(1.0, (scan_best + 1) as f64 / scan_steps as f64);
+                vector_math::ieee_math::min_f64(1.0, (scan_best + 1) as f64 / scan_steps as f64);
             for _ in 0..Self::TERNARY_STEPS {
                 LevelLineWork::poll_cancel()?;
                 let (was_lo, was_hi) = (lo, hi);

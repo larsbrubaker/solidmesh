@@ -169,7 +169,7 @@ mod tests {
     /// tests pin and its lion conformance test checks), so a mesh built from them has a fixed
     /// vertex and face order.
     #[test]
-    fn rust_only_square_with_hole_caches_in_csharp_render_order() {
+    fn rust_only_square_with_hole_caches_in_render_order() {
         let mut tesselator = CachedTesselator::new();
         tesselator.send_vertex_source(&square_with_hole());
         let positions: Vec<(f64, f64)> = tesselator

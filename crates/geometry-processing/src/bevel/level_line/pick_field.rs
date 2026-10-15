@@ -12,7 +12,7 @@
 use std::cell::OnceCell;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bounded_maximum;
 use super::stopwatch;
@@ -149,8 +149,8 @@ impl PickField {
 
             members.push(k);
             let chain = &all_chains[k as usize];
-            min_setback = cs_math::min_f64(min_setback, chain.min_setback);
-            max_setback = cs_math::max_f64(max_setback, chain.max_setback);
+            min_setback = ieee_math::min_f64(min_setback, chain.min_setback);
+            max_setback = ieee_math::max_f64(max_setback, chain.max_setback);
         }
 
         Ok(PickField {
@@ -213,7 +213,7 @@ impl PickField {
 
 /// The least of `values`: NaN where any value is NaN, so a broken reading is never hidden (an
 /// empty pick has none).
-fn linq_min(values: impl Iterator<Item = Result<f64, WorkError>>) -> Result<f64, WorkError> {
+fn min_or_nan(values: impl Iterator<Item = Result<f64, WorkError>>) -> Result<f64, WorkError> {
     let mut least: Option<f64> = None;
     for value in values {
         let value = value?;
@@ -278,7 +278,7 @@ impl PickField {
     /// The least of the members'
     /// [`ChainField::value_across_the_known_cut`] readings.
     pub fn value_across_the_known_cut(&self, point: Vector3) -> Result<f64, WorkError> {
-        linq_min(
+        min_or_nan(
             self.members
                 .iter()
                 .map(|&k| self.chains[k as usize].value_across_the_known_cut(point)),
@@ -294,7 +294,7 @@ impl PickField {
         a: Vector3,
         b: Vector3,
     ) -> Result<f64, WorkError> {
-        linq_min(self.members.iter().map(|&k| {
+        min_or_nan(self.members.iter().map(|&k| {
             let chain = &self.chains[k as usize];
             if chain.lies_in_an_end_plane(a, b) {
                 chain.value_in_the_end_plane(point)
@@ -417,14 +417,14 @@ impl PickField {
         let chain = |k: i32| &self.chains[k as usize];
         let mut bound = chain(s0.chain).segment_cell_bound(s0.chain, s0, s1, s2, v0, v1, v2)?;
         if s1.chain != s0.chain {
-            bound = cs_math::min_f64(
+            bound = ieee_math::min_f64(
                 bound,
                 chain(s1.chain).segment_cell_bound(s1.chain, s0, s1, s2, v0, v1, v2)?,
             );
         }
 
         if s2.chain != s0.chain && s2.chain != s1.chain {
-            bound = cs_math::min_f64(
+            bound = ieee_math::min_f64(
                 bound,
                 chain(s2.chain).segment_cell_bound(s2.chain, s0, s1, s2, v0, v1, v2)?,
             );

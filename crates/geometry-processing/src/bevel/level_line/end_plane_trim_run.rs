@@ -4,7 +4,7 @@
 //! gap fill's ends site, so a failed end can be diagnosed from the trace.
 
 use vector_math::number_format::format_f64_max_decimals;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::end_plane_trim::{
     at_ray_parameter, cut_at, end_plane, farthest_out, section, to_the_corner,
@@ -18,7 +18,7 @@ fn three(value: f64) -> String {
 }
 
 /// A flag in the ends-site notes, as `True` or `False`.
-fn cs_bool(value: bool) -> &'static str {
+fn title_case_bool(value: bool) -> &'static str {
     if value {
         "True"
     } else {
@@ -70,7 +70,7 @@ fn least(values: &[f64]) -> f64 {
         if m.is_nan() || v.is_nan() {
             f64::NAN
         } else {
-            cs_math::min_f64(m, v)
+            ieee_math::min_f64(m, v)
         }
     })
 }
@@ -153,8 +153,8 @@ pub fn trim_end(
         let (Some(new_left), Some(new_right)) = (new_left.clone(), new_right.clone()) else {
             append_ends_site(&format!(
                 " / trim {which}: no corner (left {}, right {}, setback {})",
-                cs_bool(new_left.is_some()),
-                cs_bool(new_right.is_some()),
+                title_case_bool(new_left.is_some()),
+                title_case_bool(new_right.is_some()),
                 three(setback)
             ));
             return Ok(None);
@@ -195,9 +195,9 @@ pub fn trim_end(
         right.parameters[right.parameters.len() - 1]
     };
     let t_p = if last {
-        cs_math::max_f64(t_left, t_right)
+        ieee_math::max_f64(t_left, t_right)
     } else {
-        cs_math::min_f64(t_left, t_right)
+        ieee_math::min_f64(t_left, t_right)
     };
     let mut stretch_left = Vec::new();
     let mut stretch_right = Vec::new();
@@ -209,10 +209,10 @@ pub fn trim_end(
             append_ends_site(&format!(
                 " / trim {which}: no cut at {} (left {} [{}, {}], right {} [{}, {}], right P - t* {}, left P - t* {}, tP {}, reach {})",
                 three(t_star),
-                cs_bool(cut_left.is_some()),
+                title_case_bool(cut_left.is_some()),
                 three(least(&left.parameters)),
                 three(greatest(&left.parameters)),
-                cs_bool(cut_right.is_some()),
+                title_case_bool(cut_right.is_some()),
                 three(least(&right.parameters)),
                 three(greatest(&right.parameters)),
                 g3(t_right - t_star),
@@ -292,7 +292,7 @@ pub fn run(
         // The input is float: a vertex made on the side-to-end crease stands a few 1e-6 off the
         // plane read through the end vertex, and must still be in the face.
         1.0 - n.dot(normal).abs() <= 1e-9
-            && (a - end).dot(normal).abs() <= 1e-5 * cs_math::max_f64(1.0, (a - end).length())
+            && (a - end).dot(normal).abs() <= 1e-5 * ieee_math::max_f64(1.0, (a - end).length())
     };
 
     let points = section(

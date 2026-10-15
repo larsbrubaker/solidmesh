@@ -15,7 +15,7 @@
 //! [`out_polys`] (output points and records, results, PolyTree), [`joins`] (common-edge joins
 //! and strictly-simple splitting), [`poly_tree`], [`offset`] (`ClipperOffset`), [`statics`]
 //! (`Area`, `PointInPolygon`, `SimplifyPolygon(s)`, Minkowski, PolyTree walks). The
-//! intersection list is ordered with `vector_math::cs_sort`, an unstable introspective sort
+//! intersection list is ordered with `vector_math::fixed_tie_sort`, an unstable introspective sort
 //! whose order for equal keys is fixed.
 
 mod clipper_base;

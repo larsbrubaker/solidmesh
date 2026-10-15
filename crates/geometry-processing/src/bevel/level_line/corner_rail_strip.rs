@@ -92,7 +92,7 @@ pub fn set_back(
     jump_ends: &mut std::collections::HashMap<i32, f64>,
     low: bool,
 ) -> Result<Option<f64>, super::LevelLineMeshError> {
-    use vector_math::cs_math;
+    use vector_math::ieee_math;
 
     let tied = |mesh: &super::LevelLineMesh, vertex: i32| -> Result<bool, super::WorkError> {
         for (k, other) in chains.iter().enumerate() {
@@ -140,7 +140,7 @@ pub fn set_back(
             if m.is_nan() || e.is_nan() {
                 f64::NAN
             } else {
-                cs_math::min_f64(m, e)
+                ieee_math::min_f64(m, e)
             }
         })
     };

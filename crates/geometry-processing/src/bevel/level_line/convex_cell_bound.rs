@@ -39,7 +39,7 @@
 //!
 //! The end-plane reading (chain index, point) is optional: `None` where no end is clipped.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::FieldSample;
 
@@ -57,7 +57,7 @@ pub fn over_segment(
     // The two ends stand in for the third corner - a segment's farthest point from c is one of
     // its ends.
     let bound = from_one(s0, v0, v1, v1, end_plane_at);
-    cs_math::min_f64(bound, from_one(s1, v0, v1, v1, end_plane_at))
+    ieee_math::min_f64(bound, from_one(s1, v0, v1, v1, end_plane_at))
 }
 
 /// The bound over the triangle v0 v1 v2, from the three corners' own chain points.
@@ -72,8 +72,8 @@ pub fn over_triangle(
     end_plane_at: Option<EndPlaneAt>,
 ) -> f64 {
     let mut bound = from_one(s0, v0, v1, v2, end_plane_at);
-    bound = cs_math::min_f64(bound, from_one(s1, v0, v1, v2, end_plane_at));
-    bound = cs_math::min_f64(bound, from_one(s2, v0, v1, v2, end_plane_at));
+    bound = ieee_math::min_f64(bound, from_one(s1, v0, v1, v2, end_plane_at));
+    bound = ieee_math::min_f64(bound, from_one(s2, v0, v1, v2, end_plane_at));
     bound
 }
 
@@ -99,17 +99,17 @@ fn from_one(
     }
 
     let c = sample.nearest;
-    let farthest = cs_math::max_f64(
+    let farthest = ieee_math::max_f64(
         (v0 - c).length(),
-        cs_math::max_f64((v1 - c).length(), (v2 - c).length()),
+        ieee_math::max_f64((v1 - c).length(), (v2 - c).length()),
     );
     let mut term = farthest - setback_at(sample);
     if let Some(end_plane_at) = end_plane_at {
-        term = cs_math::max_f64(
+        term = ieee_math::max_f64(
             term,
-            cs_math::max_f64(
+            ieee_math::max_f64(
                 end_plane_at(sample.chain, v0),
-                cs_math::max_f64(
+                ieee_math::max_f64(
                     end_plane_at(sample.chain, v1),
                     end_plane_at(sample.chain, v2),
                 ),

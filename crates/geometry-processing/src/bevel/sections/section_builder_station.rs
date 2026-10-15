@@ -5,7 +5,7 @@
 use std::rc::Rc;
 
 use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 use super::section_builder::{
     place_the_interior_samples, try_boundary, try_junction, SMALLEST_WEDGE_COSINE,
@@ -123,7 +123,7 @@ pub fn try_section(
     let wedge = cosine.clamp(-1.0, 1.0).acos();
     let setback = radius * (wedge / 2.0).tan();
     let centre = station - ((left + right) * radius / (1.0 + cosine));
-    let across = cs_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
+    let across = ieee_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
     let left_away = ((left * cosine) - right) / across;
     let right_away = ((right * cosine) - left) / across;
 

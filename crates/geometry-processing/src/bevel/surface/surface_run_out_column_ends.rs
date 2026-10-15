@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_mixed_corner_run_out;
 use super::{SurfaceMixedCorner, SurfaceMixedCornerWall};
@@ -87,7 +87,7 @@ pub fn with_the_crossings_stationed(
     }
 
     asking.push(foot_crosses_at);
-    asking.sort_by(cs_compare);
+    asking.sort_by(nan_first_compare);
 
     let mut stationed: Vec<f64> = Vec::with_capacity(asking.len());
 
@@ -127,11 +127,15 @@ pub fn too_close_to_the_end(near_enough: f64, size: f64) -> f64 {
     }
 
     surface_mixed_corner_run_out::clears_the_wall()
-        - cs_math::min_f64(1.0, 1.0 / (2.0 - cs_math::min_f64(1.0, near_enough / size))).acos()
+        - ieee_math::min_f64(
+            1.0,
+            1.0 / (2.0 - ieee_math::min_f64(1.0, near_enough / size)),
+        )
+        .acos()
 }
 
 /// A total order on `f64` that puts a NaN before every number, so a sort never panics on one.
-fn cs_compare(a: &f64, b: &f64) -> Ordering {
+fn nan_first_compare(a: &f64, b: &f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Less,

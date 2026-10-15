@@ -7,7 +7,7 @@
 
 use std::sync::Mutex;
 
-use vector_math::cs_math::{max_f64, min_f64};
+use vector_math::ieee_math::{max_f64, min_f64};
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
 
 use crate::Mesh;

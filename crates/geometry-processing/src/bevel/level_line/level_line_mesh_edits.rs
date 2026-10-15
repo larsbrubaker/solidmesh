@@ -2,7 +2,7 @@
 //! interior split, adding a free vertex and a face, and the triangle bookkeeping under them. The
 //! type and its readings are in `level_line_mesh.rs`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{
@@ -133,7 +133,7 @@ impl LevelLineMesh {
         let exact = 1e-12 * self.length(a, b);
         let mut coincident = exact;
         if widen_for_float_noise && self.input_is_float_stored {
-            coincident = cs_math::max_f64(coincident, float_grid::step_at_point(point));
+            coincident = ieee_math::max_f64(coincident, float_grid::step_at_point(point));
         }
 
         let (pa, pb) = (self.vertices[a as usize], self.vertices[b as usize]);
@@ -217,7 +217,7 @@ impl LevelLineMesh {
         let t = self.triangles[triangle as usize];
         let mut longest = 0.0;
         for corner in 0..3 {
-            longest = cs_math::max_f64(
+            longest = ieee_math::max_f64(
                 longest,
                 self.length(t.corner(corner), t.corner((corner + 1) % 3)),
             );

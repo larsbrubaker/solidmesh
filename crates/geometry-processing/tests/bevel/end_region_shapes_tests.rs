@@ -12,7 +12,7 @@ use geometry_processing::bevel::level_line::chain_on_the_mesh::chain_edges;
 use geometry_processing::bevel::level_line::end_face_flow::END_FACE_BEND_DEGREES;
 use geometry_processing::bevel::level_line::gap_fill;
 use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use vector_math::dotnet_random::DotNetRandom;
+use vector_math::seeded_random::SeededRandom;
 use vector_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
@@ -377,7 +377,7 @@ fn largest_bend_degrees(positions: &[Vector3], indices: &[(i32, i32, i32)], of: 
 /// x = -1 to x = +1, so its second end stands on the noisy face.
 fn noisy_end_box(bend_row: i32, second_bend_row: i32) -> SolidWithChain {
     let lean = (std::f64::consts::PI / 180.0).tan();
-    let mut random = DotNetRandom::new(7);
+    let mut random = SeededRandom::new(7);
     let cells = CELLS as f64;
     let bend_z = -1.0 + (2.0 * bend_row as f64 / cells);
     let second_bend_z = -1.0 + (2.0 * second_bend_row as f64 / cells);

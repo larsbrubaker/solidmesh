@@ -835,8 +835,8 @@ impl FieldCounters {
             // Two introsorts: by line descending (ordinal), then by count descending. The sort is
             // unstable, so ties among equal counts fall where `introspective_sort` puts them -
             // the same place on every run.
-            vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.1.cmp(&a.1));
-            vector_math::cs_sort::introspective_sort(&mut lines, &mut |a, b| b.0.cmp(&a.0));
+            vector_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| b.1.cmp(&a.1));
+            vector_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| b.0.cmp(&a.0));
             lines
                 .into_iter()
                 .map(|(_, line)| line)

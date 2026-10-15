@@ -7,7 +7,7 @@
 //! construction lands with a later run of this package.
 
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bevel_section::SectionProfileDoesNotEndOnItsBoundaries;
 use super::section_junction::{Canal, JunctionPiece, JunctionSection};
@@ -104,7 +104,7 @@ impl Canal {
         let radial = offset - (self.along * offset.dot(self.along));
 
         if (radial.length() - self.radius).abs()
-            > cs_math::max_f64(SAME_TO_WITHIN * self.radius, self.lattice)
+            > ieee_math::max_f64(SAME_TO_WITHIN * self.radius, self.lattice)
             || self.wedge < SAME_TO_WITHIN
         {
             return None;
@@ -127,13 +127,14 @@ pub fn lattice_of(points: &[Vector3]) -> f64 {
     let mut largest = 0.0f32;
 
     for at in points {
-        let biggest = cs_math::max_f64(at.x.abs(), cs_math::max_f64(at.y.abs(), at.z.abs())) as f32;
+        let biggest =
+            ieee_math::max_f64(at.x.abs(), ieee_math::max_f64(at.y.abs(), at.z.abs())) as f32;
         largest = largest.max(biggest);
     }
 
     let ulp = float_grid::step_at(largest);
 
-    cs_math::max_f64(SAME_TO_WITHIN, GRID_ULPS * ulp)
+    ieee_math::max_f64(SAME_TO_WITHIN, GRID_ULPS * ulp)
 }
 
 /// A facet's unit normal, read off its corners.

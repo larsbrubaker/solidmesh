@@ -325,14 +325,14 @@ pub fn try_fit(part: &Mesh, faces: &[i32], through: Vector3) -> Option<BevelRoun
         let relative = Vector3::from_vector3_float(part.vertices[vertex as usize]) - axis_point;
         let along = relative.dot(direction);
 
-        axial_from = vector_math::cs_math::min_f64(axial_from, along);
-        axial_to = vector_math::cs_math::max_f64(axial_to, along);
+        axial_from = vector_math::ieee_math::min_f64(axial_from, along);
+        axial_to = vector_math::ieee_math::max_f64(axial_to, along);
 
         let radial = relative - (direction * along);
         let phi = radial.dot(second_radial).atan2(radial.dot(first_radial));
 
-        span_low = vector_math::cs_math::min_f64(span_low, phi);
-        span_high = vector_math::cs_math::max_f64(span_high, phi);
+        span_low = vector_math::ieee_math::min_f64(span_low, phi);
+        span_high = vector_math::ieee_math::max_f64(span_high, phi);
     }
 
     if span_high - span_low > PI {

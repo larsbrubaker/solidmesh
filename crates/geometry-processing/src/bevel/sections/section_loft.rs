@@ -30,7 +30,7 @@
 //! concave chain reaching this far shows up as a quad whose normal disagrees with the run's winding
 //! and is refused rather than lofted inside out.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::section_loft_gaps;
 use super::section_smooth_seam::SectionSmoothSeam;
@@ -565,8 +565,8 @@ pub(super) fn cross_unless_degenerate(
     let one = pool.position_of(triangle.1) - zero;
     let two = pool.position_of(triangle.2) - zero;
     let cross = one.cross(two);
-    let longest = cs_math::max_f64(
-        cs_math::max_f64(one.length_squared(), two.length_squared()),
+    let longest = ieee_math::max_f64(
+        ieee_math::max_f64(one.length_squared(), two.length_squared()),
         (two - one).length_squared(),
     );
 

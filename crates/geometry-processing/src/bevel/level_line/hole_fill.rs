@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::hole_fill_fairing;
 use super::{HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineWork, WorkError};
@@ -156,22 +156,22 @@ pub fn triangulate(
                 }
 
                 let normal = cross.get_normal();
-                let mut worst = cs_math::max_f64(angle[at(i, m)], angle[at(m, k)]);
+                let mut worst = ieee_math::max_f64(angle[at(i, m)], angle[at(m, k)]);
                 let left = if m == i + 1 {
                     edge_normal(i)
                 } else {
                     triangle_normal(i, middle[at(i, m)] as usize, m)
                 };
-                worst = cs_math::max_f64(worst, dihedral(normal, left));
+                worst = ieee_math::max_f64(worst, dihedral(normal, left));
                 let right = if k == m + 1 {
                     edge_normal(m)
                 } else {
                     triangle_normal(m, middle[at(m, k)] as usize, k)
                 };
-                worst = cs_math::max_f64(worst, dihedral(normal, right));
+                worst = ieee_math::max_f64(worst, dihedral(normal, right));
                 if span == n - 1 {
                     // the last triangle also carries the closing loop edge n-1 -> 0
-                    worst = cs_math::max_f64(worst, dihedral(normal, edge_normal(n - 1)));
+                    worst = ieee_math::max_f64(worst, dihedral(normal, edge_normal(n - 1)));
                 }
 
                 let total = area[at(i, m)] + area[at(m, k)] + triangle_area;

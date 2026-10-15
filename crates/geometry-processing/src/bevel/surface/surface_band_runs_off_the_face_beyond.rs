@@ -38,7 +38,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use polygon_mesh::Mesh;
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::surface_room_standing_feature;
 use super::SurfaceBandRunsOffOverAStretch;
@@ -101,7 +101,7 @@ impl BandSpan {
 
     /// How near two readings of one position are, at this edge's scale.
     fn near(&self) -> f64 {
-        cs_math::max_f64(self.length, 1.0) * VERTEX_TOLERANCE
+        ieee_math::max_f64(self.length, 1.0) * VERTEX_TOLERANCE
     }
 }
 
@@ -324,7 +324,7 @@ pub fn consumes_the_face_to_its_rim(
             continue;
         };
 
-        farthest_of_all = cs_math::max_f64(farthest_of_all, in_front.farthest);
+        farthest_of_all = ieee_math::max_f64(farthest_of_all, in_front.farthest);
     }
 
     // The FARTHEST any rim reaches, because one rim standing at the setback while another stands
@@ -467,7 +467,7 @@ pub fn try_read_a_stretch(
     // same place give the same `lowest`, pass the same gap test and fold into the same `highest`
     // whichever comes first.
     let mut order: Vec<usize> = (0..windows.len()).collect();
-    order.sort_by(|&left, &right| cs_compare(windows[left].0, windows[right].0));
+    order.sort_by(|&left, &right| nan_first_compare(windows[left].0, windows[right].0));
 
     let lowest = windows[order[0]].0;
     let mut highest = windows[order[0]].1;
@@ -480,7 +480,7 @@ pub fn try_read_a_stretch(
             ));
         }
 
-        highest = cs_math::max_f64(highest, windows[at].1);
+        highest = ieee_math::max_f64(highest, windows[at].1);
     }
 
     let touches_the_start = lowest <= near;
@@ -707,7 +707,7 @@ fn try_in_front_over_the_span(rim: &FeatureEdge, span: &BandSpan, near: f64) -> 
         return None;
     }
 
-    let farthest = cs_math::max_f64(
+    let farthest = ieee_math::max_f64(
         start_in + ((end_in - start_in) * low),
         start_in + ((end_in - start_in) * high),
     );
@@ -748,8 +748,8 @@ fn try_in_front_over_the_span(rim: &FeatureEdge, span: &BandSpan, near: f64) -> 
         let at_low = start_along + ((end_along - start_along) * under_low);
         let at_high = start_along + ((end_along - start_along) * under_high);
 
-        under_from = cs_math::max_f64(cs_math::min_f64(at_low, at_high), 0.0);
-        under_to = cs_math::min_f64(cs_math::max_f64(at_low, at_high), span.length);
+        under_from = ieee_math::max_f64(ieee_math::min_f64(at_low, at_high), 0.0);
+        under_to = ieee_math::min_f64(ieee_math::max_f64(at_low, at_high), span.length);
     }
 
     Some(InFront {
@@ -771,16 +771,16 @@ fn narrow(at_start: f64, at_end: f64, floor: f64, low: &mut f64, high: &mut f64)
     let crosses = (floor - at_start) / rise;
 
     if rise > 0.0 {
-        *low = cs_math::max_f64(*low, crosses);
+        *low = ieee_math::max_f64(*low, crosses);
     } else {
-        *high = cs_math::min_f64(*high, crosses);
+        *high = ieee_math::min_f64(*high, crosses);
     }
 
     *low <= *high
 }
 
 /// NaN sorts first, and equal values (0.0 and -0.0 included) are equal.
-fn cs_compare(a: f64, b: f64) -> Ordering {
+fn nan_first_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Less,

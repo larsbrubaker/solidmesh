@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineWork, WorkError,
@@ -85,7 +85,7 @@ impl GrowingCreaseRuns {
                     // A root at the scale of rounding is a ridge that starts ON the chain line.
                     let s = c0 / denominator;
                     if s > Self::ROOT_FLOOR * chain_length {
-                        room = cs_math::min_f64(room, s);
+                        room = ieee_math::min_f64(room, s);
                     }
                 }
             }
@@ -107,7 +107,7 @@ impl GrowingCreaseRuns {
         }
 
         growing.iter().fold(room, |least, g| {
-            cs_math::min_f64(least, g.fillet_pierce_room(unit_setback, fillet_segments))
+            ieee_math::min_f64(least, g.fillet_pierce_room(unit_setback, fillet_segments))
         })
     }
 

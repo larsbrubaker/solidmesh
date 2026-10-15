@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use vector_math::{Vector2, Vector3};
 
-use vector_math::cs_math::min_f64;
+use vector_math::ieee_math::min_f64;
 use vector_math::math_helper::degrees_to_radians;
 
 use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};

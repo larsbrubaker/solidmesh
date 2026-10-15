@@ -9,7 +9,7 @@
 //! changed, since a tree build that edits its input is a latent bug.
 
 use super::morton_codes;
-use crate::cs_sort::introspective_sort;
+use crate::fixed_tie_sort::introspective_sort;
 use crate::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
 
 /// A node of the flat tree: a leaf when `left == right` (both the box index), else the indices

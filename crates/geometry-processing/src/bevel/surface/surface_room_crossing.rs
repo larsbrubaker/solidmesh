@@ -7,7 +7,7 @@ use polygon_mesh::CancelToken;
 
 use super::{SurfaceRoomCut, SurfaceRoomFootprint};
 use crate::bevel::level_line::WorkError;
-use vector_math::cs_math;
+use vector_math::ieee_math;
 
 /// A run-out skirt and a band crossing over one region.
 ///
@@ -244,11 +244,11 @@ impl SurfaceRoomCrossing {
         // band's foot line.
         let across_to_the_band = -skirt.inward.dot(band.inward);
         let reach = skirt.setback_per_size * size * across_to_the_band;
-        let usable_reach = cs_math::min_f64(reach, gap);
+        let usable_reach = ieee_math::min_f64(reach, gap);
         let the_bands_foot_line = gap - (band.setback_per_size * size);
 
         if !(usable_reach
-            > the_bands_foot_line + (cs_math::max_f64(gap, 1.0) * Self::RELATIVE_TOLERANCE))
+            > the_bands_foot_line + (ieee_math::max_f64(gap, 1.0) * Self::RELATIVE_TOLERANCE))
         {
             // The row that gets furthest dies before the strip begins, so the two footprints
             // never meet on this region and there is nothing here to sew.
@@ -287,7 +287,7 @@ impl SurfaceRoomCrossing {
         skirt: &SurfaceRoomCut,
         size: f64,
     ) -> Option<f64> {
-        let tolerance = cs_math::max_f64(band.length, 1.0) * Self::RELATIVE_TOLERANCE;
+        let tolerance = ieee_math::max_f64(band.length, 1.0) * Self::RELATIVE_TOLERANCE;
 
         let opens = -(band.overhang_before_from * size);
         let closes = band.length + (band.overhang_past_to * size);
@@ -298,15 +298,15 @@ impl SurfaceRoomCrossing {
         let along_from = from_the_band.dot(band.along);
         let along_to = to_the_band.dot(band.along);
 
-        if cs_math::min_f64(along_from, along_to) < opens - tolerance
-            || cs_math::max_f64(along_from, along_to) > closes + tolerance
+        if ieee_math::min_f64(along_from, along_to) < opens - tolerance
+            || ieee_math::max_f64(along_from, along_to) > closes + tolerance
         {
             return None;
         }
 
         let near = from_the_band.dot(band.inward);
         let far = to_the_band.dot(band.inward);
-        let gap = cs_math::min_f64(near, far);
+        let gap = ieee_math::min_f64(near, far);
 
         (gap > tolerance).then_some(gap)
     }

@@ -5,12 +5,12 @@
 //! (`{"MinXYZ":{..},"MaxXYZ":{..}}`). `corner(index)` reads a corner by index (0 = min,
 //! 1 = max); `contains_xyz` and `contains_point` allow .001 of slack, `contains_point_within` a
 //! custom range; `union_point` grows the box to a vertex; the `+` operator is `union`. Min and
-//! max go through `cs_math`, so a NaN coordinate shows in the box instead of being dropped.
+//! max go through `ieee_math`, so a NaN coordinate shows in the box instead of being dropped.
 //!
 //! Volume and surface area are computed on every call rather than cached, so a box changed
 //! after either was read never reports a stale value.
 
-use crate::cs_math::{max_f64, min_f64};
+use crate::ieee_math::{max_f64, min_f64};
 use crate::{Matrix4X4, Vector3, Vector3Float};
 use std::fmt;
 use std::ops::Add;

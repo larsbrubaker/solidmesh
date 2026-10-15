@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{surface_cut_clip, surface_ring, SurfaceBandEnd, SurfaceLine, SurfaceVertexPool};
 
@@ -248,8 +248,8 @@ impl SurfaceFacetCut {
             return false;
         }
 
-        let where_ = cs_math::min_f64(
-            cs_math::max_f64(
+        let where_ = ieee_math::min_f64(
+            ieee_math::max_f64(
                 (point - self.chain_from).dot(run) / run.length_squared(),
                 0.0,
             ),
@@ -309,7 +309,7 @@ impl SurfaceFacetCut {
         let at_start = removed_at_from + ((removed_at_to - removed_at_from) * start);
         let at_finish = removed_at_from + ((removed_at_to - removed_at_from) * finish);
 
-        if cs_math::min_f64(at_start, at_finish) >= -on_the_cut {
+        if ieee_math::min_f64(at_start, at_finish) >= -on_the_cut {
             return None;
         }
 
@@ -337,9 +337,9 @@ impl SurfaceFacetCut {
             let crossing = at_from / (at_from - at_to);
 
             if at_from < 0.0 {
-                *start = cs_math::max_f64(*start, crossing);
+                *start = ieee_math::max_f64(*start, crossing);
             } else {
-                *finish = cs_math::min_f64(*finish, crossing);
+                *finish = ieee_math::min_f64(*finish, crossing);
             }
         }
 
@@ -356,8 +356,8 @@ impl SurfaceFacetCut {
         for &corner in ring {
             let at = end.signed_distance(pool.position_of(corner));
 
-            least = cs_math::min_f64(least, at);
-            most = cs_math::max_f64(most, at);
+            least = ieee_math::min_f64(least, at);
+            most = ieee_math::max_f64(most, at);
         }
 
         let stands_on =
@@ -408,8 +408,8 @@ impl SurfaceFacetCut {
             for &vertex in &between {
                 let at = end.signed_distance(pool.position_of(vertex));
 
-                least = cs_math::min_f64(least, at);
-                most = cs_math::max_f64(most, at);
+                least = ieee_math::min_f64(least, at);
+                most = ieee_math::max_f64(most, at);
             }
 
             let on_the_cut = surface_cut_clip::on_the_cut(pool);

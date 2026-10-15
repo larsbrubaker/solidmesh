@@ -218,7 +218,7 @@ pub fn with_the_end_face_triangle_taken(
 
     let normal = normal.get_normal();
     let origin = mesh.position(hole_loop[0]);
-    let snap = vector_math::cs_math::max_f64(mesh.same_place, DEFAULT_SNAP) * 1000.0;
+    let snap = vector_math::ieee_math::max_f64(mesh.same_place, DEFAULT_SNAP) * 1000.0;
     let on_the_plane =
         |mesh: &LevelLineMesh, v: i32| (mesh.position(v) - origin).dot(normal).abs() <= snap;
     if !hole_loop.iter().all(|&v| on_the_plane(mesh, v)) {

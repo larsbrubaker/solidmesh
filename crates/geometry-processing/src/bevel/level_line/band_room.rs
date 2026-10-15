@@ -11,7 +11,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::band_gap_reading::{self, ReadRoomError};
 use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
@@ -424,7 +424,7 @@ pub fn room_of_cut_mesh(
         foreign = except(&foreign, &far_bounds);
     }
 
-    let near_room = cs_math::min_f64(
+    let near_room = ieee_math::min_f64(
         foreign_edge_room_readings::room_for(
             mesh,
             &foreign,
@@ -447,7 +447,7 @@ pub fn room_of_cut_mesh(
         unit_setback,
         REFERENCE_SIZE,
     )?;
-    let foreign_room = cs_math::min_f64(near_room, far_room);
+    let foreign_room = ieee_math::min_f64(near_room, far_room);
     let mut room = GrowingCreaseRuns::least(
         foreign_room,
         &growing,
@@ -497,7 +497,7 @@ pub fn room_of_cut_mesh(
             side,
             REFERENCE_SIZE,
             &mut samples,
-            cs_math::min_f64(ceiling, room),
+            ieee_math::min_f64(ceiling, room),
         )?;
 
         // A side the round SWALLOWS past its self room (its far corner on the crease two growing
@@ -528,7 +528,7 @@ pub fn room_of_cut_mesh(
         unit_setback
             .iter()
             .copied()
-            .fold(f64::NEG_INFINITY, cs_math::max_f64)
+            .fold(f64::NEG_INFINITY, ieee_math::max_f64)
     };
     Ok((
         steady_down(room - band_gap_reading::room_margin(largest, snap)),

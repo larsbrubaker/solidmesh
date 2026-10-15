@@ -6,7 +6,7 @@
 use vector_math::number_format::format_f64_max_decimals;
 
 #[test]
-fn rust_only_nine_places_match_dotnet() {
+fn rust_only_nine_places_write_the_pinned_text() {
     let table: [(f64, &str); 16] = [
         (0.0000000005, "0.000000001"),
         (0.0000000015, "0.000000002"),
@@ -26,7 +26,7 @@ fn rust_only_nine_places_match_dotnet() {
         (3.0000000015, "3.000000002"),
     ];
 
-    for (value, dotnet) in table {
-        assert_eq!(format_f64_max_decimals(value, 9), dotnet, "{value:e}");
+    for (value, expected) in table {
+        assert_eq!(format_f64_max_decimals(value, 9), expected, "{value:e}");
     }
 }

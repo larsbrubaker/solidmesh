@@ -8,7 +8,7 @@
 //! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]). Its end-face cap is in
 //! `corner_cap_zip_end.rs`.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::gap_fill::FILL_TAG;
 use super::{corner_fill, LevelLineMesh, LevelLineMeshError, LevelLineWork};
@@ -246,7 +246,7 @@ pub fn zips_about_the_rows_axis(
     let mut sag = 0.0;
     for i in 0..row.len() - 1 {
         let mid = (mesh.position(row[i]) + mesh.position(row[i + 1])) / 2.0;
-        sag = cs_math::max_f64(sag, radius - from_the_axis(mid));
+        sag = ieee_math::max_f64(sag, radius - from_the_axis(mid));
     }
 
     for &vertex in run {

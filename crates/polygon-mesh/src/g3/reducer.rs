@@ -9,7 +9,7 @@
 //! Reduce operation (`DecimateObject3D`) runs it through [`crate::Mesh::reduced_to_triangle_count`].
 //!
 //! The arithmetic order is fixed, and the initial queue is filled from an introsort of the edge
-//! errors (`vector_math::cs_sort`), whose order for tied errors is fixed too: the order ties
+//! errors (`vector_math::fixed_tie_sort`), whose order for tied errors is fixed too: the order ties
 //! are queued in decides which edges collapse, so Reduce gives the same mesh on every run. The
 //! per-vertex and per-edge setup loops write disjoint slots and run sequentially. There is no
 //! cancel check: nothing that runs the reducer interrupts it.
@@ -112,7 +112,7 @@ fn fast_normal_area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> ([f64; 3], f64)
 
 /// The smaller of two doubles, NaN if either is NaN (so a NaN error is never mistaken for
 /// the cheapest).
-fn cs_min(a: f64, b: f64) -> f64 {
+fn min_or_nan(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else if b < a {
@@ -124,7 +124,7 @@ fn cs_min(a: f64, b: f64) -> f64 {
 
 /// Sorts `items` by `keys`: NaN keys move to the front in order, then an introsort orders
 /// the rest, with its fixed placement of tied keys.
-fn cs_sort_keys_and_items(keys: &mut [f32], items: &mut [i32]) {
+fn sort_keys_and_items_nan_first(keys: &mut [f32], items: &mut [i32]) {
     let mut pairs: Vec<(f32, i32)> = keys.iter().copied().zip(items.iter().copied()).collect();
     let mut left = 0;
     for i in 0..pairs.len() {
@@ -133,7 +133,7 @@ fn cs_sort_keys_and_items(keys: &mut [f32], items: &mut [i32]) {
             left += 1;
         }
     }
-    vector_math::cs_sort::introspective_sort(&mut pairs[left..], &mut |a, b| {
+    vector_math::fixed_tie_sort::introspective_sort(&mut pairs[left..], &mut |a, b| {
         a.0.partial_cmp(&b.0).unwrap_or(Ordering::Equal)
     });
     for (i, (k, v)) in pairs.into_iter().enumerate() {
@@ -350,7 +350,7 @@ impl<'a, 't> Reducer<'a, 't> {
 
         // sorted pq insert is faster, so sort edge errors array and index map
         let mut indices: Vec<i32> = (0..max_eid).collect();
-        cs_sort_keys_and_items(&mut edge_errors, &mut indices);
+        sort_keys_and_items_nan_first(&mut edge_errors, &mut indices);
 
         // now do inserts
         for (i, &eid) in indices.iter().enumerate() {
@@ -395,7 +395,7 @@ impl<'a, 't> Reducer<'a, 't> {
         let fb = q.evaluate(vb);
         let fc = q.evaluate(c);
         // The minimum of the three, NaN-propagating
-        let m = cs_min(fa, cs_min(fb, fc));
+        let m = min_or_nan(fa, min_or_nan(fb, fc));
         if m == fa {
             va
         } else if m == fb {

@@ -12,7 +12,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::{
     surface_mixed_corner_run_out, SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceRoomCut,
@@ -34,7 +34,7 @@ pub fn try_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<Surfa
 
     // Never past the flat wall's own sixty degrees: a facet answering later than that is answering
     // for a turn the run-out does not reach.
-    let dies = cs_math::min_f64(
+    let dies = ieee_math::min_f64(
         meets,
         corner.turn_radians() + surface_mixed_corner_run_out::clears_the_wall(),
     );
@@ -108,7 +108,7 @@ pub fn try_wall_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<
     let wall = SurfaceMixedCornerWall::try_read(corner).ok()?;
     let meets = wall.try_where_the_rail_meets_the_wall()?;
 
-    let dies = cs_math::min_f64(
+    let dies = ieee_math::min_f64(
         meets,
         corner.turn_radians() + surface_mixed_corner_run_out::clears_the_wall(),
     );
@@ -157,8 +157,8 @@ pub fn try_wall_cut(corner: &Rc<SurfaceMixedCorner>, corner_key: i32) -> Option<
             continue;
         };
 
-        reach = cs_math::max_f64(reach, (at - corner.corner).dot(travel));
-        deepest = cs_math::max_f64(deepest, (at - corner.corner).dot(down));
+        reach = ieee_math::max_f64(reach, (at - corner.corner).dot(travel));
+        deepest = ieee_math::max_f64(deepest, (at - corner.corner).dot(down));
     }
 
     if !(reach > 0.0) {
@@ -215,8 +215,8 @@ pub fn span_across(
     let mut take = |turn: f64| {
         let here = at(turn);
 
-        nearest = cs_math::min_f64(nearest, here);
-        furthest = cs_math::max_f64(furthest, here);
+        nearest = ieee_math::min_f64(nearest, here);
+        furthest = ieee_math::max_f64(furthest, here);
     };
 
     take(corner.turn_radians());

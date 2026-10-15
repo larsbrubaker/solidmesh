@@ -2,7 +2,7 @@
 //! cap that drags a strip back further than its segment (or a capped straight run) is long turns
 //! that strip inside out.
 
-use vector_math::{cs_math, Vector3};
+use vector_math::{ieee_math, Vector3};
 
 use super::bevel_chain_sweep_mesh::SweptSegment;
 use super::bevel_straight_run::{run_to_ring, straight_run_from, TOUCHING_RING};
@@ -84,7 +84,7 @@ pub fn try_check_for_folds(
                 0.0
             };
 
-            worst_cap_corner = if cs_math::max_f64(from_start_cap, from_end_cap) <= 0.0 {
+            worst_cap_corner = if ieee_math::max_f64(from_start_cap, from_end_cap) <= 0.0 {
                 None
             } else if from_start_cap >= from_end_cap {
                 Some(swept[0].from)
