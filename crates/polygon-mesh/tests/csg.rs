@@ -12,6 +12,8 @@ mod boolean_reporter_routing_tests;
 mod csg_tests;
 #[path = "csg/implicit_boolean_tests.rs"]
 mod implicit_boolean_tests;
+#[path = "csg/kernel_call_count_tests.rs"]
+mod kernel_call_count_tests;
 #[path = "csg/manifold_rust_backend_cancel_tests.rs"]
 mod manifold_rust_backend_cancel_tests;
 #[path = "csg/manifold_rust_backend_tests.rs"]
