@@ -4,9 +4,8 @@
 //!
 //! Each subtree writes its own disjoint index range, so building large subtrees in parallel
 //! would give the same result as the recursive build that runs here (see [`crate::parallel`]).
-//! Box 0's Morton code is taken from the joint bounds' center rather than its own, which keeps
-//! the node array identical to the established output; the caller's boxes are read only, never
-//! changed, since a tree build that edits its input is a latent bug.
+//! The caller's boxes are read only, never changed, since a tree build that edits its input is
+//! a latent bug.
 
 use super::morton_codes;
 use crate::fixed_tie_sort::introspective_sort;
@@ -51,17 +50,9 @@ impl BvhBuilderLocallyOrderedClustering {
         let centers_to_morton_space = calculate_morton_transform(&bounds, scale);
 
         let mut node_infos: Vec<NodeInfo> = (0..aabbs.len())
-            .map(|i| {
-                // Box 0's code comes from the joint bounds' center (see the header).
-                let center = if i == 0 {
-                    bounds.center()
-                } else {
-                    aabbs[i].center()
-                };
-                NodeInfo {
-                    morton_code: calculate_morton_code(center, centers_to_morton_space),
-                    original_index: i as i32,
-                }
+            .map(|i| NodeInfo {
+                morton_code: calculate_morton_code(aabbs[i].center(), centers_to_morton_space),
+                original_index: i as i32,
             })
             .collect();
 

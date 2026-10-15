@@ -7,8 +7,7 @@
 //! one for [`Intersectable`] items, which report their own cost. The items are taken by value,
 //! so the caller's list is never reordered. Sorting uses a fixed introsort
 //! ([`crate::fixed_tie_sort`]) so tied centers always end up in the same place and the tree's shape is
-//! the same on every platform. The recursive calls do not pass `do_simple_sort_size` on, so
-//! subgroups use the default of 5000.
+//! the same on every platform. `do_simple_sort_size` applies at every level of the tree.
 
 use super::{BvhTree, BvhTreeItemData, Intersectable};
 use crate::fixed_tie_sort::introspective_sort;
@@ -133,7 +132,10 @@ fn build<T>(
     if recursion_depth < max_recursion {
         if num_items > do_simple_sort_size {
             best_axis = Some(accelerator.next_axis());
-            best_index_to_split_on = num_items / 2;
+            // The split keeps items 0..=index on the left, so index n/2 - 1 halves the group
+            // and leaves both sides non-empty (n/2 would put both of two items on the left
+            // and recurse on the same group forever).
+            best_index_to_split_on = num_items / 2 - 1;
         } else {
             let mut total_intersect_cost = 0.0;
             for item in &items_to_add {
@@ -243,7 +245,7 @@ fn build<T>(
                 max_recursion,
                 recursion_depth + 1,
                 accelerator,
-                TradeOffBvhConstructor::DEFAULT_DO_SIMPLE_SORT_SIZE,
+                do_simple_sort_size,
                 item_cost,
             );
             let right_group = build(
@@ -251,16 +253,15 @@ fn build<T>(
                 max_recursion,
                 recursion_depth + 1,
                 accelerator,
-                TradeOffBvhConstructor::DEFAULT_DO_SIMPLE_SORT_SIZE,
+                do_simple_sort_size,
                 item_cost,
             );
             match (left_group, right_group) {
                 (Some(left_group), Some(right_group)) => {
                     Some(BvhTree::from_nodes(left_group, right_group, best_axis))
                 }
-                // Only a two-item group split at the median (`do_simple_sort_size` < 2) leaves a
-                // side empty, and a branch needs two children. The other side holds every
-                // item, so it is the tree.
+                // The split index is at most n - 2, so neither side is empty; should one ever
+                // be, the other side holds every item and is the tree.
                 (Some(group), None) | (None, Some(group)) => Some(group),
                 (None, None) => None,
             }

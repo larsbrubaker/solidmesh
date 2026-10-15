@@ -92,15 +92,12 @@ impl Cylinder {
 
 impl Sdf for Cylinder {
     fn sdf(&self, p: Vector3) -> f64 {
-        let z = p.z.abs();
-        if z > self.half_height {
-            z - self.half_height
-        } else if p.z < -self.half_height {
-            // Unreachable after the `abs` test above.
-            p.z
-        } else {
-            Vector2::new(p.x, p.y).length() - self.radius
-        }
+        // The distances past the side and past the nearer cap: outside both, the nearest point
+        // is on the rim, so they combine as a 2D length; inside, the nearer surface decides.
+        let radial = Vector2::new(p.x, p.y).length() - self.radius;
+        let axial = p.z.abs() - self.half_height;
+        let outside = Vector2::new(radial.max(0.0), axial.max(0.0)).length();
+        outside + radial.max(axial).min(0.0)
     }
 
     fn bounds(&self) -> AxisAlignedBoundingBox {
@@ -147,7 +144,8 @@ impl Sdf for Box {
     }
 }
 
-/// The union of `items` (the least distance). Needs at least one item.
+/// The union of `items` (the least distance). With no items it is empty: outside everywhere,
+/// with empty bounds.
 #[derive(Default)]
 pub struct Union {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,
@@ -155,23 +153,30 @@ pub struct Union {
 
 impl Sdf for Union {
     fn sdf(&self, p: Vector3) -> f64 {
-        let mut d = self.items[0].sdf(p);
-        for item in &self.items[1..] {
+        let Some((first, rest)) = self.items.split_first() else {
+            return f64::INFINITY;
+        };
+        let mut d = first.sdf(p);
+        for item in rest {
             d = d.min(item.sdf(p));
         }
         d
     }
 
     fn bounds(&self) -> AxisAlignedBoundingBox {
-        let mut b = self.items[0].bounds();
-        for item in &self.items[1..] {
+        let Some((first, rest)) = self.items.split_first() else {
+            return AxisAlignedBoundingBox::empty();
+        };
+        let mut b = first.bounds();
+        for item in rest {
             b = AxisAlignedBoundingBox::union(&b, &item.bounds());
         }
         b
     }
 }
 
-/// The intersection of `items` (the greatest distance). Needs at least one item.
+/// The intersection of `items` (the greatest distance). With no items it is empty: outside
+/// everywhere, with empty bounds.
 #[derive(Default)]
 pub struct Intersection {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,
@@ -179,23 +184,30 @@ pub struct Intersection {
 
 impl Sdf for Intersection {
     fn sdf(&self, p: Vector3) -> f64 {
-        let mut d = self.items[0].sdf(p);
-        for item in &self.items[1..] {
+        let Some((first, rest)) = self.items.split_first() else {
+            return f64::INFINITY;
+        };
+        let mut d = first.sdf(p);
+        for item in rest {
             d = d.max(item.sdf(p));
         }
         d
     }
 
     fn bounds(&self) -> AxisAlignedBoundingBox {
-        let mut b = self.items[0].bounds();
-        for item in &self.items[1..] {
+        let Some((first, rest)) = self.items.split_first() else {
+            return AxisAlignedBoundingBox::empty();
+        };
+        let mut b = first.bounds();
+        for item in rest {
             b = AxisAlignedBoundingBox::intersection(&b, &item.bounds());
         }
         b
     }
 }
 
-/// The first item with every later one removed. Needs at least one item.
+/// The first item with every later one removed. With no items it is empty: outside
+/// everywhere, with empty bounds.
 #[derive(Default)]
 pub struct Subtraction {
     pub items: Vec<std::boxed::Box<dyn Sdf>>,
@@ -203,14 +215,19 @@ pub struct Subtraction {
 
 impl Sdf for Subtraction {
     fn sdf(&self, p: Vector3) -> f64 {
-        let mut d = self.items[0].sdf(p);
-        for item in &self.items[1..] {
+        let Some((first, rest)) = self.items.split_first() else {
+            return f64::INFINITY;
+        };
+        let mut d = first.sdf(p);
+        for item in rest {
             d = d.max(-item.sdf(p));
         }
         d
     }
 
     fn bounds(&self) -> AxisAlignedBoundingBox {
-        self.items[0].bounds()
+        self.items
+            .first()
+            .map_or_else(AxisAlignedBoundingBox::empty, |first| first.bounds())
     }
 }

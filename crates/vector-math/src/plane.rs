@@ -234,32 +234,27 @@ impl Plane {
     }
 
     /// Where the segment `start`-`end` crosses the plane, if it does (the miss position is
-    /// positive infinity). The crossing test uses the ends' signed distances from the parallel
-    /// plane through the origin, not from this plane, so for an offset plane it can miss or
-    /// misreport a crossing.
+    /// positive infinity). An end lying on the plane is the crossing; otherwise the ends must
+    /// be on opposite sides, judged by their signed distances from this plane.
     pub fn line_hit_plane(&self, start: Vector3, end: Vector3) -> (bool, Vector3) {
-        let distance_to_start_from_origin = self.normal.dot(start);
-        if distance_to_start_from_origin == 0.0 {
+        let start_distance_from_plane = self.normal.dot(start) - self.distance_from_origin;
+        if start_distance_from_plane == 0.0 {
             return (true, start);
         }
 
-        let distance_to_end_from_origin = self.normal.dot(end);
-        if distance_to_end_from_origin == 0.0 {
+        let end_distance_from_plane = self.normal.dot(end) - self.distance_from_origin;
+        if end_distance_from_plane == 0.0 {
             return (true, end);
         }
 
-        if (distance_to_start_from_origin < 0.0 && distance_to_end_from_origin > 0.0)
-            || (distance_to_start_from_origin > 0.0 && distance_to_end_from_origin < 0.0)
+        if (start_distance_from_plane < 0.0 && end_distance_from_plane > 0.0)
+            || (start_distance_from_plane > 0.0 && end_distance_from_plane < 0.0)
         {
-            let direction = (end - start).get_normal();
-
-            let start_distance_from_plane =
-                distance_to_start_from_origin - self.distance_from_origin;
-            let end_distance_from_plane = distance_to_end_from_origin - self.distance_from_origin;
-            let length_along_plan_normal = end_distance_from_plane - start_distance_from_plane;
-
-            let ratio_to_plan_from_start = start_distance_from_plane / length_along_plan_normal;
-            return (true, start + direction * ratio_to_plan_from_start);
+            // The signed distance changes linearly along the segment, so the crossing is the
+            // fraction of the segment where it reaches zero.
+            let ratio_from_start =
+                start_distance_from_plane / (start_distance_from_plane - end_distance_from_plane);
+            return (true, start + (end - start) * ratio_from_start);
         }
 
         (false, Vector3::POSITIVE_INFINITY)

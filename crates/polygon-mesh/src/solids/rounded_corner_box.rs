@@ -238,20 +238,19 @@ impl RoundedCornerBox {
         self.edge_count = 2 * (segments + 1);
         let capacity = (self.edge_count * self.edge_count * self.edge_count * 3) as usize;
         self.index_to_verts = HashMap::with_capacity(capacity);
-        // The corner spheres are projected onto with the radius as passed; only the face inset
-        // below uses the clamped one.
-        self.radius = radius_in;
-        let dx = if segments > 0 {
-            radius_in / segments as f64
-        } else {
-            0.0
-        };
-
+        // A radius past half the smallest side cannot fit; the face inset, the grid step and the
+        // corner spheres all use the clamped one, so the rounded edges meet the flat faces.
         let min_size = size_xyz.x.min(size_xyz.y.min(size_xyz.z));
         let radius = if radius_in > min_size / 2.0 {
             min_size / 2.0
         } else {
             radius_in
+        };
+        self.radius = radius;
+        let dx = if segments > 0 {
+            radius / segments as f64
+        } else {
+            0.0
         };
 
         let face_xyz = (size_xyz / 2.0) - Vector3::new(radius, radius, radius);

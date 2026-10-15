@@ -68,46 +68,66 @@ impl fmt::Display for MathError {
 
 impl std::error::Error for MathError {}
 
-/// The smallest power of two >= `n`. The shift wraps on overflow
-/// rather than panicking.
+/// The smallest power of two >= `n` (1 for `n` <= 1). Past 2^30 no `i32` power of two is
+/// large enough, so the result saturates at `i32::MAX` instead of wrapping (a wrapped shift
+/// would never reach `n` and loop forever).
 pub fn first_power_two_greater_than_or_equal_to(n: i32) -> i32 {
+    if n > 1 << 30 {
+        return i32::MAX;
+    }
     let mut pow2_size: i32 = 1;
     while pow2_size < n {
-        pow2_size = pow2_size.wrapping_shl(1);
+        pow2_size <<= 1;
     }
     pow2_size
 }
 
-/// `2^ceil(log2(n))`. The cast saturates, so a result too large for `i64` is `i64::MAX`.
+/// `2^ceil(log2(n))`, corrected to be exact: the logarithm's rounding can land just above a
+/// whole number for an exact power of two (or just below it next to one), and `ceil` would
+/// then double (or halve) the answer. The result is the smallest power of two >= `n`.
+fn power_of_two_at_or_above(n: f64) -> f64 {
+    let mut pow2 = 2f64.powf(log_base2(n).ceil());
+    if pow2.is_finite() && pow2 > 0.0 {
+        if pow2 * 0.5 >= n {
+            pow2 *= 0.5;
+        } else if pow2 < n {
+            pow2 *= 2.0;
+        }
+    }
+    pow2
+}
+
+/// The smallest power of two >= `n` (0 for 0). The cast saturates, so a result too large for
+/// `i64` is `i64::MAX`.
 pub fn next_power_of_two_i64(n: i64) -> Result<i64, MathError> {
     if n < 0 {
         return Err(MathError::MustBePositive);
     }
-    Ok(2f64.powf(log_base2(n as f64).ceil()) as i64)
+    Ok(power_of_two_at_or_above(n as f64) as i64)
 }
 
-/// `2^ceil(log2(n))`.
+/// The smallest power of two >= `n` (0 for 0).
 pub fn next_power_of_two_i32(n: i32) -> Result<i32, MathError> {
     if n < 0 {
         return Err(MathError::MustBePositive);
     }
-    Ok(2f64.powf(log_base2(f64::from(n)).ceil()) as i32)
+    Ok(power_of_two_at_or_above(f64::from(n)) as i32)
 }
 
-/// `2^ceil(log2(n))`.
+/// The smallest power of two >= `n` (0 for 0).
 pub fn next_power_of_two_f32(n: f32) -> Result<f32, MathError> {
     if n < 0.0 {
         return Err(MathError::MustBePositive);
     }
-    Ok(2f64.powf(log_base2(f64::from(n)).ceil()) as f32)
+    Ok(power_of_two_at_or_above(f64::from(n)) as f32)
 }
 
-/// `2^ceil(log2(n))`.
+/// The smallest power of two >= `n` (0 for 0).
 pub fn next_power_of_two_f64(n: f64) -> Result<f64, MathError> {
     if n < 0.0 {
         return Err(MathError::MustBePositive);
     }
-    Ok(2f64.powf(log_base2(n).ceil()))
+    Ok(power_of_two_at_or_above(n))
 }
 
 /// `test` limited to `[min, max]` (NaN passes through).
@@ -121,12 +141,12 @@ pub fn clamp(test: f64, min: f64, max: f64) -> f64 {
     test
 }
 
-/// `n!`. The multiplication wraps rather than panicking, so results past 20! are wrong.
+/// `n!`, saturating at `i64::MAX` past 20! (the largest factorial an `i64` holds).
 pub fn factorial(n: i32) -> i64 {
     let mut result: i64 = 1;
     let mut n = n;
     while n > 1 {
-        result = result.wrapping_mul(i64::from(n));
+        result = result.saturating_mul(i64::from(n));
         n -= 1;
     }
     result

@@ -40,5 +40,7 @@ mod rust_only_mesh_editing_tests;
 mod rust_only_platonic_solids_tests;
 #[path = "polygon_mesh/rust_only_stl_tests.rs"]
 mod rust_only_stl_tests;
+#[path = "polygon_mesh/sdf_and_rounded_box_tests.rs"]
+mod sdf_and_rounded_box_tests;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
 mod stl_parse_yield_tests;

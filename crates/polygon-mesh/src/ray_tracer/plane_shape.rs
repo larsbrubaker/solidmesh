@@ -56,10 +56,10 @@ impl PlaneShape {
 
 impl std::fmt::Display for PlaneShape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Debug text only; it says "Sphere" and nothing parses it.
+        // Debug text only: the plane's equation, normal . p = distance.
         write!(
             f,
-            "Sphere {}x+{}y+{}z+{}=0)",
+            "Plane ({}x+{}y+{}z={})",
             self.plane.normal.x,
             self.plane.normal.y,
             self.plane.normal.z,

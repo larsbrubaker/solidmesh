@@ -49,18 +49,18 @@ impl RectangleInt {
         self.right.wrapping_sub(self.left)
     }
 
-    /// Clips `dest` to `bounding`; false when nothing is left. Note: its top/bottom tests read as
-    /// a y-down rectangle.
+    /// Clips `dest` to `bounding`; false when nothing is left. Rectangles are y-up: `top` is
+    /// the larger y.
     pub fn clip_rect(bounding: RectangleInt, dest: &mut RectangleInt) -> bool {
-        if dest.top < bounding.top {
+        if dest.top > bounding.top {
             dest.top = bounding.top;
-            if dest.top >= dest.bottom {
+            if dest.top <= dest.bottom {
                 return false;
             }
         }
-        if dest.bottom > bounding.bottom {
+        if dest.bottom < bounding.bottom {
             dest.bottom = bounding.bottom;
-            if dest.bottom <= dest.top {
+            if dest.bottom >= dest.top {
                 return false;
             }
         }
@@ -79,32 +79,32 @@ impl RectangleInt {
         true
     }
 
-    /// Clips `dest` to `bounding`, moving `source`'s sides by the same amounts (as `clip_rect`,
-    /// y-down).
+    /// Clips `dest` to `bounding`, moving `source`'s sides by the same amounts (y-up, as
+    /// `clip_rect`).
     pub fn clip_rects(
         bounding: RectangleInt,
         source: &mut RectangleInt,
         dest: &mut RectangleInt,
     ) -> Result<bool, ClipRectsError> {
-        if dest.top < bounding.top {
+        if dest.top > bounding.top {
             if source.height() != dest.height() {
                 return Err(ClipRectsError::HeightMismatch);
             }
-            source.top = source.top.wrapping_add(bounding.top.wrapping_sub(dest.top));
+            source.top = source.top.wrapping_sub(dest.top.wrapping_sub(bounding.top));
             dest.top = bounding.top;
-            if dest.top >= dest.bottom {
+            if dest.top <= dest.bottom {
                 return Ok(false);
             }
         }
-        if dest.bottom > bounding.bottom {
+        if dest.bottom < bounding.bottom {
             if source.height() != dest.height() {
                 return Err(ClipRectsError::HeightMismatch);
             }
             source.bottom = source
                 .bottom
-                .wrapping_sub(dest.bottom.wrapping_sub(bounding.bottom));
+                .wrapping_add(bounding.bottom.wrapping_sub(dest.bottom));
             dest.bottom = bounding.bottom;
-            if dest.bottom <= dest.top {
+            if dest.bottom >= dest.top {
                 return Ok(false);
             }
         }
@@ -236,11 +236,12 @@ impl RectangleInt {
         self.init(left, bottom, right, top);
     }
 
-    /// The union of `r1` and `r2` (it assigns `right = r1.top`; see RectangleDouble).
+    /// Sets this rectangle to the smallest one holding both `r1` and `r2`.
     pub fn unite_rectangles(&mut self, r1: RectangleInt, r2: RectangleInt) {
         self.left = r1.left;
         self.bottom = r1.bottom;
-        self.right = r1.top;
+        self.right = r1.right;
+        self.top = r1.top;
         if self.right < r2.right {
             self.right = r2.right;
         }

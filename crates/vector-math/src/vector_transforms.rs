@@ -116,10 +116,10 @@ impl Vector3 {
         vec + temp
     }
 
-    /// `(x, y, z, 0) * mat`, divided by the resulting w. The vector is built with w = 0, so the
-    /// translation row is ignored.
+    /// `(x, y, z, 1) * mat`, divided by the resulting w: a position through a projection, so
+    /// the translation row applies.
     pub fn transform_perspective(self, mat: Matrix4X4) -> Vector3 {
-        let v = Vector4::from_vector3(self).transform(mat);
+        let v = Vector4::new(self.x, self.y, self.z, 1.0).transform(mat);
         Vector3::new(v.x / v.w, v.y / v.w, v.z / v.w)
     }
 }

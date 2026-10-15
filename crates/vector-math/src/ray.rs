@@ -77,14 +77,7 @@ impl Ray {
         max_distance_to_consider: f64,
         intersection_type: IntersectionType,
     ) -> Self {
-        let one_over_direction = 1.0 / direction_normal;
-        let sign_of = |v: f64| {
-            if v < 0.0 {
-                Sign::Negative
-            } else {
-                Sign::Positive
-            }
-        };
+        let (one_over_direction, sign) = Self::slab_terms(direction_normal);
         Ray {
             origin,
             direction_normal,
@@ -93,26 +86,46 @@ impl Ray {
             one_over_direction,
             is_shadow_ray: false,
             intersection_type,
-            sign: [
+            sign,
+        }
+    }
+
+    /// The reciprocal direction and per-axis signs the slab test reads; they must be
+    /// recomputed whenever the direction changes.
+    fn slab_terms(direction_normal: Vector3) -> (Vector3, [Sign; 3]) {
+        let one_over_direction = 1.0 / direction_normal;
+        let sign_of = |v: f64| {
+            if v < 0.0 {
+                Sign::Negative
+            } else {
+                Sign::Positive
+            }
+        };
+        (
+            one_over_direction,
+            [
                 sign_of(one_over_direction.x),
                 sign_of(one_over_direction.y),
                 sign_of(one_over_direction.z),
             ],
-        }
+        )
     }
 
     /// The ray moved by `matrix` (origin as a position, direction as a vector; the direction is
-    /// not renormalized). `is_shadow_ray` resets to false.
+    /// not renormalized). The window, face type and shadow flag carry over: moving a ray into
+    /// an object's space must not change what kind of query it is.
     pub fn transform(ray: &Ray, matrix: Matrix4X4) -> Ray {
         let transformed_origin = ray.origin.transform_position(matrix);
         let transformed_directon = ray.direction_normal.transform_vector(matrix);
-        Ray::with_limits(
+        let mut transformed = Ray::with_limits(
             transformed_origin,
             transformed_directon,
             ray.min_distance_to_consider,
             ray.max_distance_to_consider,
             ray.intersection_type,
-        )
+        );
+        transformed.is_shadow_ray = ray.is_shadow_ray;
+        transformed
     }
 
     /// The box corner (0 = min, 1 = max) the slab test enters through on `axis`, and the one it
@@ -206,14 +219,22 @@ impl Ray {
 
                 info.closest_hit_object = Some(*bounds);
                 info.hit_position = self.origin + self.direction_normal * dist_found;
+                // The normal is the hit face's outward normal: the ray enters through the face
+                // opposite its sign on the entry axis and leaves through the face matching its
+                // sign on the exit axis.
                 let mut normal_at_hit = Vector3::default();
-                // you hit the side that is opposite your sign (the entry face's axis is used
-                // for back faces too)
-                normal_at_hit[found.min_axis] = if self.sign[found.min_axis] == Sign::Negative {
-                    1.0
-                } else {
-                    -1.0
+                let entering_outward = |axis: usize| {
+                    if self.sign[axis] == Sign::Negative {
+                        1.0
+                    } else {
+                        -1.0
+                    }
                 };
+                if hit_type == IntersectionType::FrontFace {
+                    normal_at_hit[found.min_axis] = entering_outward(found.min_axis);
+                } else {
+                    normal_at_hit[found.max_axis] = -entering_outward(found.max_axis);
+                }
                 info.normal_at_hit = normal_at_hit;
                 info.distance_to_hit = dist_found;
             }
@@ -281,11 +302,13 @@ impl Ray {
     }
 
     /// Nudges the direction by up to 1e-5 per axis; `next_double` returns a random value in
-    /// [0, 1). The reciprocal direction and signs are not updated, so the slab test keeps
-    /// using the unperturbed direction.
+    /// [0, 1). The slab test's reciprocal direction and signs follow the new direction.
     pub fn perturb_direction(&mut self, mut next_double: impl FnMut() -> f64) {
         self.direction_normal.x += 1e-5 * next_double();
         self.direction_normal.y += 1e-5 * next_double();
         self.direction_normal.z += 1e-5 * next_double();
+        let (one_over_direction, sign) = Self::slab_terms(self.direction_normal);
+        self.one_over_direction = one_over_direction;
+        self.sign = sign;
     }
 }

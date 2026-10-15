@@ -57,7 +57,8 @@ pub fn min_f32(val1: f32, val2: f32) -> f32 {
 }
 
 /// The base-2 logarithm as `ln(a) / ln(2)`, not `log2`: the two can differ in the last bit,
-/// and the `next_power_of_two_*` helpers round this value up, so it decides their results.
+/// so a power of two can come out a hair off its whole-number logarithm; the
+/// `next_power_of_two_*` helpers correct for that after rounding up.
 pub fn log_base2(a: f64) -> f64 {
     a.ln() / 2f64.ln()
 }

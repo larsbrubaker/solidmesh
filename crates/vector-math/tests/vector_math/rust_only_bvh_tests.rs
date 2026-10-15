@@ -1,7 +1,7 @@
 // Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection`, the
 // estimator and the track ball. The expected values of the `*_pinned_*` tests are recorded
-// output for these 30 boxes, with `BvhTreeItemData::center` left at zero as every caller leaves
-// it; they pin tree shape, search order and hits, so any change to them shows up here.
+// output for these 30 boxes; they pin tree shape, search order and hits, so any change to them
+// shows up here.
 
 use vector_math::bvh::{
     morton_codes, BvhBuilderLocallyOrderedClustering, BvhTree, BvhTreeItemData,
@@ -49,7 +49,7 @@ fn copied(results: Vec<&i32>) -> Vec<i32> {
 #[test]
 fn rust_only_trade_off_tree_has_the_pinned_shape() {
     let tree = test_tree();
-    assert_eq!(tree.count_branches(), 7);
+    assert_eq!(tree.count_branches(), 29);
 
     let mut results = Vec::new();
     tree.search_bounds(
@@ -62,8 +62,8 @@ fn rust_only_trade_off_tree_has_the_pinned_shape() {
     assert_eq!(
         copied(results),
         vec![
-            8, 7, 6, 5, 4, 3, 2, 1, 28, 29, 10, 9, 12, 11, 0, 27, 26, 25, 24, 23, 22, 21, 20, 19,
-            18, 17, 16, 15, 14, 13
+            8, 16, 5, 19, 4, 10, 7, 13, 2, 15, 29, 18, 24, 21, 27, 22, 1, 9, 23, 17, 25, 3, 11, 12,
+            26, 20, 28, 0, 6, 14
         ]
     );
 
@@ -72,7 +72,7 @@ fn rust_only_trade_off_tree_has_the_pinned_shape() {
         &AxisAlignedBoundingBox::new(Vector3::new(2.0, 2.0, 0.0), Vector3::new(5.0, 4.0, 1.0)),
         &mut results,
     );
-    assert_eq!(copied(results), vec![6, 3, 12, 26, 20, 17]);
+    assert_eq!(copied(results), vec![17, 3, 12, 26, 20, 6]);
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn rust_only_locally_ordered_clustering_builds_the_pinned_tree() {
         .collect();
     assert_eq!(
         described.join(";"),
-        "1,40;2,23;3,16;4,7;5,6;6,6;12,12;8,11;9,10;14,14;20,20;12,13;11,11;14,15;26,26;0,0;\
+        "1,40;2,23;3,16;4,9;5,8;6,7;0,0;6,6;12,12;10,13;11,12;14,14;20,20;14,15;11,11;26,26;\
          17,22;18,21;19,20;21,21;27,27;18,18;5,5;24,33;25,30;26,27;3,3;28,29;9,9;15,15;31,32;\
          17,17;23,23;34,35;24,24;36,37;29,29;38,39;2,2;8,8;41,52;42,47;43,44;28,28;45,46;25,25;\
          4,4;48,51;49,50;7,7;13,13;19,19;53,56;54,55;22,22;1,1;57,58;10,10;16,16"

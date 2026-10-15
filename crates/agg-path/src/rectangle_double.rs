@@ -189,12 +189,12 @@ impl RectangleDouble {
         self.left < self.right && self.bottom < self.top
     }
 
-    /// The union of `r1` and `r2`. Note: it assigns `right = r1.top` where `top = r1.top` was
-    /// meant, so `top` starts from this rectangle's own top.
+    /// Sets this rectangle to the smallest one holding both `r1` and `r2`.
     pub fn unite_rectangles(&mut self, r1: RectangleDouble, r2: RectangleDouble) {
         self.left = r1.left;
         self.bottom = r1.bottom;
-        self.right = r1.top;
+        self.right = r1.right;
+        self.top = r1.top;
         if self.right < r2.right {
             self.right = r2.right;
         }

@@ -126,12 +126,10 @@ impl Vector4 {
         )
     }
 
-    /// Each component limited to `[min, max]` — except that the z and w lower-bound tests
-    /// compare `vec.x` and `vec.y` (not `vec.z`/`vec.w`) against `min.z` and `min.w`. That is
-    /// a known bug, left unchanged until a caller needs it fixed.
+    /// Each component limited to `[min, max]` (NaN passes through).
     pub fn clamp(vec: Vector4, min: Vector4, max: Vector4) -> Vector4 {
-        let pick = |test: f64, value: f64, min: f64, max: f64| {
-            if test < min {
+        let pick = |value: f64, min: f64, max: f64| {
+            if value < min {
                 min
             } else if value > max {
                 max
@@ -140,10 +138,10 @@ impl Vector4 {
             }
         };
         Vector4::new(
-            pick(vec.x, vec.x, min.x, max.x),
-            pick(vec.y, vec.y, min.y, max.y),
-            pick(vec.x, vec.z, min.z, max.z),
-            pick(vec.y, vec.w, min.w, max.w),
+            pick(vec.x, min.x, max.x),
+            pick(vec.y, min.y, max.y),
+            pick(vec.z, min.z, max.z),
+            pick(vec.w, min.w, max.w),
         )
     }
 

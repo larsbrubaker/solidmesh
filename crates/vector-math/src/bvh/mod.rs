@@ -76,8 +76,8 @@ impl<H> Default for RayHitInfo<H> {
     }
 }
 
-/// An item and its bounds as a tree holds them. `center` is not
-/// derived from the bounds: the constructor leaves it zero, and the builder sorts by it.
+/// An item and its bounds as a tree holds them. `center` is the bounds' center, which the
+/// builder sorts by to split the items spatially.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BvhTreeItemData<T> {
     pub aabb: AxisAlignedBoundingBox,
@@ -89,7 +89,7 @@ impl<T> BvhTreeItemData<T> {
     pub fn new(item: T, bounds: AxisAlignedBoundingBox) -> Self {
         BvhTreeItemData {
             aabb: bounds,
-            center: Vector3::ZERO,
+            center: bounds.center(),
             item,
         }
     }

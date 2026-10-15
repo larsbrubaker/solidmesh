@@ -38,14 +38,13 @@ pub fn length_to(polygon: &[Vector2], index: i32, _is_closed: bool) -> f64 {
 }
 
 /// The point `length_from_start` along the polyline. A closed polyline
-/// wraps the length around; an open one clamps to its ends. The total it wraps by is always
-/// the closed length, even for an open polyline.
+/// wraps the length around its closed length; an open one clamps to its ends.
 ///
 /// Panics on an empty `polygon` (an open polyline asked for a point past either end), a
 /// caller bug.
 pub fn get_position_at(polygon: &[Vector2], length_from_start: f64, closed: bool) -> Vector2 {
     let mut length_from_start = length_from_start;
-    let total_length = polygon_length(polygon, true);
+    let total_length = polygon_length(polygon, closed);
     if length_from_start > total_length {
         if closed {
             let ratio = length_from_start / total_length;
