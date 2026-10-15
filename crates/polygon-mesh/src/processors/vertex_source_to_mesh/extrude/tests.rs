@@ -25,7 +25,7 @@ fn ring(points: &[(i64, i64)]) -> Paths64 {
 /// top bevel. (The straight wall keeps the band's flat faces, where a feature of the bottom ring
 /// ends, off the bottom cap, as the extrusion's own wall does.)
 fn banded_solid(bottom: &Paths64, top: &Paths64) -> Mesh {
-    let mut rings = RingMesh::new();
+    let mut rings = RingMesh::with_base(0.0);
     let bottom = Rc::new(bottom.clone());
     let base = rings.place(&bottom, 0.0);
     rings.cap(&base, &(0..bottom.len()).collect::<Vec<_>>(), false);

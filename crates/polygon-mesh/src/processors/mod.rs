@@ -5,6 +5,7 @@
 //! `planar_region_simplifier` (on manifold-rust's ear clipper), `mesh_helper`'s plane, and
 //! turning 2D paths into meshes (`vertex_source_to_mesh`).
 
+pub mod cap_fill;
 pub mod face_bsp_tree;
 pub(crate) mod hull_bounds_points;
 pub mod mesh_convex_hull;

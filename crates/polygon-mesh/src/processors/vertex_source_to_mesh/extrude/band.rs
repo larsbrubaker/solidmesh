@@ -23,7 +23,8 @@ use clipper2_rust::{area, Path64};
 
 use crate::csg::path_stitcher::{best_start_indices, zip_steps_on_a};
 
-use super::ring_mesh::{fill_triangles, loop_edges, walks_exactly, PlacedRing, RingMesh};
+use super::ring_mesh::{PlacedRing, RingMesh};
+use crate::processors::cap_fill::{fill_triangles, loop_edges, walks_exactly};
 
 /// Adds the band between `lower` and `upper`. `lower_is_outer` says the profile shrinks as it
 /// rises here (a top bevel); a bottom bevel's profile grows.

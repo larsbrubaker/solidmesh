@@ -49,6 +49,11 @@ pub fn extrude(
 /// `z_height_top`, capped and joined by a straight wall. Every ring is placed in the mesh once
 /// and every face is built on its vertices, so the result is a closed solid whatever the profile.
 /// A clipper failure in the profile's clean-up comes back as the error.
+///
+/// A zero height encloses nothing and gives an empty mesh. A negative height extrudes downward:
+/// the solid from `z_height_top` up to z = 0, faces pointing out, built as the extrusion of the
+/// height's magnitude (bevels and all) moved down by it, so the top bevel still rounds the
+/// upper end.
 pub fn extrude_bevelled(
     vertex_source_in: &dyn VertexSource,
     z_height_top: f64,
@@ -57,13 +62,19 @@ pub fn extrude_bevelled(
     bottom_bevel: Option<&[(f64, f64)]>,
     bottom_join_type: JoinType,
 ) -> Result<Mesh, ClipperError> {
+    if z_height_top == 0.0 {
+        return Ok(Mesh::new());
+    }
     let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
 
     // ensure good winding and consistent shapes
     let bottom_polygons = get_corrected_winding(&bottom_polygons)?;
 
+    // the solid's lowest z: every ring is placed this far below the height it is built at
+    let base = z_height_top.min(0.0);
     get_loop_mesh(
-        z_height_top,
+        base,
+        z_height_top.abs(),
         bevel,
         &bottom_polygons,
         join_type,
@@ -76,10 +87,11 @@ pub fn extrude_bevelled(
 /// shared, so [`Rc::ptr_eq`] recognises the straight wall.
 type Ring = (Rc<Paths64>, f64);
 
-/// Caps and walls each outline-with-holes group through its bevel rings. Each ring is placed in
-/// the mesh once and every face is built on its vertices (`ring_mesh.rs`), so the solid is closed
+/// Caps and walls each outline-with-holes group through its bevel rings, from z = `base` up to
+/// `base + z_height_top`. Each ring is placed in the mesh once and every face is built on its vertices (`ring_mesh.rs`), so the solid is closed
 /// by construction.
 fn get_loop_mesh(
+    base: f64,
     z_height_top: f64,
     bevel: Option<&[(f64, f64)]>,
     input_polygons: &Paths64,
@@ -89,7 +101,7 @@ fn get_loop_mesh(
 ) -> Result<Mesh, ClipperError> {
     let bottom_polygons_sets = input_polygons.separate_polygon_groups()?;
 
-    let mut ring_mesh = RingMesh::new();
+    let mut ring_mesh = RingMesh::with_base(base);
     for bottom_polygons in bottom_polygons_sets {
         let rings = build_bevel_rings(
             bottom_polygons,

@@ -7,11 +7,11 @@
 
 use std::collections::HashMap;
 
-use clipper2_rust::Paths64;
-use tess2_rust::{ElementType, TessOption, Tessellator, WindingRule};
+use clipper2_rust::{Path64, Paths64};
 use vector_math::{Matrix4X4, Vector2, Vector3, Vector3Float};
 
 use crate::mesh::Mesh;
+use crate::processors::cap_fill::cap_faces;
 
 /// Clipper units per mm, the scale the cleaned profile's integer points are in.
 const UNITS_PER_MM: f64 = agg_path::data_converters_2d::DEFAULT_SCALING;
@@ -22,13 +22,17 @@ struct Profile {
     points: Vec<(i64, i64)>,
     /// Each loop as point indices.
     loops: Vec<Vec<usize>>,
+    /// The loops themselves, for the cap fill.
+    paths: Paths64,
+    /// The index of each distinct point.
+    by_position: HashMap<(i64, i64), usize>,
 }
 
 impl Profile {
-    fn new(loops: &Paths64) -> Self {
+    fn new(loops_in: &Paths64) -> Self {
         let mut by_position: HashMap<(i64, i64), usize> = HashMap::new();
         let mut points = Vec::new();
-        let loops = loops
+        let loops = loops_in
             .iter()
             .map(|path| {
                 path.iter()
@@ -41,7 +45,12 @@ impl Profile {
                     .collect()
             })
             .collect();
-        Profile { points, loops }
+        Profile {
+            points,
+            loops,
+            paths: loops_in.clone(),
+            by_position,
+        }
     }
 
     fn on_axis(&self, point: usize) -> bool {
@@ -98,15 +107,12 @@ pub(super) fn revolved_mesh(
                 if a == b || (profile.on_axis(a) && profile.on_axis(b)) {
                     continue;
                 }
-                add_polygon(
-                    &mut mesh,
-                    &[
-                        vertex[next][b],
-                        vertex[column][b],
-                        vertex[column][a],
-                        vertex[next][a],
-                    ],
-                );
+                mesh.add_polygon(&[
+                    vertex[next][b],
+                    vertex[column][b],
+                    vertex[column][a],
+                    vertex[next][a],
+                ]);
             }
         }
     }
@@ -128,153 +134,20 @@ fn revolved_position(profile_point: Vector2, angle: f64, revolve_around_z: bool)
         .transform(Matrix4X4::create_rotation_y(angle))
 }
 
-/// Fans a polygon from its first corner, after dropping a corner that repeats the one before it
-/// (the pole a strip meets the axis at is one vertex, so its quad is a triangle).
-fn add_polygon(mesh: &mut Mesh, corners: &[i32]) {
-    let mut distinct: Vec<i32> = Vec::with_capacity(corners.len());
-    for &corner in corners {
-        if !distinct.contains(&corner) {
-            distinct.push(corner);
-        }
-    }
-    for k in 1..distinct.len().saturating_sub(1) {
-        let (a, b, c) = (distinct[0], distinct[k], distinct[k + 1]);
-        mesh.faces.add(a, b, c, &mesh.vertices);
-    }
-}
-
 /// The flat face closing a partial sweep at one column (`row`, that column's vertices). The
 /// strips walk the first column's loop edges backward and the last column's forward, so the start
-/// cap walks them in loop order and the end cap backward, facing out of the solid either way.
-///
-/// The fill only joins the profile's own points. Should it not close exactly the loops' edges,
-/// each loop is fanned from its first point instead, which walks every edge once whatever the
-/// loop's shape, so the solid stays closed.
+/// cap walks them in loop order and the end cap backward, facing out of the solid either way. The
+/// fill joins only the column's own vertices (see [`cap_faces`]).
 fn add_cap(mesh: &mut Mesh, profile: &Profile, row: &[i32], start: bool) {
-    let oriented = |[a, b, c]: [usize; 3]| if start { [a, b, c] } else { [c, b, a] };
-    let filled = fill_triangles(profile).map(|triangles| {
-        triangles
-            .into_iter()
-            .map(|triangle| oriented(triangle).map(|point| row[point]))
-            .collect::<Vec<_>>()
-    });
-    let boundary: Vec<(i32, i32)> = profile
+    let paths: Vec<&Path64> = profile.paths.iter().collect();
+    let indices: Vec<Vec<i32>> = profile
         .loops
         .iter()
-        .flat_map(|indices| {
-            (0..indices.len()).map(move |i| (indices[i], indices[(i + 1) % indices.len()]))
-        })
-        .map(|(a, b)| {
-            if start {
-                (row[a], row[b])
-            } else {
-                (row[b], row[a])
-            }
-        })
+        .map(|points| points.iter().map(|&point| row[point]).collect())
         .collect();
-
-    let faces = match filled.filter(|faces| walks_exactly(faces, &boundary)) {
-        Some(faces) => faces,
-        None => profile
-            .loops
-            .iter()
-            .flat_map(|indices| {
-                (1..indices.len().saturating_sub(1))
-                    .map(|k| oriented([indices[0], indices[k], indices[k + 1]]).map(|p| row[p]))
-            })
-            .collect(),
-    };
-    for [a, b, c] in faces {
-        if a != b && b != c && c != a {
-            mesh.faces.add(a, b, c, &mesh.vertices);
-        }
+    let indices: Vec<&[i32]> = indices.iter().map(Vec::as_slice).collect();
+    let vertex_at = |x, y| profile.by_position.get(&(x, y)).map(|&point| row[point]);
+    for [a, b, c] in cap_faces(&paths, &indices, vertex_at, start) {
+        mesh.faces.add(a, b, c, &mesh.vertices);
     }
-}
-
-/// Whether `faces` is a surface whose open boundary is exactly `boundary`: each of those directed
-/// edges walked once and never back, every other edge walked once each way, and no face with a
-/// repeated corner.
-fn walks_exactly(faces: &[[i32; 3]], boundary: &[(i32, i32)]) -> bool {
-    let mut walks: HashMap<(i32, i32), u32> = HashMap::new();
-    for &[a, b, c] in faces {
-        if a == b || b == c || c == a {
-            return false;
-        }
-        for edge in [(a, b), (b, c), (c, a)] {
-            *walks.entry(edge).or_insert(0) += 1;
-        }
-    }
-    // the strips beside the cap walk its boundary the other way
-    for &(a, b) in boundary {
-        *walks.entry((b, a)).or_insert(0) += 1;
-    }
-    walks
-        .iter()
-        .all(|(&(a, b), &count)| count == 1 && walks.get(&(b, a)) == Some(&1))
-}
-
-/// The constrained Delaunay fill of the profile under the odd rule, counter clockwise, each corner
-/// one of the profile's points; `None` when the tessellator fails, adds a point of its own (only
-/// loops that cross need one) or leaves a triangle with no area. Delaunay refinement keeps the
-/// triangles off the zero-area slivers a plain sweep leaves along straight runs of points.
-fn fill_triangles(profile: &Profile) -> Option<Vec<[usize; 3]>> {
-    let mut tess = Tessellator::new();
-    tess.set_option(TessOption::ConstrainedDelaunayTriangulation, true);
-    // the tessellator numbers its input points in the order they are added
-    let mut input_points = Vec::new();
-    for indices in &profile.loops {
-        if indices.len() >= 3 {
-            let coordinates: Vec<f64> = indices
-                .iter()
-                .flat_map(|&point| {
-                    let (x, y) = profile.points[point];
-                    [x as f64, y as f64]
-                })
-                .collect();
-            tess.add_contour(2, &coordinates);
-            input_points.extend_from_slice(indices);
-        }
-    }
-    if input_points.is_empty() {
-        return Some(Vec::new());
-    }
-    // the +z normal makes every triangle counter clockwise in 2D
-    if !tess.tessellate(
-        WindingRule::Odd,
-        ElementType::Polygons,
-        3,
-        2,
-        Some([0.0, 0.0, 1.0]),
-    ) {
-        return None;
-    }
-
-    let original = tess.vertex_indices();
-    let mut triangles = Vec::new();
-    for triangle in tess.elements().as_chunks::<3>().0 {
-        if triangle.contains(&tess2_rust::tess::TESS_UNDEF) {
-            continue;
-        }
-        let mut corners = [0; 3];
-        for (corner, &output) in corners.iter_mut().zip(triangle) {
-            let input = original[output as usize];
-            if input == tess2_rust::tess::TESS_UNDEF {
-                return None;
-            }
-            *corner = *input_points.get(input as usize)?;
-        }
-        if doubled_area(profile, corners) == 0 {
-            return None;
-        }
-        triangles.push(corners);
-    }
-    Some(triangles)
-}
-
-/// Twice the signed area of a triangle of profile points, exactly.
-fn doubled_area(profile: &Profile, [a, b, c]: [usize; 3]) -> i128 {
-    let [a, b, c] = [a, b, c].map(|point| profile.points[point]);
-    let (abx, aby) = ((b.0 - a.0) as i128, (b.1 - a.1) as i128);
-    let (acx, acy) = ((c.0 - a.0) as i128, (c.1 - a.1) as i128);
-    abx * acy - aby * acx
 }

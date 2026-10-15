@@ -384,6 +384,23 @@ impl Mesh {
         }
     }
 
+    /// Adds a polygon over existing vertices, fanned from its first corner across its distinct
+    /// corners. A builder that places each point once gives a collapsed side (a tip scaled to a
+    /// point, a ring on the axis) one vertex, so a corner repeating an earlier one is dropped, and
+    /// a polygon left with fewer than three distinct corners encloses nothing and adds no face.
+    pub fn add_polygon(&mut self, corners: &[i32]) {
+        let mut distinct: Vec<i32> = Vec::with_capacity(corners.len());
+        for &corner in corners {
+            if !distinct.contains(&corner) {
+                distinct.push(corner);
+            }
+        }
+        for k in 1..distinct.len().saturating_sub(1) {
+            self.faces
+                .add(distinct[0], distinct[k], distinct[k + 1], &self.vertices);
+        }
+    }
+
     /// Appends every face of `mesh`, transformed by `matrix`, as new welded-per-face geometry,
     /// with its textures and colors.
     ///
