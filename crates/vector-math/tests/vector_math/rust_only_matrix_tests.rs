@@ -100,3 +100,28 @@ fn rust_only_perspective_rejects_out_of_range_arguments() {
         Err(MathError::ArgumentOutOfRange("zNear"))
     );
 }
+
+#[test]
+fn axis_angle_rotation_turns_by_the_right_hand_rule_like_the_single_axis_builders() {
+    // Under row vectors the textbook axis-angle matrix turns the opposite way, so the builder
+    // that negates its angle is the one that agrees with `create_rotation_x/y/z` and with the
+    // quaternion sandwich: a positive quarter turn about +X takes +Y to +Z.
+    let quarter = std::f64::consts::FRAC_PI_2;
+    let turned =
+        Vector3::UNIT_Y.transform(Matrix4X4::create_from_axis_angle(Vector3::UNIT_X, quarter));
+    assert!(turned.equals_within(Vector3::UNIT_Z, 1e-12), "{turned:?}");
+    let v = Vector3::new(1.0, 2.0, 3.0);
+    for (axis, single) in [
+        (Vector3::UNIT_X, Matrix4X4::create_rotation_x(0.7)),
+        (Vector3::UNIT_Y, Matrix4X4::create_rotation_y(0.7)),
+        (Vector3::UNIT_Z, Matrix4X4::create_rotation_z(0.7)),
+    ] {
+        let m = Matrix4X4::create_from_axis_angle(axis, 0.7);
+        assert!(m.equals_within(single, 1e-12));
+        let by_quaternion = v.transform_by_quaternion(Quaternion::from_axis_angle(axis, 0.7));
+        assert!(v.transform(m).equals_within(by_quaternion, 1e-12));
+        // The non-negating builder turns the other way.
+        let opposite = Matrix4X4::create_rotation_axis_angle(axis, -0.7);
+        assert!(m.equals_within(opposite, 1e-12));
+    }
+}

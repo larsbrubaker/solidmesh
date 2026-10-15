@@ -1,7 +1,7 @@
 //! The 8-bit RGBA colour (the `Color` struct, its named statics, HTML parsing and formatting, the `+`/`-`/`*` operators, `Blend`, `gradient`,
 //! `add`, `WithAlpha` from `ColorExtensionMethods`). The LAB naming helpers live in
-//! [`super::color_names`], the float colour in [`super::color_f`], the `IColorType` extension
-//! methods in [`super::color_type`], and the JSON shape in [`super::color_serde`].
+//! `color_names`, the float colour in [`super::color_f`], the `IColorType` extension
+//! methods in [`super::color_type`], and the JSON shape in `color_serde`.
 
 use std::fmt;
 use std::ops::{Add, Mul, Sub};

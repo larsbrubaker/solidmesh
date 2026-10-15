@@ -1,5 +1,5 @@
-// Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection`, the
-// estimator and the track ball. The expected values of the `*_pinned_*` tests are recorded
+// Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection` and
+// the track ball. The expected values of the `*_pinned_*` tests are recorded
 // output for these 30 boxes; they pin tree shape, search order and hits, so any change to them
 // shows up here.
 
@@ -8,8 +8,8 @@ use vector_math::bvh::{
 };
 use vector_math::bvh::{SortingAccelerator, TradeOffBvhConstructor};
 use vector_math::{
-    estimator, AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Quaternion, Ray,
-    TrackBallController, TrackBallError, TrackBallTransformType, Vector2, Vector3,
+    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Quaternion, Ray, TrackBallController,
+    TrackBallError, TrackBallTransformType, Vector2, Vector3,
 };
 
 fn test_boxes() -> Vec<AxisAlignedBoundingBox> {
@@ -198,20 +198,6 @@ fn rust_only_ray_closest_intersection_front_and_back() {
     assert_eq!(hit.hit_type, IntersectionType::None);
     assert_eq!(hit.distance_to_hit, f64::MAX);
     assert!(hit.closest_hit_object.is_none());
-}
-
-#[test]
-fn rust_only_estimator_trapezoid_and_triangle() {
-    // accelerate 5 mm to 100 mm/s in 0.1 s, cruise 90 mm in 0.9 s, decelerate in 0.1 s
-    let seconds = estimator::get_seconds_for_movement(100.0, 100.0, 1000.0, 200.0, 0.0, 1.0);
-    assert!((seconds - 1.1).abs() < 1e-12, "{seconds}");
-    // too short to reach 100 mm/s: accelerate over half, decelerate over half
-    let seconds = estimator::get_seconds_for_movement(2.0, 100.0, 1000.0, 200.0, 0.0, 1.0);
-    assert!((seconds - 2.0 * (2.0f64 * 1000.0).sqrt() / 1000.0).abs() < 1e-12);
-    assert_eq!(
-        estimator::get_seconds_for_movement(0.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-        0.0
-    );
 }
 
 #[test]

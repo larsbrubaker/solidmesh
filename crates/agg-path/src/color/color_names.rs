@@ -149,14 +149,14 @@ fn xyz_to_rgb(xyz: [f64; 3]) -> [f64; 3] {
     ]
 }
 
-/// LAB to XYZ. `eps` and `kap` are the integer quotients of `216 / 24389` and `24389 / 27`,
-/// 0 and 903, not the CIE constants; the named-colour results are pinned to them.
+/// LAB to XYZ with the CIE constants `eps` = 216/24389 and `kap` = 24389/27, so dark colours
+/// (L* below 8) take the linear branch.
 fn lab_to_xyz(lab: [f64; 3]) -> [f64; 3] {
     // d65 standard illuminant in XYZ
     let d65 = [95.05, 100.0, 108.9];
     let (l, a, b) = (lab[0], lab[1], lab[2]);
-    let eps = (216 / 24389) as f64;
-    let kap = (24389 / 27) as f64;
+    let eps = 216.0 / 24389.0;
+    let kap = 24389.0 / 27.0;
     let f_y = (l + 16.0) / 116.0;
     let f_z = f_y - b / 200.0;
     let f_x = a / 500.0 + f_y;

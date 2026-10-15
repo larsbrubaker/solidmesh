@@ -7,8 +7,8 @@
 //! `AxisAlignedBoundingBox`, `Plane`/`PlaneFloat`, `Ray`, `Frustum`, the vectors' matrix and
 //! quaternion transforms (`vector_transforms`), `std::hash::Hash` for the value types
 //! (`float_hash`) and their serde JSON in the shape saved files hold (`serde_impls` plus
-//! derives). `WorldView` (camera and projection), `TrackBallController`, `easing`, `estimator`,
-//! the BVH (`bvh`: `BvhTree`, its two builders, Morton codes, `RayHitInfo`, with
+//! derives). `WorldView` (camera and projection), `TrackBallController`, `easing`, the BVH
+//! (`bvh`: `BvhTree`, its two builders, Morton codes, `RayHitInfo`, with
 //! `Ray::get_closest_intersection`), the `parallel` loop wrapper (sequential on every host,
 //! since wasm32 has no threads) and the fixed-order introsort (`fixed_tie_sort`) the builders need so
 //! ties always land in the same place. `seeded_random` is the seeded generator shared by the
@@ -23,7 +23,6 @@
 mod axis_aligned_bounding_box;
 pub mod bvh;
 pub mod easing;
-pub mod estimator;
 pub mod fixed_tie_sort;
 pub mod float_hash;
 mod frustum;

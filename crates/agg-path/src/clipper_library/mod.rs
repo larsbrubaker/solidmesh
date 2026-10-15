@@ -6,7 +6,7 @@
 //! `FillRule`, `ClipType`/`JoinType` → clipper2's own, `PolyTree` → `PolyTree64`. The modules:
 //! point helpers ([`int_point_extensions`]), one polygon ([`polygon_extensions`]), many
 //! polygons ([`polygons_extensions`]), and from a modified Clipper 6.4.2 the statics ([`clipper_statics`], which adapts those types to [`crate::clipper6`]) and
-//! `CleanPolygon(s)` ([`clean_polygon`]). Every helper that runs Clipper 6 returns
+//! `CleanPolygon(s)` ([`mod@clean_polygon`]). Every helper that runs Clipper 6 returns
 //! `Result<_, `[`ClipperError`]`>`.
 
 pub mod clean_polygon;

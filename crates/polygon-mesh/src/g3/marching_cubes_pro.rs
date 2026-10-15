@@ -15,12 +15,11 @@ use super::marching_cubes::{cell_dimensions, find_iso, RootfindingModes};
 use crate::sdf::marching_cubes_tables::{EDGE_INDICES, EDGE_TABLE, TRI_TABLE};
 use crate::sdf::DenseGrid3f;
 
-/// The edge-axis flags of a vertex key: bits 28, 29 and 30 (a 32-bit shift by 60/61/62, masked to
-/// five bits). They overlap the y field of the corner hash only from y = 4096 on, beyond any grid
-/// the implicit booleans build.
-const EDGE_X: i64 = 1 << (60 & 31);
-const EDGE_Y: i64 = 1 << (61 & 31);
-const EDGE_Z: i64 = 1 << (62 & 31);
+/// The edge-axis flags of a vertex key: bits 60, 61 and 62, above the 48 bits the corner hash
+/// fills, so an edge's axis never aliases a coordinate on any grid.
+const EDGE_X: i64 = 1 << 60;
+const EDGE_Y: i64 = 1 << 61;
+const EDGE_Z: i64 = 1 << 62;
 
 /// g3 `MarchingCubesPro`, configured as the implicit booleans set it.
 pub(crate) struct MarchingCubesPro<'a> {
@@ -211,5 +210,24 @@ impl Run<'_, '_> {
             }
             i += 3;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::edge_hash;
+
+    #[test]
+    fn edges_on_distant_rows_of_a_fine_grid_get_their_own_vertices() {
+        // x edges at y = 0 and y = 4096 are different edges and need different vertex keys.
+        assert_ne!(
+            edge_hash([0, 0, 0], [1, 0, 0]),
+            edge_hash([0, 4096, 0], [1, 4096, 0])
+        );
+        // An edge's axis is part of its key.
+        let x = edge_hash([2, 3, 4], [3, 3, 4]);
+        let y = edge_hash([2, 3, 4], [2, 4, 4]);
+        let z = edge_hash([2, 3, 4], [2, 3, 5]);
+        assert!(x != y && y != z && x != z);
     }
 }

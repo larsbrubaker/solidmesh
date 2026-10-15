@@ -198,20 +198,28 @@ impl<'a> RemesherPro<'a> {
         };
 
         self.remesher.modified_edges_last_pass = 0;
+        let mut outcome = Ok(());
         for cur_eid in edges {
             if self.remesher.mesh().is_edge(cur_eid) {
-                // Flips are off for this pass, so FlipEdge (the only edit that can throw) is
-                // never reached. An error would return before pop_state restores the settings.
-                let result = self.remesher.process_edge(cur_eid, &mut split_f)?;
-                if result == ProcessResult::OkSplit {
-                    // new edges queued by SplitF
-                    self.remesher.modified_edges_last_pass += 1;
-                    split_edges += 1;
+                // Flips are off for this pass, so the flip (the only edit that can fail) is not
+                // reached; an error still stops the pass only after the settings are restored.
+                match self.remesher.process_edge(cur_eid, &mut split_f) {
+                    Ok(ProcessResult::OkSplit) => {
+                        // new edges queued by split_f
+                        self.remesher.modified_edges_last_pass += 1;
+                        split_edges += 1;
+                    }
+                    Ok(_) => {}
+                    Err(error) => {
+                        outcome = Err(error);
+                        break;
+                    }
                 }
             }
         }
 
         self.pop_state();
+        outcome?;
         Ok(split_edges)
     }
 

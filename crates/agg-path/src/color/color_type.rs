@@ -53,26 +53,16 @@ pub trait ColorType: Copy {
         overlaid
     }
 
-    /// The WCAG contrast ratio, 1 to 21, rounded to one decimal (two
-    /// when this colour is semi-transparent).
+    /// The WCAG contrast ratio, 1 to 21, of `color` shown on this colour, rounded to one
+    /// decimal (two when this colour is semi-transparent). A semi-transparent `color` is
+    /// composited on this colour first.
     fn contrast<C: ColorType>(&self, color: &C) -> f64 {
-        let mut boxed = *color;
-        self.contrast_boxed(&mut boxed)
-    }
-
-    /// The WCAG contrast ratio, where `color` is a box and `OverlayOn` writes into
-    /// the box it is called on, so `color` comes back overlaid when it was semi-transparent.
-    /// Callers that pass the same box again (`WithContrast`, the semi-transparent branch here)
-    /// see that change; this keeps it.
-    fn contrast_boxed<C: ColorType>(&self, color: &mut C) -> f64 {
         // Formula: http://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef
         let alpha = self.alpha0_to_1();
         if alpha >= 1.0 {
-            if color.alpha0_to_1() < 1.0 {
-                *color = color.overlay_on(self);
-            }
+            let shown = color.overlay_on(self);
             let l1 = self.luminance0_to_1() + 0.05;
-            let l2 = color.luminance0_to_1() + 0.05;
+            let l2 = shown.luminance0_to_1() + 0.05;
             let mut ratio = l1 / l2;
             if l2 > l1 {
                 ratio = 1.0 / ratio;
@@ -80,16 +70,12 @@ pub trait ColorType: Copy {
             return round_digits(ratio, 1);
         }
 
-        // If we're here, it means we have a semi-transparent background. The text color may or
-        // may not be semi-transparent, but that doesn't matter.
-        //
-        // `on_white` is the already-opaque `on_black` overlaid on white, so it equals
-        // `on_black`: the overlay writes back into the colour it is called on. The contrast
-        // values the theme's text colours are chosen by are pinned to this.
+        // A semi-transparent background shows differently over dark and light content, so
+        // measure it composited on black and on white and take the midpoint of the range.
         let on_black = self.overlay_on(&Color::BLACK);
-        let on_white = on_black.overlay_on(&Color::WHITE);
-        let contrast_on_black = on_black.contrast_boxed(color);
-        let contrast_on_white = on_white.contrast_boxed(color);
+        let on_white = self.overlay_on(&Color::WHITE);
+        let contrast_on_black = on_black.contrast(color);
+        let contrast_on_white = on_white.contrast(color);
 
         let max = contrast_on_black.max(contrast_on_white);
         let mut min = 1.0;
@@ -104,10 +90,8 @@ pub trait ColorType: Copy {
     /// Lighten or darken by 5%
     /// steps (at most 30) until the contrast with `fixed_color` is reached.
     fn with_contrast<C: ColorType>(&self, fixed_color: &C, minimum_required_contrast: f64) -> Self {
-        // `fixedColor` is one box for the whole loop, so `Contrast` may overlay it in place.
-        let mut fixed_color = *fixed_color;
         let mut color_to_adjust = *self;
-        let mut contrast = color_to_adjust.contrast_boxed(&mut fixed_color);
+        let mut contrast = color_to_adjust.contrast(fixed_color);
         let mut tries = 0;
         while contrast < minimum_required_contrast && {
             let go = tries < 30;
@@ -120,7 +104,7 @@ pub trait ColorType: Copy {
                 0.95
             };
             color_to_adjust = Self::from_color(color_to_adjust.adjust_lightness(factor).to_color());
-            contrast = color_to_adjust.contrast_boxed(&mut fixed_color);
+            contrast = color_to_adjust.contrast(fixed_color);
         }
         color_to_adjust
     }

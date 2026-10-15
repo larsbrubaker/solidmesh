@@ -229,3 +229,15 @@ fn rust_only_inline_projection_keeps_every_vertex_on_the_original_surface() {
         assert!(d2 < 1e-12, "vertex {vid} is {d2} off the surface");
     }
 }
+
+#[test]
+fn a_zero_area_triangle_measures_to_its_edges_instead_of_nan() {
+    let point = [1.0, 1.0, 0.0];
+    let collinear = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
+    assert_eq!(tri_distance_sqr(&collinear, point), 1.0);
+    let (d2, closest) = distance_sqr_closest(&collinear, point);
+    assert_eq!((d2, closest), (1.0, [1.0, 0.0, 0.0]));
+    let single_point = [[0.0, 0.0, 0.0]; 3];
+    assert_eq!(tri_distance_sqr(&single_point, point), 2.0);
+    assert_eq!(distance_sqr_closest(&single_point, point), (2.0, [0.0; 3]));
+}

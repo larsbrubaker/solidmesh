@@ -12,8 +12,10 @@
 use crate::{MathError, Matrix4X4, Quaternion, Vector3, Vector4};
 
 impl Matrix4X4 {
-    /// A rotation of `angle` radians about `axis`, with the angle negated, so it turns the
-    /// opposite way from [`Matrix4X4::create_rotation_axis_angle`].
+    /// A rotation of `angle` radians about `axis` by the right-hand rule, the same way
+    /// [`Matrix4X4::create_rotation_x`]/`_y`/`_z` and [`Quaternion::from_axis_angle`] turn. The
+    /// textbook axis-angle matrix is written for column vectors; under this type's row vectors
+    /// it turns backwards, so the angle is negated to turn forwards.
     pub fn create_from_axis_angle(axis: Vector3, angle: f64) -> Matrix4X4 {
         let cos = (-angle).cos();
         let sin = (-angle).sin();
@@ -83,7 +85,9 @@ impl Matrix4X4 {
         )
     }
 
-    /// A rotation of `angle` radians about `axis`.
+    /// A rotation of `angle` radians about `axis`, turning against the right-hand rule under
+    /// row vectors (the opposite of [`Matrix4X4::create_from_axis_angle`]). Saved designs'
+    /// Euler and quaternion rotations are built through it, so its direction stays as it is.
     pub fn create_rotation_axis_angle(axis: Vector3, angle: f64) -> Matrix4X4 {
         let cos = angle.cos();
         let sin = angle.sin();

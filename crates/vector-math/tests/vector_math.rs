@@ -1,5 +1,5 @@
 // Vector-math tests (CLAUDE.md "Testing framework", net 1): vectors, matrices, easing, the
-// math-helper constants, the parallel helpers, and the BVH, estimator and track-ball checks.
+// math-helper constants, the parallel helpers, and the BVH and track-ball checks.
 
 #[path = "vector_math/bvh_build_quality_tests.rs"]
 mod bvh_build_quality_tests;

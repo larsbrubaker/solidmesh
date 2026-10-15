@@ -96,16 +96,26 @@ impl MergeCoincidentEdges {
                 if set_len != 1 {
                     continue;
                 }
-                // Each partner's set is checked here, but the check only skips to the next partner,
-                // so it decides nothing; what it can do is fail, on a partner that has no set.
+                // A pair is unique only when the partner has no other candidate either;
+                // otherwise which edge it should weld to is ambiguous, so leave this edge.
+                let mut partner_is_unique = true;
                 if let Some(set) = &equiv_sets[i as usize] {
                     for &j in set {
-                        if equiv_sets[j as usize].is_none() {
-                            return Err(G3Exception(
-                                "MergeCoincidentEdges.Apply: partner edge has no equivalence set",
-                            ));
+                        match &equiv_sets[j as usize] {
+                            None => {
+                                return Err(G3Exception(
+                                    "MergeCoincidentEdges.Apply: partner edge has no equivalence set",
+                                ));
+                            }
+                            Some(partner_set) if partner_set.len() != 1 => {
+                                partner_is_unique = false;
+                            }
+                            Some(_) => {}
                         }
                     }
+                }
+                if !partner_is_unique {
+                    continue;
                 }
             }
             q.enqueue(i, set_len as f32);

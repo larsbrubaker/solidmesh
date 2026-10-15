@@ -9,6 +9,39 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
+/// The squared distance from `point` to the segment `a`-`b` and the segment's point nearest to
+/// it; a zero-length segment is its one point.
+fn segment_distance_sqr_closest(a: [f64; 3], b: [f64; 3], point: [f64; 3]) -> (f64, [f64; 3]) {
+    let edge = sub(b, a);
+    let length_sqr = dot(edge, edge);
+    let along = if length_sqr > 0.0 {
+        (dot(sub(point, a), edge) / length_sqr).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let closest = [
+        a[0] + along * edge[0],
+        a[1] + along * edge[1],
+        a[2] + along * edge[2],
+    ];
+    let offset = sub(point, closest);
+    (dot(offset, offset), closest)
+}
+
+/// A zero-area triangle (its corners on one line, or coincident) has no interior, so its nearest
+/// point lies on one of its three edges; the region walk would divide by its zero area.
+fn degenerate_distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, [f64; 3]) {
+    let mut best = segment_distance_sqr_closest(v[0], v[1], point);
+    for (a, b) in [(v[1], v[2]), (v[2], v[0])] {
+        let candidate = segment_distance_sqr_closest(a, b, point);
+        // Ties keep the earlier edge, so the result does not depend on rounding order.
+        if candidate.0 < best.0 {
+            best = candidate;
+        }
+    }
+    best
+}
+
 /// The squared distance from `point` to the triangle `v`.
 pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     let diff = sub(v[0], point);
@@ -21,6 +54,9 @@ pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     let b1 = dot(diff, edge1);
     let c = dot(diff, diff);
     let det = (a00 * a11 - a01 * a01).abs();
+    if det == 0.0 {
+        return degenerate_distance_sqr_closest(v, point).0;
+    }
     let mut s = a01 * b1 - a11 * b0;
     let mut t = a01 * b0 - a00 * b1;
     let sqr_distance;
@@ -159,6 +195,9 @@ pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, 
     let b1 = dot(diff, edge1);
     let c = dot(diff, diff);
     let det = (a00 * a11 - a01 * a01).abs();
+    if det == 0.0 {
+        return degenerate_distance_sqr_closest(v, point);
+    }
     let mut s = a01 * b1 - a11 * b0;
     let mut t = a01 * b0 - a00 * b1;
     let sqr_distance;

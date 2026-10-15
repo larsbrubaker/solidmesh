@@ -9,10 +9,10 @@
 //! API already speaks; Clipper 6's `Int128` math is `i128`. Built with `use_lines` (open paths)
 //! and without `use_xyz`/`use_int32`.
 //!
-//! Files by responsibility: [`types`] (edges, out-records, enums, errors), [`clipper_base`]
-//! (`ClipperBase`: AddPath, bounds, local minima, scanbeams, the AEL), [`engine`] (`Clipper`:
-//! Execute and the sweep's winding rules), [`horizontals`] (intersections, horizontals, maxima),
-//! [`out_polys`] (output points and records, results, PolyTree), [`joins`] (common-edge joins
+//! Files by responsibility: [`types`] (edges, out-records, enums, errors), `clipper_base`
+//! (`ClipperBase`: AddPath, bounds, local minima, scanbeams, the AEL), `engine` (`Clipper`:
+//! Execute and the sweep's winding rules), `horizontals` (intersections, horizontals, maxima),
+//! `out_polys` (output points and records, results, PolyTree), `joins` (common-edge joins
 //! and strictly-simple splitting), [`poly_tree`], [`offset`] (`ClipperOffset`), [`statics`]
 //! (`Area`, `PointInPolygon`, `SimplifyPolygon(s)`, Minkowski, PolyTree walks). The
 //! intersection list is ordered with `vector_math::fixed_tie_sort`, an unstable introspective sort

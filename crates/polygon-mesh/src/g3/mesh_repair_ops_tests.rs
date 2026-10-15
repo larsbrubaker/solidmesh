@@ -72,3 +72,38 @@ fn rust_only_merge_coincident_edges_closes_a_cube_split_into_faces() {
     assert_eq!(m.vertex_count(), 8);
     assert_eq!(m.triangle_count(), 12);
 }
+
+#[test]
+fn unique_pairs_only_leaves_an_edge_whose_partner_has_another_candidate() {
+    // Three boundary edges stacked 0.006 apart with a 0.01 merge distance: the middle one could
+    // pair with either neighbour, so no pair is unique and nothing may be welded.
+    let mut m = DMesh3::default();
+    let mut add = |z: f64, upward: bool| {
+        let a = m.append_vertex([0.0, 0.0, z]);
+        let b = m.append_vertex([1.0, 0.0, z]);
+        let c = m.append_vertex([0.5, if upward { 1.0 } else { -1.0 }, z]);
+        if upward {
+            m.append_triangle(a, b, c);
+        } else {
+            m.append_triangle(b, a, c);
+        }
+    };
+    add(0.0, false);
+    add(0.006, true);
+    add(0.012, false);
+    let merge = MergeCoincidentEdges {
+        merge_distance: 0.01,
+        only_unique_pairs: true,
+    };
+    merge.apply(&mut m).unwrap();
+    assert_eq!(m.vertex_count(), 9);
+
+    // Without the restriction the same edges weld.
+    let mut all = m.clone();
+    let merge = MergeCoincidentEdges {
+        merge_distance: 0.01,
+        only_unique_pairs: false,
+    };
+    merge.apply(&mut all).unwrap();
+    assert!(all.vertex_count() < 9);
+}
