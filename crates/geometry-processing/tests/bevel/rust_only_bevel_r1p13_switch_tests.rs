@@ -147,7 +147,7 @@ fn rust_only_the_level_line_routing_statics() {
         level_line_routing::first_route().as_deref(),
         Some("level-line")
     );
-    // The switch is process-wide, so the test puts back the default it found.
+    // The reset puts back the default this thread started from.
     level_line_routing::set_use_level_line(false);
     assert!(!level_line_routing::use_level_line());
     level_line_routing::reset_to_the_default();

@@ -1,17 +1,23 @@
 //! Which route the app's bevel build takes, and the watch it can leave behind. Ports the record of
 //! `Bevel/LevelLine/LevelLineRouting.cs` ([`LevelLineChainWatch`]); the C# static class
-//! `LevelLineRouting`'s process-wide switch ([`use_level_line`], [`reset_to_the_default`],
+//! `LevelLineRouting`'s switch ([`use_level_line`], [`reset_to_the_default`],
 //! [`turn_on_for_the_running_app`]), its route diagnostics ([`last_route`], [`first_route`]) and the
 //! switch's readings of a setting ([`reads_as_on`], [`reads_as_off`],
 //! [`the_running_app_wants_it_on`]) and its test seams ([`watch`], [`watch_room`],
 //! [`watch_budget`]).
 //!
-//! C#'s statics stay process-wide here (the bevel-core decision on process-wide settings), made
-//! thread-safe because the kernel runs on worker threads: an atomic for the switch, a mutex for
-//! the route strings and the chain and room watches. The budget watch alone is per thread, because
-//! the allowances it is handed are single-threaded (`Rc`).
+//! The switch's default is process-wide and read once from the developer variable, but a write
+//! ([`set_use_level_line`]) holds only for the thread that made it: tests run on threads of one
+//! process, and a test that pins the older construction for its own build must not change the
+//! construction another test's build takes beside it. Work handed to another thread carries the
+//! writing thread's choice along ([`LevelLineChoice::current`] on the submitting thread,
+//! [`LevelLineChoice::enter`] on the worker; the model's compute pool does this for every job), so
+//! a build sees the switch its own test set wherever its compute runs. The route strings and the
+//! chain and room watches stay process-wide behind a mutex, because the kernel runs on worker
+//! threads. The budget watch is per thread, because the allowances it is handed are
+//! single-threaded (`Rc`).
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::cell::Cell;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 use vector_math::Vector3;
@@ -27,12 +33,15 @@ fn use_level_line_setting() -> Option<String> {
     std::env::var(USE_LEVEL_LINE_VARIABLE).ok()
 }
 
-/// C# `LevelLineRouting.UseLevelLine` (static field, read once when the type is first touched).
-static USE_LEVEL_LINE: LazyLock<AtomicBool> = LazyLock::new(|| {
-    AtomicBool::new(the_running_app_wants_it_on(
-        use_level_line_setting().as_deref(),
-    ))
-});
+/// The default of C# `LevelLineRouting.UseLevelLine` (static field, read once when the type is
+/// first touched): what every thread sees until it sets the switch itself.
+static DEFAULT_USE_LEVEL_LINE: LazyLock<bool> =
+    LazyLock::new(|| the_running_app_wants_it_on(use_level_line_setting().as_deref()));
+
+thread_local! {
+    // This thread's own setting of the switch; `None` follows the default.
+    static USE_LEVEL_LINE: Cell<Option<bool>> = const { Cell::new(None) };
+}
 
 /// C#'s `lastRoute` and `FirstRoute`.
 static ROUTES: Mutex<(Option<String>, Option<String>)> = Mutex::new((None, None));
@@ -49,14 +58,56 @@ fn routes() -> MutexGuard<'static, (Option<String>, Option<String>)> {
 /// edges - closed loops or open runs alike - goes through the level line. On from the start, in
 /// tests exactly as in the running app, because the level line is what Surface mode does; a
 /// developer comparing constructions turns it off with `MATTERCAD_BEVEL_LEVELLINE=0` (or "false").
+/// Read on this thread: its own [`set_use_level_line`], or the one carried in by a
+/// [`LevelLineChoice`], or else the default.
 pub fn use_level_line() -> bool {
-    USE_LEVEL_LINE.load(Ordering::SeqCst)
+    USE_LEVEL_LINE
+        .with(Cell::get)
+        .unwrap_or(*DEFAULT_USE_LEVEL_LINE)
 }
 
-/// Sets [`use_level_line`] (C#'s field write): tests that pin the older frozen construction set it
-/// false and restore it around one build.
+/// Sets [`use_level_line`] for this thread (C#'s field write) and the work it hands the compute
+/// pool: tests that pin the older frozen construction set it false and restore it around one
+/// build, without touching the switch other threads' builds read.
 pub fn set_use_level_line(on: bool) {
-    USE_LEVEL_LINE.store(on, Ordering::SeqCst);
+    USE_LEVEL_LINE.with(|choice| choice.set(Some(on)));
+}
+
+/// The switch as one thread has it set, captured so work run on another thread builds the way
+/// the thread that asked for it would.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LevelLineChoice(Option<bool>);
+
+impl LevelLineChoice {
+    /// This thread's setting right now (the default's when it has set none).
+    pub fn current() -> Self {
+        Self(USE_LEVEL_LINE.with(Cell::get))
+    }
+
+    /// Reads the captured setting on this thread until the returned guard drops.
+    pub fn enter(self) -> LevelLineChoiceScope {
+        let outer = USE_LEVEL_LINE.with(|choice| choice.replace(self.0));
+        LevelLineChoiceScope {
+            outer,
+            _not_send: std::marker::PhantomData,
+        }
+    }
+}
+
+/// While alive, this thread reads the setting a [`LevelLineChoice`] carried in; dropping it puts
+/// back what the thread had before. It belongs to the thread that made it.
+#[must_use = "the carried setting ends as soon as the scope is dropped"]
+#[derive(Debug)]
+pub struct LevelLineChoiceScope {
+    outer: Option<bool>,
+    // A scope moved to another thread would restore that thread's setting wrongly.
+    _not_send: std::marker::PhantomData<*const ()>,
+}
+
+impl Drop for LevelLineChoiceScope {
+    fn drop(&mut self) {
+        USE_LEVEL_LINE.with(|choice| choice.set(self.outer));
+    }
 }
 
 /// C# `LevelLineRouting.LastRoute` (getter): which way the last pass went - [`LEVEL_LINE_ROUTE`],
@@ -89,18 +140,17 @@ pub fn set_first_route(value: Option<String>) {
 }
 
 /// C# `LevelLineRouting.TurnOnForTheRunningApp`: the default the running app wants - the level
-/// line on, unless the developer variable says off. Called once at startup.
+/// line on, unless the developer variable says off. Called once at startup, on the thread that
+/// builds the app.
 pub fn turn_on_for_the_running_app() {
     reset_to_the_default();
 }
 
-/// C# `LevelLineRouting.ResetToTheDefault`: puts the flag back to the default it starts at - the
-/// same one the running app wants. The reset between Standard tests calls this, so a test that
-/// turned the level line off cannot hand that to the tests after it.
+/// C# `LevelLineRouting.ResetToTheDefault`: puts this thread's switch back to the default it
+/// starts at - the same one the running app wants - so a test that turned the level line off
+/// cannot hand that to the work after it.
 pub fn reset_to_the_default() {
-    set_use_level_line(the_running_app_wants_it_on(
-        use_level_line_setting().as_deref(),
-    ));
+    USE_LEVEL_LINE.with(|choice| choice.set(None));
 }
 
 /// What [`watch`] is handed: every pick the app route is about to give the kernel.
