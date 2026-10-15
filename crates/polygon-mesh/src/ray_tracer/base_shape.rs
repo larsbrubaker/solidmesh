@@ -1,14 +1,13 @@
-//! The `IBvhItem` members every agg-sharp shape shares (agg-sharp
-//! `RayTracer/Primitive/Shapes/BaseShape.cs`: `GetContained`, `Contains`, `GetCrossing`,
-//! `GetTouching`), as functions the leaf shapes ([`super::BoxShape`], [`super::SphereShape`],
+//! The BVH-item queries every leaf shape shares (collecting contained, contains, crossing and
+//! touching items), as functions the leaf shapes ([`super::BoxShape`], [`super::SphereShape`],
 //! [`super::TriangleShape`], [`super::MinimalTriangle`], [`super::PlaneShape`]) call from their
-//! [`Traceable`] impls. The color half of `BaseShape` is [`super::Primitive`].
+//! [`Traceable`] impls. The color half of a shape is [`super::Primitive`].
 
 use vector_math::{AxisAlignedBoundingBox, Plane, Vector3};
 
 use super::{Traceable, PLANE_CROSSED_BY_ERROR};
 
-/// C# `BaseShape.GetContained`: the shape itself when its bounds contain `sub_region`.
+/// The shape itself when its bounds contain `sub_region`.
 pub(crate) fn leaf_get_contained<'a, T: Traceable>(
     shape: &'a T,
     results: &mut Vec<&'a dyn Traceable>,
@@ -22,14 +21,14 @@ pub(crate) fn leaf_get_contained<'a, T: Traceable>(
     false
 }
 
-/// C# `BaseShape.Contains`: inside the bounds (with C#'s .001 slack).
+/// Inside the bounds (with .001 of slack, so a point on a face counts as inside).
 pub(crate) fn leaf_contains<T: Traceable>(shape: &T, position: Vector3) -> bool {
     shape
         .get_axis_aligned_bounding_box()
         .contains_point(position)
 }
 
-/// C# `BaseShape.GetCrossing`: the shape itself when the plane crosses its bounds.
+/// The shape itself when the plane crosses its bounds.
 pub(crate) fn leaf_get_crossing<'a, T: Traceable>(
     shape: &'a T,
     plane: &Plane,
@@ -42,7 +41,7 @@ pub(crate) fn leaf_get_crossing<'a, T: Traceable>(
     }
 }
 
-/// C# `BaseShape.GetTouching`: the shape itself when its bounds hold `position` within `error`.
+/// The shape itself when its bounds hold `position` within `error`.
 pub(crate) fn leaf_get_touching<T: Traceable>(
     shape: &T,
     position: Vector3,

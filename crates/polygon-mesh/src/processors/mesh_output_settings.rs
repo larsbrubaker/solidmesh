@@ -1,5 +1,4 @@
 //! How a mesh is written: ASCII or binary, CSG handling, metadata and a progress callback.
-//! Ports agg-sharp `PolygonMesh/Processors/MeshOutputSettings.cs`.
 
 use std::fmt;
 use std::sync::Arc;
@@ -27,8 +26,8 @@ pub type ReportProgress = Arc<dyn Fn(f64, &str) + Send + Sync>;
 #[derive(Clone, Default)]
 pub struct MeshOutputSettings {
     pub output_type_setting: OutputType,
-    /// Key/value metadata in insertion order (C# `Dictionary<string, string>`; a repeated key
-    /// replaces the earlier value in place rather than throwing as `Dictionary.Add` would).
+    /// Key/value metadata in insertion order (a repeated key replaces the earlier value in
+    /// place, so a caller setting a key twice gets the last value at the first position).
     pub meta_data_key_value: Vec<(String, String)>,
     pub csg_option_state: CsgOption,
     pub report_progress: Option<ReportProgress>,

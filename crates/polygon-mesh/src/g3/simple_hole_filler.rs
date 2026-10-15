@@ -1,12 +1,12 @@
-//! geometry3Sharp `mesh_ops/SimpleHoleFiller.cs`: fills a boundary loop with one triangle when
-//! it has three vertices, else with a fan around a new vertex at the loop's centroid, backing
-//! the vertex out again if the fan is refused.
+//! The simple hole filler (derived from geometry3Sharp): fills a boundary loop with one
+//! triangle when it has three vertices, else with a fan around a new vertex at the loop's
+//! centroid, backing the vertex out again if the fan is refused.
 
 use super::dmesh3::{DMesh3, G3Exception, INVALID_ID};
 use super::edge_loop::{is_boundary_loop, EdgeLoop, ValidationStatus};
 use super::mesh_editor::add_triangle_fan_ordered_vertex_loop;
 
-/// g3 `SimpleHoleFiller`.
+/// A fill of one boundary loop and what it added.
 #[derive(Debug, Clone)]
 pub(crate) struct SimpleHoleFiller<'l> {
     pub(crate) lp: &'l EdgeLoop,
@@ -17,7 +17,7 @@ pub(crate) struct SimpleHoleFiller<'l> {
 }
 
 impl<'l> SimpleHoleFiller<'l> {
-    /// C# `new SimpleHoleFiller(mesh, loop)`.
+    /// A filler for loop `lp`.
     pub(crate) fn new(lp: &'l EdgeLoop) -> Self {
         SimpleHoleFiller {
             lp,
@@ -26,14 +26,14 @@ impl<'l> SimpleHoleFiller<'l> {
         }
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `Validate`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Whether the loop is still a boundary loop of `mesh`.
     pub(crate) fn validate(&self, mesh: &DMesh3) -> ValidationStatus {
         is_boundary_loop(mesh, self.lp)
     }
 
-    /// C# `Fill(group_id)`. `Err` is the exception C#'s back-out `RemoveVertex` would throw
-    /// (it cannot once the fan has removed what it added, but nothing catches it in C#).
+    /// Fills the loop, the new triangles in group `group_id`. `Err` is a failure of the
+    /// back-out `remove_vertex` (it cannot fail once the fan has removed what it added).
     pub(crate) fn fill(&mut self, mesh: &mut DMesh3, group_id: i32) -> Result<bool, G3Exception> {
         let verts = &self.lp.vertices;
         if verts.len() < 3 {
@@ -65,7 +65,7 @@ impl<'l> SimpleHoleFiller<'l> {
         // add centroid vtx
         self.new_vertex = mesh.append_vertex(c);
 
-        // stitch triangles (C# catches the fan's throw and treats it as a refusal)
+        // stitch triangles (a fan that fails to back out counts as a refusal)
         self.new_triangles =
             add_triangle_fan_ordered_vertex_loop(mesh, self.new_vertex, verts, group_id)
                 .ok()

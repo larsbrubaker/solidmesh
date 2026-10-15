@@ -1,6 +1,5 @@
-//! Rust-only tests for the crack-closing pieces of the g3 mesh repair (`merge_coincident_edges`,
-//! `point_set_hashtable`, `dynamic_priority_queue`). agg-sharp ships no geometry3Sharp tests
-//! for these.
+//! Tests for the crack-closing pieces of the mesh repair (`merge_coincident_edges`,
+//! `point_set_hashtable`, `dynamic_priority_queue`).
 
 use super::dmesh3::DMesh3;
 use super::dynamic_priority_queue::DynamicPriorityQueue;
@@ -42,7 +41,7 @@ fn rust_only_priority_queue_dequeues_lowest_first() {
     while let Some(v) = q.dequeue() {
         out.push(v);
     }
-    // C#'s sift-up only stops below a strictly lower priority, so 13 climbs past the equal 11
+    // sift-up only stops below a strictly lower priority, so 13 climbs past the equal 11
     // to the root and comes out first
     assert_eq!(out, vec![13, 11, 12, 10, 14]);
 }
@@ -58,7 +57,7 @@ fn rust_only_ball_query_finds_coincident_edge_midpoints() {
         .expect("radius is below a cell");
     assert!(hits.contains(&eid));
     assert_eq!(hits.len(), 2);
-    // a radius above the cell size is refused, as C# throws
+    // a radius above the cell size is refused: the search only visits neighbouring cells
     assert!(hash.find_in_ball(&m, [0.0, 0.5, 0.0], 1.0).is_err());
 }
 

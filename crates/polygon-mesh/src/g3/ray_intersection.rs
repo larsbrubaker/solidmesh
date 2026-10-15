@@ -1,13 +1,12 @@
-//! geometry3Sharp's ray queries the AABB tree's `FindNearestHitTriangle` uses: `Ray3d`'s
-//! direction normalization (`curve/Ray3.cs`), `IntrRay3Triangle3.Intersects`
-//! (`intersection/IntrRay3Triangle3.cs`) and `IntrRay3AxisAlignedBox3.FindRayIntersectT` with
-//! `IntrLine3AxisAlignedBox3.DoClipping` / `Clip` (`intersection/IntrLine3AxisAlignedBox3.cs`).
+//! Ray queries (derived from geometry3Sharp) the AABB tree's nearest-hit search uses: a ray
+//! whose direction is normalized on construction, the ray-triangle intersection, and the
+//! ray-box entry parameter found by clipping the ray against each slab.
 
 use super::dmesh3::AxisAlignedBox3d;
 
-/// g3 `MathUtil.ZeroTolerance`.
+/// The zero tolerance for "already normalized", parallel rays and slab clipping.
 const ZERO_TOLERANCE: f64 = 1e-08;
-/// g3 `MathUtil.Epsilon`.
+/// The double machine epsilon.
 const EPSILON: f64 = 2.220_446_049_250_313e-16;
 
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -26,7 +25,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     ]
 }
 
-/// g3 `Ray3d`.
+/// A ray with a unit direction.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Ray3d {
     pub(crate) origin: [f64; 3],
@@ -34,8 +33,8 @@ pub(crate) struct Ray3d {
 }
 
 impl Ray3d {
-    /// C# `new Ray3d(origin, direction)`: the direction is normalized unless it already is
-    /// (`IsNormalized`: squared length within `ZeroTolerance` of one).
+    /// A ray from `origin`; the direction is normalized unless it already is
+    /// ([`is_normalized`]).
     pub(crate) fn new(origin: [f64; 3], direction: [f64; 3]) -> Self {
         let mut direction = direction;
         if !is_normalized(direction) {
@@ -51,13 +50,13 @@ impl Ray3d {
     }
 }
 
-/// C# `Vector3d.IsNormalized`.
+/// Whether `v`'s squared length is within `ZERO_TOLERANCE` of one.
 pub(crate) fn is_normalized(v: [f64; 3]) -> bool {
     (dot(v, v) - 1.0).abs() < ZERO_TOLERANCE
 }
 
-/// C# `IntrRay3Triangle3.Intersects(ref ray, ref V0, ref V1, ref V2, out rayT)`: the ray
-/// parameter of the hit, `None` for a miss (and for a ray parallel to the triangle).
+/// Intersects a ray with a triangle: the ray parameter of the hit, `None` for a miss (and
+/// for a ray parallel to the triangle).
 pub(crate) fn ray_triangle_intersects(
     ray: &Ray3d,
     v0: [f64; 3],
@@ -107,7 +106,7 @@ pub(crate) fn ray_triangle_intersects(
     None
 }
 
-/// C# `IntrLine3AxisAlignedBox3.Clip`.
+/// Clips the parameter range `[t0, t1]` against one slab plane.
 fn clip(denom: f64, numer: f64, t0: &mut f64, t1: &mut f64) -> bool {
     // Return value is 'true' if line segment intersects the current test
     // plane.  Otherwise 'false' is returned in which case the line segment
@@ -133,7 +132,7 @@ fn clip(denom: f64, numer: f64, t0: &mut f64, t1: &mut f64) -> bool {
     }
 }
 
-/// C# `IntrRay3AxisAlignedBox3.FindRayIntersectT`: the entry parameter of the ray into the
+/// The entry parameter of the ray into the
 /// (solid) box, `None` for a miss.
 pub(crate) fn ray_box_intersect_t(ray: &Ray3d, bx: &AxisAlignedBox3d) -> Option<f64> {
     let (mut t0, mut t1) = (0.0, f64::MAX);

@@ -1,15 +1,14 @@
-//! geometry3Sharp's `Remesher` (`mesh/Remesher.cs`): edge-length-driven isotropic remeshing by
-//! per-edge collapse / flip / split (`ProcessEdge`), constraint-aware, with buffered smoothing
-//! and optional projection onto a target. This file holds the settings, `ProcessEdge` and its
+//! The remesher (derived from geometry3Sharp): edge-length-driven isotropic remeshing by
+//! per-edge collapse / flip / split (`process_edge`), constraint-aware, with buffered smoothing
+//! and optional projection onto a target. This file holds the settings, `process_edge` and its
 //! split/collapse helpers, the prime-modulo edge order, and the smoothing buffer;
 //! `remesher_pro.rs` holds the queue-driven passes (`RemesherPro`) that `MinimalHoleFill`
 //! runs. The constraint checks are in `mesh_refiner_base.rs`.
 //!
-//! Ported subset: what `RemesherPro.FastestRemesh` reaches. `BasicRemeshPass` with its
-//! `FullSmoothPass_*` / `FullProjectionPass`, the `MeanValue`/`Cotan`/custom smoothers
-//! (`SmoothType`, `CustomSmoothF`, which need `MeshWeights`), the profiling stopwatches, the
-//! debug checks (`ENABLE_DEBUG_CHECKS`, `DebugEdges`) and cancellation are not ported. Passes
-//! run on one thread; see divergence 795.
+//! Smoothing is uniform (the one-ring centroid) and nothing cancels a pass. Passes run on one
+//! thread: each new position is computed from the unmodified mesh into a buffer, but the
+//! order edges join the modified-edge queue sets the next iteration's order, so one thread
+//! makes the remeshed result the same on every run.
 
 use super::dmesh3::{DMesh3, G3Exception, MeshResult, INVALID_ID};
 use super::dmesh3_edge_ops::EdgeSplitInfo;
@@ -18,17 +17,17 @@ use super::mesh_refiner_base::MeshRefinerBase;
 use super::mesh_util::uniform_smooth;
 use super::vector3d::{distance_squared, is_finite};
 
-/// C# `Remesher.VertexControl` (a `[Flags]` enum): per-vertex overrides.
+/// Per-vertex overrides, combined bitwise.
 pub(crate) mod vertex_control {
     pub(crate) const ALLOW_ALL: u32 = 0;
     pub(crate) const NO_SMOOTH: u32 = 1;
     pub(crate) const NO_PROJECT: u32 = 2;
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
+    #[allow(dead_code)] // mesh API only the tests call so far
     pub(crate) const NO_MOVEMENT: u32 = NO_SMOOTH | NO_PROJECT;
 }
 use vertex_control as vc_flags;
 
-/// C# `Remesher.TargetProjectionMode`.
+/// When vertices are projected onto the target: never, after a pass, or as they move.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TargetProjectionMode {
     /// Disable projection.
@@ -39,7 +38,7 @@ pub(crate) enum TargetProjectionMode {
     Inline,
 }
 
-/// C# `Remesher.ProcessResult`.
+/// The outcome of processing one edge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ProcessResult {
     OkCollapsed,
@@ -51,12 +50,12 @@ pub(crate) enum ProcessResult {
     FailedNotAnEdge,
 }
 
-/// C#'s `nPrime`: edges are visited in prime-modulo order to break symmetry, so that eg the
-/// tiny cap edges of a minimal cylinder are not collapsed one after another until the mesh
-/// erodes away.
+/// The edge-order stride: edges are visited in prime-modulo order to break symmetry, so
+/// that eg the tiny cap edges of a minimal cylinder are not collapsed one after another
+/// until the mesh erodes away.
 const N_PRIME: i32 = 31337;
 
-/// C# `Remesher`.
+/// The remesher's settings and per-pass state over one mesh.
 pub(crate) struct Remesher<'a> {
     pub(crate) base: MeshRefinerBase<'a>,
     target: TargetRef,
@@ -71,12 +70,12 @@ pub(crate) struct Remesher<'a> {
     pub(crate) max_edge_length: f64,
     pub(crate) smooth_speed_t: f64,
 
-    /// C# `VertexControlF`: granular per-vertex control, somewhat redundant with the vertex
+    /// Granular per-vertex control, somewhat redundant with the vertex
     /// constraints.
     pub(crate) vertex_control_f: Option<Box<dyn Fn(i32) -> u32 + 'a>>,
     pub(crate) projection_mode: TargetProjectionMode,
 
-    /// If the mesh is known closed, the is-boundary checks are skipped (`Precompute`).
+    /// If the mesh is known closed, the is-boundary checks are skipped.
     mesh_is_closed: bool,
     /// Edges modified in the previous pass; small relative to the edge count means converged.
     pub(crate) modified_edges_last_pass: i32,
@@ -87,7 +86,8 @@ pub(crate) struct Remesher<'a> {
 }
 
 impl<'a> Remesher<'a> {
-    /// C# `new Remesher(m)`, with C#'s defaults (the `float` literals widened as C# does).
+    /// A remesher over `mesh` with the default settings (single-precision literals widened to
+    /// double, so 0.001 is `0.001_f32 as f64`; the remesh results depend on those exact values).
     pub(crate) fn new(mesh: &'a mut DMesh3) -> Self {
         Self {
             base: MeshRefinerBase::new(mesh),
@@ -110,36 +110,36 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// C# `Mesh`.
+    /// The mesh being remeshed.
     pub(crate) fn mesh(&self) -> &DMesh3 {
         self.base.mesh
     }
 
-    /// C# `ProjectionTarget`.
+    /// The surface vertices are projected onto, if any.
     pub(crate) fn projection_target(&self) -> &TargetRef {
         &self.target
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `SetProjectionTarget`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Sets the surface vertices are projected onto.
     pub(crate) fn set_projection_target(&mut self, target: TargetRef) {
         self.target = target;
     }
 
-    /// C# `EnableInlineProjection`.
+    /// Whether vertices are projected as they move rather than after the pass.
     fn enable_inline_projection(&self) -> bool {
         self.projection_mode == TargetProjectionMode::Inline
     }
 
-    /// C# `SetTargetEdgeLength`: min/max at 0.66 / 1.33 of the target, so that both halves of
+    /// Min/max at 0.66 / 1.33 of the target, so that both halves of
     /// a split edge stay above the minimum.
     pub(crate) fn set_target_edge_length(&mut self, f_length: f64) {
         self.min_edge_length = f_length * 0.66;
         self.max_edge_length = f_length * 1.33;
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `Precompute`: records whether the mesh is closed so the flip valence tests can skip
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Records whether the mesh is closed so the flip valence tests can skip
     /// the boundary checks. Re-run after editing the mesh externally.
     pub(crate) fn precompute(&mut self) {
         let mesh = &*self.base.mesh;
@@ -153,9 +153,9 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// C# `start_edges()` / `next_edge()`, collected: every id below the pass's starting
-    /// `MaxEdgeID`, stepping by [`N_PRIME`] modulo it. The bound is fixed when the pass
-    /// starts, so collecting up front visits the same ids as C#'s lazy iterator.
+    /// The pass's edge order: every id below the pass's starting `max_edge_id()`, stepping by
+    /// [`N_PRIME`] modulo it. The bound is fixed when the pass starts, so the list can be
+    /// collected up front even though the pass adds edges.
     pub(crate) fn edge_order(&mut self) -> Vec<i32> {
         self.n_max_edge_id = self.base.mesh.max_edge_id();
         let mut out = Vec::new();
@@ -171,14 +171,14 @@ impl<'a> Remesher<'a> {
         out
     }
 
-    /// C# `smooth_vertices()`.
+    /// The vertices a smoothing pass visits: every live vertex, in id order.
     pub(crate) fn smooth_vertices(&self) -> Vec<i32> {
         self.base.mesh.vertex_indices().collect()
     }
 
-    /// C# `ProcessEdge`: collapse the edge if it is too short, else flip it if that improves
-    /// the valences, else split it if it is too long. `on_split` is C#'s `OnEdgeSplit` hook.
-    /// A `G3Exception` from `FlipEdge` unwinds out, as in C#.
+    /// Collapse the edge if it is too short, else flip it if that improves
+    /// the valences, else split it if it is too long. `on_split` is called after each split.
+    /// A `G3Exception` from `flip_edge` (broken topology) is returned to the caller.
     pub(crate) fn process_edge(
         &mut self,
         edge_id: i32,
@@ -299,8 +299,8 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// The collapse branch of C# `ProcessEdge`. `None` is C#'s `goto abort_collapse` (the
-    /// normal-flip guard refused, so the collapse was not tried).
+    /// The collapse branch of `process_edge`. `None` means the normal-flip guard refused, so
+    /// the collapse was not tried and the edge goes on to the flip and split checks.
     #[allow(clippy::too_many_arguments)]
     fn try_collapse(
         &mut self,
@@ -360,7 +360,7 @@ impl<'a> Remesher<'a> {
         Some(result)
     }
 
-    /// C# `update_after_split`: the new edge inherits the split edge's constraint, and the new
+    /// The new edge inherits the split edge's constraint, and the new
     /// vertex may inherit Fixed (both ends fixed) or a Target (shared with the edge).
     fn update_after_split(&mut self, edge_id: i32, va: i32, vb: i32, split_info: &EdgeSplitInfo) {
         let mut b_position_fixed = false;
@@ -422,14 +422,14 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// C# `project_vertex`.
+    /// Moves `vid` onto `target`.
     fn project_vertex(&mut self, vid: i32, target: &dyn super::mesh_constraints::ProjectionTarget) {
         let curpos = self.base.mesh.vertex(vid);
         let projected = target.project(curpos, vid);
         self.base.mesh.set_vertex(vid, projected);
     }
 
-    /// C# `get_projected_collapse_position`: the collapse point projected onto the kept
+    /// The collapse point projected onto the kept
     /// vertex's constraint target, or the surface target when projecting inline.
     fn get_projected_collapse_position(&self, vid: i32, v_new_pos: [f64; 3]) -> [f64; 3] {
         if let Some(constraints) = &self.base.constraints {
@@ -452,7 +452,7 @@ impl<'a> Remesher<'a> {
         v_new_pos
     }
 
-    /// C# `InitializeVertexBufferForPass`: buffer room for every vertex id, all flags clear.
+    /// Buffer room for every vertex id, all flags clear.
     pub(crate) fn initialize_vertex_buffer_for_pass(&mut self) {
         let max_vid = self.base.mesh.max_vertex_id() as usize;
         if self.v_buffer_v.len() < max_vid {
@@ -465,7 +465,7 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// C# `ApplyVertexBuffer`: writes every flagged buffered position back to the mesh.
+    /// Writes every flagged buffered position back to the mesh.
     pub(crate) fn apply_vertex_buffer(&mut self) {
         let max_vid = self.base.mesh.max_vertex_id();
         for vid in 0..max_vid {
@@ -477,12 +477,11 @@ impl<'a> Remesher<'a> {
         }
     }
 
-    /// C# `ComputeSmoothedVertexPos` with the uniform smoother: the smoothed position under
+    /// The uniform smoother: the smoothed position under
     /// the vertex's constraint and control flags, and whether it may move. Does not modify the
     /// mesh.
     pub(crate) fn compute_smoothed_vertex_pos(&self, vid: i32) -> ([f64; 3], bool) {
-        // C#'s `get_vertex_constraint(vID, ref vc)` leaves a default struct when none is set:
-        // not fixed, no target.
+        // A vertex with no constraint is free: not fixed, no target.
         let v_constraint = self
             .base
             .constraints
@@ -515,7 +514,7 @@ impl<'a> Remesher<'a> {
         (v_smoothed, true)
     }
 
-    /// The `VertexControlF` check of C#'s projection passes.
+    /// Whether the vertex control forbids projecting `vid`.
     pub(crate) fn vertex_blocks_projection(&self, vid: i32) -> bool {
         (self.vertex_control(vid) & vc_flags::NO_PROJECT) != 0
     }

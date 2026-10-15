@@ -1,14 +1,14 @@
-//! The part of geometry3Sharp's `mesh/MeshEditor.cs` the mesh repair and the simple hole filler
-//! reach: removing lists of triangles (and the "loner" triangles with no neighbours), the
+//! Mesh edits (derived from geometry3Sharp) the mesh repair and the simple hole filler use:
+//! removing lists of triangles (and the "loner" triangles with no neighbours), the
 //! ordered-vertex-loop triangle fan, splitting bowtie vertices apart, and re-inserting an
-//! edited submesh (`ReinsertSubmesh`, for `RegionOperator`).
+//! edited submesh (`reinsert_submesh`, for `RegionOperator`).
 
 use super::dmesh3::{DMesh3, G3Exception, MeshResult, INVALID_ID};
 use super::dsubmesh3::{DSubmesh3, INVALID_INDEX};
 use super::mesh_iterators::bowtie_vertices;
 
-/// C# `MeshEditor.RemoveTriangles(IEnumerable<int>, bRemoveIsolatedVerts)` (and its static
-/// form): dead ids count as a failure but do not stop the rest.
+/// Removes `triangles`, false if any could not be removed: dead ids count as a failure but do
+/// not stop the rest.
 pub(crate) fn remove_triangles(
     mesh: &mut DMesh3,
     triangles: impl IntoIterator<Item = i32>,
@@ -27,9 +27,8 @@ pub(crate) fn remove_triangles(
     all_ok
 }
 
-/// C# `MeshEditor.RemoveTriangles(IList<int>, bRemoveIsolatedVerts)`, the overload an `int[]`
-/// binds to: [`INVALID_ID`] entries are skipped, any other id (dead ones too) goes to
-/// `RemoveTriangle`, whose failures count against the result.
+/// Removes the triangles of an id list: [`INVALID_ID`] entries are skipped, any other id (dead
+/// ones too) goes to `remove_triangle`, whose failures count against the result.
 pub(crate) fn remove_triangles_list(
     mesh: &mut DMesh3,
     triangles: &[i32],
@@ -47,14 +46,13 @@ pub(crate) fn remove_triangles_list(
     all_ok
 }
 
-/// C# `MeshEditor.ReinsertSubmesh(sub, ref new_tris, out SubToNewV, eDuplicateBehavior)` with
-/// `DuplicateTriBehavior.AssertContinue`, the behavior `RegionOperator` uses (its duplicate
-/// check is a `Debug.Assert`, so nothing in a release build). The old region must already be
+/// Re-inserts an edited submesh for `RegionOperator`; a duplicate triangle is not checked
+/// for, it is simply refused by the mesh like any other. The old region must already be
 /// removed from `mesh`. Submesh boundary vertices that map to a base border vertex still on
 /// the mesh boundary are reused; every other submesh vertex is appended. `new_tris` gets the
 /// new triangle ids in submesh id order (a refused triangle's negative id included); the
 /// result is false if any triangle was refused, and `Err` when the submesh has no boundary
-/// info, which C# throws.
+/// info.
 pub(crate) fn reinsert_submesh(
     mesh: &mut DMesh3,
     sub: &DSubmesh3,
@@ -128,8 +126,8 @@ pub(crate) fn reinsert_submesh(
     Ok(all_ok)
 }
 
-/// C# `MeshEditor.RemoveTriangles(Func<int, bool> selectorF, bRemoveIsolatedVerts)`: ids
-/// `0..MaxTriangleID` in order, each tested as the walk reaches it.
+/// Removes the live triangles `selector` picks, walking ids `0..max_triangle_id()` in order and
+/// testing each as the walk reaches it, so earlier removals can change later answers.
 fn remove_triangles_where(
     mesh: &mut DMesh3,
     selector: impl Fn(&DMesh3, i32) -> bool,
@@ -148,7 +146,7 @@ fn remove_triangles_where(
     all_ok
 }
 
-/// C# `MeshEditor.RemoveIsolatedTriangles`: removes triangles with no neighbour across any edge.
+/// Removes triangles with no neighbour across any edge.
 pub(crate) fn remove_isolated_triangles(mesh: &mut DMesh3) -> bool {
     remove_triangles_where(
         mesh,
@@ -157,7 +155,7 @@ pub(crate) fn remove_isolated_triangles(mesh: &mut DMesh3) -> bool {
     )
 }
 
-/// C# `MeshEditor.remove_triangles(int[], count)`: the back-out of a failed fan.
+/// The back-out of a failed fan.
 fn remove_triangles_backout(mesh: &mut DMesh3, tri_list: &[i32]) -> bool {
     for &tid in tri_list {
         if !mesh.is_triangle(tid) {
@@ -170,9 +168,9 @@ fn remove_triangles_backout(mesh: &mut DMesh3, tri_list: &[i32]) -> bool {
     true
 }
 
-/// C# `MeshEditor.AddTriangleFan_OrderedVertexLoop`: triangles `[center, b, a]` for each
+/// Triangles `[center, b, a]` for each
 /// consecutive `[a, b]` of the loop. `Ok(None)` when one is refused (the ones added so far are
-/// removed again); `Err` when that back-out itself fails, which C# throws.
+/// removed again); `Err` when that back-out itself fails.
 pub(crate) fn add_triangle_fan_ordered_vertex_loop(
     mesh: &mut DMesh3,
     center: i32,
@@ -199,8 +197,8 @@ pub(crate) fn add_triangle_fan_ordered_vertex_loop(
     Ok(Some(new_tris))
 }
 
-/// C# `MeshEditor.DisconnectBowtie`: groups the vertex's triangles into edge-connected fans
-/// (greedily, in one-ring order, as C# does) and gives every fan but the largest its own copy
+/// Groups the vertex's triangles into edge-connected fans
+/// (greedily, in one-ring order) and gives every fan but the largest its own copy
 /// of the vertex.
 pub(crate) fn disconnect_bowtie(mesh: &mut DMesh3, vid: i32) {
     let mut sets: Vec<Vec<i32>> = Vec::new();
@@ -235,7 +233,7 @@ pub(crate) fn disconnect_bowtie(mesh: &mut DMesh3, vid: i32) {
     }
 }
 
-/// C# `MeshEditor.DisconnectAllBowties(nMaxIters)`: repeats until no bowtie is left or the
+/// Repeats until no bowtie is left or the
 /// iterations run out; returns how many remain.
 pub(crate) fn disconnect_all_bowties(mesh: &mut DMesh3, max_iters: i32) -> usize {
     let mut bowties = bowtie_vertices(mesh);
@@ -253,11 +251,11 @@ pub(crate) fn disconnect_all_bowties(mesh: &mut DMesh3, max_iters: i32) -> usize
     bowties.len()
 }
 
-/// C# `sets.Sort(bowtie_sorter)` (largest first, equal sizes compare equal), reproducing
-/// .NET's `Array.Sort` for up to 16 elements: two and three elements go through its fixed
-/// `SwapIfGreater` sequence (which can reorder equal fans), longer lists through its insertion
-/// sort (which keeps them). Beyond 16 .NET switches to its introsort; this keeps inserting,
-/// which can order equal-sized fans differently there (divergence 790).
+/// Sorts a bowtie's fans largest first, equal sizes comparing equal. Two and three fans go
+/// through a fixed `swap_if_greater` sequence (which can reorder equal fans), longer lists
+/// through an insertion sort (which keeps them). Which fan keeps the original vertex decides
+/// the repaired mesh's vertex ids, so this order is pinned exactly; more than 16 fans on one
+/// vertex is rare enough that the insertion sort simply continues there.
 fn dotnet_sort_by_size_descending(sets: &mut [Vec<i32>]) {
     let greater = |sets: &[Vec<i32>], i: usize, j: usize| sets[i].len() < sets[j].len();
     let swap_if_greater = |sets: &mut [Vec<i32>], i: usize, j: usize| {

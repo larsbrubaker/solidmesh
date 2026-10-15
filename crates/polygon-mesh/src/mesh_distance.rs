@@ -1,12 +1,12 @@
-//! MatterCADLib `DesignTools/MeshDistance.cs`: the true distance between two meshes' surfaces,
+//! Mesh distance: the true distance between two meshes' surfaces,
 //! rather than between their bounding boxes, which overlap long before the parts do (a ball
 //! resting near a tilted part is a box overlap and a real gap). It lives here rather than in
-//! mattercad-model because it is built on the crate's geometry3Sharp pieces (`g3`: the AABB tree's
+//! mattercad-model because it is built on the crate's `g3` pieces (the AABB tree's
 //! nearest-pair search in `dmesh_aabb_tree3_pairs`, the triangle-triangle distance in
 //! `dist_triangle3_triangle3`, and the fast winding number in `fast_winding`), and on the boolean
 //! kernel (`csg`) for telling a touch from a crossing. The AI tool's `measure` reads it;
 //! `point_distances` answers point-to-surface distances over the same tree, and
-//! `point_triangle_distance_sqr` is g3's public single point-triangle distance.
+//! `point_triangle_distance_sqr` exposes the single point-triangle distance.
 
 use vector_math::{Matrix4X4, Vector3};
 
@@ -17,38 +17,38 @@ use crate::g3::dmesh_aabb_tree3::DMeshAABBTree3;
 use crate::g3::fast_winding::FastWinding;
 use crate::{CancelToken, Mesh};
 
-/// C# `MeshDistanceResult`: how far apart two meshes' surfaces are and whether the solids share
+/// How far apart two meshes' surfaces are and whether the solids share
 /// volume.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MeshDistanceResult {
-    /// C# `SurfaceDistance`: the distance between the surfaces (0 when they meet).
+    /// The distance between the surfaces (0 when they meet).
     pub surface_distance: f64,
-    /// C# `NearestOnA`: the point of the first surface nearest the second.
+    /// The point of the first surface nearest the second.
     pub nearest_on_a: Vector3,
-    /// C# `NearestOnB`: the point of the second surface nearest the first.
+    /// The point of the second surface nearest the first.
     pub nearest_on_b: Vector3,
-    /// C# `Overlap`: the solids share volume: their surfaces cross, or one lies wholly inside the
+    /// The solids share volume: their surfaces cross, or one lies wholly inside the
     /// other. Touching is not overlap.
     pub overlap: bool,
-    /// C# `AInsideB`: the first solid lies wholly inside the second (surfaces apart).
+    /// The first solid lies wholly inside the second (surfaces apart).
     pub a_inside_b: bool,
-    /// C# `BInsideA`: the second solid lies wholly inside the first (surfaces apart).
+    /// The second solid lies wholly inside the first (surfaces apart).
     pub b_inside_a: bool,
 }
 
-/// C# `ContactTolerance`: surfaces closer than this (mm) meet; the meshes store float vertices,
+/// Surfaces closer than this (mm) meet; the meshes store float vertices,
 /// so coincident faces land within it.
 pub const CONTACT_TOLERANCE: f64 = 1e-5;
 
-/// C# `OverlapVolumeTolerance`: a shared volume at or under this (mm³) is a touch, not an
+/// A shared volume at or under this (mm³) is a touch, not an
 /// overlap.
 const OVERLAP_VOLUME_TOLERANCE: f64 = 1e-4;
 
-/// C# `MeshDistance.Between`: measures `a` against `b` with one AABB tree each (g3's nearest
+/// Measures `a` against `b` with one AABB tree each (the trees' nearest
 /// triangle pair search), so large meshes answer quickly. Containment is a winding-number test,
 /// which assumes closed meshes; surfaces that meet are told apart from surfaces that cross by the
-/// volume of their boolean intersection. `None` when either mesh has no faces (C# would throw on
-/// the empty tree; its one caller checks first). A cancelled token is `Err(Cancelled)`.
+/// volume of their boolean intersection. `None` when either mesh has no faces (there is no
+/// surface to measure). A cancelled token is `Err(Cancelled)`.
 pub fn between(
     a: &Mesh,
     b: &Mesh,
@@ -99,8 +99,8 @@ pub fn between(
 }
 
 /// The distance from each of `points` to the nearest point of `mesh`'s surface, through one AABB
-/// tree (g3's `FindNearestTriangle` then `MeshQueries.TriDistanceSqr`, as MatterCAD's wall
-/// thickness checks measure a hollowed part). `f64::MAX` for every point when the mesh has no
+/// tree (the nearest triangle, then the exact distance to it, as the wall thickness checks
+/// measure a hollowed part). `f64::MAX` for every point when the mesh has no
 /// faces.
 pub fn point_distances(mesh: &Mesh, points: &[Vector3]) -> Vec<f64> {
     if mesh.faces.is_empty() {
@@ -121,17 +121,17 @@ pub fn point_distances(mesh: &Mesh, points: &[Vector3]) -> Vec<f64> {
         .collect()
 }
 
-/// g3's public `DistPoint3Triangle3.DistanceSqr`: the squared distance from `point` to the
-/// triangle `triangle` (Eberly's region walk). A zero-area triangle answers NaN, as in g3.
+/// The squared distance from `point` to the triangle `triangle` (Eberly's region walk). A
+/// zero-area triangle answers NaN.
 pub fn point_triangle_distance_sqr(triangle: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     tri_distance_sqr(triangle, point)
 }
 
-/// C# `SurfacesCross`: surfaces that meet either just touch (a part resting on another) or
+/// Surfaces that meet either just touch (a part resting on another) or
 /// cross; only crossing leaves a shared volume. A mesh the boolean kernel refuses cannot be told
 /// apart, so meeting counts as overlap.
 fn surfaces_cross(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<bool, BooleanError> {
-    // C# passes ProcessingModes.Polygons at resolution 64/64: the defaults.
+    // Polygon processing at the default resolution: the overlap only needs a volume.
     let shared = boolean_processing::do_array(
         &[(a, Matrix4X4::IDENTITY), (b, Matrix4X4::IDENTITY)],
         CsgModes::Intersect,
@@ -147,7 +147,7 @@ fn surfaces_cross(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<bool, Bool
     }
 }
 
-/// C# `TriangleSoup`: every triangle with its own three vertices. g3's mesh refuses triangles
+/// Every triangle with its own three vertices. A `DMesh3` refuses triangles
 /// that would make an edge non-manifold, and exported meshes can have those; a soup keeps every
 /// triangle for the distance, and the winding number does not need connectivity.
 fn triangle_soup(mesh: &Mesh) -> DMesh3 {

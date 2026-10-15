@@ -1,6 +1,5 @@
-//! Rust-only tests for `MinimalHoleFill` (`minimal_hole_fill`). geometry3Sharp ships no tests
-//! for it in agg-sharp; the expected values were printed by geometry3Sharp itself (MatterCAD's
-//! built `geometry3Sharp.dll`, driven from a scratch console building the same meshes).
+//! Tests for `MinimalHoleFill` (`minimal_hole_fill`). The expected values come from an
+//! independent run of the reference hole filler on the same meshes.
 
 use std::collections::HashMap;
 

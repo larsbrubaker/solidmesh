@@ -1,12 +1,12 @@
-//! geometry3Sharp `QuadricError` (`mesh/Reducer.cs`): the quadratic function that measures the
+//! Quadric error (derived from geometry3Sharp): the quadratic function that measures the
 //! squared distance to a plane (or a weighted sum of planes), in Garland's minimal 10-coefficient
 //! form (http://mgarland.org/files/papers/qtheory.pdf) - symmetric matrix A, vector b,
 //! constant c. The `Reducer` (`reducer.rs`) keeps one per vertex and scores each edge collapse
-//! with their sum. C#'s operation order is kept.
+//! with their sum. The operation order is fixed, so reduce results are reproducible to the bit.
 
 use super::vector3d::{dot, EPSILON};
 
-/// C# `QuadricError`.
+/// A quadric: symmetric matrix A, vector b and constant c.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub(crate) struct QuadricError {
     pub(crate) axx: f64,
@@ -22,7 +22,7 @@ pub(crate) struct QuadricError {
 }
 
 impl QuadricError {
-    /// C# `QuadricError.Zero`.
+    /// The zero quadric.
     pub(crate) const ZERO: QuadricError = QuadricError {
         axx: 0.0,
         axy: 0.0,
@@ -36,7 +36,7 @@ impl QuadricError {
         c: 0.0,
     };
 
-    /// C# `new QuadricError(ref n, ref p)`: the plane through `p` with normal `n`.
+    /// The plane through `p` with normal `n`.
     pub(crate) fn from_plane(n: [f64; 3], p: [f64; 3]) -> Self {
         let mut q = QuadricError {
             axx: n[0] * n[0],
@@ -55,7 +55,7 @@ impl QuadricError {
         q
     }
 
-    /// C# `new QuadricError(ref a, ref b)`: the sum of two quadrics.
+    /// The sum of two quadrics.
     pub(crate) fn sum(a: &QuadricError, b: &QuadricError) -> Self {
         QuadricError {
             axx: a.axx + b.axx,
@@ -71,7 +71,7 @@ impl QuadricError {
         }
     }
 
-    /// C# `Add(w, ref b)`: adds `w * b`.
+    /// Adds `w * b`.
     pub(crate) fn add(&mut self, w: f64, b: &QuadricError) {
         self.axx += w * b.axx;
         self.axy += w * b.axy;
@@ -85,7 +85,7 @@ impl QuadricError {
         self.c += w * b.c;
     }
 
-    /// C# `Evaluate`: `pAp + 2*dot(p,b) + c`.
+    /// The quadric's value at `pt`: `pAp + 2*dot(p,b) + c`.
     pub(crate) fn evaluate(&self, pt: [f64; 3]) -> f64 {
         let x = self.axx * pt[0] + self.axy * pt[1] + self.axz * pt[2];
         let y = self.axy * pt[0] + self.ayy * pt[1] + self.ayz * pt[2];
@@ -95,7 +95,7 @@ impl QuadricError {
             + self.c
     }
 
-    /// C# `multiplyA`.
+    /// `A * pt`.
     fn multiply_a(&self, pt: [f64; 3]) -> [f64; 3] {
         let x = self.axx * pt[0] + self.axy * pt[1] + self.axz * pt[2];
         let y = self.axy * pt[0] + self.ayy * pt[1] + self.ayz * pt[2];
@@ -103,7 +103,7 @@ impl QuadricError {
         [x, y, z]
     }
 
-    /// C# `OptimalPoint`: the point minimizing the quadric, or `None` when A is (nearly)
+    /// The point minimizing the quadric, or `None` when A is (nearly)
     /// singular.
     pub(crate) fn optimal_point(&self) -> Option<[f64; 3]> {
         let mut a11 = self.azz * self.ayy - self.ayz * self.ayz;

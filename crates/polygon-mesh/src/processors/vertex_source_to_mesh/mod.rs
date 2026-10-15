@@ -1,7 +1,6 @@
-//! Paths to meshes: agg-sharp `PolygonMesh/Processors/VertexSourceToMesh.cs`. `TriangulateFaces`
-//! (the flat fill every other entry point builds on, over [`CachedTesselator`]) is in this
-//! file; `Revolve` is in [`revolve`] and `Extrude` with its bevel rings in
-//! [`extrude`], split by entry point for the file-size limit.
+//! Paths to meshes. The flat fill every other entry point builds on ([`triangulate_faces`],
+//! over [`CachedTesselator`]) is in this file; revolving is in [`revolve`] and extruding with
+//! its bevel rings in [`extrude`], split by entry point for the file-size limit.
 
 use agg_path::vertex_data::VertexData;
 use agg_path::vertex_source::VertexSource;
@@ -16,7 +15,8 @@ pub use revolve::{revolve, RevolveError};
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
 
-/// C# `TriangulateFaces(this IVertexSource, CachedTesselator, Mesh, double)`.
+/// Fills the path's outline at `z_height`, added to `mesh_to_add_to` or a new mesh (see
+/// [`triangulate_vertices`]).
 pub fn triangulate_faces(
     vertex_source: &dyn VertexSource,
     tesselated_source: Option<&mut CachedTesselator>,
@@ -32,10 +32,9 @@ pub fn triangulate_faces(
     )
 }
 
-/// C# `TriangulateFaces(this IEnumerable<VertexData>, CachedTesselator, Mesh, double,
-/// Matrix4X4?)`: fills the outline at `z_height`, skipping triangles with two equal corners,
+/// Fills the outline at `z_height`, skipping triangles with two equal corners,
 /// and transforms each corner by `in_matrix` unless it is absent or the identity. A caller
-/// that passes `tesselated_source` gets the tessellation back in it, as C#'s does.
+/// that passes `tesselated_source` gets the tessellation back in it.
 pub fn triangulate_vertices(
     vertex_source: &[VertexData],
     tesselated_source: Option<&mut CachedTesselator>,
@@ -63,7 +62,7 @@ pub fn triangulate_vertices(
 }
 
 /// Calls `f` with the three corners of every tessellated triangle that has three distinct
-/// corners (the `v0 == v1 || v1 == v2 || v2 == v0` skip every C# reader of the cache repeats).
+/// corners (the `v0 == v1 || v1 == v2 || v2 == v0` skip every reader of the cache needs).
 pub(crate) fn for_each_triangle(
     tesselator: &CachedTesselator,
     mut f: impl FnMut(Vector2, Vector2, Vector2),

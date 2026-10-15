@@ -1,6 +1,7 @@
-//! MIConvexHull's `ConvexHull/MathHelper.cs`, the 3D parts: face planes, vertex-to-plane
-//! distance, the simplex volume (a Cayley-Menger determinant) and the LU factorization it uses.
-//! Operation order follows the C# exactly so the chosen vertices match.
+//! The quickhull's math (derived from MIConvexHull), the 3D parts: face planes,
+//! vertex-to-plane distance, the simplex volume (a Cayley-Menger determinant) and the LU
+//! factorization it uses. The operation order is fixed, so the same input always chooses the
+//! same vertices.
 
 use super::data_model::FaceInternal;
 
@@ -17,7 +18,7 @@ fn vector_between_vertices(positions: &[f64], to_index: i32, from_index: i32) ->
     target
 }
 
-/// `FindNormalVector3D`.
+/// The unit normal of the triangle through three vertices.
 fn find_normal_vector_3d(positions: &[f64], vertices: &[i32; 3], normal: &mut [f64; DIM]) {
     let nt_x = vector_between_vertices(positions, vertices[1], vertices[0]);
     let nt_y = vector_between_vertices(positions, vertices[2], vertices[1]);
@@ -31,8 +32,8 @@ fn find_normal_vector_3d(positions: &[f64], vertices: &[i32; 3], normal: &mut [f
     normal[2] = f * nz;
 }
 
-/// `CalculateFacePlane`: the face normal (pointing away from `center`) and offset. False when
-/// the face is degenerate; the NaN normal is still written, as in C#.
+/// The face normal (pointing away from `center`) and offset. False when
+/// the face is degenerate; the NaN normal is still written.
 pub(super) fn calculate_face_plane(
     positions: &[f64],
     face: &mut FaceInternal,
@@ -67,7 +68,7 @@ pub(super) fn calculate_face_plane(
     true
 }
 
-/// `GetVertexDistance`: signed distance of vertex `v` from the face plane.
+/// Signed distance of vertex `v` from the face plane.
 pub(super) fn get_vertex_distance(positions: &[f64], v: usize, f: &FaceInternal) -> f64 {
     let x = v * DIM;
     let mut distance = f.offset;
@@ -77,7 +78,7 @@ pub(super) fn get_vertex_distance(positions: &[f64], v: usize, f: &FaceInternal)
     distance
 }
 
-/// `VolumeOfSimplex`: from the Cayley-Menger determinant of the first `DIM + 1` vertices.
+/// From the Cayley-Menger determinant of the first `DIM + 1` vertices.
 pub(super) fn volume_of_simplex(positions: &[f64], vertex_indices: &[i32]) -> f64 {
     let num_row_col = DIM + 2;
     let mut a = vec![0.0; num_row_col * num_row_col];
@@ -124,9 +125,9 @@ pub(super) fn volume_of_simplex(positions: &[f64], vertex_indices: &[i32]) -> f6
     det
 }
 
-// Indexed loops mirror the C# column arithmetic.
+// Indexed loops keep the column arithmetic readable.
 #[allow(clippy::needless_range_loop)]
-/// `LUFactor`: in-place LU factorization with partial pivoting (column-major `data`).
+/// In-place LU factorization with partial pivoting (column-major `data`).
 fn lu_factor(data: &mut [f64], order: usize, ipiv: &mut [usize], vec_lu_colj: &mut [f64]) {
     for (i, p) in ipiv.iter_mut().enumerate().take(order) {
         *p = i;

@@ -1,7 +1,7 @@
-//! Rust-only tests for geometry3Sharp's `Reducer` (`reducer`), `QuadricError`
-//! (`quadric_error`), `IndexPriorityQueue` (`index_priority_queue`) and `MeshProjectionTarget`
-//! (`mesh_projection_target`). geometry3Sharp ships no tests for them in agg-sharp, and
-//! MatterCAD's tests reach the Reducer only through `DecimateObject3D` (mattercad-model).
+//! Tests for the `Reducer` (`reducer`), `QuadricError` (`quadric_error`),
+//! `IndexPriorityQueue` (`index_priority_queue`) and `MeshProjectionTarget`
+//! (`mesh_projection_target`). The Reduce operation's own tests (`DecimateObject3D`) live in
+//! mattercad-model.
 
 use super::dmesh3::DMesh3;
 use super::dmesh3_tests::check_valid;
@@ -69,8 +69,8 @@ fn rust_only_index_priority_queue_dequeues_lowest_first_and_updates_in_place() {
     assert_eq!(order, vec![9, 7, 0, 3]);
 }
 
-/// Divergence 2795: C# kept a dequeued id's map entry pointing at its old slot, so once an
-/// insert reused that slot `Contains` said the dequeued id was still queued.
+/// A dequeued id is not reported as queued once an insert reuses its old slot; otherwise the
+/// reducer would re-prioritize a stranger's edge and never re-queue the dequeued one.
 #[test]
 fn rust_only_a_dequeued_id_is_not_queued_after_its_slot_is_reused() {
     let mut q = IndexPriorityQueue::new(4);

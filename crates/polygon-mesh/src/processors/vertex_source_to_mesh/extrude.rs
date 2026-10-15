@@ -1,9 +1,9 @@
-//! Lifting a 2D profile into a prism: C# `VertexSourceToMesh.Extrude` with its bevel path
-//! (`GetLoopMesh`, `BuildBevelRings`, `CreateTriangulation`, `CreateMeshLoop`).
+//! Lifting a 2D profile into a prism, square-ended or with bevel rings at either end.
 //!
-//! C#'s `CreateMeshLoop` triangulates the band between two bevel rings with TriangleNet, which
-//! derives from Shewchuk's Triangle (non-commercial license) and is not ported; here tess2-rust
-//! triangulates it with its constrained Delaunay refinement (docs/CSHARP_DIVERGENCES.md 290).
+//! Where two bevel rings do not correspond point for point, the band between them is
+//! triangulated by tess2-rust with its constrained Delaunay refinement, which adds no points
+//! for rings that do not cross. (Shewchuk's Triangle, the usual tool for this, is licensed
+//! for non-commercial use only.)
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -22,8 +22,8 @@ use crate::csg::path_stitcher;
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
 
-/// C# `Extrude(this IVertexSource, zHeightTop)`: the profile from z = 0 up to `z_height_top`
-/// with square ends. Clipper's exceptions (C# throws) come back as the error.
+/// The profile from z = 0 up to `z_height_top`
+/// with square ends. A clipper failure in the profile's clean-up comes back as the error.
 pub fn extrude(
     vertex_source_in: &dyn VertexSource,
     z_height_top: f64,
@@ -38,8 +38,7 @@ pub fn extrude(
     )
 }
 
-/// C# `Extrude(this IVertexSource, zHeightTop, bevel, joinType, bottomBevel, bottomJoinType)`:
-/// extrudes a closed profile from z = 0 up to `z_height_top`, optionally rounding either end.
+/// Extrudes a closed profile from z = 0 up to `z_height_top`, optionally rounding either end.
 ///
 /// `bevel` (`(height, inset_amount)` pairs) is the top bevel ordered from the bottom of the
 /// bevel UPWARD. Each `height` is an absolute z and each `inset_amount` is in mm from the
@@ -48,7 +47,7 @@ pub fn extrude(
 /// last entry's at `z_height_top`, the profile the top cap is built from. `bottom_bevel` is
 /// its mirror image, ordered from the top of the bevel DOWNWARD, its last inset reached at
 /// z = 0. The join types say how the clipper offset rounds corners while insetting each bevel.
-/// Clipper's exceptions (C# throws) come back as the error.
+/// A clipper failure in the profile's clean-up comes back as the error.
 pub fn extrude_bevelled(
     vertex_source_in: &dyn VertexSource,
     z_height_top: f64,
@@ -127,10 +126,10 @@ pub fn extrude_bevelled(
 }
 
 /// One profile ring of a bevelled extrusion and the height it sits at. The un-inset profile is
-/// shared (C# reuses it by reference), so [`Rc::ptr_eq`] recognises the straight wall.
+/// shared, so [`Rc::ptr_eq`] recognises the straight wall.
 type Ring = (Rc<Paths64>, f64);
 
-/// C# `GetLoopMesh`: caps and walls each outline-with-holes group through its bevel rings.
+/// Caps and walls each outline-with-holes group through its bevel rings.
 fn get_loop_mesh(
     z_height_top: f64,
     bevel: Option<&[(f64, f64)]>,
@@ -215,7 +214,7 @@ fn get_loop_mesh(
     Ok(mesh)
 }
 
-/// C# `BuildBevelRings`: the stack of profile rings the extrusion passes through, bottom to
+/// The stack of profile rings the extrusion passes through, bottom to
 /// top, the first at z = 0 and the last at `z_height_top`. Both bevels inset the ORIGINAL
 /// profile, and every ring shares the one arc tolerance the profile's size earns.
 fn build_bevel_rings(
@@ -269,13 +268,13 @@ fn build_bevel_rings(
     Ok(rings)
 }
 
-/// The exact position of a point, for C#'s `HashSet<Vector2>` (`+ 0.0` folds -0 onto 0, which
-/// `Vector2` equality does too).
+/// The exact position of a point as a set key (`+ 0.0` folds -0 onto 0, as `Vector2`
+/// equality does).
 fn position_key(x: f64, y: f64) -> (u64, u64) {
     ((x + 0.0).to_bits(), (y + 0.0).to_bits())
 }
 
-/// C# `CreateTriangulation`: skins the wall between two rings that do not correspond point for
+/// Skins the wall between two rings that do not correspond point for
 /// point by triangulating the area between them in 2D and lifting each vertex to the ring it
 /// came from. `flip_winding` reverses the faces for a profile that grows as it rises.
 fn create_triangulation(
@@ -312,7 +311,7 @@ fn create_triangulation(
     Ok(())
 }
 
-/// C# `CreateMeshLoop`: triangulates one outline minus its holes (clipper units) and adds the
+/// Triangulates one outline minus its holes (clipper units) and adds the
 /// triangles, each corner at the bottom height if it is a bottom-ring point and the top height
 /// otherwise, scaled back to mm.
 fn create_mesh_loop(

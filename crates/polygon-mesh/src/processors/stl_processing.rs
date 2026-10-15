@@ -1,12 +1,12 @@
-//! STL reading (ASCII and binary). Ports the load half of agg-sharp
-//! `PolygonMesh/Processors/StlProcessing.cs`.
+//! STL reading (ASCII and binary); `stl_writer` is the save half.
 //!
-//! C# writes the parse as an iterator that pauses every [`FACES_PER_YIELD`] faces so its async
-//! entry point can hand the browser's UI thread back between chunks. Here that walk is
-//! [`StlParse`]: the caller drives it chunk by chunk with [`StlParse::next_chunk`] (the web
-//! shell between frames), or runs it out with [`parse_file_contents`]. Progress is reported and
-//! cancellation polled at every chunk boundary (see divergence 40). Where C# returned `null`
-//! (too short, truncated, cancelled, an exception) these return an [`StlError`].
+//! The parse pauses every [`FACES_PER_YIELD`] faces so the browser's UI thread gets control
+//! back between chunks: [`StlParse`] is driven chunk by chunk with [`StlParse::next_chunk`]
+//! (the web shell between frames), or run out with [`parse_file_contents`]. Progress is
+//! reported and cancellation polled at every chunk boundary, with or without a progress
+//! callback, so every load can be cancelled; a chunk is about one frame of parsing, and no
+//! clock is needed (a clock is not available on wasm32). A file that is too short, truncated,
+//! cancelled or fails to parse is an [`StlError`].
 
 use std::collections::HashMap;
 use std::fmt;
@@ -22,7 +22,7 @@ use crate::mesh::{f64_key, Mesh};
 /// one frame of wasm parsing gets through, so a progress bar moves while a large STL comes in.
 pub const FACES_PER_YIELD: i32 = 5000;
 
-/// A progress callback: ratio done (0..1) and a status message (C# `Action<double, string>`).
+/// A progress callback: ratio done (0..1) and a status message.
 pub type Progress<'a> = &'a mut dyn FnMut(f64, &str);
 
 /// Why an STL produced no mesh.
@@ -279,7 +279,7 @@ impl<'a> StlParse<'a> {
         }
     }
 
-    /// The next line (C# `StreamReader.ReadLine`: ends at "\n", "\r" or "\r\n").
+    /// The next line, ending at "\n", "\r" or "\r\n" (files from any platform read alike).
     fn next_ascii_line(&mut self) -> Option<String> {
         let Format::Ascii { text, position } = &mut self.format else {
             return None;
@@ -342,8 +342,8 @@ impl<'a> StlParse<'a> {
     }
 }
 
-/// The three numbers after "vertex" (C# `Convert`): each runs from the first non-space to the
-/// next space; one that does not parse is 0, as `double.TryParse` leaves it.
+/// The three numbers after "vertex": each runs from the first non-space to the next space;
+/// one that does not parse is 0, so a damaged number does not lose the whole file.
 fn convert(line: &str) -> Result<Vector3, StlError> {
     let bytes = line.as_bytes();
     let mut current_position = "vertex".len();
@@ -352,7 +352,7 @@ fn convert(line: &str) -> Result<Vector3, StlError> {
         while bytes.get(current_position) == Some(&b' ') {
             current_position += 1;
         }
-        // C# indexes past the end here and the load fails.
+        // A line with fewer than three numbers: the load fails.
         if current_position >= bytes.len() {
             return Err(StlError::Malformed {
                 line: line.to_string(),
@@ -368,8 +368,8 @@ fn convert(line: &str) -> Result<Vector3, StlError> {
     Ok(Vector3::new(values[0], values[1], values[2]))
 }
 
-/// C# `double.TryParse` with `AllowDecimalPoint | AllowExponent | AllowLeadingSign` and the
-/// invariant culture: like `NumberStyles.Float` but without surrounding white space.
+/// An invariant-culture number with an optional sign, decimal point and exponent, and no
+/// surrounding white space (a number with white space in it reads as 0).
 fn parse_stl_number(number: &str) -> f64 {
     if number.chars().any(char::is_whitespace) {
         return 0.0;

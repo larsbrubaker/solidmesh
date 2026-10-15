@@ -1,8 +1,8 @@
-//! Spinning a 2D profile into a solid: C# `VertexSourceToMesh.Revolve` with its helpers
-//! (`fixCloseAngles`, `RevolvedPosition`, `AddRevolveCap`, `AddRevolveStrip`). The profile goes
-//! through agg-path's clipper conversions (`CreatePolygons`, `GetCorrectedWinding`,
-//! `CreateVertexStorage`) so its winding is normalized and anything left of the axis is
-//! mirrored onto the right before it is swept.
+//! Spinning a 2D profile into a solid, with its helpers (snapping angles near 0 or a full turn, the
+//! revolved position, the end caps and the strips). The profile goes through agg-path's
+//! clipper conversions (to polygons, corrected winding, back to a vertex storage) so its
+//! winding is normalized and anything left of the axis is mirrored onto the right before it is
+//! swept.
 
 use std::fmt;
 
@@ -19,8 +19,8 @@ use super::for_each_triangle;
 use crate::data_converters_2d::CachedTesselator;
 use crate::mesh::Mesh;
 
-/// What [`revolve`] can fail with, as the C# throws: an angle `Range0ToTau` rejects, or a
-/// Clipper exception from the profile's clean-up.
+/// What [`revolve`] can fail with: an angle that cannot be brought into `[0, Tau]`, or a
+/// clipper failure in the profile's clean-up.
 #[derive(Clone, Debug, PartialEq)]
 pub enum RevolveError {
     Angle(MathError),
@@ -50,7 +50,7 @@ impl fmt::Display for RevolveError {
 
 impl std::error::Error for RevolveError {}
 
-/// C# `fixCloseAngles`: snaps an angle within 0.001 of 0 or Tau onto it.
+/// Snaps an angle within 0.001 of 0 or Tau onto it.
 fn fix_close_angles(angle: f64) -> f64 {
     if angle.abs() < 0.001 {
         return 0.0;
@@ -63,13 +63,12 @@ fn fix_close_angles(angle: f64) -> f64 {
     angle
 }
 
-/// C# `Revolve(this IVertexSource, angleSteps = 30, angleStart = 0, angleEnd = Tau,
-/// revolveAroundZ = true)`: sweeps the profile (x out from the axis, y along it) from
+/// Sweeps the profile (x out from the axis, y along it) from
 /// `angle_start` to `angle_end` in `angle_steps` strips, capping both ends of a partial sweep.
 /// A profile that encloses no area revolves to an empty mesh.
 ///
 /// The angles are brought into `[0, Tau]` first; one that cannot be (below `-Tau`, or NaN) is
-/// the error C#'s `Range0ToTau` throws; Clipper's exceptions are the other error.
+/// an error; a clipper failure is the other.
 pub fn revolve(
     source: &dyn VertexSource,
     angle_steps: i32,
@@ -211,7 +210,7 @@ pub fn revolve(
     Ok(mesh)
 }
 
-/// C# `RevolvedPosition`: the single place a profile point becomes a point on the solid, at
+/// The single place a profile point becomes a point on the solid, at
 /// `angle` around the axis. Every part of the solid comes through here, because
 /// `clean_and_merge` welds on exact float equality and a second way of computing a shared
 /// point would leave the seam open.
@@ -225,7 +224,7 @@ fn revolved_position(profile_point: Vector2, angle: f64, revolve_around_z: bool)
         .transform(Matrix4X4::create_rotation_y(angle))
 }
 
-/// C# `AddRevolveCap`: the flat face closing a partial revolve at `angle`, wound outward
+/// The flat face closing a partial revolve at `angle`, wound outward
 /// (`reverse_winding` flips it for the end of the sweep). It tessellates directly rather than
 /// through `triangulate_faces` so its corners are placed by [`revolved_position`].
 fn add_revolve_cap(
@@ -248,7 +247,7 @@ fn add_revolve_cap(
     });
 }
 
-/// C# `AddRevolveStrip`: one quad per profile segment between the two angles.
+/// One quad per profile segment between the two angles.
 fn add_revolve_strip(
     vertex_source: &dyn VertexSource,
     mesh: &mut Mesh,

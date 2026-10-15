@@ -1,14 +1,12 @@
-//! The part of geometry3Sharp's `MeshSignedDistanceGrid` (`spatial/MeshSignedDistanceGrid.cs`)
-//! `MeshSdfGrid` reaches: the grid layout of `Compute` with `PadWidth` set, the
-//! `NarrowBand_SpatialFloodFill` mode with `ComputeSigns = false`
-//! (`make_level_set3_parallel_floodfill` up to its sign step), and Batty's robust
-//! `point_in_triangle_2d`, which `MeshSdfGrid` signs with.
+//! The narrow-band distance grid (derived from geometry3Sharp's mesh signed distance grid)
+//! that `MeshSdfGrid` uses: the grid layout padded around the mesh, the spatial flood fill
+//! of unsigned distances near the surface, and Batty's robust `point_in_triangle_2d`, which
+//! `MeshSdfGrid` signs with.
 //!
-//! C# floods with `gParallel.ForEach` under a spin lock. Every voxel's value is the distance to
-//! its nearest triangle, whichever worker gets there first, and a voxel joins the next pass
-//! from its own distance alone, so the passes visit the same voxels with the same values in any
-//! order: here they run in order on one thread. The work count, its progress callback and the
-//! cancel poll (every 64th voxel) follow C#.
+//! Every voxel's value is the distance to its nearest triangle, and a voxel joins the next
+//! pass from its own distance alone, so the passes visit the same voxels with the same values
+//! in any order; they run in order on one thread. The work count feeds a progress callback,
+//! and cancellation is polled every 64th voxel.
 
 use std::sync::Arc;
 
@@ -16,10 +14,10 @@ use super::dmesh3::{tri_distance_sqr, DMesh3};
 use super::dmesh_aabb_tree3::DMeshAABBTree3;
 use crate::sdf::DenseGrid3f;
 
-/// g3 `MathUtil.SqrtTwo`.
+/// The square root of two.
 const SQRT_TWO: f64 = std::f64::consts::SQRT_2;
 
-/// g3 `gIndices.GridOffsets26`: face, edge, then corner neighbours.
+/// The 26 neighbour offsets of a grid cell: face, edge, then corner neighbours.
 const GRID_OFFSETS_26: [[i32; 3]; 26] = [
     [0, 0, -1],
     [0, 0, 1],
@@ -49,40 +47,39 @@ const GRID_OFFSETS_26: [[i32; 3]; 26] = [
     [-1, -1, -1],
 ];
 
-/// The flood's running work count, reported once per voxel (C# `FloodProgress`).
+/// The flood's running work count, reported once per voxel.
 pub type FloodProgress = Arc<dyn Fn(i64) + Send + Sync>;
 
-/// A narrow-band unsigned distance grid (C# `MeshSignedDistanceGrid` in
-/// `NarrowBand_SpatialFloodFill` mode with `ComputeSigns = false` and `PadWidth` set).
+/// A narrow-band unsigned distance grid, padded around the mesh and filled by a spatial flood.
 pub(crate) struct NarrowBandDistanceGrid<'a> {
     pub(crate) mesh: &'a DMesh3,
     pub(crate) spatial: &'a DMeshAABBTree3<'a>,
-    /// C# `CellSize` (stored as float).
+    /// The edge length of a grid cell (stored as float).
     pub(crate) cell_size: f32,
-    /// C# `NarrowBandMaxDistance`.
+    /// How far from the surface the flood fills distances.
     pub(crate) narrow_band_max_distance: f64,
-    /// C# `PadWidth`.
+    /// How far the grid extends past the mesh bounds.
     pub(crate) pad_width: f64,
-    /// C# `CancelF`.
+    /// Polled during the flood; true stops it.
     pub(crate) cancel: &'a dyn Fn() -> bool,
-    /// C# `FloodProgress`.
+    /// Receives the running work count.
     pub(crate) flood_progress: Option<FloodProgress>,
-    /// C# `FloodVoxelsProcessed`.
+    /// The number of voxels the flood has processed.
     pub(crate) flood_voxels_processed: i64,
-    /// C# `GridOrigin`, set by [`NarrowBandDistanceGrid::compute`].
+    /// The grid's minimum corner, set by [`NarrowBandDistanceGrid::compute`].
     pub(crate) grid_origin: [f32; 3],
 }
 
 impl NarrowBandDistanceGrid<'_> {
-    /// C# `Compute()`: lays out the grid around the mesh bounds padded by `pad_width` and
-    /// floods the band. Returns the grid (possibly unfinished when cancelled; C# leaves it
-    /// so too and the caller checks the token).
+    /// Lays out the grid around the mesh bounds padded by `pad_width` and
+    /// floods the band. Returns the grid, possibly unfinished when cancelled; the caller
+    /// checks its own cancel token before using it.
     pub(crate) fn compute(&mut self) -> DenseGrid3f {
         let bounds = self.mesh.cached_bounds();
         let pad = self.pad_width as f32;
         let min = bounds.min.map(|v| v as f32);
         let max_b = bounds.max.map(|v| v as f32);
-        // C# `(Vector3f)bounds.Min - fBufferWidth * Vector3f.One - (Vector3f)ExpandBounds`.
+        // The float minimum, minus the pad, minus a zero bounds expansion.
         let origin: [f32; 3] = std::array::from_fn(|a| min[a] - pad - 0.0);
         let max: [f32; 3] = std::array::from_fn(|a| max_b[a] + pad + 0.0);
         let ni = ((max[0] - origin[0]) / self.cell_size) as i32 + 1;
@@ -92,20 +89,20 @@ impl NarrowBandDistanceGrid<'_> {
         self.flood_fill(ni.max(0) as usize, nj.max(0) as usize, nk.max(0) as usize)
     }
 
-    /// C# `cell_center`.
+    /// The centre of cell `idx` in world space.
     fn cell_center(&self, idx: [i32; 3]) -> [f64; 3] {
         std::array::from_fn(|a| (idx[a] as f32 * self.cell_size + self.grid_origin[a]) as f64)
     }
 
-    /// The exact distance from `p` to triangle `tid` (C# `DistPoint3Triangle3.DistanceSqr`, rooted).
+    /// The exact distance from `p` to triangle `tid`.
     fn distance(&self, p: [f64; 3], tid: i32) -> f64 {
         tri_distance_sqr(&self.mesh.get_tri_vertices(tid as usize), p).sqrt()
     }
 
-    /// C# `make_level_set3_parallel_floodfill` with `ComputeSigns = false`.
+    /// The flood fill: unsigned distances for the cells near the surface.
     fn flood_fill(&mut self, ni: usize, nj: usize, nk: usize) -> DenseGrid3f {
         let dx = self.cell_size;
-        // C# `upper_bound`: `(ni + nj + nk) * CellSize` in float.
+        // The upper bound: (ni + nj + nk) cells, in float.
         let upper_bound = (ni + nj + nk) as i32 as f32 * dx;
         let mut distances = DenseGrid3f::new(ni, nj, nk, upper_bound);
         let size = distances.size();
@@ -146,7 +143,7 @@ impl NarrowBandDistanceGrid<'_> {
             let p = self.cell_center(idx);
             let near_tid = self.spatial.find_nearest_triangle(p, f64::MAX);
             if near_tid < 0 {
-                // No triangle at all (g3 would throw reading triangle -1).
+                // No triangle at all (an empty mesh): leave the cell at its upper bound.
                 continue;
             }
             distances.buffer[linear] = self.distance(p, near_tid) as f32;
@@ -225,7 +222,7 @@ impl NarrowBandDistanceGrid<'_> {
     }
 }
 
-/// g3 `orientation`: twice the signed area of (0,0)-(x1,y1)-(x2,y2), and its sign with a
+/// Twice the signed area of (0,0)-(x1,y1)-(x2,y2), and its sign with a
 /// simulation-of-simplicity tie-break (0 only when the two points coincide).
 fn orientation(x1: f64, y1: f64, x2: f64, y2: f64) -> (i32, f64) {
     let twice_signed_area = y1 * x2 - x1 * y2;
@@ -247,7 +244,7 @@ fn orientation(x1: f64, y1: f64, x2: f64, y2: f64) -> (i32, f64) {
     (sign, twice_signed_area)
 }
 
-/// g3 `point_in_triangle_2d`: whether (x0, y0) is in the triangle, robustly (a point on a shared
+/// Whether (x0, y0) is in the triangle, robustly (a point on a shared
 /// edge or vertex is in exactly one of the triangles sharing it), with its barycentric
 /// coordinates.
 #[allow(clippy::too_many_arguments)]
@@ -276,7 +273,7 @@ pub(crate) fn point_in_triangle_2d(
         return None;
     }
     let sum = a + b + c;
-    // With matching nonzero SOS signs a, b and c cannot all be zero (C# throws "badness" here).
+    // With matching nonzero SOS signs a, b and c cannot all be zero.
     assert!(
         sum != 0.0,
         "MakeNarrowBandLevelSet.point_in_triangle_2d: badness!"

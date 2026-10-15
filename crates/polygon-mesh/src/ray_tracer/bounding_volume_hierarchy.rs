@@ -1,6 +1,5 @@
-//! A binary bounding-volume node over two traceables (agg-sharp
-//! `RayTracer/Bvh/BoundingVolumeHierarchy.cs`), and `CreateNewHierarchy`, which picks the
-//! builder. Tracing descends the nearer child first along the node's longest axis and narrows
+//! A binary bounding-volume node over two traceables, and `create_new_hierarchy`, which picks
+//! the builder. Tracing descends the nearer child first along the node's longest axis and narrows
 //! the ray to the first hit, so the far child only tests what could be nearer.
 
 use std::any::Any;
@@ -12,9 +11,7 @@ use super::{
     UnboundCollection, PLANE_CROSSED_BY_ERROR,
 };
 
-/// How [`BoundingVolumeHierarchy::create_new_hierarchy`] builds the tree (C#
-/// `BvhCreationOptions`). `BottomUpClustering` and `ParallelBinnedSah` arrive with their
-/// builders.
+/// How [`BoundingVolumeHierarchy::create_new_hierarchy`] builds the tree.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum BvhCreationOptions {
     /// Every item in one flat [`UnboundCollection`]: no build time, slow tracing.
@@ -24,7 +21,7 @@ pub enum BvhCreationOptions {
     LocalOrderClustering,
 }
 
-/// A node of two children and their joint bounds (C# `BoundingVolumeHierarchy`).
+/// A node of two children and their joint bounds.
 pub struct BoundingVolumeHierarchy {
     aabb: AxisAlignedBoundingBox,
     left: TraceableRef,
@@ -59,7 +56,7 @@ impl BoundingVolumeHierarchy {
         &self.right
     }
 
-    /// The tree over `trace_primitives` built as `options` says (C# `CreateNewHierarchy`).
+    /// The tree over `trace_primitives` built as `options` says.
     /// `None` only for an empty list built by `LocalOrderClustering`; a single item is
     /// returned as it is.
     pub fn create_new_hierarchy(
@@ -86,7 +83,7 @@ impl BoundingVolumeHierarchy {
     }
 }
 
-/// True when `info` is a real hit (C# `info != null && info.HitType != IntersectionType.None`).
+/// True when `info` is a real hit: present, with a hit type other than `None`.
 fn is_hit(info: &Option<IntersectInfo<'_>>) -> bool {
     matches!(info, Some(hit) if hit.hit_type != IntersectionType::None)
 }
@@ -186,7 +183,7 @@ impl Traceable for BoundingVolumeHierarchy {
         AxisAlignedBoundingBox::get_intersect_cost()
     }
 
-    /// The near child's hits, then the far child's (C# drops `None` hits as it goes).
+    /// The near child's hits, then the far child's, dropping `None` hits as it goes.
     fn intersection_iterator<'a>(
         &'a self,
         ray: &Ray,

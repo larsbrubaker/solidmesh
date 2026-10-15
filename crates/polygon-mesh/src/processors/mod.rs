@@ -1,10 +1,8 @@
-//! Mesh processors (agg-sharp `PolygonMesh/Processors`). This slice ports STL reading and
-//! writing (`StlProcessing.cs`, split into `stl_processing` for the reader and `stl_writer`)
-//! and `MeshOutputSettings`, plus the face BSP tree (`FaceBspTree.cs`) and the convex hull (`MeshConvexHull.cs`, on a port of
-//! MIConvexHull in `mi_convex_hull`) and `planar_region_simplifier`
-//! (`PlanarRegionSimplifier.cs`, on manifold-rust's ear clipper) and `mesh_helper`'s plane
-//! (`MeshHelper.cs`); the rest of the folder joins in
-//! later Phase 2 slices.
+//! Mesh processors: STL reading (`stl_processing`) and writing (`stl_writer`) with
+//! `mesh_output_settings`, the face BSP tree (`face_bsp_tree`), the convex hull
+//! (`mesh_convex_hull`, built by `mi_convex_hull`, derived from MIConvexHull),
+//! `planar_region_simplifier` (on manifold-rust's ear clipper), `mesh_helper`'s plane, and
+//! turning 2D paths into meshes (`vertex_source_to_mesh`).
 
 pub mod face_bsp_tree;
 pub mod mesh_convex_hull;

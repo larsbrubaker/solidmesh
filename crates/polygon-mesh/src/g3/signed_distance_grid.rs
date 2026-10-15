@@ -1,40 +1,38 @@
-//! geometry3Sharp's `MeshSignedDistanceGrid` (`spatial/MeshSignedDistanceGrid.cs`, Boost Software
-//! License 1.0, after Christopher Batty's public-domain SDFGen) in its default configuration, the
-//! one agg-sharp's implicit booleans (`BooleanProcessing.GetImplicitFunction`) use:
-//! `ComputeMode = NarrowBandOnly`, `ComputeSigns = true`, `InsideMode = ParityCount`,
-//! `ExactBandWidth = 1`, no spatial structure (`make_level_set3_parallel`, then
-//! `compute_intersections` and `compute_signs`). The flood-fill mode `MeshSdfGrid` uses lives in
+//! The signed narrow-band distance grid (derived from geometry3Sharp's mesh signed distance
+//! grid, Boost Software License 1.0, after Christopher Batty's public-domain SDFGen) that the
+//! implicit booleans use: exact distances within one cell of the surface, signs by parity
+//! count along x rays, no spatial structure (`make_level_set3`, then `compute_intersections`
+//! and `compute_signs`). The flood-fill grid `MeshSdfGrid` uses lives in
 //! `mesh_signed_distance_grid`, whose robust `point_in_triangle_2d` this shares.
 //!
-//! C# spreads the triangles over `gParallel.ForEach` with spin-locked grid writes. Each cell
-//! ends at the minimum distance over the triangles whose band covers it and each crossing count
-//! is a sum, so the order the triangles land in cannot change the grid: they run in order on
-//! one thread here.
+//! Each cell ends at the minimum distance over the triangles whose band covers it and each
+//! crossing count is a sum, so the order the triangles are visited in cannot change the grid;
+//! they run in order on one thread.
 
 use super::dmesh3::DMesh3;
 use super::mesh_signed_distance_grid::point_in_triangle_2d;
 use crate::sdf::DenseGrid3f;
 
-/// The signed narrow-band grid (C# `MeshSignedDistanceGrid` after `Compute()`): distances are
+/// The signed narrow-band grid: distances are
 /// exact within a cell of the surface, `±upper_bound` elsewhere, negative inside.
 pub(crate) struct SignedDistanceGrid {
-    /// C# `Grid`.
+    /// The distance values.
     pub(crate) grid: DenseGrid3f,
-    /// C# `GridOrigin`.
+    /// The world position of cell (0, 0, 0).
     pub(crate) grid_origin: [f32; 3],
-    /// C# `CellSize`.
+    /// The edge length of a cell.
     pub(crate) cell_size: f32,
 }
 
-/// C# `ExactBandWidth`'s default.
+/// How many cells from a triangle get exact distances.
 const EXACT_BAND: i32 = 1;
 
 impl SignedDistanceGrid {
-    /// C# `new MeshSignedDistanceGrid(mesh, cellSize)` then `Compute()`.
+    /// Computes the grid for `mesh` with cells of `cell_size`.
     pub(crate) fn compute(mesh: &DMesh3, cell_size: f64) -> Self {
         let cell_size = cell_size as f32;
         let bounds = mesh.cached_bounds();
-        // C# `fBufferWidth = 2 * ExactBandWidth * CellSize` (float); `ExpandBounds` is zero.
+        // Pad by two exact bands (in float) so the band never touches the grid's edge.
         let buffer_width = (2 * EXACT_BAND) as f32 * cell_size;
         let origin: [f32; 3] = std::array::from_fn(|a| bounds.min[a] as f32 - buffer_width);
         let max: [f32; 3] = std::array::from_fn(|a| bounds.max[a] as f32 + buffer_width);
@@ -57,7 +55,7 @@ impl SignedDistanceGrid {
     }
 }
 
-/// C# `make_level_set3_parallel` with `ComputeSigns = true` in `NarrowBandOnly` mode.
+/// The exact distances near each triangle, then the crossing counts and signs.
 fn make_level_set3(
     mesh: &DMesh3,
     origin: [f32; 3],
@@ -66,7 +64,7 @@ fn make_level_set3(
     nj: usize,
     nk: usize,
 ) -> DenseGrid3f {
-    // C# `upper_bound`: `(float)((ni + nj + nk) * CellSize)`.
+    // The upper bound: (ni + nj + nk) cells, in float.
     let upper_bound = (ni + nj + nk) as i32 as f32 * dx;
     let mut distances = DenseGrid3f::new(ni, nj, nk, upper_bound);
     let mut intersection_count = vec![0i32; ni * nj * nk];
@@ -99,7 +97,7 @@ fn make_level_set3(
         for k in k0..=k1 {
             for j in j0..=j1 {
                 for i in i0..=i1 {
-                    // C# builds the cell centre in float, then widens it.
+                    // The cell centre is built in float, then widened, like the grid origin.
                     let gx = [
                         (i as f32 * dx + origin[0]) as f64,
                         (j as f32 * dx + origin[1]) as f64,
@@ -120,7 +118,7 @@ fn make_level_set3(
     distances
 }
 
-/// C# `compute_intersections` in `ParityCount` mode: each triangle crossed by an x-ray through
+/// Crossing counts: each triangle crossed by an x-ray through
 /// grid node (j, k) adds one to the cell where it crosses, minus one when it faces +x.
 fn compute_intersections(
     mesh: &DMesh3,
@@ -135,7 +133,7 @@ fn compute_intersections(
     let invdx = 1.0 / dx as f64;
     for tid in 0..mesh.triangle_count() {
         let [xp, xq, xr] = mesh.get_tri_vertices(tid);
-        // C# `MathUtil.FastNormalDirection`: (q - p) x (r - p), only its x is read.
+        // (q - p) x (r - p), only its x is read.
         let e1 = [xq[0] - xp[0], xq[1] - xp[1], xq[2] - xp[2]];
         let e2 = [xr[0] - xp[0], xr[1] - xp[1], xr[2] - xp[2]];
         let neg_x = e1[1] * e2[2] - e1[2] * e2[1] > 0.0;
@@ -185,7 +183,7 @@ fn compute_intersections(
     }
 }
 
-/// C# `compute_signs` in `ParityCount` mode: along each x row a positive running count is inside.
+/// Signs: along each x row a positive running count is inside.
 fn compute_signs(
     ni: usize,
     nj: usize,
@@ -207,12 +205,12 @@ fn compute_signs(
     }
 }
 
-/// g3 `MathUtil.Min(a, b, c)`.
+/// The smallest of three values.
 fn min3(a: f64, b: f64, c: f64) -> f64 {
     a.min(b).min(c)
 }
 
-/// g3 `MathUtil.Max(a, b, c)`.
+/// The largest of three values.
 fn max3(a: f64, b: f64, c: f64) -> f64 {
     a.max(b).max(c)
 }
@@ -225,23 +223,23 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// g3 `Vector3d.Distance`.
+/// The distance between two points.
 fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
-/// C# `point_segment_distance` (double): distance from `x0` to segment `x1`-`x2`.
+/// Distance (in double) from `x0` to segment `x1`-`x2`.
 fn point_segment_distance(x0: [f64; 3], x1: [f64; 3], x2: [f64; 3]) -> f64 {
     let dx = sub(x2, x1);
     let m2 = dot(dx, dx);
-    // C# clamps with two ifs; `clamp` matches it, NaN included.
+    // Clamp to the segment; a NaN parameter (a zero-length segment) stays NaN.
     let s12 = (dot(dx, sub(x2, x0)) / m2).clamp(0.0, 1.0);
     let p = std::array::from_fn(|a| s12 * x1[a] + (1.0 - s12) * x2[a]);
     distance(x0, p)
 }
 
-/// C# `point_triangle_distance` (double): distance from `x0` to triangle `x1`-`x2`-`x3`.
+/// Distance (in double) from `x0` to triangle `x1`-`x2`-`x3`.
 fn point_triangle_distance(x0: [f64; 3], x1: [f64; 3], x2: [f64; 3], x3: [f64; 3]) -> f64 {
     // Barycentric coordinates of the closest point on the infinite plane.
     let x13 = sub(x1, x3);

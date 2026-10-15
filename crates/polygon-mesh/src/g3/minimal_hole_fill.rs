@@ -1,11 +1,11 @@
-//! geometry3Sharp `mesh_ops/MinimalHoleFill.cs`: fills a boundary loop with a "minimal"
+//! Minimal hole fill (derived from geometry3Sharp): fills a boundary loop with a "minimal"
 //! surface. A simple fan fill (`simple_hole_filler`) is extracted as a submesh
 //! (`region_operator`), remeshed to a working density (`remesher_pro`), collapsed back down to
 //! a minimal mesh, then improved by edge flips that flatten it, reduce Gaussian curvature
 //! (recovering sharp edges) and improve triangle aspect ratios, before being spliced back.
 //!
-//! C#'s `HashSet<int>` edge sets are only added to and cleared, so they enumerate in
-//! insertion order; [`OrderedSet`] keeps that order, which decides the flip order.
+//! The edge sets are only added to and cleared, and their order decides the flip order, so
+//! [`OrderedSet`] keeps insertion order and the fill is the same on every run.
 
 use std::collections::{HashMap, HashSet};
 
@@ -23,7 +23,7 @@ use super::remesher_pro::RemesherPro;
 use super::simple_hole_filler::SimpleHoleFiller;
 use super::vector3d::{aspect_ratio, distance, dot, EPSILONF, TWO_PI, ZERO_TOLERANCEF};
 
-/// A C# `HashSet<int>` that is only added to and cleared: enumerates in insertion order.
+/// A set of ids that is only added to and cleared: enumerates in insertion order.
 #[derive(Debug, Default)]
 struct OrderedSet {
     order: Vec<i32>,
@@ -55,16 +55,16 @@ impl OrderedSet {
     }
 }
 
-/// g3 `MinimalHoleFill`.
+/// The minimal hole fill's settings and its result.
 #[derive(Debug, Clone)]
 pub(crate) struct MinimalHoleFill {
     pub(crate) ignore_boundary_triangles: bool,
     pub(crate) optimize_developability: bool,
     pub(crate) optimize_triangles: bool,
     pub(crate) developability_tolerance: f64,
-    /// C# `FillVertices`: final fill vertices (should be empty?)
+    /// Final fill vertices (should be empty?)
     pub(crate) fill_vertices: Vec<i32>,
-    /// C# `FillTriangles`: final fill triangles.
+    /// Final fill triangles.
     pub(crate) fill_triangles: Vec<i32>,
 }
 
@@ -81,7 +81,7 @@ impl Default for MinimalHoleFill {
     }
 }
 
-/// The per-fill state C# keeps in fields: the angle each boundary vertex already has in the
+/// The per-fill curvature state: the angle each boundary vertex already has in the
 /// base mesh outside the fill, and the cached Gaussian curvature per fill vertex.
 struct Curvature {
     exterior_angle_sums: HashMap<i32, f64>,
@@ -89,7 +89,8 @@ struct Curvature {
 }
 
 impl Curvature {
-    /// C# `compute_gauss_curvature`.
+    /// The Gaussian curvature (angle defect) at `vid`, counting the base mesh's angle outside
+    /// the fill.
     fn compute_gauss_curvature(&self, fillmesh: &DMesh3, vid: i32) -> f64 {
         let mut angle_sum = self.exterior_angle_sums.get(&vid).copied().unwrap_or(0.0);
         for tid in fillmesh.vtx_triangles(vid) {
@@ -100,12 +101,12 @@ impl Curvature {
         angle_sum - TWO_PI
     }
 
-    /// C# `update_curvature`.
+    /// Refreshes the cached curvature of `vid`.
     fn update_curvature(&mut self, fillmesh: &DMesh3, vid: i32) {
         self.curvatures[vid as usize] = self.compute_gauss_curvature(fillmesh, vid);
     }
 
-    /// C# `curvature_metric_cached`.
+    /// The summed absolute curvature of the flip quad `a, b, c, d`, from the cache.
     fn metric_cached(&self, a: i32, b: i32, c: i32, d: i32) -> f64 {
         let defect_a = self.curvatures[a as usize];
         let defect_b = self.curvatures[b as usize];
@@ -114,7 +115,7 @@ impl Curvature {
         defect_a.abs() + defect_b.abs() + defect_c.abs() + defect_d.abs()
     }
 
-    /// C# `curvature_metric_eval`.
+    /// The summed absolute curvature of the flip quad `a, b, c, d`, computed afresh.
     fn metric_eval(&self, fillmesh: &DMesh3, a: i32, b: i32, c: i32, d: i32) -> f64 {
         let defect_a = self.compute_gauss_curvature(fillmesh, a);
         let defect_b = self.compute_gauss_curvature(fillmesh, b);
@@ -131,7 +132,7 @@ impl Curvature {
     }
 }
 
-/// C# `add_all_edges`: the edges of both triangles on `ei`.
+/// The edges of both triangles on `ei`.
 fn add_all_edges(fillmesh: &DMesh3, ei: i32, edge_set: &mut OrderedSet) {
     let et = fillmesh.get_edge_t(ei);
     for t in et {
@@ -141,7 +142,7 @@ fn add_all_edges(fillmesh: &DMesh3, ei: i32, edge_set: &mut OrderedSet) {
     }
 }
 
-/// C# `aspect_metric`: the flipped pair's total aspect deviation over the current pair's.
+/// The flipped pair's total aspect deviation over the current pair's.
 fn aspect_metric(fillmesh: &DMesh3, eid: i32) -> f64 {
     let (ta, tb, ota, otb) = get_edge_flip_tris(fillmesh, eid);
     let aspect = |t: [i32; 3]| {
@@ -160,11 +161,11 @@ fn aspect_metric(fillmesh: &DMesh3, eid: i32) -> f64 {
     metric_cd / metric_ab
 }
 
-/// C# `remove_remaining_interior_verts`: sometimes, for some reason, we have a remaining
+/// Sometimes, for some reason, we have a remaining
 /// interior vertex (have only ever seen one?). Try to force removal of such vertices, even if
 /// it makes ugly mesh.
 fn remove_remaining_interior_verts(fillmesh: &mut DMesh3) {
-    // C#'s HashSet: built once, then only removed from, so it keeps the build order.
+    // Built once, then only removed from, so it keeps the build (id) order.
     let mut interiorv = interior_vertices(fillmesh);
     let mut prev_count = 0;
     while !interiorv.is_empty() && interiorv.len() != prev_count {
@@ -184,12 +185,12 @@ fn remove_remaining_interior_verts(fillmesh: &mut DMesh3) {
             }
         }
     }
-    // C# `Util.gBreakToDebugger()` when some remain: nothing in a release build.
+    // Any vertex left here stays: the fill is still a valid mesh, only less tidy.
 }
 
 impl MinimalHoleFill {
-    /// C# `Apply()` for `new MinimalHoleFill(mesh, fillLoop)`. `Err` carries an exception C#
-    /// would throw out of the fill (a broken-topology flip, a refused back-out).
+    /// Fills `fill_loop` in `mesh`. `Err` carries a failure inside the fill (a broken-topology
+    /// flip, a refused back-out).
     pub(crate) fn apply(
         &mut self,
         mesh: &mut DMesh3,
@@ -211,7 +212,7 @@ impl MinimalHoleFill {
         }
 
         // try to guess a reasonable edge length that will give us enough geometry to work with
-        // in simplify pass (C# measures the loop on the base mesh after extracting the region,
+        // in simplify pass (the loop is measured on the base mesh after extracting the region,
         // which does not change it)
         let loop_stats = edge_length_stats_from_edges(mesh, fill_loop.edges.iter().copied());
 

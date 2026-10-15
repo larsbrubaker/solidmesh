@@ -1,6 +1,5 @@
-//! g3's point-triangle distance (`MeshQueries.TriDistanceSqr` and
-//! `DistPoint3Triangle3.DistanceSqr`, which are the same computation), used by
-//! [`super::DMeshAABBTree3`] and the signed distance grids.
+//! The point-triangle distance (derived from geometry3Sharp; Eberly's region walk), used by
+//! [`super::DMeshAABBTree3`], the signed distance grids and the mesh projection target.
 
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
@@ -10,8 +9,7 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// g3 `MeshQueries.TriDistanceSqr` / `DistPoint3Triangle3.DistanceSqr` (Eberly's region walk):
-/// the squared distance from `point` to the triangle `v`.
+/// The squared distance from `point` to the triangle `v`.
 pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     let diff = sub(v[0], point);
     let edge0 = sub(v[1], v[0]);
@@ -139,7 +137,7 @@ pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
         }
     }
 
-    // C# `if (sqrDistance < 0) sqrDistance = 0` (NaN passes through, as in C#).
+    // Rounding can leave a tiny negative; clamp it to zero (NaN passes through).
     if sqr_distance < 0.0 {
         0.0
     } else {
@@ -147,10 +145,9 @@ pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     }
 }
 
-/// g3 `DistPoint3Triangle3.DistanceSqr(point, triangle, out closestPoint, out baryCoords)`: the
-/// squared distance from `point` to the triangle `v` and the triangle's point nearest to it,
-/// which `MeshProjectionTarget.Project` (`mesh_projection_target.rs`) returns. The same region
-/// walk as [`tri_distance_sqr`], also tracking the parameters `s`, `t` of that point.
+/// The squared distance from `point` to the triangle `v` and the triangle's point nearest to
+/// it, which `MeshProjectionTarget::project` (`mesh_projection_target.rs`) returns. The same
+/// region walk as [`tri_distance_sqr`], also tracking the parameters `s`, `t` of that point.
 pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, [f64; 3]) {
     let diff = sub(v[0], point);
     let edge0 = sub(v[1], v[0]);
@@ -310,13 +307,13 @@ pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, 
         }
     }
 
-    // C# `triangle.V0 + s * edge0 + t * edge1`, left to right.
+    // `v0 + s * edge0 + t * edge1`, added left to right.
     let closest = [
         v[0][0] + s * edge0[0] + t * edge1[0],
         v[0][1] + s * edge0[1] + t * edge1[1],
         v[0][2] + s * edge0[2] + t * edge1[2],
     ];
-    // C# `Math.Max(sqrDistance, 0)` (NaN propagates, as .NET's Math.Max does).
+    // Rounding can leave a tiny negative; clamp it to zero (NaN propagates).
     let sqr_distance = if sqr_distance.is_nan() || sqr_distance >= 0.0 {
         sqr_distance
     } else {

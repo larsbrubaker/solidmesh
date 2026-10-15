@@ -1,5 +1,4 @@
 //! Whole-mesh measurements: enclosed volume and total surface area, in the mesh's own units.
-//! Ports agg-sharp `PolygonMesh/MeshMeasure.cs` as `Mesh` methods.
 
 use vector_math::{Matrix4X4, Vector3};
 

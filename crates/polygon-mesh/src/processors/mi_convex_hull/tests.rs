@@ -1,7 +1,7 @@
-//! Rust-only checks that the MIConvexHull port emits the same faces, in the same order and
-//! winding, as NuGet `MIConvexHull 1.1.19.1019` (`ConvexHull.Create<TVertex, TFace>(points, .01)`,
-//! the call `MeshConvexHull` makes). Expected strings were printed by a .NET 10 console app over
-//! the same point sets; each face is its vertices' indices into the input.
+//! Checks that the convex hull emits the same faces, in the same order and winding, as the
+//! MIConvexHull 1.1.19.1019 release with tolerance .01 (the call `mesh_convex_hull` makes).
+//! Expected strings come from that release run over the same point sets; each face is its
+//! vertices' indices into the input.
 
 use super::{create, ConvexHullAlgorithm};
 
@@ -135,7 +135,7 @@ fn cube_surface_grid(n: usize) -> Vec<[f64; 3]> {
 
 #[test]
 fn rust_only_bounding_box_points_are_distinct_in_first_seen_order() {
-    // C# `Distinct()`: x minima, x maxima, then y and z extremes not already seen.
+    // X minima, x maxima, then y and z extremes not already seen.
     let points = [
         [0.0, 0.0, 0.0],
         [1.0, 1.0, 1.0],

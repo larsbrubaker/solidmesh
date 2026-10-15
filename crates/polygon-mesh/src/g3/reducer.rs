@@ -1,4 +1,4 @@
-//! geometry3Sharp `Reducer` (`mesh/Reducer.cs`): mesh simplification by Garland & Heckbert's
+//! The reducer (derived from geometry3Sharp): mesh simplification by Garland & Heckbert's
 //! Quadric Error Metric. Each vertex carries the area-weighted quadric of its triangles' planes
 //! (`quadric_error.rs`); every edge is queued (`index_priority_queue.rs`) by the error of
 //! collapsing it to the point that minimizes the sum of its two vertices' quadrics, and the
@@ -8,14 +8,11 @@
 //! points are projected back onto the original surface, inline or after the pass. MatterCAD's
 //! Reduce operation (`DecimateObject3D`) runs it through [`crate::Mesh::reduced_to_triangle_count`].
 //!
-//! C#'s operation order is kept, and the initial queue is filled in the order .NET's
-//! `Array.Sort(edgeErrors, indices)` leaves tied errors in (`vector_math::cs_sort`), since
-//! the order ties are queued in decides which edges collapse. The parallel loops of C#
-//! (`gParallel`) write disjoint slots and run sequentially here. Not ported: the profiling
-//! stopwatches (`ENABLE_PROFILING`), the debugger hooks (`DebugEdges`, `ENABLE_DEBUG_CHECKS`), and
-//! the subclass hooks no ported type overrides (`OnEdgeCollapse`, `start_edges`/`next_edge`, which
-//! the Reducer itself never calls). g3's `Cancelled()` is always false on this path (see
-//! `mesh_refiner_base.rs`), so its checks are left out.
+//! The arithmetic order is fixed, and the initial queue is filled from an introsort of the edge
+//! errors (`vector_math::cs_sort`), whose order for tied errors is fixed too: the order ties
+//! are queued in decides which edges collapse, so Reduce gives the same mesh on every run. The
+//! per-vertex and per-edge setup loops write disjoint slots and run sequentially. There is no
+//! cancel check: nothing that runs the reducer interrupts it.
 
 use std::cmp::Ordering;
 
@@ -27,8 +24,8 @@ use super::mesh_refiner_base::MeshRefinerBase;
 use super::quadric_error::QuadricError;
 use super::vector3d::{add, cross, distance_squared, scale, sub, EPSILON};
 
-/// C# `Reducer.TargetProjectionMode`: how a projection target is used.
-#[allow(dead_code)] // `NoProjection` is geometry3Sharp API no ported caller selects
+/// How a projection target is used.
+#[allow(dead_code)] // no caller selects `NoProjection` yet
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TargetProjectionMode {
     /// Disable projection.
@@ -40,7 +37,7 @@ pub(crate) enum TargetProjectionMode {
     Inline,
 }
 
-/// C# `Reducer.TargetModes`.
+/// What the reduce counts toward its target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TargetModes {
     TriangleCount,
@@ -48,8 +45,8 @@ enum TargetModes {
     MinEdgeLength,
 }
 
-/// C# `Reducer.ProcessResult`.
-#[allow(dead_code)] // the variants C# names but no path here returns are kept for parity
+/// The outcome of one edge collapse attempt.
+#[allow(dead_code)] // the full set of outcomes, though no path returns some of them yet
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ProcessResult {
     OkCollapsed,
@@ -62,14 +59,14 @@ pub(crate) enum ProcessResult {
     FailedNotAnEdge,
 }
 
-/// C# `Reducer.QEdge`: an edge's summed quadric and its collapse point.
+/// An edge's summed quadric and its collapse point.
 #[derive(Debug, Clone, Copy, Default)]
 struct QEdge {
     q: QuadricError,
     collapse_pt: [f64; 3],
 }
 
-/// C# `Reducer`.
+/// The quadric-error reducer over one mesh.
 pub(crate) struct Reducer<'a, 't> {
     pub(crate) base: MeshRefinerBase<'a>,
     target: Option<&'t dyn ProjectionTarget>,
@@ -91,13 +88,13 @@ pub(crate) struct Reducer<'a, 't> {
     is_boundary_vtx_cache: Vec<bool>,
 }
 
-/// C# `MathUtil.FastNormalArea`: the unit normal and the area of triangle `v1 v2 v3`.
+/// The unit normal and the area of triangle `v1 v2 v3`.
 fn fast_normal_area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> ([f64; 3], f64) {
     let edge1 = sub(v2, v1);
     let edge2 = sub(v3, v1);
     let v_cross = cross(edge1, edge2);
-    // C# `Vector3d.Normalize()`: normalizes in place and returns the length (zero, with a zero
-    // vector, at or below `MathUtil.Epsilon`).
+    // Normalizes in place and returns the length (zero, with a zero
+    // vector, at or below the double epsilon).
     let length =
         (v_cross[0] * v_cross[0] + v_cross[1] * v_cross[1] + v_cross[2] * v_cross[2]).sqrt();
     if length > EPSILON {
@@ -113,7 +110,8 @@ fn fast_normal_area(v1: [f64; 3], v2: [f64; 3], v3: [f64; 3]) -> ([f64; 3], f64)
     }
 }
 
-/// .NET `Math.Min(double, double)`: NaN if either is NaN.
+/// The smaller of two doubles, NaN if either is NaN (so a NaN error is never mistaken for
+/// the cheapest).
 fn cs_min(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
@@ -124,8 +122,8 @@ fn cs_min(a: f64, b: f64) -> f64 {
     }
 }
 
-/// .NET `Array.Sort(float[] keys, int[] items)`: NaN keys moved to the front in order
-/// (`SortUtils.MoveNansToFront`), then .NET's introsort over the rest.
+/// Sorts `items` by `keys`: NaN keys move to the front in order, then an introsort orders
+/// the rest, with its fixed placement of tied keys.
 fn cs_sort_keys_and_items(keys: &mut [f32], items: &mut [i32]) {
     let mut pairs: Vec<(f32, i32)> = keys.iter().copied().zip(items.iter().copied()).collect();
     let mut left = 0;
@@ -145,7 +143,7 @@ fn cs_sort_keys_and_items(keys: &mut [f32], items: &mut [i32]) {
 }
 
 impl<'a, 't> Reducer<'a, 't> {
-    /// C# `new Reducer(mesh)`.
+    /// A reducer over `mesh`, with no target and no projection.
     pub(crate) fn new(mesh: &'a mut DMesh3) -> Self {
         Self {
             base: MeshRefinerBase::new(mesh),
@@ -164,12 +162,12 @@ impl<'a, 't> Reducer<'a, 't> {
         }
     }
 
-    /// C# `SetProjectionTarget`.
+    /// Sets the surface collapsed points are projected back onto.
     pub(crate) fn set_projection_target(&mut self, target: &'t dyn ProjectionTarget) {
         self.target = Some(target);
     }
 
-    /// C# `Mesh`.
+    /// The mesh being reduced.
     pub(crate) fn mesh(&self) -> &DMesh3 {
         self.base.mesh
     }
@@ -178,7 +176,7 @@ impl<'a, 't> Reducer<'a, 't> {
         self.projection_mode == TargetProjectionMode::Inline
     }
 
-    /// C# `DoReduce`: collapse the cheapest edges until the target is reached.
+    /// Collapse the cheapest edges until the target is reached.
     pub(crate) fn do_reduce(&mut self) {
         if self.base.mesh.triangle_count() == 0 {
             // badness if we don't catch this...
@@ -215,7 +213,7 @@ impl<'a, 't> Reducer<'a, 't> {
         self.reproject();
     }
 
-    /// C# `ReduceToTriangleCount`.
+    /// Reduces until at most `n_count` triangles remain (at least one).
     pub(crate) fn reduce_to_triangle_count(&mut self, n_count: i32) {
         self.reduce_mode = TargetModes::TriangleCount;
         self.target_count = n_count.max(1);
@@ -223,8 +221,8 @@ impl<'a, 't> Reducer<'a, 't> {
         self.do_reduce();
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `ReduceToVertexCount`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Reduces until at most `n_count` vertices remain (at least three).
     pub(crate) fn reduce_to_vertex_count(&mut self, n_count: i32) {
         self.reduce_mode = TargetModes::VertexCount;
         self.target_count = n_count.max(3);
@@ -232,8 +230,8 @@ impl<'a, 't> Reducer<'a, 't> {
         self.do_reduce();
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `ReduceToEdgeLength`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Collapses edges shorter than `min_edge_len`, cheapest first.
     pub(crate) fn reduce_to_edge_length(&mut self, min_edge_len: f64) {
         self.reduce_mode = TargetModes::MinEdgeLength;
         self.target_count = 1;
@@ -241,8 +239,8 @@ impl<'a, 't> Reducer<'a, 't> {
         self.do_reduce();
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `FastCollapsePass`: collapse every interior edge shorter than `f_min_edge_length` to
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Collapse every interior edge shorter than `f_min_edge_length` to
     /// its midpoint, up to `n_rounds` times or until a round collapses nothing.
     pub(crate) fn fast_collapse_pass(
         &mut self,
@@ -294,7 +292,7 @@ impl<'a, 't> Reducer<'a, 't> {
         self.reproject();
     }
 
-    /// C# `InitializeVertexQuadrics`: each vertex's quadric is the area-weighted sum of its
+    /// Each vertex's quadric is the area-weighted sum of its
     /// triangles' plane quadrics.
     fn initialize_vertex_quadrics(&mut self) {
         let mesh = &*self.base.mesh;
@@ -303,7 +301,7 @@ impl<'a, 't> Reducer<'a, 't> {
         let mut tri_areas = vec![0.0f64; nt];
         for tid in 0..nt {
             if mesh.is_triangle(tid as i32) {
-                // C# `GetTriInfo`: the centroid, then `FastNormalArea`.
+                // The centroid, then the unit normal and area.
                 let [v0, v1, v2] = mesh.get_tri_vertices(tid);
                 let c = scale(add(add(v0, v1), v2), 1.0 / 3.0);
                 let (n, area) = fast_normal_area(v0, v1, v2);
@@ -324,7 +322,7 @@ impl<'a, 't> Reducer<'a, 't> {
         self.vert_quadrics = vert_quadrics;
     }
 
-    /// C# `InitializeQueue`: score every edge, then queue them in error order (a sorted insert
+    /// Score every edge, then queue them in error order (a sorted insert
     /// is faster).
     fn initialize_queue(&mut self) {
         let max_eid = self.base.mesh.max_edge_id();
@@ -362,7 +360,7 @@ impl<'a, 't> Reducer<'a, 't> {
         }
     }
 
-    /// C# `OptimalPoint`: the point that minimizes quadric error `q` for edge `[ea, eb]`.
+    /// The point that minimizes quadric error `q` for edge `[ea, eb]`.
     fn optimal_point(&self, eid: i32, q: &QuadricError, ea: i32, eb: i32) -> [f64; 3] {
         let mesh = &*self.base.mesh;
         // if we would like to preserve boundary, we need to know that here so that we properly
@@ -396,7 +394,7 @@ impl<'a, 't> Reducer<'a, 't> {
         let fa = q.evaluate(va);
         let fb = q.evaluate(vb);
         let fc = q.evaluate(c);
-        // C# `MathUtil.Min(fa, fb, fc)` = `Math.Min(fa, Math.Min(fb, fc))`
+        // The minimum of the three, NaN-propagating
         let m = cs_min(fa, cs_min(fb, fc));
         if m == fa {
             va
@@ -414,7 +412,7 @@ impl<'a, 't> Reducer<'a, 't> {
         }
     }
 
-    /// C# `UpdateNeighbours`: re-score every edge in `vid`'s one-ring.
+    /// Re-score every edge in `vid`'s one-ring.
     fn update_neighbours(&mut self, vid: i32) {
         for eid in self.base.mesh.vtx_edges(vid) {
             let [a, b] = self.base.mesh.get_edge_v(eid);
@@ -436,14 +434,14 @@ impl<'a, 't> Reducer<'a, 't> {
         }
     }
 
-    /// C# `Reproject`.
+    /// Projects every vertex back onto the target when projection runs after the pass.
     fn reproject(&mut self) {
         if self.target.is_some() && self.projection_mode == TargetProjectionMode::AfterRefinement {
             self.full_projection_pass();
         }
     }
 
-    /// C# `Precompute`: which vertices are on the boundary (none if the mesh is known closed).
+    /// Which vertices are on the boundary (none if the mesh is known closed).
     fn precompute(&mut self, b_mesh_is_closed: bool) {
         self.have_boundary = false;
         self.is_boundary_vtx_cache = vec![false; self.base.mesh.max_vertex_id() as usize];
@@ -462,7 +460,7 @@ impl<'a, 't> Reducer<'a, 't> {
         self.is_boundary_vtx_cache[vid as usize]
     }
 
-    /// C# `CollapseEdge`: collapse `edge_id` with its new vertex at `v_new_pos` (or at a fixed or
+    /// Collapse `edge_id` with its new vertex at `v_new_pos` (or at a fixed or
     /// boundary end), unless a constraint, the edge length or a normal flip forbids it. The
     /// second value is the kept vertex (`INVALID_ID` unless collapsed).
     fn collapse_edge(&mut self, edge_id: i32, mut v_new_pos: [f64; 3]) -> (ProcessResult, i32) {
@@ -571,7 +569,7 @@ impl<'a, 't> Reducer<'a, 't> {
         (ret_val, collapse_to_v)
     }
 
-    /// C# `get_projected_collapse_position`: the new vertex's position under `vid`'s vertex
+    /// The new vertex's position under `vid`'s vertex
     /// constraint. (Inline projection onto the target already happened in `optimal_point`.)
     fn get_projected_collapse_position(&self, vid: i32, v_new_pos: [f64; 3]) -> [f64; 3] {
         if let Some(constraints) = &self.base.constraints {
@@ -586,7 +584,7 @@ impl<'a, 't> Reducer<'a, 't> {
         v_new_pos
     }
 
-    /// C# `FullProjectionPass`: project every unconstrained vertex onto the target.
+    /// Project every unconstrained vertex onto the target.
     fn full_projection_pass(&mut self) {
         let Some(target) = self.target else {
             return;
@@ -604,10 +602,11 @@ impl<'a, 't> Reducer<'a, 't> {
 }
 
 impl crate::Mesh {
-    /// The geometry of MatterCAD's `DecimateObject3D.Reduce(inMesh, targetCount)`: `ToDMesh3`,
-    /// a `Reducer` reducing to `target_count` triangles - with "Maintain Surface"
+    /// The geometry of the Reduce operation (`DecimateObject3D`): the mesh as a `DMesh3`, a
+    /// `Reducer` reducing to `target_count` triangles - with "Maintain Surface"
     /// (`maintain_surface`), projecting every collapse inline onto a copy of the original mesh
-    /// through its `DMeshAABBTree3` - then `ToMesh`. The caller applies Reduce's floor of 4.
+    /// through its `DMeshAABBTree3` - then back to a `Mesh`. The caller applies Reduce's floor
+    /// of 4.
     pub fn reduced_to_triangle_count(&self, target_count: i32, maintain_surface: bool) -> Self {
         let mut mesh = self.to_dmesh3();
         if maintain_surface {

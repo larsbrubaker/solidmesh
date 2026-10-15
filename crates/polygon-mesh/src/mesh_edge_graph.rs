@@ -1,10 +1,9 @@
-//! A mesh's unique edges and the faces on each, plus the per-vertex face lists. Ports agg-sharp
-//! `PolygonMesh/MeshEdgeGraph.cs`, `MeshEdge.cs` and `VertexFaceList.cs`.
+//! A mesh's unique edges and the faces on each, plus the per-vertex face lists.
 //!
 //! [`MeshEdgeGraph`] exists because the object-per-edge view ([`MeshEdge`]) is far too
 //! expensive for the outline render path, which walks every edge once and keeps nothing.
-//! Measured in C# on a 5,113,368 face mesh (7,670,061 unique edges), the old
-//! dictionary-of-lists build allocated 2,279 MB and retained 824 MB. Here the whole thing is
+//! On a 5,113,368 face mesh (7,670,061 unique edges) a dictionary-of-lists build allocated
+//! 2,279 MB and retained 824 MB. Here the whole thing is
 //! four arrays and one sort: three (edgeKey, faceIndex) slots per face sorted by key, then a
 //! walk over equal-key runs. Adjacency is stored CSR style: the faces on edge e are
 //! `face_indices[face_starts[e] .. face_starts[e + 1]]`.
@@ -65,7 +64,7 @@ impl MeshEdgeGraph {
         // One slot per face-edge. The key packs the edge's two vertex indices low-first into a
         // single u64 so a plain numeric sort brings every use of the same edge together. The
         // face index rides along as the tie-break, which also leaves every edge's faces in
-        // ascending order (C# sorts unstably and then insertion-sorts each run to get there).
+        // ascending order.
         let mut slots: Vec<(u64, i32)> = Vec::with_capacity(slot_count);
         for (face_index, face) in mesh.faces.iter().enumerate() {
             let face_index = face_index as i32;
@@ -92,7 +91,7 @@ impl MeshEdgeGraph {
     }
 }
 
-/// The two vertex indices packed low-first (C# casts through `uint`).
+/// The two vertex indices packed low-first, each as its unsigned 32-bit pattern.
 fn edge_key(vertex_a: i32, vertex_b: i32) -> u64 {
     let (low, high) = if vertex_a < vertex_b {
         (vertex_a, vertex_b)

@@ -1,12 +1,11 @@
-//! geometry3Sharp `mesh_ops/MeshRepairOrientation.cs`: makes each edge-connected component's
+//! Orientation repair (derived from geometry3Sharp): makes each edge-connected component's
 //! triangles agree in orientation (a flood fill that flips neighbours to match), then, for the
 //! global solve, casts a ray at each triangle from both sides to see whether the component is
 //! mostly seen from outside or inside, and flips the components seen from inside.
 //!
-//! C# sums each component's facing areas from parallel workers under a lock, so the order the
-//! areas are added in (and so the last bits of the sums) varies run to run; here they are
-//! added in triangle order (divergence 791). Progress reporting is not ported: the repair's
-//! reporter has no consumer in the combine.
+//! Each component's facing areas are added in triangle order on one thread, so the sums (and
+//! the flip decisions that rest on them) are the same on every run. There is no progress
+//! reporting: nothing that runs the repair displays it.
 
 use std::collections::HashSet;
 
@@ -15,10 +14,11 @@ use super::dmesh3_queries::find_tri_ordered_edge;
 use super::ray_intersection::Ray3d;
 use super::DMeshAABBTree3;
 
-/// g3 `MathUtil.ZeroTolerancef`, compared against a double area.
+/// The single-precision zero tolerance, compared against a double area: smaller triangles
+/// have no reliable normal and are left out of the vote.
 const ZERO_TOLERANCE_F: f64 = 1e-6f32 as f64;
 
-/// C# `MeshRepairOrientation.Component`.
+/// One edge-connected component and its inward- and outward-facing area totals.
 #[derive(Debug, Clone, Default)]
 struct Component {
     triangles: Vec<i32>,
@@ -26,7 +26,7 @@ struct Component {
     in_facing: f64,
 }
 
-/// g3 `MeshRepairOrientation`.
+/// The orientation repair's components, found once and then solved.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct MeshRepairOrientation {
     components: Vec<Component>,
@@ -37,13 +37,13 @@ impl MeshRepairOrientation {
         Self::default()
     }
 
-    /// C# `OrientComponents`: flood-fills each component from its lowest triangle id,
+    /// Flood-fills each component from its lowest triangle id,
     /// reversing every neighbour that does not run the shared edge the opposite way.
     pub(crate) fn orient_components(&mut self, mesh: &mut DMesh3) {
         self.components.clear();
 
-        // C# `HashSet<int>(TriangleIndices())` with removals only: `First()` is the lowest
-        // remaining id, so a flag per id and a cursor give the same order.
+        // Each flood starts from the lowest remaining triangle id; a flag per id and a cursor
+        // find it without a set.
         let max_tid = mesh.max_triangle_id() as usize;
         let mut remaining = vec![false; max_tid];
         let mut remaining_count = 0;
@@ -88,7 +88,7 @@ impl MeshRepairOrientation {
         }
     }
 
-    /// C# `ComputeStatistics` (`compute_statistics` per component): builds the tree over the
+    /// Computes every component's facing areas. Builds the tree over the
     /// mesh as it is now and drops it before returning, so the mesh can be edited again.
     fn compute_statistics(&mut self, mesh: &DMesh3) {
         let spatial = DMeshAABBTree3::new(mesh);
@@ -106,8 +106,8 @@ impl MeshRepairOrientation {
                 let pos_pt: [f64; 3] = std::array::from_fn(|a| centroid[a] + dist * normal[a]);
                 let neg_pt: [f64; 3] = std::array::from_fn(|a| centroid[a] - dist * normal[a]);
                 let neg_normal = normal.map(|v| -v);
-                // C# throws for a direction that is not normalized; the area check above
-                // keeps zero normals out, so a refusal cannot happen and counts as a miss.
+                // The ray query refuses a direction that is not normalized; the area check
+                // above keeps zero normals out, so a refusal cannot happen and counts as a miss.
                 let hit_pos = spatial
                     .find_nearest_hit_triangle(
                         &Ray3d::new(pos_pt, neg_normal),
@@ -133,12 +133,12 @@ impl MeshRepairOrientation {
         }
     }
 
-    /// C# `SolveGlobalOrientation`: flips the components seen more from inside than outside.
+    /// Flips the components seen more from inside than outside.
     pub(crate) fn solve_global_orientation(&mut self, mesh: &mut DMesh3) {
         self.compute_statistics(mesh);
         for c in &self.components {
             if c.in_facing > c.out_facing {
-                // C# `MeshEditor.ReverseTriangles` (there are no vertex normals to flip here)
+                // Reverse each triangle (there are no vertex normals to flip here)
                 for &tid in &c.triangles {
                     mesh.reverse_tri_orientation(tid);
                 }
@@ -147,7 +147,7 @@ impl MeshRepairOrientation {
     }
 }
 
-/// C# `AxisAlignedBox3d.DiagonalLength` of `CachedBounds`.
+/// The diagonal length of the mesh's cached bounds.
 fn diagonal_length(mesh: &DMesh3) -> f64 {
     let b = mesh.cached_bounds();
     let (dx, dy, dz) = (
@@ -158,7 +158,7 @@ fn diagonal_length(mesh: &DMesh3) -> f64 {
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
-/// C# `DMesh3.GetTriInfo`: `MathUtil.FastNormalArea`'s normal and area, and the centroid.
+/// A triangle's unit normal, area and centroid.
 fn get_tri_info(mesh: &DMesh3, tid: i32) -> ([f64; 3], f64, [f64; 3]) {
     let [v0, v1, v2] = mesh.get_tri_vertices(tid as usize);
     let f = 1.0 / 3.0;
@@ -170,7 +170,7 @@ fn get_tri_info(mesh: &DMesh3, tid: i32) -> ([f64; 3], f64, [f64; 3]) {
         edge1[2] * edge2[0] - edge1[0] * edge2[2],
         edge1[0] * edge2[1] - edge1[1] * edge2[0],
     ];
-    // C# `Vector3d.Normalize()` returns the length it divided by (zero below `Epsilon`)
+    // Normalize, keeping the length divided by (zero below the double epsilon)
     let length = (c[0] * c[0] + c[1] * c[1] + c[2] * c[2]).sqrt();
     let (normal, length) = if length > 2.220_446_049_250_313e-16 {
         let inv = 1.0 / length;

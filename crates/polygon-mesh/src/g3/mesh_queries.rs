@@ -1,12 +1,12 @@
-//! geometry3Sharp `queries/MeshQueries.cs`, the edge-length statistics `MinimalHoleFill` sizes
-//! its remesh with: `EdgeLengthStats` (all edges, or a prime-stride sample) and
-//! `EdgeLengthStatsFromEdges` (a given edge list). The point-triangle distance from the same
-//! C# file is in `tri_distance`.
+//! Mesh queries (derived from geometry3Sharp): the edge-length statistics `MinimalHoleFill` sizes
+//! its remesh with: [`edge_length_stats`] (all edges, or a prime-stride sample) and
+//! [`edge_length_stats_from_edges`] (a given edge list). The point-triangle distance is in
+//! `tri_distance`.
 
 use super::dmesh3::{DMesh3, G3Exception};
 use super::vector3d::distance;
 
-/// Minimum, maximum and average edge length, as C#'s three `out` values.
+/// Minimum, maximum and average edge length.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct EdgeLengthStats {
     pub(crate) min: f64,
@@ -36,10 +36,9 @@ impl EdgeLengthStats {
     }
 }
 
-/// C# `MeshQueries.EdgeLengthStats(mesh, out min, out max, out avg, samples)`. With
+/// The edge-length statistics of `mesh`. With
 /// `samples == 0` every edge id is visited in order; otherwise ids are stepped by 31337 modulo
-/// `MaxEdgeID`. A mesh with `MaxEdgeID == 0` divides by zero in C#, which is returned as an
-/// error here.
+/// `max_edge_id()`. Sampling a mesh with no edge ids would divide by zero, so it is an error.
 pub(crate) fn edge_length_stats(
     mesh: &DMesh3,
     samples: i32,
@@ -76,8 +75,8 @@ pub(crate) fn edge_length_stats(
     Ok(stats)
 }
 
-/// C# `MeshQueries.EdgeLengthStatsFromEdges(mesh, edges, out min, out max, out avg)`: dead edge
-/// ids are skipped; with no live edge the average is NaN (0 / 0), as in C#.
+/// The edge-length statistics of the listed edges. Dead edge ids are skipped; with no live
+/// edge the average is NaN (0 / 0).
 pub(crate) fn edge_length_stats_from_edges(
     mesh: &DMesh3,
     edges: impl IntoIterator<Item = i32>,

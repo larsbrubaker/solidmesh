@@ -1,6 +1,6 @@
-//! A BSP tree over a mesh's faces for back-to-front rendering without a depth buffer: agg-sharp
-//! `PolygonMesh/Processors/FaceBspTree.cs` (`FaceBspTree`, `BspNode`, `BspNodeExtensions`).
-//! Faces are never cut; each node splits on the sampled face that crosses the least.
+//! A BSP tree over a mesh's faces for back-to-front rendering without a depth buffer: the
+//! tree's nodes, building it, and walking it in visibility order. Faces are never cut; each
+//! node splits on the sampled face that crosses the least.
 
 use vector_math::Matrix4X4;
 
@@ -10,7 +10,7 @@ use crate::mesh::Mesh;
 const CONSIDER_COPLANAR: f64 = 0.1;
 
 /// One node: the face it splits on (-1 for an empty leaf) and the faces behind and in front.
-/// A node with a face always has both children (an empty side is a -1 leaf), as in the C#.
+/// A node with a face always has both children (an empty side is a -1 leaf).
 #[derive(Debug, Clone, PartialEq)]
 pub struct BspNode {
     pub back_node: Option<Box<BspNode>>,
@@ -29,7 +29,7 @@ impl Default for BspNode {
 }
 
 /// A node as seen from the camera: its face and its children swapped so `back` is the far side
-/// (C# `RenderOrder`, which returns a fresh node sharing the children).
+/// (a fresh view sharing the node's children, so the tree is never reordered in place).
 #[derive(Debug, Clone, Copy)]
 struct RenderNode<'a> {
     index: i32,
@@ -83,13 +83,13 @@ pub fn create(mesh: &Mesh, max_faces_to_test: usize, try_to_balance_tree: bool) 
     root
 }
 
-/// [`create`] with the C# defaults (10 faces tested, no balancing).
+/// [`create`] with the defaults (10 faces tested, no balancing).
 pub fn create_default(mesh: &Mesh) -> BspNode {
     create(mesh, 10, false)
 }
 
-/// The face indices back to front for the given view (C# `GetFacesInVisibiltyOrder`). An
-/// empty tree (root index -1) yields nothing, where the C# indexes face -1 and throws.
+/// The face indices back to front for the given view. An empty tree (root index -1) yields
+/// nothing.
 pub fn get_faces_in_visibilty_order(
     mesh: &Mesh,
     root: &BspNode,
@@ -254,8 +254,8 @@ fn create_no_splitting_fast(
         }
     }
 
-    // The C# indexes face -1 (and throws) when every candidate overflows to infinity; the
-    // first candidate is the closest non-throwing reading of that.
+    // When every candidate's crossing area overflows to infinity none is picked; the first
+    // candidate is as good a splitter as any then.
     let best_face_index = best_face_index.unwrap_or(0);
 
     // the source faces are 0..n, so a face's index in them is the face index itself

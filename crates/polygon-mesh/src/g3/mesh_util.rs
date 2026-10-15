@@ -1,8 +1,8 @@
-//! geometry3Sharp's `MeshUtil` (`mesh/MeshUtil.cs`): the uniform smoother the `Remesher`
-//! uses, the discrete Gaussian curvature, and the edge-collapse / edge-flip checks and
-//! flip-candidate triangles and normals the hole fillers (`MinimalHoleFill`) use; plus the two
-//! `DMesh3` per-element measures they need (`GetTriInternalAngleR`, `VtxOneRingCentroid` from
-//! `mesh/DMesh3.cs`). Vector arithmetic is in `vector3d`.
+//! Mesh utilities (derived from geometry3Sharp): the uniform smoother the `Remesher` uses, the
+//! discrete Gaussian curvature, and the edge-collapse / edge-flip checks and flip-candidate
+//! triangles and normals the hole fillers (`MinimalHoleFill`) use; plus the two `DMesh3`
+//! per-element measures they need (a triangle's interior angle and a vertex's one-ring
+//! centroid). Vector arithmetic is in `vector3d`.
 
 use super::dmesh3::DMesh3;
 use super::dmesh3_queries::{find_tri_index, orient_tri_edge};
@@ -11,7 +11,7 @@ use super::vector3d::{
 };
 
 impl DMesh3 {
-    /// C# `GetTriInternalAngleR(tID, i)`: the interior angle at corner `i` in radians.
+    /// The interior angle at corner `i` in radians.
     pub(crate) fn get_tri_internal_angle_r(&self, tid: i32, i: i32) -> f64 {
         let t = self.triangles[tid as usize];
         let a = self.vertices[t[0] as usize];
@@ -26,7 +26,7 @@ impl DMesh3 {
         }
     }
 
-    /// C# `VtxOneRingCentroid`: the mean of the one-ring neighbours (zero for a dead or
+    /// The mean of the one-ring neighbours (zero for a dead or
     /// isolated vertex), summed in the vertex's edge-list order.
     pub(crate) fn vtx_one_ring_centroid(&self, vid: i32) -> [f64; 3] {
         let mut centroid = [0.0; 3];
@@ -50,7 +50,7 @@ impl DMesh3 {
     }
 }
 
-/// C# `MeshUtil.UniformSmooth`: `(1-t) v + t c` with `c` the one-ring centroid, `t` in [0,1].
+/// `(1-t) v + t c` with `c` the one-ring centroid, `t` in [0,1].
 pub(crate) fn uniform_smooth(mesh: &DMesh3, vid: i32, t: f64) -> [f64; 3] {
     let mut v = mesh.vertex(vid);
     let c = mesh.vtx_one_ring_centroid(vid);
@@ -61,8 +61,8 @@ pub(crate) fn uniform_smooth(mesh: &DMesh3, vid: i32, t: f64) -> [f64; 3] {
     v
 }
 
-#[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-/// C# `MeshUtil.DiscreteGaussCurvature`: the sum of the interior angles around `vid`, minus
+#[allow(dead_code)] // mesh API only the tests call so far
+/// The sum of the interior angles around `vid`, minus
 /// 2 pi; zero on flat areas.
 pub(crate) fn discrete_gauss_curvature(mesh: &DMesh3, vid: i32) -> f64 {
     let mut angle_sum = 0.0;
@@ -74,7 +74,7 @@ pub(crate) fn discrete_gauss_curvature(mesh: &DMesh3, vid: i32) -> f64 {
     angle_sum - TWO_PI
 }
 
-/// C# `MeshUtil.CheckIfCollapseCreatesFlip`: would collapsing `edge_id` to `newv` flip the
+/// Would collapsing `edge_id` to `newv` flip the
 /// normal of any surrounding triangle (or hit an invalid neighbourhood)?
 pub(crate) fn check_if_collapse_creates_flip(mesh: &DMesh3, edge_id: i32, newv: [f64; 3]) -> bool {
     let edge_info = mesh.get_edge(edge_id);
@@ -109,8 +109,7 @@ pub(crate) fn check_if_collapse_creates_flip(mesh: &DMesh3, edge_id: i32, newv: 
                 let nnew = cross(sub(vb, va), sub(newv, va));
                 dot(ncur, nnew)
             } else {
-                // C# throws "should never be here!": vtx_triangles only yields triangles
-                // that contain vid.
+                // vtx_triangles only yields triangles that contain vid.
                 unreachable!("vtx_triangles yielded a triangle without its vertex")
             };
 
@@ -122,7 +121,7 @@ pub(crate) fn check_if_collapse_creates_flip(mesh: &DMesh3, edge_id: i32, newv: 
     false
 }
 
-/// C# `MeshUtil.edge_flip_metric`.
+/// How alike two normals are: their dot, normalized first unless the tolerance is zero.
 fn edge_flip_metric(n0: [f64; 3], n1: [f64; 3], flip_dot_tol: f64) -> f64 {
     if flip_dot_tol == 0.0 {
         dot(n0, n1)
@@ -143,8 +142,8 @@ fn oriented_flip_quad(mesh: &DMesh3, eid: i32) -> (i32, i32, i32, i32) {
     (oa, ob, ov[0], ov[1])
 }
 
-/// C# `MeshUtil.CheckIfEdgeFlipCreatesFlip`: after flipping `eid`, does any old/new normal
-/// pair have a dot at or below `flip_dot_tol` (C#'s default is 0)?
+/// After flipping `eid`, does any old/new normal
+/// pair have a dot at or below `flip_dot_tol` (the hole fill passes 0: no normal may turn past a right angle)?
 pub(crate) fn check_if_edge_flip_creates_flip(mesh: &DMesh3, eid: i32, flip_dot_tol: f64) -> bool {
     debug_assert!(!mesh.is_boundary_edge(eid));
     let (oa, ob, c, d) = oriented_flip_quad(mesh, eid);
@@ -171,7 +170,7 @@ pub(crate) fn check_if_edge_flip_creates_flip(mesh: &DMesh3, eid: i32, flip_dot_
     false
 }
 
-/// C# `MeshUtil.GetEdgeFlipTris`: the edge's two triangles and the two a flip would make,
+/// The edge's two triangles and the two a flip would make,
 /// as `(orig_t0, orig_t1, flip_t0, flip_t1)`.
 pub(crate) fn get_edge_flip_tris(
     mesh: &DMesh3,
@@ -181,7 +180,7 @@ pub(crate) fn get_edge_flip_tris(
     ([oa, ob, c], [ob, oa, d], [c, d, ob], [d, c, oa])
 }
 
-/// C# `MeshUtil.GetEdgeFlipNormals`: the unit normals of the edge's two triangles and of the
+/// The unit normals of the edge's two triangles and of the
 /// two a flip would make, as `(n1, n2, on1, on2)`.
 pub(crate) fn get_edge_flip_normals(
     mesh: &DMesh3,

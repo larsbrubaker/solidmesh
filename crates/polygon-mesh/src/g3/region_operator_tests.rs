@@ -1,7 +1,6 @@
-//! Rust-only tests for the pieces `MinimalHoleFill` builds on: `DSubmesh3` (`dsubmesh3`),
-//! `RegionOperator` (`region_operator`) with `MeshEditor.ReinsertSubmesh`, the
-//! `MeshQueries` edge-length statistics (`mesh_queries`) and `MathUtil.Area` / `AspectRatio`
-//! (`vector3d`). geometry3Sharp ships no tests for them in agg-sharp.
+//! Tests for the pieces `MinimalHoleFill` builds on: `DSubmesh3` (`dsubmesh3`),
+//! `RegionOperator` (`region_operator`) with `mesh_editor::reinsert_submesh`, the edge-length
+//! statistics (`mesh_queries`) and the triangle area and aspect ratio (`vector3d`).
 
 use super::dmesh3::{DMesh3, INVALID_ID};
 use super::dmesh3_tests::check_valid;
@@ -118,7 +117,8 @@ fn rust_only_back_propagate_reinserts_an_edited_region_and_keeps_the_mesh_closed
 #[test]
 fn rust_only_back_propagate_splits_edges_the_base_already_has() {
     // An unedited face region: its diagonal joins two border vertices that the base mesh
-    // also joins, so the repair splits it before re-inserting (as C# does).
+    // also joins, so the repair splits it before re-inserting (re-inserting it whole would
+    // make that edge non-manifold).
     let mut base = cube();
     {
         let mut op = RegionOperator::new(&mut base, &[0, 1]).expect("live triangles");
@@ -144,9 +144,9 @@ fn rust_only_back_propagate_splits_edges_the_base_already_has() {
     assert_eq!((base.vertex_count(), base.triangle_count()), (8, 12));
 }
 
-/// Values printed by geometry3Sharp itself (the `geometry3Sharp.dll` MatterCAD builds, driven
-/// from a scratch console) for the same inputs: the statistics and metrics bit for bit, and the
-/// cube after a face region is split and re-inserted, triangle ids and vertex order included.
+/// Values from an independent run of the reference implementation on the same inputs: the
+/// statistics and metrics bit for bit, and the cube after a face region is split and
+/// re-inserted, triangle ids and vertex order included.
 #[test]
 fn rust_only_region_operator_matches_geometry3sharp() {
     let base = cube();

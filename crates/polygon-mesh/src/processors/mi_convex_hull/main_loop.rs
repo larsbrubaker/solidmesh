@@ -1,21 +1,21 @@
-//! MIConvexHull's `ConvexHull/ConvexHullAlgorithm.MainLoop.cs`, 3D path: for the furthest
+//! The quickhull's main loop (derived from MIConvexHull), 3D path: for the furthest
 //! vertex beyond the first unprocessed face, tag every face it sees, replace them with a cone
 //! from the vertex to their horizon, and hand the old faces' beyond vertices to the new faces.
 //!
-//! An adjacency of -1 (a deposited face's link) is an index exception in C#, which fails the
-//! whole hull; here it is [`HullFailed`].
+//! An adjacency of -1 (a deposited face's link) means the hull's topology broke; it fails the
+//! whole hull with [`HullFailed`].
 
 use super::data_model::{DeferredFace, FaceConnector, CONNECTOR_TABLE_SIZE};
 use super::math_helper::{calculate_face_plane, get_vertex_distance, DIM};
 use super::{ConvexHullAlgorithm, HullFailed};
 
-/// An adjacency entry as a face index; C# indexes arrays with it, so a negative one throws.
+/// An adjacency entry as a face index; a negative one fails the hull.
 fn face_index(adj: i32) -> Result<usize, HullFailed> {
     usize::try_from(adj).map_err(|_| HullFailed)
 }
 
 impl ConvexHullAlgorithm {
-    /// `TagAffectedFaces`.
+    /// Tags every face the current vertex is beyond, starting from `current_face`.
     pub(super) fn tag_affected_faces(&mut self, current_face: usize) -> Result<(), HullFailed> {
         self.affected_face_buffer.clear();
         self.affected_face_buffer
@@ -23,7 +23,7 @@ impl ConvexHullAlgorithm {
         self.traverse_affected_faces(self.face_pool[current_face].index)
     }
 
-    /// `TraverseAffectedFaces`: flood the faces the current vertex is beyond.
+    /// Flood the faces the current vertex is beyond.
     fn traverse_affected_faces(&mut self, current_face: usize) -> Result<(), HullFailed> {
         self.traverse_stack.clear();
         self.traverse_stack.push(current_face);
@@ -48,7 +48,7 @@ impl ConvexHullAlgorithm {
         Ok(())
     }
 
-    /// `ConnectFace`: pair the connector with its twin in the hash table, or file it there.
+    /// Pair the connector with its twin in the hash table, or file it there.
     fn connect_face(&mut self, connector: usize) {
         let index = (self.connectors[connector].hash_code % CONNECTOR_TABLE_SIZE) as usize;
         let mut current = self.connector_table[index].first;
@@ -76,7 +76,7 @@ impl ConvexHullAlgorithm {
         self.connector_table[index].add(&mut self.connectors, connector);
     }
 
-    /// `CreateCone`: a new face per horizon edge. False when one is degenerate (then the vertex
+    /// A new face per horizon edge. False when one is degenerate (then the vertex
     /// is handled as singular).
     pub(super) fn create_cone(&mut self) -> Result<bool, HullFailed> {
         let current_vertex_index = self.current_vertex as i32;
@@ -170,7 +170,7 @@ impl ConvexHullAlgorithm {
         Ok(true)
     }
 
-    /// `CommitCone`: link the cone faces, distribute beyond vertices, retire the old faces.
+    /// Link the cone faces, distribute beyond vertices, retire the old faces.
     pub(super) fn commit_cone(&mut self) {
         for i in 0..self.cone_face_buffer.len() {
             let face = self.cone_face_buffer[i];
@@ -227,7 +227,7 @@ impl ConvexHullAlgorithm {
         }
     }
 
-    /// `IsBeyond`: files `v` in `beyond_vertices` if it is beyond the face, tracking the
+    /// Files `v` in `beyond_vertices` if it is beyond the face, tracking the
     /// furthest (ties within tolerance go to the lexicographically larger position).
     pub(super) fn is_beyond(&mut self, face: usize, beyond_vertices: usize, v: usize) {
         let distance = get_vertex_distance(&self.positions, v, &self.face_pool[face]);
@@ -248,7 +248,7 @@ impl ConvexHullAlgorithm {
         }
     }
 
-    /// `LexCompare`, with C#'s `double.CompareTo` (NaN sorts first).
+    /// Compares two vertices coordinate by coordinate (NaN sorts first, so the order is total).
     fn lex_compare(&self, u: usize, v: usize) -> std::cmp::Ordering {
         let (u_offset, v_offset) = (u * DIM, v * DIM);
         for i in 0..DIM {
@@ -261,8 +261,8 @@ impl ConvexHullAlgorithm {
         std::cmp::Ordering::Equal
     }
 
-    /// `FindBeyondVertices(face, beyond, beyond1)`: the union of two beyond sets. Buffers are
-    /// read by index with a live length, as C# does, because they can alias (see data_model).
+    /// The union of two beyond sets. Buffers are
+    /// read by index with a live length, because they can alias (see data_model).
     fn find_beyond_vertices_two(&mut self, face: usize, beyond: usize, beyond1: usize) {
         let beyond_vertices = self.beyond_buffer;
         self.max_distance = f64::NEG_INFINITY;
@@ -297,7 +297,7 @@ impl ConvexHullAlgorithm {
         self.swap_in_beyond_buffer(face, beyond_vertices);
     }
 
-    /// `FindBeyondVertices(face, beyond)`.
+    /// The vertices of one beyond set that are beyond `face`.
     fn find_beyond_vertices_one(&mut self, face: usize, beyond: usize) {
         let beyond_vertices = self.beyond_buffer;
         self.max_distance = f64::NEG_INFINITY;
@@ -314,7 +314,7 @@ impl ConvexHullAlgorithm {
         self.swap_in_beyond_buffer(face, beyond_vertices);
     }
 
-    /// The tail both `FindBeyondVertices` overloads share: the filled working buffer becomes
+    /// The tail both beyond-vertex searches share: the filled working buffer becomes
     /// the face's, and the face's old buffer (cleared) becomes the working buffer.
     fn swap_in_beyond_buffer(&mut self, face: usize, beyond_vertices: usize) {
         self.face_pool[face].furthest_vertex = self.furthest_vertex;
@@ -324,7 +324,7 @@ impl ConvexHullAlgorithm {
         self.beyond_buffer = temp;
     }
 
-    /// `HandleSingular`: the vertex (and everything beyond its faces) cannot extend the hull;
+    /// The vertex (and everything beyond its faces) cannot extend the hull;
     /// the affected faces are kept as hull faces.
     pub(super) fn handle_singular(&mut self) {
         self.singular_vertices.insert(self.current_vertex);
@@ -342,7 +342,7 @@ impl ConvexHullAlgorithm {
     }
 }
 
-/// C# `double.CompareTo`: a total order with NaN below everything, NaN equal to NaN.
+/// A total order with NaN below everything, NaN equal to NaN.
 fn cs_compare(x: f64, y: f64) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     if x < y {

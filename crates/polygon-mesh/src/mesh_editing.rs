@@ -1,5 +1,5 @@
-//! Mesh editing from agg-sharp `PolygonMesh/Mesh.cs`: the vertex BVH, `UnionFind` and
-//! `MergeVertices`, `SplitFace`, `Split` and the `SplitOnPlanes` extension.
+//! Mesh editing: the vertex BVH, `UnionFind` and vertex merging, splitting a face, splitting a
+//! mesh by a plane, and `split_on_planes`.
 //!
 //! Each rebuild records which source face every new face came from and calls
 //! `Mesh::remap_face_data` (`face_data.rs`) so face colors and textures follow the faces; cut
@@ -15,10 +15,10 @@ use crate::face::{Face, FaceList};
 use crate::face_split::{clip_edge_at_plane, SplitData};
 use crate::mesh::Mesh;
 
-/// A progress callback: the fraction done and a status message (C# `Action<double, string>`).
+/// A progress callback: the fraction done and a status message.
 pub type ProgressReporter<'a> = &'a mut dyn FnMut(f64, &str);
 
-/// Disjoint sets with path compression and union by size (C# `Mesh.UnionFind`).
+/// Disjoint sets with path compression and union by size.
 #[derive(Debug, Clone)]
 pub struct UnionFind {
     parent: Vec<usize>,
@@ -36,7 +36,7 @@ impl UnionFind {
 
     /// The representative of `i`'s set.
     pub fn find(&mut self, i: usize) -> usize {
-        // iterative path compression; same final parents as the recursive C#
+        // iterative path compression; same final parents as the recursive form
         let mut root = i;
         while self.parent[root] != root {
             root = self.parent[root];
@@ -69,8 +69,8 @@ impl UnionFind {
 }
 
 impl Mesh {
-    /// A BVH over the vertex indices, each a .001 box around its vertex (C#
-    /// `GetVertexBvhTree`); `None` for a mesh with no vertices.
+    /// A BVH over the vertex indices, each a .001 box around its vertex; `None` for a mesh
+    /// with no vertices.
     pub fn get_vertex_bvh_tree(&self) -> Option<BvhTree<i32>> {
         let tiny_distance = Vector3Float::new(0.001, 0.001, 0.001);
         let items: Vec<BvhTreeItemData<i32>> = self
@@ -324,7 +324,7 @@ impl Mesh {
     }
 
     /// Cuts every face along each of the parallel planes `normal . p = d` for `d` in
-    /// `distances_from_origin`, so no face crosses any of them (C# `SplitOnPlanes`). Edge
+    /// `distances_from_origin`, so no face crosses any of them. Edge
     /// crossings are computed once per edge so the two faces on an edge agree bit for bit.
     pub fn split_on_planes(
         &mut self,
@@ -544,7 +544,7 @@ impl Mesh {
                     }
 
                     if side != 0 && next_side != 0 && side != next_side {
-                        // Should be unreachable (see the C#): every crossing was inserted per edge.
+                        // Should be unreachable: every crossing was inserted per edge.
                         debug_assert!(
                             false,
                             "SplitOnPlanes: ring segment straddles a plane; crossings should all have been inserted per edge."
@@ -598,7 +598,7 @@ impl Mesh {
 }
 
 /// Which side of a plane a point sits on, anything within `on_plane_distance` counting as on
-/// it (C# `Side`).
+/// it.
 fn side_of(offset: f64, plane_distance: f64, on_plane_distance: f64) -> i32 {
     let distance = offset - plane_distance;
     if distance < -on_plane_distance {

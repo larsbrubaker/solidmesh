@@ -1,14 +1,14 @@
-//! geometry3Sharp's `MeshRefinerBase` (`mesh/MeshRefinerBase.cs`): the mesh and constraint
-//! set a refiner edits, and the constraint-aware collapse and flip checks the `Remesher`
-//! (`remesher.rs`) runs per edge. g3's `Progress`/`Cancelled()` is not ported: nothing that
-//! reaches the remesher sets a `ProgressCancel`, so `Cancelled()` is always false.
+//! The refiner base (derived from geometry3Sharp): the mesh and constraint set a refiner
+//! edits, and the constraint-aware collapse and flip checks the `Remesher` (`remesher.rs`)
+//! runs per edge. There is no progress or cancel hook: nothing that runs the remesher needs to
+//! interrupt it.
 
 use super::dmesh3::{DMesh3, INVALID_ID};
 use super::dmesh3_queries::orient_tri_edge;
 use super::mesh_constraints::{same_target, MeshConstraints, VertexConstraint};
 use super::vector3d::{clamp, cross, dot, fast_normal_direction, normalized, sub};
 
-/// C# `MeshRefinerBase`.
+/// The mesh a refiner edits, its constraints and its flip tolerance.
 pub(crate) struct MeshRefinerBase<'a> {
     pub(crate) mesh: &'a mut DMesh3,
     pub(crate) constraints: Option<MeshConstraints>,
@@ -19,7 +19,7 @@ pub(crate) struct MeshRefinerBase<'a> {
 }
 
 impl<'a> MeshRefinerBase<'a> {
-    /// C# `new MeshRefinerBase(mesh)`.
+    /// A refiner over `mesh` with no constraints.
     pub(crate) fn new(mesh: &'a mut DMesh3) -> Self {
         Self {
             mesh,
@@ -29,25 +29,25 @@ impl<'a> MeshRefinerBase<'a> {
         }
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `EdgeFlipTolerance` getter: a normal-pair dot below this counts as a flip.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// A normal-pair dot below this counts as a flip.
     pub(crate) fn edge_flip_tolerance(&self) -> f64 {
         self.edge_flip_tol
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `EdgeFlipTolerance` setter, clamped to [-1, 1].
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Sets the flip tolerance, clamped to [-1, 1].
     pub(crate) fn set_edge_flip_tolerance(&mut self, value: f64) {
         self.edge_flip_tol = clamp(value, -1.0, 1.0);
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `SetExternalConstraints`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Sets the constraints the refiner honours.
     pub(crate) fn set_external_constraints(&mut self, cons: MeshConstraints) {
         self.constraints = Some(cons);
     }
 
-    /// C# `edge_flip_metric`.
+    /// How alike two normals are: their dot, normalized first unless the tolerance is zero.
     fn edge_flip_metric(&self, n0: [f64; 3], n1: [f64; 3]) -> f64 {
         if self.edge_flip_tol == 0.0 {
             dot(n0, n1)
@@ -56,7 +56,7 @@ impl<'a> MeshRefinerBase<'a> {
         }
     }
 
-    /// C# `collapse_creates_flip_or_invalid`: would moving `vid` to `newv` (collapsing it
+    /// Would moving `vid` to `newv` (collapsing it
     /// with `vother`) flip a one-ring normal of `vid` or break the link condition? Only
     /// `vid`'s one-ring is checked; call it twice with the roles swapped.
     pub(crate) fn collapse_creates_flip_or_invalid(
@@ -91,8 +91,7 @@ impl<'a> MeshRefinerBase<'a> {
                 let nnew = cross(sub(vb, va), sub(newv, va));
                 self.edge_flip_metric(ncur, nnew)
             } else {
-                // C# throws "should never be here!": vtx_triangles only yields triangles
-                // that contain vid.
+                // vtx_triangles only yields triangles that contain vid.
                 unreachable!("vtx_triangles yielded a triangle without its vertex")
             };
 
@@ -103,7 +102,7 @@ impl<'a> MeshRefinerBase<'a> {
         false
     }
 
-    /// C# `flip_inverts_normals`: does flipping `[a,b]` (between `t0` and its neighbour, with
+    /// Does flipping `[a,b]` (between `t0` and its neighbour, with
     /// opposite vertices `c`, `d`) reverse any old/new normal pair?
     pub(crate) fn flip_inverts_normals(&self, a: i32, b: i32, c: i32, d: i32, t0: i32) -> bool {
         let v_c = self.mesh.vertex(c);
@@ -133,8 +132,8 @@ impl<'a> MeshRefinerBase<'a> {
         false
     }
 
-    /// C# `can_collapse_constraints`: may edge `[a,b]` collapse under the constraints? The
-    /// second value is C#'s `collapse_to` (the vertex to keep, or -1).
+    /// May edge `[a,b]` collapse under the constraints? The
+    /// second value is the vertex to keep, or -1 when either may go.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn can_collapse_constraints(
         &self,
@@ -175,7 +174,7 @@ impl<'a> MeshRefinerBase<'a> {
         (true, collapse_to)
     }
 
-    /// C# `can_collapse_vtx`: resolves the vertex constraints of edge `[a,b]`. If `a` or `b`
+    /// Resolves the vertex constraints of edge `[a,b]`. If `a` or `b`
     /// is constrained the collapse keeps that vertex, returned as `collapse_to` (else -1).
     pub(crate) fn can_collapse_vtx(&self, eid: i32, a: i32, b: i32) -> (bool, i32) {
         let Some(constraints) = &self.constraints else {
@@ -234,15 +233,15 @@ impl<'a> MeshRefinerBase<'a> {
         (false, -1)
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `vertex_is_fixed`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Whether vertex `vid` is fixed in place.
     pub(crate) fn vertex_is_fixed(&self, vid: i32) -> bool {
         self.constraints
             .as_ref()
             .is_some_and(|c| c.get_vertex_constraint(vid).fixed)
     }
 
-    /// C# `vertex_is_constrained`: fixed or on a target.
+    /// Whether vertex `vid` is fixed or on a target.
     pub(crate) fn vertex_is_constrained(&self, vid: i32) -> bool {
         if let Some(constraints) = &self.constraints {
             let vc = constraints.get_vertex_constraint(vid);
@@ -253,8 +252,8 @@ impl<'a> MeshRefinerBase<'a> {
         false
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
-    /// C# `get_vertex_constraint(vid)`.
+    #[allow(dead_code)] // mesh API only the tests call so far
+    /// Vertex `vid`'s constraint, or unconstrained.
     pub(crate) fn get_vertex_constraint(&self, vid: i32) -> VertexConstraint {
         match &self.constraints {
             Some(c) => c.get_vertex_constraint(vid),

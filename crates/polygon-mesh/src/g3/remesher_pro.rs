@@ -1,13 +1,12 @@
-//! geometry3Sharp's `RemesherPro` (`mesh/RemesherPro.cs`): a `Remesher` (`remesher.rs`) that
-//! queues the edges each pass touched and only revisits those - `FastSplitIteration` splits
-//! to reach the target edge length quickly, `RemeshIteration` runs the collapse/flip/split
+//! The queued remesher (derived from geometry3Sharp): a `Remesher` (`remesher.rs`) that
+//! queues the edges each pass touched and only revisits those - a fast split iteration splits
+//! to reach the target edge length quickly, the remesh iteration runs the collapse/flip/split
 //! pass over the queue and then the tracked smoothing and projection passes, and
-//! `FastestRemesh` drives both. `MinimalHoleFill` remeshes its fill this way.
+//! `fastest_remesh` drives both. `MinimalHoleFill` remeshes its fill this way.
 //!
-//! Ported subset: `UseFaceAlignedProjection` with `TrackedFaceProjectionPass`,
-//! `InitializeBuffersForFacePass` and `SharpEdgeReprojectionRemesh` (which need
-//! `IOrientedProjectionTarget` and `Frame3f`) are not ported; nothing that reaches the
-//! remesher turns face-aligned projection on. Passes run on one thread (divergence 795).
+//! Projection moves each vertex to its nearest surface point (there is no face-aligned
+//! projection). Passes run on one thread, so the queue order, and with it the remeshed result,
+//! is the same on every run.
 
 use std::collections::HashSet;
 
@@ -17,8 +16,8 @@ use super::mesh_constraints::{fix_all_boundary_edges, MeshConstraints};
 use super::remesher::{ProcessResult, Remesher, TargetProjectionMode};
 use super::vector3d::{distance, distance_squared, epsilon_equal, ZERO_TOLERANCEF};
 
-/// C#'s `HashSet<int> modified_edges`. The set is only ever added to and cleared, so C#
-/// enumerates it in first-insertion order; this keeps that order explicitly.
+/// The modified-edge queue. The set is only ever added to and cleared, and its order sets the
+/// next iteration's edge order, so it enumerates in first-insertion order.
 #[derive(Default)]
 struct EdgeQueue {
     order: Vec<i32>,
@@ -37,13 +36,13 @@ impl EdgeQueue {
         self.seen.clear();
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
+    #[allow(dead_code)] // mesh API only the tests call so far
     fn len(&self) -> usize {
         self.order.len()
     }
 }
 
-/// C# `RemesherPro.SettingState`, saved by `PushState`.
+/// The remesher settings a pass changes, saved by `push_state` and restored by `pop_state`.
 #[derive(Clone, Copy)]
 struct SettingState {
     enable_flips: bool,
@@ -56,15 +55,15 @@ struct SettingState {
     projection_mode: TargetProjectionMode,
 }
 
-/// C# `RemesherPro`.
+/// The queued remesher over one mesh.
 pub(crate) struct RemesherPro<'a> {
     pub(crate) remesher: Remesher<'a>,
-    /// C#'s nullable `modified_edges`: `None` until a pass starts, and after `ResetQueue`.
+    /// `None` until a pass starts, and again after the queue is reset.
     modified_edges: Option<EdgeQueue>,
     state_stack: Vec<SettingState>,
 }
 
-/// C# `queue_one_ring`: queues every edge of a live vertex.
+/// Queues every edge of a live vertex.
 fn queue_one_ring(mesh: &DMesh3, queue: &mut EdgeQueue, vid: i32) {
     if mesh.is_vertex(vid) {
         for eid in mesh.vtx_edges(vid) {
@@ -74,7 +73,7 @@ fn queue_one_ring(mesh: &DMesh3, queue: &mut EdgeQueue, vid: i32) {
 }
 
 impl<'a> RemesherPro<'a> {
-    /// C# `new RemesherPro(m)`.
+    /// A queued remesher over `mesh` with the default settings.
     pub(crate) fn new(mesh: &'a mut DMesh3) -> Self {
         Self {
             remesher: Remesher::new(mesh),
@@ -83,7 +82,7 @@ impl<'a> RemesherPro<'a> {
         }
     }
 
-    /// C# `MeshConstraintUtil.FixAllBoundaryEdges(Remesher r)`: creates the constraint set if
+    /// Creates the constraint set if
     /// there is none, then pins every boundary edge and vertex.
     pub(crate) fn fix_all_boundary_edges(&mut self) {
         let base = &mut self.remesher.base;
@@ -93,7 +92,7 @@ impl<'a> RemesherPro<'a> {
         fix_all_boundary_edges(cons, base.mesh);
     }
 
-    /// C# `FastestRemesh(nMaxIterations = 25, bDoFastSplits = true)`: fast splits to reach
+    /// Fast splits to reach
     /// the edge-length target, then queued remesh iterations with projection on every other
     /// one, then a final iteration with full projection.
     pub(crate) fn fastest_remesh(
@@ -140,7 +139,7 @@ impl<'a> RemesherPro<'a> {
         self.remesh_iteration()
     }
 
-    /// C# `ResetQueue`: call when the mesh was edited externally between passes, and between
+    /// Call when the mesh was edited externally between passes, and between
     /// different kinds of pass.
     pub(crate) fn reset_queue(&mut self) {
         self.modified_edges = None;
@@ -163,7 +162,7 @@ impl<'a> RemesherPro<'a> {
         }
     }
 
-    /// C# `FastSplitIteration`: one pass of splits only. Returns the number of splits.
+    /// One pass of splits only. Returns the number of splits.
     pub(crate) fn fast_split_iteration(&mut self) -> Result<i32, G3Exception> {
         if self.remesher.mesh().triangle_count() == 0 {
             // badness if we don't catch this...
@@ -183,7 +182,7 @@ impl<'a> RemesherPro<'a> {
         let mut split_edges = 0;
 
         // When we split an edge, we need to check it and the adjacent ones we added. Because of
-        // overhead in ProcessEdge, it is worth it to do a distance-check here (C#'s SplitF).
+        // overhead in process_edge, it is worth it to do a distance-check here (split_f).
         let max_edge_len_sqr = self.remesher.max_edge_length * self.remesher.max_edge_length;
         let queue = self.modified_edges.get_or_insert_with(EdgeQueue::default);
         let mut split_f = |mesh: &DMesh3, info: &EdgeSplitInfo| {
@@ -202,7 +201,7 @@ impl<'a> RemesherPro<'a> {
         for cur_eid in edges {
             if self.remesher.mesh().is_edge(cur_eid) {
                 // Flips are off for this pass, so FlipEdge (the only edit that can throw) is
-                // never reached. As in C#, an exception would skip PopState.
+                // never reached. An error would return before pop_state restores the settings.
                 let result = self.remesher.process_edge(cur_eid, &mut split_f)?;
                 if result == ProcessResult::OkSplit {
                     // new edges queued by SplitF
@@ -216,7 +215,7 @@ impl<'a> RemesherPro<'a> {
         Ok(split_edges)
     }
 
-    /// C# `RemeshIteration`: the collapse/flip/split pass over the queued edges (queueing the
+    /// The collapse/flip/split pass over the queued edges (queueing the
     /// one-rings around every edit), then tracked smoothing, then tracked projection.
     pub(crate) fn remesh_iteration(&mut self) -> Result<(), G3Exception> {
         if self.remesher.mesh().triangle_count() == 0 {
@@ -261,7 +260,7 @@ impl<'a> RemesherPro<'a> {
         Ok(())
     }
 
-    /// C# `TrackedSmoothPass`: smooths every vertex into the buffer, queueing each edge whose
+    /// Smooths every vertex into the buffer, queueing each edge whose
     /// new length leaves [min, max], then applies the buffer.
     fn tracked_smooth_pass(&mut self) {
         self.remesher.initialize_vertex_buffer_for_pass();
@@ -280,7 +279,7 @@ impl<'a> RemesherPro<'a> {
         r.apply_vertex_buffer();
     }
 
-    /// C# `TrackedProjectionPass`: projects every unconstrained vertex onto the target into
+    /// Projects every unconstrained vertex onto the target into
     /// the buffer, queueing edges whose new length leaves [min, max], then applies it.
     fn tracked_projection_pass(&mut self) {
         self.remesher.initialize_vertex_buffer_for_pass();
@@ -304,7 +303,7 @@ impl<'a> RemesherPro<'a> {
         r.apply_vertex_buffer();
     }
 
-    /// C# `PushState`: saves the settings a specialized pass overrides.
+    /// Saves the settings a specialized pass overrides.
     pub(crate) fn push_state(&mut self) {
         let r = &self.remesher;
         self.state_stack.push(SettingState {
@@ -319,7 +318,7 @@ impl<'a> RemesherPro<'a> {
         });
     }
 
-    /// C# `PopState`: restores the settings `PushState` saved.
+    /// Restores the settings `push_state` saved.
     pub(crate) fn pop_state(&mut self) {
         let Some(s) = self.state_stack.pop() else {
             return;
@@ -335,14 +334,14 @@ impl<'a> RemesherPro<'a> {
         r.projection_mode = s.projection_mode;
     }
 
-    #[allow(dead_code)] // geometry3Sharp API no ported caller reaches yet; the tests do
+    #[allow(dead_code)] // mesh API only the tests call so far
     /// The number of queued edges (for tests and convergence checks).
     pub(crate) fn queued_edge_count(&self) -> usize {
         self.modified_edges.as_ref().map_or(0, EdgeQueue::len)
     }
 }
 
-/// The edge check shared by C#'s tracked passes: queue each edge of `vid` whose length with
+/// The edge check shared by the tracked passes: queue each edge of `vid` whose length with
 /// `vid` at `new_pos` falls outside [min, max].
 fn queue_edges_leaving_range(r: &Remesher<'_>, queue: &mut EdgeQueue, vid: i32, new_pos: [f64; 3]) {
     let mesh = r.mesh();
@@ -357,7 +356,7 @@ fn queue_edges_leaving_range(r: &Remesher<'_>, queue: &mut EdgeQueue, vid: i32, 
     }
 }
 
-/// C# `ComputeProjectedVertexPos`: the vertex projected onto the target unless it is
+/// The vertex projected onto the target unless it is
 /// constrained or its control flags forbid it. Does not modify the mesh.
 fn compute_projected_vertex_pos(r: &Remesher<'_>, vid: i32) -> ([f64; 3], bool) {
     if r.base.vertex_is_constrained(vid) {
@@ -369,7 +368,7 @@ fn compute_projected_vertex_pos(r: &Remesher<'_>, vid: i32) -> ([f64; 3], bool) 
     let curpos = r.mesh().vertex(vid);
     match r.projection_target() {
         Some(target) => (target.project(curpos, vid), true),
-        // C# only calls this with a target set.
+        // Only called with a target set; without one nothing moves.
         None => (curpos, false),
     }
 }

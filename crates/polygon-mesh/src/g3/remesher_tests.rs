@@ -1,8 +1,7 @@
-//! Rust-only tests for the remeshing pieces (`mesh_constraints`, `mesh_refiner_base`,
-//! `mesh_util`, `remesher`, `remesher_pro`). geometry3Sharp ships no tests for them in
-//! agg-sharp, so these pin the behavior `MinimalHoleFill` relies on: a fixed boundary stays
-//! put, a flat patch stays flat and reaches the target edge lengths, and the flip/collapse
-//! checks and constraint rules answer as the C# does.
+//! Tests for the remeshing pieces (`mesh_constraints`, `mesh_refiner_base`, `mesh_util`,
+//! `remesher`, `remesher_pro`). They pin the behavior `MinimalHoleFill` relies on: a fixed
+//! boundary stays put, a flat patch stays flat and reaches the target edge lengths, and the
+//! flip/collapse checks and constraint rules give the expected answers.
 
 use std::rc::Rc;
 
@@ -73,10 +72,9 @@ fn total_area(m: &DMesh3) -> f64 {
         .sum()
 }
 
-/// The expected values come from running geometry3Sharp's own `RemesherPro` (the
-/// `geometry3Sharp.dll` MatterCAD builds) on the same grid with the same settings, with
-/// `EnableParallelSmooth = false` so its queue order is deterministic (divergence 795): the
-/// counts, the one folded corner triangle, and a position checksum all match bit for bit.
+/// The expected values come from an independent sequential run of the reference remesher on
+/// the same grid with the same settings: the counts, the one folded corner triangle, and a
+/// position checksum all match bit for bit.
 #[test]
 fn rust_only_remesh_flat_patch_matches_csharp_and_keeps_boundary() {
     let mut m = grid(2, 1.0);
@@ -96,7 +94,7 @@ fn rust_only_remesh_flat_patch_matches_csharp_and_keeps_boundary() {
     for v in m.vertex_indices() {
         assert_eq!(m.vertex(v)[2], 0.0, "vertex {v} left the plane");
     }
-    // C#'s remesher (PreventNormalFlips off, as MinimalHoleFill leaves it) folds one sliver
+    // The remesher (normal-flip prevention off, as MinimalHoleFill leaves it) folds one sliver
     // at the (2,2) corner; the rest face +z and the patch keeps its area
     let folded: Vec<i32> = m
         .triangle_indices()
@@ -213,7 +211,7 @@ fn rust_only_remesh_projects_interior_onto_target() {
     for v in m.vertex_indices() {
         assert_eq!(m.vertex(v)[2], 0.0, "vertex {v} not projected");
     }
-    // geometry3Sharp's sequential run of the same remesh (see the flat-patch test)
+    // the reference sequential run of the same remesh (see the flat-patch test)
     assert_eq!(
         (
             m.triangle_count(),

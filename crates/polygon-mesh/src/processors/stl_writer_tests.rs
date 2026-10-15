@@ -1,6 +1,5 @@
-//! Unit tests for the STL number formatting in `stl_writer.rs` (Rust-only: the C# tests never
-//! check `FormatForStl` directly). Expected values are what .NET prints for
-//! `x.ToString("0.000000", CultureInfo.InvariantCulture)`.
+//! Unit tests for the STL number formatting in `stl_writer.rs`. Expected values are the
+//! reference "0.000000" invariant-culture formatting of each value.
 
 use super::*;
 

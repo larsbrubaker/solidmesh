@@ -1,21 +1,20 @@
-//! geometry3Sharp `mesh_selection/MeshBoundaryLoops.cs`: walks a mesh's boundary edges into
-//! closed loops (and open spans where a walk cannot close), splitting a loop that passes a
-//! bowtie vertex more than once into simple sub-loops. Ported with its defaults - spans
-//! computed (`SpanBehaviors.Compute`), failures kept as spans (`ConvertToOpenSpan`), no
-//! `EdgeFilterF` - which is how the mesh repair and hole fillers construct it; with those, none
-//! of C#'s throwing branches can be reached.
+//! Boundary loops (derived from geometry3Sharp): walks a mesh's boundary edges into closed
+//! loops (and open spans where a walk cannot close), splitting a loop that passes a bowtie
+//! vertex more than once into simple sub-loops. Spans are always computed, a walk that fails
+//! is kept as an open span, and no edge filter applies; that is how the mesh repair and hole
+//! fillers use it, and with those choices no walk can end in an error.
 
 use super::dmesh3::DMesh3;
 use super::edge_loop::{EdgeLoop, EdgeSpan};
 
-/// g3 `MathUtil.ZeroTolerancef`.
+/// Squared cross-product length below which two directions count as parallel.
 const ZERO_TOLERANCE_F: f32 = 1e-6;
-/// g3 `MathUtil.Epsilonf`.
+/// The single-precision machine epsilon: below it a float vector is too short to normalize.
 const EPSILON_F: f32 = 1.192_092_9e-7;
-/// g3 `MathUtil.Epsilon`.
+/// The double machine epsilon: below it a vector is too short to normalize.
 const EPSILON: f64 = 2.220_446_049_250_313e-16;
 
-/// g3 `MeshBoundaryLoops` after `Compute`.
+/// A mesh's boundary loops and the open spans its walks could not close.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct MeshBoundaryLoops {
     pub(crate) loops: Vec<EdgeLoop>,
@@ -28,14 +27,14 @@ pub(crate) struct MeshBoundaryLoops {
 }
 
 impl MeshBoundaryLoops {
-    /// C# `new MeshBoundaryLoops(mesh)` (`bAutoCompute: true`).
+    /// The boundary loops and spans of `mesh`, computed at once.
     pub(crate) fn new(mesh: &DMesh3) -> Self {
         let mut out = MeshBoundaryLoops::default();
         out.compute(mesh);
         out
     }
 
-    /// C# `Compute`.
+    /// Walks every boundary edge into loops and spans, replacing any earlier result.
     fn compute(&mut self, mesh: &DMesh3) {
         self.loops.clear();
         self.spans.clear();
@@ -169,7 +168,7 @@ impl MeshBoundaryLoops {
         }
     }
 
-    /// C# `find_left_turn_edge`: at a bowtie vertex, the unused outgoing boundary edge making
+    /// At a bowtie vertex, the unused outgoing boundary edge making
     /// the smallest signed turn (in float, about the vertex normal) from the incoming edge.
     fn find_left_turn_edge(
         &self,
@@ -211,7 +210,7 @@ impl MeshBoundaryLoops {
     }
 }
 
-/// C# `extract_subloops`: peels the shortest simple loop off each repeated bowtie vertex until
+/// Peels the shortest simple loop off each repeated bowtie vertex until
 /// none repeats; what is left is one more loop. A walk with no simple loop is kept as a span.
 fn extract_subloops(
     mesh: &DMesh3,
@@ -307,14 +306,14 @@ fn extract_subloops(
     (loops, spans)
 }
 
-/// The `start_i` / `end_i` C#'s `is_simple_bowtie_loop` leaves in its out parameters when it
-/// returns false: the first two positions of the vertex.
+/// The first two positions of the vertex in the loop: the stretch `is_simple_bowtie_loop`
+/// tests, and the one its caller falls back to when neither direction is simple.
 fn bowtie_loop_ends(loop_v: &[i32], bowtie_v: i32) -> (i32, i32) {
     let start_i = find_index(loop_v, 0, bowtie_v);
     (start_i, find_index(loop_v, start_i + 1, bowtie_v))
 }
 
-/// C# `is_simple_bowtie_loop`: the stretch between the vertex's first two occurrences (either
+/// The stretch between the vertex's first two occurrences (either
 /// way round the loop) that passes no other bowtie.
 fn is_simple_bowtie_loop(loop_v: &[i32], bowties: &[i32], bowtie_v: i32) -> Option<(i32, i32)> {
     let (start_i, end_i) = bowtie_loop_ends(loop_v, bowtie_v);
@@ -327,7 +326,7 @@ fn is_simple_bowtie_loop(loop_v: &[i32], bowties: &[i32], bowtie_v: i32) -> Opti
     }
 }
 
-/// C# `is_simple_path`: walks `i1` up to `i2` (wrapping), skipping removed (-1) entries.
+/// Walks `i1` up to `i2` (wrapping), skipping removed (-1) entries.
 fn is_simple_path(loop_v: &[i32], bowties: &[i32], bowtie_v: i32, i1: i32, i2: i32) -> bool {
     let n = loop_v.len() as i32;
     let mut i = i1;
@@ -341,7 +340,7 @@ fn is_simple_path(loop_v: &[i32], bowties: &[i32], bowtie_v: i32, i1: i32, i2: i
     true
 }
 
-/// C# `extract_span`: the live entries from `i0` up to `i1` (wrapping), marking them removed.
+/// The live entries from `i0` up to `i1` (wrapping), marking them removed.
 fn extract_span(lp: &mut [i32], i0: i32, i1: i32, mark_invalid: bool) -> Vec<i32> {
     let n = lp.len() as i32;
     let mut out = Vec::new();
@@ -358,7 +357,7 @@ fn extract_span(lp: &mut [i32], i0: i32, i1: i32, mark_invalid: bool) -> Vec<i32
     out
 }
 
-/// C# `count_span`.
+/// The number of live (not -1) entries from `i0` up to `i1`, wrapping.
 fn count_span(l: &[i32], i0: i32, i1: i32) -> i32 {
     let n = l.len() as i32;
     let mut c = 0;
@@ -372,14 +371,14 @@ fn count_span(l: &[i32], i0: i32, i1: i32) -> i32 {
     c
 }
 
-/// C# `find_index`.
+/// The first position at or after `start` holding `item`, or -1.
 fn find_index(lp: &[i32], start: i32, item: i32) -> i32 {
     (start.max(0) as usize..lp.len())
         .find(|&i| lp[i] == item)
         .map_or(-1, |i| i as i32)
 }
 
-/// C# `count_in_list`.
+/// How many times `item` occurs in the loop.
 fn count_in_list(lp: &[i32], item: i32) -> usize {
     lp.iter().filter(|&&v| v == item).count()
 }
@@ -392,7 +391,7 @@ fn to_f32(v: [f64; 3]) -> [f32; 3] {
     v.map(|x| x as f32)
 }
 
-/// g3 `Vector3d.Normalize()`.
+/// The unit vector, or zero for a vector shorter than `EPSILON`.
 fn normalize_d(v: [f64; 3]) -> [f64; 3] {
     let length = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
     if length > EPSILON {
@@ -411,7 +410,7 @@ fn cross_d(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     ]
 }
 
-/// g3 `DMesh3.GetTriNormal` (`MathUtil.Normal`: both edges normalized before the cross).
+/// A triangle's unit normal (both edges normalized before the cross product).
 pub(crate) fn get_tri_normal(mesh: &DMesh3, tid: i32) -> [f64; 3] {
     let [v1, v2, v3] = mesh.get_tri_vertices(tid as usize);
     let edge1 = normalize_d(sub(v2, v1));
@@ -419,7 +418,7 @@ pub(crate) fn get_tri_normal(mesh: &DMesh3, tid: i32) -> [f64; 3] {
     normalize_d(cross_d(edge1, edge2))
 }
 
-/// C# `get_vtx_normal`: the normalized sum of the one-ring's triangle normals.
+/// The normalized sum of the one-ring's triangle normals.
 fn get_vtx_normal(mesh: &DMesh3, vid: i32) -> [f64; 3] {
     let mut n = [0.0; 3];
     for ti in mesh.vtx_triangles(vid) {
@@ -433,7 +432,7 @@ fn dot_f(a: [f32; 3], b: [f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// g3 `Vector3f.Normalize()`.
+/// The unit vector, or zero for a vector shorter than `EPSILON_F`.
 fn normalize_f(v: [f32; 3]) -> [f32; 3] {
     let length = dot_f(v, v).sqrt();
     if length > EPSILON_F {
@@ -444,7 +443,7 @@ fn normalize_f(v: [f32; 3]) -> [f32; 3] {
     }
 }
 
-/// g3 `MathUtil.PlaneAngleSignedD(Vector3f, Vector3f, Vector3f)`: the signed angle in degrees
+/// The signed angle in degrees
 /// from `v_from` to `v_to` projected into the plane of `plane_n`.
 fn plane_angle_signed_d(v_from: [f32; 3], v_to: [f32; 3], plane_n: [f32; 3]) -> f32 {
     let df = dot_f(v_from, plane_n);
@@ -464,7 +463,7 @@ fn plane_angle_signed_d(v_from: [f32; 3], v_to: [f32; 3], plane_n: [f32; 3]) -> 
             0.0
         };
     }
-    // C# `Math.Sign(float)` (which throws on NaN; a NaN here can only come from NaN positions)
+    // The sign of the turn: a NaN (only from NaN positions) counts as no turn
     let d = dot_f(c, plane_n);
     let sign = if d > 0.0 {
         1.0f32
@@ -473,7 +472,7 @@ fn plane_angle_signed_d(v_from: [f32; 3], v_to: [f32; 3], plane_n: [f32; 3]) -> 
     } else {
         0.0
     };
-    // C# `Vector3f.AngleD`: the dot clamped, acos in double, then degrees, narrowed
+    // The dot clamped, acos in double, then degrees, narrowed
     let fdot = dot_f(v_from, v_to).clamp(-1.0, 1.0);
     let angle = ((fdot as f64).acos() * (180.0 / std::f64::consts::PI)) as f32;
     sign * angle

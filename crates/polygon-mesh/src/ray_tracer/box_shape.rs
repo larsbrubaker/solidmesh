@@ -1,7 +1,6 @@
-//! An axis-aligned solid box (agg-sharp `RayTracer/Primitive/Shapes/BoxShape.cs`, with the
-//! `BaseShape.cs` members it inherits). Being closed, it reports a front face where a ray
-//! enters and a back face where it leaves, which is what [`super::Difference`] needs. The slab
-//! test is vector-math's [`Ray::intersect`], the same code the C# box carries a copy of.
+//! An axis-aligned solid box, with the shared leaf-shape queries of `base_shape`. Being
+//! closed, it reports a front face where a ray enters and a back face where it leaves, which
+//! is what [`super::Difference`] needs. The slab test is vector-math's [`Ray::intersect`].
 
 use std::any::Any;
 
@@ -10,7 +9,7 @@ use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ra
 use super::base_shape::{leaf_contains, leaf_get_contained, leaf_get_crossing, leaf_get_touching};
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};
 
-/// A box from `min_xyz` to `max_xyz` (C# `BoxShape`).
+/// A box from `min_xyz` to `max_xyz`.
 #[derive(Debug, Clone)]
 pub struct BoxShape {
     pub min_xyz: Vector3,
@@ -19,8 +18,8 @@ pub struct BoxShape {
 }
 
 impl BoxShape {
-    /// C# `BoxShape(Vector3 minXYZ, Vector3 maxXYZ, MaterialAbstract material)`; an error when
-    /// any max is below its min.
+    /// A box from `min_xyz` to `max_xyz` with `material`; an error when any max is below its
+    /// min.
     pub fn new(
         min_xyz: Vector3,
         max_xyz: Vector3,
@@ -62,7 +61,7 @@ impl BoxShape {
 }
 
 impl BoxShape {
-    /// Replaces the material (C# `Material` setter).
+    /// Replaces the material.
     pub fn set_material(&mut self, material: Option<MaterialRef>) {
         self.material = material;
     }
@@ -93,7 +92,8 @@ impl Traceable for BoxShape {
     }
 
     fn axis_to_world(&self) -> Matrix4X4 {
-        // C# BaseShape throws here; a leaf is never asked (see divergence 141).
+        // A leaf has no children, and only items with children are asked; identity is the
+        // honest answer for a shape in world space.
         Matrix4X4::IDENTITY
     }
 
@@ -131,8 +131,8 @@ impl Traceable for BoxShape {
         leaf_contains(self, position)
     }
 
-    /// The entry face for a front-face ray, the exit face for any other (C# checks
-    /// `intersectionType == FrontFace`, so `Both` reports the exit).
+    /// The entry face for a front-face ray, the exit face for any other (so `Both` reports the
+    /// exit).
     fn get_closest_intersection<'a>(&'a self, ray: &mut Ray) -> Option<IntersectInfo<'a>> {
         let (hit, bounds_hit) = ray.intersect(&self.get_axis_aligned_bounding_box());
         if !hit {

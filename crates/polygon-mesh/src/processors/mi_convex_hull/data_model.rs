@@ -1,18 +1,16 @@
-//! MIConvexHull's internal data model and pooled collections, for the 3D hull path: ports
-//! `ConvexHull/DataModel.cs` (`ConvexFaceInternal`, `FaceConnector`, `DeferredFace`),
-//! `ConvexHull/Collections.cs` (`FaceList`, `ConnectorList`) and `ConvexHull/ObjectManager.cs`.
+//! The quickhull's data model and pooled collections (derived from MIConvexHull), for the 3D
+//! hull path: faces, the connectors that pair new cone edges, deferred faces, the unprocessed
+//! face list and the connector hash buckets.
 //!
-//! C# links faces and connectors through object references and reuses them through pools; here
-//! they live in arenas and links are indices. Pool reuse is kept exactly (free stacks popped in
-//! the same order), because the face index decides the connector hash table order and the order
-//! the hull faces come out in. Vertex buffers are arena ids too: C# shares one `EmptyBuffer`
-//! object among finished faces and can swap it into the working `BeyondBuffer`, and sharing an
-//! id reproduces that aliasing.
+//! Faces and connectors live in arenas, linked by index, and are reused through free stacks
+//! popped last-in first-out, because the face index decides the connector hash table order and
+//! the order the hull faces come out in. Vertex buffers are arena ids too: finished faces share
+//! one empty buffer, which can be swapped into the working beyond buffer, so two ids can alias.
 
-/// `Constants.ConnectorTableSize`.
+/// The number of connector hash buckets (a prime).
 pub(super) const CONNECTOR_TABLE_SIZE: u32 = 2017;
 
-/// `ConvexFaceInternal`.
+/// One hull face: its vertices, neighbours, plane and beyond vertices.
 #[derive(Debug, Clone)]
 pub(super) struct FaceInternal {
     pub adjacent_faces: [i32; 3],
@@ -25,7 +23,7 @@ pub(super) struct FaceInternal {
     pub normal: [f64; 3],
     pub offset: f64,
     pub vertices: [i32; 3],
-    /// Id of the vertex buffer (`VerticesBeyond`).
+    /// Id of the buffer of vertices beyond this face.
     pub vertices_beyond: usize,
 }
 
@@ -47,7 +45,7 @@ impl FaceInternal {
     }
 }
 
-/// `FaceConnector`: one edge of a new cone face, waiting for its twin.
+/// One edge of a new cone face, waiting for its twin.
 #[derive(Debug, Clone, Default)]
 pub(super) struct FaceConnector {
     pub edge_index: usize,
@@ -59,7 +57,7 @@ pub(super) struct FaceConnector {
 }
 
 impl FaceConnector {
-    /// `Update`: the face's vertices without `edge_index`, and their hash.
+    /// The face's vertices without `edge_index`, and their hash.
     pub(super) fn update(&mut self, face: &FaceInternal, edge_index: usize) {
         self.face = Some(face.index);
         self.edge_index = edge_index;
@@ -71,20 +69,20 @@ impl FaceConnector {
             }
             self.vertices[c] = v;
             c += 1;
-            // unchecked in C#
+            // wrapping arithmetic: the hash only has to agree for the same vertices
             hash_code =
                 hash_code.wrapping_add(31u32.wrapping_mul(hash_code).wrapping_add(v as u32));
         }
         self.hash_code = hash_code;
     }
 
-    /// `AreConnectable`.
+    /// Whether two connectors are twins: the same hash and the same two vertices.
     pub(super) fn are_connectable(a: &FaceConnector, b: &FaceConnector) -> bool {
         a.hash_code == b.hash_code && a.vertices == b.vertices
     }
 }
 
-/// `DeferredFace`: a cone face whose adjacency is committed after the whole cone is built.
+/// A cone face whose adjacency is committed after the whole cone is built.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct DeferredFace {
     pub face: usize,
@@ -94,7 +92,7 @@ pub(super) struct DeferredFace {
     pub old_face: usize,
 }
 
-/// `FaceList`: the unprocessed faces, an intrusive list through the faces' next/previous.
+/// The unprocessed faces, an intrusive list through the faces' next/previous.
 #[derive(Debug, Default)]
 pub(super) struct FaceList {
     last: Option<usize>,
@@ -111,7 +109,7 @@ impl FaceList {
         self.first = Some(face);
     }
 
-    /// `Add`: a face with more beyond vertices than the first goes to the front.
+    /// A face with more beyond vertices than the first goes to the front.
     pub(super) fn add(&mut self, faces: &mut [FaceInternal], buffers: &[Vec<i32>], face: usize) {
         let count = |faces: &[FaceInternal], f: usize| buffers[faces[f].vertices_beyond].len();
         if faces[face].in_list {
@@ -144,7 +142,7 @@ impl FaceList {
         }
     }
 
-    /// `Remove`.
+    /// Unlinks `face` from the list (nothing when it is not in it).
     pub(super) fn remove(&mut self, faces: &mut [FaceInternal], face: usize) {
         if !faces[face].in_list {
             return;
@@ -164,7 +162,7 @@ impl FaceList {
     }
 }
 
-/// `ConnectorList`: one bucket of the connector hash table.
+/// One bucket of the connector hash table.
 #[derive(Debug, Default, Clone)]
 pub(super) struct ConnectorList {
     last: Option<usize>,
@@ -172,7 +170,7 @@ pub(super) struct ConnectorList {
 }
 
 impl ConnectorList {
-    /// `Add`: appends at the end.
+    /// Appends at the end.
     pub(super) fn add(&mut self, connectors: &mut [FaceConnector], element: usize) {
         if let Some(last) = self.last {
             connectors[last].next = Some(element);
@@ -184,7 +182,7 @@ impl ConnectorList {
         }
     }
 
-    /// `Remove`.
+    /// Unlinks `connector` from the bucket.
     pub(super) fn remove(&mut self, connectors: &mut [FaceConnector], connector: usize) {
         let (previous, next) = (connectors[connector].previous, connectors[connector].next);
         match previous {

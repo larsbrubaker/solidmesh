@@ -1,8 +1,7 @@
-//! Port of `Agg.PolygonMesh/PlanarRegionSimplifierTests.cs` (unit tests, for the crate-private
-//! work counter and g3 nearest-triangle query): the distance-field Dilate / Erode surface of a
-//! mechanical part is mostly grid-sized triangles on flat walls; merging them must shed most
-//! triangles and leave the surface, its closure and its volume exactly as they were.
-//! `ReleaseTimings` is `[Explicit]` (a manual timing run over a local file) and is not ported.
+//! Planar region simplifier tests (unit tests, for the crate-private work counter and the
+//! nearest-triangle query): the distance-field Dilate / Erode surface of a mechanical part is
+//! mostly grid-sized triangles on flat walls; merging them must shed most triangles and leave
+//! the surface, its closure and its volume exactly as they were.
 //!
 //! The `rust_only_*` tests check the same properties on hand-built meshes.
 
@@ -180,7 +179,7 @@ fn assert_simplifies(name: &str, part: Mesh, iso: f64, minimum_reduction: usize)
     assert!(simplified.faces.len() * minimum_reduction < source.faces.len());
 }
 
-/// C# `AssertSameSolid`: closed, manifold, same volume, and every source vertex (kept or
+/// Closed, manifold, same volume, and every source vertex (kept or
 /// dropped) still lies on the simplified surface.
 fn assert_same_solid_on_surface(source: &Mesh, simplified: &Mesh) {
     assert!(simplified.is_manifold());
@@ -250,7 +249,7 @@ fn tiled_box(size: f64, n: i32) -> Mesh {
     mesh
 }
 
-/// Half-edges without exactly one opposite partner (C# `ClosedEdgeErrors`).
+/// Half-edges without exactly one opposite partner.
 fn closed_edge_errors(mesh: &Mesh) -> usize {
     let mut directed: HashMap<(i32, i32), i32> = HashMap::new();
     for face in mesh.faces.iter() {
@@ -264,8 +263,9 @@ fn closed_edge_errors(mesh: &Mesh) -> usize {
         .count()
 }
 
-/// C# `AssertSameSolid`, less the nearest-triangle distance (no g3 here): closed, manifold, same
-/// volume, and every kept vertex is one of the source's own.
+/// The same solid (without the nearest-triangle distance check of
+/// `assert_same_solid_on_surface`): closed, manifold, same volume, and every kept vertex is
+/// one of the source's own.
 fn assert_same_solid(source: &Mesh, simplified: &Mesh) {
     assert!(simplified.is_manifold());
     assert_eq!(closed_edge_errors(simplified), 0);
@@ -341,7 +341,7 @@ fn rust_only_a_raised_vertex_keeps_its_side_from_merging_over_it() {
 
 #[test]
 fn rust_only_work_grows_linearly_with_the_mesh() {
-    // C# `WorkGrowsLinearlyWithTheMesh` on a tiled box: two copies with their own vertices, in
+    // The linear-work check on a tiled box: two copies with their own vertices, in
     // the same place, so the bounds and the rounding are the same as the single's.
     let single = tiled_box(10.0, 8);
     let doubled = doubled_in_place(&single);

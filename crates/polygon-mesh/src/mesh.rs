@@ -1,14 +1,13 @@
-//! `Mesh`: a triangle mesh of f32 vertices and indexed faces. Ports the core of agg-sharp
-//! `PolygonMesh/Mesh.cs` (the `Mesh` class: constructors, equality, winding, welding, hashing,
-//! change tracking, transforms, bounds and face creation). The free extension methods of the
-//! same file live in `mesh_extensions.rs`; measurements in `mesh_measure.rs`.
+//! `Mesh`: a triangle mesh of f32 vertices and indexed faces, with its constructors, equality,
+//! winding, welding, hashing, change tracking, transforms, bounds and face creation. The other
+//! mesh helpers live in `mesh_extensions.rs`; measurements in `mesh_measure.rs`.
 //!
-//! `MergeVertices`, `GetVertexBvhTree`, `SplitFace` and `Split` are in `mesh_editing.rs`.
+//! Vertex merging, the vertex BVH and splitting faces and meshes are in `mesh_editing.rs`.
 //!
-//! The per-face colors and textures are fields here; `RemapFaceData`, the centroid colors and
-//! the texture helpers live in `face_data.rs`. Not yet ported: `PropertyBag` and the `Changed`
-//! event (shape decided with Phase 5's event outbox). The convex hull and transformed-bounds caches live in
-//! `processors::mesh_convex_hull` and `transformed_aabb_cache`; they key on `changed_count`.
+//! The per-face colors and textures are fields here; remapping them, the centroid colors and
+//! the texture helpers live in `face_data.rs`. A mesh has no property bag or change event:
+//! caches and owners watch `changed_count`. The convex hull and transformed-bounds caches live
+//! in `processors::mesh_convex_hull` and `transformed_aabb_cache`; they key on `changed_count`.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -47,12 +46,13 @@ pub struct Mesh {
     pub(crate) convex_hull_cache: ConvexHullCache,
 }
 
-/// C# `int.GetLongHashCode(hash)`: FNV-1a over the int's 4 little-endian bytes.
+/// FNV-1a over the int's 4 little-endian bytes.
 pub(crate) fn int_long_hash(value: i32, hash: u64) -> u64 {
     long_hash::compute_hash(&value.to_le_bytes(), hash)
 }
 
-/// A dictionary key with C# `float.Equals` semantics: 0.0 and -0.0 alike, every NaN alike.
+/// A dictionary key under which 0.0 and -0.0 are alike and every NaN is alike, so welding
+/// treats equal positions as equal however they were computed.
 pub(crate) fn f32_key(value: f32) -> u32 {
     if value == 0.0 {
         0
@@ -63,7 +63,8 @@ pub(crate) fn f32_key(value: f32) -> u32 {
     }
 }
 
-/// A dictionary key with C# `double.Equals` semantics: 0.0 and -0.0 alike, every NaN alike.
+/// A dictionary key under which 0.0 and -0.0 are alike and every NaN is alike (the f64 form
+/// of [`f32_key`]).
 pub(crate) fn f64_key(value: f64) -> u64 {
     if value == 0.0 {
         0
@@ -115,8 +116,7 @@ impl Mesh {
         mesh
     }
 
-    /// A mesh from f64 vertices (narrowed) and a flat face index list (C# `Mesh(List<Vector3>,
-    /// List<int>)`).
+    /// A mesh from f64 vertices (narrowed) and a flat face index list.
     pub fn from_vector3_list_and_indices(v: &[Vector3], f: &[i32]) -> Self {
         let mut mesh = Mesh::new();
         mesh.vertices = v.iter().map(|&p| Vector3Float::from_vector3(p)).collect();
@@ -126,7 +126,8 @@ impl Mesh {
         mesh
     }
 
-    /// How many times [`Mesh::mark_as_changed`] has run (wraps, as C#'s unchecked increment).
+    /// How many times [`Mesh::mark_as_changed`] has run (wrapping; caches only compare it for
+    /// equality).
     pub fn changed_count(&self) -> i32 {
         self.changed_count
     }
@@ -153,7 +154,7 @@ impl Mesh {
         face.normal *= -1.0;
 
         // The UVs are per corner, so the winding flip has to take them along or the face's
-        // texture comes out mirrored. Replaced rather than edited in place, as C# does because a
+        // texture comes out mirrored. Replaced rather than edited in place, because a
         // FaceTextureData can be shared with another face or mesh.
         if let Some(texture_data) = self.face_textures.get_mut(&(face_index as i32)) {
             *texture_data = FaceTextureData::new(
@@ -235,7 +236,7 @@ impl Mesh {
     }
 
     /// FNV-1a over the vertex and face counts, up to ~1000 sampled vertices and ~10000 sampled
-    /// faces, starting from `hash` (C# `GetLongHashCode(ulong hash)`).
+    /// faces, starting from `hash`.
     pub fn get_long_hash_code_with(&self, hash: u64) -> u64 {
         let mut hash = int_long_hash(self.vertices.len() as i32, hash);
         hash = int_long_hash(self.faces.len() as i32, hash);
@@ -276,7 +277,7 @@ impl Mesh {
     pub fn mark_as_changed(&mut self) {
         self.transformed_aabb_cache.changed();
         self.cached_aabb.take();
-        // unchecked in C#: rolls over rather than throwing.
+        // rolls over rather than panicking: caches only compare it for equality.
         self.changed_count = self.changed_count.wrapping_add(1);
     }
 
@@ -334,8 +335,7 @@ impl Mesh {
     }
 
     /// The bounds of the mesh under `transform`, from its convex hull where it has one (cached
-    /// per transform until the next [`Mesh::mark_as_changed`]; C#
-    /// `GetAxisAlignedBoundingBox(Matrix4X4)`).
+    /// per transform until the next [`Mesh::mark_as_changed`]).
     pub fn get_axis_aligned_bounding_box_transformed(
         &self,
         transform: Matrix4X4,
@@ -344,8 +344,7 @@ impl Mesh {
             .get_axis_aligned_bounding_box(self, transform)
     }
 
-    /// Adds the distinct positions as new vertices and fans faces across them (C#
-    /// `CreateFace(params Vector3[])`).
+    /// Adds the distinct positions as new vertices and fans faces across them.
     pub fn create_face(&mut self, positions_in: &[Vector3]) {
         let mut positions: Vec<Vector3> = Vec::with_capacity(positions_in.len());
         for &p in positions_in {
@@ -446,7 +445,7 @@ impl Mesh {
     }
 }
 
-/// C# `Equals(Mesh)`: same vertices (exactly) and same face indices, in order. Normals and
+/// Same vertices (exactly) and same face indices, in order. Normals and
 /// change counts are not compared.
 impl PartialEq for Mesh {
     fn eq(&self, other: &Self) -> bool {

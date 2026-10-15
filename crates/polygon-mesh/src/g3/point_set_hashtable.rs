@@ -1,15 +1,14 @@
-//! geometry3Sharp's `spatial/PointSetHashtable.cs` (with `ShiftGridIndexer3` from
-//! `spatial/GridIndexing.cs`, `gIndices.GridOffsets26` and `BoundsUtil.Bounds(IPointSet)`) over
-//! `MeshBoundaryEdgeMidpoints` (`mesh/MeshPointSets.cs`): boundary edges hashed by their
-//! midpoints into a uniform grid, and the ball query `MergeCoincidentEdges` uses. A ball
-//! query returns its hits in C#'s order: the centre cell, then the 26 neighbours in
-//! `GridOffsets26` order, each cell in insertion order.
+//! A point-set hashtable over boundary-edge midpoints (derived from geometry3Sharp): boundary
+//! edges hashed by their midpoints into a uniform grid, and the ball query
+//! `MergeCoincidentEdges` uses. A ball query returns its hits in a fixed order: the centre
+//! cell, then the 26 neighbours in `GRID_OFFSETS_26` order, each cell in insertion order, so
+//! the merges (and the repaired mesh) are the same on every run.
 
 use std::collections::HashMap;
 
 use super::dmesh3::{DMesh3, G3Exception};
 
-/// g3 `gIndices.GridOffsets26`.
+/// The 26 neighbour offsets of a grid cell: face, edge, then corner neighbours.
 const GRID_OFFSETS_26: [[i32; 3]; 26] = [
     // face-nbrs
     [0, 0, -1],
@@ -42,7 +41,7 @@ const GRID_OFFSETS_26: [[i32; 3]; 26] = [
     [-1, -1, -1],
 ];
 
-/// C# `DMesh3.GetEdgePoint(eID, t)`.
+/// The point a fraction `t` along edge `eid`, from its first vertex to its second.
 pub(crate) fn get_edge_point(mesh: &DMesh3, eid: i32, t: f64) -> [f64; 3] {
     let [a, b] = mesh.get_edge_v(eid);
     let (v0, v1) = (mesh.vertex(a), mesh.vertex(b));
@@ -55,7 +54,7 @@ fn distance_squared(a: [f64; 3], b: [f64; 3]) -> f64 {
     dx * dx + dy * dy + dz * dz
 }
 
-/// g3 `PointSetHashtable` built over `MeshBoundaryEdgeMidpoints`: the "points" are boundary
+/// A uniform-grid hashtable whose "points" are boundary
 /// edge ids, each at its edge's midpoint.
 #[derive(Debug, Clone)]
 pub(crate) struct BoundaryEdgeMidpointHashtable {
@@ -65,10 +64,10 @@ pub(crate) struct BoundaryEdgeMidpointHashtable {
 }
 
 impl BoundaryEdgeMidpointHashtable {
-    /// C# `new PointSetHashtable(new MeshBoundaryEdgeMidpoints(mesh)).Build(maxAxisSubdivs)`:
-    /// the grid spans the midpoints' bounds, `MaxDim / maxAxisSubdivs` per cell.
+    /// Hashes `mesh`'s boundary edges. The grid spans the midpoints' bounds, the largest
+    /// dimension divided by `max_axis_subdivs` per cell.
     pub(crate) fn build(mesh: &DMesh3, max_axis_subdivs: i32) -> Self {
-        // C# `BoundsUtil.Bounds(IPointSet)`: `AxisAlignedBox3d.Empty` grown by `Contain`
+        // An empty box grown to contain every midpoint
         let mut min = [f64::MAX; 3];
         let mut max = [f64::MIN; 3];
         for eid in mesh.boundary_edge_indices() {
@@ -96,19 +95,20 @@ impl BoundaryEdgeMidpointHashtable {
         table
     }
 
-    /// C# `ShiftGridIndexer3.ToGrid`: truncating casts (saturating, as .NET 9+ converts).
+    /// The cell holding `p`. The casts truncate and saturate, so a far-off point lands in an
+    /// edge cell instead of wrapping.
     fn world_to_grid(&self, p: [f64; 3]) -> [i32; 3] {
         std::array::from_fn(|a| ((p[a] - self.origin[a]) / self.cell_size) as i32)
     }
 
-    /// C# `ShiftGridIndexer3.FromGrid`.
+    /// The world position of cell `idx`'s minimum corner.
     fn grid_to_world(&self, idx: [i32; 3]) -> [f64; 3] {
         std::array::from_fn(|a| (idx[a] as f64 * self.cell_size) + self.origin[a])
     }
 
-    /// C# `FindInBall(pt, r, buffer, out count)`: the edges whose midpoint is strictly within
-    /// `r` of `pt`. `Err` where C# throws for a radius larger than a cell. C#'s fixed-size
-    /// buffer is a `Vec` here (divergence 792).
+    /// The edges whose midpoint is strictly within
+    /// `r` of `pt`. `Err` for a radius larger than a cell: the search only visits neighbouring
+    /// cells. Every hit is returned, however many edge midpoints coincide.
     pub(crate) fn find_in_ball(
         &self,
         mesh: &DMesh3,

@@ -1,15 +1,13 @@
-//! geometry3Sharp `mesh_ops/RemoveOccludedTriangles.cs`: removes the triangles on the "inside"
-//! of a mesh, for the Repair tool's Advanced `RemoveMode` (`advanced_repair`). Also
-//! `MeshNormals.Compute` (`mesh/MeshNormals.cs`, the area-weighted face average), which supplies
-//! the vertex normals the per-vertex test nudges along, since a `DMesh3` here stores none.
+//! Occluded-triangle removal (derived from geometry3Sharp): removes the triangles on the
+//! "inside" of a mesh, for the Repair tool's Advanced remove mode (`advanced_repair`). Also
+//! the area-weighted vertex normals, which supply the direction the per-vertex test nudges
+//! along, since a `DMesh3` here stores none.
 //!
-//! The two modes the Repair tool reaches are ported: `FastWindingNumber` (Interior, over
+//! Two modes, the ones the Repair tool offers: `FastWindingNumber` (Interior, over
 //! `fast_winding`) and `SimpleOcclusionTest` (Occluded, six axis rays through
-//! `DMeshAABBTree3::find_nearest_hit_triangle`). C# tests vertices and triangles with
-//! `gParallel.ForEach` and collects the removed ids under a lock, so their order varies from run
-//! to run; here they are tested in id order, which makes the removal order (and so the ids the
-//! mesh frees) deterministic. Nothing sets the C# `Progress` or `ProgressReporter` on this path,
-//! so there is no cancellation point.
+//! `DMeshAABBTree3::find_nearest_hit_triangle`). Vertices and triangles are tested in id
+//! order on one thread, which makes the removal order (and so the ids the mesh frees) the
+//! same on every run. Nothing interrupts the test, so there is no cancellation point.
 
 use super::dmesh3::DMesh3;
 use super::dmesh_aabb_tree3::DMeshAABBTree3;
@@ -19,16 +17,16 @@ use super::ray_intersection::Ray3d;
 use super::vector3d::ZERO_TOLERANCEF;
 use super::vector3d::{add, area, dot, normalized, scale, tri_normal, ZERO_TOLERANCE};
 
-/// C# `RemoveOccludedTriangles.CalculationMode`, the modes the Repair tool uses.
+/// How "inside" is decided, one mode per Repair tool option.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CalculationMode {
-    /// Inside where the fast winding number exceeds `WindingIsoValue`.
+    /// Inside where the fast winding number exceeds `winding_iso_value`.
     FastWindingNumber,
     /// Inside where a ray along every axis direction hits the mesh.
     SimpleOcclusionTest,
 }
 
-/// g3 `RemoveOccludedTriangles`.
+/// The occluded-triangle removal's settings and result.
 pub(crate) struct RemoveOccludedTriangles {
     /// if true, then we discard tris if any vertex is occluded.
     /// Otherwise we discard based on tri centroids
@@ -45,7 +43,7 @@ pub(crate) struct RemoveOccludedTriangles {
 }
 
 impl RemoveOccludedTriangles {
-    /// C# `new RemoveOccludedTriangles(mesh)` with `InsideMode` set.
+    /// A removal using `inside_mode`, with the default settings.
     pub(crate) fn new(inside_mode: CalculationMode) -> Self {
         Self {
             per_vertex: false,
@@ -57,7 +55,7 @@ impl RemoveOccludedTriangles {
         }
     }
 
-    /// C# `Apply()`: always true (there is no cancellation here).
+    /// Always true (there is no cancellation here).
     pub(crate) fn apply(&mut self, mesh: &mut DMesh3) -> bool {
         let removed = {
             let spatial = DMeshAABBTree3::new(mesh);
@@ -132,9 +130,9 @@ impl RemoveOccludedTriangles {
     }
 }
 
-/// C# `MeshNormals.Compute` (`Compute_FaceAvg_AreaWeighted`): each vertex's normal is the
-/// area-weighted sum of its triangles' unit normals, normalized when its squared length exceeds
-/// `MathUtil.ZeroTolerancef`. Indexed by vertex id.
+/// Vertex normals: each vertex's normal is the area-weighted sum of its triangles' unit
+/// normals, normalized when its squared length exceeds the single-precision zero tolerance.
+/// Indexed by vertex id.
 fn compute_vertex_normals(mesh: &DMesh3) -> Vec<[f64; 3]> {
     let mut normals = vec![[0.0; 3]; mesh.max_vertex_id().max(0) as usize];
     for ti in mesh.triangle_indices() {

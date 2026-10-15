@@ -1,4 +1,4 @@
-//! Port of agg-sharp `PolygonMesh/Processors/PlanarRegionSimplifier.cs`: merges connected
+//! The planar region simplifier: merges connected
 //! coplanar triangles into one region each and retriangulates the region from its boundary
 //! vertices alone. The marching-cubes surface of a distance field over a mechanical part is mostly
 //! flat walls tiled with grid-sized triangles, which this collapses to a few large ones without
@@ -8,21 +8,19 @@
 //! exactly as it was: the mesh stays closed with no T-junctions, and non-planar regions are
 //! untouched. Only interior vertices go, and each lies within the distance tolerance of its
 //! region's plane. The retriangulation is manifold-rust's ear clipper
-//! (`polygon::triangulate_idx`, the code C#'s `ManifoldSharp.Polygon.TriangulateIdx` wraps: built
-//! for retriangulating coplanar faces, holes included, never adding a vertex). A region is left as
+//! (`polygon::triangulate_idx`, built for retriangulating coplanar faces, holes included, never
+//! adding a vertex). A region is left as
 //! it was when its boundary pinches (one vertex starts two boundary edges), when the new triangles
 //! do not tile the old area exactly, or when a new diagonal duplicates an edge elsewhere in the
 //! mesh.
 //!
-//! C# wraps `TriangulateIdx` in a catch-all that leaves the region as it was; manifold-rust's
-//! ear clipper does not fail with an error (C++ Manifold only throws there in its debug geometry
-//! checks), and a bad result is still caught by the triangle-count and area checks after it.
+//! The ear clipper does not fail with an error, so there is nothing to catch; a bad result is
+//! caught by the triangle-count and area checks after it, which leave the region as it was.
 //!
-//! Iteration order is kept where it reaches the output: boundary loops are traced in the order
-//! their start vertices were first seen (C#'s insertion-ordered `Dictionary`), the seed order is
-//! .NET's unstable introsort, and clashing regions fall back in ascending order (C#'s
-//! `HashSet<int>` of small ints, filled in ascending order). Rust-only tests are in
-//! `planar_region_simplifier_tests.rs`.
+//! Iteration order is fixed wherever it reaches the output, so the same mesh always simplifies
+//! the same way: boundary loops are traced in the order their start vertices were first seen,
+//! the seeds are ordered by an introsort with a fixed placement of ties, and clashing regions
+//! fall back in ascending order. Tests are in `planar_region_simplifier_tests.rs`.
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -36,17 +34,17 @@ use vector_math::Vector3;
 
 use crate::Mesh;
 
-/// The default `angleTolerance` of C# `Simplify`: radians a face normal may differ from its
+/// The default angle tolerance of [`simplify`]: radians a face normal may differ from its
 /// region's.
 pub const DEFAULT_ANGLE_TOLERANCE: f64 = 1e-4;
-/// The default `relativeDistanceTolerance` of C# `Simplify`: how far, as a fraction of the largest
-/// bounding box extent, a vertex may sit off its region's plane.
+/// The default relative distance tolerance of [`simplify`]: how far, as a fraction of the
+/// largest bounding box extent, a vertex may sit off its region's plane.
 pub const DEFAULT_RELATIVE_DISTANCE_TOLERANCE: f64 = 1e-7;
 
-/// C#'s `-1` "no region".
+/// A face not yet in any region.
 const NO_REGION: usize = usize::MAX;
 
-/// A directed edge (from, to) by vertex index; C# packs it into a `long`.
+/// A directed edge (from, to) by vertex index.
 type EdgeKey = (usize, usize);
 
 #[derive(Default)]
@@ -70,7 +68,7 @@ impl Faces<'_> {
     }
 }
 
-/// `Simplify(mesh)` with the C# default tolerances.
+/// Simplifies `mesh` with the default tolerances.
 pub fn simplify(mesh: &Mesh) -> Mesh {
     simplify_with(
         mesh,
@@ -87,8 +85,7 @@ pub fn simplify_with(mesh: &Mesh, angle_tolerance: f64, relative_distance_tolera
 }
 
 /// `simplify_with`, also counting its inner-loop steps (faces grown, boundary vertices scanned and
-/// triangulated, edges checked) so a test can guard that the cost stays linear in the mesh (C#'s
-/// internal `out long work` overload).
+/// triangulated, edges checked) so a test can guard that the cost stays linear in the mesh.
 pub(crate) fn simplify_counting_work(
     mesh: &Mesh,
     angle_tolerance: f64,
@@ -267,7 +264,7 @@ pub(crate) fn simplify_counting_work(
     }
 }
 
-/// The retriangulation pass's mutable state (the C# method's locals its `FallBack` closes over).
+/// The retriangulation pass's mutable state, shared with its fall-back step.
 struct Retriangulation {
     active: Vec<bool>,
     replacements: Vec<Option<Vec<[usize; 3]>>>,
@@ -309,7 +306,7 @@ fn next(h: usize) -> usize {
     }
 }
 
-/// C# `double.CompareTo`: NaN sorts below every number and equal to itself.
+/// NaN sorts below every number and equal to itself.
 fn cs_compare(a: f64, b: f64) -> Ordering {
     match a.partial_cmp(&b) {
         Some(ordering) => ordering,
@@ -330,7 +327,8 @@ fn trace_boundary(
     region_of: &[usize],
     half_edges: &HashMap<EdgeKey, usize>,
 ) -> bool {
-    // C#'s Dictionary iterates in insertion order (nothing is removed); `starts` keeps that order.
+    // `starts` keeps the order start vertices were first seen, so loops are traced in a fixed
+    // order (nothing is removed).
     let mut next_on_boundary: HashMap<usize, usize> = HashMap::new();
     let mut starts: Vec<usize> = Vec::new();
     for &f in &region.faces {
@@ -578,7 +576,7 @@ fn retriangulate(
             positions[corners[2]],
             normal,
         );
-        // Not `area <= 0.0`: a NaN area fails too, as C#'s `!(area > 0)` does.
+        // Not `area <= 0.0`: a NaN area must fail too.
         if area.partial_cmp(&0.0) != Some(Ordering::Greater) {
             return None;
         }
@@ -601,8 +599,8 @@ fn projected_area(a: Vector3, b: Vector3, c: Vector3, normal: Vector3) -> f64 {
 }
 
 /// The merged regions whose new triangles use an edge that is not used exactly once each way in
-/// the result - a diagonal that repeats an edge elsewhere. Returned in ascending order, the order
-/// C#'s `HashSet<int>` hands them back in.
+/// the result - a diagonal that repeats an edge elsewhere. Returned in ascending order, so the
+/// fall-back order is fixed.
 fn find_clashing_regions(
     verts: &[usize],
     region_of: &[usize],

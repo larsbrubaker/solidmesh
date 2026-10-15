@@ -1,14 +1,10 @@
-//! The face and mesh queries agg-sharp keeps as extension methods at the bottom of
-//! `PolygonMesh/Mesh.cs` (`FaceExtensionMethods`, `MeshExtensionMethods`), as `Face` and `Mesh`
-//! methods: copying, planes, coplanar faces, edges and manifoldness, unused-vertex and
-//! degenerate-face removal.
+//! Face and mesh queries as `Face` and `Mesh` methods: copying, planes, coplanar faces, edges
+//! and manifoldness, unused-vertex and degenerate-face removal.
 //!
-//! `Face.Split`/`GetCutLine` live in `face_split.rs`, `SplitOnPlanes` in `mesh_editing.rs` and
-//! `RepairTJunctions` in `t_junctions.rs`, the texture helpers with an explicit mapping
-//! (`PlaceTexture*`, `RemoveTexture`, `GetMaxPlaneProjection`, and the single-face projection
-//! overload `PlaceTextureOnFace(face, image)` as `place_texture_on_face_projected`) in
-//! `face_data.rs`. Not ported: `AddFaceCopy`, which nothing calls; `TexturedPlane` throws
-//! `NotImplementedException` in C#.
+//! Splitting a face and its cut line live in `face_split.rs`, `split_on_planes` in
+//! `mesh_editing.rs` and T-junction repair in `t_junctions.rs`; the texture helpers (placing
+//! and removing textures, the max-plane projection, and the single-face projection
+//! `place_texture_on_face_projected`) are in `face_data.rs`.
 
 use std::collections::HashSet;
 
@@ -19,7 +15,7 @@ use crate::face::{Face, FaceList};
 use crate::mesh::Mesh;
 use crate::mesh_edge_graph::{MeshEdge, MeshEdgeGraph, VertexFaceList};
 
-/// A face's first corner and its normal (C# `PositionNormal`).
+/// A face's first corner and its normal.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PositionNormal {
     pub position: Vector3Float,
@@ -62,7 +58,7 @@ impl Face {
 }
 
 impl Mesh {
-    /// C# `CopyFaces(copyFrom)`: appends `copy_from`'s vertices as they are and its faces with
+    /// Appends `copy_from`'s vertices as they are and its faces with
     /// their normals, unwelded, with its face textures and colors at their new indices.
     pub fn copy_faces(&mut self, copy_from: &Mesh) {
         let v_start = self.vertices.len() as i32;
@@ -93,15 +89,14 @@ impl Mesh {
             colors[f_start..f_start + count].copy_from_slice(&source_colors[..count]);
             self.face_colors = Some(colors);
         } else if let Some(colors) = &mut self.face_colors {
-            // target has face colors but source doesn't - extend with transparent (C#
-            // Array.Resize, which also truncates a longer array)
+            // target has face colors but source doesn't - extend with transparent (resize
+            // also truncates a longer array)
             colors.resize(total_faces, Color::default());
         }
     }
 
     /// An independent copy of the mesh - its own vertices, faces and per-face data - so that
-    /// editing the copy can never reach back into the source. (C#'s `Copy` takes a cancellation
-    /// token and a progress callback that it never uses.)
+    /// editing the copy can never reach back into the source.
     pub fn copy(&self) -> Mesh {
         let mut copy = Mesh::from_vertices_and_faces(&self.vertices, &self.faces);
         copy.face_colors = self.face_colors.clone();
@@ -244,7 +239,7 @@ impl Mesh {
     }
 
     /// Drops faces with a repeated vertex index or an area below `min_face_area` (compared in
-    /// f32, as C# compares against the f32 `GetArea`).
+    /// f32, against the face's f32 area).
     pub fn remove_degenerate_faces(&mut self, min_face_area: f64) {
         let mut new_faces = FaceList::new();
         let mut source_face_index: Vec<i32> = Vec::with_capacity(self.faces.len());

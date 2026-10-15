@@ -1,12 +1,11 @@
-//! `MeshConvexHull`: the convex hull of a mesh's vertices, cached on the mesh. Ports agg-sharp
-//! `PolygonMesh/Processors/MeshConvexHull.cs` on the MIConvexHull port in `mi_convex_hull`.
+//! The convex hull of a mesh's vertices, cached on the mesh, built by
+//! `mi_convex_hull` (derived from MIConvexHull).
 //! `TransformedAabbCache` (`crate::transformed_aabb_cache`) bounds a transformed mesh by its hull.
 //!
-//! C# keeps the hull in `Mesh.PropertyBag` and drops it from a `Mesh.Changed` handler. Here the
-//! mesh owns a typed [`ConvexHullCache`] whose entry carries the [`Mesh::changed_count`] it was
-//! built at, so any [`Mesh::mark_as_changed`] makes it stale - the same invalidation, without a
-//! property bag or an event. C# forces `generateAsync` off (a background hull of a mesh the owner
-//! may be editing races), so there is no in-flight marker either: every call is synchronous.
+//! The mesh owns a typed [`ConvexHullCache`] whose entry carries the [`Mesh::changed_count`] it
+//! was built at, so any [`Mesh::mark_as_changed`] makes it stale, without a property bag or an
+//! event. Every call is synchronous (a background hull of a mesh the owner may be editing
+//! would race), so there is no in-flight marker either.
 
 use std::sync::{Arc, Mutex};
 
@@ -17,7 +16,7 @@ use crate::mesh::f32_key;
 use crate::Mesh;
 
 /// What [`Mesh::get_convex_hull`] hands back: the cached hull, or - when the mesh is flat or
-/// empty - the mesh itself, which is then its own best hull (C# returns the same reference).
+/// empty - the mesh itself, which is then its own best hull.
 #[derive(Debug, Clone)]
 pub enum ConvexHull<'a> {
     Hull(Arc<Mesh>),
@@ -64,8 +63,8 @@ impl Mesh {
     /// Gets the convex hull of the mesh, caching it on the mesh (and dropping the cache when the
     /// mesh changes). `None` when the mesh has fewer than 4 faces or the hull cannot be built.
     ///
-    /// `_generate_async` is accepted for parity with C#, which forces it off: a background task
-    /// walking a mesh the owning thread may still be editing is the original threading issue.
+    /// `_generate_async` is ignored and the hull is always built synchronously: a background
+    /// task walking a mesh the owning thread may still be editing would race with the edit.
     pub fn get_convex_hull(&self, _generate_async: bool) -> Option<ConvexHull<'_>> {
         if self.faces.len() < 4 {
             return None;
@@ -77,20 +76,19 @@ impl Mesh {
         self.create_hull_mesh(changed_count)
     }
 
-    /// Whether a hull built at the mesh's current [`Mesh::changed_count`] is cached (C# checks
-    /// `PropertyBag.ContainsKey(ConvexHullMesh)`).
+    /// Whether a hull built at the mesh's current [`Mesh::changed_count`] is cached.
     pub fn has_cached_convex_hull(&self) -> bool {
         self.convex_hull_cache.get(self.changed_count()).is_some()
     }
 
     fn create_hull_mesh(&self, changed_count: i32) -> Option<ConvexHull<'_>> {
         let mut bounds = AxisAlignedBoundingBox::empty();
-        // Get the convex hull for the mesh (C# `Vertices.Distinct()`: float ==, first kept)
+        // Get the convex hull for the mesh over the distinct vertices (float ==, first kept)
         let mut seen = std::collections::HashSet::new();
         let mut ch_vertex_list: Vec<[f64; 3]> = Vec::new();
         for &position in self.vertices.iter() {
             let has_nan = position.x.is_nan() || position.y.is_nan() || position.z.is_nan();
-            // NaN never equals itself, so C# keeps every NaN position
+            // NaN never equals itself, so every NaN position is kept
             if has_nan
                 || seen.insert((
                     f32_key(position.x),

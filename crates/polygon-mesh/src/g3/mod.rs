@@ -1,17 +1,17 @@
 //! The pieces of geometry3Sharp (https://github.com/gradientspace/geometry3Sharp, Copyright Ryan
-//! Schmidt / gradientspace, Boost Software License 1.0, vendored in agg-sharp) that agg-sharp's
-//! PolygonMesh reaches: an append-only `DMesh3` with its topology edits, the top-down `DMeshAABBTree3` and its
-//! nearest-triangle query, `MeshSignedDistanceGrid` in its narrow-band flood mode (for
+//! Schmidt / gradientspace, Boost Software License 1.0) that this crate uses: an append-only
+//! `DMesh3` with its topology edits, the top-down `DMeshAABBTree3` and its
+//! nearest-triangle query, the mesh signed distance grid in its narrow-band flood mode (for
 //! `sdf::MeshSdfGrid`) and its default signed narrow-band mode (`signed_distance_grid`), the
 //! implicit functions and boolean operators (`implicit3d`), and `MarchingCubes` /
-//! `MarchingCubesPro`, which the implicit booleans (`csg::implicit_boolean`) mesh with. Only
-//! what is reached is ported; each file names the C# it follows. See `THIRD_PARTY_NOTICES.md`.
+//! `MarchingCubesPro`, which the implicit booleans (`csg::implicit_boolean`) mesh with. See
+//! `THIRD_PARTY_NOTICES.md`.
 //! The dynamic `DMesh3` (`dmesh3*`, `ref_count_vector`, `small_list_set`) is the base the mesh
 //! repair (`MeshAutoRepair`) builds on.
 //! The remesher `MinimalHoleFill` runs (`remesher`, `remesher_pro`, with `mesh_constraints`,
 //! `mesh_refiner_base`, `mesh_util` and `vector3d`) edits that `DMesh3`, on a submesh copy of
 //! the fill that `region_operator` / `dsubmesh3` extract and splice back, sized with
-//! `mesh_queries`' edge-length statistics. `mesh_auto_repair` (g3 `MeshAutoRepair`, the Repair
+//! `mesh_queries`' edge-length statistics. `mesh_auto_repair` (the Repair
 //! tool's default pass, exposed as `Mesh::auto_repaired`) drives all of it.
 //! `advanced_repair` (the Repair tool's Advanced path, `Mesh::advanced_repaired`) adds the
 //! kernel face orientation and `remove_occluded_triangles`, which tests points with the fast

@@ -1,9 +1,9 @@
-//! MIConvexHull's `ConvexHull/ConvexHullAlgorithm.Initialize.cs`, 3D non-lifted path: the
+//! The quickhull's initialization (derived from MIConvexHull), 3D non-lifted path: the
 //! bounding box points, the shift to positive coordinates, and the initial simplex chosen from
-//! seeded random draws (`Random(1)`). C#'s quirks are kept on purpose, because they decide which
-//! vertices start the hull: `numBBPoints` is not refreshed after padding the bounding box points,
-//! the "distance" from the centroid only keeps the last axis's square, and a padding vertex of -1
-//! (no candidate found) makes C# throw on first use.
+//! seeded random draws (seed 1). Three details decide which vertices start the hull and are
+//! pinned by the hull tests: the bounding-box point count is read before the points are
+//! padded, the "distance" from the centroid keeps only the last axis's square, and a padding
+//! vertex of -1 (no candidate found) fails the hull on first use.
 
 use std::collections::HashSet;
 
@@ -23,7 +23,7 @@ impl ConvexHullAlgorithm {
         self.positions[v_index * DIM + dimension]
     }
 
-    /// `FindBoundingBoxPoints`: every vertex at a minimum or maximum on some axis, distinct, in
+    /// Every vertex at a minimum or maximum on some axis, distinct, in
     /// first-seen order.
     pub(super) fn find_bounding_box_points(&mut self) {
         let mut points: Vec<i32> = Vec::new();
@@ -56,14 +56,14 @@ impl ConvexHullAlgorithm {
             points.extend_from_slice(&min_indices);
             points.extend_from_slice(&max_indices);
         }
-        // LINQ `Distinct()` is a hash set yielding first occurrences in order; a linear scan
-        // here is quadratic when a dense part has many vertices on a flat extreme.
+        // Distinct, first occurrences in order, through a hash set: a linear scan here is
+        // quadratic when a dense part has many vertices on a flat extreme.
         let mut seen = HashSet::with_capacity(points.len());
         points.retain(|&p| seen.insert(p));
         self.bounding_box_points = points;
     }
 
-    /// `ShiftAndScalePositions`: shift so the minimum on each axis is half the maximum (no
+    /// Shift so the minimum on each axis is half the maximum (no
     /// points at zero, no huge ratios).
     pub(super) fn shift_and_scale_positions(&mut self) {
         let mut shift_amount = [0.0; DIM];
@@ -79,7 +79,8 @@ impl ConvexHullAlgorithm {
         }
     }
 
-    /// `CreateInitialSimplex`.
+    /// Builds the first hull faces from the initial points and files every other vertex
+    /// beyond them.
     pub(super) fn create_initial_simplex(&mut self) -> Result<(), HullFailed> {
         let initial_points = self.find_initial_points()?;
 
@@ -126,14 +127,14 @@ impl ConvexHullAlgorithm {
         Ok(())
     }
 
-    /// `FindInitialPoints`: dimension + 1 points spanning a non-negligible volume.
+    /// Dimension + 1 points spanning a non-negligible volume.
     fn find_initial_points(&mut self) -> Result<Vec<i32>, HullFailed> {
         let mut negligible_volume = FRACTIONAL_NEGLIGIBLE_VOLUME;
         for i in 0..DIM {
             negligible_volume *= self.maxima[i] - self.minima[i];
         }
         let mut best_vertex_indices: Option<Vec<i32>> = None;
-        // C# reads the count once, before the padding below.
+        // The count is read once, before the padding below.
         let num_bb_points = self.bounding_box_points.len();
         let mut degenerate = true;
         if (DIM + 1) > num_bb_points {
@@ -170,13 +171,13 @@ impl ConvexHullAlgorithm {
             // DegenerateData: the data is all co-planar (or collinear).
             return Err(HullFailed);
         }
-        // a null list here is a NullReferenceException in C#
+        // no simplex was found: the hull fails
         let best = best_vertex_indices.ok_or(HullFailed)?;
         self.inside_point = self.calculate_vertex_centroid(&best)?;
         Ok(best)
     }
 
-    /// `FindLargestRandomSimplex`: five seeded draws of a base triangle from `bb_points`, each
+    /// Five seeded draws of a base triangle from `bb_points`, each
     /// completed by the farthest of `other_points`; the largest volume wins.
     fn find_largest_random_simplex(
         &self,
@@ -215,7 +216,7 @@ impl ConvexHullAlgorithm {
                 }
             }
             if vertex_indices.iter().any(|&v| v < 0) {
-                // a -1 padding vertex: C#'s position lookup throws
+                // a -1 padding vertex has no position: the hull fails
                 return Err(HullFailed);
             }
             let mut plane = FaceInternal::new(0, usize::MAX);
@@ -236,7 +237,7 @@ impl ConvexHullAlgorithm {
         Ok((best_vertex_indices, max_volume))
     }
 
-    /// `FindFarthestPoint`: the vertex farthest from the plane, either side; -1 if none.
+    /// The vertex farthest from the plane, either side; -1 if none.
     fn find_farthest_point(&self, vertex_indices: &[i32], plane: &FaceInternal) -> i32 {
         let mut max_distance = 0.0;
         let mut farthest_vertex_index = -1;
@@ -250,7 +251,8 @@ impl ConvexHullAlgorithm {
         farthest_vertex_index
     }
 
-    /// `AddNVerticesFarthestToCentroid`.
+    /// Pads `vertex_indices` to `n` vertices, each time adding the one farthest from the
+    /// current centroid.
     fn add_n_vertices_farthest_to_centroid(
         &self,
         vertex_indices: Vec<i32>,
@@ -268,7 +270,7 @@ impl ConvexHullAlgorithm {
                 let mut distance_squared = 0.0;
                 for (i, c) in centroid.iter().enumerate() {
                     let d = c - self.positions[i + DIM * v];
-                    // C# assigns rather than accumulates: only the last axis counts.
+                    // Assigned rather than accumulated: only the last axis counts.
                     distance_squared = d * d;
                 }
                 if max_distance < distance_squared {
@@ -281,10 +283,10 @@ impl ConvexHullAlgorithm {
         Ok(new_verts_list)
     }
 
-    /// `CalculateVertexCentriod`.
+    /// The centroid of the listed vertices; a -1 padding vertex fails the hull.
     fn calculate_vertex_centroid(&self, vertex_indices: &[i32]) -> Result<[f64; DIM], HullFailed> {
         if vertex_indices.iter().any(|&v| v < 0) {
-            // a -1 padding vertex: C#'s position lookup throws
+            // a -1 padding vertex has no position: the hull fails
             return Err(HullFailed);
         }
         let num_points = vertex_indices.len();
@@ -298,7 +300,7 @@ impl ConvexHullAlgorithm {
         Ok(centroid)
     }
 
-    /// `UpdateAdjacency`: links two faces of the initial simplex that share an edge.
+    /// Links two faces of the initial simplex that share an edge.
     fn update_adjacency(&mut self, l: usize, r: usize) {
         let lv = self.face_pool[l].vertices.map(|v| v as usize);
         let rv = self.face_pool[r].vertices.map(|v| v as usize);
@@ -344,7 +346,7 @@ impl ConvexHullAlgorithm {
         self.face_pool[r].adjacent_faces[i] = self.face_pool[l].index as i32;
     }
 
-    /// `FindBeyondVertices(face)`: every unvisited vertex beyond the face, into its own buffer.
+    /// Every unvisited vertex beyond the face, into its own buffer.
     fn find_beyond_vertices_all(&mut self, face: usize) {
         let beyond_vertices = self.face_pool[face].vertices_beyond;
         self.max_distance = f64::NEG_INFINITY;

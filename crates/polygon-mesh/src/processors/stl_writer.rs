@@ -1,5 +1,5 @@
-//! STL writing (ASCII and binary). Ports the save half of agg-sharp
-//! `PolygonMesh/Processors/StlProcessing.cs` (`Save`, `FormatForStl`).
+//! STL writing (ASCII and binary) and the six-decimal number format ASCII STL uses;
+//! `stl_processing` is the load half.
 
 use std::io::Write;
 use std::path::Path;
@@ -11,7 +11,7 @@ use crate::mesh::Mesh;
 use crate::processors::mesh_output_settings::{MeshOutputSettings, OutputType};
 use crate::processors::stl_processing::StlError;
 
-/// Writes `mesh` to a new file at `file_name` (C# `Save(this Mesh, string, ...)`).
+/// Writes `mesh` to a new file at `file_name`.
 pub fn save_file(
     mesh: &Mesh,
     file_name: &Path,
@@ -35,8 +35,8 @@ pub fn save<W: Write>(
     let io = |e: std::io::Error| StlError::Io(e.to_string());
     match output_info.output_type_setting {
         OutputType::Ascii => {
-            // .NET's StreamWriter.WriteLine ends lines with Environment.NewLine; see
-            // divergence 41.
+            // Lines always end with "\n", on every platform: one output for one mesh, and
+            // every STL reader accepts it.
             writeln!(writer, "solid Default").map_err(io)?;
             for face in mesh.faces.iter() {
                 if cancel.is_cancelled() {
@@ -59,8 +59,8 @@ pub fn save<W: Write>(
         OutputType::Binary => {
             // 80 bytes of nothing
             writer.write_all(&[0u8; 80]).map_err(io)?;
-            // the number of triangles (C# writes a placeholder and seeks back to fill in the
-            // count it wrote; that count is always the face count when the save completes)
+            // the number of triangles (the face count, written up front so the writer never
+            // has to seek back)
             writer
                 .write_all(&(mesh.faces.len() as i32).to_le_bytes())
                 .map_err(io)?;
@@ -89,7 +89,7 @@ pub fn save<W: Write>(
     writer.flush().map_err(io)
 }
 
-/// "x y z" with six decimals, as C# `string.Format("{0:0.000000} ...")` formats doubles.
+/// "x y z" with six decimals, for doubles.
 pub fn format_for_stl(value: Vector3) -> String {
     format!(
         "{} {} {}",
@@ -99,7 +99,7 @@ pub fn format_for_stl(value: Vector3) -> String {
     )
 }
 
-/// "x y z" with six decimals, as C# `string.Format("{0:0.000000} ...")` formats floats.
+/// "x y z" with six decimals, for floats.
 pub fn format_for_stl_f32(value: Vector3Float) -> String {
     format!(
         "{} {} {}",
@@ -109,10 +109,10 @@ pub fn format_for_stl_f32(value: Vector3Float) -> String {
     )
 }
 
-/// .NET's custom format "0.000000": the value is first rounded to `precision` significant
-/// digits (7 for float, 15 for double - .NET's custom-format precisions), then that digit
-/// string is rounded half-up to six decimals. A negative value keeps its sign even when it
-/// rounds to zero, as .NET Core 3.0+ does.
+/// The fixed "0.000000" format: the value is first rounded to `precision` significant digits
+/// (7 for float, 15 for double: the digits each type holds reliably), then that digit string
+/// is rounded half-up to six decimals, so a float's noise digits never reach the file. A
+/// negative value keeps its sign even when it rounds to zero.
 pub(crate) fn format_fixed6(value: f64, precision: usize) -> String {
     if value.is_nan() {
         return "NaN".to_string();

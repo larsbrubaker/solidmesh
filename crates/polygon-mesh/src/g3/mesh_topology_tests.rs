@@ -1,6 +1,6 @@
-//! Rust-only tests for the g3 boundary-loop, editor, selection and iterator ports
+//! Tests for the mesh boundary loops, editor, selection and iterators
 //! (`mesh_boundary_loops`, `mesh_editor`, `mesh_face_selection`, `mesh_iterators`,
-//! `edge_loop`, `dmesh3_set_triangle`). agg-sharp ships no geometry3Sharp tests for these.
+//! `edge_loop`, `dmesh3_set_triangle`).
 
 use super::dmesh3::{DMesh3, INVALID_ID};
 use super::edge_loop::{is_boundary_loop, EdgeLoop, ValidationStatus};
