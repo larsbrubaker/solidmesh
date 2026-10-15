@@ -100,9 +100,9 @@ pub fn best_start_indices(loop_a: &Path64, loop_b: &Path64) -> (usize, usize) {
 }
 
 /// Walls two loops that do not have the same number of vertices, by walking both at once and
-/// closing one triangle per step. Each step advances the loop whose candidate diagonal is the
-/// SHORTER, which is what keeps the wall running straight up between the loops; once a loop has
-/// been walked all the way round, every remaining step is taken on the other. The loops are in
+/// closing one triangle per step (the step rule is [`zip_steps_on_a`]): the shorter diagonal
+/// keeps the wall running straight up between the loops, and every edge of both loops is used
+/// exactly once. The loops are in
 /// clipper units (`scaling` to the unit) and the heights in units; the mesh is in units.
 pub fn stitch_2_single_walls(
     loop_a: &Path64,
@@ -126,7 +126,13 @@ pub fn stitch_2_single_walls(
         let diagonal_if_advancing_a = distance_squared(loop_b[cur_index_b], loop_a[next_index_a]);
         let diagonal_if_advancing_b = distance_squared(loop_a[cur_index_a], loop_b[next_index_b]);
 
-        if (!looped_a && diagonal_if_advancing_a <= diagonal_if_advancing_b) || looped_b {
+        if zip_steps_on_a(
+            (cur_index_a, cur_index_b),
+            (next_index_a, next_index_b),
+            (start_index_a, start_index_b),
+            (looped_a, looped_b),
+            diagonal_if_advancing_a <= diagonal_if_advancing_b,
+        ) {
             mesh.create_face(&[
                 at_height(loop_a[cur_index_a], height_a, scaling),
                 at_height(loop_a[next_index_a], height_a, scaling),
@@ -144,12 +150,33 @@ pub fn stitch_2_single_walls(
             looped_b = cur_index_b == start_index_b;
         }
 
-        if cur_index_a == start_index_a && cur_index_b == start_index_b {
+        // Both loops walked all the way round. (Being back at both starts is not enough: a
+        // small loop can be walked whole before the other has taken a step, which left the
+        // other loop's wall out.)
+        if looped_a && looped_b {
             break;
         }
     }
 
     mesh
+}
+
+/// Whether a zipper over loops a and b (at `cur`, about to step to `next`, having started at
+/// `start`, with `looped` saying which loop has been walked all the way round) takes its next
+/// triangle on loop a. It steps on the loop whose new diagonal is the shorter (`a_is_shorter`)
+/// and on the other once a loop is done - but never back onto both starting points before the
+/// other loop is done: the diagonal between the starts is the wall's seam, and passing it in the
+/// middle walks it twice and ends the wall early.
+pub fn zip_steps_on_a(
+    cur: (usize, usize),
+    next: (usize, usize),
+    start: (usize, usize),
+    looped: (bool, bool),
+    a_is_shorter: bool,
+) -> bool {
+    let can_step_a = !looped.0 && !(next.0 == start.0 && cur.1 == start.1 && !looped.1);
+    let can_step_b = !looped.1 && !(next.1 == start.1 && cur.0 == start.0 && !looped.0);
+    can_step_a && (!can_step_b || a_is_shorter)
 }
 
 /// Walls two loops with the same vertex count, two triangles per vertex pair. The loops are in
