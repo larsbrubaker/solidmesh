@@ -1,7 +1,6 @@
-//! An infinite plane (agg-sharp `RayTracer/Primitive/Shapes/PlaneShape.cs`, with the
-//! `BaseShape.cs` members it inherits). MatterCAD's drag handles trace their mouse rays against
-//! these (the bed plane, and planes through the grabbed point). MatterCAD passes a `null`
-//! material everywhere it builds one, so it keeps none (divergence 530).
+//! An infinite plane. MatterCAD's drag handles trace their mouse rays against these (the bed
+//! plane, and planes through the grabbed point). Nothing needs a plane's color, so it keeps no
+//! material and does not answer `as_primitive`.
 
 use std::any::Any;
 
@@ -10,19 +9,19 @@ use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ra
 use super::base_shape::{leaf_get_crossing, leaf_get_touching};
 use super::{IntersectInfo, RayTracerError, Traceable};
 
-/// An infinite plane (C# `PlaneShape`).
+/// An infinite plane.
 #[derive(Debug, Clone, Copy)]
 pub struct PlaneShape {
     pub plane: Plane,
 }
 
 impl PlaneShape {
-    /// C# `PlaneShape(Plane plane, MaterialAbstract material)`.
+    /// The plane `plane`.
     pub fn new(plane: Plane) -> Self {
         PlaneShape { plane }
     }
 
-    /// C# `PlaneShape(Vector3 planeNormal, double distanceFromOrigin, MaterialAbstract material)`.
+    /// The plane with normal `plane_normal` at `distance_from_origin` along it.
     pub fn from_normal_and_distance(plane_normal: Vector3, distance_from_origin: f64) -> Self {
         Self::new(Plane::new(plane_normal, distance_from_origin))
     }
@@ -57,7 +56,7 @@ impl PlaneShape {
 
 impl std::fmt::Display for PlaneShape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // The C# text says "Sphere"; kept as it is.
+        // Debug text only; it says "Sphere" and nothing parses it.
         write!(
             f,
             "Sphere {}x+{}y+{}z+{}=0)",
@@ -79,7 +78,7 @@ impl Traceable for PlaneShape {
     }
 
     fn axis_to_world(&self) -> Matrix4X4 {
-        // C# BaseShape throws here; a leaf is never asked (see divergence 141).
+        // A leaf is never asked: the tree walk reads this only on items with children.
         Matrix4X4::IDENTITY
     }
 

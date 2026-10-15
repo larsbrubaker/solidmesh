@@ -1,7 +1,6 @@
 //! A solid's signed distance field, sampled once on a grid, from which the offset surface at any
 //! radius up to `max_radius` is pulled by marching cubes: the preview a Dilate / Erode radius
-//! drag shows before the exact kernel result replaces it. Port of agg-sharp
-//! `PolygonMesh/Sdf/MeshSdfGrid.cs`.
+//! drag shows before the exact kernel result replaces it.
 //!
 //! The field is negative inside. Distances come from g3's `MeshSignedDistanceGrid` narrow-band
 //! flood (`crate::g3`), exact out to the band (`max_radius` plus two cells) and never visiting
@@ -12,9 +11,8 @@
 //! A grid given a `DistanceGridBuilder` (`distance_grid_builder.rs`; MatterCAD's GPU fill) lays
 //! the grid out as the flood would and takes the unsigned distances from it instead
 //! (`build_with_injected_distances`); the CPU flood is the reference that fill is tested against.
-//! C# builds such a grid only through `BuildAsync`, which awaits the builder; here the builder
-//! blocks, so `build` serves both. C# runs the crossing count with `Parallel.For` and atomic increments; the counts and votes do not
-//! depend on order, so here it runs on one thread.
+//! The builder blocks, so `build` serves both kinds of grid. The crossing counts and votes do
+//! not depend on order, so the count runs on one thread.
 
 use std::sync::atomic::{AtomicI32, AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -31,18 +29,17 @@ use crate::{CancelToken, Mesh};
 
 pub use crate::g3::mesh_signed_distance_grid::FloodProgress;
 
-/// Why a grid was not built or an offset not extracted. C# throws these as exceptions.
+/// Why a grid was not built or an offset not extracted.
 #[derive(Debug, Clone)]
 pub enum SdfGridError {
-    /// An argument was out of range (C# `ArgumentOutOfRangeException`).
+    /// An argument was out of range.
     OutOfRange(String),
-    /// The caller's token was cancelled (C# `OperationCanceledException`); the field stays
-    /// unbuilt, so a later call starts over.
+    /// The caller's token was cancelled; the field stays unbuilt, so a later call starts over.
     Cancelled,
     /// Orienting the part's shells failed other than by the kernel refusing the part (which the
-    /// grid absorbs, as C# does).
+    /// grid absorbs by using the part as it is).
     Orientation(MinkowskiError),
-    /// The injected `DistanceGridBuilder` failed (C# the exception it threw), with its message.
+    /// The injected `DistanceGridBuilder` failed, with its message.
     DistanceFill(String),
 }
 
@@ -66,7 +63,8 @@ struct Built {
     origin: Vector3,
 }
 
-/// C# `MeshSdfGrid`.
+/// A solid's signed distance field on a grid, built once and extracted at any offset up to
+/// `max_radius`.
 pub struct MeshSdfGrid {
     source: Mesh,
     max_radius: f64,
@@ -87,13 +85,13 @@ impl MeshSdfGrid {
     /// with the cube of it.
     pub const MAX_RESOLUTION: i32 = 256;
 
-    /// C#'s default `resolution`.
+    /// The default `resolution` (128^3 floats is 8 MB).
     pub const DEFAULT_RESOLUTION: i32 = 128;
 
-    /// C# `new MeshSdfGrid(solid, maxRadius, resolution)`. `max_radius` is the largest |iso|
-    /// the caller will extract (the band holds exact distances this far both sides, and the
-    /// grid is padded by it); `resolution` is the voxel count along the padded longest axis,
-    /// clamped to [`MeshSdfGrid::MAX_RESOLUTION`].
+    /// A grid for `solid`, not built yet. `max_radius` is the largest |iso| the caller will extract
+    /// (the band holds exact distances this far both sides, and the grid is padded by it);
+    /// `resolution` is the voxel count along the padded longest axis, clamped to
+    /// [`MeshSdfGrid::MAX_RESOLUTION`].
     pub fn new(solid: Mesh, max_radius: f64, resolution: i32) -> Result<Self, SdfGridError> {
         if max_radius.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
             return Err(SdfGridError::OutOfRange(
@@ -121,21 +119,21 @@ impl MeshSdfGrid {
         })
     }
 
-    /// C# `OrientShells` (init): whether the build orients the part's shells first. Leave it
-    /// true unless the caller already ran [`orient_shells_as_solid`] on the mesh.
+    /// Whether the build orients the part's shells first. Leave it true unless the caller already
+    /// ran [`orient_shells_as_solid`] on the mesh.
     pub fn with_orient_shells(mut self, orient_shells: bool) -> Self {
         self.orient_shells = orient_shells;
         self
     }
 
-    /// C# `new MeshSdfGrid(.., distanceBuilder)`: computes the unsigned band distances with
-    /// `builder` instead of g3's CPU flood; the sign is still the crossing vote here.
+    /// Computes the unsigned band distances with `builder` instead of g3's CPU flood; the sign
+    /// is still the crossing vote here.
     pub fn with_distance_builder(mut self, builder: Arc<dyn DistanceGridBuilder>) -> Self {
         self.distance_builder = Some(builder);
         self
     }
 
-    /// C# `FloodProgress`: called with the flood's running work count, once per voxel.
+    /// Called with the flood's running work count, once per voxel.
     pub fn set_flood_progress(&mut self, progress: Option<FloodProgress>) {
         self.flood_progress = progress;
     }
@@ -182,8 +180,8 @@ impl MeshSdfGrid {
             .map_or(Vector3::new(0.0, 0.0, 0.0), |built| built.origin)
     }
 
-    /// C# `Build` (and `BuildAsync` for a grid with a `DistanceGridBuilder`): computes the field
-    /// if it has not been computed yet. Safe from several threads: one builds, the others wait.
+    /// Computes the field (with the `DistanceGridBuilder` when the grid has one) if it has not
+    /// been computed yet. Safe from several threads: one builds, the others wait.
     pub fn build(&self, cancel: &CancelToken) -> Result<(), SdfGridError> {
         if self.built.get().is_some() {
             return Ok(());
@@ -208,7 +206,7 @@ impl MeshSdfGrid {
         Ok(())
     }
 
-    /// C# `Prepare`: orients the part (unless it is provably fine as is) and sets the cell size.
+    /// Orients the part (unless it is provably fine as is) and sets the cell size.
     fn prepare(&self, cancel: &CancelToken) -> Result<DMesh3, SdfGridError> {
         // Orient first, as the kernel does, so the preview is of the same solid the exact
         // Dilate / Erode will build; its repair also joins split seams the crossing count would
@@ -241,7 +239,7 @@ impl MeshSdfGrid {
         Ok(dmesh)
     }
 
-    /// C# `BuildCpuDistances`: the unsigned band distances and the grid origin.
+    /// The unsigned band distances from the CPU flood, and the grid origin.
     fn build_cpu_distances(
         &self,
         dmesh: &DMesh3,
@@ -274,9 +272,9 @@ impl MeshSdfGrid {
         ))
     }
 
-    /// C# `BuildWithInjectedDistances`: the grid laid out exactly as g3's `Compute` does with
-    /// `PadWidth` set (f32 origin, f32 cell size, the same truncating counts), so the injected
-    /// distances land on exactly the samples the CPU flood would have written.
+    /// The grid laid out exactly as g3's `Compute` does with `PadWidth` set (f32 origin, f32 cell
+    /// size, the same truncating counts), so the injected distances land on exactly the samples the
+    /// CPU flood would have written.
     fn build_with_injected_distances(
         &self,
         dmesh: &DMesh3,
@@ -331,7 +329,7 @@ impl MeshSdfGrid {
             0.0,
         );
         let size = field.size();
-        // C# `Array.Copy(distances, field.Buffer, field.size)` throws on a short answer.
+        // A short answer cannot fill the grid; extra distances are ignored.
         if distances.len() < size {
             return Err(SdfGridError::DistanceFill(format!(
                 "The distance fill returned {} distances for a grid of {size} samples.",
@@ -342,8 +340,8 @@ impl MeshSdfGrid {
         Ok((field, grid_origin))
     }
 
-    /// C# `Extract`: the surface at signed distance `iso` from the part (positive grows it,
-    /// negative shrinks it), building the field first if needed.
+    /// The surface at signed distance `iso` from the part (positive grows it, negative shrinks it),
+    /// building the field first if needed.
     pub fn extract(&self, iso: f64, cancel: &CancelToken) -> Result<Mesh, SdfGridError> {
         if iso.abs() > self.max_radius {
             return Err(SdfGridError::OutOfRange(format!(
@@ -358,8 +356,7 @@ impl MeshSdfGrid {
     }
 }
 
-/// C# `ApplyCrossingSigns`: negates every voxel that at least two of the three axis crossing
-/// parities put inside.
+/// Negates every voxel that at least two of the three axis crossing parities put inside.
 fn apply_crossing_signs(
     mesh: &DMesh3,
     field: &mut DenseGrid3f,

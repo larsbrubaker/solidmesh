@@ -1,6 +1,5 @@
-//! T-junction repair: agg-sharp `PolygonMesh/Mesh.cs` `RepairTJunctions` and
-//! `RepairTJunctionsPass`. Every vertex lying on the interior of an edge it is not connected to
-//! gets that edge split at it, fanning the edge's faces from their opposite corners.
+//! T-junction repair for [`Mesh`]. Every vertex lying on the interior of an edge it is not
+//! connected to gets that edge split at it, fanning the edge's faces from their opposite corners.
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -13,7 +12,7 @@ use crate::face::{Face, FaceList};
 use crate::mesh::Mesh;
 use crate::mesh_editing::ProgressReporter;
 
-/// Where a vertex splits an edge (C# `VertexSplitInfo`): the vertex to use (-1 for a new one at
+/// Where a vertex splits an edge: the vertex to use (-1 for a new one at
 /// `projection_point`) and its distance along the edge.
 #[derive(Debug, Clone, Copy)]
 struct VertexSplitInfo {
@@ -22,7 +21,8 @@ struct VertexSplitInfo {
     projection_point: Vector3Float,
 }
 
-/// C# `float.CompareTo`: NaN sorts before everything and equals itself.
+/// A total order on floats: NaN sorts before everything and equals itself, so a NaN projection
+/// cannot break the sort.
 fn float_compare_to(a: f32, b: f32) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -132,7 +132,7 @@ fn repair_t_junctions_pass(
         return false;
     };
     let mut search_results: Vec<&i32> = Vec::new();
-    // insertion ordered, as the C# Dictionary<MeshEdge, ...> enumerates (no removals)
+    // insertion ordered (and never removed from), so the edges split in the order found
     let mut edges_to_split: Vec<(usize, Vec<VertexSplitInfo>)> = Vec::new();
     let mut vertices_to_move: Vec<(i32, Vector3Float)> = Vec::new();
     let mut vertices_to_move_slot: HashMap<i32, usize> = HashMap::new();
@@ -450,7 +450,8 @@ fn repair_t_junctions_pass(
                         continue;
                     }
 
-                    // normals are calculated once the new vertices are in (divergence 100)
+                    // normals are calculated once the new vertices are in: a face's normal
+                    // cannot be computed while it names a vertex not yet added
                     if edge_forward {
                         new_faces_to_add.push(Face::with_normal(
                             seg_start,

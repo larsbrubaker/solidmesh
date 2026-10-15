@@ -1,24 +1,22 @@
-//! Orderings of f64 positions used to find nearby vertices by binary search. Ports agg-sharp
-//! `PolygonMesh/VertexSorters/*` (`VertexSorterBase`, `VertexXAxisSorter`,
-//! `VertexXYZAxisWithRotation`, `VertexDistanceFromPointSorter`).
+//! Orderings of f64 positions used to find nearby vertices by binary search: along X, along
+//! all three axes after a rotation, and by distance from a point.
 //!
-//! C#'s base class declares `FindVertices` abstract; `VertexDistanceFromPointSorter` only
-//! throws `NotImplementedException` from it, so here [`VertexSorter`] is just the ordering and
-//! `find_vertices` is an inherent method on the two sorters that implement it.
+//! The distance sorter cannot find nearby vertices (positions at about the same distance from
+//! its point can be far apart), so [`VertexSorter`] is just the ordering and
+//! `find_vertices` is an inherent method on the two sorters that support it.
 
 use std::cmp::Ordering;
 
 use vector_math::{Matrix4X4, Vector3};
 
-/// An ordering of positions (C# `VertexSorterBase : IComparer<Vector3>`).
+/// An ordering of positions.
 pub trait VertexSorter {
-    /// C# `Compare`: negative, zero or positive as `a` sorts before, with or after `b`.
+    /// Negative, zero or positive as `a` sorts before, with or after `b`.
     fn compare(&self, a: Vector3, b: Vector3) -> i32;
 }
 
-/// C# `List.BinarySearch(item, comparer)`: the index of a match, or the bitwise complement of
-/// the insertion point. Same midpoint rule as .NET's `ArraySortHelper`, so ties resolve to the
-/// same index.
+/// The index of a match, or the bitwise complement of the insertion point. The midpoint is
+/// `lo + (hi - lo) / 2`, a fixed rule, so among equal entries the same one is always found.
 fn binary_search(vertices: &[Vector3], value: Vector3, sorter: &dyn VertexSorter) -> i32 {
     let mut lo: i32 = 0;
     let mut hi: i32 = vertices.len() as i32 - 1;
@@ -37,7 +35,7 @@ fn binary_search(vertices: &[Vector3], value: Vector3, sorter: &dyn VertexSorter
     !lo
 }
 
-/// C# `double.CompareTo` as an i32 (NaN sorts first).
+/// A total order on doubles as an i32 (NaN sorts first, so sorting never fails on one).
 fn compare_f64(a: f64, b: f64) -> i32 {
     match a.partial_cmp(&b) {
         Some(Ordering::Less) => -1,
@@ -188,7 +186,7 @@ impl VertexSorter for VertexXYZAxisWithRotation {
     fn compare(&self, a_vertex: Vector3, b_vertex: Vector3) -> i32 {
         let a = self.transform_vector(a_vertex);
         let b = self.transform_vector(b_vertex);
-        // C#'s if-chain: anything not "less" and not "equal" (NaN included) is 1.
+        // Anything not "less" and not "equal" (NaN included) is 1.
         let step = |a: f64, b: f64| {
             if a < b {
                 Some(-1)

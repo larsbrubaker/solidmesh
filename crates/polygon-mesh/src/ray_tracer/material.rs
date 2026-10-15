@@ -1,13 +1,10 @@
-//! Surface materials and the primitives that carry them (agg-sharp
-//! `RayTracer/Materials/MaterialAbstract.cs`, `Materials/SolidMaterial.cs`,
-//! `Primitive/IPrimitive.cs`, and the color half of `Primitive/Shapes/BaseShape.cs`).
+//! Surface materials and the primitives that carry them.
 //!
-//! C#'s abstract `MaterialAbstract` class becomes the [`MaterialAbstract`] trait over a shared
-//! [`MaterialProperties`] block (gloss, transparency, reflection, refraction with their C#
-//! defaults); shapes share materials the way C# shares references, as [`MaterialRef`]. A shape
-//! built with C#'s `null` material holds `None`, and asking it for a color is an error where the
-//! C# dereferences null. [`Primitive`] is C# `IPrimitive`: a traceable with a material and a
-//! color at a hit; [`super::Traceable::as_primitive`] reaches it from a hit object.
+//! Every material implements the [`MaterialAbstract`] trait over a shared
+//! [`MaterialProperties`] block (gloss, transparency, reflection, refraction with their
+//! defaults); shapes share materials as [`MaterialRef`]. A shape built without a material holds
+//! `None`, and asking it for a color is an error. [`Primitive`] is a traceable with a material
+//! and a color at a hit; [`super::Traceable::as_primitive`] reaches it from a hit object.
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -16,10 +13,10 @@ use agg_path::ColorF;
 
 use super::{IntersectInfo, RayTracerError, Traceable};
 
-/// A shared material (C# `MaterialAbstract` reference).
+/// A shared material.
 pub type MaterialRef = Arc<dyn MaterialAbstract>;
 
-/// The lighting values every material has (C# `MaterialAbstract`'s fields).
+/// The lighting values every material has.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialProperties {
     pub gloss: f64,
@@ -29,7 +26,7 @@ pub struct MaterialProperties {
 }
 
 impl Default for MaterialProperties {
-    /// The C# constructor's values.
+    /// An opaque, non-reflective surface of gloss 2 and refraction 0.5.
     fn default() -> Self {
         MaterialProperties {
             gloss: 2.0,        // set a realistic value by default
@@ -40,15 +37,15 @@ impl Default for MaterialProperties {
     }
 }
 
-/// A surface's color source (C# `abstract class MaterialAbstract`).
+/// A surface's color source.
 pub trait MaterialAbstract: Debug + Send + Sync {
-    /// The lighting values (C# `Gloss`, `Transparency`, `Reflection`, `Refraction`).
+    /// The lighting values (gloss, transparency, reflection, refraction).
     fn properties(&self) -> &MaterialProperties;
 
-    /// True when the color depends on the texture coordinates (C# `HasTexture`).
+    /// True when the color depends on the texture coordinates.
     fn has_texture(&self) -> bool;
 
-    /// The color at texture coordinates `(u, v)` (C# `GetColor`).
+    /// The color at texture coordinates `(u, v)`.
     fn get_color(&self, u: f64, v: f64) -> ColorF;
 
     fn reflection(&self) -> f64 {
@@ -68,8 +65,8 @@ pub trait MaterialAbstract: Debug + Send + Sync {
     }
 }
 
-/// Wraps any value into [-1, 1) rotationally: 1.7 → -0.3, -1.1 → 0.9, -2.3 → -0.3 (C#
-/// `MaterialAbstract.WrapUp`, for textured materials). C# `%` on doubles is Rust `%`.
+/// Wraps any value into [-1, 1) rotationally: 1.7 → -0.3, -1.1 → 0.9, -2.3 → -0.3 (for
+/// textured materials). `%` keeps the dividend's sign, hence the two corrections.
 pub fn wrap_up(mut t: f64) -> f64 {
     t %= 2.0;
     if t < -1.0 {
@@ -81,7 +78,7 @@ pub fn wrap_up(mut t: f64) -> f64 {
     t
 }
 
-/// One color everywhere (C# `SolidMaterial`).
+/// One color everywhere.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SolidMaterial {
     color: ColorF,
@@ -89,8 +86,8 @@ pub struct SolidMaterial {
 }
 
 impl SolidMaterial {
-    /// C# `SolidMaterial(ColorF color, double reflection, double transparency, double gloss)`;
-    /// refraction keeps its default.
+    /// A material of `color` with the given reflection, transparency and gloss; refraction
+    /// keeps its default.
     pub fn new(color: ColorF, reflection: f64, transparency: f64, gloss: f64) -> Self {
         SolidMaterial {
             color,
@@ -103,7 +100,7 @@ impl SolidMaterial {
         }
     }
 
-    /// Mutable lighting values (the C# property setters).
+    /// Mutable lighting values.
     pub fn properties_mut(&mut self) -> &mut MaterialProperties {
         &mut self.properties
     }
@@ -123,8 +120,8 @@ impl MaterialAbstract for SolidMaterial {
     }
 }
 
-/// The material `BaseShape`'s constructor gives a shape before the derived constructor sets
-/// its own: opaque magenta.
+/// The material a shape starts with before it is given its own: opaque magenta, so a shape
+/// that never got one stands out.
 pub fn base_shape_default_material() -> MaterialRef {
     Arc::new(SolidMaterial::new(
         ColorF::from_f64(1.0, 0.0, 1.0, 1.0),
@@ -134,17 +131,17 @@ pub fn base_shape_default_material() -> MaterialRef {
     ))
 }
 
-/// A traceable with a surface (C# `IPrimitive`). The C# `Material` setter is an inherent
-/// `set_material` on the shapes that keep one.
+/// A traceable with a surface. Shapes that keep a material set it with their own inherent
+/// `set_material`.
 pub trait Primitive: Traceable {
-    /// The material, `None` where the C# holds `null` (C# `Material`).
+    /// The material, `None` for a shape built without one.
     fn material(&self) -> Option<&MaterialRef>;
 
-    /// The texture coordinates of a hit on this shape (C# `BaseShape.GetUv`).
+    /// The texture coordinates of a hit on this shape.
     fn get_uv(&self, info: &IntersectInfo<'_>) -> Result<(f64, f64), RayTracerError>;
 
-    /// The color at a hit (C# `BaseShape.GetColor`): the texture at the hit's coordinates for a
-    /// textured material, the material's (0, 0) color otherwise.
+    /// The color at a hit: the texture at the hit's coordinates for a textured material, the
+    /// material's (0, 0) color otherwise.
     fn get_color(&self, info: &IntersectInfo<'_>) -> Result<ColorF, RayTracerError> {
         let material = self.material().ok_or(RayTracerError::NoMaterial)?;
         if material.has_texture() {

@@ -1,12 +1,10 @@
-//! View-space CSG on hit lists (agg-sharp `RayTracer/TraceData/IntersectInfo.cs`: `Subtract`,
-//! `ReadInList`, and `CompareIntersectInfoOnDistance`). [`super::Difference`] gathers every
-//! front and back face hit of its primary and subtract shapes along a ray, sorts both by
-//! distance, and removes from the primary's list the spans the subtract shapes cover, adding
-//! faces where a cut opens the primary.
+//! View-space CSG on hit lists: subtracting one from another, reading a saved list back, and the
+//! distance order both are sorted in. [`super::Difference`] gathers every front and back face hit
+//! of its primary and subtract shapes along a ray, sorts both by distance, and removes from the
+//! primary's list the spans the subtract shapes cover, adding faces where a cut opens the primary.
 //!
-//! The C# writes both lists to `BadSubtract.txt` before rethrowing when the lists are
-//! malformed (a debugging aid); here the malformed input is an `Err` and nothing is written
-//! (divergence 531).
+//! Malformed lists are an `Err` that carries the cause; nothing is written to disk, because a
+//! library has no business writing into the working directory and the browser has none.
 
 use std::cmp::Ordering;
 
@@ -14,9 +12,9 @@ use vector_math::{IntersectionType, Ray};
 
 use super::{IntersectInfo, RayTracerError};
 
-/// C# `CompareIntersectInfoOnDistance.Compare`: nearer first, and at the same distance a front
-/// face before a back face. Two different hit types that are not a front/back pair (a `None`
-/// in the list) are an error where the C# throws.
+/// Nearer first, and at the same distance a front face before a back face. Two different hit
+/// types that are not a front/back pair (a `None` in the list) are an error: the list is
+/// malformed.
 pub fn compare_intersect_info_on_distance(
     a: &IntersectInfo<'_>,
     b: &IntersectInfo<'_>,
@@ -38,8 +36,7 @@ pub fn compare_intersect_info_on_distance(
     Ok(Ordering::Equal)
 }
 
-/// Sorts `list` with [`compare_intersect_info_on_distance`] (C# `List.Sort(new
-/// CompareIntersectInfoOnDistance())`). C#'s sort is unstable; this one is stable, so hits tied
+/// Sorts `list` with [`compare_intersect_info_on_distance`]. The sort is stable, so hits tied
 /// on distance and type keep the order the iterator produced them in.
 pub(crate) fn sort_on_distance(list: &mut [IntersectInfo<'_>]) -> Result<(), RayTracerError> {
     let mut error = None;
@@ -57,7 +54,7 @@ pub(crate) fn sort_on_distance(list: &mut [IntersectInfo<'_>]) -> Result<(), Ray
 
 impl<'a> IntersectInfo<'a> {
     /// A copy of the hit's type, object, position, normal and distance, with the color left
-    /// unset (C# `IntersectInfo(IntersectInfo copyInfo)`).
+    /// unset.
     pub fn copy_hit(copy_info: &IntersectInfo<'a>) -> Self {
         IntersectInfo {
             hit_type: copy_info.hit_type,
@@ -70,9 +67,8 @@ impl<'a> IntersectInfo<'a> {
     }
 
     /// Reads a count line, then that many `HitType, distance` lines, into `list_to_populate`
-    /// (C# `ReadInList`, the format `SaveOutLists` writes). Unparsable numbers read as 0, as
-    /// C#'s `TryParse` leaves them; a hit type other than `FrontFace`/`BackFace`, or a missing
-    /// line, is an error.
+    /// (the debugging dump format of saved hit lists). Unparsable numbers read as 0; a hit
+    /// type other than `FrontFace`/`BackFace`, or a missing line, is an error.
     pub fn read_in_list<'s>(
         list_to_populate: &mut Vec<IntersectInfo<'a>>,
         lines: &mut impl Iterator<Item = &'s str>,
@@ -108,8 +104,8 @@ impl<'a> IntersectInfo<'a> {
         Ok(())
     }
 
-    /// `all_primary` with the spans covered by `all_subtract` removed, into `result` (C#
-    /// `Subtract`). Both lists are sorted by distance and alternate front and back faces.
+    /// `all_primary` with the spans covered by `all_subtract` removed, into `result`. Both
+    /// lists are sorted by distance and alternate front and back faces.
     pub fn subtract(
         all_primary: &[IntersectInfo<'a>],
         all_subtract: &[IntersectInfo<'a>],
@@ -163,7 +159,7 @@ fn subtract_remove_region<'a>(
             if primary_info.distance_to_hit < start {
                 // We are in front of the remove start. If the next backface is behind the
                 // remove start, add a back face at the remove start. There should always be a
-                // back face after a front face (the C# lets the bounds check throw).
+                // back face after a front face; a missing one is a malformed list.
                 let next = remove_from
                     .get(index + 1)
                     .ok_or(RayTracerError::BadHitList(

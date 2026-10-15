@@ -1,5 +1,5 @@
-//! Marching cubes straight over a sampled distance field: agg-sharp
-//! `PolygonMesh/Sdf/GridMarchingCubes.cs`, with g3's `DenseGrid3f` (the field it reads).
+//! Marching cubes straight over a sampled distance field, with the [`DenseGrid3f`] field it
+//! reads.
 //!
 //! The corners are the grid samples themselves and every cell is tested (skipping cells far
 //! from the iso tore the surface across open holes). Vertices are keyed by the grid edge they
@@ -14,8 +14,8 @@
 //! of three or four crossings is fanned; a longer one gets a centre vertex. Loops are never
 //! joined through the cell interior, which can only lose a sub-cell tunnel.
 //!
-//! C# runs both passes with `Parallel.For` over slices and stitches the per-slice lists in slice
-//! order; here they run in that order on one thread, which gives the same mesh.
+//! Both passes work slice by slice and stitch the per-slice lists in slice order, so running the
+//! slices in parallel would give the same mesh; here they run in order on one thread.
 
 use super::marching_cubes_tables::{EDGE_INDICES, EDGE_TABLE, TRI_TABLE};
 use crate::cancel::CancelToken;
@@ -32,7 +32,7 @@ pub struct DenseGrid3f {
 }
 
 impl DenseGrid3f {
-    /// C# `new DenseGrid3f(ni, nj, nk, initialValue)`.
+    /// An `ni * nj * nk` grid with every sample `initial_value`.
     pub fn new(ni: usize, nj: usize, nk: usize, initial_value: f32) -> Self {
         DenseGrid3f {
             ni,
@@ -42,7 +42,7 @@ impl DenseGrid3f {
         }
     }
 
-    /// C# `size`.
+    /// The number of samples.
     pub fn size(&self) -> usize {
         self.buffer.len()
     }
@@ -100,9 +100,7 @@ fn build_ambiguous_cases() -> [bool; 256] {
     ambiguous
 }
 
-/// C# `GridMarchingCubes.Extract(grid, origin, cellSize, iso, cancellationToken)`: the surface
-/// where the field equals `iso`, or `None` when `cancel` is set (C# throws
-/// `OperationCanceledException`).
+/// The surface where the field equals `iso`, or `None` when `cancel` is set.
 pub fn extract(
     grid: &DenseGrid3f,
     origin: Vector3,
@@ -296,8 +294,7 @@ struct CellBuilder<'a> {
 }
 
 impl CellBuilder<'_> {
-    /// C#'s local `AddCellLoops`: a cell with an ambiguous face, its contour loops chained from
-    /// per-face segments.
+    /// A cell with an ambiguous face: its contour loops chained from per-face segments.
     fn add_cell_loops(
         &self,
         cell: Cell,

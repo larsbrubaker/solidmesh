@@ -1,8 +1,6 @@
-//! A triangle that keeps its own corners (agg-sharp `RayTracer/Primitive/Shapes/TriangleShape.cs`,
-//! with the `BaseShape.cs` members it inherits). MatterCAD builds these when a mesh is traced
-//! with a material (`AddTraceables`) and in its trace tests; picking uses the lighter
-//! [`super::MinimalTriangle`]. `new` is C#'s constructor with a `null` material;
-//! `with_material` takes one.
+//! A triangle that keeps its own corners. MatterCAD builds these when a mesh is traced with a
+//! material and in its trace tests; picking uses the lighter [`super::MinimalTriangle`]. `new`
+//! builds one with no material; `with_material` takes one.
 
 use std::any::Any;
 
@@ -14,7 +12,7 @@ use super::base_shape::{leaf_get_contained, leaf_get_crossing, leaf_get_touching
 use super::triangle_hit::{triangle_surface_area, TriangleProjection};
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};
 
-/// A triangle with f32 corners (C# `TriangleShape`).
+/// A triangle with f32 corners.
 #[derive(Debug, Clone)]
 pub struct TriangleShape {
     projection: TriangleProjection,
@@ -22,7 +20,7 @@ pub struct TriangleShape {
     aabb_max_xyz: Vector3Float,
     center: Vector3Float,
     vertices: [Vector3Float; 3],
-    /// The face this came from, -1 when none (C# `index`, kept by the constructor's caller).
+    /// The face this came from, -1 when none (the caller that builds it sets it).
     pub index: i32,
     material: Option<MaterialRef>,
 }
@@ -45,14 +43,12 @@ impl PartialEq for TriangleShape {
 }
 
 impl TriangleShape {
-    /// The triangle through three corners with no material (C# `TriangleShape(Vector3,
-    /// Vector3, Vector3, null, index)`).
+    /// The triangle through three corners with no material.
     pub fn new(vertex0: Vector3, vertex1: Vector3, vertex2: Vector3, index: i32) -> Self {
         Self::with_material(vertex0, vertex1, vertex2, None, index)
     }
 
-    /// The triangle through three corners (C# `TriangleShape(Vector3, Vector3, Vector3,
-    /// MaterialAbstract, int)`).
+    /// The triangle through three corners with `material`.
     pub fn with_material(
         vertex0: Vector3,
         vertex1: Vector3,
@@ -81,13 +77,13 @@ impl TriangleShape {
         }
     }
 
-    /// Replaces the material (C# `Material` setter).
+    /// Replaces the material.
     pub fn set_material(&mut self, material: Option<MaterialRef>) {
         self.material = material;
     }
 
-    /// C# `TriangleShape.GetUv`: the hit position projected on two axes in the triangle's
-    /// plane, in f32 as the C# computes it.
+    /// The texture coordinates of a hit: the hit position projected on two axes in the
+    /// triangle's plane, computed in f32 like the corners.
     pub(crate) fn plane_uv(&self, info: &IntersectInfo<'_>) -> (f64, f64) {
         let normal = self.projection.plane.normal();
         let vec_u = Vector3Float::new_f32(normal.y, normal.z, -normal.x);
@@ -114,17 +110,17 @@ impl TriangleShape {
         )
     }
 
-    /// The axis the triangle is projected along for the hit test (C# `MajorAxis`).
+    /// The axis the triangle is projected along for the hit test.
     pub fn major_axis(&self) -> u8 {
         self.projection.major_axis
     }
 
-    /// The triangle's plane (C# `Plane`).
+    /// The triangle's plane.
     pub fn plane(&self) -> vector_math::PlaneFloat {
         self.projection.plane
     }
 
-    /// Corner `index` (C# `ITriangle.GetVertex`).
+    /// Corner `index`.
     pub fn get_vertex(&self, index: usize) -> Vector3 {
         Vector3::from_vector3_float(self.vertices[index])
     }
@@ -150,7 +146,7 @@ impl Traceable for TriangleShape {
     }
 
     fn axis_to_world(&self) -> Matrix4X4 {
-        // C# BaseShape throws here; a leaf is never asked (see divergence 141).
+        // A leaf is never asked: the tree walk reads this only on items with children.
         Matrix4X4::IDENTITY
     }
 

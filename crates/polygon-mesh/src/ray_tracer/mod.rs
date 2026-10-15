@@ -1,33 +1,29 @@
-//! The ray tracer's trace path (agg-sharp `PolygonMesh/RayTracer`): the [`Traceable`] trait
-//! (C# `ITraceable` together with the `IBvhItem` members it inherits), the hit record
-//! [`IntersectInfo`], the shapes MatterCAD picks with ([`TriangleShape`], [`MinimalTriangle`],
-//! [`PlaneShape`]), the containers ([`BoundingVolumeHierarchy`], [`UnboundCollection`],
-//! [`Transform`]), the Morton-code builder [`BvhBuilderLocallyOrderedClustering`] behind
-//! [`BoundingVolumeHierarchy::create_new_hierarchy`], and the tree walk [`BvhIterator`]
-//! (C# `PolygonMesh/Processors/BvhIterator.cs`).
+//! The ray tracer's trace path: the [`Traceable`] trait (everything a ray can hit and a BVH
+//! can hold), the hit record [`IntersectInfo`], the shapes MatterCAD picks with
+//! ([`TriangleShape`], [`MinimalTriangle`], [`PlaneShape`]), the containers
+//! ([`BoundingVolumeHierarchy`], [`UnboundCollection`], [`Transform`]), the Morton-code
+//! builder [`BvhBuilderLocallyOrderedClustering`] behind
+//! [`BoundingVolumeHierarchy::create_new_hierarchy`], and the tree walk [`BvhIterator`].
 //!
-//! Design: C# shares `ITraceable` references freely (MatterCAD caches a mesh's BVH and wraps
-//! it in a fresh `Transform` per object), so nodes hold their children as [`TraceableRef`]
+//! Design: traceables are shared freely (MatterCAD caches a mesh's BVH and wraps it in a
+//! fresh `Transform` per object), so nodes hold their children as [`TraceableRef`]
 //! (`Arc<dyn Traceable>`), and every traceable is `Send + Sync` so a tree can be built on a
 //! worker and traced from the UI. A hit borrows what it hit (`IntersectInfo<'a>` carries
 //! `&'a dyn Traceable`) the way vector-math's `RayHitInfo<&T>` does; callers that need the
-//! concrete leaf (MatterCAD reads `MinimalTriangle.FaceIndex` off a hit) downcast through
-//! [`Traceable::as_any`]. The C# `Ray` is a class the BVH narrows in place as it finds
-//! hits, so tracing takes `&mut Ray`.
+//! concrete leaf (picking reads the triangle's face index off a hit) downcast through
+//! [`Traceable::as_any`]. The BVH narrows the ray in place as it finds hits, so tracing
+//! takes `&mut Ray`.
 //!
-//! Materials and the [`Primitive`] trait (C# `IPrimitive`) live in `material`; the solid shapes
-//! [`BoxShape`] and [`SphereShape`] and the view-space CSG node [`Difference`] report every hit
-//! along a ray through [`Traceable::intersection_iterator`], which `Difference` combines with
+//! Materials and the [`Primitive`] trait (a shape with a material) live in `material`; the solid
+//! shapes [`BoxShape`] and [`SphereShape`] and the view-space CSG node [`Difference`] report every
+//! hit along a ray through [`Traceable::intersection_iterator`], which `Difference` combines with
 //! [`IntersectInfo::subtract`] (in `intersect_info_subtract`).
 //!
-//! Where the C# throws `NotImplementedException` (the triangles' and plane's
-//! `IntersectionIterator`, `Transform`'s and `Difference`'s `GetCrossing`/`GetTouching`) the
-//! Rust returns [`RayTracerError::NotSupported`].
+//! Queries a shape cannot answer (the triangles' and plane's `intersection_iterator`, and
+//! `Transform`'s and `Difference`'s `get_crossing`/`get_touching`) return
+//! [`RayTracerError::NotSupported`] rather than a wrong answer.
 //!
-//! [`RayTracer`] (C# `RayTracer.cs`) traces a primary ray into a [`Scene`]'s shapes.
-//!
-//! Not here yet (later 2d work): ray bundles (`FindFirstRay`, `GetClosestIntersections`),
-//! `Cylinder`, the other builders, cameras, lights, and the image renderer.
+//! [`RayTracer`] traces a primary ray into a [`Scene`]'s shapes.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
@@ -74,19 +70,19 @@ pub use triangle_shape::TriangleShape;
 pub use triangle_shape_uv::TriangleShapeUv;
 pub use unbound_collection::UnboundCollection;
 
-/// A shared traceable, as C# shares `ITraceable` references.
+/// A shared traceable: one BVH can sit under several transforms.
 pub type TraceableRef = Arc<dyn Traceable>;
 
-/// What the C# reports by throwing from the ray tracer.
+/// Why a ray tracer query has no answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RayTracerError {
-    /// The C# member throws `NotImplementedException` (named here).
+    /// The named query is not supported by this shape.
     NotSupported(&'static str),
-    /// A color was asked of a shape whose material is the C# `null`.
+    /// A color was asked of a shape that has no material.
     NoMaterial,
-    /// A hit list handed to [`IntersectInfo::subtract`] is malformed (the C# exception text).
+    /// A hit list handed to [`IntersectInfo::subtract`] is malformed (the text says how).
     BadHitList(&'static str),
-    /// A shape's construction arguments are invalid (the C# `ArgumentException` text).
+    /// A shape's construction arguments are invalid (the text says which).
     InvalidArgument(&'static str),
 }
 
@@ -104,15 +100,15 @@ impl std::fmt::Display for RayTracerError {
 
 impl std::error::Error for RayTracerError {}
 
-/// Something a ray can be traced against and a BVH can hold (C# `ITraceable : IBvhItem`).
+/// Something a ray can be traced against and a BVH can hold.
 pub trait Traceable: Any + Send + Sync {
-    /// This, for downcasting to the concrete type (the C# `is` tests).
+    /// This, for downcasting to the concrete type (a picked triangle's face index, say).
     fn as_any(&self) -> &dyn Any;
 
-    /// The items this one is made of, `None` for a leaf (C# `IBvhItem.Children`).
+    /// The items this one is made of, `None` for a leaf.
     fn children(&self) -> Option<Vec<&dyn Traceable>>;
 
-    /// The transform from this item's space to its parent's (C# `IBvhItem.AxisToWorld`).
+    /// The transform from this item's space to its parent's.
     /// Leaves report identity: only items with children are ever asked.
     fn axis_to_world(&self) -> Matrix4X4;
 
@@ -146,33 +142,34 @@ pub trait Traceable: Any + Send + Sync {
     fn get_intersect_cost(&self) -> f64;
 
     /// Every hit along `ray`, front and back faces as the ray's `intersection_type` asks, for
-    /// view-space CSG (C# `IntersectionIterator`). Containers concatenate their children's.
+    /// view-space CSG. Containers concatenate their children's.
     fn intersection_iterator<'a>(
         &'a self,
         ray: &Ray,
     ) -> Result<Vec<IntersectInfo<'a>>, RayTracerError>;
 
-    /// The items whose bounds the plane crosses (C# `IBvhItem.GetCrossing`): a leaf itself, a
+    /// The items whose bounds the plane crosses: a leaf itself, a
     /// BVH node its children's, an [`UnboundCollection`] its direct items.
     fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError>;
 
-    /// The items whose bounds hold `position` within `error` (C# `IBvhItem.GetTouching`).
+    /// The items whose bounds hold `position` within `error`.
     fn get_touching(
         &self,
         position: Vector3,
         error: f64,
     ) -> Result<Vec<&dyn Traceable>, RayTracerError>;
 
-    /// This as a [`Primitive`] when it has a material (the C# `is IPrimitive` test).
+    /// This as a [`Primitive`] when it has a material.
     fn as_primitive(&self) -> Option<&dyn Primitive> {
         None
     }
 }
 
-/// C# `Plane.CrossedBy(bounds)` with its default error.
+/// The tolerance a plane-crosses-bounds test uses: bounds within this of the plane count
+/// as crossed.
 pub(crate) const PLANE_CROSSED_BY_ERROR: f64 = 0.001;
 
-/// Everything about a ray-shape hit (C# `IntersectInfo`).
+/// Everything about a ray-shape hit.
 #[derive(Clone, Copy)]
 pub struct IntersectInfo<'a> {
     pub hit_type: IntersectionType,
@@ -180,12 +177,12 @@ pub struct IntersectInfo<'a> {
     pub hit_position: Vector3,
     pub normal_at_hit: Vector3,
     pub distance_to_hit: f64,
-    /// The shaded color the renderer stores (C# `TotalColor`), transparent black until set.
+    /// The shaded color the renderer stores, transparent black until set.
     pub total_color: ColorF,
 }
 
 impl<'a> IntersectInfo<'a> {
-    /// No hit yet: distance `f64::MAX`, hit type `None` (C# `default(IntersectionType)`).
+    /// No hit yet: distance `f64::MAX`, hit type `None`.
     pub fn new() -> Self {
         IntersectInfo {
             hit_type: IntersectionType::None,
@@ -197,13 +194,13 @@ impl<'a> IntersectInfo<'a> {
         }
     }
 
-    /// True when the hit object is `object` itself (C# reference `==`).
+    /// True when the hit object is `object` itself (the same instance, not an equal one).
     pub fn hit_object_is(&self, object: &dyn Traceable) -> bool {
         self.closest_hit_object
             .is_some_and(|hit| std::ptr::addr_eq(hit as *const dyn Traceable, object))
     }
 
-    /// The hit object as a `T`, if it is one (C# `info.ClosestHitObject is T t`).
+    /// The hit object as a `T`, if it is one.
     pub fn closest_hit_as<T: Traceable>(&self) -> Option<&'a T> {
         self.closest_hit_object
             .and_then(|object| object.as_any().downcast_ref::<T>())

@@ -1,12 +1,11 @@
-//! View-space CSG: one traceable with another cut away (agg-sharp
-//! `RayTracer/Primitive/Difference.cs`). Nothing is built; every ray collects all front and
-//! back faces of both operands and [`IntersectInfo::subtract`] removes the spans the subtract
-//! operand covers, so the first remaining face is the visible one.
+//! View-space CSG: one traceable with another cut away. Nothing is built; every ray collects
+//! all front and back faces of both operands and [`IntersectInfo::subtract`] removes the spans
+//! the subtract operand covers, so the first remaining face is the visible one.
 //!
-//! The C# throws from `Children`, `AxisToWorld`, `GetContained`, `Material` and `GetColor`;
-//! here it reports no children, identity, nothing contained, no material and a
-//! [`RayTracerError::NotSupported`] color, and a hit list the C# would throw on makes
-//! [`Traceable::get_closest_intersection`] report no hit (divergence 532).
+//! A difference has no tree of its own: it reports no children, identity, nothing contained,
+//! no material and a [`RayTracerError::NotSupported`] color. A malformed hit list makes
+//! [`Traceable::get_closest_intersection`] report no hit, because the trace path has no error
+//! channel and a ray that cannot be resolved should show the background, not stop the render.
 
 use std::any::Any;
 
@@ -15,7 +14,7 @@ use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ra
 use super::intersect_info_subtract::sort_on_distance;
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable, TraceableRef};
 
-/// `primary` minus `subtract` (C# `Difference`).
+/// `primary` minus `subtract`.
 pub struct Difference {
     primary: TraceableRef,
     subtract: TraceableRef,
@@ -26,18 +25,18 @@ impl Difference {
         Difference { primary, subtract }
     }
 
-    /// C# `Primary`.
+    /// The shape cut from.
     pub fn primary(&self) -> &TraceableRef {
         &self.primary
     }
 
-    /// C# `Subtract`.
+    /// The shape cut away.
     pub fn subtract(&self) -> &TraceableRef {
         &self.subtract
     }
 
     /// Every remaining face along `ray`, nearest first; `None` when the primary is not hit at
-    /// all (the C# `GetClosestIntersection` returns before tracing the subtract then).
+    /// all and `stop_when_primary_missed` is set (the subtract is not traced then).
     fn remaining_hits<'a>(
         &'a self,
         ray: &Ray,

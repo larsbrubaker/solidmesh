@@ -1,16 +1,13 @@
-//! The default BVH builder (agg-sharp `RayTracer/Bvh/Builders/BvhBuilderLocallyOrderedClustering.cs`):
-//! the items' centers are Morton-coded over their joint bounds and radix-sorted into a tree;
-//! trees of up to 10,000 items are then rebuilt from their leaves, re-sorted by Morton code,
-//! cut into up to 32 bins, each bin built by the surface-area heuristic and the bins joined
-//! the same way.
+//! The default BVH builder: the items' centers are Morton-coded over their joint bounds and
+//! radix-sorted into a tree; trees of up to 10,000 items are then rebuilt from their leaves,
+//! re-sorted by Morton code, cut into up to 32 bins, each bin built by the surface-area
+//! heuristic and the bins joined the same way.
 //!
-//! Mapping notes: the C# runs the Morton coding, subtree builds and bin builds through
-//! `Parallel.For`/`Parallel.Invoke`; every task writes its own slot, so the tree equals the
-//! sequential build, which is what runs here. Its node and list pools only recycle storage.
-//! `Array.Sort` of the leaves is .NET's unstable introsort, reproduced by
-//! [`introspective_sort`] so tied Morton codes keep MatterCAD's order. The C# reads its bounds
-//! from the first item's own box object and grows it in place; the boxes here are values
-//! (divergence 140).
+//! The build is sequential: the Morton coding, subtree builds and bin builds are independent
+//! tasks that each write their own slot, so running them in parallel would give the same tree.
+//! The leaves are sorted with [`introspective_sort`], an unstable sort with a fixed tie order,
+//! so tied Morton codes always land in the same order and the tree shape is deterministic. The
+//! joint bounds are a fresh value, so building never changes an item's own box.
 
 use vector_math::bvh::morton_codes;
 use vector_math::cs_sort::introspective_sort;
@@ -28,7 +25,7 @@ const MAX_STACK_DEPTH: usize = 64;
 
 type MortonNode = (TraceableRef, i64);
 
-/// The builder (C# `BvhBuilderLocallyOrderedClustering`).
+/// The builder.
 pub struct BvhBuilderLocallyOrderedClustering;
 
 fn node(left: TraceableRef, right: TraceableRef) -> TraceableRef {
@@ -73,7 +70,7 @@ fn morton_coded(source_nodes: &[TraceableRef]) -> Vec<MortonNode> {
         .collect()
 }
 
-/// A stable LSD radix sort on the 64-bit codes, 8 bits a pass (C# `RadixSort`).
+/// A stable LSD radix sort on the 64-bit codes, 8 bits a pass.
 fn radix_sort(a: &mut Vec<MortonNode>) {
     const R: i32 = 8;
     const MASK: i64 = (1 << R) - 1;
@@ -110,7 +107,7 @@ fn build_tree_parallel(nodes: &[MortonNode], start: usize, end: usize) -> Tracea
     }
 
     let split = find_best_split(nodes, start, end);
-    // The C# builds the two halves with Parallel.Invoke; each is independent.
+    // The two halves are independent builds.
     let left = build_tree_parallel(nodes, start, split);
     let right = build_tree_parallel(nodes, split + 1, end);
     node(left, right)
@@ -132,8 +129,7 @@ fn build_tree_recursive(nodes: &[MortonNode], start: usize, end: usize) -> Trace
     node(left, right)
 }
 
-/// A balanced tree straight from the sorted range (C# `BuildTreeIterative`, which only
-/// forwards here).
+/// A balanced tree straight from the sorted range.
 fn build_balanced_tree_from_range(nodes: &[MortonNode], start: usize, end: usize) -> TraceableRef {
     if start == end {
         return nodes[start].0.clone();
@@ -148,7 +144,8 @@ fn build_balanced_tree_from_range(nodes: &[MortonNode], start: usize, end: usize
     node(left, right)
 }
 
-/// C# `BitOperations.LeadingZeroCount((ulong)(a ^ b)) - 64`.
+/// The leading zeros of `a ^ b`, less 64. Prefixes are only compared with each other, so the
+/// offset does not change any split.
 fn common_prefix(a: i64, b: i64) -> i32 {
     ((a ^ b) as u64).leading_zeros() as i32 - 64
 }
@@ -199,7 +196,7 @@ fn optimize_tree(root_node: TraceableRef) -> TraceableRef {
 }
 
 /// Every non-BVH node under `node`, left to right (a hierarchy given as an item is flattened
-/// too, as in the C#).
+/// too).
 fn collect_leaf_nodes(node: &TraceableRef, leaf_nodes: &mut Vec<TraceableRef>) {
     let mut stack = vec![node.clone()];
     while let Some(current) = stack.pop() {
@@ -223,7 +220,7 @@ fn build_optimized_tree(leaf_nodes: &[TraceableRef]) -> TraceableRef {
     let leaf_count = leaf_nodes.len();
     let mut nodes = morton_coded(leaf_nodes);
 
-    // Sort by Morton code (C# Array.Sort: unstable, reproduced exactly)
+    // Sort by Morton code (unstable, with a fixed tie order)
     introspective_sort(&mut nodes, &mut |a, b| a.1.cmp(&b.1));
 
     // Determine optimal bin count based on node count (more bins for more nodes)

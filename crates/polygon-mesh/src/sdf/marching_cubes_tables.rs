@@ -1,8 +1,8 @@
-//! geometry3Sharp's marching cubes tables (`mesh_generators/MarchingCubes.cs`, Boost Software
-//! License 1.0): Paul Bourke's edge and triangle tables over g3's corner order, which
-//! `grid_marching_cubes` follows so its winding matches g3's. Generated from the C# source.
+//! geometry3Sharp's marching cubes tables (Boost Software License 1.0): Paul Bourke's edge and
+//! triangle tables over g3's corner order, which `grid_marching_cubes` follows so its winding
+//! matches g3's. Generated from the geometry3Sharp source.
 
-/// The two corners of each of the 12 cell edges (C# `MarchingCubes.edge_indices`).
+/// The two corners of each of the 12 cell edges.
 pub(crate) const EDGE_INDICES: [[usize; 2]; 12] = [
     [0, 1],
     [1, 2],
@@ -18,7 +18,7 @@ pub(crate) const EDGE_INDICES: [[usize; 2]; 12] = [
     [3, 7],
 ];
 
-/// Which edges each corner case crosses (C# `MarchingCubes.edgeTable`).
+/// Which edges each corner case crosses.
 pub(crate) const EDGE_TABLE: [i32; 256] = [
     0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03,
     0xe09, 0xf00, 0x190, 0x99, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f,
@@ -42,7 +42,7 @@ pub(crate) const EDGE_TABLE: [i32; 256] = [
     0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0,
 ];
 
-/// Each case's triangles as edge triples, ended by -1 (C# `MarchingCubes.triTable`).
+/// Each case's triangles as edge triples, ended by -1.
 pub(crate) const TRI_TABLE: [[i8; 16]; 256] = [
     [
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

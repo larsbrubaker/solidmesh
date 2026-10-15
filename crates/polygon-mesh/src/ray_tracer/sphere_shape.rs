@@ -1,5 +1,4 @@
-//! A solid sphere (agg-sharp `RayTracer/Primitive/Shapes/SphereShape.cs`, with the `BaseShape.cs`
-//! members it inherits): the classic ray-sphere test, front and back faces for
+//! A solid sphere: the classic ray-sphere test, front and back faces for
 //! [`super::Difference`], and the latitude/longitude texture coordinates.
 
 use std::any::Any;
@@ -10,7 +9,7 @@ use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ra
 use super::base_shape::{leaf_contains, leaf_get_contained, leaf_get_crossing, leaf_get_touching};
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};
 
-/// A sphere of `radius` around `position` (C# `SphereShape`).
+/// A sphere of `radius` around `position`.
 #[derive(Debug, Clone)]
 pub struct SphereShape {
     pub radius: f64,
@@ -26,7 +25,7 @@ struct SphereRayTerms {
 }
 
 impl SphereShape {
-    /// C# `SphereShape(Vector3 position, double radius, MaterialAbstract material)`.
+    /// A sphere of `radius` around `position` with `material`.
     pub fn new(position: Vector3, radius: f64, material: Option<MaterialRef>) -> Self {
         SphereShape {
             radius,
@@ -76,7 +75,7 @@ impl SphereShape {
 }
 
 impl SphereShape {
-    /// Replaces the material (C# `Material` setter).
+    /// Replaces the material.
     pub fn set_material(&mut self, material: Option<MaterialRef>) {
         self.material = material;
     }
@@ -102,12 +101,12 @@ impl Traceable for SphereShape {
     }
 
     fn axis_to_world(&self) -> Matrix4X4 {
-        // C# BaseShape throws here; a leaf is never asked (see divergence 141).
+        // A leaf is never asked: the tree walk reads this only on items with children.
         Matrix4X4::IDENTITY
     }
 
     fn get_surface_area(&self) -> f64 {
-        // C# MathHelper.Tau.
+        // 4πr², written with τ = 2π.
         2.0 * std::f64::consts::TAU * self.radius * self.radius
     }
 

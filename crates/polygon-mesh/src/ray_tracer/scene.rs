@@ -1,15 +1,13 @@
-//! The scene a [`RayTracer`](super::RayTracer) traces into (agg-sharp
-//! `PolygonMesh/RayTracer/Scene.cs`) and its [`Background`] (`Background.cs`).
+//! The scene a [`RayTracer`](super::RayTracer) traces into and its [`Background`].
 //!
-//! C#'s scene also holds a camera (`ICamera`, defaulting to a `SimpleCamera`) and lights
-//! (`ILight`); only the image renderer (`RayTraceScene`, `FullyTraceRay`) reads them, so they
-//! arrive with it. What lands here is what the primary-ray trace reads: the shapes.
+//! The scene holds no camera or lights: only a shading image renderer would read them, and the
+//! tracer here follows primary rays. What it reads is the shapes.
 
 use agg_path::ColorF;
 
 use super::{BoundingVolumeHierarchy, BvhCreationOptions, TraceableRef};
 
-/// The background of a scene (C# `Background`).
+/// The background of a scene.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Background {
     /// The color of the background.
@@ -25,17 +23,14 @@ impl Background {
     }
 }
 
-/// A scene: a background and the objects in it, called the shapes (C# `Scene`).
-///
-/// C# `shapes` may hold `null` entries, which the trace skips; a Rust `Vec<TraceableRef>` can
-/// hold none.
+/// A scene: a background and the objects in it, called the shapes.
 pub struct Scene {
     pub background: Background,
     pub shapes: Vec<TraceableRef>,
 }
 
 impl Scene {
-    /// An empty scene on a transparent black background with 0.2 ambience (C# `new Scene()`).
+    /// An empty scene on a transparent black background with 0.2 ambience.
     pub fn new() -> Self {
         Scene {
             background: Background::new(ColorF::new(0.0, 0.0, 0.0, 0.0), 0.2),
@@ -43,9 +38,9 @@ impl Scene {
         }
     }
 
-    /// Removes the shapes from `shapes`, puts them in a bounding volume hierarchy and adds that
-    /// as the single element of `shapes` (C# `MoveShapesIntoBoundingVolumeHierarchy`). Returns
-    /// the hierarchy, `None` (leaving `shapes` as it was) when there were no shapes.
+    /// Removes the shapes from `shapes`, puts them in a bounding volume hierarchy and adds that as
+    /// the single element of `shapes`. Returns the hierarchy, `None` (leaving `shapes` as it was)
+    /// when there were no shapes.
     pub fn move_shapes_into_bounding_volume_hierarchy(&mut self) -> Option<TraceableRef> {
         let root_object = BoundingVolumeHierarchy::create_new_hierarchy(
             self.shapes.clone(),

@@ -1,11 +1,8 @@
-//! The triangle hit test `TriangleShape` and `MinimalTriangle` share (agg-sharp
-//! `RayTracer/Primitive/Shapes/TriangleShape.cs` and `MinimalTriangle.cs` carry identical
-//! copies): the plane from the corners, the major axis the triangle is projected along, the
-//! projected bounds, the 2D side-of-line test and the surface area. The two C# copies differ in
-//! one place, the side-of-line test (`< 0` versus `<= 0`); neither counts a point exactly on an
-//! edge as inside for both projected windings, so here both shapes share one test that does
-//! (`docs/CSHARP_DIVERGENCES.md` 1840), and a point within the plane hit's single-precision slack
-//! of an edge counts as on it (2276).
+//! The triangle hit test `TriangleShape` and `MinimalTriangle` share: the plane from the
+//! corners, the major axis the triangle is projected along, the projected bounds, the 2D
+//! side-of-line test and the surface area. A point exactly on an edge counts as inside for both
+//! projected windings, and a point within the plane hit's single-precision slack of an edge
+//! counts as on it, so a click exactly on an edge two faces share never falls through the part.
 
 use std::cmp::Ordering;
 
@@ -16,11 +13,11 @@ use vector_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Fl
 /// still count as on its edge (see `TriangleProjection::hit`).
 const HIT_SLACK_FLOAT_STEPS: f64 = 4.0;
 
-/// The projected axes for each major axis (C# `xMapping`, `yMapping`).
+/// The projected axes for each major axis.
 const X_MAPPING: [usize; 3] = [1, 0, 0];
 const Y_MAPPING: [usize; 3] = [2, 2, 1];
 
-/// The precomputed projection of a triangle (C# `MajorAxis`, `boundsOnMajorAxis`, `Plane`).
+/// The precomputed projection of a triangle: its major axis, projected bounds and plane.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct TriangleProjection {
     pub plane: PlaneFloat,
@@ -32,7 +29,8 @@ pub(crate) struct TriangleProjection {
     pub top: f32,
 }
 
-/// C# `double.CompareTo`, which orders NaN below everything (the key `OrderBy` sorts on).
+/// A total order on doubles with NaN below everything, so a NaN normal component never wins
+/// the major axis over a number.
 fn cs_compare(a: f64, b: f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
         (true, true) => Ordering::Equal,
@@ -92,8 +90,8 @@ impl TriangleProjection {
         )
     }
 
-    /// The hit of `ray` on the triangle with `corners`: distance, position and normal (C#
-    /// `GetClosestIntersection` up to building the `IntersectInfo`).
+    /// The hit of `ray` on the triangle with `corners`: distance, position and normal, for the
+    /// shape to build its `IntersectInfo` from.
     pub fn hit(
         &self,
         ray: &Ray,
@@ -113,11 +111,11 @@ impl TriangleProjection {
         }
 
         let hit_position = ray.origin + ray.direction_normal * f64::from(distance_to_hit);
-        // The plane hit is single precision (C# `PlaneFloat.RayHitPlane`), so the point is only
+        // The plane hit is single precision (`PlaneFloat`), so the point is only
         // known to a few float steps of its distance along the ray. Two faces that share an edge
         // but project along different axes each place their own hit, and a ray onto the edge
-        // can land that far outside both; within that slack the point counts as on the edge
-        // (divergence 2276).
+        // can land that far outside both; within that slack the point counts as on the edge,
+        // so a click exactly over such an edge (a pyramid's diagonal seen from above) hits.
         let tolerance =
             f64::from(distance_to_hit).abs() * f64::from(f32::EPSILON) * HIT_SLACK_FLOAT_STEPS;
         let have_hit_in_2d = match self.major_axis {
@@ -159,9 +157,9 @@ impl TriangleProjection {
             let vertex1 = project(1);
             let vertex2 = project(2);
             let hit_position = Vector2::new(x, y);
-            // C# sums `FindSideOfLine` (1 or -1 per edge) and wants 3 or -3. A point exactly on
-            // an edge (cross 0) then counts for one winding only, so a ray onto an edge two
-            // triangles share missed both whenever their projection wound the other way. Here
+            // Summing a ±1 sign per edge and asking for 3 or -3 would count a point exactly on
+            // an edge (cross 0) for one winding only, so a ray onto an edge two triangles share
+            // would miss both whenever their projection wound the other way. Instead
             // an edge only rules the point out when it lies strictly on the other side from
             // another edge: on an edge or corner, every triangle touching it reports the hit.
             // Each cross product is the point's distance from its edge times the edge's length;
@@ -188,11 +186,11 @@ impl TriangleProjection {
     }
 }
 
-/// The cross product C# `FindSideOfLine` takes the sign of: negative on one side of the line
-/// `side_point0 -> side_point1`, positive on the other, zero on it. The line is always measured
-/// from its lexicographically smaller end, so two triangles sharing an edge (which run it in
-/// opposite directions) get exactly opposite values for the same point: rounding can never put
-/// a point outside both.
+/// The cross product whose sign says which side of a line a point is on: negative on one side
+/// of the line `side_point0 -> side_point1`, positive on the other, zero on it. The line is
+/// always measured from its lexicographically smaller end, so two triangles sharing an edge
+/// (which run it in opposite directions) get exactly opposite values for the same point:
+/// rounding can never put a point outside both.
 pub(crate) fn side_of_line(
     side_point0: Vector2,
     side_point1: Vector2,
@@ -206,7 +204,7 @@ pub(crate) fn side_of_line(
     }
 }
 
-/// Half the length of the summed corner cross products (C# `GetSurfaceArea`).
+/// Half the length of the summed corner cross products.
 pub(crate) fn triangle_surface_area(corners: &dyn Fn(usize) -> Vector3Float) -> f64 {
     let mut accumulation = Vector3::ZERO;
     for first_index in 0..3 {

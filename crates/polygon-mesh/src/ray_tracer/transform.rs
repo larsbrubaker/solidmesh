@@ -1,7 +1,6 @@
-//! A traceable seen through a matrix (agg-sharp `RayTracer/Primitive/Transform.cs`, with the
-//! `AxisToWorld`/`WorldToAxis` pair of `TraceData/Axis3D.cs` it inherits). MatterCAD wraps each
-//! object's cached mesh BVH in one of these with the object's matrix, so one tree serves every
-//! placement: rays go into the child's space, hits come back out.
+//! A traceable seen through a matrix, with its axis-to-world transform and the inverse. MatterCAD
+//! wraps each object's cached mesh BVH in one of these with the object's matrix, so one tree serves
+//! every placement: rays go into the child's space, hits come back out.
 
 use std::any::Any;
 
@@ -9,7 +8,7 @@ use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector3};
 
 use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef};
 
-/// A child traceable under a transform (C# `RayTracer.Traceable.Transform`).
+/// A child traceable under a transform.
 pub struct Transform {
     child: TraceableRef,
     axis_to_world: Matrix4X4,
@@ -17,7 +16,7 @@ pub struct Transform {
 }
 
 impl Transform {
-    /// The child untransformed (C# `Transform(ITraceable root)`).
+    /// The child untransformed.
     pub fn new(root: TraceableRef) -> Self {
         Transform {
             child: root,
@@ -26,7 +25,7 @@ impl Transform {
         }
     }
 
-    /// The child moved by `transform` (C# `Transform(ITraceable root, Matrix4X4 transform)`).
+    /// The child moved by `transform`.
     pub fn with_matrix(root: TraceableRef, transform: Matrix4X4) -> Self {
         Transform {
             child: root,
@@ -35,18 +34,18 @@ impl Transform {
         }
     }
 
-    /// The transformed traceable (C# `Child`).
+    /// The transformed traceable.
     pub fn child(&self) -> &TraceableRef {
         &self.child
     }
 
-    /// The inverse of [`Traceable::axis_to_world`] (C# `WorldToAxis`).
+    /// The inverse of [`Traceable::axis_to_world`].
     pub fn world_to_axis(&self) -> Matrix4X4 {
         self.world_to_axis
     }
 
     fn get_local_space_ray(&self, ray: &Ray) -> Ray {
-        // TODO (from the C#): cache this.
+        // The inverse is computed for every ray; caching it would save that work.
         Ray::transform(ray, self.axis_to_world.inverted())
     }
 
@@ -92,7 +91,8 @@ impl Traceable for Transform {
         self.get_center()[axis]
     }
 
-    /// The child's contained items, tested against `sub_region` untransformed, as in the C#.
+    /// The child's contained items, tested against `sub_region` untransformed (the region is
+    /// not moved into the child's space).
     fn get_contained<'a>(
         &'a self,
         results: &mut Vec<&'a dyn Traceable>,

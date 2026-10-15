@@ -1,16 +1,16 @@
-//! A depth-first walk of a trace tree with each item's transform to world and depth (agg-sharp
-//! `PolygonMesh/Processors/BvhIterator.cs` and its `Filter` extension). MatterCAD walks scene
-//! trace data with it for rectangle selection and its debug bounds drawing; the filter decides
-//! per item whether the item and everything under it is visited.
+//! A depth-first walk of a trace tree with each item's transform to world and depth, optionally
+//! filtered. MatterCAD walks scene trace data with it for rectangle selection and its debug
+//! bounds drawing; the filter decides per item whether the item and everything under it is
+//! visited.
 
 use vector_math::Matrix4X4;
 
 use super::Traceable;
 
-/// Decides whether an item (and so its subtree) is visited (C# `Func<BvhIterator, bool>`).
+/// Decides whether an item (and so its subtree) is visited.
 pub type BvhDescentFilter<'f> = &'f dyn Fn(&BvhIterator<'_, '_>) -> bool;
 
-/// One item of the walk, and the walk from it (C# `BvhIterator`).
+/// One item of the walk, and the walk from it.
 #[derive(Clone, Copy)]
 pub struct BvhIterator<'a, 'f> {
     pub transform_to_world: Matrix4X4,
@@ -25,8 +25,8 @@ impl<'a, 'f> BvhIterator<'a, 'f> {
         Self::with(reference_item, Matrix4X4::IDENTITY, 0, None)
     }
 
-    /// The walk from `reference_item` under `initial_transform` at `initial_depth`. As in the
-    /// C#, an all-zero `initial_transform` (C# `default(Matrix4X4)`) means the identity.
+    /// The walk from `reference_item` under `initial_transform` at `initial_depth`. An all-zero
+    /// `initial_transform` (`Matrix4X4::default()`, "no transform given") means the identity.
     pub fn with(
         reference_item: &'a dyn Traceable,
         initial_transform: Matrix4X4,
@@ -46,7 +46,7 @@ impl<'a, 'f> BvhIterator<'a, 'f> {
         }
     }
 
-    /// The walk from `item` keeping only what `descent_filter` accepts (C# `item.Filter(...)`).
+    /// The walk from `item` keeping only what `descent_filter` accepts.
     pub fn filter(item: &'a dyn Traceable, descent_filter: BvhDescentFilter<'f>) -> Self {
         Self::with(item, Matrix4X4::IDENTITY, 0, Some(descent_filter))
     }
@@ -77,7 +77,7 @@ impl<'a, 'f> Iterator for BvhWalk<'a, 'f> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(current) = self.stack.pop() {
-            // `DecentFilter?.Invoke(this) != false`: no filter visits everything.
+            // No filter visits everything.
             if current
                 .descent_filter
                 .is_some_and(|filter| !filter(&current))

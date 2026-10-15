@@ -1,10 +1,9 @@
 //! `TransformedAabbCache`: the bounds of a mesh under a transform, computed from its convex hull
-//! and remembered per transform. Ports agg-sharp `PolygonMesh/TransformedAabbCache.cs`; the
-//! hull is `processors::mesh_convex_hull`, and [`crate::Mesh::get_axis_aligned_bounding_box_transformed`]
-//! is the entry point.
+//! and remembered per transform. The hull is `processors::mesh_convex_hull`, and
+//! [`crate::Mesh::get_axis_aligned_bounding_box_transformed`] is the entry point.
 //!
-//! As in C#, `Mesh::mark_as_changed` clears it ([`TransformedAabbCache::changed`]); the hull it
-//! reads is itself keyed on [`crate::Mesh::changed_count`].
+//! `Mesh::mark_as_changed` clears it ([`TransformedAabbCache::changed`]); the hull it reads is
+//! itself keyed on [`crate::Mesh::changed_count`].
 
 use std::sync::Mutex;
 
@@ -16,8 +15,7 @@ use crate::Mesh;
 /// Per-transform bounds of one mesh.
 #[derive(Debug, Default)]
 pub struct TransformedAabbCache {
-    /// C# `Dictionary<Matrix4X4, AxisAlignedBoundingBox>`; at most 101 entries, looked up by
-    /// `Matrix4X4` equality.
+    /// Bounds per transform; at most 101 entries, looked up by `Matrix4X4` equality.
     cache: Mutex<Vec<(Matrix4X4, AxisAlignedBoundingBox)>>,
 }
 
@@ -29,7 +27,7 @@ impl Clone for TransformedAabbCache {
 }
 
 impl TransformedAabbCache {
-    /// Forgets every cached transform (C# `Changed`).
+    /// Forgets every cached transform.
     pub fn changed(&self) {
         let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         // set the aabbTransform to a bad value so we detect in needs to be recreated

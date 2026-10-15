@@ -1,6 +1,6 @@
-//! A box with rounded edges and corners, centred on the origin: agg-sharp
-//! `PolygonMesh/Solids/RoundedCornerBox.cs`. One segment bevels every edge and corner flat;
-//! more segments project a grid on each face onto spheres around the eight inner corners.
+//! A box with rounded edges and corners, centred on the origin. One segment bevels every edge
+//! and corner flat; more segments project a grid on each face onto spheres around the eight
+//! inner corners.
 
 use std::collections::HashMap;
 
@@ -8,7 +8,7 @@ use vector_math::Vector3;
 
 use crate::mesh::Mesh;
 
-/// C# `RoundedCornerBox`: the vertex and index lists a box is built into.
+/// The vertex and index lists a rounded box is built into.
 pub struct RoundedCornerBox {
     indices: Vec<i32>,
     index_to_verts: HashMap<i32, i32>,
@@ -19,7 +19,7 @@ pub struct RoundedCornerBox {
 }
 
 impl RoundedCornerBox {
-    /// C# `RoundedCornerBox.Create(segments, sizeXyz, radius)`: the box as a cleaned mesh.
+    /// The box as a cleaned mesh.
     pub fn create(segments: i32, size_xyz: Vector3, radius: f64) -> Mesh {
         let round_box = RoundedCornerBox::new(segments, size_xyz, radius);
         let mut mesh = Mesh::from_vector3_list_and_indices(&round_box.vertices, &round_box.indices);
@@ -27,7 +27,7 @@ impl RoundedCornerBox {
         mesh
     }
 
-    /// C# `new RoundedCornerBox(segments, sizeXyz, radius)`.
+    /// The box's vertex and index lists for `segments` segments per rounded edge.
     pub fn new(segments: i32, size_xyz: Vector3, radius: f64) -> Self {
         let mut round_box = RoundedCornerBox {
             indices: Vec::new(),
@@ -45,7 +45,8 @@ impl RoundedCornerBox {
         round_box
     }
 
-    /// The vertex normals the multi-segment build records (C# `normals`, unused by `Create`).
+    /// The vertex normals the multi-segment build records ([`RoundedCornerBox::create`] does
+    /// not use them).
     pub fn normals(&self) -> &[Vector3] {
         &self.normals
     }
@@ -237,8 +238,8 @@ impl RoundedCornerBox {
         self.edge_count = 2 * (segments + 1);
         let capacity = (self.edge_count * self.edge_count * self.edge_count * 3) as usize;
         self.index_to_verts = HashMap::with_capacity(capacity);
-        // C# keeps the radius as passed for projecting onto the corner spheres, and only the
-        // face inset below uses the clamped one.
+        // The corner spheres are projected onto with the radius as passed; only the face inset
+        // below uses the clamped one.
         self.radius = radius_in;
         let dx = if segments > 0 {
             radius_in / segments as f64
@@ -255,15 +256,16 @@ impl RoundedCornerBox {
 
         let face_xyz = (size_xyz / 2.0) - Vector3::new(radius, radius, radius);
 
-        // xy-planes (C# reverses the bottom), xz-planes (the back), yz-planes (the left)
+        // which face of each pair is reversed: xy-planes the bottom, xz-planes the back,
+        // yz-planes the left
         self.add_grid_plane(segments, face_xyz, radius, dx, [0, 1, 2], 0);
         self.add_grid_plane(segments, face_xyz, radius, dx, [0, 2, 1], 1);
         self.add_grid_plane(segments, face_xyz, radius, dx, [1, 2, 0], 0);
     }
 
-    /// The two parallel faces normal to `axes[2]`: C#'s three copies of the plane loop, which
-    /// differ only in which axes the grid's `i`/`j` run along (`axes[0]`/`axes[1]`) and which
-    /// of the pair is wound inward (`inversed_kid`).
+    /// The two parallel faces normal to `axes[2]`. The three pairs differ only in which axes the
+    /// grid's `i`/`j` run along (`axes[0]`/`axes[1]`) and which of the pair is wound inward
+    /// (`inversed_kid`).
     fn add_grid_plane(
         &mut self,
         segments: i32,
@@ -278,7 +280,7 @@ impl RoundedCornerBox {
         let ks = [0, segments * 2 + 1];
         let s = segments;
 
-        // a grid point (i along a, j along b, k along the fixed axis) as C#'s (x, y, z) indices
+        // a grid point (i along a, j along b, k along the fixed axis) as (x, y, z) indices
         let grid = |i: i32, j: i32, k: i32| {
             let mut g = [0; 3];
             g[a] = i;
@@ -338,7 +340,7 @@ impl RoundedCornerBox {
                 }
             }
 
-            // a grid cell (i, j)-(i + 1, j + 1) as C#'s two AddFace calls
+            // a grid cell (i, j)-(i + 1, j + 1) as two triangles
             let cell = |this: &mut Self, i: i32, j: i32| {
                 let t = |this: &Self, i: i32, j: i32| this.translate_indices(grid(i, j, k));
                 let (p00, p11, p01, p10) = (

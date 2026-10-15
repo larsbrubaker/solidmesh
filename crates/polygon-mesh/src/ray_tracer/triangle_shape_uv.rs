@@ -1,7 +1,6 @@
-//! A [`TriangleShape`] that carries per-corner texture coordinates (agg-sharp
-//! `RayTracer/Primitive/Shapes/TriangleShape.cs`, class `TriangleShapeUv`). The C# keeps the
-//! three coordinates but its `GetUv` is the same plane projection as `TriangleShape`'s; both
-//! are kept as they are.
+//! A [`TriangleShape`] that carries per-corner texture coordinates. It keeps the three
+//! coordinates, but its `get_uv` is the same plane projection as `TriangleShape`'s and does
+//! not interpolate them.
 
 use std::any::Any;
 
@@ -11,7 +10,7 @@ use vector_math::{
 
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable, TriangleShape};
 
-/// A triangle with texture coordinates (C# `TriangleShapeUv : TriangleShape`).
+/// A triangle with texture coordinates.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TriangleShapeUv {
     triangle: TriangleShape,
@@ -21,8 +20,8 @@ pub struct TriangleShapeUv {
 }
 
 impl TriangleShapeUv {
-    /// C# `TriangleShapeUv(Vector3, Vector3, Vector3, Vector2Float, Vector2Float,
-    /// Vector2Float, MaterialAbstract, int)`.
+    /// The triangle through three corners with a texture coordinate per corner, a material
+    /// and the index of the face it came from.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         vertex0: Vector3,
@@ -66,7 +65,7 @@ impl TriangleShapeUv {
         )
     }
 
-    /// The triangle part (the C# base class).
+    /// The triangle part.
     pub fn triangle(&self) -> &TriangleShape {
         &self.triangle
     }
@@ -76,7 +75,7 @@ impl TriangleShapeUv {
         &mut self.triangle
     }
 
-    /// Corner `index` (C# `ITriangle.GetVertex`).
+    /// Corner `index`.
     pub fn get_vertex(&self, index: usize) -> Vector3 {
         self.triangle.get_vertex(index)
     }

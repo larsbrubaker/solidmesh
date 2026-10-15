@@ -1,5 +1,4 @@
-//! The memory-light triangle MatterCAD traces meshes with (agg-sharp
-//! `RayTracer/Primitive/Shapes/MinimalTriangle.cs`): it reads its corners back through a
+//! The memory-light triangle MatterCAD traces meshes with: it reads its corners back through a
 //! callback on the mesh instead of storing them, and carries the index of the face it stands
 //! for, which is how a pick recovers the face it hit.
 
@@ -14,11 +13,10 @@ use super::base_shape::{leaf_get_crossing, leaf_get_touching};
 use super::triangle_hit::{triangle_surface_area, TriangleProjection};
 use super::{IntersectInfo, RayTracerError, Traceable};
 
-/// The corner lookup: `(face_index, vertex_index 0..3) -> corner` (C# `Func<int, int,
-/// Vector3Float>`).
+/// The corner lookup: `(face_index, vertex_index 0..3) -> corner`.
 pub type VertexFunc = Arc<dyn Fn(i32, i32) -> Vector3Float + Send + Sync>;
 
-/// A triangle whose corners come from a callback (C# `MinimalTriangle`).
+/// A triangle whose corners come from a callback.
 #[derive(Clone)]
 pub struct MinimalTriangle {
     projection: TriangleProjection,
@@ -29,7 +27,7 @@ pub struct MinimalTriangle {
     // hierarchy never tested the triangle at all.
     aabb_min: Vector3Float,
     aabb_max: Vector3Float,
-    /// The face this triangle stands for (C# `FaceIndex`).
+    /// The face this triangle stands for.
     pub face_index: i32,
     vertex_func: VertexFunc,
 }
@@ -52,7 +50,7 @@ impl MinimalTriangle {
         }
     }
 
-    /// The triangle's plane (C# `Plane`).
+    /// The triangle's plane.
     pub fn plane(&self) -> vector_math::PlaneFloat {
         self.projection.plane
     }
@@ -65,7 +63,7 @@ impl MinimalTriangle {
         (self.aabb_min + self.aabb_max) / 2.0
     }
 
-    /// Corner `index` (C# `ITriangle.GetVertex`).
+    /// Corner `index`.
     pub fn get_vertex(&self, index: usize) -> Vector3 {
         Vector3::from_vector3_float(self.vertex(index))
     }

@@ -1,6 +1,5 @@
-//! Helpers over vertex lists: flat double arrays, in-place transforms and bounds. Ports
-//! agg-sharp `PolygonMesh/Vector3List.cs` (`Vector3ListEx`, `Vector3FloatListEx`) as free
-//! functions over slices.
+//! Helpers over vertex lists (f64 and f32 positions): flat double arrays, in-place transforms
+//! and bounds, as free functions over slices.
 
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
 

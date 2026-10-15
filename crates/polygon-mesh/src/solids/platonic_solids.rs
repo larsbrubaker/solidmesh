@@ -1,4 +1,4 @@
-//! The Platonic solids as meshes. Ports agg-sharp `PolygonMesh/Solids/PlatonicSolids.cs`.
+//! The Platonic solids as meshes.
 
 use vector_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
 
@@ -133,10 +133,9 @@ pub fn create_octahedron(scale: f64) -> Mesh {
 
 /// A dodecahedron: twelve pentagons, each fanned into three triangles.
 ///
-/// Deliberate divergence from C#: agg-sharp's `CreateDodecahedron` adds only 14 of the 20
-/// vertices and its face table is not a closed surface (it throws on index 16). This builds
-/// the canonical golden-ratio dodecahedron with the same cube corners first, then the twelve
-/// golden-rectangle vertices, and faces wound outward.
+/// The canonical golden-ratio dodecahedron: all 20 vertices, the eight cube corners first,
+/// then the twelve golden-rectangle vertices, and faces wound outward, so the result is a
+/// closed surface.
 pub fn create_dodecahedron(scale: f64) -> Mesh {
     let mut dodecahedron = Mesh::new();
 

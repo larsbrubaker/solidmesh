@@ -1,10 +1,8 @@
-//! A flat list of traceables tested one after another (agg-sharp
-//! `RayTracer/Primitive/UnboundCollection.cs`): the `SingleUnboundCollection` hierarchy, and
-//! what MatterCAD groups its bevel pick surfaces in.
+//! A flat list of traceables tested one after another: the `SingleUnboundCollection`
+//! hierarchy, and what MatterCAD groups its bevel pick surfaces in.
 //!
-//! The C# computes its bounds lazily on first request and caches them (recomputing while they
-//! are still infinite); the items cannot change here after construction, so the same
-//! computation runs once, in the constructor, unless it is still infinite.
+//! The items cannot change after construction, so the bounds are computed once, in the
+//! constructor, and only recomputed on request while they are still infinite.
 
 use std::any::Any;
 
@@ -12,7 +10,7 @@ use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ra
 
 use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef, PLANE_CROSSED_BY_ERROR};
 
-/// A list of traceables with no hierarchy (C# `UnboundCollection`).
+/// A list of traceables with no hierarchy.
 pub struct UnboundCollection {
     items: Vec<TraceableRef>,
     cached_aabb: AxisAlignedBoundingBox,
@@ -48,7 +46,7 @@ impl UnboundCollection {
         }
     }
 
-    /// The items, in the order they are traced (C# `Items`).
+    /// The items, in the order they are traced.
     pub fn items(&self) -> &[TraceableRef] {
         &self.items
     }
@@ -161,7 +159,7 @@ impl Traceable for UnboundCollection {
         Ok(hits)
     }
 
-    /// The direct items whose bounds the plane crosses (the C# does not descend into them).
+    /// The direct items whose bounds the plane crosses (it does not descend into them).
     fn get_crossing(&self, plane: &Plane) -> Result<Vec<&dyn Traceable>, RayTracerError> {
         let mut crossing = Vec::new();
         if plane.crossed_by(

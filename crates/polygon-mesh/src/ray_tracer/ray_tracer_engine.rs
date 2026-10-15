@@ -1,16 +1,14 @@
-//! The ray tracer's settings and its primary-ray trace (agg-sharp
-//! `PolygonMesh/RayTracer/RayTracer.cs`, the class MatterCAD's tests also alias
-//! `RayTracerEngine`). [`RayTracer::trace_primary_ray`] finds the nearest hit among a
-//! [`Scene`]'s shapes; the image renderer (`RayTraceScene`, `FullyTraceRay`, the color, depth
-//! and normal buffers, anti-aliasing and the image copies) and ray bundles arrive with the
-//! renderer slice, which reads the settings stored here.
+//! The ray tracer's settings and its primary-ray trace (the file is named for the engine so
+//! it does not share the module's name). [`RayTracer::trace_primary_ray`] finds the nearest
+//! hit among a [`Scene`]'s shapes. There is no image renderer (color, depth and normal
+//! buffers, anti-aliasing, ray bundles) here; the settings are what one would read.
 
 use vector_math::{IntersectionType, Ray};
 
 use super::{IntersectInfo, Scene};
 
-/// How many extra rays the renderer fires per pixel that differs from its neighbors (C#
-/// `AntiAliasing`; the discriminant is the sample count).
+/// How many extra rays the renderer fires per pixel that differs from its neighbors (the
+/// discriminant is the sample count).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AntiAliasing {
     None = 0,
@@ -21,7 +19,7 @@ pub enum AntiAliasing {
     VeryHigh = 32,
 }
 
-/// A ray tracer's settings (C# `RayTracer`), defaulting as the C# properties do.
+/// A ray tracer's settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RayTracer {
     pub anti_aliasing: AntiAliasing,
@@ -50,15 +48,15 @@ impl Default for RayTracer {
 }
 
 impl RayTracer {
-    /// A ray tracer with the default settings (C# `new RayTracer()`).
+    /// A ray tracer with the default settings.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// The nearest hit of `ray` among the scene's shapes at a distance of at least 0 (C#
-    /// `TracePrimaryRay`); a miss is an [`IntersectInfo::new`] (hit type `None`, distance
-    /// `f64::MAX`). As in C#, the shapes narrow the ray's `max_distance_to_consider` as they
-    /// find hits, so a later shape is only tested up to the nearest hit so far.
+    /// The nearest hit of `ray` among the scene's shapes at a distance of at least 0; a miss
+    /// is an [`IntersectInfo::new`] (hit type `None`, distance `f64::MAX`). The shapes narrow
+    /// the ray's `max_distance_to_consider` as they find hits, so a later shape is only tested
+    /// up to the nearest hit so far.
     pub fn trace_primary_ray<'a>(&self, ray: &mut Ray, scene: &'a Scene) -> IntersectInfo<'a> {
         let mut primary_ray_intersection = IntersectInfo::new();
 

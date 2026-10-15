@@ -1,9 +1,9 @@
-//! agg-sharp `PolygonMesh/Rendering/OrthographicZProjection.cs`: the outline of a mesh seen from
-//! straight above, as ClipperLib polygons (`GetClipperPolygons`). Each projected triangle is grown
-//! by 100 clipper units and unioned into the result, so faces that share an edge merge into one
-//! outline, and the union is shrunk back by the same 100 with round joins. `FitToCylinderObject3D`
-//! uses it to find the outline whose weight it centers. `draw_to` (C# `DrawTo`) fills the
-//! up-facing triangles, seen from above, into an image graphics: the part sheet's silhouettes.
+//! The outline of a mesh seen from straight above, as clipper polygons
+//! ([`get_clipper_polygons`]). Each projected triangle is grown by 100 clipper units and
+//! unioned into the result, so faces that share an edge merge into one outline, and the union
+//! is shrunk back by the same 100 with round joins. The fit-to-cylinder operation uses it to
+//! find the outline whose weight it centers. [`draw_to`] fills the up-facing triangles, seen
+//! from above, into an image graphics: the part sheet's silhouettes.
 
 use agg_path::clipper_library::{
     int_point, ClipperError, JoinType, PolygonExtensions, PolygonsExtensions,
@@ -16,12 +16,13 @@ use vector_math::{Matrix4X4, Vector2};
 
 use crate::Mesh;
 
-/// C#'s default `meshToPolygonScale`: clipper units per mesh unit.
+/// The default `mesh_to_polygon_scale`: clipper units per mesh unit, so a clipper unit is a
+/// thousandth of a millimetre.
 pub const DEFAULT_MESH_TO_POLYGON_SCALE: f64 = 1000.0;
 
-/// C# `DrawTo(graphics2D, mesh, matrix, offset, scale, silhouetteColor)`: every face whose
-/// transformed normal points up (+Z), projected onto XY, moved by `offset`, scaled by `scale`, and
-/// filled in `silhouette_color` as one path.
+/// Draws the mesh's silhouette from above: every face whose transformed normal points up (+Z),
+/// projected onto XY, moved by `offset`, scaled by `scale`, and filled in `silhouette_color` as
+/// one path.
 pub fn draw_to(
     graphics_2d: &mut ImageGraphics2D<'_>,
     mesh: &Mesh,
@@ -47,9 +48,8 @@ pub fn draw_to(
     graphics_2d.render(&polygon_projected, silhouette_color);
 }
 
-/// C# `GetClipperPolygons(polygons, meshToPolygonScale)`: the union of the triangles, each
-/// scaled into clipper units, grown by 100 before the union and the union shrunk by 100 after it
-/// (round joins), so shared edges close up.
+/// The union of the triangles, each scaled into clipper units, grown by 100 before the union
+/// and the union shrunk by 100 after it (round joins), so shared edges close up.
 pub fn get_clipper_polygons(
     polygons: impl IntoIterator<Item = (Vector2, Vector2, Vector2)>,
     mesh_to_polygon_scale: f64,
@@ -70,7 +70,7 @@ pub fn get_clipper_polygons(
                 polygon.2.y * mesh_to_polygon_scale,
             ),
         ];
-        // C# `Union(Polygons other)` defaults to even-odd
+        // The union fills even-odd.
         polygon_projected =
             polygon_projected.union(&poly_face.offset(100.0)?, FillRule::EvenOdd)?;
     }
