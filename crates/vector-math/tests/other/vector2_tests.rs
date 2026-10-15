@@ -1,8 +1,8 @@
-// Port of `Vector2Tests` from agg-sharp `Tests/Agg.Tests/Other/Vector2Tests.cs`: arithmetic,
-// length, `Vector2Ex` polyline lengths and positions, and cross/dot agreeing with Vector3.
+// Vector2 basics: arithmetic, length, polyline lengths and positions (`vector2_ex`), and
+// cross/dot agreeing with Vector3.
 //
-// C# draws its inputs from an unseeded `new Random()`; these tests seed `DotNetRandom` so a
-// failure reproduces. The assertions hold for any inputs.
+// The inputs are random but drawn from a seeded `DotNetRandom`, so a failure reproduces. The
+// assertions hold for any inputs.
 
 use vector_math::dotnet_random::DotNetRandom;
 use vector_math::vector2_ex::{get_position_at, polygon_length};

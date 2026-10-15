@@ -1,4 +1,4 @@
-// Port of `Vector2Tests` (agg-sharp VectorMathTests.cs).
+// Vector2 behaviour: the signed delta angle around a center, and distance to a line.
 
 use vector_math::{math_helper, Vector2};
 

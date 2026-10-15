@@ -1,11 +1,9 @@
-// Port of `ParallelSequentialEquivalenceTests` (agg-sharp
-// Tests/Agg.Tests/Agg.VectorMath/ParallelSequentialEquivalenceTests.cs): the two tests of the
-// wrapper itself. `LocallyOrderedClusteringBvhMatchesAcrossSequentialFlag`,
-// `ParallelBinnedSahBvhMatchesAcrossSequentialFlag` and `RayTracedImageMatchesAcrossSequentialFlag`
-// build PolygonMesh RayTracer BVHs and scenes and join with Phase 2.
+// The parallel wrapper gives the same results with the process-wide sequential flag on and off.
+// These are the checks of the wrapper itself; the cases that build ray-tracer BVHs live in
+// polygon-mesh's tests/ray_tracer/parallel_sequential_equivalence_tests.rs.
 //
-// The C# tests are `[NotInParallel]` because the flag is process-wide; Rust runs tests on
-// several threads, so the ones that set it hold `FLAG_LOCK` and restore the incoming value.
+// The flag is process-wide and tests run on several threads, so the tests that set it hold
+// `FLAG_LOCK` and restore the incoming value.
 
 use std::sync::Mutex;
 use vector_math::parallel;

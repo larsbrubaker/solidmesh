@@ -1,4 +1,5 @@
-// Port of `EasingTests` (agg-sharp Tests/Agg.Tests/Agg.VectorMath/VectorMathTests.cs).
+// Easing curves: the linear, cubic and quadratic curves, in every option, invert back to their
+// input across [0, 1].
 
 use vector_math::easing::{self, EaseOption, EaseType, DEFAULT_INVERSE_TOLERANCE};
 

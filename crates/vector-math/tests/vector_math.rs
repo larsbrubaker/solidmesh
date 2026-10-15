@@ -1,6 +1,5 @@
-// Ported tests from agg-sharp `Tests/Agg.Tests/Agg.VectorMath/VectorMathTests.cs`, one file
-// per C# test class (CLAUDE.md "Testing framework", net 1), plus the two Parallel test classes
-// from the same folder and Rust-only checks.
+// Vector-math tests (CLAUDE.md "Testing framework", net 1): vectors, matrices, easing, the
+// math-helper constants, the parallel helpers, and the BVH, estimator and track-ball checks.
 
 #[path = "vector_math/easing_tests.rs"]
 mod easing_tests;

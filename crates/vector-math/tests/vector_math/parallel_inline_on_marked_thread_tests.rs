@@ -1,10 +1,7 @@
-// Port of `ParallelInlineOnMarkedThreadTests` (agg-sharp
-// Tests/Agg.Tests/Agg.VectorMath/ParallelInlineOnMarkedThreadTests.cs). A thread marked with
-// `run_inline_on_current_thread` (the UI thread) runs every loop routed through the wrapper on
-// itself. The C# bodies spin so the unmarked parallel path would spread across pool threads;
-// the Rust wrapper never leaves the calling thread, so the spin is dropped. The loop-state check
-// of `ForWithLoopStateRunsEveryIterationOnTheMarkedThread` has no Rust counterpart: the body is
-// not handed a `ParallelLoopState` (see `parallel::for_with_local`).
+// A thread marked with `run_inline_on_current_thread` (the UI thread) runs every loop routed
+// through the parallel wrapper on itself. The loop bodies do no busy work: the wrapper never
+// leaves the calling thread, so there is no pool for work to spread across. There is no
+// loop-state check: the body is not handed a loop-state object (see `parallel::for_with_local`).
 
 use std::sync::Mutex;
 use std::thread::{self, ThreadId};

@@ -1,7 +1,6 @@
-// Port of `Vector3Tests` from agg-sharp `Tests/Agg.Tests/Other/Vector3Tests.cs`: arithmetic,
-// scalar multiply/divide, dot, cross, normalize and the true 3D `DistanceToSegment`.
-// C#'s static `Vector3.Add` is the `+` operator and `Vector3Ex.Dot`/`Cross` are the
-// `dot`/`cross` methods (see the vector-math mapping notes).
+// Vector3 basics: arithmetic, scalar multiply/divide, dot, cross, normalize and the true 3D
+// distance to a segment. Addition is the `+` operator; dot and cross are the `dot`/`cross`
+// methods.
 
 use vector_math::Vector3;
 

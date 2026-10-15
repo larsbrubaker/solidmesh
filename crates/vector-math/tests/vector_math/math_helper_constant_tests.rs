@@ -1,4 +1,4 @@
-// Port of `MathHelperConstantTests` (agg-sharp VectorMathTests.cs).
+// The math-helper constants carry full double precision.
 
 use std::f64::consts;
 use vector_math::math_helper;

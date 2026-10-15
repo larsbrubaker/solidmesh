@@ -1,8 +1,7 @@
 // Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection`, the
-// estimator and the track ball. agg-sharp has no tests of its own for these; the expected
-// values of the `*_matches_csharp` tests were captured by running agg-sharp's VectorMath (.NET
-// 10) on the same 30 boxes, with `BvhTreeItemData.Center` left at zero as every MatterCAD caller
-// leaves it, so they pin tree shape, search order and hits to the C#.
+// estimator and the track ball. The expected values of the `*_matches_csharp` tests are recorded
+// output for these 30 boxes, with `BvhTreeItemData::center` left at zero as every caller leaves
+// it; they pin tree shape, search order and hits, so any change to them shows up here.
 
 use vector_math::bvh::{
     morton_codes, BvhBuilderLocallyOrderedClustering, BvhTree, BvhTreeItemData,
@@ -91,7 +90,7 @@ fn rust_only_closest_intersection_matches_csharp() {
         match expected {
             None => assert!(hit.is_none(), "{origin}"),
             Some((item, distance)) => {
-                let hit = hit.expect("the C# hit here");
+                let hit = hit.expect("a recorded hit here");
                 assert_eq!(hit.closest_hit_object, Some(&item));
                 assert_eq!(hit.distance_to_hit, distance);
                 assert_eq!(hit.hit_type, IntersectionType::FrontFace);
@@ -117,7 +116,8 @@ fn rust_only_locally_ordered_clustering_matches_csharp() {
          17,17;23,23;34,35;24,24;36,37;29,29;38,39;2,2;8,8;41,52;42,47;43,44;28,28;45,46;25,25;\
          4,4;48,51;49,50;7,7;13,13;19,19;53,56;54,55;22,22;1,1;57,58;10,10;16,16"
     );
-    // The caller's boxes are left as they were (divergence 32).
+    // Building the tree leaves the caller's boxes as they were: changing an input as a side
+    // effect of building a tree would surprise the caller.
     assert_eq!(boxes, test_boxes());
 }
 

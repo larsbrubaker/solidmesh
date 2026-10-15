@@ -1,7 +1,6 @@
-// Port of `MatterHackers.RayTracer.TraceAPITests` (agg-sharp
-// Tests/Agg.Tests/Agg.RayTracer/TraceAPITests.cs): `PlaneGetDistanceToIntersection` uses only
-// VectorMath's Plane and Ray. `EnumerateBvh` builds PolygonMesh RayTracer shapes and joins with
-// Phase 2.
+// Plane/ray intersection distance: the trace API case that uses only vector-math's Plane and
+// Ray. The BVH enumeration case builds ray-tracer shapes and lives in polygon-mesh's
+// tests/ray_tracer/trace_api_tests.rs.
 
 use vector_math::{Plane, Ray, Vector3};
 

@@ -1,6 +1,5 @@
-// Port of `Vector3Tests` (agg-sharp VectorMathTests.cs): the vector, JSON, WorldView, frustum,
-// plane and hash tests. `TestGetHashCode` hashes through `std::hash::Hash`
-// where the C# calls `GetHashCode()`; its assertions are unchanged.
+// Vector3 behaviour: the vector, JSON, WorldView, frustum, plane and hash tests. The hash test
+// hashes through `std::hash::Hash`.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -128,7 +127,8 @@ pub fn assert_within(actual: f64, expected: f64, tolerance: f64) {
     );
 }
 
-/// The C# public helper `TestFrustumClipLine`.
+/// Clips a line against a frustum and checks whether any of it is inside and, if so, where the
+/// clipped ends land.
 pub fn test_frustum_clip_line(
     frustum: &Frustum,
     line_start: Vector3,
@@ -509,7 +509,7 @@ fn plane_clip_line_tests() {
     }
 }
 
-/// C# `GetHashCode()`: here, `std::hash::Hash` through the default hasher.
+/// A value's hash through `std::hash::Hash` and the default hasher.
 fn get_hash_code<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();
     value.hash(&mut hasher);

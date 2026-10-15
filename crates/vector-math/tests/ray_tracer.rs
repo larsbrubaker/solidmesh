@@ -1,6 +1,6 @@
-// Ported tests from agg-sharp `Tests/Agg.Tests/Agg.RayTracer` that exercise only VectorMath
-// types (CLAUDE.md "Testing framework", net 1). The rest of that folder tests the PolygonMesh
-// RayTracer and joins with Phase 2 (polygon-mesh).
+// Ray-tracer tests that need only vector-math types (CLAUDE.md "Testing framework", net 1):
+// the frustum and the plane/ray intersection. The ray tracer's own tests are in polygon-mesh's
+// tests/ray_tracer.
 
 #[path = "ray_tracer/frustum_tests.rs"]
 mod frustum_tests;
