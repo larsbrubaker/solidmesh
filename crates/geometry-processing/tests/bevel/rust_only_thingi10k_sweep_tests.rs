@@ -5,8 +5,8 @@
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
-use std::time::Duration;
+use std::sync::{mpsc, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::stl_reader;
 use crate::sweep_row::SweepRow;
@@ -154,16 +154,30 @@ fn rust_only_the_watchdog_names_a_throw_a_panic_and_a_hang() {
     assert_eq!(panicked.outcome.as_deref(), Some("Threw:Panic"));
     assert_eq!(panicked.detail.as_deref(), Some("a defect"));
 
-    // A loop that never charges the budget cannot be cancelled, and outlasts the watchdog's grace
-    // as well: it is abandoned and still counted.
+    // The builds above answered, so none of them is counted, even if its thread has not exited.
     let before = sweep_watchdog::alive();
-    let spinner = sweep_watchdog::run(1000, |_| -> Result<(), _> {
-        std::thread::sleep(Duration::from_millis(3000));
+    assert_eq!(
+        before, 0,
+        "a build that answered is not counted as abandoned"
+    );
+
+    // A build that never charges the budget cannot be cancelled; this one waits until the test
+    // lets it go, so it outlasts the watchdog's grace however the machine schedules it: it is
+    // abandoned and still counted.
+    let (release, held) = mpsc::channel::<()>();
+    let spinner = sweep_watchdog::run(1000, move |_| -> Result<(), _> {
+        let _ = held.recv();
         Ok(())
     });
     assert_eq!(spinner.outcome.as_deref(), Some("Hung"));
     assert!(sweep_watchdog::alive() > before);
-    std::thread::sleep(Duration::from_millis(1500));
+
+    // Once it ends on its own it leaves the count; its thread is never joined, so wait for that.
+    drop(release);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while sweep_watchdog::alive() != before && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
     assert_eq!(
         sweep_watchdog::alive(),
         before,

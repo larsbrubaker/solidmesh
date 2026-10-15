@@ -7,12 +7,16 @@
 //! its own within a few milliseconds) and waits two seconds for it, so a Hung row can carry the
 //! work it spent: a `WorkBudget` is single-threaded (`Rc`/`Cell`) and is read only on the thread
 //! that owns it. A build that does not end is abandoned and its row reads 0 work.
+//!
+//! Only abandoned builds are counted alive. A build that answered in time is not, even in the
+//! moment between handing back its answer and its thread exiting, so the count read right after a
+//! build returns is exact.
 
 use std::any::Any;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{mpsc, Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use geometry_processing::bevel::level_line::WorkBudget;
@@ -25,8 +29,18 @@ const BUILD_STACK_BYTES: usize = 32 * 1024 * 1024;
 /// How long a build that was told to cancel gets to hand back the work it spent.
 const GRACE: Duration = Duration::from_secs(2);
 
-/// Abandoned builds still spinning.
-static HUNG_ALIVE: AtomicI32 = AtomicI32::new(0);
+/// Abandoned builds still spinning, and which run of the sweep they count toward.
+struct Abandoned {
+    alive: i32,
+    /// Bumped by `forget_abandoned`: a build abandoned in an earlier run that ends later must not
+    /// take one off this run's count.
+    run: u64,
+}
+
+/// The count and every build's state change under this one lock, so a build ending and the
+/// watchdog giving up on it cannot interleave: the build is counted exactly when it was abandoned
+/// and is still running.
+static ABANDONED: Mutex<Abandoned> = Mutex::new(Abandoned { alive: 0, run: 0 });
 
 /// Wall-clock milliseconds one build may take before it is abandoned as Hung (30 s by default).
 static BUILD_CAP_MS: AtomicU64 = AtomicU64::new(30_000);
@@ -75,20 +89,64 @@ pub fn build_cap() -> Duration {
 
 /// How many abandoned builds are still spinning right now.
 pub fn alive() -> i32 {
-    HUNG_ALIVE.load(Ordering::SeqCst)
+    abandoned().alive
 }
 
 /// Starts a run's count of abandoned builds from nothing.
 pub fn forget_abandoned() {
-    HUNG_ALIVE.store(0, Ordering::SeqCst);
+    let mut abandoned = abandoned();
+    abandoned.alive = 0;
+    abandoned.run += 1;
 }
 
-/// Counts the thread alive while it runs, whatever way it ends.
-struct AliveGuard;
+/// Nothing panics while holding the lock, so a poisoned one still holds a sound count.
+fn abandoned() -> MutexGuard<'static, Abandoned> {
+    ABANDONED.lock().unwrap_or_else(PoisonError::into_inner)
+}
 
-impl Drop for AliveGuard {
+/// Where one build stands, as far as the count of abandoned builds is concerned.
+#[derive(Clone, Copy)]
+enum BuildState {
+    Running,
+    Ended,
+    /// Given up on by the watchdog while still running, during the given run of the sweep.
+    Abandoned {
+        run: u64,
+    },
+}
+
+/// One build's state, shared by its thread and the watchdog; only changed under `ABANDONED`.
+type SharedState = Arc<Mutex<BuildState>>;
+
+fn state_of(state: &SharedState) -> MutexGuard<'_, BuildState> {
+    state.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Marks the build ended when its thread finishes, whatever way it finishes; an abandoned one
+/// leaves the count then.
+struct EndGuard(SharedState);
+
+impl Drop for EndGuard {
     fn drop(&mut self) {
-        HUNG_ALIVE.fetch_sub(1, Ordering::SeqCst);
+        let mut abandoned = abandoned();
+        let mut state = state_of(&self.0);
+        if let BuildState::Abandoned { run } = *state {
+            if run == abandoned.run {
+                abandoned.alive -= 1;
+            }
+        }
+        *state = BuildState::Ended;
+    }
+}
+
+/// The watchdog gives up on a build: counted alive if it is still running, not if it ended
+/// meanwhile.
+fn abandon(state: &SharedState) {
+    let mut abandoned = abandoned();
+    let mut state = state_of(state);
+    if let BuildState::Running = *state {
+        *state = BuildState::Abandoned { run: abandoned.run };
+        abandoned.alive += 1;
     }
 }
 
@@ -107,12 +165,13 @@ pub fn run<T: Send + 'static>(
     let token = CancelToken::new();
     let build_token = token.clone();
     let (sender, receiver) = mpsc::channel::<(Ended<T>, i64)>();
+    let state: SharedState = Arc::new(Mutex::new(BuildState::Running));
+    let build_state = Arc::clone(&state);
 
-    HUNG_ALIVE.fetch_add(1, Ordering::SeqCst);
     let spawned = std::thread::Builder::new()
         .stack_size(BUILD_STACK_BYTES)
         .spawn(move || {
-            let _alive = AliveGuard;
+            let _end = EndGuard(build_state);
             let budget = Rc::new(
                 WorkBudget::with_cancellation(limit, build_token, None)
                     .expect("a sweep's work limit is positive"),
@@ -125,7 +184,6 @@ pub fn run<T: Send + 'static>(
             let _ = sender.send((ended, budget.spent.get()));
         });
     if let Err(error) = spawned {
-        HUNG_ALIVE.fetch_sub(1, Ordering::SeqCst);
         return Guarded {
             value: None,
             outcome: Some("Threw:IOException".to_string()),
@@ -138,7 +196,13 @@ pub fn run<T: Send + 'static>(
         Ok((ended, spent)) => answer(ended, spent),
         Err(_) => {
             token.cancel();
-            let work = receiver.recv_timeout(GRACE).map_or(0, |(_, spent)| spent);
+            let work = match receiver.recv_timeout(GRACE) {
+                Ok((_, spent)) => spent,
+                Err(_) => {
+                    abandon(&state);
+                    0
+                }
+            };
             Guarded {
                 value: None,
                 outcome: Some("Hung".to_string()),
