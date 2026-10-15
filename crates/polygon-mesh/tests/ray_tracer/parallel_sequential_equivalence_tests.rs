@@ -1,12 +1,11 @@
-//! The ray-tracer cases of `MatterHackers.VectorMath.ParallelSequentialEquivalenceTests`
-//! (agg-sharp `Tests/Agg.Tests/Agg.VectorMath/ParallelSequentialEquivalenceTests.cs`), deferred
-//! from vector-math until the ray tracer existed. The rest of the class lives in
-//! `crates/vector-math/tests/vector_math/parallel_sequential_equivalence_tests.rs`.
+//! The ray-tracer cases of the parallel/sequential equivalence checks: a BVH built with the
+//! process-wide sequential flag on and off must be the same tree and trace the same hits. The
+//! rest of the checks live in vector-math's
+//! `tests/vector_math/parallel_sequential_equivalence_tests.rs`, which has no ray tracer.
 //!
-//! Skipped until their code is ported: `ParallelBinnedSahBvhMatchesAcrossSequentialFlag` (the
-//! `ParallelBinnedSah` builder) and `RayTracedImageMatchesAcrossSequentialFlag` (the image
-//! renderer). The C# triangles carry a `SolidMaterial`; materials arrive with the renderer and
-//! play no part in the tree, so the triangles here have none.
+//! Not run here: the parallel binned-SAH BVH builder and the ray-traced image matching across
+//! the flag (there is no binned-SAH builder or image renderer yet). Materials play no part in the
+//! tree, so the triangles here have none.
 
 use std::sync::{Arc, Mutex};
 
@@ -16,13 +15,13 @@ use polygon_mesh::ray_tracer::{
 };
 use vector_math::{parallel, IntersectionType, Ray, Vector3};
 
-/// Serializes the tests that flip the process-wide flag (C# `[NotInParallel]`).
+/// Serializes the tests that flip the process-wide flag, so no test sees another's setting.
 static SEQUENTIAL_FLAG: Mutex<()> = Mutex::new(());
 
 const TRIANGLE_COUNT: usize = 800;
 const TRIANGLE_SIZE: f64 = 3.0;
 
-/// A 64-bit LCG returning values in [0, 1) (the C# test's `DeterministicNumbers`).
+/// A 64-bit LCG returning values in [0, 1), so every run builds the same triangles.
 struct DeterministicNumbers {
     state: u64,
 }

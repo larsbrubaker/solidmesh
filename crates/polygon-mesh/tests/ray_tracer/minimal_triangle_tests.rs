@@ -1,5 +1,4 @@
-//! Port of `MatterHackers.RayTracer.MinimalTriangleTests` (agg-sharp
-//! `Tests/Agg.Tests/Agg.RayTracer/MinimalTriangleTests.cs`).
+//! `MinimalTriangle`, the shape meshes are picked with: its bounding box holds every corner.
 
 use std::sync::Arc;
 

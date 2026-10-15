@@ -1,6 +1,5 @@
-//! Port of `Agg.PolygonMesh/MeshEdgeGraphTests.cs`: the edge topology that both
-//! `MeshEdgeGraph` and `MeshEdge::create_mesh_edge_list` must produce, written from the
-//! geometry rather than from either implementation.
+//! The edge topology that both `MeshEdgeGraph` and `MeshEdge::create_mesh_edge_list` must
+//! produce, written from the geometry rather than from either implementation.
 
 use std::collections::{HashMap, HashSet};
 

@@ -1,6 +1,5 @@
-//! Port of MatterCAD `Tests/MatterCADTests/Standard/BooleanProcessingCrashTests.cs`: inputs that
-//! got a process killed under the C++ Manifold engine MatterCAD once ran on (identical operands,
-//! whose result is empty or degenerate). The kernel is the only boolean backend
+//! Booleans on inputs that can kill a native boolean engine (identical operands, whose result is
+//! empty or degenerate). The kernel is the only boolean backend
 //! (`boolean_processing::do_array` over manifold-rust), so answering at all - with a result, not
 //! an error - is the assertion.
 
@@ -11,7 +10,8 @@ use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Matrix4X4;
 
-/// C#'s `BooleanProcessing.DoArray(items, mode, Polygons, _64, _64, null, None)`.
+/// `do_array` with polygon processing at 64-bit input and output resolution, no reporter and no
+/// cancellation.
 fn do_array(items: &[(&Mesh, Matrix4X4)], mode: CsgModes) -> Mesh {
     let options = BooleanOptions {
         processing_mode: ProcessingModes::Polygons,

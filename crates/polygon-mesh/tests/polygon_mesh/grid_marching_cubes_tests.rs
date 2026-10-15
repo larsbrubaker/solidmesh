@@ -1,7 +1,6 @@
-//! Port of agg-sharp `Tests/Agg.Tests/Agg.PolygonMesh/GridMarchingCubesTests.cs`: marching cubes
-//! over random fields gives a closed, manifold surface whatever the corner values. The seeded
-//! fields come from a port of .NET's `System.Random(int)` (Knuth's subtractive generator), so the
-//! same 300 grids are tested.
+//! Marching cubes over random fields gives a closed, manifold surface whatever the corner values.
+//! The fields come from a seeded Knuth subtractive generator, so every run tests the same 300
+//! grids and a failure always reproduces.
 
 use std::collections::HashMap;
 
@@ -9,7 +8,8 @@ use polygon_mesh::sdf::{extract, DenseGrid3f};
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 
-/// .NET's seeded `System.Random` (the legacy Knuth subtractive generator).
+/// A seeded Knuth subtractive random generator: the same seed gives the same sequence on every
+/// platform.
 struct DotNetRandom {
     seed_array: [i32; 56],
     inext: usize,

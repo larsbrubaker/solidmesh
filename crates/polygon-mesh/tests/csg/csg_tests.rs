@@ -1,11 +1,8 @@
-//! Port of `Agg.PolygonMesh/CsgTests.cs` (class `MeshCsgTests`): two-mesh booleans through
-//! `csg_operations` and `boolean_processing`.
+//! Two-mesh booleans through `csg_operations` and `boolean_processing`.
 //!
-//! `SubtractHasAllFaces` and `SubtractionMakesClosedSolid` build their operands with agg-sharp's
-//! `MatterHackers.Csg` solid tree (`Box`, `Translate`, `keep - subtract`) and convert it with
-//! `CsgToMesh`. That tree's only MatterCAD caller is label printing, which is out of scope, so
-//! the same centred 10 mm boxes come from `create_cube` and the difference from
-//! `csg_operations::subtract`: the same geometry and the same checks.
+//! `subtract_has_all_faces` and `subtraction_makes_closed_solid` subtract one centred 10 mm box
+//! from another: the boxes come from `create_cube` and the difference from
+//! `csg_operations::subtract`.
 
 use polygon_mesh::csg::{boolean_processing, csg_operations, BooleanOptions, CsgModes};
 use polygon_mesh::solids::platonic_solids::{create_cube, create_cube_vector, create_icosahedron};

@@ -1,12 +1,11 @@
-//! Port of agg-sharp `Agg.PolygonMesh/BooleanKernelYieldTests.cs`: the yielding half of the
-//! boolean kernel (`boolean_processing::do_array_async`). An n-ary union has to hand the UI its
-//! thread back between operands, or in the browser - where the job and the UI share one thread -
-//! the progress bar cannot paint until the whole boolean is over.
+//! The yielding half of the boolean kernel (`boolean_processing::do_array_async`). An n-ary
+//! union has to hand the UI its thread back between operands, or in the browser - where the job
+//! and the UI share one thread - the progress bar cannot paint until the whole boolean is over.
 //!
-//! C# installs its hook in the process-global `ProgressReporter.UiYield` and runs the class
-//! `[NotInParallel]`; here the hook is passed to the call (divergence 4252), so nothing is
-//! installed or restored. `block_on` (shared with `boolean_reporter_routing_tests`) drives the
-//! call to completion; every hop it is handed is already complete.
+//! The UI yield hook is passed to the call, not installed in a process-wide slot, so these tests
+//! run in parallel and nothing is installed or restored. `block_on` (shared with
+//! `boolean_reporter_routing_tests`) drives the call to completion; every hop it is handed is
+//! already complete.
 
 use std::future::{ready, Future, Ready};
 use std::sync::{Arc, Mutex};
@@ -69,7 +68,7 @@ impl ProgressLog {
     }
 }
 
-/// C#'s `ProgressThrottleWait.WaitOutTheWindowAsync`: at least one full throttle window.
+/// Waits at least one full throttle window, so the next yield is not throttled away.
 fn wait_out_the_window() {
     let start = Instant::now();
     let window = Duration::from_millis(YIELD_THROTTLE_MS);

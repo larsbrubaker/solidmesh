@@ -1,6 +1,6 @@
-//! Port of `Agg.PolygonMesh/FaceTextureTests.cs`: face textures are keyed by face index, so
-//! every operation that rebuilds the face list has to move the entries with the faces - a
-//! texture entry must always describe the face it is filed under.
+//! Face textures are keyed by face index, so every operation that rebuilds the face list has to
+//! move the entries with the faces - a texture entry must always describe the face it is filed
+//! under.
 
 use std::sync::{Arc, OnceLock};
 
@@ -10,7 +10,7 @@ use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{FaceTextureData, Mesh};
 use vector_math::{Matrix4X4, Plane, Vector2Float, Vector3, Vector3Float};
 
-/// C#'s `static readonly ImageBuffer TestTexture = new ImageBuffer(4, 4)`: one shared image.
+/// One shared 4 x 4 image, so every texture entry in a test points at the same buffer.
 fn test_texture() -> Arc<ImageBuffer> {
     static TEXTURE: OnceLock<Arc<ImageBuffer>> = OnceLock::new();
     Arc::clone(TEXTURE.get_or_init(|| Arc::new(ImageBuffer::new(4, 4))))
@@ -148,7 +148,8 @@ fn split_on_planes_interpolates_textures_onto_the_cut_pieces() {
 #[test]
 fn split_interpolates_textures_onto_the_cut_pieces() {
     let mut mesh = make_uv_is_position_triangle(10.0);
-    // C# defaults: onPlaneDistance .001, no clipFace, cleanAndMerge, keep the negative side
+    // The usual split: on-plane distance .001, no clip face, clean and merge, keep the negative
+    // side
     mesh.split(
         Plane::new(Vector3::new(0.0, 0.0, 1.0), 4.0),
         0.001,

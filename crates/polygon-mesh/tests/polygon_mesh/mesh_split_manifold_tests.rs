@@ -1,15 +1,15 @@
-//! Port of `Agg.PolygonMesh/MeshSplitManifoldTests.cs`: cutting a closed solid with planes
-//! (`Mesh::split`, `split_on_planes`, `split_face`) has to leave it closed, and has to mark the
-//! mesh as changed. The two faces sharing an edge walk it in opposite directions, so each used to
-//! compute the plane crossing from its own end; in float those differ by an ulp or two and
-//! `clean_and_merge` welds only bit-identical positions.
+//! Cutting a closed solid with planes (`Mesh::split`, `split_on_planes`, `split_face`) has to
+//! leave it closed, and has to mark the mesh as changed. The two faces sharing an edge walk it in
+//! opposite directions, so each must compute the plane crossing from the same end: from its own
+//! end, in float the two differ by an ulp or two and `clean_and_merge` welds only bit-identical
+//! positions.
 
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
 use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector3};
 
-/// C#'s `Split(plane, onPlaneDistance = .001, clipFace = null, cleanAndMerge = true,
-/// discardFacesOnNegativeSide = false)` defaults.
+/// `Mesh::split` with its usual arguments: no clip face, clean and merge, keep the faces on the
+/// negative side.
 fn split(mesh: &mut Mesh, plane: Plane, on_plane_distance: f64) -> bool {
     mesh.split(plane, on_plane_distance, None, true, false)
 }

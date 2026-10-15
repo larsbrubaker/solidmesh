@@ -1,6 +1,6 @@
-//! Port of `Agg.PolygonMesh/MeshTests.cs`: STL parsing, face cut lines, face splitting, the
-//! face BSP tree, slicing and stitching on clipper polygons, and the dual contouring signed
-//! distance functions and dual contouring a box (`CreateDualContouringCube`).
+//! STL parsing, face cut lines, face splitting, the face BSP tree, slicing and stitching on
+//! clipper polygons, and the dual contouring signed distance functions and dual contouring a
+//! box.
 
 use agg_path::clipper_library::{
     create_from_string, ClipperError, Intersection, PolygonExtensions,
@@ -83,7 +83,7 @@ fn face_cut_wound_correctly() {
 
     let check_angle = |angle: f64, distance: f64| {
         let normal = Vector3::from_vector2(Vector2::new(1.0, 0.0).get_rotated(angle), 0.0);
-        // C# ignores GetCutLine's return here and reads the zeroed outs on a miss
+        // A miss reads as a zero-length cut line at the origin
         let (start, end) = face
             .get_cut_line(&vertices, Plane::new(normal, distance))
             .unwrap_or((Vector3::ZERO, Vector3::ZERO));
@@ -139,7 +139,7 @@ fn count_x(mesh: &Mesh, value: f32) -> usize {
     mesh.vertices.iter().filter(|v| v.x == value).count()
 }
 
-/// `PathStitcher.Stitch` with the C# default scaling (1000) on two loop strings.
+/// `path_stitcher::stitch` with the default scaling (1000) on two loop strings.
 fn stitch_strings(bottom: &str, top: &str) -> Mesh {
     let bottom = create_from_string(bottom, 1.0).unwrap();
     let top = create_from_string(top, 1.0).unwrap();
@@ -147,10 +147,9 @@ fn stitch_strings(bottom: &str, top: &str) -> Mesh {
         .expect("one loop, or a matching pair, always stitches")
 }
 
-// C# opens this test with `return;`, so none of its assertions run there. The three CCW cases
-// hold for `Stitch` (C# and Rust alike) and are asserted with the C# values. The three CW
-// "error condition" cases expect 0 faces, but `Stitch` caps or walls a loop whatever its
-// winding (8, 2 and 2 faces); C# keeps them as the disabled intent, and they stay that here:
+// The three CCW cases are asserted. Three CW "error condition" cases would expect 0 faces, but
+// `stitch` caps or walls a loop whatever its winding (8, 2 and 2 faces), so they are recorded
+// here as intent and not asserted:
 //   CW skirt "0,0, 0,100, 100,100, 100,0" both ways -> 0 faces
 //   CW bottom only -> 0 faces; CW top only -> 0 faces
 #[test]
@@ -406,7 +405,7 @@ fn get_slice_loop() -> Result<(), ClipperError> {
         assert_eq!(slice[0].len(), 4);
     }
 
-    // C# runs this block twice, identically.
+    // Run twice, identically: a second fresh cube must slice exactly like the first.
     for _ in 0..2 {
         let mut cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
         cube.translate_xyz(0.0, 0.0, 5.0); // move bottom to z=0
@@ -465,7 +464,7 @@ fn create_dual_contouring_cube() {
                 "size {size} iterations {iterations}"
             );
 
-            // C# orders by X, then Y, then Z (a stable sort).
+            // Ordered by X, then Y, then Z, so two vertex lists compare position by position.
             let sorted = |mut v: Vec<Vector3Float>| {
                 v.sort_by(|a, b| {
                     a.x.partial_cmp(&b.x)

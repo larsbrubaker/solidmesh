@@ -1,13 +1,12 @@
-//! Port of agg-sharp `Agg.PolygonMesh/MinkowskiErosionCancelTests.cs`: cancellation and the
-//! throttled progress bar on both slow erosion paths of `csg::minkowski_morph` - the kernel's
-//! union tree (`Manifold::try_erode_by_convex`), which a non-convex solid takes, and the sweep,
-//! which a non-convex tool still takes.
+//! Cancellation and the throttled progress bar on both slow erosion paths of
+//! `csg::minkowski_morph` - the kernel's union tree (`Manifold::try_erode_by_convex`), which a
+//! non-convex solid takes, and the sweep, which a non-convex tool still takes.
 //!
 //! Each test asserts which path ran through `erosion_tree_runs`, because `ErosionPath` reads
-//! Sweep for both. C# runs the class `[NotInParallel]` because the counter is process-wide; the
-//! gate's nextest runs every test in its own process, and under `cargo test` the tests of this
-//! file still take one lock so none of them erodes beside another. C#'s
-//! `MinkowskiDifferenceAsync` is `minkowski_difference_with_path_and_progress`.
+//! Sweep for both. That counter is process-wide: the gate's nextest runs every test in its own
+//! process, and under `cargo test` the tests of this file take one lock so none of them erodes
+//! beside another. The difference with progress is
+//! `minkowski_difference_with_path_and_progress`.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -22,7 +21,7 @@ use polygon_mesh::{CancelToken, Mesh};
 
 use super::minkowski_tests::dented;
 
-/// C#'s `[NotInParallel]` for this class.
+/// Keeps this file's tests from eroding side by side, so the process-wide counter counts one.
 static NOT_IN_PARALLEL: Mutex<()> = Mutex::new(());
 
 #[test]

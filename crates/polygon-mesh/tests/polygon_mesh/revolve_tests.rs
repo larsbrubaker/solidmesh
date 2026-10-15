@@ -1,7 +1,6 @@
-//! Port of `Agg.PolygonMesh/RevolveTests.cs`: Revolve turns a 2D profile into a solid, and
-//! every primitive that spins a profile around an axis reaches the same code. The profile can be
-//! degenerate while a user is mid-edit, and it may or may not have material on the negative side
-//! of the axis.
+//! Revolve turns a 2D profile into a solid, and every primitive that spins a profile around an
+//! axis reaches the same code. The profile can be degenerate while a user is mid-edit, and it may
+//! or may not have material on the negative side of the axis.
 
 use agg_path::VertexStorage;
 use polygon_mesh::processors::vertex_source_to_mesh::revolve;
@@ -33,7 +32,7 @@ fn clockwise_rectangle_profile(left: f64, right: f64, height: f64) -> VertexStor
     path
 }
 
-/// C#'s default sweep: a full turn around z.
+/// The default sweep: a full turn around z.
 fn revolve_full(profile: &VertexStorage, angle_steps: i32) -> Mesh {
     revolve(profile, angle_steps, 0.0, TAU, true).expect("angles in range")
 }
@@ -73,7 +72,8 @@ fn a_zero_area_profile_revolves_to_an_empty_mesh() {
 
 #[test]
 fn a_profile_right_of_the_axis_revolves_unchanged() {
-    // The counts are the ones the C#'s pre-fix code produced for this profile.
+    // Handling material left of the axis must not touch a profile that stays right of it: four
+    // corners times 30 steps of vertices, two triangles per corner per step.
     let mesh = revolve_full(&rectangle_profile(5.0, 15.0, 10.0), 30);
 
     assert_eq!(mesh.faces.len(), 240);

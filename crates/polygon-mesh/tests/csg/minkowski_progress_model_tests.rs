@@ -1,7 +1,7 @@
-//! Port of `Agg.PolygonMesh/MinkowskiProgressModelTests.cs`: the sweep's and the union tree's
-//! unit-to-time mappings in `minkowski_progress_model`.
-//! `APatchedDilationsPhaseTotalMatchesTheModelsLayout` runs manifold-rust's
-//! `Manifold::try_dilate_by_convex` directly, as the C# runs manifold-sharp's.
+//! The sweep's and the union tree's unit-to-time mappings in `minkowski_progress_model`.
+//! `a_patched_dilations_phase_total_matches_the_models_layout` runs manifold-rust's
+//! `Manifold::try_dilate_by_convex` directly, so the kernel's own phase total is what the model
+//! is checked against.
 
 use manifold_rust::linalg::Vec3;
 use manifold_rust::manifold::Manifold;
@@ -150,8 +150,8 @@ fn a_patched_dilations_phase_total_matches_the_models_layout() {
     let solid = Manifold::cube(Vec3::new(20.0, 20.0, 20.0), true)
         - Manifold::cube(Vec3::new(10.0, 10.0, 10.0), false)
         - Manifold::sphere(6.0, 24).translate(Vec3::new(-10.0, 0.0, 0.0));
-    // C#'s callback reads the reporter it belongs to; here it reaches it through a weak handle
-    // set once the reporter exists.
+    // The callback reads the reporter it belongs to, through a weak handle set once the reporter
+    // exists (the reporter cannot hold a strong handle to itself).
     let phase_total = Arc::new(AtomicU64::new(0));
     let reporter_cell: Arc<OnceLock<Weak<ProgressReporter>>> = Arc::new(OnceLock::new());
     let reporter = {

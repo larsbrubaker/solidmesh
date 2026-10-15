@@ -1,6 +1,6 @@
-//! Port of `Agg.PolygonMesh/FaceColorBooleanScenarios.cs`: the face-colour behaviour a CSG
-//! backend has to deliver, stated once as a contract. `face_color_tests.rs` runs each scenario
-//! through the public `boolean_processing` entry points.
+//! The face-colour behaviour a CSG backend has to deliver, stated once as a contract.
+//! `face_color_tests.rs` runs each scenario through the public `boolean_processing` entry
+//! points.
 
 use agg_path::Color;
 use polygon_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};

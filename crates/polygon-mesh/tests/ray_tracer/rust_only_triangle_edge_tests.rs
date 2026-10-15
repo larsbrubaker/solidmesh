@@ -1,10 +1,10 @@
-//! Rust-only checks that a ray landing exactly on an edge or corner two triangles share hits
-//! (`docs/CSHARP_DIVERGENCES.md` 1840). agg-sharp's `MinimalTriangle` counts a point on an edge
-//! as inside only for one projected winding (`<= 0`) and `TriangleShape` only for the other
-//! (`< 0`), so for half the face directions a click exactly on a mesh edge missed both
-//! neighbours and fell through the part. Each case builds a square of four triangles fanned
-//! around its center vertex, facing each of the six axis directions, and fires a ray straight at
-//! the face onto the center vertex and onto the middle of a shared spoke edge.
+//! Rust-only checks that a ray landing exactly on an edge or corner two triangles share hits.
+//! A point on an edge counts as inside whichever way the face points, so a click exactly on a
+//! mesh edge or vertex selects the part instead of falling through it to whatever is behind
+//! (clicking a part's center on screen is where this happens most). Each case builds a square of
+//! four triangles fanned around its center vertex, facing each of the six axis directions, and
+//! fires a ray straight at the face onto the center vertex and onto the middle of a shared spoke
+//! edge.
 
 use std::sync::Arc;
 

@@ -1,6 +1,5 @@
-//! Port of `Agg.PolygonMesh/FaceColorTests.cs`: per-face colors through copies, welds,
-//! booleans and face merging. The boolean cases run the contract in
-//! `face_color_boolean_scenarios.rs`.
+//! Per-face colors through copies, welds, booleans and face merging. The boolean cases run the
+//! contract in `face_color_boolean_scenarios.rs`.
 
 use agg_path::Color;
 use polygon_mesh::solids::platonic_solids::create_cube;

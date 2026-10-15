@@ -1,6 +1,6 @@
-//! Rust-only checks of `RayTracer::trace_primary_ray` and `Scene` (agg-sharp `RayTracer.cs`,
-//! `Scene.cs`): the nearest hit across several shapes wins, a miss reports no hit, and moving
-//! the shapes into a hierarchy keeps what a ray hits.
+//! Rust-only checks of `RayTracer::trace_primary_ray` and `Scene`: the nearest hit across several
+//! shapes wins, a miss reports no hit, and moving the shapes into a hierarchy keeps what a ray
+//! hits.
 
 use std::sync::Arc;
 

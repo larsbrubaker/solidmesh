@@ -1,4 +1,4 @@
-//! Port of `Agg.PolygonMesh/MeshMeasureTests.cs`: volume and surface area.
+//! Mesh measurements: volume and surface area.
 
 use polygon_mesh::solids::platonic_solids;
 use vector_math::Matrix4X4;

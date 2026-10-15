@@ -1,6 +1,5 @@
-//! Port of `Agg.PolygonMesh/MeshCopyIndependenceTests.cs`: a copied mesh owns its faces, so no
-//! in place face edit on the copy (reverse, recalculated normals, texture UVs, face colors)
-//! reaches the source.
+//! A copied mesh owns its faces, so no in place face edit on the copy (reverse, recalculated
+//! normals, texture UVs, face colors) reaches the source.
 
 use agg_path::Color;
 use polygon_mesh::{FaceTextureData, Mesh};

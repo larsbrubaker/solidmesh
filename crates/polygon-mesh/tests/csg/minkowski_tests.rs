@@ -1,14 +1,12 @@
-//! Port of agg-sharp `Agg.PolygonMesh/MinkowskiTests.cs`: the kernel's morphological operations
-//! through `csg::minkowski_morph` and `csg::minkowski_processing`, the entry points a uniform
-//! fillet and the bevel feature's test oracle both go through.
+//! The kernel's morphological operations through `csg::minkowski_morph` and
+//! `csg::minkowski_processing`, the entry points a uniform fillet and the bevel feature's test
+//! oracle both go through.
 //!
 //! Every volume is bracketed rather than compared to one analytic number: the structuring ball
 //! is an inscribed polytope, so it contains the sphere of its own inradius and is contained by
-//! the sphere of its radius, and Minkowski sums are monotone in either operand. C#'s async entry
-//! points (`MinkowskiSumAsync`, `MinkowskiDifferenceAsync`, `MinkowskiDifferenceWithPathAsync`)
-//! are the `*_with_progress` / `*_with_path_and_progress` calls in Rust (see
-//! `minkowski_morph.rs`'s header). `dented` is shared with `minkowski_erosion_cancel_tests`, as
-//! C#'s `MinkowskiTests.Dented` is.
+//! the sphere of its radius, and Minkowski sums are monotone in either operand. The calls that
+//! report progress are the `*_with_progress` / `*_with_path_and_progress` ones (see
+//! `minkowski_morph.rs`'s header). `dented` is shared with `minkowski_erosion_cancel_tests`.
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -260,8 +258,8 @@ fn an_open_mesh_is_refused_the_way_a_boolean_refuses_it() {
     assert_import_rejected_not_closed(&as_tool);
 }
 
-/// C#'s `Throws<InvalidOperationException>` whose message names `NotClosed`: the status is what
-/// tells the user which operand was unusable.
+/// The import's refusal, naming `NotClosed`: the status is what tells the user which operand was
+/// unusable.
 fn assert_import_rejected_not_closed(error: &MinkowskiError) {
     assert!(
         matches!(error, MinkowskiError::ImportRejected { .. }),

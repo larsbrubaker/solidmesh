@@ -1,11 +1,10 @@
-//! Port of agg-sharp `Tests/Agg.Tests/Agg.PolygonMesh/MeshConvexHullTests.cs`, plus Rust-only
-//! checks of the transformed bounds (`TransformedAabbCache`) built on the hull.
+//! The mesh's cached convex hull, plus Rust-only checks of the transformed bounds
+//! (`TransformedAabbCache`) built on the hull.
 //!
-//! C# reads the hull cache through `Mesh.PropertyBag`; the Rust mesh has a typed cache keyed on
-//! `changed_count`, read with `has_cached_convex_hull`, and "same reference" is `Arc::ptr_eq`.
-//! The in-flight marker `SyncHullDoesNotWaitOnAnInFlightHull` plants does not exist here (hulls
-//! are only ever built synchronously, as C# forces), so that test keeps its assertions without
-//! the marker.
+//! The hull cache is typed and keyed on `changed_count`, read with `has_cached_convex_hull`, and
+//! "same reference" is `Arc::ptr_eq`. Hulls are only ever built synchronously, so there is no
+//! in-flight hull to wait on: `sync_hull_does_not_wait_on_an_in_flight_hull` checks that a
+//! hull request answers promptly.
 
 use std::sync::Arc;
 use std::time::Instant;

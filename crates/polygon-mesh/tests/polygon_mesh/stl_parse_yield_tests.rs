@@ -1,11 +1,11 @@
-//! Port of `Agg.PolygonMesh/StlParseYieldTests.cs`: a large model has to hand the UI its
-//! thread back while it comes in, or in the browser the frame is frozen for the whole load.
+//! A large model has to hand the UI its thread back while it comes in, or in the browser the
+//! frame is frozen for the whole load.
 //!
-//! C# yields through a global `ProgressReporter.UiYield` hook from an async parse; here the
-//! caller drives [`StlParse::next_chunk`] and each `Continue` is a point where it gets its
-//! thread back. A caller with no reporter (exports, thumbnails, tests) uses the synchronous
-//! [`stl_processing::parse_file_contents`], which hands control back only with the finished
-//! mesh: that is `AParseNobodyIsWatchingNeverYields` here.
+//! The caller drives [`StlParse::next_chunk`] and each `Continue` is a point where it gets its
+//! thread back, so no process-wide yield hook is needed. A caller with no reporter (exports,
+//! thumbnails, tests) uses the synchronous [`stl_processing::parse_file_contents`], which hands
+//! control back only with the finished mesh: `a_parse_nobody_is_watching_never_yields` checks
+//! that.
 
 use polygon_mesh::processors::stl_processing::{self, StlChunk, StlParse, FACES_PER_YIELD};
 use polygon_mesh::processors::{stl_writer, MeshOutputSettings};
@@ -101,8 +101,7 @@ fn a_large_stl_hands_the_ui_its_thread_back_while_it_parses_false() {
 fn a_parse_nobody_is_watching_never_yields() {
     // The only reason not to hop the event loop is that there is no reporter. Getting this
     // wrong costs every non-UI caller - exports, thumbnails, tests - a UI hop per chunk of
-    // every STL it reads. C# also checks `ProgressReporter.Null`, the singleton a null Action
-    // becomes; Rust has one "no reporter", `None`, so the one parse covers both.
+    // every STL it reads. There is one "no reporter", `None`, so this one parse covers it.
     let parsed =
         stl_processing::parse_file_contents(&multi_chunk_stl_bytes(), &CancelToken::new(), None)
             .expect("the parse succeeds");

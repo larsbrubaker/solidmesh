@@ -1,6 +1,6 @@
-//! agg-sharp `MeshSdfGridTests`: the drag preview's distance field. Offsets of a 20 mm cube land
-//! on the exact rounded box and the shrunk cube, an inside-out cube reads as the same solid, one
-//! field serves every step, and offsets keep the part's topology.
+//! The drag preview's distance field. Offsets of a 20 mm cube land on the exact rounded box and
+//! the shrunk cube, an inside-out cube reads as the same solid, one field serves every step, and
+//! offsets keep the part's topology.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -431,7 +431,8 @@ pub(crate) fn signed_volume(mesh: &Mesh) -> f64 {
         let a = mesh.vertices[face.v0 as usize];
         let b = mesh.vertices[face.v1 as usize];
         let c = mesh.vertices[face.v2 as usize];
-        // In float, as C# multiplies the `Vector3Float` components before dividing by 6.0.
+        // In float: the stored `Vector3Float` components are multiplied before the sum is
+        // widened and divided by 6.0.
         let six_volume = (a.x * ((b.y * c.z) - (b.z * c.y))) - (a.y * ((b.x * c.z) - (b.z * c.x)))
             + (a.z * ((b.x * c.y) - (b.y * c.x)));
         total += six_volume as f64 / 6.0;

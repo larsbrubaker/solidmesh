@@ -1,7 +1,7 @@
-//! Rust-only checks of the shapes, materials and tree queries that have no C# test of their
+//! Rust-only checks of the shapes, materials and tree queries that have no test class of their
 //! own: `SphereShape` front/back hits and its iterator, `SolidMaterial` colors through
-//! `Primitive::get_color`, `TriangleShapeUv` hits, `GetCrossing`/`GetTouching` through a BVH,
-//! `IntersectionIterator` through a `Transform`, and `wrap_up`.
+//! `Primitive::get_color`, `TriangleShapeUv` hits, `get_crossing`/`get_touching` through a BVH,
+//! `intersection_iterator` through a `Transform`, and `wrap_up`.
 
 use std::sync::Arc;
 

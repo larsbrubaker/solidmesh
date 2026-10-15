@@ -1,6 +1,5 @@
-//! Port of agg-sharp `Tests/Agg.Tests/Agg.RayTracer/BooleanTests.cs`: view-space CSG with
-//! `BoxShape` and `Difference`, and `IntersectInfo.Subtract` on a hit list that once failed.
-//! The C# `#if false` cases (a subtract through a BVH of boxes) are disabled there too.
+//! View-space CSG with `BoxShape` and `Difference`, and `IntersectInfo::subtract` on a hit list
+//! that once failed. Not run here: a subtract through a BVH of boxes.
 
 use std::sync::Arc;
 
@@ -82,6 +81,6 @@ BackFace, 7.36209329430552";
 
     let mut result = Vec::new();
 
-    // The C# passes when this does not throw.
+    // The case passes when the subtract returns without an error.
     IntersectInfo::subtract(&all_primary, &all_subtract, &mut result).unwrap();
 }

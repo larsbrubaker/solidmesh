@@ -1,5 +1,5 @@
 //! Rust-only STL tests: round trips through the writer and reader, cancellation and the
-//! error cases where C# returned null.
+//! error cases a reader must report instead of returning a mesh.
 
 use polygon_mesh::processors::stl_processing::{self, StlError};
 use polygon_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};

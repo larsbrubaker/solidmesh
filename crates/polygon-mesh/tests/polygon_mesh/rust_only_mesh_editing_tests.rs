@@ -1,4 +1,4 @@
-//! Rust-only tests for mesh editing and cleanup that the C# suite exercises only indirectly:
+//! Rust-only tests for mesh editing and cleanup that other tests exercise only indirectly:
 //! `merge_vertices`, `split`, `split_on_planes`, `repair_t_junctions`, `clean_and_merge`,
 //! `remove_unused_vertices`, `remove_degenerate_faces` and the vertex sorters.
 

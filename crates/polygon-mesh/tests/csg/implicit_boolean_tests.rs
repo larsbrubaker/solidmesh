@@ -1,7 +1,6 @@
-//! Port of `Agg.PolygonMesh/ImplicitBooleanTests.cs`: the implicit-surface processing modes
-//! (marching cubes, dual contouring) resample the operands instead of running the kernel, so
-//! their answers are only checked by volume. C#'s parameterized
-//! `NarySubtractRemovesEveryCutterFromTheFirstOperand(mode)` is one test per mode here.
+//! The implicit-surface processing modes (marching cubes, dual contouring) resample the operands
+//! instead of running the kernel, so their answers are only checked by volume. The n-ary
+//! subtract case runs once per mode, each as its own test.
 
 use polygon_mesh::csg::boolean_processing::{do_array, do_boolean};
 use polygon_mesh::csg::minkowski_processing::sphere_mesh;

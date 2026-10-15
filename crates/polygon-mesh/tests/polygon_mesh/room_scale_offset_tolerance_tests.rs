@@ -1,8 +1,8 @@
-//! Port of agg-sharp `Tests/Agg.Tests/Agg/RoomScaleOffsetToleranceTests.cs`, the two
-//! bevelled-extrude cases: an extrude's bevel rings are offsets cut by the size of what they
-//! offset, so a room-size frame gets no more of a mesh than a printer-bed one, and a desk-size
-//! one is the mesh it always was. They need `VertexSourceToMesh.Extrude`, so they live with it
-//! here; the offset cases are in agg-path's `tests/agg/room_scale_offset_tolerance_tests.rs`.
+//! The two bevelled-extrude cases of room-scale offset tolerance: an extrude's bevel rings are
+//! offsets cut by the size of what they offset, so a room-size frame gets no more of a mesh than
+//! a printer-bed one, and a desk-size one is the mesh it always was. They need
+//! `vertex_source_to_mesh::extrude_bevelled`, so they live with it here; the offset cases are in
+//! agg-path's `tests/agg/room_scale_offset_tolerance_tests.rs`.
 
 use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;
@@ -86,8 +86,8 @@ fn frame(size: f64) -> VertexStorage {
     frame
 }
 
-/// The exact bits of every vertex position, in sorted order, plus the face count (C# sorts
-/// because the vertex ORDER is not stable; the positions are what a stored mesh keeps).
+/// The exact bits of every vertex position, in sorted order, plus the face count (sorted because
+/// the vertex ORDER is not stable; the positions are what a stored mesh keeps).
 fn checksum(mesh: &Mesh) -> i64 {
     let mut vertices: Vec<[f64; 3]> = mesh
         .vertices

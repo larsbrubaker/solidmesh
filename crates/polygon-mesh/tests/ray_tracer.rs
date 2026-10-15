@@ -1,6 +1,5 @@
-//! Ported agg-sharp `Tests/Agg.Tests/Agg.RayTracer` test classes (and the ray-tracer cases of
-//! `Agg.VectorMath/ParallelSequentialEquivalenceTests`), one file each (CLAUDE.md net 1).
-//! Cases that need code not ported yet are listed as skipped in each file's header.
+//! The ray-tracer test binary: triangle and shape hits, view-space CSG, the trace API, and the
+//! BVH built in parallel against the sequential build, one file per test class.
 
 #[path = "ray_tracer/boolean_tests.rs"]
 mod boolean_tests;

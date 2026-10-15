@@ -1,16 +1,14 @@
-//! Port of `Agg.PolygonMesh/ManifoldRustBackendTests.cs`, its cancellation and progress cases
-//! (`CancelObservedByTheKernelSurfacesAsCancellation`,
-//! `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
-//! `ReporterSeesProgressWithoutChangingTheResult`) and the `UvSphere` fixture they share. The
-//! rest of the class is `manifold_rust_backend_tests.rs`; split only for the 800-line limit.
+//! The manifold-rust boolean backend's cancellation and progress cases: a cancel the kernel
+//! observes surfaces as cancellation, a cancel from another thread stops the boolean before its
+//! work finishes, and a reporter sees progress without changing the result. Also the UV sphere
+//! fixture they share. The rest of the backend's tests are `manifold_rust_backend_tests.rs`;
+//! split only for the 800-line limit.
 //!
-//! `cancel_observed_by_the_kernel_surfaces_as_cancellation` lands its cancel where C# does -
-//! after the last operand's import, before the kernel - but by a different hook: C# hands
-//! `DoArray` an iterator that cancels after its last yield, and Rust's `do_array` takes a
-//! slice. The hook here is the batch combine's own opening report ("Boolean: combining"),
-//! which the seam publishes after every import and before the kernel's CSG tree runs, so the
-//! next code to see the flag is still the kernel. The batch path is the same one C# exercises
-//! (a reporter is not a reason to fold), and the expected values are unchanged.
+//! `cancel_observed_by_the_kernel_surfaces_as_cancellation` lands its cancel after the last
+//! operand's import and before the kernel. `do_array` takes a slice, so the hook is the batch
+//! combine's own opening report ("Boolean: combining"), which the seam publishes after every
+//! import and before the kernel's CSG tree runs, so the next code to see the flag is the kernel.
+//! A reporter is not a reason to fold, so this is the batch path every union takes.
 
 use std::sync::{Arc, Barrier, Mutex};
 

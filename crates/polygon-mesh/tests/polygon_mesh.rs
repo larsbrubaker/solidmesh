@@ -1,6 +1,6 @@
-//! Ported agg-sharp `Tests/Agg.Tests/Agg.PolygonMesh` test classes, one file each (CLAUDE.md
-//! net 1). Only the cases that exercise code ported so far are here; the rest are listed in
-//! `docs/PORTING_PLAN.md` with the slice that brings them.
+//! The polygon-mesh test binary: the mesh, its face colours and textures, measuring, splitting,
+//! convex hulls, revolve and extrude, marching cubes, distance fields and STL, one file per test
+//! class.
 
 #[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
 mod face_color_boolean_scenarios;

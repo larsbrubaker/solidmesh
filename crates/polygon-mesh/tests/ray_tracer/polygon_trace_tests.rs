@@ -1,7 +1,5 @@
-//! Port of MatterCAD `Tests/MatterCADTests/Standard/PolygonTraceTests.cs`: a `TriangleShape`'s
-//! projection axis and its front-face-only hits. Same names and values.
-//! `RayBundleSameResultAsIndividualRays` has an empty body in C#. `CorrectRayOnCircle` needs
-//! MatterCAD's `MeshToBVH`, so it lives in mattercad-model
+//! A `TriangleShape`'s projection axis and its front-face-only hits. The rays-on-a-circle case
+//! needs the model's mesh-to-BVH conversion, so it lives in mattercad-model
 //! (`crates/mattercad-model/tests/scene_core/polygon_trace_tests.rs`).
 
 use std::sync::Arc;
@@ -37,7 +35,7 @@ fn triangle_major_axis() {
     assert_eq!(triangle2.major_axis(), 1u8);
 }
 
-/// Whether `info` landed on exactly `shape` (C# `ClosestHitObject == shape`).
+/// Whether `info`'s closest hit is exactly `shape`, the same object and not an equal one.
 fn hit_is(info: &polygon_mesh::ray_tracer::IntersectInfo<'_>, shape: &TriangleShape) -> bool {
     info.closest_hit_as::<TriangleShape>()
         .is_some_and(|hit| std::ptr::eq(hit, shape))

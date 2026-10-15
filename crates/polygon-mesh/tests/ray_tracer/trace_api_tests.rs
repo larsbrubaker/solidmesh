@@ -1,6 +1,6 @@
-//! Port of `MatterHackers.RayTracer.TraceAPITests` (agg-sharp
-//! `Tests/Agg.Tests/Agg.RayTracer/TraceAPITests.cs`). `PlaneGetDistanceToIntersection` uses only
-//! vector-math and lives in `crates/vector-math/tests/ray_tracer/trace_api_tests.rs`.
+//! The ray tracer's trace API: enumerating a BVH visits every shape in it. The plane's distance
+//! to an intersection uses only vector-math and is checked in
+//! `crates/vector-math/tests/ray_tracer/trace_api_tests.rs`.
 
 use std::sync::Arc;
 

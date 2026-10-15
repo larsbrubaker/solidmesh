@@ -1,6 +1,5 @@
-//! Ported agg-sharp `Tests/Agg.Tests/Agg.PolygonMesh` boolean test classes, one file each
-//! (CLAUDE.md net 1). Cases that need code not ported yet are listed as skipped in each file's
-//! header.
+//! The CSG test binary: two-mesh and n-ary booleans, the Minkowski operations, implicit-surface
+//! booleans and the manifold-rust backend, one file per test class.
 
 #[path = "csg/boolean_kernel_yield_tests.rs"]
 mod boolean_kernel_yield_tests;

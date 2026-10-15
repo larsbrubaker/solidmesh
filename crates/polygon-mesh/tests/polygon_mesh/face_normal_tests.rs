@@ -1,6 +1,5 @@
-//! Port of `Agg.PolygonMesh/FaceNormalTests.cs`: a zero area face is topologically real - the
-//! seams where a solid touches itself are made of them - so the mesh has to be able to hold
-//! one without its normal turning into NaN.
+//! A zero area face is topologically real - the seams where a solid touches itself are made of
+//! them - so the mesh has to be able to hold one without its normal turning into NaN.
 
 use polygon_mesh::Face;
 use vector_math::Vector3Float;

@@ -1,4 +1,4 @@
-//! Rust-only checks of `solids::platonic_solids`: agg-sharp has no test for these builders.
+//! Rust-only checks of `solids::platonic_solids`, the builders every primitive starts from.
 //! Every solid must be a closed, outward-wound, genus-zero mesh with the expected counts.
 
 use polygon_mesh::solids::platonic_solids;

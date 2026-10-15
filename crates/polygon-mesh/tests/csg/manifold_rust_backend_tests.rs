@@ -1,13 +1,11 @@
-//! Port of `Agg.PolygonMesh/ManifoldRustBackendTests.cs`: the manifold-rust boolean backend,
-//! exercised through the public `boolean_processing` entry points.
+//! The manifold-rust boolean backend, exercised through the public `boolean_processing` entry
+//! points.
 //!
-//! C# asserts a status by its name in the exception message (`ManifoldStatus.NotClosed`); the
-//! Rust message carries the kernel status's `Debug` name the same way.
+//! A refused operand is asserted by the kernel status's `Debug` name in the error message
+//! (`NotClosed`), the name a user's error report carries.
 //!
-//! The cancellation and progress cases (`CancelObservedByTheKernelSurfacesAsCancellation`,
-//! `CancelFromAnotherThreadDuringTheBooleanStopsBeforeTheWorkFinishes`,
-//! `ReporterSeesProgressWithoutChangingTheResult`) are in `manifold_rust_backend_cancel_tests.rs`,
-//! split for the 800-line limit.
+//! The cancellation and progress cases are in `manifold_rust_backend_cancel_tests.rs`, split for
+//! the 800-line limit.
 
 use std::collections::HashMap;
 
@@ -324,7 +322,7 @@ fn an_input_the_kernel_rejects_throws_rather_than_going_missing() {
         "the rejection under test has to be geometric, not topological"
     );
 
-    // C# calls DoArrayViaManifoldRust and DoArray here; in Rust they are one function.
+    // `do_array` is the only n-ary entry point, so one call covers the backend and the seam.
     let error = do_array(
         &[(&cube, Matrix4X4::IDENTITY), (&bad, Matrix4X4::IDENTITY)],
         CsgModes::Union,
@@ -626,7 +624,7 @@ fn split_corners(cube: &Mesh, mut perturbed: impl FnMut(Vector3Float) -> Vector3
 }
 
 /// A cube whose every triangle carries its own copy of its corners, each nudged by up to
-/// `jitter` (C# `CubeWithSplitSeams`).
+/// `jitter`.
 fn cube_with_split_seams(size: f64, jitter: f32) -> Mesh {
     let cube = create_cube(size, size, size);
     // Deterministic, so a failure here is always the same failure.
@@ -641,7 +639,7 @@ fn cube_with_split_seams(size: f64, jitter: f32) -> Mesh {
 }
 
 /// A cube at `at` whose every triangle carries its own copy of its corners, each corner nudged
-/// `ulps` steps along the float grid (C# `CubeWithSeamsSplitByFloatSpacing`).
+/// `ulps` steps along the float grid.
 fn cube_with_seams_split_by_float_spacing(size: f64, at: Vector3, ulps: i32) -> Mesh {
     let mut cube = create_cube(size, size, size);
     cube.transform(Matrix4X4::create_translation_vector(at));

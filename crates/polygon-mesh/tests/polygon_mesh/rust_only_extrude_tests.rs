@@ -1,6 +1,7 @@
-//! Rust-only checks of `VertexSourceToMesh.Extrude` (agg-sharp has no Extrude test class): the
-//! square and bevelled paths make closed, outward-wound solids of the expected size, including
-//! the bevel bands tess2 triangulates where C# uses TriangleNet (docs/CSHARP_DIVERGENCES.md 290).
+//! Rust-only checks of `vertex_source_to_mesh::extrude` and `extrude_bevelled`: the square and
+//! bevelled paths make closed, outward-wound solids of the expected size, including the bevel
+//! bands between rings that do not correspond point for point, which tess2 fills with a
+//! constrained Delaunay triangulation that adds no points.
 
 use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;

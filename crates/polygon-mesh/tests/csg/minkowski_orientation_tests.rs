@@ -1,10 +1,10 @@
-//! Port of agg-sharp `Agg.PolygonMesh/MinkowskiOrientationTests.cs`: Dilate and Erode
-//! (`csg::minkowski_morph`) read a part saved inside out as the solid it looks like, while a
-//! hollow part's correctly wound cavity stays a cavity (`csg::minkowski_shell_orientation`).
+//! Dilate and Erode (`csg::minkowski_morph`) read a part saved inside out as the solid it looks
+//! like, while a hollow part's correctly wound cavity stays a cavity
+//! (`csg::minkowski_shell_orientation`).
 //!
-//! Thingi10K 95430 is such a part: before the repair its Dilate came back at 0.947 from a 7.156
-//! part, because the kernel read the inverted shell as a void and dilated that. C#'s
-//! `MinkowskiSumAsync` is `minkowski_sum_with_progress`.
+//! Thingi10K 95430 is such a part: without the orientation repair its Dilate came back at 0.947
+//! from a 7.156 part, because the kernel read the inverted shell as a void and dilated that. The
+//! sum with progress is `minkowski_sum_with_progress`.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
@@ -141,8 +141,8 @@ fn a_patched_dilations_bar_follows_the_kernels_hull_count() {
     let solid = Manifold::cube(Vec3::new(20.0, 20.0, 20.0), true)
         - Manifold::cube(Vec3::new(10.0, 10.0, 10.0), false)
         - Manifold::sphere(6.0, 24).translate(Vec3::new(-10.0, 0.0, 0.0));
-    // C#'s callback reads the reporter it belongs to; here it reaches it through a weak handle
-    // set once the reporter exists.
+    // The callback reads the reporter it belongs to, through a weak handle set once the reporter
+    // exists (the reporter cannot hold a strong handle to itself).
     let phase_total = Arc::new(AtomicU64::new(0));
     let reporter_cell: Arc<OnceLock<Weak<ProgressReporter>>> = Arc::new(OnceLock::new());
     let kernel_reporter = {

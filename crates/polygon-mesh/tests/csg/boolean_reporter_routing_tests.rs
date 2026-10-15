@@ -1,13 +1,12 @@
-//! Port of agg-sharp `Agg.PolygonMesh/BooleanReporterRoutingTests.cs`: which n-ary route the
-//! boolean kernel takes (`boolean_processing::do_array` / `do_array_async`) must not depend on
-//! the progress reporter at all - not on whether one exists, and not on whether anyone is
-//! watching it.
+//! Which n-ary route the boolean kernel takes (`boolean_processing::do_array` /
+//! `do_array_async`) must not depend on the progress reporter at all - not on whether one
+//! exists, and not on whether anyone is watching it.
 //!
 //! The two routes - the kernel's CSG tree and the explicit pairwise left fold - build the same
 //! solid out of different vertices, and the fold costs a full binary boolean per operand. Only a
-//! non-default winding rule may take the fold. C#'s `ProgressReporter.Null` and
-//! `new ProgressReporter(null)` convert to a non-null `Action`; the synchronous cases pass that
-//! same shape, a sink that forwards to the targetless reporter.
+//! non-default winding rule may take the fold. A reporter with no target still makes a non-null
+//! sink once it is wrapped as a callback; the synchronous cases pass that shape, a sink that
+//! forwards to the targetless reporter.
 
 use std::sync::{Arc, Mutex};
 
@@ -79,7 +78,7 @@ fn union_async(reporter: &ProgressReporter) -> Mesh {
     .unwrap()
 }
 
-/// The sink C#'s implicit conversion makes of a reporter: a non-null action calling its Report.
+/// A reporter wrapped as a boolean's progress sink: a non-null callback calling its `report`.
 fn as_action(reporter: ProgressReporter) -> Option<BooleanReporter> {
     Some(Arc::new(move |ratio: f64, message: &str| {
         reporter.report(ratio, message)
@@ -117,8 +116,8 @@ fn assert_same_mesh(expected: &Mesh, actual: &Mesh, because: &str) {
 fn a_targetless_reporter_builds_the_same_solid_as_none() {
     let with_no_reporter = union(None);
 
-    // ProgressReporter::null() as the non-null sink C# converts it to: the shape that used to
-    // buy the pairwise fold while the line above got the CSG tree.
+    // ProgressReporter::null() wrapped as a non-null sink: a reporter that is present but has no
+    // target must not buy the pairwise fold while the line above gets the CSG tree.
     let with_targetless_reporter = union(as_action(ProgressReporter::null()));
 
     assert_same_mesh(
