@@ -38,7 +38,7 @@ fn the_corners_are_mirror_symmetric() {
         "self-intersection"
     );
 
-    // LINQ SelectMany(...).Distinct(): first-seen order.
+    // Each added vertex once, in the order the kept triangles first reach it.
     let mut added: Vec<i32> = Vec::new();
     for &(a, b, c) in &kept {
         for v in [a, b, c] {

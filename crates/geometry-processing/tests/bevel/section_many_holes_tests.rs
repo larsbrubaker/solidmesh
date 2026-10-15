@@ -1,8 +1,8 @@
 //! THE ONE ROW OF "Many Holes.mcx", on the part's own mesh - a
-//! ported barrel picked as one FaceGroup whose rim is fifty closed loops, asked for a 0.5 mm fillet.
+//! barrel picked as one FaceGroup whose rim is fifty closed loops, asked for a 0.5 mm fillet.
 //! What the KERNEL answers for it, loop by loop, is read here off [`crate::many_holes_test_mesh`]
-//! through [`crate::many_holes_rim_reading`] instead of through a MatterCADLib build and an .mcx
-//! load per turn.
+//! through [`crate::many_holes_rim_reading`] instead of through a model build and an .mcx load
+//! per turn.
 //!
 //! **The reading as it stands, loop by loop, each loop built and assembled ALONE at 0.5.** Of the
 //! fifty closed loops FORTY are sound - closed, manifold, one shell - ONE builds and then refuses in

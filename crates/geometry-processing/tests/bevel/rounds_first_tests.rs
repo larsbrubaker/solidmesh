@@ -539,7 +539,7 @@ fn the_rounds_first_build_is_mirror_symmetric() {
             )
         })
         .collect();
-    // LINQ OrderByDescending is stable.
+    // Worst first; `sort_by` is stable, so ties keep their vertex order.
     off_mirror.sort_by(|a, b| b.1.total_cmp(&a.1));
     let worst: Vec<String> = off_mirror
         .iter()

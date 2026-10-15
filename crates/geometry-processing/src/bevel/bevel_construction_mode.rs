@@ -9,7 +9,7 @@
 //! Serialized by NAME rather than by ordinal, so a member added in the middle later does not
 //! re-interpret the bevels already saved in people's files - the same rule `BevelSelectionKind`
 //! carries, for the same reason. serde's default unit-variant form is the variant name, which is
-//! what Newtonsoft writes.
+//! the form saved files hold.
 
 use std::fmt;
 
