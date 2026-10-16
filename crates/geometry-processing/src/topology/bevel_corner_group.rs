@@ -7,8 +7,8 @@
 //! edge directions say which corner. There is deliberately no stored bend tolerance: which
 //! vertices are corners is decided live by the operation's `BendThresholdDegrees`.
 //!
-//! The JSON is the shape saved designs already hold: PascalCase names in declaration order, every
-//! member optional on load.
+//! The JSON is the shape saved designs already hold: PascalCase names, read by name (a saved
+//! design lists them in its own property order), every member optional on load.
 
 use serde::{Deserialize, Serialize};
 use vector_math::Vector2;

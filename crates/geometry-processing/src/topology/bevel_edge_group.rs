@@ -8,9 +8,10 @@
 //! segment count belong to the operation.
 //!
 //! **Contract.** The MCP edge tools and `BevelPickCandidates` rely on this group's JSON shape,
-//! which is exactly the one saved designs hold: PascalCase property names in declaration order,
-//! `SelectionKind` by name, `SourceItemID` left out when null, and every member optional on load
-//! with the field defaults as defaults.
+//! which is exactly the one saved designs hold: PascalCase property names, `SelectionKind` by
+//! name, `SourceItemID` left out when null, and every member optional on load with the field
+//! defaults as defaults. Members are read by name, so their order is free: serde writes them in
+//! declaration order, and a saved design lists them in its own property order.
 
 use serde::{Deserialize, Serialize};
 use vector_math::{Matrix4X4, Vector3};
