@@ -29,6 +29,8 @@ pub(crate) struct ManifoldOperandBatch {
     /// tracking at all.
     pub(crate) mesh_colors: Option<Vec<Color>>,
     repair_orientation: bool,
+    /// Whether the kernel works to the operands' f32 precision (`BooleanOptions::single_precision`).
+    single_precision: bool,
     // A union is the one operation where leaving an operand out still has an answer: the other
     // operands' union. Subtract and Intersect are defined by every operand, so dropping one of
     // those would silently change what the operation means.
@@ -45,11 +47,13 @@ impl ManifoldOperandBatch {
         operation: CsgModes,
         mesh_colors: Option<Vec<Color>>,
         repair_orientation: bool,
+        single_precision: bool,
     ) -> Self {
         Self {
             operation,
             mesh_colors,
             repair_orientation,
+            single_precision,
             skip_refused_operands: operation == CsgModes::Union,
             manifolds: Vec::new(),
             skipped: Vec::new(),
@@ -120,8 +124,12 @@ impl ManifoldOperandBatch {
         cancel: &CancelToken,
     ) -> Result<Manifold, OperandError> {
         let Some(mesh_colors) = &self.mesh_colors else {
-            return manifold_import::import(mesh_copy, self.repair_orientation)
-                .map_err(OperandError::Refused);
+            return manifold_import::import_at_precision(
+                mesh_copy,
+                self.repair_orientation,
+                self.single_precision,
+            )
+            .map_err(OperandError::Refused);
         };
 
         if mesh_copy.face_colors.is_some() {
@@ -130,6 +138,7 @@ impl ManifoldOperandBatch {
                 &mut self.original_id_to_color,
                 cancel,
                 self.repair_orientation,
+                self.single_precision,
             )? {
                 return Ok(split);
             }
@@ -137,8 +146,9 @@ impl ManifoldOperandBatch {
 
         // as_original is what gives the input an original id, and the run data that carries
         // colours back is keyed on that.
-        let manifold = import_as_original(mesh_copy, self.repair_orientation)
-            .map_err(OperandError::Refused)?;
+        let manifold =
+            import_as_original(mesh_copy, self.repair_orientation, self.single_precision)
+                .map_err(OperandError::Refused)?;
 
         // -1 is what original_id reports when the re-tag did not take (a soup manifold). It is
         // not an id: every such operand would register under the same key. Registering nothing
@@ -213,8 +223,10 @@ enum OperandError {
 fn import_as_original(
     mesh: &Mesh,
     repair_orientation: bool,
+    single_precision: bool,
 ) -> Result<Manifold, manifold_import::ImportRejected> {
-    let imported = manifold_import::import(mesh, repair_orientation)?;
+    let imported =
+        manifold_import::import_at_precision(mesh, repair_orientation, single_precision)?;
     let as_original = imported.as_original();
     if as_original.status() != KernelStatus::NoError {
         return Ok(imported);
@@ -231,6 +243,7 @@ fn try_split_by_face_colors(
     original_id_to_color: &mut HashMap<i32, Color>,
     cancel: &CancelToken,
     repair_orientation: bool,
+    single_precision: bool,
 ) -> Result<Option<Manifold>, OperandError> {
     let Some(face_colors) = &mesh_copy.face_colors else {
         return Ok(None);
@@ -285,7 +298,8 @@ fn try_split_by_face_colors(
             return Ok(None);
         }
 
-        let Ok(sub_manifold) = import_as_original(&sub_mesh, repair_orientation) else {
+        let Ok(sub_manifold) = import_as_original(&sub_mesh, repair_orientation, single_precision)
+        else {
             return Ok(None);
         };
         // Same -1 guard as import_operand.

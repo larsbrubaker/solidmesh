@@ -60,7 +60,7 @@ pub fn try_repair_orientation(source_mesh: &Mesh) -> Option<Mesh> {
     manifold_kernel::ensure_configured();
 
     let imported =
-        Manifold::from_mesh_gl64_robust(&manifold_import::to_rust_mesh_data(source_mesh));
+        Manifold::from_mesh_gl64_robust(&manifold_import::to_rust_mesh_data(source_mesh, false));
     if imported.status() != KernelStatus::NoError {
         return None;
     }

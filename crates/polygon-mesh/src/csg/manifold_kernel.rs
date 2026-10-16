@@ -54,6 +54,7 @@ pub(crate) fn run_boolean(
         operation,
         options.mesh_colors.clone(),
         options.repair_orientation,
+        options.single_precision,
     );
 
     for &(mesh, matrix) in items {
@@ -94,6 +95,7 @@ pub(crate) async fn run_boolean_async<F: Future<Output = ()>, Y: Fn() -> F + ?Si
         operation,
         options.mesh_colors.clone(),
         options.repair_orientation,
+        options.single_precision,
     );
 
     for &(mesh, matrix) in items {

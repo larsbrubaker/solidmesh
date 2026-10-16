@@ -1,6 +1,7 @@
 //! Getting a [`Mesh`] into the kernel: the robust import, the orientation repair and the flattening
-//! into the kernel's `MeshGL64`. Called by `manifold_operand_batch` and
-//! `boolean_processing::classify_boolean_operand`.
+//! into the kernel's `MeshGL64`, which can tell the kernel to work to the mesh's single precision
+//! so no result has a sliver f32 cannot hold (`BooleanOptions::single_precision`). Called by
+//! `manifold_operand_batch` and `boolean_processing::classify_boolean_operand`.
 //!
 //! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld);
 //! [`import_strict`] is the one-shot import with no retry, for callers that must read exactly
@@ -33,16 +34,26 @@ pub struct ImportRejected {
 /// The refusal is returned rather than absorbed: a boolean swallows an error operand as empty
 /// geometry and still reports success, which would show up as a part silently missing.
 pub fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
+    import_at_precision(mesh, repair_orientation, false)
+}
+
+/// [`import`], telling the kernel to work to the mesh's own f32 precision when `single_precision`
+/// is set ([`single_precision_tolerance`]) and to its own exact f64 precision when it is not.
+pub(crate) fn import_at_precision(
+    mesh: &Mesh,
+    repair_orientation: bool,
+    single_precision: bool,
+) -> Result<Manifold, ImportRejected> {
     manifold_kernel::ensure_configured();
 
-    let rejected = match try_import(mesh, repair_orientation) {
+    let rejected = match try_import(mesh, repair_orientation, single_precision) {
         Ok(imported) => return Ok(imported),
         Err(rejected) => rejected,
     };
 
     if rejected.status == KernelStatus::NotClosed {
         if let Some(welded) = weld_seams(mesh) {
-            if let Ok(retried) = try_import(&welded, repair_orientation) {
+            if let Ok(retried) = try_import(&welded, repair_orientation, single_precision) {
                 return Ok(retried);
             }
         }
@@ -59,13 +70,17 @@ pub fn import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportR
 /// builder left open and hide it.
 pub fn import_strict(mesh: &Mesh) -> Result<Manifold, ImportRejected> {
     manifold_kernel::ensure_configured();
-    try_import(mesh, false)
+    try_import(mesh, false, false)
 }
 
 /// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide whether
 /// it is worth a retry.
-fn try_import(mesh: &Mesh, repair_orientation: bool) -> Result<Manifold, ImportRejected> {
-    let imported = Manifold::from_mesh_gl64_robust(&to_rust_mesh_data(mesh));
+fn try_import(
+    mesh: &Mesh,
+    repair_orientation: bool,
+    single_precision: bool,
+) -> Result<Manifold, ImportRejected> {
+    let imported = Manifold::from_mesh_gl64_robust(&to_rust_mesh_data(mesh, single_precision));
     let status = imported.status();
     if status != KernelStatus::NoError {
         return Err(ImportRejected {
@@ -141,14 +156,21 @@ fn max_abs_component(corner: Vector3) -> f64 {
 
 /// Flattens a mesh into the interleaved position list and triangle index list the kernel
 /// takes. Positions widen from the mesh's f32 to f64 with no narrowing at the boundary; three
-/// properties per vertex and nothing else set (no merge vectors, runs or tangents).
-pub(crate) fn to_rust_mesh_data(mesh: &Mesh) -> MeshGL64 {
+/// properties per vertex and, when `single_precision` is set, the single-precision tolerance
+/// ([`single_precision_tolerance`]); nothing else set (no merge vectors, runs or tangents), so
+/// without it the kernel works to its own exact f64 precision.
+pub(crate) fn to_rust_mesh_data(mesh: &Mesh, single_precision: bool) -> MeshGL64 {
     let mut vert_properties = Vec::with_capacity(mesh.vertices.len() * 3);
     for vertex in &mesh.vertices {
         vert_properties.push(f64::from(vertex.x));
         vert_properties.push(f64::from(vertex.y));
         vert_properties.push(f64::from(vertex.z));
     }
+    let tolerance = if single_precision {
+        single_precision_tolerance(&vert_properties)
+    } else {
+        0.0
+    };
 
     // Face indices are i32; a negative one is out of bounds for the kernel either way, so it is
     // passed as the u64 it wraps to and the import reports VertexOutOfBounds.
@@ -163,6 +185,36 @@ pub(crate) fn to_rust_mesh_data(mesh: &Mesh) -> MeshGL64 {
         num_prop: 3,
         vert_properties,
         tri_verts,
+        tolerance,
         ..MeshGL64::default()
     }
+}
+
+/// How finely a mesh's own coordinates can place a point: one f32 step at its largest
+/// coordinate (`f32::EPSILON` times the largest absolute coordinate), the precision the kernel
+/// is told to work to when a boolean asks for single precision.
+///
+/// A [`Mesh`] stores f32 positions and every boolean result is narrowed back to f32. Left at the
+/// kernel's own f64 precision, a boolean whose operands nearly touch (a thread's root and the core
+/// it is unioned onto, both rounded to f32 on their own) cuts slivers whose corners lie a
+/// hundred-millionth of a millimetre apart: valid in f64, but narrowed to f32 they become
+/// triangles with no area. Told the coordinates are only good to an f32 step, the kernel merges
+/// those edges instead of cutting them, and the result has nothing f32 cannot hold. Nothing a
+/// user could see moves: the shape changes by under one f32 step.
+///
+/// It is opt-in because the merging reaches every edge of the result, not only the slivers: a
+/// faceted edge whose facets bend by less than the tolerance can lose facets, and an operand
+/// built exactly in f64 (a bevel's cutting tool) no longer cuts exactly where it was built.
+///
+/// Zero for a mesh with no vertices or with a non-finite one, which leaves the kernel at its own
+/// precision and its own verdict on the non-finite vertex.
+fn single_precision_tolerance(vert_properties: &[f64]) -> f64 {
+    let mut scale = 0.0f64;
+    for &coordinate in vert_properties {
+        if !coordinate.is_finite() {
+            return 0.0;
+        }
+        scale = scale.max(coordinate.abs());
+    }
+    f64::from(f32::EPSILON) * scale
 }

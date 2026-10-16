@@ -125,6 +125,14 @@ pub struct BooleanOptions {
     /// no color tracking (the result has no face colors). An operand that has face colors of its
     /// own is painted from those instead. Polygon mode only.
     pub mesh_colors: Option<Vec<agg_path::Color>>,
+    /// Work to the f32 precision a [`crate::Mesh`] stores its positions at, rather than the
+    /// kernel's exact f64. Operands that nearly touch (a thread's root on the core it is unioned
+    /// onto) then leave no zero-area face once the result is narrowed back to f32: the kernel
+    /// merges edges shorter than one f32 step instead of cutting slivers between them. The shape
+    /// moves by under one f32 step, but every edge of the result is open to that merging, so
+    /// near-flat facets can be merged away; off (the default) the kernel is exact. Polygon mode
+    /// only.
+    pub single_precision: bool,
 }
 
 impl Default for BooleanOptions {
@@ -139,6 +147,7 @@ impl Default for BooleanOptions {
             input_resolution: ProcessingResolution::R64,
             output_resolution: ProcessingResolution::R64,
             mesh_colors: None,
+            single_precision: false,
         }
     }
 }
@@ -155,6 +164,7 @@ impl fmt::Debug for BooleanOptions {
             .field("input_resolution", &self.input_resolution)
             .field("output_resolution", &self.output_resolution)
             .field("mesh_colors", &self.mesh_colors)
+            .field("single_precision", &self.single_precision)
             .finish()
     }
 }

@@ -25,3 +25,5 @@ mod minkowski_orientation_tests;
 mod minkowski_progress_model_tests;
 #[path = "csg/minkowski_tests.rs"]
 mod minkowski_tests;
+#[path = "csg/single_precision_union_tests.rs"]
+mod single_precision_union_tests;
