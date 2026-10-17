@@ -122,7 +122,7 @@ pub fn point_distances(mesh: &Mesh, points: &[Vector3]) -> Vec<f64> {
 }
 
 /// The squared distance from `point` to the triangle `triangle` (Eberly's region walk). A
-/// zero-area triangle answers NaN.
+/// zero-area triangle answers the distance to the nearest of its edges.
 pub fn point_triangle_distance_sqr(triangle: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     tri_distance_sqr(triangle, point)
 }
