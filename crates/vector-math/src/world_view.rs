@@ -304,6 +304,84 @@ impl WorldView {
         Ok(())
     }
 
+    /// Sets a perspective projection by its pinhole camera: a focal length of `focal_px` screen
+    /// pixels and the principal point (where the view axis meets the screen) at `principal`, in
+    /// bottom-left screenspace of the `width` x `height` viewport. [`Self::calculate_perspective_matrix_off_center`]
+    /// is the case with the principal point at `((width + center_offset_x) / 2, height / 2)` and
+    /// `focal_px = height / 2 / tan(vfov / 2)`; this one lets the principal point sit anywhere, so a
+    /// view whose rect changes can keep every point where it was in the window. The vertical FOV
+    /// recorded is the symmetric one of that focal length.
+    pub fn calculate_perspective_matrix_with_principal(
+        &mut self,
+        width: f64,
+        height: f64,
+        principal: Vector2,
+        focal_px: f64,
+        z_near: f64,
+        z_far: f64,
+    ) -> Result<(), MathError> {
+        let width = max_f64(1.0, width);
+        let height = max_f64(1.0, height);
+        let focal_px = max_f64(1e-9, focal_px);
+        let (z_near, z_far) = Self::sanitise_perspective_near_far(z_near, z_far);
+        let per_px = z_near / focal_px;
+        let x_min = -principal.x * per_px;
+        let x_max = (width - principal.x) * per_px;
+        let y_min = -principal.y * per_px;
+        let y_max = (height - principal.y) * per_px;
+        let projection_matrix =
+            Matrix4X4::create_perspective_off_center(x_min, x_max, y_min, y_max, z_near, z_far)?;
+        self.projection_matrix = projection_matrix;
+        self.inverse_projection_matrix = projection_matrix.inverted();
+        self.width = width;
+        self.height = height;
+        self.v_fov_degrees =
+            math_helper::radians_to_degrees((height * 0.5 / focal_px).atan() * 2.0);
+        self.h_fov_degrees =
+            math_helper::radians_to_degrees((x_max / z_near).atan() - (x_min / z_near).atan());
+        self.near_plane_height_in_viewspace = y_max - y_min;
+        self.near_z = z_near;
+        self.far_z = z_far;
+        self.is_orthographic = false;
+        Ok(())
+    }
+
+    /// Sets an orthographic projection of `units_per_px` viewspace units per screen pixel with the
+    /// view axis at `principal`, in bottom-left screenspace of the `width` x `height` viewport:
+    /// [`Self::calculate_orthographic_matrix_off_center_with_viewspace_height`] with the principal
+    /// point anywhere (there it is `((width + center_offset_x) / 2, height / 2)`).
+    pub fn calculate_orthographic_matrix_with_principal(
+        &mut self,
+        width: f64,
+        height: f64,
+        principal: Vector2,
+        units_per_px: f64,
+        z_near: f64,
+        z_far: f64,
+    ) {
+        let width = max_f64(1.0, width);
+        let height = max_f64(1.0, height);
+        let units_per_px = max_f64(
+            units_per_px,
+            Self::orthographic_projection_minimum_height() / height,
+        );
+        let (z_near, z_far) = Self::sanitise_orthographic_near_far(z_near, z_far);
+        let x_min = -principal.x * units_per_px;
+        let x_max = (width - principal.x) * units_per_px;
+        let y_min = -principal.y * units_per_px;
+        let y_max = (height - principal.y) * units_per_px;
+        let projection_matrix =
+            Matrix4X4::create_orthographic_off_center(x_min, x_max, y_min, y_max, z_near, z_far);
+        self.width = width;
+        self.height = height;
+        self.projection_matrix = projection_matrix;
+        self.inverse_projection_matrix = projection_matrix.inverted();
+        self.near_plane_height_in_viewspace = height * units_per_px;
+        self.near_z = z_near;
+        self.far_z = z_far;
+        self.is_orthographic = true;
+    }
+
     /// The near and far planes made usable for an orthographic projection.
     pub fn sanitise_orthographic_near_far(near: f64, far: f64) -> (f64, f64) {
         let mut far = max_f64(
