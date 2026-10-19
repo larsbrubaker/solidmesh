@@ -1,7 +1,8 @@
 //! The Minkowski runs: [`minkowski_sum`], [`minkowski_difference`] (with and without the
 //! [`ErosionPath`] it took), their progress and cancellation, and the kernel routing (`run`,
 //! `morph`): the closed form for a convex erosion, the parallel union tree for a dilation or
-//! erosion by a convex tool, the sweep for the rest. The operand import and shell repair they share
+//! erosion by a convex tool, the sweep for the rest - and the seam clean-up every dilation gets
+//! (`seam_tolerance`). The operand import and shell repair they share
 //! live in `minkowski_processing.rs`; the bar's time weighting is `minkowski_progress_model.rs`.
 //!
 //! There are no async entry points: a caller runs these on its own worker (`RebuildCx::compute`),
@@ -115,6 +116,27 @@ fn run(
     throw_if_no_volume(&tool_manifold)?;
 
     let (result, erosion_path) = morph(&solid_manifold, &tool_manifold, inset, reporter, cancel)?;
+    // A dilation is the union of one hull per triangle, and neighbouring hulls share faces that
+    // are only coplanar to within the operands' f32 rounding. Left alone, every such seam
+    // survives as a cluster of nearly coincident vertices and needle triangles, and the next
+    // operation sweeps every one of them: an L bracket rounded inside and then all over came
+    // back with 1926 triangles, 118 of them visible slivers. Collapsing them is the kernel's own
+    // topology simplification, which keeps the mesh manifold by construction. Faces within the
+    // tolerance (8 to 16 f32 steps at the result's size) are treated as one plane, and removing
+    // a vertex from an edge that is straight only to that tolerance can move the surface next
+    // to it by more than the tolerance itself: on the L bracket the volume moved by under
+    // 0.001 mm3, but on an exactly recovered part it is measurable, which is why an erosion's
+    // result (whose faces a closing recovers exactly) is left as the kernel built it - there
+    // the same clean-up moved a closed cube's faces by about a micron.
+    // manifold-rust workaround: the per-triangle hull union in Manifold::try_dilate_by_convex
+    // (and the sweep's) should build its hulls at the operands' tolerance, so the boolean's own
+    // new-vertex collapse removes these seams, erosions included, without moving an original
+    // vertex.
+    let result = if inset {
+        result
+    } else {
+        result.simplify(seam_tolerance(solid, tool))
+    };
     let name = if inset {
         "minkowski difference"
     } else {
@@ -233,6 +255,22 @@ fn morph(
         return Err(MinkowskiError::Cancelled);
     }
     Ok((result, erosion_path))
+}
+
+/// How far apart two faces of a dilation may be and still be one face: eight times f32's
+/// epsilon at the largest coordinate the result can reach, which is 8 to 16 f32 steps there.
+/// The operands are `Mesh`es, whose vertices are f32, so faces that are coplanar in the design
+/// are only coplanar to that precision once they reach the kernel, and the result goes back into
+/// an f32 mesh, which cannot hold any finer detail anyway.
+fn seam_tolerance(solid: &Mesh, tool: &Mesh) -> f64 {
+    let reach = |mesh: &Mesh| {
+        let bounds = mesh.get_axis_aligned_bounding_box();
+        [bounds.min_xyz, bounds.max_xyz]
+            .iter()
+            .flat_map(|corner| [corner.x.abs(), corner.y.abs(), corner.z.abs()])
+            .fold(0.0_f64, f64::max)
+    };
+    8.0 * f64::from(f32::EPSILON) * (reach(solid) + reach(tool))
 }
 
 fn throw_if_no_volume(manifold: &Manifold) -> Result<(), MinkowskiError> {
