@@ -37,3 +37,32 @@ fn the_box_holds_every_corner() {
     let hit = triangle.get_closest_intersection(&mut ray);
     assert!(hit.is_some());
 }
+
+/// A hit outside the ray's distance window is no hit: the 3D view's section plane narrows a
+/// pick ray to the stretch past its cut, and a triangle before it (cut away on screen) must not
+/// be picked.
+#[test]
+fn a_hit_outside_the_rays_distance_window_is_no_hit() {
+    let corners = [
+        Vector3Float::new_f32(-5.0, -5.0, 0.0),
+        Vector3Float::new_f32(5.0, -5.0, 0.0),
+        Vector3Float::new_f32(0.0, 5.0, 0.0),
+    ];
+    let triangle = MinimalTriangle::new(Arc::new(move |_face, vertex| corners[vertex as usize]), 0);
+    let down = -Vector3::UNIT_Z;
+    let start = Vector3::new(0.0, 0.0, 10.0);
+    let window = |min: f64, max: f64| {
+        let mut ray = Ray::with_limits(start, down, min, max, vector_math::IntersectionType::Both);
+        triangle
+            .get_closest_intersection(&mut ray)
+            .map(|hit| hit.distance_to_hit)
+    };
+    assert_eq!(window(0.0, f64::INFINITY), Some(10.0));
+    assert_eq!(window(9.0, 11.0), Some(10.0));
+    assert_eq!(
+        window(10.5, f64::INFINITY),
+        None,
+        "the hit is before the window"
+    );
+    assert_eq!(window(0.0, 9.5), None, "the hit is past the window");
+}

@@ -3,6 +3,7 @@
 //! side-of-line test and the surface area. A point exactly on an edge counts as inside for both
 //! projected windings, and a point within the plane hit's single-precision slack of an edge
 //! counts as on it, so a click exactly on an edge two faces share never falls through the part.
+//! A hit outside the ray's distance window is no hit.
 
 use std::cmp::Ordering;
 
@@ -100,6 +101,13 @@ impl TriangleProjection {
     ) -> Option<(f64, Vector3, Vector3)> {
         let (hit_plane, distance_to_hit, in_front) = self.plane.ray_hit_plane(ray);
         if !hit_plane {
+            return None;
+        }
+        // Only hits inside the ray's distance window count: a caller narrowing the ray (the 3D
+        // view's section plane keeps only the stretch past the cut) must never be handed a hit
+        // outside it.
+        let distance = f64::from(distance_to_hit);
+        if distance < ray.min_distance_to_consider || distance > ray.max_distance_to_consider {
             return None;
         }
 
