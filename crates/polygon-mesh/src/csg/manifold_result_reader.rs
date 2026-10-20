@@ -93,10 +93,11 @@ fn build_mesh(exported: &MeshGL64, operation_name: &str) -> Result<Mesh, Boolean
 /// of the colour of the input face it lies on. The kernel carries both through the boolean, so
 /// every attributed triangle wears exactly the colour of the face it came from.
 ///
-/// Not every run can be traced back to an operand: the robust engine (which `Auto` picks for
-/// non-manifold or self-intersecting operands) does not carry the operands' mesh relations
-/// through. Such a run is never painted [`Mesh::UNKNOWN_FACE_COLOR`], a colour nothing in the
-/// scene is wearing. When nothing at all could be attributed this returns `None`, so the
+/// Both of the kernel's engines carry these through: the exact one and the robust one `Auto`
+/// picks for non-manifold or self-intersecting operands. Not every run can be traced back to a
+/// palette, though: an operand the caller supplied no colour for is imported untagged, so its
+/// triangles come back under an id no palette is keyed by. Such a run is never painted
+/// [`Mesh::UNKNOWN_FACE_COLOR`], a colour nothing in the scene is wearing. When nothing at all could be attributed this returns `None`, so the
 /// object's own colour shows; when only some runs are unattributed they take the first
 /// operand's colour - the base being cut or unioned into. A face id outside its operand's
 /// palette is treated the same way.
