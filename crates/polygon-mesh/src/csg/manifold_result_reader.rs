@@ -1,6 +1,6 @@
-//! Reading a kernel result back out as a [`Mesh`], with per-face colours recovered from the
-//! result's runs; called by `manifold_kernel`, with the colour bookkeeping `manifold_operand_batch`
-//! recorded.
+//! Reading a kernel result back out as a [`Mesh`], with per-face colours read exactly from the
+//! result's runs and face ids; called by `manifold_kernel`, with the palettes
+//! `manifold_operand_batch` recorded.
 
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use vector_math::{Vector3, Vector3Float};
 
 use super::manifold_operand_batch::ManifoldOperandBatch;
 use super::BooleanError;
-use crate::{CentroidColor, Face, Mesh};
+use crate::{Face, Mesh};
 
 /// A finished boolean as a mesh, its faces painted from the run data when the caller asked for
 /// colour tracking.
@@ -27,8 +27,7 @@ pub(crate) fn read_result(
             result_mesh.face_colors = extract_face_colors_from_runs(
                 &exported,
                 &result_mesh,
-                &batch.original_id_to_color,
-                &batch.original_id_to_spatial_colors,
+                &batch.original_id_to_palette,
                 mesh_colors,
             );
         }
@@ -90,25 +89,27 @@ fn build_mesh(exported: &MeshGL64, operation_name: &str) -> Result<Mesh, Boolean
 /// Per-face colors from a boolean result's run data.
 ///
 /// Each run is a contiguous span of result triangles that came from one source mesh; the run's
-/// original id says which. A source that had a single color paints its whole run, and one that
-/// had per-face colors is matched face by face through the nearest saved centroid.
+/// original id says which, and each triangle's face id is the index, in that operand's palette,
+/// of the colour of the input face it lies on. The kernel carries both through the boolean, so
+/// every attributed triangle wears exactly the colour of the face it came from.
 ///
 /// Not every run can be traced back to an operand: the robust engine (which `Auto` picks for
 /// non-manifold or self-intersecting operands) does not carry the operands' mesh relations
 /// through. Such a run is never painted [`Mesh::UNKNOWN_FACE_COLOR`], a colour nothing in the
 /// scene is wearing. When nothing at all could be attributed this returns `None`, so the
 /// object's own colour shows; when only some runs are unattributed they take the first
-/// operand's colour - the base being cut or unioned into.
+/// operand's colour - the base being cut or unioned into. A face id outside its operand's
+/// palette is treated the same way.
 fn extract_face_colors_from_runs(
     result_mesh_gl: &MeshGL64,
     result_mesh: &Mesh,
-    original_id_to_color: &HashMap<i32, Color>,
-    original_id_to_spatial_colors: &HashMap<i32, Vec<CentroidColor>>,
+    original_id_to_palette: &HashMap<i32, Vec<Color>>,
     mesh_colors: &[Color],
 ) -> Option<Vec<Color>> {
     let face_count = result_mesh.faces.len();
     let run_index = &result_mesh_gl.run_index;
     let run_original_id = &result_mesh_gl.run_original_id;
+    let face_id = &result_mesh_gl.face_id;
 
     // run_index carries a trailing end sentinel, so a usable one is at least a start and an end
     // for a single run.
@@ -132,31 +133,23 @@ fn extract_face_colors_from_runs(
         };
         let end_tri = end_tri.min(face_count);
         // Signed on the manifold, unsigned in the run data; the cast reinterprets the bits.
-        let orig_id = original_id as i32;
-
-        if let Some(spatial_colors) = original_id_to_spatial_colors.get(&orig_id) {
+        let palette = original_id_to_palette.get(&(original_id as i32));
+        if palette.is_some() {
             any_run_attributed = true;
-            for (tri, color) in face_colors
-                .iter_mut()
-                .enumerate()
-                .take(end_tri)
-                .skip(start_tri)
-            {
-                let face = result_mesh.faces[tri];
-                let centroid = result_mesh.face_centroid(face.v0, face.v1, face.v2);
-                *color = Mesh::find_nearest_centroid_color(centroid, spatial_colors);
-            }
-        } else {
-            let color = match original_id_to_color.get(&orig_id) {
-                Some(&color) => {
-                    any_run_attributed = true;
-                    color
-                }
-                None => unattributed_color,
-            };
-            for slot in face_colors.iter_mut().take(end_tri).skip(start_tri) {
-                *slot = color;
-            }
+        }
+        for (tri, slot) in face_colors
+            .iter_mut()
+            .enumerate()
+            .take(end_tri)
+            .skip(start_tri)
+        {
+            *slot = palette
+                .zip(face_id.get(tri))
+                .and_then(|(palette, &index)| {
+                    usize::try_from(index).ok().and_then(|i| palette.get(i))
+                })
+                .copied()
+                .unwrap_or(unattributed_color);
         }
     }
 

@@ -32,7 +32,6 @@ fn one_union_is_one_operand_combine() {
     }
     assert_eq!(counts.operand_combines(), 1);
     assert_eq!(counts.pairwise_steps(), 0);
-    assert_eq!(counts.color_group_unions(), 0);
 
     // Once the scope has ended, later booleans no longer count.
     union_once();

@@ -5,9 +5,13 @@
 //!
 //! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld);
 //! [`import_strict`] is the one-shot import with no retry, for callers that must read exactly
-//! what the kernel makes of the mesh as given. The re-tag that attributes result triangles to an
-//! operand is only used by face-colour tracking and lives with it in `manifold_operand_batch`.
+//! what the kernel makes of the mesh as given. [`import_with_provenance`] is the import for
+//! face-colour tracking: every triangle goes in tagged with its operand's reserved id and the
+//! index of its colour in that operand's palette, which the kernel carries through the boolean.
 
+use std::collections::HashMap;
+
+use agg_path::Color;
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
 
@@ -44,16 +48,60 @@ pub(crate) fn import_at_precision(
     repair_orientation: bool,
     single_precision: bool,
 ) -> Result<Manifold, ImportRejected> {
+    import_with_retry(mesh, repair_orientation, single_precision, None)
+        .map(|(manifold, _)| manifold)
+}
+
+/// Which operand a mesh is, for an import whose result triangles must be traceable to it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct OperandTag {
+    /// An id reserved from the kernel (`Manifold::reserve_ids`) for this operand alone; the
+    /// result's runs name it for every triangle that came from this operand.
+    pub original_id: u32,
+    /// The colour the whole operand wears when the mesh has no per-face colours of its own.
+    pub operand_color: Option<Color>,
+}
+
+/// [`import_at_precision`] with every triangle tagged for colour tracking: the run carries
+/// `tag.original_id`, and each triangle's face id is the index of its colour in the palette this
+/// returns (the mesh's per-face colours in first-seen order, or the one operand colour). The
+/// kernel keeps both through booleans and simplification, so the result can be painted exactly.
+///
+/// The face id is a colour index rather than a triangle index so coplanar neighbours of one
+/// colour still merge in simplification; a triangle index would keep every input edge and the
+/// mesh would grow at each level of a nested boolean. Edges between non-coplanar faces are kept
+/// either way: the kernel only merges triangles that share both face id and plane.
+///
+/// The palette is `None` when the operand has no colour at all (no per-face colours and no
+/// `operand_color`); its triangles are then left unattributed rather than given a colour from
+/// nowhere. When the tolerance weld retry runs, the palette is built from the welded mesh,
+/// whose per-face colours follow its faces through the weld, so no triangle's colour is ever
+/// re-derived from its position.
+pub(crate) fn import_with_provenance(
+    mesh: &Mesh,
+    repair_orientation: bool,
+    single_precision: bool,
+    tag: OperandTag,
+) -> Result<(Manifold, Option<Vec<Color>>), ImportRejected> {
+    import_with_retry(mesh, repair_orientation, single_precision, Some(tag))
+}
+
+fn import_with_retry(
+    mesh: &Mesh,
+    repair_orientation: bool,
+    single_precision: bool,
+    tag: Option<OperandTag>,
+) -> Result<(Manifold, Option<Vec<Color>>), ImportRejected> {
     manifold_kernel::ensure_configured();
 
-    let rejected = match try_import(mesh, repair_orientation, single_precision) {
+    let rejected = match try_import(mesh, repair_orientation, single_precision, tag) {
         Ok(imported) => return Ok(imported),
         Err(rejected) => rejected,
     };
 
     if rejected.status == KernelStatus::NotClosed {
         if let Some(welded) = weld_seams(mesh) {
-            if let Ok(retried) = try_import(&welded, repair_orientation, single_precision) {
+            if let Ok(retried) = try_import(&welded, repair_orientation, single_precision, tag) {
                 return Ok(retried);
             }
         }
@@ -70,17 +118,27 @@ pub(crate) fn import_at_precision(
 /// builder left open and hide it.
 pub fn import_strict(mesh: &Mesh) -> Result<Manifold, ImportRejected> {
     manifold_kernel::ensure_configured();
-    try_import(mesh, false, false)
+    try_import(mesh, false, false, None).map(|(manifold, _)| manifold)
 }
 
 /// Uploads a mesh, handing back the status that explains a failure so [`import`] can decide whether
-/// it is worth a retry.
+/// it is worth a retry, and the colour palette its face ids index when it was tagged.
 fn try_import(
     mesh: &Mesh,
     repair_orientation: bool,
     single_precision: bool,
-) -> Result<Manifold, ImportRejected> {
-    let imported = Manifold::from_mesh_gl64_robust(&to_rust_mesh_data(mesh, single_precision));
+    tag: Option<OperandTag>,
+) -> Result<(Manifold, Option<Vec<Color>>), ImportRejected> {
+    let mut mesh_gl = to_rust_mesh_data(mesh, single_precision);
+    let mut palette = None;
+    if let Some(tag) = tag {
+        if let Some((colors, face_ids)) = face_palette(mesh, tag.operand_color) {
+            mesh_gl.face_id = face_ids;
+            mesh_gl.run_original_id = vec![tag.original_id];
+            palette = Some(colors);
+        }
+    }
+    let imported = Manifold::from_mesh_gl64_robust(&mesh_gl);
     let status = imported.status();
     if status != KernelStatus::NoError {
         return Err(ImportRejected {
@@ -94,12 +152,12 @@ fn try_import(
     }
 
     if !repair_orientation {
-        return Ok(imported);
+        return Ok((imported, palette));
     }
 
     // On the imported manifold rather than the mesh: the repair is a kernel operation over the
     // imported shells. A mesh that needs no repair comes back as a plain copy, so this is safe
-    // unconditionally.
+    // unconditionally. It only rewinds triangles in place, so their face ids stay with them.
     let repaired = imported.repair_orientation();
     let status = repaired.status();
     if status != KernelStatus::NoError {
@@ -112,7 +170,31 @@ fn try_import(
             status,
         });
     }
-    Ok(repaired)
+    Ok((repaired, palette))
+}
+
+/// A mesh's colour palette and, per face, the index of its colour in it: the per-face colours in
+/// first-seen order (a face past the end of the list counts as [`Mesh::UNKNOWN_FACE_COLOR`]), or
+/// `operand_color` for every face when the mesh has none. `None` when there is no colour at all.
+fn face_palette(mesh: &Mesh, operand_color: Option<Color>) -> Option<(Vec<Color>, Vec<u64>)> {
+    let Some(face_colors) = &mesh.face_colors else {
+        return operand_color.map(|color| (vec![color], vec![0; mesh.faces.len()]));
+    };
+    let mut palette = Vec::new();
+    let mut index_of: HashMap<Color, u64> = HashMap::new();
+    let face_ids = (0..mesh.faces.len())
+        .map(|face| {
+            let color = face_colors
+                .get(face)
+                .copied()
+                .unwrap_or(Mesh::UNKNOWN_FACE_COLOR);
+            *index_of.entry(color).or_insert_with(|| {
+                palette.push(color);
+                palette.len() as u64 - 1
+            })
+        })
+        .collect();
+    Some((palette, face_ids))
 }
 
 /// A tolerance-welded copy of a mesh, or `None` when there is no sane scale to weld at.

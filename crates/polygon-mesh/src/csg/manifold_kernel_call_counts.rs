@@ -1,7 +1,6 @@
 //! How many boolean evaluations the manifold kernel has run, by kind, for the work a caller is
-//! measuring. Counted by `manifold_kernel`
-//! (the n-ary combine), `manifold_cancellable_boolean` (each pairwise step) and
-//! `manifold_operand_batch` (the colour group union at import).
+//! measuring. Counted by `manifold_kernel` (the n-ary combine) and `manifold_cancellable_boolean`
+//! (each pairwise step).
 //!
 //! It lets a test pin that an n-ary boolean reached the kernel as ONE call rather than a pairwise
 //! fold. Never read by production code.
@@ -23,7 +22,6 @@ use std::sync::Arc;
 struct Counts {
     operand_combines: AtomicUsize,
     pairwise_steps: AtomicUsize,
-    color_group_unions: AtomicUsize,
 }
 
 /// One tally of kernel calls. Clones share the same counts.
@@ -50,12 +48,6 @@ impl KernelCallCounts {
     /// One binary step of a winding-rule pairwise fold - n-1 of them per folded boolean.
     pub fn pairwise_steps(&self) -> usize {
         self.0.pairwise_steps.load(Ordering::SeqCst)
-    }
-
-    /// One union of a multi-coloured operand's colour groups at import, before the real
-    /// operation runs.
-    pub fn color_group_unions(&self) -> usize {
-        self.0.color_group_unions.load(Ordering::SeqCst)
     }
 }
 
@@ -133,8 +125,4 @@ pub(crate) fn count_operand_combine() {
 
 pub(crate) fn count_pairwise_step() {
     count(|counts| &counts.pairwise_steps);
-}
-
-pub(crate) fn count_color_group_union() {
-    count(|counts| &counts.color_group_unions);
 }
