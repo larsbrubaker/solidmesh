@@ -1,7 +1,8 @@
 //! polygon-mesh: MatterCAD's triangle meshes and the geometry built on them.
 //!
 //! The Mesh core: [`Mesh`] (f32 vertices, indexed [`Face`]s with normals; welding,
-//! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`],
+//! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`], also built in
+//! steps by [`MeshEdgeGraphSteps`],
 //! [`MeshEdge`], [`VertexFaceList`]), volume and area (`mesh_measure`), the vertex sorters,
 //! the Platonic solids and STL read/write (`processors`). The booleans (`csg`) run on
 //! manifold-rust.
@@ -41,6 +42,7 @@ mod g3;
 mod mesh;
 pub mod mesh_distance;
 mod mesh_edge_graph;
+mod mesh_edge_graph_steps;
 mod mesh_editing;
 mod mesh_extensions;
 mod mesh_measure;
@@ -62,6 +64,7 @@ pub use g3::advanced_repair::{AdvancedRepairOptions, RemoveModes};
 pub use g3::mesh_auto_repair::MeshAutoRepairError;
 pub use mesh::Mesh;
 pub use mesh_edge_graph::{MeshEdge, MeshEdgeGraph, VertexFaceList};
+pub use mesh_edge_graph_steps::MeshEdgeGraphSteps;
 pub use mesh_editing::{ProgressReporter, UnionFind};
 pub use mesh_extensions::PositionNormal;
 pub use transformed_aabb_cache::TransformedAabbCache;

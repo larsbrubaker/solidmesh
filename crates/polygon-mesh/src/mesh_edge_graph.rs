@@ -6,18 +6,19 @@
 //! 2,279 MB and retained 824 MB. Here the whole thing is
 //! four arrays and one sort: three (edgeKey, faceIndex) slots per face sorted by key, then a
 //! walk over equal-key runs. Adjacency is stored CSR style: the faces on edge e are
-//! `face_indices[face_starts[e] .. face_starts[e + 1]]`.
+//! `face_indices[face_starts[e] .. face_starts[e + 1]]`. `mesh_edge_graph_steps.rs` builds the
+//! same graph a budget of faces at a time.
 
 use crate::mesh::Mesh;
 
 /// The unique edges of a mesh, and the faces adjacent to each edge, held as flat arrays.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MeshEdgeGraph {
-    edge_vertex0: Vec<i32>,
-    edge_vertex1: Vec<i32>,
+    pub(crate) edge_vertex0: Vec<i32>,
+    pub(crate) edge_vertex1: Vec<i32>,
     // Length edge_count + 1, so the run for the last edge needs no special case.
-    face_starts: Vec<i32>,
-    face_indices: Vec<i32>,
+    pub(crate) face_starts: Vec<i32>,
+    pub(crate) face_indices: Vec<i32>,
 }
 
 impl MeshEdgeGraph {
@@ -92,7 +93,7 @@ impl MeshEdgeGraph {
 }
 
 /// The two vertex indices packed low-first, each as its unsigned 32-bit pattern.
-fn edge_key(vertex_a: i32, vertex_b: i32) -> u64 {
+pub(crate) fn edge_key(vertex_a: i32, vertex_b: i32) -> u64 {
     let (low, high) = if vertex_a < vertex_b {
         (vertex_a, vertex_b)
     } else {

@@ -18,6 +18,8 @@ mod invariant_culture_tests;
 mod mesh_convex_hull_tests;
 #[path = "polygon_mesh/mesh_copy_independence_tests.rs"]
 mod mesh_copy_independence_tests;
+#[path = "polygon_mesh/mesh_edge_graph_steps_tests.rs"]
+mod mesh_edge_graph_steps_tests;
 #[path = "polygon_mesh/mesh_edge_graph_tests.rs"]
 mod mesh_edge_graph_tests;
 #[path = "polygon_mesh/mesh_measure_tests.rs"]
