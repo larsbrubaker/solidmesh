@@ -19,7 +19,7 @@ use agg_path::vertex_source::VertexSource;
 use clipper2_rust::Paths64;
 
 use crate::mesh::Mesh;
-use crate::processors::ring_loops::simple_loops;
+use crate::processors::ring_loops::{simple_loops, without_crossings};
 use band::add_band;
 use ring_mesh::{PlacedRing, RingMesh};
 
@@ -74,7 +74,8 @@ pub fn extrude_bevelled(
     // ensure good winding and consistent shapes: the area the outline fills, as the path
     // display shows it, as loops a ring can be built on, so each loop is grouped with the holes
     // inside it before any ring is built
-    let bottom_polygons = simple_loops(get_corrected_winding(&bottom_polygons)?);
+    let bottom_polygons =
+        simple_loops(without_crossings(get_corrected_winding(&bottom_polygons)?)?);
 
     // the solid's lowest z: every ring is placed this far below the height it is built at
     let base = z_height_top.min(0.0);
@@ -133,9 +134,13 @@ fn get_loop_mesh(
         // A bevel that insets the whole outline away leaves nothing beyond it; the last ring
         // with loops is capped instead.
         rings.retain(|((loops, _), _)| !loops.is_empty());
-        let Some(((first_loops, first_height), _)) = rings.first() else {
+        // Where both bevels inset a small outline away and meet with no straight wall between
+        // them, the one ring left encloses nothing: capping it from both sides would make a sheet
+        // of no thickness, so the outline adds nothing to the solid.
+        if rings.len() < 2 {
             continue;
-        };
+        }
+        let ((first_loops, first_height), _) = &rings[0];
 
         let all_loops = |ring: &PlacedRing| (0..ring.loops.len()).collect::<Vec<_>>();
         if let [_, ((top_loops, top_height), _)] = rings.as_slice() {
@@ -194,6 +199,7 @@ fn build_bevel_rings(
         }
         profile
             .offset_with_arc_tolerance(delta, join, arc_tolerance)
+            .and_then(without_crossings)
             .map(|ring| Rc::new(simple_loops(ring)))
     };
 

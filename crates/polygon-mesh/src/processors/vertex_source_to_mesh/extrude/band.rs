@@ -84,8 +84,10 @@ fn triangulated_band(
         if !lower_is_outer {
             points.swap(0, 2);
         }
-        let on_lower = points.map(|(x, y)| lower.vertices.vertex_at(x, y));
-        let on_upper = points.map(|(x, y)| upper.vertices.vertex_at(x, y));
+        // where a ring passes a corner's point more than once, the vertex of the pass whose wedge
+        // the triangle lies in
+        let on_lower = [0, 1, 2].map(|k| lower.vertices.corner_vertex(points, k));
+        let on_upper = [0, 1, 2].map(|k| upper.vertices.corner_vertex(points, k));
         // A point both rings pass through is one point to the 2D fill; it is lifted to the lower
         // ring, and the slivers below join it to the upper ring.
         let mut lifted = [0; 3];

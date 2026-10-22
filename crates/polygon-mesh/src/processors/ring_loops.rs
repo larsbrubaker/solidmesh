@@ -7,11 +7,13 @@
 //! [`simple_loops`] turns any of these into loops whose every point the ring's other loops pass
 //! through is a point of theirs too, that share no edge, and that never revisit a point except
 //! once per filled wedge there, so the cap fills them with the loops' own edges and every wall
-//! edge has exactly two faces.
+//! edge has exactly two faces. Before that, [`without_crossings`] mends the loops clipper hands
+//! back where its rounding to whole units left two edges crossing.
 
 use std::collections::HashMap;
 
-use clipper2_rust::{Path64, Paths64, Point64};
+use agg_path::clipper_library::{ClipperError, PolygonsExtensions};
+use clipper2_rust::{FillRule, Path64, Paths64, Point64};
 
 /// A ring point as a map key.
 type Key = (i64, i64);
@@ -23,6 +25,62 @@ type Key = (i64, i64);
 /// [`without_straight_points`]).
 pub fn simple_loops(loops: Paths64) -> Paths64 {
     without_straight_points(chained_by_wedges(with_touch_points(loops)))
+}
+
+/// How many times [`without_crossings`] re-runs the union before taking what it has.
+const CROSSING_ROUNDS: usize = 8;
+
+/// The loops with no two edges crossing. Clipper computes where edges meet exactly but rounds
+/// each meeting point to whole units, so a loop it returns (an offset's inset, the union a profile
+/// is cleaned up with) can cross itself or another loop by less than a unit: a needle of no width
+/// whose way back crosses its way out, a tiny loop turned inside out beyond the crossing. No
+/// solid can be built on such loops - a flat fill across them needs a point that is on none of
+/// them - so the loops are put through clipper's union again, filling what winds positively (an
+/// outline's inside, not its holes, not a lobe turned inside out), which finds the crossing and
+/// cuts the loops there. That rounds a new point too, which can cross again in turn, so this
+/// repeats while any crossing is left, up to [`CROSSING_ROUNDS`] times. Loops that cross nowhere
+/// come back unchanged.
+pub fn without_crossings(loops: Paths64) -> Result<Paths64, ClipperError> {
+    let mut loops = loops;
+    for _ in 0..CROSSING_ROUNDS {
+        if !has_crossing(&loops) {
+            break;
+        }
+        loops = loops.union(&Paths64::new(), FillRule::Positive)?;
+    }
+    Ok(loops)
+}
+
+/// Whether two edges of the loops cross at a point inside both, found exactly on the integer
+/// points. Edges that only touch (at an end, or along a shared line) are not crossings: the
+/// steps of [`simple_loops`] handle those.
+fn has_crossing(loops: &Paths64) -> bool {
+    let mut edges: Vec<(Point64, Point64)> = loops
+        .iter()
+        .flat_map(|path| (0..path.len()).map(move |i| (path[i], path[(i + 1) % path.len()])))
+        .filter(|(a, b)| a != b)
+        .collect();
+    // by lowest x, so each edge is checked only against the edges that start within its x range
+    edges.sort_unstable_by_key(|(a, b)| (a.x.min(b.x), a.x.max(b.x), a.y, b.y));
+    let side = |value: i128| value.signum();
+    for (i, &(a, b)) in edges.iter().enumerate() {
+        let high_x = a.x.max(b.x);
+        let (low_y, high_y) = (a.y.min(b.y), a.y.max(b.y));
+        for &(c, d) in edges[i + 1..]
+            .iter()
+            .take_while(|(c, d)| c.x.min(d.x) <= high_x)
+        {
+            if c.y.max(d.y) < low_y || c.y.min(d.y) > high_y {
+                continue;
+            }
+            let (c_side, d_side) = (side(cross(a, b, c)), side(cross(a, b, d)));
+            let (a_side, b_side) = (side(cross(c, d, a)), side(cross(c, d, b)));
+            if c_side * d_side < 0 && a_side * b_side < 0 {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Twice the signed area of the triangle (a, b, c): zero when the three lie on one line.
