@@ -6,7 +6,8 @@
 //!
 //! [`fill_triangles`] is the 2D constrained Delaunay fill on the loops' integer points,
 //! [`walks_exactly`] the check that a surface's open boundary is exactly the edges it must close,
-//! and [`cap_faces`] the two together with a fan for any loop set the fill cannot close.
+//! and [`cap_faces`] the two together with a fan for any loop set the fill cannot close
+//! ([`cap_faces_by_corner`] where the loops pass a point more than once, with a vertex per pass).
 
 use std::collections::HashMap;
 
@@ -29,6 +30,23 @@ pub fn cap_faces(
     vertex_at: impl Fn(i64, i64) -> Option<i32>,
     walk_forward: bool,
 ) -> Vec<[i32; 3]> {
+    cap_faces_by_corner(
+        loops,
+        indices,
+        |triangle, corner| vertex_at(triangle[corner].0, triangle[corner].1),
+        walk_forward,
+    )
+}
+
+/// [`cap_faces`] for loops that may pass through one point more than once, with a vertex for each
+/// pass: `corner_vertex(triangle, k)` is the vertex of corner `k` of a fill triangle, which the
+/// caller can choose by the wedge of the point the triangle lies in.
+pub fn cap_faces_by_corner(
+    loops: &[&Path64],
+    indices: &[&[i32]],
+    corner_vertex: impl Fn(Triangle, usize) -> Option<i32>,
+    walk_forward: bool,
+) -> Vec<[i32; 3]> {
     let orient = |[a, b, c]: [i32; 3]| if walk_forward { [a, b, c] } else { [c, b, a] };
     let boundary: Vec<(i32, i32)> = indices
         .iter()
@@ -45,7 +63,7 @@ pub fn cap_faces(
                 }
                 // The tessellator lays triangles out counter clockwise, walking a loop's edges
                 // in loop order (outlines run counter clockwise, holes clockwise).
-                let [a, b, c] = triangle.map(|(x, y)| vertex_at(x, y));
+                let [a, b, c] = [0, 1, 2].map(|k| corner_vertex(triangle, k));
                 Some(orient([a?, b?, c?]))
             })
             .collect::<Option<Vec<[i32; 3]>>>()

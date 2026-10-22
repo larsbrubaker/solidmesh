@@ -2,6 +2,8 @@
 //! convex hulls, revolve and extrude, marching cubes, distance fields and STL, one file per test
 //! class.
 
+#[path = "polygon_mesh/clean_extrude_tests.rs"]
+mod clean_extrude_tests;
 #[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
 mod face_color_boolean_scenarios;
 #[path = "polygon_mesh/face_color_tests.rs"]

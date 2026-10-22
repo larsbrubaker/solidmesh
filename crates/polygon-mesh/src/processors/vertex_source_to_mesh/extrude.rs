@@ -4,12 +4,11 @@
 //! where a bevel rounds an end), each placed in the mesh once (`extrude/ring_mesh.rs`); the caps,
 //! the straight walls and the bands between rings that differ (`extrude/band.rs`) are all built
 //! on those vertices, so every extrusion is a closed solid by construction. A bevel ring inset by
-//! less than one clipper unit is the profile itself. A profile that crosses itself is first
-//! resolved into the area it fills (the even-odd area, as the path display fills it) and cut into
-//! loops that never cross or revisit a point, so a bowtie or a figure eight extrudes to a closed
-//! solid of exactly that area.
+//! less than one clipper unit is the profile itself. A profile is first resolved into the area it
+//! fills (the even-odd area, as the path display fills it), then into loops a ring can be built
+//! on (`extrude/ring_loops.rs`): a hole touching its outline, a seam of no width between two
+//! loops, a bowtie or a figure eight all extrude to a closed solid of exactly that area.
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use agg_path::clipper_library::{ClipperError, JoinType, PolygonsExtensions};
@@ -17,10 +16,11 @@ use agg_path::data_converters_2d::{
     get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
 };
 use agg_path::vertex_source::VertexSource;
-use clipper2_rust::{Path64, Paths64};
+use clipper2_rust::Paths64;
 
 use crate::mesh::Mesh;
 use band::add_band;
+use ring_loops::simple_loops;
 use ring_mesh::{PlacedRing, RingMesh};
 
 /// The profile from z = 0 up to `z_height_top` with square ends: [`extrude_bevelled`] with no
@@ -72,8 +72,8 @@ pub fn extrude_bevelled(
     let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
 
     // ensure good winding and consistent shapes: the area the outline fills, as the path
-    // display shows it, cut into loops that never cross or revisit a point, so each loop is
-    // grouped with the holes inside it before any ring is built
+    // display shows it, as loops a ring can be built on, so each loop is grouped with the holes
+    // inside it before any ring is built
     let bottom_polygons = simple_loops(get_corrected_winding(&bottom_polygons)?);
 
     // the solid's lowest z: every ring is placed this far below the height it is built at
@@ -231,89 +231,8 @@ fn build_bevel_rings(
     Ok(rings)
 }
 
-/// The loops as simple loops a ring can be built on: each loop that passes through one point more
-/// than once split there (see [`split_at_repeated_points`]), then the points that add no area
-/// dropped (see [`without_straight_points`]).
-fn simple_loops(loops: Paths64) -> Paths64 {
-    let mut split = Vec::with_capacity(loops.len());
-    for path in loops {
-        split_at_repeated_points(path, &mut split);
-    }
-    without_straight_points(split)
-}
-
-/// Adds `path` to `out` as loops that each pass through every point once. An outline that crosses
-/// itself (a bowtie, a figure eight, a cross whose wings are wider than its arms are long) comes
-/// back from the clipper clean-up as the area the user sees filled, but drawn as one loop that
-/// runs through each crossing point twice, touching itself there. A cap cannot be filled across
-/// such a loop, so it is cut at the first point it revisits into the part between the two visits
-/// and the rest, each a closed loop, and both are cut again until no point repeats. The pieces
-/// cover exactly the area the loop did and keep its direction, so outlines stay outlines and holes
-/// holes. A loop with no repeated point is passed through unchanged.
-fn split_at_repeated_points(path: Path64, out: &mut Paths64) {
-    // a work list rather than recursion: a traced outline can revisit thousands of points
-    let mut pending = vec![path];
-    while let Some(path) = pending.pop() {
-        let mut first_visit: HashMap<(i64, i64), usize> = HashMap::with_capacity(path.len());
-        let repeat = path
-            .iter()
-            .enumerate()
-            .find_map(|(j, point)| first_visit.insert((point.x, point.y), j).map(|i| (i, j)));
-        match repeat {
-            None => out.push(path),
-            Some((i, j)) => {
-                // from the second visit round to the first, then from the first visit to the
-                // second; the rest is cut first, so the pieces come out in a fixed order
-                let mut rest: Path64 = path[j..].to_vec();
-                rest.extend_from_slice(&path[..i]);
-                pending.push(path[i..j].to_vec());
-                pending.push(rest);
-            }
-        }
-    }
-}
-
-/// The loops with every point that lies exactly on the line through its neighbours removed
-/// (integer cross product zero: the outline runs straight on through it, turns straight back
-/// in a needle of no width, or repeats it), and any loop left with fewer than three points
-/// dropped. Such a point adds no area to the shape, but a cap or band could close it off only
-/// with a zero-area triangle.
-fn without_straight_points(loops: Paths64) -> Paths64 {
-    loops
-        .into_iter()
-        .map(|path| {
-            let mut points = path;
-            // Each removal can straighten a neighbour, so repeat until nothing changes.
-            loop {
-                let count = points.len();
-                if count < 3 {
-                    break;
-                }
-                let kept: Path64 = (0..count)
-                    .filter(|&i| {
-                        let (prev, here, next) = (
-                            points[(i + count - 1) % count],
-                            points[i],
-                            points[(i + 1) % count],
-                        );
-                        let (ax, ay) = ((here.x - prev.x) as i128, (here.y - prev.y) as i128);
-                        let (bx, by) = ((next.x - here.x) as i128, (next.y - here.y) as i128);
-                        ax * by - ay * bx != 0
-                    })
-                    .map(|i| points[i])
-                    .collect();
-                if kept.len() == count {
-                    break;
-                }
-                points = kept;
-            }
-            points
-        })
-        .filter(|path| path.len() >= 3)
-        .collect()
-}
-
 mod band;
+mod ring_loops;
 mod ring_mesh;
 
 #[cfg(test)]
