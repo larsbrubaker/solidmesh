@@ -6,7 +6,7 @@
 //! on those vertices, so every extrusion is a closed solid by construction. A bevel ring inset by
 //! less than one clipper unit is the profile itself. A profile is first resolved into the area it
 //! fills (the even-odd area, as the path display fills it), then into loops a ring can be built
-//! on (`extrude/ring_loops.rs`): a hole touching its outline, a seam of no width between two
+//! on (`processors/ring_loops.rs`): a hole touching its outline, a seam of no width between two
 //! loops, a bowtie or a figure eight all extrude to a closed solid of exactly that area.
 
 use std::rc::Rc;
@@ -19,8 +19,8 @@ use agg_path::vertex_source::VertexSource;
 use clipper2_rust::Paths64;
 
 use crate::mesh::Mesh;
+use crate::processors::ring_loops::simple_loops;
 use band::add_band;
-use ring_loops::simple_loops;
 use ring_mesh::{PlacedRing, RingMesh};
 
 /// The profile from z = 0 up to `z_height_top` with square ends: [`extrude_bevelled`] with no
@@ -232,7 +232,6 @@ fn build_bevel_rings(
 }
 
 mod band;
-mod ring_loops;
 mod ring_mesh;
 
 #[cfg(test)]

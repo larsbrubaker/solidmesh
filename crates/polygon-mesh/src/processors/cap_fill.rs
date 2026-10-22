@@ -6,8 +6,9 @@
 //!
 //! [`fill_triangles`] is the 2D constrained Delaunay fill on the loops' integer points,
 //! [`walks_exactly`] the check that a surface's open boundary is exactly the edges it must close,
-//! and [`cap_faces`] the two together with a fan for any loop set the fill cannot close
-//! ([`cap_faces_by_corner`] where the loops pass a point more than once, with a vertex per pass).
+//! and [`cap_faces_by_corner`] the two together with a fan for any loop set the fill cannot close
+//! (`ring_vertices.rs` calls it with each ring's vertices, a vertex per pass where the loops pass
+//! a point more than once).
 
 use std::collections::HashMap;
 
@@ -15,32 +16,17 @@ use clipper2_rust::Path64;
 use tess2_rust::{ElementType, TessOption, Tessellator, WindingRule};
 
 /// The faces of a flat cap across `loops` (clipper loops, outlines counter clockwise and holes
-/// clockwise), `indices[i][k]` the vertex of point `k` of loop `i` and `vertex_at` the vertex at
-/// any of the loops' points. A cap that walks the loops' edges in loop order (`walk_forward`)
-/// closes a solid lying on the side the +z normal points away from (a top, or the start of a
-/// sweep); one that walks them backward closes the other side.
+/// clockwise), `indices[i][k]` the vertex of point `k` of loop `i` and `corner_vertex(triangle, k)`
+/// the vertex of corner `k` of a fill triangle (where the loops pass a point more than once, the
+/// vertex of the pass whose wedge the triangle lies in: `ring_vertices.rs`). A cap that walks the
+/// loops' edges in loop order (`walk_forward`) closes a solid lying on the side the +z normal
+/// points away from (a top, or the start of a sweep); one that walks them backward closes the
+/// other side.
 ///
 /// The fill only joins the loops' own points: clipper's loops never cross. Should a fill still
 /// not close exactly the loops' edges, or leave a triangle with no area, each loop is fanned from
 /// its first point instead, which walks every edge once whatever the loop's shape, so the solid
 /// stays closed.
-pub fn cap_faces(
-    loops: &[&Path64],
-    indices: &[&[i32]],
-    vertex_at: impl Fn(i64, i64) -> Option<i32>,
-    walk_forward: bool,
-) -> Vec<[i32; 3]> {
-    cap_faces_by_corner(
-        loops,
-        indices,
-        |triangle, corner| vertex_at(triangle[corner].0, triangle[corner].1),
-        walk_forward,
-    )
-}
-
-/// [`cap_faces`] for loops that may pass through one point more than once, with a vertex for each
-/// pass: `corner_vertex(triangle, k)` is the vertex of corner `k` of a fill triangle, which the
-/// caller can choose by the wedge of the point the triangle lies in.
 pub fn cap_faces_by_corner(
     loops: &[&Path64],
     indices: &[&[i32]],

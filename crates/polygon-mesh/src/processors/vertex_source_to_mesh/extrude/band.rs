@@ -34,9 +34,15 @@ pub(super) fn add_band(
     upper: &PlacedRing,
     lower_is_outer: bool,
 ) {
-    let mut boundary: Vec<(i32, i32)> = lower.indices.iter().flat_map(|l| loop_edges(l)).collect();
+    let mut boundary: Vec<(i32, i32)> = lower
+        .vertices
+        .indices
+        .iter()
+        .flat_map(|l| loop_edges(l))
+        .collect();
     boundary.extend(
         upper
+            .vertices
             .indices
             .iter()
             .flat_map(|l| loop_edges(l))
@@ -64,6 +70,7 @@ fn triangulated_band(
 
     // Every edge of the upper ring, in both directions, for the slivers below.
     let upper_edges: HashSet<(i32, i32)> = upper
+        .vertices
         .indices
         .iter()
         .flat_map(|l| loop_edges(l))
@@ -77,8 +84,8 @@ fn triangulated_band(
         if !lower_is_outer {
             points.swap(0, 2);
         }
-        let on_lower = points.map(|(x, y)| lower.vertex_at(x, y));
-        let on_upper = points.map(|(x, y)| upper.vertex_at(x, y));
+        let on_lower = points.map(|(x, y)| lower.vertices.vertex_at(x, y));
+        let on_upper = points.map(|(x, y)| upper.vertices.vertex_at(x, y));
         // A point both rings pass through is one point to the 2D fill; it is lifted to the lower
         // ring, and the slivers below join it to the upper ring.
         let mut lifted = [0; 3];
@@ -116,14 +123,20 @@ fn triangulated_band(
     // An edge both rings run along in the same direction is no boundary of the 2D area at all,
     // so the fill holds no face along it; the wall there is a vertical quad from the edge on the
     // lower ring up to the same edge on the upper ring.
-    let lower_edges: HashSet<(i32, i32)> =
-        lower.indices.iter().flat_map(|l| loop_edges(l)).collect();
-    for (path, indices) in upper.loops.iter().zip(&upper.indices) {
+    let lower_edges: HashSet<(i32, i32)> = lower
+        .vertices
+        .indices
+        .iter()
+        .flat_map(|l| loop_edges(l))
+        .collect();
+    for (path, indices) in upper.loops.iter().zip(&upper.vertices.indices) {
         for i in 0..path.len() {
             let next = (i + 1) % path.len();
             let (a, b) = (path[i], path[next]);
-            let (Some(a0), Some(b0)) = (lower.vertex_at(a.x, a.y), lower.vertex_at(b.x, b.y))
-            else {
+            let (Some(a0), Some(b0)) = (
+                lower.vertices.vertex_at(a.x, a.y),
+                lower.vertices.vertex_at(b.x, b.y),
+            ) else {
                 continue;
             };
             if !lower_edges.contains(&(a0, b0)) {
@@ -196,8 +209,8 @@ fn zipped_band(rings: &mut RingMesh, lower: &PlacedRing, upper: &PlacedRing) {
 /// each step closing one triangle ([`zip_steps_on_a`] picks the loop). Every edge of
 /// both loops is used exactly once, lower forward and upper backward.
 fn zip(rings: &mut RingMesh, lower: &PlacedRing, l: usize, upper: &PlacedRing, u: usize) {
-    let (a_points, a) = (&lower.loops[l], &lower.indices[l]);
-    let (b_points, b) = (&upper.loops[u], &upper.indices[u]);
+    let (a_points, a) = (&lower.loops[l], &lower.vertices.indices[l]);
+    let (b_points, b) = (&upper.loops[u], &upper.vertices.indices[u]);
     let distance = |p: clipper2_rust::Point64, q: clipper2_rust::Point64| {
         let (dx, dy) = ((p.x - q.x) as i128, (p.y - q.y) as i128);
         dx * dx + dy * dy

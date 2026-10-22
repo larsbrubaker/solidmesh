@@ -1,12 +1,13 @@
-//! The loops a ring of an extrusion is built on (`ring_mesh.rs` places them, the caps and walls
-//! join their points). The clipper clean-up in `extrude.rs` gives the area the outline fills, but
-//! not always as loops a solid can be built on directly: a hole can touch its outline at a point
-//! partway along one of the outline's edges, two loops can run along the same stretch in opposite
-//! directions (a hole sharing an edge with its outline: a seam of no width), and a loop can pass
-//! through one point twice. [`simple_loops`] turns any of these into loops whose every point the
-//! ring's other loops pass through is a point of theirs too, that share no edge, and that never
-//! revisit a point, so the cap fills them with the loops' own edges and every wall edge has
-//! exactly two faces.
+//! The loops a solid's ring is built on: a ring of an extrusion, a column of a revolve, a station
+//! of a sweep (`ring_vertices.rs` places their points, and the caps and walls join them). A
+//! clipper clean-up gives the area an outline fills, but not always as loops a solid can be built
+//! on directly: a hole can touch its outline at a point partway along one of the outline's edges,
+//! two loops can run along the same stretch in opposite directions (a hole sharing an edge with
+//! its outline: a seam of no width), and a loop can pass through one point twice.
+//! [`simple_loops`] turns any of these into loops whose every point the ring's other loops pass
+//! through is a point of theirs too, that share no edge, and that never revisit a point except
+//! once per filled wedge there, so the cap fills them with the loops' own edges and every wall
+//! edge has exactly two faces.
 
 use std::collections::HashMap;
 
@@ -20,7 +21,7 @@ type Key = (i64, i64);
 /// removed and the rest chained so each pass through a point bounds one filled wedge (see
 /// [`chained_by_wedges`]), then the points that add no area dropped (see
 /// [`without_straight_points`]).
-pub(super) fn simple_loops(loops: Paths64) -> Paths64 {
+pub fn simple_loops(loops: Paths64) -> Paths64 {
     without_straight_points(chained_by_wedges(with_touch_points(loops)))
 }
 
@@ -89,7 +90,7 @@ fn with_touch_points(loops: Paths64) -> Paths64 {
 /// wedges, each between an edge leaving the point and the next edge round counter clockwise, which
 /// arrives (the filled side of every edge is its left). The loops are chained so that each pass
 /// through the point arrives along one wedge's arriving edge and leaves along the same wedge's
-/// leaving edge; the ring then gives each pass a vertex of its own (`ring_mesh.rs`), so the wall
+/// leaving edge; the ring then gives each pass a vertex of its own (`ring_vertices.rs`), so the wall
 /// edge standing on each has the two faces of its own wedge and the cap meets each wedge on its
 /// own vertex. Elsewhere each loop keeps its own order. Loops with no removed edge and no point
 /// passed twice come back unchanged.

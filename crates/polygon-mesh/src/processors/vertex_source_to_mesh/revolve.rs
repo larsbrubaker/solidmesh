@@ -1,8 +1,9 @@
 //! Spinning a 2D profile into a solid: the sweep's angles (snapped onto a full turn when they are
 //! within a hair of one) and the profile's clean-up. The profile goes through agg-path's clipper
 //! conversions (to integer polygons with corrected winding) so its winding is normalized and
-//! anything left of the axis is mirrored onto the right before it is swept. The solid itself is
-//! built from those integer loops in `revolve/revolved_mesh.rs`.
+//! anything left of the axis is mirrored onto the right before it is swept, then prepared as loops a
+//! solid can be built on (`processors/ring_loops.rs`). The solid itself is built from those
+//! integer loops in `revolve/revolved_mesh.rs`.
 
 use std::fmt;
 
@@ -16,6 +17,7 @@ use vector_math::math_helper::{range_0_to_tau, TAU};
 use vector_math::MathError;
 
 use crate::mesh::Mesh;
+use crate::processors::ring_loops::simple_loops;
 
 mod revolved_mesh;
 
@@ -173,6 +175,9 @@ pub fn revolve(
     let widest_strips = (outermost as f64 * (angle_end - angle_start).abs()) as i32;
     angle_steps = angle_steps.min(widest_strips.max(fewest_steps));
 
+    // loops a column can be built on: where loops touch, each pass through a point gets its own
+    // vertex, so every strip edge has exactly two faces
+    let polygons = simple_loops(polygons);
     let has_start_and_end_faces = angle_start > 0.000001 || angle_end < TAU - 0.000001;
     let wraps = !has_start_and_end_faces;
     Ok(revolved_mesh(
