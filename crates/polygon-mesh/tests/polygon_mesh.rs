@@ -38,6 +38,8 @@ mod mesh_sdf_grid_tests;
 mod mesh_split_manifold_tests;
 #[path = "polygon_mesh/mesh_tests.rs"]
 mod mesh_tests;
+#[path = "polygon_mesh/repair_texture_caps_tests.rs"]
+mod repair_texture_caps_tests;
 #[path = "polygon_mesh/revolve_tests.rs"]
 mod revolve_tests;
 #[path = "polygon_mesh/room_scale_offset_tolerance_tests.rs"]

@@ -38,6 +38,7 @@ pub mod dual_contouring;
 mod face;
 mod face_data;
 mod face_split;
+mod face_texture_fill;
 mod g3;
 mod mesh;
 pub mod mesh_distance;

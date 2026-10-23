@@ -9,7 +9,8 @@
 //! The fields themselves (`Mesh::face_colors`, `Mesh::face_textures`) live on `Mesh` in
 //! `mesh.rs`; the operations that rebuild the face list (`mesh.rs`, `mesh_editing.rs`,
 //! `mesh_extensions.rs`, `t_junctions.rs`) call [`Mesh::remap_face_data`] so the data follows
-//! the faces.
+//! the faces. Faces the corner restore leaves bare (a repair's caps) are textured from their
+//! neighbours in `face_texture_fill.rs`.
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -70,7 +71,7 @@ pub type CornerTexture = ([Vector3Float; 3], FaceTextureData);
 
 /// A face's corner positions as an order-free key: each position's exact bits, sorted, so a face
 /// found again with its corners rotated or its winding flipped still matches.
-fn corner_key(corners: [Vector3Float; 3]) -> [[u32; 3]; 3] {
+pub(crate) fn corner_key(corners: [Vector3Float; 3]) -> [[u32; 3]; 3] {
     let mut key = corners.map(|p| [f32_key(p.x), f32_key(p.y), f32_key(p.z)]);
     key.sort_unstable();
     key
@@ -223,8 +224,9 @@ impl Mesh {
     /// Gives every face whose three corners sit exactly where a saved face's did that face's
     /// texture, each corner taking the UV of the saved corner at its position, so a face that
     /// came back rotated or turned over still shows the picture the same way. Faces matching no
-    /// saved face (a cap over a hole) stay untextured. Exact positions, not nearest ones: a face
-    /// that moved is a different face, and stretching a picture onto it would be a guess.
+    /// saved face (a cap over a hole) are left for [`Mesh::texture_new_faces_from_neighbors`],
+    /// which fills them from the faces around them. Exact positions, not nearest ones: a face
+    /// that moved is a different face, and carrying its old corner UVs onto it would be a guess.
     pub fn restore_face_textures_from_corners(&mut self, saved: &[CornerTexture]) {
         if saved.is_empty() {
             return;

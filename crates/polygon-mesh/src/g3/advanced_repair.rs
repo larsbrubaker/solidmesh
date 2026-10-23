@@ -117,6 +117,7 @@ impl Mesh {
         // Save per-face colors before DMesh3 conversion (which loses them)
         let saved_face_colors = self.save_face_centroid_colors();
         let saved_textures = self.save_face_corner_textures();
+        let untextured_before = self.save_untextured_face_corners();
 
         let mut in_mesh: Option<Mesh> = None;
         match run(
@@ -131,6 +132,7 @@ impl Mesh {
                 let mut result = dmesh3.to_mesh();
                 result.restore_face_colors_from_centroids(saved_face_colors.as_deref());
                 result.restore_face_textures_from_corners(&saved_textures);
+                result.texture_new_faces_from_neighbors(&untextured_before);
                 Ok(result)
             }
             Err(Stop::Cancelled) => Ok(in_mesh.unwrap_or_else(|| self.copy())),
