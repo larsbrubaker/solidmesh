@@ -1,12 +1,13 @@
-//! Face and mesh queries as `Face` and `Mesh` methods: copying, planes, coplanar faces, edges
-//! and manifoldness, unused-vertex and degenerate-face removal.
+//! Face and mesh queries as `Face` and `Mesh` methods: copying, planes, coplanar faces, edges,
+//! manifoldness and whether the faces close into one consistently wound surface, unused-vertex
+//! and degenerate-face removal.
 //!
 //! Splitting a face and its cut line live in `face_split.rs`, `split_on_planes` in
 //! `mesh_editing.rs` and T-junction repair in `t_junctions.rs`; the texture helpers (placing
 //! and removing textures, the max-plane projection, and the single-face projection
 //! `place_texture_on_face_projected`) are in `face_data.rs`.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use agg_path::Color;
 use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
@@ -203,6 +204,30 @@ impl Mesh {
     pub fn is_manifold(&self) -> bool {
         let graph = self.get_mesh_edge_graph();
         (0..graph.edge_count()).all(|e| graph.get_face_count(e) == 2)
+    }
+
+    /// True when the faces close up into one consistently wound surface: every edge, on shared
+    /// vertex indices, is walked exactly once in each direction by the faces around it, and no
+    /// face repeats a vertex. Stricter than [`Self::is_manifold`], which counts faces per edge
+    /// but not which way they walk it, so a face flipped against its neighbours passes there.
+    /// False with no faces, which bound nothing.
+    pub fn is_closed_consistently_wound(&self) -> bool {
+        if self.faces.is_empty() {
+            return false;
+        }
+        let mut walks: HashMap<(i32, i32), u32> = HashMap::new();
+        for face in self.faces.iter() {
+            if face.v0 == face.v1 || face.v1 == face.v2 || face.v2 == face.v0 {
+                return false;
+            }
+            for edge in [(face.v0, face.v1), (face.v1, face.v2), (face.v2, face.v0)] {
+                *walks.entry(edge).or_insert(0) += 1;
+            }
+        }
+        // Only lookups: the map's order never reaches an output.
+        walks
+            .iter()
+            .all(|(&(a, b), &count)| count == 1 && walks.get(&(b, a)) == Some(&1))
     }
 
     /// Drops the vertices no face uses and renumbers the faces (normals recomputed).

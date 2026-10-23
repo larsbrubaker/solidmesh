@@ -8,6 +8,8 @@ mod clean_caps_tests;
 mod clean_extrude_tests;
 #[path = "polygon_mesh/clean_solid_support.rs"]
 mod clean_solid_support;
+#[path = "polygon_mesh/closed_solid_repair_tests.rs"]
+mod closed_solid_repair_tests;
 #[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
 mod face_color_boolean_scenarios;
 #[path = "polygon_mesh/face_color_tests.rs"]
