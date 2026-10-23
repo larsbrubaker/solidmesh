@@ -116,6 +116,7 @@ impl Mesh {
     ) -> Result<Mesh, MeshAutoRepairError> {
         // Save per-face colors before DMesh3 conversion (which loses them)
         let saved_face_colors = self.save_face_centroid_colors();
+        let saved_textures = self.save_face_corner_textures();
 
         let mut in_mesh: Option<Mesh> = None;
         match run(
@@ -129,6 +130,7 @@ impl Mesh {
             Ok(Outcome::Repaired(dmesh3)) => {
                 let mut result = dmesh3.to_mesh();
                 result.restore_face_colors_from_centroids(saved_face_colors.as_deref());
+                result.restore_face_textures_from_corners(&saved_textures);
                 Ok(result)
             }
             Err(Stop::Cancelled) => Ok(in_mesh.unwrap_or_else(|| self.copy())),

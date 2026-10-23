@@ -268,12 +268,15 @@ impl crate::Mesh {
     /// The geometry half of the Repair operation's default (non-Advanced) path: the mesh into a
     /// `DMesh3`, `MeshAutoRepair::apply`, then back to a [`crate::Mesh`] from that same `DMesh3`.
     /// Face colors are not carried (the caller saves and restores them by face centroid, since the
-    /// round trip renumbers faces).
+    /// round trip renumbers faces); face textures are, onto the faces whose corners did not move.
     pub fn auto_repaired(&self) -> Result<crate::Mesh, MeshAutoRepairError> {
+        let saved_textures = self.save_face_corner_textures();
         let mut dmesh3 = self.to_dmesh3();
         MeshAutoRepair::default()
             .apply(&mut dmesh3)
             .map_err(|e| MeshAutoRepairError(e.0))?;
-        Ok(dmesh3.to_mesh())
+        let mut result = dmesh3.to_mesh();
+        result.restore_face_textures_from_corners(&saved_textures);
+        Ok(result)
     }
 }

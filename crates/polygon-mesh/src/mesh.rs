@@ -51,6 +51,20 @@ pub(crate) fn int_long_hash(value: i32, hash: u64) -> u64 {
     long_hash::compute_hash(&value.to_le_bytes(), hash)
 }
 
+/// FNV-1a over a picture's size and up to ~4096 of its bytes, evenly sampled, so hashing a large
+/// texture stays cheap while two different pictures of one size still almost always differ.
+fn image_long_hash(image: Option<&agg_path::image::ImageBuffer>, hash: u64) -> u64 {
+    let Some(image) = image else {
+        return int_long_hash(-1, hash);
+    };
+    let mut hash = int_long_hash(image.width(), hash);
+    hash = int_long_hash(image.height(), hash);
+    let bytes = image.get_buffer();
+    let step = (bytes.len() / 4096).max(1);
+    let sampled: Vec<u8> = bytes.iter().step_by(step).copied().collect();
+    long_hash::compute_hash(&sampled, hash)
+}
+
 /// A dictionary key under which 0.0 and -0.0 are alike and every NaN is alike, so welding
 /// treats equal positions as equal however they were computed.
 pub(crate) fn f32_key(value: f32) -> u32 {
@@ -236,7 +250,7 @@ impl Mesh {
     }
 
     /// FNV-1a over the vertex and face counts, up to ~1000 sampled vertices and ~10000 sampled
-    /// faces, starting from `hash`.
+    /// faces, the face colors and the face textures, starting from `hash`.
     pub fn get_long_hash_code_with(&self, hash: u64) -> u64 {
         let mut hash = int_long_hash(self.vertices.len() as i32, hash);
         hash = int_long_hash(self.faces.len() as i32, hash);
@@ -262,6 +276,30 @@ impl Mesh {
             let color_step = (face_colors.len() / 1000).max(1);
             for color in face_colors.iter().step_by(color_step) {
                 hash = color.get_long_hash_code(hash);
+            }
+        }
+
+        // Include the face textures (which faces, their UVs and their pictures) so a textured
+        // mesh never shares a stored asset with the same shape untextured or wearing another
+        // picture. A mesh without textures hashes as it always has.
+        if !self.face_textures.is_empty() {
+            hash = int_long_hash(self.face_textures.len() as i32, hash);
+            let texture_step = (self.face_textures.len() / 1000).max(1);
+            let mut last_image: Option<&std::sync::Arc<agg_path::image::ImageBuffer>> = None;
+            for (&face, texture) in self.face_textures.iter().step_by(texture_step) {
+                hash = int_long_hash(face, hash);
+                for uv in [texture.uv0, texture.uv1, texture.uv2] {
+                    hash = int_long_hash(uv.x.to_bits() as i32, hash);
+                    hash = int_long_hash(uv.y.to_bits() as i32, hash);
+                }
+                let same_as_last = matches!(
+                    (last_image, &texture.image),
+                    (Some(a), Some(b)) if std::sync::Arc::ptr_eq(a, b)
+                );
+                if !same_as_last {
+                    hash = image_long_hash(texture.image.as_deref(), hash);
+                    last_image = texture.image.as_ref();
+                }
             }
         }
 

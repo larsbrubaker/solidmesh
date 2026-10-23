@@ -1,6 +1,8 @@
 //! Per-face colors and textures on a [`Mesh`]: [`FaceTextureData`], remapping face data when the
 //! face list is rebuilt, interpolating a texture onto split faces, the uncolored and unknown face
-//! colors, saving face colors by centroid and restoring them by nearest centroid, and placing and
+//! colors, saving face colors by centroid and restoring them by nearest centroid, saving face
+//! textures with their corner positions and restoring them onto faces with the same corners, and
+//! placing and
 //! removing textures with an explicit mapping, plus the projection picking that stretches an image
 //! over a face's plane.
 //!
@@ -9,7 +11,7 @@
 //! `mesh_extensions.rs`, `t_junctions.rs`) call [`Mesh::remap_face_data`] so the data follows
 //! the faces.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use agg_path::image::ImageBuffer;
@@ -17,7 +19,7 @@ use agg_path::{Color, RectangleDouble};
 use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
 use crate::face::FaceList;
-use crate::mesh::Mesh;
+use crate::mesh::{f32_key, Mesh};
 
 /// The texture on one face: the image and the UV of each corner.
 ///
@@ -62,6 +64,17 @@ pub type FaceTextures = BTreeMap<i32, FaceTextureData>;
 
 /// One saved face color with the face's centroid.
 pub type CentroidColor = (Vector3, Color);
+
+/// One saved face texture with the positions of the face's three corners, in UV order.
+pub type CornerTexture = ([Vector3Float; 3], FaceTextureData);
+
+/// A face's corner positions as an order-free key: each position's exact bits, sorted, so a face
+/// found again with its corners rotated or its winding flipped still matches.
+fn corner_key(corners: [Vector3Float; 3]) -> [[u32; 3]; 3] {
+    let mut key = corners.map(|p| [f32_key(p.x), f32_key(p.y), f32_key(p.z)]);
+    key.sort_unstable();
+    key
+}
 
 impl Mesh {
     /// The color a face gets when a mesh with no per-face colors is merged into one that has
@@ -191,6 +204,62 @@ impl Mesh {
             })
             .collect();
         self.face_colors = Some(face_colors);
+    }
+
+    /// Each textured face's texture with its corner positions, to put back with
+    /// [`Mesh::restore_face_textures_from_corners`] after an operation that renumbers faces.
+    pub fn save_face_corner_textures(&self) -> Vec<CornerTexture> {
+        self.face_textures
+            .iter()
+            .filter_map(|(&face, texture)| {
+                let face = self.faces.get(usize::try_from(face).ok()?)?;
+                let corner = |v: i32| self.vertices.get(usize::try_from(v).ok()?).copied();
+                let corners = [corner(face.v0)?, corner(face.v1)?, corner(face.v2)?];
+                Some((corners, texture.clone()))
+            })
+            .collect()
+    }
+
+    /// Gives every face whose three corners sit exactly where a saved face's did that face's
+    /// texture, each corner taking the UV of the saved corner at its position, so a face that
+    /// came back rotated or turned over still shows the picture the same way. Faces matching no
+    /// saved face (a cap over a hole) stay untextured. Exact positions, not nearest ones: a face
+    /// that moved is a different face, and stretching a picture onto it would be a guess.
+    pub fn restore_face_textures_from_corners(&mut self, saved: &[CornerTexture]) {
+        if saved.is_empty() {
+            return;
+        }
+        // Only looked up, never iterated; the first saved face wins a shared key.
+        let mut by_corners: HashMap<[[u32; 3]; 3], usize> = HashMap::new();
+        for (index, (corners, _)) in saved.iter().enumerate() {
+            by_corners.entry(corner_key(*corners)).or_insert(index);
+        }
+        let mut restored = FaceTextures::new();
+        for (face_index, face) in self.faces.iter().enumerate() {
+            let corners = [face.v0, face.v1, face.v2].map(|v| self.vertices[v as usize]);
+            let Some(&index) = by_corners.get(&corner_key(corners)) else {
+                continue;
+            };
+            let (saved_corners, texture) = &saved[index];
+            let saved_uvs = [texture.uv0, texture.uv1, texture.uv2];
+            let uv_at = |p: Vector3Float| {
+                let key = [f32_key(p.x), f32_key(p.y), f32_key(p.z)];
+                saved_corners
+                    .iter()
+                    .position(|c| [f32_key(c.x), f32_key(c.y), f32_key(c.z)] == key)
+                    .map_or(saved_uvs[0], |i| saved_uvs[i])
+            };
+            restored.insert(
+                face_index as i32,
+                FaceTextureData::new(
+                    texture.image.clone(),
+                    uv_at(corners[0]),
+                    uv_at(corners[1]),
+                    uv_at(corners[2]),
+                ),
+            );
+        }
+        self.face_textures = restored;
     }
 
     /// The centroid of a face, summed and divided in f32, then widened, so saved and restored

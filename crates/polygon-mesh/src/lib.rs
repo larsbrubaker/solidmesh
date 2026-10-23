@@ -58,7 +58,7 @@ pub mod vertex_sorters;
 
 pub use cancel::CancelToken;
 pub use face::{Face, FaceList};
-pub use face_data::{CentroidColor, FaceTextureData, FaceTextures};
+pub use face_data::{CentroidColor, CornerTexture, FaceTextureData, FaceTextures};
 pub use face_split::{clip_edge_at_plane, SplitData};
 pub use g3::advanced_repair::{AdvancedRepairOptions, RemoveModes};
 pub use g3::mesh_auto_repair::MeshAutoRepairError;
