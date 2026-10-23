@@ -21,6 +21,7 @@ use clipper2_rust::Paths64;
 use crate::mesh::Mesh;
 use crate::processors::ring_loops::{simple_loops, without_crossings};
 use band::add_band;
+use meeting_ring::cut_meeting_ring;
 use ring_mesh::{PlacedRing, RingMesh};
 
 /// The profile from z = 0 up to `z_height_top` with square ends: [`extrude_bevelled`] with no
@@ -127,10 +128,19 @@ fn get_loop_mesh(
             .map(|(i, ring)| (ring, i > bottom_bevel_band_count))
             .collect();
         // A top and bottom bevel that exactly meet leave no straight wall between them: the one
-        // ring they share is placed once.
+        // ring they share is placed once, with the area both its bands would cover flat cut out
+        // of it (`extrude/meeting_ring.rs`).
+        let meeting = rings.windows(2).position(|pair| {
+            let ((lower, lower_height), (upper, upper_height)) = (&pair[0].0, &pair[1].0);
+            Rc::ptr_eq(lower, upper) && lower_height == upper_height
+        });
         rings.dedup_by(|(upper, _), (lower, _)| {
             Rc::ptr_eq(&upper.0, &lower.0) && upper.1 == lower.1
         });
+        if let Some(m) = meeting.filter(|&m| m > 0 && m + 1 < rings.len()) {
+            let cut = cut_meeting_ring(&rings[m - 1].0 .0, &rings[m].0 .0, &rings[m + 1].0 .0);
+            rings[m].0 .0 = cut;
+        }
         // A bevel that insets the whole outline away leaves nothing beyond it; the last ring
         // with loops is capped instead.
         rings.retain(|((loops, _), _)| !loops.is_empty());
@@ -238,6 +248,7 @@ fn build_bevel_rings(
 }
 
 mod band;
+mod meeting_ring;
 mod ring_mesh;
 
 #[cfg(test)]
