@@ -1,8 +1,9 @@
 //! Revolve and bevelled Linear Extrude make clean solids from paths whose loops touch: a hole
-//! touching its outline at a point or along an edge, two parts meeting at a corner, a bowtie, and
-//! the traced picture outline. Each solid is closed on shared vertices, wound outward and free of
-//! zero-area faces, and every flat cap covers exactly the area the path fills (the checker and
-//! the paths are in `clean_solid_support.rs`).
+//! touching its outline at a point or along an edge, two parts meeting at a corner, a bowtie, the
+//! traced picture outline, and (where a top and a bottom bevel meet) a bridge between two holes
+//! narrower than the bevels' first inset. Each solid is closed on shared vertices, wound outward
+//! and free of zero-area faces, and every flat cap covers exactly the area the path fills (the
+//! checker and the paths are in `clean_solid_support.rs`).
 
 use agg_path::clipper_library::JoinType;
 use agg_path::VertexStorage;
@@ -124,4 +125,66 @@ fn an_outline_both_bevels_inset_away_adds_nothing_where_the_bevels_meet() {
         beyond_large, 0,
         "the tiny square left a sheet of no thickness"
     );
+}
+
+/// A bevel list: (height, inset) pairs as `extrude_bevelled` takes them.
+type Bevel = Vec<(f64, f64)>;
+
+/// A Round bevel of `radius` in 9 steps at the top and the bottom of an extrusion twice as tall,
+/// so the two bevels meet halfway up with no straight wall between them (a pill): the (top,
+/// bottom) lists `extrude_bevelled` takes, the quarter circle sampled as Linear Extrude samples it.
+fn pill_bevels(radius: f64) -> (Bevel, Bevel) {
+    let segments = 9;
+    let quarter = |ratio: f64| ratio * std::f64::consts::TAU / 4.0;
+    let step = |i: i32| {
+        let inset = -radius + radius * quarter(f64::from(i + 1) / f64::from(segments)).cos();
+        let rise = radius * quarter(f64::from(i) / f64::from(segments)).sin();
+        (rise, inset)
+    };
+    let top = (0..segments)
+        .map(step)
+        .map(|(rise, inset)| (radius + rise, inset))
+        .collect();
+    let bottom = (0..segments)
+        .map(step)
+        .map(|(rise, inset)| (radius - rise, inset))
+        .collect();
+    (top, bottom)
+}
+
+#[test]
+fn a_bridge_narrower_than_the_first_inset_between_two_holes_extrudes_as_a_pill() {
+    // Two holes in a square, a few hundredths of a millimetre apart: the bridge between them is
+    // narrower than the bevels' first inset (0.046 mm), so it holds material only where the
+    // bevels meet, and the solid must not pinch to an edge there. A traced picture makes such
+    // bridges where two holes come close; straight across and at a slant.
+    let (top, bottom) = pill_bevels(3.0);
+    for (slant, gap) in [(0.0, 0.06), (0.046, 0.039), (0.0, 0.03), (0.02, 0.05)] {
+        let outline = square_at(0.0, 0.0, 10.0, false);
+        let upper_hole = [(5.0, 5.0 + gap / 2.0), (4.7, 5.3), (5.0, 5.6), (5.3, 5.3)];
+        let lower_hole = [
+            (5.0 + slant, 5.0 - gap / 2.0),
+            (5.06 + slant, 4.94),
+            (5.0 + slant, 4.88),
+            (4.94 + slant, 4.94),
+        ];
+        let path = path_of(&[&outline, &upper_hole, &lower_hole]);
+        let mesh = extrude_bevelled(
+            &path,
+            6.0,
+            Some(&top),
+            JoinType::Round,
+            Some(&bottom),
+            JoinType::Round,
+        )
+        .expect("the profile cleans up");
+        let what = format!("holes {gap} mm apart, slanted {slant} mm, meeting bevels");
+        assert_closed_outward(&mesh, &what);
+        let prism = even_odd_area(&path) * 6.0;
+        assert!(
+            mesh.get_volume() < prism,
+            "{what}: the pill holds {} mm³, the square-ended part {prism} mm³",
+            mesh.get_volume()
+        );
+    }
 }
