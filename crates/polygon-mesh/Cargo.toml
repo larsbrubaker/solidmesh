@@ -26,14 +26,14 @@ agg-path = { path = "../agg-path" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
-manifold-rust = { path = "../../../manifold-rust" }
+manifold-rust = { path = "../../../manifold-rust", version = "0.19.1" }
 # The integer polygons slicing works in: Clipper2's `Path64`/`Paths64`
 # (the union itself runs on agg-path's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
-clipper2-rust = { path = "../../../clipper2-rust" }
+clipper2-rust = { path = "../../../clipper2-rust", version = "1.2.0" }
 # The SGI GLU tessellator for `CachedTesselator`: tess2-rust, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
-tess2-rust = { path = "../../../tess2-rust" }
+tess2-rust = { path = "../../../tess2-rust", version = "1.2.1" }
 
 # Native hosts get the kernel's `parallel` feature; the browser does not, because
 # wasm32-unknown-unknown has no threads to schedule on. Only determinism-preserving sites are parallel, so the geometry is identical.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-manifold-rust = { path = "../../../manifold-rust", features = ["parallel"] }
+manifold-rust = { path = "../../../manifold-rust", version = "0.19.1", features = ["parallel"] }
