@@ -10,6 +10,13 @@
 //! segment's two ends ask the SAME setback no search is run: the least is the piece's closest
 //! approach to that segment less the setback, in closed form (`chain_approach`).
 //!
+//! The clipped least visits every segment's term, so it first bounds each one by the gap between
+//! the boxes less the segment's larger setback ([`ChainField::segment_bound`]) and searches only
+//! those that could reach the value to beat; on a long chain read against thousands of foreign
+//! edges, searching the far ones as well was nearly all of a fillet's build time. A caller that
+//! only asks whether a triangle's least is at or below a threshold (the band's candidates) gets
+//! [`ChainField::triangle_reaches`], which searches only the terms that could get there.
+//!
 //! Here too `ChainField`'s [`ChainDistanceField`] impl, which these queries complete.
 
 use super::chain_approach;
@@ -314,15 +321,30 @@ impl ChainField {
         // The clipped field at the unclipped minimiser is the plane's reading: the value to beat.
         let unclipped = best.0;
         best.0 = plane_at_best;
+        let (corners, count) = piece.corners();
+        let piece_min = corners[1..count]
+            .iter()
+            .fold(corners[0], |low, &p| Vector3::component_min(low, p));
+        let piece_max = corners[1..count]
+            .iter()
+            .fold(corners[0], |high, &p| Vector3::component_max(high, p));
         for i in 0..self.segment_count() {
-            let mut term: Best = (f64::INFINITY, best.1, i32::MAX);
-            self.least_over_segments(i, i + 1, piece, &mut term)?;
-            if term.0 < best.0 + (Self::TIE_RELATIVE * (1.0 + best.0.abs())) {
-                let segment = i as usize;
-                let (value, at) = self.least_of_clipped_term(piece, None, &|p| {
-                    self.least_over_segment_from_point(segment, p).0
-                });
-                Self::offer(i, value, at, best);
+            // A segment whose box stands so far from the piece that even its larger setback cannot
+            // bring its term to the value to beat is left unsearched. Its term is never below that
+            // bound, so the test just below would turn it away anyway: the same answer, without the
+            // full search of every far segment that made each clipped reading cost the whole chain.
+            if self.segment_bound(i as usize, piece_min, piece_max)
+                < best.0 + (Self::TIE_RELATIVE * (1.0 + best.0.abs()))
+            {
+                let mut term: Best = (f64::INFINITY, best.1, i32::MAX);
+                self.least_over_segments(i, i + 1, piece, &mut term)?;
+                if term.0 < best.0 + (Self::TIE_RELATIVE * (1.0 + best.0.abs())) {
+                    let segment = i as usize;
+                    let (value, at) = self.least_of_clipped_term(piece, None, &|p| {
+                        self.least_over_segment_from_point(segment, p).0
+                    });
+                    Self::offer(i, value, at, best);
+                }
             }
 
             let Some(rays) = self
@@ -356,6 +378,121 @@ impl ChainField {
 
         Ok(())
     }
+
+    /// Whether the least field value over the triangle abc, interior included, is at or below
+    /// `threshold`: [`ChainField::min_over_triangle`]'s answer to that question, for less. The
+    /// unclipped least is a floor under the clipped one, so a floor above the threshold is "no";
+    /// where no end plane clips at its minimiser, or the plane's reading there is already at or
+    /// below the threshold, the clipped least is too, so it is "yes". Otherwise only the terms that
+    /// could get down to the threshold are searched, and the first that does settles it. On a long
+    /// open chain read past its ends this is the difference between seconds and minutes, since
+    /// every triangle beyond an end plane asked the full clipped search of every term. Agrees with
+    /// the least to the field's tie tolerance; a NaN reading answers "no", as the least's does.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x <= y)` on purpose: NaN is not "at or below"
+    pub fn triangle_reaches(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        threshold: f64,
+    ) -> Result<bool, WorkError> {
+        FieldCounters::with(|t| t.min_tri += 1);
+        LevelLineWork::charge(1)?;
+        let min = Vector3::component_min(Vector3::component_min(a, b), c);
+        let max = Vector3::component_max(Vector3::component_max(a, b), c);
+        let piece = ChainFieldMeshPiece::triangle(a, b, c);
+        let mut best: Best = (f64::INFINITY, self.points[0], i32::MAX);
+        self.visit_least(0, min, max, &piece, &mut best)?;
+        if !(best.0 <= threshold) {
+            return Ok(false);
+        }
+
+        if self.end_clips.is_none() || best.0 == f64::INFINITY {
+            return Ok(true);
+        }
+
+        let plane_at_best = self.clip_at(best.1).0;
+        if !(plane_at_best > best.0) || plane_at_best <= threshold {
+            return Ok(true);
+        }
+
+        // The clipped field never stands below the end planes' reading, and that reading is never
+        // below any one end plane's, a linear function whose least over the triangle is at a
+        // corner. A triangle wholly past an end plane by more than the threshold is out, unsearched.
+        // Two ends on ONE plane read the nearer end and snap points on the plane to it, so that
+        // case is left to the search.
+        if let Some(clips) = self.end_clips.as_deref() {
+            if !(clips.len() == 2 && super::chain_field_clip::one_plane(clips[0], clips[1])) {
+                let floor = clips
+                    .iter()
+                    .map(|clip| {
+                        [a, b, c]
+                            .iter()
+                            .map(|&corner| (corner - clip.vertex).dot(clip.normal))
+                            .fold(f64::INFINITY, vector_math::ieee_math::min_f64)
+                    })
+                    .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);
+                if floor > threshold {
+                    return Ok(false);
+                }
+            }
+        }
+
+        for i in 0..self.segment_count() {
+            let segment = i as usize;
+            if !(self.segment_bound(segment, min, max) > threshold) {
+                let mut term: Best = (f64::INFINITY, best.1, i32::MAX);
+                self.least_over_segments(i, i + 1, &piece, &mut term)?;
+                if term.0 <= threshold {
+                    let (value, _) = self.least_of_clipped_term(&piece, None, &|p| {
+                        self.least_over_segment_from_point(segment, p).0
+                    });
+                    if value <= threshold {
+                        return Ok(true);
+                    }
+                }
+            }
+
+            let Some(rays) = self.extensions.as_ref().and_then(|e| e[segment].as_ref()) else {
+                continue;
+            };
+
+            for ray in rays {
+                let (approach, _) = piece.clipped_approach_to(ray.origin, ray.end(), ray.keep);
+                if approach == f64::INFINITY || approach - ray.setback > threshold {
+                    continue;
+                }
+
+                let (value, _) =
+                    self.least_of_clipped_term(&piece, Some(ray), &|p| ray.value_at(p).0);
+                if value <= threshold {
+                    return Ok(true);
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// The least chain segment `segment`'s term can read anywhere over a piece boxed by
+    /// `piece_min`..`piece_max`: the gap between the piece's box and the segment's, less the
+    /// larger of the segment's two setbacks (the setback runs straight between its ends, so no
+    /// point along it asks more).
+    pub fn segment_bound(&self, segment: usize, piece_min: Vector3, piece_max: Vector3) -> f64 {
+        let n = self.points.len();
+        let from = self.points[segment];
+        let to = self.points[(segment + 1) % n];
+        let setback = vector_math::ieee_math::max_f64(
+            self.setbacks[segment],
+            self.setbacks[(segment + 1) % n],
+        );
+        segment_box_tree::box_gap(
+            piece_min,
+            piece_max,
+            Vector3::component_min(from, to),
+            Vector3::component_max(from, to),
+        ) - setback
+    }
 }
 
 impl ChainDistanceField for ChainField {
@@ -370,6 +507,16 @@ impl ChainDistanceField for ChainField {
         c: Vector3,
     ) -> Result<FieldMinimum, WorkError> {
         ChainField::min_over_triangle(self, a, b, c)
+    }
+
+    fn triangle_reaches(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        threshold: f64,
+    ) -> Result<bool, WorkError> {
+        ChainField::triangle_reaches(self, a, b, c, threshold)
     }
 
     fn nothing_reaches_below(&self, min: Vector3, max: Vector3, margin: f64) -> bool {

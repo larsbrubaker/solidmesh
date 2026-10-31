@@ -134,6 +134,11 @@ pub fn foreign_edges(
         ))
     };
     let mut edges = Vec::new();
+    // Every crease of one growing run is replaced by the SAME far bounds, so without this a run of
+    // a hundred creases listed its region's rim a hundred times over, and each reading of the room
+    // read every copy. Only the first of an edge is kept: the room is the least over the edges, so
+    // a repeat can never change it, nor which edge names it.
+    let mut listed: HashSet<(i32, i32)> = HashSet::new();
     let mut growing: Option<GrowingCreaseRuns> = None;
     let failed: Rc<RefCell<Option<WorkError>>> = Rc::new(RefCell::new(None));
     let chain_ends: HashSet<i32> = if chain_is_closed {
@@ -205,11 +210,13 @@ pub fn foreign_edges(
         }
 
         if let Some(bounds) = bounds {
-            edges.extend(bounds);
+            edges.extend(bounds.into_iter().filter(|&bound| listed.insert(bound)));
             continue;
         }
 
-        edges.push(edge);
+        if listed.insert(edge) {
+            edges.push(edge);
+        }
     }
 
     drop(m);

@@ -61,7 +61,7 @@ pub fn candidates(
             continue;
         }
 
-        if field.min_over_triangle(a, b, c)?.value <= snap {
+        if field.triangle_reaches(a, b, c, snap)? {
             near.push(i);
         }
     }

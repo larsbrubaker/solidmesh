@@ -201,3 +201,77 @@ fn indexed_and_exhaustive_agree_on_a_bounded_field() {
         }
     }
 }
+
+/// `triangle_reaches` answers "is the least over this triangle at or below the threshold" exactly
+/// as the least itself does, on a curved chain whose setback varies (so the terms are searched,
+/// not read in closed form) and whose two ends are clipped. The thresholds stand off the least by
+/// more than the field's tie tolerance, which is all the question is asked to: inside it, which of
+/// two tied terms the least keeps is a choice of order, not of value.
+#[test]
+fn a_triangle_reaches_a_threshold_exactly_when_its_least_does() {
+    let mut points = Vec::new();
+    let mut setbacks = Vec::new();
+    for i in 0..30 {
+        let x = i as f64 * 0.5;
+        points.push(Vector3::new(x, x.sin(), 0.5 * (2.0 * x).cos()));
+        setbacks.push(1.0 + (0.3 * (3.0 * x).sin()));
+    }
+
+    let first = (points[0] - points[1]).get_normal() + Vector3::new(0.0, 0.7, 0.4);
+    let last = (points[29] - points[28]).get_normal() + Vector3::new(0.0, -0.5, 0.8);
+    let field = ChainField::from_polyline_bounded(
+        &points,
+        false,
+        &setbacks,
+        f64::INFINITY,
+        (true, true),
+        (Some(bound(4.0, first)), Some(bound(4.0, last))),
+    )
+    .expect("a valid chain");
+    let mut random = SeededRandom::new(20261030);
+    let mut near = |end: Vector3, spread: f64| {
+        let x = (random.next_double() - 0.5) * spread;
+        let y = (random.next_double() - 0.5) * spread;
+        let z = (random.next_double() - 0.5) * spread;
+        end + Vector3::new(x, y, z)
+    };
+
+    let (mut clipped_yes, mut clipped_no) = (0, 0);
+    for i in 0..300 {
+        // Round the two ends, where the clip decides, and along the middle, where it does not.
+        let end = match i % 3 {
+            0 => points[0],
+            1 => points[29],
+            _ => points[15],
+        };
+        let a = near(end, 10.0);
+        let b = a + near(Vector3::ZERO, 3.0);
+        let c = a + near(Vector3::ZERO, 3.0);
+        let least = field.min_over_triangle(a, b, c).expect("no budget").value;
+        let off = 1e-9 * (1.0 + least.abs());
+        for threshold in [least - off, least + off, least - 0.5, least + 0.5, 0.0] {
+            let reaches = field
+                .triangle_reaches(a, b, c, threshold)
+                .expect("no budget");
+            assert_eq!(
+                reaches,
+                least <= threshold,
+                "triangle {a:?} {b:?} {c:?}: least {least}, threshold {threshold}"
+            );
+            if i % 3 != 2 && field.end_plane_at(a) > least {
+                if reaches {
+                    clipped_yes += 1;
+                } else {
+                    clipped_no += 1;
+                }
+            }
+        }
+    }
+
+    // Both answers were asked where an end plane stands above the least, so the clipped search and
+    // the end-plane floor were each put to the question.
+    assert!(
+        clipped_yes > 0 && clipped_no > 0,
+        "{clipped_yes} yes, {clipped_no} no past an end"
+    );
+}

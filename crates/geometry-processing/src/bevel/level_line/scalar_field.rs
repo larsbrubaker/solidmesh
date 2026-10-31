@@ -128,6 +128,21 @@ pub trait ChainDistanceField: ScalarField {
         c: Vector3,
     ) -> Result<FieldMinimum, WorkError>;
 
+    /// Whether the least field value over the triangle abc, its interior included, is at or below
+    /// `threshold` - all a caller sorting triangles by "does the line reach this one" asks. The
+    /// default reads the exact least; a field that can settle the question for less (turning away
+    /// the terms that cannot get down to the threshold, stopping at the first that does) answers
+    /// it itself.
+    fn triangle_reaches(
+        &self,
+        a: Vector3,
+        b: Vector3,
+        c: Vector3,
+        threshold: f64,
+    ) -> Result<bool, WorkError> {
+        Ok(self.min_over_triangle(a, b, c)?.value <= threshold)
+    }
+
     /// A cheap "no" to `is the least value over this box at or below the margin`, for a caller
     /// that only asks whether a piece dips across the line. The default answers "cannot say", so a
     /// field that has no such bound to give simply pays for the exact search.
