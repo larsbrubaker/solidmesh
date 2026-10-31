@@ -21,6 +21,6 @@ pub mod stl_writer;
 pub mod vertex_source_to_mesh;
 
 pub use face_bsp_tree::BspNode;
-pub use mesh_convex_hull::ConvexHull;
+pub use mesh_convex_hull::{ConvexHull, ConvexHullSteps};
 pub use mesh_output_settings::{CsgOption, MeshOutputSettings, OutputType};
 pub use stl_processing::{Progress, StlChunk, StlError, StlParse, FACES_PER_YIELD};

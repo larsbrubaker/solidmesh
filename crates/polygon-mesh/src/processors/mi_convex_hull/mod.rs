@@ -27,12 +27,131 @@ pub(crate) struct HullFailed;
 
 /// The convex hull of 3D points: the hull faces as triples of indices into `points` (flipped
 /// faces have vertices 0 and 2 swapped), in the algorithm's face order. `None` when the hull
-/// cannot be built.
+/// cannot be built. The mesh's hull builds through [`HullBuild`]; this whole build is what the
+/// algorithm's own tests pin.
+#[cfg(test)]
 pub(crate) fn create(points: &[[f64; 3]], tolerance: f64) -> Option<Vec<[usize; 3]>> {
-    let mut hull = ConvexHullAlgorithm::new(points, tolerance).ok()?;
-    hull.get_convex_hull().ok()?;
-    Some(hull.get_convex_faces())
+    let mut hull = HullBuild::new(points, tolerance)?;
+    loop {
+        if let Some(faces) = hull.step(usize::MAX) {
+            return faces;
+        }
+    }
 }
+
+/// The hull of [`create`] built a piece at a time, so a caller that must keep drawing frames can
+/// spread a large mesh's hull over them. The pieces run the one build in its own order, so the
+/// faces are [`create`]'s.
+pub(crate) struct HullBuild {
+    algorithm: ConvexHullAlgorithm,
+    stage: Stage,
+}
+
+/// Where a [`HullBuild`] is.
+enum Stage {
+    /// Nothing done: next the bounding box extremes and the shift.
+    Bounds,
+    /// Next the starting simplex's faces.
+    Simplex,
+    /// Filing the vertices beyond the starting faces: `faces[face]`, from vertex `next`.
+    Beyond {
+        faces: [usize; DIM + 1],
+        face: usize,
+        next: usize,
+    },
+    /// The main loop.
+    Expand,
+}
+
+impl HullBuild {
+    /// The build of `points`' hull, nothing done yet; `None` when there are too few points.
+    pub(crate) fn new(points: &[[f64; 3]], tolerance: f64) -> Option<Self> {
+        Some(Self {
+            algorithm: ConvexHullAlgorithm::new(points, tolerance).ok()?,
+            stage: Stage::Bounds,
+        })
+    }
+
+    /// The vertex visits done so far.
+    pub(crate) fn work(&self) -> usize {
+        self.algorithm.work
+    }
+
+    /// The vertex visits the next [`step`](Self::step) of `work` does at least: the first step
+    /// reads every point twice (the bounding box and the shift) in one piece.
+    pub(crate) fn next_work(&self, work: usize) -> usize {
+        match self.stage {
+            Stage::Bounds => work.max(self.algorithm.number_of_vertices.saturating_mul(2)),
+            _ => work,
+        }
+    }
+
+    /// Does about `work` vertex visits of the build (a vertex tested against a face, or read
+    /// while setting up), stopping between iterations of the main loop, so one iteration may pass
+    /// `work` (the first step does [`next_work`](Self::next_work)). `Some` with the faces once the
+    /// build is over (`Some(None)` when it fails), `None` while there is more to do.
+    pub(crate) fn step(&mut self, work: usize) -> Option<Option<Vec<[usize; 3]>>> {
+        let hull = &mut self.algorithm;
+        let goal = hull.work.saturating_add(work);
+        loop {
+            if hull.work >= goal {
+                return None;
+            }
+            match &mut self.stage {
+                Stage::Bounds => {
+                    // next the bounding box extremes are found. This is used to shift, scale and
+                    // find the starting simplex.
+                    hull.find_bounding_box_points();
+                    // the positions are shifted to avoid divide by zero problems
+                    hull.shift_and_scale_positions();
+                    // Each pass reads every point once.
+                    hull.work = hull.work.saturating_add(hull.number_of_vertices * 2);
+                    self.stage = Stage::Simplex;
+                }
+                Stage::Simplex => {
+                    // Find the (dimension+1) initial points and create the simplexes.
+                    let Ok(faces) = hull.create_initial_faces() else {
+                        return Some(None);
+                    };
+                    hull.work = hull.work.saturating_add(1);
+                    hull.begin_beyond_vertices();
+                    self.stage = Stage::Beyond {
+                        faces,
+                        face: 0,
+                        next: 0,
+                    };
+                }
+                Stage::Beyond { faces, face, next } => {
+                    // Init the vertex beyond buffers, a run of vertices at a time.
+                    let end = next
+                        .saturating_add(goal - hull.work)
+                        .min(hull.number_of_vertices);
+                    // Each vertex tested counts itself (`is_beyond`).
+                    hull.find_beyond_vertices_in(faces[*face], *next..end);
+                    *next = end;
+                    if end == hull.number_of_vertices {
+                        hull.end_beyond_vertices(faces[*face]);
+                        *face += 1;
+                        *next = 0;
+                        if *face == faces.len() {
+                            self.stage = Stage::Expand;
+                        } else {
+                            hull.begin_beyond_vertices();
+                        }
+                    }
+                }
+                Stage::Expand => match hull.iterate() {
+                    Ok(true) => {}
+                    Ok(false) => return Some(Some(hull.get_convex_faces())),
+                    Err(HullFailed) => return Some(None),
+                },
+            }
+        }
+    }
+}
+
+/// What one affected face of a main-loop iteration counts, in vertex visits.
+const AFFECTED_FACE_VISITS: usize = 8;
 
 /// The quickhull's state: positions, face and connector pools, buffers and the hull so far.
 pub(super) struct ConvexHullAlgorithm {
@@ -67,6 +186,8 @@ pub(super) struct ConvexHullAlgorithm {
     connector_stack: Option<usize>,
     empty_buffer_stack: Vec<usize>,
     free_face_indices: Vec<usize>,
+    /// The vertex visits done so far (`HullBuild`'s measure of work).
+    work: usize,
 }
 
 impl ConvexHullAlgorithm {
@@ -115,40 +236,40 @@ impl ConvexHullAlgorithm {
             connector_stack: None,
             empty_buffer_stack: Vec::new(),
             free_face_indices: Vec::new(),
+            work: 0,
         })
     }
 
-    /// The quickhull main loop.
-    fn get_convex_hull(&mut self) -> Result<(), HullFailed> {
-        // accessing a 1D array is quicker than a jagged array (SerializeVerticesToPositions is
-        // done in `new`)
-        // next the bounding box extremes are found. This is used to shift, scale and find the
-        // starting simplex.
-        self.find_bounding_box_points();
-        // the positions are shifted to avoid divide by zero problems
-        self.shift_and_scale_positions();
-        // Find the (dimension+1) initial points and create the simplexes.
-        self.create_initial_simplex()?;
-
-        // Now, the main loop. These initial faces of a simplex are replaced and expanded
-        // outwards to make the convex hull and faces.
-        while let Some(current_face) = self.unprocessed_faces.first {
-            self.current_vertex = self.face_pool[current_face].furthest_vertex;
-            // The affected faces get tagged
-            self.tag_affected_faces(current_face)?;
-            // Create the cone from the currentVertex and the affected faces horizon.
-            if !self.singular_vertices.contains(&self.current_vertex) && self.create_cone()? {
-                self.commit_cone();
-            } else {
-                self.handle_singular();
-            }
-            // Need to reset the tags
-            for i in 0..self.affected_face_buffer.len() {
-                let f = self.affected_face_buffer[i];
-                self.affected_face_flags[f] = false;
-            }
+    /// One iteration of the quickhull's main loop: the initial faces of a simplex are replaced
+    /// and expanded outwards to make the convex hull and faces. `false` once no face is left to
+    /// process (the hull is done).
+    fn iterate(&mut self) -> Result<bool, HullFailed> {
+        let Some(current_face) = self.unprocessed_faces.first else {
+            return Ok(false);
+        };
+        self.work = self.work.saturating_add(1);
+        self.current_vertex = self.face_pool[current_face].furthest_vertex;
+        // The affected faces get tagged
+        self.tag_affected_faces(current_face)?;
+        // Create the cone from the currentVertex and the affected faces horizon.
+        if !self.singular_vertices.contains(&self.current_vertex) && self.create_cone()? {
+            self.commit_cone();
+        } else {
+            self.handle_singular();
         }
-        Ok(())
+        // Need to reset the tags
+        for i in 0..self.affected_face_buffer.len() {
+            let f = self.affected_face_buffer[i];
+            self.affected_face_flags[f] = false;
+        }
+        // Each affected face is walked, replaced by cone faces and connected; counted as
+        // vertex visits by the time it takes, measured natively on a 96,000-face mesh.
+        self.work = self.work.saturating_add(
+            self.affected_face_buffer
+                .len()
+                .saturating_mul(AFFECTED_FACE_VISITS),
+        );
+        Ok(true)
     }
 
     /// Each hull face's vertices, flipped faces with vertices 0 and 2 swapped.

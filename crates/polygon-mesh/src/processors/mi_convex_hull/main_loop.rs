@@ -230,6 +230,7 @@ impl ConvexHullAlgorithm {
     /// Files `v` in `beyond_vertices` if it is beyond the face, tracking the
     /// furthest (ties within tolerance go to the lexicographically larger position).
     pub(super) fn is_beyond(&mut self, face: usize, beyond_vertices: usize, v: usize) {
+        self.work = self.work.saturating_add(1);
         let distance = get_vertex_distance(&self.positions, v, &self.face_pool[face]);
         if distance >= self.plane_distance_tolerance {
             if distance > self.max_distance {

@@ -79,9 +79,9 @@ impl ConvexHullAlgorithm {
         }
     }
 
-    /// Builds the first hull faces from the initial points and files every other vertex
-    /// beyond them.
-    pub(super) fn create_initial_simplex(&mut self) -> Result<(), HullFailed> {
+    /// The first hull faces, from the initial points, with the initial points marked visited;
+    /// no vertex is filed beyond them yet.
+    pub(super) fn create_initial_faces(&mut self) -> Result<[usize; DIM + 1], HullFailed> {
         let initial_points = self.find_initial_points()?;
 
         // Create the first faces from (dimension + 1) vertices.
@@ -111,20 +111,39 @@ impl ConvexHullAlgorithm {
         for &item in initial_points.iter() {
             self.vertex_visited[item as usize] = true;
         }
+        Ok(faces)
+    }
 
-        // Init the vertex beyond buffers.
-        for &face_index in faces.iter() {
-            self.find_beyond_vertices_all(face_index);
-            let face = &self.face_pool[face_index];
-            if self.buffers[face.vertices_beyond].is_empty() {
-                // The face is on the hull
-                self.convex_faces.push(face.index);
-            } else {
-                self.unprocessed_faces
-                    .add(&mut self.face_pool, &self.buffers, face_index);
+    /// Starts filing the vertices beyond an initial face ([`Self::find_beyond_vertices_in`]
+    /// over every vertex, in order, then [`Self::end_beyond_vertices`]).
+    pub(super) fn begin_beyond_vertices(&mut self) {
+        self.max_distance = f64::NEG_INFINITY;
+        self.furthest_vertex = 0;
+    }
+
+    /// Every unvisited vertex of `range` beyond the face, into its own buffer.
+    pub(super) fn find_beyond_vertices_in(&mut self, face: usize, range: std::ops::Range<usize>) {
+        let beyond_vertices = self.face_pool[face].vertices_beyond;
+        for i in range {
+            if self.vertex_visited[i] {
+                continue;
             }
+            self.is_beyond(face, beyond_vertices, i);
         }
-        Ok(())
+    }
+
+    /// Ends filing an initial face's beyond vertices: it is a hull face when none is beyond it,
+    /// else it waits for the main loop.
+    pub(super) fn end_beyond_vertices(&mut self, face_index: usize) {
+        self.face_pool[face_index].furthest_vertex = self.furthest_vertex;
+        let face = &self.face_pool[face_index];
+        if self.buffers[face.vertices_beyond].is_empty() {
+            // The face is on the hull
+            self.convex_faces.push(face.index);
+        } else {
+            self.unprocessed_faces
+                .add(&mut self.face_pool, &self.buffers, face_index);
+        }
     }
 
     /// Dimension + 1 points spanning a non-negligible volume.
@@ -344,19 +363,5 @@ impl ConvexHullAlgorithm {
             i += 1;
         }
         self.face_pool[r].adjacent_faces[i] = self.face_pool[l].index as i32;
-    }
-
-    /// Every unvisited vertex beyond the face, into its own buffer.
-    fn find_beyond_vertices_all(&mut self, face: usize) {
-        let beyond_vertices = self.face_pool[face].vertices_beyond;
-        self.max_distance = f64::NEG_INFINITY;
-        self.furthest_vertex = 0;
-        for i in 0..self.number_of_vertices {
-            if self.vertex_visited[i] {
-                continue;
-            }
-            self.is_beyond(face, beyond_vertices, i);
-        }
-        self.face_pool[face].furthest_vertex = self.furthest_vertex;
     }
 }
