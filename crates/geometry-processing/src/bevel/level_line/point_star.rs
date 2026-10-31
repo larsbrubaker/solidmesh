@@ -5,6 +5,12 @@
 //!
 //! The edge map is an `IndexMap` because it is walked in insertion order, and the order reaches
 //! the answer: the neighbour and feature-end lists are summed and averaged in it.
+//!
+//! A star is read off the whole mesh, because its room needs every feature edge of the part. Point
+//! mode's candidate list only asks each candidate whether a sharp edge meets it, which
+//! [`has_sharp_edges_at`] answers from the triangles round that one vertex
+//! ([`triangles_around`], indexed once per mesh), so listing a heavy part's corners is one pass
+//! over the mesh rather than one per corner.
 
 use indexmap::IndexMap;
 use vector_math::Vector3;
@@ -40,7 +46,7 @@ impl PointStar {
         let at = |i: i32| positions[i as usize];
         let normals: Vec<Vector3> = triangles
             .iter()
-            .map(|&(a, b, c)| (at(b) - at(a)).cross(at(c) - at(a)).get_normal())
+            .map(|&triangle| face_normal(positions, triangle))
             .collect();
 
         let mut face_normals = Vec::new();
@@ -64,12 +70,12 @@ impl PointStar {
             }
         }
 
-        let bend = (bend_threshold_degrees * std::f64::consts::PI / 180.0).cos();
+        let bend = bend_cosine(bend_threshold_degrees);
         let mut neighbours = Vec::new();
         let mut feature_ends = Vec::new();
         let mut far_features = Vec::new();
         for (&(low, high), on) in &edge_triangles {
-            let feature = on.len() != 2 || normals[on[0]].dot(normals[on[1]]) < bend;
+            let feature = is_feature(on, |i| normals[i], bend);
             if low == vertex || high == vertex {
                 let other = at(if low == vertex { high } else { low });
                 neighbours.push(other);
@@ -226,6 +232,70 @@ impl PointStar {
             f64::INFINITY
         }
     }
+}
+
+/// Each vertex's triangles, by index ascending, for [`has_sharp_edges_at`]: a triangle is listed
+/// once under each distinct vertex it uses.
+pub fn triangles_around(vertex_count: usize, triangles: &[(i32, i32, i32)]) -> Vec<Vec<usize>> {
+    let mut around: Vec<Vec<usize>> = vec![Vec::new(); vertex_count];
+    for (i, &(a, b, c)) in triangles.iter().enumerate() {
+        for v in [a, b, c] {
+            let list = &mut around[v as usize];
+            if list.last() != Some(&i) {
+                list.push(i);
+            }
+        }
+    }
+
+    around
+}
+
+/// [`PointStar::has_sharp_edges`] for `vertex`, read off only `around` (its triangles from
+/// [`triangles_around`]). The same answer bit for bit: every triangle on an edge at the vertex
+/// uses the vertex, so the edge's triangles are found here in the order the whole-mesh walk finds
+/// them, and their normals are the same sums.
+pub fn has_sharp_edges_at(
+    positions: &[Vector3],
+    triangles: &[(i32, i32, i32)],
+    around: &[usize],
+    vertex: i32,
+    bend_threshold_degrees: f64,
+) -> bool {
+    let mut edge_triangles: IndexMap<(i32, i32), Vec<usize>> = IndexMap::new();
+    for &i in around {
+        let (a, b, c) = triangles[i];
+        for (u, w) in [(a, b), (b, c), (c, a)] {
+            if u == vertex || w == vertex {
+                edge_triangles
+                    .entry((u.min(w), u.max(w)))
+                    .or_default()
+                    .push(i);
+            }
+        }
+    }
+
+    let bend = bend_cosine(bend_threshold_degrees);
+    edge_triangles
+        .values()
+        .any(|on| is_feature(on, |i| face_normal(positions, triangles[i]), bend))
+}
+
+/// A triangle's unit normal.
+fn face_normal(positions: &[Vector3], (a, b, c): (i32, i32, i32)) -> Vector3 {
+    let at = |i: i32| positions[i as usize];
+    (at(b) - at(a)).cross(at(c) - at(a)).get_normal()
+}
+
+/// The cosine two faces' normals fall below where the edge between them bends by more than the
+/// threshold.
+fn bend_cosine(bend_threshold_degrees: f64) -> f64 {
+    (bend_threshold_degrees * std::f64::consts::PI / 180.0).cos()
+}
+
+/// Whether the edge whose triangles are `on` is a feature edge: an open or non-manifold edge, or
+/// one whose two faces bend past `bend` (a cosine).
+fn is_feature(on: &[usize], normal: impl Fn(usize) -> Vector3, bend: f64) -> bool {
+    on.len() != 2 || normal(on[0]).dot(normal(on[1])) < bend
 }
 
 /// The mean of `values`: the sum in order, over the count. An empty sequence (a star with no

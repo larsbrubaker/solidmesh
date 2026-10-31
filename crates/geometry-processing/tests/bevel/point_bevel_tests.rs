@@ -11,6 +11,7 @@ use geometry_processing::bevel::level_line::point_bevel::{
     self, PointBevelKind, PointBevelRefusal,
 };
 use geometry_processing::bevel::level_line::point_candidates;
+use geometry_processing::bevel::level_line::point_star::PointStar;
 use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
 use vector_math::number_format::format_f64_max_decimals;
 use vector_math::{Matrix4X4, Vector3};
@@ -268,6 +269,45 @@ fn every_candidate_takes_a_chamfer_and_only_a_point_without_sharp_edges_a_fillet
         cube_candidates.iter().all(|c| !c.allows_fillet),
         "three sharp edges meet every cube corner"
     );
+}
+
+#[test]
+fn each_candidates_sharp_edges_read_round_it_match_its_whole_mesh_star() {
+    // A cone at a threshold low enough to offer its base rim too, beside a cube: points with and
+    // without sharp edges in one mesh, each answered from its own triangles.
+    let (mut positions, mut triangles) = cone(false);
+    let (cube_positions, cube_triangles) = cube(2.0);
+    let offset = positions.len() as i32;
+    positions.extend(
+        cube_positions
+            .iter()
+            .map(|p| *p + Vector3::new(5.0, 0.0, 0.0)),
+    );
+    triangles.extend(
+        cube_triangles
+            .iter()
+            .map(|&(a, b, c)| (a + offset, b + offset, c + offset)),
+    );
+    let threshold = 10.0;
+
+    let described = point_candidates::describe(&positions, &triangles, threshold);
+
+    assert_eq!(
+        described.len(),
+        1 + SIDES as usize + 8,
+        "the apex, the base rim and the cube's corners"
+    );
+    assert!(described.iter().any(|c| c.allows_fillet));
+    assert!(described.iter().any(|c| !c.allows_fillet));
+    for candidate in &described {
+        let star = PointStar::new(&positions, &triangles, candidate.vertex, threshold);
+        assert_eq!(
+            candidate.allows_fillet,
+            !star.has_sharp_edges(),
+            "vertex {}",
+            candidate.vertex
+        );
+    }
 }
 
 #[test]

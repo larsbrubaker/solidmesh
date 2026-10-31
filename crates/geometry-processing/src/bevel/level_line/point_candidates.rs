@@ -3,13 +3,13 @@
 //! face angles - exceeds the bend threshold, so a cone's tip and a cube's corner qualify while a
 //! vertex on a smooth tessellated surface or along a tessellated rim (a few degrees) does not.
 //! Each candidate says whether a fillet is offered there as well as a chamfer, read off its
-//! [`PointStar`]; the bevel itself is [`super::point_bevel`].
+//! [`super::point_star::PointStar`]; the bevel itself is [`super::point_bevel`].
 
 use std::collections::HashMap;
 
 use vector_math::Vector3;
 
-use super::point_star::PointStar;
+use super::point_star;
 
 /// A vertex point mode offers, and whether a fillet is offered there as well
 /// as a chamfer.
@@ -51,12 +51,22 @@ pub fn describe(
     bend_threshold_degrees: f64,
 ) -> Vec<PointCandidate> {
     let defects = angle_defects(positions, triangles);
+    let candidates = find(positions, triangles, bend_threshold_degrees);
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+
+    // Indexed once, so each candidate reads only its own triangles.
+    let around = point_star::triangles_around(positions.len(), triangles);
     let mut described = Vec::new();
-    for v in find(positions, triangles, bend_threshold_degrees) {
-        // one star per candidate walks the whole mesh; fine for the kernel, index once if the panel
-        // needs speed
-        let sharp =
-            PointStar::new(positions, triangles, v, bend_threshold_degrees).has_sharp_edges();
+    for v in candidates {
+        let sharp = point_star::has_sharp_edges_at(
+            positions,
+            triangles,
+            &around[v as usize],
+            v,
+            bend_threshold_degrees,
+        );
         described.push(PointCandidate {
             vertex: v,
             defect_degrees: defects[v as usize].0,
