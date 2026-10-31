@@ -3,7 +3,7 @@
 //! Expected strings come from that release run over the same point sets; each face is its
 //! vertices' indices into the input.
 
-use super::{create, ConvexHullAlgorithm};
+use super::{create, ConvexHullAlgorithm, HullBuild};
 
 fn faces_string(points: &[[f64; 3]]) -> String {
     match create(points, 0.01) {
@@ -44,9 +44,9 @@ fn rust_only_cube_corners_match_miconvexhull() {
     );
 }
 
-#[test]
-fn rust_only_point_cloud_matches_miconvexhull() {
-    let cloud: Vec<[f64; 3]> = (0..200i64)
+/// 200 points scattered through a box with no structure.
+fn cloud() -> Vec<[f64; 3]> {
+    (0..200i64)
         .map(|i| {
             [
                 ((i * 7919) % 1000) as f64 / 37.0,
@@ -54,9 +54,13 @@ fn rust_only_point_cloud_matches_miconvexhull() {
                 ((i * 1299709) % 991) as f64 / 43.0,
             ]
         })
-        .collect();
+        .collect()
+}
+
+#[test]
+fn rust_only_point_cloud_matches_miconvexhull() {
     assert_eq!(
-        faces_string(&cloud),
+        faces_string(&cloud()),
         "135,158,181 181,158,113 39,113,158 45,135,181 181,113,45 45,86,135 86,45,0 173,62,25 \
          173,112,62 62,112,113 39,62,113 62,39,25 0,2,137 137,136,0 25,115,136 25,136,173 \
          2,119,199 199,119,0 119,2,0 74,115,117 158,117,39 117,115,39 115,74,23 158,135,111 \
@@ -188,4 +192,28 @@ fn rust_only_dense_flat_based_grid_hulls_quickly() {
     eprintln!("bounding box points {dedupe:?}, whole hull {whole:?}");
     assert_eq!(faces, PINNED_CUBE_SURFACE_GRID_163);
     assert!(dedupe < std::time::Duration::from_millis(500), "{dedupe:?}");
+}
+
+/// The finest stepping - a single vertex visit asked for at a time - stops the build between
+/// every piece it can, and still emits the one-piece build's faces in the same order and winding,
+/// so a hull spread over many frames is the hull a desktop save builds.
+#[test]
+fn a_build_stepped_one_visit_at_a_time_emits_the_one_piece_faces() {
+    for (name, points) in [
+        ("cloud", cloud()),
+        ("grid", grid()),
+        ("cube surface", cube_surface_grid(8)),
+    ] {
+        let whole = create(&points, 0.01).expect("a hull");
+        let mut build = HullBuild::new(&points, 0.01).expect("enough points");
+        let mut steps = 0;
+        let stepped = loop {
+            steps += 1;
+            if let Some(faces) = build.step(1) {
+                break faces.expect("a hull");
+            }
+        };
+        assert_eq!(stepped, whole, "{name}");
+        assert!(steps > 10, "{name}: built in {steps} steps");
+    }
 }

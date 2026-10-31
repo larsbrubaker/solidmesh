@@ -7,8 +7,8 @@
 //! The mesh owns a typed [`ConvexHullCache`] whose entry carries the [`Mesh::changed_count`] it
 //! was built at, so any [`Mesh::mark_as_changed`] makes it stale, without a property bag or an
 //! event. [`ConvexHullSteps`] builds the same hull a piece at a time for a thread that must keep
-//! drawing frames, and caches it the same way. Every call is synchronous (a background hull of a mesh the owner may be editing
-//! would race), so there is no in-flight marker either.
+//! drawing frames, and caches it the same way. Every call is synchronous (a background hull of a
+//! mesh the owner may be editing would race), so there is no in-flight marker either.
 
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -154,12 +154,23 @@ impl<'a> ConvexHullSteps<'a> {
     }
 
     /// The vertex visits the next [`step`](Self::step) of `work` does at least: `work`, except
-    /// that the hull's first piece reads every distinct vertex twice in one go, and one vertex
-    /// read is the least a piece collecting the distinct vertices does.
+    /// that the hull's first piece reads every distinct vertex twice in one go, one vertex read
+    /// is the least a piece collecting the distinct vertices does, and the piece that reads the
+    /// last vertices also copies every distinct vertex into the hull's setup (counted here over
+    /// the ones found so far; the few the piece itself adds are recorded once it is done).
     pub fn next_work(&self, work: usize) -> usize {
         match &self.phase {
             Phase::Hull { build, .. } => build.next_work(work),
-            _ => work.max(DISTINCT_READ_VISITS),
+            Phase::Distinct { next, points, .. } => {
+                let reads = (work / DISTINCT_READ_VISITS).max(1);
+                let reading = work.max(DISTINCT_READ_VISITS);
+                if next.saturating_add(reads) >= self.mesh.vertices.len() {
+                    reading.saturating_add(points.len())
+                } else {
+                    reading
+                }
+            }
+            Phase::Done => work.max(DISTINCT_READ_VISITS),
         }
     }
 

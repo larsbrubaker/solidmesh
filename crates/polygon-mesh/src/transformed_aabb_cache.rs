@@ -6,6 +6,10 @@
 //! convex hull (`processors::hull_bounds_points`), worked out once per mesh change; a vertex
 //! inside the hull can never be an extreme.
 //!
+//! A vertex with a NaN or infinite coordinate (a broken file's stray vertex) is left out, so one
+//! such vertex cannot make the whole box NaN: the hull's on-or-outside test never keeps one, and
+//! the measure over every vertex (a mesh with no hull) skips them too.
+//!
 //! `Mesh::mark_as_changed` clears it ([`TransformedAabbCache::changed`]); the hull and the point
 //! set are keyed on [`crate::Mesh::changed_count`].
 
@@ -96,6 +100,9 @@ fn calculate_bounds(vertices: &[Vector3Float], transform: Matrix4X4) -> AxisAlig
     let mut max_xyz = Vector3::new(f64::MIN, f64::MIN, f64::MIN);
 
     for &position_in in vertices {
+        if !(position_in.x.is_finite() && position_in.y.is_finite() && position_in.z.is_finite()) {
+            continue;
+        }
         let position = Vector3::from_vector3_float(position_in).transform(transform);
 
         min_xyz.x = min_f64(min_xyz.x, position.x);

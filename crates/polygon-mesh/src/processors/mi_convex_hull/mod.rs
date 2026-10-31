@@ -9,6 +9,12 @@
 //! Neighbors: `data_model` (faces, connectors, lists, pools), `math_helper` (planes, volumes),
 //! `initialize` (bounding box points and the initial simplex), `main_loop` (cone building);
 //! the seeded random generator is `vector_math::seeded_random`.
+//!
+//! The build runs a piece at a time ([`HullBuild`]): the bounding box and shift in one piece,
+//! the starting simplex, the vertices beyond its faces a run at a time, then the main loop an
+//! iteration at a time, each piece doing about the vertex visits asked of it. The pieces run the
+//! one build in its own order, so however finely it is cut the faces are the same; the mesh's
+//! hull (`mesh_convex_hull::ConvexHullSteps`) steps it so a frame-bound thread can spread it.
 
 mod data_model;
 mod initialize;
@@ -21,7 +27,7 @@ use data_model::{ConnectorList, DeferredFace, FaceConnector, FaceInternal, FaceL
 use math_helper::DIM;
 
 /// The hull could not be built (degenerate input, or broken topology inside the algorithm);
-/// [`create`] turns it into `None`.
+/// [`HullBuild::new`] turns it into `None`, [`HullBuild::step`] into `Some(None)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct HullFailed;
 
@@ -39,9 +45,11 @@ pub(crate) fn create(points: &[[f64; 3]], tolerance: f64) -> Option<Vec<[usize; 
     }
 }
 
-/// The hull of [`create`] built a piece at a time, so a caller that must keep drawing frames can
-/// spread a large mesh's hull over them. The pieces run the one build in its own order, so the
-/// faces are [`create`]'s.
+/// The convex hull of 3D points built a piece at a time ([`step`](Self::step)), so a caller that
+/// must keep drawing frames can spread a large mesh's hull over them: the hull faces as triples
+/// of indices into the points (flipped faces have vertices 0 and 2 swapped), in the algorithm's
+/// face order. The pieces run the one build in its own order, so the faces are those of the
+/// build run in one piece however finely it is cut.
 pub(crate) struct HullBuild {
     algorithm: ConvexHullAlgorithm,
     stage: Stage,
