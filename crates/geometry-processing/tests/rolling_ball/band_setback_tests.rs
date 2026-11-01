@@ -1,13 +1,13 @@
 //! The rolling ball's setbacks where they are not the level line's (a side that bends away beyond
 //! a narrow first face, so the ball touches the face past it); an open chain whose two sides'
 //! contacts differ (a groove and a wedge), each side cut at its own distance and each end face's
-//! cut meeting both rails; the passes and builds that keep the level line's: such a chain at a
-//! free end, an end ray or in a pass of several chains, chains meeting at a
-//! corner, a chain that is convex along part of its length and concave along the rest, and the
-//! probes a build runs inside itself, which never write the route; which group reads a chain's
-//! side field; and a closed chain whose sides differ (the groove revolved into a ring), where
-//! each side's band is cut at its own side's distance. The grooves, the wedge and the ring are
-//! built here; the cube, the prism and the build are `band_route_tests.rs`'s.
+//! cut meeting both rails; the passes and builds that keep the level line's: such a chain with an
+//! end ray or in a pass of several chains, chains meeting at a corner, a chain that is convex
+//! along part of its length and concave along the rest, and the probes a build runs inside
+//! itself, which never write the route; which group reads a chain's side field; and a closed
+//! chain whose sides differ (the groove revolved into a ring), where each side's band is cut at
+//! its own side's distance. The grooves, the wedge and the ring are built here; the cube, the
+//! prism and the build are `band_route_tests.rs`'s.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -546,16 +546,16 @@ fn probes_keep_the_outer_passs_route() {
 }
 
 /// The one-wall-bending groove's ring: the profile revolved about the z axis at this mean radius.
-const RING_RADIUS: f64 = 20.0;
+pub const RING_RADIUS: f64 = 20.0;
 
 /// How many facets the ring has round the axis.
-const RING_SEGMENTS: i32 = 256;
+pub const RING_SEGMENTS: i32 = 256;
 
 /// The one-wall-bending groove's profile (straight wall at x < 0, steeper wall at x > 0) revolved
 /// about the z axis: profile point (x, z) at segment j is vertex j n + i at radius
 /// [`RING_RADIUS`] + x, angle 2 pi j / [`RING_SEGMENTS`]. A closed ring, with no caps; the groove's
 /// floor is the closed chain of vertices j n.
-fn a_ring_with_one_groove_wall_bending_steeper() -> (Vec<Vector3>, Triangles, Vec<i32>) {
+pub fn a_ring_with_one_groove_wall_bending_steeper() -> (Vec<Vector3>, Triangles, Vec<i32>) {
     let steep = STEEP_DEGREES.to_radians();
     let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
     let profile = [
@@ -800,20 +800,6 @@ fn open_chains_whose_sides_differ_in_a_pass_of_several_keep_the_level_line() {
         route.ends_with(
             "an open chain's end regions in a pass of several chains are not cut per side yet"
         ),
-        "{route}"
-    );
-}
-
-/// A stretch of the ring's floor picked as an open chain: its ends stand on the floor's crease
-/// running on unpicked, so every face round them is one side's or the other's and the ball ends
-/// free there, where the two rails end apart on the rim. A free end is not cut per side, so the
-/// pass keeps the level line.
-#[test]
-fn a_free_end_whose_sides_differ_keeps_the_level_line() {
-    let (positions, triangles, chain) = a_ring_with_one_groove_wall_bending_steeper();
-    let route = kept_the_level_line(&(positions, triangles), &[chain[..8].to_vec()]);
-    assert!(
-        route.ends_with("a free end is not cut per side yet"),
         "{route}"
     );
 }

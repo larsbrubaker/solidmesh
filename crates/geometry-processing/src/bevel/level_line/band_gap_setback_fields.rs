@@ -47,6 +47,11 @@ pub struct PassSetbacks {
 }
 
 impl PassSetbacks {
+    /// The turn, in degrees, past which a chain vertex of this pass's fields is mitred.
+    pub fn sharp_turn_degrees(&self) -> f64 {
+        self.sharp_turn_degrees
+    }
+
     /// The pick's step 1 readings.
     pub fn of(
         positions: &[Vector3],

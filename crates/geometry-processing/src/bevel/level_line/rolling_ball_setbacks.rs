@@ -33,9 +33,13 @@
 //! **An open chain's sides per side.** Where an open chain's two sides differ by more than
 //! [`SIDES_AGREE_SHARE`] of the size, each side's rail is cut at its own distance and each end face
 //! the round cuts (an end region) is cut by its own cap field ([`CapShift`]), which meets each
-//! side's rail exactly where that side's band ends. Where they differ the level line is still kept
-//! whole, with the route naming the sides' distances, at:
-//! - a free end (`LastStation`): the two rails end apart on the rim, and nothing cuts the end;
+//! side's rail exactly where that side's band ends. At every free end (`LastStation` with no end
+//! face: the edge runs on as an unpicked crease), whether or not the sides differ there, both
+//! sides' setbacks taper to nothing at the end vertex (`rolling_ball_free_ends`), so the round
+//! closes onto that vertex. Where they differ the level
+//! line is still kept whole, with the route naming the sides' distances, at:
+//! - an end face the walk never reached (its last station short of the face's plane): nothing
+//!   says where on that face the rails end;
 //! - an end face where the end station's contact on a side rests on a rim of that side as the
 //!   walk extends it past the face (a gap in the extension, `rolling_ball::side_extension`): its
 //!   distance is no setback, so the pass keeps the level line rather than build short;
@@ -76,6 +80,7 @@ use vector_math::Vector3;
 
 use super::band_gap_setback_fields::PassSetbacks;
 use super::rolling_ball_end_caps::{self, CapSide};
+use super::rolling_ball_free_ends;
 use super::triangle_edges;
 use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
 use super::{BandProfile, ChainField};
@@ -94,8 +99,10 @@ pub struct SideSetbacks {
     pub right: Vec<f64>,
     /// How each end's cap is cut, as (first end, last end), where that end's two sides differ by
     /// more than [`SIDES_AGREE_SHARE`] of the size (only on an end face, square or leaning, that
-    /// carries both rails' ends, the pass refused at every other end where they differ); `None` where they agree and on a closed chain, whose
-    /// cap, if any, reads the chain's own field (the larger side) as the level line does.
+    /// carries both rails' ends; a free end's sides taper to the end vertex instead, and the pass
+    /// is refused at every other end where they differ); `None` where they agree, at a free end
+    /// and on a closed chain, whose cap, if any, reads the chain's own field (the larger side) as
+    /// the level line does.
     pub caps: [Option<CapShift>; 2],
 }
 
@@ -411,17 +418,40 @@ fn walked_setbacks(
         }
         let mut caps = [None, None];
         if !closed[k] {
+            // Every free end closes the round onto its end vertex, whether or not the sides
+            // agree there: both sides' setbacks taper to nothing at it (`rolling_ball_free_ends`).
+            let free_ends =
+                [0, 1].map(|end| ends[end].is_none() && walk.ends[end] == WalkEnd::LastStation);
+            for (end, &free) in free_ends.iter().enumerate() {
+                if free {
+                    for side in [&mut left, &mut right] {
+                        rolling_ball_free_ends::close_onto_the_end_vertex(
+                            side,
+                            &band.chain_points[k],
+                            end == 1,
+                            size,
+                            band.sharp_turn_degrees(),
+                            // The other end's end ray, if it has one.
+                            if end == 1 {
+                                band.end_rays[k].0
+                            } else {
+                                band.end_rays[k].1
+                            },
+                        );
+                    }
+                }
+            }
             for (end, finished) in walk.ends.iter().enumerate() {
                 let i = if end == 0 { 0 } else { points.len() - 1 };
                 let (l, r) = (left[i] * size, right[i] * size);
-                if (l - r).abs() <= SIDES_AGREE_SHARE * size {
+                if free_ends[end] || (l - r).abs() <= SIDES_AGREE_SHARE * size {
                     continue;
                 }
                 let differ = format!("chain {k} end {end}: the sides' contacts stand {l} and {r}");
                 let (Some(_), WalkEnd::EndFace) = (ends[end].as_ref(), *finished) else {
                     return Err(format!(
-                        "{differ} from the chain at a free end, whose rails end apart on the \
-                         rim, and a free end is not cut per side yet"
+                        "{differ} from the chain at an end face the ball's walk never reached, \
+                         and only an end it reaches is cut per side"
                     ));
                 };
                 // The band's own fields, so each side's rail ends where that side's band does.
