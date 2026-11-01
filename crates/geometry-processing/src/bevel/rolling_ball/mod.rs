@@ -27,7 +27,8 @@
 //!   every station checked to be a usable ball ([`StationFault`]: not reaching past the part, on
 //!   the right side of each contact, not resting on a rim both sides share). A chain ending on a
 //!   face that is neither side ([`EndFace`]) keeps the ball's centre on its own side of that
-//!   face's plane, held in the plane where it would cross, and the end face never refuses it.
+//!   face's plane, held in the plane where it would cross, reads each side as extended past the
+//!   face (`side_extension.rs`), and the end face never refuses it.
 //!   A free end where the contacts meet on the chain closes with a zero-width end station
 //!   (`run_out.rs`); [`ChainWalk`] says how each end finished ([`WalkEnd`]).
 //!
@@ -42,6 +43,7 @@ mod ball_station;
 mod contact_tracking;
 pub mod rolling_ball_routing;
 mod run_out;
+mod side_extension;
 mod side_surface;
 mod walk;
 

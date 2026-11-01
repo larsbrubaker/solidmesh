@@ -200,7 +200,7 @@ struct Node {
 /// One side of a picked edge: the triangles of the part on that side, with a box tree.
 #[derive(Debug, Clone)]
 pub struct RollingBallSide {
-    positions: Vec<Vector3>,
+    pub(super) positions: Vec<Vector3>,
     pub(super) triangles: Vec<[i32; 3]>,
     /// Triangle indices in tree order.
     order: Vec<usize>,

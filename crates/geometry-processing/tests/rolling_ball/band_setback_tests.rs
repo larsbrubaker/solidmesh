@@ -15,6 +15,7 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_one_unvalidated, build_pick, BandGapBuildOptions,
 };
+use geometry_processing::bevel::level_line::band_gap_setback_fields::PassSetbacks;
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::rolling_ball_setbacks::{
     for_the_pass, unless_a_rayed_end_differs, PassScope, SideSetbacks,
@@ -34,7 +35,7 @@ use crate::band_route_tests::{a_sixty_degree_prism, built, creases, Triangles};
 /// at y = 0 and vertex n + i at y = `length`. Each end cap is a fan from `centre` (vertices 2n
 /// and 2n + 1) where given, or else from profile point 0; the profile must be star-shaped from
 /// it. Wound so the solid's volume is positive.
-fn extruded(
+pub fn extruded(
     profile: &[(f64, f64)],
     length: f64,
     centre: Option<(f64, f64)>,
@@ -417,6 +418,24 @@ fn only_a_side_member_proper_reads_a_side_field() {
     assert!(Rc::ptr_eq(&read[0], &own[0]) && Rc::ptr_eq(&read[1], &own[1]));
 }
 
+/// The pass's own setbacks for a fillet with a 30 degree sharp turn, whose fields the cap reads.
+fn the_band(
+    positions: &[Vector3],
+    triangles: &Triangles,
+    chains: &[Vec<i32>],
+    closed: &[bool],
+) -> PassSetbacks {
+    PassSetbacks::of(
+        positions,
+        triangles,
+        chains,
+        closed,
+        30.0,
+        BandProfile::Fillet,
+    )
+    .expect("the pass's setbacks")
+}
+
 /// A 60 degree prism's top rim picked as three open chains meeting at its corners: the ball's
 /// rule for a corner is not built, so the whole pass keeps the level line's, and says so.
 #[test]
@@ -435,7 +454,7 @@ fn chains_meeting_at_a_corner_keep_the_level_line_whole() {
         None,
         0.2,
         BandProfile::Fillet,
-        30.0,
+        &the_band(&positions, &triangles, &chains, &[false, false, false]),
         false,
     );
     let route = last_route();
@@ -473,7 +492,7 @@ fn a_chain_both_convex_and_concave_keeps_the_level_line_whole() {
         None,
         0.2,
         BandProfile::Fillet,
-        30.0,
+        &the_band(&positions, &triangles, &[vec![2, 3, 9]], &[false]),
         false,
     );
     let route = last_route();

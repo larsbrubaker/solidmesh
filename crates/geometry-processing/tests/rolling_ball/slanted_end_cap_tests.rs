@@ -1,8 +1,9 @@
 //! The rolling ball's per-side cap on an end face that leans off square to the chain: the
 //! one-wall-bending wedge sheared along its apex, so its walls stay the same planes (the ball's
-//! contacts are the square wedge's) and each end face leans 10 degrees. The pass keeps the level
-//! line there today; the cut it is to make is held to hand answers for where each rail ends on
-//! each wall's edge with the end face.
+//! contacts are the square wedge's) and each end face leans 10 degrees. The ball reads each wall
+//! as extended past the leaning end face, so every rail runs at its wall's own distance, and each
+//! end's cut is held to hand answers for where each rail ends on each wall's edge with the end
+//! face.
 
 use std::collections::HashMap;
 
@@ -12,8 +13,9 @@ use vector_math::Vector3;
 
 use crate::band_route_tests::{built, Triangles};
 use crate::band_setback_tests::{
-    a_wedge_with_one_wall_bending_steeper, kept_the_level_line, on_the_steeper_walls_edge,
-    on_the_straight_walls_edge, the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES,
+    a_wedge_with_one_wall_bending_steeper, extruded, kept_the_level_line,
+    on_the_steeper_walls_edge, on_the_straight_walls_edge,
+    the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES,
 };
 
 /// The chain: the apex from (0, 0, 0) to (0, 6, 0).
@@ -63,22 +65,6 @@ fn rail_end_by_hand(
     point(0.5 * (lo + hi))
 }
 
-/// The wedge's end faces leaning 10 degrees off square (too little for an end ray): the walk reads
-/// each side only on the chain's side of a leaning end face, so its end stations' contacts move
-/// off the rails' (2.70 and 2.32 from the chain where the walls' are 2.72 and 2.34), and the pass
-/// keeps the level line and says why.
-#[test]
-fn a_wedge_whose_sides_differ_and_whose_end_face_leans_keeps_the_level_line() {
-    let route = kept_the_level_line(&a_slanted_wedge(10f64.to_radians().tan()), &[vec![0, 4]]);
-    assert!(
-        route.ends_with(
-            "an end face that is not square to the chain or does not reach both rails along its \
-             own wall edges is not cut per side yet"
-        ),
-        "{route}"
-    );
-}
-
 /// The wedge's ends leaning 10 degrees off square (too little for an end ray), its sides' contacts
 /// 2.34 (the straight wall) and 2.72 (the steeper wall) from the chain at radius 2: the pass takes
 /// the ball. Each rail runs at its own side's distance from the chain; each end face's cut meets
@@ -87,8 +73,6 @@ fn a_wedge_whose_sides_differ_and_whose_end_face_leans_keeps_the_level_line() {
 /// from the end vertex, on the others its distance from the chain's line, each worked out here by
 /// hand; the fill refuses nothing and the result is closed.
 #[test]
-#[ignore = "the walk's end station reads each side only on the chain's side of a leaning end \
-            face, so its setbacks there are not the rails' (docs/rolling-ball-fillet.md, Next)"]
 fn a_wedge_whose_sides_differ_and_whose_end_face_leans_cuts_each_end_to_meet_both_rails() {
     let slope = 10f64.to_radians().tan();
     let part = a_slanted_wedge(slope);
@@ -183,5 +167,107 @@ fn a_wedge_whose_sides_differ_and_whose_end_face_leans_cuts_each_end_to_meet_bot
             Some(&1),
             "edge {a}-{b} has no triangle running it back: the mesh is open"
         );
+    }
+}
+
+/// The square wedge with its first end face notched: the end face at the chain's first end is only
+/// the triangle from the apex to (-1.5, 0, 1.5) on the straight wall and (1, 0, 1) on the steeper
+/// wall, and the rest of that end is a pyramid standing out of it (creased far past the feature
+/// angle), a third face. Each wall's edge with the end face (2.12 and 1.41 long) is shorter than
+/// its rail's distance (2.34 and 2.72), so no point of the end face's own edge carries the rail's
+/// end, and the pass keeps the level line, saying so; a rail end read on along the pyramid's edges
+/// would cut the end face's cap through points that are not on it.
+#[test]
+fn a_wedge_whose_end_face_is_narrower_than_its_rails_keeps_the_level_line() {
+    let (mut positions, triangles) = a_wedge_with_one_wall_bending_steeper();
+    // Vertices 0..4 are the profile at y = 0, 4..8 at y = 6, 8 and 9 the caps' centres.
+    let notch = positions.len() as i32;
+    positions.push(Vector3::new(-1.5, 0.0, 1.5));
+    let apex = notch + 1;
+    positions.push(Vector3::new(-0.9, -3.0, 4.1));
+    let forward = triangles.contains(&(8, 1, 0))
+        || triangles.contains(&(1, 0, 8))
+        || triangles.contains(&(0, 8, 1));
+    let oriented = |(a, b, c): (i32, i32, i32)| if forward { (a, b, c) } else { (a, c, b) };
+    let mut notched: Triangles = Vec::new();
+    for &(a, b, c) in &triangles {
+        let t = [a, b, c];
+        if t.contains(&8) {
+            continue;
+        }
+        // The straight wall's triangle on the edge from vertex 3 to the apex, split at the notch.
+        if t.contains(&3) && t.contains(&0) && t.contains(&4) {
+            notched.push(oriented((3, notch, 4)));
+            notched.push(oriented((notch, 0, 4)));
+            continue;
+        }
+        notched.push((a, b, c));
+    }
+    for t in [
+        (notch, 1, 0),
+        (apex, 2, 1),
+        (apex, 3, 2),
+        (apex, notch, 3),
+        (apex, 1, notch),
+    ] {
+        notched.push(oriented(t));
+    }
+
+    let route = kept_the_level_line(&(positions, notched), &[vec![0, 4]]);
+    assert!(route.starts_with("level-line: chain 0 end 0: "), "{route}");
+    assert!(
+        route.ends_with(
+            "its rail does not meet the end face along the side's own edge with it (the end face \
+             is narrower than the rail's distance, or the band flows over it)"
+        ),
+        "{route}"
+    );
+}
+
+/// A roof ridge of 160 degrees (its faces falling 5 and 15 degrees from the ridge, the chain),
+/// sheared so each end face leans 25 degrees off square to it either way, rounded at radius 2: the
+/// ball's end station, held in a leaning end plane at so obtuse a corner, can touch a side where
+/// its extension past the face leaves a gap (beside the chain's own line carried on past the end
+/// vertex), on a strip's open edge. Such a contact is no setback: the pass either builds every
+/// setback at the hand answer, r tan 10 degrees (both faces flat), or keeps the level line saying
+/// the end contact rests on a rim; it never builds a band short.
+#[test]
+fn an_obtuse_ridge_with_a_leaning_end_never_builds_short() {
+    let (left, right) = (5f64.to_radians().tan(), 15f64.to_radians().tan());
+    let profile = [
+        (0.0, 0.0),
+        (-5.0, -5.0 * left),
+        (-5.0, -10.0),
+        (5.0, -10.0),
+        (5.0, -5.0 * right),
+    ];
+    let (positions, triangles) = extruded(&profile, LENGTH, None);
+    let radius = 2.0;
+    let hand = radius * 10f64.to_radians().tan();
+    for lean in [25.0f64, -25.0] {
+        let slope = lean.to_radians().tan();
+        let sheared: Vec<Vector3> = positions
+            .iter()
+            .map(|p| Vector3::new(p.x, p.y + (slope * p.x), p.z))
+            .collect();
+        let part = (sheared, triangles.clone());
+        let (ball, route) = built(&part, &[vec![0, 5]], radius, true);
+        let route = route.expect("the pass writes its route");
+        if route == "rolling-ball" {
+            assert_eq!(ball.refusal, BandGapRefusal::None);
+            for chain in &ball.chains {
+                for &setback in &chain.setbacks {
+                    assert!(
+                        (setback - hand).abs() < 1e-9,
+                        "lean {lean}: {setback} where {hand}"
+                    );
+                }
+            }
+        } else {
+            assert!(
+                route.contains("rests on a rim of the side extended past the face"),
+                "lean {lean}: {route}"
+            );
+        }
     }
 }

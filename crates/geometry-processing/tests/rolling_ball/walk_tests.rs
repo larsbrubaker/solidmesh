@@ -462,9 +462,14 @@ fn where_the_free_ball_would_leave_through_the_end_face_its_centre_is_held_in_th
         (last.contact_a.point - Vector3::new(RADIUS / cos, 0.0, 0.0)).length() <= EXACT,
         "{last:?}"
     );
+    // The floor's trace in the end plane, where the floor runs on into its extension past the end
+    // face: an edge of the side read as extended, no rim.
     assert!(
-        last.contact_a.feature.is_rim(),
-        "the floor's trace in the end plane"
+        matches!(
+            last.contact_a.feature,
+            ContactFeature::Edge { rim: false, .. }
+        ),
+        "the floor's trace in the end plane: {last:?}"
     );
     let on_wall = Vector3::new(RADIUS * sin * sin / cos, -RADIUS * sin, RADIUS);
     assert!(

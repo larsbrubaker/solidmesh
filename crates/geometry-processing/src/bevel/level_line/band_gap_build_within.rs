@@ -109,6 +109,15 @@ pub fn build_within(
         return Err(BuildFault::Error(BandGapBuildError::SizeNotPositive(size)));
     }
 
+    // 1. SETBACK, per chain.
+    let setbacks = PassSetbacks::of(
+        positions,
+        indices,
+        chains,
+        closed,
+        sharp_turn_degrees,
+        profile,
+    )?;
     // The field at the size takes the rolling ball's setbacks where its switch is on, this is the
     // outer pass and no topology-only probe, and the ball takes the whole pass; probes, the room
     // and every other size keep the level line's own, and only the outer pass writes the route.
@@ -122,7 +131,7 @@ pub fn build_within(
         side_regions,
         size,
         profile,
-        sharp_turn_degrees,
+        &setbacks,
         topology_only || !pass.is_outer(),
     );
     let is_feature_edge: FeatureEdgeTest =
@@ -131,15 +140,6 @@ pub fn build_within(
     let count = chains.len();
     let only = count == 1;
 
-    // 1. SETBACK, per chain.
-    let setbacks = PassSetbacks::of(
-        positions,
-        indices,
-        chains,
-        closed,
-        sharp_turn_degrees,
-        profile,
-    )?;
     let PassSetbacks {
         chain_edges,
         unit_setbacks,

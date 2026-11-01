@@ -37,24 +37,28 @@
 //! Where a chain ends on a face that is neither of its sides ([`EndFace`], given per end to
 //! [`RollingBall::walk_ending_on`]) - the T Handle's junction chains end on the pocket's floor -
 //! one rule holds. The end face is neither a side nor an obstacle: the ball touches only the two
-//! sides, each read only on the chain's side of the end face's plane (a side can wrap on past it,
-//! as the T Handle's pocket wall runs on through the web), and nothing of the part on the end face
-//! or beyond its plane refuses it. Its centre is kept on the chain's side of
+//! sides, each read as cut at the end face's plane and extended past it, each of its triangles
+//! meeting the plane carried on as its own plane (`side_extension.rs`: what lies past the plane
+//! of a side that wraps on past it, as the T Handle's pocket wall runs on through the web, is
+//! never read), and nothing of the part on the end face or beyond its plane refuses it. Its
+//! centre is kept on the chain's side of
 //! the end face's plane, the side the chain approaches from: where the free centre would cross the
 //! plane, the station is solved in the end plane instead of square to the chain, still at the
 //! radius from both sides, so the plane takes the place of the station's own. The round keeps its
-//! full radius right to the end, and the end face cuts it flat. Where the sides meet the end face
-//! square, the ball held in the plane touches each side on its trace in the plane, so the round's
-//! section there is the end face outline's own fillet, the round a part gets by extending the
-//! sides and trimming them at the end face. An end face that is not flat near the chain's end is
+//! full radius right to the end, and the end face cuts it flat: the round a part gets by extending
+//! the sides and trimming them at the end face. Where the sides meet the end face square, the ball
+//! held in the plane touches each side on its trace in the plane, so the round's section there is
+//! the end face outline's own fillet; where the face leans, the end stations touch the sides'
+//! extensions, so on prism walls every station's contacts stand the walls' own distances from the
+//! chain. An end face that is not flat near the chain's end is
 //! read as its tangent plane at the chain's end vertex, which the caller gives.
 //!
 //! A free end (no end face) where one side narrows to nothing can end the round with no width: the
 //! ball's two contacts meet on the chain ([`StationFault::ContactsMeet`]), and toward a free end,
 //! with no ball anywhere past that point, the walk closes there with a zero-width end station
 //! (`run_out.rs`). The result says how each end finished ([`WalkEnd`]). Each side is read a hair
-//! past every plane that bounds it, the corner's included, because the contacts converge onto the
-//! chain there and the chain lies in the corner's plane.
+//! past its half of the corner, because the contacts converge onto the chain there and the chain
+//! lies in the corner's plane.
 
 use vector_math::Vector3;
 
@@ -62,6 +66,7 @@ use super::ball_station::{
     ball_station_reading, flat_face_centre, BallStation, BallStationError, SideReading,
     SOLVED_RELATIVE,
 };
+use super::side_extension::extended_past;
 use super::side_surface::{HalfSpace, RollingBallSide, SideContact};
 
 /// How far beyond an end face's plane a free centre may stand, relative to one plus the radius,
@@ -76,10 +81,10 @@ const END_PLANE_RELATIVE: f64 = 1e-9;
 /// precision the mesh was stored at, fall wholly outside, and far below any feature of a part.
 const END_FACE_GAP_RELATIVE: f64 = 1e-6;
 
-/// How far past each plane that bounds a side's reading (its half of the corner, the chain's side
-/// of each end face) the side is still read, relative to one plus the radius. A side meets each
-/// such plane on its own surface - the chain lies in the corner's plane, and a side's trace in an
-/// end face's - and a contact there is surface, not cut; a plane a blended direction tilts by a
+/// How far past its half of the corner a side is still read, relative to one plus the radius, and
+/// how near an end face's plane a side's vertex counts as on it (`side_extension.rs`). A side
+/// meets the corner's plane on its own surface - the chain lies in it - and a contact there is
+/// surface, not cut; a plane a blended direction tilts by a
 /// hair would otherwise hide it, as where the round runs out and the contacts converge onto the
 /// chain. Its size is the end face gap's ([`END_FACE_GAP_RELATIVE`]): wide against the tilt a
 /// blended direction gives a plane between stations, and far below any feature of a part.
@@ -282,7 +287,10 @@ impl RollingBall<'_> {
     /// `ends[0]` the face its first point lies on, `ends[1]` its last's. Each end face is no
     /// obstacle, and the ball's centre stays on the chain's side of its plane, held in the plane
     /// where it would cross (see the file header). A station so held has its centre in the end
-    /// face's plane; its `chain_point` and `tangent` are still the chain's.
+    /// face's plane; its `chain_point` and `tangent` are still the chain's. With any end face,
+    /// each side is read as extended past it (`side_extension.rs`), and every contact's triangle
+    /// and feature indices name the extended side's own triangle list and vertices (the part's
+    /// vertices keep their indices; the cut's and the strips' come after them), not the side's.
     #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: a NaN refuses
     pub fn walk_ending_on(
         &self,
@@ -318,8 +326,26 @@ impl RollingBall<'_> {
                 normal: if cosine > 0.0 { normal } else { -normal },
             });
         }
+        // Each side read as cut at every end face's plane and extended past it as its own planes
+        // (`side_extension.rs`): the round the sides would make run on past the end face.
+        let scale = 1.0 + self.radius.abs();
+        let extended = (!kept.is_empty()).then(|| {
+            let tolerance = READING_PAST_RELATIVE * scale;
+            (
+                extended_past(self.side_a, &kept, self.radius, tolerance),
+                extended_past(self.side_b, &kept, self.radius, tolerance),
+            )
+        });
+        let ball = match &extended {
+            Some((side_a, side_b)) => RollingBall {
+                side_a,
+                side_b,
+                ..*self
+            },
+            None => *self,
+        };
         let walk = Walk {
-            ball: self,
+            ball: &ball,
             ends: &kept,
         };
 
@@ -553,13 +579,13 @@ impl Walk<'_, '_> {
     }
 
     /// The halves of space each side is read within at `point` for a ball of `radius`: its half of
-    /// the corner and the chain's side of every end face, each read a hair past its plane. A side
-    /// touches each plane on its own surface - the chain lies in the corner's plane, a side's trace
-    /// in an end face's - and a contact there is surface, not cut: where the round runs out the
+    /// the corner, read a hair past its plane. A side touches that plane on its own surface - the
+    /// chain lies in it - and a contact there is surface, not cut: where the round runs out the
     /// contacts converge onto the chain, and a plane through it that a blended direction tilts by
     /// a hair would otherwise hide them. A ball rolled on from a neighbour's (`track`) has no
-    /// corner half: its contacts are followed over each side's surface (`contact_tracking.rs`),
-    /// and only the end faces bound them.
+    /// corner half: its contacts are followed over each side's surface (`contact_tracking.rs`).
+    /// The end faces bound no reading: the walk's sides are already cut at them and extended past
+    /// them (`side_extension.rs`).
     fn reading_halves(
         &self,
         point: &ChainPoint,
@@ -573,7 +599,6 @@ impl Walk<'_, '_> {
         let past = READING_PAST_RELATIVE * (1.0 + radius.abs());
         let within = |half: Option<HalfSpace>| -> Vec<HalfSpace> {
             half.into_iter()
-                .chain(self.ends.iter().copied())
                 .map(|half| HalfSpace {
                     origin: half.origin - (half.normal * past),
                     normal: half.normal,
