@@ -38,7 +38,7 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
-use super::band_gap::{chord_tolerance_of, needle_floor_of, BandGapBuildError};
+use super::band_gap::{chord_tolerance_of, needle_floor_of, BandGapBuildError, BuildWithinArgs};
 use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
@@ -55,24 +55,10 @@ use super::{
     square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
 };
 use super::{
-    BandGapRefusal, BandGapResult, BandGroup, BandProfile, ChainEdgeNotOnTwoTriangles, ChainField,
+    BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, ChainField,
     FieldCounters, GapLoop, LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind,
     RoomSource, ScalarField, VertexFieldReading,
 };
-
-/// The build's arguments that are not the pick itself.
-pub struct BuildWithinArgs<'a> {
-    pub size: f64,
-    pub profile: BandProfile,
-    pub chord_tolerance: f64,
-    pub snap: f64,
-    pub known_room: Option<f64>,
-    pub topology_only: bool,
-    pub seam_epsilon: f64,
-    pub sharp_turn_degrees: f64,
-    pub fillet_segments: i32,
-    pub step_corners: &'a HashSet<i32>,
-}
 
 /// One group of a single-chain pick, seeded by chain 0 on `side`.
 fn one_chain_group(tag: i32) -> BandGroup {
@@ -110,6 +96,7 @@ pub fn build_within(
         sharp_turn_degrees,
         fillet_segments,
         step_corners,
+        side_regions,
     } = *args;
 
     if chains.iter().any(|one| one.len() < 2) {
@@ -132,6 +119,7 @@ pub fn build_within(
         chains,
         closed,
         is_feature_edge.as_deref(),
+        side_regions,
         size,
         profile,
         topology_only || !pass.is_outer(),

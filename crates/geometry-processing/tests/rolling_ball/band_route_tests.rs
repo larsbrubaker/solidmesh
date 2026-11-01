@@ -50,7 +50,7 @@ fn outward(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> Triangles {
 }
 
 /// A box from `min` to `max`: bottom corners 0 to 3, top 4 to 7, counterclockwise from (-, -).
-fn a_box(min: Vector3, max: Vector3) -> (Vec<Vector3>, Triangles) {
+pub fn a_box(min: Vector3, max: Vector3) -> (Vec<Vector3>, Triangles) {
     let positions = vec![
         Vector3::new(min.x, min.y, min.z),
         Vector3::new(max.x, min.y, min.z),

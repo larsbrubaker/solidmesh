@@ -50,14 +50,14 @@
 //! too: a contact's distance is not linear in the size on a curved side, so a setback per unit of
 //! size read at one size says nothing at another.
 //!
-//! **Where the sides come from.** The kernel reads each side for itself: from the triangles the
-//! chain's edges stand between, flooded over every edge that is neither a feature edge (the pass's
-//! own `is_feature_edge`) nor an edge of a chain in the pass. That is the region the pick shows
-//! the user on each side of the edge (the model floods its face regions to the same creases), and
-//! reading it here rather than handing triangle lists in through `BandGapBuildOptions` keeps the
-//! sides matched to the chains the pass actually builds: a pick is split at setback steps and
-//! probed one chain at a time on its way here, so lists made for the caller's chains would not
-//! line up with these. Its cost is one flood per side per pass, only with the switch on.
+//! **Where the sides come from** (`rolling_ball_sides.rs`). From the caller's face region of every
+//! triangle where it gives them (`band_gap_entry_points::build_pick_with_side_regions`, the
+//! regions the pick shows the user): each side is every region holding a triangle beside the
+//! chain's edges. Where it gives none, the kernel floods each side for itself from those
+//! triangles over every edge that is neither a feature edge (the pass's own `is_feature_edge`)
+//! nor an edge of a chain in the pass. That file's header says why the caller hands a region per
+//! triangle and not a side list per chain. The flood costs one walk per side per pass, only with
+//! the switch on.
 //!
 //! The whole part is the obstacle the ball may not reach past. A chain's end that lies on a face
 //! of neither side ends on that face (its plane through the end vertex, normal the area-weighted
@@ -69,7 +69,7 @@ use std::collections::HashSet;
 use vector_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
-use super::{chain_on_the_mesh, pick_validation};
+use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
 use super::{BandProfile, ChainField};
 use crate::bevel::rolling_ball::rolling_ball_routing::{
     set_last_route, use_rolling_ball, ROLLING_BALL_ROUTE,
@@ -179,6 +179,7 @@ pub fn for_the_pass(
     chains: &[Vec<i32>],
     closed: &[bool],
     is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    side_regions: Option<&[u32]>,
     size: f64,
     profile: BandProfile,
     probe: bool,
@@ -193,6 +194,7 @@ pub fn for_the_pass(
         chains,
         closed,
         is_feature_edge,
+        side_regions,
         size,
         profile,
     ) {
@@ -241,21 +243,25 @@ pub fn unless_a_rayed_end_differs(
 
 /// Every chain's walked setbacks, or why the pass keeps the level line's.
 #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x <= tolerance)` on purpose: a NaN refuses
+#[allow(clippy::too_many_arguments)]
 fn walked_setbacks(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
     closed: &[bool],
     is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    side_regions: Option<&[u32]>,
     size: f64,
     profile: BandProfile,
 ) -> Result<Vec<SideSetbacks>, String> {
     if profile == BandProfile::Chamfer {
         return Err("a chamfer is not rolled by a ball".to_string());
     }
-    let Some(is_feature_edge) = is_feature_edge else {
+    // The caller's face regions bound each side on their own; only the kernel's flood needs the
+    // feature edges.
+    if is_feature_edge.is_none() && side_regions.is_none() {
         return Err("the pass has no feature edges to bound its sides".to_string());
-    };
+    }
 
     if let Some(corner) = pick_validation::corners_of(chains, closed, true).first() {
         return Err(format!(
@@ -304,13 +310,17 @@ fn walked_setbacks(
             ));
         }
         let crosses = |a: i32, b: i32| {
-            !on_a_chain.contains(&triangle_edges::key(a, b)) && !is_feature_edge(a, b)
+            !on_a_chain.contains(&triangle_edges::key(a, b))
+                && !is_feature_edge.is_some_and(|feature| feature(a, b))
         };
-        let in_a = flood(indices, &standing, &lefts, &crosses);
-        let in_b = flood(indices, &standing, &rights, &crosses);
-        if in_a.iter().zip(&in_b).any(|(&a, &b)| a && b) {
-            return Err(format!("chain {k}: its two sides are one surface"));
-        }
+        let (in_a, in_b) = rolling_ball_sides::of_the_chain(
+            indices,
+            &standing,
+            k,
+            (&lefts, &rights),
+            side_regions,
+            &crosses,
+        )?;
 
         let triangles_of = |inside: &[bool]| -> Vec<[i32; 3]> {
             (0..indices.len())
@@ -517,41 +527,6 @@ fn from_the_chain(
     }
 
     nearest
-}
-
-/// Which triangles a walk from `seeds` reaches over edges `crosses` allows, by triangle index.
-fn flood(
-    indices: &[(i32, i32, i32)],
-    standing: &StandingMap,
-    seeds: &[i32],
-    crosses: &dyn Fn(i32, i32) -> bool,
-) -> Vec<bool> {
-    let mut inside = vec![false; indices.len()];
-    let mut stack: Vec<i32> = Vec::new();
-    for &seed in seeds {
-        if !inside[seed as usize] {
-            inside[seed as usize] = true;
-            stack.push(seed);
-        }
-    }
-    while let Some(t) = stack.pop() {
-        for (a, b) in triangle_edges::corners(indices[t as usize]) {
-            if !crosses(a, b) {
-                continue;
-            }
-            for &next in standing
-                .get(&triangle_edges::key(a, b))
-                .map_or(&[][..], Vec::as_slice)
-            {
-                if !inside[next as usize] {
-                    inside[next as usize] = true;
-                    stack.push(next);
-                }
-            }
-        }
-    }
-
-    inside
 }
 
 /// The chain's points as the ball reads them: each vertex with the chain's direction there and

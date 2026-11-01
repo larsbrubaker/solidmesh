@@ -1,7 +1,8 @@
 //! The band gap's public builds: the optional arguments are [`BandGapBuildOptions`] (whose
-//! `Default` holds the usual values) and there are three functions - one chain
-//! ([`build`]), a whole pick ([`build_pick`]), and one chain unvalidated with the topology-only
-//! switch ([`build_one_unvalidated`]). The funnel they reach is
+//! `Default` holds the usual values) and there are four functions - one chain
+//! ([`build`]), a whole pick ([`build_pick`]), a whole pick with the caller's face regions for the
+//! rolling ball's sides ([`build_pick_with_side_regions`]), and one chain unvalidated with the
+//! topology-only switch ([`build_one_unvalidated`]). The funnel they reach is
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated).
 
 use std::rc::Rc;
@@ -84,6 +85,37 @@ pub fn build_pick(
     profile: BandProfile,
     options: &BandGapBuildOptions,
 ) -> Result<BandGapResult, BandGapBuildError> {
+    build_pick_with_side_regions(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge,
+        size,
+        profile,
+        options,
+        None,
+    )
+}
+
+/// [`build_pick`] with the caller's face region of every triangle of `indices`
+/// (`side_regions[t]` is triangle t's region; regions are told apart by their numbers, nothing
+/// else). Where the rolling ball's switch is on, each chain's two sides are the regions holding
+/// the triangles either side of its edges, in place of the kernel's own flood over the feature
+/// edges (`rolling_ball_sides`); `None` is [`build_pick`]. A list whose length is not the
+/// triangle count keeps the level line, the route saying so.
+#[allow(clippy::too_many_arguments)]
+pub fn build_pick_with_side_regions(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    is_feature_edge: Option<FeatureEdgeTest>,
+    size: f64,
+    profile: BandProfile,
+    options: &BandGapBuildOptions,
+    side_regions: Option<&[u32]>,
+) -> Result<BandGapResult, BandGapBuildError> {
     pick_validation::check_pick_arguments(positions, indices, chains, closed)?;
     if size.is_nan() || size <= 0.0 {
         return Err(BandGapBuildError::SizeNotPositive(size));
@@ -127,6 +159,7 @@ pub fn build_pick(
         options.seam_epsilon,
         options.sharp_turn_degrees,
         options.fillet_segments,
+        side_regions,
     )
 }
 
@@ -160,5 +193,6 @@ pub fn build_one_unvalidated(
         options.seam_epsilon,
         options.sharp_turn_degrees,
         options.fillet_segments,
+        None,
     )
 }

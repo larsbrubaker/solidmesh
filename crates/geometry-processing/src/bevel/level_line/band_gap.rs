@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::band_gap_build_fault::BuildFault;
-use super::band_gap_build_within::{build_within, BuildWithinArgs};
+use super::band_gap_build_within::build_within;
 use super::chain_field_from_polyline::ChainFieldArgumentError;
 use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
@@ -20,6 +20,24 @@ use super::{
     band_side_tagging, chain_on_the_mesh, pick_validation, self_room, BandGapRefusal,
     BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges, WorkBudget, WorkError,
 };
+
+/// The build's arguments that are not the pick itself, as the funnel ([`build_unvalidated`])
+/// hands them to the build proper (`band_gap_build_within::build_within`).
+pub struct BuildWithinArgs<'a> {
+    pub size: f64,
+    pub profile: BandProfile,
+    pub chord_tolerance: f64,
+    pub snap: f64,
+    pub known_room: Option<f64>,
+    pub topology_only: bool,
+    pub seam_epsilon: f64,
+    pub sharp_turn_degrees: f64,
+    pub fillet_segments: i32,
+    pub step_corners: &'a HashSet<i32>,
+    /// The caller's face region of every triangle of the mesh, where it gave them: the rolling
+    /// ball's sides (`rolling_ball_sides`).
+    pub side_regions: Option<&'a [u32]>,
+}
 
 /// How a band gap build leaves without a result: the errors a caller sees. A refusal (the
 /// part said no) and a build that ran out of work are a [`BandGapResult`]; these are a caller's
@@ -70,7 +88,8 @@ impl From<PickArgumentError> for BandGapBuildError {
 /// for, and the build's own faults turned into the caller's outcomes - a cancel leaves as
 /// [`BandGapBuildError::Cancelled`], a chain edge not on two triangles and a budget that ran out
 /// as refusals carrying the working mesh as it stood. No input validation: the public builds
-/// (`band_gap_entry_points`) validate first.
+/// (`band_gap_entry_points`) validate first. `side_regions`, one face region per triangle of the
+/// mesh, reaches the rolling ball's sides unchanged by the split: the split moves no triangle.
 #[allow(clippy::too_many_arguments)]
 pub fn build_unvalidated(
     positions: &[Vector3],
@@ -88,6 +107,7 @@ pub fn build_unvalidated(
     seam_epsilon: f64,
     sharp_turn_degrees: f64,
     fillet_segments: i32,
+    side_regions: Option<&[u32]>,
 ) -> Result<BandGapResult, BandGapBuildError> {
     // Each edge keeps its own setback: a chain is cut where its edges' setbacks step. The vertices
     // inside a picked chain: where the split cuts one, the pieces meet at a STEP CORNER.
@@ -187,6 +207,7 @@ pub fn build_unvalidated(
         sharp_turn_degrees,
         fillet_segments,
         step_corners: &step_corners,
+        side_regions,
     };
     match build_within(
         positions,
