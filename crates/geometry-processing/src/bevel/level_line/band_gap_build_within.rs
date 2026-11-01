@@ -3,9 +3,27 @@
 //! refinement and roots per group, the band's delete, the room, the gap loops and the pinch -
 //! leaving nothing to do but fill. Its faults travel as [`BuildFault`] (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
-//! outcomes. Behind the rolling ball's switch, the outer pass's step 1 field at the size takes its
-//! setbacks from the ball's contacts (`rolling_ball_setbacks.rs`); its probes and the room keep
-//! the level line's own.
+//! outcomes. Step 1's setbacks and fields are `band_gap_setback_fields.rs`'s.
+//!
+//! Behind the rolling ball's switch, the outer pass's step 1 fields at the size take their
+//! setbacks from the ball's contacts (`rolling_ball_setbacks.rs`): one field per side per chain and
+//! the chain's own field, the larger of the two sides at each point.
+//! - **Per side:** each side group's reading for the chains it is a side of
+//!   (`band_group_fields::of_sides`), and with it that group's refinement, end clip and sharp-joint
+//!   corners, witness and roots - everything that places a side's rail.
+//! - **The chain's own field:** the tagging's reach, the end regions, the swallowed and consumed
+//!   rims, the loop walk and the result's `chains` (which the fill reads). These read both sides
+//!   at once. They are sound because the ball takes an open chain, the only kind with end regions,
+//!   swallowed sides, consumed rims and rails carried past an end, only where its two sides agree
+//!   within the solve's precision (`rolling_ball_setbacks::SIDES_AGREE_SHARE`), so there the
+//!   larger side is either side; on a closed chain whose sides differ they read the larger side as
+//!   a reach or a tolerance (how far the band can reach, the fill's monotone slack), never as where
+//!   a rail stands.
+//! - **The level line's own setbacks:** the probes, the room and every reading at another size
+//!   (`field_at_0`, the room's convex-ray field, the narrow end face's flow). Where a closed
+//!   chain's sides differ the room is the level line's: it can name a size the ball's band does
+//!   not fit (a side whose contact stands farther out than the angle formula says), and such a size
+//!   is then not refused by its room.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -17,6 +35,7 @@ use vector_math::Vector3;
 use super::band_gap::{chord_tolerance_of, needle_floor_of, BandGapBuildError};
 use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_reading::room_margin;
+use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
 use super::band_room;
 use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_END_TAG};
@@ -24,10 +43,10 @@ use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_groups,
-    band_side_tagging, band_triangles, chain_on_the_mesh, consumed_to_the_rim, corner_tie_points,
-    end_clip_corners, end_face_sense, gap_loop_walk, narrow_face_flow, pick_validation,
-    pinch_ladder_search, rolling_ball_setbacks, sharp_joint_corners, side_roots_settling,
-    side_witness, square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
+    band_side_tagging, band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners,
+    end_face_sense, gap_loop_walk, narrow_face_flow, pick_validation, pinch_ladder_search,
+    rolling_ball_setbacks, sharp_joint_corners, side_roots_settling, side_witness,
+    square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, BandProfile, ChainEdgeNotOnTwoTriangles, ChainField,
@@ -117,81 +136,25 @@ pub fn build_within(
     let count = chains.len();
     let only = count == 1;
 
-    // 1. SETBACK, per chain. Held per unit of size, so the room can ask the same question at any
-    // size.
-    let mut chain_edges: Vec<Vec<(i32, i32)>> = Vec::with_capacity(count);
-    let mut unit_setbacks: Vec<Vec<f64>> = Vec::with_capacity(count);
-    let mut chain_points: Vec<Vec<Vector3>> = Vec::with_capacity(count);
-    for k in 0..count {
-        let edges = chain_on_the_mesh::chain_edges(&chains[k], closed[k]);
-        unit_setbacks.push(chain_on_the_mesh::unit_setbacks(
-            positions, indices, &chains[k], closed[k], &edges, profile,
-        )?);
-        chain_edges.push(edges);
-        chain_points.push(chains[k].iter().map(|&v| positions[v as usize]).collect());
-    }
-
-    // An end on an OBLIQUE end face carries the end ray; an end at a CORNER is not an end face.
-    let corner_ends: HashSet<i32> = if count > 1 {
-        pick_validation::corners_of(chains, closed, true)
-            .iter()
-            .map(|c| c.vertex)
-            .collect()
-    } else {
-        HashSet::new()
-    };
-    let mut end_rays: Vec<(bool, bool)> = Vec::with_capacity(count);
-    let mut end_ray_bounds = Vec::with_capacity(count);
-    for k in 0..count {
-        let rays = end_face_sense::oblique_ends(
-            positions,
-            indices,
-            &chains[k],
-            closed[k],
-            sharp_turn_degrees,
-        );
-        let rays = (
-            rays.0 && !corner_ends.contains(&chains[k][0]),
-            rays.1 && !corner_ends.contains(&chains[k][chains[k].len() - 1]),
-        );
-        end_rays.push(rays);
-        end_ray_bounds.push(end_face_sense::end_ray_bounds(
-            positions, indices, &chains[k], rays,
-        ));
-    }
-
-    // A square end on a concave crease whose side runs on past it is clipped in the end face's
-    // plane.
-    let square_crease_clips = square_crease_end_clip::square_crease_end_clips_of_pick(
-        positions, indices, chains, closed, &end_rays,
-    );
-    for k in 0..count {
-        end_ray_bounds[k] = (
-            end_ray_bounds[k].0.or(square_crease_clips[k].0),
-            end_ray_bounds[k].1.or(square_crease_clips[k].1),
-        );
-    }
-
-    let field_from = |k: usize, units: &[f64], s: f64| {
-        let setbacks: Vec<f64> = units.iter().map(|u| u * s).collect();
-        ChainField::from_polyline_bounded(
-            &chain_points[k],
-            closed[k],
-            &setbacks,
-            sharp_turn_degrees,
-            end_rays[k],
-            end_ray_bounds[k],
-        )
-    };
-
-    let field_of = |k: usize, s: f64| field_from(k, &unit_setbacks[k], s);
-    let mut fields: Vec<Rc<ChainField>> = Vec::with_capacity(count);
-    for k in 0..count {
-        let units = ball_setbacks
-            .as_ref()
-            .map_or(&unit_setbacks[k], |ball| &ball[k]);
-        fields.push(Rc::new(field_from(k, units, size)?));
-    }
+    // 1. SETBACK, per chain.
+    let setbacks = PassSetbacks::of(
+        positions,
+        indices,
+        chains,
+        closed,
+        sharp_turn_degrees,
+        profile,
+    )?;
+    let PassSetbacks {
+        chain_edges,
+        unit_setbacks,
+        chain_points,
+        end_rays,
+        end_ray_bounds,
+        ..
+    } = &setbacks;
+    let field_of = |k: usize, s: f64| setbacks.field_of(k, s);
+    let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
     // at every size.
@@ -283,18 +246,18 @@ pub fn build_within(
         let mut undivided;
         (tags, groups, undivided) = band_side_groups::group_sides(
             indices,
-            &chain_edges,
+            chain_edges,
             &*is_feature_edge,
             true,
             Some(positions),
-            Some(&end_rays),
+            Some(end_rays),
             Some(&fields),
         )?;
         step_corner_carry::join_the_larger_setback_piece(
             positions,
             indices,
-            &chain_edges,
-            &unit_setbacks,
+            chain_edges,
+            unit_setbacks,
             &tags,
             &mut groups,
             step_corners,
@@ -314,7 +277,7 @@ pub fn build_within(
             undivided = band_side_tagging::first_both_sided_at_a_mixed_corner(
                 Some(positions),
                 indices,
-                &chain_edges,
+                chain_edges,
                 &groups,
             )?;
         }
@@ -345,7 +308,7 @@ pub fn build_within(
 
         // ...but never a needle standing ON the pick, nor a fold the tagging flooded up to.
         let mut on_a_chain: HashSet<(i32, i32)> = HashSet::new();
-        for edges in &chain_edges {
+        for edges in chain_edges.iter() {
             for &(from, to) in edges {
                 on_a_chain.insert(triangle_edges::key(from, to));
             }
@@ -446,8 +409,14 @@ pub fn build_within(
         &tags,
         Some(&input_standing),
     );
-    let (group_fields, group_samples) =
-        band_group_fields::of(&groups, only, &fields, run_outs.as_ref()).map_err(defect)?;
+    let (group_fields, group_samples) = band_group_fields::of_sides(
+        &groups,
+        only,
+        &fields,
+        side_fields.as_deref(),
+        run_outs.as_ref(),
+    )
+    .map_err(defect)?;
     let pick_has_corners = !pick_validation::corners_of(chains, closed, true).is_empty();
 
     // 3. PER GROUP: refine and root the group's own triangles against the group's own reading.
@@ -469,7 +438,14 @@ pub fn build_within(
             }
         }
 
-        let member_fields = || group.members.iter().map(|&m| &*fields[m as usize]);
+        let group_chain_fields =
+            band_group_fields::chain_fields_of(group, &fields, side_fields.as_deref());
+        let member_fields = || {
+            group
+                .members
+                .iter()
+                .map(|&m| &*group_chain_fields[m as usize])
+        };
         if !only {
             candidates = sharp_joint_corners::insert(
                 &reading,

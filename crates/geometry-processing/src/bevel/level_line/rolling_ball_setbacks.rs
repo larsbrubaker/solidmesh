@@ -11,15 +11,31 @@
 //! r from both edges but r sqrt 2 from the corner vertex, and a setback of r sqrt 2 there would
 //! cut the band far wider at every corner than the round is.
 //!
+//! **A setback per side.** Each side's contacts give that side's own setbacks ([`SideSetbacks`],
+//! left and right as `chain_on_the_mesh::sides_of` names a chain edge's two triangles: the left
+//! one runs the edge in the chain's direction, and the ball's side A is the left). Where a side
+//! curves away from the edge (a groove wall that bends, the T Handle's wall against its sphere)
+//! the two differ, and each side's band is cut at its own distance (`band_group_fields::of` hands
+//! each side group its own side's field through `band_group_fields::of_sides`).
+//!
 //! **Whole pass, never half.** The rolling ball decides the pass only where every chain in it
-//! walks: every station solves, both sides' contacts stand the same distance from the chain's
-//! edges within [`SIDES_AGREE_SHARE`] of the size (the pass has one field per chain, shared by
-//! both sides, so it can hold only one distance), and each end finishes on an end face or as a
-//! plain last station. Anything else keeps the level line's own setbacks for every chain, and the
-//! route says why: a chamfer, a pass with no feature-edge test, chains of the pass meeting at a
-//! corner (the ball's three-face rule for a corner is not built, and a corner is no end face), a
-//! chain whose edges are not all convex or all concave (one ball sits on one side of the part), a
-//! walk refused, a run-out end, sides that disagree, a distance that is not a finite number.
+//! walks: every station solves, both contacts' distances are finite numbers, each end finishes on
+//! an end face or as a plain last station, and an open chain's two sides agree within
+//! [`SIDES_AGREE_SHARE`] of the size. Anything else keeps the level line's own setbacks for every
+//! chain, and the route says why: a chamfer, a pass with no feature-edge test, chains of the pass
+//! meeting at a corner (the ball's three-face rule for a corner is not built, and a corner is no
+//! end face), a chain whose edges are not all convex or all concave (one ball sits on one side of
+//! the part), a walk refused, a run-out end, a distance that is not a finite number, an open chain
+//! whose sides differ.
+//!
+//! **Why an open chain's sides must still agree.** Several readings of an open chain's band read
+//! one field for both sides: the end face's cap (an end region reads the chain's own field, so it
+//! would be cut at one distance while each wall's rail ends at its own, leaving a notch along the
+//! wall), the swallowed sides' made-up runs, the rims a band consumed to, and the rail carried past
+//! an end. None of them is per side yet, so an open chain whose sides differ keeps the level
+//! line rather than build a band whose ends do not meet its rails. A closed chain has none of
+//! these: its side groups read their own side's fields, and what reads the chain's own field (the
+//! larger side) reads it as a reach or a tolerance, never as where a rail stands.
 //!
 //! **Only the outer pass.** The ball is walked, and the route written, only by the outermost
 //! `build_within` on the thread and only where it is not a topology-only probe ([`PassScope`]).
@@ -56,10 +72,32 @@ use crate::bevel::rolling_ball::rolling_ball_routing::{
 };
 use crate::bevel::rolling_ball::{ChainPoint, EndFace, RollingBall, RollingBallSide, WalkEnd};
 
-/// How far apart the two sides' contact distances may stand at one chain point, as a share of the
-/// size, for the one field the pass holds per chain to stand for both. A flat corner's two
-/// distances are equal to the solve's precision; a side that curves away from the edge sets them
-/// apart, and that needs a field per side.
+/// One chain's setbacks per unit of size from the rolling ball, one per chain vertex on each side:
+/// how far side A's (left) and side B's (right) contacts stand from the chain there.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SideSetbacks {
+    /// The left side's (tag 1's) setbacks.
+    pub left: Vec<f64>,
+    /// The right side's (tag 2's) setbacks.
+    pub right: Vec<f64>,
+}
+
+impl SideSetbacks {
+    /// The larger of the two sides at each chain vertex: how far the band reaches from the chain
+    /// on either side, which is what a reading of the whole band (not one side's rail) asks.
+    pub fn larger(&self) -> Vec<f64> {
+        self.left
+            .iter()
+            .zip(&self.right)
+            .map(|(&l, &r)| vector_math::ieee_math::max_f64(l, r))
+            .collect()
+    }
+}
+
+/// How far apart an open chain's two sides' contact distances may stand at one chain point, as a
+/// share of the size, for the one field its ends and swallowed sides read to stand for both. A
+/// flat corner's two distances are equal to the solve's precision; a side that curves away from
+/// the edge sets them apart.
 pub const SIDES_AGREE_SHARE: f64 = 1e-3;
 
 thread_local! {
@@ -99,8 +137,7 @@ impl Drop for PassScope {
     }
 }
 
-/// The pass's setbacks per unit of size from the rolling ball, one list per chain and one per
-/// chain vertex - or `None` where the switch is off, the pass is a `probe` (not the outer pass, or
+/// The pass's setbacks per unit of size from the rolling ball, one [`SideSetbacks`] per chain - or `None` where the switch is off, the pass is a `probe` (not the outer pass, or
 /// topology only), or the ball cannot take the whole pass. With the switch on, an outer pass that
 /// is no probe writes the route it took; a probe writes nothing (see the file header).
 #[allow(clippy::too_many_arguments)]
@@ -113,7 +150,7 @@ pub fn for_the_pass(
     size: f64,
     profile: BandProfile,
     probe: bool,
-) -> Option<Vec<Vec<f64>>> {
+) -> Option<Vec<SideSetbacks>> {
     if probe || !use_rolling_ball() {
         return None;
     }
@@ -148,7 +185,7 @@ fn walked_setbacks(
     is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
     size: f64,
     profile: BandProfile,
-) -> Result<Vec<Vec<f64>>, String> {
+) -> Result<Vec<SideSetbacks>, String> {
     if profile == BandProfile::Chamfer {
         return Err("a chamfer is not rolled by a ball".to_string());
     }
@@ -253,7 +290,8 @@ fn walked_setbacks(
             ));
         }
 
-        let mut unit = Vec::with_capacity(points.len());
+        let mut left = Vec::with_capacity(points.len());
+        let mut right = Vec::with_capacity(points.len());
         for (i, station) in walk.stations.iter().enumerate() {
             let to_a = from_the_chain(positions, edges, closed[k], i, station.contact_a.point);
             let to_b = from_the_chain(positions, edges, closed[k], i, station.contact_b.point);
@@ -262,15 +300,16 @@ fn walked_setbacks(
                     "chain {k} point {i}: a contact's distance is not a number ({to_a}, {to_b})"
                 ));
             }
-            if !((to_a - to_b).abs() <= SIDES_AGREE_SHARE * size) {
+            if !closed[k] && !((to_a - to_b).abs() <= SIDES_AGREE_SHARE * size) {
                 return Err(format!(
                     "chain {k} point {i}: the sides' contacts stand {to_a} and {to_b} from the \
-                     chain"
+                     chain, and an open chain's ends are not cut per side yet"
                 ));
             }
-            unit.push(((to_a + to_b) / 2.0) / size);
+            left.push(to_a / size);
+            right.push(to_b / size);
         }
-        setbacks.push(unit);
+        setbacks.push(SideSetbacks { left, right });
     }
 
     Ok(setbacks)

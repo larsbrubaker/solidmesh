@@ -1,17 +1,27 @@
 //! The rolling ball's setbacks where they are not the level line's (a side that bends away beyond
 //! a narrow first face, so the ball touches the face past it), and the passes and builds that
-//! keep the level line's: chains meeting at a corner, a chain that is convex along part of its
-//! length and concave along the rest, and the probes a build runs inside itself, which never
-//! write the route. Meshes and the build are `band_route_tests.rs`'s.
+//! keep the level line's: an open chain whose two sides' contacts differ, chains meeting at a
+//! corner, a chain that is convex along part of its length and concave along the rest, and the
+//! probes a build runs inside itself, which never write the route; which group reads a chain's
+//! side field; and a closed chain whose sides differ (the groove revolved into a ring), where
+//! each side's band is cut at its own side's distance. The grooves and the ring are built here; the
+//! cube, the prism and the build are `band_route_tests.rs`'s.
+
+use std::collections::HashMap;
+use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_one_unvalidated, build_pick, BandGapBuildOptions,
 };
+use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::rolling_ball_setbacks::{for_the_pass, PassScope};
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile};
+use geometry_processing::bevel::level_line::{
+    chain_fields_of, BandGapRefusal, BandGroup, BandProfile, ChainField, GapFillRefusal,
+};
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball,
 };
+use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use crate::band_route_tests::{a_sixty_degree_prism, built, creases, Triangles};
@@ -138,6 +148,153 @@ fn where_the_wall_bends_away_the_band_takes_the_balls_setback_not_the_angles() {
     }
 }
 
+/// The groove with only its right wall (x > 0) bending steeper past the narrow first face; the
+/// left wall runs straight at 45 degrees to the block's top. The chain is the floor, vertices 0
+/// and 8.
+fn a_groove_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
+    let steep = STEEP_DEGREES.to_radians();
+    let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
+    let profile = [
+        (0.0, 0.0),
+        (1.0, 1.0),
+        (tx, tz),
+        (5.0, tz),
+        (5.0, -3.0),
+        (-7.0, -3.0),
+        (-7.0, tz),
+        (-tz, tz),
+    ];
+    extruded(&profile, 6.0, Some((0.0, -2.0)))
+}
+
+/// Where a ball of `radius` touches each wall of the groove with one wall bending steeper, by
+/// hand, as (straight wall's distance from the floor's line, steeper wall's). The centre C stands
+/// `radius` inside both walls' lines: the straight wall's through the floor with inward normal
+/// (1, 1) / sqrt 2, the steeper wall's through (1, 1) with inward normal (-sin 65, cos 65). Each
+/// contact is C less `radius` times its wall's normal. The ball must clear the right wall's narrow
+/// first face, which the test checks.
+fn the_contact_distances_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
+    let steep = STEEP_DEGREES.to_radians();
+    let root_half = std::f64::consts::FRAC_1_SQRT_2;
+    let (a1, b1, c1) = (root_half, root_half, radius);
+    let (a2, b2) = (-steep.sin(), steep.cos());
+    let c2 = radius + a2 + b2;
+    let det = (a1 * b2) - (a2 * b1);
+    let (cx, cz) = (((c1 * b2) - (c2 * b1)) / det, ((a1 * c2) - (a2 * c1)) / det);
+    let along_first_face = ((cx + cz) / 2.0).clamp(0.0, 1.0);
+    let off_the_first_face = (cx - along_first_face).hypot(cz - along_first_face);
+    assert!(off_the_first_face > radius, "{off_the_first_face}");
+    let straight = (cx - (radius * a1)).hypot(cz - (radius * b1));
+    let steeper = (cx - (radius * a2)).hypot(cz - (radius * b2));
+    (straight, steeper)
+}
+
+/// Radius 2 in the groove whose right wall alone bends steeper: the ball touches the straight wall
+/// 2.34 from the floor and the steeper wall 2.72 from it, each by hand. The chain is open, and an
+/// open chain's end caps are not cut per side yet (a cap at one distance would leave a notch along
+/// the wall whose rail ends at the other), so the pass keeps the level line's band whole, exactly
+/// as with the switch off, and the route names both sides' distances.
+#[test]
+fn where_one_wall_bends_away_an_open_chain_keeps_the_level_line_and_names_both_sides() {
+    let radius = 2.0;
+    let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(radius);
+    assert!((straight - 2.3416).abs() < 1e-3, "{straight}");
+    assert!((steeper - 2.7235).abs() < 1e-3, "{steeper}");
+    let part = a_groove_with_one_wall_bending_steeper();
+    let chains = [vec![0, 8]];
+    let (ball, route) = built(&part, &chains, radius, true);
+    let route = route.expect("the outer pass writes its route");
+    let prefix = "level-line: chain 0 point 0: the sides' contacts stand ";
+    assert!(route.starts_with(prefix), "{route}");
+    assert!(
+        route.ends_with("an open chain's ends are not cut per side yet"),
+        "{route}"
+    );
+    let mut stand: Vec<f64> = route[prefix.len()..]
+        .split(" from the chain")
+        .next()
+        .expect("the distances")
+        .split(" and ")
+        .map(|number| number.parse().expect("a distance"))
+        .collect();
+    stand.sort_by(f64::total_cmp);
+    assert_eq!(stand.len(), 2, "{route}");
+    assert!((stand[0] - straight).abs() < 1e-6, "{route}");
+    assert!((stand[1] - steeper).abs() < 1e-6, "{route}");
+
+    let (level_line, _) = built(&part, &chains, radius, false);
+    assert_eq!(ball.refusal, level_line.refusal);
+    assert_eq!(ball.chains.len(), level_line.chains.len());
+    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
+        assert_eq!(a.setbacks, b.setbacks);
+    }
+    let ball_mesh = ball.mesh.as_ref().expect("the band came out").borrow();
+    let line_mesh = level_line
+        .mesh
+        .as_ref()
+        .expect("the band came out")
+        .borrow();
+    assert_eq!(ball_mesh.vertices(), line_mesh.vertices());
+    assert_eq!(ball_mesh.triangles(), line_mesh.triangles());
+}
+
+/// Cube edges 0-1 and 2-6: chain 1's end stands on a side group of chain 0, which names chain 1 in
+/// its `side_of_chain` by the group's own tag, not by a side. Such a member - and an end region's,
+/// a carried, grown-over or both-sided member - reads the chain's own field; only a side member
+/// proper reads its side's.
+#[test]
+fn only_a_side_member_proper_reads_a_side_field() {
+    let field = |setback: f64| {
+        Rc::new(
+            ChainField::from_polyline(
+                &[Vector3::ZERO, Vector3::new(1.0, 0.0, 0.0)],
+                false,
+                &[setback, setback],
+            )
+            .expect("a two-point chain"),
+        )
+    };
+    let own = [field(1.0), field(1.0)];
+    let sides = [[field(2.0), field(3.0)], [field(4.0), field(5.0)]];
+    let side_group = BandGroup {
+        tag: 1,
+        members: vec![0, 1],
+        side_of_chain: IndexMap::from([(0, 2), (1, 1)]),
+        end_members: vec![1],
+        ..BandGroup::default()
+    };
+    let read = chain_fields_of(&side_group, &own, Some(&sides));
+    assert!(Rc::ptr_eq(&read[0], &sides[0][1]), "chain 0's right side");
+    assert!(Rc::ptr_eq(&read[1], &own[1]), "an end member's own field");
+
+    let others = [
+        BandGroup {
+            carried_ends: IndexMap::from([(1, 1)]),
+            ..side_group.clone()
+        },
+        BandGroup {
+            end_members: Vec::new(),
+            both_sided: vec![1],
+            ..side_group.clone()
+        },
+        BandGroup {
+            grow_over_members: vec![1],
+            ..side_group.clone()
+        },
+        BandGroup {
+            end_members: Vec::new(),
+            end_of: 1,
+            ..side_group.clone()
+        },
+    ];
+    for group in &others {
+        let read = chain_fields_of(group, &own, Some(&sides));
+        assert!(Rc::ptr_eq(&read[1], &own[1]), "{group:?}");
+    }
+    let read = chain_fields_of(&side_group, &own, None);
+    assert!(Rc::ptr_eq(&read[0], &own[0]) && Rc::ptr_eq(&read[1], &own[1]));
+}
+
 /// A 60 degree prism's top rim picked as three open chains meeting at its corners: the ball's
 /// rule for a corner is not built, so the whole pass keeps the level line's, and says so.
 #[test]
@@ -241,4 +398,176 @@ fn probes_keep_the_outer_passs_route() {
     reset_to_the_default();
     assert_eq!(after_nested.as_deref(), Some("the outer pass"));
     assert_eq!(after_probe.as_deref(), Some("the outer pass"));
+}
+
+/// The one-wall-bending groove's ring: the profile revolved about the z axis at this mean radius.
+const RING_RADIUS: f64 = 20.0;
+
+/// How many facets the ring has round the axis.
+const RING_SEGMENTS: i32 = 256;
+
+/// The one-wall-bending groove's profile (straight wall at x < 0, steeper wall at x > 0) revolved
+/// about the z axis: profile point (x, z) at segment j is vertex j n + i at radius
+/// [`RING_RADIUS`] + x, angle 2 pi j / [`RING_SEGMENTS`]. A closed ring, with no caps; the groove's
+/// floor is the closed chain of vertices j n.
+fn a_ring_with_one_groove_wall_bending_steeper() -> (Vec<Vector3>, Triangles, Vec<i32>) {
+    let steep = STEEP_DEGREES.to_radians();
+    let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
+    let profile = [
+        (0.0, 0.0),
+        (1.0, 1.0),
+        (tx, tz),
+        (5.0, tz),
+        (5.0, -3.0),
+        (-7.0, -3.0),
+        (-7.0, tz),
+        (-tz, tz),
+    ];
+    let n = profile.len() as i32;
+    let mut positions = Vec::new();
+    for j in 0..RING_SEGMENTS {
+        let angle = std::f64::consts::TAU * f64::from(j) / f64::from(RING_SEGMENTS);
+        for &(x, z) in &profile {
+            let rho = RING_RADIUS + x;
+            positions.push(Vector3::new(rho * angle.cos(), rho * angle.sin(), z));
+        }
+    }
+    let mut triangles: Triangles = Vec::new();
+    for j in 0..RING_SEGMENTS {
+        let next = (j + 1) % RING_SEGMENTS;
+        for i in 0..n {
+            let k = (i + 1) % n;
+            let (a, b, c, d) = (j * n + i, j * n + k, next * n + k, next * n + i);
+            triangles.push((a, b, c));
+            triangles.push((a, c, d));
+        }
+    }
+    let mut volume = 0.0;
+    for &(a, b, c) in &triangles {
+        let (pa, pb, pc) = (
+            positions[a as usize],
+            positions[b as usize],
+            positions[c as usize],
+        );
+        volume += pa.dot(pb.cross(pc));
+    }
+    if volume < 0.0 {
+        triangles = triangles.iter().map(|&(a, b, c)| (a, c, b)).collect();
+    }
+    let chain = (0..RING_SEGMENTS).map(|j| j * n).collect();
+    (positions, triangles, chain)
+}
+
+/// How far `point` stands from the closed polygon through `chain`.
+fn from_the_closed_chain(positions: &[Vector3], chain: &[i32], point: Vector3) -> f64 {
+    let mut nearest = f64::INFINITY;
+    for (e, &from) in chain.iter().enumerate() {
+        let to = chain[(e + 1) % chain.len()];
+        let on =
+            ChainField::closest_on_segment(point, positions[from as usize], positions[to as usize]);
+        nearest = nearest.min((point - on).length());
+    }
+    nearest
+}
+
+/// Radius 2 round the floor of the groove revolved into a ring, a closed chain: each side's band is
+/// cut at its own side's contact distance, the straight wall's 2.34 and the steeper wall's 2.72.
+///
+/// The hand answers are the straight groove's. A surface of revolution's nearest point to a point
+/// in a meridian half-plane lies in that half-plane (its distance squared is rho^2 + rho_c^2 - 2
+/// rho rho_c cos(dtheta) + dz^2, least at dtheta = 0), and by the mirror symmetry about the
+/// meridian through a chain vertex the ball's centre lies in it, so on the smooth ring the ball
+/// solves the profile's problem in that plane. The facets stand inside the smooth ring by at most
+/// the sagitta rho (1 - cos(pi / N)) at the radius rho of a contact (at most 25 here, N = 256), so a
+/// contact, and the rail at its distance, moves by at most that; the chain's own facets move the
+/// distance measured to the chain by the same order. Twice the sagitta at the ring's outer radius
+/// bounds both.
+#[test]
+fn round_a_closed_chain_whose_sides_differ_each_sides_band_takes_its_own_balls_setback() {
+    let radius = 2.0;
+    let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(radius);
+    let tolerance =
+        2.0 * (RING_RADIUS + 5.0) * (1.0 - (std::f64::consts::PI / f64::from(RING_SEGMENTS)).cos());
+    assert!(tolerance < 0.01 && steeper - straight > 0.3, "{tolerance}");
+
+    let (positions, triangles, chain) = a_ring_with_one_groove_wall_bending_steeper();
+    set_use_rolling_ball(true);
+    set_last_route(None);
+    let ball = build_pick(
+        &positions,
+        &triangles,
+        std::slice::from_ref(&chain),
+        &[true],
+        Some(creases(&positions, &triangles)),
+        radius,
+        BandProfile::Fillet,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the pick's arguments are good");
+    let route = last_route();
+    reset_to_the_default();
+    assert_eq!(route.as_deref(), Some("rolling-ball"));
+    assert_eq!(ball.refusal, BandGapRefusal::None);
+
+    let mut rails = 0;
+    {
+        let mesh = ball
+            .mesh
+            .as_ref()
+            .expect("the ball's band came out")
+            .borrow();
+        for gap_loop in &ball.loops {
+            rails += 1;
+            assert!(
+                gap_loop.side == 1 || gap_loop.side == 2,
+                "{}",
+                gap_loop.side
+            );
+            let points: Vec<Vector3> = gap_loop
+                .vertices
+                .iter()
+                .map(|&v| mesh.position(v))
+                .collect();
+            let outside = |p: &Vector3| p.x.hypot(p.y) > RING_RADIUS;
+            let on_the_steeper_wall = outside(&points[0]);
+            let expected = if on_the_steeper_wall {
+                steeper
+            } else {
+                straight
+            };
+            for p in &points {
+                assert_eq!(outside(p), on_the_steeper_wall, "one side's rail: {p:?}");
+                let from_the_floor = from_the_closed_chain(&positions, &chain, *p);
+                assert!(
+                    (from_the_floor - expected).abs() < tolerance,
+                    "side {} rail at {p:?} stands {from_the_floor} from the floor, not {expected}",
+                    gap_loop.side
+                );
+            }
+        }
+    }
+    assert_eq!(rails, 2, "one rail per side");
+
+    let fill =
+        gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs");
+    assert_eq!(fill.refusal, GapFillRefusal::None, "{:?}", fill.open_edge);
+    let mesh = fill.mesh.as_ref().expect("the filled mesh").borrow();
+    let mut directed: HashMap<(i32, i32), i32> = HashMap::new();
+    for t in 0..mesh.triangle_count() {
+        if mesh.is_removed(t) {
+            continue;
+        }
+        let face = mesh.triangles()[t as usize];
+        for (a, b) in [(face.a, face.b), (face.b, face.c), (face.c, face.a)] {
+            *directed.entry((a, b)).or_default() += 1;
+        }
+    }
+    for (&(a, b), &count) in &directed {
+        assert_eq!(count, 1, "edge {a}-{b} is run {count} times one way");
+        assert_eq!(
+            directed.get(&(b, a)),
+            Some(&1),
+            "edge {a}-{b} has no triangle running it back: the mesh is open"
+        );
+    }
 }
