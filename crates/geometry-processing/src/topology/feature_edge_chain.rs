@@ -237,6 +237,22 @@ impl FeatureEdgeChain {
         self.edges.len()
     }
 
+    /// A chain from parts a walk already produced: [`super::tangent_chain_cache`] hands back a
+    /// cached walk re-seeded, which is a walk's own edges in another order.
+    pub(crate) fn from_parts(
+        edges: Vec<ChainEdge>,
+        is_closed: bool,
+        start: ChainEnd,
+        end: ChainEnd,
+    ) -> FeatureEdgeChain {
+        FeatureEdgeChain {
+            edges,
+            is_closed,
+            start,
+            end,
+        }
+    }
+
     /// Extends a seed feature edge into a tangent chain at the default tolerance.
     pub fn propagate(
         features: &FeatureEdgeSet,

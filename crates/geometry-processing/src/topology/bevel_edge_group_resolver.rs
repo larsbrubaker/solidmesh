@@ -185,8 +185,17 @@ pub fn create_from_face_group(
     boundary_edge: &FeatureEdge,
     flat_angle_degrees: f64,
 ) -> Result<BevelEdgeGroup, TopologyError> {
-    let face0_is_in_group = face_group.faces().contains(&boundary_edge.face0);
-    let face1_is_in_group = face_group.faces().contains(&boundary_edge.face1);
+    // A group's faces are in mesh order (`FaceGroup::create_fenced`), so a binary search
+    // answers what a scan would, without walking a region of a hundred thousand faces per hover.
+    debug_assert!(face_group.faces().windows(2).all(|pair| pair[0] < pair[1]));
+    let face0_is_in_group = face_group
+        .faces()
+        .binary_search(&boundary_edge.face0)
+        .is_ok();
+    let face1_is_in_group = face_group
+        .faces()
+        .binary_search(&boundary_edge.face1)
+        .is_ok();
 
     if !face0_is_in_group && !face1_is_in_group {
         return Err(TopologyError::EdgeDoesNotBoundFaceGroup {

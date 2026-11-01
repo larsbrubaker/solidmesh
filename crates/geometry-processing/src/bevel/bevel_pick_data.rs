@@ -1,6 +1,8 @@
 //! One state of one mesh, prepared for picking: the welded working copy
-//! ([`super::bevel_working_mesh`]), a BVH over it, its edge graph, and the feature edge set of the
-//! operation's own bend threshold. The construction plane's face picker (mattercad-model
+//! ([`super::bevel_working_mesh`]), a BVH over it, its edge graph, the feature edge set of the
+//! operation's own bend threshold and its face regions. A caller that hovers it readies it first
+//! ([`BevelPickData::prepare_for_hover`]: every tangent chain walked, the big regions flooded);
+//! a one-off face pick does not. The construction plane's face picker (mattercad-model
 //! `construction_plane_pick_model`) is built on it; the source that keys and publishes it for edge
 //! picking lives with the bevel pick model.
 
@@ -11,13 +13,21 @@ use polygon_mesh::{Mesh, MeshEdgeGraph};
 
 use super::bevel_working_mesh::{self, StampedVerdict};
 use crate::topology::bevel_edge_group_resolver::{self, MatchTolerances};
-use crate::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache, FeatureEdgeSet};
+use crate::topology::{
+    BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache, FeatureEdgeChain, FeatureEdgeSet,
+};
 
 /// How far two flat tolerances may differ and still be the same rung when a stored group is
 /// matched to a cached feature edge set. Only wide enough to absorb arithmetic on the tolerances
 /// themselves - the resolver refuses a real mismatch, and this must never be the thing that lets
 /// one through.
 pub const SAME_RUNG_DEGREES: f64 = 1e-6;
+
+/// Regions this big are flooded when the data is readied for hovering
+/// ([`BevelPickData::prepare_for_hover`]) rather than on the first hover onto them: a
+/// flood of a few thousand faces takes well under a millisecond, and one of a hundred thousand
+/// tens of milliseconds, more than a frame.
+pub const REGION_FLOODED_UP_FRONT_FACES: usize = 2048;
 
 /// One mesh state ready to pick on. Immutable once built, which is what lets a background build
 /// hand it to the UI thread whole and lets anything ask it a question from any thread.
@@ -86,6 +96,21 @@ impl BevelPickData {
         }
     }
 
+    /// Readies the data for hovering, on whatever thread built it: walks every tangent chain of
+    /// the pick set (so a hover onto each new edge of a long rim reads its chain rather than
+    /// walking the whole rim again) and floods every region of at least
+    /// [`REGION_FLOODED_UP_FRONT_FACES`] faces (so the first hover onto a smooth surface of a
+    /// hundred thousand faces is a lookup). Only for a caller that will hover or list many edges:
+    /// the bevel's pick source and the AI's edge list. A one-off face pick (Align to Face, the
+    /// construction plane) skips it; at a fine flat tolerance nearly every edge of a curved part
+    /// is a feature edge, and walking them all would cost far more than its one answer.
+    pub fn prepare_for_hover(&self) {
+        self.pick_features
+            .prepare_tangent_chains(FeatureEdgeChain::DEFAULT_TANGENT_ANGLE_DEGREES);
+        self.face_regions()
+            .flood_regions_of_at_least(REGION_FLOODED_UP_FRONT_FACES);
+    }
+
     /// The welded copy of the source mesh everything about this snapshot is measured against.
     pub fn working_mesh(&self) -> &Arc<Mesh> {
         &self.working_mesh
@@ -112,8 +137,9 @@ impl BevelPickData {
         &self.ladder
     }
 
-    /// The face regions of [`Self::working_mesh`], each flooded once as it is first asked for.
-    /// Built lazily, so a part nobody hovers a face on never pays for it.
+    /// The face regions of [`Self::working_mesh`], each flooded once as it is first asked for, or
+    /// already, for the big ones, by [`Self::prepare_for_hover`]. Built lazily, so data nobody
+    /// hovers a face on never pays for it.
     pub fn face_regions(&self) -> &FaceRegionCache {
         self.face_regions.get_or_init(|| {
             FaceRegionCache::new(

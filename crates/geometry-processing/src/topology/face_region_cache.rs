@@ -180,6 +180,41 @@ impl FaceRegionCache {
         Some(shared)
     }
 
+    /// Floods now every region of at least `min_faces` faces, so that the first ask for one of
+    /// them is a lookup rather than a walk of the region - work for a background build, done once,
+    /// so a hover onto a huge smooth surface answers inside a frame. Small regions are left to be
+    /// flooded on demand, where a flood costs microseconds. A cache with a fence floods nothing
+    /// here: the surface labelling that finds the regions crosses no fence.
+    ///
+    /// The readings do not change: a region's faces and rim are sorted into mesh order, so the
+    /// region a face belongs to is the same whichever of its faces seeded the flood. Only
+    /// [`FaceGroup::seed_face`] says which one did - here the region's lowest face - and it shows
+    /// nowhere but in the text of a `EdgeDoesNotBoundFaceGroup` error, which names the face the
+    /// region was flooded from.
+    pub fn flood_regions_of_at_least(&self, min_faces: usize) {
+        if self.barriers.is_some() {
+            return;
+        }
+        let labels = FaceGroup::label_surfaces(&self.mesh, &self.graph, self.flat_angle_degrees);
+        // Labels are dense from zero in ascending face order, so the first face seen with a label
+        // is that region's lowest face.
+        let mut first_face: Vec<i32> = Vec::new();
+        let mut size: Vec<usize> = Vec::new();
+        for (face, &label) in labels.iter().enumerate() {
+            let label = label as usize;
+            if label >= size.len() {
+                size.resize(label + 1, 0);
+                first_face.resize(label + 1, face as i32);
+            }
+            size[label] += 1;
+        }
+        for (label, &count) in size.iter().enumerate() {
+            if count >= min_faces {
+                self.region(first_face[label]);
+            }
+        }
+    }
+
     fn lock_regions(&self) -> std::sync::MutexGuard<'_, HashMap<i32, Arc<FaceGroup>>> {
         // A poisoned lock only means another thread panicked mid-insert; every entry in the map
         // is a complete region, so the map is still sound to read and extend.

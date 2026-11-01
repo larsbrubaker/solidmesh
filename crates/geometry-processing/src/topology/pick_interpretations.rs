@@ -154,7 +154,9 @@ pub fn build_at_angles(
 /// This exists for the viewport, where detecting the whole ladder again on every pick is the
 /// expensive part and the mesh has not changed between picks. It also makes the ladder explicit:
 /// a caller can offer readings at whatever tolerances it likes without this having to know how
-/// to produce them.
+/// to produce them. A rung whose set has its tangent chains prepared
+/// ([`FeatureEdgeSet::prepare_tangent_chains`]) at `curve_tolerance_degrees` reads the chain off
+/// them rather than walking it, with the same answer.
 pub fn build(
     mesh: &Arc<Mesh>,
     graph: Option<&MeshEdgeGraph>,
@@ -214,21 +216,30 @@ pub fn build(
 
         // One tolerance for both of the chain's tests, matching what a group stores: it persists
         // a single "how far may the surface turn" number and re-propagates from that on rebuild.
-        let chain = FeatureEdgeChain::propagate_with(
-            rung,
-            rung_seed_index,
-            curve_tolerance_degrees,
-            curve_tolerance_degrees,
-        )?;
+        // Read off the set's walked chains where it has them, which is the same chain without
+        // walking a rim of thousands of edges on every hover.
+        let (chain, signature) =
+            match rung.tangent_chain_through(rung_seed_index, curve_tolerance_degrees) {
+                Some((chain, signature)) => (chain, signature.to_vec()),
+                None => {
+                    let chain = FeatureEdgeChain::propagate_with(
+                        rung,
+                        rung_seed_index,
+                        curve_tolerance_degrees,
+                        curve_tolerance_degrees,
+                    )?;
+                    let signature = mesh_edge_signature_of_chain(&chain);
+                    (chain, signature)
+                }
+            };
 
-        let chain_edges: Vec<FeatureEdge> = chain.edges().iter().map(|e| e.edge).collect();
-
-        let signature = mesh_edge_signature(&chain_edges);
         if edge_sets_already_offered.contains(&signature) {
             // The same edges as a lower rung, so it is the same reading told twice - including
             // the collinear run, which a chain that stops where the crease stops comes out as.
             continue;
         }
+
+        let chain_edges: Vec<FeatureEdge> = chain.edges().iter().map(|e| e.edge).collect();
 
         let stops_where_the_shape_does = chain.is_closed()
             || (stop_is_a_corner_of_the_shape(rung, chain.start())
@@ -410,13 +421,7 @@ pub fn build_for_face(
 /// [`super::bevel_edge_readings`], which asks the same question of the same ladder, so the two
 /// cannot come to differ.
 pub fn index_of_mesh_edge(features: &FeatureEdgeSet, mesh_edge_index: i32) -> i32 {
-    // A scan rather than a binary search over the set's mesh edge order: it costs nothing against
-    // the detection pass that just built the set, and it does not depend on that order.
-    features
-        .edges()
-        .iter()
-        .position(|edge| edge.mesh_edge_index == mesh_edge_index)
-        .map_or(-1, |i| i as i32)
+    features.index_of_mesh_edge(mesh_edge_index)
 }
 
 /// Whether two readings select the same thing - the same mesh edges, whatever their order.
@@ -591,6 +596,17 @@ fn ascending_sets(rung_features: &[Arc<FeatureEdgeSet>]) -> Vec<Arc<FeatureEdgeS
     }
 
     rungs
+}
+
+/// [`mesh_edge_signature`] of a chain's edges, without copying them out first.
+fn mesh_edge_signature_of_chain(chain: &FeatureEdgeChain) -> Vec<i32> {
+    let mut mesh_edges: Vec<i32> = chain
+        .edges()
+        .iter()
+        .map(|edge| edge.edge.mesh_edge_index)
+        .collect();
+    mesh_edges.sort_unstable();
+    mesh_edges
 }
 
 /// What makes two readings the same reading: the mesh edges they select, in a canonical order.
