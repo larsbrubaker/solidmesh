@@ -215,6 +215,21 @@ impl FaceRegionCache {
         }
     }
 
+    /// Every face's region as a label, in one pass over the mesh: two faces share a label exactly
+    /// where [`Self::region`] gives them the same region, with the cache's own fence. A barrier
+    /// face's region is not shared out ([`Self::region`]), so each barrier face has a label of
+    /// its own. Labels are dense from zero in ascending face order
+    /// ([`FaceGroup::label_surfaces_fenced`]). Nothing is flooded into the cache: this costs one
+    /// walk of the mesh, where asking for every region in turn costs a walk per region.
+    pub fn label_every_face(&self) -> Vec<i32> {
+        FaceGroup::label_surfaces_fenced(
+            &self.mesh,
+            &self.graph,
+            self.flat_angle_degrees,
+            self.barrier_faces.as_deref(),
+        )
+    }
+
     fn lock_regions(&self) -> std::sync::MutexGuard<'_, HashMap<i32, Arc<FaceGroup>>> {
         // A poisoned lock only means another thread panicked mid-insert; every entry in the map
         // is a complete region, so the map is still sound to read and extend.

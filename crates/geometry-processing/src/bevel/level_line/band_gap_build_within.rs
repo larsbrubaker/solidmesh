@@ -122,6 +122,7 @@ pub fn build_within(
         side_regions,
         size,
         profile,
+        sharp_turn_degrees,
         topology_only || !pass.is_outer(),
     );
     let is_feature_edge: FeatureEdgeTest =

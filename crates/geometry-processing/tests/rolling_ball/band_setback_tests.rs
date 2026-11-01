@@ -2,7 +2,7 @@
 //! a narrow first face, so the ball touches the face past it); an open chain whose two sides'
 //! contacts differ (a groove and a wedge), each side cut at its own distance and each end face's
 //! cut meeting both rails; the passes and builds that keep the level line's: such a chain at a
-//! leaning end face, a free end, an end ray or in a pass of several chains, chains meeting at a
+//! free end, an end ray or in a pass of several chains, chains meeting at a
 //! corner, a chain that is convex along part of its length and concave along the rest, and the
 //! probes a build runs inside itself, which never write the route; which group reads a chain's
 //! side field; and a closed chain whose sides differ (the groove revolved into a ring), where
@@ -85,7 +85,7 @@ fn extruded(
 }
 
 /// The groove's walls past the first bend run at this angle to the horizontal, in degrees.
-const STEEP_DEGREES: f64 = 65.0;
+pub const STEEP_DEGREES: f64 = 65.0;
 
 /// A 90 degree V-groove along y whose walls run 45 degrees for sqrt 2 (to (+-1, 1)), then bend 20
 /// degrees steeper (less than the 30 degree crease, so each wall is one side) for 4, then turn out
@@ -177,7 +177,7 @@ fn a_groove_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
 /// (1, 1) / sqrt 2, the steeper wall's through (1, 1) with inward normal (-sin 65, cos 65). Each
 /// contact is C less `radius` times its wall's normal. The ball must clear the right wall's narrow
 /// first face, which the test checks.
-fn the_contact_distances_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
+pub fn the_contact_distances_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
     let steep = STEEP_DEGREES.to_radians();
     let root_half = std::f64::consts::FRAC_1_SQRT_2;
     let (a1, b1, c1) = (root_half, root_half, radius);
@@ -199,13 +199,13 @@ fn from_the_floor(point: Vector3) -> f64 {
 }
 
 /// Whether `point` lies on the straight (left) wall's trace in its end plane: z = -x, x < 0.
-fn on_the_straight_walls_edge(point: Vector3, near: f64) -> bool {
+pub fn on_the_straight_walls_edge(point: Vector3, near: f64) -> bool {
     point.x < 0.0 && (point.z + point.x).abs() <= near
 }
 
 /// Whether `point` lies on the steeper (right) wall's trace in its end plane: the line from (1, 1)
 /// at [`STEEP_DEGREES`] to the horizontal, past the narrow first face.
-fn on_the_steeper_walls_edge(point: Vector3, near: f64) -> bool {
+pub fn on_the_steeper_walls_edge(point: Vector3, near: f64) -> bool {
     let steep = STEEP_DEGREES.to_radians();
     let (dx, dz) = (point.x - 1.0, point.z - 1.0);
     point.x > 1.0 && ((dx * steep.sin()) - (dz * steep.cos())).abs() <= near
@@ -215,7 +215,7 @@ fn on_the_steeper_walls_edge(point: Vector3, near: f64) -> bool {
 /// straight at 45 degrees and its right wall the groove's, bending steeper past the narrow first
 /// face at (1, 1); both walls run up to a flat top at z = 7, and the two ends are square. The ball
 /// inside it is the ball in the groove, so its contacts are the groove's.
-fn a_wedge_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
+pub fn a_wedge_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
     let steep = STEEP_DEGREES.to_radians();
     let along = 6.0 / steep.sin();
     let profile = [
@@ -435,6 +435,7 @@ fn chains_meeting_at_a_corner_keep_the_level_line_whole() {
         None,
         0.2,
         BandProfile::Fillet,
+        30.0,
         false,
     );
     let route = last_route();
@@ -472,6 +473,7 @@ fn a_chain_both_convex_and_concave_keeps_the_level_line_whole() {
         None,
         0.2,
         BandProfile::Fillet,
+        30.0,
         false,
     );
     let route = last_route();
@@ -699,7 +701,7 @@ fn round_a_closed_chain_whose_sides_differ_each_sides_band_takes_its_own_balls_s
 /// The route a build of `part` round `chains` (open) writes at radius 2 with the switch on, after
 /// checking the pass kept the level line's band: every chain's setbacks those of the build with the
 /// switch off.
-fn kept_the_level_line(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) -> String {
+pub fn kept_the_level_line(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) -> String {
     let (ball, route) = built(part, chains, 2.0, true);
     let (level_line, _) = built(part, chains, 2.0, false);
     assert_eq!(ball.refusal, level_line.refusal);
@@ -710,32 +712,6 @@ fn kept_the_level_line(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) ->
     let route = route.expect("the outer pass writes its route");
     assert!(route.starts_with("level-line: "), "{route}");
     route
-}
-
-/// The wedge with every vertex moved along the chain by `slope` times its x: the walls stay planes
-/// and the apex stays the chain, but each end face leans off square to it.
-fn a_slanted_wedge(slope: f64) -> (Vec<Vector3>, Triangles) {
-    let (positions, triangles) = a_wedge_with_one_wall_bending_steeper();
-    let slanted = positions
-        .iter()
-        .map(|p| Vector3::new(p.x, p.y + (slope * p.x), p.z))
-        .collect();
-    (slanted, triangles)
-}
-
-/// The wedge's end faces leaning 10 degrees off square (too little for an end ray): the cap's
-/// circle, laid square to the chain, would not meet the rails on the end face, so the pass keeps
-/// the level line and says why.
-#[test]
-fn a_wedge_whose_sides_differ_and_whose_end_face_leans_keeps_the_level_line() {
-    let route = kept_the_level_line(&a_slanted_wedge(10f64.to_radians().tan()), &[vec![0, 4]]);
-    assert!(
-        route.ends_with(
-            "an end face that is not square to the chain or does not reach both rails along its \
-             own wall edges is not cut per side yet"
-        ),
-        "{route}"
-    );
 }
 
 /// An open chain whose sides differ anywhere and which carries an end ray keeps the level line,

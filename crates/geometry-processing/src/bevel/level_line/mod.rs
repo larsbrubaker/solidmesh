@@ -177,6 +177,7 @@ pub mod point_star;
 pub mod rail_stations;
 pub mod refinement_splits;
 pub mod refinement_splits_enqueue;
+mod rolling_ball_end_caps;
 pub mod rolling_ball_setbacks;
 mod rolling_ball_sides;
 mod room_candidate;

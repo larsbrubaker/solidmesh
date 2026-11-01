@@ -32,10 +32,12 @@
 //! side's rail exactly where that side's band ends. Where they differ the level line is still kept
 //! whole, with the route naming the sides' distances, at:
 //! - a free end (`LastStation`): the two rails end apart on the rim, and nothing cuts the end;
-//! - an end face whose normal does not run along the chain's end edge, or whose edges with the
-//!   walls do not carry both rails' ends (a face narrower than a rail's distance, or one the band
-//!   flowed over): the cap's circle is laid in the plane square to the chain through the rails'
-//!   ends there ([`SQUARE_END_SLACK`]), which only on such a square end are the rails' ends;
+//! - an end face whose normal does not run along the chain's end edge: the walk reads each side
+//!   only on the chain's side of the face's plane, so where the face leans the end station's
+//!   contacts move off the rails' and its setbacks are not the rails' ([`SQUARE_END_SLACK`]);
+//! - an end face whose edges with the walls end before a rail does (narrower than the rail's
+//!   distance, or one the band flows over): no point of its edge carries that rail's end
+//!   (`rolling_ball_end_caps::rail_end`);
 //! - an open chain in a pass of several chains (its end regions are groups of the whole pick, not
 //!   tied to one chain end, so no cap is handed them);
 //! - an open chain with an end ray ([`unless_a_rayed_end_differs`]: the rail carried past such an
@@ -68,7 +70,8 @@ use std::collections::HashSet;
 
 use vector_math::Vector3;
 
-use super::triangle_edges::{self, StandingMap};
+use super::rolling_ball_end_caps::{self, CapSide};
+use super::triangle_edges;
 use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
 use super::{BandProfile, ChainField};
 use crate::bevel::rolling_ball::rolling_ball_routing::{
@@ -85,8 +88,8 @@ pub struct SideSetbacks {
     /// The right side's (tag 2's) setbacks.
     pub right: Vec<f64>,
     /// How each end's cap is cut, as (first end, last end), where that end's two sides differ by
-    /// more than [`SIDES_AGREE_SHARE`] of the size (only on a square end face, the pass refused
-    /// at every other end where they differ); `None` where they agree and on a closed chain, whose
+    /// more than [`SIDES_AGREE_SHARE`] of the size (only on a square end face that carries both
+    /// rails' ends, the pass refused at every other end where they differ); `None` where they agree and on a closed chain, whose
     /// cap, if any, reads the chain's own field (the larger side) as the level line does.
     pub caps: [Option<CapShift>; 2],
 }
@@ -94,17 +97,11 @@ pub struct SideSetbacks {
 /// An open chain's end cap cut to meet each side's rail where that side's band ends, per unit of
 /// size: the cap reads the chain's own field moved by `offset` and every setback grown by `grow`.
 ///
-/// **Why a moved circle.** In the end plane the left side's rail meets the cap at A', `l` from the
-/// end vertex e along the left wall, and the right side's at B', `r` along the right. The cap's
-/// cut must pass through both, or a notch opens along the wall whose rail ends short of the cut.
-/// The cut taken is the circle through A' and B' whose centre is the point of their bisector
-/// nearest e: it is smooth (one arc between the walls), it is the level line's own circle about e
-/// where `l` = `r` (the offset is then nothing), and it keeps the cap a chain field - a union of
-/// balls, so every bounded search, sample and chain parameter the cap's group reads works as
-/// before (a translation moves no parameter). A setback blended by angle round e would meet both
-/// walls too, but it is no union of balls: not 1-Lipschitz near e, which the bounded searches rely
-/// on. The offset runs along B' - A', which lies in the end face, so an end ray's bound plane
-/// through the moved end vertex is the same plane.
+/// Each rail's end is where that side's field meets the side's edge with the end face, and the cap
+/// is moved and grown so its cut passes through both; `rolling_ball_end_caps` says why that cut is
+/// smooth and still a chain field. The offset runs along the line between the rails' ends, which
+/// lies in the end face, so an end ray's bound plane through the moved end vertex is the same
+/// plane.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CapShift {
     /// How far the cap's chain is moved, per unit of size.
@@ -118,11 +115,7 @@ impl SideSetbacks {
     /// The larger of the two sides at each chain vertex: how far the band reaches from the chain
     /// on either side, which is what a reading of the whole band (not one side's rail) asks.
     pub fn larger(&self) -> Vec<f64> {
-        self.left
-            .iter()
-            .zip(&self.right)
-            .map(|(&l, &r)| vector_math::ieee_math::max_f64(l, r))
-            .collect()
+        larger_of(&self.left, &self.right)
     }
 }
 
@@ -182,6 +175,7 @@ pub fn for_the_pass(
     side_regions: Option<&[u32]>,
     size: f64,
     profile: BandProfile,
+    sharp_turn_degrees: f64,
     probe: bool,
 ) -> Option<Vec<SideSetbacks>> {
     if probe || !use_rolling_ball() {
@@ -197,6 +191,7 @@ pub fn for_the_pass(
         side_regions,
         size,
         profile,
+        sharp_turn_degrees,
     ) {
         Ok(setbacks) => {
             set_last_route(Some(ROLLING_BALL_ROUTE.to_string()));
@@ -253,6 +248,7 @@ fn walked_setbacks(
     side_regions: Option<&[u32]>,
     size: f64,
     profile: BandProfile,
+    sharp_turn_degrees: f64,
 ) -> Result<Vec<SideSetbacks>, String> {
     if profile == BandProfile::Chamfer {
         return Err("a chamfer is not rolled by a ball".to_string());
@@ -400,37 +396,48 @@ fn walked_setbacks(
                          rim, and a free end is not cut per side yet"
                     ));
                 };
+                // On an end face leaning off square the walk reads each side only on the chain's
+                // side of the face's plane, so the end station's contacts move off the rails'
+                // (the sheared wedge's stand 2.70 and 2.32 from the chain where its walls' are
+                // 2.72 and 2.34): the setbacks there are not the rails' to cut a cap through.
                 let edge = edges[if end == 0 { 0 } else { edges.len() - 1 }];
-                let e = points[i].point;
                 let along = (positions[edge.1 as usize] - positions[edge.0 as usize]).get_normal();
-                let station = &walk.stations[i];
-                let rail_at = |contact: Vector3, distance: f64| {
-                    let foot = ChainField::closest_on_segment(
-                        contact,
-                        positions[edge.0 as usize],
-                        positions[edge.1 as usize],
-                    );
-                    e + ((contact - foot).get_normal() * distance)
-                };
-                let (a, b) = (
-                    rail_at(station.contact_a.point, l),
-                    rail_at(station.contact_b.point, r),
-                );
-                let wall_edge = |rail: Vector3, distance: f64, side: &[bool], other: &[bool]| {
-                    on_a_wall_edge(positions, indices, &standing, (side, other), rail, distance)
-                };
-                if face.normal.get_normal().dot(along).abs() < 1.0 - SQUARE_END_SLACK
-                    || !wall_edge(a, l, &in_a, &in_b)
-                    || !wall_edge(b, r, &in_b, &in_a)
-                {
+                if face.normal.get_normal().dot(along).abs() < 1.0 - SQUARE_END_SLACK {
                     return Err(format!(
                         "{differ} from the chain, and an end face that is not square to the \
                          chain or does not reach both rails along its own wall edges is not cut \
                          per side yet"
                     ));
                 }
-                let shift = cap_shift(e, a, b, vector_math::ieee_math::max_f64(l, r))
-                    .ok_or_else(|| format!("chain {k} end {end}: its cap has no circle"))?;
+                let field = |units: &[f64]| {
+                    let at_the_size: Vec<f64> = units.iter().map(|u| u * size).collect();
+                    let along: Vec<Vector3> = points.iter().map(|p| p.point).collect();
+                    ChainField::from_polyline_sharp(&along, false, &at_the_size, sharp_turn_degrees)
+                        .map_err(|error| format!("{differ}: a side's field: {error:?}"))
+                };
+                let (own, left_field, right_field) = (
+                    field(&larger_of(&left, &right))?,
+                    field(&left)?,
+                    field(&right)?,
+                );
+                let side_a = CapSide {
+                    side: &in_a,
+                    other: &in_b,
+                    field: &left_field,
+                };
+                let side_b = CapSide {
+                    side: &in_b,
+                    other: &in_a,
+                    field: &right_field,
+                };
+                let chain_end = chain[i];
+                let rail = |side: &CapSide<'_>| {
+                    rolling_ball_end_caps::rail_end(positions, indices, &standing, chain_end, side)
+                        .map_err(|why| format!("{differ} from the chain, and {why}"))
+                };
+                let (a, b) = (rail(&side_a)?, rail(&side_b)?);
+                let shift = rolling_ball_end_caps::cap_through(&own, a, b)
+                    .map_err(|why| format!("chain {k} end {end}: {why}"))?;
                 caps[end] = Some(CapShift {
                     offset: shift.offset * (1.0 / size),
                     grow: shift.grow / size,
@@ -443,56 +450,16 @@ fn walked_setbacks(
     Ok(setbacks)
 }
 
-/// How far from exact a square end may stand for its cap to be cut per side: the end face's unit
-/// normal's cosine with the chain's end edge within this of 1, and a rail's end point within this
-/// share of its distance (at least 1) of the end face's edge with its side. Past it the cap's circle, laid in
-/// the plane square to the chain, would not meet the rails on the end face, so the pass keeps the
-/// level line.
+/// How far from square an end face may lean for its cap to be cut per side: the end face's unit
+/// normal's cosine with the chain's end edge within this of 1.
 const SQUARE_END_SLACK: f64 = 1e-9;
 
-/// Whether `rail` lies on the end face's edge with `side`: an edge of a triangle of `side` whose
-/// other triangle is of neither side (`sides`: that side's and the other's triangles), within
-/// [`SQUARE_END_SLACK`] of `distance` (at least 1). An end face narrower than the rail's distance
-/// has no such edge there.
-fn on_a_wall_edge(
-    positions: &[Vector3],
-    indices: &[(i32, i32, i32)],
-    standing: &StandingMap,
-    (side, other): (&[bool], &[bool]),
-    rail: Vector3,
-    distance: f64,
-) -> bool {
-    let near = SQUARE_END_SLACK * vector_math::ieee_math::max_f64(1.0, distance);
-    indices.iter().enumerate().any(|(t, &corners)| {
-        side[t]
-            && triangle_edges::corners(corners).into_iter().any(|(a, b)| {
-                let on_the_end_face = standing
-                    .get(&triangle_edges::key(a, b))
-                    .map_or(&[][..], Vec::as_slice)
-                    .iter()
-                    .any(|&u| !side[u as usize] && !other[u as usize]);
-                let (from, to) = (positions[a as usize], positions[b as usize]);
-                on_the_end_face
-                    && (rail - ChainField::closest_on_segment(rail, from, to)).length() <= near
-            })
-    })
-}
-
-/// The cap's circle at an end vertex `e` through the left rail's end `a` and the right's `b`
-/// (see [`CapShift`]), at the size: the moved centre's offset from `e`, and its radius less
-/// `larger`. `None` where `a` and `b` are one point or the radius is not a finite number.
-fn cap_shift(e: Vector3, a: Vector3, b: Vector3, larger: f64) -> Option<CapShift> {
-    let across = b - a;
-    let across_squared = across.length_squared();
-    if across_squared.is_nan() || across_squared <= 0.0 {
-        return None;
-    }
-    // The bisector of a and b is every p with (p - e) . across = (|b - e|^2 - |a - e|^2) / 2.
-    let along = ((b - e).length_squared() - (a - e).length_squared()) / (2.0 * across_squared);
-    let offset = across * along;
-    let radius = (a - (e + offset)).length();
-    let grow = radius - larger;
-    (radius.is_finite() && grow.is_finite()).then_some(CapShift { offset, grow })
+/// The larger of two sides' setbacks at each chain point.
+fn larger_of(left: &[f64], right: &[f64]) -> Vec<f64> {
+    left.iter()
+        .zip(right)
+        .map(|(&l, &r)| vector_math::ieee_math::max_f64(l, r))
+        .collect()
 }
 
 /// How far `contact` stands from the chain's edges either side of chain vertex `v` (the one edge
