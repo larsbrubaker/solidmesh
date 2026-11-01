@@ -5,6 +5,10 @@
 
 #[path = "rolling_ball/ball_station_tests.rs"]
 mod ball_station_tests;
+#[path = "rolling_ball/band_route_tests.rs"]
+mod band_route_tests;
+#[path = "rolling_ball/band_setback_tests.rs"]
+mod band_setback_tests;
 #[path = "rolling_ball/contact_tracking_tests.rs"]
 mod contact_tracking_tests;
 #[path = "rolling_ball/run_out_tests.rs"]

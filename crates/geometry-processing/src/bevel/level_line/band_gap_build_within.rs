@@ -3,7 +3,9 @@
 //! refinement and roots per group, the band's delete, the room, the gap loops and the pinch -
 //! leaving nothing to do but fill. Its faults travel as [`BuildFault`] (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
-//! outcomes.
+//! outcomes. Behind the rolling ball's switch, the outer pass's step 1 field at the size takes its
+//! setbacks from the ball's contacts (`rolling_ball_setbacks.rs`); its probes and the room keep
+//! the level line's own.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -24,8 +26,8 @@ use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_groups,
     band_side_tagging, band_triangles, chain_on_the_mesh, consumed_to_the_rim, corner_tie_points,
     end_clip_corners, end_face_sense, gap_loop_walk, narrow_face_flow, pick_validation,
-    pinch_ladder_search, sharp_joint_corners, side_roots_settling, side_witness,
-    square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
+    pinch_ladder_search, rolling_ball_setbacks, sharp_joint_corners, side_roots_settling,
+    side_witness, square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, BandProfile, ChainEdgeNotOnTwoTriangles, ChainField,
@@ -95,6 +97,20 @@ pub fn build_within(
         return Err(BuildFault::Error(BandGapBuildError::SizeNotPositive(size)));
     }
 
+    // The field at the size takes the rolling ball's setbacks where its switch is on, this is the
+    // outer pass and no topology-only probe, and the ball takes the whole pass; probes, the room
+    // and every other size keep the level line's own, and only the outer pass writes the route.
+    let pass = rolling_ball_setbacks::PassScope::enter();
+    let ball_setbacks = rolling_ball_setbacks::for_the_pass(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge.as_deref(),
+        size,
+        profile,
+        topology_only || !pass.is_outer(),
+    );
     let is_feature_edge: FeatureEdgeTest =
         is_feature_edge.unwrap_or_else(|| Rc::new(|_: i32, _: i32| false));
     let tolerance = chord_tolerance_of(size, chord_tolerance);
@@ -156,8 +172,8 @@ pub fn build_within(
         );
     }
 
-    let field_of = |k: usize, s: f64| {
-        let setbacks: Vec<f64> = unit_setbacks[k].iter().map(|u| u * s).collect();
+    let field_from = |k: usize, units: &[f64], s: f64| {
+        let setbacks: Vec<f64> = units.iter().map(|u| u * s).collect();
         ChainField::from_polyline_bounded(
             &chain_points[k],
             closed[k],
@@ -168,9 +184,13 @@ pub fn build_within(
         )
     };
 
+    let field_of = |k: usize, s: f64| field_from(k, &unit_setbacks[k], s);
     let mut fields: Vec<Rc<ChainField>> = Vec::with_capacity(count);
     for k in 0..count {
-        fields.push(Rc::new(field_of(k, size)?));
+        let units = ball_setbacks
+            .as_ref()
+            .map_or(&unit_setbacks[k], |ball| &ball[k]);
+        fields.push(Rc::new(field_from(k, units, size)?));
     }
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it

@@ -6,7 +6,10 @@
 //! simply moves onto the rim; where both faces curve, it touches where it touches.
 //!
 //! Built beside the level line's band, which reads a setback per chain point from the angle at
-//! the edge (`level_line::ChainField`), and not yet used by any build. What is here:
+//! the edge (`level_line::ChainField`). Behind its switch ([`rolling_ball_routing`], off unless
+//! `MATTERCAD_BEVEL_ROLLINGBALL` is on), a level-line pass takes its band's setbacks from the
+//! ball's contacts instead, where every chain of the pass walks
+//! (`level_line::rolling_ball_setbacks`); no build the app makes by default uses it. What is here:
 //!
 //! - [`RollingBallSide`] (`side_surface.rs`): one side's surface - triangles of the part - with a
 //!   box tree, answering the side's closest point to a point in space and what that point lies on
@@ -37,6 +40,7 @@
 
 mod ball_station;
 mod contact_tracking;
+pub mod rolling_ball_routing;
 mod run_out;
 mod side_surface;
 mod walk;
