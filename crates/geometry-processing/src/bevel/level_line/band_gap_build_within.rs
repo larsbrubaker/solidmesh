@@ -185,7 +185,7 @@ pub fn build_within(
     };
     let field = Rc::clone(&fields[0]);
 
-    // 2. SIDES, as GROUPS. The ball's sides are bounded by its contacts' planes.
+    // 2. SIDES, as GROUPS. The ball's sides are bounded by its planes through the chain.
     LevelLineWork::enter(LevelLineWorkPhase::Sides);
     let planes = match (&ball_sides, ball_setbacks.as_deref()) {
         (Some(_), Some(ball)) => {

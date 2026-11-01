@@ -7,8 +7,8 @@
 //! rolling ball takes a one-chain pass whose side floods join its two sides into one region, the
 //! sides are the ones the ball rolled on (`rolling_ball_band_tags`, whose header says why and why
 //! only there). The ball's tags then lose what its contacts never sweep (`rolling_ball_sweep`):
-//! a side wrapping round behind the other side's contact, or a pass refused where a side's band
-//! folds back past it.
+//! a side wrapping round past the chain into the other side's sweep, or a pass refused where a
+//! side's band folds back past the chain.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -53,7 +53,7 @@ pub struct SideInputs<'a> {
     pub step_corners: &'a HashSet<i32>,
     /// The triangles the ball rolled on, where it takes a pass of one chain.
     pub ball_sides: Option<&'a BallSides>,
-    /// Where the ball takes a pass of one chain: its contacts' planes and side A's and side B's
+    /// Where the ball takes a pass of one chain: its planes through the chain and side A's and B's
     /// fields at the size, which bound the sides its tags give (`rolling_ball_sweep`).
     pub ball_sweep: Option<(&'a ContactPlanes, &'a [Rc<ChainField>; 2])>,
 }
@@ -165,8 +165,8 @@ pub fn tag_the_sides(
                     if let Sweep::FoldsBack { point, side } = swept {
                         let (own, other) = if side == 0 { ("A", "B") } else { ("B", "A") };
                         let why = format!(
-                            "chain 0: side {own}'s band runs behind side {other}'s contact at \
-                             ({}, {}, {})",
+                            "chain 0: side {own}'s band folds back past the chain into side \
+                             {other}'s sweep at ({}, {}, {})",
                             point.x, point.y, point.z
                         );
                         rolling_ball_routing::record_refusal(&why);

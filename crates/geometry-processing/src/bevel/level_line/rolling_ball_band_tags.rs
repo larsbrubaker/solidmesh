@@ -26,9 +26,10 @@
 //! that side's setbacks on; a pass whose floods join never ran it before either.
 //!
 //! **Bounded by the contacts.** A side region can run on past where the ball's contact on it ever
-//! goes, round behind the other side's contact (a step's tread in the top's region, under the riser
-//! the ball rests on). The build then takes out of each side what its contacts never sweep
-//! (`rolling_ball_sweep`, right after these tags), so the band is cut only where the ball rolls.
+//! goes, round past the chain into the other side's sweep (a step's tread in the top's region,
+//! under the riser the ball rests on). The build then takes out of each side what its contacts
+//! never sweep (`rolling_ball_sweep`, right after these tags), so the band is cut only where the
+//! ball rolls.
 //!
 //! With the switch off, or where the ball does not take the pass, nothing here runs.
 
