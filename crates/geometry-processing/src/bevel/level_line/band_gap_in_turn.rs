@@ -3,7 +3,9 @@
 //! in-turn test ([`takes_open_chains_in_turn`]), a chain's ends carried onto the mesh an earlier
 //! cut left ([`ends_on_the_mesh`], [`nearest_on_the_edge`]), the built mesh's coplanar turn, and a
 //! chain and the feature test carried onto a built mesh ([`chain_after_a_build`],
-//! [`feature_edges_after_a_build`]), and the build itself ([`build_open_chains_in_turn`]).
+//! [`feature_edges_after_a_build`]), and the build itself ([`build_open_chains_in_turn`], and
+//! [`build_open_chains_in_turn_with_side_regions`] with the caller's face regions for the rolling
+//! ball, carried onto each mesh an earlier chain rewrote by `side_regions_after_a_build`).
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -12,11 +14,12 @@ use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use super::band_gap::BandGapBuildError;
-use super::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use super::band_gap_entry_points::{build_pick_with_side_regions, BandGapBuildOptions};
 use super::gap_fill::{self, GapFillError};
 use super::open_gap_fill::set_ends_site;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
+use super::side_regions_after_a_build;
 use super::triangle_edges::{self, StandingMap};
 use super::{BandGapResult, BandProfile, GapFillRefusal, GapFillResult, WorkBudget};
 
@@ -336,6 +339,50 @@ pub fn build_open_chains_in_turn(
     budget_for: Option<BudgetFor<'_>>,
     closed: Option<&[bool]>,
 ) -> Result<GapFillResult, BuildAndFillError> {
+    build_open_chains_in_turn_with_side_regions(
+        positions,
+        indices,
+        chains,
+        is_feature_edge,
+        size,
+        profile,
+        fillet_segments,
+        room,
+        snap,
+        seam_epsilon,
+        sharp_turn_degrees,
+        budget_for,
+        closed,
+        None,
+    )
+}
+
+/// [`build_open_chains_in_turn`] with the caller's face region of every triangle of `indices`
+/// for the rolling ball's sides (as `band_gap_entry_points::build_pick_with_side_regions` takes
+/// them). Chain 0 is built on the input mesh and takes them as given; each later chain is built
+/// on the mesh the chains before it left, and takes them carried onto that mesh
+/// (`side_regions_after_a_build`): a kept or rewritten triangle keeps the region of the triangle
+/// it lies on, and each round an earlier chain filled is a region of its own, never a side's.
+/// `None` builds exactly as [`build_open_chains_in_turn`], and so does any build where the ball
+/// would not read them (`side_regions_after_a_build::the_ball_reads_them`: its switch off, a
+/// chamfer, or a build inside another pass), whatever `side_regions` holds.
+#[allow(clippy::too_many_arguments)]
+pub fn build_open_chains_in_turn_with_side_regions(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    is_feature_edge: Option<FeatureEdgeTest>,
+    size: f64,
+    profile: BandProfile,
+    fillet_segments: i32,
+    room: Option<f64>,
+    snap: f64,
+    seam_epsilon: f64,
+    sharp_turn_degrees: f64,
+    budget_for: Option<BudgetFor<'_>>,
+    closed: Option<&[bool]>,
+    side_regions: Option<&[u32]>,
+) -> Result<GapFillResult, BuildAndFillError> {
     let is_feature_edge: FeatureEdgeTest =
         is_feature_edge.unwrap_or_else(|| Rc::new(|_: i32, _: i32| false));
     let input_count = positions.len() as i32;
@@ -347,6 +394,11 @@ pub fn build_open_chains_in_turn(
     let mut current: Vec<Vector3> = positions.to_vec();
     let mut current_indices: Vec<(i32, i32, i32)> = indices.to_vec();
     let mut filled: Option<GapFillResult> = None;
+    // The regions of `current`'s triangles, carried on after every chain.
+    // Only where the ball reads them; elsewhere every pass is handed none and nothing is carried.
+    let mut labels: Option<Vec<u32>> = side_regions
+        .filter(|_| side_regions_after_a_build::the_ball_reads_them(profile))
+        .map(<[u32]>::to_vec);
     // In the pick's own order. Building closed rims first was tried (a rim cannot be carried past
     // a vertex an earlier open chain's band took away) and cost Inner Right Sides and Center
     // f6+c10+c12+c23 at 0.1, which builds only in this order.
@@ -381,7 +433,7 @@ pub fn build_open_chains_in_turn(
             sharp_turn_degrees,
             fillet_segments,
         };
-        let gap = build_pick(
+        let gap = build_pick_with_side_regions(
             &current,
             &current_indices,
             &[chain],
@@ -390,6 +442,7 @@ pub fn build_open_chains_in_turn(
             size,
             profile,
             &options,
+            labels.as_deref(),
         )?;
         if !gap.built() {
             set_ends_site(Some(format!("in turn: chain {k} band {:?}", gap.refusal)));
@@ -406,12 +459,9 @@ pub fn build_open_chains_in_turn(
         let fill_triangles = gap.mesh.as_ref().map_or(current_indices.len() as i32, |m| {
             m.borrow().triangle_count()
         });
-        let this_fill = gap_fill::fill_with_budget(
-            &gap,
-            profile,
-            fillet_segments,
-            budget_for.map(|f| f(fill_triangles)),
-        )?;
+        let fill_budget = budget_for.map(|f| f(fill_triangles));
+        let this_fill =
+            gap_fill::fill_with_budget(&gap, profile, fillet_segments, fill_budget.clone())?;
         if !this_fill.filled() {
             return Ok(GapFillResult {
                 refusal: this_fill.refusal,
@@ -428,8 +478,18 @@ pub fn build_open_chains_in_turn(
 
         if let Some(mesh) = &this_fill.mesh {
             let mesh = mesh.borrow();
+            let built_indices = super::band_gap_rounds_first::kept(&mesh);
+            if let Some(before) = labels.take() {
+                labels = side_regions_after_a_build::carried(
+                    (&current, &current_indices),
+                    &before,
+                    &mesh,
+                    &this_fill.added_triangles,
+                    fill_budget.as_deref(),
+                )?;
+            }
             current = mesh.vertices.clone();
-            current_indices = super::band_gap_rounds_first::kept(&mesh);
+            current_indices = built_indices;
         }
 
         filled = Some(this_fill);

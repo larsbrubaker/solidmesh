@@ -16,8 +16,10 @@
 //! at a corner, and the pinch ladder probes one chain at a time, so a list of sides per caller's
 //! chain would not line up with the chains a pass builds. A region per triangle answers for any
 //! chain on that mesh, however it was split, because no split moves a triangle. It holds only on
-//! the mesh it labels: a build on a mesh an earlier cut rewrote (a chain at a time, rounds first)
-//! is handed none.
+//! the mesh it labels: a build a chain at a time hands each later chain the labelling carried onto
+//! the mesh the earlier chains rewrote (`side_regions_after_a_build`), each rewritten triangle in
+//! its own triangle's region and each earlier round a region of its own; a rounds-first build's
+//! passes are handed none.
 //!
 //! **The kernel's own flood, where it is given none.** Each side is the triangles beside the
 //! chain's edges flooded over every edge that is neither a feature edge (the pass's own

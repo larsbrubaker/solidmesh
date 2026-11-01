@@ -9,6 +9,8 @@ mod ball_station_tests;
 mod band_route_tests;
 #[path = "rolling_ball/band_setback_tests.rs"]
 mod band_setback_tests;
+#[path = "rolling_ball/carried_regions_tests.rs"]
+mod carried_regions_tests;
 #[path = "rolling_ball/contact_tracking_tests.rs"]
 mod contact_tracking_tests;
 #[path = "rolling_ball/free_end_room_tests.rs"]
@@ -17,6 +19,8 @@ mod free_end_room_tests;
 mod free_end_taper_tests;
 #[path = "rolling_ball/free_end_tests.rs"]
 mod free_end_tests;
+#[path = "rolling_ball/in_turn_side_regions_tests.rs"]
+mod in_turn_side_regions_tests;
 #[path = "rolling_ball/run_out_tests.rs"]
 mod run_out_tests;
 #[path = "rolling_ball/side_regions_tests.rs"]

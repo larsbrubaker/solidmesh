@@ -198,6 +198,7 @@ pub mod segment_box_tree;
 pub mod self_room;
 pub mod sharp_joint_corners;
 pub mod side_flow;
+pub mod side_regions_after_a_build;
 pub mod side_roots_settling;
 pub mod side_witness;
 pub mod split_meter;
