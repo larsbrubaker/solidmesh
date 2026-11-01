@@ -268,6 +268,7 @@ fn room_of_tags(
         None,
         None,
         None,
+        None,
     )
     .expect("the room reads")
     .0

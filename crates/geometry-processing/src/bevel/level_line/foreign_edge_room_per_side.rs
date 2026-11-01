@@ -21,9 +21,10 @@
 //! its own fixed steps, each building that family's field at the trial size, so up to three times
 //! the field builds of one reading.
 //!
-//! **Growing crease runs** (`GrowingCreaseRuns::least`, in `band_room::room_of_cut_mesh`) still
-//! read the chain's own setbacks, the larger side's: conservative, never a size the larger side's
-//! band would not fit.
+//! **Growing crease runs** (`GrowingCreaseRuns::least_with`, in `band_room::room_of_cut_mesh`) are
+//! read against the ball's own centres where the ball takes the pass (`ball_pierce_room`: one
+//! centre a radius from both sides, so the side a run lies on needs no setback of its own), and
+//! against the chain's own setbacks, the larger side's, otherwise.
 
 use vector_math::{ieee_math, Vector3};
 

@@ -13,6 +13,7 @@ use std::rc::Rc;
 
 use vector_math::{ieee_math, Vector3};
 
+use super::ball_pierce_room::BallPath;
 use super::band_gap_reading::{self, ReadRoomError};
 use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
 use super::end_face_sense::{self, PointPlane};
@@ -293,6 +294,7 @@ fn room_within(
         Some(&present),
         Some(&field_without_convex_rays),
         None,
+        None,
     )?;
     within.room = room;
     within.set_by = set_by;
@@ -364,8 +366,10 @@ pub fn the_foreign_source(
 /// side's own (`sides`), against which the foreign edges on that side alone are read
 /// (`foreign_edge_room_per_side`), and by which each side's self room is read; with no `sides`
 /// every foreign edge and both sides' self rooms are read against the chain's own field. Growing
-/// crease runs read `unit_setback` either way. The optional arguments are passed explicitly
-/// (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces, no sides).
+/// crease runs read their pierce room from the ball's centres where it hands them (`ball`,
+/// `ball_pierce_room`), from `unit_setback`'s angle centre otherwise. The optional arguments are
+/// passed explicitly (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces,
+/// no sides, no ball).
 #[allow(clippy::too_many_arguments)]
 pub fn room_of_cut_mesh(
     shared_mesh: &Rc<RefCell<LevelLineMesh>>,
@@ -380,6 +384,7 @@ pub fn room_of_cut_mesh(
     convex_end_faces: Option<&[PointPlane]>,
     field_without_convex_rays: Option<FieldAt>,
     sides: Option<&SideRoomFields>,
+    ball: Option<&BallPath>,
 ) -> Result<(f64, RoomSource), WorkError> {
     let field = Rc::new(field_at(REFERENCE_SIZE));
     // The mesh is shared (`Rc<RefCell>`) because the growing runs the foreign reading hands back
@@ -448,12 +453,13 @@ pub fn room_of_cut_mesh(
     );
     let far_room = room_for_by_side(mesh, &far_bounds, field_at, unit_setback, sides, false)?;
     let foreign_room = ieee_math::min_f64(near_room, far_room);
-    let mut room = GrowingCreaseRuns::least(
+    let mut room = GrowingCreaseRuns::least_with(
         foreign_room,
         &growing,
         unit_setback,
         profile,
         fillet_segments,
+        ball,
     );
     // The crease is read only where the far bound alone sets the room; reading it can spend work,
     // so it is read here, under that condition, before the source is named.

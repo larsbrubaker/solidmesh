@@ -257,6 +257,15 @@ pub fn build_within(
             &setbacks,
             room_units,
             one_chain_room::the_sides(ball_setbacks.as_deref(), only, &tags),
+            one_chain_room::the_path(
+                ball_setbacks.as_deref(),
+                only,
+                &setbacks.chain_points[0],
+                closed[0],
+                setbacks.end_rays[0],
+                size,
+            )
+            .as_ref(),
             snap,
             seam_epsilon,
             profile,

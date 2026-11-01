@@ -1,13 +1,15 @@
 //! The readings of [`GrowingCreaseRuns`] past its constructor: whether a crease grows, the
 //! straight run it belongs to and that run's far end,
 //! the far creases that bound a growing run, the ridges off the chain's crease, and the size at
-//! which a ridge first pierces the round (the fillet pierce room). Split from
+//! which a ridge first pierces the round (the fillet pierce room, read from the angle's centre;
+//! `ball_pierce_room` reads it from the rolling ball's where the ball takes the pass). Split from
 //! `growing_crease_runs.rs` by responsibility.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use vector_math::{ieee_math, Vector3};
 
+use super::ball_pierce_room::BallPath;
 use super::{
     end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineWork, WorkError,
 };
@@ -102,13 +104,45 @@ impl GrowingCreaseRuns {
         profile: BandProfile,
         fillet_segments: i32,
     ) -> f64 {
+        Self::least_with(room, growing, unit_setback, profile, fillet_segments, None)
+    }
+
+    /// [`Self::least`], each run's pierce room read from the rolling ball's centres where `ball`
+    /// gives them (`ball_pierce_room`), from the angle's centre otherwise.
+    pub fn least_with(
+        room: f64,
+        growing: &[GrowingCreaseRuns],
+        unit_setback: &[f64],
+        profile: BandProfile,
+        fillet_segments: i32,
+        ball: Option<&BallPath>,
+    ) -> f64 {
         if profile != BandProfile::Fillet {
             return room;
         }
 
         growing.iter().fold(room, |least, g| {
-            ieee_math::min_f64(least, g.fillet_pierce_room(unit_setback, fillet_segments))
+            let pierce = match ball {
+                Some(ball) => ball.pierce_room(&g.ridge_segments(), fillet_segments),
+                None => g.fillet_pierce_room(unit_setback, fillet_segments),
+            };
+            ieee_math::min_f64(least, pierce)
         })
+    }
+
+    /// Each ridge met so far as its two ends (its start on the crease, its far end), once each.
+    pub fn ridge_segments(&self) -> Vec<(Vector3, Vector3)> {
+        let mut seen = Vec::new();
+        let mesh = self.mesh.borrow();
+        let mut segments = Vec::new();
+        for &ridge in self.ridges.borrow().iter() {
+            if seen.contains(&ridge) {
+                continue;
+            }
+            seen.push(ridge);
+            segments.push((mesh.position(ridge.0), mesh.position(ridge.1)));
+        }
+        segments
     }
 
     /// The chain edge's two sides (one triangle tagged 1, one tagged 2), or

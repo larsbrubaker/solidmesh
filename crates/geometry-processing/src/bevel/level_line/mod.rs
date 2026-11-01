@@ -42,6 +42,7 @@
 //!   the route's watch record ([`LevelLineChainWatch`]) and the work phase and progress
 //!   ([`LevelLineWorkPhase`], [`LevelLineProgress`]).
 
+pub mod ball_pierce_room;
 pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_after_the_rounds;

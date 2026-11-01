@@ -37,7 +37,8 @@
 //! (left, right, either), each with the unchanged bracket and fixed bisection, so each edge is read
 //! in one list but up to three times the trial fields are built where a side's setbacks are not one
 //! number; the self room builds each side's own field and samples its vertices with it. A growing
-//! crease run's room still reads the larger side's setbacks (conservative). Where the build's side
+//! crease run's pierce room is read from the ball's own centres ([`the_path`],
+//! `ball_pierce_room`), which stand a radius from both sides. Where the build's side
 //! floods join the two sides (sides joined round a free end) and the ball takes the pass, the band
 //! is tagged from the ball's own sides (`rolling_ball_band_tags`), so the room reads each side
 //! there too.
@@ -55,6 +56,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::ball_pierce_room::BallPath;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_room;
 use super::foreign_edge_room_per_side::SideRoomFields;
@@ -87,10 +89,35 @@ pub fn the_sides<'a>(
     }
 }
 
+/// The ball's centre path for the growing crease runs' pierce room where the ball takes a pass of
+/// one chain (the same condition as [`the_units`]), walked at `size` along `chain_points`; the
+/// round is carried past an end only where that end carries an end ray (`end_rays`).
+pub fn the_path<'a>(
+    ball: Option<&'a [SideSetbacks]>,
+    only: bool,
+    chain_points: &'a [Vector3],
+    closed: bool,
+    end_rays: (bool, bool),
+    size: f64,
+) -> Option<BallPath<'a>> {
+    match ball {
+        Some([chain]) if only => BallPath {
+            chain_points,
+            unit_centres: &chain.centres,
+            closed,
+            carried: [end_rays.0, end_rays.1],
+            size,
+        }
+        .checked(),
+        _ => None,
+    }
+}
+
 /// The room of chain 0 read on `mesh`, the input tagged into its two sides, with the setbacks
 /// `units` per unit of size: the level line's own reading, its convex end faces read against the
 /// chain without their rays (`band_room::room_of_cut_mesh` says why). With the ball's `sides`
-/// ([`the_sides`]), each foreign edge on one side alone is read against that side's own setbacks.
+/// ([`the_sides`]), each foreign edge on one side alone is read against that side's own setbacks;
+/// with the ball's `path` ([`the_path`]), the growing crease runs' pierce room is read from it.
 #[allow(clippy::too_many_arguments)]
 pub fn read_in_the_build(
     positions: &[Vector3],
@@ -101,6 +128,7 @@ pub fn read_in_the_build(
     setbacks: &PassSetbacks,
     units: &[f64],
     sides: Option<&SideSetbacks>,
+    path: Option<&BallPath>,
     snap: f64,
     seam_epsilon: f64,
     profile: BandProfile,
@@ -157,5 +185,6 @@ pub fn read_in_the_build(
         Some(&present),
         Some(&|s| field_without_convex_rays(units, s)),
         side_fields.as_ref(),
+        path,
     )
 }

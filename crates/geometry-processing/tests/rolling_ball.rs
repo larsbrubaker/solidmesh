@@ -3,6 +3,8 @@
 //! an answer worked out by hand - a corner of flat faces, a cylinder or sphere meeting a plate, a
 //! face that runs out - so the module is checked against geometry, not against itself.
 
+#[path = "rolling_ball/ball_pierce_room_tests.rs"]
+mod ball_pierce_room_tests;
 #[path = "rolling_ball/ball_station_tests.rs"]
 mod ball_station_tests;
 #[path = "rolling_ball/band_route_tests.rs"]
@@ -19,6 +21,8 @@ mod free_end_room_tests;
 mod free_end_taper_tests;
 #[path = "rolling_ball/free_end_tests.rs"]
 mod free_end_tests;
+#[path = "rolling_ball/growing_ridge_room_tests.rs"]
+mod growing_ridge_room_tests;
 #[path = "rolling_ball/in_turn_side_regions_tests.rs"]
 mod in_turn_side_regions_tests;
 #[path = "rolling_ball/run_out_tests.rs"]

@@ -114,6 +114,10 @@ pub struct SideSetbacks {
     /// and on a closed chain, whose cap, if any, reads the chain's own field (the larger side) as
     /// the level line does.
     pub caps: [Option<CapShift>; 2],
+    /// The ball's centre less its chain point at each chain vertex, per unit of size: where the
+    /// round's axis runs, which the growing crease runs' pierce room reads
+    /// (`ball_pierce_room`).
+    pub centres: Vec<Vector3>,
 }
 
 /// An open chain's end cap cut to meet each side's rail where that side's band ends, per unit of
@@ -422,6 +426,7 @@ fn walked_setbacks(
 
         let mut left = Vec::with_capacity(points.len());
         let mut right = Vec::with_capacity(points.len());
+        let mut centres = Vec::with_capacity(points.len());
         for (i, station) in walk.stations.iter().enumerate() {
             let on_an_end_face = !closed[k]
                 && ((i == 0 && walk.ends[0] == WalkEnd::EndFace)
@@ -463,6 +468,7 @@ fn walked_setbacks(
             }
             left.push(to_a / size);
             right.push(to_b / size);
+            centres.push((station.centre - station.chain_point) * (1.0 / size));
         }
         let mut caps = [None, None];
         if !closed[k] {
@@ -549,7 +555,12 @@ fn walked_setbacks(
                 });
             }
         }
-        setbacks.push(SideSetbacks { left, right, caps });
+        setbacks.push(SideSetbacks {
+            left,
+            right,
+            caps,
+            centres,
+        });
         sides.push(BallSides { in_a, in_b });
     }
 
