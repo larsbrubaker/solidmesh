@@ -133,6 +133,7 @@ mod foreign_edge_index;
 pub mod foreign_edge_regions;
 pub mod foreign_edge_regions_filing;
 pub mod foreign_edge_room;
+mod foreign_edge_room_per_side;
 pub mod foreign_edge_room_readings;
 pub mod foreign_room_counters;
 pub mod gap_fill;

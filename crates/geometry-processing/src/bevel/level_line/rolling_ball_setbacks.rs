@@ -20,7 +20,8 @@
 //! one runs the edge in the chain's direction, and the ball's side A is the left). Where a side
 //! curves away from the edge (a groove wall that bends, the T Handle's wall against its sphere)
 //! the two differ, and each side's band is cut at its own distance (`band_group_fields::of` hands
-//! each side group its own side's field through `band_group_fields::of_sides`).
+//! each side group its own side's field through `band_group_fields::of_sides`) - where the band's
+//! tagging divides the two sides into a group each; where it does not, see below.
 //!
 //! **Whole pass, never half.** The rolling ball decides the pass only where every chain in it
 //! walks: every station solves, both contacts' distances are finite numbers, and each end finishes
@@ -49,7 +50,11 @@
 //! - an open chain in a pass of several chains (its end regions are groups of the whole pick, not
 //!   tied to one chain end, so no cap is handed them);
 //! - an open chain with an end ray ([`unless_a_rayed_end_differs`]: the rail carried past such an
-//!   end and its end-plane trim carry one setback for both sides).
+//!   end and its end-plane trim carry one setback for both sides);
+//! - a pass of one open chain whose band tagging does not divide its two sides (the side floods
+//!   meet, as on the T Handle round its free tip): its band is one group cut by one field
+//!   ([`unless_an_undivided_chain_differs`]). Where the sides agree there, that group reads the
+//!   chain's own field.
 //!
 //! **Only the outer pass.** The ball is walked, and the route written, only by the outermost
 //! `build_within` on the thread and only where it is not a topology-only probe ([`PassScope`]).
@@ -80,6 +85,7 @@ use std::collections::HashSet;
 use vector_math::Vector3;
 
 use super::band_gap_setback_fields::PassSetbacks;
+use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
 use super::rolling_ball_end_caps::{self, CapSide};
 use super::rolling_ball_free_ends;
 use super::triangle_edges;
@@ -252,6 +258,60 @@ pub fn unless_a_rayed_end_differs(
         }
     }
     Some(setbacks)
+}
+
+/// The ball's setbacks for a pass of ONE OPEN chain whose band tagging does not divide its two
+/// sides (the side floods meet: a crease that dies out, or sides joined round a free end), as
+/// (setbacks, whether the one band group reads the chain's own field). Such a band is one group cut
+/// by one field, so no side's own setback can stand for both: where the two sides differ anywhere
+/// by more than [`SIDES_AGREE_SHARE`] of the size, the whole pass keeps the level line, the route
+/// naming why (the larger field would overshoot on the nearer side, either side's own would cut
+/// the other at the wrong distance); where they agree the group reads the chain's own field. Every
+/// other pass comes back as it was, with `false`. `divides` is read by the same side floods the
+/// build's tagging runs (`band_side_tagging_ends::tag_sides`), which no field changes.
+pub fn unless_an_undivided_chain_differs(
+    ball: Option<Vec<SideSetbacks>>,
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[Vec<(i32, i32)>],
+    closed: &[bool],
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    size: f64,
+) -> Result<(Option<Vec<SideSetbacks>>, bool), SideTaggingError> {
+    let Some(setbacks) = ball else {
+        return Ok((None, false));
+    };
+    if setbacks.len() != 1 || closed[0] {
+        return Ok((Some(setbacks), false));
+    }
+    let (_, divides) = band_side_tagging_ends::tag_sides(
+        indices,
+        &chain_edges[0],
+        is_feature_edge,
+        false,
+        None,
+        (false, false),
+        SideReach::default(),
+    )?;
+    if divides {
+        return Ok((Some(setbacks), false));
+    }
+    let chain = &setbacks[0];
+    let differ = chain
+        .left
+        .iter()
+        .zip(&chain.right)
+        .position(|(l, r)| (l - r).abs() > SIDES_AGREE_SHARE);
+    if let Some(i) = differ {
+        set_last_route(Some(format!(
+            "level-line: chain 0 point {i}: the sides' contacts stand {} and {} from the chain, \
+             and the band's tagging joins its two sides into one region, which is not cut per \
+             side yet",
+            chain.left[i] * size,
+            chain.right[i] * size
+        )));
+        return Ok((None, false));
+    }
+    Ok((Some(setbacks), true))
 }
 
 /// Every chain's walked setbacks, or why the pass keeps the level line's.

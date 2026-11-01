@@ -10,7 +10,9 @@
 //! the chain's own field, the larger of the two sides at each point.
 //! - **Per side:** each side group's reading for the chains it is a side of
 //!   (`band_group_fields::of_sides`), and with it that group's refinement, end clip and sharp-joint
-//!   corners, witness and roots - everything that places a side's rail.
+//!   corners, witness and roots - everything that places a side's rail. A single open chain whose
+//!   tagging joins its sides into one group takes the ball only where they agree, reading the
+//!   chain's own field (`rolling_ball_setbacks::unless_an_undivided_chain_differs`).
 //! - **Per end:** a single open chain's end region whose sides differ at its end reads its cap
 //!   field (`PassSetbacks::caps_of_one_open_chain`), cut to meet each side's rail.
 //! - **Per side, judged:** whether the band ends on a rim (`consumed_to_the_rim`, each edge read
@@ -150,7 +152,16 @@ pub fn build_within(
     } = &setbacks;
     let ball_setbacks =
         rolling_ball_setbacks::unless_a_rayed_end_differs(ball_setbacks, closed, end_rays, size);
+    let (ball_setbacks, one_group) = rolling_ball_setbacks::unless_an_undivided_chain_differs(
+        ball_setbacks,
+        indices,
+        chain_edges,
+        closed,
+        &*is_feature_edge,
+        size,
+    )?;
     let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
+    let side_fields = side_fields.filter(|_| !one_group);
     let caps = setbacks.caps_of_one_open_chain(ball_setbacks.as_deref(), size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
@@ -337,6 +348,7 @@ pub fn build_within(
             &mesh,
             &setbacks,
             room_units,
+            one_chain_room::the_sides(ball_setbacks.as_deref(), only, &tags),
             snap,
             seam_epsilon,
             profile,

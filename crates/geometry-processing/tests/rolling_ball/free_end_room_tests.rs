@@ -7,21 +7,26 @@
 //! from the chain vertex nearest a full setback back from the end. And a room the caller hands in
 //! (read, as the model reads it, with the angle's setbacks) is set aside wherever the ball may take
 //! a pass of one chain, open or closed: held on the one-wall-bending groove's ring, whose steeper
-//! wall's top crease the ball's band reaches before the angle's does.
+//! wall's top crease the ball's band reaches before the angle's does. And each side's creases, and
+//! how far a side runs before it is swallowed, are read against that side's own band: held on the
+//! ring with its straight wall creasing between the two sides' contact distances.
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick, BandGapBuildOptions,
 };
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile};
+use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, GapFillRefusal};
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball,
 };
+use std::collections::HashMap;
+
 use vector_math::Vector3;
 
 use crate::band_route_tests::{built, creases, Triangles};
 use crate::band_setback_tests::{
     a_ring_with_one_groove_wall_bending_steeper, the_contact_distances_in_the_one_sided_groove,
-    STEEP_DEGREES,
+    RING_RADIUS, RING_SEGMENTS, STEEP_DEGREES,
 };
 use crate::free_end_taper_tests::sliced;
 use crate::free_end_tests::closes_onto_both_end_vertices;
@@ -255,4 +260,132 @@ fn a_closed_chain_handed_a_refusing_room_still_reaches_the_ball() {
         "the ball's room {}, by hand {by_hand}",
         ball.room
     );
+}
+
+/// How far along its 45 degree line the straight wall of [`a_ring_whose_straight_wall_creases`]
+/// runs from the floor before it creases onto the ring's top.
+const STRAIGHT_WALL: f64 = 2.7;
+
+/// The radius asked round [`a_ring_whose_straight_wall_creases`].
+const SIDE_ROOM_RADIUS: f64 = 2.0;
+
+/// The one-wall-bending groove's ring (`a_ring_with_one_groove_wall_bending_steeper`, revolved
+/// the same way) with its straight wall stopping [`STRAIGHT_WALL`] from the floor at a
+/// convex crease onto a flat top; the steeper wall and its top 5.35 out as before. A closed ring,
+/// its floor the closed chain.
+fn a_ring_whose_straight_wall_creases() -> (Vec<Vector3>, Triangles, Vec<i32>) {
+    let steep = STEEP_DEGREES.to_radians();
+    let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
+    let top = STRAIGHT_WALL * std::f64::consts::FRAC_1_SQRT_2;
+    let profile = [
+        (0.0, 0.0),
+        (1.0, 1.0),
+        (tx, tz),
+        (5.0, tz),
+        (5.0, -3.0),
+        (-7.0, -3.0),
+        (-7.0, top),
+        (-top, top),
+    ];
+    let n = profile.len() as i32;
+    let mut positions = Vec::new();
+    for j in 0..RING_SEGMENTS {
+        let angle = std::f64::consts::TAU * f64::from(j) / f64::from(RING_SEGMENTS);
+        for &(x, z) in &profile {
+            let rho = RING_RADIUS + x;
+            positions.push(Vector3::new(rho * angle.cos(), rho * angle.sin(), z));
+        }
+    }
+    let mut triangles: Triangles = Vec::new();
+    for j in 0..RING_SEGMENTS {
+        let next = (j + 1) % RING_SEGMENTS;
+        for i in 0..n {
+            let k = (i + 1) % n;
+            let (a, b, c, d) = (j * n + i, j * n + k, next * n + k, next * n + i);
+            triangles.push((a, b, c));
+            triangles.push((a, c, d));
+        }
+    }
+    let mut volume = 0.0;
+    for &(a, b, c) in &triangles {
+        let (pa, pb, pc) = (
+            positions[a as usize],
+            positions[b as usize],
+            positions[c as usize],
+        );
+        volume += pa.dot(pb.cross(pc));
+    }
+    if volume < 0.0 {
+        triangles = triangles.iter().map(|&(a, b, c)| (a, c, b)).collect();
+    }
+    let chain = (0..RING_SEGMENTS).map(|j| j * n).collect();
+    (positions, triangles, chain)
+}
+
+/// A narrow side with a crease near the chain beside a wide side with none: radius 2 round the
+/// ring whose straight wall creases [`STRAIGHT_WALL`] = 2.7 out. By hand the ball touches the
+/// straight wall 2.34 from the floor (short of its crease) and the steeper wall 2.72 out. Read
+/// against the larger side, the crease (2.7 from the chain all round) would be reached at
+/// 2.7 x 2 / 2.72 = 1.98, under the size asked, and the straight wall, all of its side, would be
+/// swallowed at that size too; read against its own side, the straight wall's, at
+/// 2.7 x 2 / 2.34 = 2.31, above it. The steeper side's nearest crease, its top, is reached later
+/// still. So the room is the straight side's, the size builds on the ball and the filled mesh is
+/// closed. The facets move a contact by at most twice their sagitta (under 0.01), and the room
+/// with it, as the closed ring's room test reasons.
+#[test]
+fn a_crease_on_the_narrow_side_is_read_against_that_sides_own_band() {
+    let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(SIDE_ROOM_RADIUS);
+    assert!(straight < STRAIGHT_WALL && STRAIGHT_WALL < steeper);
+    let by_the_larger_side = STRAIGHT_WALL * SIDE_ROOM_RADIUS / steeper;
+    let by_its_own_side = STRAIGHT_WALL * SIDE_ROOM_RADIUS / straight;
+    assert!(by_the_larger_side < SIDE_ROOM_RADIUS && SIDE_ROOM_RADIUS < by_its_own_side);
+    assert!(the_steeper_walls_top() * SIDE_ROOM_RADIUS / steeper > by_its_own_side);
+
+    let (positions, triangles, chain) = a_ring_whose_straight_wall_creases();
+    set_use_rolling_ball(true);
+    set_last_route(None);
+    let ball = build_pick(
+        &positions,
+        &triangles,
+        std::slice::from_ref(&chain),
+        &[true],
+        Some(creases(&positions, &triangles)),
+        SIDE_ROOM_RADIUS,
+        BandProfile::Fillet,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the pick's arguments are good");
+    let route = last_route();
+    reset_to_the_default();
+    assert_eq!(route.as_deref(), Some("rolling-ball"));
+    assert_eq!(ball.refusal, BandGapRefusal::None, "room {}", ball.room);
+    assert!(
+        (ball.room - by_its_own_side).abs() < 0.02,
+        "the ball's room {}, by hand {by_its_own_side} (read against the larger side \
+         {by_the_larger_side})",
+        ball.room
+    );
+
+    let fill =
+        gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs");
+    assert_eq!(fill.refusal, GapFillRefusal::None, "{:?}", fill.open_edge);
+    let mesh = fill.mesh.as_ref().expect("the filled mesh").borrow();
+    let mut directed: HashMap<(i32, i32), i32> = HashMap::new();
+    for t in 0..mesh.triangle_count() {
+        if mesh.is_removed(t) {
+            continue;
+        }
+        let face = mesh.triangles()[t as usize];
+        for (a, b) in [(face.a, face.b), (face.b, face.c), (face.c, face.a)] {
+            *directed.entry((a, b)).or_default() += 1;
+        }
+    }
+    for (&(a, b), &count) in &directed {
+        assert_eq!(count, 1, "edge {a}-{b} is run {count} times one way");
+        assert_eq!(
+            directed.get(&(b, a)),
+            Some(&1),
+            "edge {a}-{b} has no triangle running it back: the mesh is open"
+        );
+    }
 }

@@ -27,6 +27,21 @@
 //! builds just under it, is refused again and falls back to the percent - no loop, but a number
 //! that does not help the user.
 //!
+//! **Each side against its own band.** Where the band's tagging divides the chain's two sides (tags
+//! 1 and 2 both present, [`the_sides`]), each foreign crease on one side alone is read against that
+//! side's own setbacks, and each side runs out of itself (the self room) at its own band; a crease
+//! touching both sides, an end region or no band group, is read against the larger side, as
+//! before. The room is the least over the sides (`foreign_edge_room_per_side`). The side of a crease
+//! is read off the tags of the triangles on it, the tags the band is cut by, so the room reads the
+//! same side the cut does. Cost: the foreign edges are filed once and read in up to three lists
+//! (left, right, either), each with the unchanged bracket and fixed bisection, so each edge is read
+//! in one list but up to three times the trial fields are built where a side's setbacks are not one
+//! number; the self room builds each side's own field and samples its vertices with it. A growing
+//! crease run's room still reads the larger side's setbacks (conservative). Where the tagging does
+//! not divide the sides (a crease that dies out, or sides joined round a free end) the band is one
+//! group cut by one field, so the ball takes such a pass only where its sides agree, the group
+//! reading the chain's own field (`rolling_ball_setbacks::unless_an_undivided_chain_differs`).
+//!
 //! **Where it applies.** A pass of one chain, open or closed, that the ball may take - its switch
 //! on, the outer pass, no topology-only probe - is neither refused nor trusted on a room the caller
 //! handed in (`band_gap::build_unvalidated` sets it aside: it was read with the angle's setbacks),
@@ -42,6 +57,7 @@ use vector_math::Vector3;
 
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_room;
+use super::foreign_edge_room_per_side::SideRoomFields;
 use super::rolling_ball_setbacks::SideSetbacks;
 use super::{end_face_sense, BandProfile, ChainField, LevelLineMesh, RoomSource, WorkError};
 
@@ -55,9 +71,26 @@ pub fn the_units(ball: Option<&[SideSetbacks]>, only: bool) -> Option<Vec<f64>> 
     }
 }
 
+/// The ball's two sides of the pass, where [`the_units`] reads the ball's setbacks and the mesh is
+/// tagged into two sides (`tags` holds both 1 and 2: a crease that dies out is one region holding
+/// both sides, whose edges no one side's band reaches alone): the room then reads each side's
+/// foreign edges against that side's own setbacks.
+pub fn the_sides<'a>(
+    ball: Option<&'a [SideSetbacks]>,
+    only: bool,
+    tags: &[i32],
+) -> Option<&'a SideSetbacks> {
+    let divided = tags.contains(&1) && tags.contains(&2);
+    match ball {
+        Some([chain]) if only && divided => Some(chain),
+        _ => None,
+    }
+}
+
 /// The room of chain 0 read on `mesh`, the input tagged into its two sides, with the setbacks
 /// `units` per unit of size: the level line's own reading, its convex end faces read against the
-/// chain without their rays (`band_room::room_of_cut_mesh` says why).
+/// chain without their rays (`band_room::room_of_cut_mesh` says why). With the ball's `sides`
+/// ([`the_sides`]), each foreign edge on one side alone is read against that side's own setbacks.
 #[allow(clippy::too_many_arguments)]
 pub fn read_in_the_build(
     positions: &[Vector3],
@@ -67,6 +100,7 @@ pub fn read_in_the_build(
     mesh: &Rc<RefCell<LevelLineMesh>>,
     setbacks: &PassSetbacks,
     units: &[f64],
+    sides: Option<&SideSetbacks>,
     snap: f64,
     seam_epsilon: f64,
     profile: BandProfile,
@@ -78,12 +112,12 @@ pub fn read_in_the_build(
         end_rays.0 && convex_ends.0.is_none(),
         end_rays.1 && convex_ends.1.is_none(),
     );
-    let field_at = |s: f64| {
+    let field_at = |units: &[f64], s: f64| {
         setbacks
             .field_from(0, units, s)
             .expect("the chain's polyline built a field at the size asked")
     };
-    let field_without_convex_rays = |s: f64| {
+    let field_without_convex_rays = |units: &[f64], s: f64| {
         let scaled: Vec<f64> = units.iter().map(|u| u * s).collect();
         ChainField::from_polyline_bounded(
             &setbacks.chain_points[0],
@@ -96,10 +130,24 @@ pub fn read_in_the_build(
         .expect("the chain's polyline built a field at the size asked")
     };
     let present = band_room::present(convex_ends);
+    let (left, right): (&[f64], &[f64]) = match sides {
+        Some(sides) => (&sides.left, &sides.right),
+        None => (&[], &[]),
+    };
+    let (left_at, right_at) = (|s| field_at(left, s), |s| field_at(right, s));
+    let (left_bare, right_bare) = (
+        |s| field_without_convex_rays(left, s),
+        |s| field_without_convex_rays(right, s),
+    );
+    let side_fields = sides.map(|_| SideRoomFields {
+        units: [left, right],
+        field_at: [&left_at, &right_at],
+        without_convex_rays: [&left_bare, &right_bare],
+    });
     band_room::room_of_cut_mesh(
         mesh,
         &setbacks.chain_edges[0],
-        &field_at,
+        &|s| field_at(units, s),
         units,
         closed,
         snap,
@@ -107,6 +155,7 @@ pub fn read_in_the_build(
         profile,
         fillet_segments,
         Some(&present),
-        Some(&field_without_convex_rays),
+        Some(&|s| field_without_convex_rays(units, s)),
+        side_fields.as_ref(),
     )
 }
