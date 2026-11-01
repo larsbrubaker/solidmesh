@@ -4,6 +4,31 @@
 //! ([`foreign_edges`]), whether an edge meets the chain at an end ([`meets_the_chain_at_an_end`]),
 //! the clusters of short edges at a chain's ends ([`cluster_at_the_ends`]) and the unindexed edge
 //! list ([`every_edge`]); the room readings over those edges are in `foreign_edge_room_readings.rs`.
+//!
+//! **The chain's own crease past a free end.** On the rolling ball's tags
+//! (`LevelLineMesh::sides_from_the_ball`) the chain's crease running on unpicked past a free end is
+//! a 1|2 edge away from the chain, and it is read like any other foreign edge: against the band's
+//! real field, the tapered round's (`rolling_ball_free_ends`: every setback capped by its chain
+//! point's distance from the end vertex), never exempted for where it runs. The only edge exempt
+//! is the one through the end vertex of an end that runs out ([`meets_the_chain_at_an_end`]): the
+//! field reads zero there to rounding, either way, which no reading can tell from a reach. Every
+//! other edge is read because the geometry decides it:
+//! - **Run on straight**, each of its points reads its own distance from the end vertex (a ball
+//!   through the end vertex never reaches past it along the chain's line), so it never sets the
+//!   room, at any size.
+//! - **Turned back alongside the chain** (a hairpin round a sliver of one side coming to a point
+//!   at the end vertex - the T Handle's free tip, where the wall's sliver between the picked crease
+//!   and its unpicked twin is 0.0052 wide a third of a unit from the tip), the tapered round does
+//!   reach it: the other side's region wraps round past the sliver, and that side's band, a
+//!   setback of 0.31 there at a size of 12, would be cut on it beyond the crease, across a crease
+//!   the user did not pick. The room is then honest, and an exemption by topology (the run of 1|2
+//!   edges leaving the end vertex) would exempt exactly that crease.
+//!
+//! An end that carries an end region (3 or 4) keeps no exemption at its end vertex: its setback
+//! there is the cap's, not zero, so a 1|2 edge through it - a second crease between the two sides
+//! meeting the chain's end corner - reads below zero at every size and the room is zero. The band
+//! does cut across such a crease at that corner, whatever the size; which crease the round should
+//! stop at there is the corner of three creases, the ball's corner rule.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};

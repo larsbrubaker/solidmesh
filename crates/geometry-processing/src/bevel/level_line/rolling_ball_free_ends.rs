@@ -285,6 +285,43 @@ mod tests {
         );
     }
 
+    /// The chain's crease running on past a free end is read by the room against the tapered
+    /// round, never exempted by where it runs (`foreign_edge_room`'s header says why). Run on
+    /// straight, the round never reaches it: every point reads its own distance from the end vertex.
+    /// Turned back alongside the chain (a hairpin round a sliver of one side coming to a point at
+    /// the end vertex, as at the T Handle's free tip), the round at a size of 12 reaches it a third
+    /// of a unit from the tip, where it stands 0.0052 from the chain and the setback is 0.31: the
+    /// band would cut across it there.
+    #[test]
+    fn a_crease_turned_back_alongside_the_chain_is_reached_where_one_run_on_straight_is_not() {
+        let along = [0.0, 0.31, 0.93, 1.55, 2.5, 4.0, 6.0, 9.0, 13.0, 18.0, 24.0];
+        let points: Vec<Vector3> = along.iter().map(|&x| Vector3::new(x, 0.0, 0.0)).collect();
+        let size = 12.0;
+        let mut setbacks = vec![1.0; points.len()];
+        close_onto_the_end_vertex(&mut setbacks, &points, false, size, f64::INFINITY, false);
+        let scaled: Vec<f64> = setbacks.iter().map(|u| u * size).collect();
+        let field = ChainField::from_polyline_bounded(
+            &points,
+            false,
+            &scaled,
+            f64::INFINITY,
+            (false, false),
+            (None, None),
+        )
+        .expect("a chain");
+        let least =
+            |a: Vector3, b: Vector3| field.min_along_segment(a, b).expect("no budget").value;
+
+        let straight = least(Vector3::new(-0.31, 0.0, 0.0), Vector3::new(-0.93, 0.0, 0.0));
+        assert!((straight - 0.31).abs() < 1e-9, "{straight}");
+
+        let hairpin = least(
+            Vector3::new(0.31, 0.0052, 0.0),
+            Vector3::new(0.93, 0.016, 0.0),
+        );
+        assert!(hairpin < -0.3, "{hairpin}");
+    }
+
     /// On a chain that bends round, the field of the capped setbacks reads zero at the end vertex
     /// (never below), and the cap stays 1-Lipschitz along the chain.
     #[test]

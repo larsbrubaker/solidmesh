@@ -4,8 +4,9 @@
 //! other, which the regions keep apart (the band's own floods join the two sides there, so the band
 //! is tagged from the ball's sides), regions that do not give a chain two sides (refused by the
 //! ball, strict), a chain whose band's own side floods join two sides that differ, whose band is
-//! tagged from the ball's sides and cut per side (and which the switch off leaves as it was), and a
-//! box whose two side regions meet again away from the chain, where the room is read.
+//! tagged from the ball's sides and cut per side (and which the switch off leaves as it was), whose
+//! crease running on past each free end the tapered round never reaches, and a box whose two side
+//! regions meet again away from the chain, where the room is read.
 
 use std::rc::Rc;
 
@@ -295,4 +296,50 @@ fn the_groove_whose_sides_join_round_its_free_ends_is_unchanged_with_the_switch_
     assert_eq!(level_line.room, 1.999999998);
     assert_eq!(level_line.room_set_by.kind, RoomReadingKind::Foreign);
     assert_eq!(level_line.room_set_by.crease_at, Some(Vector3::ZERO));
+}
+
+/// The floor's crease runs on past each free end of the groove whose band floods join round its
+/// free ends, eight edges to the groove's square end, between the two sides' regions: on the
+/// ball's tags each of those edges is a 1|2 edge away from the chain. The round closes onto the end
+/// vertex, so by hand the band's fields (the chain's own and each side's) read every point of that
+/// crease at exactly its distance from the end vertex - no ball reaches past it, which a straight
+/// run's taper (each setback capped by its distance from the end vertex) makes exact - and the
+/// crease never sets the room: radius 2 builds, both rails closing onto both end vertices, the mesh closed.
+#[test]
+fn the_crease_running_on_past_a_free_end_is_never_reached_by_the_tapered_round() {
+    let (ball, route) = the_groove_whose_sides_join_round_its_free_ends(true);
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    assert_eq!(ball.refusal, BandGapRefusal::None);
+    assert!(ball.room > 2.0, "{}", ball.room);
+    let ends = [Vector3::new(0.0, 2.0, 0.0), Vector3::new(0.0, 14.0, 0.0)];
+    the_rails_close_onto_both_end_vertices(&ball, ends);
+    let sides = ball.side_chains.as_ref().expect("the ball's two sides");
+    let fields = [&ball.chains[0], &sides[0][0], &sides[0][1]];
+    // The floor's line past each end, in the slices' quarter steps: y = 0 to 2 and 14 to 16.
+    let past_the_ends = (0..8)
+        .map(|j| {
+            (
+                f64::from(j) * 0.25,
+                f64::from(j + 1) * 0.25,
+                2.0 - f64::from(j + 1) * 0.25,
+            )
+        })
+        .chain((0..8).map(|j| {
+            let near = 14.0 + (f64::from(j) * 0.25);
+            (near, near + 0.25, near - 14.0)
+        }));
+    for (from, to, nearest) in past_the_ends {
+        let (a, b) = (Vector3::new(0.0, from, 0.0), Vector3::new(0.0, to, 0.0));
+        for field in fields {
+            let least = field.min_along_segment(a, b).expect("no budget").value;
+            // The edge through the end vertex reads zero there, to rounding either way: a reading
+            // the room cannot tell from a reach, which is why that one edge is exempt (an end that
+            // runs out). Every edge past it stands clear by its distance.
+            let clear = nearest == 0.0 || least > 0.0;
+            assert!(
+                clear && (least - nearest).abs() < 1e-9,
+                "the crease from y = {from} to {to} reads {least}, not its distance {nearest}"
+            );
+        }
+    }
 }
