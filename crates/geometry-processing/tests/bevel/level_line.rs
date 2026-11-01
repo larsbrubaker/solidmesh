@@ -63,6 +63,8 @@ pub(crate) mod concave_edge_end_face_tests;
 pub(crate) mod concave_end_cap_rows_tests;
 #[path = "concave_rim_fill_tests.rs"]
 pub(crate) mod concave_rim_fill_tests;
+#[path = "consumed_rim_per_side_tests.rs"]
+pub(crate) mod consumed_rim_per_side_tests;
 #[path = "convex_cell_bound_tests.rs"]
 pub(crate) mod convex_cell_bound_tests;
 #[path = "convex_end_ray_room_tests.rs"]
@@ -389,6 +391,8 @@ pub(crate) mod union_of_balls_field_tests;
 pub(crate) mod unstoppable_build_tests;
 #[path = "usable_room_tests.rs"]
 pub(crate) mod usable_room_tests;
+#[path = "virtual_rail_per_side_tests.rs"]
+pub(crate) mod virtual_rail_per_side_tests;
 #[path = "virtual_rail_tests.rs"]
 pub(crate) mod virtual_rail_tests;
 #[path = "waisted_side_tests.rs"]

@@ -1,6 +1,14 @@
 //! A side consumed to its rim: the foreign creases the band at a size ends on exactly
 //! ([`rims_the_band_ends_on`]) and whether
 //! an edge lies on one of them ([`lies_on_a_rim`]).
+//!
+//! Which foreign edges the band reaches is read with the chain's own field, a reach over the whole
+//! band. Whether the band ends on an edge is read with the field of each band group (tag above 0)
+//! whose triangle stands on the edge (`field_of_tag`), the far face's untagged triangle left out:
+//! where the rolling ball cuts the two sides at different distances, a rim on one side is where
+//! that side's band ends. An edge with no group's triangle on it reads the chain's own field; an
+//! edge between two groups must be a rim for each, which fails safe (a size refused, never a rim
+//! misread).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -16,10 +24,12 @@ use super::{ChainField, LevelLineMesh, WorkError};
 /// foreign edge, at a vertex or part way along it. ON the line is within two snaps: the field
 /// value the margin's strip is wide (margin x unit setback = 2 x snap). The limit fails safe - a
 /// rim read just past it is not this case and refuses by size.
+#[allow(clippy::too_many_arguments)]
 pub fn rims_the_band_ends_on(
     mesh: &Rc<RefCell<LevelLineMesh>>,
     chain_edges: &[(i32, i32)],
     field: &Rc<ChainField>,
+    field_of_tag: &dyn Fn(i32) -> Rc<ChainField>,
     seam_epsilon: f64,
     above_the_room: f64,
     margin: f64,
@@ -39,15 +49,33 @@ pub fn rims_the_band_ends_on(
     for (low, high) in foreign {
         let a = mesh.position(low);
         let b = mesh.position(high);
-        let a_value = field.evaluate(a)?.value;
-        let b_value = field.evaluate(b)?.value;
-        if field.min_along_segment(a, b)?.value < -on_the_line {
-            // The band stands over this edge, at an end or part way along: it crosses a foreign
-            // crease.
-            return Ok(None);
+        let mut tags: Vec<i32> = mesh
+            .triangles_on(low, high)
+            .iter()
+            .map(|&t| mesh.triangles()[t as usize].tag)
+            .filter(|&tag| tag > 0)
+            .collect();
+        tags.sort_unstable();
+        tags.dedup();
+        if tags.is_empty() {
+            // No band group's triangle stands on it: the chain's own field.
+            tags.push(0);
+        }
+        let mut on_the_rim = true;
+        for tag in tags {
+            let field = field_of_tag(tag);
+            let a_value = field.evaluate(a)?.value;
+            let b_value = field.evaluate(b)?.value;
+            if field.min_along_segment(a, b)?.value < -on_the_line {
+                // The band stands over this edge, at an end or part way along: it crosses a
+                // foreign crease.
+                return Ok(None);
+            }
+
+            on_the_rim &= a_value.abs() <= on_the_line && b_value.abs() <= on_the_line;
         }
 
-        if a_value.abs() <= on_the_line && b_value.abs() <= on_the_line {
+        if on_the_rim {
             rims.push((a, b));
         }
     }

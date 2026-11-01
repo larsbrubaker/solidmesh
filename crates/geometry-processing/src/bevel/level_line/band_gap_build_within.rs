@@ -11,14 +11,20 @@
 //! - **Per side:** each side group's reading for the chains it is a side of
 //!   (`band_group_fields::of_sides`), and with it that group's refinement, end clip and sharp-joint
 //!   corners, witness and roots - everything that places a side's rail.
-//! - **The chain's own field:** the tagging's reach, the end regions, the swallowed and consumed
-//!   rims, the loop walk and the result's `chains` (which the fill reads). These read both sides
-//!   at once. They are sound because the ball takes an open chain, the only kind with end regions,
-//!   swallowed sides, consumed rims and rails carried past an end, only where its two sides agree
-//!   within the solve's precision (`rolling_ball_setbacks::SIDES_AGREE_SHARE`), so there the
-//!   larger side is either side; on a closed chain whose sides differ they read the larger side as
-//!   a reach or a tolerance (how far the band can reach, the fill's monotone slack), never as where
-//!   a rail stands.
+//! - **Per end:** a single open chain's end region whose sides differ at its end reads its cap
+//!   field (`PassSetbacks::caps_of_one_open_chain`), cut to meet each side's rail.
+//! - **Per side, judged:** whether the band ends on a rim (`consumed_to_the_rim`, each edge read
+//!   with the field of the group its triangles belong to) and the swallowed sides' made-up runs
+//!   (`swallowed_side_runs::runs_if_both_swallowed_per_side`, each side's run at its own setback).
+//! - **The chain's own field, as a reach or a tolerance:** the tagging's reach, the narrow end
+//!   face's flow, which foreign edges the band reaches, the swallowed runs' walls, stations and
+//!   margin, the loop walk's ties and the result's `chains` (which the fill reads for its rows'
+//!   chain points, end rays and tolerances). The larger side is how far the band can reach; it is
+//!   never read as where one side's rail stands: the result carries the side fields
+//!   (`side_chains`), which the rail joined past a rib reads (`virtual_rail::joined_sides`). The
+//!   fill's rail carried past an oblique end reads one setback for both sides, so the ball takes no
+//!   open chain whose sides differ and which has an end ray
+//!   (`rolling_ball_setbacks::unless_a_rayed_end_differs`).
 //! - **The level line's own setbacks:** the probes, the room and every reading at another size
 //!   (`field_at_0`, the room's convex-ray field, the narrow end face's flow). Where a closed
 //!   chain's sides differ the room is the level line's: it can name a size the ball's band does
@@ -153,8 +159,11 @@ pub fn build_within(
         end_ray_bounds,
         ..
     } = &setbacks;
+    let ball_setbacks =
+        rolling_ball_setbacks::unless_a_rayed_end_differs(ball_setbacks, closed, end_rays, size);
     let field_of = |k: usize, s: f64| setbacks.field_of(k, s);
     let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
+    let caps = setbacks.caps_of_one_open_chain(ball_setbacks.as_deref(), size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
     // at every size.
@@ -375,6 +384,9 @@ pub fn build_within(
                 &mesh,
                 &chain_edges[0],
                 &field,
+                &|tag| {
+                    band_group_fields::one_chains_field(tag, &field, side_fields.as_deref(), &caps)
+                },
                 seam_epsilon,
                 size - room,
                 room_margin(largest, snap),
@@ -414,6 +426,7 @@ pub fn build_within(
         only,
         &fields,
         side_fields.as_deref(),
+        Some(&caps),
         run_outs.as_ref(),
     )
     .map_err(defect)?;
@@ -438,8 +451,12 @@ pub fn build_within(
             }
         }
 
-        let group_chain_fields =
-            band_group_fields::chain_fields_of(group, &fields, side_fields.as_deref());
+        let group_chain_fields = band_group_fields::chain_fields_of_group(
+            group,
+            &fields,
+            side_fields.as_deref(),
+            Some(&caps),
+        );
         let member_fields = || {
             group
                 .members
@@ -583,7 +600,16 @@ pub fn build_within(
     // A side the strip swallows whole leaves no run, and its made-up one is read off the side
     // before it goes.
     let swallowed_runs = if only && !closed[0] {
-        swallowed_side_runs::runs_if_both_swallowed(&mesh.borrow(), &field, profile)?.map(Vec::from)
+        let sides = [1, 2].map(|tag| {
+            band_group_fields::one_chains_field(tag, &field, side_fields.as_deref(), &caps)
+        });
+        swallowed_side_runs::runs_if_both_swallowed_per_side(
+            &mesh.borrow(),
+            &field,
+            [&*sides[0], &*sides[1]],
+            profile,
+        )?
+        .map(Vec::from)
     } else {
         None
     };
@@ -804,6 +830,7 @@ pub fn build_within(
         room_set_by,
         mesh: Some(mesh),
         chains: fields,
+        side_chains: side_fields,
         loops,
         side_loops,
         removed_triangles: removed,

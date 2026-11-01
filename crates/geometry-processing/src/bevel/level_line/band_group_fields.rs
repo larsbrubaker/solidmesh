@@ -15,7 +15,8 @@
 //! tag, not a side, for a member joined through its end or carried past a step corner, so only a
 //! side member proper ([`side_member_of`]) reads a side field; an end region, an end, carried,
 //! grown-over or both-sided member, and every chain with no side fields read the chain's own
-//! field. The run-out finder is
+//! field - save a single open chain's end region whose sides differ at its end, which reads its
+//! cap field, cut to meet each side's rail ([`chain_fields_of_group`]). The run-out finder is
 //! [`band_group_run_outs`](super::band_group_run_outs).
 
 use std::rc::Rc;
@@ -417,17 +418,23 @@ pub fn of(
     ),
     PickFieldArgumentError,
 > {
-    of_sides(groups, only, fields, None, run_outs)
+    of_sides(groups, only, fields, None, None, run_outs)
 }
 
+/// An end region's own field, by its group's tag, read for the region's member chains in place of
+/// their own: a single open chain's cap cut per side (`band_gap_setback_fields::CapFields`).
+pub type CapFieldsByTag = IndexMap<i32, Rc<ChainField>>;
+
 /// [`of`], where `side_fields`, if given, holds each chain's left and right fields and each group
-/// reads its own side's ([`chain_fields_of`]).
+/// reads its own side's, and an end region named in `caps` reads its cap field
+/// ([`chain_fields_of_group`]).
 #[allow(clippy::type_complexity)]
 pub fn of_sides(
     groups: &[BandGroup],
     only: bool,
     fields: &[Rc<ChainField>],
     side_fields: Option<&[[Rc<ChainField>; 2]]>,
+    caps: Option<&CapFieldsByTag>,
     run_outs: Option<&IndexMap<i32, Vec<Rc<dyn ChainDistanceField>>>>,
 ) -> Result<
     (
@@ -439,7 +446,7 @@ pub fn of_sides(
     let mut group_fields: IndexMap<i32, Rc<dyn ChainDistanceField>> = IndexMap::new();
     let mut samples: IndexMap<i32, GroupSampler> = IndexMap::new();
     for group in groups {
-        let fields = chain_fields_of(group, fields, side_fields);
+        let fields = chain_fields_of_group(group, fields, side_fields, caps);
         let fields = &fields[..];
         let (mut pick_field, mut sample, end_planes): (
             Rc<dyn ChainDistanceField>,
@@ -510,6 +517,41 @@ pub fn chain_fields_of(
             Rc::clone(side.unwrap_or(own))
         })
         .collect()
+}
+
+/// [`chain_fields_of`], where a group whose tag `caps` names reads that cap field for each of its
+/// member chains.
+pub fn chain_fields_of_group(
+    group: &BandGroup,
+    fields: &[Rc<ChainField>],
+    side_fields: Option<&[[Rc<ChainField>; 2]]>,
+    caps: Option<&CapFieldsByTag>,
+) -> Vec<Rc<ChainField>> {
+    let mut read = chain_fields_of(group, fields, side_fields);
+    if let Some(cap) = caps.and_then(|caps| caps.get(&group.tag)) {
+        for &m in &group.members {
+            if let Some(slot) = read.get_mut(m as usize) {
+                *slot = Rc::clone(cap);
+            }
+        }
+    }
+    read
+}
+
+/// The field a single chain's group `tag` reads: a side's own (1 left, 2 right) where the ball
+/// gives side fields, an end region's cap where it has one, and the chain's own `field` otherwise.
+pub fn one_chains_field(
+    tag: i32,
+    field: &Rc<ChainField>,
+    side_fields: Option<&[[Rc<ChainField>; 2]]>,
+    caps: &CapFieldsByTag,
+) -> Rc<ChainField> {
+    let side = match (side_fields.and_then(|sides| sides.first()), tag) {
+        (Some(pair), 1) => Some(&pair[0]),
+        (Some(pair), 2) => Some(&pair[1]),
+        _ => caps.get(&tag),
+    };
+    Rc::clone(side.unwrap_or(field))
 }
 
 /// Which side of a chain a group is.

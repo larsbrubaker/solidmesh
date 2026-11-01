@@ -5,8 +5,9 @@
 //!
 //! At the size itself a pass the rolling ball takes (`rolling_ball_setbacks.rs`) has a field per
 //! side per chain from that side's contacts ([`PassSetbacks::fields_at_the_size`]), and the
-//! chain's own field holds the larger of the two sides at each point; every other pass has the
-//! chain's own field from the angle and no side fields, exactly as the angle gives it.
+//! chain's own field holds the larger of the two sides at each point; an open chain's end whose
+//! sides differ has a cap field of its own ([`PassSetbacks::cap_fields_at_the_size`]). Every other
+//! pass has the chain's own field from the angle and no side fields, exactly as the angle gives it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -14,6 +15,8 @@ use std::rc::Rc;
 use vector_math::Vector3;
 
 use super::band_gap_build_fault::BuildFault;
+use super::band_group_fields::CapFieldsByTag;
+use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::chain_field_from_polyline::ChainFieldArgumentError;
 use super::rolling_ball_setbacks::SideSetbacks;
 use super::{
@@ -23,6 +26,9 @@ use super::{
 
 /// A chain's left and right fields at the size, as `band_group_fields::of_sides` reads them.
 pub type SideFields = Vec<[Rc<ChainField>; 2]>;
+
+/// Each chain's first and last end caps' own fields, where the rolling ball cuts them per side.
+pub type CapFields = Vec<[Option<Rc<ChainField>>; 2]>;
 
 /// Every chain's step 1 readings, per unit of size.
 pub struct PassSetbacks {
@@ -165,5 +171,63 @@ impl PassSetbacks {
             ]);
         }
         Ok((fields, Some(sides)))
+    }
+
+    /// A pick of one open chain's end regions' cap fields by their groups' tags
+    /// (`band_side_tagging`'s first and last end tags), where the ball cuts a cap per side; empty
+    /// for any other pass.
+    pub fn caps_of_one_open_chain(
+        &self,
+        ball: Option<&[SideSetbacks]>,
+        size: f64,
+    ) -> Result<CapFieldsByTag, ChainFieldArgumentError> {
+        let mut by_tag = CapFieldsByTag::new();
+        let Some(ball) = ball.filter(|b| b.len() == 1 && !self.closed[0]) else {
+            return Ok(by_tag);
+        };
+        let [first, last] = self.cap_fields_at_the_size(ball, size)?.swap_remove(0);
+        for (tag, cap) in [(FIRST_END_TAG, first), (SECOND_END_TAG, last)] {
+            if let Some(cap) = cap {
+                by_tag.insert(tag, cap);
+            }
+        }
+        Ok(by_tag)
+    }
+
+    /// Each chain's end caps at `size` from the rolling ball's setbacks, as (first end, last end):
+    /// where the ball gives an end a [`CapShift`](super::rolling_ball_setbacks::CapShift), the
+    /// chain's own field (the larger side) moved by its offset with every setback grown by its
+    /// growth, so the cap's cut meets each side's rail where that side's band ends; `None` at
+    /// every other end, whose cap reads the chain's own field.
+    pub fn cap_fields_at_the_size(
+        &self,
+        ball: &[SideSetbacks],
+        size: f64,
+    ) -> Result<CapFields, ChainFieldArgumentError> {
+        let mut caps = Vec::with_capacity(ball.len());
+        for (k, chain) in ball.iter().enumerate() {
+            let larger = chain.larger();
+            let mut ends = [None, None];
+            for (end, shift) in chain.caps.iter().enumerate() {
+                let Some(shift) = shift else { continue };
+                let offset = shift.offset * size;
+                let points: Vec<Vector3> =
+                    self.chain_points[k].iter().map(|&p| p + offset).collect();
+                let setbacks: Vec<f64> = larger
+                    .iter()
+                    .map(|u| (u * size) + (shift.grow * size))
+                    .collect();
+                ends[end] = Some(Rc::new(ChainField::from_polyline_bounded(
+                    &points,
+                    self.closed[k],
+                    &setbacks,
+                    self.sharp_turn_degrees,
+                    self.end_rays[k],
+                    self.end_ray_bounds[k],
+                )?));
+            }
+            caps.push(ends);
+        }
+        Ok(caps)
     }
 }

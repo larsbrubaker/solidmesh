@@ -1,11 +1,13 @@
 //! The rolling ball's setbacks where they are not the level line's (a side that bends away beyond
-//! a narrow first face, so the ball touches the face past it), and the passes and builds that
-//! keep the level line's: an open chain whose two sides' contacts differ, chains meeting at a
+//! a narrow first face, so the ball touches the face past it); an open chain whose two sides'
+//! contacts differ (a groove and a wedge), each side cut at its own distance and each end face's
+//! cut meeting both rails; the passes and builds that keep the level line's: such a chain at a
+//! leaning end face, a free end, an end ray or in a pass of several chains, chains meeting at a
 //! corner, a chain that is convex along part of its length and concave along the rest, and the
 //! probes a build runs inside itself, which never write the route; which group reads a chain's
 //! side field; and a closed chain whose sides differ (the groove revolved into a ring), where
-//! each side's band is cut at its own side's distance. The grooves and the ring are built here; the
-//! cube, the prism and the build are `band_route_tests.rs`'s.
+//! each side's band is cut at its own side's distance. The grooves, the wedge and the ring are
+//! built here; the cube, the prism and the build are `band_route_tests.rs`'s.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -14,7 +16,9 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_one_unvalidated, build_pick, BandGapBuildOptions,
 };
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::rolling_ball_setbacks::{for_the_pass, PassScope};
+use geometry_processing::bevel::level_line::rolling_ball_setbacks::{
+    for_the_pass, unless_a_rayed_end_differs, PassScope, SideSetbacks,
+};
 use geometry_processing::bevel::level_line::{
     chain_fields_of, BandGapRefusal, BandGroup, BandProfile, ChainField, GapFillRefusal,
 };
@@ -189,53 +193,171 @@ fn the_contact_distances_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
     (straight, steeper)
 }
 
-/// Radius 2 in the groove whose right wall alone bends steeper: the ball touches the straight wall
-/// 2.34 from the floor and the steeper wall 2.72 from it, each by hand. The chain is open, and an
-/// open chain's end caps are not cut per side yet (a cap at one distance would leave a notch along
-/// the wall whose rail ends at the other), so the pass keeps the level line's band whole, exactly
-/// as with the switch off, and the route names both sides' distances.
-#[test]
-fn where_one_wall_bends_away_an_open_chain_keeps_the_level_line_and_names_both_sides() {
+/// How far `point` stands from the floor's line (the chain, along y at x = z = 0).
+fn from_the_floor(point: Vector3) -> f64 {
+    point.x.hypot(point.z)
+}
+
+/// Whether `point` lies on the straight (left) wall's trace in its end plane: z = -x, x < 0.
+fn on_the_straight_walls_edge(point: Vector3, near: f64) -> bool {
+    point.x < 0.0 && (point.z + point.x).abs() <= near
+}
+
+/// Whether `point` lies on the steeper (right) wall's trace in its end plane: the line from (1, 1)
+/// at [`STEEP_DEGREES`] to the horizontal, past the narrow first face.
+fn on_the_steeper_walls_edge(point: Vector3, near: f64) -> bool {
+    let steep = STEEP_DEGREES.to_radians();
+    let (dx, dz) = (point.x - 1.0, point.z - 1.0);
+    point.x > 1.0 && ((dx * steep.sin()) - (dz * steep.cos())).abs() <= near
+}
+
+/// The groove's V alone as a solid wedge: its apex the chain (vertices 0 and 4), its left wall
+/// straight at 45 degrees and its right wall the groove's, bending steeper past the narrow first
+/// face at (1, 1); both walls run up to a flat top at z = 7, and the two ends are square. The ball
+/// inside it is the ball in the groove, so its contacts are the groove's.
+fn a_wedge_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
+    let steep = STEEP_DEGREES.to_radians();
+    let along = 6.0 / steep.sin();
+    let profile = [
+        (0.0, 0.0),
+        (1.0, 1.0),
+        (1.0 + (along * steep.cos()), 7.0),
+        (-7.0, 7.0),
+    ];
+    extruded(&profile, 6.0, Some((0.0, 4.0)))
+}
+
+/// Builds `part` round the open chain `chains` at radius 2 with the switch on, and checks what the
+/// one-wall-bending V (a groove or a wedge) must show: the route is the ball's with no refusal,
+/// every rail vertex stands at its own side's hand distance (the straight wall's left of x = 0,
+/// the steeper wall's right of it), every end region's cut meets each wall's edge in its end
+/// plane once, exactly at that wall's distance (no notch), the fill refuses nothing and the result
+/// is closed (every directed edge of a live triangle run once, and once back). Returns how many
+/// end regions' loops there were.
+fn the_v_builds_on_the_ball_cut_per_side(
+    part: &(Vec<Vector3>, Triangles),
+    chains: &[Vec<i32>],
+) -> i32 {
     let radius = 2.0;
     let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(radius);
     assert!((straight - 2.3416).abs() < 1e-3, "{straight}");
     assert!((steeper - 2.7235).abs() < 1e-3, "{steeper}");
-    let part = a_groove_with_one_wall_bending_steeper();
-    let chains = [vec![0, 8]];
-    let (ball, route) = built(&part, &chains, radius, true);
-    let route = route.expect("the outer pass writes its route");
-    let prefix = "level-line: chain 0 point 0: the sides' contacts stand ";
-    assert!(route.starts_with(prefix), "{route}");
-    assert!(
-        route.ends_with("an open chain's ends are not cut per side yet"),
-        "{route}"
-    );
-    let mut stand: Vec<f64> = route[prefix.len()..]
-        .split(" from the chain")
-        .next()
-        .expect("the distances")
-        .split(" and ")
-        .map(|number| number.parse().expect("a distance"))
-        .collect();
-    stand.sort_by(f64::total_cmp);
-    assert_eq!(stand.len(), 2, "{route}");
-    assert!((stand[0] - straight).abs() < 1e-6, "{route}");
-    assert!((stand[1] - steeper).abs() < 1e-6, "{route}");
+    let (ball, route) = built(part, chains, radius, true);
+    assert_eq!(route.as_deref(), Some("rolling-ball"));
+    assert_eq!(ball.refusal, BandGapRefusal::None);
 
-    let (level_line, _) = built(&part, &chains, radius, false);
-    assert_eq!(ball.refusal, level_line.refusal);
-    assert_eq!(ball.chains.len(), level_line.chains.len());
-    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
-        assert_eq!(a.setbacks, b.setbacks);
+    // Within the field's root precision of the hand answer.
+    let near = 1e-6;
+    let (mut rails, mut caps) = (0, 0);
+    {
+        let mesh = ball.mesh.as_ref().expect("the band came out").borrow();
+        for gap_loop in &ball.loops {
+            let points: Vec<Vector3> = gap_loop
+                .vertices
+                .iter()
+                .map(|&v| mesh.position(v))
+                .collect();
+            if gap_loop.side == 1 || gap_loop.side == 2 {
+                rails += 1;
+                for p in &points {
+                    let expected = if p.x < 0.0 { straight } else { steeper };
+                    assert!(
+                        (from_the_floor(*p) - expected).abs() < near,
+                        "side {} rail at {p:?} stands {} from the floor, not {expected}",
+                        gap_loop.side,
+                        from_the_floor(*p)
+                    );
+                }
+                continue;
+            }
+            caps += 1;
+            let (mut on_straight, mut on_steeper) = (0, 0);
+            for p in &points {
+                for (on, expected, count) in [
+                    (
+                        on_the_straight_walls_edge(*p, near),
+                        straight,
+                        &mut on_straight,
+                    ),
+                    (
+                        on_the_steeper_walls_edge(*p, near),
+                        steeper,
+                        &mut on_steeper,
+                    ),
+                ] {
+                    if on && from_the_floor(*p) > 0.5 {
+                        *count += 1;
+                        assert!(
+                            (from_the_floor(*p) - expected).abs() < near,
+                            "end region {}'s cut meets a wall at {p:?}, {} from the floor, not \
+                             {expected}",
+                            gap_loop.side,
+                            from_the_floor(*p)
+                        );
+                    }
+                }
+            }
+            assert_eq!(
+                (on_straight, on_steeper),
+                (1, 1),
+                "end region {}'s cut meets each wall once",
+                gap_loop.side
+            );
+        }
     }
-    let ball_mesh = ball.mesh.as_ref().expect("the band came out").borrow();
-    let line_mesh = level_line
-        .mesh
-        .as_ref()
-        .expect("the band came out")
-        .borrow();
-    assert_eq!(ball_mesh.vertices(), line_mesh.vertices());
-    assert_eq!(ball_mesh.triangles(), line_mesh.triangles());
+    assert_eq!(rails, 2, "a rail per side");
+
+    let fill =
+        gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs");
+    assert_eq!(fill.refusal, GapFillRefusal::None, "{:?}", fill.open_edge);
+    let mesh = fill.mesh.as_ref().expect("the filled mesh").borrow();
+    let mut directed: HashMap<(i32, i32), i32> = HashMap::new();
+    for t in 0..mesh.triangle_count() {
+        if mesh.is_removed(t) {
+            continue;
+        }
+        let face = mesh.triangles()[t as usize];
+        for (a, b) in [(face.a, face.b), (face.b, face.c), (face.c, face.a)] {
+            *directed.entry((a, b)).or_default() += 1;
+        }
+    }
+    for (&(a, b), &count) in &directed {
+        assert_eq!(count, 1, "edge {a}-{b} is run {count} times one way");
+        assert_eq!(
+            directed.get(&(b, a)),
+            Some(&1),
+            "edge {a}-{b} has no triangle running it back: the mesh is open"
+        );
+    }
+    caps
+}
+
+/// Radius 2 in the groove whose right wall alone bends steeper, an open concave chain ending on
+/// the block's two square end faces: the ball touches the straight wall 2.34 from the floor and the
+/// steeper wall 2.72 from it, each by hand. The pass takes the ball with no refusal and each side's
+/// rail runs at its own distance right up to each end face. These end faces fold the opposite way
+/// to the chain, so the concave round grows over them rather than cutting them and there is no end
+/// region to meet the rails (a concave chain running into an inside corner does get one, cut by
+/// its cap as the wedge's are).
+#[test]
+fn where_one_wall_bends_away_an_open_groove_takes_the_ball_each_rail_at_its_own_distance() {
+    let part = a_groove_with_one_wall_bending_steeper();
+    assert_eq!(
+        the_v_builds_on_the_ball_cut_per_side(&part, &[vec![0, 8]]),
+        0
+    );
+}
+
+/// The same V as a solid wedge, its apex a convex open chain ending on two square end faces, which
+/// the round cuts: each end face's cut meets the straight wall's rail at 2.34 and the steeper
+/// wall's at 2.72, where each wall's band ends, with no notch along either wall's edge.
+#[test]
+fn where_one_wall_bends_away_an_open_wedges_end_faces_are_cut_to_meet_each_rail() {
+    let part = a_wedge_with_one_wall_bending_steeper();
+    assert_eq!(
+        the_v_builds_on_the_ball_cut_per_side(&part, &[vec![0, 4]]),
+        2
+    );
 }
 
 /// Cube edges 0-1 and 2-6: chain 1's end stands on a side group of chain 0, which names chain 1 in
@@ -570,4 +692,131 @@ fn round_a_closed_chain_whose_sides_differ_each_sides_band_takes_its_own_balls_s
             "edge {a}-{b} has no triangle running it back: the mesh is open"
         );
     }
+}
+
+/// The route a build of `part` round `chains` (open) writes at radius 2 with the switch on, after
+/// checking the pass kept the level line's band: every chain's setbacks those of the build with the
+/// switch off.
+fn kept_the_level_line(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) -> String {
+    let (ball, route) = built(part, chains, 2.0, true);
+    let (level_line, _) = built(part, chains, 2.0, false);
+    assert_eq!(ball.refusal, level_line.refusal);
+    assert_eq!(ball.chains.len(), level_line.chains.len());
+    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
+        assert_eq!(a.setbacks, b.setbacks);
+    }
+    let route = route.expect("the outer pass writes its route");
+    assert!(route.starts_with("level-line: "), "{route}");
+    route
+}
+
+/// The wedge with every vertex moved along the chain by `slope` times its x: the walls stay planes
+/// and the apex stays the chain, but each end face leans off square to it.
+fn a_slanted_wedge(slope: f64) -> (Vec<Vector3>, Triangles) {
+    let (positions, triangles) = a_wedge_with_one_wall_bending_steeper();
+    let slanted = positions
+        .iter()
+        .map(|p| Vector3::new(p.x, p.y + (slope * p.x), p.z))
+        .collect();
+    (slanted, triangles)
+}
+
+/// The wedge's end faces leaning 10 degrees off square (too little for an end ray): the cap's
+/// circle, laid square to the chain, would not meet the rails on the end face, so the pass keeps
+/// the level line and says why.
+#[test]
+fn a_wedge_whose_sides_differ_and_whose_end_face_leans_keeps_the_level_line() {
+    let route = kept_the_level_line(&a_slanted_wedge(10f64.to_radians().tan()), &[vec![0, 4]]);
+    assert!(
+        route.ends_with(
+            "an end face that is not square to the chain or does not reach both rails along its \
+             own wall edges is not cut per side yet"
+        ),
+        "{route}"
+    );
+}
+
+/// An open chain whose sides differ anywhere and which carries an end ray keeps the level line,
+/// and the route names the first point where they differ: the rail carried past an oblique end is
+/// laid at one setback. (A slanted end whose sides differ there is refused before this, by its
+/// cap; this is the chain whose sides agree at its ends and differ between them.) A closed chain,
+/// a chain with no end ray and sides that agree keep the ball's setbacks.
+#[test]
+fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_keeps_the_level_line() {
+    let differ = SideSetbacks {
+        left: vec![1.0, 1.0, 1.0],
+        right: vec![1.0, 1.5, 1.0],
+        caps: [None, None],
+    };
+    let agree = SideSetbacks {
+        right: vec![1.0, 1.0, 1.0],
+        ..differ.clone()
+    };
+    set_last_route(None);
+    let kept = |ball: &SideSetbacks, closed: bool, rays: (bool, bool)| {
+        unless_a_rayed_end_differs(Some(vec![ball.clone()]), &[closed], &[rays], 2.0)
+    };
+    assert_eq!(
+        kept(&differ, false, (false, false)),
+        Some(vec![differ.clone()])
+    );
+    assert_eq!(
+        kept(&differ, true, (false, false)),
+        Some(vec![differ.clone()])
+    );
+    assert_eq!(kept(&agree, false, (true, true)), Some(vec![agree.clone()]));
+    assert_eq!(last_route(), None);
+    assert_eq!(kept(&differ, false, (false, true)), None);
+    let route = last_route();
+    reset_to_the_default();
+    assert_eq!(
+        route.as_deref(),
+        Some(
+            "level-line: chain 0 point 1: the sides' contacts stand 2 and 3 from the chain, and \
+             an oblique end's rail carried past the end is not cut per side yet"
+        )
+    );
+}
+
+/// Two wedges side by side, each apex a chain of one pass: an open chain's end regions in a pass
+/// of several chains belong to the whole pick's groups, not one chain end, so the pass keeps the
+/// level line.
+#[test]
+fn open_chains_whose_sides_differ_in_a_pass_of_several_keep_the_level_line() {
+    let (mut positions, mut triangles) = a_wedge_with_one_wall_bending_steeper();
+    let count = positions.len() as i32;
+    let moved: Vec<Vector3> = positions
+        .iter()
+        .map(|p| Vector3::new(p.x + 30.0, p.y, p.z))
+        .collect();
+    positions.extend(moved);
+    let again: Triangles = triangles
+        .iter()
+        .map(|&(a, b, c)| (a + count, b + count, c + count))
+        .collect();
+    triangles.extend(again);
+    let route = kept_the_level_line(
+        &(positions, triangles),
+        &[vec![0, 4], vec![count, count + 4]],
+    );
+    assert!(
+        route.ends_with(
+            "an open chain's end regions in a pass of several chains are not cut per side yet"
+        ),
+        "{route}"
+    );
+}
+
+/// A stretch of the ring's floor picked as an open chain: its ends stand on the floor's crease
+/// running on unpicked, so every face round them is one side's or the other's and the ball ends
+/// free there, where the two rails end apart on the rim. A free end is not cut per side, so the
+/// pass keeps the level line.
+#[test]
+fn a_free_end_whose_sides_differ_keeps_the_level_line() {
+    let (positions, triangles, chain) = a_ring_with_one_groove_wall_bending_steeper();
+    let route = kept_the_level_line(&(positions, triangles), &[chain[..8].to_vec()]);
+    assert!(
+        route.ends_with("a free end is not cut per side yet"),
+        "{route}"
+    );
 }

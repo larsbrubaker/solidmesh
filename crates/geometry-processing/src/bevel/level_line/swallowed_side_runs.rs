@@ -4,6 +4,13 @@
 //! [`virtual_run_over`]), the span the rows must cover ([`row_span`]), the room where the two ties
 //! merge ([`ties_merge_room`]) and both sides' runs ([`runs_if_both_swallowed`]). The swallowed
 //! strip's fill is `swallowed_side::fill`.
+//!
+//! The per-side readings ([`runs_if_both_swallowed_per_side`], [`row_span_per_side`],
+//! [`virtual_run_at`]) place each side's run at its own field where the rolling ball cuts the two
+//! sides at different distances. With today's switch they are not reached with sides that differ:
+//! a swallowed side needs end rays at both ends ([`growing_walls`]), and the ball keeps the level
+//! line for an open chain whose sides differ and which has an end ray
+//! (`rolling_ball_setbacks::unless_a_rayed_end_differs`).
 
 use vector_math::{ieee_math, Vector3};
 
@@ -73,10 +80,24 @@ pub fn virtual_run(mesh: &LevelLineMesh, chain: &ChainField, side: i32) -> Optio
 /// one cell spanning the whole run laid the round flat between its end rows, so the wall clip's
 /// curve cut across it stood 0.19 off the cylinder (Fillet Thin Front at 4.9); four cells read
 /// 0.015.
-#[allow(clippy::needless_range_loop)]
 pub fn virtual_run_over(
     mesh: &LevelLineMesh,
     chain: &ChainField,
+    side: i32,
+    span: Option<(f64, f64)>,
+) -> Option<VirtualRun> {
+    virtual_run_at(mesh, chain, chain, side, span)
+}
+
+/// [`virtual_run_over`] with the rail carried `rail`'s setback away from the chain: the side's own
+/// field where the rolling ball cuts the sides at different distances. `chain` (the larger side)
+/// gives the walls, the tolerance and the stations' spacing, the same for both sides so their runs
+/// stand at the same parameters.
+#[allow(clippy::needless_range_loop)]
+pub fn virtual_run_at(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    rail: &ChainField,
     side: i32,
     span: Option<(f64, f64)>,
 ) -> Option<VirtualRun> {
@@ -104,7 +125,7 @@ pub fn virtual_run_over(
         let direction = (points[i + 1] - points[i]).get_normal();
         points[i]
             + (direction * (t - starts[i]))
-            + (aways[i] * chain.setback_at(t.clamp(0.0, chain.length)))
+            + (aways[i] * rail.setback_at(t.clamp(0.0, chain.length)))
     };
 
     let crossing = |wall: Wall, near_last: bool| {
@@ -183,6 +204,19 @@ pub fn row_span(
     chain: &ChainField,
     profile: BandProfile,
 ) -> Option<(f64, f64)> {
+    row_span_per_side(mesh, chain, [chain, chain], profile)
+}
+
+/// [`row_span`], each row's left end read at `sides[0]`'s setback and its right end at
+/// `sides[1]`'s, so where the two sides' bands end at different distances each row runs from one
+/// side's rail to the other's. `chain` (the larger side) gives the walls, the straightness test
+/// and the margin past the last touch, which are about the whole band.
+pub fn row_span_per_side(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    sides: [&ChainField; 2],
+    profile: BandProfile,
+) -> Option<(f64, f64)> {
     let walls = growing_walls(mesh, chain)?;
     let points = &chain.points;
     let p0 = points[0];
@@ -201,10 +235,10 @@ pub fn row_span(
     // The rows at the chain's two ends, and each wall's greatest in-front distance over them.
     let in_front = |wall: Wall, t: f64| {
         let on_chain = p0 + (direction * t);
-        let setback = chain.setback_at(t.clamp(0.0, chain.length));
+        let at = t.clamp(0.0, chain.length);
         last_to_leave(
-            on_chain + (left * setback),
-            on_chain + (right * setback),
+            on_chain + (left * sides[0].setback_at(at)),
+            on_chain + (right * sides[1].setback_at(at)),
             on_chain,
             direction,
             -wall.1,
@@ -325,18 +359,30 @@ pub fn runs_if_both_swallowed(
     chain: &ChainField,
     profile: BandProfile,
 ) -> Result<Option<[VirtualRun; 2]>, WorkError> {
+    runs_if_both_swallowed_per_side(mesh, chain, [chain, chain], profile)
+}
+
+/// [`runs_if_both_swallowed`], each side judged swallowed by, and its run placed at, its own
+/// side's field (`sides`: left, right), where the rolling ball cuts the two sides at different
+/// distances; `chain` (the larger side) gives the walls and the margin.
+pub fn runs_if_both_swallowed_per_side(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    sides: [&ChainField; 2],
+    profile: BandProfile,
+) -> Result<Option<[VirtualRun; 2]>, WorkError> {
     if growing_walls(mesh, chain).is_none()
-        || !is_swallowed(mesh, chain, 1)?
-        || !is_swallowed(mesh, chain, 2)?
+        || !is_swallowed(mesh, sides[0], 1)?
+        || !is_swallowed(mesh, sides[1], 2)?
     {
         return Ok(None);
     }
 
-    let Some(span) = row_span(mesh, chain, profile) else {
+    let Some(span) = row_span_per_side(mesh, chain, sides, profile) else {
         return Ok(None);
     };
-    let left = virtual_run_over(mesh, chain, 1, Some(span));
-    let right = virtual_run_over(mesh, chain, 2, Some(span));
+    let left = virtual_run_at(mesh, chain, sides[0], 1, Some(span));
+    let right = virtual_run_at(mesh, chain, sides[1], 2, Some(span));
     Ok(match (left, right) {
         (Some(left), Some(right)) => Some([left, right]),
         _ => None,
