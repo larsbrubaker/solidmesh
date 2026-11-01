@@ -55,10 +55,11 @@
 //! `build_within` on the thread and only where it is not a topology-only probe ([`PassScope`]).
 //! The probes a build runs inside itself - the pinch ladder's, which call `build_within` again at
 //! other sizes, and every topology-only build - keep the level line's setbacks and never write
-//! the route, so the route a build reports is its own pass's. The room search (`band_room`,
-//! `band_room_pair_room_pick`) asks its fields at other sizes and keeps the level line's setbacks
-//! too: a contact's distance is not linear in the size on a curved side, so a setback per unit of
-//! size read at one size says nothing at another.
+//! the route, so the route a build reports is its own pass's. The room of a pass of one chain the
+//! ball takes is read with these setbacks, per unit of the size asked (`one_chain_room`): exact as
+//! a yes or no at that size, an estimate below it, since a contact's distance is not linear in the
+//! size on a curved side. The room of a pass of several chains (`band_room_pair_room_pick`) keeps
+//! the level line's.
 //!
 //! **Where the sides come from** (`rolling_ball_sides.rs`). From the caller's face region of every
 //! triangle where it gives them (`band_gap_entry_points::build_pick_with_side_regions`, the
@@ -165,6 +166,11 @@ impl PassScope {
     /// Whether no other pass was running on this thread when this one began.
     pub fn is_outer(&self) -> bool {
         self.outer
+    }
+
+    /// Whether a pass entered now on this thread would be the outer one: no pass is running.
+    pub fn would_be_outer() -> bool {
+        PASS_DEPTH.with(|d| d.get() == 0)
     }
 }
 

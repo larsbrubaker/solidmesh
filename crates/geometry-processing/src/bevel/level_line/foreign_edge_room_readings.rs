@@ -4,19 +4,22 @@
 //! trial size ([`every_value_is_above_zero`]), the bisection every room reading ends in
 //! ([`bisect`]) and where the edge that sets the room comes nearest the chain
 //! ([`where_the_room_is_set`]), and the bracket read off one pass of the bare field
-//! ([`bracket_from_one_bare_pass`]), the room itself ([`room_for`]) and the room read off a spatial
-//! index of the foreign edges ([`room_from_index`]).
+//! ([`bracket_from_one_bare_pass`]; past a setback of zero, with the rolling ball's switch on,
+//! `foreign_edge_bracket_past_a_zero_setback.rs`), the room itself ([`room_for`]) and the room
+//! read off a spatial index of the foreign edges ([`room_from_index`]).
 
 use vector_math::Vector3;
 
 use std::rc::Rc;
 
+use super::foreign_edge_bracket_past_a_zero_setback::bracket_past_a_zero_setback;
 use super::foreign_edge_room::{
     every_edge, read_every_foreign_edge, PRUNE_SLACK, ROOM_BISECTION_STEPS, ROOM_BRACKET_DOUBLINGS,
     UNIFORM_SETBACK_TOLERANCE,
 };
 use super::ForeignEdgeIndex;
 use super::{foreign_room_counters, ChainField, LevelLineMesh, LevelLineWork, WorkError};
+use crate::bevel::rolling_ball::rolling_ball_routing::use_rolling_ball;
 
 /// A foreign edge as (low, high, the other chain's extra unit setback taken off it).
 pub type ForeignEdge = (i32, i32, f64);
@@ -250,7 +253,15 @@ pub fn room_for(
         return Ok(best);
     }
 
-    let bracket = bracket_from_one_bare_pass(mesh, foreign, field_at, lowest_unit, highest_unit)?;
+    // A setback of zero somewhere (a free end the rolling ball closes onto its vertex) leaves the
+    // bare pass no upper end; with the ball's switch on one is read through the largest setback.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: a NaN takes the bare pass
+    let past_a_zero = !(lowest_unit > 0.0) && !lowest_unit.is_nan() && use_rolling_ball();
+    let bracket = if past_a_zero {
+        bracket_past_a_zero_setback(mesh, foreign, field_at, unit_setback, highest_unit)?
+    } else {
+        bracket_from_one_bare_pass(mesh, foreign, field_at, lowest_unit, highest_unit)?
+    };
     let searched: Vec<ForeignEdge> = bracket.searched.unwrap_or_else(|| foreign.to_vec());
     let (mut lo, mut hi) = (bracket.lo, bracket.hi);
     if !bracket.bracketed {

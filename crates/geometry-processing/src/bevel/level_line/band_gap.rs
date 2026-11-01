@@ -17,9 +17,11 @@ use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
 use super::{
-    band_side_tagging, chain_on_the_mesh, pick_validation, self_room, BandGapRefusal,
-    BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges, WorkBudget, WorkError,
+    band_side_tagging, chain_on_the_mesh, pick_validation, rolling_ball_setbacks, self_room,
+    BandGapRefusal, BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges,
+    WorkBudget, WorkError,
 };
+use crate::bevel::rolling_ball::rolling_ball_routing::use_rolling_ball;
 
 /// The build's arguments that are not the pick itself, as the funnel ([`build_unvalidated`])
 /// hands them to the build proper (`band_gap_build_within::build_within`).
@@ -85,7 +87,8 @@ impl From<PickArgumentError> for BandGapBuildError {
 /// The build every public entry point funnels through, with its work budget and topology-only
 /// switch: the pick split where its setbacks step, its closed chains started at a
 /// corner, its seams no longer features, a size over a KNOWN room refused before anything is paid
-/// for, and the build's own faults turned into the caller's outcomes - a cancel leaves as
+/// for (except where the rolling ball may take a pass of one chain, whose handed room is set
+/// aside), and the build's own faults turned into the caller's outcomes - a cancel leaves as
 /// [`BandGapBuildError::Cancelled`], a chain edge not on two triangles and a budget that ran out
 /// as refusals carrying the working mesh as it stood. No input validation: the public builds
 /// (`band_gap_entry_points`) validate first. `side_regions`, one face region per triangle of the
@@ -171,6 +174,16 @@ pub fn build_unvalidated(
     if budget.cancellation_token.is_cancelled() {
         return Err(BandGapBuildError::Cancelled);
     }
+
+    // A pass of one chain the rolling ball may take (its switch on, the outer pass, no probe) is
+    // neither refused nor trusted on a handed room, which was read with the angle's setbacks: the
+    // build reads its own room, with the ball's setbacks where the ball takes the pass
+    // (`one_chain_room`), and a refusal names that room.
+    let the_ball_may_take_it = chains.len() == 1
+        && !topology_only
+        && use_rolling_ball()
+        && rolling_ball_setbacks::PassScope::would_be_outer();
+    let known_room = known_room.filter(|_| !the_ball_may_take_it);
 
     // A size the KNOWN room cannot hold is refused HERE, before anything is paid for - except for
     // ONE OPEN chain, whose handed-in room is read size-free and may be flowed past.

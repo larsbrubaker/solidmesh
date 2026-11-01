@@ -31,7 +31,7 @@ const PICKED: (i32, i32) = (8, 56);
 /// point i at slice j is vertex j n + i; each end is a fan from `centre` (the last two vertices),
 /// the profile star-shaped from it. Wound so the solid's volume is positive. Returns the part and
 /// the chain of profile point 0 over the slices `picked`.
-fn sliced(
+pub fn sliced(
     profile: &[(f64, f64)],
     centre: (f64, f64),
     picked: (i32, i32),
@@ -198,8 +198,7 @@ fn where_the_sides_agree_a_free_end_still_closes_onto_the_end_vertex() {
 /// there, so cut by a cap of its own) to y = 10, free. Radius 2: the pass takes the ball, both
 /// rails end together on the free end vertex, the fill (the end faces' fill, with the end region's
 /// loop) refuses nothing and the result is closed. The free end stands 6 short of the wedge's far
-/// end: the room is still read with the level line's setbacks, whose round runs one setback past a
-/// free end, and picked to y = 14 that round would reach the far end's crease and refuse the size.
+/// end.
 #[test]
 fn a_free_end_and_a_cut_end_face_on_one_chain_both_close() {
     let steep = STEEP_DEGREES.to_radians();

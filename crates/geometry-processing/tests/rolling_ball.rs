@@ -11,6 +11,8 @@ mod band_route_tests;
 mod band_setback_tests;
 #[path = "rolling_ball/contact_tracking_tests.rs"]
 mod contact_tracking_tests;
+#[path = "rolling_ball/free_end_room_tests.rs"]
+mod free_end_room_tests;
 #[path = "rolling_ball/free_end_taper_tests.rs"]
 mod free_end_taper_tests;
 #[path = "rolling_ball/free_end_tests.rs"]

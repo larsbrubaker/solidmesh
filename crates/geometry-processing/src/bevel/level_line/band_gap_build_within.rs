@@ -25,11 +25,14 @@
 //!   fill's rail carried past an oblique end reads one setback for both sides, so the ball takes no
 //!   open chain whose sides differ and which has an end ray
 //!   (`rolling_ball_setbacks::unless_a_rayed_end_differs`).
-//! - **The level line's own setbacks:** the probes, the room and every reading at another size
-//!   (`field_at_0`, the room's convex-ray field, the narrow end face's flow). Where a closed
-//!   chain's sides differ the room is the level line's: it can name a size the ball's band does
-//!   not fit (a side whose contact stands farther out than the angle formula says), and such a size
-//!   is then not refused by its room.
+//! - **The room of a pass of one chain:** read in the build with the ball's setbacks at the size
+//!   asked, scaled (`one_chain_room`, whose header says why): `field_at_0`, the room's convex-ray
+//!   field, the narrow end face's flow and the room's margin. Such a pass is handed no room
+//!   (`band_gap::build_unvalidated` sets a caller's aside where the ball may take the pass).
+//! - **The level line's own setbacks:** the probes and the room of a pass of several chains (its
+//!   pair and corner readings). There a closed chain whose sides differ can read a room that names
+//!   a size the ball's band does not fit (a side whose contact stands farther out than the angle
+//!   formula says), and such a size is then not refused by its room.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -43,21 +46,20 @@ use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
-use super::band_room;
 use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_END_TAG};
 use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_groups,
     band_side_tagging, band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners,
-    end_face_sense, gap_loop_walk, narrow_face_flow, pick_validation, pinch_ladder_search,
+    gap_loop_walk, narrow_face_flow, one_chain_room, pick_validation, pinch_ladder_search,
     rolling_ball_setbacks, sharp_joint_corners, side_roots_settling, side_witness,
     square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
 };
 use super::{
-    BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, ChainField,
-    FieldCounters, GapLoop, LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind,
-    RoomSource, ScalarField, VertexFieldReading,
+    BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
+    LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind, RoomSource, ScalarField,
+    VertexFieldReading,
 };
 
 /// One group of a single-chain pick, seeded by chain 0 on `side`.
@@ -143,21 +145,24 @@ pub fn build_within(
     let PassSetbacks {
         chain_edges,
         unit_setbacks,
-        chain_points,
         end_rays,
-        end_ray_bounds,
         ..
     } = &setbacks;
     let ball_setbacks =
         rolling_ball_setbacks::unless_a_rayed_end_differs(ball_setbacks, closed, end_rays, size);
-    let field_of = |k: usize, s: f64| setbacks.field_of(k, s);
     let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
     let caps = setbacks.caps_of_one_open_chain(ball_setbacks.as_deref(), size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
-    // at every size.
-    let field_at_0 =
-        |s: f64| field_of(0, s).expect("the chain's polyline built a field at the size asked");
+    // at every size. A pass of one chain the ball takes reads its room with the ball's setbacks
+    // (`one_chain_room`); every other pass with the angle's.
+    let ball_room_units = one_chain_room::the_units(ball_setbacks.as_deref(), only);
+    let room_units: &[f64] = ball_room_units.as_deref().unwrap_or(&unit_setbacks[0]);
+    let field_at_0 = |s: f64| {
+        setbacks
+            .field_from(0, room_units, s)
+            .expect("the chain's polyline built a field at the size asked")
+    };
     let field = Rc::clone(&fields[0]);
 
     // 2. SIDES, as GROUPS.
@@ -213,7 +218,7 @@ pub fn build_within(
                 end_rays[0],
                 &field,
                 &field_at_0,
-                &unit_setbacks[0],
+                room_units,
                 size,
                 snap,
                 seam_epsilon,
@@ -324,37 +329,18 @@ pub fn build_within(
     let mut read_room_set_by = RoomSource::nothing();
     if only && known_room.is_none() {
         LevelLineWork::enter(LevelLineWorkPhase::CutRoom);
-        let convex_ends =
-            end_face_sense::convex_end_faces(positions, indices, &chains[0], end_rays[0]);
-        let without_convex_rays = (
-            end_rays[0].0 && convex_ends.0.is_none(),
-            end_rays[0].1 && convex_ends.1.is_none(),
-        );
-        let field_without_convex_rays = |s: f64| {
-            let setbacks: Vec<f64> = unit_setbacks[0].iter().map(|u| u * s).collect();
-            ChainField::from_polyline_bounded(
-                &chain_points[0],
-                closed[0],
-                &setbacks,
-                sharp_turn_degrees,
-                without_convex_rays,
-                end_ray_bounds[0],
-            )
-            .expect("the chain's polyline built a field at the size asked")
-        };
-        let present = band_room::present(convex_ends);
-        let (room, set_by) = band_room::room_of_cut_mesh(
-            &mesh,
-            &chain_edges[0],
-            &field_at_0,
-            &unit_setbacks[0],
+        let (room, set_by) = one_chain_room::read_in_the_build(
+            positions,
+            indices,
+            &chains[0],
             closed[0],
+            &mesh,
+            &setbacks,
+            room_units,
             snap,
             seam_epsilon,
             profile,
             fillet_segments,
-            Some(&present),
-            Some(&field_without_convex_rays),
         )?;
         read_room = Some(room);
         read_room_set_by = set_by;
@@ -365,7 +351,7 @@ pub fn build_within(
         Some(room)
             if !closed[0] && size > room && read_room_set_by.kind == RoomReadingKind::Foreign =>
         {
-            let largest = unit_setbacks[0]
+            let largest = room_units
                 .iter()
                 .copied()
                 .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);

@@ -354,7 +354,9 @@ pub fn the_foreign_source(
 /// tolerances below scale with the size they are given, so the same geometry read at two sizes
 /// answers two rooms and a build at the room a refusal named could be refused again. Everything is
 /// read at [`REFERENCE_SIZE`]; the setback is held per unit of size, so the answer is a ratio and
-/// any size would have given the same room but for those tolerances. The optional arguments are
+/// any size would have given the same room but for those tolerances. A build whose pass of one
+/// chain the rolling ball takes hands its own `field_at` and `unit_setback`, the ball's setbacks at
+/// the size it was asked, per unit of that size (`one_chain_room` says why). The optional arguments are
 /// passed explicitly (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces).
 #[allow(clippy::too_many_arguments)]
 pub fn room_of_cut_mesh(
