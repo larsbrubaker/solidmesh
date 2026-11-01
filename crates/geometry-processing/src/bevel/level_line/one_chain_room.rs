@@ -37,10 +37,10 @@
 //! (left, right, either), each with the unchanged bracket and fixed bisection, so each edge is read
 //! in one list but up to three times the trial fields are built where a side's setbacks are not one
 //! number; the self room builds each side's own field and samples its vertices with it. A growing
-//! crease run's room still reads the larger side's setbacks (conservative). Where the tagging does
-//! not divide the sides (a crease that dies out, or sides joined round a free end) the band is one
-//! group cut by one field, so the ball takes such a pass only where its sides agree, the group
-//! reading the chain's own field (`rolling_ball_setbacks::unless_an_undivided_chain_differs`).
+//! crease run's room still reads the larger side's setbacks (conservative). Where the build's side
+//! floods join the two sides (sides joined round a free end) and the ball takes the pass, the band
+//! is tagged from the ball's own sides (`rolling_ball_band_tags`), so the room reads each side
+//! there too.
 //!
 //! **Where it applies.** A pass of one chain, open or closed, that the ball may take - its switch
 //! on, the outer pass, no topology-only probe - is neither refused nor trusted on a room the caller

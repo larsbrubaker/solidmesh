@@ -86,7 +86,7 @@ pub fn sliced(
 /// vertices are under that), and at least as wide as the ball at the last vertex x_i short of S
 /// (setback x_i, so h^2 >= 2 x_i y - y^2) and the ball at the first vertex x_i+1 past it (setback S,
 /// so h^2 >= S^2 - (y - x_i+1)^2). Returns whether the point lies in the taper.
-fn on_the_sphere_through_the_end(p: Vector3, setback: f64) -> bool {
+pub fn on_the_sphere_through_the_end(p: Vector3, setback: f64) -> bool {
     let edge = LENGTH / f64::from(SLICES);
     let (start, stop) = (edge * f64::from(PICKED.0), edge * f64::from(PICKED.1));
     let y = (p.y - start).min(stop - p.y);

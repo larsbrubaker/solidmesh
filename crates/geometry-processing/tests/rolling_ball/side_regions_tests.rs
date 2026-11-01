@@ -1,10 +1,10 @@
 //! The rolling ball's two sides read from the caller's face regions
 //! (`band_gap_entry_points::build_pick_with_side_regions`) rather than flooded by the kernel over
 //! the build's feature edges: a cube whose back the feature edges let one side flood round into
-//! the other, which the regions keep apart (the band's own tagging still joins the two sides into
-//! one group there, and the sides agree, so that group reads the chain's own field), regions that do
-//! not give a chain two sides, and a chain whose band tagging joins two sides that differ, which
-//! keeps the level line.
+//! the other, which the regions keep apart (the band's own floods join the two sides there, so the
+//! band is tagged from the ball's sides), regions that do
+//! not give a chain two sides, and a chain whose band's own side floods join two sides that
+//! differ, whose band is tagged from the ball's sides and cut per side.
 
 use std::rc::Rc;
 
@@ -18,8 +18,9 @@ use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
 use vector_math::Vector3;
 
 use super::band_route_tests::{a_box, creases, Triangles};
-use super::band_setback_tests::STEEP_DEGREES;
-use super::free_end_taper_tests::sliced;
+use super::band_setback_tests::{the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES};
+use super::free_end_taper_tests::{on_the_sphere_through_the_end, sliced};
+use super::free_end_tests::the_rails_close_onto_both_end_vertices;
 
 /// The cube from (-1, -1, -1) to (1, 1, 1), its faces' two triangles each numbered as one region
 /// (bottom 0, top 1, front 2, right 3, back 4, left 5: `a_box` makes two triangles per face in
@@ -127,12 +128,12 @@ fn face_regions_that_miss_a_triangle_keep_the_level_line() {
 }
 
 /// The one-wall-bending groove sliced along its length, picked from y = 2 to y = 14, free at both
-/// ends, built at radius 2 with the switch `on`. Its feature edges are its creases but the floor's
+/// ends, built at radius 2 with the switch on. Its feature edges are its creases but the floor's
 /// line past the pick, so the band's side floods run round each free end and join the two sides
 /// into one region; its side regions are its profile's faces, the steeper wall's narrow first face
 /// and the wall above it one region, so the ball reads the straight wall and the steeper wall
 /// (2.34 and 2.72 from the floor) apart.
-fn the_groove_whose_sides_join_round_its_free_ends(on: bool) -> (BandGapResult, Option<String>) {
+fn the_groove_whose_sides_join_round_its_free_ends() -> (BandGapResult, Option<String>) {
     let steep = STEEP_DEGREES.to_radians();
     let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
     let profile = [
@@ -157,7 +158,7 @@ fn the_groove_whose_sides_join_round_its_free_ends(on: bool) -> (BandGapResult, 
         .collect();
     let sharp = creases(&positions, &triangles);
     let floor = move |a: i32, b: i32| a % (n as i32) == 0 && b % (n as i32) == 0;
-    set_use_rolling_ball(on);
+    set_use_rolling_ball(true);
     set_last_route(None);
     let result = build_pick_with_side_regions(
         &positions,
@@ -176,28 +177,38 @@ fn the_groove_whose_sides_join_round_its_free_ends(on: bool) -> (BandGapResult, 
     (result, route)
 }
 
-/// One open chain whose band tagging joins its two sides into one group, while the ball reads them
-/// 2.34 and 2.72 from the floor: one group is cut by one field, and neither side's own nor the
-/// larger stands for both, so the pass keeps the level line, the route says why, and its setbacks
-/// are bit for bit those of the build with the switch off.
+/// One open chain whose band's own side floods join its two sides round its free ends, while the
+/// ball reads them 2.34 and 2.72 from the floor: the band is tagged from the sides the ball rolled
+/// on, so it is cut per side. Clear of the ends each rail stands at its own side's hand distance
+/// (the straight wall's 2.3416, the steeper wall's 2.7235), near each end it follows the sphere of
+/// that distance through the end vertex, both rails close onto both free end vertices, the fill
+/// closes the round and the mesh is closed.
 #[test]
-fn a_chain_whose_band_joins_two_sides_that_differ_keeps_the_level_line() {
-    let (ball, route) = the_groove_whose_sides_join_round_its_free_ends(true);
-    let (level_line, _) = the_groove_whose_sides_join_round_its_free_ends(false);
-    let route = route.expect("the outer pass writes its route");
-    assert!(
-        route.starts_with("level-line: chain 0 point ")
-            && route.ends_with(
-                "and the band's tagging joins its two sides into one region, which is not cut \
-                 per side yet"
-            ),
-        "{route}"
-    );
-    assert_eq!(ball.refusal, level_line.refusal);
-    assert_eq!(ball.room.to_bits(), level_line.room.to_bits());
-    assert_eq!(ball.chains.len(), level_line.chains.len());
-    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
-        let bits = |s: &[f64]| s.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
-        assert_eq!(bits(&a.setbacks), bits(&b.setbacks));
+fn a_chain_whose_band_floods_join_two_sides_that_differ_is_cut_per_side_on_the_balls_sides() {
+    let (ball, route) = the_groove_whose_sides_join_round_its_free_ends();
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(2.0);
+    assert!((straight - 2.3416).abs() < 1e-3, "{straight}");
+    assert!((steeper - 2.7235).abs() < 1e-3, "{steeper}");
+    // The picked stretch of the floor runs from y = 2 to y = 14 at x = z = 0.
+    let ends = [Vector3::new(0.0, 2.0, 0.0), Vector3::new(0.0, 14.0, 0.0)];
+    let rails = the_rails_close_onto_both_end_vertices(&ball, ends);
+    let mut sides: Vec<i32> = rails.iter().map(|rail| rail.side).collect();
+    sides.sort_unstable();
+    assert_eq!(sides, [1, 2], "one rail per side of the ball");
+    for rail in &rails {
+        let middle = rail.points[rail.points.len() / 2];
+        let setback = if middle.x > 0.0 { steeper } else { straight };
+        let tapered = rail
+            .points
+            .iter()
+            .filter(|p| on_the_sphere_through_the_end(**p, setback))
+            .count();
+        let clear = rail.points.len() - tapered;
+        assert!(
+            tapered > 10 && clear > 10,
+            "side {}: {tapered} points in the tapers, {clear} clear of them",
+            rail.side
+        );
     }
 }

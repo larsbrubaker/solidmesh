@@ -1,5 +1,5 @@
 //! The band gap's build proper (split out of `band_gap.rs` for size). Steps 1 to 7 of the level
-//! line construction - setback, sides,
+//! line construction - setback, sides (step 2 is `band_gap_build_sides.rs`'s),
 //! refinement and roots per group, the band's delete, the room, the gap loops and the pinch -
 //! leaving nothing to do but fill. Its faults travel as [`BuildFault`] (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
@@ -10,9 +10,9 @@
 //! the chain's own field, the larger of the two sides at each point.
 //! - **Per side:** each side group's reading for the chains it is a side of
 //!   (`band_group_fields::of_sides`), and with it that group's refinement, end clip and sharp-joint
-//!   corners, witness and roots - everything that places a side's rail. A single open chain whose
-//!   tagging joins its sides into one group takes the ball only where they agree, reading the
-//!   chain's own field (`rolling_ball_setbacks::unless_an_undivided_chain_differs`).
+//!   corners, witness and roots - everything that places a side's rail. A pass of one chain whose
+//!   side floods join its two sides into one region is tagged from the ball's own sides
+//!   (`rolling_ball_band_tags`, in step 2), so each side is a group of its own there too.
 //! - **Per end:** a single open chain's end region whose sides differ at its end reads its cap
 //!   field (`PassSetbacks::caps_of_one_open_chain`), cut to meet each side's rail.
 //! - **Per side, judged:** whether the band ends on a rim (`consumed_to_the_rim`, each edge read
@@ -45,34 +45,23 @@ use vector_math::Vector3;
 
 use super::band_gap::{chord_tolerance_of, needle_floor_of, BandGapBuildError, BuildWithinArgs};
 use super::band_gap_build_fault::{defect, BuildFault};
+use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
-use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_END_TAG};
-use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::seam_edges::FeatureEdgeTest;
 use super::{
-    band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_groups,
-    band_side_tagging, band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners,
-    gap_loop_walk, narrow_face_flow, one_chain_room, pick_validation, pinch_ladder_search,
-    rolling_ball_setbacks, sharp_joint_corners, side_roots_settling, side_witness,
-    square_crease_end_clip, step_corner_carry, swallowed_side_runs, triangle_edges,
+    band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
+    band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
+    one_chain_room, pick_validation, pinch_ladder_search, rolling_ball_setbacks,
+    sharp_joint_corners, side_roots_settling, side_witness, square_crease_end_clip,
+    swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
     LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind, RoomSource, ScalarField,
     VertexFieldReading,
 };
-
-/// One group of a single-chain pick, seeded by chain 0 on `side`.
-fn one_chain_group(tag: i32) -> BandGroup {
-    BandGroup {
-        tag,
-        members: vec![0],
-        side_of_chain: IndexMap::from([(0, tag)]),
-        ..BandGroup::default()
-    }
-}
 
 /// The build proper. `working` receives the working mesh as soon as it is made, so a refusal out
 /// of the middle of the build can still hand it back; `unflowed_room` receives the plain
@@ -126,7 +115,7 @@ pub fn build_within(
     // outer pass and no topology-only probe, and the ball takes the whole pass; probes, the room
     // and every other size keep the level line's own, and only the outer pass writes the route.
     let pass = rolling_ball_setbacks::PassScope::enter();
-    let ball_setbacks = rolling_ball_setbacks::for_the_pass(
+    let ball_pass = rolling_ball_setbacks::with_the_sides(
         positions,
         indices,
         chains,
@@ -150,18 +139,15 @@ pub fn build_within(
         end_rays,
         ..
     } = &setbacks;
+    let (ball_setbacks, ball_sides) = match ball_pass {
+        Some((setbacks, sides)) => (Some(setbacks), Some(sides)),
+        None => (None, None),
+    };
     let ball_setbacks =
         rolling_ball_setbacks::unless_a_rayed_end_differs(ball_setbacks, closed, end_rays, size);
-    let (ball_setbacks, one_group) = rolling_ball_setbacks::unless_an_undivided_chain_differs(
-        ball_setbacks,
-        indices,
-        chain_edges,
-        closed,
-        &*is_feature_edge,
-        size,
-    )?;
+    // The ball's sides tag a one-chain band only where its setbacks are kept.
+    let ball_sides = ball_sides.filter(|_| only && ball_setbacks.is_some());
     let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
-    let side_fields = side_fields.filter(|_| !one_group);
     let caps = setbacks.caps_of_one_open_chain(ball_setbacks.as_deref(), size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
@@ -178,133 +164,31 @@ pub fn build_within(
 
     // 2. SIDES, as GROUPS.
     LevelLineWork::enter(LevelLineWorkPhase::Sides);
-    let mut tags: Vec<i32>;
-    let mut groups: Vec<BandGroup>;
-    if only {
-        let divides;
-        (tags, divides) = if known_room.is_some() {
-            band_side_tagging_ends::tag_band(
-                positions,
-                indices,
-                &chain_edges[0],
-                &*is_feature_edge,
-                &field,
-                snap,
-                true,
-            )?
-        } else {
-            band_side_tagging_ends::tag_sides(
-                indices,
-                &chain_edges[0],
-                &*is_feature_edge,
-                true,
-                Some(positions),
-                end_rays[0],
-                SideReach {
-                    ends: EndReach {
-                        end_reach: None,
-                        end_face_reach: Some(&field),
-                    },
-                    side_reach: None,
-                },
-            )?
-        };
-        if !divides && closed[0] {
-            return Ok(BandGapResult {
-                refusal: BandGapRefusal::ChainDoesNotDivideItsSides,
-                room: 0.0,
-                ..BandGapResult::default()
-            });
-        }
-
-        // An end face NARROWER than this size's setback is flowed over onto the next face - but
-        // only where the end face's own room would refuse the size and the flowed ends take it.
-        if known_room.is_none() && divides && !closed[0] {
-            tags = narrow_face_flow::tag_flowed_where_it_builds(
-                positions,
-                indices,
-                &chain_edges[0],
-                closed[0],
-                Rc::clone(&is_feature_edge),
-                end_rays[0],
-                &field,
-                &field_at_0,
-                room_units,
-                size,
-                snap,
-                seam_epsilon,
-                profile,
-                fillet_segments,
-                tags,
-                unflowed_room,
-            )?;
-        }
-
-        // An OPEN chain whose sides fall in ONE region is a crease that DIES OUT, carried as ONE
-        // group; what the CUT leaves decides whether it can be filled.
-        groups = if divides {
-            vec![one_chain_group(1), one_chain_group(2)]
-        } else {
-            vec![one_chain_group(1)]
-        };
-
-        // An open chain ending on an END FACE: each end region is a group of its own.
-        if divides && !closed[0] {
-            for end in [FIRST_END_TAG, SECOND_END_TAG] {
-                if tags.contains(&end) {
-                    groups.push(one_chain_group(end));
-                }
-            }
-        }
-    } else {
-        let mut undivided;
-        (tags, groups, undivided) = band_side_groups::group_sides(
-            indices,
-            chain_edges,
-            &*is_feature_edge,
-            true,
-            Some(positions),
-            Some(end_rays),
-            Some(&fields),
-        )?;
-        step_corner_carry::join_the_larger_setback_piece(
-            positions,
-            indices,
-            chain_edges,
-            unit_setbacks,
-            &tags,
-            &mut groups,
-            step_corners,
-        );
-
-        // A BOTH-SIDED member divides its sides and is built; only with the switch off does it
-        // refuse by the name it had before.
-        if undivided < 0 && !both_sided_members_build() {
-            undivided = groups
-                .iter()
-                .flat_map(|g| g.both_sided.iter().copied())
-                .min()
-                .unwrap_or(-1);
-        }
-
-        if undivided < 0 {
-            undivided = band_side_tagging::first_both_sided_at_a_mixed_corner(
-                Some(positions),
-                indices,
-                chain_edges,
-                &groups,
-            )?;
-        }
-
-        if undivided >= 0 {
-            return Ok(BandGapResult {
-                refusal: BandGapRefusal::ChainDoesNotDivideItsSides,
-                room: 0.0,
-                offending_chain: undivided,
-                ..BandGapResult::default()
-            });
-        }
-    }
+    let side_inputs = SideInputs {
+        positions,
+        indices,
+        chain_edges,
+        closed,
+        is_feature_edge: &is_feature_edge,
+        end_rays,
+        unit_setbacks,
+        fields: &fields,
+        field: &field,
+        field_at_0: &field_at_0,
+        room_units,
+        known_room,
+        size,
+        snap,
+        seam_epsilon,
+        profile,
+        fillet_segments,
+        step_corners,
+        ball_sides: ball_sides.as_ref().map(|sides| &sides[0]),
+    };
+    let (tags, groups) = match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {
+        Sides::Tagged(tags, groups) => (tags, groups),
+        Sides::Refused(refusal) => return Ok(*refusal),
+    };
 
     let mesh = Rc::new(RefCell::new(LevelLineMesh::from_triangles(
         positions,

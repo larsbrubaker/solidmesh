@@ -3,8 +3,8 @@
 //! the chain's end vertex there, each side's band thinning to nothing at it
 //! (`level_line::rolling_ball_free_ends`). Here on stretches of the one-wall-bending groove's ring
 //! (`band_setback_tests.rs`): a long stretch whose sides differ, and a short one whose round is a
-//! lens. The helpers that build such a pick and check its rails and fill are shared with
-//! `free_end_taper_tests.rs`.
+//! lens. The helpers that build such a pick and check its rails and fill are shared with the other
+//! free-end and side-region tests.
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -83,6 +83,18 @@ pub fn closes_onto_both_end_vertices(
     let route = last_route();
     reset_to_the_default();
     assert_eq!(route.as_deref(), Some("rolling-ball"));
+    let rails = the_rails_close_onto_both_end_vertices(&ball, ends);
+    (ball, rails)
+}
+
+/// What [`closes_onto_both_end_vertices`] checks of a build, `ball`, round an open chain free at
+/// both ends whose end vertices stand at `ends`: nothing refused, one rail per side running from
+/// one end vertex to the other, the fill closing the round as two runs meeting end to end, the
+/// result closed. Returns the two rails.
+pub fn the_rails_close_onto_both_end_vertices(
+    ball: &BandGapResult,
+    ends: [Vector3; 2],
+) -> Vec<Rail> {
     assert_eq!(ball.refusal, BandGapRefusal::None);
 
     let mut rails = Vec::new();
@@ -130,7 +142,7 @@ pub fn closes_onto_both_end_vertices(
     let seen = Rc::clone(&fades);
     let watch: WatchFadeHole = Rc::new(move |_hole: &[(i32, i32)]| seen.set(seen.get() + 1));
     open_gap_fill::WATCH_FADE_HOLE.with(|w| *w.borrow_mut() = Some(watch));
-    let fill = gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS);
+    let fill = gap_fill::fill(ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS);
     open_gap_fill::WATCH_FADE_HOLE.with(|w| *w.borrow_mut() = None);
     let fill = fill.expect("the fill runs");
     assert_eq!(fades.get(), 1, "the runs meet end to end at both ends");
@@ -156,7 +168,7 @@ pub fn closes_onto_both_end_vertices(
             );
         }
     }
-    (ball, rails)
+    rails
 }
 
 /// Twice the ring facets' sagitta at its outer radius, as the closed ring's test reasons: how far
