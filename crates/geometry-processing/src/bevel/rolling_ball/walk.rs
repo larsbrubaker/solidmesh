@@ -38,7 +38,8 @@
 //! [`RollingBall::walk_ending_on`]) - the T Handle's junction chains end on the pocket's floor -
 //! one rule holds. The end face is neither a side nor an obstacle: the ball touches only the two
 //! sides, each read as cut at the end face's plane and extended past it, each of its triangles
-//! meeting the plane carried on as its own plane (`side_extension.rs`: what lies past the plane
+//! meeting the plane carried on as its own plane as far as the chain's line carried on past its
+//! end vertex, where the trim at the chain ends it (`side_extension.rs`: what lies past the plane
 //! of a side that wraps on past it, as the T Handle's pocket wall runs on through the web, is
 //! never read), and nothing of the part on the end face or beyond its plane refuses it. Its
 //! centre is kept on the chain's side of
@@ -66,7 +67,7 @@ use super::ball_station::{
     ball_station_reading, flat_face_centre, BallStation, BallStationError, SideReading,
     SOLVED_RELATIVE,
 };
-use super::side_extension::extended_past;
+use super::side_extension::{extended_past, ChainEnd};
 use super::side_surface::{HalfSpace, RollingBallSide, SideContact};
 
 /// How far beyond an end face's plane a free centre may stand, relative to one plus the radius,
@@ -306,10 +307,18 @@ impl RollingBall<'_> {
 
         // Each end's plane as the half of space the chain approaches it from: from the first
         // point the chain runs on along its tangent, into the last against it.
+        // The chain's end vertex and its direction carried on past it bound each side's
+        // extension there (`side_extension.rs`).
         let mut kept: Vec<HalfSpace> = Vec::new();
-        for (end, into, last) in [
-            (ends[0], points[0].tangent, false),
-            (ends[1], -points[points.len() - 1].tangent, true),
+        let mut chain_ends: Vec<ChainEnd> = Vec::new();
+        for (end, into, at, last) in [
+            (ends[0], points[0].tangent, points[0].point, false),
+            (
+                ends[1],
+                -points[points.len() - 1].tangent,
+                points[points.len() - 1].point,
+                true,
+            ),
         ] {
             let Some(end) = end else { continue };
             let length = end.normal.length();
@@ -321,9 +330,15 @@ impl RollingBall<'_> {
             if !(cosine.abs() > END_FACE_LEAST_COSINE) {
                 return Err(WalkError::EndFaceAlongTheChain { last });
             }
-            kept.push(HalfSpace {
+            let plane = HalfSpace {
                 origin: end.point,
                 normal: if cosine > 0.0 { normal } else { -normal },
+            };
+            kept.push(plane);
+            chain_ends.push(ChainEnd {
+                plane,
+                vertex: at,
+                along: -into,
             });
         }
         // Each side read as cut at every end face's plane and extended past it as its own planes
@@ -332,8 +347,8 @@ impl RollingBall<'_> {
         let extended = (!kept.is_empty()).then(|| {
             let tolerance = READING_PAST_RELATIVE * scale;
             (
-                extended_past(self.side_a, &kept, self.radius, tolerance),
-                extended_past(self.side_b, &kept, self.radius, tolerance),
+                extended_past(self.side_a, &chain_ends, self.radius, tolerance),
+                extended_past(self.side_b, &chain_ends, self.radius, tolerance),
             )
         });
         let ball = match &extended {

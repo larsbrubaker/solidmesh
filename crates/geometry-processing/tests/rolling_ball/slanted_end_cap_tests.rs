@@ -226,11 +226,11 @@ fn a_wedge_whose_end_face_is_narrower_than_its_rails_keeps_the_level_line() {
 
 /// A roof ridge of 160 degrees (its faces falling 5 and 15 degrees from the ridge, the chain),
 /// sheared so each end face leans 25 degrees off square to it either way, rounded at radius 2: the
-/// ball's end station, held in a leaning end plane at so obtuse a corner, can touch a side where
-/// its extension past the face leaves a gap (beside the chain's own line carried on past the end
-/// vertex), on a strip's open edge. Such a contact is no setback: the pass either builds every
-/// setback at the hand answer, r tan 10 degrees (both faces flat), or keeps the level line saying
-/// the end contact rests on a rim; it never builds a band short.
+/// ball's end station, held in a leaning end plane at so obtuse a corner, touches each side on its
+/// extension past the face (bounded at the chain's line carried on past the end vertex, so no
+/// strip reaches across it, and filled beside it), on the side's plane and no rim: the pass takes
+/// the ball and builds every setback at the hand answer, r tan 10 degrees (both faces flat), never
+/// short.
 #[test]
 fn an_obtuse_ridge_with_a_leaning_end_never_builds_short() {
     let (left, right) = (5f64.to_radians().tan(), 15f64.to_radians().tan());
@@ -253,21 +253,15 @@ fn an_obtuse_ridge_with_a_leaning_end_never_builds_short() {
         let part = (sheared, triangles.clone());
         let (ball, route) = built(&part, &[vec![0, 5]], radius, true);
         let route = route.expect("the pass writes its route");
-        if route == "rolling-ball" {
-            assert_eq!(ball.refusal, BandGapRefusal::None);
-            for chain in &ball.chains {
-                for &setback in &chain.setbacks {
-                    assert!(
-                        (setback - hand).abs() < 1e-9,
-                        "lean {lean}: {setback} where {hand}"
-                    );
-                }
+        assert_eq!(route, "rolling-ball", "lean {lean}");
+        assert_eq!(ball.refusal, BandGapRefusal::None);
+        for chain in &ball.chains {
+            for &setback in &chain.setbacks {
+                assert!(
+                    (setback - hand).abs() < 1e-9,
+                    "lean {lean}: {setback} where {hand}"
+                );
             }
-        } else {
-            assert!(
-                route.contains("rests on a rim of the side extended past the face"),
-                "lean {lean}: {route}"
-            );
         }
     }
 }

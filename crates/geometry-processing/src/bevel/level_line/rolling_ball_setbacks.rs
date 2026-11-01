@@ -372,8 +372,8 @@ fn walked_setbacks(
                 && ((i == 0 && walk.ends[0] == WalkEnd::EndFace)
                     || (i + 1 == walk.stations.len() && walk.ends[1] == WalkEnd::EndFace));
             // A contact on a rim of a side read as extended past the end face lies where the
-            // extension has a gap (beside the chain's own line, between strips, past a strip's
-            // reach): no surface the round rests on, so its distance is no setback. Fail safe.
+            // extension has a hole (the ones `rolling_ball::side_extension` lists): no surface
+            // the round rests on, so its distance is no setback. Fail safe.
             if on_an_end_face {
                 let end = usize::from(i != 0);
                 for (contact, name) in [(&station.contact_a, "A"), (&station.contact_b, "B")] {
