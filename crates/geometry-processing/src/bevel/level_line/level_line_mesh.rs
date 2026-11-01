@@ -122,6 +122,13 @@ pub struct LevelLineMesh {
     /// tangled that repairing one needle keeps making another. Never seen; the flag is so it
     /// cannot be silent.
     pub repair_hit_its_bound: bool,
+    /// True where the band's side tags are the rolling ball's sides
+    /// (`rolling_ball_band_tags`), whose two sides are the caller's face regions and so may meet
+    /// again away from the chain (another chain's crease, or the chain's own crease running on
+    /// past a free end): the room reads such a meeting as foreign (`foreign_edge_room`). False,
+    /// the default, for every other tagging, whose sides meet only on the chain or across a
+    /// feature edge the room has always left to the cut.
+    pub sides_from_the_ball: bool,
 }
 
 impl std::fmt::Debug for LevelLineMesh {

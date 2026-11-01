@@ -80,10 +80,15 @@ pub fn is_a_knife(
 }
 
 /// The foreign feature edges - where a side's region ends on
-/// something that is not the chain, and not at the chain's own ends. A region only ever ends at a
-/// chain edge (which puts the other side across it) or at a feature edge (which leaves untagged
-/// material across it), so an edge onto tag 0 is exactly a foreign feature edge, and it stays one
-/// through every split, since a split's children inherit their parent's tag. A crease a growing
+/// something that is not the chain, and not at the chain's own ends. A side flooded by the band's
+/// own tagging only ever ends at a chain edge (which puts the other side across it) or at a
+/// feature edge (which leaves untagged material across it), so an edge onto tag 0 is exactly a
+/// foreign feature edge, and it stays one through every split, since a split's children inherit
+/// their parent's tag. A side tagged from the rolling ball's (`LevelLineMesh::sides_from_the_ball`)
+/// is the caller's face regions, which end at region boundaries: onto tag 0, or onto the other
+/// side away from the chain (another chain's crease between the same two regions, or the chain's
+/// own crease running on past a free end), where no tag 0 stands. Such a 1|2 edge is foreign too:
+/// the band cutting across it would cut through a crease the user did not pick. A crease a growing
 /// neighbour grows over is replaced by what it grows into; the growing runs read along the way are
 /// handed to `growing_runs` when given (`seam_epsilon` 0 is the usual value).
 ///
@@ -157,7 +162,9 @@ pub fn foreign_edges(
 
         let standing = m.triangles_on(edge.0, edge.1);
         let tags = || standing.iter().map(|&t| m.triangles[t as usize].tag);
-        if !tags().any(|t| t != 0) || !tags().any(|t| t == 0) {
+        let sides_meet_off_the_chain =
+            m.sides_from_the_ball && tags().any(|t| t == 1) && tags().any(|t| t == 2);
+        if !sides_meet_off_the_chain && (!tags().any(|t| t != 0) || !tags().any(|t| t == 0)) {
             continue;
         }
 

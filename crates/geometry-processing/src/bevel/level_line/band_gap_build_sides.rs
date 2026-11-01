@@ -54,8 +54,9 @@ pub struct SideInputs<'a> {
 /// The sides of the pass: its triangles' tags and its band groups, or the refusal the build hands
 /// back as it is.
 pub enum Sides {
-    /// The tags per triangle and the band groups.
-    Tagged(Vec<i32>, Vec<BandGroup>),
+    /// The tags per triangle, the band groups, and whether the tags are the rolling ball's sides
+    /// (`rolling_ball_band_tags`).
+    Tagged(Vec<i32>, Vec<BandGroup>, bool),
     /// A chain that does not divide its sides (boxed: a result is far larger than the tags).
     Refused(Box<BandGapResult>),
 }
@@ -100,6 +101,7 @@ pub fn tag_the_sides(
     } = *inputs;
     let mut tags: Vec<i32>;
     let mut groups: Vec<BandGroup>;
+    let mut tagged_by_the_ball = false;
     if chain_edges.len() == 1 {
         let mut divides;
         (tags, divides) = if known_room.is_some() {
@@ -147,6 +149,7 @@ pub fn tag_the_sides(
             }
             _ => false,
         };
+        tagged_by_the_ball = from_the_ball;
         if !divides && closed[0] {
             return Ok(Sides::Refused(Box::new(BandGapResult {
                 refusal: BandGapRefusal::ChainDoesNotDivideItsSides,
@@ -244,5 +247,5 @@ pub fn tag_the_sides(
         }
     }
 
-    Ok(Sides::Tagged(tags, groups))
+    Ok(Sides::Tagged(tags, groups, tagged_by_the_ball))
 }

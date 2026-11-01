@@ -185,10 +185,11 @@ pub fn build_within(
         step_corners,
         ball_sides: ball_sides.as_ref().map(|sides| &sides[0]),
     };
-    let (tags, groups) = match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {
-        Sides::Tagged(tags, groups) => (tags, groups),
-        Sides::Refused(refusal) => return Ok(*refusal),
-    };
+    let (tags, groups, sides_from_the_ball) =
+        match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {
+            Sides::Tagged(tags, groups, from_the_ball) => (tags, groups, from_the_ball),
+            Sides::Refused(refusal) => return Ok(*refusal),
+        };
 
     let mesh = Rc::new(RefCell::new(LevelLineMesh::from_triangles(
         positions,
@@ -203,6 +204,7 @@ pub fn build_within(
         m.set_same_place(snap).map_err(defect)?;
         // Needles are repaired out of the mesh BEFORE anything reads it.
         m.needle_floor = needle_floor_of(snap, tolerance);
+        m.sides_from_the_ball = sides_from_the_ball;
 
         // ...but never a needle standing ON the pick, nor a fold the tagging flooded up to.
         let mut on_a_chain: HashSet<(i32, i32)> = HashSet::new();

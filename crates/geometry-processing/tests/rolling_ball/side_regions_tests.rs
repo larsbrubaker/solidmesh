@@ -3,15 +3,19 @@
 //! the build's feature edges: a cube whose back the feature edges let one side flood round into
 //! the other, which the regions keep apart (the band's own floods join the two sides there, so the
 //! band is tagged from the ball's sides), regions that do
-//! not give a chain two sides, and a chain whose band's own side floods join two sides that
-//! differ, whose band is tagged from the ball's sides and cut per side.
+//! not give a chain two sides, a chain whose band's own side floods join two sides that differ,
+//! whose band is tagged from the ball's sides and cut per side (and which the switch off leaves as
+//! it was), and a box whose two side regions meet again away from the chain, where the room is
+//! read.
 
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick_with_side_regions, BandGapBuildOptions,
 };
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile};
+use geometry_processing::bevel::level_line::{
+    BandGapRefusal, BandGapResult, BandProfile, RoomReadingKind,
+};
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball, ROLLING_BALL_ROUTE,
 };
@@ -133,7 +137,7 @@ fn face_regions_that_miss_a_triangle_keep_the_level_line() {
 /// into one region; its side regions are its profile's faces, the steeper wall's narrow first face
 /// and the wall above it one region, so the ball reads the straight wall and the steeper wall
 /// (2.34 and 2.72 from the floor) apart.
-fn the_groove_whose_sides_join_round_its_free_ends() -> (BandGapResult, Option<String>) {
+fn the_groove_whose_sides_join_round_its_free_ends(on: bool) -> (BandGapResult, Option<String>) {
     let steep = STEEP_DEGREES.to_radians();
     let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
     let profile = [
@@ -158,7 +162,7 @@ fn the_groove_whose_sides_join_round_its_free_ends() -> (BandGapResult, Option<S
         .collect();
     let sharp = creases(&positions, &triangles);
     let floor = move |a: i32, b: i32| a % (n as i32) == 0 && b % (n as i32) == 0;
-    set_use_rolling_ball(true);
+    set_use_rolling_ball(on);
     set_last_route(None);
     let result = build_pick_with_side_regions(
         &positions,
@@ -185,7 +189,7 @@ fn the_groove_whose_sides_join_round_its_free_ends() -> (BandGapResult, Option<S
 /// closes the round and the mesh is closed.
 #[test]
 fn a_chain_whose_band_floods_join_two_sides_that_differ_is_cut_per_side_on_the_balls_sides() {
-    let (ball, route) = the_groove_whose_sides_join_round_its_free_ends();
+    let (ball, route) = the_groove_whose_sides_join_round_its_free_ends(true);
     assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
     let (straight, steeper) = the_contact_distances_in_the_one_sided_groove(2.0);
     assert!((straight - 2.3416).abs() < 1e-3, "{straight}");
@@ -211,4 +215,80 @@ fn a_chain_whose_band_floods_join_two_sides_that_differ_is_cut_per_side_on_the_b
             rail.side
         );
     }
+}
+
+/// A box 6 long (x), 2 deep (y) and 7 tall (z), its faces numbered as in [`a_cube_and_its_faces`]
+/// but with the bottom in the top's region and the back in the front's: each of the top front
+/// edge's two sides spans two faces that never touch it, as a pick's region can span the whole
+/// part, so the top's region meets the front's again at the top back crease, 2 from the chain.
+fn a_deep_box_whose_regions_meet_again_at_its_back() -> ((Vec<Vector3>, Triangles), Vec<u32>) {
+    let part = a_box(Vector3::new(-3.0, -1.0, -6.0), Vector3::new(3.0, 1.0, 1.0));
+    let regions = (0..part.1.len() as u32)
+        .map(|t| match t / 2 {
+            0 => 1,
+            4 => 2,
+            face => face,
+        })
+        .collect();
+    (part, regions)
+}
+
+/// The deep box's top front edge (4 to 5) filleted at `size` with the switch on, its feature
+/// edges every crease but the three round the back, so the band's own floods join its sides and
+/// the band is tagged from the ball's.
+fn the_deep_box_top_front_edge(size: f64) -> (BandGapResult, Option<String>) {
+    let ((positions, triangles), regions) = a_deep_box_whose_regions_meet_again_at_its_back();
+    let sharp = creases(&positions, &triangles);
+    let blended = |a: i32, b: i32| {
+        let (low, high) = if a < b { (a, b) } else { (b, a) };
+        matches!((low, high), (6, 7) | (2, 3) | (0, 1))
+    };
+    set_use_rolling_ball(true);
+    set_last_route(None);
+    let result = build_pick_with_side_regions(
+        &positions,
+        &triangles,
+        &[vec![4, 5]],
+        &[false],
+        Some(Rc::new(move |a, b| sharp(a, b) && !blended(a, b))),
+        size,
+        BandProfile::Fillet,
+        &BandGapBuildOptions::default(),
+        Some(&regions),
+    )
+    .expect("the pick's arguments are good");
+    let route = last_route();
+    reset_to_the_default();
+    (result, route)
+}
+
+/// The deep box's top front edge at 0.5 takes the ball, its band tagged from the ball's sides
+/// (the top and bottom, the front and back), and the room is read at the top back crease, where
+/// the top's region meets the front's again with no untagged triangle beside it. By hand: the
+/// crease stands 2 from the chain across the flat top, and the ball between two flat faces at a
+/// right angle sets back exactly its radius, so the band reaches the crease at a size of 2 (less
+/// the kept strip's margin). Read as no crease, the room would be the sides' own reach, the far
+/// corner of the bottom (sqrt(2^2 + 7^2) = 7.28) or of the back, and a band past 2 would cut
+/// across the crease.
+#[test]
+fn a_side_region_meeting_the_other_side_away_from_the_chain_bounds_the_room_there() {
+    let (ball, route) = the_deep_box_top_front_edge(0.5);
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    assert_eq!(ball.refusal, BandGapRefusal::None);
+    assert!(ball.room < 2.0 && ball.room > 2.0 - 1e-6, "{}", ball.room);
+    assert_eq!(ball.room_set_by.kind, RoomReadingKind::Foreign);
+}
+
+/// With the switch off the groove whose band floods join round its free ends builds as it always
+/// has: no route is written, and the level line's room, 2 less the margin, is set where the
+/// floor's crease runs on past the first free end, 2 from it at the origin, so a size of 2 is
+/// refused.
+#[test]
+fn the_groove_whose_sides_join_round_its_free_ends_is_unchanged_with_the_switch_off() {
+    let (level_line, route) = the_groove_whose_sides_join_round_its_free_ends(false);
+    assert_eq!(route, None);
+    assert_eq!(level_line.refusal, BandGapRefusal::Size);
+    assert_eq!(level_line.room, 1.999999998);
+    assert_eq!(level_line.room_set_by.kind, RoomReadingKind::Foreign);
+    assert_eq!(level_line.room_set_by.crease_at, Some(Vector3::ZERO));
 }
