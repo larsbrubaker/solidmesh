@@ -53,6 +53,7 @@ use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
+use super::rolling_ball_sweep::ContactPlanes;
 use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
@@ -184,8 +185,14 @@ pub fn build_within(
     };
     let field = Rc::clone(&fields[0]);
 
-    // 2. SIDES, as GROUPS.
+    // 2. SIDES, as GROUPS. The ball's sides are bounded by its contacts' planes.
     LevelLineWork::enter(LevelLineWorkPhase::Sides);
+    let planes = match (&ball_sides, ball_setbacks.as_deref()) {
+        (Some(_), Some(ball)) => {
+            ContactPlanes::of(&ball[0], &setbacks.chain_points[0], closed[0], size, snap)
+        }
+        _ => None,
+    };
     let side_inputs = SideInputs {
         positions,
         indices,
@@ -206,6 +213,9 @@ pub fn build_within(
         fillet_segments,
         step_corners,
         ball_sides: ball_sides.as_ref().map(|sides| &sides[0]),
+        ball_sweep: planes
+            .as_ref()
+            .zip(side_fields.as_ref().map(|sides| &sides[0])),
     };
     let (tags, groups, sides_from_the_ball) =
         match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {

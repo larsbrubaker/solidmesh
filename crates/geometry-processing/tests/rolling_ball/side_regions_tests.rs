@@ -6,15 +6,17 @@
 //! ball, strict), a chain whose band's own side floods join two sides that differ, whose band is
 //! tagged from the ball's sides and cut per side (and which the switch off leaves as it was), whose
 //! crease running on past each free end the tapered round never reaches, and a box whose two side
-//! regions meet again away from the chain, where the room is read.
+//! regions meet again away from the chain, where the room is read, and a step whose tread, in the
+//! top's region, wraps round behind the riser the ball rests on, which the band never cuts.
 
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick_with_side_regions, BandGapBuildOptions,
 };
+use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandGapResult, BandProfile, RoomReadingKind,
+    BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, RoomReadingKind,
 };
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball, ROLLING_BALL_REFUSED,
@@ -342,4 +344,109 @@ fn the_crease_running_on_past_a_free_end_is_never_reached_by_the_tapered_round()
             );
         }
     }
+}
+
+/// A step: the top (z = 0, x <= 0) and the tread (z = -0.5, 0 <= x <= 4) one side region, the
+/// riser (x = 0) between them another, on a block 6 deep, sliced along its length (y) and picked
+/// along the top|riser edge from y = 2 to y = 14, free at both ends. Its feature edges are its
+/// creases but the picked edge's line past the pick, so the band's side floods run round each free
+/// end and join the two sides into one region, and the band is tagged from the ball's sides: side
+/// A the top and the tread, side B the riser. Built at radius 2 with the switch on; returns the
+/// result, the route and the part's vertex positions.
+fn the_step_whose_tread_wraps_round_behind_its_riser(
+) -> (BandGapResult, Option<String>, Vec<Vector3>) {
+    let profile = [
+        (0.0, 0.0),
+        (0.0, -0.5),
+        (4.0, -0.5),
+        (4.0, -6.0),
+        (-6.0, -6.0),
+        (-6.0, 0.0),
+    ];
+    let n = profile.len() as u32;
+    let ((positions, triangles), chain) = sliced(&profile, (-1.0, -3.0), (8, 56));
+    let walls = (triangles.len() as u32) - (2 * n);
+    // Face i runs from profile point i to i + 1: the riser is face 0, the tread face 1 and the top
+    // face 5, which the tread joins.
+    let regions: Vec<u32> = (0..triangles.len() as u32)
+        .map(|t| match t {
+            t if t >= walls => n,
+            t if (t / 2) % n == 1 => n - 1,
+            t => (t / 2) % n,
+        })
+        .collect();
+    let sharp = creases(&positions, &triangles);
+    let picked_line = move |a: i32, b: i32| a % (n as i32) == 0 && b % (n as i32) == 0;
+    set_use_rolling_ball(true);
+    set_last_route(None);
+    let result = build_pick_with_side_regions(
+        &positions,
+        &triangles,
+        &[chain],
+        &[false],
+        Some(Rc::new(move |a, b| sharp(a, b) && !picked_line(a, b))),
+        2.0,
+        BandProfile::Fillet,
+        &BandGapBuildOptions::default(),
+        Some(&regions),
+    )
+    .expect("the pick's arguments are good");
+    let route = last_route();
+    reset_to_the_default();
+    (result, route, positions)
+}
+
+/// The step whose tread wraps round behind its riser. By hand, the ball of radius 2 rests on the
+/// top 1.3229 (sqrt(1.75)) from the chain and on the riser|tread rim 0.5 below it, so side A's field
+/// reaches the tread up to x = 1.2247, behind the rim the ball rests on, which its contact on A never
+/// sweeps. The tread is taken out of side A (`rolling_ball_sweep`): no tread triangle is in A's
+/// band, cut or moved, and the room is no longer read across the tread at the rim (0.7559, a size
+/// of 2 refused), so the band is cut at 2. The riser's band reaches exactly the rim its contact
+/// rests on and takes the whole riser between the free ends' tapers, so side B's rail breaks into a
+/// stub at each end and the fill refuses the open ends: a crease a side's contacts rest on is not
+/// yet that side's rail.
+#[test]
+fn a_side_wrapping_round_behind_the_other_sides_contact_is_not_cut_there() {
+    let (ball, route, positions) = the_step_whose_tread_wraps_round_behind_its_riser();
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    assert_eq!(ball.refusal, BandGapRefusal::None, "{}", ball.room);
+    assert!(ball.room > 2.0, "{}", ball.room);
+    let on_the_tread = |p: Vector3| p.x > -1e-12 && (p.z + 0.5).abs() < 1e-12;
+    {
+        let mesh = ball.mesh.as_ref().expect("the band came out").borrow();
+        for (v, &p) in positions.iter().enumerate() {
+            if on_the_tread(p) {
+                assert_eq!(mesh.position(v as i32), p, "tread vertex {v} moved");
+            }
+        }
+        let mut tread = 0;
+        for t in 0..mesh.triangle_count() {
+            let face = mesh.triangles()[t as usize];
+            if [face.a, face.b, face.c]
+                .iter()
+                .all(|&v| on_the_tread(mesh.position(v)))
+            {
+                assert!(!mesh.is_removed(t), "tread triangle {t} is in the band");
+                assert_eq!(face.tag, 0, "tread triangle {t} is in side {}", face.tag);
+                tread += 1;
+            }
+        }
+        // 64 slices of two triangles each, none of them cut.
+        assert_eq!(tread, 128);
+        let side_b_ends: Vec<Vector3> = ball
+            .loops
+            .iter()
+            .filter(|l| l.side == 2)
+            .flat_map(|l| [l.vertices[0], l.vertices[l.vertices.len() - 1]])
+            .map(|v| mesh.position(v))
+            .collect();
+        assert!(
+            side_b_ends.contains(&Vector3::new(0.0, 2.5, -0.5))
+                && side_b_ends.contains(&Vector3::new(0.0, 13.5, -0.5)),
+            "side B's rail is not cut at the rim: {side_b_ends:?}"
+        );
+    }
+    let fill =
+        gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs");
+    assert_eq!(fill.refusal, GapFillRefusal::OpenChainEnds);
 }

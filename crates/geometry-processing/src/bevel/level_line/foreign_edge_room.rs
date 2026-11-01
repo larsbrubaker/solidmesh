@@ -22,7 +22,11 @@
 //!   reach it: the other side's region wraps round past the sliver, and that side's band, a
 //!   setback of 0.31 there at a size of 12, would be cut on it beyond the crease, across a crease
 //!   the user did not pick. The room is then honest, and an exemption by topology (the run of 1|2
-//!   edges leaving the end vertex) would exempt exactly that crease.
+//!   edges leaving the end vertex) would exempt exactly that crease. Where the ball's contacts
+//!   never sweep that side's triangles behind the crease, they leave the side before the room is
+//!   read (`rolling_ball_sweep`), so the crease is read as the other side's edge with no side
+//!   beyond it, against that side's own field; where the side's band within reach lies on both
+//!   sides of the other contact's plane the pass is refused before any room is read.
 //!
 //! An end that carries an end region (3 or 4) keeps no exemption at its end vertex: its setback
 //! there is the cap's, not zero, so a 1|2 edge through it - a second crease between the two sides
@@ -113,7 +117,13 @@ pub fn is_a_knife(
 /// is the caller's face regions, which end at region boundaries: onto tag 0, or onto the other
 /// side away from the chain (another chain's crease between the same two regions, or the chain's
 /// own crease running on past a free end), where no tag 0 stands. Such a 1|2 edge is foreign too:
-/// the band cutting across it would cut through a crease the user did not pick. A crease a growing
+/// the band cutting across it would cut through a crease the user did not pick. Such a side also
+/// loses what the ball's contacts never sweep (`rolling_ball_sweep`), which can end it onto tag 0
+/// across a smooth surface, not at a crease: that edge is read like any other onto tag 0 - no knife
+/// edge (`is_a_knife_edge`: it is not folded at all), no growing crease (`GrowingCreaseRuns::grows`
+/// asks for an opposite-sense crease, which a flat edge is not, so `bounds_of` keeps the edge
+/// itself) - and filed on the side against that side's own field (`foreign_edge_room_per_side`),
+/// so it can only lower the room. A crease a growing
 /// neighbour grows over is replaced by what it grows into; the growing runs read along the way are
 /// handed to `growing_runs` when given (`seam_epsilon` 0 is the usual value).
 ///

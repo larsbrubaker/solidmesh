@@ -6,7 +6,9 @@
 //! room, the consumed rims, the loop walk and the fill) reads the sides this step chose. Where the
 //! rolling ball takes a one-chain pass whose side floods join its two sides into one region, the
 //! sides are the ones the ball rolled on (`rolling_ball_band_tags`, whose header says why and why
-//! only there).
+//! only there). The ball's tags then lose what its contacts never sweep (`rolling_ball_sweep`):
+//! a side wrapping round behind the other side's contact, or a pass refused where a side's band
+//! folds back past it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -19,9 +21,11 @@ use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_E
 use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::foreign_edge_room_readings::FieldAt;
 use super::rolling_ball_band_tags::{self, BallSides};
+use super::rolling_ball_sweep::{self, ContactPlanes, Sweep};
 use super::seam_edges::FeatureEdgeTest;
 use super::{band_side_groups, band_side_tagging, narrow_face_flow, step_corner_carry};
 use super::{BandGapRefusal, BandGapResult, BandGroup, BandProfile, ChainField};
+use crate::bevel::rolling_ball::rolling_ball_routing;
 
 /// What step 2 reads: the pass's mesh and chains, and the fields and settings the one-chain
 /// tagging's reaches and the narrow face flow's rooms read.
@@ -49,6 +53,9 @@ pub struct SideInputs<'a> {
     pub step_corners: &'a HashSet<i32>,
     /// The triangles the ball rolled on, where it takes a pass of one chain.
     pub ball_sides: Option<&'a BallSides>,
+    /// Where the ball takes a pass of one chain: its contacts' planes and side A's and side B's
+    /// fields at the size, which bound the sides its tags give (`rolling_ball_sweep`).
+    pub ball_sweep: Option<(&'a ContactPlanes, &'a [Rc<ChainField>; 2])>,
 }
 
 /// The sides of the pass: its triangles' tags and its band groups, or the refusal the build hands
@@ -98,6 +105,7 @@ pub fn tag_the_sides(
         fillet_segments,
         step_corners,
         ball_sides,
+        ball_sweep,
     } = *inputs;
     let mut tags: Vec<i32>;
     let mut groups: Vec<BandGroup>;
@@ -144,6 +152,31 @@ pub fn tag_the_sides(
                     end_rays[0],
                     field,
                 )?;
+                if let Some((planes, [a, b])) = ball_sweep {
+                    let swept = rolling_ball_sweep::retag_what_the_contacts_never_sweep(
+                        positions,
+                        indices,
+                        &chain_edges[0],
+                        &mut tags,
+                        [a, b],
+                        planes,
+                        snap,
+                    )?;
+                    if let Sweep::FoldsBack { point, side } = swept {
+                        let (own, other) = if side == 0 { ("A", "B") } else { ("B", "A") };
+                        let why = format!(
+                            "chain 0: side {own}'s band runs behind side {other}'s contact at \
+                             ({}, {}, {})",
+                            point.x, point.y, point.z
+                        );
+                        rolling_ball_routing::record_refusal(&why);
+                        return Ok(Sides::Refused(Box::new(BandGapResult {
+                            refusal: BandGapRefusal::RollingBall,
+                            rolling_ball_refusal: Some(why),
+                            ..BandGapResult::default()
+                        })));
+                    }
+                }
                 divides = true;
                 true
             }

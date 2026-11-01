@@ -746,6 +746,7 @@ fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_t
         right: vec![1.0, 1.5, 1.0],
         caps: [None, None],
         centres: Vec::new(),
+        contacts: [Vec::new(), Vec::new()],
     };
     let agree = SideSetbacks {
         right: vec![1.0, 1.0, 1.0],

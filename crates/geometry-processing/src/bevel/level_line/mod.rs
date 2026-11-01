@@ -187,6 +187,7 @@ mod rolling_ball_end_caps;
 mod rolling_ball_free_ends;
 pub mod rolling_ball_setbacks;
 mod rolling_ball_sides;
+pub mod rolling_ball_sweep;
 mod room_candidate;
 mod room_field;
 mod room_reading;
