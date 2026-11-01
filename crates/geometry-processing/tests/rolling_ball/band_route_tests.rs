@@ -2,8 +2,9 @@
 //! (`level_line::rolling_ball_setbacks`, behind `rolling_ball::rolling_ball_routing`), held to the
 //! level line's own build where the two must agree: on a flat corner the ball's contacts stand
 //! r tan(phi / 2) from the edge, exactly the setback the level line works out from the angle, so
-//! the band comes out the same on both routes. And a pass the ball cannot take whole keeps the
-//! level line's setbacks for every chain, with the reason in the route.
+//! the band comes out the same on both routes. And a pass the ball cannot take whole is refused
+//! (strict: never built on the level line's own setbacks), with the reason on the result and in
+//! the route.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -14,7 +15,7 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
 use geometry_processing::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile};
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball,
-    the_running_app_wants_it_on, ROLLING_BALL_ROUTE,
+    the_running_app_wants_it_on, ROLLING_BALL_REFUSED, ROLLING_BALL_ROUTE,
 };
 use vector_math::Vector3;
 
@@ -235,29 +236,26 @@ fn a_sixty_degree_corner_bands_the_same_on_the_rolling_ball_as_on_the_level_line
 
 /// A slab 0.5 thick with two picked edges at radius 0.4: the ball walks the short upright edge
 /// (two broad faces either side, the top and bottom its end faces) but not the long top edge,
-/// where a ball 0.4 below the top reaches through the bottom. The whole pass keeps the level
-/// line's setbacks - the upright edge's too - and the route names the chain that refused.
+/// where a ball 0.4 below the top reaches through the bottom. The whole pass is refused - the
+/// upright edge's too, never built on the level line's setbacks - and the refusal and the route
+/// name the chain that refused. With the switch off the same pick builds on the level line's.
 #[test]
-fn a_pass_the_rolling_ball_cannot_walk_whole_keeps_the_level_line_for_every_chain() {
+fn a_pass_the_rolling_ball_cannot_walk_whole_is_refused_with_its_reason() {
     let part = a_box(Vector3::new(-5.0, -5.0, 0.0), Vector3::new(5.0, 5.0, 0.5));
     let chains = [vec![0, 4], vec![6, 7]];
     let (ball, route) = built(&part, &chains, 0.4, true);
-    let route = route.expect("a pass with the switch on writes its route");
-    assert!(
-        route.starts_with("level-line: chain 1: the ball has no walk"),
-        "{route}"
-    );
+    assert_eq!(ball.refusal, BandGapRefusal::RollingBall);
+    let why = ball
+        .rolling_ball_refusal
+        .clone()
+        .expect("a rolling-ball refusal says why");
+    assert!(why.starts_with("chain 1: the ball has no walk"), "{why}");
+    assert_eq!(route, Some(format!("{ROLLING_BALL_REFUSED}{why}")));
+    assert!(ball.mesh.is_none(), "a refused pass hands back no band");
+    assert!(ball.chains.is_empty(), "nor any field it was not cut by");
     let (level_line, _) = built(&part, &chains, 0.4, false);
     assert_eq!(level_line.refusal, BandGapRefusal::None);
-    assert_eq!(ball.refusal, BandGapRefusal::None);
-    assert_eq!(level_line.chains.len(), 2);
-    assert_eq!(ball.chains.len(), level_line.chains.len());
-    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
-        assert_eq!(
-            a.setbacks, b.setbacks,
-            "the level line's own setbacks, bit for bit"
-        );
-    }
+    assert_eq!(level_line.rolling_ball_refusal, None);
 }
 
 /// The developer variable turns the ball on only where it plainly says so: unset, "0", "false" or

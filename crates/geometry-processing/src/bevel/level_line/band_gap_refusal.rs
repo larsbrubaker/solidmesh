@@ -62,4 +62,11 @@ pub enum BandGapRefusal {
     /// room is ZERO and NOT a size statement. Seen on `Center Right and Left Side.mcx`. Refused by
     /// name so the user is not told to shrink a size no smaller size fixes.
     SidesLeaveNoLoopAtAnySize,
+
+    /// The rolling ball's switch is on (`rolling_ball::rolling_ball_routing`) and the ball cannot
+    /// take this pass: a chamfer, a corner, a walk refused, an end it does not finish, and so on.
+    /// The result's `rolling_ball_refusal` says which. Refused rather than built on the level
+    /// line's own setbacks, so a pass with the switch on is the ball's or nothing. The room is ZERO
+    /// and NOT a size statement.
+    RollingBall,
 }

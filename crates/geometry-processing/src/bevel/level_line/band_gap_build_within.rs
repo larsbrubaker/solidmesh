@@ -24,13 +24,17 @@
 //!   chain points, end rays and tolerances). The larger side is how far the band can reach; it is
 //!   never read as where one side's rail stands: the result carries the side fields
 //!   (`side_chains`), which the rail joined past a rib reads (`virtual_rail::joined_sides`). The
-//!   fill's rail carried past an oblique end reads one setback for both sides, so the ball takes no
-//!   open chain whose sides differ and which has an end ray
-//!   (`rolling_ball_setbacks::unless_a_rayed_end_differs`).
+//!   fill's rail carried past an oblique end reads one setback for both sides, so the ball refuses
+//!   an open chain whose sides differ and which has an end ray
+//!   (`rolling_ball_setbacks::a_rayed_end_that_differs`).
 //! - **The room of a pass of one chain:** read in the build with the ball's setbacks at the size
 //!   asked, scaled (`one_chain_room`, whose header says why): `field_at_0`, the room's convex-ray
 //!   field, the narrow end face's flow and the room's margin. Such a pass is handed no room
 //!   (`band_gap::build_unvalidated` sets a caller's aside where the ball may take the pass).
+//! - **Strict:** an outer fillet pass the ball is asked to take and cannot (`with_the_sides` or
+//!   `a_rayed_end_that_differs` names why) is refused as `BandGapRefusal::RollingBall` with that
+//!   reason, before anything is cut; it is never built on the level line's own setbacks. A
+//!   chamfer is never asked: no ball defines it, and it builds exactly as with the switch off.
 //! - **The level line's own setbacks:** the probes and the room of a pass of several chains (its
 //!   pair and corner readings). There a closed chain whose sides differ can read a room that names
 //!   a size the ball's band does not fit (a side whose contact stands farther out than the angle
@@ -62,6 +66,16 @@ use super::{
     LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind, RoomSource, ScalarField,
     VertexFieldReading,
 };
+use crate::bevel::rolling_ball::rolling_ball_routing;
+
+/// A pass the rolling ball was asked to take and cannot, refused with `why`.
+fn refused_by_the_ball(why: String) -> BandGapResult {
+    BandGapResult {
+        refusal: BandGapRefusal::RollingBall,
+        rolling_ball_refusal: Some(why),
+        ..BandGapResult::default()
+    }
+}
 
 /// The build proper. `working` receives the working mesh as soon as it is made, so a refusal out
 /// of the middle of the build can still hand it back; `unflowed_room` receives the plain
@@ -112,10 +126,11 @@ pub fn build_within(
         profile,
     )?;
     // The field at the size takes the rolling ball's setbacks where its switch is on, this is the
-    // outer pass and no topology-only probe, and the ball takes the whole pass; probes, the room
-    // and every other size keep the level line's own, and only the outer pass writes the route.
+    // outer pass and no topology-only probe, and the ball takes the whole pass, which is refused
+    // where the ball cannot take it; probes, the room and every other size keep the level line's
+    // own, and only the outer pass writes the route.
     let pass = rolling_ball_setbacks::PassScope::enter();
-    let ball_pass = rolling_ball_setbacks::with_the_sides(
+    let ball_pass = match rolling_ball_setbacks::with_the_sides(
         positions,
         indices,
         chains,
@@ -126,7 +141,10 @@ pub fn build_within(
         profile,
         &setbacks,
         topology_only || !pass.is_outer(),
-    );
+    ) {
+        Ok(ball_pass) => ball_pass,
+        Err(why) => return Ok(refused_by_the_ball(why)),
+    };
     let is_feature_edge: FeatureEdgeTest =
         is_feature_edge.unwrap_or_else(|| Rc::new(|_: i32, _: i32| false));
     let tolerance = chord_tolerance_of(size, chord_tolerance);
@@ -143,8 +161,12 @@ pub fn build_within(
         Some((setbacks, sides)) => (Some(setbacks), Some(sides)),
         None => (None, None),
     };
-    let ball_setbacks =
-        rolling_ball_setbacks::unless_a_rayed_end_differs(ball_setbacks, closed, end_rays, size);
+    if let Some(why) = ball_setbacks.as_deref().and_then(|ball| {
+        rolling_ball_setbacks::a_rayed_end_that_differs(ball, closed, end_rays, size)
+    }) {
+        rolling_ball_routing::record_refusal(&why);
+        return Ok(refused_by_the_ball(why));
+    }
     // The ball's sides tag a one-chain band only where its setbacks are kept.
     let ball_sides = ball_sides.filter(|_| only && ball_setbacks.is_some());
     let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;

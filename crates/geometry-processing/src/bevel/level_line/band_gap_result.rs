@@ -107,6 +107,9 @@ pub struct BandGapResult {
     pub work_spent: i64,
     /// How many units it was allowed.
     pub work_limit: i64,
+    /// Why the rolling ball could not take the pass, where the refusal is
+    /// [`BandGapRefusal::RollingBall`]; `None` otherwise.
+    pub rolling_ball_refusal: Option<String>,
 }
 
 impl Default for BandGapResult {
@@ -137,6 +140,7 @@ impl Default for BandGapResult {
             phase: LevelLineWorkPhase::default(),
             work_spent: 0,
             work_limit: 0,
+            rolling_ball_refusal: None,
         }
     }
 }

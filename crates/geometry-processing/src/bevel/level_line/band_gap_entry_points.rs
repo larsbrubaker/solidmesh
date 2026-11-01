@@ -103,7 +103,7 @@ pub fn build_pick(
 /// else). Where the rolling ball's switch is on, each chain's two sides are the regions holding
 /// the triangles either side of its edges, in place of the kernel's own flood over the feature
 /// edges (`rolling_ball_sides`); `None` is [`build_pick`]. A list whose length is not the
-/// triangle count keeps the level line, the route saying so.
+/// triangle count is refused by the ball (`BandGapRefusal::RollingBall`), the route saying so.
 #[allow(clippy::too_many_arguments)]
 pub fn build_pick_with_side_regions(
     positions: &[Vector3],

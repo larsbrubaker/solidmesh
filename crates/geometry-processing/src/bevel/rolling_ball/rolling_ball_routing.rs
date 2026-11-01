@@ -14,9 +14,22 @@
 //! route its pass took reaches the test that asked for it, wherever its compute runs.
 //!
 //! The route is written by every pass that runs with the switch on: [`ROLLING_BALL_ROUTE`] where
-//! the rolling ball decided the pass's setbacks, or "level-line: " and why it did not, where the
-//! whole pass kept the level line's own (`level_line::rolling_ball_setbacks`). A pass with the
-//! switch off writes nothing.
+//! the rolling ball decided the pass's setbacks, or [`ROLLING_BALL_REFUSED`] and why it did not
+//! (`level_line::rolling_ball_setbacks`). A pass with the switch off writes nothing.
+//!
+//! **Strict.** With the switch on, an outer fillet pass the ball does not take is refused
+//! (`BandGapRefusal::RollingBall`, the reason on the result's `rolling_ball_refusal`); it is never
+//! built on the level line's own setbacks. The ball is being brought to parity, and a pass quietly
+//! built the older way would pass every test while saying nothing about the ball. A caller reads
+//! the reason off the result it was handed (`BandGapResult::rolling_ball_refusal`, carried on by
+//! chains in turn and rounds first as `GapFillResult::rolling_ball_refusal`), never off this
+//! record: the record is shared by every job one thread hands the compute pool, so two builds
+//! running at once would read each other's. The route record is a test seam only.
+//!
+//! **Chamfers are outside the ball.** A chamfer is a flat cut at a distance along each face, which
+//! no ball defines, so with the switch on a chamfer's pass is built exactly as with it off: never
+//! offered to the ball, never refused by it, writing no route. That is a different tool, not a
+//! fallback.
 
 use std::cell::{Cell, RefCell};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
@@ -28,6 +41,9 @@ pub const USE_ROLLING_BALL_VARIABLE: &str = "MATTERCAD_BEVEL_ROLLINGBALL";
 
 /// The route string a pass whose setbacks the rolling ball decided writes.
 pub const ROLLING_BALL_ROUTE: &str = "rolling-ball";
+
+/// What the route of a pass the rolling ball refused starts with; the reason follows it.
+pub const ROLLING_BALL_REFUSED: &str = "refused: ";
 
 /// Whether the running app reads setbacks from the rolling ball, given the developer variable's
 /// value: only where it plainly says on. A function of the value, so a test can check both
@@ -90,6 +106,11 @@ pub fn last_route() -> Option<String> {
 /// Records (or clears) [`last_route`].
 pub fn set_last_route(value: Option<String>) {
     *locked(&route()) = value;
+}
+
+/// Records a pass the rolling ball refused: the route reads [`ROLLING_BALL_REFUSED`] and `why`.
+pub fn record_refusal(why: &str) {
+    set_last_route(Some(format!("{ROLLING_BALL_REFUSED}{why}")));
 }
 
 /// The switch as one thread has it set and the record its route lives in, captured so work run on

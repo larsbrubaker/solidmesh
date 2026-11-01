@@ -1,13 +1,13 @@
-//! The rolling ball's setbacks where they are not the level line's (a side that bends away beyond
-//! a narrow first face, so the ball touches the face past it); an open chain whose two sides'
+//! The rolling ball's setbacks where they are not the level line's (a side that bends away beyond a
+//! narrow first face, so the ball touches the face past it); an open chain whose two sides'
 //! contacts differ (a groove and a wedge), each side cut at its own distance and each end face's
-//! cut meeting both rails; the passes and builds that keep the level line's: such a chain with an
-//! end ray or in a pass of several chains, chains meeting at a corner, a chain that is convex
-//! along part of its length and concave along the rest, and the probes a build runs inside
-//! itself, which never write the route; which group reads a chain's side field; and a closed
-//! chain whose sides differ (the groove revolved into a ring), where each side's band is cut at
-//! its own side's distance. The grooves, the wedge and the ring are built here; the cube, the
-//! prism and the build are `band_route_tests.rs`'s.
+//! cut meeting both rails; the passes and builds the ball refuses (strict: never built on the level
+//! line's setbacks): such a chain with an end ray or in a pass of several chains, chains meeting at
+//! a corner, a chain that is convex along part of its length and concave along the rest; the probes
+//! a build runs inside itself, which keep the level line's and never write the route; which group
+//! reads a chain's side field; and a closed chain whose sides differ (the groove revolved into a
+//! ring), where each side's band is cut at its own side's distance. The grooves, the wedge and the
+//! ring are built here; the cube, the prism and the build are `band_route_tests.rs`'s.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -18,13 +18,13 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
 use geometry_processing::bevel::level_line::band_gap_setback_fields::PassSetbacks;
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::rolling_ball_setbacks::{
-    for_the_pass, unless_a_rayed_end_differs, PassScope, SideSetbacks,
+    a_rayed_end_that_differs, for_the_pass, PassScope, SideSetbacks,
 };
 use geometry_processing::bevel::level_line::{
     chain_fields_of, BandGapRefusal, BandGroup, BandProfile, ChainField, GapFillRefusal,
 };
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
-    last_route, reset_to_the_default, set_last_route, set_use_rolling_ball,
+    last_route, reset_to_the_default, set_last_route, set_use_rolling_ball, ROLLING_BALL_REFUSED,
 };
 use indexmap::IndexMap;
 use vector_math::Vector3;
@@ -437,9 +437,9 @@ fn the_band(
 }
 
 /// A 60 degree prism's top rim picked as three open chains meeting at its corners: the ball's
-/// rule for a corner is not built, so the whole pass keeps the level line's, and says so.
+/// rule for a corner is not built, so the ball refuses the whole pass, and says so.
 #[test]
-fn chains_meeting_at_a_corner_keep_the_level_line_whole() {
+fn chains_meeting_at_a_corner_are_refused_by_the_ball() {
     let (positions, triangles) = a_sixty_degree_prism();
     let chains = [vec![3, 4], vec![4, 5], vec![5, 3]];
     let crease = creases(&positions, &triangles);
@@ -461,16 +461,19 @@ fn chains_meeting_at_a_corner_keep_the_level_line_whole() {
     reset_to_the_default();
     assert_eq!(setbacks, None);
     let route = route.expect("the pass writes its route");
+    let why = route
+        .strip_prefix(ROLLING_BALL_REFUSED)
+        .expect("the route says the ball refused");
     assert!(
-        route.starts_with("level-line: the pass's chains meet at a corner"),
-        "{route}"
+        why.starts_with("the pass's chains meet at a corner"),
+        "{why}"
     );
 }
 
 /// An L-shaped block's chain running along a convex rim edge into the concave inner corner: one
-/// ball sits on one side of the part, so the whole pass keeps the level line's.
+/// ball sits on one side of the part, so the ball refuses the whole pass.
 #[test]
-fn a_chain_both_convex_and_concave_keeps_the_level_line_whole() {
+fn a_chain_both_convex_and_concave_is_refused_by_the_ball() {
     let profile = [
         (0.0, 0.0),
         (2.0, 0.0),
@@ -500,7 +503,7 @@ fn a_chain_both_convex_and_concave_keeps_the_level_line_whole() {
     assert_eq!(setbacks, None);
     assert_eq!(
         route.as_deref(),
-        Some("level-line: chain 0: edge 1 is concave where its first edge is convex")
+        Some("refused: chain 0: edge 1 is concave where its first edge is convex")
     );
 }
 
@@ -717,29 +720,27 @@ fn round_a_closed_chain_whose_sides_differ_each_sides_band_takes_its_own_balls_s
     }
 }
 
-/// The route a build of `part` round `chains` (open) writes at radius 2 with the switch on, after
-/// checking the pass kept the level line's band: every chain's setbacks those of the build with the
-/// switch off.
-pub fn kept_the_level_line(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) -> String {
+/// Why the ball refused a build of `part` round `chains` (open) at radius 2 with the switch on,
+/// after checking the build was refused as the ball's (no band handed back) and the route says the
+/// same reason.
+pub fn refused_by_the_ball(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]) -> String {
     let (ball, route) = built(part, chains, 2.0, true);
-    let (level_line, _) = built(part, chains, 2.0, false);
-    assert_eq!(ball.refusal, level_line.refusal);
-    assert_eq!(ball.chains.len(), level_line.chains.len());
-    for (a, b) in ball.chains.iter().zip(&level_line.chains) {
-        assert_eq!(a.setbacks, b.setbacks);
-    }
-    let route = route.expect("the outer pass writes its route");
-    assert!(route.starts_with("level-line: "), "{route}");
-    route
+    assert_eq!(ball.refusal, BandGapRefusal::RollingBall);
+    assert!(ball.mesh.is_none(), "a refused pass hands back no band");
+    let why = ball.rolling_ball_refusal.expect("the refusal says why");
+    assert_eq!(route, Some(format!("{ROLLING_BALL_REFUSED}{why}")));
+    why
 }
 
-/// An open chain whose sides differ anywhere and which carries an end ray keeps the level line,
-/// and the route names the first point where they differ: the rail carried past an oblique end is
+/// An open chain whose sides differ anywhere and which carries an end ray is refused by the ball,
+/// and the reason names the first point where they differ: the rail carried past an oblique end is
 /// laid at one setback. (A slanted end whose sides differ there is refused before this, by its
 /// cap; this is the chain whose sides agree at its ends and differ between them.) A closed chain,
-/// a chain with no end ray and sides that agree keep the ball's setbacks.
+/// a chain with no end ray and sides that agree keep the ball's setbacks. The reading writes no
+/// route; the build that refuses on it does, held end to end on "Center Right and Left Side.mcx"
+/// (mattercad-model's `bevel_strict_reason_tests`).
 #[test]
-fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_keeps_the_level_line() {
+fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_the_ball() {
     let differ = SideSetbacks {
         left: vec![1.0, 1.0, 1.0],
         right: vec![1.0, 1.5, 1.0],
@@ -750,36 +751,28 @@ fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_keeps_the_level
         ..differ.clone()
     };
     set_last_route(None);
-    let kept = |ball: &SideSetbacks, closed: bool, rays: (bool, bool)| {
-        unless_a_rayed_end_differs(Some(vec![ball.clone()]), &[closed], &[rays], 2.0)
+    let why = |ball: &SideSetbacks, closed: bool, rays: (bool, bool)| {
+        a_rayed_end_that_differs(std::slice::from_ref(ball), &[closed], &[rays], 2.0)
     };
+    assert_eq!(why(&differ, false, (false, false)), None);
+    assert_eq!(why(&differ, true, (false, false)), None);
+    assert_eq!(why(&agree, false, (true, true)), None);
     assert_eq!(
-        kept(&differ, false, (false, false)),
-        Some(vec![differ.clone()])
-    );
-    assert_eq!(
-        kept(&differ, true, (false, false)),
-        Some(vec![differ.clone()])
-    );
-    assert_eq!(kept(&agree, false, (true, true)), Some(vec![agree.clone()]));
-    assert_eq!(last_route(), None);
-    assert_eq!(kept(&differ, false, (false, true)), None);
-    let route = last_route();
-    reset_to_the_default();
-    assert_eq!(
-        route.as_deref(),
+        why(&differ, false, (false, true)).as_deref(),
         Some(
-            "level-line: chain 0 point 1: the sides' contacts stand 2 and 3 from the chain, and \
-             an oblique end's rail carried past the end is not cut per side yet"
+            "chain 0 point 1: the sides' contacts stand 2 and 3 from the chain, and an oblique \
+             end's rail carried past the end is not cut per side yet"
         )
     );
+    assert_eq!(last_route(), None);
+    reset_to_the_default();
 }
 
 /// Two wedges side by side, each apex a chain of one pass: an open chain's end regions in a pass
-/// of several chains belong to the whole pick's groups, not one chain end, so the pass keeps the
-/// level line.
+/// of several chains belong to the whole pick's groups, not one chain end, so the ball refuses the
+/// pass.
 #[test]
-fn open_chains_whose_sides_differ_in_a_pass_of_several_keep_the_level_line() {
+fn open_chains_whose_sides_differ_in_a_pass_of_several_are_refused_by_the_ball() {
     let (mut positions, mut triangles) = a_wedge_with_one_wall_bending_steeper();
     let count = positions.len() as i32;
     let moved: Vec<Vector3> = positions
@@ -792,7 +785,7 @@ fn open_chains_whose_sides_differ_in_a_pass_of_several_keep_the_level_line() {
         .map(|&(a, b, c)| (a + count, b + count, c + count))
         .collect();
     triangles.extend(again);
-    let route = kept_the_level_line(
+    let route = refused_by_the_ball(
         &(positions, triangles),
         &[vec![0, 4], vec![count, count + 4]],
     );

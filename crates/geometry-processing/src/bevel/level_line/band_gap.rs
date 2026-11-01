@@ -175,12 +175,13 @@ pub fn build_unvalidated(
         return Err(BandGapBuildError::Cancelled);
     }
 
-    // A pass of one chain the rolling ball may take (its switch on, the outer pass, no probe) is
-    // neither refused nor trusted on a handed room, which was read with the angle's setbacks: the
-    // build reads its own room, with the ball's setbacks where the ball takes the pass
-    // (`one_chain_room`), and a refusal names that room.
+    // A pass of one chain the rolling ball may take (its switch on, a fillet, the outer pass, no
+    // probe) is neither refused nor trusted on a handed room, which was read with the angle's
+    // setbacks: the build reads its own room, with the ball's setbacks where the ball takes the
+    // pass (`one_chain_room`), and a refusal names that room.
     let the_ball_may_take_it = chains.len() == 1
         && !topology_only
+        && profile != BandProfile::Chamfer
         && use_rolling_ball()
         && rolling_ball_setbacks::PassScope::would_be_outer();
     let known_room = known_room.filter(|_| !the_ball_may_take_it);

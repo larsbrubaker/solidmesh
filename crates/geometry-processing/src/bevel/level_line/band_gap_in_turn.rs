@@ -398,6 +398,7 @@ pub fn build_open_chains_in_turn(
                 offending_chain: k as i32,
                 mesh: gap.mesh.clone(),
                 phase: gap.phase,
+                rolling_ball_refusal: gap.rolling_ball_refusal.clone(),
                 ..GapFillResult::default()
             });
         }

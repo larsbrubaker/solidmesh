@@ -9,7 +9,8 @@
 //! the edge (`level_line::ChainField`). Behind its switch ([`rolling_ball_routing`], off unless
 //! `MATTERCAD_BEVEL_ROLLINGBALL` is on), a level-line pass takes its band's setbacks from the
 //! ball's contacts instead, where every chain of the pass walks
-//! (`level_line::rolling_ball_setbacks`); no build the app makes by default uses it. What is here:
+//! (`level_line::rolling_ball_setbacks`), and is refused where one does not (strict: never built
+//! on the level line's own setbacks); no build the app makes by default uses it. What is here:
 //!
 //! - [`RollingBallSide`] (`side_surface.rs`): one side's surface - triangles of the part - with a
 //!   box tree, answering the side's closest point to a point in space and what that point lies on

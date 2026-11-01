@@ -26,11 +26,17 @@
 //!
 //! **Whole pass, never half.** The rolling ball decides the pass only where every chain in it
 //! walks: every station solves, both contacts' distances are finite numbers, and each end finishes
-//! on an end face or as a plain last station. Anything else keeps the level line's own setbacks
-//! for every chain, and the route says why: a chamfer, a pass with no feature-edge test, chains of
-//! the pass meeting at a corner (the ball's three-face rule for a corner is not built, and a corner
-//! is no end face), a chain whose edges are not all convex or all concave (one ball sits on one
-//! side of the part), a walk refused, a run-out end, a distance that is not a finite number.
+//! on an end face or as a plain last station. Anything else refuses the whole pass
+//! (`BandGapRefusal::RollingBall`, strict: never built on the level line's own setbacks), and the
+//! route says why: a pass with no feature-edge test, chains of the pass meeting at a corner (the
+//! ball's three-face rule for a corner is not built, and a corner is no end face), a chain whose
+//! edges are not all convex or all concave (one ball sits on one side of the part), a walk refused,
+//! a run-out end, a distance that is not a finite number.
+//!
+//! **Chamfers are outside the ball.** A chamfer is a flat cut at a distance along each face; no
+//! ball defines it. A chamfer's pass is never offered to the ball (as with the switch off: no walk,
+//! no route, no refusal) and keeps the level line's own construction, a different tool and not a
+//! fallback.
 //!
 //! **An open chain's sides per side.** Where an open chain's two sides differ by more than
 //! [`SIDES_AGREE_SHARE`] of the size, each side's rail is cut at its own distance and each end face
@@ -38,19 +44,19 @@
 //! side's rail exactly where that side's band ends. At every free end (`LastStation` with no end
 //! face: the edge runs on as an unpicked crease), whether or not the sides differ there, both
 //! sides' setbacks taper to nothing at the end vertex (`rolling_ball_free_ends`), so the round
-//! closes onto that vertex. Where they differ the level
-//! line is still kept whole, with the route naming the sides' distances, at:
+//! closes onto that vertex. Where they differ the pass
+//! is refused, with the route naming the sides' distances, at:
 //! - an end face the walk never reached (its last station short of the face's plane): nothing
 //!   says where on that face the rails end;
 //! - an end face where the end station's contact on a side rests on a rim of that side as the
 //!   walk extends it past the face (a gap in the extension, `rolling_ball::side_extension`): its
-//!   distance is no setback, so the pass keeps the level line rather than build short;
+//!   distance is no setback, so the pass is refused rather than built short;
 //! - an end face whose edges with the walls end before a rail does (narrower than the rail's
 //!   distance, or one the band flows over): no point of its edge carries that rail's end
 //!   (`rolling_ball_end_caps::rail_end`);
 //! - an open chain in a pass of several chains (its end regions are groups of the whole pick, not
 //!   tied to one chain end, so no cap is handed them);
-//! - an open chain with an end ray ([`unless_a_rayed_end_differs`]: the rail carried past such an
+//! - an open chain with an end ray ([`a_rayed_end_that_differs`]: the rail carried past such an
 //!   end and its end-plane trim carry one setback for both sides).
 //!
 //! **Only the outer pass.** The ball is walked, and the route written, only by the outermost
@@ -89,7 +95,7 @@ use super::triangle_edges;
 use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
 use super::{BandProfile, ChainField};
 use crate::bevel::rolling_ball::rolling_ball_routing::{
-    set_last_route, use_rolling_ball, ROLLING_BALL_ROUTE,
+    record_refusal, set_last_route, use_rolling_ball, ROLLING_BALL_ROUTE,
 };
 use crate::bevel::rolling_ball::{ChainPoint, EndFace, RollingBall, RollingBallSide, WalkEnd};
 
@@ -185,7 +191,8 @@ impl Drop for PassScope {
 
 /// The pass's setbacks per unit of size from the rolling ball, one [`SideSetbacks`] per chain - or `None` where the switch is off, the pass is a `probe` (not the outer pass, or
 /// topology only), or the ball cannot take the whole pass. With the switch on, an outer pass that
-/// is no probe writes the route it took; a probe writes nothing (see the file header).
+/// is no probe writes the route it took; a probe writes nothing (see the file header). The build
+/// itself asks [`with_the_sides`], which tells a refusal apart from a pass never asked.
 #[allow(clippy::too_many_arguments)]
 pub fn for_the_pass(
     positions: &[Vector3],
@@ -211,12 +218,17 @@ pub fn for_the_pass(
         band,
         probe,
     );
-    pass.map(|(setbacks, _)| setbacks)
+    pass.ok().flatten().map(|(setbacks, _)| setbacks)
 }
+
+/// A pass the ball took: one [`SideSetbacks`] and one [`BallSides`] per chain.
+pub type BallPass = (Vec<SideSetbacks>, Vec<BallSides>);
 
 /// [`for_the_pass`] with the triangles the ball rolled on, one [`BallSides`] per chain: what the
 /// build tags a one-chain band's sides by where its own floods join them
-/// (`rolling_ball_band_tags`).
+/// (`rolling_ball_band_tags`). `Ok(None)` where the ball was not asked (the switch off, or a
+/// probe); `Err` with why, recorded as the route, where it was asked and
+/// cannot take the whole pass, which the build refuses (`BandGapRefusal::RollingBall`).
 #[allow(clippy::too_many_arguments)]
 pub fn with_the_sides(
     positions: &[Vector3],
@@ -229,9 +241,10 @@ pub fn with_the_sides(
     profile: BandProfile,
     band: &PassSetbacks,
     probe: bool,
-) -> Option<(Vec<SideSetbacks>, Vec<BallSides>)> {
-    if probe || !use_rolling_ball() {
-        return None;
+) -> Result<Option<BallPass>, String> {
+    // A chamfer is no ball's to decide (see the file header).
+    if probe || profile == BandProfile::Chamfer || !use_rolling_ball() {
+        return Ok(None);
     }
 
     match walked_setbacks(
@@ -242,32 +255,31 @@ pub fn with_the_sides(
         is_feature_edge,
         side_regions,
         size,
-        profile,
         band,
     ) {
         Ok(setbacks) => {
             set_last_route(Some(ROLLING_BALL_ROUTE.to_string()));
-            Some(setbacks)
+            Ok(Some(setbacks))
         }
         Err(why) => {
-            set_last_route(Some(format!("level-line: {why}")));
-            None
+            record_refusal(&why);
+            Err(why)
         }
     }
 }
 
-/// The ball's setbacks kept, or `None` with the route naming why, where an open chain whose two
-/// sides differ anywhere by more than [`SIDES_AGREE_SHARE`] of the size carries an END RAY at
-/// either end (`end_rays`, as `end_face_sense::oblique_ends` reads them): an oblique end face is
-/// not cut by the chain's distance, and the rails carried past such an end and its end-plane trim
-/// (`virtual_rail_past_the_end`, `end_face_fill_try`) carry one setback for both sides.
-pub fn unless_a_rayed_end_differs(
-    ball: Option<Vec<SideSetbacks>>,
+/// Why the ball cannot take the pass, where an open chain whose two sides differ anywhere by more
+/// than [`SIDES_AGREE_SHARE`] of the size carries an END RAY at either end (`end_rays`, as
+/// `end_face_sense::oblique_ends` reads them): an oblique end face is not cut by the chain's
+/// distance, and the rails carried past such an end and its end-plane trim
+/// (`virtual_rail_past_the_end`, `end_face_fill_try`) carry one setback for both sides. `None`
+/// where no such end stands in the pass. Writes nothing.
+pub fn a_rayed_end_that_differs(
+    setbacks: &[SideSetbacks],
     closed: &[bool],
     end_rays: &[(bool, bool)],
     size: f64,
-) -> Option<Vec<SideSetbacks>> {
-    let setbacks = ball?;
+) -> Option<String> {
     for (k, chain) in setbacks.iter().enumerate() {
         let rayed = end_rays.get(k).is_some_and(|&(first, last)| first || last);
         let differ = chain
@@ -276,19 +288,18 @@ pub fn unless_a_rayed_end_differs(
             .zip(&chain.right)
             .position(|(l, r)| (l - r).abs() > SIDES_AGREE_SHARE);
         if let (false, true, Some(i)) = (closed[k], rayed, differ) {
-            set_last_route(Some(format!(
-                "level-line: chain {k} point {i}: the sides' contacts stand {} and {} from the \
-                 chain, and an oblique end's rail carried past the end is not cut per side yet",
+            return Some(format!(
+                "chain {k} point {i}: the sides' contacts stand {} and {} from the chain, and an \
+                 oblique end's rail carried past the end is not cut per side yet",
                 chain.left[i] * size,
                 chain.right[i] * size
-            )));
-            return None;
+            ));
         }
     }
-    Some(setbacks)
+    None
 }
 
-/// Every chain's walked setbacks, or why the pass keeps the level line's.
+/// Every chain's walked setbacks, or why the ball cannot take the pass.
 #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x <= tolerance)` on purpose: a NaN refuses
 #[allow(clippy::too_many_arguments)]
 fn walked_setbacks(
@@ -299,12 +310,8 @@ fn walked_setbacks(
     is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
     side_regions: Option<&[u32]>,
     size: f64,
-    profile: BandProfile,
     band: &PassSetbacks,
 ) -> Result<(Vec<SideSetbacks>, Vec<BallSides>), String> {
-    if profile == BandProfile::Chamfer {
-        return Err("a chamfer is not rolled by a ball".to_string());
-    }
     // The caller's face regions bound each side on their own; only the kernel's flood needs the
     // feature edges.
     if is_feature_edge.is_none() && side_regions.is_none() {

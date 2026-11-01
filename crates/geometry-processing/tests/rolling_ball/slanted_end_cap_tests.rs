@@ -13,9 +13,9 @@ use vector_math::Vector3;
 
 use crate::band_route_tests::{built, Triangles};
 use crate::band_setback_tests::{
-    a_wedge_with_one_wall_bending_steeper, extruded, kept_the_level_line,
-    on_the_steeper_walls_edge, on_the_straight_walls_edge,
-    the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES,
+    a_wedge_with_one_wall_bending_steeper, extruded, on_the_steeper_walls_edge,
+    on_the_straight_walls_edge, refused_by_the_ball, the_contact_distances_in_the_one_sided_groove,
+    STEEP_DEGREES,
 };
 
 /// The chain: the apex from (0, 0, 0) to (0, 6, 0).
@@ -175,10 +175,10 @@ fn a_wedge_whose_sides_differ_and_whose_end_face_leans_cuts_each_end_to_meet_bot
 /// wall, and the rest of that end is a pyramid standing out of it (creased far past the feature
 /// angle), a third face. Each wall's edge with the end face (2.12 and 1.41 long) is shorter than
 /// its rail's distance (2.34 and 2.72), so no point of the end face's own edge carries the rail's
-/// end, and the pass keeps the level line, saying so; a rail end read on along the pyramid's edges
+/// end, and the ball refuses the pass, saying so; a rail end read on along the pyramid's edges
 /// would cut the end face's cap through points that are not on it.
 #[test]
-fn a_wedge_whose_end_face_is_narrower_than_its_rails_keeps_the_level_line() {
+fn a_wedge_whose_end_face_is_narrower_than_its_rails_is_refused_by_the_ball() {
     let (mut positions, triangles) = a_wedge_with_one_wall_bending_steeper();
     // Vertices 0..4 are the profile at y = 0, 4..8 at y = 6, 8 and 9 the caps' centres.
     let notch = positions.len() as i32;
@@ -213,8 +213,8 @@ fn a_wedge_whose_end_face_is_narrower_than_its_rails_keeps_the_level_line() {
         notched.push(oriented(t));
     }
 
-    let route = kept_the_level_line(&(positions, notched), &[vec![0, 4]]);
-    assert!(route.starts_with("level-line: chain 0 end 0: "), "{route}");
+    let route = refused_by_the_ball(&(positions, notched), &[vec![0, 4]]);
+    assert!(route.starts_with("chain 0 end 0: "), "{route}");
     assert!(
         route.ends_with(
             "its rail does not meet the end face along the side's own edge with it (the end face \

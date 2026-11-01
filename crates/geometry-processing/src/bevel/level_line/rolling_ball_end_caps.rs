@@ -36,7 +36,7 @@
 //! reads the chain's own field as the level line does.
 //!
 //! An end face that ends before a side's rail does (narrower than that side's distance, or one the
-//! band flows over) has no such point on its edge, and the pass keeps the level line.
+//! band flows over) has no such point on its edge, and the ball refuses the pass.
 
 use std::collections::HashMap;
 

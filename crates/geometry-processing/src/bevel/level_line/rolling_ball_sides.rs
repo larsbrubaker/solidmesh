@@ -1,6 +1,6 @@
 //! The two sides a chain's rolling ball rolls between, as triangles of the pass's mesh, read for
-//! `rolling_ball_setbacks.rs` (which walks the ball between them and says why a pass keeps the
-//! level line where a chain has no two sides).
+//! `rolling_ball_setbacks.rs` (which walks the ball between them and says why the ball refuses a
+//! pass where a chain has no two sides).
 //!
 //! **The caller's face regions, where it gives them.** A side is the region the pick shows the
 //! user across the edge: the face beside it, and every face that carries on smoothly from it. The
