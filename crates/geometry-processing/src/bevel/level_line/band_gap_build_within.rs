@@ -1,7 +1,9 @@
-//! The band gap's build proper (split out of `band_gap.rs` for size). Steps 1 to 7 of the level
-//! line construction - setback, sides (step 2 is `band_gap_build_sides.rs`'s),
-//! refinement and roots per group, the band's delete, the room, the gap loops and the pinch -
-//! leaving nothing to do but fill. Its faults travel as [`BuildFault`] (`band_gap_build_fault.rs`), which
+//! The band gap's build proper from step 1's fields on (split out of `band_gap.rs` for size; the
+//! pass is entered, its step 1 readings made and the ball asked, in `band_gap_build_entry.rs`).
+//! Steps 1 to 7 of the level line construction - setback, sides (step 2 is
+//! `band_gap_build_sides.rs`'s), refinement and roots per group, the band's delete, the room, the
+//! gap loops and the pinch - leaving nothing to do but fill. Its faults travel as [`BuildFault`]
+//! (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
 //! outcomes. Step 1's setbacks and fields are `band_gap_setback_fields.rs`'s.
 //!
@@ -33,13 +35,9 @@
 //!   asked, scaled (`one_chain_room`, whose header says why): `field_at_0`, the room's convex-ray
 //!   field, the narrow end face's flow and the room's margin. Such a pass is handed no room
 //!   (`band_gap::build_unvalidated` sets a caller's aside where the ball may take the pass).
-//! - **Strict:** an outer fillet pass the ball is asked to take and cannot (`with_the_sides` or
-//!   `a_rayed_end_that_differs` names why) is refused as `BandGapRefusal::RollingBall` with that
-//!   reason, before anything is cut; it is never built on the level line's own setbacks. A pass
-//!   of one chain is refused by its size instead where the ball's own room, read at a smaller
-//!   size it walks, explains the refusal (`rolling_ball_size_room`, which reads it through
-//!   `build_on_the_walk` stopping at the room). A
-//!   chamfer is never asked: no ball defines it, and it builds exactly as with the switch off.
+//! - **Strict:** a pass the ball is asked to take and cannot is refused before it gets here
+//!   (`band_gap_build_entry.rs`); this build is handed the ball's walk, or none where the ball was
+//!   not asked.
 //! - **The level line's own setbacks:** the probes and the room of a pass of several chains (its
 //!   pair and corner readings). There a closed chain whose sides differ can read a room that names
 //!   a size the ball's band does not fit (a side whose contact stands farther out than the angle
@@ -52,125 +50,28 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
-use super::band_gap::{chord_tolerance_of, needle_floor_of, BandGapBuildError, BuildWithinArgs};
+use super::band_gap::{chord_tolerance_of, needle_floor_of, BuildWithinArgs};
 use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
 use super::rolling_ball_setbacks::BallPass;
-use super::rolling_ball_size_room::{self, refused_by_the_ball};
+use super::rolling_ball_size_room;
 use super::rolling_ball_sweep::ContactPlanes;
 use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
     band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
     one_chain_room, pick_validation, pinch_ladder_search, rolling_ball_rested_rims,
-    rolling_ball_setbacks, sharp_joint_corners, side_roots_settling, side_witness,
-    square_crease_end_clip, swallowed_side_runs, triangle_edges,
+    sharp_joint_corners, side_roots_settling, side_witness, square_crease_end_clip,
+    swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
     LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomReadingKind, RoomSource, ScalarField,
     VertexFieldReading,
 };
-
-/// The build proper. `working` receives the working mesh as soon as it is made, so a refusal out
-/// of the middle of the build can still hand it back; `unflowed_room` receives the plain
-/// tagging's room where the flowed tagging is cut instead (see
-/// [`tag_flowed_where_it_builds`](super::narrow_face_flow::tag_flowed_where_it_builds)).
-#[allow(clippy::too_many_arguments)]
-pub fn build_within(
-    positions: &[Vector3],
-    indices: &[(i32, i32, i32)],
-    chains: &[Vec<i32>],
-    closed: &[bool],
-    is_feature_edge: Option<FeatureEdgeTest>,
-    args: &BuildWithinArgs,
-    working: &mut Option<Rc<RefCell<LevelLineMesh>>>,
-    unflowed_room: &mut Option<f64>,
-) -> Result<BandGapResult, BuildFault> {
-    let BuildWithinArgs {
-        size,
-        profile,
-        known_room,
-        topology_only,
-        sharp_turn_degrees,
-        side_regions,
-        ..
-    } = *args;
-
-    if chains.iter().any(|one| one.len() < 2) {
-        return Err(BuildFault::Error(BandGapBuildError::Arguments(
-            pick_validation::PickArgumentError::ChainTooShort,
-        )));
-    }
-
-    if size.is_nan() || size <= 0.0 {
-        return Err(BuildFault::Error(BandGapBuildError::SizeNotPositive(size)));
-    }
-
-    // 1. SETBACK, per chain.
-    let setbacks = PassSetbacks::of(
-        positions,
-        indices,
-        chains,
-        closed,
-        sharp_turn_degrees,
-        profile,
-    )?;
-    // The field at the size takes the rolling ball's setbacks where its switch is on, this is the
-    // outer pass and no topology-only probe, and the ball takes the whole pass, which is refused
-    // where the ball cannot take it; probes, the room and every other size keep the level line's
-    // own, and only the outer pass writes the route.
-    let pass = rolling_ball_setbacks::PassScope::enter();
-    let probe = topology_only || !pass.is_outer();
-    let walk = |s: f64| {
-        rolling_ball_setbacks::walked_for_the_build(
-            positions,
-            indices,
-            chains,
-            closed,
-            is_feature_edge.as_deref(),
-            side_regions,
-            s,
-            profile,
-            &setbacks,
-            probe,
-        )
-    };
-    match walk(size) {
-        Ok(ball_pass) => build_on_the_walk(
-            positions,
-            indices,
-            chains,
-            closed,
-            is_feature_edge.clone(),
-            args,
-            working,
-            unflowed_room,
-            &setbacks,
-            ball_pass,
-            false,
-        ),
-        // A refused pass of one chain names the ball's own room where it has one
-        // (`rolling_ball_size_room`); nothing is cut either way.
-        Err(why) if chains.len() == 1 && known_room.is_none() => {
-            let read = rolling_ball_size_room::ReadAt {
-                positions,
-                indices,
-                chains,
-                closed,
-                is_feature_edge: &is_feature_edge,
-                args,
-                setbacks: &setbacks,
-            };
-            let mut walk_at = |s| walk(s).and_then(|p| p.ok_or_else(|| String::new().into()));
-            rolling_ball_size_room::refusal(size, why, &mut walk_at, &read)
-        }
-        Err(refused) => Ok(refused_by_the_ball(refused.why)),
-    }
-}
 
 /// The build from step 1's fields on: on the ball's walk (`ball_pass`) where it takes the pass,
 /// on the level line's own setbacks where it was not asked. With `room_only`, a pass of one chain

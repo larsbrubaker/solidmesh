@@ -284,8 +284,7 @@ pub fn with_the_sides(
     band: &PassSetbacks,
     probe: bool,
 ) -> Result<Option<BallPass>, BallRefusal> {
-    // A chamfer is no ball's to decide (see the file header).
-    if probe || profile == BandProfile::Chamfer || !use_rolling_ball() {
+    if !asks_the_ball(probe, profile) {
         return Ok(None);
     }
 
@@ -308,6 +307,12 @@ pub fn with_the_sides(
             Err(refusal)
         }
     }
+}
+
+/// Whether a pass is the ball's to take: the switch is on, it is no topology-only or inner probe
+/// (`probe`), and it is a fillet. A chamfer is no ball's to decide (see the file header).
+pub fn asks_the_ball(probe: bool, profile: BandProfile) -> bool {
+    !probe && profile != BandProfile::Chamfer && use_rolling_ball()
 }
 
 /// [`with_the_sides`] as the build asks it: also refused (and the refusal recorded) where the ball

@@ -2,7 +2,8 @@
 //! are `band_gap_in_turn.rs` and `band_gap_rounds_first.rs`). The size refusal, the chain ceiling,
 //! the chord tolerance, the needle floor and the closed chains turned to start at a corner
 //! ([`start_closed_chains_at_a_corner`]) and the build's funnel ([`build_unvalidated`]); the
-//! build proper is `band_gap_build_within.rs` and the public builds `band_gap_entry_points.rs`.
+//! build proper is `band_gap_build_entry.rs` and `band_gap_build_within.rs`, and the public builds
+//! `band_gap_entry_points.rs`.
 
 use vector_math::{ieee_math, Vector3};
 
@@ -10,8 +11,8 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use super::band_gap_build_entry::build_within;
 use super::band_gap_build_fault::BuildFault;
-use super::band_gap_build_within::build_within;
 use super::chain_field_from_polyline::ChainFieldArgumentError;
 use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
@@ -24,7 +25,7 @@ use super::{
 use crate::bevel::rolling_ball::rolling_ball_routing::use_rolling_ball;
 
 /// The build's arguments that are not the pick itself, as the funnel ([`build_unvalidated`])
-/// hands them to the build proper (`band_gap_build_within::build_within`).
+/// hands them to the build proper (`band_gap_build_entry::build_within`).
 pub struct BuildWithinArgs<'a> {
     pub size: f64,
     pub profile: BandProfile,

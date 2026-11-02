@@ -1,5 +1,5 @@
 //! How the band gap's build leaves by a fault: every way out of
-//! [`build_within`](super::band_gap_build_within::build_within) other than a result, gathered into
+//! [`build_within`](super::band_gap_build_entry::build_within) other than a result, gathered into
 //! one [`BuildFault`] with the conversions from every callee's error. Split out of
 //! `band_gap_build_within.rs` for size;
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns each into the

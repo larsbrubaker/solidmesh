@@ -48,6 +48,7 @@ pub mod ball_row_control;
 pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_after_the_rounds;
+pub mod band_gap_build_entry;
 pub mod band_gap_build_fault;
 pub mod band_gap_build_sides;
 pub mod band_gap_build_within;
