@@ -382,13 +382,12 @@ pub fn build_crest_in_pick(
         .map(|&c| chain_after_a_build(&pick[c], closed[c], &built, &built_indices))
         .collect();
     let rest_closed: Vec<bool> = rest.iter().map(|&c| closed[c]).collect();
-    // The rest of the pick spends the attempt's own allowance, so its cap and its cancel hold.
-    let shared_budget = options.budget.clone();
-    let budget_for = move |_: i32| {
-        shared_budget
-            .clone()
-            .expect("asked only where the attempt carries a budget")
-    };
+    // The rest of the pick spends the attempt's own allowance, so its cap and its cancel hold; an
+    // attempt without one hands none on, and the rest takes the default as the attempt did.
+    let budget_for = options.budget.as_ref().map(|budget| {
+        let budget = Rc::clone(budget);
+        move |_: i32| Rc::clone(&budget)
+    });
     let in_turn = build_open_chains_in_turn(
         &built,
         &built_indices,
@@ -401,10 +400,7 @@ pub fn build_crest_in_pick(
         options.snap,
         options.seam_epsilon,
         options.sharp_turn_degrees,
-        options
-            .budget
-            .as_ref()
-            .map(|_| &budget_for as BudgetFor<'_>),
+        budget_for.as_ref().map(|f| f as BudgetFor<'_>),
         Some(&rest_closed),
     )?;
     Ok(in_turn.filled().then_some(in_turn))
