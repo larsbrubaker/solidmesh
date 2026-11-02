@@ -9,6 +9,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::end_face_section_row::flat_end_faces;
 use super::open_gap_fill::{arcs, backwards, is_straight_row, set_ends_site, try_rail};
 use super::open_gap_fill_cut_section::{flat_run_out, lay_beside_a_cut_row};
 use super::open_gap_fill_end_run_row::{end_run_rows, lay_ladder, EndRunAsk};
@@ -162,6 +163,7 @@ pub fn fill(
             first_row.as_deref(),
             run_rows[1].as_ref().map(|row| &row.run[..]),
         ],
+        flat_end_faces(mesh, chain, ends.end_runs),
     )?;
     let past_an_end: Vec<bool> = spokes
         .iter()

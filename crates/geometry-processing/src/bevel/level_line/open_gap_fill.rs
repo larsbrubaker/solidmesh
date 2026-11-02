@@ -15,6 +15,7 @@ use std::rc::Rc;
 use vector_math::{ieee_math, Vector3};
 
 use super::ball_row_control::{self, RowAsked};
+use super::end_face_section_row::{section_row, EndRowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
     corner_cap_flat_ends, dying_crease_fill, end_face_fill, gap_fill, open_gap_fill_cut_section,
@@ -403,9 +404,13 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
 /// One arc per spoke, from the left rail's vertex to the right rail's
 /// through the chain's own point at the mean of the two extended parameters - clamped into the
 /// chain, so a spoke past an end takes the END VERTEX as its control point and the nose is the
-/// profile swept round that vertex. On the rolling ball's route a row the ball describes is drawn
+/// profile swept round that vertex. An end face's last row (an end-face fill's first or last
+/// spoke) takes its end vertex whatever the mean, and on a leaning end face is the round's own
+/// section in that face (`end_face_section_row`), so the cap beside it closes flat. On the rolling ball's route a row the ball describes is drawn
 /// about the ball's centre instead (`ball_row_control::row_control`), so it is the ball's arc. A
 /// row in `given_ends` (first spoke's, last spoke's) is taken as it is, and nothing is minted.
+/// `flat_end_faces` names the ends whose end face is flat where the row closes it; only there is
+/// the end row drawn about the end vertex (and, leaning, as the round's section).
 /// Every vertex minted is appended to `added_vertices`; each spoke charged. `rows_on_the_ray` and
 /// `meets_on_the_crease` are usually `false`.
 #[allow(clippy::too_many_arguments)]
@@ -420,6 +425,7 @@ pub fn arcs(
     rows_on_the_ray: bool,
     meets_on_the_crease: bool,
     given_ends: [Option<&[i32]>; 2],
+    flat_end_faces: [bool; 2],
 ) -> Result<Vec<Vec<i32>>, super::WorkError> {
     let mut arcs = Vec::new();
     let tie = PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, chain.length);
@@ -484,16 +490,35 @@ pub fn arcs(
         let q = mesh.position(b);
         // On the rolling ball's route the row is drawn about the ball's centre where the ball
         // describes it (`ball_row_control`); with no ball on the chain that is the chain point.
+        // An end face's last row is drawn about the end vertex, not the chain's point at its
+        // rails' mean: on a leaning end face the two rails end at different chain parameters, so
+        // their mean can fall inside the chain and its point off the end face, and the row bowed
+        // out of the face its cap must close flat in (the groove leaning 8 degrees: 1.7e-3 off,
+        // and the cap between it and the end run was no longer star-shaped about the end vertex).
+        // The two sides' tangent planes meet along the chain's line, which meets the end face at
+        // the end vertex, so in that face the row's tangents meet there. On a square end the mean
+        // is the end's own parameter, so nothing moves. Only on a FLAT end face (its end run and
+        // end vertex in one plane, `end_face_section_row::end_face_is_flat`): on a curved one the
+        // row has no one face to lie in, and the end vertex is not where its tangents meet (the D
+        // prism's rounded end, faceted round z: drawn about it, the rebuilt part grew by 6.46).
+        let end_row = k == 0 || k + 1 == spokes.len();
+        let end_face_row =
+            end_row && !meets_on_the_crease && flat_end_faces[if k == 0 { 0 } else { 1 }];
+        let chain_point = if end_face_row {
+            chain.point_at(if k == 0 { 0.0 } else { chain.length })
+        } else {
+            chain.point_at(mean.clamp(0.0, chain.length))
+        };
         let c = if rows_on_the_ray {
             chain.point_on_the_ray(mean).1
         } else {
             let row = RowAsked {
                 mean,
-                chain_point: chain.point_at(mean.clamp(0.0, chain.length)),
+                chain_point,
                 segments,
                 tie_or_mitre: left_span[lu].0 != left_span[lu].1
                     || right_span[ru].0 != right_span[ru].1,
-                end_row: k == 0 || k + 1 == spokes.len(),
+                end_row,
                 snap: mesh.same_place(),
                 tangent: chain_direction_at(chain, mean),
             };
@@ -505,6 +530,21 @@ pub fn arcs(
         arc[segments as usize] = b;
         let mut along: Box<dyn Fn(f64) -> Vector3> =
             Box::new(move |f| gap_fill::arc_point(p, c, q, f));
+        // A leaning end face's last row is the round's own section in that face
+        // (`end_face_section_row`); a square end's is the row just drawn.
+        if end_face_row && !rows_on_the_ray {
+            let asked = EndRowAsked {
+                at_the_far_end: k != 0,
+                tangent: chain_direction_at(chain, if k == 0 { 0.0 } else { chain.length }),
+                segments,
+                tie_or_mitre: left_span[lu].0 != left_span[lu].1
+                    || right_span[ru].0 != right_span[ru].1,
+                snap: mesh.same_place(),
+            };
+            if let Some(section) = section_row(chain, p, q, asked) {
+                along = Box::new(section);
+            }
+        }
         // A row past the chain's end whose spoke is short against its reach to the control point:
         // the fade has all but run out there, so it too is laid as its straight edge (the far end
         // repeated, as a meeting-point row is). Past the end both rails stand on the circle round

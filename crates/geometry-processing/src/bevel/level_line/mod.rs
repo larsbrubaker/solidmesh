@@ -120,6 +120,7 @@ pub mod end_face_crease_plane;
 pub mod end_face_fill;
 pub mod end_face_fill_try;
 pub mod end_face_flow;
+pub mod end_face_section_row;
 pub mod end_face_sense;
 mod end_face_sense_oblique;
 pub mod end_plane_trim;

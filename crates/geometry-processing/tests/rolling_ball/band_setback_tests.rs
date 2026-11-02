@@ -154,7 +154,7 @@ fn where_the_wall_bends_away_the_band_takes_the_balls_setback_not_the_angles() {
 /// The groove with only its right wall (x > 0) bending steeper past the narrow first face; the
 /// left wall runs straight at 45 degrees to the block's top. The chain is the floor, vertices 0
 /// and 8.
-fn a_groove_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
+pub fn a_groove_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
     let steep = STEEP_DEGREES.to_radians();
     let (tx, tz) = (1.0 + (4.0 * steep.cos()), 1.0 + (4.0 * steep.sin()));
     let profile = [
@@ -171,25 +171,36 @@ fn a_groove_with_one_wall_bending_steeper() -> (Vec<Vector3>, Triangles) {
 }
 
 /// Where a ball of `radius` touches each wall of the groove with one wall bending steeper, by
-/// hand, as (straight wall's distance from the floor's line, steeper wall's). The centre C stands
-/// `radius` inside both walls' lines: the straight wall's through the floor with inward normal
-/// (1, 1) / sqrt 2, the steeper wall's through (1, 1) with inward normal (-sin 65, cos 65). Each
-/// contact is C less `radius` times its wall's normal. The ball must clear the right wall's narrow
+/// hand, as (straight wall's distance from the floor's line, steeper wall's). The centre C is
+/// [`the_balls_centre_in_the_one_sided_groove`]'s; each contact is C less `radius` times its wall's
+/// inward normal. The ball must clear the right wall's narrow
 /// first face, which the test checks.
 pub fn the_contact_distances_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
     let steep = STEEP_DEGREES.to_radians();
     let root_half = std::f64::consts::FRAC_1_SQRT_2;
-    let (a1, b1, c1) = (root_half, root_half, radius);
+    let (a1, b1) = (root_half, root_half);
     let (a2, b2) = (-steep.sin(), steep.cos());
-    let c2 = radius + a2 + b2;
-    let det = (a1 * b2) - (a2 * b1);
-    let (cx, cz) = (((c1 * b2) - (c2 * b1)) / det, ((a1 * c2) - (a2 * c1)) / det);
+    let (cx, cz) = the_balls_centre_in_the_one_sided_groove(radius);
     let along_first_face = ((cx + cz) / 2.0).clamp(0.0, 1.0);
     let off_the_first_face = (cx - along_first_face).hypot(cz - along_first_face);
     assert!(off_the_first_face > radius, "{off_the_first_face}");
     let straight = (cx - (radius * a1)).hypot(cz - (radius * b1));
     let steeper = (cx - (radius * a2)).hypot(cz - (radius * b2));
     (straight, steeper)
+}
+
+/// Where the ball of `radius` in the groove with one wall bending steeper is centred, by hand, as
+/// (x, z): `radius` inside both walls' lines (the straight wall's through the floor with inward
+/// normal (1, 1) / sqrt 2, the steeper wall's through (1, 1) with inward normal (-sin 65, cos 65)),
+/// the two lines' equations solved by Cramer's rule.
+pub fn the_balls_centre_in_the_one_sided_groove(radius: f64) -> (f64, f64) {
+    let steep = STEEP_DEGREES.to_radians();
+    let root_half = std::f64::consts::FRAC_1_SQRT_2;
+    let (a1, b1, c1) = (root_half, root_half, radius);
+    let (a2, b2) = (-steep.sin(), steep.cos());
+    let c2 = radius + a2 + b2;
+    let det = (a1 * b2) - (a2 * b1);
+    (((c1 * b2) - (c2 * b1)) / det, ((a1 * c2) - (a2 * c1)) / det)
 }
 
 /// How far `point` stands from the floor's line (the chain, along y at x = z = 0).
