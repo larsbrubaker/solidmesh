@@ -23,8 +23,10 @@
 //! a strip in that triangle's own plane, running out square to the edge away from the triangle,
 //! far enough that a point the ball's radius beyond the plane is inside it; a facet extends as
 //! itself. Where two such strips leave one vertex in different directions a triangle fills the
-//! wedge between them, so the extension is one surface with the side, sharing its vertices: the
-//! side's trace in the plane is no rim any more, and contact tracking walks on over it.
+//! wedge between them, and where they leave it in the same direction (collinear trace edges, or a
+//! prism's walls past a square end) they share their far vertex, so the extension is one surface
+//! with the side, sharing its vertices: the side's trace in the plane is no rim any more, and
+//! contact tracking walks on over it.
 //!
 //! **Bounded at the chain.** Extended and trimmed, a side ends where the other side's extension
 //! meets it: on the chain's own line carried on past its end vertex ([`ChainEnd`]). So each end's
@@ -46,21 +48,34 @@
 //! named `Edge { rim: false }` (the side now runs on past it) where it was a rim, and the cut side
 //! is a new triangle list, so a solve can differ from the side's own in the last bits.
 //!
-//! **Its holes.** The extension's open edges are the chain's line (the side's own boundary there,
-//! as the chain edge is), and these, each reading as a rim where a contact lands on it: what lies
-//! past a strip's reach (two radii past the plane), the trace's far end (one strip leaves it), a
-//! vertex three or more strips leave (no fill; the pairing round it is not decided), a strip left
-//! out because its triangle lies along the plane, and an end vertex where the side's trace in the
-//! plane leaves by no edge or by two (no bound and no wedge there). A ball touching the side near
-//! the chain's end reaches none of them on a side whose trace leaves the end vertex once; the pass
-//! refuses an end station whose contact rests on a rim rather than take its distance as a setback
-//! (`level_line::rolling_ball_setbacks`).
+//! **Its holes.** The extension's open edges are of two kinds. The side's own boundary carried on:
+//! its rims on the chain's side of the plane (the cut side's open edges in no end plane, touching
+//! no chain end vertex) and, where such a rim reaches the plane at the trace's far end (one strip
+//! leaves it), the strip's edge leaving there, which carries that rim on. And holes, each reading
+//! as a rim where a contact lands on it, though no surface of the side ends there: what lies past
+//! a strip's reach (two radii past the plane), a vertex three or more strips leave (no fill; the
+//! pairing round it is not decided), a strip left out because its triangle lies along the plane,
+//! and an end vertex where the side's trace in the plane leaves by no edge or by two (no bound and
+//! no wedge there); with them the chain's own edge at the end vertex and its line carried on past
+//! it, where the band starts and no rail can end. Every vertex a hole's edge touches is a hole.
+//!
+//! **Which end contacts are setbacks** ([`ExtendedSide::end_contact_fault`]). A contact on a face
+//! is. A contact on a hole is not. A contact on the side's own rim is only where the ball touches
+//! one of the side's faces there square to it (a wall exactly as tall as the fillet, its end
+//! station on the wall's bottom corner): a ball that only rests on the rim (a size past the side's
+//! width: a cube edge of 2 asked for 2.2 would build a 2.0 round) gives no round of the size
+//! asked. The pass refuses an end station whose contact is no setback
+//! (`level_line::rolling_ball_legs`). The own rim is defined by what it is not (a hole), so a side
+//! that curves back or is cut short near the end (a chamfer between the side and the end face) is
+//! kept from building wrong by the square-touch rule and, before it, by the walk's reach check:
+//! the ball whose round would cut into the chamfer is refused as `ReachesPastThePart`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use vector_math::Vector3;
 
-use super::side_surface::{HalfSpace, RollingBallSide};
+use super::side_surface::{ContactFeature, HalfSpace, RollingBallSide, SideContact};
+use super::walk::EndContactFault;
 
 /// How nearly a strip must run along the plane, as the cosine between its direction out and the
 /// plane's normal, before it is left out: a triangle lying in the plane extends nowhere past it.
@@ -69,6 +84,12 @@ const LEAST_STRIP_COSINE: f64 = 1e-3;
 /// How many radii past the plane a strip reaches, at least: the ball's contact beyond the plane is
 /// at most a radius from its centre, which stands on the chain's side; twice leaves room.
 const STRIP_RADII: f64 = 2.0;
+
+/// How nearly the line from a rim contact to the ball's centre must stand square to a face of
+/// the side there, as the sine of the angle off its normal, for the ball to touch that face: the
+/// solve places a tangent contact to about a billionth of the part's size, and a ball resting on
+/// the rim off the face's normal by an angle that changes the round's size stands far past this.
+const TANGENT_SINE: f64 = 1e-6;
 
 /// One end of a chain on an end face, as the extension reads it.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -148,6 +169,88 @@ struct TraceAtEnd {
     away: Vector3,
 }
 
+/// A side cut at its chain's end faces and extended past them ([`extended_past`]), with the holes
+/// its extension leaves.
+pub(super) struct ExtendedSide {
+    /// The side as the ball reads it.
+    pub(super) side: RollingBallSide,
+    holes: Holes,
+}
+
+impl ExtendedSide {
+    /// Why a contact on `feature` is no setback at an end station whose ball's centre is
+    /// `centre`; `None` where it is one: a contact on a face, or on the side's own rim (the far
+    /// corner of its trace in the end face, its rim on the chain's side, or that rim carried on
+    /// as a strip's edge) where the ball touches one of the side's faces there square to it, as a
+    /// wall exactly as tall as the fillet is touched at its bottom rim.
+    pub(super) fn end_contact_fault(
+        &self,
+        contact: &SideContact,
+        centre: Vector3,
+    ) -> Option<EndContactFault> {
+        if !contact.feature.is_rim() {
+            return None;
+        }
+        if self.on_a_hole(&contact.feature) {
+            return Some(EndContactFault::OnAHole);
+        }
+        (!self.touched_square(contact, centre)).then_some(EndContactFault::OffTheSidesFaces)
+    }
+
+    /// Whether a contact on `feature` rests on a hole of the extension (the file header's list):
+    /// a rim that is not the side's own boundary carried on past the end face, where the ball
+    /// rests on no surface of the side, so its distance is no setback.
+    pub(super) fn on_a_hole(&self, feature: &ContactFeature) -> bool {
+        match *feature {
+            ContactFeature::Edge { from, to, rim } => {
+                rim && self.holes.edges.contains(&(from.min(to), from.max(to)))
+            }
+            ContactFeature::Vertex { vertex, rim } => rim && self.holes.vertices.contains(&vertex),
+            ContactFeature::Face { .. } | ContactFeature::Cut { .. } => false,
+        }
+    }
+
+    /// Whether the line from `contact` to `centre` stands square to one of the side's triangles
+    /// using the contact's edge or vertex, within [`TANGENT_SINE`]: the ball touches that face at
+    /// its rim, rather than only resting on the rim.
+    fn touched_square(&self, contact: &SideContact, centre: Vector3) -> bool {
+        let (v, also) = match contact.feature {
+            ContactFeature::Edge { from, to, .. } => (from, Some(to)),
+            ContactFeature::Vertex { vertex, .. } => (vertex, None),
+            ContactFeature::Face { .. } | ContactFeature::Cut { .. } => return true,
+        };
+        let out = centre - contact.point;
+        let length = out.length();
+        if length.is_nan() || length <= 0.0 {
+            return false;
+        }
+        let side = &self.side;
+        side.vertex_triangles.get(&v).is_some_and(|around| {
+            around.iter().any(|&t| {
+                let [a, b, c] = side.triangles[t];
+                if also.is_some_and(|w| a != w && b != w && c != w) {
+                    return false;
+                }
+                let (pa, pb, pc) = (
+                    side.positions[a as usize],
+                    side.positions[b as usize],
+                    side.positions[c as usize],
+                );
+                let normal = (pb - pa).cross(pc - pa);
+                let area = normal.length();
+                area > 0.0 && out.cross(normal).length() <= TANGENT_SINE * length * area
+            })
+        })
+    }
+}
+
+/// The extension's open edges (low, high) that are holes, and every vertex they touch.
+#[derive(Default)]
+struct Holes {
+    edges: HashSet<(i32, i32)>,
+    vertices: HashSet<i32>,
+}
+
 /// One strip: its edge `a -> b` in the side's order, its end plane, and its two far vertices.
 struct Strip {
     a: i32,
@@ -166,7 +269,7 @@ pub(super) fn extended_past(
     ends: &[ChainEnd],
     radius: f64,
     tolerance: f64,
-) -> RollingBallSide {
+) -> ExtendedSide {
     let mut positions = side.positions.clone();
     let mut crossings: Crossings = HashMap::new();
 
@@ -191,6 +294,8 @@ pub(super) fn extended_past(
             kept.push([polygon[0], polygon[i], polygon[i + 1]]);
         }
     }
+    // The cut side's vertices are these; the strips', the fills' and the bound's come after.
+    let cut_count = positions.len();
 
     // The cut side's edges in a plane that one triangle uses, each with that triangle's far
     // corner, in triangle order.
@@ -285,10 +390,23 @@ pub(super) fn extended_past(
     let mut leaving: HashMap<i32, Vec<(i32, bool, usize)>> = HashMap::new();
     let mut leaving_order: Vec<i32> = Vec::new();
     for (a, b, end, far_a, far_b) in runs {
-        positions.push(far_a);
-        positions.push(far_b);
-        // A part's vertex count fits an i32 (the mesh's own indices are i32).
-        let (fa, fb) = ((positions.len() - 2) as i32, (positions.len() - 1) as i32);
+        // Two strips leaving one vertex in the same direction (a prism's walls past a square end,
+        // collinear trace edges) share their far vertex there, so the seam between them is no
+        // open edge: no wedge fits between them, and an unshared seam would read as a rim.
+        let mut far_of = |v: i32, at: Vector3| -> i32 {
+            let shared = leaving.get(&v).and_then(|around| {
+                around.iter().find_map(|&(far, _, on)| {
+                    (on == end && (positions[far as usize] - at).length() <= tolerance)
+                        .then_some(far)
+                })
+            });
+            shared.unwrap_or_else(|| {
+                positions.push(at);
+                // A part's vertex count fits an i32 (the mesh's own indices are i32).
+                (positions.len() - 1) as i32
+            })
+        };
+        let (fa, fb) = (far_of(a, far_a), far_of(b, far_b));
         extension.push(([b, a, fa], end));
         extension.push(([b, fa, fb], end));
         for (v, far, into) in [(a, fa, false), (b, fb, true)] {
@@ -387,7 +505,114 @@ pub(super) fn extended_past(
             kept.push([polygon[0], polygon[i], polygon[i + 1]]);
         }
     }
-    RollingBallSide::new(&positions, &kept)
+    // The strips leaving the trace's far ends, each `(v, far)`: where the side's own rim reaches
+    // the end plane, its continuation past it.
+    let carried: Vec<(i32, i32)> = strips
+        .iter()
+        .flat_map(|strip| [(strip.a, strip.far_a), (strip.b, strip.far_b)])
+        .filter(|(v, _)| leaving.get(v).is_some_and(|around| around.len() == 1))
+        .collect();
+    let holes = holes_of(&positions, &kept, ends, cut_count, &carried, tolerance);
+    ExtendedSide {
+        side: RollingBallSide::new(&positions, &kept),
+        holes,
+    }
+}
+
+/// The open edges of the extended side `kept` that are holes in it, not the side's own boundary
+/// carried on (the file header's list), and every vertex such an edge touches. The side's own
+/// boundary is an edge of the cut side (both ends below `cut_count`) that lies in no end plane
+/// and touches no chain end vertex (the chain's own edge, or the line carried on past it), and
+/// the strip edge leaving such a rim where it reaches an end plane (one of `carried`, or the part
+/// of it the bound keeps).
+fn holes_of(
+    positions: &[Vector3],
+    kept: &[[i32; 3]],
+    ends: &[ChainEnd],
+    cut_count: usize,
+    carried: &[(i32, i32)],
+    tolerance: f64,
+) -> Holes {
+    let mut uses: HashMap<(i32, i32), u32> = HashMap::new();
+    let mut open: Vec<(i32, i32)> = Vec::new();
+    for t in kept {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            let key = (a.min(b), a.max(b));
+            let count = uses.entry(key).or_insert(0);
+            if *count == 0 {
+                open.push(key);
+            }
+            *count += 1;
+        }
+    }
+    open.retain(|key| uses.get(key) == Some(&1));
+    let at_an_end = |v: i32| {
+        ends.iter()
+            .any(|end| at_vertex(positions, v, end, tolerance))
+    };
+    let in_one_plane = |a: i32, b: i32| {
+        ends.iter().any(|end| {
+            end.plane.depth(positions[a as usize]).abs() <= tolerance
+                && end.plane.depth(positions[b as usize]).abs() <= tolerance
+        })
+    };
+    // A vertex index a part never reaches is past every cut vertex (the cut side's indices fit
+    // an i32, as the mesh's do).
+    let of_the_cut = |v: i32| (v as usize) < cut_count;
+    let own_rim = |a: i32, b: i32| {
+        of_the_cut(a) && of_the_cut(b) && !in_one_plane(a, b) && !at_an_end(a) && !at_an_end(b)
+    };
+    // Where the side's own rim reaches each vertex, so a strip carries it on only from there.
+    let mut rim_reaches: HashSet<i32> = HashSet::new();
+    for &(a, b) in &open {
+        if own_rim(a, b) {
+            rim_reaches.insert(a);
+            rim_reaches.insert(b);
+        }
+    }
+    let carried_on = |a: i32, b: i32| {
+        carried.iter().any(|&(v, far)| {
+            if !rim_reaches.contains(&v) || at_an_end(v) {
+                return false;
+            }
+            let other = if a == v {
+                b
+            } else if b == v {
+                a
+            } else {
+                return false;
+            };
+            other == far || on_segment(positions, other, v, far, tolerance)
+        })
+    };
+    let mut holes = Holes::default();
+    for (a, b) in open {
+        if own_rim(a, b) || carried_on(a, b) {
+            continue;
+        }
+        holes.edges.insert((a, b));
+        holes.vertices.insert(a);
+        holes.vertices.insert(b);
+    }
+
+    holes
+}
+
+/// Whether vertex `p` lies on the segment from `v` to `far`, within `tolerance`.
+fn on_segment(positions: &[Vector3], p: i32, v: i32, far: i32, tolerance: f64) -> bool {
+    let (p, from, to) = (
+        positions[p as usize],
+        positions[v as usize],
+        positions[far as usize],
+    );
+    let along = to - from;
+    let length_squared = along.length_squared();
+    if length_squared.is_nan() || length_squared <= 0.0 {
+        return false;
+    }
+    let t = (p - from).dot(along) / length_squared;
+    let nearest = from + (along * t.clamp(0.0, 1.0));
+    (p - nearest).length() <= tolerance
 }
 
 /// Whether vertex `v` is the chain's end vertex at `end`, within `tolerance`.
@@ -445,7 +670,7 @@ mod tests {
     #[test]
     fn the_extended_side_is_wound_one_way() {
         for degrees in [-25.0, 25.0] {
-            let side = extended_past(&floor(), &[leaning(degrees)], 2.0, 1e-9);
+            let side = extended_past(&floor(), &[leaning(degrees)], 2.0, 1e-9).side;
             let mut runs: HashMap<(i32, i32), u32> = HashMap::new();
             for t in &side.triangles {
                 for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
@@ -475,7 +700,7 @@ mod tests {
     /// below it.
     #[test]
     fn past_the_plane_the_floor_runs_on_beside_the_chain_too() {
-        let side = extended_past(&floor(), &[leaning(-25.0)], 2.0, 1e-9);
+        let side = extended_past(&floor(), &[leaning(-25.0)], 2.0, 1e-9).side;
         // Above the strip: past the trace, which falls 25 degrees in y along x from the origin.
         let above = side
             .closest(Vector3::new(2.0, 0.0, 1.0))
@@ -499,7 +724,7 @@ mod tests {
     /// the floor's continuation.
     #[test]
     fn no_strip_reaches_across_the_chains_line() {
-        let side = extended_past(&floor(), &[leaning(25.0)], 2.0, 1e-9);
+        let side = extended_past(&floor(), &[leaning(25.0)], 2.0, 1e-9).side;
         assert!(side.triangles.len() > 2, "the strip was added");
         for t in &side.triangles {
             for &v in t {
@@ -515,7 +740,7 @@ mod tests {
     /// side's boundary there (a rim, as the chain edge is).
     #[test]
     fn past_the_chains_line_the_side_reads_only_up_to_the_line() {
-        let side = extended_past(&floor(), &[leaning(25.0)], 2.0, 1e-9);
+        let side = extended_past(&floor(), &[leaning(25.0)], 2.0, 1e-9).side;
         let beyond = side
             .closest(Vector3::new(-0.5, 1.0, 1.0))
             .expect("the side has triangles");
@@ -534,5 +759,42 @@ mod tests {
             .expect("the side has triangles");
         assert!((inside.distance - 1.0).abs() < 1e-12, "{inside:?}");
         assert!(!inside.feature.is_rim(), "{inside:?}");
+    }
+
+    /// Cut square at y = 0 (the chain along x = 0 ending at the origin), the floor's trace in the
+    /// plane runs from the origin through (2, 0, 0), where its diagonal crosses the plane, to its
+    /// far corner (4, 0, 0), where the floor's own rim x = 4
+    /// reaches the plane, and the strip carries that rim on past it. A contact on the rim, on its
+    /// corner in the plane or on the strip's edge carrying it on rests on the floor's own boundary;
+    /// one on the strip's far edge (past its reach) or on the chain's line past the end vertex
+    /// rests on a hole of the extension, as does one on the chain's own edge into the end vertex.
+    #[test]
+    fn the_sides_own_rim_carried_on_is_no_hole_and_the_strips_far_edge_is() {
+        let extended = extended_past(&floor(), &[leaning(0.0)], 2.0, 1e-9);
+        for (at, hole) in [
+            (Vector3::new(5.0, -1.0, 1.0), false),
+            (Vector3::new(5.0, 0.0, 1.0), false),
+            (Vector3::new(5.0, 1.0, 1.0), false),
+            (Vector3::new(3.0, 5.0, 1.0), true),
+            (Vector3::new(-1.0, 1.0, 1.0), true),
+            // The chain's own edge, cut at the plane, into the end vertex.
+            (Vector3::new(-1.0, -1.0, 1.0), true),
+        ] {
+            let contact = extended.side.closest(at).expect("the side has triangles");
+            assert!(contact.feature.is_rim(), "{at:?}: {contact:?}");
+            assert_eq!(
+                extended.on_a_hole(&contact.feature),
+                hole,
+                "{at:?}: {contact:?}"
+            );
+        }
+        // Over the strip itself the contact is on its face, no rim at all; and over the seam
+        // where the floor's diagonal meets the plane at (2, 0, 0), whose two trace edges' strips
+        // leave in the same direction and share their far vertex, it is on no rim either.
+        for at in [Vector3::new(3.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 1.0)] {
+            let over = extended.side.closest(at).expect("the side has triangles");
+            assert!(!over.feature.is_rim(), "{at:?}: {over:?}");
+            assert!(!extended.on_a_hole(&over.feature), "{at:?}: {over:?}");
+        }
     }
 }

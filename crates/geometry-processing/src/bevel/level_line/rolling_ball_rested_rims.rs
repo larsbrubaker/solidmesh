@@ -22,7 +22,9 @@
 //!
 //! Left out, each for its reason:
 //! - a station on an end face (its feature is `None`): its side is read as extended past the face,
-//!   so its rim is the extension's, not the part's (and the walk refuses such a contact anyway);
+//!   so its feature names the extension, not the part; a contact on a hole of the extension is
+//!   refused, and a rim the side's own contact rests on there is listed only through a station
+//!   beside it resting on that rim (widened by one chain edge);
 //! - a contact on a vertex the walk added past an end face (numbered from the part's count up):
 //!   no edge of the part carries it;
 //! - a contact on the chain itself (a chain edge or vertex, as at a free end where the contacts

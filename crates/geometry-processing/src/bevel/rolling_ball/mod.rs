@@ -55,5 +55,6 @@ pub use ball_station::{
 };
 pub use side_surface::{ContactFeature, HalfSpace, RollingBallSide, SideContact};
 pub use walk::{
-    ChainPoint, ChainWalk, EndFace, RollingBall, StationFailure, StationFault, WalkEnd, WalkError,
+    ChainPoint, ChainWalk, EndContactFault, EndFace, RollingBall, StationFailure, StationFault,
+    WalkEnd, WalkError,
 };

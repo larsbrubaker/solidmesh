@@ -61,7 +61,7 @@ use super::triangle_edges::{self, StandingMap};
 use super::ChainField;
 use super::{chain_field_rays, rolling_ball_sides};
 use crate::bevel::rolling_ball::{
-    ChainPoint, ContactFeature, EndFace, RollingBall, RollingBallSide, WalkEnd,
+    ChainPoint, ContactFeature, EndContactFault, EndFace, RollingBall, RollingBallSide, WalkEnd,
 };
 
 /// How square to a leg the other leg's face must stand (the cosine between the leg and the face's
@@ -283,19 +283,28 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
             let on_an_end_face = !leg_closed
                 && ((i == 0 && walk.ends[0] == WalkEnd::EndFace)
                     || (i == last && walk.ends[1] == WalkEnd::EndFace));
-            // A contact on a rim of a side read as extended past the end face lies where the
-            // extension has a hole (the ones `rolling_ball::side_extension` lists): no surface
-            // the round rests on, so its distance is no setback. Fail safe.
+            // An end station's contact that is no setback (`EndContactFault`): on a hole of a
+            // side read as extended past the end face, or on the side's own rim with the ball
+            // not touching the side square there. Fail safe. A contact on the side's own rim the
+            // ball touches square (a wall consumed exactly to its rim) is the round's.
             if on_an_end_face {
                 let end = usize::from(i != 0);
-                for (contact, name) in [(&station.contact_a, "A"), (&station.contact_b, "B")] {
-                    if contact.feature.is_rim() {
-                        return Err(format!(
-                            "{}: side {name}'s contact at the end face rests on a rim of the side \
-                             extended past the face, so its setback there is not the round's",
-                            where_ends(end)
-                        ));
-                    }
+                for (fault, name) in walk.end_contact_faults[end].into_iter().zip(["A", "B"]) {
+                    let why = match fault {
+                        None => continue,
+                        Some(EndContactFault::OnAHole) => {
+                            "rests on a hole of the side extended past \
+                                                           the face"
+                        }
+                        Some(EndContactFault::OffTheSidesFaces) => {
+                            "rests on the side's rim without touching the side square there"
+                        }
+                    };
+                    return Err(format!(
+                        "{}: side {name}'s contact at the end face {why}, so its setback there is \
+                         not the round's",
+                        where_ends(end)
+                    ));
                 }
             }
             let measure = |contact: Vector3| {

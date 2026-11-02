@@ -19,6 +19,8 @@ mod contact_tracking_tests;
 mod corner_setback_tests;
 #[path = "rolling_ball/end_face_plane_tests.rs"]
 mod end_face_plane_tests;
+#[path = "rolling_ball/end_face_rim_tests.rs"]
+mod end_face_rim_tests;
 #[path = "rolling_ball/free_end_room_tests.rs"]
 mod free_end_room_tests;
 #[path = "rolling_ball/free_end_taper_tests.rs"]

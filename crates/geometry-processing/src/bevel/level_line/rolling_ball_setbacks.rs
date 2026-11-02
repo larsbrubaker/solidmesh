@@ -65,9 +65,10 @@
 //! is refused, with the route naming the sides' distances, at:
 //! - an end face the walk never reached (its last station short of the face's plane): nothing
 //!   says where on that face the rails end;
-//! - an end face where the end station's contact on a side rests on a rim of that side as the
-//!   walk extends it past the face (a gap in the extension, `rolling_ball::side_extension`): its
-//!   distance is no setback, so the pass is refused rather than built short;
+//! - an end face where the end station's contact on a side rests on a hole of that side as the
+//!   walk extends it past the face (`rolling_ball::side_extension`; a contact on the side's own
+//!   rim there, its far corner in the end face, is the round's): its distance is no setback, so
+//!   the pass is refused rather than built short;
 //! - an end face whose edges with the walls end before a rail does (narrower than the rail's
 //!   distance, or one the band flows over): no point of its edge carries that rail's end
 //!   (`rolling_ball_end_caps::rail_end`);

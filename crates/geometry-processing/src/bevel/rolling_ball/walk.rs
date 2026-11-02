@@ -271,6 +271,23 @@ pub struct ChainWalk {
     pub stations: Vec<BallStation>,
     /// How the chain's first end (`ends[0]`) and last end finished.
     pub ends: [WalkEnd; 2],
+    /// Per end (first, last), why the end station's contact on side A and on side B is no
+    /// setback, `None` where it is one (and at an end that finished on no end face): see
+    /// [`EndContactFault`].
+    pub end_contact_faults: [[Option<EndContactFault>; 2]; 2],
+}
+
+/// Why an end station's contact on a side, read as extended past the end face
+/// (`side_extension.rs`), gives no setback for the round there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EndContactFault {
+    /// On a hole of the extension: a rim that is not the side's own boundary, where the ball
+    /// rests on no surface of the side.
+    OnAHole,
+    /// On the side's own rim, with the ball not touching the side square to any of its faces
+    /// there: it only rests on the rim (a size past the side's width, a side cut short by a
+    /// chamfer at the end), so the round there is not of the size asked.
+    OffTheSidesFaces,
 }
 
 /// Why a chain has no walk.
@@ -372,8 +389,8 @@ impl RollingBall<'_> {
         });
         let ball = match &extended {
             Some((side_a, side_b)) => RollingBall {
-                side_a,
-                side_b,
+                side_a: &side_a.side,
+                side_b: &side_b.side,
                 ..*self
             },
             None => *self,
@@ -432,14 +449,29 @@ impl RollingBall<'_> {
         }
 
         let [head, tail] = run_outs;
-        let stations = head
+        let stations: Vec<BallStation> = head
             .into_iter()
             .chain(stations.into_iter().flatten())
             .chain(tail)
             .collect();
+        // Each end face's station read against the sides as extended past it.
+        let mut end_contact_faults = [[None; 2]; 2];
+        if let (Some((side_a, side_b)), Some(first), Some(last)) =
+            (&extended, stations.first(), stations.last())
+        {
+            for (end, station) in [first, last].into_iter().enumerate() {
+                if finished[end] == WalkEnd::EndFace {
+                    end_contact_faults[end] = [
+                        side_a.end_contact_fault(&station.contact_a, station.centre),
+                        side_b.end_contact_fault(&station.contact_b, station.centre),
+                    ];
+                }
+            }
+        }
         Ok(ChainWalk {
             stations,
             ends: finished,
+            end_contact_faults,
         })
     }
 
