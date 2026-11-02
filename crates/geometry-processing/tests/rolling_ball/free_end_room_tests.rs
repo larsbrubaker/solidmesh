@@ -3,8 +3,10 @@
 //! onto its end vertex is not refused by a crease the level line's round, run one setback past the
 //! end, would reach. Held to a plain 90 degree V-groove on a thin floor, picked free at both ends 2
 //! short of the groove's square ends, whose bottom crease stands 0.5 below the floor's line: the
-//! level line's room is the distance from the end vertex to that crease, the ball's the distance
-//! from the chain vertex nearest a full setback back from the end. And a room the caller hands in
+//! level line's room is the distance from the end vertex to that crease; the ball never reaches
+//! that crease (it lies below the floor's line), and its room is the wall's own reach to its far
+//! corner at the square end, read from the chain vertex nearest a full setback back from the end.
+//! And a room the caller hands in
 //! (read, as the model reads it, with the angle's setbacks) is set aside wherever the ball may take
 //! a pass of one chain, open or closed: held on the one-wall-bending groove's ring, whose steeper
 //! wall's top crease the ball's band reaches before the angle's does. And each side's creases, and
@@ -21,7 +23,9 @@ use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
 };
 use std::collections::HashMap;
 
-use vector_math::Vector3;
+use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use polygon_mesh::Mesh;
+use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
 use crate::band_route_tests::{built, creases, Triangles};
 use crate::band_setback_tests::{
@@ -37,6 +41,9 @@ const FLOOR: f64 = 0.5;
 /// How far each free end stands short of its square end: the picked stretch runs from slice 8 to
 /// slice 56 of 64, y = 2 to 14 of 16.
 const SHORT: f64 = 2.0;
+
+/// How far the groove's walls rise and reach out: their rims stand at (+-4, 4).
+const WALL_TOP: f64 = 4.0;
 
 /// The radius asked: above the level line's room, well under the ball's.
 const RADIUS: f64 = 2.3;
@@ -69,18 +76,24 @@ fn the_level_lines_room() -> f64 {
     SHORT.hypot(FLOOR)
 }
 
-/// The ball's room by hand, read at [`RADIUS`]. Its setback at a chain vertex t from the free end is
-/// t, capped at the radius (the round closes onto the end vertex as the sphere of radius S
-/// through it), so per unit of size t / S under a full setback. Scaled to a size s it reaches the
-/// bottom crease from that vertex at s min(t, S) / S = sqrt((2 + t)^2 + 0.5^2): the room is the
-/// least such s over the chain's vertices (t = 0.25 k), which is t = 2.25, the last vertex under a
-/// full setback: sqrt(4.25^2 + 0.25) 2.3 / 2.25 = 4.3744.
+/// The ball's room by hand, read at [`RADIUS`]. The floor's crease past the free end sets none:
+/// it lies below the floor's line, out of the ball's reach and of the band between the ball and the
+/// chain (`far_bound_ball_room`). What sets it is the wall's own far corner, (4, 0, 4), where the
+/// wall's rim meets the square end, read as the side's reach (the self room): the side's setback at
+/// a chain vertex t from the free end is t, capped at the radius (the round closes onto the end
+/// vertex as the sphere of radius S through it), so per unit of size min(t, S) / S, and scaled to
+/// a size s it reaches the corner, sqrt((2 + t)^2 + 32) from that vertex, at s min(t, S) / S =
+/// that distance. The least such s over the chain's vertices (t = 0.25 k) is at t = 2.5, the first
+/// under a full setback: sqrt(4.5^2 + 32) = sqrt(52.25) = 7.2284. That is the self room's
+/// estimate read at the size asked, not a limit of the part: the round closes onto its end vertex
+/// at y = 2 and the taper reaches further as the size grows, so the room read grows with it, and
+/// the ball builds up to 8.8 ([`the_ball_builds_on_either_side_of_the_room_it_read`]).
 fn the_balls_room() -> f64 {
     (1..=56 - 8)
         .map(|k| {
             let t = EDGE * f64::from(k);
             let reach = t.min(RADIUS) / RADIUS;
-            (SHORT + t).hypot(FLOOR) / reach
+            (SHORT + t).hypot(WALL_TOP.hypot(WALL_TOP)) / reach
         })
         .fold(f64::INFINITY, f64::min)
 }
@@ -386,6 +399,49 @@ fn a_crease_on_the_narrow_side_is_read_against_that_sides_own_band() {
             directed.get(&(b, a)),
             Some(&1),
             "edge {a}-{b} has no triangle running it back: the mesh is open"
+        );
+    }
+}
+
+/// The ball's room read at [`RADIUS`] is no limit of the part: the floor's crease past the free end
+/// lies below the floor's line, where neither the ball nor the band between it and the chain ever
+/// goes, so the round builds a twentieth past the room and a twentieth under it alike, the filled
+/// mesh closed, not crossing itself and within the part's height (the floor's underside to the
+/// walls' tops).
+#[test]
+fn the_ball_builds_on_either_side_of_the_room_it_read() {
+    let (part, chain) = the_groove_on_a_thin_floor();
+    for factor in [0.95, 1.05] {
+        let size = the_balls_room() * factor;
+        let (ball, route) = built(&part, std::slice::from_ref(&chain), size, true);
+        assert_eq!(route.as_deref(), Some("rolling-ball"), "at {size}");
+        assert_eq!(ball.refusal, BandGapRefusal::None, "at {size}");
+        let fill = gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS)
+            .expect("the fill runs");
+        assert_eq!(fill.refusal, GapFillRefusal::None, "at {size}");
+        let mesh = fill.mesh.as_ref().expect("the filled mesh").borrow();
+        let mut solid = Mesh::new();
+        for v in 0..mesh.vertex_count() {
+            solid
+                .vertices
+                .push(Vector3Float::from_vector3(mesh.position(v)));
+            let z = mesh.position(v).z;
+            assert!(
+                (-FLOOR..=4.0).contains(&z),
+                "a vertex at z = {z}, at {size}"
+            );
+        }
+        for t in 0..mesh.triangle_count() {
+            if mesh.is_removed(t) {
+                continue;
+            }
+            let face = mesh.triangles()[t as usize];
+            solid.faces.add(face.a, face.b, face.c, &solid.vertices);
+        }
+        assert_eq!(
+            classify_boolean_operand(&solid, Matrix4X4::IDENTITY, false),
+            BooleanOperandVerdict::Clean,
+            "at {size}"
         );
     }
 }

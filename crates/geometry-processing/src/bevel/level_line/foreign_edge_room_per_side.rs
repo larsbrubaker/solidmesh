@@ -28,6 +28,11 @@
 //! its own fixed steps, each building that family's field at the trial size, so up to three times
 //! the field builds of one reading.
 //!
+//! **A far bound in neither side** (a growing neighbour's far bound whose triangles are all tag 0),
+//! where the ball takes the pass, is not read here: `band_room::room_of_cut_mesh` reads it from the
+//! ball's centres (`far_bound_ball_room`), since the chain's own field, the larger side's setback
+//! about the chain, reaches where the ball never goes.
+//!
 //! **Growing crease runs** (`GrowingCreaseRuns::least_with`, in `band_room::room_of_cut_mesh`) are
 //! read against the ball's own centres where the ball takes the pass (`ball_pierce_room`: one
 //! centre a radius from both sides, so the side a run lies on needs no setback of its own), and

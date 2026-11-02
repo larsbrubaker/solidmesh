@@ -24,7 +24,9 @@ use super::foreign_edge_room_readings::{FieldAt, ForeignEdge};
 use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
-use super::{chain_on_the_mesh, foreign_edge_room, self_room, swallowed_side_runs};
+use super::{
+    chain_on_the_mesh, far_bound_ball_room, foreign_edge_room, self_room, swallowed_side_runs,
+};
 use super::{
     BandProfile, ChainEdgeNotOnTwoTriangles, ChainField, FieldSample, GrowingCreaseRuns,
     LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomField, RoomReading, RoomSource,
@@ -365,7 +367,9 @@ pub fn the_foreign_source(
 /// the size it was asked, per unit of that size (`one_chain_room` says why), and with them each
 /// side's own (`sides`), against which the foreign edges on that side alone are read
 /// (`foreign_edge_room_per_side`), and by which each side's self room is read; with no `sides`
-/// every foreign edge and both sides' self rooms are read against the chain's own field. Growing
+/// every foreign edge and both sides' self rooms are read against the chain's own field. A growing
+/// neighbour's far bound in neither side is read from the ball's centres where it hands them
+/// (`far_bound_ball_room`), and with the rest of the far bounds otherwise. Growing
 /// crease runs read their pierce room from the ball's centres where it hands them (`ball`,
 /// `ball_pierce_room`), from `unit_setback`'s angle centre otherwise. The optional arguments are
 /// passed explicitly (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces,
@@ -451,7 +455,46 @@ pub fn room_of_cut_mesh(
             true,
         )?,
     );
-    let far_room = room_for_by_side(mesh, &far_bounds, field_at, unit_setback, sides, false)?;
+    // A far bound in neither side, where the ball takes the pass, is read from the ball's centres
+    // (`far_bound_ball_room`): the larger side's setback about the chain reaches where the ball
+    // never goes. The rest of the far bounds, and those past a carried end, are read as before.
+    let (ball_far, read_far): (Vec<ForeignEdge>, Vec<ForeignEdge>) = match ball {
+        Some(_) => far_bounds.iter().copied().partition(|e| {
+            in_neither_side(mesh, (e.0, e.1))
+                && ball.is_some_and(|path| {
+                    !far_bound_ball_room::is_past_a_carried_end(
+                        path,
+                        mesh.position(e.0),
+                        mesh.position(e.1),
+                    )
+                })
+        }),
+        None => (Vec::new(), far_bounds.clone()),
+    };
+    let (ball_far_room, ball_far_at) = match ball {
+        Some(path) if !ball_far.is_empty() => {
+            let ends: Vec<(Vector3, Vector3)> = ball_far
+                .iter()
+                .map(|e| (mesh.position(e.0), mesh.position(e.1)))
+                .collect();
+            let (planes, plane_snap) = match sides {
+                Some(sides) => (sides.end_planes, sides.snap),
+                None => ([None, None], snap),
+            };
+            far_bound_ball_room::room_of_far_bounds(path, &ends, &planes, plane_snap)?
+        }
+        _ => (f64::INFINITY, None),
+    };
+    let read_far_room = room_for_by_side(mesh, &read_far, field_at, unit_setback, sides, false)?;
+    // With no far bound read from the ball the reading stands as it is, so a NaN still surfaces;
+    // a NaN from either reading is the far room.
+    let far_room = if ball_far.is_empty() {
+        read_far_room
+    } else if read_far_room.is_nan() || ball_far_room.is_nan() {
+        f64::NAN
+    } else {
+        ieee_math::min_f64(read_far_room, ball_far_room)
+    };
     let foreign_room = ieee_math::min_f64(near_room, far_room);
     let mut room = GrowingCreaseRuns::least_with(
         foreign_room,
@@ -464,7 +507,17 @@ pub fn room_of_cut_mesh(
     // The crease is read only where the far bound alone sets the room; reading it can spend work,
     // so it is read here, under that condition, before the source is named.
     let crease_at = if room != f64::INFINITY && far_room < near_room && room == far_room {
-        where_the_room_is_set_by_side(mesh, &far_bounds, field_at, unit_setback, sides, far_room)?
+        match ball_far_at {
+            Some(at) if ball_far_room <= read_far_room => at,
+            _ => where_the_room_is_set_by_side(
+                mesh,
+                &read_far,
+                field_at,
+                unit_setback,
+                sides,
+                far_room,
+            )?,
+        }
     } else {
         Vector3::ZERO
     };
@@ -547,6 +600,13 @@ pub fn room_of_cut_mesh(
         steady_down(room - band_gap_reading::room_margin(largest, snap)),
         set_by,
     ))
+}
+
+/// Whether every triangle on `edge` is in neither side (tag 0).
+fn in_neither_side(mesh: &LevelLineMesh, edge: (i32, i32)) -> bool {
+    mesh.triangles_on(edge.0, edge.1)
+        .iter()
+        .all(|&t| mesh.triangles()[t as usize].tag == 0)
 }
 
 /// The distinct elements of `first` not in `second`, in order.

@@ -38,7 +38,8 @@
 //! in one list but up to three times the trial fields are built where a side's setbacks are not one
 //! number; the self room builds each side's own field and samples its vertices with it. A growing
 //! crease run's pierce room is read from the ball's own centres ([`the_path`],
-//! `ball_pierce_room`), which stand a radius from both sides. Where the build's side
+//! `ball_pierce_room`), which stand a radius from both sides, and so is a growing neighbour's far
+//! bound in neither side (`far_bound_ball_room`: the hull of the chain point and the ball). Where the build's side
 //! floods join the two sides (sides joined round a free end) and the ball takes the pass, the band
 //! is tagged from the ball's own sides (`rolling_ball_band_tags`), so the room reads each side
 //! there too. Those sides also lose what lies wholly past an unrayed end's own end face plane
