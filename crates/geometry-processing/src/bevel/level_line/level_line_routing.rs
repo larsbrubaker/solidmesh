@@ -3,7 +3,7 @@
 //! [`reset_to_the_default`], [`turn_on_for_the_running_app`]), its route diagnostics
 //! ([`last_route`], [`first_route`]) and the switch's readings of a setting ([`reads_as_on`],
 //! [`reads_as_off`], [`the_running_app_wants_it_on`]) and its test seams ([`watch`],
-//! [`watch_room`], [`watch_budget`]).
+//! [`watch_room`], [`watch_budget`], [`fail_the_crest_attempt`]).
 //!
 //! The switch's default is process-wide and read once from the developer variable, but a write
 //! ([`set_use_level_line`]) holds only for the thread that made it: tests run on threads of one
@@ -46,6 +46,8 @@ struct RouteRecord {
     last: Option<String>,
     /// The first route since it was cleared ([`first_route`]).
     first: Option<String>,
+    /// Whether the crest attempt is made to fail ([`fail_the_crest_attempt`]).
+    crest_attempt_fails: bool,
     /// The chain watch ([`watch`]).
     chain_watch: Option<ChainWatch>,
     /// The room watch ([`watch_room`]).
@@ -188,6 +190,18 @@ pub fn first_route() -> Option<String> {
 /// Sets (or clears) [`first_route`].
 pub fn set_first_route(value: Option<String>) {
     locked(&record()).first = value;
+}
+
+/// A test seam: makes this thread's crest attempts (`band_gap_crest::build_crest_in_pick`) fail
+/// with a defect, carried to the worker like the routes, so a test can show a failed attempt
+/// leaves the pick's own refusal word for word.
+pub fn fail_the_crest_attempt(on: bool) {
+    locked(&record()).crest_attempt_fails = on;
+}
+
+/// Whether [`fail_the_crest_attempt`] is set on this thread's record.
+pub fn the_crest_attempt_fails() -> bool {
+    locked(&record()).crest_attempt_fails
 }
 
 /// The default the running app wants - the level line on, unless the developer variable says off.

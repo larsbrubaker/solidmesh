@@ -83,6 +83,10 @@ pub(crate) mod crease_dies_out_fixtures;
 pub(crate) mod crease_dies_out_tests;
 #[path = "crease_run_out_tests.rs"]
 pub(crate) mod crease_run_out_tests;
+#[path = "crest_seam_rows_tests.rs"]
+pub(crate) mod crest_seam_rows_tests;
+#[path = "crest_seam_tests.rs"]
+pub(crate) mod crest_seam_tests;
 #[path = "cube_corner_ball_tests.rs"]
 pub(crate) mod cube_corner_ball_tests;
 #[path = "cube_corner_fill_tests.rs"]

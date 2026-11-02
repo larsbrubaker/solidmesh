@@ -32,9 +32,10 @@
 //!   [`ForeignEdgeRegionsChainGrowth`], [`ForeignEdgeIndex`], [`ForeignEdgeIndexNode`],
 //!   [`ForeignApproach`]) and the growing-crease room ([`GrowingCreaseRuns`]).
 //! - **Fills and ends.** Why a fill was refused ([`GapFillRefusal`]) and its answer
-//!   ([`GapFillResult`]), the hole filler's answer ([`HoleFillResult`]), the flat end-face fill
-//!   ([`flat_hole_fill`]), the curved end face test ([`curved_end_face`]), a zip rail and its two
-//!   senses ([`ZipRail`], [`GapFillRailSenses`]), the open fill's rail and flat run-out region
+//!   ([`GapFillResult`]), where two overlapping rounds meet ([`crest_seam_rows`]) and their
+//!   crest build and fill ([`band_gap_crest`], [`gap_fill_crest`]), the hole filler's answer ([`HoleFillResult`]), the flat end-face fill
+//!   ([`flat_hole_fill`]), the curved end face test ([`curved_end_face`]), a zip rail and its
+//!   two senses ([`ZipRail`], [`GapFillRailSenses`]), the open fill's rail and flat run-out region
 //!   ([`OpenGapFillOpenRail`], [`OpenGapFillFlatRunOutRegion`]), a corner cap's last row
 //!   ([`CornerCapLastRow`]), a corner fill's loop piece ([`CornerFillPiece`]), a hull clip's
 //!   supporting plane ([`HullClipPlane`]), a knife end's overrun ([`KnifeEndOverrunEnd`]) and the
@@ -50,6 +51,7 @@ pub mod band_gap_build_entry;
 pub mod band_gap_build_fault;
 pub mod band_gap_build_sides;
 pub mod band_gap_build_within;
+pub mod band_gap_crest;
 pub mod band_gap_entry_points;
 pub mod band_gap_extra_fields;
 pub mod band_gap_in_turn;
@@ -109,6 +111,7 @@ pub mod corner_rail_strip;
 pub mod corner_rail_strip_zip;
 pub mod corner_tie_points;
 mod crease_run_out;
+pub mod crest_seam_rows;
 pub mod curved_end_face;
 pub mod dying_crease_fill;
 pub mod edge_bump_rule;
@@ -139,6 +142,7 @@ pub mod foreign_edge_room;
 pub mod foreign_edge_room_readings;
 pub mod foreign_room_counters;
 pub mod gap_fill;
+pub mod gap_fill_crest;
 pub mod gap_fill_one_chain;
 mod gap_fill_refusal;
 mod gap_fill_result;
