@@ -7,16 +7,16 @@
 //! tagged from the ball's sides and cut per side (and which the switch off leaves as it was), whose
 //! crease running on past each free end the tapered round never reaches, and a box whose two side
 //! regions meet again away from the chain, where the room is read, and a step whose tread, in the
-//! top's region, wraps round behind the riser the ball rests on, which the band never cuts.
+//! top's region, wraps round behind the riser the ball rests on, which the band never cuts and
+//! whose riser|tread rim is the riser's rail.
 
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick_with_side_regions, BandGapBuildOptions,
 };
-use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, RoomReadingKind,
+    BandGapRefusal, BandGapResult, BandProfile, LevelLineMesh, RoomReadingKind,
 };
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball, ROLLING_BALL_REFUSED,
@@ -402,18 +402,22 @@ fn the_step_whose_tread_wraps_round_behind_its_riser(
 /// sweeps. The tread is taken out of side A (`rolling_ball_sweep`): no tread triangle is in A's
 /// band, cut or moved, and the room is no longer read across the tread at the rim (0.7559, a size
 /// of 2 refused), so the band is cut at 2. The riser's band reaches exactly the rim its contact
-/// rests on and takes the whole riser between the free ends' tapers, so side B's rail breaks into a
-/// stub at each end and the fill refuses the open ends: a crease a side's contacts rest on is not
-/// yet that side's rail.
+/// rests on, and that rim is side B's rail (`rolling_ball_rested_rims`): B's rail is one run from
+/// the free end at y = 2 down the taper, along the rim through every one of its 45 vertices
+/// (0, 2.5 + 0.25 k, -0.5) in order, and up the taper to y = 14; A's rail clear of the tapers (from
+/// the chain vertex at y = 3.5 to the one at 12.5, the first and last whose setback the free ends'
+/// taper leaves whole) runs at the contact's distance on the top, x = -sqrt(1.75). The fill closes
+/// and the mesh is closed.
+/// The round between the rails is not yet the ball's circular arc: the rows are still drawn about
+/// the chain point, and rows about the ball's centre are the next step, which will pin the arc.
 #[test]
-fn a_side_wrapping_round_behind_the_other_sides_contact_is_not_cut_there() {
+fn a_crease_a_sides_contacts_rest_on_is_that_sides_rail() {
     let (ball, route, positions) = the_step_whose_tread_wraps_round_behind_its_riser();
     assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
     assert_eq!(ball.refusal, BandGapRefusal::None, "{}", ball.room);
     assert!(ball.room > 2.0, "{}", ball.room);
     let on_the_tread = |p: Vector3| p.x > -1e-12 && (p.z + 0.5).abs() < 1e-12;
-    {
-        let mesh = ball.mesh.as_ref().expect("the band came out").borrow();
+    let the_tread_is_untouched = |mesh: &LevelLineMesh| {
         for (v, &p) in positions.iter().enumerate() {
             if on_the_tread(p) {
                 assert_eq!(mesh.position(v as i32), p, "tread vertex {v} moved");
@@ -422,31 +426,50 @@ fn a_side_wrapping_round_behind_the_other_sides_contact_is_not_cut_there() {
         let mut tread = 0;
         for t in 0..mesh.triangle_count() {
             let face = mesh.triangles()[t as usize];
-            if [face.a, face.b, face.c]
-                .iter()
-                .all(|&v| on_the_tread(mesh.position(v)))
+            if !mesh.is_removed(t)
+                && [face.a, face.b, face.c]
+                    .iter()
+                    .all(|&v| on_the_tread(mesh.position(v)))
             {
-                assert!(!mesh.is_removed(t), "tread triangle {t} is in the band");
                 assert_eq!(face.tag, 0, "tread triangle {t} is in side {}", face.tag);
                 tread += 1;
             }
         }
         // 64 slices of two triangles each, none of them cut.
         assert_eq!(tread, 128);
-        let side_b_ends: Vec<Vector3> = ball
-            .loops
-            .iter()
-            .filter(|l| l.side == 2)
-            .flat_map(|l| [l.vertices[0], l.vertices[l.vertices.len() - 1]])
-            .map(|v| mesh.position(v))
-            .collect();
+    };
+    the_tread_is_untouched(&ball.mesh.as_ref().expect("the band came out").borrow());
+
+    let ends = [Vector3::new(0.0, 2.0, 0.0), Vector3::new(0.0, 14.0, 0.0)];
+    let rails = the_rails_close_onto_both_end_vertices(&ball, ends);
+    let rail_b = rails.iter().find(|r| r.side == 2).expect("side B's rail");
+    let on_the_rim: Vec<Vector3> = rail_b
+        .points
+        .iter()
+        .copied()
+        .filter(|p| p.x.abs() < 1e-12 && (p.z + 0.5).abs() < 1e-12)
+        .collect();
+    let mut along = on_the_rim.iter().map(|p| p.y).collect::<Vec<f64>>();
+    if along.first() > along.last() {
+        along.reverse();
+    }
+    let rim: Vec<f64> = (0..45).map(|k| 2.5 + (0.25 * f64::from(k))).collect();
+    assert_eq!(along, rim, "side B's rail does not run along the rim");
+    let rail_a = rails.iter().find(|r| r.side == 1).expect("side A's rail");
+    let contact = -(1.75f64.sqrt());
+    let clear = rail_a
+        .points
+        .iter()
+        .filter(|p| p.y >= 3.5 && p.y <= 12.5)
+        .collect::<Vec<_>>();
+    assert!(clear.len() > 30, "{}", clear.len());
+    for p in clear {
         assert!(
-            side_b_ends.contains(&Vector3::new(0.0, 2.5, -0.5))
-                && side_b_ends.contains(&Vector3::new(0.0, 13.5, -0.5)),
-            "side B's rail is not cut at the rim: {side_b_ends:?}"
+            (p.x - contact).abs() < 1e-9 && p.z.abs() < 1e-9,
+            "side A's rail is at {p:?}, not on the top at x = {contact}"
         );
     }
-    let fill =
-        gap_fill::fill(&ball, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS).expect("the fill runs");
-    assert_eq!(fill.refusal, GapFillRefusal::OpenChainEnds);
+    // The fill (run by `the_rails_close_onto_both_end_vertices`, closed) writes into the band's
+    // own mesh, and leaves the tread as the cut did.
+    the_tread_is_untouched(&ball.mesh.as_ref().expect("the filled mesh").borrow());
 }

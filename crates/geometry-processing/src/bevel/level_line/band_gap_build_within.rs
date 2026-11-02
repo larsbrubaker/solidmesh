@@ -16,7 +16,9 @@
 //! - **Per end:** a single open chain's end region whose sides differ at its end reads its cap
 //!   field (`PassSetbacks::caps_of_one_open_chain`), cut to meet each side's rail.
 //! - **Per side, judged:** whether the band ends on a rim (`consumed_to_the_rim`, each edge read
-//!   with the field of the group its triangles belong to) and the swallowed sides' made-up runs
+//!   with the field of the group its triangles belong to), the rims each side's contacts rest on,
+//!   which the loop walk takes as that side's rail (`rolling_ball_rested_rims`, added to the
+//!   consumed rims for that side's group only), and the swallowed sides' made-up runs
 //!   (`swallowed_side_runs::runs_if_both_swallowed_per_side`, each side's run at its own setback).
 //! - **The chain's own field, as a reach or a tolerance:** the tagging's reach, the narrow end
 //!   face's flow, which foreign edges the band reaches, the swallowed runs' walls, stations and
@@ -58,9 +60,9 @@ use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
     band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
-    one_chain_room, pick_validation, pinch_ladder_search, rolling_ball_setbacks,
-    sharp_joint_corners, side_roots_settling, side_witness, square_crease_end_clip,
-    swallowed_side_runs, triangle_edges,
+    one_chain_room, pick_validation, pinch_ladder_search, rolling_ball_rested_rims,
+    rolling_ball_setbacks, sharp_joint_corners, side_roots_settling, side_witness,
+    square_crease_end_clip, swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
@@ -571,7 +573,23 @@ pub fn build_within(
         }
     });
 
+    // On the ball's route each side's rested rims are its rail too: side A's for tag 1's walk,
+    // side B's for tag 2's, on top of the rims the band is consumed to.
+    let rested = match (&ball_sides, ball_setbacks.as_deref()) {
+        (Some(sides), Some(ball)) => rolling_ball_rested_rims::of_the_chain(
+            positions, indices, &chains[0], closed[0], &ball[0], &sides[0], size,
+        ),
+        _ => [Vec::new(), Vec::new()],
+    };
     for group in &groups {
+        let rested_rims = match group.tag {
+            1 | 2 if !rested[(group.tag - 1) as usize].is_empty() => {
+                let mut rims = consumed_rims.clone().unwrap_or_default();
+                rims.extend_from_slice(&rested[(group.tag - 1) as usize]);
+                Some(rims)
+            }
+            _ => None,
+        };
         let walked = gap_loop_walk::loops_of_side(
             &mesh.borrow(),
             &*group_samples[&group.tag],
@@ -580,7 +598,7 @@ pub fn build_within(
             side_of_both_sided
                 .as_ref()
                 .map(|f| f as &dyn Fn(i32, Vector3) -> i32),
-            consumed_rims.as_deref(),
+            rested_rims.as_deref().or(consumed_rims.as_deref()),
             snap,
         )?;
         if let Some(bad) = side_fault.borrow_mut().take() {

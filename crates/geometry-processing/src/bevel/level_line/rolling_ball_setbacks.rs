@@ -112,7 +112,9 @@ use super::{BandProfile, ChainField};
 use crate::bevel::rolling_ball::rolling_ball_routing::{
     record_refusal, set_last_route, use_rolling_ball, ROLLING_BALL_ROUTE,
 };
-use crate::bevel::rolling_ball::{ChainPoint, EndFace, RollingBall, RollingBallSide, WalkEnd};
+use crate::bevel::rolling_ball::{
+    ChainPoint, ContactFeature, EndFace, RollingBall, RollingBallSide, WalkEnd,
+};
 
 /// One chain's setbacks per unit of size from the rolling ball, one per chain vertex on each side:
 /// how far side A's (left) and side B's (right) contacts stand from the chain there.
@@ -137,6 +139,12 @@ pub struct SideSetbacks {
     /// unit of size, as the walk found them (a free end's taper does not move them): where each
     /// side's band stops behind the other's contact (`rolling_ball_sweep`).
     pub contacts: [Vec<Vector3>; 2],
+    /// What side A's and side B's contact lies on at each chain vertex, in the part's own vertex
+    /// numbers (a vertex the walk added past an end face numbered from the part's count up), or
+    /// `None` at a station on an end face, where the side is read as extended past the face and
+    /// the feature names the extension, not the part: where a side's contacts rest on a rim, that
+    /// rim is the side's rail (`rolling_ball_rested_rims`).
+    pub features: [Vec<Option<ContactFeature>>; 2],
 }
 
 /// An open chain's end cap cut to meet each side's rail where that side's band ends, per unit of
@@ -451,6 +459,10 @@ fn walked_setbacks(
             Vec::with_capacity(points.len()),
             Vec::with_capacity(points.len()),
         ];
+        let mut features = [
+            Vec::with_capacity(points.len()),
+            Vec::with_capacity(points.len()),
+        ];
         for (i, station) in walk.stations.iter().enumerate() {
             let on_an_end_face = !closed[k]
                 && ((i == 0 && walk.ends[0] == WalkEnd::EndFace)
@@ -495,6 +507,9 @@ fn walked_setbacks(
             centres.push((station.centre - station.chain_point) * (1.0 / size));
             contacts[0].push((station.contact_a.point - station.chain_point) * (1.0 / size));
             contacts[1].push((station.contact_b.point - station.chain_point) * (1.0 / size));
+            let off_the_end_face = |feature: ContactFeature| (!on_an_end_face).then_some(feature);
+            features[0].push(off_the_end_face(station.contact_a.feature));
+            features[1].push(off_the_end_face(station.contact_b.feature));
         }
         let mut caps = [None, None];
         if !closed[k] {
@@ -595,6 +610,7 @@ fn walked_setbacks(
             caps,
             centres,
             contacts,
+            features,
         });
         sides.push(BallSides { in_a, in_b });
     }

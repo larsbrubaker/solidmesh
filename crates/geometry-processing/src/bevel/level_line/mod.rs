@@ -186,6 +186,7 @@ pub mod rolling_ball_band_tags;
 mod rolling_ball_end_caps;
 mod rolling_ball_end_planes;
 mod rolling_ball_free_ends;
+mod rolling_ball_rested_rims;
 pub mod rolling_ball_setbacks;
 mod rolling_ball_sides;
 pub mod rolling_ball_sweep;

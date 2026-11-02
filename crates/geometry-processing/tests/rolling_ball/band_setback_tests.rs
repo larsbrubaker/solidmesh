@@ -711,6 +711,7 @@ fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_t
         left: vec![1.0, 1.0, 1.0],
         right: vec![1.0, 1.5, 1.0],
         caps: [None, None],
+        features: [Vec::new(), Vec::new()],
         centres: Vec::new(),
         contacts: [Vec::new(), Vec::new()],
     };

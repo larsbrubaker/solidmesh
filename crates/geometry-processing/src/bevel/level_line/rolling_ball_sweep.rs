@@ -475,6 +475,7 @@ mod tests {
             left: vec![setback; 3],
             right: vec![setback; 3],
             caps: [None, None],
+            features: [Vec::new(), Vec::new()],
             centres: vec![centre; 3],
             contacts: [vec![faces[0] * setback; 3], vec![faces[1] * setback; 3]],
         };
@@ -525,6 +526,7 @@ mod tests {
             left: vec![a / 2.0; 2],
             right: vec![0.25; 2],
             caps: [None, None],
+            features: [Vec::new(), Vec::new()],
             centres: vec![Vector3::new(-a, 0.0, -2.0) * 0.5; 2],
             contacts: [
                 vec![Vector3::new(-a, 0.0, 0.0) * 0.5; 2],
@@ -561,6 +563,7 @@ mod tests {
             left: vec![1.0; 5],
             right: vec![1.0; 5],
             caps: [None, None],
+            features: [Vec::new(), Vec::new()],
             centres: (0..5).map(|_| Vector3::new(-1.0, 0.0, -1.0)).collect(),
             contacts: [
                 (0..5).map(|_| Vector3::new(-1.0, 0.0, 0.0)).collect(),
@@ -715,6 +718,7 @@ mod tests {
             left: vec![0.0; 2],
             right: vec![0.0; 2],
             caps: [None, None],
+            features: [Vec::new(), Vec::new()],
             centres: vec![Vector3::new(-1.0, 0.0, -1.0); 2],
             contacts: [vec![Vector3::ZERO; 2], vec![Vector3::ZERO; 2]],
         };
