@@ -202,8 +202,9 @@ impl LevelLineMesh {
                 (t.c, t.a, t.b)
             };
 
+            let behind = self.input_triangle_behind(parent);
             self.replace_triangle(parent, LevelLineTriangle::new(x, mid, other, t.tag));
-            self.add_triangle(LevelLineTriangle::new(mid, y, other, t.tag));
+            self.add_triangle_from(LevelLineTriangle::new(mid, y, other, t.tag), behind);
         }
 
         Ok(mid)
@@ -243,9 +244,10 @@ impl LevelLineMesh {
             SplitMeter::note_triangle_split(self, inserted, point, triangle);
         }
 
+        let behind = self.input_triangle_behind(triangle);
         self.replace_triangle(triangle, LevelLineTriangle::new(t.a, t.b, inserted, t.tag));
-        self.add_triangle(LevelLineTriangle::new(t.b, t.c, inserted, t.tag));
-        self.add_triangle(LevelLineTriangle::new(t.c, t.a, inserted, t.tag));
+        self.add_triangle_from(LevelLineTriangle::new(t.b, t.c, inserted, t.tag), behind);
+        self.add_triangle_from(LevelLineTriangle::new(t.c, t.a, inserted, t.tag), behind);
         Ok(inserted)
     }
 
@@ -281,9 +283,21 @@ impl LevelLineMesh {
         Ok(index)
     }
 
-    /// Appends a triangle and stands it on its edges.
+    /// Appends a triangle and stands it on its edges; it descends from itself.
     pub fn add_triangle(&mut self, t: LevelLineTriangle) {
+        self.add_triangle_from(t, [t.a, t.b, t.c]);
+    }
+
+    /// Appends a piece split off a triangle whose input triangle has corners `behind`
+    /// (`input_triangle_behind` of the parent), and stands it on its edges.
+    pub fn add_triangle_from(&mut self, t: LevelLineTriangle, behind: [i32; 3]) {
         let index = self.triangles.len() as i32;
+        // Triangles pushed straight onto the list (a hand-built mesh) are their own.
+        while self.triangle_descends_from.len() < self.triangles.len() {
+            let own = self.triangles[self.triangle_descends_from.len()];
+            self.triangle_descends_from.push([own.a, own.b, own.c]);
+        }
+        self.triangle_descends_from.push(behind);
         self.triangles.push(t);
         self.removed.push(false);
         self.attach(index, t);

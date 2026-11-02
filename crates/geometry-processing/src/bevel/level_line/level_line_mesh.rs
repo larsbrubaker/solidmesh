@@ -70,6 +70,13 @@ pub struct LevelLineMesh {
     /// reader downstream has to tell a piece of an input edge from a new edge that merely stands
     /// near it, and after a few splits no geometry says which is which.
     pub descends_from: Vec<(i32, i32)>,
+    /// Per triangle, the corners of the triangle it descends from as it was first added: an input
+    /// triangle's own corners, which every piece a split cuts from it inherits
+    /// ([`LevelLineMesh::input_triangle_behind`]). Carried because a piece lies in its input
+    /// triangle's plane, so how far rounding the input can tilt the piece is that triangle's, never
+    /// what the piece's own shape would say (a sliver's would be far wider). A triangle added whole
+    /// (the input's, a re-tiled strip's, a fill's) is its own.
+    pub triangle_descends_from: Vec<[i32; 3]>,
     /// How many triangles have been removed - the gap's band.
     pub removed_count: i32,
     /// How near an edge's own end a point has to stand for the edge split to answer with that end
@@ -315,6 +322,19 @@ impl LevelLineMesh {
     /// not a tolerance.
     pub fn input_edge_behind(&self, vertex: i32) -> (i32, i32) {
         self.descends_from[vertex as usize]
+    }
+
+    /// The corners of the triangle `triangle` descends from (`triangle_descends_from`): its input
+    /// triangle's, however many times it has been split. A triangle pushed onto `triangles` without
+    /// [`LevelLineMesh::add_triangle`] carries no record and answers its own corners.
+    pub fn input_triangle_behind(&self, triangle: i32) -> [i32; 3] {
+        self.triangle_descends_from
+            .get(triangle as usize)
+            .copied()
+            .unwrap_or_else(|| {
+                let t = self.triangles[triangle as usize];
+                [t.a, t.b, t.c]
+            })
     }
 
     /// The input edge two ancestries have in common: the pair of input vertices they name between

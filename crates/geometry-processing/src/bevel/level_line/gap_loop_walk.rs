@@ -595,19 +595,15 @@ pub fn loops_of_side(
         let Some(&removed) = removed_on.get(&edge) else {
             return false;
         };
-        foreign_edge_room::is_a_knife(
-            mesh,
-            mesh.triangles()[removed as usize],
-            mesh.triangles()[kept as usize],
-            edge,
-        ) || consumed_rims.is_some_and(|rims| {
-            consumed_to_the_rim::lies_on_a_rim(
-                rims,
-                mesh.position(edge.0),
-                mesh.position(edge.1),
-                snap,
-            )
-        })
+        foreign_edge_room::is_a_knife(mesh, removed, kept, edge)
+            || consumed_rims.is_some_and(|rims| {
+                consumed_to_the_rim::lies_on_a_rim(
+                    rims,
+                    mesh.position(edge.0),
+                    mesh.position(edge.1),
+                    snap,
+                )
+            })
     };
 
     let end_cut_stops = mesh.sides_from_the_ball.then(|| end_region_cut_stops(mesh));

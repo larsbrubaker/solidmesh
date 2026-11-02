@@ -43,6 +43,8 @@ mod no_crease_tests;
 mod oblique_end_per_side_tests;
 #[path = "rolling_ball/own_side_reach_tests.rs"]
 mod own_side_reach_tests;
+#[path = "rolling_ball/right_angle_knife_tests.rs"]
+mod right_angle_knife_tests;
 #[path = "rolling_ball/round_segment_tests.rs"]
 mod round_segment_tests;
 #[path = "rolling_ball/rounded_on_past_the_end_tests.rs"]

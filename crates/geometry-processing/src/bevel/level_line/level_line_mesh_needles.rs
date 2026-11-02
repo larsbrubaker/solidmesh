@@ -168,8 +168,9 @@ impl LevelLineMesh {
 
             let other = Self::opposite_corner(t, a, b);
             let (x, y) = Self::directed_edge(t, a, b);
+            let behind = self.input_triangle_behind(parent);
             self.replace_triangle(parent, LevelLineTriangle::new(x, at, other, t.tag));
-            self.add_triangle(LevelLineTriangle::new(at, y, other, t.tag));
+            self.add_triangle_from(LevelLineTriangle::new(at, y, other, t.tag), behind);
         }
 
         true
@@ -353,12 +354,17 @@ impl LevelLineMesh {
         }
 
         self.discard(needle);
+        // Both halves lie in the neighbour, whose apex split they are.
+        let behind = self.input_triangle_behind(across);
         self.replace_triangle(
             across,
             LevelLineTriangle::new(x, apex, other, neighbour.tag),
         );
         let added = self.triangles.len() as i32;
-        self.add_triangle(LevelLineTriangle::new(apex, y, other, neighbour.tag));
+        self.add_triangle_from(
+            LevelLineTriangle::new(apex, y, other, neighbour.tag),
+            behind,
+        );
         if FieldCounters::meter_on() {
             NeedleMeter::note_repair_left(
                 across,

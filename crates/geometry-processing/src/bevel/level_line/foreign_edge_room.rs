@@ -38,6 +38,8 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+use vector_math::Vector3;
+
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::{end_face_sense, triangle_edges};
 use super::{
@@ -58,9 +60,68 @@ pub const ROOM_BRACKET_DOUBLINGS: i32 = 20;
 /// an edge the EXACT keep test would have kept. Pure slack: an extra edge read changes no answer.
 pub const PRUNE_SLACK: f64 = 1e-9;
 
-/// How far past a right angle (as the cosine between the two unit normals) a crease must turn to
-/// be a knife: well above the 1e-16 an exact right angle reads, well below any real knife's cosine.
+/// The least a crease must turn past a right angle (as the cosine between the two unit normals) to
+/// be a knife: well above the 1e-16 an exact right angle reads from vertices placed exactly, well
+/// below any real knife's cosine. [`right_angle_noise`] raises it to what the vertices' own
+/// placement can tilt the two normals by.
 pub const RIGHT_ANGLE_NOISE: f64 = 1e-9;
+
+/// The relative precision a float-stored mesh's vertices are placed to
+/// (`LevelLineMesh::input_is_float_stored`, set for every mesh the model hands over): half a unit
+/// in the last place of a single-precision coordinate (2^-24).
+pub const SINGLE_PRECISION_PLACEMENT: f64 = 5.960_464_477_539_063e-8;
+
+/// How far the two triangles' unit normals' dot can stray from a right angle's 0 through the
+/// placement of their vertices alone, never below [`RIGHT_ANGLE_NOISE`]: a crease reading within
+/// it is a right angle as far as the input can say. `side` and `far` are the corners of the INPUT
+/// triangles the crease's two triangles descend from (`LevelLineMesh::input_triangle_behind`).
+///
+/// Rounding a coordinate `c` to single precision moves it by at most
+/// `|c| SINGLE_PRECISION_PLACEMENT`, so it moves a corner `p` out of its triangle's plane (unit
+/// normal `n`) by at most `d = SINGLE_PRECISION_PLACEMENT (|n.x p.x| + |n.y p.y| + |n.z p.z|)`:
+/// read per axis, because a face square to an axis at a small coordinate (a cut face on y = -3 of
+/// a part 160 tall) is placed to that coordinate's precision, not the part's. Moving one corner by
+/// `d` out of the plane tilts the normal by `d / h`, `h` that corner's height over the opposite
+/// edge (`2 * area / opposite edge`); the three corners together tilt it by at most the sum. Near a
+/// right angle the dot of two unit normals changes by at most the sum of their tilts.
+///
+/// A piece the band's cut split off an input triangle lies in that triangle's plane and inside it,
+/// so its heights are never larger: read on the piece, the bound would never be smaller than the
+/// input triangle's own, and on a sliver far larger, so the bound is read on the input triangle.
+///
+/// The bound grows with where the part sits (a coordinate of 160 carries a thousand times a
+/// coordinate of 0.16's rounding) and with how thin the input triangles are, which no fixed
+/// constant can follow: the T Handle's exact right-angle rim, its vertices single-precision values
+/// near 160 on triangles a unit high, reads dots from -1.3e-7 to 1.1e-7, so a fixed 1e-9 split one
+/// straight rail into alternate knife and plain edges, while a boolean's sliver cut face on a real
+/// knife (dot -0.13) must stay a knife, which a bound read from the largest coordinate on every axis
+/// (0.18 there) would not. A degenerate triangle has no normal to read: its bound is infinite and
+/// the crease is no knife, as its NaN normal already read.
+pub fn right_angle_noise(side: [Vector3; 3], far: [Vector3; 3]) -> f64 {
+    let tilt = |t: [Vector3; 3]| {
+        let cross = (t[1] - t[0]).cross(t[2] - t[0]);
+        let twice_area = cross.length();
+        if twice_area.is_nan() || twice_area <= 0.0 {
+            return f64::INFINITY;
+        }
+
+        let normal = cross * (1.0 / twice_area);
+        let mut sum = 0.0;
+        for corner in 0..3 {
+            let p = t[corner];
+            // How far rounding this corner's coordinates can move it out of the plane.
+            let off_plane = SINGLE_PRECISION_PLACEMENT
+                * ((normal.x.abs() * p.x.abs())
+                    + (normal.y.abs() * p.y.abs())
+                    + (normal.z.abs() * p.z.abs()));
+            let opposite = (t[(corner + 2) % 3] - t[(corner + 1) % 3]).length();
+            sum += off_plane * opposite / twice_area;
+        }
+        sum
+    };
+
+    RIGHT_ANGLE_NOISE.max(tilt(side) + tilt(far))
+}
 
 thread_local! {
     /// Makes the indexed room read EVERY foreign edge,
@@ -78,14 +139,11 @@ pub fn set_read_every_foreign_edge(on: bool) {
     READ_EVERY_FOREIGN_EDGE.with(|cell| cell.set(on));
 }
 
-/// True when the crease `edge` between `side` and `far` is a KNIFE: convex, and turned past a
-/// right angle by more than round-off.
-pub fn is_a_knife(
-    mesh: &LevelLineMesh,
-    side: LevelLineTriangle,
-    far: LevelLineTriangle,
-    edge: (i32, i32),
-) -> bool {
+/// True when the crease `edge` between triangles `side` and `far` (indices) is a KNIFE: convex,
+/// and turned past a right angle by more than the vertices' placement can tilt it
+/// ([`right_angle_noise`], read on the input triangles the two descend from).
+pub fn is_a_knife(mesh: &LevelLineMesh, side: i32, far: i32, edge: (i32, i32)) -> bool {
+    let input_corners = |t: i32| mesh.input_triangle_behind(t).map(|v| mesh.position(v));
     let normal_of = |t: LevelLineTriangle| {
         let a = mesh.position(t.a);
         (mesh.position(t.b) - a)
@@ -93,6 +151,8 @@ pub fn is_a_knife(
             .get_normal()
     };
 
+    let (side_index, far_index) = (side, far);
+    let (side, far) = (mesh.triangles[side as usize], mesh.triangles[far as usize]);
     let side_normal = normal_of(side);
     let opposite = if far.a != edge.0 && far.a != edge.1 {
         far.a
@@ -102,10 +162,19 @@ pub fn is_a_knife(
         far.c
     };
     let convex = side_normal.dot(mesh.position(opposite) - mesh.position(edge.0)) < 0.0;
-    // Past a right angle by more than round-off: an exact right-angle crease reads its normals' dot
-    // as +-1e-16, and a bare "< 0" let where the part sat decide whether it was a knife - Meeting
-    // Edge Round's corner joined its rail across one only when turned, and its fill moved with it.
-    convex && side_normal.dot(normal_of(far)) < -RIGHT_ANGLE_NOISE
+    // Past a right angle by more than the vertices' placement can tilt it: a bare "< 0" let where
+    // the part sat decide whether it was a knife - Meeting Edge Round's corner joined its rail
+    // across one only when turned, and its fill moved with it.
+    // Vertices placed exactly (a mesh built in doubles) carry no placement error to allow for. A
+    // piece lies in its input triangle's plane, so the input triangle's allowance is the piece's.
+    convex && {
+        let noise = if mesh.input_is_float_stored {
+            right_angle_noise(input_corners(side_index), input_corners(far_index))
+        } else {
+            RIGHT_ANGLE_NOISE
+        };
+        side_normal.dot(normal_of(far)) < -noise
+    }
 }
 
 /// The foreign feature edges - where a side's region ends on
@@ -399,9 +468,9 @@ pub fn is_a_knife_edge(mesh: &LevelLineMesh, edge: (i32, i32)) -> bool {
     }
 
     let (side, far) = if first.tag != 0 {
-        (first, second)
+        (standing[0], standing[1])
     } else {
-        (second, first)
+        (standing[1], standing[0])
     };
 
     is_a_knife(mesh, side, far, edge)
