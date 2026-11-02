@@ -147,6 +147,11 @@ pub struct SideSetbacks {
     /// the feature names the extension, not the part: where a side's contacts rest on a rim, that
     /// rim is the side's rail (`rolling_ball_rested_rims`).
     pub features: [Vec<Option<ContactFeature>>; 2],
+    /// Whether each end (first, last) is a free end, whose round closes onto its end vertex: no
+    /// end face round it, no picked chain meeting it, and the walk's last station there
+    /// (`rolling_ball_free_ends`). The end-face fill reads such an end as the round's nose
+    /// (`end_face_fill_try`), never as a growing end face.
+    pub free_ends: [bool; 2],
 }
 
 /// An open chain's end cap cut to meet each side's rail where that side's band ends, per unit of
@@ -514,6 +519,7 @@ fn walked_setbacks(
             features[1].push(off_the_end_face(station.contact_b.feature));
         }
         let mut caps = [None, None];
+        let mut free = [false, false];
         if !closed[k] {
             // Every free end closes the round onto its end vertex, whether or not the sides
             // agree there: both sides' setbacks taper to nothing at it (`rolling_ball_free_ends`).
@@ -525,6 +531,7 @@ fn walked_setbacks(
             let free_ends = [0, 1].map(|end| {
                 !at_a_corner[end] && ends[end].is_none() && walk.ends[end] == WalkEnd::LastStation
             });
+            free = free_ends;
             for (end, &free) in free_ends.iter().enumerate() {
                 if free {
                     for side in [&mut left, &mut right] {
@@ -613,6 +620,7 @@ fn walked_setbacks(
             centres,
             contacts,
             features,
+            free_ends: free,
         });
         sides.push(BallSides { in_a, in_b });
     }

@@ -708,6 +708,7 @@ pub fn refused_by_the_ball(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]
 #[test]
 fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_the_ball() {
     let differ = SideSetbacks {
+        free_ends: [false, false],
         left: vec![1.0, 1.0, 1.0],
         right: vec![1.0, 1.5, 1.0],
         caps: [None, None],
@@ -716,6 +717,7 @@ fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_t
         contacts: [Vec::new(), Vec::new()],
     };
     let agree = SideSetbacks {
+        free_ends: [false, false],
         right: vec![1.0, 1.0, 1.0],
         ..differ.clone()
     };

@@ -239,6 +239,10 @@ pub fn build_within(
         // Needles are repaired out of the mesh BEFORE anything reads it.
         m.needle_floor = needle_floor_of(snap, tolerance);
         m.sides_from_the_ball = sides_from_the_ball;
+        m.ball_free_ends = match ball_setbacks.as_deref() {
+            Some([one]) if sides_from_the_ball => one.free_ends,
+            _ => [false, false],
+        };
 
         // ...but never a needle standing ON the pick, nor a fold the tagging flooded up to.
         let mut on_a_chain: HashSet<(i32, i32)> = HashSet::new();

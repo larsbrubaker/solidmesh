@@ -129,6 +129,10 @@ pub struct LevelLineMesh {
     /// the default, for every other tagging, whose sides meet only on the chain or across a
     /// feature edge the room has always left to the cut.
     pub sides_from_the_ball: bool,
+    /// Where the band's sides are the ball's (`sides_from_the_ball`), whether each end of its one
+    /// open chain (first, last) is a free end, as the ball read it
+    /// (`rolling_ball_setbacks::SideSetbacks::free_ends`); false otherwise.
+    pub ball_free_ends: [bool; 2],
 }
 
 impl std::fmt::Debug for LevelLineMesh {

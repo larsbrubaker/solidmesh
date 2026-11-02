@@ -33,6 +33,8 @@ mod in_turn_side_regions_tests;
 mod own_side_reach_tests;
 #[path = "rolling_ball/round_segment_tests.rs"]
 mod round_segment_tests;
+#[path = "rolling_ball/rounded_on_past_the_end_tests.rs"]
+mod rounded_on_past_the_end_tests;
 #[path = "rolling_ball/run_out_tests.rs"]
 mod run_out_tests;
 #[path = "rolling_ball/side_regions_tests.rs"]

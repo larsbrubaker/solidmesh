@@ -472,6 +472,7 @@ mod tests {
             Vector3::new(0.0, 2.0, 0.0),
         ];
         let ball = SideSetbacks {
+            free_ends: [false, false],
             left: vec![setback; 3],
             right: vec![setback; 3],
             caps: [None, None],
@@ -523,6 +524,7 @@ mod tests {
         let a = 1.75_f64.sqrt();
         let points = vec![Vector3::ZERO, Vector3::new(0.0, 1.0, 0.0)];
         let ball = SideSetbacks {
+            free_ends: [false, false],
             left: vec![a / 2.0; 2],
             right: vec![0.25; 2],
             caps: [None, None],
@@ -560,6 +562,7 @@ mod tests {
         let at = |x: f64, j: f64, z: f64| Vector3::new(x, j, lift(j) + z);
         let points: Vec<Vector3> = (0..5).map(|j| at(0.0, f64::from(j), 0.0)).collect();
         let ball = SideSetbacks {
+            free_ends: [false, false],
             left: vec![1.0; 5],
             right: vec![1.0; 5],
             caps: [None, None],
@@ -715,6 +718,7 @@ mod tests {
     fn contacts_that_meet_exclude_nothing() {
         let points = vec![Vector3::ZERO, Vector3::new(0.0, 1.0, 0.0)];
         let ball = SideSetbacks {
+            free_ends: [false, false],
             left: vec![0.0; 2],
             right: vec![0.0; 2],
             caps: [None, None],
