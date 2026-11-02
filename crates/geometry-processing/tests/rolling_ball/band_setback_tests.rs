@@ -2,9 +2,9 @@
 //! narrow first face, so the ball touches the face past it); an open chain whose two sides'
 //! contacts differ (a groove and a wedge), each side cut at its own distance and each end face's
 //! cut meeting both rails; the passes and builds the ball refuses (strict: never built on the level
-//! line's setbacks): such a chain with an end ray or in a pass of several chains, chains meeting at
-//! a corner, a chain that is convex along part of its length and concave along the rest; the probes
-//! a build runs inside itself, which keep the level line's and never write the route; which group
+//! line's setbacks): such a chain with an end ray or in a pass of several chains, a chain that is
+//! convex along part of its length and concave along the rest; the probes a build runs inside
+//! itself, which keep the level line's and never write the route; which group
 //! reads a chain's side field; and a closed chain whose sides differ (the groove revolved into a
 //! ring), where each side's band is cut at its own side's distance. The grooves, the wedge and the
 //! ring are built here; the cube, the prism and the build are `band_route_tests.rs`'s.
@@ -419,7 +419,7 @@ fn only_a_side_member_proper_reads_a_side_field() {
 }
 
 /// The pass's own setbacks for a fillet with a 30 degree sharp turn, whose fields the cap reads.
-fn the_band(
+pub fn the_band(
     positions: &[Vector3],
     triangles: &Triangles,
     chains: &[Vec<i32>],
@@ -434,40 +434,6 @@ fn the_band(
         BandProfile::Fillet,
     )
     .expect("the pass's setbacks")
-}
-
-/// A 60 degree prism's top rim picked as three open chains meeting at its corners: the ball's
-/// rule for a corner is not built, so the ball refuses the whole pass, and says so.
-#[test]
-fn chains_meeting_at_a_corner_are_refused_by_the_ball() {
-    let (positions, triangles) = a_sixty_degree_prism();
-    let chains = [vec![3, 4], vec![4, 5], vec![5, 3]];
-    let crease = creases(&positions, &triangles);
-    set_use_rolling_ball(true);
-    set_last_route(None);
-    let setbacks = for_the_pass(
-        &positions,
-        &triangles,
-        &chains,
-        &[false, false, false],
-        Some(&*crease),
-        None,
-        0.2,
-        BandProfile::Fillet,
-        &the_band(&positions, &triangles, &chains, &[false, false, false]),
-        false,
-    );
-    let route = last_route();
-    reset_to_the_default();
-    assert_eq!(setbacks, None);
-    let route = route.expect("the pass writes its route");
-    let why = route
-        .strip_prefix(ROLLING_BALL_REFUSED)
-        .expect("the route says the ball refused");
-    assert!(
-        why.starts_with("the pass's chains meet at a corner"),
-        "{why}"
-    );
 }
 
 /// An L-shaped block's chain running along a convex rim edge into the concave inner corner: one

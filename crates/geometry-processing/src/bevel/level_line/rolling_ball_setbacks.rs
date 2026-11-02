@@ -28,10 +28,25 @@
 //! walks: every station solves, both contacts' distances are finite numbers, and each end finishes
 //! on an end face or as a plain last station. Anything else refuses the whole pass
 //! (`BandGapRefusal::RollingBall`, strict: never built on the level line's own setbacks), and the
-//! route says why: a pass with no feature-edge test, chains of the pass meeting at a corner (the
-//! ball's three-face rule for a corner is not built, and a corner is no end face), a chain whose
-//! edges are not all convex or all concave (one ball sits on one side of the part), a walk refused,
-//! a run-out end, a distance that is not a finite number.
+//! route says why: a pass with no feature-edge test, a chain whose edges are not all convex or all
+//! concave (one ball sits on one side of the part), a walk refused, a run-out end, a distance that
+//! is not a finite number.
+//!
+//! **Corners where picked chains meet** (`pick_validation::corners_of`, setback steps included).
+//! The ball supplies each chain's setbacks up to the corner vertex, and the level line's corner
+//! fill closes the corner as it does with the switch off (`corner_cap_hole_fill`, whose patch is
+//! snapped onto the ball touching all three faces where every row shares one centre). On flat
+//! faces, where one flat face of neither side stands round the corner, the ball's end station
+//! there touches each side as far out as the angle's setback, r tan(phi / 2): that third face is
+//! the chain's end face, so the station's centre is kept on the chain's side of its plane, a radius
+//! from both sides, and the two routes agree to the solve's precision. Where several faces of
+//! neither side stand round the corner, the end face is one plane through the vertex whose normal
+//! is the area-weighted sum of theirs (`end_face`), which is none of them, and the setbacks there
+//! need not be the angle's. A corner end is no free end, even with no face of neither side round
+//! it (a setback step), so its setbacks are not tapered to the end vertex, and it is never cut by a
+//! cap of the chain's own. Where an open chain's sides differ in such a pass, the rule for a pass
+//! of several chains below refuses it: a corner whose contacts differ needs the corner's own rows
+//! about the ball, not built yet.
 //!
 //! **Chamfers are outside the ball.** A chamfer is a flat cut at a distance along each face; no
 //! ball defines it. A chamfer's pass is never offered to the ball (as with the switch off: no walk,
@@ -326,12 +341,13 @@ fn walked_setbacks(
         return Err("the pass has no feature edges to bound its sides".to_string());
     }
 
-    if let Some(corner) = pick_validation::corners_of(chains, closed, true).first() {
-        return Err(format!(
-            "the pass's chains meet at a corner at vertex {}, which the ball does not close yet",
-            corner.vertex
-        ));
-    }
+    // Where picked chains meet, each chain's end there is no end of the round: the corner's own
+    // fill closes it (see the file header), so the ends below that would close an open end skip
+    // these vertices.
+    let corner_vertices: HashSet<i32> = pick_validation::corners_of(chains, closed, true)
+        .iter()
+        .map(|corner| corner.vertex)
+        .collect();
 
     let standing = triangle_edges::standing_map(indices);
     let chain_edges: Vec<Vec<(i32, i32)>> = chains
@@ -484,8 +500,14 @@ fn walked_setbacks(
         if !closed[k] {
             // Every free end closes the round onto its end vertex, whether or not the sides
             // agree there: both sides' setbacks taper to nothing at it (`rolling_ball_free_ends`).
-            let free_ends =
-                [0, 1].map(|end| ends[end].is_none() && walk.ends[end] == WalkEnd::LastStation);
+            // An end where picked chains meet is no free end, even with no face of neither side
+            // round it (two chains meeting in a setback step): the round runs on into the next
+            // chain's, so its setback stays the ball's to the corner.
+            let at_a_corner =
+                [chain[0], chain[chain.len() - 1]].map(|v| corner_vertices.contains(&v));
+            let free_ends = [0, 1].map(|end| {
+                !at_a_corner[end] && ends[end].is_none() && walk.ends[end] == WalkEnd::LastStation
+            });
             for (end, &free) in free_ends.iter().enumerate() {
                 if free {
                     for side in [&mut left, &mut right] {
@@ -508,7 +530,9 @@ fn walked_setbacks(
             for (end, finished) in walk.ends.iter().enumerate() {
                 let i = if end == 0 { 0 } else { points.len() - 1 };
                 let (l, r) = (left[i] * size, right[i] * size);
-                if free_ends[end] || (l - r).abs() <= SIDES_AGREE_SHARE * size {
+                // A corner end is cut by the corner's fill, never by a cap of the chain's own;
+                // its sides differing in a pass of several chains is refused above.
+                if free_ends[end] || at_a_corner[end] || (l - r).abs() <= SIDES_AGREE_SHARE * size {
                     continue;
                 }
                 let differ = format!("chain {k} end {end}: the sides' contacts stand {l} and {r}");

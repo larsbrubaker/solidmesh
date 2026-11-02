@@ -15,6 +15,8 @@ mod band_setback_tests;
 mod carried_regions_tests;
 #[path = "rolling_ball/contact_tracking_tests.rs"]
 mod contact_tracking_tests;
+#[path = "rolling_ball/corner_setback_tests.rs"]
+mod corner_setback_tests;
 #[path = "rolling_ball/end_face_plane_tests.rs"]
 mod end_face_plane_tests;
 #[path = "rolling_ball/free_end_room_tests.rs"]
