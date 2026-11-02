@@ -4,7 +4,7 @@
 //! centre is a radius above the plate and a radius out from the cylinder; a floor that narrows to
 //! a point beside a wall, where the floor's contact moves onto its rim exactly where the floor
 //! grows narrower than the radius and the centre then sinks as the circle through the rim says;
-//! a side that wraps round the other past a shared rim; the fault that keeps a ball out of
+//! a side that wraps round the other past a shared rim; the fault that keeps a ball's round out of
 //! the solid; and chains ending on a face that is neither side, where the centre stays on the
 //! chain's side of the end face's plane, the end face never refuses the ball, and a side is never
 //! read beyond the end face's plane.
@@ -224,8 +224,10 @@ fn where_the_floor_narrows_past_the_radius_its_contact_moves_onto_the_rim() {
 
 #[test]
 fn a_ball_that_would_reach_into_the_part_is_refused_with_what_it_reaches() {
-    // A ceiling 8 above the floor, facing down, over the square corner: a ball of radius 5 in the
-    // corner would reach to 10, 2 into it.
+    // A shelf 1 above the floor, from x = 2 to 4, facing up, inside the square corner: the round
+    // of radius 5 between the floor and the wall, the arc from (5, 0) to (0, 5) about (5, 5) in x
+    // and z, passes 0.42 above the floor at x = 3, so the shelf cuts through it. (A ceiling the
+    // ball overlaps only on the centre's side of its chord does not refuse it: `round_segment_tests`.)
     let mut positions = Vec::new();
     let floor = rectangle(
         &mut positions,
@@ -236,19 +238,19 @@ fn a_ball_that_would_reach_into_the_part_is_refused_with_what_it_reaches() {
         4,
     );
     let wall = wall(&mut positions);
-    let ceiling = rectangle(
+    let shelf = rectangle(
         &mut positions,
-        Vector3::new(0.0, -10.0, 8.0),
+        Vector3::new(2.0, -10.0, 1.0),
+        Vector3::new(2.0, 0.0, 0.0),
         Vector3::new(0.0, 20.0, 0.0),
-        Vector3::new(30.0, 0.0, 0.0),
+        2,
         4,
-        6,
     );
     let (a, b) = (
         RollingBallSide::new(&positions, &floor),
         RollingBallSide::new(&positions, &wall),
     );
-    let part = RollingBallSide::new(&positions, &[floor, wall, ceiling].concat());
+    let part = RollingBallSide::new(&positions, &[floor, wall, shelf].concat());
     let error = ball(&a, &b, Some(&part))
         .walk(&along_y(-4.0, 4.0, 9))
         .unwrap_err();
@@ -263,7 +265,8 @@ fn a_ball_that_would_reach_into_the_part_is_refused_with_what_it_reaches() {
     else {
         panic!("{failure:?}");
     };
-    assert!((reach.point.z - 8.0).abs() <= EXACT, "{reach:?}");
+    assert!((reach.point.z - 1.0).abs() <= EXACT, "{reach:?}");
+    assert!((2.0..=4.0).contains(&reach.point.x), "{reach:?}");
 }
 
 #[test]

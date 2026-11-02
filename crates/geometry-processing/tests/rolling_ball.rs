@@ -29,6 +29,10 @@ mod free_end_tests;
 mod growing_ridge_room_tests;
 #[path = "rolling_ball/in_turn_side_regions_tests.rs"]
 mod in_turn_side_regions_tests;
+#[path = "rolling_ball/own_side_reach_tests.rs"]
+mod own_side_reach_tests;
+#[path = "rolling_ball/round_segment_tests.rs"]
+mod round_segment_tests;
 #[path = "rolling_ball/run_out_tests.rs"]
 mod run_out_tests;
 #[path = "rolling_ball/side_regions_tests.rs"]

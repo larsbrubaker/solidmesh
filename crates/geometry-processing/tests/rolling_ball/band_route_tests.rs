@@ -234,28 +234,62 @@ fn a_sixty_degree_corner_bands_the_same_on_the_rolling_ball_as_on_the_level_line
     }
 }
 
-/// A slab 0.5 thick with two picked edges at radius 0.4: the ball walks the short upright edge
-/// (two broad faces either side, the top and bottom its end faces) but not the long top edge,
-/// where a ball 0.4 below the top reaches through the bottom. The whole pass is refused - the
-/// upright edge's too, never built on the level line's setbacks - and the refusal and the route
-/// name the chain that refused. With the switch off the same pick builds on the level line's.
+/// A slab 0.5 thick with two picked edges at radius 0.4: the short upright edge (two broad faces
+/// either side, the top and bottom its end faces) and the long top edge, where the ball rests 0.4
+/// below the top and pokes 0.3 out through the bottom - on the centre's side of its chord, whose arc between
+/// the contacts stays inside the slab (`round_segment_tests`). The ball takes the whole pass: the
+/// route is the ball's and every setback on both chains is the radius, as on any square corner.
 #[test]
-fn a_pass_the_rolling_ball_cannot_walk_whole_is_refused_with_its_reason() {
+fn a_slab_whose_ball_pokes_out_behind_its_round_takes_the_rolling_ball() {
     let part = a_box(Vector3::new(-5.0, -5.0, 0.0), Vector3::new(5.0, 5.0, 0.5));
     let chains = [vec![0, 4], vec![6, 7]];
     let (ball, route) = built(&part, &chains, 0.4, true);
-    assert_eq!(ball.refusal, BandGapRefusal::RollingBall);
+    assert_eq!(ball.refusal, BandGapRefusal::None, "{route:?}");
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    assert_eq!(ball.chains.len(), 2);
+    for chain in &ball.chains {
+        for setback in &chain.setbacks {
+            assert!((setback - 0.4).abs() < SAME_MESH, "{setback}");
+        }
+    }
+    let (level_line, _) = built(&part, &chains, 0.4, false);
+    assert_eq!(level_line.refusal, BandGapRefusal::None);
+}
+
+/// A block 4 tall with a sealed cavity just under its long top edge (x from -4.9 to 4.9, y from
+/// 4.4 to 4.7, z from 3.4 to 3.7, faces wound into the cavity), and two picked edges at radius
+/// 1.5: the upright edge at (-5, -5), clear of the cavity, which the ball walks, and the long top
+/// edge, whose ball rests at (x, 3.5, 2.5) with its round between (x, 3.5, 4) and (x, 5, 2.5). The
+/// edge's stations are its end vertices; at (5, 3.5, 2.5) the cavity's corner (4.9, 4.4, 3.4)
+/// stands 1.28 from the centre, beyond the chord: the round would cut into the cavity. The whole
+/// pass is refused - the upright edge's too, never built on the level line's setbacks - and the
+/// refusal and the route name the chain that refused.
+#[test]
+fn a_pass_the_rolling_ball_cannot_walk_whole_is_refused_with_its_reason() {
+    let (mut positions, mut triangles) =
+        a_box(Vector3::new(-5.0, -5.0, 0.0), Vector3::new(5.0, 5.0, 4.0));
+    let (cavity, cavity_triangles) =
+        a_box(Vector3::new(-4.9, 4.4, 3.4), Vector3::new(4.9, 4.7, 3.7));
+    let base = positions.len() as i32;
+    positions.extend(cavity);
+    triangles.extend(
+        cavity_triangles
+            .iter()
+            .map(|&(a, b, c)| (base + a, base + c, base + b)),
+    );
+    let part = (positions, triangles);
+    let chains = [vec![0, 4], vec![6, 7]];
+    let (ball, route) = built(&part, &chains, 1.5, true);
+    assert_eq!(ball.refusal, BandGapRefusal::RollingBall, "{route:?}");
     let why = ball
         .rolling_ball_refusal
         .clone()
         .expect("a rolling-ball refusal says why");
     assert!(why.starts_with("chain 1: the ball has no walk"), "{why}");
+    assert!(why.contains("ReachesPastThePart"), "{why}");
     assert_eq!(route, Some(format!("{ROLLING_BALL_REFUSED}{why}")));
     assert!(ball.mesh.is_none(), "a refused pass hands back no band");
     assert!(ball.chains.is_empty(), "nor any field it was not cut by");
-    let (level_line, _) = built(&part, &chains, 0.4, false);
-    assert_eq!(level_line.refusal, BandGapRefusal::None);
-    assert_eq!(level_line.rolling_ball_refusal, None);
 }
 
 /// The developer variable turns the ball on only where it plainly says so: unset, "0", "false" or

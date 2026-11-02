@@ -40,6 +40,7 @@
 //! Numbers follow the crate's rules: `f64`, a fixed order of operations, no fused multiply-add,
 //! and every tie broken by triangle index so a search reads the same on every run.
 
+mod ball_reach;
 mod ball_station;
 mod contact_tracking;
 pub mod rolling_ball_routing;

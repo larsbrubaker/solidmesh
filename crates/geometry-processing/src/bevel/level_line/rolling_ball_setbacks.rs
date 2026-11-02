@@ -93,9 +93,11 @@
 //! triangle and not a side list per chain. The flood costs one walk per side per pass, only with
 //! the switch on.
 //!
-//! The whole part is the obstacle the ball may not reach past. A chain's end that lies on a face
-//! of neither side ends on that face (its plane through the end vertex, normal the area-weighted
-//! sum of those faces round the vertex); an end with none is free and the ball rolls on to it.
+//! The whole part is what the ball's round may not reach past, read where the round can meet it:
+//! the ball's segment beyond the chord through its contacts (`rolling_ball::ball_reach`). A
+//! chain's end that lies on a face of neither side ends on that face (its plane through the end
+//! vertex, normal the area-weighted sum of those faces round the vertex); an end with none is
+//! free and the ball rolls on to it.
 
 use std::cell::Cell;
 use std::collections::HashSet;

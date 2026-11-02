@@ -28,10 +28,16 @@
 //! sides touches a side across that plane (the T Handle's R12 ball near the web rests on the
 //! pocket wall about 18 down its curve).
 //!
-//! What makes a ball usable ([`StationFault`]): nothing of the part is nearer its centre than the
-//! radius (the ball does not reach into the solid - for a concave edge - or out of it - for a
-//! convex one), its centre stands on the free-space side (concave) or solid side (convex) of each
-//! side where it touches it, neither contact is only where its half was cut, and its two contacts
+//! What makes a ball usable ([`StationFault`]): nothing of the part its round can meet is nearer
+//! its centre than the radius (the round does not reach into the solid - for a concave edge - or
+//! out of it - for a convex one). What the round can meet is the ball's circular segment beyond
+//! the chord through its two contacts, on the chain's side (`ball_reach.rs`): any surface crossing
+//! the round passes through it, and what the ball overlaps on the centre's side of that chord - a
+//! ceiling over a concave corner nearer than the ball's diameter, the far faces of a bar narrower
+//! than it - the round never touches. A rolled ball never passes into its own sides: it rests on
+//! any part of a side it would (`ball_reach.rs`). Its centre stands on the free-space side
+//! (concave) or solid side (convex) of each side where it touches it, neither contact is only
+//! where its half was cut, and its two contacts
 //! are not one point on a rim the sides share.
 //!
 //! Where a chain ends on a face that is neither of its sides ([`EndFace`], given per end to
@@ -63,6 +69,7 @@
 
 use vector_math::Vector3;
 
+use super::ball_reach::round_segment;
 use super::ball_station::{
     ball_station_reading, flat_face_centre, BallStation, BallStationError, SideReading,
     SOLVED_RELATIVE,
@@ -112,7 +119,7 @@ const MOST_STEP_HALVINGS: usize = 6;
 
 /// How much nearer than the radius the part may come to the centre, relative to one plus the
 /// radius: the solve's own tolerance with room to spare, so only a real reach counts.
-const REACH_RELATIVE: f64 = 1e-9;
+pub(super) const REACH_RELATIVE: f64 = 1e-9;
 
 /// How close two contacts must be, relative to one plus the radius, to count as one point.
 pub(super) const SAME_POINT_RELATIVE: f64 = 1e-7;
@@ -197,8 +204,9 @@ pub struct RollingBall<'a> {
 /// Why a solved station is no ball the fillet can use.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum StationFault {
-    /// Something of the part is nearer the centre than the radius: the ball reaches into the
-    /// solid (concave) or out of it (convex). `reach` is the part's nearest point.
+    /// Something of the part within the round's segment (`ball_reach.rs`), or of a side the ball
+    /// could not be moved off, is nearer the centre than the radius: the round reaches into the
+    /// solid (concave) or out of it (convex). `reach` is that part's nearest point.
     ReachesPastThePart { reach: SideContact },
     /// The centre stands on the wrong side of a side where it touches it - reaching round a rim
     /// from behind. `side_b` names the side; `by` is how far (negative).
@@ -458,7 +466,7 @@ impl Walk<'_, '_> {
     fn fault(&self, station: &BallStation, radius: f64) -> Option<StationFault> {
         let scale = 1.0 + radius.abs();
         let gap = END_FACE_GAP_RELATIVE * scale;
-        let clear_of_ends: Vec<HalfSpace> = self
+        let mut in_reach: Vec<HalfSpace> = self
             .ends
             .iter()
             .map(|end| HalfSpace {
@@ -466,10 +474,11 @@ impl Walk<'_, '_> {
                 normal: end.normal,
             })
             .collect();
+        in_reach.extend(round_segment(station));
         if let Some(reach) = self
             .ball
             .part
-            .and_then(|part| part.closest_within(station.centre, &clear_of_ends))
+            .and_then(|part| part.closest_within(station.centre, &in_reach))
         {
             if reach.distance < radius - (REACH_RELATIVE * scale) {
                 return Some(StationFault::ReachesPastThePart { reach });
@@ -714,16 +723,25 @@ impl Walk<'_, '_> {
             Ok(station) => deepest_beyond(station.centre, -tolerance).map(|f| (f, station.centre)),
             Err(_) => deepest_beyond(start, tolerance).map(|f| (f, start)),
         };
-        let station = match (held, free) {
-            (None, free) => free.map_err(StationFailure::Unsolved)?,
+        let (station, plane) = match (held, free) {
+            (None, free) => (
+                free.map_err(StationFailure::Unsolved)?,
+                (point.point, point.tangent),
+            ),
             (Some(((depth, end), from)), _) => {
                 let on_plane = from - (end.normal * depth);
                 let mut station =
                     solve(end.origin, end.normal, on_plane).map_err(StationFailure::Unsolved)?;
                 station.chain_point = point.point;
                 station.tangent = point.tangent.get_normal();
-                station
+                (station, (end.origin, end.normal))
             }
+        };
+        // A rolled ball rests on any part of a side it would pass into (`ball_reach.rs`); a seed
+        // reads each side whole within its half already.
+        let station = match track {
+            Some(_) => self.onto_the_sides(station, plane, radius, (&halves_a, &halves_b))?,
+            None => station,
         };
         match self.fault(&station, radius) {
             Some(fault) => Err(StationFailure::Fault {
