@@ -160,6 +160,11 @@ pub struct SideSetbacks {
     /// (`rolling_ball_free_ends`). The end-face fill reads such an end as the round's nose
     /// (`end_face_fill_try`), never as a growing end face.
     pub free_ends: [bool; 2],
+    /// The share of the ball's own setback a free end's taper leaves at each chain vertex, the
+    /// smaller of the two sides' (the tapered setback over the walk's): exactly 1 away from every
+    /// free end, falling to 0 at its end vertex. The fill fades its rows from the ball's arc to the
+    /// chain point by it (`ball_row_control`).
+    pub taper: Vec<f64>,
 }
 
 /// An open chain's end cap cut to meet each side's rail where that side's band ends, per unit of
@@ -464,6 +469,7 @@ fn walked_setbacks(
         }
         let mut caps = [None, None];
         let mut free = [false, false];
+        let walked = [left.clone(), right.clone()];
         if !closed[k] {
             // Every free end closes the round onto its end vertex, whether or not the sides
             // agree there: both sides' setbacks taper to nothing at it (`rolling_ball_free_ends`).
@@ -557,7 +563,23 @@ fn walked_setbacks(
                 });
             }
         }
+        let taper = (0..count)
+            .map(|i| {
+                [(&walked[0], &left), (&walked[1], &right)]
+                    .iter()
+                    .map(|(walk, tapered)| {
+                        // A setback the taper left alone is its own share, exactly 1.
+                        if walk[i] > 0.0 && tapered[i] < walk[i] {
+                            tapered[i] / walk[i]
+                        } else {
+                            1.0
+                        }
+                    })
+                    .fold(1.0, vector_math::ieee_math::min_f64)
+            })
+            .collect();
         setbacks.push(SideSetbacks {
+            taper,
             left,
             right,
             caps,

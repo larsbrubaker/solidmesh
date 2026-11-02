@@ -180,6 +180,7 @@ impl PassSetbacks {
                     .map(|(&point, &centre)| point + (centre * size))
                     .collect(),
                 radius: size,
+                taper: chain.taper.clone(),
             }));
             fields.push(Rc::new(own));
             sides.push([

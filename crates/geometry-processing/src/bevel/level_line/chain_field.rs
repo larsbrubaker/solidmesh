@@ -390,6 +390,27 @@ impl ChainField {
         Some(from + ((to - from) * t))
     }
 
+    /// The share of the ball's setback a free end's taper leaves at a chain parameter (held into
+    /// the chain), linear along each segment between its two points' shares: 1 with no ball on the
+    /// field, and away from every free end.
+    pub fn ball_taper_at(&self, parameter: f64) -> f64 {
+        let Some(ball) = self.ball.as_deref() else {
+            return 1.0;
+        };
+        if ball.taper.len() != self.points.len() || parameter.is_nan() {
+            return 1.0;
+        }
+        let (segment, t) = self.locate_on_chain(parameter.clamp(0.0, self.length));
+        let (from, to) = (
+            ball.taper[segment],
+            ball.taper[(segment + 1) % self.points.len()],
+        );
+        if from == to {
+            return from;
+        }
+        from + ((to - from) * t)
+    }
+
     /// The segment a chain parameter falls on and how far along it
     /// (0..1). A closed chain wraps the parameter round its loop; an open one is held to its ends.
     /// The parameter is first read back from the smooth-joint spans onto the chain.

@@ -22,7 +22,7 @@ use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball, ROLLING_BALL_REFUSED,
     ROLLING_BALL_ROUTE,
 };
-use vector_math::Vector3;
+use vector_math::{ieee_math, Vector3};
 
 use super::band_route_tests::{a_box, creases, Triangles};
 use super::band_setback_tests::{the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES};
@@ -526,4 +526,57 @@ fn the_steps_round_is_the_balls_arc() {
         .filter(|p| (p.x - middle.0).abs() < 1e-9 && (p.z - middle.1).abs() < 1e-9)
         .count();
     assert!(middles > 30, "{middles} rows' middles on the ball's arc");
+}
+
+/// The step's round meets its free ends' tapers with no ridge. Each row of the fill is a rational
+/// quadratic in four segments, minted as its three inner vertices in turn (its quarter point, its
+/// middle and its three-quarter point, top to rim), so the fill's own vertices read in mesh order
+/// are its rows in order along the chain. A round that changes smoothly from row to row carries a
+/// row's middle no further than the larger of its quarter points' moves: the row moves and turns
+/// with its rails, and its middle, the deepest point, moves most only where the row's own shape
+/// steps. The ball's rows move their middle half as far as their rails (0.5 of the quarter points'
+/// largest), the taper's at most 0.77 of it. Where a row the ball describes met the taper's row
+/// drawn about the chain point, the round turned 41 degrees on one and 90 on the next, and the
+/// middle moved 1.2 times its quarter points' largest move (0.24 against 0.20, at y = 3.47 and
+/// 12.56); the rows between now fade from the ball's control point to the chain point
+/// (`ball_row_control::ball_weight`).
+#[test]
+fn the_steps_round_meets_its_free_ends_tapers_with_no_ridge() {
+    let (ball, route, positions) = the_step_whose_tread_wraps_round_behind_its_riser();
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    let ends = [Vector3::new(0.0, 2.0, 0.0), Vector3::new(0.0, 14.0, 0.0)];
+    the_rails_close_onto_both_end_vertices(&ball, ends);
+    let mesh = ball.mesh.as_ref().expect("the filled mesh").borrow();
+    // The fill's vertices strictly between the top and the rim: off every face of the part.
+    let inside = |p: &Vector3| p.x < -1e-9 && p.z < -1e-9 && p.z > -0.5 + 1e-9;
+    let minted: Vec<Vector3> = mesh.vertices()[positions.len()..]
+        .iter()
+        .copied()
+        .filter(inside)
+        .collect();
+    assert_eq!(
+        minted.len() % 3,
+        0,
+        "{} vertices are not whole rows",
+        minted.len()
+    );
+    let rows: Vec<&[Vector3]> = minted.chunks(3).collect();
+    assert!(rows.len() > 100, "{} rows", rows.len());
+    for row in &rows {
+        // Each is one row, top to rim: it descends from its quarter point to its three-quarter.
+        assert!(
+            row[0].z > row[1].z && row[1].z > row[2].z,
+            "{row:?} is not a row"
+        );
+    }
+    for pair in rows.windows(2) {
+        let (from, to) = (pair[0], pair[1]);
+        let quarters = ieee_math::max_f64((to[0] - from[0]).length(), (to[2] - from[2]).length());
+        let middle = (to[1] - from[1]).length();
+        assert!(
+            middle <= quarters,
+            "the round steps between the rows {from:?} and {to:?}: its middle moves {middle}, \
+             its quarter points at most {quarters}"
+        );
+    }
 }

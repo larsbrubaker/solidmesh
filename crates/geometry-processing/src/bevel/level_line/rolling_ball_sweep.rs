@@ -473,6 +473,7 @@ mod tests {
         ];
         let ball = SideSetbacks {
             free_ends: [false, false],
+            taper: vec![1.0; 3],
             left: vec![setback; 3],
             right: vec![setback; 3],
             caps: [None, None],
@@ -525,6 +526,7 @@ mod tests {
         let points = vec![Vector3::ZERO, Vector3::new(0.0, 1.0, 0.0)];
         let ball = SideSetbacks {
             free_ends: [false, false],
+            taper: vec![1.0; 3],
             left: vec![a / 2.0; 2],
             right: vec![0.25; 2],
             caps: [None, None],
@@ -563,6 +565,7 @@ mod tests {
         let points: Vec<Vector3> = (0..5).map(|j| at(0.0, f64::from(j), 0.0)).collect();
         let ball = SideSetbacks {
             free_ends: [false, false],
+            taper: vec![1.0; 3],
             left: vec![1.0; 5],
             right: vec![1.0; 5],
             caps: [None, None],
@@ -719,6 +722,7 @@ mod tests {
         let points = vec![Vector3::ZERO, Vector3::new(0.0, 1.0, 0.0)];
         let ball = SideSetbacks {
             free_ends: [false, false],
+            taper: vec![1.0; 3],
             left: vec![0.0; 2],
             right: vec![0.0; 2],
             caps: [None, None],

@@ -495,6 +495,7 @@ pub fn arcs(
                     || right_span[ru].0 != right_span[ru].1,
                 end_row: k == 0 || k + 1 == spokes.len(),
                 snap: mesh.same_place(),
+                tangent: chain_direction_at(chain, mean),
             };
             ball_row_control::row_control(chain, p, q, row)
         };
@@ -621,4 +622,18 @@ pub fn on_the_ridge_between(
     }
 
     Ok(false)
+}
+
+/// The chain's unit direction on the segment a parameter falls on (clamped into the chain), or zero
+/// where that segment has no length.
+fn chain_direction_at(chain: &ChainField, parameter: f64) -> Vector3 {
+    let (segment, _) = chain.locate_on_chain(parameter.clamp(0.0, chain.length));
+    let next = (segment + 1) % chain.points.len();
+    let step = chain.points[next] - chain.points[segment];
+    let length = step.length();
+    if length > 0.0 {
+        step * (1.0 / length)
+    } else {
+        Vector3::ZERO
+    }
 }
