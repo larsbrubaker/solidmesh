@@ -1,4 +1,4 @@
-// Ray-tracer tests that need only vector-math types (CLAUDE.md "Testing framework", net 1):
+// Ray-tracer tests that need only vector-math types:
 // the frustum and the plane/ray intersection. The ray tracer's own tests are in polygon-mesh's
 // tests/ray_tracer.
 

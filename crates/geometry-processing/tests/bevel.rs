@@ -1,4 +1,4 @@
-//! The bevel kernel's test binary: one file per test class (CLAUDE.md net 1), with the fixture
+//! The bevel kernel's test binary: one file per test class, with the fixture
 //! builders they need as modules.
 //!
 //! The member modules are listed in group modules under `bevel/`, by subject and class prefix, so

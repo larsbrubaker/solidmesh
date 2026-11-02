@@ -1,4 +1,4 @@
-// General vector-math tests (CLAUDE.md "Testing framework", net 1): vector parsing and the
+// General vector-math tests: vector parsing and the
 // basic Vector2/Vector3 arithmetic. The `vector_math` area holds the deeper vector, matrix,
 // frustum and WorldView tests in files of the same names.
 
