@@ -37,3 +37,7 @@ tess2-rust = { path = "../../../tess2-rust", version = "1.2.1" }
 # wasm32-unknown-unknown has no threads to schedule on. Only determinism-preserving sites are parallel, so the geometry is identical.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 manifold-rust = { path = "../../../manifold-rust", version = "0.19.2", features = ["parallel"] }
+
+# The workspace lints: `todo!()` and `unimplemented!()` are refused everywhere (root Cargo.toml).
+[lints]
+workspace = true
