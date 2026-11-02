@@ -19,7 +19,8 @@
 //! closed loop is removed, the end's flat fill laying it again, and the cut's own vertex on the
 //! input edge joining the two chains' ends there - found by index, never by distance - is the seam
 //! vertex there, the end's hole closed as two, one each side of it.
-//! Each triangle faces away from its round's axis; each end hole faces past its chains' ends.
+//! Each triangle faces away from its round's axis; each end hole faces past its chains' ends, and
+//! is read flat to the tolerance the pair's edges were read straight to.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -60,6 +61,10 @@ pub struct CrestFillInput<'a> {
     pub seam_epsilon: f64,
     /// The kernel's snap.
     pub snap: f64,
+    /// The length within which the edges were read straight and on the shared face: the seam
+    /// reads them, and each end hole is read flat, to the same tolerance, so a part stored in
+    /// single precision (its faces flat only to the stored bits) is read as it was picked.
+    pub tolerance: f64,
     /// Each chain's first and last input vertex, chain 0 then chain 1.
     pub chain_ends: [[i32; 2]; 2],
 }
@@ -216,7 +221,7 @@ pub fn fill(input: &CrestFillInput) -> Result<Option<GapFillResult>, LevelLineMe
         face_normal: n,
         radius: r,
         seam_epsilon: epsilon,
-        tolerance: input.snap.max(1e-9),
+        tolerance: input.tolerance,
     }) else {
         return Ok(None);
     };
@@ -407,7 +412,8 @@ pub fn fill(input: &CrestFillInput) -> Result<Option<GapFillResult>, LevelLineMe
         };
         for hole in holes {
             let points: Vec<Vector3> = hole.iter().map(|&v| mesh.position(v)).collect();
-            let Some((triangles, normal)) = flat_hole_fill::fill(&points, input.snap, None) else {
+            let Some((triangles, normal)) = flat_hole_fill::fill(&points, input.tolerance, None)
+            else {
                 return Ok(None);
             };
             let flip = normal.dot(past) < 0.0;
