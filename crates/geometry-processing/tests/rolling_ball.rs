@@ -39,6 +39,8 @@ mod in_turn_side_regions_tests;
 mod inside_turn_tests;
 #[path = "rolling_ball/no_crease_tests.rs"]
 mod no_crease_tests;
+#[path = "rolling_ball/oblique_end_per_side_tests.rs"]
+mod oblique_end_per_side_tests;
 #[path = "rolling_ball/own_side_reach_tests.rs"]
 mod own_side_reach_tests;
 #[path = "rolling_ball/round_segment_tests.rs"]

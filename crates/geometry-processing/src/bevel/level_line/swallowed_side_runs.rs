@@ -7,10 +7,8 @@
 //!
 //! The per-side readings ([`runs_if_both_swallowed_per_side`], [`row_span_per_side`],
 //! [`virtual_run_at`]) place each side's run at its own field where the rolling ball cuts the two
-//! sides at different distances. With today's switch they are not reached with sides that differ:
-//! a swallowed side needs end rays at both ends ([`growing_walls`]), and the ball refuses an open
-//! chain whose sides differ and which has an end ray
-//! (`rolling_ball_setbacks::a_rayed_end_that_differs`).
+//! sides at different distances (a swallowed side needs end rays at both ends,
+//! [`growing_walls`]).
 
 use vector_math::{ieee_math, Vector3};
 

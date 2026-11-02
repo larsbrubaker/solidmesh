@@ -185,6 +185,13 @@ pub fn try_end_faces(
     }
 
     let chain: &ChainField = &gap.chains[0];
+    // Each side's own field where the rolling ball cut the sides apart, so a trimmed end cuts each
+    // rail at its own side's setback; the chain's for both otherwise.
+    let rails: [&ChainField; 2] = gap
+        .side_chains
+        .as_ref()
+        .and_then(|sides| sides.first())
+        .map_or([chain, chain], |pair| [&*pair[0], &*pair[1]]);
     let points = chain.points();
     let (point_first, point_last) = (points[0], points[points.len() - 1]);
 
@@ -261,6 +268,7 @@ pub fn try_end_faces(
         end_plane_trim_run::trim_end(
             &mut mesh_handle.borrow_mut(),
             chain,
+            rails,
             &mut left,
             &mut right,
             false,
@@ -288,6 +296,7 @@ pub fn try_end_faces(
         end_plane_trim_run::trim_end(
             &mut mesh_handle.borrow_mut(),
             chain,
+            rails,
             &mut left,
             &mut right,
             true,

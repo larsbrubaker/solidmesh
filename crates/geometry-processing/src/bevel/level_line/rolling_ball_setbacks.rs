@@ -73,9 +73,14 @@
 //!   distance, or one the band flows over): no point of its edge carries that rail's end
 //!   (`rolling_ball_end_caps::rail_end`);
 //! - an open chain in a pass of several chains (its end regions are groups of the whole pick, not
-//!   tied to one chain end, so no cap is handed them);
-//! - an open chain with an end ray ([`a_rayed_end_that_differs`]: the rail carried past such an
-//!   end and its end-plane trim carry one setback for both sides).
+//!   tied to one chain end, so no cap is handed them).
+//!
+//! An open chain whose sides differ and which ends on an oblique end face (an end ray) is the
+//! ball's: past such an end each side's rail runs on along that side's face, at that side's own
+//! distance from the chain's line, to the end plane. The fill reads each side's own field there
+//! (`BandGapResult::side_chains`): the rail carried past the end
+//! (`virtual_rail_past_the_end`) and the end-plane trim (`end_plane_trim_run::trim_end`) each
+//! carry and cut a side's rail at its own setback.
 //!
 //! **Only the outer pass.** The ball is walked, and the route written, only by the outermost
 //! `build_within` on the thread and only where it is not a topology-only probe ([`PassScope`]).
@@ -313,74 +318,6 @@ pub fn with_the_sides(
 /// (`probe`), and it is a fillet. A chamfer is no ball's to decide (see the file header).
 pub fn asks_the_ball(probe: bool, profile: BandProfile) -> bool {
     !probe && profile != BandProfile::Chamfer && use_rolling_ball()
-}
-
-/// [`with_the_sides`] as the build asks it: also refused (and the refusal recorded) where the ball
-/// took the pass but [`a_rayed_end_that_differs`] stands in it.
-#[allow(clippy::too_many_arguments)]
-pub fn walked_for_the_build(
-    positions: &[Vector3],
-    indices: &[(i32, i32, i32)],
-    chains: &[Vec<i32>],
-    closed: &[bool],
-    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
-    side_regions: Option<&[u32]>,
-    size: f64,
-    profile: BandProfile,
-    band: &PassSetbacks,
-    probe: bool,
-) -> Result<Option<BallPass>, BallRefusal> {
-    let ball_pass = with_the_sides(
-        positions,
-        indices,
-        chains,
-        closed,
-        is_feature_edge,
-        side_regions,
-        size,
-        profile,
-        band,
-        probe,
-    )?;
-    let rayed = ball_pass
-        .as_ref()
-        .and_then(|(ball, _)| a_rayed_end_that_differs(ball, closed, &band.end_rays, size));
-    if let Some(why) = rayed {
-        record_refusal(&why);
-        return Err(BallRefusal::other(why));
-    }
-    Ok(ball_pass)
-}
-
-/// Why the ball cannot take the pass, where an open chain whose two sides differ anywhere by more
-/// than [`SIDES_AGREE_SHARE`] of the size carries an END RAY at either end (`end_rays`, as
-/// `end_face_sense::oblique_ends` reads them): an oblique end face is not cut by the chain's
-/// distance, and the rails carried past such an end and its end-plane trim
-/// (`virtual_rail_past_the_end`, `end_face_fill_try`) carry one setback for both sides. `None`
-/// where no such end stands in the pass. Writes nothing.
-pub fn a_rayed_end_that_differs(
-    setbacks: &[SideSetbacks],
-    closed: &[bool],
-    end_rays: &[(bool, bool)],
-    size: f64,
-) -> Option<String> {
-    for (k, chain) in setbacks.iter().enumerate() {
-        let rayed = end_rays.get(k).is_some_and(|&(first, last)| first || last);
-        let differ = chain
-            .left
-            .iter()
-            .zip(&chain.right)
-            .position(|(l, r)| (l - r).abs() > SIDES_AGREE_SHARE);
-        if let (false, true, Some(i)) = (closed[k], rayed, differ) {
-            return Some(format!(
-                "chain {k} point {i}: the sides' contacts stand {} and {} from the chain, and an \
-                 oblique end's rail carried past the end is not cut per side yet",
-                chain.left[i] * size,
-                chain.right[i] * size
-            ));
-        }
-    }
-    None
 }
 
 /// Every chain's walked setbacks, or why the ball cannot take the pass.

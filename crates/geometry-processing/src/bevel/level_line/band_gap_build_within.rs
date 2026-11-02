@@ -27,10 +27,9 @@
 //!   margin, the loop walk's ties and the result's `chains` (which the fill reads for its rows'
 //!   chain points, end rays and tolerances). The larger side is how far the band can reach; it is
 //!   never read as where one side's rail stands: the result carries the side fields
-//!   (`side_chains`), which the rail joined past a rib reads (`virtual_rail::joined_sides`). The
-//!   fill's rail carried past an oblique end reads one setback for both sides, so the ball refuses
-//!   an open chain whose sides differ and which has an end ray
-//!   (`rolling_ball_setbacks::a_rayed_end_that_differs`).
+//!   (`side_chains`), which every reading that places one side's rail reads: the rail joined past
+//!   a rib (`virtual_rail::joined_sides`), the rail carried past an oblique end
+//!   (`virtual_rail_past_the_end`) and the end-plane trim (`end_plane_trim_run::trim_end`).
 //! - **The room of a pass of one chain:** read in the build with the ball's setbacks at the size
 //!   asked, scaled (`one_chain_room`, whose header says why): `field_at_0`, the room's convex-ray
 //!   field, the narrow end face's flow and the room's margin. Such a pass is handed no room

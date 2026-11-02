@@ -17,9 +17,7 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
 };
 use geometry_processing::bevel::level_line::band_gap_setback_fields::PassSetbacks;
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::rolling_ball_setbacks::{
-    a_rayed_end_that_differs, for_the_pass, PassScope, SideSetbacks, SIDES_AGREE_SHARE,
-};
+use geometry_processing::bevel::level_line::rolling_ball_setbacks::{for_the_pass, PassScope};
 use geometry_processing::bevel::level_line::{
     chain_fields_of, BandGapRefusal, BandGroup, BandProfile, ChainField, GapFillRefusal,
 };
@@ -696,51 +694,6 @@ pub fn refused_by_the_ball(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]
     let why = ball.rolling_ball_refusal.expect("the refusal says why");
     assert_eq!(route, Some(format!("{ROLLING_BALL_REFUSED}{why}")));
     why
-}
-
-/// An open chain whose sides differ anywhere and which carries an end ray is refused by the ball,
-/// and the reason names the first point where they differ: the rail carried past an oblique end is
-/// laid at one setback. (A slanted end whose sides differ there is refused before this, by its
-/// cap; this is the chain whose sides agree at its ends and differ between them.) A closed chain,
-/// a chain with no end ray and sides that agree (within [`SIDES_AGREE_SHARE`]) keep the ball's
-/// setbacks. The reading writes no route; the build that refuses on it does.
-#[test]
-fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_the_ball() {
-    let differ = SideSetbacks {
-        free_ends: [false, false],
-        left: vec![1.0, 1.0, 1.0],
-        right: vec![1.0, 1.5, 1.0],
-        caps: [None, None],
-        features: [Vec::new(), Vec::new()],
-        centres: Vec::new(),
-        contacts: [Vec::new(), Vec::new()],
-    };
-    let agree = SideSetbacks {
-        free_ends: [false, false],
-        right: vec![1.0, 1.0, 1.0],
-        ..differ.clone()
-    };
-    set_last_route(None);
-    let why = |ball: &SideSetbacks, closed: bool, rays: (bool, bool)| {
-        a_rayed_end_that_differs(std::slice::from_ref(ball), &[closed], &[rays], 2.0)
-    };
-    assert_eq!(why(&differ, false, (false, false)), None);
-    assert_eq!(why(&differ, true, (false, false)), None);
-    assert_eq!(why(&agree, false, (true, true)), None);
-    let within_the_share = SideSetbacks {
-        right: vec![1.0, 1.0 + (SIDES_AGREE_SHARE * 0.5), 1.0],
-        ..differ.clone()
-    };
-    assert_eq!(why(&within_the_share, false, (true, true)), None);
-    assert_eq!(
-        why(&differ, false, (false, true)).as_deref(),
-        Some(
-            "chain 0 point 1: the sides' contacts stand 2 and 3 from the chain, and an oblique \
-             end's rail carried past the end is not cut per side yet"
-        )
-    );
-    assert_eq!(last_route(), None);
-    reset_to_the_default();
 }
 
 /// Two wedges side by side, each apex a chain of one pass: an open chain's end regions in a pass

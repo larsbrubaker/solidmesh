@@ -4,8 +4,8 @@
 //! (`rolling_ball_setbacks.rs`), or answered here where it does not. The funnel
 //! ([`band_gap::build_unvalidated`](super::band_gap::build_unvalidated)) calls [`build_within`].
 //!
-//! - **Strict:** an outer fillet pass the ball is asked to take and cannot (`with_the_sides` or
-//!   `a_rayed_end_that_differs` names why) is refused as `BandGapRefusal::RollingBall` with that
+//! - **Strict:** an outer fillet pass the ball is asked to take and cannot (`with_the_sides`
+//!   names why) is refused as `BandGapRefusal::RollingBall` with that
 //!   reason, before anything is cut; it is never built on the level line's own setbacks. A pass
 //!   of one chain is refused by its size instead where the ball's own room, read at a smaller
 //!   size it walks, explains the refusal (`rolling_ball_size_room`, which reads it through
@@ -107,7 +107,7 @@ pub fn build_within(
         });
     }
     let walk = |s: f64| {
-        rolling_ball_setbacks::walked_for_the_build(
+        rolling_ball_setbacks::with_the_sides(
             positions,
             indices,
             chains,
