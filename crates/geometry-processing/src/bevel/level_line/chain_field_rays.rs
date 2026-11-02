@@ -9,6 +9,21 @@ use super::{ChainField, ChainFieldExtension, EndRayBound};
 /// Per segment, the rays it also answers for (`None` for a segment with none).
 pub type ChainFieldRays = Vec<Option<Vec<ChainFieldExtension>>>;
 
+/// The cosine a joint's two unit directions must fall under to turn sharper than
+/// `sharp_turn_degrees`.
+pub(crate) fn sharp_turn_cosine(sharp_turn_degrees: f64) -> f64 {
+    (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos()
+}
+
+/// Whether a joint whose chain runs in along unit `d_in` and out along unit `d_out` is mitred:
+/// it turns past the threshold (`cos_threshold`, [`sharp_turn_cosine`]), and is no full reversal,
+/// which has no bisector. Shared with the rolling ball's legs (`rolling_ball_legs`), so the chain
+/// is cut into legs exactly where its field mitres.
+pub(crate) fn mitres_at(d_in: Vector3, d_out: Vector3, cos_threshold: f64) -> bool {
+    let cos = d_in.dot(d_out);
+    !(cos >= cos_threshold || 1.0 + cos < 1e-9)
+}
+
 /// The chain's bounding-box diagonal.
 fn box_diagonal(points: &[Vector3]) -> f64 {
     let mut box_min = points[0];
@@ -42,7 +57,7 @@ impl ChainField {
         let n = points.len();
         let segment_count = parameter_at_point.len() - 1;
         let diagonal = box_diagonal(points);
-        let cos_threshold = (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
+        let cos_threshold = sharp_turn_cosine(sharp_turn_degrees);
         let mut found: Option<ChainFieldRays> = None;
         for j in 0..n {
             if is_smooth_joint(j as i32) {
@@ -66,7 +81,7 @@ impl ChainField {
             let cos = d_in.dot(d_out);
 
             // At or below the threshold the vertex keeps its ball; a full reversal has no bisector.
-            if cos >= cos_threshold || 1.0 + cos < 1e-9 {
+            if !mitres_at(d_in, d_out, cos_threshold) {
                 continue;
             }
 

@@ -18,7 +18,7 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
 use geometry_processing::bevel::level_line::band_gap_setback_fields::PassSetbacks;
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::rolling_ball_setbacks::{
-    a_rayed_end_that_differs, for_the_pass, PassScope, SideSetbacks,
+    a_rayed_end_that_differs, for_the_pass, PassScope, SideSetbacks, SIDES_AGREE_SHARE,
 };
 use geometry_processing::bevel::level_line::{
     chain_fields_of, BandGapRefusal, BandGroup, BandProfile, ChainField, GapFillRefusal,
@@ -702,9 +702,8 @@ pub fn refused_by_the_ball(part: &(Vec<Vector3>, Triangles), chains: &[Vec<i32>]
 /// and the reason names the first point where they differ: the rail carried past an oblique end is
 /// laid at one setback. (A slanted end whose sides differ there is refused before this, by its
 /// cap; this is the chain whose sides agree at its ends and differ between them.) A closed chain,
-/// a chain with no end ray and sides that agree keep the ball's setbacks. The reading writes no
-/// route; the build that refuses on it does, held end to end on "Center Right and Left Side.mcx"
-/// (mattercad-model's `bevel_strict_reason_tests`).
+/// a chain with no end ray and sides that agree (within [`SIDES_AGREE_SHARE`]) keep the ball's
+/// setbacks. The reading writes no route; the build that refuses on it does.
 #[test]
 fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_the_ball() {
     let differ = SideSetbacks {
@@ -728,6 +727,11 @@ fn an_open_chain_whose_sides_differ_and_which_carries_an_end_ray_is_refused_by_t
     assert_eq!(why(&differ, false, (false, false)), None);
     assert_eq!(why(&differ, true, (false, false)), None);
     assert_eq!(why(&agree, false, (true, true)), None);
+    let within_the_share = SideSetbacks {
+        right: vec![1.0, 1.0 + (SIDES_AGREE_SHARE * 0.5), 1.0],
+        ..differ.clone()
+    };
+    assert_eq!(why(&within_the_share, false, (true, true)), None);
     assert_eq!(
         why(&differ, false, (false, true)).as_deref(),
         Some(

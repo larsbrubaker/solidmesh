@@ -85,8 +85,11 @@ use super::side_surface::{HalfSpace, RollingBallSide, SideContact};
 const END_PLANE_RELATIVE: f64 = 1e-9;
 
 /// How far inside the chain's side of an end face's plane the part starts to count as an obstacle,
-/// relative to one plus the radius: wide enough that the end face's own triangles, flat only to the
-/// precision the mesh was stored at, fall wholly outside, and far below any feature of a part.
+/// relative to one plus the radius and the end vertex's distance from the origin (the plane's
+/// origin is the chain's end vertex): wide enough that the
+/// end face's own triangles, flat only to the precision the mesh was stored at (which scales with
+/// the coordinates: a face stored as floats 300 from the origin is flat to about 1e-5), fall
+/// wholly outside, and far below any feature of a part.
 const END_FACE_GAP_RELATIVE: f64 = 1e-6;
 
 /// How far past its half of the corner a side is still read, relative to one plus the radius, and
@@ -95,7 +98,10 @@ const END_FACE_GAP_RELATIVE: f64 = 1e-6;
 /// surface, not cut; a plane a blended direction tilts by a
 /// hair would otherwise hide it, as where the round runs out and the contacts converge onto the
 /// chain. Its size is the end face gap's ([`END_FACE_GAP_RELATIVE`]): wide against the tilt a
-/// blended direction gives a plane between stations, and far below any feature of a part.
+/// blended direction gives a plane between stations, and far below any feature of a part. As an
+/// on-the-plane tolerance it is taken relative to one plus the radius and the farthest end
+/// vertex's distance from the origin, as the gap is, since a side stored as floats is flat only
+/// that finely.
 const READING_PAST_RELATIVE: f64 = END_FACE_GAP_RELATIVE;
 
 /// How square to the chain an end face's normal must stand (the cosine between them) for the
@@ -353,7 +359,12 @@ impl RollingBall<'_> {
         // (`side_extension.rs`): the round the sides would make run on past the end face.
         let scale = 1.0 + self.radius.abs();
         let extended = (!kept.is_empty()).then(|| {
-            let tolerance = READING_PAST_RELATIVE * scale;
+            // As the end face gap: a side stored as floats is flat only as finely as its
+            // coordinates' size allows.
+            let far = chain_ends.iter().fold(0.0, |far, end| {
+                vector_math::ieee_math::max_f64(far, end.vertex.length())
+            });
+            let tolerance = READING_PAST_RELATIVE * (scale + far);
             (
                 extended_past(self.side_a, &chain_ends, self.radius, tolerance),
                 extended_past(self.side_b, &chain_ends, self.radius, tolerance),
@@ -465,12 +476,12 @@ impl Walk<'_, '_> {
     /// little way in, so neither the end face nor anything beyond it counts as reached.
     fn fault(&self, station: &BallStation, radius: f64) -> Option<StationFault> {
         let scale = 1.0 + radius.abs();
-        let gap = END_FACE_GAP_RELATIVE * scale;
         let mut in_reach: Vec<HalfSpace> = self
             .ends
             .iter()
             .map(|end| HalfSpace {
-                origin: end.origin + (end.normal * gap),
+                origin: end.origin
+                    + (end.normal * (END_FACE_GAP_RELATIVE * (scale + end.origin.length()))),
                 normal: end.normal,
             })
             .collect();

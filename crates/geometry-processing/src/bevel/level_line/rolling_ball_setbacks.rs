@@ -7,13 +7,15 @@
 //! the two, because that is what the field's setback is: the distance from the chain at which the
 //! rail runs. Along a straight run that is the contact's distance from the chain point (the
 //! contact lies in the plane square to the chain there). At a turn of the chain it is not: the
-//! ball at a cube rim's corner, rolled square to the corner's blended direction, touches the top
-//! r from both edges but r sqrt 2 from the corner vertex, and a setback of r sqrt 2 there would
-//! cut the band far wider at every corner than the round is. At an open chain's end on an end
-//! face, the end station touches each side where the walk extends it past the face, which beyond a
-//! face leaning back over the end vertex lies past that vertex: there the end edge is read as its
-//! line carried on past the end vertex, and clamped toward the chain's interior
-//! ([`from_the_end_edge`]), as the band's own field reads the chain past its end.
+//! ball at a gentle turn, rolled square to the vertex's blended direction, touches each side
+//! further from the vertex than from either edge. At a turn sharper than the pass's bend threshold
+//! where one side's face changes (a cube rim's corner, a pocket floor's), the chain is walked in
+//! legs, each ending on the other leg's face, and the turn's setback is the mean of the legs'
+//! (`rolling_ball_legs`, whose header says why). At an open chain's end on an end face, the end
+//! station touches each side where the walk extends it past the face, which beyond a face leaning
+//! back over the end vertex lies past that vertex: there the end edge is read as its line carried
+//! on past the end vertex, and clamped toward the chain's interior
+//! (`rolling_ball_legs::from_the_end_edge`), as the band's own field reads the chain past its end.
 //!
 //! **A setback per side.** Each side's contacts give that side's own setbacks ([`SideSetbacks`],
 //! left and right as `chain_on_the_mesh::sides_of` names a chain edge's two triangles: the left
@@ -108,15 +110,14 @@ use super::band_gap_setback_fields::PassSetbacks;
 use super::rolling_ball_band_tags::BallSides;
 use super::rolling_ball_end_caps::{self, CapSide};
 use super::rolling_ball_free_ends;
+use super::rolling_ball_legs::{self, ChainToWalk};
 use super::triangle_edges;
+use super::BandProfile;
 use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
-use super::{BandProfile, ChainField};
 use crate::bevel::rolling_ball::rolling_ball_routing::{
     record_refusal, set_last_route, use_rolling_ball, ROLLING_BALL_ROUTE,
 };
-use crate::bevel::rolling_ball::{
-    ChainPoint, ContactFeature, EndFace, RollingBall, RollingBallSide, WalkEnd,
-};
+use crate::bevel::rolling_ball::{ContactFeature, EndFace, RollingBallSide, WalkEnd};
 
 /// One chain's setbacks per unit of size from the rolling ball, one per chain vertex on each side:
 /// how far side A's (left) and side B's (right) contacts stand from the chain there.
@@ -417,16 +418,6 @@ fn walked_setbacks(
             &crosses,
         )?;
 
-        let triangles_of = |inside: &[bool]| -> Vec<[i32; 3]> {
-            (0..indices.len())
-                .filter(|&t| inside[t])
-                .map(|t| every_triangle[t])
-                .collect()
-        };
-        let side_a = RollingBallSide::new(positions, &triangles_of(&in_a));
-        let side_b = RollingBallSide::new(positions, &triangles_of(&in_b));
-
-        let points = chain_points(positions, indices, chain, closed[k], edges, &lefts, &rights);
         let ends = if closed[k] {
             [None, None]
         } else {
@@ -435,67 +426,36 @@ fn walked_setbacks(
                 end_face(positions, indices, chain[chain.len() - 1], &in_a, &in_b),
             ]
         };
-
-        let ball = RollingBall {
-            side_a: &side_a,
-            side_b: &side_b,
-            part: Some(&part),
-            radius: size,
+        // The walk, leg by leg where the chain turns sharply (`rolling_ball_legs`).
+        let walk = rolling_ball_legs::walked(&ChainToWalk {
+            positions,
+            indices,
+            standing: &standing,
+            k,
+            chain,
+            closed: closed[k],
+            edges,
+            lefts: &lefts,
+            rights: &rights,
             convex,
-        };
-        let walk = ball
-            .walk_ending_on(&points, ends)
-            .map_err(|error| format!("chain {k}: the ball has no walk: {error:?}"))?;
-        for (end, finished) in walk.ends.iter().enumerate() {
-            if !matches!(finished, WalkEnd::EndFace | WalkEnd::LastStation) {
-                return Err(format!("chain {k}: end {end} finished {finished:?}"));
-            }
-        }
-        if walk.stations.len() != points.len() {
-            return Err(format!(
-                "chain {k}: {} stations for {} chain points",
-                walk.stations.len(),
-                points.len()
-            ));
-        }
+            in_a: &in_a,
+            in_b: &in_b,
+            ends,
+            side_regions,
+            crosses: &crosses,
+            part: &part,
+            size,
+            sharp_turn_degrees: band.sharp_turn_degrees(),
+        })?;
+        let count = walk.readings.len();
 
-        let mut left = Vec::with_capacity(points.len());
-        let mut right = Vec::with_capacity(points.len());
-        let mut centres = Vec::with_capacity(points.len());
-        let mut contacts = [
-            Vec::with_capacity(points.len()),
-            Vec::with_capacity(points.len()),
-        ];
-        let mut features = [
-            Vec::with_capacity(points.len()),
-            Vec::with_capacity(points.len()),
-        ];
-        for (i, station) in walk.stations.iter().enumerate() {
-            let on_an_end_face = !closed[k]
-                && ((i == 0 && walk.ends[0] == WalkEnd::EndFace)
-                    || (i + 1 == walk.stations.len() && walk.ends[1] == WalkEnd::EndFace));
-            // A contact on a rim of a side read as extended past the end face lies where the
-            // extension has a hole (the ones `rolling_ball::side_extension` lists): no surface
-            // the round rests on, so its distance is no setback. Fail safe.
-            if on_an_end_face {
-                let end = usize::from(i != 0);
-                for (contact, name) in [(&station.contact_a, "A"), (&station.contact_b, "B")] {
-                    if contact.feature.is_rim() {
-                        return Err(format!(
-                            "chain {k} end {end}: side {name}'s contact at the end face rests on a \
-                             rim of the side extended past the face, so its setback there is not \
-                             the round's"
-                        ));
-                    }
-                }
-            }
-            let measure = |contact: Vector3| {
-                from_the_chain(positions, edges, closed[k], i, on_an_end_face, contact)
-            };
-            let (to_a, to_b) = (
-                measure(station.contact_a.point),
-                measure(station.contact_b.point),
-            );
+        let mut left = Vec::with_capacity(count);
+        let mut right = Vec::with_capacity(count);
+        let mut centres = Vec::with_capacity(count);
+        let mut contacts = [Vec::with_capacity(count), Vec::with_capacity(count)];
+        let mut features = [Vec::with_capacity(count), Vec::with_capacity(count)];
+        for (i, reading) in walk.readings.iter().enumerate() {
+            let (to_a, to_b) = (reading.to_a, reading.to_b);
             if !to_a.is_finite() || !to_b.is_finite() {
                 return Err(format!(
                     "chain {k} point {i}: a contact's distance is not a number ({to_a}, {to_b})"
@@ -511,12 +471,11 @@ fn walked_setbacks(
             }
             left.push(to_a / size);
             right.push(to_b / size);
-            centres.push((station.centre - station.chain_point) * (1.0 / size));
-            contacts[0].push((station.contact_a.point - station.chain_point) * (1.0 / size));
-            contacts[1].push((station.contact_b.point - station.chain_point) * (1.0 / size));
-            let off_the_end_face = |feature: ContactFeature| (!on_an_end_face).then_some(feature);
-            features[0].push(off_the_end_face(station.contact_a.feature));
-            features[1].push(off_the_end_face(station.contact_b.feature));
+            centres.push(reading.centre * (1.0 / size));
+            for side in 0..2 {
+                contacts[side].push(reading.contacts[side] * (1.0 / size));
+                features[side].push(reading.features[side]);
+            }
         }
         let mut caps = [None, None];
         let mut free = [false, false];
@@ -552,7 +511,7 @@ fn walked_setbacks(
                 }
             }
             for (end, finished) in walk.ends.iter().enumerate() {
-                let i = if end == 0 { 0 } else { points.len() - 1 };
+                let i = if end == 0 { 0 } else { count - 1 };
                 let (l, r) = (left[i] * size, right[i] * size);
                 // A corner end is cut by the corner's fill, never by a cap of the chain's own;
                 // its sides differing in a pass of several chains is refused above.
@@ -636,112 +595,6 @@ fn larger_of(left: &[f64], right: &[f64]) -> Vec<f64> {
         .collect()
 }
 
-/// How far `contact` stands from the chain's edges either side of chain vertex `v`: the nearer.
-/// At an open chain's end on an end face (`on_an_end_face`), the one edge there is carried on
-/// past the end vertex as its line ([`from_the_end_edge`]): the end station there touches each
-/// side where the side runs on past the face (`rolling_ball::walk`), which past a face leaning
-/// back over the end vertex lies beyond it, and the rail there stands that far from the chain
-/// carried on past its end, as the band's own field reads it past the end. At a square end the
-/// contact lies in the plane square to the chain at the end vertex, where the two agree.
-fn from_the_chain(
-    positions: &[Vector3],
-    edges: &[(i32, i32)],
-    is_closed: bool,
-    v: usize,
-    on_an_end_face: bool,
-    contact: Vector3,
-) -> f64 {
-    let before = if v > 0 {
-        Some(v - 1)
-    } else if is_closed {
-        Some(edges.len() - 1)
-    } else {
-        None
-    };
-    let after = (v < edges.len()).then_some(v);
-    let mut nearest = f64::INFINITY;
-    for e in [before, after].into_iter().flatten() {
-        let (from, to) = edges[e];
-        let (start, stop) = (positions[from as usize], positions[to as usize]);
-        let on = if on_an_end_face {
-            from_the_end_edge(start, stop, v == 0, contact)
-        } else {
-            ChainField::closest_on_segment(contact, start, stop)
-        };
-        let distance = (contact - on).length();
-        if distance < nearest {
-            nearest = distance;
-        }
-    }
-
-    nearest
-}
-
-/// The point of an open chain's end edge `start -> stop` nearest `contact`, the edge carried on as
-/// its line past the chain's end vertex only (`start` at the first end, `stop` at the last) and
-/// clamped at its other vertex, toward the chain's interior, where the next edge in takes over.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: a NaN reads the vertex
-fn from_the_end_edge(start: Vector3, stop: Vector3, first_end: bool, contact: Vector3) -> Vector3 {
-    let along = stop - start;
-    let length_squared = along.length_squared();
-    if !(length_squared > 0.0) {
-        return start;
-    }
-    let t = (contact - start).dot(along) / length_squared;
-    let t = if first_end {
-        vector_math::ieee_math::min_f64(t, 1.0)
-    } else {
-        vector_math::ieee_math::max_f64(t, 0.0)
-    };
-    start + (along * t)
-}
-
-/// The chain's points as the ball reads them: each vertex with the chain's direction there and
-/// each side's normal beside it, both blended over the edges either side of the vertex (the one
-/// edge at an open chain's end).
-fn chain_points(
-    positions: &[Vector3],
-    indices: &[(i32, i32, i32)],
-    chain: &[i32],
-    is_closed: bool,
-    edges: &[(i32, i32)],
-    lefts: &[i32],
-    rights: &[i32],
-) -> Vec<ChainPoint> {
-    let count = edges.len();
-    let direction =
-        |e: usize| (positions[edges[e].1 as usize] - positions[edges[e].0 as usize]).get_normal();
-    let left_normal = |e: usize| triangle_edges::normal(positions, indices[lefts[e] as usize]);
-    let right_normal = |e: usize| triangle_edges::normal(positions, indices[rights[e] as usize]);
-    let blend = |of: &dyn Fn(usize) -> Vector3, before: Option<usize>, after: Option<usize>| match (
-        before, after,
-    ) {
-        (Some(b), Some(a)) => (of(b) + of(a)).get_normal(),
-        (Some(only), None) | (None, Some(only)) => of(only),
-        (None, None) => Vector3::ZERO,
-    };
-
-    (0..chain.len())
-        .map(|v| {
-            // Vertex v stands between edge v - 1 and edge v.
-            let before = if v > 0 {
-                Some(v - 1)
-            } else if is_closed {
-                Some(count - 1)
-            } else {
-                None
-            };
-            let after = (v < count).then_some(v);
-            ChainPoint {
-                point: positions[chain[v] as usize],
-                tangent: blend(&direction, before, after),
-                normal_a: blend(&left_normal, before, after),
-                normal_b: blend(&right_normal, before, after),
-            }
-        })
-        .collect()
-}
-
 /// Whether the edge `from -> to` is convex: the right triangle folds away behind the left one's
 /// outward normal.
 fn is_convex(
@@ -784,40 +637,4 @@ fn end_face(
         point: positions[vertex as usize],
         normal,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A chain turning a right angle, (0, 0, 0) to (1, 0, 0) to (1, 1, 0): each end edge is 1 long.
-    fn turning() -> (Vec<Vector3>, Vec<(i32, i32)>) {
-        let positions = vec![
-            Vector3::new(0.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, 1.0, 0.0),
-        ];
-        (positions, vec![(0, 1), (1, 2)])
-    }
-
-    /// At an end face the end edge runs on as its line past the end vertex only: a contact past
-    /// the end stands its distance from that line, and one whose offset along the edge reaches
-    /// past the edge's inner vertex stands its distance from that vertex, never from the line.
-    #[test]
-    fn the_end_edge_runs_on_past_the_end_vertex_only() {
-        let (positions, edges) = turning();
-        let measure = |v: usize, contact: Vector3| {
-            from_the_chain(&positions, &edges, false, v, true, contact)
-        };
-        // First end: past (0, 0, 0) along -x the line, 1.5 off it.
-        assert_eq!(measure(0, Vector3::new(-2.0, 1.5, 0.0)), 1.5);
-        // First end, 3 along the edge where it is 1 long: from (1, 0, 0), not the line's 2.
-        let inner = measure(0, Vector3::new(3.0, 2.0, 0.0));
-        assert!((inner - 8f64.sqrt()).abs() < 1e-15, "{inner}");
-        // Last end: past (1, 1, 0) along +y the line, 0.75 off it.
-        assert_eq!(measure(2, Vector3::new(0.25, 2.5, 0.0)), 0.75);
-        // Last end, 3 back along the edge: from (1, 0, 0).
-        let inner = measure(2, Vector3::new(1.5, -3.0, 0.0));
-        assert!((inner - 0.5f64.hypot(3.0)).abs() < 1e-15, "{inner}");
-    }
 }
