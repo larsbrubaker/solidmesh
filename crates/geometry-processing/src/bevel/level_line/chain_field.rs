@@ -5,7 +5,8 @@
 //! the smooth-joint test and
 //! the sharp-joint finder, and the readings along the chain - where a parameter stands
 //! ([`ChainField::locate_on_chain`]), the point and setback there, the sharp joints found once -
-//! and the exact point query ([`ChainField::evaluate`]). Construction is in
+//! and the exact point query ([`ChainField::evaluate`]) - and, on the rolling ball's route, the
+//! ball's centre at a parameter ([`ChainField::ball_centre_at`]). Construction is in
 //! `chain_field_from_polyline.rs`, the other queries in the other `chain_field_*` modules.
 
 use std::cell::OnceCell;
@@ -14,6 +15,7 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::ball_row_control::BallRows;
 use super::chain_field_nearest::ChainFieldNearest;
 use super::{
     ChainFieldEndClip, ChainFieldExtension, EndRayBound, FieldCounters, FieldSample, LevelLineWork,
@@ -90,6 +92,10 @@ pub struct ChainField {
     /// The chain's joints sharper than [`ChainField::sharp_turn_degrees`], each as its parameter
     /// and the setback asked there, in parameter order; found once on first ask.
     pub sharp_joints: OnceCell<Vec<(f64, f64)>>,
+    /// The rolling ball's centres at each chain point and its radius, where the ball's route made
+    /// this field as the chain's own (`band_gap_setback_fields::fields_at_the_size`); `None` on
+    /// every other field. The fill draws its rows about them (`ball_row_control`).
+    pub ball: Option<Rc<BallRows>>,
 }
 
 impl std::fmt::Debug for ChainField {
@@ -355,6 +361,33 @@ impl ChainField {
     /// its parameter and the setback asked there, in parameter order; found once.
     pub fn sharp_joints(&self) -> &[(f64, f64)] {
         self.sharp_joints.get_or_init(|| self.find_sharp_joints())
+    }
+
+    /// The rolling ball's centre at a chain parameter, linear along each segment between its two
+    /// points' centres as [`ChainField::point_at`] is. `None` where the field carries no ball,
+    /// outside [0, length] (past an end the round is swept round the end vertex, no station's),
+    /// and on a segment that touches a sharp joint: there a station's centre is a mean of the two
+    /// legs' balls, no ball's own.
+    pub fn ball_centre_at(&self, parameter: f64) -> Option<Vector3> {
+        let ball = self.ball.as_deref()?;
+        if !(0.0..=self.length).contains(&parameter) || ball.centres.len() != self.points.len() {
+            return None;
+        }
+        let (segment, t) = self.locate_on_chain(parameter);
+        let next = (segment + 1) % self.points.len();
+        let (from_at, to_at) = (
+            self.parameter_at_point[segment],
+            self.parameter_at_point[segment + 1],
+        );
+        // A closed chain's first point is also the segment end at the full length.
+        let touches = |joint: f64| {
+            joint == from_at || joint == to_at || (self.is_closed && next == 0 && joint == 0.0)
+        };
+        if self.sharp_joints().iter().any(|&(joint, _)| touches(joint)) {
+            return None;
+        }
+        let (from, to) = (ball.centres[segment], ball.centres[next]);
+        Some(from + ((to - from) * t))
     }
 
     /// The segment a chain parameter falls on and how far along it

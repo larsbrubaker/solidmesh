@@ -186,6 +186,7 @@ fn rust_only_the_last_r1p15_pieces_read_their_pinned_text() {
         end_clips: None,
         end_plane_reader: Default::default(),
         sharp_joints: Default::default(),
+        ball: None,
     };
     let mut piece = CornerFillPiece {
         owner: 0,

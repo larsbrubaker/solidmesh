@@ -4,16 +4,18 @@
 //! size so the room can ask the same question at any size.
 //!
 //! At the size itself a pass the rolling ball takes (`rolling_ball_setbacks.rs`) has a field per
-//! side per chain from that side's contacts ([`PassSetbacks::fields_at_the_size`]), and the
-//! chain's own field holds the larger of the two sides at each point; an open chain's end whose
-//! sides differ has a cap field of its own ([`PassSetbacks::cap_fields_at_the_size`]). Every other
-//! pass has the chain's own field from the angle and no side fields, exactly as the angle gives it.
+//! side per chain from that side's contacts ([`PassSetbacks::fields_at_the_size`]), and the chain's
+//! own field holds the larger of the two sides at each point and carries the ball's centres at the
+//! size ([`BallRows`]), which the fill draws its rows about; an open chain's end whose sides differ
+//! has a cap field of its own ([`PassSetbacks::cap_fields_at_the_size`]). Every other pass has the
+//! chain's own field from the angle and no side fields, exactly as the angle gives it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
+use super::ball_row_control::BallRows;
 use super::band_gap_build_fault::BuildFault;
 use super::band_group_fields::CapFieldsByTag;
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
@@ -152,7 +154,8 @@ impl PassSetbacks {
 
     /// Every chain's own field at `size`, and with the rolling ball's setbacks (`ball`) each
     /// chain's left and right fields: the own field from the angle where `ball` is `None`, the
-    /// larger of the ball's two sides where it is given.
+    /// larger of the ball's two sides where it is given, carrying the ball's centres and radius
+    /// (the size) for the fill's rows.
     pub fn fields_at_the_size(
         &self,
         ball: Option<&[SideSetbacks]>,
@@ -169,7 +172,16 @@ impl PassSetbacks {
 
         let mut sides = Vec::with_capacity(count);
         for (k, chain) in ball.iter().enumerate() {
-            fields.push(Rc::new(self.field_from(k, &chain.larger(), size)?));
+            let mut own = self.field_from(k, &chain.larger(), size)?;
+            own.ball = Some(Rc::new(BallRows {
+                centres: self.chain_points[k]
+                    .iter()
+                    .zip(&chain.centres)
+                    .map(|(&point, &centre)| point + (centre * size))
+                    .collect(),
+                radius: size,
+            }));
+            fields.push(Rc::new(own));
             sides.push([
                 Rc::new(self.field_from(k, &chain.left, size)?),
                 Rc::new(self.field_from(k, &chain.right, size)?),

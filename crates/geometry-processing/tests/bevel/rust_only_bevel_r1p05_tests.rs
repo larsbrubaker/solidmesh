@@ -301,6 +301,7 @@ fn polyline_field(
         end_clips: None,
         end_plane_reader: Default::default(),
         sharp_joints: Default::default(),
+        ball: None,
     }
 }
 

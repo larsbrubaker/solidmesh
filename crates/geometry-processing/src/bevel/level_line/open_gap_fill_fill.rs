@@ -1,8 +1,8 @@
 //! The open fill itself. Its own file because `open_gap_fill.rs` holds the rest of the open fill
-//! and would pass the 800-line limit. It reads both runs as rails
-//! (`open_gap_fill::try_rail`), gives each rail the other's stations
-//! (`open_gap_fill_stations::with_stations_of`), lays the rows (`open_gap_fill::arcs`) and the
-//! cells between them, closes the ends (`corner_cap_zip_end::zip_end`,
+//! and would pass the 800-line limit. It reads both runs as rails (`open_gap_fill::try_rail`),
+//! gives each rail the other's stations (`open_gap_fill_stations::with_stations_of`), lays the rows
+//! (`open_gap_fill::arcs`) and the cells between them (onto an end's run taken as the last row,
+//! `open_gap_fill_end_run_row`), closes the ends (`corner_cap_zip_end::zip_end`,
 //! `end_plane_trim_carry::carry`), clips the strip on the growing neighbour or the part's hull
 //! (`strip_clip_neighbour`, `hull_clip`) and checks that the fill closes (`fill_closure`).
 
@@ -11,6 +11,7 @@ use std::rc::Rc;
 
 use super::open_gap_fill::{arcs, backwards, is_straight_row, set_ends_site, try_rail};
 use super::open_gap_fill_cut_section::{flat_run_out, lay_beside_a_cut_row};
+use super::open_gap_fill_end_run_row::{end_run_rows, lay_ladder, EndRunAsk};
 use super::open_gap_fill_stations::{rows_where_the_round_needs_them, spokes, with_stations_of};
 use super::open_gap_fill_sunk_arc::{area2, past_an_end, sunk_arc_point};
 use super::{
@@ -128,6 +129,25 @@ pub fn fill(
         fillet_segments
     };
     let mut added_vertices = Vec::new();
+    // On the ball's route an end run lying on the end station's section is that end's last row.
+    let carried_ends = ends.carried_ends.unwrap_or([false, false]);
+    let run_rows = match ends.end_runs {
+        Some(end_runs) if square => end_run_rows(
+            mesh,
+            chain,
+            &left,
+            &right,
+            EndRunAsk {
+                spokes: &spokes,
+                end_runs,
+                kept_ends: [0, 1].map(|e| ends.clip_ends || hull_ends[e] || carried_ends[e]),
+                rows_on_the_ray: ends.rows_on_the_ray,
+                segments,
+            },
+        ),
+        _ => [None, None],
+    };
+    let first_row = run_rows[0].as_ref().map(|row| backwards(&row.run));
     let arcs = arcs(
         mesh,
         chain,
@@ -138,6 +158,10 @@ pub fn fill(
         &mut added_vertices,
         ends.rows_on_the_ray,
         ends.end_runs.is_none(),
+        [
+            first_row.as_deref(),
+            run_rows[1].as_ref().map(|row| &row.run[..]),
+        ],
     )?;
     let past_an_end: Vec<bool> = spokes
         .iter()
@@ -190,6 +214,24 @@ pub fn fill(
         // rail vertex was given no row of its own (RowsWhereTheRoundNeedsThem).
         let lefts: Vec<i32> = left.vertices[this.0 as usize..=next.0 as usize].to_vec();
         let rights: Vec<i32> = right.vertices[this.1 as usize..=next.1 as usize].to_vec();
+        // A cell onto an end's run taken as its row: the ladder from the row beside it.
+        let onto_a_run = if cell == 0 {
+            run_rows[0].as_ref().map(|row| {
+                let reversed = |v: &[i32]| v.iter().rev().copied().collect::<Vec<i32>>();
+                (backwards(after), reversed(&rights), row, reversed(&lefts))
+            })
+        } else if cell + 2 == spokes.len() {
+            run_rows[1]
+                .as_ref()
+                .map(|row| (before.clone(), lefts.clone(), row, rights.clone()))
+        } else {
+            None
+        };
+        if let Some((u, first, row, last)) = onto_a_run {
+            lay_ladder(mesh, &u, &first, &row.run, &row.turn, &last, laid)?;
+            cell += 1;
+            continue;
+        }
         if next.0 != this.0 && next.1 != this.1 {
             // Both rails advanced: a row of quads, laid as the left-advancing cell lays its first
             // rows. A rail vertex that was given no row of its own (RowsWhereTheRoundNeedsThem) is
@@ -301,6 +343,15 @@ pub fn fill(
             // A HULL end is not zipped: its rows run whole past the part and the hull clips them
             // below.
             if hull_ends[e] {
+                continue;
+            }
+
+            // An end's run taken as its last row is laid already, with no cap.
+            if run_rows[e].is_some() {
+                for i in 0..run.len().saturating_sub(1) {
+                    kept.push((run[i], run[i + 1]));
+                }
+
                 continue;
             }
 

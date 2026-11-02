@@ -14,6 +14,7 @@ use std::rc::Rc;
 
 use vector_math::{ieee_math, Vector3};
 
+use super::ball_row_control::{self, RowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
     corner_cap_flat_ends, dying_crease_fill, end_face_fill, gap_fill, open_gap_fill_cut_section,
@@ -402,8 +403,11 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
 /// One arc per spoke, from the left rail's vertex to the right rail's
 /// through the chain's own point at the mean of the two extended parameters - clamped into the
 /// chain, so a spoke past an end takes the END VERTEX as its control point and the nose is the
-/// profile swept round that vertex. Every vertex minted is appended to `added_vertices`; each
-/// spoke charged. `rows_on_the_ray` and `meets_on_the_crease` are usually `false`.
+/// profile swept round that vertex. On the rolling ball's route a row the ball describes is drawn
+/// about the ball's centre instead (`ball_row_control::row_control`), so it is the ball's arc. A
+/// row in `given_ends` (first spoke's, last spoke's) is taken as it is, and nothing is minted.
+/// Every vertex minted is appended to `added_vertices`; each spoke charged. `rows_on_the_ray` and
+/// `meets_on_the_crease` are usually `false`.
 #[allow(clippy::too_many_arguments)]
 pub fn arcs(
     mesh: &mut LevelLineMesh,
@@ -415,14 +419,25 @@ pub fn arcs(
     added_vertices: &mut Vec<i32>,
     rows_on_the_ray: bool,
     meets_on_the_crease: bool,
+    given_ends: [Option<&[i32]>; 2],
 ) -> Result<Vec<Vec<i32>>, super::WorkError> {
     let mut arcs = Vec::new();
     let tie = PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, chain.length);
     let left_span = open_gap_fill_stations::tie_spans(mesh, chain, left, tie)?;
     let right_span = open_gap_fill_stations::tie_spans(mesh, chain, right, tie)?;
     let row_length = (segments + 1) as usize;
-    for &(l, r) in spokes {
+    for (k, &(l, r)) in spokes.iter().enumerate() {
         super::LevelLineWork::charge(1)?;
+        // An end's run taken as that end's last row (`open_gap_fill_end_run_row`): nothing minted.
+        let given = match k {
+            0 => given_ends[0],
+            _ if k + 1 == spokes.len() => given_ends[1],
+            _ => None,
+        };
+        if let Some(row) = given {
+            arcs.push(row.to_vec());
+            continue;
+        }
         let (lu, ru) = (l as usize, r as usize);
         let a = left.vertices[lu];
         let b = right.vertices[ru];
@@ -465,17 +480,28 @@ pub fn arcs(
         let left_reads = right.parameters[ru].clamp(left_span[lu].0, left_span[lu].1);
         let right_reads = left.parameters[lu].clamp(right_span[ru].0, right_span[ru].1);
         let mean = (left_reads + right_reads) / 2.0;
+        let p = mesh.position(a);
+        let q = mesh.position(b);
+        // On the rolling ball's route the row is drawn about the ball's centre where the ball
+        // describes it (`ball_row_control`); with no ball on the chain that is the chain point.
         let c = if rows_on_the_ray {
             chain.point_on_the_ray(mean).1
         } else {
-            chain.point_at(mean.clamp(0.0, chain.length))
+            let row = RowAsked {
+                mean,
+                chain_point: chain.point_at(mean.clamp(0.0, chain.length)),
+                segments,
+                tie_or_mitre: left_span[lu].0 != left_span[lu].1
+                    || right_span[ru].0 != right_span[ru].1,
+                end_row: k == 0 || k + 1 == spokes.len(),
+                snap: mesh.same_place(),
+            };
+            ball_row_control::row_control(chain, p, q, row)
         };
 
         let mut arc = vec![0; row_length];
         arc[0] = a;
         arc[segments as usize] = b;
-        let p = mesh.position(a);
-        let q = mesh.position(b);
         let mut along: Box<dyn Fn(f64) -> Vector3> =
             Box::new(move |f| gap_fill::arc_point(p, c, q, f));
         // A row past the chain's end whose spoke is short against its reach to the control point:

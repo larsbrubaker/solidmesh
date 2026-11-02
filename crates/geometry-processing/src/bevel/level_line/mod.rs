@@ -2,13 +2,14 @@
 //!
 //! - **Fields.** The field traits ([`ScalarField`], [`ChainDistanceField`]) and a field reading
 //!   ([`FieldSample`]); the chain's distance field ([`ChainField`], with its end-ray bound
-//!   [`EndRayBound`], mitre and end rays [`ChainFieldExtension`], end clips
-//!   [`ChainFieldEndClip`], query pieces [`ChainFieldMeshPiece`] and smooth-joint scope
-//!   [`ChainFieldSmoothJointsScope`]), the field over a group of chains ([`PickField`]), the one a
-//!   room reading asks ([`RoomField`]), a picked point's field ([`PointField`]), a crease run-out
-//!   and its field ([`CreaseRunOut`], [`RunOutField`]), the group field with run-outs and its gate
-//!   scope ([`BandGroupFieldsWithRunOuts`], [`BandGroupFieldsRunOutsScope`]) and the pair-corner
-//!   end-face field and its scope ([`PairCornerEndFaceField`], [`PairCornerEndFaceFieldScope`]).
+//!   [`EndRayBound`], mitre and end rays [`ChainFieldExtension`], end clips [`ChainFieldEndClip`],
+//!   query pieces [`ChainFieldMeshPiece`], smooth-joint scope [`ChainFieldSmoothJointsScope`] and
+//!   the rolling ball's centres carried on it [`BallRows`]), the field over a group of chains
+//!   ([`PickField`]), the one a room reading asks ([`RoomField`]), a picked point's field
+//!   ([`PointField`]), a crease run-out and its field ([`CreaseRunOut`], [`RunOutField`]), the
+//!   group field with run-outs and its gate scope ([`BandGroupFieldsWithRunOuts`],
+//!   [`BandGroupFieldsRunOutsScope`]) and the pair-corner end-face field and its scope
+//!   ([`PairCornerEndFaceField`], [`PairCornerEndFaceFieldScope`]).
 //! - **Searches and bounds.** The Lipschitz bounds ([`field_bounds`]), the chain's segment box
 //!   tree ([`segment_box_tree`]), the convex cell bound the ridge searches prune with
 //!   ([`convex_cell_bound`]), the bounded search's cell bound and best-so-far
@@ -43,6 +44,7 @@
 //!   ([`LevelLineWorkPhase`], [`LevelLineProgress`]).
 
 pub mod ball_pierce_room;
+pub mod ball_row_control;
 pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_after_the_rounds;
@@ -164,6 +166,7 @@ pub mod needle_meter;
 mod one_chain_room;
 pub mod open_gap_fill;
 pub mod open_gap_fill_cut_section;
+pub mod open_gap_fill_end_run_row;
 pub mod open_gap_fill_fill;
 pub mod open_gap_fill_stations;
 pub mod open_gap_fill_sunk_arc;
@@ -223,6 +226,7 @@ pub mod virtual_rail_past_the_end;
 pub mod work_budget;
 mod zip_rail;
 
+pub use ball_row_control::BallRows;
 pub use band_cut::{BandCutResult, LevelLineChain};
 pub use band_gap_refusal::BandGapRefusal;
 pub use band_gap_result::BandGapResult;

@@ -235,12 +235,14 @@ fn an_end_face_cut_up_to_a_sides_surface_leaves_that_edge_as_the_ends_run() {
 
 /// What the fill made of a built band: whether the filled mesh is closed (every directed edge of
 /// its live triangles run once and once back), whether the Boolean kernel reads it as crossing
-/// itself (taken in single precision, as the app publishes it), and its volume. `Err` with the
-/// fill's refusal where it refused.
+/// itself (taken in single precision, as the app publishes it), its volume and the vertices it
+/// minted. `Err` with the fill's refusal where it refused.
 pub struct Filled {
     pub closed: bool,
     pub crosses_itself: bool,
     pub volume: f64,
+    /// Where each vertex the fill minted stands.
+    pub minted: Vec<Vector3>,
 }
 
 /// The fill of `ball` (see [`Filled`]).
@@ -280,10 +282,16 @@ pub fn filled(ball: &BandGapResult) -> Result<Filled, String> {
         .all(|(&(a, b), &count)| count == 1 && directed.get(&(b, a)) == Some(&1));
     let crosses_itself = classify_boolean_operand(&answer, Matrix4X4::IDENTITY, false)
         == BooleanOperandVerdict::SelfIntersecting;
+    let minted = fill
+        .added_vertices
+        .iter()
+        .map(|&v| mesh.position(v))
+        .collect();
     Ok(Filled {
         closed,
         crosses_itself,
         volume,
+        minted,
     })
 }
 
@@ -319,18 +327,24 @@ fn a_round_just_under_the_rounded_corners_radius_fills_closed_into_it() {
 }
 
 /// At 0.99 the end run, the rounded corner's circle in 8 chords, stands within the last row's
-/// sagitta (its 4 chords of the round's end section bow 0.019 inside the arc, which stands 0.01
-/// inside the circle): the two polylines cross, so the cap zipped between them folds over itself
-/// in the end face, and the closed answer crosses itself. This is the T Handle's web end in small
-/// (there the angle's last row stands 0.73 outside the hole's circle and 0.24 inside it). Where
-/// the end run lies on the round's end section the last row should be the end run itself; until
-/// then this pins what the fill does.
+/// sagitta of the round's end section (its 4 chords bow 0.019 inside the arc, which stands 0.01
+/// inside the circle). Minted as the angle's or the ball's arc, the last row crossed the run and
+/// the cap zipped between them folded over itself in the end face. That run lies on the end
+/// station's circle and turns one way about its centre, so it IS the last row: nothing is minted in
+/// either end face, the cell before it is zipped from the row before onto the run, no cap is laid,
+/// and the closed answer does not cross itself. This is the T Handle's web end in small.
 #[test]
-fn a_round_whose_last_row_crosses_its_end_run_folds_its_cap() {
+fn a_round_whose_end_run_lies_on_its_end_section_takes_that_run_as_its_last_row() {
     let (ball, route) = the_sharp_stretch(0.99);
     assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
     assert_eq!(ball.refusal, BandGapRefusal::None);
     let filled = filled(&ball).expect("the fill closes");
     assert!(filled.closed);
-    assert!(filled.crosses_itself);
+    assert!(!filled.crosses_itself);
+    for p in &filled.minted {
+        assert!(
+            p.y.abs() > 1e-9 && (p.y - LENGTH).abs() > 1e-9,
+            "a fill vertex is minted in an end face: {p:?}"
+        );
+    }
 }

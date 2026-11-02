@@ -8,7 +8,7 @@
 //! crease running on past each free end the tapered round never reaches, and a box whose two side
 //! regions meet again away from the chain, where the room is read, and a step whose tread, in the
 //! top's region, wraps round behind the riser the ball rests on, which the band never cuts and
-//! whose riser|tread rim is the riser's rail.
+//! whose riser|tread rim is the riser's rail, its round drawn as the ball's own arc.
 
 use std::rc::Rc;
 
@@ -407,9 +407,8 @@ fn the_step_whose_tread_wraps_round_behind_its_riser(
 /// (0, 2.5 + 0.25 k, -0.5) in order, and up the taper to y = 14; A's rail clear of the tapers (from
 /// the chain vertex at y = 3.5 to the one at 12.5, the first and last whose setback the free ends'
 /// taper leaves whole) runs at the contact's distance on the top, x = -sqrt(1.75). The fill closes
-/// and the mesh is closed.
-/// The round between the rails is not yet the ball's circular arc: the rows are still drawn about
-/// the chain point, and rows about the ball's centre are the next step, which will pin the arc.
+/// and the mesh is closed. The round between the rails is the ball's arc
+/// ([`the_steps_round_is_the_balls_arc`]).
 #[test]
 fn a_crease_a_sides_contacts_rest_on_is_that_sides_rail() {
     let (ball, route, positions) = the_step_whose_tread_wraps_round_behind_its_riser();
@@ -472,4 +471,60 @@ fn a_crease_a_sides_contacts_rest_on_is_that_sides_rail() {
     // The fill (run by `the_rails_close_onto_both_end_vertices`, closed) writes into the band's
     // own mesh, and leaves the tread as the cut did.
     the_tread_is_untouched(&ball.mesh.as_ref().expect("the filled mesh").borrow());
+}
+
+/// The step's round is the ball's own arc, not the angle's: clear of the free ends' tapers (y from
+/// 3.5 to 12.5) every row from the top's contact P = (-a, y, 0) to the rim Q = (0, y, -0.5), with
+/// a = sqrt(1.75), is drawn about the ball's centre O = (-a, y, -2) (`ball_row_control`), so every
+/// vertex the fill mints on it stands the radius 2 from O. By hand the arc's middle is
+/// O + 2 (u_P + u_Q) / |u_P + u_Q| with u_P = (0, 0, 1), u_Q = (a, 0, 1.5) / 2 and
+/// |u_P + u_Q| = sqrt(3.5): (-a (1 - 1 / sqrt(3.5)), y, -2 + sqrt(3.5)) = (-0.615769, y,
+/// -0.129171), and with the default four segments that is each row's middle vertex.
+///
+/// Only the rows whose two rail ends stand at one y are that arc: this fill is a fade (both ends
+/// free), whose spokes pair each rail vertex with the other rail's nearest rather than a station at
+/// the same parameter, and A's rail has a vertex where the cut crosses each slice's diagonal, so
+/// every other row runs from one y to another. No arc between such P and Q lies on the ball's
+/// cylinder; drawn about the ball's centre at their mean, the 216 vertices of those rows stand at
+/// most 1.23e-3 off it, against 0.086 when every row was drawn about the chain point.
+#[test]
+fn the_steps_round_is_the_balls_arc() {
+    let (ball, route, _) = the_step_whose_tread_wraps_round_behind_its_riser();
+    assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    let ends = [Vector3::new(0.0, 2.0, 0.0), Vector3::new(0.0, 14.0, 0.0)];
+    the_rails_close_onto_both_end_vertices(&ball, ends);
+    let a = 1.75f64.sqrt();
+    let middle = (-a * (1.0 - (1.0 / 3.5f64.sqrt())), -2.0 + 3.5f64.sqrt());
+    assert!((middle.0 + 0.615769).abs() < 1e-6 && (middle.1 + 0.129171).abs() < 1e-6);
+    let mesh = ball.mesh.as_ref().expect("the filled mesh").borrow();
+    // A vertex strictly between the two contacts is off every face of the part: the fill's own.
+    let between = |p: &Vector3| {
+        p.y >= 3.5
+            && p.y <= 12.5
+            && p.x > -a + 1e-9
+            && p.x < -1e-9
+            && p.z > -0.5 + 1e-9
+            && p.z < -1e-9
+    };
+    let rows: Vec<Vector3> = mesh.vertices().iter().copied().filter(between).collect();
+    let off = |p: &Vector3| (*p - Vector3::new(-a, p.y, -2.0)).length() - 2.0;
+    let on_the_ball = rows.iter().filter(|p| off(p).abs() < 1e-9).count();
+    // The rows square to the chain: 109 vertices measured, 37 of them rows' middles.
+    assert!(
+        on_the_ball > 90,
+        "{on_the_ball} of {} on the ball",
+        rows.len()
+    );
+    for p in &rows {
+        assert!(
+            off(p).abs() < 1.5e-3,
+            "row vertex {p:?} stands {} off the ball",
+            off(p)
+        );
+    }
+    let middles = rows
+        .iter()
+        .filter(|p| (p.x - middle.0).abs() < 1e-9 && (p.z - middle.1).abs() < 1e-9)
+        .count();
+    assert!(middles > 30, "{middles} rows' middles on the ball's arc");
 }

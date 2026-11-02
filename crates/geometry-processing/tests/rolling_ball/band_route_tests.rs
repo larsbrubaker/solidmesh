@@ -2,9 +2,9 @@
 //! (`level_line::rolling_ball_setbacks`, behind `rolling_ball::rolling_ball_routing`), held to the
 //! level line's own build where the two must agree: on a flat corner the ball's contacts stand
 //! r tan(phi / 2) from the edge, exactly the setback the level line works out from the angle, so
-//! the band comes out the same on both routes. And a pass the ball cannot take whole is refused
-//! (strict: never built on the level line's own setbacks), with the reason on the result and in
-//! the route.
+//! the band comes out the same on both routes, and so does its fill. And a pass the ball cannot
+//! take whole is refused (strict: never built on the level line's own setbacks), with the reason
+//! on the result and in the route.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -12,7 +12,10 @@ use std::rc::Rc;
 use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick, BandGapBuildOptions,
 };
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile};
+use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use geometry_processing::bevel::level_line::{
+    BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
+};
 use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
     last_route, reset_to_the_default, set_last_route, set_use_rolling_ball,
     the_running_app_wants_it_on, ROLLING_BALL_REFUSED, ROLLING_BALL_ROUTE,
@@ -214,6 +217,41 @@ fn a_square_corner_bands_the_same_on_the_rolling_ball_as_on_the_level_line() {
     for setback in &ball.chains[0].setbacks {
         assert!((setback - 0.25).abs() < SAME_MESH, "{setback}");
     }
+}
+
+/// A cube's edge filled on both routes: on a square corner the ball's centre stands square off the
+/// edge, so the tangents at its two contacts meet on the edge and the rows drawn about the ball's
+/// centre (`ball_row_control`) are the rows the level line draws about the chain point. The fill's
+/// meshes agree vertex for vertex, the fill's own vertices included.
+#[test]
+fn a_cube_edges_fill_is_the_same_on_both_routes() {
+    let part = a_box(Vector3::new(-1.0, -1.0, -1.0), Vector3::new(1.0, 1.0, 1.0));
+    let chains = [vec![4, 5]];
+    let filled = |on: bool| {
+        let (band, _) = built(&part, &chains, 0.25, on);
+        let before = band
+            .mesh
+            .as_ref()
+            .expect("the band")
+            .borrow()
+            .vertex_count();
+        let fill = gap_fill::fill(&band, BandProfile::Fillet, DEFAULT_FILLET_SEGMENTS)
+            .expect("the fill runs");
+        assert_eq!(fill.refusal, GapFillRefusal::None, "{:?}", fill.open_edge);
+        let mesh = fill.mesh.as_ref().expect("the filled mesh").borrow();
+        assert!(mesh.vertex_count() > before, "the fill minted no vertex");
+        (mesh.vertices().to_vec(), mesh.triangles().to_vec())
+    };
+    let (ball, ball_triangles) = filled(true);
+    let (level_line, line_triangles) = filled(false);
+    assert_eq!(ball.len(), level_line.len());
+    for (v, (p, q)) in ball.iter().zip(&level_line).enumerate() {
+        assert!(
+            (*p - *q).length() < SAME_MESH,
+            "vertex {v}: {p:?} against {q:?}"
+        );
+    }
+    assert_eq!(ball_triangles, line_triangles);
 }
 
 /// A 60 degree corner: the contacts stand r tan(60 degrees) = r sqrt 3 from the edge on both
