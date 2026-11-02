@@ -9,6 +9,8 @@
 //! only there). The ball's tags then lose what its contacts never sweep (`rolling_ball_sweep`):
 //! a side wrapping round past the chain into the other side's sweep, or a pass refused where a
 //! side's band folds back past the chain.
+//! They also lose what lies wholly past an unrayed end's own end face plane, where the round is
+//! cut flat (`rolling_ball_end_planes`): a far pocket behind the web the chain ends on.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -21,6 +23,7 @@ use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_E
 use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::foreign_edge_room_readings::FieldAt;
 use super::rolling_ball_band_tags::{self, BallSides};
+use super::rolling_ball_end_planes;
 use super::rolling_ball_sweep::{self, ContactPlanes, Sweep};
 use super::seam_edges::FeatureEdgeTest;
 use super::{band_side_groups, band_side_tagging, narrow_face_flow, step_corner_carry};
@@ -177,6 +180,24 @@ pub fn tag_the_sides(
                         })));
                     }
                 }
+                // Past an unrayed end's own face the round is cut flat: none of a side lies there.
+                let triangles: Vec<_> = indices.iter().copied().zip(tags.iter().copied()).collect();
+                let planes = rolling_ball_end_planes::end_face_planes(
+                    &|v| positions[v as usize],
+                    &triangles,
+                    &rolling_ball_end_planes::chain_vertices(&chain_edges[0]),
+                    closed[0],
+                    end_rays[0],
+                    snap,
+                );
+                rolling_ball_end_planes::leave_what_lies_past(
+                    positions,
+                    indices,
+                    &chain_edges[0],
+                    &mut tags,
+                    &planes,
+                    snap,
+                );
                 divides = true;
                 true
             }

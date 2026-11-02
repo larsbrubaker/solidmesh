@@ -184,6 +184,7 @@ pub mod refinement_splits;
 pub mod refinement_splits_enqueue;
 pub mod rolling_ball_band_tags;
 mod rolling_ball_end_caps;
+mod rolling_ball_end_planes;
 mod rolling_ball_free_ends;
 pub mod rolling_ball_setbacks;
 mod rolling_ball_sides;

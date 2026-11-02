@@ -41,7 +41,9 @@
 //! `ball_pierce_room`), which stand a radius from both sides. Where the build's side
 //! floods join the two sides (sides joined round a free end) and the ball takes the pass, the band
 //! is tagged from the ball's own sides (`rolling_ball_band_tags`), so the room reads each side
-//! there too.
+//! there too. Those sides also lose what lies wholly past an unrayed end's own end face plane
+//! (`rolling_ball_end_planes`), and a foreign edge wholly past it, on no end region, sets no room:
+//! past that plane the round is cut flat and the band does not exist.
 //!
 //! **Where it applies.** A pass of one chain, open or closed, that the ball may take - its switch
 //! on, the outer pass, no topology-only probe - is neither refused nor trusted on a room the caller
@@ -60,6 +62,7 @@ use super::ball_pierce_room::BallPath;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_room;
 use super::foreign_edge_room_per_side::SideRoomFields;
+use super::rolling_ball_end_planes;
 use super::rolling_ball_setbacks::SideSetbacks;
 use super::{end_face_sense, BandProfile, ChainField, LevelLineMesh, RoomSource, WorkError};
 
@@ -167,10 +170,36 @@ pub fn read_in_the_build(
         |s| field_without_convex_rays(left, s),
         |s| field_without_convex_rays(right, s),
     );
+    // Past an unrayed end's own face the round is cut flat: on the ball's sides nothing there is
+    // reached (`rolling_ball_end_planes`).
+    let end_planes = {
+        let m = mesh.borrow();
+        if m.sides_from_the_ball {
+            let triangles: Vec<_> = m
+                .triangles()
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| !m.is_removed(i as i32))
+                .map(|(_, t)| ((t.a, t.b, t.c), t.tag))
+                .collect();
+            rolling_ball_end_planes::end_face_planes(
+                &|v| m.position(v),
+                &triangles,
+                chain,
+                closed,
+                end_rays,
+                snap,
+            )
+        } else {
+            [None, None]
+        }
+    };
     let side_fields = sides.map(|_| SideRoomFields {
         units: [left, right],
         field_at: [&left_at, &right_at],
         without_convex_rays: [&left_bare, &right_bare],
+        end_planes,
+        snap,
     });
     band_room::room_of_cut_mesh(
         mesh,

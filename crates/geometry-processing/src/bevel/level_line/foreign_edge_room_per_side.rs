@@ -12,6 +12,13 @@
 //! reading only ever trades the larger side's reach for a side's own where the band that can reach
 //! the edge is that side's alone.
 //!
+//! **Past an unrayed end's own face.** On the rolling ball's sides an edge wholly past the plane of
+//! an end face the round is cut flat in (`SideRoomFields::end_planes`, `rolling_ball_end_planes`)
+//! is filed in no list: past that plane the band does not exist. An edge straddling or lying in the
+//! plane is filed as before, and so is one touching an end region (tags 3 and 4): those keep their
+//! tags past the plane, since the cap is cut from its own field, so the room reads what that cut
+//! can cross.
+//!
 //! **Why three readings and not one.** The edges are filed into three lists (left, right, either)
 //! and each list is read by [`room_for`] with its own field family, unchanged: its bracket, its
 //! pruning and its fixed bisection hold for one field family each, and the least of three rooms is
@@ -28,7 +35,10 @@
 
 use vector_math::{ieee_math, Vector3};
 
+use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
+use super::end_face_sense::PointPlane;
 use super::foreign_edge_room_readings::{room_for, where_the_room_is_set, FieldAt, ForeignEdge};
+use super::rolling_ball_end_planes;
 use super::{LevelLineMesh, WorkError};
 
 /// Each side's field family, as the room reads it: index 0 the left side (tag 1), 1 the right
@@ -41,6 +51,12 @@ pub struct SideRoomFields<'a> {
     /// Each side's field at a trial size without the convex end faces' rays
     /// (`band_room::room_of_cut_mesh` says why such an edge is read without them).
     pub without_convex_rays: [FieldAt<'a>; 2],
+    /// Each open end's own end face plane where the round is cut flat in it
+    /// (`rolling_ball_end_planes`): a foreign edge wholly past one sets no room, since past it the
+    /// band does not exist.
+    pub end_planes: [Option<PointPlane>; 2],
+    /// How far past a plane an edge must lie to be past it.
+    pub snap: f64,
 }
 
 /// Which side the foreign edge `low`-`high` lies on: `Some(0)` where only the left side's (tag 1)
@@ -63,10 +79,26 @@ pub fn side_of_edge(mesh: &LevelLineMesh, low: i32, high: i32) -> Option<usize> 
     }
 }
 
-/// `edges` filed as (left, right, either), each in the order given.
-fn filed(mesh: &LevelLineMesh, edges: &[ForeignEdge]) -> [Vec<ForeignEdge>; 3] {
+/// `edges` filed as (left, right, either), each in the order given, less every edge wholly past
+/// one of `end_planes` (by more than `snap`) and on no end region's triangle.
+fn filed(
+    mesh: &LevelLineMesh,
+    edges: &[ForeignEdge],
+    end_planes: &[Option<PointPlane>; 2],
+    snap: f64,
+) -> [Vec<ForeignEdge>; 3] {
     let mut lists: [Vec<ForeignEdge>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     for &edge in edges {
+        let ends = [mesh.position(edge.0), mesh.position(edge.1)];
+        let on_an_end_region = mesh.triangles_on(edge.0, edge.1).iter().any(|&t| {
+            matches!(
+                mesh.triangles()[t as usize].tag,
+                FIRST_END_TAG | SECOND_END_TAG
+            )
+        });
+        if !on_an_end_region && rolling_ball_end_planes::is_wholly_past(end_planes, &ends, snap) {
+            continue;
+        }
         let at = side_of_edge(mesh, edge.0, edge.1).unwrap_or(2);
         lists[at].push(edge);
     }
@@ -113,7 +145,7 @@ pub fn room_for_by_side(
             super::band_room::REFERENCE_SIZE,
         );
     };
-    let lists = filed(mesh, edges);
+    let lists = filed(mesh, edges, &sides.end_planes, sides.snap);
     let mut room = f64::INFINITY;
     for (list, (at, of)) in lists
         .iter()
@@ -139,7 +171,7 @@ pub fn where_the_room_is_set_by_side(
     let Some(sides) = sides else {
         return where_the_room_is_set(mesh, edges, field_at, units, room);
     };
-    let lists = filed(mesh, edges);
+    let lists = filed(mesh, edges, &sides.end_planes, sides.snap);
     for (list, (at, of)) in lists.iter().zip(families(sides, field_at, units, false)) {
         if list.is_empty() {
             continue;
