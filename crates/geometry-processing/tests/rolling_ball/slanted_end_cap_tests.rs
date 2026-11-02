@@ -9,13 +9,13 @@ use std::collections::HashMap;
 
 use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
 use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, GapFillRefusal};
+use geometry_processing::bevel::rolling_ball::rolling_ball_routing::ROLLING_BALL_REFUSED;
 use vector_math::Vector3;
 
 use crate::band_route_tests::{built, Triangles};
 use crate::band_setback_tests::{
     a_wedge_with_one_wall_bending_steeper, extruded, on_the_steeper_walls_edge,
-    on_the_straight_walls_edge, refused_by_the_ball, the_contact_distances_in_the_one_sided_groove,
-    STEEP_DEGREES,
+    on_the_straight_walls_edge, the_contact_distances_in_the_one_sided_groove, STEEP_DEGREES,
 };
 
 /// The chain: the apex from (0, 0, 0) to (0, 6, 0).
@@ -175,10 +175,13 @@ fn a_wedge_whose_sides_differ_and_whose_end_face_leans_cuts_each_end_to_meet_bot
 /// wall, and the rest of that end is a pyramid standing out of it (creased far past the feature
 /// angle), a third face. Each wall's edge with the end face (2.12 and 1.41 long) is shorter than
 /// its rail's distance (2.34 and 2.72), so no point of the end face's own edge carries the rail's
-/// end, and the ball refuses the pass, saying so; a rail end read on along the pyramid's edges
-/// would cut the end face's cap through points that are not on it.
+/// end, and the ball refuses the size, saying so in the route; a rail end read on along the
+/// pyramid's edges would cut the end face's cap through points that are not on it. The pass is
+/// refused by its size, naming the room the ball's own walk at a smaller size reads
+/// (`rolling_ball_size_room`), and the ball builds at that room.
 #[test]
-fn a_wedge_whose_end_face_is_narrower_than_its_rails_is_refused_by_the_ball() {
+fn a_wedge_whose_end_face_is_narrower_than_its_rails_is_refused_by_size_naming_a_size_the_ball_builds(
+) {
     let (mut positions, triangles) = a_wedge_with_one_wall_bending_steeper();
     // Vertices 0..4 are the profile at y = 0, 4..8 at y = 6, 8 and 9 the caps' centres.
     let notch = positions.len() as i32;
@@ -213,7 +216,16 @@ fn a_wedge_whose_end_face_is_narrower_than_its_rails_is_refused_by_the_ball() {
         notched.push(oriented(t));
     }
 
-    let route = refused_by_the_ball(&(positions, notched), &[vec![0, 4]]);
+    let part = (positions, notched);
+    let (refused, route) = built(&part, &[vec![0, 4]], 2.0, true);
+    assert_eq!(refused.refusal, BandGapRefusal::Size, "{route:?}");
+    assert!(refused.mesh.is_none(), "a refused pass hands back no band");
+    assert!(refused.room > 0.0 && refused.room < 2.0, "{}", refused.room);
+    let (at_the_room, at_route) = built(&part, &[vec![0, 4]], refused.room, true);
+    assert_eq!(at_the_room.refusal, BandGapRefusal::None, "{at_route:?}");
+    let route = route
+        .and_then(|r| r.strip_prefix(ROLLING_BALL_REFUSED).map(str::to_string))
+        .expect("the route says the ball refused the size asked");
     assert!(route.starts_with("chain 0 end 0: "), "{route}");
     assert!(
         route.ends_with(

@@ -45,6 +45,8 @@ mod run_out_tests;
 mod side_regions_tests;
 #[path = "rolling_ball/side_surface_tests.rs"]
 mod side_surface_tests;
+#[path = "rolling_ball/size_past_the_room_tests.rs"]
+mod size_past_the_room_tests;
 #[path = "rolling_ball/slanted_end_cap_tests.rs"]
 mod slanted_end_cap_tests;
 #[path = "rolling_ball/surfaces.rs"]

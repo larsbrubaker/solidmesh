@@ -112,6 +112,7 @@ use super::rolling_ball_band_tags::BallSides;
 use super::rolling_ball_end_caps::{self, CapSide};
 use super::rolling_ball_free_ends;
 use super::rolling_ball_legs::{self, ChainToWalk};
+use super::rolling_ball_refusal::BallRefusal;
 use super::triangle_edges;
 use super::BandProfile;
 use super::{chain_on_the_mesh, pick_validation, rolling_ball_sides};
@@ -267,7 +268,8 @@ pub type BallPass = (Vec<SideSetbacks>, Vec<BallSides>);
 /// [`for_the_pass`] with the triangles the ball rolled on, one [`BallSides`] per chain: what the
 /// build tags a one-chain band's sides by where its own floods join them
 /// (`rolling_ball_band_tags`). `Ok(None)` where the ball was not asked (the switch off, or a
-/// probe); `Err` with why, recorded as the route, where it was asked and
+/// probe); `Err` with why and its kind (`rolling_ball_refusal`), recorded as the route, where it
+/// was asked and
 /// cannot take the whole pass, which the build refuses (`BandGapRefusal::RollingBall`).
 #[allow(clippy::too_many_arguments)]
 pub fn with_the_sides(
@@ -281,7 +283,7 @@ pub fn with_the_sides(
     profile: BandProfile,
     band: &PassSetbacks,
     probe: bool,
-) -> Result<Option<BallPass>, String> {
+) -> Result<Option<BallPass>, BallRefusal> {
     // A chamfer is no ball's to decide (see the file header).
     if probe || profile == BandProfile::Chamfer || !use_rolling_ball() {
         return Ok(None);
@@ -301,11 +303,48 @@ pub fn with_the_sides(
             set_last_route(Some(ROLLING_BALL_ROUTE.to_string()));
             Ok(Some(setbacks))
         }
-        Err(why) => {
-            record_refusal(&why);
-            Err(why)
+        Err(refusal) => {
+            record_refusal(&refusal.why);
+            Err(refusal)
         }
     }
+}
+
+/// [`with_the_sides`] as the build asks it: also refused (and the refusal recorded) where the ball
+/// took the pass but [`a_rayed_end_that_differs`] stands in it.
+#[allow(clippy::too_many_arguments)]
+pub fn walked_for_the_build(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    side_regions: Option<&[u32]>,
+    size: f64,
+    profile: BandProfile,
+    band: &PassSetbacks,
+    probe: bool,
+) -> Result<Option<BallPass>, BallRefusal> {
+    let ball_pass = with_the_sides(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge,
+        side_regions,
+        size,
+        profile,
+        band,
+        probe,
+    )?;
+    let rayed = ball_pass
+        .as_ref()
+        .and_then(|(ball, _)| a_rayed_end_that_differs(ball, closed, &band.end_rays, size));
+    if let Some(why) = rayed {
+        record_refusal(&why);
+        return Err(BallRefusal::other(why));
+    }
+    Ok(ball_pass)
 }
 
 /// Why the ball cannot take the pass, where an open chain whose two sides differ anywhere by more
@@ -351,11 +390,13 @@ fn walked_setbacks(
     side_regions: Option<&[u32]>,
     size: f64,
     band: &PassSetbacks,
-) -> Result<(Vec<SideSetbacks>, Vec<BallSides>), String> {
+) -> Result<(Vec<SideSetbacks>, Vec<BallSides>), BallRefusal> {
     // The caller's face regions bound each side on their own; only the kernel's flood needs the
     // feature edges.
     if is_feature_edge.is_none() && side_regions.is_none() {
-        return Err("the pass has no feature edges to bound its sides".to_string());
+        return Err(BallRefusal::other(
+            "the pass has no feature edges to bound its sides".to_string(),
+        ));
     }
 
     // Where picked chains meet, each chain's end there is no end of the round: the corner's own
@@ -400,11 +441,11 @@ fn walked_setbacks(
         let convex = convex_at(0);
         if let Some(e) = (1..edges.len()).find(|&e| convex_at(e) != convex) {
             let kind = |c: bool| if c { "convex" } else { "concave" };
-            return Err(format!(
+            return Err(BallRefusal::other(format!(
                 "chain {k}: edge {e} is {} where its first edge is {}",
                 kind(!convex),
                 kind(convex)
-            ));
+            )));
         }
         let crosses = |a: i32, b: i32| {
             !on_a_chain.contains(&triangle_edges::key(a, b))
@@ -458,17 +499,17 @@ fn walked_setbacks(
         for (i, reading) in walk.readings.iter().enumerate() {
             let (to_a, to_b) = (reading.to_a, reading.to_b);
             if !to_a.is_finite() || !to_b.is_finite() {
-                return Err(format!(
+                return Err(BallRefusal::other(format!(
                     "chain {k} point {i}: a contact's distance is not a number ({to_a}, {to_b})"
-                ));
+                )));
             }
             if !closed[k] && chains.len() > 1 && !((to_a - to_b).abs() <= SIDES_AGREE_SHARE * size)
             {
-                return Err(format!(
+                return Err(BallRefusal::other(format!(
                     "chain {k} point {i}: the sides' contacts stand {to_a} and {to_b} from the \
                      chain, and an open chain's end regions in a pass of several chains are not \
                      cut per side yet"
-                ));
+                )));
             }
             left.push(to_a / size);
             right.push(to_b / size);
@@ -521,10 +562,10 @@ fn walked_setbacks(
                 }
                 let differ = format!("chain {k} end {end}: the sides' contacts stand {l} and {r}");
                 let (Some(_), WalkEnd::EndFace) = (ends[end].as_ref(), *finished) else {
-                    return Err(format!(
+                    return Err(BallRefusal::other(format!(
                         "{differ} from the chain at an end face the ball's walk never reached, \
                          and only an end it reaches is cut per side"
-                    ));
+                    )));
                 };
                 // The band's own fields, so each side's rail ends where that side's band does.
                 let field = |units: &[f64]| {

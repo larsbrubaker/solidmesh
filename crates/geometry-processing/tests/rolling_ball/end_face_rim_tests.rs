@@ -10,7 +10,9 @@ use vector_math::Vector3;
 
 use super::band_route_tests::{a_box, built, Triangles};
 use super::rounded_on_past_the_end_tests::filled;
-use geometry_processing::bevel::rolling_ball::rolling_ball_routing::ROLLING_BALL_ROUTE;
+use geometry_processing::bevel::rolling_ball::rolling_ball_routing::{
+    ROLLING_BALL_REFUSED, ROLLING_BALL_ROUTE,
+};
 
 /// The fillet's radius, and the front wall's height.
 const R: f64 = 1.5;
@@ -68,18 +70,25 @@ fn an_end_face_contact_on_the_sides_own_rim_takes_the_ball_and_fills_closed() {
 /// both faces' far rims, its centre outside the cube, touching neither face square to it; its
 /// contacts at the end faces lie on the faces' far corners. A ball that only rests on a rim
 /// there, not tangent to the side, gives no round of the size asked (a 2.0 round for a 2.2
-/// request), so the pass is refused.
+/// request), so the size is refused, never built smaller: by its size, naming the faces' width,
+/// the room the ball's own walk at a smaller size reads (`rolling_ball_size_room`), where the ball
+/// builds. The route still says why the ball refused 2.2.
 #[test]
-fn a_cube_edge_over_its_faces_width_is_refused_not_built_at_the_faces_width() {
+fn a_cube_edge_over_its_faces_width_is_refused_by_size_naming_the_faces_width() {
     let part = a_box(Vector3::new(-1.0, -1.0, -1.0), Vector3::new(1.0, 1.0, 1.0));
     let (ball, route) = built(&part, &[vec![4, 5]], 2.2, true);
-    assert_ne!(ball.refusal, BandGapRefusal::None, "{route:?}");
+    assert_eq!(ball.refusal, BandGapRefusal::Size, "{route:?}");
     assert!(ball.mesh.is_none(), "{route:?}");
-    let why = ball.rolling_ball_refusal.unwrap_or_default();
+    assert!((ball.room - 2.0).abs() < 1e-8, "{}", ball.room);
+    let why = route.unwrap_or_default();
+    assert!(why.starts_with(ROLLING_BALL_REFUSED), "{why}");
     assert!(
         why.contains("end face rests on the side's rim without touching the side square"),
         "{why}"
     );
+    let (at_the_room, at_route) = built(&part, &[vec![4, 5]], ball.room, true);
+    assert_eq!(at_the_room.refusal, BandGapRefusal::None, "{at_route:?}");
+    assert_eq!(at_route.as_deref(), Some(ROLLING_BALL_ROUTE));
 }
 
 /// A bar 3 tall and 10 deep along x, its end at x = 5 chamfered at 45 degrees at the bottom (the
@@ -89,9 +98,12 @@ fn a_cube_edge_over_its_faces_width_is_refused_not_built_at_the_faces_width() {
 /// rest on the chamfer's rim, the side's own rim, which the end rule alone would accept only if the
 /// ball touched the front face square. Here it is refused before that, as the walk reaches the
 /// end: the ball's round would cut into the chamfer (`ReachesPastThePart`). That reach check is
-/// what refuses an end whose side curves back or is cut short (`side_extension.rs`'s header).
+/// what refuses an end whose side curves back or is cut short (`side_extension.rs`'s header). The
+/// size is refused, never built smaller: by its size, naming the room the ball's own walk at a
+/// smaller size reads (`rolling_ball_size_room`), where the ball builds; the route still says why
+/// the ball refused 2.5.
 #[test]
-fn an_end_whose_side_is_chamfered_short_of_the_ball_is_refused() {
+fn an_end_whose_side_is_chamfered_short_of_the_ball_is_refused_by_size() {
     let outline = [(-5.0, 0.0), (3.5, 0.0), (5.0, 1.5), (5.0, 3.0), (-5.0, 3.0)];
     let mut positions = Vec::new();
     for y in [-1.0, 9.0] {
@@ -131,9 +143,19 @@ fn an_end_whose_side_is_chamfered_short_of_the_ball_is_refused() {
     let chain = vec![4, 3];
     assert_eq!(positions[4], Vector3::new(-5.0, -1.0, 3.0));
     assert_eq!(positions[3], Vector3::new(5.0, -1.0, 3.0));
-    let (ball, route) = built(&(positions, triangles), &[chain], 2.5, true);
-    assert_ne!(ball.refusal, BandGapRefusal::None, "{route:?}");
+    let part = (positions, triangles);
+    let (ball, route) = built(&part, std::slice::from_ref(&chain), 2.5, true);
+    assert_eq!(ball.refusal, BandGapRefusal::Size, "{route:?}");
     assert!(ball.mesh.is_none(), "{route:?}");
-    let why = ball.rolling_ball_refusal.unwrap_or_default();
+    assert!(ball.room > 0.0 && ball.room < 2.5, "{}", ball.room);
+    let why = route.unwrap_or_default();
+    assert!(why.starts_with(ROLLING_BALL_REFUSED), "{why}");
     assert!(why.contains("ReachesPastThePart"), "{why}");
+    let (at_the_room, at_route) = built(&part, &[chain], ball.room, true);
+    eprintln!(
+        "chamfered end: room {} named, {:?} there",
+        ball.room, at_the_room.refusal
+    );
+    assert_eq!(at_the_room.refusal, BandGapRefusal::None, "{at_route:?}");
+    assert_eq!(at_route.as_deref(), Some(ROLLING_BALL_ROUTE));
 }

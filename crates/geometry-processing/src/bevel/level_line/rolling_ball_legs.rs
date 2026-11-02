@@ -57,6 +57,7 @@
 
 use vector_math::Vector3;
 
+use super::rolling_ball_refusal::{BallRefusal, RefusalKind};
 use super::triangle_edges::{self, StandingMap};
 use super::ChainField;
 use super::{chain_field_rays, rolling_ball_sides};
@@ -136,7 +137,7 @@ struct Leg {
 }
 
 /// The chain walked leg by leg (see the file header), each station measured.
-pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
+pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, BallRefusal> {
     let k = c.k;
     let n = c.chain.len();
     let turns = sharp_turns(c);
@@ -236,7 +237,7 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
             convex: c.convex,
         };
         let walk = ball.walk_ending_on(&points, leg.ends).map_err(|error| {
-            if whole {
+            let why = if whole {
                 format!("chain {k}: the ball has no walk: {error:?}")
             } else {
                 format!(
@@ -244,6 +245,10 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
                     leg.at[0] % n,
                     leg.at[leg.at.len() - 1] % n
                 )
+            };
+            BallRefusal {
+                why,
+                kind: RefusalKind::of_the_walk(&error),
             }
         })?;
         // Which of the chain's own ends each of the leg's ends is, if any.
@@ -261,21 +266,21 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
         };
         for (end, done) in walk.ends.iter().enumerate() {
             if !matches!(done, WalkEnd::EndFace | WalkEnd::LastStation) {
-                return Err(match own_end(end) {
+                return Err(BallRefusal::other(match own_end(end) {
                     Some(own) => format!("chain {k}: end {own} finished {done:?}"),
                     None => format!("{}: finished {done:?}", where_ends(end)),
-                });
+                }));
             }
             if let Some(own) = own_end(end) {
                 finished[own] = *done;
             }
         }
         if walk.stations.len() != points.len() {
-            return Err(format!(
+            return Err(BallRefusal::other(format!(
                 "chain {k}: {} stations for {} chain points",
                 walk.stations.len(),
                 points.len()
-            ));
+            )));
         }
 
         let last = walk.stations.len() - 1;
@@ -290,21 +295,26 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
             if on_an_end_face {
                 let end = usize::from(i != 0);
                 for (fault, name) in walk.end_contact_faults[end].into_iter().zip(["A", "B"]) {
+                    let Some(fault) = fault else {
+                        continue;
+                    };
                     let why = match fault {
-                        None => continue,
-                        Some(EndContactFault::OnAHole) => {
+                        EndContactFault::OnAHole => {
                             "rests on a hole of the side extended past \
                                                            the face"
                         }
-                        Some(EndContactFault::OffTheSidesFaces) => {
+                        EndContactFault::OffTheSidesFaces => {
                             "rests on the side's rim without touching the side square there"
                         }
                     };
-                    return Err(format!(
-                        "{}: side {name}'s contact at the end face {why}, so its setback there is \
-                         not the round's",
-                        where_ends(end)
-                    ));
+                    return Err(BallRefusal {
+                        why: format!(
+                            "{}: side {name}'s contact at the end face {why}, so its setback \
+                             there is not the round's",
+                            where_ends(end)
+                        ),
+                        kind: RefusalKind::EndContact(fault),
+                    });
                 }
             }
             let measure = |contact: Vector3| {
@@ -373,10 +383,10 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, String> {
                 }
             }
             _ => {
-                return Err(format!(
+                return Err(BallRefusal::other(format!(
                     "chain {k} point {i}: {} stations where its legs meet",
                     found.len()
-                ))
+                )))
             }
         });
     }
