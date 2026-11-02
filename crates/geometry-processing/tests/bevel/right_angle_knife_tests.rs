@@ -128,24 +128,20 @@ fn a_crease_clearly_past_a_right_angle_is_still_a_knife() {
 
 #[test]
 fn the_side_rail_along_a_single_precision_right_angle_is_one_run() {
-    // The same rule serves both routes: the ball's side tags and the level line's.
-    for sides_from_the_ball in [false, true] {
-        let mut mesh = wall_on_a_cut_face(0.0);
-        mesh.sides_from_the_ball = sides_from_the_ball;
-        let loops = side_one_loops(&mesh);
-        assert_eq!(
-            loops.len(),
-            1,
-            "side 1 leaves one loop (ball's sides {sides_from_the_ball}): {:?}",
-            loops.iter().map(|l| &l.vertices).collect::<Vec<_>>()
-        );
-        // None of the crease's vertices (column C) is on it: the cut face's boundary is the end's.
-        assert!(
-            loops[0].vertices.iter().all(|v| v % 4 != 2),
-            "the crease stays off side 1's rail: {:?}",
-            loops[0].vertices
-        );
-    }
+    let mesh = wall_on_a_cut_face(0.0);
+    let loops = side_one_loops(&mesh);
+    assert_eq!(
+        loops.len(),
+        1,
+        "side 1 leaves one loop: {:?}",
+        loops.iter().map(|l| &l.vertices).collect::<Vec<_>>()
+    );
+    // None of the crease's vertices (column C) is on it: the cut face's boundary is the end's.
+    assert!(
+        loops[0].vertices.iter().all(|v| v % 4 != 2),
+        "the crease stays off side 1's rail: {:?}",
+        loops[0].vertices
+    );
 }
 
 #[test]

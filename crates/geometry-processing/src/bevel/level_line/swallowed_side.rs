@@ -126,9 +126,8 @@ pub fn fill(
 
     let filled = open_gap_fill_fill::fill(
         mesh_handle,
-        // The chain's own field: the rows' chain points and tolerances. Its runs were placed per
-        // side (`swallowed_side_runs::runs_if_both_swallowed_per_side`), and a swallowed pair is
-        // never reached with sides that differ (rayed ends keep the level line there).
+        // The chain's own field: the rows' chain points and tolerances, the field its runs were
+        // placed at (`swallowed_side_runs::runs_if_both_swallowed`).
         &gap.chains[0],
         &left,
         &right,

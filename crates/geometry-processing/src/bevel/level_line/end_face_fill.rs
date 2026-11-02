@@ -4,7 +4,7 @@
 //! ([`runs_end_past_the_end`]), whether the end face meets the sides convexly
 //! ([`meets_the_sides_convexly`]), whether a run is planar ([`is_planar`]) and an end face's one
 //! run ([`run`]), a trimmed run with one end put back whole ([`with_whole_end`]), whether a gap
-//! is concave ([`is_concave`]), a run without its end-face edges ([`without_end_face_edges_at`]) and
+//! is concave ([`is_concave`]), a run without its end-face edges ([`without_end_face_edges`]) and
 //! the crease stretch along the end face ([`crease_run`]). The fill itself (`TryEndFaces`,
 //! `TryGrowingEndFaces`) is in `end_face_fill_try.rs`, kept apart for the file-size limit and
 //! re-exported here.
@@ -330,13 +330,9 @@ pub fn is_concave(mesh: &LevelLineMesh, left: &GapLoop, right: &GapLoop) -> bool
     false
 }
 
-/// `run` without the edges that stand on the end face alone (tag 0), at its head where `at[0]`
-/// and at its tail where `at[1]`; `None` (noting the site) where nothing is left.
-pub fn without_end_face_edges_at(
-    mesh: &LevelLineMesh,
-    run: &GapLoop,
-    at: [bool; 2],
-) -> Option<GapLoop> {
+/// `run` without the edges that stand on the end face alone (tag 0), at its head and its tail;
+/// `None` (noting the site) where nothing is left.
+pub fn without_end_face_edges(mesh: &LevelLineMesh, run: &GapLoop) -> Option<GapLoop> {
     let on_the_end_face_alone = |a: i32, b: i32| {
         let standing = mesh.triangles_on(a, b);
         standing.len() == 1 && mesh.triangles()[standing[0] as usize].tag == 0
@@ -344,15 +340,13 @@ pub fn without_end_face_edges_at(
 
     let mut from = 0;
     let mut to = run.vertices.len() as i32 - 1;
-    while at[0]
-        && from < to
+    while from < to
         && on_the_end_face_alone(run.vertices[from as usize], run.vertices[from as usize + 1])
     {
         from += 1;
     }
 
-    while at[1]
-        && to > from
+    while to > from
         && on_the_end_face_alone(run.vertices[to as usize - 1], run.vertices[to as usize])
     {
         to -= 1;

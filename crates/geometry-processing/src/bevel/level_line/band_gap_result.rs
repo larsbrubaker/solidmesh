@@ -43,10 +43,6 @@ pub struct BandGapResult {
     /// The pick's chains as fields, in the order they were given: the setbacks, the parameters and
     /// the distances the gap was cut to. A pick of one chain holds exactly one.
     pub chains: Vec<Rc<ChainField>>,
-    /// Where the rolling ball cut the band, each chain's left (side 1) and right (side 2) fields:
-    /// what a reading that places one side's rail reads (the rail joined past a rib,
-    /// `virtual_rail::joined_sides`); `None` on every other build, whose sides read `chains`.
-    pub side_chains: Option<Vec<[Rc<ChainField>; 2]>>,
     /// Which of the room's readings named it - see [`RoomSource`]. Kind `None` where the room was
     /// handed in through knownRoom, or where nothing bounded the pick.
     pub room_set_by: RoomSource,
@@ -107,9 +103,6 @@ pub struct BandGapResult {
     pub work_spent: i64,
     /// How many units it was allowed.
     pub work_limit: i64,
-    /// Why the rolling ball could not take the pass, where the refusal is
-    /// [`BandGapRefusal::RollingBall`]; `None` otherwise.
-    pub rolling_ball_refusal: Option<String>,
 }
 
 impl Default for BandGapResult {
@@ -119,7 +112,6 @@ impl Default for BandGapResult {
             room: 0.0,
             mesh: None,
             chains: Vec::new(),
-            side_chains: None,
             room_set_by: RoomSource::nothing(),
             unflowed_room: None,
             swallowed_runs: None,
@@ -140,7 +132,6 @@ impl Default for BandGapResult {
             phase: LevelLineWorkPhase::default(),
             work_spent: 0,
             work_limit: 0,
-            rolling_ball_refusal: None,
         }
     }
 }

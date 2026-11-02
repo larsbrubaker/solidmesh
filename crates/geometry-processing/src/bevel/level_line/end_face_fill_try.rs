@@ -3,26 +3,22 @@
 //! 800-line limit;
 //! both are re-exported from there. It reads each end's run - the cut's run on the end face
 //! (`end_face_fill::run`), a growing end face's crease stretch (`end_face_fill::crease_run`), the
-//! end-plane trim's section (`end_plane_trim_run::trim_end`), a mixed pick's nose, a free tip's
-//! nose (an end the rolling ball read as free, its rails kept whole and closing onto the end
-//! vertex: `LevelLineMesh::ball_free_ends`) or a hull end
+//! end-plane trim's section (`end_plane_trim_run::trim_end`), a mixed pick's nose or a hull end
 //! carried past the part (`virtual_rail_past_the_end::extended`) - and hands the strip and its end
 //! runs to the open fill (`open_gap_fill_fill::fill`).
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
-
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::end_face_fill::{
     crease_run, is_concave, is_planar, meets_the_sides_convexly, rails_to_the_clip_corner, run,
-    runs_end_past_the_end, with_whole_end, without_end_face_edges_at,
+    runs_end_past_the_end, with_whole_end, without_end_face_edges,
 };
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
-    corner_cap_flat_ends, corner_fill, end_plane_trim_run, hull_clip, open_gap_fill,
-    virtual_rail_past_the_end, BandGapResult, BandProfile, ChainField, GapFillRefusal,
-    GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
+    corner_cap_flat_ends, end_plane_trim_run, hull_clip, open_gap_fill, virtual_rail_past_the_end,
+    BandGapResult, BandProfile, ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
+    LevelLineMeshError,
 };
 
 /// A flag as the refusal sites print it: `True` or `False`.
@@ -141,41 +137,10 @@ pub fn try_end_faces(
     let grows_second = !gap.loops.iter().any(|l| l.side == SECOND_END_TAG);
     let grows = [grows_first, grows_second];
     let (whole_left, whole_right) = (left.clone(), right.clone());
-    // A FREE end's nose: an end the rolling ball read as free (no end face, no picked chain
-    // meeting it: `LevelLineMesh::ball_free_ends`), where both rails close onto the chain's own end
-    // vertex, has no end face, so no edge of a rail there is an end face's crease, though a rail
-    // may run along a rim onto an untagged face (a rim the side's contacts rest on): the rails
-    // stay whole there, the end is neither trimmed nor a hull, and its run is the nose alone. The
-    // rails meeting there is not enough on its own: on a growing end face a rail can take knife
-    // crease edges down to the end vertex too.
-    let noses = {
+    if grows_first || grows_second {
         let mesh = mesh_handle.borrow();
-        let points = gap.chains[0].points();
-        let nose = |free: bool, meets: bool, at: i32, point: Vector3| {
-            free && meets && corner_fill::same(mesh.position(at), point)
-        };
-        [
-            grows_first
-                && nose(
-                    mesh.ball_free_ends[0],
-                    left.vertices[0] == right.vertices[right.vertices.len() - 1],
-                    left.vertices[0],
-                    points[0],
-                ),
-            grows_second
-                && nose(
-                    mesh.ball_free_ends[1],
-                    left.vertices[left.vertices.len() - 1] == right.vertices[0],
-                    right.vertices[0],
-                    points[points.len() - 1],
-                ),
-        ]
-    };
-    if (grows_first && !noses[0]) || (grows_second && !noses[1]) {
-        let mesh = mesh_handle.borrow();
-        // Left runs end 0 to end 1, right end 1 to end 0.
-        let without_left = without_end_face_edges_at(&mesh, &left, [!noses[0], !noses[1]]);
-        let without_right = without_end_face_edges_at(&mesh, &right, [!noses[1], !noses[0]]);
+        let without_left = without_end_face_edges(&mesh, &left);
+        let without_right = without_end_face_edges(&mesh, &right);
         let (Some(without_left), Some(without_right)) = (without_left, without_right) else {
             open_gap_fill::append_ends_site(" / EndFaceFill:85");
             return Ok(None);
@@ -185,13 +150,6 @@ pub fn try_end_faces(
     }
 
     let chain: &ChainField = &gap.chains[0];
-    // Each side's own field where the rolling ball cut the sides apart, so a trimmed end cuts each
-    // rail at its own side's setback; the chain's for both otherwise.
-    let rails: [&ChainField; 2] = gap
-        .side_chains
-        .as_ref()
-        .and_then(|sides| sides.first())
-        .map_or([chain, chain], |pair| [&*pair[0], &*pair[1]]);
     let points = chain.points();
     let (point_first, point_last) = (points[0], points[points.len() - 1]);
 
@@ -231,8 +189,8 @@ pub fn try_end_faces(
             }
         };
 
-        hull_first = !noses[0] && grows_to_a_hull(false);
-        hull_second = !noses[1] && grows_to_a_hull(true);
+        hull_first = grows_to_a_hull(false);
+        hull_second = grows_to_a_hull(true);
         carries = !hull_first && !hull_second;
     }
 
@@ -259,8 +217,8 @@ pub fn try_end_faces(
         ];
         (
             beside_a_hull,
-            !noses[0] && (t(false, carries) || beside_a_hull[0]),
-            !noses[1] && (t(true, carries) || beside_a_hull[1]),
+            t(false, carries) || beside_a_hull[0],
+            t(true, carries) || beside_a_hull[1],
         )
     };
 
@@ -268,15 +226,12 @@ pub fn try_end_faces(
         end_plane_trim_run::trim_end(
             &mut mesh_handle.borrow_mut(),
             chain,
-            rails,
             &mut left,
             &mut right,
             false,
             profile,
             fillet_segments,
         )?
-    } else if noses[0] {
-        Some(vec![left.vertices[0]])
     } else if grows_first {
         crease_run(
             &mesh_handle.borrow(),
@@ -296,15 +251,12 @@ pub fn try_end_faces(
         end_plane_trim_run::trim_end(
             &mut mesh_handle.borrow_mut(),
             chain,
-            rails,
             &mut left,
             &mut right,
             true,
             profile,
             fillet_segments,
         )?
-    } else if noses[1] {
-        Some(vec![right.vertices[0]])
     } else if grows_second {
         crease_run(
             &mesh_handle.borrow(),

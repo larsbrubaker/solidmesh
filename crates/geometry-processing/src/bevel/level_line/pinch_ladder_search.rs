@@ -257,8 +257,6 @@ pub fn leaves_one_loop_per_side(
         0.0,
         sharp_turn_degrees,
         0,
-        // A topology-only probe never walks the rolling ball, so it reads no sides.
-        None,
     );
     LevelLineWork::enter(LevelLineWorkPhase::CutRoom);
 

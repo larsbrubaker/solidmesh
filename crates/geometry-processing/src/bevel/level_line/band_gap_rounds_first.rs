@@ -472,7 +472,6 @@ pub fn build_the_rounds(
             refusal: GapFillRefusal::OpenChainEnds,
             mesh: gap.mesh.clone(),
             phase: gap.phase,
-            rolling_ball_refusal: gap.rolling_ball_refusal.clone(),
             ..GapFillResult::default()
         });
     }
@@ -604,7 +603,6 @@ pub fn build_rounds_first(
                 refusal: GapFillRefusal::OpenChainEnds,
                 mesh: gap.mesh.clone(),
                 phase: gap.phase,
-                rolling_ball_refusal: gap.rolling_ball_refusal.clone(),
                 ..GapFillResult::default()
             });
         }

@@ -1,6 +1,5 @@
-//! Whether the band ends on a rim, read per side: a foreign edge between a band group's triangle
-//! and the far face's untagged one is judged by that group's own field (`field_of_tag`), never by
-//! the chain's own field (the larger side) through the untagged triangle.
+//! Whether the band ends on a rim (`consumed_to_the_rim::rims_the_band_ends_on`): a band that
+//! stands over a side's crease ends on no rim there.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -56,47 +55,13 @@ fn field(points: &[Vector3], setback: f64) -> Rc<ChainField> {
     )
 }
 
-/// The side's own field cuts at 2, exactly on the crease; the chain's own (the larger side) at 3,
-/// past it. Read by the side group's field the crease is a rim the band ends on; the untagged
-/// triangle is never asked about, and with the chain's own field for the side (the level line,
-/// one field for both sides) the band stands over the crease and there is no rim.
+/// The chain's field at a setback of 3 reaches past the side's crease at y = 2, so the band
+/// stands over the crease and there is no rim.
 #[test]
-fn a_rim_at_the_smaller_sides_distance_is_read_by_that_sides_own_field() {
+fn a_band_standing_over_the_sides_crease_ends_on_no_rim() {
     let (mesh, chain_edges, points) = a_side_ending_on_a_crease();
     let own = field(&points, 3.0);
-    let side = field(&points, 2.0);
-    let asked = RefCell::new(Vec::new());
-    let read = |tag: i32| {
-        asked.borrow_mut().push(tag);
-        if tag == 1 {
-            Rc::clone(&side)
-        } else {
-            Rc::clone(&own)
-        }
-    };
-    let rims = rims_the_band_ends_on(&mesh, &chain_edges, &own, &read, 0.0, 0.1, 1.0, 1e-3)
-        .expect("no budget");
-    let rims = rims.expect("the side's band ends on the crease");
-    assert!(!rims.is_empty());
-    for (a, b) in &rims {
-        assert!(
-            (a.y - 2.0).abs() <= 1e-12 && (b.y - 2.0).abs() <= 1e-12,
-            "{a:?} {b:?}"
-        );
-    }
-    assert!(!asked.borrow().is_empty());
-    assert!(
-        asked.borrow().iter().all(|&tag| tag == 1),
-        "only the band group is asked: {:?}",
-        asked.borrow()
-    );
-
-    let one_field = |_: i32| Rc::clone(&own);
-    let level_line =
-        rims_the_band_ends_on(&mesh, &chain_edges, &own, &one_field, 0.0, 0.1, 1.0, 1e-3)
-            .expect("no budget");
-    assert_eq!(
-        level_line, None,
-        "the larger side's band stands over the crease"
-    );
+    let rims =
+        rims_the_band_ends_on(&mesh, &chain_edges, &own, 0.0, 0.1, 1.0, 1e-3).expect("no budget");
+    assert_eq!(rims, None, "the band stands over the crease");
 }

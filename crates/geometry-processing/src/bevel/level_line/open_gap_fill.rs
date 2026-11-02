@@ -14,7 +14,6 @@ use std::rc::Rc;
 
 use vector_math::{ieee_math, Vector3};
 
-use super::ball_row_control::{self, RowAsked};
 use super::end_face_section_row::{section_row, EndRowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
@@ -406,9 +405,7 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
 /// chain, so a spoke past an end takes the END VERTEX as its control point and the nose is the
 /// profile swept round that vertex. An end face's last row (an end-face fill's first or last
 /// spoke) takes its end vertex whatever the mean, and on a leaning end face is the round's own
-/// section in that face (`end_face_section_row`), so the cap beside it closes flat. On the rolling ball's route a row the ball describes is drawn
-/// about the ball's centre instead (`ball_row_control::row_control`), so it is the ball's arc. A
-/// row in `given_ends` (first spoke's, last spoke's) is taken as it is, and nothing is minted.
+/// section in that face (`end_face_section_row`), so the cap beside it closes flat.
 /// `flat_end_faces` names the ends whose end face is flat where the row closes it; only there is
 /// the end row drawn about the end vertex (and, leaning, as the round's section).
 /// Every vertex minted is appended to `added_vertices`; each spoke charged. `rows_on_the_ray` and
@@ -424,7 +421,6 @@ pub fn arcs(
     added_vertices: &mut Vec<i32>,
     rows_on_the_ray: bool,
     meets_on_the_crease: bool,
-    given_ends: [Option<&[i32]>; 2],
     flat_end_faces: [bool; 2],
 ) -> Result<Vec<Vec<i32>>, super::WorkError> {
     let mut arcs = Vec::new();
@@ -434,16 +430,6 @@ pub fn arcs(
     let row_length = (segments + 1) as usize;
     for (k, &(l, r)) in spokes.iter().enumerate() {
         super::LevelLineWork::charge(1)?;
-        // An end's run taken as that end's last row (`open_gap_fill_end_run_row`): nothing minted.
-        let given = match k {
-            0 => given_ends[0],
-            _ if k + 1 == spokes.len() => given_ends[1],
-            _ => None,
-        };
-        if let Some(row) = given {
-            arcs.push(row.to_vec());
-            continue;
-        }
         let (lu, ru) = (l as usize, r as usize);
         let a = left.vertices[lu];
         let b = right.vertices[ru];
@@ -488,10 +474,8 @@ pub fn arcs(
         let mean = (left_reads + right_reads) / 2.0;
         let p = mesh.position(a);
         let q = mesh.position(b);
-        // On the rolling ball's route the row is drawn about the ball's centre where the ball
-        // describes it (`ball_row_control`); with no ball on the chain that is the chain point.
-        // An end face's last row is drawn about the end vertex, not the chain's point at its
-        // rails' mean: on a leaning end face the two rails end at different chain parameters, so
+        // The row is drawn about the chain point. An end face's last row is drawn about the end
+        // vertex, not the chain's point at its rails' mean: on a leaning end face the two rails end at different chain parameters, so
         // their mean can fall inside the chain and its point off the end face, and the row bowed
         // out of the face its cap must close flat in (the groove leaning 8 degrees: 1.7e-3 off,
         // and the cap between it and the end run was no longer star-shaped about the end vertex).
@@ -512,17 +496,7 @@ pub fn arcs(
         let c = if rows_on_the_ray {
             chain.point_on_the_ray(mean).1
         } else {
-            let row = RowAsked {
-                mean,
-                chain_point,
-                segments,
-                tie_or_mitre: left_span[lu].0 != left_span[lu].1
-                    || right_span[ru].0 != right_span[ru].1,
-                end_row,
-                snap: mesh.same_place(),
-                tangent: chain_direction_at(chain, mean),
-            };
-            ball_row_control::row_control(chain, p, q, row)
+            chain_point
         };
 
         let mut arc = vec![0; row_length];
@@ -536,10 +510,6 @@ pub fn arcs(
             let asked = EndRowAsked {
                 at_the_far_end: k != 0,
                 tangent: chain_direction_at(chain, if k == 0 { 0.0 } else { chain.length }),
-                segments,
-                tie_or_mitre: left_span[lu].0 != left_span[lu].1
-                    || right_span[ru].0 != right_span[ru].1,
-                snap: mesh.same_place(),
             };
             if let Some(section) = section_row(chain, p, q, asked) {
                 along = Box::new(section);

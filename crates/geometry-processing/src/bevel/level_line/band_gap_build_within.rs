@@ -1,46 +1,11 @@
 //! The band gap's build proper from step 1's fields on (split out of `band_gap.rs` for size; the
-//! pass is entered, its step 1 readings made and the ball asked, in `band_gap_build_entry.rs`).
+//! pass is entered and its step 1 readings made in `band_gap_build_entry.rs`).
 //! Steps 1 to 7 of the level line construction - setback, sides (step 2 is
 //! `band_gap_build_sides.rs`'s), refinement and roots per group, the band's delete, the room, the
 //! gap loops and the pinch - leaving nothing to do but fill. Its faults travel as [`BuildFault`]
 //! (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
 //! outcomes. Step 1's setbacks and fields are `band_gap_setback_fields.rs`'s.
-//!
-//! Behind the rolling ball's switch, the outer pass's step 1 fields at the size take their
-//! setbacks from the ball's contacts (`rolling_ball_setbacks.rs`): one field per side per chain and
-//! the chain's own field, the larger of the two sides at each point.
-//! - **Per side:** each side group's reading for the chains it is a side of
-//!   (`band_group_fields::of_sides`), and with it that group's refinement, end clip and sharp-joint
-//!   corners, witness and roots - everything that places a side's rail. A pass of one chain whose
-//!   side floods join its two sides into one region is tagged from the ball's own sides
-//!   (`rolling_ball_band_tags`, in step 2), so each side is a group of its own there too.
-//! - **Per end:** a single open chain's end region whose sides differ at its end reads its cap
-//!   field (`PassSetbacks::caps_of_one_open_chain`), cut to meet each side's rail.
-//! - **Per side, judged:** whether the band ends on a rim (`consumed_to_the_rim`, each edge read
-//!   with the field of the group its triangles belong to), the rims each side's contacts rest on,
-//!   which the loop walk takes as that side's rail (`rolling_ball_rested_rims`, added to the
-//!   consumed rims for that side's group only), and the swallowed sides' made-up runs
-//!   (`swallowed_side_runs::runs_if_both_swallowed_per_side`, each side's run at its own setback).
-//! - **The chain's own field, as a reach or a tolerance:** the tagging's reach, the narrow end
-//!   face's flow, which foreign edges the band reaches, the swallowed runs' walls, stations and
-//!   margin, the loop walk's ties and the result's `chains` (which the fill reads for its rows'
-//!   chain points, end rays and tolerances). The larger side is how far the band can reach; it is
-//!   never read as where one side's rail stands: the result carries the side fields
-//!   (`side_chains`), which every reading that places one side's rail reads: the rail joined past
-//!   a rib (`virtual_rail::joined_sides`), the rail carried past an oblique end
-//!   (`virtual_rail_past_the_end`) and the end-plane trim (`end_plane_trim_run::trim_end`).
-//! - **The room of a pass of one chain:** read in the build with the ball's setbacks at the size
-//!   asked, scaled (`one_chain_room`, whose header says why): `field_at_0`, the room's convex-ray
-//!   field, the narrow end face's flow and the room's margin. Such a pass is handed no room
-//!   (`band_gap::build_unvalidated` sets a caller's aside where the ball may take the pass).
-//! - **Strict:** a pass the ball is asked to take and cannot is refused before it gets here
-//!   (`band_gap_build_entry.rs`); this build is handed the ball's walk, or none where the ball was
-//!   not asked.
-//! - **The level line's own setbacks:** the probes and the room of a pass of several chains (its
-//!   pair and corner readings). There a closed chain whose sides differ can read a room that names
-//!   a size the ball's band does not fit (a side whose contact stands farther out than the angle
-//!   formula says), and such a size is then not refused by its room.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -55,16 +20,12 @@ use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
 use super::band_gap_setback_fields::PassSetbacks;
 use super::band_refinement::{self, RefineOptions};
-use super::rolling_ball_setbacks::BallPass;
-use super::rolling_ball_size_room;
-use super::rolling_ball_sweep::ContactPlanes;
 use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
     band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
-    one_chain_room, pick_validation, pinch_ladder_search, rolling_ball_rested_rims,
-    sharp_joint_corners, side_roots_settling, side_witness, square_crease_end_clip,
-    swallowed_side_runs, triangle_edges,
+    one_chain_room, pick_validation, pinch_ladder_search, sharp_joint_corners, side_roots_settling,
+    side_witness, square_crease_end_clip, swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
@@ -72,12 +33,9 @@ use super::{
     VertexFieldReading,
 };
 
-/// The build from step 1's fields on: on the ball's walk (`ball_pass`) where it takes the pass,
-/// on the level line's own setbacks where it was not asked. With `room_only`, a pass of one chain
-/// stops once its room is read, before anything is cut, and answers `None` where the size fits
-/// that room and `Size` where it does not (`rolling_ball_size_room`).
+/// The build from step 1's fields on, on the level line's own setbacks.
 #[allow(clippy::too_many_arguments)]
-pub(super) fn build_on_the_walk(
+pub(super) fn build_from_the_setbacks(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
@@ -87,8 +45,6 @@ pub(super) fn build_on_the_walk(
     working: &mut Option<Rc<RefCell<LevelLineMesh>>>,
     unflowed_room: &mut Option<f64>,
     setbacks: &PassSetbacks,
-    ball_pass: Option<BallPass>,
-    room_only: bool,
 ) -> Result<BandGapResult, BuildFault> {
     let BuildWithinArgs {
         size,
@@ -115,35 +71,19 @@ pub(super) fn build_on_the_walk(
         end_rays,
         ..
     } = setbacks;
-    let (ball_setbacks, ball_sides) = match ball_pass {
-        Some((setbacks, sides)) => (Some(setbacks), Some(sides)),
-        None => (None, None),
-    };
-    // The ball's sides tag a one-chain band only where its setbacks are kept.
-    let ball_sides = ball_sides.filter(|_| only && ball_setbacks.is_some());
-    let (fields, side_fields) = setbacks.fields_at_the_size(ball_setbacks.as_deref(), size)?;
-    let caps = setbacks.caps_of_one_open_chain(ball_setbacks.as_deref(), size)?;
+    let fields = setbacks.fields_at_the_size(size)?;
 
     // Scaling the setbacks moves no point, so a polyline that built a field at the size builds it
-    // at every size. A pass of one chain the ball takes reads its room with the ball's setbacks
-    // (`one_chain_room`); every other pass with the angle's.
-    let ball_room_units = one_chain_room::the_units(ball_setbacks.as_deref(), only);
-    let room_units: &[f64] = ball_room_units.as_deref().unwrap_or(&unit_setbacks[0]);
+    // at every size.
     let field_at_0 = |s: f64| {
         setbacks
-            .field_from(0, room_units, s)
+            .field_of(0, s)
             .expect("the chain's polyline built a field at the size asked")
     };
     let field = Rc::clone(&fields[0]);
 
-    // 2. SIDES, as GROUPS. The ball's sides are bounded by its planes through the chain.
+    // 2. SIDES, as GROUPS.
     LevelLineWork::enter(LevelLineWorkPhase::Sides);
-    let planes = match (&ball_sides, ball_setbacks.as_deref()) {
-        (Some(_), Some(ball)) => {
-            ContactPlanes::of(&ball[0], &setbacks.chain_points[0], closed[0], size, snap)
-        }
-        _ => None,
-    };
     let side_inputs = SideInputs {
         positions,
         indices,
@@ -155,7 +95,6 @@ pub(super) fn build_on_the_walk(
         fields: &fields,
         field: &field,
         field_at_0: &field_at_0,
-        room_units,
         known_room,
         size,
         snap,
@@ -163,16 +102,11 @@ pub(super) fn build_on_the_walk(
         profile,
         fillet_segments,
         step_corners,
-        ball_sides: ball_sides.as_ref().map(|sides| &sides[0]),
-        ball_sweep: planes
-            .as_ref()
-            .zip(side_fields.as_ref().map(|sides| &sides[0])),
     };
-    let (tags, groups, sides_from_the_ball) =
-        match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {
-            Sides::Tagged(tags, groups, from_the_ball) => (tags, groups, from_the_ball),
-            Sides::Refused(refusal) => return Ok(*refusal),
-        };
+    let (tags, groups) = match band_gap_build_sides::tag_the_sides(&side_inputs, unflowed_room)? {
+        Sides::Tagged(tags, groups) => (tags, groups),
+        Sides::Refused(refusal) => return Ok(*refusal),
+    };
 
     let mesh = Rc::new(RefCell::new(LevelLineMesh::from_triangles(
         positions,
@@ -187,11 +121,6 @@ pub(super) fn build_on_the_walk(
         m.set_same_place(snap).map_err(defect)?;
         // Needles are repaired out of the mesh BEFORE anything reads it.
         m.needle_floor = needle_floor_of(snap, tolerance);
-        m.sides_from_the_ball = sides_from_the_ball;
-        m.ball_free_ends = match ball_setbacks.as_deref() {
-            Some([one]) if sides_from_the_ball => one.free_ends,
-            _ => [false, false],
-        };
 
         // ...but never a needle standing ON the pick, nor a fold the tagging flooded up to.
         let mut on_a_chain: HashSet<(i32, i32)> = HashSet::new();
@@ -220,17 +149,6 @@ pub(super) fn build_on_the_walk(
             closed[0],
             &mesh,
             setbacks,
-            room_units,
-            one_chain_room::the_sides(ball_setbacks.as_deref(), only, &tags),
-            one_chain_room::the_path(
-                ball_setbacks.as_deref(),
-                only,
-                &setbacks.chain_points[0],
-                closed[0],
-                setbacks.end_rays[0],
-                size,
-            )
-            .as_ref(),
             snap,
             seam_epsilon,
             profile,
@@ -245,7 +163,7 @@ pub(super) fn build_on_the_walk(
         Some(room)
             if !closed[0] && size > room && read_room_set_by.kind == RoomReadingKind::Foreign =>
         {
-            let largest = room_units
+            let largest = unit_setbacks[0]
                 .iter()
                 .copied()
                 .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);
@@ -253,9 +171,6 @@ pub(super) fn build_on_the_walk(
                 &mesh,
                 &chain_edges[0],
                 &field,
-                &|tag| {
-                    band_group_fields::one_chains_field(tag, &field, side_fields.as_deref(), &caps)
-                },
                 seam_epsilon,
                 size - room,
                 room_margin(largest, snap),
@@ -265,18 +180,6 @@ pub(super) fn build_on_the_walk(
         _ => None,
     };
     let ends_on_the_rim = consumed_rims.is_some();
-    if room_only {
-        return Ok(rolling_ball_size_room::room_only_answer(
-            args,
-            positions,
-            indices,
-            chains,
-            closed,
-            read_room,
-            read_room_set_by,
-            ends_on_the_rim,
-        ));
-    }
 
     // The input's precision is applied only from here on; the strips and needles go after the room
     // reading, under their own phase.
@@ -302,15 +205,8 @@ pub(super) fn build_on_the_walk(
         &tags,
         Some(&input_standing),
     );
-    let (group_fields, group_samples) = band_group_fields::of_sides(
-        &groups,
-        only,
-        &fields,
-        side_fields.as_deref(),
-        Some(&caps),
-        run_outs.as_ref(),
-    )
-    .map_err(defect)?;
+    let (group_fields, group_samples) =
+        band_group_fields::of(&groups, only, &fields, run_outs.as_ref()).map_err(defect)?;
     let pick_has_corners = !pick_validation::corners_of(chains, closed, true).is_empty();
 
     // 3. PER GROUP: refine and root the group's own triangles against the group's own reading.
@@ -332,12 +228,7 @@ pub(super) fn build_on_the_walk(
             }
         }
 
-        let group_chain_fields = band_group_fields::chain_fields_of_group(
-            group,
-            &fields,
-            side_fields.as_deref(),
-            Some(&caps),
-        );
+        let group_chain_fields = &fields;
         let member_fields = || {
             group
                 .members
@@ -481,16 +372,7 @@ pub(super) fn build_on_the_walk(
     // A side the strip swallows whole leaves no run, and its made-up one is read off the side
     // before it goes.
     let swallowed_runs = if only && !closed[0] {
-        let sides = [1, 2].map(|tag| {
-            band_group_fields::one_chains_field(tag, &field, side_fields.as_deref(), &caps)
-        });
-        swallowed_side_runs::runs_if_both_swallowed_per_side(
-            &mesh.borrow(),
-            &field,
-            [&*sides[0], &*sides[1]],
-            profile,
-        )?
-        .map(Vec::from)
+        swallowed_side_runs::runs_if_both_swallowed(&mesh.borrow(), &field, profile)?.map(Vec::from)
     } else {
         None
     };
@@ -538,23 +420,7 @@ pub(super) fn build_on_the_walk(
         }
     });
 
-    // On the ball's route each side's rested rims are its rail too: side A's for tag 1's walk,
-    // side B's for tag 2's, on top of the rims the band is consumed to.
-    let rested = match (&ball_sides, ball_setbacks.as_deref()) {
-        (Some(sides), Some(ball)) => rolling_ball_rested_rims::of_the_chain(
-            positions, indices, &chains[0], closed[0], &ball[0], &sides[0], size,
-        ),
-        _ => [Vec::new(), Vec::new()],
-    };
     for group in &groups {
-        let rested_rims = match group.tag {
-            1 | 2 if !rested[(group.tag - 1) as usize].is_empty() => {
-                let mut rims = consumed_rims.clone().unwrap_or_default();
-                rims.extend_from_slice(&rested[(group.tag - 1) as usize]);
-                Some(rims)
-            }
-            _ => None,
-        };
         let walked = gap_loop_walk::loops_of_side(
             &mesh.borrow(),
             &*group_samples[&group.tag],
@@ -563,7 +429,7 @@ pub(super) fn build_on_the_walk(
             side_of_both_sided
                 .as_ref()
                 .map(|f| f as &dyn Fn(i32, Vector3) -> i32),
-            rested_rims.as_deref().or(consumed_rims.as_deref()),
+            consumed_rims.as_deref(),
             snap,
         )?;
         if let Some(bad) = side_fault.borrow_mut().take() {
@@ -727,7 +593,6 @@ pub(super) fn build_on_the_walk(
         room_set_by,
         mesh: Some(mesh),
         chains: fields,
-        side_chains: side_fields,
         loops,
         side_loops,
         removed_triangles: removed,

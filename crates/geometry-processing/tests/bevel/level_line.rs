@@ -63,8 +63,8 @@ pub(crate) mod concave_edge_end_face_tests;
 pub(crate) mod concave_end_cap_rows_tests;
 #[path = "concave_rim_fill_tests.rs"]
 pub(crate) mod concave_rim_fill_tests;
-#[path = "consumed_rim_per_side_tests.rs"]
-pub(crate) mod consumed_rim_per_side_tests;
+#[path = "consumed_rim_tests.rs"]
+pub(crate) mod consumed_rim_tests;
 #[path = "convex_cell_bound_tests.rs"]
 pub(crate) mod convex_cell_bound_tests;
 #[path = "convex_end_ray_room_tests.rs"]
@@ -209,6 +209,8 @@ pub(crate) mod level_line_cost_gate;
 pub(crate) mod level_line_feature_edges;
 #[path = "level_line_fixture.rs"]
 pub(crate) mod level_line_fixture;
+#[path = "level_line_groove_room_tests.rs"]
+pub(crate) mod level_line_groove_room_tests;
 #[path = "level_line_robustness_tests.rs"]
 pub(crate) mod level_line_robustness_tests;
 #[path = "level_line_room_geometry.rs"]
@@ -285,6 +287,8 @@ pub(crate) mod raked_box_fixture;
 pub(crate) mod ridge_search_cost_tests;
 #[path = "ridge_survives_tests.rs"]
 pub(crate) mod ridge_survives_tests;
+#[path = "right_angle_knife_tests.rs"]
+pub(crate) mod right_angle_knife_tests;
 #[path = "room_ceiling_tests.rs"]
 pub(crate) mod room_ceiling_tests;
 #[path = "room_pairs_cost_tests.rs"]
@@ -391,8 +395,8 @@ pub(crate) mod union_of_balls_field_tests;
 pub(crate) mod unstoppable_build_tests;
 #[path = "usable_room_tests.rs"]
 pub(crate) mod usable_room_tests;
-#[path = "virtual_rail_per_side_tests.rs"]
-pub(crate) mod virtual_rail_per_side_tests;
+#[path = "virtual_rail_join_setback_tests.rs"]
+pub(crate) mod virtual_rail_join_setback_tests;
 #[path = "virtual_rail_tests.rs"]
 pub(crate) mod virtual_rail_tests;
 #[path = "waisted_side_tests.rs"]

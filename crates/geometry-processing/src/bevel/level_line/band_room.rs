@@ -13,20 +13,14 @@ use std::rc::Rc;
 
 use vector_math::{ieee_math, Vector3};
 
-use super::ball_pierce_room::BallPath;
 use super::band_gap_reading::{self, ReadRoomError};
 use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
 use super::end_face_sense::{self, PointPlane};
-use super::foreign_edge_room_per_side::{
-    room_for_by_side, where_the_room_is_set_by_side, SideRoomFields,
-};
-use super::foreign_edge_room_readings::{FieldAt, ForeignEdge};
+use super::foreign_edge_room_readings::{room_for, where_the_room_is_set, FieldAt, ForeignEdge};
 use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
-use super::{
-    chain_on_the_mesh, far_bound_ball_room, foreign_edge_room, self_room, swallowed_side_runs,
-};
+use super::{chain_on_the_mesh, foreign_edge_room, self_room, swallowed_side_runs};
 use super::{
     BandProfile, ChainEdgeNotOnTwoTriangles, ChainField, FieldSample, GrowingCreaseRuns,
     LevelLineMesh, LevelLineWork, LevelLineWorkPhase, RoomField, RoomReading, RoomSource,
@@ -295,8 +289,6 @@ fn room_within(
         0,
         Some(&present),
         Some(&field_without_convex_rays),
-        None,
-        None,
     )?;
     within.room = room;
     within.set_by = set_by;
@@ -362,18 +354,10 @@ pub fn the_foreign_source(
 /// tolerances below scale with the size they are given, so the same geometry read at two sizes
 /// answers two rooms and a build at the room a refusal named could be refused again. Everything is
 /// read at [`REFERENCE_SIZE`]; the setback is held per unit of size, so the answer is a ratio and
-/// any size would have given the same room but for those tolerances. A build whose pass of one
-/// chain the rolling ball takes hands its own `field_at` and `unit_setback`, the ball's setbacks at
-/// the size it was asked, per unit of that size (`one_chain_room` says why), and with them each
-/// side's own (`sides`), against which the foreign edges on that side alone are read
-/// (`foreign_edge_room_per_side`), and by which each side's self room is read; with no `sides`
-/// every foreign edge and both sides' self rooms are read against the chain's own field. A growing
-/// neighbour's far bound in neither side is read from the ball's centres where it hands them
-/// (`far_bound_ball_room`), and with the rest of the far bounds otherwise. Growing
-/// crease runs read their pierce room from the ball's centres where it hands them (`ball`,
-/// `ball_pierce_room`), from `unit_setback`'s angle centre otherwise. The optional arguments are
-/// passed explicitly (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces,
-/// no sides, no ball).
+/// any size would have given the same room but for those tolerances. Every foreign edge and both
+/// sides' self rooms are read against the chain's own field, and growing crease runs read their
+/// pierce room from `unit_setback`'s angle centre. The optional arguments are passed explicitly
+/// (`seam_epsilon` 0, `profile` Fillet, `fillet_segments` 0, no convex end faces).
 #[allow(clippy::too_many_arguments)]
 pub fn room_of_cut_mesh(
     shared_mesh: &Rc<RefCell<LevelLineMesh>>,
@@ -387,8 +371,6 @@ pub fn room_of_cut_mesh(
     fillet_segments: i32,
     convex_end_faces: Option<&[PointPlane]>,
     field_without_convex_rays: Option<FieldAt>,
-    sides: Option<&SideRoomFields>,
-    ball: Option<&BallPath>,
 ) -> Result<(f64, RoomSource), WorkError> {
     let field = Rc::new(field_at(REFERENCE_SIZE));
     // The mesh is shared (`Rc<RefCell>`) because the growing runs the foreign reading hands back
@@ -445,79 +427,28 @@ pub fn room_of_cut_mesh(
     }
 
     let near_room = ieee_math::min_f64(
-        room_for_by_side(mesh, &foreign, field_at, unit_setback, sides, false)?,
-        room_for_by_side(
+        room_for(mesh, &foreign, field_at, unit_setback, REFERENCE_SIZE)?,
+        room_for(
             mesh,
             &past_an_end_face,
             field_without_convex_rays.unwrap_or(field_at),
             unit_setback,
-            sides,
-            true,
+            REFERENCE_SIZE,
         )?,
     );
-    // A far bound in neither side, where the ball takes the pass, is read from the ball's centres
-    // (`far_bound_ball_room`): the larger side's setback about the chain reaches where the ball
-    // never goes. The rest of the far bounds, and those past a carried end, are read as before.
-    let (ball_far, read_far): (Vec<ForeignEdge>, Vec<ForeignEdge>) = match ball {
-        Some(_) => far_bounds.iter().copied().partition(|e| {
-            in_neither_side(mesh, (e.0, e.1))
-                && ball.is_some_and(|path| {
-                    !far_bound_ball_room::is_past_a_carried_end(
-                        path,
-                        mesh.position(e.0),
-                        mesh.position(e.1),
-                    )
-                })
-        }),
-        None => (Vec::new(), far_bounds.clone()),
-    };
-    let (ball_far_room, ball_far_at) = match ball {
-        Some(path) if !ball_far.is_empty() => {
-            let ends: Vec<(Vector3, Vector3)> = ball_far
-                .iter()
-                .map(|e| (mesh.position(e.0), mesh.position(e.1)))
-                .collect();
-            let (planes, plane_snap) = match sides {
-                Some(sides) => (sides.end_planes, sides.snap),
-                None => ([None, None], snap),
-            };
-            far_bound_ball_room::room_of_far_bounds(path, &ends, &planes, plane_snap)?
-        }
-        _ => (f64::INFINITY, None),
-    };
-    let read_far_room = room_for_by_side(mesh, &read_far, field_at, unit_setback, sides, false)?;
-    // With no far bound read from the ball the reading stands as it is, so a NaN still surfaces;
-    // a NaN from either reading is the far room.
-    let far_room = if ball_far.is_empty() {
-        read_far_room
-    } else if read_far_room.is_nan() || ball_far_room.is_nan() {
-        f64::NAN
-    } else {
-        ieee_math::min_f64(read_far_room, ball_far_room)
-    };
+    let far_room = room_for(mesh, &far_bounds, field_at, unit_setback, REFERENCE_SIZE)?;
     let foreign_room = ieee_math::min_f64(near_room, far_room);
-    let mut room = GrowingCreaseRuns::least_with(
+    let mut room = GrowingCreaseRuns::least(
         foreign_room,
         &growing,
         unit_setback,
         profile,
         fillet_segments,
-        ball,
     );
     // The crease is read only where the far bound alone sets the room; reading it can spend work,
     // so it is read here, under that condition, before the source is named.
     let crease_at = if room != f64::INFINITY && far_room < near_room && room == far_room {
-        match ball_far_at {
-            Some(at) if ball_far_room <= read_far_room => at,
-            _ => where_the_room_is_set_by_side(
-                mesh,
-                &read_far,
-                field_at,
-                unit_setback,
-                sides,
-                far_room,
-            )?,
-        }
+        where_the_room_is_set(mesh, &far_bounds, field_at, unit_setback, far_room)?
     } else {
         Vector3::ZERO
     };
@@ -527,23 +458,10 @@ pub fn room_of_cut_mesh(
     // band closes on its own middle and takes the whole face. The greatest field distance standing
     // inside a side, scaled to a size, is that side's largest buildable size, and the smaller of
     // the two rooms is the room.
-    // With the ball's sides, each side runs out of itself at its own band: its own field, and its
-    // own samples, since a sample is one field's reading at a vertex.
-    let shared_field = RoomField::from_chain(field);
-    let mut shared_samples: Vec<Option<FieldSample>> = vec![None; mesh.vertex_count() as usize];
+    let room_field = RoomField::from_chain(field);
+    let mut samples: Vec<Option<FieldSample>> = vec![None; mesh.vertex_count() as usize];
     let pick_ceiling = self_room::self_room_ceiling(mesh, chain_edges);
     for side in [1, 2] {
-        let mut own_samples: Vec<Option<FieldSample>>;
-        let own_field: RoomField;
-        let (room_field, samples, field_at) = match sides {
-            Some(sides) => {
-                let at = sides.field_at[side as usize - 1];
-                own_field = RoomField::from_chain(Rc::new(at(REFERENCE_SIZE)));
-                own_samples = vec![None; mesh.vertex_count() as usize];
-                (&own_field, &mut own_samples, at)
-            }
-            None => (&shared_field, &mut shared_samples, field_at),
-        };
         // An OPEN chain's band is not bounded by the pick: a fade runs a size past each end and
         // round the crease, so a one-facet pick can swallow a side a dozen times its own diameter -
         // which the pick's ceiling reports UNBOUNDED, and the room then over-reads to the next
@@ -552,17 +470,17 @@ pub fn room_of_cut_mesh(
         let ceiling = if chain_is_closed {
             pick_ceiling
         } else {
-            self_room::reach_of_side(mesh, room_field, side, REFERENCE_SIZE, samples)?
+            self_room::reach_of_side(mesh, &room_field, side, REFERENCE_SIZE, &mut samples)?
         };
 
         // The room already found is itself a ceiling: a side whose own room stands above it cannot
         // change the answer, so there is nothing to read exactly beyond that point.
         let mut of_side = self_room::self_room_of_side(
             mesh,
-            room_field,
+            &room_field,
             side,
             REFERENCE_SIZE,
-            samples,
+            &mut samples,
             ieee_math::min_f64(ceiling, room),
         )?;
 
@@ -600,13 +518,6 @@ pub fn room_of_cut_mesh(
         steady_down(room - band_gap_reading::room_margin(largest, snap)),
         set_by,
     ))
-}
-
-/// Whether every triangle on `edge` is in neither side (tag 0).
-fn in_neither_side(mesh: &LevelLineMesh, edge: (i32, i32)) -> bool {
-    mesh.triangles_on(edge.0, edge.1)
-        .iter()
-        .all(|&t| mesh.triangles()[t as usize].tag == 0)
 }
 
 /// The distinct elements of `first` not in `second`, in order.

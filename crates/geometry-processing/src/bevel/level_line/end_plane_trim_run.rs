@@ -101,13 +101,11 @@ fn end_and_outward(chain: &ChainField, last: bool) -> (Vector3, Vector3) {
 /// the end face ([`run`]). Answers the run round the end: the first rail's cut-off stretch out to
 /// its end, the section, the other's stretch back; `None` with the reason on the ends site where
 /// it cannot. The rails are updated in place; where a rail has no corner it is left as it was
-/// (an absent corner stays absent). `rails` are the left and right sides' own fields: a bounded
-/// end trims each rail at its own side's setback (both `chain` where the sides share one).
+/// (an absent corner stays absent). A bounded end trims each rail at the chain's own setback.
 #[allow(clippy::too_many_arguments)]
 pub fn trim_end(
     mesh: &mut LevelLineMesh,
     chain: &ChainField,
-    rails: [&ChainField; 2],
     left: &mut GapLoop,
     right: &mut GapLoop,
     last: bool,
@@ -148,17 +146,17 @@ pub fn trim_end(
     if bounded {
         // A bounded end's field is clipped by the end plane, and a rail point on the plane reads
         // the END's parameter; the runs end at the corners where the rails meet the plane.
-        let [left_setback, right_setback] = rails.map(|rail| rail.setback_at(end_parameter));
+        let setback = chain.setback_at(end_parameter);
         let (new_left, left_corner_inside) =
-            to_the_corner(mesh, left, last, end, outward, normal, left_setback);
+            to_the_corner(mesh, left, last, end, outward, normal, setback);
         let (new_right, right_corner_inside) =
-            to_the_corner(mesh, right, !last, end, outward, normal, right_setback);
+            to_the_corner(mesh, right, !last, end, outward, normal, setback);
         let (Some(new_left), Some(new_right)) = (new_left.clone(), new_right.clone()) else {
             append_ends_site(&format!(
                 " / trim {which}: no corner (left {}, right {}, setback {})",
                 title_case_bool(new_left.is_some()),
                 title_case_bool(new_right.is_some()),
-                three(ieee_math::max_f64(left_setback, right_setback))
+                three(setback)
             ));
             return Ok(None);
         };

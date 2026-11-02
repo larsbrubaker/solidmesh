@@ -2,35 +2,18 @@
 //! its setbacks per unit of size from the angle at each edge (`chain_on_the_mesh::unit_setbacks`),
 //! its end rays and their bounds, and from those the chain fields at any size. Held per unit of
 //! size so the room can ask the same question at any size.
-//!
-//! At the size itself a pass the rolling ball takes (`rolling_ball_setbacks.rs`) has a field per
-//! side per chain from that side's contacts ([`PassSetbacks::fields_at_the_size`]), and the chain's
-//! own field holds the larger of the two sides at each point and carries the ball's centres at the
-//! size ([`BallRows`]), which the fill draws its rows about; an open chain's end whose sides differ
-//! has a cap field of its own ([`PassSetbacks::cap_fields_at_the_size`]). Every other pass has the
-//! chain's own field from the angle and no side fields, exactly as the angle gives it.
 
 use std::collections::HashSet;
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::ball_row_control::BallRows;
 use super::band_gap_build_fault::BuildFault;
-use super::band_group_fields::CapFieldsByTag;
-use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::chain_field_from_polyline::ChainFieldArgumentError;
-use super::rolling_ball_setbacks::SideSetbacks;
 use super::{
     chain_on_the_mesh, end_face_sense, pick_validation, square_crease_end_clip, BandProfile,
     ChainField, EndRayBound,
 };
-
-/// A chain's left and right fields at the size, as `band_group_fields::of_sides` reads them.
-pub type SideFields = Vec<[Rc<ChainField>; 2]>;
-
-/// Each chain's first and last end caps' own fields, where the rolling ball cuts them per side.
-pub type CapFields = Vec<[Option<Rc<ChainField>>; 2]>;
 
 /// Every chain's step 1 readings, per unit of size.
 pub struct PassSetbacks {
@@ -152,100 +135,13 @@ impl PassSetbacks {
         self.field_from(k, &self.unit_setbacks[k], s)
     }
 
-    /// Every chain's own field at `size`, and with the rolling ball's setbacks (`ball`) each
-    /// chain's left and right fields: the own field from the angle where `ball` is `None`, the
-    /// larger of the ball's two sides where it is given, carrying the ball's centres and radius
-    /// (the size) for the fill's rows.
+    /// Every chain's own field at `size`, from the angle.
     pub fn fields_at_the_size(
         &self,
-        ball: Option<&[SideSetbacks]>,
         size: f64,
-    ) -> Result<(Vec<Rc<ChainField>>, Option<SideFields>), ChainFieldArgumentError> {
-        let count = self.chain_points.len();
-        let mut fields: Vec<Rc<ChainField>> = Vec::with_capacity(count);
-        let Some(ball) = ball else {
-            for k in 0..count {
-                fields.push(Rc::new(self.field_of(k, size)?));
-            }
-            return Ok((fields, None));
-        };
-
-        let mut sides = Vec::with_capacity(count);
-        for (k, chain) in ball.iter().enumerate() {
-            let mut own = self.field_from(k, &chain.larger(), size)?;
-            own.ball = Some(Rc::new(BallRows {
-                centres: self.chain_points[k]
-                    .iter()
-                    .zip(&chain.centres)
-                    .map(|(&point, &centre)| point + (centre * size))
-                    .collect(),
-                radius: size,
-                taper: chain.taper.clone(),
-            }));
-            fields.push(Rc::new(own));
-            sides.push([
-                Rc::new(self.field_from(k, &chain.left, size)?),
-                Rc::new(self.field_from(k, &chain.right, size)?),
-            ]);
-        }
-        Ok((fields, Some(sides)))
-    }
-
-    /// A pick of one open chain's end regions' cap fields by their groups' tags
-    /// (`band_side_tagging`'s first and last end tags), where the ball cuts a cap per side; empty
-    /// for any other pass.
-    pub fn caps_of_one_open_chain(
-        &self,
-        ball: Option<&[SideSetbacks]>,
-        size: f64,
-    ) -> Result<CapFieldsByTag, ChainFieldArgumentError> {
-        let mut by_tag = CapFieldsByTag::new();
-        let Some(ball) = ball.filter(|b| b.len() == 1 && !self.closed[0]) else {
-            return Ok(by_tag);
-        };
-        let [first, last] = self.cap_fields_at_the_size(ball, size)?.swap_remove(0);
-        for (tag, cap) in [(FIRST_END_TAG, first), (SECOND_END_TAG, last)] {
-            if let Some(cap) = cap {
-                by_tag.insert(tag, cap);
-            }
-        }
-        Ok(by_tag)
-    }
-
-    /// Each chain's end caps at `size` from the rolling ball's setbacks, as (first end, last end):
-    /// where the ball gives an end a [`CapShift`](super::rolling_ball_setbacks::CapShift), the
-    /// chain's own field (the larger side) moved by its offset with every setback grown by its
-    /// growth, so the cap's cut meets each side's rail where that side's band ends; `None` at
-    /// every other end, whose cap reads the chain's own field.
-    pub fn cap_fields_at_the_size(
-        &self,
-        ball: &[SideSetbacks],
-        size: f64,
-    ) -> Result<CapFields, ChainFieldArgumentError> {
-        let mut caps = Vec::with_capacity(ball.len());
-        for (k, chain) in ball.iter().enumerate() {
-            let larger = chain.larger();
-            let mut ends = [None, None];
-            for (end, shift) in chain.caps.iter().enumerate() {
-                let Some(shift) = shift else { continue };
-                let offset = shift.offset * size;
-                let points: Vec<Vector3> =
-                    self.chain_points[k].iter().map(|&p| p + offset).collect();
-                let setbacks: Vec<f64> = larger
-                    .iter()
-                    .map(|u| (u * size) + (shift.grow * size))
-                    .collect();
-                ends[end] = Some(Rc::new(ChainField::from_polyline_bounded(
-                    &points,
-                    self.closed[k],
-                    &setbacks,
-                    self.sharp_turn_degrees,
-                    self.end_rays[k],
-                    self.end_ray_bounds[k],
-                )?));
-            }
-            caps.push(ends);
-        }
-        Ok(caps)
+    ) -> Result<Vec<Rc<ChainField>>, ChainFieldArgumentError> {
+        (0..self.chain_points.len())
+            .map(|k| self.field_of(k, size).map(Rc::new))
+            .collect()
     }
 }

@@ -45,13 +45,6 @@ pub fn joined_sides(
     };
     let mut mesh = mesh.borrow_mut();
     let chain = &*gap.chains[0];
-    // Each side's rail is laid at its own setback where the rolling ball cut the sides apart.
-    let rail_of = |side: i32| -> &ChainField {
-        gap.side_chains
-            .as_ref()
-            .and_then(|sides| sides.first())
-            .map_or(chain, |pair| &*pair[usize::from(side == 2)])
-    };
 
     let mut loops = gap.loops.clone();
     for side in [1, 2] {
@@ -72,14 +65,7 @@ pub fn joined_sides(
 
         let first = minted.len();
         let before_count = loops[runs[0]].vertices.len();
-        let joined = join_at(
-            &mut mesh,
-            chain,
-            rail_of(side),
-            &loops[runs[0]],
-            &loops[runs[1]],
-            minted,
-        )?;
+        let joined = join(&mut mesh, chain, &loops[runs[0]], &loops[runs[1]], minted)?;
         if let Some(joined) = joined {
             loops.remove(runs[0]);
             let after = if runs[1] > runs[0] {
@@ -175,19 +161,6 @@ pub fn join(
     after: &GapLoop,
     minted: &mut Vec<i32>,
 ) -> Result<Option<GapLoop>, WorkError> {
-    join_at(mesh, chain, chain, before, after, minted)
-}
-
-/// [`join`], each minted point laid at `rail`'s setback (the side's own field where the rolling
-/// ball cuts the two sides at different distances); `chain` gives the parameters and points.
-pub fn join_at(
-    mesh: &mut LevelLineMesh,
-    chain: &ChainField,
-    rail: &ChainField,
-    before: &GapLoop,
-    after: &GapLoop,
-    minted: &mut Vec<i32>,
-) -> Result<Option<GapLoop>, WorkError> {
     let side = before.side;
     let crease_vertices = opposite_sense_crease_vertices(mesh, side);
     let a = before.vertices[before.vertices.len() - 1];
@@ -221,7 +194,7 @@ pub fn join_at(
     let mut vertices = before.vertices.clone();
     let mut parameters = before.parameters.clone();
     for t in between {
-        let vertex = mesh.add_vertex(chain.point_at(t) + (away * rail.setback_at(t)));
+        let vertex = mesh.add_vertex(chain.point_at(t) + (away * chain.setback_at(t)));
         minted.push(vertex);
         vertices.push(vertex);
         parameters.push(t);

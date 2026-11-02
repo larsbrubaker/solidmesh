@@ -17,8 +17,7 @@ pub(crate) fn sharp_turn_cosine(sharp_turn_degrees: f64) -> f64 {
 
 /// Whether a joint whose chain runs in along unit `d_in` and out along unit `d_out` is mitred:
 /// it turns past the threshold (`cos_threshold`, [`sharp_turn_cosine`]), and is no full reversal,
-/// which has no bisector. Shared with the rolling ball's legs (`rolling_ball_legs`), so the chain
-/// is cut into legs exactly where its field mitres.
+/// which has no bisector.
 pub(crate) fn mitres_at(d_in: Vector3, d_out: Vector3, cos_threshold: f64) -> bool {
     let cos = d_in.dot(d_out);
     !(cos >= cos_threshold || 1.0 + cos < 1e-9)

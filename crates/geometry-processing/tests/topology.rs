@@ -11,8 +11,6 @@ mod edge_picking_tests;
 mod face_group_tests;
 #[path = "topology/face_pick_interpretation_tests.rs"]
 mod face_pick_interpretation_tests;
-#[path = "topology/face_region_labelling_tests.rs"]
-mod face_region_labelling_tests;
 #[path = "topology/feature_edge_chain_tests.rs"]
 mod feature_edge_chain_tests;
 #[path = "topology/feature_edge_collinear_run_tests.rs"]

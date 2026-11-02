@@ -44,9 +44,7 @@
 //! - **Shared readings.** The per-tolerance surface labels ([`BevelSurfaceLabels`]), the
 //!   straight surface walk ([`BevelSurfaceWalk`]) and the float grid step ([`float_grid`]).
 //! - **Constructions.** The level-line build ([`level_line`]), the vertex-centric sections
-//!   ([`sections`]) and the surface construction ([`surface`]); and, being built beside them to
-//!   replace their special cases, the rolling ball's geometry ([`rolling_ball`],
-//!   `docs/rolling-ball-fillet.md`).
+//!   ([`sections`]) and the surface construction ([`surface`]).
 //!
 //! Stateless helpers are modules of free functions.
 
@@ -140,7 +138,6 @@ pub mod bevel_valley_fold_mitre;
 pub mod bevel_working_mesh;
 pub mod float_grid;
 pub mod level_line;
-pub mod rolling_ball;
 pub mod sections;
 pub mod surface;
 

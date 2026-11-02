@@ -37,7 +37,6 @@ pub fn open_chain(points: Vec<Vector3>, setbacks: Vec<f64>) -> ChainField {
         end_clips: None,
         end_plane_reader: OnceCell::new(),
         sharp_joints: OnceCell::new(),
-        ball: None,
     }
 }
 

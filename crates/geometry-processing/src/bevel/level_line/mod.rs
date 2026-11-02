@@ -3,8 +3,8 @@
 //! - **Fields.** The field traits ([`ScalarField`], [`ChainDistanceField`]) and a field reading
 //!   ([`FieldSample`]); the chain's distance field ([`ChainField`], with its end-ray bound
 //!   [`EndRayBound`], mitre and end rays [`ChainFieldExtension`], end clips [`ChainFieldEndClip`],
-//!   query pieces [`ChainFieldMeshPiece`], smooth-joint scope [`ChainFieldSmoothJointsScope`] and
-//!   the rolling ball's centres carried on it [`BallRows`]), the field over a group of chains
+//!   query pieces [`ChainFieldMeshPiece`], smooth-joint scope
+//!   [`ChainFieldSmoothJointsScope`]), the field over a group of chains
 //!   ([`PickField`]), the one a room reading asks ([`RoomField`]), a picked point's field
 //!   ([`PointField`]), a crease run-out and its field ([`CreaseRunOut`], [`RunOutField`]), the
 //!   group field with run-outs and its gate scope ([`BandGroupFieldsWithRunOuts`],
@@ -43,8 +43,6 @@
 //!   the route's watch record ([`LevelLineChainWatch`]) and the work phase and progress
 //!   ([`LevelLineWorkPhase`], [`LevelLineProgress`]).
 
-pub mod ball_pierce_room;
-pub mod ball_row_control;
 pub mod band_cut;
 pub mod band_gap;
 pub mod band_gap_after_the_rounds;
@@ -126,7 +124,6 @@ mod end_face_sense_oblique;
 pub mod end_plane_trim;
 pub mod end_plane_trim_carry;
 pub mod end_plane_trim_run;
-pub mod far_bound_ball_room;
 pub mod fast_hash;
 pub mod field_bounds;
 pub mod field_counters;
@@ -135,12 +132,10 @@ pub mod fill_closure;
 pub mod fillet_arc;
 pub mod fillet_arc_rows;
 pub mod flat_hole_fill;
-mod foreign_edge_bracket_past_a_zero_setback;
 mod foreign_edge_index;
 pub mod foreign_edge_regions;
 pub mod foreign_edge_regions_filing;
 pub mod foreign_edge_room;
-mod foreign_edge_room_per_side;
 pub mod foreign_edge_room_readings;
 pub mod foreign_room_counters;
 pub mod gap_fill;
@@ -169,7 +164,6 @@ pub mod needle_meter;
 mod one_chain_room;
 pub mod open_gap_fill;
 pub mod open_gap_fill_cut_section;
-pub mod open_gap_fill_end_run_row;
 pub mod open_gap_fill_fill;
 pub mod open_gap_fill_stations;
 pub mod open_gap_fill_sunk_arc;
@@ -188,17 +182,6 @@ pub mod point_star;
 pub mod rail_stations;
 pub mod refinement_splits;
 pub mod refinement_splits_enqueue;
-pub mod rolling_ball_band_tags;
-mod rolling_ball_end_caps;
-mod rolling_ball_end_planes;
-mod rolling_ball_free_ends;
-mod rolling_ball_legs;
-pub mod rolling_ball_refusal;
-mod rolling_ball_rested_rims;
-pub mod rolling_ball_setbacks;
-mod rolling_ball_sides;
-mod rolling_ball_size_room;
-pub mod rolling_ball_sweep;
 mod room_candidate;
 mod room_field;
 mod room_reading;
@@ -211,7 +194,6 @@ pub mod segment_box_tree;
 pub mod self_room;
 pub mod sharp_joint_corners;
 pub mod side_flow;
-pub mod side_regions_after_a_build;
 pub mod side_roots_settling;
 pub mod side_witness;
 pub mod split_meter;
@@ -231,13 +213,11 @@ pub mod virtual_rail_past_the_end;
 pub mod work_budget;
 mod zip_rail;
 
-pub use ball_row_control::BallRows;
 pub use band_cut::{BandCutResult, LevelLineChain};
 pub use band_gap_refusal::BandGapRefusal;
 pub use band_gap_result::BandGapResult;
 pub use band_group::BandGroup;
 pub use band_group_fields::unwrapped as band_group_fields_unwrapped;
-pub use band_group_fields::{chain_fields_of, side_member_of, SideOfChain};
 pub use band_group_fields::{of as band_group_fields_of, GroupSampler};
 pub use band_group_fields::{run_outs as band_group_run_outs, BandGroupExtraFields};
 pub use band_group_fields::{run_outs_on, turn_run_outs_on};

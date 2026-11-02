@@ -5,18 +5,7 @@
 //! [`WorkBudget`](super::WorkBudget) so it travels with the build) and the wrapped field
 //! ([`BandGroupFieldsWithRunOuts`], with its constructor, inner field, point query, bounded maxima
 //! least queries, field seam and `ChainDistanceField` impl) and the pick under it
-//! ([`unwrapped`]), and each group's field ([`of`]).
-//!
-//! **A side's own field.** Where the rolling ball sets a pass's setbacks, each chain has a field
-//! per side as well as its own (`band_gap_setback_fields.rs`). A group is tagged left or right of
-//! each member chain by its `side_of_chain` (1 the left side, the triangle that runs a chain edge in
-//! the chain's direction, 2 the right, as `chain_on_the_mesh::sides_of` names them), and reads
-//! that side's field for that member ([`chain_fields_of`]). `side_of_chain` holds the group's own
-//! tag, not a side, for a member joined through its end or carried past a step corner, so only a
-//! side member proper ([`side_member_of`]) reads a side field; an end region, an end, carried,
-//! grown-over or both-sided member, and every chain with no side fields read the chain's own
-//! field - save a single open chain's end region whose sides differ at its end, which reads its
-//! cap field, cut to meet each side's rail ([`chain_fields_of_group`]). The run-out finder is
+//! ([`unwrapped`]), and each group's field ([`of`]). The run-out finder is
 //! [`band_group_run_outs`](super::band_group_run_outs).
 
 use std::rc::Rc;
@@ -418,36 +407,9 @@ pub fn of(
     ),
     PickFieldArgumentError,
 > {
-    of_sides(groups, only, fields, None, None, run_outs)
-}
-
-/// An end region's own field, by its group's tag, read for the region's member chains in place of
-/// their own: a single open chain's cap cut per side (`band_gap_setback_fields::CapFields`).
-pub type CapFieldsByTag = IndexMap<i32, Rc<ChainField>>;
-
-/// [`of`], where `side_fields`, if given, holds each chain's left and right fields and each group
-/// reads its own side's, and an end region named in `caps` reads its cap field
-/// ([`chain_fields_of_group`]).
-#[allow(clippy::type_complexity)]
-pub fn of_sides(
-    groups: &[BandGroup],
-    only: bool,
-    fields: &[Rc<ChainField>],
-    side_fields: Option<&[[Rc<ChainField>; 2]]>,
-    caps: Option<&CapFieldsByTag>,
-    run_outs: Option<&IndexMap<i32, Vec<Rc<dyn ChainDistanceField>>>>,
-) -> Result<
-    (
-        IndexMap<i32, Rc<dyn ChainDistanceField>>,
-        IndexMap<i32, GroupSampler>,
-    ),
-    PickFieldArgumentError,
-> {
     let mut group_fields: IndexMap<i32, Rc<dyn ChainDistanceField>> = IndexMap::new();
     let mut samples: IndexMap<i32, GroupSampler> = IndexMap::new();
     for group in groups {
-        let fields = chain_fields_of_group(group, fields, side_fields, caps);
-        let fields = &fields[..];
         let (mut pick_field, mut sample, end_planes): (
             Rc<dyn ChainDistanceField>,
             GroupSampler,
@@ -494,94 +456,6 @@ pub fn of_sides(
     }
 
     Ok((group_fields, samples))
-}
-
-/// The chain fields `group` reads, one per chain of the pick: for each member the group is one
-/// side of ([`side_member_of`]), that side's field from `side_fields`; for every other chain, or
-/// with no side fields, the chain's own field from `fields`.
-pub fn chain_fields_of(
-    group: &BandGroup,
-    fields: &[Rc<ChainField>],
-    side_fields: Option<&[[Rc<ChainField>; 2]]>,
-) -> Vec<Rc<ChainField>> {
-    fields
-        .iter()
-        .enumerate()
-        .map(|(k, own)| {
-            let side = side_fields.zip(side_member_of(group, k as i32)).and_then(
-                |(sides, side)| match side {
-                    SideOfChain::Left => sides.get(k).map(|pair| &pair[0]),
-                    SideOfChain::Right => sides.get(k).map(|pair| &pair[1]),
-                },
-            );
-            Rc::clone(side.unwrap_or(own))
-        })
-        .collect()
-}
-
-/// [`chain_fields_of`], where a group whose tag `caps` names reads that cap field for each of its
-/// member chains.
-pub fn chain_fields_of_group(
-    group: &BandGroup,
-    fields: &[Rc<ChainField>],
-    side_fields: Option<&[[Rc<ChainField>; 2]]>,
-    caps: Option<&CapFieldsByTag>,
-) -> Vec<Rc<ChainField>> {
-    let mut read = chain_fields_of(group, fields, side_fields);
-    if let Some(cap) = caps.and_then(|caps| caps.get(&group.tag)) {
-        for &m in &group.members {
-            if let Some(slot) = read.get_mut(m as usize) {
-                *slot = Rc::clone(cap);
-            }
-        }
-    }
-    read
-}
-
-/// The field a single chain's group `tag` reads: a side's own (1 left, 2 right) where the ball
-/// gives side fields, an end region's cap where it has one, and the chain's own `field` otherwise.
-pub fn one_chains_field(
-    tag: i32,
-    field: &Rc<ChainField>,
-    side_fields: Option<&[[Rc<ChainField>; 2]]>,
-    caps: &CapFieldsByTag,
-) -> Rc<ChainField> {
-    let side = match (side_fields.and_then(|sides| sides.first()), tag) {
-        (Some(pair), 1) => Some(&pair[0]),
-        (Some(pair), 2) => Some(&pair[1]),
-        _ => caps.get(&tag),
-    };
-    Rc::clone(side.unwrap_or(field))
-}
-
-/// Which side of a chain a group is.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SideOfChain {
-    /// The side whose triangle runs a chain edge in the chain's direction (`side_of_chain` 1).
-    Left,
-    /// The other side (`side_of_chain` 2).
-    Right,
-}
-
-/// Which side of chain `k` `group` is, only where the group is that chain's side proper: a side
-/// group (not a free end's end region), with `k` neither an end member (its end stands on the
-/// group's face, the group's `side_of_chain` naming the group's own tag there, not a side), a
-/// carried member (likewise), a grown-over member nor a both-sided member (both its sides are in
-/// the group, so no one side's field stands for it). `None` everywhere else.
-pub fn side_member_of(group: &BandGroup, k: i32) -> Option<SideOfChain> {
-    let proper = group.end_of < 0
-        && !group.end_members.contains(&k)
-        && !group.carried_ends.contains_key(&k)
-        && !group.grow_over_members.contains(&k)
-        && !group.both_sided.contains(&k);
-    if !proper {
-        return None;
-    }
-    match group.side_of_chain.get(&k) {
-        Some(1) => Some(SideOfChain::Left),
-        Some(2) => Some(SideOfChain::Right),
-        _ => None,
-    }
 }
 
 /// Per group tag, the extra chain-distance fields its band reads, in the order the tags were

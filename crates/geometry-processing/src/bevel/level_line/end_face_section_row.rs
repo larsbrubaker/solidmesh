@@ -12,16 +12,11 @@
 //! the rational quadratic of its carried control points with the same weight, so the oblique row
 //! is the square row's control point slid onto the face with the square row's weight - exactly the
 //! section, never a row drawn in the oblique plane by that plane's own angle (which bows off the
-//! round: 0.11 inside the ball's cylinder on the groove leaning 8 degrees).
+//! round: 0.11 inside the round's cylinder on the groove leaning 8 degrees).
 //!
-//! The square plane is the one through the ball's centre at the end station, where the ball's
-//! route describes the end, so the square row is the ball's arc there (`ball_row_control`, which
-//! keeps every fallback of its own); with no ball it is the one through the end vertex, and the
-//! square row is the level line's, drawn about the end vertex. The slid row is the round's section
-//! only where that centre lies in the end face (the walk holds its end station there); a ball
-//! centred off the face by more than the row's chord sagitta (the T Handle's web end, 1.563 off
-//! the web's plane) leaves the row to `open_gap_fill::arcs`, drawn about the end vertex. Before the slide, both rail ends are
-//! slid along the chain into that square plane; the slide takes them back to themselves.
+//! The square plane is the one through the end vertex, and the square row is the level line's,
+//! drawn about the end vertex. Before the slide, both rail ends are slid along the chain into that
+//! square plane; the slide takes them back to themselves.
 //!
 //! Both the end vertex and the slide hold only on a FLAT end face ([`flat_end_faces`]): its end
 //! run and the chain's end vertex in one plane within the mesh's snap, the same snap the flat cap
@@ -34,7 +29,6 @@
 
 use vector_math::Vector3;
 
-use super::ball_row_control::{row_control, RowAsked};
 use super::gap_fill::arc_point;
 use super::{ChainField, LevelLineMesh};
 
@@ -48,20 +42,13 @@ pub const SQUARE_COSINE: f64 = 1.0 - 1e-9;
 /// chain) has no section the slide can reach.
 const ALONG_THE_CHAIN_COSINE: f64 = 1e-6;
 
-/// What the section row of one end asks: the end it closes, the chain's unit direction there, the
-/// rows' segment count, whether a rail end is a tie or mitre vertex, and the mesh's snap.
+/// What the section row of one end asks: the end it closes and the chain's unit direction there.
 #[derive(Clone, Copy, Debug)]
 pub struct EndRowAsked {
     /// Whether the row closes the chain's far end (parameter `chain.length`) rather than its start.
     pub at_the_far_end: bool,
     /// The chain's unit direction at that end.
     pub tangent: Vector3,
-    /// How many segments the row has.
-    pub segments: i32,
-    /// Whether either rail end is a tie or mitre vertex standing for a jump of parameters.
-    pub tie_or_mitre: bool,
-    /// How near two points must stand to be one (the mesh's `same_place`).
-    pub snap: f64,
 }
 
 /// The row from `p` to `q` (the two rails' ends on a leaning end face) as the round's section in
@@ -93,63 +80,18 @@ pub fn section_row(
         return None;
     }
 
-    // The square plane through the ball's centre at the end station, or through the end vertex
-    // where no ball describes the end; e is the chain's line where it crosses that plane.
-    let reference = chain.ball_centre_at(end).unwrap_or(v);
-    if let Some(ball) = chain.ball.as_deref() {
-        if !centre_in_the_face(reference, ball.radius, v, n, p, q, asked.segments) {
-            return None;
-        }
-    }
+    // The square plane through the end vertex; e is the chain's line where it crosses that plane.
+    // Read as v plus the offset along t rather than v itself, so every bit stays as it was (a -0.0
+    // component of v comes out +0.0 this way).
+    let reference = v;
     let e = v + (t * (reference - v).dot(t));
     let into_the_square_plane = |x: Vector3| x - (t * (x - e).dot(t));
     let (p_square, q_square) = (into_the_square_plane(p), into_the_square_plane(q));
-    let c_square = row_control(
-        chain,
-        p_square,
-        q_square,
-        RowAsked {
-            mean: end,
-            chain_point: e,
-            segments: asked.segments,
-            tie_or_mitre: asked.tie_or_mitre,
-            end_row: true,
-            snap: asked.snap,
-            tangent: t,
-        },
-    );
+    let c_square = e;
 
     // Each point of the square row slides along the chain onto the end face.
     let onto_the_face = move |x: Vector3| x + (t * ((v - x).dot(n) / lean));
     Some(move |f: f64| onto_the_face(arc_point(p_square, c_square, q_square, f)))
-}
-
-/// Whether the ball's end centre `centre` lies in the end face (through `v`, unit normal `n`)
-/// within the row's chord sagitta, `radius (1 - cos(theta / (2 segments)))` with theta the angle
-/// the row from `p` to `q` subtends at the centre: the error the row's own facets already carry.
-/// The walk holds its end station to the end face, so there the centre is in it to the solve's
-/// precision and the slid square row is the round's section; a centre standing off the face by
-/// more (an end the walk did not hold to this face) rolls a ball whose square row, slid onto the
-/// face, is not the round there.
-fn centre_in_the_face(
-    centre: Vector3,
-    radius: f64,
-    v: Vector3,
-    n: Vector3,
-    p: Vector3,
-    q: Vector3,
-    segments: i32,
-) -> bool {
-    let (to_p, to_q) = (p - centre, q - centre);
-    let lengths = to_p.length() * to_q.length();
-    // Not a number reads as no row, as zero does.
-    #[allow(clippy::neg_cmp_op_on_partial_ord)]
-    if !(lengths > 0.0) || segments < 1 {
-        return false;
-    }
-    let cos = (to_p.dot(to_q) / lengths).clamp(-1.0, 1.0);
-    let sagitta = radius * (1.0 - (cos.acos() / (2.0 * f64::from(segments))).cos());
-    (centre - v).dot(n).abs() <= sagitta
 }
 
 /// Which of the chain's two ends close on a FLAT end face: the end run there (from one rail's end

@@ -18,11 +18,9 @@ use super::level_line_mesh_edits::LevelLineMeshError;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
 use super::{
-    band_side_tagging, chain_on_the_mesh, pick_validation, rolling_ball_setbacks, self_room,
-    BandGapRefusal, BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges,
-    WorkBudget, WorkError,
+    band_side_tagging, chain_on_the_mesh, pick_validation, self_room, BandGapRefusal,
+    BandGapResult, BandProfile, LevelLineMesh, LevelLineWork, SeamEdges, WorkBudget, WorkError,
 };
-use crate::bevel::rolling_ball::rolling_ball_routing::use_rolling_ball;
 
 /// The build's arguments that are not the pick itself, as the funnel ([`build_unvalidated`])
 /// hands them to the build proper (`band_gap_build_entry::build_within`).
@@ -37,9 +35,6 @@ pub struct BuildWithinArgs<'a> {
     pub sharp_turn_degrees: f64,
     pub fillet_segments: i32,
     pub step_corners: &'a HashSet<i32>,
-    /// The caller's face region of every triangle of the mesh, where it gave them: the rolling
-    /// ball's sides (`rolling_ball_sides`).
-    pub side_regions: Option<&'a [u32]>,
 }
 
 /// How a band gap build leaves without a result: the errors a caller sees. A refusal (the
@@ -88,12 +83,10 @@ impl From<PickArgumentError> for BandGapBuildError {
 /// The build every public entry point funnels through, with its work budget and topology-only
 /// switch: the pick split where its setbacks step, its closed chains started at a
 /// corner, its seams no longer features, a size over a KNOWN room refused before anything is paid
-/// for (except where the rolling ball may take a pass of one chain, whose handed room is set
-/// aside), and the build's own faults turned into the caller's outcomes - a cancel leaves as
+/// for, and the build's own faults turned into the caller's outcomes - a cancel leaves as
 /// [`BandGapBuildError::Cancelled`], a chain edge not on two triangles and a budget that ran out
 /// as refusals carrying the working mesh as it stood. No input validation: the public builds
-/// (`band_gap_entry_points`) validate first. `side_regions`, one face region per triangle of the
-/// mesh, reaches the rolling ball's sides unchanged by the split: the split moves no triangle.
+/// (`band_gap_entry_points`) validate first.
 #[allow(clippy::too_many_arguments)]
 pub fn build_unvalidated(
     positions: &[Vector3],
@@ -111,7 +104,6 @@ pub fn build_unvalidated(
     seam_epsilon: f64,
     sharp_turn_degrees: f64,
     fillet_segments: i32,
-    side_regions: Option<&[u32]>,
 ) -> Result<BandGapResult, BandGapBuildError> {
     // Each edge keeps its own setback: a chain is cut where its edges' setbacks step. The vertices
     // inside a picked chain: where the split cuts one, the pieces meet at a STEP CORNER.
@@ -176,17 +168,6 @@ pub fn build_unvalidated(
         return Err(BandGapBuildError::Cancelled);
     }
 
-    // A pass of one chain the rolling ball may take (its switch on, a fillet, the outer pass, no
-    // probe) is neither refused nor trusted on a handed room, which was read with the angle's
-    // setbacks: the build reads its own room, with the ball's setbacks where the ball takes the
-    // pass (`one_chain_room`), and a refusal names that room.
-    let the_ball_may_take_it = chains.len() == 1
-        && !topology_only
-        && profile != BandProfile::Chamfer
-        && use_rolling_ball()
-        && rolling_ball_setbacks::PassScope::would_be_outer();
-    let known_room = known_room.filter(|_| !the_ball_may_take_it);
-
     // A size the KNOWN room cannot hold is refused HERE, before anything is paid for - except for
     // ONE OPEN chain, whose handed-in room is read size-free and may be flowed past.
     let may_flow_past_the_room = chains.len() == 1 && !closed[0] && !topology_only;
@@ -222,7 +203,6 @@ pub fn build_unvalidated(
         sharp_turn_degrees,
         fillet_segments,
         step_corners: &step_corners,
-        side_regions,
     };
     match build_within(
         positions,

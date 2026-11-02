@@ -571,11 +571,6 @@ pub enum BevelAdvisoryCode {
     /// not by the face's own width. Args: (double size, Vector3 at, double largestThatFits), as
     /// `SizeExceedsFaceWidth`, with "at" standing on that crease.
     SizeReachesPastCrease,
-    /// BevelSurfacePartBuilder (strict rolling ball): with the rolling ball's switch on
-    /// (`rolling_ball::rolling_ball_routing`), nothing the ball could take built these edges, and
-    /// no other construction is asked to. A complaint. Args: (string reason), the ball's own
-    /// reason (`BandGapRefusal::RollingBall`) or, where no pass reached the ball, why not.
-    RollingBallRefused,
 }
 
 impl fmt::Display for BevelAdvisoryCode {

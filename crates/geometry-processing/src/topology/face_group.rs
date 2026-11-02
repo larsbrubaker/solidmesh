@@ -1,4 +1,4 @@
-//! The logical surface a face belongs to, and every face's surface label at once (fenced or not).
+//! The logical surface a face belongs to, and every face's surface label at once.
 //! Flooded over a
 //! [`MeshEdgeGraph`] with
 //! [`FeatureEdge::try_classify`]; cached per mesh by [`super::FaceRegionCache`].
@@ -234,42 +234,17 @@ impl FaceGroup {
     /// face order and mean nothing across meshes, tolerances or rebuilds.
     ///
     /// Edges that cannot be classified - an open rim, a non-manifold junction - are not crossed,
-    /// exactly as the group fill does not cross them.
+    /// exactly as the group fill does not cross them. One pass: every face is visited once and each
+    /// edge classified once per face beside it, where flooding a group a seed at a time rebuilds
+    /// the face-to-edge map per group.
     pub fn label_surfaces(
         mesh: &Mesh,
         graph: &MeshEdgeGraph,
         curve_tolerance_degrees: f64,
     ) -> Vec<i32> {
-        Self::label_surfaces_fenced(mesh, graph, curve_tolerance_degrees, None)
-    }
-
-    /// [`Self::label_surfaces`] with a FENCE: every face outside the fence gets the label of the
-    /// group [`Self::create_fenced`] floods from it (the fill never enters a barrier face), and
-    /// every barrier face gets a label of its own. A flood seeded on a barrier face lifts the
-    /// fence for that seed alone and so runs out into its neighbours' surface; that group is the
-    /// barrier face's answer and nobody else's, so in a labelling, where every face has exactly
-    /// one id, the barrier face stands alone. `None` (or empty) is no fence and labels exactly
-    /// as [`Self::label_surfaces`] does.
-    ///
-    /// Ids are dense from zero in ascending face order, a barrier face's id where its index
-    /// comes. One pass: every face is visited once and each edge classified once per face beside
-    /// it, where flooding a group a seed at a time rebuilds the face-to-edge map per group.
-    pub fn label_surfaces_fenced(
-        mesh: &Mesh,
-        graph: &MeshEdgeGraph,
-        curve_tolerance_degrees: f64,
-        barrier_faces: Option<&[i32]>,
-    ) -> Vec<i32> {
         let face_count = mesh.faces.len();
         let face_edges = build_face_to_edge_map(face_count, graph);
         let mut surface_of_face = vec![-1; face_count];
-
-        let mut fence = vec![false; face_count];
-        for &barrier in barrier_faces.unwrap_or(&[]) {
-            if barrier >= 0 && (barrier as usize) < face_count {
-                fence[barrier as usize] = true;
-            }
-        }
 
         let mut to_visit = VecDeque::new();
         let mut surfaces = 0;
@@ -282,11 +257,6 @@ impl FaceGroup {
             let surface = surfaces;
             surfaces += 1;
             surface_of_face[seed] = surface;
-
-            // A barrier face is a surface of its own: nothing floods out of it.
-            if fence[seed] {
-                continue;
-            }
 
             to_visit.push_back(seed as i32);
 
@@ -313,10 +283,6 @@ impl FaceGroup {
                     } else {
                         edge.face0
                     };
-
-                    if fence[across_face as usize] {
-                        continue;
-                    }
 
                     if surface_of_face[across_face as usize] < 0 {
                         surface_of_face[across_face as usize] = surface;

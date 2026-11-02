@@ -277,7 +277,6 @@ fn rust_only_an_end_plane_trim_with_no_end_face_says_why() {
     let trimmed = trim_end(
         &mut mesh,
         &chain,
-        [&chain, &chain],
         &mut left,
         &mut right,
         true,

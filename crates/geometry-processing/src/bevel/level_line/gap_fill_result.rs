@@ -41,10 +41,6 @@ pub struct GapFillResult {
     pub work_spent: i64,
     /// How many units it was allowed.
     pub work_limit: i64,
-    /// Why the rolling ball refused the band this fill was refused for
-    /// (`BandGapResult::rolling_ball_refusal`), where a build of several passes - chains in turn,
-    /// rounds first - stopped at a pass the ball refused; `None` otherwise.
-    pub rolling_ball_refusal: Option<String>,
 }
 
 impl Default for GapFillResult {
@@ -63,7 +59,6 @@ impl Default for GapFillResult {
             phase: LevelLineWorkPhase::default(),
             work_spent: 0,
             work_limit: 0,
-            rolling_ball_refusal: None,
         }
     }
 }

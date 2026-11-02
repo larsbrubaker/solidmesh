@@ -12,14 +12,6 @@
 //! plane, at the setback from the chain's extended line, to that parameter: one minted point, the
 //! row there touching the end plane at its last point to leave it.
 //!
-//! **Each side at its own distance.** Where the rolling ball cut the two sides at different
-//! distances (`BandGapResult::side_chains`), each side's rail is carried at that side's own
-//! setback at the end: past an oblique end the round's rail on a side runs on along that side's
-//! face, at that side's distance from the chain's line, until the end plane cuts it. P is read on
-//! each side's own field, the minted point stands at each side's own setback, and the row between
-//! them is the one laid from those two points. Every other build reads the chain's one field for
-//! both sides.
-//!
 //! Assumes a STRAIGHT end segment, a flat side across the stretch and a FILLET or chamfer row laid
 //! as the fill lays it (a circular arc tangent to both sides, or the straight chord). A run whose
 //! end does not stand on a ray end, or whose section passes the end plane before P, is returned as
@@ -70,13 +62,6 @@ pub fn extended(
     };
     let mut mesh = mesh.borrow_mut();
 
-    // Each side's own field where the ball cut the sides apart; the chain's otherwise.
-    let rails = gap
-        .side_chains
-        .as_ref()
-        .and_then(|sides| sides.first())
-        .map_or([chain, chain], |pair| [&*pair[0], &*pair[1]]);
-
     let mut left = sides[0][0].clone();
     let mut right = sides[1][0].clone();
     for last in [false, true] {
@@ -87,7 +72,6 @@ pub fn extended(
         let extended = extend_both(
             &mut mesh,
             chain,
-            rails,
             &left,
             &right,
             last,
@@ -113,14 +97,12 @@ pub fn extended(
 /// Both sides' runs carried past the `last` (or first) end
 /// to where the row last leaves the end plane, as (left, right); `None` where that end is bounded,
 /// has no end face facing as asked, a run has no rail end there, or the row has already left the
-/// end plane at P. `chain` gives the chain's points, end and bounds; `rails` the left and right
-/// sides' own fields, each side's rail read and carried at its own setback (both `chain` where the
-/// sides share one).
+/// end plane at P. `chain` gives the chain's points, end, bounds and the setback both rails are
+/// read and carried at.
 #[allow(clippy::too_many_arguments)]
 pub fn extend_both(
     mesh: &mut LevelLineMesh,
     chain: &ChainField,
-    rails: [&ChainField; 2],
     left: &GapLoop,
     right: &GapLoop,
     last: bool,
@@ -152,10 +134,9 @@ pub fn extend_both(
     })
     .get_normal();
     let end_parameter = if last { chain.length } else { 0.0 };
-    // How far the rail is carried past the touch reads the chain's own setback (the larger
-    // side's where they differ); each rail stands at its own side's.
+    // How far the rail is carried past the touch, and where each rail stands, read the chain's own
+    // setback.
     let setback = chain.setback_at(end_parameter);
-    let [left_setback, right_setback] = rails.map(|rail| rail.setback_at(end_parameter));
 
     // The end face's plane: a kept, untagged triangle at the end vertex, faced along the chain.
     let mut normal: Option<Vector3> = None;
@@ -193,16 +174,16 @@ pub fn extend_both(
         return Ok(None);
     }
 
-    let left_cut = to_the_rail(mesh, rails[0], left, last, left_setback, back_facing)?;
-    let right_cut = to_the_rail(mesh, rails[1], right, last, right_setback, back_facing)?;
+    let left_cut = to_the_rail(mesh, chain, left, last, setback, back_facing)?;
+    let right_cut = to_the_rail(mesh, chain, right, last, setback, back_facing)?;
     let (Some(left_cut), Some(right_cut)) = (left_cut, right_cut) else {
         return Ok(None);
     };
 
     // The row at the end vertex, and how far past the end its last point is from leaving the end
     // plane.
-    let rail_left = end + (left_cut.away * left_setback);
-    let rail_right = end + (right_cut.away * right_setback);
+    let rail_left = end + (left_cut.away * setback);
+    let rail_right = end + (right_cut.away * setback);
     let reach = last_to_leave(rail_left, rail_right, end, outward, plane, profile);
     let along = plane.dot(outward);
     let exit = end_parameter + ((if last { 1.0 } else { -1.0 }) * reach / along);
@@ -246,8 +227,8 @@ pub fn extend_both(
         )
     };
 
-    let left = with(left, left_cut, left_setback);
-    let right = with(right, right_cut, right_setback);
+    let left = with(left, left_cut, setback);
+    let right = with(right, right_cut, setback);
     Ok(Some((left, right)))
 }
 

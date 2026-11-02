@@ -12,7 +12,6 @@ use std::rc::Rc;
 
 use vector_math::Vector3;
 
-use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::triangle_edges::{self, level_line_triangle_corners};
 use super::{consumed_to_the_rim, corner_fill, foreign_edge_room};
 use super::{BandGroup, ChainSideLoops, GapLoop, LevelLineMesh, PickCorner};
@@ -524,36 +523,11 @@ pub fn one_of(mesh: &LevelLineMesh, from: i32, to: i32) -> Option<i32> {
     })
 }
 
-/// Each edge of a removed triangle of an open chain's end region (tags 3 and 4), with that tag:
-/// where such an edge is open and the triangle kept across it is a side's, the end region's cut
-/// stopped there (see [`loops_of_side`]).
-fn end_region_cut_stops(mesh: &LevelLineMesh) -> HashMap<(i32, i32), i32> {
-    let mut stops = HashMap::new();
-    for r in 0..mesh.triangle_count() {
-        let t = mesh.triangles()[r as usize];
-        if mesh.is_removed(r) && (t.tag == FIRST_END_TAG || t.tag == SECOND_END_TAG) {
-            for (from, to) in level_line_triangle_corners(t) {
-                stops.insert(triangle_edges::key(from, to), t.tag);
-            }
-        }
-    }
-    stops
-}
-
 /// The gap's boundary on one side, walked with the kept surface on
 /// the left. After the removal a gap edge stands on exactly one triangle, so the steps are read
 /// straight off the mesh: each open edge whose remaining triangle belongs to this side, in that
 /// triangle's own direction - and, across a KNIFE the band reached (or along a side consumed
 /// exactly to its rim, `consumed_rims`), the edge whose kept triangle is the untagged far face.
-///
-/// On the rolling ball's route (`LevelLineMesh::sides_from_the_ball`) an open edge whose removed
-/// triangle is an end region's (3 or 4) and whose kept triangle is a side's (1 or 2) is that end's
-/// step, never the side's: the end region was cut away right up to its edge with the side, which
-/// the side's own band never reached, so the stretch is the end cap's boundary. The ball's sides
-/// are the caller's whole face regions, so a side can run on round behind an end face (the T
-/// Handle's web, whose rim is a hole wall in the pocket walls' region, its edge with the web
-/// circling 12 round the end station's centre): read by the kept tag, the end face's own edge
-/// broke the side's rail in two.
 ///
 /// Which step FOLLOWS a step is asked of the triangle fan ([`follows`]), not of the arriving
 /// vertex: the boundary may pass through one vertex twice, and a successor kept per vertex
@@ -606,8 +580,6 @@ pub fn loops_of_side(
             })
     };
 
-    let end_cut_stops = mesh.sides_from_the_ball.then(|| end_region_cut_stops(mesh));
-
     // The mesh's edges come in ascending (low, high) order, so the steps are gathered in a
     // canonical order and the loops do not depend on when the walk was asked.
     for edge in mesh.edges() {
@@ -617,15 +589,7 @@ pub fn loops_of_side(
         }
 
         let kept_tag = mesh.triangles()[standing[0] as usize].tag;
-        let end_cut_stop = end_cut_stops
-            .as_ref()
-            .and_then(|stops| stops.get(&edge).copied())
-            .filter(|_| kept_tag == 1 || kept_tag == 2);
-        if let Some(end_tag) = end_cut_stop {
-            if end_tag != side {
-                continue;
-            }
-        } else if kept_tag != side && !(kept_tag == 0 && ours_across_a_knife(edge, standing[0])) {
+        if kept_tag != side && !(kept_tag == 0 && ours_across_a_knife(edge, standing[0])) {
             continue;
         }
 

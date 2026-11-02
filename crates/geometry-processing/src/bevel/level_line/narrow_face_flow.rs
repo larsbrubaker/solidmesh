@@ -100,8 +100,6 @@ pub fn tag_flowed_where_it_builds(
             fillet_segments,
             None,
             None,
-            None,
-            None,
         )?;
         Ok(room)
     };

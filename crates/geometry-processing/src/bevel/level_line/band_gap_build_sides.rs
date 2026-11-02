@@ -3,14 +3,7 @@
 //! A pass of one chain tags its two sides (and an open chain's end regions) for itself; a pass of
 //! several chains groups the sides of the whole pick (`band_side_groups`). The tags it returns are
 //! the ones the working mesh is made with, so everything after it (the cut, the band's delete, the
-//! room, the consumed rims, the loop walk and the fill) reads the sides this step chose. Where the
-//! rolling ball takes a one-chain pass whose side floods join its two sides into one region, the
-//! sides are the ones the ball rolled on (`rolling_ball_band_tags`, whose header says why and why
-//! only there). The ball's tags then lose what its contacts never sweep (`rolling_ball_sweep`):
-//! a side wrapping round past the chain into the other side's sweep, or a pass refused where a
-//! side's band folds back past the chain.
-//! They also lose what lies wholly past an unrayed end's own end face plane, where the round is
-//! cut flat (`rolling_ball_end_planes`): a far pocket behind the web the chain ends on.
+//! room, the consumed rims, the loop walk and the fill) reads the sides this step chose.
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -22,13 +15,9 @@ use super::band_gap_build_fault::BuildFault;
 use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_END_TAG};
 use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::foreign_edge_room_readings::FieldAt;
-use super::rolling_ball_band_tags::{self, BallSides};
-use super::rolling_ball_end_planes;
-use super::rolling_ball_sweep::{self, ContactPlanes, Sweep};
 use super::seam_edges::FeatureEdgeTest;
 use super::{band_side_groups, band_side_tagging, narrow_face_flow, step_corner_carry};
 use super::{BandGapRefusal, BandGapResult, BandGroup, BandProfile, ChainField};
-use crate::bevel::rolling_ball::rolling_ball_routing;
 
 /// What step 2 reads: the pass's mesh and chains, and the fields and settings the one-chain
 /// tagging's reaches and the narrow face flow's rooms read.
@@ -44,9 +33,8 @@ pub struct SideInputs<'a> {
     pub fields: &'a [Rc<ChainField>],
     /// Chain 0's field at the size (a pass of one chain).
     pub field: &'a ChainField,
-    /// Chain 0's field at any size, with `room_units`.
+    /// Chain 0's field at any size.
     pub field_at_0: FieldAt<'a>,
-    pub room_units: &'a [f64],
     pub known_room: Option<f64>,
     pub size: f64,
     pub snap: f64,
@@ -54,19 +42,13 @@ pub struct SideInputs<'a> {
     pub profile: BandProfile,
     pub fillet_segments: i32,
     pub step_corners: &'a HashSet<i32>,
-    /// The triangles the ball rolled on, where it takes a pass of one chain.
-    pub ball_sides: Option<&'a BallSides>,
-    /// Where the ball takes a pass of one chain: its planes through the chain and side A's and B's
-    /// fields at the size, which bound the sides its tags give (`rolling_ball_sweep`).
-    pub ball_sweep: Option<(&'a ContactPlanes, &'a [Rc<ChainField>; 2])>,
 }
 
 /// The sides of the pass: its triangles' tags and its band groups, or the refusal the build hands
 /// back as it is.
 pub enum Sides {
-    /// The tags per triangle, the band groups, and whether the tags are the rolling ball's sides
-    /// (`rolling_ball_band_tags`).
-    Tagged(Vec<i32>, Vec<BandGroup>, bool),
+    /// The tags per triangle and the band groups.
+    Tagged(Vec<i32>, Vec<BandGroup>),
     /// A chain that does not divide its sides (boxed: a result is far larger than the tags).
     Refused(Box<BandGapResult>),
 }
@@ -99,7 +81,6 @@ pub fn tag_the_sides(
         fields,
         field,
         field_at_0,
-        room_units,
         known_room,
         size,
         snap,
@@ -107,14 +88,11 @@ pub fn tag_the_sides(
         profile,
         fillet_segments,
         step_corners,
-        ball_sides,
-        ball_sweep,
     } = *inputs;
     let mut tags: Vec<i32>;
     let mut groups: Vec<BandGroup>;
-    let mut tagged_by_the_ball = false;
     if chain_edges.len() == 1 {
-        let mut divides;
+        let divides;
         (tags, divides) = if known_room.is_some() {
             band_side_tagging_ends::tag_band(
                 positions,
@@ -142,68 +120,6 @@ pub fn tag_the_sides(
                 },
             )?
         };
-        // Floods that join the two sides give way to the ball's own sides, which never do.
-        let from_the_ball = match ball_sides {
-            Some(sides) if !divides => {
-                tags = rolling_ball_band_tags::tags_of(
-                    positions,
-                    indices,
-                    &chain_edges[0],
-                    closed[0],
-                    &**is_feature_edge,
-                    sides,
-                    end_rays[0],
-                    field,
-                )?;
-                if let Some((planes, [a, b])) = ball_sweep {
-                    let swept = rolling_ball_sweep::retag_what_the_contacts_never_sweep(
-                        positions,
-                        indices,
-                        &chain_edges[0],
-                        &mut tags,
-                        [a, b],
-                        planes,
-                        snap,
-                    )?;
-                    if let Sweep::FoldsBack { point, side } = swept {
-                        let (own, other) = if side == 0 { ("A", "B") } else { ("B", "A") };
-                        let why = format!(
-                            "chain 0: side {own}'s band folds back past the chain into side \
-                             {other}'s sweep at ({}, {}, {})",
-                            point.x, point.y, point.z
-                        );
-                        rolling_ball_routing::record_refusal(&why);
-                        return Ok(Sides::Refused(Box::new(BandGapResult {
-                            refusal: BandGapRefusal::RollingBall,
-                            rolling_ball_refusal: Some(why),
-                            ..BandGapResult::default()
-                        })));
-                    }
-                }
-                // Past an unrayed end's own face the round is cut flat: none of a side lies there.
-                let triangles: Vec<_> = indices.iter().copied().zip(tags.iter().copied()).collect();
-                let planes = rolling_ball_end_planes::end_face_planes(
-                    &|v| positions[v as usize],
-                    &triangles,
-                    &rolling_ball_end_planes::chain_vertices(&chain_edges[0]),
-                    closed[0],
-                    end_rays[0],
-                    snap,
-                );
-                rolling_ball_end_planes::leave_what_lies_past(
-                    positions,
-                    indices,
-                    &chain_edges[0],
-                    &mut tags,
-                    &planes,
-                    snap,
-                );
-                divides = true;
-                true
-            }
-            _ => false,
-        };
-        tagged_by_the_ball = from_the_ball;
         if !divides && closed[0] {
             return Ok(Sides::Refused(Box::new(BandGapResult {
                 refusal: BandGapRefusal::ChainDoesNotDivideItsSides,
@@ -214,7 +130,7 @@ pub fn tag_the_sides(
 
         // An end face NARROWER than this size's setback is flowed over onto the next face - but
         // only where the end face's own room would refuse the size and the flowed ends take it.
-        if known_room.is_none() && divides && !closed[0] && !from_the_ball {
+        if known_room.is_none() && divides && !closed[0] {
             tags = narrow_face_flow::tag_flowed_where_it_builds(
                 positions,
                 indices,
@@ -224,7 +140,7 @@ pub fn tag_the_sides(
                 end_rays[0],
                 field,
                 field_at_0,
-                room_units,
+                &unit_setbacks[0],
                 size,
                 snap,
                 seam_epsilon,
@@ -301,5 +217,5 @@ pub fn tag_the_sides(
         }
     }
 
-    Ok(Sides::Tagged(tags, groups, tagged_by_the_ball))
+    Ok(Sides::Tagged(tags, groups))
 }

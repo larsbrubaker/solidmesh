@@ -4,35 +4,6 @@
 //! ([`foreign_edges`]), whether an edge meets the chain at an end ([`meets_the_chain_at_an_end`]),
 //! the clusters of short edges at a chain's ends ([`cluster_at_the_ends`]) and the unindexed edge
 //! list ([`every_edge`]); the room readings over those edges are in `foreign_edge_room_readings.rs`.
-//!
-//! **The chain's own crease past a free end.** On the rolling ball's tags
-//! (`LevelLineMesh::sides_from_the_ball`) the chain's crease running on unpicked past a free end is
-//! a 1|2 edge away from the chain, and it is read like any other foreign edge: against the band's
-//! real field, the tapered round's (`rolling_ball_free_ends`: every setback capped by its chain
-//! point's distance from the end vertex), never exempted for where it runs. The only edge exempt
-//! is the one through the end vertex of an end that runs out ([`meets_the_chain_at_an_end`]): the
-//! field reads zero there to rounding, either way, which no reading can tell from a reach. Every
-//! other edge is read because the geometry decides it:
-//! - **Run on straight**, each of its points reads its own distance from the end vertex (a ball
-//!   through the end vertex never reaches past it along the chain's line), so it never sets the
-//!   room, at any size.
-//! - **Turned back alongside the chain** (a hairpin round a sliver of one side coming to a point
-//!   at the end vertex - the T Handle's free tip, where the wall's sliver between the picked crease
-//!   and its unpicked twin is 0.0052 wide a third of a unit from the tip), the tapered round does
-//!   reach it: the other side's region wraps round past the sliver, and that side's band, a
-//!   setback of 0.31 there at a size of 12, would be cut on it beyond the crease, across a crease
-//!   the user did not pick. The room is then honest, and an exemption by topology (the run of 1|2
-//!   edges leaving the end vertex) would exempt exactly that crease. Where the ball's contacts
-//!   never sweep that side's triangles behind the crease, they leave the side before the room is
-//!   read (`rolling_ball_sweep`), so the crease is read as the other side's edge with no side
-//!   beyond it, against that side's own field; where the side's band within reach lies on both
-//!   sides of the other contact's plane the pass is refused before any room is read.
-//!
-//! An end that carries an end region (3 or 4) keeps no exemption at its end vertex: its setback
-//! there is the cap's, not zero, so a 1|2 edge through it - a second crease between the two sides
-//! meeting the chain's end corner - reads below zero at every size and the room is zero. The band
-//! does cut across such a crease at that corner, whatever the size; which crease the round should
-//! stop at there is the corner of three creases, the ball's corner rule.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -182,17 +153,7 @@ pub fn is_a_knife(mesh: &LevelLineMesh, side: i32, far: i32, edge: (i32, i32)) -
 /// own tagging only ever ends at a chain edge (which puts the other side across it) or at a
 /// feature edge (which leaves untagged material across it), so an edge onto tag 0 is exactly a
 /// foreign feature edge, and it stays one through every split, since a split's children inherit
-/// their parent's tag. A side tagged from the rolling ball's (`LevelLineMesh::sides_from_the_ball`)
-/// is the caller's face regions, which end at region boundaries: onto tag 0, or onto the other
-/// side away from the chain (another chain's crease between the same two regions, or the chain's
-/// own crease running on past a free end), where no tag 0 stands. Such a 1|2 edge is foreign too:
-/// the band cutting across it would cut through a crease the user did not pick. Such a side also
-/// loses what the ball's contacts never sweep (`rolling_ball_sweep`), which can end it onto tag 0
-/// across a smooth surface, not at a crease: that edge is read like any other onto tag 0 - no knife
-/// edge (`is_a_knife_edge`: it is not folded at all), no growing crease (`GrowingCreaseRuns::grows`
-/// asks for an opposite-sense crease, which a flat edge is not, so `bounds_of` keeps the edge
-/// itself) - and filed on the side against that side's own field (`foreign_edge_room_per_side`),
-/// so it can only lower the room. A crease a growing
+/// their parent's tag. A crease a growing
 /// neighbour grows over is replaced by what it grows into; the growing runs read along the way are
 /// handed to `growing_runs` when given (`seam_epsilon` 0 is the usual value).
 ///
@@ -266,9 +227,7 @@ pub fn foreign_edges(
 
         let standing = m.triangles_on(edge.0, edge.1);
         let tags = || standing.iter().map(|&t| m.triangles[t as usize].tag);
-        let sides_meet_off_the_chain =
-            m.sides_from_the_ball && tags().any(|t| t == 1) && tags().any(|t| t == 2);
-        if !sides_meet_off_the_chain && (!tags().any(|t| t != 0) || !tags().any(|t| t == 0)) {
+        if !tags().any(|t| t != 0) || !tags().any(|t| t == 0) {
             continue;
         }
 
