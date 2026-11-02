@@ -17,6 +17,8 @@ mod carried_regions_tests;
 mod contact_tracking_tests;
 #[path = "rolling_ball/corner_setback_tests.rs"]
 mod corner_setback_tests;
+#[path = "rolling_ball/cube_corner_end_tests.rs"]
+mod cube_corner_end_tests;
 #[path = "rolling_ball/end_face_plane_tests.rs"]
 mod end_face_plane_tests;
 #[path = "rolling_ball/end_face_rim_tests.rs"]

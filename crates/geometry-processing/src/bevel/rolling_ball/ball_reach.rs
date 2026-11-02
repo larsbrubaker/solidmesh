@@ -119,6 +119,7 @@ impl Walk<'_, '_> {
                     self.ball.side_a,
                     SideReading::TrackedFrom {
                         contact: from_a,
+                        touched: None,
                         halves: halves_a,
                     },
                 ),
@@ -126,6 +127,7 @@ impl Walk<'_, '_> {
                     self.ball.side_b,
                     SideReading::TrackedFrom {
                         contact: from_b,
+                        touched: None,
                         halves: halves_b,
                     },
                 ),

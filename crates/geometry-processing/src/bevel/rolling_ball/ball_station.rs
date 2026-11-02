@@ -12,6 +12,7 @@
 
 use vector_math::Vector3;
 
+use super::contact_tracking::TouchedFrom;
 use super::side_surface::{HalfSpace, RollingBallSide, SideContact};
 
 /// The most Newton steps a station takes.
@@ -162,12 +163,49 @@ pub enum SideReading<'h> {
     /// ([`RollingBallSide::closest_within`]): how a ball is seeded from nothing.
     Nearest(&'h [HalfSpace]),
     /// The side's nearest point reached downhill over its surface from `contact`, a contact the
-    /// side gave a neighbouring ball, within every one of the halves
-    /// ([`RollingBallSide::closest_tracked`]): how a rolling ball's contact moves on.
+    /// side gave a neighbouring ball (`touched`, where given: where the contact's face ends, also
+    /// from the other places that ball touched), within every one of the halves
+    /// ([`RollingBallSide::closest_tracked_from_any`]): how a rolling ball's contact moves on.
     TrackedFrom {
         contact: SideContact,
+        touched: Option<TouchedFrom>,
         halves: &'h [HalfSpace],
     },
+}
+
+impl<'h> SideReading<'h> {
+    /// How a station reads both sides within `halves` (side A's, side B's): from nothing (the
+    /// nearest point within them) for a seed, followed from `track`'s contacts for a ball rolled
+    /// on from it to the chain point `to` (where a contact's face ends there, also from the other
+    /// places `track` touched, [`RollingBallSide::touched_elsewhere`]).
+    pub(super) fn both(
+        halves: [&'h [HalfSpace]; 2],
+        track: Option<&BallStation>,
+        to: Vector3,
+    ) -> (SideReading<'h>, SideReading<'h>) {
+        let touched = track.map(|from| TouchedFrom {
+            centre: from.centre,
+            ahead: to - from.chain_point,
+        });
+        match track {
+            None => (
+                SideReading::Nearest(halves[0]),
+                SideReading::Nearest(halves[1]),
+            ),
+            Some(from) => (
+                SideReading::TrackedFrom {
+                    contact: from.contact_a,
+                    touched,
+                    halves: halves[0],
+                },
+                SideReading::TrackedFrom {
+                    contact: from.contact_b,
+                    touched,
+                    halves: halves[1],
+                },
+            ),
+        }
+    }
 }
 
 impl SideReading<'_> {
@@ -177,8 +215,10 @@ impl SideReading<'_> {
     ///
     /// A followed contact that finds nothing is [`BallStationError::ContactNotFollowed`], not an
     /// empty side: the side may well hold surface within the halves, but only somewhere the
-    /// contact would have to leap to, and reading the whole side there would let it.
-    fn read(
+    /// contact would have to leap to, and reading the whole side there would let it. The other
+    /// places `touched` gave are starts only for the first reading: after it the contact slides on
+    /// from `latest`.
+    pub(super) fn read(
         &self,
         side: &RollingBallSide,
         centre: Vector3,
@@ -189,9 +229,15 @@ impl SideReading<'_> {
             SideReading::Nearest(halves) => side
                 .closest_within(centre, halves)
                 .ok_or(BallStationError::EmptySide),
-            SideReading::TrackedFrom { contact, halves } => side
-                .closest_tracked(centre, latest.unwrap_or(contact), halves)
-                .ok_or(BallStationError::ContactNotFollowed { side_b }),
+            SideReading::TrackedFrom {
+                contact,
+                touched,
+                halves,
+            } => match latest {
+                Some(latest) => side.closest_tracked(centre, latest, halves),
+                None => side.closest_tracked_from_any(centre, contact, *touched, halves),
+            }
+            .ok_or(BallStationError::ContactNotFollowed { side_b }),
         }
     }
 }

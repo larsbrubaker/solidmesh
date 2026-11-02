@@ -675,32 +675,6 @@ impl Walk<'_, '_> {
         (within(half_a), within(half_b))
     }
 
-    /// How a station at `point` reads each side within `halves_a` and `halves_b`: from nothing
-    /// (the nearest point within them) for a seed, followed from `track`'s contacts for a ball
-    /// rolled on from it.
-    fn readings<'h>(
-        halves_a: &'h [HalfSpace],
-        halves_b: &'h [HalfSpace],
-        track: Option<&BallStation>,
-    ) -> (SideReading<'h>, SideReading<'h>) {
-        match track {
-            None => (
-                SideReading::Nearest(halves_a),
-                SideReading::Nearest(halves_b),
-            ),
-            Some(from) => (
-                SideReading::TrackedFrom {
-                    contact: from.contact_a,
-                    halves: halves_a,
-                },
-                SideReading::TrackedFrom {
-                    contact: from.contact_b,
-                    halves: halves_b,
-                },
-            ),
-        }
-    }
-
     /// Where a ball centred at `centre` touches each side, read as a station at `point` reads
     /// them (followed from `track`'s contacts where given); `None` for a side with no triangles
     /// there.
@@ -712,16 +686,10 @@ impl Walk<'_, '_> {
         track: Option<&BallStation>,
     ) -> Option<(SideContact, SideContact)> {
         let (halves_a, halves_b) = self.reading_halves(point, radius, track);
-        let (reading_a, reading_b) = Self::readings(&halves_a, &halves_b, track);
-        let read = |reading: SideReading<'_>, side: &RollingBallSide| match reading {
-            SideReading::Nearest(halves) => side.closest_within(centre, halves),
-            SideReading::TrackedFrom { contact, halves } => {
-                side.closest_tracked(centre, &contact, halves)
-            }
-        };
+        let (reading_a, reading_b) = SideReading::both([&halves_a, &halves_b], track, point.point);
         Some((
-            read(reading_a, self.ball.side_a)?,
-            read(reading_b, self.ball.side_b)?,
+            reading_a.read(self.ball.side_a, centre, None, false).ok()?,
+            reading_b.read(self.ball.side_b, centre, None, true).ok()?,
         ))
     }
 
@@ -739,7 +707,7 @@ impl Walk<'_, '_> {
         track: Option<&BallStation>,
     ) -> Result<BallStation, StationFailure> {
         let (halves_a, halves_b) = self.reading_halves(point, radius, track);
-        let (reading_a, reading_b) = Self::readings(&halves_a, &halves_b, track);
+        let (reading_a, reading_b) = SideReading::both([&halves_a, &halves_b], track, point.point);
         let solve = |origin: Vector3, normal: Vector3, from: Vector3| {
             ball_station_reading(
                 (self.ball.side_a, reading_a),

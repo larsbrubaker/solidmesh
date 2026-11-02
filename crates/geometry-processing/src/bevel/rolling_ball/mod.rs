@@ -53,6 +53,7 @@ pub use ball_station::{
     ball_station, ball_station_reading, ball_station_within, flat_face_centre, BallStation,
     BallStationError, SideReading, MAX_NEWTON_STEPS,
 };
+pub use contact_tracking::{TouchedFrom, TURN_CREASE_DEGREES};
 pub use side_surface::{ContactFeature, HalfSpace, RollingBallSide, SideContact};
 pub use walk::{
     ChainPoint, ChainWalk, EndContactFault, EndFace, RollingBall, StationFailure, StationFault,

@@ -347,6 +347,7 @@ fn a_contact_whose_surface_lies_wholly_past_its_halves_cannot_be_followed() {
             &a,
             SideReading::TrackedFrom {
                 contact,
+                touched: None,
                 halves: &halves,
             },
         ),

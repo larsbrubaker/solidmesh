@@ -155,7 +155,12 @@ pub(super) fn closest_on_cut_triangle(
 /// The closest point of the triangle `a`, `b`, `c` to `point`, a triangle with no area included:
 /// the barycentric region test divides by the triangle's area terms, so a triangle whose corners
 /// coincide or line up is read as its three edges instead, never as a point that is not a number.
-fn closest_on_any_triangle(point: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
+pub(super) fn closest_on_any_triangle(
+    point: Vector3,
+    a: Vector3,
+    b: Vector3,
+    c: Vector3,
+) -> Vector3 {
     if (b - a).cross(c - a).length_squared() > 0.0 {
         return ChainField::closest_on_triangle(point, a, b, c);
     }
@@ -435,6 +440,31 @@ impl RollingBallSide {
             },
             triangle,
         })
+    }
+
+    /// The side's triangles whose boxes in the tree come within `reach` of `point` (a superset of
+    /// the triangles within `reach`), in tree order.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x >= 0)` on purpose: a NaN reach finds none
+    pub(super) fn within(&self, point: Vector3, reach: f64) -> Vec<usize> {
+        let mut found = Vec::new();
+        if self.nodes.is_empty() || !(reach >= 0.0) {
+            return found;
+        }
+        let reach_squared = reach * reach;
+        let mut stack = vec![0usize];
+        while let Some(n) = stack.pop() {
+            let node = self.nodes[n];
+            if box_distance_squared(point, node.min, node.max) > reach_squared {
+                continue;
+            }
+            if node.left < 0 {
+                found.extend_from_slice(&self.order[node.start..node.start + node.count]);
+            } else {
+                stack.push(node.right as usize);
+                stack.push(node.left as usize);
+            }
+        }
+        found
     }
 
     /// How far `point` stands off the side where `contact` touches it, on the side asked: in
