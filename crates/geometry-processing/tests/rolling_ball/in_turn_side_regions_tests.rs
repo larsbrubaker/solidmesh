@@ -2,8 +2,9 @@
 //! (`band_gap_in_turn::build_open_chains_in_turn_with_side_regions`): the first chain reads them
 //! on the input mesh, the later ones read them carried onto the mesh the earlier chains left
 //! (`side_regions_after_a_build`). Held to a cube whose left face blends smoothly into its
-//! neighbours, so the kernel's own flood joins each picked edge's two sides round it while the
-//! regions keep them apart.
+//! neighbours, so the kernel's own flood joins each picked edge's two sides round it (and divides
+//! the left face between them, where the ball at the chain's end meets it from both sides) while
+//! the regions keep them apart.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -168,22 +169,37 @@ fn a_pick_built_a_chain_at_a_time_hands_every_chain_its_side_regions() {
     the_rounds_are_the_balls(&both);
 }
 
-/// Without the regions the first chain's sides flood into one round the blended left face, so
-/// the ball has no two sides to roll between: with the switch on the pass is the ball's or
-/// refused, so the pick is refused at that chain with the reason, which the result carries. This
-/// is what the regions change.
+/// Without the regions the first chain's sides flood into one round the blended left face, which
+/// the division where the floods meet hands to both sides: at the chain's end on that face the
+/// ball touches the one face from both sides and has no walk. With the switch on the pass is the
+/// ball's or refused, so the pick is refused at that chain with the reason, which the result
+/// carries. This is what the regions change.
 #[test]
 fn without_side_regions_the_first_chain_floods_its_sides_into_one() {
     let (both, route) = built_in_turn(&the_two_edges(), None);
-    assert_eq!(
-        route.as_deref(),
-        Some("refused: chain 0: its two sides are one surface")
-    );
+    the_ball_meets_the_left_face_from_both_sides(route.as_deref());
     assert_eq!(both.refusal, GapFillRefusal::OpenChainEnds);
     assert_eq!(both.offending_chain, 0);
-    assert_eq!(
-        both.rolling_ball_refusal.as_deref(),
-        Some("chain 0: its two sides are one surface")
+    the_ball_meets_the_left_face_from_both_sides(
+        both.rolling_ball_refusal
+            .as_deref()
+            .map(|why| format!("refused: {why}"))
+            .as_deref(),
+    );
+}
+
+/// The route of a chain ending on the cube's blended left face read without the regions: the
+/// ball's walk is refused with its sides parallel, both meeting that one face. Which of the left
+/// face's two triangles each side keeps depends on the face's diagonal (the division goes by
+/// distance over the surface), so a different diagonal may change where the walk stops, not
+/// whether it is refused.
+fn the_ball_meets_the_left_face_from_both_sides(route: Option<&str>) {
+    assert!(
+        route.is_some_and(
+            |route| route.starts_with("refused: chain 0: the ball has no walk")
+                && route.contains("SidesParallel")
+        ),
+        "{route:?}"
     );
 }
 
@@ -296,13 +312,13 @@ fn regions_carried_past_a_build_keep_each_face_and_give_the_round_its_own() {
     assert_eq!(route.as_deref(), Some(ROLLING_BALL_ROUTE));
     assert_eq!(ball.refusal, BandGapRefusal::None);
     let (flooded, route) = second(None);
-    assert_eq!(
-        route.as_deref(),
-        Some("refused: chain 0: its two sides are one surface")
-    );
+    the_ball_meets_the_left_face_from_both_sides(route.as_deref());
     assert_eq!(flooded.refusal, BandGapRefusal::RollingBall);
-    assert_eq!(
-        flooded.rolling_ball_refusal.as_deref(),
-        Some("chain 0: its two sides are one surface")
+    the_ball_meets_the_left_face_from_both_sides(
+        flooded
+            .rolling_ball_refusal
+            .as_deref()
+            .map(|why| format!("refused: {why}"))
+            .as_deref(),
     );
 }

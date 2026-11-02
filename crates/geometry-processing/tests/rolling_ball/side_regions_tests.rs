@@ -1,8 +1,8 @@
 //! The rolling ball's two sides read from the caller's face regions
 //! (`band_gap_entry_points::build_pick_with_side_regions`) rather than flooded by the kernel over
 //! the build's feature edges: a cube whose back the feature edges let one side flood round into the
-//! other, which the regions keep apart (the band's own floods join the two sides there, so the band
-//! is tagged from the ball's sides), regions that do not give a chain two sides (refused by the
+//! other, which the regions keep apart and the kernel's flood divides where the floods meet (the
+//! band's own floods join the two sides there, so the band is tagged from the ball's sides), regions that do not give a chain two sides (refused by the
 //! ball, strict), a chain whose band's own side floods join two sides that differ, whose band is
 //! tagged from the ball's sides and cut per side (and which the switch off leaves as it was), whose
 //! crease running on past each free end the tapered round never reaches, and a box whose two side
@@ -68,21 +68,20 @@ fn the_top_front_edge(side_regions: Option<&[u32]>) -> (BandGapResult, Option<St
     (result, route)
 }
 
-/// The kernel's flood runs round the back from the top into the front, so without the regions
-/// the chain has one side and the ball refuses it; with them its sides are the top and the front,
-/// a square corner, and the ball takes the pass with its contacts the radius from the edge.
+/// A side that wraps round the part into the other far from the chain takes the ball with or
+/// without the caller's regions: the kernel's flood runs round the back from the top into the
+/// front, and without the regions that one surface is divided where the floods meet (round the
+/// back); with them the sides are the top and the front. Either way the ball rolls in a square
+/// corner with its contacts the radius from the edge. That the division keeps a finely cut side
+/// whole is held in `fine_front_sides_tests`.
 #[test]
-fn the_callers_face_regions_split_sides_the_feature_edges_let_flood_into_one() {
+fn a_side_wrapping_round_into_the_other_takes_the_ball_with_or_without_regions() {
     let (flooded, flooded_route) = the_top_front_edge(None);
-    assert_eq!(
-        flooded_route.as_deref(),
-        Some("refused: chain 0: its two sides are one surface")
-    );
-    assert_eq!(flooded.refusal, BandGapRefusal::RollingBall);
-    assert_eq!(
-        flooded.rolling_ball_refusal.as_deref(),
-        Some("chain 0: its two sides are one surface")
-    );
+    assert_eq!(flooded_route.as_deref(), Some(ROLLING_BALL_ROUTE));
+    assert_eq!(flooded.refusal, BandGapRefusal::None);
+    for setback in &flooded.chains[0].setbacks {
+        assert!((setback - 0.25).abs() < 1e-8, "{setback}");
+    }
 
     let (_, faces) = a_cube_and_its_faces();
     let (ball, route) = the_top_front_edge(Some(&faces));

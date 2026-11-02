@@ -200,6 +200,7 @@ pub(super) fn walked(c: &ChainToWalk<'_>) -> Result<WalkedChain, BallRefusal> {
             (c.in_a, c.in_b)
         } else {
             leg_sides = rolling_ball_sides::of_the_chain(
+                c.positions,
                 c.indices,
                 c.standing,
                 k,

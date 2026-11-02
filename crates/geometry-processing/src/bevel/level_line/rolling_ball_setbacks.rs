@@ -452,6 +452,7 @@ fn walked_setbacks(
                 && !is_feature_edge.is_some_and(|feature| feature(a, b))
         };
         let (in_a, in_b) = rolling_ball_sides::of_the_chain(
+            positions,
             indices,
             &standing,
             k,

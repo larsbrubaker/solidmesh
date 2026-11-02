@@ -42,8 +42,8 @@ use super::triangle_edges;
 use super::ChainField;
 
 /// One chain's two sides as the ball rolled on them, by triangle index: side A (the left, tag 1)
-/// and side B (the right, tag 2). The two never share a triangle: the ball takes no pass whose
-/// sides are one surface.
+/// and side B (the right, tag 2). The two never share a triangle: where the floods make them one
+/// surface, it is divided where they meet (`rolling_ball_sides`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct BallSides {
     /// Whether each triangle is in side A.

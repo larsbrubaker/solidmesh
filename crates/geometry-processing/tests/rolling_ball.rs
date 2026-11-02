@@ -21,6 +21,8 @@ mod corner_setback_tests;
 mod end_face_plane_tests;
 #[path = "rolling_ball/end_face_rim_tests.rs"]
 mod end_face_rim_tests;
+#[path = "rolling_ball/fine_front_sides_tests.rs"]
+mod fine_front_sides_tests;
 #[path = "rolling_ball/free_end_room_tests.rs"]
 mod free_end_room_tests;
 #[path = "rolling_ball/free_end_taper_tests.rs"]
