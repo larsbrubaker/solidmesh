@@ -11,7 +11,10 @@
 //! the cap is a vertex the cut or the strip already has, shared by index.
 //!
 //! Taken only where BOTH ends of the one chain are stopped and each run starts and ends on the end
-//! planes; anything else is read as before (`open_gap_fill::try_fade`).
+//! planes; anything else is read as before (`open_gap_fill::try_fade`). A chain stopped at ONE end
+//! only (its other end at a corner where two creases leave) is such a fade: its band still stops
+//! on the stopped end's plane, so the neighbours past it stay sharp, but the strip's rows taper
+//! into that end vertex instead of showing the section there.
 
 use std::cell::RefCell;
 use std::rc::Rc;

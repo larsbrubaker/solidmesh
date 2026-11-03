@@ -2,7 +2,8 @@
 //! stop on their mitre planes; an arc over half the circle keeps fading, because its own far points
 //! stand past each end's plane and a clip there would cut its own band; a leaving edge that is not
 //! a feature crease stops nothing; and a sector's radial edge and arc meeting at a corner, the
-//! arc's far end stopped, read a room the band builds at. Filled, a stopped arc is closed with its
+//! arc's far end stopped, read a room the band builds at; that arc alone, stopped at its far end
+//! only, fills closed with the rim past it sharp. Filled, a stopped arc is closed with its
 //! neighbours sharp and cut flat on both end planes, showing its whole section there, on exact and
 //! on single-precision input. The three-facet arc's removed volume is not asserted here: its rail
 //! chords across the inner joints' corners within the chord tolerance, which a vertex at every
@@ -16,10 +17,12 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
     build_pick, BandGapBuildOptions,
 };
 use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
+use geometry_processing::bevel::level_line::corner_cap_flat_ends::WATCH_FLAT_ENDS;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
 use geometry_processing::bevel::level_line::stopped_end_fill::try_stopped_ends;
 use geometry_processing::bevel::level_line::{
-    gap_fill, turn_stopped_ends_on, BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh,
+    gap_fill, turn_stopped_ends_on, BandGapResult, BandProfile, ChainField, GapLoop,
+    HoleFillTriangle, LevelLineMesh,
 };
 use vector_math::Vector3;
 
@@ -369,8 +372,25 @@ fn fills_flat_and_closed(mesh: &Mesh, facets: i32, single: bool) -> f64 {
         band(mesh, &[top_rim(0, facets)], feature_edges(mesh), size)
     };
     assert!(gap.built(), "the stopped arc builds: {:?}", gap.refusal);
-    let filled = gap_fill::fill_with_budget(&gap, BandProfile::Fillet, segments, None)
-        .expect("the fill runs");
+    let closed_flat = std::rc::Rc::new(std::cell::Cell::new(0));
+    {
+        let seen = Rc::clone(&closed_flat);
+        WATCH_FLAT_ENDS.with(|w| {
+            *w.borrow_mut() = Some(Rc::new(
+                move |_: &LevelLineMesh, _: &[i32], _: &[HoleFillTriangle]| {
+                    seen.set(seen.get() + 1);
+                },
+            ));
+        });
+    }
+    let filled = gap_fill::fill_with_budget(&gap, BandProfile::Fillet, segments, None);
+    WATCH_FLAT_ENDS.with(|w| *w.borrow_mut() = None);
+    let filled = filled.expect("the fill runs");
+    assert_eq!(
+        closed_flat.get(),
+        2,
+        "each end hole is closed by the flat fill in its plane"
+    );
     assert!(
         filled.filled(),
         "the stopped arc fills: {:?}",
@@ -483,5 +503,43 @@ fn runs_that_do_not_start_in_their_end_planes_are_left_to_the_fade() {
     assert!(
         fill.is_none(),
         "runs off both end planes are no stopped end"
+    );
+}
+
+#[test]
+fn an_arc_stopped_at_one_end_only_fills_closed() {
+    // The 60 degree sector's arc from its corner with the radial edge to its second facet seam:
+    // the corner end, where two creases leave, does not stop; the far end does.
+    let mut outline = vec![(0.0, 0.0)];
+    for i in 0..=8 {
+        let angle = f64::from(i) * (PI / 3.0) / 8.0;
+        outline.push((RADIUS * angle.cos(), RADIUS * angle.sin()));
+    }
+    let mesh = prism(&outline, 0);
+    let n = outline.len() as i32;
+    let gap = {
+        let _on = turn_stopped_ends_on();
+        band(
+            &mesh,
+            &[vec![n + 1, n + 2, n + 3]],
+            feature_edges(&mesh),
+            1.0,
+        )
+    };
+    assert!(gap.built(), "the arc builds: {:?}", gap.refusal);
+    let bounds = gap.chains[0].end_ray_bounds;
+    assert!(
+        bounds.0.is_none_or(|b| !b.stopped) && bounds.1.is_some_and(|b| b.stopped),
+        "only the far end stops"
+    );
+    let filled =
+        gap_fill::fill_with_budget(&gap, BandProfile::Fillet, 4, None).expect("the fill runs");
+    assert!(filled.filled(), "the arc fills: {:?}", filled.refusal);
+    let handle = Rc::clone(filled.mesh.as_ref().expect("the fill keeps its mesh"));
+    let filled_mesh = handle.borrow();
+    assert!(is_closed(&filled_mesh), "the filled arc is closed");
+    assert!(
+        keeps_edge(&filled_mesh, n + 3, n + 4) || keeps_edge(&filled_mesh, n + 4, n + 3),
+        "the rim edge past the stopped end stays sharp"
     );
 }

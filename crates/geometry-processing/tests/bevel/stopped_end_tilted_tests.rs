@@ -234,3 +234,16 @@ fn a_256_facet_tilted_cylinder_whose_seams_stand_far_off_the_stored_plane_is_cut
         angle: 1.1,
     });
 }
+
+/// A round as large as most of the facet's reach along the tilted seam: the end plane at each
+/// corner still holds the whole section.
+#[test]
+fn a_large_round_on_a_tilted_single_precision_cylinder_shows_its_whole_section_at_both_ends() {
+    let smallest = cuts_flat(&Case {
+        facets: 128,
+        size: 8.0,
+        axis: Vector3::new(0.8, -0.1, 0.5),
+        angle: 2.6,
+    });
+    assert!(smallest >= 1e-6, "no sliver is left: {smallest}");
+}

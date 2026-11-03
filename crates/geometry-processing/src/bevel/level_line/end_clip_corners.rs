@@ -121,14 +121,24 @@ pub fn insert<'a>(
         }
 
         // A stopped plane crossing the triangle with no edge in it: its trace across the
-        // triangle, from a corner on the plane or an edge it crosses to another.
-        if pending.len() == before && ![t.a, t.b, t.c].iter().any(|v| corners.contains(v)) {
+        // triangle, from a corner on the plane or an edge it crosses to another. A triangle
+        // holding a corner already made on THIS plane is a split's child and is not asked again;
+        // a corner made on another plane says nothing about this one (the two planes of a short
+        // facet meet inside the cap's fan triangles, one plane's corner splitting the triangle the
+        // other's trace crosses).
+        if pending.len() == before {
             let corners_at = [position(t.a), position(t.b), position(t.c)];
             for &(vertex, normal, stopped) in &planes {
                 let Some(tilt) = stopped else {
                     continue;
                 };
                 if normal == Vector3::ZERO || pending.len() != before {
+                    continue;
+                }
+                if [t.a, t.b, t.c].iter().zip(corners_at).any(|(v, at)| {
+                    corners.contains(v)
+                        && super::ChainField::on_a_stopped_plane(vertex, normal, tilt, at)
+                }) {
                     continue;
                 }
 

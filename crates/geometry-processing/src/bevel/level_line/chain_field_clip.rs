@@ -66,6 +66,29 @@ pub fn clip_at(clips: &[ChainFieldEndClip], point: Vector3) -> (f64, ChainFieldE
     (best, which)
 }
 
+/// [`clip_at`], with a STOPPED end's plane read as exactly 0 in its zone
+/// ([`ChainField::on_a_stopped_plane`]); `stopped` says which of the first and last ends stop.
+fn clip_in_stopped_zone(
+    clips: &[ChainFieldEndClip],
+    stopped: (bool, bool),
+    point: Vector3,
+) -> (f64, ChainFieldEndClip) {
+    let (value, clip) = clip_at(clips, point);
+    let stops = if clip.parameter == 0.0 {
+        stopped.0
+    } else {
+        stopped.1
+    };
+    if value != 0.0
+        && stops
+        && ChainField::on_a_stopped_plane(clip.vertex, clip.normal, clip.tilt, point)
+    {
+        return (0.0, clip);
+    }
+
+    (value, clip)
+}
+
 /// The part of a convex polygon on the kept side of a plane (Sutherland-Hodgman); at most one more
 /// point than it had.
 pub fn clip_to_keep(polygon: &[Vector3], origin: Vector3, keep: Vector3) -> Vec<Vector3> {
@@ -158,20 +181,19 @@ impl ChainField {
     /// inside the band - enough, below the snap, for the refinement to chase that noise with
     /// vertices microns apart and take the neighbour's slivers along the seam.
     pub fn clip_at(&self, point: Vector3) -> (f64, ChainFieldEndClip) {
-        let (value, clip) = clip_at(self.end_clips.as_deref().unwrap_or(&[]), point);
-        let stopped = if clip.parameter == 0.0 {
-            self.end_ray_bounds.0
-        } else {
-            self.end_ray_bounds.1
-        };
-        if value != 0.0
-            && stopped.is_some_and(|bound| bound.stopped)
-            && Self::on_a_stopped_plane(clip.vertex, clip.normal, clip.tilt, point)
-        {
-            return (0.0, clip);
-        }
+        clip_in_stopped_zone(
+            self.end_clips.as_deref().unwrap_or(&[]),
+            self.stopped_ends(),
+            point,
+        )
+    }
 
-        (value, clip)
+    /// Whether the chain's first and last ends are stopped.
+    fn stopped_ends(&self) -> (bool, bool) {
+        (
+            self.end_ray_bounds.0.is_some_and(|bound| bound.stopped),
+            self.end_ray_bounds.1.is_some_and(|bound| bound.stopped),
+        )
     }
 
     /// How many float steps (`float_grid::step_at_point`) off a stopped end's plane a point may
@@ -208,13 +230,18 @@ impl ChainField {
     }
 
     /// The greatest end plane's reading at a point, or `None` for a field no end plane clips -
-    /// what the convex cell bound needs to bound the plane's part of the field over a cell. Made
-    /// once; it carries its own copy of the clips, which never change.
+    /// what the convex cell bound needs to bound the plane's part of the field over a cell. It
+    /// reads as [`ChainField::clip_at`] does, a stopped end's zone as 0, so the bound is of the
+    /// field the cut reads. Made once; it carries its own copy of the clips and of which ends
+    /// stop, which never change.
     pub fn end_plane_reader(&self) -> Option<super::ChainFieldEndPlaneReader> {
         let clips = self.end_clips.as_ref()?;
+        let stopped = self.stopped_ends();
         Some(Rc::clone(self.end_plane_reader.get_or_init(|| {
             let clips = clips.clone();
-            Rc::new(move |_chain: i32, point: Vector3| clip_at(&clips, point).0)
+            Rc::new(move |_chain: i32, point: Vector3| {
+                clip_in_stopped_zone(&clips, stopped, point).0
+            })
         })))
     }
 
@@ -228,8 +255,11 @@ impl ChainField {
     }
 
     /// The least over the piece - cut to the ray's side of its bisector when `ray` is given - of
-    /// `max(term(p), plane(p))`, a convex function, by fixed-step ternary search, with where it
-    /// stands; +infinity where the ray's side cuts the piece.
+    /// `max(term(p), plane(p))` by fixed-step ternary search, with where it stands; +infinity
+    /// where the ray's side cuts the piece. With a convex term the function is convex but for a
+    /// STOPPED end's zone, where the plane reads 0 a few float steps either side of it
+    /// ([`ChainField::clip_at`]): the zone's dent is that narrow, so the search may step over it
+    /// and read a least higher than the zone's by at most the plane's reading across the zone.
     pub fn least_of_clipped_term(
         &self,
         piece: &ChainFieldMeshPiece,
