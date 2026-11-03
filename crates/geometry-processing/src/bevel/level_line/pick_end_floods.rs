@@ -16,7 +16,9 @@ use super::{BandGroup, ChainField};
 /// alone would flood it, tagged as a new group after the side groups with the one chain as its
 /// member and `end_of` naming it; a free end whose end face is another chain's side joins that
 /// side group instead (`join_the_side_it_ends_on`). `end_rays` and `end_face_reaches` are `None`
-/// where the caller has none to give.
+/// where the caller has none to give; `flow_reaches`, each chain's field at the size being built,
+/// flows a free end's region over a narrow end face as the chain alone would (`end_regions_of`),
+/// and is `None` for the plain tagging.
 #[allow(clippy::too_many_arguments)]
 pub fn flood_pick_ends(
     positions: &[Vector3],
@@ -27,6 +29,7 @@ pub fn flood_pick_ends(
     tags: &mut [i32],
     groups: &mut Vec<BandGroup>,
     end_face_reaches: Option<&[std::rc::Rc<ChainField>]>,
+    flow_reaches: Option<&[std::rc::Rc<ChainField>]>,
 ) -> Result<(), SideTaggingError> {
     // Every end region is read on the SIDE tagging alone: an end group tagged for one chain would
     // read to the next chain's flood as foreign surface and stop it short of an end face the two
@@ -59,6 +62,7 @@ pub fn flood_pick_ends(
             &|t| own.contains(&t),
             rays,
             reach,
+            flow_reaches.map(|r| &*r[k]),
         )?;
         let last = edges[edges.len() - 1].1;
         for (vertex, end_tag) in [(edges[0].0, FIRST_END_TAG), (last, SECOND_END_TAG)] {
@@ -220,6 +224,7 @@ fn join_the_side_it_ends_on(
             &|t| own.contains(&t),
             end_rays,
             end_face_reach,
+            None,
         )?;
         (0..side_tags.len())
             .filter(|&t| ends[t] == end_tag && side_tags[t] != 0 && side_tags[t] <= sides)

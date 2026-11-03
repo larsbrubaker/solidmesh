@@ -2,8 +2,10 @@
 //! pass is entered and its step 1 readings made in `band_gap_build_entry.rs`).
 //! Steps 1 to 7 of the level line construction - setback, sides (step 2 is
 //! `band_gap_build_sides.rs`'s), refinement and roots per group, the band's delete, the room, the
-//! gap loops and the pinch - leaving nothing to do but fill. Its faults travel as [`BuildFault`]
-//! (`band_gap_build_fault.rs`), which
+//! gap loops and the pinch - leaving nothing to do but fill. A pick of several chains reads its
+//! room before the sides, so the sides can be flowed over narrow end faces where that alone holds
+//! the size, by the one-chain rule (`narrow_face_flow::takes_the_flow`). Its faults travel as
+//! [`BuildFault`] (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
 //! outcomes. Step 1's setbacks and fields are `band_gap_setback_fields.rs`'s.
 
@@ -14,7 +16,7 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
-use super::band_gap::{chord_tolerance_of, needle_floor_of, BuildWithinArgs};
+use super::band_gap::{chord_tolerance_of, needle_floor_of, refused_by_size, BuildWithinArgs};
 use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
@@ -24,8 +26,8 @@ use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
     band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
-    one_chain_room, pick_validation, pinch_ladder_search, sharp_joint_corners, side_roots_settling,
-    side_witness, square_crease_end_clip, swallowed_side_runs, triangle_edges,
+    narrow_face_flow, one_chain_room, pick_validation, pinch_ladder_search, sharp_joint_corners,
+    side_roots_settling, side_witness, square_crease_end_clip, swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
@@ -57,6 +59,7 @@ pub(super) fn build_from_the_setbacks(
         sharp_turn_degrees,
         fillet_segments,
         step_corners,
+        handed_in_room,
         ..
     } = *args;
     let is_feature_edge: FeatureEdgeTest =
@@ -82,6 +85,58 @@ pub(super) fn build_from_the_setbacks(
     };
     let field = Rc::clone(&fields[0]);
 
+    // A pick of several chains reads its room on the input mesh, so it is read here, before the
+    // sides: where it refuses the size and the pick with every free end flowed over a narrow end
+    // face holds it, the flowed tagging is cut (the rule a pick of one chain flows by,
+    // `narrow_face_flow::takes_the_flow`), and the plain room is kept as the room the user is told.
+    let read_the_pick = |flow_reaches: Option<&[Rc<super::ChainField>]>| {
+        LevelLineWork::enter(LevelLineWorkPhase::CutRoom);
+        band_room_pair_room_pick::room_of_pick_flowing(
+            positions,
+            indices,
+            chains,
+            closed,
+            Some(Rc::clone(&is_feature_edge)),
+            profile,
+            snap,
+            f64::NAN,
+            seam_epsilon,
+            sharp_turn_degrees,
+            fillet_segments,
+            flow_reaches,
+        )
+    };
+    let mut pick_room = None;
+    let mut flow_reaches: Option<&[Rc<super::ChainField>]> = None;
+    if !only && known_room.is_none() {
+        // A room handed in IS the plain room, read already: only the flowed one is read here, and
+        // where the flow does not hold the size the pick refuses with the handed room at once.
+        let plain = match handed_in_room {
+            Some(_) => None,
+            None => Some(read_the_pick(None)?),
+        };
+        let plain_room = handed_in_room
+            .or(plain.as_ref().map(|p| p.room))
+            .unwrap_or(f64::INFINITY);
+        let mut flowed = None;
+        let takes = closed.iter().any(|&c| !c)
+            && narrow_face_flow::takes_the_flow(size, plain_room, || {
+                let read = read_the_pick(Some(&fields))?;
+                let room = read.room;
+                flowed = Some(read);
+                Ok::<f64, super::band_side_tagging_ends::SideTaggingError>(room)
+            })?;
+        if takes {
+            *unflowed_room = Some(plain_room);
+            flow_reaches = Some(&fields);
+            pick_room = flowed;
+        } else if let Some(handed) = handed_in_room {
+            return Ok(refused_by_size(handed));
+        } else {
+            pick_room = plain;
+        }
+    }
+
     // 2. SIDES, as GROUPS.
     LevelLineWork::enter(LevelLineWorkPhase::Sides);
     let side_inputs = SideInputs {
@@ -93,6 +148,7 @@ pub(super) fn build_from_the_setbacks(
         end_rays,
         unit_setbacks,
         fields: &fields,
+        flow_reaches,
         field: &field,
         field_at_0: &field_at_0,
         known_room,
@@ -326,20 +382,10 @@ pub(super) fn build_from_the_setbacks(
         room = read_room.expect("a pick of one chain read its room above");
         room_set_by = read_room_set_by;
     } else {
-        LevelLineWork::enter(LevelLineWorkPhase::CutRoom);
-        let pick = band_room_pair_room_pick::room_of_pick(
-            positions,
-            indices,
-            chains,
-            closed,
-            Some(Rc::clone(&is_feature_edge)),
-            profile,
-            snap,
-            f64::NAN,
-            seam_epsilon,
-            sharp_turn_degrees,
-            fillet_segments,
-        )?;
+        let pick = match pick_room.take() {
+            Some(pick) => pick,
+            None => read_the_pick(None)?,
+        };
         room = pick.room;
         room_set_by = pick.set_by;
     }
@@ -359,9 +405,11 @@ pub(super) fn build_from_the_setbacks(
 
     // ONE number decides: the size asked for is refused exactly when it stands above the room.
     if size > room && !ends_on_the_rim {
+        // A flowed band refused by size quotes the room it had without the flow, the one the user
+        // is told everywhere else (`unflowed_room`), never the flowed room it was cut by.
         return Ok(BandGapResult {
             refusal: BandGapRefusal::Size,
-            room,
+            room: unflowed_room.unwrap_or(room),
             room_set_by,
             chains: fields,
             mesh: Some(mesh),

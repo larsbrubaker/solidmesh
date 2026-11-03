@@ -1,7 +1,8 @@
 //! A pick's SIDE GROUPS: one topological flood over the input from every chain's two seeds, with
 //! seeds that reach the same triangles merged into one group, then the end floods. The floods it
 //! runs are in `band_side_tagging` and
-//! `band_side_tagging_ends`, a pick's end groups in `pick_end_floods`.
+//! `band_side_tagging_ends`, a pick's end groups in `pick_end_floods` (flowed over narrow end faces
+//! by `group_sides_flowing`).
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -57,7 +58,8 @@ pub fn has_a_both_sided_member(
 /// seeds, not crossing a chain edge or a feature edge, with seeds that reach the same triangles
 /// merged into one group. Groups are numbered in seed order - chain 0's left is 1 and its right is
 /// 2 - so everything that reads tags 1 and 2 of a single chain reads the same thing. `positions`,
-/// `end_rays` and `end_face_reaches` are `None` where the caller has none.
+/// `end_rays` and `end_face_reaches` are `None` where the caller has none. The plain tagging:
+/// no end flows over a narrow end face (`group_sides_flowing`).
 pub fn group_sides(
     indices: &[(i32, i32, i32)],
     chain_edges: &[Vec<(i32, i32)>],
@@ -66,6 +68,32 @@ pub fn group_sides(
     positions: Option<&[Vector3]>,
     end_rays: Option<&[(bool, bool)]>,
     end_face_reaches: Option<&[std::rc::Rc<ChainField>]>,
+) -> Result<GroupedSides, SideTaggingError> {
+    group_sides_flowing(
+        indices,
+        chain_edges,
+        is_feature_edge,
+        end_floods,
+        positions,
+        end_rays,
+        end_face_reaches,
+        None,
+    )
+}
+
+/// [`group_sides`], each open chain's free ends flowed over an end face narrower than the setback
+/// by `flow_reaches` (each chain's field at the size being built), as the chain alone flows them
+/// (`narrow_face_flow`); `None` is the plain tagging.
+#[allow(clippy::too_many_arguments)]
+pub fn group_sides_flowing(
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[Vec<(i32, i32)>],
+    is_feature_edge: &dyn Fn(i32, i32) -> bool,
+    end_floods: bool,
+    positions: Option<&[Vector3]>,
+    end_rays: Option<&[(bool, bool)]>,
+    end_face_reaches: Option<&[std::rc::Rc<ChainField>]>,
+    flow_reaches: Option<&[std::rc::Rc<ChainField>]>,
 ) -> Result<GroupedSides, SideTaggingError> {
     let standing = triangle_edges::standing_map(indices);
     let chain_keys: HashSet<(i32, i32)> = chain_edges
@@ -256,6 +284,7 @@ pub fn group_sides(
                 &mut tags,
                 &mut groups,
                 end_face_reaches,
+                flow_reaches,
             )?;
         }
     }

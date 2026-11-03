@@ -1,7 +1,13 @@
 //! The side tagging of ONE open chain flowed over a face narrower than the size's setback onto the
 //! next face (an end face, by the side tagging's end flow, or a side onto its gentle convex
-//! neighbour), taken only where the plain tagging refuses the size and the flowed one takes it.
-//! Split from the band gap; the rooms it compares are read by `band_room::room_of_cut_mesh`.
+//! neighbour), taken only where the plain tagging refuses the size and the flowed one takes it
+//! ([`takes_the_flow`], the rule a pick of several chains flows its ends by too). Split from the
+//! band gap; the rooms it compares are read by `band_room::room_of_cut_mesh`.
+//!
+//! The flow makes what builds NOT monotone in size, for one chain and a pick alike: every size up
+//! to the plain room builds unflowed, a size above it builds only where the flowed band holds and
+//! fills, so a size can build where a smaller one above the plain room refuses. A refusal past the
+//! plain room quotes the plain room (`unflowed_room`), which always builds.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -11,7 +17,6 @@ use vector_math::Vector3;
 
 use super::band_gap_reading::ReadRoomError;
 use super::band_room::{self, RoomWithinError};
-use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::band_side_tagging_ends::{self, EndReach, SideReach};
 use super::foreign_edge_room_readings::FieldAt;
 use super::level_line_mesh_edits::LevelLineMeshError;
@@ -59,19 +64,7 @@ pub fn tag_flowed_where_it_builds(
     )?;
 
     let an_end_flows_to_the_other = |tagging: &[i32]| {
-        let first = chain_edges[0].0;
-        let last = chain_edges[chain_edges.len() - 1].1;
-        for (i, &(a, b, c)) in indices.iter().enumerate() {
-            let at_first = a == first || b == first || c == first;
-            let at_last = a == last || b == last || c == last;
-            if (at_last && tagging[i] == FIRST_END_TAG && tags[i] != FIRST_END_TAG)
-                || (at_first && tagging[i] == SECOND_END_TAG && tags[i] != SECOND_END_TAG)
-            {
-                return true;
-            }
-        }
-
-        false
+        band_side_tagging_ends::an_end_flows_to_the_other(indices, chain_edges, &tags, tagging)
     };
 
     let room_on_the_tagging = |tagging: &[i32]| -> Result<f64, RoomWithinError> {
@@ -113,7 +106,7 @@ pub fn tag_flowed_where_it_builds(
     let mut room_unflowed = f64::NAN;
     if flowed != tags && !an_end_flows_to_the_other(&flowed) {
         room_unflowed = room_on_the_tagging(&tags)?;
-        if size > room_unflowed && size <= room_on_the_tagging(&flowed)? {
+        if takes_the_flow(size, room_unflowed, || room_on_the_tagging(&flowed))? {
             *unflowed_room = Some(room_unflowed);
             return Ok(flowed);
         }
@@ -140,11 +133,22 @@ pub fn tag_flowed_where_it_builds(
             room_unflowed = room_on_the_tagging(&tags)?;
         }
 
-        if size > room_unflowed && size <= room_on_the_tagging(&side_flowed)? {
+        if takes_the_flow(size, room_unflowed, || room_on_the_tagging(&side_flowed))? {
             *unflowed_room = Some(room_unflowed);
             return Ok(side_flowed);
         }
     }
 
     Ok(tags)
+}
+
+/// The one rule a flowed tagging is cut by, for a pick of one chain here and of several in
+/// `band_gap_build_within`: where the plain tagging's room refuses `size` and the flowed tagging's
+/// room holds it. The flowed room is read only where the plain one refuses.
+pub fn takes_the_flow<E>(
+    size: f64,
+    unflowed_room: f64,
+    flowed_room: impl FnOnce() -> Result<f64, E>,
+) -> Result<bool, E> {
+    Ok(size > unflowed_room && size <= flowed_room()?)
 }

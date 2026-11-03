@@ -35,6 +35,10 @@ pub struct BuildWithinArgs<'a> {
     pub sharp_turn_degrees: f64,
     pub fillet_segments: i32,
     pub step_corners: &'a HashSet<i32>,
+    /// The room the caller handed in where the size stands above it and the pick may flow past
+    /// it: the plain room, so a pick of several chains reads only its flowed room, and refuses
+    /// with this one at once where the flow does not hold the size.
+    pub handed_in_room: Option<f64>,
 }
 
 /// How a band gap build leaves without a result: the errors a caller sees. A refusal (the
@@ -169,8 +173,17 @@ pub fn build_unvalidated(
     }
 
     // A size the KNOWN room cannot hold is refused HERE, before anything is paid for - except for
-    // ONE OPEN chain, whose handed-in room is read size-free and may be flowed past.
-    let may_flow_past_the_room = chains.len() == 1 && !closed[0] && !topology_only;
+    // one OPEN chain, or a pick holding an open chain with a FREE end (one no other chain of the
+    // pick reaches), whose handed-in room is read size-free and may be flowed past (one chain by
+    // `narrow_face_flow`, several by `band_gap_build_within`'s flowed pick room). An end another
+    // chain reaches is no end region, so it cannot flow.
+    let may_flow_past_the_room = !topology_only
+        && (0..chains.len()).any(|k| {
+            !closed[k]
+                && [chains[k][0], chains[k][chains[k].len() - 1]]
+                    .iter()
+                    .any(|&end| !(0..chains.len()).any(|j| j != k && chains[j].contains(&end)))
+        });
     let mut known_room = known_room;
     if let Some(known) = known_room {
         if size > known && !may_flow_past_the_room {
@@ -203,6 +216,7 @@ pub fn build_unvalidated(
         sharp_turn_degrees,
         fillet_segments,
         step_corners: &step_corners,
+        handed_in_room,
     };
     match build_within(
         positions,
@@ -235,6 +249,11 @@ pub fn build_unvalidated(
             mesh: working,
             ..BandGapResult::default()
         }),
+        // A size above the room the caller handed in that ran out of work trying the flow is that
+        // room's refusal, the answer the caller would have had without the flow.
+        Err(BuildFault::Work(WorkError::BudgetExceeded(_))) if handed_in_room.is_some() => {
+            Ok(refused_by_size(handed_in_room.unwrap_or_default()))
+        }
         // The half-built mesh comes back as it stood when the work ran out - NOT a result.
         Err(BuildFault::Work(WorkError::BudgetExceeded(_))) => Ok(BandGapResult {
             refusal: BandGapRefusal::WorkBudgetExceeded,

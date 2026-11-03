@@ -1,7 +1,9 @@
 //! The room of a pick of several chains: (a) foreign edges per chain, (b) chain to chain per pair,
 //! (d) a stopped end's stretch of its plane covered by the other members sharing a side
 //! (`stopped_end_room.rs`), (c) each side running out of itself. The pair reading's helpers are in
-//! `band_room_pair_room.rs`, which re-exports this.
+//! `band_room_pair_room.rs`, which re-exports this. The reading is size-free; read with each
+//! chain's field at a size (`room_of_pick_flowing`) its free ends' regions flow over narrow end
+//! faces as a chain alone flows them, which is the room a build that flowed cuts by.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -65,7 +67,7 @@ fn spent_now() -> i64 {
 /// `name_every_candidate_under` (NaN for none) keeps every pair that could read under that size,
 /// so the candidates are complete up to it; the room and its source cannot move. A chain edge not
 /// on two triangles is the `ChainEdge` error.
-#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+#[allow(clippy::too_many_arguments)]
 pub fn room_of_pick(
     positions: &[Vector3],
     indices: &[(i32, i32, i32)],
@@ -78,6 +80,40 @@ pub fn room_of_pick(
     seam_epsilon: f64,
     sharp_turn_degrees: f64,
     fillet_segments: i32,
+) -> Result<PickRoom, SideTaggingError> {
+    room_of_pick_flowing(
+        positions,
+        indices,
+        chains,
+        closed,
+        is_feature_edge,
+        profile,
+        snap,
+        name_every_candidate_under,
+        seam_epsilon,
+        sharp_turn_degrees,
+        fillet_segments,
+        None,
+    )
+}
+
+/// [`room_of_pick`] with each open chain's end regions flowed over an end face narrower than the
+/// setback by `flow_reaches` (each chain's field at the size being built), as the one-chain room
+/// reads the flowed tagging (`narrow_face_flow`); `None` is the plain, size-free reading.
+#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
+pub fn room_of_pick_flowing(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    is_feature_edge: Option<FeatureEdgeTest>,
+    profile: BandProfile,
+    snap: f64,
+    name_every_candidate_under: f64,
+    seam_epsilon: f64,
+    sharp_turn_degrees: f64,
+    fillet_segments: i32,
+    flow_reaches: Option<&[Rc<ChainField>]>,
 ) -> Result<PickRoom, SideTaggingError> {
     let is_feature_edge: FeatureEdgeTest = is_feature_edge.unwrap_or_else(|| Rc::new(|_, _| false));
     let mut source = RoomSource::nothing();
@@ -261,7 +297,10 @@ pub fn room_of_pick(
             &tags,
             &|tag| seeds(tag, k),
             oblique(ku),
-            None,
+            // Flowed, the end regions are read with the end face reach the build's own tagging
+            // floods them with (`flood_pick_ends`), so the reading and the cut decide alike.
+            flow_reaches.map(|r| &*r[ku]),
+            flow_reaches.map(|r| &*r[ku]),
         ) {
             Ok(end_tags) => end_tags,
             Err(error) => {

@@ -24,7 +24,9 @@ pub type CreaseBounds = HashMap<(i32, i32), Option<Vec<(i32, i32)>>>;
 /// The room past a GROWING neighbour C (flow rung 2), in closed form. An
 /// opposite-sense crease does not bound the room where the band first reaches it: the rows run on
 /// virtually past it and C's plane clips them (`VirtualRail`, `StripClip`). What bounds it is C's
-/// cap reaching a SECOND crease of C.
+/// cap reaching a SECOND crease of C - but not the seam onto the next facet where C is one facet of
+/// a faceted wall whose crease carries on, since that facet grows a cap of its own
+/// (`read_bounds`).
 ///
 /// The refinement splits creases, so the run is walked over collinear opposite-sense pieces, once
 /// per crease, on a vertex-to-edge adjacency built once per room read and only when a growing

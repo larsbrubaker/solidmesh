@@ -4,7 +4,8 @@
 //! build's own exit, or a chain edge not on two triangles), and the taggings that call them: the
 //! sides and their ends
 //! ([`tag_sides`]), the band reached at a size ([`tag_band`]) and one chain's end regions on a
-//! tagged pick ([`end_regions_of`]).
+//! tagged pick ([`end_regions_of`]), and whether a flowed end reaches round to the chain's other
+//! end ([`an_end_flows_to_the_other`]), the test a chain alone and a pick both refuse a flow by.
 //!
 //! An end region stops at a fold, and at a soft bend only where the end flood may not cross it
 //! (`end_face_flow::crosses_a_soft_bend`): past the end within the band's reach, or size-free
@@ -531,7 +532,10 @@ pub fn tag_band(
 
 /// One chain's end regions read on a pick's tagging: its own
 /// sides (tags `seeds` accepts) read as a picked side, another chain's sides as another pick's side
-/// (closed to the end flood but where it stands past the end), untagged as untagged.
+/// (closed to the end flood but where it stands past the end), untagged as untagged. `end_reach`,
+/// the chain's field at the size being built, flows each end region over an end face narrower than
+/// the setback exactly as the one-chain tagging does (`EndReach::end_reach`); `None` is the
+/// size-free tagging.
 #[allow(clippy::too_many_arguments)]
 pub fn end_regions_of(
     positions: &[Vector3],
@@ -542,6 +546,7 @@ pub fn end_regions_of(
     seeds: &dyn Fn(i32) -> bool,
     end_rays: (bool, bool),
     end_face_reach: Option<&ChainField>,
+    end_reach: Option<&ChainField>,
 ) -> Result<Vec<i32>, SideTaggingError> {
     let mut tags: Vec<i32> = pick_tags
         .iter()
@@ -570,10 +575,55 @@ pub fn end_regions_of(
         None,
         end_rays,
         EndReach {
-            end_reach: None,
+            end_reach,
             end_face_reach,
         },
         true,
     )?;
+    // A flow that carries an end round to the chain's other end is not taken, as a chain alone
+    // does not take it (`narrow_face_flow`): the end regions stay the size-free ones.
+    if end_reach.is_some() {
+        let plain = end_regions_of(
+            positions,
+            indices,
+            chain_edges,
+            is_feature_edge,
+            pick_tags,
+            seeds,
+            end_rays,
+            end_face_reach,
+            None,
+        )?;
+        if an_end_flows_to_the_other(indices, chain_edges, &plain, &tags) {
+            return Ok(plain);
+        }
+    }
     Ok(tags)
+}
+
+/// Whether `flowed`, a chain's end regions flowed over a narrow end face, carries one END round to
+/// the chain's OTHER end where `plain` (the same regions unflowed) does not: a triangle at the last
+/// vertex newly in the first end's region, or at the first vertex newly in the last end's. Such an
+/// end is no end at all - the band has cut through the part's whole thickness there and would
+/// split it in two - so neither a chain alone (`narrow_face_flow`) nor a pick (`end_regions_of`)
+/// takes that flow.
+pub fn an_end_flows_to_the_other(
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[(i32, i32)],
+    plain: &[i32],
+    flowed: &[i32],
+) -> bool {
+    let first = chain_edges[0].0;
+    let last = chain_edges[chain_edges.len() - 1].1;
+    for (i, &(a, b, c)) in indices.iter().enumerate() {
+        let at_first = a == first || b == first || c == first;
+        let at_last = a == last || b == last || c == last;
+        if (at_last && flowed[i] == FIRST_END_TAG && plain[i] != FIRST_END_TAG)
+            || (at_first && flowed[i] == SECOND_END_TAG && plain[i] != SECOND_END_TAG)
+        {
+            return true;
+        }
+    }
+
+    false
 }

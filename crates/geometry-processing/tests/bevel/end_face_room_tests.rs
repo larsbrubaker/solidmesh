@@ -144,3 +144,50 @@ fn apex_prism() -> SolidWithChain {
     let chain = vec![top[2], top[2] + outline.len() as i32];
     (positions, indices, chain)
 }
+
+/// Picked with a top edge of a large cube standing apart, the apex edge refuses by size above its
+/// end faces' room just as it does alone: at 1.1 times that room the apex edge's end region would
+/// flow round to its other end and cut the prism in two, so the pick does not take the flow either.
+#[test]
+fn an_end_that_would_flow_to_the_other_end_refuses_in_a_pick_too() {
+    let (mut positions, mut indices, chain) = apex_prism();
+    let room = room_of(&positions, &indices, &chain);
+    let (cube_positions, cube_indices) = cube_solid(5.0);
+    let base = positions.len() as i32;
+    positions.extend(
+        cube_positions
+            .iter()
+            .map(|p| *p + Vector3::new(20.0, 0.0, 0.0)),
+    );
+    indices.extend(
+        cube_indices
+            .iter()
+            .map(|&(a, b, c)| (a + base, b + base, c + base)),
+    );
+    let cube_edge = vec![base + 4, base + 5];
+    let pick = band_gap_entry_points::build_pick(
+        &positions,
+        &indices,
+        &[chain.clone(), cube_edge],
+        &[false, false],
+        Some(feature(&positions, &indices)),
+        1.1 * room,
+        BandProfile::Fillet,
+        &BandGapBuildOptions::default(),
+    )
+    .expect("the pick builds or refuses by name");
+    assert_eq!(
+        pick.refusal,
+        BandGapRefusal::Size,
+        "room {}, set by {:?}",
+        pick.room,
+        pick.room_set_by
+    );
+    // The plain room, not the flowed one (the cube's 10): the pick's reading of it agrees with
+    // the chain's alone to the reading's own slack, the two reading at their own snaps.
+    assert!(
+        (pick.room - room).abs() < ROOM_SLACK,
+        "{} against {room}",
+        pick.room
+    );
+}

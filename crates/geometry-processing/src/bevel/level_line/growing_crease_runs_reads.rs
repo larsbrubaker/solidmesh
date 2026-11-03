@@ -1,6 +1,7 @@
 //! The readings of [`GrowingCreaseRuns`] past its constructor: whether a crease grows, the
 //! straight run it belongs to and that run's far end,
-//! the far creases that bound a growing run, the ridges off the chain's crease, and the size at
+//! the far creases that bound a growing run (less the convex seams onto the next facet of one wall,
+//! [`GrowingCreaseRuns::read_bounds`]), the ridges off the chain's crease, and the size at
 //! which a ridge first pierces the round (the fillet pierce room, read from the angle's centre).
 //! Split from
 //! `growing_crease_runs.rs` by responsibility.
@@ -9,8 +10,10 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use vector_math::{ieee_math, Vector3};
 
+use super::end_face_sense::{COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES};
 use super::{
-    end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineWork, WorkError,
+    end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineMesh, LevelLineWork,
+    WorkError,
 };
 
 /// The two sides of a chain edge as the pierce room reads them: a point of the edge, its unit
@@ -209,8 +212,10 @@ impl GrowingCreaseRuns {
 
     /// For a growing crease on one of the chain's own sides whose run ends at no
     /// chain end, the boundary creases of the far triangle's coplanar untagged region - less the
-    /// run itself, the ridges out of its NEAR end (noted as ridges instead) and creases at a chain
-    /// end.
+    /// run itself, the ridges out of its NEAR end (noted as ridges instead), the CONVEX seams out
+    /// of its FAR end onto a face that carries the run on as the next facet of one wall (a faceted
+    /// cylinder's next facet, which grows its own cap: `faces_carrying_the_run_on`) and creases at
+    /// a chain end.
     pub fn read_bounds(
         &self,
         edge: (i32, i32),
@@ -303,6 +308,37 @@ impl GrowingCreaseRuns {
             }
         }
 
+        // C's seams out of its FAR end onto the next facet of the same wall, whose own cap meets
+        // C's along the seam: they do not bound either.
+        let far = if near == a { b } else { a };
+        let carrying_on = self.faces_carrying_the_run_on(&mesh, near, far, &run_keys, normal)?;
+        let seams: HashSet<(i32, i32)> = distinct
+            .iter()
+            .copied()
+            .filter(|e| (e.0 == far || e.1 == far) && !run_keys.contains(e))
+            .filter(|e| {
+                let on = mesh.triangles_on(e.0, e.1);
+                let Some(&own) = on.iter().find(|t| in_c.contains(t)) else {
+                    return false;
+                };
+                on.iter().any(|&t| {
+                    !in_c.contains(&t)
+                        && mesh.triangles[t as usize].tag == 0
+                        && carrying_on.iter().any(|n| unit(t).dot(*n) >= 1.0 - 1e-9)
+                        // A CONVEX seam only: the strip clip drops the strip where every face of
+                        // the neighbour stands over it, which is the neighbour's inside only where
+                        // its faces meet convexly. A concave seam (a V-notch, a wall bending back
+                        // into the part) stays a bound.
+                        && end_face_sense::is_convex(
+                            &mesh.vertices,
+                            corners_of(mesh.triangles[own as usize]),
+                            corners_of(mesh.triangles[t as usize]),
+                            e.0,
+                        )
+                })
+            })
+            .collect();
+
         // C's ridges out of the run's NEAR end are what the cap extends past: they do not bound.
         let mut ridges = self.ridges.borrow_mut();
         for &(p, q) in distinct
@@ -316,10 +352,86 @@ impl GrowingCreaseRuns {
             distinct
                 .into_iter()
                 .filter(|e| {
-                    !run_keys.contains(e) && e.0 != near && e.1 != near && !at_a_chain_end(*e)
+                    !run_keys.contains(e)
+                        && e.0 != near
+                        && e.1 != near
+                        && !at_a_chain_end(*e)
+                        && !seams.contains(e)
                 })
                 .collect(),
         ))
+    }
+
+    /// The normals of the faces that carry a growing run on past its far end `far` as facets of one
+    /// wall: the untagged face of each growing crease of this chain's own sides leaving `far`
+    /// (other than the run's own pieces) that turns off the run's line by no more than
+    /// [`SEPARATE_END_FACE_DEGREES`] and whose face folds off C's (normal `c_normal`) by no more
+    /// than it (a 12-gon's 30 degrees carries on) - the kernel's one reading of "the curve
+    /// carries on", as a stopped end and an oblique end read a faceted curve's next facet. Such a
+    /// face grows its own cap over the band, meeting C's along the seam between them, so the seam
+    /// is no far crease. A crease turning sharper is a corner of the neighbour (a rib's back), past
+    /// which C's cap would have to turn: that seam still bounds.
+    fn faces_carrying_the_run_on(
+        &self,
+        mesh: &LevelLineMesh,
+        near: i32,
+        far: i32,
+        run: &HashSet<(i32, i32)>,
+        c_normal: Vector3,
+    ) -> Result<Vec<Vector3>, WorkError> {
+        // Read with a slack of `COPLANAR_TOLERANCE` in the cosine, so a turn of exactly 30 degrees
+        // (a 12-gon's, which `SEPARATE_END_FACE_DEGREES` reads as one wall) carries on whichever
+        // way its coordinates round.
+        let least_lean = SEPARATE_END_FACE_DEGREES.to_radians().cos() - COPLANAR_TOLERANCE;
+        let along = (mesh.position(far) - mesh.position(near)).get_normal();
+        let around = self
+            .neighbours
+            .borrow()
+            .as_ref()
+            .and_then(|n| n.get(&far))
+            .cloned()
+            .unwrap_or_default();
+        let mut normals = Vec::new();
+        for w in around {
+            LevelLineWork::charge(1)?;
+            if run.contains(&triangle_edges::key(far, w)) {
+                continue;
+            }
+
+            let on = mesh.triangles_on(far, w);
+            if on.len() != 2 {
+                continue;
+            }
+            let (first, second) = (
+                mesh.triangles[on[0] as usize],
+                mesh.triangles[on[1] as usize],
+            );
+            let (side, face) = match (first.tag, second.tag) {
+                (0, 0) => continue,
+                (0, _) => (second, first),
+                (_, 0) => (first, second),
+                _ => continue,
+            };
+            if !(self.is_own_side)(side.tag) || !self.grows((far, w)) {
+                continue;
+            }
+
+            let step = mesh.position(w) - mesh.position(far);
+            if step.length() == 0.0 || along.dot(step.get_normal()) < least_lean {
+                continue;
+            }
+
+            let face_normal = (mesh.position(face.b) - mesh.position(face.a))
+                .cross(mesh.position(face.c) - mesh.position(face.a))
+                .get_normal();
+            if face_normal.dot(c_normal) < least_lean {
+                continue;
+            }
+
+            normals.push(face_normal);
+        }
+
+        Ok(normals)
     }
 
     /// Whether `edge` is a noted ridge whose near end stands on
@@ -427,4 +539,9 @@ impl GrowingCreaseRuns {
 
         Ok(())
     }
+}
+
+/// A working-mesh triangle's three corners.
+fn corners_of(t: super::LevelLineTriangle) -> (i32, i32, i32) {
+    (t.a, t.b, t.c)
 }

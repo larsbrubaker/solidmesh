@@ -31,6 +31,9 @@ pub struct SideInputs<'a> {
     pub unit_setbacks: &'a [Vec<f64>],
     /// Every chain's field at the size.
     pub fields: &'a [Rc<ChainField>],
+    /// Each chain's field at the size, where a pick of several chains flows its free ends over
+    /// narrow end faces (`band_gap_build_within` decides); `None` for the plain tagging.
+    pub flow_reaches: Option<&'a [Rc<ChainField>]>,
     /// Chain 0's field at the size (a pass of one chain).
     pub field: &'a ChainField,
     /// Chain 0's field at any size.
@@ -79,6 +82,7 @@ pub fn tag_the_sides(
         end_rays,
         unit_setbacks,
         fields,
+        flow_reaches,
         field,
         field_at_0,
         known_room,
@@ -169,7 +173,7 @@ pub fn tag_the_sides(
         }
     } else {
         let mut undivided;
-        (tags, groups, undivided) = band_side_groups::group_sides(
+        (tags, groups, undivided) = band_side_groups::group_sides_flowing(
             indices,
             chain_edges,
             &**is_feature_edge,
@@ -177,6 +181,7 @@ pub fn tag_the_sides(
             Some(positions),
             Some(end_rays),
             Some(fields),
+            flow_reaches,
         )?;
         step_corner_carry::join_the_larger_setback_piece(
             positions,

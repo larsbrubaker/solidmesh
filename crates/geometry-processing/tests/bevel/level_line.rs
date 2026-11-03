@@ -171,6 +171,8 @@ pub(crate) mod graze_fixture_tests;
 pub(crate) mod grid_hole_plate_fixture;
 #[path = "growing_crease_room_source_tests.rs"]
 pub(crate) mod growing_crease_room_source_tests;
+#[path = "growing_neighbour_facet_seam_tests.rs"]
+pub(crate) mod growing_neighbour_facet_seam_tests;
 #[path = "half_cut_tangent_chain_tests.rs"]
 pub(crate) mod half_cut_tangent_chain_tests;
 #[path = "hole_fill_corner_tests.rs"]
@@ -279,6 +281,8 @@ pub(crate) mod parallel_edges_room_tests;
 pub(crate) mod pass_one_pinch_tests;
 #[path = "pick_field_tests.rs"]
 pub(crate) mod pick_field_tests;
+#[path = "pick_flows_over_a_narrow_end_face_tests.rs"]
+pub(crate) mod pick_flows_over_a_narrow_end_face_tests;
 #[path = "pinned_chain_end_tests.rs"]
 pub(crate) mod pinned_chain_end_tests;
 #[path = "point_bevel_tests.rs"]

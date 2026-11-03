@@ -502,6 +502,7 @@ fn rust_only_the_sides_band_and_end_regions_of_a_cube_edge() {
         &|t| t == 1,
         (false, false),
         None,
+        None,
     )
     .expect("two sides");
     assert_eq!(regions, vec![1, -1, 4]);
@@ -596,6 +597,7 @@ fn rust_only_a_picks_free_end_floods_its_end_face_as_an_end_group() {
         &mut tags,
         &mut groups,
         None,
+        None,
     )
     .expect("the end floods");
     // The end at 1 stands on the untagged face, which becomes the chain's end group; the end at 0
@@ -619,6 +621,7 @@ fn rust_only_a_picks_free_end_floods_its_end_face_as_an_end_group() {
         None,
         &mut closed_tags,
         &mut closed_groups,
+        None,
         None,
     )
     .expect("nothing to flood");
