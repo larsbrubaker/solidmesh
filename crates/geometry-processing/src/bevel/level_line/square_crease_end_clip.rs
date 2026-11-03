@@ -4,8 +4,9 @@
 //! kept on the build's [`WorkBudget`](super::WorkBudget) so it travels with the build) and the
 //! clips read
 //! off plain positions ([`square_crease_end_clips`]), and the clips over a pick with the room they
-//! leave ([`square_crease_end_clips_of_pick`], [`square_crease_end_room`], [`cap_room`]). Reads the
-//! end-face sense (`end_face_sense.rs`).
+//! leave ([`square_crease_end_clips_of_pick`], [`square_crease_end_room`], [`cap_room`]); the room
+//! is the reach of the end's concave crease, followed from chord to chord where it is a faceted
+//! curve. Reads the end-face sense (`end_face_sense.rs`).
 
 use std::collections::HashSet;
 
@@ -13,7 +14,9 @@ use vector_math::{ieee_math, Vector3};
 
 use super::{end_face_sense, pick_validation, RoomSource};
 
-use super::end_face_sense::{face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE};
+use super::end_face_sense::{
+    face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES,
+};
 use super::{EndRayBound, LevelLineWork};
 
 /// Whether [`square_crease_end_clips`] reads any
@@ -148,7 +151,8 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
         return None;
     }
 
-    let mut n = face_normal(positions, end_triangles[0]);
+    let end_normal = face_normal(positions, end_triangles[0]);
+    let mut n = end_normal;
     let bent = end_triangles
         .iter()
         .any(|&t| face_normal(positions, t).dot(n) < 1.0 - COPLANAR_TOLERANCE);
@@ -166,10 +170,11 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
         .copied()
         .filter(|&t| has(t, end) && in_a_side(face_normal(positions, t)))
         .collect();
-    // The crease's length from the end vertex bounds the room: the round's section in the end plane
-    // meets the crease a setback down it, so past its far vertex the section's foot leaves the
-    // crease (onto the nose on Bevel to Center Feature, 6.667 down) and the fill's arc sinks into
-    // the solid.
+    // The crease's reach from the end vertex bounds the room: the round's section in the end plane
+    // meets the crease a setback from the end vertex, so past the crease's last vertex the
+    // section's foot leaves the crease (onto the nose on Bevel to Center Feature, 6.667 down) and
+    // the fill's arc sinks into the solid. A faceted crease carries the foot on from chord to
+    // chord ([`crease_reach`]).
     let mut crease_length = f64::INFINITY;
     for &side in &side_faces {
         for &other in &end_triangles {
@@ -177,8 +182,8 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
             if shared.len() == 2 && shared.contains(&end) && !is_convex(positions, side, other, end)
             {
                 if let Some(&far) = shared.iter().find(|&&c| c != end) {
-                    crease_length =
-                        ieee_math::min_f64(crease_length, (positions[far as usize] - v).length());
+                    let reach = crease_reach(positions, indices, end, far, side, end_normal);
+                    crease_length = ieee_math::min_f64(crease_length, reach);
                 }
             }
         }
@@ -225,6 +230,85 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
         })
     } else {
         None
+    }
+}
+
+/// How far from the end vertex `end` the concave crease leaving it along the chord `end` - `far`
+/// reaches, `side` the face beside that chord and `end_normal` the end face's normal. The round's
+/// section lies in the end face's plane, and its foot stands on the crease where the crease is a
+/// setback from the end vertex; on a FACETED crease (an end wall meeting a faceted curve) the foot
+/// rides on from chord to chord. The crease runs on from a vertex along the one next chord that is
+/// again a concave crease between the end face and a face, where that face folds off the last one
+/// by less than [`SEPARATE_END_FACE_DEGREES`] (the faceted curve carrying on, read as the oblique
+/// end reader reads a facet), and only while each vertex stands farther from the end vertex than
+/// the last: where the crease turns back, or meets a real corner, the foot leaves it there.
+fn crease_reach(
+    positions: &[Vector3],
+    indices: &[Corners],
+    end: i32,
+    far: i32,
+    side: Corners,
+    end_normal: Vector3,
+) -> f64 {
+    let origin = positions[end as usize];
+    let in_the_end_face =
+        |t: Corners| face_normal(positions, t).dot(end_normal) >= 1.0 - COPLANAR_TOLERANCE;
+    let least_fold = SEPARATE_END_FACE_DEGREES.to_radians().cos();
+    let (mut previous, mut current, mut face) = (end, far, side);
+    let mut reach = (positions[far as usize] - origin).length();
+    loop {
+        // Each next chord out of `current`: its two triangles, one in the end face and one beside
+        // it, folding concavely, the face beside it carrying the last one's surface on.
+        let mut next: Option<(i32, Corners)> = None;
+        let mut several = false;
+        for &t in indices.iter().filter(|&&t| has(t, current)) {
+            if in_the_end_face(t) {
+                continue;
+            }
+
+            for w in [t.0, t.1, t.2] {
+                if w == current || w == previous {
+                    continue;
+                }
+
+                let standing: Vec<Corners> = indices
+                    .iter()
+                    .copied()
+                    .filter(|&o| has(o, current) && has(o, w))
+                    .collect();
+                if standing.len() != 2 {
+                    continue;
+                }
+
+                let Some(&wall) = standing.iter().find(|&&o| in_the_end_face(o)) else {
+                    continue;
+                };
+                if is_convex(positions, t, wall, current)
+                    || face_normal(positions, t).dot(face_normal(positions, face)) < least_fold
+                {
+                    continue;
+                }
+
+                match next {
+                    Some((at, _)) if at == w => {}
+                    Some(_) => several = true,
+                    None => next = Some((w, t)),
+                }
+            }
+        }
+
+        // No chord on, or more than one (the crease forks): the crease ends here.
+        let Some((w, t)) = next.filter(|_| !several) else {
+            return reach;
+        };
+        let farther = (positions[w as usize] - origin).length();
+        // A NaN distance (a degenerate vertex) ends the crease as a nearer vertex does.
+        if farther.partial_cmp(&reach) != Some(std::cmp::Ordering::Greater) {
+            return reach;
+        }
+
+        reach = farther;
+        (previous, current, face) = (current, w, t);
     }
 }
 

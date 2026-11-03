@@ -171,6 +171,8 @@ pub(crate) mod graze_fixture_tests;
 pub(crate) mod grid_hole_plate_fixture;
 #[path = "growing_crease_room_source_tests.rs"]
 pub(crate) mod growing_crease_room_source_tests;
+#[path = "half_cut_tangent_chain_tests.rs"]
+pub(crate) mod half_cut_tangent_chain_tests;
 #[path = "hole_fill_corner_tests.rs"]
 pub(crate) mod hole_fill_corner_tests;
 #[path = "hole_fill_density_tests.rs"]
@@ -345,6 +347,8 @@ pub(crate) mod slanted_face_rim_tests;
 pub(crate) mod sliver_split_guard_tests;
 #[path = "spoke_centre_parameter_tests.rs"]
 pub(crate) mod spoke_centre_parameter_tests;
+#[path = "square_crease_faceted_room_tests.rs"]
+pub(crate) mod square_crease_faceted_room_tests;
 #[path = "stair_step_chain_tests.rs"]
 pub(crate) mod stair_step_chain_tests;
 #[path = "step_corner_rim_tests.rs"]
