@@ -10,11 +10,13 @@
 //! the end run is closed flat in the plane (`corner_cap_flat_ends::closes_flat`). Every corner of
 //! the cap is a vertex the cut or the strip already has, shared by index.
 //!
-//! Taken only where BOTH ends of the one chain are stopped and each run starts and ends on the end
-//! planes; anything else is read as before (`open_gap_fill::try_fade`). A chain stopped at ONE end
-//! only (its other end at a corner where two creases leave) is such a fade: its band still stops
-//! on the stopped end's plane, so the neighbours past it stay sharp, but the strip's rows taper
-//! into that end vertex instead of showing the section there.
+//! Each end is cut by [`cut_flat_at`], shared with the end-face fill (`end_face_fill_try.rs`),
+//! which cuts a stopped end flat the same way where the chain's other end is on its end face.
+//! [`try_stopped_ends`] is taken only where BOTH ends of the one chain are stopped and each run
+//! starts and ends on the end planes; anything else is read as before (`open_gap_fill::try_fade`).
+//! A chain stopped at ONE end only with its other end at a corner where two creases leave is such
+//! a fade: its band still stops on the stopped end's plane, so the neighbours past it stay sharp,
+//! but the strip's rows taper into that end vertex instead of showing the section there.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -55,10 +57,101 @@ fn leading_in_plane(
         .count()
 }
 
+/// The stopped plane at the chain's first end (`last` false) or last end, as (end point, unit
+/// normal, tilt); `None` where that end is not stopped.
+pub fn stopped_plane(chain: &ChainField, last: bool) -> Option<(Vector3, Vector3, f64)> {
+    let bound = if last {
+        chain.end_ray_bounds.1
+    } else {
+        chain.end_ray_bounds.0
+    }?;
+    if !bound.stopped {
+        return None;
+    }
+
+    let points = chain.points();
+    let point = if last {
+        points[points.len() - 1]
+    } else {
+        points[0]
+    };
+    Some((point, bound.plane_normal.get_normal(), bound.plane_tilt))
+}
+
+/// One stopped end cut flat: the runs `left` (walking end 0 to end 1) and `right` (end 1 to end
+/// 0), which meet at that end's vertex, with their stretches in the end's `plane` taken off them,
+/// and the end run those stretches make (end 0: the right run's stretch, through the end vertex,
+/// then the left run's; end 1 the same way round). `None` where the runs do not meet there, or a
+/// run does not reach the plane at a vertex of its own other than the end vertex (two or more in
+/// the plane) with rail left between, so the caller reads that end as before.
+pub fn cut_flat_at(
+    mesh: &LevelLineMesh,
+    left: &GapLoop,
+    right: &GapLoop,
+    plane: (Vector3, Vector3, f64),
+    last: bool,
+) -> Option<(GapLoop, GapLoop, Vec<i32>)> {
+    let (l, r) = (&left.vertices, &right.vertices);
+    if l.len() < 2 || r.len() < 2 {
+        return None;
+    }
+
+    let reversed = |run: &[i32]| run.iter().rev().copied().collect::<Vec<i32>>();
+    if last {
+        if l[l.len() - 1] != r[0] {
+            return None;
+        }
+
+        // The first index of the left run's stretch on the plane, and the last of the right's.
+        let left_to = l
+            .len()
+            .checked_sub(leading_in_plane(mesh, &reversed(l), plane))?;
+        let right_from = leading_in_plane(mesh, r, plane).checked_sub(1)?;
+        if left_to == 0 || left_to >= l.len() - 1 || right_from == 0 || right_from >= r.len() - 1 {
+            return None;
+        }
+
+        let end: Vec<i32> = l[left_to..]
+            .iter()
+            .chain(r[1..=right_from].iter())
+            .copied()
+            .collect();
+        Some((
+            stretch(left, 0, left_to),
+            stretch(right, right_from, r.len() - 1),
+            end,
+        ))
+    } else {
+        if r[r.len() - 1] != l[0] {
+            return None;
+        }
+
+        // The last index of the left run's stretch on the plane, and the first of the right's.
+        let left_from = leading_in_plane(mesh, l, plane).checked_sub(1)?;
+        let right_to = r
+            .len()
+            .checked_sub(leading_in_plane(mesh, &reversed(r), plane))?;
+        if left_from == 0 || left_from >= l.len() - 1 || right_to == 0 || right_to >= r.len() - 1 {
+            return None;
+        }
+
+        let end: Vec<i32> = r[right_to..]
+            .iter()
+            .chain(l[1..=left_from].iter())
+            .copied()
+            .collect();
+        Some((
+            stretch(left, left_from, l.len() - 1),
+            stretch(right, 0, right_to),
+            end,
+        ))
+    }
+}
+
 /// The fill of a one-chain gap whose two ends are both stopped, its runs `left` (walking end 0 to
-/// end 1) and `right` (end 1 to end 0) meeting at the end vertices; `None` where the chain is not
-/// stopped at both ends or a run does not run along both planes to its rail, so the caller fills
-/// it as a fade.
+/// end 1) and `right` (end 1 to end 0) meeting at the end vertices, each end cut flat
+/// ([`cut_flat_at`]); `None` where the chain is not stopped at both ends or either end cannot be
+/// cut flat, so the caller fills it as a fade.
 pub fn try_stopped_ends(
     gap: &BandGapResult,
     mesh_handle: &Rc<RefCell<LevelLineMesh>>,
@@ -70,69 +163,21 @@ pub fn try_stopped_ends(
     let Some(chain) = gap.chains.first() else {
         return Ok(None);
     };
-    let (Some(first), Some(last)) = (chain.end_ray_bounds.0, chain.end_ray_bounds.1) else {
+    let (Some(first_plane), Some(last_plane)) =
+        (stopped_plane(chain, false), stopped_plane(chain, true))
+    else {
         return Ok(None);
     };
-    if !first.stopped || !last.stopped {
-        return Ok(None);
-    }
 
-    let points = chain.points();
-    let planes = [
-        (points[0], first.plane_normal.get_normal(), first.plane_tilt),
-        (
-            points[points.len() - 1],
-            last.plane_normal.get_normal(),
-            last.plane_tilt,
-        ),
-    ];
-    let (l, r) = (&left.vertices, &right.vertices);
-    if l.len() < 2 || r.len() < 2 || l[0] != r[r.len() - 1] || r[0] != l[l.len() - 1] {
-        return Ok(None);
-    }
-
-    let (left_rail, right_rail, end_runs) = {
+    let cut = {
         let mesh = mesh_handle.borrow();
-        let reversed = |run: &[i32]| run.iter().rev().copied().collect::<Vec<i32>>();
-        // How many vertices from each run's start stand in the plane it starts on, and from its
-        // end in the plane it ends on. Each run must leave its start plane and reach its end plane
-        // at a vertex of its own other than the end vertex (two or more in each plane), with rail
-        // between; a run whose end vertex is not read in its plane (a refinement vertex just
-        // outside the zone) is no stopped end this fill can lay.
-        let counts = [
-            leading_in_plane(&mesh, l, planes[0]),
-            leading_in_plane(&mesh, &reversed(l), planes[1]),
-            leading_in_plane(&mesh, r, planes[1]),
-            leading_in_plane(&mesh, &reversed(r), planes[0]),
-        ];
-        if counts.iter().any(|&count| count < 2) {
-            return Ok(None);
-        }
-        // The last index of each run's stretch on the plane it starts on, and the first of the
-        // stretch on the plane it ends on.
-        let left_from = counts[0] - 1;
-        let left_to = l.len() - counts[1];
-        let right_from = counts[2] - 1;
-        let right_to = r.len() - counts[3];
-        if left_from >= left_to || right_from >= right_to {
-            return Ok(None);
-        }
-
-        let end_0: Vec<i32> = r[right_to..]
-            .iter()
-            .chain(l[1..=left_from].iter())
-            .copied()
-            .collect();
-        let end_1: Vec<i32> = l[left_to..]
-            .iter()
-            .chain(r[1..=right_from].iter())
-            .copied()
-            .collect();
-        (
-            stretch(left, left_from, left_to),
-            stretch(right, right_from, right_to),
-            [end_0, end_1],
-        )
+        cut_flat_at(&mesh, left, right, first_plane, false).and_then(|(left, right, end_0)| {
+            cut_flat_at(&mesh, &left, &right, last_plane, true)
+                .map(|(left, right, end_1)| (left, right, [end_0, end_1]))
+        })
+    };
+    let Some((left_rail, right_rail, end_runs)) = cut else {
+        return Ok(None);
     };
 
     Ok(Some(open_gap_fill_fill::fill(

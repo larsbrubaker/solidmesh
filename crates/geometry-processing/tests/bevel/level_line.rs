@@ -353,6 +353,8 @@ pub(crate) mod step_corner_rim_tests;
 pub(crate) mod stl_reader;
 #[path = "stopped_end_arc_tests.rs"]
 pub(crate) mod stopped_end_arc_tests;
+#[path = "stopped_end_mixed_tests.rs"]
+pub(crate) mod stopped_end_mixed_tests;
 #[path = "stopped_end_room_tests.rs"]
 pub(crate) mod stopped_end_room_tests;
 #[path = "stopped_end_tilted_tests.rs"]

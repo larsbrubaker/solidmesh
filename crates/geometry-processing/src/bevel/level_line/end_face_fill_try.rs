@@ -3,9 +3,10 @@
 //! 800-line limit;
 //! both are re-exported from there. It reads each end's run - the cut's run on the end face
 //! (`end_face_fill::run`), a growing end face's crease stretch (`end_face_fill::crease_run`), the
-//! end-plane trim's section (`end_plane_trim_run::trim_end`), a mixed pick's nose or a hull end
-//! carried past the part (`virtual_rail_past_the_end::extended`) - and hands the strip and its end
-//! runs to the open fill (`open_gap_fill_fill::fill`).
+//! end-plane trim's section (`end_plane_trim_run::trim_end`), a stopped end's flat section
+//! (`stopped_end_fill::cut_flat_at`), a mixed pick's nose or a hull end carried past the part
+//! (`virtual_rail_past_the_end::extended`) - and hands the strip and its end runs to the open
+//! fill (`open_gap_fill_fill::fill`).
 
 use std::collections::HashSet;
 
@@ -16,9 +17,9 @@ use super::end_face_fill::{
 };
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
-    corner_cap_flat_ends, end_plane_trim_run, hull_clip, open_gap_fill, virtual_rail_past_the_end,
-    BandGapResult, BandProfile, ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
-    LevelLineMeshError,
+    corner_cap_flat_ends, end_plane_trim_run, hull_clip, open_gap_fill, stopped_end_fill,
+    virtual_rail_past_the_end, BandGapResult, BandProfile, ChainField, GapFillRefusal,
+    GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
 };
 
 /// A flag as the refusal sites print it: `True` or `False`.
@@ -288,6 +289,35 @@ pub fn try_end_faces(
                 rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &right, run, true);
             right = rail;
             second = Some(run);
+        }
+    }
+
+    // A STOPPED end (`stopped_end_clip.rs`) beside an end face: the band stops on its plane, so
+    // each run reaches the end vertex along the plane. Read as a nose, the rows would taper into
+    // the end vertex across those in-plane stretches and fold over each other; the end is cut flat
+    // instead, as at a chain stopped at both ends, its run the two in-plane stretches.
+    for last in [false, true] {
+        let (end_run, grows_here, trims_here) = if last {
+            (&second, grows_second, trims_second)
+        } else {
+            (&first, grows_first, trims_first)
+        };
+        if end_run.as_ref().is_some_and(|run| run.len() > 1) || !grows_here || trims_here {
+            continue;
+        }
+
+        let Some(plane) = stopped_end_fill::stopped_plane(chain, last) else {
+            continue;
+        };
+        let cut = stopped_end_fill::cut_flat_at(&mesh_handle.borrow(), &left, &right, plane, last);
+        if let Some((cut_left, cut_right, run)) = cut {
+            left = cut_left;
+            right = cut_right;
+            if last {
+                second = Some(run);
+            } else {
+                first = Some(run);
+            }
         }
     }
 

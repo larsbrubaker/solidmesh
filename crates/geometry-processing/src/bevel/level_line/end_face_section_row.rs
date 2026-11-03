@@ -27,8 +27,14 @@
 //!
 //! A face within [`SQUARE_COSINE`] of square to the chain keeps the square row bit for bit, so no
 //! square end moves by the projection's rounding.
+//!
+//! At a STOPPED end whose side folds across the band (a faceted twisted surface), the end plane's
+//! trace on that side bends, so the row's tangents at the rail corners no longer meet at the end
+//! vertex: [`stopped_end_controls`] gives the point where the traces at the two rail corners meet,
+//! and the row is drawn about it (slid as above), so the flat cap between row and trace never
+//! crosses itself. A side that is one plane keeps the end vertex.
 
-use vector_math::Vector3;
+use vector_math::{ieee_math, Vector3};
 
 use super::gap_fill::arc_point;
 use super::{ChainField, LevelLineMesh};
@@ -61,6 +67,7 @@ pub fn section_row(
     p: Vector3,
     q: Vector3,
     asked: EndRowAsked,
+    control: Option<Vector3>,
 ) -> Option<impl Fn(f64) -> Vector3> {
     let end = if asked.at_the_far_end {
         chain.length
@@ -88,7 +95,9 @@ pub fn section_row(
     let e = v + (t * (reference - v).dot(t));
     let into_the_square_plane = |x: Vector3| x - (t * (x - e).dot(t));
     let (p_square, q_square) = (into_the_square_plane(p), into_the_square_plane(q));
-    let c_square = e;
+    // Where the sides fold, the row's tangents meet at `control` in the face, not at the end
+    // vertex ([`stopped_end_controls`]); the slide is affine, so it carries that point too.
+    let c_square = control.map_or(e, into_the_square_plane);
 
     // Each point of the square row slides along the chain onto the end face.
     let onto_the_face = move |x: Vector3| x + (t * ((v - x).dot(n) / lean));
@@ -143,4 +152,102 @@ pub fn flat_end_faces(
         run.iter()
             .all(|&i| (mesh.position(i) - v).dot(n).abs() <= snap)
     })
+}
+
+/// How far from a rail corner, against the row's span, the end run's next vertex must stand
+/// before its direction is read as the side's trace there: nearer, float noise in its position
+/// would turn the tangent.
+const TRACE_DIRECTION_LEAST_SHARE: f64 = 1e-6;
+
+/// The control point of each STOPPED end's last row where a side folds across the band: the
+/// point in the end plane where the two sides' traces at the rail corners, carried on as straight
+/// lines, meet. The round rests tangent on the face each rail lies in, so its section in the end
+/// plane leaves each rail corner along that face's trace (the end run's first and last edges),
+/// and where a side is one plane both traces run straight to the end vertex and the row is drawn
+/// about it as before (`None`). Across a folded side (a faceted twisted surface) the trace bends,
+/// and a row drawn about the end vertex leaves the rail across the trace, so the cap's hole
+/// between that row and the end run crossed itself. `None` too where the traces do not meet
+/// ahead of both rail corners.
+pub fn stopped_end_controls(
+    mesh: &LevelLineMesh,
+    chain: &ChainField,
+    end_runs: Option<&[Vec<i32>]>,
+) -> [Option<Vector3>; 2] {
+    let Some(end_runs) = end_runs else {
+        return [None, None];
+    };
+    let snap = mesh.same_place();
+    [0, 1].map(|e| {
+        let bound = if e == 0 {
+            chain.end_ray_bounds.0
+        } else {
+            chain.end_ray_bounds.1
+        };
+        if !bound.is_some_and(|bound| bound.stopped) {
+            return None;
+        }
+        let run = end_runs.get(e)?;
+        if run.len() < 3 {
+            return None;
+        }
+        let v = chain.point_at(if e == 0 { 0.0 } else { chain.length });
+        let p = mesh.position(run[0]);
+        let q = mesh.position(run[run.len() - 1]);
+        let least = TRACE_DIRECTION_LEAST_SHARE * (q - p).length();
+        let leaving = |from: Vector3, run: &mut dyn Iterator<Item = &i32>| {
+            run.map(|&i| mesh.position(i) - from)
+                .find(|d| d.length() > least)
+                .map(|d| d.get_normal())
+        };
+        let along_p = leaving(p, &mut run.iter().skip(1))?;
+        let along_q = leaving(q, &mut run.iter().rev().skip(1))?;
+        where_the_traces_meet(v, (p, along_p), (q, along_q), snap)
+    })
+}
+
+/// Where the traces leaving the rail corners `p` and `q` (each with its unit direction toward the
+/// end vertex's side), carried on as straight lines, meet: the stopped end's row control
+/// ([`stopped_end_controls`]). `None` where both traces run straight through the end vertex `v`
+/// within `snap` (the row stays about `v`), where they do not meet ahead of both corners, or where
+/// they meet farther from `v` than the farther rail corner. Each trace runs from `v` to its rail
+/// corner, so the round's tangent there turns from the line to `v` by no more than the trace bends
+/// on the way, and the true section's control stays within that reach of `v`; a meeting point
+/// past it is two nearly parallel traces (a fold just past a rail corner, or a trace edge read
+/// along a fold), whose far crossing would bow the row out of the section.
+pub fn where_the_traces_meet(
+    v: Vector3,
+    (p, along_p): (Vector3, Vector3),
+    (q, along_q): (Vector3, Vector3),
+    snap: f64,
+) -> Option<Vector3> {
+    let off_the_line = |from: Vector3, along: Vector3| {
+        let d = v - from;
+        (d - (along * d.dot(along))).length()
+    };
+    if off_the_line(p, along_p) <= snap && off_the_line(q, along_q) <= snap {
+        return None;
+    }
+
+    // The nearest points of the two lines p + s along_p and q + t along_q (one point where they
+    // meet, as two traces in one plane do).
+    let w = p - q;
+    let b = along_p.dot(along_q);
+    let (d, f) = (along_p.dot(w), along_q.dot(w));
+    let denominator = 1.0 - (b * b);
+    if denominator.is_nan() || denominator <= 0.0 {
+        return None;
+    }
+    let s = ((b * f) - d) / denominator;
+    let t = (f - (b * d)) / denominator;
+    if s.is_nan() || t.is_nan() || s <= 0.0 || t <= 0.0 {
+        return None;
+    }
+    let meeting = ((p + (along_p * s)) + (q + (along_q * t))) * 0.5;
+    let reach = ieee_math::max_f64((p - v).length(), (q - v).length());
+    // Not a number reads as past the reach.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    if !((meeting - v).length() <= reach) {
+        return None;
+    }
+    Some(meeting)
 }

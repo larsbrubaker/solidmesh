@@ -8,7 +8,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::end_face_section_row::flat_end_faces;
+use super::end_face_section_row::{flat_end_faces, stopped_end_controls};
 use super::open_gap_fill::{arcs, backwards, is_straight_row, set_ends_site, try_rail};
 use super::open_gap_fill_cut_section::{flat_run_out, lay_beside_a_cut_row};
 use super::open_gap_fill_stations::{rows_where_the_round_needs_them, spokes, with_stations_of};
@@ -139,6 +139,7 @@ pub fn fill(
         ends.rows_on_the_ray,
         ends.end_runs.is_none(),
         flat_end_faces(mesh, chain, ends.end_runs),
+        stopped_end_controls(mesh, chain, ends.end_runs),
     )?;
     let past_an_end: Vec<bool> = spokes
         .iter()

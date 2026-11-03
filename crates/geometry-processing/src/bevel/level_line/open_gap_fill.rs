@@ -428,6 +428,8 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
 /// section in that face (`end_face_section_row`), so the cap beside it closes flat.
 /// `flat_end_faces` names the ends whose end face is flat where the row closes it; only there is
 /// the end row drawn about the end vertex (and, leaning, as the round's section).
+/// `end_controls` moves that row's control point off the end vertex where a stopped end's side
+/// folds (`end_face_section_row::stopped_end_controls`).
 /// Every vertex minted is appended to `added_vertices`; each spoke charged. `rows_on_the_ray` and
 /// `meets_on_the_crease` are usually `false`.
 #[allow(clippy::too_many_arguments)]
@@ -442,6 +444,7 @@ pub fn arcs(
     rows_on_the_ray: bool,
     meets_on_the_crease: bool,
     flat_end_faces: [bool; 2],
+    end_controls: [Option<Vector3>; 2],
 ) -> Result<Vec<Vec<i32>>, super::WorkError> {
     let mut arcs = Vec::new();
     let tie = PARAMETER_TIE_RELATIVE * ieee_math::max_f64(1.0, chain.length);
@@ -519,6 +522,15 @@ pub fn arcs(
             chain_point
         };
 
+        // A stopped end's last row across a folded side is drawn about where the sides' traces
+        // meet (`end_face_section_row::stopped_end_controls`).
+        let control = if end_face_row && !rows_on_the_ray {
+            end_controls[if k == 0 { 0 } else { 1 }]
+        } else {
+            None
+        };
+        let c = control.unwrap_or(c);
+
         let mut arc = vec![0; row_length];
         arc[0] = a;
         arc[segments as usize] = b;
@@ -531,7 +543,7 @@ pub fn arcs(
                 at_the_far_end: k != 0,
                 tangent: chain_direction_at(chain, if k == 0 { 0.0 } else { chain.length }),
             };
-            if let Some(section) = section_row(chain, p, q, asked) {
+            if let Some(section) = section_row(chain, p, q, asked, control) {
                 along = Box::new(section);
             }
         }

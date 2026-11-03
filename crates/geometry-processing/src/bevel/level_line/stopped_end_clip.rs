@@ -38,7 +38,8 @@
 //! `ChainField::IN_A_STOPPED_PLANE_STEPS` float steps of the plane reads exactly on it
 //! (`ChainField::clip_at`), and the corner where the plane meets each side's rail is put on the
 //! line (`end_clip_corners.rs`), so the band's boundary follows the plane to the rail on both
-//! sides. Nothing turns the gate on but a caller that asks; the fillet join wires the route to it.
+//! sides. Nothing turns the gate on but a caller that asks; the app's Fillet/Chamfer build asks for
+//! its whole run (`BevelSurfacePartBuilder::build` in `mattercad-model`).
 //! The clip's `same_sense` is false (the default): the fill's same-sense trim (`EndPlaneTrim`)
 //! trims a face the mesh already has, which a stopped end does not.
 
