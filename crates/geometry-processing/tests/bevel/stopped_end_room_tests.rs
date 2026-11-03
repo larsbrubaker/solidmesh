@@ -85,11 +85,13 @@ fn the_chains_far_end_clip_bounds_its_stretch_of_the_plane() {
                     vertex: own[0],
                     normal: far_normal,
                     parameter: 0.0,
+                    tilt: 0.0,
                 },
                 ChainFieldEndClip {
                     vertex: own[1],
                     normal: Vector3::new(1.0, 0.0, 0.0),
                     parameter: 1.0,
+                    tilt: 0.0,
                 },
             ]);
             clipped

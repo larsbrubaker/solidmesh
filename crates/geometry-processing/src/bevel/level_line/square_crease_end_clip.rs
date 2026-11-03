@@ -221,6 +221,7 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
             same_sense: true,
             crease_room: crease_length,
             stopped: false,
+            plane_tilt: 0.0,
         })
     } else {
         None

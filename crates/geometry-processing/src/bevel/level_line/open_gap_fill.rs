@@ -18,8 +18,9 @@ use super::end_face_section_row::{section_row, EndRowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
     corner_cap_flat_ends, dying_crease_fill, end_face_fill, gap_fill, open_gap_fill_cut_section,
-    open_gap_fill_stations, virtual_rail, virtual_rail_past_the_end, BandGapResult, BandProfile,
-    ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
+    open_gap_fill_stations, stopped_end_fill, virtual_rail, virtual_rail_past_the_end,
+    BandGapResult, BandProfile, ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
+    LevelLineMeshError,
 };
 
 /// A watcher of the fade's hole, as directed edges.
@@ -228,6 +229,18 @@ pub fn try_fade(
         return Ok(with_minted(filled.unwrap_or(refused), &minted));
     }
 
+    // Ends where the round stops on its end planes are cut flat there, not faded.
+    if let Some(stopped) = stopped_end_fill::try_stopped_ends(
+        gap,
+        mesh_handle,
+        &left,
+        &right,
+        profile,
+        fillet_segments,
+    )? {
+        return Ok(with_minted(one_chain(stopped), &minted));
+    }
+
     let watch = WATCH_FADE_HOLE.with(|watch| watch.borrow().clone());
     if let Some(watch) = watch {
         watch(&hole_between(&left, &right));
@@ -244,25 +257,31 @@ pub fn try_fade(
         OpenFillEnds::default(),
     )?;
     Ok(if fade.filled() {
-        let (triangles, vertices) = (
-            fade.added_triangles.len() as i32,
-            fade.added_vertices.len() as i32,
-        );
-        with_minted(
-            GapFillResult {
-                refusal: GapFillRefusal::None,
-                mesh: fade.mesh,
-                added_triangles: fade.added_triangles,
-                added_vertices: fade.added_vertices,
-                triangles_of_chain: vec![triangles],
-                vertices_of_chain: vec![vertices],
-                ..GapFillResult::default()
-            },
-            &minted,
-        )
+        with_minted(one_chain(fade), &minted)
     } else {
         fade
     })
+}
+
+/// A one-chain fill's answer, its counts given to its one chain; a refusal unchanged.
+fn one_chain(filled: GapFillResult) -> GapFillResult {
+    if !filled.filled() {
+        return filled;
+    }
+
+    let (triangles, vertices) = (
+        filled.added_triangles.len() as i32,
+        filled.added_vertices.len() as i32,
+    );
+    GapFillResult {
+        refusal: GapFillRefusal::None,
+        mesh: filled.mesh,
+        added_triangles: filled.added_triangles,
+        added_vertices: filled.added_vertices,
+        triangles_of_chain: vec![triangles],
+        vertices_of_chain: vec![vertices],
+        ..GapFillResult::default()
+    }
 }
 
 /// A filled result with the vertices the virtual rail minted listed first among its added ones

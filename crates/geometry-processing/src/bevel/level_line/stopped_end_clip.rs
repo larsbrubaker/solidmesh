@@ -33,17 +33,20 @@
 //! (`band_refinement_asking.rs`, rule (i)), which puts the band's side of the corner - the chain's
 //! own edge, between two end vertices on their planes - inside the band.
 //!
-//! The fill cannot yet cap a stopped end - it has no mesh face behind it, and needs a new flat cap
-//! in the end plane between the round's arc, the line where the plane cuts the flat face and the
-//! facet seam - so nothing turns the gate on but a caller that asks. The fillet join's second step
-//! adds that cap and wires the route to the gate. The clip's `same_sense` is false (the default):
-//! the fill's same-sense trim (`EndPlaneTrim`, `end_clip_corners`) trims a face the mesh already
-//! has, which a stopped end does not.
+//! The fill cuts a stopped end flat (`stopped_end_fill.rs`): the round keeps its whole profile up
+//! to the plane, and the plane shows its section. A point within
+//! `ChainField::IN_A_STOPPED_PLANE_STEPS` float steps of the plane reads exactly on it
+//! (`ChainField::clip_at`), and the corner where the plane meets each side's rail is put on the
+//! line (`end_clip_corners.rs`), so the band's boundary follows the plane to the rail on both
+//! sides. Nothing turns the gate on but a caller that asks; the fillet join wires the route to it.
+//! The clip's `same_sense` is false (the default): the fill's same-sense trim (`EndPlaneTrim`)
+//! trims a face the mesh already has, which a stopped end does not.
 
 use std::cell::Cell;
 
 use vector_math::Vector3;
 
+use super::super::float_grid;
 use super::end_face_sense::{
     face_normal, is_convex, Corners, COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES,
 };
@@ -230,7 +233,14 @@ fn stop_at(
 
     let (_, w) = leaving?;
     let along = (positions[w as usize] - v).get_normal();
-    let normal = (outward + along).get_normal();
+    let bisector = outward + along;
+    let normal = bisector.get_normal();
+    let step = float_grid::step_at_point(v)
+        .max(float_grid::step_at_point(positions[next as usize]))
+        .max(float_grid::step_at_point(positions[w as usize]));
+    let lean = |far: Vector3| 3.0_f64.sqrt() * step / (far - v).length();
+    let plane_tilt =
+        (lean(positions[next as usize]) + lean(positions[w as usize])) / bisector.length();
     // The plane clips the whole half-space past it: a chain point standing there (an arc over half
     // a circle reaches round behind its own end) would have its own band cut.
     for &c in chain {
@@ -245,6 +255,7 @@ fn stop_at(
         reach_per_setback: 0.0,
         plane_normal: normal,
         stopped: true,
+        plane_tilt,
         ..EndRayBound::default()
     })
 }

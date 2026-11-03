@@ -99,7 +99,9 @@ pub fn section_row(
 /// `same_place` of the plane through the run's two ends and the end vertex. That snap is the one
 /// the flat cap (`corner_cap_flat_ends::closes_flat`) closes the hole within, so an end read flat
 /// here is one the cap can close in its plane. A fade (no end runs), a run of fewer than two
-/// vertices, or ends and vertex spanning no plane is not flat.
+/// vertices, or ends and vertex spanning no plane is not flat. A STOPPED end
+/// (`stopped_end_clip.rs`) is flat where every run vertex stands on its end plane by
+/// `ChainField::on_a_stopped_plane`, the rule its band was cut by.
 pub fn flat_end_faces(
     mesh: &LevelLineMesh,
     chain: &ChainField,
@@ -117,6 +119,18 @@ pub fn flat_end_faces(
             return false;
         }
         let v = chain.point_at(if e == 0 { 0.0 } else { chain.length });
+        // A STOPPED end's run lies in its own end plane by the rule the band cut reads it by.
+        let bound = if e == 0 {
+            chain.end_ray_bounds.0
+        } else {
+            chain.end_ray_bounds.1
+        };
+        if let Some(bound) = bound.filter(|bound| bound.stopped) {
+            let normal = bound.plane_normal.get_normal();
+            return run.iter().all(|&i| {
+                ChainField::on_a_stopped_plane(v, normal, bound.plane_tilt, mesh.position(i))
+            });
+        }
         let (p, q) = (mesh.position(run[0]), mesh.position(run[run.len() - 1]));
         let normal = (p - v).cross(q - v);
         let length = normal.length();

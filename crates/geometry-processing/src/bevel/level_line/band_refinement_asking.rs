@@ -7,7 +7,8 @@
 //! point; its mirror, the bump, and its third face, the mixed edge; (ii) a hidden loop inside a
 //! triangle with every corner outside; (iv) an island of kept material inside a triangle
 //! with no corner outside; (v) a ridge through a crossed triangle's middle; (iii) the chord of a
-//! crossed triangle held to the chord tolerance. Each fires on an EXACT reading at the point it
+//! crossed triangle held to the chord tolerance, its line point in a stopped end's plane put on
+//! the plane (`stopped_plane_points.rs`). Each fires on an EXACT reading at the point it
 //! inserts, so no edge is divided twice by one rule; a split that would thin a child past the
 //! sliver limit bisects the longest-edge path instead. The only bound is the work budget; a
 //! triangle already under the accuracy anyone asked for that a rule still fires on is refused by
@@ -34,6 +35,7 @@ use super::refinement_splits_enqueue::{
     bisect_instead_of_thinning, bisect_instead_of_thinning_on_edge, insert_on_the_line,
     insert_where_it_stands, split_edge_and_enqueue,
 };
+use super::stopped_plane_points::onto_a_stopped_plane;
 use super::{
     ChainDistanceField, FieldCounters, FieldMaximum, LevelLineMeshError, LevelLineRule,
     LevelLineWork, VertexFieldReading, VertexSide, WorkError,
@@ -473,6 +475,7 @@ pub fn refine_by_asking(
         };
 
         FieldCounters::fired(LevelLineRule::ChordAccuracy);
+        let on_the_line = onto_a_stopped_plane(reading, triangle, on_the_line);
         let added = insert_on_the_line(
             &mut reading.mesh.borrow_mut(),
             triangle,

@@ -25,7 +25,8 @@ use vector_math::Vector3;
 /// [`EndRayBound::same_sense`]: the end face folds the chain's own way at the side creases, so the
 /// fill trims it to the round's section (`EndPlaneTrim`) rather than growing it.
 /// [`EndRayBound::crease_room`]: the largest size a square crease end's section stays on its crease
-/// (`square_crease_end_clip`). [`EndRayBound::stopped`]: a stopped end's clip. `Default` is
+/// (`square_crease_end_clip`). [`EndRayBound::stopped`]: a stopped end's clip, and
+/// [`EndRayBound::plane_tilt`] how far its stored plane may lean off the true one. `Default` is
 /// written out because not every default is zero (`crease_room` is +infinity: no bound).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EndRayBound {
@@ -42,6 +43,13 @@ pub struct EndRayBound {
     /// True when this is a STOPPED end's clip (`stopped_end_clip.rs`, default false): no ray, a
     /// plane that does not scale with the size.
     pub stopped: bool,
+    /// How far a STOPPED end's plane normal may lean off the true mitre, in radians, from the
+    /// float storage of the three vertices it is read from (default 0): each chord's unit
+    /// direction leans at most sqrt(3) float steps (its two ends rounded half a step on each
+    /// axis) over the chord's length, and the normal, their bisector, at most the two leans over
+    /// the bisector's length. A seam in the true plane stands off the stored one by this times its
+    /// distance from the end vertex ([`super::ChainField::on_a_stopped_plane`]).
+    pub plane_tilt: f64,
 }
 
 impl Default for EndRayBound {
@@ -52,6 +60,7 @@ impl Default for EndRayBound {
             same_sense: false,
             crease_room: f64::INFINITY,
             stopped: false,
+            plane_tilt: 0.0,
         }
     }
 }

@@ -151,9 +151,33 @@ pub fn least_over_triangle_by_ternary(
 
 impl ChainField {
     /// The greatest end plane's reading at a point, and which end it is; -infinity with no clip.
+    ///
+    /// A STOPPED end's plane reads exactly 0 in its zone ([`ChainField::on_a_stopped_plane`]): the
+    /// facet seam it stands on is float input, off the plane through the end vertex by its own
+    /// storage and the plane's lean, and read by its distance the seam's plateau would sit a few billionths
+    /// inside the band - enough, below the snap, for the refinement to chase that noise with
+    /// vertices microns apart and take the neighbour's slivers along the seam.
     pub fn clip_at(&self, point: Vector3) -> (f64, ChainFieldEndClip) {
-        clip_at(self.end_clips.as_deref().unwrap_or(&[]), point)
+        let (value, clip) = clip_at(self.end_clips.as_deref().unwrap_or(&[]), point);
+        let stopped = if clip.parameter == 0.0 {
+            self.end_ray_bounds.0
+        } else {
+            self.end_ray_bounds.1
+        };
+        if value != 0.0
+            && stopped.is_some_and(|bound| bound.stopped)
+            && Self::on_a_stopped_plane(clip.vertex, clip.normal, clip.tilt, point)
+        {
+            return (0.0, clip);
+        }
+
+        (value, clip)
     }
+
+    /// How many float steps (`float_grid::step_at_point`) off a stopped end's plane a point may
+    /// stand for its own storage and still be in it, before the plane's lean over the point's
+    /// distance is added. Read through [`ChainField::on_a_stopped_plane`] alone.
+    pub const IN_A_STOPPED_PLANE_STEPS: f64 = 4.0;
 
     /// A point sample with the clip applied: where an end plane stands above the chain's reading,
     /// or ties it to rounding ([`ChainField::END_PLANE_TIE_RELATIVE`]), the value is the plane's

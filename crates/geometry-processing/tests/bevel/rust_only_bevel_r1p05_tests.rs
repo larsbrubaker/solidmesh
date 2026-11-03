@@ -407,11 +407,13 @@ fn rust_only_end_clips_read_the_greatest_plane_or_the_nearer_of_one() {
         vertex: v(0.0, 0.0, 0.0),
         normal: v(-1.0, 0.0, 0.0),
         parameter: 0.0,
+        tilt: 0.0,
     };
     let last = ChainFieldEndClip {
         vertex: v(4.0, 0.0, 0.0),
         normal: v(1.0, 0.0, 0.0),
         parameter: 4.0,
+        tilt: 0.0,
     };
     field.end_clips = Some(vec![first, last]);
     assert_eq!(field.clip_at(v(6.0, 1.0, 0.0)), (2.0, last));
@@ -444,11 +446,13 @@ fn rust_only_end_clips_read_the_greatest_plane_or_the_nearer_of_one() {
         vertex: v(0.0, 0.0, 0.0),
         normal: v(0.0, 0.0, 1.0),
         parameter: 0.0,
+        tilt: 0.0,
     };
     let b = ChainFieldEndClip {
         vertex: v(5.0, 0.0, 0.0),
         normal: v(0.0, 0.0, 1.0),
         parameter: 5.0,
+        tilt: 0.0,
     };
     field.end_clips = Some(vec![a, b]);
     assert_eq!(field.clip_at(v(4.0, 0.0, 2.0)), (2.0, b));

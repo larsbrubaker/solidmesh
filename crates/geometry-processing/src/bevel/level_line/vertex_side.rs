@@ -6,7 +6,7 @@
 //! [`VertexFieldReading::value_in_the_end_plane`]) and the known cuts' test of a chain's or pick's bounded ends
 //! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]) and
 //! the stopped ends' tests ([`VertexFieldReading::has_stopped_ends`],
-//! [`VertexFieldReading::in_a_stopped_end_plane`],
+//! [`VertexFieldReading::in_a_stopped_end_plane`], [`VertexFieldReading::stopped_end_plane_at`],
 //! [`VertexFieldReading::is_a_band_corner_on_a_stopped_plane`]); the
 //! reading's queries land with the refinement's method package.
 
@@ -157,13 +157,19 @@ impl VertexFieldReading {
     /// triangles on the band side of it reach into the band. False for any other field. Reads only
     /// the clips, never the field, so it charges no work.
     pub fn in_a_stopped_end_plane(&self, point: Vector3) -> bool {
+        self.stopped_end_plane_at(point).is_some()
+    }
+
+    /// The stopped end's plane of the pick (under any run-out wrapper) a point stands in, as
+    /// (point on it, unit normal); `None` for any other field. Reads only the clips.
+    pub fn stopped_end_plane_at(&self, point: Vector3) -> Option<(Vector3, Vector3, f64)> {
         let pick = self.pick();
         if let Some(chain) = pick.as_chain_field() {
-            chain.lies_in_a_stopped_end_plane(point)
+            chain.stopped_end_plane_at(point)
         } else if let Some(pick) = pick.as_pick_field() {
-            pick.lies_in_a_stopped_end_plane(point)
+            pick.stopped_end_plane_at(point)
         } else {
-            false
+            None
         }
     }
 

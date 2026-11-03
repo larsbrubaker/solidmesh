@@ -221,9 +221,15 @@ impl PickField {
     /// Whether a point stands in a stopped end's plane of any member chain
     /// ([`ChainField::lies_in_a_stopped_end_plane`]).
     pub fn lies_in_a_stopped_end_plane(&self, point: Vector3) -> bool {
+        self.stopped_end_plane_at(point).is_some()
+    }
+
+    /// The first member's stopped end plane the point stands in
+    /// ([`ChainField::stopped_end_plane_at`]), in member order.
+    pub fn stopped_end_plane_at(&self, point: Vector3) -> Option<(Vector3, Vector3, f64)> {
         self.members
             .iter()
-            .any(|&k| self.chains[k as usize].lies_in_a_stopped_end_plane(point))
+            .find_map(|&k| self.chains[k as usize].stopped_end_plane_at(point))
     }
 }
 

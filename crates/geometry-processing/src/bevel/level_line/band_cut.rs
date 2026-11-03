@@ -180,6 +180,12 @@ pub fn put_the_root_on_the_line(
     point: vector_math::Vector3,
 ) -> Result<(), super::LevelLineMeshError> {
     // Asked as "is the answer a vertex that was already there": a new vertex is always the next id.
+    // A root in a stopped end's plane goes onto the plane exactly.
+    let ends = {
+        let mesh = reading.mesh.borrow();
+        (mesh.position(a), mesh.position(b))
+    };
+    let point = super::stopped_plane_points::edge_root_onto_a_stopped_plane(reading, ends, point);
     let (before, mid) = {
         let mut mesh = reading.mesh.borrow_mut();
         let before = mesh.vertex_count();

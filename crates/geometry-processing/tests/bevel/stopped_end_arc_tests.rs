@@ -2,7 +2,11 @@
 //! stop on their mitre planes; an arc over half the circle keeps fading, because its own far points
 //! stand past each end's plane and a clip there would cut its own band; a leaving edge that is not
 //! a feature crease stops nothing; and a sector's radial edge and arc meeting at a corner, the
-//! arc's far end stopped, read a room the band builds at.
+//! arc's far end stopped, read a room the band builds at. Filled, a stopped arc is closed with its
+//! neighbours sharp and cut flat on both end planes, showing its whole section there, on exact and
+//! on single-precision input. The three-facet arc's removed volume is not asserted here: its rail
+//! chords across the inner joints' corners within the chord tolerance, which a vertex at every
+//! inner joint's rail corner answers on its own.
 
 use std::collections::HashSet;
 use std::f64::consts::PI;
@@ -13,10 +17,13 @@ use geometry_processing::bevel::level_line::band_gap_entry_points::{
 };
 use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
 use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{turn_stopped_ends_on, BandGapResult, BandProfile};
+use geometry_processing::bevel::level_line::stopped_end_fill::try_stopped_ends;
+use geometry_processing::bevel::level_line::{
+    gap_fill, turn_stopped_ends_on, BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh,
+};
 use vector_math::Vector3;
 
-type Mesh = (Vec<Vector3>, Vec<(i32, i32, i32)>);
+pub(crate) type Mesh = (Vec<Vector3>, Vec<(i32, i32, i32)>);
 
 const RADIUS: f64 = 10.0;
 const HEIGHT: f64 = 10.0;
@@ -60,8 +67,27 @@ fn cylinder() -> Mesh {
     prism(&outline, 0)
 }
 
+/// The cylinder as a part stores it: every coordinate rounded to single precision. Upright, each
+/// facet seam stays exactly vertical, so it lies exactly in the stored end plane through its top
+/// vertex (a horizontal normal read from the rounded rim), though that plane leans a few float
+/// steps off the exact radial one; a tilted part's seams stand off it (`stopped_end_tilted_tests.rs`).
+fn single_precision_cylinder() -> Mesh {
+    let (positions, indices) = cylinder();
+    let rounded = positions
+        .iter()
+        .map(|p| {
+            Vector3::new(
+                f64::from(p.x as f32),
+                f64::from(p.y as f32),
+                f64::from(p.z as f32),
+            )
+        })
+        .collect();
+    (rounded, indices)
+}
+
 /// Every edge whose two triangles fold more than [`FEATURE_DEGREES`].
-fn feature_edges((positions, indices): &Mesh) -> FeatureEdgeTest {
+pub(crate) fn feature_edges((positions, indices): &Mesh) -> FeatureEdgeTest {
     let normal = |t: (i32, i32, i32)| {
         let a = positions[t.0 as usize];
         (positions[t.1 as usize] - a)
@@ -83,7 +109,12 @@ fn feature_edges((positions, indices): &Mesh) -> FeatureEdgeTest {
     Rc::new(move |a: i32, b: i32| features.contains(&(a.min(b), a.max(b))))
 }
 
-fn band(mesh: &Mesh, chains: &[Vec<i32>], feature: FeatureEdgeTest, size: f64) -> BandGapResult {
+pub(crate) fn band(
+    mesh: &Mesh,
+    chains: &[Vec<i32>],
+    feature: FeatureEdgeTest,
+    size: f64,
+) -> BandGapResult {
     let closed = vec![false; chains.len()];
     build_pick(
         &mesh.0,
@@ -245,5 +276,212 @@ fn a_corner_pair_with_a_stopped_far_end_reads_a_room_the_band_builds_at() {
         "the band builds at the room read, {}: {:?}",
         reading.room,
         gap.refusal
+    );
+}
+
+/// The signed volume of the live triangles.
+fn volume(mesh: &LevelLineMesh) -> f64 {
+    let mut six = 0.0;
+    for (i, t) in mesh.triangles.iter().enumerate() {
+        if mesh.removed[i] {
+            continue;
+        }
+        let (a, b, c) = (
+            mesh.vertices[t.a as usize],
+            mesh.vertices[t.b as usize],
+            mesh.vertices[t.c as usize],
+        );
+        six += a.dot(b.cross(c));
+    }
+    six / 6.0
+}
+
+/// Every live edge a->b has exactly one live b->a and no second a->b.
+pub(crate) fn is_closed(mesh: &LevelLineMesh) -> bool {
+    let mut edges = std::collections::HashMap::new();
+    for (i, t) in mesh.triangles.iter().enumerate() {
+        if mesh.removed[i] {
+            continue;
+        }
+        for (a, b) in [(t.a, t.b), (t.b, t.c), (t.c, t.a)] {
+            *edges.entry((a, b)).or_insert(0) += 1;
+        }
+    }
+    edges
+        .iter()
+        .all(|(&(a, b), &n)| n == 1 && edges.get(&(b, a)) == Some(&1))
+}
+
+/// Whether the live mesh keeps the edge a-b.
+pub(crate) fn keeps_edge(mesh: &LevelLineMesh, a: i32, b: i32) -> bool {
+    mesh.triangles
+        .iter()
+        .enumerate()
+        .any(|(i, t)| !mesh.removed[i] && [(t.a, t.b), (t.b, t.c), (t.c, t.a)].contains(&(a, b)))
+}
+
+/// The area of the live triangles lying in the radial plane through top vertex `rim`: all three
+/// corners within 1e-9 of it on exact input, and on single-precision input on it as the kernel
+/// reads a stopped plane (`ChainField::on_a_stopped_plane`).
+fn area_in_the_radial_plane(mesh: &LevelLineMesh, rim: i32, single: bool) -> f64 {
+    let p = mesh.vertices[(24 + rim % 24) as usize];
+    let normal = Vector3::new(-p.y, p.x, 0.0).get_normal();
+    let mut area = 0.0;
+    for (i, t) in mesh.triangles.iter().enumerate() {
+        if mesh.removed[i] {
+            continue;
+        }
+        let corners = [t.a, t.b, t.c].map(|v| mesh.vertices[v as usize]);
+        let on = |c: Vector3| {
+            if single {
+                ChainField::on_a_stopped_plane(p, normal, 0.0, c)
+            } else {
+                (c - p).dot(normal).abs() <= 1e-9
+            }
+        };
+        if corners.iter().all(|&c| on(c)) {
+            area += (corners[1] - corners[0])
+                .cross(corners[2] - corners[0])
+                .length()
+                / 2.0;
+        }
+    }
+    area
+}
+
+/// The round's section in an end plane with the arc laid in `segments` even chords: the square section
+/// (the corner square less the chord fan from the arc's centre) slid along the facet onto the
+/// radial plane, which stretches it across by 1 / cos of the facet's half angle.
+fn chorded_section_in_the_end_plane(size: f64, segments: i32) -> f64 {
+    let alpha = PI / 2.0 / f64::from(segments);
+    let square = size * size - f64::from(segments) * size * size / 2.0 * alpha.sin();
+    square / (PI / 24.0).cos()
+}
+
+/// Fills a stopped arc over `top_rim(0, facets)` at size 2 in 4 segments, and checks it closed,
+/// its neighbours' rim edges sharp and both ends cut flat with the whole section in the plane.
+/// Hands back the filled part's volume.
+fn fills_flat_and_closed(mesh: &Mesh, facets: i32, single: bool) -> f64 {
+    let size = 2.0;
+    let segments = 4;
+    let gap = {
+        let _on = turn_stopped_ends_on();
+        band(mesh, &[top_rim(0, facets)], feature_edges(mesh), size)
+    };
+    assert!(gap.built(), "the stopped arc builds: {:?}", gap.refusal);
+    let filled = gap_fill::fill_with_budget(&gap, BandProfile::Fillet, segments, None)
+        .expect("the fill runs");
+    assert!(
+        filled.filled(),
+        "the stopped arc fills: {:?}",
+        filled.refusal
+    );
+    let handle = Rc::clone(filled.mesh.as_ref().expect("the fill keeps its mesh"));
+    let filled_mesh = handle.borrow();
+    assert!(is_closed(&filled_mesh), "the filled arc is closed");
+    // The unpicked neighbours' rim edges stay sharp, kept as the part had them.
+    assert!(
+        keeps_edge(&filled_mesh, 24 + 23, 24) || keeps_edge(&filled_mesh, 24, 24 + 23),
+        "the rim edge before the arc stays sharp"
+    );
+    let after = 24 + (facets + 1) % 24;
+    let last = 24 + facets % 24;
+    assert!(
+        keeps_edge(&filled_mesh, last, after) || keeps_edge(&filled_mesh, after, last),
+        "the rim edge after the arc stays sharp"
+    );
+    let chorded = chorded_section_in_the_end_plane(size, segments);
+    let exact = (1.0 - PI / 4.0) * size * size / (PI / 24.0).cos();
+    for rim in [0, facets] {
+        let area = area_in_the_radial_plane(&filled_mesh, rim, single);
+        println!(
+            "end plane at rim vertex {rim}: in-plane fill {area}, exact section {exact}, chorded \
+             {chorded}"
+        );
+        // The profile's points are not evenly spaced in angle, so the chorded section is read to
+        // a thousandth.
+        assert!(
+            area >= exact && (area - chorded).abs() <= 1e-3 * chorded,
+            "the end plane at rim vertex {rim} shows the round's whole section, cut flat: {area} \
+             against {chorded}"
+        );
+    }
+    volume(&filled_mesh)
+}
+
+#[test]
+fn one_facet_rounded_with_stopped_ends_is_cut_flat_with_its_whole_profile_between_its_end_planes() {
+    let mesh = cylinder();
+    let kept = fills_flat_and_closed(&mesh, 1, false);
+    let n = 24.0;
+    let half = PI / n;
+    let part = n * RADIUS * RADIUS * half.sin() * half.cos() * HEIGHT;
+    let removed = part - kept;
+    // The facet's round is a prism of the profile's corner area between the two mitre planes
+    // through the axis: the area times the facet's length at the area's centroid, which stands
+    // r (10 - 3 pi) / (12 - 3 pi) in from each face, and a length 2 (a - u) tan(h) at depth u.
+    let size = 2.0;
+    let apothem = RADIUS * half.cos();
+    let area = (1.0 - PI / 4.0) * size * size;
+    let centroid = size * (10.0 - 3.0 * PI) / (12.0 - 3.0 * PI);
+    let exact = area * 2.0 * (apothem - centroid) * half.tan();
+    // The arc laid in 4 chords adds each chord's segment, standing at most the face's length.
+    let alpha = PI / 2.0 / 4.0;
+    let chord_area = 4.0 * size * size / 2.0 * (alpha - alpha.sin());
+    let chorded = exact + chord_area * 2.0 * apothem * half.tan();
+    println!("removed {removed}, exact {exact}, chorded at most {chorded}");
+    assert!(
+        removed >= exact && removed <= chorded,
+        "the round removes its whole profile between its end planes: {removed} against {exact} \
+         exact, {chorded} with the chords"
+    );
+}
+
+#[test]
+fn three_facets_rounded_with_stopped_ends_are_cut_flat_and_closed() {
+    fills_flat_and_closed(&cylinder(), 3, false);
+}
+
+#[test]
+fn one_facet_of_a_single_precision_cylinder_is_cut_flat_with_its_whole_profile() {
+    fills_flat_and_closed(&single_precision_cylinder(), 1, true);
+}
+
+#[test]
+fn runs_that_do_not_start_in_their_end_planes_are_left_to_the_fade() {
+    // A stopped one-facet arc's ends are the radial planes through rim vertices 0 and 1. Runs
+    // between bottom vertices 6 and 7, which stand in neither plane, have no stretch in a plane at
+    // all: the stopped fill hands them back to the fade instead of reading a stretch before the
+    // run's start.
+    let mesh = cylinder();
+    let gap = {
+        let _on = turn_stopped_ends_on();
+        band(&mesh, &[top_rim(0, 1)], feature_edges(&mesh), 2.0)
+    };
+    assert!(gap.built(), "the stopped arc builds: {:?}", gap.refusal);
+    let handle = Rc::clone(gap.mesh.as_ref().expect("the build kept its mesh"));
+    let left = GapLoop::new(
+        1,
+        false,
+        vec![6, 30, 7],
+        vec![0.0, 0.5, 1.0],
+        0,
+        false,
+        None,
+    );
+    let right = GapLoop::new(
+        2,
+        false,
+        vec![7, 31, 6],
+        vec![1.0, 0.5, 0.0],
+        0,
+        false,
+        None,
+    );
+    let fill = try_stopped_ends(&gap, &handle, &left, &right, BandProfile::Fillet, 4)
+        .expect("the stopped fill reads the runs");
+    assert!(
+        fill.is_none(),
+        "runs off both end planes are no stopped end"
     );
 }

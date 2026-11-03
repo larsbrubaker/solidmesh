@@ -355,6 +355,8 @@ pub(crate) mod stl_reader;
 pub(crate) mod stopped_end_arc_tests;
 #[path = "stopped_end_room_tests.rs"]
 pub(crate) mod stopped_end_room_tests;
+#[path = "stopped_end_tilted_tests.rs"]
+pub(crate) mod stopped_end_tilted_tests;
 #[path = "strip_clip_rib_meshes.rs"]
 pub(crate) mod strip_clip_rib_meshes;
 #[path = "strip_clip_rib_tests.rs"]
