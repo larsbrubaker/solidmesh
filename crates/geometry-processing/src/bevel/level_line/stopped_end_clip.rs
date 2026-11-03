@@ -33,8 +33,9 @@
 //! (`band_refinement_asking.rs`, rule (i)), which puts the band's side of the corner - the chain's
 //! own edge, between two end vertices on their planes - inside the band.
 //!
-//! The fill cuts a stopped end flat (`stopped_end_fill.rs`): the round keeps its whole profile up
-//! to the plane, and the plane shows its section. A point within
+//! The fill cuts a stopped end flat (`stopped_end_fill.rs`; in the corner fill, where the chain's
+//! other end meets other chains, `corner_fill_free_ends.rs` and `corner_rail_strip_zip.rs`): the
+//! round keeps its whole profile up to the plane, and the plane shows its section. A point within
 //! `ChainField::IN_A_STOPPED_PLANE_STEPS` float steps of the plane reads exactly on it
 //! (`ChainField::clip_at`), and the corner where the plane meets each side's rail is put on the
 //! line (`end_clip_corners.rs`), so the band's boundary follows the plane to the rail on both

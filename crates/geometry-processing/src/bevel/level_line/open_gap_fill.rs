@@ -668,7 +668,7 @@ pub fn on_the_ridge_between(
 
 /// The chain's unit direction on the segment a parameter falls on (clamped into the chain), or zero
 /// where that segment has no length.
-fn chain_direction_at(chain: &ChainField, parameter: f64) -> Vector3 {
+pub fn chain_direction_at(chain: &ChainField, parameter: f64) -> Vector3 {
     let (segment, _) = chain.locate_on_chain(parameter.clamp(0.0, chain.length));
     let next = (segment + 1) % chain.points.len();
     let step = chain.points[next] - chain.points[segment];

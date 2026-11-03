@@ -1,6 +1,8 @@
 //! The corner fill's zip of one chain's two rail pieces into the strip between them, with the
-//! last rows it hands the corner caps. The spoke centre, the nearest station and the setback are
-//! in `corner_rail_strip`, the knife end overrun in `knife_end_overrun`.
+//! last rows it hands the corner caps. A spoke between two rail corners in one STOPPED end plane is
+//! the round's section in that plane (`fillet_arc_rows::build_in_a_stopped_plane`). The spoke
+//! centre, the nearest station and the setback are in `corner_rail_strip`, the knife end overrun
+//! in `knife_end_overrun`.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -10,7 +12,7 @@ use vector_math::{ieee_math, Vector3};
 use super::corner_cap::CornerCapLastRow;
 use super::corner_fill_end_ray_trim::TrimSections;
 use super::corner_rail_strip::{nearest, set_back, spoke_centre_parameter};
-use super::fillet_arc_rows::{build, build_skew, on_a_rim_joints_seam};
+use super::fillet_arc_rows::{build, build_in_a_stopped_plane, build_skew, on_a_rim_joints_seam};
 use super::gap_fill::quads;
 use super::knife_end_overrun;
 use super::rail_stations::{densify, tie_spans};
@@ -221,6 +223,10 @@ pub fn strip(
                 section.iter().rev().copied().collect()
             } else if av[i] == bv[j] {
                 vec![av[i]; segments as usize + 1]
+            } else if let Some(section) =
+                build_in_a_stopped_plane(mesh, chain, av[i], bv[j], segments, added_vertices)
+            {
+                section
             } else if let Some(seam) =
                 on_a_rim_joints_seam(mesh, chain, av[i], bv[j], segments, added_vertices)
             {

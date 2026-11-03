@@ -1,14 +1,16 @@
 //! A corner loop's pieces split round a chain's FREE end (the piece type is in `corner_fill.rs`):
 //! the rails kept past an end ([`rails_past_an_end`]), a closed
 //! loop's piece turned to start inside an end arc ([`start_inside_an_end_arc`]), a piece's slice
-//! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]).
+//! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]), which at a STOPPED
+//! end reads the stretch round it by the end plane and ends each rail at its corner in that plane.
 
 use vector_math::ieee_math;
 
 use std::rc::Rc;
 
 use super::corner_fill::same;
-use super::{ChainField, CornerFillPiece};
+use super::stopped_end_fill::stopped_plane;
+use super::{ChainField, CornerFillPiece, LevelLineMesh};
 
 /// The rails of `piece` with its run(s) at one free end's
 /// `parameter` taken off. A piece wholly at the end (or not at it at all) has no rail to keep and
@@ -18,10 +20,20 @@ pub fn rails_past_an_end(
     parameter: f64,
     tolerance: f64,
 ) -> Vec<CornerFillPiece> {
+    rails_past_an_end_where(piece, |i| {
+        (piece.parameters[i] - parameter).abs() <= tolerance
+    })
+}
+
+/// The rails of `piece` with its run(s) round one free end taken off, where `round_the_end` names
+/// the piece's vertices (by index) that stand round that end; [`rails_past_an_end`] reads them by
+/// the end's parameter, a STOPPED end also by its plane ([`split_round_a_free_end`]).
+pub fn rails_past_an_end_where(
+    piece: &CornerFillPiece,
+    round_the_end: impl Fn(usize) -> bool,
+) -> Vec<CornerFillPiece> {
     let n = piece.vertices.len();
-    let at_end: Vec<usize> = (0..n)
-        .filter(|&i| (piece.parameters[i] - parameter).abs() <= tolerance)
-        .collect();
+    let at_end: Vec<usize> = (0..n).filter(|&i| round_the_end(i)).collect();
     if at_end.is_empty() || at_end.len() == n {
         return vec![piece.clone()];
     }
@@ -95,7 +107,20 @@ pub fn slice(piece: &CornerFillPiece, first: usize, last: usize) -> CornerFillPi
 /// region of the pick. Each rail keeps one vertex at the end's parameter; the arc beyond it is left
 /// open for the cap, as a carved end region's run is. Every other piece - a closed chain's, or one
 /// with no free end - comes back as it was.
+///
+/// At a STOPPED free end (`stopped_end_clip.rs`) the stretch round the end is the end plane's
+/// trace: every vertex standing in the plane by [`ChainField::on_a_stopped_plane`] is round the
+/// end, whatever its parameter. Where the plane leans off square to the chain, the trace's
+/// vertices read parameters short of the end (the rail's corner in the plane reads where its
+/// square section crosses the chain), and only the stretch nearest the end vertex reads the end's
+/// own; read by parameter alone, the rail ran on along the plane to that stretch and its last row
+/// was drawn from there, a section narrower than the round's (the rim facet leaning 4.5 degrees:
+/// 0.73 of the profile's reach on the top face). The rail keeps its first vertex in the plane, its
+/// corner, which reads the end's own parameter: the strip runs the other rail on to the end
+/// against it, and the row between the two corners is the round's section in the plane
+/// (`fillet_arc_rows::build_in_a_stopped_plane`).
 pub fn split_round_a_free_end(
+    mesh: &LevelLineMesh,
     chains: &[Rc<ChainField>],
     piece: &CornerFillPiece,
 ) -> Vec<CornerFillPiece> {
@@ -107,19 +132,49 @@ pub fn split_round_a_free_end(
     let tolerance = 1e-9 * ieee_math::max_f64(1.0, field.length);
     let mut result = vec![piece.clone()];
     let ends = [
-        (field.points[0], 0.0),
-        (field.points[field.points.len() - 1], field.length),
+        (field.points[0], 0.0, stopped_plane(field, false)),
+        (
+            field.points[field.points.len() - 1],
+            field.length,
+            stopped_plane(field, true),
+        ),
     ];
-    for (point, parameter) in ends {
+    for (point, parameter, plane) in ends {
         let free = !chains
             .iter()
             .filter(|c| !Rc::ptr_eq(c, field))
             .any(|c| c.points.iter().any(|&p| same(p, point)));
-        if free {
-            result = result
-                .iter()
-                .flat_map(|p| rails_past_an_end(p, parameter, tolerance))
-                .collect();
+        if !free {
+            continue;
+        }
+
+        let in_the_plane = |vertex: i32| {
+            plane.is_some_and(|(origin, normal, tilt)| {
+                ChainField::on_a_stopped_plane(origin, normal, tilt, mesh.position(vertex))
+            })
+        };
+        result = result
+            .iter()
+            .flat_map(|p| {
+                rails_past_an_end_where(p, |i| {
+                    (p.parameters[i] - parameter).abs() <= tolerance || in_the_plane(p.vertices[i])
+                })
+            })
+            .collect();
+        if plane.is_none() {
+            continue;
+        }
+
+        // The corner stands for the end: its row is the section in the plane, drawn about the end
+        // vertex, so it reads the end's own parameter and the strip runs the other rail on to the
+        // end against it.
+        for rail in &mut result {
+            let last = rail.vertices.len() - 1;
+            for k in [0, last] {
+                if in_the_plane(rail.vertices[k]) {
+                    rail.parameters[k] = parameter;
+                }
+            }
         }
     }
 

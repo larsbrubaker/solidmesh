@@ -598,7 +598,7 @@ fn rust_only_a_piece_round_a_free_end_splits_into_its_rails() {
         vertices: vec![10, 11, 12, 13, 14],
         parameters: vec![3.0, 4.0, 4.0, 4.0, 3.0],
     };
-    let rails = split_round_a_free_end(&chains, &piece);
+    let rails = split_round_a_free_end(&LevelLineMesh::default(), &chains, &piece);
     assert_eq!(rails.len(), 2);
     assert_eq!(rails[0].vertices, vec![10, 11]);
     assert_eq!(rails[1].vertices, vec![13, 14]);
@@ -609,7 +609,7 @@ fn rust_only_a_piece_round_a_free_end_splits_into_its_rails() {
         parameters: vec![1.0, 0.0, 1.0],
     };
     assert_eq!(
-        split_round_a_free_end(&chains, &at_start),
+        split_round_a_free_end(&LevelLineMesh::default(), &chains, &at_start),
         vec![at_start.clone()]
     );
 }

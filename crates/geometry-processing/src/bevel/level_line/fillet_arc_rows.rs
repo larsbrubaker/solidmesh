@@ -1,16 +1,18 @@
 //! A fillet's arc across the band, drawn into the level-line mesh: the plain and skew rows
-//! ([`build`], [`build_skew`]), a closed chain's zip spoke carried along or round the chain
+//! ([`build`], [`build_skew`]), a STOPPED end's row in its plane ([`build_in_a_stopped_plane`]), a closed chain's zip spoke carried along or round the chain
 //! ([`along_the_chain`]), and the rows on a sharp joint's seam ([`in_the_seam`],
 //! [`on_a_rim_joints_seam`]). The geometry they read (the carry, the seam row, the leg tests) is in
 //! `fillet_arc`.
 
 use vector_math::{ieee_math, Vector3};
 
+use super::end_face_section_row::{section_row, EndRowAsked};
 use super::fillet_arc::{
     carried, carry_weight, on_a_whole_leg, on_the_partners_leg, seam_row, seam_tolerance,
     tangent_at, RowEnd,
 };
 use super::gap_fill::arc_point;
+use super::open_gap_fill::chain_direction_at;
 use super::{ChainField, LevelLineMesh};
 
 /// The new interior vertices of a row: `points[1..segments]` added to the mesh, recorded in
@@ -55,6 +57,45 @@ pub fn build(
     row_of(mesh, from, to, segments, added_vertices, |s| {
         arc_point(p, chain_point, q, s as f64 / segments as f64)
     })
+}
+
+/// The row from `from` to `to` where BOTH stand in one of the chain's STOPPED end planes
+/// (`stopped_end_clip.rs`): the round's own section in that plane (`end_face_section_row`), the
+/// square section slid along the chain onto the plane, so the row lies in the plane and the flat
+/// cap beside it closes there. A skew row's points leave the plane between its ends wherever the
+/// plane leans off square to the chain (its shift is shared out by the arc's parameter, not by
+/// where each point stands). `None` where the two do not stand in one stopped plane, or the plane
+/// is square to the chain (the plain rows are already the section there).
+pub fn build_in_a_stopped_plane(
+    mesh: &mut LevelLineMesh,
+    chain: &ChainField,
+    from: i32,
+    to: i32,
+    segments: i32,
+    added_vertices: &mut Vec<i32>,
+) -> Option<Vec<i32>> {
+    if segments == 1 {
+        return None;
+    }
+
+    let (p, q) = (mesh.position(from), mesh.position(to));
+    let (origin, _, _) = chain.stopped_end_plane_at(p)?;
+    let (other, _, _) = chain.stopped_end_plane_at(q)?;
+    if origin != other {
+        return None;
+    }
+
+    let points = chain.points();
+    let at_the_far_end = origin == points[points.len() - 1] && origin != points[0];
+    let end = if at_the_far_end { chain.length } else { 0.0 };
+    let asked = EndRowAsked {
+        at_the_far_end,
+        tangent: chain_direction_at(chain, end),
+    };
+    let section = section_row(chain, p, q, asked, None)?;
+    Some(row_of(mesh, from, to, segments, added_vertices, |s| {
+        section(s as f64 / segments as f64)
+    }))
 }
 
 /// A SKEW

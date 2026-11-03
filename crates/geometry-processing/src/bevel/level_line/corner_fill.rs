@@ -326,7 +326,7 @@ pub fn pieces(
                 // side group, so the loop runs down one rail, round one end, up the other and round
                 // the other end. Started inside an end arc, it splits into its two rails.
                 return Ok(corner_fill_free_ends::split_round_a_free_end(
-                    chains, &pieces[0],
+                    mesh, chains, &pieces[0],
                 ));
             }
         }
@@ -376,7 +376,7 @@ pub fn pieces(
 
     let mut pieces: Vec<CornerFillPiece> = pieces
         .iter()
-        .flat_map(|p| corner_fill_free_ends::split_round_a_free_end(chains, p))
+        .flat_map(|p| corner_fill_free_ends::split_round_a_free_end(mesh, chains, p))
         .collect();
 
     // A chain whose whole rail here is ties owns no vertex, so the split above gives it no piece
