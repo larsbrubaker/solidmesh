@@ -128,6 +128,13 @@ pub struct ChainFieldSmoothJointsScope {
 }
 
 impl ChainField {
+    /// Whether a stopped end's clip bounds this field (`stopped_end_clip.rs`): its end plane does
+    /// not scale with the size, so the field is not its bare field less the setback.
+    pub fn is_clipped_by_a_stop(&self) -> bool {
+        self.end_ray_bounds.0.is_some_and(|b| b.stopped)
+            || self.end_ray_bounds.1.is_some_and(|b| b.stopped)
+    }
+
     /// Whether this field was built inside the smooth-joints scope
     /// with smooth joints of its own.
     pub fn has_smooth_joints(&self) -> bool {

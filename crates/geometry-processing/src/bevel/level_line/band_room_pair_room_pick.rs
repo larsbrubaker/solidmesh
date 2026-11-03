@@ -1,4 +1,6 @@
-//! The room of a pick of several chains. The pair reading's helpers are in
+//! The room of a pick of several chains: (a) foreign edges per chain, (b) chain to chain per pair,
+//! (d) a stopped end's stretch of its plane covered by the other members sharing a side
+//! (`stopped_end_room.rs`), (c) each side running out of itself. The pair reading's helpers are in
 //! `band_room_pair_room.rs`, which re-exports this.
 
 use std::cell::RefCell;
@@ -22,7 +24,9 @@ use super::corner_cap_flat_ends::use_flat_ends;
 use super::foreign_edge_regions_filing::Seeds;
 use super::foreign_edge_room::{cluster_at_the_ends, meets_the_chain_at_an_end};
 use super::foreign_edge_room_readings::{room_for, room_from_index, ForeignEdge};
+use super::pick_end_bounds::PickEnds;
 use super::seam_edges::FeatureEdgeTest;
+use super::stopped_end_room::{stopped_end_room, StoppedEnd};
 use super::{
     chain_on_the_mesh, end_face_sense, foreign_room_counters, pick_validation, self_room,
     triangle_edges, BandProfile, ChainField, EndRayBound, FieldSample, ForeignEdgeRegions,
@@ -53,9 +57,11 @@ fn spent_now() -> i64 {
 
 /// ONE room for a pick of several chains, read once on the INPUT mesh.
 ///
-/// Three readings, and the room is the least of them: FOREIGN per chain (each chain with its own
+/// Four readings, and the room is the least of them: FOREIGN per chain (each chain with its own
 /// field), CHAIN TO CHAIN over ordered pairs inside a group (the approach shared between the two
-/// unit setbacks), and SELF per group (the group's own field under the whole pick's ceiling).
+/// unit setbacks), STOPPED END per stopped end (the size at which the other members sharing its
+/// side cover its stretch of its plane) and SELF per group (the group's own field under the whole
+/// pick's ceiling).
 /// `name_every_candidate_under` (NaN for none) keeps every pair that could read under that size,
 /// so the candidates are complete up to it; the room and its source cannot move. A chain edge not
 /// on two triangles is the `ChainEdge` error.
@@ -150,24 +156,21 @@ pub fn room_of_pick(
         }
     };
 
-    // With flat ends the room is read on the field the band is cut on: BandGap's end rays, none at
-    // a corner.
-    let corner_ends: HashSet<i32> = if count > 1 {
-        pick_validation::corners_of(chains, closed, true)
-            .iter()
-            .map(|c| c.vertex)
-            .collect()
-    } else {
-        HashSet::new()
-    };
-    let rays_of = |k: usize| -> (bool, bool) {
-        let rays = oblique(k);
-        let chain = &chains[k];
-        (
-            rays.0 && !corner_ends.contains(&chain[0]),
-            rays.1 && !corner_ends.contains(&chain[chain.len() - 1]),
-        )
-    };
+    // The ends as the band is cut on them (`pick_end_bounds.rs`), less the square crease clips
+    // the room is read without: BandGap's end rays (none at a corner) and bounds, from one place.
+    let ends = PickEnds::of(
+        positions,
+        indices,
+        chains,
+        closed,
+        sharp_turn_degrees,
+        &*is_feature_edge,
+    );
+    let rays_of_pick = &ends.end_rays;
+    let pick_bounds: Vec<(Option<EndRayBound>, Option<EndRayBound>)> = (0..count)
+        .map(|k| ends.bounds_without_square_crease_clips(k))
+        .collect();
+    let stopped = &ends.stopped;
 
     let field_of = |k: usize, s: f64, without_convex_rays: bool| -> ChainField {
         let scaled: Vec<f64> = unit_setbacks[k].iter().map(|u| u * s).collect();
@@ -181,8 +184,8 @@ pub fn room_of_pick(
             .expect("a picked chain has a point and a setback per vertex");
         }
 
-        let mut rays = rays_of(k);
-        let bounds = end_face_sense::end_ray_bounds(positions, indices, &chains[k], rays);
+        let mut rays = rays_of_pick[k];
+        let bounds = pick_bounds[k];
         if without_convex_rays {
             let convex_ends =
                 end_face_sense::convex_end_faces(positions, indices, &chains[k], rays);
@@ -337,7 +340,7 @@ pub fn room_of_pick(
                 positions,
                 indices,
                 &chains[k],
-                rays_of(k),
+                rays_of_pick[k],
             ))
         } else {
             Vec::new()
@@ -472,6 +475,7 @@ pub fn room_of_pick(
                 }
 
                 let (k, j) = (k32 as usize, j32 as usize);
+
                 let mut theirs: Vec<ForeignEdge> = Vec::new();
                 let us = &unit_setbacks[j];
                 let mut most_extra = 0.0;
@@ -500,6 +504,32 @@ pub fn room_of_pick(
                     same_sense_bounds_of(k),
                     same_sense_bounds_of(j),
                 );
+                // j's edges stand for j's band as balls of its setback, which a stopped end's clip
+                // cuts back, so this direction reads j's band through its stopped end. Where k's
+                // band is its balls (no ray, no clip) and nothing here drops k's edges from the
+                // other direction (no shared corner, no faced end), that other direction - j's
+                // clipped field against k's edges - reads the pair alone.
+                if stopped[j]
+                    && !stopped[k]
+                    && rays_of_pick[k] == (false, false)
+                    && ends.bounds[k] == (None, None)
+                    && shared_corners
+                        .as_ref()
+                        .is_none_or(|shared| shared.is_empty())
+                    && ends_faced.is_none()
+                    && ends_with_an_end_region(
+                        &regions,
+                        &chain_edges,
+                        j32,
+                        k32,
+                        same_sense_bounds_of(j),
+                        same_sense_bounds_of(k),
+                    )
+                    .is_none()
+                {
+                    continue;
+                }
+
                 let bare_of_k = ends_faced.as_ref().map(|_| field_of(k, 0.0, false));
                 for (e, &(from, to)) in chain_edges[j].iter().enumerate() {
                     if out_of_corners
@@ -570,6 +600,76 @@ pub fn room_of_pick(
                     t.pair_ticks += ticks;
                     t.in_a_pair = false;
                 });
+            }
+        }
+    }
+
+    // (d) STOPPED ENDS: the size at which the other members sharing a side cover a stopped end's
+    // own stretch of its plane there (`stopped_end_room.rs`), read below what a pair must beat, so
+    // with `name_every_candidate_under` set every stopped end under it is named; the source is the
+    // member that covers the last of the stretch.
+    for group in &groups {
+        for &a in &group.members {
+            let au = a as usize;
+            let chain = &chains[au];
+            let bounded_ends = [
+                (pick_bounds[au].0, chain[0]),
+                (pick_bounds[au].1, chain[chain.len() - 1]),
+            ];
+            for (bound, end_vertex) in bounded_ends {
+                let Some(bound) = bound.filter(|b| b.stopped) else {
+                    continue;
+                };
+
+                if !(pair_threshold(room) > 0.0) {
+                    continue;
+                }
+
+                let others: Vec<usize> = group
+                    .members
+                    .iter()
+                    .map(|&k| k as usize)
+                    .filter(|&k| k != au && !chains[k].contains(&end_vertex))
+                    .collect();
+                if others.is_empty() {
+                    continue;
+                }
+
+                let end = StoppedEnd {
+                    chain: au,
+                    end_vertex,
+                    vertex: positions[end_vertex as usize],
+                    normal: bound.plane_normal.get_normal(),
+                };
+                let widest = if unit_setbacks[au].is_empty() {
+                    0.0
+                } else {
+                    max_or_nan(&unit_setbacks[au])
+                };
+                let Some(candidate) = stopped_end_room(
+                    positions,
+                    indices,
+                    &tags,
+                    group.tag,
+                    &end,
+                    &others,
+                    &|k, s| field_of(k, s, false),
+                    widest,
+                    pair_threshold(room),
+                )?
+                else {
+                    continue;
+                };
+                offer(
+                    &mut read,
+                    &mut room,
+                    candidate.room,
+                    RoomSource::chain_to_chain(a, candidate.covered_by as i32),
+                    f64::NAN,
+                    f64::NAN,
+                    false,
+                    None,
+                );
             }
         }
     }

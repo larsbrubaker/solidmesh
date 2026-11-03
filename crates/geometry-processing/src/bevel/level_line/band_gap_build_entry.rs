@@ -49,6 +49,11 @@ pub fn build_within(
     }
 
     // 1. SETBACK, per chain.
+    let no_feature_edges = |_: i32, _: i32| false;
+    let feature: &dyn Fn(i32, i32) -> bool = match &is_feature_edge {
+        Some(test) => test.as_ref(),
+        None => &no_feature_edges,
+    };
     let setbacks = PassSetbacks::of(
         positions,
         indices,
@@ -56,6 +61,7 @@ pub fn build_within(
         closed,
         sharp_turn_degrees,
         profile,
+        feature,
     )?;
     build_from_the_setbacks(
         positions,

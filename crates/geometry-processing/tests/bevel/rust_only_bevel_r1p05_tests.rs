@@ -122,6 +122,7 @@ fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudge
         both_sided_members_off: Cell::new(false),
         run_outs_on: Cell::new(false),
         square_crease_clips_off: Cell::new(false),
+        stopped_ends_on: Cell::new(false),
         watch_hole_fills: std::cell::RefCell::new(None),
         spent: Cell::new(0),
         phase: Cell::new(LevelLineWorkPhase::None),

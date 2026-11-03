@@ -25,8 +25,8 @@ use vector_math::Vector3;
 /// [`EndRayBound::same_sense`]: the end face folds the chain's own way at the side creases, so the
 /// fill trims it to the round's section (`EndPlaneTrim`) rather than growing it.
 /// [`EndRayBound::crease_room`]: the largest size a square crease end's section stays on its crease
-/// (`square_crease_end_clip`). `Default` is written out because not every default is zero
-/// (`crease_room` is +infinity: no bound).
+/// (`square_crease_end_clip`). [`EndRayBound::stopped`]: a stopped end's clip. `Default` is
+/// written out because not every default is zero (`crease_room` is +infinity: no bound).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EndRayBound {
     /// How far the ray runs, as a multiple of the end's setback (the `EndPlaneTrim.FarthestOut`
@@ -39,6 +39,9 @@ pub struct EndRayBound {
     pub same_sense: bool,
     /// The largest size a square crease end's section stays on its crease (default +infinity).
     pub crease_room: f64,
+    /// True when this is a STOPPED end's clip (`stopped_end_clip.rs`, default false): no ray, a
+    /// plane that does not scale with the size.
+    pub stopped: bool,
 }
 
 impl Default for EndRayBound {
@@ -48,6 +51,7 @@ impl Default for EndRayBound {
             plane_normal: Vector3::default(),
             same_sense: false,
             crease_room: f64::INFINITY,
+            stopped: false,
         }
     }
 }

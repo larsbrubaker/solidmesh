@@ -39,7 +39,8 @@
 //!   ([`OpenGapFillOpenRail`], [`OpenGapFillFlatRunOutRegion`]), a corner cap's last row
 //!   ([`CornerCapLastRow`]), a corner fill's loop piece ([`CornerFillPiece`]), a hull clip's
 //!   supporting plane ([`HullClipPlane`]), a knife end's overrun ([`KnifeEndOverrunEnd`]) and the
-//!   square-crease clip's scope ([`SquareCreaseEndClipSquareCreaseClipsOffScope`]).
+//!   square-crease clip's scope ([`SquareCreaseEndClipSquareCreaseClipsOffScope`]) and the
+//!   stopped end's gate scope ([`StoppedEndClipScope`]).
 //! - **Picks and progress.** A pick corner ([`PickCorner`]) and a pick's fault ([`PickFault`]),
 //!   the route's watch record ([`LevelLineChainWatch`]) and the work phase and progress
 //!   ([`LevelLineWorkPhase`], [`LevelLineProgress`]).
@@ -173,6 +174,7 @@ pub mod open_gap_fill_stations;
 pub mod open_gap_fill_sunk_arc;
 pub mod pair_corner_end_face_field;
 mod pair_corner_end_face_field_queries;
+pub mod pick_end_bounds;
 pub mod pick_end_floods;
 mod pick_fault;
 mod pick_field;
@@ -203,6 +205,8 @@ pub mod side_witness;
 pub mod split_meter;
 mod square_crease_end_clip;
 pub mod step_corner_carry;
+mod stopped_end_clip;
+pub mod stopped_end_room;
 pub mod stopwatch;
 pub mod strip_clip;
 pub mod strip_clip_neighbour;
@@ -283,6 +287,10 @@ pub use square_crease_end_clip::SquareCreaseEndClipSquareCreaseClipsOffScope;
 pub use square_crease_end_clip::{
     cap_room, square_crease_clips_on, square_crease_end_clips, square_crease_end_clips_of_pick,
     square_crease_end_room, turn_square_crease_clips_off,
+};
+pub use stopped_end_clip::{
+    flow_stopped_ends_on, stopped_end_clips, stopped_ends_on, turn_stopped_ends_on,
+    StoppedEndClipScope,
 };
 pub use vertex_side::{VertexFieldReading, VertexSide};
 pub use work_budget::{

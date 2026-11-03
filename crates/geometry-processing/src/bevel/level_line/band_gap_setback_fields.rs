@@ -1,19 +1,18 @@
 //! Step 1 of the band gap's build (`band_gap_build_within.rs`), the SETBACK: each chain's edges,
 //! its setbacks per unit of size from the angle at each edge (`chain_on_the_mesh::unit_setbacks`),
-//! its end rays and their bounds, and from those the chain fields at any size. Held per unit of
-//! size so the room can ask the same question at any size.
+//! its end rays and their bounds (with the square crease and stopped ends' clips, read in
+//! `pick_end_bounds.rs`), and from those
+//! the chain fields at any size. Held per unit of size so the room can ask the same question at
+//! any size.
 
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use vector_math::Vector3;
 
 use super::band_gap_build_fault::BuildFault;
 use super::chain_field_from_polyline::ChainFieldArgumentError;
-use super::{
-    chain_on_the_mesh, end_face_sense, pick_validation, square_crease_end_clip, BandProfile,
-    ChainField, EndRayBound,
-};
+use super::pick_end_bounds::PickEnds;
+use super::{chain_on_the_mesh, BandProfile, ChainField, EndRayBound};
 
 /// Every chain's step 1 readings, per unit of size.
 pub struct PassSetbacks {
@@ -45,6 +44,7 @@ impl PassSetbacks {
         closed: &[bool],
         sharp_turn_degrees: f64,
         profile: BandProfile,
+        is_feature_edge: &dyn Fn(i32, i32) -> bool,
     ) -> Result<PassSetbacks, BuildFault> {
         let count = chains.len();
         let mut chain_edges: Vec<Vec<(i32, i32)>> = Vec::with_capacity(count);
@@ -59,47 +59,18 @@ impl PassSetbacks {
             chain_points.push(chains[k].iter().map(|&v| positions[v as usize]).collect());
         }
 
-        // An end on an OBLIQUE end face carries the end ray; an end at a CORNER is not an end
-        // face.
-        let corner_ends: HashSet<i32> = if count > 1 {
-            pick_validation::corners_of(chains, closed, true)
-                .iter()
-                .map(|c| c.vertex)
-                .collect()
-        } else {
-            HashSet::new()
-        };
-        let mut end_rays: Vec<(bool, bool)> = Vec::with_capacity(count);
-        let mut end_ray_bounds = Vec::with_capacity(count);
-        for k in 0..count {
-            let rays = end_face_sense::oblique_ends(
-                positions,
-                indices,
-                &chains[k],
-                closed[k],
-                sharp_turn_degrees,
-            );
-            let rays = (
-                rays.0 && !corner_ends.contains(&chains[k][0]),
-                rays.1 && !corner_ends.contains(&chains[k][chains[k].len() - 1]),
-            );
-            end_rays.push(rays);
-            end_ray_bounds.push(end_face_sense::end_ray_bounds(
-                positions, indices, &chains[k], rays,
-            ));
-        }
-
-        // A square end on a concave crease whose side runs on past it is clipped in the end face's
-        // plane.
-        let square_crease_clips = square_crease_end_clip::square_crease_end_clips_of_pick(
-            positions, indices, chains, closed, &end_rays,
+        // The ends, as every reading of the pick takes them: rays, their bounds, square crease
+        // and stopped ends' clips.
+        let ends = PickEnds::of(
+            positions,
+            indices,
+            chains,
+            closed,
+            sharp_turn_degrees,
+            is_feature_edge,
         );
-        for k in 0..count {
-            end_ray_bounds[k] = (
-                end_ray_bounds[k].0.or(square_crease_clips[k].0),
-                end_ray_bounds[k].1.or(square_crease_clips[k].1),
-            );
-        }
+        let end_rays = ends.end_rays;
+        let end_ray_bounds = ends.bounds;
 
         Ok(PassSetbacks {
             chain_edges,

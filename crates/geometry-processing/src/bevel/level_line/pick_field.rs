@@ -2,7 +2,8 @@
 //! ([`PickField::new`], refusing bad arguments with [`PickFieldArgumentError`]), its member
 //! read-throughs and its
 //! end-plane reader ([`PickField::end_plane_reader`]) and whether an edge lies in a member's end
-//! plane ([`PickField::lies_in_an_end_plane`]), the point query ([`PickField::evaluate`]) and its
+//! plane ([`PickField::lies_in_an_end_plane`]) or a point in a member's stopped end plane
+//! ([`PickField::lies_in_a_stopped_end_plane`]), the point query ([`PickField::evaluate`]) and its
 //! readings, the bounded maximum queries and the field seam ([`ScalarField`], saying it is a
 //! pick's field), the least queries ([`PickField::min_along_segment`],
 //! [`PickField::min_over_triangle`]) and the [`ChainDistanceField`] impl they complete; the swallow
@@ -208,6 +209,21 @@ impl PickField {
         self.members
             .iter()
             .any(|&k| self.chains[k as usize].lies_in_an_end_plane(a, b))
+    }
+
+    /// Whether a stopped end clips any member chain ([`ChainField::is_clipped_by_a_stop`]).
+    pub fn has_a_stopped_member(&self) -> bool {
+        self.members
+            .iter()
+            .any(|&k| self.chains[k as usize].is_clipped_by_a_stop())
+    }
+
+    /// Whether a point stands in a stopped end's plane of any member chain
+    /// ([`ChainField::lies_in_a_stopped_end_plane`]).
+    pub fn lies_in_a_stopped_end_plane(&self, point: Vector3) -> bool {
+        self.members
+            .iter()
+            .any(|&k| self.chains[k as usize].lies_in_a_stopped_end_plane(point))
     }
 }
 

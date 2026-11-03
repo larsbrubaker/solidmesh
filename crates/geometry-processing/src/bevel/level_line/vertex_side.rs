@@ -4,7 +4,10 @@
 //! reads ([`VertexFieldReading::side_for`]), a point's value ([`VertexFieldReading::value_at_point`])
 //! the readings across the known cuts ([`VertexFieldReading::known_cut_value_at`],
 //! [`VertexFieldReading::value_in_the_end_plane`]) and the known cuts' test of a chain's or pick's bounded ends
-//! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]); the
+//! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]) and
+//! the stopped ends' tests ([`VertexFieldReading::has_stopped_ends`],
+//! [`VertexFieldReading::in_a_stopped_end_plane`],
+//! [`VertexFieldReading::is_a_band_corner_on_a_stopped_plane`]); the
 //! reading's queries land with the refinement's method package.
 
 use std::cell::RefCell;
@@ -149,6 +152,49 @@ impl VertexFieldReading {
         }
     }
 
+    /// Whether a point stands in a stopped end's plane of the pick (under any run-out wrapper):
+    /// the line runs through a vertex there that the clipped field reads on it, while the
+    /// triangles on the band side of it reach into the band. False for any other field. Reads only
+    /// the clips, never the field, so it charges no work.
+    pub fn in_a_stopped_end_plane(&self, point: Vector3) -> bool {
+        let pick = self.pick();
+        if let Some(chain) = pick.as_chain_field() {
+            chain.lies_in_a_stopped_end_plane(point)
+        } else if let Some(pick) = pick.as_pick_field() {
+            pick.lies_in_a_stopped_end_plane(point)
+        } else {
+            false
+        }
+    }
+
+    /// Whether the pick (under any run-out wrapper) has a stopped end at all; reads only the
+    /// chains' bounds, so it charges no work.
+    pub fn has_stopped_ends(&self) -> bool {
+        let pick = self.pick();
+        if let Some(chain) = pick.as_chain_field() {
+            chain.is_clipped_by_a_stop()
+        } else if let Some(pick) = pick.as_pick_field() {
+            pick.has_a_stopped_member()
+        } else {
+            false
+        }
+    }
+
+    /// Whether a vertex the reading puts ON the line stands in a stopped end's plane
+    /// ([`VertexFieldReading::in_a_stopped_end_plane`]): a corner of the band, whose edges into the
+    /// band's side can dip below the line between ends that read on or outside it.
+    pub fn is_a_band_corner_on_a_stopped_plane(
+        &self,
+        vertex: i32,
+    ) -> Result<bool, super::WorkError> {
+        if self.side_of(vertex)? != VertexSide::On {
+            return Ok(false);
+        }
+
+        let position = self.mesh.borrow().position(vertex);
+        Ok(self.in_a_stopped_end_plane(position))
+    }
+
     /// The field value at an arbitrary point - the same field
     /// the vertices are read from.
     pub fn value_at_point(&self, point: Vector3) -> Result<f64, super::WorkError> {
@@ -276,9 +322,13 @@ impl VertexFieldReading {
 
         // A vertex ON a bounded end's plane (a known cut, flat ends on) reads the clipped field's 0
         // wherever the chain is within its setback, but the plane is the band's boundary there,
-        // not its level line: on the band side the chain's own value places it.
+        // not its level line: on the band side the chain's own value places it. Not in a STOPPED
+        // end's plane: that plane crosses faces the mesh carries on with past the end, so the
+        // line runs through such a vertex, and the triangles on the band side of it are found by
+        // the refinement's dip from it (`band_refinement_asking`).
         if side == VertexSide::On
             && self.has_known_cuts()
+            && !self.in_a_stopped_end_plane(position)
             && self.known_cut_value_at(position)? < -self.snap
         {
             side = VertexSide::Inside;

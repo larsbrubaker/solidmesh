@@ -129,6 +129,10 @@ pub struct WorkBudget {
     /// on by default);
     /// `square_crease_end_clip::turn_square_crease_clips_off` flips it for the budget in force.
     pub square_crease_clips_off: Cell<bool>,
+    /// Whether this build reads stopped ends (a per-flow switch, off by default);
+    /// `stopped_end_clip::turn_stopped_ends_on` flips it for the budget in force, and a budget
+    /// created inside a scope starts on.
+    pub stopped_ends_on: Cell<bool>,
     /// Who watches each corner hole the cap closes with the hole fill for this build (a per-flow
     /// watcher, none by default): the mesh, the fill's
     /// vertices, how many of them are the hole's own points, its triangles and the rows it closed.
@@ -581,6 +585,7 @@ impl WorkBudget {
             both_sided_members_off: Cell::new(false),
             run_outs_on: Cell::new(super::band_group_fields::flow_run_outs_on()),
             square_crease_clips_off: Cell::new(false),
+            stopped_ends_on: Cell::new(super::stopped_end_clip::flow_stopped_ends_on()),
             watch_hole_fills: RefCell::new(None),
             spent: Cell::new(0),
             phase: Cell::new(LevelLineWorkPhase::None),

@@ -220,6 +220,7 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
             plane_normal: n,
             same_sense: true,
             crease_room: crease_length,
+            stopped: false,
         })
     } else {
         None

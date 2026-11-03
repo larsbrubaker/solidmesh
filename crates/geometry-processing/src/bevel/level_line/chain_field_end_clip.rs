@@ -2,7 +2,8 @@
 //! sample, the end-plane
 //! reader and the clipped term's searches are in `chain_field_clip.rs`. Here too the clips a
 //! chain's end-ray bounds give ([`ChainField::find_end_clips`]) and whether an edge lies in a
-//! knife end's plane ([`ChainField::lies_in_an_end_plane`]) and the known-cut reading
+//! knife end's plane ([`ChainField::lies_in_an_end_plane`]), whether a point stands in a stopped
+//! end's plane ([`ChainField::lies_in_a_stopped_end_plane`]) and the known-cut reading
 //! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece is in
 //! `chain_field_least.rs`.
 
@@ -95,6 +96,28 @@ impl ChainField {
         }
 
         false
+    }
+
+    /// Whether a point stands in a STOPPED end's plane (`stopped_end_clip.rs`), within a few float
+    /// steps of it. Such a plane, unlike a knife end's, cuts across faces the mesh carries on with
+    /// past the end, so the band's boundary there is the plane itself: a vertex in it that the
+    /// clipped field reads on the line IS on the line, though the triangles on the band side of it
+    /// reach into the band.
+    pub fn lies_in_a_stopped_end_plane(&self, point: Vector3) -> bool {
+        let Some(end_clips) = &self.end_clips else {
+            return false;
+        };
+
+        end_clips.iter().any(|clip| {
+            let bound = if clip.parameter == 0.0 {
+                self.end_ray_bounds.0
+            } else {
+                self.end_ray_bounds.1
+            };
+            bound.is_some_and(|bound| bound.stopped)
+                && (point - clip.vertex).dot(clip.normal).abs()
+                    <= 4.0 * float_grid::step_at_point(point)
+        })
     }
 }
 

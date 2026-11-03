@@ -5,7 +5,10 @@
 //! ([`bisect`]) and where the edge that sets the room comes nearest the chain
 //! ([`where_the_room_is_set`]), and the bracket read off one pass of the bare field
 //! ([`bracket_from_one_bare_pass`]), the room itself ([`room_for`]) and the room
-//! read off a spatial index of the foreign edges ([`room_from_index`]).
+//! read off a spatial index of the foreign edges ([`room_from_index`]). A field a stopped end clips
+//! (`stopped_end_clip.rs`, [`ChainField::is_clipped_by_a_stop`]) is not its bare field less the
+//! setback: its room starts from the bare field's reading as a lower bound and is bracketed by
+//! doubling and bisected on the field itself, over every edge (`room_on_a_stopped_field`).
 
 use vector_math::Vector3;
 
@@ -235,6 +238,10 @@ pub fn room_for(
     });
 
     let (lowest_unit, highest_unit) = least_and_greatest(unit_setback);
+    if field_at(0.0).is_clipped_by_a_stop() {
+        return room_on_a_stopped_field(mesh, foreign, field_at, highest_unit, asked);
+    }
+
     if lowest_unit > 0.0 && highest_unit - lowest_unit <= UNIFORM_SETBACK_TOLERANCE * highest_unit {
         // The bare distance field - no setback taken off - so each edge's approach is read once.
         let bare = field_at(0.0);
@@ -285,6 +292,63 @@ pub fn room_for(
     bisect(mesh, &searched, field_at, lo, hi)
 }
 
+/// The room the `foreign` edges leave a field a stopped end clips (`stopped_end_clip.rs`). The
+/// clip's plane does not scale with the size, so the field is not its bare field less the setback;
+/// but the clip only raises the field, so the bare field's approach over the greatest setback is
+/// still a lower bound. From there the room is bracketed by doubling and bisected on the field
+/// itself, every edge read at every trial size and charged to the budget. An edge already standing
+/// on the chain leaves room zero; +infinity where the bracket never closes.
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+fn room_on_a_stopped_field(
+    mesh: &LevelLineMesh,
+    foreign: &[ForeignEdge],
+    field_at: FieldAt,
+    highest_unit: f64,
+    asked: f64,
+) -> Result<f64, WorkError> {
+    let bare = field_at(0.0);
+    let mut lo = f64::INFINITY;
+    for &(low, high, extra_unit) in foreign {
+        foreign_room_counters::read();
+        LevelLineWork::charge(1)?;
+        let approach = bare
+            .min_along_segment(mesh.position(low), mesh.position(high))?
+            .value;
+        if approach <= 0.0 && extra_unit >= 0.0 {
+            return Ok(0.0);
+        }
+
+        lo = vector_math::ieee_math::min_f64(lo, approach / (highest_unit + extra_unit));
+    }
+
+    // A lower bound that cannot be read (no positive setback, a NaN) starts from nothing.
+    if !(lo > 0.0) || lo.is_infinite() {
+        lo = 0.0;
+    }
+
+    let charge = foreign.len() as i64;
+    let mut hi = if lo > 0.0 { 2.0 * lo } else { asked };
+    let mut doubling = 0;
+    loop {
+        LevelLineWork::charge(charge)?;
+        if !every_value_is_above_zero(mesh, foreign, field_at, hi)? {
+            break;
+        }
+
+        if doubling == ROOM_BRACKET_DOUBLINGS {
+            return Ok(f64::INFINITY);
+        }
+
+        lo = hi;
+        hi *= 2.0;
+        doubling += 1;
+    }
+
+    // The bisection charges a unit a step; every step reads every edge.
+    LevelLineWork::charge((charge - 1).max(0) * i64::from(ROOM_BISECTION_STEPS))?;
+    bisect(mesh, foreign, field_at, lo, hi)
+}
+
 /// The same room as [`room_for`], read off a SPATIAL INDEX of
 /// the pick's foreign edges rather than a pass over all of them: the chain's own edges (`exempt`)
 /// aside, the answer is the same number. The nearest-first search reads each edge's bare approach
@@ -305,8 +369,10 @@ pub fn room_from_index(
         return Ok(f64::INFINITY);
     }
 
+    // A stopped end's clip does not scale with the size, so the index's bare-field bracket does
+    // not hold: a stopped field is read over every edge by `room_for`.
     let (lowest_unit, highest_unit) = least_and_greatest(unit_setback);
-    if read_every_foreign_edge() || !(lowest_unit > 0.0) {
+    if read_every_foreign_edge() || !(lowest_unit > 0.0) || field_at(0.0).is_clipped_by_a_stop() {
         return room_for(
             mesh,
             &every_edge(indexes, exempt),

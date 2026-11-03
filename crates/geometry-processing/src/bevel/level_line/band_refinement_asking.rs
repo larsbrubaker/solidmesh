@@ -2,9 +2,10 @@
 //! points the field itself names. `band_refinement` routes to it, the bump rule is
 //! `edge_bump_rule` and the mixed edge rule `band_refinement_mixed_edge`.
 //!
-//! The rules, in order: (i) an edge dipping below the line between two outside ends is split once
-//! at its least point; its mirror, the bump, and its third face, the mixed edge; (ii) a hidden loop
-//! inside a triangle with every corner outside; (iv) an island of kept material inside a triangle
+//! The rules, in order: (i) an edge dipping below the line between two outside ends - or leaving a
+//! band corner on a stopped end's plane with neither end inside - is split once at its least
+//! point; its mirror, the bump, and its third face, the mixed edge; (ii) a hidden loop inside a
+//! triangle with every corner outside; (iv) an island of kept material inside a triangle
 //! with no corner outside; (v) a ridge through a crossed triangle's middle; (iii) the chord of a
 //! crossed triangle held to the chord tolerance. Each fires on an EXACT reading at the point it
 //! inserts, so no edge is divided twice by one rule; a split that would thin a child past the
@@ -35,7 +36,7 @@ use super::refinement_splits_enqueue::{
 };
 use super::{
     ChainDistanceField, FieldCounters, FieldMaximum, LevelLineMeshError, LevelLineRule,
-    LevelLineWork, VertexFieldReading, VertexSide,
+    LevelLineWork, VertexFieldReading, VertexSide, WorkError,
 };
 
 /// A rule's point inside a triangle, put in the way every triangle rule puts it: bisected along the
@@ -56,6 +57,23 @@ fn insert_or_bisect(
     }
 
     Ok(())
+}
+
+/// Whether the edge v-w leaves a band corner on a stopped end's plane
+/// ([`VertexFieldReading::is_a_band_corner_on_a_stopped_plane`]) with neither end inside: the line
+/// runs through the corner, so its ends read on or outside the line while the band's side of the
+/// corner lies under the edge, and rule (i) asks it as it asks an edge between outside ends. Reads
+/// nothing on a pick with no stopped end.
+fn leaves_a_band_corner(reading: &VertexFieldReading, v: i32, w: i32) -> Result<bool, WorkError> {
+    if !reading.has_stopped_ends()
+        || reading.side_of(v)? == VertexSide::Inside
+        || reading.side_of(w)? == VertexSide::Inside
+    {
+        return Ok(false);
+    }
+
+    Ok(reading.is_a_band_corner_on_a_stopped_plane(v)?
+        || reading.is_a_band_corner_on_a_stopped_plane(w)?)
 }
 
 /// See the module header. Answers `(true, -1)` when every
@@ -131,9 +149,9 @@ pub fn refine_by_asking(
             let v = t.corner(corner);
             let w = t.corner((corner + 1) % 3);
             corner += 1;
-            if reading.side_of(v)? != VertexSide::Outside
-                || reading.side_of(w)? != VertexSide::Outside
-            {
+            let between_outside_ends = reading.side_of(v)? == VertexSide::Outside
+                && reading.side_of(w)? == VertexSide::Outside;
+            if !between_outside_ends && !leaves_a_band_corner(reading, v, w)? {
                 continue;
             }
 

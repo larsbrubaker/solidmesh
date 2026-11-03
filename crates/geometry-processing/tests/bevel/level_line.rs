@@ -349,6 +349,10 @@ pub(crate) mod stair_step_chain_tests;
 pub(crate) mod step_corner_rim_tests;
 #[path = "stl_reader.rs"]
 pub(crate) mod stl_reader;
+#[path = "stopped_end_arc_tests.rs"]
+pub(crate) mod stopped_end_arc_tests;
+#[path = "stopped_end_room_tests.rs"]
+pub(crate) mod stopped_end_room_tests;
 #[path = "strip_clip_rib_meshes.rs"]
 pub(crate) mod strip_clip_rib_meshes;
 #[path = "strip_clip_rib_tests.rs"]

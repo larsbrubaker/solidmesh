@@ -18,6 +18,7 @@ use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
 use super::end_face_sense::{self, PointPlane};
 use super::foreign_edge_room_readings::{room_for, where_the_room_is_set, FieldAt, ForeignEdge};
 use super::level_line_mesh_edits::LevelLineMeshError;
+use super::pick_end_bounds::PickEnds;
 use super::pick_validation::PickArgumentError;
 use super::seam_edges::FeatureEdgeTest;
 use super::{chain_on_the_mesh, foreign_edge_room, self_room, swallowed_side_runs};
@@ -195,14 +196,18 @@ fn room_within(
         None => &no_feature_edges,
     };
     let chain_edges = chain_on_the_mesh::chain_edges(chain, chain_is_closed);
-    let end_rays = end_face_sense::oblique_ends(
+    // The ends as the band is cut on them (`pick_end_bounds.rs`), less the square crease clips
+    // the room is read without.
+    let ends = PickEnds::of(
         positions,
         indices,
-        chain,
-        chain_is_closed,
+        &[chain.to_vec()],
+        &[chain_is_closed],
         sharp_turn_degrees,
+        is_feature_edge,
     );
-    let end_ray_bounds = end_face_sense::end_ray_bounds(positions, indices, chain, end_rays);
+    let end_rays = ends.end_rays[0];
+    let end_ray_bounds = ends.bounds_without_square_crease_clips(0);
     let (tags, divides) = band_side_tagging_ends::tag_sides(
         indices,
         &chain_edges,
