@@ -20,7 +20,8 @@
 //!
 //! Both the end vertex and the slide hold only on a FLAT end face ([`flat_end_faces`]): its end
 //! run and the chain's end vertex in one plane within the mesh's snap, the same snap the flat cap
-//! closes the hole within. On a curved end face (the D prism's rounded end, faceted round its
+//! closes the hole within, or, at a STOPPED end, every run vertex on its end plane by
+//! `ChainField::on_a_stopped_plane`, the rule its band was cut by. On a curved end face (the D prism's rounded end, faceted round its
 //! axis, whose rail on the top face ends on a facet 1.6 off the plane of the facet at the end
 //! vertex) the row has no one face to lie in, and it is drawn as every other row is.
 //!

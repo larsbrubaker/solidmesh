@@ -7,12 +7,12 @@
 //! triangle it is put in, to the trace's nearest point: where an edge of the triangle lies in the
 //! plane (a facet seam) the trace IS that edge, and the insertion then splits the edge, shared by
 //! index with the triangle across it, rather than minting a sliver beside it. An edge's root goes
-//! to where the edge crosses the plane. Read by the corner finder (`end_clip_corners.rs`), the
+//! to where the edge crosses the plane, where that crossing is on the line. Read by the corner finder (`end_clip_corners.rs`), the
 //! refinement's line points (`band_refinement_asking.rs`) and the cut's edge roots (`band_cut.rs`).
 
 use vector_math::Vector3;
 
-use super::{end_clip_corners, ChainField, VertexFieldReading};
+use super::{end_clip_corners, ChainField, VertexFieldReading, WorkError};
 
 /// `point`, to be put in `triangle`, moved onto the stopped end plane it stands in: to the nearest
 /// point of that plane's trace across the triangle (the triangle's edge in the plane, where it has
@@ -45,27 +45,34 @@ pub fn onto_a_stopped_plane(
 
 /// An edge root `point` on the edge `a`-`b`, moved onto the stopped end plane it stands in: to
 /// where the edge crosses the plane. Unmoved where it stands in no stopped plane or the edge does
-/// not cross it (both ends on one side, or the edge in the plane).
+/// not cross it (both ends on one side, or the edge in the plane), and where the crossing is not
+/// on the line: a root of the RAIL that stands in the plane's zone beside the band corner, on an
+/// edge grazing the plane, would otherwise be carried along the edge to a crossing past the rail.
 pub fn edge_root_onto_a_stopped_plane(
     reading: &VertexFieldReading,
     (a, b): (Vector3, Vector3),
     point: Vector3,
-) -> Vector3 {
+) -> Result<Vector3, WorkError> {
     let Some((vertex, normal, tilt)) = reading.stopped_end_plane_at(point) else {
-        return point;
+        return Ok(point);
     };
     if ChainField::on_a_stopped_plane(vertex, normal, tilt, a)
         || ChainField::on_a_stopped_plane(vertex, normal, tilt, b)
     {
-        return point;
+        return Ok(point);
     }
 
     let (da, db) = ((a - vertex).dot(normal), (b - vertex).dot(normal));
     if (da < 0.0) == (db < 0.0) {
-        return point;
+        return Ok(point);
     }
 
-    a + (b - a) * (da / (da - db))
+    let crossing = a + (b - a) * (da / (da - db));
+    if reading.value_at_point(crossing)?.abs() > reading.snap {
+        return Ok(point);
+    }
+
+    Ok(crossing)
 }
 
 /// The nearest point to `point` of the segment `a`-`b` (`a` where the segment has no length).

@@ -3,7 +3,9 @@
 //! reader and the clipped term's searches are in `chain_field_clip.rs`. Here too the clips a
 //! chain's end-ray bounds give ([`ChainField::find_end_clips`]) and whether an edge lies in a
 //! knife end's plane ([`ChainField::lies_in_an_end_plane`]), whether a point stands in a stopped
-//! end's plane ([`ChainField::lies_in_a_stopped_end_plane`]) and the known-cut reading
+//! end's plane ([`ChainField::lies_in_a_stopped_end_plane`]) and which one
+//! ([`ChainField::stopped_end_plane_at`]), the one rule for standing on a stopped plane
+//! ([`ChainField::on_a_stopped_plane`]) and the known-cut reading
 //! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece is in
 //! `chain_field_least.rs`.
 

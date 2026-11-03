@@ -185,7 +185,7 @@ pub fn put_the_root_on_the_line(
         let mesh = reading.mesh.borrow();
         (mesh.position(a), mesh.position(b))
     };
-    let point = super::stopped_plane_points::edge_root_onto_a_stopped_plane(reading, ends, point);
+    let point = super::stopped_plane_points::edge_root_onto_a_stopped_plane(reading, ends, point)?;
     let (before, mid) = {
         let mut mesh = reading.mesh.borrow_mut();
         let before = mesh.vertex_count();

@@ -5,8 +5,8 @@
 //! meeting point ([`meeting_point_of`]), a reversed arc ([`backwards`]), a run read as a rail
 //! ([`try_rail`]), the extended parameter past an end ([`extended`]) and the rows laid along the
 //! spokes ([`arcs`]), and the entry points that route an open chain's gap ([`try_open`]) and fill
-//! the fade ([`try_fade`]). The fill itself is in `open_gap_fill_fill.rs`, kept apart for
-//! the file-size limit.
+//! the fade ([`try_fade`]), which hands a chain stopped at both ends to `stopped_end_fill.rs`.
+//! The fill itself is in `open_gap_fill_fill.rs`, kept apart for the file-size limit.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -134,8 +134,9 @@ fn single_side(loops: &[GapLoop], side: i32) -> Option<GapLoop> {
 
 /// The open gap this rung builds: one chain, one open run per side, and
 /// the runs' ends meeting on the continuing ridge. Runs on the END regions too go to the end-face
-/// fill, runs ending apart to the growing end faces' fill; anything else about an open gap is
-/// refused by name ([`ends_site`]).
+/// fill, runs ending apart to the growing end faces' fill, and a chain stopped at both ends on its
+/// end planes to the stopped fill (`stopped_end_fill::try_stopped_ends`), cut flat there rather
+/// than faded; anything else about an open gap is refused by name ([`ends_site`]).
 pub fn try_fade(
     gap: &BandGapResult,
     profile: BandProfile,
