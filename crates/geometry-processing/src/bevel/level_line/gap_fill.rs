@@ -236,6 +236,7 @@ pub fn fill_within(
                 profile,
                 fillet_segments,
                 &mut added_triangles,
+                &mut HashMap::new(),
             ) {
                 Ok(one) => one,
                 Err(error @ LevelLineMeshError::Work(WorkError::BudgetExceeded(_))) => {

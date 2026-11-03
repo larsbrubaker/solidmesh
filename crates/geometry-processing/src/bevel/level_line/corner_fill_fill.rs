@@ -245,6 +245,7 @@ pub fn fill(
                 profile,
                 segments,
                 &mut added,
+                &mut splits,
             )?;
             if !one.filled() {
                 return Ok(refuse(

@@ -2,8 +2,22 @@
 //! spokes, the spokes drawn as the fillet's arcs and the cells between them laid as strips - and
 //! taken back out if the shell does not close. The senses, the pairing, the merge, the arcs and
 //! the strip are in `gap_fill`, the rails in `zip_rail`.
+//!
+//! Before the merge, a zip that reads its rails' tie spans (a fillet, or any profile on a chain
+//! with sharp joints) gives each rail a station wherever the chain's reading jumps along the
+//! middle of one of its edges over a reading of the other rail
+//! (`rail_stations::stations_at_jumps`). Such an edge crosses the inside of a turn of the chain,
+//! and the parameters inside the jump are stood for by no point of it but the one at the jump.
+//! Without the station, the other rail's vertices reading those parameters fan into an end of the
+//! edge, each arc carried round the chain from its own reading to that end's, and arcs a few
+//! thousandths apart sharing one far end cross just before it. With it they fan into the station,
+//! whose span is the whole jump, and each arc is drawn in its own section of the chain. A zip that
+//! reads no spans draws straight spokes, which cannot cross that way, and asks for no stations.
+//! The stations are split into the kept surface's own edges, so the strip shares them by index
+//! and the closure check reads each split edge as its pieces.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::gap_fill::{
@@ -16,8 +30,12 @@ use super::{
 };
 
 /// Fills the band of one closed chain between its side-1 and side-2
-/// loops, appending the laid triangles to `laid`. Refuses (with nothing left laid) where a rail is
-/// not monotone, the rails run the same way, or the strip does not close the shell.
+/// loops, appending the laid triangles to `laid` and each rail edge its stations split to
+/// `splits` (the split edge, undirected, to its new vertex), so a caller reading the loops' edges
+/// afterwards reads them as their pieces. Refuses (with nothing left laid) where a rail is
+/// not monotone, the rails run the same way, or the strip does not close the shell. The stations'
+/// splits are NOT undone on a refusal: each split keeps the kept surface closed and unchanged in
+/// shape, and no caller fills the same gap again after one.
 pub fn fill_one_chain(
     mesh: &Rc<RefCell<super::LevelLineMesh>>,
     chain: &ChainField,
@@ -25,6 +43,7 @@ pub fn fill_one_chain(
     profile: BandProfile,
     fillet_segments: i32,
     laid: &mut Vec<i32>,
+    splits: &mut HashMap<(i32, i32), i32>,
 ) -> Result<GapFillResult, LevelLineMeshError> {
     let start = laid.len();
     let slack = monotone_slack(chain);
@@ -56,7 +75,7 @@ pub fn fill_one_chain(
         });
     };
     let mut left: ZipRail = (*left).clone();
-    let right: ZipRail = (*right).clone();
+    let mut right: ZipRail = (*right).clone();
 
     let length = chain.length;
     let tie = PARAMETER_TIE_RELATIVE * length;
@@ -65,6 +84,35 @@ pub fn fill_one_chain(
     // no sharp joint reads each vertex at its own parameter; a fillet reads them all.
     let reads_ties = (profile != BandProfile::Chamfer && fillet_segments != 1)
         || !chain.sharp_joints().is_empty();
+
+    // A station stands for a jump through its span, so only a zip that reads spans asks for one.
+    // Each rail is offered the other's readings a lap either side too, so a jump on a wrap edge
+    // is read like any other.
+    let laps = |rail: &ZipRail| -> Vec<f64> {
+        rail.parameters
+            .iter()
+            .flat_map(|&p| [p - length, p, p + length])
+            .collect()
+    };
+    let (left_reads, right_reads) = (laps(&left), laps(&right));
+    let asked = if reads_ties {
+        vec![(&mut left, &right_reads), (&mut right, &left_reads)]
+    } else {
+        Vec::new()
+    };
+    for (rail, others) in asked {
+        super::rail_stations::stations_at_jumps(
+            &mut mesh.borrow_mut(),
+            chain,
+            &mut rail.vertices,
+            &mut rail.parameters,
+            others,
+            tie,
+            length,
+            splits,
+        )?;
+    }
+
     let spans = |rail: &ZipRail| -> Result<Vec<(f64, f64)>, LevelLineMeshError> {
         if reads_ties {
             Ok(super::rail_stations::tie_spans(
@@ -165,7 +213,17 @@ pub fn fill_one_chain(
     }
 
     let added_triangles = laid[start..].to_vec();
-    let open = super::fill_closure::first_open_edge(&mesh_mut, loops, &added_triangles);
+    // The loops' edges as the stations left them: each split edge stands as its pieces.
+    let mut kept = Vec::new();
+    for gap_loop in loops {
+        let count = gap_loop.vertices.len();
+        for i in 0..count {
+            let (a, b) = (gap_loop.vertices[i], gap_loop.vertices[(i + 1) % count]);
+            kept.extend(super::rail_stations::pieces(a, b, splits));
+        }
+    }
+
+    let open = super::fill_closure::first_open_edge_of(&mesh_mut, &kept, &added_triangles);
     if open.0 >= 0 {
         // The construction promises a closed shell; when it did not deliver one the strip is taken
         // back out and the fill says so - never a repair pass.

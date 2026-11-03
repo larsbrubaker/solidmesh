@@ -285,6 +285,8 @@ pub(crate) mod point_bevel_tests;
 pub(crate) mod port_mouth_carry_tests;
 #[path = "rail_monotone_tests.rs"]
 pub(crate) mod rail_monotone_tests;
+#[path = "rail_station_at_a_jump_tests.rs"]
+pub(crate) mod rail_station_at_a_jump_tests;
 #[path = "raked_box_fixture.rs"]
 pub(crate) mod raked_box_fixture;
 #[path = "ridge_search_cost_tests.rs"]
