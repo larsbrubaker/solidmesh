@@ -15,7 +15,7 @@ use vector_math::{ieee_math, Vector3};
 use super::{end_face_sense, pick_validation, RoomSource};
 
 use super::end_face_sense::{
-    face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES,
+    carries_on, face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE,
 };
 use super::{EndRayBound, LevelLineWork};
 
@@ -238,9 +238,9 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
 /// section lies in the end face's plane, and its foot stands on the crease where the crease is a
 /// setback from the end vertex; on a FACETED crease (an end wall meeting a faceted curve) the foot
 /// rides on from chord to chord. The crease runs on from a vertex along the one next chord that is
-/// again a concave crease between the end face and a face, where that face folds off the last one
-/// by less than [`SEPARATE_END_FACE_DEGREES`] (the faceted curve carrying on, read as the oblique
-/// end reader reads a facet), and only while each vertex stands farther from the end vertex than
+/// again a concave crease between the end face and a face, where that face carries the last one on
+/// (`end_face_sense::carries_on`, the faceted curve carrying on, read as the oblique end reader
+/// reads a facet), and only while each vertex stands farther from the end vertex than
 /// the last: where the crease turns back, or meets a real corner, the foot leaves it there.
 fn crease_reach(
     positions: &[Vector3],
@@ -253,7 +253,6 @@ fn crease_reach(
     let origin = positions[end as usize];
     let in_the_end_face =
         |t: Corners| face_normal(positions, t).dot(end_normal) >= 1.0 - COPLANAR_TOLERANCE;
-    let least_fold = SEPARATE_END_FACE_DEGREES.to_radians().cos();
     let (mut previous, mut current, mut face) = (end, far, side);
     let mut reach = (positions[far as usize] - origin).length();
     loop {
@@ -284,7 +283,7 @@ fn crease_reach(
                     continue;
                 };
                 if is_convex(positions, t, wall, current)
-                    || face_normal(positions, t).dot(face_normal(positions, face)) < least_fold
+                    || !carries_on(face_normal(positions, t).dot(face_normal(positions, face)))
                 {
                     continue;
                 }

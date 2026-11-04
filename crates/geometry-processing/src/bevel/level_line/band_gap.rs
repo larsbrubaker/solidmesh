@@ -177,13 +177,7 @@ pub fn build_unvalidated(
     // pick reaches), whose handed-in room is read size-free and may be flowed past (one chain by
     // `narrow_face_flow`, several by `band_gap_build_within`'s flowed pick room). An end another
     // chain reaches is no end region, so it cannot flow.
-    let may_flow_past_the_room = !topology_only
-        && (0..chains.len()).any(|k| {
-            !closed[k]
-                && [chains[k][0], chains[k][chains[k].len() - 1]]
-                    .iter()
-                    .any(|&end| !(0..chains.len()).any(|j| j != k && chains[j].contains(&end)))
-        });
+    let may_flow_past_the_room = !topology_only && has_a_free_end(&chains, &closed);
     let mut known_room = known_room;
     if let Some(known) = known_room {
         if size > known && !may_flow_past_the_room {
@@ -275,6 +269,18 @@ pub fn refused_by_size(room: f64) -> BandGapResult {
         room,
         ..BandGapResult::default()
     }
+}
+
+/// Whether some OPEN chain of the pick has a FREE end - an end vertex no other chain of the pick
+/// reaches - the only end with an end region to flow over a narrow end face. A pick with none has
+/// no flowed room to read.
+pub fn has_a_free_end(chains: &[Vec<i32>], closed: &[bool]) -> bool {
+    (0..chains.len()).any(|k| {
+        !closed[k]
+            && [chains[k][0], chains[k][chains[k].len() - 1]]
+                .iter()
+                .any(|&end| !(0..chains.len()).any(|j| j != k && chains[j].contains(&end)))
+    })
 }
 
 /// The largest size the pick could have room for at all ([`self_room::chain_ceiling`]).

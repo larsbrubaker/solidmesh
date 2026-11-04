@@ -7,8 +7,8 @@ use vector_math::Vector3;
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::curved_end_face::bends_on_softly;
 use super::end_face_sense::{
-    face_normal, is_convex, leans_off_square, shared_corners, Corners, COPLANAR_TOLERANCE,
-    SEPARATE_END_FACE_DEGREES,
+    carries_on, face_normal, is_convex, leans_off_square, shared_corners, Corners,
+    COPLANAR_TOLERANCE,
 };
 
 /// The mesh and bend threshold `ObliqueEnds`' local functions close over.
@@ -119,26 +119,24 @@ impl ObliqueEndReader<'_> {
             return false;
         };
 
-        // A face that folds off a side by less than SeparateEndFaceDegrees is that side CARRYING ON
+        // A face that folds off a side within SEPARATE_END_FACE_DEGREES is that side CARRYING ON
         // (the next facet of a faceted curve), not an end face: the pick covers part of a longer
-        // crease, which fades. The least fold is NaN if any is NaN, so a broken normal is never
-        // hidden.
-        let folds = sides
-            .iter()
-            .map(|s| s.dot(end_face).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI);
-        let mut fold = f64::INFINITY;
-        for f in folds {
-            if f.is_nan() {
-                fold = f64::NAN;
+        // crease, which fades. The nearest side is read (the greatest cosine), NaN if any is, so a
+        // broken normal is never hidden.
+        let mut nearest = f64::NEG_INFINITY;
+        for side in &sides {
+            let cosine = side.dot(end_face);
+            if cosine.is_nan() {
+                nearest = f64::NAN;
                 break;
             }
 
-            if f < fold {
-                fold = f;
+            if cosine > nearest {
+                nearest = cosine;
             }
         }
 
-        if fold < SEPARATE_END_FACE_DEGREES {
+        if carries_on(nearest) {
             return false;
         }
 

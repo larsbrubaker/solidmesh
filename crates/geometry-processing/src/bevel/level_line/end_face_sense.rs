@@ -39,6 +39,16 @@ pub const COPLANAR_TOLERANCE: f64 = 1e-6;
 /// prism's fold 69.3 and 110.7, Fillet Thin Front's 66.9, Center Flows Through's 66.9 and 90).
 pub const SEPARATE_END_FACE_DEGREES: f64 = 30.0;
 
+/// Whether two unit directions whose dot product is `cosine` - two faces' normals, or a crease and
+/// the next leg leaving it - stand within [`SEPARATE_END_FACE_DEGREES`] of each other: the faceted
+/// curve CARRYING ON. The one reading of that limit for every caller (the oblique end, the stopped
+/// end, the square crease's reach and a growing neighbour's next facet). Read on the cosine with a
+/// slack of [`COPLANAR_TOLERANCE`], so a turn of exactly 30 degrees, a 12-gon's, carries on
+/// whichever way its coordinates round; NaN, a broken direction, never carries on.
+pub fn carries_on(cosine: f64) -> bool {
+    cosine >= SEPARATE_END_FACE_DEGREES.to_radians().cos() - COPLANAR_TOLERANCE
+}
+
 /// The lean off square past which a wall facing BACK
 /// over a chain it meets the opposite way takes the end ray. Under it the wall is read as square
 /// and grows (flow rung 1): Top & Round's rim end stands 4.5 degrees off square and builds only

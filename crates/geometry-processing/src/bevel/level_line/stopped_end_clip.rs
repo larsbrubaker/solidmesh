@@ -49,9 +49,7 @@ use std::cell::Cell;
 use vector_math::Vector3;
 
 use super::super::float_grid;
-use super::end_face_sense::{
-    face_normal, is_convex, Corners, COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES,
-};
+use super::end_face_sense::{carries_on, face_normal, is_convex, Corners, COPLANAR_TOLERANCE};
 use super::{EndRayBound, LevelLineWork};
 
 /// Whether the build in force reads stopped ends (off unless a caller turns them on with
@@ -122,7 +120,7 @@ fn has(t: Corners, v: i32) -> bool {
 
 /// The stopped-end clip at each UNRAYED end of an open chain whose crease carries on past it, or
 /// `None` at an end that is not stopped: a rayed end, a closed chain, an end no feature crease
-/// leaves within [`SEPARATE_END_FACE_DEGREES`] of the chain's line, or an end whose plane some
+/// leaves carrying the chain's line on (`end_face_sense::carries_on`), or an end whose plane some
 /// point of the chain itself stands past (an open chain over half a faceted circle: its plane would
 /// cut the chain's own band, so that end keeps fading). Reads nothing unless [`stopped_ends_on`].
 pub fn stopped_end_clips(
@@ -171,8 +169,8 @@ const ON_ITS_PLANE_RELATIVE: f64 = 1e-9;
 
 /// The clip at chain end `end`, whose next chain vertex is `next`: the mitre plane between the
 /// chain and the feature crease leaving `end` most nearly along the chain's line, when that crease
-/// folds the chain's way and turns off the line by less than [`SEPARATE_END_FACE_DEGREES`] (the
-/// faceted curve carrying on, read as the oblique-end reader reads a facet), and no point of the
+/// folds the chain's way and carries the line on (`end_face_sense::carries_on`, the faceted curve
+/// carrying on, read as the oblique-end reader reads a facet), and no point of the
 /// chain stands past the plane. `None` otherwise.
 fn stop_at(
     positions: &[Vector3],
@@ -195,7 +193,6 @@ fn stop_at(
 
     let chain_convex = is_convex(positions, sides[0], sides[1], end);
     let at_end: Vec<Corners> = indices.iter().copied().filter(|&t| has(t, end)).collect();
-    let least_lean = SEPARATE_END_FACE_DEGREES.to_radians().cos();
     // The leaving crease: the most leaning on; a tie goes to the lower vertex index, so the answer
     // does not depend on the triangles' order. Only a feature edge is a crease: a soft
     // triangulation diagonal is not the curve carrying on.
@@ -219,7 +216,7 @@ fn stop_at(
             }
 
             let lean = (positions[w as usize] - v).get_normal().dot(outward);
-            if lean.is_nan() || lean < least_lean {
+            if !carries_on(lean) {
                 continue;
             }
 

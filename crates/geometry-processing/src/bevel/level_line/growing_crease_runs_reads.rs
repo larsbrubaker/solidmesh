@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use vector_math::{ieee_math, Vector3};
 
-use super::end_face_sense::{COPLANAR_TOLERANCE, SEPARATE_END_FACE_DEGREES};
 use super::{
     end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineMesh, LevelLineWork,
     WorkError,
@@ -364,10 +363,10 @@ impl GrowingCreaseRuns {
 
     /// The normals of the faces that carry a growing run on past its far end `far` as facets of one
     /// wall: the untagged face of each growing crease of this chain's own sides leaving `far`
-    /// (other than the run's own pieces) that turns off the run's line by no more than
-    /// [`SEPARATE_END_FACE_DEGREES`] and whose face folds off C's (normal `c_normal`) by no more
-    /// than it (a 12-gon's 30 degrees carries on) - the kernel's one reading of "the curve
-    /// carries on", as a stopped end and an oblique end read a faceted curve's next facet. Such a
+    /// (other than the run's own pieces) that carries the run's line on and whose face carries C's
+    /// on (normal `c_normal`), by the kernel's one reading of "the curve carries on"
+    /// (`end_face_sense::carries_on`, under which a 12-gon is one wall), as a stopped end and an
+    /// oblique end read a faceted curve's next facet. Such a
     /// face grows its own cap over the band, meeting C's along the seam between them, so the seam
     /// is no far crease. A crease turning sharper is a corner of the neighbour (a rib's back), past
     /// which C's cap would have to turn: that seam still bounds.
@@ -379,10 +378,6 @@ impl GrowingCreaseRuns {
         run: &HashSet<(i32, i32)>,
         c_normal: Vector3,
     ) -> Result<Vec<Vector3>, WorkError> {
-        // Read with a slack of `COPLANAR_TOLERANCE` in the cosine, so a turn of exactly 30 degrees
-        // (a 12-gon's, which `SEPARATE_END_FACE_DEGREES` reads as one wall) carries on whichever
-        // way its coordinates round.
-        let least_lean = SEPARATE_END_FACE_DEGREES.to_radians().cos() - COPLANAR_TOLERANCE;
         let along = (mesh.position(far) - mesh.position(near)).get_normal();
         let around = self
             .neighbours
@@ -417,14 +412,14 @@ impl GrowingCreaseRuns {
             }
 
             let step = mesh.position(w) - mesh.position(far);
-            if step.length() == 0.0 || along.dot(step.get_normal()) < least_lean {
+            if step.length() == 0.0 || !end_face_sense::carries_on(along.dot(step.get_normal())) {
                 continue;
             }
 
             let face_normal = (mesh.position(face.b) - mesh.position(face.a))
                 .cross(mesh.position(face.c) - mesh.position(face.a))
                 .get_normal();
-            if face_normal.dot(c_normal) < least_lean {
+            if !end_face_sense::carries_on(face_normal.dot(c_normal)) {
                 continue;
             }
 

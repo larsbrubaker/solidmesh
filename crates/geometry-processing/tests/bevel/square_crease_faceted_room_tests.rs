@@ -4,7 +4,8 @@
 //! front carries on past the end in the front's plane. The round's section in the end wall meets
 //! the crease at a setback from the end vertex, so its foot rides the crease from facet to facet
 //! for as long as the crease runs on, and the room the crease leaves is the farthest the crease
-//! reaches from the end vertex, not the first chord's length.
+//! reaches from the end vertex, not the first chord's length. Facets folding exactly 30 degrees (a
+//! 12-gon's) are still one curve, 31 degrees a corner (`end_face_sense::carries_on`).
 
 use geometry_processing::bevel::level_line::square_crease_end_clips;
 use vector_math::Vector3;
@@ -26,13 +27,19 @@ fn faced(positions: &[Vector3], t: (i32, i32, i32), outward: Vector3) -> (i32, i
 /// wall x = 0; the chain is its top edge 1 - 0 on y = 0, z = 0, ending at vertex 0. The block past
 /// the wall stands to z = 5 with the same front y = 0 and runs to x = 5.
 fn quarter_round_onto_a_wall(facets: usize) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
+    round_onto_a_wall(facets, std::f64::consts::FRAC_PI_2 / facets as f64)
+}
+
+/// [`quarter_round_onto_a_wall`] with each of its `facets` facets turning `step` radians off the
+/// last, so the round spans `facets * step`.
+fn round_onto_a_wall(facets: usize, step: f64) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {
     let length = 5.0;
     let height = 5.0;
     let mut positions = Vec::new();
     // At x = 0 (index 2k) and x = -length (index 2k + 1), k = 0..=facets; vertex 0 is the end and
     // vertex 1 the chain's other end.
     for k in 0..=facets {
-        let angle = std::f64::consts::FRAC_PI_2 * k as f64 / facets as f64;
+        let angle = step * k as f64;
         let (y, z) = (-RADIUS * angle.sin(), RADIUS * angle.cos() - RADIUS);
         positions.push(Vector3::new(0.0, y, z));
         positions.push(Vector3::new(-length, y, z));
@@ -73,7 +80,14 @@ fn quarter_round_onto_a_wall(facets: usize) -> (Vec<Vector3>, Vec<(i32, i32, i32
 
 /// The end clip at the chain's end on the wall.
 fn the_wall_end_clip(facets: usize) -> geometry_processing::bevel::level_line::EndRayBound {
-    let (positions, indices) = quarter_round_onto_a_wall(facets);
+    the_end_clip_on(quarter_round_onto_a_wall(facets))
+}
+
+/// The end clip at the chain's end on the wall of `solid`.
+fn the_end_clip_on(
+    solid: (Vec<Vector3>, Vec<(i32, i32, i32)>),
+) -> geometry_processing::bevel::level_line::EndRayBound {
+    let (positions, indices) = solid;
     let (clip, other) =
         square_crease_end_clips(&positions, &indices, &[1, 0], false, (false, false));
     assert_eq!(clip, None, "the chain's far end is not on the wall");
@@ -103,6 +117,34 @@ fn a_faceted_crease_leaves_the_room_it_reaches() {
 fn a_crease_stops_at_a_corner() {
     let clip = the_wall_end_clip(2);
     let chord = 2.0 * RADIUS * std::f64::consts::FRAC_PI_8.sin();
+    assert!(
+        (clip.crease_room - chord).abs() <= 1e-9 * chord,
+        "room {} against the first chord {chord}",
+        clip.crease_room
+    );
+}
+
+/// A 12-gon's quarter: three facets, each folding exactly 30 degrees off the last, which
+/// `end_face_sense::carries_on` reads as one curve whichever way the coordinates round, so the
+/// room follows the whole crease.
+#[test]
+fn a_twelve_gon_crease_leaves_the_room_it_reaches() {
+    let clip = the_wall_end_clip(3);
+    let reach = RADIUS * std::f64::consts::SQRT_2;
+    assert!(
+        (clip.crease_room - reach).abs() <= 1e-9 * reach,
+        "room {} against the crease's reach {reach}",
+        clip.crease_room
+    );
+}
+
+/// Two facets folding 31 degrees apart, a degree past the limit: a corner, so the room stays the
+/// first chord's.
+#[test]
+fn a_crease_folding_past_thirty_degrees_stops_at_the_first_chord() {
+    let step = 31.0_f64.to_radians();
+    let clip = the_end_clip_on(round_onto_a_wall(2, step));
+    let chord = 2.0 * RADIUS * (step / 2.0).sin();
     assert!(
         (clip.crease_room - chord).abs() <= 1e-9 * chord,
         "room {} against the first chord {chord}",

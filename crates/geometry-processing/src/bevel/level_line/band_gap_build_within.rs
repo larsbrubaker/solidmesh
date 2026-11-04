@@ -16,7 +16,9 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use vector_math::Vector3;
 
-use super::band_gap::{chord_tolerance_of, needle_floor_of, refused_by_size, BuildWithinArgs};
+use super::band_gap::{
+    chord_tolerance_of, has_a_free_end, needle_floor_of, refused_by_size, BuildWithinArgs,
+};
 use super::band_gap_build_fault::{defect, BuildFault};
 use super::band_gap_build_sides::{self, SideInputs, Sides};
 use super::band_gap_reading::room_margin;
@@ -107,6 +109,8 @@ pub(super) fn build_from_the_setbacks(
         )
     };
     let mut pick_room = None;
+    // Which reading named the plain room a flowed pick quotes, where it read one itself.
+    let mut unflowed_set_by: Option<RoomSource> = None;
     let mut flow_reaches: Option<&[Rc<super::ChainField>]> = None;
     if !only && known_room.is_none() {
         // A room handed in IS the plain room, read already: only the flowed one is read here, and
@@ -119,7 +123,7 @@ pub(super) fn build_from_the_setbacks(
             .or(plain.as_ref().map(|p| p.room))
             .unwrap_or(f64::INFINITY);
         let mut flowed = None;
-        let takes = closed.iter().any(|&c| !c)
+        let takes = has_a_free_end(chains, closed)
             && narrow_face_flow::takes_the_flow(size, plain_room, || {
                 let read = read_the_pick(Some(&fields))?;
                 let room = read.room;
@@ -128,6 +132,7 @@ pub(super) fn build_from_the_setbacks(
             })?;
         if takes {
             *unflowed_room = Some(plain_room);
+            unflowed_set_by = plain.as_ref().map(|p| p.set_by);
             flow_reaches = Some(&fields);
             pick_room = flowed;
         } else if let Some(handed) = handed_in_room {
@@ -406,11 +411,12 @@ pub(super) fn build_from_the_setbacks(
     // ONE number decides: the size asked for is refused exactly when it stands above the room.
     if size > room && !ends_on_the_rim {
         // A flowed band refused by size quotes the room it had without the flow, the one the user
-        // is told everywhere else (`unflowed_room`), never the flowed room it was cut by.
+        // is told everywhere else (`unflowed_room`), never the flowed room it was cut by - and the
+        // reading that named THAT room, so the place shown is where that number is set.
         return Ok(BandGapResult {
             refusal: BandGapRefusal::Size,
             room: unflowed_room.unwrap_or(room),
-            room_set_by,
+            room_set_by: unflowed_set_by.unwrap_or(room_set_by),
             chains: fields,
             mesh: Some(mesh),
             ..BandGapResult::default()
