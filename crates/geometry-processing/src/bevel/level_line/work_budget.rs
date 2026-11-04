@@ -136,6 +136,11 @@ pub struct WorkBudget {
     /// `stopped_end_clip::turn_stopped_ends_on` flips it for the budget in force, and a budget
     /// created inside a scope starts on.
     pub stopped_ends_on: Cell<bool>,
+    /// The vertices where this build cuts a chain because its crease flips between a cove and a
+    /// round there (none by default): the fallback a rim takes only at the flips next to where its
+    /// blend could not be built (`chain_on_the_mesh::sense_flips_near`); every other flip stays
+    /// blended.
+    pub sense_flips_to_cut: RefCell<Vec<i32>>,
     /// Who watches each corner hole the cap closes with the hole fill for this build (a per-flow
     /// watcher, none by default): the mesh, the fill's
     /// vertices, how many of them are the hole's own points, its triangles and the rows it closed.
@@ -590,6 +595,7 @@ impl WorkBudget {
             square_crease_clips_off: Cell::new(false),
             leaning_crease_clips_off: Cell::new(false),
             stopped_ends_on: Cell::new(super::stopped_end_clip::flow_stopped_ends_on()),
+            sense_flips_to_cut: RefCell::new(Vec::new()),
             watch_hole_fills: RefCell::new(None),
             spent: Cell::new(0),
             phase: Cell::new(LevelLineWorkPhase::None),

@@ -205,7 +205,9 @@ pub fn read_room_of_pick(
     // The room is read on the chains the build cuts - split where their edges' setbacks step.
     // Validation has already found every chain edge on two triangles, so the split cannot fail on
     // one; were it to, the reading answers as the one-chain reading does for such an edge.
-    let (chains, closed) = match chain_on_the_mesh::split_at_setback_steps(
+    // Read under the reading's budget, as the build's split is.
+    let splitting = super::LevelLineWork::begin(Some(Rc::clone(&budget)));
+    let split = chain_on_the_mesh::split_at_setback_steps(
         positions,
         indices,
         chains,
@@ -213,7 +215,9 @@ pub fn read_room_of_pick(
         profile,
         sharp_turn_degrees,
         is_feature_edge.as_deref(),
-    ) {
+    );
+    drop(splitting);
+    let (chains, closed) = match split {
         Ok(split) => split,
         Err(bad) => {
             return Ok(RoomReading {

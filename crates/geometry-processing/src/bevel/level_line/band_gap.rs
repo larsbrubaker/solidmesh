@@ -154,7 +154,10 @@ pub fn build_unvalidated(
         }
     }
 
-    let (chains, closed) = match the_chains_as_built(
+    // Read under the build's budget, so a build asking for its rim to be cut at its cove-to-round
+    // corners (`WorkBudget::sense_flips_to_cut`) is.
+    let splitting = LevelLineWork::begin(budget.clone());
+    let split = the_chains_as_built(
         positions,
         indices,
         chains,
@@ -162,7 +165,9 @@ pub fn build_unvalidated(
         profile,
         sharp_turn_degrees,
         is_feature_edge.as_deref(),
-    ) {
+    );
+    drop(splitting);
+    let (chains, closed) = match split {
         Ok(split) => split,
         Err(bad) => {
             return Ok(BandGapResult {

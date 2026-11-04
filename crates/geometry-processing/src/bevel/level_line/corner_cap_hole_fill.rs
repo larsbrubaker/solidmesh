@@ -8,7 +8,9 @@
 //! ([`on_the_ball`], [`covers_the_ball_once`]), and one corner hole closed by the filler
 //! ([`fill_one`], with [`convex_creases_at_the_arc_ends`] and [`in_face_cross_tangent`]) with its
 //! watchers ([`WATCH_CORNER_HOLES`], the build's `WorkBudget::watch_hole_fills`) and its last
-//! failure ([`last_hole_fill_failure`]). Its switch is in `corner_cap_hole_fill_switch.rs`; its
+//! failure ([`last_hole_fill_failure`]). The added vertices held within the faces the rows leave
+//! along, and the held patch checked again, are `corner_cap_hold.rs`. Its switch is in
+//! `corner_cap_hole_fill_switch.rs`; its
 //! end hole closed by the one filler (`EndHoleByTheOneFiller`) is in
 //! `corner_cap_hole_fill_end.rs`.
 
@@ -20,9 +22,9 @@ use std::sync::{Arc, Mutex};
 use vector_math::{ieee_math, Vector3};
 
 use super::{
-    corner_fill, corner_mitre_patch, hole_fill, ChainField, CornerCapLastRow, GapFillRefusal,
-    HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineMesh, LevelLineMeshError,
-    LevelLineTriangle, LevelLineWork,
+    corner_cap_hold, corner_fill, corner_mitre_patch, hole_fill, ChainField, CornerCapLastRow,
+    GapFillRefusal, HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineMesh,
+    LevelLineMeshError, LevelLineTriangle, LevelLineWork,
 };
 
 /// A watcher of every corner hole [`fill_one`] reads: its loop's points, the strip ends on it and
@@ -154,7 +156,7 @@ pub fn removed_triangles_on_the_loop(
 type NearFace = (Vector3, Vector3, Vector3, Vector3, Vector3);
 
 /// A face plane as (origin, unit normal).
-type FacePlane = (Vector3, Vector3);
+pub(super) type FacePlane = (Vector3, Vector3);
 
 /// NaN sorts below every number.
 fn nan_first_compare(a: f64, b: f64) -> std::cmp::Ordering {
@@ -166,20 +168,14 @@ fn nan_first_compare(a: f64, b: f64) -> std::cmp::Ordering {
     }
 }
 
-/// The added fill vertex (index `n` on) standing furthest through the faces the rows leave along -
-/// in front of a convex row's face, behind a concave row's - past a tenth of the rows' mean width;
-/// -1 for none, no rows, nothing added, or no removed face near the hole.
-pub fn bulging_fill_vertex(
+/// The faces the rows leave along at each arc end, as (the row is concave, the face at its first
+/// end, the face at its last), read off the removed triangles near the hole; `None` where no
+/// removed face is near.
+pub(super) fn faces_the_rows_leave_along(
     mesh: &LevelLineMesh,
-    fill: &[Vector3],
-    n: i32,
     rows: &[CornerCapLastRow],
     points: &[Vector3],
-) -> i32 {
-    if rows.is_empty() || fill.len() as i32 == n {
-        return -1;
-    }
-
+) -> Option<Vec<(bool, FacePlane, FacePlane)>> {
     let mean = points.iter().fold(Vector3::ZERO, |s, &p| s + p) / points.len() as f64;
     // A NaN is displaced by any number.
     let reach = 2.0
@@ -219,7 +215,7 @@ pub fn bulging_fill_vertex(
     }
 
     if planes.is_empty() {
-        return -1;
+        return None;
     }
 
     // The face an arc end lies on: the removed triangle under it, measured to the triangle. Where
@@ -281,10 +277,30 @@ pub fn bulging_fill_vertex(
         (face.0, face.1)
     };
 
-    let faces: Vec<(&CornerCapLastRow, FacePlane, FacePlane)> = rows
-        .iter()
-        .map(|r| (r, face_at(r, true), face_at(r, false)))
-        .collect();
+    Some(
+        rows.iter()
+            .map(|r| (r.concave, face_at(r, true), face_at(r, false)))
+            .collect(),
+    )
+}
+
+/// The added fill vertex (index `n` on) standing furthest through the faces the rows leave along -
+/// in front of a convex row's face, behind a concave row's - past a tenth of the rows' mean width;
+/// -1 for none, no rows, nothing added, or no removed face near the hole.
+pub fn bulging_fill_vertex(
+    mesh: &LevelLineMesh,
+    fill: &[Vector3],
+    n: i32,
+    rows: &[CornerCapLastRow],
+    points: &[Vector3],
+) -> i32 {
+    if rows.is_empty() || fill.len() as i32 == n {
+        return -1;
+    }
+
+    let Some(faces) = faces_the_rows_leave_along(mesh, rows, points) else {
+        return -1;
+    };
     let allowance = 0.1
         * (rows
             .iter()
@@ -296,10 +312,10 @@ pub fn bulging_fill_vertex(
     let mut at = -1;
     for (i, &point) in fill.iter().enumerate().skip(n as usize) {
         let mut through = if mixed { f64::MAX } else { f64::MIN };
-        for &(row, a, b) in &faces {
+        for &(concave, a, b) in &faces {
             // in front of a face is positive; a convex row's fill must not stand in front, a
             // concave row's must not stand behind
-            let sign = if row.concave { -1.0 } else { 1.0 };
+            let sign = if concave { -1.0 } else { 1.0 };
             let by_row =
                 ieee_math::max_f64(sign * a.1.dot(point - a.0), sign * b.1.dot(point - b.0));
             through = if mixed {
@@ -649,7 +665,14 @@ pub fn fill_one(
         return Ok((GapFillRefusal::FillLeavesThePart, cycle[0]));
     }
 
-    // After the bulge check, so a patch the filler folded or bulged is refused as before.
+    // After the bulge check, so a patch the filler folded or bulged is refused as before; the held
+    // patch is checked again, and refused the same way where holding cannot keep it within the
+    // faces without turning or flattening a triangle.
+    let Some(filled) =
+        corner_cap_hold::held_within_the_faces(mesh, filled, n as i32, &rows, &points)
+    else {
+        return Ok((GapFillRefusal::FillLeavesThePart, cycle[0]));
+    };
     let filled = on_the_ball(filled, &points, &rows);
     let filled = corner_mitre_patch::on_the_mitre(filled, &points, &rows);
 

@@ -2,7 +2,8 @@
 //! (`end_face_sense::oblique_ends`, none at a corner of the pick), the rays' bounds
 //! (`end_face_sense::end_ray_bounds`), a square crease end's clip where an end has no bound
 //! (`square_crease_end_clip.rs`) and a stopped end's clip where it still has none
-//! (`stopped_end_clip.rs`), always in that order. The band build (`band_gap_setback_fields.rs`)
+//! (`stopped_end_clip.rs`), always in that order, and last a run's flush end at a cove-to-round
+//! corner of a rim cut at its flips (`flip_corner_clip.rs`). The band build (`band_gap_setback_fields.rs`)
 //! and the room readings (`band_room.rs`, `band_room_pair_room_pick.rs`) all read their ends here,
 //! so a clip reaches the readings exactly where it reaches the band. The readings do not read the
 //! square crease clips ([`PickEnds::bounds_without_square_crease_clips`]); they never have, and the
@@ -13,7 +14,9 @@ use std::collections::HashSet;
 use vector_math::Vector3;
 
 use super::end_face_sense::{self, Corners};
-use super::{pick_validation, square_crease_end_clip, stopped_end_clip, EndRayBound};
+use super::{
+    flip_corner_clip, pick_validation, square_crease_end_clip, stopped_end_clip, EndRayBound,
+};
 
 /// One chain's two end bounds, as (first, last).
 pub type EndBounds = (Option<EndRayBound>, Option<EndRayBound>);
@@ -106,6 +109,26 @@ impl PickEnds {
                 stopped[k] = true;
             }
             if bounds[k].1.is_none() && !at_a_corner(chain.last()) && last.is_some() {
+                bounds[k].1 = last;
+                stopped[k] = true;
+            }
+        }
+
+        // A run ending at a cove-to-round corner of a rim cut at its flips stops flush on the
+        // seam plane there (`flip_corner_clip.rs`), read as a stopped end.
+        let flips = flip_corner_clip::flip_corner_clips(
+            positions,
+            indices,
+            chains,
+            closed,
+            is_feature_edge,
+        );
+        for (k, (first, last)) in flips.into_iter().enumerate() {
+            if first.is_some() {
+                bounds[k].0 = first;
+                stopped[k] = true;
+            }
+            if last.is_some() {
                 bounds[k].1 = last;
                 stopped[k] = true;
             }

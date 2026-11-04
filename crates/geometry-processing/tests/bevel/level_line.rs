@@ -71,12 +71,16 @@ pub(crate) mod convex_cell_bound_tests;
 pub(crate) mod convex_end_ray_room_tests;
 #[path = "coplanar_diagonal_flip.rs"]
 pub(crate) mod coplanar_diagonal_flip;
+#[path = "corner_cap_hold_tests.rs"]
+pub(crate) mod corner_cap_hold_tests;
 #[path = "corner_pick_with_mouth_tests.rs"]
 pub(crate) mod corner_pick_with_mouth_tests;
 #[path = "corner_setback_measure_tests.rs"]
 pub(crate) mod corner_setback_measure_tests;
 #[path = "corner_volume_measure_tests.rs"]
 pub(crate) mod corner_volume_measure_tests;
+#[path = "cove_round_corner_tests.rs"]
+pub(crate) mod cove_round_corner_tests;
 #[path = "crease_dies_out_fixtures.rs"]
 pub(crate) mod crease_dies_out_fixtures;
 #[path = "crease_dies_out_tests.rs"]

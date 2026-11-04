@@ -1,6 +1,7 @@
 //! A picked chain read on the mesh it was picked from: its edges in its own direction and the two
 //! triangles each stands between, with the setback-step fraction ([`SETBACK_STEP_FRACTION`]), the
-//! setback steps and unit setbacks.
+//! setback steps (and the cove-to-round flips cut with them, and whether a set of flips cuts more
+//! than the last: [`flips_cut_more`]), each edge's convexity and the unit setbacks.
 
 use super::triangle_edges::{self, StandingMap};
 use super::ChainEdgeNotOnTwoTriangles;
@@ -89,6 +90,91 @@ pub fn per_edge_unit_setbacks(
     Ok(per_edge)
 }
 
+/// Whether an unpicked feature edge runs into chain vertex `v`, other than the chain's own edges
+/// to `a` and `b` (always, without an `is_feature_edge`): where a chain may be cut, at a setback
+/// step or a cove-to-round flip.
+pub fn a_crease_runs_in(
+    indices: &[(i32, i32, i32)],
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    a: i32,
+    v: i32,
+    b: i32,
+) -> bool {
+    let Some(is_feature_edge) = is_feature_edge else {
+        return true;
+    };
+
+    indices.iter().any(|&(x, y, z)| {
+        [(x, y), (y, z), (z, x)].into_iter().any(|(u, w)| {
+            let other = if u == v {
+                w
+            } else if w == v {
+                u
+            } else {
+                -1
+            };
+            other >= 0 && other != a && other != b && is_feature_edge(v, other)
+        })
+    })
+}
+
+/// The vertices within `reach` of `point` where a picked chain's crease flips between a cove and a
+/// round and a crease runs in, so the chain could be cut there: the narrow trigger of the fallback
+/// that cuts a rim at its flips. A rim refused because a rail ran backward is cut only at the
+/// flips next to where the refusal stands; every other flip stays blended.
+pub fn sense_flips_near(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    point: vector_math::Vector3,
+    reach: f64,
+) -> Result<Vec<i32>, ChainEdgeNotOnTwoTriangles> {
+    let mut near = Vec::new();
+    for (k, chain) in chains.iter().enumerate() {
+        let edges = chain_edges(chain, closed[k]);
+        let convex = per_edge_convexity(positions, indices, &edges)?;
+        let n = edges.len();
+        let joints = if closed[k] { n } else { n.saturating_sub(1) };
+        for i in 0..joints {
+            let j = (i + 1) % n;
+            let vertex = edges[j].0;
+            if convex[i] != convex[j]
+                && (positions[vertex as usize] - point).length() <= reach
+                && a_crease_runs_in(indices, is_feature_edge, edges[i].0, vertex, edges[j].1)
+                && !near.contains(&vertex)
+            {
+                near.push(vertex);
+            }
+        }
+    }
+
+    Ok(near)
+}
+
+/// Whether each chain edge's crease is convex: the far triangle's opposite corner lies behind the
+/// near triangle's plane (`end_face_sense::is_convex`).
+pub fn per_edge_convexity(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chain_edges: &[(i32, i32)],
+) -> Result<Vec<bool>, ChainEdgeNotOnTwoTriangles> {
+    let standing = triangle_edges::standing_map(indices);
+    chain_edges
+        .iter()
+        .map(|&(from, to)| {
+            let (left, right) = sides_of(indices, &standing, from, to)?;
+            Ok(super::end_face_sense::is_convex(
+                positions,
+                indices[left as usize],
+                indices[right as usize],
+                from,
+            ))
+        })
+        .collect()
+}
+
 /// Each chain vertex's setback at size 1, the mean of the
 /// edges either side of it (the one edge at an open chain's end).
 pub fn unit_setbacks(
@@ -128,8 +214,10 @@ pub fn unit_setbacks(
 
 /// Each chain cut into pieces at its STEPS - sharp
 /// turns (past `sharp_turn_degrees`) where the unit setback jumps by more than
-/// [`SETBACK_STEP_FRACTION`] and an unpicked crease runs into the vertex (always, without an
-/// `is_feature_edge`). A closed chain needs two steps to be cut, and its pieces wrap past its
+/// [`SETBACK_STEP_FRACTION`], and the vertices a build names
+/// ([`WorkBudget::sense_flips_to_cut`](super::WorkBudget)) where the crease flips between concave
+/// and convex ([`per_edge_convexity`]); in both cases where an unpicked crease runs into the
+/// vertex ([`a_crease_runs_in`]). A closed chain needs two steps to be cut, and its pieces wrap past its
 /// start. A chamfer, or no threshold, never steps; nothing cut hands the chains back as they are.
 #[allow(clippy::too_many_arguments)]
 pub fn split_at_setback_steps(
@@ -146,30 +234,14 @@ pub fn split_at_setback_steps(
         return Ok((chains.to_vec(), closed.to_vec()));
     }
 
-    // An unpicked feature edge at vertex v, other than the chain's own edges to a and b.
-    let a_crease_runs_in = |a: i32, v: i32, b: i32| {
-        let Some(is_feature_edge) = is_feature_edge else {
-            return true;
-        };
-
-        indices.iter().any(|&(x, y, z)| {
-            [(x, y), (y, z), (z, x)].into_iter().any(|(u, w)| {
-                let other = if u == v {
-                    w
-                } else if w == v {
-                    u
-                } else {
-                    -1
-                };
-                other >= 0 && other != a && other != b && is_feature_edge(v, other)
-            })
-        })
-    };
-
     let mut split: Option<(Vec<Vec<i32>>, Vec<bool>)> = None;
     for (k, chain) in chains.iter().enumerate() {
         let edges = chain_edges(chain, closed[k]);
         let per_edge = per_edge_unit_setbacks(positions, indices, &edges, profile)?;
+        let convex = per_edge_convexity(positions, indices, &edges)?;
+        let flips_to_cut: Vec<i32> = super::LevelLineWork::current()
+            .map(|budget| budget.sense_flips_to_cut.borrow().clone())
+            .unwrap_or_default();
         let cos_sharp = (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
         let steps_at = |before: usize, after: usize| {
             // Edge i runs from chain[i]; the vertex between edges before and after is chain[after].
@@ -178,11 +250,21 @@ pub fn split_at_setback_steps(
             let sharp = d_in.length_squared() > 0.0
                 && d_out.length_squared() > 0.0
                 && d_in.get_normal().dot(d_out.get_normal()) < cos_sharp;
-            sharp
+            let setback_steps = sharp
                 && (per_edge[before] - per_edge[after]).abs()
                     > SETBACK_STEP_FRACTION
-                        * vector_math::ieee_math::max_f64(per_edge[before], per_edge[after])
-                && a_crease_runs_in(edges[before].0, edges[after].0, edges[after].1)
+                        * vector_math::ieee_math::max_f64(per_edge[before], per_edge[after]);
+            // A crease that flips from a cove to a round (or back) is cut there too, whatever its
+            // setbacks: one run cannot be both, and each stops flush at the corner.
+            let flips = convex[before] != convex[after] && flips_to_cut.contains(&edges[after].0);
+            (setback_steps || flips)
+                && a_crease_runs_in(
+                    indices,
+                    is_feature_edge,
+                    edges[before].0,
+                    edges[after].0,
+                    edges[after].1,
+                )
         };
 
         // The chain positions a step stands at: vertex i sits between edge i - 1 and edge i.
@@ -231,4 +313,55 @@ pub fn split_at_setback_steps(
     }
 
     Ok(split.unwrap_or_else(|| (chains.to_vec(), closed.to_vec())))
+}
+
+/// Whether naming `flips` changes the build from naming `last`: the split the build itself runs
+/// ([`split_at_setback_steps`]), read with each set named on a budget of its own
+/// (`WorkBudget::sense_flips_to_cut`), gives more pieces, or a newly named flip is a piece's end -
+/// even one a setback step cuts already, since a named flip's end stops flush where a step's does
+/// not. A flip that changes neither (a closed chain's lone flip, a vertex no crease runs into, so
+/// no piece ends there) asks for a build that would only repeat the last one.
+#[allow(clippy::too_many_arguments)]
+pub fn flips_cut_more(
+    positions: &[vector_math::Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    profile: super::BandProfile,
+    sharp_turn_degrees: f64,
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+    last: &[i32],
+    flips: &[i32],
+) -> bool {
+    let split = |named: &[i32]| -> Option<(Vec<Vec<i32>>, Vec<bool>)> {
+        let budget = super::WorkBudget::new(1).ok()?;
+        *budget.sense_flips_to_cut.borrow_mut() = named.to_vec();
+        let _work = super::LevelLineWork::begin(Some(std::rc::Rc::new(budget)));
+        split_at_setback_steps(
+            positions,
+            indices,
+            chains,
+            closed,
+            profile,
+            sharp_turn_degrees,
+            is_feature_edge,
+        )
+        .ok()
+    };
+    let (Some((before, _)), Some((after, after_closed))) = (split(last), split(flips)) else {
+        return false;
+    };
+    // A closed piece's first vertex is only where it starts, no end.
+    let is_an_end = |v: i32| {
+        after
+            .iter()
+            .zip(&after_closed)
+            .any(|(piece, &piece_closed)| {
+                !piece_closed && (piece.first() == Some(&v) || piece.last() == Some(&v))
+            })
+    };
+    after.len() > before.len()
+        || flips
+            .iter()
+            .any(|&flip| !last.contains(&flip) && is_an_end(flip))
 }

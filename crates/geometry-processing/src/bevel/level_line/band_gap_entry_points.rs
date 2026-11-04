@@ -16,7 +16,9 @@ use vector_math::Vector3;
 
 use super::band_gap::{build_unvalidated, the_chains_as_built, BandGapBuildError};
 use super::seam_edges::FeatureEdgeTest;
-use super::{pick_validation, square_crease_end_clip, BandGapResult, BandProfile, WorkBudget};
+use super::{
+    pick_validation, square_crease_end_clip, BandGapResult, BandProfile, LevelLineWork, WorkBudget,
+};
 
 /// The optional arguments of the public builds.
 #[derive(Clone)]
@@ -144,7 +146,10 @@ pub fn build_pick(
     // leaning clips are read, and where they refuse what the square clips built, the square
     // build stands - a pick that built before the leaning clip never starts refusing. Each build
     // has the whole allowance: the work counter is put back between them.
-    // The guard reads the pick as the build will: split at its setback steps.
+    // The guard reads the pick as the build will: split at its setback steps, and at the
+    // cove-to-round flips the build's budget names (`WorkBudget::sense_flips_to_cut`), so it is
+    // read under that budget.
+    let reading = LevelLineWork::begin(Some(Rc::clone(&budget)));
     let as_built = the_chains_as_built(
         positions,
         indices,
@@ -154,6 +159,7 @@ pub fn build_pick(
         options.sharp_turn_degrees,
         is_feature_edge.as_deref(),
     );
+    drop(reading);
     if as_built.as_ref().is_ok_and(|(split, split_closed)| {
         square_crease_end_clip::a_clip_leans(
             positions,
