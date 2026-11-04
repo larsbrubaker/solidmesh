@@ -3,7 +3,7 @@
 //! [`reset_to_the_default`], [`turn_on_for_the_running_app`]), its route diagnostics
 //! ([`last_route`], [`first_route`]) and the switch's readings of a setting ([`reads_as_on`],
 //! [`reads_as_off`], [`the_running_app_wants_it_on`]) and its test seams ([`watch`],
-//! [`watch_room`], [`watch_budget`], [`fail_the_crest_attempt`]).
+//! [`watch_room`], [`watch_budget`], [`fail_the_crest_attempt`], [`fail_the_second_half`]).
 //!
 //! The switch's default is process-wide and read once from the developer variable, but a write
 //! ([`set_use_level_line`]) holds only for the thread that made it: tests run on threads of one
@@ -48,6 +48,9 @@ struct RouteRecord {
     first: Option<String>,
     /// Whether the crest attempt is made to fail ([`fail_the_crest_attempt`]).
     crest_attempt_fails: bool,
+    /// Whether the second half of a pass built in two is made to refuse
+    /// ([`fail_the_second_half`]).
+    second_half_fails: bool,
     /// The chain watch ([`watch`]).
     chain_watch: Option<ChainWatch>,
     /// The room watch ([`watch_room`]).
@@ -197,6 +200,18 @@ pub fn set_first_route(value: Option<String>) {
 /// leaves the pick's own refusal word for word.
 pub fn fail_the_crest_attempt(on: bool) {
     locked(&record()).crest_attempt_fails = on;
+}
+
+/// A test seam: makes the second half of a pass built in two (the app's face rim built after its
+/// partner) refuse, so the branch that keeps the pass's earlier answer can be reached. Off by
+/// default; nothing in the app sets it.
+pub fn fail_the_second_half(on: bool) {
+    locked(&record()).second_half_fails = on;
+}
+
+/// Whether [`fail_the_second_half`] is set on this thread's record.
+pub fn the_second_half_fails() -> bool {
+    locked(&record()).second_half_fails
 }
 
 /// Whether [`fail_the_crest_attempt`] is set on this thread's record.
