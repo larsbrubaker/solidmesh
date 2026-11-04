@@ -92,7 +92,10 @@ fn a_flowed_band_carries_the_room_it_had_without_the_flow() {
 /// only the upper wall's concave crease was read there, that end alone took the end ray, and the
 /// ray read the top's x = -65 crease 0.016 off along it as room 0 at every size. Both ends now read
 /// alike, and each flows over its narrow end wall (decision 4): the band builds, carrying the room
-/// it had without the flow (0.0065, the top's x = -65 crease read from the end vertex).
+/// it had without the flow (0.0065, the top's x = -65 crease read from the end vertex). The end
+/// walls lean off square, so a leaning clip would stop the round on them; the pick flows only
+/// because it is first built with square clips (`band_gap_entry_points`), and this test and
+/// `the_knife_crease_builds_closed` fail without that guard.
 #[test]
 fn the_knife_crease_flows_over_both_narrow_end_walls() {
     for size in [0.05, 0.1] {

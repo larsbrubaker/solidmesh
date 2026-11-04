@@ -28,8 +28,9 @@ use super::seam_edges::FeatureEdgeTest;
 use super::{
     band_gap_extra_fields, band_group_fields, band_room_pair_room_pick, band_side_tagging,
     band_triangles, consumed_to_the_rim, corner_tie_points, end_clip_corners, gap_loop_walk,
-    narrow_face_flow, one_chain_room, pick_validation, pinch_ladder_search, sharp_joint_corners,
-    side_roots_settling, side_witness, square_crease_end_clip, swallowed_side_runs, triangle_edges,
+    known_cut_trace, narrow_face_flow, one_chain_room, pick_validation, pinch_ladder_search,
+    sharp_joint_corners, side_roots_settling, side_witness, square_crease_end_clip,
+    swallowed_side_runs, triangle_edges,
 };
 use super::{
     BandGapRefusal, BandGapResult, BandGroup, ChainEdgeNotOnTwoTriangles, FieldCounters, GapLoop,
@@ -250,6 +251,8 @@ pub(super) fn build_from_the_setbacks(
             LevelLineWork::current().is_some_and(|budget| budget.input_is_float_stored);
         LevelLineWork::enter(LevelLineWorkPhase::InputStrips);
         m.remove_input_needle_strips()?;
+        // The known cuts' traces go in before the needle repair, so it repairs what they leave.
+        known_cut_trace::insert_traces(&mut m, &fields)?;
         m.repair_needles()?;
     }
 

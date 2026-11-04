@@ -207,6 +207,8 @@ pub(crate) mod input_needle_strip_tests;
 pub(crate) mod insert_polyline_tests;
 #[path = "island_split_order_tests.rs"]
 pub(crate) mod island_split_order_tests;
+#[path = "known_cut_crossing_tests.rs"]
+pub(crate) mod known_cut_crossing_tests;
 #[path = "known_room_refuses_first_tests.rs"]
 pub(crate) mod known_room_refuses_first_tests;
 #[path = "land_sliver_joins_two_bands_tests.rs"]
@@ -351,6 +353,8 @@ pub(crate) mod slanted_face_rim_tests;
 pub(crate) mod sliver_split_guard_tests;
 #[path = "spoke_centre_parameter_tests.rs"]
 pub(crate) mod spoke_centre_parameter_tests;
+#[path = "square_crease_corner_tests.rs"]
+pub(crate) mod square_crease_corner_tests;
 #[path = "square_crease_faceted_room_tests.rs"]
 pub(crate) mod square_crease_faceted_room_tests;
 #[path = "stair_step_chain_tests.rs"]

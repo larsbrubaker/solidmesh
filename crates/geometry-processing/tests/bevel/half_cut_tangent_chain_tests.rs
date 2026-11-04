@@ -2,12 +2,12 @@
 //! level line: the edge where the cylinder's outer wall meets the cut's curved wall, running from
 //! the cut's floor (its end face; the outer wall carries on below it) up over the top. The floor
 //! end is a convex chain stopping on an unpicked concave crease (floor against the cut wall)
-//! against one flat end face, but the chain's first edge leans 5.1 degrees off the floor's normal
-//! (the cut's 40-gon facet beside the floor): too far for the square crease clip, not far enough
-//! for an end ray. With neither, the field's end is the end vertex's ball and the outer wall's rail
-//! curls round it under the floor at every size; between about 0.985 and 1.02 the fill's rows over
-//! that curl also cross the floor's end-face fill. The fixture is the app's first hand-over at 1
-//! (`unexpected_refusals_regression_tests`).
+//! against one flat end face, with the chain's first edge leaning 5.1 degrees off the floor's
+//! normal (the cut's 40-gon facet beside the floor). The floor's plane clips the round there
+//! though it leans (`square_crease_end_clip`), and is cut into the mesh as a known cut
+//! (`known_cut_trace`), so the round ends flush on the floor: no rail curls under it, the end
+//! vertex stands on one rail once, and the chain builds closed and uncrossed at every size from
+//! 0.9 to 2. The fixture is the app's first hand-over at 1 (`unexpected_refusals_regression_tests`).
 use std::rc::Rc;
 
 use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
@@ -24,8 +24,6 @@ use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures;
 
 #[test]
-#[ignore = "between about 0.985 and 1.02 the round's rows at the floor end reach through the \
-            floor's end-face fill; the cause is not yet found"]
 fn the_chain_alone_builds_uncrossed_from_0_9_to_2() {
     for size in [0.9, 0.98, 0.985, 0.99, 1.0, 1.01, 1.02, 1.05, 1.5, 2.0] {
         let fixture = Rc::new(LevelLineFixture::load(
@@ -73,9 +71,6 @@ const FLOOR_END: (f64, f64) = (44.451480865478516, -36.34162902832031);
 
 /// The band's rails stop at the floor's plane: none runs on under the floor round the end vertex.
 #[test]
-#[ignore = "the floor end leans 5.1 degrees off square, so it takes neither the square crease \
-            clip nor an end ray, and the outer wall's rail curls round the end vertex's ball \
-            under the floor at every size"]
 fn the_rails_stop_at_the_floor() {
     for size in [0.5, 0.98, 1.0, 1.05, 2.0] {
         let fixture = Rc::new(LevelLineFixture::load(
@@ -99,5 +94,32 @@ fn the_rails_stop_at_the_floor() {
             lowest >= FLOOR - 1e-6,
             "a rail runs down to {lowest} under the floor at {FLOOR} at {size}"
         );
+    }
+}
+
+/// The chain's own end vertex is a corner of the band on the floor's clip plane: the line runs
+/// through it once, where the round's section meets the floor, and never again up the wall. The
+/// outer wall's long facet triangles fanning out of it dip into the band along their edges though
+/// both their ends read on or outside the line, and are cut there, not kept whole.
+#[test]
+fn the_end_vertex_is_on_one_rail_once() {
+    for size in [0.5, 0.9, 1.0, 1.5, 2.0] {
+        let fixture = Rc::new(LevelLineFixture::load(
+            "unexpected-refusals-half-cut-chain-r1",
+        ));
+        let options = BandGapBuildOptions {
+            budget: Some(default_budget(&fixture, false)),
+            ..as_saved(&fixture, fixture.known_room)
+        };
+        let gap = build_chains(&fixture, &[0], size, &options);
+        assert!(gap.built(), "band {:?} at {size}", gap.refusal);
+        let end = fixture.chains[0][0];
+        let visits = gap
+            .loops
+            .iter()
+            .flat_map(|l| l.vertices.iter())
+            .filter(|&&v| v == end)
+            .count();
+        assert_eq!(visits, 1, "the end vertex's visits to the rails at {size}");
     }
 }

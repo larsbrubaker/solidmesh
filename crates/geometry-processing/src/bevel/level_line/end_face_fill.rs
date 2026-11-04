@@ -17,14 +17,17 @@ use super::{BandGapResult, ChainField, GapLoop, LevelLineMesh, LevelLineTriangle
 
 /// Where the chain's end ray is bounded by a same-sense end plane, moves the rail's stretch that
 /// runs along that plane to the clip corner off the rail and onto the end run, as (rail, run); the
-/// pair unchanged otherwise. The end run at end 1 closes on the rail's head, at end 0 it starts
-/// from its tail.
+/// pair unchanged otherwise. The end run at end 1 closes on the right rail's head and the left
+/// rail's tail, at end 0 it starts from the right rail's tail and ends on the left rail's head
+/// (`left_rail` says which rail this is); either side's face may be the one carrying on across the
+/// plane.
 pub fn rails_to_the_clip_corner(
     mesh: &LevelLineMesh,
     chain: &ChainField,
     rail: &GapLoop,
     run: &[i32],
     last: bool,
+    left_rail: bool,
 ) -> (GapLoop, Vec<i32>) {
     let bound = if last {
         chain.end_ray_bounds.1
@@ -45,9 +48,13 @@ pub fn rails_to_the_clip_corner(
     let normal = bound.plane_normal.get_normal();
     let on_the_plane = |v: i32| (mesh.position(v) - end).dot(normal).abs() <= 1e-5;
 
+    // Read from the end: the right rail's end-0 vertex is its last and the left rail's its first,
+    // and the other way round at end 1. The stretch joins the run on the side the rail meets it.
+    let from_the_tail = left_rail == last;
+    let appended = left_rail != last;
     let mut vertices = rail.vertices.clone();
     let mut parameters = rail.parameters.clone();
-    if !last {
+    if from_the_tail {
         vertices.reverse();
         parameters.reverse();
     }
@@ -60,20 +67,20 @@ pub fn rails_to_the_clip_corner(
         corner += 1;
     }
 
-    let run_end = if last { run[run.len() - 1] } else { run[0] };
+    let run_end = if appended { run[run.len() - 1] } else { run[0] };
     if corner == 0 || vertices.len() - corner < 2 || run_end != vertices[0] {
         return (rail.clone(), run.to_vec());
     }
 
     let stretch = &vertices[..=corner];
-    let new_run: Vec<i32> = if last {
+    let new_run: Vec<i32> = if appended {
         run.iter().chain(&stretch[1..]).copied().collect()
     } else {
         stretch[1..].iter().rev().chain(run).copied().collect()
     };
     vertices.drain(0..corner);
     parameters.drain(0..corner);
-    if !last {
+    if from_the_tail {
         vertices.reverse();
         parameters.reverse();
     }

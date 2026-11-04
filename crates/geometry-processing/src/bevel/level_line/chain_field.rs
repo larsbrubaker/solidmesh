@@ -90,6 +90,9 @@ pub struct ChainField {
     /// The chain's joints sharper than [`ChainField::sharp_turn_degrees`], each as its parameter
     /// and the setback asked there, in parameter order; found once on first ask.
     pub sharp_joints: OnceCell<Vec<(f64, f64)>>,
+    /// The planes of the chain's square crease ends cut into the mesh as known cuts
+    /// (`known_cut_trace.rs`), read once on first ask: the build's root search reads them per edge.
+    pub known_cuts: OnceCell<Vec<(Vector3, Vector3)>>,
 }
 
 impl std::fmt::Debug for ChainField {

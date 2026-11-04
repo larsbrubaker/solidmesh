@@ -277,8 +277,11 @@ pub fn try_end_faces(
     if !trims_first && !grows_first {
         if let Some(run) = &first {
             let (rail, run) =
-                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &right, run, false);
+                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &right, run, false, false);
             right = rail;
+            let (rail, run) =
+                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &left, &run, false, true);
+            left = rail;
             first = Some(run);
         }
     }
@@ -286,8 +289,11 @@ pub fn try_end_faces(
     if !trims_second && !grows_second {
         if let Some(run) = &second {
             let (rail, run) =
-                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &right, run, true);
+                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &right, run, true, false);
             right = rail;
+            let (rail, run) =
+                rails_to_the_clip_corner(&mesh_handle.borrow(), chain, &left, &run, true, true);
+            left = rail;
             second = Some(run);
         }
     }

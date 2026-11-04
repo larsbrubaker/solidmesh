@@ -156,6 +156,7 @@ pub mod hole_fill_fairing;
 mod hole_fill_result;
 pub mod hull_clip;
 pub mod knife_end_overrun;
+pub mod known_cut_trace;
 mod level_line_mesh;
 mod level_line_mesh_edits;
 pub mod level_line_mesh_input_strips;

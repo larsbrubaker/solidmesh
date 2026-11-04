@@ -73,6 +73,20 @@ pub fn find_over(
                 continue;
             }
 
+            // An edge from an inside vertex ON a known-cut plane to an outside one PAST it: the
+            // plane is the band's boundary, at the edge's inside end, so the edge has no crossing
+            // and that end is not put on the line.
+            let (inside, outside) = if side_low == VertexSide::Inside {
+                (low, high)
+            } else {
+                (high, low)
+            };
+            if reading
+                .leaves_across_a_known_cut(&[mesh.position(inside)], &[mesh.position(outside)])?
+            {
+                continue;
+            }
+
             let point = root_on(mesh.position(low), mesh.position(high), reading)?;
             if (point - mesh.position(low)).length() <= reading.snap {
                 reading.put_on_the_line(low)?;

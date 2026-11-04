@@ -271,6 +271,12 @@ pub fn side_of_triangle(
         }
     }
 
+    // Inside corners all ON a known-cut plane and outside corners all PAST it: the triangle stands
+    // on the plane's far side, outside, its inside corners only touching the boundary.
+    if saw_inside && saw_outside && stands_past_a_known_cut(reading, &t)? {
+        return Ok(super::VertexSide::Outside);
+    }
+
     if saw_inside && saw_outside {
         return Err(BandCutError::Straddles(format!(
             "triangle {triangle} still straddles the line after the cut - a root was missed"
@@ -296,4 +302,25 @@ pub fn side_of_triangle(
     } else {
         super::VertexSide::Outside
     })
+}
+
+/// Whether a triangle's inside corners all stand ON one known-cut plane of one chain, inside by
+/// that chain's own value, and its outside corners all PAST that same plane (`known_cut_trace.rs`).
+fn stands_past_a_known_cut(
+    reading: &super::VertexFieldReading,
+    t: &super::LevelLineTriangle,
+) -> Result<bool, BandCutError> {
+    let mut insides = Vec::new();
+    let mut outsides = Vec::new();
+    for corner in 0..3 {
+        let vertex = t.corner(corner);
+        let position = reading.mesh.borrow().position(vertex);
+        match reading.side_of(vertex)? {
+            super::VertexSide::Inside => insides.push(position),
+            super::VertexSide::Outside => outsides.push(position),
+            super::VertexSide::On => {}
+        }
+    }
+
+    Ok(reading.leaves_across_a_known_cut(&insides, &outsides)?)
 }

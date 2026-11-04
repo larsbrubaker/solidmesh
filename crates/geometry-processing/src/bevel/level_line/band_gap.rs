@@ -1,7 +1,8 @@
 //! The band between two offsets of a pick's chains (the band gap's main module; its other parts
 //! are `band_gap_in_turn.rs` and `band_gap_rounds_first.rs`). The size refusal, the chain ceiling,
 //! the chord tolerance, the needle floor and the closed chains turned to start at a corner
-//! ([`start_closed_chains_at_a_corner`]) and the build's funnel ([`build_unvalidated`]); the
+//! ([`start_closed_chains_at_a_corner`]), the chains as the build reads them, split at setback
+//! steps ([`the_chains_as_built`]), and the build's funnel ([`build_unvalidated`]); the
 //! build proper is `band_gap_build_entry.rs` and `band_gap_build_within.rs`, and the public builds
 //! `band_gap_entry_points.rs`.
 
@@ -84,6 +85,33 @@ impl From<PickArgumentError> for BandGapBuildError {
     }
 }
 
+/// The chains a build reads: the pick split where its edges' setbacks step
+/// (`chain_on_the_mesh::split_at_setback_steps`) and each closed chain started at a corner
+/// ([`start_closed_chains_at_a_corner`]). Read by the build itself and by anything that must read
+/// the pick as the build will (`square_crease_end_clip::a_clip_leans`).
+#[allow(clippy::type_complexity)]
+pub fn the_chains_as_built(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    profile: BandProfile,
+    sharp_turn_degrees: f64,
+    is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
+) -> Result<(Vec<Vec<i32>>, Vec<bool>), super::ChainEdgeNotOnTwoTriangles> {
+    let (chains, closed) = chain_on_the_mesh::split_at_setback_steps(
+        positions,
+        indices,
+        chains,
+        closed,
+        profile,
+        sharp_turn_degrees,
+        is_feature_edge,
+    )?;
+    let chains = start_closed_chains_at_a_corner(&chains, Some(&closed));
+    Ok((chains, closed))
+}
+
 /// The build every public entry point funnels through, with its work budget and topology-only
 /// switch: the pick split where its setbacks step, its closed chains started at a
 /// corner, its seams no longer features, a size over a KNOWN room refused before anything is paid
@@ -126,7 +154,7 @@ pub fn build_unvalidated(
         }
     }
 
-    let (chains, closed) = match chain_on_the_mesh::split_at_setback_steps(
+    let (chains, closed) = match the_chains_as_built(
         positions,
         indices,
         chains,
@@ -145,8 +173,6 @@ pub fn build_unvalidated(
             })
         }
     };
-
-    let chains = start_closed_chains_at_a_corner(&chains, Some(&closed));
     let step_corners: HashSet<i32> = (0..chains.len())
         .filter(|&k| !closed[k])
         .flat_map(|k| [chains[k][0], chains[k][chains[k].len() - 1]])

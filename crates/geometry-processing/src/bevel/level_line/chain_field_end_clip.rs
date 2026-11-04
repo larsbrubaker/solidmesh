@@ -69,10 +69,11 @@ impl ChainField {
     /// vertex). Along such an edge the clipped field reads 0 wherever the chain is within its
     /// setback, so its band boundary is where the chain's OWN value crosses 0 (EdgeRoot).
     ///
-    /// Only an end that carries the END RAY and does not fold the chain's own way - the knife end,
-    /// whose plane is the neighbour face across a knife. A same-sense square crease end (no ray)
-    /// has the side face's stretch in its plane, where the chain's own zero is not the band's
-    /// boundary; read there, the whole pick crossed itself (BevelToCenterBlendCreaseTests).
+    /// A knife end (it carries the END RAY and does not fold the chain's own way; its plane is the
+    /// neighbour face across a knife), and a square crease end, whose plane holds its end face and
+    /// is cut into the mesh as a known cut (`known_cut_trace.rs`): its plane's trace is inserted,
+    /// the far side reads outside, and along an edge in the plane the chain's own zero is where
+    /// the round's section meets it.
     pub fn lies_in_an_end_plane(&self, a: Vector3, b: Vector3) -> bool {
         let Some(end_clips) = &self.end_clips else {
             return false;
@@ -93,7 +94,11 @@ impl ChainField {
             } else {
                 self.end_ray_bounds.1
             };
-            if !rayed || !bound.is_some_and(|bound| !bound.same_sense) {
+            // A knife end's plane, and a square crease end's (same sense, with its crease room),
+            // whose plane holds its end face and is cut into the mesh as a known cut.
+            let knife = rayed && bound.is_some_and(|bound| !bound.same_sense);
+            let square_crease = bound.is_some_and(|bound| bound.holds_its_end_face());
+            if !knife && !square_crease {
                 continue;
             }
 

@@ -4,7 +4,9 @@
 //! reads ([`VertexFieldReading::side_for`]), a point's value ([`VertexFieldReading::value_at_point`])
 //! the readings across the known cuts ([`VertexFieldReading::known_cut_value_at`],
 //! [`VertexFieldReading::value_in_the_end_plane`]) and the known cuts' test of a chain's or pick's bounded ends
-//! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]) and
+//! ([`VertexFieldReading::has_known_cuts`], [`VertexFieldReading::edge_lies_in_a_known_cut`]),
+//! whether an edge or triangle leaves the band across one chain's known cut rather than the line
+//! ([`VertexFieldReading::leaves_across_a_known_cut`], read per chain and per plane) and
 //! the stopped ends' tests ([`VertexFieldReading::has_stopped_ends`],
 //! [`VertexFieldReading::in_a_stopped_end_plane`], [`VertexFieldReading::stopped_end_plane_at`],
 //! [`VertexFieldReading::is_a_band_corner_on_a_stopped_plane`]); the
@@ -124,6 +126,35 @@ impl VertexFieldReading {
                 self.pick().kind(),
                 FieldKind::ChainField | FieldKind::PickField
             )
+    }
+
+    /// Whether corners `insides` (inside the band) and `outsides` (outside it) leave the band
+    /// across one known-cut plane of ONE of the pick's chains, inside by that chain's own value
+    /// ([`super::ChainField::leaves_across_its_known_cut`]): the edge then has no crossing, and the
+    /// triangle stands outside. False where known cuts are off.
+    pub fn leaves_across_a_known_cut(
+        &self,
+        insides: &[Vector3],
+        outsides: &[Vector3],
+    ) -> Result<bool, super::WorkError> {
+        if !use_flat_ends() {
+            return Ok(false);
+        }
+
+        let pick = self.pick();
+        if let Some(chain) = pick.as_chain_field() {
+            return chain.leaves_across_its_known_cut(insides, outsides);
+        }
+
+        if let Some(pick) = pick.as_pick_field() {
+            for &k in &pick.members {
+                if pick.chains[k as usize].leaves_across_its_known_cut(insides, outsides)? {
+                    return Ok(true);
+                }
+            }
+        }
+
+        Ok(false)
     }
 
     /// The pick under a run-out wrapper - the known cuts are its

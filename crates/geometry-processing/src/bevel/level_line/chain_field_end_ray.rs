@@ -65,6 +65,14 @@ impl Default for EndRayBound {
     }
 }
 
+impl EndRayBound {
+    /// Whether this is a square crease end's bound (same sense, with its crease room), whose plane
+    /// holds the end face and is cut into the mesh as a known cut (`known_cut_trace.rs`).
+    pub fn holds_its_end_face(&self) -> bool {
+        self.same_sense && self.crease_room != f64::INFINITY
+    }
+}
+
 impl super::ChainField {
     /// The chain's point at `parameter`, carried on along the END
     /// RAY past an end that has one; clamped to the chain as [`super::ChainField::point_at`] is

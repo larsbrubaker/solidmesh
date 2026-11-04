@@ -109,6 +109,7 @@ impl ChainField {
             end_clips,
             end_plane_reader: OnceCell::new(),
             sharp_joints: OnceCell::new(),
+            known_cuts: OnceCell::new(),
         }
     }
 

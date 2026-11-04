@@ -7,6 +7,14 @@
 //! leave ([`square_crease_end_clips_of_pick`], [`square_crease_end_room`], [`cap_room`]); the room
 //! is the reach of the end's concave crease, followed from chord to chord where it is a faceted
 //! curve. Reads the end-face sense (`end_face_sense.rs`).
+//! The end face may lean off square by ANY amount ([`leaning_clips_on`]) where its plane leaves
+//! the whole chain on the band's side and no end ray takes the end: an end face that holds the
+//! round's section stops it flush whatever its lean (a faceted curve's end wall leans by half a
+//! facet's turn; a steep wall at 35 degrees is pinned in `square_crease_faceted_room_tests`), and a
+//! side may
+//! carry on past the end across a flat edge in the plane or under it across a convex crease; a
+//! pick with a leaning clip ([`a_clip_leans`]) is first built with square clips only, and where
+//! that build flows over a narrow end face that answer stands (`band_gap_entry_points`).
 
 use std::collections::HashSet;
 
@@ -17,13 +25,50 @@ use super::{end_face_sense, pick_validation, RoomSource};
 use super::end_face_sense::{
     carries_on, face_normal, is_convex, shared_corners, Corners, COPLANAR_TOLERANCE,
 };
-use super::{EndRayBound, LevelLineWork};
+use super::{EndRayBound, LevelLineWork, WorkBudget};
 
 /// Whether [`square_crease_end_clips`] reads any
 /// clip: on unless a test turns it off with [`turn_square_crease_clips_off`] to read the unclipped
 /// ball end. Per build, as the run-outs switch is (on wherever no budget is in force).
 pub fn square_crease_clips_on() -> bool {
     LevelLineWork::current().is_none_or(|budget| !budget.square_crease_clips_off.get())
+}
+
+/// Whether a square crease end clip may lean off square in the build in force: on unless that
+/// build turned leaning clips off ([`WorkBudget::leaning_crease_clips_off`](super::WorkBudget)).
+pub fn leaning_clips_on() -> bool {
+    LevelLineWork::current().is_none_or(|budget| !budget.leaning_crease_clips_off.get())
+}
+
+/// Whether some chain end of the pick takes a square crease clip only because it may lean: the
+/// pick's clips, read exactly as the build reads them (each chain's end rays at
+/// `sharp_turn_degrees`, a pick corner's end taking none: [`square_crease_end_clips_of_pick`]),
+/// differ with leaning clips allowed and not. A rayed or corner end never takes a clip, so it
+/// never asks for the second build. Read outside any build, so leaning is on.
+pub fn a_clip_leans(
+    positions: &[Vector3],
+    indices: &[Corners],
+    chains: &[Vec<i32>],
+    closed: &[bool],
+    sharp_turn_degrees: f64,
+) -> bool {
+    let rays: Vec<(bool, bool)> = chains
+        .iter()
+        .enumerate()
+        .map(|(k, chain)| {
+            end_face_sense::oblique_ends(positions, indices, chain, closed[k], sharp_turn_degrees)
+        })
+        .collect();
+    let leaning = square_crease_end_clips_of_pick(positions, indices, chains, closed, &rays);
+    let Ok(off) = WorkBudget::new(1) else {
+        return false;
+    };
+    off.leaning_crease_clips_off.set(true);
+    let square = {
+        let _work = LevelLineWork::begin(Some(std::rc::Rc::new(off)));
+        square_crease_end_clips_of_pick(positions, indices, chains, closed, &rays)
+    };
+    leaning != square
 }
 
 /// Turns the clips off for the build in force
@@ -106,7 +151,7 @@ pub fn square_crease_end_clips(
     let first = if rays.0 {
         None
     } else {
-        clip_at(positions, indices, chain[0], chain[1])
+        clip_at(positions, indices, chain, chain[0], chain[1])
     };
     let last = if rays.1 {
         None
@@ -114,6 +159,7 @@ pub fn square_crease_end_clips(
         clip_at(
             positions,
             indices,
+            chain,
             chain[chain.len() - 1],
             chain[chain.len() - 2],
         )
@@ -124,7 +170,13 @@ pub fn square_crease_end_clips(
 /// The clip at chain end `end`, whose next chain vertex is `next`, or `None` where it does not
 /// clip.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
-fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> Option<EndRayBound> {
+fn clip_at(
+    positions: &[Vector3],
+    indices: &[Corners],
+    chain: &[i32],
+    end: i32,
+    next: i32,
+) -> Option<EndRayBound> {
     let v = positions[end as usize];
     let outward = (v - positions[next as usize]).get_normal();
     let sides: Vec<Corners> = indices
@@ -156,11 +208,28 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
     let bent = end_triangles
         .iter()
         .any(|&t| face_normal(positions, t).dot(n) < 1.0 - COPLANAR_TOLERANCE);
-    if bent || !(n.dot(outward).abs() >= SQUARE_COSINE) {
+    if bent {
         return None;
     }
 
+    // An end face leaning off square clips too, at its own plane, whatever its lean, so long as the
+    // plane leaves the whole chain on the band's side ([`leans_clear_of_its_chain`]) and no ray
+    // takes the end: an end face that holds the round's section stops it flush as a square one
+    // does (a faceted curve's end wall leans by half a facet's turn, a steep wall further). Only a
+    // SEPARATE end face: one that carries either side on (`end_face_sense::carries_on`, the one
+    // reading of the faceted curve carrying on, a 12-gon's 30 degrees included) is that side's
+    // next facet, where the round runs out instead. Separate is exactly not carrying on, so the
+    // limit falls the same way here as everywhere else.
     n = if n.dot(outward) > 0.0 { n } else { -n };
+    let square = n.dot(outward) >= SQUARE_COSINE;
+    let separate = !side_normals
+        .iter()
+        .any(|side| carries_on(side.dot(n).abs()));
+    if !square
+        && (!leaning_clips_on() || !separate || !leans_clear_of_its_chain(positions, chain, v, n))
+    {
+        return None;
+    }
 
     // On an unpicked CONCAVE crease: some side folds into the end face against the chain's own
     // sense. A fanned side meets the end face on its own triangle at the end, not on the chain
@@ -214,8 +283,9 @@ fn clip_at(positions: &[Vector3], indices: &[Corners], end: i32, next: i32) -> O
                 .filter(|&o| has(o, end) && has(o, w))
                 .collect();
             carries_the_plane |= standing.len() == 2
-                && face_normal(positions, standing[0]).dot(face_normal(positions, standing[1]))
-                    >= 1.0 - COPLANAR_TOLERANCE;
+                && (face_normal(positions, standing[0]).dot(face_normal(positions, standing[1]))
+                    >= 1.0 - COPLANAR_TOLERANCE
+                    || (!square && carries_on_under(positions, &standing, end, &in_a_side)));
         }
     }
 
@@ -309,6 +379,45 @@ fn crease_reach(
         reach = farther;
         (previous, current, face) = (current, w, t);
     }
+}
+
+/// How far past a leaning end face's plane a chain point may stand and still read as on it: float
+/// noise at the point's magnitude, as a stopped end's plane reads its chain
+/// (`stopped_end_clip.rs`).
+const ON_ITS_PLANE_RELATIVE: f64 = 1e-9;
+
+/// Whether an end face's plane through the end vertex `v`, unit `normal` faced on past the end,
+/// leaves the whole chain on the band's side. The clip cuts the whole half-space past the plane,
+/// so a plane that leans until some point of the chain stands past it would cut the chain's own
+/// band; short of that, the plane meets the chain only at its end and the round stops on it.
+fn leans_clear_of_its_chain(
+    positions: &[Vector3],
+    chain: &[i32],
+    v: Vector3,
+    normal: Vector3,
+) -> bool {
+    chain.iter().all(|&c| {
+        let p = positions[c as usize];
+        (p - v).dot(normal) <= ON_ITS_PLANE_RELATIVE * (1.0 + p.length())
+    })
+}
+
+/// Whether the two triangles standing on an edge out of the end vertex are a side's face and the
+/// end face meeting in a CONVEX crease: the side carries on past the end, under the end face's
+/// plane, as a cylinder's wall carries on below a floor cut into it. The round must stop on the
+/// end face's plane there just as where the side runs on across a flat edge in it.
+fn carries_on_under(
+    positions: &[Vector3],
+    standing: &[Corners],
+    end: i32,
+    in_a_side: &dyn Fn(Vector3) -> bool,
+) -> bool {
+    let (a, b) = (standing[0], standing[1]);
+    let (a_side, b_side) = (
+        in_a_side(face_normal(positions, a)),
+        in_a_side(face_normal(positions, b)),
+    );
+    a_side != b_side && is_convex(positions, a, b, end)
 }
 
 /// [`square_crease_end_clips`] over a pick, as the build reads
