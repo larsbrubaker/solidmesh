@@ -27,13 +27,19 @@ pub struct MeshDistanceResult {
     pub nearest_on_a: Vector3,
     /// The point of the second surface nearest the first.
     pub nearest_on_b: Vector3,
-    /// The solids share volume: their surfaces cross, or one lies wholly inside the
+    /// The solids share volume: their surfaces cross, or a body of one lies inside the
     /// other. Touching is not overlap.
     pub overlap: bool,
-    /// The first solid lies wholly inside the second (surfaces apart).
+    /// Every body of the first solid lies inside the second (surfaces apart).
     pub a_inside_b: bool,
-    /// The second solid lies wholly inside the first (surfaces apart).
+    /// Every body of the second solid lies inside the first (surfaces apart).
     pub b_inside_a: bool,
+    /// At least one body of the first solid lies inside the second (surfaces apart); true
+    /// whenever `a_inside_b` is.
+    pub a_partly_inside_b: bool,
+    /// At least one body of the second solid lies inside the first (surfaces apart); true
+    /// whenever `b_inside_a` is.
+    pub b_partly_inside_a: bool,
 }
 
 /// Surfaces closer than this (mm) meet; the meshes store float vertices,
@@ -45,8 +51,10 @@ pub const CONTACT_TOLERANCE: f64 = 1e-5;
 const OVERLAP_VOLUME_TOLERANCE: f64 = 1e-4;
 
 /// Measures `a` against `b` with one AABB tree each (the trees' nearest
-/// triangle pair search), so large meshes answer quickly. Containment is a winding-number test,
-/// which assumes closed meshes; surfaces that meet are told apart from surfaces that cross by the
+/// triangle pair search), so large meshes answer quickly. Containment is a winding-number test of
+/// one corner of each body (each connected surface; with the surfaces apart, a body with one
+/// corner inside the other solid lies wholly inside it), which assumes closed meshes; surfaces
+/// that meet are told apart from surfaces that cross by the
 /// volume of their boolean intersection. `None` when either mesh has no faces (there is no
 /// surface to measure). A cancelled token is `Err(Cancelled)`.
 pub fn between(
@@ -73,18 +81,19 @@ pub fn between(
     let on_b = to_vector3(nearest.triangle1_closest);
 
     if distance > CONTACT_TOLERANCE {
-        // Separate surfaces: the solids share volume only if one holds the other, and then every
-        // vertex of the inner one is inside, so testing one is enough.
-        let a_inside_b = FastWinding::new(&tree_b).fast_winding_number(soup_a.get_vertex(0)) > 0.5;
-        let b_inside_a = !a_inside_b
-            && FastWinding::new(&tree_a).fast_winding_number(soup_b.get_vertex(0)) > 0.5;
+        // Separate surfaces: the solids share volume only where a body of one lies inside the
+        // other, and then every corner of that body is inside, so one corner per body tells.
+        let (a_inside_b, a_partly_inside_b) = bodies_inside(a, &FastWinding::new(&tree_b));
+        let (b_inside_a, b_partly_inside_a) = bodies_inside(b, &FastWinding::new(&tree_a));
         return Ok(Some(MeshDistanceResult {
             surface_distance: distance,
             nearest_on_a: on_a,
             nearest_on_b: on_b,
-            overlap: a_inside_b || b_inside_a,
+            overlap: a_partly_inside_b || b_partly_inside_a,
             a_inside_b,
             b_inside_a,
+            a_partly_inside_b,
+            b_partly_inside_a,
         }));
     }
 
@@ -95,7 +104,84 @@ pub fn between(
         overlap: surfaces_cross(a, b, cancel)?,
         a_inside_b: false,
         b_inside_a: false,
+        a_partly_inside_b: false,
+        b_partly_inside_a: false,
     }))
+}
+
+/// Whether every body of `mesh` lies inside the solid `other` winds around, and whether any does:
+/// one corner of each body tested by its winding number.
+fn bodies_inside(mesh: &Mesh, other: &FastWinding) -> (bool, bool) {
+    let (mut all, mut any) = (true, false);
+    for corner in body_corners(mesh) {
+        let v = mesh.vertices[corner];
+        let inside = other.fast_winding_number([v.x as f64, v.y as f64, v.z as f64]) > 0.5;
+        all &= inside;
+        any |= inside;
+    }
+    (all && any, any)
+}
+
+/// One corner index of each body of `mesh`, in index order: faces joined through shared corners,
+/// a corner matched by position as well as by index so a body whose faces carry their own copies
+/// of a corner is still one body.
+fn body_corners(mesh: &Mesh) -> Vec<usize> {
+    fn root(parent: &mut [usize], mut at: usize) -> usize {
+        while parent[at] != at {
+            parent[at] = parent[parent[at]];
+            at = parent[at];
+        }
+        at
+    }
+    fn join(parent: &mut [usize], a: usize, b: usize) {
+        let (a, b) = (root(parent, a), root(parent, b));
+        if a != b {
+            parent[a.max(b)] = a.min(b);
+        }
+    }
+
+    let count = mesh.vertices.len();
+    let mut parent: Vec<usize> = (0..count).collect();
+    // Exact bits, sorted with the index as tie-break, so nothing depends on hash order;
+    // `+ 0.0` makes -0.0 and 0.0 one position.
+    let mut by_position: Vec<(u32, u32, u32, usize)> = mesh
+        .vertices
+        .iter()
+        .enumerate()
+        .map(|(index, v)| {
+            let bits = |axis: f32| (axis + 0.0).to_bits();
+            (bits(v.x), bits(v.y), bits(v.z), index)
+        })
+        .collect();
+    by_position.sort_unstable();
+    for pair in by_position.windows(2) {
+        if pair[0].0 == pair[1].0 && pair[0].1 == pair[1].1 && pair[0].2 == pair[1].2 {
+            join(&mut parent, pair[0].3, pair[1].3);
+        }
+    }
+    let mut used = vec![false; count];
+    for face in mesh.faces.iter() {
+        let corners = [face.v0, face.v1, face.v2].map(|v| v as usize);
+        join(&mut parent, corners[0], corners[1]);
+        join(&mut parent, corners[1], corners[2]);
+        for corner in corners {
+            used[corner] = true;
+        }
+    }
+    // The first corner a face uses in each body: a corner no face uses may share a body's
+    // position, but it is no corner of the body.
+    let mut seen = vec![false; count];
+    let mut corners = Vec::new();
+    for (corner, &used) in used.iter().enumerate() {
+        if used {
+            let body = root(&mut parent, corner);
+            if !seen[body] {
+                seen[body] = true;
+                corners.push(corner);
+            }
+        }
+    }
+    corners
 }
 
 /// The distance from each of `points` to the nearest point of `mesh`'s surface, through one AABB
