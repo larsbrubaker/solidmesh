@@ -1,4 +1,5 @@
-//! clipper-library: the integer polygon clipper under MatterCAD's 2D paths and its mesh kernel.
+//! clipper-library (package `solidmesh-clipper`): the integer polygon clipper under solidmesh's
+//! mesh kernel and under the 2D paths of MatterCAD, which depends on it.
 //!
 //! [`clipper6`] is a port of ClipperLib 6.4.2 (Angus Johnson, Boost Software License 1.0; see
 //! THIRD_PARTY_NOTICES.md): booleans, offsets, simplification and the PolyTree. It is kept beside
@@ -20,8 +21,8 @@
 //!
 //! Its neighbours: it stands only on clipper2-rust (the integer types) and vector-math (the
 //! fixed-tie sort Clipper 6's intersection list needs, and `RectangleDouble`), so the mesh kernel
-//! (polygon-mesh, geometry-processing) uses it without the 2D path model. agg-path depends on it
-//! and re-exports its modules under their usual paths (`agg_path::clipper6`,
+//! (polygon-mesh, geometry-processing) uses it without a 2D path model. MatterCAD's agg-path
+//! depends on it and re-exports its modules under their usual paths (`agg_path::clipper6`,
 //! `agg_path::clipper_library`, `agg_path::curve_tolerance`,
 //! `agg_path::data_converters_2d::get_corrected_winding`), where it converts paths to and from
 //! these polygons.

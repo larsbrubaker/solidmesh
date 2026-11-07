@@ -1,7 +1,7 @@
 // ASCII STL is culture-independent: the writer puts '.' decimals in the text and the reader reads
 // them back, whatever the user's locale (a German locale would write ','). Rust formats and
 // parses numbers with no culture at all, so the check needs no locale scope. The vector parse is
-// in vector-math's tests/other, the packed polygon string in agg-path's tests/other.
+// in vector-math's tests/other, the packed polygon string in clipper-library's tests/clipper.
 
 use polygon_mesh::processors::stl_processing;
 use polygon_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};

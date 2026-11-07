@@ -4,9 +4,9 @@
 //! (`Arc<dyn TexturePixels>`), tells two pictures apart by allocation (`Arc::ptr_eq`, which
 //! ignores the trait object's vtable, so the identity is the same as through the concrete type),
 //! and folds a picture's size and bytes into the mesh's long hash. That is all this trait offers.
-//! agg-path's byte image implements it, and agg-path's `texture_image` and `texture_image_arc`
-//! downcast back through [`TexturePixels::as_any`] / [`TexturePixels::into_any_arc`] for code that
-//! draws.
+//! The caller's image type implements it (MatterCAD's is agg-path's byte image, whose
+//! `texture_image` and `texture_image_arc` downcast back through [`TexturePixels::as_any`] /
+//! [`TexturePixels::into_any_arc`] for code that draws).
 
 use std::any::Any;
 use std::fmt::Debug;

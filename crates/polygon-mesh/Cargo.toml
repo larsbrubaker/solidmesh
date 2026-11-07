@@ -1,16 +1,22 @@
-# polygon-mesh: triangle meshes (Mesh, faces, edges, measurements, Platonic solids, STL).
+# polygon-mesh, published as solidmesh-mesh: solidmesh's triangle meshes (Mesh, faces, edges,
+# measurements, Platonic solids, STL).
 # Depends on vector-math, for CSG (`csg`) the sibling manifold-rust checkout, and for slicing the
 # sibling clipper2-rust checkout; builds for wasm32-unknown-unknown. The ray tracer's trace path
 # lives in `ray_tracer`, the signed distance fields in `sdf` and `dual_contouring`, and the mesh
 # processors in `processors`.
 [package]
-name = "polygon-mesh"
-description = "PolygonMesh: triangle meshes, CSG, slicing and ray tracing for mattercad-rust"
+name = "solidmesh-mesh"
+description = "Triangle meshes for solid modeling: welding, winding and measures, booleans on manifold-rust, repair, SDF and implicit meshing, convex hulls, extrusion and revolution of 2D outlines, slicing, ray tracing and STL; pure Rust, builds for wasm32"
+keywords = ["mesh", "csg", "boolean", "geometry", "stl"]
+categories = ["graphics", "mathematics", "rendering::data-formats", "wasm"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+# Not yet on crates.io: the publish step flips this once the public API is settled.
 publish = false
 
 [lib]
@@ -18,12 +24,13 @@ name = "polygon_mesh"
 path = "src/lib.rs"
 
 [dependencies]
-vector-math = { path = "../vector-math" }
+vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
 # The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
-# slicing, stitching, extrude and revolve share with DataConverters2D.
-clipper-library = { path = "../clipper-library" }
+# slicing, stitching, extrude and revolve share with MatterCAD's DataConverters2D.
+clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", version = "0.1.0" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
-# github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
+# github.com/larsbrubaker/manifold-rust), like the other siblings, so an upstream fix is usable
+# at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
 manifold-rust = { path = "../../../manifold-rust", version = "0.19.2" }
 # The integer polygons slicing works in: Clipper2's `Path64`/`Paths64`

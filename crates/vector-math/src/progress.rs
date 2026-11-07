@@ -10,10 +10,10 @@
 //! decides only whether this report is worth a hop. A reporter is built from a closure with
 //! [`ProgressReporter::new`].
 //!
-//! It lives here, below the 2D path model, so the mesh kernel's long jobs (booleans, the pairwise
-//! fold) report through it without agg-path; agg-path re-exports this module as
-//! `agg_path::progress_reporter`, where its single-threaded twin `LocalProgressReporter` shares
-//! [`YIELD_THROTTLE_MS`].
+//! It lives here, at the bottom of the kernel, so the mesh kernel's long jobs (booleans, the
+//! pairwise fold) report through it without any 2D path model; MatterCAD's agg-path re-exports
+//! this module as `agg_path::progress_reporter`, where its single-threaded twin
+//! `LocalProgressReporter` shares [`YIELD_THROTTLE_MS`].
 
 use std::sync::{Arc, Mutex, OnceLock};
 use web_time::{Duration, Instant};

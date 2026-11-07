@@ -4,13 +4,16 @@
 # Where the architecture lives: each crate's `lib.rs` header says what the crate is, what it owns
 # and the rules that span its files; each file's header says how it fits its neighbours.
 #
-# Members live under crates/. Today that is only the repo-wide gates (workspace-gates, tests
-# only, never published). The four kernel crates join when they move in from mattercad-rust with
-# their history, each at the same directory name it has there, so relative paths survive:
-#   crates/vector-math         -> package solidmesh-math
-#   crates/clipper-library     -> package solidmesh-clipper
-#   crates/polygon-mesh        -> package solidmesh-mesh
-#   crates/geometry-processing -> package solidmesh
+# Members live under crates/: the repo-wide gates (workspace-gates, tests only, never published)
+# and the four kernel crates. A kernel crate's directory and library name are the ones MatterCAD
+# has always used (so `use vector_math::...` reads the same in both repositories and the history
+# follows the files); its package name is the one it publishes under:
+#   crates/vector-math         -> package solidmesh-math     (lib vector_math)
+#   crates/clipper-library     -> package solidmesh-clipper  (lib clipper_library)
+#   crates/polygon-mesh        -> package solidmesh-mesh     (lib polygon_mesh)
+#   crates/geometry-processing -> package solidmesh          (lib geometry_processing)
+# Between themselves they keep the directory names as dependency keys (`vector-math = { package =
+# "solidmesh-math", path = "../vector-math", version = "0.1.0" }`), as MatterCAD's manifests do.
 # They reach the sibling checkouts beside this repository (manifold-rust, clipper2-rust,
 # tess2-rust) by path, `../../../<sibling>`, each with a version floor (`{ path, version }`), so
 # a stale sibling checkout stops the build at resolve time and the published manifests keep only
@@ -19,6 +22,10 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/vector-math",
+    "crates/clipper-library",
+    "crates/polygon-mesh",
+    "crates/geometry-processing",
     "crates/workspace-gates",
 ]
 

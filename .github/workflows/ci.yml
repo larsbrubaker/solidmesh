@@ -1,5 +1,6 @@
 # CI: format, lint and test on Linux, macOS and Windows, plus the wasm32-unknown-unknown build of
-# every library crate. Modelled on mattercad-rust's ci.yml, which builds these crates too.
+# every library crate. Modelled on mattercad-rust's ci.yml, whose app builds these crates as
+# path dependencies.
 #
 # Siblings: the crates depend on manifold-rust, clipper2-rust and tess2-rust by path
 # (`../../../<sibling>` from crates/<crate>), so every job checks solidmesh out into `solidmesh/`
@@ -163,8 +164,8 @@ jobs:
           packages=$(cargo metadata --no-deps --format-version 1 --locked |
             jq -r '.packages[] | select(.name != "workspace-gates") | "-p " + .name' | tr '\n' ' ')
           if [ -z "$packages" ]; then
-            echo "No library crates in the workspace yet; nothing to build for wasm32."
-            exit 0
+            echo "cargo metadata listed no library crates; the query above is wrong."
+            exit 1
           fi
           echo "cargo build --locked --target wasm32-unknown-unknown $packages"
           cargo build --locked --target wasm32-unknown-unknown $packages

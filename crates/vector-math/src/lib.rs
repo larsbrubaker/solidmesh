@@ -1,4 +1,5 @@
-//! vector-math: the f64 vector math under MatterCAD's geometry, model and renderer.
+//! vector-math (package `solidmesh-math`): the f64 vector math under solidmesh's meshes and
+//! fillets, and under the geometry, model and renderer of MatterCAD, which depends on it.
 //!
 //! The value types and their helpers: `math_helper`, `Vector2`/`Vector3`/`Vector4` (f64),
 //! `Vector2Float`/`Vector3Float` (f32), the FNV-1a `long_hash` behind every
@@ -17,13 +18,14 @@
 //! The 2D value types the mesh kernel and the 2D paths share live here too: the colours
 //! (`color`: the 8-bit `Color`, the float `ColorF`, the `ColorType` trait, colour names and
 //! `Color`'s JSON shape) and the axis-aligned rectangles (`RectangleDouble`, `RectangleInt`).
-//! agg-path re-exports them under the same paths (`agg_path::Color`, `agg_path::color::...`,
-//! `agg_path::rectangle_double::...`), so code above it names them either way.
+//! MatterCAD's 2D path crate (agg-path) re-exports them under the same paths
+//! (`agg_path::Color`, `agg_path::color::...`, `agg_path::rectangle_double::...`), so code above
+//! it names them either way.
 //! The job progress channel is here for the same reason: `progress` (`ProgressReporter`, its
 //! throttled UI yield and `YIELD_THROTTLE_MS`, on web-time's clock so the browser build can read
-//! it), which agg-path re-exports as `agg_path::progress_reporter`. A mesh face's picture is a
-//! `texture::TexturePixels` (its size and bytes for the mesh hash, shared by `Arc` identity), which
-//! agg-path's byte image implements.
+//! it), which MatterCAD's agg-path re-exports as `agg_path::progress_reporter`. A mesh face's
+//! picture is a `texture::TexturePixels` (its size and bytes for the mesh hash, shared by `Arc`
+//! identity), which the caller's image type implements (MatterCAD's is agg-path's byte image).
 //!
 //! Conventions: constructors and static helpers are associated functions, read-only values are
 //! methods (`length()`), in-place and by-value variants that compute the same thing are one

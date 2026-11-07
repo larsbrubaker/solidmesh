@@ -1,4 +1,5 @@
-//! polygon-mesh: MatterCAD's triangle meshes and the geometry built on them.
+//! polygon-mesh (package `solidmesh-mesh`): solidmesh's triangle meshes and the geometry built
+//! on them, which MatterCAD's objects are made of.
 //!
 //! The Mesh core: [`Mesh`] (f32 vertices, indexed [`Face`]s with normals; welding,
 //! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`], also built in

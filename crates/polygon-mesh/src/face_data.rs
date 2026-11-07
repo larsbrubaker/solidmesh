@@ -27,7 +27,8 @@ use crate::mesh::{f32_key, Mesh};
 /// The image is shared (`Arc`) rather than copied per face; two entries carry "the same texture"
 /// when their images are the same allocation ([`FaceTextureData::same_image`]). The mesh only
 /// hashes and compares the picture, so it holds it as a [`TexturePixels`] trait object; code that
-/// draws it downcasts to the concrete image (agg-path's `image::texture_image`).
+/// draws it downcasts to the caller's concrete image type (in MatterCAD, agg-path's
+/// `image::texture_image`).
 #[derive(Debug, Clone)]
 pub struct FaceTextureData {
     pub image: Option<Arc<dyn TexturePixels>>,

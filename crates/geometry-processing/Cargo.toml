@@ -1,14 +1,20 @@
-# geometry-processing: the bevel/fillet kernel (topology, path bevels, the bevel itself). Pure
-# geometry over polygon-mesh and vector-math with no scene, UI or app dependency, so it builds for
-# wasm32-unknown-unknown and is testable without a GPU.
+# geometry-processing, published as solidmesh: the bevel/fillet kernel (topology, path bevels,
+# the bevel itself), the entry point of the solidmesh library. Pure geometry over polygon-mesh and
+# vector-math with no scene, UI or app dependency, so it builds for wasm32-unknown-unknown and is
+# testable without a GPU.
 [package]
-name = "geometry-processing"
-description = "The bevel/fillet kernel and mesh topology for mattercad-rust"
+name = "solidmesh"
+description = "Solid modeling on triangle meshes in pure Rust: fillets and chamfers on mesh edges, corners and outlines that keep closed solids closed, over solidmesh-mesh's booleans, repair and implicit operations; builds for wasm32"
+keywords = ["mesh", "fillet", "chamfer", "cad", "geometry"]
+categories = ["graphics", "mathematics", "science", "wasm"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+# Not yet on crates.io: the publish step flips this once the public API is settled.
 publish = false
 
 [lib]
@@ -17,16 +23,16 @@ path = "src/lib.rs"
 
 [dependencies]
 # The Clipper 6 port and polygon helpers the bevel's shadow clip unions and tests footprints with.
-clipper-library = { path = "../clipper-library" }
-vector-math = { path = "../vector-math" }
-polygon-mesh = { path = "../polygon-mesh" }
+clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", version = "0.1.0" }
+vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
+polygon-mesh = { package = "solidmesh-mesh", path = "../polygon-mesh", version = "0.1.0" }
 indexmap = "2"
 web-time = "1"
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 serde_json = "1"
-# SHA-256 for the cost tests' mesh digests (ConvexCellBoundTests), as mattercad-model has it.
+# SHA-256 for the cost tests' mesh digests (ConvexCellBoundTests), as MatterCAD's model has it.
 sha2 = { version = "0.10", default-features = false }
 # `Thingi10KSweep` reads the corpus' meshes straight out of their zip files (StlReader).
 zip = { version = "2.4", default-features = false, features = ["deflate"] }

@@ -12,11 +12,10 @@
 # share one build and one link; a unit test that needs private access lives in `src/**/tests.rs`
 # beside the code. A test is named for the behaviour it pins.
 #
-# The overrides below are for geometry-processing's bevel binary (`tests/bevel.rs`), whose tests
-# all sit under its `level_line::` module, the only one by that name in the workspace. They filter
-# by test name alone: nextest refuses a `binary(...)` term that matches no binary, and the
-# filters must load before the kernel crates move in; a test filter that matches nothing is
-# allowed.
+# The overrides below are for geometry-processing's bevel binary (`tests/bevel.rs`, binary id
+# `solidmesh::bevel`), whose tests they name under its `level_line::` module. nextest refuses a
+# `binary_id(...)` term that matches no binary, so renaming the package or the binary stops every
+# run here until these follow.
 
 [profile.default]
 # One test per logical CPU.
@@ -38,52 +37,52 @@ path = "junit.xml"
 # too close to the 3-minute limit. They get a longer leash (6 minutes) than the 3-minute hung-test
 # limit everything else has.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::chain_field_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::chain_field_tests::/)'
 slow-timeout = { period = "60s", terminate-after = 6 }
 
 # The work budget's timing tests: their wall-clock limits (a cancel reaching a large hole fill
 # within a fifth of a second, watching a build costing almost nothing) only mean something when
 # the machine isn't busy with other tests, so each runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(=level_line::work_budget_tests::watching_a_build_costs_almost_nothing) | test(=level_line::work_budget_tests::cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second)'
+filter = 'binary_id(solidmesh::bevel) & (test(=level_line::work_budget_tests::watching_a_build_costs_almost_nothing) | test(=level_line::work_budget_tests::cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second))'
 threads-required = "num-test-threads"
 
 # The many-chain build cost and needle repair tests switch and read the bevel meter over builds of
 # some seconds, so each runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::many_chain_build_cost_tests::/) | test(/^level_line::needle_repair_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & (test(/^level_line::many_chain_build_cost_tests::/) | test(/^level_line::needle_repair_tests::/))'
 threads-required = "num-test-threads"
 
 # The needle cascade meter tests (gated on LEVELLINE_COST=1): the needle meter and the field
 # counters it reads are meant to count one build alone, and its minutes-long build is timed, so
 # each test runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::needle_cascade_meter_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::needle_cascade_meter_tests::/)'
 threads-required = "num-test-threads"
 
 # The input needle strip tests bound the work a strip removal and a build spend, so each runs
 # with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::input_needle_strip_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::input_needle_strip_tests::/)'
 threads-required = "num-test-threads"
 
 # The chain field speed tests time a drag's builds against a wall-clock hang guard and print the
 # field counters, so each runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::chain_field_speed_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::chain_field_speed_tests::/)'
 threads-required = "num-test-threads"
 
 # The measurement modules (each gated on its own run variable, and a plain run returns at once):
 # bevel ends, bevel invariants, corner setback, corner volume, cube corner and around-center kink.
 # Their builds are timed, so each runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::(bevel_ends|bevel_invariants|corner_setback|corner_volume|cube_corner|around_center_kink)_measure_tests::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::(bevel_ends|bevel_invariants|corner_setback|corner_volume|cube_corner|around_center_kink)_measure_tests::/)'
 threads-required = "num-test-threads"
 
 # The Thingi10K sweep (gated on `THINGI_SWEEP=1`; a plain run returns at once) times builds
 # against a wall-clock hang cap, so it runs with every test thread to itself.
 [[profile.default.overrides]]
-filter = 'test(/^level_line::thingi10k_sweep::/)'
+filter = 'binary_id(solidmesh::bevel) & test(/^level_line::thingi10k_sweep::/)'
 threads-required = "num-test-threads"
 
 # CI's runners (`--profile ci`): 3 or 4 CPUs, several times slower than a development machine,

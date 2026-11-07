@@ -1,8 +1,8 @@
 // Vector parsing reads '.' decimals: `Vector2/3/4::parse` and the Vector2 string conversion.
 // Files store numbers with a '.' whatever the user's locale, and a locale-sensitive read would
 // turn "1.5" into 15 under a comma-decimal locale. Rust parses numbers with no locale at all, so
-// this pins that the parse stays that way. The packed polygon string is in agg-path's
-// tests/other, the ASCII STL case in polygon-mesh's tests/polygon_mesh.
+// this pins that the parse stays that way. The packed polygon string is in clipper-library's
+// tests/clipper, the ASCII STL case in polygon-mesh's tests/polygon_mesh.
 
 use vector_math::{Vector2, Vector3, Vector4};
 

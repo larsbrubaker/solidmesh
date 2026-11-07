@@ -6,10 +6,6 @@ redistributions; a dependency used as a crate (not copied) is listed for provena
 names the crate that carries it, at the folder the crate has here. Add a section in the same
 change that ports or adapts anything from a new upstream (CLAUDE.md, "Never").
 
-The crates move in from mattercad-rust with their history; until they do, the paths below are
-where each lands (`crates/vector-math`, `crates/clipper-library`, `crates/polygon-mesh`,
-`crates/geometry-processing`), and the code itself still lives in mattercad-rust.
-
 # solidmesh-math (`crates/vector-math`)
 
 ## The Open Toolkit library (MIT/X11)
@@ -277,3 +273,15 @@ Carried by: solidmesh (`crates/geometry-processing`)
 Source: https://github.com/indexmap-rs/indexmap — a crates.io dependency (not copied) of
 `crates/geometry-processing`, which iterates maps and sets in insertion order with it where that
 order reaches a result (CLAUDE.md, "Exactness").
+
+## libc, windows-sys, sha2 and zip (test-only)
+
+Carried by: solidmesh (`crates/geometry-processing`), as dev-dependencies only
+
+Sources: https://github.com/rust-lang/libc and https://github.com/microsoft/windows-rs (MIT OR
+Apache-2.0), read by the bevel cost tests for the calling thread's CPU time (`clock_gettime` on
+Unix, `GetThreadTimes` on Windows); https://github.com/RustCrypto/hashes (`sha2`, MIT OR
+Apache-2.0), the cost tests' mesh digests; https://github.com/zip-rs/zip2 (`zip`, MIT), which the
+Thingi10K sweep reads the corpus' meshes out of their zip files with. Used as crates (not copied),
+by the tests alone: none of them reaches the library. License texts are in each crate's
+repository.

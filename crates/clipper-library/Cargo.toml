@@ -1,16 +1,21 @@
-# clipper-library: the Clipper 6.4.2 port (`clipper6`) and the integer polygon helpers on
+# clipper-library, published as solidmesh-clipper: the Clipper 6.4.2 port (`clipper6`) and the integer polygon helpers on
 # clipper2-rust's `Point64`/`Path64`/`Paths64` that run it, the winding correction and the curve
 # tolerance size rule. std plus clipper2-rust (the integer types) and vector-math (the fixed-tie
-# sort and `RectangleDouble`); builds for wasm32-unknown-unknown. MatterCAD's path model
-# re-exports it, and the mesh kernel (polygon-mesh, geometry-processing) uses it directly.
+# sort and `RectangleDouble`); builds for wasm32-unknown-unknown. The mesh kernel (polygon-mesh,
+# geometry-processing) uses it directly, and MatterCAD's 2D path model re-exports it.
 [package]
-name = "clipper-library"
-description = "Clipper 6.4.2 port and integer polygon helpers for mattercad-rust"
+name = "solidmesh-clipper"
+description = "A pure-Rust port of the Clipper 6.4.2 polygon clipper (booleans, offsets, simplification) with integer polygon helpers on clipper2-rust's types, for the solidmesh mesh kernel"
+keywords = ["clipper", "polygon", "boolean", "offset", "geometry"]
+categories = ["algorithms", "graphics", "mathematics", "wasm"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+# Not yet on crates.io: the publish step flips this once the public API is settled.
 publish = false
 
 [lib]
@@ -20,7 +25,7 @@ path = "src/lib.rs"
 [dependencies]
 # The fixed-order introsort Clipper 6's intersection list is ordered with, and `RectangleDouble`
 # (the polygons' bounds in path units).
-vector-math = { path = "../vector-math" }
+vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
 # The integer polygon types the helpers speak: Clipper2's `Point64`/`Path64`/`Paths64` and enums,
 # from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust). The
 # clipping itself is the Clipper 6 port in src/clipper6.

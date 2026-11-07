@@ -1,16 +1,22 @@
-# vector-math: VectorMath (vectors, MathHelper, Matrix4X4, Quaternion,
+# vector-math, published as solidmesh-math: the f64 math under solidmesh (vectors, MathHelper,
+# Matrix4X4, Quaternion,
 # AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing, Estimator, BVH,
 # Color/ColorF, RectangleDouble/RectangleInt, ProgressReporter).
 # std plus serde (the JSON shape `.mcx` files store the value types in) and web-time (the clock of
 # ProgressReporter's yield throttle); builds for wasm32-unknown-unknown.
 [package]
-name = "vector-math"
-description = "VectorMath: vectors, matrices and math helpers for mattercad-rust"
+name = "solidmesh-math"
+description = "Deterministic f64 vectors, matrices, quaternions, planes, rays, bounds and a BVH for the solidmesh mesh kernel; pure Rust, builds for wasm32"
+keywords = ["geometry", "vector", "matrix", "bvh", "deterministic"]
+categories = ["mathematics", "graphics", "wasm"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+# Not yet on crates.io: the publish step flips this once the public API is settled.
 publish = false
 
 [lib]

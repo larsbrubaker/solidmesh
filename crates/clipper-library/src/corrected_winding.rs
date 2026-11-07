@@ -1,6 +1,7 @@
 //! `GetCorrectedWinding`: polygons cleaned and re-wound so every outer contour and hole turns the
-//! way Clipper expects, the first step of every extrude and revolve and of a path's offset
-//! (agg-path's `VertexSourceToClipperPolygons::offset`). The clean and the intersection run on
+//! way Clipper expects, the first step of every extrude and revolve and of a path's offset (in
+//! MatterCAD, agg-path's `VertexSourceToClipperPolygons::offset`). The clean and the intersection
+//! run on
 //! [`crate::clipper6`] through [`crate::clipper_statics`].
 
 use clipper2_rust::{ClipType, FillRule, Path64, Paths64, Point64};

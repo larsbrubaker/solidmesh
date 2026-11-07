@@ -3,37 +3,33 @@
 **Solid modeling on triangle meshes, in pure Rust: booleans, fillets and chamfers, repair, and
 implicit (SDF) operations that keep closed solids closed.**
 
-solidmesh is the geometry kernel behind MatterCAD, being moved out
-of the application into its own library so that others can use it and build on it. It works on
-the meshes real pipelines contain (STL and 3MF downloads, scans, triangle soup) as well as on
-clean modeled parts, builds for `wasm32-unknown-unknown`, contains no C or C++, and gives the
-same answer on every platform.
+solidmesh is the geometry kernel behind MatterCAD, moved out of the application into its own
+library so that others can use it and build on it. It works on the meshes real pipelines contain
+(STL and 3MF downloads, scans, triangle soup) as well as on clean modeled parts, builds for
+`wasm32-unknown-unknown`, contains no C or C++, and gives the same answer on every platform.
 
 ## Status
 
-**In extraction: no code has moved here yet.** The kernel still lives in the
-[mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace
-(`crates/vector-math`, `crates/polygon-mesh`, `crates/geometry-processing`) while it is cut free
-of MatterCAD's 2D path and image crate (`agg-path`). The plan, with its decisions and the steps
-still open, is the "solidmesh" item in mattercad-rust's
-[`docs/roadmap/geometry-libraries.md`](https://github.com/MatterHackers/mattercad-rust/blob/main/docs/roadmap/geometry-libraries.md);
-each step lands on mattercad-rust's `main` as it is done.
+**The kernel lives here; it is not on crates.io yet.** The four crates moved in from the
+[mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace with their history,
+and MatterCAD now depends on them by path, from a solidmesh checkout beside its own. The work
+still open happens here: results as codes only (the application words them), the fillet
+orchestration moving in from the app behind one entry point, the public API (everything else
+crate-private), and then publishing to crates.io. Until then the crates are `publish = false`
+and their API changes with MatterCAD's needs.
 
-As soon as the kernel no longer needs `agg-path`, the crates move here with their history and
-mattercad-rust depends on them by path. From then on the work happens here: results as codes
-only, the fillet orchestration moving in from the app, the public API, and publishing to
-crates.io.
+## Crates
 
-What is here already is the workspace the crates move into: the repository gates
-(`crates/workspace-gates`), the pinned toolchain, lint and test settings, and CI.
-
-## Planned crates
-
-| Crate | What it holds | Comes from (mattercad-rust) |
+| Crate | Folder | What it holds |
 |---|---|---|
-| `solidmesh-math` | Vectors, matrices, planes, rays and bounds in `f64` and `f32` | `crates/vector-math` |
-| `solidmesh-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; STL | `crates/polygon-mesh` |
-| `solidmesh` | Fillets and chamfers on mesh edges, corners and outlines, behind one public API; re-exports the other two | `crates/geometry-processing` |
+| `solidmesh-math` | `crates/vector-math` | Vectors, matrices, quaternions, planes, rays and bounds in `f64` and `f32`; a BVH; colours, rectangles and the progress reporter the kernel shares with its callers |
+| `solidmesh-clipper` | `crates/clipper-library` | A Clipper 6.4.2 port (integer polygon booleans, offsets, simplification) and the polygon helpers on clipper2-rust's types that the kernel slices, extrudes and revolves with |
+| `solidmesh-mesh` | `crates/polygon-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; slicing; ray tracing; STL |
+| `solidmesh` | `crates/geometry-processing` | Fillets and chamfers on mesh edges, corners and outlines |
+
+Each folder and library name is the one MatterCAD has always used (`use vector_math::...`,
+`use polygon_mesh::...`), so code reads the same in both repositories; the package name is the
+one the crate will publish under.
 
 ## Design rules
 
