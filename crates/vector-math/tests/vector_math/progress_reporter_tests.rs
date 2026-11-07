@@ -5,7 +5,7 @@
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 
-use agg_path::progress_reporter::{ProgressReporter, YIELD_THROTTLE_MS};
+use vector_math::progress::{ProgressReporter, YIELD_THROTTLE_MS};
 use web_time::{Duration, Instant};
 
 fn no_op() -> ProgressReporter {

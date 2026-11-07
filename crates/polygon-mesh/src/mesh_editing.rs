@@ -16,7 +16,7 @@ use crate::face_split::{clip_edge_at_plane, SplitData};
 use crate::mesh::Mesh;
 
 /// A progress callback: the fraction done and a status message.
-pub type ProgressReporter<'a> = &'a mut dyn FnMut(f64, &str);
+pub type ProgressCallback<'a> = &'a mut dyn FnMut(f64, &str);
 
 /// Disjoint sets with path compression and union by size.
 #[derive(Debug, Clone)]
@@ -103,7 +103,7 @@ impl Mesh {
         &mut self,
         treat_as_same_distance: f64,
         min_face_area: f64,
-        mut reporter: Option<ProgressReporter<'_>>,
+        mut reporter: Option<ProgressCallback<'_>>,
     ) {
         let Some(vertex_bvh_tree) = self.get_vertex_bvh_tree() else {
             return;

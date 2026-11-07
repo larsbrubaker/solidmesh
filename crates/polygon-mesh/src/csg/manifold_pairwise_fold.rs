@@ -4,7 +4,7 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use agg_path::progress_reporter::ProgressReporter;
+use vector_math::progress::ProgressReporter;
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{BooleanEngine, OpType, WindingRule};

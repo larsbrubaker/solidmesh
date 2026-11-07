@@ -66,6 +66,6 @@ pub use g3::mesh_auto_repair::MeshAutoRepairError;
 pub use mesh::Mesh;
 pub use mesh_edge_graph::{MeshEdge, MeshEdgeGraph, VertexFaceList};
 pub use mesh_edge_graph_steps::MeshEdgeGraphSteps;
-pub use mesh_editing::{ProgressReporter, UnionFind};
+pub use mesh_editing::{ProgressCallback, UnionFind};
 pub use mesh_extensions::PositionNormal;
 pub use transformed_aabb_cache::TransformedAabbCache;

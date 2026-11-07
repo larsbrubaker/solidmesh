@@ -1,7 +1,8 @@
 # vector-math: VectorMath (vectors, MathHelper, Matrix4X4, Quaternion,
 # AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing, Estimator, BVH,
-# Color/ColorF, RectangleDouble/RectangleInt).
-# std plus serde (the JSON shape `.mcx` files store the value types in); builds for wasm32-unknown-unknown.
+# Color/ColorF, RectangleDouble/RectangleInt, ProgressReporter).
+# std plus serde (the JSON shape `.mcx` files store the value types in) and web-time (the clock of
+# ProgressReporter's yield throttle); builds for wasm32-unknown-unknown.
 [package]
 name = "vector-math"
 description = "VectorMath: vectors, matrices and math helpers for mattercad-rust"
@@ -18,6 +19,9 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+# The clock (std natively, `performance.now`/`Date.now` in the browser) for ProgressReporter's
+# yield throttle; std's `Instant::now` panics on wasm32. MIT/Apache-2.0, already in the workspace.
+web-time = "1"
 
 [dev-dependencies]
 serde_json = "1"

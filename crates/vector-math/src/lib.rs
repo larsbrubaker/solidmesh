@@ -19,6 +19,9 @@
 //! `Color`'s JSON shape) and the axis-aligned rectangles (`RectangleDouble`, `RectangleInt`).
 //! agg-path re-exports them under the same paths (`agg_path::Color`, `agg_path::color::...`,
 //! `agg_path::rectangle_double::...`), so code above it names them either way.
+//! The job progress channel is here for the same reason: `progress` (`ProgressReporter`, its
+//! throttled UI yield and `YIELD_THROTTLE_MS`, on web-time's clock so the browser build can read
+//! it), which agg-path re-exports as `agg_path::progress_reporter`.
 //!
 //! Conventions: constructors and static helpers are associated functions, read-only values are
 //! methods (`length()`), in-place and by-value variants that compute the same thing are one
@@ -40,6 +43,7 @@ pub mod number_format;
 pub mod parallel;
 mod plane;
 mod plane_float;
+pub mod progress;
 mod quaternion;
 mod ray;
 pub mod rectangle_double;

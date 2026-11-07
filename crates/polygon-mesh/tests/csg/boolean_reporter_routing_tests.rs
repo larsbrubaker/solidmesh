@@ -10,12 +10,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use agg_path::progress_reporter::ProgressReporter;
 use polygon_mesh::csg::boolean_processing::{do_array, do_array_async};
 use polygon_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
 use std::future::Ready;
+use vector_math::progress::ProgressReporter;
 use vector_math::Matrix4X4;
 
 use super::boolean_kernel_yield_tests::block_on;

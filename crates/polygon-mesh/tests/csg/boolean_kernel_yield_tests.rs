@@ -12,11 +12,11 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-use agg_path::progress_reporter::{ProgressReporter, YIELD_THROTTLE_MS};
 use polygon_mesh::csg::boolean_processing::{do_array, do_array_async};
 use polygon_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
+use vector_math::progress::{ProgressReporter, YIELD_THROTTLE_MS};
 use vector_math::Matrix4X4;
 
 /// Runs `future` to completion on this thread.

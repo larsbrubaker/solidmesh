@@ -9,7 +9,7 @@
 
 use std::future::Future;
 
-use agg_path::progress_reporter::ProgressReporter;
+use vector_math::progress::ProgressReporter;
 use vector_math::Matrix4X4;
 
 use super::{

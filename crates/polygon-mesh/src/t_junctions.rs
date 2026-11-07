@@ -10,7 +10,7 @@ use vector_math::{AxisAlignedBoundingBox, Vector3Float};
 
 use crate::face::{Face, FaceList};
 use crate::mesh::Mesh;
-use crate::mesh_editing::ProgressReporter;
+use crate::mesh_editing::ProgressCallback;
 
 /// Where a vertex splits an edge: the vertex to use (-1 for a new one at
 /// `projection_point`) and its distance along the edge.
@@ -38,7 +38,7 @@ impl Mesh {
     /// `aggressive_max_distance` onto non-manifold edges), with merges and cleanups around them.
     pub fn repair_t_junctions(
         &mut self,
-        reporter: Option<ProgressReporter<'_>>,
+        reporter: Option<ProgressCallback<'_>>,
         aggressive_non_manifold_fix: bool,
         aggressive_max_distance: f64,
     ) {

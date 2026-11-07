@@ -13,6 +13,8 @@ mod parallel_inline_on_marked_thread_tests;
 mod parallel_sequential_equivalence_tests;
 #[path = "vector_math/plane_ray_and_helper_tests.rs"]
 mod plane_ray_and_helper_tests;
+#[path = "vector_math/progress_reporter_tests.rs"]
+mod progress_reporter_tests;
 #[path = "vector_math/rectangle_tests.rs"]
 mod rectangle_tests;
 #[path = "vector_math/rust_only_bvh_tests.rs"]
