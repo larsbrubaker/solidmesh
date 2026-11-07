@@ -12,9 +12,17 @@ same answer on every platform.
 ## Status
 
 **In extraction: no code has moved here yet.** The kernel still lives in the
-[mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace while its public API
-is drawn and its MatterCAD-only parts are separated out. Then the crates move here with their
-history and are published to crates.io.
+[mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace
+(`crates/vector-math`, `crates/polygon-mesh`, `crates/geometry-processing`) while it is cut free
+of MatterCAD's 2D path and image crate (`agg-path`). The plan, with its decisions and the steps
+still open, is the "solidmesh" item in mattercad-rust's
+[`docs/roadmap/geometry-libraries.md`](https://github.com/MatterHackers/mattercad-rust/blob/main/docs/roadmap/geometry-libraries.md);
+each step lands on mattercad-rust's `main` as it is done.
+
+As soon as the kernel no longer needs `agg-path`, the crates move here with their history and
+mattercad-rust depends on them by path. From then on the work happens here: results as codes
+only, the fillet orchestration moving in from the app, the public API, and publishing to
+crates.io.
 
 ## Planned crates
 
