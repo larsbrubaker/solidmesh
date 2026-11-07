@@ -1,8 +1,8 @@
 //! A copied mesh owns its faces, so no in place face edit on the copy (reverse, recalculated
 //! normals, texture UVs, face colors) reaches the source.
 
-use agg_path::Color;
 use polygon_mesh::{FaceTextureData, Mesh};
+use vector_math::Color;
 use vector_math::{Vector2Float, Vector3Float};
 
 type Snapshot = Vec<(i32, i32, i32, Vector3Float)>;

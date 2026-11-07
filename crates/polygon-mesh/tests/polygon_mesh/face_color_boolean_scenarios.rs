@@ -2,10 +2,10 @@
 //! `face_color_tests.rs` runs each scenario through the public `boolean_processing` entry
 //! points.
 
-use agg_path::Color;
 use polygon_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
+use vector_math::Color;
 use vector_math::Matrix4X4;
 
 fn translation(x: f64, y: f64, z: f64) -> Matrix4X4 {

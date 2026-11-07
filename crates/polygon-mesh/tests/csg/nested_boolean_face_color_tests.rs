@@ -4,10 +4,10 @@
 //! added on top of the mixed-colour result. A colour may never show up on a plane where no face
 //! of that colour ever was.
 
-use agg_path::Color;
 use polygon_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
+use vector_math::Color;
 use vector_math::{Matrix4X4, Vector3};
 
 const PINK: Color = Color::rgb(0xFE, 0x8D, 0x86);

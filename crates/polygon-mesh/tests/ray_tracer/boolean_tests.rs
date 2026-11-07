@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
-use agg_path::ColorF;
 use polygon_mesh::ray_tracer::{
     BoxShape, Difference, IntersectInfo, MaterialRef, SolidMaterial, Traceable, TraceableRef,
 };
+use vector_math::ColorF;
 use vector_math::{IntersectionType, Ray, Vector3};
 
 #[test]

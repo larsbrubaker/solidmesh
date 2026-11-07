@@ -8,10 +8,10 @@
 use agg_path::clipper_library::{
     int_point, ClipperError, JoinType, PolygonExtensions, PolygonsExtensions,
 };
-use agg_path::color::Color;
 use agg_path::image::image_graphics_2d::ImageGraphics2D;
 use agg_path::vertex_storage::VertexStorage;
 use clipper2_rust::{FillRule, Path64, Paths64};
+use vector_math::Color;
 use vector_math::{Matrix4X4, Vector2};
 
 use crate::Mesh;

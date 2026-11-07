@@ -4,8 +4,8 @@
 // reader leaves the stream partway inside the value it just read, the next property does not
 // survive.
 
-use agg_path::Color;
 use serde::Deserialize;
+use vector_math::Color;
 
 /// No converter attribute here on purpose: Color's own Deserialize is the path customer files
 /// take.

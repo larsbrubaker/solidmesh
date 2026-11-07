@@ -5,9 +5,9 @@
 use std::sync::{Arc, OnceLock};
 
 use agg_path::image::ImageBuffer;
-use agg_path::Color;
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{FaceTextureData, Mesh};
+use vector_math::Color;
 use vector_math::{Matrix4X4, Plane, Vector2Float, Vector3, Vector3Float};
 
 /// One shared 4 x 4 image, so every texture entry in a test points at the same buffer.

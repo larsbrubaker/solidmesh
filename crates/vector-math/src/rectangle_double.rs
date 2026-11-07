@@ -1,13 +1,13 @@
 //! Axis-aligned rectangle in doubles (y up: bottom < top). Inflating by a border and containing
 //! a raster point take GUI/raster types and are not here (agg-gui owns borders).
 
+use crate::ieee_math::{max_f64, min_f64};
+use crate::number_format::format_f64;
 use crate::rectangle_int::RectangleInt;
+use crate::Vector2;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::{BitAnd, BitOr, Mul};
-use vector_math::ieee_math::{max_f64, min_f64};
-use vector_math::number_format::format_f64;
-use vector_math::Vector2;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct RectangleDouble {

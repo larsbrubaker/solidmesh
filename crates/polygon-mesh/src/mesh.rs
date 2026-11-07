@@ -14,7 +14,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::OnceLock;
 
-use agg_path::Color;
+use vector_math::Color;
 use vector_math::{
     long_hash, AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float, LONG_HASH_SEED,
 };

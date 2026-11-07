@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use agg_path::ColorF;
 use polygon_mesh::ray_tracer::{MaterialRef, SolidMaterial, Traceable, TriangleShape};
+use vector_math::ColorF;
 use vector_math::{IntersectionType, Ray, Vector3};
 
 #[test]

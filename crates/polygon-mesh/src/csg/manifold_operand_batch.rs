@@ -5,8 +5,8 @@
 
 use std::collections::HashMap;
 
-use agg_path::Color;
 use manifold_rust::manifold::Manifold;
+use vector_math::Color;
 use vector_math::Matrix4X4;
 
 use super::manifold_import::{self, OperandTag};

@@ -14,7 +14,11 @@
 //! ties always land in the same place. `seeded_random` is the seeded generator shared by the
 //! crates above that must draw the same numbers for the same seed. There is no smallest
 //! enclosing circle here: the known implementation is LGPL-3 (Project Nayuki).
-//! `RectangleDouble` lives with the 2D paths (`agg-path`), not here.
+//! The 2D value types the mesh kernel and the 2D paths share live here too: the colours
+//! (`color`: the 8-bit `Color`, the float `ColorF`, the `ColorType` trait, colour names and
+//! `Color`'s JSON shape) and the axis-aligned rectangles (`RectangleDouble`, `RectangleInt`).
+//! agg-path re-exports them under the same paths (`agg_path::Color`, `agg_path::color::...`,
+//! `agg_path::rectangle_double::...`), so code above it names them either way.
 //!
 //! Conventions: constructors and static helpers are associated functions, read-only values are
 //! methods (`length()`), in-place and by-value variants that compute the same thing are one
@@ -22,6 +26,7 @@
 
 mod axis_aligned_bounding_box;
 pub mod bvh;
+pub mod color;
 pub mod easing;
 pub mod fixed_tie_sort;
 pub mod float_hash;
@@ -37,6 +42,8 @@ mod plane;
 mod plane_float;
 mod quaternion;
 mod ray;
+pub mod rectangle_double;
+pub mod rectangle_int;
 pub mod seeded_random;
 mod serde_impls;
 mod track_ball_controller;
@@ -50,6 +57,7 @@ mod vector_transforms;
 mod world_view;
 
 pub use axis_aligned_bounding_box::AxisAlignedBoundingBox;
+pub use color::{Color, ColorF, ColorType};
 pub use frustum::{Frustum, FrustumIntersection};
 pub use math_helper::MathError;
 pub use matrix4x4::Matrix4X4;
@@ -57,6 +65,8 @@ pub use plane::Plane;
 pub use plane_float::PlaneFloat;
 pub use quaternion::Quaternion;
 pub use ray::{IntersectionType, Ray, RayBoundsHit, Sign};
+pub use rectangle_double::{OutCode, RectangleDouble};
+pub use rectangle_int::RectangleInt;
 pub use track_ball_controller::{TrackBallController, TrackBallError, TrackBallTransformType};
 pub use vector2::Vector2;
 pub use vector2_float::Vector2Float;

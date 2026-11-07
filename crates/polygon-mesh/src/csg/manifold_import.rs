@@ -11,9 +11,9 @@
 
 use std::collections::HashMap;
 
-use agg_path::Color;
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
+use vector_math::Color;
 
 use vector_math::Vector3;
 

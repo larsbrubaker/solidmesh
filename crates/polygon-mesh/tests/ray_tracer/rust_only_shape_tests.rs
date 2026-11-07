@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
-use agg_path::ColorF;
 use polygon_mesh::ray_tracer::{
     wrap_up, BoundingVolumeHierarchy, BoxShape, BvhCreationOptions, MaterialRef, RayTracerError,
     SolidMaterial, SphereShape, Traceable, TraceableRef, Transform, TriangleShape, TriangleShapeUv,
 };
+use vector_math::ColorF;
 use vector_math::{IntersectionType, Matrix4X4, Plane, Ray, Vector2Float, Vector3};
 
 fn red() -> MaterialRef {

@@ -1,9 +1,9 @@
 //! Per-face colors through copies, welds, booleans and face merging. The boolean cases run the
 //! contract in `face_color_boolean_scenarios.rs`.
 
-use agg_path::Color;
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::Mesh;
+use vector_math::Color;
 use vector_math::{Matrix4X4, Vector3Float};
 
 use crate::face_color_boolean_scenarios as scenarios;

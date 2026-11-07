@@ -9,13 +9,13 @@
 
 use std::collections::HashMap;
 
-use agg_path::Color;
 use polygon_mesh::csg::{
     boolean_processing, manifold_import, BooleanError, BooleanOptions, CsgModes, WindingRule,
 };
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Face, Mesh};
 use vector_math::seeded_random::SeededRandom;
+use vector_math::Color;
 use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
 const NOT_CLOSED: &str = "NotClosed";

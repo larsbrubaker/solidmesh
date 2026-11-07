@@ -1,7 +1,16 @@
-//! Rust-only checks of the colour port (moved from mattercad-app's theme colour, plus the HSL,
-//! naming and serialization paths), complementing the ported `ColorJsonConverterTests`.
+//! Rust-only checks of the colours: every HTML form, the JSON string and its round trip,
+//! blending, HSL, naming, LAB, contrast and hashing, complementing the ported
+//! `ColorJsonConverterTests`.
 
-use super::*;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use vector_math::color::{Color, ColorF, ColorType};
+
+fn hash_of<T: Hash>(value: &T) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    value.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[test]
 fn rust_only_parses_every_html_form() {
@@ -106,4 +115,39 @@ fn semi_transparent_text_is_overlaid_on_each_background_it_is_measured_against()
     let adjusted = Color::new_rgb(200, 200, 200).with_contrast(&text, 1.6);
     let composited = text.overlay_on(&adjusted);
     assert!(adjusted.contrast(&composited) >= 1.6, "{adjusted:?}");
+}
+
+/// Saved files hold a colour as its JSON string, so writing one and reading it back must give
+/// the same colour and the same text, opaque and translucent alike.
+#[test]
+fn rust_only_json_round_trips_exactly() {
+    for (color, text) in [
+        (Color::RED, "\"#FF0000\""),
+        (Color::rgba(1, 2, 255, 16), "\"#0102FF10\""),
+        (Color::rgba(0, 0, 0, 0), "\"#00000000\""),
+        (Color::rgba(18, 52, 86, 255), "\"#123456\""),
+    ] {
+        let written = serde_json::to_string(&color).expect("a colour serializes");
+        assert_eq!(written, text);
+        let read: Color = serde_json::from_str(&written).expect("its own text reads back");
+        assert_eq!(read, color);
+        assert_eq!(
+            serde_json::to_string(&read).expect("serializes again"),
+            text
+        );
+    }
+}
+
+#[test]
+fn test_get_hash_code() {
+    {
+        let a = Color::new_rgb(10, 11, 12);
+        let b = Color::new_rgb(10, 11, 12);
+        assert!(hash_of(&a) == hash_of(&b));
+    }
+    {
+        let a = ColorF::new(10.0, 11.0, 12.0, 1.0);
+        let b = ColorF::new(10.0, 11.0, 12.0, 1.0);
+        assert!(hash_of(&a) == hash_of(&b));
+    }
 }

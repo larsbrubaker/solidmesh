@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use agg_path::image::ImageBuffer;
-use agg_path::{Color, RectangleDouble};
+use vector_math::{Color, RectangleDouble};
 use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
 use crate::face::FaceList;

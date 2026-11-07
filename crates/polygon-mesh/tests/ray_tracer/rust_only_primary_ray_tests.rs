@@ -4,10 +4,10 @@
 
 use std::sync::Arc;
 
-use agg_path::ColorF;
 use polygon_mesh::ray_tracer::{
     AntiAliasing, Background, BoundingVolumeHierarchy, RayTracer, Scene, SphereShape, TraceableRef,
 };
+use vector_math::ColorF;
 use vector_math::{IntersectionType, Ray, Vector3};
 
 fn sphere(z: f64) -> TraceableRef {

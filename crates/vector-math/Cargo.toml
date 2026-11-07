@@ -1,5 +1,6 @@
 # vector-math: VectorMath (vectors, MathHelper, Matrix4X4, Quaternion,
-# AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing, Estimator, BVH).
+# AxisAlignedBoundingBox, Plane, Ray, Frustum, WorldView, TrackBall, Easing, Estimator, BVH,
+# Color/ColorF, RectangleDouble/RectangleInt).
 # std plus serde (the JSON shape `.mcx` files store the value types in); builds for wasm32-unknown-unknown.
 [package]
 name = "vector-math"

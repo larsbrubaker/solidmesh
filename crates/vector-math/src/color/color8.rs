@@ -199,7 +199,7 @@ impl Color {
 
     /// FNV-1a over red, green, blue, alpha.
     pub fn get_long_hash_code(&self, hash: u64) -> u64 {
-        vector_math::long_hash::compute_hash(&[self.red, self.green, self.blue, self.alpha], hash)
+        crate::long_hash::compute_hash(&[self.red, self.green, self.blue, self.alpha], hash)
     }
 
     pub fn to_color_f(self) -> ColorF {

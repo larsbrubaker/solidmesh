@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use agg_path::Color;
+use vector_math::Color;
 use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
 
 use crate::face::{Face, FaceList};

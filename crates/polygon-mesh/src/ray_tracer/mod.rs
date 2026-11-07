@@ -47,7 +47,7 @@ mod unbound_collection;
 use std::any::Any;
 use std::sync::Arc;
 
-use agg_path::ColorF;
+use vector_math::ColorF;
 use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 pub use bounding_volume_hierarchy::{BoundingVolumeHierarchy, BvhCreationOptions};

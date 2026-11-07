@@ -159,7 +159,7 @@ impl Primitive for Difference {
         Err(RayTracerError::NotSupported("Difference.GetUv"))
     }
 
-    fn get_color(&self, _info: &IntersectInfo<'_>) -> Result<agg_path::ColorF, RayTracerError> {
+    fn get_color(&self, _info: &IntersectInfo<'_>) -> Result<vector_math::ColorF, RayTracerError> {
         // You should not get a color directly from a Difference.
         Err(RayTracerError::NotSupported("Difference.GetColor"))
     }
