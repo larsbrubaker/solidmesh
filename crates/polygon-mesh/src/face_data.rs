@@ -15,7 +15,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use agg_path::image::ImageBuffer;
+use vector_math::texture::TexturePixels;
 use vector_math::{Color, RectangleDouble};
 use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
@@ -25,10 +25,12 @@ use crate::mesh::{f32_key, Mesh};
 /// The texture on one face: the image and the UV of each corner.
 ///
 /// The image is shared (`Arc`) rather than copied per face; two entries carry "the same texture"
-/// when their images are the same allocation ([`FaceTextureData::same_image`]).
+/// when their images are the same allocation ([`FaceTextureData::same_image`]). The mesh only
+/// hashes and compares the picture, so it holds it as a [`TexturePixels`] trait object; code that
+/// draws it downcasts to the concrete image (agg-path's `image::texture_image`).
 #[derive(Debug, Clone)]
 pub struct FaceTextureData {
-    pub image: Option<Arc<ImageBuffer>>,
+    pub image: Option<Arc<dyn TexturePixels>>,
     pub uv0: Vector2Float,
     pub uv1: Vector2Float,
     pub uv2: Vector2Float,
@@ -36,7 +38,7 @@ pub struct FaceTextureData {
 
 impl FaceTextureData {
     pub fn new(
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
         uv0: Vector2Float,
         uv1: Vector2Float,
         uv2: Vector2Float,
@@ -50,9 +52,11 @@ impl FaceTextureData {
     }
 
     /// Whether the `image` fields are the same allocation (both absent counts as the same).
-    pub fn same_image(&self, texture: Option<&Arc<ImageBuffer>>) -> bool {
+    /// `texture` may be the picture's own type (`Arc<ImageBuffer>`) or the trait object; only the
+    /// allocation's address is compared.
+    pub fn same_image<T: TexturePixels + ?Sized>(&self, texture: Option<&Arc<T>>) -> bool {
         match (&self.image, texture) {
-            (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+            (Some(a), Some(b)) => std::ptr::addr_eq(Arc::as_ptr(a), Arc::as_ptr(b)),
             (None, None) => true,
             _ => false,
         }
@@ -276,7 +280,7 @@ impl Mesh {
     pub fn place_texture_on_face(
         &mut self,
         face: usize,
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
         texture_coordinate_mapping: Matrix4X4,
         mark_as_change: bool,
     ) {
@@ -295,7 +299,7 @@ impl Mesh {
     pub fn place_texture_on_face_projected(
         &mut self,
         face: usize,
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
     ) {
         //// planar project along the normal of this face
         let mapping = self.get_max_plane_projection(&[face], None);
@@ -307,7 +311,7 @@ impl Mesh {
     pub fn place_texture_on_faces(
         &mut self,
         faces: &[usize],
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
         texture_coordinate_mapping: Matrix4X4,
     ) {
         let mut face_textures = FaceTextures::new();
@@ -329,7 +333,7 @@ impl Mesh {
     /// Textures every face with the same mapping.
     pub fn place_texture(
         &mut self,
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
         texture_coordinate_mapping: Matrix4X4,
     ) {
         for i in 0..self.faces.len() {
@@ -344,17 +348,17 @@ impl Mesh {
     }
 
     /// Removes `texture` from every face that carries it.
-    pub fn remove_texture(&mut self, texture: Option<&Arc<ImageBuffer>>) {
+    pub fn remove_texture<T: TexturePixels + ?Sized>(&mut self, texture: Option<&Arc<T>>) {
         for i in 0..self.faces.len() {
             self.remove_texture_from_face(i, texture);
         }
     }
 
     /// Removes `texture` from face `face_index` if that face carries it.
-    pub fn remove_texture_from_face(
+    pub fn remove_texture_from_face<T: TexturePixels + ?Sized>(
         &mut self,
         face_index: usize,
-        texture: Option<&Arc<ImageBuffer>>,
+        texture: Option<&Arc<T>>,
     ) {
         let key = face_index as i32;
         if self
@@ -404,7 +408,7 @@ impl Mesh {
     pub fn place_texture_on_coplanar_faces(
         &mut self,
         face: usize,
-        texture_to_use: Option<Arc<ImageBuffer>>,
+        texture_to_use: Option<Arc<dyn TexturePixels>>,
     ) {
         //// planar project along the normal of this face
         let faces = self.get_coplanar_faces_of_face(face);

@@ -21,7 +21,9 @@
 //! `agg_path::rectangle_double::...`), so code above it names them either way.
 //! The job progress channel is here for the same reason: `progress` (`ProgressReporter`, its
 //! throttled UI yield and `YIELD_THROTTLE_MS`, on web-time's clock so the browser build can read
-//! it), which agg-path re-exports as `agg_path::progress_reporter`.
+//! it), which agg-path re-exports as `agg_path::progress_reporter`. A mesh face's picture is a
+//! `texture::TexturePixels` (its size and bytes for the mesh hash, shared by `Arc` identity), which
+//! agg-path's byte image implements.
 //!
 //! Conventions: constructors and static helpers are associated functions, read-only values are
 //! methods (`length()`), in-place and by-value variants that compute the same thing are one
@@ -50,6 +52,7 @@ pub mod rectangle_double;
 pub mod rectangle_int;
 pub mod seeded_random;
 mod serde_impls;
+pub mod texture;
 mod track_ball_controller;
 mod vector2;
 pub mod vector2_ex;
@@ -71,6 +74,7 @@ pub use quaternion::Quaternion;
 pub use ray::{IntersectionType, Ray, RayBoundsHit, Sign};
 pub use rectangle_double::{OutCode, RectangleDouble};
 pub use rectangle_int::RectangleInt;
+pub use texture::TexturePixels;
 pub use track_ball_controller::{TrackBallController, TrackBallError, TrackBallTransformType};
 pub use vector2::Vector2;
 pub use vector2_float::Vector2Float;

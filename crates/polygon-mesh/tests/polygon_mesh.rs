@@ -9,6 +9,8 @@ mod face_color_boolean_scenarios;
 mod face_color_tests;
 #[path = "polygon_mesh/face_normal_tests.rs"]
 mod face_normal_tests;
+#[path = "polygon_mesh/face_texture_hash_tests.rs"]
+mod face_texture_hash_tests;
 #[path = "polygon_mesh/face_texture_tests.rs"]
 mod face_texture_tests;
 #[path = "polygon_mesh/grid_marching_cubes_tests.rs"]

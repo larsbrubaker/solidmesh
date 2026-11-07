@@ -12,14 +12,14 @@
 
 use std::sync::Arc;
 
-use agg_path::image::ImageBuffer;
+use vector_math::texture::TexturePixels;
 use vector_math::{Vector2Float, Vector3Float};
 
 use crate::face_data::{corner_key, FaceTextureData};
 use crate::mesh::Mesh;
 
 /// A face's picture: the image allocation (`None` is a texture entry with no image).
-type Picture = Option<Arc<ImageBuffer>>;
+type Picture = Option<Arc<dyn TexturePixels>>;
 
 /// Whether two pictures are the same allocation (both absent counts as the same).
 fn same_picture(a: &Picture, b: &Picture) -> bool {

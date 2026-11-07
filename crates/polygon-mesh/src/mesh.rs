@@ -14,6 +14,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::OnceLock;
 
+use vector_math::texture::TexturePixels;
 use vector_math::Color;
 use vector_math::{
     long_hash, AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float, LONG_HASH_SEED,
@@ -53,13 +54,13 @@ pub(crate) fn int_long_hash(value: i32, hash: u64) -> u64 {
 
 /// FNV-1a over a picture's size and up to ~4096 of its bytes, evenly sampled, so hashing a large
 /// texture stays cheap while two different pictures of one size still almost always differ.
-fn image_long_hash(image: Option<&agg_path::image::ImageBuffer>, hash: u64) -> u64 {
+fn image_long_hash(image: Option<&dyn TexturePixels>, hash: u64) -> u64 {
     let Some(image) = image else {
         return int_long_hash(-1, hash);
     };
     let mut hash = int_long_hash(image.width(), hash);
     hash = int_long_hash(image.height(), hash);
-    let bytes = image.get_buffer();
+    let bytes = image.pixel_bytes();
     let step = (bytes.len() / 4096).max(1);
     let sampled: Vec<u8> = bytes.iter().step_by(step).copied().collect();
     long_hash::compute_hash(&sampled, hash)
@@ -285,7 +286,7 @@ impl Mesh {
         if !self.face_textures.is_empty() {
             hash = int_long_hash(self.face_textures.len() as i32, hash);
             let texture_step = (self.face_textures.len() / 1000).max(1);
-            let mut last_image: Option<&std::sync::Arc<agg_path::image::ImageBuffer>> = None;
+            let mut last_image: Option<&std::sync::Arc<dyn TexturePixels>> = None;
             for (&face, texture) in self.face_textures.iter().step_by(texture_step) {
                 hash = int_long_hash(face, hash);
                 for uv in [texture.uv0, texture.uv1, texture.uv2] {

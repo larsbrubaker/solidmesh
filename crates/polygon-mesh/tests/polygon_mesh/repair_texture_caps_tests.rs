@@ -28,12 +28,7 @@ fn uv_at(p: Vector3Float) -> Vector2Float {
 fn texture_by_position(mesh: &mut Mesh, index: usize, image: &Arc<ImageBuffer>) {
     let face = mesh.faces[index];
     let uv = |v: i32| uv_at(mesh.vertices[v as usize]);
-    let data = FaceTextureData::new(
-        Some(Arc::clone(image)),
-        uv(face.v0),
-        uv(face.v1),
-        uv(face.v2),
-    );
+    let data = FaceTextureData::new(Some(image.clone()), uv(face.v0), uv(face.v1), uv(face.v2));
     mesh.face_textures.insert(index as i32, data);
 }
 
@@ -185,7 +180,7 @@ fn a_cap_between_two_pictures_takes_the_one_most_corners_carry() {
     // touch picture A (faces 2 and 3), so A covers more of the cap.
     let mut mesh = mesh_of(vertices, &[[0, 1, 2], [0, 3, 4], [1, 3, 5], [2, 4, 5]]);
     let with = |image: &Arc<ImageBuffer>, uvs: [Vector2Float; 3]| {
-        FaceTextureData::new(Some(Arc::clone(image)), uvs[0], uvs[1], uvs[2])
+        FaceTextureData::new(Some(image.clone()), uvs[0], uvs[1], uvs[2])
     };
     mesh.face_textures
         .insert(1, with(&b, [uv(0.9, 0.9), uv(0.8, 0.8), uv(0.7, 0.7)]));
@@ -219,7 +214,7 @@ fn new_faces_fill_inward_from_the_faces_touching_the_texture() {
     mesh.face_textures.insert(
         0,
         FaceTextureData::new(
-            Some(Arc::clone(&image)),
+            Some(image.clone()),
             uv(0.0, 0.0),
             uv(1.0, 0.0),
             uv(0.0, 1.0),
@@ -250,7 +245,7 @@ fn a_separate_bare_piece_is_textured_only_when_every_face_must_be() {
     mesh.face_textures.insert(
         0,
         FaceTextureData::new(
-            Some(Arc::clone(&image)),
+            Some(image.clone()),
             uv(0.1, 0.2),
             uv(0.3, 0.4),
             uv(0.5, 0.6),
