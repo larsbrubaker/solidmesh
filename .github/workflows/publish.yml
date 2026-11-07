@@ -1,0 +1,81 @@
+# Publishes solidmesh's crates to crates.io from GitHub's network.
+#
+# Same route as manifold-rust's, agg-rust's and agg-gui's publish workflows: the development
+# machine's network path drops HTTPS uploads larger than ~1.1MB, and publishing from CI keeps the
+# token off the machine.
+#
+# Requires the repository secret CARGO_REGISTRY_TOKEN (a crates.io token with the publish-new and
+# publish-update scopes); scripts/set-crates-token.ps1 stores it.
+#
+# Run it from the Actions tab (or `gh workflow run publish --repo larsbrubaker/solidmesh`). The
+# `crate` input names one workspace package, or `all` to publish every publishable member in
+# dependency order (cargo publish --workspace), which is how a release that bumps several crates
+# goes out. A version already on crates.io is refused by crates.io, so bump before publishing.
+#
+# manifold-rust, clipper2-rust and tess2-rust are `{ version, path }` dependencies. Cargo needs the
+# sibling checkouts beside solidmesh to load the workspace (the crates reach them as
+# ../../../<sibling> from crates/<crate>), so they are checked out next to it; the published
+# manifests keep only the `version`, and cargo's verify build resolves them from crates.io. So
+# when solidmesh needs a newer sibling, publish that sibling first, then raise the version
+# requirement here.
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: "Package to publish, or 'all' for every publishable workspace member"
+        required: true
+        default: "all"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: solidmesh
+    steps:
+      - name: Checkout solidmesh
+        uses: actions/checkout@v7
+        with:
+          path: solidmesh
+
+      - name: Checkout manifold-rust
+        uses: actions/checkout@v7
+        with:
+          repository: larsbrubaker/manifold-rust
+          path: manifold-rust
+
+      - name: Checkout clipper2-rust
+        uses: actions/checkout@v7
+        with:
+          repository: larsbrubaker/clipper2-rust
+          path: clipper2-rust
+
+      - name: Checkout tess2-rust
+        uses: actions/checkout@v7
+        with:
+          repository: larsbrubaker/tess2-rust
+          path: tess2-rust
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # A tree whose tests fail never reaches crates.io.
+      - name: Run tests
+        run: cargo test --workspace --release
+
+      # cargo publish verifies each packaged tarball by building it on its own, against the
+      # crates.io siblings, before uploading.
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CRATE: ${{ github.event.inputs.crate }}
+        run: |
+          if [ "$CRATE" = "all" ]; then
+            cargo publish --workspace
+          else
+            cargo publish -p "$CRATE"
+          fi
