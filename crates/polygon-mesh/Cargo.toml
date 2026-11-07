@@ -19,16 +19,18 @@ path = "src/lib.rs"
 
 [dependencies]
 vector-math = { path = "../vector-math" }
-# agg-path: the path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`) and the
-# ClipperLib polygon helpers (`clipper_library`) slicing and stitching share with
-# DataConverters2D.
+# agg-path: the path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`) and
+# DataConverters2D's path-to-polygon conversion.
 agg-path = { path = "../agg-path" }
+# The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
+# slicing, stitching, extrude and revolve share with DataConverters2D.
+clipper-library = { path = "../clipper-library" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like agg-gui, so an upstream fix is usable at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
 manifold-rust = { path = "../../../manifold-rust", version = "0.19.2" }
 # The integer polygons slicing works in: Clipper2's `Path64`/`Paths64`
-# (the union itself runs on agg-path's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
+# (the union itself runs on clipper-library's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust", version = "1.2.0" }
 # The SGI GLU tessellator for `CachedTesselator`: tess2-rust, from the sibling checkout (../tess2-rust, github.com/larsbrubaker/tess2-rust).
 tess2-rust = { path = "../../../tess2-rust", version = "1.2.1" }

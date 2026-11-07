@@ -23,8 +23,8 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use agg_path::clipper_library::PolygonsExtensions;
 use clipper2_rust::{area, FillRule, Path64, Paths64, Point64};
+use clipper_library::PolygonsExtensions;
 
 use crate::processors::cap_fill::{doubled_area, fill_triangles, Triangle};
 use crate::processors::ring_loops::{simple_loops, without_crossings};

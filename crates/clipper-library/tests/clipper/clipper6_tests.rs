@@ -1,7 +1,7 @@
 //! Rust-only checks of the Clipper 6 port (`clipper6`): booleans, offsets, strictly simple
 //! splitting and the PolyTree on small shapes whose Clipper 6 answers are known by hand.
 
-use super::*;
+use clipper_library::clipper6::*;
 
 fn square(x: i64, y: i64, size: i64) -> Path {
     vec![

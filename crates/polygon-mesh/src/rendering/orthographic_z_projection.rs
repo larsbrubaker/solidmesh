@@ -5,12 +5,10 @@
 //! find the outline whose weight it centers. [`draw_to`] fills the up-facing triangles, seen
 //! from above, into an image graphics: the part sheet's silhouettes.
 
-use agg_path::clipper_library::{
-    int_point, ClipperError, JoinType, PolygonExtensions, PolygonsExtensions,
-};
 use agg_path::image::image_graphics_2d::ImageGraphics2D;
 use agg_path::vertex_storage::VertexStorage;
 use clipper2_rust::{FillRule, Path64, Paths64};
+use clipper_library::{int_point, ClipperError, JoinType, PolygonExtensions, PolygonsExtensions};
 use vector_math::Color;
 use vector_math::{Matrix4X4, Vector2};
 

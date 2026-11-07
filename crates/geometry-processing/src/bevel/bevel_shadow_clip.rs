@@ -6,11 +6,11 @@
 //! into a footprint and extruded up the obstruction's height - with its shadow body where asked
 //! for.
 
-use agg_path::clipper6::{IntPoint as Point64, Path as Path64, Paths as Paths64};
-use agg_path::clipper_library::clipper_statics;
-use agg_path::clipper_library::polygons_extensions::PolygonsExtensions;
-use agg_path::clipper_library::ClipperError;
 use agg_path::vertex_storage::VertexStorage;
+use clipper_library::clipper6::{IntPoint as Point64, Path as Path64, Paths as Paths64};
+use clipper_library::clipper_statics;
+use clipper_library::polygons_extensions::PolygonsExtensions;
+use clipper_library::ClipperError;
 use indexmap::IndexSet;
 use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::{Mesh, MeshEdgeGraph};

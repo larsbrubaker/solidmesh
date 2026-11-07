@@ -8,7 +8,7 @@
 //! valid for the two that follow - the cap clip, which does renumber, has to be last for that
 //! reason. Called from the cut stage (`BevelCutStage`).
 
-use agg_path::clipper_library::ClipperError;
+use clipper_library::ClipperError;
 use polygon_mesh::csg::{BooleanError, CsgModes};
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use vector_math::Matrix4X4;

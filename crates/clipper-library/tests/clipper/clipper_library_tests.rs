@@ -1,12 +1,10 @@
 //! Rust-only checks of the clipper_library helpers MatterCAD calls that the ported tests do
-//! not cover: Clipper 6's area sign and point-in-polygon, the PolyTree walks, and
-//! DataConverters2D's winding correction and round trip.
+//! not cover: Clipper 6's area sign and point-in-polygon, the PolyTree walks, and the winding
+//! correction.
 
 use clipper2_rust::{make_path64, FillRule, Paths64};
 
-use super::*;
-use crate::data_converters_2d::{create_vertex_storage, get_corrected_winding};
-use crate::VertexSourceToClipperPolygons;
+use clipper_library::*;
 
 /// A square `outer` across with a square hole `inner` across, both counter-clockwise.
 fn frame(outer: i64, inner: i64) -> Paths64 {
@@ -88,13 +86,6 @@ fn rust_only_corrected_winding_turns_the_hole_clockwise() -> Result<(), ClipperE
 }
 
 #[test]
-fn rust_only_vertex_storage_round_trips_through_polygons() {
-    let polygons = frame(100_000, 50_000);
-    let storage = create_vertex_storage(&polygons, 1000.0);
-    assert_eq!(storage.create_polygons(1000.0), polygons);
-}
-
-#[test]
 fn rust_only_booleans_drop_collinear_points_as_clipper_6_does() -> Result<(), ClipperError> {
     // Two squares side by side union to one rectangle; Clipper 6 drops the shared edge's ends.
     let left: Paths64 = vec![make_path64(&[0, 0, 10, 0, 10, 10, 0, 10])];
@@ -113,7 +104,7 @@ fn rust_only_coordinates_beyond_clipper_6s_range_are_an_error() {
     let square: Paths64 = vec![make_path64(&[0, 0, huge, 0, huge, huge, 0, huge])];
     let small: Paths64 = vec![make_path64(&[0, 0, 10, 0, 10, 10, 0, 10])];
     let expected = Some(ClipperError(
-        crate::clipper6::ClipperError::CoordinateOutsideRange,
+        clipper_library::clipper6::ClipperError::CoordinateOutsideRange,
     ));
 
     assert_eq!(square.union(&small, FillRule::EvenOdd).err(), expected);

@@ -5,8 +5,8 @@
 //! and free of zero-area faces, and every flat cap covers exactly the area the path fills (the
 //! checker and the paths are in `clean_solid_support.rs`).
 
-use agg_path::clipper_library::JoinType;
 use agg_path::VertexStorage;
+use clipper_library::JoinType;
 use polygon_mesh::processors::vertex_source_to_mesh::{extrude_bevelled, revolve};
 use polygon_mesh::Mesh;
 use std::f64::consts::FRAC_PI_2;

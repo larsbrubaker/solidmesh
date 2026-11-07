@@ -12,7 +12,7 @@ use super::clipper_statics::{execute, execute_tree, offset_closed_polygons};
 use super::int_point_extensions::int_point;
 use super::polygon_extensions::PolygonExtensions;
 use crate::curve_tolerance;
-use crate::rectangle_double::RectangleDouble;
+use vector_math::rectangle_double::RectangleDouble;
 
 /// Clipper's own default arc tolerance, in clipper units - what these helpers always used.
 pub const DEFAULT_ARC_TOLERANCE: f64 = 0.25;

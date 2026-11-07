@@ -5,8 +5,8 @@
 //!
 //! Clipper 6's classes are reference graphs (edges, output points, output records, poly nodes); here
 //! each kind lives in an arena `Vec` inside [`Clipper`] and the links are indices. Integer points
-//! are clipper2-rust's `Point64` (`x`/`y` as `i64`), which is what agg-path's `clipper_library`
-//! API already speaks; Clipper 6's `Int128` math is `i128`. Built with `use_lines` (open paths)
+//! are clipper2-rust's `Point64` (`x`/`y` as `i64`), which is what the crate root's
+//! helpers already speak; Clipper 6's `Int128` math is `i128`. Built with `use_lines` (open paths)
 //! and without `use_xyz`/`use_int32`.
 //!
 //! Files by responsibility: [`types`] (edges, out-records, enums, errors), `clipper_base`
@@ -41,6 +41,3 @@ pub use types::{
     ClipType, ClipperError, EndType, IntPoint, IntRect, JoinType, Path, Paths, PolyFillType,
     PolyType,
 };
-
-#[cfg(test)]
-mod tests;

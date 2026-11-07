@@ -12,8 +12,8 @@
 
 use std::collections::HashMap;
 
-use agg_path::clipper_library::{ClipperError, PolygonsExtensions};
 use clipper2_rust::{FillRule, Path64, Paths64, Point64};
+use clipper_library::{ClipperError, PolygonsExtensions};
 
 /// A ring point as a map key.
 type Key = (i64, i64);

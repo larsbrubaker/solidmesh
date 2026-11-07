@@ -7,12 +7,10 @@
 
 use std::fmt;
 
-use agg_path::clipper_library::{int_point, ClipperError, PolygonsExtensions};
-use agg_path::data_converters_2d::{
-    get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
-};
+use agg_path::data_converters_2d::{VertexSourceToClipperPolygons, DEFAULT_SCALING};
 use agg_path::vertex_source::VertexSource;
 use clipper2_rust::{FillRule, Path64};
+use clipper_library::{get_corrected_winding, int_point, ClipperError, PolygonsExtensions};
 use vector_math::math_helper::{range_0_to_tau, TAU};
 use vector_math::MathError;
 

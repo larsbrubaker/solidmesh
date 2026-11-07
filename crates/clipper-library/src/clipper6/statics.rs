@@ -1,7 +1,7 @@
 //! Clipper 6's static members: `Area`, `Orientation`, `PointInPolygon`,
 //! `GetBounds`, `ReversePaths`, `SimplifyPolygon(s)`, `MinkowskiSum`/`MinkowskiDiff`, and the
 //! PolyTree-to-paths walks. `CleanPolygon(s)` (a modified version) lives in
-//! `crate::clipper_library::clean_polygon`.
+//! `crate::clean_polygon`.
 
 use super::engine::Clipper;
 use super::poly_tree::PolyTree;

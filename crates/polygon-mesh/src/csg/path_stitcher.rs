@@ -7,8 +7,8 @@ use vector_math::{Matrix4X4, Vector3};
 
 use crate::processors::vertex_source_to_mesh::triangulate_faces;
 use crate::Mesh;
-use agg_path::clipper_library::{get_intersection, length_squared, Intersection};
 use agg_path::data_converters_2d::create_vertex_storage;
+use clipper_library::{get_intersection, length_squared, Intersection};
 
 fn distance_squared(a: Point64, b: Point64) -> i64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y))

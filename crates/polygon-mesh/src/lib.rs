@@ -10,7 +10,7 @@
 //! Mesh editing: vertex merging over a vertex BVH (`mesh_editing`), cutting faces and
 //! meshes by planes (`face_split`, `mesh_editing`), T-junction repair (`t_junctions`) and the
 //! face BSP tree (`processors::face_bsp_tree`), slicing a mesh into clipper2 integer polygons
-//! (`csg::slice_layer`, on agg-path's `clipper_library`) and walling loops back up (`csg::path_stitcher`).
+//! (`csg::slice_layer`, on `clipper_library`) and walling loops back up (`csg::path_stitcher`).
 //!
 //! The ray tracer (`ray_tracer`): traceables, hits, the BVH and its default builder,
 //! the shapes MatterCAD picks with, materials, solid box/sphere shapes and view-space CSG.

@@ -11,12 +11,10 @@
 
 use std::rc::Rc;
 
-use agg_path::clipper_library::{ClipperError, JoinType, PolygonsExtensions};
-use agg_path::data_converters_2d::{
-    get_corrected_winding, VertexSourceToClipperPolygons, DEFAULT_SCALING,
-};
+use agg_path::data_converters_2d::{VertexSourceToClipperPolygons, DEFAULT_SCALING};
 use agg_path::vertex_source::VertexSource;
 use clipper2_rust::Paths64;
+use clipper_library::{get_corrected_winding, ClipperError, JoinType, PolygonsExtensions};
 
 use crate::mesh::Mesh;
 use crate::processors::ring_loops::{simple_loops, without_crossings};

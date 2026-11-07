@@ -2,7 +2,7 @@
 //! License 1.0), and the `new Clipper()` +
 //! `Execute` pattern the extension methods share. Everything runs on the Clipper 6 port in
 //! [`crate::clipper6`]; this module adapts clipper2-rust's types (`Path64`, `FillRule`,
-//! `ClipType`, `PolyTree64`), which agg-path's polygon API speaks, to it. `CleanPolygon(s)` is
+//! `ClipType`, `PolyTree64`), which this crate's polygon helpers speak, to it. `CleanPolygon(s)` is
 //! in [`mod@super::clean_polygon`].
 
 use clipper2_rust::{ClipType, FillRule, JoinType, Path64, Paths64, PolyTree64, Rect64};

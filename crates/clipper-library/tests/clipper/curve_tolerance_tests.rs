@@ -1,6 +1,6 @@
 // The size rule every curve tolerance scales by.
 
-use agg_path::curve_tolerance::{for_size, scale_for};
+use clipper_library::curve_tolerance::{for_size, scale_for};
 
 /// Desk-size shapes keep EXACTLY the tolerance they always had.
 #[test]

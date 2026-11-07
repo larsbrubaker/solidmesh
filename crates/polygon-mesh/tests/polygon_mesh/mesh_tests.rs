@@ -2,10 +2,8 @@
 //! clipper polygons, and the dual contouring signed distance functions and dual contouring a
 //! box.
 
-use agg_path::clipper_library::{
-    create_from_string, ClipperError, Intersection, PolygonExtensions,
-};
 use clipper2_rust::Point64;
+use clipper_library::{create_from_string, ClipperError, Intersection, PolygonExtensions};
 use polygon_mesh::csg::{path_stitcher, slice_layer};
 use polygon_mesh::dual_contouring::{build_octree, generate_mesh_from_octree, Cylinder, Sdf};
 use polygon_mesh::processors::{face_bsp_tree, stl_processing};

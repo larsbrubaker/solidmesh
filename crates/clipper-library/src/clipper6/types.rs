@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-/// Clipper2-rust's `Point64`, the type agg-path's clipper API already uses.
+/// Clipper2-rust's `Point64`, the type the crate root's helpers already use.
 pub type IntPoint = clipper2_rust::Point64;
 pub type Path = Vec<IntPoint>;
 pub type Paths = Vec<Path>;

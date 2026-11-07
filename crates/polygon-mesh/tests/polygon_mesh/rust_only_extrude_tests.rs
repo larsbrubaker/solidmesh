@@ -3,8 +3,8 @@
 //! bands between rings that do not correspond point for point, which tess2 fills with a
 //! constrained Delaunay triangulation that adds no points.
 
-use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;
+use clipper_library::{ClipperError, JoinType};
 use polygon_mesh::processors::vertex_source_to_mesh::{extrude, extrude_bevelled};
 
 fn square(side: f64) -> VertexStorage {

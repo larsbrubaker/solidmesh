@@ -1,7 +1,7 @@
-// Cleaning a polygon with `agg_path::clipper_library::clean_polygon`.
+// Cleaning a polygon with `clipper_library::clean_polygon`.
 
-use agg_path::clipper_library::{clean_polygon, int_point, length as point_length};
 use clipper2_rust::{Path64, Point64};
+use clipper_library::{clean_polygon, int_point, length as point_length};
 use vector_math::math_helper::degrees_to_radians;
 
 #[test]

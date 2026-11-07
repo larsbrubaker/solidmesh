@@ -14,7 +14,7 @@ use vector_math::fixed_tie_sort::introspective_sort;
 use vector_math::{Matrix4X4, Plane, Quaternion, Vector2, Vector3};
 
 use crate::Mesh;
-use agg_path::clipper_library::{
+use clipper_library::{
     clean_polygons, int_point, length, length_squared, ClipperError, PolygonsExtensions,
 };
 

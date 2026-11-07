@@ -4,8 +4,8 @@
 //! `vertex_source_to_mesh::extrude_bevelled`, so they live with it here; the offset cases are in
 //! agg-path's `tests/agg/room_scale_offset_tolerance_tests.rs`.
 
-use agg_path::clipper_library::{ClipperError, JoinType};
 use agg_path::VertexStorage;
+use clipper_library::{ClipperError, JoinType};
 use polygon_mesh::processors::vertex_source_to_mesh::extrude_bevelled;
 use polygon_mesh::Mesh;
 

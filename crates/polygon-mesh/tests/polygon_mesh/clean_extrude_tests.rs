@@ -8,8 +8,8 @@
 //! The checker and the paths are shared with the other path-to-solid operations
 //! (`clean_solid_support.rs`).
 
-use agg_path::clipper_library::ClipperError;
 use agg_path::VertexStorage;
+use clipper_library::ClipperError;
 use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 
 use super::clean_solid_support::{
