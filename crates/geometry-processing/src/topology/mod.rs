@@ -9,7 +9,6 @@
 
 mod bevel_corner_group;
 pub mod bevel_corner_group_resolver;
-mod bevel_corner_mode;
 mod bevel_edge_group;
 pub mod bevel_edge_group_resolver;
 pub mod bevel_edge_readings;
@@ -30,7 +29,6 @@ mod tangent_chain_cache;
 
 pub use bevel_corner_group::BevelCornerGroup;
 pub use bevel_corner_group_resolver::BevelCornerGroupResolution;
-pub use bevel_corner_mode::BevelCornerMode;
 pub use bevel_edge_group::{BevelEdgeGroup, BevelSelectionKind};
 pub use bevel_edge_group_resolver::{BevelEdgeGroupResolution, MatchTolerances};
 pub use bevel_group::BevelGroup;

@@ -22,10 +22,7 @@ fn stepped_graph(mesh: &Mesh, budget: usize) -> (MeshEdgeGraph, usize) {
 }
 
 fn batman() -> Mesh {
-    let path = format!(
-        "{}/../../test-data/TestParts/Batman.stl",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let path = format!("{}/tests/fixtures/Batman.stl", env!("CARGO_MANIFEST_DIR"));
     stl_processing::load_file(std::path::Path::new(&path), &CancelToken::new(), None)
         .expect("Batman.stl loads")
 }

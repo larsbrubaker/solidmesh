@@ -4,9 +4,7 @@
 use std::sync::Arc;
 
 use geometry_processing::bevel::{bevel_advisory_codes, BevelAdvisory, BevelAdvisoryCode};
-use geometry_processing::topology::{
-    bevel_group_edits, BevelCornerMode, BevelEdgeGroup, BevelSelectionKind,
-};
+use geometry_processing::topology::{bevel_group_edits, BevelEdgeGroup, BevelSelectionKind};
 use vector_math::Vector3;
 
 #[test]
@@ -49,7 +47,6 @@ fn rust_only_edge_group_json_defaults_missing_members_and_ignores_old_sizes() {
     assert_eq!(back.selection_kind, BevelSelectionKind::FaceGroup);
     assert_eq!(back.curve_tolerance_degrees, 30.0);
     assert_eq!(back.source_item_id, None);
-    assert_eq!(BevelCornerMode::default(), BevelCornerMode::Angle);
 }
 
 #[test]

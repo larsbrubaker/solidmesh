@@ -3,7 +3,7 @@
 //! (`BooleanOptions::single_precision`): the kernel then never cuts a sliver too thin for f32 to
 //! hold. Without it the kernel stays exact, slivers included.
 //!
-//! The fixture (`test-data/TestMeshes/SinglePrecisionUnion`) is the helix and core of a three-sided,
+//! The fixture (`tests/fixtures/SinglePrecisionUnion`) is the helix and core of a three-sided,
 //! one-turn Threads object used as a hole, whose roots sit within an f32 step of the core. Format:
 //! "vertices faces", then one "x y z" per vertex (each an f32 value written as round-trip f64
 //! text, so exact), then one "v0 v1 v2" per face.
@@ -14,7 +14,7 @@ use vector_math::{Matrix4X4, Vector3, Vector3Float};
 
 fn load_fixture(name: &str) -> Mesh {
     let path = format!(
-        "{}/../../test-data/TestMeshes/SinglePrecisionUnion/{name}.txt",
+        "{}/tests/fixtures/SinglePrecisionUnion/{name}.txt",
         env!("CARGO_MANIFEST_DIR")
     );
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
