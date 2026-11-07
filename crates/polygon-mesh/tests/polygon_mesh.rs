@@ -49,5 +49,7 @@ mod sdf_and_rounded_box_tests;
 mod solid_checks;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
 mod stl_parse_yield_tests;
+#[path = "polygon_mesh/test_picture.rs"]
+mod test_picture;
 #[path = "polygon_mesh/transformed_bounds_exact_tests.rs"]
 mod transformed_bounds_exact_tests;

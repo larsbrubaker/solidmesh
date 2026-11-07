@@ -16,7 +16,6 @@ name = "geometry_processing"
 path = "src/lib.rs"
 
 [dependencies]
-agg-path = { path = "../agg-path" }
 # The Clipper 6 port and polygon helpers the bevel's shadow clip unions and tests footprints with.
 clipper-library = { path = "../clipper-library" }
 vector-math = { path = "../vector-math" }

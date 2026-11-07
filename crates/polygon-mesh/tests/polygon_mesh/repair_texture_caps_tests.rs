@@ -6,13 +6,13 @@
 
 use std::sync::Arc;
 
-use agg_path::image::ImageBuffer;
+use crate::test_picture::TestPicture;
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{FaceTextureData, Mesh};
 use vector_math::{Vector2Float, Vector3Float};
 
-fn picture() -> Arc<ImageBuffer> {
-    Arc::new(ImageBuffer::new(4, 4))
+fn picture() -> Arc<TestPicture> {
+    Arc::new(TestPicture::new(4, 4))
 }
 
 /// The UV every face gives a corner at `p`: one value per position, so a cap that took its
@@ -25,7 +25,7 @@ fn uv_at(p: Vector3Float) -> Vector2Float {
 }
 
 /// `mesh`'s face `index` textured with `image`, each corner's UV `uv_at` its position.
-fn texture_by_position(mesh: &mut Mesh, index: usize, image: &Arc<ImageBuffer>) {
+fn texture_by_position(mesh: &mut Mesh, index: usize, image: &Arc<TestPicture>) {
     let face = mesh.faces[index];
     let uv = |v: i32| uv_at(mesh.vertices[v as usize]);
     let data = FaceTextureData::new(Some(image.clone()), uv(face.v0), uv(face.v1), uv(face.v2));
@@ -62,7 +62,7 @@ fn is_bottom(mesh: &Mesh, index: usize) -> bool {
 }
 
 /// Asserts face `index` carries `image` with each corner's UV `uv_at` its position.
-fn assert_textured_by_position(mesh: &Mesh, index: usize, image: &Arc<ImageBuffer>) {
+fn assert_textured_by_position(mesh: &Mesh, index: usize, image: &Arc<TestPicture>) {
     let data = mesh
         .face_textures
         .get(&(index as i32))
@@ -179,7 +179,7 @@ fn a_cap_between_two_pictures_takes_the_one_most_corners_carry() {
     // Face 0 is the bare cap. Corner 0 touches only picture B (face 1, met first); corners 1 and 2
     // touch picture A (faces 2 and 3), so A covers more of the cap.
     let mut mesh = mesh_of(vertices, &[[0, 1, 2], [0, 3, 4], [1, 3, 5], [2, 4, 5]]);
-    let with = |image: &Arc<ImageBuffer>, uvs: [Vector2Float; 3]| {
+    let with = |image: &Arc<TestPicture>, uvs: [Vector2Float; 3]| {
         FaceTextureData::new(Some(image.clone()), uvs[0], uvs[1], uvs[2])
     };
     mesh.face_textures

@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_mesh_closure, surface_mixed_corner_run_out, surface_run_out_column_ends,
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceMixedCornerWall,
@@ -359,7 +359,7 @@ fn one_planned_edge(
 /// The L with its notch's far wall leaned in to 45 degrees: the step wall runs from (10, 10) out to
 /// (17, 17), so the void wedge at the reflex edge is half a right angle.
 fn a_sharp_notched_prism() -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     path.move_to(0.0, 0.0);
     path.line_to(20.0, 0.0);

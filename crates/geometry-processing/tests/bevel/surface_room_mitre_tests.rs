@@ -8,7 +8,7 @@
 //! regions are read with the helpers `surface_room_mitre_window_tests` reads its own notch with.
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomFootprint,
@@ -176,7 +176,7 @@ fn the_size_the_fit_accepts_is_the_size_that_closes_4_2() {
 /// A 40 by 20 rectangle with a V notched 8 mm into the middle of one side, extruded 10 tall. The
 /// apex of the notch is a corner of 296 degrees of material and stands 12 mm from the far side.
 fn notched_prism() -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     path.move_to(0.0, 0.0);
     path.line_to(15.0, 0.0);

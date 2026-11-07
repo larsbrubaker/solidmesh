@@ -5,11 +5,12 @@
 
 use std::collections::HashSet;
 
-use agg_path::VertexStorage;
 use geometry_processing::path::path_bevel::{self, Contour};
 use geometry_processing::path::path_segment_run::walk;
 use geometry_processing::path::{PathSegmentRunError, RunStopReason, SegmentRun};
 use vector_math::{math_helper, Vector2};
+
+use super::flattened_curve_path::FlattenedCurvePath;
 
 const RADIUS: f64 = 20.0;
 
@@ -44,8 +45,7 @@ fn circle72() -> Vec<Vector2> {
 fn flattened_quarter_circle() -> Contour {
     // the control point offset that makes a cubic bezier hug a circular arc: 4/3 tan(sweep / 4)
     let k = 4.0 / 3.0 * (std::f64::consts::PI / 4.0 / 4.0).tan();
-    let mut source = VertexStorage::new();
-    source.move_to(RADIUS, 0.0);
+    let mut source = FlattenedCurvePath::starting_at(RADIUS, 0.0);
     append_arc(&mut source, 0.0, std::f64::consts::PI / 4.0, k);
     append_arc(
         &mut source,
@@ -53,10 +53,10 @@ fn flattened_quarter_circle() -> Contour {
         std::f64::consts::PI / 2.0,
         k,
     );
-    path_bevel::cleaned_contours(&source).remove(0)
+    path_bevel::cleaned_contours(&[source.contour()]).remove(0)
 }
 
-fn append_arc(source: &mut VertexStorage, start_angle: f64, end_angle: f64, k: f64) {
+fn append_arc(source: &mut FlattenedCurvePath, start_angle: f64, end_angle: f64, k: f64) {
     let start = Vector2::new(start_angle.cos(), start_angle.sin()) * RADIUS;
     let end = Vector2::new(end_angle.cos(), end_angle.sin()) * RADIUS;
     let start_tangent = Vector2::new(-start_angle.sin(), start_angle.cos()) * RADIUS;

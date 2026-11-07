@@ -55,7 +55,7 @@ pub fn create_isosceles_prism(apex_angle_degrees: f64, length: f64, height: f64)
 /// A half disc of `radius` (its arc chorded into `segments`, closed by its diameter on the x axis),
 /// extruded `height` along z.
 pub fn create_arc_prism(radius: f64, height: f64, segments: i32) -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(radius, 0.0);
     for i in 1..=segments {
         let angle = std::f64::consts::PI * f64::from(i) / f64::from(segments);
@@ -226,7 +226,7 @@ pub fn create_rib_on_plate() -> Mesh {
 /// A `sides`-sided cylinder of `radius` and `height` about
 /// z, centred on the origin.
 pub fn create_cylinder(radius: f64, height: f64, sides: i32) -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(0.0, -height / 2.0);
     path.line_to(radius, -height / 2.0);
     path.line_to(radius, height / 2.0);
@@ -245,7 +245,7 @@ pub fn create_bore_block_with_chord_wall(sides: i32) -> Mesh {
     let block = polygon_mesh::solids::platonic_solids::create_cube(40.0, 40.0, 20.0);
     let bore = create_cylinder(8.0, 30.0, sides);
 
-    let mut lobe = agg_path::vertex_storage::VertexStorage::new();
+    let mut lobe = crate::path_solids::Outline::new();
     lobe.move_to(0.0, -6.0);
     lobe.line_to(12.0, -6.0);
     lobe.line_to(12.0, 6.0);
@@ -327,7 +327,7 @@ pub fn create_pyramid_pocket_prism(sides: i32, radius: f64, height: f64, apex: V
 /// A `sides`-sided frustum about z, `bottom_radius` at
 /// z = -height / 2 tapering to `top_radius` at +height / 2, closed at both ends.
 pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i32) -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(0.0, -height / 2.0);
     path.line_to(bottom_radius, -height / 2.0);
     path.line_to(top_radius, height / 2.0);
@@ -380,7 +380,7 @@ pub fn create_sheared_l_shaped_grid_prism(lean_degrees: f64, along_the_rim: bool
 /// An L cross section extruded 10 in z - five square
 /// corners and one reflex corner at (10, 10), which is the one concave edge of the solid.
 pub fn create_l_shaped_prism() -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(0.0, 0.0);
     path.line_to(20.0, 0.0);
     path.line_to(20.0, 10.0);
@@ -397,7 +397,7 @@ pub fn create_l_shaped_prism() -> Mesh {
 /// and its VOID wedge is 2 atan(1.5) = 112.62 degrees, at an angle chosen so every outline
 /// coordinate is an integer and nothing rounds on the way through Clipper.
 pub fn create_notched_prism() -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(0.0, 0.0);
     path.line_to(20.0, 0.0);
     path.line_to(20.0, 4.0);
@@ -424,7 +424,7 @@ pub fn create_notched_prism() -> Mesh {
 pub fn create_shallow_reflex_prism(turn_degrees: f64, height: f64) -> Mesh {
     let kink = 10.0 * (math_helper::degrees_to_radians(turn_degrees) / 2.0).tan();
 
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
     path.move_to(0.0, 0.0);
     path.line_to(20.0, 0.0);
     path.line_to(20.0, 20.0);

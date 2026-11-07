@@ -4,8 +4,8 @@
 //! a pair of cubes and an open tube) and the path-corner resolver (`bevel_corner_group_resolver`,
 //! on a square and a comb) - is driven here and pinned to its code and argument list.
 
-use agg_path::{VertexSource, VertexStorage};
 use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use geometry_processing::path::Contour;
 use geometry_processing::topology::bevel_corner_group_resolver::{
     create_from_corner, resolve, DEFAULT_DIRECTION_TOLERANCE_DEGREES,
     DEFAULT_DRIFT_FRACTION_OF_EXTENT,
@@ -49,14 +49,12 @@ fn comb(teeth: i32) -> Vec<Vector2> {
     points
 }
 
-fn closed_path(points: &[Vector2]) -> impl VertexSource {
-    let mut storage = VertexStorage::new();
-    storage.move_to_vector(points[0]);
-    for point in &points[1..] {
-        storage.line_to_vector(*point);
-    }
-    storage.close_polygon();
-    storage
+/// The points as one closed contour.
+fn closed_path(points: &[Vector2]) -> Vec<Contour> {
+    vec![Contour {
+        points: points.to_vec(),
+        is_closed: true,
+    }]
 }
 
 fn index_of_corner_at(corners: &PathCornerSet, position: Vector2) -> i32 {
@@ -78,8 +76,9 @@ fn double_arg(arg: &BevelAdvisoryArg) -> f64 {
 fn a_path_with_no_corners_fails_naming_the_bend_threshold() {
     const SHARPER_THAN_A_SQUARE: f64 = 100.0;
     let square = closed_path(&square(20.0));
-    let group = create_from_corner(&PathCornerSet::create(&square, BEND_THRESHOLD), 0).unwrap();
-    let no_corners = PathCornerSet::create(&square, SHARPER_THAN_A_SQUARE);
+    let group =
+        create_from_corner(&PathCornerSet::from_contours(&square, BEND_THRESHOLD), 0).unwrap();
+    let no_corners = PathCornerSet::from_contours(&square, SHARPER_THAN_A_SQUARE);
     assert_eq!(no_corners.count(), 0);
 
     let resolution = resolve(&group, &no_corners);
@@ -95,7 +94,7 @@ fn a_path_with_no_corners_fails_naming_the_bend_threshold() {
 
 #[test]
 fn a_corner_group_with_no_anchor_directions_fails_saying_so() {
-    let corners = PathCornerSet::create(&closed_path(&square(20.0)), BEND_THRESHOLD);
+    let corners = PathCornerSet::from_contours(&closed_path(&square(20.0)), BEND_THRESHOLD);
     let resolution = resolve(&BevelCornerGroup::default(), &corners);
     assert!(!resolution.is_resolved());
     assert_eq!(
@@ -110,11 +109,11 @@ fn a_corner_group_with_no_anchor_directions_fails_saying_so() {
 #[test]
 fn a_corner_nothing_matches_fails_quoting_the_gates_it_was_judged_by() {
     let square = square(20.0);
-    let corners = PathCornerSet::create(&closed_path(&square), BEND_THRESHOLD);
+    let corners = PathCornerSet::from_contours(&closed_path(&square), BEND_THRESHOLD);
     let group = create_from_corner(&corners, index_of_corner_at(&corners, Vector2::ZERO)).unwrap();
 
     let triangle: Vec<Vector2> = square[1..].to_vec();
-    let remaining = PathCornerSet::create(&closed_path(&triangle), BEND_THRESHOLD);
+    let remaining = PathCornerSet::from_contours(&closed_path(&triangle), BEND_THRESHOLD);
     let resolution = resolve(&group, &remaining);
     assert!(!resolution.is_resolved());
 
@@ -140,7 +139,7 @@ fn a_corner_nothing_matches_fails_quoting_the_gates_it_was_judged_by() {
 #[test]
 fn a_corner_two_corners_fit_equally_well_fails_quoting_both_scores() {
     let comb = comb(5);
-    let corners = PathCornerSet::create(&closed_path(&comb), BEND_THRESHOLD);
+    let corners = PathCornerSet::from_contours(&closed_path(&comb), BEND_THRESHOLD);
     let middle_tooth = Vector2::new(12.0, 5.0);
     let group = create_from_corner(&corners, index_of_corner_at(&corners, middle_tooth)).unwrap();
 
@@ -152,7 +151,7 @@ fn a_corner_two_corners_fit_equally_well_fails_quoting_both_scores() {
         .collect();
     let resolution = resolve(
         &group,
-        &PathCornerSet::create(&closed_path(&filed_off), BEND_THRESHOLD),
+        &PathCornerSet::from_contours(&closed_path(&filed_off), BEND_THRESHOLD),
     );
     assert!(!resolution.is_resolved());
 

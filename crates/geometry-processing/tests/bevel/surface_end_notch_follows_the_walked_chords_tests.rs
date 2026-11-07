@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::bevel_arc_chording;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
@@ -196,7 +196,7 @@ fn a_concave_rolled_seams_bead_cap_reaches_the_same_chords() {
 /// `create_arc_prism`, with the same wall and the same seam at (10, 0) and the material on the
 /// other side of it.
 fn boss_on_a_slab() -> Mesh {
-    let mut outline = VertexStorage::new();
+    let mut outline = Outline::new();
 
     outline.move_to(20.0, -20.0);
     outline.line_to(20.0, 0.0);

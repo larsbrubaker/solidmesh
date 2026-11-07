@@ -6,7 +6,7 @@
 //! the test classes here read; the barrel port and the edge bore are their own modules.
 
 use crate::path_solids::revolve;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use polygon_mesh::{FaceList, Mesh};
 use vector_math::{math_helper, Vector3, Vector3Float};
 
@@ -46,7 +46,7 @@ pub fn create_the_raked_fixture() -> Mesh {
 /// A plate `thickness` thick, centred on z = 0, with a bore of
 /// `radius` drawn with `sides` facets and `land` of plate outside it.
 pub fn create_plate_with_a_round_bore(sides: i32, radius: f64, thickness: f64, land: f64) -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
     path.move_to(radius, -thickness / 2.0);
     path.line_to(radius + land, -thickness / 2.0);
     path.line_to(radius + land, thickness / 2.0);

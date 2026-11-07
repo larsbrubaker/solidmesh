@@ -14,7 +14,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceBuildOptions, SurfaceEdgePlan, SurfaceLine, SurfaceStrip,
@@ -715,7 +715,7 @@ fn distance_to_the_chord(point: Vector3, from: Vector2, to: Vector2) -> f64 {
 /// back to where it started. `create_arc_prism` is this at 180 degrees; a shallower sweep is what
 /// makes the seam a NARROW wedge.
 fn segment_prism(radius: f64, height: f64, sweep_degrees: f64, segments: i32) -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
     let sweep = degrees_to_radians(sweep_degrees);
 
     path.move_to(radius, 0.0);

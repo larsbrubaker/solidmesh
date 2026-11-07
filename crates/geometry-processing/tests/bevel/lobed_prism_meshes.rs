@@ -4,7 +4,7 @@
 #![allow(dead_code)] // the fixture's whole surface, for the classes that read it
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use polygon_mesh::Mesh;
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::Vector2;
@@ -35,7 +35,7 @@ fn create_to(right_edge: f64) -> Mesh {
     let first = *outside.iter().min().expect("the disc crosses the wall");
     let last = *outside.iter().max().expect("the disc crosses the wall");
 
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
     path.move_to(0.0, 0.0);
     path.line_to_vector(crossing_at_the_side(first - 1, first));
     for corner in first..=last {

@@ -1,8 +1,8 @@
 # clipper-library: the Clipper 6.4.2 port (`clipper6`) and the integer polygon helpers on
 # clipper2-rust's `Point64`/`Path64`/`Paths64` that run it, the winding correction and the curve
 # tolerance size rule. std plus clipper2-rust (the integer types) and vector-math (the fixed-tie
-# sort and `RectangleDouble`); builds for wasm32-unknown-unknown. agg-path re-exports it, and the
-# mesh kernel (polygon-mesh, geometry-processing) uses it directly.
+# sort and `RectangleDouble`); builds for wasm32-unknown-unknown. MatterCAD's path model
+# re-exports it, and the mesh kernel (polygon-mesh, geometry-processing) uses it directly.
 [package]
 name = "clipper-library"
 description = "Clipper 6.4.2 port and integer polygon helpers for mattercad-rust"

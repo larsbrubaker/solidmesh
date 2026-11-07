@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
     SurfaceBuildOptions, SurfaceBuilt,
@@ -225,7 +225,7 @@ pub fn build(size: f64) -> (Mesh, Result<SurfaceBuilt, SurfaceBuildFailure>) {
 /// A half disc, drawn with `facets` chords on its arc and closed by its
 /// diameter, extruded along z. The corpus fixture's half cylinder in the kernel's own terms.
 pub fn half_disc_prism(facets: i32, radius: f64, height: f64) -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     for i in 0..=facets {
         let angle = std::f64::consts::PI * i as f64 / facets as f64;

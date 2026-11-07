@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomCut, SurfaceRoomFootprint,
@@ -282,7 +282,7 @@ pub fn the_cap(prism: &Mesh) -> FaceGroup {
 /// A 40 by 36 rectangle with a V notched 8 mm into the middle of one side and a tongue of void
 /// hanging 16 mm down over the other, extruded 10 tall.
 fn tongued_prism() -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     path.move_to(0.0, 0.0);
     path.line_to(15.0, 0.0);

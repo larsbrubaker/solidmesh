@@ -19,9 +19,6 @@ path = "src/lib.rs"
 
 [dependencies]
 vector-math = { path = "../vector-math" }
-# agg-path: the path model `VertexSourceToMesh` reads (`IVertexSource`, `VertexStorage`) and
-# DataConverters2D's path-to-polygon conversion.
-agg-path = { path = "../agg-path" }
 # The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
 # slicing, stitching, extrude and revolve share with DataConverters2D.
 clipper-library = { path = "../clipper-library" }

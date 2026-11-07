@@ -410,7 +410,7 @@ fn taken_whole(read: Result<Option<TheFaceBeyond>, BevelAdvisory>, because: &str
 /// A bench solid for the run-off reading: the prism of an outline whose `y = 0` side carries the
 /// chain edge, walked from `x = -5` to `x = 25`, with `far_boundary` walked back right to left.
 fn run_off_bench(far_boundary: &[Vector2]) -> Mesh {
-    let mut path = agg_path::vertex_storage::VertexStorage::new();
+    let mut path = crate::path_solids::Outline::new();
 
     path.move_to(-5.0, 0.0);
     path.line_to(25.0, 0.0);

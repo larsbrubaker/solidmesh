@@ -5,11 +5,11 @@
 //! `path_bevel_arcs::run_places_measured`, which is per thread, so other tests running beside it
 //! cannot disturb the count.
 
-use agg_path::{FlagsAndCommand, VertexSource, VertexStorage};
 use geometry_processing::path::path_bevel::{bevel, bevel_contour, cleaned_contours};
-use geometry_processing::path::{path_bevel_arcs, PathBevelSizeMode};
+use geometry_processing::path::{path_bevel_arcs, Contour, PathBevelSizeMode};
 use vector_math::{math_helper, Vector2};
 
+use super::flattened_curve_path::FlattenedCurvePath;
 use super::path_bevel_test_geometry::{
     angle_between_directions, arc_center, distance_to_polyline, inserted_arc, local_direction_at,
     position_along, self_intersects, sweep_about, tangent_distance,
@@ -37,9 +37,9 @@ fn bevel_plain(contour: &[Vector2], closed: bool, size: f64, segments: i32) -> V
     )
 }
 
-fn bevel_source(source: &VertexStorage, size: f64, segments: i32) -> VertexStorage {
+fn bevel_source(source: &FlattenedCurvePath, size: f64, segments: i32) -> Vec<Contour> {
     bevel(
-        source,
+        &[source.contour()],
         size,
         segments,
         10.0,
@@ -48,17 +48,15 @@ fn bevel_source(source: &VertexStorage, size: f64, segments: i32) -> VertexStora
     )
 }
 
-fn points_of(source: &dyn VertexSource) -> Vec<Vector2> {
-    source
-        .vertices()
-        .into_iter()
-        .filter(|v| v.command == FlagsAndCommand::MOVE_TO || v.is_line_to())
-        .map(|v| v.position)
+fn points_of(contours: &[Contour]) -> Vec<Vector2> {
+    contours
+        .iter()
+        .flat_map(|contour| contour.points.iter().copied())
         .collect()
 }
 
-fn flattened_points(source: &VertexStorage) -> Vec<Vector2> {
-    cleaned_contours(source).remove(0).points
+fn flattened_points(source: &FlattenedCurvePath) -> Vec<Vector2> {
+    cleaned_contours(&[source.contour()]).remove(0).points
 }
 
 #[test]
@@ -102,16 +100,15 @@ fn a_nan_vertex_costs_only_itself() {
 
 const CURVE_RADIUS: f64 = 20.0;
 
-fn quarter_circle() -> VertexStorage {
+fn quarter_circle() -> FlattenedCurvePath {
     let k = 4.0 / 3.0 * (PI / 4.0 / 4.0).tan();
-    let mut source = VertexStorage::new();
-    source.move_to(CURVE_RADIUS, 0.0);
+    let mut source = FlattenedCurvePath::starting_at(CURVE_RADIUS, 0.0);
     append_arc(&mut source, 0.0, PI / 4.0, k);
     append_arc(&mut source, PI / 4.0, PI / 2.0, k);
     source
 }
 
-fn append_arc(source: &mut VertexStorage, start_angle: f64, end_angle: f64, k: f64) {
+fn append_arc(source: &mut FlattenedCurvePath, start_angle: f64, end_angle: f64, k: f64) {
     let start = Vector2::new(start_angle.cos(), start_angle.sin()) * CURVE_RADIUS;
     let end = Vector2::new(end_angle.cos(), end_angle.sin()) * CURVE_RADIUS;
     let start_tangent = Vector2::new(-start_angle.sin(), start_angle.cos()) * CURVE_RADIUS;
@@ -132,9 +129,8 @@ fn a_curve_survives_the_bevel_as_a_curve() {
 
 const CORNER_CURVE_RADIUS: f64 = 20.0;
 
-fn straight_into_quarter_circle() -> VertexStorage {
-    let mut source = VertexStorage::new();
-    source.move_to(0.0, -30.0);
+fn straight_into_quarter_circle() -> FlattenedCurvePath {
+    let mut source = FlattenedCurvePath::starting_at(0.0, -30.0);
     source.line_to(0.0, 0.0);
     let center = Vector2::new(0.0, CORNER_CURVE_RADIUS);
     append_arc_about(
@@ -149,7 +145,7 @@ fn straight_into_quarter_circle() -> VertexStorage {
 }
 
 fn append_arc_about(
-    source: &mut VertexStorage,
+    source: &mut FlattenedCurvePath,
     center: Vector2,
     radius: f64,
     start_angle: f64,
@@ -295,9 +291,8 @@ fn a_polygon_bevels_exactly_as_before() {
     assert_matches(&bevel_plain(&hexagon, true, 2.5, 3), &expected_hexagon);
 }
 
-fn two_corners_on_one_arc() -> VertexStorage {
-    let mut source = VertexStorage::new();
-    source.move_to(0.0, -10.0);
+fn two_corners_on_one_arc() -> FlattenedCurvePath {
+    let mut source = FlattenedCurvePath::starting_at(0.0, -10.0);
     source.line_to(0.0, 0.0);
     let center = Vector2::new(0.0, 4.0);
     append_arc_about(&mut source, center, 4.0, -PI / 2.0, -PI / 4.0);
@@ -385,9 +380,8 @@ fn the_arc_radius_is_exactly_what_was_asked() {
     assert_near((arc[0] - center).length(), RADIUS, 1e-9);
 }
 
-fn two_arcs_meeting_at_a_corner() -> VertexStorage {
-    let mut source = VertexStorage::new();
-    source.move_to(-10.0, 10.0);
+fn two_arcs_meeting_at_a_corner() -> FlattenedCurvePath {
+    let mut source = FlattenedCurvePath::starting_at(-10.0, 10.0);
     let big = Vector2::new(0.0, 10.0);
     let small = Vector2::new(5.0, 0.0);
     append_arc_about(&mut source, big, 10.0, PI, PI * 1.25);
@@ -424,9 +418,8 @@ fn two_curves_meeting_at_a_corner_fillet_tangent_to_both() {
     assert!(math_helper::radians_to_degrees(end_misalignment) < 0.5);
 }
 
-fn two_corners_inside_one_arc() -> VertexStorage {
-    let mut source = VertexStorage::new();
-    source.move_to(0.0, -30.0);
+fn two_corners_inside_one_arc() -> FlattenedCurvePath {
+    let mut source = FlattenedCurvePath::starting_at(0.0, -30.0);
     source.line_to(0.0, 0.0);
     let center = Vector2::new(0.0, -4.0);
     append_arc_about(&mut source, center, 4.0, PI / 2.0, PI / 4.0);
@@ -471,7 +464,7 @@ fn a_radius_too_big_for_its_curved_run_shrinks_to_what_fits() {
 fn a_smooth_run_gets_no_beveled_corners() {
     let source = quarter_circle();
     let beveled = bevel_source(&source, 0.5, 4);
-    let flattened_count: usize = cleaned_contours(&source)
+    let flattened_count: usize = cleaned_contours(&[source.contour()])
         .iter()
         .map(|contour| contour.points.len())
         .sum();

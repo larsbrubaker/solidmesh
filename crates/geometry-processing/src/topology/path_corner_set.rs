@@ -5,8 +5,9 @@
 //! [`crate::path::path_bevel::cleaned_contours`] and decided by the bevel's own candidate test,
 //! so the corners offered in the viewport are by construction exactly the vertices the bevel
 //! will consider. [`super::bevel_corner_group_resolver`] matches stored corner groups in it.
+//! It is built from the same flattened contours the bevel is handed (the app flattens its paths
+//! for both in mattercad-geometry).
 
-use agg_path::VertexSource;
 use vector_math::{ieee_math, math_helper, Vector2};
 
 use crate::path::path_bevel::{self, Contour};
@@ -57,9 +58,10 @@ impl PathCornerSet {
         self.corners.len()
     }
 
-    /// Finds the corners of a path at a bend threshold.
-    pub fn create(source: &dyn VertexSource, bend_threshold_degrees: f64) -> PathCornerSet {
-        let contours = path_bevel::cleaned_contours(source);
+    /// Finds the corners of a path's contours (flattened, as [`path_bevel::bevel`] is handed
+    /// them) at a bend threshold.
+    pub fn from_contours(contours: &[Contour], bend_threshold_degrees: f64) -> PathCornerSet {
+        let contours = path_bevel::cleaned_contours(contours);
         let mut corners = Vec::new();
         let mut minimum = Vector2::new(f64::MAX, f64::MAX);
         let mut maximum = Vector2::new(f64::MIN, f64::MIN);

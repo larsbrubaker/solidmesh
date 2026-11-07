@@ -4,7 +4,7 @@
 use std::f64::consts::TAU;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
 use polygon_mesh::solids::platonic_solids;
@@ -14,7 +14,7 @@ use vector_math::{Matrix4X4, Vector2, Vector3};
 /// A regular prism drawn with `sides` chords, its vertices exactly on the circle so a fit of them
 /// has an exact answer to find, extruded along z about the origin.
 pub fn create_polygon_prism(sides: i32, radius: f64, height: f64) -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     for i in 0..sides {
         let angle = TAU * i as f64 / sides as f64;

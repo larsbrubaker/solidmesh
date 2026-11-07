@@ -3,7 +3,7 @@
 //! tool carries perfectly well is left exactly as it was.
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::bevel_chain_sweep::{self, BevelSweptSection};
 use geometry_processing::bevel::BevelAdvisoryCode;
@@ -144,7 +144,7 @@ fn rim(part: &Mesh, top: f64) -> BevelSweptChain {
 
 /// A square prism, built the same way the arc prism is.
 fn box_prism(side: f64, height: f64) -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     path.move_to(0.0, 0.0);
     path.line_to(side, 0.0);

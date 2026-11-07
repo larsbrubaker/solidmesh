@@ -4,9 +4,8 @@
 //! `a_reflex_corner_is_filleted_on_the_outside_of_the_turn` runs both windings inside
 //! the one test.
 
-use agg_path::{FlagsAndCommand, VertexSource, VertexStorage};
 use geometry_processing::path::path_bevel::{bevel, bevel_contour};
-use geometry_processing::path::PathBevelSizeMode;
+use geometry_processing::path::{Contour, PathBevelSizeMode};
 use vector_math::Vector2;
 
 use super::path_bevel_test_geometry::{arc_center, tangent_distance};
@@ -279,23 +278,26 @@ fn a_repeated_mid_path_vertex_does_not_survive_the_bevel() {
     assert_eq!(beveled, plain);
 }
 
-/// The drawn points of a beveled path: its MoveTo and LineTo positions.
-fn drawn_points(path: &VertexStorage) -> Vec<Vector2> {
-    path.vertices()
-        .into_iter()
-        .filter(|v| v.command == FlagsAndCommand::MOVE_TO || v.is_line_to())
-        .map(|v| v.position)
+/// Every point of every beveled contour, in order.
+fn drawn_points(contours: &[Contour]) -> Vec<Vector2> {
+    contours
+        .iter()
+        .flat_map(|contour| contour.points.iter().copied())
         .collect()
 }
 
 #[test]
 fn an_open_contour_that_ends_where_it_started_keeps_its_last_edge() {
-    let mut source = VertexStorage::new();
-    source.move_to(0.0, 0.0);
-    source.line_to(20.0, 0.0);
-    source.line_to(20.0, 20.0);
-    source.line_to(0.0, 20.0);
-    source.line_to(0.0, 0.0);
+    let source = [Contour {
+        points: vec![
+            Vector2::new(0.0, 0.0),
+            Vector2::new(20.0, 0.0),
+            Vector2::new(20.0, 20.0),
+            Vector2::new(0.0, 20.0),
+            Vector2::new(0.0, 0.0),
+        ],
+        is_closed: false,
+    }];
     const SEGMENTS: usize = 4;
     let beveled = bevel(
         &source,
@@ -309,7 +311,7 @@ fn an_open_contour_that_ends_where_it_started_keeps_its_last_edge() {
     assert_eq!(points.len(), 3 * (SEGMENTS + 1) + 2);
     assert_eq!(points[0], Vector2::new(0.0, 0.0));
     assert_eq!(points[points.len() - 1], Vector2::new(0.0, 0.0));
-    assert!(!beveled.vertices().iter().any(|v| v.is_close()));
+    assert!(!beveled.iter().any(|contour| contour.is_closed));
 }
 
 #[test]
@@ -332,16 +334,21 @@ fn a_repeated_closing_vertex_does_not_become_a_stray_point() {
 }
 
 #[test]
-fn beveling_a_vertex_source_keeps_each_contours_openness() {
-    let mut source = VertexStorage::new();
-    source.move_to(0.0, 0.0);
-    source.line_to(20.0, 0.0);
-    source.line_to(20.0, 20.0);
-    source.line_to(0.0, 20.0);
-    source.close_polygon();
-    source.move_to(40.0, 0.0);
-    source.line_to(50.0, 0.0);
-    source.line_to(50.0, 10.0);
+fn beveling_contours_keeps_each_contours_openness() {
+    let source = [
+        Contour {
+            points: square(20.0),
+            is_closed: true,
+        },
+        Contour {
+            points: vec![
+                Vector2::new(40.0, 0.0),
+                Vector2::new(50.0, 0.0),
+                Vector2::new(50.0, 10.0),
+            ],
+            is_closed: false,
+        },
+    ];
     const SEGMENTS: usize = 4;
     let beveled = bevel(
         &source,
@@ -351,15 +358,11 @@ fn beveling_a_vertex_source_keeps_each_contours_openness() {
         None,
         PathBevelSizeMode::Radius,
     );
-    let vertices = beveled.vertices();
+    assert_eq!(beveled.len(), 2);
     assert_eq!(
-        vertices
-            .iter()
-            .filter(|v| v.command == FlagsAndCommand::MOVE_TO)
-            .count(),
-        2
+        beveled.iter().filter(|contour| contour.is_closed).count(),
+        1
     );
-    assert_eq!(vertices.iter().filter(|v| v.is_close()).count(), 1);
     assert_eq!(
         drawn_points(&beveled).len(),
         4 * (SEGMENTS + 1) + (SEGMENTS + 1 + 2)

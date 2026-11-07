@@ -13,12 +13,17 @@
 //!
 //! A vertex selection is `Option<&dyn Fn(usize, usize, Vector2) -> bool>` (`None` selects all):
 //! contour ordinal, index within that contour, position.
+//!
+//! The input is plain [`Contour`]s, already flattened: a caller with curves flattens them first,
+//! as finely as it wants its corners judged (the bends of a finely flattened curve fall below any
+//! reasonable bend threshold, so how fine decides what a corner is as much as smoothness). The
+//! app's paths are flattened, and the beveled contours drawn back into a path, in
+//! mattercad-geometry.
 
 // The long way round: `!(x > 0)` is true for NaN where `x <= 0` is not, and that is
 // how a NaN size, radius or angle declines a corner instead of slipping through.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use agg_path::{FlagsAndCommand, FlattenCurves, VertexSource, VertexStorage};
 use vector_math::{ieee_math, math_helper, Vector2};
 
 use super::path_bevel_arcs;
@@ -63,56 +68,38 @@ pub const MINIMUM_EDGE_LENGTH: f64 = 1e-10;
 /// An interior angle below this is a cusp, with no arc inscribed in it.
 pub const MINIMUM_INTERIOR_ANGLE: f64 = 1e-6;
 
-/// How finely a curved source is flattened before it is beveled: 1000, as the rest of the path
-/// pipeline uses, rather than agg's default of 1 (half a millimetre of chord error).
-const FLATTENING_RESOLUTION_SCALE: f64 = 1000.0;
-
-/// Bevels the corners of every contour in the source.
+/// Bevels the corners of every contour: one beveled contour out for each one in, open or closed
+/// as it came. A contour's position in `contours` is the contour ordinal the selection is told.
 ///
 /// `size` is the arc radius in Radius mode and the setback in TangentDistance mode; corners get
 /// less where there is not room. `segments` is line segments per corner (one gives the chamfer
-/// chord).
+/// chord). Only an empty contour comes back empty.
 pub fn bevel(
-    source: &dyn VertexSource,
+    contours: &[Contour],
     size: f64,
     segments: i32,
     bend_threshold_degrees: f64,
     vertex_selection: VertexSelection<'_>,
     size_mode: PathBevelSizeMode,
-) -> VertexStorage {
-    let mut output = VertexStorage::new();
-
-    let contours = extract_contours(source);
-
-    for (contour_index, contour) in contours.iter().enumerate() {
-        // a zero size still comes through here and is rebuilt as it was (flattened)
-        let beveled = bevel_contour(
-            &contour.points,
-            contour.is_closed,
-            size,
-            segments,
-            bend_threshold_degrees,
-            vertex_selection,
-            size_mode,
-            contour_index,
-        );
-
-        if beveled.is_empty() {
-            continue;
-        }
-
-        output.move_to_vector(beveled[0]);
-
-        for point in &beveled[1..] {
-            output.line_to_vector(*point);
-        }
-
-        if contour.is_closed {
-            output.close_polygon();
-        }
-    }
-
-    output
+) -> Vec<Contour> {
+    contours
+        .iter()
+        .enumerate()
+        .map(|(contour_index, contour)| Contour {
+            // a zero size still comes through here and is handed back as it was
+            points: bevel_contour(
+                &contour.points,
+                contour.is_closed,
+                size,
+                segments,
+                bend_threshold_degrees,
+                vertex_selection,
+                size_mode,
+                contour_index,
+            ),
+            is_closed: contour.is_closed,
+        })
+        .collect()
 }
 
 /// Bevels one contour. `closed` false is a polyline, whose two
@@ -289,13 +276,12 @@ fn share_of_run(run_length: f64, tangent_dist: f64, neighbor_tangent_dist: f64) 
     }
 }
 
-/// The contours of a path exactly as a bevel sees them: flattened, with the vertices that carry
-/// no geometry taken out. One entry per contour, including
-/// those too short to have a corner, because the position in this list is the contour ordinal
-/// the selection is told.
-pub fn cleaned_contours(source: &dyn VertexSource) -> Vec<Contour> {
-    extract_contours(source)
-        .into_iter()
+/// The contours exactly as a bevel sees them: with the vertices that carry no geometry taken
+/// out. One entry per contour, including those too short to have a corner, because the position
+/// in this list is the contour ordinal the selection is told.
+pub fn cleaned_contours(contours: &[Contour]) -> Vec<Contour> {
+    contours
+        .iter()
         .map(|contour| Contour {
             points: clean_contour(&contour.points, contour.is_closed),
             is_closed: contour.is_closed,
@@ -519,48 +505,4 @@ pub(crate) fn next_index(i: usize, vertex_count: usize, closed: bool) -> i64 {
     } else {
         i as i64 + 1
     }
-}
-
-/// Splits the path into contours, keeping for each whether it was closed. Flattened at
-/// [`FLATTENING_RESOLUTION_SCALE`], which decides what a corner is as much as smoothness: the
-/// bends of a finely flattened curve fall below any reasonable bend threshold.
-fn extract_contours(source: &dyn VertexSource) -> Vec<Contour> {
-    let mut contours: Vec<Contour> = Vec::new();
-
-    let mut flattened = FlattenCurves::new(Box::new(VertexStorage::from_source(source)));
-    flattened.set_resolution_scale(FLATTENING_RESOLUTION_SCALE);
-
-    // the index of the contour being added to, if any
-    let mut current: Option<usize> = None;
-
-    for vertex_data in flattened.vertices() {
-        if vertex_data.command == FlagsAndCommand::MOVE_TO || vertex_data.is_line_to() {
-            if vertex_data.command == FlagsAndCommand::MOVE_TO {
-                // a MoveTo always starts a new contour
-                current = None;
-            }
-
-            let index = match current {
-                Some(index) => index,
-                None => {
-                    contours.push(Contour::default());
-                    contours.len() - 1
-                }
-            };
-            current = Some(index);
-
-            contours[index].points.push(vertex_data.position);
-        } else if vertex_data.command != FlagsAndCommand::FLAG_NONE {
-            // the close vertex is the only thing that says the contour was closed
-            if vertex_data.is_close() {
-                if let Some(index) = current {
-                    contours[index].is_closed = true;
-                }
-            }
-
-            current = None;
-        }
-    }
-
-    contours
 }

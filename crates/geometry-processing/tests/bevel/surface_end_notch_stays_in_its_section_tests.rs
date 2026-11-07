@@ -14,7 +14,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 use crate::path_solids::extrude;
-use agg_path::vertex_storage::VertexStorage;
+use crate::path_solids::Outline;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
@@ -199,7 +199,7 @@ fn coarse_lipped_prism() -> Mesh {
 /// A 20 square prism with a 6 by 5 tab on its `y = 0` side, 10 tall. The tab is what makes the
 /// cap carry on past the rim the corner at `(0, 0)` stands on.
 fn tabbed_prism() -> Mesh {
-    let mut path = VertexStorage::new();
+    let mut path = Outline::new();
 
     path.move_to(0.0, 0.0);
     path.line_to(10.0, 0.0);

@@ -4,16 +4,16 @@
 
 use std::sync::{Arc, OnceLock};
 
-use agg_path::image::ImageBuffer;
+use crate::test_picture::TestPicture;
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{FaceTextureData, Mesh};
 use vector_math::Color;
 use vector_math::{Matrix4X4, Plane, Vector2Float, Vector3, Vector3Float};
 
 /// One shared 4 x 4 image, so every texture entry in a test points at the same buffer.
-fn test_texture() -> Arc<ImageBuffer> {
-    static TEXTURE: OnceLock<Arc<ImageBuffer>> = OnceLock::new();
-    Arc::clone(TEXTURE.get_or_init(|| Arc::new(ImageBuffer::new(4, 4))))
+fn test_texture() -> Arc<TestPicture> {
+    static TEXTURE: OnceLock<Arc<TestPicture>> = OnceLock::new();
+    Arc::clone(TEXTURE.get_or_init(|| Arc::new(TestPicture::new(4, 4))))
 }
 
 fn uv(x: f64, y: f64) -> Vector2Float {
