@@ -1,10 +1,10 @@
 //! Rust-only checks of the first leaf cluster of the bevel core (`BevelCornerFaceRing`,
-//! `BevelCreaseMerge`, `BevelEndCap`, `BevelConstructionMode`). The whole-build tests also cover
+//! `BevelCreaseMerge`, `BevelEndCap`). The whole-build tests also cover
 //! them; these pin the leaf behaviour alone.
 
 use geometry_processing::bevel::bevel_corner_face_ring::{try_order, try_order_at_vertex};
 use geometry_processing::bevel::bevel_crease_merge::merge;
-use geometry_processing::bevel::{BevelConstructionMode, BevelEndCap};
+use geometry_processing::bevel::BevelEndCap;
 use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids;
 use vector_math::Vector3;
@@ -74,19 +74,4 @@ fn rust_only_an_end_cap_slides_a_profile_point_onto_its_plane() {
     assert_eq!(slide, 3.5);
 
     assert!(!BevelEndCap::default().is_capped());
-}
-
-#[test]
-fn rust_only_the_construction_mode_saves_by_name() {
-    assert_eq!(
-        BevelConstructionMode::default(),
-        BevelConstructionMode::Boolean
-    );
-    assert_eq!(
-        serde_json::to_string(&BevelConstructionMode::Surface).unwrap(),
-        "\"Surface\""
-    );
-    let read: BevelConstructionMode = serde_json::from_str("\"Boolean\"").unwrap();
-    assert_eq!(read, BevelConstructionMode::Boolean);
-    assert_eq!(BevelConstructionMode::Surface.to_string(), "Surface");
 }

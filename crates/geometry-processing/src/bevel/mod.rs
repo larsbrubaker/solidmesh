@@ -5,7 +5,7 @@
 //!   say about itself ([`BevelRebuildAdvisories`]) and what each group did on it
 //!   ([`BevelGroupResult`], [`BevelRebuildResults`], [`bevel_group_failures`]), and the rebuild's
 //!   boolean budget ([`bevel_rebuild_step_budget`]).
-//! - **Tools and sweeps.** The construction mode ([`BevelConstructionMode`]), the profile and
+//! - **Tools and sweeps.** The profile and
 //!   frame an edge's tool is drawn in ([`bevel_edge_tool_builder`]), arc chording
 //!   ([`bevel_arc_chording`]), the cross-section ear clip ([`bevel_profile_polygon`]), the
 //!   analytic round ([`BevelRoundDescriptor`]), a run's taper ([`BevelRunTaper`]), one edge to one
@@ -37,7 +37,7 @@
 //!   ([`bevel_interrupted_crease`]), the second pass's crease merge ([`bevel_crease_merge`]) and
 //!   run plan ([`BevelSecondPassRunPlan`]) and the pass itself, re-beading the concave creases on
 //!   the cut part ([`bevel_second_pass`]), the shadow clips' obstructions and apply step
-//!   ([`bevel_shadow_clip`], [`bevel_shadow_clip_applier`]), the T-vertex repair
+//!   ([`bevel_shadow_clip`]), the T-vertex repair
 //!   ([`bevel_t_vertex_slivers`]), the sliver recut ([`bevel_sliver_collapse`]), the published
 //!   mesh's cleaning ([`bevel_published_mesh`]), the working mesh's verdict cache
 //!   ([`bevel_working_mesh`]) and one mesh state prepared for picking ([`BevelPickData`]).
@@ -66,7 +66,6 @@ pub mod bevel_chain_sweep;
 pub mod bevel_chain_sweep_mesh;
 pub mod bevel_chain_sweep_rings;
 pub mod bevel_chain_sweep_sections;
-mod bevel_construction_mode;
 pub mod bevel_corner_face_ring;
 pub mod bevel_corner_handover;
 pub mod bevel_corner_patch;
@@ -117,7 +116,6 @@ pub mod bevel_second_pass;
 pub mod bevel_second_pass_run_plan;
 pub mod bevel_shadow_body;
 pub mod bevel_shadow_clip;
-pub mod bevel_shadow_clip_applier;
 pub mod bevel_shared_edges;
 pub mod bevel_sliver_collapse;
 pub mod bevel_source_hull;
@@ -147,7 +145,6 @@ pub use bevel_bead_batch::BevelBeadBatch;
 pub use bevel_chain_end_cap::BevelChainEnds;
 pub use bevel_chain_linker::BevelSweptChain;
 pub use bevel_chain_sweep::BevelSweptSection;
-pub use bevel_construction_mode::BevelConstructionMode;
 pub use bevel_corner_face_ring::CornerFaceRing;
 pub use bevel_corner_patch::{BevelCornerPatch, BevelCornerPatchSet};
 pub use bevel_corner_voids::BevelCornerVoids;
