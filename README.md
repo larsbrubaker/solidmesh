@@ -24,6 +24,9 @@ mattercad-rust depends on them by path. From then on the work happens here: resu
 only, the fillet orchestration moving in from the app, the public API, and publishing to
 crates.io.
 
+What is here already is the workspace the crates move into: the repository gates
+(`crates/workspace-gates`), the pinned toolchain, lint and test settings, and CI.
+
 ## Planned crates
 
 | Crate | What it holds | Comes from (mattercad-rust) |
@@ -42,7 +45,32 @@ crates.io.
   refusal that says why, with the largest size that would have worked where there is one.
 - **Errors are values.** Library code returns `Result`s and never panics on input.
 
+## Building
+
+The crates depend on three sibling libraries by path, so check them out beside this repository:
+
+```
+<any folder>/
+  solidmesh/       github.com/larsbrubaker/solidmesh
+  manifold-rust/   github.com/larsbrubaker/manifold-rust
+  clipper2-rust/   github.com/larsbrubaker/clipper2-rust
+  tess2-rust/      github.com/larsbrubaker/tess2-rust
+```
+
+`rust-toolchain.toml` pins the Rust version (rustup installs it on first use). From
+`solidmesh/`:
+
+```
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo nextest run --workspace     # or: cargo test --workspace
+```
+
+The tests include the repository gates (file headers and size, Markdown placement, permissive
+licenses and pure-Rust dependencies, the browser-safe clock); CI runs the same commands plus a
+`wasm32-unknown-unknown` build of every library crate.
+
 ## License
 
-BSD-2-Clause ([LICENSE](LICENSE)). Third-party code is listed in `THIRD_PARTY_NOTICES.md` as it
-arrives.
+BSD-2-Clause ([LICENSE](LICENSE)). Third-party code the crates adapt is listed, by the crate
+that carries it, in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

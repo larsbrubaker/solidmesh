@@ -1,0 +1,107 @@
+# cargo-nextest settings for plain `cargo nextest run --workspace` and CI's test job
+# (`.github/workflows/ci.yml`, the `ci` profile below).
+#
+# nextest runs every test in its own process and test binaries in parallel, so the suite's wall
+# time is about its slowest test rather than the sum of its binaries. Tests that change
+# process-wide state still serialize themselves with their binary's lock (the bevel binary's
+# meter lock, `crates/geometry-processing/tests/bevel/meter_lock.rs`), which is harmless when each
+# test has a process of its own.
+#
+# How every crate lays its tests out: an area is one test binary, `crates/<crate>/tests/<area>.rs`,
+# which pulls its files in with `#[path = "<area>/<file>.rs"] mod <file>;`, so a binary's tests
+# share one build and one link; a unit test that needs private access lives in `src/**/tests.rs`
+# beside the code. A test is named for the behaviour it pins.
+#
+# The overrides below are for geometry-processing's bevel binary (`tests/bevel.rs`), whose tests
+# all sit under its `level_line::` module, the only one by that name in the workspace. They filter
+# by test name alone: nextest refuses a `binary(...)` term that matches no binary, and the
+# filters must load before the kernel crates move in; a test filter that matches nothing is
+# allowed.
+
+[profile.default]
+# One test per logical CPU.
+test-threads = "num-cpus"
+# Report a test as slow after 60 s and stop it after 3 such periods, so a hung test fails within
+# 3 minutes instead of stalling the run. Apart from the bevel cross-checks below, the slowest
+# correct test takes under 25 s on a machine loaded by other builds.
+slow-timeout = { period = "60s", terminate-after = 3 }
+# Run every test even after a failure, so one run reports all of them.
+fail-fast = false
+
+# Every run's JUnit report, each test's time in it, at target/nextest/default/junit.xml (replaced
+# by the next run): where the run's time went, binary by binary.
+[profile.default.junit]
+path = "junit.xml"
+
+# The bevel kernel's brute-force cross-checks (`chain_field_tests`) are the suite's slowest tests:
+# the slowest took 164 s while other builds loaded the machine (load average 30 on 10 cores),
+# too close to the 3-minute limit. They get a longer leash (6 minutes) than the 3-minute hung-test
+# limit everything else has.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::chain_field_tests::/)'
+slow-timeout = { period = "60s", terminate-after = 6 }
+
+# The work budget's timing tests: their wall-clock limits (a cancel reaching a large hole fill
+# within a fifth of a second, watching a build costing almost nothing) only mean something when
+# the machine isn't busy with other tests, so each runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(=level_line::work_budget_tests::watching_a_build_costs_almost_nothing) | test(=level_line::work_budget_tests::cancel_reaches_a_large_hole_fill_within_a_fifth_of_a_second)'
+threads-required = "num-test-threads"
+
+# The many-chain build cost and needle repair tests switch and read the bevel meter over builds of
+# some seconds, so each runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::many_chain_build_cost_tests::/) | test(/^level_line::needle_repair_tests::/)'
+threads-required = "num-test-threads"
+
+# The needle cascade meter tests (gated on LEVELLINE_COST=1): the needle meter and the field
+# counters it reads are meant to count one build alone, and its minutes-long build is timed, so
+# each test runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::needle_cascade_meter_tests::/)'
+threads-required = "num-test-threads"
+
+# The input needle strip tests bound the work a strip removal and a build spend, so each runs
+# with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::input_needle_strip_tests::/)'
+threads-required = "num-test-threads"
+
+# The chain field speed tests time a drag's builds against a wall-clock hang guard and print the
+# field counters, so each runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::chain_field_speed_tests::/)'
+threads-required = "num-test-threads"
+
+# The measurement modules (each gated on its own run variable, and a plain run returns at once):
+# bevel ends, bevel invariants, corner setback, corner volume, cube corner and around-center kink.
+# Their builds are timed, so each runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::(bevel_ends|bevel_invariants|corner_setback|corner_volume|cube_corner|around_center_kink)_measure_tests::/)'
+threads-required = "num-test-threads"
+
+# The Thingi10K sweep (gated on `THINGI_SWEEP=1`; a plain run returns at once) times builds
+# against a wall-clock hang cap, so it runs with every test thread to itself.
+[[profile.default.overrides]]
+filter = 'test(/^level_line::thingi10k_sweep::/)'
+threads-required = "num-test-threads"
+
+# CI's runners (`--profile ci`): 3 or 4 CPUs, several times slower than a development machine,
+# so a correct test there can pass the 3 minutes a hung test gets locally; it is stopped after 5.
+# Everything else, the overrides above included, is the default profile's.
+[profile.ci]
+slow-timeout = { period = "60s", terminate-after = 5 }
+# The failures again at the end of the run, where a long CI log is read from.
+failure-output = "immediate-final"
+
+# CI's report, at target/nextest/ci/junit.xml.
+[profile.ci.junit]
+path = "junit.xml"
+
+# The gated measurements are long measurements, up to an hour each, past the 3-minute hung-test
+# limit: run them with `--profile measure` and their run variable set, e.g.
+# `BEVEL_ENDS=1 cargo nextest run --workspace --test bevel --profile measure --no-capture
+# bevel_ends_measure_tests`; the Thingi10K sweep likewise (`THINGI_SWEEP=1`, knobs in its file
+# header).
+[profile.measure]
+slow-timeout = { period = "60s", terminate-after = 60 }

@@ -11,6 +11,7 @@
 # `crate` input names one workspace package, or `all` to publish every publishable member in
 # dependency order (cargo publish --workspace), which is how a release that bumps several crates
 # goes out. A version already on crates.io is refused by crates.io, so bump before publishing.
+# workspace-gates (the repository's gates, tests only) sets `publish = false`, so `all` skips it.
 #
 # manifold-rust, clipper2-rust and tess2-rust are `{ version, path }` dependencies. Cargo needs the
 # sibling checkouts beside solidmesh to load the workspace (the crates reach them as
@@ -61,7 +62,10 @@ jobs:
           repository: larsbrubaker/tess2-rust
           path: tess2-rust
 
-      - uses: dtolnay/rust-toolchain@stable
+      # rust-toolchain.toml pins the version (the one CI tests with); with no argument rustup
+      # installs exactly that (the step runs inside the checkout, so it sees it).
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install
 
       # A tree whose tests fail never reaches crates.io.
       - name: Run tests
