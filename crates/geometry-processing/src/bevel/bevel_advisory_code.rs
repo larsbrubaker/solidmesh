@@ -571,6 +571,60 @@ pub enum BevelAdvisoryCode {
     /// not by the face's own width. Args: (double size, Vector3 at, double largestThatFits), as
     /// `SizeExceedsFaceWidth`, with "at" standing on that crease.
     SizeReachesPastCrease,
+    /// BevelCutStage: the cutters would not union into one solid the kernel accepts, and taking
+    /// them out of the part one at a time failed as well, so the part has no cut to publish. A
+    /// whole-operation failure. No args.
+    BooleanCuttersCouldNotBeJoined,
+    /// BevelCutStage and the boolean part build: the cut left no part at all - every group may have
+    /// cut perfectly well, and it is the union of them that took everything. Said against the whole
+    /// operation, because the sources are still visible and the part would otherwise look as though
+    /// the operation had been ignored. No args.
+    CutRemovedTheWholePart,
+    /// The boolean part build: the first-pass beads, or the second pass's re-swept ones, would not
+    /// union onto the cut part. A whole-operation failure. No args.
+    BooleanBeadsCouldNotBeJoined,
+    /// The boolean part build: the blends where mixed groups' cuts meet their beads joined into
+    /// something that is not a boolean operand. A whole-operation failure. No args.
+    BooleanBlendsCouldNotBeJoined,
+    /// The boolean part build: every edge this group names is also named by another group that
+    /// carries them further as one run, so this group builds nothing of its own. A NOTE on the
+    /// row's warning rather than a failure - the edges are bevelled. No args.
+    EdgesBevelledByAnotherGroup,
+    /// BevelFeaturePartBuilder and the Point groups: the part this selection belongs to has no mesh
+    /// (none, or one with no vertices). One refusal per group, so no row vanishes from the panel.
+    /// No args.
+    PartHasNoMeshToBevel,
+    /// BevelFeaturePathBuilder: the corner mode is Formula and the formula is blank. A
+    /// whole-operation failure on the 2D leg. No args.
+    CornerFormulaEmpty,
+    /// BevelFeaturePathBuilder: the corner formula would not evaluate. A whole-operation failure on
+    /// the 2D leg. Args: (string reason), the evaluator's own words.
+    CornerFormulaCouldNotBeEvaluated,
+    /// The Point groups: the operation's construction is not Surface, which is the only one that
+    /// bevels a point. No args.
+    PointNeedsTheSurfaceConstruction,
+    /// The Point groups: the picked point lies on a chain an edge group of the same operation
+    /// bevels. No args.
+    PointMeetsAPickedEdge,
+    /// The Point groups: no corner or tip of the part stands where the point was picked any more.
+    /// No args.
+    PointIsNoLongerACorner,
+    /// The Point groups: an earlier pick of the same operation already bevels this corner. No args.
+    PointPickedTwice,
+    /// The Point groups: the size is too large for the point and no smaller size tried builds it.
+    /// No args.
+    PointTooLargeForAnySize,
+    /// The Point groups: the size is too large for the point, which has room for the size quoted.
+    /// Args: (double largestThatFits).
+    PointTooLargeRoomFor,
+    /// BevelSecondPassStage: the rounds cut on the part changed a concave crease and its fillet
+    /// could not be rebuilt along the new one, so the first-pass fillet was kept. A NOTE on the
+    /// row's warning, followed by the second pass's own reason. No args.
+    SecondPassKeptFirstPassFillet,
+    /// BevelSecondPassStage: the round on the edge two creases meet at joined them into one crease,
+    /// filleted as one run under the first group; said on every other group of that run. A NOTE on
+    /// the row's warning. No args.
+    SecondPassCreasesJoinedIntoOneRun,
 }
 
 impl fmt::Display for BevelAdvisoryCode {
