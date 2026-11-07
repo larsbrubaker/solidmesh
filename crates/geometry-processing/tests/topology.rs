@@ -23,5 +23,9 @@ mod rust_only_bevel_group_tests;
 mod split_crease_test_meshes;
 // Shared with the bevel binary, which uses builders this one does not.
 #[allow(dead_code)]
+#[path = "bevel/path_solids.rs"]
+mod path_solids;
+// Shared with the bevel binary, which uses builders this one does not.
+#[allow(dead_code)]
 #[path = "bevel/topology_test_meshes.rs"]
 mod topology_test_meshes;

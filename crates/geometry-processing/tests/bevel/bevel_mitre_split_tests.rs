@@ -2,12 +2,12 @@
 //! refused (`bevel_chain_linker::split_where_the_mitre_cannot_fit`), and a rim whose corners the
 //! tool carries perfectly well is left exactly as it was.
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::bevel_chain_sweep::{self, BevelSweptSection};
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::Mesh;
 
 use crate::topology_test_meshes::create_arc_prism;

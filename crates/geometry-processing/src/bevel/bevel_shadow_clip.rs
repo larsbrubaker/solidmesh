@@ -6,13 +6,12 @@
 //! into a footprint and extruded up the obstruction's height - with its shadow body where asked
 //! for.
 
-use agg_path::vertex_storage::VertexStorage;
 use clipper_library::clipper6::{IntPoint as Point64, Path as Path64, Paths as Paths64};
 use clipper_library::clipper_statics;
 use clipper_library::polygons_extensions::PolygonsExtensions;
-use clipper_library::ClipperError;
+use clipper_library::{ClipperError, DEFAULT_SCALING};
 use indexmap::IndexSet;
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
+use polygon_mesh::processors::outline_to_mesh::extrude;
 use polygon_mesh::{Mesh, MeshEdgeGraph};
 use std::collections::HashMap;
 use vector_math::{ieee_math, Matrix4X4, Vector3, Vector4};
@@ -27,8 +26,9 @@ pub const BAND_MARGIN_FRACTION: f64 = 0.05;
 /// How far in front of a face a point has to stand to be off it: four float steps, relative.
 pub const IN_FRONT_OF_THE_FACE: f64 = 4.0 * 1.192092896e-7;
 
-/// The scale the column's outline is taken to integers at for the polygon clipper.
-pub const CLIPPER_SCALE: f64 = 1000.0;
+/// The scale the column's outline is taken to integers at for the polygon clipper: the extruder's
+/// own grid, so the footprint is extruded as it stands.
+pub const CLIPPER_SCALE: f64 = DEFAULT_SCALING;
 
 /// One face of one selected edge that something is standing on - what `BevelFaceFit` recorded when
 /// it admitted the group, and everything the clip needs to draw the column.
@@ -369,17 +369,18 @@ pub fn column(
     let below = (obstruction.setback * 2.0) + obstruction.planar_within;
     let above = stands_up_to + obstruction.planar_within;
 
-    let mut outline = VertexStorage::new();
-    add_contour(&mut outline, polygon);
+    // The outer and the holes inside it, still on the clipper grid, which is the extruder's own
+    // ([`CLIPPER_SCALE`] is `DEFAULT_SCALING`).
+    let mut outline: Paths64 = vec![polygon.clone()];
     for hole in footprint {
         if !clipper_statics::orientation(hole)
             && clipper_statics::point_in_polygon(hole[0], polygon) != 0
         {
-            add_contour(&mut outline, hole);
+            outline.push(hole.clone());
         }
     }
 
-    // Extruded by the shared path extruder, so a footprint with holes in it is triangulated by the
+    // Extruded by the shared extruder, so a footprint with holes in it is triangulated by the
     // same code every other extrusion uses.
     let mut mesh = extrude(&outline, below + above)?;
     if mesh.faces.is_empty() {
@@ -395,21 +396,4 @@ pub fn column(
         Vector4::from_vector3_w(obstruction.origin - (obstruction.plane_normal * below), 1.0),
     ));
     Ok(Some(mesh))
-}
-
-/// Adds a footprint contour, back out of Clipper's integer grid, as one closed polygon.
-pub fn add_contour(outline: &mut VertexStorage, contour: &Path64) {
-    for (i, point) in contour.iter().enumerate() {
-        let (x, y) = (
-            point.x as f64 / CLIPPER_SCALE,
-            point.y as f64 / CLIPPER_SCALE,
-        );
-        if i == 0 {
-            outline.move_to(x, y);
-        } else {
-            outline.line_to(x, y);
-        }
-    }
-
-    outline.close_polygon();
 }

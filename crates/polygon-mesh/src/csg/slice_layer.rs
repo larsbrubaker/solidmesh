@@ -2,16 +2,14 @@
 //! lookups it chains them through; integer polygons are clipper2-rust's
 //! `Point64`/`Path64`/`Paths64`.
 //!
-//! Slicing visits every face; there is no bounding-volume-accelerated variant. The `as_vertices`
-//! helpers turn polygons back into agg-path vertices.
+//! Slicing visits every face; there is no bounding-volume-accelerated variant. The app turns the
+//! polygons back into paths (mattercad-geometry's `slice_vertices`).
 
 use std::collections::HashMap;
 
-use agg_path::shape_path::FlagsAndCommand;
-use agg_path::vertex_data::VertexData;
 use clipper2_rust::{FillRule, Path64, Paths64, Point64};
 use vector_math::fixed_tie_sort::introspective_sort;
-use vector_math::{Matrix4X4, Plane, Quaternion, Vector2, Vector3};
+use vector_math::{Matrix4X4, Plane, Quaternion, Vector3};
 
 use crate::Mesh;
 use clipper_library::{
@@ -329,31 +327,6 @@ fn get_touching_segment_index(
     }
 
     lookup_segment_index
-}
-
-/// Each polygon of more than two points as a path, divided by `output_scale`.
-pub fn polygons_as_vertices(polygons: &Paths64, output_scale: f64) -> Vec<VertexData> {
-    polygons
-        .iter()
-        .filter(|polygon| polygon.len() > 2)
-        .flat_map(|polygon| as_vertices(polygon, output_scale))
-        .collect()
-}
-
-/// A move-to the last point, then a line-to every point in order (so the path ends where it began;
-/// no close).
-pub fn as_vertices(polygon: &Path64, output_scale: f64) -> Vec<VertexData> {
-    let scaled = |p: &Point64| Vector2::new(p.x as f64 / output_scale, p.y as f64 / output_scale);
-    let Some(last) = polygon.last() else {
-        return Vec::new();
-    };
-    std::iter::once(VertexData::new(FlagsAndCommand::MOVE_TO, scaled(last)))
-        .chain(
-            polygon
-                .iter()
-                .map(|p| VertexData::new(FlagsAndCommand::LINE_TO, scaled(p))),
-        )
-        .collect()
 }
 
 /// The area of a polygon, positive for counter-clockwise.

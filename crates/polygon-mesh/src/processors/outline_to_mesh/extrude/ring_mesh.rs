@@ -14,7 +14,7 @@ use crate::mesh::Mesh;
 use crate::processors::ring_vertices::RingVertices;
 
 /// Clipper units per mm, the scale every ring's integer points are in.
-const UNITS_PER_MM: f64 = agg_path::data_converters_2d::DEFAULT_SCALING;
+const UNITS_PER_MM: f64 = clipper_library::DEFAULT_SCALING;
 
 /// One ring placed in the mesh: its loops and the vertex of every loop point.
 pub(super) struct PlacedRing {

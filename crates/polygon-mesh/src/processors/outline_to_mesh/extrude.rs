@@ -11,10 +11,10 @@
 
 use std::rc::Rc;
 
-use agg_path::data_converters_2d::{VertexSourceToClipperPolygons, DEFAULT_SCALING};
-use agg_path::vertex_source::VertexSource;
 use clipper2_rust::Paths64;
-use clipper_library::{get_corrected_winding, ClipperError, JoinType, PolygonsExtensions};
+use clipper_library::{
+    get_corrected_winding, ClipperError, JoinType, PolygonsExtensions, DEFAULT_SCALING,
+};
 
 use crate::mesh::Mesh;
 use crate::processors::ring_loops::{simple_loops, without_crossings};
@@ -25,12 +25,9 @@ use ring_mesh::{PlacedRing, RingMesh};
 /// The profile from z = 0 up to `z_height_top` with square ends: [`extrude_bevelled`] with no
 /// bevel at either end, a closed solid by construction. A clipper failure in the profile's
 /// clean-up comes back as the error.
-pub fn extrude(
-    vertex_source_in: &dyn VertexSource,
-    z_height_top: f64,
-) -> Result<Mesh, ClipperError> {
+pub fn extrude(polygons: &Paths64, z_height_top: f64) -> Result<Mesh, ClipperError> {
     extrude_bevelled(
-        vertex_source_in,
+        polygons,
         z_height_top,
         None,
         JoinType::Miter,
@@ -39,7 +36,8 @@ pub fn extrude(
     )
 }
 
-/// Extrudes a closed profile from z = 0 up to `z_height_top`, optionally rounding either end.
+/// Extrudes a closed profile (integer polygons at `DEFAULT_SCALING`) from z = 0 up to
+/// `z_height_top`, optionally rounding either end.
 ///
 /// `bevel` (`(height, inset_amount)` pairs) is the top bevel ordered from the bottom of the
 /// bevel UPWARD. Each `height` is an absolute z and each `inset_amount` is in mm from the
@@ -58,7 +56,7 @@ pub fn extrude(
 /// height's magnitude (bevels and all) moved down by it, so the top bevel still rounds the
 /// upper end.
 pub fn extrude_bevelled(
-    vertex_source_in: &dyn VertexSource,
+    polygons: &Paths64,
     z_height_top: f64,
     bevel: Option<&[(f64, f64)]>,
     join_type: JoinType,
@@ -68,13 +66,11 @@ pub fn extrude_bevelled(
     if z_height_top == 0.0 {
         return Ok(Mesh::new());
     }
-    let bottom_polygons = vertex_source_in.create_polygons(DEFAULT_SCALING);
 
     // ensure good winding and consistent shapes: the area the outline fills, as the path
     // display shows it, as loops a ring can be built on, so each loop is grouped with the holes
     // inside it before any ring is built
-    let bottom_polygons =
-        simple_loops(without_crossings(get_corrected_winding(&bottom_polygons)?)?);
+    let bottom_polygons = simple_loops(without_crossings(get_corrected_winding(polygons)?)?);
 
     // the solid's lowest z: every ring is placed this far below the height it is built at
     let base = z_height_top.min(0.0);

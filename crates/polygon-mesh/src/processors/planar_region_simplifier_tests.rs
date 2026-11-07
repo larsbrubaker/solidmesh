@@ -7,19 +7,56 @@
 
 use std::collections::HashMap;
 
-use agg_path::vertex_storage::VertexStorage;
 use vector_math::{Vector2, Vector3Float};
 
 use super::{simplify, simplify_counting_work};
 use crate::g3::dmesh3::tri_distance_sqr;
 use crate::g3::DMeshAABBTree3;
-use crate::processors::vertex_source_to_mesh::extrude;
+use crate::processors::outline_to_mesh::extrude_contours;
 use crate::sdf::MeshSdfGrid;
 use crate::solids::platonic_solids::{create_cube, create_icosahedron};
 use crate::{CancelToken, Mesh};
 
+/// An outline drawn as contours in mm: each move-to starts a contour, and a contour is closed
+/// back to its first point.
+#[derive(Default)]
+struct Outline {
+    contours: Vec<Vec<Vector2>>,
+}
+
+impl Outline {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn move_to(&mut self, x: f64, y: f64) {
+        self.move_to_vector(Vector2::new(x, y));
+    }
+
+    fn line_to(&mut self, x: f64, y: f64) {
+        self.line_to_vector(Vector2::new(x, y));
+    }
+
+    fn move_to_vector(&mut self, p: Vector2) {
+        self.contours.push(vec![p]);
+    }
+
+    fn line_to_vector(&mut self, p: Vector2) {
+        match self.contours.last_mut() {
+            Some(contour) => contour.push(p),
+            None => self.contours.push(vec![p]),
+        }
+    }
+
+    /// Ends the contour (it closes back to its first point on its own): a line-to after it starts
+    /// the next one. The empty contour this leaves is skipped by the conversion to polygons.
+    fn close_polygon(&mut self) {
+        self.contours.push(Vec::new());
+    }
+}
+
 fn block_with_hole_and_notch(iso: f64) {
-    let mut outline = VertexStorage::new();
+    let mut outline = Outline::new();
     outline.move_to(0.0, 0.0);
     outline.line_to(12.0, 0.0);
     outline.line_to(12.0, 5.0);
@@ -50,7 +87,7 @@ fn block_with_hole_and_notch_minus_1() {
 
 #[test]
 fn gear_like_extrusion() {
-    let mut outline = VertexStorage::new();
+    let mut outline = Outline::new();
     const TEETH: i32 = 12;
     for i in 0..TEETH * 4 {
         let angle = i as f64 * std::f64::consts::PI * 2.0 / (TEETH * 4) as f64;
@@ -70,7 +107,7 @@ fn gear_like_extrusion() {
 
 #[test]
 fn l_bracket() {
-    let mut outline = VertexStorage::new();
+    let mut outline = Outline::new();
     outline.move_to(0.0, 0.0);
     outline.line_to(40.0, 0.0);
     outline.line_to(40.0, 5.0);
@@ -98,7 +135,7 @@ fn round_part_is_left_almost_as_it_was() {
 
 #[test]
 fn work_grows_linearly_with_the_mesh() {
-    let mut outline = VertexStorage::new();
+    let mut outline = Outline::new();
     outline.move_to(0.0, 0.0);
     outline.line_to(30.0, 0.0);
     outline.line_to(30.0, 20.0);
@@ -124,8 +161,8 @@ fn work_grows_linearly_with_the_mesh() {
     assert!(doubled_work as f64 <= 2.5 * single_work as f64);
 }
 
-fn extrude_part(outline: &VertexStorage, height: f64) -> Mesh {
-    extrude(outline, height).expect("the outline extrudes")
+fn extrude_part(outline: &Outline, height: f64) -> Mesh {
+    extrude_contours(&outline.contours, height).expect("the outline extrudes")
 }
 
 /// Two copies of `single`, each with its own vertices, in the same place.
@@ -150,7 +187,7 @@ fn doubled_in_place(single: &Mesh) -> Mesh {
     doubled
 }
 
-fn add_circle(outline: &mut VertexStorage, center: Vector2, radius: f64, sides: i32) {
+fn add_circle(outline: &mut Outline, center: Vector2, radius: f64, sides: i32) {
     for i in 0..sides {
         let angle = i as f64 * std::f64::consts::PI * 2.0 / sides as f64;
         let p = center + Vector2::new(angle.cos() * radius, angle.sin() * radius);

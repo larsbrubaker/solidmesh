@@ -1,13 +1,6 @@
 //! The polygon-mesh test binary: the mesh, its face colours and textures, measuring, splitting,
-//! convex hulls, revolve and extrude, marching cubes, distance fields and STL, one file per test
-//! class.
+//! convex hulls, marching cubes, distance fields and STL, one file per test class.
 
-#[path = "polygon_mesh/clean_caps_tests.rs"]
-mod clean_caps_tests;
-#[path = "polygon_mesh/clean_extrude_tests.rs"]
-mod clean_extrude_tests;
-#[path = "polygon_mesh/clean_solid_support.rs"]
-mod clean_solid_support;
 #[path = "polygon_mesh/closed_solid_repair_tests.rs"]
 mod closed_solid_repair_tests;
 #[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
@@ -38,14 +31,10 @@ mod mesh_sdf_grid_tests;
 mod mesh_split_manifold_tests;
 #[path = "polygon_mesh/mesh_tests.rs"]
 mod mesh_tests;
+#[path = "polygon_mesh/outline_to_mesh_tests.rs"]
+mod outline_to_mesh_tests;
 #[path = "polygon_mesh/repair_texture_caps_tests.rs"]
 mod repair_texture_caps_tests;
-#[path = "polygon_mesh/revolve_tests.rs"]
-mod revolve_tests;
-#[path = "polygon_mesh/room_scale_offset_tolerance_tests.rs"]
-mod room_scale_offset_tolerance_tests;
-#[path = "polygon_mesh/rust_only_extrude_tests.rs"]
-mod rust_only_extrude_tests;
 #[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]
 mod rust_only_mesh_editing_tests;
 #[path = "polygon_mesh/rust_only_platonic_solids_tests.rs"]
@@ -54,6 +43,8 @@ mod rust_only_platonic_solids_tests;
 mod rust_only_stl_tests;
 #[path = "polygon_mesh/sdf_and_rounded_box_tests.rs"]
 mod sdf_and_rounded_box_tests;
+#[path = "polygon_mesh/solid_checks.rs"]
+mod solid_checks;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
 mod stl_parse_yield_tests;
 #[path = "polygon_mesh/transformed_bounds_exact_tests.rs"]

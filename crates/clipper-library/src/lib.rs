@@ -54,5 +54,5 @@ pub use int_point_extensions::{
 pub use polygon_extensions::PolygonExtensions;
 pub use polygons_extensions::{
     create_from_string, PolygonDescription, PolygonsExtensions, DEFAULT_ARC_TOLERANCE,
-    DEFAULT_CLIPPER_UNITS_PER_UNIT,
+    DEFAULT_CLIPPER_UNITS_PER_UNIT, DEFAULT_SCALING,
 };

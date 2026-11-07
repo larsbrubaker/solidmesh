@@ -13,7 +13,7 @@ use crate::mesh::Mesh;
 use crate::processors::ring_vertices::RingVertices;
 
 /// Clipper units per mm, the scale the cleaned profile's integer points are in.
-const UNITS_PER_MM: f64 = agg_path::data_converters_2d::DEFAULT_SCALING;
+const UNITS_PER_MM: f64 = clipper_library::DEFAULT_SCALING;
 
 /// The solid swept by `loops` (loops prepared by `ring_loops`, x out from the axis, y along it,
 /// outlines counter clockwise) through the column `angles`. A full turn (`wraps`) closes its last

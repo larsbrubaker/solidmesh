@@ -7,13 +7,13 @@
 //! notch's bisector. The fit charges that wedge against the far side's band. The cap's rim and its
 //! regions are read with the helpers `surface_room_mitre_window_tests` reads its own notch with.
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomFootprint,
 };
 use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 

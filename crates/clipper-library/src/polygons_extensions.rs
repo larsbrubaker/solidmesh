@@ -20,6 +20,11 @@ pub const DEFAULT_ARC_TOLERANCE: f64 = 0.25;
 /// The clipper units in one unit of the shape: agg converts paths at 1000 (a micron in mm).
 pub const DEFAULT_CLIPPER_UNITS_PER_UNIT: f64 = 1000.0;
 
+/// The integer grid every outline is snapped to before it becomes a solid: clipper units per mm
+/// of the outline, one micron. Extrude and revolve build on polygons at this scale, and paths are
+/// converted to them at it, so a profile's corners are the same points wherever they are read.
+pub const DEFAULT_SCALING: f64 = DEFAULT_CLIPPER_UNITS_PER_UNIT;
+
 /// Clipper 6's `ClipperOffset` default miter limit.
 pub const DEFAULT_MITER_LIMIT: f64 = 2.0;
 

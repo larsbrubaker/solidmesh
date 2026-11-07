@@ -1,13 +1,13 @@
 //! Walling two integer polygon loops into a mesh: [`stitch`], the start-pair search, the advance
-//! rule for an outer/inner pair and the two wall builders [`stitch`] uses. Its top-only and
-//! bottom-only cases cap a loop through `vertex_source_to_mesh::triangulate_faces`.
+//! rule for an outer/inner pair and the two wall builders [`stitch`] uses (the extruder's bevel
+//! bands pair their rings with the same start search). Its top-only and bottom-only cases cap a
+//! loop through `outline_to_mesh::triangulate_faces`.
 
 use clipper2_rust::{Path64, Paths64, Point64};
-use vector_math::{Matrix4X4, Vector3};
+use vector_math::{Matrix4X4, Vector2, Vector3};
 
-use crate::processors::vertex_source_to_mesh::triangulate_faces;
+use crate::processors::outline_to_mesh::triangulate_faces;
 use crate::Mesh;
-use agg_path::data_converters_2d::create_vertex_storage;
 use clipper_library::{get_intersection, length_squared, Intersection};
 
 fn distance_squared(a: Point64, b: Point64) -> i64 {
@@ -16,7 +16,7 @@ fn distance_squared(a: Point64, b: Point64) -> i64 {
 
 /// The point in units (`scaling` clipper units to the unit) at `height`, already in units. Every
 /// coordinate is computed once in f64 and rounded to the mesh's f32 once, the same way the caps
-/// (`create_vertex_storage` then `triangulate_faces`) and the extruder's band triangulation place
+/// (`contours_in_units` then `triangulate_faces`) and the extruder's band triangulation place
 /// their points, so a ring this walls lands on exactly the vertices the faces beside it use.
 /// Building in clipper units and scaling the f32 mesh afterwards rounds twice, which moved a ring
 /// at a height such as 0.0999999970 mm to 0.1 here but to 0.099999994 in its neighbours, leaving
@@ -60,22 +60,24 @@ pub fn stitch(
     }
 }
 
+/// The loops as contours in units (`scaling` clipper units to the unit), for the flat fill.
+fn contours_in_units(path: &Paths64, scaling: f64) -> Vec<Vec<Vector2>> {
+    path.iter()
+        .map(|polygon| {
+            polygon
+                .iter()
+                .map(|point| Vector2::new(point.x as f64 / scaling, point.y as f64 / scaling))
+                .collect()
+        })
+        .collect()
+}
+
 fn create_top(path: &Paths64, top_height: f64, scaling: f64) -> Mesh {
-    triangulate_faces(
-        &create_vertex_storage(path, scaling),
-        None,
-        None,
-        top_height,
-    )
+    triangulate_faces(&contours_in_units(path, scaling), None, None, top_height)
 }
 
 fn create_bottom(path: &Paths64, bottom_height: f64, scaling: f64) -> Mesh {
-    let mut mesh = triangulate_faces(
-        &create_vertex_storage(path, scaling),
-        None,
-        None,
-        bottom_height,
-    );
+    let mut mesh = triangulate_faces(&contours_in_units(path, scaling), None, None, bottom_height);
     mesh.reverse_faces();
     mesh
 }

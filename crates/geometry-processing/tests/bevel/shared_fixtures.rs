@@ -45,6 +45,8 @@ pub(crate) mod nose_in_notch_mixed_corners;
 pub(crate) mod nose_in_notch_test_meshes;
 #[path = "nose_on_a_cube_corner_test_meshes.rs"]
 pub(crate) mod nose_on_a_cube_corner_test_meshes;
+#[path = "path_solids.rs"]
+pub(crate) mod path_solids;
 #[path = "picture_hanger_test_mesh.rs"]
 pub(crate) mod picture_hanger_test_mesh;
 #[path = "pyramid_recess_test_meshes.rs"]

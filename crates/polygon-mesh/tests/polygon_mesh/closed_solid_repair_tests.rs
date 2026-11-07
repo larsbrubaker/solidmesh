@@ -10,7 +10,7 @@ use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::Mesh;
 use vector_math::Vector3Float;
 
-use super::clean_solid_support::assert_closed_outward;
+use super::solid_checks::assert_closed_outward;
 
 /// The 10 mm box the cases start from, centred on the origin.
 fn box_mesh() -> Mesh {

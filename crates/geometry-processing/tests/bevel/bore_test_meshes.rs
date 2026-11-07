@@ -5,8 +5,8 @@
 //! (`create_plate_with_a_raked_bore_whose_mouth_chords_are_split`, `split_the_edge_between`) that
 //! the test classes here read; the barrel port and the edge bore are their own modules.
 
+use crate::path_solids::revolve;
 use agg_path::vertex_storage::VertexStorage;
-use polygon_mesh::processors::vertex_source_to_mesh::revolve;
 use polygon_mesh::{FaceList, Mesh};
 use vector_math::{math_helper, Vector3, Vector3Float};
 

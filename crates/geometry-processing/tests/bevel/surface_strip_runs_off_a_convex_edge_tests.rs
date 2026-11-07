@@ -421,8 +421,7 @@ fn run_off_bench(far_boundary: &[Vector2]) -> Mesh {
 
     path.close_polygon();
 
-    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, BENCH_HEIGHT)
-        .expect("the bench outline extrudes")
+    crate::path_solids::extrude(&path, BENCH_HEIGHT).expect("the bench outline extrudes")
 }
 
 /// The bench's far side as a chorded arc of one circle, apex (10, 12) and ends (25, 3) and (-5, 3).

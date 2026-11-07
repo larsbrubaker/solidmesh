@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_room, surface_room_measure,
@@ -22,7 +23,6 @@ use geometry_processing::bevel::{
     bevel_chain_linker, bevel_edge_tool_builder, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::{Vector2, Vector3};

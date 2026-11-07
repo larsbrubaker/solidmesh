@@ -6,14 +6,13 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 
-use agg_path::VertexStorage;
 use polygon_mesh::csg::minkowski_processing::sphere_mesh;
 use polygon_mesh::csg::minkowski_shell_orientation::mesh_may_need_repair;
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
+use polygon_mesh::processors::outline_to_mesh::extrude_contours;
 use polygon_mesh::sdf::{MeshSdfGrid, SdfGridError};
 use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Matrix4X4;
+use vector_math::{Matrix4X4, Vector2};
 
 const SIDE: f64 = 20.0;
 const RADIUS: f64 = 2.0;
@@ -233,7 +232,6 @@ fn cancelled_build_stops_promptly() {
 /// must not come off as floating shells.
 #[test]
 fn eroded_gear_tooth_tips_stay_joined_to_the_body() {
-    let mut outline = VertexStorage::new();
     const TEETH: i32 = 12;
     let (tip_radius, root_radius) = (15.0, 12.5);
     let fraction = [0.0, 0.25, 0.4, 0.6, 0.75];
@@ -244,26 +242,27 @@ fn eroded_gear_tooth_tips_stay_joined_to_the_body() {
         tip_radius,
         root_radius,
     ];
+    let mut gear = Vec::new();
     for tooth in 0..TEETH {
         for k in 0..fraction.len() {
             let angle = (tooth as f64 + fraction[k]) * std::f64::consts::PI * 2.0 / TEETH as f64;
-            let (x, y) = (radius[k] * angle.cos(), radius[k] * angle.sin());
-            if tooth == 0 && k == 0 {
-                outline.move_to(x, y);
-            } else {
-                outline.line_to(x, y);
-            }
+            gear.push(Vector2::new(
+                radius[k] * angle.cos(),
+                radius[k] * angle.sin(),
+            ));
         }
     }
-    outline.close_polygon();
-    outline.move_to(2.5, 0.0);
+    let mut bore = vec![Vector2::new(2.5, 0.0)];
     for i in 1..32 {
         let angle = -(i as f64) * std::f64::consts::PI * 2.0 / 32.0;
-        outline.line_to(2.5 * angle.cos(), 2.5 * angle.sin());
+        bore.push(Vector2::new(2.5 * angle.cos(), 2.5 * angle.sin()));
     }
-    outline.close_polygon();
     const DEPTH: f64 = 1.0479;
-    let sdf = grid(extrude(&outline, 8.0).expect("extrude"), DEPTH, 130);
+    let sdf = grid(
+        extrude_contours(&[gear, bore], 8.0).expect("extrude"),
+        DEPTH,
+        130,
+    );
 
     let eroded = offset(&sdf, -DEPTH);
     closed_volume(&eroded);
@@ -275,18 +274,20 @@ fn eroded_gear_tooth_tips_stay_joined_to_the_body() {
 /// part's own topology.
 #[test]
 fn offsets_of_torus_and_bracket_keep_their_topology() {
-    let mut bracket = VertexStorage::new();
-    bracket.move_to(0.0, 0.0);
-    bracket.line_to(40.0, 0.0);
-    bracket.line_to(40.0, 4.0);
-    bracket.line_to(4.0, 4.0);
-    bracket.line_to(4.0, 30.0);
-    bracket.line_to(0.0, 30.0);
-    bracket.close_polygon();
+    let bracket = [
+        (0.0, 0.0),
+        (40.0, 0.0),
+        (40.0, 4.0),
+        (4.0, 4.0),
+        (4.0, 30.0),
+        (0.0, 30.0),
+    ]
+    .map(|(x, y)| Vector2::new(x, y))
+    .to_vec();
 
     for (part, euler) in [
         (torus(10.0, 3.0, 64, 32), 0),
-        (extrude(&bracket, 20.0).expect("extrude"), 2),
+        (extrude_contours(&[bracket], 20.0).expect("extrude"), 2),
     ] {
         let sdf = grid(part, 1.5, 96);
         for iso in [1.5, 0.7, -0.7, -1.5] {

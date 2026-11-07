@@ -64,8 +64,7 @@ pub fn create_arc_prism(radius: f64, height: f64, segments: i32) -> Mesh {
 
     path.close_polygon();
 
-    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, height)
-        .expect("a half disc extrudes")
+    crate::path_solids::extrude(&path, height).expect("a half disc extrudes")
 }
 
 /// The solid cells of an axis-aligned grid, each exposed
@@ -232,14 +231,8 @@ pub fn create_cylinder(radius: f64, height: f64, sides: i32) -> Mesh {
     path.line_to(radius, -height / 2.0);
     path.line_to(radius, height / 2.0);
     path.line_to(0.0, height / 2.0);
-    polygon_mesh::processors::vertex_source_to_mesh::revolve(
-        &path,
-        sides,
-        0.0,
-        std::f64::consts::TAU,
-        true,
-    )
-    .expect("the cylinder revolves")
+    crate::path_solids::revolve(&path, sides, 0.0, std::f64::consts::TAU, true)
+        .expect("the cylinder revolves")
 }
 
 /// A 40 x 40 x 20 block with a bore of
@@ -258,8 +251,7 @@ pub fn create_bore_block_with_chord_wall(sides: i32) -> Mesh {
     lobe.line_to(12.0, 6.0);
     lobe.line_to(0.0, 6.0);
     lobe.close_polygon();
-    let mut lobe_mesh = polygon_mesh::processors::vertex_source_to_mesh::extrude(&lobe, 30.0)
-        .expect("the lobe extrudes");
+    let mut lobe_mesh = crate::path_solids::extrude(&lobe, 30.0).expect("the lobe extrudes");
     lobe_mesh.translate(Vector3::new(0.0, 0.0, -15.0));
 
     do_array(
@@ -340,14 +332,8 @@ pub fn create_frustum(bottom_radius: f64, top_radius: f64, height: f64, sides: i
     path.line_to(bottom_radius, -height / 2.0);
     path.line_to(top_radius, height / 2.0);
     path.line_to(0.0, height / 2.0);
-    polygon_mesh::processors::vertex_source_to_mesh::revolve(
-        &path,
-        sides,
-        0.0,
-        std::f64::consts::TAU,
-        true,
-    )
-    .expect("the frustum revolves")
+    crate::path_solids::revolve(&path, sides, 0.0, std::f64::consts::TAU, true)
+        .expect("the frustum revolves")
 }
 
 /// An L of three 10 mm cells, 10 tall - one concave
@@ -403,8 +389,7 @@ pub fn create_l_shaped_prism() -> Mesh {
     path.line_to(0.0, 20.0);
     path.close_polygon();
 
-    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, 10.0)
-        .expect("the L outline extrudes")
+    crate::path_solids::extrude(&path, 10.0).expect("the L outline extrudes")
 }
 
 /// A square prism with a triangular notch cut into its
@@ -422,8 +407,7 @@ pub fn create_notched_prism() -> Mesh {
     path.line_to(0.0, 20.0);
     path.close_polygon();
 
-    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, 10.0)
-        .expect("the notched outline extrudes")
+    crate::path_solids::extrude(&path, 10.0).expect("the notched outline extrudes")
 }
 
 /// A square prism whose top edge is kinked INWARD
@@ -448,8 +432,7 @@ pub fn create_shallow_reflex_prism(turn_degrees: f64, height: f64) -> Mesh {
     path.line_to(0.0, 20.0);
     path.close_polygon();
 
-    polygon_mesh::processors::vertex_source_to_mesh::extrude(&path, height)
-        .expect("the shallow reflex outline extrudes")
+    crate::path_solids::extrude(&path, height).expect("the shallow reflex outline extrudes")
 }
 
 /// The L prism whose inner corner FADES -

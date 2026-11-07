@@ -3,8 +3,8 @@
 
 #![allow(dead_code)] // the fixture's whole surface, for the classes that read it
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::Mesh;
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::Vector2;

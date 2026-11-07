@@ -24,8 +24,7 @@
 //! from the operands' colors.
 //!
 //! `mesh_distance` measures the true gap between two meshes' surfaces and whether they
-//! overlap. `rendering` has the outline a mesh casts straight down, as clipper polygons
-//! (`rendering::orthographic_z_projection`).
+//! overlap.
 //!
 //! Conventions follow vector-math: queries are methods on `Mesh` and `Face`, indices are
 //! `i32` (the sizes saved files and the model use), and matrices are row-major with row
@@ -49,7 +48,6 @@ mod mesh_extensions;
 mod mesh_measure;
 pub mod processors;
 pub mod ray_tracer;
-pub mod rendering;
 pub mod sdf;
 pub mod solids;
 mod t_junctions;

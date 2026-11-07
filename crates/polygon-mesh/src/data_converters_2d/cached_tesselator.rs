@@ -1,4 +1,4 @@
-//! A tessellator that keeps its output, fed a vertex source by [`CachedTesselator::send_shape`].
+//! A tessellator that keeps its output, fed contours by [`CachedTesselator::send_contours`].
 //!
 //! Vertices it is handed and the intersections it combines go into `vertices_cache`, and every
 //! triangle corner it emits goes into `indices_cache` with the edge flag in force. tess2-rust runs
@@ -7,8 +7,6 @@
 //! in GLU's emit order, corner for corner, so the meshes built from them have a stable vertex and
 //! face order.
 
-use agg_path::vertex_data::VertexData;
-use agg_path::vertex_source::VertexSource;
 use tess2_rust::{ElementType, Tessellator, WindingRule};
 use vector_math::Vector2;
 
@@ -38,41 +36,21 @@ impl CachedTesselator {
         self.indices_cache.clear();
     }
 
-    pub fn send_vertex_source(&mut self, vertex_source: &dyn VertexSource) {
-        self.send_shape(&vertex_source.vertices());
-    }
-
-    /// Tessellates a vertex source: a move-to or any end_poly ends the contour, only vertex
-    /// commands carry a point, NaN points are skipped, and a Stop ends the walk. The caches are
-    /// replaced.
-    pub fn send_shape(&mut self, vertex_source: &[VertexData]) {
+    /// Tessellates the contours (each closed back to its first point), skipping points with a NaN
+    /// coordinate and contours left with none. The caches are replaced.
+    pub fn send_contours(&mut self, contours: &[Vec<Vector2>]) {
         self.clear();
 
-        let mut contours: Vec<Vec<f64>> = Vec::new();
-        let mut current: Vec<f64> = Vec::new();
-        let mut have_begun_contour = false;
-        for vertex_data in vertex_source {
-            if vertex_data.is_stop() {
-                break;
-            }
-
-            if have_begun_contour && (vertex_data.command.is_end_poly() || vertex_data.is_move_to())
-            {
-                contours.push(std::mem::take(&mut current));
-                have_begun_contour = false;
-            }
-
-            if vertex_data.is_vertex() {
-                have_begun_contour = true;
-                let position = vertex_data.position;
-                if !position.x.is_nan() && !position.y.is_nan() {
-                    current.extend_from_slice(&[position.x, position.y]);
-                }
-            }
-        }
-        if have_begun_contour {
-            contours.push(current);
-        }
+        let contours: Vec<Vec<f64>> = contours
+            .iter()
+            .map(|contour| {
+                contour
+                    .iter()
+                    .filter(|point| !point.x.is_nan() && !point.y.is_nan())
+                    .flat_map(|point| [point.x, point.y])
+                    .collect()
+            })
+            .collect();
 
         self.tessellate(&contours);
     }
@@ -118,21 +96,13 @@ impl CachedTesselator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agg_path::vertex_storage::VertexStorage;
 
-    fn square_with_hole() -> VertexStorage {
-        let mut path = VertexStorage::new();
-        path.move_to(0.0, 0.0);
-        path.line_to(10.0, 0.0);
-        path.line_to(10.0, 10.0);
-        path.line_to(0.0, 10.0);
-        path.close_polygon();
-        path.move_to(3.0, 3.0);
-        path.line_to(3.0, 7.0);
-        path.line_to(7.0, 7.0);
-        path.line_to(7.0, 3.0);
-        path.close_polygon();
-        path
+    fn square_with_hole() -> Vec<Vec<Vector2>> {
+        let contour = |points: [(f64, f64); 4]| points.map(|(x, y)| Vector2::new(x, y)).to_vec();
+        vec![
+            contour([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]),
+            contour([(3.0, 3.0), (3.0, 7.0), (7.0, 7.0), (7.0, 3.0)]),
+        ]
     }
 
     fn signed_area(t: &CachedTesselator, i: usize) -> f64 {
@@ -144,7 +114,7 @@ mod tests {
     #[test]
     fn rust_only_square_with_hole_tessellates_to_its_area_with_outline_edges_flagged() {
         let mut tesselator = CachedTesselator::new();
-        tesselator.send_vertex_source(&square_with_hole());
+        tesselator.send_contours(&square_with_hole());
         assert_eq!(tesselator.indices_cache.len() % 3, 0);
         let area: f64 = (0..tesselator.indices_cache.len())
             .step_by(3)
@@ -171,7 +141,7 @@ mod tests {
     #[test]
     fn rust_only_square_with_hole_caches_in_render_order() {
         let mut tesselator = CachedTesselator::new();
-        tesselator.send_vertex_source(&square_with_hole());
+        tesselator.send_contours(&square_with_hole());
         let positions: Vec<(f64, f64)> = tesselator
             .vertices_cache
             .iter()
@@ -230,7 +200,7 @@ mod tests {
     #[test]
     fn rust_only_empty_shape_gives_nothing() {
         let mut tesselator = CachedTesselator::new();
-        tesselator.send_shape(&[]);
+        tesselator.send_contours(&[]);
         assert!(tesselator.indices_cache.is_empty());
     }
 }

@@ -13,6 +13,7 @@
 
 use std::sync::Arc;
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
@@ -20,7 +21,6 @@ use geometry_processing::bevel::surface::{
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 

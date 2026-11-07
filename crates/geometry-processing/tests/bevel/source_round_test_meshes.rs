@@ -3,10 +3,10 @@
 
 use std::f64::consts::TAU;
 
+use crate::path_solids::extrude;
 use agg_path::vertex_storage::VertexStorage;
 use polygon_mesh::csg::boolean_processing::do_array;
 use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::processors::vertex_source_to_mesh::extrude;
 use polygon_mesh::solids::platonic_solids;
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::{Matrix4X4, Vector2, Vector3};
