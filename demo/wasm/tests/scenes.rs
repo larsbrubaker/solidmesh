@@ -146,11 +146,11 @@ fn the_showcase_part_is_one_closed_solid() {
 }
 
 // The Fillet & Chamfer page: a pick made the way the page makes it (a ray at the part, through
-// `PickSession::pick`) and built the way the page builds it (`fillet_part`, one `bevel_part` call
-// per radius).
+// `PickSession::pick`) and built the way the page builds it (`fillet_part`, every pick at one
+// radius in one `bevel_part` call).
 mod fillet {
     use polygon_mesh::CancelToken;
-    use solidmesh_wasm::fillet::{fillet_part, FilletBuild, FilletPick};
+    use solidmesh_wasm::fillet::{fillet_part, FilletBuild};
     use solidmesh_wasm::fillet_parts::part;
     use solidmesh_wasm::fillet_pick::{Pick, PickMode, PickSession};
     use vector_math::Vector3;
@@ -167,17 +167,21 @@ mod fillet {
             .expect("the click lands on a pick")
     }
 
-    fn build(index: u32, picks: Vec<(Pick, f64)>) -> FilletBuild {
+    /// The L-bracket's concave edge inside the L, picked as a chain from above the base.
+    fn inside_edge(session: &PickSession) -> Pick {
+        pick_at(
+            session,
+            Vector3::new(-16.9, 0.0, 8.0),
+            Vector3::new(20.0, 0.0, 20.0),
+            PickMode::Chain,
+        )
+    }
+
+    fn build(index: u32, picks: Vec<Pick>, size: f64) -> FilletBuild {
         geometry_processing::bevel::level_line::level_line_routing::turn_on_for_the_running_app();
         let source = part(index).expect("the part builds");
-        let picks: Vec<FilletPick> = picks
-            .into_iter()
-            .map(|(pick, size)| FilletPick {
-                group: pick.group,
-                size,
-            })
-            .collect();
-        fillet_part(&source, &picks, true, 6, &CancelToken::new()).expect("the build runs")
+        let groups: Vec<_> = picks.into_iter().map(|pick| pick.group).collect();
+        fillet_part(&source, &groups, size, true, 6, &CancelToken::new()).expect("the build runs")
     }
 
     fn assert_built(build: &FilletBuild, what: &str) {
@@ -195,19 +199,13 @@ mod fillet {
     #[test]
     fn the_l_brackets_inside_edge_is_picked_and_filleted() {
         let session = PickSession::new(&part(0).expect("the bracket builds"));
-        let pick = pick_at(
-            &session,
-            Vector3::new(-16.9, 0.0, 8.0),
-            Vector3::new(20.0, 0.0, 20.0),
-            PickMode::Chain,
-        );
+        let pick = inside_edge(&session);
         assert_eq!(1, pick.segments.len(), "{}", pick.label);
         let source_volume = part(0).expect("the bracket builds").get_volume();
 
-        let build = build(0, vec![(pick, 4.0)]);
+        let build = build(0, vec![pick], 4.0);
 
         assert_built(&build, "inside edge");
-        assert_eq!(1, build.passes);
         // a concave round adds material
         assert!(build.scene.mesh.get_volume() > source_volume);
     }
@@ -224,34 +222,43 @@ mod fillet {
         );
         assert_eq!(36, pick.segments.len(), "{}", pick.label);
 
-        let build = build(1, vec![(pick, 1.5)]);
+        let build = build(1, vec![pick], 1.5);
 
         assert_built(&build, "pocket rim");
     }
 
-    /// Picks with different radii are built one radius after another, the later pick found
-    /// again on the mesh the earlier one rounded.
+    /// The L-bracket's three starting picks - the edge inside the L, the top of the upright and
+    /// the base's far edge - all round at the page's starting radius, 3 mm, in the one call.
     #[test]
-    fn two_radii_on_the_l_bracket_are_two_calls_that_both_build() {
+    fn several_picks_at_one_radius_build_in_one_call() {
         let session = PickSession::new(&part(0).expect("the bracket builds"));
-        let inside = pick_at(
-            &session,
-            Vector3::new(-16.9, 0.0, 8.0),
-            Vector3::new(20.0, 0.0, 20.0),
-            PickMode::Chain,
-        );
-        let top = pick_at(
-            &session,
-            Vector3::new(-17.1, 0.0, 40.0),
-            Vector3::new(20.0, 0.0, 20.0),
-            PickMode::Chain,
-        );
+        let from = Vector3::new(20.0, 0.0, 20.0);
+        let picks = vec![
+            inside_edge(&session),
+            pick_at(
+                &session,
+                Vector3::new(-17.1, 0.0, 40.0),
+                from,
+                PickMode::Chain,
+            ),
+            pick_at(
+                &session,
+                Vector3::new(24.9, 0.0, 8.0),
+                from,
+                PickMode::Chain,
+            ),
+        ];
+        let source_faces = part(0).expect("the bracket builds").faces.len();
 
-        let build = build(0, vec![(inside, 4.0), (top, 2.0)]);
+        let build = build(0, picks, 3.0);
 
-        assert_built(&build, "two radii");
-        assert_eq!(2, build.passes);
-        assert_eq!(1, build.rows[1].pass);
+        assert_built(&build, "three picks");
+        assert_eq!(3, build.rows.len());
+        assert!(build
+            .scene
+            .note
+            .contains("3 of 3 picks built, in one bevel_part call"));
+        assert!(build.scene.mesh.faces.len() > source_faces);
     }
 
     /// A radius wider than the face the round lands on is refused with its code and the size
@@ -259,14 +266,8 @@ mod fillet {
     #[test]
     fn an_oversized_radius_is_refused_with_the_size_that_fits() {
         let session = PickSession::new(&part(0).expect("the bracket builds"));
-        let pick = pick_at(
-            &session,
-            Vector3::new(-16.9, 0.0, 8.0),
-            Vector3::new(20.0, 0.0, 20.0),
-            PickMode::Chain,
-        );
 
-        let build = build(0, vec![(pick, 50.0)]);
+        let build = build(0, vec![inside_edge(&session)], 50.0);
 
         let row = &build.rows[0];
         assert!(!row.built, "{row:?}");

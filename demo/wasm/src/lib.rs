@@ -17,7 +17,7 @@
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
 //! - `showcase`: the part of the Measure & Export page;
 //! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
-//!   them in wasm, and the picks applied with `bevel::part::bevel_part`, one call per radius;
+//!   them in wasm, and the picks applied at one radius in one `bevel::part::bevel_part` call;
 //!   `fillet_words*` word the kernel's refusal codes in English and `fillet_json` writes the
 //!   picks and rows the page reads.
 
@@ -402,9 +402,9 @@ pub fn fillet_pick(
     })
 }
 
-/// Fillet & Chamfer page: part `part` with every pick applied (`fillet::fillet_part`). `picks` is
-/// each pick's group as `fillet_pick::GROUP_NUMBERS` numbers followed by its size; rounds when
-/// `round`, chamfers otherwise. The rows come back as JSON in `data` (`fillet_json::rows`).
+/// Fillet & Chamfer page: part `part` with every pick applied at `size` mm (`fillet::fillet_part`).
+/// `picks` is each pick's group as `fillet_pick::GROUP_NUMBERS` numbers; rounds when `round`,
+/// chamfers otherwise. The rows come back as JSON in `data` (`fillet_json::rows`).
 ///
 /// The `CancelToken` is never cancelled: the worker runs one wasm call to its end before it reads
 /// its next message, so nothing could reach the token while the build runs (that would need
@@ -414,34 +414,31 @@ pub fn fillet_pick(
 pub fn fillet_scene(
     part: u32,
     picks: &[f64],
+    size: f64,
     round: bool,
     segments: u32,
 ) -> Result<MeshData, JsError> {
     let source = fillet_parts::part(part).map_err(|e| JsError::new(&e))?;
-    let stride = fillet_pick::GROUP_NUMBERS + 1;
+    let stride = fillet_pick::GROUP_NUMBERS;
     if !picks.len().is_multiple_of(stride) {
         return Err(JsError::new("The picks are not whole."));
     }
     let picks = picks
         .chunks(stride)
-        .map(|n| {
-            Ok(fillet::FilletPick {
-                group: fillet_pick::group_from_numbers(&n[..stride - 1])?,
-                size: n[stride - 1],
-            })
-        })
+        .map(fillet_pick::group_from_numbers)
         .collect::<Result<Vec<_>, String>>()
         .map_err(|e| JsError::new(&e))?;
     let build = fillet::fillet_part(
         &source,
         &picks,
+        size,
         round,
         segments.clamp(1, 32) as i32,
         &CancelToken::new(),
     )
     .map_err(|e| JsError::new(&e))?;
     Ok(MeshData {
-        data: fillet_json::rows(&build.rows, build.passes),
+        data: fillet_json::rows(&build.rows),
         scene: build.scene,
     })
 }

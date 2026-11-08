@@ -24,7 +24,7 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
 const CARDS: Record<string, { title: string; text: string }> = {
   'fillet': {
     title: 'Fillet & Chamfer',
-    text: 'Pick edge chains, single edges, face rims or corners, give each its own radius, and watch them rounded live.',
+    text: 'Pick edge chains, single edges, face rims or corners, set one radius, and watch them all rounded live.',
   },
   'booleans': {
     title: 'Booleans',

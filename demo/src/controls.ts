@@ -1,5 +1,8 @@
 // The control builders every page uses (slider, dropdown, checkbox, button, readout box), so the
-// pages share one look; styles/main.css styles them.
+// pages share one look; styles/main.css styles them. A slider sits in a wrapper that takes touch
+// input in its place (src/slider-touch.ts), so a finger scrolling the page past it does not move it.
+
+import { attachTouchDrag } from './slider-touch.ts';
 
 export function createSlider(
   label: string, min: number, max: number, value: number, step: number,
@@ -27,8 +30,13 @@ export function createSlider(
     onChange(v);
   });
 
+  const hold = document.createElement('div');
+  hold.className = 'slider-hold';
+  hold.appendChild(input);
+  attachTouchDrag(hold, input);
+
   group.appendChild(lbl);
-  group.appendChild(input);
+  group.appendChild(hold);
   return group;
 }
 

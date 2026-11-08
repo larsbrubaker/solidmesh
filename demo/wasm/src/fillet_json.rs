@@ -95,17 +95,17 @@ pub fn pick(pick: Option<&Pick>) -> String {
     out
 }
 
-/// `{"passes": n, "rows": [{"built", "edges", "text", "fits", "pass", "code"}, ...]}`.
-pub fn rows(rows: &[PickRow], passes: usize) -> String {
-    let mut out = format!("{{\"passes\":{passes},\"rows\":[");
+/// `{"rows": [{"built", "edges", "text", "fits", "code"}, ...]}`.
+pub fn rows(rows: &[PickRow]) -> String {
+    let mut out = String::from("{\"rows\":[");
     for (i, row) in rows.iter().enumerate() {
         if i > 0 {
             out.push(',');
         }
         let _ = write!(
             out,
-            "{{\"built\":{},\"edges\":{},\"pass\":{},\"text\":",
-            row.built, row.edge_count, row.pass
+            "{{\"built\":{},\"edges\":{},\"text\":",
+            row.built, row.edge_count
         );
         string(&mut out, &row.text);
         out.push_str(",\"fits\":");

@@ -5,7 +5,8 @@
 //
 // A page builds its own controls into `page.controls` and calls `page.request(fn, args)` with a
 // wasm export of demo/wasm (src/lib.rs); requests coalesce (src/mesh-runner.ts), so controls can
-// call it on every input event.
+// call it on every input event. A page with display options of its own (the Fillet page's
+// "Show picks") adds them beside Feature edges and Wireframe with `page.addDisplayToggle`.
 
 import { ThreeViewer } from './three-viewer.ts';
 import { Coalescer, lastResultStl, type RunResult } from './mesh-runner.ts';
@@ -29,6 +30,8 @@ export interface DemoPage {
   request(fn: string, args: unknown[]): void;
   /** Called with each result after the shell has shown it. */
   onResult?: (r: RunResult) => void;
+  /** Puts a page's own display option after the Feature edges and Wireframe checkboxes. */
+  addDisplayToggle(el: HTMLElement): void;
   dispose(): void;
 }
 
@@ -119,6 +122,7 @@ export function createDemoPage(container: HTMLElement, spec: PageSpec): DemoPage
     viewer,
     controls,
     request: () => {},
+    addDisplayToggle: el => tail.insertBefore(el, legend),
     dispose: () => {},
   };
 

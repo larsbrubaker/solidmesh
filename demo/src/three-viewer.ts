@@ -1,14 +1,18 @@
 // The Three.js viewer every page draws its result in: z up (the kernel's convention), orbit
 // controls, flat shading with the solid's feature edges drawn dark, back faces in saffron so an
 // inside-out patch or a hole shows at a glance, and an optional translucent ghost (a boolean's
-// operands, a hull's source). The Fillet page also draws overlays on it (edges as tubes, corners
-// as balls, `setTubes` / `setBalls`) and casts the pointer's ray into the part (`rayAt`).
+// operands, a hull's source). The Fillet page also draws overlays on it (edges as tubes or as
+// lines a fixed number of pixels wide, corners as balls: `setTubes` / `setLines` / `setBalls`) and casts the pointer's ray into the part (`rayAt`); an
+// overlay drawn `withEdges` (the part's feature edges) shows only while Feature edges is on.
 //
 // The newest live viewer is `activeViewer()`: src/capture.ts draws it with `renderNow` and reads
 // its canvas for the thumbnail (preserveDrawingBuffer keeps the frame readable).
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 
 export const COLORS = {
   solid: 0x2a9d8f,
@@ -173,6 +177,10 @@ export class ThreeViewer {
 
   setEdges(on: boolean) {
     this.showEdges = on;
+    for (const key of this.edgeOverlays) {
+      const group = this.overlays.get(key);
+      if (group) group.visible = on;
+    }
     this.rebuild();
   }
 
@@ -224,15 +232,21 @@ export class ThreeViewer {
   }
 
   private overlays = new Map<string, THREE.Group>();
+  /** The overlays shown only while feature edges are. */
+  private edgeOverlays = new Set<string>();
 
   /**
    * Draws `segments` (six numbers per segment, in the part's space) as tubes of `radius` mm, or
    * clears them with null: the Fillet page's feature edges, hovered pick and picks, each under its
-   * own key. `onTop` draws them through the part, for a hover that must show behind a face.
+   * own key. `onTop` draws them through the part, for a hover that must show behind a face;
+   * `withEdges` shows them only while feature edges are shown.
    */
   setTubes(key: string, segments: Float32Array | number[] | null, color: number, radius: number,
-    opts: { onTop?: boolean; opacity?: number } = {}) {
+    opts: { onTop?: boolean; opacity?: number; withEdges?: boolean } = {}) {
     this.clearOverlay(key);
+    if (opts.withEdges) this.edgeOverlays.add(key);
+    else this.edgeOverlays.delete(key);
+    this.overlayGroup(key).visible = !opts.withEdges || this.showEdges;
     if (!segments || segments.length < 6) return;
     const count = Math.floor(segments.length / 6);
     const geom = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true);
@@ -261,13 +275,39 @@ export class ThreeViewer {
     this.overlayGroup(key).add(tubes);
   }
 
-  /** Draws a ball of `radius` mm at each point (three numbers each), or clears them with null. */
-  setBalls(key: string, points: Float32Array | number[] | null, color: number, radius: number) {
+  /**
+   * Draws `segments` (as for `setTubes`) as lines `width` CSS pixels wide whatever the zoom, or
+   * clears them with null: a pick shown lightly, which must stay thin on a round it would hide.
+   */
+  setLines(key: string, segments: Float32Array | number[] | null, color: number, width: number,
+    opts: { onTop?: boolean; opacity?: number } = {}) {
+    this.clearOverlay(key);
+    if (!segments || segments.length < 6) return;
+    const geom = new LineSegmentsGeometry();
+    geom.setPositions(Array.from(segments).slice(0, Math.floor(segments.length / 6) * 6));
+    const lines = new LineSegments2(geom, new LineMaterial({
+      color, linewidth: width, transparent: (opts.opacity ?? 1) < 1 || !!opts.onTop,
+      opacity: opts.opacity ?? 1, depthTest: !opts.onTop,
+    }));
+    lines.renderOrder = opts.onTop ? 10 : 1;
+    this.overlayGroup(key).add(lines);
+  }
+
+  /**
+   * Draws a ball of `radius` mm at each point (three numbers each), or clears them with null;
+   * `onTop` and `opacity` as for `setTubes`.
+   */
+  setBalls(key: string, points: Float32Array | number[] | null, color: number, radius: number,
+    opts: { onTop?: boolean; opacity?: number } = {}) {
     this.clearOverlay(key);
     if (!points || points.length < 3) return;
     const count = Math.floor(points.length / 3);
     const balls = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8),
-      new THREE.MeshBasicMaterial({ color }), count);
+      new THREE.MeshBasicMaterial({
+        color, transparent: (opts.opacity ?? 1) < 1 || !!opts.onTop, opacity: opts.opacity ?? 1,
+        depthTest: !opts.onTop,
+      }), count);
+    balls.renderOrder = opts.onTop ? 10 : 1;
     const m = new THREE.Matrix4();
     for (let i = 0; i < count; i++) {
       m.makeScale(radius, radius, radius);

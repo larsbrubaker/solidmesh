@@ -434,6 +434,21 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
 }
 
+.slider-hold { display: flex; }
+
+/* On a touch screen the wrapper takes the slider's input (src/slider-touch.ts): vertical pans
+   scroll the page, and only a clear sideways drag moves the value. The padding, taken back by the
+   margin, gives a finger more than the 6 px track to land on without moving anything. */
+@media (pointer: coarse) {
+  .slider-hold {
+    touch-action: pan-y;
+    padding: 8px 0;
+    margin: -8px 0;
+  }
+
+  .slider-hold input[type="range"] { pointer-events: none; }
+}
+
 select,
 input[type="number"] {
   width: 100%;
@@ -795,6 +810,9 @@ input[type="number"] {
 }
 
 .pick-row.refused { border-color: var(--danger); }
+/* the row whose pick is drawn bold on the part (hovered, focused or tapped) */
+.pick-row.lit { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pick-row.refused.lit { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
 
 .pick-head {
   display: flex;
