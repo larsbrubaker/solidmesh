@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- The demo site's one page: the sidebar of demo routes and the main area src/main.ts renders
+     each route into. build.ts swaps the src/main.ts script for the bundled main.js. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>solidmesh: Interactive Solid Modeling Demos</title>
+  <meta name="description" content="Booleans, outline to solid, implicit blends, Minkowski sums, convex hulls and mesh repair on triangle meshes, computed in your browser by solidmesh, a pure-Rust geometry kernel compiled to WebAssembly.">
+  <link rel="icon" type="image/svg+xml" href="./public/favicon.svg">
+  <link rel="stylesheet" href="./styles/main.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <button id="menu-toggle" class="menu-toggle" aria-label="Toggle navigation">
+    <span></span><span></span><span></span>
+  </button>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <h1 class="logo">solid<span class="logo-accent">mesh</span></h1>
+      <p class="tagline">Solid modeling on triangle meshes, in Rust</p>
+    </div>
+    <ul class="nav-list">
+      <li><a href="#/" class="nav-link active" data-route="home">
+        <span class="nav-icon">&#9670;</span> Home
+      </a></li>
+      <li class="nav-section">Build</li>
+      <li><a href="#/booleans" class="nav-link" data-route="booleans">
+        <span class="nav-icon">&#9726;</span> Booleans
+      </a></li>
+      <li><a href="#/outline" class="nav-link" data-route="outline">
+        <span class="nav-icon">&#10548;</span> Outline to Solid
+      </a></li>
+      <li><a href="#/implicit" class="nav-link" data-route="implicit">
+        <span class="nav-icon">&#9673;</span> Implicit &amp; SDF
+      </a></li>
+      <li><a href="#/minkowski-hull" class="nav-link" data-route="minkowski-hull">
+        <span class="nav-icon">&#9651;</span> Minkowski &amp; Hull
+      </a></li>
+      <li class="nav-section">Fix &amp; ship</li>
+      <li><a href="#/repair" class="nav-link" data-route="repair">
+        <span class="nav-icon">&#10010;</span> Mesh Repair
+      </a></li>
+      <li><a href="#/measure-export" class="nav-link" data-route="measure-export">
+        <span class="nav-icon">&#9881;</span> Measure &amp; Export
+      </a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="capture-thumbs-btn" class="capture-btn" style="display:none">Update Thumbnails</button>
+      <button id="capture-hero-btn" class="capture-btn" style="display:none">Capture README Hero</button>
+      <p><a href="https://github.com/larsbrubaker/solidmesh" target="_blank" rel="noopener">Source on GitHub</a></p>
+      <p>MatterCAD's geometry kernel</p>
+      <p class="license">BSD-2-Clause License</p>
+    </div>
+  </nav>
+
+  <main id="main-content"></main>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
