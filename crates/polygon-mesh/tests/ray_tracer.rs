@@ -9,6 +9,10 @@ mod minimal_triangle_tests;
 mod parallel_sequential_equivalence_tests;
 #[path = "ray_tracer/polygon_trace_tests.rs"]
 mod polygon_trace_tests;
+#[path = "ray_tracer/ray_bundle_contract_tests.rs"]
+mod ray_bundle_contract_tests;
+#[path = "ray_tracer/ray_bundle_tests.rs"]
+mod ray_bundle_tests;
 #[path = "ray_tracer/rust_only_primary_ray_tests.rs"]
 mod rust_only_primary_ray_tests;
 #[path = "ray_tracer/rust_only_ray_tracer_tests.rs"]

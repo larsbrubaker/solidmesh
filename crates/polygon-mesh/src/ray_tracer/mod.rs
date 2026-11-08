@@ -23,18 +23,22 @@
 //! `Transform`'s and `Difference`'s `get_crossing`/`get_touching`) return
 //! [`RayTracerError::NotSupported`] rather than a wrong answer.
 //!
-//! [`RayTracer`] traces a primary ray into a [`Scene`]'s shapes.
+//! [`RayTracer`] traces a primary ray into a [`Scene`]'s shapes, or a [`RayBundle`] of them
+//! together. A bundle's rays each get the same result, bit for bit, as tracing them alone:
+//! `ray_bundle`, `bvh_bundle_traversal` and [`Traceable::trace_ray_bundle`] say how.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
 mod box_shape;
 mod bvh_builder_locally_ordered_clustering;
+mod bvh_bundle_traversal;
 mod bvh_iterator;
 mod difference;
 mod intersect_info_subtract;
 mod material;
 mod minimal_triangle;
 mod plane_shape;
+mod ray_bundle;
 mod ray_tracer_engine;
 mod scene;
 mod sphere_shape;
@@ -62,6 +66,9 @@ pub use material::{
 };
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
 pub use plane_shape::PlaneShape;
+#[doc(hidden)]
+pub use ray_bundle::PacketBounds;
+pub use ray_bundle::{RayBundle, RayBundleStats};
 pub use ray_tracer_engine::{AntiAliasing, RayTracer};
 pub use scene::{Background, Scene};
 pub use sphere_shape::SphereShape;
@@ -82,7 +89,7 @@ pub enum RayTracerError {
     NoMaterial,
     /// A hit list handed to [`IntersectInfo::subtract`] is malformed (the text says how).
     BadHitList(&'static str),
-    /// A shape's construction arguments are invalid (the text says which).
+    /// A shape's construction arguments or a bundle's rays are invalid (the text says which).
     InvalidArgument(&'static str),
 }
 
@@ -137,6 +144,22 @@ pub trait Traceable: Any + Send + Sync {
     /// The nearest hit of `ray`, if any. Containers narrow the ray's
     /// `max_distance_to_consider` as they find hits.
     fn get_closest_intersection<'a>(&'a self, ray: &mut Ray) -> Option<IntersectInfo<'a>>;
+
+    /// Traces the rays in `bundle` at the positions `active`, leaving each one's result exactly
+    /// as [`Traceable::get_closest_intersection`] would on that ray alone: at most one entry per
+    /// active ray on the bundle's stack. This default does just that, one ray at a time;
+    /// containers override it to trace their rays together. A ray index past the end of
+    /// the bundle is a [`RayTracerError::InvalidArgument`].
+    fn trace_ray_bundle<'a>(
+        &'a self,
+        bundle: &mut RayBundle<'a>,
+        active: &[u32],
+    ) -> Result<(), RayTracerError> {
+        for &index in active {
+            bundle.trace_one(index, self)?;
+        }
+        Ok(())
+    }
 
     /// The relative cost of an intersection test against this (a bounds test is 1).
     fn get_intersect_cost(&self) -> f64;

@@ -1,7 +1,5 @@
 // Frustum tests: transforming a frustum, and clipping boxes and lines against its planes. They
 // use only vector-math's Frustum, Plane, Matrix4X4 and AxisAlignedBoundingBox.
-// `ray_bundle_same_result_as_individual_rays` has no checks yet: ray bundles against single rays
-// is still an open case.
 
 use solidmesh_math::{
     math_helper, AxisAlignedBoundingBox, Frustum, FrustumIntersection, Matrix4X4, Plane, Vector3,
@@ -14,9 +12,6 @@ fn v3(x: f64, y: f64, z: f64) -> Vector3 {
 fn aabb(min: [f64; 3], max: [f64; 3]) -> AxisAlignedBoundingBox {
     AxisAlignedBoundingBox::new(v3(min[0], min[1], min[2]), v3(max[0], max[1], max[2]))
 }
-
-#[test]
-fn ray_bundle_same_result_as_individual_rays() {}
 
 #[test]
 fn frustum_transform_tests() {

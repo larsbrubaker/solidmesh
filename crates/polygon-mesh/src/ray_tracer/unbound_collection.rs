@@ -8,7 +8,10 @@ use std::any::Any;
 
 use solidmesh_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
-use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef, PLANE_CROSSED_BY_ERROR};
+use super::ray_bundle::Pick;
+use super::{
+    IntersectInfo, RayBundle, RayTracerError, Traceable, TraceableRef, PLANE_CROSSED_BY_ERROR,
+};
 
 /// A list of traceables with no hierarchy.
 pub struct UnboundCollection {
@@ -136,6 +139,32 @@ impl Traceable for UnboundCollection {
         }
 
         best_info
+    }
+
+    /// Each item in turn over the same rays, keeping per ray the nearest hit at a distance of
+    /// at least 0.
+    fn trace_ray_bundle<'a>(
+        &'a self,
+        bundle: &mut RayBundle<'a>,
+        active: &[u32],
+    ) -> Result<(), RayTracerError> {
+        let base = bundle.hits.len();
+        for item in &self.items {
+            let mid = bundle.hits.len();
+            item.trace_ray_bundle(bundle, active)?;
+            bundle.combine_hits(base, mid, |_, _, best, info| match (best, info) {
+                (best, Some(info))
+                    if info.hit_type != IntersectionType::None
+                        && info.distance_to_hit >= 0.0
+                        && best.is_none_or(|best| info.distance_to_hit < best.distance_to_hit) =>
+                {
+                    Pick::Second
+                }
+                (Some(_), _) => Pick::First,
+                (None, _) => Pick::Neither,
+            });
+        }
+        Ok(())
     }
 
     /// The sum of the items' costs.

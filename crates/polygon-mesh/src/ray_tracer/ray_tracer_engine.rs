@@ -1,11 +1,12 @@
-//! The ray tracer's settings and its primary-ray trace (the file is named for the engine so
+//! The ray tracer's settings and its primary-ray traces (the file is named for the engine so
 //! it does not share the module's name). [`RayTracer::trace_primary_ray`] finds the nearest
-//! hit among a [`Scene`]'s shapes. There is no image renderer (color, depth and normal
-//! buffers, anti-aliasing, ray bundles) here; the settings are what one would read.
+//! hit among a [`Scene`]'s shapes for one ray, [`RayTracer::trace_ray_bundle`] for a bundle at
+//! once. There is no image renderer (color, depth and normal buffers, anti-aliasing) here; the
+//! settings are what one would read.
 
 use solidmesh_math::{IntersectionType, Ray};
 
-use super::{IntersectInfo, Scene};
+use super::{IntersectInfo, RayBundle, RayTracerError, Scene};
 
 /// How many extra rays the renderer fires per pixel that differs from its neighbors (the
 /// discriminant is the sample count).
@@ -73,5 +74,17 @@ impl RayTracer {
         }
 
         primary_ray_intersection
+    }
+
+    /// Traces every ray of `bundle` into the scene together; afterwards each ray's result in
+    /// [`RayBundle::results`] is what [`RayTracer::trace_primary_ray`] returns for it alone
+    /// (`Some` always, a miss an [`IntersectInfo::new`]). More rays than a bundle can index is
+    /// a [`RayTracerError::InvalidArgument`].
+    pub fn trace_ray_bundle<'a>(
+        &self,
+        bundle: &mut RayBundle<'a>,
+        scene: &'a Scene,
+    ) -> Result<(), RayTracerError> {
+        bundle.trace_scene(&scene.shapes)
     }
 }

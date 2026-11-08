@@ -7,8 +7,8 @@ use std::any::Any;
 use solidmesh_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 use super::{
-    BvhBuilderLocallyOrderedClustering, IntersectInfo, RayTracerError, Traceable, TraceableRef,
-    UnboundCollection, PLANE_CROSSED_BY_ERROR,
+    BvhBuilderLocallyOrderedClustering, IntersectInfo, RayBundle, RayTracerError, Traceable,
+    TraceableRef, UnboundCollection, PLANE_CROSSED_BY_ERROR,
 };
 
 /// How [`BoundingVolumeHierarchy::create_new_hierarchy`] builds the tree.
@@ -23,28 +23,43 @@ pub enum BvhCreationOptions {
 
 /// A node of two children and their joint bounds.
 pub struct BoundingVolumeHierarchy {
-    aabb: AxisAlignedBoundingBox,
-    left: TraceableRef,
-    right: TraceableRef,
-    splitting_plane: usize,
+    pub(super) aabb: AxisAlignedBoundingBox,
+    pub(super) left: TraceableRef,
+    pub(super) right: TraceableRef,
+    pub(super) splitting_plane: usize,
+    /// The box has no NaN and its min is at most its max: what the packet traversal's skipped
+    /// box tests rely on (`bvh_bundle_traversal`).
+    pub(super) monotone: bool,
+    /// The child is a sound node whose box is inside this one, so the packet traversal can
+    /// walk down into it without testing each ray.
+    pub(super) left_descends: bool,
+    pub(super) right_descends: bool,
 }
 
 impl BoundingVolumeHierarchy {
     /// The node over `node_a` and `node_b`, split along its longest axis (z on ties with it,
     /// y on an x/y tie).
     pub fn new(node_a: TraceableRef, node_b: TraceableRef) -> Self {
-        let aabb = node_a.get_axis_aligned_bounding_box() + node_b.get_axis_aligned_bounding_box();
+        let left_bounds = node_a.get_axis_aligned_bounding_box();
+        let right_bounds = node_b.get_axis_aligned_bounding_box();
+        let aabb = left_bounds + right_bounds;
         let mut splitting_plane = if aabb.x_size() > aabb.y_size() { 0 } else { 1 };
         splitting_plane = if aabb.size()[splitting_plane] > aabb.z_size() {
             splitting_plane
         } else {
             2
         };
+        let monotone = is_sound(&aabb);
+        let left_descends = monotone && is_sound_node_inside(&node_a, &left_bounds, &aabb);
+        let right_descends = monotone && is_sound_node_inside(&node_b, &right_bounds, &aabb);
         BoundingVolumeHierarchy {
             aabb,
             left: node_a,
             right: node_b,
             splitting_plane,
+            monotone,
+            left_descends,
+            right_descends,
         }
     }
 
@@ -81,6 +96,27 @@ impl BoundingVolumeHierarchy {
             (&self.left, &self.right)
         }
     }
+}
+
+/// True when the box has no NaN and is not inside out.
+fn is_sound(bounds: &AxisAlignedBoundingBox) -> bool {
+    (0..3).all(|axis| bounds.min_xyz[axis] <= bounds.max_xyz[axis])
+}
+
+/// True when `child` is a sound node whose bounds lie inside `parent`.
+fn is_sound_node_inside(
+    child: &TraceableRef,
+    child_bounds: &AxisAlignedBoundingBox,
+    parent: &AxisAlignedBoundingBox,
+) -> bool {
+    child
+        .as_any()
+        .downcast_ref::<BoundingVolumeHierarchy>()
+        .is_some_and(|node| node.monotone)
+        && (0..3).all(|axis| {
+            parent.min_xyz[axis] <= child_bounds.min_xyz[axis]
+                && child_bounds.max_xyz[axis] <= parent.max_xyz[axis]
+        })
 }
 
 /// True when `info` is a real hit: present, with a hit type other than `None`.
@@ -177,6 +213,15 @@ impl Traceable for BoundingVolumeHierarchy {
 
         // we don't have to test it because it didn't hit.
         info_second
+    }
+
+    /// The packet traversal in `bvh_bundle_traversal`.
+    fn trace_ray_bundle<'a>(
+        &'a self,
+        bundle: &mut RayBundle<'a>,
+        active: &[u32],
+    ) -> Result<(), RayTracerError> {
+        self.trace_bundle_entry(bundle, active)
     }
 
     fn get_intersect_cost(&self) -> f64 {

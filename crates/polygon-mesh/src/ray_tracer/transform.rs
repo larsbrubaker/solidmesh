@@ -6,7 +6,8 @@ use std::any::Any;
 
 use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector3};
 
-use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef};
+use super::ray_bundle::ray_index_count;
+use super::{IntersectInfo, RayBundle, RayTracerError, Traceable, TraceableRef};
 
 /// A child traceable under a transform.
 pub struct Transform {
@@ -120,6 +121,31 @@ impl Traceable for Transform {
         let mut local_ray = self.get_local_space_ray(ray);
         let local_intersection = self.child.get_closest_intersection(&mut local_ray)?;
         Some(self.get_global_space_info(local_intersection))
+    }
+
+    /// The active rays moved into the child's space and traced there together: the child's
+    /// own bundle starts from rays it has never seen, and the rays here keep the windows they
+    /// came with, as a lone ray's does.
+    fn trace_ray_bundle<'a>(
+        &'a self,
+        bundle: &mut RayBundle<'a>,
+        active: &[u32],
+    ) -> Result<(), RayTracerError> {
+        bundle.check_indices(active)?;
+        let local_count = ray_index_count(active.len())?;
+        let world_to_local = self.axis_to_world.inverted();
+        let rays = active
+            .iter()
+            .map(|&index| Ray::transform(&bundle.rays()[index as usize], world_to_local))
+            .collect();
+        let base = bundle.hits.len();
+        let mut local = bundle.local(rays);
+        let local_active: Vec<u32> = (0..local_count).collect();
+        let outcome = self.child.trace_ray_bundle(&mut local, &local_active);
+        bundle.finish_local(local, base, active, |local_info| {
+            self.get_global_space_info(local_info)
+        });
+        outcome
     }
 
     fn get_intersect_cost(&self) -> f64 {
