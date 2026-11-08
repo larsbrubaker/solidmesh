@@ -85,6 +85,7 @@ pub use path_tracer::{
     display_byte, linear_to_srgb, pixel_jitter, tone_map, AccumulatedPixel, Environment,
     LightSetup, LightStrategy, PathTraceSettings, PathTracer, PixelRandom, RenderCamera,
     RenderScene, RenderSurface, RenderTile, RenderWork, Sun, TileRect, BOUNCE_HISTOGRAM_BINS,
+    MAX_CROSSINGS_PER_LINE,
 };
 pub use placed_part::{PartHit, PlacedPart, PlacedParts};
 pub use plane_shape::PlaneShape;

@@ -17,6 +17,8 @@ pub struct RenderWork {
     pub later_shadow_rays: u64,
     /// Rays continuing a path after a bounce: incoherent.
     pub bounce_rays: u64,
+    /// Rays continuing a straight line past a part that was not there.
+    pub pass_through_rays: u64,
     /// Pixels that received a sample.
     pub pixels_rendered: u64,
     /// Samples dropped because a value overflowed or turned to NaN (see
@@ -31,7 +33,11 @@ pub struct RenderWork {
 impl RenderWork {
     /// Every ray of every kind.
     pub fn total_rays(&self) -> u64 {
-        self.camera_rays + self.first_hit_shadow_rays + self.later_shadow_rays + self.bounce_rays
+        self.camera_rays
+            + self.first_hit_shadow_rays
+            + self.later_shadow_rays
+            + self.bounce_rays
+            + self.pass_through_rays
     }
 
     /// The fraction of rays that are coherent (camera rays and shadow rays from their first hit),
@@ -52,6 +58,7 @@ impl RenderWork {
         self.first_hit_shadow_rays += other.first_hit_shadow_rays;
         self.later_shadow_rays += other.later_shadow_rays;
         self.bounce_rays += other.bounce_rays;
+        self.pass_through_rays += other.pass_through_rays;
         self.pixels_rendered += other.pixels_rendered;
         self.dropped_samples += other.dropped_samples;
         self.cancelled |= other.cancelled;

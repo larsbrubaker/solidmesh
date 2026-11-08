@@ -18,12 +18,22 @@
 //! 160 by 80 sphere, but in a white furnace with smooth normals a 12 by 6 sphere loses 0.59%
 //! (Lambert), 4.36% (metal at roughness 0.1) and 3.22% (glass), and an 8 by 4 sphere 1.35%, 9.11%
 //! and 6.10%. A coarse mesh with smooth normals is visibly darker than a fine one.
+//!
+//! **See-through parts.** At a hit on a part that is only partly there, `see_through` decides
+//! whether the path finds it. A path that doesn't goes on along the same line with nothing else
+//! changed: the throughput, the bounce count, the direction and the record of how it got here.
+//! Weighting the sun's two estimators stays right because of that last one. The direction was
+//! chosen at the last real vertex, and whether a shadow ray along it reaches the sun past
+//! see-through parts is the same question, with the same chance, as whether a sampled ray along
+//! it does. Both estimators are scaled by the same visibility, so the weights stay the ratio of
+//! the two densities at the last vertex, and a shadow ray walks its line by the same rule.
 
 use solidmesh_math::{IntersectionType, Ray, Vector3};
 
 use super::pixel_random::PixelRandom;
 use super::render_scene::RenderScene;
 use super::render_work::RenderWork;
+use super::see_through::{continued_ray, AtHit, StraightLine};
 use crate::ray_tracer::{LocalFrame, RayTracerError, ScatteringSurface, SurfacePoint};
 
 /// Which of the ways of reaching the sun a render uses. [`LightStrategy::Combined`] is the one to
@@ -160,6 +170,35 @@ struct Vertex<'a> {
     is_first_hit: bool,
 }
 
+/// Whether the sun is seen along `shadow_ray`. With no see-through part in the scene the first
+/// hit found answers it. With one, the line is followed nearest hit first, deciding at each part
+/// as a path would, so the chance the sun is seen is the product of what each part leaves.
+fn sun_reachable(
+    scene: &RenderScene,
+    mut shadow_ray: Ray,
+    random: &mut PixelRandom,
+    work: &mut RenderWork,
+) -> Result<bool, RayTracerError> {
+    if !scene.has_see_through_parts() {
+        shadow_ray.is_shadow_ray = true;
+        return Ok(scene.parts().trace(&mut shadow_ray).is_none());
+    }
+    let direction = shadow_ray.direction_normal;
+    let mut line = StraightLine::default();
+    loop {
+        let Some(hit) = scene.parts().trace(&mut shadow_ray) else {
+            return Ok(true);
+        };
+        match line.at_hit(scene, hit.part.index(), random) {
+            AtHit::Stops | AtHit::Ended => return Ok(false),
+            AtHit::PassesThrough => {
+                shadow_ray = continued_ray(&hit.surface_point()?, direction);
+                work.pass_through_rays += 1;
+            }
+        }
+    }
+}
+
 /// Traces a shadow ray toward the sun and returns what it brings, when the strategy uses
 /// next-event estimation. The surface is evaluated first so a direction it passes nothing along
 /// costs no ray.
@@ -169,10 +208,12 @@ fn sample_sun(
     vertex: &Vertex<'_>,
     random: &mut PixelRandom,
     work: &mut RenderWork,
-) -> Option<[f64; 3]> {
-    let sun = scene.lights().sun.as_ref()?;
+) -> Result<Option<[f64; 3]>, RayTracerError> {
+    let Some(sun) = scene.lights().sun.as_ref() else {
+        return Ok(None);
+    };
     if settings.strategy == LightStrategy::SurfaceSamplingOnly {
-        return None;
+        return Ok(None);
     }
     let wi_world = sun.sample([random.next_unit(), random.next_unit()]);
     let wi = vertex.frame.to_local(wi_world);
@@ -183,27 +224,26 @@ fn sample_sun(
         vertex.wo.z,
         wi.z,
     ) {
-        return None;
+        return Ok(None);
     }
     let bsdf = vertex.surface.evaluate(vertex.wo, wi);
     if largest_channel(bsdf) <= 0.0 {
-        return None;
+        return Ok(None);
     }
-    let mut shadow_ray = Ray::with_limits(
+    let shadow_ray = Ray::with_limits(
         vertex.point.next_ray_origin(wi_world),
         wi_world,
         0.0,
         f64::INFINITY,
         IntersectionType::Both,
     );
-    shadow_ray.is_shadow_ray = true;
     if vertex.is_first_hit {
         work.first_hit_shadow_rays += 1;
     } else {
         work.later_shadow_rays += 1;
     }
-    if scene.parts().trace(&mut shadow_ray).is_some() {
-        return None;
+    if !sun_reachable(scene, shadow_ray, random, work)? {
+        return Ok(None);
     }
     let pdf_light = sun.pdf();
     let weight = if settings.strategy == LightStrategy::Combined {
@@ -211,10 +251,10 @@ fn sample_sun(
     } else {
         1.0
     };
-    Some(scaled(
+    Ok(Some(scaled(
         multiply(bsdf, sun.radiance()),
         wi.z.abs() / pdf_light * weight,
-    ))
+    )))
 }
 
 /// The radiance brought back along `ray` (a camera ray), by one path. Random numbers come only
@@ -234,6 +274,7 @@ pub(super) fn trace_path(
     let mut eta_scale = 1.0;
     let mut arrival = Arrival::Unweighted;
     let mut scatters = 0_u32;
+    let mut line = StraightLine::default();
 
     work.camera_rays += 1;
     loop {
@@ -242,6 +283,19 @@ pub(super) fn trace_path(
             add_to(&mut radiance, multiply(throughput, escaped));
             break;
         };
+        // Whether the part is there at all comes before the bounce limit: a path past its last
+        // bounce still sees through what isn't there.
+        if scene.has_see_through_parts() {
+            match line.at_hit(scene, hit.part.index(), random) {
+                AtHit::Stops => {}
+                AtHit::Ended => break,
+                AtHit::PassesThrough => {
+                    ray = continued_ray(&hit.surface_point()?, ray.direction_normal);
+                    work.pass_through_rays += 1;
+                    continue;
+                }
+            }
+        }
         if scatters >= settings.max_bounces {
             break;
         }
@@ -272,7 +326,7 @@ pub(super) fn trace_path(
             wo,
             is_first_hit: scatters == 0,
         };
-        if let Some(direct) = sample_sun(scene, settings, &vertex, random, work) {
+        if let Some(direct) = sample_sun(scene, settings, &vertex, random, work)? {
             add_to(&mut radiance, multiply(throughput, direct));
         }
 
@@ -317,6 +371,7 @@ pub(super) fn trace_path(
             IntersectionType::Both,
         );
         work.bounce_rays += 1;
+        line.restart();
     }
     work.record_path(scatters);
     Ok(radiance)

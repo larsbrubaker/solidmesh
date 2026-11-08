@@ -9,6 +9,10 @@ mod bvh_flat_mesh_depth_tests;
 mod minimal_triangle_tests;
 #[path = "ray_tracer/parallel_sequential_equivalence_tests.rs"]
 mod parallel_sequential_equivalence_tests;
+#[path = "ray_tracer/part_opacity_tests.rs"]
+mod part_opacity_tests;
+#[path = "ray_tracer/path_tracer_golden_tests.rs"]
+mod path_tracer_golden_tests;
 #[path = "ray_tracer/path_tracer_measure_tests.rs"]
 mod path_tracer_measure_tests;
 #[path = "ray_tracer/path_tracer_partial_glass_tests.rs"]

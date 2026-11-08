@@ -11,7 +11,9 @@
 //! - `lights`: [`Environment`] (a constant radiance or a smooth sky-to-ground gradient), [`Sun`]
 //!   (a disc with a finite angular radius and a radiance) and [`LightSetup`], which holds one of
 //!   each (the sun is optional).
-//! - `render_scene`: [`RenderScene`], the parts, one surface per part, and the lights.
+//! - `render_scene`: [`RenderScene`], the parts, one surface and optional opacity per part, and
+//!   the lights.
+//! - `see_through`: how a ray goes past a part that is only partly there.
 //! - `camera`: [`RenderCamera`], perspective or orthographic, from eye, target and up.
 //! - `pixel_random`: [`PixelRandom`], each pixel's random stream, and the jitter inside the pixel.
 //! - `integrator`: the path loop; [`PathTraceSettings`] and [`LightStrategy`] are its knobs.
@@ -39,6 +41,17 @@
 //! small sun they are rare. A point behind glass in sun-only light therefore converges slowly to
 //! its correct brightness.
 //!
+//! **A part's opacity is coverage, not color.** At a hit on a part of opacity `a`, the path finds
+//! the part with probability `a`, and otherwise goes on along the same line as if the part
+//! weren't there: no throughput change and no bounce used. A shadow ray does the same, so a part
+//! at opacity `a` scales its shadow by `a`, unlike glass above. The decision is one per part
+//! along one straight line, drawn from the pixel's stream, so a closed solid at opacity `a`
+//! covers `a` of what is behind it even though a line crosses two of its surfaces. A scene whose
+//! parts are all opaque draws no extra number and traces no extra ray: its image is unchanged to
+//! the bit. A line goes through at most `MAX_CROSSINGS_PER_LINE` see-through surfaces; a path
+//! past that ends, losing whatever it still carries, as with the bounce limit.
+//! [`RenderScene::coverage_along`] says what a camera ray's coverage is, without sampling.
+//!
 //! **Rough glass loses energy.** The scattering model's rough glass is single-scatter only (its
 //! header says so), and the integrator returns exactly what the model gives it.
 //!
@@ -61,6 +74,7 @@ mod render_scene;
 mod render_surface;
 mod render_work;
 mod renderer;
+mod see_through;
 
 pub use camera::RenderCamera;
 pub use display::{display_byte, linear_to_srgb, tone_map};
@@ -71,3 +85,4 @@ pub use render_scene::RenderScene;
 pub use render_surface::{AccumulatedPixel, RenderSurface, RenderTile, TileRect};
 pub use render_work::{RenderWork, BOUNCE_HISTOGRAM_BINS};
 pub use renderer::PathTracer;
+pub use see_through::MAX_CROSSINGS_PER_LINE;
