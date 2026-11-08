@@ -15,6 +15,7 @@ const WATCH_DIRS = [
   join(REPO_ROOT, "crates", "vector-math", "src"),
   join(REPO_ROOT, "crates", "clipper-library", "src"),
   join(REPO_ROOT, "crates", "polygon-mesh", "src"),
+  join(REPO_ROOT, "crates", "geometry-processing", "src"),
 ];
 
 let building = false;

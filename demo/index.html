@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>solidmesh: Interactive Solid Modeling Demos</title>
-  <meta name="description" content="Booleans, outline to solid, implicit blends, Minkowski sums, convex hulls and mesh repair on triangle meshes, computed in your browser by solidmesh, a pure-Rust geometry kernel compiled to WebAssembly.">
+  <meta name="description" content="Fillets and chamfers, booleans, outline to solid, implicit blends, Minkowski sums, convex hulls and mesh repair on triangle meshes, computed in your browser by solidmesh, a pure-Rust geometry kernel compiled to WebAssembly.">
   <link rel="icon" type="image/svg+xml" href="./public/favicon.svg">
   <link rel="stylesheet" href="./styles/main.css">
   <script type="importmap">
@@ -34,6 +34,9 @@
         <span class="nav-icon">&#9670;</span> Home
       </a></li>
       <li class="nav-section">Build</li>
+      <li><a href="#/fillet" class="nav-link" data-route="fillet">
+        <span class="nav-icon">&#9701;</span> Fillet &amp; Chamfer
+      </a></li>
       <li><a href="#/booleans" class="nav-link" data-route="booleans">
         <span class="nav-icon">&#9726;</span> Booleans
       </a></li>

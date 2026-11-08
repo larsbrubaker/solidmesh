@@ -1,7 +1,8 @@
 // The Three.js viewer every page draws its result in: z up (the kernel's convention), orbit
 // controls, flat shading with the solid's feature edges drawn dark, back faces in saffron so an
 // inside-out patch or a hole shows at a glance, and an optional translucent ghost (a boolean's
-// operands, a hull's source).
+// operands, a hull's source). The Fillet page also draws overlays on it (edges as tubes, corners
+// as balls, `setTubes` / `setBalls`) and casts the pointer's ray into the part (`rayAt`).
 //
 // The newest live viewer is `activeViewer()`: src/capture.ts draws it with `renderNow` and reads
 // its canvas for the thumbnail (preserveDrawingBuffer keeps the frame readable).
@@ -222,9 +223,102 @@ export class ThreeViewer {
     this.hasFramed = false;
   }
 
+  private overlays = new Map<string, THREE.Group>();
+
+  /**
+   * Draws `segments` (six numbers per segment, in the part's space) as tubes of `radius` mm, or
+   * clears them with null: the Fillet page's feature edges, hovered pick and picks, each under its
+   * own key. `onTop` draws them through the part, for a hover that must show behind a face.
+   */
+  setTubes(key: string, segments: Float32Array | number[] | null, color: number, radius: number,
+    opts: { onTop?: boolean; opacity?: number } = {}) {
+    this.clearOverlay(key);
+    if (!segments || segments.length < 6) return;
+    const count = Math.floor(segments.length / 6);
+    const geom = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: (opts.opacity ?? 1) < 1 || !!opts.onTop, opacity: opts.opacity ?? 1,
+      depthTest: !opts.onTop,
+    });
+    const tubes = new THREE.InstancedMesh(geom, mat, count);
+    const a = new THREE.Vector3();
+    const b = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const s = new THREE.Vector3();
+    for (let i = 0; i < count; i++) {
+      a.set(segments[i * 6], segments[i * 6 + 1], segments[i * 6 + 2]);
+      b.set(segments[i * 6 + 3], segments[i * 6 + 4], segments[i * 6 + 5]);
+      const dir = b.clone().sub(a);
+      const length = dir.length();
+      q.setFromUnitVectors(up, length > 0 ? dir.normalize() : up);
+      s.set(radius, length, radius);
+      m.compose(a.clone().add(b).multiplyScalar(0.5), q, s);
+      tubes.setMatrixAt(i, m);
+    }
+    tubes.renderOrder = opts.onTop ? 10 : 1;
+    this.overlayGroup(key).add(tubes);
+  }
+
+  /** Draws a ball of `radius` mm at each point (three numbers each), or clears them with null. */
+  setBalls(key: string, points: Float32Array | number[] | null, color: number, radius: number) {
+    this.clearOverlay(key);
+    if (!points || points.length < 3) return;
+    const count = Math.floor(points.length / 3);
+    const balls = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8),
+      new THREE.MeshBasicMaterial({ color }), count);
+    const m = new THREE.Matrix4();
+    for (let i = 0; i < count; i++) {
+      m.makeScale(radius, radius, radius);
+      m.setPosition(points[i * 3], points[i * 3 + 1], points[i * 3 + 2]);
+      balls.setMatrixAt(i, m);
+    }
+    this.overlayGroup(key).add(balls);
+  }
+
+  private overlayGroup(key: string): THREE.Group {
+    let group = this.overlays.get(key);
+    if (!group) {
+      group = new THREE.Group();
+      this.overlays.set(key, group);
+      this.scene.add(group);
+    }
+    return group;
+  }
+
+  clearOverlay(key: string) {
+    const group = this.overlays.get(key);
+    if (group) ThreeViewer.disposeGroup(group);
+  }
+
+  /**
+   * The ray under a pointer at client coordinates: its origin and unit direction in the scene's
+   * (the part's) space, and how many mm one pixel spans at 1 mm from the eye.
+   */
+  rayAt(clientX: number, clientY: number): { origin: number[]; direction: number[]; pixelSize: number } {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1,
+      -((clientY - rect.top) / Math.max(rect.height, 1)) * 2 + 1,
+    );
+    const caster = new THREE.Raycaster();
+    caster.setFromCamera(ndc, this.camera);
+    const { origin, direction } = caster.ray;
+    const pixelSize = (2 * Math.tan((this.camera.fov * Math.PI) / 360)) / Math.max(rect.height, 1);
+    return { origin: [origin.x, origin.y, origin.z], direction: [direction.x, direction.y, direction.z], pixelSize };
+  }
+
+  /** The radius of the bounding sphere of what is shown, for sizing tubes and balls. */
+  get contentRadius(): number {
+    const box = new THREE.Box3().setFromObject(this.content);
+    return box.isEmpty() ? 10 : box.getBoundingSphere(new THREE.Sphere()).radius;
+  }
+
   clear() {
     ThreeViewer.disposeGroup(this.content);
     ThreeViewer.disposeGroup(this.ghost);
+    for (const group of this.overlays.values()) ThreeViewer.disposeGroup(group);
     this.last = null;
   }
 

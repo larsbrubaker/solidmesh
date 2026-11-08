@@ -12,6 +12,7 @@ import { DEMO_ROUTES } from './routes.ts';
 
 type DemoInit = (container: HTMLElement) => (() => void) | void;
 const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
+  'fillet': () => import('./demos/fillet.ts' as any),
   'booleans': () => import('./demos/booleans.ts' as any),
   'outline': () => import('./demos/outline.ts' as any),
   'implicit': () => import('./demos/implicit.ts' as any),
@@ -21,6 +22,10 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
 };
 
 const CARDS: Record<string, { title: string; text: string }> = {
+  'fillet': {
+    title: 'Fillet & Chamfer',
+    text: 'Pick edge chains, single edges, face rims or corners, give each its own radius, and watch them rounded live.',
+  },
   'booleans': {
     title: 'Booleans',
     text: 'Union, difference and intersection on the exact kernel, and the robust path for inside-out or self-intersecting operands.',
@@ -95,8 +100,9 @@ function renderHome(container: HTMLElement) {
       <div class="hero">
         <h1>solid<span>mesh</span></h1>
         <p>
-          Solid modeling on triangle meshes, in pure Rust: booleans, outlines to solids, implicit
-          blends, Minkowski sums, convex hulls and repair, on the meshes real pipelines contain.
+          Solid modeling on triangle meshes, in pure Rust: fillets and chamfers, booleans, outlines
+          to solids, implicit blends, Minkowski sums, convex hulls and repair, on the meshes real
+          pipelines contain.
           Every page below runs the library itself in your browser, compiled to WebAssembly.
         </p>
       </div>
@@ -109,7 +115,8 @@ function renderHome(container: HTMLElement) {
           3MF downloads, scans, triangle soup), builds for <code>wasm32-unknown-unknown</code>,
           contains no C or C++, and gives the same answer on every platform. Booleans run on
           <a href="https://github.com/larsbrubaker/manifold-rust" target="_blank" rel="noopener">manifold-rust</a>.
-          Fillets and chamfers on mesh edges join this demo when their public entry point lands.
+          Fillets and chamfers, the library's signature feature, come through one call,
+          <code>bevel::part::bevel_part</code>.
         </p>
         <p style="margin-top: 12px">
           By <strong>Lars Brubaker</strong>, sponsored by

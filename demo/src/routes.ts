@@ -3,5 +3,5 @@
 // at the demo root (capture-thumbs.ts, capture-hero.ts), which run under Bun outside the page.
 
 export const DEMO_ROUTES = [
-  'booleans', 'outline', 'implicit', 'minkowski-hull', 'repair', 'measure-export',
+  'fillet', 'booleans', 'outline', 'implicit', 'minkowski-hull', 'repair', 'measure-export',
 ];

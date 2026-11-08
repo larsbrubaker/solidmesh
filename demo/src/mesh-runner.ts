@@ -5,6 +5,10 @@
 // `whenIdle()` resolves once nothing is computing or queued (`whenIdleWithin` gives up after a
 // timeout); the thumbnail capture (src/capture.ts) waits on it instead of guessing how long a page
 // takes. src/mesh-runner.test.ts tests the coalescing and the idle tracking.
+//
+// `callMesh` asks the same worker for a plain value; `SideWorker` is a second worker with its own
+// wasm instance, for calls that must not queue behind a build (the Fillet page's hover picking),
+// and `holdBusy` keeps the capture waiting while a page prepares its first request there.
 
 export interface MeshResult {
   positions: Float32Array;
@@ -18,6 +22,8 @@ export interface MeshResult {
   closed: boolean;
   openEdges: number;
   note: string;
+  /** A page's own answer beside the mesh, as JSON (the Fillet page's rows); empty elsewhere. */
+  data: string;
 }
 
 export interface RunResult {
@@ -41,8 +47,8 @@ function settleIdle() {
   for (const w of waiters) w();
 }
 
-function ensureWorker(): Worker {
-  if (worker) return worker;
+/** A new worker running src/mesh-worker.ts, told where the wasm package is. */
+function spawnWorker(): Worker {
   // In dev the server transpiles src/*.ts and import.meta.url ends in .ts; the build bundles the
   // worker as mesh-worker.js beside main.js.
   const url = import.meta.url.endsWith('.ts')
@@ -53,13 +59,23 @@ function ensureWorker(): Worker {
     type: 'init',
     pkgUrl: new URL('./public/pkg/solidmesh_wasm.js', window.location.href).href,
   });
+  return w;
+}
+
+function ensureWorker(): Worker {
+  if (worker) return worker;
+  const w = spawnWorker();
   w.onmessage = (ev: MessageEvent) => {
     const msg = ev.data;
     const p = pending.get(msg.id);
     if (!p) return;
     pending.delete(msg.id);
     inFlight--;
-    if (msg.ok) p.resolve(msg.type === 'stl' ? msg.bytes : { mesh: msg.mesh, ms: msg.ms });
+    if (msg.ok) {
+      if (msg.type === 'stl') p.resolve(msg.bytes);
+      else if (msg.type === 'call') p.resolve(msg.value);
+      else p.resolve({ mesh: msg.mesh, ms: msg.ms });
+    }
     else {
       if (msg.fatal) restartWorker();
       p.reject(new Error(msg.error));
@@ -102,6 +118,75 @@ export function runMesh(fn: string, args: unknown[]): Promise<RunResult> {
 /** The worker's last result as binary STL bytes. */
 export function lastResultStl(): Promise<Uint8Array> {
   return post<Uint8Array>({ type: 'stl' });
+}
+
+/** Runs wasm export `fn(...args)` in the worker for a plain value, in turn with its builds. */
+export function callMesh<T>(fn: string, args: unknown[]): Promise<T> {
+  return post<T>({ type: 'call', fn, args });
+}
+
+/**
+ * A worker of its own with its own wasm instance, for calls that must not wait behind a build:
+ * the Fillet page picks in one while the site's worker rounds the part. Not counted by
+ * `whenIdle()`; `dispose()` ends it.
+ */
+export class SideWorker {
+  private worker: Worker | null = null;
+  private nextId = 1;
+  private pending = new Map<number, Pending>();
+
+  private ensure(): Worker {
+    if (this.worker) return this.worker;
+    const w = spawnWorker();
+    w.onmessage = (ev: MessageEvent) => {
+      const msg = ev.data;
+      const p = this.pending.get(msg.id);
+      if (!p) return;
+      this.pending.delete(msg.id);
+      if (msg.ok) p.resolve(msg.value);
+      else {
+        if (msg.fatal) this.dispose();
+        p.reject(new Error(msg.error));
+      }
+    };
+    this.worker = w;
+    return w;
+  }
+
+  /** Runs wasm export `fn(...args)` for a plain value. */
+  call<T>(fn: string, args: unknown[]): Promise<T> {
+    const w = this.ensure();
+    const id = this.nextId++;
+    return new Promise<T>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      w.postMessage({ type: 'call', id, fn, args });
+    });
+  }
+
+  dispose() {
+    this.worker?.terminate();
+    this.worker = null;
+    for (const [id, p] of this.pending) {
+      p.reject(new Error('the side worker was stopped'));
+      this.pending.delete(id);
+    }
+  }
+}
+
+/**
+ * Counts as computing until the returned release is called: a page that prepares its first
+ * request elsewhere (the Fillet page picks its starting edges in a `SideWorker`) holds the
+ * capture off until that request is queued.
+ */
+export function holdBusy(): () => void {
+  inFlight++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    inFlight--;
+    settleIdle();
+  };
 }
 
 /** Resolves once nothing is computing or queued. */

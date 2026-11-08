@@ -749,3 +749,85 @@ input[type="number"] {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* ===================== Fillet page ===================== */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.segmented button {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.segmented button:last-child { border-right: none; }
+.segmented button.active { background: var(--accent); color: #fff; }
+
+.hint-line {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pick-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+}
+
+.pick-row.refused { border-color: var(--danger); }
+
+.pick-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.pick-head .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.pick-label { flex: 1; color: var(--text); }
+.pick-head .ok { font-size: 0.75rem; color: var(--accent); }
+.pick-head .bad { font-size: 0.75rem; color: var(--danger); }
+
+.pick-remove {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pick-remove:hover { color: var(--danger); }
+
+.pick-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.pick-note.bad { color: var(--danger); }

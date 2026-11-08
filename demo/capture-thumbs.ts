@@ -16,7 +16,7 @@
 // Capture the thumbnails, either way:
 //   bun run capture:thumbs            # this script: headless Edge or Chrome opens
 //                                     # http://localhost:3030/?capture=thumbs, which runs the
-//                                     # capture on load; the script waits for all six files
+//                                     # capture on load; the script waits for every page's file
 //   or click "Update Thumbnails" in the sidebar of http://localhost:3030 (localhost only)
 //
 // Then the README hero (README_HERO.png at the repository root, 1234 x 749, a screenshot of the

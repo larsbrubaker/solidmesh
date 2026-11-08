@@ -8,8 +8,12 @@
 //                                            server (/src/) and the built site (/)
 //   { type: 'run', id, fn, args }            call wasm export `fn(...args)`; keep the result
 //   { type: 'stl', id }                      the last result as a binary STL
-// Messages out (one per run / stl, with its id):
+//   { type: 'call', id, fn, args }           call wasm export `fn(...args)` for a plain value (a
+//                                            JSON string, a count): the Fillet page's picking
+//                                            and upload, which keep state in this worker's wasm
+// Messages out (one per run / stl / call, with its id):
 //   { type: 'result', id, ok: true, ms, mesh } where mesh holds typed arrays and the measures
+//   { type: 'call', id, ok: true, value, ms }
 //   { type: 'stl', id, ok: true, bytes }
 //   { type: ..., id, ok: false, error, fatal } (fatal: the wasm instance trapped and is unusable)
 // `ms` is the wall time of the wasm call alone, measured here, which is what the pages show.
@@ -64,6 +68,7 @@ self.onmessage = async (ev: MessageEvent) => {
         closed: data.closed as boolean,
         openEdges: data.open_edges as number,
         note: data.note as string,
+        data: data.data as string,
       };
       if (last) last.free();
       last = data;
@@ -76,6 +81,21 @@ self.onmessage = async (ev: MessageEvent) => {
       // A trap (a Rust panic) leaves the instance unusable; the runner then starts a new worker.
       const fatal = e instanceof WebAssembly.RuntimeError;
       (self as any).postMessage({ type: 'result', id: msg.id, ok: false, fatal, error: errorText(e) });
+    }
+    return;
+  }
+  if (msg.type === 'call') {
+    try {
+      const wasm = await ensureWasm();
+      const fn = wasm[msg.fn];
+      if (typeof fn !== 'function') throw new Error(`no wasm export ${msg.fn}`);
+      const start = performance.now();
+      const value = fn(...msg.args);
+      const ms = performance.now() - start;
+      (self as any).postMessage({ type: 'call', id: msg.id, ok: true, value, ms });
+    } catch (e) {
+      const fatal = e instanceof WebAssembly.RuntimeError;
+      (self as any).postMessage({ type: 'call', id: msg.id, ok: false, fatal, error: errorText(e) });
     }
     return;
   }
