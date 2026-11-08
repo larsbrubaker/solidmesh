@@ -17,15 +17,13 @@ pub fn is_source_conditioning(code: BevelAdvisoryCode) -> bool {
         BevelAdvisoryCode::SourceMeshHadFoldedFlaps
             | BevelAdvisoryCode::SourceMeshHadTVertexSlivers
             | BevelAdvisoryCode::SourceMeshHadThinSlivers
-            | BevelAdvisoryCode::SourceMeshHadSplitChords
     )
 }
 
 /// Whether an advisory is a NOTE about a bevel that built rather than news of something given up
-/// on: the source conditioning notes plus `BuiltWithTheOtherConstruction` (the pick came back
-/// BUILT, by the construction the user did not set).
+/// on: the source conditioning notes.
 pub fn is_a_note_rather_than_a_complaint(code: BevelAdvisoryCode) -> bool {
-    is_source_conditioning(code) || code == BevelAdvisoryCode::BuiltWithTheOtherConstruction
+    is_source_conditioning(code)
 }
 
 /// The largest size a refusal about the SIZE already worked out would have fitted, where the
@@ -41,9 +39,7 @@ pub fn try_the_most_that_fits(advisory: Option<&BevelAdvisory>) -> Option<f64> {
     }
 
     match advisory.code() {
-        BevelAdvisoryCode::CapPullsToolBackPastSegment
-        | BevelAdvisoryCode::SizeFoldsToolAtCurve
-        | BevelAdvisoryCode::SizeCollidesAcrossFace
+        BevelAdvisoryCode::SizeCollidesAcrossFace
         | BevelAdvisoryCode::SizeExceedsFaceWidth
         | BevelAdvisoryCode::SizeReachesPastCrease => {}
         _ => return None,

@@ -1,8 +1,7 @@
 //! One level of refinement of a corner patch's spherical polygon that leaves its BOUNDARY exactly
 //! where it was: every interior edge is split at its midpoint on the sphere, every boundary edge is
-//! untouched, and the triangles are re-cut to suit. The corner patch's mesher
-//! (`BevelCornerPatchMesher`) and the surface corner's rows (`SurfaceCornerPatchRows`) refine with
-//! it.
+//! untouched, and the triangles are re-cut to suit. The surface corner's rows
+//! (`SurfaceCornerPatchRows`) refine with it.
 //!
 //! **Why the interior alone.** The boundary arcs of that polygon are the SEAM
 //! ([`super::bevel_seam_ring`]): the runs ending at the corner carry those very points, so moving

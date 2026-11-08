@@ -6,8 +6,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_group_tools::{self, BevelGroupToolsOptions};
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{
     bevel_edge_group_resolver, pick_interpretations, BevelSelectionKind, FaceGroup,
     FaceRegionCache, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet, PickInterpretation,
@@ -313,10 +311,10 @@ fn a_cylinder_rim_edge_offers_the_chain_and_the_wall_facet_with_the_caps_rim_col
     );
 }
 
-/// A group on a partly open face is warned about rather than refused: a partial rim is a warning
-/// about the part, naming how many boundary edges had nothing to bevel against.
+/// A group on a partly open face still resolves: the closed sides of the face are a real
+/// selection, and the part's open rim is left for the build to warn about.
 #[test]
-fn a_group_on_a_partly_open_face_is_warned_about_rather_than_refused() {
+fn a_group_on_a_partly_open_face_resolves() {
     let open = Arc::new(split_crease_test_meshes::create_bar_with_a_wall_missing());
     let features = Arc::new(FeatureEdgeSet::create(&open));
     let top = index_of_face_with_normal(&open, Vector3::new(0.0, 0.0, 1.0));
@@ -330,33 +328,13 @@ fn a_group_on_a_partly_open_face_is_warned_about_rather_than_refused() {
         None,
     )
     .unwrap();
-    let region = region.expect("the face's region");
+    assert!(region.is_some(), "the face's region");
 
     let resolution = bevel_edge_group_resolver::resolve(readings[0].group(), &open);
 
     assert!(
         resolution.is_resolved(),
         "the three closed sides of the face are a real selection"
-    );
-
-    let built =
-        bevel_group_tools::try_build(&resolution, true, 1.0, 4, BevelGroupToolsOptions::default())
-            .unwrap_or_else(|refusal| {
-                panic!(
-                    "a partial rim is a warning about the part, not a refusal of the group: {:?}",
-                    refusal.reason
-                )
-            });
-
-    let warnings = built.warnings.expect("the partial rim is said");
-    let open_edges = region.open_boundary_mesh_edges().len() as i32;
-
-    assert!(
-        warnings.iter().any(
-            |warning| warning.code() == BevelAdvisoryCode::FaceRegionRimIsPartial
-                && warning.args().first() == Some(&BevelAdvisoryArg::Int(open_edges))
-        ),
-        "the warning has to name how many edges of the boundary had nothing to bevel against"
     );
 }
 

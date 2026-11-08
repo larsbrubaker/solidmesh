@@ -1,112 +1,23 @@
-//! Rust-only tests for bevel slice 9: what one end of a run can afford
-//! (`bevel_chain_end_budget`), the rebuild's per-group rows (`BevelGroupResult`,
-//! `bevel_group_failures`) and the run-off readings
-//! (`surface_band_runs_off_the_face_beyond`). MatterCAD exercises these only through the sweep,
-//! the room measure and the operation (`BevelVoidWedgeSectionTests`, `SurfaceRoomTests`,
-//! `BevelGroupResolutionAdvisoryTests`, ...), which land with the cyclic core and the app; these
-//! hold the pieces to their own contracts until then. `SurfaceCutClip` has its ported class in
-//! `surface_facet_cut_own_ends_tests.rs`.
+//! Rust-only tests for bevel slice 9: the rebuild's per-group rows (`BevelGroupResult`,
+//! `bevel_group_failures`) and the run-off readings (`surface_band_runs_off_the_face_beyond`).
+//! The room measure and the operation exercise them in context (`SurfaceRoomTests`,
+//! `BevelGroupResolutionAdvisoryTests`, ...); these hold the pieces to their own contracts.
+//! `SurfaceCutClip` has its ported class in `surface_facet_cut_own_ends_tests.rs`.
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::bevel_chain_end_budget as budget;
 use geometry_processing::bevel::surface::surface_band_runs_off_the_face_beyond::{
     self as run_off, BandSpan,
 };
 use geometry_processing::bevel::{
-    bevel_group_failures, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelEndCap,
-    BevelGroupResult, BevelLoopFailure, BevelResultGroup,
+    bevel_group_failures, BevelAdvisory, BevelAdvisoryCode, BevelGroupResult, BevelLoopFailure,
+    BevelResultGroup,
 };
 use geometry_processing::topology::{
-    bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, ChainEdge, FaceGroup,
-    FeatureEdge, FeatureEdgeSet,
+    bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
 use polygon_mesh::solids::platonic_solids;
 use vector_math::Vector3;
-
-/// A right-angle convex edge 4 long along x.
-fn square_segment() -> ChainEdge {
-    ChainEdge::new(
-        0,
-        FeatureEdge {
-            start: Vector3::new(0.0, 0.0, 0.0),
-            end: Vector3::new(4.0, 0.0, 0.0),
-            turn_angle_degrees: 90.0,
-            ..Default::default()
-        },
-        false,
-    )
-}
-
-#[test]
-fn rust_only_an_uncapped_end_is_held_to_half_its_segment() {
-    let segment = square_segment();
-    let uncapped = BevelEndCap::default();
-
-    // A 1 mm fillet at a right angle reaches 1 past the end, inside the half segment of 2.
-    assert_eq!(
-        budget::maximum_overshoot(&uncapped, false, 1.0, true, &segment),
-        (2.0, false)
-    );
-    // A 3 mm one reaches 3, so the bound bites.
-    assert_eq!(
-        budget::maximum_overshoot(&uncapped, false, 3.0, true, &segment),
-        (2.0, true)
-    );
-    // A capped end, or one reaching for something, takes no bound.
-    let capped = BevelEndCap::new(Vector3::new(1.0, 0.0, 0.0), 4.0);
-    assert_eq!(
-        budget::maximum_overshoot(&capped, false, 3.0, true, &segment),
-        (f64::INFINITY, false)
-    );
-    assert_eq!(
-        budget::maximum_overshoot(&uncapped, true, 3.0, true, &segment),
-        (f64::INFINITY, false)
-    );
-}
-
-#[test]
-fn rust_only_the_bead_cap_agreement_is_the_cosine_where_the_slide_fills_half_the_segment() {
-    let segment = square_segment();
-    let reach = 1.0 / (45.0_f64.to_radians()).sin();
-    let expected = reach / ((reach * reach) + 4.0).sqrt();
-
-    assert!((budget::minimum_bead_cap_agreement(1.0, &segment) - expected).abs() < 1e-12);
-
-    // No section at all trusts the flat guard; no room at all trusts only the square cap.
-    assert_eq!(budget::minimum_bead_cap_agreement(0.0, &segment), 0.0);
-    let point = ChainEdge::new(
-        0,
-        FeatureEdge {
-            turn_angle_degrees: 90.0,
-            ..Default::default()
-        },
-        false,
-    );
-    assert_eq!(budget::minimum_bead_cap_agreement(1.0, &point), 1.0);
-}
-
-#[test]
-fn rust_only_held_back_names_the_ends_it_held() {
-    let segment = square_segment();
-
-    let one = budget::held_back(false, true, &segment, &segment, 3.0, 1);
-    assert_eq!(
-        one,
-        BevelAdvisory::new(
-            BevelAdvisoryCode::HeldBackAtOneEnd,
-            vec![
-                BevelAdvisoryArg::Vector3(Vector3::new(4.0, 0.0, 0.0)),
-                BevelAdvisoryArg::Double(3.0),
-                BevelAdvisoryArg::Int(1),
-            ],
-        )
-    );
-
-    let both = budget::held_back(true, true, &segment, &segment, 3.0, 1);
-    assert_eq!(both.code(), BevelAdvisoryCode::HeldBackAtBothEnds);
-    assert_eq!(both.args().len(), 4);
-}
 
 #[test]
 fn rust_only_a_row_says_whether_it_failed_partly_refused_or_warned() {

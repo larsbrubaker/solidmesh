@@ -302,29 +302,6 @@ pub fn creases_scaled(part: &Mesh, scale: f64) -> (Vec<BevelSweptChain>, Vec<Str
     (runs, names)
 }
 
-/// At scale 1: the three creases "5mm Bevel Center
-/// Bottom.mcx" picks, as groups a rebuild can resolve - the notch's own centre crease from the floor
-/// up to [`lower_crease_end`], and the two LOWER nose creases that die on the same point. All three
-/// meet at that one concave junction, which is what makes this selection the inside-corner mirror
-/// of a three-run boss.
-///
-/// One group per edge, which is what the all-edges gesture gives and what the fixture carries. The
-/// two UPPER nose creases are deliberately NOT in it: their absence is why each nose bead's ridge
-/// end has no partner to be bounded by and has to be ended on the plane of the face across the
-/// ridge instead (`BevelPartneredBead`).
-pub fn centre_bottom_groups(features: &FeatureEdgeSet) -> (Vec<BevelEdgeGroup>, Vec<String>) {
-    groups_on(
-        features,
-        &[
-            ("centre", notch_floor(), lower_crease_end()),
-            ("lower left", left_ridge_end(), lower_crease_end()),
-            ("lower right", right_ridge_end(), lower_crease_end()),
-        ],
-        1.0,
-        "",
-    )
-}
-
 /// At scale 1: the two creases "Center Flows
 /// Through.mcx" picks, as groups a rebuild can resolve - the two pieces the nose leaves of the
 /// notch's own centre crease, from the floor up to [`lower_crease_end`], and from

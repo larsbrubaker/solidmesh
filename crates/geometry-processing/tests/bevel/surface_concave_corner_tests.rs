@@ -20,13 +20,13 @@ use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
     SurfaceBuilt, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{bevel_chain_linker, bevel_sliver_collapse, BevelAdvisoryCode};
+use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode};
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
 
 use crate::bevel_around_center_tip_dihedrals::worst_dihedral_degrees;
-use crate::mesh_measurements::signed_volume;
+use crate::mesh_measurements::{altitude_of, signed_volume};
 use crate::surface_test_build::{assert_sound, expect_built, TryBevelOutcome};
 use crate::topology_test_meshes::create_corner_pocket_block;
 
@@ -550,7 +550,7 @@ fn the_thinnest_face_in(mesh: &Mesh) -> (f64, String) {
 
     for face in mesh.faces.iter() {
         let corners = [face.v0, face.v1, face.v2].map(|v| mesh.vertices[v as usize]);
-        let altitude = bevel_sliver_collapse::altitude_of(corners[0], corners[1], corners[2]);
+        let altitude = altitude_of(corners[0], corners[1], corners[2]);
 
         if altitude < thinnest {
             thinnest = altitude;

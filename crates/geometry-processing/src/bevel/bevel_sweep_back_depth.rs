@@ -99,31 +99,3 @@ pub fn turn_radius(chain: &[ChainEdge], is_closed: bool) -> f64 {
 
     tightest
 }
-
-/// The same reading over the swept segments: each segment's own length and direction.
-#[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > y)` refuses a NaN as well.
-pub fn turn_radius_of_the_segments(swept: &[SweptSegment], is_closed: bool) -> f64 {
-    let mut tightest = f64::INFINITY;
-    let count = swept.len();
-
-    for i in (if is_closed { 0 } else { 1 })..count {
-        let before = &swept[(i + count - 1) % count];
-        let after = &swept[i];
-        let turn = before
-            .direction
-            .dot(after.direction)
-            .clamp(-1.0, 1.0)
-            .acos();
-
-        if !(turn > 1e-9) {
-            continue;
-        }
-
-        tightest = ieee_math::min_f64(
-            tightest,
-            ieee_math::min_f64(before.length, after.length) / turn,
-        );
-    }
-
-    tightest
-}

@@ -1,7 +1,7 @@
 //! Whole-mesh measurements that tests use as shape assertions. They read the mesh the production
 //! code actually produced rather than its tessellation, so they stay honest across geometry
-//! changes. (`sweep_mesh_measures` holds the same readings over a level-line mesh's raw positions
-//! and indices.)
+//! changes; a face's altitude reads a sliver. (`sweep_mesh_measures` holds the same readings over a
+//! level-line mesh's raw positions and indices.)
 
 #![allow(dead_code)]
 
@@ -143,4 +143,33 @@ pub fn shell_count(mesh: &Mesh) -> i32 {
     }
 
     roots.len() as i32
+}
+
+/// The height of the triangle standing on its own longest edge - twice its area over that edge -
+/// or zero when it has no edge to stand on: how near to a straight line the three points are, in
+/// the part's own units, which neither area nor edge length says on its own (a sliver's reading).
+pub fn altitude_of(p0: Vector3Float, p1: Vector3Float, p2: Vector3Float) -> f64 {
+    let v0 = Vector3::from_vector3_float(p0);
+    let v1 = Vector3::from_vector3_float(p1);
+    let v2 = Vector3::from_vector3_float(p2);
+
+    let lengths = [(v1 - v0).length(), (v2 - v1).length(), (v0 - v2).length()];
+    let mut longest_edge = 0;
+
+    for edge in 1..3 {
+        if lengths[edge] > lengths[longest_edge] {
+            longest_edge = edge;
+        }
+    }
+
+    let longest_length = lengths[longest_edge];
+
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    if !(longest_length > 0.0) {
+        return 0.0;
+    }
+
+    let area = (v1 - v0).cross(v2 - v0).length() / 2.0;
+
+    2.0 * area / longest_length
 }

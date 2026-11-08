@@ -1,16 +1,13 @@
-//! The surface construction's answer to an edge two groups both name, and the counterpart of
-//! `BevelSharedEdges`: groups that share an edge are linked as ONE selection rather than one of
-//! them losing the edge: [`link_together`] and the union-find it is read with.
+//! The surface construction's answer to an edge two groups both name: groups that share an edge
+//! are linked as ONE selection rather than one of them losing the edge: [`link_together`] and the
+//! union-find it is read with.
 //!
-//! **Why the award cannot be consumed here.** One edge, one tool is a rule about SOLIDS - two
-//! coincident swept beads cannot be unioned - so the boolean path gives each doubly named edge to
-//! the first group that named it and takes it out of the rest. In polygon space there is no tool:
-//! one mesh edge is one strip between its two faces, and the same strip whichever group named it.
-//! Taking the edge out of the loser costs the loser its CLOSURE - a face region's rim is a closed
-//! loop, and a loop with an edge missing is an open run whose two ends now have to be cut somewhere
-//! in the middle of the winner's own strip. That is what every multi-region case of "Every Chamfer
-//! Works.mcx" came back saying, as "strip does not meet the walkback" or as a shell left open
-//! along the shared arc.
+//! **Why no group loses the edge.** In polygon space one mesh edge is one strip between its two
+//! faces, and the same strip whichever group named it. Taking the edge out of one group would cost
+//! it its CLOSURE - a face region's rim is a closed loop, and a loop with an edge missing is an open
+//! run whose two ends would have to be cut somewhere in the middle of the other group's own strip,
+//! which every multi-region case of "Every Chamfer Works.mcx" showed as "strip does not meet the
+//! walkback" or as a shell left open along the shared arc.
 //!
 //! **What is linked with what.** Only the groups that actually share an edge are unioned, as the
 //! connected components of "names an edge this one also names". A group sharing nothing keeps its

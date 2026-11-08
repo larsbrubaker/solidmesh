@@ -7,128 +7,27 @@
 //! and asking every point of the cut surface how far it is from the arc that edge is supposed to
 //! carry (`knife_edge_rim_measures`). The same measurement is run over a plain box rim in
 //! `a_box_face_rim_of_four_right_angles_is_exact`, so a failure here is the bevel and not the
-//! ruler. The rim is cut both as a rebuild's swept tools do it and by the level line
-//! (`band_gap_entry_points::build_pick` and `gap_fill::fill`).
+//! ruler. The rim is cut by the level line (`band_gap_entry_points::build_pick` and
+//! `gap_fill::fill`).
 
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::bevel_group_tools::{self, BevelGroupToolsOptions};
 use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
 use geometry_processing::bevel::level_line::gap_fill;
 use geometry_processing::bevel::level_line::{BandGapResult, BandProfile};
-use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{FaceGroup, FeatureEdgeSet};
-use polygon_mesh::csg::CsgModes;
 use polygon_mesh::{FaceList, Mesh};
 use vector_math::math_helper::degrees_to_radians;
 use vector_math::{Vector2, Vector3, Vector3Float};
 
 use crate::end_face_measures::to_triangle;
-use crate::kernel_cut_helpers::boolean;
 use crate::knife_edge_rim_measures::{
-    assert_every_section, knife_centre_y, measure_back_corner, measure_knife_edge_chamfer_section,
-    measure_knife_edge_section, measure_top_edge_chamfer_section, measure_top_edge_section,
-    measure_top_knife_corner, prism, r#box, show, x_min_face, SectionReading, RADIUS, SIZE,
+    assert_every_section, knife_centre_y, measure_back_corner, measure_knife_edge_section,
+    measure_top_edge_section, measure_top_knife_corner, prism, show, SectionReading, RADIUS, SIZE,
 };
 use crate::sweep_mesh_measures;
 
 const SEGMENTS: i32 = 16;
-
-const THE_ARC: &str = "the radius 2 arc its edge carries";
-
-/// The two right-angle edges beside the knife edge have to keep the section they would have had
-/// on their own. This slices the TOP edge - the one at x = 0, z = 20, running along y - near the
-/// far end (y = 3), in the middle (y = 8) and as near the knife end as a plain arc still reaches
-/// (y = 14), so a blend that is only right where it starts is caught by where it has got to.
-///
-/// The stations stop short of both corners because the true surface near a corner is the corner
-/// blend and not the plain arc: the knife's fillet is tangent 4.83 back along the x = 0 face, so
-/// nothing past y = 15.17 is this edge's own section, and the far corner's own 90 degree edge
-/// reaches 2 from y = 0.
-#[test]
-fn the_right_angle_edges_beside_the_knife_edge_keep_their_section() {
-    let part = prism();
-
-    assert_the_rim_is_what_we_think(&part);
-
-    let cut = round_the_x_min_rim(&part, true);
-
-    assert_every_section(
-        [3.0, 8.0, 14.0].map(|y| measure_top_edge_section(&cut, y)),
-        THE_ARC,
-    );
-}
-
-/// And the knife edge itself carries a radius 2 arc tangent to both of its faces through its whole
-/// 135 degrees, at both ends of its length.
-#[test]
-fn the_knife_edge_is_rounded_through_its_whole_arc() {
-    let part = prism();
-
-    assert_the_rim_is_what_we_think(&part);
-
-    let cut = round_the_x_min_rim(&part, true);
-
-    assert_every_section(
-        [5.0, 15.0].map(|z| measure_knife_edge_section(&cut, z)),
-        THE_ARC,
-    );
-}
-
-/// The same rim CHAMFERED, which is the same claim with the roundness taken out of it: the two
-/// right angle edges beside the knife have to keep their own 45 degree chamfer plane.
-///
-/// A chamfer reaches `RADIUS` along each face whatever the dihedral is, so the two segments'
-/// tangent distances are IDENTICAL here while their sections are not - the 90 degree edge's chamfer
-/// is a chord of a right angle and the knife's is a chord of 135 degrees. That is why the mitre fit
-/// compares the profiles themselves rather than their reach; measured on tangent distance this
-/// joint reads as no change of section at all and the averaged ring goes through unnoticed.
-#[test]
-fn the_right_angle_edges_beside_the_knife_edge_keep_their_chamfer() {
-    let part = prism();
-
-    assert_the_rim_is_what_we_think(&part);
-
-    let cut = round_the_x_min_rim(&part, false);
-
-    assert_every_section(
-        [3.0, 8.0, 14.0].map(|y| measure_top_edge_chamfer_section(&cut, y)),
-        "the 45 degree chamfer plane its edge carries",
-    );
-}
-
-/// And the chamfered knife edge carries its OWN chamfer - the chord of 135 degrees, 2 along the
-/// x = 0 face and 2 along the slope - rather than the 90 degree one averaged in from its
-/// neighbours.
-#[test]
-fn the_knife_edge_carries_its_own_chamfer() {
-    let part = prism();
-
-    assert_the_rim_is_what_we_think(&part);
-
-    let cut = round_the_x_min_rim(&part, false);
-
-    assert_every_section(
-        [5.0, 15.0].map(|z| measure_knife_edge_chamfer_section(&cut, z)),
-        "the chamfer chord of its own 135 degrees",
-    );
-}
-
-/// The control: the same rim, the same slices, the same arc - on a box, where all four edges are
-/// 90 degrees. This passes, which is what says the two tests above are measuring the bevel and not
-/// the measurement.
-#[test]
-fn a_box_face_rim_of_four_right_angles_is_exact() {
-    let part = r#box();
-    let cut = round_the_x_min_rim(&part, true);
-
-    assert_every_section(
-        [3.0, 10.0, 17.0].map(|y| measure_top_edge_section(&cut, y)),
-        THE_ARC,
-    );
-}
 
 /// At the rim's step corners the knife piece, whose setback (4.83) is the larger, carries its band
 /// past the step onto the top piece's side faces (the top and bottom faces), out to its own reach:
@@ -442,100 +341,4 @@ fn band_of_the_x_min_rim(part: &Mesh, size: f64, reverse: bool) -> BandGapResult
         },
     )
     .expect("the pick is well formed")
-}
-
-/// The rim really is three right angles and one 45 degree knife - if that stopped being true the
-/// tests above would be measuring some other part's bevel.
-fn assert_the_rim_is_what_we_think(part: &Mesh) {
-    let face_group = FaceGroup::create_with_graph(
-        part,
-        &part.get_mesh_edge_graph(),
-        x_min_face(part),
-        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
-    )
-    .expect("the x = 0 face groups");
-
-    assert_eq!(
-        face_group.boundary_edges().len(),
-        4,
-        "the x = 0 face of the prism is bounded by four edges"
-    );
-
-    for edge in face_group.boundary_edges() {
-        // The knife edge is the one running up the corner at (0, 20), where the face meets the
-        // slope.
-        let on_the_knife = (edge.start.y - SIZE).abs() < 1e-6 && (edge.end.y - SIZE).abs() < 1e-6;
-        let expected = if on_the_knife { 45.0 } else { 90.0 };
-
-        assert!(
-            (edge.dihedral_angle_degrees() - expected).abs() <= 0.01,
-            "the edge from {} to {} is {}",
-            show(edge.start),
-            show(edge.end),
-            if on_the_knife {
-                "where the face meets the 45 degree slope"
-            } else {
-                "an ordinary box edge"
-            }
-        );
-    }
-}
-
-/// Bevels the rim of the x = 0 face exactly as a rebuild does - face group, resolve, link, sweep
-/// one tool per run, union them and subtract - and hands back the cut part.
-fn round_the_x_min_rim(part: &Mesh, round_profile: bool) -> Mesh {
-    let features = FeatureEdgeSet::create(part);
-    let face_group = FaceGroup::create_with_graph(
-        part,
-        &part.get_mesh_edge_graph(),
-        x_min_face(part),
-        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
-    )
-    .expect("the x = 0 face groups");
-    let group = bevel_edge_group_resolver::create_from_face_group(
-        &face_group,
-        &face_group.boundary_edges()[0],
-        features.flat_angle_degrees(),
-    )
-    .expect("the rim makes a group");
-    let resolution = bevel_edge_group_resolver::resolve(&group, part);
-
-    assert_eq!(
-        resolution.edges.len(),
-        4,
-        "the rim resolves to its own four edges"
-    );
-
-    let chains = bevel_chain_linker::link(&resolution.edges);
-
-    assert_eq!(chains.len(), 1, "a face rim is one run");
-
-    assert_eq!(chains[0].edges.len(), 4, "with all four of its edges in it");
-
-    assert!(chains[0].is_closed, "and it comes back to where it started");
-
-    let tools = match bevel_group_tools::try_build(
-        &resolution,
-        round_profile,
-        RADIUS,
-        SEGMENTS,
-        BevelGroupToolsOptions::default(),
-    ) {
-        Ok(built) => built.tools,
-        Err(failure) => panic!(
-            "the rim has to produce a tool - {:?}",
-            failure.reason.code()
-        ),
-    };
-
-    let solids: Vec<Mesh> = tools.into_iter().map(|tool| tool.mesh).collect();
-    // The tools have to union, and the cutter has to come out of the part: the shared boolean
-    // panics where the kernel refuses either.
-    let cutter = if solids.len() == 1 {
-        solids[0].clone()
-    } else {
-        boolean(&solids.iter().collect::<Vec<_>>(), CsgModes::Union)
-    };
-
-    boolean(&[part, &cutter], CsgModes::Subtract)
 }

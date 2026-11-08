@@ -1,18 +1,6 @@
-//! Rust-only checks of the R1.P12 package: the level line's chaining of crossed edges, and the
-//! run-out's edge and face readings, a mixed corner's sector apex, and the corner patches'
-//! gathering of corners.
+//! Rust-only checks of the R1.P12 package: the level line's chaining of crossed edges and a mixed
+//! corner's sector apex.
 
-use std::collections::HashSet;
-use std::sync::Arc;
-
-use indexmap::IndexMap;
-
-use polygon_mesh::solids::platonic_solids::create_cube;
-
-use geometry_processing::bevel::bevel_corner_patch::{
-    collect, record, BevelCornerPatchSet, Corner,
-};
-use geometry_processing::bevel::bevel_face_fit::DEFAULT_SURFACE_TOLERANCE_DEGREES;
 use geometry_processing::bevel::level_line::band_cut::{chain, key};
 use geometry_processing::bevel::level_line::LevelLineChain;
 use geometry_processing::bevel::surface::surface_mixed_corner_sector::{
@@ -21,10 +9,7 @@ use geometry_processing::bevel::surface::surface_mixed_corner_sector::{
 use geometry_processing::bevel::surface::{
     SurfaceBandEnd, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine,
 };
-use geometry_processing::bevel::{BevelAdvisoryCode, BevelFaceRunOut};
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge, FeatureEdgeSet,
-};
+use geometry_processing::bevel::BevelAdvisoryCode;
 use vector_math::Vector3;
 
 #[test]
@@ -52,41 +37,6 @@ fn rust_only_separate_runs_and_rings_come_out_separately_and_nothing_is_nothing(
     assert!(chain(&[]).is_empty());
     assert_eq!(key(5, 2), (2, 5));
     assert_eq!(key(2, 5), (2, 5));
-}
-
-#[test]
-fn rust_only_the_run_out_reads_a_cubes_edges_faces_and_starts() {
-    let mesh = Arc::new(create_cube(20.0, 20.0, 20.0));
-    let run_out = BevelFaceRunOut::create(mesh.clone(), None, DEFAULT_SURFACE_TOLERANCE_DEGREES);
-
-    let edge = *run_out.surface_edges.first().unwrap();
-    let (from, to) = run_out.try_edge_ends(edge).unwrap();
-    assert!(((to - from).length() - 20.0).abs() < 1e-9);
-    assert!(run_out.try_edge_ends(-1).is_none());
-    assert!(run_out.try_edge_ends(run_out.graph.edge_count()).is_none());
-
-    let (normal0, normal1) = run_out.try_edge_face_normals(edge).unwrap();
-    assert!(normal0.dot(normal1).abs() < 1e-9, "a cube's edge is square");
-
-    let v0 = run_out.graph.get_vertex0(edge);
-    let v1 = run_out.graph.get_vertex1(edge);
-    assert_eq!(run_out.try_edge_between(v1, v0), Some(edge));
-
-    // Every face holds its own centroid and finds itself (or its coplanar partner) as the start.
-    for face in 0..mesh.faces.len() as i32 {
-        let f = mesh.faces[face as usize];
-        let p = |v: i32| Vector3::from_vector3_float(mesh.vertices[v as usize]);
-        let centroid = (p(f.v0) + p(f.v1) + p(f.v2)) / 3.0;
-        assert!(run_out.contains(face, centroid));
-        assert!(!run_out.contains(face, centroid + (p(f.v1) - p(f.v0)) * 5.0));
-        assert_eq!(run_out.try_find_start(face, centroid), Some(face));
-        assert!(run_out.try_face_normal(face).is_some());
-    }
-
-    // A point on another side of the cube is not on the face's surface.
-    assert!(run_out
-        .try_find_start(0, Vector3::new(1000.0, 1000.0, 1000.0))
-        .is_none());
 }
 
 /// A square mixed corner at (7, 7, 7), size 1, its axis +z through the origin (shared with
@@ -184,95 +134,4 @@ fn rust_only_a_sector_between_corners_without_a_mitre_closes_on_the_rail_centre(
     )
     .unwrap();
     assert!((crossed - Vector3::new(4.0, 0.0, 0.0)).length() < 1e-12);
-}
-
-fn corner_edge(mesh_edge_index: i32, from: i32, to: i32, convexity: EdgeConvexity) -> FeatureEdge {
-    FeatureEdge {
-        mesh_edge_index,
-        start_vertex: from,
-        end_vertex: to,
-        start: Vector3::new(f64::from(from), 0.0, 0.0),
-        end: Vector3::new(f64::from(to), 0.0, 0.0),
-        convexity,
-        ..Default::default()
-    }
-}
-
-fn resolution(edges: Vec<FeatureEdge>) -> BevelEdgeGroupResolution {
-    BevelEdgeGroupResolution {
-        group: BevelEdgeGroup::default(),
-        features: Arc::new(FeatureEdgeSet::create(&create_cube(1.0, 1.0, 1.0))),
-        failure_reason: None,
-        seed_edge_index: 0,
-        edges,
-        chain: None,
-        face_group: None,
-    }
-}
-
-#[test]
-fn rust_only_a_corner_takes_each_mesh_edge_once_sorted_and_each_group_once() {
-    let mut corner = Corner::new(4, Vector3::new(1.0, 2.0, 3.0));
-    corner.add(corner_edge(9, 4, 1, EdgeConvexity::Convex), 2);
-    corner.add(corner_edge(3, 4, 2, EdgeConvexity::Convex), 0);
-    corner.add(corner_edge(9, 4, 1, EdgeConvexity::Convex), 1);
-    corner.add(corner_edge(5, 4, 7, EdgeConvexity::Convex), 2);
-
-    let order: Vec<i32> = corner.edges().iter().map(|e| e.mesh_edge_index).collect();
-    assert_eq!(order, vec![3, 5, 9]);
-    assert_eq!(corner.groups(), &[2, 0]);
-
-    let mut at_vertex = IndexMap::new();
-    record(
-        &mut at_vertex,
-        4,
-        corner.position,
-        &corner_edge(1, 4, 0, EdgeConvexity::Convex),
-        0,
-    );
-    record(
-        &mut at_vertex,
-        4,
-        Vector3::default(),
-        &corner_edge(2, 4, 3, EdgeConvexity::Convex),
-        1,
-    );
-    assert_eq!(at_vertex.len(), 1);
-    assert_eq!(
-        at_vertex[&4].position, corner.position,
-        "the first position stands"
-    );
-    assert_eq!(at_vertex[&4].edges().len(), 2);
-}
-
-#[test]
-fn rust_only_collect_splits_outside_and_inside_corners_over_eligible_groups() {
-    let resolutions = vec![
-        resolution(vec![
-            corner_edge(10, 0, 1, EdgeConvexity::Convex),
-            corner_edge(11, 0, 2, EdgeConvexity::Convex),
-            corner_edge(12, 0, 3, EdgeConvexity::Concave),
-            corner_edge(13, 8, 9, EdgeConvexity::Flat),
-        ]),
-        resolution(vec![corner_edge(14, 5, 6, EdgeConvexity::Concave)]),
-    ];
-
-    let (outside, inside, concave) = collect(&resolutions, &[true, true]);
-    let vertices = |corners: &[Corner]| corners.iter().map(|c| c.vertex).collect::<Vec<_>>();
-    assert_eq!(vertices(&outside), vec![0, 1, 2]);
-    assert_eq!(outside[0].edges().len(), 2);
-    assert_eq!(
-        vertices(&inside),
-        vec![3, 5, 6],
-        "vertex 0 has a convex corner, so no inside one"
-    );
-    assert_eq!(concave, HashSet::from([0, 3, 5, 6]));
-    assert_eq!(inside[1].groups(), &[1]);
-
-    let (_, inside, concave) = collect(&resolutions, &[true, false]);
-    assert_eq!(vertices(&inside), vec![3]);
-    assert_eq!(concave, HashSet::from([0, 3]));
-
-    let empty = BevelCornerPatchSet::empty();
-    assert!(empty.patches.is_empty() && empty.warnings.is_empty() && empty.seam_rings.is_empty());
 }

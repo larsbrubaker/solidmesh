@@ -1,7 +1,6 @@
 //! Rust-only checks of the fifth bevel slice (`SurfaceVertexPool`, `SurfaceMitreJointStep`,
-//! `SurfaceRoomStandingFeature`, `BevelBlendSeam`, `BevelCornerSeam`, and
-//! `SurfaceMeshClosure.FoldedEdgeCount`). The tests that exercise them in context build whole
-//! surface bevels; these pin each piece alone.
+//! `SurfaceRoomStandingFeature` and `SurfaceMeshClosure.FoldedEdgeCount`). The tests that exercise
+//! them in context build whole surface bevels; these pin each piece alone.
 
 use std::collections::HashSet;
 
@@ -9,9 +8,7 @@ use geometry_processing::bevel::surface::{
     surface_mesh_closure, surface_mitre_joint_step, surface_room_standing_feature,
     SurfaceVertexPool,
 };
-use geometry_processing::bevel::{bevel_blend_seam, bevel_corner_seam, BevelEndCap};
 use geometry_processing::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
-use indexmap::IndexMap;
 use polygon_mesh::solids::platonic_solids;
 use vector_math::{Vector3, Vector3Float};
 
@@ -302,110 +299,4 @@ fn rust_only_a_cube_tops_walls_are_not_hidden_by_any_feature() {
     assert!(!surface_room_standing_feature::hides_the_end_of_a_wall(
         &region, &wall, wall.end, 1e-6, &none, &none
     ));
-}
-
-// ---------------------------------------------------------------- BevelBlendSeam
-
-#[test]
-fn rust_only_a_blend_seam_hands_a_cut_its_capped_handover_and_a_bead_its_face() {
-    let position = Vector3::new(1.0, 2.0, 3.0);
-    let up = Vector3::new(0.0, 0.0, 1.0);
-
-    let mut handovers = IndexMap::new();
-    handovers.insert((4, 7), BevelEndCap::new(up, 5.0));
-    handovers.insert((4, 8), BevelEndCap::default());
-
-    assert_eq!(
-        bevel_blend_seam::blend_seam(4, 7, position, false, Some(&handovers), None),
-        Some(BevelEndCap::new(up, 5.0))
-    );
-    // an uncapped handover and a missing one both say nothing
-    assert_eq!(
-        bevel_blend_seam::blend_seam(4, 8, position, false, Some(&handovers), None),
-        None
-    );
-    assert_eq!(
-        bevel_blend_seam::blend_seam(5, 7, position, false, Some(&handovers), None),
-        None
-    );
-    assert_eq!(
-        bevel_blend_seam::blend_seam(4, 7, position, false, None, None),
-        None
-    );
-
-    let mut capped = IndexMap::new();
-    capped.insert((4, 7), up);
-
-    assert_eq!(
-        bevel_blend_seam::blend_seam(4, 7, position, true, Some(&handovers), Some(&capped)),
-        Some(BevelEndCap::new(up, 3.0))
-    );
-    assert_eq!(
-        bevel_blend_seam::blend_seam(4, 7, position, true, Some(&handovers), None),
-        None
-    );
-}
-
-// ---------------------------------------------------------------- BevelCornerSeam
-
-#[test]
-fn rust_only_a_cutters_cap_stands_off_by_four_ulps_of_its_coordinate() {
-    let far_out = Vector3::new(0.0, 0.0, 100.0);
-
-    assert_eq!(bevel_corner_seam::stand_off(true, far_out), 0.0);
-    assert_eq!(bevel_corner_seam::stand_off(false, Vector3::ZERO), 1e-6);
-    assert_eq!(
-        bevel_corner_seam::stand_off(false, far_out),
-        100.0 * (4.0 * 1.192092896e-7)
-    );
-    assert_eq!(bevel_corner_seam::CAP_TAPER, 0.25);
-}
-
-#[test]
-fn rust_only_a_three_run_convex_corner_drives_through_to_a_stand_off_short_of_the_vertex() {
-    let outward = Vector3::new(1.0, 0.0, 0.0);
-    let vertex_at = Vector3::new(10.0, 0.0, 0.0);
-    let ball_centre = Vector3::new(7.0, 1.0, 1.0);
-    let runs = HashSet::from([3]);
-    let seam = [Vector3::new(7.0, 0.0, 0.0)];
-
-    let cap = bevel_corner_seam::try_drive_through(
-        false,
-        3,
-        outward,
-        vertex_at,
-        ball_centre,
-        Some(&runs),
-        Some(&seam),
-    )
-    .expect("a listed corner whose ball sits back drives through");
-
-    assert_eq!(cap.plane_normal, outward);
-    assert_eq!(cap.plane_distance, 7.0);
-    assert!(cap.drives_through);
-    assert_eq!(
-        cap.drive_through_distance,
-        10.0 - bevel_corner_seam::stand_off(false, vertex_at)
-    );
-    assert_eq!(cap.seam_points.as_deref(), Some(&seam[..]));
-
-    // a bead, an unlisted corner, and a corner whose ball sits on the vertex all keep their caps
-    let drive = |is_bead: bool, vertex: i32, centre: Vector3| {
-        bevel_corner_seam::try_drive_through(
-            is_bead,
-            vertex,
-            outward,
-            vertex_at,
-            centre,
-            Some(&runs),
-            None,
-        )
-    };
-    assert_eq!(drive(true, 3, ball_centre), None);
-    assert_eq!(drive(false, 4, ball_centre), None);
-    assert_eq!(drive(false, 3, vertex_at), None);
-    assert_eq!(
-        bevel_corner_seam::try_drive_through(false, 3, outward, vertex_at, ball_centre, None, None),
-        None
-    );
 }

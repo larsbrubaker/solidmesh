@@ -1,45 +1,12 @@
-//! The helpers the shadow clip, shadow body, seam ring and three-run corner tests share: the n-ary
-//! boolean in polygon mode, the part with a shadow-clipped cutter taken out of it, the feature edge
-//! between two known positions, and the one-edge group picked there.
+//! The feature edge between two known positions ([`edge_index`]) and the one-edge group picked
+//! there ([`edge_group`]), which the tests that pick a known edge share.
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use vector_math::Vector3;
 
 use geometry_processing::topology::bevel_edge_group_resolver;
 use geometry_processing::topology::{
     BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-
-/// `BooleanProcessing.DoArray` over `meshes` in polygon mode.
-pub fn boolean(meshes: &[&Mesh], mode: CsgModes) -> Mesh {
-    let items: Vec<(&Mesh, Matrix4X4)> = meshes.iter().map(|&m| (m, Matrix4X4::IDENTITY)).collect();
-
-    do_array(
-        &items,
-        mode,
-        &CancelToken::new(),
-        &BooleanOptions::default(),
-    )
-    .unwrap_or_else(|error| panic!("the boolean was refused: {error:?}"))
-}
-
-/// The part with the clipped cutter taken out of it, which is what a rebuild publishes.
-/// `shadows` are the columns (and bodies) the cutter must not reach into.
-pub fn cut(part: &Mesh, cutter: &Mesh, shadows: &[Mesh]) -> Mesh {
-    let clipped;
-    let mut cutter = cutter;
-
-    if !shadows.is_empty() {
-        let mut operands = vec![cutter];
-        operands.extend(shadows.iter());
-        clipped = boolean(&operands, CsgModes::Subtract);
-        cutter = &clipped;
-    }
-
-    boolean(&[part, cutter], CsgModes::Subtract)
-}
 
 /// The feature edge running between two known positions, whichever way round the
 /// mesh stores it, matched `within` that distance at both ends.

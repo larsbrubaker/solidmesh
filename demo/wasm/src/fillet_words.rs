@@ -10,8 +10,8 @@ use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryC
 
 use crate::fillet_words_blend::format_blend_or_operation;
 use crate::fillet_words_parts::{
-    at, describe_at, face_angle_sentence, format, held_back_sentence, int_at, localize,
-    size_sentence, stops_square_sentence, text,
+    at, describe_at, face_angle_sentence, format, int_at, localize, size_sentence,
+    stops_square_sentence, text,
 };
 
 /// The sentence for one advisory.
@@ -22,23 +22,6 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
     }
 
     match advisory.code() {
-            BevelAdvisoryCode::CapClipCouldNotCut => format(
-                &localize("The cap where these edges end at {0} could not be cut, so a size of {1:0.###} cannot be stopped there."),
-                &[text(describe_at(args, 0)), at(args, 1)],
-            ),
-            BevelAdvisoryCode::HeldBackAtOneEnd => held_back_sentence(
-                format(&localize("these edges end at {0}"), &[text(describe_at(args, 0))]),
-                at(args, 1),
-                int_at(args, 2),
-            ),
-            BevelAdvisoryCode::HeldBackAtBothEnds => held_back_sentence(
-                format(
-                    &localize("these edges end at {0} and at {1}"),
-                    &[text(describe_at(args, 0)), text(describe_at(args, 1))],
-                ),
-                at(args, 2),
-                int_at(args, 3),
-            ),
             BevelAdvisoryCode::SurfaceRunStopsSquareAtOneEnd => stops_square_sentence(
                 format(&localize("this run ends at {0}"), &[text(describe_at(args, 0))]),
                 int_at(args, 1),
@@ -49,18 +32,6 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
                     &[text(describe_at(args, 0)), text(describe_at(args, 1))],
                 ),
                 int_at(args, 2),
-            ),
-            BevelAdvisoryCode::BeadSquaredAtCorner => format(
-                &localize("The bevel stops square at the corner at {0} rather than on it: the faces bounding that corner either lie too nearly along the edges to trim the tool against or would slide the bevel's end further than its last segment can absorb, so the material it adds ends in a flat face there."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BeadDoesNotSpanInterruption => format(
-                &localize("The bevel runs into the feature standing on the edge at {0} but does not come out the far side of it: that feature is {2:0.###} across, and a size of {1:0.###} reaches less than half of it from each side, so the edge inside it is left unbeveled between them. A larger size closes it."),
-                &[text(describe_at(args, 0)), at(args, 1), at(args, 2)],
-            ),
-            BevelAdvisoryCode::CutRunsPastCorner => format(
-                &localize("The bevel runs past the corner at {0} instead of stopping on it: every face bounding that corner lies too nearly along the edges to trim the tool against."),
-                &[text(describe_at(args, 0))],
             ),
             BevelAdvisoryCode::SurfaceStripSeamDidNotMeet => format(
                 &localize("The bevel does not meet the part cleanly at {0}. Try a smaller size, or bevel this edge in a group of its own."),
@@ -77,10 +48,6 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
             BevelAdvisoryCode::SurfaceCreaseFacesAreOneSurface => format(
                 &localize("The edge at {0} stops where a rounded blend takes the corner over, and every turn around that blend is gentler than the Bend Threshold of {1} degrees, so the blend and the faces beside it are read as one surface. Lower the Bend Threshold below the blend's own turn to bevel this edge apart from the blend."),
                 &[text(describe_at(args, 0)), at(args, 1)],
-            ),
-            BevelAdvisoryCode::BooleanCutterUnionBlewUp => format(
-                &localize("Joining the cutting tools ran away: after {2} of {3} tools the joined solid carried {0} faces where the tools themselves hold only {1}, so the join was stopped rather than left to run for minutes. Set this feature's Construction to Surface, which builds this shape without joining any tools."),
-                &[at(args, 0), at(args, 1), at(args, 2), at(args, 3)],
             ),
             BevelAdvisoryCode::SurfaceSmoothSideNotCut => format(
                 &localize("The surface beside the edge at {0} is one this bevel cannot cut to lay the fillet into yet. Try a smaller size, or bevel this edge in a group of its own."),
@@ -202,10 +169,6 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
                 &localize("At {0} the bevel turning that corner crosses another selected edge's bevel at an angle this construction cannot state exactly. Try a smaller size, or bevel those edges in separate groups."),
                 &[text(describe_at(args, 0))],
             ),
-            BevelAdvisoryCode::SurfaceCrossingStandsOnTheWall => format(
-                &localize("At {0} the bevel turning that corner crosses another selected edge's bevel standing on the wall it turns against, which is not built yet. Try a smaller size, or bevel those edges in separate groups."),
-                &[text(describe_at(args, 0))],
-            ),
             BevelAdvisoryCode::SurfaceCrossingMissesTheMitre => format(
                 &localize("At {0} the bevel turning that corner crosses two bevels meeting at a corner of another face, and nowhere along the line those two share does it hand over from one to the other. Try a smaller size, or bevel those edges in separate groups."),
                 &[text(describe_at(args, 0))],
@@ -294,31 +257,15 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
                 &localize("This loop meets another selected loop at a corner ({0}), so the two can't be rounded in the same bevel."),
                 &[text(describe_at(args, 0))],
             ),
-            BevelAdvisoryCode::BuiltWithTheOtherConstruction => format(
-                &localize("Built with the {0} construction."),
-                &[at(args, 0)],
-            ),
             BevelAdvisoryCode::ConstructionCouldNotBuildThisGroup => localize("Something went wrong while building the bevel along these edges. A smaller size may work."),
             BevelAdvisoryCode::SurfaceConstructionNotBuilt => localize("The bevel could not be built along these edges. Try a smaller size, or bevel fewer edges at once."),
             BevelAdvisoryCode::SurfaceMixedSizesInOnePass => localize("One part cannot be bevelled at two sizes or two shapes at once: where those bevels meet there is no single corner to build. Give the groups the same size and shape, or bevel them one after another."),
             BevelAdvisoryCode::NoEdgesResolved => localize("The group resolved to no edges at all."),
-            BevelAdvisoryCode::LoopTooShortToEnclose => localize("This selection closes into a loop of fewer than three edges, which encloses nothing to cut with."),
-            BevelAdvisoryCode::LoopSurfacesSwapped => format(
-                &localize("This selection comes back to {0} with its two surfaces swapped over, so no single tool can be swept round it."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::ToolCouldNotClose => localize("The cutting tool for this chain of edges could not be closed up."),
-            BevelAdvisoryCode::ToolSelfIntersects => localize("The cutting tool swept along this chain of edges crosses itself, so the bevel is too big for the shape it follows."),
-            BevelAdvisoryCode::ToolNotUsableSolid => localize("The cutting tool swept along this chain of edges is not a solid the boolean can use."),
             BevelAdvisoryCode::RunMixedConvexity => format(
                 &localize("The edges in this run do not all turn the same way at {0}, so no single tool can be swept along it."),
                 &[text(describe_at(args, 0))],
             ),
             BevelAdvisoryCode::EdgeHasNoLength => localize("One of the edges in this chain has no length."),
-            BevelAdvisoryCode::CornerSeamNotCarried => format(
-                &localize("The rounded corner at {0} and the run meeting it could not be made to share the same points, so the two may meet roughly there."),
-                &[text(describe_at(args, 0))],
-            ),
             BevelAdvisoryCode::CrossSectionChanged => localize("The cross section changed shape along this chain of edges."),
             BevelAdvisoryCode::ChainDoublesBack => format(
                 &localize("The chain of edges doubles straight back on itself at {0}, so no tool can be swept through that corner."),
@@ -332,31 +279,12 @@ pub fn format_advisory(advisory: &BevelAdvisory) -> String {
                 &localize("The two edges meeting at {0} do not leave a plane to place the bevel in."),
                 &[text(describe_at(args, 0))],
             ),
-            BevelAdvisoryCode::CornerBallDoesNotTouchAllInsideEdges => format(
-                &localize("The {0} rounded inside edges meeting at {1} do not all touch one ball of that size, so no rounded corner could be built there."),
-                &[at(args, 0), text(describe_at(args, 1))],
-            ),
-            BevelAdvisoryCode::CornerBallDoesNotTouchAllEdges => format(
-                &localize("The {0} rounded edges meeting at {1} do not all touch one ball of that size, so no rounded corner could be built there."),
-                &[at(args, 0), text(describe_at(args, 1))],
-            ),
-            BevelAdvisoryCode::CornerPatchNotSolidToAdd => format(
-                &localize("The rounded corner where {0} inside edges meet at {1} could not be built as a solid to add."),
-                &[at(args, 0), text(describe_at(args, 1))],
-            ),
-            BevelAdvisoryCode::CornerPatchNotSolidToCut => format(
-                &localize("The rounded corner where {0} edges meet at {1} could not be built as a solid to cut with."),
-                &[at(args, 0), text(describe_at(args, 1))],
-            ),
             BevelAdvisoryCode::SizeRemovesNothing => format(
                 &localize("A size of {0} removes nothing."),
                 &[at(args, 0)],
             ),
             BevelAdvisoryCode::FacesCoplanar => localize("The two faces along this edge lie in the same plane, so there is no corner to bevel."),
             BevelAdvisoryCode::FacesFoldBack => localize("The two faces along this edge fold back on each other, so there is no corner to cut."),
-            BevelAdvisoryCode::NoWedgeToClipAgainst => localize("The faces along this edge do not open a wedge to clip the bevel against."),
-            BevelAdvisoryCode::ChamferHasNoBall => localize("A chamfer has no rolling ball to sweep."),
-            BevelAdvisoryCode::FacesDoNotCloseCorner => localize("The faces along this edge do not close a corner for a ball to sit in."),
             BevelAdvisoryCode::FaceAngleTooSharp => face_angle_sentence(at(args, 0), localize("sharp")),
             BevelAdvisoryCode::FaceAngleTooFlat => face_angle_sentence(at(args, 0), localize("flat")),
             BevelAdvisoryCode::BevelDoesNotFitCorner => localize("The bevel does not fit in the corner between these faces."),

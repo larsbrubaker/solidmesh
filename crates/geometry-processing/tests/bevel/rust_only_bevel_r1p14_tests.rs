@@ -1,19 +1,14 @@
 //! Rust-only checks of the R1.P14 package beyond the roll's geometry: the walk across a curved
 //! landing surface, the mixed junction's gathering of three chain ends, the room's corner gap and
-//! fixed-point step, the face-width check (its creation, setbacks, plane readings and exemptions),
-//! the run-out's creation, and the wall ran-out's feet.
+//! fixed-point step, and the wall ran-out's feet.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use polygon_mesh::solids::platonic_solids::create_cube;
 use polygon_mesh::Mesh;
 
-use geometry_processing::bevel::bevel_face_fit::{
-    add_selected_edge_at, try_get_setback, DEFAULT_SURFACE_TOLERANCE_DEGREES,
-};
 use geometry_processing::bevel::surface::surface_roll_across_the_wall::SurfaceRollAcrossTheWallSides;
 use geometry_processing::bevel::surface::surface_room::{
     try_gap_to_the_corner, SurfaceRoomCut, SurfaceRoomFootprint,
@@ -30,7 +25,7 @@ use geometry_processing::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceEdgeRoles, SurfaceLine, SurfaceMixedJunction,
     SurfacePlanRecipe, SurfaceRunAcrossSectionStep,
 };
-use geometry_processing::bevel::{BevelFaceFit, BevelFaceRunOut, BevelSweptChain};
+use geometry_processing::bevel::BevelSweptChain;
 use geometry_processing::topology::{ChainEdge, EdgeConvexity, FaceGroup, FeatureEdge};
 use vector_math::Vector3;
 
@@ -248,139 +243,6 @@ fn rust_only_a_size_steps_down_one_ruler_while_it_stays_a_size() {
     assert_eq!(stepped_down(5.0, 1.0), 4.0);
     assert_eq!(stepped_down(1.0, 1.0), 1.0);
     assert_eq!(stepped_down(0.5, 1.0), 0.5);
-}
-
-fn cube_edge(convexity: EdgeConvexity, turn: f64) -> FeatureEdge {
-    FeatureEdge {
-        mesh_edge_index: 0,
-        start_vertex: 0,
-        end_vertex: 1,
-        turn_angle_degrees: turn,
-        convexity,
-        normal0: Vector3::new(0.0, 0.0, 1.0),
-        normal1: Vector3::new(0.0, -1.0, 0.0),
-        ..Default::default()
-    }
-}
-
-#[test]
-fn rust_only_a_setback_is_the_size_for_a_chamfer_and_square_fillet() {
-    let square = cube_edge(EdgeConvexity::Convex, 90.0);
-    let chamfer = try_get_setback(&square, 2.0, false).unwrap();
-    assert_eq!(chamfer, 2.0);
-    let fillet = try_get_setback(&square, 2.0, true).unwrap();
-    assert!((fillet - 2.0).abs() < 1e-9, "{fillet}");
-    assert!(try_get_setback(&square, 0.0, true).is_none());
-    assert!(try_get_setback(&square, f64::NAN, false).is_none());
-
-    let mut at_vertex = HashMap::new();
-    add_selected_edge_at(&mut at_vertex, 3, 8);
-    add_selected_edge_at(&mut at_vertex, 3, 8);
-    add_selected_edge_at(&mut at_vertex, 3, 9);
-    assert_eq!(at_vertex[&3], HashSet::from([8, 9]));
-}
-
-#[test]
-fn rust_only_the_face_fit_reads_a_cubes_twelve_convex_edges_and_its_planes() {
-    let mesh = Arc::new(create_cube(10.0, 10.0, 10.0));
-    let fit = BevelFaceFit::create(
-        mesh.clone(),
-        Rc::new(Vec::new()),
-        true,
-        1.0,
-        DEFAULT_SURFACE_TOLERANCE_DEGREES,
-        None,
-    );
-
-    assert_eq!(fit.surface_edges.len(), 12);
-    assert!(fit.concave_surface_edges.is_empty());
-    assert!(fit.setbacks.is_empty() && fit.largest_setback == 0.0);
-    assert!((fit.plane_tolerance - 300f64.sqrt() * 1e-5).abs() < 1e-12);
-
-    for face in 0..mesh.faces.len() as i32 {
-        let normal = fit.face_normal(face);
-        assert!((normal.length() - 1.0).abs() < 1e-9);
-        let on = mesh.vertices[mesh.faces[face as usize].v0 as usize];
-        let plane = normal.dot(Vector3::from_vector3_float(on));
-        assert!(fit.lies_in_the_plane(face, normal, plane));
-        assert!(!fit.lies_in_the_plane(face, normal, plane + 1.0));
-    }
-
-    // Nothing concave stands on a cube's faces, so no stop is an obstruction on the plane.
-    let edge = cube_edge(EdgeConvexity::Convex, 90.0);
-    let blocking = *fit.surface_edges.first().unwrap();
-    assert!(fit
-        .stands_on_the_face_rather_than_ending_it(0, &edge, blocking, &[])
-        .is_none());
-}
-
-#[test]
-fn rust_only_the_face_fit_exemptions_read_the_stop() {
-    let mesh = Arc::new(create_cube(10.0, 10.0, 10.0));
-    let mut fit = BevelFaceFit::create(
-        mesh.clone(),
-        Rc::new(Vec::new()),
-        true,
-        1.0,
-        DEFAULT_SURFACE_TOLERANCE_DEGREES,
-        None,
-    );
-    let convex_stop = *fit.surface_edges.first().unwrap();
-    let concave = cube_edge(EdgeConvexity::Concave, -90.0);
-
-    assert!(fit.a_negligible_sliver_past_a_convex_edge(convex_stop, 0.01, 1.0));
-    assert!(!fit.a_negligible_sliver_past_a_convex_edge(convex_stop, 0.03, 1.0));
-    assert!(!fit.a_negligible_sliver_past_a_convex_edge(-1, 0.0, 1.0));
-    assert!(fit.a_bead_running_out_past_a_convex_edge(&concave, convex_stop, 1.0, 1.0));
-    assert!(!fit.a_bead_running_out_past_a_convex_edge(&concave, convex_stop, 0.5, 1.0));
-    assert!(!fit.two_beads_sharing_the_face(&concave, convex_stop, true));
-
-    fit.concave_surface_edges.insert(convex_stop);
-    assert!(fit.two_beads_sharing_the_face(&concave, convex_stop, true));
-    assert!(!fit.two_beads_sharing_the_face(&concave, convex_stop, false));
-    assert!(!fit.a_bead_running_out_past_a_convex_edge(&concave, convex_stop, 1.0, 1.0));
-
-    // The corner's business: a stop sharing one of the edge's vertices, the face wide enough.
-    let shared = fit.graph.get_vertex0(convex_stop);
-    let touching = FeatureEdge {
-        start_vertex: shared,
-        end_vertex: -5,
-        ..concave
-    };
-    fit.setbacks.insert(convex_stop, 1.0);
-    assert!(fit.the_corners_business(&touching, convex_stop, 1.0, 1.0));
-    assert!(!fit.the_corners_business(&touching, convex_stop, 0.5, 1.0));
-    let apart = FeatureEdge {
-        start_vertex: -4,
-        end_vertex: -5,
-        ..concave
-    };
-    assert!(!fit.the_corners_business(&apart, convex_stop, 1.0, 1.0));
-}
-
-#[test]
-fn rust_only_the_run_out_reads_a_cubes_edges_and_its_diagonal() {
-    let mesh = Arc::new(create_cube(10.0, 10.0, 10.0));
-    let run_out = BevelFaceRunOut::create(mesh, None, DEFAULT_SURFACE_TOLERANCE_DEGREES);
-
-    assert_eq!(run_out.surface_edges.len(), 12);
-    assert!(run_out
-        .convexity_by_mesh_edge
-        .values()
-        .all(|&c| c == EdgeConvexity::Convex));
-    assert!((run_out.diagonal - 300f64.sqrt()).abs() < 1e-9);
-    assert_eq!(
-        run_out.edges_by_vertex_pair.len() as i32,
-        run_out.graph.edge_count()
-    );
-    for (&(low, high), &edge) in &run_out.edges_by_vertex_pair {
-        assert!(low < high);
-        let ends = (
-            run_out.graph.get_vertex0(edge),
-            run_out.graph.get_vertex1(edge),
-        );
-        assert!(ends == (low, high) || ends == (high, low));
-    }
 }
 
 fn sides() -> SurfaceRollAcrossTheWallSides {

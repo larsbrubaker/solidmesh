@@ -295,8 +295,7 @@ fn the_same_plane_agreement() -> f64 {
     (1.0 * std::f64::consts::PI / 180.0).cos()
 }
 
-/// One end's incidence read once - the faces gathered exactly as
-/// `BevelChainEndPlane` gathers them: every face of an edge here that is not one of the run's own
+/// One end's incidence read once: every face of an edge here that is not one of the run's own
 /// two, with the run's own edge passed over.
 fn scan_the_end(
     edge: &ChainEdge,

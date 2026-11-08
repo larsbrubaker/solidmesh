@@ -77,24 +77,6 @@ fn rust_only_a_zip_rail_reads_canonically_and_past_its_wrap() {
 }
 
 #[test]
-fn rust_only_the_bead_batch_withdraws_by_owner() {
-    use geometry_processing::bevel::BevelBeadBatch;
-    use polygon_mesh::solids::platonic_solids;
-    use std::collections::HashSet;
-    let cube = || platonic_solids::create_cube(1.0, 1.0, 1.0);
-    let mut batch = BevelBeadBatch::default();
-    batch.add_chain_bead(0, cube());
-    batch.add_fill_patch(vec![0, 2], cube());
-    batch.add_fill_patch(vec![0, 1], cube());
-    assert_eq!(batch.fill_patches_start_at(), 1);
-    batch.withdraw(&HashSet::from([1]));
-    assert_eq!(batch.whole().len(), 2);
-    assert_eq!(batch.fill_patches_start_at(), 1);
-    batch.withdraw(&HashSet::from([0]));
-    assert!(batch.whole().is_empty());
-}
-
-#[test]
 fn rust_only_small_level_line_readings() {
     use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
     use geometry_processing::bevel::level_line::consumed_to_the_rim::lies_on_a_rim;

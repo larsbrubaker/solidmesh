@@ -84,23 +84,9 @@ fn selection(edge_count: i32) -> String {
     }
 }
 
-/// The one line a run whose overshoot was bounded puts on its own row - which
-/// ends were held, at what size, and how much was picked - the size named as the thing the user can
-/// change and the selection as the other thing, since the reading chooser lands on this same row.
-pub fn held_back_sentence(
-    held_back_ends: String,
-    size: BevelAdvisoryArg,
-    edge_count: i32,
-) -> String {
-    format(
-        &localize("The bevel is held back where {0}: a size of {1:0.###} would reach further past there than half the edge it ends on, and no face at that corner is square enough to stop it. This selection is {2}; choose a longer reading from the row's dropdown or from the badge beside the edge, or use a smaller size, to cut further."),
-        &[text(held_back_ends), size, text(selection(edge_count))],
-    )
-}
-
 /// The line a run that stopped SQUARE puts on its own row - where it
-/// stopped and how much was picked. The size is not named, because unlike the boolean path's
-/// held-back end nothing about the size was given up here - the cut is the full size asked for, and
+/// stopped and how much was picked. The size is not named, because nothing about the size was given
+/// up - the cut is the full size asked for, and
 /// what stops short is how far along the part it runs. So the only thing offered is the other one:
 /// read more of the edge and it goes further.
 pub fn stops_square_sentence(stopped_at: String, edge_count: i32) -> String {
@@ -118,29 +104,13 @@ pub fn face_angle_sentence(interior_angle_degrees: BevelAdvisoryArg, too_what: S
     )
 }
 
-/// The sentence for one of the five size codes, or `None` for any other code. The room a row
+/// The sentence for one of the three size codes, or `None` for any other code. The room a row
 /// offers is `args[2]`; where it is not a double nothing was confirmed to build and the sentence
 /// names no size.
 pub fn size_sentence(code: BevelAdvisoryCode, args: &[BevelAdvisoryArg]) -> Option<String> {
     let offers_room = matches!(args.get(2), Some(BevelAdvisoryArg::Double(_)));
 
     Some(match code {
-        BevelAdvisoryCode::CapPullsToolBackPastSegment if !offers_room => format(
-            &localize("The cap where these edges end at {0} pulls the tool back past its own last segment, so a size of {1:0.###} cannot be stopped there."),
-            &[text(describe_at(args, 0)), at(args, 1)],
-        ),
-        BevelAdvisoryCode::CapPullsToolBackPastSegment => format(
-            &localize("The cap where these edges end at {0} pulls the tool back past its own last segment, so a size of {1:0.###} cannot be stopped there. The most that fits is about {2:0.###}."),
-            &[text(describe_at(args, 0)), at(args, 1), at(args, 2)],
-        ),
-        BevelAdvisoryCode::SizeFoldsToolAtCurve if !offers_room => format(
-            &localize("A size of {0:0.###} folds the tool through itself where the edges curve near {1}."),
-            &[at(args, 0), text(describe_at(args, 1))],
-        ),
-        BevelAdvisoryCode::SizeFoldsToolAtCurve => format(
-            &localize("A size of {0:0.###} folds the tool through itself where the edges curve near {1}. The most that fits there is about {2:0.###}."),
-            &[at(args, 0), text(describe_at(args, 1)), at(args, 2)],
-        ),
         BevelAdvisoryCode::SizeCollidesAcrossFace if !offers_room => format(
             &localize("A size of {0:0.###} runs into the bevel coming the other way across the face at {1}, so the two of them do not both fit."),
             &[at(args, 0), text(describe_at(args, 1))],

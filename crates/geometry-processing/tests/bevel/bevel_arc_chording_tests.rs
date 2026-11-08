@@ -1,12 +1,7 @@
-//! The one rule that says how finely an arc is chorded, which a run's profile and the corner
-//! patch's boundary both have to read the same way or the seam between them does not meet. Each
+//! The one rule that says how finely an arc is chorded (`bevel_arc_chording::segments_for`). Each
 //! test's rows run as a loop, each row's reason as the assertion message.
 
-use geometry_processing::bevel::bevel_arc_chording::{effective_segments, segments_for};
-use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-
-use crate::topology_test_meshes::create_isosceles_prism;
+use geometry_processing::bevel::bevel_arc_chording::segments_for;
 
 /// The count a fresh fillet carries, and the one every number below is stated against.
 const EIGHT: i32 = 8;
@@ -40,42 +35,6 @@ fn the_step_comes_out_the_same_whatever_the_arc() {
              sharp corner is no longer sampled more coarsely than a blunt one ({angle_degrees}: {step})"
         );
     }
-}
-
-/// The count one whole OPERATION is built at: the largest any of its arcs asks for, floored at
-/// the operation's own number, read off real parts. A prism whose APEX is obtuse still answers
-/// 14, because the maximum is over every edge and that prism's back corners are sharper than its
-/// apex.
-#[test]
-fn an_operation_is_built_at_the_count_its_sharpest_arc_asks_for() {
-    let rows: [(f64, i32, &str); 3] = [
-        (90.0, 8, "a cube: every edge turns a quarter, so nothing moves"),
-        (45.0, 12, "a 45 degree knife tip turns through 135, which is a segment and a half per quarter"),
-        (135.0, 14, "the SHARPEST arc anywhere in the part decides, and on a 135 degree prism that is not the apex at all - its back corners are 22.5 degrees interior, turning through 157.5, which asks for 14"),
-    ];
-
-    for (apex_degrees, expected, why) in rows {
-        let part = if apex_degrees == 90.0 {
-            platonic_solids::create_cube(20.0, 20.0, 20.0)
-        } else {
-            create_isosceles_prism(apex_degrees, 20.0, 20.0)
-        };
-
-        let features = FeatureEdgeSet::create(&part);
-        let edges: Vec<FeatureEdge> = features.edges().to_vec();
-
-        assert_eq!(effective_segments(Some(&edges), EIGHT), expected, "{why}");
-    }
-}
-
-/// Nothing to read is the operation's own count, not zero.
-#[test]
-fn no_edges_answer_the_operations_own_count() {
-    assert_eq!(effective_segments(None::<&[FeatureEdge]>, EIGHT), EIGHT);
-    assert_eq!(
-        effective_segments(Some(&[] as &[FeatureEdge]), EIGHT),
-        EIGHT
-    );
 }
 
 /// A sliver of an arc still has to be crossed, and a nonsense count still has to answer

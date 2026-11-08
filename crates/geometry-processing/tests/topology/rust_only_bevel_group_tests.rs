@@ -69,7 +69,7 @@ fn rust_only_advisory_equality_ignores_mesh_edge_and_tells_int_from_double() {
         Some(1.5)
     );
     assert!(bevel_advisory_codes::is_a_note_rather_than_a_complaint(
-        BevelAdvisoryCode::BuiltWithTheOtherConstruction
+        BevelAdvisoryCode::SourceMeshHadThinSlivers
     ));
 }
 

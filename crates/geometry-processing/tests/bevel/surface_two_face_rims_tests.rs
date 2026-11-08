@@ -2,12 +2,9 @@
 //! between its two faces, whichever groups name it, so the two rims are one network of chains
 //! rather than two selections to be told apart.
 //!
-//! The boolean construction cannot have it that way - two coincident swept tools cannot be unioned,
-//! so `bevel_shared_edges::award_once` gives each doubly named edge to one group and takes it out
-//! of the other. The surface path unions the groups' edges and links the union instead, which is
-//! what the other tests here measure - and
-//! `taking_the_shared_edge_out_of_one_rim_leaves_the_same_solid` is what the award costs it. The
-//! union is a real network and not just a longer list: the two ends of the shared edge are vertices
+//! The surface path unions the groups' edges and links the union, which is what the tests here
+//! measure - and `taking_the_shared_edge_out_of_one_rim_leaves_the_same_solid` holds that naming the
+//! shared edge in only one rim builds the same solid. The union is a real network and not just a longer list: the two ends of the shared edge are vertices
 //! where THREE selected edges meet, which is the three-edge corner the kernel already builds
 //! (`surface_corner_tests`, whose closed-form profile terms are shared here).
 

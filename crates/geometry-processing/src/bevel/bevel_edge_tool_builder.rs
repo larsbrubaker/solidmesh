@@ -1,7 +1,8 @@
 //! The cross section one edge's bevel is cut with, and the frame it is drawn in: on a convex edge
 //! the profile of the material that has to go, on a concave edge the mirror of the same
-//! construction, which is the bead that is unioned on. `BevelChainSweep` is what turns these into a
-//! solid. Its `try_*` functions return `Result<_, BevelAdvisory>`: the built section, or the reason
+//! construction. The chain sweep's sections (`bevel_chain_sweep_sections`) draw them along a run,
+//! and the surface construction reads the closed forms (`tangent_distance`,
+//! `profile_wedge_angle_degrees`). Its `try_*` functions return `Result<_, BevelAdvisory>`: the built section, or the reason
 //! there is none.
 //!
 //! The size is dimensioned the way CAD dimensions it - a chamfer's setback is measured along each
@@ -28,49 +29,10 @@ use crate::topology::{EdgeConvexity, FeatureEdge};
 
 /// How square to the edge the two faces have to be before the frame means anything. Below this
 /// the faces have folded back on each other or lie flat, and there is no corner to cut.
-///
-/// Shared rather than private because it is the same question wherever a profile is inscribed in
-/// a wedge - `BevelMixedBlends` draws one per station in the wedge its own miter plane presents
-/// and is refused on these bounds, so a corner this builder would turn down cannot be reached
-/// round the back by a blend.
 pub const MINIMUM_INTERIOR_ANGLE_DEGREES: f64 = 1.0;
 
 /// See [`MINIMUM_INTERIOR_ANGLE_DEGREES`].
 pub const MAXIMUM_INTERIOR_ANGLE_DEGREES: f64 = 179.0;
-
-/// How far past the bead's own tangent points the void wedge reaches, as a proportion of them -
-/// just enough that the arc lies strictly inside the wedge rather than on its boundary. Derived,
-/// and argued for being this small rather than larger, on [`try_build_void_wedge_cross_section`].
-/// Shared with `BevelVoidWedgeSectionTests`, so the bound moves with the margin.
-pub const CONTAINMENT_MARGIN: f64 = 1.05;
-
-/// How far INSIDE the material a swept void wedge's two lateral walls are buried, as a fraction
-/// of the wedge's own reach, so that neither wall lies in the crease face it runs along. Why, and
-/// why a thousandth rather than a float hair, is on [`try_build_void_wedge_cross_section`]; the
-/// same fraction, against the same hazard, sets the corner void's apex back in
-/// `BevelCornerPatchMesher`.
-pub const WALLS_CLEAR_THE_FACES_BY: f64 = 1e-3;
-
-/// How far the rolling-ball TUBE's section stands outside the ball itself, as a fraction of one
-/// chord's sagitta - the margin that keeps a tube's facet planes off the partner cutter's own arc
-/// facets, which are the same planes when the two runs meet at a right angle. Argued on
-/// [`try_build_ball_cross_section`].
-pub const TUBE_STAND_OFF_FRACTION: f64 = 0.25;
-
-/// How far past each end of an edge the tool runs, so the cut does not stop short of the
-/// corners. The chain sweep leaves an open chain's two free ends exactly this far over too (plan
-/// 5.2's overshoot).
-///
-/// It is a function of the SIZE and of nothing else - the run it is swept along does not appear -
-/// and that is deliberate at a corner the tool has to reach past. It is also why `BevelChainEnds`
-/// bounds it at an uncapped end shorter than itself.
-pub fn overshoot(size: f64, tangent_distance: f64) -> f64 {
-    // NaN propagates, which f64::max would not do: a NaN size must not read as a real overshoot.
-    if size.is_nan() || tangent_distance.is_nan() {
-        return f64::NAN;
-    }
-    size.max(tangent_distance)
-}
 
 /// How far back along each face the bevel reaches, without building the cross section - the
 /// closed form of the tangent distance [`try_build_cross_section`] hands back.
@@ -79,7 +41,7 @@ pub fn overshoot(size: f64, tangent_distance: f64) -> f64 {
 /// is drawn in ([`profile_wedge_angle_degrees`]), `round_profile` true for a fillet's tangent arc.
 /// A chamfer's setback IS the size. A fillet's is `radius / tan(theta / 2)`, the same line
 /// `TryMeasureCorner` computes from the angle it measures out of the frame; the two agree because
-/// they are the same angle read two ways (`BevelVoidWedgeSectionTests` asserts it).
+/// they are the same angle read two ways.
 pub fn tangent_distance(size: f64, wedge_angle_degrees: f64, round_profile: bool) -> f64 {
     if !round_profile {
         return size;
@@ -88,9 +50,9 @@ pub fn tangent_distance(size: f64, wedge_angle_degrees: f64, round_profile: bool
     let tangent_of_half_angle = (degrees_to_radians(wedge_angle_degrees) / 2.0).tan();
 
     // A wedge folded shut has no corner to reach back along. Infinity is the honest answer and it
-    // stays usable where it matters: BevelChainEnds only ever COMPARES this against half a
-    // segment, and infinity compares the right way round. try_build_cross_section refuses the
-    // corner outright in any case, so no tool is ever swept on it.
+    // stays usable where it matters: a caller only ever COMPARES this against a length, and
+    // infinity compares the right way round. try_build_cross_section refuses the corner outright
+    // in any case, so no section is ever swept on it.
     if tangent_of_half_angle > 0.0 {
         size / tangent_of_half_angle
     } else {
@@ -119,29 +81,6 @@ pub fn profile_wedge_angle_degrees(edge: &FeatureEdge) -> f64 {
     180.0 - edge.turn_angle_degrees.abs()
 }
 
-/// How far the cross section reaches from the edge at its furthest point, without building it -
-/// the bound `BevelChainEnds` sizes a capping plane's ring slide against.
-///
-/// Read straight off [`try_build_cross_section`], where every point of the section is one of
-/// three things. The cleared apex sits `clearance / sin(halfAngle)` up the bisector, and the
-/// clearance IS the size. Each cleared corner sits at `hypot(tangentDistance, clearance)`, which
-/// for a fillet is that same `size / sin(halfAngle)` and for a chamfer is `sqrt(2) size`. And the
-/// profile return lies inside the triangle those corners span. So the larger of the two closed
-/// forms bounds both profiles.
-// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
-#[allow(clippy::neg_cmp_op_on_partial_ord)]
-pub fn cross_section_reach(size: f64, wedge_angle_degrees: f64) -> f64 {
-    let sine_of_half_angle = (degrees_to_radians(wedge_angle_degrees) / 2.0).sin();
-
-    if !(sine_of_half_angle > 0.0) {
-        // A wedge that has folded shut has no section to measure; try_build_cross_section refuses
-        // it outright, and every caller here reads an unbounded reach as "trust no plane".
-        return f64::INFINITY;
-    }
-
-    size * 2.0_f64.sqrt().max(1.0 / sine_of_half_angle)
-}
-
 /// The two normals the cross section is drawn from: the faces' own outward normals on a convex
 /// edge, and both of them NEGATED on a concave one. That single sign flip is the whole of the
 /// plan's mirrored concave profile (5.1).
@@ -154,8 +93,7 @@ pub fn cross_section_reach(size: f64, wedge_angle_degrees: f64) -> f64 {
 /// material wedge a convex one closes. In that turned frame the construction reads term for term
 /// as it did, but about the void: the arc centre lands where a ball rolling INSIDE the corner
 /// sits, and the "clearance" walls run in past each face into solid material - a closed bead whose
-/// curved face is the arc and whose back faces are buried inside the part. Only which boolean
-/// takes it differs (`BevelFeatureMeshBuilder` subtracts a cut and unions a bead).
+/// curved face is the arc and whose back faces are buried inside the part.
 ///
 /// A flat edge is refused: there is no wedge either way, so there is nothing to draw a profile in.
 ///
@@ -249,8 +187,9 @@ pub fn try_build_cross_section(
     //
     // One size, unless the caller asked for a shallower back. It does that only when the chain
     // this section is swept along turns tightly enough that a back a whole size deep would fold
-    // through itself on the inside of the turn - see BevelChainSweep.TryCreate, which measures the
-    // fold and retries rather than refusing the tool. Never DEEPER than the size.
+    // through itself on the inside of the turn - see the chain linker's mitre split
+    // (`bevel_chain_linker`), which measures the back reach and retries at the depth the turn
+    // allows (`bevel_sweep_back_depth`). Never DEEPER than the size.
     let clearance = if back_depth > 0.0 {
         // NaN cannot reach here (back_depth > 0 is false for NaN), so f64::min is safe.
         back_depth.min(size)
@@ -291,196 +230,6 @@ pub fn try_build_cross_section(
         arc_segments,
         round_profile,
     );
-
-    Ok((points, tangent_distance))
-}
-
-/// The triangle that covers the WEDGE the profile is drawn in, in the same 2D frame and walked in
-/// the same sense as [`try_build_cross_section`], so one sweep can carry either; with the tangent
-/// distance.
-///
-/// This exists for the concave case, where the wedge is the VOID between the two selected faces,
-/// and it is what lets the bead's buried back be trimmed to the wall it is buried in: swept along
-/// the same chain with the same frames, miters and caps, `BevelFeatureMeshBuilder` keeps only
-/// `bead ∩ (part ∪ wedge)`, so on a wall thinner than the size the back does not union on as a
-/// slab.
-///
-/// It is the triangle the two tangent points span, scaled out from the edge by
-/// [`CONTAINMENT_MARGIN`]: everything of the bead in the void is bounded by the ARC, which is
-/// tangent to both faces at those points and bows back toward the edge, so the whole of it sits
-/// inside their triangle; the margin makes the containment strict.
-///
-/// **Why it is no bigger.** An over-large wedge fails SILENTLY: `BevelChainSweep`'s fold test
-/// refuses it where it is too wide for the curvature, and a refused wedge is a bead added
-/// unclipped. Covering the bead's cleared apex (which is never in the void) made it about three
-/// times the bead's section; a fourth point pushed out by `1 / cos(halfAngle)` ran away without
-/// bound as the wedge flattened. What is left is bounded by the bead's own reach at every angle.
-///
-/// **Why the two walls are BURIED.** Drawn as the bare triangle each lateral wall lies exactly on
-/// a face of the crease, so the clip's `part ∪ wedge` is handed coincident sheets; at the
-/// coordinates rebuilds work in, floats put the wall nanometres off the face and the clipped bead
-/// carried coincident triangle pairs and zero-area slivers ("UpperLeftInner should bevel.mcx").
-/// Insetting each wall by [`WALLS_CLEAR_THE_FACES_BY`] of the reach along its profile normal (into
-/// the MATERIAL on a concave edge) makes each wall CROSS its face; the extra sliver is inside
-/// `part`, so the kept point set is unchanged. The edge corner moves to where both inset walls
-/// meet, `(out0 + out1) * s / (1 + out0 . out1)`, left unclamped.
-///
-/// **Why a thousandth.** Swept across the kernel suite: at `1e-9` the wall is still coincident
-/// (`BevelRecessApexRunOutTests` fails); `1e-6` through `1e-3` is green; a thousandth clears the
-/// floor by three decades and matches `BevelCornerPatchMesher.TryBuildVoidCone`'s setback.
-///
-/// **And why ONE wedge is still drawn flush** (`clear_the_faces` false). Where the bead squares off
-/// against a 5.3 corner the keep-set is `wedge ∪ corner void`, whose walls lie ON these same faces,
-/// so an inset makes a near-parallel pair rather than removing a coincidence
-/// (`BevelTwoBeadCornerClipTests`). That squared wedge alone is swept flush
-/// (`BevelSweptSection.VoidWedgeOnTheFaces`); the section tests also measure the bare triangle.
-/// `clear_the_faces` is normally true.
-// `!(x > 0)` is true for NaN too, which the rewritten comparison would not be.
-#[allow(clippy::too_many_arguments, clippy::neg_cmp_op_on_partial_ord)]
-pub fn try_build_void_wedge_cross_section(
-    normal0: Vector3,
-    normal1: Vector3,
-    x_axis: Vector3,
-    y_axis: Vector3,
-    z_axis: Vector3,
-    size: f64,
-    round_profile: bool,
-    clear_the_faces: bool,
-) -> Result<(Vec<Vector2>, f64), BevelAdvisory> {
-    let (corner, tangent_distance) = try_measure_corner(
-        normal0,
-        normal1,
-        x_axis,
-        y_axis,
-        z_axis,
-        size,
-        round_profile,
-    )?;
-
-    if !(tangent_distance > 0.0) {
-        // The size is validated positive and the angle is gated well inside (0, 180) degrees, so
-        // this cannot happen; refusing rather than sweeping it keeps a future change to either
-        // bound from producing a wedge that is quietly the wrong shape.
-        return Err(BevelAdvisory::new(
-            BevelAdvisoryCode::NoWedgeToClipAgainst,
-            vec![],
-        ));
-    }
-
-    let reach = CONTAINMENT_MARGIN * tangent_distance;
-
-    // Both walls buried in the material by a thousandth of the reach - see above. The corner is
-    // where the two inset wall lines cross; the denominator only vanishes as the wedge closes to
-    // a knife, which try_measure_corner's angle bounds have already refused.
-    let wall_stand_off = if clear_the_faces {
-        WALLS_CLEAR_THE_FACES_BY * reach
-    } else {
-        0.0
-    };
-    let outward = corner.face0_out + corner.face1_out;
-    let closing = 1.0 + corner.face0_out.dot(corner.face1_out);
-    let edge_corner = if closing > 0.0 {
-        outward * (wall_stand_off / closing)
-    } else {
-        Vector2::ZERO
-    };
-
-    let points = vec![
-        edge_corner,
-        (corner.face0_direction * reach) + (corner.face0_out * wall_stand_off),
-        (corner.face1_direction * reach) + (corner.face1_out * wall_stand_off),
-    ];
-
-    Ok((points, tangent_distance))
-}
-
-/// The BALL the profile is drawn around, in the same 2D frame and walked in the same sense as
-/// [`try_build_cross_section`]: a closed polygon of `4 * segments` sides around the arc centre, of
-/// the rolling ball's own radius (stood off a hair), with the tangent distance.
-///
-/// Swept along a chain this is the tube a ball of that radius leaves as it rolls down the edge,
-/// for the corner where two convex fillet chains overshoot into each other
-/// (`BevelPairCornerTrim`): each cutter has its partner's tube taken out of it before the union.
-///
-/// **The same centre.** `size / sin(halfAngle)` up the bisector, read from the same
-/// `try_measure_corner` the tool reads, so the tube's surface is the tool's own arc surface rather
-/// than a second one a rounding off it.
-///
-/// **4 * segments sides, phased on the arc.** At a right angle the tool's arc step is
-/// `90 / segments` degrees, so a full circle of that step is `4 * segments` sides; starting at the
-/// tool's own arc start (the tangent point on face 1) puts a ball vertex on every arc vertex.
-///
-/// **A hair OUTSIDE the ball.** Drawn on the circle itself, the tube's facets lay exactly ON the
-/// partner's fillet facets, a coincident face that made the union of the two trimmed cutters
-/// self-intersecting at every unequal-dihedral corner. Standing off by
-/// [`TUBE_STAND_OFF_FRACTION`] of one chord's sagitta lifts every facet plane clear; a quarter was
-/// bracketed against the Onshape control of `CornerShouldBeSmoothRegressionTests` (a whole
-/// sagitta stood 0.049 mm proud; a half-step rotation cut 0.098 mm below).
-///
-/// A chamfer has no ball, so a square profile is refused.
-#[allow(clippy::too_many_arguments)]
-pub fn try_build_ball_cross_section(
-    normal0: Vector3,
-    normal1: Vector3,
-    x_axis: Vector3,
-    y_axis: Vector3,
-    z_axis: Vector3,
-    size: f64,
-    segments: i32,
-    round_profile: bool,
-) -> Result<(Vec<Vector2>, f64), BevelAdvisory> {
-    if !round_profile {
-        return Err(BevelAdvisory::new(
-            BevelAdvisoryCode::ChamferHasNoBall,
-            vec![],
-        ));
-    }
-
-    let (corner, tangent_distance) = try_measure_corner(
-        normal0,
-        normal1,
-        x_axis,
-        y_axis,
-        z_axis,
-        size,
-        round_profile,
-    )?;
-
-    let cut_start = corner.face0_direction * tangent_distance;
-    let cut_end = corner.face1_direction * tangent_distance;
-    let bisector = cut_start + cut_end;
-
-    if bisector.length() < 1e-12 {
-        // The two faces have opened to a straight line, which try_measure_corner's angle bounds
-        // already refuse; kept so a future change to those bounds cannot produce a centre at the
-        // origin.
-        return Err(BevelAdvisory::new(
-            BevelAdvisoryCode::FacesDoNotCloseCorner,
-            vec![],
-        ));
-    }
-
-    let arc_centre = bisector.get_normal() * (size / corner.half_angle.sin());
-    let sides = 4 * segments.max(1);
-    let start_angle = (cut_end.y - arc_centre.y).atan2(cut_end.x - arc_centre.x);
-
-    // A quarter of the chord's own sagitta proud of the ball, which is what keeps this surface
-    // OFF the partner cutter's arc rather than in it - see above.
-    let stand_off = size
-        + (TUBE_STAND_OFF_FRACTION
-            * size
-            * (1.0 - (std::f64::consts::PI / f64::from(sides)).cos()));
-
-    let mut points = Vec::with_capacity(sides as usize);
-
-    for i in 0..sides {
-        let angle = start_angle + (2.0 * std::f64::consts::PI * f64::from(i) / f64::from(sides));
-
-        points.push(Vector2::new(
-            arc_centre.x + (stand_off * angle.cos()),
-            arc_centre.y + (stand_off * angle.sin()),
-        ));
-    }
 
     Ok((points, tangent_distance))
 }

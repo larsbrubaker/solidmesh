@@ -1,11 +1,9 @@
-//! The SEWING half of the chain sweep: the per-segment record the finished rings are built from
-//! ([`SweptSegment`]). Its constructor and profile offset, the cap's own profile ([`cap_profile`]),
-//! and the solid sewn from the rings ([`build_mesh`]).
+//! The per-segment record of the chain sweep ([`SweptSegment`]): one chain edge's section, frame and
+//! end slides, with its constructor and profile offset. The sections half builds them
+//! ([`super::bevel_chain_sweep_sections`]) and the rings half mitres their joints
+//! ([`super::bevel_chain_sweep_rings`]).
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3, Vector3Float};
-
-use super::{bevel_profile_polygon, BevelChainEnds};
+use vector_math::{Vector2, Vector3};
 
 /// One edge of the chain with everything the sweep needs from it - where it runs, the frame its
 /// cross section is drawn in, and how far each end of its strip is dragged by the joints at its
@@ -69,100 +67,4 @@ impl SweptSegment {
     pub fn offset(&self, point: usize) -> Vector3 {
         (self.x_axis * self.profile[point].x) + (self.y_axis * self.profile[point].y)
     }
-}
-
-/// A ring read back into `segment`'s profile frame: each point's offset from the segment's start
-/// along its two axes.
-pub fn cap_profile(ring: &[Vector3], segment: &SweptSegment) -> Vec<Vector2> {
-    ring.iter()
-        .map(|&point| {
-            let offset = point - segment.from;
-            Vector2::new(offset.dot(segment.x_axis), offset.dot(segment.y_axis))
-        })
-        .collect()
-}
-
-/// The solid sewn from a run's `rings`: one strip of quads between each consecutive pair (wrapping
-/// on a closed run), and on an open run the two end caps triangulated from the profile - from the
-/// actual ring where an end drives through, since its profile is tapered. `None` where a cap
-/// cannot be triangulated.
-pub fn build_mesh(
-    swept: &[SweptSegment],
-    rings: &[Vec<Vector3>],
-    closed: bool,
-    point_count: usize,
-    ends: Option<&BevelChainEnds>,
-) -> Option<Mesh> {
-    let mut mesh = Mesh::new();
-
-    for ring in rings {
-        for &position in ring {
-            mesh.vertices.push(Vector3Float::from_vector3(position));
-        }
-    }
-
-    let ring_count = rings.len();
-
-    // One strip between every consecutive pair of rings, counted off the RINGS because a
-    // drive-through end adds one of its own beyond the run's last ring.
-    let strip_count = if closed { ring_count } else { ring_count - 1 };
-    let pc = point_count as i32;
-
-    for strip in 0..strip_count {
-        let back = (strip as i32) * pc;
-        let front = (((strip + 1) % ring_count) as i32) * pc;
-
-        for point in 0..pc {
-            let next = (point + 1) % pc;
-
-            // With the profile wound counter clockwise and the rings ordered along the sweep, this
-            // is the winding whose normals face out of the tool.
-            mesh.faces
-                .add(back + point, back + next, front + next, &mesh.vertices);
-            mesh.faces
-                .add(back + point, front + next, front + point, &mesh.vertices);
-        }
-    }
-
-    if !closed {
-        // A drive-through cap has a tapered profile: triangulate the actual ring.
-        let first = &swept[0];
-        let last = &swept[swept.len() - 1];
-        let start_profile = if ends.is_some_and(|e| e.start.drives_through) {
-            cap_profile(&rings[0], first)
-        } else {
-            first.profile.clone()
-        };
-        let end_profile = if ends.is_some_and(|e| e.end.drives_through) {
-            cap_profile(&rings[ring_count - 1], last)
-        } else {
-            last.profile.clone()
-        };
-
-        let start_cap = bevel_profile_polygon::try_triangulate(&start_profile)?;
-        let end_cap = bevel_profile_polygon::try_triangulate(&end_profile)?;
-
-        let last_ring = (ring_count as i32 - 1) * pc;
-
-        for i in (0..start_cap.len()).step_by(3) {
-            // reversed, because the start cap faces back down the sweep
-            mesh.faces.add(
-                start_cap[i],
-                start_cap[i + 2],
-                start_cap[i + 1],
-                &mesh.vertices,
-            );
-        }
-
-        for i in (0..end_cap.len()).step_by(3) {
-            mesh.faces.add(
-                last_ring + end_cap[i],
-                last_ring + end_cap[i + 1],
-                last_ring + end_cap[i + 2],
-                &mesh.vertices,
-            );
-        }
-    }
-
-    Some(mesh)
 }

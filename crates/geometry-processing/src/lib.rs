@@ -8,8 +8,8 @@
 //! `topology` holds feature edges, chains, face groups, the region cache, edge picking, the bevel
 //! edge/corner group records, the edge and corner group resolvers, path corners and the readings
 //! of a pick or stored group; `path` the path bevel and segment runs; and `bevel` the whole
-//! kernel: advisories, the level-line, section and surface builders, the tool, bead and clip
-//! builders, and a whole part's fillet or chamfer through its one entry point,
+//! kernel: advisories, the level-line, section and surface builders, the section and run readings
+//! they share, and a whole part's fillet or chamfer through its one entry point,
 //! `bevel::part::bevel_part`.
 //! The live size preview, which drives the model's rebuild, lives in MatterCAD (mattercad-model).
 

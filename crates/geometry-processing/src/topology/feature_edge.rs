@@ -85,19 +85,6 @@ impl FeatureEdge {
         180.0 - self.turn_angle_degrees
     }
 
-    /// The same edge over part of its length: only `start` and `end` move, to two points of the
-    /// line it already runs along. It deliberately keeps the original vertices and mesh edge
-    /// index - no vertex of the mesh stands at the cut, so there is nothing truer to name -
-    /// which is why anything that needs one edge per mesh edge must not be handed a subdivided
-    /// chain. Crate-internal for that reason: the bevel is the one caller.
-    pub(crate) fn over_part_of_its_length(&self, start: Vector3, end: Vector3) -> FeatureEdge {
-        FeatureEdge {
-            start,
-            end,
-            ..*self
-        }
-    }
-
     /// Classifies one edge of a mesh, whatever its dihedral angle. `None` for edges a bevel can
     /// say nothing about: boundary edges (one face), non-manifold edges (three or more), and
     /// edges whose faces have no area to take a normal from. The result may be `Flat`.

@@ -1,12 +1,12 @@
-//! Rust-only tests for slice 19's units that have no test class of their own: the mixed-corner
-//! blends a selection asks for (`BevelMixedBlends`, whose other tests are app-level), and the
-//! walkback's reconciling of the standing features two bands reach
-//! (`SurfaceWalkbackStandingFeatures`), and the survey that refuses two plans turning a corner at
-//! one vertex (`SurfaceTwoCornersAtOneVertex`).
+//! Rust-only tests for slice 19's units that have no test class of their own: the walkback's
+//! reconciling of the standing features two bands reach (`SurfaceWalkbackStandingFeatures`), and
+//! the survey that refuses two plans turning a corner at one vertex
+//! (`SurfaceTwoCornersAtOneVertex`).
 
 use std::rc::Rc;
 use std::sync::Arc;
 
+use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::surface_two_corners_at_one_vertex::try_survey;
 use geometry_processing::bevel::surface::surface_walkback_standing_features::{
     none_of_the_feature_is_also_being_cut, try_merge_what_two_bands_both_reached,
@@ -16,128 +16,9 @@ use geometry_processing::bevel::surface::{
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::bevel::{bevel_chain_linker, bevel_mixed_blends};
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelEdgeGroupResolution, EdgeConvexity, FaceRegionCache, FeatureEdge,
-    FeatureEdgeSet,
-};
+use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids;
 use vector_math::{Vector3, Vector3Float};
-
-use crate::topology_test_meshes::create_l_shaped_prism;
-
-/// A resolved group selecting `edges` among `features`.
-fn resolution(features: &Arc<FeatureEdgeSet>, edges: Vec<FeatureEdge>) -> BevelEdgeGroupResolution {
-    BevelEdgeGroupResolution {
-        group: BevelEdgeGroup::default(),
-        features: features.clone(),
-        failure_reason: None,
-        seed_edge_index: -1,
-        edges,
-        chain: None,
-        face_group: None,
-    }
-}
-
-/// The L prism's features, its one concave edge, and the two convex top edges meeting it at
-/// (10, 10, 10).
-fn l_prism_corner() -> (Arc<FeatureEdgeSet>, FeatureEdge, Vec<FeatureEdge>) {
-    let mesh = create_l_shaped_prism();
-    let features = Arc::new(FeatureEdgeSet::create(&mesh));
-    let top = Vector3::new(10.0, 10.0, 10.0);
-    let at_top =
-        |edge: &FeatureEdge| (edge.start - top).length() < 1e-6 || (edge.end - top).length() < 1e-6;
-
-    let concave = *features
-        .edges()
-        .iter()
-        .find(|e| e.convexity == EdgeConvexity::Concave)
-        .expect("the L prism has its reflex edge");
-    let convex: Vec<FeatureEdge> = features
-        .edges()
-        .iter()
-        .filter(|e| e.convexity == EdgeConvexity::Convex && at_top(e))
-        .cloned()
-        .collect();
-
-    assert!(at_top(&concave));
-    assert_eq!(convex.len(), 2);
-
-    (features, concave, convex)
-}
-
-#[test]
-fn rust_only_a_cut_into_a_bead_gets_one_blend_capped_on_the_top() {
-    let (features, concave, convex) = l_prism_corner();
-    let resolutions = vec![
-        resolution(&features, vec![convex[0]]),
-        resolution(&features, vec![concave]),
-    ];
-
-    let set = bevel_mixed_blends::create(&resolutions, &[true, true], true, 2.0, 8);
-
-    assert_eq!(set.blends().len(), 1);
-    assert!(set.warnings().iter().all(Option::is_none));
-    assert_eq!(set.blends()[0].groups(), &[0, 1]);
-    assert_eq!(set.convex_handovers().len(), 1);
-    assert_eq!(set.concave_cap_normals().len(), 1);
-
-    let cap = *set.concave_cap_normals().values().next().unwrap();
-    assert!((cap - Vector3::new(0.0, 0.0, 1.0)).length() < 1e-6, "{cap}");
-    assert!(set.convex_handovers().values().next().unwrap().is_capped());
-}
-
-#[test]
-fn rust_only_a_chamfered_pair_is_left_alone_and_says_nothing() {
-    let (features, concave, convex) = l_prism_corner();
-    let resolutions = vec![
-        resolution(&features, vec![convex[0]]),
-        resolution(&features, vec![concave]),
-    ];
-
-    let set = bevel_mixed_blends::create(&resolutions, &[true, true], false, 2.0, 8);
-
-    assert!(set.blends().is_empty());
-    assert!(set.convex_handovers().is_empty());
-    assert!(set.warnings().iter().all(Option::is_none));
-}
-
-#[test]
-fn rust_only_two_cuts_in_one_group_are_named_and_not_blended() {
-    let (features, concave, convex) = l_prism_corner();
-    let resolutions = vec![
-        resolution(&features, convex),
-        resolution(&features, vec![concave]),
-    ];
-
-    let set = bevel_mixed_blends::create(&resolutions, &[true, true], true, 2.0, 8);
-
-    assert!(set.blends().is_empty());
-
-    for warnings in set.warnings() {
-        let warnings = warnings.as_ref().expect("both groups are told");
-        assert_eq!(warnings.len(), 1);
-        assert_eq!(
-            warnings[0].code(),
-            BevelAdvisoryCode::BlendSameGroupNotBlended
-        );
-    }
-}
-
-#[test]
-fn rust_only_a_three_edge_chamfer_corner_says_it_was_capped() {
-    let (features, concave, convex) = l_prism_corner();
-    let resolutions = vec![
-        resolution(&features, vec![convex[0]]),
-        resolution(&features, vec![convex[1]]),
-        resolution(&features, vec![concave]),
-    ];
-
-    let set = bevel_mixed_blends::create(&resolutions, &[true, true, true], false, 2.0, 8);
-
-    assert!(set.blends().is_empty());
-    assert!(set.warnings().iter().all(Option::is_some));
-}
 
 fn pool() -> SurfaceVertexPool {
     SurfaceVertexPool::new(&[

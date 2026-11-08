@@ -1,14 +1,10 @@
 //! The shared fixture builders of the `bevel` test area, one module each, plus the helpers several
-//! test files share (bead sequence, kernel cuts, the bevel meter lock, thread CPU time). The
+//! test files share (the known-edge picks, the bevel meter lock, thread CPU time). The
 //! `bevel.rs` root re-exports every member, so test files in any group reach them as
 //! `crate::<module>`.
 
-#[path = "bead_sequence.rs"]
-pub(crate) mod bead_sequence;
 #[path = "bevel_around_center_tip_dihedrals.rs"]
 pub(crate) mod bevel_around_center_tip_dihedrals;
-#[path = "bevel_obstruction_test_meshes.rs"]
-pub(crate) mod bevel_obstruction_test_meshes;
 #[path = "bore_test_meshes.rs"]
 pub(crate) mod bore_test_meshes;
 #[path = "bore_test_meshes_barrel_port.rs"]
@@ -55,8 +51,6 @@ pub(crate) mod pyramid_recess_test_meshes;
 pub(crate) mod rigid_motion_meshes;
 #[path = "skew_ridge_solid.rs"]
 pub(crate) mod skew_ridge_solid;
-#[path = "source_round_test_meshes.rs"]
-pub(crate) mod source_round_test_meshes;
 #[path = "surface_mixed_corner_fixture.rs"]
 pub(crate) mod surface_mixed_corner_fixture;
 #[path = "surface_test_build.rs"]

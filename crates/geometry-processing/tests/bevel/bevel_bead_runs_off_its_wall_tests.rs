@@ -1,23 +1,14 @@
 //! A bead whose wall runs out onto the cube's own convex edge is admitted; one wider than its wall
 //! everywhere is still refused.
 
-use std::rc::Rc;
-use std::sync::Arc;
-
-use geometry_processing::bevel::bevel_face_fit::DEFAULT_SURFACE_TOLERANCE_DEGREES;
 use geometry_processing::bevel::bevel_working_mesh::signed_volume;
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelFaceFit};
-use geometry_processing::topology::{
-    bevel_edge_group_resolver, BevelSelectionKind, EdgeConvexity, FaceGroup, FeatureEdgeSet,
-};
+use geometry_processing::topology::{EdgeConvexity, FeatureEdgeSet};
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
 
 const CUBE_SIZE: f64 = 20.0;
 const RIDGE_AT: f64 = CUBE_SIZE / 2.0;
 const MOUTH_INSET: f64 = 0.032;
-const RADIUS: f64 = 3.0;
-const RADIUS_NO_WALL_CAN_CARRY: f64 = 20.0;
 
 fn apex() -> Vector3 {
     Vector3::new(
@@ -82,46 +73,6 @@ fn the_fixture_is_a_cube_with_a_concave_crease_from_its_rim_to_the_recess_apex()
     let features = FeatureEdgeSet::create(&part);
     let crease = features.edges()[edge_index(&features, rim(), apex())];
     assert_eq!(crease.convexity, EdgeConvexity::Concave);
-}
-
-fn fit_at(radius: f64) -> BevelFaceFit {
-    let part = pyramidal_recess_in_a_cube();
-    let features = FeatureEdgeSet::create(&part);
-    let group = bevel_edge_group_resolver::create_from_edge(
-        &features,
-        edge_index(&features, rim(), apex()) as i32,
-        BevelSelectionKind::Edge,
-        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
-    )
-    .unwrap();
-    let (resolutions, _) = bevel_edge_group_resolver::resolve_all(&[group], &part);
-    BevelFaceFit::create(
-        Arc::new(part),
-        Rc::new(resolutions),
-        true,
-        radius,
-        DEFAULT_SURFACE_TOLERANCE_DEGREES,
-        None,
-    )
-}
-
-/// A bead is admitted where its wall runs out onto the cube's own convex edge.
-#[test]
-fn a_bead_is_admitted_where_its_wall_runs_out_onto_the_cubes_own_convex_edge() {
-    let checked = fit_at(RADIUS).try_check_group(0);
-    assert!(checked.is_ok(), "{checked:?}");
-}
-
-/// A bead wider than its wall everywhere is still refused.
-#[test]
-fn a_bead_wider_than_its_wall_everywhere_is_still_refused() {
-    let reason = fit_at(RADIUS_NO_WALL_CAN_CARRY)
-        .try_check_group(0)
-        .expect_err("no wall carries a radius of 20");
-    match reason.args()[2] {
-        BevelAdvisoryArg::Double(fits) => assert!(fits < RADIUS_NO_WALL_CAN_CARRY),
-        ref other => panic!("{other:?}"),
-    }
 }
 
 fn edge_index(features: &FeatureEdgeSet, from: Vector3, to: Vector3) -> usize {

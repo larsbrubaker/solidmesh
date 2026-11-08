@@ -1,20 +1,11 @@
-//! Rust-only checks of the seventh bevel slice (`SurfaceRing`, `BevelCornerHandover`,
-//! `BevelEdgeToolBuilder`, `BevelMixedBlend`) and of slice 8's `RoomCandidate`. The tests that
-//! exercise them in context read whole bevels (the tool-plane accuracy tests through the group
-//! tools, the mixed-corner tests through the surface builder); these pin each piece alone. The
-//! void-wedge section has its own test file.
+//! Rust-only checks of the seventh bevel slice (`SurfaceRing`, `BevelEdgeToolBuilder`) and of
+//! slice 8's `RoomCandidate`. The tests that exercise them in context read whole bevels; these pin
+//! each piece alone.
 
-use std::collections::HashSet;
-
-use geometry_processing::bevel::bevel_corner_handover::try_hand_over;
 use geometry_processing::bevel::bevel_edge_tool_builder as builder;
 use geometry_processing::bevel::surface::{surface_ring, SurfaceVertexPool};
-use geometry_processing::bevel::{
-    BevelAdvisoryCode, BevelEndCap, BevelMixedBlend, BevelMixedBlendSet,
-};
+use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::EdgeConvexity;
-use indexmap::IndexMap;
-use polygon_mesh::Mesh;
 use vector_math::{Vector2, Vector3};
 
 // ---------------------------------------------------------------- SurfaceRing
@@ -96,135 +87,6 @@ fn rust_only_knit_leaves_a_single_piece_alone() {
     assert_eq!(surface_ring::knit(pieces.clone(), &pool), pieces);
 }
 
-// ---------------------------------------------------------------- BevelCornerHandover
-
-#[test]
-fn rust_only_a_patched_corner_hands_over_square_through_the_ball_centre() {
-    let mut patched = IndexMap::new();
-    patched.insert(7, Vector3::new(1.0, 1.0, 1.0));
-    let mut seams = IndexMap::new();
-    seams.insert((7, 3), vec![Vector3::new(1.0, 0.0, 0.0)]);
-
-    let outward = Vector3::new(1.0, 0.0, 0.0);
-    let cap = try_hand_over(
-        7,
-        Vector3::new(2.0, 0.0, 0.0),
-        outward,
-        3,
-        false,
-        Some(&patched),
-        None,
-        None,
-        None,
-        Some(&seams),
-    )
-    .expect("the patch owns the corner");
-
-    assert_eq!(cap.plane_normal, outward);
-    assert_eq!(cap.plane_distance, 1.0);
-    assert!(!cap.drives_through);
-    assert_eq!(cap.seam_points, Some(vec![Vector3::new(1.0, 0.0, 0.0)]));
-}
-
-#[test]
-fn rust_only_a_cutter_at_a_drive_through_corner_runs_past_the_ball_centre() {
-    let mut patched = IndexMap::new();
-    patched.insert(7, Vector3::new(1.0, 1.0, 1.0));
-    let drive: HashSet<i32> = [7].into_iter().collect();
-
-    let cap = try_hand_over(
-        7,
-        Vector3::new(2.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        3,
-        false,
-        Some(&patched),
-        None,
-        None,
-        Some(&drive),
-        None,
-    )
-    .expect("the patch owns the corner");
-
-    assert!(cap.drives_through);
-    assert_eq!(cap.plane_distance, 1.0);
-    assert!(cap.drive_through_distance > 1.0 && cap.drive_through_distance < 2.0);
-}
-
-#[test]
-fn rust_only_a_blend_handover_is_turned_to_point_out_of_the_end() {
-    let mut handovers = IndexMap::new();
-    handovers.insert((4, 9), BevelEndCap::new(Vector3::new(-1.0, 0.0, 0.0), -5.0));
-
-    let cap = try_hand_over(
-        4,
-        Vector3::new(5.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        9,
-        false,
-        None,
-        Some(&handovers),
-        None,
-        None,
-        None,
-    )
-    .expect("the blend owns the corner");
-
-    assert_eq!(cap, BevelEndCap::new(Vector3::new(1.0, 0.0, 0.0), 5.0));
-
-    // A different edge at the same vertex is not this blend's handover.
-    assert!(try_hand_over(
-        4,
-        Vector3::new(5.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        8,
-        false,
-        None,
-        Some(&handovers),
-        None,
-        None,
-        None,
-    )
-    .is_none());
-}
-
-#[test]
-fn rust_only_a_bead_caps_on_the_blends_face_and_an_edge_on_plane_says_nothing() {
-    let mut capped = IndexMap::new();
-    capped.insert((4, 9), Vector3::new(0.0, 0.0, 1.0));
-    let position = Vector3::new(1.0, 2.0, 3.0);
-
-    let cap = try_hand_over(
-        4,
-        position,
-        Vector3::new(0.0, 0.0, -1.0),
-        9,
-        true,
-        None,
-        None,
-        Some(&capped),
-        None,
-        None,
-    )
-    .expect("the blend caps the bead");
-    assert_eq!(cap, BevelEndCap::new(Vector3::new(0.0, 0.0, -1.0), -3.0));
-
-    // Square to the run's own direction: no sense to choose, so the caller decides.
-    assert!(try_hand_over(
-        4,
-        position,
-        Vector3::new(1.0, 0.0, 0.0),
-        9,
-        true,
-        None,
-        None,
-        Some(&capped),
-        None,
-        None,
-    )
-    .is_none());
-}
-
 // ---------------------------------------------------------------- BevelEdgeToolBuilder
 
 /// A convex box edge along z with faces facing +x and +y.
@@ -248,8 +110,17 @@ fn rust_only_a_right_angle_chamfer_section_is_five_points_reaching_root_two_size
     assert_eq!(points.len(), 5);
     assert_eq!(tangent, 2.0);
     let reach = points.iter().map(Vector2::length).fold(0.0, f64::max);
-    assert!((reach - builder::cross_section_reach(2.0, 90.0)).abs() < 1e-12);
     assert!((reach - 2.0 * 2.0_f64.sqrt()).abs() < 1e-12);
+}
+
+#[test]
+fn rust_only_the_closed_forms_read_the_size_and_the_wedge() {
+    assert_eq!(builder::tangent_distance(2.0, 60.0, false), 2.0);
+    assert!(
+        (builder::tangent_distance(2.0, 60.0, true) - 2.0 / 30.0_f64.to_radians().tan()).abs()
+            < 1e-12
+    );
+    assert_eq!(builder::tangent_distance(2.0, 0.0, true), f64::INFINITY);
 }
 
 #[test]
@@ -264,25 +135,6 @@ fn rust_only_a_right_angle_fillet_section_lays_its_arc_on_the_rolling_ball() {
     for point in &points[5..] {
         assert!(((*point - centre).length() - 2.0).abs() < 1e-12);
     }
-}
-
-#[test]
-fn rust_only_the_ball_section_stands_a_quarter_sagitta_off_the_ball() {
-    let (n0, n1, x, y, z) = box_edge_frame();
-    let (points, _) = builder::try_build_ball_cross_section(n0, n1, x, y, z, 2.0, 4, true).unwrap();
-
-    assert_eq!(points.len(), 16);
-    let expected = 2.0 + 0.25 * 2.0 * (1.0 - (std::f64::consts::PI / 16.0).cos());
-    let centre = Vector2::new(0.0, -2.0 * 2.0_f64.sqrt());
-    for point in &points {
-        assert!(((*point - centre).length() - expected).abs() < 1e-12);
-    }
-
-    let refused = builder::try_build_ball_cross_section(n0, n1, x, y, z, 2.0, 4, false);
-    assert_eq!(
-        refused.unwrap_err().code(),
-        BevelAdvisoryCode::ChamferHasNoBall
-    );
 }
 
 #[test]
@@ -315,43 +167,6 @@ fn rust_only_the_builder_refuses_what_has_no_corner() {
         refused.unwrap_err().code(),
         BevelAdvisoryCode::FaceAngleTooFlat
     );
-}
-
-#[test]
-fn rust_only_the_closed_forms_read_the_size_and_the_wedge() {
-    assert_eq!(builder::overshoot(2.0, 3.0), 3.0);
-    assert_eq!(builder::overshoot(4.0, 3.0), 4.0);
-    assert_eq!(builder::tangent_distance(2.0, 60.0, false), 2.0);
-    assert!(
-        (builder::tangent_distance(2.0, 60.0, true) - 2.0 / 30.0_f64.to_radians().tan()).abs()
-            < 1e-12
-    );
-    assert_eq!(builder::tangent_distance(2.0, 0.0, true), f64::INFINITY);
-    assert_eq!(builder::cross_section_reach(1.0, 0.0), f64::INFINITY);
-    assert!(
-        (builder::cross_section_reach(1.0, 30.0) - 1.0 / 15.0_f64.to_radians().sin()).abs() < 1e-12
-    );
-}
-
-// ---------------------------------------------------------------- BevelMixedBlend
-
-#[test]
-fn rust_only_a_blend_set_hands_back_what_it_was_built_with() {
-    let blend = BevelMixedBlend::new(Mesh::new(), vec![0, 2], 1.5, 1.0, 1.75);
-    let mut handovers = IndexMap::new();
-    handovers.insert((3, 5), BevelEndCap::new(Vector3::UNIT_X, 1.0));
-    let mut normals = IndexMap::new();
-    normals.insert((3, 6), Vector3::UNIT_Z);
-
-    let set = BevelMixedBlendSet::new(vec![blend], handovers, normals, vec![None, Some(vec![])]);
-
-    assert_eq!(set.blends()[0].groups(), &[0, 2]);
-    assert_eq!(set.blends()[0].cap_face_reach(), 1.5);
-    assert_eq!(set.blends()[0].void_face_reach(), 1.0);
-    assert_eq!(set.blends()[0].runout_reach(), 1.75);
-    assert!(set.convex_handovers().contains_key(&(3, 5)));
-    assert_eq!(set.concave_cap_normals()[&(3, 6)], Vector3::UNIT_Z);
-    assert!(set.warnings()[0].is_none());
 }
 
 // ---------------------------------------------------------------- RoomCandidate (slice 8)

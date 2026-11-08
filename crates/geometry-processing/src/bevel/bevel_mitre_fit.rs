@@ -1,7 +1,7 @@
 //! Which joints of a chain a single mitred sweep CANNOT carry ([`joints_the_mitre_cannot_fit`]) -
 //! where the run is split so each piece sweeps on its own.
 
-use super::bevel_chain_sweep::{BevelSweptSection, MINIMUM_CLOSED_SEGMENTS};
+use super::bevel_chain_sweep::MINIMUM_CLOSED_SEGMENTS;
 use super::bevel_chain_sweep_rings::{profile_deviation, try_build_joint_at};
 use super::bevel_chain_sweep_sections::try_build_segments;
 use super::bevel_edge_tool_builder;
@@ -34,16 +34,7 @@ pub fn joints_the_mitre_cannot_fit(
         return None;
     }
 
-    let mut swept = try_build_segments(
-        chain,
-        size,
-        segments,
-        round_profile,
-        BevelSweptSection::Tool,
-        back_depth,
-        None,
-    )
-    .ok()?;
+    let mut swept = try_build_segments(chain, size, segments, round_profile, back_depth).ok()?;
 
     let point_count = swept[0].profile.len();
     let segment_count = swept.len();

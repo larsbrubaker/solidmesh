@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use vector_math::ieee_math;
 
-use super::bevel_chain_sweep::BevelSweptSection;
 use super::bevel_chain_sweep_sections::try_build_segments;
 use super::{bevel_mitre_fit, bevel_sweep_back_depth};
 use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge};
@@ -254,15 +253,7 @@ pub fn split_where_the_mitre_cannot_fit_with_depth(
         return (vec![chain], 0.0);
     };
 
-    if let Ok(swept) = try_build_segments(
-        &chain.edges,
-        size,
-        segments,
-        round_profile,
-        BevelSweptSection::Tool,
-        0.0,
-        None,
-    ) {
+    if let Ok(swept) = try_build_segments(&chain.edges, size, segments, round_profile, 0.0) {
         let shallower = bevel_sweep_back_depth::retry_depth(
             &chain.edges,
             chain.is_closed,

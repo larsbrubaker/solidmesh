@@ -13,32 +13,8 @@ use std::fmt;
 /// Which sentence a [`super::BevelAdvisory`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BevelAdvisoryCode {
-    /// BevelCapClip.ApplyAsync: a clip the kernel refused. Args: (Vector3 at, double size).
-    CapClipCouldNotCut,
-    /// BevelChainEndBudget.HeldBack, one end bounded. Args: (Vector3 at, double size, int edgeCount).
-    HeldBackAtOneEnd,
-    /// BevelChainEndBudget.HeldBack, both ends bounded. Args: (Vector3 start, Vector3 end, double size, int edgeCount).
-    HeldBackAtBothEnds,
-    /// BevelChainEnds.ResolveEnd: a bead squared off where its faces could not cap it. Args: (Vector3 at).
-    BeadSquaredAtCorner,
-    /// BevelChainEnds.Resolve: a bead running on through what interrupts its crease
-    /// (`BevelInterruptedCrease`) whose reach does not carry it to the far side, so a stretch
-    /// of the crease inside the interruption is left unbeveled. Args: (Vector3 at, double size, double gap).
-    BeadDoesNotSpanInterruption,
-    /// BevelChainEnds.ResolveEnd: a cutter overshooting a corner no face could trim. Args: (Vector3 at).
-    CutRunsPastCorner,
-    /// BevelChainSweep.TryCreate and BevelGroupTools.TryBuild: an empty chain. No args.
+    /// The surface part builder: a group whose pick resolved to no edges. No args.
     NoEdgesResolved,
-    /// BevelChainSweep.TryCreate: a closed loop of fewer than three edges. No args.
-    LoopTooShortToEnclose,
-    /// BevelChainSweep.TryCreate: an open run that returns to its start with its surfaces swapped. Args: (Vector3 at).
-    LoopSurfacesSwapped,
-    /// BevelChainSweep.TryCreate: the rings would not sew into a mesh. No args.
-    ToolCouldNotClose,
-    /// BevelChainSweep.TryCreate: the swept tool crosses itself. No args.
-    ToolSelfIntersects,
-    /// BevelChainSweep.TryCreate: the swept tool is not a boolean operand. No args.
-    ToolNotUsableSolid,
     /// BevelChainSweep.TryBuildSegments: a run mixing convex and concave edges. Args: (Vector3 at).
     RunMixedConvexity,
     /// BevelChainSweep.TryBuildSegments: a zero length edge. No args.
@@ -51,10 +27,6 @@ pub enum BevelAdvisoryCode {
     ChainTurnsTooSharply,
     /// BevelChainSweep.TryBuildJoint: no across axis survives in the miter plane. Args: (Vector3 at).
     NoPlaneAtJoint,
-    /// BevelSweepFoldCheck.TryCheckForFolds: a cap's slide outruns its segment. Args: (Vector3 at, double size, double largestThatFits).
-    CapPullsToolBackPastSegment,
-    /// BevelSweepFoldCheck.TryCheckForFolds: a miter folds the strip. Args: (double size, Vector3 near, double largestThatFits).
-    SizeFoldsToolAtCurve,
     /// BevelCornerGroupResolver.Resolve: the path has no corners at its bend threshold. Args: (double bendThresholdDegrees).
     PathHasNoCorners,
     /// BevelCornerGroupResolver.Resolve: a group whose anchor directions are zero. No args.
@@ -63,14 +35,6 @@ pub enum BevelAdvisoryCode {
     NoCornerMatchesAnchor,
     /// BevelCornerGroupResolver.Resolve: two corners fit about equally well. Args: (Vector2 anchorPosition, double bestScore, double runnerUpScore).
     AnchorMatchesMoreThanOneCorner,
-    /// BevelCornerPatch.TryBuild, inside corner: no one ball touches every edge. Args: (int edgeCount, Vector3 at).
-    CornerBallDoesNotTouchAllInsideEdges,
-    /// BevelCornerPatch.TryBuild, outside corner: no one ball touches every edge. Args: (int edgeCount, Vector3 at).
-    CornerBallDoesNotTouchAllEdges,
-    /// BevelCornerPatch.TryBuild, inside corner: the fill is not a solid. Args: (int edgeCount, Vector3 at).
-    CornerPatchNotSolidToAdd,
-    /// BevelCornerPatch.TryBuild, outside corner: the scoop is not a solid. Args: (int edgeCount, Vector3 at).
-    CornerPatchNotSolidToCut,
     /// BevelEdgeGroupResolver.TryMatchAnchor: the mesh has no feature edges at the group's flat tolerance. Args: (double flatAngleDegrees).
     NoFeatureEdgesAtTolerance,
     /// BevelEdgeGroupResolver.TryMatchAnchor: a group whose anchor direction is zero. No args.
@@ -93,60 +57,18 @@ pub enum BevelAdvisoryCode {
     FacesCoplanar,
     /// BevelEdgeToolBuilder.TryBuildFrame: the two normals cancel. No args.
     FacesFoldBack,
-    /// BevelEdgeToolBuilder.TryBuildVoidWedgeCrossSection: no positive tangent distance. No args.
-    NoWedgeToClipAgainst,
-    /// BevelEdgeToolBuilder.TryBuildBallCrossSection: asked for a chamfer. No args.
-    ChamferHasNoBall,
-    /// BevelEdgeToolBuilder.TryBuildBallCrossSection: the faces open to a straight line. No args.
-    FacesDoNotCloseCorner,
     /// BevelEdgeToolBuilder.TryMeasureCorner: interior angle under the minimum. Args: (double interiorAngleDegrees).
     FaceAngleTooSharp,
     /// BevelEdgeToolBuilder.TryMeasureCorner: interior angle over the maximum. Args: (double interiorAngleDegrees).
     FaceAngleTooFlat,
     /// BevelEdgeToolBuilder.TryMeasureCorner: a tangent distance that is not a number. No args.
     BevelDoesNotFitCorner,
-    /// BevelFaceFit.TryCheckGroup: two setbacks meet across one face. Args: (double size, Vector3 at, double largestThatFits).
+    /// The room readings (level line, sections): two setbacks meet across one face. Args: (double size, Vector3 at, double largestThatFits).
     SizeCollidesAcrossFace,
-    /// BevelFaceFit.TryCheckGroup: a setback wider than its face. Args: (double size, Vector3 at, double largestThatFits).
+    /// The room readings (level line, sections): a setback wider than its face. Args: (double size, Vector3 at, double largestThatFits).
     SizeExceedsFaceWidth,
     /// BevelGroupFailures.Diagnose: a tangent chain stopped at its seed by the tolerance. Args: (double flatAngleDegrees, double coarseFlatAngleDegrees).
     ChainNeverGrewPastPick,
-    /// BevelMixedBlends.Blend: two edges of one convexity in one group. Args: (Vector3 at).
-    BlendSameGroupNotBlended,
-    /// BevelMixedBlends.Blend: a three-edge corner between more than three faces. Args: (Vector3 at).
-    BlendMoreThanThreeFaces,
-    /// BevelMixedBlends.TryBuild: the inner corner runs along the cap face. Args: (Vector3 at).
-    BlendRimRunsAlongFace,
-    /// BevelMixedBlends.TryBuild: the ball's basis has collapsed. Args: (Vector3 at).
-    BlendFacesTooNearlyAligned,
-    /// BevelMixedBlends.TryBuild: the inner corner turns less than the minimum. Args: (Vector3 at).
-    BlendCornerFoldsTooLittle,
-    /// BevelMixedBlends.TryBuild: the inner corner leans past the off-square budget. Args: (Vector3 at).
-    BlendCornerNotSquareEnough,
-    /// BevelMixedBlends.TryBuild: a handover seam no run can stop on. Args: (Vector3 at).
-    BlendRimTooNearlyAlongCorner,
-    /// BevelMixedBlends.TryBuild: the blend tool is not a solid. Args: (Vector3 at).
-    BlendNotSolidToCut,
-    /// BevelMixedCorners.CappedCorner: a mixed corner every run stops at. Args: (int edgeCount, Vector3 at).
-    MixedCornerCapped,
-    /// BevelMixedCorners.Describe: why four or more mixed edges are not blended; always follows MixedCornerCapped. No args.
-    MixedCornerTooManyEdges,
-    /// BevelRebuildAdvisories.BeadWentOnUnclipped. No args.
-    BeadWentOnUnclipped,
-    /// BevelRebuildAdvisories.ShadowClipWasRefused. No args.
-    ShadowClipWasRefused,
-    /// BevelRebuildAdvisories.ShadowBodyWasGivenUp. No args.
-    ShadowBodyWasGivenUp,
-    /// BevelRebuildAdvisories.CornerWentUnrounded. No args.
-    CornerWentUnrounded,
-    /// BevelRebuildAdvisories.SecondPassToolWasNotABead. No args.
-    SecondPassToolWasNotABead,
-    /// BevelSecondPass.Rebead: two groups whose creases the merge put in one run read stretches of it
-    /// that will not join into a single chain, so the run swept the longest of them and this group's own
-    /// reading was not covered by it. Its first-pass bead is kept. No args.
-    SecondPassCreaseDidNotJoin,
-    /// BevelChainSweep.TryBuildRings: a run could not take the corner patch's own seam points onto its ring. Args: (Vector3 at).
-    CornerSeamNotCarried,
     /// BevelWorkingMesh.CreateFrom: the source was reversed to bevel it. No args.
     SourceMeshWasInsideOut,
     /// BevelSurfacePartBuilder and the sections route: the construction declined these edges with
@@ -319,19 +241,6 @@ pub enum BevelAdvisoryCode {
     /// reads it in closed form only. Named rather than searched for, so that a curve the construction
     /// cannot state exactly is never approximated. Args: (Vector3 at).
     SurfaceCrossingBandNotAlongTheAxis,
-    /// SurfaceBevelBuilder: a mixed corner's RUN-OUT crosses a band standing on the WALL it turns against
-    /// rather than on the cap it runs across. The room reading measures that pair and reports it as a
-    /// crossing - it is a pair to SEW and not a size to refuse - but the band there ends the run-out's
-    /// own COLUMNS where a band on the cap ends its rows, and that sewing is not built yet. The size is
-    /// not the problem; the geometry is real and is named rather than published as an open shell.
-    /// Args: (Vector3 at).
-    ///
-    ///
-    /// RESERVED, not retired: nothing emits this now that the pair IS sewn
-    /// (`SurfaceCrossingAtTheMitre`). Kept because the sewing covers only the pair that MITRES, and
-    /// a run-out over a band on the cap and a band on the wall that are not each other's neighbour has
-    /// no ring to hand over on - which is this sentence again and is still owed a construction.
-    SurfaceCrossingStandsOnTheWall,
     /// SurfaceCrossingAtTheMitre: a mixed corner's RUN-OUT crosses both bands of one MITRED corner, and
     /// the ring those two bands share at their mitre never leaves the run-out's own swept ball along one
     /// chord of itself - it stands clear of the run-out all the way, or it goes under and never comes
@@ -506,7 +415,7 @@ pub enum BevelAdvisoryCode {
     /// neither side, and a bevel landing on it is refused. The edge is collapsed to its midpoint in the
     /// working copy, taking its triangles with it. Args: (int sliverCount).
     SourceMeshHadThinSlivers,
-    /// SurfaceRunStopsShort: the surface construction's answer to `HeldBackAtOneEnd` - one
+    /// SurfaceRunStopsShort: one
     /// free end of a picked run stops SQUARE, because the crease it arrives at carries straight on past
     /// that corner in an edge nobody picked (`SurfaceChainEndReading`) or one of the faces being
     /// walked back does (`SurfaceFaceCarriesOn`). The cut is made at the size asked for; what falls
@@ -536,21 +445,6 @@ pub enum BevelAdvisoryCode {
     /// here the crease itself is square, and saying nothing turns would be false. Args:
     /// (Vector3 creaseMidpoint, double flatAngleDegrees).
     SurfaceCreaseFacesAreOneSurface,
-    /// BevelCutStage: the BOOLEAN construction's cutter union ran away. The kernel's n-ary fold of the
-    /// whole batch came back a solid it would not certify, so the ladder fell to the pairwise fold, and
-    /// there the accumulated solid grew far past the material actually in the operands - a self cut whose
-    /// cost squares with every step, not a shape. The fold is stopped at the step that crossed the guard
-    /// rather than run to the end, because past that point one more 68 face cutter costs half a minute and
-    /// there are dozens left. Args: (int accumulatedFaces, int operandFaces, int foldedCount, int total).
-    BooleanCutterUnionBlewUp,
-    /// BevelWorkingMesh.CreateFrom: the source carried one or more SPLIT CHORDS - a vertex standing part
-    /// way along a straight crease, with nothing turning there and the surface flat on both sides of it,
-    /// which is what a boolean leaves where its own seam crossed a rim. The two pieces read as two edges
-    /// of a picked chain, each with its own tangent line and its own mitre, and two tangent lines a few
-    /// ten-millionths from parallel put a crossing wherever the arithmetic lands. The vertex is taken out
-    /// of the working copy and the fan each side of it re-triangulated, so the chord is the one edge it
-    /// always was. Args: (int splitCount).
-    SourceMeshHadSplitChords,
     /// SectionSmoothSeamReading: the SMOOTH surface beside a picked edge - the one the fillet's boundary
     /// runs across rather than stops inside - would not take the cut that boundary asks of it, so the
     /// band has nothing watertight to end on. The refusal is carried by NAME rather than collapsed into
@@ -558,11 +452,6 @@ pub enum BevelAdvisoryCode {
     /// test failure and a bug report both need in order to tell a facet with a hole in it apart from a
     /// boundary that never left one facet. Args: (Vector3 at, string refusal).
     SurfaceSmoothSideNotCut,
-    /// BevelConstructionFallThrough: the construction this bevel is set to published nothing for these
-    /// picks, so the other one built them. A NOTE and not a complaint - the result is the one the user
-    /// asked for - and the operation's own Construction setting is left as they left it.
-    /// Args: (string construction).
-    BuiltWithTheOtherConstruction,
     /// BevelSurfacePartBuilder (TouchingLoops): this closed loop of the pick shares a vertex with another
     /// closed loop of it - two hole mouths, or a mouth and the face's own rim, meeting at one corner. The
     /// level line refuses such a pick by name (ChainsTouch), so one loop of each touching pair is left
@@ -574,25 +463,6 @@ pub enum BevelAdvisoryCode {
     /// not by the face's own width. Args: (double size, Vector3 at, double largestThatFits), as
     /// `SizeExceedsFaceWidth`, with "at" standing on that crease.
     SizeReachesPastCrease,
-    /// BevelCutStage: the cutters would not union into one solid the kernel accepts, and taking
-    /// them out of the part one at a time failed as well, so the part has no cut to publish. A
-    /// whole-operation failure. No args.
-    BooleanCuttersCouldNotBeJoined,
-    /// BevelCutStage and the boolean part build: the cut left no part at all - every group may have
-    /// cut perfectly well, and it is the union of them that took everything. Said against the whole
-    /// operation, because the sources are still visible and the part would otherwise look as though
-    /// the operation had been ignored. No args.
-    CutRemovedTheWholePart,
-    /// The boolean part build: the first-pass beads, or the second pass's re-swept ones, would not
-    /// union onto the cut part. A whole-operation failure. No args.
-    BooleanBeadsCouldNotBeJoined,
-    /// The boolean part build: the blends where mixed groups' cuts meet their beads joined into
-    /// something that is not a boolean operand. A whole-operation failure. No args.
-    BooleanBlendsCouldNotBeJoined,
-    /// The boolean part build: every edge this group names is also named by another group that
-    /// carries them further as one run, so this group builds nothing of its own. A NOTE on the
-    /// row's warning rather than a failure - the edges are bevelled. No args.
-    EdgesBevelledByAnotherGroup,
     /// BevelFeaturePartBuilder and the Point groups: the part this selection belongs to has no mesh
     /// (none, or one with no vertices). One refusal per group, so no row vanishes from the panel.
     /// No args.
@@ -603,9 +473,6 @@ pub enum BevelAdvisoryCode {
     /// BevelFeaturePathBuilder: the corner formula would not evaluate. A whole-operation failure on
     /// the 2D leg. Args: (string reason), the evaluator's own words.
     CornerFormulaCouldNotBeEvaluated,
-    /// The Point groups: the operation's construction is not Surface, which is the only one that
-    /// bevels a point. No args.
-    PointNeedsTheSurfaceConstruction,
     /// The Point groups: the picked point lies on a chain an edge group of the same operation
     /// bevels. No args.
     PointMeetsAPickedEdge,
@@ -645,14 +512,6 @@ pub enum BevelAdvisoryCode {
     /// `point_bevel::build`, fillet: the round over the ring would not close. Args: (string
     /// failure), the hole fill's own name for why, for a bug report.
     PointRoundDidNotClose,
-    /// BevelSecondPassStage: the rounds cut on the part changed a concave crease and its fillet
-    /// could not be rebuilt along the new one, so the first-pass fillet was kept. A NOTE on the
-    /// row's warning, followed by the second pass's own reason. No args.
-    SecondPassKeptFirstPassFillet,
-    /// BevelSecondPassStage: the round on the edge two creases meet at joined them into one crease,
-    /// filleted as one run under the first group; said on every other group of that run. A NOTE on
-    /// the row's warning. No args.
-    SecondPassCreasesJoinedIntoOneRun,
 }
 
 impl fmt::Display for BevelAdvisoryCode {

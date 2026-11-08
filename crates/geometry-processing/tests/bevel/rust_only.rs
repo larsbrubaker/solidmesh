@@ -2,8 +2,6 @@
 //! kernel that have no test class of their own, one file each. The `bevel.rs` root re-exports every
 //! member, so test files in any group reach them as `crate::<module>`.
 
-#[path = "rust_only_bevel_core_leaf_tests.rs"]
-pub(crate) mod rust_only_bevel_core_leaf_tests;
 #[path = "rust_only_bevel_level_line_watch_tests.rs"]
 pub(crate) mod rust_only_bevel_level_line_watch_tests;
 #[path = "rust_only_bevel_r1p01_mesh_tests.rs"]
@@ -98,14 +96,10 @@ pub(crate) mod rust_only_bevel_s18_tests;
 pub(crate) mod rust_only_bevel_section_routing_tests;
 #[path = "rust_only_bevel_slice10_tests.rs"]
 pub(crate) mod rust_only_bevel_slice10_tests;
-#[path = "rust_only_bevel_slice12_tests.rs"]
-pub(crate) mod rust_only_bevel_slice12_tests;
 #[path = "rust_only_bevel_slice17_tests.rs"]
 pub(crate) mod rust_only_bevel_slice17_tests;
 #[path = "rust_only_bevel_slice19_tests.rs"]
 pub(crate) mod rust_only_bevel_slice19_tests;
-#[path = "rust_only_bevel_slice2_tests.rs"]
-pub(crate) mod rust_only_bevel_slice2_tests;
 #[path = "rust_only_bevel_slice3_tests.rs"]
 pub(crate) mod rust_only_bevel_slice3_tests;
 #[path = "rust_only_bevel_slice4_tests.rs"]
@@ -120,7 +114,5 @@ pub(crate) mod rust_only_bevel_slice7_tests;
 pub(crate) mod rust_only_bevel_slice8_tests;
 #[path = "rust_only_bevel_slice9_tests.rs"]
 pub(crate) mod rust_only_bevel_slice9_tests;
-#[path = "rust_only_bevel_sliver_collapse_tests.rs"]
-pub(crate) mod rust_only_bevel_sliver_collapse_tests;
 #[path = "rust_only_thingi10k_sweep_tests.rs"]
 pub(crate) mod rust_only_thingi10k_sweep_tests;

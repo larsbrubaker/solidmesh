@@ -84,44 +84,6 @@ pub fn measure_knife_edge_section(cut: &Mesh, z: f64) -> SectionReading {
     )
 }
 
-/// The section of the top edge's CHAMFER in the plane y = `y`. The chamfer reaches 2 along each
-/// face from the edge at x = 0, z = 20, so it is the plane through (0, 18) and (2, 20) in the
-/// slice - the line `z = x + 18`.
-pub fn measure_top_edge_chamfer_section(cut: &Mesh, y: f64) -> SectionReading {
-    measure_section_against_line(
-        cut,
-        1,
-        y,
-        // Between the two tangent lines and clear of both, so neither flat face is counted as a
-        // point off the chamfer.
-        |point| point.x > 0.05 && point.x < 1.95 && point.z > 18.05 && point.z < 19.95,
-        |point| Vector2::new(point.x, point.z),
-        Vector2::new(0.0, 18.0),
-        Vector2::new(2.0, 20.0),
-        &format!("top edge at y = {y:.1}"),
-    )
-}
-
-/// The section of the knife edge's CHAMFER in the plane z = `z`. Two along the x = 0 face from the
-/// edge at (0, 20) is (0, 18); two along the slope x + y = 20 is (2 / sqrt 2, 20 - 2 / sqrt 2) =
-/// (1.414, 18.586).
-pub fn measure_knife_edge_chamfer_section(cut: &Mesh, z: f64) -> SectionReading {
-    let along_the_slope = RADIUS / 2.0_f64.sqrt();
-
-    measure_section_against_line(
-        cut,
-        2,
-        z,
-        // Well inside both tangent points: x = 0 is the flat face and x + y = 20 is the slope, and
-        // the chamfer runs between them from (0, 18) to (1.414, 18.586).
-        |point| point.x > 0.12 && point.x < 1.3 && point.y > 17.9 && point.x + point.y < 19.9,
-        |point| Vector2::new(point.x, point.y),
-        Vector2::new(0.0, SIZE - RADIUS),
-        Vector2::new(along_the_slope, SIZE - along_the_slope),
-        &format!("knife edge at z = {z:.1}"),
-    )
-}
-
 /// The back corner at z = 0 (`centre_z` 2) or z = 20 (18): the top or bottom round about (x 2,
 /// z `centre_z`) meeting the back round about (x 2, y 2).
 pub fn measure_back_corner(cut: &Mesh, centre_z: f64) -> SectionReading {
@@ -240,63 +202,6 @@ pub fn measure_top_knife_corner(cut: &Mesh) -> SectionReading {
     }
 }
 
-/// The same slice as [`measure_section`], measured against the straight chord a chamfer carries
-/// instead of against an arc.
-#[allow(clippy::too_many_arguments)]
-fn measure_section_against_line(
-    cut: &Mesh,
-    axis: usize,
-    value: f64,
-    in_window: impl Fn(Vector3) -> bool,
-    section: impl Fn(Vector3) -> Vector2,
-    from: Vector2,
-    to: Vector2,
-    what: &str,
-) -> SectionReading {
-    let points: Vec<Vector2> = slice_points(cut, axis, value)
-        .into_iter()
-        .filter(|&point| in_window(point))
-        .map(section)
-        .collect();
-
-    if points.is_empty() {
-        return SectionReading::new(
-            f64::INFINITY,
-            format!("{what} has NO section points in the chamfer window"),
-        );
-    }
-
-    let along = (to - from).get_normal();
-    let across = Vector2::new(-along.y, along.x);
-    let offsets: Vec<f64> = points
-        .iter()
-        .map(|&point| (point - from).dot(across))
-        .collect();
-    let worst = offsets
-        .iter()
-        .map(|offset| offset.abs())
-        .fold(f64::NEG_INFINITY, f64::max);
-    let at = points[offsets
-        .iter()
-        .position(|offset| offset.abs() == worst)
-        .expect("the worst is one of them")];
-
-    SectionReading::new(
-        worst,
-        format!(
-            "{what} is off its chamfer through ({:.3}, {:.3}) and ({:.3}, {:.3}) by up to \
-             {worst:.3} at ({:.3}, {:.3}), over {} section points",
-            from.x,
-            from.y,
-            to.x,
-            to.y,
-            at.x,
-            at.y,
-            points.len()
-        ),
-    )
-}
-
 /// Slices the cut part square to one edge and asks every point of the section that falls in the
 /// fillet's window how far it is from the arc that edge should carry.
 fn measure_section(
@@ -400,17 +305,6 @@ pub fn prism() -> Mesh {
     ])
 }
 
-/// The control part: a box over the same 0 to 20 cube of space, so every slice, window and arc
-/// centre the prism is measured with applies to it unchanged.
-pub fn r#box() -> Mesh {
-    extrude(&[
-        Vector2::new(0.0, 0.0),
-        Vector2::new(SIZE, 0.0),
-        Vector2::new(SIZE, SIZE),
-        Vector2::new(0.0, SIZE),
-    ])
-}
-
 /// Extrudes a counter-clockwise plan from z = 0 to z = 20, wound so every face points out.
 fn extrude(plan: &[Vector2]) -> Mesh {
     let mut mesh = Mesh::new();
@@ -443,20 +337,6 @@ fn extrude(plan: &[Vector2]) -> Mesh {
     mesh.clean_and_merge();
 
     mesh
-}
-
-/// The index of a triangle of the x = 0 face, which is the face the rim is taken from.
-pub fn x_min_face(mesh: &Mesh) -> i32 {
-    for (i, face) in mesh.faces.iter().enumerate() {
-        if [face.v0, face.v1, face.v2]
-            .iter()
-            .all(|&vertex| f64::from(mesh.vertices[vertex as usize].x).abs() < 1e-4)
-        {
-            return i as i32;
-        }
-    }
-
-    panic!("the part has no face at x = 0");
 }
 
 pub fn show(point: Vector3) -> String {

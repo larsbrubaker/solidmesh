@@ -22,7 +22,8 @@ name = "geometry_processing"
 path = "src/lib.rs"
 
 [dependencies]
-# The Clipper 6 port and polygon helpers the bevel's shadow clip unions and tests footprints with.
+# The Clipper 6 port. No code in this crate reads it; the publish step settles whether `solidmesh`
+# re-exports it or drops it.
 clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", version = "0.1.0" }
 vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
 polygon-mesh = { package = "solidmesh-mesh", path = "../polygon-mesh", version = "0.1.0" }

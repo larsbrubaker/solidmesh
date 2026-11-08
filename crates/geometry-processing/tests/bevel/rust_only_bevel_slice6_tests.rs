@@ -1,10 +1,10 @@
-//! Rust-only checks of the sixth bevel slice (`BevelRoundFaces`, `ConvexCellBound`, `RoomSource`,
+//! Rust-only checks of the sixth bevel slice (`ConvexCellBound`, `RoomSource`,
 //! `SurfaceMixedCornerSpine`, `SurfaceRegionFaceGrid`). The tests that exercise them in context
 //! read whole bevels; these pin each piece alone. `FlatHoleFill` has its own ported class
 //! (`flat_hole_fill_tests`).
 
 use std::collections::HashSet;
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::FRAC_PI_2;
 
 use geometry_processing::bevel::level_line::{
     convex_cell_bound, FieldSample, RoomReadingKind, RoomSource,
@@ -12,108 +12,9 @@ use geometry_processing::bevel::level_line::{
 use geometry_processing::bevel::surface::{
     nearest_on_the_triangle, SurfaceLine, SurfaceMixedCornerSpine, SurfaceRegionFaceGrid,
 };
-use geometry_processing::bevel::{BevelRoundDescriptor, BevelRoundFaces};
 use geometry_processing::topology::FaceGroup;
 use polygon_mesh::Mesh;
 use vector_math::Vector3;
-
-// ---------------------------------------------------------------- BevelRoundFaces
-
-/// A quarter round of radius 1 about the z axis, from +x to +y, 1 tall.
-fn quarter_round() -> BevelRoundDescriptor {
-    BevelRoundDescriptor::with_span(
-        Vector3::ZERO,
-        Vector3::UNIT_Z,
-        1.0,
-        Vector3::UNIT_X,
-        0.0,
-        FRAC_PI_2,
-        0.0,
-        1.0,
-        8,
-    )
-}
-
-fn mesh_of(triangles: &[[Vector3; 3]]) -> Mesh {
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
-    for triangle in triangles {
-        for &corner in triangle {
-            indices.push(vertices.len() as i32);
-            vertices.push(corner);
-        }
-    }
-
-    Mesh::from_vector3_list_and_indices(&vertices, &indices)
-}
-
-#[test]
-fn rust_only_round_faces_label_a_facet_a_tangent_plane_and_nothing_else() {
-    let chord = Vector3::new((PI / 8.0).cos(), (PI / 8.0).sin(), 0.0);
-    let part = mesh_of(&[
-        // a facet of the round: every corner on the radius
-        [
-            Vector3::new(1.0, 0.0, 0.0),
-            chord,
-            Vector3::new(1.0, 0.0, 1.0),
-        ],
-        // the flat the round runs out onto at +x, facing +x, one corner on the tangent line
-        [
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 1.0),
-            Vector3::new(1.0, -1.0, 0.0),
-        ],
-        // far off every round
-        [
-            Vector3::new(50.0, 50.0, 50.0),
-            Vector3::new(51.0, 50.0, 50.0),
-            Vector3::new(50.0, 51.0, 50.0),
-        ],
-    ]);
-
-    let faces = BevelRoundFaces::label(&part, &[quarter_round()], 1.0, true);
-
-    assert!(faces.read_from_the_source_mesh());
-    assert_eq!(faces.count(), 1);
-    assert_eq!(faces.tangent_plane_count(), 1);
-    assert!(matches!(faces.try_read_face(0), Some((_, false))));
-    assert!(matches!(faces.try_read_face(1), Some((_, true))));
-    assert!(faces.try_read_face(2).is_none());
-}
-
-#[test]
-fn rust_only_round_faces_with_no_rounds_or_a_chamfer_label_nothing() {
-    let part = mesh_of(&[[Vector3::ZERO, Vector3::UNIT_X, Vector3::UNIT_Y]]);
-
-    let none = BevelRoundFaces::label(&part, &[], 1.0, false);
-    assert_eq!(none.count(), 0);
-    assert!(!none.read_from_the_source_mesh());
-
-    let chamfer = BevelRoundFaces::create(&part, &[], &[], 1.0, 8, false);
-    assert_eq!(chamfer.count() + chamfer.tangent_plane_count(), 0);
-}
-
-#[test]
-fn rust_only_adding_the_same_round_twice_merges_its_axial_extent() {
-    let mut rounds = Vec::new();
-    BevelRoundFaces::add(&mut rounds, quarter_round(), 1e-3);
-    let higher = BevelRoundDescriptor::with_span(
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::UNIT_Z,
-        1.0,
-        Vector3::UNIT_X,
-        0.0,
-        FRAC_PI_2,
-        0.0,
-        2.0,
-        8,
-    );
-    BevelRoundFaces::add(&mut rounds, higher, 1e-3);
-
-    assert_eq!(rounds.len(), 1);
-    assert_eq!(rounds[0].axial_from, 0.0);
-    assert_eq!(rounds[0].axial_to, 3.0);
-}
 
 // ---------------------------------------------------------------- ConvexCellBound
 

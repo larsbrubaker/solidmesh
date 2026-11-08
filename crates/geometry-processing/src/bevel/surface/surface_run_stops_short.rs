@@ -1,15 +1,11 @@
 //! Where a built surface bevel stopped SHORT of the part rather than short of its size, and the one
 //! line that says so on the group's own row: [`read`] and the end gathering it is read with.
 //!
-//! This is the surface construction's half of what the boolean path says through
-//! `bevel_chain_end_budget::held_back`, and it is owed for the same reason: a user picks one facet
-//! of a tessellated rim, the cut is made, and it ends in a little wall part way round with nothing
-//! anywhere saying why. The two constructions arrive there differently - the boolean end WANTED to
-//! overshoot and was bounded to half its own segment; the surface end never overshoots at all,
-//! because the crease carries on past the corner in an edge nobody picked and there is no face
-//! beyond it to run out onto (`SurfaceChainEndReading`, `SurfaceFaceCarriesOn`) - so the sentence
-//! is its own. What they share is the advice, which is the only thing a user can act on: read more
-//! of the edge.
+//! It is owed because a user picks one facet of a tessellated rim, the cut is made, and it ends in
+//! a little wall part way round with nothing anywhere saying why. The surface end never overshoots:
+//! the crease carries on past the corner in an edge nobody picked and there is no face beyond it to
+//! run out onto (`SurfaceChainEndReading`, `SurfaceFaceCarriesOn`). The advice is the only thing a
+//! user can act on: read more of the edge.
 //!
 //! Owed only to a FREE end. An end another pick's run also stands at is CONSUMED by the corner
 //! reading between them - a junction blend (`SurfaceMixedJunction`), a ball corner
@@ -51,8 +47,7 @@ pub fn read(
 
     // Two runs can stop square at the SAME two corners - a region's rim opened at two junctions
     // comes back as two arcs between one pair of vertices - and the same sentence about the same
-    // two points twice reads as two problems rather than one (bevel_chain_end_budget::held_back
-    // says the same of one run's two ends). Keyed on the pair unordered, since the two arcs walk it
+    // two points twice reads as two problems rather than one. Keyed on the pair unordered, since the two arcs walk it
     // opposite ways. A list compared with `==` (component for component), since `Vector3` is no
     // `Eq`; a pass says a handful of these at most.
     let mut already_said: Vec<(Vector3, Vector3)> = Vec::new();
@@ -102,8 +97,7 @@ pub fn read(
 
         already_said.push(where_);
 
-        // One line for the run and not one per end, for the reason
-        // bevel_chain_end_budget::held_back gives: two ends of one short run are one story, and
+        // One line for the run and not one per end: two ends of one short run are one story, and
         // saying it twice reads as two problems.
         said.get_or_insert_with(Vec::new)
             .push(if start_stops_free && end_stops_free {

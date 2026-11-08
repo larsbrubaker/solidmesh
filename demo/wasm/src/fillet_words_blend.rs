@@ -13,49 +13,6 @@ pub fn format_blend_or_operation(advisory: &BevelAdvisory) -> String {
     let args = advisory.args();
 
     match advisory.code() {
-            BevelAdvisoryCode::BlendSameGroupNotBlended => format(
-                &localize("Selected edges of both kinds meet at {0} and two of them are in the same group, so the bevel there runs through that corner rather than stopping at it - which is what blending them into each other would need - and the join is left square."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendMoreThanThreeFaces => format(
-                &localize("The three selected edges at {0} run between more than three faces, so which face each rounded rim there ends on cannot be read off the corner; the beads are left standing beside the rims."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendRimRunsAlongFace => format(
-                &localize("The inner corner at {0} runs along the face the rounded rim ends on rather than into it, so there is no rim there to blend along."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendFacesTooNearlyAligned => format(
-                &localize("The faces meeting at the inner corner at {0} lie too nearly along each other for a ball of that size to have a path there, so the bead is left standing beside the rim."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendCornerFoldsTooLittle => format(
-                &localize("The inner corner at {0} folds too little for a rounded rim to be carried round it, so the bead there is left standing beside the rim."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendCornerNotSquareEnough => format(
-                &localize("The inner corner at {0} does not run square enough to the face the rounded rim ends on, so the bead there is left standing beside the rim rather than blended into it."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendRimTooNearlyAlongCorner => format(
-                &localize("The rounded rim at {0} runs too nearly along the inner corner it meets for the two to be blended into each other, so the bead there is left standing beside the rim."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::BlendNotSolidToCut => format(
-                &localize("The blend where the cut meets the bead at {0} could not be built as a solid to cut with."),
-                &[text(describe_at(args, 0))],
-            ),
-            BevelAdvisoryCode::MixedCornerCapped => format(
-                &localize("{0} selected edges of both kinds meet at {1}. Each one is stopped at that corner rather than blended into the others, so the join there is left square."),
-                &[at(args, 0), text(describe_at(args, 1))],
-            ),
-            BevelAdvisoryCode::MixedCornerTooManyEdges => localize("More than three selected edges meet at that corner, which is more than this bevel can blend or round, so the join there is left square. Leave some of them out of the selection, or bevel them in separate groups."),
-            BevelAdvisoryCode::BeadWentOnUnclipped => localize("One of these fillets may have pushed material out through the far side of a wall thinner than the fillet is large. Try a smaller size, or set Construction to Surface."),
-            BevelAdvisoryCode::ShadowClipWasRefused => localize("A boss, rib or hole standing on one of the bevelled faces could not be kept clear of the cut, so the bevel has run through it. Try a smaller size that keeps clear of its foot, or set Construction to Surface."),
-            BevelAdvisoryCode::ShadowBodyWasGivenUp => localize("A boss, rib or hole standing on one of the bevelled faces was kept only as wide as its foot, so where it widens out below that the bevel has cut into it. Try a smaller size, or set Construction to Surface."),
-            BevelAdvisoryCode::CornerWentUnrounded => localize("A small ridge may be left at the corner where two of these fillets meet, which could not be rounded there. Try a smaller size, or set Construction to Surface."),
-            BevelAdvisoryCode::SecondPassToolWasNotABead => localize("One of these fillets could not be built after the inside rounds were cut, so a corner may be left square. Try a smaller size, or set Construction to Surface."),
-            BevelAdvisoryCode::SecondPassCreaseDidNotJoin => localize("The rounds cut on this part joined this edge to another one, and only the longer of the two was filleted at the size asked for. Bevel this edge in a group of its own, or set Construction to Surface."),
             BevelAdvisoryCode::SourceMeshHadFoldedFlaps => format(
                 &localize("This source mesh folds back on itself in {0} place(s) - the same triangle is in it twice, facing both ways at once, which is what a boolean can leave where two shapes met flush. Those doubled faces have been dropped to bevel it; the source itself is unchanged."),
                 &[at(args, 0)],
@@ -68,23 +25,13 @@ pub fn format_blend_or_operation(advisory: &BevelAdvisory) -> String {
                 &localize("This source mesh has {0} triangle(s) in it only microns thick - slivers standing on edge where one shape pokes a hair through another's face and the boolean writes the same point down twice, a few millionths apart. Each of those doubled points has been put back together and the slivers with it, to bevel the surface they were lying across; the source itself is unchanged."),
                 &[at(args, 0)],
             ),
-            BevelAdvisoryCode::SourceMeshHadSplitChords => format(
-                &localize("This source mesh cuts {0} of its own straight edge(s) in two - an extra point part way along an edge that does not turn there, which is what a boolean leaves where its seam crossed a rim. Each of those edges has been put back together as the one edge it always was, to bevel it; the source itself is unchanged."),
-                &[at(args, 0)],
-            ),
             BevelAdvisoryCode::SourceMeshWasInsideOut => localize("This part was inside out - every one of its faces pointed into the solid rather than out of it - and has been turned right way out so it could be bevelled. The bevelled part comes back facing the right way; check that it is the shape you expect."),
-            BevelAdvisoryCode::BooleanCuttersCouldNotBeJoined => localize("The cutting tools for these groups could not be joined into one solid to cut with."),
-            BevelAdvisoryCode::CutRemovedTheWholePart => localize("The cut removed the whole part, so nothing was left to keep."),
-            BevelAdvisoryCode::BooleanBeadsCouldNotBeJoined => localize("The fillet beads for these groups could not be joined into one solid to add."),
-            BevelAdvisoryCode::BooleanBlendsCouldNotBeJoined => localize("The blends where these groups' cuts meet their beads could not be joined into one solid to cut with."),
-            BevelAdvisoryCode::EdgesBevelledByAnotherGroup => localize("Every edge this selection names is also named by another group, which bevels them as one longer run."),
             BevelAdvisoryCode::PartHasNoMeshToBevel => localize("This selection's part has no mesh to bevel."),
             BevelAdvisoryCode::CornerFormulaEmpty => localize("The corner formula is empty. Write an expression that starts with =, or switch to Select or Angle."),
             BevelAdvisoryCode::CornerFormulaCouldNotBeEvaluated => format(
                 &localize("The corner formula could not be evaluated: {0}"),
                 &[at(args, 0)],
             ),
-            BevelAdvisoryCode::PointNeedsTheSurfaceConstruction => localize("A point is bevelled only by the Surface construction."),
             BevelAdvisoryCode::PointMeetsAPickedEdge => localize("This point meets a picked edge - bevel it with the edges, or remove the point."),
             BevelAdvisoryCode::PointIsNoLongerACorner => localize("This point is no longer a corner or tip of the part."),
             BevelAdvisoryCode::PointPickedTwice => localize("Another pick already bevels this point - remove one of them."),
@@ -108,8 +55,6 @@ pub fn format_blend_or_operation(advisory: &BevelAdvisory) -> String {
                 &localize("the round would not close ({0})"),
                 &[at(args, 0)],
             ),
-            BevelAdvisoryCode::SecondPassKeptFirstPassFillet => localize("The rounds cut on this part changed the crease this fillet follows, and the fillet could not be rebuilt along the new one, so the fillet built before the cut was kept."),
-            BevelAdvisoryCode::SecondPassCreasesJoinedIntoOneRun => localize("The round on the edge these creases meet at joins them into one crease, which is filleted as one run."),
             _ => format_resolution(advisory),
     }
 }

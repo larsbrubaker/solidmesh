@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use vector_math::{math_helper, Vector3};
 
 use super::{SurfaceBandEnd, SurfaceEdgePlan};
-use crate::bevel::BevelChainEnds;
+use crate::bevel::bevel_interrupted_crease::MAXIMUM_CAP_PLANE_ANGLE_DEGREES;
 use crate::topology::{EdgeConvexity, FaceRegionCache};
 
 /// How far two faces' normals may differ and still be read as one plane, as one less the cosine
@@ -17,10 +17,9 @@ pub const FACES_AGREE: f64 = 1e-6;
 
 /// How far from square to the run the face across the corner may lean and still be read as the
 /// plane that cuts the bead off, as the cosine of
-/// [`BevelChainEnds::MAXIMUM_CAP_PLANE_ANGLE_DEGREES`]: the same 80 degrees the boolean
-/// construction caps on.
+/// [`MAXIMUM_CAP_PLANE_ANGLE_DEGREES`]: the same 80 degrees an interrupted crease's end reads.
 pub fn square_enough() -> f64 {
-    math_helper::degrees_to_radians(BevelChainEnds::MAXIMUM_CAP_PLANE_ANGLE_DEGREES).cos()
+    math_helper::degrees_to_radians(MAXIMUM_CAP_PLANE_ANGLE_DEGREES).cos()
 }
 
 /// The plane the bead of chain end `end` is cut off by at `corner` (mesh vertex
