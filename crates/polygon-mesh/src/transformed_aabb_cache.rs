@@ -15,8 +15,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use vector_math::ieee_math::{max_f64, min_f64};
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::ieee_math::{max_f64, min_f64};
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
 
 use crate::processors::hull_bounds_points::points_on_or_outside_hull;
 use crate::processors::ConvexHull;

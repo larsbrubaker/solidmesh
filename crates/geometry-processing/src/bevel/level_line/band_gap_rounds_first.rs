@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::band_gap_after_the_rounds::{
     creases_after_the_rounds_closed, feature_edges_after_the_rounds,
@@ -596,7 +596,7 @@ pub fn build_rounds_first(
             set_ends_site(Some(format!(
                 "rounds first: creases band {:?} (room {} set by {})",
                 gap.refusal,
-                vector_math::number_format::format_f64_max_decimals(gap.room, 4),
+                solidmesh_math::number_format::format_f64_max_decimals(gap.room, 4),
                 room_source_text(&gap.room_set_by)
             )));
             return Ok(GapFillResult {

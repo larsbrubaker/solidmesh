@@ -1,7 +1,7 @@
 //! A picked point's field for the kernel's level-line cut ([`PointField`]): the type with its
 //! constructors and field queries, the least over a triangle included.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{ChainDistanceField, ChainField, FieldMaximum, FieldMinimum, ScalarField, WorkError};
 

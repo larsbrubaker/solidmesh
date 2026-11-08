@@ -2,10 +2,8 @@
 //! closed, wound the way the input was, and its volume GROWS, because a fillet on a concave edge
 //! fills the corner with material instead of taking it away.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
-    gap_fill, BandGapRefusal, BandProfile, GapFillRefusal,
-};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, BandGapRefusal, BandProfile, GapFillRefusal};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{

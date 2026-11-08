@@ -6,12 +6,13 @@
 //! Forbidden are agg-path, the UI and the rest of agg (`agg-*`) and every MatterCAD app crate
 //! (`mattercad-*`): the kernel takes contours and integer polygons, and the app's paths are
 //! converted in mattercad-geometry. Of this workspace's own crates (path dependencies one level up)
-//! only `polygon-mesh`, `vector-math` and `clipper-library` are allowed; the first two are
+//! only `solidmesh-mesh`, `solidmesh-math` and `solidmesh-clipper` are allowed; the first two are
 //! required.
 
 const FORBIDDEN_PREFIXES: [&str; 2] = ["agg-", "mattercad-"];
 
-const ALLOWED_WORKSPACE_CRATES: [&str; 3] = ["polygon-mesh", "vector-math", "clipper-library"];
+const ALLOWED_WORKSPACE_CRATES: [&str; 3] =
+    ["solidmesh-mesh", "solidmesh-math", "solidmesh-clipper"];
 
 /// One dependency: the table it is in, its name, and its `path` if it has one.
 struct Dependency {
@@ -141,6 +142,6 @@ fn the_kernel_is_built_on_the_mesh_and_vector_math() {
         .map(|dependency| dependency.name)
         .collect();
 
-    assert!(names.iter().any(|name| name == "polygon-mesh"));
-    assert!(names.iter().any(|name| name == "vector-math"));
+    assert!(names.iter().any(|name| name == "solidmesh-mesh"));
+    assert!(names.iter().any(|name| name == "solidmesh-math"));
 }

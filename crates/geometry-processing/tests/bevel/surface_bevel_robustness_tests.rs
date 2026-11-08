@@ -8,12 +8,12 @@
 //! it was made and at each rigid motion, every invariant read, and the answers held to the recorded
 //! ratchet table of today's construction.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::CancelToken;
-use vector_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_mesh::CancelToken;
 
 use crate::bore_test_meshes::{
     create_plate_with_a_raked_bore, create_plate_with_a_raked_bore_whose_mouth_chords_are_split,

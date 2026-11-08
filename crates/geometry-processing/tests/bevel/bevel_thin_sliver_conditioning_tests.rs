@@ -11,15 +11,15 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_chain_join, surface_chain_opens_at_the_junction, surface_room, SurfaceBevelPlan,
 };
-use geometry_processing::bevel::{
+use solidmesh::bevel::{
     bevel_chain_linker, bevel_t_vertex_slivers, bevel_thin_slivers, bevel_working_mesh,
 };
-use geometry_processing::topology::{FaceGroup, FaceRegionCache};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::topology::{FaceGroup, FaceRegionCache};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::gusset_test_meshes;
 use crate::mesh_measurements;

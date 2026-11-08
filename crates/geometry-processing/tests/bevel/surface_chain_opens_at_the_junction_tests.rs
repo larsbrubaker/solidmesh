@@ -3,12 +3,12 @@
 //! beside it is three edges meeting at a corner, and the junction readings want three chain ENDS
 //! there whichever way the three were picked.
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_chain_opens_at_the_junction;
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_chain_opens_at_the_junction;
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 const CUBE_SIZE: f64 = 20.0;
 

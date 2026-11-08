@@ -1,7 +1,7 @@
 //! What a rebuild says about itself beyond its rows (`BevelRebuildAdvisories`): the repair the
 //! working copy needed travels with the rebuild, and a rebuild with nothing to say says nothing.
 
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelRebuildAdvisories};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelRebuildAdvisories};
 
 #[test]
 fn the_repair_travels_with_the_rebuild() {

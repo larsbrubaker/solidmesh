@@ -5,14 +5,14 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill_switch::use_hole_fill;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room_of_pick;
+use solidmesh::bevel::level_line::corner_cap_hole_fill_switch::use_hole_fill;
+use solidmesh::bevel::level_line::{
     corner_fill, gap_fill, BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
     GapFillResult, LevelLineMesh, WorkBudget,
 };
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::hole_fill_corner_tests::{
     build, every_edge, room_of, sign, smallest_kept_area, two_faces,

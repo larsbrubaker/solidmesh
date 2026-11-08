@@ -5,16 +5,16 @@
 
 use std::sync::{Arc, Mutex};
 
-use geometry_processing::bevel::part::{
+use solidmesh::bevel::part::{
     bevel_part, BevelPartError, BevelPartOutcome, BevelPartRequest, BevelProgress,
     BevelProgressReport,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
-use geometry_processing::topology::{BevelEdgeGroup, BevelSelectionKind};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
+use solidmesh::topology::{BevelEdgeGroup, BevelSelectionKind};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// The cube's first straight crease as one Edge group.
 fn one_edge(cube: &Mesh) -> Vec<BevelEdgeGroup> {

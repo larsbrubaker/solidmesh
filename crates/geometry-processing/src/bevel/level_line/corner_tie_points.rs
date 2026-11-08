@@ -4,7 +4,7 @@
 //! triangle ([`try_mitre`],
 //! [`try_mitre_from`]) and the insertion over a band's candidates ([`insert`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineWork, WorkError};
 

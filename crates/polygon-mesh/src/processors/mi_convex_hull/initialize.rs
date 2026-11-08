@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use super::data_model::FaceInternal;
 use super::math_helper::{calculate_face_plane, get_vertex_distance, volume_of_simplex, DIM};
 use super::{ConvexHullAlgorithm, HullFailed};
-use vector_math::seeded_random::SeededRandom;
+use solidmesh_math::seeded_random::SeededRandom;
 
 /// `Constants.FractionalNegligibleVolume` in the 1.1.19.1019 package.
 const FRACTIONAL_NEGLIGIBLE_VOLUME: f64 = 1e-8;

@@ -5,7 +5,7 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap_rounds_first::{
     chain_senses, crease_on_the_end_face, kept, plane_of, rounds_first_tips, same_plane,

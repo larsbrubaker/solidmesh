@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
-use vector_math::Color;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::Color;
+use solidmesh_math::{Vector3, Vector3Float};
 
 use super::manifold_operand_batch::ManifoldOperandBatch;
 use super::BooleanError;

@@ -3,9 +3,9 @@
 //! rail runs along the plane to its corner B, still within the setback of the end ray, then leaves
 //! the plane beside the ray's line (C) before it clears the setback (D).
 
-use geometry_processing::bevel::level_line::end_plane_trim::to_the_corner;
-use geometry_processing::bevel::level_line::{GapLoop, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::end_plane_trim::to_the_corner;
+use solidmesh::bevel::level_line::{GapLoop, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)

@@ -5,11 +5,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     fillet_arc, self_room, swallowed_side, ChainField, FieldKind, FieldSample, LevelLineMesh,
     PickField, RoomField, ScalarField, VertexFieldReading,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::{l_chain, open_chain};
 
@@ -235,7 +235,7 @@ fn rust_only_a_pick_and_a_room_read_their_members() {
 
 #[test]
 fn rust_only_a_group_with_run_outs_reads_the_least_and_marks_it_clipped() {
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         corner_cap_flat_ends, BandGroupFieldsWithRunOuts, ChainDistanceField, PointField,
     };
     let chain = Rc::new(open_chain(
@@ -315,7 +315,7 @@ fn rust_only_a_group_with_run_outs_reads_the_least_and_marks_it_clipped() {
 
 #[test]
 fn rust_only_a_vertex_reading_of_a_chain_reads_across_its_known_cut() {
-    use geometry_processing::bevel::level_line::corner_cap_flat_ends;
+    use solidmesh::bevel::level_line::corner_cap_flat_ends;
     let chain = Rc::new(open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],

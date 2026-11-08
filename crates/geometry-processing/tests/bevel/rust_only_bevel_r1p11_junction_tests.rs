@@ -8,20 +8,20 @@
 
 use std::rc::Rc;
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::MeshEdgeGraph;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::MeshEdgeGraph;
 
-use geometry_processing::bevel::sections::section_corner::CornerRefusal;
-use geometry_processing::bevel::sections::section_junction::Canal;
-use geometry_processing::bevel::sections::section_junction_build::{self, JunctionRefusal};
-use geometry_processing::bevel::sections::section_junction_canal as junction;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_corner::CornerRefusal;
+use solidmesh::bevel::sections::section_junction::Canal;
+use solidmesh::bevel::sections::section_junction_build::{self, JunctionRefusal};
+use solidmesh::bevel::sections::section_junction_canal as junction;
+use solidmesh::bevel::sections::{
     section_builder, section_corner, BevelSection, JunctionPiece, JunctionSection, SectionKind,
     SectionPool, SectionSide,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
 
 /// A square edge along +x: its left face the top (+z), its right the front (-y).
 fn square_edge() -> ChainEdge {
@@ -188,8 +188,7 @@ fn rust_only_a_boundary_slides_down_the_crease_on_its_side() {
 
     let arriving = section_builder::try_feature_edge_between(&features, others[0], corner).unwrap();
     let leaving = section_builder::try_feature_edge_between(&features, corner, others[1]).unwrap();
-    let third =
-        pairs[&geometry_processing::bevel::sections::section_room::pair_key(corner, others[2])];
+    let third = pairs[&solidmesh::bevel::sections::section_room::pair_key(corner, others[2])];
     let away = (at(others[2]) - station).get_normal();
     assert!(!section_corner::is_a_smooth_fold(&cube, &graph, third));
 
@@ -265,8 +264,7 @@ fn rust_only_a_box_top_corner_is_built_as_a_mitre() {
     let leaving = section_builder::try_feature_edge_between(&features, corner, rim[1]).unwrap();
     let (flat_on_the_left, cosine, _) =
         section_corner::try_read_the_sides(&arriving, &leaving).expect("the top is shared");
-    let wall_fold =
-        pairs[&geometry_processing::bevel::sections::section_room::pair_key(corner, below)];
+    let wall_fold = pairs[&solidmesh::bevel::sections::section_room::pair_key(corner, below)];
     let (r, segments) = (1.5, 4);
 
     // The two fold readings on the real corner.

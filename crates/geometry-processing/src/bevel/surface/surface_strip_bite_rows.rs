@@ -45,7 +45,7 @@ pub struct SurfaceStripBiteRows {
 }
 
 /// The advisory every refusal here is named with.
-fn does_not_read(at: vector_math::Vector3) -> BevelAdvisory {
+fn does_not_read(at: solidmesh_math::Vector3) -> BevelAdvisory {
     BevelAdvisory::new(BevelAdvisoryCode::SurfaceBiteDoesNotRead, vec![at.into()])
 }
 

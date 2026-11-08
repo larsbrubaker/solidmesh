@@ -3,11 +3,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_refinement::{refine, RefineOptions};
-use geometry_processing::bevel::level_line::{
-    ChainField, LevelLineMesh, VertexFieldReading, VertexSide,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_refinement::{refine, RefineOptions};
+use solidmesh::bevel::level_line::{ChainField, LevelLineMesh, VertexFieldReading, VertexSide};
+use solidmesh_math::Vector3;
 
 use crate::level_line_test_geometry::coincident_vertices;
 

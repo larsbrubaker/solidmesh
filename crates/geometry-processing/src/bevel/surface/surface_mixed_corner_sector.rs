@@ -2,7 +2,7 @@
 //! rail's centre, or, where the corner hands over at a mitre, the crossing of the handover plane's
 //! trace with the cap's radius.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::SurfaceMixedCorner;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

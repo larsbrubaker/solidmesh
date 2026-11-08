@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::{bevel_advisory_codes, BevelAdvisory, BevelAdvisoryCode};
-use geometry_processing::topology::{bevel_group_edits, BevelEdgeGroup, BevelSelectionKind};
-use vector_math::Vector3;
+use solidmesh::bevel::{bevel_advisory_codes, BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::topology::{bevel_group_edits, BevelEdgeGroup, BevelSelectionKind};
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_edge_group_json_matches_newtonsoft_shape() {

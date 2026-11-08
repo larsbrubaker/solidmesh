@@ -3,10 +3,10 @@
 //! and the facet that stands in the gap between them, removed by one and kept whole by the other
 //! (held as a measurement, a queue entry rather than a fix).
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_cut_clip, SurfaceBandEnd, SurfaceFacetCut, SurfaceLine, SurfaceVertexPool,
 };
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 #[test]
 fn a_facet_inside_the_band_by_between_a_weld_and_a_nearness_is_removed_and_kept_at_once() {

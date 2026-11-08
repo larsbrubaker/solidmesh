@@ -16,14 +16,14 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
     SurfaceBuilt, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{bevel_chain_linker, BevelAdvisoryCode};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bevel_around_center_tip_dihedrals::worst_dihedral_degrees;
 use crate::mesh_measurements::{altitude_of, signed_volume};

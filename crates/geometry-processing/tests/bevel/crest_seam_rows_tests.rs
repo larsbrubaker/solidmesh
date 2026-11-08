@@ -2,10 +2,10 @@
 //! the parallel case's closed form, on two edges converging at 60 degrees across one face against
 //! hand values, at the face's exact width (the snap), and at the two true limits.
 
-use geometry_processing::bevel::level_line::crest_seam_rows::{
+use solidmesh::bevel::level_line::crest_seam_rows::{
     seam_rows, RowEnd, SeamRowsPair, SeamRowsRefusal, SeamStrip,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 const EPSILON: f64 = 1e-6;
 

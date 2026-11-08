@@ -3,11 +3,11 @@
 //! Its record, its derived readings, the test that finds one ([`SurfaceRoomCrossing::try_cross`])
 //! and the gathering of every crossing of a pass ([`SurfaceRoomCrossing::gather`]).
 
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use super::{SurfaceRoomCut, SurfaceRoomFootprint};
 use crate::bevel::level_line::WorkError;
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 /// A run-out skirt and a band crossing over one region.
 ///

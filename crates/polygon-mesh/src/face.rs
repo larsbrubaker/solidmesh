@@ -6,7 +6,7 @@
 
 use std::ops::{Deref, DerefMut};
 
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
 
 /// One triangle: indices into the mesh's vertex list and the face normal.
 #[derive(Debug, Clone, Copy, PartialEq)]

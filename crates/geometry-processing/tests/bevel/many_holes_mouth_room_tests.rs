@@ -4,10 +4,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_room;
-use geometry_processing::bevel::level_line::{
-    BandProfile, RoomReading, RoomReadingKind, WorkBudget,
-};
+use solidmesh::bevel::level_line::band_room;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 

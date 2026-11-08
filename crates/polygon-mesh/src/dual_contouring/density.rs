@@ -4,7 +4,7 @@
 //! The box primitive is called [`Box`], so inside this module the standard library's box is spelled
 //! `std::boxed::Box`.
 
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector2, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Vector2, Vector3};
 
 /// A signed distance function and the bounds of its solid.
 pub trait Sdf {

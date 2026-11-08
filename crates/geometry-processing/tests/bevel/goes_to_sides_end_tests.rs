@@ -15,9 +15,9 @@ use crate::end_face_measures::to_triangle;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::round_mouth_fillet_crossings::crossing_pairs;
 use crate::sweep_mesh_measures;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{
     gap_fill, BandGapResult, BandProfile, GapFillRefusal, WorkBudget,
 };
 

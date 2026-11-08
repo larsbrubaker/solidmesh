@@ -10,16 +10,14 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_chain;
-use geometry_processing::bevel::sections::{
-    section_assembly, section_split_blend, SectionPool, SectionRun,
-};
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::section_builder_run::try_build_chain;
+use solidmesh::bevel::sections::{section_assembly, section_split_blend, SectionPool, SectionRun};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet, MatchTolerances,
 };
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::Mesh;
 
 use crate::bore_test_meshes::create_plate_with_a_raked_bore_whose_mouth_chords_are_split;
 use crate::section_robustness_tests::{code_of, worst_reach_off_the_canal};

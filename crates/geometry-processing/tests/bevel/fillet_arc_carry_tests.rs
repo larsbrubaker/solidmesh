@@ -2,10 +2,10 @@
 //! under an infinite bend threshold, the carry's fade into a mitre's window, and the chain's
 //! direction at its seam.
 
-use geometry_processing::bevel::level_line::fillet_arc::{carry_weight, tangent_at};
-use geometry_processing::bevel::level_line::fillet_arc_rows::{along_the_chain, build};
-use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh};
-use vector_math::{ieee_math, Vector3};
+use solidmesh::bevel::level_line::fillet_arc::{carry_weight, tangent_at};
+use solidmesh::bevel::level_line::fillet_arc_rows::{along_the_chain, build};
+use solidmesh::bevel::level_line::{ChainField, LevelLineMesh};
+use solidmesh_math::{ieee_math, Vector3};
 
 #[test]
 fn a_row_straddling_a_mitre_evenly_keeps_the_mean_drawing() {

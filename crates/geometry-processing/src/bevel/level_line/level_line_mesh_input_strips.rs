@@ -9,7 +9,7 @@
 use std::collections::{HashSet, VecDeque};
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{LevelLineMesh, LevelLineTriangle, LevelLineWork, WorkError};
 

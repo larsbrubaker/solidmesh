@@ -1,8 +1,8 @@
 //! The pick the surface tests on the nose-in-notch part anchor on: the edge group on the feature
 //! edge between two known points ([`anchor`]).
 
-use geometry_processing::topology::{BevelEdgeGroup, FeatureEdgeSet};
-use vector_math::Vector3;
+use solidmesh::topology::{BevelEdgeGroup, FeatureEdgeSet};
+use solidmesh_math::Vector3;
 
 use crate::kernel_cut_helpers::edge_group;
 

@@ -5,17 +5,15 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{
-    fillet_arc, segment_box_tree, ChainField, LevelLineMesh,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{fillet_arc, segment_box_tree, ChainField, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::{l_chain, open_chain};
 
 #[test]
 fn rust_only_a_rail_is_recut_at_a_jump_nearest_the_other_start() {
-    use geometry_processing::bevel::level_line::gap_fill::within_excursion;
-    use geometry_processing::bevel::level_line::ZipRail;
+    use solidmesh::bevel::level_line::gap_fill::within_excursion;
+    use solidmesh::bevel::level_line::ZipRail;
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![
         Vector3::new(0.0, 0.0, 0.0),
@@ -50,7 +48,7 @@ fn rust_only_a_rail_is_recut_at_a_jump_nearest_the_other_start() {
 
 #[test]
 fn rust_only_a_sharp_joints_inside_corner_and_carry_weight() {
-    use geometry_processing::bevel::level_line::sharp_joint_corners::the_inside_corner;
+    use solidmesh::bevel::level_line::sharp_joint_corners::the_inside_corner;
     let chain = ChainField {
         sharp_turn_degrees: 45.0,
         ..l_chain()
@@ -77,8 +75,8 @@ fn rust_only_a_sharp_joints_inside_corner_and_carry_weight() {
 
 #[test]
 fn rust_only_a_loop_reads_as_a_rail_both_ways_and_the_rails_zip() {
-    use geometry_processing::bevel::level_line::gap_fill::{merge, senses, try_envelope};
-    use geometry_processing::bevel::level_line::{GapLoop, ZipRail};
+    use solidmesh::bevel::level_line::gap_fill::{merge, senses, try_envelope};
+    use solidmesh::bevel::level_line::{GapLoop, ZipRail};
     let chain = l_chain();
     // Cut open after its wrap (3 -> 0) and already monotone.
     let (rail, cost, offending) = try_envelope(
@@ -166,8 +164,8 @@ fn rust_only_a_loop_reads_as_a_rail_both_ways_and_the_rails_zip() {
 
 #[test]
 fn rust_only_open_rails_extend_past_the_ends_and_tie_vertices_span_the_jump() {
-    use geometry_processing::bevel::level_line::open_gap_fill::{extended, try_rail};
-    use geometry_processing::bevel::level_line::{open_gap_fill_stations, rail_stations};
+    use solidmesh::bevel::level_line::open_gap_fill::{extended, try_rail};
+    use solidmesh::bevel::level_line::{open_gap_fill_stations, rail_stations};
     let chain = open_chain(
         vec![
             Vector3::new(0.0, 0.0, 0.0),
@@ -248,9 +246,9 @@ fn rust_only_open_rails_extend_past_the_ends_and_tie_vertices_span_the_jump() {
 
 #[test]
 fn rust_only_two_chains_level_lines_meet_at_the_mitre_and_a_run_is_cut_back_to_the_rail() {
-    use geometry_processing::bevel::level_line::corner_tie_points::try_mitre;
-    use geometry_processing::bevel::level_line::virtual_rail_past_the_end::to_the_rail;
-    use geometry_processing::bevel::level_line::GapLoop;
+    use solidmesh::bevel::level_line::corner_tie_points::try_mitre;
+    use solidmesh::bevel::level_line::virtual_rail_past_the_end::to_the_rail;
+    use solidmesh::bevel::level_line::GapLoop;
     let along_x = open_chain(
         vec![Vector3::new(-5.0, 0.0, 0.0), Vector3::new(5.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -313,8 +311,8 @@ fn rust_only_two_chains_level_lines_meet_at_the_mitre_and_a_run_is_cut_back_to_t
 
 #[test]
 fn rust_only_a_boundary_step_follows_round_the_fan() {
-    use geometry_processing::bevel::level_line::gap_loop_walk::{follows, one_of};
-    use geometry_processing::bevel::level_line::LevelLineTriangle;
+    use solidmesh::bevel::level_line::gap_loop_walk::{follows, one_of};
+    use solidmesh::bevel::level_line::LevelLineTriangle;
     // A unit square as two triangles sharing the diagonal 0-2.
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![
@@ -345,10 +343,8 @@ fn rust_only_a_boundary_step_follows_round_the_fan() {
 
 #[test]
 fn rust_only_a_corner_is_where_chains_end_together_and_ties_are_read_by_value() {
-    use geometry_processing::bevel::level_line::corner_fill::{
-        corner_points, fields_tie, takes, ties,
-    };
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::corner_fill::{corner_points, fields_tie, takes, ties};
+    use solidmesh::bevel::level_line::{
         BandGapRefusal, BandGapResult, BandProfile, CornerFillPiece,
     };
     let x_leg = Rc::new(open_chain(
@@ -390,9 +386,9 @@ fn rust_only_a_corner_is_where_chains_end_together_and_ties_are_read_by_value() 
 
 #[test]
 fn rust_only_corner_pieces_are_trimmed_off_the_line_and_closed_round_the_seam() {
-    use geometry_processing::bevel::level_line::corner_fill::close_round_the_seam;
-    use geometry_processing::bevel::level_line::corner_fill_pieces::trim_off_the_line;
-    use geometry_processing::bevel::level_line::CornerFillPiece;
+    use solidmesh::bevel::level_line::corner_fill::close_round_the_seam;
+    use solidmesh::bevel::level_line::corner_fill_pieces::trim_off_the_line;
+    use solidmesh::bevel::level_line::CornerFillPiece;
     let x_leg = open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -452,11 +448,11 @@ fn rust_only_corner_pieces_are_trimmed_off_the_line_and_closed_round_the_seam() 
 
 #[test]
 fn rust_only_a_side_between_two_leaning_walls_is_swallowed() {
-    use geometry_processing::bevel::level_line::swallowed_side_runs::{
+    use solidmesh::bevel::level_line::swallowed_side_runs::{
         back_facing_wall, growing_walls, is_swallowed, row_span, runs_if_both_swallowed,
         ties_merge_room, virtual_run,
     };
-    use geometry_processing::bevel::level_line::{BandProfile, LevelLineTriangle};
+    use solidmesh::bevel::level_line::{BandProfile, LevelLineTriangle};
     // A chain along x from 0 to 4 with both ends rayed; walls x + 3z = 0 and 4 - x + 3z = 0 lean
     // back over it and meet at (2, y, -2/3), two thirds of a setback below the chain; side 1 is
     // the triangle under the chain reaching that crease.
@@ -525,8 +521,8 @@ fn rust_only_a_side_between_two_leaning_walls_is_swallowed() {
 
 #[test]
 fn rust_only_a_knife_end_overrun_cuts_the_climbing_rail_back_off_the_end_plane() {
-    use geometry_processing::bevel::level_line::knife_end_overrun::read;
-    use geometry_processing::bevel::level_line::{CornerFillPiece, EndRayBound};
+    use solidmesh::bevel::level_line::knife_end_overrun::read;
+    use solidmesh::bevel::level_line::{CornerFillPiece, EndRayBound};
     // The chain along x from 0 to 4 rays on past its last end to the plane E: x + y = 4.
     let normal = Vector3::new(1.0, 1.0, 0.0).get_normal();
     let chain = ChainField {
@@ -580,8 +576,8 @@ fn rust_only_a_knife_end_overrun_cuts_the_climbing_rail_back_off_the_end_plane()
 
 #[test]
 fn rust_only_a_piece_round_a_free_end_splits_into_its_rails() {
-    use geometry_processing::bevel::level_line::corner_fill_free_ends::split_round_a_free_end;
-    use geometry_processing::bevel::level_line::CornerFillPiece;
+    use solidmesh::bevel::level_line::corner_fill_free_ends::split_round_a_free_end;
+    use solidmesh::bevel::level_line::CornerFillPiece;
     let x_leg = Rc::new(open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -644,8 +640,8 @@ fn rust_only_a_row_end_on_a_joints_seam_is_read_on_its_partners_leg() {
 
 #[test]
 fn rust_only_a_one_owner_loop_splits_at_another_chains_tie_run() {
-    use geometry_processing::bevel::level_line::corner_fill_pieces::tie_split;
-    use geometry_processing::bevel::level_line::GapLoop;
+    use solidmesh::bevel::level_line::corner_fill_pieces::tie_split;
+    use solidmesh::bevel::level_line::GapLoop;
     let x_leg = Rc::new(open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],

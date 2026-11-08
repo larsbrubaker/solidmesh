@@ -6,17 +6,15 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_working_mesh::seam_epsilon_for_positions;
-use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::gap_fill::{self, GapFillError};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::bevel_working_mesh::seam_epsilon_for_positions;
+use solidmesh::bevel::level_line::band_gap::BandGapBuildError;
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill::{self, GapFillError};
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, LevelLineWorkPhase,
     RoomReadingKind, RoomSource, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::sweep_mesh_measures::{
     is_closed_and_consistent, kept, key, shell_count, signed_volume, smallest_area,
@@ -160,7 +158,7 @@ pub fn build_the_pick(
 
     let thread_input = input.clone();
     let guarded = sweep_watchdog::run(
-        geometry_processing::bevel::level_line::WorkBudget::default_limit(triangles as i32),
+        solidmesh::bevel::level_line::WorkBudget::default_limit(triangles as i32),
         move |budget| the_pick(&thread_input, size, profile, budget),
     );
 

@@ -4,9 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{ChainField, LevelLineWork, ScalarField, WorkBudget};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::{ieee_math, Vector3};
+use solidmesh::bevel::level_line::{ChainField, LevelLineWork, ScalarField, WorkBudget};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::{ieee_math, Vector3};
 
 /// A closed octagon of radius 10 in Z = 0 whose setback alternates `even` and `odd` round it.
 fn alternating_octagon(even: f64, odd: f64) -> ChainField {

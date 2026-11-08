@@ -5,7 +5,7 @@
 //! ([`try_fill_the_root`], [`try_fan`]). `surface_mixed_corner_dual_patch` puts these together with
 //! the cap's side and the grid.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_fan, SurfaceLine, SurfaceMixedCorner, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};

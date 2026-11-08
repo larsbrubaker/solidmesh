@@ -4,7 +4,7 @@
 // this pins that the parse stays that way. The packed polygon string is in clipper-library's
 // tests/clipper, the ASCII STL case in polygon-mesh's tests/polygon_mesh.
 
-use vector_math::{Vector2, Vector3, Vector4};
+use solidmesh_math::{Vector2, Vector3, Vector4};
 
 #[test]
 fn vector_parsing_reads_point_decimals() {

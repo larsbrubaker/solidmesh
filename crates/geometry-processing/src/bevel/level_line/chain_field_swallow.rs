@@ -9,7 +9,7 @@
 //! least stands at an END. The ends are offered in every case. Every segment is read - one pass
 //! for one point, asked a handful of times per room reading.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineWork, PickField, RoomField, WorkError};
 

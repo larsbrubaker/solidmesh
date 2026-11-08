@@ -18,9 +18,9 @@ use crate::bevel::level_line::{
 use crate::bevel::part::{self, SettledPick};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelGroupResult, BevelLoopFailure};
 use indexmap::IndexMap;
-use polygon_mesh::CancelToken;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 use std::rc::Rc;
-use vector_math::Vector3;
 
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError, TheChainCondemned};
 

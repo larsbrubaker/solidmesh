@@ -10,17 +10,17 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_builder;
-use geometry_processing::bevel::sections::section_junction_build;
-use geometry_processing::bevel::sections::{section_routing, JunctionSection, SectionPool};
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::section_builder;
+use solidmesh::bevel::sections::section_junction_build;
+use solidmesh::bevel::sections::{section_routing, JunctionSection, SectionPool};
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, ChainEdge, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::math_helper::radians_to_degrees;
-use vector_math::Vector3;
+use solidmesh_math::math_helper::radians_to_degrees;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::inner_face_test_mesh;
 use crate::section_turn_readings::the_sharp_turns_of;

@@ -6,19 +6,19 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::end_face_sense;
-use geometry_processing::bevel::level_line::field_counters::FieldCounters;
-use geometry_processing::bevel::level_line::swallowed_side_runs::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::end_face_sense;
+use solidmesh::bevel::level_line::field_counters::FieldCounters;
+use solidmesh::bevel::level_line::swallowed_side_runs::{
     growing_walls, is_swallowed, row_span, virtual_run, virtual_run_over,
 };
-use geometry_processing::bevel::level_line::{gap_fill, strip_clip};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{gap_fill, strip_clip};
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, ChainField, GapFillRefusal, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::fillet_thin_front_fin::{assert_the_fin_rounds_to_the_control, profile_of};
 use crate::level_line_fixture::LevelLineFixture;

@@ -9,8 +9,8 @@
 use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_builder;
 use super::section_fan_walk::{self, EdgeAtPair};

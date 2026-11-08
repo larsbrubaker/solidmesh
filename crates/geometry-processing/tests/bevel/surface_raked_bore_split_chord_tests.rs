@@ -9,13 +9,13 @@
 //! `TheRimOnABorrowedRailIsEmittedAsAContinuation` is not run, still open: the emitter is built,
 //! but the stand-off's corner is not among the ten cuts that borrowed a rail.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use indexmap::IndexMap;
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use indexmap::IndexMap;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes::{
     create_plate_with_a_raked_bore, create_plate_with_a_raked_bore_whose_mouth_chords_are_split,

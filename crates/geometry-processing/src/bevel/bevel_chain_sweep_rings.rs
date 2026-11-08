@@ -1,8 +1,8 @@
 //! The RINGS half of the chain sweep: the mitred ring at a joint ([`try_build_joint`],
 //! [`try_build_joint_at`]) and how far two segments' profiles differ ([`profile_deviation`]) - what
-//! the mitre fit ([`super::bevel_mitre_fit`]) reads to find the joints one sweep cannot carry.
+//! the mitre fit (`super::bevel_mitre_fit`) reads to find the joints one sweep cannot carry.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::bevel_chain_sweep::MINIMUM_MITER_COSINE;
 use super::bevel_chain_sweep_mesh::SweptSegment;

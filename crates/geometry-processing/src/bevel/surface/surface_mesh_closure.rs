@@ -27,8 +27,8 @@
 //! in an [`IndexMap`] and the report is the same on every run.
 
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// How many times an undirected edge is used, and the balance of its directed uses: +1 for each
 /// use running low to high, -1 for each running high to low.

@@ -27,7 +27,7 @@
 //! is drawn by any fixture.
 
 use indexmap::IndexSet;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_end_gives_up_the_section::try_give_it_up;
 use super::SurfaceVertexPool;

@@ -9,8 +9,8 @@
 
 use std::future::Future;
 
-use vector_math::progress::ProgressReporter;
-use vector_math::Matrix4X4;
+use solidmesh_math::progress::ProgressReporter;
+use solidmesh_math::Matrix4X4;
 
 use super::{
     implicit_boolean, manifold_import, manifold_kernel, BooleanError, BooleanOptions, CsgModes,

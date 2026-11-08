@@ -5,13 +5,11 @@
 //! BY SIZE at all four after a rotation and a translation. Parameter rows are loops over the
 //! same-named test.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{
-    BandGapResult, BandProfile, GapFillRefusal, RoomReading,
-};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, GapFillRefusal, RoomReading};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::{box_with_square_hole, hourglass_solid};

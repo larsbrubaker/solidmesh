@@ -3,8 +3,8 @@
 //! straight-line test ([`stands_on_the_line_between`]) the sections' room reading and split blend
 //! share.
 
-use polygon_mesh::Mesh;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// The step between neighbouring floats at magnitude one, which is how a mesh stores a point.
 const FLOAT_STORAGE_EPSILON: f64 = 1.1920929e-7;
@@ -14,7 +14,7 @@ const FLOAT_STORAGE_EPSILON: f64 = 1.1920929e-7;
 /// because the smallest turn these rims really make is thousands of steps wide.
 const LATTICE_FACTOR: f64 = 8.0;
 
-/// The mesh's own lattice - [`LATTICE_FACTOR`] float steps at its furthest coordinate - or zero for
+/// The mesh's own lattice - `LATTICE_FACTOR` float steps at its furthest coordinate - or zero for
 /// a mesh with no extent (or an infinite one).
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn lattice_for(mesh: &Mesh) -> f64 {

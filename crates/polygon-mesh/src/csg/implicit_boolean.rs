@@ -9,7 +9,7 @@
 //! The operand field is always the sampled grid: an exact fast-winding-number field would only
 //! matter in `Polygons` mode, which never reaches this path.
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use super::{CsgModes, ProcessingModes, ProcessingResolution};
 use crate::dual_contouring::{build_octree, generate_mesh_from_octree};

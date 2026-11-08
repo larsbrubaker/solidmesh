@@ -11,7 +11,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::foreign_edge_room;
 use super::{ChainField, LevelLineMesh, WorkError};

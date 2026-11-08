@@ -8,8 +8,8 @@
 //! [`super::section_smooth_side_triangulate`].
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_smooth_side::{normal_of, SmoothSideCut, SmoothSideFacetCut, SmoothSideRefusal};
 use super::section_smooth_side_holes::{

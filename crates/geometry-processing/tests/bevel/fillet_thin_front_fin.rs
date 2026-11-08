@@ -5,12 +5,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::field_counters::FieldCounters;
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{gap_fill, strip_clip};
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::field_counters::FieldCounters;
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{gap_fill, strip_clip};
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::signed_volume;

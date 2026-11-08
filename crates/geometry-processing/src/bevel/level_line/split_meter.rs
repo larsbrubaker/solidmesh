@@ -15,8 +15,8 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use vector_math::number_format::{self, format_i64_number};
-use vector_math::Vector3;
+use solidmesh_math::number_format::{self, format_i64_number};
+use solidmesh_math::Vector3;
 
 use super::refinement_splits;
 use super::stopwatch::e3;

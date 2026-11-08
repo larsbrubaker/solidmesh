@@ -6,7 +6,7 @@
 //! foot ([`try_the_foot`]), the fill ([`try_fill_the_notch`]) and the bites
 //! ([`try_give_up_the_notch`], [`try_bite`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_fan, SurfaceMixedCorner, SurfaceMixedJunctionArm, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

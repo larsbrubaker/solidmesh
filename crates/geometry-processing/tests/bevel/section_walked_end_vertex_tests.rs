@@ -3,12 +3,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::bevel_section::BevelSection;
-use geometry_processing::bevel::sections::section_builder_run::try_build_run;
-use geometry_processing::bevel::sections::{SectionPool, SectionRun};
-use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::sections::bevel_section::BevelSection;
+use solidmesh::bevel::sections::section_builder_run::try_build_run;
+use solidmesh::bevel::sections::{SectionPool, SectionRun};
+use solidmesh::topology::{ChainEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 const RADIUS: f64 = 2.0;
 const SEGMENTS: i32 = 4;

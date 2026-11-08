@@ -6,11 +6,11 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::bevel_chain_linker::link;
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_room::{self, SectionRoomCache};
-use geometry_processing::bevel::sections::SectionPool;
-use geometry_processing::topology::bevel_edge_group_resolver;
+use solidmesh::bevel::bevel_chain_linker::link;
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_room::{self, SectionRoomCache};
+use solidmesh::bevel::sections::SectionPool;
+use solidmesh::topology::bevel_edge_group_resolver;
 
 use crate::many_holes_test_mesh;
 use crate::tapered_barrel_test_meshes;

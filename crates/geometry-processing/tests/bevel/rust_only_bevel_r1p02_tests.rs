@@ -12,7 +12,8 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::bevel::surface::{
+use indexmap::{IndexMap, IndexSet};
+use solidmesh::bevel::surface::{
     surface_convex_bite, surface_corner_patch_rows, surface_end_cut,
     surface_end_follows_the_walked_chords, surface_end_gives_up_the_section,
     surface_mixed_corner_dual_wall, surface_mixed_corner_run_out_strip, surface_row_zip,
@@ -20,11 +21,10 @@ use geometry_processing::bevel::surface::{
     SurfaceMixedCornerDualWallCrossing, SurfaceSplitsOnASegment,
     SurfaceTwoCreaseJunctionWallCrossing, SurfaceVertexPool,
 };
-use geometry_processing::bevel::surface::{SurfaceBevelPlan, SurfaceEdgeRoles, SurfacePlanRecipe};
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::bevel::{bevel_patch_refinement, BevelAdvisoryCode};
-use indexmap::{IndexMap, IndexSet};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceBevelPlan, SurfaceEdgeRoles, SurfacePlanRecipe};
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::bevel::{bevel_patch_refinement, BevelAdvisoryCode};
+use solidmesh_math::Vector3;
 
 /// Two rows of equal count alternate, the upper winning each tie, and a row of 2 chords hands over
 /// to a row of 3 with every point used.

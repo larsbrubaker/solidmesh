@@ -5,12 +5,12 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::{
     section_fan_walk, section_smooth_side, section_surface_walk_join, SectionKind, SectionSide,
 };
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::inner_face_test_mesh;
 use crate::section_pierced_face_junction_run_tests::the_run;

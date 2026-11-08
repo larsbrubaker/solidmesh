@@ -11,7 +11,7 @@
 //! design lists them in its own property order), every member optional on load.
 
 use serde::{Deserialize, Serialize};
-use vector_math::Vector2;
+use solidmesh_math::Vector2;
 
 use super::bevel_group::BevelGroup;
 

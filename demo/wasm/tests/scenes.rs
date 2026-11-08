@@ -149,11 +149,11 @@ fn the_showcase_part_is_one_closed_solid() {
 // `PickSession::pick`) and built the way the page builds it (`fillet_part`, every pick at one
 // radius in one `bevel_part` call).
 mod fillet {
-    use polygon_mesh::CancelToken;
+    use solidmesh::math::Vector3;
+    use solidmesh::mesh::CancelToken;
     use solidmesh_wasm::fillet::{fillet_part, FilletBuild};
     use solidmesh_wasm::fillet_parts::part;
     use solidmesh_wasm::fillet_pick::{Pick, PickMode, PickSession};
-    use vector_math::Vector3;
 
     /// The mm a pixel spans at 1 mm from the eye in the page's 40 degree view, about 700 px tall.
     const PIXEL_SIZE: f64 = 0.001;

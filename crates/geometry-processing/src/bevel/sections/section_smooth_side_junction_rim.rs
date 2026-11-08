@@ -6,7 +6,7 @@
 //! the junction's group ([`mint_the_crease_takeovers`]).
 
 use indexmap::IndexSet;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_smooth_side::{

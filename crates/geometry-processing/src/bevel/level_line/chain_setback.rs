@@ -2,7 +2,7 @@
 //! in the level-line field, read from the angle between the two sides rather than from any
 //! per-station construction.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The setback a fillet of `radius` asks of an edge whose two sides carry outward normals
 /// `n_left` and `n_right`: `radius * tan(phi / 2)`, phi being the angle between those normals. A

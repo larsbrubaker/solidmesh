@@ -6,8 +6,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::{BandGapRefusal, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::{BandGapRefusal, WorkBudget};
 
 use crate::end_face_builds::build_chains;
 use crate::level_line_fixture::LevelLineFixture;

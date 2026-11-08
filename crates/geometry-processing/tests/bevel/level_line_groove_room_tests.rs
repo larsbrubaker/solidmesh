@@ -10,17 +10,15 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, GapFillResult, LevelLineMesh,
     RoomReadingKind,
 };
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::Mesh;
 
 type Triangles = Vec<(i32, i32, i32)>;
 

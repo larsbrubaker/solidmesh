@@ -6,18 +6,18 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_mitre_joint_step::SideSeams;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_end_cap_around_a_feature, surface_mesh_closure,
     surface_standing_feature_faces, SurfaceBevelPlan, SurfaceBuildFailure, SurfaceEdgePlan,
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
     SurfaceStripNotchedByAFeature, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::FeatureEdge;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::signed_volume;
 use crate::nose_in_notch_test_meshes;

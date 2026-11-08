@@ -13,18 +13,16 @@ use std::collections::HashSet;
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
-use geometry_processing::bevel::level_line::corner_cap_flat_ends::WATCH_FLAT_ENDS;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::stopped_end_fill::try_stopped_ends;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room_of_pick;
+use solidmesh::bevel::level_line::corner_cap_flat_ends::WATCH_FLAT_ENDS;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::stopped_end_fill::try_stopped_ends;
+use solidmesh::bevel::level_line::{
     gap_fill, turn_stopped_ends_on, BandGapResult, BandProfile, ChainField, GapLoop,
     HoleFillTriangle, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 pub(crate) type Mesh = (Vec<Vector3>, Vec<(i32, i32, i32)>);
 

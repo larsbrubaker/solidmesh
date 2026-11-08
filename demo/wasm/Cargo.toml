@@ -9,8 +9,9 @@
 # published (`publish = false`; publish.yml's `cargo publish --workspace` skips it). CI's wasm32 job
 # builds it with the library crates, which is what it exists for.
 #
-# It calls only the kernel crates' public API; it adds no geometry of its own beyond the demo
-# scenes (which shapes, where) and the smooth blend of the implicit page.
+# It calls only solidmesh's documented API, through the one `solidmesh` dependency; it adds no
+# geometry of its own beyond the demo scenes (which shapes, where) and the smooth blend of the
+# implicit page.
 [package]
 name = "solidmesh-demo-wasm"
 description = "WebAssembly bindings for the solidmesh demo site"
@@ -26,10 +27,9 @@ name = "solidmesh_wasm"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vector-math = { package = "solidmesh-math", path = "../../crates/vector-math", version = "0.1.0" }
-clipper-library = { package = "solidmesh-clipper", path = "../../crates/clipper-library", version = "0.1.0" }
-polygon-mesh = { package = "solidmesh-mesh", path = "../../crates/polygon-mesh", version = "0.1.0" }
-geometry-processing = { package = "solidmesh", path = "../../crates/geometry-processing", version = "0.1.0" }
+# The library, alone: it re-exports solidmesh-math, solidmesh-clipper and solidmesh-mesh as
+# `solidmesh::math`, `solidmesh::clipper` and `solidmesh::mesh`, as a library user would use it.
+solidmesh = { path = "../../crates/geometry-processing", version = "0.1.0" }
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 # Routes Rust panic messages (with location) to console.error: without it a panic surfaces only as

@@ -3,7 +3,7 @@
 // Rust parses numbers with no locale at all, so the test checks the result directly. The vector
 // parse is in vector-math's tests/other, the ASCII STL case in polygon-mesh's tests/polygon_mesh.
 
-use clipper_library::polygons_extensions::create_from_string;
+use solidmesh_clipper::polygons_extensions::create_from_string;
 
 #[test]
 fn packed_polygon_strings_read_point_decimals() {

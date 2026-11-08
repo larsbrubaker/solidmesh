@@ -18,15 +18,15 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread::ThreadId;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::WATCH_CORNER_HOLES;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
-use geometry_processing::bevel::level_line::corner_rail_strip::WATCH_SETBACKS;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_cap_hole_fill::WATCH_CORNER_HOLES;
+use solidmesh::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
+use solidmesh::bevel::level_line::corner_rail_strip::WATCH_SETBACKS;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     band_gap_reading, BandGapResult, BandProfile, CornerCapLastRow, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::feature_of;
 use crate::hole_fill_corner_tests::fill_with_the_filler;

@@ -8,9 +8,9 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::{gap_fill, BandGapRefusal, BandGapResult, ChainField};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::{gap_fill, BandGapRefusal, BandGapResult, ChainField};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::build_chains;
 use crate::fillet_thin_front_fin::profile_of;

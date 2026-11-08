@@ -31,7 +31,7 @@
 //! **The span is read in closed form, not sampled.** A rail's crossing parameter with a plane is
 //! AFFINE in the profile point, so the difference of the two is affine over the arc and its minimum
 //! is at a foot or at the one arc point facing down the difference's own gradient. Three points are
-//! measured, never a sweep (see [`the_feature_spans_the_strip`]).
+//! measured, never a sweep (see `the_feature_spans_the_strip`).
 //!
 //! **The readings.** Something here CLOSES OVER the run's own continuation and nothing FALLS AWAY
 //! from it (`Leaning::closes_over_the_run`, fed every face at the vertex that is not one of the
@@ -39,7 +39,7 @@
 //! both of the end's own two faces carry on past the vertex, matched by NORMAL
 //! (`both_own_faces_carry_on`); no unselected edge carries the crease's own line on past the vertex
 //! (`crease_carries_on`); and the crease RESUMES in another open concave run of this pass
-//! (`crease_resumes_beyond`) that stands on THE SAME TWO SURFACES ([`the_same_two_regions`]), which
+//! (`crease_resumes_beyond`) that stands on THE SAME TWO SURFACES (`the_same_two_regions`), which
 //! is what makes this one crease rather than two that happen to be collinear. The region test
 //! answers two blocks on a plate with ordinary plate between them however much plate there is,
 //! which a bound on the distance would not.
@@ -53,7 +53,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{ieee_math, math_helper, Vector3};
+use solidmesh_math::{ieee_math, math_helper, Vector3};
 
 use super::SurfaceBevelPlan;
 use crate::bevel::bevel_edge_tool_builder;

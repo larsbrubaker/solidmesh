@@ -3,8 +3,8 @@
 //! `create_isosceles_prism` (arc chording), `create_arc_prism` (sweep-back depth) and
 //! `create_frustum` (`tapered_barrel_test_meshes.rs`).
 
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector2, Vector3};
+use solidmesh_math::{math_helper, Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// A triangular prism whose apex at the origin has the given interior angle, the two long sides
 /// running `length` along +x, standing `height` tall centred on z = 0. Welded, so the fixture is
@@ -292,7 +292,7 @@ pub fn create_sheared_l_shaped_grid_prism(lean_degrees: f64, along_the_rim: bool
     let mut mesh = create_l_shaped_grid_prism();
     let shear = math_helper::degrees_to_radians(lean_degrees).tan();
 
-    mesh.transform(vector_math::Matrix4X4::new(
+    mesh.transform(solidmesh_math::Matrix4X4::new(
         1.0,
         0.0,
         0.0,
@@ -481,18 +481,18 @@ pub fn create_l_prism_with_fading_inner_corner(
 /// under the part. The two walls present their top edges to the top face at DIFFERENT angles, and
 /// the two fillets there have different setbacks and different overshoots.
 pub fn create_raked_l_block(rake_degrees: f64) -> Mesh {
-    use polygon_mesh::csg::boolean_processing::do_array;
-    use polygon_mesh::csg::CsgModes;
-    use vector_math::Matrix4X4;
+    use solidmesh_math::Matrix4X4;
+    use solidmesh_mesh::csg::boolean_processing::do_array;
+    use solidmesh_mesh::csg::CsgModes;
 
-    let mut block = polygon_mesh::solids::platonic_solids::create_cube(40.0, 40.0, 20.0);
+    let mut block = solidmesh_mesh::solids::platonic_solids::create_cube(40.0, 40.0, 20.0);
 
     block.translate(Vector3::new(0.0, 0.0, -10.0));
 
     // Big enough in every direction that its own far faces never touch the block, so the only thing
     // it contributes is the two planes through the origin: x = 0 and, after the rotation,
     // y = z tan(rake).
-    let mut quadrant = polygon_mesh::solids::platonic_solids::create_cube(200.0, 200.0, 400.0);
+    let mut quadrant = solidmesh_mesh::solids::platonic_solids::create_cube(200.0, 200.0, 400.0);
 
     quadrant.transform(
         Matrix4X4::create_translation(100.0, 100.0, 0.0)
@@ -505,8 +505,8 @@ pub fn create_raked_l_block(rake_degrees: f64) -> Mesh {
             (&quadrant, Matrix4X4::IDENTITY),
         ],
         CsgModes::Subtract,
-        &polygon_mesh::CancelToken::new(),
-        &polygon_mesh::csg::BooleanOptions::default(),
+        &solidmesh_mesh::CancelToken::new(),
+        &solidmesh_mesh::csg::BooleanOptions::default(),
     )
     .expect("the quadrant cuts the block")
 }
@@ -516,11 +516,11 @@ pub fn create_raked_l_block(rake_degrees: f64) -> Mesh {
 /// The post runs well down into the slab rather than resting on its face, because two coincident
 /// faces are a boolean's worst input and the fixture is not what is under test.
 pub fn create_boss_on_slab(post_radius: f64, sides: i32, slab_top: f64) -> Mesh {
-    use polygon_mesh::csg::boolean_processing::do_array;
-    use polygon_mesh::csg::CsgModes;
-    use vector_math::Matrix4X4;
+    use solidmesh_math::Matrix4X4;
+    use solidmesh_mesh::csg::boolean_processing::do_array;
+    use solidmesh_mesh::csg::CsgModes;
 
-    let slab = polygon_mesh::solids::platonic_solids::create_cube(30.0, 30.0, slab_top * 2.0);
+    let slab = solidmesh_mesh::solids::platonic_solids::create_cube(30.0, 30.0, slab_top * 2.0);
     let mut post = create_cylinder(post_radius, 12.0, sides);
 
     post.translate(Vector3::new(0.0, 0.0, slab_top + 3.0));
@@ -528,8 +528,8 @@ pub fn create_boss_on_slab(post_radius: f64, sides: i32, slab_top: f64) -> Mesh 
     do_array(
         &[(&slab, Matrix4X4::IDENTITY), (&post, Matrix4X4::IDENTITY)],
         CsgModes::Union,
-        &polygon_mesh::CancelToken::new(),
-        &polygon_mesh::csg::BooleanOptions::default(),
+        &solidmesh_mesh::CancelToken::new(),
+        &solidmesh_mesh::csg::BooleanOptions::default(),
     )
     .expect("the post and slab union")
 }

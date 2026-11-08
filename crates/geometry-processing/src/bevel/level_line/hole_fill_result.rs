@@ -1,7 +1,7 @@
 //! What the level line's one hole filler hands back: a filled hole, or why it gave no fill
 //! ([`HoleFillFailure`], [`HoleFillTriangle`], [`HoleFillResult`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// Why the hole filler gave no fill. The filler never hands back a repaired mesh.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

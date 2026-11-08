@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_run_across::SurfaceRunAcrossRegionMapsCache;
 use super::{
@@ -227,7 +227,7 @@ impl SurfaceBevelPlan {
 
 impl SurfaceBevelPlan {
     /// The mesh the plan was read against, or `None` where it had no regions.
-    pub fn mesh(&self) -> Option<&std::sync::Arc<polygon_mesh::Mesh>> {
+    pub fn mesh(&self) -> Option<&std::sync::Arc<solidmesh_mesh::Mesh>> {
         self.regions.as_ref().map(|regions| regions.mesh())
     }
 

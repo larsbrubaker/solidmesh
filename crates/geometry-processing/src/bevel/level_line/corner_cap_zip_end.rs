@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap::{fans_about_the_end, zips_about_the_rows_axis, WATCH_END_HOLE_AT};
 use super::corner_cap_flat_ends::{
@@ -39,7 +39,7 @@ const PLACEMENT_TIE_SNAPS: f64 = 8.0;
 /// from S to T refuses [`GapFillRefusal::CornerCapNotStarShaped`] - unless the run turns the other
 /// way round V to close the full turn, which [`fans_about_the_end`] takes. Answers the refusal and
 /// the offending vertex (-1 on success). `flowed` sends a refused hole of a
-/// flowed band to [`end_hole_by_the_one_filler`].
+/// flowed band to `end_hole_by_the_one_filler`.
 #[allow(clippy::too_many_arguments)]
 pub fn zip_end(
     mesh: &mut LevelLineMesh,

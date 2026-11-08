@@ -22,7 +22,7 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::SurfaceBevelPlan;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

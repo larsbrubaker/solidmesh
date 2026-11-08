@@ -7,9 +7,9 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::LazyLock;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::surface_band_runs_off_the_face_beyond::{self, BandSpan, ChainAtTheSpan};
 use super::surface_run_across::SurfaceRunAcrossRegionMapsCache;

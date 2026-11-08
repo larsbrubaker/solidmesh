@@ -4,9 +4,9 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::sdf::{extract, DenseGrid3f};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::sdf::{extract, DenseGrid3f};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// A seeded Knuth subtractive random generator: the same seed gives the same sequence on every
 /// platform.
@@ -134,7 +134,7 @@ fn random_fields_give_closed_manifold_surfaces() {
 
 /// Why the mesh is not a closed, consistently wound manifold, or `None`.
 fn surface_problem(mesh: &Mesh) -> Option<String> {
-    let corners = |f: &polygon_mesh::Face| [f.v0, f.v1, f.v2];
+    let corners = |f: &solidmesh_mesh::Face| [f.v0, f.v1, f.v2];
     let mut directed: HashMap<(i32, i32), i32> = HashMap::new();
     for face in mesh.faces.iter() {
         let [v0, v1, v2] = corners(face);

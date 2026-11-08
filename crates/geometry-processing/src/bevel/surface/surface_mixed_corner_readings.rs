@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use indexmap::IndexMap;
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::{
     surface_mixed_corner_cut_edge, surface_mixed_corner_hands_over_at_the_mitre, SurfaceEdgePlan,

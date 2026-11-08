@@ -14,9 +14,9 @@ use std::fmt;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::OnceLock;
 
-use vector_math::texture::TexturePixels;
-use vector_math::Color;
-use vector_math::{
+use solidmesh_math::texture::TexturePixels;
+use solidmesh_math::Color;
+use solidmesh_math::{
     long_hash, AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float, LONG_HASH_SEED,
 };
 

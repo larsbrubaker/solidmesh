@@ -11,13 +11,13 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use polygon_mesh::csg::minkowski_morph::{
+use solidmesh_mesh::csg::minkowski_morph::{
     erosion_tree_runs, minkowski_difference_with_path_and_progress,
 };
-use polygon_mesh::csg::minkowski_processing::{sphere_mesh, MinkowskiError};
-use polygon_mesh::csg::minkowski_progress_model::tree_units;
-use polygon_mesh::csg::BooleanReporter;
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::csg::minkowski_processing::{sphere_mesh, MinkowskiError};
+use solidmesh_mesh::csg::minkowski_progress_model::tree_units;
+use solidmesh_mesh::csg::BooleanReporter;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::minkowski_tests::dented;
 

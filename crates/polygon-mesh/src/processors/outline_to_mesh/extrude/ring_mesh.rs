@@ -8,13 +8,13 @@
 use std::rc::Rc;
 
 use clipper2_rust::Paths64;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 use crate::mesh::Mesh;
 use crate::processors::ring_vertices::RingVertices;
 
 /// Clipper units per mm, the scale every ring's integer points are in.
-const UNITS_PER_MM: f64 = clipper_library::DEFAULT_SCALING;
+const UNITS_PER_MM: f64 = solidmesh_clipper::DEFAULT_SCALING;
 
 /// One ring placed in the mesh: its loops and the vertex of every loop point.
 pub(super) struct PlacedRing {

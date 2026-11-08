@@ -1,16 +1,16 @@
-//! Rust-only checks of the ray tracer's trace path (`polygon_mesh::ray_tracer`): a Morton-built
+//! Rust-only checks of the ray tracer's trace path (`solidmesh_mesh::ray_tracer`): a Morton-built
 //! hierarchy finds the same nearest hits as a flat list, a pick recovers the hit face through
 //! `MinimalTriangle::face_index`, `Transform` moves rays in and hits out, and every traceable
 //! can cross threads.
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::{IntersectionType, Matrix4X4, Ray, Vector3};
+use solidmesh_mesh::ray_tracer::{
     BoundingVolumeHierarchy, BvhCreationOptions, BvhIterator, MinimalTriangle, PlaneShape,
     Traceable, TraceableRef, Transform, TriangleShape, UnboundCollection,
 };
-use polygon_mesh::Mesh;
-use vector_math::{IntersectionType, Matrix4X4, Ray, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// MatterCAD's `AddTraceables` without a material: one `MinimalTriangle` per face reading the
 /// mesh's corners.

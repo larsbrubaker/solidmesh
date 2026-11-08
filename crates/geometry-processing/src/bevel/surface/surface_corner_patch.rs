@@ -10,7 +10,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_corner_mitre, surface_corner_patch_rows, SurfaceStripStation};
 use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};

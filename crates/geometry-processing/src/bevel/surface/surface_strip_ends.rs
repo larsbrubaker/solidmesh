@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{
@@ -462,7 +462,7 @@ pub fn try_the_stretch_at(
     over_a_stretch: Option<&[[Option<super::SurfaceBandRunsOffOverAStretch>; 2]]>,
     edge_index: usize,
     at_the_start: bool,
-    corner: vector_math::Vector3,
+    corner: solidmesh_math::Vector3,
 ) -> Result<Option<super::SurfaceBandRunsOffOverAStretch>, crate::bevel::BevelAdvisory> {
     let Some(over_a_stretch) = over_a_stretch else {
         return Ok(None);

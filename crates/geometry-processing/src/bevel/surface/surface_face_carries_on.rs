@@ -8,8 +8,8 @@
 /// facet of the region standing there.
 use std::collections::HashSet;
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use super::SurfaceEdgePlan;
 use crate::topology::FaceRegionCache;

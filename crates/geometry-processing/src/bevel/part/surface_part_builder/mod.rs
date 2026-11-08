@@ -12,17 +12,17 @@
 pub mod build;
 pub mod cove_round_retry;
 pub mod level_line;
-pub mod level_line_build;
+pub(crate) mod level_line_build;
 pub mod level_line_kernel_handoff;
 pub mod level_line_memo;
-pub mod level_line_rows;
-pub mod narrow_the_refusal;
-pub mod pass_in_two;
-pub mod past_the_level_lines_room;
+pub(crate) mod level_line_rows;
+pub(crate) mod narrow_the_refusal;
+pub(crate) mod pass_in_two;
+pub(crate) mod past_the_level_lines_room;
 pub mod rim_after_its_partner;
-pub mod rim_loops;
-pub mod settled_pick;
-pub mod size_that_fits;
+pub(crate) mod rim_loops;
+pub(crate) mod settled_pick;
+pub(crate) mod size_that_fits;
 pub mod touching_loops;
 pub mod try_together;
 
@@ -43,9 +43,9 @@ use crate::bevel::BevelRebuildAdvisories;
 use crate::bevel::{BevelAdvisory, BevelGroupResult, BevelLoopFailure};
 use crate::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache, FeatureEdge};
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Color;
-use vector_math::Matrix4X4;
+use solidmesh_math::Color;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 pub use build::SurfacePartBuildError;
 pub use level_line::{LevelLineAnswer, LevelLineRouteError, TheChainCondemned};

@@ -4,7 +4,7 @@
 //! standing less than the snap off its longest edge is dropped rather than laid. Its triangles are
 //! [`HoleFillTriangle`]s, as the faired filler's are.
 
-use vector_math::{ieee_math, Vector2, Vector3};
+use solidmesh_math::{ieee_math, Vector2, Vector3};
 
 use super::HoleFillTriangle;
 

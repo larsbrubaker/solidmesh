@@ -11,14 +11,10 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::topology::{
-    EdgeConvexity, FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet,
-};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::topology::{EdgeConvexity, FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::topology_test_meshes::create_boss_on_slab;

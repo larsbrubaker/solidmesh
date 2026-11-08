@@ -4,7 +4,9 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Sign, Vector3};
+use solidmesh_math::{
+    AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Sign, Vector3,
+};
 
 use super::base_shape::{leaf_contains, leaf_get_contained, leaf_get_crossing, leaf_get_touching};
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable};

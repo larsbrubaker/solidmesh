@@ -12,15 +12,15 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_end_cut,
     surface_room_measure, SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomCrossing,
     SurfaceRoomCut, SurfaceRoomFootprint,
 };
-use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::shell_count;

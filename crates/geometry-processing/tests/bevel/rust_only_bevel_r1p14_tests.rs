@@ -7,27 +7,27 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::surface::surface_roll_across_the_wall::SurfaceRollAcrossTheWallSides;
-use geometry_processing::bevel::surface::surface_room::{
+use solidmesh::bevel::surface::surface_roll_across_the_wall::SurfaceRollAcrossTheWallSides;
+use solidmesh::bevel::surface::surface_room::{
     try_gap_to_the_corner, SurfaceRoomCut, SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::surface::surface_room_fixed_point::stepped_down;
-use geometry_processing::bevel::surface::surface_run_across::nothing_across_it_can_curve;
-use geometry_processing::bevel::surface::surface_run_across_walk::{
+use solidmesh::bevel::surface::surface_room_fixed_point::stepped_down;
+use solidmesh::bevel::surface::surface_run_across::nothing_across_it_can_curve;
+use solidmesh::bevel::surface::surface_run_across_walk::{
     try_across_a_curved_region, try_walk_one_section,
 };
-use geometry_processing::bevel::surface::surface_wall_ran_out::{
+use solidmesh::bevel::surface::surface_wall_ran_out::{
     the_profile_can_rest_on_the_crease, try_feet_at,
 };
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceEdgeRoles, SurfaceLine, SurfaceMixedJunction,
     SurfacePlanRecipe, SurfaceRunAcrossSectionStep,
 };
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::{ChainEdge, EdgeConvexity, FaceGroup, FeatureEdge};
-use vector_math::Vector3;
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::topology::{ChainEdge, EdgeConvexity, FaceGroup, FeatureEdge};
+use solidmesh_math::Vector3;
 
 use crate::topology_test_meshes::{create_arc_prism, create_isosceles_prism};
 

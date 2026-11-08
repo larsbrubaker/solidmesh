@@ -2,12 +2,12 @@
 //! instead of running the kernel, so their answers are only checked by volume. The n-ary
 //! subtract case runs once per mode, each as its own test.
 
-use polygon_mesh::csg::boolean_processing::{do_array, do_boolean};
-use polygon_mesh::csg::minkowski_processing::sphere_mesh;
-use polygon_mesh::csg::{BooleanOptions, CsgModes, ProcessingModes, ProcessingResolution};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::csg::boolean_processing::{do_array, do_boolean};
+use solidmesh_mesh::csg::minkowski_processing::sphere_mesh;
+use solidmesh_mesh::csg::{BooleanOptions, CsgModes, ProcessingModes, ProcessingResolution};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 // A 20 mm cube with two 10 x 10 columns punched through opposite quarters: 8000 - 2 x 2000.
 const CUBE_SIZE: f64 = 20.0;

@@ -4,9 +4,9 @@
 //! `a_reflex_corner_is_filleted_on_the_outside_of_the_turn` runs both windings inside
 //! the one test.
 
-use geometry_processing::path::path_bevel::{bevel, bevel_contour};
-use geometry_processing::path::{Contour, PathBevelSizeMode};
-use vector_math::Vector2;
+use solidmesh::path::path_bevel::{bevel, bevel_contour};
+use solidmesh::path::{Contour, PathBevelSizeMode};
+use solidmesh_math::Vector2;
 
 use super::path_bevel_test_geometry::{arc_center, tangent_distance};
 

@@ -7,8 +7,8 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::path::Contour;
-use vector_math::Vector2;
+use solidmesh::path::Contour;
+use solidmesh_math::Vector2;
 
 /// Chords per cubic: 256 makes a 4 mm radius eighth turn's chords 12 microns long (64 left the
 /// largest fillet on such a run 8.5 microns over the exact one, past its 5 micron tolerance).

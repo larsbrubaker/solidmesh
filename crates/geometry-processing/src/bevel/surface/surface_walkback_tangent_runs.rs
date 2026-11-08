@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use vector_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::fixed_tie_sort::introspective_sort;
 
 use super::surface_band_runs_off_the_face_beyond::{consumes_the_face_to_its_rim, BandSpan};
 use super::{

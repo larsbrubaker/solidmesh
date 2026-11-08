@@ -7,14 +7,14 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use indexmap::IndexMap;
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine, SurfaceWalkbackResult,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use indexmap::IndexMap;
-use polygon_mesh::{FaceList, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::{bevel_chain_linker, BevelSweptChain};
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{FaceList, Mesh};
 
 use crate::topology_test_meshes;
 

@@ -7,14 +7,14 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_builder_walked_side::SectionBuildRefusal;
-use geometry_processing::bevel::sections::{section_assembly, section_builder_run, SectionPool};
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceBevelPlan};
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::section_builder_walked_side::SectionBuildRefusal;
+use solidmesh::bevel::sections::{section_assembly, section_builder_run, SectionPool};
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector2, Vector3, Vector3Float};
+use solidmesh_math::{Matrix4X4, Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::rigid_motion_meshes::{most_faces_on_an_edge, move_mesh, signature_of, the_motions};

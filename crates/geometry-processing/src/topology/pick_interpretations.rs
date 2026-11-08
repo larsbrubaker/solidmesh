@@ -1,5 +1,5 @@
 //! The candidate readings of one pick, for the user to cycle through before committing, as free
-//! functions. The reading type itself is [`super::pick_interpretation`], and
+//! functions. The reading type itself is `super::pick_interpretation`, and
 //! [`super::bevel_edge_readings`] reaches the same
 //! list from a stored group.
 //!
@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::bevel_edge_group::BevelSelectionKind;
 use super::bevel_edge_group_resolver;

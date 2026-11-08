@@ -5,7 +5,7 @@
 //! ([`ForeignEdgeIndex::over`]) and the nearest-first search
 //! ([`ForeignEdgeIndex::least_approach`], [`ForeignEdgeIndex::search`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{foreign_room_counters, segment_box_tree, ChainField, WorkError};
 

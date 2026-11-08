@@ -6,7 +6,7 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef, PLANE_CROSSED_BY_ERROR};
 

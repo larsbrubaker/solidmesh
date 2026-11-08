@@ -1,8 +1,8 @@
 //! The plate a gusset pokes through, kept as the triangles the boolean actually left, and the
 //! sliver seam it leaves on the top face.
 
-use polygon_mesh::{Face, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{Face, Mesh};
 
 /// The plate-and-gusset union of "Chain and Face Should
 /// Both work.mcx", as the kernel's own boolean left it - a 55 x 4 x 20 plate with a 5 x 5 x 20

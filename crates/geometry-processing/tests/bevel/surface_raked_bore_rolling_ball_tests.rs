@@ -7,8 +7,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
-use vector_math::Vector3;
+use solidmesh::topology::{FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
 
 use crate::bore_test_meshes::{
     create_plate_with_a_round_bore, create_the_raked_fixture, raked_drill_axis, RAKED_RADIUS,

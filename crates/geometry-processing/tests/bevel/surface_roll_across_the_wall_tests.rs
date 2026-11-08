@@ -15,17 +15,17 @@ use std::sync::Arc;
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine, SurfaceStrip,
 };
-use geometry_processing::bevel::{
+use solidmesh::bevel::{
     bevel_chain_linker, bevel_edge_tool_builder, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::{Vector2, Vector3};
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::topology_test_meshes::create_arc_prism;

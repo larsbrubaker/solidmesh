@@ -1,14 +1,14 @@
 //! Rust-only checks of the bevel core's R2.P08 package: the growing runs' live seeds (in the R2.P05
 //! crease tests), and the pieces the whole-build tests reach only through the rest of the build.
 
-use polygon_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_a_mixed_corner_is_refused_off_two_plans_of_one_sense() {
-    use geometry_processing::bevel::surface::SurfaceMixedCorner;
-    use geometry_processing::bevel::BevelAdvisoryCode;
+    use solidmesh::bevel::surface::SurfaceMixedCorner;
+    use solidmesh::bevel::BevelAdvisoryCode;
 
     // Two convex plans: no concave bead to roll round.
     let convex = crate::rust_only_bevel_r1p06_tests::square_edge_plan(1.0, true);
@@ -33,11 +33,11 @@ fn rust_only_a_mixed_corner_is_refused_off_two_plans_of_one_sense() {
 
 #[test]
 fn rust_only_a_side_that_is_not_an_offset_or_reaches_nowhere_is_not_walked() {
-    use geometry_processing::bevel::sections::bevel_section::{BevelSection, SectionSide};
-    use geometry_processing::bevel::sections::section_builder_walked_side::try_lay_one_side;
-    use geometry_processing::bevel::sections::section_fan_walk::EdgeAtPair;
-    use geometry_processing::bevel::sections::SectionPool;
-    use geometry_processing::topology::{ChainEdge, FeatureEdge};
+    use solidmesh::bevel::sections::bevel_section::{BevelSection, SectionSide};
+    use solidmesh::bevel::sections::section_builder_walked_side::try_lay_one_side;
+    use solidmesh::bevel::sections::section_fan_walk::EdgeAtPair;
+    use solidmesh::bevel::sections::SectionPool;
+    use solidmesh::topology::{ChainEdge, FeatureEdge};
 
     let cube = create_cube(2.0, 2.0, 2.0);
     let graph = cube.get_mesh_edge_graph();

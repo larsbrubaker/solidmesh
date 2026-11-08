@@ -2,11 +2,11 @@
 //! stands in a triangle, the longest edge, the end-face bend, the needle bookkeeping and the open
 //! fill's small tests. The whole-build tests also cover them.
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     corner_fill, end_face_flow, open_gap_fill, refinement_splits, triangle_edges, LevelLineMesh,
     LevelLineTriangle, PointPlace,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -101,7 +101,7 @@ fn rust_only_small_fill_tests_read_their_pinned_text() {
 
 #[test]
 fn rust_only_bridges_are_the_edges_no_cycle_holds() {
-    use geometry_processing::bevel::level_line::pair_corner_end_face_field::bridges;
+    use solidmesh::bevel::level_line::pair_corner_end_face_field::bridges;
     use std::collections::{HashMap, HashSet};
     // A triangle 0-1-2 with a tail 2-3-4: the tail's two edges are the bridges.
     let mut neighbours: HashMap<i32, Vec<i32>> = HashMap::new();
@@ -114,7 +114,7 @@ fn rust_only_bridges_are_the_edges_no_cycle_holds() {
 
 #[test]
 fn rust_only_pick_corners_are_where_chains_turn_into_each_other() {
-    use geometry_processing::bevel::level_line::pick_validation::corners_of;
+    use solidmesh::bevel::level_line::pick_validation::corners_of;
     // Two open chains meeting end to end at 2, turning (three distinct edges at 2 with a third
     // chain ending there too).
     let chains = vec![vec![0, 1, 2], vec![2, 3], vec![2, 4]];
@@ -131,7 +131,7 @@ fn rust_only_pick_corners_are_where_chains_turn_into_each_other() {
 
 #[test]
 fn rust_only_a_walk_runs_along_a_split_edge() {
-    use geometry_processing::bevel::level_line::band_gap_in_turn::walk_along;
+    use solidmesh::bevel::level_line::band_gap_in_turn::walk_along;
     use std::collections::HashMap;
     let positions = [
         v(0.0, 0.0, 0.0),

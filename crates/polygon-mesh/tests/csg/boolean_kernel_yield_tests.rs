@@ -12,12 +12,12 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-use polygon_mesh::csg::boolean_processing::{do_array, do_array_async};
-use polygon_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::progress::{ProgressReporter, YIELD_THROTTLE_MS};
-use vector_math::Matrix4X4;
+use solidmesh_math::progress::{ProgressReporter, YIELD_THROTTLE_MS};
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::csg::boolean_processing::{do_array, do_array_async};
+use solidmesh_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// Runs `future` to completion on this thread.
 pub(crate) fn block_on<F: Future>(future: F) -> F::Output {

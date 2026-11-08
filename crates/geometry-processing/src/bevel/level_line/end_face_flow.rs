@@ -5,7 +5,7 @@
 //! ([`flat_patch`]), and the flow over a narrow end face ([`flow_over_a_narrow_end_face`]) and
 //! the round-run reading ([`rounds_from_the_end`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
 use std::cell::RefCell;

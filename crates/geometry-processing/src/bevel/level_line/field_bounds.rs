@@ -12,7 +12,7 @@
 //! and the bound is consulted only to prove it cannot, so the questions skipped are exactly the ones
 //! whose answers could not have changed anything and the refinement's result is identical.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 /// The greatest value the field can take anywhere on an edge of length L whose ends read va, vb.
 /// From either end the value rises at most one per unit of length, so along the edge it lies under

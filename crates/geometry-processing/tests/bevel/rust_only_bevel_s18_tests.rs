@@ -2,8 +2,8 @@
 //! sharing edges linked as one network (`surface_shared_edge_network`) and the seam re-read's
 //! candidates (`surface_seam_re_read`).
 
-use geometry_processing::bevel::bevel_chain_linker::link_resolution;
-use geometry_processing::bevel::surface::{surface_seam_re_read, surface_shared_edge_network};
+use solidmesh::bevel::bevel_chain_linker::link_resolution;
+use solidmesh::bevel::surface::{surface_seam_re_read, surface_shared_edge_network};
 
 use crate::tapered_barrel_test_meshes;
 

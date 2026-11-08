@@ -11,16 +11,16 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_junction_build;
-use geometry_processing::bevel::sections::section_loft;
-use geometry_processing::bevel::sections::section_smooth_seam::SectionSmoothSeam;
-use geometry_processing::bevel::sections::section_smooth_side::SmoothSideCut;
-use geometry_processing::bevel::sections::section_split_blend::SplitPlacement;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_junction_build;
+use solidmesh::bevel::sections::section_loft;
+use solidmesh::bevel::sections::section_smooth_seam::SectionSmoothSeam;
+use solidmesh::bevel::sections::section_smooth_side::SmoothSideCut;
+use solidmesh::bevel::sections::section_split_blend::SplitPlacement;
+use solidmesh::bevel::sections::{
     BevelSection, JunctionSection, SectionAbsorbedSplits, SectionPool, SectionRun, SectionSide,
 };
-use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
-use vector_math::Vector3;
+use solidmesh::topology::{ChainEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
 
 use crate::inner_face_test_mesh;
 

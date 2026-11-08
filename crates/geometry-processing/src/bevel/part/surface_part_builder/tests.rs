@@ -9,9 +9,9 @@ use std::sync::Arc;
 use crate::bevel::{BevelAdvisoryArg, BevelAdvisoryCode, BevelLoopFailure, BevelRebuildAdvisories};
 use crate::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdge, FeatureEdgeSet};
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
-use vector_math::Color;
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::Color;
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 use super::{BevelSurfacePartBuilder, RimLoop};
 

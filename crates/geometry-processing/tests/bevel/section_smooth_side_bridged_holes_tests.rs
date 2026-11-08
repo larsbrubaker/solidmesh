@@ -5,13 +5,13 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_side::{
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_side::{
     try_cut_the_smooth_side, SmoothSideCut, SmoothSideRefusal,
 };
-use geometry_processing::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
-use geometry_processing::bevel::sections::{SectionPool, SectionSide};
+use solidmesh::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
+use solidmesh::bevel::sections::{SectionPool, SectionSide};
 
 use crate::two_mouths_in_one_facet_mesh as fixture;
 

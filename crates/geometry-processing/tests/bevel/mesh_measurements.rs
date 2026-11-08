@@ -7,9 +7,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::topology::FeatureEdge;
-use polygon_mesh::Mesh;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 /// The signed volume of a closed mesh from the divergence theorem. Positive
 /// means the faces face out; zero or negative means the mesh is inside out or folds through itself.

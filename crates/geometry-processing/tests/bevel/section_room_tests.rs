@@ -2,12 +2,12 @@
 //! sections construction can build on a closed chain, read off the part without building
 //! anything, and TIGHT: the build succeeds just under the number and is refused just over it.
 
-use geometry_processing::bevel::sections::{section_assembly, section_room};
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::sections::{section_assembly, section_room};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::bore_test_meshes::{
     create_plate_with_a_raked_bore, create_plate_with_a_round_bore, RAKED_RAKE_DEGREES, RAKED_SIDES,

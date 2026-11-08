@@ -3,7 +3,7 @@
 //! it and a ray's reading, and the unclipped readings built on it (the unclipped parameter and
 //! value, and the value in an end plane). The type lives in `chain_field.rs`.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::segment_box_tree;
 use super::{ChainField, ChainFieldExtension, LevelLineWork, WorkError};

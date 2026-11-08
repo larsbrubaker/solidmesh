@@ -10,12 +10,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::{gap_fill, LevelLineMesh, WorkBudget};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{gap_fill, LevelLineMesh, WorkBudget};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::feature_of;
 use crate::end_face_measures::to_triangle;

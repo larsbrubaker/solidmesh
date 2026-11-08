@@ -13,7 +13,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_cut::{self, BandCutError};
 use super::band_refinement::{self, RefineError, RefineOptions};

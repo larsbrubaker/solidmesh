@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, RoomReadingKind};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, RoomReadingKind};
+use solidmesh_math::Vector3;
 
 use crate::level_line_fixture::LevelLineFixture;
 

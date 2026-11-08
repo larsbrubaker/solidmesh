@@ -7,8 +7,8 @@
 //! in GLU's emit order, corner for corner, so the meshes built from them have a stable vertex and
 //! face order.
 
+use solidmesh_math::Vector2;
 use tess2_rust::{ElementType, Tessellator, WindingRule};
-use vector_math::Vector2;
 
 /// One triangle corner: an index into [`CachedTesselator::vertices_cache`] and whether the edge
 /// from this corner to the next one in the triangle is on the outline.

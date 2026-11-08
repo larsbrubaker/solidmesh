@@ -26,7 +26,7 @@ use super::{
     ChainDistanceField, ChainField, ChainFieldMeshPiece, FieldCounters, FieldMaximum, FieldMinimum,
     LevelLineWork, WorkError,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The held answer of a least search: (value, point on the piece, chain segment).
 type Best = (f64, Vector3, i32);
@@ -231,9 +231,9 @@ impl ChainField {
             }
 
             let mut lo =
-                vector_math::ieee_math::max_f64(0.0, (scan_best - 1) as f64 / scan_steps as f64);
+                solidmesh_math::ieee_math::max_f64(0.0, (scan_best - 1) as f64 / scan_steps as f64);
             let mut hi =
-                vector_math::ieee_math::min_f64(1.0, (scan_best + 1) as f64 / scan_steps as f64);
+                solidmesh_math::ieee_math::min_f64(1.0, (scan_best + 1) as f64 / scan_steps as f64);
             for _ in 0..Self::TERNARY_STEPS {
                 LevelLineWork::poll_cancel()?;
                 let (was_lo, was_hi) = (lo, hi);
@@ -429,9 +429,9 @@ impl ChainField {
                         [a, b, c]
                             .iter()
                             .map(|&corner| (corner - clip.vertex).dot(clip.normal))
-                            .fold(f64::INFINITY, vector_math::ieee_math::min_f64)
+                            .fold(f64::INFINITY, solidmesh_math::ieee_math::min_f64)
                     })
-                    .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);
+                    .fold(f64::NEG_INFINITY, solidmesh_math::ieee_math::max_f64);
                 if floor > threshold {
                     return Ok(false);
                 }
@@ -482,7 +482,7 @@ impl ChainField {
         let n = self.points.len();
         let from = self.points[segment];
         let to = self.points[(segment + 1) % n];
-        let setback = vector_math::ieee_math::max_f64(
+        let setback = solidmesh_math::ieee_math::max_f64(
             self.setbacks[segment],
             self.setbacks[(segment + 1) % n],
         );

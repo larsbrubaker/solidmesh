@@ -2,7 +2,7 @@
 //! planar and faired by [`super::corner_cap_hole_fill::fill_one`] otherwise
 //! ([`end_hole_by_the_one_filler`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::corner_cap_flat_ends::closes_flat;
 use super::corner_cap_hole_fill::fill_one;

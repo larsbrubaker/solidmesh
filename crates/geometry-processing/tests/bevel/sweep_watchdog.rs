@@ -19,8 +19,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use geometry_processing::bevel::level_line::WorkBudget;
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::level_line::WorkBudget;
+use solidmesh_mesh::CancelToken;
 
 /// A build thread wants a real stack: the kernel's flood and refinement recurse nowhere near the
 /// default, but a wedged one can, and a stack overflow takes the whole host down with it.

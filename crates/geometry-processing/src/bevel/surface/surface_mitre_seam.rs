@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceEdgePlan, SurfaceLine};
 use crate::topology::FaceGroup;
@@ -44,7 +44,7 @@ pub fn try_the_point(
     through
 }
 
-/// Whether two lines run parallel, to [`PARALLEL_WITHIN`].
+/// Whether two lines run parallel, to `PARALLEL_WITHIN`.
 pub fn they_are_parallel(mine: SurfaceLine, theirs: SurfaceLine) -> bool {
     (mine.direction.dot(theirs.direction).abs() - 1.0).abs() < PARALLEL_WITHIN
 }

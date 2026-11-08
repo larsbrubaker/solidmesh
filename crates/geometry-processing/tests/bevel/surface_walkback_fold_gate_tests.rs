@@ -5,12 +5,10 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
-    surface_face_walkback, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::topology::FaceRegionCache;
-use polygon_mesh::Mesh;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{surface_face_walkback, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::topology::FaceRegionCache;
+use solidmesh_mesh::Mesh;
 
 use crate::lobed_prism_meshes;
 

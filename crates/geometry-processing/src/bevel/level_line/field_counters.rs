@@ -422,7 +422,7 @@ impl FieldCounters {
         Self::with(|t| {
             format!(
                 "dequeues {}, deepest split {}\n{}",
-                vector_math::number_format::format_i64_number(t.dequeues),
+                solidmesh_math::number_format::format_i64_number(t.dequeues),
                 t.deepest_split,
                 t.progress.join("\n")
             )
@@ -500,7 +500,7 @@ pub fn reach(row: &mut Vec<i64>) -> &mut Vec<i64> {
 
 /// .NET `N0`: a count grouped in threes.
 fn n0(value: i64) -> String {
-    vector_math::number_format::format_i64_number(value)
+    solidmesh_math::number_format::format_i64_number(value)
 }
 
 impl FieldCounters {
@@ -833,8 +833,12 @@ impl FieldCounters {
             // Two introsorts: by line descending (ordinal), then by count descending. The sort is
             // unstable, so ties among equal counts fall where `introspective_sort` puts them -
             // the same place on every run.
-            vector_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| b.1.cmp(&a.1));
-            vector_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| b.0.cmp(&a.0));
+            solidmesh_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| {
+                b.1.cmp(&a.1)
+            });
+            solidmesh_math::fixed_tie_sort::introspective_sort(&mut lines, &mut |a, b| {
+                b.0.cmp(&a.0)
+            });
             lines
                 .into_iter()
                 .map(|(_, line)| line)

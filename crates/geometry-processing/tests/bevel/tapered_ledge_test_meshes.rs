@@ -6,8 +6,8 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// How tall the block stands above the plate's top.
 pub const BLOCK_HEIGHT: f64 = 8.0;

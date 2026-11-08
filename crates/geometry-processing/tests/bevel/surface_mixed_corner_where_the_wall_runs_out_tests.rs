@@ -11,16 +11,16 @@
 //! `surface_mixed_corner_section_stands_on_the_plane_tests.rs` shares. The parameter rows are a
 //! loop.
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_wall_ends, SurfaceBandEnd,
     SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerWall,
 };
-use geometry_processing::topology::FaceRegionCache;
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh::topology::FaceRegionCache;
+use solidmesh_math::math_helper::radians_to_degrees;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 use std::rc::Rc;
 use std::sync::Arc;
-use vector_math::math_helper::radians_to_degrees;
-use vector_math::Vector3;
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::{shell_count, signed_volume};

@@ -13,16 +13,16 @@
 use std::collections::HashMap;
 
 use clipper2_rust::{FillRule, Path64, Paths64, Point64};
-use clipper_library::{ClipperError, PolygonsExtensions};
+use solidmesh_clipper::{ClipperError, PolygonsExtensions};
 
 /// A ring point as a map key.
 type Key = (i64, i64);
 
 /// The loops a ring can be built on: every point of the ring that lies on another edge added to
-/// that edge (see [`with_touch_points`]), the stretches two loops run along in opposite directions
+/// that edge (see `with_touch_points`), the stretches two loops run along in opposite directions
 /// removed and the rest chained so each pass through a point bounds one filled wedge (see
-/// [`chained_by_wedges`]), then the points that add no area dropped (see
-/// [`without_straight_points`]).
+/// `chained_by_wedges`), then the points that add no area dropped (see
+/// `without_straight_points`).
 pub fn simple_loops(loops: Paths64) -> Paths64 {
     without_straight_points(chained_by_wedges(with_touch_points(loops)))
 }
@@ -38,7 +38,7 @@ const CROSSING_ROUNDS: usize = 8;
 /// them - so the loops are put through clipper's union again, filling what winds positively (an
 /// outline's inside, not its holes, not a lobe turned inside out), which finds the crossing and
 /// cuts the loops there. That rounds a new point too, which can cross again in turn, so this
-/// repeats while any crossing is left, up to [`CROSSING_ROUNDS`] times. Loops that cross nowhere
+/// repeats while any crossing is left, up to `CROSSING_ROUNDS` times. Loops that cross nowhere
 /// come back unchanged.
 pub fn without_crossings(loops: Paths64) -> Result<Paths64, ClipperError> {
     let mut loops = loops;

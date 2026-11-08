@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::open_gap_fill_stations::on_the_edge;
 use super::{ChainField, LevelLineMesh, WorkError};

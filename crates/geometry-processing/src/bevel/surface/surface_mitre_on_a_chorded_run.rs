@@ -11,7 +11,7 @@
 //! (`SurfaceStripSeamDidNotMeet`). **So the plane divides the RUN's band as the corner divides the
 //! run**, and only where the corner stands outside the stretch.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{surface_mitre_seam, surface_plan_band_ends, SurfaceEdgePlan, SurfaceLine};
 

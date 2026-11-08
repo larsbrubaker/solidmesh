@@ -4,8 +4,8 @@
 //! straight control and on the raked bore. The bore and its walkback are
 //! `surface_raked_bore_mouth_tests`' ([`a_bores_mouth_walked_back`]).
 
-use geometry_processing::bevel::surface::{SurfaceBevelPlan, SurfaceLine, SurfaceVertexPool};
-use vector_math::{math_helper, Vector3};
+use solidmesh::bevel::surface::{SurfaceBevelPlan, SurfaceLine, SurfaceVertexPool};
+use solidmesh_math::{math_helper, Vector3};
 
 use crate::surface_raked_bore_mouth_tests::{
     a_bores_mouth_walked_back, RAKED_RADIUS, RAKE_DEGREES,

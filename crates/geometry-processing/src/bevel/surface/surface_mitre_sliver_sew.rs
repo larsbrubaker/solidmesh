@@ -7,7 +7,7 @@
 // The negated comparisons are deliberate: each is false for NaN, which is the point.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceMitreSliver, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

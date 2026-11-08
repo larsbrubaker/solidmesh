@@ -3,8 +3,8 @@
 //! of the end, and at an end without a ray, it reads exactly as before. Each test's cases run as a
 //! loop.
 
-use geometry_processing::bevel::level_line::ChainField;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::ChainField;
+use solidmesh_math::Vector3;
 
 const POINTS: [Vector3; 3] = [
     Vector3::new(0.0, 0.0, 0.0),

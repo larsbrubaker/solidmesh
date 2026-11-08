@@ -12,13 +12,13 @@ use std::cell::RefCell;
 use std::f64::consts::{FRAC_PI_2, TAU};
 use std::sync::Arc;
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::processors::outline_to_mesh::{extrude_contours, revolve_contours};
-use polygon_mesh::processors::stl_processing;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh::math::{Matrix4X4, Vector2, Vector3};
+use solidmesh::mesh::csg::boolean_processing::do_array;
+use solidmesh::mesh::csg::{BooleanOptions, CsgModes};
+use solidmesh::mesh::processors::outline_to_mesh::{extrude_contours, revolve_contours};
+use solidmesh::mesh::processors::stl_processing;
+use solidmesh::mesh::solids::platonic_solids::create_cube;
+use solidmesh::mesh::{CancelToken, Mesh};
 
 use crate::shapes::{cylinder, placed};
 use crate::showcase::showcase_part;

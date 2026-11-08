@@ -17,18 +17,16 @@
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_run;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_seam::side_is_smooth;
-use geometry_processing::bevel::sections::section_smooth_side::{
-    try_cut_the_smooth_side, SmoothSideCut,
-};
-use geometry_processing::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
-use geometry_processing::bevel::sections::{SectionPool, SectionRun};
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::bevel::sections::section_builder_run::try_build_run;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_seam::side_is_smooth;
+use solidmesh::bevel::sections::section_smooth_side::{try_cut_the_smooth_side, SmoothSideCut};
+use solidmesh::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
+use solidmesh::bevel::sections::{SectionPool, SectionRun};
+use solidmesh::topology::FeatureEdgeSet;
 
 use crate::inner_face_test_mesh;
 use crate::open_mouth_arc_walk::the_top_mouth_arc;
@@ -370,7 +368,7 @@ fn the_cut_holds(part: &Mesh, pool: &SectionPool, run: &SectionRun, cut: &Smooth
     );
 }
 
-fn the_features(part: &Mesh, graph: &polygon_mesh::MeshEdgeGraph) -> FeatureEdgeSet {
+fn the_features(part: &Mesh, graph: &solidmesh_mesh::MeshEdgeGraph) -> FeatureEdgeSet {
     FeatureEdgeSet::create_with_graph(part, graph, inner_face_test_mesh::BEND_THRESHOLD_DEGREES)
 }
 
@@ -385,7 +383,7 @@ fn the_feature_edges(features: &FeatureEdgeSet) -> HashSet<i32> {
 /// The open run along the top mouth arc at `radius`, as every test here builds it.
 fn the_run(
     part: &Mesh,
-    graph: &polygon_mesh::MeshEdgeGraph,
+    graph: &solidmesh_mesh::MeshEdgeGraph,
     features: &FeatureEdgeSet,
     pool: &mut SectionPool,
     radius: f64,

@@ -1,9 +1,9 @@
 //! Rust-only checks of the bevel core's R2.P02 package pieces no other test reaches on its own: the
 //! bounded searches over a segment and a triangle, their bound and their meter.
 
-use geometry_processing::bevel::level_line::bounded_maximum;
-use geometry_processing::bevel::level_line::{FieldCounters, FieldSample, WorkError};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::bounded_maximum;
+use solidmesh::bevel::level_line::{FieldCounters, FieldSample, WorkError};
+use solidmesh_math::Vector3;
 
 /// The distance to the origin less 1: 1-Lipschitz, least at the origin.
 fn ball(point: Vector3) -> Result<FieldSample, WorkError> {

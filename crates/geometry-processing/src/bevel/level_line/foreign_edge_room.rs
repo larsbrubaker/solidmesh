@@ -9,7 +9,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::{end_face_sense, triangle_edges};

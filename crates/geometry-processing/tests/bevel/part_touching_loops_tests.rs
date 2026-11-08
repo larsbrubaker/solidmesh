@@ -4,7 +4,7 @@
 //!
 //! The answer is a set, so `equivalent` sorts both sides before comparing.
 
-use geometry_processing::bevel::part::touching_loops::the_ones_to_leave_alone;
+use solidmesh::bevel::part::touching_loops::the_ones_to_leave_alone;
 
 type Loop = Vec<(i32, i32)>;
 

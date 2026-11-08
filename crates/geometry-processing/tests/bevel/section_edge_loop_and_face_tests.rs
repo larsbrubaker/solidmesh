@@ -10,14 +10,14 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::{
     section_builder_run, section_corner, section_routing, SectionPool, SectionSide,
 };
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceBevelPlan};
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{BevelEdgeGroup, EdgeConvexity, FeatureEdge};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{BevelEdgeGroup, EdgeConvexity, FeatureEdge};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::edge_loop_and_face_test_mesh as fixture;
 use crate::mesh_measurements::{shell_count, signed_volume};

@@ -4,10 +4,8 @@
 //! reaches 9.719 mm across a cap that runs 8 mm. The question is whether the run-out's touch row,
 //! stopped where the face stops it, gets past the band's FOOT LINE.
 
-use geometry_processing::bevel::surface::{
-    SurfaceRoomCrossing, SurfaceRoomCut, SurfaceRoomFootprint,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceRoomCrossing, SurfaceRoomCut, SurfaceRoomFootprint};
+use solidmesh_math::Vector3;
 
 /// The fixture's own radius, which every reach below is drawn at.
 const RADIUS: f64 = 3.756;

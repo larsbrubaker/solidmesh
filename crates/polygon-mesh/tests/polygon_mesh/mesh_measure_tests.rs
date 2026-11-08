@@ -1,7 +1,7 @@
 //! Mesh measurements: volume and surface area.
 
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::solids::platonic_solids;
 
 const EPSILON: f64 = 1e-9;
 

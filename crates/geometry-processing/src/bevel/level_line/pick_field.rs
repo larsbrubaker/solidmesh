@@ -13,7 +13,7 @@
 use std::cell::OnceCell;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::bounded_maximum;
 use super::stopwatch;
@@ -81,8 +81,8 @@ impl PickField {
     /// that might is enough to make the caller pay for the exact search.
     pub fn nothing_reaches_below(
         &self,
-        min: vector_math::Vector3,
-        max: vector_math::Vector3,
+        min: solidmesh_math::Vector3,
+        max: solidmesh_math::Vector3,
         margin: f64,
     ) -> bool {
         self.members
@@ -195,7 +195,7 @@ impl PickField {
 
         Some(Rc::clone(self.end_plane_reader.get_or_init(|| {
             let chains = self.chains.clone();
-            Rc::new(move |k: i32, point: vector_math::Vector3| {
+            Rc::new(move |k: i32, point: solidmesh_math::Vector3| {
                 chains[k as usize].end_plane_at(point)
             })
         })))

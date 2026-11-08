@@ -6,7 +6,7 @@
 //! and its ends across a corner with them (`surface_interrupted_crease`,
 //! `surface_end_across_the_corner`).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::BevelSweptChain;
 use crate::topology::FeatureEdgeSet;
@@ -148,7 +148,7 @@ pub fn both_own_faces_carry_on(
 }
 
 /// Whether another incident feature edge runs on along the run's line (either way, as a line),
-/// within [`CREASE_CARRIES_ON_DEGREES`].
+/// within `CREASE_CARRIES_ON_DEGREES`.
 pub fn crease_carries_on(
     incident: &[i32],
     features: &FeatureEdgeSet,

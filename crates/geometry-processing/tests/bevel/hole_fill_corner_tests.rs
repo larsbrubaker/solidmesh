@@ -9,16 +9,16 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::work_budget::WatchHoleFills;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
+use solidmesh::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::work_budget::WatchHoleFills;
+use solidmesh::bevel::level_line::{
     band_gap_reading, corner_fill, gap_fill, BandGapResult, BandProfile, GapFillRefusal,
     GapFillResult, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_fixture::LevelLineFixture;
@@ -439,7 +439,7 @@ fn meets_the_requirement(
 
 /// The smallest area of the kept triangles.
 pub fn smallest_kept_area(
-    mesh: &geometry_processing::bevel::level_line::LevelLineMesh,
+    mesh: &solidmesh::bevel::level_line::LevelLineMesh,
     kept: &[(i32, i32, i32)],
 ) -> f64 {
     kept.iter()

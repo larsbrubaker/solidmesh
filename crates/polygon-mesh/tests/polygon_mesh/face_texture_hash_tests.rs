@@ -6,9 +6,9 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{FaceTextureData, Mesh};
-use vector_math::Vector2Float;
+use solidmesh_math::Vector2Float;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{FaceTextureData, Mesh};
 
 use crate::test_picture::TestPicture;
 

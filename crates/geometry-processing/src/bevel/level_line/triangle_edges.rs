@@ -3,14 +3,14 @@
 //! mesh through, and the one place the (low, high) edge key is made.
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::fast_hash::FastBuildHasher;
 use super::LevelLineTriangle;
 
 /// Per edge key (low, high), the triangles standing on it, in triangle order; the map keeps the
 /// order the edges were first met in, so the build never depends on hashing, hashed by the cheap
-/// [`FastBuildHasher`] since the order never depends on the hash.
+/// `FastBuildHasher` since the order never depends on the hash.
 pub type StandingMap = IndexMap<(i32, i32), Vec<i32>, FastBuildHasher>;
 
 /// Which triangles of `indices` stand on each edge.

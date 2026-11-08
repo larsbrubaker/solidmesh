@@ -4,9 +4,9 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{MaterialRef, SolidMaterial, Traceable, TriangleShape};
-use vector_math::ColorF;
-use vector_math::{IntersectionType, Ray, Vector3};
+use solidmesh_math::ColorF;
+use solidmesh_math::{IntersectionType, Ray, Vector3};
+use solidmesh_mesh::ray_tracer::{MaterialRef, SolidMaterial, Traceable, TriangleShape};
 
 #[test]
 fn triangle_major_axis() {
@@ -36,7 +36,7 @@ fn triangle_major_axis() {
 }
 
 /// Whether `info`'s closest hit is exactly `shape`, the same object and not an equal one.
-fn hit_is(info: &polygon_mesh::ray_tracer::IntersectInfo<'_>, shape: &TriangleShape) -> bool {
+fn hit_is(info: &solidmesh_mesh::ray_tracer::IntersectInfo<'_>, shape: &TriangleShape) -> bool {
     info.closest_hit_as::<TriangleShape>()
         .is_some_and(|hit| std::ptr::eq(hit, shape))
 }

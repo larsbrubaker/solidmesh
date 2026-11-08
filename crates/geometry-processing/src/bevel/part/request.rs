@@ -5,8 +5,8 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::Mesh;
-use vector_math::{Color, Matrix4X4};
+use solidmesh_math::{Color, Matrix4X4};
+use solidmesh_mesh::Mesh;
 
 use super::surface_part_builder::{BevelSurfacePartBuilder, SurfacePartBuildError};
 use super::{BevelPickMemo, BevelRouting};

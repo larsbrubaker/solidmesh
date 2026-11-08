@@ -13,16 +13,16 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_seam_ring;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_seam_ring;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_corner_mitre, surface_corner_patch_rows, surface_mesh_closure,
     SurfaceBevelPlan, SurfaceBuildFailure, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode, BevelSweptChain};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh::bevel::{bevel_chain_linker, BevelAdvisoryCode, BevelSweptChain};
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_test_chains::join_and_open;

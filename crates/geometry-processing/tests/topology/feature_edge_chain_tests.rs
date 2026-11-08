@@ -1,12 +1,10 @@
 //! Tangent-chain propagation, extending one picked feature edge into the run of edges a CAD package
 //! would treat as one selection.
 
-use geometry_processing::topology::{
-    ChainStopReason, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet,
-};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector2;
+use solidmesh::topology::{ChainStopReason, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::Vector2;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes;
 

@@ -10,41 +10,41 @@ use std::rc::Rc;
 
 use indexmap::IndexMap;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band_of;
-use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
-use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
+use solidmesh::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band_of;
+use solidmesh::bevel::surface::surface_mitre_joint_step::SideSeams;
+use solidmesh::bevel::surface::surface_mitre_on_a_chorded_run::{
     try_the_point, where_the_neighbours_plane_crosses,
 };
-use geometry_processing::bevel::surface::surface_mixed_corner_bites::under_the_cap;
-use geometry_processing::bevel::surface::surface_mixed_corner_hands_over_at_the_mitre as hands_over;
-use geometry_processing::bevel::surface::surface_mixed_corner_patch::{try_cut_the_ring, try_ring};
-use geometry_processing::bevel::surface::surface_mixed_corner_run_out as run_out;
-use geometry_processing::bevel::surface::surface_mixed_corner_wall_ends as wall_ends;
-use geometry_processing::bevel::surface::surface_mixed_corner_which_canal::{
+use solidmesh::bevel::surface::surface_mixed_corner_bites::under_the_cap;
+use solidmesh::bevel::surface::surface_mixed_corner_hands_over_at_the_mitre as hands_over;
+use solidmesh::bevel::surface::surface_mixed_corner_patch::{try_cut_the_ring, try_ring};
+use solidmesh::bevel::surface::surface_mixed_corner_run_out as run_out;
+use solidmesh::bevel::surface::surface_mixed_corner_wall_ends as wall_ends;
+use solidmesh::bevel::surface::surface_mixed_corner_which_canal::{
     the_corner_takes_the_dual, try_how_far_the_duals_crease_runs,
 };
-use geometry_processing::bevel::surface::surface_plan_band_ends::{
+use solidmesh::bevel::surface::surface_plan_band_ends::{
     band_end_where_the_chain_arrives, band_end_where_the_chain_leaves,
 };
-use geometry_processing::bevel::surface::surface_run_out_column_ends as column_ends;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::surface_run_out_column_ends as column_ends;
+use solidmesh::bevel::surface::{
     surface_junction_band_ends, SurfaceBandEnd, SurfaceMixedCornerFaces, SurfaceMixedCornerWall,
     SurfaceRunOutCarry, SurfaceVertexPool,
 };
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceEdgeRoles, SurfacePlanRecipe,
 };
-use geometry_processing::bevel::surface::{SurfaceCrossingAtTheMitre, SurfaceStrip};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{SurfaceCrossingAtTheMitre, SurfaceStrip};
+use solidmesh::bevel::surface::{
     SurfaceRunOutColumnWalk, SurfaceRunOutColumnWindow, SurfaceRunOutMeetsTheBand,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
-use geometry_processing::topology::{ChainEdge, EdgeConvexity, FeatureEdge};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelSweptChain};
+use solidmesh::topology::{ChainEdge, EdgeConvexity, FeatureEdge};
 
 use crate::rust_only_bevel_r1p06_tests::square_edge_plan;
-use geometry_processing::bevel::surface::{SurfaceLine, SurfaceMixedCorner};
+use solidmesh::bevel::surface::{SurfaceLine, SurfaceMixedCorner};
 
 /// The R1.P12 mixed corner with its bead's axis (its centre line) stood square to the cap: +z
 /// through the origin, so nothing about the corner leans.

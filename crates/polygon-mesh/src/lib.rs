@@ -1,5 +1,59 @@
-//! polygon-mesh (package `solidmesh-mesh`): solidmesh's triangle meshes and the geometry built
-//! on them, which MatterCAD's objects are made of.
+//! **solidmesh-mesh**: triangle meshes for solid modeling, in pure Rust: booleans that keep
+//! closed solids closed, repair, signed distance fields and implicit meshing, convex hulls and
+//! Minkowski sums, extrusion and revolution of 2D outlines, slicing, ray tracing and STL. It
+//! builds for `wasm32-unknown-unknown`, contains no C or C++, and gives the same mesh on every
+//! platform.
+//!
+//! The mesh is [`Mesh`]: `f32` vertices and indexed triangle [`Face`]s, with volume, area, bounds
+//! and welding as methods. Where to start:
+//!
+//! - **Booleans**: [`csg::csg_operations`] (`union`, `subtract`, `intersect` of two meshes) and
+//!   [`csg::boolean_processing::do_array`] (many operands, each with its own matrix), on
+//!   [manifold-rust](https://docs.rs/manifold-rust);
+//! - **Outlines**: [`processors::outline_to_mesh`] extrudes (optionally with bevelled edges) or
+//!   revolves 2D contours into closed solids;
+//! - **Solids**: [`solids::platonic_solids`] and [`solids::RoundedCornerBox`];
+//! - **Implicit surfaces**: [`sdf`] (marching cubes over a sampled field) and [`dual_contouring`];
+//! - **Minkowski sums and hulls**: [`csg::minkowski_morph`], [`processors::mesh_convex_hull`];
+//! - **Repair**: [`csg::mesh_repair_rust`], and [`AdvancedRepairOptions`] for the full repair;
+//! - **Files**: [`processors::stl_processing`] reads STL and [`processors::stl_writer`] writes it.
+//!
+//! Long operations take a [`CancelToken`]; matrices are `solidmesh-math`'s row-major
+//! [`Matrix4X4`](solidmesh_math::Matrix4X4) with row vectors (`p * M`).
+//!
+//! ```
+//! use solidmesh_mesh::csg::csg_operations::subtract;
+//! use solidmesh_mesh::processors::outline_to_mesh::extrude_contours;
+//! use solidmesh_mesh::solids::platonic_solids::create_cube;
+//! use solidmesh_mesh::CancelToken;
+//! use solidmesh_math::Vector2;
+//!
+//! // A 20 mm cube with a 10 mm cube cut out of its middle: a closed hollow solid.
+//! let hollow = subtract(
+//!     &create_cube(20.0, 20.0, 20.0),
+//!     &create_cube(10.0, 10.0, 10.0),
+//!     &CancelToken::new(),
+//! )?;
+//! assert!((hollow.get_volume() - 7000.0).abs() < 1e-6);
+//!
+//! // A 10 by 5 rectangle extruded 2 mm tall.
+//! let rectangle = vec![
+//!     Vector2::new(0.0, 0.0),
+//!     Vector2::new(10.0, 0.0),
+//!     Vector2::new(10.0, 5.0),
+//!     Vector2::new(0.0, 5.0),
+//! ];
+//! let plate = extrude_contours(&[rectangle], 2.0)?;
+//! assert!((plate.get_volume() - 100.0).abs() < 1e-6);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! solidmesh-mesh is one of four crates: [solidmesh-math](https://docs.rs/solidmesh-math)
+//! (vectors, matrices, bounds), [solidmesh-clipper](https://docs.rs/solidmesh-clipper) (integer
+//! polygon clipping), this one and [solidmesh](https://docs.rs/solidmesh) (fillets and chamfers),
+//! which re-exports the other three; depend on `solidmesh` alone to get them all.
+//!
+//! # How the crate is laid out
 //!
 //! The Mesh core: [`Mesh`] (f32 vertices, indexed [`Face`]s with normals; welding,
 //! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`], also built in
@@ -11,7 +65,7 @@
 //! Mesh editing: vertex merging over a vertex BVH (`mesh_editing`), cutting faces and
 //! meshes by planes (`face_split`, `mesh_editing`), T-junction repair (`t_junctions`) and the
 //! face BSP tree (`processors::face_bsp_tree`), slicing a mesh into clipper2 integer polygons
-//! (`csg::slice_layer`, on `clipper_library`) and walling loops back up (`csg::path_stitcher`).
+//! (`csg::slice_layer`, on `solidmesh_clipper`) and walling loops back up (`csg::path_stitcher`).
 //!
 //! The ray tracer (`ray_tracer`): traceables, hits, the BVH and its default builder,
 //! the shapes MatterCAD picks with, materials, solid box/sphere shapes and view-space CSG.
@@ -52,8 +106,8 @@ pub mod ray_tracer;
 pub mod sdf;
 pub mod solids;
 mod t_junctions;
-pub mod transformed_aabb_cache;
-pub mod vector3_list;
+mod transformed_aabb_cache;
+pub(crate) mod vector3_list;
 pub mod vertex_sorters;
 
 pub use cancel::{CancelToken, Cancelled};

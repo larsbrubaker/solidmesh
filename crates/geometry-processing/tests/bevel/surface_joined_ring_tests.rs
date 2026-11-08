@@ -11,12 +11,12 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{surface_bevel_builder, SurfaceBevelPlan};
-use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_bevel_builder, SurfaceBevelPlan};
+use solidmesh::bevel::{bevel_chain_linker, BevelSweptChain};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::signed_volume;
 use crate::surface_chain_opens_at_the_junction_tests::edge_between;

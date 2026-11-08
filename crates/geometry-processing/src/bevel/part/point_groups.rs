@@ -8,8 +8,8 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Color, Vector3};
+use solidmesh_math::{Color, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::answer_mesh::the_mesh_of;
 use super::prologue::build_edges;

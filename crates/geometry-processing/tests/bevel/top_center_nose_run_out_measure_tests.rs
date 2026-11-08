@@ -13,12 +13,10 @@ use std::collections::{HashSet, VecDeque};
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
-use geometry_processing::bevel::level_line::{
-    band_side_groups, chain_on_the_mesh, gap_fill, triangle_edges,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
+use solidmesh::bevel::level_line::{band_side_groups, chain_on_the_mesh, gap_fill, triangle_edges};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
 use crate::fillet_thin_front_fin::profile_of;

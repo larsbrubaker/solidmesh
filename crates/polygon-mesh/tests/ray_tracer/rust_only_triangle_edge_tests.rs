@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{MinimalTriangle, Traceable, TriangleShape};
-use vector_math::{Ray, Vector3, Vector3Float};
+use solidmesh_math::{Ray, Vector3, Vector3Float};
+use solidmesh_mesh::ray_tracer::{MinimalTriangle, Traceable, TriangleShape};
 
 /// The six face directions: the normal axis and its sign.
 const FACINGS: [(usize, f64); 6] = [

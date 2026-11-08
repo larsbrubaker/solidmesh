@@ -3,14 +3,14 @@
 //! box.
 
 use clipper2_rust::Point64;
-use clipper_library::{create_from_string, ClipperError, Intersection, PolygonExtensions};
-use polygon_mesh::csg::{path_stitcher, slice_layer};
-use polygon_mesh::dual_contouring::{build_octree, generate_mesh_from_octree, Cylinder, Sdf};
-use polygon_mesh::processors::{face_bsp_tree, stl_processing};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::math_helper::TAU;
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector2, Vector3, Vector3Float};
+use solidmesh_clipper::{create_from_string, ClipperError, Intersection, PolygonExtensions};
+use solidmesh_math::math_helper::TAU;
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::csg::{path_stitcher, slice_layer};
+use solidmesh_mesh::dual_contouring::{build_octree, generate_mesh_from_octree, Cylinder, Sdf};
+use solidmesh_mesh::processors::{face_bsp_tree, stl_processing};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 #[test]
 fn sdf_density_functions() {
@@ -446,7 +446,7 @@ fn create_dual_contouring_cube() {
     for size in [1.0, 15.0, 200.0] {
         for iterations in [2, 3, 4, 5, 6, 7] {
             // Apply dual contouring to a box shape and validate that the generated mesh is a cube.
-            let shape = polygon_mesh::dual_contouring::Box::new(Vector3::new(size, size, size));
+            let shape = solidmesh_mesh::dual_contouring::Box::new(Vector3::new(size, size, size));
 
             let mut bounds = shape.bounds();
             bounds.expand(0.1);

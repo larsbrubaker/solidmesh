@@ -5,9 +5,9 @@
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use polygon_mesh::Mesh;
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::Vector2;
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::Vector2;
+use solidmesh_mesh::Mesh;
 
 pub const RADIUS: f64 = 10.0;
 pub const SIDES: i32 = 40;

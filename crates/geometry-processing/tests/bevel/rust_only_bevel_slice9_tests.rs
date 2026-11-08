@@ -6,18 +6,16 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::surface_band_runs_off_the_face_beyond::{
-    self as run_off, BandSpan,
-};
-use geometry_processing::bevel::{
+use solidmesh::bevel::surface::surface_band_runs_off_the_face_beyond::{self as run_off, BandSpan};
+use solidmesh::bevel::{
     bevel_group_failures, BevelAdvisory, BevelAdvisoryCode, BevelGroupResult, BevelLoopFailure,
     BevelResultGroup,
 };
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 #[test]
 fn rust_only_a_row_says_whether_it_failed_partly_refused_or_warned() {
@@ -83,7 +81,7 @@ fn rust_only_a_chain_that_grew_past_its_pick_keeps_its_refusal() {
 fn box_top_band(
     setback: f64,
 ) -> (
-    polygon_mesh::Mesh,
+    solidmesh_mesh::Mesh,
     FaceGroup,
     BandSpan,
     HashSet<i32>,

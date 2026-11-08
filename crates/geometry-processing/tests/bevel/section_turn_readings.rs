@@ -5,11 +5,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_corner;
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::math_helper::radians_to_degrees;
+use solidmesh::bevel::sections::section_corner;
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::topology::{ChainEdge, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::math_helper::radians_to_degrees;
+use solidmesh_mesh::Mesh;
 
 /// Every vertex of the plans where the chain turns sharper than the curve
 /// tolerance, as its arriving and leaving edges.

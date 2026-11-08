@@ -4,13 +4,13 @@
 
 use indexmap::IndexSet;
 
-use geometry_processing::bevel::surface::surface_convex_bite::{
+use solidmesh::bevel::surface::surface_convex_bite::{
     try_take, with_the_vertices_standing_on_it, without_the_straight_through,
 };
-use geometry_processing::bevel::surface::SurfaceVertexPool;
-use geometry_processing::bevel::BevelAdvisoryCode;
-use polygon_mesh::solids::platonic_solids::create_cube_vector;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::SurfaceVertexPool;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube_vector;
 
 const MEASURED: f64 = 1e-6;
 

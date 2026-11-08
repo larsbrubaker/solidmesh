@@ -11,7 +11,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::band_gap_reading::{self, ReadRoomError};
 use super::band_side_tagging_ends::{self, SideReach, SideTaggingError};
@@ -120,7 +120,7 @@ pub fn read_room_of_one(
     }
 }
 
-/// What [`room_within`] reads besides the room.
+/// What `room_within` reads besides the room.
 #[derive(Debug, Clone, Copy)]
 pub struct RoomWithin {
     /// The room.
@@ -133,7 +133,7 @@ pub struct RoomWithin {
     pub set_by: RoomSource,
 }
 
-/// How [`room_within`] can leave without a room.
+/// How `room_within` can leave without a room.
 #[derive(Debug, Clone)]
 pub enum RoomWithinError {
     /// The budget ran out, or the caller cancelled.

@@ -6,10 +6,10 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector3Float};
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::{Matrix4X4, Vector3Float};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::Mesh;
 
 use crate::sweep_mesh_measures;
 

@@ -2,12 +2,12 @@
 //! the seam readings, openness, the signed volume and the inside-out test. The whole-build tests
 //! also cover them.
 
-use geometry_processing::bevel::bevel_working_mesh::{
+use solidmesh::bevel::bevel_working_mesh::{
     folded_flaps_dropped, is_inside_out, is_usable_operand, open_edge_count,
     seam_epsilon_for_positions, seam_tolerance_for, signed_volume,
 };
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 #[test]
 fn rust_only_a_cube_reads_closed_outward_and_usable() {
@@ -45,12 +45,10 @@ fn rust_only_a_folded_flap_is_dropped_in_pairs() {
 
 #[test]
 fn rust_only_sliver_readings_and_a_clean_cube_left_alone() {
-    use geometry_processing::bevel::bevel_t_vertex_slivers::{
-        dropped_from, stands_on, try_read_t_vertex,
-    };
-    use geometry_processing::bevel::bevel_thin_slivers::{collapsed_from, the_one_it_is};
-    use polygon_mesh::{Face, Mesh};
-    use vector_math::Vector3Float;
+    use solidmesh::bevel::bevel_t_vertex_slivers::{dropped_from, stands_on, try_read_t_vertex};
+    use solidmesh::bevel::bevel_thin_slivers::{collapsed_from, the_one_it_is};
+    use solidmesh_math::Vector3Float;
+    use solidmesh_mesh::{Face, Mesh};
 
     let v = |x: f64, y: f64, z: f64| Vector3::new(x, y, z);
     assert!(stands_on(

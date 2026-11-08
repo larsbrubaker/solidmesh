@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 /// Box corners bottom 0-3, top 4-7; the rib's tip T 8, base corners P 9 and Q 10, ridge top R 11.
 fn the_box() -> Vec<Vector3> {

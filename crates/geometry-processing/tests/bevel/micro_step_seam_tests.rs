@@ -3,13 +3,11 @@
 //! outside the epsilon is still a wall; and the read-drop-re-read loop ([`PickThatFits`]) honours
 //! the same epsilon.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room;
-use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::{
-    BandGapResult, BandProfile, PickThatFits, RoomReading,
-};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room;
+use solidmesh::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, PickThatFits, RoomReading};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::several_chains_fixtures;

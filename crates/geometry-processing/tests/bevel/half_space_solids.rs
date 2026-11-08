@@ -8,8 +8,8 @@
 //! intersection of half spaces, with no hull algorithm in between to have a bug of its own. Each
 //! wall's own vertices are then turned about its normal and fanned.
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::mesh_measurements::signed_volume;
 

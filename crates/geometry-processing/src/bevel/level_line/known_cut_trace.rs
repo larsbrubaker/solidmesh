@@ -12,7 +12,7 @@
 //! (`edge_root::find_over`) and such a triangle is outside (`band_cut::side_of_triangle`). The
 //! planes are read once per field ([`ChainField::known_cut_planes`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::{ChainField, LevelLineMesh, LevelLineMeshError};

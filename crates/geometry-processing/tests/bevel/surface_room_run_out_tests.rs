@@ -13,16 +13,16 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_run_out, surface_room,
     surface_room_measure, surface_room_run_out, SurfaceBevelPlan, SurfaceBuildFailure,
     SurfaceBuildOptions, SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceRoomCrossing,
     SurfaceRoomCut, SurfaceRoomFootprint, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::shell_count;

@@ -6,14 +6,14 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::run_out_field::RunOutField;
-use geometry_processing::bevel::level_line::{
+use indexmap::IndexMap;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::run_out_field::RunOutField;
+use solidmesh::bevel::level_line::{
     triangle_edges, turn_run_outs_on, BandGapResult, ChainDistanceField, CreaseRunOut, GapLoop,
     LevelLineWork, ScalarField,
 };
-use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
 use crate::level_line_fixture::LevelLineFixture;

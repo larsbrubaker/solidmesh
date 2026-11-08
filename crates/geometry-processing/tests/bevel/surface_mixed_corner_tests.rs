@@ -16,15 +16,15 @@
 
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::bevel_chain_linker::BevelSweptChain;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker::BevelSweptChain;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_mesh_closure, surface_mixed_corner_patch,
     SurfaceBevelPlan, SurfaceStrip, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache};
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_mixed_corner_fixture as fixture;

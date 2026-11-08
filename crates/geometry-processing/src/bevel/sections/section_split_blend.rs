@@ -7,8 +7,8 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use super::{BevelSection, NanSectionPoint, SectionKind, SectionPool, SectionSide};
 use crate::bevel::bevel_split_chords;
@@ -40,12 +40,12 @@ impl SplitPlacement {
 /// kernel runs on worker threads (bevel README, "Decided").
 static ABSORB_SPLIT_VERTICES: AtomicBool = AtomicBool::new(true);
 
-/// Reads [`ABSORB_SPLIT_VERTICES`].
+/// Reads `ABSORB_SPLIT_VERTICES`.
 pub fn absorb_split_vertices() -> bool {
     ABSORB_SPLIT_VERTICES.load(Ordering::Relaxed)
 }
 
-/// Sets [`ABSORB_SPLIT_VERTICES`].
+/// Sets `ABSORB_SPLIT_VERTICES`.
 pub fn set_absorb_split_vertices(absorb: bool) {
     ABSORB_SPLIT_VERTICES.store(absorb, Ordering::Relaxed);
 }

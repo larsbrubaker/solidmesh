@@ -5,10 +5,10 @@
 
 use std::sync::{Arc, Barrier, Mutex};
 
-use geometry_processing::bevel::sections::section_routing::{
+use solidmesh::bevel::sections::section_routing::{
     self, set_last_route, set_route_observed, SectionRouteRecord,
 };
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
 
 use crate::section_routing_tests::{try_bevel_the_bore_mouth, SIZE};
 use crate::surface_test_build::{pinned_to_the_legacy_construction, pinned_to_the_sections};

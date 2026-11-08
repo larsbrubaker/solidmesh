@@ -5,8 +5,8 @@
 //! edge, a refusal). The walk itself (`TryWalk`) and its face-holding readings land with later runs
 //! of this package.
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::bevel::float_grid;
 use crate::bevel::surface::SurfaceVertexPool;

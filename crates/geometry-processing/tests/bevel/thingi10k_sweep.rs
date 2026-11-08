@@ -29,7 +29,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use geometry_processing::bevel::level_line::work_budget::{DEFAULT_FLOOR, DEFAULT_PER_TRIANGLE};
+use solidmesh::bevel::level_line::work_budget::{DEFAULT_FLOOR, DEFAULT_PER_TRIANGLE};
 
 use crate::sweep_model::{sweep_model, Sinks, FRACTIONS};
 use crate::sweep_report;

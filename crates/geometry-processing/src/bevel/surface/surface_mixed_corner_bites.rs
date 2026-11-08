@@ -3,7 +3,7 @@
 //! two bites themselves: the cap face's sectors ([`try_bite_the_cap_face`], each a [`try_sector`])
 //! and the wall's strip and scallop ([`try_bite_the_wall`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{
     surface_mixed_corner_sector, SurfaceBandEnd, SurfaceMixedCorner, SurfaceMixedCornerFaces,

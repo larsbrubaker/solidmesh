@@ -4,14 +4,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_fixture::LevelLineFixture;

@@ -3,9 +3,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, WorkBudget};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{cube_solid, cylinder_solid};

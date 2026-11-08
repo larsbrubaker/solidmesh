@@ -12,12 +12,12 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceLine, SurfaceVertexPool};
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceLine, SurfaceVertexPool};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes;
 use crate::mesh_measurements::shell_count;

@@ -10,22 +10,16 @@
 
 use std::collections::HashSet;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_run;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_side::{
-    try_cut_the_smooth_side, SmoothSidePlace,
-};
-use geometry_processing::bevel::sections::section_surface_walk::{
-    SurfaceWalkCrossing, SurfaceWalkRefusal,
-};
-use geometry_processing::bevel::sections::section_surface_walk_join::{
-    try_join, try_join_counting,
-};
-use geometry_processing::bevel::sections::SectionPool;
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::bevel::sections::section_builder_run::try_build_run;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_side::{try_cut_the_smooth_side, SmoothSidePlace};
+use solidmesh::bevel::sections::section_surface_walk::{SurfaceWalkCrossing, SurfaceWalkRefusal};
+use solidmesh::bevel::sections::section_surface_walk_join::{try_join, try_join_counting};
+use solidmesh::bevel::sections::SectionPool;
+use solidmesh::topology::FeatureEdgeSet;
 
 use crate::inner_face_test_mesh;
 use crate::mesh_surface_distance;

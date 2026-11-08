@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
 
 /// A triangle list's positions and index triples.
 pub type Solid = (Vec<Vector3>, Vec<(i32, i32, i32)>);

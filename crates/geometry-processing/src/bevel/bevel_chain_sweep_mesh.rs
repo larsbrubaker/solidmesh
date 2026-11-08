@@ -1,9 +1,9 @@
 //! The per-segment record of the chain sweep ([`SweptSegment`]): one chain edge's section, frame and
 //! end slides, with its constructor and profile offset. The sections half builds them
-//! ([`super::bevel_chain_sweep_sections`]) and the rings half mitres their joints
+//! (`super::bevel_chain_sweep_sections`) and the rings half mitres their joints
 //! ([`super::bevel_chain_sweep_rings`]).
 
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
 
 /// One edge of the chain with everything the sweep needs from it - where it runs, the frame its
 /// cross section is drawn in, and how far each end of its strip is dragged by the joints at its

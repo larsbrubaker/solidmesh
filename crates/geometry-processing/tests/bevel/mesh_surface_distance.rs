@@ -6,8 +6,8 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// The distance from `point` to the nearest point of any triangle.
 pub fn from(mesh: &Mesh, point: Vector3) -> f64 {

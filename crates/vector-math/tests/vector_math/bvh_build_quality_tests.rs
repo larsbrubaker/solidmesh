@@ -2,10 +2,10 @@
 // honours the caller's median-split size at every level; the Morton builder places every box,
 // box 0 included, by its own center.
 
-use vector_math::bvh::{
+use solidmesh_math::bvh::{
     BvhBuilderLocallyOrderedClustering, BvhNode, BvhTree, BvhTreeItemData, TradeOffBvhConstructor,
 };
-use vector_math::{AxisAlignedBoundingBox, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Vector3};
 
 fn unit_box_at(x: f64, y: f64) -> AxisAlignedBoundingBox {
     AxisAlignedBoundingBox::new(Vector3::new(x, y, 0.0), Vector3::new(x + 1.0, y + 1.0, 1.0))

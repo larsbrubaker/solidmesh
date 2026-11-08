@@ -17,17 +17,17 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::surface_mitre_joint_step::SideSeams;
+use solidmesh::bevel::surface::{
     surface_face_walkback, surface_mesh_closure, SurfaceEdgePlan, SurfaceStandingFeatureWithheld,
     SurfaceStandingFeatureWithheldFace, SurfaceStrip, SurfaceStripBiteRows,
     SurfaceStripBittenByAFeature, SurfaceStripStation, SurfaceStripTrimmedByTheFaceBeyond,
     SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_cut::anchor;
@@ -678,7 +678,7 @@ fn the_band_on(
 /// A surface-mode build of these groups at this class's own chording, which has to succeed.
 fn built(
     part: &Mesh,
-    groups: &[geometry_processing::topology::BevelEdgeGroup],
+    groups: &[solidmesh::topology::BevelEdgeGroup],
     size: f64,
     because: &str,
 ) -> Mesh {

@@ -6,12 +6,12 @@
 //! A sheared prism's top edge filleting straight to its oblique end faces (and its near-the-room
 //! rows) is open work ("flow rung 3 open") and is not tested here.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, virtual_rail_past_the_end};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, virtual_rail_past_the_end};
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, GapFillResult,
 };
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh_math::{Matrix4X4, Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of};

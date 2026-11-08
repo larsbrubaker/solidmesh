@@ -24,7 +24,7 @@ pub fn get_corrected_winding(polygons_to_fix: &Paths64) -> Result<Paths64, Clipp
     let fix_bounds = polygons_to_fix.get_bounds();
     let clean_distance = curve_tolerance::for_size(
         1.415,
-        vector_math::ieee_math::max_f64(fix_bounds.width(), fix_bounds.height())
+        solidmesh_math::ieee_math::max_f64(fix_bounds.width(), fix_bounds.height())
             / DEFAULT_CLIPPER_UNITS_PER_UNIT,
     );
     let polygons_to_fix = clean_polygons(polygons_to_fix, clean_distance);

@@ -5,10 +5,10 @@
 //! curves everywhere, so a value recorded on one platform holds on every other, and these pins
 //! fail on any platform where that stops being true (CI runs them on all of them).
 
-use geometry_processing::path::path_bevel::bevel;
-use geometry_processing::path::{Contour, PathBevelSizeMode};
-use geometry_processing::topology::FeatureEdge;
-use vector_math::Vector2;
+use solidmesh::path::path_bevel::bevel;
+use solidmesh::path::{Contour, PathBevelSizeMode};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::Vector2;
 
 use super::flattened_curve_path::FlattenedCurvePath;
 

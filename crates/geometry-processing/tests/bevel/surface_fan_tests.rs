@@ -9,8 +9,8 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{surface_fan, SurfaceVertexPool};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_fan, SurfaceVertexPool};
+use solidmesh_math::Vector3;
 
 /// The hard case, and the reason the apex is chosen rather than taken: a triangle with a point
 /// clipped into each of its edges. Fanned from a corner, the triangle spanning the point on that

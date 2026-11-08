@@ -7,11 +7,11 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::sections::section_routing::{is_simple, partition};
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::sections::section_routing::{is_simple, partition};
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_mesh::Mesh;
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 

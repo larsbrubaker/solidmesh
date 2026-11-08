@@ -6,12 +6,12 @@
 //! boolean (`Mesh::copy_all_faces`): a scattering of small octahedra (a point cloud with
 //! volume), a few spheres and boxes, or one star prism.
 
-use polygon_mesh::csg::minkowski_morph::{minkowski_difference, minkowski_sum};
-use polygon_mesh::csg::minkowski_processing::sphere_mesh;
-use polygon_mesh::processors::outline_to_mesh::extrude_contours;
-use polygon_mesh::solids::platonic_solids::create_octahedron;
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector2};
+use solidmesh::math::{Matrix4X4, Vector2};
+use solidmesh::mesh::csg::minkowski_morph::{minkowski_difference, minkowski_sum};
+use solidmesh::mesh::csg::minkowski_processing::sphere_mesh;
+use solidmesh::mesh::processors::outline_to_mesh::extrude_contours;
+use solidmesh::mesh::solids::platonic_solids::create_octahedron;
+use solidmesh::mesh::Mesh;
 
 use crate::shapes::{circle, prism, star, Lcg, Shape};
 use crate::Scene;

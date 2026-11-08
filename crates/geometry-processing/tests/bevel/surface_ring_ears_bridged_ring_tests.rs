@@ -11,8 +11,8 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{surface_ring_ears, SurfaceVertexPool};
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_ring_ears, SurfaceVertexPool};
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
 
 fn pool_of(points: &[Vector3]) -> SurfaceVertexPool {
     let points: Vec<Vector3Float> = points

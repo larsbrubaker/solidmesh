@@ -11,7 +11,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::end_face_sense::{self, Corners};
 use super::{

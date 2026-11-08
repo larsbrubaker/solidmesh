@@ -4,8 +4,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 use super::super::{
     SurfaceEdgePlan, SurfaceLine, SurfaceStandingFeatureWithheld,

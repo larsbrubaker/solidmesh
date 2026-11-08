@@ -13,7 +13,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::topology::FeatureEdge;
 

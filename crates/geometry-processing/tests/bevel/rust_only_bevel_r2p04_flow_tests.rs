@@ -5,16 +5,16 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::ChainField;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::ChainField;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_a_points_side_of_a_chain_and_a_both_sided_members_corners() {
-    use geometry_processing::bevel::level_line::band_side_tagging::{
+    use solidmesh::bevel::level_line::band_side_tagging::{
         first_both_sided_at_a_mixed_corner, side_of,
     };
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
-    use geometry_processing::bevel::level_line::BandGroup;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::BandGroup;
     // The cube's top-front edge 0 -> 1: the top (left, side 1) and the front (right, side 2).
     let positions = vec![
         Vector3::new(0.0, 0.0, 1.0),
@@ -93,8 +93,8 @@ fn rust_only_a_points_side_of_a_chain_and_a_both_sided_members_corners() {
 
 #[test]
 fn rust_only_a_sides_candidates_are_the_triangles_the_line_dips_into() {
-    use geometry_processing::bevel::level_line::band_triangles::candidates;
-    use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
+    use solidmesh::bevel::level_line::band_triangles::candidates;
+    use solidmesh::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
     // A long thin triangle whose corners all stand outside the line (setback 1 about the chain) but
     // whose middle dips across it, a far one, and one of another side.
     let mut mesh = LevelLineMesh::new();
@@ -140,8 +140,8 @@ fn rust_only_a_sides_candidates_are_the_triangles_the_line_dips_into() {
 fn rust_only_a_flat_patch_stops_at_bends_and_keeps_its_soft_rim() {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::end_face_flow::flat_patch;
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::end_face_flow::flat_patch;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // Two flat triangles (0, 1) and a third (2) bent gently down across the edge 1-2.
     let positions = vec![
         Vector3::new(0.0, 0.0, 0.0),
@@ -187,10 +187,10 @@ fn rust_only_a_flat_patch_stops_at_bends_and_keeps_its_soft_rim() {
 fn rust_only_the_rounds_band_and_its_smooth_joints() {
     use std::cell::RefCell;
 
-    use geometry_processing::bevel::level_line::band_gap_rounds_first::{
+    use solidmesh::bevel::level_line::band_gap_rounds_first::{
         smooth_joints_over_the_rounds, the_rounds_band, the_rounds_chains,
     };
-    use geometry_processing::bevel::level_line::{GapFillResult, LevelLineMesh, LevelLineTriangle};
+    use solidmesh::bevel::level_line::{GapFillResult, LevelLineMesh, LevelLineTriangle};
     // The input: one face in z = 0. The rounds added a triangle tiling that face again and one
     // facet of a round standing off it.
     let input = vec![
@@ -243,8 +243,8 @@ fn rust_only_the_rounds_band_and_its_smooth_joints() {
 fn rust_only_an_end_region_flows_over_a_narrow_face_as_far_as_the_band_reaches() {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::end_face_flow::flow_over_a_narrow_end_face;
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::end_face_flow::flow_over_a_narrow_end_face;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // A flat strip of four triangles up y, its crossings 1-2 and 3-4 creases; the end region is
     // triangle 0 (tag 5) at the end vertex 0, the band's chain just below the strip.
     let positions = vec![
@@ -294,8 +294,8 @@ fn rust_only_an_end_region_flows_over_a_narrow_face_as_far_as_the_band_reaches()
 
 #[test]
 fn rust_only_the_room_is_bracketed_from_one_bare_pass() {
-    use geometry_processing::bevel::level_line::foreign_edge_room_readings::bracket_from_one_bare_pass;
-    use geometry_processing::bevel::level_line::LevelLineMesh;
+    use solidmesh::bevel::level_line::foreign_edge_room_readings::bracket_from_one_bare_pass;
+    use solidmesh::bevel::level_line::LevelLineMesh;
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![
         Vector3::new(1.0, 3.0, 0.0),
@@ -331,8 +331,8 @@ fn rust_only_the_room_is_bracketed_from_one_bare_pass() {
 
 #[test]
 fn rust_only_the_room_for_a_chain_reads_uniform_setbacks_in_one_pass_and_bisects_the_rest() {
-    use geometry_processing::bevel::level_line::foreign_edge_room_readings::{bisect, room_for};
-    use geometry_processing::bevel::level_line::LevelLineMesh;
+    use solidmesh::bevel::level_line::foreign_edge_room_readings::{bisect, room_for};
+    use solidmesh::bevel::level_line::LevelLineMesh;
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![
         Vector3::new(1.0, 3.0, 0.0),
@@ -382,8 +382,8 @@ fn rust_only_the_room_for_a_chain_reads_uniform_setbacks_in_one_pass_and_bisects
 fn rust_only_an_ends_end_face_is_flooded_as_its_end_region() {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::band_side_tagging_ends::{flood_ends, EndReach};
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::band_side_tagging_ends::{flood_ends, EndReach};
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // The cube's top-front edge 0 -> 1 (top side 1, front side 2) ending on the x = 1 face, whose
     // creases with the sides are folds.
     let positions = vec![
@@ -419,7 +419,7 @@ fn rust_only_an_ends_end_face_is_flooded_as_its_end_region() {
     // An end carrying the end ray keeps its end face whole and untagged.
     assert_eq!(tagged((false, true)), vec![1, 2, 0]);
     // A flat end face bounded by folds is no round from the end on: it has no soft join to cross.
-    let rounds = geometry_processing::bevel::level_line::end_face_flow::rounds_from_the_end(
+    let rounds = solidmesh::bevel::level_line::end_face_flow::rounds_from_the_end(
         &positions,
         &indices,
         &standing,
@@ -434,7 +434,7 @@ fn rust_only_an_ends_end_face_is_flooded_as_its_end_region() {
 
 #[test]
 fn rust_only_the_sides_band_and_end_regions_of_a_cube_edge() {
-    use geometry_processing::bevel::level_line::band_side_tagging_ends::{
+    use solidmesh::bevel::level_line::band_side_tagging_ends::{
         end_regions_of, tag_band, tag_sides, SideReach,
     };
     let positions = vec![
@@ -510,10 +510,8 @@ fn rust_only_the_sides_band_and_end_regions_of_a_cube_edge() {
 
 #[test]
 fn rust_only_the_room_read_off_the_index_is_the_plain_reading() {
-    use geometry_processing::bevel::level_line::foreign_edge_room_readings::{
-        room_for, room_from_index,
-    };
-    use geometry_processing::bevel::level_line::{ForeignEdgeIndex, LevelLineMesh};
+    use solidmesh::bevel::level_line::foreign_edge_room_readings::{room_for, room_from_index};
+    use solidmesh::bevel::level_line::{ForeignEdgeIndex, LevelLineMesh};
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![
         Vector3::new(1.0, 3.0, 0.0),
@@ -566,8 +564,8 @@ fn rust_only_the_room_read_off_the_index_is_the_plain_reading() {
 
 #[test]
 fn rust_only_a_picks_free_end_floods_its_end_face_as_an_end_group() {
-    use geometry_processing::bevel::level_line::pick_end_floods::flood_pick_ends;
-    use geometry_processing::bevel::level_line::BandGroup;
+    use solidmesh::bevel::level_line::pick_end_floods::flood_pick_ends;
+    use solidmesh::bevel::level_line::BandGroup;
     let positions = vec![
         Vector3::new(0.0, 0.0, 1.0),
         Vector3::new(1.0, 0.0, 1.0),
@@ -631,9 +629,7 @@ fn rust_only_a_picks_free_end_floods_its_end_face_as_an_end_group() {
 
 #[test]
 fn rust_only_the_side_groups_of_one_and_two_chains() {
-    use geometry_processing::bevel::level_line::band_side_groups::{
-        group_sides, has_a_both_sided_member,
-    };
+    use solidmesh::bevel::level_line::band_side_groups::{group_sides, has_a_both_sided_member};
     let positions = vec![
         Vector3::new(0.0, 0.0, 1.0),
         Vector3::new(1.0, 0.0, 1.0),

@@ -11,14 +11,14 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_corner_mitre, surface_corner_patch, surface_end_cut_above_the_crossing,
     surface_strip_ends, SurfaceCornerPatchArrival, SurfaceCrossingAtTheMitre, SurfaceStrip,
     SurfaceStripStation, SurfaceStripTrimmedAtTheCrossing, SurfaceStripTrimmedByTheFaceBeyond,
     SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::Vector3;
 
 use crate::rust_only_bevel_r1p06_tests::square_edge_plan;
 
@@ -487,7 +487,7 @@ fn rust_only_the_end_cut_cuts_back_at_the_run_out_and_finds_its_foot() {
 /// by a crease vertex standing on the straight side.
 #[test]
 fn rust_only_the_tail_and_landing_readings() {
-    use geometry_processing::bevel::surface::{
+    use solidmesh::bevel::surface::{
         surface_strip_ends_at_a_landing_notch, surface_strip_tail_around_a_feature,
     };
 

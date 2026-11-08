@@ -4,7 +4,7 @@
 use std::io::Write;
 use std::path::Path;
 
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 use crate::cancel::CancelToken;
 use crate::mesh::Mesh;

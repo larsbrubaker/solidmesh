@@ -3,7 +3,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::Vector2;
+use solidmesh_math::Vector2;
 
 /// How far back along its edge a beveled corner starts.
 pub fn tangent_distance(corner: Vector2, arc_point: Vector2) -> f64 {

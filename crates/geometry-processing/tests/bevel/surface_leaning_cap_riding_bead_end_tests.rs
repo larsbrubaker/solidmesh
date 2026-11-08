@@ -14,16 +14,16 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::surface_mixed_corner_patch::try_cut_the_ring;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::surface_mixed_corner_patch::try_cut_the_ring;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_run_out, SurfaceBevelPlan,
     SurfaceBuildOptions, SurfaceMixedCorner, SurfaceMixedCornerRows, SurfaceMixedCornerWall,
     SurfaceStrip,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::math_helper;
+use solidmesh_mesh::{CancelToken, Mesh};
 use std::sync::Arc;
-use vector_math::math_helper;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_mixed_corner_fixture as fixture;

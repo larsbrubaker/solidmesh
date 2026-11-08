@@ -10,10 +10,10 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal, GapFillResult};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal, GapFillResult};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{open_edges, signed_volume, signed_volume_of};

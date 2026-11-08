@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{MinimalTriangle, Traceable};
-use vector_math::{Ray, Vector3, Vector3Float};
+use solidmesh_math::{Ray, Vector3, Vector3Float};
+use solidmesh_mesh::ray_tracer::{MinimalTriangle, Traceable};
 
 /// A triangle's box has to hold its own corners. It used to be kept as a float centre and half
 /// size, and centre - halfSize rounds: a cylinder cap triangle with a corner at x = -3.8e-15 and
@@ -52,7 +52,13 @@ fn a_hit_outside_the_rays_distance_window_is_no_hit() {
     let down = -Vector3::UNIT_Z;
     let start = Vector3::new(0.0, 0.0, 10.0);
     let window = |min: f64, max: f64| {
-        let mut ray = Ray::with_limits(start, down, min, max, vector_math::IntersectionType::Both);
+        let mut ray = Ray::with_limits(
+            start,
+            down,
+            min,
+            max,
+            solidmesh_math::IntersectionType::Both,
+        );
         triangle
             .get_closest_intersection(&mut ray)
             .map(|hit| hit.distance_to_hit)

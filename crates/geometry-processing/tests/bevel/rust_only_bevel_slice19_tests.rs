@@ -6,19 +6,19 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_two_corners_at_one_vertex::try_survey;
-use geometry_processing::bevel::surface::surface_walkback_standing_features::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_two_corners_at_one_vertex::try_survey;
+use solidmesh::bevel::surface::surface_walkback_standing_features::{
     none_of_the_feature_is_also_being_cut, try_merge_what_two_bands_both_reached,
 };
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::bevel::surface::{
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids;
 
 fn pool() -> SurfaceVertexPool {
     SurfaceVertexPool::new(&[
@@ -160,9 +160,7 @@ fn rust_only_two_plans_turning_a_corner_at_one_vertex_are_refused_there() {
         format!("{:?}", failure.args()),
         format!(
             "{:?}",
-            vec![geometry_processing::bevel::BevelAdvisoryArg::Vector3(
-                corner
-            )]
+            vec![solidmesh::bevel::BevelAdvisoryArg::Vector3(corner)]
         )
     );
 }

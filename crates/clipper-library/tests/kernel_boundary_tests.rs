@@ -4,12 +4,12 @@
 //! and its tests build without the app.
 //!
 //! Forbidden are agg (`agg-*`) and every MatterCAD app crate (`mattercad-*`). Of this workspace's
-//! own crates (path dependencies one level up) only `vector-math` is allowed; clipper2-rust is a
+//! own crates (path dependencies one level up) only `solidmesh-math` is allowed; clipper2-rust is a
 //! sibling checkout, further out.
 
 const FORBIDDEN_PREFIXES: [&str; 2] = ["agg-", "mattercad-"];
 
-const ALLOWED_WORKSPACE_CRATES: [&str; 1] = ["vector-math"];
+const ALLOWED_WORKSPACE_CRATES: [&str; 1] = ["solidmesh-math"];
 
 /// One dependency: the table it is in, its name, and its `path` if it has one.
 struct Dependency {

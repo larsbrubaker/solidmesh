@@ -4,8 +4,8 @@
 //! the walk's types and small readings, by responsibility: these are the questions the walk asks of
 //! ONE face (or the faces round one vertex or edge) at each step.
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{is_a_fold, normal_of, pair_key, ALONG_AN_ARM, LATTICE_FRACTION};

@@ -13,9 +13,9 @@
 //! cut because it is that end, not because of what a dot product says, and a side whose two ends
 //! both stand there is the cut itself and is never intersected.
 
-use geometry_processing::bevel::surface::surface_cut_clip;
-use geometry_processing::bevel::surface::SurfaceVertexPool;
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_cut_clip;
+use solidmesh::bevel::surface::SurfaceVertexPool;
+use solidmesh_math::Vector3;
 
 /// The ring, the chord's two ends among its corners, and a cut line that MEASURES them a hair
 /// apart - the collinear reading that mints the third point.

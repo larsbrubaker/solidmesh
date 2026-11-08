@@ -8,7 +8,7 @@
 //! at follow insertion order, which must be the same on every run.
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     surface_cut_clip, surface_end_cut, surface_end_notch, surface_fan, surface_ring,

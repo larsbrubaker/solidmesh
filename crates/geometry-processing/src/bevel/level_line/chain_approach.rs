@@ -21,7 +21,7 @@
 //! distance displaces the best, so a minimum attained over a whole interval (two parallel
 //! segments) answers at its LOWEST parameter - the same rule the rest of the field reads ties by.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::ChainField;
 

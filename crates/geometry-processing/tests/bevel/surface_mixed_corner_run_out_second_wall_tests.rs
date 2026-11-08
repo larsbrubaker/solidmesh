@@ -6,10 +6,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceMixedCorner, SurfaceMixedCornerDualCanal, SurfaceMixedCornerSpine,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::nose_in_notch_mixed_corners;
 use crate::nose_in_notch_test_meshes;

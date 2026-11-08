@@ -1,8 +1,8 @@
 //! A zero area face is topologically real - the seams where a solid touches itself are made of
 //! them - so the mesh has to be able to hold one without its normal turning into NaN.
 
-use polygon_mesh::Face;
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::Face;
 
 #[test]
 fn zero_area_face_gets_a_finite_normal() {

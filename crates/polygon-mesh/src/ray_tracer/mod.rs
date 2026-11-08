@@ -47,8 +47,8 @@ mod unbound_collection;
 use std::any::Any;
 use std::sync::Arc;
 
-use vector_math::ColorF;
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
+use solidmesh_math::ColorF;
+use solidmesh_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 pub use bounding_volume_hierarchy::{BoundingVolumeHierarchy, BvhCreationOptions};
 pub use box_shape::BoxShape;

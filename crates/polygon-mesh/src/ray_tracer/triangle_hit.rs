@@ -7,8 +7,8 @@
 
 use std::cmp::Ordering;
 
-use vector_math::ieee_math::{max_f32, min_f32};
-use vector_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Float};
+use solidmesh_math::ieee_math::{max_f32, min_f32};
+use solidmesh_math::{IntersectionType, PlaneFloat, Ray, Vector2, Vector3, Vector3Float};
 
 /// How many single-precision steps of the hit distance a hit may fall outside a triangle and
 /// still count as on its edge (see `TriangleProjection::hit`).

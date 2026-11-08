@@ -15,7 +15,7 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_side_tagging::{
     flood, model_scale_of, normal_of, outward_at, ANOTHER_PICKS_SIDE, FIRST_END_TAG, SECOND_END_TAG,

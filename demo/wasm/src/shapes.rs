@@ -1,5 +1,5 @@
 //! The primitives and 2D profiles the demo pages share, every one built with the library: the
-//! cube and icosahedron are `polygon_mesh::solids`, the rounded box is `RoundedCornerBox`, a
+//! cube and icosahedron are `solidmesh::mesh::solids`, the rounded box is `RoundedCornerBox`, a
 //! sphere and a torus are half circles and circles revolved by `outline_to_mesh::revolve_contours`,
 //! and a cylinder or a star prism is a contour extruded by `extrude_contours`. Sizes are in mm and
 //! each solid is centred on the origin, so the pages place them with a matrix.
@@ -9,11 +9,11 @@
 
 use std::f64::consts::{PI, TAU};
 
-use polygon_mesh::processors::outline_to_mesh::{extrude_contours, revolve_contours};
-use polygon_mesh::solids::platonic_solids::{create_cube, create_icosahedron};
-use polygon_mesh::solids::RoundedCornerBox;
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh::math::{Matrix4X4, Vector2, Vector3};
+use solidmesh::mesh::processors::outline_to_mesh::{extrude_contours, revolve_contours};
+use solidmesh::mesh::solids::platonic_solids::{create_cube, create_icosahedron};
+use solidmesh::mesh::solids::RoundedCornerBox;
+use solidmesh::mesh::Mesh;
 
 /// The shapes the boolean, Minkowski and repair pages offer, by the index their menus send.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -6,10 +6,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{surface_bevel_builder, SurfaceMixedJunction};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_bevel_builder, SurfaceMixedJunction};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_test_meshes;

@@ -3,7 +3,7 @@
 //! has one. Split from `section_builder_walked_side.rs` by responsibility.
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_builder_walked_side::{
     rewritten, the_joins_own_point, try_lay_one_side, SectionBuildRefusal,

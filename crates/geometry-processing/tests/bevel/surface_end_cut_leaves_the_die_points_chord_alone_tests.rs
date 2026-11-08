@@ -1,8 +1,8 @@
 //! A die point on the section's straight side (or nudged just outside the ruler of it) cuts the
 //! section and only the section - its chord takes nothing of the end face the bead stands over.
 
-use geometry_processing::bevel::surface::{surface_end_cut, SurfaceVertexPool};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_end_cut, SurfaceVertexPool};
+use solidmesh_math::{Vector3, Vector3Float};
 
 const CORNER: Vector3 = Vector3::new(0.0, 0.0, 0.0);
 const ARC_CENTRE: Vector3 = Vector3::new(5.0, 5.0, 0.0);

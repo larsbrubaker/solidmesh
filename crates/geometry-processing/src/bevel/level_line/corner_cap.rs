@@ -8,7 +8,7 @@
 //! [`close_one`], [`rings`] and [`closes_planar_fillet_hole`]). Its end-face cap is in
 //! `corner_cap_zip_end.rs`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::gap_fill::FILL_TAG;
 use super::{corner_fill, LevelLineMesh, LevelLineMeshError, LevelLineWork};

@@ -1,9 +1,9 @@
 //! Rust-only checks of the bevel core's R3.P03 fill pieces on hand-built meshes: the uneven strip's
 //! zip. The tests that read these pieces in a whole build are in their own files.
 
-use geometry_processing::bevel::level_line::uneven_strip::cell;
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::uneven_strip::cell;
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_an_uneven_cell_zips_its_arcs_by_length_share() {
@@ -33,8 +33,8 @@ fn rust_only_an_uneven_cell_zips_its_arcs_by_length_share() {
 
 #[test]
 fn rust_only_a_long_rail_edge_is_given_the_other_rails_stations() {
-    use geometry_processing::bevel::level_line::rail_stations::densify;
-    use geometry_processing::bevel::level_line::ChainField;
+    use solidmesh::bevel::level_line::rail_stations::densify;
+    use solidmesh::bevel::level_line::ChainField;
     use std::collections::HashMap;
     let chain = ChainField::from_polyline(
         &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(10.0, 0.0, 0.0)],
@@ -100,8 +100,8 @@ fn rust_only_a_long_rail_edge_is_given_the_other_rails_stations() {
 
 #[test]
 fn rust_only_a_strip_end_is_set_back_to_where_its_chain_ties_the_next() {
-    use geometry_processing::bevel::level_line::corner_rail_strip::{set_back, WATCH_SETBACKS};
-    use geometry_processing::bevel::level_line::ChainField;
+    use solidmesh::bevel::level_line::corner_rail_strip::{set_back, WATCH_SETBACKS};
+    use solidmesh::bevel::level_line::ChainField;
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
@@ -178,8 +178,8 @@ fn rust_only_a_strip_end_is_set_back_to_where_its_chain_ties_the_next() {
 
 #[test]
 fn rust_only_a_run_is_cut_at_its_end_parameter() {
-    use geometry_processing::bevel::level_line::end_plane_trim::cut_at;
-    use geometry_processing::bevel::level_line::GapLoop;
+    use solidmesh::bevel::level_line::end_plane_trim::cut_at;
+    use solidmesh::bevel::level_line::GapLoop;
     let mut mesh = LevelLineMesh::from_triangles(
         &[
             Vector3::new(0.0, 0.0, 0.0),
@@ -216,10 +216,8 @@ fn rust_only_a_run_is_cut_at_its_end_parameter() {
 
 #[test]
 fn rust_only_the_corner_fill_refuses_what_it_cannot_zip() {
-    use geometry_processing::bevel::level_line::corner_fill_fill::{fill, CornerFillError};
-    use geometry_processing::bevel::level_line::{
-        BandGapResult, BandProfile, GapFillRefusal, GapLoop,
-    };
+    use solidmesh::bevel::level_line::corner_fill_fill::{fill, CornerFillError};
+    use solidmesh::bevel::level_line::{BandGapResult, BandProfile, GapFillRefusal, GapLoop};
     use std::cell::RefCell;
     use std::rc::Rc;
     let mesh = Rc::new(RefCell::new(LevelLineMesh::new()));
@@ -251,9 +249,9 @@ fn rust_only_the_corner_fill_refuses_what_it_cannot_zip() {
 
 #[test]
 fn rust_only_an_end_plane_trim_with_no_end_face_says_why() {
-    use geometry_processing::bevel::level_line::end_plane_trim_run::{run, trim_end};
-    use geometry_processing::bevel::level_line::open_gap_fill::{ends_site, set_ends_site};
-    use geometry_processing::bevel::level_line::{BandProfile, ChainField, GapLoop};
+    use solidmesh::bevel::level_line::end_plane_trim_run::{run, trim_end};
+    use solidmesh::bevel::level_line::open_gap_fill::{ends_site, set_ends_site};
+    use solidmesh::bevel::level_line::{BandProfile, ChainField, GapLoop};
     // A chain along x with no triangle standing at either end: no end plane to trim to.
     let chain = ChainField::from_polyline(
         &[Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],

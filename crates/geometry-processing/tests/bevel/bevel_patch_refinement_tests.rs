@@ -3,9 +3,9 @@
 //! point between two of its points, would leave two solids meeting along two different polylines;
 //! the interior belongs to nobody else and is where the chord error lives.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::bevel_patch_refinement;
+use solidmesh::bevel::bevel_patch_refinement;
 
 /// Every point the refinement adds is ON the sphere, in doubles, and no boundary point moves or
 /// gains a point between it and its neighbour.

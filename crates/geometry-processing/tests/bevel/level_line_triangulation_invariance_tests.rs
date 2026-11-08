@@ -7,12 +7,12 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{gap_fill, GapFillRefusal, GapFillResult, WorkBudget};
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{gap_fill, GapFillRefusal, GapFillResult, WorkBudget};
 
 use crate::coplanar_diagonal_flip;
 use crate::end_face_builds::feature_of;

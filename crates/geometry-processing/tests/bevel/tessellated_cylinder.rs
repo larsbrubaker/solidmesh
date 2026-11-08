@@ -3,7 +3,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_room_geometry::SolidWithChain;
 

@@ -46,7 +46,7 @@
 
 use std::cell::Cell;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::float_grid;
 use super::end_face_sense::{carries_on, face_normal, is_convex, Corners, COPLANAR_TOLERANCE};

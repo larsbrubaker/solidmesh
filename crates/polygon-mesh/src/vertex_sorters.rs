@@ -7,7 +7,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 /// An ordering of positions.
 pub trait VertexSorter {

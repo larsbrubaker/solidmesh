@@ -43,7 +43,7 @@
 //! [`SurfaceStripEndsOnTheHull::supporting_planes_of`]: super::SurfaceStripEndsOnTheHull::supporting_planes_of
 //! [`SurfaceStripEndsOnTheHull`]: super::SurfaceStripEndsOnTheHull
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_mitre_sector, surface_strip_ends};

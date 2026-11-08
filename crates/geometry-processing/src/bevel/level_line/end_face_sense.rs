@@ -14,7 +14,7 @@
 //! face is not trimmed by the bead but GROWS over its section, so it is not an end region of the
 //! band: it is not refined, rooted or cut, and it does not bound the room.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::end_face_sense_oblique::ObliqueEndReader;

@@ -2,7 +2,7 @@
 //! the refinement notes, the reports and the reset, and the switches holding for the thread that
 //! sets them, as the tallies they fill do.
 
-use geometry_processing::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
+use solidmesh::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
 
 #[test]
 fn rust_only_the_meter_counts_and_reports_the_rules() {
@@ -108,7 +108,7 @@ fn rust_only_the_site_report_puts_the_busiest_site_first() {
 fn rust_only_entering_a_phase_resets_what_the_phase_owns() {
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::{LevelLineWork, LevelLineWorkPhase, WorkBudget};
+    use solidmesh::bevel::level_line::{LevelLineWork, LevelLineWorkPhase, WorkBudget};
 
     let _meter = crate::meter_lock::meter_lock();
     let budget = Rc::new(WorkBudget::new(1_000_000).unwrap());

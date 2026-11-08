@@ -4,22 +4,22 @@
 //! a pair of cubes and an open tube) and the path-corner resolver (`bevel_corner_group_resolver`,
 //! on a square and a comb) - is driven here and pinned to its code and argument list.
 
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::path::Contour;
-use geometry_processing::topology::bevel_corner_group_resolver::{
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::path::Contour;
+use solidmesh::topology::bevel_corner_group_resolver::{
     create_from_corner, resolve, DEFAULT_DIRECTION_TOLERANCE_DEGREES,
     DEFAULT_DRIFT_FRACTION_OF_EXTENT,
 };
-use geometry_processing::topology::bevel_edge_group_resolver::{
+use solidmesh::topology::bevel_edge_group_resolver::{
     self, DEFAULT_DIRECTION_TOLERANCE_DEGREES as EDGE_DIRECTION_TOLERANCE_DEGREES,
     DEFAULT_DRIFT_FRACTION_OF_FEATURE_EXTENT, DEFAULT_NORMAL_TOLERANCE_DEGREES,
 };
-use geometry_processing::topology::{
+use solidmesh::topology::{
     BevelCornerGroup, BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet, PathCornerSet,
 };
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, AxisAlignedBoundingBox, Vector2, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, AxisAlignedBoundingBox, Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::Mesh;
 
 const BEND_THRESHOLD: f64 = 10.0;
 

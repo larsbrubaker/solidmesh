@@ -6,7 +6,7 @@
 //! chain edge; where along it the strip starts and stops is the neighbouring edge's business,
 //! decided at the mitre in a later phase, and a segment would have to guess that now.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// A line in space: a point on it and the direction it runs in.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

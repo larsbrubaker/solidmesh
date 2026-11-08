@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{SurfaceEdgePlan, SurfaceLine, SurfaceStrip};
-use geometry_processing::topology::{ChainEdge, EdgeConvexity, FaceGroup, FeatureEdge};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceEdgePlan, SurfaceLine, SurfaceStrip};
+use solidmesh::topology::{ChainEdge, EdgeConvexity, FaceGroup, FeatureEdge};
+use solidmesh_math::Vector3;
 
 use crate::topology_test_meshes::create_isosceles_prism;
 
@@ -94,9 +94,7 @@ fn rust_only_a_round_strip_samples_its_quarter_arc() {
 
 #[test]
 fn rust_only_the_canal_bisects_to_the_sign_change() {
-    use geometry_processing::bevel::surface::{
-        SurfaceMixedCornerDualCanal, SurfaceMixedCornerRows,
-    };
+    use solidmesh::bevel::surface::{SurfaceMixedCornerDualCanal, SurfaceMixedCornerRows};
 
     let at = SurfaceMixedCornerDualCanal::bisect(&|x| x - 0.3, 0.0, 1.0, false);
     assert!((at - 0.3).abs() < 1e-15);
@@ -109,7 +107,7 @@ fn rust_only_the_canal_bisects_to_the_sign_change() {
 
 #[test]
 fn rust_only_a_chained_run_wraps_only_when_closed() {
-    use geometry_processing::bevel::surface::surface_mitre_on_a_chorded_run::{
+    use solidmesh::bevel::surface::surface_mitre_on_a_chorded_run::{
         try_the_next, try_the_previous,
     };
 
@@ -127,7 +125,7 @@ fn rust_only_a_chained_run_wraps_only_when_closed() {
 
 #[test]
 fn rust_only_two_pieces_of_one_crease_are_one_line() {
-    use geometry_processing::bevel::surface::surface_mitre_seam;
+    use solidmesh::bevel::surface::surface_mitre_seam;
 
     // The same plan twice shares both faces and lies on the same two lines: one line, and no
     // crossing to read off parallel lines.
@@ -138,7 +136,7 @@ fn rust_only_two_pieces_of_one_crease_are_one_line() {
 
 #[test]
 fn rust_only_three_end_rings_close_into_one_loop() {
-    use geometry_processing::bevel::surface::surface_corner_patch::try_order_the_sides;
+    use solidmesh::bevel::surface::surface_corner_patch::try_order_the_sides;
 
     // The second ring meets the first's end by its own far end, so it is turned over.
     let sides = try_order_the_sides(&[vec![1, 2, 3], vec![5, 4, 3], vec![5, 6, 1]]).unwrap();
@@ -150,8 +148,8 @@ fn rust_only_three_end_rings_close_into_one_loop() {
 
 #[test]
 fn rust_only_a_closed_tetrahedron_covers_nothing_twice() {
-    use geometry_processing::bevel::surface::surface_mixed_corner_patch::nothing_covers_nothing;
-    use geometry_processing::bevel::surface::SurfaceVertexPool;
+    use solidmesh::bevel::surface::surface_mixed_corner_patch::nothing_covers_nothing;
+    use solidmesh::bevel::surface::SurfaceVertexPool;
 
     let mut pool = SurfaceVertexPool::new(&[]);
     let a = pool.add(Vector3::new(0.0, 0.0, 0.0));
@@ -169,8 +167,8 @@ fn rust_only_a_closed_tetrahedron_covers_nothing_twice() {
 
 #[test]
 fn rust_only_skew_lines_and_size_windows() {
-    use geometry_processing::bevel::surface::surface_mixed_corner_cut_edge::try_apart;
-    use geometry_processing::bevel::surface::surface_wall_ran_out::bound;
+    use solidmesh::bevel::surface::surface_mixed_corner_cut_edge::try_apart;
+    use solidmesh::bevel::surface::surface_wall_ran_out::bound;
 
     // Two skew lines a unit apart along z.
     let apart = try_apart(
@@ -193,8 +191,8 @@ fn rust_only_skew_lines_and_size_windows() {
 
 #[test]
 fn rust_only_a_chain_end_reading_indexes_the_vertices_once() {
-    use geometry_processing::bevel::surface::SurfaceChainEndReading;
-    use geometry_processing::topology::FaceRegionCache;
+    use solidmesh::bevel::surface::SurfaceChainEndReading;
+    use solidmesh::topology::FaceRegionCache;
 
     // No cache, no reading.
     assert!(SurfaceChainEndReading::for_regions(None).is_none());

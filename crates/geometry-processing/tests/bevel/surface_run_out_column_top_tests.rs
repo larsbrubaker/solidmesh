@@ -3,7 +3,7 @@
 //! everything about the station says the band's chord tops it but the chord has no start. Driven on
 //! its own numbers rather than through a build.
 
-use geometry_processing::bevel::surface::SurfaceRunOutColumnWalk;
+use solidmesh::bevel::surface::SurfaceRunOutColumnWalk;
 
 /// Row 0 crosses at 0.1 radians past the bead and row 1 at 0.3, with row 2 never.
 const CROSSES_AT: [f64; 3] = [0.1, 0.3, f64::INFINITY];

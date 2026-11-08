@@ -17,17 +17,17 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::bevel_chain_linker::{link, BevelSweptChain};
-use geometry_processing::bevel::bevel_working_mesh::{create_from_with_advisories, StampedVerdict};
-use geometry_processing::bevel::sections::section_builder::try_creases_in_the_fan;
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::{edges_by_vertex_pair, EdgeAtPair};
-use geometry_processing::bevel::sections::{section_assembly, SectionPool, SectionRun};
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{BevelEdgeGroupResolution, ChainEdge};
+use solidmesh::bevel::bevel_chain_linker::{link, BevelSweptChain};
+use solidmesh::bevel::bevel_working_mesh::{create_from_with_advisories, StampedVerdict};
+use solidmesh::bevel::sections::section_builder::try_creases_in_the_fan;
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::{edges_by_vertex_pair, EdgeAtPair};
+use solidmesh::bevel::sections::{section_assembly, SectionPool, SectionRun};
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{BevelEdgeGroupResolution, ChainEdge};
 
 use crate::{mesh_measurements, mesh_surface_distance, tapered_barrel_test_meshes};
 

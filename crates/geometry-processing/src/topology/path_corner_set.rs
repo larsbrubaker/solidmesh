@@ -8,7 +8,7 @@
 //! It is built from the same flattened contours the bevel is handed (the app flattens its paths
 //! for both in mattercad-geometry).
 
-use vector_math::{ieee_math, math_helper, Vector2};
+use solidmesh_math::{ieee_math, math_helper, Vector2};
 
 use crate::path::path_bevel::{self, Contour};
 

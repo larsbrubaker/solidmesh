@@ -4,10 +4,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     BandGroupFieldsWithRunOuts, ChainDistanceField, ChainField, PickField, PointField,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::{l_chain, open_chain};
 
@@ -110,8 +110,8 @@ fn rust_only_a_pick_and_a_wrapper_read_the_least_of_their_fields() {
 
 #[test]
 fn rust_only_each_group_reads_its_cutting_members_pick_and_its_run_outs() {
-    use geometry_processing::bevel::level_line::{band_group_fields_of, BandGroup, FieldKind};
     use indexmap::IndexMap;
+    use solidmesh::bevel::level_line::{band_group_fields_of, BandGroup, FieldKind};
     let x = Rc::new(x_leg());
     let y = Rc::new(open_chain(
         vec![Vector3::new(0.0, 5.0, 0.0), Vector3::new(4.0, 5.0, 0.0)],
@@ -155,7 +155,7 @@ fn rust_only_each_group_reads_its_cutting_members_pick_and_its_run_outs() {
 
 #[test]
 fn rust_only_a_point_is_swallowed_at_its_distance_over_the_setback() {
-    use geometry_processing::bevel::level_line::RoomField;
+    use solidmesh::bevel::level_line::RoomField;
     let chain = x_leg();
     // Two above a chain of unit setback: swallowed at size 2.
     assert!(
@@ -198,8 +198,8 @@ fn rust_only_a_point_is_swallowed_at_its_distance_over_the_setback() {
 
 #[test]
 fn rust_only_an_end_face_rising_off_a_convex_edges_side_is_opposite_sense() {
-    use geometry_processing::bevel::level_line::end_face_sense::is_opposite_sense;
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::end_face_sense::is_opposite_sense;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // The unit cube's top-front edge along x (convex), its top side 1 and front side 2; at the end
     // vertex 1 a face rises off the top's edge 1-2 - a concave crease, the opposite sense.
     let positions = vec![
@@ -247,7 +247,7 @@ fn rust_only_an_end_face_rising_off_a_convex_edges_side_is_opposite_sense() {
 
 #[test]
 fn rust_only_the_foreign_edge_tree_finds_the_nearest_edge_first() {
-    use geometry_processing::bevel::level_line::ForeignEdgeIndex;
+    use solidmesh::bevel::level_line::ForeignEdgeIndex;
     // Six unit edges standing parallel to the chain at y = 2 .. 7.
     let mut ends = Vec::new();
     for i in 0..6 {
@@ -286,7 +286,7 @@ fn rust_only_the_foreign_edge_tree_finds_the_nearest_edge_first() {
 
 #[test]
 fn rust_only_a_clipped_chains_least_is_lifted_to_its_end_plane() {
-    use geometry_processing::bevel::level_line::EndRayBound;
+    use solidmesh::bevel::level_line::EndRayBound;
     // The chain along x from 0 to 4, its last end bounded by the plane x = 4.
     let bound = EndRayBound {
         plane_normal: Vector3::new(1.0, 0.0, 0.0),
@@ -331,10 +331,10 @@ fn rust_only_a_clipped_chains_least_is_lifted_to_its_end_plane() {
 
 #[test]
 fn rust_only_the_foreign_room_is_bisected_to_where_the_band_reaches_an_edge() {
-    use geometry_processing::bevel::level_line::foreign_edge_room_readings::{
+    use solidmesh::bevel::level_line::foreign_edge_room_readings::{
         bisect, every_value_is_above_zero, where_the_room_is_set,
     };
-    use geometry_processing::bevel::level_line::LevelLineMesh;
+    use solidmesh::bevel::level_line::LevelLineMesh;
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![Vector3::new(1.0, 3.0, 0.0), Vector3::new(3.0, 3.0, 0.0)];
     let field_at = |size: f64| {
@@ -362,8 +362,8 @@ fn rust_only_the_foreign_room_is_bisected_to_where_the_band_reaches_an_edge() {
 fn rust_only_a_flood_stops_at_chain_and_feature_edges() {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::band_side_tagging::{connected_regions, flood};
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::band_side_tagging::{connected_regions, flood};
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // A strip of three triangles: 0 | 1 | 2 across the edges 1-2 and 2-3.
     let indices = vec![(0, 1, 2), (1, 3, 2), (2, 3, 4)];
     let standing = standing_map(&indices);
@@ -406,10 +406,10 @@ fn rust_only_a_flood_stops_at_chain_and_feature_edges() {
 fn rust_only_chains_read_their_fold_and_a_knife_tips_end_face() {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::band_gap_rounds_first::{
+    use solidmesh::bevel::level_line::band_gap_rounds_first::{
         chain_senses, plane_of, takes_rounds_first, the_tips_end_face,
     };
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     // The cube's top-front edge (convex) and a floor-wall corner (concave), each on two triangles.
     let convex_at = vec![
         Vector3::new(0.0, 0.0, 1.0),
@@ -467,8 +467,8 @@ fn rust_only_chains_read_their_fold_and_a_knife_tips_end_face() {
 
 #[test]
 fn rust_only_a_side_flows_only_onto_a_gentle_convex_neighbour_it_reaches() {
-    use geometry_processing::bevel::level_line::side_flow::flows_onto_a_gentle_neighbour;
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::side_flow::flows_onto_a_gentle_neighbour;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     let mut positions = vec![
         Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
@@ -510,8 +510,8 @@ fn rust_only_a_side_flows_only_onto_a_gentle_convex_neighbour_it_reaches() {
 
 #[test]
 fn rust_only_an_end_regions_flood_crosses_a_soft_bend_while_the_band_reaches_it() {
-    use geometry_processing::bevel::level_line::end_face_flow::crosses_a_soft_bend;
-    use geometry_processing::bevel::level_line::triangle_edges::standing_map;
+    use solidmesh::bevel::level_line::end_face_flow::crosses_a_soft_bend;
+    use solidmesh::bevel::level_line::triangle_edges::standing_map;
     let positions = vec![
         Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),

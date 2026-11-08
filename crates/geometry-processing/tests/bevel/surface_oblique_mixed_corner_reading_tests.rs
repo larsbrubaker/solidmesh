@@ -14,13 +14,13 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use sha2::{Digest, Sha256};
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_which_canal, SurfaceLine,
     SurfaceMixedCorner, SurfaceMixedCornerSpine,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use sha2::{Digest, Sha256};
-use vector_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::nose_in_notch_mixed_corners;

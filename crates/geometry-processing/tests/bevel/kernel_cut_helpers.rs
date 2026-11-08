@@ -1,12 +1,10 @@
 //! The feature edge between two known positions ([`edge_index`]) and the one-edge group picked
 //! there ([`edge_group`]), which the tests that pick a known edge share.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
-};
+use solidmesh::topology::bevel_edge_group_resolver;
+use solidmesh::topology::{BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet};
 
 /// The feature edge running between two known positions, whichever way round the
 /// mesh stores it, matched `within` that distance at both ends.

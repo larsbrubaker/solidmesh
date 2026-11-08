@@ -8,8 +8,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
-use geometry_processing::bevel::sections::section_smooth_side::SmoothSideCut;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_smooth_side::SmoothSideCut;
+use solidmesh::bevel::sections::{
     section_face_rebuild, section_loft, section_smooth_seam, SectionRun,
 };
 

@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{surface_cut_clip, surface_ring, SurfaceBandEnd, SurfaceLine, SurfaceVertexPool};
 

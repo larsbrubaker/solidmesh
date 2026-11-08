@@ -26,7 +26,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_bevel_stitch, surface_strip_ends};

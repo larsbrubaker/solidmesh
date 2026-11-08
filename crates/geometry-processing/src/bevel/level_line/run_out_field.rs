@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     ChainDistanceField, CreaseRunOut, FieldMaximum, FieldMinimum, LevelLineWork, ScalarField,

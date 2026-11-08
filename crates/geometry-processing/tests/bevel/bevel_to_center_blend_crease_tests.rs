@@ -13,12 +13,12 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::{
     band_room, gap_fill, BandGapRefusal, BandGapResult, GapFillRefusal, GapFillResult,
     LevelLineWork, WorkBudget,
 };
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget, feature_of};
 use crate::fillet_thin_front_fin::profile_of;

@@ -20,12 +20,12 @@ use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{
     band_gap_in_turn, corner_cap, dying_crease_fill, gap_fill, hull_clip, open_gap_fill,
     strip_clip, BandGapResult, BandProfile, GapFillRefusal, GapFillResult, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, feature_of};
 use crate::fillet_thin_front_fin::profile_of;

@@ -1,9 +1,9 @@
 //! Splitting a mesh into its separate volumes (`processors::split_volumes`): each volume comes
 //! out as its own mesh, a mesh of one volume comes out whole, and a cancel stops the walk.
 
-use polygon_mesh::processors::split_volumes::split_volumes_into_meshes;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::processors::split_volumes::split_volumes_into_meshes;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// Two 10 mm cubes 30 mm apart, as one mesh.
 fn two_cubes() -> Mesh {

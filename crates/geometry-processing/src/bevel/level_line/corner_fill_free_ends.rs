@@ -4,7 +4,7 @@
 //! ([`slice`]), and the split round a free end ([`split_round_a_free_end`]), which at a STOPPED
 //! end reads the stretch round it by the end plane and ends each rail at its corner in that plane.
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use std::rc::Rc;
 

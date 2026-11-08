@@ -39,7 +39,7 @@
 //!
 //! The end-plane reading (chain index, point) is optional: `None` where no end is clipped.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::FieldSample;
 

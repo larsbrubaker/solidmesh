@@ -3,12 +3,12 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::corner_cap::{close, CornerCapLastRow};
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::{
+use solidmesh::bevel::level_line::corner_cap::{close, CornerCapLastRow};
+use solidmesh::bevel::level_line::corner_cap_hole_fill::{
     inside_the_creases, leaves_through_convex_crease, out_of_the_planes,
 };
-use geometry_processing::bevel::level_line::{GapFillRefusal, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{GapFillRefusal, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 const CYLINDER_CENTRE_X: f64 = 5.0;
 const CYLINDER_CENTRE_Y: f64 = -4.0;

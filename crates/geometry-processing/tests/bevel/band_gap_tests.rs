@@ -6,15 +6,15 @@
 use std::cell::Ref;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
-use geometry_processing::bevel::level_line::chain_setback;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::room_margin;
+use solidmesh::bevel::level_line::chain_setback;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, ChainField, LevelLineMesh,
 };
+use solidmesh_math::{Matrix4X4, Vector3};
 use std::rc::Rc;
-use vector_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::box_with_square_hole;

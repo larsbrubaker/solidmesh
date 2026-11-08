@@ -12,7 +12,7 @@ use super::clipper_statics::{execute, execute_tree, offset_closed_polygons};
 use super::int_point_extensions::int_point;
 use super::polygon_extensions::PolygonExtensions;
 use crate::curve_tolerance;
-use vector_math::rectangle_double::RectangleDouble;
+use solidmesh_math::rectangle_double::RectangleDouble;
 
 /// Clipper's own default arc tolerance, in clipper units - what these helpers always used.
 pub const DEFAULT_ARC_TOLERANCE: f64 = 0.25;
@@ -135,7 +135,7 @@ impl PolygonsExtensions for Paths64 {
         let bounds = self.get_bounds();
         curve_tolerance::for_size(
             DEFAULT_ARC_TOLERANCE,
-            vector_math::ieee_math::max_f64(bounds.width(), bounds.height())
+            solidmesh_math::ieee_math::max_f64(bounds.width(), bounds.height())
                 / clipper_units_per_unit,
         )
     }

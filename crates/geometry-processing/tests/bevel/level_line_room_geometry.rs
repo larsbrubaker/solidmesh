@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// A triangle-soup solid and the chains of a pick on it: the vertex positions, the triangles as
 /// index triples into those positions, and each chain as a loop of vertex indices.

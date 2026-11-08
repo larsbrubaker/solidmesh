@@ -2,7 +2,7 @@
 //! ([`the_edge_nearest_the_place_among`]) - the fallback a pass charges a refusal by when the
 //! build could not stamp the edge itself.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
 use crate::topology::FeatureEdge;

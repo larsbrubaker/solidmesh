@@ -2,7 +2,7 @@
 //! origin in z = 0, the mesh the renderer's floor gives the bed (mattercad-renderer's
 //! `bed_shadow_gpu::bed_quad` draws the same plane) and textures to mint its uvs.
 
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
 
 use crate::Mesh;
 

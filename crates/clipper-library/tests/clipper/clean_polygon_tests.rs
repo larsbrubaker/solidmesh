@@ -1,8 +1,8 @@
-// Cleaning a polygon with `clipper_library::clean_polygon`.
+// Cleaning a polygon with `solidmesh_clipper::clean_polygon`.
 
 use clipper2_rust::{Path64, Point64};
-use clipper_library::{clean_polygon, int_point, length as point_length};
-use vector_math::math_helper::degrees_to_radians;
+use solidmesh_clipper::{clean_polygon, int_point, length as point_length};
+use solidmesh_math::math_helper::degrees_to_radians;
 
 #[test]
 fn clean_polygons_test() {

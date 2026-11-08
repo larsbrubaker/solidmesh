@@ -4,8 +4,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_room_pair_room::room_of_pick;
-use geometry_processing::bevel::level_line::BandProfile;
+use solidmesh::bevel::level_line::band_room_pair_room::room_of_pick;
+use solidmesh::bevel::level_line::BandProfile;
 
 use crate::level_line_fixture::LevelLineFixture;
 

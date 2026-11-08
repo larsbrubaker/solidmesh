@@ -3,9 +3,9 @@
 
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::{chain_setback, ChainField, ScalarField};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{chain_setback, ChainField, ScalarField};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 /// A straight chain along X, so the right answer can be written down by hand.
 fn straight_chain(setback: f64) -> ChainField {
@@ -448,7 +448,7 @@ fn the_greatest_value_over_a_triangle_agrees_with_brute_force() {
                 let value = chain
                     .value_at(a + ((b - a) * u) + ((c - a) * v))
                     .expect("no budget");
-                sampled = vector_math::ieee_math::max_f64(sampled, value);
+                sampled = solidmesh_math::ieee_math::max_f64(sampled, value);
             }
         }
 

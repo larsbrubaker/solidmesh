@@ -7,10 +7,10 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_rounds_first::build_rounds_first;
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_rounds_first::build_rounds_first;
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::level_line_fixture::LevelLineFixture;
 

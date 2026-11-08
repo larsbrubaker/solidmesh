@@ -3,10 +3,10 @@
 //! level line refused it "the most that fits is about 1.55" - the facet width, with no other bevel
 //! anywhere. Parameter rows are a loop over the same-named test.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use polygon_mesh::csg::boolean_processing::BooleanOperandVerdict;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh_mesh::csg::boolean_processing::BooleanOperandVerdict;
 
 use crate::boolean_kernel_gate;
 use crate::level_line_feature_edges::feature_edges_over;

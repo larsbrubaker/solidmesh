@@ -8,8 +8,8 @@
 
 use std::sync::{Arc, OnceLock};
 
-use polygon_mesh::ray_tracer::TraceableRef;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::ray_tracer::TraceableRef;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::bevel_working_mesh::{self, StampedVerdict};
 use crate::topology::bevel_edge_group_resolver::{self, MatchTolerances};
@@ -99,7 +99,7 @@ impl BevelPickData {
     /// Readies the data for hovering, on whatever thread built it: walks every tangent chain of
     /// the pick set (so a hover onto each new edge of a long rim reads its chain rather than
     /// walking the whole rim again) and floods every region of at least
-    /// [`REGION_FLOODED_UP_FRONT_FACES`] faces (so the first hover onto a smooth surface of a
+    /// `REGION_FLOODED_UP_FRONT_FACES` faces (so the first hover onto a smooth surface of a
     /// hundred thousand faces is a lookup). Only for a caller that will hover or list many edges:
     /// the bevel's pick source and the AI's edge list. A one-off face pick (Align to Face, the
     /// construction plane) skips it; at a fine flat tolerance nearly every edge of a curved part

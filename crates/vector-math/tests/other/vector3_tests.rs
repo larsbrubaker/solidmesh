@@ -2,7 +2,7 @@
 // distance to a segment. Addition is the `+` operator; dot and cross are the `dot`/`cross`
 // methods.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn vector_addition_and_subtraction() {

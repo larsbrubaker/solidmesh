@@ -4,12 +4,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::bevel_section::SectionSide;
-use geometry_processing::bevel::sections::section_builder_run::try_build_chain;
-use geometry_processing::bevel::sections::{SectionPool, SectionRun};
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh::bevel::sections::bevel_section::SectionSide;
+use solidmesh::bevel::sections::section_builder_run::try_build_chain;
+use solidmesh::bevel::sections::{SectionPool, SectionRun};
+use solidmesh::topology::{FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 

@@ -11,13 +11,11 @@ use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
 
-use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandProfile, LevelLineWork, WorkBudget,
-};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::level_line::band_gap::BandGapBuildError;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, LevelLineWork, WorkBudget};
+use solidmesh_mesh::CancelToken;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::hourglass_solid;

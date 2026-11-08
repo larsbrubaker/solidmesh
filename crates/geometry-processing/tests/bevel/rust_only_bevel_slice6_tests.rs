@@ -6,15 +6,13 @@
 use std::collections::HashSet;
 use std::f64::consts::FRAC_PI_2;
 
-use geometry_processing::bevel::level_line::{
-    convex_cell_bound, FieldSample, RoomReadingKind, RoomSource,
-};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::level_line::{convex_cell_bound, FieldSample, RoomReadingKind, RoomSource};
+use solidmesh::bevel::surface::{
     nearest_on_the_triangle, SurfaceLine, SurfaceMixedCornerSpine, SurfaceRegionFaceGrid,
 };
-use geometry_processing::topology::FaceGroup;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::topology::FaceGroup;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 // ---------------------------------------------------------------- ConvexCellBound
 

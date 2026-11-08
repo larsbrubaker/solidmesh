@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 
 use indexmap::IndexSet;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{chain_setback, ChainField, EndRayBound, ForeignEdgeRegions, LevelLineMesh, WorkError};
 

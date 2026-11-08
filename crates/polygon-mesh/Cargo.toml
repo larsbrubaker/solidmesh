@@ -15,19 +15,19 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme.workspace = true
-# Not yet on crates.io: the publish step flips this once the public API is settled.
-publish = false
+readme = "README.md"
+# The tests and their fixtures stay in the repository; the package is the library alone.
+exclude = ["tests/"]
 
 [lib]
-name = "polygon_mesh"
+name = "solidmesh_mesh"
 path = "src/lib.rs"
 
 [dependencies]
-vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
+solidmesh-math = { path = "../vector-math", version = "0.1.0" }
 # The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
 # slicing, stitching, extrude and revolve share with MatterCAD's DataConverters2D.
-clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", version = "0.1.0" }
+solidmesh-clipper = { path = "../clipper-library", version = "0.1.0" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like the other siblings, so an upstream fix is usable
 # at once.

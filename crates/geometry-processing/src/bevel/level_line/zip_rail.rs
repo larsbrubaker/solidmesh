@@ -3,7 +3,7 @@
 //! reading past the wrap, whether a step is a jump ([`ZipRail::is_a_jump`]) and the rail re-cut to
 //! start nearest the other's start ([`ZipRail::start_nearest`]).
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::{gap_fill, LevelLineMesh};
 

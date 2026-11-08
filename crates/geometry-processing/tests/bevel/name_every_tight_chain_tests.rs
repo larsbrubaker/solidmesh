@@ -5,14 +5,14 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
-use geometry_processing::bevel::level_line::pick_validation;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room_of_pick;
+use solidmesh::bevel::level_line::pick_validation;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandProfile, ChainsThatCannotFit, RoomCandidate, RoomReading, RoomReadingKind,
     RoomSource,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::cube_solid;

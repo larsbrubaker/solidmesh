@@ -9,7 +9,7 @@
 //! ([`ChainField::value_across_the_known_cut`]); the clipped least over a piece is in
 //! `chain_field_least.rs`.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::float_grid;
 use super::{ChainField, EndRayBound, ScalarField, WorkError};

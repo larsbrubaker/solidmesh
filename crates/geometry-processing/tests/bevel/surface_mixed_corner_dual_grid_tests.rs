@@ -5,10 +5,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceEdgePlan, SurfaceMixedCornerDualCanal, SurfaceMixedCornerDualGrid, SurfaceStrip,
 };
-use vector_math::math_helper::radians_to_degrees;
+use solidmesh_math::math_helper::radians_to_degrees;
 
 use crate::nose_in_notch_mixed_corners;
 use crate::nose_in_notch_test_meshes;

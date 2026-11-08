@@ -14,15 +14,15 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_chain_join, surface_room, surface_room_measure, SurfaceBandRunsOffOverAStretch,
     SurfaceBevelPlan, SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::pyramid_recess_test_meshes;
 use crate::tapered_ledge_test_meshes;

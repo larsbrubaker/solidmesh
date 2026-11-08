@@ -1,4 +1,4 @@
-//! The bevel part tests (`part_*`): a whole part's bevel (`geometry_processing::bevel::part`) -
+//! The bevel part tests (`part_*`): a whole part's bevel (`solidmesh::bevel::part`) -
 //! the pieces it is orchestrated with, one file each beside this one, and its entry point, its
 //! prologue and its surface construction, in `part/`. Nothing else uses their helpers, so
 //! `bevel.rs` does not re-export this group; the fixtures they read are the shared ones.

@@ -9,14 +9,14 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::csg::{
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Color;
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::{
     boolean_processing, manifold_import, BooleanError, BooleanOptions, CsgModes, WindingRule,
 };
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Color;
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 const NOT_CLOSED: &str = "NotClosed";
 const NON_FINITE_VERTEX: &str = "NonFiniteVertex";

@@ -5,8 +5,8 @@
 //! ([`try_swallow_the_folds_vertices`]). The rest of the rebuild is
 //! [`super::section_face_rebuild`], whose state ([`Rebuild`]) these write into.
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_face_rebuild::{corner_not_supported, cross, Rebuild, WalkedFan};
 use super::section_surface_walk;

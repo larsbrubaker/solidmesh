@@ -6,11 +6,11 @@
 use std::future::Future;
 use std::sync::{Arc, Once};
 
-use vector_math::progress::ProgressReporter;
+use solidmesh_math::progress::ProgressReporter;
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{BooleanConfig, BooleanEngine, OpType, WindingRule};
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
 
 use super::boolean_progress_adapter::{progress_sink_for, BooleanProgressAdapter};
 use super::manifold_operand_batch::{AddOutcome, ManifoldOperandBatch};

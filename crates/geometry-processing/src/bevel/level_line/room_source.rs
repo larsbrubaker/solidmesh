@@ -1,7 +1,7 @@
 //! Which reading set a band's room, and which chain or pair of chains it was about. Leans on
 //! [`RoomReadingKind`] for the kind; the room readings produce one.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::RoomReadingKind;
 

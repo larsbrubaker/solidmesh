@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{triangle_edges, LevelLineWork};
 

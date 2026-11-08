@@ -10,10 +10,10 @@
 //! foot, which is what says the two readings meet rather than overlap. Built through the shared
 //! `SurfaceTestBuild` port.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_cut;

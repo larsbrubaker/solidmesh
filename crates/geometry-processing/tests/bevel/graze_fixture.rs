@@ -16,11 +16,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::chain_setback;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, ChainField, PickField};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::chain_setback;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, ChainField, PickField};
+use solidmesh_math::Vector3;
 
 use crate::annulus_plate_builder::AnnulusPlateBuilder;
 use crate::level_line_feature_edges::feature_edges_over;

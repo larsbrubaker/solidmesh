@@ -6,11 +6,9 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use geometry_processing::bevel::sections::section_routing::{self, SectionRouteAnswer};
-use geometry_processing::bevel::sections::{
-    section_face_rebuild, section_loft, section_smooth_seam,
-};
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::bevel::sections::section_routing::{self, SectionRouteAnswer};
+use solidmesh::bevel::sections::{section_face_rebuild, section_loft, section_smooth_seam};
+use solidmesh::topology::FeatureEdgeSet;
 
 use crate::inner_face_test_mesh;
 use crate::section_pierced_face_readings::the_plans;

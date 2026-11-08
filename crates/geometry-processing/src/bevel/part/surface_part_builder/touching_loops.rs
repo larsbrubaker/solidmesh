@@ -11,7 +11,7 @@ use crate::bevel::{
     BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelGroupResult, BevelLoopFailure,
 };
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{BevelSurfacePartBuilder, RimLoop, TheChainCondemned};
 

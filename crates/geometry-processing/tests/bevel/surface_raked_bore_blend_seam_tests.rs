@@ -4,11 +4,11 @@
 //! different fault from a hole and counted apart from one. The raked fixture's constants are in
 //! `surface_raked_bore_mouth_tests.rs`, its mouth reading in `surface_bore_mouth_tests.rs`.
 
-use geometry_processing::topology::{
+use indexmap::IndexMap;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use indexmap::IndexMap;
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::surface_bore_mouth_tests::the_upper_raked_mouth;
 use crate::surface_raked_bore_mouth_tests::{

@@ -6,9 +6,9 @@
 //! topology binaries and by the model's and app's bevel tests that build these parts (alongside
 //! `topology_test_meshes`).
 
-use polygon_mesh::processors::outline_to_mesh::{self, RevolveError};
-use polygon_mesh::Mesh;
-use vector_math::Vector2;
+use solidmesh_math::Vector2;
+use solidmesh_mesh::processors::outline_to_mesh::{self, RevolveError};
+use solidmesh_mesh::Mesh;
 
 /// An outline drawn as a path is: each MoveTo starts a contour, each LineTo adds a point to the
 /// current one (starting one if there is none), and a close ends it.

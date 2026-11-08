@@ -9,7 +9,7 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use vector_math::ColorF;
+use solidmesh_math::ColorF;
 
 use super::{IntersectInfo, RayTracerError, Traceable};
 

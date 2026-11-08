@@ -12,7 +12,7 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::topology::bevel_edge_group_resolver;
+use solidmesh::topology::bevel_edge_group_resolver;
 
 use crate::many_holes_rim_reading::{self, LoopAnswer};
 use crate::many_holes_test_mesh;

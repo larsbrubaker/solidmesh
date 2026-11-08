@@ -36,7 +36,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::surface_walkback_tangent_runs::KeptFaces;
 use super::{

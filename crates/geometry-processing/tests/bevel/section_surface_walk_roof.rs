@@ -7,8 +7,8 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::mesh_surface_distance::closest_point_on_triangle;
 

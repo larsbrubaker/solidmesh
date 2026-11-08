@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use crate::level_line_room_geometry::{SolidWithChains, SolidWithTwoChains};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 /// A fold threshold that reads a 90 degree corner as a feature and a 16-sided
 /// cylinder as smooth.

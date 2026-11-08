@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::settled_pick::SettledPick;
 use crate::bevel::level_line::RoomSource;

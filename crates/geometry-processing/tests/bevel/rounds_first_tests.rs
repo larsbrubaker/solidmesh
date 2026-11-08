@@ -7,22 +7,22 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
-use geometry_processing::bevel::level_line::band_gap_after_the_rounds::{
+use solidmesh::bevel::level_line::band_gap::BandGapBuildError;
+use solidmesh::bevel::level_line::band_gap_after_the_rounds::{
     creases_after_the_rounds, feature_edges_after_the_rounds,
 };
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_in_turn::BuildAndFillError;
-use geometry_processing::bevel::level_line::band_gap_rounds_first::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_in_turn::BuildAndFillError;
+use solidmesh::bevel::level_line::band_gap_rounds_first::{
     build_rounds_first, build_the_rounds, chain_senses, takes_rounds_first,
 };
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandProfile, GapFillRefusal, GapFillResult, WorkBudget,
 };
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::level_line_fixture::LevelLineFixture;
 use crate::sweep_mesh_measures;

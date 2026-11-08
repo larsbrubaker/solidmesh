@@ -13,10 +13,10 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::topology::{BevelEdgeGroup, BevelSelectionKind};
+use solidmesh::topology::{BevelEdgeGroup, BevelSelectionKind};
 
 /// The size the owner file's fillet asks, as its expression evaluates.
 pub const SIZE: f64 = 3.7561607778139794;

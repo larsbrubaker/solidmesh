@@ -2,15 +2,15 @@
 //! running along an edge between two facets, leaning off it by float noise. A fold is where a
 //! direction computed from single-precision vertices lands outside BOTH faces' wedges at once.
 
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::sections::section_fan_walk;
-use geometry_processing::bevel::sections::section_surface_walk_faces::{
+use solidmesh::bevel::sections::section_fan_walk;
+use solidmesh::bevel::sections::section_surface_walk_faces::{
     try_face_holding, try_face_holding_at_edge,
 };
-use geometry_processing::bevel::sections::section_surface_walk_try::try_walk;
-use geometry_processing::bevel::sections::SurfaceWalkRefusal;
+use solidmesh::bevel::sections::section_surface_walk_try::try_walk;
+use solidmesh::bevel::sections::SurfaceWalkRefusal;
 
 use crate::tapered_barrel_test_meshes;
 

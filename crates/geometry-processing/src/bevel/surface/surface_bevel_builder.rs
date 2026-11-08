@@ -14,7 +14,7 @@
 //! **Ends and mitres are the same cut.** Both are a plane the rails are cut at: at a corner between
 //! two chain edges it is the mitre plane through the corner, and at the open end of a chain it is
 //! the plane of the face beyond the corner. Either way each rail meets it at its own parameter,
-//! which is why the strip is kept as rails ([`SurfaceStrip`]) - a mitred corner of a cube's top rim
+//! which is why the strip is kept as rails (`SurfaceStrip`) - a mitred corner of a cube's top rim
 //! meets the top face's tangent line 3 mm before it meets the side face's, and no single cross
 //! section could be at both.
 //!
@@ -25,16 +25,16 @@
 //! no-fallback rule.
 //!
 //! The pass is split by stage for the file-length limit: the strips and their seams are
-//! [`super::surface_bevel_builder_seams`], the corner loop [`super::surface_bevel_builder_corners`]
-//! and the last pass, the stitches, [`super::surface_builder_bitten_strips`]. The build is one
+//! `super::surface_bevel_builder_seams`, the corner loop `super::surface_bevel_builder_corners`
+//! and the last pass, the stitches, `super::surface_builder_bitten_strips`. The build is one
 //! function taking [`SurfaceBuildOptions`] for what a caller may leave out, answering
 //! `Result<SurfaceBuilt, SurfaceBuildFailure>`.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
 
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use super::surface_bevel_builder_corners::{self as corners, CornerLoopInputs};
 use super::surface_bevel_builder_seams as seams;
@@ -126,7 +126,7 @@ pub struct SurfaceBuildOptions<'a> {
     /// The partial run-offs the ROOM read on these same plans (`SurfaceRoom::try_fit`), for this
     /// build to check its own reading against: the two are the same call and must answer the
     /// same, and where they do not the pass is refused by name rather than built with an end
-    /// nobody closes ([`surface_run_off_agreement`]). `None` where the caller has no reading to
+    /// nobody closes (`surface_run_off_agreement`). `None` where the caller has no reading to
     /// offer, which leaves the build on its own.
     pub ran_off_over_a_stretch: Option<&'a [SurfaceBandRunsOffOverAStretch]>,
     /// Lifts THE LEAN GATE, for the kernel test that measures a leaning corner's own rows while

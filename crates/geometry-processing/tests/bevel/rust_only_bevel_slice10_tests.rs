@@ -5,7 +5,7 @@
 
 #[test]
 fn rust_only_a_pick_fault_defaults_to_naming_nothing() {
-    use geometry_processing::bevel::level_line::{BandGapRefusal, PickFault};
+    use solidmesh::bevel::level_line::{BandGapRefusal, PickFault};
 
     // Its initial values: every index -1 (none yet), the refusal its first member.
     let fault = PickFault::default();

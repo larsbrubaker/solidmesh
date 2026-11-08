@@ -18,7 +18,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_fan::emit_facing;
 use super::surface_ring_ears::try_triangulate_the_ring;

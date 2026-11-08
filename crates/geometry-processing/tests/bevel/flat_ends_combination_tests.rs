@@ -5,11 +5,11 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::GapFillRefusal;
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::GapFillRefusal;
 
 use crate::end_face_builds::{as_saved, build_chains, feature_of, FlatEnds};
 use crate::end_face_measures::to_triangle;

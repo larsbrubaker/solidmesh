@@ -4,10 +4,10 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::ray_tracer::{
     BvhIterator, Traceable, TraceableRef, Transform, TriangleShape, UnboundCollection,
 };
-use vector_math::{Matrix4X4, Vector3};
 
 fn is<T: Traceable>(item: &BvhIterator<'_, '_>) -> bool {
     item.bvh.as_any().is::<T>()

@@ -8,8 +8,8 @@
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{gap_fill, triangle_edges, ChainField};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{gap_fill, triangle_edges, ChainField};
+use solidmesh_math::Vector3;
 
 use super::{build, p, publish, to_control, RUN_VARIABLE};
 use crate::encroaching_side_room_tests::up_to;

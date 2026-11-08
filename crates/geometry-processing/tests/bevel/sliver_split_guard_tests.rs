@@ -6,18 +6,18 @@
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::field_counters::{ALL_RULES, WOULD_THIN_LIMITS};
-use geometry_processing::bevel::level_line::point_bevel::PointBevelKind;
-use geometry_processing::bevel::level_line::refinement_splits::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::field_counters::{ALL_RULES, WOULD_THIN_LIMITS};
+use solidmesh::bevel::level_line::point_bevel::PointBevelKind;
+use solidmesh::bevel::level_line::refinement_splits::{
     would_thin_a_child, would_thin_a_child_on_edge,
 };
-use geometry_processing::bevel::level_line::refinement_splits_enqueue::{
+use solidmesh::bevel::level_line::refinement_splits_enqueue::{
     bisect_instead_of_thinning_on_edge, SLIVER_ASPECT_LIMIT,
 };
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     BandProfile, FieldCounters, LevelLineMesh, LevelLineRule, WorkBudget,
 };
 

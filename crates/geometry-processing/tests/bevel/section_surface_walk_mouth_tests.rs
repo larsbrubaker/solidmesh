@@ -11,19 +11,17 @@
 
 use std::collections::HashSet;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::bevel_chain_linker::{link, BevelSweptChain};
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::{self, EdgeAtPair};
-use geometry_processing::bevel::sections::section_surface_walk_faces::try_face_holding;
-use geometry_processing::bevel::sections::section_surface_walk_join::try_join;
-use geometry_processing::bevel::sections::section_surface_walk_try::try_walk;
-use geometry_processing::bevel::sections::{
-    SectionPool, SectionSide, SurfaceWalkRefusal, SurfaceWalkResult,
-};
-use geometry_processing::topology::BevelEdgeGroupResolution;
+use solidmesh::bevel::bevel_chain_linker::{link, BevelSweptChain};
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::{self, EdgeAtPair};
+use solidmesh::bevel::sections::section_surface_walk_faces::try_face_holding;
+use solidmesh::bevel::sections::section_surface_walk_join::try_join;
+use solidmesh::bevel::sections::section_surface_walk_try::try_walk;
+use solidmesh::bevel::sections::{SectionPool, SectionSide, SurfaceWalkRefusal, SurfaceWalkResult};
+use solidmesh::topology::BevelEdgeGroupResolution;
 
 use crate::mesh_surface_distance::closest_point_on_triangle;
 use crate::rigid_motion_meshes;

@@ -2,7 +2,7 @@
 //! corners lie past the end, and whether its creases fold opposite at the end, split out of
 //! `end_face_sense.rs` (which holds the entry point, `oblique_ends`) for length.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::curved_end_face::bends_on_softly;

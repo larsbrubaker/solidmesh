@@ -11,14 +11,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
-use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::bevel::{bevel_chain_linker, BevelSweptChain};
+use solidmesh::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_corner_tests::{fillet_profile, mitred_corner_overlap, section_area};

@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::SurfaceStandingFeatureWithheld;
 

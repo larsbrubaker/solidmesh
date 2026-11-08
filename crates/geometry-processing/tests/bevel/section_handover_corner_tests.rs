@@ -15,16 +15,16 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::{section_corner, section_mixed_corner, section_routing};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::sections::{section_corner, section_mixed_corner, section_routing};
+use solidmesh::bevel::surface::{
     surface_mixed_corner_readings, surface_mixed_corner_run_out, surface_mixed_corner_which_canal,
     SurfaceBevelPlan, SurfaceMixedCornerDualCanal,
 };
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{ChainEdge, EdgeConvexity};
-use polygon_mesh::CancelToken;
-use vector_math::math_helper::radians_to_degrees;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{ChainEdge, EdgeConvexity};
+use solidmesh_math::math_helper::radians_to_degrees;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::handover_corner_test_mesh as fixture;
 use crate::section_turn_readings::{feature_dihedral_degrees, the_creases_at};
@@ -398,7 +398,7 @@ fn legacy_answers_the_corner_with_a_cap_riding_run_out_and_refuses_the_dual_cana
 struct FlagOnBuild {
     plans: Vec<Rc<SurfaceBevelPlan>>,
     /// The mesh, or the advisory (`None` where nothing was named).
-    result: Result<polygon_mesh::Mesh, Option<BevelAdvisory>>,
+    result: Result<solidmesh_mesh::Mesh, Option<BevelAdvisory>>,
     route: Option<String>,
 }
 

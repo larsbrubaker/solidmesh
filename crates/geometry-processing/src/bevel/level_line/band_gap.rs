@@ -6,7 +6,7 @@
 //! build proper is `band_gap_build_entry.rs` and `band_gap_build_within.rs`, and the public builds
 //! `band_gap_entry_points.rs`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use std::cell::RefCell;
 use std::collections::HashSet;

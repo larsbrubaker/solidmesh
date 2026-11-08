@@ -10,13 +10,13 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::link;
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker::link;
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::bevel::surface::{
     surface_mesh_closure, surface_shared_edge_network, SurfaceBevelPlan,
 };
-use geometry_processing::topology::{BevelEdgeGroupResolution, FaceRegionCache, FeatureEdgeChain};
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh::topology::{BevelEdgeGroupResolution, FaceRegionCache, FeatureEdgeChain};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::surface_test_build::{
     pinned_to_the_legacy_construction, pinned_to_the_sections, try_bevel_resolutions,

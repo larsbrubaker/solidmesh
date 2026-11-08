@@ -4,13 +4,13 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::topology::bevel_edge_group_resolver;
+use solidmesh::topology::{
     BevelEdgeGroup, BevelSelectionKind, ChainEdge, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// The cube's edge.
 pub const SIZE: f64 = 20.0;
@@ -149,7 +149,7 @@ fn create_full(
     mesh.clean_and_merge();
 
     if scale != 1.0 {
-        mesh.transform(vector_math::Matrix4X4::create_scale_uniform(scale));
+        mesh.transform(solidmesh_math::Matrix4X4::create_scale_uniform(scale));
     }
 
     mesh

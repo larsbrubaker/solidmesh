@@ -13,13 +13,13 @@ use std::fmt::Write as _;
 use std::io::Write as _;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     band_gap_reading, band_side_groups, chain_on_the_mesh, gap_loop_walk, BandProfile, ChainField,
     PickField,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::cube_solid;

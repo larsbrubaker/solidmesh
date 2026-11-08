@@ -3,7 +3,7 @@
 //! hit among a [`Scene`]'s shapes. There is no image renderer (color, depth and normal
 //! buffers, anti-aliasing, ray bundles) here; the settings are what one would read.
 
-use vector_math::{IntersectionType, Ray};
+use solidmesh_math::{IntersectionType, Ray};
 
 use super::{IntersectInfo, Scene};
 

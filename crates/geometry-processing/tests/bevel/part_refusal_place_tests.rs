@@ -1,11 +1,11 @@
 //! Which picked edge a refusal's place blames (`part::refusal_place`) and the level-line answer
 //! as a mesh (`part::answer_mesh`), read on bare edges and positions.
 
-use geometry_processing::bevel::part::answer_mesh::the_mesh_of;
-use geometry_processing::bevel::part::refusal_place::the_edge_nearest_the_place_among;
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::FeatureEdge;
-use vector_math::Vector3;
+use solidmesh::bevel::part::answer_mesh::the_mesh_of;
+use solidmesh::bevel::part::refusal_place::the_edge_nearest_the_place_among;
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::Vector3;
 
 fn feature_edge(index: i32, start: Vector3, end: Vector3) -> FeatureEdge {
     FeatureEdge {

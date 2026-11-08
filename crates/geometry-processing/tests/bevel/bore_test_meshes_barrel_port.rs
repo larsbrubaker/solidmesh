@@ -6,8 +6,8 @@
 //! belongs to. The plate bores are in `bore_test_meshes.rs`, the edge bore in
 //! `bore_test_meshes_edge_bore.rs`.
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// How many facets round the barrel of the flash hider the port fixture is cut from.
 pub const BARREL_SIDES: i32 = 124;

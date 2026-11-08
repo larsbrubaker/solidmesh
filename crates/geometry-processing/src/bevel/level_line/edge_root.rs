@@ -3,7 +3,7 @@
 //! [`BRACKET_TOLERANCE`]) and the bracketed search that finds the roots ([`find`], [`find_over`],
 //! [`root_on`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{
     FieldCounters, LevelLineMesh, LevelLineWork, VertexFieldReading, VertexSide, WorkError,

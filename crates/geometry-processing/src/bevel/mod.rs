@@ -6,11 +6,11 @@
 //!   ([`BevelGroupResult`], [`bevel_group_failures`]).
 //! - **Sections and runs.** The profile and frame an edge's section is drawn in
 //!   ([`bevel_edge_tool_builder`]), arc chording ([`bevel_arc_chording`]), a section's winding
-//!   ([`bevel_profile_polygon`]), the runs a selection links into ([`BevelSweptChain`],
+//!   (`bevel_profile_polygon`), the runs a selection links into ([`BevelSweptChain`],
 //!   [`bevel_chain_linker`]) and the sweep that measures them: its rulers
-//!   ([`bevel_chain_sweep`]), sections ([`bevel_chain_sweep_sections`]), segments
+//!   (`bevel_chain_sweep`), sections (`bevel_chain_sweep_sections`), segments
 //!   ([`bevel_chain_sweep_mesh`]), joint rings ([`bevel_chain_sweep_rings`]), the joints one
-//!   sweep cannot carry ([`bevel_mitre_fit`]) and how deep its back may reach
+//!   sweep cannot carry (`bevel_mitre_fit`) and how deep its back may reach
 //!   ([`bevel_sweep_back_depth`]).
 //! - **Ends and corners.** The interrupted-crease readings and the steepest plane an end stops on
 //!   ([`bevel_interrupted_crease`]), the equal-angle step a corner samples its ball with
@@ -35,17 +35,17 @@ mod bevel_advisory_code;
 pub mod bevel_advisory_codes;
 pub mod bevel_arc_chording;
 pub mod bevel_chain_linker;
-pub mod bevel_chain_sweep;
+pub(crate) mod bevel_chain_sweep;
 pub mod bevel_chain_sweep_mesh;
 pub mod bevel_chain_sweep_rings;
-pub mod bevel_chain_sweep_sections;
+pub(crate) mod bevel_chain_sweep_sections;
 pub mod bevel_edge_tool_builder;
 mod bevel_group_result;
 pub mod bevel_interrupted_crease;
-pub mod bevel_mitre_fit;
+pub(crate) mod bevel_mitre_fit;
 pub mod bevel_patch_refinement;
 pub mod bevel_pick_data;
-pub mod bevel_profile_polygon;
+pub(crate) mod bevel_profile_polygon;
 mod bevel_rebuild_advisories;
 pub mod bevel_seam_ring;
 pub mod bevel_split_chords;

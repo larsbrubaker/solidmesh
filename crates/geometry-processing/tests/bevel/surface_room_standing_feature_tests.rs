@@ -10,19 +10,19 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_face_walkback, surface_mesh_closure, surface_room, surface_room_measure,
     surface_room_standing_feature, surface_shared_edge_network, SurfaceBevelPlan,
     SurfaceWalkbackResult,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
-use geometry_processing::topology::{
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, FaceGroup, FaceRegionCache, FeatureEdge,
     FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements;
 use crate::nose_in_notch_test_meshes;

@@ -6,9 +6,9 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::{CancelToken, Cancelled, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::{CancelToken, Cancelled, Mesh};
 use web_time::Instant;
 
 use super::answer_mesh::the_mesh_of;

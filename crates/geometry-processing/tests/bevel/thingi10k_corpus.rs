@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use vector_math::seeded_random::SeededRandom;
+use solidmesh_math::seeded_random::SeededRandom;
 
 /// One record of the Thingi10K metadata: which model, which repository shard, how many faces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

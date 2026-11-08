@@ -476,7 +476,7 @@ impl DMesh3 {
             map_v[vid as usize] = accum as i32;
             let v = self.vertices[vid as usize];
             out.vertices
-                .push(vector_math::Vector3Float::new(v[0], v[1], v[2]));
+                .push(solidmesh_math::Vector3Float::new(v[0], v[1], v[2]));
         }
         for tid in self.triangle_indices() {
             let t = self.get_triangle(tid);

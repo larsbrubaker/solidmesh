@@ -23,7 +23,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 /// A bucket key: a cell `near_enough` across.
 type Cell = (i64, i64, i64);

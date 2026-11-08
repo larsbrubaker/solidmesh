@@ -4,8 +4,8 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
 
 /// How many pairs of live triangles not sharing an edge have an edge of one
 /// passing through the other's interior.

@@ -20,8 +20,8 @@ use crate::bevel::level_line::{
 use crate::bevel::part::answer_mesh::the_mesh_of;
 use crate::bevel::part::self_intersection_check::the_answer_intersects_itself_where_the_source_did_not as crosses_itself;
 use crate::bevel::surface::surface_mesh_closure;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::level_line::LevelLineRouteError;
 use super::level_line_kernel_handoff::the_kept_triangles;

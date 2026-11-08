@@ -8,12 +8,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
+use indexmap::IndexMap;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{
     BandProfile, FieldCounters, LevelLineProgress, LevelLineWorkPhase, WorkBudget,
 };
-use indexmap::IndexMap;
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use crate::convex_cell_bound_tests::digest;
 use crate::grid_hole_plate_fixture;

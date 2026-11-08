@@ -1,6 +1,6 @@
 // Vector2 behaviour: the signed delta angle around a center, and distance to a line.
 
-use vector_math::{math_helper, Vector2};
+use solidmesh_math::{math_helper, Vector2};
 
 #[test]
 fn get_delta_angle_tests() {

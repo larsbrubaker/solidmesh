@@ -11,14 +11,14 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, SurfaceBevelPlan,
     SurfaceBuildFailure,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::pyramid_recess_test_meshes;
 

@@ -20,7 +20,7 @@
 use super::marching_cubes_tables::{EDGE_INDICES, EDGE_TABLE, TRI_TABLE};
 use crate::cancel::CancelToken;
 use crate::mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// g3's `DenseGrid3f`: `ni * nj * nk` floats, x fastest (`i + ni * (j + nj * k)`).
 #[derive(Clone, Debug, PartialEq)]

@@ -2,7 +2,7 @@
 // perspective transforms, exact powers of two, saturating factorials, and the ray's slab terms,
 // shadow flag and back-face normals.
 
-use vector_math::{
+use solidmesh_math::{
     math_helper, AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Sign, Vector3,
     Vector4,
 };

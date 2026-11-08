@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{surface_face_walkback, SurfaceBevelPlan};
-use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{surface_face_walkback, SurfaceBevelPlan};
+use solidmesh::topology::{FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::surface_walkback_checks::{
     assert_no_new_t_junctions, boundary_loops, regions_of, rounded,

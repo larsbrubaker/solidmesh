@@ -5,7 +5,7 @@
 //! lies in ([`try_find_the_end_plane`]), and the cut itself ([`try_cut`]).
 
 use indexmap::IndexSet;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use std::collections::HashMap;
 

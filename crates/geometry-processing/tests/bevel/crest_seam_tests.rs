@@ -4,11 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, RoomReadingKind};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, RoomReadingKind};
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)

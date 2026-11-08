@@ -12,14 +12,14 @@ use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceLine,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::topology_test_meshes::{create_cylinder, create_l_shaped_prism};
@@ -517,7 +517,7 @@ fn build_the_top_rim(cube: &Mesh, size: f64, round_profile: bool, segments: i32)
 fn build_chain(
     part: &Mesh,
     regions: &Arc<FaceRegionCache>,
-    edges: &[geometry_processing::topology::FeatureEdge],
+    edges: &[solidmesh::topology::FeatureEdge],
     size: f64,
     round_profile: bool,
     segments: i32,

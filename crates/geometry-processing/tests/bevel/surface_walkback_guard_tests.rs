@@ -7,16 +7,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{surface_face_walkback, SurfaceBevelPlan};
-use geometry_processing::bevel::{
+use solidmesh::bevel::surface::{surface_face_walkback, SurfaceBevelPlan};
+use solidmesh::bevel::{
     bevel_chain_linker, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelSweptChain,
 };
-use geometry_processing::topology::{
-    EdgeConvexity, FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet,
-};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::topology::{EdgeConvexity, FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::surface_walkback_checks::{
     area_on, assert_every_run_is_a_chain_of_real_edges, assert_no_new_t_junctions,

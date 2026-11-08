@@ -17,7 +17,7 @@
 //! side's normal carried along, which no pick asks for yet.
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::{end_face_sense, triangle_edges};
 use super::{

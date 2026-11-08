@@ -6,7 +6,7 @@
 //! ([`on_the_partners_leg`]); the arcs that read the level-line mesh are in `fillet_arc_rows`. The
 //! arc point itself is [`super::gap_fill::arc_point`].
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::gap_fill::arc_point;
 use super::{ChainField, LevelLineMesh};
@@ -254,7 +254,7 @@ pub fn carry_weight(
             } else {
                 0.0
             };
-            away_from_joints = vector_math::ieee_math::min_f64(away_from_joints, weight);
+            away_from_joints = solidmesh_math::ieee_math::min_f64(away_from_joints, weight);
             k += 1;
         }
     }

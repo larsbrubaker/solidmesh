@@ -8,13 +8,13 @@ use std::f64::consts::PI;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_room, surface_room_measure, SurfaceBevelPlan, SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_mesh::CancelToken;
 
 use crate::surface_mitre_consumes_a_chord_tests::half_disc_prism;
 

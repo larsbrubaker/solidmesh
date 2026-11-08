@@ -5,7 +5,7 @@
 //! predicate and a bend threshold, per-corner radii settled by damped relaxation, then one
 //! inscribed tangent arc per surviving corner. Open contours are handled (a polyline's ends are
 //! never rounded), and the relaxation solves a whole pass at a time so the radii depend on the
-//! shape and not on where its vertex numbering starts (see [`relax_radii`]).
+//! shape and not on where its vertex numbering starts (see `relax_radii`).
 //!
 //! The size is read either as a radius (a fillet) or as a setback along each edge (a chamfer,
 //! [`PathBevelSizeMode::TangentDistance`]); a setback `d` is turned into the radius
@@ -24,7 +24,7 @@
 // how a NaN size, radius or angle declines a corner instead of slipping through.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use vector_math::{ieee_math, math_helper, Vector2};
+use solidmesh_math::{ieee_math, math_helper, Vector2};
 
 use super::path_bevel_arcs;
 

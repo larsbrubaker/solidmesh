@@ -4,8 +4,8 @@
 
 use std::rc::Rc;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_builder::{
     place_the_interior_samples, try_boundary, try_junction, SMALLEST_WEDGE_COSINE,

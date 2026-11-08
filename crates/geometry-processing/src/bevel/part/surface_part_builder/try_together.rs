@@ -16,7 +16,7 @@ use crate::bevel::surface::{
 use crate::bevel::{
     BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelGroupResult, BevelResultGroup,
 };
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError, TheChainCondemned};
 

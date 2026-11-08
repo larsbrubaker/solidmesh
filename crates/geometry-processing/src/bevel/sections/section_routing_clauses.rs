@@ -7,8 +7,8 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::math_helper;
+use solidmesh_math::math_helper;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_run::IsAFeatureEdge;
 use super::{section_corner, section_end, section_fan_walk, section_junction_build};

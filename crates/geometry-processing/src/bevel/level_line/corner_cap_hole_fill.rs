@@ -19,7 +19,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     corner_cap_hold, corner_fill, corner_mitre_patch, hole_fill, ChainField, CornerCapLastRow,

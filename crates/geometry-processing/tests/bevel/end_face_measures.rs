@@ -3,7 +3,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The distance from `p` to the triangle a-b-c.
 pub fn to_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> f64 {

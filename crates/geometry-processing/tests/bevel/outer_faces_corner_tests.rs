@@ -6,9 +6,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::corner_pick_with_mouth_tests::concave_bound;
 use crate::end_face_builds::feature_of;

@@ -10,10 +10,10 @@
 
 #![allow(dead_code)]
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::chain_setback;
-use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, PickField};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::chain_setback;
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, PickField};
+use solidmesh_math::Vector3;
 
 use crate::annulus_plate_builder::AnnulusPlateBuilder;
 use crate::graze_fixture;

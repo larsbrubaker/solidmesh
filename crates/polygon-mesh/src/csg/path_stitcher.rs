@@ -4,11 +4,11 @@
 //! loop through `outline_to_mesh::triangulate_faces`.
 
 use clipper2_rust::{Path64, Paths64, Point64};
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh_math::{Matrix4X4, Vector2, Vector3};
 
 use crate::processors::outline_to_mesh::triangulate_faces;
 use crate::Mesh;
-use clipper_library::{get_intersection, length_squared, Intersection};
+use solidmesh_clipper::{get_intersection, length_squared, Intersection};
 
 fn distance_squared(a: Point64, b: Point64) -> i64 {
     length_squared(Point64::new(a.x - b.x, a.y - b.y))

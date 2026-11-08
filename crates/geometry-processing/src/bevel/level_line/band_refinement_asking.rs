@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::band_refinement::{
     farthest_from_the_line, farthest_from_the_line3, line_points_of, nearest_to_the_line,

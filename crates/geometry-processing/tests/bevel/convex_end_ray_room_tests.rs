@@ -4,11 +4,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_room_pair_room_pick;
-use geometry_processing::bevel::level_line::corner_cap_flat_ends;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_room_pair_room_pick;
+use solidmesh::bevel::level_line::corner_cap_flat_ends;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 

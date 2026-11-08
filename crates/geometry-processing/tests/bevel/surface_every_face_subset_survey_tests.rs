@@ -15,13 +15,13 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, EdgeConvexity, FaceGroup,
     FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::number_format::format_f64_max_decimals;
+use solidmesh_math::number_format::format_f64_max_decimals;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_test_meshes;

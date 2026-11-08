@@ -5,7 +5,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 

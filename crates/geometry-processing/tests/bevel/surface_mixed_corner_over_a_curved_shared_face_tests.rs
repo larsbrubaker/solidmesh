@@ -12,15 +12,15 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_hands_over_at_the_mitre,
     surface_mixed_corner_ring_schedule, surface_mixed_corner_sector, SurfaceBandEnd,
     SurfaceBevelPlan, SurfaceEdgeRoles, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerFaces,
     SurfaceStrip, SurfaceVertexPool,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::math_helper::{degrees_to_radians, radians_to_degrees};
-use vector_math::Vector3;
+use solidmesh_math::math_helper::{degrees_to_radians, radians_to_degrees};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::{shell_count, signed_volume};
@@ -920,7 +920,7 @@ fn the_mitre_handover(read: &Rim) -> (usize, Option<SurfaceBandEnd>, Rc<SurfaceM
 
 /// The edge's tangent line on the CAP - the side the corner's two edges do not share.
 fn on_the_cap_of(
-    edge: &geometry_processing::bevel::surface::SurfaceEdgePlan,
+    edge: &solidmesh::bevel::surface::SurfaceEdgePlan,
     corner: &SurfaceMixedCorner,
 ) -> SurfaceLine {
     if edge.left_region_key() == corner.shared_region_key {

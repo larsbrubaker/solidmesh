@@ -7,11 +7,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_cap::WATCH_END_HOLE_AT;
-use geometry_processing::bevel::level_line::corner_cap_flat_ends::set_use_flat_ends_override;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{BandGapResult, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_cap::WATCH_END_HOLE_AT;
+use solidmesh::bevel::level_line::corner_cap_flat_ends::set_use_flat_ends_override;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapResult, WorkBudget};
 
 use crate::fillet_thin_front_fin::profile_of;
 use crate::level_line_fixture::LevelLineFixture;

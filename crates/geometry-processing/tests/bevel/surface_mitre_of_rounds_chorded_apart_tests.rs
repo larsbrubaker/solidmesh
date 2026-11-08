@@ -15,12 +15,10 @@
 //! 90 and 135 degrees take 15 and 23 chords of 6 and 5.8696 and do not pair. The parameter rows are
 //! a loop.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
-    bevel_edge_group_resolver, BevelEdgeGroup, FaceGroup, FeatureEdgeSet,
-};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{bevel_edge_group_resolver, BevelEdgeGroup, FaceGroup, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_cut::anchor;

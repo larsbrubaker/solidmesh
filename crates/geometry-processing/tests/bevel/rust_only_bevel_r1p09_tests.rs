@@ -1,8 +1,8 @@
 //! Rust-only checks of the bevel core's R1.P09 package pieces no other test reaches alone: the
 //! interrupted crease's leaning and the valley-fold mitre.
 
-use geometry_processing::bevel::bevel_interrupted_crease::{crosses_the_run, Leaning};
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_interrupted_crease::{crosses_the_run, Leaning};
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_an_end_closes_over_the_run_only_where_nothing_falls_away() {
@@ -29,10 +29,10 @@ fn rust_only_an_end_closes_over_the_run_only_where_nothing_falls_away() {
 
 #[test]
 fn rust_only_a_joint_mitres_a_square_turn_and_refuses_a_doubling_back() {
-    use geometry_processing::bevel::bevel_chain_sweep_mesh::SweptSegment;
-    use geometry_processing::bevel::bevel_chain_sweep_rings::try_build_joint;
-    use geometry_processing::bevel::BevelAdvisoryCode;
-    use vector_math::Vector2;
+    use solidmesh::bevel::bevel_chain_sweep_mesh::SweptSegment;
+    use solidmesh::bevel::bevel_chain_sweep_rings::try_build_joint;
+    use solidmesh::bevel::BevelAdvisoryCode;
+    use solidmesh_math::Vector2;
 
     let up = Vector3::new(0.0, 0.0, 1.0);
     let segment = |from: Vector3, to: Vector3| {

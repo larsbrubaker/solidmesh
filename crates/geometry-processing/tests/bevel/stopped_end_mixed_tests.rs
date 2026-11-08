@@ -7,11 +7,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::end_face_section_row::where_the_traces_meet;
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::end_face_section_row::where_the_traces_meet;
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     gap_fill, turn_stopped_ends_on, BandGapResult, GapFillRefusal, LevelLineMesh,
 };
 

@@ -10,16 +10,14 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::bevel_chain_linker::{link, BevelSweptChain};
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::{
-    section_assembly, section_room, SectionPool, SectionRoomCache,
-};
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg};
-use geometry_processing::topology::{BevelEdgeGroupResolution, FeatureEdgeSet};
+use solidmesh::bevel::bevel_chain_linker::{link, BevelSweptChain};
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::{section_assembly, section_room, SectionPool, SectionRoomCache};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg};
+use solidmesh::topology::{BevelEdgeGroupResolution, FeatureEdgeSet};
 
 use crate::mesh_measurements;
 

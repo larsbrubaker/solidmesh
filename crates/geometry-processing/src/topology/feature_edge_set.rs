@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::feature_edge::{EdgeConvexity, FeatureEdge};
 use super::tangent_chain_cache::TangentChainCache;

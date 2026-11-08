@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::bevel_chain_sweep_sections::try_build_segments;
 use super::{bevel_mitre_fit, bevel_sweep_back_depth};

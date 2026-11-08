@@ -8,8 +8,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::{Color, Matrix4X4, Vector4};
+use solidmesh_math::{Color, Matrix4X4, Vector4};
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use super::surface_part_builder::BevelSurfacePartBuilder;
 use super::{BevelPartError, BevelPartOutcome, BevelPartRequest, BevelProgressReport};

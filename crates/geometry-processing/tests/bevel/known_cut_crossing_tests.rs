@@ -4,8 +4,8 @@
 //! value what makes the inside end inside. A chain from (0, 0, 0) to (2, 0, 0), setback 1,
 //! clipped square at both ends: P0 the plane x = 0 faced -x, P1 the plane x = 2 faced +x.
 
-use geometry_processing::bevel::level_line::{ChainField, EndRayBound};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{ChainField, EndRayBound};
+use solidmesh_math::Vector3;
 
 fn square_end(normal: Vector3) -> EndRayBound {
     EndRayBound {

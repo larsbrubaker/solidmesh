@@ -6,7 +6,7 @@
 use manifold_rust::linalg::Vec3;
 use manifold_rust::manifold::Manifold;
 use manifold_rust::progress::ProgressReporter;
-use polygon_mesh::csg::minkowski_progress_model::{
+use solidmesh_mesh::csg::minkowski_progress_model::{
     kernel_units, time_fraction, tree_hull_units, tree_time_fraction, tree_units,
     TREE_LEAF_TIME_SHARE, TREE_LEVEL_TIME_SHARE,
 };

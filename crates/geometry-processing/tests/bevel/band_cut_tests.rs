@@ -5,11 +5,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_refinement::{refine, RefineOptions};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_refinement::{refine, RefineOptions};
+use solidmesh::bevel::level_line::{
     LevelLineChain, LevelLineMesh, ScalarField, VertexFieldReading, VertexSide,
 };
-use vector_math::{ieee_math, Matrix4X4, Vector3};
+use solidmesh_math::{ieee_math, Matrix4X4, Vector3};
 
 use crate::level_line_test_geometry::{
     cube, cylinder, is_watertight, line_points, run_cut, shortest_side, signed_volume,

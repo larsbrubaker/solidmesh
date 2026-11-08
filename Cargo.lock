@@ -472,9 +472,6 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "solidmesh",
- "solidmesh-clipper",
- "solidmesh-math",
- "solidmesh-mesh",
  "wasm-bindgen",
 ]
 

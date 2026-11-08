@@ -3,9 +3,9 @@
 //! pinned directly; the surface tests also reach them through a whole build
 //! (`surface_test_build.rs`).
 
-use geometry_processing::bevel::level_line::point_candidates;
-use geometry_processing::bevel::surface::surface_strip_mitre_rails::{beside, merge, on_the_chord};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::point_candidates;
+use solidmesh::bevel::surface::surface_strip_mitre_rails::{beside, merge, on_the_chord};
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_merge_takes_the_union_per_chord_after_the_sector() {

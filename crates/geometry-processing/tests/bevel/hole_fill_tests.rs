@@ -6,9 +6,9 @@
 use std::collections::{HashMap, HashSet};
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::level_line::hole_fill;
-use geometry_processing::bevel::level_line::{HoleFillFailure, HoleFillResult};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::hole_fill;
+use solidmesh::bevel::level_line::{HoleFillFailure, HoleFillResult};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 /// The fill's boundary-normal error against the same faceting on the sphere. Measured 1.00 degrees
 /// on the 8-segments-per-arc cube corner (7.93 degrees against the analytic normal, almost all of

@@ -8,7 +8,7 @@
 //! input selects the same hull vertices and emits the same faces in the same order.
 //! Neighbors: `data_model` (faces, connectors, lists, pools), `math_helper` (planes, volumes),
 //! `initialize` (bounding box points and the initial simplex), `main_loop` (cone building);
-//! the seeded random generator is `vector_math::seeded_random`.
+//! the seeded random generator is `solidmesh_math::seeded_random`.
 //!
 //! The build runs a piece at a time ([`HullBuild`]): the bounding box and shift in one piece,
 //! the starting simplex, the vertices beyond its faces a run at a time, then the main loop an

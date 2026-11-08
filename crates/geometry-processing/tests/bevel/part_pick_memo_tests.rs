@@ -5,14 +5,12 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::level_line::{
-    ChainCannotFit, RoomReading, RoomReadingKind, RoomSource,
-};
-use geometry_processing::bevel::part::pick_memo::zero_room_source;
-use geometry_processing::bevel::part::{BevelPickMemo, SettledPick};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{Face, Mesh};
-use vector_math::Vector3Float;
+use solidmesh::bevel::level_line::{ChainCannotFit, RoomReading, RoomReadingKind, RoomSource};
+use solidmesh::bevel::part::pick_memo::zero_room_source;
+use solidmesh::bevel::part::{BevelPickMemo, SettledPick};
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{Face, Mesh};
 const STAMP: u64 = 7;
 
 const KEY: &str = "stamp|Chamfer|1e-9|closed:1,2,3";

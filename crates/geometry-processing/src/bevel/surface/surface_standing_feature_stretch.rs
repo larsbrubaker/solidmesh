@@ -21,8 +21,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::surface_cut_clip;
 use super::surface_room_standing_feature::stands_on;

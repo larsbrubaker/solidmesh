@@ -3,12 +3,12 @@
 //! ruler, the end gaining the section reading, the run-out column top) need the whole build; these
 //! pin the pieces alone.
 
-use geometry_processing::bevel::surface::surface_end_gains_the_section::{area_of, kept_by};
-use geometry_processing::bevel::surface::surface_run_out_column_ends::{
+use solidmesh::bevel::surface::surface_end_gains_the_section::{area_of, kept_by};
+use solidmesh::bevel::surface::surface_run_out_column_ends::{
     try_first_row_standing, try_the_slot_the_top_takes, with_the_crossings_stationed,
 };
-use geometry_processing::bevel::surface::{SurfaceBandEnd, SurfaceFacetCut, SurfaceLine};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceBandEnd, SurfaceFacetCut, SurfaceLine};
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_a_facet_cut_removes_only_past_its_line_and_inside_its_ends() {
@@ -98,7 +98,7 @@ fn rust_only_column_ends_station_the_crossings() {
 
 #[test]
 fn rust_only_level_line_ceilings_aspects_and_refusals() {
-    use geometry_processing::bevel::level_line::{band_gap, refinement_splits, BandGapRefusal};
+    use solidmesh::bevel::level_line::{band_gap, refinement_splits, BandGapRefusal};
 
     // The ceiling is the widest pair; a pick on one point names none.
     let points = [
@@ -128,7 +128,7 @@ fn rust_only_level_line_ceilings_aspects_and_refusals() {
 
 #[test]
 fn rust_only_a_pick_is_checked_and_its_touching_chains_found() {
-    use geometry_processing::bevel::level_line::pick_validation::{
+    use solidmesh::bevel::level_line::pick_validation::{
         check_pick_arguments, every_touching_pair, PickArgumentError,
     };
 
@@ -156,7 +156,7 @@ fn rust_only_a_pick_is_checked_and_its_touching_chains_found() {
 
 #[test]
 fn rust_only_a_room_reading_says_what_bounded_it() {
-    use geometry_processing::bevel::level_line::RoomReading;
+    use solidmesh::bevel::level_line::RoomReading;
 
     let unbounded = RoomReading {
         read: true,
@@ -175,9 +175,9 @@ fn rust_only_a_room_reading_says_what_bounded_it() {
 
 #[test]
 fn rust_only_gathering_crossings_leaves_when_cancelled() {
-    use geometry_processing::bevel::level_line::WorkError;
-    use geometry_processing::bevel::surface::{SurfaceRoomCrossing, SurfaceRoomCut};
-    use polygon_mesh::CancelToken;
+    use solidmesh::bevel::level_line::WorkError;
+    use solidmesh::bevel::surface::{SurfaceRoomCrossing, SurfaceRoomCut};
+    use solidmesh_mesh::CancelToken;
 
     let cut = SurfaceRoomCut::new(
         1,
@@ -208,11 +208,11 @@ fn rust_only_gathering_crossings_leaves_when_cancelled() {
 
 #[test]
 fn rust_only_the_gap_loop_walks_verdicts() {
-    use geometry_processing::bevel::level_line::gap_loop_walk::{
+    use solidmesh::bevel::level_line::gap_loop_walk::{
         each_side_leaves_one_closed_loop, side_of_a_both_sided_loop,
         without_open_members_own_pieces,
     };
-    use geometry_processing::bevel::level_line::GapLoop;
+    use solidmesh::bevel::level_line::GapLoop;
 
     // Mostly one side reads that side; a quarter or more on the other is the group's call.
     assert_eq!(side_of_a_both_sided_loop(&[1, 1, 1, 1, 1, 2], 2), 1);
@@ -235,7 +235,7 @@ fn rust_only_the_gap_loop_walks_verdicts() {
 
 #[test]
 fn rust_only_the_end_face_field_switch_travels_with_the_build() {
-    use geometry_processing::bevel::level_line::{LevelLineWork, PairCornerEndFaceField};
+    use solidmesh::bevel::level_line::{LevelLineWork, PairCornerEndFaceField};
 
     // With no build in force there is nothing to switch, and the field reads on.
     assert!(PairCornerEndFaceField::on());

@@ -11,7 +11,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, MutexGuard};
 
-use vector_math::number_format::format_i64_number;
+use solidmesh_math::number_format::format_i64_number;
 
 use super::stopwatch::g4;
 use super::FieldCounters;

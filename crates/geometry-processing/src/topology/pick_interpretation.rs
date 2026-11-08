@@ -41,7 +41,7 @@ pub struct PickInterpretation {
 impl PickInterpretation {
     /// A reading (public because the tests that pin how a list of readings labels itself build
     /// lists the pick never would); `stops_where_the_shape_does` defaults to true, and
-    /// [`Self::with_stops_where_the_shape_does`] sets it.
+    /// `Self::with_stops_where_the_shape_does` sets it.
     pub fn new(
         kind: PickInterpretationKind,
         features: Arc<FeatureEdgeSet>,

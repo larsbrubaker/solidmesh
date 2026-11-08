@@ -4,10 +4,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::SurfaceMixedCornerDualCanal;
-use geometry_processing::bevel::BevelAdvisoryCode;
-use vector_math::math_helper::{degrees_to_radians, radians_to_degrees};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::SurfaceMixedCornerDualCanal;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::math_helper::{degrees_to_radians, radians_to_degrees};
+use solidmesh_math::Vector3;
 
 use crate::nose_in_notch_mixed_corners;
 use crate::nose_in_notch_test_meshes;

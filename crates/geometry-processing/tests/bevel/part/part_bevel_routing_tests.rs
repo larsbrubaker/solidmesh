@@ -5,14 +5,14 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::level_line::level_line_routing::{
+use solidmesh::bevel::level_line::level_line_routing::{
     first_route, set_first_route, LEVEL_LINE_ROUTE,
 };
-use geometry_processing::bevel::part::{bevel_part, BevelPartRequest, BevelRouting};
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::part::{bevel_part, BevelPartRequest, BevelRouting};
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::CancelToken;
 
 /// A 1 mm fillet of a 10 mm cube's first straight crease, with the default routes.
 fn a_cube_edge() -> BevelPartRequest {

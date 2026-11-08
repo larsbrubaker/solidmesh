@@ -4,13 +4,11 @@
 //! they meet in - not one face's projection after the other's; and the held patch's two shape
 //! re-checks (`corner_cap_hold::the_held_patch_fails`), each pinned where it alone fires.
 
-use geometry_processing::bevel::level_line::corner_cap_hold::{
+use solidmesh::bevel::level_line::corner_cap_hold::{
     closest_within_the_planes, the_held_patch_fails, HeldPatchFault,
 };
-use geometry_processing::bevel::level_line::{
-    hole_fill, HoleFillFailure, HoleFillResult, HoleFillTriangle,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{hole_fill, HoleFillFailure, HoleFillResult, HoleFillTriangle};
+use solidmesh_math::Vector3;
 
 /// The quarter-space x <= 0, y <= 0, as two faces with outward normals.
 fn corner() -> Vec<(Vector3, Vector3)> {

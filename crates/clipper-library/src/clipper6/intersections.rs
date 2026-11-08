@@ -8,7 +8,7 @@ use super::types::{
     ip, round, ClipType, ClipperError, IntPoint, IntersectNode, PolyFillType, PolyType, TEdge,
     UNASSIGNED,
 };
-use vector_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::fixed_tie_sort::introspective_sort;
 
 impl Clipper {
     /// SEL pointers in PEdge are use to build transient lists of horizontal

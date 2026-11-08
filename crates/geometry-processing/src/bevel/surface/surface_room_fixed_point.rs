@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use super::{surface_room, surface_room_measure, SurfaceBevelPlan, SurfaceVertexPool};
 use crate::bevel::level_line::WorkError;

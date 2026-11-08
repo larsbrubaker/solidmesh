@@ -3,12 +3,12 @@
 //! (`boolean_processing::do_array` over manifold-rust), so answering at all - with a result, not
 //! an error - is the assertion.
 
-use polygon_mesh::csg::{
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::csg::{
     boolean_processing, BooleanOptions, CsgModes, ProcessingModes, ProcessingResolution,
 };
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Matrix4X4;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// `do_array` with polygon processing at 64-bit input and output resolution, no reporter and no
 /// cancellation.

@@ -19,15 +19,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::csg::{boolean_processing, manifold_import, BooleanOperandVerdict};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::csg::{boolean_processing, manifold_import, BooleanOperandVerdict};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::{shell_count, signed_volume};

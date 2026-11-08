@@ -6,8 +6,8 @@
 //! [`super::section_junction`], which keeps the junction's types, by responsibility; the junction's
 //! construction is [`super::section_junction_build`].
 
-use polygon_mesh::Mesh;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::Mesh;
 
 use super::bevel_section::SectionProfileDoesNotEndOnItsBoundaries;
 use super::section_junction::{Canal, JunctionPiece, JunctionSection};

@@ -2,7 +2,7 @@
 //! the two rounds make ([`on_the_mitre`]).
 
 use indexmap::IndexSet;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{CornerCapLastRow, HoleFillResult, HoleFillTriangle};
 

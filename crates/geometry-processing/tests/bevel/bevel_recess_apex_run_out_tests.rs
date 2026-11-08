@@ -3,7 +3,7 @@
 //! fourteen vertices make are one solid, so a reading taken on either is a reading about the same
 //! part.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::mesh_measurements::signed_volume;
 use crate::pyramid_recess_test_meshes as recess;

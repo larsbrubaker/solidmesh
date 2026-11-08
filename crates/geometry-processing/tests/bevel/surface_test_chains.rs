@@ -6,10 +6,8 @@
 // The kernel tests that join through here land with the slices their construction needs.
 #![allow(dead_code)]
 
-use geometry_processing::bevel::surface::{
-    surface_chain_join, surface_chain_opens_at_the_junction,
-};
-use geometry_processing::bevel::BevelSweptChain;
+use solidmesh::bevel::surface::{surface_chain_join, surface_chain_opens_at_the_junction};
+use solidmesh::bevel::BevelSweptChain;
 
 /// Chains joined end to end, then cut open at every junction vertex they pass through - exactly
 /// `surface_chain_opens_at_the_junction::open(surface_chain_join::join(chains))`, which is what the

@@ -10,7 +10,7 @@
 //! to where the edge crosses the plane, where that crossing is on the line. Read by the corner finder (`end_clip_corners.rs`), the
 //! refinement's line points (`band_refinement_asking.rs`) and the cut's edge roots (`band_cut.rs`).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{end_clip_corners, ChainField, VertexFieldReading, WorkError};
 

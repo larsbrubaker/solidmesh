@@ -7,7 +7,7 @@
 //! ([`try_walk_around`]), the stitches read along the profile ([`try_the_betweens`]) and the ring
 //! tests ([`the_area_of`], [`is_simple`]), and the capping itself ([`try_cap`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{
     surface_end_cut, surface_end_notch, surface_fan, SurfaceStripNotchedByAFeature,

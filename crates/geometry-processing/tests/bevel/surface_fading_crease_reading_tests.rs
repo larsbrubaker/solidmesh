@@ -4,12 +4,12 @@
 //! apex is under the 10 degree rung, a strip that narrows linearly to nothing where the wall's rim
 //! reaches the rail, and a closing ring that welds only on the blend's own chords.
 
-use geometry_processing::bevel::bevel_edge_tool_builder;
-use geometry_processing::bevel::surface::SurfaceVertexPool;
-use geometry_processing::topology::{EdgeConvexity, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::math_helper;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_edge_tool_builder;
+use solidmesh::bevel::surface::SurfaceVertexPool;
+use solidmesh::topology::{EdgeConvexity, FeatureEdgeSet};
+use solidmesh_math::math_helper;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes::create_l_prism_with_fading_inner_corner;
 

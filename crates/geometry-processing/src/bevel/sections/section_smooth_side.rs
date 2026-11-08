@@ -5,10 +5,10 @@
 //! ([`try_cut_the_smooth_side`]), and the readings of the side the cut is laid on: its faces, its
 //! flat pieces and the facets each boundary vertex stands on. The boundary is laid in
 //! [`super::section_smooth_side_boundary`] (a junction's rim in
-//! [`super::section_smooth_side_junction_rim`]), the facet split is in
-//! [`super::section_smooth_side_facets`], the kept rings' triangulation in
+//! `super::section_smooth_side_junction_rim`), the facet split is in
+//! `super::section_smooth_side_facets`, the kept rings' triangulation in
 //! [`super::section_smooth_side_triangulate`], and a piece with holes is read as one ring in
-//! [`super::section_smooth_side_holes`].
+//! `super::section_smooth_side_holes`.
 //!
 //! The cut is TOPOLOGICAL, not clipped: a facet is a disc bounded by one outline ring, the boundary
 //! enters it at a point ON that ring, runs through points interior to it and leaves at another point
@@ -20,9 +20,9 @@
 //! [`SectionPool`]: super::SectionPool
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 use std::collections::VecDeque;
-use vector_math::Vector3;
 
 use super::section_fan_walk::{self, pair_key, EdgeAtPair};
 use super::section_smooth_side_boundary::{try_lay_the_boundary, SmoothSideFailure};

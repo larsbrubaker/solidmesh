@@ -4,13 +4,13 @@
 //! alone and together with the top rim, with the split vertices blended and absorbed. Built through
 //! the shared `surface_test_build` with the sections flag pinned on.
 
-use geometry_processing::bevel::sections::{section_room, section_routing, section_split_blend};
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::{section_room, section_routing, section_split_blend};
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, FeatureEdgeChain, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::picture_hanger_test_mesh as fixture;
 use crate::surface_test_build::{

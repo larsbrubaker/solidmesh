@@ -4,10 +4,12 @@
 //! from another: the boxes come from `create_cube` and the difference from
 //! `csg_operations::subtract`.
 
-use polygon_mesh::csg::{boolean_processing, csg_operations, BooleanOptions, CsgModes};
-use polygon_mesh::solids::platonic_solids::{create_cube, create_cube_vector, create_icosahedron};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::csg::{boolean_processing, csg_operations, BooleanOptions, CsgModes};
+use solidmesh_mesh::solids::platonic_solids::{
+    create_cube, create_cube_vector, create_icosahedron,
+};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 fn are_equal(a: f64, b: f64) -> bool {
     let error_range = 0.001;
@@ -80,7 +82,7 @@ fn has_position(all_vertices: &[Vector3], position: Vector3) -> bool {
         .any(|vertex| vertex.equals_within(position, 0.0001))
 }
 
-fn face_at_height(mesh: &Mesh, face: &polygon_mesh::Face, height: f64) -> bool {
+fn face_at_height(mesh: &Mesh, face: &solidmesh_mesh::Face, height: f64) -> bool {
     [face.v0, face.v1, face.v2]
         .iter()
         .all(|&vi| are_equal(mesh.vertices[vi as usize].z as f64, height))

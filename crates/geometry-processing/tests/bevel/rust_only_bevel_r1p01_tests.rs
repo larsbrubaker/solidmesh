@@ -3,11 +3,11 @@
 //! `ChainOnTheMesh`, `BandTriangles`, `VirtualRail`) and the working mesh's accessors. The
 //! whole-build tests also cover them.
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     band_triangles, chain_approach, chain_on_the_mesh, sharp_joint_corners, triangle_edges,
     virtual_rail, ChainField, LevelLineMesh, LevelLineTriangle,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -162,5 +162,5 @@ fn rust_only_working_mesh_reads_its_edges_in_canonical_order() {
 }
 
 fn strip_directed(mesh: &LevelLineMesh) -> (i32, i32) {
-    geometry_processing::bevel::level_line::strip_clip::directed(mesh.triangles()[0], 0, 2)
+    solidmesh::bevel::level_line::strip_clip::directed(mesh.triangles()[0], 0, 2)
 }

@@ -5,12 +5,12 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::refinement_splits::NOTHING_TO_INSERT;
-use geometry_processing::bevel::level_line::refinement_splits_enqueue::{
+use solidmesh::bevel::level_line::refinement_splits::NOTHING_TO_INSERT;
+use solidmesh::bevel::level_line::refinement_splits_enqueue::{
     insert_on_the_line, insert_where_it_stands, split_edge_and_enqueue,
 };
-use geometry_processing::bevel::level_line::{LevelLineMesh, VertexFieldReading, VertexSide};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{LevelLineMesh, VertexFieldReading, VertexSide};
+use solidmesh_math::Vector3;
 
 use crate::level_line_test_geometry::PlaneField;
 

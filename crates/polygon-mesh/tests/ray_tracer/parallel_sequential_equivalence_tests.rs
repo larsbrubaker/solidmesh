@@ -9,11 +9,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::{parallel, IntersectionType, Ray, Vector3};
+use solidmesh_mesh::ray_tracer::{
     BoundingVolumeHierarchy, BvhCreationOptions, BvhIterator, MinimalTriangle, Traceable,
     TraceableRef, Transform, TriangleShape, UnboundCollection,
 };
-use vector_math::{parallel, IntersectionType, Ray, Vector3};
 
 /// Serializes the tests that flip the process-wide flag, so no test sees another's setting.
 static SEQUENTIAL_FLAG: Mutex<()> = Mutex::new(());

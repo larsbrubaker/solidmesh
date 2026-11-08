@@ -7,7 +7,7 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use vector_math::TexturePixels;
+use solidmesh_math::TexturePixels;
 
 /// A `width` by `height` picture of four bytes a pixel.
 #[derive(Debug, Clone)]

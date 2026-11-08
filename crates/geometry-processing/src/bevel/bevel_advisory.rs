@@ -7,7 +7,7 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use vector_math::{float_hash, Vector2, Vector3};
+use solidmesh_math::{float_hash, Vector2, Vector3};
 
 use super::bevel_advisory_code::BevelAdvisoryCode;
 

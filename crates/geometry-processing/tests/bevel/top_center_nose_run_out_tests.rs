@@ -10,12 +10,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
+use solidmesh::bevel::level_line::{
     gap_fill, turn_run_outs_on, GapFillResult, LevelLineWork, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
 use crate::fillet_thin_front_fin::profile_of;

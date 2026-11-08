@@ -10,9 +10,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::surface_mixed_corner_which_canal;
-use geometry_processing::bevel::surface::{SurfaceMixedCorner, SurfaceMixedCornerDualCanal};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mixed_corner_which_canal;
+use solidmesh::bevel::surface::{SurfaceMixedCorner, SurfaceMixedCornerDualCanal};
+use solidmesh_math::Vector3;
 
 use crate::surface_mixed_corner_fixture as fixture;
 use crate::surface_mixed_corner_reading_tests::the_mixed_corner;

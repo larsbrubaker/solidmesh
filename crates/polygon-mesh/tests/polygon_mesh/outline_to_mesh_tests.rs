@@ -3,11 +3,11 @@
 //! and a square with a hole extrudes and revolves to closed, outward solids of the right volume.
 
 use clipper2_rust::Point64;
-use polygon_mesh::processors::outline_to_mesh::{
+use solidmesh_math::math_helper::TAU;
+use solidmesh_math::Vector2;
+use solidmesh_mesh::processors::outline_to_mesh::{
     contours_to_polygons, extrude_contours, revolve_contours, triangulate_faces,
 };
-use vector_math::math_helper::TAU;
-use vector_math::Vector2;
 
 use super::solid_checks::assert_closed_outward;
 

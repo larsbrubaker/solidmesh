@@ -1,6 +1,6 @@
 //! Quadric error (derived from geometry3Sharp): the quadratic function that measures the
 //! squared distance to a plane (or a weighted sum of planes), in Garland's minimal 10-coefficient
-//! form (http://mgarland.org/files/papers/qtheory.pdf) - symmetric matrix A, vector b,
+//! form (<http://mgarland.org/files/papers/qtheory.pdf>) - symmetric matrix A, vector b,
 //! constant c. The `Reducer` (`reducer.rs`) keeps one per vertex and scores each edge collapse
 //! with their sum. The operation order is fixed, so reduce results are reproducible to the bit.
 

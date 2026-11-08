@@ -9,10 +9,10 @@
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     end_face_sense, stopped_end_clips, turn_stopped_ends_on, LevelLineWork, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 

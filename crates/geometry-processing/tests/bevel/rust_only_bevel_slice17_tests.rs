@@ -2,14 +2,14 @@
 //! closing a ring it assembled from single picks, the three-plane point the mitre sector cuts with,
 //! the empty chord table, and the interrupted-crease reading's quick answers.
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_chain_join, surface_interrupted_crease, surface_mitre_sector,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 use std::sync::Arc;
-use vector_math::Vector3;
 
 /// Four edges round a cube's top picked one at a time are four chains; the join puts them end to
 /// end and, being the one who assembled the ring, publishes it CLOSED.

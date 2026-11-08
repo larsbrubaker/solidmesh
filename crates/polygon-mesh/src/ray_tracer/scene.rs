@@ -3,7 +3,7 @@
 //! The scene holds no camera or lights: only a shading image renderer would read them, and the
 //! tracer here follows primary rays. What it reads is the shapes.
 
-use vector_math::ColorF;
+use solidmesh_math::ColorF;
 
 use super::{BoundingVolumeHierarchy, BvhCreationOptions, TraceableRef};
 

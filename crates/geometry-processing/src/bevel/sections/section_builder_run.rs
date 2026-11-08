@@ -7,8 +7,8 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_absorbed_splits::SectionAbsorbedSplits;
 use super::section_builder_offsets::lay_the_offsets_along_the_surface;

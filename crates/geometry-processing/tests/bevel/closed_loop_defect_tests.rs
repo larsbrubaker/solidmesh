@@ -5,8 +5,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, BandGapRefusal, GapFillRefusal};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, BandGapRefusal, GapFillRefusal};
 
 use crate::end_face_builds::feature_of;
 use crate::fillet_thin_front_fin::profile_of;

@@ -6,10 +6,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal, GapFillResult};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal, GapFillResult};
+use solidmesh_math::Vector3;
 
 use crate::level_line_fixture::LevelLineFixture;
 use crate::rounds_first_tests::distance_to_mesh;

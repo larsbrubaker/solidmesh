@@ -2,10 +2,10 @@
 // combinations, a rounded box whose radius is larger than half its smallest side, and the
 // plane shape's debug text.
 
-use polygon_mesh::dual_contouring::{Cylinder, Intersection, Sdf, Subtraction, Union};
-use polygon_mesh::ray_tracer::PlaneShape;
-use polygon_mesh::solids::RoundedCornerBox;
-use vector_math::{AxisAlignedBoundingBox, Plane, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Plane, Vector3};
+use solidmesh_mesh::dual_contouring::{Cylinder, Intersection, Sdf, Subtraction, Union};
+use solidmesh_mesh::ray_tracer::PlaneShape;
+use solidmesh_mesh::solids::RoundedCornerBox;
 
 #[test]
 fn cylinder_distance_is_measured_to_the_nearest_surface() {

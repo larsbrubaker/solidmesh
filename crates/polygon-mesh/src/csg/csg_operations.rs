@@ -5,7 +5,7 @@
 //! an empty mesh returns the non-empty one here, unlike `do_boolean`). They take no progress
 //! reporter: each is a single quick boolean.
 
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
 
 use super::boolean_processing::do_boolean;
 use super::{BooleanError, BooleanOptions, CsgModes};

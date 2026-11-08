@@ -2,7 +2,7 @@
 //! ([`band_group_run_outs`](super::band_group_run_outs)) and
 //! the mitred pair corners' end-face fields ([`PairCornerEndFaceField::find`]), gathered by group.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{band_group_run_outs, triangle_edges, BandGroupExtraFields, PairCornerEndFaceField};
 

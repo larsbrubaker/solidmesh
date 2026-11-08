@@ -13,7 +13,7 @@
 /// covering only part of it is the ordinary case and not a fault. And covered means covered OF THE
 /// SECTION, not of the wedge, whose two sides are infinite half spaces.
 use indexmap::IndexSet;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::BevelAdvisory;
 use super::surface_end_notch::{self, SurfaceEndNotchSide};

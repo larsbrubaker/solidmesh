@@ -12,8 +12,8 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use polygon_mesh::CancelToken;
-use vector_math::{ieee_math, number_format};
+use solidmesh_math::{ieee_math, number_format};
+use solidmesh_mesh::CancelToken;
 
 use super::stopwatch;
 
@@ -80,7 +80,7 @@ pub type LevelLineProgressReport = Rc<dyn Fn(LevelLineProgress)>;
 pub type WatchHoleFills = Rc<
     dyn Fn(
         &super::LevelLineMesh,
-        &[vector_math::Vector3],
+        &[solidmesh_math::Vector3],
         i32,
         &[super::HoleFillTriangle],
         &[super::CornerCapLastRow],

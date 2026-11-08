@@ -11,19 +11,19 @@
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use polygon_mesh::csg::boolean_processing::do_boolean;
-use polygon_mesh::csg::consistent_winding;
-use polygon_mesh::csg::mesh_repair_rust::rewind_backward_patches;
-use polygon_mesh::csg::minkowski_morph::{
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::boolean_processing::do_boolean;
+use solidmesh_mesh::csg::consistent_winding;
+use solidmesh_mesh::csg::mesh_repair_rust::rewind_backward_patches;
+use solidmesh_mesh::csg::minkowski_morph::{
     erosion_tree_runs, minkowski_difference, minkowski_difference_with_path,
     minkowski_difference_with_path_and_progress, minkowski_sum, minkowski_sum_with_progress,
     ErosionPath,
 };
-use polygon_mesh::csg::minkowski_processing::{sphere_mesh, MinkowskiError};
-use polygon_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::minkowski_processing::{sphere_mesh, MinkowskiError};
+use solidmesh_mesh::csg::{BooleanOptions, BooleanReporter, CsgModes};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// The cube these tests round, as a centred 10mm box.
 const CUBE_SIDE: f64 = 10.0;

@@ -7,18 +7,18 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_shared_edge_network, SurfaceBevelPlan,
     SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, BevelSelectionKind, FaceGroup,
     FaceRegionCache, FeatureEdgeSet, MatchTolerances,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 use crate::mesh_measurements::shell_count;

@@ -2,8 +2,8 @@
 // (`cove_round_retry::the_next_flip`): the run's end nearer the refusal, where it is a flip not yet
 // cut, and never an end of a closed run, whose first point is only where the pick started it.
 
-use geometry_processing::bevel::part::surface_part_builder::cove_round_retry::the_next_flip;
-use vector_math::Vector3;
+use solidmesh::bevel::part::surface_part_builder::cove_round_retry::the_next_flip;
+use solidmesh_math::Vector3;
 
 const A: Vector3 = Vector3::new(0.0, 0.0, 0.0);
 const B: Vector3 = Vector3::new(10.0, 0.0, 0.0);

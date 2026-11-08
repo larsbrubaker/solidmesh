@@ -13,13 +13,9 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::{
-    band_gap_reading, foreign_room_counters, level_line_routing,
-};
-use geometry_processing::bevel::level_line::{FieldCounters, PickThatFits, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{band_gap_reading, foreign_room_counters, level_line_routing};
+use solidmesh::bevel::level_line::{FieldCounters, PickThatFits, WorkBudget};
 
 use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;

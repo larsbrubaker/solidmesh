@@ -4,10 +4,10 @@
 //! ([`PickMode`]).
 //!
 //! - **Chain**: the edge nearest the hit, read as the tangent chain it lies in
-//!   (`pick_interpretations::build`, then `index_of_preferred_chain`);
+//!   (`pick::interpretations_of_edge`, then `index_of_preferred_chain`);
 //! - **Edge**: that edge alone (the first reading, the straight crease it is part of);
-//! - **Face rim**: the rim of the smooth region the hit face belongs to (`build_for_face`);
-//! - **Point**: the sharp corner nearest the hit (`point_candidates::describe`), as a Point group.
+//! - **Face rim**: the rim of the smooth region the hit face belongs to (`pick::interpretations_of_face`);
+//! - **Point**: the sharp corner nearest the hit (`pick::corner_candidates`), as a Point group.
 //!
 //! A pick answers the [`BevelEdgeGroup`] a click would store, which is a geometric signature in the
 //! part's own space, and the polylines to draw it with. The page keeps the group as numbers
@@ -15,18 +15,13 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::level_line::point_candidates;
-use geometry_processing::bevel::BevelPickData;
-use geometry_processing::topology::edge_picking::pick_feature_edge_measured;
-use geometry_processing::topology::pick_interpretations;
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelSelectionKind, FeatureEdge, FeatureEdgeChain,
-};
-use polygon_mesh::ray_tracer::{
+use solidmesh::math::{Matrix4X4, Ray, Vector3, Vector3Float};
+use solidmesh::mesh::ray_tracer::{
     BoundingVolumeHierarchy, BvhCreationOptions, MinimalTriangle, TraceableRef, VertexFunc,
 };
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Ray, Vector3, Vector3Float};
+use solidmesh::mesh::Mesh;
+use solidmesh::pick::{self, pick_feature_edge_measured, BevelPickData};
+use solidmesh::{BevelEdgeGroup, BevelSelectionKind, FeatureEdge, FeatureEdgeChain};
 
 /// The bend threshold every pick and build on the page reads the part at, in degrees: an edge is
 /// an edge where the surface turns more than this.
@@ -110,7 +105,7 @@ impl PickSession {
             .collect();
         let triangles: Vec<(i32, i32, i32)> =
             working.faces.iter().map(|f| (f.v0, f.v1, f.v2)).collect();
-        let corners = point_candidates::describe(&positions, &triangles, BEND_THRESHOLD_DEGREES)
+        let corners = pick::corner_candidates(&positions, &triangles, BEND_THRESHOLD_DEGREES)
             .into_iter()
             .map(|c| (positions[c.vertex as usize], c.allows_fillet))
             .collect();
@@ -188,7 +183,7 @@ impl PickSession {
     }
 
     fn pick_face(&self, face: i32) -> Result<Option<Pick>, String> {
-        let (readings, _) = pick_interpretations::build_for_face(
+        let (readings, _) = pick::interpretations_of_face(
             self.data.working_mesh(),
             Some(self.data.graph()),
             self.data.pick_features(),
@@ -225,7 +220,7 @@ impl PickSession {
         if !pick.is_hit() {
             return Ok(None);
         }
-        let readings = pick_interpretations::build(
+        let readings = pick::interpretations_of_edge(
             self.data.working_mesh(),
             Some(self.data.graph()),
             self.data.pick_features(),
@@ -236,7 +231,7 @@ impl PickSession {
         )
         .map_err(|e| format!("{e:?}"))?;
         let index = match mode {
-            PickMode::Chain => pick_interpretations::index_of_preferred_chain(&readings).max(0),
+            PickMode::Chain => pick::index_of_preferred_chain(&readings).max(0),
             _ => 0,
         } as usize;
         let Some(reading) = readings.get(index) else {

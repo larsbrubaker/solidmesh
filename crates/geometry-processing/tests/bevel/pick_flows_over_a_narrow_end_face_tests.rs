@@ -7,8 +7,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 
@@ -103,7 +103,7 @@ fn a_pick_handed_a_room_no_flow_holds_refuses_with_it() {
     let pick = build_handed(&fixture, &chains, 12.0, Some(0.0316));
     assert_eq!(
         pick.refusal,
-        geometry_processing::bevel::level_line::BandGapRefusal::Size
+        solidmesh::bevel::level_line::BandGapRefusal::Size
     );
     assert_eq!(pick.room, 0.0316);
 }

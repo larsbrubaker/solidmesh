@@ -6,14 +6,12 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill::{
-    self, arc_point, DEFAULT_FILLET_SEGMENTS, FILL_TAG,
-};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill::{self, arc_point, DEFAULT_FILLET_SEGMENTS, FILL_TAG};
+use solidmesh::bevel::level_line::{
     BandGapResult, BandProfile, GapFillRefusal, GapFillResult, LevelLineMesh, LevelLineTriangle,
 };
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::box_with_square_hole;

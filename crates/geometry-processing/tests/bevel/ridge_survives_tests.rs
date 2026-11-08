@@ -7,9 +7,9 @@
 //! rectangle comes apart. Nothing about the strip is special: it is the L-shaped top face of
 //! "Simple Internal Fillet" with the L straightened out.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, GapFillRefusal};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, GapFillRefusal};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{

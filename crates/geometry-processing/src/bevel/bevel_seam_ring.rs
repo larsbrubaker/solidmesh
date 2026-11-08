@@ -2,7 +2,7 @@
 //! patch samples the ball between two face normals, so the arc a corner and the strip ending on it
 //! share is computed by one route (the surface corner's rows, `surface_corner_patch_rows`).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The point `fraction` of the way along the great circle from one unit vector to another - equal
 /// angles, which is how a corner patch samples the ball.

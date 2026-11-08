@@ -6,7 +6,7 @@
 //! corner ([`first_both_sided_at_a_mixed_corner`]); the side and end floods land with later
 //! packages.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use std::collections::{HashSet, VecDeque};
 

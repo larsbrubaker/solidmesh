@@ -15,12 +15,12 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme.workspace = true
-# Not yet on crates.io: the publish step flips this once the public API is settled.
-publish = false
+readme = "README.md"
+# The tests and their fixtures stay in the repository; the package is the library alone.
+exclude = ["tests/"]
 
 [lib]
-name = "vector_math"
+name = "solidmesh_math"
 path = "src/lib.rs"
 
 [dependencies]

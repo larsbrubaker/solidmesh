@@ -4,9 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{field_bounds, ChainField, FieldSample, PickField};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{field_bounds, ChainField, FieldSample, PickField};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 use crate::clipped_cell_bound_tests::greatest_by_sampling;
 

@@ -5,8 +5,8 @@
 
 use std::collections::VecDeque;
 
-use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineMeshError};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{LevelLineMesh, LevelLineMeshError};
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -95,7 +95,7 @@ fn rust_only_a_needle_is_repaired_through_its_neighbour() {
 
 #[test]
 fn rust_only_the_fill_lays_skip_degenerate_triangles() {
-    use geometry_processing::bevel::level_line::{corner_fill, gap_fill};
+    use solidmesh::bevel::level_line::{corner_fill, gap_fill};
 
     let mut mesh = square();
     let free = mesh.add_vertex(v(2.0, 0.0, 0.0));
@@ -127,7 +127,7 @@ fn points(at: &[Vector3]) -> LevelLineMesh {
 
 #[test]
 fn rust_only_the_gap_fill_cells_lay_rows_of_quads() {
-    use geometry_processing::bevel::level_line::gap_fill;
+    use solidmesh::bevel::level_line::gap_fill;
 
     let at: Vec<Vector3> = (0..6)
         .map(|i| v(f64::from(i % 3), f64::from(i / 3), 0.0))
@@ -149,7 +149,7 @@ fn rust_only_the_gap_fill_cells_lay_rows_of_quads() {
 
 #[test]
 fn rust_only_the_end_holes_close_flat_and_zip_about_the_axis() {
-    use geometry_processing::bevel::level_line::{corner_cap, corner_cap_flat_ends};
+    use solidmesh::bevel::level_line::{corner_cap, corner_cap_flat_ends};
 
     // A flat square hole: the row 0-1-2 and the run back 0-3-2 close with two triangles.
     let mut mesh = points(&[
@@ -200,7 +200,7 @@ fn rust_only_the_end_holes_close_flat_and_zip_about_the_axis() {
 
 #[test]
 fn rust_only_the_hull_cap_ear_clips_a_planar_outline() {
-    use geometry_processing::bevel::level_line::hull_clip;
+    use solidmesh::bevel::level_line::hull_clip;
     use std::collections::HashSet;
 
     // An L-shaped outline in z = 0, counter-clockwise about +z: four ears' worth of triangles.
@@ -233,7 +233,7 @@ fn rust_only_the_hull_cap_ear_clips_a_planar_outline() {
 
 #[test]
 fn rust_only_the_valley_cap_fans_from_a_corner_that_sees_the_whole_polygon() {
-    use geometry_processing::bevel::level_line::strip_clip_valley;
+    use solidmesh::bevel::level_line::strip_clip_valley;
     use std::collections::HashSet;
 
     // The L outline: corner 0, the first tried, sees the whole polygon (the reflex corner 3 too).
@@ -273,8 +273,8 @@ fn rust_only_the_valley_cap_fans_from_a_corner_that_sees_the_whole_polygon() {
 
 #[test]
 fn rust_only_the_flat_end_carries_a_chamfer_strip_to_the_end_plane() {
-    use geometry_processing::bevel::level_line::end_plane_trim_carry::carry;
-    use geometry_processing::bevel::level_line::{BandProfile, ChainField};
+    use solidmesh::bevel::level_line::end_plane_trim_carry::carry;
+    use solidmesh::bevel::level_line::{BandProfile, ChainField};
 
     // A chain along +x ending at x = 10; the chamfer's last row stands at x = 9 and the run goes out
     // to the end plane, across the section and back.
@@ -325,7 +325,7 @@ fn rust_only_the_flat_end_carries_a_chamfer_strip_to_the_end_plane() {
 
 #[test]
 fn rust_only_the_strip_clip_splits_along_a_plane_until_nothing_crosses() {
-    use geometry_processing::bevel::level_line::strip_clip::{self, ClipPlane};
+    use solidmesh::bevel::level_line::strip_clip::{self, ClipPlane};
     use std::collections::HashSet;
 
     let mut mesh = square();

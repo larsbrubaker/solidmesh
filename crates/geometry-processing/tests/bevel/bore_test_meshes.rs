@@ -7,8 +7,8 @@
 
 use crate::path_solids::revolve;
 use crate::path_solids::Outline;
-use polygon_mesh::{FaceList, Mesh};
-use vector_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_mesh::{FaceList, Mesh};
 
 /// How many facets round the raked fixture's bore, which is also its mouth's
 /// chord count.

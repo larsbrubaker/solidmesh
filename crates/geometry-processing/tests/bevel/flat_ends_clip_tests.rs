@@ -6,9 +6,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::BandGapResult;
-use geometry_processing::bevel::level_line::ScalarField;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::BandGapResult;
+use solidmesh::bevel::level_line::ScalarField;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, at_bend, build_chains, FlatEnds};
 use crate::level_line_fixture::LevelLineFixture;

@@ -4,8 +4,8 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{surface_split_sewing, SurfaceVertexPool};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_split_sewing, SurfaceVertexPool};
+use solidmesh_math::{Vector3, Vector3Float};
 
 /// A hundred across, so the ruler this pool measures with is a thousandth.
 fn a_pool_a_hundred_across() -> SurfaceVertexPool {

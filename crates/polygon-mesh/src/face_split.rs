@@ -3,7 +3,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{Plane, Vector3, Vector3Float};
+use solidmesh_math::{Plane, Vector3, Vector3Float};
 
 use crate::face::Face;
 

@@ -11,19 +11,17 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::surface_band_runs_off_the_face_beyond::{
-    self as run_off, BandSpan,
-};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::surface_band_runs_off_the_face_beyond::{self as run_off, BandSpan};
+use solidmesh::bevel::surface::{
     surface_face_walkback, surface_mesh_closure, SurfaceBevelPlan, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisory, BevelAdvisoryCode};
-use geometry_processing::topology::{
+use solidmesh::bevel::{bevel_chain_linker, BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FaceRegionCache, FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_test_build::{try_bevel, TryBevelOptions};

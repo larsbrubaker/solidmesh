@@ -1,6 +1,6 @@
 //! The Platonic solids as meshes.
 
-use vector_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
 
 use crate::mesh::Mesh;
 

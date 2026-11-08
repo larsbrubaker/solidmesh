@@ -6,7 +6,7 @@
 //! ([`greatest_possible_over`]), a side's reach ([`reach_of_side`]) and the per-vertex sample cache
 //! ([`sample_at`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{FieldSample, LevelLineMesh, LevelLineTriangle, LevelLineWork, RoomField, WorkError};
 

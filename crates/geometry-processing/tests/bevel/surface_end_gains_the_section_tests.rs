@@ -11,16 +11,16 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use indexmap::IndexSet;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, SurfaceBevelPlan,
     SurfaceBuildOptions,
 };
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
-use indexmap::IndexSet;
-use polygon_mesh::csg::manifold_import;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::csg::manifold_import;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_test_meshes;

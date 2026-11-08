@@ -7,11 +7,11 @@
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_the_foreign_edge_tree_splits_at_the_longest_axis_median() {
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         foreign_edge_room, ForeignApproach, ForeignEdgeIndex, ForeignEdgeIndexNode,
     };
     // Six unit edges standing along x at x = 5, 4, 3, 2, 1, 0 (edge i at x = 5 - i).
@@ -62,8 +62,8 @@ fn rust_only_foreign_edge_regions_read_each_chains_growth() {
     use std::cell::RefCell;
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::foreign_edge_regions::{chain_ends, open_chain_of};
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::foreign_edge_regions::{chain_ends, open_chain_of};
+    use solidmesh::bevel::level_line::{
         ForeignEdgeRegions, ForeignEdgeRegionsChainGrowth, GrowingCreaseRuns, LevelLineMesh,
     };
 
@@ -144,7 +144,7 @@ fn rust_only_foreign_edge_regions_read_each_chains_growth() {
 fn rust_only_end_clips_and_a_vertex_reading() {
     use std::cell::RefCell;
 
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         ChainField, EndRayBound, LevelLineMesh, ScalarField, VertexFieldReading, VertexSide,
         WorkError,
     };
@@ -190,7 +190,7 @@ fn rust_only_end_clips_and_a_vertex_reading() {
 
 #[test]
 fn rust_only_mesh_pieces_know_whether_they_have_a_closed_form() {
-    use geometry_processing::bevel::level_line::ChainFieldMeshPiece;
+    use solidmesh::bevel::level_line::ChainFieldMeshPiece;
     let a = Vector3::new(0.0, 0.0, 0.0);
     let b = Vector3::new(2.0, 0.0, 0.0);
     let c = Vector3::new(0.0, 2.0, 0.0);
@@ -209,10 +209,10 @@ fn rust_only_mesh_pieces_know_whether_they_have_a_closed_form() {
 
 #[test]
 fn rust_only_a_chain_cut_short_by_an_earlier_band_starts_where_its_edge_enters_the_mesh() {
-    use geometry_processing::bevel::level_line::band_gap_in_turn::{
+    use solidmesh::bevel::level_line::band_gap_in_turn::{
         ends_on_the_mesh, nearest_on_the_edge, takes_open_chains_in_turn,
     };
-    use geometry_processing::bevel::level_line::{BandGapRefusal, BandGapResult, GapLoop};
+    use solidmesh::bevel::level_line::{BandGapRefusal, BandGapResult, GapLoop};
 
     // The chain 0 - 1 - 2 along x; vertex 0 was cut away, and the earlier cut left 3 at x = 0.4
     // on the first edge (and 4 off the line).
@@ -275,8 +275,8 @@ fn rust_only_a_chain_cut_short_by_an_earlier_band_starts_where_its_edge_enters_t
 
 #[test]
 fn rust_only_the_rail_pairing_takes_the_cheaper_opposite_senses() {
-    use geometry_processing::bevel::level_line::gap_fill::try_pair;
-    use geometry_processing::bevel::level_line::{GapFillRailSenses, ZipRail};
+    use solidmesh::bevel::level_line::gap_fill::try_pair;
+    use solidmesh::bevel::level_line::{GapFillRailSenses, ZipRail};
     let rail = |reversed: bool| {
         Some(Rc::new(ZipRail {
             vertices: vec![0, 1],
@@ -301,7 +301,7 @@ fn rust_only_the_rail_pairing_takes_the_cheaper_opposite_senses() {
 
 #[test]
 fn rust_only_a_split_record_describes_itself_in_one_line() {
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         LevelLineRule, PointPlace, SplitMeterSplitKind, SplitMeterSplitRecord,
     };
     let record = SplitMeterSplitRecord {
@@ -346,9 +346,9 @@ fn rust_only_a_split_record_describes_itself_in_one_line() {
 
 #[test]
 fn rust_only_a_trimmed_run_gets_its_end_back_whole() {
-    use geometry_processing::bevel::level_line::dying_crease_fill::is_one_loop_round_an_open_chain;
-    use geometry_processing::bevel::level_line::end_face_fill::with_whole_end;
-    use geometry_processing::bevel::level_line::{BandGapResult, GapLoop};
+    use solidmesh::bevel::level_line::dying_crease_fill::is_one_loop_round_an_open_chain;
+    use solidmesh::bevel::level_line::end_face_fill::with_whole_end;
+    use solidmesh::bevel::level_line::{BandGapResult, GapLoop};
 
     let whole = GapLoop::new(
         1,
@@ -391,7 +391,7 @@ fn rust_only_a_trimmed_run_gets_its_end_back_whole() {
 
 #[test]
 fn rust_only_ray_reaches_are_their_far_ends_per_segment() {
-    use geometry_processing::bevel::level_line::{ChainField, ChainFieldExtension};
+    use solidmesh::bevel::level_line::{ChainField, ChainFieldExtension};
     assert_eq!(ChainField::reaches_of(None), None);
     let ray = ChainFieldExtension {
         origin: Vector3::new(1.0, 0.0, 0.0),
@@ -408,8 +408,8 @@ fn rust_only_ray_reaches_are_their_far_ends_per_segment() {
 
 #[test]
 fn rust_only_a_corner_piece_keeps_its_rails_past_a_free_end() {
-    use geometry_processing::bevel::level_line::corner_fill_free_ends::{rails_past_an_end, slice};
-    use geometry_processing::bevel::level_line::CornerFillPiece;
+    use solidmesh::bevel::level_line::corner_fill_free_ends::{rails_past_an_end, slice};
+    use solidmesh::bevel::level_line::CornerFillPiece;
     let piece = |parameters: Vec<f64>| CornerFillPiece {
         owner: 3,
         vertices: (10..10 + parameters.len() as i32).collect(),
@@ -443,7 +443,7 @@ fn rust_only_a_corner_piece_keeps_its_rails_past_a_free_end() {
 fn rust_only_a_run_out_wrapper_is_read_through_to_its_pick() {
     use std::cell::RefCell;
 
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         band_group_fields_unwrapped, corner_cap_flat_ends, BandGroupFieldsWithRunOuts,
         ChainDistanceField, FieldKind, FieldMaximum, FieldMinimum, FieldSample, LevelLineMesh,
         PointField, ScalarField, VertexFieldReading, WorkError,
@@ -550,14 +550,14 @@ fn rust_only_pair_room_corner_runs_pieces_and_end_faces() {
     use std::cell::RefCell;
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::level_line::band_room_pair_room::{
+    use indexmap::IndexSet;
+    use solidmesh::bevel::level_line::band_room_pair_room::{
         edges_running_out_of_corners, ends_with_an_end_region, pieces_of_one_chain,
     };
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         EndRayBound, ForeignEdgeRegions, ForeignEdgeRegionsChainGrowth, GrowingCreaseRuns,
         LevelLineMesh,
     };
-    use indexmap::IndexSet;
 
     // k runs along x from the corner 0; j leaves the corner up y, then turns off along x.
     let positions = vec![

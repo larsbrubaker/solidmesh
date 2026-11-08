@@ -4,11 +4,11 @@
 //! (`gap_loop_walk::loops_of_side`) and the cut face's boundary stays the end's; a crease turned
 //! clearly past a right angle still is one.
 
-use geometry_processing::bevel::level_line::gap_loop_walk::loops_of_side;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::gap_loop_walk::loops_of_side;
+use solidmesh::bevel::level_line::{
     foreign_edge_room, BandGroup, FieldSample, LevelLineMesh, WorkError,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// Rim segments along the crease.
 const SEGMENTS: i32 = 12;
@@ -88,7 +88,7 @@ fn crease_is_a_knife(mesh: &LevelLineMesh, k: i32) -> bool {
     foreign_edge_room::is_a_knife(mesh, 6 * k + 3, 6 * k + 5, (4 * k + 2, 4 * (k + 1) + 2))
 }
 
-fn side_one_loops(mesh: &LevelLineMesh) -> Vec<geometry_processing::bevel::level_line::GapLoop> {
+fn side_one_loops(mesh: &LevelLineMesh) -> Vec<solidmesh::bevel::level_line::GapLoop> {
     let group = BandGroup {
         tag: 1,
         members: vec![0],

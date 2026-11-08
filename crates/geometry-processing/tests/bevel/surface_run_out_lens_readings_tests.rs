@@ -3,9 +3,9 @@
 //! (`surface_mixed_corner_bites`). The second reads the L prism's mixed corner from
 //! `surface_mixed_corner_reading_tests::the_mixed_corner`.
 
-use geometry_processing::bevel::surface::surface_mixed_corner_bites::try_where_the_touch_row_leaves_the_face;
-use geometry_processing::bevel::surface::surface_run_out_column_ends::try_the_slot_the_top_takes;
-use geometry_processing::bevel::surface::SurfaceBandEnd;
+use solidmesh::bevel::surface::surface_mixed_corner_bites::try_where_the_touch_row_leaves_the_face;
+use solidmesh::bevel::surface::surface_run_out_column_ends::try_the_slot_the_top_takes;
+use solidmesh::bevel::surface::SurfaceBandEnd;
 
 use crate::surface_mixed_corner_reading_tests::the_mixed_corner;
 

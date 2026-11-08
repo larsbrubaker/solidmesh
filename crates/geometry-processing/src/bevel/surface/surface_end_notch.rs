@@ -4,7 +4,7 @@
 //! ([`try_cap_with_the_section`]). The notch itself is cut by `surface_end_gives_up_the_section`
 //! and `surface_end_gains_the_section`, which build on these.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_end_cut, surface_fan, surface_ring, SurfaceVertexPool};

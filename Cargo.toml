@@ -6,15 +6,16 @@
 #
 # Members live under crates/ (plus demo/wasm, the demo site's WebAssembly bindings, never published;
 # its Cargo.toml says why it is a member): the repo-wide gates (workspace-gates, tests only, never published)
-# and the four kernel crates. A kernel crate's directory and library name are the ones MatterCAD
-# has always used (so `use vector_math::...` reads the same in both repositories and the history
-# follows the files); its package name is the one it publishes under:
-#   crates/vector-math         -> package solidmesh-math     (lib vector_math)
-#   crates/clipper-library     -> package solidmesh-clipper  (lib clipper_library)
-#   crates/polygon-mesh        -> package solidmesh-mesh     (lib polygon_mesh)
-#   crates/geometry-processing -> package solidmesh          (lib geometry_processing)
-# Between themselves they keep the directory names as dependency keys (`vector-math = { package =
-# "solidmesh-math", path = "../vector-math", version = "0.1.0" }`), as MatterCAD's manifests do.
+# and the four kernel crates. A kernel crate's directory is the one MatterCAD has always used (so
+# the history follows the files); its package and library names are the ones it publishes under:
+#   crates/vector-math         -> package solidmesh-math     (lib solidmesh_math)
+#   crates/clipper-library     -> package solidmesh-clipper  (lib solidmesh_clipper)
+#   crates/polygon-mesh        -> package solidmesh-mesh     (lib solidmesh_mesh)
+#   crates/geometry-processing -> package solidmesh          (lib solidmesh)
+# Between themselves they name each other by package (`solidmesh-math = { path =
+# "../vector-math", version = "0.1.0" }`). MatterCAD keeps its own dependency keys
+# (`vector-math = { package = "solidmesh-math", ... }`), so its code reads `use vector_math::...`.
+# `solidmesh` re-exports the other three (`solidmesh::math`, `::clipper`, `::mesh`).
 # They reach the sibling checkouts beside this repository (manifold-rust, clipper2-rust,
 # tess2-rust) by path, `../../../<sibling>`, each with a version floor (`{ path, version }`), so
 # a stale sibling checkout stops the build at resolve time and the published manifests keep only

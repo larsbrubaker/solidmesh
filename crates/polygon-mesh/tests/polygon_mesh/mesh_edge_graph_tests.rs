@@ -3,9 +3,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 type Adjacency = HashMap<(i32, i32), Vec<i32>>;
 

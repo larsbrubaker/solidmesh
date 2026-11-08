@@ -2,7 +2,7 @@
 //! fields and its construction from a plan ([`SurfaceStrip::try_create`]), and its rail readings
 //! ([`SurfaceStrip::point_on`], [`SurfaceStrip::param_of`], [`SurfaceStrip::try_cross`]).
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use super::{SurfaceBevelPlan, SurfaceEdgePlan};
 use crate::bevel::{bevel_arc_chording, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};

@@ -8,7 +8,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::{IntersectionType, Ray};
+use solidmesh_math::{IntersectionType, Ray};
 
 use super::{IntersectInfo, RayTracerError};
 

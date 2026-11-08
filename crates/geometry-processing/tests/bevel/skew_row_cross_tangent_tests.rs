@@ -8,10 +8,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::arc_cross_tangent;
-use geometry_processing::bevel::level_line::BandProfile;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_cap_hole_fill::arc_cross_tangent;
+use solidmesh::bevel::level_line::BandProfile;
+use solidmesh_math::Vector3;
 
 use crate::hole_fill_corner_tests::fill_with_the_filler_watched;
 use crate::level_line_feature_edges::feature_edges_over;

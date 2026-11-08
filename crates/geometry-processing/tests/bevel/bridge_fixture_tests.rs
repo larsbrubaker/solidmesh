@@ -7,11 +7,11 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_test_geometry::coincident_vertices;
 use crate::two_hole_bridge_fixture::{self, GAP_IN_SIZES, RADIUS_IN_SIZES, SIZE};
-use geometry_processing::bevel::level_line::BandGapRefusal;
+use solidmesh::bevel::level_line::BandGapRefusal;
 
 /// What the spanning triangulation is, in sizes -
 /// a statement of the fixture's geometry, so it fails loudly if a change to the fixture quietly

@@ -16,14 +16,14 @@ use std::sync::Arc;
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceRoomCut, SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode};
-use geometry_processing::topology::{FaceGroup, FaceRegionCache};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{bevel_chain_linker, BevelAdvisoryCode};
+use solidmesh::topology::{FaceGroup, FaceRegionCache};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_test_build::pinned_to_the_legacy_construction;

@@ -7,11 +7,11 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_chain;
-use geometry_processing::bevel::sections::section_loft;
-use geometry_processing::bevel::sections::{SectionPool, SectionRun};
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::sections::section_builder_run::try_build_chain;
+use solidmesh::bevel::sections::section_loft;
+use solidmesh::bevel::sections::{SectionPool, SectionRun};
+use solidmesh::topology::{FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 use crate::rigid_motion_meshes;

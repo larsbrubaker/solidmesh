@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap::{
     chord_tolerance_of, has_a_free_end, needle_floor_of, refused_by_size, BuildWithinArgs,
@@ -228,7 +228,7 @@ pub(super) fn build_from_the_setbacks(
             let largest = unit_setbacks[0]
                 .iter()
                 .copied()
-                .fold(f64::NEG_INFINITY, vector_math::ieee_math::max_f64);
+                .fold(f64::NEG_INFINITY, solidmesh_math::ieee_math::max_f64);
             consumed_to_the_rim::rims_the_band_ends_on(
                 &mesh,
                 &chain_edges[0],

@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mixed_corner_run_out;
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceMixedCorner, SurfaceMixedCornerWall};

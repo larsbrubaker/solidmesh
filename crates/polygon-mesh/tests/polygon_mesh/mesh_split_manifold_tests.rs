@@ -4,9 +4,9 @@
 //! end, in float the two differ by an ulp or two and `clean_and_merge` welds only bit-identical
 //! positions.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Vector3};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 /// `Mesh::split` with its usual arguments: no clip face, clean and merge, keep the faces on the
 /// negative side.

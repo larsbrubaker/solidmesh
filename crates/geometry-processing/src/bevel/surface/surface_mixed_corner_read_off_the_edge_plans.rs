@@ -3,7 +3,7 @@
 //! questions the reading is made of: which region the two edges share, whether the bead rests on a
 //! crease of it, which side's normal and tangent line to read, and where two skew lines touch.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceEdgePlan, SurfaceLine};
 

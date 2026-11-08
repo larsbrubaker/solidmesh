@@ -43,8 +43,8 @@
 use std::collections::{HashMap, HashSet};
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk;
 use super::SectionPool;

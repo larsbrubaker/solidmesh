@@ -13,7 +13,7 @@ use std::fmt;
 use std::io::Read;
 use std::path::Path;
 
-use vector_math::{number_format, Vector3, Vector3Float};
+use solidmesh_math::{number_format, Vector3, Vector3Float};
 
 use crate::cancel::CancelToken;
 use crate::mesh::{f64_key, Mesh};

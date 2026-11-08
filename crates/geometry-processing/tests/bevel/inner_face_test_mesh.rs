@@ -11,10 +11,10 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::topology::{BevelEdgeGroup, BevelSelectionKind};
+use solidmesh::topology::{BevelEdgeGroup, BevelSelectionKind};
 
 /// The size the owner file asks of its one row.
 pub const SIZE: f64 = 2.0;

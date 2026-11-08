@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::point_star;
 

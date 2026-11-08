@@ -1,7 +1,7 @@
 //! Whether the band flows from a side onto a gentle neighbour: its constant and the flow test
 //! ([`flows_onto_a_gentle_neighbour`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::triangle_edges::{self, StandingMap};
 use super::{ChainField, WorkError};

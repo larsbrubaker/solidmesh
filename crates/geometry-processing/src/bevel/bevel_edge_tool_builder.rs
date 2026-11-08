@@ -21,8 +21,8 @@
 //! so its cut plane sat up to a micron off the analytic one while the sweep's is exact
 //! (`BevelToolPlaneAccuracyTests`).
 
-use vector_math::math_helper::{degrees_to_radians, radians_to_degrees};
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::math_helper::{degrees_to_radians, radians_to_degrees};
+use solidmesh_math::{Vector2, Vector3};
 
 use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use crate::topology::{EdgeConvexity, FeatureEdge};

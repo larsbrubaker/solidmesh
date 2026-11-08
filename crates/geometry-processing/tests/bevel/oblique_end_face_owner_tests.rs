@@ -6,15 +6,15 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::corner_cap::{WatchEndHoleAt, WATCH_END_HOLE_AT};
-use geometry_processing::bevel::level_line::end_face_sense::oblique_ends;
-use geometry_processing::bevel::level_line::field_counters::FieldCounters;
-use geometry_processing::bevel::level_line::{gap_fill, hull_clip, virtual_rail_past_the_end};
-use geometry_processing::bevel::level_line::{BandGapRefusal, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::corner_cap::{WatchEndHoleAt, WATCH_END_HOLE_AT};
+use solidmesh::bevel::level_line::end_face_sense::oblique_ends;
+use solidmesh::bevel::level_line::field_counters::FieldCounters;
+use solidmesh::bevel::level_line::{gap_fill, hull_clip, virtual_rail_past_the_end};
+use solidmesh::bevel::level_line::{BandGapRefusal, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{at_bend, build_chains, feature_of, FlatEnds};
 use crate::fillet_thin_front_fin::{

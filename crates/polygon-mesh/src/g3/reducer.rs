@@ -9,7 +9,7 @@
 //! Reduce operation (`DecimateObject3D`) runs it through [`crate::Mesh::reduced_to_triangle_count`].
 //!
 //! The arithmetic order is fixed, and the initial queue is filled from an introsort of the edge
-//! errors (`vector_math::fixed_tie_sort`), whose order for tied errors is fixed too: the order ties
+//! errors (`solidmesh_math::fixed_tie_sort`), whose order for tied errors is fixed too: the order ties
 //! are queued in decides which edges collapse, so Reduce gives the same mesh on every run. The
 //! per-vertex and per-edge setup loops write disjoint slots and run sequentially. There is no
 //! cancel check: nothing that runs the reducer interrupts it.
@@ -133,7 +133,7 @@ fn sort_keys_and_items_nan_first(keys: &mut [f32], items: &mut [i32]) {
             left += 1;
         }
     }
-    vector_math::fixed_tie_sort::introspective_sort(&mut pairs[left..], &mut |a, b| {
+    solidmesh_math::fixed_tie_sort::introspective_sort(&mut pairs[left..], &mut |a, b| {
         a.0.partial_cmp(&b.0).unwrap_or(Ordering::Equal)
     });
     for (i, (k, v)) in pairs.into_iter().enumerate() {

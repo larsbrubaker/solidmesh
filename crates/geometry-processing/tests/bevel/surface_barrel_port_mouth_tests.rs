@@ -8,13 +8,13 @@
 //! Legacy-only: every test pins the sections router off
 //! (`pinned_to_the_legacy_construction`). The parameter rows are a loop.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes_barrel_port::{
     create_barrel_with_a_radial_port, BARREL_RADIUS, BARREL_SIDES, PORT_RADIUS, PORT_SIDES,

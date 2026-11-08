@@ -5,7 +5,7 @@
 
 use std::collections::VecDeque;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::error::TopologyError;
 use super::feature_edge::{EdgeConvexity, FeatureEdge};

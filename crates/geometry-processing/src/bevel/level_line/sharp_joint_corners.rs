@@ -8,7 +8,7 @@
 //! whole parameter jump, and the strip fanned the back round's rows from the wrong end of the
 //! chord.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineMesh};
 

@@ -5,12 +5,12 @@
 use std::cell::OnceCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::chain_field_from_polyline::ChainFieldArgumentError;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::chain_field_from_polyline::ChainFieldArgumentError;
+use solidmesh::bevel::level_line::{
     corner_fill_free_ends, fillet_arc, segment_box_tree, swallowed_side, ChainField,
     CornerFillPiece, EndRayBound, PickField, RoomField,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn l_points() -> Vec<Vector3> {
     vec![

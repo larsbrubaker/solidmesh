@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 
 use manifold_rust::manifold::Manifold;
-use vector_math::Color;
-use vector_math::Matrix4X4;
+use solidmesh_math::Color;
+use solidmesh_math::Matrix4X4;
 
 use super::manifold_import::{self, OperandTag};
 use super::{BooleanError, CsgModes, SkippedBooleanOperand};

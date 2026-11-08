@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_side_tagging::{both_sided_members_build, connected_regions, flood};
 use super::band_side_tagging_ends::{flood_ends, EndReach, SideTaggingError};

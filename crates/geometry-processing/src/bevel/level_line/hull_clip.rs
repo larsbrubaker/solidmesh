@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::{ieee_math, Vector2, Vector3};
+use solidmesh_math::{ieee_math, Vector2, Vector3};
 
 use super::{FieldCounters, LevelLineMesh, LevelLineMeshError, LevelLineTriangle};
 

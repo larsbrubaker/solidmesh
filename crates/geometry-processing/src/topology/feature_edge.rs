@@ -2,8 +2,8 @@
 //! [`EdgeConvexity`]). [`super::FeatureEdgeSet`] keeps
 //! the ones that are edges of the shape; chains and face groups are built from them.
 
-use polygon_mesh::{Face, Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{Face, Mesh, MeshEdgeGraph};
 
 /// Which way the solid folds where two faces meet along an edge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

@@ -8,9 +8,9 @@
 use std::fmt;
 
 use clipper2_rust::{FillRule, Path64, Paths64};
-use clipper_library::{get_corrected_winding, int_point, ClipperError, PolygonsExtensions};
-use vector_math::math_helper::{range_0_to_tau, TAU};
-use vector_math::MathError;
+use solidmesh_clipper::{get_corrected_winding, int_point, ClipperError, PolygonsExtensions};
+use solidmesh_math::math_helper::{range_0_to_tau, TAU};
+use solidmesh_math::MathError;
 
 use crate::mesh::Mesh;
 use crate::processors::ring_loops::simple_loops;

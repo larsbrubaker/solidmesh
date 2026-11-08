@@ -4,13 +4,13 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, edge_picking, pick_interpretations, BevelSelectionKind, FeatureEdge,
     FeatureEdgePick, FeatureEdgeSet, PickInterpretation, PickInterpretationKind, TopologyError,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes;
 

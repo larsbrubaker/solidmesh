@@ -6,16 +6,16 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     field_bounds, segment_box_tree, ChainDistanceField, FieldMaximum, FieldMinimum, GapLoop,
     ScalarField, WorkError,
 };
-use geometry_processing::bevel::sections::SectionPool;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::sections::SectionPool;
+use solidmesh::bevel::surface::{
     SurfaceBandEnd, SurfaceBandRunsOffOverAStretch, SurfaceEdgeRoles, SurfaceLine,
 };
-use geometry_processing::topology::FeatureEdge;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::{Vector3, Vector3Float};
 
 #[test]
 fn rust_only_lipschitz_bounds_bracket_a_point_distance_field() {

@@ -3,7 +3,7 @@
 //! [`super::TriangleShape`], [`super::MinimalTriangle`], [`super::PlaneShape`]) call from their
 //! [`Traceable`] impls. The color half of a shape is [`super::Primitive`].
 
-use vector_math::{AxisAlignedBoundingBox, Plane, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Plane, Vector3};
 
 use super::{Traceable, PLANE_CROSSED_BY_ERROR};
 

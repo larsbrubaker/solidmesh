@@ -14,7 +14,7 @@
 //! declaration order, and a saved design lists them in its own property order.
 
 use serde::{Deserialize, Serialize};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use super::bevel_group::BevelGroup;
 use super::face_group::FaceGroup;

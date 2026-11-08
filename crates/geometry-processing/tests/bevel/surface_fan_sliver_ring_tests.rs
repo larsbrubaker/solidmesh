@@ -4,8 +4,8 @@
 //! corner, and a collapsed strip quad is emitted as needles along its own chord (or nothing, where
 //! it doubles back).
 
-use geometry_processing::bevel::surface::{surface_fan, surface_split_sewing, SurfaceVertexPool};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_fan, surface_split_sewing, SurfaceVertexPool};
+use solidmesh_math::{Vector3, Vector3Float};
 
 use crate::lobed_prism_meshes;
 

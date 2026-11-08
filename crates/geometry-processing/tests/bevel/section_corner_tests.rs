@@ -7,17 +7,17 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::{
     section_assembly, section_builder_run, section_corner, section_fan_walk, section_routing,
     SectionKind, SectionPool, SectionRun,
 };
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, ChainEdge, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::mesh_measurements::{shell_count, signed_volume, unclassifiable_edges};
 use crate::mesh_surface_distance::farthest_from;

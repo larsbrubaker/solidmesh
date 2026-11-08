@@ -7,10 +7,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::surface::surface_mesh_closure;
 
 /// The translation the picture hanger's owner file stands its part at.
 pub const THE_HANGERS_OWN_STAND_OFF: Vector3 = Vector3::new(-28.5, 23.66, 12.0);

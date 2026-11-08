@@ -4,8 +4,8 @@
 
 use std::cell::OnceCell;
 
-use geometry_processing::bevel::level_line::{segment_box_tree, ChainField};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{segment_box_tree, ChainField};
+use solidmesh_math::Vector3;
 
 /// An open chain through `points` asking `setbacks`, no sharp turn, no end ray, no clip.
 pub fn open_chain(points: Vec<Vector3>, setbacks: Vec<f64>) -> ChainField {

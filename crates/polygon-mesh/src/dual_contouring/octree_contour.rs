@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
 
 use super::octree::{OctreeNode, OctreeNodeKind};
 use crate::Mesh;

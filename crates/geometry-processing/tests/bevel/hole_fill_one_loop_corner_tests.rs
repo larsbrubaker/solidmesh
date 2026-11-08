@@ -8,14 +8,14 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
-use geometry_processing::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
+use solidmesh::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
+use solidmesh::bevel::level_line::{
     flat_hole_fill, BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, GapFillResult,
 };
-use polygon_mesh::csg::boolean_processing::BooleanOperandVerdict;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::csg::boolean_processing::BooleanOperandVerdict;
 
 use crate::boolean_kernel_gate;
 use crate::hole_fill_corner_tests::{

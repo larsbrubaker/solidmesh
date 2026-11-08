@@ -10,10 +10,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::chain_on_the_mesh::sense_flips_near;
-use geometry_processing::bevel::level_line::{gap_fill, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::chain_on_the_mesh::sense_flips_near;
+use solidmesh::bevel::level_line::{gap_fill, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
 use crate::fillet_thin_front_fin::profile_of;
@@ -189,10 +189,8 @@ fn the_floor_rim_cut_at_its_flips_refuses_a_folded_corner_at_two() {
 /// cove), which parts the runs and cuts into no face past the corner.
 #[test]
 fn the_floor_rims_flush_ends_stop_on_the_other_runs_side_face() {
-    use geometry_processing::bevel::level_line::flip_corner_clip::{
-        flip_corner_plane_paths, SeamPlanePath,
-    };
-    use geometry_processing::bevel::level_line::{chain_on_the_mesh, BandProfile, LevelLineWork};
+    use solidmesh::bevel::level_line::flip_corner_clip::{flip_corner_plane_paths, SeamPlanePath};
+    use solidmesh::bevel::level_line::{chain_on_the_mesh, BandProfile, LevelLineWork};
 
     let fixture = Rc::new(LevelLineFixture::load(
         "unexpected-refusals-half-cut-floor-rim-r1",
@@ -258,7 +256,7 @@ fn faceted_wall_at_a_corner(lean_up: f64, lean_down: f64) -> (Vec<Vector3>, Vec<
 /// to the crease's plane.
 #[test]
 fn a_side_face_whose_facets_straddle_its_plane_is_refused() {
-    use geometry_processing::bevel::level_line::flip_corner_clip::against_the_other_side_face;
+    use solidmesh::bevel::level_line::flip_corner_clip::against_the_other_side_face;
 
     let (positions, indices) = faceted_wall_at_a_corner(-0.1, -0.1);
     let one_side = against_the_other_side_face(&positions, &indices, 0, 1, 2);
@@ -283,7 +281,7 @@ fn a_side_face_whose_facets_straddle_its_plane_is_refused() {
 /// two, changes nothing, so the offer would not build again for it.
 #[test]
 fn a_flip_that_cuts_nothing_new_asks_for_no_build() {
-    use geometry_processing::bevel::level_line::{chain_on_the_mesh, BandProfile};
+    use solidmesh::bevel::level_line::{chain_on_the_mesh, BandProfile};
     let fixture = Rc::new(LevelLineFixture::load(
         "unexpected-refusals-half-cut-floor-rim-r1",
     ));

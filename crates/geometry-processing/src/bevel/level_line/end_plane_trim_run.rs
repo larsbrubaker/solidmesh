@@ -3,8 +3,8 @@
 //! farthest reach, the section, the cut) is in `end_plane_trim`. Each refusal notes why on the open
 //! gap fill's ends site, so a failed end can be diagnosed from the trace.
 
-use vector_math::number_format::format_f64_max_decimals;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::number_format::format_f64_max_decimals;
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::end_plane_trim::{
     at_ray_parameter, cut_at, end_plane, farthest_out, section, to_the_corner,

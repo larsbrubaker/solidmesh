@@ -14,7 +14,7 @@
 
 use std::cmp::Ordering;
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_fan, surface_ring, surface_seam_re_read};

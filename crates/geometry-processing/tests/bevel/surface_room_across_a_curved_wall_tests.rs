@@ -7,14 +7,12 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{surface_room, surface_room_measure, SurfaceBevelPlan};
-use geometry_processing::bevel::{
-    bevel_chain_linker, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode,
-};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_room, surface_room_measure, SurfaceBevelPlan};
+use solidmesh::bevel::{bevel_chain_linker, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::topology_test_meshes;
 

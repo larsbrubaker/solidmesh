@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap::CornerCapLastRow;
 use super::corner_fill_end_ray_trim::TrimSections;

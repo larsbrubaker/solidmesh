@@ -2,7 +2,7 @@
 //! tree's nodes, building it, and walking it in visibility order. Faces are never cut; each
 //! node splits on the sampled face that crosses the least.
 
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
 
 use crate::mesh::Mesh;
 
@@ -184,7 +184,7 @@ fn calculate_crossing_area(
 
     // return whatever side is small as our rating of badness (0 being good)
     (
-        vector_math::ieee_math::min_f64(negative_distance, positive_distance),
+        solidmesh_math::ieee_math::min_f64(negative_distance, positive_distance),
         (negative_side_count - positive_side_count).abs(),
     )
 }

@@ -7,9 +7,9 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::topology::{ChainEdge, FeatureEdgeSet};
+use solidmesh::topology::{ChainEdge, FeatureEdgeSet};
 
 use crate::inner_face_test_mesh;
 

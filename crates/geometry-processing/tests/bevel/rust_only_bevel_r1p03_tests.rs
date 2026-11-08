@@ -2,11 +2,11 @@
 //! mitre, ring readers). The tests that exercise these methods read whole planned chains, so these
 //! pin, method by method, the closed forms the code's comments state.
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_plan_band_ends, SurfaceBevelPlan, SurfaceMixedCornerDualGrid,
     SurfaceTwoCreaseJunctionRings,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_mitre_normal_bisects_the_turn() {
@@ -71,7 +71,7 @@ fn rust_only_the_wedge_floors_are_one_degree_from_either_end() {
 
 #[test]
 fn rust_only_offset_to_segment_reads_the_nearest_clipped_end() {
-    use geometry_processing::bevel::surface::surface_room_measure::offset_to_segment;
+    use solidmesh::bevel::surface::surface_room_measure::offset_to_segment;
 
     let from = Vector3::new(0.0, 0.0, 0.0);
     let along = Vector3::new(1.0, 0.0, 0.0);
@@ -114,7 +114,7 @@ fn rust_only_offset_to_segment_reads_the_nearest_clipped_end() {
 
 #[test]
 fn rust_only_the_first_root_is_the_one_the_turn_reaches() {
-    use geometry_processing::bevel::surface::SurfaceMixedCornerWall;
+    use solidmesh::bevel::surface::SurfaceMixedCornerWall;
     use std::f64::consts::PI;
 
     // cos t = 1/2 has roots at +-pi/3; from zero the turn reaches pi/3 first.
@@ -132,14 +132,14 @@ fn rust_only_the_first_root_is_the_one_the_turn_reaches() {
 
 #[test]
 fn rust_only_a_missing_wall_section_has_no_sagitta() {
-    use geometry_processing::bevel::surface::surface_mixed_corner_cut_edge::sagitta_of_the_walls_chords;
+    use solidmesh::bevel::surface::surface_mixed_corner_cut_edge::sagitta_of_the_walls_chords;
 
     assert_eq!(sagitta_of_the_walls_chords(None), 0.0);
 }
 
 #[test]
 fn rust_only_a_room_cut_keeps_its_defaults_and_is_told_its_plan() {
-    use geometry_processing::bevel::surface::{SurfaceRoomCut, SurfaceRoomFootprint};
+    use solidmesh::bevel::surface::{SurfaceRoomCut, SurfaceRoomFootprint};
 
     let cut = SurfaceRoomCut::new(
         7,
@@ -166,7 +166,7 @@ fn rust_only_a_room_cut_keeps_its_defaults_and_is_told_its_plan() {
 
 #[test]
 fn rust_only_a_square_mitre_carries_the_outside_band_one_setback() {
-    use geometry_processing::bevel::surface::surface_room_mitre::overhang_per_setback;
+    use solidmesh::bevel::surface::surface_room_mitre::overhang_per_setback;
 
     let into_the_edge = Vector3::new(-1.0, 0.0, 0.0);
     let past_the_corner = Vector3::new(0.0, 1.0, 0.0);
@@ -190,7 +190,7 @@ fn rust_only_a_square_mitre_carries_the_outside_band_one_setback() {
 
 #[test]
 fn rust_only_a_chord_meets_the_touch_circle_within_its_own_span() {
-    use geometry_processing::bevel::surface::SurfaceRunOutMeetsAWallBand;
+    use solidmesh::bevel::surface::SurfaceRunOutMeetsAWallBand;
 
     // From inside a circle of radius 2 out to past it, along +x: the crossing is at x = 2.
     let at = SurfaceRunOutMeetsAWallBand::try_across(
@@ -224,7 +224,7 @@ fn rust_only_a_chord_meets_the_touch_circle_within_its_own_span() {
 
 #[test]
 fn rust_only_three_planes_meet_at_their_common_point() {
-    use geometry_processing::bevel::surface::SurfaceStripTrimmedByTheFaceBeyond;
+    use solidmesh::bevel::surface::SurfaceStripTrimmedByTheFaceBeyond;
 
     let at = SurfaceStripTrimmedByTheFaceBeyond::try_three_planes(
         Vector3::new(1.0, 0.0, 0.0),

@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{chain_on_the_mesh, triangle_edges, BandGapRefusal, PickFault};
 

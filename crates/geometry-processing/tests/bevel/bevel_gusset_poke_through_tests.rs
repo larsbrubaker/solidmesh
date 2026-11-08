@@ -12,14 +12,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_chain_join, surface_chain_opens_at_the_junction, surface_room, SurfaceBevelPlan,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{FaceGroup, FaceRegionCache};
-use polygon_mesh::{CancelToken, Face, Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FaceGroup, FaceRegionCache};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Face, Mesh, MeshEdgeGraph};
 
 use crate::gusset_test_meshes;
 

@@ -12,16 +12,16 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_chain_join, surface_room_measure, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan,
     SurfaceEdgePlan, SurfaceLine, SurfaceStrip, SurfaceStripEndsOnTheHull,
     SurfaceStripEndsOnTheHullSupportingPlane, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::pyramid_recess_test_meshes;
 

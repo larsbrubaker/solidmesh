@@ -1,9 +1,9 @@
 //! Opens the room the fillet will stand in by REWRITING the part's own faces: at
 //! every chain vertex, each of the two fans around it has that vertex replaced by the boundary
 //! point the section handed that side ([`try_rebuild`]). The junction station's wall side, whose
-//! fan the fold cuts in two, is [`super::section_face_rebuild_fold`]; a fan that folds is drawn
-//! again by [`super::section_fan_remesh`], and an open run's transverse face is spliced by
-//! [`super::section_end_splice`].
+//! fan the fold cuts in two, is `super::section_face_rebuild_fold`; a fan that folds is drawn
+//! again by `super::section_fan_remesh`, and an open run's transverse face is spliced by
+//! `super::section_end_splice`.
 //!
 //! **Substitution, not clipping.** Nothing is cut here. Every triangle of the part comes out as a
 //! triangle, the face COUNT does not change, and no point of the part moves except the chain's own
@@ -30,8 +30,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_face_rebuild_fold::try_substitute_either_side_of_the_fold;
 use super::section_fan_remesh::{try_remesh_the_region, Triple};
@@ -103,7 +103,7 @@ pub fn try_rebuild_run(
 /// the faces its own sections were computed for whatever the first run has already written into
 /// them. What they must not do is meet ON a corner: two runs sharing a chain vertex is refused up
 /// front at that vertex's station; two runs wanting the same corner of the same face for different
-/// vertices is refused by [`Rebuild::rewrite`], which finds the corner already given away.
+/// vertices is refused by `Rebuild::rewrite`, which finds the corner already given away.
 ///
 /// The fold check, the region re-mesh and the drop are all over the UNION: a region growing out of
 /// one run's folded fan may take in faces another run has rewritten, and re-meshing them one run

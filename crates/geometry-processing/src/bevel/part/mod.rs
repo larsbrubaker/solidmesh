@@ -24,7 +24,7 @@ mod outcome;
 pub mod pick_memo;
 pub mod point_groups;
 mod progress;
-pub mod progress_bar;
+pub(crate) mod progress_bar;
 pub mod prologue;
 pub mod refusal_place;
 mod request;

@@ -6,13 +6,13 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_face_walkback, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceMixedCornerDualFrame,
     SurfaceMixedJunction, SurfaceStrip, SurfaceTwoCreaseJunctionRings, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::Mesh;
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_two_crease_junction_reading_tests::{

@@ -7,14 +7,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::level_line::point_bevel::{
-    self, PointBevelKind, PointBevelRefusal,
-};
-use geometry_processing::bevel::level_line::point_candidates;
-use geometry_processing::bevel::level_line::point_star::PointStar;
-use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::point_bevel::{self, PointBevelKind, PointBevelRefusal};
+use solidmesh::bevel::level_line::point_candidates;
+use solidmesh::bevel::level_line::point_star::PointStar;
+use solidmesh::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 const SIDES: i32 = 40;
 const RADIUS: f64 = 1.0;

@@ -1,7 +1,7 @@
 //! What the level-line field reads at one point: how far the chain is, which point of the chain
 //! that is, and the field value whose zero set is the level line.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// One reading of the field at a point: plain public fields, copied by value.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

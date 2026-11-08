@@ -21,9 +21,9 @@ use std::time::Duration;
 
 use indexmap::IndexMap;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points;
-use geometry_processing::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points;
+use solidmesh::bevel::level_line::corner_fill_fill::WATCH_OPEN_HOLES;
+use solidmesh::bevel::level_line::{
     band_gap_in_turn, corner_cap_zip_end, dying_crease_fill, gap_fill, hull_clip, open_gap_fill,
     strip_clip, BandGapResult, GapFillRefusal,
 };

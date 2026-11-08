@@ -4,11 +4,9 @@
 //! fill closes, keeps the solid's winding and moves an amount that is continuous in the size and
 //! invariant under a rigid motion. Each test's cases run as a loop inside it.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
-    gap_fill, BandProfile, GapFillRefusal, GapFillResult,
-};
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal, GapFillResult};
+use solidmesh_math::{Matrix4X4, Vector2, Vector3};
 
 use crate::cube_edge_union_tests::chorded_fillet_section;
 use crate::level_line_feature_edges::feature_edges_over;

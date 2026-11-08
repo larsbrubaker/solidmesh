@@ -5,8 +5,8 @@
 // The flag is process-wide and tests run on several threads, so the tests that set it hold
 // `FLAG_LOCK` and restore the incoming value.
 
+use solidmesh_math::parallel;
 use std::sync::Mutex;
-use vector_math::parallel;
 
 static FLAG_LOCK: Mutex<()> = Mutex::new(());
 

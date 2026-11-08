@@ -3,10 +3,10 @@
 //! faces. It is read on the built mesh because no step of the build can see it - a step knows the
 //! ring it emitted, not whether the ring next door emitted the other side of it.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 /// A solid nothing has been done to is closed, and says nothing about where.
 #[test]

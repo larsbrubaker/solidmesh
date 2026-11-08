@@ -2,9 +2,9 @@
 //! side whose plane cut lies far from the end vertex, and a chain whose far end's clip cuts the
 //! plane short of where its raw band reaches.
 
-use geometry_processing::bevel::level_line::stopped_end_room::{stopped_end_room, StoppedEnd};
-use geometry_processing::bevel::level_line::{ChainField, ChainFieldEndClip};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::stopped_end_room::{stopped_end_room, StoppedEnd};
+use solidmesh::bevel::level_line::{ChainField, ChainFieldEndClip};
+use solidmesh_math::Vector3;
 
 /// A chain field of unit setback at size `s`.
 fn field(points: &[Vector3], s: f64) -> ChainField {

@@ -29,7 +29,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_row_zip, SurfaceVertexPool};
 use crate::bevel::{bevel_patch_refinement, bevel_seam_ring};

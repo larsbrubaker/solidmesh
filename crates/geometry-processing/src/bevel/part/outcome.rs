@@ -4,8 +4,8 @@
 //! [`bevel_part`](super::bevel_part) hands it to the caller, who words the rows, the part-level
 //! failures and the advisories in its own language.
 
-use polygon_mesh::Mesh;
-use vector_math::Color;
+use solidmesh_math::Color;
+use solidmesh_mesh::Mesh;
 
 use crate::bevel::{
     BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelGroupResult, BevelResultGroup,

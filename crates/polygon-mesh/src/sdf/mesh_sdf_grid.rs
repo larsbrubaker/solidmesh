@@ -17,7 +17,7 @@
 use std::sync::atomic::{AtomicI32, AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::distance_grid_builder::{DistanceBuildError, DistanceGridBuilder, DistanceGridRequest};
 use super::grid_marching_cubes::{extract, DenseGrid3f};

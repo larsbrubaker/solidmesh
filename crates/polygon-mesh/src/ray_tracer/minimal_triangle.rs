@@ -5,7 +5,7 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use vector_math::{
+use solidmesh_math::{
     AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3, Vector3Float,
 };
 
@@ -51,7 +51,7 @@ impl MinimalTriangle {
     }
 
     /// The triangle's plane.
-    pub fn plane(&self) -> vector_math::PlaneFloat {
+    pub fn plane(&self) -> solidmesh_math::PlaneFloat {
         self.projection.plane
     }
 

@@ -32,8 +32,8 @@
 //! ([`SurfaceFacetCut::may_touch`]), so re-aiming it would undo the walk it made.
 
 use indexmap::IndexMap;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use super::{SurfaceFacetCut, SurfaceRegionWalkback, SurfaceVertexPool};
 

@@ -1,7 +1,7 @@
 //! The gate between the legacy edge-centric Surface construction and the vertex-centric sections
 //! one: whether a whole
 //! pass of plans is SIMPLE in the sections' sense, and the run to build it from when it is. The
-//! clauses it asks of each plan are in [`super::section_routing_clauses`].
+//! clauses it asks of each plan are in `super::section_routing_clauses`.
 //!
 //! **Whole builds, never half.** The router answers for the pass and not for a chain, because the
 //! two constructions publish different meshes at the same place - the sections' own documented
@@ -43,7 +43,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_builder_run::{try_build_loop, try_build_plan};
 use super::section_builder_walked_side::SectionBuildRefusal;

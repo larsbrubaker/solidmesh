@@ -4,10 +4,10 @@
 //! radius 2 about (9, 11, 9) in y = 11. Both span the same two end rings; they differ by up to a
 //! whole radius in between, sweep the same Pappus volume, and are exact mirrors about the part.
 
-use geometry_processing::bevel::bevel_working_mesh::signed_volume;
-use geometry_processing::bevel::surface::SurfaceMixedCornerSpine;
-use vector_math::math_helper::radians_to_degrees;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_working_mesh::signed_volume;
+use solidmesh::bevel::surface::SurfaceMixedCornerSpine;
+use solidmesh_math::math_helper::radians_to_degrees;
+use solidmesh_math::Vector3;
 
 use crate::surface_mixed_corner_reading_tests::the_mixed_corner;
 use crate::topology_test_meshes::create_l_shaped_grid_prism;

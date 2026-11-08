@@ -7,12 +7,12 @@
 //! (`mattercad-*`): the mesh takes contours and integer polygons and holds pictures through
 //! vector-math's `TexturePixels`, and the app's paths and images are converted in
 //! mattercad-geometry. Of this workspace's own crates (path dependencies one level up) only
-//! `vector-math` and `clipper-library` are allowed; the sibling checkouts (manifold-rust,
+//! `solidmesh-math` and `solidmesh-clipper` are allowed; the sibling checkouts (manifold-rust,
 //! clipper2-rust, tess2-rust) are further out and are not this workspace's.
 
 const FORBIDDEN_PREFIXES: [&str; 2] = ["agg-", "mattercad-"];
 
-const ALLOWED_WORKSPACE_CRATES: [&str; 2] = ["vector-math", "clipper-library"];
+const ALLOWED_WORKSPACE_CRATES: [&str; 2] = ["solidmesh-math", "solidmesh-clipper"];
 
 /// One dependency: the table it is in, its name, and its `path` if it has one.
 struct Dependency {

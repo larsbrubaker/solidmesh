@@ -7,10 +7,10 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
-use geometry_processing::bevel::bevel_working_mesh::seam_epsilon_for_positions;
-use geometry_processing::bevel::level_line::band_gap_reading::{read_room_of_pick, ReadRoomError};
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
-use vector_math::seeded_random::SeededRandom;
+use solidmesh::bevel::bevel_working_mesh::seam_epsilon_for_positions;
+use solidmesh::bevel::level_line::band_gap_reading::{read_room_of_pick, ReadRoomError};
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
+use solidmesh_math::seeded_random::SeededRandom;
 
 use crate::stl_reader;
 use crate::sweep_build::{self, PickInput};
@@ -166,7 +166,7 @@ fn sweep_pick<W: Write>(
     model: &Thingi10KModel,
     p: i32,
     pick: &SweepPick,
-    positions: &Arc<Vec<vector_math::Vector3>>,
+    positions: &Arc<Vec<solidmesh_math::Vector3>>,
     indices: &Arc<Vec<(i32, i32, i32)>>,
     features: &Arc<HashSet<(i32, i32)>>,
     model_diagonal: f64,

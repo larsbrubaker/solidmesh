@@ -17,7 +17,7 @@
 //! end does not stand on a ray end, or whose section passes the end plane before P, is returned as
 //! it was.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{BandGapResult, BandProfile, ChainField, GapLoop, LevelLineMesh, WorkError};
 

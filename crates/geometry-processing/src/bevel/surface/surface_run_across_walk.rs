@@ -6,8 +6,8 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use polygon_mesh::Mesh;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::Mesh;
 
 use super::surface_run_across::{
     edge_key, maps_of, normal_of, vertices_of, SurfaceRunAcrossRegionMapsCache, FLAT_COSINE,

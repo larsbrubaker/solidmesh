@@ -1,10 +1,10 @@
 //! The level line's route diagnostics and test seams - nothing here chooses a route: which
 //! constructions a build may take is the request's routing (`BevelRouting`, handed down the surface
 //! part builder). What is here is what a test reads or plants: the route a build took
-//! ([`last_route`], [`first_route`], written by the builder as it goes), the watched pick
-//! ([`LevelLineChainWatch`] through [`watch`]), the known room ([`watch_room`]), the work
-//! allowances ([`watch_budget`]) and two failure injections ([`fail_the_crest_attempt`],
-//! [`fail_the_second_half`]). Nothing in a product sets any of them, and each costs a build one
+//! (`last_route`, `first_route`, written by the builder as it goes), the watched pick
+//! ([`LevelLineChainWatch`] through `watch`), the known room (`watch_room`), the work
+//! allowances (`watch_budget`) and two failure injections (`fail_the_crest_attempt`,
+//! `fail_the_second_half`). Nothing in a product sets any of them, and each costs a build one
 //! check where it is unset.
 //!
 //! They are per-thread rather than on the request because they are a test's own instruments,
@@ -13,7 +13,7 @@
 //! and room watches are a record each thread starts with its own of: tests run on threads of one
 //! process, so the route a build took and the picks it was about to build reach the test that
 //! asked for that build and no other. Work handed to another thread carries the record along
-//! ([`LevelLineRouteRecord::current`] on the submitting thread, [`LevelLineRouteRecord::enter`] on
+//! (`LevelLineRouteRecord::current` on the submitting thread, `LevelLineRouteRecord::enter` on
 //! the worker; the model's compute pool does this for every job); it sits behind a mutex because
 //! a carried record is written on the worker and read on the asking thread. The budget watch is
 //! per thread and not carried, because the allowances it is handed are single-threaded (`Rc`).
@@ -21,7 +21,7 @@
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The route string a pass the level line built writes.
 pub const LEVEL_LINE_ROUTE: &str = "level-line";

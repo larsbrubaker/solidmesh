@@ -4,9 +4,9 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
-use geometry_processing::bevel::level_line::{strip_clip_valley, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::field_counters::{FieldCounters, LevelLineRule};
+use solidmesh::bevel::level_line::{strip_clip_valley, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 #[test]
 fn would_thin_at_a_limit_never_tallied_reads_zero() {

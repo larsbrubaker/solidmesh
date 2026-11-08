@@ -5,9 +5,9 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh, ScalarField};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::{ieee_math, Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::{ChainField, LevelLineMesh, ScalarField};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::{ieee_math, Matrix4X4, Vector3};
 
 use crate::level_line_test_geometry::{
     cube, is_watertight, run_cut, signed_volume, subdivided_plane, surface_area,
@@ -305,7 +305,7 @@ fn two_runs_of_the_same_cut_agree_exactly() {
     }
 
     // The same lines, in any order.
-    let names = |lines: &[geometry_processing::bevel::level_line::LevelLineChain]| {
+    let names = |lines: &[solidmesh::bevel::level_line::LevelLineChain]| {
         let mut names: Vec<String> = lines
             .iter()
             .map(|l| {

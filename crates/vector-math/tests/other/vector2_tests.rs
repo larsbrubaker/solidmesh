@@ -4,9 +4,9 @@
 // The inputs are random but drawn from a seeded `SeededRandom`, so a failure reproduces. The
 // assertions hold for any inputs.
 
-use vector_math::seeded_random::SeededRandom;
-use vector_math::vector2_ex::{get_position_at, polygon_length};
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::vector2_ex::{get_position_at, polygon_length};
+use solidmesh_math::{Vector2, Vector3};
 
 #[test]
 fn arithmatic_operations() {

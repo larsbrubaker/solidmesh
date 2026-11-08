@@ -3,9 +3,9 @@
 //! 0), and both in one hole (a mixed corner). A fill vertex through either face the row joins - out
 //! of a convex part, into a concave one - refuses; a sound one does not.
 
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::bulging_fill_vertex;
-use geometry_processing::bevel::level_line::{CornerCapLastRow, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::corner_cap_hole_fill::bulging_fill_vertex;
+use solidmesh::bevel::level_line::{CornerCapLastRow, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Interior {

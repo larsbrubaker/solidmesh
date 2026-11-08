@@ -1,16 +1,16 @@
 //! Rust-only checks of the R1.P12 package: the level line's chaining of crossed edges and a mixed
 //! corner's sector apex.
 
-use geometry_processing::bevel::level_line::band_cut::{chain, key};
-use geometry_processing::bevel::level_line::LevelLineChain;
-use geometry_processing::bevel::surface::surface_mixed_corner_sector::{
+use solidmesh::bevel::level_line::band_cut::{chain, key};
+use solidmesh::bevel::level_line::LevelLineChain;
+use solidmesh::bevel::surface::surface_mixed_corner_sector::{
     the_trace, try_apex, try_apex_between, try_cross,
 };
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceBandEnd, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_an_open_run_is_one_chain_walked_from_its_lower_end() {

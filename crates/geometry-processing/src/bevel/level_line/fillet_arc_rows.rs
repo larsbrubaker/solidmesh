@@ -4,7 +4,7 @@
 //! [`on_a_rim_joints_seam`]). The geometry they read (the carry, the seam row, the leg tests) is in
 //! `fillet_arc`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::end_face_section_row::{section_row, EndRowAsked};
 use super::fillet_arc::{

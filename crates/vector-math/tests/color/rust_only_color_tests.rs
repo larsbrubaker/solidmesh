@@ -2,9 +2,9 @@
 //! blending, HSL, naming, LAB, contrast and hashing, complementing the ported
 //! `ColorJsonConverterTests`.
 
+use solidmesh_math::color::{Color, ColorF, ColorType};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use vector_math::color::{Color, ColorF, ColorType};
 
 fn hash_of<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();

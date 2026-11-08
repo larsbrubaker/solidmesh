@@ -4,7 +4,7 @@
 //! where the round needs them ([`rows_where_the_round_needs_them`]) and the zipper that pairs the
 //! two rails ([`spokes`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, LevelLineMesh, LevelLineMeshError, OpenGapFillOpenRail, WorkError};
 use crate::bevel::float_grid;

@@ -13,13 +13,11 @@
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_strip_tests::{chord_excess_area, wedge_area};

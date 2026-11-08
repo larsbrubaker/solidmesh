@@ -4,7 +4,7 @@
 //! `TransformedAabbCache` (`crate::transformed_aabb_cache`) measures a transformed mesh's bounds over
 //! the vertices on or outside this hull (`hull_bounds_points`).
 //!
-//! The mesh owns a typed [`ConvexHullCache`] whose entry carries the [`Mesh::changed_count`] it
+//! The mesh owns a typed `ConvexHullCache` whose entry carries the [`Mesh::changed_count`] it
 //! was built at, so any [`Mesh::mark_as_changed`] makes it stale, without a property bag or an
 //! event. [`ConvexHullSteps`] builds the same hull a piece at a time for a thread that must keep
 //! drawing frames, and caches it the same way. Every call is synchronous (a background hull of a
@@ -13,7 +13,7 @@
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use vector_math::{AxisAlignedBoundingBox, Vector3, Vector3Float};
+use solidmesh_math::{AxisAlignedBoundingBox, Vector3, Vector3Float};
 
 use super::mi_convex_hull;
 use crate::mesh::f32_key;

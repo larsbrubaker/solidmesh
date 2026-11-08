@@ -5,7 +5,7 @@
 // survive.
 
 use serde::Deserialize;
-use vector_math::Color;
+use solidmesh_math::Color;
 
 /// No converter attribute here on purpose: Color's own Deserialize is the path customer files
 /// take.

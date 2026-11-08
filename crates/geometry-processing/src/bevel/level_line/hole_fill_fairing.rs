@@ -13,7 +13,7 @@
 
 use std::collections::BTreeSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{HoleFillTriangle, LevelLineWork, WorkError};
 

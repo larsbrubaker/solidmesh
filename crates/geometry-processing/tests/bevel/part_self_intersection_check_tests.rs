@@ -2,12 +2,12 @@
 //! crosses itself is caught only where the part it was built on did not already cross itself, a
 //! clean answer passes, and a cancel stops the check.
 
-use geometry_processing::bevel::part::answer_mesh::the_mesh_of;
-use geometry_processing::bevel::part::self_intersection_check::the_answer_intersects_itself_where_the_source_did_not as crosses_itself;
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Cancelled, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::part::answer_mesh::the_mesh_of;
+use solidmesh::bevel::part::self_intersection_check::the_answer_intersects_itself_where_the_source_did_not as crosses_itself;
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Cancelled, Mesh};
 
 /// A mesh as the kernel hands one over: positions and triangles.
 fn the_kernels_view(mesh: &Mesh) -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {

@@ -2,12 +2,12 @@
 //! removal and ancestry, the work budget's bar arithmetic and default size, and the run-out field's
 //! hull, reading and golden-section least. The whole-build tests also cover them.
 
-use geometry_processing::bevel::level_line::run_out_field::RunOutField;
-use geometry_processing::bevel::level_line::work_budget::{DEFAULT_FLOOR, PHASE_ORDER};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::run_out_field::RunOutField;
+use solidmesh::bevel::level_line::work_budget::{DEFAULT_FLOOR, PHASE_ORDER};
+use solidmesh::bevel::level_line::{
     LevelLineMesh, LevelLineTriangle, LevelLineWorkPhase, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -110,7 +110,7 @@ fn rust_only_a_run_out_wedge_reads_under_its_profile() {
     assert_eq!(RunOutField::least_of(&|x| x, 2.0, 1.0), 2.0);
 }
 
-fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudget> {
+fn budget(limit: i64, token: solidmesh_mesh::CancelToken) -> std::rc::Rc<WorkBudget> {
     use std::cell::{Cell, RefCell};
     std::rc::Rc::new(WorkBudget {
         cancellation_token: token,
@@ -147,11 +147,11 @@ fn budget(limit: i64, token: polygon_mesh::CancelToken) -> std::rc::Rc<WorkBudge
 
 #[test]
 fn rust_only_a_budget_runs_out_or_is_cancelled_as_an_error() {
-    use geometry_processing::bevel::level_line::{LevelLineWork, WorkError};
+    use solidmesh::bevel::level_line::{LevelLineWork, WorkError};
     // No budget in force: charging is free.
     assert!(LevelLineWork::charge(1_000_000).is_ok());
 
-    let spent = budget(10, polygon_mesh::CancelToken::new());
+    let spent = budget(10, solidmesh_mesh::CancelToken::new());
     let _scope = LevelLineWork::begin(Some(spent.clone()));
     assert!(LevelLineWork::charge(10).is_ok());
     match LevelLineWork::charge(1) {
@@ -165,7 +165,7 @@ fn rust_only_a_budget_runs_out_or_is_cancelled_as_an_error() {
         other => panic!("expected the budget to run out, got {other:?}"),
     }
 
-    let token = polygon_mesh::CancelToken::new();
+    let token = solidmesh_mesh::CancelToken::new();
     let watched = budget(1_000_000, token.clone());
     let _inner = LevelLineWork::begin(Some(watched));
     assert!(LevelLineWork::poll_cancel().is_ok());
@@ -187,9 +187,7 @@ fn rust_only_a_budget_runs_out_or_is_cancelled_as_an_error() {
 
 #[test]
 fn rust_only_field_queries_read_the_wedge_and_the_pair_corner_exactly() {
-    use geometry_processing::bevel::level_line::{
-        ChainDistanceField, PairCornerEndFaceField, ScalarField,
-    };
+    use solidmesh::bevel::level_line::{ChainDistanceField, PairCornerEndFaceField, ScalarField};
     let wedge = RunOutField::cone(v(0.0, 0.0, 0.0), v(1.0, 0.0, 0.0), 4.0, 0.5, f64::INFINITY);
     assert_eq!(
         wedge.value_at(v(2.0, 3.0, 0.0)).ok(),
@@ -278,8 +276,8 @@ fn polyline_field(
     points: Vec<Vector3>,
     setbacks: Vec<f64>,
     smooth: Option<std::collections::HashSet<i32>>,
-) -> geometry_processing::bevel::level_line::ChainField {
-    use geometry_processing::bevel::level_line::{segment_box_tree, ChainField};
+) -> solidmesh::bevel::level_line::ChainField {
+    use solidmesh::bevel::level_line::{segment_box_tree, ChainField};
     let mut parameter_at_point = vec![0.0];
     for pair in points.windows(2) {
         let last = *parameter_at_point.last().unwrap_or(&0.0);
@@ -310,7 +308,7 @@ fn polyline_field(
 
 #[test]
 fn rust_only_the_nearest_walk_reads_the_union_of_balls() {
-    use geometry_processing::bevel::level_line::ChainFieldExtension;
+    use solidmesh::bevel::level_line::ChainFieldExtension;
     let field = polyline_field(
         vec![v(0.0, 0.0, 0.0), v(4.0, 0.0, 0.0), v(4.0, 4.0, 0.0)],
         vec![1.0, 1.0, 1.0],
@@ -378,7 +376,7 @@ fn rust_only_a_smooth_joint_span_carries_the_parameter_across_the_joint() {
 
 #[test]
 fn rust_only_a_dying_crease_run_walks_the_loop_its_own_way() {
-    use geometry_processing::bevel::level_line::{dying_crease_fill, GapLoop};
+    use solidmesh::bevel::level_line::{dying_crease_fill, GapLoop};
     let closed = GapLoop::new(
         2,
         true,
@@ -397,7 +395,7 @@ fn rust_only_a_dying_crease_run_walks_the_loop_its_own_way() {
 
 #[test]
 fn rust_only_end_clips_read_the_greatest_plane_or_the_nearer_of_one() {
-    use geometry_processing::bevel::level_line::{ChainFieldEndClip, FieldSample};
+    use solidmesh::bevel::level_line::{ChainFieldEndClip, FieldSample};
     let mut field = polyline_field(
         vec![v(0.0, 0.0, 0.0), v(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -464,7 +462,7 @@ fn rust_only_end_clips_read_the_greatest_plane_or_the_nearer_of_one() {
 
 #[test]
 fn rust_only_a_sharp_vertex_gets_mitre_rays_and_open_ends_get_end_rays() {
-    use geometry_processing::bevel::level_line::ChainField;
+    use solidmesh::bevel::level_line::ChainField;
     let points = [v(0.0, 0.0, 0.0), v(2.0, 0.0, 0.0), v(2.0, 2.0, 0.0)];
     let setbacks = [1.0, 1.0, 1.0];
     let parameters = [0.0, 2.0, 4.0];
@@ -510,7 +508,7 @@ fn rust_only_a_sharp_vertex_gets_mitre_rays_and_open_ends_get_end_rays() {
 
 #[test]
 fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
-    use geometry_processing::bevel::level_line::ChainField;
+    use solidmesh::bevel::level_line::ChainField;
     let points = [v(0.0, 0.0, 0.0), v(-0.0, 1.0, 0.0), v(2.0, 2.0, 0.0)];
     assert!(ChainField::smooth_joints_in(&points).is_none());
     {
@@ -530,12 +528,12 @@ fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
 
 #[test]
 fn rust_only_the_last_small_pieces_read_their_pinned_text() {
-    use geometry_processing::bevel::level_line::open_gap_fill::{
+    use solidmesh::bevel::level_line::open_gap_fill::{
         backwards, hole_between, meeting_point_of, with_minted,
     };
-    use geometry_processing::bevel::level_line::open_gap_fill_cut_section::fans_from_a_rail_run_out;
-    use geometry_processing::bevel::level_line::open_gap_fill_sunk_arc::concave;
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::open_gap_fill_cut_section::fans_from_a_rail_run_out;
+    use solidmesh::bevel::level_line::open_gap_fill_sunk_arc::concave;
+    use solidmesh::bevel::level_line::{
         GapFillRefusal, GapFillResult, GapLoop, OpenGapFillOpenRail,
     };
 
@@ -595,7 +593,7 @@ fn rust_only_the_last_small_pieces_read_their_pinned_text() {
 
 #[test]
 fn rust_only_an_edge_meets_the_chain_at_a_run_out_end_or_inside_one_cluster() {
-    use geometry_processing::bevel::level_line::foreign_edge_room::meets_the_chain_at_an_end;
+    use solidmesh::bevel::level_line::foreign_edge_room::meets_the_chain_at_an_end;
     use std::collections::HashSet;
     let mut mesh = LevelLineMesh::new();
     mesh.descends_from = vec![(0, 0), (1, 1), (2, 2), (3, 3), (0, 3)];
@@ -638,5 +636,5 @@ fn rust_only_an_edge_meets_the_chain_at_a_run_out_end_or_inside_one_cluster() {
 
 /// A plain budget for other files' checks: a generous limit, never cancelled.
 pub fn budget_for_tests() -> std::rc::Rc<WorkBudget> {
-    budget(i64::MAX, polygon_mesh::CancelToken::new())
+    budget(i64::MAX, solidmesh_mesh::CancelToken::new())
 }

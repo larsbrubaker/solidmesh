@@ -2,9 +2,9 @@
 // Vector4/Matrix4X4/Quaternion/AxisAlignedBoundingBox, inversion, quaternion round trips, the
 // -0.0 hash rule and the out-of-range index errors.
 
+use solidmesh_math::{AxisAlignedBoundingBox, MathError, Matrix4X4, Quaternion, Vector3, Vector4};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use vector_math::{AxisAlignedBoundingBox, MathError, Matrix4X4, Quaternion, Vector3, Vector4};
 
 fn hash_of<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();

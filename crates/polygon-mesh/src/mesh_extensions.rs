@@ -9,8 +9,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::Color;
-use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
+use solidmesh_math::Color;
+use solidmesh_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
 
 use crate::face::{Face, FaceList};
 use crate::mesh::Mesh;

@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 
@@ -73,7 +73,7 @@ pub fn profile(fixture: &LevelLineFixture) -> BandProfile {
 /// The fixture's feature-edge list as the kernel's feature-edge test.
 pub fn feature_test(
     fixture: &Rc<LevelLineFixture>,
-) -> Option<geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest> {
+) -> Option<solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest> {
     let features = Rc::clone(fixture);
     Some(Rc::new(move |a, b| features.is_feature_edge(a, b)))
 }

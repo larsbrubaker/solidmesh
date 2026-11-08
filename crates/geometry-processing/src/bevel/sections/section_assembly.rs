@@ -20,8 +20,8 @@
 //! A build that fails says why with [`SectionBuildRefusal`]: a named refusal, a decline with no
 //! advisory, or a NaN point.
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_builder_walked_side::SectionBuildRefusal;
 use super::section_smooth_seam::{self, SectionSmoothSeam, SmoothSeamFailure};

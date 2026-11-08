@@ -7,7 +7,7 @@
 //! The mesh the refinement edits is always the reading's own, so the refinement takes the reading
 //! and edits its mesh, borrowing it only between reads.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 /// How many times one triangle may be halved before the refinement gives up rather than loop.
 /// This bounds the LIPSCHITZ halving only: the asking refinement - every field that answers as a

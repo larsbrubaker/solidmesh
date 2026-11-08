@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use super::error::TopologyError;
 use super::feature_edge::FeatureEdge;

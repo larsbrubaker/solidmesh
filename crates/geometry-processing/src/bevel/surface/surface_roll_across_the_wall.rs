@@ -24,8 +24,8 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use vector_math::ieee_math::{max_f64, min_f64};
-use vector_math::Vector3;
+use solidmesh_math::ieee_math::{max_f64, min_f64};
+use solidmesh_math::Vector3;
 
 use super::surface_run_across::{
     nothing_across_it_can_curve, SurfaceRunAcrossRegionMapsCache, VERTEX_TOLERANCE,
@@ -37,7 +37,7 @@ use super::{
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::{ChainEdge, FaceGroup};
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 /// Where along the chain edge the section the roll is drawn in is taken.
 pub const THE_MIDDLE: f64 = 0.5;

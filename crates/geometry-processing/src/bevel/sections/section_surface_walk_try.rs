@@ -5,8 +5,8 @@
 //! [`super::section_surface_walk_faces`], and the turn through a vertex in
 //! [`super::section_walk_vertex_turn`].
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{

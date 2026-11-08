@@ -23,8 +23,8 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::level_line::BandGapResult;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::BandGapResult;
+use solidmesh_math::Vector3;
 
 use crate::level_line_room_geometry::SolidWithChains;
 use crate::two_hole_bridge_fixture;

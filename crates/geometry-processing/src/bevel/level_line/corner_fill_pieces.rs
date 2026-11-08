@@ -3,7 +3,7 @@
 //! ([`trim_off_the_line`]) and a one-owner loop split at another chain's tie run
 //! ([`tie_split`]).
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use std::rc::Rc;
 

@@ -4,11 +4,11 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 use crate::split_crease_test_meshes;
 

@@ -12,7 +12,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap::{build_unvalidated, the_chains_as_built, BandGapBuildError};
 use super::seam_edges::FeatureEdgeTest;

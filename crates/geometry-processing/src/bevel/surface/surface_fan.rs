@@ -18,7 +18,7 @@
 //! `emit_with`, and [`emit_triangle_facing`] lays one triangle of three vertices facing a
 //! reference.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_split_sewing;
 use super::SurfaceVertexPool;

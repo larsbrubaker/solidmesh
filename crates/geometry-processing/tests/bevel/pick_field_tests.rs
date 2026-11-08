@@ -4,9 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{ChainField, PickField, ScalarField};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{ChainField, PickField, ScalarField};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 /// A three-point open chain in a box round `centre`, with varying setbacks.
 fn random_chain(random: &mut SeededRandom, centre: Vector3) -> Rc<ChainField> {
@@ -59,7 +59,7 @@ fn brute_force(chains: &[Rc<ChainField>], members: &[i32], point: Vector3) -> (f
             best_chain = k;
             best_parameter = sample.parameter;
         } else {
-            runner_up = vector_math::ieee_math::min_f64(runner_up, sample.value);
+            runner_up = solidmesh_math::ieee_math::min_f64(runner_up, sample.value);
         }
     }
 

@@ -8,13 +8,13 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_junction_patch, SurfaceBevelPlan,
     SurfaceMixedJunction, SurfaceStrip, SurfaceVertexPool,
 };
-use geometry_processing::topology::FaceRegionCache;
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::{math_helper, Vector3};
+use solidmesh::topology::FaceRegionCache;
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_mixed_corner_fixture as fixture;
@@ -360,7 +360,7 @@ fn the_junction_built(segments: i32) -> (Mesh, SurfaceMixedJunction, SurfaceStri
         &plans,
         segments,
         &CancelToken::new(),
-        geometry_processing::bevel::surface::SurfaceBuildOptions {
+        solidmesh::bevel::surface::SurfaceBuildOptions {
             crossings: None,
             ran_off_over_a_stretch: None,
             lay_the_oblique_rows_anyway: false,

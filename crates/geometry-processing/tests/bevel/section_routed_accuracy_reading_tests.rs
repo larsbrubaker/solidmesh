@@ -12,13 +12,13 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::bevel::surface::SurfaceLine;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::bevel::surface::SurfaceLine;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::bore_test_meshes::{create_plate_with_a_raked_bore, create_plate_with_a_round_bore};
 use crate::mesh_measurements::signed_volume;

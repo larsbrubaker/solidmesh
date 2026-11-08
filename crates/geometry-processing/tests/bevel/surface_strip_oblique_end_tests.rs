@@ -6,16 +6,16 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_bevel_stitch;
-use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_bevel_stitch;
+use solidmesh::bevel::surface::surface_mitre_joint_step::SideSeams;
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceStrip, SurfaceStripStation, SurfaceVertexPool,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 /// A column of the strip that collapses to zero width still owes the points the END CUT left on
 /// its chord: they are carried forward to the first column that has width, which takes them as

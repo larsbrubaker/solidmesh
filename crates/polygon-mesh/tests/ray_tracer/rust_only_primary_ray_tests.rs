@@ -4,11 +4,11 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::ColorF;
+use solidmesh_math::{IntersectionType, Ray, Vector3};
+use solidmesh_mesh::ray_tracer::{
     AntiAliasing, Background, BoundingVolumeHierarchy, RayTracer, Scene, SphereShape, TraceableRef,
 };
-use vector_math::ColorF;
-use vector_math::{IntersectionType, Ray, Vector3};
 
 fn sphere(z: f64) -> TraceableRef {
     Arc::new(SphereShape::new(Vector3::new(0.0, 0.0, z), 1.0, None))

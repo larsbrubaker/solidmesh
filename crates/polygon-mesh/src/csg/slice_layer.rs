@@ -8,11 +8,11 @@
 use std::collections::HashMap;
 
 use clipper2_rust::{FillRule, Path64, Paths64, Point64};
-use vector_math::fixed_tie_sort::introspective_sort;
-use vector_math::{Matrix4X4, Plane, Quaternion, Vector3};
+use solidmesh_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::{Matrix4X4, Plane, Quaternion, Vector3};
 
 use crate::Mesh;
-use clipper_library::{
+use solidmesh_clipper::{
     clean_polygons, int_point, length, length_squared, ClipperError, PolygonsExtensions,
 };
 

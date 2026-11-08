@@ -8,10 +8,10 @@
 use std::collections::BTreeSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill::{self, arc_point};
-use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill::{self, arc_point};
+use solidmesh::bevel::level_line::{BandProfile, WorkBudget};
+use solidmesh_math::Vector3;
 
 use crate::cube_edge_union_tests::{link, rim_edges, FACE_RIMS};
 use crate::level_line_feature_edges::feature_edges_over;

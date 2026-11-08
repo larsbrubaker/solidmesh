@@ -7,16 +7,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
-use geometry_processing::bevel::BevelRebuildAdvisories;
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdge, FeatureEdgeSet,
-};
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::CancelToken;
-use vector_math::Color;
-use vector_math::Matrix4X4;
+use solidmesh::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
+use solidmesh::bevel::BevelRebuildAdvisories;
+use solidmesh::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::Color;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::CancelToken;
 
 /// The slab's thickness: the front face between the two colliding edges is this tall.
 const THICKNESS: f64 = 2.0;

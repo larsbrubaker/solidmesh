@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     end_face_sense, triangle_edges, BandProfile, GrowingCreaseRuns, LevelLineMesh, LevelLineWork,

@@ -5,9 +5,9 @@
 //! in the bisector ([`slid_profile`]); the fold and shared side the section ends on
 //! ([`try_the_fold`], [`try_the_shared_side`]); and the corner's construction ([`try_build`]).
 
-use vector_math::{ieee_math, math_helper, Vector3};
+use solidmesh_math::{ieee_math, math_helper, Vector3};
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::{

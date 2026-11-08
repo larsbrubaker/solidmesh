@@ -1,7 +1,7 @@
 // Easing curves: the linear, cubic and quadratic curves, in every option, invert back to their
 // input across [0, 1].
 
-use vector_math::easing::{self, EaseOption, EaseType, DEFAULT_INVERSE_TOLERANCE};
+use solidmesh_math::easing::{self, EaseOption, EaseType, DEFAULT_INVERSE_TOLERANCE};
 
 #[test]
 fn static_function_tests() {

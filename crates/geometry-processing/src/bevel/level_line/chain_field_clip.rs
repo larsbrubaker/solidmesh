@@ -6,7 +6,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{ChainField, ChainFieldEndClip, ChainFieldExtension, ChainFieldMeshPiece, FieldSample};

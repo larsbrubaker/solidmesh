@@ -12,8 +12,8 @@
 
 use std::sync::Arc;
 
-use vector_math::texture::TexturePixels;
-use vector_math::{Vector2Float, Vector3Float};
+use solidmesh_math::texture::TexturePixels;
+use solidmesh_math::{Vector2Float, Vector3Float};
 
 use crate::face_data::{corner_key, FaceTextureData};
 use crate::mesh::Mesh;

@@ -6,12 +6,12 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::foreign_edge_room;
-use geometry_processing::bevel::level_line::foreign_room_counters;
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::foreign_edge_room;
+use solidmesh::bevel::level_line::foreign_room_counters;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
+use solidmesh_math::Vector3;
 
 use crate::five_hole_plate_fixture;
 use crate::grid_hole_plate_fixture;

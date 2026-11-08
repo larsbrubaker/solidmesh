@@ -2,7 +2,7 @@
 //! of that wedge is a footprint of its own ([`SurfaceRoomFootprint::MitreTip`]); the overhang a
 //! mitre carries a band by is read here too, and every tip of a plan is added ([`add_to`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceRoomCut, SurfaceRoomFootprint};
 

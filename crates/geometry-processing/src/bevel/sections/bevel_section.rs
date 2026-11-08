@@ -12,7 +12,7 @@
 //! because every profile direction is square to [`BevelSection::tangent`] - the direction the
 //! centre segment runs along - every sample is exactly a radius from the segment.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// How one end of a strip meets the face beyond it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

@@ -8,8 +8,8 @@
 use std::collections::VecDeque;
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{ieee_math, Vector2, Vector3};
+use solidmesh_math::{ieee_math, Vector2, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_surface_walk::{is_the_same_point, normal_of, pair_key, JOIN_ITERATIONS};
@@ -146,7 +146,7 @@ pub fn arrived_at(
 }
 
 /// The shortest strip of faces from `from` to `to`, breadth first across manifold
-/// edges the walk may cross, no deeper than [`JOIN_STRIP_REACH`], as `(faces, folds)`.
+/// edges the walk may cross, no deeper than `JOIN_STRIP_REACH`, as `(faces, folds)`.
 pub fn try_strip(
     mesh: &Mesh,
     graph: &MeshEdgeGraph,

@@ -16,7 +16,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::band_refinement::{refine, RefineError, RefineOptions};
 use super::band_room::REFERENCE_SIZE;

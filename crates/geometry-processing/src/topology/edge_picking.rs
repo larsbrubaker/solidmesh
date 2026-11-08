@@ -2,8 +2,8 @@
 //! against a [`FeatureEdgeSet`] built from the mesh the
 //! ray was cast at.
 
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::Mesh;
 
 use super::error::TopologyError;
 use super::feature_edge::FeatureEdge;

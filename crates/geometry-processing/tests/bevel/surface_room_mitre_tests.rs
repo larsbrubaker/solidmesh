@@ -9,13 +9,13 @@
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
     SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_room_mitre_window_tests::{regions_of, the_cap, the_caps_rim};

@@ -4,7 +4,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualFrame};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

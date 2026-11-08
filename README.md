@@ -16,33 +16,70 @@ library so that others can use it and build on it. It works on the meshes real p
 
 ## Status
 
-**The kernel lives here; it is not on crates.io yet.** The four crates moved in from the
-[mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace with their history,
-and MatterCAD now depends on them by path, from a solidmesh checkout beside its own. Fillets and
-chamfers are one call, `bevel::part::bevel_part`, whose request carries the constructions it may
-take (`BevelRouting`; the default is MatterCAD's) and whose outcome reports refusals as codes for
-the caller to word. The work still open happens here: the public API (everything else
-crate-private), and then publishing to crates.io. Until then the crates are `publish = false`
-and their API changes with MatterCAD's needs.
+**Ready for its first crates.io release (0.1.0), not yet published.** The four crates moved in
+from the [mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace with their
+history, and MatterCAD depends on them by path, from a solidmesh checkout beside its own. Fillets
+and chamfers are one call, `solidmesh::bevel_part`, whose request carries the constructions it
+may take (`BevelRouting`; the default is MatterCAD's) and whose outcome reports refusals as codes
+for the caller to word. The documented API on docs.rs is the semver promise; the `solidmesh`
+crate also has modules hidden from its docs (the constructions and the readings MatterCAD builds
+on), which may change in any release.
 
 ## Crates
 
-| Crate | Folder | What it holds |
-|---|---|---|
-| `solidmesh-math` | `crates/vector-math` | Vectors, matrices, quaternions, planes, rays and bounds in `f64` and `f32`; a BVH; colours, rectangles and the progress reporter the kernel shares with its callers |
-| `solidmesh-clipper` | `crates/clipper-library` | A Clipper 6.4.2 port (integer polygon booleans, offsets, simplification) and the polygon helpers on clipper2-rust's types that the kernel slices, extrudes and revolves with |
-| `solidmesh-mesh` | `crates/polygon-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; slicing; ray tracing; STL |
-| `solidmesh` | `crates/geometry-processing` | Fillets and chamfers on mesh edges, corners and outlines |
+| Crate | Import as | Folder | What it holds |
+|---|---|---|---|
+| `solidmesh` | `solidmesh` | `crates/geometry-processing` | Fillets and chamfers on mesh edges, corners and outlines, and picking what to round; re-exports the other three as `solidmesh::math`, `solidmesh::clipper` and `solidmesh::mesh` |
+| `solidmesh-mesh` | `solidmesh_mesh` | `crates/polygon-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; slicing; ray tracing; STL |
+| `solidmesh-clipper` | `solidmesh_clipper` | `crates/clipper-library` | A Clipper 6.4.2 port (integer polygon booleans, offsets, simplification) and the polygon helpers on clipper2-rust's types that the kernel slices, extrudes and revolves with |
+| `solidmesh-math` | `solidmesh_math` | `crates/vector-math` | Vectors, matrices, quaternions, planes, rays and bounds in `f64` and `f32`; a BVH; colours, rectangles and the progress reporter the kernel shares with its callers |
 
-Each folder and library name is the one MatterCAD has always used (`use vector_math::...`,
-`use polygon_mesh::...`), so code reads the same in both repositories; the package name is the
-one the crate will publish under.
+The folders keep the names MatterCAD has always used, so the history follows the files.
+
+## Using it
+
+`solidmesh` is the one dependency:
+
+```toml
+[dependencies]
+solidmesh = "0.1"
+```
+
+```rust
+use std::sync::Arc;
+
+use solidmesh::mesh::solids::platonic_solids::create_cube;
+use solidmesh::mesh::CancelToken;
+use solidmesh::{bevel_part, pick, BevelPartRequest, BevelSelectionKind, FaceGroup, FeatureEdgeSet};
+
+// A 20 mm cube and its sharp edges, read at a 20 degree bend threshold.
+let cube = Arc::new(create_cube(20.0, 20.0, 20.0));
+let edges = FeatureEdgeSet::create_with_angle(&cube, 20.0);
+
+// Pick one edge and round it with a 3 mm fillet of 8 segments.
+let picked = pick::group_from_edge(
+    &edges,
+    0,
+    BevelSelectionKind::Edge,
+    FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+)?;
+let request = BevelPartRequest::new(Some(cube), vec![picked], 3.0, 8, true, 20.0);
+let outcome = bevel_part(request, &CancelToken::new(), None)?;
+
+// One row per pick: built, or refused with a code and the largest size that fits.
+let rounded = outcome.mesh; // None when nothing built
+```
+
+`solidmesh::pick` turns a click on a part into a pick (an edge, its tangent chain, a face's rim or
+a corner); `solidmesh::path` rounds the corners of 2D contours. Booleans, outlines, implicit
+surfaces and STL are in `solidmesh::mesh`. The [demo's bindings](demo/wasm/src) use only this
+documented API, and are a worked example of each.
 
 ## Demo
 
 The [live demo](https://larsbrubaker.github.io/solidmesh/) runs the library itself in the browser,
 compiled to WebAssembly: fillets and chamfers through their one entry point,
-`bevel::part::bevel_part` (pick edge chains, single edges, face rims or corners on a part, set
+`solidmesh::bevel_part` (pick edge chains, single edges, face rims or corners on a part, set
 one radius for them all, and see the part rounded in one call; a pick that does not fit is refused
 with the size that would), booleans (including inside-out and self-intersecting operands), outlines
 extruded with bevels or revolved, smooth implicit blends meshed by marching cubes or dual

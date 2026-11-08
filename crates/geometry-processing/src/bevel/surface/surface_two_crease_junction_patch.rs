@@ -105,7 +105,7 @@ pub fn try_close(
 }
 
 /// The pool positions of a ring of vertex indices.
-pub fn positions_of(pool: &super::SurfaceVertexPool, ring: &[i32]) -> Vec<vector_math::Vector3> {
+pub fn positions_of(pool: &super::SurfaceVertexPool, ring: &[i32]) -> Vec<solidmesh_math::Vector3> {
     ring.iter().map(|&index| pool.position_of(index)).collect()
 }
 

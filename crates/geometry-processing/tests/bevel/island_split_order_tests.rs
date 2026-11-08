@@ -3,9 +3,9 @@
 //! and a vertex taken from that sample moves by up to the tolerance, enough to flip a room at its
 //! limit into a pinch.
 
-use geometry_processing::bevel::level_line::bounded_maximum;
-use geometry_processing::bevel::level_line::{FieldSample, WorkError};
-use vector_math::{ieee_math, Vector3};
+use solidmesh::bevel::level_line::bounded_maximum;
+use solidmesh::bevel::level_line::{FieldSample, WorkError};
+use solidmesh_math::{ieee_math, Vector3};
 
 const SETBACK: f64 = 1.0;
 

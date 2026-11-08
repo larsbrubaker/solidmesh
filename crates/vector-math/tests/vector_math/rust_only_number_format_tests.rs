@@ -3,7 +3,7 @@
 //! last kept decimal round AWAY from zero on the 15-significant-digit value, a negative value that
 //! rounds to zero keeps its sign, and the infinities and NaN are spelled as .NET spells them.
 
-use vector_math::number_format::format_f64_max_decimals;
+use solidmesh_math::number_format::format_f64_max_decimals;
 
 #[test]
 fn rust_only_nine_places_write_the_pinned_text() {

@@ -2,10 +2,10 @@
 //! the second bite takes the vertex the first left on the edge, and a crossing where a vertex,
 //! a ring corner or a profile vertex already stands is that vertex.
 
-use geometry_processing::bevel::surface::surface_convex_bite::try_take;
-use geometry_processing::bevel::surface::surface_cut_clip::clip_by;
-use geometry_processing::bevel::surface::SurfaceVertexPool;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::surface_convex_bite::try_take;
+use solidmesh::bevel::surface::surface_cut_clip::clip_by;
+use solidmesh::bevel::surface::SurfaceVertexPool;
+use solidmesh_math::{Vector3, Vector3Float};
 
 const TALL: f64 = 20.0;
 const WIDE: f64 = 0.15;

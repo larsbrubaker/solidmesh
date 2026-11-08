@@ -7,7 +7,7 @@
 //! check that the winner actually won, so repeated geometry (a row of teeth) whose anchored corner
 //! was deleted is refused rather than resolved onto a sibling.
 
-use vector_math::{ieee_math, math_helper};
+use solidmesh_math::{ieee_math, math_helper};
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 

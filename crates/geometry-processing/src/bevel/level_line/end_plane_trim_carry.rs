@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap::WATCH_END_HOLE_AT;
 use super::{corner_fill, flat_hole_fill};

@@ -12,20 +12,20 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use manifold_rust::linalg::Vec3;
 use manifold_rust::manifold::Manifold;
 use manifold_rust::progress::ProgressReporter;
-use polygon_mesh::csg::manifold_import::import;
-use polygon_mesh::csg::manifold_result_reader::to_mesh;
-use polygon_mesh::csg::minkowski_morph::{
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::csg::manifold_import::import;
+use solidmesh_mesh::csg::manifold_result_reader::to_mesh;
+use solidmesh_mesh::csg::minkowski_morph::{
     minkowski_difference, minkowski_sum, minkowski_sum_with_progress,
 };
-use polygon_mesh::csg::minkowski_processing::{orient_shells_as_solid, sphere_mesh};
-use polygon_mesh::csg::minkowski_progress_model::{
+use solidmesh_mesh::csg::minkowski_processing::{orient_shells_as_solid, sphere_mesh};
+use solidmesh_mesh::csg::minkowski_progress_model::{
     tree_hull_units, TREE_LEAF_SIZE, TREE_LEAF_TIME_SHARE,
 };
-use polygon_mesh::csg::minkowski_shell_orientation::may_have_inverted_shell;
-use polygon_mesh::csg::BooleanReporter;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Matrix4X4;
+use solidmesh_mesh::csg::minkowski_shell_orientation::may_have_inverted_shell;
+use solidmesh_mesh::csg::BooleanReporter;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::minkowski_tests::signed_volume;
 

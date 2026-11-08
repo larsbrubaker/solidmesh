@@ -1,11 +1,11 @@
 //! Rust-only checks of the R1.P14 roll-across-the-wall geometry: the two-plane centre, the
 //! out-of-the-facet lean, the section projections and the finiteness checks.
 
-use geometry_processing::bevel::surface::surface_roll_across_the_wall::{
+use solidmesh::bevel::surface::surface_roll_across_the_wall::{
     in_the_section, in_the_section_of_the_normal, is_finite, is_finite_vector, out_of_the_facet,
     try_centre,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_the_centre_of_a_square_corner_sits_offset_from_both_planes() {

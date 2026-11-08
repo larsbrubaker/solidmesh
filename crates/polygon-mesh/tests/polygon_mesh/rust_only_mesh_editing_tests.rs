@@ -2,12 +2,12 @@
 //! `merge_vertices`, `split`, `split_on_planes`, `repair_t_junctions`, `clean_and_merge`,
 //! `remove_unused_vertices`, `remove_degenerate_faces` and the vertex sorters.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::vertex_sorters::{
+use solidmesh_math::{Plane, Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::vertex_sorters::{
     VertexDistanceFromPointSorter, VertexSorter, VertexXAxisSorter, VertexXYZAxisWithRotation,
 };
-use polygon_mesh::{Mesh, UnionFind};
-use vector_math::{Plane, Vector3, Vector3Float};
+use solidmesh_mesh::{Mesh, UnionFind};
 
 #[test]
 fn rust_only_union_find_joins_sets_larger_root_wins() {
@@ -141,7 +141,7 @@ fn rust_only_repair_t_junctions_splits_the_long_edge() {
 fn rust_only_clean_and_merge_welds_soup_and_skips_manifold() {
     let mut soup = Mesh::new();
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
-    soup.copy_all_faces(&cube, vector_math::Matrix4X4::IDENTITY);
+    soup.copy_all_faces(&cube, solidmesh_math::Matrix4X4::IDENTITY);
     assert_eq!(soup.vertices.len(), 36);
     soup.clean_and_merge();
     assert_eq!(soup.vertices.len(), 8);

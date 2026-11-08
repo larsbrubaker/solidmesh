@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::triangle_edges::{self, level_line_triangle_corners};
 use super::{consumed_to_the_rim, corner_fill, foreign_edge_room};

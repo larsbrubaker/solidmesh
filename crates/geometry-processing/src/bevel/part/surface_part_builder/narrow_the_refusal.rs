@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::bevel::{BevelAdvisory, BevelGroupResult, BevelLoopFailure};
 use indexmap::IndexMap;
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use super::build::check;
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError};

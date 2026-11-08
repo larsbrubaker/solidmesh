@@ -5,10 +5,10 @@
 //! rather than dividing by the unit of the additive problem's minimiser (which answered 1.289 and
 //! refused its own room). Each parameter row is one pass of a loop in the test of the same name.
 
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, ChainField, RoomSource};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, ChainField, RoomSource};
+use solidmesh_math::Vector3;
 
 use crate::level_line_test_geometry::open_edges;
 use crate::raked_box_fixture;

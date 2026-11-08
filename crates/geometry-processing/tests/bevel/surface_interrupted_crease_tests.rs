@@ -12,10 +12,10 @@
 //! faces - feet further from the crease than the nose's own root. On this fixture that starts
 //! between 7 and 7.5 mm, the ridge standing 7.071 from the crease. The parameter rows are a loop.
 
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{BevelEdgeGroup, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{BevelEdgeGroup, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bevel_volume_probes::{probe_cube, volume_inside};
 use crate::mesh_measurements::signed_volume;

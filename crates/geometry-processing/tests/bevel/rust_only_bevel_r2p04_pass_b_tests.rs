@@ -4,12 +4,12 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_the_larger_setback_piece_is_carried_past_the_step() {
-    use geometry_processing::bevel::level_line::band_side_groups::group_sides;
-    use geometry_processing::bevel::level_line::step_corner_carry::join_the_larger_setback_piece;
+    use solidmesh::bevel::level_line::band_side_groups::group_sides;
+    use solidmesh::bevel::level_line::step_corner_carry::join_the_larger_setback_piece;
     use std::collections::HashSet;
     let positions = vec![
         Vector3::new(0.0, 0.0, 1.0),
@@ -78,10 +78,10 @@ fn rust_only_the_larger_setback_piece_is_carried_past_the_step() {
 fn rust_only_pass_bs_creases_and_feature_edges_off_the_rounds() {
     use std::cell::RefCell;
 
-    use geometry_processing::bevel::level_line::band_gap_after_the_rounds::{
+    use solidmesh::bevel::level_line::band_gap_after_the_rounds::{
         creases_after_the_rounds, feature_edges_after_the_rounds,
     };
-    use geometry_processing::bevel::level_line::{GapFillResult, LevelLineMesh, LevelLineTriangle};
+    use solidmesh::bevel::level_line::{GapFillResult, LevelLineMesh, LevelLineTriangle};
     let input = vec![
         Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),

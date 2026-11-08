@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::refinement_splits::{
     enqueue, longest_edge, longest_edge_length, terminal_edge, triangle_thinned_by,

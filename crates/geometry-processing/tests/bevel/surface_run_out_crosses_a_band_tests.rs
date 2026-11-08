@@ -14,17 +14,17 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_bevel_crossings, surface_mesh_closure,
     surface_mixed_corner_run_out, surface_room, SurfaceBevelPlan, SurfaceBuildOptions,
     SurfaceEdgePlan, SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceRunOutMeetsTheBand,
     SurfaceStrip, SurfaceStripTrimmedAtTheCrossing, SurfaceStripTrims, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::shell_count;
@@ -496,7 +496,7 @@ pub fn build_with(
     prism: &Mesh,
     regions: &FaceRegionCache,
     plans: &[Rc<SurfaceBevelPlan>],
-    crossings: &[geometry_processing::bevel::surface::SurfaceRoomCrossing],
+    crossings: &[solidmesh::bevel::surface::SurfaceRoomCrossing],
 ) -> Result<Mesh, String> {
     surface_bevel_builder::try_build(
         prism,

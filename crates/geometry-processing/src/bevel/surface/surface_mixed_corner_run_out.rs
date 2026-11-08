@@ -7,7 +7,7 @@
 use std::cmp::Ordering;
 use std::rc::Rc;
 
-use vector_math::{fixed_tie_sort, ieee_math, Vector3};
+use solidmesh_math::{fixed_tie_sort, ieee_math, Vector3};
 
 use super::surface_run_out_column_ends;
 use super::{surface_mixed_corner_patch, surface_mixed_corner_run_out_strip};

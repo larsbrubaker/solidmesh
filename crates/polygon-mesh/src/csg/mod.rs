@@ -124,7 +124,7 @@ pub struct BooleanOptions {
     /// One color per operand, in operand order, to paint the result's faces from; `None` asks for
     /// no color tracking (the result has no face colors). An operand that has face colors of its
     /// own is painted from those instead. Polygon mode only.
-    pub mesh_colors: Option<Vec<vector_math::Color>>,
+    pub mesh_colors: Option<Vec<solidmesh_math::Color>>,
     /// Work to the f32 precision a [`crate::Mesh`] stores its positions at, rather than the
     /// kernel's exact f64. Operands that nearly touch (a thread's root on the core it is unioned
     /// onto) then leave no zero-area face once the result is narrowed back to f32: the kernel

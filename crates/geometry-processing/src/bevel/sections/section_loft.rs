@@ -30,7 +30,7 @@
 //! concave chain reaching this far shows up as a quad whose normal disagrees with the run's winding
 //! and is refused rather than lofted inside out.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::section_loft_gaps;
 use super::section_smooth_seam::SectionSmoothSeam;

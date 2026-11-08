@@ -1,8 +1,8 @@
 //! The surface plan's reading of one picked edge: its finiteness tests ([`is_finite`],
 //! [`is_finite_vector`]) and the reading itself ([`try_plan_edge`]).
 
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::Vector3;
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::Vector3;
 
 use super::super::bevel_edge_tool_builder::{profile_wedge_angle_degrees, tangent_distance};
 use super::super::{BevelAdvisory, BevelAdvisoryCode};

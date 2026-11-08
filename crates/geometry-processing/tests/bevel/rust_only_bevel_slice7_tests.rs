@@ -2,11 +2,11 @@
 //! slice 8's `RoomCandidate`. The tests that exercise them in context read whole bevels; these pin
 //! each piece alone.
 
-use geometry_processing::bevel::bevel_edge_tool_builder as builder;
-use geometry_processing::bevel::surface::{surface_ring, SurfaceVertexPool};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::EdgeConvexity;
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::bevel_edge_tool_builder as builder;
+use solidmesh::bevel::surface::{surface_ring, SurfaceVertexPool};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::EdgeConvexity;
+use solidmesh_math::{Vector2, Vector3};
 
 // ---------------------------------------------------------------- SurfaceRing
 
@@ -173,7 +173,7 @@ fn rust_only_the_builder_refuses_what_has_no_corner() {
 
 #[test]
 fn rust_only_a_room_candidate_takes_the_record_defaults() {
-    use geometry_processing::bevel::level_line::{RoomCandidate, RoomSource};
+    use solidmesh::bevel::level_line::{RoomCandidate, RoomSource};
 
     let candidate = RoomCandidate::new(RoomSource::foreign(3), 1.25);
     assert_eq!(candidate.source, RoomSource::foreign(3));

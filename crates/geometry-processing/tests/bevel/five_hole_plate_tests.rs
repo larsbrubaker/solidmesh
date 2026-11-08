@@ -6,14 +6,14 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::{read_room, read_room_of_pick};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::{read_room, read_room_of_pick};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandProfile, ChainsThatCannotFit, LevelLineMesh, PickThatFits, RoomReading,
     RoomReadingKind, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::five_hole_plate_fixture as fixture;
 use crate::gap_fill_tests::shell_count;

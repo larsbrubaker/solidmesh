@@ -8,7 +8,7 @@
 //! `point_distances` answers point-to-surface distances over the same tree, and
 //! `point_triangle_distance_sqr` exposes the single point-triangle distance.
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes};
 use crate::g3::dist_triangle3_triangle3::dist_triangle3_triangle3;

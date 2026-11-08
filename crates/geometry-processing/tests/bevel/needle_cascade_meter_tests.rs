@@ -11,12 +11,10 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::{FieldCounters, NeedleMeter, PickThatFits};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap;
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{FieldCounters, NeedleMeter, PickThatFits};
+use solidmesh_math::Vector3;
 
 use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;
@@ -288,9 +286,9 @@ fn the_cascade_is_metered() {
     ) {
         Ok(built) => {
             let mesh = built.mesh.as_ref().map(|m| m.borrow());
-            let of = |read: &dyn Fn(
-                &geometry_processing::bevel::level_line::LevelLineMesh,
-            ) -> String| { mesh.as_ref().map_or(String::new(), |m| read(m)) };
+            let of = |read: &dyn Fn(&solidmesh::bevel::level_line::LevelLineMesh) -> String| {
+                mesh.as_ref().map_or(String::new(), |m| read(m))
+            };
             format!(
                 "{:?}, needles repaired {}, left alone {}, on a chain edge {}, hit its bound {}, \
                  triangles made {}, vertices {}",

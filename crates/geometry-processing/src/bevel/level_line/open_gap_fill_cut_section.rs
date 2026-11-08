@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::flat_hole_fill;
 use super::gap_fill::{self, arc_point};

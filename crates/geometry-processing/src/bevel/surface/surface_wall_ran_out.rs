@@ -3,10 +3,10 @@
 //! linear condition puts on the size, each facet's window of sizes ([`try_window_on`]) and the
 //! advisory that names the largest size that fits ([`advisory`]).
 
-use vector_math::ieee_math;
-use vector_math::Vector3;
+use solidmesh_math::ieee_math;
+use solidmesh_math::Vector3;
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::surface_roll_across_the_wall::{

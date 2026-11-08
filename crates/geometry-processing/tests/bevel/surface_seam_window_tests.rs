@@ -6,15 +6,15 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_seam_over_the_edge::try_pick_the_run_over_the_edge;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_seam_over_the_edge::try_pick_the_run_over_the_edge;
+use solidmesh::bevel::surface::{
     SurfaceBandEnd, SurfaceBevelPlan, SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 const SIZE: f64 = 3.0;
 

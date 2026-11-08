@@ -2,7 +2,7 @@
 //! ([`signed_area`]), so every profile of a run can be wound the same way
 //! ([`super::bevel_chain_sweep_sections`]).
 
-use vector_math::Vector2;
+use solidmesh_math::Vector2;
 
 /// The polygon's signed area: positive when it winds counter clockwise.
 pub fn signed_area(polygon: &[Vector2]) -> f64 {

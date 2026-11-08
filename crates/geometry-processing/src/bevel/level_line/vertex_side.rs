@@ -16,7 +16,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap_flat_ends::use_flat_ends;
 use super::{FieldKind, LevelLineMesh, ScalarField};

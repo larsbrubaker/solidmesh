@@ -2,7 +2,7 @@
 // captured by running that sort on the same inputs (keys `(i * 7) % 3` for several lengths, then
 // 40 equal keys). The BVH builders depend on this order matching.
 
-use vector_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::fixed_tie_sort::introspective_sort;
 
 fn sorted_indices(keys: impl Fn(usize) -> i32, n: usize) -> Vec<usize> {
     let mut items: Vec<(i32, usize)> = (0..n).map(|i| (keys(i), i)).collect();

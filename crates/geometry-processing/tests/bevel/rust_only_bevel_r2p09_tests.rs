@@ -3,9 +3,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::seam_edges::{FeatureEdgeTest, SeamEdges};
-use geometry_processing::bevel::level_line::{band_gap, fill_closure, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::seam_edges::{FeatureEdgeTest, SeamEdges};
+use solidmesh::bevel::level_line::{band_gap, fill_closure, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)

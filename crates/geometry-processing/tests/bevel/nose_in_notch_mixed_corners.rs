@@ -7,12 +7,12 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceVertexPool,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use vector_math::Vector3;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
 
 use crate::nose_in_notch_test_meshes;
 

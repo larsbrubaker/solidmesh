@@ -7,17 +7,17 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points;
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::level_line::band_gap_entry_points;
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
-use geometry_processing::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::corner_cap_hole_fill::last_hole_fill_failure;
+use solidmesh::bevel::level_line::corner_cap_hole_fill_switch::set_use_hole_fill_override;
+use solidmesh::bevel::level_line::{
     gap_fill, BandGapRefusal, BandGapResult, GapFillRefusal, GapFillResult, SeamEdges,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, feature_of};
 use crate::fillet_thin_front_fin::profile_of;

@@ -3,12 +3,12 @@
 //! edge room's knife test by edge, open gap loops meeting, and the opposite-sense crease on the
 //! working mesh, valley planes, would-thin splits and the longest-edge path's end.
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     chain_on_the_mesh, corner_cap, end_face_sense, foreign_edge_room, knife_end_overrun,
     open_gap_fill, refinement_splits, self_room, strip_clip_valley, BandProfile, GapLoop,
     LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -340,7 +340,7 @@ fn rust_only_the_longest_edge_path_ends_where_two_triangles_share_it() {
 
 #[test]
 fn rust_only_every_chain_side_leaves_one_owned_loop() {
-    use geometry_processing::bevel::level_line::{gap_loop_walk, BandGroup};
+    use solidmesh::bevel::level_line::{gap_loop_walk, BandGroup};
 
     let group = BandGroup {
         tag: 5,
@@ -410,7 +410,7 @@ fn rust_only_every_chain_side_leaves_one_owned_loop() {
 
 #[test]
 fn rust_only_spokes_merge_two_rails_by_their_edges_middles() {
-    use geometry_processing::bevel::level_line::{open_gap_fill_stations, OpenGapFillOpenRail};
+    use solidmesh::bevel::level_line::{open_gap_fill_stations, OpenGapFillOpenRail};
 
     let rail = |parameters: Vec<f64>| OpenGapFillOpenRail {
         vertices: (0..parameters.len() as i32).collect(),
@@ -460,7 +460,7 @@ fn rust_only_spokes_merge_two_rails_by_their_edges_middles() {
 fn rust_only_run_outs_are_filed_under_their_creases_groups_when_on() {
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         band_group_run_outs, turn_run_outs_on, LevelLineWork, WorkBudget,
     };
 
@@ -498,9 +498,9 @@ fn rust_only_run_outs_are_filed_under_their_creases_groups_when_on() {
 
 #[test]
 fn rust_only_a_square_corner_has_no_pair_corner_end_face_and_gathers_nothing() {
-    use geometry_processing::bevel::level_line::band_gap_extra_fields;
-    use geometry_processing::bevel::level_line::PairCornerEndFaceField;
-    use polygon_mesh::solids::platonic_solids::create_cube;
+    use solidmesh::bevel::level_line::band_gap_extra_fields;
+    use solidmesh::bevel::level_line::PairCornerEndFaceField;
+    use solidmesh_mesh::solids::platonic_solids::create_cube;
 
     let mut cube = create_cube(2.0, 2.0, 2.0);
     cube.clean_and_merge();
@@ -549,9 +549,9 @@ fn rust_only_a_square_corner_has_no_pair_corner_end_face_and_gathers_nothing() {
 
 #[test]
 fn rust_only_a_knife_prisms_foot_corner_has_a_pair_corner_end_face() {
-    use geometry_processing::bevel::level_line::band_gap_extra_fields;
-    use geometry_processing::bevel::level_line::PairCornerEndFaceField;
-    use polygon_mesh::Mesh;
+    use solidmesh::bevel::level_line::band_gap_extra_fields;
+    use solidmesh::bevel::level_line::PairCornerEndFaceField;
+    use solidmesh_mesh::Mesh;
 
     // A prism along x whose section is a tall thin triangle: its sides lean at 14 degrees off
     // vertical, so the floor and a side meet sharper than square.
@@ -615,10 +615,9 @@ fn rust_only_a_knife_prisms_foot_corner_has_a_pair_corner_end_face() {
     assert_eq!(gathered[&1].len(), 1);
 
     // Off for the build in force: nothing.
-    let budget = std::rc::Rc::new(
-        geometry_processing::bevel::level_line::WorkBudget::new(1_000_000).unwrap(),
-    );
-    let _work = geometry_processing::bevel::level_line::LevelLineWork::begin(Some(budget));
+    let budget =
+        std::rc::Rc::new(solidmesh::bevel::level_line::WorkBudget::new(1_000_000).unwrap());
+    let _work = solidmesh::bevel::level_line::LevelLineWork::begin(Some(budget));
     let _off = PairCornerEndFaceField::turn_off();
     assert!(PairCornerEndFaceField::find(
         &positions,

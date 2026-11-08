@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap_build_fault::BuildFault;
 use super::band_side_tagging::{both_sided_members_build, FIRST_END_TAG, SECOND_END_TAG};

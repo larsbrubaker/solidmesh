@@ -8,13 +8,13 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{
     gap_fill, BandGapRefusal, BandProfile, ChainField, FieldCounters, WorkBudget,
 };
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChain;

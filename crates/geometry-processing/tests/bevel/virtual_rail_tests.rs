@@ -3,14 +3,14 @@
 //! top side's rail runs on in the top's plane at the setback where the band has passed the rib's
 //! creases.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::end_face_fill_try;
-use geometry_processing::bevel::level_line::fill_closure;
-use geometry_processing::bevel::level_line::virtual_rail;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::end_face_fill_try;
+use solidmesh::bevel::level_line::fill_closure;
+use solidmesh::bevel::level_line::virtual_rail;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, GapLoop, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::open_edges;

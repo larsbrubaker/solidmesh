@@ -345,16 +345,16 @@ impl SurfaceStripTrimmedAtTheCrossing {
         let length = (edge.to() - edge.from()).dot(strip.along());
         let mut reach = foot_param;
         for &param in &param_of {
-            reach = vector_math::ieee_math::max_f64(reach, param);
+            reach = solidmesh_math::ieee_math::max_f64(reach, param);
         }
 
         let mut nearest = foot_param;
         for &param in &param_of {
-            nearest = vector_math::ieee_math::min_f64(nearest, param);
+            nearest = solidmesh_math::ieee_math::min_f64(nearest, param);
         }
 
         let at_the_start = nearest < length - reach;
-        let near = vector_math::ieee_math::max_f64(pool.near_enough(), 0.0);
+        let near = solidmesh_math::ieee_math::max_f64(pool.near_enough(), 0.0);
         let stands_at_the_end = at_the_mitre.is_some()
             || if at_the_start {
                 nearest <= near

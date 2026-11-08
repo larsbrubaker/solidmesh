@@ -7,8 +7,8 @@
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 use crate::sweep_mesh_measures::{corners_of, key, standing};
 

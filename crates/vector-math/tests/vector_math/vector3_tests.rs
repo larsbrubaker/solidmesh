@@ -1,12 +1,12 @@
 // Vector3 behaviour: the vector, JSON, WorldView, frustum, plane and hash tests. The hash test
 // hashes through `std::hash::Hash`.
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use vector_math::{
+use solidmesh_math::{
     math_helper, AxisAlignedBoundingBox, Frustum, FrustumIntersection, Matrix4X4, Plane,
     Quaternion, Vector2, Vector2Float, Vector3, Vector3Float, Vector4, WorldView,
 };
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 #[test]
 fn static_function_tests() {

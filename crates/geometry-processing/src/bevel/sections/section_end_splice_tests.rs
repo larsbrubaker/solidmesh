@@ -2,8 +2,8 @@
 //! access: the walk reaching a rim point the pool minted past the mesh, which must refuse rather
 //! than read past the mesh's vertices.
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 use super::swallowed_along;
 

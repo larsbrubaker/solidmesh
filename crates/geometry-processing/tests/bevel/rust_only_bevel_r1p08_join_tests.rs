@@ -5,18 +5,18 @@
 //! a cube. Each pins the rule on a hand-built case.
 
 use indexmap::IndexMap;
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::sections::section_split_blend::SplitPlacement;
-use geometry_processing::bevel::sections::section_surface_walk::normal_of;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_split_blend::SplitPlacement;
+use solidmesh::bevel::sections::section_surface_walk::normal_of;
+use solidmesh::bevel::sections::{
     section_builder, section_builder_walked_side, section_room_smooth_side,
     section_surface_walk_join as join, section_surface_walk_try, BevelSection, SectionPool,
     SectionSide, SurfaceWalkRefusal,
 };
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::topology::FeatureEdgeSet;
 
 /// The faces of a cube whose normal points along `along`.
 fn faces_facing(cube: &Mesh, along: Vector3) -> Vec<i32> {

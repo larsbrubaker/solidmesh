@@ -8,10 +8,10 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, ChainField, LevelLineMesh};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, ChainField, LevelLineMesh};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::end_face_builds::feature_of;
 use crate::fillet_thin_front_fin::profile_of;

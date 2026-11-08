@@ -30,7 +30,7 @@ pub fn insert<'a>(
     candidates: Vec<i32>,
     snap: f64,
 ) -> Result<Vec<i32>, super::LevelLineMeshError> {
-    use vector_math::Vector3;
+    use solidmesh_math::Vector3;
 
     // (point on the plane, unit normal, the plane's tilt where it is a stopped end's)
     let mut planes: Vec<(Vector3, Vector3, Option<f64>)> = Vec::new();
@@ -175,8 +175,12 @@ pub fn insert<'a>(
 /// by [`ChainField::on_a_stopped_plane`](super::ChainField::on_a_stopped_plane), a knife end's
 /// within [`ON_THE_PLANE`].
 fn on_the_plane(
-    (vertex, normal, stopped): (vector_math::Vector3, vector_math::Vector3, Option<f64>),
-    point: vector_math::Vector3,
+    (vertex, normal, stopped): (
+        solidmesh_math::Vector3,
+        solidmesh_math::Vector3,
+        Option<f64>,
+    ),
+    point: solidmesh_math::Vector3,
 ) -> bool {
     if let Some(tilt) = stopped {
         super::ChainField::on_a_stopped_plane(vertex, normal, tilt, point)
@@ -191,11 +195,11 @@ fn on_the_plane(
 /// misses the triangle, touches it at one point, or holds one of its edges (that is a crease edge,
 /// read on its own).
 pub fn trace_across(
-    corners: [vector_math::Vector3; 3],
-    vertex: vector_math::Vector3,
-    normal: vector_math::Vector3,
+    corners: [solidmesh_math::Vector3; 3],
+    vertex: solidmesh_math::Vector3,
+    normal: solidmesh_math::Vector3,
     tilt: f64,
-) -> Option<(vector_math::Vector3, vector_math::Vector3)> {
+) -> Option<(solidmesh_math::Vector3, solidmesh_math::Vector3)> {
     let d = corners.map(|c| (c - vertex).dot(normal));
     let on = corners.map(|c| super::ChainField::on_a_stopped_plane(vertex, normal, tilt, c));
     let mut ends = Vec::with_capacity(2);
@@ -228,8 +232,8 @@ fn corner_between(
     reading: &super::VertexFieldReading,
     field: &dyn super::ChainDistanceField,
     triangle: i32,
-    (a, b): (vector_math::Vector3, vector_math::Vector3),
-    (vertex, normal): (vector_math::Vector3, vector_math::Vector3),
+    (a, b): (solidmesh_math::Vector3, solidmesh_math::Vector3),
+    (vertex, normal): (solidmesh_math::Vector3, solidmesh_math::Vector3),
     snap: f64,
     (pending, depth): (
         &mut std::collections::VecDeque<i32>,
@@ -238,7 +242,7 @@ fn corner_between(
 ) -> Result<Option<i32>, super::LevelLineMeshError> {
     // On the plateau the PLANE term is the reading, or the value is not above zero; off
     // it the chain's reading rises above zero. The corner is the one point between.
-    let on_plateau = |q: vector_math::Vector3| -> Result<bool, super::WorkError> {
+    let on_plateau = |q: solidmesh_math::Vector3| -> Result<bool, super::WorkError> {
         let value = field.value_at(q)?;
         Ok(value <= 0.0 || value <= (q - vertex).dot(normal) + 1e-12)
     };

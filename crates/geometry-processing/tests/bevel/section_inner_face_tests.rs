@@ -8,14 +8,14 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::{section_corner, section_routing, section_split_blend};
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::{section_corner, section_routing, section_split_blend};
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, EdgeConvexity, FeatureEdge,
 };
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::inner_face_test_mesh as fixture;
 use crate::section_turn_readings::{
@@ -265,7 +265,7 @@ fn the_bore_wall_at(size: f64) -> TryBevelOutcome {
     )
 }
 
-fn the_rim(part: &polygon_mesh::Mesh) -> BevelEdgeGroupResolution {
+fn the_rim(part: &solidmesh_mesh::Mesh) -> BevelEdgeGroupResolution {
     let (mut resolutions, _) =
         bevel_edge_group_resolver::resolve_all(&[fixture::the_bore_wall()], part);
     resolutions.remove(0)

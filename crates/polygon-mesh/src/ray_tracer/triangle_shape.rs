@@ -4,7 +4,7 @@
 
 use std::any::Any;
 
-use vector_math::{
+use solidmesh_math::{
     AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3, Vector3Float,
 };
 
@@ -116,7 +116,7 @@ impl TriangleShape {
     }
 
     /// The triangle's plane.
-    pub fn plane(&self) -> vector_math::PlaneFloat {
+    pub fn plane(&self) -> solidmesh_math::PlaneFloat {
         self.projection.plane
     }
 

@@ -7,9 +7,9 @@ use std::fmt::Write as _;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use geometry_processing::bevel::level_line::BandProfile;
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::BandProfile;
+use solidmesh_math::Vector3;
 
 use crate::sweep_pick::{PARTIAL_KIND, WHOLE_OPEN_KIND};
 use crate::sweep_row::SweepRow;

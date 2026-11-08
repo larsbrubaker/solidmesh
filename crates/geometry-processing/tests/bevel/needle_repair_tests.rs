@@ -8,12 +8,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{
     band_cut, band_gap_reading, BandProfile, ChainField, EdgeRoot, FieldCounters, LevelLineMesh,
     LevelLineWork, VertexFieldReading, VertexSide, WorkBudget, WorkError,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::graze_fixture;
 use crate::level_line_feature_edges::feature_edges_over;

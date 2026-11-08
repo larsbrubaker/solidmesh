@@ -6,8 +6,8 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::{FaceList, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{FaceList, Mesh};
 
 use super::bevel_working_mesh;
 

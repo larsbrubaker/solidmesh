@@ -34,7 +34,7 @@
 //! and the row is drawn about it (slid as above), so the flat cap between row and trace never
 //! crosses itself. A side that is one plane keeps the end vertex.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::gap_fill::arc_point;
 use super::{ChainField, LevelLineMesh};

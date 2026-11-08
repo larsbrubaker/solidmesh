@@ -9,7 +9,7 @@
 //! `TryGrowingEndFaces`) is in `end_face_fill_try.rs`, kept apart for the file-size limit and
 //! re-exported here.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 pub use super::end_face_fill_try::{try_end_faces, try_growing_end_faces};
 use super::open_gap_fill;
@@ -450,7 +450,7 @@ pub fn crease_run(
         open_gap_fill::append_ends_site(&format!(
             " / EndFaceFill:511 run of {} misses the end vertex by {}",
             run.len(),
-            vector_math::number_format::format_f64_max_decimals(least, 3)
+            solidmesh_math::number_format::format_f64_max_decimals(least, 3)
         ));
         return None;
     }

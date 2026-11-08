@@ -4,15 +4,15 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_seam::{
+use indexmap::IndexMap;
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_seam::{
     a_walk_crossed_a_fold, side_is_smooth, try_cut_every_smooth_side, SmoothSeamFailure,
 };
-use geometry_processing::bevel::sections::{SectionPool, SectionRun};
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
-use indexmap::IndexMap;
-use polygon_mesh::Mesh;
+use solidmesh::bevel::sections::{SectionPool, SectionRun};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use solidmesh_mesh::Mesh;
 
 use crate::two_mouths_in_one_facet_mesh as fixture;
 

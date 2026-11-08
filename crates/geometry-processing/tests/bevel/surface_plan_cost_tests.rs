@@ -12,9 +12,9 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdgeSet};
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::topology::{FaceGroup, FaceRegionCache, FeatureEdgeSet};
 
 use crate::thread_cpu_time::thread_cpu_time;
 use crate::topology_test_meshes::create_cylinder;

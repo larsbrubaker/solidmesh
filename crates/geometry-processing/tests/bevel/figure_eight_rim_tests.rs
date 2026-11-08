@@ -4,11 +4,11 @@
 //! where a refusal belongs: picks are COLLECTED off a mesh, not typed by a programmer, so a
 //! figure-eight rim is a statement about the part and leaves by name.
 
-use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap::BandGapBuildError;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChain;

@@ -5,11 +5,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     convex_cell_bound, ChainField, EndRayBound, PickField, ScalarField,
 };
-use vector_math::seeded_random::SeededRandom;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::{ieee_math, Vector3};
 
 // A chain along -x ending at the origin, setback 1, its last end cut by a plane leaning 80 degrees
 // off the chain's own direction - so at (-2, 1) the plane reads 0.638 against the chain's 0 and the

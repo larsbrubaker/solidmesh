@@ -4,12 +4,12 @@
 //! section's chords take - so a far lobe of the same coplanar patch inside the wedge extended counts
 //! for nothing.
 
-use geometry_processing::bevel::surface::{
+use indexmap::IndexSet;
+use solidmesh::bevel::surface::{
     surface_end_gains_the_section, surface_end_notch, SurfaceEndGainsTheSectionReading,
     SurfaceVertexPool,
 };
-use indexmap::IndexSet;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 const REACH: f64 = 4.0;
 

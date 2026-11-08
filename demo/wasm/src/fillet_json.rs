@@ -6,7 +6,7 @@
 
 use std::fmt::Write;
 
-use vector_math::Vector3;
+use solidmesh::math::Vector3;
 
 use crate::fillet::PickRow;
 use crate::fillet_pick::{group_to_numbers, Pick, PickSession};

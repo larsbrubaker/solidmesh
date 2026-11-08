@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use vector_math::{Vector2, Vector3Float};
+use solidmesh_math::{Vector2, Vector3Float};
 
 use super::{simplify, simplify_counting_work};
 use crate::g3::dmesh3::tri_distance_sqr;

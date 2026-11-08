@@ -9,7 +9,7 @@
 //! an unsplit mesh would get, and the split vertex is merely a point of that strip's two boundary
 //! rows - a strip never subdivided there cannot reverse there.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::section_split_blend::SplitPlacement;
 use super::{section_corner, BevelSection, SectionPool, SectionSide};

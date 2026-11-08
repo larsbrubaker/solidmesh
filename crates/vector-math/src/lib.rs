@@ -1,5 +1,31 @@
-//! vector-math (package `solidmesh-math`): the f64 vector math under solidmesh's meshes and
-//! fillets, and under the geometry, model and renderer of MatterCAD, which depends on it.
+//! **solidmesh-math**: deterministic `f64` geometry math in pure Rust: vectors, matrices,
+//! quaternions, planes, rays, bounds, a BVH, colours and rectangles, under the
+//! [solidmesh](https://docs.rs/solidmesh) mesh kernel. It builds for `wasm32-unknown-unknown` and
+//! gives the same bits on every platform.
+//!
+//! The value types are [`Vector2`], [`Vector3`] and [`Vector4`] (`f64`; [`Vector2Float`] and
+//! [`Vector3Float`] in `f32`), [`Matrix4X4`], [`Quaternion`], [`AxisAlignedBoundingBox`],
+//! [`Plane`] and [`Ray`]; [`bvh`] is a bounding volume hierarchy for ray and box queries, and
+//! [`Color`]/[`ColorF`] the colours a mesh face carries. [`Matrix4X4`] is row-major with row
+//! vectors: a point is transformed as `p * M`, so `A * B` applies `A` first.
+//!
+//! ```
+//! use solidmesh_math::{Matrix4X4, Vector3};
+//!
+//! // Scale by 2, then move 10 along x: the matrices compose left to right.
+//! let m = Matrix4X4::create_scale_uniform(2.0) * Matrix4X4::create_translation(10.0, 0.0, 0.0);
+//! let p = Vector3::new(1.0, 2.0, 3.0).transform(m);
+//! assert_eq!(p, Vector3::new(12.0, 4.0, 6.0));
+//! assert_eq!((p - Vector3::new(12.0, 0.0, 0.0)).length(), 52f64.sqrt());
+//! ```
+//!
+//! solidmesh-math is one of four crates: this one,
+//! [solidmesh-clipper](https://docs.rs/solidmesh-clipper) (integer polygon clipping),
+//! [solidmesh-mesh](https://docs.rs/solidmesh-mesh) (triangle meshes, booleans, repair) and
+//! [solidmesh](https://docs.rs/solidmesh) (fillets and chamfers), which re-exports the other
+//! three; depend on `solidmesh` alone to get them all.
+//!
+//! # How the crate is laid out
 //!
 //! The value types and their helpers: `math_helper`, `Vector2`/`Vector3`/`Vector4` (f64),
 //! `Vector2Float`/`Vector3Float` (f32), the FNV-1a `long_hash` behind every

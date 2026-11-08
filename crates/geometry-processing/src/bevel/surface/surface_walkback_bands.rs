@@ -12,8 +12,8 @@
 use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
-use polygon_mesh::{Face, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Face, Mesh};
 
 use super::surface_cut_clip;
 use super::{SurfaceFacetCut, SurfaceLine, SurfaceRegionWalkback, SurfaceVertexPool};

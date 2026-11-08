@@ -17,7 +17,7 @@ use std::rc::Rc;
 use crate::bevel::part::BevelSizeSearchRung;
 use crate::bevel::BevelGroupResult;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 use web_time::Instant;
 
 use super::super::shown_size::the_shown_size;

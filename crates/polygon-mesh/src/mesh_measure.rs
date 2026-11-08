@@ -1,6 +1,6 @@
 //! Whole-mesh measurements: enclosed volume and total surface area, in the mesh's own units.
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::mesh::Mesh;
 

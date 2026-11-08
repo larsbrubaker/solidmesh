@@ -2,7 +2,7 @@
 //! interior split, adding a free vertex and a face, and the triangle bookkeeping under them. The
 //! type and its readings are in `level_line_mesh.rs`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{

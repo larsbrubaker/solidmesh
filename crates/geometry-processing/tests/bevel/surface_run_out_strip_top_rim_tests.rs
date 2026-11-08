@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::bevel::surface::{surface_mixed_corner_run_out_strip, SurfaceVertexPool};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_mixed_corner_run_out_strip, SurfaceVertexPool};
+use solidmesh_math::Vector3;
 
 fn two_columns() -> (SurfaceVertexPool, [i32; 3], [i32; 3], i32) {
     let mut pool = SurfaceVertexPool::new(&[]);

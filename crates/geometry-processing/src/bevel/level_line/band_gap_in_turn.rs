@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap::BandGapBuildError;
 use super::band_gap_entry_points::{build_pick, BandGapBuildOptions};

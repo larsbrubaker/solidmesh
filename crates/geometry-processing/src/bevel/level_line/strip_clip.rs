@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::float_grid;
 use super::strip_clip_valley::other_says;
@@ -385,7 +385,7 @@ pub fn crosses_at_a_needles_apex(
 /// A number in the format `0.###e0`: up to three decimals and an exponent (the outcome notes'
 /// distances).
 pub(super) fn format_e0(value: f64) -> String {
-    vector_math::number_format::format_f64_scientific_e0(value, 3)
+    solidmesh_math::number_format::format_f64_scientific_e0(value, 3)
 }
 
 /// Closes the hole the drop left. Its outline is the crease stretch plus the

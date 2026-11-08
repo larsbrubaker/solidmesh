@@ -5,11 +5,11 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_reading::{read_room_of_pick, room_margin};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_reading::{read_room_of_pick, room_margin};
+use solidmesh::bevel::level_line::{
     BandProfile, RoomReading, RoomReadingKind, RoomSource, WorkBudget,
 };
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChains;

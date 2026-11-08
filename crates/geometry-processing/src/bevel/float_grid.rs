@@ -1,7 +1,7 @@
 //! The single-precision grid parts are stored on: how far apart two neighbouring float values are
 //! at a magnitude. A stored vertex stands anywhere within one step of where its shape puts it.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 /// The float step at a magnitude; zero at zero. The next float up less the magnitude, the
 /// subtraction done in single precision, then widened.

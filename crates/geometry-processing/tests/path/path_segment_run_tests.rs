@@ -5,10 +5,10 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::path::path_bevel::{self, Contour};
-use geometry_processing::path::path_segment_run::walk;
-use geometry_processing::path::{PathSegmentRunError, RunStopReason, SegmentRun};
-use vector_math::{math_helper, Vector2};
+use solidmesh::path::path_bevel::{self, Contour};
+use solidmesh::path::path_segment_run::walk;
+use solidmesh::path::{PathSegmentRunError, RunStopReason, SegmentRun};
+use solidmesh_math::{math_helper, Vector2};
 
 use super::flattened_curve_path::FlattenedCurvePath;
 

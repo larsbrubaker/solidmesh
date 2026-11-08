@@ -15,13 +15,13 @@
 //! rails past 90 degrees have no partner and end on the top face z = 20, so its end ring is a
 //! STAIRCASE turning at rail 8, (16.6, 4.8083, 20).
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, EdgeConvexity, FaceGroup,
     FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::nose_in_notch_cut::anchor;

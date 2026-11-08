@@ -1,7 +1,7 @@
-// Rust-only checks for `vector_math::seeded_random`: the seeded sequences match .NET 10's
+// Rust-only checks for `solidmesh_math::seeded_random`: the seeded sequences match .NET 10's
 // `new Random(seed)` (values printed by a .NET 10 console program, `NextDouble().ToString("R")`).
 
-use vector_math::seeded_random::SeededRandom;
+use solidmesh_math::seeded_random::SeededRandom;
 
 #[test]
 fn rust_only_seeded_sequence_draws_the_pinned_numbers() {

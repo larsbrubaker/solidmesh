@@ -29,9 +29,9 @@ use crate::bevel::{
     BevelResultGroup,
 };
 use indexmap::IndexMap;
-use polygon_mesh::{take_uniform_face_color, CancelToken, Mesh};
-use vector_math::Color;
-use vector_math::Matrix4X4;
+use solidmesh_math::Color;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::{take_uniform_face_color, CancelToken, Mesh};
 
 use super::super::outcome::BevelPartOutcome;
 use super::level_line::LevelLineRouteError;
@@ -72,8 +72,8 @@ impl From<WorkError> for SurfacePartBuildError {
     }
 }
 
-impl From<polygon_mesh::Cancelled> for SurfacePartBuildError {
-    fn from(_: polygon_mesh::Cancelled) -> Self {
+impl From<solidmesh_mesh::Cancelled> for SurfacePartBuildError {
+    fn from(_: solidmesh_mesh::Cancelled) -> Self {
         SurfacePartBuildError::Cancelled
     }
 }

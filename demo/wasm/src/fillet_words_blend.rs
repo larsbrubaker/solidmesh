@@ -3,7 +3,7 @@
 //! sentences a pick comes back with when it cannot find its edge or corner again
 //! (`format_resolution`).
 
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::{BevelAdvisory, BevelAdvisoryCode};
 
 use crate::fillet_words_parts::{at, describe_at, format, localize, text};
 

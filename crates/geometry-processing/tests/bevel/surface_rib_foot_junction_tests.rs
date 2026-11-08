@@ -7,13 +7,11 @@
 //! Standard test can say THAT it did not close and this one can say WHERE. Built through the shared
 //! `surface_test_build`.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{
-    BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
-};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::bevel_edge_group_resolver;
+use solidmesh::topology::{BevelEdgeGroup, BevelSelectionKind, FaceGroup, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_test_build::{try_bevel, TryBevelOptions};

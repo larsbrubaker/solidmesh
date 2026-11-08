@@ -6,16 +6,16 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::surface_plan_band_ends;
-use geometry_processing::bevel::surface::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::surface_plan_band_ends;
+use solidmesh::bevel::surface::{SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{
     ChainEdge, EdgeConvexity, FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes::{create_isosceles_prism, create_l_shaped_prism};
 

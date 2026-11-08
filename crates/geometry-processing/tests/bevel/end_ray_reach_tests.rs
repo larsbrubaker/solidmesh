@@ -5,14 +5,14 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
 
 use crate::end_face_builds::{as_saved, feature_of, FlatEnds};
 use crate::end_face_measures::prism;
 use crate::hole_fill_corner_tests::fill_with_the_filler;
 use crate::level_line_fixture::LevelLineFixture;
 use crate::level_line_test_geometry::{signed_volume, signed_volume_of};
-use geometry_processing::bevel::level_line::band_gap_entry_points;
+use solidmesh::bevel::level_line::band_gap_entry_points;
 
 #[test]
 fn a_concave_chain_ending_at_a_tent_tip_adds_its_prism_alone() {

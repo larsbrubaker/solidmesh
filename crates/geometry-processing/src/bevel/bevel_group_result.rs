@@ -61,7 +61,7 @@ pub struct BevelGroupResult {
     ///
     /// The one thing a user can do about a refusal they did not ask for, so it travels beside the
     /// refusal rather than only inside it: a size refusal found the number on its way to saying no
-    /// ([`bevel_advisory_codes::try_the_most_that_fits`]), and a BUILD refusal is bisected for it
+    /// (`bevel_advisory_codes::try_the_most_that_fits`), and a BUILD refusal is bisected for it
     /// afterwards. A caller says it once: after the refusal's own words, unless the refusal already
     /// quotes it (the size refusals' room, `PointTooLargeRoomFor`).
     pub largest_size_that_fits: Option<f64>,

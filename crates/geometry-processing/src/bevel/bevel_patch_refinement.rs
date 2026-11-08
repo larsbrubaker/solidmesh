@@ -24,7 +24,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The refined triangle list, with the midpoints appended to `directions` as unit vectors - so the
 /// caller's own indices, and every direction it already had, keep their meaning.

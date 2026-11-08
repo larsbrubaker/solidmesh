@@ -3,12 +3,12 @@
 
 use std::sync::Arc;
 
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, bevel_edge_readings, pick_interpretations, BevelSelectionKind,
     ChainStopReason, FaceGroup, FeatureEdgeChain, FeatureEdgeSet, MatchTolerances,
 };
-use polygon_mesh::solids::platonic_solids;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
 
 use crate::split_crease_test_meshes;
 

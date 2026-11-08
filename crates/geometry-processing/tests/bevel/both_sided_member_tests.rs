@@ -6,16 +6,16 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_side_groups::group_sides;
-use geometry_processing::bevel::level_line::band_side_tagging;
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::triangle_edges;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_side_groups::group_sides;
+use solidmesh::bevel::level_line::band_side_tagging;
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::triangle_edges;
+use solidmesh::bevel::level_line::{
     corner_fill, gap_fill, BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
     LevelLineMesh, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::gap_fill_tests::shell_count;
 use crate::level_line_feature_edges::feature_edges_over;

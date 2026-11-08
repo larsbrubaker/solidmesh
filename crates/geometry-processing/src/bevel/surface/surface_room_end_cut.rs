@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{
     surface_room_notch_sides, SurfaceBevelPlan, SurfaceEdgePlan, SurfaceRoomCut,
@@ -104,7 +104,7 @@ pub fn try_cut(plan: Option<&SurfaceBevelPlan>, at_the_start: bool) -> Option<Su
     let corner = if at_the_start { edge.from() } else { edge.to() };
 
     // The profile's reach out of the corner: the further of its two tangent points.
-    let reach = vector_math::ieee_math::max_f64(edge.left_setback, edge.right_setback);
+    let reach = solidmesh_math::ieee_math::max_f64(edge.left_setback, edge.right_setback);
 
     #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(x > 0)` on purpose: NaN declines
     let no_reach = !(reach > 0.0);
@@ -159,8 +159,8 @@ pub fn try_the_face_beyond(
     let left = edge.left_region_key();
     let right = edge.right_region_key();
     let picked = edge.edge.edge.mesh_edge_index;
-    let tolerance =
-        vector_math::ieee_math::max_f64((edge.to() - edge.from()).length(), 1.0) * VERTEX_TOLERANCE;
+    let tolerance = solidmesh_math::ieee_math::max_f64((edge.to() - edge.from()).length(), 1.0)
+        * VERTEX_TOLERANCE;
 
     let across_the_left = across_the_rim(
         regions,

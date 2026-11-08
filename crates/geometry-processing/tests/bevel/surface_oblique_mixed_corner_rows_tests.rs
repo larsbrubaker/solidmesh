@@ -11,15 +11,15 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, SurfaceBevelPlan, SurfaceBuildFailure, SurfaceBuildOptions,
     SurfaceMixedCorner, SurfaceMixedCornerRows,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::CancelToken;
 use std::rc::Rc;
-use vector_math::{math_helper, Vector3};
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_mixed_corner_fixture as fixture;

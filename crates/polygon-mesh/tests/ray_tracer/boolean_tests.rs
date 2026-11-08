@@ -3,11 +3,11 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::ColorF;
+use solidmesh_math::{IntersectionType, Ray, Vector3};
+use solidmesh_mesh::ray_tracer::{
     BoxShape, Difference, IntersectInfo, MaterialRef, SolidMaterial, Traceable, TraceableRef,
 };
-use vector_math::ColorF;
-use vector_math::{IntersectionType, Ray, Vector3};
 
 #[test]
 fn difference_tests_for_box() {

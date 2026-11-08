@@ -6,10 +6,8 @@
 use std::f64::consts::{PI, TAU};
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
-    SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
+use solidmesh_math::Vector3;
 
 use crate::nose_in_notch_mixed_corners;
 use crate::nose_in_notch_test_meshes;

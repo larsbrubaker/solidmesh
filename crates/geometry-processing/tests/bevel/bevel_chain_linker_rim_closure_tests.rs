@@ -2,11 +2,11 @@
 //! starts from, even where the face's normal misses its axis by a ten-millionth - which breaks the
 //! square-corner tie any normal comparison is deciding.
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::topology::{bevel_edge_group_resolver, FaceGroup, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3Float;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::topology::{bevel_edge_group_resolver, FaceGroup, FeatureEdgeSet};
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 const CUBE_SIZE: f64 = 20.0;
 

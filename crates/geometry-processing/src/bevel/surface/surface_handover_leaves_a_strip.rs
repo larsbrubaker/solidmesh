@@ -3,7 +3,7 @@
 //! ([`try_check`]), the band test along a line ([`leaves_a_band`]) and its plan form
 //! ([`leaves_a_band_of`]).
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::{SurfaceBandEnd, SurfaceBevelPlan, SurfaceLine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

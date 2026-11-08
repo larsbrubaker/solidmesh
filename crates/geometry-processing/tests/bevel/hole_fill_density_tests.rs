@@ -5,9 +5,7 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::{
-    gap_fill, BandGapResult, BandProfile, GapFillRefusal,
-};
+use solidmesh::bevel::level_line::{gap_fill, BandGapResult, BandProfile, GapFillRefusal};
 
 use crate::hole_fill_corner_tests::{
     build, fill_with_the_filler, fixture_feature, room_of, two_faces,

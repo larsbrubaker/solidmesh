@@ -10,14 +10,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mixed_corner_patch, SurfaceBevelPlan, SurfaceMixedCorner,
     SurfaceStrip,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::surface_test_chains::join_and_open;
 use crate::topology_test_meshes::create_l_shaped_grid_prism;

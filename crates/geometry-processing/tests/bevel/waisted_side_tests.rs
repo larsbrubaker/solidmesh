@@ -2,9 +2,9 @@
 //! back narrows to 2 deep at x = 10. The front top edge's band at 3 would cut the top face's front
 //! in two - a neck, not a crossing feature - so it must refuse by size, never build as two pieces.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 

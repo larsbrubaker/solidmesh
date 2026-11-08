@@ -9,9 +9,9 @@
 //! line. A split on a mesh edge is a function of the EDGE and not of which plane asked for it
 //! (`surface_walkback_rewrite::try_find_crossings`). The parameter rows are a loop.
 
-use geometry_processing::bevel::surface::{surface_bevel_builder, surface_mesh_closure};
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_band_end_along_a_facet_edge_tests::plan_of_the_rim;

@@ -4,11 +4,11 @@
 
 use std::sync::{Arc, Barrier};
 
-use polygon_mesh::csg::csg_operations;
-use polygon_mesh::csg::manifold_kernel_call_counts::{KernelCallContext, KernelCallCounts};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::csg::csg_operations;
+use solidmesh_mesh::csg::manifold_kernel_call_counts::{KernelCallContext, KernelCallCounts};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 fn overlapping_cubes() -> (Mesh, Mesh) {
     let a = create_cube(10.0, 10.0, 10.0);

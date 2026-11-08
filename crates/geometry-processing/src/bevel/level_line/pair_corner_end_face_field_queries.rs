@@ -5,7 +5,7 @@
 //! piece stands at a corner, where two pieces tie along an edge, or where three tie inside a
 //! triangle, and its greatest at a corner or the point nearest the axis.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     ChainDistanceField, FieldMaximum, FieldMinimum, LevelLineWork, PairCornerEndFaceField,

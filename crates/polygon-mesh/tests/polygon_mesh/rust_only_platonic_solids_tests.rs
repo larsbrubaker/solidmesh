@@ -1,8 +1,8 @@
 //! Rust-only checks of `solids::platonic_solids`, the builders every primitive starts from.
 //! Every solid must be a closed, outward-wound, genus-zero mesh with the expected counts.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 fn assert_closed_outward(mesh: &Mesh, vertices: usize, triangles: usize) {
     assert_eq!(mesh.vertices.len(), vertices);

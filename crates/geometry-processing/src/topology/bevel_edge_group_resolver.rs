@@ -10,8 +10,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, AxisAlignedBoundingBox, Vector3};
+use solidmesh_math::{math_helper, AxisAlignedBoundingBox, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 

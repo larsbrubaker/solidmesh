@@ -7,20 +7,20 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use geometry_processing::bevel::level_line::band_gap::BandGapBuildError;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::hole_fill;
-use geometry_processing::bevel::level_line::pinch_ladder_search;
-use geometry_processing::bevel::level_line::work_budget::{
+use solidmesh::bevel::level_line::band_gap::BandGapBuildError;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::hole_fill;
+use solidmesh::bevel::level_line::pinch_ladder_search;
+use solidmesh::bevel::level_line::work_budget::{
     LevelLineProgress, LevelLineWork, DEFAULT_FLOOR, DEFAULT_PER_TRIANGLE,
 };
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, LevelLineWorkPhase, WorkBudget, WorkError,
 };
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::grid_hole_plate_fixture;
 use crate::level_line_feature_edges::feature_edges_over;

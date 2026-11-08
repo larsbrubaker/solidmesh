@@ -5,7 +5,7 @@
 //!
 //! A mesh the kernel calls `NotClosed` gets one retry after `weld_seams` (a tolerance weld);
 //! [`import_strict`] is the one-shot import with no retry, for callers that must read exactly
-//! what the kernel makes of the mesh as given. [`import_with_provenance`] is the import for
+//! what the kernel makes of the mesh as given. `import_with_provenance` is the import for
 //! face-colour tracking: every triangle goes in tagged with its operand's reserved id and the
 //! index of its colour in that operand's palette, which the kernel carries through the boolean.
 
@@ -13,9 +13,9 @@ use std::collections::HashMap;
 
 use manifold_rust::manifold::Manifold;
 use manifold_rust::types::{Error as KernelStatus, MeshGL64};
-use vector_math::Color;
+use solidmesh_math::Color;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::manifold_kernel;
 use crate::Mesh;
@@ -33,7 +33,7 @@ pub struct ImportRejected {
 /// and the manifold is not marked soup, so the Auto engine still picks the fast exact
 /// pipeline. Closed but non-manifold input is welded into a soup manifold instead of being
 /// rejected. Only geometry that is not even closed still fails, as `NotClosed` - and that one
-/// gets a second chance through [`weld_seams`] before it is refused.
+/// gets a second chance through `weld_seams` before it is refused.
 ///
 /// The refusal is returned rather than absorbed: a boolean swallows an error operand as empty
 /// geometry and still reports success, which would show up as a part silently missing.

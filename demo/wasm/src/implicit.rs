@@ -11,14 +11,14 @@
 //! (`BooleanOptions::processing_mode`): two mesh operands resampled as distance grids, combined
 //! and meshed again, which never fails whatever the operands.
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes, ProcessingModes, ProcessingResolution};
-use polygon_mesh::dual_contouring::{
+use solidmesh::math::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use solidmesh::mesh::csg::boolean_processing::do_array;
+use solidmesh::mesh::csg::{BooleanOptions, CsgModes, ProcessingModes, ProcessingResolution};
+use solidmesh::mesh::dual_contouring::{
     build_octree, generate_mesh_from_octree, Box as SdfBox, Cylinder, Sdf, Sphere, Transform,
 };
-use polygon_mesh::sdf::{extract, DenseGrid3f};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use solidmesh::mesh::sdf::{extract, DenseGrid3f};
+use solidmesh::mesh::{CancelToken, Mesh};
 
 use crate::shapes::Shape;
 use crate::Scene;

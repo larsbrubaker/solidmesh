@@ -11,11 +11,11 @@
 
 use std::f64::consts::TAU;
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::processors::outline_to_mesh::revolve_contours;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector2, Vector3};
+use solidmesh::math::{AxisAlignedBoundingBox, Matrix4X4, Vector2, Vector3};
+use solidmesh::mesh::csg::boolean_processing::do_array;
+use solidmesh::mesh::csg::{BooleanOptions, CsgModes};
+use solidmesh::mesh::processors::outline_to_mesh::revolve_contours;
+use solidmesh::mesh::{CancelToken, Mesh};
 
 use crate::implicit::{mesh_marching_cubes, smooth_min, Field};
 use crate::outline::extrude_scene;

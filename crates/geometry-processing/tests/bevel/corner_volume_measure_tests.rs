@@ -14,13 +14,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     band_gap_reading, BandGapResult, BandProfile, CornerCapLastRow, GapFillRefusal,
     HoleFillTriangle, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::feature_of;
 use crate::hole_fill_corner_tests::{fill_with_the_filler, fill_with_the_filler_watched};

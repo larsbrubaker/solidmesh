@@ -4,9 +4,9 @@
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::Mesh;
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_mesh::Mesh;
 
 const RADIUS: f64 = 10.0;
 

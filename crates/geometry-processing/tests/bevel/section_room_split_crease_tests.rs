@@ -2,10 +2,10 @@
 //! is read to its far end and not to the first mesh edge - splitting a bore's wall folds into two
 //! collinear mesh edges moves no geometry, so it may not move the room.
 
-use geometry_processing::bevel::sections::section_room;
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh::bevel::sections::section_room;
+use solidmesh::topology::{FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::bore_test_meshes;
 

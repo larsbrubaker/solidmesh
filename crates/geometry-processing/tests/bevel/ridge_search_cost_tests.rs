@@ -8,10 +8,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
-    BandGapResult, BandProfile, LevelLineMesh, WorkBudget,
-};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, LevelLineMesh, WorkBudget};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::{hourglass_solid, l_prism, SolidWithChain};

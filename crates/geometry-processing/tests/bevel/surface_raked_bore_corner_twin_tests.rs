@@ -5,14 +5,14 @@
 //! halves: the contract the user is owed (closed, or refused by name as the app's own closure gate
 //! has it), and the twin as a ratchet. The parameter rows are a loop.
 
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceVertexPool};
-use geometry_processing::topology::{
+use indexmap::IndexMap;
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceVertexPool};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, BevelSelectionKind, FaceGroup,
     FeatureEdgeSet,
 };
-use indexmap::IndexMap;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::inner_face_test_mesh::{the_part, BEND_THRESHOLD_DEGREES, SEGMENTS};
 use crate::mesh_measurements::shell_count;

@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::sweep_watchdog::Thrown;
 

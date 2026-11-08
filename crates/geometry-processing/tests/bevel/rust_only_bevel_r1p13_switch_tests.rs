@@ -8,12 +8,12 @@ use std::rc::Rc;
 
 use indexmap::IndexMap;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     level_line_routing, run_outs_on, square_crease_clips_on, square_crease_end_clips,
     triangle_edges, turn_run_outs_on, turn_square_crease_clips_off, CreaseRunOut, LevelLineWork,
     LevelLineWorkPhase, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 #[test]
 fn rust_only_a_work_budget_is_a_positive_count_with_the_flow_defaults() {
@@ -241,7 +241,7 @@ fn rust_only_an_edges_sense_and_the_run_out_map() {
 
 #[test]
 fn rust_only_the_foreign_room_meter_counts_per_thread() {
-    use geometry_processing::bevel::level_line::foreign_room_counters;
+    use solidmesh::bevel::level_line::foreign_room_counters;
     foreign_room_counters::reset();
     assert_eq!(
         foreign_room_counters::with(|t| t.edges_per_chain.clone()),
@@ -271,7 +271,7 @@ fn rust_only_the_foreign_room_meter_counts_per_thread() {
 
 #[test]
 fn rust_only_results_say_whether_they_came_out_and_strip_clips_note_their_outcome() {
-    use geometry_processing::bevel::level_line::{
+    use solidmesh::bevel::level_line::{
         strip_clip, BandGapRefusal, BandGapResult, GapFillRefusal, GapFillResult, LevelLineTriangle,
     };
     let filled = GapFillResult::default();

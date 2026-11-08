@@ -11,7 +11,7 @@
 //! What stands along the profile is `Option<&[Vec<i32>]>`: the whole table may be absent, but every
 //! list the end cuts hand over is a list (empty where nothing stands along a chord).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{

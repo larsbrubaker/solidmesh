@@ -14,15 +14,13 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
-};
-use geometry_processing::bevel::{bevel_arc_chording, bevel_chain_linker};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::csg::{boolean_processing, manifold_import, BooleanOperandVerdict};
-use polygon_mesh::{CancelToken, Face, Mesh};
 use sha2::{Digest, Sha256};
-use vector_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh::bevel::surface::{surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan};
+use solidmesh::bevel::{bevel_arc_chording, bevel_chain_linker};
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_mesh::csg::{boolean_processing, manifold_import, BooleanOperandVerdict};
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 use crate::half_space_solids::{self, Wall};
 use crate::mesh_measurements::{shell_count, signed_volume};

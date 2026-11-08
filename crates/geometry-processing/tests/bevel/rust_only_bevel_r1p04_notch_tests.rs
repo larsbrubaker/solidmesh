@@ -8,14 +8,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_end_cap_around_a_feature, SurfaceEndCapAroundAFeatureMeeting,
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
     SurfaceStripEndsOnTheHull, SurfaceStripEndsOnTheHullSupportingPlane,
     SurfaceStripNotchedByAFeature, SurfaceStripNotchedByAFeatureBetween,
     SurfaceStripTrimmedByTheFaceBeyond, SurfaceVertexPool,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::rust_only_bevel_r1p06_tests::square_edge_plan;
 

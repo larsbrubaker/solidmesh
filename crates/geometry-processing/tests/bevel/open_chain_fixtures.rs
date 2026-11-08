@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_test_geometry;
 

@@ -4,16 +4,16 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::{read_room, room_of};
-use geometry_processing::bevel::level_line::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
-use geometry_processing::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
-use geometry_processing::bevel::level_line::chain_on_the_mesh::chain_edges;
-use geometry_processing::bevel::level_line::end_face_flow::END_FACE_BEND_DEGREES;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::{read_room, room_of};
+use solidmesh::bevel::level_line::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
+use solidmesh::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
+use solidmesh::bevel::level_line::chain_on_the_mesh::chain_edges;
+use solidmesh::bevel::level_line::end_face_flow::END_FACE_BEND_DEGREES;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::l_prism;

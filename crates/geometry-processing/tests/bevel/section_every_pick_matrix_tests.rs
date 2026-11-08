@@ -8,16 +8,16 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::bevel::surface::{surface_mesh_closure, surface_shared_edge_network};
-use geometry_processing::bevel::BevelAdvisoryArg;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::bevel::surface::{surface_mesh_closure, surface_shared_edge_network};
+use solidmesh::bevel::BevelAdvisoryArg;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelEdgeGroupResolution, BevelSelectionKind,
     EdgeConvexity, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::number_format::format_f64_max_decimals;
-use vector_math::Vector3;
+use solidmesh_math::number_format::format_f64_max_decimals;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::inner_face_test_mesh::{the_part, BEND_THRESHOLD_DEGREES, SEGMENTS};
 use crate::mesh_measurements::{shell_count, signed_volume};

@@ -4,23 +4,21 @@
 //! readings (`SectionSurfaceWalk.Join`) and the walk itself (`TryWalk`), all on a cube. Each pins
 //! the rule on a hand-built case.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::MeshEdgeGraph;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::MeshEdgeGraph;
 
-use geometry_processing::bevel::sections::{section_builder, section_room};
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::bevel::sections::{section_builder, section_room};
+use solidmesh::topology::FeatureEdgeSet;
 
 /// The surface walk's small readings on a cube: its grid, one point read twice, feet along an edge,
 /// folds (a cube edge is one, a face's diagonal is not), a parameter turned to the graph's way, and a
 /// refusal carrying where it stopped.
 #[test]
 fn rust_only_the_surface_walk_reads_folds_and_feet() {
-    use geometry_processing::bevel::sections::section_surface_walk as walk;
-    use geometry_processing::bevel::sections::{
-        SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult,
-    };
-    use geometry_processing::bevel::surface::SurfaceVertexPool;
+    use solidmesh::bevel::sections::section_surface_walk as walk;
+    use solidmesh::bevel::sections::{SurfaceWalkCrossing, SurfaceWalkRefusal, SurfaceWalkResult};
+    use solidmesh::bevel::surface::SurfaceVertexPool;
 
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     let graph = MeshEdgeGraph::create(&cube);
@@ -108,9 +106,9 @@ fn rust_only_the_surface_walk_reads_folds_and_feet() {
 /// holds a direction in one wedge, and turning through a corner finds the face that carries on.
 #[test]
 fn rust_only_the_surface_walk_reads_faces_and_turns_through_vertices() {
-    use geometry_processing::bevel::sections::section_surface_walk::normal_of;
-    use geometry_processing::bevel::sections::section_surface_walk_faces as faces;
-    use geometry_processing::bevel::sections::section_walk_vertex_turn as turn;
+    use solidmesh::bevel::sections::section_surface_walk::normal_of;
+    use solidmesh::bevel::sections::section_surface_walk_faces as faces;
+    use solidmesh::bevel::sections::section_walk_vertex_turn as turn;
 
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     let graph = MeshEdgeGraph::create(&cube);
@@ -233,10 +231,10 @@ fn rust_only_the_surface_walk_reads_faces_and_turns_through_vertices() {
 /// a point read into it, a strip's key, and whether a walk arrived.
 #[test]
 fn rust_only_the_join_reads_strips_and_unfolds_them() {
-    use geometry_processing::bevel::sections::section_surface_walk::normal_of;
-    use geometry_processing::bevel::sections::section_surface_walk_join as join;
-    use geometry_processing::bevel::sections::{SurfaceWalkCrossing, SurfaceWalkResult};
-    use vector_math::Vector2;
+    use solidmesh::bevel::sections::section_surface_walk::normal_of;
+    use solidmesh::bevel::sections::section_surface_walk_join as join;
+    use solidmesh::bevel::sections::{SurfaceWalkCrossing, SurfaceWalkResult};
+    use solidmesh_math::Vector2;
 
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     let graph = MeshEdgeGraph::create(&cube);
@@ -321,9 +319,9 @@ fn rust_only_the_join_reads_strips_and_unfolds_them() {
 /// ON it.
 #[test]
 fn rust_only_the_walk_runs_over_the_edge_or_stops_at_the_crease() {
-    use geometry_processing::bevel::sections::section_surface_walk::normal_of;
-    use geometry_processing::bevel::sections::section_surface_walk_try::try_walk;
-    use geometry_processing::bevel::sections::SurfaceWalkRefusal;
+    use solidmesh::bevel::sections::section_surface_walk::normal_of;
+    use solidmesh::bevel::sections::section_surface_walk_try::try_walk;
+    use solidmesh::bevel::sections::SurfaceWalkRefusal;
 
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     let graph = MeshEdgeGraph::create(&cube);

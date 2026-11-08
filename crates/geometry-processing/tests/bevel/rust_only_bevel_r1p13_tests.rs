@@ -5,14 +5,14 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     band_gap, band_gap_rounds_first, band_room, band_room_pair_room, corner_cap,
     corner_cap_flat_ends, corner_cap_hole_fill, corner_cap_hole_fill_switch, end_face_crease_plane,
     end_face_sense, end_plane_trim, fillet_arc, gap_fill, triangle_edges, BandProfile,
     CornerCapLastRow, HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineTriangle,
     RoomSource,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn near(a: Vector3, b: Vector3, tolerance: f64) -> bool {
     (a - b).length() <= tolerance

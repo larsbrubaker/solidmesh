@@ -16,19 +16,19 @@
 
 use std::collections::{HashMap, HashSet};
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::{edges_by_vertex_pair, EdgeAtPair};
-use geometry_processing::bevel::sections::section_run::SectionRun;
-use geometry_processing::bevel::sections::section_smooth_side::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::{edges_by_vertex_pair, EdgeAtPair};
+use solidmesh::bevel::sections::section_run::SectionRun;
+use solidmesh::bevel::sections::section_smooth_side::{
     try_cut_the_smooth_side, SmoothSideCut, SmoothSideFacetCut, SmoothSideRefusal,
 };
-use geometry_processing::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
-use geometry_processing::bevel::sections::{SectionPool, SectionSide};
-use geometry_processing::topology::BevelEdgeGroupResolution;
+use solidmesh::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
+use solidmesh::bevel::sections::{SectionPool, SectionSide};
+use solidmesh::topology::BevelEdgeGroupResolution;
 
 use crate::mesh_surface_distance;
 use crate::tapered_barrel_test_meshes;

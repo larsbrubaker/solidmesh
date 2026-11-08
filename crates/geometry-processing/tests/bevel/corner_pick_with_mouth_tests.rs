@@ -4,13 +4,11 @@
 //! top mouth. The mouth's two loops are each one owner all the way round, so the corner fill hands
 //! them to the per-chain zip. Each test's cases run as a loop inside it.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::corner_fill;
-use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::{
-    BandGapResult, BandProfile, GapFillRefusal, GapFillResult,
-};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::corner_fill;
+use solidmesh::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, GapFillRefusal, GapFillResult};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::{box_with_square_hole, SolidWithChains};

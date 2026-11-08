@@ -7,7 +7,7 @@
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{SurfaceMixedCorner, SurfaceWallSection};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

@@ -2,8 +2,8 @@
 //! its end-face capping. A guard against a fill result rebuilt field by field losing its
 //! capped-by-end-faces flag, which would send a capped fade back to be capped again.
 
-use geometry_processing::bevel::level_line::open_gap_fill::with_minted;
-use geometry_processing::bevel::level_line::{GapFillRefusal, GapFillResult};
+use solidmesh::bevel::level_line::open_gap_fill::with_minted;
+use solidmesh::bevel::level_line::{GapFillRefusal, GapFillResult};
 
 #[test]
 fn rust_only_a_fade_capped_by_end_faces_keeps_its_flag_when_the_rail_minted_vertices() {

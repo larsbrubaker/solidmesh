@@ -4,15 +4,15 @@
 //! with no plane to face out of; the cure drops the sliver and splits the face across its long edge
 //! at the middle vertex, on the working copy, with an advisory.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{Face, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{Face, Mesh};
 
-use geometry_processing::bevel::bevel_working_mesh::{
+use solidmesh::bevel::bevel_working_mesh::{
     create_from_with_advisories, seam_tolerance_for, signed_volume, StampedVerdict,
 };
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 /// How far the T-vertex stands off the line it is supposed to be on - the corpus's own slivers
 /// carry about this much, because the boolean that made them stored its answer as float.

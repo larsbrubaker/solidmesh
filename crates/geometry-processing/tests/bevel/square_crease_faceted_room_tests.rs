@@ -7,8 +7,8 @@
 //! reaches from the end vertex, not the first chord's length. Facets folding exactly 30 degrees (a
 //! 12-gon's) are still one curve, 31 degrees a corner (`end_face_sense::carries_on`).
 
-use geometry_processing::bevel::level_line::square_crease_end_clips;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::square_crease_end_clips;
+use solidmesh_math::Vector3;
 
 /// The round's radius.
 const RADIUS: f64 = 10.0;
@@ -100,14 +100,14 @@ fn round_onto_a_leaning_wall(
 }
 
 /// The end clip at the chain's end on the wall.
-fn the_wall_end_clip(facets: usize) -> geometry_processing::bevel::level_line::EndRayBound {
+fn the_wall_end_clip(facets: usize) -> solidmesh::bevel::level_line::EndRayBound {
     the_end_clip_on(quarter_round_onto_a_wall(facets))
 }
 
 /// The end clip at the chain's end on the wall of `solid`.
 fn the_end_clip_on(
     solid: (Vec<Vector3>, Vec<(i32, i32, i32)>),
-) -> geometry_processing::bevel::level_line::EndRayBound {
+) -> solidmesh::bevel::level_line::EndRayBound {
     let (positions, indices) = solid;
     let (clip, other) =
         square_crease_end_clips(&positions, &indices, &[1, 0], false, (false, false));
@@ -277,10 +277,8 @@ fn an_edge_onto_a_leaning_floor_its_side_carries_on_under_takes_the_clip() {
 /// rails): the band builds and fills closed, one shell, flush on the floor.
 #[test]
 fn an_edge_onto_a_leaning_floor_rounds_closed_read_either_way() {
-    use geometry_processing::bevel::level_line::band_gap_entry_points::{
-        self, BandGapBuildOptions,
-    };
-    use geometry_processing::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
+    use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+    use solidmesh::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
 
     let (positions, indices, chain) = edge_down_to_a_leaning_floor(0.2);
     let features = crate::level_line_feature_edges::feature_edges_over(&positions, &indices, 10.0);

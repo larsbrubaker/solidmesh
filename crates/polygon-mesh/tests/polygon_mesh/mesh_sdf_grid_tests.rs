@@ -6,13 +6,13 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 
-use polygon_mesh::csg::minkowski_processing::sphere_mesh;
-use polygon_mesh::csg::minkowski_shell_orientation::mesh_may_need_repair;
-use polygon_mesh::processors::outline_to_mesh::extrude_contours;
-use polygon_mesh::sdf::{MeshSdfGrid, SdfGridError};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector2};
+use solidmesh_math::{Matrix4X4, Vector2};
+use solidmesh_mesh::csg::minkowski_processing::sphere_mesh;
+use solidmesh_mesh::csg::minkowski_shell_orientation::mesh_may_need_repair;
+use solidmesh_mesh::processors::outline_to_mesh::extrude_contours;
+use solidmesh_mesh::sdf::{MeshSdfGrid, SdfGridError};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 const SIDE: f64 = 20.0;
 const RADIUS: f64 = 2.0;

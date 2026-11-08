@@ -6,14 +6,14 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, pick_interpretations, BevelSelectionKind, FaceGroup,
     FaceRegionCache, FeatureEdge, FeatureEdgeChain, FeatureEdgeSet, PickInterpretation,
     PickInterpretationKind,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::split_crease_test_meshes;
 use crate::topology_test_meshes::create_cylinder;

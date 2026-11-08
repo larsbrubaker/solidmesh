@@ -1,6 +1,6 @@
 //! The crest build's entry: a pick of two straight convex chains on one flat face whose rounds
 //! overlap across that face, refused by size, built instead with the two rounds meeting in a
-//! crest ([`super::gap_fill_crest`]).
+//! crest (`super::gap_fill_crest`).
 //!
 //! It runs only after the band build has refused the pick by size, so a pick that builds today
 //! never reaches it. The pair is offered by its shape - the seam's own overlap test, asked at the
@@ -18,7 +18,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap::BandGapBuildError;
 use super::band_gap_entry_points::{build_pick, BandGapBuildOptions};

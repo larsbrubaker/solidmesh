@@ -6,13 +6,13 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
+use solidmesh_math::{math_helper, Matrix4X4, Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::csg::boolean_processing::do_array;
+use solidmesh_mesh::csg::{BooleanOptions, CsgModes};
+use solidmesh_mesh::{CancelToken, Mesh};
 
-use geometry_processing::bevel::bevel_working_mesh::{create_from, StampedVerdict};
-use geometry_processing::topology::{
+use solidmesh::bevel::bevel_working_mesh::{create_from, StampedVerdict};
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, FaceGroup, FeatureEdgeSet,
 };
 

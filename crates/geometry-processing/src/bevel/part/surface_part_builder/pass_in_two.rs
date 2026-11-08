@@ -23,8 +23,8 @@ use crate::topology::{
     BevelEdgeGroupResolution, EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet,
 };
 use indexmap::IndexMap;
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::{Matrix4X4, Vector3Float};
+use solidmesh_math::{Matrix4X4, Vector3Float};
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError};
 

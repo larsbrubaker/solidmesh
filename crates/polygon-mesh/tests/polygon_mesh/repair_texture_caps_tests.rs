@@ -7,9 +7,9 @@
 use std::sync::Arc;
 
 use crate::test_picture::TestPicture;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{FaceTextureData, Mesh};
-use vector_math::{Vector2Float, Vector3Float};
+use solidmesh_math::{Vector2Float, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{FaceTextureData, Mesh};
 
 fn picture() -> Arc<TestPicture> {
     Arc::new(TestPicture::new(4, 4))
@@ -135,12 +135,12 @@ fn an_advanced_repair_textures_its_caps_too() {
     for index in 0..mesh.faces.len() {
         texture_by_position(&mut mesh, index, &image);
     }
-    let options = polygon_mesh::AdvancedRepairOptions {
+    let options = solidmesh_mesh::AdvancedRepairOptions {
         fill_holes: true,
         ..Default::default()
     };
     let repaired = mesh
-        .advanced_repaired(&options, &polygon_mesh::CancelToken::new())
+        .advanced_repaired(&options, &solidmesh_mesh::CancelToken::new())
         .expect("the repair runs");
     assert!(repaired.is_closed_consistently_wound(), "the box is closed");
     for index in 0..repaired.faces.len() {

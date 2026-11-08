@@ -2,15 +2,13 @@
 //! edges but never across them; a triangular prism's vertical edge tells the honest room from one
 //! blind to its end faces.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
-};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::SolidWithChain;

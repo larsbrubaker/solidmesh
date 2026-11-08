@@ -7,14 +7,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_room, surface_room_end_cut, surface_room_measure, SurfaceBevelPlan, SurfaceRoomCut,
     SurfaceRoomFootprint,
 };
-use geometry_processing::bevel::BevelSweptChain;
-use geometry_processing::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::BevelSweptChain;
+use solidmesh::topology::{ChainEdge, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_walkback_checks::regions_of;

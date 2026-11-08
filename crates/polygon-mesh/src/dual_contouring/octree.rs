@@ -16,7 +16,7 @@
 //! Contouring (`octree_contour`) walks the tree with the paper's cell/face/edge recursion and
 //! makes one quad per minimal sign-changing edge from the vertices of the cells around it.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::qef::{QefData, QefSolver};
 

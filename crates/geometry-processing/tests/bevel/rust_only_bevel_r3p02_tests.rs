@@ -6,15 +6,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_cut::{cut, side_of_triangle, BandCutError};
-use geometry_processing::bevel::level_line::edge_root::{find, root_on};
-use geometry_processing::bevel::level_line::side_roots_settling::{
-    root_the_side, settle_every_side,
-};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_cut::{cut, side_of_triangle, BandCutError};
+use solidmesh::bevel::level_line::edge_root::{find, root_on};
+use solidmesh::bevel::level_line::side_roots_settling::{root_the_side, settle_every_side};
+use solidmesh::bevel::level_line::{
     LevelLineMesh, ScalarField, VertexFieldReading, VertexSide, WorkError,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The signed distance to the plane x = 0.5: negative on the x < 0.5 half.
 struct HalfPlane;
@@ -138,8 +136,8 @@ fn rust_only_settling_roots_each_side_until_a_pass_roots_nothing() {
 
 #[test]
 fn rust_only_a_rules_point_is_inserted_where_it_stands() {
-    use geometry_processing::bevel::level_line::refinement_splits::NOTHING_TO_INSERT;
-    use geometry_processing::bevel::level_line::refinement_splits_enqueue::{
+    use solidmesh::bevel::level_line::refinement_splits::NOTHING_TO_INSERT;
+    use solidmesh::bevel::level_line::refinement_splits_enqueue::{
         insert_on_the_line, insert_where_it_stands,
     };
     use std::collections::VecDeque;
@@ -208,7 +206,7 @@ fn rust_only_a_rules_point_is_inserted_where_it_stands() {
 
 #[test]
 fn rust_only_a_sides_witness_is_read_and_inserted_at_the_snap() {
-    use geometry_processing::bevel::level_line::side_witness::{holds_an_outside_vertex, insert};
+    use solidmesh::bevel::level_line::side_witness::{holds_an_outside_vertex, insert};
     use std::collections::VecDeque;
     let reading = VertexFieldReading::new(square(0), Rc::new(HalfPlane), 1e-9).expect("a snap");
     // Triangle 1 (0, 2, 3) has corner 2 outside; reading stops there.
@@ -230,7 +228,7 @@ fn rust_only_a_sides_witness_is_read_and_inserted_at_the_snap() {
 
 #[test]
 fn rust_only_a_sides_band_is_its_inside_triangles_reaching_the_chain() {
-    use geometry_processing::bevel::level_line::band_triangles::band_of_side;
+    use solidmesh::bevel::level_line::band_triangles::band_of_side;
     use std::collections::HashSet;
     let reading = VertexFieldReading::new(square(2), Rc::new(HalfPlane), 1e-9).expect("a snap");
     let roots = find(&reading.mesh.borrow(), &reading).expect("the roots");
@@ -254,7 +252,7 @@ fn rust_only_a_sides_band_is_its_inside_triangles_reaching_the_chain() {
 
 #[test]
 fn rust_only_the_line_walk_finds_the_lines_point_down_the_slope() {
-    use geometry_processing::bevel::level_line::line_walk::try_find_line_point_near;
+    use solidmesh::bevel::level_line::line_walk::try_find_line_point_near;
     let reading = VertexFieldReading::new(square(0), Rc::new(HalfPlane), 1e-9).expect("a snap");
     let mesh = reading.mesh.borrow();
     // From inside the band the walk goes up +x to the line x = 0.5.
@@ -288,8 +286,8 @@ fn rust_only_the_line_walk_finds_the_lines_point_down_the_slope() {
 
 #[test]
 fn rust_only_two_chains_mitre_point_is_made_a_vertex() {
-    use geometry_processing::bevel::level_line::corner_tie_points::insert;
-    use geometry_processing::bevel::level_line::{ChainField, PickField};
+    use solidmesh::bevel::level_line::corner_tie_points::insert;
+    use solidmesh::bevel::level_line::{ChainField, PickField};
     let leg = |to: Vector3| {
         Rc::new(
             ChainField::from_polyline(&[Vector3::new(0.0, 0.0, 0.0), to], false, &[1.0, 1.0])
@@ -329,8 +327,8 @@ fn rust_only_two_chains_mitre_point_is_made_a_vertex() {
 
 #[test]
 fn rust_only_a_sharp_joints_inside_corner_is_made_a_vertex_on_the_line() {
-    use geometry_processing::bevel::level_line::sharp_joint_corners::insert;
-    use geometry_processing::bevel::level_line::ChainField;
+    use solidmesh::bevel::level_line::sharp_joint_corners::insert;
+    use solidmesh::bevel::level_line::ChainField;
     // An L whose joint at (4, 0) turns a right angle: its inside corner, a setback from both
     // legs, is (3, 1).
     let chain = ChainField::from_polyline(
@@ -380,7 +378,7 @@ fn rust_only_a_sharp_joints_inside_corner_is_made_a_vertex_on_the_line() {
         Some(vec![2, 0])
     );
     assert_eq!(
-        geometry_processing::bevel::level_line::end_clip_corners::insert(
+        solidmesh::bevel::level_line::end_clip_corners::insert(
             &reading,
             &straight,
             [&straight],

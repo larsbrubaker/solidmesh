@@ -4,11 +4,11 @@
 //! ([`try_the_join`]), with the crossings a join need not mint dropped; an end section's landing is
 //! found by walking down its crease to the chord that holds it ([`try_the_crease_chord_under`]). A
 //! junction station's rim and the crease takeovers beside it are in
-//! [`super::section_smooth_side_junction_rim`].
+//! `super::section_smooth_side_junction_rim`.
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_smooth_side::{corners, SmoothSideCut, SmoothSidePlace, SmoothSideRefusal};
@@ -52,9 +52,9 @@ impl From<NanSectionPoint> for SmoothSideFailure {
 /// fold crossings between consecutive points. An OFFSET station's point is its setback WALKED along
 /// the surface; a SLIDE station's is the point it already slid to, which lies on a fold. A JUNCTION
 /// station hands THREE points - its own rim P1, F1, P2
-/// ([`section_smooth_side_junction_rim::try_lay_the_junctions_rim`]) - and where a junction's wall end
+/// (`section_smooth_side_junction_rim::try_lay_the_junctions_rim`) - and where a junction's wall end
 /// was carried past a crease the crossing onto that crease is minted inside its group too
-/// ([`section_smooth_side_junction_rim::mint_the_crease_takeovers`]).
+/// (`section_smooth_side_junction_rim::mint_the_crease_takeovers`).
 ///
 /// A place names the face its point is IN. Every place written here comes from something that
 /// LANDED - the end face of a walk the run made, the end face of a join the run placed a split

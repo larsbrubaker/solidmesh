@@ -25,7 +25,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use crate::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
 

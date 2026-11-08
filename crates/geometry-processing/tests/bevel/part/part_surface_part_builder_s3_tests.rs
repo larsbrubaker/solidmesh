@@ -7,16 +7,16 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::part::surface_part_builder::{
+use solidmesh::bevel::part::surface_part_builder::{
     BevelSurfacePartBuilder, SurfacePartBuildError,
 };
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceBuildFailure};
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelRebuildAdvisories};
-use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::CancelToken;
-use vector_math::Color;
-use vector_math::Matrix4X4;
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceBuildFailure};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelRebuildAdvisories};
+use solidmesh::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdgeSet};
+use solidmesh_math::Color;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::CancelToken;
 
 /// A 10 mm cube with its top rim picked as group 0 and its bottom rim as group 1; only the groups
 /// in `offered` are offered.

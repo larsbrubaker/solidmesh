@@ -12,14 +12,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::{
+use indexmap::IndexMap;
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{
     ChainField, FieldCounters, GapLoop, LevelLineMesh, PickField, PickThatFits, SplitMeter,
 };
-use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::grid_hole_plate_fixture;
 use crate::level_line_cost_gate::{self as gate, say};

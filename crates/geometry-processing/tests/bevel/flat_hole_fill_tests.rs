@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::level_line::flat_hole_fill;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::flat_hole_fill;
+use solidmesh_math::Vector3;
 
 const SNAP: f64 = 1e-9;
 

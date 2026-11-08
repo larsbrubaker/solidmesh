@@ -5,8 +5,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::{self, EdgeAtPair};
 use super::{NanSectionPoint, SectionPool};

@@ -4,16 +4,16 @@
 //! corners, the raked bore cube's open top mouth arc, a plain cube edge alone, a chamfer, and the
 //! flag left off. Each parameter row is one pass of a loop in the test of the same name.
 
-use geometry_processing::bevel::sections::{section_end, section_routing};
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::bevel::BevelAdvisory;
-use geometry_processing::topology::{
+use solidmesh::bevel::sections::{section_end, section_routing};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::BevelAdvisory;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelEdgeGroupResolution, BevelSelectionKind, FaceGroup,
     FeatureEdgeSet,
 };
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes::create_plate_with_a_raked_bore;
 use crate::inner_face_test_mesh as inner_face;

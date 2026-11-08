@@ -4,9 +4,9 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
-use vector_math::fixed_tie_sort::introspective_sort;
-use vector_math::ieee_math::{max_f32, min_f32};
-use vector_math::{AxisAlignedBoundingBox, Vector3Float};
+use solidmesh_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::ieee_math::{max_f32, min_f32};
+use solidmesh_math::{AxisAlignedBoundingBox, Vector3Float};
 
 use crate::face::{Face, FaceList};
 use crate::mesh::Mesh;

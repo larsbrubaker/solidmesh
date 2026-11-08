@@ -5,14 +5,12 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, WorkBudget};
-use geometry_processing::bevel::part::surface_part_builder::level_line_kernel_handoff::the_room_to_hand_the_build;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room_of_pick;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, WorkBudget};
+use solidmesh::bevel::part::surface_part_builder::level_line_kernel_handoff::the_room_to_hand_the_build;
+use solidmesh_math::Vector3;
 
 /// A unit cube as bare positions and triangles - the smallest thing a chain can be picked on.
 fn cube() -> (Vec<Vector3>, Vec<(i32, i32, i32)>) {

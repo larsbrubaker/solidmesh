@@ -3,11 +3,11 @@
 //! tests and friends, which need the level-line build) also cover them; these pin the leaf
 //! behaviour alone.
 
-use geometry_processing::bevel::float_grid;
-use geometry_processing::bevel::level_line::{chain_setback, curved_end_face, BandGroup};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::float_grid;
+use solidmesh::bevel::level_line::{chain_setback, curved_end_face, BandGroup};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 fn position(mesh: &Mesh, vertex: i32) -> Vector3 {
     Vector3::from_vector3_float(mesh.vertices[vertex as usize])

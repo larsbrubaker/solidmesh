@@ -4,10 +4,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::BandProfile;
-use geometry_processing::bevel::level_line::{RoomReading, RoomReadingKind};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::BandProfile;
+use solidmesh::bevel::level_line::{RoomReading, RoomReadingKind};
 
 use crate::level_line_fixture::LevelLineFixture;
 

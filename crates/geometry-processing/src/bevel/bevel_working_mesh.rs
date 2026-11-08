@@ -8,9 +8,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::{Face, FaceList, Mesh};
-use vector_math::{ieee_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use solidmesh_math::{ieee_math, AxisAlignedBoundingBox, Matrix4X4, Vector3};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::{Face, FaceList, Mesh};
 
 use super::{bevel_t_vertex_slivers, bevel_thin_slivers, BevelAdvisory, BevelAdvisoryCode};
 use crate::topology::FeatureEdgeSet;
@@ -181,7 +181,7 @@ pub fn carry_face_data_onto(mesh: &mut Mesh, source_face_index: &[i32]) {
     }
 
     if !mesh.face_textures.is_empty() {
-        let mut kept = polygon_mesh::FaceTextures::new();
+        let mut kept = solidmesh_mesh::FaceTextures::new();
         for (i, source) in source_face_index.iter().enumerate() {
             if let Some(texture) = mesh.face_textures.get(source) {
                 kept.insert(i as i32, texture.clone());

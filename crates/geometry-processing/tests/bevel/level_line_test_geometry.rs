@@ -8,13 +8,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_cut::cut;
-use geometry_processing::bevel::level_line::band_refinement::{refine, RefineOptions};
-use geometry_processing::bevel::level_line::edge_root::find;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_cut::cut;
+use solidmesh::bevel::level_line::band_refinement::{refine, RefineOptions};
+use solidmesh::bevel::level_line::edge_root::find;
+use solidmesh::bevel::level_line::{
     BandCutResult, LevelLineMesh, LevelLineTriangle, ScalarField, VertexFieldReading, WorkError,
 };
-use vector_math::{ieee_math, Matrix4X4, Vector3};
+use solidmesh_math::{ieee_math, Matrix4X4, Vector3};
 
 /// The signed distance to a plane.
 pub struct PlaneField {

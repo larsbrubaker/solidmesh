@@ -1,12 +1,10 @@
 //! The room is a property of the part's SHAPE - scale the part by k and the room scales by k - and
 //! the app's fixed snap only ever reads it low.
 
-use geometry_processing::bevel::level_line::band_gap_reading::{
-    read_room, read_room_of_pick, room_margin,
-};
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_reading::{read_room, read_room_of_pick, room_margin};
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_fixture::LevelLineFixture;

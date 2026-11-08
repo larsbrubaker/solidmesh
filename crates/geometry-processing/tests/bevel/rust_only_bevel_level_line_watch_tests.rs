@@ -5,9 +5,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use geometry_processing::bevel::level_line::level_line_routing;
-use geometry_processing::bevel::level_line::LevelLineChainWatch;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::level_line_routing;
+use solidmesh::bevel::level_line::LevelLineChainWatch;
+use solidmesh_math::Vector3;
 
 fn one_pick() -> LevelLineChainWatch {
     LevelLineChainWatch {

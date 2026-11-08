@@ -9,7 +9,7 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Plane, Ray, Vector3};
 
 use super::intersect_info_subtract::sort_on_distance;
 use super::{IntersectInfo, MaterialRef, Primitive, RayTracerError, Traceable, TraceableRef};
@@ -159,7 +159,10 @@ impl Primitive for Difference {
         Err(RayTracerError::NotSupported("Difference.GetUv"))
     }
 
-    fn get_color(&self, _info: &IntersectInfo<'_>) -> Result<vector_math::ColorF, RayTracerError> {
+    fn get_color(
+        &self,
+        _info: &IntersectInfo<'_>,
+    ) -> Result<solidmesh_math::ColorF, RayTracerError> {
         // You should not get a color directly from a Difference.
         Err(RayTracerError::NotSupported("Difference.GetColor"))
     }

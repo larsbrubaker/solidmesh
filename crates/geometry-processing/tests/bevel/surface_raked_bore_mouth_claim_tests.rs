@@ -5,11 +5,11 @@
 //! from the far corner, and a fan wound once for its whole ring; the readings are in
 //! `surface_bore_mouth_tests.rs`, the constants in `surface_raked_bore_mouth_tests.rs`.
 
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeSet,
 };
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_bore_mouth_tests::{

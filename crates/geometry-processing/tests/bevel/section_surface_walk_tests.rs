@@ -7,18 +7,18 @@
 //! bore mouths and the pyramid's corner are the class's other half, in
 //! `section_surface_walk_mouth_tests`.
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
-use geometry_processing::bevel::sections::section_fan_walk;
-use geometry_processing::bevel::sections::section_surface_walk::{
+use solidmesh::bevel::sections::section_fan_walk;
+use solidmesh::bevel::sections::section_surface_walk::{
     grid_of, SurfaceWalkCrossing, SurfaceWalkResult,
 };
-use geometry_processing::bevel::sections::section_surface_walk_faces::try_face_holding;
-use geometry_processing::bevel::sections::section_surface_walk_join::try_join;
-use geometry_processing::bevel::sections::section_surface_walk_try::try_walk;
-use geometry_processing::bevel::sections::SurfaceWalkRefusal;
-use geometry_processing::bevel::surface::SurfaceVertexPool;
+use solidmesh::bevel::sections::section_surface_walk_faces::try_face_holding;
+use solidmesh::bevel::sections::section_surface_walk_join::try_join;
+use solidmesh::bevel::sections::section_surface_walk_try::try_walk;
+use solidmesh::bevel::sections::SurfaceWalkRefusal;
+use solidmesh::bevel::surface::SurfaceVertexPool;
 
 use crate::section_surface_walk_roof::{
     a_roof, a_roof_at, corners, face_holding, frame, is_the_hinge, normal_of, off_the_face,

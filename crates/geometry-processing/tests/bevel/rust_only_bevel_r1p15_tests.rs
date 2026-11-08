@@ -3,12 +3,12 @@
 //! the zip rail's canonical and unwrapped readings, and the corner strip's nearest rail vertex. The
 //! whole-build tests also cover them.
 
-use geometry_processing::bevel::level_line::bounded_maximum::not_shorter;
-use geometry_processing::bevel::level_line::corner_rail_strip::nearest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::bounded_maximum::not_shorter;
+use solidmesh::bevel::level_line::corner_rail_strip::nearest;
+use solidmesh::bevel::level_line::{
     BoundedMaximumCanonicalMaximum, ChainDistanceField, PointField, ScalarField, ZipRail,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -78,11 +78,11 @@ fn rust_only_a_zip_rail_reads_canonically_and_past_its_wrap() {
 
 #[test]
 fn rust_only_small_level_line_readings() {
-    use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
-    use geometry_processing::bevel::level_line::consumed_to_the_rim::lies_on_a_rim;
-    use geometry_processing::bevel::level_line::knife_end_overrun::on_the_plane;
-    use geometry_processing::bevel::level_line::line_walk::in_triangle;
-    use geometry_processing::bevel::level_line::rail_stations::pieces;
+    use solidmesh::bevel::level_line::band_gap_reading::room_margin;
+    use solidmesh::bevel::level_line::consumed_to_the_rim::lies_on_a_rim;
+    use solidmesh::bevel::level_line::knife_end_overrun::on_the_plane;
+    use solidmesh::bevel::level_line::line_walk::in_triangle;
+    use solidmesh::bevel::level_line::rail_stations::pieces;
     use std::collections::HashMap;
 
     assert_eq!(room_margin(4.0, 1e-9), 5e-10);
@@ -119,18 +119,18 @@ fn rust_only_small_level_line_readings() {
 
 #[test]
 fn rust_only_the_last_r1p15_pieces_read_their_pinned_text() {
-    use geometry_processing::bevel::level_line::band_refinement::{
+    use solidmesh::bevel::level_line::band_refinement::{
         farthest_from_the_line3, nearest_to_the_line, span,
     };
-    use geometry_processing::bevel::level_line::band_side_tagging::{
+    use solidmesh::bevel::level_line::band_side_tagging::{
         both_sided_members_build, model_scale_of, outward_at,
     };
-    use geometry_processing::bevel::level_line::corner_fill_pieces::trim_the_turn_back;
-    use geometry_processing::bevel::level_line::strip_clip_valley::one_plane_run;
-    use geometry_processing::bevel::level_line::virtual_rail_past_the_end::last_to_leave;
-    use geometry_processing::bevel::level_line::{BandProfile, ChainField, CornerFillPiece};
-    use geometry_processing::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band;
-    use geometry_processing::bevel::surface::{SurfaceBandEnd, SurfaceLine};
+    use solidmesh::bevel::level_line::corner_fill_pieces::trim_the_turn_back;
+    use solidmesh::bevel::level_line::strip_clip_valley::one_plane_run;
+    use solidmesh::bevel::level_line::virtual_rail_past_the_end::last_to_leave;
+    use solidmesh::bevel::level_line::{BandProfile, ChainField, CornerFillPiece};
+    use solidmesh::bevel::surface::surface_handover_leaves_a_strip::leaves_a_band;
+    use solidmesh::bevel::surface::{SurfaceBandEnd, SurfaceLine};
     use std::collections::HashSet;
 
     assert_eq!(

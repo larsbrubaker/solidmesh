@@ -14,7 +14,7 @@
 
 use std::fmt;
 
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 /// The refusal [`SectionPool::add`] gives a NaN point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

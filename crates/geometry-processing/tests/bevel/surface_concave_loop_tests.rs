@@ -14,12 +14,12 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_mesh_closure, SurfaceBevelPlan,
 };
-use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
-use geometry_processing::topology::{EdgeConvexity, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::{bevel_chain_linker, BevelSweptChain};
+use solidmesh::topology::{EdgeConvexity, FeatureEdge, FeatureEdgeSet};
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_walkback_checks::{area_on, regions_of};

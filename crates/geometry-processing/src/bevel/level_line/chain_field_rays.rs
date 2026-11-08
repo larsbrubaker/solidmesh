@@ -2,7 +2,7 @@
 //! END RAYS run on past an open chain's ends. The type lives in `chain_field.rs`; a ray's reading
 //! is in `chain_field_nearest.rs`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, ChainFieldExtension, EndRayBound};
 

@@ -2,7 +2,7 @@
 //! walk to the line near a point
 //! ([`try_find_line_point_near`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// True when `p` (in the triangle's plane) stands inside triangle abc or on its rim, to a
 /// barycentric slack of 1e-12; false for a triangle with no area.

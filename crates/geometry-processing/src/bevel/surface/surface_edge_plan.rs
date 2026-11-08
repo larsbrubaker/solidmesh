@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceBevelPlan, SurfaceLine, SurfaceWallSection};
 use crate::topology::{ChainEdge, EdgeConvexity, FaceGroup};
@@ -186,6 +186,6 @@ impl SurfaceEdgePlan {
 impl SurfaceEdgePlan {
     /// The widest setback either face gives up.
     pub fn setback(&self) -> f64 {
-        vector_math::ieee_math::max_f64(self.left_setback, self.right_setback)
+        solidmesh_math::ieee_math::max_f64(self.left_setback, self.right_setback)
     }
 }

@@ -12,7 +12,7 @@
 //! inside the face. That is why it is named for the ring rather than for the section it was first
 //! built for.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_fan;
 use super::SurfaceVertexPool;

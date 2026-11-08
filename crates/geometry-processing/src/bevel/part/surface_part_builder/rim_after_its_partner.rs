@@ -22,8 +22,8 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode, BevelGroupResult, BevelLoop
 use crate::topology::bevel_edge_group_resolver;
 use crate::topology::{BevelEdgeGroup, BevelSelectionKind};
 use indexmap::IndexMap;
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError};
 

@@ -3,9 +3,9 @@
 // leaves the calling thread, so there is no pool for work to spread across. There is no
 // loop-state check: the body is not handed a loop-state object (see `parallel::for_with_local`).
 
+use solidmesh_math::parallel;
 use std::sync::Mutex;
 use std::thread::{self, ThreadId};
-use vector_math::parallel;
 
 const ITERATIONS: i32 = 1000;
 

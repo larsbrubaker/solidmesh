@@ -12,14 +12,12 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{
-    build, build_pick, BandGapBuildOptions,
-};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{build, build_pick, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{
     ChainSideLoops, FieldCounters, LevelLineMesh, PickThatFits, SplitMeter, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_cost_gate::{self as gate, say};
 use crate::level_line_fixture::LevelLineFixture;

@@ -12,10 +12,12 @@
 
 use std::sync::{Arc, Barrier, Mutex};
 
-use polygon_mesh::csg::{boolean_processing, BooleanError, BooleanOptions, CsgModes, WindingRule};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::{
+    boolean_processing, BooleanError, BooleanOptions, CsgModes, WindingRule,
+};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 use super::manifold_rust_backend_tests::signed_volume;
 

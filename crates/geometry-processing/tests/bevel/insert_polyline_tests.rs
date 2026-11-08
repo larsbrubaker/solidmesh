@@ -1,7 +1,7 @@
 //! A polyline inserted into a flat region as a chain of edges, and the part it encloses taken out.
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
 
 fn square() -> [Vector3; 4] {
     [

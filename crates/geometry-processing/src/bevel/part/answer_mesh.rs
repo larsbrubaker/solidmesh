@@ -3,8 +3,8 @@
 //! self-intersection check, `self_intersection_check`) wants only the vertices its triangles
 //! stand on.
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 /// The kernel's answer as a [`Mesh`], carrying only the vertices some kept
 /// triangle stands on - the band's own vertices are orphans by now and a published mesh has no

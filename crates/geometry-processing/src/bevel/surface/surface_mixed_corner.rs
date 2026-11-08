@@ -8,7 +8,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::bevel::BevelAdvisory;
 use crate::topology::EdgeConvexity;

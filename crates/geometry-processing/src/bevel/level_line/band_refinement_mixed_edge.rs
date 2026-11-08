@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_refinement::{farthest_from_the_line, nearest_to_the_line};
 use super::edge_bump_rule::BumpAnswer;

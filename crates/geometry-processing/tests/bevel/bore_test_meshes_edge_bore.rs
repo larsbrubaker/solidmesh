@@ -4,8 +4,8 @@
 //! closed loop draped over a convex 90 degree edge and crosses the cube's crease twice, at two of
 //! its own vertices. The other bore fixtures are in `bore_test_meshes.rs`.
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 /// How many facets round the edge-bore fixture, which is the part's own count.
 pub const EDGE_BORE_SIDES: i32 = 40;

@@ -6,14 +6,10 @@
 use std::collections::{BTreeSet, HashSet};
 use std::fmt::Write;
 
-use geometry_processing::bevel::sections::section_smooth_side::{
-    self, SmoothSideCut, SmoothSidePlace,
-};
-use geometry_processing::bevel::sections::{
-    section_fan_walk, section_surface_walk_join, SectionPool,
-};
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::MeshEdgeGraph;
+use solidmesh::bevel::sections::section_smooth_side::{self, SmoothSideCut, SmoothSidePlace};
+use solidmesh::bevel::sections::{section_fan_walk, section_surface_walk_join, SectionPool};
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_mesh::MeshEdgeGraph;
 
 use crate::inner_face_test_mesh;
 use crate::section_pierced_face_junction_run_tests::the_run;

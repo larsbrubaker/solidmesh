@@ -35,7 +35,7 @@
 //! cap to follow the walked chords rather than run straight back to the corner, and no fixture
 //! mitres unequal setbacks onto a roll.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_end_cut;
 use super::{SurfaceEdgePlan, SurfaceVertexPool};

@@ -37,8 +37,8 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use polygon_mesh::Mesh;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::Mesh;
 
 use super::surface_room_standing_feature;
 use super::SurfaceBandRunsOffOverAStretch;

@@ -2,7 +2,7 @@
 //! along the wall and pressed against the cut's tube: its record with its reading
 //! ([`SurfaceMixedCornerDualFrame::try_read_the_dual`]) and its rail accessors.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceBandEnd, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerSpine};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};

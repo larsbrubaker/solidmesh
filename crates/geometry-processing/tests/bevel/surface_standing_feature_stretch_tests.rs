@@ -9,20 +9,20 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_face_walkback;
-use geometry_processing::bevel::surface::surface_standing_feature_stretch::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_face_walkback;
+use solidmesh::bevel::surface::surface_standing_feature_stretch::{
     standing_stretches, try_read, try_the_region_of,
 };
-use geometry_processing::bevel::surface::surface_walkback_standing_features::none_of_the_feature_is_also_being_cut;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::surface_walkback_standing_features::none_of_the_feature_is_also_being_cut;
+use solidmesh::bevel::surface::{
     SurfaceBandEnd, SurfaceBevelPlan, SurfaceFacetCut, SurfaceLine, SurfaceRegionWalkback,
     SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3, Vector3Float};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_walkback_checks::{centre_of, regions_of};

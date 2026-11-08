@@ -8,9 +8,9 @@
 //! "vertices faces", then one "x y z" per vertex (each an f32 value written as round-trip f64
 //! text, so exact), then one "v0 v1 v2" per face.
 
-use polygon_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
-use polygon_mesh::{CancelToken, Face, Mesh};
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
+use solidmesh_mesh::{CancelToken, Face, Mesh};
 
 fn load_fixture(name: &str) -> Mesh {
     let path = format!(

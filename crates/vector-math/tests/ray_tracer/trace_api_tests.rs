@@ -2,7 +2,7 @@
 // Ray. The BVH enumeration case builds ray-tracer shapes and lives in polygon-mesh's
 // tests/ray_tracer/trace_api_tests.rs.
 
-use vector_math::{Plane, Ray, Vector3};
+use solidmesh_math::{Plane, Ray, Vector3};
 
 #[test]
 fn plane_get_distance_to_intersection() {

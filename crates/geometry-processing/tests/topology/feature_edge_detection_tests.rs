@@ -1,9 +1,9 @@
 //! Feature-edge detection and dihedral classification, the topology foundation the fillet and
 //! chamfer operations stand on.
 
-use geometry_processing::topology::{EdgeConvexity, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::Mesh;
+use solidmesh::topology::{EdgeConvexity, FeatureEdge, FeatureEdgeSet};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes;
 

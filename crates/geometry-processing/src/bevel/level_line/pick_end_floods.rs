@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap_rounds_first::chain_senses;
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};

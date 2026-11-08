@@ -8,10 +8,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::GapFillRefusal;
-use polygon_mesh::csg::boolean_processing::BooleanOperandVerdict;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::GapFillRefusal;
+use solidmesh_mesh::csg::boolean_processing::BooleanOperandVerdict;
 
 use crate::boolean_kernel_gate;
 use crate::end_face_builds::{as_saved, build_chains, default_budget};

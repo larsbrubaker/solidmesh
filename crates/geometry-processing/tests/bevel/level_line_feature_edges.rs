@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh_math::Vector3;
 
 /// An edge is a feature where it is not two triangles
 /// meeting within `degrees`.

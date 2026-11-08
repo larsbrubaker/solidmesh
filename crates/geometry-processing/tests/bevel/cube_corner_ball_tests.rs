@@ -3,14 +3,12 @@
 //! along its end circle. The kernel twin of the app's
 //! `BevelCornerPatchTests.TheLevelLinesCornerPatchMeetsEachFilletTangentlyAlongTheirSharedCircle`.
 
-use geometry_processing::bevel::level_line::corner_cap_hole_fill::{
-    covers_the_ball_once, on_the_ball,
-};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::corner_cap_hole_fill::{covers_the_ball_once, on_the_ball};
+use solidmesh::bevel::level_line::{
     gap_fill, BandProfile, CornerCapLastRow, GapFillRefusal, GapFillResult, HoleFillFailure,
     HoleFillResult, HoleFillTriangle, LevelLineMesh,
 };
-use vector_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3};
 
 use crate::hole_fill_corner_tests::{build, every_edge, sign};
 use crate::level_line_feature_edges::feature_edges_over;

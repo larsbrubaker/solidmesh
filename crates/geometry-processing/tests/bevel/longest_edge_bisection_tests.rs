@@ -4,10 +4,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::refinement_splits::LONGEST_EDGE_PATH_CAP;
-use geometry_processing::bevel::level_line::refinement_splits_enqueue::bisect_along_longest_edge_path;
-use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
-use vector_math::{ieee_math, Vector3};
+use solidmesh::bevel::level_line::refinement_splits::LONGEST_EDGE_PATH_CAP;
+use solidmesh::bevel::level_line::refinement_splits_enqueue::bisect_along_longest_edge_path;
+use solidmesh::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
+use solidmesh_math::{ieee_math, Vector3};
 
 #[test]
 fn a_thin_strip_loses_its_longest_edge_and_stays_conforming_and_shaped() {

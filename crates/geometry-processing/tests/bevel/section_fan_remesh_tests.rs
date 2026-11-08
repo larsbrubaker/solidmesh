@@ -15,14 +15,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_chain;
-use geometry_processing::bevel::sections::{
-    section_assembly, section_face_rebuild, SectionPool, SectionRun,
-};
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3, Vector3Float};
+use solidmesh::bevel::sections::section_builder_run::try_build_chain;
+use solidmesh::bevel::sections::{section_assembly, section_face_rebuild, SectionPool, SectionRun};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 use crate::{mesh_measurements, rigid_motion_meshes};

@@ -1,13 +1,13 @@
-// Rust-only checks for the BVH (`vector_math::bvh`), `Ray::get_closest_intersection` and
+// Rust-only checks for the BVH (`solidmesh_math::bvh`), `Ray::get_closest_intersection` and
 // the track ball. The expected values of the `*_pinned_*` tests are recorded
 // output for these 30 boxes; they pin tree shape, search order and hits, so any change to them
 // shows up here.
 
-use vector_math::bvh::{
+use solidmesh_math::bvh::{
     morton_codes, BvhBuilderLocallyOrderedClustering, BvhTree, BvhTreeItemData,
 };
-use vector_math::bvh::{SortingAccelerator, TradeOffBvhConstructor};
-use vector_math::{
+use solidmesh_math::bvh::{SortingAccelerator, TradeOffBvhConstructor};
+use solidmesh_math::{
     AxisAlignedBoundingBox, IntersectionType, Matrix4X4, Quaternion, Ray, TrackBallController,
     TrackBallError, TrackBallTransformType, Vector2, Vector3,
 };
@@ -213,7 +213,7 @@ fn rust_only_track_ball_rotation_and_errors() {
     controller
         .on_mouse_down(start, Matrix4X4::IDENTITY, TrackBallTransformType::Scale)
         .unwrap();
-    let mut world = vector_math::WorldView::new(100.0, 100.0);
+    let mut world = solidmesh_math::WorldView::new(100.0, 100.0);
     controller
         .on_mouse_move(&mut world, Vector2::new(10.0, 20.0))
         .unwrap();

@@ -14,7 +14,7 @@
 //! with its run-outs), the trait says it: [`ScalarField::kind`] and the typed accessors, `None` by
 //! default and overridden by those types, so no reader downcasts.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{BandGroupFieldsWithRunOuts, ChainField, PickField, WorkError};
 

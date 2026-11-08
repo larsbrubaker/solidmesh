@@ -19,7 +19,7 @@
 //! corner than the grid did. Index fractions are exact in integers - `(i + 1) / M <= (j + 1) / N`
 //! is `(i + 1) N <= (j + 1) M` - so the comparison never turns on a rounding at all.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_fan;
 use super::SurfaceVertexPool;

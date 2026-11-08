@@ -21,8 +21,8 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// The cube's edge.
 pub const SIZE: f64 = 20.0;

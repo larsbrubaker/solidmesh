@@ -3,8 +3,8 @@
 //! runs, the foreign edge index's build, a chain growth's reads and the filing of foreign creases
 //! by tag pair. Split from `rust_only_bevel_r2p05_mesh_tests.rs` by responsibility.
 
-use geometry_processing::bevel::level_line::{end_face_sense, BandProfile, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{end_face_sense, BandProfile, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 fn v(x: f64, y: f64, z: f64) -> Vector3 {
     Vector3::new(x, y, z)
@@ -62,7 +62,7 @@ fn rust_only_a_growing_end_reads_the_side_to_end_face_creases_from_it() {
 
 #[test]
 fn rust_only_an_end_face_triangle_holding_the_hole_is_taken_into_it() {
-    use geometry_processing::bevel::level_line::corner_cap_flat_ends;
+    use solidmesh::bevel::level_line::corner_cap_flat_ends;
 
     // The hole c-a-p-b lies flat in z = 0, inside the end face's triangle b-c-a at its corner c;
     // the triangle a-b-d beyond keeps the far edge walled.
@@ -123,7 +123,7 @@ fn rust_only_growing_crease_runs_read_sides_runs_and_rooms() {
     use std::collections::HashSet;
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::GrowingCreaseRuns;
+    use solidmesh::bevel::level_line::GrowingCreaseRuns;
 
     // The square fold of floor (side 1) and wall (side 2) along the chain edge 0-1.
     let mesh = LevelLineMesh::from_triangles(
@@ -192,7 +192,7 @@ fn rust_only_growing_crease_runs_read_sides_runs_and_rooms() {
 
 #[test]
 fn rust_only_a_foreign_edge_index_holds_its_edges_in_tree_order() {
-    use geometry_processing::bevel::level_line::ForeignEdgeIndex;
+    use solidmesh::bevel::level_line::ForeignEdgeIndex;
 
     let mesh = square([0, 0]);
     let edges = [(0, 1), (1, 2), (2, 3), (0, 3), (0, 2)];
@@ -218,9 +218,7 @@ fn rust_only_a_chain_growth_sets_aside_its_own_sides_and_bounds_the_rest() {
     use std::collections::HashSet;
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::{
-        ForeignEdgeRegionsChainGrowth, GrowingCreaseRuns,
-    };
+    use solidmesh::bevel::level_line::{ForeignEdgeRegionsChainGrowth, GrowingCreaseRuns};
 
     let mesh = square([1, 0]);
     let runs = Rc::new(GrowingCreaseRuns::new(
@@ -264,8 +262,8 @@ fn rust_only_foreign_creases_are_filed_by_tag_pair_and_indexed_once() {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::ForeignEdgeRegions;
     use indexmap::IndexSet;
+    use solidmesh::bevel::level_line::ForeignEdgeRegions;
 
     let mesh = Rc::new(RefCell::new(square([1, 2])));
     let keys: IndexSet<(i32, i32)> = IndexSet::from([(0, 1)]);
@@ -292,8 +290,8 @@ fn rust_only_a_chains_growing_runs_keep_the_seeds_delegate_live() {
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
 
-    use geometry_processing::bevel::level_line::foreign_edge_regions_filing::Seeds;
-    use geometry_processing::bevel::level_line::ForeignEdgeRegions;
+    use solidmesh::bevel::level_line::foreign_edge_regions_filing::Seeds;
+    use solidmesh::bevel::level_line::ForeignEdgeRegions;
 
     let mesh = Rc::new(RefCell::new(square([1, 2])));
     let own_tag = Rc::new(Cell::new(1));

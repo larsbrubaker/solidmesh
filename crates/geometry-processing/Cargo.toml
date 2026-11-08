@@ -1,7 +1,7 @@
 # geometry-processing, published as solidmesh: the bevel/fillet kernel (topology, path bevels,
-# the bevel itself), the entry point of the solidmesh library. Pure geometry over polygon-mesh and
-# vector-math with no scene, UI or app dependency, so it builds for wasm32-unknown-unknown and is
-# testable without a GPU.
+# the bevel itself), the entry point of the solidmesh library, which re-exports the other three
+# crates. Pure geometry over polygon-mesh and vector-math with no scene, UI or app dependency, so
+# it builds for wasm32-unknown-unknown and is testable without a GPU.
 [package]
 name = "solidmesh"
 description = "Solid modeling on triangle meshes in pure Rust: fillets and chamfers on mesh edges, corners and outlines that keep closed solids closed, over solidmesh-mesh's booleans, repair and implicit operations; builds for wasm32"
@@ -13,20 +13,21 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme.workspace = true
-# Not yet on crates.io: the publish step flips this once the public API is settled.
-publish = false
+readme = "README.md"
+# The tests and their fixtures stay in the repository: they read data files and the kernel's
+# hidden internals, and a published crate needs neither (the bevel fixtures alone are ~10 MB).
+exclude = ["tests/"]
 
 [lib]
-name = "geometry_processing"
+name = "solidmesh"
 path = "src/lib.rs"
 
 [dependencies]
-# The Clipper 6 port. No code in this crate reads it; the publish step settles whether `solidmesh`
-# re-exports it or drops it.
-clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", version = "0.1.0" }
-vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
-polygon-mesh = { package = "solidmesh-mesh", path = "../polygon-mesh", version = "0.1.0" }
+# The Clipper 6 port, which no code here calls: `solidmesh` re-exports it as `solidmesh::clipper`
+# (with `math` and `mesh`), so `solidmesh` alone is enough to depend on.
+solidmesh-clipper = { path = "../clipper-library", version = "0.1.0" }
+solidmesh-math = { path = "../vector-math", version = "0.1.0" }
+solidmesh-mesh = { path = "../polygon-mesh", version = "0.1.0" }
 indexmap = "2"
 # Pure-Rust trig for the 2D path bevel and the topology readings (`src/path`, `src/topology`):
 # std's `sin`/`cos`/`tan`/`acos`/`atan2` call each platform's own libm, whose last bits differ, so

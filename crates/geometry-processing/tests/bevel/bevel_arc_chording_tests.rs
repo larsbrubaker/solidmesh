@@ -1,7 +1,7 @@
 //! The one rule that says how finely an arc is chorded (`bevel_arc_chording::segments_for`). Each
 //! test's rows run as a loop, each row's reason as the assertion message.
 
-use geometry_processing::bevel::bevel_arc_chording::segments_for;
+use solidmesh::bevel::bevel_arc_chording::segments_for;
 
 /// The count a fresh fillet carries, and the one every number below is stated against.
 const EIGHT: i32 = 8;

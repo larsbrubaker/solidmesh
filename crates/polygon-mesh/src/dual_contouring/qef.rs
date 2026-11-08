@@ -8,7 +8,7 @@
 //! contouring reaches is here: no general least-squares solve, matrix products, transpose, matrix
 //! norms or error over a full matrix.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// A symmetric 3x3 matrix by its upper triangle.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

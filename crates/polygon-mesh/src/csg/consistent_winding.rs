@@ -10,7 +10,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
 
 use crate::mesh::f32_key;
 use crate::{FaceList, FaceTextureData, Mesh};

@@ -6,7 +6,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// The source with every flippable coplanar diagonal flipped, and how many were.
 /// Each triangle takes part in at most one flip, so the result does not depend on the order of

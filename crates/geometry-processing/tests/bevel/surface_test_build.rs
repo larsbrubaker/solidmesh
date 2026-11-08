@@ -21,15 +21,15 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_interrupted_crease, surface_mesh_closure, surface_room,
     surface_shared_edge_network, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan,
     SurfaceBevelPlanlessLoop, SurfaceBuildFailure, SurfaceBuildOptions, SurfaceBuilt,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::bevel_edge_group_resolver;
-use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache};
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::bevel_edge_group_resolver;
+use solidmesh::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::surface_test_chains::join_and_open;

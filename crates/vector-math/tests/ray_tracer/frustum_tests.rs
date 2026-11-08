@@ -3,7 +3,7 @@
 // `ray_bundle_same_result_as_individual_rays` has no checks yet: ray bundles against single rays
 // is still an open case.
 
-use vector_math::{
+use solidmesh_math::{
     math_helper, AxisAlignedBoundingBox, Frustum, FrustumIntersection, Matrix4X4, Plane, Vector3,
 };
 

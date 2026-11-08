@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// One loaded fixture.
 pub struct LevelLineFixture {

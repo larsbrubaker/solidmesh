@@ -8,11 +8,11 @@
 
 use std::f64::consts::FRAC_PI_2;
 
-use clipper_library::JoinType;
-use polygon_mesh::processors::outline_to_mesh::{
+use solidmesh::clipper::JoinType;
+use solidmesh::math::Vector2;
+use solidmesh::mesh::processors::outline_to_mesh::{
     extrude_bevelled_contours, extrude_contours, revolve_contours,
 };
-use vector_math::Vector2;
 
 use crate::Scene;
 

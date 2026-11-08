@@ -1,8 +1,8 @@
 //! The smooth side's boundary neighbours: a closed boundary wraps round, an open one's two ends
 //! have no pair of neighbours, so a straight-run reading never lifts an end out of a kept ring.
 
-use geometry_processing::bevel::sections::section_smooth_side::SmoothSideCut;
-use geometry_processing::bevel::sections::section_smooth_side_triangulate::{
+use solidmesh::bevel::sections::section_smooth_side::SmoothSideCut;
+use solidmesh::bevel::sections::section_smooth_side_triangulate::{
     lies_on_the_segment_between_its_neighbours, the_polyline_neighbours,
 };
 

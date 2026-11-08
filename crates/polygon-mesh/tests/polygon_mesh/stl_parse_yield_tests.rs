@@ -7,10 +7,10 @@
 //! control back only with the finished mesh: `a_parse_nobody_is_watching_never_yields` checks
 //! that.
 
-use polygon_mesh::processors::stl_processing::{self, StlChunk, StlParse, FACES_PER_YIELD};
-use polygon_mesh::processors::{stl_writer, MeshOutputSettings};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::processors::stl_processing::{self, StlChunk, StlParse, FACES_PER_YIELD};
+use solidmesh_mesh::processors::{stl_writer, MeshOutputSettings};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// Enough faces to cross FACES_PER_YIELD several times, so a yield has to land in the middle
 /// of the parse rather than only at its end.

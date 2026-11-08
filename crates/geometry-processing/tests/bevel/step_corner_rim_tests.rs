@@ -10,9 +10,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
-use geometry_processing::bevel::level_line::{gap_fill, GapFillRefusal, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::BandGapBuildOptions;
+use solidmesh::bevel::level_line::{gap_fill, GapFillRefusal, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{as_saved, build_chains, default_budget};
 use crate::fillet_thin_front_fin::profile_of;
@@ -68,7 +68,7 @@ fn the_crease_running_into_a_step_is_not_a_foreign_wall() {
 fn build_whole(
     fixture: &Rc<LevelLineFixture>,
     known_room: Option<f64>,
-) -> geometry_processing::bevel::level_line::BandGapResult {
+) -> solidmesh::bevel::level_line::BandGapResult {
     let all: Vec<usize> = (0..fixture.chains.len()).collect();
     build_chains(
         fixture,

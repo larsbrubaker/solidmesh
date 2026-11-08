@@ -4,7 +4,7 @@
 
 use clipper2_rust::{make_path64, FillRule, Paths64};
 
-use clipper_library::*;
+use solidmesh_clipper::*;
 
 /// A square `outer` across with a square hole `inner` across, both counter-clockwise.
 fn frame(outer: i64, inner: i64) -> Paths64 {
@@ -104,7 +104,7 @@ fn rust_only_coordinates_beyond_clipper_6s_range_are_an_error() {
     let square: Paths64 = vec![make_path64(&[0, 0, huge, 0, huge, huge, 0, huge])];
     let small: Paths64 = vec![make_path64(&[0, 0, 10, 0, 10, 10, 0, 10])];
     let expected = Some(ClipperError(
-        clipper_library::clipper6::ClipperError::CoordinateOutsideRange,
+        solidmesh_clipper::clipper6::ClipperError::CoordinateOutsideRange,
     ));
 
     assert_eq!(square.union(&small, FillRule::EvenOdd).err(), expected);

@@ -12,16 +12,16 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use indexmap::IndexMap;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, SurfaceBevelPlan,
     SurfaceBuildFailure, SurfaceBuildOptions,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::FeatureEdge;
-use indexmap::IndexMap;
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::FeatureEdge;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::shell_count;

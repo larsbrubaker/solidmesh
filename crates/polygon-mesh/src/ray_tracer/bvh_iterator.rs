@@ -3,7 +3,7 @@
 //! bounds drawing; the filter decides per item whether the item and everything under it is
 //! visited.
 
-use vector_math::Matrix4X4;
+use solidmesh_math::Matrix4X4;
 
 use super::Traceable;
 

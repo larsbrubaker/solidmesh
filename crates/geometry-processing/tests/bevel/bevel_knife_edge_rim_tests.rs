@@ -13,12 +13,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandGapResult, BandProfile};
-use polygon_mesh::{FaceList, Mesh};
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::{Vector2, Vector3, Vector3Float};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile};
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::{Vector2, Vector3, Vector3Float};
+use solidmesh_mesh::{FaceList, Mesh};
 
 use crate::end_face_measures::to_triangle;
 use crate::knife_edge_rim_measures::{

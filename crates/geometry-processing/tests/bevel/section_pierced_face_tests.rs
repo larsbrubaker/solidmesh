@@ -11,9 +11,9 @@
 //! `TheTopFaceTakesItsFilletThroughTheSections` is not run: the junction's wedge is still laid
 //! twice.
 
-use geometry_processing::bevel::sections::section_corner;
-use vector_math::math_helper::degrees_to_radians;
-use vector_math::Vector3;
+use solidmesh::bevel::sections::section_corner;
+use solidmesh_math::math_helper::degrees_to_radians;
+use solidmesh_math::Vector3;
 
 use crate::inner_face_test_mesh;
 use crate::section_pierced_face_readings::{

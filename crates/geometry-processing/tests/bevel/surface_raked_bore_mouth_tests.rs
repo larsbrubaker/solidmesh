@@ -13,21 +13,21 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_face_walkback, surface_mitre_seam, surface_plan_band_ends, surface_seam_over_the_edge,
     surface_shared_edge_network, SurfaceBevelPlan, SurfaceLine, SurfaceStrip, SurfaceVertexPool,
     SurfaceWalkbackResult,
 };
-use geometry_processing::topology::{
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FaceRegionCache, FeatureEdgeSet,
 };
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::Mesh;
 
 use crate::bore_test_meshes;
 use crate::mesh_measurements;
 use crate::surface_test_chains;
-use geometry_processing::bevel::surface::surface_mesh_closure;
+use solidmesh::bevel::surface::surface_mesh_closure;
 
 /// How many facets round, on the bore and on the outside alike.
 pub const SIDES: i32 = 40;

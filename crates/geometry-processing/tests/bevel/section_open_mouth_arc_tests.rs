@@ -22,17 +22,15 @@
 
 use std::collections::HashSet;
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_run;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_side::try_cut_the_smooth_side;
-use geometry_processing::bevel::sections::{
-    section_assembly, section_loft, SectionKind, SectionPool,
-};
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{FeatureEdge, FeatureEdgeSet};
+use solidmesh::bevel::sections::section_builder_run::try_build_run;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_side::try_cut_the_smooth_side;
+use solidmesh::bevel::sections::{section_assembly, section_loft, SectionKind, SectionPool};
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{FeatureEdge, FeatureEdgeSet};
 
 use crate::open_mouth_arc_walk::{
     the_same_arc_on, the_top_mouth_arc, the_top_mouth_arc_walk, MINUS_X_PLANE,

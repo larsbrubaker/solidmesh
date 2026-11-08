@@ -18,7 +18,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{end_face_sense, pick_validation, RoomSource};
 

@@ -7,12 +7,12 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{band_gap_reading, gap_fill};
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{band_gap_reading, gap_fill};
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandProfile, GapFillRefusal, LevelLineMesh, LevelLineWork, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{is_watertight, open_edges, signed_volume, signed_volume_of};

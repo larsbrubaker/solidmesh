@@ -14,7 +14,7 @@ use crate::bridge_fixture_tests::spanning_edges;
 use crate::hole_row_bridge_fixture::{self, HoleVariation, SIZE};
 use crate::level_line_room_geometry::SolidWithChains;
 use crate::level_line_test_geometry::coincident_vertices;
-use geometry_processing::bevel::level_line::BandGapRefusal;
+use solidmesh::bevel::level_line::BandGapRefusal;
 
 /// The variants of the row, in the order they were tried.
 #[derive(Debug, Clone, Copy)]

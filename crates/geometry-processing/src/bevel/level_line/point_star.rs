@@ -13,7 +13,7 @@
 //! over the mesh rather than one per corner.
 
 use indexmap::IndexMap;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::point_bevel::PointBevelKind;
 use crate::bevel::BevelAdvisoryCode;

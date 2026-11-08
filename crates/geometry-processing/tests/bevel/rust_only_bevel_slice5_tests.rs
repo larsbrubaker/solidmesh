@@ -4,13 +4,13 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_mesh_closure, surface_mitre_joint_step, surface_room_standing_feature,
     SurfaceVertexPool,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
-use polygon_mesh::solids::platonic_solids;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::solids::platonic_solids;
 
 // ---------------------------------------------------------------- SurfaceVertexPool
 

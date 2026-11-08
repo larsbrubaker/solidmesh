@@ -6,12 +6,12 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_end_cap_around_a_feature, surface_ring_ears, surface_standing_feature_faces,
     surface_strip_tail_around_a_feature, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh_math::{Vector3, Vector3Float};
 
 /// The tail's own rule, read off the production reading rather than off a copy of it: every corner
 /// of every band it sews is a point that was ALREADY standing - a row point of the cross section, a

@@ -4,13 +4,13 @@
 //! faces - so it is repaired once, on the working copy
 //! (`bevel_working_mesh::create_from_with_advisories`), and reported.
 
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{Face, Mesh};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{Face, Mesh};
 
-use geometry_processing::bevel::bevel_working_mesh::{
+use solidmesh::bevel::bevel_working_mesh::{
     create_from_with_advisories, signed_volume, StampedVerdict,
 };
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryCode};
+use solidmesh::bevel::{BevelAdvisory, BevelAdvisoryCode};
 
 use crate::nose_in_notch_test_meshes;
 

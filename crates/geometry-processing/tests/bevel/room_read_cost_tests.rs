@@ -3,8 +3,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_reading::read_room;
-use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_reading::read_room;
+use solidmesh::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::level_line_fixture::LevelLineFixture;
 

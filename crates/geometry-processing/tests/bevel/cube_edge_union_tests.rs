@@ -7,18 +7,18 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_in_turn::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_in_turn::{
     build_open_chains_in_turn, takes_open_chains_in_turn,
 };
-use geometry_processing::bevel::level_line::seam_edges::FeatureEdgeTest;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::seam_edges::FeatureEdgeTest;
+use solidmesh::bevel::level_line::{
     gap_fill, gap_loop_walk, BandGapResult, BandProfile, GapFillResult, LevelLineMesh, WorkBudget,
 };
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::gap_fill_tests::shell_count;
 use crate::level_line_feature_edges::feature_edges_over;

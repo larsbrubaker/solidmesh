@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{
@@ -35,7 +35,7 @@ pub struct SurfaceMixedJunctionPatchArrival {
 /// Closes the junction - the three end rings, the grid between them and the cap's sector.
 /// `arriving` is the three strips at the corner: the first cut, the second cut and the bead (for a
 /// TWO-crease junction, the cut and then both beads - that corner is a patch of its own,
-/// [`surface_two_crease_junction_patch::try_close`]). Returns one end ring per strip, in the order
+/// `surface_two_crease_junction_patch::try_close`). Returns one end ring per strip, in the order
 /// they were handed in. Fewer than three arrivals are refused by name.
 pub fn try_close(
     pool: &mut SurfaceVertexPool,

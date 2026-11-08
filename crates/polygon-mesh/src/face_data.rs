@@ -15,9 +15,9 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use vector_math::texture::TexturePixels;
-use vector_math::{Color, RectangleDouble};
-use vector_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
+use solidmesh_math::texture::TexturePixels;
+use solidmesh_math::{Color, RectangleDouble};
+use solidmesh_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
 use crate::face::FaceList;
 use crate::mesh::{f32_key, Mesh};

@@ -3,14 +3,12 @@
 //! how far the ladder can climb on it - the CAP FACE RUNS OUT under the blend, a third of the way
 //! through the turn. Both tests are measurements of the fixture, not of a wish.
 
-use geometry_processing::bevel::surface::surface_mixed_corner_patch::try_cut_the_ring;
-use geometry_processing::bevel::surface::surface_mixed_corner_sector::try_apex;
-use geometry_processing::bevel::surface::{
-    SurfaceMixedCorner, SurfaceMixedCornerRows, SurfaceStrip,
-};
-use geometry_processing::topology::{EdgeConvexity, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::surface::surface_mixed_corner_patch::try_cut_the_ring;
+use solidmesh::bevel::surface::surface_mixed_corner_sector::try_apex;
+use solidmesh::bevel::surface::{SurfaceMixedCorner, SurfaceMixedCornerRows, SurfaceStrip};
+use solidmesh::topology::{EdgeConvexity, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_oblique_mixed_corner_reading_tests::the_oblique_corner;

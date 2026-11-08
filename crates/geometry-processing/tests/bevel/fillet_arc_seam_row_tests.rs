@@ -1,8 +1,8 @@
 //! `FilletArc.SeamRow` - a section of the incoming leg's fillet slid onto a joint's bisector plane -
 //! lies on BOTH legs' fillets where the setback is constant.
 
-use geometry_processing::bevel::level_line::fillet_arc;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::fillet_arc;
+use solidmesh_math::Vector3;
 
 #[test]
 fn a_box_rim_mitres_seam_row_lies_on_both_cylinders() {

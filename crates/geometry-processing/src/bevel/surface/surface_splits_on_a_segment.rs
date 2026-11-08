@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_split_sewing, SurfaceVertexPool};
 

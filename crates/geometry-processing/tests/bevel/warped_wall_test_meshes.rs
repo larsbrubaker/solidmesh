@@ -3,8 +3,8 @@
 
 #![allow(dead_code)]
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 const COLUMNS: i32 = 10;
 const ROWS: i32 = 5;

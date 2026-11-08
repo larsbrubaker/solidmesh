@@ -2,11 +2,11 @@
 //! (`sections::section_fan_walk`). The section construction exercises it in context
 //! (`SectionSurfaceWalkTests`, `SectionCornerTests`, ...); these hold it to its own contract.
 
-use geometry_processing::bevel::sections::section_fan_walk::{self, pair_key};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{ChainEdge, FeatureEdge};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::sections::section_fan_walk::{self, pair_key};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{ChainEdge, FeatureEdge};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// A flat hexagonal fan round vertex 0, its rim 1..=6, every face wound up (+z).
 fn hexagon(open: bool) -> Mesh {

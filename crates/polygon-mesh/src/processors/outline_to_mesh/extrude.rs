@@ -12,7 +12,7 @@
 use std::rc::Rc;
 
 use clipper2_rust::Paths64;
-use clipper_library::{
+use solidmesh_clipper::{
     get_corrected_winding, ClipperError, JoinType, PolygonsExtensions, DEFAULT_SCALING,
 };
 

@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 /// The directed edges not walked exactly once each way: empty for a closed solid whose faces
 /// are all wound the same way round.

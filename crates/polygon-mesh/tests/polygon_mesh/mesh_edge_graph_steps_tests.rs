@@ -3,10 +3,10 @@
 //! degenerate faces, an empty mesh, Batman.stl and a 100,000-face sheet, at budgets from one face
 //! up; and a big mesh's graph takes many steps, so a frame can stop between them.
 
-use polygon_mesh::processors::stl_processing;
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph, MeshEdgeGraphSteps};
-use vector_math::Vector3Float;
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::processors::stl_processing;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph, MeshEdgeGraphSteps};
 
 /// The graph built in steps of `budget` faces, and how many steps it took.
 fn stepped_graph(mesh: &Mesh, budget: usize) -> (MeshEdgeGraph, usize) {

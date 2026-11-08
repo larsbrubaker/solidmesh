@@ -3,7 +3,7 @@
 //! a step turns into the left side's nearest plane ([`concave`]), and the first sunk arc point
 //! ([`sunk_arc_point`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{ChainField, GapLoop, LevelLineMesh, LevelLineTriangle, OpenGapFillOpenRail};
 

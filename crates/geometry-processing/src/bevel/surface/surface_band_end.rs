@@ -10,7 +10,7 @@
 //! the unbounded half space would take a whole circular segment off the disc, and an interior edge
 //! of a partial rim run would carry its band past the far end of the chain.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// One end of a band: the plane through the corner and the direction that points into the band.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

@@ -5,7 +5,7 @@
 //! [`SurfaceStripTrimmedByTheFaceBeyond`], the cross section comes from
 //! [`super::surface_strip_tail_around_a_feature`].
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{
@@ -88,7 +88,7 @@ pub fn try_the_notched_ring(
 pub fn try_the_run_off_on(
     ran_off: Option<&[[Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>; 2]]>,
     edge_index: i32,
-    corner: vector_math::Vector3,
+    corner: solidmesh_math::Vector3,
 ) -> Result<Option<std::rc::Rc<SurfaceStripTrimmedByTheFaceBeyond>>, crate::bevel::BevelAdvisory> {
     let left = SurfaceStripTrimmedByTheFaceBeyond::standing_on(ran_off, edge_index, 0);
     let right = SurfaceStripTrimmedByTheFaceBeyond::standing_on(ran_off, edge_index, 1);

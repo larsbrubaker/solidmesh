@@ -10,12 +10,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, open_gap_fill};
-use geometry_processing::bevel::level_line::{
-    BandGapResult, BandProfile, GapFillRefusal, WorkBudget,
-};
-use polygon_mesh::csg::boolean_processing::BooleanOperandVerdict;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, open_gap_fill};
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, GapFillRefusal, WorkBudget};
+use solidmesh_mesh::csg::boolean_processing::BooleanOperandVerdict;
 
 use crate::boolean_kernel_gate;
 use crate::level_line_fixture::LevelLineFixture;

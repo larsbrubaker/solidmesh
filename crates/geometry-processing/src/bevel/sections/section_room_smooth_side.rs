@@ -4,8 +4,8 @@
 //! across a curved region it is the surface walk ([`super::section_surface_walk_try::try_walk`]).
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_walk::EdgeAtPair;
 use super::section_room::{self, Region};

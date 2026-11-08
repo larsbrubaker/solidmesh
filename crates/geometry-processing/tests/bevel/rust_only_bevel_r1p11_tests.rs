@@ -3,13 +3,13 @@
 //! corner pass over a run's stations (`SectionAbsorbedSplits.BehindTheCorners`) and the split
 //! blend's small readings (`SectionSplitBlend`). Each pins the rule on a hand-built case.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::sections::section_split_blend::{self, SplitPlacement};
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_split_blend::{self, SplitPlacement};
+use solidmesh::bevel::sections::{
     section_corner, BevelSection, SectionAbsorbedSplits, SectionPool, SectionSide,
 };
-use geometry_processing::topology::{ChainEdge, FeatureEdge};
+use solidmesh::topology::{ChainEdge, FeatureEdge};
 
 /// A chain edge running from `start` to `end`.
 fn edge(start: Vector3, end: Vector3) -> ChainEdge {
@@ -174,7 +174,7 @@ fn rust_only_the_split_blend_reads_its_neighbours() {
 /// onto the line between the neighbours' boundaries, and says where along the chord it stands.
 #[test]
 fn rust_only_a_split_station_is_blended_from_its_neighbours() {
-    let mesh = polygon_mesh::solids::platonic_solids::create_cube(10.0, 10.0, 10.0);
+    let mesh = solidmesh_mesh::solids::platonic_solids::create_cube(10.0, 10.0, 10.0);
     let mut pool = SectionPool::new(&[]);
     let x = Vector3::new(1.0, 0.0, 0.0);
     let mut section = |vertex: i32, station: Vector3, left: Vector3, right: Vector3| {
@@ -223,7 +223,7 @@ fn rust_only_a_split_station_is_blended_from_its_neighbours() {
             Vector3::new(1.0, 4.0, 0.0),
         ),
     ];
-    let lattice = geometry_processing::bevel::bevel_split_chords::lattice_for(&mesh);
+    let lattice = solidmesh::bevel::bevel_split_chords::lattice_for(&mesh);
     assert!(section_split_blend::reads_as_a_split_vertex_at(
         &sections, 1, lattice
     ));
@@ -249,10 +249,10 @@ fn rust_only_a_split_station_is_blended_from_its_neighbours() {
 /// part's cache of edges and lattices.
 #[test]
 fn rust_only_the_room_reads_boundaries_and_caches_the_part() {
-    use geometry_processing::bevel::sections::section_room::{self, Boundary};
-    use geometry_processing::bevel::sections::SectionRoomCache;
-    use polygon_mesh::solids::platonic_solids;
-    use polygon_mesh::MeshEdgeGraph;
+    use solidmesh::bevel::sections::section_room::{self, Boundary};
+    use solidmesh::bevel::sections::SectionRoomCache;
+    use solidmesh_mesh::solids::platonic_solids;
+    use solidmesh_mesh::MeshEdgeGraph;
 
     let x = Vector3::new(1.0, 0.0, 0.0);
     let here = Boundary::new(Vector3::new(0.0, 1.0, 0.0), 2.0, 5.0, true);
@@ -297,9 +297,9 @@ fn rust_only_the_room_reads_boundaries_and_caches_the_part() {
 /// crosses.
 #[test]
 fn rust_only_the_builder_reads_its_canals() {
-    use geometry_processing::bevel::sections::section_builder;
-    use polygon_mesh::solids::platonic_solids;
-    use polygon_mesh::MeshEdgeGraph;
+    use solidmesh::bevel::sections::section_builder;
+    use solidmesh_mesh::solids::platonic_solids;
+    use solidmesh_mesh::MeshEdgeGraph;
 
     let x = Vector3::new(1.0, 0.0, 0.0);
     let y = Vector3::new(0.0, 1.0, 0.0);
@@ -331,7 +331,7 @@ fn rust_only_the_builder_reads_its_canals() {
     let cube = platonic_solids::create_cube(10.0, 10.0, 10.0);
     let graph = MeshEdgeGraph::create(&cube);
     let pairs = section_builder::edges_by_vertex_pair(&graph);
-    let features = geometry_processing::topology::FeatureEdgeSet::create(&cube);
+    let features = solidmesh::topology::FeatureEdgeSet::create(&cube);
     let first = features.edges()[0];
     let arriving =
         section_builder::try_feature_edge_between(&features, first.end_vertex, first.start_vertex)
@@ -377,8 +377,8 @@ fn rust_only_the_builder_reads_its_canals() {
         "at least one side of the corner's fan reads"
     );
 
-    fn section_room_is_fold(mesh: &polygon_mesh::Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
-        geometry_processing::bevel::sections::section_fan_walk::is_a_crease(mesh, graph, edge)
+    fn section_room_is_fold(mesh: &solidmesh_mesh::Mesh, graph: &MeshEdgeGraph, edge: i32) -> bool {
+        solidmesh::bevel::sections::section_fan_walk::is_a_crease(mesh, graph, edge)
     }
 }
 
@@ -442,7 +442,7 @@ fn rust_only_a_box_corner_reads_its_sides_and_mitre() {
 /// one with neither side walked comes back as it was.
 #[test]
 fn rust_only_a_section_is_rewritten_with_its_walked_ends() {
-    use geometry_processing::bevel::sections::section_builder_walked_side::{rewritten, WalkedEnd};
+    use solidmesh::bevel::sections::section_builder_walked_side::{rewritten, WalkedEnd};
 
     let section = BevelSection::new(
         4,

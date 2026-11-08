@@ -7,15 +7,15 @@
 //! dropped, and the two of them then walk one directed edge the same way, which is a fold the corner
 //! patch reports hundreds of faces away from the bite that made it. The parameter rows are a loop.
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use indexmap::IndexSet;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_convex_bite, surface_fan, surface_mesh_closure,
     surface_split_sewing, SurfaceBevelPlan, SurfaceBiteSharedSides, SurfaceVertexPool,
 };
-use indexmap::IndexSet;
-use polygon_mesh::csg::manifold_import;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::csg::manifold_import;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::surface_run_out_crosses_a_band_tests::lobed_regions;

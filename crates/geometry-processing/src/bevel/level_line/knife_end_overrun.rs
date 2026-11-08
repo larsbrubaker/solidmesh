@@ -5,7 +5,7 @@
 //! ([`on_the_plane`]), the overrun read at one end ([`read`]) and the rows laid past the end
 //! spoke ([`lay`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{ChainField, CornerFillPiece, LevelLineMesh, WorkError};
 

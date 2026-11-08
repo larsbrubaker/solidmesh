@@ -5,8 +5,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use polygon_mesh::{Face, FaceList, Mesh};
-use vector_math::{fixed_tie_sort, Vector3};
+use solidmesh_math::{fixed_tie_sort, Vector3};
+use solidmesh_mesh::{Face, FaceList, Mesh};
 
 use super::bevel_working_mesh;
 

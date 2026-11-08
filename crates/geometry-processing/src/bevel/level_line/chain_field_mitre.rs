@@ -3,7 +3,7 @@
 //! mitres is in `chain_field_rays.rs`. Here too the rays' far ends per segment
 //! ([`ChainField::reaches_of`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::ChainField;
 

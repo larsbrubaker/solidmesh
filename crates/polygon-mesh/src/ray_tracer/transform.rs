@@ -4,7 +4,7 @@
 
 use std::any::Any;
 
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector3};
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector3};
 
 use super::{IntersectInfo, RayTracerError, Traceable, TraceableRef};
 

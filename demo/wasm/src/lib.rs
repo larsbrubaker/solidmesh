@@ -17,14 +17,14 @@
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
 //! - `showcase`: the part of the Measure & Export page;
 //! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
-//!   them in wasm, and the picks applied at one radius in one `bevel::part::bevel_part` call;
+//!   them in wasm, and the picks applied at one radius in one `solidmesh::bevel_part` call;
 //!   `fillet_words*` word the kernel's refusal codes in English and `fillet_json` writes the
 //!   picks and rows the page reads.
 
 use js_sys::{Float32Array, Uint32Array, Uint8Array};
-use polygon_mesh::processors::stl_writer;
-use polygon_mesh::processors::MeshOutputSettings;
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh::mesh::processors::stl_writer;
+use solidmesh::mesh::processors::MeshOutputSettings;
+use solidmesh::mesh::{CancelToken, Mesh};
 use wasm_bindgen::prelude::*;
 
 pub mod booleans;
@@ -387,8 +387,8 @@ pub fn fillet_pick(
         };
         let pick = session
             .pick(
-                vector_math::Vector3::new(ox, oy, oz),
-                vector_math::Vector3::new(dx, dy, dz),
+                solidmesh::math::Vector3::new(ox, oy, oz),
+                solidmesh::math::Vector3::new(dx, dy, dz),
                 mode,
                 pixel_size,
                 round,

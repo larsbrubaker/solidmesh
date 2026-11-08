@@ -85,7 +85,7 @@
 // are what decides which way a NaN reading falls.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use super::section_corner;
 use crate::topology::{ChainEdge, FaceGroup};

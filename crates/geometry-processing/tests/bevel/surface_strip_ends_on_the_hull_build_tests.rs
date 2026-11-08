@@ -9,16 +9,16 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_chain_join, surface_mesh_closure, surface_room_measure,
     surface_strip_ends, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceLine,
     SurfaceStrip, SurfaceStripEndsOnTheHull, SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::tapered_ledge_test_meshes::{

@@ -2,9 +2,9 @@
 //! every face moves off the mesh; several colors, unpainted faces or no face colors leave the mesh
 //! as it was.
 
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::take_uniform_face_color;
-use vector_math::Color;
+use solidmesh_math::Color;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::take_uniform_face_color;
 
 #[test]
 fn one_color_on_every_face_moves_off_the_mesh() {

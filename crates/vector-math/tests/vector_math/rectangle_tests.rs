@@ -2,9 +2,9 @@
 // larger y, and clipping a destination trims its source alike), and equal rectangles hashing
 // equal.
 
+use solidmesh_math::{RectangleDouble, RectangleInt};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use vector_math::{RectangleDouble, RectangleInt};
 
 fn hash_of<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();

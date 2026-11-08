@@ -1,4 +1,4 @@
-//! The pieces of geometry3Sharp (https://github.com/gradientspace/geometry3Sharp, Copyright Ryan
+//! The pieces of geometry3Sharp (<https://github.com/gradientspace/geometry3Sharp>, Copyright Ryan
 //! Schmidt / gradientspace, Boost Software License 1.0) that this crate uses: an append-only
 //! `DMesh3` with its topology edits, the top-down `DMeshAABBTree3` and its
 //! nearest-triangle query, the mesh signed distance grid in its narrow-band flood mode (for

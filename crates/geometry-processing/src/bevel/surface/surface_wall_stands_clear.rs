@@ -21,7 +21,7 @@
 //! grid's answers depend only on the mesh and region it was laid from. `None` stands for no mesh or
 //! region.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{SurfaceRegionFaceGrid, SurfaceRunAcrossSectionStep};
 use crate::topology::FeatureEdge;

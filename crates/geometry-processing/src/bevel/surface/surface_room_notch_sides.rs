@@ -2,7 +2,7 @@
 //! room reads them. A notch's reach is DIRECTIONAL: the end plane is rarely square to the chain, so
 //! the section leans to one side of the corner, and the two sides are what bound it.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_mixed_corner_wall_ends, SurfaceEdgePlan, SurfaceLine};
 use crate::topology::{FaceGroup, FaceRegionCache};

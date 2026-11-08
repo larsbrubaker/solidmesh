@@ -18,7 +18,7 @@
 //! compared and no tolerance is used.
 
 use indexmap::IndexMap;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 use super::section_smooth_side::{SmoothSideCut, SmoothSideRefusal};
 use super::SectionPool;

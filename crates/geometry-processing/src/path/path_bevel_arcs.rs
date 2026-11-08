@@ -15,7 +15,7 @@
 use std::cell::Cell;
 use std::f64::consts::PI;
 
-use vector_math::{ieee_math, Vector2};
+use solidmesh_math::{ieee_math, Vector2};
 
 use super::path_bevel::{interior_angle, next_index, prev_index};
 

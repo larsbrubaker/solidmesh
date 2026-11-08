@@ -16,14 +16,14 @@ use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_side_groups::group_sides;
-use geometry_processing::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
-use geometry_processing::bevel::level_line::{
+use indexmap::IndexSet;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_side_groups::group_sides;
+use solidmesh::bevel::level_line::band_side_tagging_ends::{tag_sides, SideReach};
+use solidmesh::bevel::level_line::{
     chain_on_the_mesh, chain_setback, gap_fill, triangle_edges, BandGapResult, ChainField,
 };
-use indexmap::IndexSet;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::encroaching_side_room_tests::up_to;
 use crate::end_face_builds::feature_of;

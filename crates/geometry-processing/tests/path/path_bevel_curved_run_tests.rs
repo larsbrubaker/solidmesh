@@ -5,9 +5,9 @@
 //! `path_bevel_arcs::run_places_measured`, which is per thread, so other tests running beside it
 //! cannot disturb the count.
 
-use geometry_processing::path::path_bevel::{bevel, bevel_contour, cleaned_contours};
-use geometry_processing::path::{path_bevel_arcs, Contour, PathBevelSizeMode};
-use vector_math::{math_helper, Vector2};
+use solidmesh::path::path_bevel::{bevel, bevel_contour, cleaned_contours};
+use solidmesh::path::{path_bevel_arcs, Contour, PathBevelSizeMode};
+use solidmesh_math::{math_helper, Vector2};
 
 use super::flattened_curve_path::FlattenedCurvePath;
 use super::path_bevel_test_geometry::{

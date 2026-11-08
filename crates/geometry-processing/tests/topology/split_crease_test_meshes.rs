@@ -2,11 +2,11 @@
 //! are not corners of the shape - what a boolean, or one solid stood against another, leaves
 //! behind. The fixtures for the collinear run and the face rim readings of a pick.
 
-use polygon_mesh::csg::boolean_processing::do_array;
-use polygon_mesh::csg::{BooleanOptions, CsgModes};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_mesh::csg::boolean_processing::do_array;
+use solidmesh_mesh::csg::{BooleanOptions, CsgModes};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// A 30 x 10 x 10 bar whose top front crease is cut into three mesh edges by vertices at
 /// `x = 10` and `x = 20` where nothing else happens. The crease runs along `y = 0, z = 10`.

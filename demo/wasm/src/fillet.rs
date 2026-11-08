@@ -1,5 +1,5 @@
 //! The Fillet & Chamfer page's build: a part's picks, all at one radius (or chamfer setback),
-//! applied with one call to the library's entry point, `bevel::part::bevel_part`, with its default
+//! applied with one call to the library's entry point, `solidmesh::bevel_part`, with its default
 //! routes (the constructions MatterCAD builds by), and every pick's row worded for the list.
 //!
 //! One size for every pick is how `bevel_part` takes a request and how MatterCAD's Fillet works
@@ -10,12 +10,11 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::part::{
-    bevel_part, the_shown_size, BevelPartError, BevelPartOutcome, BevelPartRequest,
+use solidmesh::mesh::{CancelToken, Mesh};
+use solidmesh::{
+    bevel_part, the_shown_size, BevelEdgeGroup, BevelGroupResult, BevelPartError, BevelPartOutcome,
+    BevelPartRequest,
 };
-use geometry_processing::bevel::BevelGroupResult;
-use geometry_processing::topology::BevelEdgeGroup;
-use polygon_mesh::{CancelToken, Mesh};
 
 use crate::fillet_pick::BEND_THRESHOLD_DEGREES;
 use crate::fillet_words::{format_advisory, join_advisories, with_the_size_that_fits};

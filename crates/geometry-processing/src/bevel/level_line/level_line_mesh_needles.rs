@@ -6,7 +6,7 @@
 
 use std::collections::VecDeque;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::{
     FieldCounters, LevelLineMesh, LevelLineTriangle, LevelLineWork, NeedleMeter, WorkError,

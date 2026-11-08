@@ -31,8 +31,8 @@ use crate::bevel::part::{BevelProgressPhase, SettledPick};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
 use crate::topology::FeatureEdge;
 use indexmap::IndexSet;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::level_line_kernel_handoff::{
     the_budget_for, the_edge_key, the_room_to_hand_the_build, the_size_refusal_for,
@@ -57,8 +57,8 @@ pub enum LevelLineRouteError {
     SideTagging(SideTaggingError),
 }
 
-impl From<polygon_mesh::Cancelled> for LevelLineRouteError {
-    fn from(_: polygon_mesh::Cancelled) -> Self {
+impl From<solidmesh_mesh::Cancelled> for LevelLineRouteError {
+    fn from(_: solidmesh_mesh::Cancelled) -> Self {
         LevelLineRouteError::Cancelled
     }
 }

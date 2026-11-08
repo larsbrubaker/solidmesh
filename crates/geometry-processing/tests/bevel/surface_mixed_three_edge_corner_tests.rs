@@ -15,14 +15,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_face_walkback, surface_mixed_corner_patch, SurfaceBevelPlan, SurfaceEdgePlan,
     SurfaceLine, SurfaceMixedCorner, SurfaceMixedJunction, SurfaceStrip, SurfaceVertexPool,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids;
-use vector_math::{math_helper, Vector3};
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::solids::platonic_solids;
 
 use crate::surface_mixed_corner_fixture as fixture;
 use crate::surface_walkback_checks::{area_on, vertices_on};
@@ -45,7 +45,7 @@ fn assert_within(actual: f64, expected: f64, tolerance: f64, because: &str) {
     );
 }
 
-fn the_first_vector_of(reason: &geometry_processing::bevel::BevelAdvisory) -> Vector3 {
+fn the_first_vector_of(reason: &solidmesh::bevel::BevelAdvisory) -> Vector3 {
     match reason.args()[0] {
         BevelAdvisoryArg::Vector3(at) => at,
         _ => panic!("the refusal is named at a point - instead {reason:?}"),

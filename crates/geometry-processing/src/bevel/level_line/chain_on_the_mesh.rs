@@ -66,7 +66,7 @@ pub const SETBACK_STEP_FRACTION: f64 = 0.05;
 /// Each chain edge's setback at size 1 - the chamfer's
 /// own, or the fillet's at the edge's dihedral between its two triangles.
 pub fn per_edge_unit_setbacks(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chain_edges: &[(i32, i32)],
     profile: super::BandProfile,
@@ -123,12 +123,12 @@ pub fn a_crease_runs_in(
 /// that cuts a rim at its flips. A rim refused because a rail ran backward is cut only at the
 /// flips next to where the refusal stands; every other flip stays blended.
 pub fn sense_flips_near(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
     closed: &[bool],
     is_feature_edge: Option<&dyn Fn(i32, i32) -> bool>,
-    point: vector_math::Vector3,
+    point: solidmesh_math::Vector3,
     reach: f64,
 ) -> Result<Vec<i32>, ChainEdgeNotOnTwoTriangles> {
     let mut near = Vec::new();
@@ -156,7 +156,7 @@ pub fn sense_flips_near(
 /// Whether each chain edge's crease is convex: the far triangle's opposite corner lies behind the
 /// near triangle's plane (`end_face_sense::is_convex`).
 pub fn per_edge_convexity(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chain_edges: &[(i32, i32)],
 ) -> Result<Vec<bool>, ChainEdgeNotOnTwoTriangles> {
@@ -178,7 +178,7 @@ pub fn per_edge_convexity(
 /// Each chain vertex's setback at size 1, the mean of the
 /// edges either side of it (the one edge at an open chain's end).
 pub fn unit_setbacks(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chain: &[i32],
     is_closed: bool,
@@ -221,7 +221,7 @@ pub fn unit_setbacks(
 /// start. A chamfer, or no threshold, never steps; nothing cut hands the chains back as they are.
 #[allow(clippy::too_many_arguments)]
 pub fn split_at_setback_steps(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
     closed: &[bool],
@@ -253,7 +253,7 @@ pub fn split_at_setback_steps(
             let setback_steps = sharp
                 && (per_edge[before] - per_edge[after]).abs()
                     > SETBACK_STEP_FRACTION
-                        * vector_math::ieee_math::max_f64(per_edge[before], per_edge[after]);
+                        * solidmesh_math::ieee_math::max_f64(per_edge[before], per_edge[after]);
             // A crease that flips from a cove to a round (or back) is cut there too, whatever its
             // setbacks: one run cannot be both, and each stops flush at the corner.
             let flips = convex[before] != convex[after] && flips_to_cut.contains(&edges[after].0);
@@ -323,7 +323,7 @@ pub fn split_at_setback_steps(
 /// no piece ends there) asks for a build that would only repeat the last one.
 #[allow(clippy::too_many_arguments)]
 pub fn flips_cut_more(
-    positions: &[vector_math::Vector3],
+    positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
     chains: &[Vec<i32>],
     closed: &[bool],

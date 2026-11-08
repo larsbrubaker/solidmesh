@@ -1,7 +1,7 @@
 // The math-helper constants carry full double precision.
 
+use solidmesh_math::math_helper;
 use std::f64::consts;
-use vector_math::math_helper;
 
 // These were once float literals widened to double, off from the true values by about 1e-7.
 #[test]

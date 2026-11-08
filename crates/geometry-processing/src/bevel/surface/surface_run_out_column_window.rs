@@ -3,7 +3,7 @@
 //! the wall outward: its fields, its constructor and readings, the carry of a band's staircase onto
 //! the column ends, and the window's own reading ([`SurfaceRunOutColumnWindow::try_read`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{
     surface_mixed_corner_bites, surface_mixed_corner_run_out, surface_mixed_corner_wall_ends,

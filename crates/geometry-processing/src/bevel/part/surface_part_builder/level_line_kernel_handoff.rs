@@ -15,7 +15,7 @@ use crate::bevel::level_line::{
 use crate::bevel::part::{BevelProgress, BevelProgressBar, BevelProgressPhase};
 use crate::bevel::{BevelAdvisoryCode, BevelLoopFailure};
 use indexmap::IndexMap;
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use super::BevelSurfacePartBuilder;
 

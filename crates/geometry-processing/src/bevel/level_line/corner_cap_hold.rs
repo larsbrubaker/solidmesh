@@ -8,7 +8,7 @@
 //! `corner_cap_hole_fill::faces_the_rows_leave_along`'s, and `corner_cap_hole_fill::fill_one`
 //! refuses the patch where the hold returns `None`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::corner_cap_hole_fill::{faces_the_rows_leave_along, FacePlane};
 use super::{hole_fill, CornerCapLastRow, HoleFillFailure, HoleFillResult, LevelLineMesh};
@@ -123,7 +123,7 @@ pub enum HeldPatchFault {
 /// normal)`): `p` itself where it crosses none (past rounding at its own magnitude). Otherwise the
 /// closest point lies where some one, two or three of the planes meet, with every weight pulling
 /// it inward: each subset of up to three planes is tried, in order (by size, then by the planes'
-/// indices), its projection solved exactly in f64 ([`project_onto`]), and kept where no weight is
+/// indices), its projection solved exactly in f64 (`project_onto`), and kept where no weight is
 /// negative and it stands within every plane; the nearest kept wins, the earliest subset on a tie.
 /// The region is convex, so that is the one closest point. `None` where no subset holds the point
 /// (the planes leave no room, or they meet only where they are too near parallel to solve).

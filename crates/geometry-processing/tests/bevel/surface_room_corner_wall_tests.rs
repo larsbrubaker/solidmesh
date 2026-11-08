@@ -7,12 +7,12 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::{surface_room, surface_room_measure, SurfaceBevelPlan};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3Float;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::{surface_room, surface_room_measure, SurfaceBevelPlan};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3Float;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 /// A mesh keeps its vertices as floats, so a distance of 10 is a distance of 10 to about this.
 const NEAR: f64 = 1e-5;

@@ -34,8 +34,8 @@ use crate::bevel::part::self_intersection_check::the_answer_intersects_itself_wh
 use crate::bevel::part::BevelProgressPhase;
 use crate::bevel::surface::surface_mesh_closure;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::cove_round_retry::{
     the_flips_to_cut, the_rim_cut_at_its_flips, TheOneChainRefusal, ThePick,

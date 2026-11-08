@@ -3,7 +3,7 @@
 //! beyond (three planes met) and its ring, rim and profile questions, and the reading itself
 //! ([`SurfaceStripTrimmedByTheFaceBeyond::try_read`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceEdgePlan, SurfaceStrip, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
@@ -293,8 +293,8 @@ impl SurfaceStripTrimmedByTheFaceBeyond {
             }
 
             // Only the COLLAPSED rails are ever clamped.
-            trimmed_at[r] = vector_math::ieee_math::min_f64(
-                vector_math::ieee_math::max_f64(trimmed_at[r], 0.0),
+            trimmed_at[r] = solidmesh_math::ieee_math::min_f64(
+                solidmesh_math::ieee_math::max_f64(trimmed_at[r], 0.0),
                 length,
             );
         }

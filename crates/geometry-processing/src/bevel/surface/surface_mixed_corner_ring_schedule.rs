@@ -1,7 +1,7 @@
 //! A MITRE hand-over's patch, turned rigidly round the bead's axis station by station station by
 //! station.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceMixedCorner, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};

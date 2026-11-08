@@ -7,12 +7,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::{
     section_assembly, section_builder_run, section_routing, SectionPool,
 };
-use geometry_processing::topology::{FaceGroup, FeatureEdgeChain, FeatureEdgeSet};
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::{Vector2, Vector3};
+use solidmesh::topology::{FaceGroup, FeatureEdgeChain, FeatureEdgeSet};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 use crate::picture_hanger_test_mesh as hanger;

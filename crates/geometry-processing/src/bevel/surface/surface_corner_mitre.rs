@@ -4,7 +4,7 @@
 //! ([`super::surface_corner_patch`]); what is handed back is each strip's end station
 //! ([`SurfaceStripStation`]), with the meeting point standing between its two rails.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{SurfaceCornerPatchArrival, SurfaceStrip, SurfaceStripStation, SurfaceVertexPool};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};

@@ -9,9 +9,7 @@
 //! The numbers are the ones measured on "Every Chamfer Works.mcx" at r = 3.756. They
 //! are checked as exact equality, which holds the order the strip sews in too.
 
-use geometry_processing::bevel::surface::surface_end_cut_above_the_crossing::{
-    the_betweens, THE_FOOT,
-};
+use solidmesh::bevel::surface::surface_end_cut_above_the_crossing::{the_betweens, THE_FOOT};
 
 /// The crossing's foot, as a vertex of the pool.
 const THE_FOOT_VERTEX: i32 = 245;

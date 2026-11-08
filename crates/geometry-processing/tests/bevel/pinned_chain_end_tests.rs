@@ -4,10 +4,10 @@
 //! "Issue with even a single edge.mcx") also wants the crease DOUBLED over its length; these rows
 //! record the ramp alone - its reading divides the sides, is rigid, and is monotone in the size.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{BandGapResult, BandProfile, RoomReading};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{BandGapResult, BandProfile, RoomReading};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::several_chains_fixtures;

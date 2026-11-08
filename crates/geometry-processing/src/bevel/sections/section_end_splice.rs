@@ -31,8 +31,8 @@
 use std::collections::HashSet;
 
 use indexmap::IndexSet;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_fan_remesh::{try_draw_the_ring, try_the_outline, Triple};
 use super::section_fan_walk::EdgeAtPair;

@@ -4,10 +4,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use geometry_processing::bevel::level_line::work_budget::{
+use solidmesh::bevel::level_line::work_budget::{
     LevelLineProgress, LevelLineProgressReport, LevelLineWorkPhase,
 };
-use geometry_processing::bevel::part::{
+use solidmesh::bevel::part::{
     BevelProgress, BevelProgressBar, BevelProgressPhase, BevelSizeSearchRung,
 };
 

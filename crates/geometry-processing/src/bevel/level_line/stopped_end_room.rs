@@ -26,7 +26,7 @@
 //! the first scanned size that keeps nothing is bisected against the step below it. A covered
 //! window narrower than one scan step, between two kept sizes, is not seen.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{corner_fill, ChainField, LevelLineWork, ScalarField, WorkError};

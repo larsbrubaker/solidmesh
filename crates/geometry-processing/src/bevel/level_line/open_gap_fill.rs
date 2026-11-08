@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::end_face_section_row::{section_row, EndRowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};

@@ -1,7 +1,7 @@
 //! The end face's plane at an open chain's end as the rails meet it, read by
 //! `end_face_sense::end_ray_bounds`.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::end_face_sense::{shared_corners, Corners, COPLANAR_TOLERANCE};
 

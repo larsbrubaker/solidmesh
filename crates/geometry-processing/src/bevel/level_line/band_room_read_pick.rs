@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_room::lengths_of;
 use super::band_room_pair_room::room_of_pick;

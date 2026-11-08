@@ -6,10 +6,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading::read_room_of_pick;
-use geometry_processing::bevel::level_line::band_side_groups::group_sides;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading::read_room_of_pick;
+use solidmesh::bevel::level_line::band_side_groups::group_sides;
+use solidmesh::bevel::level_line::{
     chain_on_the_mesh, gap_loop_walk, pick_validation, BandProfile, RoomReadingKind,
 };
 

@@ -7,9 +7,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use polygon_mesh::csg::boolean_processing::BooleanOperandVerdict;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::csg::boolean_processing::BooleanOperandVerdict;
 
 use crate::boolean_kernel_gate;
 use crate::level_line_fixture::LevelLineFixture;

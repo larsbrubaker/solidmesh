@@ -7,10 +7,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::Mesh;
-use vector_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::{Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::Mesh;
 
 /// A triangle's three directed edges, in winding order.
 pub fn corners_of(t: (i32, i32, i32)) -> [(i32, i32); 3] {

@@ -3,8 +3,8 @@
 //! the knife rule's. The chain is convex throughout: the unit cube's edge along x at y = 0, z = 1,
 //! between the top and the front.
 
-use geometry_processing::bevel::level_line::end_face_sense;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::end_face_sense;
+use solidmesh_math::Vector3;
 
 #[test]
 fn a_ribs_concave_crease_on_a_convex_chain_is_opposite_sense() {

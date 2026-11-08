@@ -12,12 +12,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, SurfaceBevelPlan, SurfaceWalkbackResult,
 };
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::CancelToken;
-use vector_math::Vector3;
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::CancelToken;
 
 use crate::mesh_measurements::shell_count;
 use crate::nose_in_notch_test_meshes;

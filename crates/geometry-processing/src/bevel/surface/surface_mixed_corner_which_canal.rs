@@ -3,7 +3,7 @@
 //! own crease reading ([`the_corner_takes_the_dual`], [`try_how_far_the_duals_crease_runs`]).
 
 use super::{SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerDualCanal};
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 /// How far off the crease's own line a rim edge's end may stand and still be read as ON it - the
 /// part's ruler, as everywhere else a position is compared here.

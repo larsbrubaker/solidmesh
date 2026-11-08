@@ -4,8 +4,8 @@
 //! and the template filler (`format`: `{n}` and `{n:0.##}` holes filled from the advisory's
 //! values, numbers to at most as many decimals as the hole has `#`s).
 
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use vector_math::{Vector2, Vector3};
+use solidmesh::math::{Vector2, Vector3};
+use solidmesh::{BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// The English the sentences are written in: the demo shows them as they are.
 pub fn localize(sentence: &str) -> String {

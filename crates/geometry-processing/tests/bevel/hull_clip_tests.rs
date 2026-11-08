@@ -4,9 +4,9 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::hull_clip::{clip, crossed_supporting_planes};
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::hull_clip::{clip, crossed_supporting_planes};
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
 
 use crate::level_line_test_geometry::cube_solid;
 

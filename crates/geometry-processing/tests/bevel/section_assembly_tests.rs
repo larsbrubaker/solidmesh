@@ -9,16 +9,16 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::sections::section_builder_run::try_build_chain;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_builder_run::try_build_chain;
+use solidmesh::bevel::sections::{
     section_assembly, section_face_rebuild, section_loft, SectionPool,
 };
-use geometry_processing::bevel::surface::surface_mesh_closure;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::surface_mesh_closure;
+use solidmesh::topology::{
     bevel_edge_group_resolver, BevelSelectionKind, FaceGroup, FeatureEdgeChain, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh, MeshEdgeGraph};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use crate::bore_test_meshes::create_plate_with_a_round_bore;
 use crate::mesh_surface_distance::farthest_from;

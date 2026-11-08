@@ -6,8 +6,8 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{gap_fill, BandGapResult, GapFillRefusal};
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{gap_fill, BandGapResult, GapFillRefusal};
 
 use crate::end_face_builds::{as_saved, build_chains};
 use crate::fillet_thin_front_fin::profile_of;

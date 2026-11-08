@@ -5,15 +5,15 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::LevelLineMesh;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::LevelLineMesh;
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::open_chain;
 
 #[test]
 fn rust_only_a_mixed_loop_splits_into_pieces_that_take_in_tie_vertices() {
-    use geometry_processing::bevel::level_line::corner_fill::pieces;
-    use geometry_processing::bevel::level_line::GapLoop;
+    use solidmesh::bevel::level_line::corner_fill::pieces;
+    use solidmesh::bevel::level_line::GapLoop;
     let x_leg = Rc::new(open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(4.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -59,8 +59,8 @@ fn rust_only_a_mixed_loop_splits_into_pieces_that_take_in_tie_vertices() {
 
 #[test]
 fn rust_only_a_run_out_row_is_the_section_cut_by_the_face_it_ran_onto() {
-    use geometry_processing::bevel::level_line::open_gap_fill_cut_section::cut_section_arc;
-    use geometry_processing::bevel::level_line::{LevelLineTriangle, OpenGapFillOpenRail};
+    use solidmesh::bevel::level_line::open_gap_fill_cut_section::cut_section_arc;
+    use solidmesh::bevel::level_line::{LevelLineTriangle, OpenGapFillOpenRail};
     let chain = open_chain(
         vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(10.0, 0.0, 0.0)],
         vec![1.0, 1.0],
@@ -101,10 +101,8 @@ fn rust_only_a_run_out_row_is_the_section_cut_by_the_face_it_ran_onto() {
 
 #[test]
 fn rust_only_a_sides_boundary_is_walked_into_one_closed_loop() {
-    use geometry_processing::bevel::level_line::gap_loop_walk::loops_of_side;
-    use geometry_processing::bevel::level_line::{
-        BandGroup, FieldSample, LevelLineTriangle, WorkError,
-    };
+    use solidmesh::bevel::level_line::gap_loop_walk::loops_of_side;
+    use solidmesh::bevel::level_line::{BandGroup, FieldSample, LevelLineTriangle, WorkError};
     // A unit square of side 1's triangles: its boundary is one closed loop.
     let mut mesh = LevelLineMesh::new();
     mesh.vertices = vec![

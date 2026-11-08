@@ -2,9 +2,9 @@
 //! V) . n)` - so the band stops exactly on that plane. A straight chain along x from 0 to 10,
 //! setback 1, its last end's plane through (10, 0, 0) leaning 45 degrees: `n = (1, 0, 1) / sqrt 2`.
 
-use geometry_processing::bevel::level_line::{ChainField, EndRayBound};
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{ChainField, EndRayBound};
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 const POINTS: [Vector3; 2] = [Vector3::new(0.0, 0.0, 0.0), Vector3::new(10.0, 0.0, 0.0)];
 

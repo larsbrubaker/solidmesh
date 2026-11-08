@@ -4,8 +4,8 @@
 
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::level_line::{BandProfile, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::hole_fill_corner_tests::{build, fill_with_the_filler};
 use crate::level_line_feature_edges::feature_edges_over;

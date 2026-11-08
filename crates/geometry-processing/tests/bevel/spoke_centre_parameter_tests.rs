@@ -4,7 +4,7 @@
 //! faces' wedge tip on the 135-degree joint at 57.03 read 57.995 on one source and 56.064 on
 //! another, 4e-7 apart, and its spokes crossed the strip on the second.
 
-use geometry_processing::bevel::level_line::corner_rail_strip::spoke_centre_parameter;
+use solidmesh::bevel::level_line::corner_rail_strip::spoke_centre_parameter;
 
 const TIE: f64 = 1e-9;
 

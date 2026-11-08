@@ -1,12 +1,12 @@
 //! The FLOOR under the sweep's one retry - a run that folded at full back depth is offered a
 //! shallower back, but only while that back is still deep enough to bury the tool in material.
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::bevel_sweep_back_depth::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::bevel_sweep_back_depth::{
     back_depth_the_turn_allows, retry_depth, turn_radius, MINIMUM_RETRY_FRACTION_OF_SIZE,
 };
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::Mesh;
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes::create_arc_prism;
 

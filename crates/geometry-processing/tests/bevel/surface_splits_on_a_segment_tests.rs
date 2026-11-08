@@ -7,8 +7,8 @@
 mod a_crowded_cluster_of_splits {
     use std::collections::HashSet;
 
-    use geometry_processing::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
-    use vector_math::Vector3Float;
+    use solidmesh::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
+    use solidmesh_math::Vector3Float;
 
     /// Three splits in a cluster finer than the ruler, on a long side: the reading must come back,
     /// and must say it did not settle rather than handing out a stretch that repeats a vertex.
@@ -52,8 +52,8 @@ mod a_crowded_cluster_of_splits {
 
 /// Splits well apart.
 mod splits_well_apart {
-    use geometry_processing::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
-    use vector_math::Vector3Float;
+    use solidmesh::bevel::surface::{SurfaceSplitsOnASegment, SurfaceVertexPool};
+    use solidmesh_math::Vector3Float;
 
     /// The ordinary reading, kept beside the crowded one: splits comfortably apart on a side are
     /// handed back in order along it, and the reading says it settled.

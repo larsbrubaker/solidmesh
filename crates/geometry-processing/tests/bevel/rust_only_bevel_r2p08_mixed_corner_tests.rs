@@ -6,16 +6,16 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::surface_mixed_corner_patch::{
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::surface_mixed_corner_patch::{
     emit, from_the_cap_face, from_the_handover, try_cut_the_ring, try_turn_the_ring_round,
 };
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceStrip, SurfaceVertexPool,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::Mesh;
 
 use crate::topology_test_meshes::create_l_shaped_grid_prism;
 

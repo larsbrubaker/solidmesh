@@ -3,10 +3,10 @@
 //! is wide". The rib of `StripClipRibTests`: each flank's far crease with the back face, P R (x = 9)
 //! or Q R (x = 11), bounds a chamfer's room.
 
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::band_room;
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::band_room;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::strip_clip_rib_meshes;

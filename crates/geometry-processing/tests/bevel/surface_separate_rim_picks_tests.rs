@@ -15,16 +15,14 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
-    surface_mesh_closure, surface_run_stops_short, SurfaceBevelPlan,
-};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{
+use solidmesh::bevel::surface::{surface_mesh_closure, surface_run_stops_short, SurfaceBevelPlan};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{
     bevel_edge_group_resolver, pick_interpretations, BevelEdgeGroup, BevelEdgeGroupResolution,
     BevelSelectionKind, FaceGroup, FeatureEdge, FeatureEdgeSet,
 };
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::mesh_measurements::shell_count;
 use crate::mesh_surface_distance;

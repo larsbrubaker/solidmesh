@@ -3,7 +3,7 @@
 //! names a radius the tool's back reach has to stay inside; where it does not, the sweep is
 //! retried at the depth the turn allows.
 
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::bevel_chain_sweep_mesh::SweptSegment;
 use crate::topology::ChainEdge;

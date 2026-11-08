@@ -4,9 +4,9 @@
 //! in exactly the same place. The convex hull that speeds the bounds up is built with a tolerance
 //! and may leave out a vertex just outside it; that must never move the bounds.
 
-use polygon_mesh::processors::ConvexHull;
-use polygon_mesh::Mesh;
-use vector_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
+use solidmesh_math::{AxisAlignedBoundingBox, Matrix4X4, Vector3, Vector3Float};
+use solidmesh_mesh::processors::ConvexHull;
+use solidmesh_mesh::Mesh;
 
 /// The bounds of every vertex of `mesh` under `transform`, measured directly.
 fn every_vertex_bounds(mesh: &Mesh, transform: Matrix4X4) -> AxisAlignedBoundingBox {

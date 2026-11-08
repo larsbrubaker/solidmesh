@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use indexmap::{IndexMap, IndexSet};
-use vector_math::ieee_math;
+use solidmesh_math::ieee_math;
 
 use super::super::float_grid;
 use super::strip_clip::{

@@ -7,14 +7,14 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::pick_validation;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::pick_validation;
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandProfile, GapLoop, LevelLineMesh, LevelLineWork, RoomReadingKind,
     RoomSource, WorkBudget,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_room_geometry::box_with_square_hole;
 use crate::level_line_test_geometry::{

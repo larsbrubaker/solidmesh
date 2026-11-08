@@ -9,7 +9,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use polygon_mesh::Mesh;
+use solidmesh_mesh::Mesh;
 
 use super::surface_band_runs_off_the_face_beyond::{self as runs_off, BandSpan, ChainAtTheSpan};
 use super::surface_bevel_builder::{is_swallowed, plan_of, the_strips_own_edge_is_to_blame};

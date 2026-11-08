@@ -3,8 +3,8 @@
 //! edge (or read every vertex of a corner box) and say how far its surface is off the arc, chord or
 //! pair of rounds that edge should carry.
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 pub const SIZE: f64 = 20.0;
 pub const RADIUS: f64 = 2.0;

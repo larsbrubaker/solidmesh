@@ -46,7 +46,7 @@
 //! (`BevelAdvisoryCode::SurfaceObliqueMixedCornerRowsNotBuilt`) rather than published as a blend
 //! the right reading and the wrong rows would make.
 
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
 
 use super::{SurfaceBandEnd, SurfaceLine};
 

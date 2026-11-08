@@ -24,8 +24,8 @@
 //! across rebuild workers, and the grid's answers depend only on the mesh and region it was laid
 //! from.
 
-use polygon_mesh::Mesh;
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
+use solidmesh_mesh::Mesh;
 
 use super::SurfaceVertexPool;
 use crate::topology::FaceGroup;

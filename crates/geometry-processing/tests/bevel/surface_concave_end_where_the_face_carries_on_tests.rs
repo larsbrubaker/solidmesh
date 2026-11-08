@@ -10,12 +10,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::SurfaceBevelPlan;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
 use crate::surface_walkback_checks::regions_of;
 

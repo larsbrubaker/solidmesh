@@ -13,7 +13,7 @@
 
 use std::fmt;
 
-use vector_math::{math_helper, Vector2};
+use solidmesh_math::{math_helper, Vector2};
 
 /// Why a segment run stopped growing at one of its ends.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

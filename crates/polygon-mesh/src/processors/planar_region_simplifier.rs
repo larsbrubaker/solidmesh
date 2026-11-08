@@ -28,9 +28,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use manifold_rust::linalg::Vec2;
 use manifold_rust::polygon::triangulate_idx;
 use manifold_rust::types::{PolyVert, PolygonsIdx};
-use vector_math::fixed_tie_sort::introspective_sort;
-use vector_math::ieee_math::max_f64;
-use vector_math::Vector3;
+use solidmesh_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::ieee_math::max_f64;
+use solidmesh_math::Vector3;
 
 use crate::Mesh;
 

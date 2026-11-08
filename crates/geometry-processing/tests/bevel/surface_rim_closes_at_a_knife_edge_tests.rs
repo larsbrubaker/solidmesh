@@ -5,10 +5,10 @@
 
 use std::sync::Arc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
-use geometry_processing::bevel::bevel_chain_linker;
-use geometry_processing::bevel::surface::SurfaceBevelPlan;
+use solidmesh::bevel::bevel_chain_linker;
+use solidmesh::bevel::surface::SurfaceBevelPlan;
 
 use crate::nose_in_notch_test_meshes;
 use crate::surface_walkback_checks::regions_of;

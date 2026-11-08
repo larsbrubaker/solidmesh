@@ -1,10 +1,10 @@
 //! Rust-only STL tests: round trips through the writer and reader, cancellation and the
 //! error cases a reader must report instead of returning a mesh.
 
-use polygon_mesh::processors::stl_processing::{self, StlError};
-use polygon_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::processors::stl_processing::{self, StlError};
+use solidmesh_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::CancelToken;
 
 fn round_trip(output_type: OutputType) {
     let cube = platonic_solids::create_cube(2.0, 3.0, 4.0);

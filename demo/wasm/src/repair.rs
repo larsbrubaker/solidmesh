@@ -9,8 +9,8 @@
 
 use std::collections::BTreeSet;
 
-use polygon_mesh::{AdvancedRepairOptions, CancelToken, FaceList, Mesh, RemoveModes};
-use vector_math::Vector3Float;
+use solidmesh::math::Vector3Float;
+use solidmesh::mesh::{AdvancedRepairOptions, CancelToken, FaceList, Mesh, RemoveModes};
 
 use crate::shapes::{Lcg, Shape};
 use crate::Scene;

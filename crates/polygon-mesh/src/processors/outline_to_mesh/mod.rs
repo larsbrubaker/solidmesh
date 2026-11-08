@@ -16,8 +16,8 @@
 //! limit.
 
 use clipper2_rust::{Path64, Paths64};
-use clipper_library::{int_point, ClipperError, JoinType, DEFAULT_SCALING};
-use vector_math::{Matrix4X4, Vector2, Vector3};
+use solidmesh_clipper::{int_point, ClipperError, JoinType, DEFAULT_SCALING};
+use solidmesh_math::{Matrix4X4, Vector2, Vector3};
 
 mod extrude;
 mod revolve;

@@ -7,11 +7,11 @@
 //! answer is still a closed surface, it just stands somewhere the part does not carry material.
 //! Asked here of the arrays the readings are made of, so that the wrong answer FAILS.
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_mixed_corner_run_out, surface_run_out_column_ends, SurfaceMixedCorner,
     SurfaceMixedCornerWall,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::surface_mixed_corner_fixture as fixture;
 

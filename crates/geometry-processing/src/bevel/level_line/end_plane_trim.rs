@@ -5,7 +5,7 @@
 //! end plane ([`section`]), and a run cut at an end parameter ([`cut_at`]); the trim itself is in
 //! `end_plane_trim_run`.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::super::float_grid;
 use super::{BandProfile, GapLoop, LevelLineMesh};

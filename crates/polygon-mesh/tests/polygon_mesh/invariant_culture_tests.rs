@@ -3,10 +3,10 @@
 // parses numbers with no culture at all, so the check needs no locale scope. The vector parse is
 // in vector-math's tests/other, the packed polygon string in clipper-library's tests/clipper.
 
-use polygon_mesh::processors::stl_processing;
-use polygon_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::processors::stl_processing;
+use solidmesh_mesh::processors::{stl_writer, MeshOutputSettings, OutputType};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 #[test]
 fn ascii_stl_is_written_with_point_decimals() {

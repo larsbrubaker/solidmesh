@@ -1,10 +1,10 @@
 //! A bead whose wall runs out onto the cube's own convex edge is admitted; one wider than its wall
 //! everywhere is still refused.
 
-use geometry_processing::bevel::bevel_working_mesh::signed_volume;
-use geometry_processing::topology::{EdgeConvexity, FeatureEdgeSet};
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh::bevel::bevel_working_mesh::signed_volume;
+use solidmesh::topology::{EdgeConvexity, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 const CUBE_SIZE: f64 = 20.0;
 const RIDGE_AT: f64 = CUBE_SIZE / 2.0;

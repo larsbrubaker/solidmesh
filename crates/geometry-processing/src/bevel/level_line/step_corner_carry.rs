@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::band_gap_rounds_first::chain_senses;
 use super::chain_on_the_mesh::SETBACK_STEP_FRACTION;

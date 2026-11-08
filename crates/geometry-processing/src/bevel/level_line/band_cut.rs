@@ -177,7 +177,7 @@ pub fn put_the_root_on_the_line(
     reading: &super::VertexFieldReading,
     a: i32,
     b: i32,
-    point: vector_math::Vector3,
+    point: solidmesh_math::Vector3,
 ) -> Result<(), super::LevelLineMeshError> {
     // Asked as "is the answer a vertex that was already there": a new vertex is always the next id.
     // A root in a stopped end's plane goes onto the plane exactly.

@@ -4,7 +4,7 @@
 // (`level_line`) and `level_line_rows` read and write the memo through these keys.
 
 use crate::bevel::level_line::{BandProfile, RoomSource};
-use vector_math::number_format::format_f64;
+use solidmesh_math::number_format::format_f64;
 
 use super::BevelSurfacePartBuilder;
 use crate::bevel::part::BevelPickMemo;

@@ -6,10 +6,10 @@
 //! ladder that probed only the offending chain, or that stopped at the room, would name a size the
 //! pick cannot be built at. Parameter rows are loops over the same-named test.
 
-use geometry_processing::bevel::level_line::band_gap_reading::room_margin;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{BandGapRefusal, BandProfile, RoomSource};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_reading::room_margin;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandGapRefusal, BandProfile, RoomSource};
+use solidmesh_math::Vector3;
 
 use crate::hourglass_beside_square_fixture::{
     build, hourglass_chain, pick, pick_with, read, NECK_HALF_WIDTH,

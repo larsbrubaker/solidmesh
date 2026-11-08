@@ -4,9 +4,9 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::surface::{surface_end_gives_up_the_section, SurfaceVertexPool};
-use vector_math::fixed_tie_sort::introspective_sort;
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::{surface_end_gives_up_the_section, SurfaceVertexPool};
+use solidmesh_math::fixed_tie_sort::introspective_sort;
+use solidmesh_math::{Vector3, Vector3Float};
 
 const CORNER: Vector3 = Vector3::new(0.0, 0.0, 0.0);
 const OUTWARD: Vector3 = Vector3::new(0.0, 0.0, 1.0);

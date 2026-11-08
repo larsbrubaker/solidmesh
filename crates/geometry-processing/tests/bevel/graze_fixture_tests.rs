@@ -9,11 +9,11 @@
 
 use std::time::Instant;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     BandGapRefusal, BandGapResult, BandProfile, LevelLineMesh, PickField, VertexFieldReading,
     VertexSide,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::graze_fixture::{self, GrazePick, GRAZE_AS_NEEDLE, GRAZE_WITH_HEIGHT};
 use crate::level_line_test_geometry::{coincident_vertices, open_edges, signed_volume_of};

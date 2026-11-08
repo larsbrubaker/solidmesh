@@ -3,7 +3,7 @@
 //! to the surface construction first) and any other straight to the prologue and the surface
 //! construction (`prologue::build_edges`).
 
-use polygon_mesh::CancelToken;
+use solidmesh_mesh::CancelToken;
 
 use super::{
     point_groups, prologue, BevelPartError, BevelPartOutcome, BevelPartRequest, BevelProgressReport,

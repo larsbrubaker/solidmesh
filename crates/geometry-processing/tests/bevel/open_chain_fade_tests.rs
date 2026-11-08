@@ -4,12 +4,12 @@
 //! continuing ridge, about a setback past the end. The two open runs therefore chain into ONE
 //! cycle, and the fill zips them in open mode. Parameter rows are loops over the same-named test.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::gap_fill::DEFAULT_FILLET_SEGMENTS;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::gap_fill::DEFAULT_FILLET_SEGMENTS;
+use solidmesh::bevel::level_line::{
     gap_fill, BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal, GapLoop,
 };
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{distance_to_surface, signed_volume, winding_number};

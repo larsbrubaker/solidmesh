@@ -92,7 +92,7 @@ pub fn set_back(
     jump_ends: &mut std::collections::HashMap<i32, f64>,
     low: bool,
 ) -> Result<Option<f64>, super::LevelLineMeshError> {
-    use vector_math::ieee_math;
+    use solidmesh_math::ieee_math;
 
     let tied = |mesh: &super::LevelLineMesh, vertex: i32| -> Result<bool, super::WorkError> {
         for (k, other) in chains.iter().enumerate() {

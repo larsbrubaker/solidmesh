@@ -6,9 +6,9 @@
 //! crease turns square (P2 Q) and at the right the flank's crease T Q meets the back face's crease
 //! turning back, so the far creases P2 R and Q R still bound.
 
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, RoomReadingKind};
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 

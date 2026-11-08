@@ -13,12 +13,12 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_room, surface_room_measure, surface_shared_edge_network, SurfaceBevelPlan,
     SurfaceRoomCut,
 };
-use geometry_processing::topology::FaceRegionCache;
-use polygon_mesh::CancelToken;
+use solidmesh::topology::FaceRegionCache;
+use solidmesh_mesh::CancelToken;
 
 use crate::surface_test_chains::join_and_open;
 use crate::tapered_barrel_test_meshes;

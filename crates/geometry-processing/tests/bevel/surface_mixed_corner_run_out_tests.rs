@@ -11,15 +11,15 @@ use std::collections::HashMap;
 
 use crate::path_solids::extrude;
 use crate::path_solids::Outline;
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_mesh_closure, surface_mixed_corner_run_out, surface_run_out_column_ends,
     SurfaceBevelPlan, SurfaceEdgePlan, SurfaceMixedCorner, SurfaceMixedCornerWall,
     SurfaceVertexPool,
 };
-use geometry_processing::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
-use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
-use polygon_mesh::{Face, Mesh};
-use vector_math::Vector3;
+use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::topology::{FaceRegionCache, FeatureEdgeSet};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Face, Mesh};
 
 use crate::mesh_measurements::{shell_count, signed_volume};
 use crate::surface_mixed_corner_fixture as fixture;

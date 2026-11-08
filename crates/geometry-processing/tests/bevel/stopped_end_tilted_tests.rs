@@ -8,11 +8,11 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::corner_cap_flat_ends::WATCH_FLAT_ENDS;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::corner_cap_flat_ends::WATCH_FLAT_ENDS;
+use solidmesh::bevel::level_line::{
     gap_fill, turn_stopped_ends_on, BandProfile, HoleFillTriangle, LevelLineMesh,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::stopped_end_arc_tests::{band, feature_edges, is_closed, keeps_edge, Mesh};
 

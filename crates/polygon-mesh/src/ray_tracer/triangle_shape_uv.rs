@@ -4,7 +4,7 @@
 
 use std::any::Any;
 
-use vector_math::{
+use solidmesh_math::{
     AxisAlignedBoundingBox, Matrix4X4, Plane, Ray, Vector2Float, Vector3, Vector3Float,
 };
 

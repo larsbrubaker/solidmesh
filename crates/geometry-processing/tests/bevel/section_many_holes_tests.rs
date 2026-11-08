@@ -30,20 +30,18 @@
 
 use std::collections::HashSet;
 
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{CancelToken, Mesh};
 
-use geometry_processing::bevel::bevel_chain_linker::link;
-use geometry_processing::bevel::sections::section_builder_run::try_build_loop;
-use geometry_processing::bevel::sections::section_fan_walk::edges_by_vertex_pair;
-use geometry_processing::bevel::sections::section_smooth_seam::a_walk_crossed_a_fold;
-use geometry_processing::bevel::sections::section_smooth_side::{
-    try_cut_the_smooth_side, SmoothSideRefusal,
-};
-use geometry_processing::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
-use geometry_processing::bevel::sections::SectionPool;
-use geometry_processing::bevel::BevelAdvisoryArg;
-use geometry_processing::topology::bevel_edge_group_resolver::{self, BevelEdgeGroupResolution};
+use solidmesh::bevel::bevel_chain_linker::link;
+use solidmesh::bevel::sections::section_builder_run::try_build_loop;
+use solidmesh::bevel::sections::section_fan_walk::edges_by_vertex_pair;
+use solidmesh::bevel::sections::section_smooth_seam::a_walk_crossed_a_fold;
+use solidmesh::bevel::sections::section_smooth_side::{try_cut_the_smooth_side, SmoothSideRefusal};
+use solidmesh::bevel::sections::section_smooth_side_boundary::SmoothSideFailure;
+use solidmesh::bevel::sections::SectionPool;
+use solidmesh::bevel::BevelAdvisoryArg;
+use solidmesh::topology::bevel_edge_group_resolver::{self, BevelEdgeGroupResolution};
 
 use crate::many_holes_rim_reading::{self, LoopAnswer};
 use crate::many_holes_test_mesh;

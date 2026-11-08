@@ -5,7 +5,7 @@
 //! ([`ring_with_the_splits_in`], [`the_neighbours_carry_its_middle`]), and the lobes a ring that
 //! revisits a vertex falls into ([`lobes`]).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::{BevelAdvisory, BevelAdvisoryCode};
 use super::{surface_fan, surface_ring, SurfaceSplitsOnASegment, SurfaceVertexPool};
@@ -50,7 +50,7 @@ pub fn stands_on_the_side(
 /// ([`SurfaceSplitsOnASegment`]), so if the reading names b, the neighbour carries b.
 ///
 /// Measured three ways. On the lobe wall's rim at 0.1 the lobe [189, 482, 475] has its far pair
-/// 0.0557 apart and the reading of that stretch returns [475] - the middle corner named, the
+/// 0.0557 apart and the reading of that stretch returns 475 - the middle corner named, the
 /// neighbours split at it, and dropping the lobe takes the third face off the edge 189-475. At 0.02
 /// the same. But on the Round Side at radius 6 the needle [408, 415, 598] is 24.2 mm long and five
 /// hundredths of a thousandth wide, and the reading of its long side returns NOTHING: no neighbour

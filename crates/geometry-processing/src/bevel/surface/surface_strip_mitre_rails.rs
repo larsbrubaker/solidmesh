@@ -2,7 +2,7 @@
 //! which rail of a strip stands on the face two strips share, where the mitre plane
 //! stands, one rail or one pair of rails cut on that plane, the rails the narrower strip has no
 //! partner for, and the between-station lists the two end rings carry. `surface_strip_mitre` puts
-//! them together into the ring; [`super::surface_mitre_chorded_apart`] and the staircase mitre cut
+//! them together into the ring; `super::surface_mitre_chorded_apart` and the staircase mitre cut
 //! their own rings with [`try_one_rail_of_the_mitre`] and [`try_one_pair_of_the_mitre`].
 
 // The negated comparisons are deliberate: each is false for NaN, which is the point.
@@ -10,7 +10,7 @@
 
 use std::sync::Arc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_mitre_seam, surface_strip_ends};

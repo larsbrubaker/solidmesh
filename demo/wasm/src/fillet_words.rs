@@ -6,7 +6,7 @@
 //! operation and resolution sentences in `fillet_words_blend`, and the shared pieces (positions,
 //! numbers, the size refusals and the template filler) in `fillet_words_parts`.
 
-use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
+use solidmesh::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 use crate::fillet_words_blend::format_blend_or_operation;
 use crate::fillet_words_parts::{

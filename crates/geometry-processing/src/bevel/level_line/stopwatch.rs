@@ -3,7 +3,7 @@
 //! the work budget's phase tally and progress throttle read them: nanoseconds since the first
 //! reading, from `web_time::Instant`, which reads `performance.now()` in the browser and the
 //! system's monotonic clock natively. Also the number formats the meters write their reports in,
-//! `G4` ([`g4`]) and `E3` ([`e3`]); `N0` is `vector_math::number_format::format_i64_number`.
+//! `G4` ([`g4`]) and `E3` ([`e3`]); `N0` is `solidmesh_math::number_format::format_i64_number`.
 
 use std::sync::OnceLock;
 

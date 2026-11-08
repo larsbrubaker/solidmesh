@@ -7,21 +7,21 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::{
     BandGapResult, BandProfile, LevelLineWorkPhase, RoomReading, RoomReadingKind, RoomSource,
 };
-use geometry_processing::bevel::part::surface_part_builder::level_line_kernel_handoff::{
+use solidmesh::bevel::part::surface_part_builder::level_line_kernel_handoff::{
     the_budget_for, the_edge_key, the_room_to_hand_the_build, the_size_refusal_for,
     the_vertex_to_blame,
 };
-use geometry_processing::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
-use geometry_processing::bevel::part::{BevelPickMemo, BevelProgress, BevelProgressPhase};
-use geometry_processing::bevel::{BevelAdvisoryCode, BevelRebuildAdvisories};
-use geometry_processing::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdgeSet};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::CancelToken;
-use vector_math::Color;
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
+use solidmesh::bevel::part::{BevelPickMemo, BevelProgress, BevelProgressPhase};
+use solidmesh::bevel::{BevelAdvisoryCode, BevelRebuildAdvisories};
+use solidmesh::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FeatureEdgeSet};
+use solidmesh_math::Color;
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::CancelToken;
 
 /// A cube with its top rim picked as group 0 and its bottom rim as group 1.
 fn cube_builder(memo: Option<Arc<BevelPickMemo>>) -> BevelSurfacePartBuilder {
@@ -289,7 +289,7 @@ fn rust_only_the_kernel_handoff_reads() {
     assert!(budget.input_is_float_stored);
     assert_eq!(
         budget.limit,
-        geometry_processing::bevel::level_line::WorkBudget::default_limit(100)
+        solidmesh::bevel::level_line::WorkBudget::default_limit(100)
     );
 
     let builder = cube_builder(None);
@@ -308,7 +308,7 @@ fn rust_only_the_kernel_handoff_reads() {
 fn rust_only_the_rows_a_level_line_pass_built_carry_their_loops() {
     let mut builder = cube_builder(None);
     let loops = builder.the_rim_loops_of(&[0, 1]);
-    let mut results: Vec<Option<geometry_processing::bevel::BevelGroupResult>> = vec![None, None];
+    let mut results: Vec<Option<solidmesh::bevel::BevelGroupResult>> = vec![None, None];
 
     builder.write_the_rows_that_built(&loops[..1], &mut results);
     let row = results[0].as_ref().expect("group 0 built");
@@ -321,9 +321,9 @@ fn rust_only_the_rows_a_level_line_pass_built_carry_their_loops() {
     assert!(builder.the_edges_the_refusal_names().is_empty());
 
     // A refused loop goes under a row that built, and never under one that failed.
-    let failure = geometry_processing::bevel::BevelLoopFailure {
-        advisory: geometry_processing::bevel::BevelAdvisory::new(
-            geometry_processing::bevel::BevelAdvisoryCode::SizeRemovesNothing,
+    let failure = solidmesh::bevel::BevelLoopFailure {
+        advisory: solidmesh::bevel::BevelAdvisory::new(
+            solidmesh::bevel::BevelAdvisoryCode::SizeRemovesNothing,
             Vec::new(),
         ),
         largest_size_that_fits: Some(0.5),

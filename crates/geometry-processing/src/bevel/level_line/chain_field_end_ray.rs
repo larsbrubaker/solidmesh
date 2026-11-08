@@ -17,7 +17,7 @@
 //! leaning up to ~75 degrees. Only ends named in `ChainField::end_rays` carry one, so a field
 //! built without them is bit-identical.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// How far an end ray must run - until every point of the round's row at the end
 /// vertex, carried along the chain, has met the end face's plane.

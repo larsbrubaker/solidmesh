@@ -6,19 +6,15 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::band_room;
-use geometry_processing::bevel::level_line::band_side_groups::group_sides;
-use geometry_processing::bevel::level_line::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
-use geometry_processing::bevel::level_line::band_side_tagging_ends::{
-    tag_band, tag_sides, SideReach,
-};
-use geometry_processing::bevel::level_line::chain_on_the_mesh;
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::{
-    BandProfile, ChainField, GapFillRefusal, LevelLineMesh,
-};
-use vector_math::{Vector2, Vector3};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::band_room;
+use solidmesh::bevel::level_line::band_side_groups::group_sides;
+use solidmesh::bevel::level_line::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
+use solidmesh::bevel::level_line::band_side_tagging_ends::{tag_band, tag_sides, SideReach};
+use solidmesh::bevel::level_line::chain_on_the_mesh;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::{BandProfile, ChainField, GapFillRefusal, LevelLineMesh};
+use solidmesh_math::{Vector2, Vector3};
 
 use crate::crease_dies_out_fixtures;
 use crate::level_line_feature_edges::feature_edges_over;

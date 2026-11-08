@@ -7,9 +7,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::bvh::{BvhTree, BvhTreeItemData, TradeOffBvhConstructor};
-use vector_math::ieee_math::{max_f64, min_f64};
-use vector_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
+use solidmesh_math::bvh::{BvhTree, BvhTreeItemData, TradeOffBvhConstructor};
+use solidmesh_math::ieee_math::{max_f64, min_f64};
+use solidmesh_math::{AxisAlignedBoundingBox, Plane, Vector3, Vector3Float};
 
 use crate::face::{Face, FaceList};
 use crate::face_split::{clip_edge_at_plane, SplitData};

@@ -4,10 +4,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap::chain_ceiling;
-use geometry_processing::bevel::level_line::band_gap_reading::read_room;
-use geometry_processing::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh::bevel::level_line::band_gap::chain_ceiling;
+use solidmesh::bevel::level_line::band_gap_reading::read_room;
+use solidmesh::bevel::level_line::{BandProfile, RoomReading, WorkBudget};
+use solidmesh_math::{Matrix4X4, Vector3};
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_room_geometry::box_with_square_hole;

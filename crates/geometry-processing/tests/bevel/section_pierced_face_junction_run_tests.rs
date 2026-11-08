@@ -8,15 +8,15 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use geometry_processing::bevel::sections::section_smooth_side::{self, SmoothSidePlace};
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_smooth_side::{self, SmoothSidePlace};
+use solidmesh::bevel::sections::{
     section_builder_run, section_face_rebuild, section_fan_walk, section_loft,
     section_surface_walk, SectionKind, SectionPool, SectionRun,
 };
-use geometry_processing::bevel::surface::{SurfaceBevelPlan, SurfaceVertexPool};
-use geometry_processing::topology::FeatureEdgeSet;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::Vector3;
+use solidmesh::bevel::surface::{SurfaceBevelPlan, SurfaceVertexPool};
+use solidmesh::topology::FeatureEdgeSet;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::inner_face_test_mesh;
 use crate::section_pierced_face_readings::{

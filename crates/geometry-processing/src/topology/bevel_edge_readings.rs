@@ -19,7 +19,7 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::{Mesh, MeshEdgeGraph};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::bevel_edge_group::{BevelEdgeGroup, BevelSelectionKind};
 use super::bevel_edge_group_resolver::{self, MatchTolerances};

@@ -10,7 +10,7 @@ use super::{
     SurfaceStripTrimmedAtTheCrossing, SurfaceVertexPool,
 };
 use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// Where the strip STOPS - a parameter standing strictly clear of the notch's
 /// deepest point (`exit`) on one side and of everything the strip's OTHER end reaches on the other,

@@ -4,9 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::gap_fill;
-use geometry_processing::bevel::level_line::GapFillResult;
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::gap_fill;
+use solidmesh::bevel::level_line::GapFillResult;
+use solidmesh_math::Vector3;
 
 use crate::end_face_builds::{at_bend, build_chains, FlatEnds};
 use crate::fillet_thin_front_fin::profile_of;

@@ -5,9 +5,9 @@
 use std::collections::HashSet;
 use std::f64::consts::PI;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{gap_fill, BandProfile, GapFillRefusal};
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{cube_solid, signed_volume, signed_volume_of};

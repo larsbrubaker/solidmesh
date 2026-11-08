@@ -13,7 +13,7 @@
 //! an index coincidence, which is the pool having welded two of them into one - so nothing is
 //! decided by a tolerance here beyond the fan's own smallest triangle.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::{surface_fan, surface_ring, SurfaceVertexPool};
 

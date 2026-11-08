@@ -11,17 +11,17 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::bevel_chain_linker::{self, BevelSweptChain};
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_cut_edge,
     surface_mixed_corner_read_off_the_edge_plans, surface_mixed_corner_ring_schedule,
     surface_mixed_corner_run_out, SurfaceBevelPlan, SurfaceBuildOptions, SurfaceEdgePlan,
     SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerWall, SurfaceVertexPool,
 };
-use geometry_processing::topology::{EdgeConvexity, FaceRegionCache};
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh::topology::{EdgeConvexity, FaceRegionCache};
+use solidmesh_math::{math_helper, Matrix4X4, Vector3};
+use solidmesh_mesh::csg::boolean_processing::{classify_boolean_operand, BooleanOperandVerdict};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::shell_count;

@@ -4,8 +4,8 @@
 
 use std::collections::HashSet;
 
-use geometry_processing::bevel::level_line::BandProfile;
-use geometry_processing::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
+use solidmesh::bevel::level_line::BandProfile;
+use solidmesh::bevel::part::surface_part_builder::BevelSurfacePartBuilder;
 
 use crate::five_hole_plate_fixture as fixture;
 

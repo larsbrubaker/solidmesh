@@ -25,7 +25,7 @@
 //! closed form `h = r - sqrt(r^2 - (D / 2)^2)`, `D` the setbacks' overlap. The level line's crest
 //! fill (`gap_fill_crest`) builds the strips on these rows.
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 /// One picked edge's strip: the edge and where its rows stand.
 pub struct SeamStrip {

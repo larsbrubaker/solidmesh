@@ -10,7 +10,7 @@
 //! a vertex dropped from this set is inside the hull by more than any transform's rounding, so it
 //! can never be the extreme along any axis.
 
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
 
 use crate::Mesh;
 

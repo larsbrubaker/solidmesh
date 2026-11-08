@@ -2,7 +2,7 @@
 //! its bounds is read from: built once from the chain's points and setbacks, and thereafter only
 //! visited, so the whole of "which segments could still beat what I have" lives in one place.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 /// One segment per leaf: the convex search over a segment costs hundreds of closest-point
 /// evaluations, so bounding EVERY segment before searching it is worth the extra nodes many times

@@ -8,12 +8,10 @@
 //! `TheDrapedMouthTakesTheFillet` is not run, still open: it plans and publishes, but the
 //! answer is open in 24 places down the wall below the mouth. The parameter rows are a loop.
 
-use geometry_processing::bevel::surface::{surface_mesh_closure, SurfaceEdgePlan};
-use geometry_processing::topology::{
-    bevel_edge_group_resolver, BevelEdgeGroup, FaceGroup, FeatureEdgeSet,
-};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Vector3};
+use solidmesh::bevel::surface::{surface_mesh_closure, SurfaceEdgePlan};
+use solidmesh::topology::{bevel_edge_group_resolver, BevelEdgeGroup, FaceGroup, FeatureEdgeSet};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::bore_test_meshes_edge_bore::{
     create_the_edge_bore_fixture, edge_bore_drill_axis, EDGE_BORE_BLOCK, EDGE_BORE_RADIUS,

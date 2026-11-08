@@ -4,9 +4,9 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_reading;
-use geometry_processing::bevel::level_line::foreign_room_counters;
-use geometry_processing::bevel::level_line::{BandProfile, WorkBudget};
+use solidmesh::bevel::level_line::band_gap_reading;
+use solidmesh::bevel::level_line::foreign_room_counters;
+use solidmesh::bevel::level_line::{BandProfile, WorkBudget};
 
 use crate::grid_hole_plate_fixture;
 

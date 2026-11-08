@@ -12,7 +12,7 @@
 
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_fan;
 use super::surface_mitre_joint_step::SideSeams;

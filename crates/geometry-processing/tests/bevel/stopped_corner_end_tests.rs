@@ -9,12 +9,10 @@
 
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::corner_fill_free_ends::split_round_a_free_end;
-use geometry_processing::bevel::level_line::fillet_arc_rows::build_in_a_stopped_plane;
-use geometry_processing::bevel::level_line::{
-    ChainField, CornerFillPiece, EndRayBound, LevelLineMesh,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::corner_fill_free_ends::split_round_a_free_end;
+use solidmesh::bevel::level_line::fillet_arc_rows::build_in_a_stopped_plane;
+use solidmesh::bevel::level_line::{ChainField, CornerFillPiece, EndRayBound, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::open_chain;
 

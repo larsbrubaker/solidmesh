@@ -6,7 +6,7 @@
 //! strip's fill is `swallowed_side::fill`. A swallowed side needs end rays at both ends
 //! ([`growing_walls`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::swallowed_side::{away_on_side, side_vertices, tolerance, touches};
 use super::virtual_rail_past_the_end::{last_to_leave, PAST_THE_LAST_TOUCH};
@@ -162,7 +162,7 @@ pub fn virtual_run_over(
 
         // Sorted by parameter with the introspective sort, so equal parameters (a chain corner
         // standing on a station) come out in one fixed order. NaN orders first.
-        vector_math::fixed_tie_sort::introspective_sort(&mut run, &mut |p, q| {
+        solidmesh_math::fixed_tie_sort::introspective_sort(&mut run, &mut |p, q| {
             p.1.partial_cmp(&q.1)
                 .unwrap_or_else(|| q.1.is_nan().cmp(&p.1.is_nan()))
         });

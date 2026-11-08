@@ -35,7 +35,7 @@
 // takes the negated branch.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_mitre_joint_step::SideSeams;
 use super::{surface_strip_ends, surface_strip_mitre_rails};

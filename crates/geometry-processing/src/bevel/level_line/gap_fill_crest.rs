@@ -26,7 +26,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::crest_seam_rows::{seam_rows, RowEnd, SeamRowsPair, SeamStrip};
 use super::flat_hole_fill;

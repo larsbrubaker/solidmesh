@@ -8,15 +8,15 @@
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::{
+use sha2::{Digest, Sha256};
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::{
     bounded_maximum, convex_cell_bound, field_bounds, BandProfile, ChainField, FieldCounters,
     LevelLineMesh, PickField, RoomField, WorkBudget,
 };
-use sha2::{Digest, Sha256};
-use vector_math::number_format::format_f64;
-use vector_math::seeded_random::SeededRandom;
-use vector_math::Vector3;
+use solidmesh_math::number_format::format_f64;
+use solidmesh_math::seeded_random::SeededRandom;
+use solidmesh_math::Vector3;
 
 use crate::grid_hole_plate_fixture;
 

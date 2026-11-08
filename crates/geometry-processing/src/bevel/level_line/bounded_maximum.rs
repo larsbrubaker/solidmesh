@@ -18,7 +18,7 @@
 
 use std::rc::Rc;
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::convex_cell_bound::{self, EndPlaneAt};
 use super::{FieldCounters, FieldMaximum, FieldSample, LevelLineWork, WorkError};

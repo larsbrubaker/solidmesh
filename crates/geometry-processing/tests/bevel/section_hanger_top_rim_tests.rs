@@ -6,12 +6,12 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use polygon_mesh::Mesh;
-use vector_math::{Vector2, Vector3};
+use solidmesh_math::{Vector2, Vector3};
+use solidmesh_mesh::Mesh;
 
-use geometry_processing::bevel::sections::section_routing;
-use geometry_processing::topology::bevel_edge_group_resolver::{self, BevelEdgeGroupResolution};
-use polygon_mesh::CancelToken;
+use solidmesh::bevel::sections::section_routing;
+use solidmesh::topology::bevel_edge_group_resolver::{self, BevelEdgeGroupResolution};
+use solidmesh_mesh::CancelToken;
 
 use crate::picture_hanger_test_mesh as fixture;
 use crate::surface_test_build::{

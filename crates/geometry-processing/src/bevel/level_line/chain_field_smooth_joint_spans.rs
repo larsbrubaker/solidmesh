@@ -4,7 +4,7 @@
 //! either side - so the parameter read near the joint moves continuously across it, and the
 //! readings are carried into and out of that span. Outside the scope nothing changes.
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::ChainField;
 

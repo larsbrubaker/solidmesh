@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use geometry_processing::bevel::level_line::{rail_stations, ChainField, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::{rail_stations, ChainField, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 use crate::chain_field_fixtures::open_chain;
 

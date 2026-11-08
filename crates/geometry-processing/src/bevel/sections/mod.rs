@@ -8,23 +8,23 @@
 //! ([`section_routing`]), the cut of a run's smooth side ([`section_smooth_side`]), the reading of
 //! which side of each run is smooth ([`section_smooth_seam`]), the rewrite of the part's faces
 //! around every chain vertex ([`section_face_rebuild`]), the region
-//! re-mesh ([`section_fan_remesh`]), the mixed corner's reading ([`section_mixed_corner`]) and the
+//! re-mesh (`section_fan_remesh`), the mixed corner's reading ([`section_mixed_corner`]) and the
 //! whole build published as one closed mesh ([`section_assembly`]).
 
 pub mod bevel_section;
-pub mod section_absorbed_splits;
+pub(crate) mod section_absorbed_splits;
 pub mod section_assembly;
 pub mod section_builder;
-pub mod section_builder_offsets;
+pub(crate) mod section_builder_offsets;
 pub mod section_builder_run;
-pub mod section_builder_station;
+pub(crate) mod section_builder_station;
 pub mod section_builder_walked_side;
 pub mod section_corner;
 pub mod section_end;
-pub mod section_end_splice;
+pub(crate) mod section_end_splice;
 pub mod section_face_rebuild;
 mod section_face_rebuild_fold;
-pub mod section_fan_remesh;
+pub(crate) mod section_fan_remesh;
 pub mod section_fan_walk;
 pub mod section_junction;
 pub mod section_junction_build;
@@ -36,14 +36,14 @@ mod section_pool;
 pub mod section_room;
 pub mod section_room_smooth_side;
 pub mod section_routing;
-pub mod section_routing_clauses;
+pub(crate) mod section_routing_clauses;
 pub mod section_run;
 pub mod section_smooth_seam;
 pub mod section_smooth_side;
 pub mod section_smooth_side_boundary;
-pub mod section_smooth_side_facets;
-pub mod section_smooth_side_holes;
-pub mod section_smooth_side_junction_rim;
+pub(crate) mod section_smooth_side_facets;
+pub(crate) mod section_smooth_side_holes;
+pub(crate) mod section_smooth_side_junction_rim;
 pub mod section_smooth_side_triangulate;
 pub mod section_split_blend;
 pub mod section_surface_walk;

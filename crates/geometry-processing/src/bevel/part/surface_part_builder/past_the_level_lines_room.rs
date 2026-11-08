@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 use crate::bevel::level_line::{level_line_routing, RoomReadingKind};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelGroupResult};
-use polygon_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::{BevelSurfacePartBuilder, RimLoop, SurfacePartBuildError};
 use crate::bevel::part::self_intersection_check::the_answer_intersects_itself_where_the_source_did_not;

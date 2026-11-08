@@ -8,7 +8,7 @@
 //! cut's planes. It works on the welding [`SurfaceVertexPool`] and tidies what it leaves with
 //! [`surface_ring::without_repeats`].
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::surface_ring;
 use super::SurfaceVertexPool;

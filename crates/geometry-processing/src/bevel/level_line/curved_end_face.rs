@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 const COPLANAR_TOLERANCE: f64 = 1e-6;
 

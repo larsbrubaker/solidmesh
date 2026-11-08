@@ -10,15 +10,15 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use geometry_processing::bevel::sections::section_corner::{self, CornerRefusal};
-use geometry_processing::bevel::sections::section_fan_walk;
-use geometry_processing::bevel::sections::section_junction_build::{self, JunctionRefusal};
-use geometry_processing::bevel::sections::{JunctionPiece, SectionKind, SectionPool};
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{ChainEdge, FeatureEdge};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::math_helper::{self, degrees_to_radians};
-use vector_math::Vector3;
+use solidmesh::bevel::sections::section_corner::{self, CornerRefusal};
+use solidmesh::bevel::sections::section_fan_walk;
+use solidmesh::bevel::sections::section_junction_build::{self, JunctionRefusal};
+use solidmesh::bevel::sections::{JunctionPiece, SectionKind, SectionPool};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{ChainEdge, FeatureEdge};
+use solidmesh_math::math_helper::{self, degrees_to_radians};
+use solidmesh_math::Vector3;
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use crate::inner_face_test_mesh;
 use crate::rigid_motion_meshes::{move_mesh, the_motions};

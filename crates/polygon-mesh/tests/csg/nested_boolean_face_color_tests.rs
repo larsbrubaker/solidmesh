@@ -4,11 +4,11 @@
 //! added on top of the mixed-colour result. A colour may never show up on a plane where no face
 //! of that colour ever was.
 
-use polygon_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Color;
-use vector_math::{Matrix4X4, Vector3};
+use solidmesh_math::Color;
+use solidmesh_math::{Matrix4X4, Vector3};
+use solidmesh_mesh::csg::{boolean_processing, BooleanOptions, CsgModes};
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 const PINK: Color = Color::rgb(0xFE, 0x8D, 0x86);
 const GREEN: Color = Color::rgb(0xB0, 0xFE, 0x86);

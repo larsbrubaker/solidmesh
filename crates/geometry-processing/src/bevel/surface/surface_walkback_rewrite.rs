@@ -11,8 +11,8 @@
 use std::rc::Rc;
 
 use indexmap::IndexMap;
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::{
     surface_cut_clip, surface_ring, SurfaceFacetCut, SurfaceRegionWalkback,

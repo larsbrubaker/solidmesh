@@ -10,7 +10,7 @@
 //! setback: its room starts from the bare field's reading as a lower bound and is bracketed by
 //! doubling and bisected on the field itself, over every edge (`room_on_a_stopped_field`).
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use std::rc::Rc;
 
@@ -186,9 +186,9 @@ pub fn bracket_from_one_bare_pass(
         }
 
         low_ends[i] = approach / (highest_unit + extra_unit);
-        bracket_low = vector_math::ieee_math::min_f64(bracket_low, low_ends[i]);
+        bracket_low = solidmesh_math::ieee_math::min_f64(bracket_low, low_ends[i]);
         bracket_high =
-            vector_math::ieee_math::min_f64(bracket_high, approach / (lowest_unit + extra_unit));
+            solidmesh_math::ieee_math::min_f64(bracket_high, approach / (lowest_unit + extra_unit));
     }
 
     if !(bracket_low > 0.0) || bracket_high.is_infinite() {
@@ -251,7 +251,7 @@ pub fn room_for(
             let approach = bare
                 .min_along_segment(mesh.position(low), mesh.position(high))?
                 .value;
-            best = vector_math::ieee_math::min_f64(best, approach / (highest_unit + extra_unit));
+            best = solidmesh_math::ieee_math::min_f64(best, approach / (highest_unit + extra_unit));
         }
 
         return Ok(best);
@@ -318,7 +318,7 @@ fn room_on_a_stopped_field(
             return Ok(0.0);
         }
 
-        lo = vector_math::ieee_math::min_f64(lo, approach / (highest_unit + extra_unit));
+        lo = solidmesh_math::ieee_math::min_f64(lo, approach / (highest_unit + extra_unit));
     }
 
     // A lower bound that cannot be read (no positive setback, a NaN) starts from nothing.

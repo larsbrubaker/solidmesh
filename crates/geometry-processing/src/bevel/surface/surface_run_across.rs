@@ -13,8 +13,8 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 use crate::topology::FaceGroup;
 

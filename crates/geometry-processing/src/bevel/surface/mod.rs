@@ -27,7 +27,7 @@
 //!   ([`SurfaceSplitsOnASegment`]) and a band running off the face it lands on, over a stretch or
 //!   the whole span ([`SurfaceBandRunsOffOverAStretch`],
 //!   [`surface_band_runs_off_the_face_beyond`]), and the band's outline borrowed across a chorded
-//!   wall's creases ([`surface_band_outline`]); the run of a walked-back tangent line each strip
+//!   wall's creases (`surface_band_outline`); the run of a walked-back tangent line each strip
 //!   sews to ([`surface_seam_over_the_edge`]).
 //! - **Strip ends.** A chain end's reading ([`SurfaceChainEndReading`]) and the face carrying on
 //!   past it ([`SurfaceFaceCarriesOnWayOn`]); the strip ending on the hull
@@ -45,7 +45,7 @@
 //!   ([`SurfaceStripBiteRows`]) and its faces extended out to the strip
 //!   ([`surface_standing_feature_faces`]), the stretches of a feature a band passes under
 //!   ([`surface_standing_feature_stretch`]) and the builder's step that reads every standing
-//!   feature into bites and notches ([`surface_builder_standing_features`]).
+//!   feature into bites and notches (`surface_builder_standing_features`).
 //! - **Run-outs and crossings.** The run-out's columns ([`SurfaceRunOutColumnWindow`],
 //!   [`SurfaceRunOutColumnWalk`]) and its crossings of a band ([`SurfaceRunOutMeetsTheBand`],
 //!   [`SurfaceStripTrimmedAtTheCrossing`], [`SurfaceCrossingAtTheMitre`]), and the builder's
@@ -55,15 +55,15 @@
 //!   past the shared face's rim ([`SurfaceMitreOverTheFaceBeyond`]), the short chord whose two
 //!   mitres crossed over on some of its rails ([`SurfaceMitreConsumesTheRail`]), the patch
 //!   a reflex mitre's narrower arc covers past its far rim ([`SurfaceMitreSliver`]), the mitre of two
-//!   arcs chorded at different steps ([`surface_mitre_chorded_apart`]) and the ring two strips share
-//!   at a mitre ([`surface_strip_mitre`], its rails [`surface_strip_mitre_rails`]), and the two
-//!   staircase rings a consumed chord and its neighbours meet on ([`surface_staircase_mitre`]).
+//!   arcs chorded at different steps (`surface_mitre_chorded_apart`) and the ring two strips share
+//!   at a mitre (`surface_strip_mitre`, its rails [`surface_strip_mitre_rails`]), and the two
+//!   staircase rings a consumed chord and its neighbours meet on (`surface_staircase_mitre`).
 //! - **Corners and junctions.** The mixed corner ([`SurfaceMixedCorner`]), the rolling ball's
 //!   spine round it ([`SurfaceMixedCornerSpine`]), its dual canal ([`SurfaceMixedCornerDualFrame`],
 //!   [`SurfaceMixedCornerDualCanal`], [`SurfaceMixedCornerDualGrid`],
 //!   [`SurfaceMixedCornerDualWallCrossing`]) and the cap a leaning corner's run-out gives up
-//!   ([`surface_mixed_corner_dual_cap`]) and its dual-canal patch
-//!   ([`surface_mixed_corner_dual_patch`]), its rows ([`SurfaceMixedCornerRows`]), walls
+//!   (`surface_mixed_corner_dual_cap`) and its dual-canal patch
+//!   (`surface_mixed_corner_dual_patch`), its rows ([`SurfaceMixedCornerRows`]), walls
 //!   ([`SurfaceMixedCornerWall`], [`SurfaceMixedCornerFaces`]) and run-out
 //!   ([`SurfaceRunOutCarry`], [`SurfaceRunOutMeetsAWallBand`]); the three-edge junction
 //!   ([`SurfaceMixedJunction`], [`SurfaceJunctionKind`]) with its two-crease rings
@@ -74,11 +74,11 @@
 //! - **The pass around the build.** The groups sharing an edge linked as one selection
 //!   ([`surface_shared_edge_network`]), a region and the cuts asked of it
 //!   ([`SurfaceRegionWalkback`]) with the walkback's result ([`SurfaceWalkbackRuns`]), its band
-//!   reach and standing-feature guard ([`surface_walkback_bands`]) and the tangent runs each cut
+//!   reach and standing-feature guard (`surface_walkback_bands`) and the tangent runs each cut
 //!   leaves ([`surface_walkback_tangent_runs`]), the two-pass rewrite of the mesh the walkback
-//!   cuts ([`surface_walkback_rewrite`]), the walkback itself, which drives them all
+//!   cuts (`surface_walkback_rewrite`), the walkback itself, which drives them all
 //!   ([`surface_face_walkback`]), the room
-//!   and the build agreeing on their run-offs ([`surface_run_off_agreement`]), the seams re-read
+//!   and the build agreeing on their run-offs (`surface_run_off_agreement`), the seams re-read
 //!   after the later cuts ([`surface_seam_re_read`]) and the warning where a run stops short
 //!   ([`surface_run_stops_short`]).
 //! - **The builder.** The pass itself, a mesh and plans in and the bevelled mesh out
@@ -87,7 +87,7 @@
 //!   neighbours.
 
 mod surface_band_end;
-pub mod surface_band_outline;
+pub(crate) mod surface_band_outline;
 mod surface_band_runs_off_over_a_stretch;
 pub mod surface_band_runs_off_the_face_beyond;
 pub mod surface_bevel_builder;
@@ -98,10 +98,10 @@ mod surface_bevel_plan;
 mod surface_bevel_planless_loop;
 pub mod surface_bevel_stitch;
 mod surface_bite_shared_sides;
-pub mod surface_bitten_feature_faces;
+pub(crate) mod surface_bitten_feature_faces;
 mod surface_builder_bitten_strips;
-pub mod surface_builder_mixed_corners;
-pub mod surface_builder_standing_features;
+pub(crate) mod surface_builder_mixed_corners;
+pub(crate) mod surface_builder_standing_features;
 mod surface_chain_end_reading;
 pub mod surface_chain_join;
 pub mod surface_chain_opens_at_the_junction;
@@ -113,7 +113,7 @@ mod surface_crossing_at_the_mitre;
 pub mod surface_cut_clip;
 mod surface_edge_plan;
 mod surface_edge_roles;
-pub mod surface_end_across_the_corner;
+pub(crate) mod surface_end_across_the_corner;
 pub mod surface_end_cap_around_a_feature;
 pub mod surface_end_cut;
 pub mod surface_end_cut_above_the_crossing;
@@ -121,7 +121,7 @@ pub mod surface_end_follows_the_walked_chords;
 pub mod surface_end_gains_the_section;
 pub mod surface_end_gives_up_the_section;
 pub mod surface_end_notch;
-pub mod surface_face_carries_on;
+pub(crate) mod surface_face_carries_on;
 pub mod surface_face_walkback;
 mod surface_facet_cut;
 pub mod surface_fan;
@@ -130,7 +130,7 @@ pub mod surface_interrupted_crease;
 pub mod surface_junction_band_ends;
 mod surface_line;
 pub mod surface_mesh_closure;
-pub mod surface_mitre_chorded_apart;
+pub(crate) mod surface_mitre_chorded_apart;
 mod surface_mitre_consumes_the_rail;
 pub mod surface_mitre_joint_step;
 pub mod surface_mitre_on_a_chorded_run;
@@ -143,12 +143,12 @@ mod surface_mixed_corner;
 pub mod surface_mixed_corner_bites;
 pub mod surface_mixed_corner_cut_edge;
 mod surface_mixed_corner_dual_canal;
-pub mod surface_mixed_corner_dual_cap;
+pub(crate) mod surface_mixed_corner_dual_cap;
 mod surface_mixed_corner_dual_frame;
 mod surface_mixed_corner_dual_grid;
-pub mod surface_mixed_corner_dual_patch;
+pub(crate) mod surface_mixed_corner_dual_patch;
 pub mod surface_mixed_corner_dual_wall;
-pub mod surface_mixed_corner_faces;
+pub(crate) mod surface_mixed_corner_faces;
 pub mod surface_mixed_corner_hands_over_at_the_mitre;
 pub mod surface_mixed_corner_patch;
 pub mod surface_mixed_corner_read_off_the_edge_plans;
@@ -165,8 +165,8 @@ pub mod surface_mixed_corner_which_canal;
 mod surface_mixed_junction;
 pub mod surface_mixed_junction_patch;
 pub mod surface_plan_band_ends;
-pub mod surface_plan_edge_reading;
-pub mod surface_plan_recipe;
+pub(crate) mod surface_plan_edge_reading;
+pub(crate) mod surface_plan_recipe;
 mod surface_region_face_grid;
 mod surface_region_walkback;
 pub mod surface_ring;
@@ -179,14 +179,14 @@ pub mod surface_room_end_cut;
 pub mod surface_room_fixed_point;
 pub mod surface_room_measure;
 pub mod surface_room_mitre;
-pub mod surface_room_notch_sides;
+pub(crate) mod surface_room_notch_sides;
 pub mod surface_room_run_out;
 pub mod surface_room_standing_feature;
 pub mod surface_row_zip;
 pub mod surface_run_across;
 pub mod surface_run_across_walk;
-pub mod surface_run_off_agreement;
-pub mod surface_run_out_carry;
+pub(crate) mod surface_run_off_agreement;
+pub(crate) mod surface_run_out_carry;
 pub mod surface_run_out_column_ends;
 mod surface_run_out_column_walk;
 mod surface_run_out_column_window;
@@ -198,7 +198,7 @@ pub mod surface_seam_re_read;
 pub mod surface_shared_edge_network;
 pub mod surface_split_sewing;
 mod surface_splits_on_a_segment;
-pub mod surface_staircase_mitre;
+pub(crate) mod surface_staircase_mitre;
 pub mod surface_standing_feature_faces;
 pub mod surface_standing_feature_stretch;
 mod surface_standing_feature_withheld;
@@ -208,8 +208,8 @@ mod surface_strip_bitten_by_a_feature;
 pub mod surface_strip_ends;
 pub mod surface_strip_ends_at_a_landing_notch;
 mod surface_strip_ends_on_the_hull;
-pub mod surface_strip_ends_over_the_face_beyond;
-pub mod surface_strip_mitre;
+pub(crate) mod surface_strip_ends_over_the_face_beyond;
+pub(crate) mod surface_strip_mitre;
 pub mod surface_strip_mitre_rails;
 mod surface_strip_notched_by_a_feature;
 mod surface_strip_station;
@@ -217,19 +217,19 @@ pub mod surface_strip_tail_around_a_feature;
 mod surface_strip_trimmed_at_the_crossing;
 mod surface_strip_trimmed_by_the_face_beyond;
 pub mod surface_two_corners_at_one_vertex;
-pub mod surface_two_crease_junction;
-pub mod surface_two_crease_junction_patch;
+pub(crate) mod surface_two_crease_junction;
+pub(crate) mod surface_two_crease_junction_patch;
 mod surface_two_crease_junction_rings;
 pub mod surface_two_crease_junction_wall;
 mod surface_vertex_pool;
-pub mod surface_walkback_bands;
+pub(crate) mod surface_walkback_bands;
 mod surface_walkback_result;
-pub mod surface_walkback_rewrite;
+pub(crate) mod surface_walkback_rewrite;
 pub mod surface_walkback_standing_features;
 pub mod surface_walkback_tangent_runs;
 pub mod surface_wall_ran_out;
 mod surface_wall_section;
-pub mod surface_wall_stands_clear;
+pub(crate) mod surface_wall_stands_clear;
 
 pub use surface_band_end::SurfaceBandEnd;
 pub use surface_band_runs_off_over_a_stretch::SurfaceBandRunsOffOverAStretch;

@@ -8,10 +8,10 @@
 //! The note reports what `classify_boolean_operand` makes of each operand, so the page can show
 //! that a self-intersecting or inside-out operand is taken rather than refused.
 
-use polygon_mesh::csg::boolean_processing::{classify_boolean_operand, do_boolean};
-use polygon_mesh::csg::{BooleanOperandVerdict, BooleanOptions, CsgModes, WindingRule};
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::Matrix4X4;
+use solidmesh::math::Matrix4X4;
+use solidmesh::mesh::csg::boolean_processing::{classify_boolean_operand, do_boolean};
+use solidmesh::mesh::csg::{BooleanOperandVerdict, BooleanOptions, CsgModes, WindingRule};
+use solidmesh::mesh::{CancelToken, Mesh};
 
 use crate::shapes::Shape;
 use crate::Scene;

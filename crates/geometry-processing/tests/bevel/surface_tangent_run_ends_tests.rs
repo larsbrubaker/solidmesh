@@ -5,11 +5,9 @@
 //! reading is made at the VERTICES: an edge is in the run while both of its ends are inside the
 //! band.
 
-use geometry_processing::bevel::surface::surface_walkback_tangent_runs::runs_along;
-use geometry_processing::bevel::surface::{
-    SurfaceBandEnd, SurfaceFacetCut, SurfaceLine, SurfaceVertexPool,
-};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh::bevel::surface::surface_walkback_tangent_runs::runs_along;
+use solidmesh::bevel::surface::{SurfaceBandEnd, SurfaceFacetCut, SurfaceLine, SurfaceVertexPool};
+use solidmesh_math::{Vector3, Vector3Float};
 
 /// The run stops at the last vertex inside the band even where the straddling edge's MIDDLE is
 /// inside it - an edge read at its midpoint is kept or dropped by up to half its own length.

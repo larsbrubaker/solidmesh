@@ -8,13 +8,13 @@
 //! face, where it does not part the runs (this run's next vertex off it on the band's side, the
 //! other's in it or past it), or where it would cut into that face past the corner (a faceted
 //! curved face whose facets about the corner stand on both sides of it), the plane is read along
-//! the crease running in ([`seam_plane`]). [`flip_corner_plane_paths`] says which rule ran. The
+//! the crease running in (`seam_plane`). [`flip_corner_plane_paths`] says which rule ran. The
 //! clip is a stopped end's (`stopped_end_clip.rs`): an [`EndRayBound`] of no reach marked
 //! `stopped`, so the band stops on the plane and the fill cuts the end flat there.
 
 use std::collections::HashSet;
 
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use super::super::float_grid;
 use super::chain_on_the_mesh::{chain_edges, per_edge_convexity};

@@ -17,17 +17,17 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
+use solidmesh::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_run_out, surface_room,
     SurfaceBandEnd, SurfaceBevelPlan, SurfaceBuildOptions, SurfaceEdgePlan, SurfaceMixedCorner,
     SurfaceMixedCornerWall, SurfaceRunOutColumnWindow, SurfaceRunOutMeetsAWallBand, SurfaceStrip,
     SurfaceVertexPool,
 };
-use geometry_processing::bevel::BevelAdvisoryCode;
-use geometry_processing::topology::{FaceRegionCache, FeatureEdge};
-use polygon_mesh::csg::manifold_import;
-use polygon_mesh::{CancelToken, Mesh};
-use vector_math::{math_helper, Vector3};
+use solidmesh::bevel::BevelAdvisoryCode;
+use solidmesh::topology::{FaceRegionCache, FeatureEdge};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::csg::manifold_import;
+use solidmesh_mesh::{CancelToken, Mesh};
 
 use crate::lobed_prism_meshes;
 use crate::mesh_measurements::{shell_count, signed_volume};

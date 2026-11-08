@@ -3,11 +3,9 @@
 //! sides are ONE smooth surface, so the sides do not divide, and that is what a dying-out end
 //! MEANS, not a defect. The fixtures are `crease_dies_out_fixtures.rs`.
 
-use geometry_processing::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
-use geometry_processing::bevel::level_line::{
-    BandGapRefusal, BandGapResult, BandProfile, GapFillResult,
-};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::gap_fill::{self, DEFAULT_FILLET_SEGMENTS};
+use solidmesh::bevel::level_line::{BandGapRefusal, BandGapResult, BandProfile, GapFillResult};
+use solidmesh_math::Vector3;
 
 use crate::crease_dies_out_fixtures::{
     build, build_chain, chain, neighbours, seam_epsilon, swollen_ridge_block,

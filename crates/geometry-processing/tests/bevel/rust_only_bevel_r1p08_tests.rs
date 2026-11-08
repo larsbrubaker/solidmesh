@@ -6,17 +6,17 @@
 //! hand-built case.
 
 use indexmap::IndexMap;
-use polygon_mesh::solids::platonic_solids;
-use polygon_mesh::MeshEdgeGraph;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::solids::platonic_solids;
+use solidmesh_mesh::MeshEdgeGraph;
 
-use geometry_processing::bevel::sections::section_split_blend::SplitPlacement;
-use geometry_processing::bevel::sections::{
+use solidmesh::bevel::sections::section_split_blend::SplitPlacement;
+use solidmesh::bevel::sections::{
     section_builder, section_builder_walked_side, section_fan_walk, section_room,
     section_smooth_side_boundary, BevelSection, JunctionSection, SectionAbsorbedSplits,
     SectionPool,
 };
-use geometry_processing::topology::FeatureEdgeSet;
+use solidmesh::topology::FeatureEdgeSet;
 
 /// Six stations, two of them split: the unsplit four are the stations, each gap carries the split
 /// points between its ends, and a chain vertex reads back its absorbed point.

@@ -5,12 +5,12 @@
 
 use std::sync::Arc;
 
-use polygon_mesh::ray_tracer::{
+use solidmesh_math::ColorF;
+use solidmesh_math::{IntersectionType, Matrix4X4, Plane, Ray, Vector2Float, Vector3};
+use solidmesh_mesh::ray_tracer::{
     wrap_up, BoundingVolumeHierarchy, BoxShape, BvhCreationOptions, MaterialRef, RayTracerError,
     SolidMaterial, SphereShape, Traceable, TraceableRef, Transform, TriangleShape, TriangleShapeUv,
 };
-use vector_math::ColorF;
-use vector_math::{IntersectionType, Matrix4X4, Plane, Ray, Vector2Float, Vector3};
 
 fn red() -> MaterialRef {
     Arc::new(SolidMaterial::new(ColorF::RED, 0.0, 0.0, 2.0))
@@ -46,7 +46,7 @@ fn rust_only_sphere_front_and_back_hits() {
 #[test]
 fn rust_only_material_defaults_and_missing_material() {
     let material = SolidMaterial::new(ColorF::BLUE, 0.25, 0.5, 3.0);
-    use polygon_mesh::ray_tracer::MaterialAbstract;
+    use solidmesh_mesh::ray_tracer::MaterialAbstract;
     assert_eq!(material.reflection(), 0.25);
     assert_eq!(material.transparency(), 0.5);
     assert_eq!(material.gloss(), 3.0);

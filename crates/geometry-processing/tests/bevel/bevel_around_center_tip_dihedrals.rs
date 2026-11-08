@@ -6,8 +6,8 @@
 
 use std::collections::HashMap;
 
-use polygon_mesh::Mesh;
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
+use solidmesh_mesh::Mesh;
 
 /// The sharpest bend in the region, how many edges were measured, and
 /// the six sharpest named for a failure message. Panics where the region selected no edges:

@@ -4,9 +4,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use geometry_processing::bevel::level_line::consumed_to_the_rim::rims_the_band_ends_on;
-use geometry_processing::bevel::level_line::{ChainField, LevelLineMesh};
-use vector_math::Vector3;
+use solidmesh::bevel::level_line::consumed_to_the_rim::rims_the_band_ends_on;
+use solidmesh::bevel::level_line::{ChainField, LevelLineMesh};
+use solidmesh_math::Vector3;
 
 /// The working mesh, the chain's edges and the chain's points.
 type Fixture = (Rc<RefCell<LevelLineMesh>>, Vec<(i32, i32)>, Vec<Vector3>);

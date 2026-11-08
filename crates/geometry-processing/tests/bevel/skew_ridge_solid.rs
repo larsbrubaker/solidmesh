@@ -10,8 +10,8 @@
 //! over**, which puts the LONG rail of the ridge strip on one face at one end and on the other face
 //! at the other end.
 
-use polygon_mesh::Mesh;
-use vector_math::{math_helper, Vector3};
+use solidmesh_math::{math_helper, Vector3};
+use solidmesh_mesh::Mesh;
 
 use crate::half_space_solids::{self, Wall};
 

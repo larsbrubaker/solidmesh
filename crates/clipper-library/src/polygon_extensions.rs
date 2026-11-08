@@ -8,7 +8,7 @@ use super::clipper_error::ClipperError;
 use super::clipper_statics::execute;
 use super::int_point_extensions::{calc_intersection, get_intersection, int_point, Intersection};
 use super::polygons_extensions::PolygonsExtensions;
-use vector_math::rectangle_double::RectangleDouble;
+use solidmesh_math::rectangle_double::RectangleDouble;
 
 /// Helpers on a single polygon.
 pub trait PolygonExtensions {

@@ -13,8 +13,8 @@
 use std::collections::VecDeque;
 
 use indexmap::{IndexMap, IndexSet};
-use polygon_mesh::{Mesh, MeshEdgeGraph};
-use vector_math::{Vector3, Vector3Float};
+use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
 
 use super::section_smooth_side::SmoothSideCut;
 use super::section_smooth_side_triangulate::{

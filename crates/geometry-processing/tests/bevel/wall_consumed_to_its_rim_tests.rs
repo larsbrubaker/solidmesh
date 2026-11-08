@@ -2,13 +2,13 @@
 //! the wall is the wall's own bottom rim, so the wall is consumed down to that rim. It must build,
 //! and just above it must not.
 
-use geometry_processing::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
-use geometry_processing::bevel::level_line::open_gap_fill::ends_site;
-use geometry_processing::bevel::level_line::{
+use solidmesh::bevel::level_line::band_gap_entry_points::{self, BandGapBuildOptions};
+use solidmesh::bevel::level_line::open_gap_fill::ends_site;
+use solidmesh::bevel::level_line::{
     band_gap_reading, gap_fill, BandGapRefusal, BandGapResult, BandProfile, GapFillRefusal,
     GapFillResult,
 };
-use vector_math::Vector3;
+use solidmesh_math::Vector3;
 
 use crate::level_line_feature_edges::feature_edges_over;
 use crate::level_line_test_geometry::{cube_solid, signed_volume, signed_volume_of};

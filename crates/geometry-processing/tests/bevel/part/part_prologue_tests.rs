@@ -5,14 +5,14 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::part::prologue::{prepare, PreparedPart, SharedPart};
-use geometry_processing::bevel::part::BevelPartRequest;
-use geometry_processing::bevel::{BevelAdvisoryCode, BevelGroupResult};
-use geometry_processing::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
-use geometry_processing::topology::BevelEdgeGroup;
-use polygon_mesh::solids::platonic_solids::create_cube;
-use polygon_mesh::Mesh;
-use vector_math::Matrix4X4;
+use solidmesh::bevel::part::prologue::{prepare, PreparedPart, SharedPart};
+use solidmesh::bevel::part::BevelPartRequest;
+use solidmesh::bevel::{BevelAdvisoryCode, BevelGroupResult};
+use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
+use solidmesh::topology::BevelEdgeGroup;
+use solidmesh_math::Matrix4X4;
+use solidmesh_mesh::solids::platonic_solids::create_cube;
+use solidmesh_mesh::Mesh;
 
 /// A 1 mm fillet of `groups` on `mesh`, carried out to the operation by `source_to_operation`.
 fn fillet(

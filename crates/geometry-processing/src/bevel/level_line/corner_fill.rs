@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use std::rc::Rc;
 

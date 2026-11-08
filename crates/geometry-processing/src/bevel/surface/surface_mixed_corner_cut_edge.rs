@@ -2,7 +2,7 @@
 //! sagitta guard of the wall's chords, how far apart two skew lines stand, and the cut edge's walk
 //! ([`try_find`], [`try_find_for_the_bead`], [`try_walk`]).
 
-use vector_math::{ieee_math, Vector3};
+use solidmesh_math::{ieee_math, Vector3};
 
 use super::surface_mixed_corner_read_off_the_edge_plans::rests_on_the_crease_of_the_face_shared_with;
 use super::{SurfaceEdgePlan, SurfaceLine, SurfaceWallSection};
