@@ -89,7 +89,7 @@ impl TrackBallController {
                 .transform(Matrix4X4::create_rotation_y(length_on_surface_radi));
 
             // get the angle that this distance travels around the sphere
-            let angle_to_travel = delta_on_surface.y.atan2(delta_on_surface.x);
+            let angle_to_travel = libm::atan2(delta_on_surface.y, delta_on_surface.x);
 
             // now rotate that position about z in the direction of the screen vector
             position_about_y.transform(Matrix4X4::create_rotation_z(angle_to_travel))

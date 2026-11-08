@@ -23,9 +23,9 @@ fn uv_sphere(r: f64, rings: i32, segments: i32) -> DMesh3 {
         for j in 0..segments {
             let theta = 2.0 * std::f64::consts::PI * j as f64 / segments as f64;
             m.append_vertex([
-                r * phi.sin() * theta.cos(),
-                r * phi.sin() * theta.sin(),
-                r * phi.cos(),
+                r * libm::sin(phi) * libm::cos(theta),
+                r * libm::sin(phi) * libm::sin(theta),
+                r * libm::cos(phi),
             ]);
         }
     }

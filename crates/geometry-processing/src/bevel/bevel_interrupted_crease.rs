@@ -29,7 +29,7 @@ pub struct Leaning {
 /// How far along the run a face has to lean to count as crossing it, as a cosine: the steepest
 /// cap plane a run may stop on ([`MAXIMUM_CAP_PLANE_ANGLE_DEGREES`]).
 pub fn along_the_run_agreement() -> f64 {
-    (MAXIMUM_CAP_PLANE_ANGLE_DEGREES * std::f64::consts::PI / 180.0).cos()
+    libm::cos(MAXIMUM_CAP_PLANE_ANGLE_DEGREES * std::f64::consts::PI / 180.0)
 }
 
 /// Whether a face leaning `agreement` along the run crosses it.
@@ -81,7 +81,7 @@ pub fn crease_resumes_beyond(
         return (0.0, -1);
     };
 
-    let still_the_same_line = (CREASE_CARRIES_ON_DEGREES * std::f64::consts::PI / 180.0).cos();
+    let still_the_same_line = libm::cos(CREASE_CARRIES_ON_DEGREES * std::f64::consts::PI / 180.0);
     let mut nearest = 0.0;
     let mut which = -1;
 
@@ -127,7 +127,7 @@ pub fn both_own_faces_carry_on(
     own_normal0: Vector3,
     own_normal1: Vector3,
 ) -> bool {
-    let still_the_same_surface = (SAME_SURFACE_DEGREES * std::f64::consts::PI / 180.0).cos();
+    let still_the_same_surface = libm::cos(SAME_SURFACE_DEGREES * std::f64::consts::PI / 180.0);
     let mut carries_on0 = false;
     let mut carries_on1 = false;
 
@@ -155,7 +155,7 @@ pub fn crease_carries_on(
     own_edge: i32,
     outward: Vector3,
 ) -> bool {
-    let most_of_the_way_on = (CREASE_CARRIES_ON_DEGREES * std::f64::consts::PI / 180.0).cos();
+    let most_of_the_way_on = libm::cos(CREASE_CARRIES_ON_DEGREES * std::f64::consts::PI / 180.0);
 
     incident.iter().any(|&index| {
         let edge = features.edges()[index as usize];

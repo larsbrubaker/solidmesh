@@ -229,7 +229,7 @@ impl ChainField {
             return joints;
         }
 
-        let sharp = (self.sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
+        let sharp = libm::cos(self.sharp_turn_degrees * std::f64::consts::PI / 180.0);
         let n = self.points.len() as i32;
         let count = self.segment_count();
         let direction =

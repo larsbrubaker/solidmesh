@@ -462,6 +462,7 @@ name = "solidmesh-clipper"
 version = "0.1.0"
 dependencies = [
  "clipper2-rust",
+ "libm",
  "solidmesh-math",
 ]
 
@@ -479,6 +480,7 @@ dependencies = [
 name = "solidmesh-math"
 version = "0.1.0"
 dependencies = [
+ "libm",
  "serde",
  "serde_json",
  "web-time",
@@ -489,6 +491,7 @@ name = "solidmesh-mesh"
 version = "0.1.0"
 dependencies = [
  "clipper2-rust",
+ "libm",
  "manifold-rust",
  "solidmesh-clipper",
  "solidmesh-math",

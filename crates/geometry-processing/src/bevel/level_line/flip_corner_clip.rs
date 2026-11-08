@@ -235,7 +235,7 @@ pub fn against_the_other_side_face(
         .filter(|&&(x, y, z)| {
             [x, y, z].contains(&vertex)
                 && face_normal(positions, (x, y, z)).dot(normal)
-                    >= SEPARATE_END_FACE_DEGREES.to_radians().cos()
+                    >= libm::cos(SEPARATE_END_FACE_DEGREES.to_radians())
         })
         .flat_map(|&(x, y, z)| [x, y, z])
         .filter(|&w| w != vertex && !on(w))

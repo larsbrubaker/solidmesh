@@ -248,12 +248,12 @@ impl Primitive for SphereShape {
                                                            // points from center of sphere to intersection
         let vp = (info.hit_position - self.position).get_normal();
 
-        let phi = (-vp.dot(vn)).acos();
+        let phi = libm::acos(-vp.dot(vn));
         let v = (phi * 2.0 / PI) - 1.0;
 
-        let mut sinphi = ve.dot(vp) / phi.sin();
+        let mut sinphi = ve.dot(vp) / libm::sin(phi);
         sinphi = sinphi.clamp(-1.0, 1.0);
-        let theta = sinphi.acos() * 2.0 / PI;
+        let theta = libm::acos(sinphi) * 2.0 / PI;
 
         let u = if vn.cross(ve).dot(vp) > 0.0 {
             theta

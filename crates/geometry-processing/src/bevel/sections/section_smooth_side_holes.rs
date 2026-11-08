@@ -498,7 +498,7 @@ pub fn it_stands_inside(pool: &SectionPool, ring: &[i32], at: Vector3, normal: V
             continue;
         }
 
-        turned += from.cross(to).dot(facing).atan2(from.dot(to));
+        turned += libm::atan2(from.cross(to).dot(facing), from.dot(to));
     }
 
     f64::abs(turned) > std::f64::consts::PI

@@ -92,7 +92,7 @@ impl SurfaceRegionFaceGrid {
             1e-9,
             (span.x + span.y + span.z)
                 / 3.0
-                / ieee_math::max_f64(1.0, (faces.len() as f64 / FACES_TO_A_CELL).cbrt()),
+                / ieee_math::max_f64(1.0, libm::cbrt(faces.len() as f64 / FACES_TO_A_CELL)),
         );
 
         let mut across = steps(span.x, side);

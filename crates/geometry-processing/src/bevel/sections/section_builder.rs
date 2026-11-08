@@ -168,7 +168,7 @@ pub fn place_the_interior_samples(
         let from_arm = squashed(left_at - from_axis, across, squash).get_normal();
         let to_arm = squashed(right_at - to_axis, across, squash).get_normal();
 
-        let swept = from_arm.dot(to_arm).clamp(-1.0, 1.0).acos();
+        let swept = libm::acos(from_arm.dot(to_arm).clamp(-1.0, 1.0));
 
         for (k, slot) in profile.iter_mut().enumerate().take(last).skip(1) {
             let along = k as f64 / last as f64;
@@ -261,13 +261,13 @@ pub fn squashed(arm: Vector3, across: Vector3, by: f64) -> Vector3 {
 /// The direction `along` of the way round from `from` to `to`, `wedge`
 /// apart, on the great circle between them; `from` itself where the wedge is no turn at all.
 pub fn slerp(from: Vector3, to: Vector3, along: f64, wedge: f64) -> Vector3 {
-    let spread = wedge.sin();
+    let spread = libm::sin(wedge);
 
     if spread.abs() < 1e-12 {
         return from;
     }
 
-    ((from * ((1.0 - along) * wedge).sin()) + (to * (along * wedge).sin())) / spread
+    ((from * libm::sin((1.0 - along) * wedge)) + (to * libm::sin(along * wedge))) / spread
 }
 
 /// One side's boundary as [`try_boundary`] reads it: where it stands, the centre it is a radius

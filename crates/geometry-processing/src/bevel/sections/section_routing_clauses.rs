@@ -236,7 +236,8 @@ pub fn turns_under_the_curve_tolerance(
             .get_normal();
         let leaving = plan.edges[i].edge.direction().get_normal();
 
-        let turn = math_helper::radians_to_degrees(arriving.dot(leaving).clamp(-1.0, 1.0).acos());
+        let turn =
+            math_helper::radians_to_degrees(libm::acos(arriving.dot(leaving).clamp(-1.0, 1.0)));
 
         let arrived = &plan.edges[(i + count - 1) % count];
         let leaves = &plan.edges[i];

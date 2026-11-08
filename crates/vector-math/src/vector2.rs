@@ -66,7 +66,7 @@ impl Vector2 {
     /// measured in `[0, Tau)`.
     pub fn get_delta_angle(&self, start_position: Vector2, end_position: Vector2) -> f64 {
         let start_position = start_position - *self;
-        let mut start_angle = start_position.y.atan2(start_position.x);
+        let mut start_angle = libm::atan2(start_position.y, start_position.x);
         start_angle = if start_angle < 0.0 {
             start_angle + math_helper::TAU
         } else {
@@ -74,7 +74,7 @@ impl Vector2 {
         };
 
         let end_position = end_position - *self;
-        let mut end_angle = end_position.y.atan2(end_position.x);
+        let mut end_angle = libm::atan2(end_position.y, end_position.x);
         end_angle = if end_angle < 0.0 {
             end_angle + math_helper::TAU
         } else {
@@ -106,14 +106,14 @@ impl Vector2 {
 
     /// This vector rotated by `radians`.
     pub fn get_rotated(&self, radians: f64) -> Vector2 {
-        let cos = radians.cos();
-        let sin = radians.sin();
+        let cos = libm::cos(radians);
+        let sin = libm::sin(radians);
         Vector2::new(self.x * cos - self.y * sin, self.y * cos + self.x * sin)
     }
 
     /// `atan2(y, x)`.
     pub fn get_angle(&self) -> f64 {
-        self.y.atan2(self.x)
+        libm::atan2(self.y, self.x)
     }
 
     /// `get_angle` brought into `[0, Tau]`.

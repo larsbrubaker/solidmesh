@@ -28,7 +28,7 @@
 //! Angles and arc points are worked out with the pure-Rust `libm` crate, never std's `sin`, `cos`,
 //! `tan`, `acos` or `atan2`, which call each platform's own maths library and differ in the last
 //! bits: with `libm` a design gives the same curves on Windows, Linux, macOS and the browser
-//! (`tests/platform_math_tests.rs` refuses a std call here and in `topology`).
+//! (the workspace's `platform_math` gate refuses a std call).
 
 pub mod path_bevel;
 #[doc(hidden)]

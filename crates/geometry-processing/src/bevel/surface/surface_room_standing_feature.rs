@@ -38,7 +38,9 @@ use crate::topology::{EdgeConvexity, FaceGroup, FeatureEdge};
 /// (0.39 for the nose in the chevron notch, 0.58 for a fin), and a wall stands at 0. (A function
 /// because `sin` is not `const`.)
 fn rises_out_of_the_plane() -> f64 {
-    math_helper::degrees_to_radians(FeatureEdge::default_flat_angle_degrees()).sin()
+    libm::sin(math_helper::degrees_to_radians(
+        FeatureEdge::default_flat_angle_degrees(),
+    ))
 }
 
 /// How straight two rim edges have to run for the corner of the mesh between them to be no corner

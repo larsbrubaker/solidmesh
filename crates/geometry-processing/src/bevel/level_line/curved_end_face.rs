@@ -60,7 +60,7 @@ pub fn bends_on_softly(
                 if cos >= 1.0 - COPLANAR_TOLERANCE {
                     region.insert(neighbour);
                     open.push_back(neighbour);
-                } else if cos.acos() * 180.0 / std::f64::consts::PI < sharp_turn_degrees {
+                } else if libm::acos(cos) * 180.0 / std::f64::consts::PI < sharp_turn_degrees {
                     return true;
                 }
             }

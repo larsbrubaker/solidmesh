@@ -156,8 +156,8 @@ impl BevelSurfacePartBuilder {
 
         let under = room * 0.99;
         // Floored to an int: a finite positive room's log is far inside an int.
-        let places = under.log10().floor() as i32;
-        let step = 10f64.powf((places - 2) as f64);
+        let places = libm::log10(under).floor() as i32;
+        let step = libm::pow(10f64, (places - 2) as f64);
         let offered = (under / step).floor() * step;
 
         if offered > 0.0 {

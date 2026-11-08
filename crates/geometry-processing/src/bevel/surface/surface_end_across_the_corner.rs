@@ -19,7 +19,9 @@ pub const FACES_AGREE: f64 = 1e-6;
 /// plane that cuts the bead off, as the cosine of
 /// [`MAXIMUM_CAP_PLANE_ANGLE_DEGREES`]: the same 80 degrees an interrupted crease's end reads.
 pub fn square_enough() -> f64 {
-    math_helper::degrees_to_radians(MAXIMUM_CAP_PLANE_ANGLE_DEGREES).cos()
+    libm::cos(math_helper::degrees_to_radians(
+        MAXIMUM_CAP_PLANE_ANGLE_DEGREES,
+    ))
 }
 
 /// The plane the bead of chain end `end` is cut off by at `corner` (mesh vertex

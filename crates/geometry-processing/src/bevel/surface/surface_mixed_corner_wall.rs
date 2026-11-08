@@ -177,7 +177,7 @@ impl SurfaceMixedCornerWall {
                 continue;
             };
 
-            let stands = self.turn_of(middle + (cosine * at.cos()) + (sine * at.sin()));
+            let stands = self.turn_of(middle + (cosine * libm::cos(at)) + (sine * libm::sin(at)));
 
             if stands < self.entry_turn[facet] - Self::TURN_SLACK
                 || stands > self.exit_turn[facet] + Self::TURN_SLACK
@@ -212,8 +212,8 @@ impl SurfaceMixedCornerWall {
             return None;
         }
 
-        let middle = f64::atan2(b, a);
-        let spread = ratio.clamp(-1.0, 1.0).acos();
+        let middle = libm::atan2(b, a);
+        let spread = libm::acos(ratio.clamp(-1.0, 1.0));
         let mut root: Option<f64> = None;
 
         // Two roots, one either side of the curve's own furthest reach across the plane; the one
@@ -317,7 +317,7 @@ impl SurfaceMixedCornerWall {
     /// wall exists.
     fn turn_about(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
         let out0 = at - corner.outer_rail_centre;
-        let turn = f64::atan2(
+        let turn = libm::atan2(
             out0.dot(corner.towards_the_wall_square()),
             out0.dot(corner.towards_the_shared_face()),
         );
@@ -363,8 +363,8 @@ impl SurfaceMixedCornerWall {
             return None;
         }
 
-        let psi = f64::atan2(quarter, zero);
-        let spread = wanted.clamp(-1.0, 1.0).acos();
+        let psi = libm::atan2(quarter, zero);
+        let spread = libm::acos(wanted.clamp(-1.0, 1.0));
         let mut turn = 0.0;
 
         // Two roots, one either side of the facet's own perpendicular; the one the turn REACHES is

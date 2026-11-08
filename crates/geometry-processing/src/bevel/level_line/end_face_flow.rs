@@ -32,12 +32,12 @@ pub const END_FACE_BEND_DEGREES: f64 = 0.5;
 /// The joins of one round turn about one axis (the cylinder's): within about 10 degrees, as a
 /// cosine.
 pub fn round_run_axis_cosine() -> f64 {
-    (10.0 * std::f64::consts::PI / 180.0).cos()
+    libm::cos(10.0 * std::f64::consts::PI / 180.0)
 }
 
 /// [`END_FACE_BEND_DEGREES`] as a cosine.
 fn end_face_bend_cosine() -> f64 {
-    (END_FACE_BEND_DEGREES * std::f64::consts::PI / 180.0).cos()
+    libm::cos(END_FACE_BEND_DEGREES * std::f64::consts::PI / 180.0)
 }
 
 /// True when edge `a b` stands on nothing, or one of its triangles faces one of `side_normals`
@@ -343,7 +343,7 @@ pub fn rounds_from_the_end(
         }
 
         widths.push(width);
-        turns.push(in_normal.dot(out_normal).clamp(-1.0, 1.0).acos());
+        turns.push(libm::acos(in_normal.dot(out_normal).clamp(-1.0, 1.0)));
         axes.push(axis.get_normal());
 
         // Across the join: every edge of it is the next area's entry.

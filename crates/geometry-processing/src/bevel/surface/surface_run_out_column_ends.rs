@@ -127,11 +127,10 @@ pub fn too_close_to_the_end(near_enough: f64, size: f64) -> f64 {
     }
 
     surface_mixed_corner_run_out::clears_the_wall()
-        - ieee_math::min_f64(
+        - libm::acos(ieee_math::min_f64(
             1.0,
             1.0 / (2.0 - ieee_math::min_f64(1.0, near_enough / size)),
-        )
-        .acos()
+        ))
 }
 
 /// A total order on `f64` that puts a NaN before every number, so a sort never panics on one.

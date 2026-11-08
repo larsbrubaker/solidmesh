@@ -58,7 +58,7 @@ impl Canal {
             wall,
             radius,
             lattice,
-            wedge: flat.dot(wall).clamp(-1.0, 1.0).acos(),
+            wedge: libm::acos(flat.dot(wall).clamp(-1.0, 1.0)),
             axis: section_corner::the_axis_at(edge, station, radius),
             across: (wall - (flat * wall.dot(flat))).get_normal(),
             lean: 0.0,
@@ -112,7 +112,7 @@ impl Canal {
 
         let direction = radial.get_normal();
 
-        Some(direction.dot(self.across).atan2(direction.dot(self.flat)) / self.wedge)
+        Some(libm::atan2(direction.dot(self.across), direction.dot(self.flat)) / self.wedge)
     }
 
     /// Sets how far the canal's own direction leans onto `normal`.

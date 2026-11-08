@@ -160,7 +160,7 @@ impl SurfaceCrossingAtTheMitre {
     pub fn turn_of(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
         let out_of = at - corner.axis().closest_point_to(at);
 
-        f64::atan2(
+        libm::atan2(
             out_of.dot(corner.out_of_the_axis(std::f64::consts::PI / 2.0)),
             out_of.dot(corner.out_of_the_axis(0.0)),
         )

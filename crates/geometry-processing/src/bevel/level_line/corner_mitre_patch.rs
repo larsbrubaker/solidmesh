@@ -107,15 +107,15 @@ pub fn on_the_mitre(
     let segment_angle = rows
         .iter()
         .map(|row| {
-            (row.first - row.centre)
-                .get_normal()
-                .dot((row.last - row.centre).get_normal())
-                .clamp(-1.0, 1.0)
-                .acos()
-                / (row.arc.len() - 1) as f64
+            libm::acos(
+                (row.first - row.centre)
+                    .get_normal()
+                    .dot((row.last - row.centre).get_normal())
+                    .clamp(-1.0, 1.0),
+            ) / (row.arc.len() - 1) as f64
         })
         .fold(f64::NEG_INFINITY, ieee_math::max_f64);
-    let chord_sag = radius * (1.0 - (segment_angle / 2.0).cos());
+    let chord_sag = radius * (1.0 - libm::cos(segment_angle / 2.0));
 
     let placed = |q: Vector3| {
         let first = read(0, q);
@@ -221,7 +221,7 @@ pub fn on_the_mitre(
     // segment, on one round's surfaces (or from the crease onto them), is halved and its middle
     // carried onto that same surface, in a pass count fixed up front. Edges between two loop
     // vertices are left: their middles are the loop's own rows and face pieces.
-    let target = 2.0 * radius * (segment_angle / 2.0).sin();
+    let target = 2.0 * radius * libm::sin(segment_angle / 2.0);
     let surface_of = |owner: &[i32], a: usize, b: usize| {
         if owner[a] >= 0 && owner[b] >= 0 {
             if owner[a] == owner[b] {
@@ -255,7 +255,7 @@ pub fn on_the_mitre(
         .fold(0.0, ieee_math::max_f64);
     let passes = if target > 0.0 && longest > target {
         // The ceiling is a whole number; `as` saturates should it be out of range.
-        i32::min(4, (longest / target).log2().ceil() as i32)
+        i32::min(4, libm::log2(longest / target).ceil() as i32)
     } else {
         0
     };

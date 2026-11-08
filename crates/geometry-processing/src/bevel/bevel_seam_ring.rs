@@ -7,11 +7,12 @@ use solidmesh_math::Vector3;
 /// The point `fraction` of the way along the great circle from one unit vector to another - equal
 /// angles, which is how a corner patch samples the ball.
 pub fn slerp(from: Vector3, to: Vector3, fraction: f64) -> Vector3 {
-    let angle = from.dot(to).clamp(-1.0, 1.0).acos();
+    let angle = libm::acos(from.dot(to).clamp(-1.0, 1.0));
 
     if angle < 1e-9 {
         return from;
     }
 
-    ((from * ((1.0 - fraction) * angle).sin()) + (to * (fraction * angle).sin())) / angle.sin()
+    ((from * libm::sin((1.0 - fraction) * angle)) + (to * libm::sin(fraction * angle)))
+        / libm::sin(angle)
 }

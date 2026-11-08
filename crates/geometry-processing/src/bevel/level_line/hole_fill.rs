@@ -213,7 +213,7 @@ pub fn triangulate(
 
 /// The angle between two unit normals.
 pub fn dihedral(a: Vector3, b: Vector3) -> f64 {
-    a.dot(b).clamp(-1.0, 1.0).acos()
+    libm::acos(a.dot(b).clamp(-1.0, 1.0))
 }
 
 /// Liepa's refinement: split a triangle at its centroid while the centroid is more than sqrt(2)
@@ -276,7 +276,7 @@ pub fn relax(vertices: &[Vector3], triangles: &mut [HoleFillTriangle]) {
     let angle = |at: i32, p: i32, q: i32| {
         let u = (vertices[p as usize] - vertices[at as usize]).get_normal();
         let w = (vertices[q as usize] - vertices[at as usize]).get_normal();
-        u.dot(w).clamp(-1.0, 1.0).acos()
+        libm::acos(u.dot(w).clamp(-1.0, 1.0))
     };
 
     // a cap on sweeps; flipping by the Delaunay test terminates, this only guards against

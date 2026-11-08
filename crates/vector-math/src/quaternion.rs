@@ -99,7 +99,7 @@ impl Quaternion {
             q1.normalize();
         }
 
-        axis_angle.w = 2.0 * q1.w.acos();
+        axis_angle.w = 2.0 * libm::acos(q1.w);
         // assuming quaternion normalized then w is less than 1, so term always positive.
         let s = (1.0 - q1.w * q1.w).sqrt();
         if s < 0.001 {
@@ -211,8 +211,8 @@ impl Quaternion {
         let angle = angle * 0.5;
         let mut axis = axis;
         axis.normalize();
-        result.set_xyz(axis * angle.sin());
-        result.w = angle.cos();
+        result.set_xyz(axis * libm::sin(angle));
+        result.w = libm::cos(angle);
 
         Quaternion::normalized(result)
     }
@@ -244,12 +244,12 @@ impl Quaternion {
         // The threshold is 0.99 in single precision, widened, which fixes where slerp switches.
         let (blend_a, blend_b) = if cos_half_angle < f64::from(0.99f32) {
             // do proper slerp for big angles
-            let half_angle = cos_half_angle.acos();
-            let sin_half_angle = half_angle.sin();
+            let half_angle = libm::acos(cos_half_angle);
+            let sin_half_angle = libm::sin(half_angle);
             let one_over_sin_half_angle = 1.0 / sin_half_angle;
             (
-                (half_angle * (1.0 - blend)).sin() * one_over_sin_half_angle,
-                (half_angle * blend).sin() * one_over_sin_half_angle,
+                libm::sin(half_angle * (1.0 - blend)) * one_over_sin_half_angle,
+                libm::sin(half_angle * blend) * one_over_sin_half_angle,
             )
         } else {
             // do lerp if angle is really small.

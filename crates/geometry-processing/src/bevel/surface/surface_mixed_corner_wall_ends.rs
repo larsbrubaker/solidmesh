@@ -150,8 +150,8 @@ pub fn try_turn_onto(
         return None;
     }
 
-    let phase = f64::atan2(along_second, along_first);
-    let spread = (-stand_off / amplitude).clamp(-1.0, 1.0).acos();
+    let phase = libm::atan2(along_second, along_first);
+    let spread = libm::acos((-stand_off / amplitude).clamp(-1.0, 1.0));
 
     for root in [phase + spread, phase - spread] {
         let mut candidate = root;

@@ -120,8 +120,8 @@ impl SurfaceMixedCornerDualCanal {
         let across = self.across_at(turn);
 
         self.dual.spine.centre_at(turn)
-            + (along * (self.corner.size * angle.cos()))
-            + (across * (self.corner.size * angle.sin()))
+            + (along * (self.corner.size * libm::cos(angle)))
+            + (across * (self.corner.size * libm::sin(angle)))
     }
 
     /// The crease the dual canal runs out along, from the corner outwards: the cap's plane met
@@ -202,7 +202,7 @@ impl SurfaceMixedCornerDualCanal {
             return None;
         }
 
-        Some(f64::atan2(b, a) + (-height / reach).clamp(-1.0, 1.0).acos())
+        Some(libm::atan2(b, a) + libm::acos((-height / reach).clamp(-1.0, 1.0)))
     }
 
     /// The ring's in-plane direction across at `turn`: towards the cut's tube, squared up to the
@@ -220,7 +220,7 @@ impl SurfaceMixedCornerDualCanal {
         let along = self.towards_the_wall();
         let height = towards_the_tube.dot(along);
 
-        f64::atan2((towards_the_tube - (along * height)).length(), height)
+        libm::atan2((towards_the_tube - (along * height)).length(), height)
     }
 
     /// Two hundred halvings of `from`..`to`, keeping the end whose sign of `of` is `sign`.

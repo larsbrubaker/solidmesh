@@ -1,12 +1,12 @@
 # workspace-gates: repo-wide gates that are tests only (file_compliance, markdown_placement,
-# workspace_members, web_clock, scope_reads, dependencies, notices). The library is empty; the
+# workspace_members, web_clock, platform_math, scope_reads, dependencies, notices). The library is empty; the
 # gates live in tests/ and read the whole workspace from its root, so a crate that joins the workspace is
 # covered without naming it here. serde_json reads `cargo metadata` for the dependencies and
 # workspace_members gates. Never published: `publish = false` keeps `cargo publish --workspace`
 # (.github/workflows/publish.yml) from packaging it.
 [package]
 name = "workspace-gates"
-description = "Repo-wide gates for solidmesh (file compliance, Markdown placement, workspace members, browser clock, test reads, dependencies), tests only"
+description = "Repo-wide gates for solidmesh (file compliance, Markdown placement, workspace members, browser clock, platform maths, test reads, dependencies), tests only"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -301,10 +301,10 @@ pub fn ties_merge_room(
     };
 
     let setback = unit.setback_at(0.0);
-    let half = left.dot(right).clamp(-1.0, 1.0).acos() / 2.0;
+    let half = libm::acos(left.dot(right).clamp(-1.0, 1.0)) / 2.0;
     let bisector = (left + right).get_normal();
-    let centre_offset = bisector * (setback / half.cos());
-    let radius = setback * half.tan();
+    let centre_offset = bisector * (setback / libm::cos(half));
+    let radius = setback * libm::tan(half);
     let a = (points[0] - on_crease).dot(across);
     let b = centre_offset.dot(across);
     let mut best: Option<f64> = None;

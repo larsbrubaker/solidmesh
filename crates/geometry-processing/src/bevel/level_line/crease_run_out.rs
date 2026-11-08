@@ -147,7 +147,8 @@ impl CreaseRunOut {
     /// The unit direction square to the axis at `turn`, from the
     /// shared face's side toward the side face's.
     pub fn out_of_the_axis(&self, turn: f64) -> Vector3 {
-        (self.towards_the_shared_face * turn.cos()) + (self.towards_the_side_square * turn.sin())
+        (self.towards_the_shared_face * libm::cos(turn))
+            + (self.towards_the_side_square * libm::sin(turn))
     }
 
     /// How far along the axis the centre slides to stay r outside the
@@ -248,7 +249,7 @@ impl CreaseRunOut {
             wall_normal,
             shared_normal,
             square.get_normal(),
-            cosine.clamp(-1.0, 1.0).acos(),
+            libm::acos(cosine.clamp(-1.0, 1.0)),
         );
 
         let ends_at = run_out.try_the_turn_it_ends_at()?;

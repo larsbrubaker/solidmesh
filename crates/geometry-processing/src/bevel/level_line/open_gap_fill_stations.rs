@@ -223,7 +223,7 @@ pub fn is_mitred_turn_at(chain: &ChainField, parameter: f64, tie: f64) -> bool {
         if (at - parameter).abs() <= tie {
             let into = (points[k] - points[k - 1]).get_normal();
             let out_of = (points[k + 1] - points[k]).get_normal();
-            let turn = into.dot(out_of).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI;
+            let turn = libm::acos(into.dot(out_of).clamp(-1.0, 1.0)) * 180.0 / std::f64::consts::PI;
             return turn > chain.sharp_turn_degrees && !chain.is_smooth_joint(k as i32);
         }
 

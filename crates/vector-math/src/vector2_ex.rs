@@ -106,11 +106,11 @@ impl Vector2 {
             let prev_point = current_point - prev_point;
             let next_point = next_point - current_point;
 
-            let prev_angle = prev_point.y.atan2(prev_point.x);
+            let prev_angle = libm::atan2(prev_point.y, prev_point.x);
 
             // undo the rotation
             let next_point = next_point.get_rotated(-prev_angle);
-            return next_point.y.atan2(next_point.x);
+            return libm::atan2(next_point.y, next_point.x);
         }
 
         0.0

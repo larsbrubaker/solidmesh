@@ -12,7 +12,7 @@ pub type ChainFieldRays = Vec<Option<Vec<ChainFieldExtension>>>;
 /// The cosine a joint's two unit directions must fall under to turn sharper than
 /// `sharp_turn_degrees`.
 pub(crate) fn sharp_turn_cosine(sharp_turn_degrees: f64) -> f64 {
-    (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos()
+    libm::cos(sharp_turn_degrees * std::f64::consts::PI / 180.0)
 }
 
 /// Whether a joint whose chain runs in along unit `d_in` and out along unit `d_out` is mitred:

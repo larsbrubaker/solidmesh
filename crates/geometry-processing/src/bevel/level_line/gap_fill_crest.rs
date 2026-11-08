@@ -295,7 +295,7 @@ pub fn fill(input: &CrestFillInput) -> Result<Option<GapFillResult>, LevelLineMe
     {
         let m = input.edges[strip].other_normal;
         let w = Vector3::normalized(n - m * m.dot(n));
-        let turn = m.dot(n).clamp(-1.0, 1.0).acos();
+        let turn = libm::acos(m.dot(n).clamp(-1.0, 1.0));
         for (&far, end) in rail.vertices.iter().zip(ends_of.iter()) {
             let RowEnd::Seam(seam_index) = *end else {
                 return Ok(None);
@@ -303,14 +303,14 @@ pub fn fill(input: &CrestFillInput) -> Result<Option<GapFillResult>, LevelLineMe
             let far_point = mesh.position(far);
             let centre = far_point - m * r;
             let to_seam = seam.vertices[seam_index] - centre;
-            let end_angle = to_seam.dot(w).atan2(to_seam.dot(m));
+            let end_angle = libm::atan2(to_seam.dot(w), to_seam.dot(m));
             let mut vertices = vec![far];
             for i in 1..input.segments {
                 let angle = turn * f64::from(i) / f64::from(input.segments);
                 if angle >= end_angle {
                     break;
                 }
-                let point = centre + m * (r * angle.cos()) + w * (r * angle.sin());
+                let point = centre + m * (r * libm::cos(angle)) + w * (r * libm::sin(angle));
                 if (seam.vertices[seam_index] - point).length() <= epsilon {
                     break;
                 }

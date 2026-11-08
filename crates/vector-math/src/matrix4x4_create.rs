@@ -17,8 +17,8 @@ impl Matrix4X4 {
     /// textbook axis-angle matrix is written for column vectors; under this type's row vectors
     /// it turns backwards, so the angle is negated to turn forwards.
     pub fn create_from_axis_angle(axis: Vector3, angle: f64) -> Matrix4X4 {
-        let cos = (-angle).cos();
-        let sin = (-angle).sin();
+        let cos = libm::cos(-angle);
+        let sin = libm::sin(-angle);
         let t = 1.0 - cos;
 
         let mut axis = axis;
@@ -51,8 +51,8 @@ impl Matrix4X4 {
 
     /// A rotation of `angle` radians about the x axis.
     pub fn create_rotation_x(angle: f64) -> Matrix4X4 {
-        let cos = angle.cos();
-        let sin = angle.sin();
+        let cos = libm::cos(angle);
+        let sin = libm::sin(angle);
         Matrix4X4::from_rows(
             Vector4::UNIT_X,
             Vector4::new(0.0, cos, sin, 0.0),
@@ -63,8 +63,8 @@ impl Matrix4X4 {
 
     /// A rotation of `angle` radians about the y axis.
     pub fn create_rotation_y(angle: f64) -> Matrix4X4 {
-        let cos = angle.cos();
-        let sin = angle.sin();
+        let cos = libm::cos(angle);
+        let sin = libm::sin(angle);
         Matrix4X4::from_rows(
             Vector4::new(cos, 0.0, -sin, 0.0),
             Vector4::UNIT_Y,
@@ -75,8 +75,8 @@ impl Matrix4X4 {
 
     /// A rotation of `angle` radians about the z axis.
     pub fn create_rotation_z(angle: f64) -> Matrix4X4 {
-        let cos = angle.cos();
-        let sin = angle.sin();
+        let cos = libm::cos(angle);
+        let sin = libm::sin(angle);
         Matrix4X4::from_rows(
             Vector4::new(cos, sin, 0.0, 0.0),
             Vector4::new(-sin, cos, 0.0, 0.0),
@@ -89,8 +89,8 @@ impl Matrix4X4 {
     /// row vectors (the opposite of [`Matrix4X4::create_from_axis_angle`]). Saved designs'
     /// Euler and quaternion rotations are built through it, so its direction stays as it is.
     pub fn create_rotation_axis_angle(axis: Vector3, angle: f64) -> Matrix4X4 {
-        let cos = angle.cos();
-        let sin = angle.sin();
+        let cos = libm::cos(angle);
+        let sin = libm::sin(angle);
         let t = 1.0 - cos;
 
         let mut axis = axis;
@@ -213,7 +213,7 @@ impl Matrix4X4 {
             return Err(MathError::ArgumentOutOfRange("zNear"));
         }
 
-        let y_max = z_near * (0.5 * fov_y_radians).tan();
+        let y_max = z_near * libm::tan(0.5 * fov_y_radians);
         let y_min = -y_max;
         let x_min = y_min * aspect_width_over_height;
         let x_max = y_max * aspect_width_over_height;
@@ -337,7 +337,7 @@ impl Matrix4X4 {
 
     /// A perspective projection from a vertical field of view, without argument checks.
     pub fn perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Matrix4X4 {
-        let y_max = near * (0.5 * fovy).tan();
+        let y_max = near * libm::tan(0.5 * fovy);
         let y_min = -y_max;
         let x_min = y_min * aspect;
         let x_max = y_max * aspect;

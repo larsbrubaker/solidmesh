@@ -92,7 +92,7 @@ fn gear_like_extrusion() {
     for i in 0..TEETH * 4 {
         let angle = i as f64 * std::f64::consts::PI * 2.0 / (TEETH * 4) as f64;
         let radius = if (i % 4) < 2 { 15.0 } else { 12.0 };
-        let p = Vector2::new(angle.cos() * radius, angle.sin() * radius);
+        let p = Vector2::new(libm::cos(angle) * radius, libm::sin(angle) * radius);
         if i == 0 {
             outline.move_to_vector(p);
         } else {
@@ -190,7 +190,7 @@ fn doubled_in_place(single: &Mesh) -> Mesh {
 fn add_circle(outline: &mut Outline, center: Vector2, radius: f64, sides: i32) {
     for i in 0..sides {
         let angle = i as f64 * std::f64::consts::PI * 2.0 / sides as f64;
-        let p = center + Vector2::new(angle.cos() * radius, angle.sin() * radius);
+        let p = center + Vector2::new(libm::cos(angle) * radius, libm::sin(angle) * radius);
         if i == 0 {
             outline.move_to_vector(p);
         } else {

@@ -749,8 +749,8 @@ pub fn try_read_vertex(
         return Err(BevelAdvisory::new(code, vec![leaving.from_vertex().into()]));
     }
 
-    let wedge = cosine.clamp(-1.0, 1.0).acos();
-    let setback = (wedge / 2.0).tan();
+    let wedge = libm::acos(cosine.clamp(-1.0, 1.0));
+    let setback = libm::tan(wedge / 2.0);
 
     let across = ieee_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
     let left_away = ((left_normal * cosine) - right_normal) / across;

@@ -5,6 +5,8 @@
 
 #[path = "part/part_bevel_part_tests.rs"]
 pub(crate) mod part_bevel_part_tests;
+#[path = "part/part_bevel_platform_bits_tests.rs"]
+pub(crate) mod part_bevel_platform_bits_tests;
 #[path = "part/part_bevel_routing_tests.rs"]
 pub(crate) mod part_bevel_routing_tests;
 #[path = "part/part_cove_round_next_flip_tests.rs"]

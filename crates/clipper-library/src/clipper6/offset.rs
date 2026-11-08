@@ -185,9 +185,9 @@ impl ClipperOffset {
             self.arc_tolerance
         };
         //see offset_triginometry2.svg in the documentation folder ...
-        let steps = PI / (1.0 - y / delta.abs()).acos();
-        self.sin = (TWO_PI / steps).sin();
-        self.cos = (TWO_PI / steps).cos();
+        let steps = PI / libm::acos(1.0 - y / delta.abs());
+        self.sin = libm::sin(TWO_PI / steps);
+        self.cos = libm::cos(TWO_PI / steps);
         self.steps_per_rad = steps / TWO_PI;
         if delta < 0.0 {
             self.sin = -self.sin;
@@ -423,7 +423,7 @@ impl ClipperOffset {
 
     fn do_square(&mut self, j: usize, k: usize) {
         let (nj, nk, src) = (self.normals[j], self.normals[k], self.src_poly[j]);
-        let dx = (self.sin_a.atan2(nk.x * nj.x + nk.y * nj.y) / 4.0).tan();
+        let dx = libm::tan(libm::atan2(self.sin_a, nk.x * nj.x + nk.y * nj.y) / 4.0);
         self.dest_poly.push(ip(
             round(src.x as f64 + self.delta * (nk.x - nk.y * dx)),
             round(src.y as f64 + self.delta * (nk.y + nk.x * dx)),
@@ -445,7 +445,7 @@ impl ClipperOffset {
 
     fn do_round(&mut self, j: usize, k: usize) {
         let (nj, nk, src) = (self.normals[j], self.normals[k], self.src_poly[j]);
-        let a = self.sin_a.atan2(nk.x * nj.x + nk.y * nj.y);
+        let a = libm::atan2(self.sin_a, nk.x * nj.x + nk.y * nj.y);
         // Round gives a long, the cast keeps its low 32 bits.
         let steps = std::cmp::max(round(self.steps_per_rad * a.abs()) as i32, 1);
 

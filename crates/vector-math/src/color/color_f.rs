@@ -117,9 +117,9 @@ impl ColorF {
             s = (0.3 + 0.7 * (wl64 - 380.0) / (420.0 - 380.0)) as f32;
         }
 
-        t.red = ((t.red * s) as f64).powf(gamma as f64) as f32;
-        t.green = ((t.green * s) as f64).powf(gamma as f64) as f32;
-        t.blue = ((t.blue * s) as f64).powf(gamma as f64) as f32;
+        t.red = libm::pow((t.red * s) as f64, gamma as f64) as f32;
+        t.green = libm::pow((t.green * s) as f64, gamma as f64) as f32;
+        t.blue = libm::pow((t.blue * s) as f64, gamma as f64) as f32;
         t
     }
 

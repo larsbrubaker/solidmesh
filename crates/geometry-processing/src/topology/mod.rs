@@ -10,7 +10,7 @@
 //! The angle readings (edge turns, corner bends, match tolerances) use the pure-Rust `libm`
 //! crate's `acos`, `atan2` and `cos`, never std's, which differ in the last bits by platform: a
 //! pick reads the same edges and corners on every platform, as the path bevel draws the same
-//! curves (`tests/platform_math_tests.rs` refuses a std call here and in `path`).
+//! curves (the workspace's `platform_math` gate refuses a std call).
 
 mod bevel_corner_group;
 pub mod bevel_corner_group_resolver;

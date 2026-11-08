@@ -60,5 +60,5 @@ pub fn min_f32(val1: f32, val2: f32) -> f32 {
 /// so a power of two can come out a hair off its whole-number logarithm; the
 /// `next_power_of_two_*` helpers correct for that after rounding up.
 pub fn log_base2(a: f64) -> f64 {
-    a.ln() / 2f64.ln()
+    libm::log(a) / libm::log(2f64)
 }

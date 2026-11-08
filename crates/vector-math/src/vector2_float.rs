@@ -68,7 +68,7 @@ impl Vector2Float {
     /// measured in `[0, Tau)`.
     pub fn get_delta_angle(&self, start_position: Vector2Float, end_position: Vector2Float) -> f64 {
         let start_position = start_position - *self;
-        let mut start_angle = f64::from(start_position.y).atan2(f64::from(start_position.x));
+        let mut start_angle = libm::atan2(f64::from(start_position.y), f64::from(start_position.x));
         start_angle = if start_angle < 0.0 {
             start_angle + math_helper::TAU
         } else {
@@ -76,7 +76,7 @@ impl Vector2Float {
         };
 
         let end_position = end_position - *self;
-        let mut end_angle = f64::from(end_position.y).atan2(f64::from(end_position.x));
+        let mut end_angle = libm::atan2(f64::from(end_position.y), f64::from(end_position.x));
         end_angle = if end_angle < 0.0 {
             end_angle + math_helper::TAU
         } else {
@@ -103,7 +103,7 @@ impl Vector2Float {
 
     /// `atan2(y, x)`.
     pub fn get_angle(&self) -> f64 {
-        f64::from(self.y).atan2(f64::from(self.x))
+        libm::atan2(f64::from(self.y), f64::from(self.x))
     }
 
     /// `get_angle` brought into `[0, Tau]`.
@@ -215,8 +215,8 @@ impl Vector2Float {
 
     /// `to_rotate` rotated by `radians` (cos and sin narrowed to f32 first).
     pub fn rotated(to_rotate: Vector2Float, radians: f64) -> Vector2Float {
-        let cos = radians.cos() as f32;
-        let sin = radians.sin() as f32;
+        let cos = libm::cos(radians) as f32;
+        let sin = libm::sin(radians) as f32;
         Vector2Float {
             x: to_rotate.x * cos - to_rotate.y * sin,
             y: to_rotate.y * cos + to_rotate.x * sin,

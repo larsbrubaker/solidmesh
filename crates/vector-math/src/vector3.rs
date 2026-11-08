@@ -285,7 +285,7 @@ impl Vector3 {
 
     /// The angle between two vectors, in radians.
     pub fn calculate_angle(first: Vector3, second: Vector3) -> f64 {
-        (first.dot(second) / (first.length() * second.length())).acos()
+        libm::acos(first.dot(second) / (first.length() * second.length()))
     }
 
     /// The x and y.

@@ -86,7 +86,7 @@ pub fn first_power_two_greater_than_or_equal_to(n: i32) -> i32 {
 /// whole number for an exact power of two (or just below it next to one), and `ceil` would
 /// then double (or halve) the answer. The result is the smallest power of two >= `n`.
 fn power_of_two_at_or_above(n: f64) -> f64 {
-    let mut pow2 = 2f64.powf(log_base2(n).ceil());
+    let mut pow2 = libm::pow(2f64, log_base2(n).ceil());
     if pow2.is_finite() && pow2 > 0.0 {
         if pow2 * 0.5 >= n {
             pow2 *= 0.5;

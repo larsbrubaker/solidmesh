@@ -217,18 +217,16 @@ impl SurfaceMixedCornerSpine {
 
     /// How far the cap face leans off square to the bead's axis, in degrees.
     pub fn cap_lean_degrees(&self) -> f64 {
-        math_helper::radians_to_degrees(
-            self.along_the_axis_out_of_the_cap
-                .abs()
-                .clamp(-1.0, 1.0)
-                .acos(),
-        )
+        math_helper::radians_to_degrees(libm::acos(
+            self.along_the_axis_out_of_the_cap.abs().clamp(-1.0, 1.0),
+        ))
     }
 
     /// The way out of the bead's axis at `turn`: towards the shared face at zero and towards the
     /// wall at [`Self::turn_radians`].
     pub fn out_of_the_axis(&self, turn: f64) -> Vector3 {
-        (self.towards_the_shared_face * turn.cos()) + (self.towards_the_wall_square * turn.sin())
+        (self.towards_the_shared_face * libm::cos(turn))
+            + (self.towards_the_wall_square * libm::sin(turn))
     }
 
     /// How far the ball's centre stands along the axis from where the axis meets the cap face, at

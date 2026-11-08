@@ -47,7 +47,7 @@ pub fn tangent_distance(size: f64, wedge_angle_degrees: f64, round_profile: bool
         return size;
     }
 
-    let tangent_of_half_angle = (degrees_to_radians(wedge_angle_degrees) / 2.0).tan();
+    let tangent_of_half_angle = libm::tan(degrees_to_radians(wedge_angle_degrees) / 2.0);
 
     // A wedge folded shut has no corner to reach back along. Infinity is the honest answer and it
     // stays usable where it matters: a caller only ever COMPARES this against a length, and
@@ -212,7 +212,7 @@ pub fn try_build_cross_section(
     // The turning point is above both cleared corners at every angle - the gap is
     // clearance * cos^2(halfAngle) / sin(halfAngle) + tangentDistance * cos(halfAngle), both terms
     // positive for half_angle in (0, 90) - which keeps the profile a simple polygon.
-    let cleared_apex = Vector2::new(0.0, clearance / half_angle.sin());
+    let cleared_apex = Vector2::new(0.0, clearance / libm::sin(half_angle));
 
     let mut points = Vec::with_capacity(5 + arc_segments as usize);
     points.push(cut_start);
@@ -271,7 +271,7 @@ fn try_measure_corner(
     // The interior angle of the corner, measured through the wedge the profile is drawn in - the
     // material on a convex edge, the void on a concave one. (A NaN dot stays NaN through clamp and
     // acos alike and passes both angle bounds.)
-    let interior_angle = face0_direction.dot(face1_direction).clamp(-1.0, 1.0).acos();
+    let interior_angle = libm::acos(face0_direction.dot(face1_direction).clamp(-1.0, 1.0));
     let interior_angle_degrees = radians_to_degrees(interior_angle);
 
     if interior_angle_degrees < MINIMUM_INTERIOR_ANGLE_DEGREES
@@ -293,7 +293,7 @@ fn try_measure_corner(
     // A fillet is dimensioned by its radius and a chamfer by its setback, and on anything but a
     // right angle those are different numbers: tangentDistance = radius / tan(theta / 2).
     let tangent_distance = if round_profile {
-        size / half_angle.tan()
+        size / libm::tan(half_angle)
     } else {
         size
     };
@@ -341,10 +341,10 @@ fn add_profile_return(
         return;
     }
 
-    let arc_center = bisector.get_normal() * (radius / half_angle.sin());
+    let arc_center = bisector.get_normal() * (radius / libm::sin(half_angle));
 
-    let start_angle = (cut_end.y - arc_center.y).atan2(cut_end.x - arc_center.x);
-    let end_angle = (cut_start.y - arc_center.y).atan2(cut_start.x - arc_center.x);
+    let start_angle = libm::atan2(cut_end.y - arc_center.y, cut_end.x - arc_center.x);
+    let end_angle = libm::atan2(cut_start.y - arc_center.y, cut_start.x - arc_center.x);
 
     // the two tangent points are reachable both ways around the centre; the short way is the one
     // that stays inside the corner
@@ -364,8 +364,8 @@ fn add_profile_return(
         let angle = start_angle + (sweep * f64::from(i) / f64::from(segments));
 
         path.push(Vector2::new(
-            arc_center.x + (radius * angle.cos()),
-            arc_center.y + (radius * angle.sin()),
+            arc_center.x + (radius * libm::cos(angle)),
+            arc_center.y + (radius * libm::sin(angle)),
         ));
     }
 }

@@ -293,9 +293,9 @@ impl SurfaceMitreConsumesTheRail {
         // The mitre the consumed rails really end on is the one between the two NEIGHBOURS, so it
         // is bounded by the same turn any mitre is (SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES):
         // a plane so nearly along the rails cuts them metres from the part.
-        let turn_degrees = math_helper::radians_to_degrees(
-            previous.along().dot(next.along()).clamp(-1.0, 1.0).acos(),
-        );
+        let turn_degrees = math_helper::radians_to_degrees(libm::acos(
+            previous.along().dot(next.along()).clamp(-1.0, 1.0),
+        ));
 
         if !(turn_degrees < SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES) {
             return Err(BevelAdvisory::new(

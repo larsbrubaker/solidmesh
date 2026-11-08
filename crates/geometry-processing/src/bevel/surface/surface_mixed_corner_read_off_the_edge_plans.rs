@@ -250,10 +250,11 @@ pub fn try_read_carried(
         return Err(not_supported());
     }
 
-    let turn_radians = towards_the_shared_face
-        .dot(towards_the_wall)
-        .clamp(-1.0, 1.0)
-        .acos();
+    let turn_radians = libm::acos(
+        towards_the_shared_face
+            .dot(towards_the_wall)
+            .clamp(-1.0, 1.0),
+    );
     let along_out_of_the_cap = along_the_axis.dot(out_of_the_cap_face);
     if !(along_out_of_the_cap.abs() > SurfaceMixedCorner::SQUARE_ENOUGH) {
         return Err(not_supported());

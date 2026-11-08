@@ -119,8 +119,9 @@ pub fn try_mitre(
     // all: the sum is 2 cos(turn / 2) long, so a chain doubling back through 179.99 degrees still
     // leaves a vector 1.7e-4 long - far above any epsilon, and a mitre plane so nearly along the
     // rails that the ring it cuts lands metres from the part.
-    let turn_degrees =
-        math_helper::radians_to_degrees(strip.along().dot(next.along()).clamp(-1.0, 1.0).acos());
+    let turn_degrees = math_helper::radians_to_degrees(libm::acos(
+        strip.along().dot(next.along()).clamp(-1.0, 1.0),
+    ));
 
     if !(turn_degrees < SurfaceBevelPlan::MAXIMUM_WEDGE_ANGLE_DEGREES) {
         return Err(do_not_mitre());

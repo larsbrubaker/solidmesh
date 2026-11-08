@@ -178,10 +178,10 @@ pub fn farthest_out(
 
     let sa = rail_left - end;
     let sb = rail_right - end;
-    let half = sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0).acos() / 2.0;
+    let half = libm::acos(sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0)) / 2.0;
     let bisector = (sa.get_normal() + sb.get_normal()).get_normal();
-    let centre = end + (bisector * (sa.length() / half.cos()));
-    let radius = sa.length() * half.tan();
+    let centre = end + (bisector * (sa.length() / libm::cos(half)));
+    let radius = sa.length() * libm::tan(half);
     let in_section = normal - (sa.cross(sb).get_normal() * normal.dot(sa.cross(sb).get_normal()));
     if in_section.length_squared() == 0.0 {
         return best;
@@ -216,23 +216,24 @@ pub fn section(
     if profile == BandProfile::Fillet {
         let sa = square(a) - end;
         let sb = square(b) - end;
-        let half = sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0).acos() / 2.0;
+        let half = libm::acos(sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0)) / 2.0;
         let bisector = (sa.get_normal() + sb.get_normal()).get_normal();
-        let centre = end + (bisector * (sa.length() / half.cos()));
+        let centre = end + (bisector * (sa.length() / libm::cos(half)));
         let from_centre = end + sa - centre;
         let to_centre = end + sb - centre;
-        let sweep = from_centre
-            .get_normal()
-            .dot(to_centre.get_normal())
-            .clamp(-1.0, 1.0)
-            .acos();
+        let sweep = libm::acos(
+            from_centre
+                .get_normal()
+                .dot(to_centre.get_normal())
+                .clamp(-1.0, 1.0),
+        );
         let axis = from_centre.cross(to_centre).get_normal();
         let segments = 1.max(fillet_segments);
         for i in 1..segments {
             let angle = sweep * i as f64 / segments as f64;
-            let rotated = (from_centre * angle.cos())
-                + (axis.cross(from_centre) * angle.sin())
-                + (axis * axis.dot(from_centre) * (1.0 - angle.cos()));
+            let rotated = (from_centre * libm::cos(angle))
+                + (axis.cross(from_centre) * libm::sin(angle))
+                + (axis * axis.dot(from_centre) * (1.0 - libm::cos(angle)));
             result.push(onto_the_plane(centre + rotated));
         }
     }

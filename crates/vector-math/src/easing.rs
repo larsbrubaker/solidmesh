@@ -212,15 +212,15 @@ pub mod sinusoidal {
     use std::f64::consts::PI;
 
     pub fn in_(k: f64) -> f64 {
-        1.0 - (k * PI / 2.0).cos()
+        1.0 - libm::cos(k * PI / 2.0)
     }
 
     pub fn out(k: f64) -> f64 {
-        (k * PI / 2.0).sin()
+        libm::sin(k * PI / 2.0)
     }
 
     pub fn in_out(k: f64) -> f64 {
-        0.5 * (1.0 - (PI * k).cos())
+        0.5 * (1.0 - libm::cos(PI * k))
     }
 }
 
@@ -229,7 +229,7 @@ pub mod exponential {
         if k == 0.0 {
             0.0
         } else {
-            1024f64.powf(k - 1.0)
+            libm::pow(1024f64, k - 1.0)
         }
     }
 
@@ -237,7 +237,7 @@ pub mod exponential {
         if k == 1.0 {
             1.0
         } else {
-            1.0 - 2f64.powf(-10.0 * k)
+            1.0 - libm::pow(2f64, -10.0 * k)
         }
     }
 
@@ -252,10 +252,10 @@ pub mod exponential {
 
         let k = k * 2.0;
         if k < 1.0 {
-            return 0.5 * 1024f64.powf(k - 1.0);
+            return 0.5 * libm::pow(1024f64, k - 1.0);
         }
 
-        0.5 * (-(2f64.powf(-10.0 * (k - 1.0))) + 2.0)
+        0.5 * (-(libm::pow(2f64, -10.0 * (k - 1.0))) + 2.0)
     }
 }
 
@@ -297,7 +297,7 @@ pub mod elastic {
         }
 
         let k = k - 1.0;
-        -(2f64.powf(10.0 * k)) * ((k - POINT_1) * (2.0 * PI) / POINT_4).sin()
+        -(libm::pow(2f64, 10.0 * k)) * libm::sin((k - POINT_1) * (2.0 * PI) / POINT_4)
     }
 
     pub fn out(k: f64) -> f64 {
@@ -309,18 +309,20 @@ pub mod elastic {
             return 1.0;
         }
 
-        2f64.powf(-10.0 * k) * ((k - POINT_1) * (2.0 * PI) / POINT_4).sin() + 1.0
+        libm::pow(2f64, -10.0 * k) * libm::sin((k - POINT_1) * (2.0 * PI) / POINT_4) + 1.0
     }
 
     pub fn in_out(k: f64) -> f64 {
         let k = k * 2.0;
         if k < 1.0 {
             let k = k - 1.0;
-            return -0.5 * 2f64.powf(10.0 * k) * ((k - POINT_1) * (2.0 * PI) / POINT_4).sin();
+            return -0.5
+                * libm::pow(2f64, 10.0 * k)
+                * libm::sin((k - POINT_1) * (2.0 * PI) / POINT_4);
         }
 
         let k = k - 1.0;
-        2f64.powf(-10.0 * k) * ((k - POINT_1) * (2.0 * PI) / POINT_4).sin() * 0.5 + 1.0
+        libm::pow(2f64, -10.0 * k) * libm::sin((k - POINT_1) * (2.0 * PI) / POINT_4) * 0.5 + 1.0
     }
 }
 

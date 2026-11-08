@@ -119,7 +119,7 @@ impl SurfaceMixedCornerRows {
                 let width = from.dot(across);
 
                 (
-                    f64::atan2(width, height),
+                    libm::atan2(width, height),
                     ((height * height) + (width * width)).sqrt(),
                     from.dot(off_the_plane),
                 )
@@ -149,8 +149,8 @@ impl SurfaceMixedCornerRows {
         let at = angle * self.runs_to_at(turn) / self.sweep_at_turn_zero;
 
         self.spine.centre_at(turn)
-            + (along * (radius * at.cos()))
-            + (across * (radius * at.sin()))
+            + (along * (radius * libm::cos(at)))
+            + (across * (radius * libm::sin(at)))
             + (along.cross(across) * off_the_plane)
     }
 
@@ -190,6 +190,6 @@ impl SurfaceMixedCornerRows {
         let along = towards_the_bead.dot(towards_the_plate);
         let across = towards_the_bead - (towards_the_plate * along);
 
-        f64::atan2(across.length(), along)
+        libm::atan2(across.length(), along)
     }
 }

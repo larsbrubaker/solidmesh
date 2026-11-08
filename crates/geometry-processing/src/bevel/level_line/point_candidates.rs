@@ -94,7 +94,7 @@ fn angle_defects(positions: &[Vector3], triangles: &[(i32, i32, i32)]) -> Vec<(f
             let at = positions[corners[k] as usize];
             let u = positions[corners[(k + 1) % 3] as usize] - at;
             let w = positions[corners[(k + 2) % 3] as usize] - at;
-            let angle = u.cross(w).length().atan2(u.dot(w));
+            let angle = libm::atan2(u.cross(w).length(), u.dot(w));
             let key = welded[corners[k] as usize];
             let sum = sums.entry(key).or_insert(0.0);
             // Starting from 0 is exact: 0 + angle == angle.

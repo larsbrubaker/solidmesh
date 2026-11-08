@@ -571,6 +571,6 @@ pub fn on_grid(value: f64, digits: i32) -> f64 {
         return value;
     }
 
-    let scale = 10f64.powf(f64::from(digits - 1) - value.log10().floor());
+    let scale = libm::pow(10f64, f64::from(digits - 1) - libm::log10(value).floor());
     (value * scale).floor() / scale
 }

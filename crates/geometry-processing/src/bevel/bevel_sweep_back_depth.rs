@@ -79,11 +79,7 @@ pub fn turn_radius(chain: &[ChainEdge], is_closed: bool) -> f64 {
     for i in (if is_closed { 0 } else { 1 })..count {
         let before = &chain[(i + count - 1) % count];
         let after = &chain[i];
-        let turn = before
-            .direction()
-            .dot(after.direction())
-            .clamp(-1.0, 1.0)
-            .acos();
+        let turn = libm::acos(before.direction().dot(after.direction()).clamp(-1.0, 1.0));
 
         if !(turn > 1e-9) {
             continue;

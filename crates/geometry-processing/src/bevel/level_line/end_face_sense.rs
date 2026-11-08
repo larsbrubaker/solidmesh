@@ -46,7 +46,7 @@ pub const SEPARATE_END_FACE_DEGREES: f64 = 30.0;
 /// slack of [`COPLANAR_TOLERANCE`], so a turn of exactly 30 degrees, a 12-gon's, carries on
 /// whichever way its coordinates round; NaN, a broken direction, never carries on.
 pub fn carries_on(cosine: f64) -> bool {
-    cosine >= SEPARATE_END_FACE_DEGREES.to_radians().cos() - COPLANAR_TOLERANCE
+    cosine >= libm::cos(SEPARATE_END_FACE_DEGREES.to_radians()) - COPLANAR_TOLERANCE
 }
 
 /// The lean off square past which a wall facing BACK
@@ -131,7 +131,8 @@ pub fn is_opposite_sense_crease(
 /// Facing is the wall normal . the chain's outward direction,
 /// below zero here; square is -1.
 pub fn leans_off_square(facing: f64) -> bool {
-    (-facing).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI > BACK_FACING_WALL_LEAN_DEGREES
+    libm::acos((-facing).clamp(-1.0, 1.0)) * 180.0 / std::f64::consts::PI
+        > BACK_FACING_WALL_LEAN_DEGREES
 }
 
 /// Whether `normal` lies in the plane of one of `sides`: its dot with a side's normal is within

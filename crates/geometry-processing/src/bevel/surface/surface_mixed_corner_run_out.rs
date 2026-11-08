@@ -21,7 +21,7 @@ use crate::bevel::{BevelAdvisory, BevelAdvisoryCode};
 /// How far past the bead's own turn the run-out's touch row clears the wall on a flat wall:
 /// sixty degrees, `acos(1/2)`, whatever the wedge.
 pub fn clears_the_wall() -> f64 {
-    0.5f64.acos()
+    libm::acos(0.5f64)
 }
 
 /// Whether two columns stand at one place: their trim points, or their rail points, within
@@ -89,8 +89,8 @@ pub fn try_scallop_on_the_ring(
 
     Some(
         centre
-            + (towards_the_plate * (corner.size * psi.cos()))
-            + (across * (corner.size * psi.sin())),
+            + (towards_the_plate * (corner.size * libm::cos(psi)))
+            + (across * (corner.size * libm::sin(psi))),
     )
 }
 

@@ -255,10 +255,10 @@ pub fn last_to_leave(
         .get_normal()
         .dot(to_right.get_normal())
         .clamp(-1.0, 1.0);
-    let half = cos.acos() / 2.0;
+    let half = libm::acos(cos) / 2.0;
     let bisector = (to_left.get_normal() + to_right.get_normal()).get_normal();
-    let centre = end + (bisector * (to_left.length() / half.cos()));
-    let radius = to_left.length() * half.tan();
+    let centre = end + (bisector * (to_left.length() / libm::cos(half)));
+    let radius = to_left.length() * libm::tan(half);
 
     // The function's direction in the section plane (square to the chain).
     let direction = -normal - (outward * (-normal).dot(outward));

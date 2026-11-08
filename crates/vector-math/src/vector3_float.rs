@@ -280,7 +280,9 @@ impl Vector3Float {
 
     /// The angle between two vectors, in radians (ratio in f32, `acos` in f64, narrowed).
     pub fn calculate_angle(self, second: Vector3Float) -> f32 {
-        f64::from(self.dot(second) / (self.length() * second.length())).acos() as f32
+        libm::acos(f64::from(
+            self.dot(second) / (self.length() * second.length()),
+        )) as f32
     }
 }
 

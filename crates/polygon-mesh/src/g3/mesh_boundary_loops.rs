@@ -474,6 +474,6 @@ fn plane_angle_signed_d(v_from: [f32; 3], v_to: [f32; 3], plane_n: [f32; 3]) -> 
     };
     // The dot clamped, acos in double, then degrees, narrowed
     let fdot = dot_f(v_from, v_to).clamp(-1.0, 1.0);
-    let angle = ((fdot as f64).acos() * (180.0 / std::f64::consts::PI)) as f32;
+    let angle = (libm::acos(fdot as f64) * (180.0 / std::f64::consts::PI)) as f32;
     sign * angle
 }

@@ -247,8 +247,8 @@ pub fn try_build(
     } else {
         (drawn.len() - 1, rungs as usize)
     };
-    let setback_arriving = radius * (arriving_canal.wedge / 2.0).tan();
-    let setback_leaving = radius * (leaving_canal.wedge / 2.0).tan();
+    let setback_arriving = radius * libm::tan(arriving_canal.wedge / 2.0);
+    let setback_leaving = radius * libm::tan(leaving_canal.wedge / 2.0);
     let strips_section = |wall_end: usize, setback: f64| {
         the_strips_section(
             leaving.from_vertex(),

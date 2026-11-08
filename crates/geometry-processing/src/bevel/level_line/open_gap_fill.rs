@@ -407,7 +407,7 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
     let reach = q - vertex;
     let lengths = outward.length() * reach.length();
     let phi = if lengths > 0.0 {
-        (outward.dot(reach) / lengths).clamp(-1.0, 1.0).acos()
+        libm::acos((outward.dot(reach) / lengths).clamp(-1.0, 1.0))
     } else {
         std::f64::consts::PI / 2.0
     };

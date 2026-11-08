@@ -24,6 +24,11 @@ name = "solidmesh_mesh"
 path = "src/lib.rs"
 
 [dependencies]
+# Pure-Rust transcendental functions (sin, cos, atan2, pow, ...): std's call each platform's own
+# maths library, whose last bits differ between Windows, Linux, macOS and the browser, so the
+# same input would give different output by OS. `libm` is the same everywhere; the
+# `platform_math` gate (crates/workspace-gates) keeps std's out of every crate's src.
+libm = "0.2.16"
 solidmesh-math = { path = "../vector-math", version = "0.1.0" }
 # The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
 # slicing, stitching, extrude and revolve share with MatterCAD's DataConverters2D.

@@ -15,7 +15,7 @@ pub fn for_fillet(radius: f64, n_left: Vector3, n_right: Vector3) -> f64 {
         .dot(n_right.get_normal())
         .clamp(-1.0, 1.0);
 
-    radius * (cos_phi.acos() / 2.0).tan()
+    radius * libm::tan(libm::acos(cos_phi) / 2.0)
 }
 
 /// The setback a chamfer asks for, which is the size itself.

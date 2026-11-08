@@ -242,7 +242,7 @@ pub fn split_at_setback_steps(
         let flips_to_cut: Vec<i32> = super::LevelLineWork::current()
             .map(|budget| budget.sense_flips_to_cut.borrow().clone())
             .unwrap_or_default();
-        let cos_sharp = (sharp_turn_degrees * std::f64::consts::PI / 180.0).cos();
+        let cos_sharp = libm::cos(sharp_turn_degrees * std::f64::consts::PI / 180.0);
         let steps_at = |before: usize, after: usize| {
             // Edge i runs from chain[i]; the vertex between edges before and after is chain[after].
             let d_in = positions[edges[before].1 as usize] - positions[edges[before].0 as usize];

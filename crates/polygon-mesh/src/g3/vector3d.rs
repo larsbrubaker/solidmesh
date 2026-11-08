@@ -82,7 +82,7 @@ pub(crate) fn distance_squared(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// The dot clamped to [-1, 1], then `acos`.
 pub(crate) fn angle_r(a: [f64; 3], b: [f64; 3]) -> f64 {
     let f_dot = clamp(dot(a, b), -1.0, 1.0);
-    f_dot.acos()
+    libm::acos(f_dot)
 }
 
 /// Whether every component of `a` and `b` differs by at most `epsilon`.

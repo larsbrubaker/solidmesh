@@ -148,7 +148,7 @@ pub fn try_plan_edge(
             return Err(does_not_fit());
         }
 
-        center_distance = size / (degrees_to_radians(wedge_angle_degrees) / 2.0).sin();
+        center_distance = size / libm::sin(degrees_to_radians(wedge_angle_degrees) / 2.0);
         if !is_finite(center_distance) {
             return Err(does_not_fit());
         }

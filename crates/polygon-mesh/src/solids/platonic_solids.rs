@@ -22,7 +22,7 @@ fn scale_if_needed(mesh: &mut Mesh, scale: f64) {
 pub fn create_tetrahedron(scale: f64) -> Mesh {
     let mut tetrahedron = Mesh::new();
     let base_point = Vector2::new(1.0, 0.0);
-    let base_offset_z = -math_helper::degrees_to_radians(30.0).sin();
+    let base_offset_z = -libm::sin(math_helper::degrees_to_radians(30.0));
     add(
         &mut tetrahedron,
         Vector3::from_vector2(base_point, base_offset_z),

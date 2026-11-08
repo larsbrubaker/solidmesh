@@ -292,7 +292,7 @@ struct EndScan {
 /// How far two closing faces' normals may differ and still be one plane: the same one degree
 /// `BevelInterruptedCrease` reads two pieces of one surface at.
 fn the_same_plane_agreement() -> f64 {
-    (1.0 * std::f64::consts::PI / 180.0).cos()
+    libm::cos(1.0 * std::f64::consts::PI / 180.0)
 }
 
 /// One end's incidence read once: every face of an edge here that is not one of the run's own
@@ -429,7 +429,7 @@ fn the_feature_spans_the_strip(
 
         let centre = position
             + (bisector.get_normal()
-                * (size / (math_helper::degrees_to_radians(wedge_angle_degrees) / 2.0).sin()));
+                * (size / libm::sin(math_helper::degrees_to_radians(wedge_angle_degrees) / 2.0)));
 
         // The arc's own interior candidate: the point facing down the difference's gradient, taken
         // only where it lies in the sector the profile actually sweeps. The sector is named by its

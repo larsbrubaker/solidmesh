@@ -292,9 +292,9 @@ impl SurfaceMixedCorner {
         let from = self.axis().closest_point_to(point);
         let offset = point - from;
 
-        from + (offset * turn.cos())
-            + (axis.cross(offset) * turn.sin())
-            + (axis * axis.dot(offset) * (1.0 - turn.cos()))
+        from + (offset * libm::cos(turn))
+            + (axis.cross(offset) * libm::sin(turn))
+            + (axis * axis.dot(offset) * (1.0 - libm::cos(turn)))
     }
 
     /// The way one planned edge runs away from `corner`, which is one of its two ends. Shared with

@@ -214,7 +214,7 @@ impl SurfaceMixedCornerDualGrid {
             .map(|&rail| {
                 let out_of_the_axis = rail - axis.closest_point_to(rail);
 
-                f64::atan2(
+                libm::atan2(
                     out_of_the_axis.dot(spine.towards_the_wall_square()),
                     out_of_the_axis.dot(spine.towards_the_shared_face()),
                 )

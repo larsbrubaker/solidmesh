@@ -258,7 +258,7 @@ impl SurfaceRunOutMeetsAWallBand {
 
             let away = Self::try_across(from, to, touch)?;
 
-            let past = f64::atan2(
+            let past = libm::atan2(
                 away.dot(self.corner.towards_the_wall_square()),
                 away.dot(self.corner.towards_the_shared_face()),
             ) - self.corner.turn_radians();
@@ -407,9 +407,10 @@ impl SurfaceRunOutMeetsAWallBand {
             // In the cap's own plane, where every way out of the axis lies.
             flat[rail] = at - (out_of_the_cap * (at - centre).dot(out_of_the_cap));
             let away = flat[rail] - centre;
-            turns[rail] = away
-                .dot(corner.towards_the_wall_square())
-                .atan2(away.dot(corner.towards_the_shared_face()));
+            turns[rail] = libm::atan2(
+                away.dot(corner.towards_the_wall_square()),
+                away.dot(corner.towards_the_shared_face()),
+            );
             let radius = away.length();
 
             // Only a rail between the ball's own radius and the circle its touch point traces meets

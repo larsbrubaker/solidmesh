@@ -83,7 +83,7 @@ pub fn zip_end(
     let w = n.get_normal().cross(u);
     let angle_of = |mesh: &LevelLineMesh, vertex: i32| {
         let d = mesh.position(vertex) - v;
-        d.dot(w).atan2(d.dot(u))
+        libm::atan2(d.dot(w), d.dot(u))
     };
 
     let a: Vec<f64> = row.iter().map(|&i| angle_of(mesh, i)).collect();

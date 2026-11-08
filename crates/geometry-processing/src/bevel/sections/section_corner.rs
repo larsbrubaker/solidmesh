@@ -34,7 +34,9 @@ pub const PROFILES_MEET_TO_WITHIN_THIS_MUCH_OF_THE_RADIUS: f64 = 1e-3;
 /// How nearly two faces must line up to be read as ONE SMOOTH SURFACE rather than
 /// two sides of a feature - the cosine of the same curve tolerance [`is_sharp_turn`] reads turns at.
 pub fn smooth_surface_dot() -> f64 {
-    math_helper::degrees_to_radians(FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES).cos()
+    libm::cos(math_helper::degrees_to_radians(
+        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+    ))
 }
 
 /// Whether the chain turns past the curve tolerance between two consecutive edges,
@@ -50,7 +52,7 @@ pub fn turn_degrees(arriving: &ChainEdge, leaving: &ChainEdge) -> f64 {
         .get_normal()
         .dot(direction(leaving).get_normal());
 
-    math_helper::radians_to_degrees(cosine.clamp(-1.0, 1.0).acos())
+    math_helper::radians_to_degrees(libm::acos(cosine.clamp(-1.0, 1.0)))
 }
 
 /// A chain edge's walk direction.
@@ -164,7 +166,7 @@ pub fn try_read_the_sides(arriving: &ChainEdge, leaving: &ChainEdge) -> Option<(
     Some((
         left_is_shared,
         arriving_cosine,
-        arriving_cosine.clamp(-1.0, 1.0).acos(),
+        libm::acos(arriving_cosine.clamp(-1.0, 1.0)),
     ))
 }
 
@@ -195,7 +197,7 @@ pub fn slid_profile(
     let one = edge.left_normal().get_normal();
     let other = edge.right_normal().get_normal();
     let cosine = one.dot(other);
-    let wedge = cosine.clamp(-1.0, 1.0).acos();
+    let wedge = libm::acos(cosine.clamp(-1.0, 1.0));
     let centre = station - ((one + other) * radius / (1.0 + cosine));
 
     (0..points)
@@ -402,7 +404,7 @@ pub fn try_build(
         return Err(refused());
     }
 
-    let setback = radius * (wedge / 2.0).tan();
+    let setback = radius * libm::tan(wedge / 2.0);
 
     let fold = try_the_fold(
         vertex,

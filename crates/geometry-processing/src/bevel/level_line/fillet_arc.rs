@@ -42,7 +42,7 @@ pub fn on_a_whole_leg(chain: &ChainField, parameter: f64) -> bool {
     let turn = |vertex: i32| {
         let into = (at_point(vertex) - at_point(vertex - 1)).get_normal();
         let out_of = (at_point(vertex + 1) - at_point(vertex)).get_normal();
-        into.dot(out_of).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI
+        libm::acos(into.dot(out_of).clamp(-1.0, 1.0)) * 180.0 / std::f64::consts::PI
     };
     let sharp_or_end = |vertex: i32| {
         is_end(vertex)
@@ -165,7 +165,7 @@ pub fn carried(
 /// directions dot below it is sharp. Asked only of a finite threshold (`AlongTheChain` carries
 /// nothing under an infinite one).
 pub fn sharp_cosine(chain: &ChainField) -> f64 {
-    (chain.sharp_turn_degrees * std::f64::consts::PI / 180.0).cos()
+    libm::cos(chain.sharp_turn_degrees * std::f64::consts::PI / 180.0)
 }
 
 /// The index of the first joint (sorted by parameter) at or
@@ -211,7 +211,7 @@ pub fn carry_weight(
     to_tangent: Vector3,
 ) -> f64 {
     let turn_degrees =
-        from_tangent.dot(to_tangent).clamp(-1.0, 1.0).acos() * 180.0 / std::f64::consts::PI;
+        libm::acos(from_tangent.dot(to_tangent).clamp(-1.0, 1.0)) * 180.0 / std::f64::consts::PI;
     let gentle = smooth_step(2.0 * (1.0 - (turn_degrees / chain.sharp_turn_degrees)));
     let joints = chain.sharp_joints();
     if gentle <= 0.0 || joints.is_empty() {

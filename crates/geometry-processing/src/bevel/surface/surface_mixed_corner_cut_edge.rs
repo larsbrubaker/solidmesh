@@ -52,16 +52,16 @@ pub fn sagitta_of_the_walls_chords(section: Option<&SurfaceWallSection>) -> f64 
         let before = chords[chord - 1];
         let here = chords[chord];
 
-        let turn = before.0.dot(here.0).clamp(-1.0, 1.0).acos();
+        let turn = libm::acos(before.0.dot(here.0).clamp(-1.0, 1.0));
         let across = ieee_math::max_f64(before.1, here.1);
 
         if !(turn > 0.0) || !(across > 0.0) {
             continue;
         }
 
-        let radius = across / (2.0 * (turn / 2.0).sin());
+        let radius = across / (2.0 * libm::sin(turn / 2.0));
 
-        sagitta = ieee_math::max_f64(sagitta, radius * (1.0 - (turn / 2.0).cos()));
+        sagitta = ieee_math::max_f64(sagitta, radius * (1.0 - libm::cos(turn / 2.0)));
     }
 
     sagitta

@@ -29,7 +29,7 @@ pub trait ColorType: Copy {
             if c <= 0.03928 {
                 c / 12.92
             } else {
-                ((c + 0.055) / 1.055).powf(2.4)
+                libm::pow((c + 0.055) / 1.055, 2.4)
             }
         };
         0.2126 * channel(self.red0_to_1())

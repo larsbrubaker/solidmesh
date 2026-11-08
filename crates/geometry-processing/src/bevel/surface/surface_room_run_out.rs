@@ -210,7 +210,8 @@ pub fn span_across(
     let along_zero = corner.towards_the_shared_face().dot(across) * corner.outer_rail_radius();
     let along_quarter = corner.towards_the_wall_square().dot(across) * corner.outer_rail_radius();
 
-    let at = |turn: f64| centre + (along_zero * turn.cos()) + (along_quarter * turn.sin());
+    let at =
+        |turn: f64| centre + (along_zero * libm::cos(turn)) + (along_quarter * libm::sin(turn));
 
     let mut take = |turn: f64| {
         let here = at(turn);
@@ -222,7 +223,7 @@ pub fn span_across(
     take(corner.turn_radians());
     take(dies);
 
-    let stationary = f64::atan2(along_quarter, along_zero);
+    let stationary = libm::atan2(along_quarter, along_zero);
 
     for half in -2..=2 {
         let turn = stationary + (f64::from(half) * std::f64::consts::PI);

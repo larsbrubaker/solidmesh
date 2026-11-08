@@ -153,8 +153,8 @@ impl PolygonExtensions for Path64 {
     }
 
     fn rotate(&self, radians: f64) -> Path64 {
-        let cos = radians.cos();
-        let sin = radians.sin();
+        let cos = libm::cos(radians);
+        let sin = libm::sin(radians);
         self.iter()
             .map(|point| {
                 let (x, y) = (point.x as f64, point.y as f64);

@@ -96,7 +96,7 @@ impl ObliqueEndReader<'_> {
                 .dot(outward)
                 .clamp(-1.0, 1.0);
             if !self.sharp_turn_degrees.is_finite()
-                || cos.acos() * 180.0 / std::f64::consts::PI < self.sharp_turn_degrees
+                || libm::acos(cos) * 180.0 / std::f64::consts::PI < self.sharp_turn_degrees
             {
                 return false;
             }

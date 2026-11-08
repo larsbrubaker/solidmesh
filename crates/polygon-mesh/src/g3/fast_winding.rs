@@ -61,7 +61,7 @@ pub(crate) fn tri_solid_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3], p: [f64; 3]
     let bottom = (la * lb * lc) + dot(a, b) * lc + dot(b, c) * la + dot(c, a) * lb;
     let top = a[0] * (b[1] * c[2] - c[1] * b[2]) - a[1] * (b[0] * c[2] - c[0] * b[2])
         + a[2] * (b[0] * c[1] - c[0] * b[1]);
-    2.0 * top.atan2(bottom)
+    2.0 * libm::atan2(top, bottom)
 }
 
 /// g3 `MeshTriInfoCache`: each triangle's centroid, unit normal and area (`DMesh3.GetTriInfo`).

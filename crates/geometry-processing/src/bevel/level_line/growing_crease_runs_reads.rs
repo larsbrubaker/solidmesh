@@ -25,7 +25,7 @@ impl GrowingCreaseRuns {
     /// unit setback the chain carries - infinity where no ridge does.
     pub fn fillet_pierce_room(&self, unit_setback: &[f64], fillet_segments: i32) -> f64 {
         let inscribed = if fillet_segments > 0 {
-            (std::f64::consts::PI / (2.0 * f64::from(fillet_segments))).cos()
+            libm::cos(std::f64::consts::PI / (2.0 * f64::from(fillet_segments)))
         } else {
             1.0
         };

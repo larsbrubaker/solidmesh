@@ -354,7 +354,7 @@ pub fn leaves_through_convex_crease(along: Vector3, into_hole: Vector3, outward:
     }
 
     let leaving = if toward < 0.0 { along * -1.0 } else { along };
-    leaving.dot(outward) > (CREASE_DEGREES * std::f64::consts::PI / 180.0).sin()
+    leaving.dot(outward) > libm::sin(CREASE_DEGREES * std::f64::consts::PI / 180.0)
 }
 
 /// The cross-tangent at arc point `index` of a row of `count`
@@ -798,7 +798,8 @@ pub fn in_face_cross_tangent(
             continue;
         }
 
-        if live_normal.dot(across_normal) < (CREASE_DEGREES * std::f64::consts::PI / 180.0).cos() {
+        if live_normal.dot(across_normal) < libm::cos(CREASE_DEGREES * std::f64::consts::PI / 180.0)
+        {
             // only a convex crease: the removed face turns behind the live one, into the material
             let toward = away_from_third_corner(mesh, across, a, b) * -1.0;
             return if toward.length_squared() == 0.0 || toward.dot(live_normal) >= 0.0 {

@@ -107,9 +107,10 @@ impl SurfaceStrip {
         // float can tell from a knife edge's. One angle, cited rather than restated - see
         // SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES.
         let knife = 2.0
-            * (math_helper::degrees_to_radians(SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES)
-                / 2.0)
-                .sin();
+            * libm::sin(
+                math_helper::degrees_to_radians(SurfaceBevelPlan::MINIMUM_WEDGE_ANGLE_DEGREES)
+                    / 2.0,
+            );
         if !(outward.length() > knife) {
             return Err(BevelAdvisory::new(
                 BevelAdvisoryCode::FaceAngleTooSharp,
@@ -160,12 +161,11 @@ impl SurfaceStrip {
         // the right tangent line to the bit, which is what the strip has to sew to.
         let cosine = from_center.dot(to_center) / (from_center.length() * to_center.length());
         // Clamped to [-1, 1] in a way that passes a NaN through.
-        let sweep = (if cosine.is_nan() {
+        let sweep = libm::acos(if cosine.is_nan() {
             cosine
         } else {
             cosine.clamp(-1.0, 1.0)
-        })
-        .acos();
+        });
 
         // And it is bounded from below by the same one angle: a wedge at the plan's flat end
         // leaves an arc of nothing to swing, and an arc of nothing between two feet a rounding
@@ -224,8 +224,8 @@ impl SurfaceStrip {
     /// `vector` turned `radians` about `axis` - Rodrigues, written out rather than built into a
     /// matrix because it is called once per arc sample.
     pub fn turn(vector: Vector3, axis: Vector3, radians: f64) -> Vector3 {
-        let cos = radians.cos();
-        let sin = radians.sin();
+        let cos = libm::cos(radians);
+        let sin = libm::sin(radians);
 
         (vector * cos) + (axis.cross(vector) * sin) + (axis * axis.dot(vector) * (1.0 - cos))
     }

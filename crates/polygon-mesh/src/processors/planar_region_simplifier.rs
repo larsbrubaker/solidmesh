@@ -102,7 +102,7 @@ pub(crate) fn simplify_counting_work(
     let bounds = mesh.get_axis_aligned_bounding_box();
     let distance_tolerance = relative_distance_tolerance
         * max_f64(bounds.x_size(), max_f64(bounds.y_size(), bounds.z_size()));
-    let cos_tolerance = angle_tolerance.cos();
+    let cos_tolerance = libm::cos(angle_tolerance);
 
     let mut verts = vec![0usize; face_count * 3];
     let mut normals = vec![Vector3::ZERO; face_count];

@@ -112,10 +112,11 @@ impl SurfaceMixedCornerDualFrame {
         }
 
         // Math.Clamp passes a NaN through, as f64::clamp does.
-        let turn_radians = towards_the_shared_face
-            .dot(towards_the_cap)
-            .clamp(-1.0, 1.0)
-            .acos();
+        let turn_radians = libm::acos(
+            towards_the_shared_face
+                .dot(towards_the_cap)
+                .clamp(-1.0, 1.0),
+        );
 
         let Some(spine) = SurfaceMixedCornerSpine::try_create(
             axis,

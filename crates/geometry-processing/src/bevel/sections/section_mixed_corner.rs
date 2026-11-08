@@ -93,7 +93,9 @@ use crate::topology::{ChainEdge, FaceGroup};
 /// How nearly two face normals must agree to be read as one smooth surface - the same tolerance
 /// [`section_corner`] reads a shared side at, and deliberately not a second angle.
 fn smooth_surface_dot() -> f64 {
-    math_helper::degrees_to_radians(FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES).cos()
+    libm::cos(math_helper::degrees_to_radians(
+        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+    ))
 }
 
 /// One mixed corner's sides: each edge's normal on the side the two share, and on its own other

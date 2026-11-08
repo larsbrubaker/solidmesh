@@ -76,8 +76,10 @@ const DETAILED_COLORS: &[(&str, Color)] = &[
 
 /// The Euclidean distance between two LAB colours (squares taken with `powf(2.0)`).
 fn lab_distance(lab1: &[f64; 3], lab2: &[f64; 3]) -> f64 {
-    ((lab1[0] - lab2[0]).powf(2.0) + (lab1[1] - lab2[1]).powf(2.0) + (lab1[2] - lab2[2]).powf(2.0))
-        .sqrt()
+    (libm::pow(lab1[0] - lab2[0], 2.0)
+        + libm::pow(lab1[1] - lab2[1], 2.0)
+        + libm::pow(lab1[2] - lab2[2], 2.0))
+    .sqrt()
 }
 
 fn lightness_description(lightness: f64) -> &'static str {
@@ -110,7 +112,7 @@ fn rgb_to_xyz(color: Color) -> [f64; 3] {
     let lin = |c: u8| {
         let v = c as f64 / 255.0;
         let v = if v > 0.04045 {
-            ((v + 0.055) / 1.055).powf(2.4)
+            libm::pow((v + 0.055) / 1.055, 2.4)
         } else {
             v / 12.92
         };
@@ -138,7 +140,7 @@ fn xyz_to_rgb(xyz: [f64; 3]) -> [f64; 3] {
         if c <= 0.0031308 {
             12.92 * c
         } else {
-            1.055 * c.powf(1.0 / 2.4) - 0.055
+            1.055 * libm::pow(c, 1.0 / 2.4) - 0.055
         }
     };
     // Add zero to prevent signed zeros (force 0 rather than -0)
@@ -160,18 +162,18 @@ fn lab_to_xyz(lab: [f64; 3]) -> [f64; 3] {
     let f_y = (l + 16.0) / 116.0;
     let f_z = f_y - b / 200.0;
     let f_x = a / 500.0 + f_y;
-    let x_r = if f_x.powf(3.0) > eps {
-        f_x.powf(3.0)
+    let x_r = if libm::pow(f_x, 3.0) > eps {
+        libm::pow(f_x, 3.0)
     } else {
         (116.0 * f_x - 16.0) / kap
     };
     let y_r = if l > kap * eps {
-        ((l + 16.0) / 116.0).powf(3.0)
+        libm::pow((l + 16.0) / 116.0, 3.0)
     } else {
         l / kap
     };
-    let z_r = if f_z.powf(3.0) > eps {
-        f_z.powf(3.0)
+    let z_r = if libm::pow(f_z, 3.0) > eps {
+        libm::pow(f_z, 3.0)
     } else {
         (116.0 * f_z - 16.0) / kap
     };
@@ -222,7 +224,7 @@ impl Color {
     pub fn xyz_to_lab(x: f64, y: f64, z: f64) -> [f64; 3] {
         let f = |v: f64| {
             if v > 0.008856 {
-                v.powf(1.0 / 3.0)
+                libm::pow(v, 1.0 / 3.0)
             } else {
                 (7.787 * v) + (16.0 / 116.0)
             }

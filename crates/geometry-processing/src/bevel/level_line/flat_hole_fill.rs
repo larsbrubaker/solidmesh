@@ -238,7 +238,7 @@ fn smallest_angle(a: Vector2, b: Vector2, c: Vector2) -> f64 {
         let x = p - o;
         let y = q - o;
         let dot = (x.x * y.x) + (x.y * y.y);
-        (dot / (x.length() * y.length())).clamp(-1.0, 1.0).acos()
+        libm::acos((dot / (x.length() * y.length())).clamp(-1.0, 1.0))
     }
 
     ieee_math::min_f64(at(a, b, c), ieee_math::min_f64(at(b, c, a), at(c, a, b)))

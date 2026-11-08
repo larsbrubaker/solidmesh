@@ -260,7 +260,7 @@ pub fn zips_about_the_rows_axis(
     let w = n.cross(u);
     let angle_of = |mesh: &LevelLineMesh, vertex: i32| {
         let d = mesh.position(vertex) - centre;
-        d.dot(w).atan2(d.dot(u))
+        libm::atan2(d.dot(w), d.dot(u))
     };
 
     let a: Vec<f64> = row.iter().map(|&i| angle_of(mesh, i)).collect();
@@ -371,7 +371,7 @@ pub fn fans_about_the_end(
 
 /// The angle between two directions, by atan2 of their cross and dot.
 pub fn angle(a: Vector3, b: Vector3) -> f64 {
-    a.cross(b).length().atan2(a.dot(b))
+    libm::atan2(a.cross(b).length(), a.dot(b))
 }
 
 /// The point `t` of the way from `from` to `to` about the origin, turning in
@@ -382,9 +382,9 @@ pub fn toward(from: Vector3, to: Vector3, angle: f64, t: f64) -> Vector3 {
         return ((from * (1.0 - t)) + (to * t)).get_normal() * length;
     }
 
-    let sin = angle.sin();
-    let direction = (from.get_normal() * (((1.0 - t) * angle).sin() / sin))
-        + (to.get_normal() * ((t * angle).sin() / sin));
+    let sin = libm::sin(angle);
+    let direction = (from.get_normal() * (libm::sin((1.0 - t) * angle) / sin))
+        + (to.get_normal() * (libm::sin(t * angle) / sin));
     direction.get_normal() * length
 }
 
@@ -629,7 +629,7 @@ pub fn close_one(
     let w = n.cross(u);
     let angles: Vec<f64> = points
         .iter()
-        .map(|&p| (p - v).dot(w).atan2((p - v).dot(u)))
+        .map(|&p| libm::atan2((p - v).dot(w), (p - v).dot(u)))
         .collect();
     let mut turned = 0.0;
     for i in 0..cycle.len() {

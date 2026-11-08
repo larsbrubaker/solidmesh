@@ -120,8 +120,8 @@ pub fn try_section(
         tangent = -tangent;
     }
 
-    let wedge = cosine.clamp(-1.0, 1.0).acos();
-    let setback = radius * (wedge / 2.0).tan();
+    let wedge = libm::acos(cosine.clamp(-1.0, 1.0));
+    let setback = radius * libm::tan(wedge / 2.0);
     let centre = station - ((left + right) * radius / (1.0 + cosine));
     let across = ieee_math::max_f64(1.0 - (cosine * cosine), 0.0).sqrt();
     let left_away = ((left * cosine) - right) / across;

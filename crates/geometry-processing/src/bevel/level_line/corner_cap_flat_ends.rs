@@ -286,7 +286,7 @@ pub fn with_the_end_face_triangle_taken(
                     return true;
                 }
 
-                winding += ((ax * by) - (ay * bx)).atan2((ax * bx) + (ay * by));
+                winding += libm::atan2((ax * by) - (ay * bx), (ax * bx) + (ay * by));
             }
 
             // On the polygon's boundary the winding is half a turn; inside it is a whole one.

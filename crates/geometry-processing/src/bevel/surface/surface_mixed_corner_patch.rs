@@ -41,11 +41,12 @@ pub fn the_shared_faces_own_sagitta(
     let mut widest = 0.0;
 
     for facet in 1..walk.facets.len() {
-        let turned = walk.facets[facet]
-            .normal
-            .dot(walk.facets[facet - 1].normal)
-            .clamp(-1.0, 1.0)
-            .acos();
+        let turned = libm::acos(
+            walk.facets[facet]
+                .normal
+                .dot(walk.facets[facet - 1].normal)
+                .clamp(-1.0, 1.0),
+        );
 
         if !(turned > 0.0) {
             continue;
@@ -53,7 +54,7 @@ pub fn the_shared_faces_own_sagitta(
 
         widest = ieee_math::max_f64(
             widest,
-            walk.facets[facet].crossed() / 2.0 * (turned / 4.0).tan(),
+            walk.facets[facet].crossed() / 2.0 * libm::tan(turned / 4.0),
         );
     }
 

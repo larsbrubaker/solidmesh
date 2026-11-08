@@ -116,7 +116,7 @@ pub fn try_turn_the_ring_round(
 pub fn angle_of(corner: &SurfaceMixedCorner, at: Vector3) -> f64 {
     let out_of_the_axis = at - corner.axis().closest_point_to(at);
 
-    f64::atan2(
+    libm::atan2(
         out_of_the_axis.dot(corner.towards_the_wall_square()),
         out_of_the_axis.dot(corner.towards_the_shared_face()),
     )

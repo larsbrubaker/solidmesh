@@ -54,7 +54,7 @@ impl Face {
         let c = f64::from((p0 - p2).length());
         let b = Vector3::calculate_angle(xy, xz);
 
-        (a * c * b.sin()) / 2.0
+        (a * c * libm::sin(b)) / 2.0
     }
 }
 

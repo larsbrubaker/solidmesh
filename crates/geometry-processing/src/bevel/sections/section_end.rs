@@ -42,7 +42,9 @@ pub struct EndReading {
 
 /// How near two unit normals have to stand to be one SURFACE: the curve tolerance's cosine.
 pub fn same_surface_dot() -> f64 {
-    math_helper::degrees_to_radians(FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES).cos()
+    libm::cos(math_helper::degrees_to_radians(
+        FaceGroup::DEFAULT_CURVE_TOLERANCE_DEGREES,
+    ))
 }
 
 /// How near two unit normals have to stand to be one FLAT region.
@@ -463,7 +465,7 @@ pub fn try_build(
 
     let read = try_read(edge, at_the_start, mesh, graph, edge_at_pair)
         .map_err(SectionBuildRefusal::Refused)?;
-    let wedge = read.cosine.clamp(-1.0, 1.0).acos();
+    let wedge = libm::acos(read.cosine.clamp(-1.0, 1.0));
     let centre = read.station - ((read.left + read.right) * radius / (1.0 + read.cosine));
     let points = segments.max(1) + 1;
     let mut profile = vec![0; points as usize];
@@ -528,7 +530,7 @@ pub fn try_build(
         super::SectionSide::Slide,
         read.left_slide,
         read.right_slide,
-        radius * (wedge / 2.0).tan(),
+        radius * libm::tan(wedge / 2.0),
     )
     .expect("an end section's profile ends on its boundaries");
     Ok(super::BevelSection {

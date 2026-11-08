@@ -1,28 +1,38 @@
-//! Platform maths gate: the 2D path bevel (`src/path`) and the topology readings (`src/topology`)
-//! take their transcendental functions from the pure-Rust `libm` crate, never from std. std's
-//! `f64::sin`, `cos`, `tan`, `acos`, `atan2`, `exp`, `ln`, `powf` and the rest call each
-//! platform's own maths library, whose last bits differ between Windows, Linux, macOS and the
-//! browser, so a design's curves and corner readings would differ by platform; `libm` is the same
-//! everywhere. (`sqrt`, `abs` and the four operations are correctly rounded and stay std's.)
-//!
-//! Clippy cannot hold this line: its `disallowed-methods` list is one lint for the whole
-//! workspace, also the one refusing `mul_add`, so listing std's trig there and allowing it in the
-//! modules still using it (the 3D bevel in `src/bevel`, vector-math) would switch the `mul_add`
-//! refusal off in those modules too. This test reads the two module trees instead, with comments
-//! dropped, and refuses a std method call (`.sin(`) or path (`f64::sin`) of any of these names.
+// Platform maths gate: library code takes its transcendental functions from the pure-Rust `libm`
+// crate, never from std. std's `f64::sin`, `cos`, `tan`, `acos`, `atan2`, `exp`, `ln`, `powf` and
+// the rest call each platform's own maths library, whose last bits differ between Windows, Linux,
+// macOS and the browser, so the same input would give a different mesh by OS; `libm` is the same
+// everywhere. `sqrt`, `abs` and the four operations are correctly rounded and stay std's, and
+// `powi` stays too: it is repeated multiplication in Rust's own runtime, the same on every target.
+//
+// Clippy cannot hold this line: its `disallowed-methods` list is one lint for the whole
+// workspace, also the one refusing `mul_add`, and the integration tests still build their input
+// shapes with std's trig, so allowing the lint there would switch the `mul_add` refusal off too.
+// This test reads the sources instead.
+//
+// Checked: every `.rs` file under `crates/<crate>/src/` of every crate folder, so a crate that
+// moves in is checked at once, except the gates themselves. A line fails when, outside its `//`
+// comment, it has a std method call (`.sin(`) or path (`f64::sin`) of one of these names.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 /// std's `f64`/`f32` methods whose results depend on the platform's maths library.
-const PLATFORM_DEPENDENT: [&str; 26] = [
+const PLATFORM_DEPENDENT: [&str; 25] = [
     "sin", "cos", "tan", "sin_cos", "asin", "acos", "atan", "atan2", "sinh", "cosh", "tanh",
     "asinh", "acosh", "atanh", "exp", "exp2", "exp_m1", "ln", "ln_1p", "log", "log2", "log10",
-    "powf", "powi", "hypot", "cbrt",
+    "powf", "hypot", "cbrt",
 ];
 
-/// The module trees held to `libm`, relative to the crate.
-const LIBM_ONLY: [&str; 2] = ["src/path", "src/topology"];
+/// Crate folders that are not library code: the gates, which run only as native tests.
+const NOT_LIBRARY_CRATES: [&str; 1] = ["workspace-gates"];
+
+fn crates_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crates/workspace-gates sits in crates/")
+        .to_path_buf()
+}
 
 fn rust_files(dir: &Path, found: &mut Vec<PathBuf>) {
     let entries = fs::read_dir(dir).unwrap_or_else(|error| panic!("reading {dir:?}: {error}"));
@@ -37,7 +47,7 @@ fn rust_files(dir: &Path, found: &mut Vec<PathBuf>) {
 }
 
 /// The line with its `//` comment (doc comments included) dropped. A `//` inside a string literal
-/// would cut the line short too; these modules have none that hide a call.
+/// cuts the line short too, which can only hide code, never invent a hit.
 fn code_of(line: &str) -> &str {
     line.split_once("//").map_or(line, |(code, _)| code)
 }
@@ -71,15 +81,20 @@ fn std_calls(code: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_path_bevel_and_topology_take_their_trig_from_libm() {
-    let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+fn library_code_takes_its_trig_from_libm() {
+    let crates = crates_dir();
     let mut files = Vec::new();
-    for tree in LIBM_ONLY {
-        rust_files(&crate_dir.join(tree), &mut files);
+    for entry in fs::read_dir(&crates).expect("the crates folder") {
+        let crate_dir = entry.expect("a directory entry").path();
+        let name = crate_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if crate_dir.join("src").is_dir() && !NOT_LIBRARY_CRATES.contains(&name) {
+            rust_files(&crate_dir.join("src"), &mut files);
+        }
     }
     assert!(
-        files.len() > 10,
-        "expected the path and topology modules, found {files:?}"
+        files.len() > 100,
+        "expected every library crate's sources, found {} files",
+        files.len()
     );
 
     let mut refused = Vec::new();
@@ -87,7 +102,7 @@ fn the_path_bevel_and_topology_take_their_trig_from_libm() {
         let text = fs::read_to_string(file).unwrap_or_else(|error| panic!("{file:?}: {error}"));
         for (index, line) in text.lines().enumerate() {
             for call in std_calls(code_of(line)) {
-                let relative = file.strip_prefix(crate_dir).unwrap_or(file);
+                let relative = file.strip_prefix(&crates).unwrap_or(file);
                 refused.push(format!("{}:{}: {call}", relative.display(), index + 1));
             }
         }
@@ -95,9 +110,9 @@ fn the_path_bevel_and_topology_take_their_trig_from_libm() {
 
     assert!(
         refused.is_empty(),
-        "std's transcendental functions give different last bits on each platform, so the path \
-         bevel and the topology readings call the `libm` crate's (`libm::atan2(y, x)` for \
-         `y.atan2(x)`) to give a design the same curves everywhere:\n{}",
+        "std's transcendental functions give different last bits on each platform, so library \
+         code calls the `libm` crate's (`libm::atan2(y, x)` for `y.atan2(x)`) to give the same \
+         mesh everywhere:\n{}",
         refused.join("\n")
     );
 }
@@ -109,5 +124,6 @@ fn the_gate_sees_a_std_call_and_passes_a_libm_one() {
     assert_eq!(std_calls("map(f64::cos)"), vec!["f64::cos"]);
     assert!(std_calls("let a = libm::atan2(y, x) + libm::cos(t);").is_empty());
     assert!(std_calls("f64::consts::PI; f64::cosine_of(t)").is_empty());
+    assert!(std_calls("let a = base.powi(2);").is_empty());
     assert!(std_calls(code_of("let a = 1.0; // was x.sin()")).is_empty());
 }

@@ -24,6 +24,11 @@ name = "solidmesh_math"
 path = "src/lib.rs"
 
 [dependencies]
+# Pure-Rust transcendental functions (sin, cos, atan2, pow, ...): std's call each platform's own
+# maths library, whose last bits differ between Windows, Linux, macOS and the browser, so the
+# same input would give different output by OS. `libm` is the same everywhere; the
+# `platform_math` gate (crates/workspace-gates) keeps std's out of every crate's src.
+libm = "0.2.16"
 serde = { version = "1", features = ["derive"] }
 # The clock (std natively, `performance.now`/`Date.now` in the browser) for ProgressReporter's
 # yield throttle; std's `Instant::now` panics on wasm32. MIT/Apache-2.0, already in the workspace.

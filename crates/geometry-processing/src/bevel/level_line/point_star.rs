@@ -67,7 +67,7 @@ impl PointStar {
                 let u = at(corners[(k + 1) % 3]) - point;
                 let w = at(corners[(k + 2) % 3]) - point;
                 face_normals.push(normals[i]);
-                face_angles.push(u.cross(w).length().atan2(u.dot(w)));
+                face_angles.push(libm::atan2(u.cross(w).length(), u.dot(w)));
             }
         }
 
@@ -290,7 +290,7 @@ fn face_normal(positions: &[Vector3], (a, b, c): (i32, i32, i32)) -> Vector3 {
 /// The cosine two faces' normals fall below where the edge between them bends by more than the
 /// threshold.
 fn bend_cosine(bend_threshold_degrees: f64) -> f64 {
-    (bend_threshold_degrees * std::f64::consts::PI / 180.0).cos()
+    libm::cos(bend_threshold_degrees * std::f64::consts::PI / 180.0)
 }
 
 /// Whether the edge whose triangles are `on` is a feature edge: an open or non-manifold edge, or

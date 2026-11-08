@@ -246,12 +246,12 @@ impl WorldView {
 
     /// The visible height within a symmetric vertical FOV at a signed distance from the camera.
     pub fn calc_perspective_height(distance: f64, vfov_degrees: f64) -> f64 {
-        distance * 2.0 * (math_helper::degrees_to_radians(vfov_degrees) * 0.5).tan()
+        distance * 2.0 * libm::tan(math_helper::degrees_to_radians(vfov_degrees) * 0.5)
     }
 
     /// The distance from the camera at which a symmetric vertical FOV shows `height`.
     pub fn calc_perspective_distance(height: f64, vfov_degrees: f64) -> f64 {
-        height * 0.5 / (math_helper::degrees_to_radians(vfov_degrees) * 0.5).tan()
+        height * 0.5 / libm::tan(math_helper::degrees_to_radians(vfov_degrees) * 0.5)
     }
 
     /// The symmetric vertical FOV in degrees that shows `height` at `distance`.
@@ -259,7 +259,7 @@ impl WorldView {
         distance: f64,
         height: f64,
     ) -> f64 {
-        math_helper::radians_to_degrees((height * 0.5 / distance).atan() * 2.0)
+        math_helper::radians_to_degrees(libm::atan(height * 0.5 / distance) * 2.0)
     }
 
     /// Sets a perspective projection with a center adjustment (`center_offset_x` moves the
@@ -279,14 +279,14 @@ impl WorldView {
 
         let screen_dist = Self::calc_perspective_distance(height, vfov_degrees);
         let center = width / 2.0;
-        let x_angle_l = (-center - center_offset_x / 2.0).atan2(screen_dist);
-        let x_angle_r = (center - center_offset_x / 2.0).atan2(screen_dist);
+        let x_angle_l = libm::atan2(-center - center_offset_x / 2.0, screen_dist);
+        let x_angle_r = libm::atan2(center - center_offset_x / 2.0, screen_dist);
 
         // calculate yMin and yMax at the near clip plane
         let y_max = Self::calc_perspective_height(z_near, vfov_degrees) * 0.5;
         let y_min = -y_max;
-        let x_max = z_near * x_angle_r.tan();
-        let x_min = z_near * x_angle_l.tan();
+        let x_max = z_near * libm::tan(x_angle_r);
+        let x_min = z_near * libm::tan(x_angle_l);
 
         let projection_matrix =
             Matrix4X4::create_perspective_off_center(x_min, x_max, y_min, y_max, z_near, z_far)?;

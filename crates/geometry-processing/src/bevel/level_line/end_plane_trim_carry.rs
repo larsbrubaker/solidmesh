@@ -42,16 +42,16 @@ pub fn carry(
     let round: Box<dyn Fn(Vector3) -> f64> = if profile == BandProfile::Fillet {
         let sa = a - end;
         let sb = b - end;
-        let half = sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0).acos() / 2.0;
-        let centre =
-            end + ((sa.get_normal() + sb.get_normal()).get_normal() * (sa.length() / half.cos()));
-        let radius = sa.length() * half.tan();
+        let half = libm::acos(sa.get_normal().dot(sb.get_normal()).clamp(-1.0, 1.0)) / 2.0;
+        let centre = end
+            + ((sa.get_normal() + sb.get_normal()).get_normal() * (sa.length() / libm::cos(half)));
+        let radius = sa.length() * libm::tan(half);
         let from_centre = (a - centre).get_normal();
         let axis = from_centre.cross(b - centre).get_normal();
         let across = axis.cross(from_centre);
         Box::new(move |p| {
             let d = square(p) - centre;
-            radius * d.dot(across).atan2(d.dot(from_centre))
+            radius * libm::atan2(d.dot(across), d.dot(from_centre))
         })
     } else {
         let chord = (b - a).get_normal();
