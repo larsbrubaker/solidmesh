@@ -749,13 +749,3 @@ input[type="number"] {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
-
-/* The README hero is rendered at a fixed size, off to the side of the visible page. */
-.hero-stage {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 1234px;
-  height: 749px;
-  z-index: 1000;
-}

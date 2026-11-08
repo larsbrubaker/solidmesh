@@ -15,7 +15,7 @@
 //!   contouring, and the implicit boolean of meshes;
 //! - `morph`: Minkowski sum and difference, convex hull;
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
-//! - `showcase`: the part of the Measure & Export page and the README hero.
+//! - `showcase`: the part of the Measure & Export page.
 
 use js_sys::{Float32Array, Uint32Array, Uint8Array};
 use polygon_mesh::processors::stl_writer;
@@ -295,7 +295,7 @@ pub fn repair_scene(
     }))
 }
 
-/// Measure & Export page and README hero; see [`showcase::showcase_part`].
+/// Measure & Export page; see [`showcase::showcase_part`].
 #[wasm_bindgen]
 pub fn showcase_scene(
     holes: u32,

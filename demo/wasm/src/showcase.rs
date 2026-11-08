@@ -1,5 +1,4 @@
-//! The showcase part: one solid that uses most of the library at once, for the Measure & Export
-//! page and the README hero image.
+//! The showcase part of the Measure & Export page: one solid that uses most of the library at once.
 //!
 //! - a flanged hub, its profile revolved (`revolve_contours`);
 //! - a fillet where the neck meets the flange, from a smooth-blended signed distance field meshed

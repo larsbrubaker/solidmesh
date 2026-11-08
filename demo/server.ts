@@ -2,9 +2,8 @@
 // index.html, transpiles src/*.ts per request, serves styles/ and public/ (the wasm package and
 // thumbnails), and falls back to index.html for client-side routes.
 //
-// It also takes the two localhost-only captures src/capture.ts makes (see capture-thumbs.ts):
+// It also takes the localhost-only thumbnail capture src/capture.ts makes (see capture-thumbs.ts):
 //   POST /api/save-thumb  { name, data: JPEG data URL }  -> demo/public/thumbs/<name>.jpg
-//   POST /api/save-hero   { data: PNG data URL }         -> README_HERO.png at the repository root
 // The server listens on localhost only, so nothing outside this machine can write those files.
 //
 // Port: $PORT, else 3030 (manifold-rust's demo keeps 3000, so both can run side by side).
@@ -14,7 +13,6 @@ import { extname, join, resolve } from "path";
 
 const PORT = parseInt(process.env.PORT || "3030");
 const ROOT = import.meta.dir;
-const REPO_ROOT = resolve(ROOT, "..");
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -80,16 +78,6 @@ async function saveThumb(req: Request): Promise<Response> {
   return json({ ok: true, size: bytes.length });
 }
 
-async function saveHero(req: Request): Promise<Response> {
-  const { data } = (await req.json()) as { data: unknown };
-  const bytes = imageBytes(data, "png");
-  if (!bytes) return json({ ok: false, error: "expected a PNG data URL" }, 400);
-  const out = join(REPO_ROOT, "README_HERO.png");
-  writeFileSync(out, bytes);
-  console.log(`[hero] Saved ${out} (${bytes.length} bytes)`);
-  return json({ ok: true, size: bytes.length });
-}
-
 const server = Bun.serve({
   port: PORT,
   hostname: "localhost",
@@ -97,7 +85,6 @@ const server = Bun.serve({
     const url = new URL(req.url);
     try {
       if (req.method === "POST" && url.pathname === "/api/save-thumb") return await saveThumb(req);
-      if (req.method === "POST" && url.pathname === "/api/save-hero") return await saveHero(req);
     } catch (e: any) {
       return json({ ok: false, error: String(e?.message ?? e) }, 500);
     }

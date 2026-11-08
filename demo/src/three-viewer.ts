@@ -1,9 +1,10 @@
 // The Three.js viewer every page draws its result in: z up (the kernel's convention), orbit
 // controls, flat shading with the solid's feature edges drawn dark, back faces in saffron so an
 // inside-out patch or a hole shows at a glance, and an optional translucent ghost (a boolean's
-// operands, a hull's source). The hero page places several results side by side with addMesh.
+// operands, a hull's source).
 //
-// preserveDrawingBuffer is on so src/capture.ts can read the canvas for thumbnails and the hero.
+// The newest live viewer is `activeViewer()`: src/capture.ts draws it with `renderNow` and reads
+// its canvas for the thumbnail (preserveDrawingBuffer keeps the frame readable).
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -15,6 +16,13 @@ export const COLORS = {
   edge: 0x14213d,
 };
 
+let active: ThreeViewer | null = null;
+
+/** The viewer of the page on screen, or null between pages. */
+export function activeViewer(): ThreeViewer | null {
+  return active;
+}
+
 function geometry(positions: Float32Array, indices: Uint32Array): THREE.BufferGeometry {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -22,13 +30,6 @@ function geometry(positions: Float32Array, indices: Uint32Array): THREE.BufferGe
   geom.computeBoundingBox();
   geom.computeBoundingSphere();
   return geom;
-}
-
-export interface ViewerOptions {
-  /** Fixed canvas size in CSS pixels (the hero); otherwise the container's size. */
-  width?: number;
-  height?: number;
-  pixelRatio?: number;
 }
 
 export class ThreeViewer {
@@ -46,9 +47,9 @@ export class ThreeViewer {
   private showWireframe = false;
   private resizeObserver: ResizeObserver | null = null;
 
-  constructor(private container: HTMLElement, private options: ViewerOptions = {}) {
+  constructor(private container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(options.pixelRatio ?? window.devicePixelRatio);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0xf4f6f9);
     container.appendChild(this.renderer.domElement);
 
@@ -70,13 +71,10 @@ export class ThreeViewer {
     this.scene.add(this.content);
     this.scene.add(this.ghost);
 
-    if (options.width && options.height) {
-      this.setSize(options.width, options.height);
-    } else {
-      this.resizeObserver = new ResizeObserver(() => this.fitContainer());
-      this.resizeObserver.observe(container);
-      this.fitContainer();
-    }
+    this.resizeObserver = new ResizeObserver(() => this.fitContainer());
+    this.resizeObserver.observe(container);
+    this.fitContainer();
+    active = this;
     this.animate();
   }
 
@@ -97,8 +95,10 @@ export class ThreeViewer {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** Renders one frame now, for a capture that cannot wait for the next animation frame. */
+  /** Renders one frame now, at the container's current size, for a capture that cannot wait for
+   *  an animation frame (a hidden page gets none). */
   renderNow() {
+    this.fitContainer();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
@@ -156,13 +156,6 @@ export class ThreeViewer {
     if (!this.hasFramed) this.frame();
   }
 
-  /** Adds a result at `offset` beside the others (the hero's layout). */
-  addMesh(positions: Float32Array, indices: Uint32Array, color: number, offset: [number, number, number]) {
-    const solid = this.buildSolid(positions, indices, color);
-    solid.position.set(...offset);
-    this.content.add(solid);
-  }
-
   /** Shows the translucent ghost, or clears it with null. */
   setGhost(positions: Float32Array | null, indices: Uint32Array | null) {
     ThreeViewer.disposeGroup(this.ghost);
@@ -195,7 +188,7 @@ export class ThreeViewer {
   }
 
   /** Aims the camera at everything shown, from a three-quarter view, and sizes the grid. */
-  frame(direction: [number, number, number] = [0.55, -0.85, 0.6], tightness = 1.25) {
+  private frame() {
     const box = new THREE.Box3().setFromObject(this.content);
     if (box.isEmpty()) return;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
@@ -203,8 +196,8 @@ export class ThreeViewer {
     const fov = (this.camera.fov * Math.PI) / 180;
     const fitHeight = radius / Math.sin(fov / 2);
     const fitWidth = fitHeight / Math.min(this.camera.aspect, 1);
-    const dist = Math.max(fitHeight, fitWidth) * tightness;
-    const dir = new THREE.Vector3(...direction).normalize();
+    const dist = Math.max(fitHeight, fitWidth) * 1.25;
+    const dir = new THREE.Vector3(0.55, -0.85, 0.6).normalize();
     this.controls.target.copy(sphere.center);
     this.camera.position.copy(sphere.center).addScaledVector(dir, dist);
     this.camera.near = dist / 100;
@@ -237,6 +230,7 @@ export class ThreeViewer {
 
   dispose() {
     this.disposed = true;
+    if (active === this) active = null;
     cancelAnimationFrame(this.animId);
     this.resizeObserver?.disconnect();
     this.clear();

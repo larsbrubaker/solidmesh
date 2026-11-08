@@ -1,11 +1,14 @@
 // The demo site's entry point: the hash router (#/<route>) that lazily loads each page from
 // src/demos/, the home page with a card per page, the mobile sidebar toggle, and on localhost the
-// thumbnail and hero capture buttons (src/capture.ts).
+// thumbnail capture (src/capture.ts): the "Update Thumbnails" button, or ?capture=thumbs to run it
+// on load. ?hero hides the localhost-only button, so the README hero (a screenshot of the home
+// page, capture-hero.ts) shows the page as visitors see it.
 //
 // The wasm itself is loaded by the mesh worker (src/mesh-worker.ts) on a page's first request, so
 // the home page costs no wasm download.
 
-import { DEMO_ROUTES, captureHero, captureThumbnails, isLocalhost } from './capture.ts';
+import { captureThumbnails, isLocalhost } from './capture.ts';
+import { DEMO_ROUTES } from './routes.ts';
 
 type DemoInit = (container: HTMLElement) => (() => void) | void;
 const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
@@ -15,7 +18,6 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
   'minkowski-hull': () => import('./demos/minkowski-hull.ts' as any),
   'repair': () => import('./demos/repair.ts' as any),
   'measure-export': () => import('./demos/measure-export.ts' as any),
-  'hero': () => import('./demos/hero.ts' as any),
 };
 
 const CARDS: Record<string, { title: string; text: string }> = {
@@ -154,16 +156,22 @@ async function navigate(route: string) {
 window.addEventListener('hashchange', () => navigate(getRoute()));
 navigate(getRoute());
 
-if (isLocalhost()) {
-  const thumbs = document.getElementById('capture-thumbs-btn') as HTMLButtonElement;
-  thumbs.style.display = 'block';
-  // The capture moves between routes with replaceState, which fires no hashchange, so each page
-  // is loaded exactly once and the capture knows when it is up.
-  thumbs.addEventListener('click', () => captureThumbnails(async route => {
-    history.replaceState(null, '', `#/${route}`);
-    await navigate(route);
-  }, thumbs));
-  const hero = document.getElementById('capture-hero-btn') as HTMLButtonElement;
-  hero.style.display = 'block';
-  hero.addEventListener('click', () => captureHero(hero));
+const params = new URLSearchParams(location.search);
+const thumbsBtn = document.getElementById('capture-thumbs-btn') as HTMLButtonElement;
+// The capture moves between routes with replaceState, which fires no hashchange, so each page is
+// loaded exactly once and the capture knows when it is up.
+const captureNavigate = async (route: string) => {
+  history.replaceState(null, '', `#/${route}`);
+  await navigate(route);
+};
+
+if (isLocalhost() && !params.has('hero')) {
+  thumbsBtn.style.display = 'block';
+  thumbsBtn.addEventListener('click', () => captureThumbnails(captureNavigate, thumbsBtn));
+}
+
+// Scripted capture (capture-thumbs.ts): ?capture=thumbs runs it on load and retitles the page
+// when it is done.
+if (isLocalhost() && params.get('capture') === 'thumbs') {
+  captureThumbnails(captureNavigate, thumbsBtn).then(() => { document.title = 'thumbnails captured'; });
 }

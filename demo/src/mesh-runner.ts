@@ -2,8 +2,9 @@
 // and per-page coalescing so a slider dragged faster than the kernel computes only ever queues
 // the latest setting (a superseded request is dropped, never computed).
 //
-// `whenIdle()` resolves once nothing is computing or queued; the thumbnail and hero captures
-// (src/capture.ts) wait on it instead of guessing how long a page takes.
+// `whenIdle()` resolves once nothing is computing or queued (`whenIdleWithin` gives up after a
+// timeout); the thumbnail capture (src/capture.ts) waits on it instead of guessing how long a page
+// takes. src/mesh-runner.test.ts tests the coalescing and the idle tracking.
 
 export interface MeshResult {
   positions: Float32Array;
@@ -110,6 +111,20 @@ export function whenIdle(): Promise<void> {
 }
 
 /**
+ * True once nothing is computing or queued, false if that has not happened within `ms`: a
+ * capture waiting on a page whose request never returns moves on instead of hanging.
+ */
+export function whenIdleWithin(ms: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), ms);
+    whenIdle().then(() => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
+}
+
+/**
  * One page's request queue: at most one call in flight and one waiting; a newer request
  * replaces the waiting one. Results of a disposed page are dropped.
  */
@@ -122,6 +137,8 @@ export class Coalescer {
     private onResult: (r: RunResult) => void,
     private onError: (e: Error) => void,
     private onBusy: (busy: boolean) => void,
+    // The call that computes a request; the worker unless a test supplies its own.
+    private run: (fn: string, args: unknown[]) => Promise<RunResult> = runMesh,
   ) {}
 
   request(fn: string, args: unknown[]) {
@@ -139,7 +156,7 @@ export class Coalescer {
     // between them.
     inFlight++;
     try {
-      const result = await runMesh(job.fn, job.args);
+      const result = await this.run(job.fn, job.args);
       if (!this.disposed) this.onResult(result);
     } catch (e) {
       if (!this.disposed) this.onError(e as Error);

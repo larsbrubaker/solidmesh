@@ -54,8 +54,9 @@ bun run build:wasm     # wasm-pack build into demo/public/pkg
 bun run dev            # http://localhost:3030
 ```
 
-On localhost the sidebar also offers the thumbnail and README hero captures
-(`demo/capture-thumbs.ts` says how they work).
+With the dev server running, `bun run capture:thumbs` renders the page thumbnails and
+`bun run capture:hero` screenshots the home page into `README_HERO.png`, both through a headless
+Edge or Chrome (`demo/capture-thumbs.ts` says how).
 
 ## Design rules
 

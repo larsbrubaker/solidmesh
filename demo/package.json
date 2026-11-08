@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "bun --watch run dev.ts",
     "build:wasm": "wasm-pack build wasm --target web --out-dir ../public/pkg --no-typescript",
-    "build": "bun run build.ts"
+    "build": "bun run build.ts",
+    "test": "bun test",
+    "capture:thumbs": "bun run capture-thumbs.ts",
+    "capture:hero": "bun run capture-hero.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
