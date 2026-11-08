@@ -3,6 +3,10 @@
 **Solid modeling on triangle meshes, in pure Rust: booleans, fillets and chamfers, repair, and
 implicit (SDF) operations that keep closed solids closed.**
 
+[![Live WASM demo](README_HERO.png)](https://larsbrubaker.github.io/solidmesh/)
+
+<p align="center"><a href="https://larsbrubaker.github.io/solidmesh/"><b>▶ Try the live demo</b></a></p>
+
 solidmesh is the geometry kernel behind MatterCAD, moved out of the application into its own
 library so that others can use it and build on it. It works on the meshes real pipelines contain
 (STL and 3MF downloads, scans, triangle soup) as well as on clean modeled parts, builds for
@@ -30,6 +34,28 @@ and their API changes with MatterCAD's needs.
 Each folder and library name is the one MatterCAD has always used (`use vector_math::...`,
 `use polygon_mesh::...`), so code reads the same in both repositories; the package name is the
 one the crate will publish under.
+
+## Demo
+
+The [live demo](https://larsbrubaker.github.io/solidmesh/) runs the library itself in the browser,
+compiled to WebAssembly: booleans (including inside-out and self-intersecting operands), outlines
+extruded with bevels or revolved, smooth implicit blends meshed by marching cubes or dual
+contouring, Minkowski sums and convex hulls, mesh repair, and a part to measure and download as
+STL. Fillets and chamfers join it when their public entry point lands. Each page shows the
+operation's time and the result's triangle count, volume and area.
+
+It lives in `demo/`: `demo/wasm` is the bindings crate (a workspace member, never published), the
+pages are TypeScript built with [Bun](https://bun.sh), and `.github/workflows/deploy-demo.yml`
+publishes it to GitHub Pages on every push to `main`. To run it locally, from `demo/`:
+
+```
+bun install
+bun run build:wasm     # wasm-pack build into demo/public/pkg
+bun run dev            # http://localhost:3030
+```
+
+On localhost the sidebar also offers the thumbnail and README hero captures
+(`demo/capture-thumbs.ts` says how they work).
 
 ## Design rules
 
