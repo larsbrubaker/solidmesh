@@ -15,10 +15,10 @@
 //!   contouring, and the implicit boolean of meshes;
 //! - `morph`: Minkowski sum and difference, convex hull;
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
-//! - `ray_trace_scene`, `ray_trace_shade`, `ray_trace`: the Ray Tracing page - a part on a ground
-//!   plane traced through the library's BVH, its shading, and the per-pixel accumulation the
-//!   worker refines in short passes (this page draws on a 2D canvas, so it answers an image rather
-//!   than a [`MeshData`]);
+//! - `ray_trace_scene`, `ray_trace_shade`, `ray_trace`: the Ray Tracing page - a part on a floor,
+//!   its material and light presets over the library's path tracer, and the per-pixel
+//!   accumulation the worker refines in short passes (this page draws on a 2D canvas, so it
+//!   answers an image rather than a [`MeshData`]);
 //! - `showcase`: the part of the Measure & Export page;
 //! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
 //!   them in wasm, and the picks applied at one radius in one `solidmesh::bevel_part` call;
@@ -346,9 +346,9 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
-/// Ray Tracing page: builds part `part` at detail `detail` and the BVH over it on this worker,
-/// and answers its triangle count and how long each took as JSON. A BVH over a million triangles
-/// takes seconds, which is why it is built here and not on the page.
+/// Ray Tracing page: builds part `part` at detail `detail` and the tree and surface table over
+/// it on this worker, and answers its triangle count and how long each took as JSON. A tree over
+/// a million triangles takes seconds, which is why it is built here and not on the page.
 #[wasm_bindgen]
 pub fn ray_trace_prepare(part: u32, detail: u32) -> Result<String, JsError> {
     // The old part goes first, so its tree and the new one are never in memory at once.
@@ -371,7 +371,9 @@ pub fn ray_trace_prepare(part: u32, detail: u32) -> Result<String, JsError> {
 
 /// Ray Tracing page: one short pass on the prepared part (see `ray_trace`), answering the image
 /// so far and what the pass did as a plain object the worker can hand to the page. `budget_ms` 0
-/// finishes the sample under way instead of watching the clock.
+/// finishes the sample under way instead of watching the clock. `material`, `light` and the color
+/// are the page's controls (`ray_trace_shade`); a different material or light refines from scratch
+/// and never rebuilds the part.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn ray_trace_pass(
@@ -379,13 +381,34 @@ pub fn ray_trace_pass(
     pitch: f64,
     zoom: f64,
     mode: u32,
-    reflectivity: f64,
+    material: u32,
+    red: u8,
+    green: u8,
+    blue: u8,
+    roughness: f64,
+    metallic: f64,
+    transmission: f64,
+    light: u32,
+    sun_degrees: f64,
     seed: u32,
     width: u32,
     height: u32,
+    preview: bool,
     budget_ms: f64,
 ) -> Result<Object, JsError> {
-    let mode = ray_trace_shade::Mode::from_index(mode).map_err(|e| JsError::new(&e))?;
+    use ray_trace_shade::{CustomSliders, Light, Look, Material, Mode};
+    let mode = Mode::from_index(mode).map_err(|e| JsError::new(&e))?;
+    let look = Look {
+        material: Material::from_index(material).map_err(|e| JsError::new(&e))?,
+        color: [red, green, blue],
+        custom: CustomSliders {
+            roughness,
+            metallic,
+            transmission,
+        },
+        light: Light::from_index(light).map_err(|e| JsError::new(&e))?,
+        sun_degrees,
+    };
     RAY_TRACE.with(|session| {
         let mut session = session.borrow_mut();
         let session = session
@@ -396,10 +419,11 @@ pub fn ray_trace_pass(
             pitch,
             zoom,
             mode,
-            reflectivity,
+            look,
             seed,
             width,
             height,
+            preview,
         };
         let start = js_sys::Date::now();
         let report = session
@@ -409,13 +433,14 @@ pub fn ray_trace_pass(
         let ms = js_sys::Date::now() - start;
         let result = Object::new();
         let pixels = Uint8Array::from(session.accumulation.pixels());
-        let fields: [(&str, JsValue); 6] = [
+        let fields: [(&str, JsValue); 7] = [
             ("pixels", pixels.into()),
             ("width", session.accumulation.width().into()),
             ("height", session.accumulation.height().into()),
             ("samples", report.samples.into()),
-            // A double holds any count of rays one pass could fire exactly.
+            // A double holds any count of rays or pixels one pass could fire exactly.
             ("rays", (report.rays as f64).into()),
+            ("pixelSamples", (report.pixels as f64).into()),
             ("ms", ms.into()),
         ];
         for (name, value) in fields {

@@ -53,7 +53,7 @@ const CARDS: Record<string, { title: string; text: string }> = {
   },
   'ray-trace': {
     title: 'Ray Tracing',
-    text: 'A solid traced in WebAssembly through the BVH of the library: shadows, ambient occlusion and reflections, up to a million triangles.',
+    text: 'A solid path traced in WebAssembly by the library: real shadows, metal that mirrors the sky and glass that bends the floor behind it, up to a million triangles.',
   },
 };
 

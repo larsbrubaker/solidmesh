@@ -1,13 +1,15 @@
-// Ray Tracing page: a solid made by the library, traced in WebAssembly through the library's BVH
-// and drawn on a 2D canvas (demo/wasm/src/ray_trace.rs). Dragging orbits, the wheel zooms.
+// Ray Tracing page: a solid made by the library, path traced in WebAssembly by the library's
+// PathTracer and drawn on a 2D canvas (demo/wasm/src/ray_trace.rs). Dragging orbits, the wheel
+// zooms; the Material and Light menus are the library's presets.
 //
 // The page has its own worker (`SideWorker`), so the BVH of a million triangles builds off the
 // UI thread and terminating the worker on leaving the page gives that memory back. One wasm call
 // is in flight at a time, through the site's `Coalescer`: every control change and every result
 // calls `kick()`, which asks for what the page needs right now, and a newer request replaces the
-// waiting one. While the camera moves a pass renders a whole frame at low resolution, the
-// resolution adapting so a frame stays near PREVIEW_TARGET_MS; once still for STILL_MS it renders
-// full resolution in time-boxed passes, accumulating samples up to SAMPLE_CAP.
+// waiting one. While the camera moves a pass renders a whole frame at low resolution with short
+// paths, the resolution adapting so a frame stays near PREVIEW_TARGET_MS; once still for STILL_MS
+// it renders full resolution in time-boxed passes, accumulating samples up to SAMPLE_CAP. A
+// material or light change refines from scratch, on the part and tree the worker already holds.
 //
 // The thumbnail capture (src/capture.ts) reads the canvas registered with `setCaptureCanvas`, and
 // the page holds it off (`holdBusy`) until the first full-resolution image has CAPTURE_SAMPLES.
@@ -15,7 +17,7 @@
 import { demoFrameMarkup } from '../demo-shell.ts';
 import { Coalescer, SideWorker, holdBusy } from '../mesh-runner.ts';
 import { setCaptureCanvas } from '../capture.ts';
-import { createDropdown, createSlider } from '../controls.ts';
+import { createColor, createDropdown, createSlider } from '../controls.ts';
 import { loadSetting, saveSetting } from '../settings.ts';
 
 const ROUTE = 'ray-trace';
@@ -40,6 +42,7 @@ interface Pass {
   height: number;
   samples: number;
   rays: number;
+  pixelSamples: number;
   ms: number;
 }
 
@@ -54,6 +57,12 @@ interface Prepared {
 
 type Result = Pass | string;
 
+/** A color control's `#rrggbb` as its three 0..=255 channels. */
+function colorBytes(hex: string): [number, number, number] {
+  const value = parseInt(hex.slice(1), 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
 function fmt(n: number, digits = 1): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
@@ -67,10 +76,12 @@ function fmtRays(perSecond: number): string {
 export function init(container: HTMLElement): () => void {
   container.innerHTML = demoFrameMarkup(
     'Ray Tracing',
-    `A solid made by the library, traced in WebAssembly through the library's ray tracing tree, one
-    ray at a time onto a plain 2D canvas. Drag to orbit, scroll to zoom. Moving shows a fast low
-    resolution image; when you stop it sharpens, sample by sample. Normals and Depth show the raw
-    hit data, so you can see these are real intersections with the mesh.`,
+    `A part made by the library, lit the way light really behaves: this is a path tracer, following
+    light as it bounces off the part and the floor, running in WebAssembly in your browser with no
+    graphics card. Pick a material and see plastic catch a soft highlight, metal mirror the sky and
+    glass bend the floor behind it. Drag to orbit, scroll to zoom. Moving shows a small, fast image;
+    when you stop it sharpens, sample by sample. Normals and Depth show the raw hit data, so you can
+    see these are real intersections with the mesh.`,
   );
   const area = container.querySelector('#viewer-container') as HTMLElement;
   const controls = container.querySelector('#controls') as HTMLElement;
@@ -87,7 +98,13 @@ export function init(container: HTMLElement): () => void {
     part: loadSetting(ROUTE, 'part', '0'),
     detail: loadSetting(ROUTE, 'detail', '2'),
     mode: loadSetting(ROUTE, 'mode', '0'),
-    reflect: loadSetting(ROUTE, 'reflect', 0.2),
+    material: loadSetting(ROUTE, 'material', '0'),
+    color: loadSetting(ROUTE, 'color', '#5bc2b4'),
+    roughness: loadSetting(ROUTE, 'roughness', 0.3),
+    metallic: loadSetting(ROUTE, 'metallic', 0),
+    transmission: loadSetting(ROUTE, 'transmission', 0),
+    light: loadSetting(ROUTE, 'light', '0'),
+    sun: loadSetting(ROUTE, 'sun', 5),
   };
 
   const camera = { yaw: 0.85, pitch: 0.42, zoom: 1 };
@@ -99,6 +116,7 @@ export function init(container: HTMLElement): () => void {
   let preparingKey = '';
   let lastPass: Pass | null = null;
   let raysTotal = 0;
+  let pixelSamplesTotal = 0;
   let msTotal = 0;
   let disposed = false;
   let releaseCapture: (() => void) | null = holdBusy();
@@ -141,8 +159,11 @@ export function init(container: HTMLElement): () => void {
     const size = moving
       ? { w: Math.max(32, Math.round(full.w * previewScale)), h: Math.max(32, Math.round(full.h * previewScale)) }
       : full;
+    const color = colorBytes(s.color);
     coalescer.request('ray_trace_pass', [
-      camera.yaw, camera.pitch, camera.zoom, Number(s.mode), s.reflect, SEED, size.w, size.h,
+      camera.yaw, camera.pitch, camera.zoom, Number(s.mode), Number(s.material),
+      color[0], color[1], color[2], s.roughness, s.metallic, s.transmission,
+      Number(s.light), s.sun, SEED, size.w, size.h, moving,
       moving ? 0 : PASS_BUDGET_MS,
     ]);
   };
@@ -150,6 +171,7 @@ export function init(container: HTMLElement): () => void {
   const finishMoving = () => {
     stillTimer = null;
     moving = false;
+    resetRates();
     kick();
   };
 
@@ -160,14 +182,25 @@ export function init(container: HTMLElement): () => void {
     kick();
   };
 
+  const resetRates = () => {
+    raysTotal = 0;
+    pixelSamplesTotal = 0;
+    msTotal = 0;
+  };
+
   const updateStats = () => {
     const pass = lastPass;
     const raysPerSecond = msTotal > 0 ? (raysTotal / msTotal) * 1000 : 0;
+    // A sample is one pass over every pixel of the image, however the passes slice it.
+    const samplesPerSecond = pass && msTotal > 0
+      ? (pixelSamplesTotal / (pass.width * pass.height) / msTotal) * 1000
+      : 0;
     stats.innerHTML = `<div class="stats-grid">
       <span class="k">Triangles</span><span class="v">${prepared ? prepared.triangles.toLocaleString() : '…'}</span>
       <span class="k">Build mesh</span><span class="v">${prepared ? `${fmt(prepared.mesh_ms, 0)} ms` : '…'}</span>
-      <span class="k">Build BVH</span><span class="v">${prepared ? `${fmt(prepared.bvh_ms, 0)} ms` : '…'}</span>
+      <span class="k">Build tree</span><span class="v">${prepared ? `${fmt(prepared.bvh_ms, 0)} ms` : '…'}</span>
       <span class="k">Samples</span><span class="v">${pass ? `${pass.samples} / ${SAMPLE_CAP}` : '…'}</span>
+      <span class="k">Samples/s</span><span class="v">${samplesPerSecond ? fmt(samplesPerSecond, 2) : '…'}</span>
       <span class="k">Rays/s</span><span class="v">${raysPerSecond ? fmtRays(raysPerSecond) : '…'}</span>
       <span class="k">Image</span><span class="v">${pass ? `${pass.width} x ${pass.height}` : '…'}</span>
     </div>`;
@@ -186,8 +219,7 @@ export function init(container: HTMLElement): () => void {
   const onPrepared = (result: Prepared) => {
     prepared = result;
     preparingKey = '';
-    raysTotal = 0;
-    msTotal = 0;
+    resetRates();
     busy.classList.remove('visible');
     moving = true;
     if (stillTimer) clearTimeout(stillTimer);
@@ -200,6 +232,7 @@ export function init(container: HTMLElement): () => void {
     draw(pass);
     lastPass = pass;
     raysTotal += pass.rays;
+    pixelSamplesTotal += pass.pixelSamples;
     msTotal += pass.ms;
     if (moving && pass.ms > 0) {
       const adjust = Math.sqrt(PREVIEW_TARGET_MS / pass.ms);
@@ -231,8 +264,7 @@ export function init(container: HTMLElement): () => void {
   );
 
   const rerender = () => {
-    raysTotal = 0;
-    msTotal = 0;
+    resetRates();
     nudge();
   };
 
@@ -250,15 +282,52 @@ export function init(container: HTMLElement): () => void {
     { value: '4', text: 'About 1,000,000 triangles' },
   ], s.detail, v => { s.detail = v; saveSetting(ROUTE, 'detail', v); rerender(); }));
   controls.appendChild(createDropdown('View', [
-    { value: '0', text: 'Shaded' },
-    { value: '1', text: 'Normals (hit data)' },
+    { value: '0', text: 'Path traced' },
+    { value: '1', text: 'Normals (smooth hit data)' },
     { value: '2', text: 'Depth (hit data)' },
-  ], s.mode, v => { s.mode = v; saveSetting(ROUTE, 'mode', v); rerender(); }));
-  controls.appendChild(createSlider('Reflectivity ', 0, 1, s.reflect, 0.05, v => {
-    s.reflect = v;
-    saveSetting(ROUTE, 'reflect', v);
+  ], s.mode, v => { s.mode = v; saveSetting(ROUTE, 'mode', v); showLookControls(); rerender(); }));
+
+  // The look controls show only for the path traced view; Custom's sliders and the Sun size
+  // only when they mean something.
+  const lookControls = document.createElement('div');
+  const materialMenu = createDropdown('Material', [
+    { value: '0', text: 'Matte plastic' },
+    { value: '1', text: 'Glossy plastic' },
+    { value: '2', text: 'Brushed metal' },
+    { value: '3', text: 'Polished metal' },
+    { value: '4', text: 'Glass' },
+    { value: '5', text: 'Rubber' },
+    { value: '6', text: 'Custom' },
+  ], s.material, v => { s.material = v; saveSetting(ROUTE, 'material', v); showLookControls(); rerender(); });
+  const colorPicker = createColor('Color', s.color, v => { s.color = v; saveSetting(ROUTE, 'color', v); rerender(); });
+  const customSliders = document.createElement('div');
+  const lightMenu = createDropdown('Light', [
+    { value: '0', text: 'Studio (sky and soft sun)' },
+    { value: '1', text: 'Overcast (no sun)' },
+  ], s.light, v => { s.light = v; saveSetting(ROUTE, 'light', v); showLookControls(); rerender(); });
+  const sunSlider = createSlider('Sun size ', 1, 20, s.sun, 1, v => {
+    s.sun = v;
+    saveSetting(ROUTE, 'sun', v);
     rerender();
-  }));
+  });
+  const slider = (label: string, key: 'roughness' | 'metallic' | 'transmission') =>
+    createSlider(label, 0, 1, s[key], 0.05, v => { s[key] = v; saveSetting(ROUTE, key, v); rerender(); });
+  customSliders.appendChild(slider('Roughness ', 'roughness'));
+  customSliders.appendChild(slider('Metallic ', 'metallic'));
+  customSliders.appendChild(slider('Transmission ', 'transmission'));
+  lookControls.appendChild(materialMenu);
+  lookControls.appendChild(colorPicker);
+  lookControls.appendChild(customSliders);
+  lookControls.appendChild(lightMenu);
+  lookControls.appendChild(sunSlider);
+  const showLookControls = () => {
+    const pathTraced = s.mode === '0';
+    lookControls.style.display = pathTraced ? 'contents' : 'none';
+    customSliders.style.display = s.material === '6' ? 'contents' : 'none';
+    sunSlider.style.display = s.light === '0' ? '' : 'none';
+  };
+  showLookControls();
+  controls.appendChild(lookControls);
   controls.appendChild(stats);
   controls.appendChild(note);
   controls.appendChild(error);

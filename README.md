@@ -88,8 +88,8 @@ one radius for them all, and see the part rounded in one call; a pick that does 
 with the size that would), booleans (including inside-out and self-intersecting operands), outlines
 extruded with bevels or revolved, smooth implicit blends meshed by marching cubes or dual
 contouring, Minkowski sums and convex hulls, mesh repair, a part to measure and download as STL,
-and a ray traced view of a part (shadows, ambient occlusion and reflections through the library's
-BVH, at up to a million triangles). Each page shows the operation's time and the result's triangle
+and a physically based path traced view of a part (the library's path tracer, with material and
+light presets, at up to a million triangles). Each page shows the operation's time and the result's triangle
 count, volume and area.
 
 It lives in `demo/`: `demo/wasm` is the bindings crate (a workspace member, never published), the

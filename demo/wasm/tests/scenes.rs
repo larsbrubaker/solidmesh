@@ -145,14 +145,16 @@ fn the_showcase_part_is_one_closed_solid() {
     );
 }
 
-// The Ray Tracing page: the production scene, camera and shader the wasm calls, run natively on
-// known solids (a part, a cube, a sphere), reading back real pixels and hits.
+// The Ray Tracing page: the production scene, camera and renderer the wasm calls, run natively
+// on known solids (a part, a cube, a sphere), reading back real pixels and hits.
 mod ray_trace {
     use solidmesh::math::Vector3;
     use solidmesh::mesh::Mesh;
     use solidmesh_wasm::ray_trace::{Accumulation, TraceRequest};
     use solidmesh_wasm::ray_trace_scene::{Camera, Part, Surface, TraceScene};
-    use solidmesh_wasm::ray_trace_shade::{depth_range, depth_value, sun_direction, Mode};
+    use solidmesh_wasm::ray_trace_shade::{
+        depth_range, depth_value, sun_direction, CustomSliders, Light, Look, Material, Mode,
+    };
     use solidmesh_wasm::shapes::Shape;
 
     const WIDTH: u32 = 120;
@@ -162,16 +164,38 @@ mod ray_trace {
         TraceScene::new(mesh, "test".to_string()).expect("the scene builds")
     }
 
+    fn look(material: Material, color: [u8; 3], light: Light) -> Look {
+        Look {
+            material,
+            color,
+            custom: CustomSliders {
+                roughness: 0.3,
+                metallic: 0.0,
+                transmission: 0.0,
+            },
+            light,
+            sun_degrees: 5.0,
+        }
+    }
+
+    const TEAL: [u8; 3] = [64, 180, 160];
+    const WHITE: [u8; 3] = [250, 250, 250];
+
+    fn matte() -> Look {
+        look(Material::MattePlastic, TEAL, Light::Studio)
+    }
+
     fn request(mode: Mode, seed: u32) -> TraceRequest {
         TraceRequest {
             yaw: 0.9,
             pitch: 0.5,
             zoom: 1.0,
             mode,
-            reflectivity: 0.0,
+            look: matte(),
             seed,
             width: WIDTH,
             height: HEIGHT,
+            preview: false,
         }
     }
 
@@ -187,7 +211,7 @@ mod ray_trace {
     }
 
     fn pixel(image: &Accumulation, x: u32, y: u32) -> [u8; 3] {
-        let at = ((y * WIDTH + x) * 4) as usize;
+        let at = ((y * image.width() + x) * 4) as usize;
         let px = image.pixels();
         [px[at], px[at + 1], px[at + 2]]
     }
@@ -197,21 +221,24 @@ mod ray_trace {
     }
 
     fn camera_of(scene: &TraceScene, r: &TraceRequest) -> Camera {
-        Camera::new(scene, r.yaw, r.pitch, r.zoom, r.width, r.height)
+        Camera::new(scene, r.yaw, r.pitch, r.zoom, r.width, r.height).expect("the camera builds")
     }
 
     fn torus_scene() -> TraceScene {
         scene_of(&Shape::Torus.build(60.0, 64).expect("the torus builds"))
     }
 
+    fn sphere_scene() -> TraceScene {
+        scene_of(&Shape::Sphere.build(40.0, 96).expect("the sphere builds"))
+    }
+
     /// The camera orbits the part's centre and looks at it, so a ray at the centre of the image
-    /// must hit the ring (a torus' hole sits under the centre; a sphere has no hole) rather than
-    /// run off into the background, and the shaded pixel must not be the sky behind it.
+    /// must hit a solid part rather than run off into the background, and the shaded pixel must
+    /// be the part's color rather than the blue-white sky or the neutral floor.
     #[test]
     fn a_ray_at_the_part_hits_it_and_the_centre_pixel_is_not_background() {
-        let sphere = Shape::Sphere.build(40.0, 64).expect("the sphere builds");
-        let scene = scene_of(&sphere);
-        let req = request(Mode::Shaded, 1);
+        let scene = sphere_scene();
+        let req = request(Mode::PathTraced, 1);
         let camera = camera_of(&scene, &req);
         let centre = (f64::from(WIDTH) / 2.0, f64::from(HEIGHT) / 2.0);
 
@@ -219,20 +246,19 @@ mod ray_trace {
 
         assert_eq!(surface, Surface::Part);
         assert!(distance.is_finite() && distance > 0.0);
-        let image = render(&scene, req, 1);
-        // The part's color is teal; the blue-white sky and the neutral ground are not.
+        let image = render(&scene, req, 16);
         let [r, g, _] = pixel(&image, WIDTH / 2, HEIGHT / 2);
         assert!(
-            f64::from(g) > f64::from(r) * 1.4,
+            f64::from(g) > f64::from(r) * 1.3,
             "the centre pixel shows the part: red {r}, green {g}"
         );
     }
 
-    /// Far from the part, a corner of the image sees the ground or the sky, and never the part.
+    /// Far from the part, a corner of the image sees the floor or the sky, and never the part.
     #[test]
     fn a_corner_past_the_part_sees_the_ground_or_the_sky() {
         let scene = scene_of(&Shape::Sphere.build(10.0, 48).expect("the sphere builds"));
-        let mut req = request(Mode::Shaded, 1);
+        let mut req = request(Mode::PathTraced, 1);
         req.zoom = 0.4;
         let camera = camera_of(&scene, &req);
         for (px, py) in [
@@ -246,12 +272,12 @@ mod ray_trace {
         }
     }
 
-    /// A point on the ground under the part, away from the sun, is in the part's shadow and
-    /// comes out darker than an open patch of ground on the sunny side.
+    /// A point on the floor under the part, away from the sun, is in the part's shadow and comes
+    /// out darker than an open patch of floor on the sunny side.
     #[test]
-    fn the_ground_in_the_parts_shadow_is_darker_than_in_the_open() {
+    fn the_floor_in_the_parts_shadow_is_darker_than_in_the_open() {
         let scene = torus_scene();
-        let req = request(Mode::Shaded, 1);
+        let req = request(Mode::PathTraced, 1);
         let camera = camera_of(&scene, &req);
         let sun = sun_direction();
         let drop = (scene.center.z - scene.ground_z) / sun.z;
@@ -265,29 +291,28 @@ mod ray_trace {
         let (sx, sy) = camera.project(shadow_spot).expect("the shadow is in view");
         let (ox, oy) = camera
             .project(open_spot)
-            .expect("the open ground is in view");
+            .expect("the open floor is in view");
         for (px, py) in [(sx, sy), (ox, oy)] {
             assert_eq!(scene.surface_at(&camera, px, py).0, Surface::Ground);
         }
 
-        let image = render(&scene, req, 24);
+        let image = render(&scene, req, 48);
 
         let shadowed = brightness(pixel(&image, sx as u32, sy as u32));
         let open = brightness(pixel(&image, ox as u32, oy as u32));
         assert!(shadowed < open, "shadow {shadowed} vs open {open}");
     }
 
-    /// A seed and a sample index always give the same image, bit for bit, whatever the time
-    /// budget does: a different seed does not, and slicing a sample across many passes changes
-    /// nothing.
+    /// A seed always gives the same image, bit for bit, whatever the time budget does: a
+    /// different seed does not, and slicing a sample across many passes changes nothing.
     #[test]
     fn the_same_seed_gives_identical_buffers_however_the_passes_are_sliced() {
         let scene = torus_scene();
-        let mut req = request(Mode::Shaded, 7);
-        req.reflectivity = 0.4;
+        let mut req = request(Mode::PathTraced, 7);
+        req.look = look(Material::GlossyPlastic, TEAL, Light::Studio);
 
         let whole = render(&scene, req, 3);
-        assert_eq!(whole.sums(), render(&scene, req, 3).sums());
+        assert_eq!(whole.surface(), render(&scene, req, 3).surface());
 
         let mut sliced = Accumulation::new();
         let mut now = 0.0;
@@ -300,12 +325,184 @@ mod ray_trace {
                 .pass(&scene, req, 1.0, &mut clock)
                 .expect("the pass runs");
         }
-        assert_eq!(whole.sums(), sliced.sums(), "sliced differently");
+        assert_eq!(whole.surface(), sliced.surface(), "sliced differently");
         assert_eq!(whole.pixels(), sliced.pixels(), "sliced differently");
 
         let mut other = req;
         other.seed = 8;
         assert_ne!(whole.pixels(), render(&scene, other, 3).pixels());
+    }
+
+    /// Changing the material on a prepared part gives a different image, starting its samples
+    /// over, and needs nothing rebuilt: the part's trees and tables are held in the scene behind
+    /// a shared reference, and the second image comes from the very same scene.
+    #[test]
+    fn a_new_material_refines_from_scratch_on_the_same_prepared_part() {
+        let scene = torus_scene();
+        let mut req = request(Mode::PathTraced, 2);
+        let triangles = scene.triangles;
+        let mut image = Accumulation::new();
+        for _ in 0..4 {
+            image
+                .pass(&scene, req, 0.0, &mut || 0.0)
+                .expect("the pass runs");
+        }
+        assert_eq!(image.samples(), 4);
+        let matte_image = image.pixels().to_vec();
+
+        req.look = look(Material::Rubber, [200, 60, 40], Light::Overcast);
+        for _ in 0..4 {
+            image
+                .pass(&scene, req, 0.0, &mut || 0.0)
+                .expect("the pass runs");
+        }
+
+        assert_eq!(image.samples(), 4, "refining starts again from scratch");
+        assert_eq!(scene.triangles, triangles);
+        assert_ne!(
+            matte_image,
+            image.pixels(),
+            "the material reaches the image"
+        );
+    }
+
+    /// A polished white metal is a mirror of the sky, so the part of the ball facing the camera
+    /// shows the sky seen straight back along the view, within what the small roughness blurs;
+    /// white matte plastic in the same place is lit by the warm sun and does not.
+    #[test]
+    fn polished_metal_mirrors_the_sky_where_matte_plastic_does_not() {
+        let scene = sphere_scene();
+        let mut req = request(Mode::PathTraced, 3);
+        // From the sunny side, so the matte plastic below is lit by the sun.
+        req.yaw = -2.2;
+        req.look = look(Material::PolishedMetal, WHITE, Light::Studio);
+        let camera = camera_of(&scene, &req);
+        let (cx, cy) = (WIDTH / 2, HEIGHT / 2);
+        let toward_eye = (camera.eye - scene.center).get_normal();
+
+        let metal = render(&scene, req, 24);
+        let linear = metal.linear_at(cx, cy);
+
+        let lights = req.look.lights().expect("the lights build");
+        let sky = lights.environment.radiance(toward_eye);
+        for channel in 0..3 {
+            assert!(
+                (linear[channel] - sky[channel]).abs() < sky[channel] * 0.15,
+                "channel {channel}: mirror shows {:?}, the sky there is {:?}",
+                linear,
+                sky
+            );
+        }
+        // The sky's blue over red is what a mirror shows; the sun warms a white matte surface.
+        assert!(
+            linear[2] > linear[0] * 1.2,
+            "blue sky reflected: {linear:?}"
+        );
+
+        req.look = look(Material::MattePlastic, WHITE, Light::Studio);
+        let plastic = render(&scene, req, 24).linear_at(cx, cy);
+        // The sun lights the matte surface far above the sky alone, and its blue no longer leads
+        // the way the mirrored sky's does.
+        assert!(
+            plastic[0] > linear[0] * 1.5 && plastic[2] / plastic[0] < (linear[2] / linear[0]) * 0.9,
+            "matte plastic is lit by the sun, not a mirror of the sky: {plastic:?} vs {linear:?}"
+        );
+    }
+
+    /// Clear glass shows the floor through the part: a glass cube seen from above has the
+    /// floor's light and dark squares in its top face, each where it lies under the cube; the
+    /// same pixels of a matte cube are one flat color.
+    #[test]
+    fn glass_shows_the_floor_through_the_part() {
+        let scene = scene_of(&Shape::Cube.build(40.0, 8).expect("the cube builds"));
+        let mut req = request(Mode::PathTraced, 4);
+        req.width = 140;
+        req.height = 140;
+        req.pitch = 1.5;
+        req.zoom = 1.6;
+        let camera = camera_of(&scene, &req);
+        let square = scene.floor_square();
+
+        // Pixels on the part whose straight line down to the floor stays well inside one square.
+        let mut light_pixels = Vec::new();
+        let mut dark_pixels = Vec::new();
+        for y in 0..req.height {
+            for x in 0..req.width {
+                let (px, py) = (f64::from(x) + 0.5, f64::from(y) + 0.5);
+                let ray = camera.ray(px, py);
+                if scene.surface_at(&camera, px, py).0 != Surface::Part {
+                    continue;
+                }
+                let to_floor = (scene.ground_z - ray.origin.z) / ray.direction_normal.z;
+                let floor = ray.origin + ray.direction_normal * to_floor;
+                let margin = |value: f64| {
+                    let across = (value / square).rem_euclid(1.0);
+                    across.min(1.0 - across) * square
+                };
+                if margin(floor.x) < square * 0.2 || margin(floor.y) < square * 0.2 {
+                    continue;
+                }
+                if scene.floor_is_light(floor.x, floor.y) {
+                    light_pixels.push((x, y));
+                } else {
+                    dark_pixels.push((x, y));
+                }
+            }
+        }
+        assert!(
+            light_pixels.len() > 40 && dark_pixels.len() > 40,
+            "the cube covers both kinds of square: {} light, {} dark",
+            light_pixels.len(),
+            dark_pixels.len()
+        );
+
+        let mean = |image: &Accumulation, pixels: &[(u32, u32)]| {
+            let sum: f64 = pixels
+                .iter()
+                .map(|&(x, y)| {
+                    let c = image.linear_at(x, y);
+                    c[0] + c[1] + c[2]
+                })
+                .sum();
+            sum / pixels.len() as f64
+        };
+
+        req.look = look(Material::Glass, WHITE, Light::Overcast);
+        let glass = render(&scene, req, 16);
+        let (light, dark) = (mean(&glass, &light_pixels), mean(&glass, &dark_pixels));
+        assert!(
+            light > dark * 1.12,
+            "the floor's squares show through the glass: light {light}, dark {dark}"
+        );
+
+        req.look = look(Material::MattePlastic, WHITE, Light::Overcast);
+        let matte = render(&scene, req, 16);
+        let (light, dark) = (mean(&matte, &light_pixels), mean(&matte, &dark_pixels));
+        assert!(
+            light < dark * 1.03 && dark < light * 1.03,
+            "the matte top is one color: light {light}, dark {dark}"
+        );
+    }
+
+    /// The moving image's paths are short, so the same view costs fewer rays while dragging.
+    #[test]
+    fn the_preview_fires_fewer_rays_than_refinement() {
+        let scene = torus_scene();
+        let mut req = request(Mode::PathTraced, 5);
+        req.look = look(Material::Glass, WHITE, Light::Studio);
+        let refine = Accumulation::new()
+            .pass(&scene, req, 0.0, &mut || 0.0)
+            .unwrap();
+        req.preview = true;
+        let preview = Accumulation::new()
+            .pass(&scene, req, 0.0, &mut || 0.0)
+            .unwrap();
+        assert!(
+            preview.rays < refine.rays,
+            "preview {} vs refinement {}",
+            preview.rays,
+            refine.rays
+        );
     }
 
     /// Normals mode shows the actual face normal: straight up on a cube's top is (0, 0, 1).
@@ -325,9 +522,56 @@ mod ray_trace {
         assert_eq!(pixel(&image, px as u32, py as u32), [128, 128, 255]);
     }
 
+    /// The normal view is the smooth shading normal the path tracer uses, and on a coarse ball
+    /// that is measurably not the flat normal of the facet the ray hit.
+    #[test]
+    fn normals_mode_shows_the_smooth_normal_on_a_coarse_ball() {
+        let scene = scene_of(&Shape::Sphere.build(40.0, 12).expect("the sphere builds"));
+        let req = request(Mode::Normals, 1);
+        let camera = camera_of(&scene, &req);
+        let image = render(&scene, req, 1);
+        let mut different_from_flat = 0;
+        for y in 20..70 {
+            for x in 30..90 {
+                let (px, py) = (f64::from(x) + 0.5, f64::from(y) + 0.5);
+                let mut ray = camera.ray(px, py);
+                let Some(hit) = scene.hit(&mut ray) else {
+                    continue;
+                };
+                if hit.part.index() != 0 {
+                    continue;
+                }
+                let point = hit.surface_point().expect("the surface point");
+                let shown = pixel(&image, x, y);
+                for (channel, value) in [
+                    point.shading_normal.x,
+                    point.shading_normal.y,
+                    point.shading_normal.z,
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    let expected = ((value + 1.0) * 0.5 * 255.0).round() as i32;
+                    assert!(
+                        (i32::from(shown[channel]) - expected).abs() <= 2,
+                        "pixel ({x}, {y}) channel {channel}: shows {} expected {expected}",
+                        shown[channel]
+                    );
+                }
+                if (point.shading_normal - point.geometric_normal).length() > 0.03 {
+                    different_from_flat += 1;
+                }
+            }
+        }
+        assert!(
+            different_from_flat > 100,
+            "only {different_from_flat} pixels differ from the flat normal"
+        );
+    }
+
     /// The page's starting view of `scene` at `width` x `height`.
     fn starting_camera(scene: &TraceScene, width: u32, height: u32) -> Camera {
-        Camera::new(scene, 0.85, 0.42, 1.0, width, height)
+        Camera::new(scene, 0.85, 0.42, 1.0, width, height).expect("the camera builds")
     }
 
     /// The angle in degrees between the rays through two pixel positions.

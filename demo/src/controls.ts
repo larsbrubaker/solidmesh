@@ -1,4 +1,4 @@
-// The control builders every page uses (slider, dropdown, checkbox, button, readout box), so the
+// The control builders every page uses (slider, dropdown, color, checkbox, button, readout box), so the
 // pages share one look; styles/main.css styles them. A slider sits in a wrapper that takes touch
 // input in its place (src/slider-touch.ts), so a finger scrolling the page past it does not move it.
 
@@ -63,6 +63,24 @@ export function createDropdown(
 
   group.appendChild(lbl);
   group.appendChild(select);
+  return group;
+}
+
+export function createColor(
+  label: string, value: string,
+  onChange: (val: string) => void,
+): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'control-group';
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.className = 'control-color';
+  input.value = value;
+  input.addEventListener('input', () => onChange(input.value));
+  group.appendChild(lbl);
+  group.appendChild(input);
   return group;
 }
 
