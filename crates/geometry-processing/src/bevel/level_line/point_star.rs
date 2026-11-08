@@ -16,6 +16,7 @@ use indexmap::IndexMap;
 use vector_math::Vector3;
 
 use super::point_bevel::PointBevelKind;
+use crate::bevel::BevelAdvisoryCode;
 
 /// A picked point's star: the point, its faces' normals and angles, its neighbours and the feature
 /// edges round it.
@@ -109,14 +110,14 @@ impl PointStar {
         self.ball_offset
     }
 
-    /// The bevel's shape per unit of size, as `(per_size, inward)`, or the refusal in
-    /// words. A fillet's `per_size` is the setback per unit of ball radius: the ball's centre offset
+    /// The bevel's shape per unit of size, as `(per_size, inward)`, or which refusal it is
+    /// (none of them quotes a value). A fillet's `per_size` is the setback per unit of ball radius: the ball's centre offset
     /// c solves c . n = -1 over the distinct face planes (least squares - exact on a right cone or a
     /// cube corner, a fair approximation where no single ball touches every face), and the tangent
     /// ring stands sqrt(|c|^2 - 1) from the point. A chamfer's is the cut plane's depth per unit of
     /// setback along `inward`: through the setback points on the point's feature edges where it has
     /// three or more, else square to its mean normal.
-    pub fn try_shape(&mut self, kind: PointBevelKind) -> Result<(f64, Vector3), String> {
+    pub fn try_shape(&mut self, kind: PointBevelKind) -> Result<(f64, Vector3), BevelAdvisoryCode> {
         if kind == PointBevelKind::Fillet {
             let mut distinct: Vec<Vector3> = Vec::new();
             for &n in &self.face_normals {
@@ -131,7 +132,7 @@ impl PointStar {
                     self.ball_offset = c;
                     return Ok(((c.length_squared() - 1.0).sqrt(), Vector3::ZERO));
                 }
-                _ => return Err("the faces around this point hold no ball".to_string()),
+                _ => return Err(BevelAdvisoryCode::PointHoldsNoBall),
             }
         }
 
@@ -155,7 +156,7 @@ impl PointStar {
         }
 
         if mean.length() == 0.0 {
-            return Err("this point has no direction to cut square to".to_string());
+            return Err(BevelAdvisoryCode::PointHasNoDirectionToCutSquareTo);
         }
 
         let inward = -mean.get_normal();
@@ -166,7 +167,7 @@ impl PointStar {
         );
         #[allow(clippy::neg_cmp_op_on_partial_ord)] // `!(per_size > 0)` refuses a NaN too.
         if !(per_size > 0.0) {
-            return Err("this point is not convex".to_string());
+            return Err(BevelAdvisoryCode::PointIsNotConvex);
         }
 
         Ok((per_size, inward))

@@ -112,48 +112,48 @@ fn rust_only_held_back_names_the_ends_it_held() {
 fn rust_only_a_row_says_whether_it_failed_partly_refused_or_warned() {
     let group = BevelResultGroup::Edge(BevelEdgeGroup::default());
 
-    let built = BevelGroupResult::new(0, group.clone(), 4, None, None);
+    let built = BevelGroupResult::new(0, group.clone(), 4, None, Vec::new());
     assert!(!built.failed() && !built.partly_refused() && !built.warned());
 
-    let failed = BevelGroupResult::new(1, group.clone(), 0, Some("no".into()), None);
+    let failed = BevelGroupResult::new(1, group.clone(), 0, Some(refusal()), Vec::new());
     assert!(failed.failed() && !failed.partly_refused());
 
-    let mut partly = BevelGroupResult::new(2, group, 12, None, Some("held".into()));
+    let held = BevelAdvisory::new(BevelAdvisoryCode::SurfaceRunStopsSquareAtOneEnd, vec![]);
+    let mut partly = BevelGroupResult::new(2, group, 12, None, vec![held]);
     partly.loop_failures = Some(vec![BevelLoopFailure {
-        advisory: Some(BevelAdvisory::new(
-            BevelAdvisoryCode::SizeRemovesNothing,
-            vec![],
-        )),
-        failure_reason: "one loop".into(),
+        advisory: refusal(),
         largest_size_that_fits: None,
         edge_count: 3,
     }]);
     assert!(partly.partly_refused() && partly.warned());
 }
 
+/// A refusal that quotes nothing.
+fn refusal() -> BevelAdvisory {
+    BevelAdvisory::new(BevelAdvisoryCode::SizeRemovesNothing, vec![])
+}
+
 #[test]
-fn rust_only_rebuild_results_filter_source_conditioning_only_when_the_codes_line_up() {
+fn rust_only_rebuild_results_leave_the_source_conditioning_out_of_the_construction_advisories() {
     let group = BevelResultGroup::Edge(BevelEdgeGroup::default());
     let rows = [
-        BevelGroupResult::new(0, group.clone(), 4, None, None),
-        BevelGroupResult::new(1, group, 0, Some("no".into()), None),
+        BevelGroupResult::new(0, group.clone(), 4, None, Vec::new()),
+        BevelGroupResult::new(1, group, 0, Some(refusal()), Vec::new()),
     ];
-    let advisories = ["source".to_string(), "bevel".to_string()];
-    let codes = [
-        BevelAdvisoryCode::SourceMeshHadSplitChords,
-        BevelAdvisoryCode::SizeRemovesNothing,
-    ];
+    let source = BevelAdvisory::new(BevelAdvisoryCode::SourceMeshHadSplitChords, vec![]);
+    let advisories = [source, refusal()];
+    let failures = [BevelAdvisory::new(
+        BevelAdvisoryCode::CutRemovedTheWholePart,
+        vec![],
+    )];
 
-    let results = BevelRebuildResults::new(Some(&rows), None, Some(&advisories), Some(&codes));
+    let results = BevelRebuildResults::new(Some(&rows), Some(&failures), Some(&advisories));
     assert_eq!(results.group_results().len(), 2);
     assert_eq!(results.group_failures().len(), 1);
     assert_eq!(results.group_failures()[0].group_index, 1);
-    assert_eq!(results.operation_advisories().len(), 2);
-    assert_eq!(results.construction_advisories(), ["bevel".to_string()]);
-
-    // Codes that do not line up filter nothing.
-    let unfiltered = BevelRebuildResults::new(None, None, Some(&advisories), Some(&codes[..1]));
-    assert_eq!(unfiltered.construction_advisories().len(), 2);
+    assert_eq!(results.operation_failures(), failures);
+    assert_eq!(results.operation_advisories(), advisories);
+    assert_eq!(results.construction_advisories(), [refusal()]);
     assert!(BevelRebuildResults::empty().group_results().is_empty());
 }
 

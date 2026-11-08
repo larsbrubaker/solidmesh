@@ -1,7 +1,11 @@
 //! What one group did on the rebuild that has just run ([`BevelGroupResult`], with the rim loops it
 //! refused while building the rest, [`BevelLoopFailure`]); the second readings of a group failure
-//! where the sentence the geometry produced is not what went wrong ([`bevel_group_failures`]); and
+//! where the refusal the geometry produced is not what went wrong ([`bevel_group_failures`]); and
 //! everything one rebuild had to report, as one immutable thing ([`BevelRebuildResults`]).
+//!
+//! Codes and numbers only. Every refusal and note is a [`BevelAdvisory`] - which thing happened and
+//! the values it quotes - and the caller puts it into words (MatterCAD's `BevelAdvisoryText`), so
+//! nothing here is a sentence and nothing here is localized. A caller asks by code, never by prose.
 //!
 //! A row carries the group's identity rather than a pre-formatted "Group 3 was skipped: ..."
 //! string, because the property panel already knows which row it is drawing and needs the reason
@@ -28,9 +32,9 @@ pub enum BevelResultGroup {
     Corner(BevelCornerGroup),
 }
 
-/// One row of a rebuild's report: what happened to one group. The four positional members and
-/// `warning` are the constructor's ([`BevelGroupResult::new`]); the rest are left at their defaults
-/// by `new` and set by the composer.
+/// One row of a rebuild's report: what happened to one group. The three positional members,
+/// `failure` and `warnings` are the constructor's ([`BevelGroupResult::new`]); the rest are left at
+/// their defaults by `new` and set by the composer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelGroupResult {
     /// Where the group sat in the selection it came from - `BevelFeatureObject3D.Groups` on the
@@ -44,33 +48,23 @@ pub struct BevelGroupResult {
     /// or none. Zero when it failed to resolve at all.
     pub edge_count: i32,
 
-    /// Why it was skipped, already localized, or `None` when it was applied.
-    pub failure_reason: Option<String>,
+    /// Why it was skipped - WHICH refusal, with the values it quotes - or `None` when it was applied.
+    pub failure: Option<BevelAdvisory>,
 
     /// What the group did that the user should know about but which did not stop it being
-    /// applied: an open run that had to run past a corner because no face there could trim it (see
-    /// `BevelChainEnds`). Already localized; `None` when there was nothing to say.
-    pub warning: Option<String>,
-
-    /// The refusal `failure_reason` was written from - WHICH refusal this row carries, rather than
-    /// the sentence it came out as. `None` where the row did not fail, and on the few refusals that
-    /// were never a coded advisory to begin with.
-    ///
-    /// Beside the sentence and not instead of it. The sentence is what the panel draws and is
-    /// localized where it is composed; the code is what a caller ASKS with - the panel deciding a
-    /// row is refused for its size, a test naming the refusal it means - and neither can be got
-    /// from the other without matching translated prose, which is how a pin came to be written
-    /// against a phrase.
-    pub failure_advisory: Option<BevelAdvisory>,
+    /// applied: a run that stops short at one or both ends (a run can have two ends and a group
+    /// several runs). Empty when there was nothing to say; a caller with room for one line says
+    /// them in order, as one.
+    pub warnings: Vec<BevelAdvisory>,
 
     /// The largest size that WOULD have built this group on its own, where a refused row has one -
     /// `None` on a row that built, and where no size builds it at all.
     ///
     /// The one thing a user can do about a refusal they did not ask for, so it travels beside the
-    /// refusal rather than only inside the sentence: a size refusal found the number on its way to
-    /// saying no ([`bevel_advisory_codes::try_the_most_that_fits`]), and a BUILD refusal is
-    /// bisected for it afterwards. On the row it is said once - appended to the sentence where the
-    /// sentence does not already quote it.
+    /// refusal rather than only inside it: a size refusal found the number on its way to saying no
+    /// ([`bevel_advisory_codes::try_the_most_that_fits`]), and a BUILD refusal is bisected for it
+    /// afterwards. A caller says it once: after the refusal's own words, unless the refusal already
+    /// quotes it (the size refusals' room, `PointTooLargeRoomFor`).
     pub largest_size_that_fits: Option<f64>,
 
     /// The rim loops of this group that were refused while the rest of it built, empty or `None`
@@ -91,22 +85,21 @@ pub struct BevelGroupResult {
 }
 
 impl BevelGroupResult {
-    /// A row from its four positional members; `warning` is optional so that the many callers with
-    /// nothing to warn about read as the four things they are about.
+    /// A row from its positional members: which group, how many edges, why it was skipped (`None`
+    /// when it was applied) and what it has to say having been applied.
     pub fn new(
         group_index: i32,
         group: BevelResultGroup,
         edge_count: i32,
-        failure_reason: Option<String>,
-        warning: Option<String>,
+        failure: Option<BevelAdvisory>,
+        warnings: Vec<BevelAdvisory>,
     ) -> Self {
         BevelGroupResult {
             group_index,
             group,
             edge_count,
-            failure_reason,
-            warning,
-            failure_advisory: None,
+            failure,
+            warnings,
             largest_size_that_fits: None,
             loop_failures: None,
             loop_count: 0,
@@ -115,7 +108,7 @@ impl BevelGroupResult {
 
     /// Whether this group was skipped rather than cut.
     pub fn failed(&self) -> bool {
-        self.failure_reason.is_some()
+        self.failure.is_some()
     }
 
     /// Whether the group built but left one or more of its own rim loops unbevelled.
@@ -129,37 +122,34 @@ impl BevelGroupResult {
 
     /// Whether this group was applied but with something worth saying about it.
     pub fn warned(&self) -> bool {
-        self.warning.is_some()
+        !self.warnings.is_empty()
     }
 }
 
 /// One rim loop of a group that could not be built, on a row that built the rest of its loops
 /// ([`BevelLoopFailure`]).
 ///
-/// The same three things a refused ROW carries - the refusal, the sentence it was written as, and
-/// the largest size that would have built it - said about a part of a row instead of all of it,
+/// The same two things a refused ROW carries - the refusal and the largest size that would have
+/// built it - said about a part of a row instead of all of it,
 /// because that is what the user has to act on: a port mouth that did not round is answered by a
 /// smaller size or a second operation, and neither is findable from a row that simply built.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BevelLoopFailure {
-    /// Which refusal the loop got, for a caller that asks by code rather than by prose. `None` on
-    /// a loop read back from a saved file (`BevelStoredResults` keeps the sentence, not the code).
-    pub advisory: Option<BevelAdvisory>,
-
-    /// The sentence it was written as, already localized.
-    pub failure_reason: String,
+    /// Which refusal the loop got, with the values it quotes.
+    pub advisory: BevelAdvisory,
 
     /// The largest size that would have built this loop alone, or `None` where none was found -
     /// including where the search for one was not run at all, since a part with dozens of refused
-    /// loops must not spend a bisection on each of them.
+    /// loops must not spend a bisection on each of them. `Some(0.0)` where nothing fits at all (the
+    /// loop's edges are gone from the part a first pass built), which is no size to offer.
     pub largest_size_that_fits: Option<f64>,
 
     /// How many mesh edges the loop is, which is what makes it a big loop or a small one.
     pub edge_count: i32,
 }
 
-/// Second readings of a group failure, where the sentence the geometry produced is true but is not
-/// what went wrong. Kept beside [`BevelGroupResult`] because this is the same subject - the words a
+/// Second readings of a group failure, where the refusal the geometry produced is true but is not
+/// what went wrong. Kept beside [`BevelGroupResult`] because this is the same subject - what a
 /// skipped group comes back with - and separate from the builder that composes them because the
 /// builder is about tools and booleans.
 pub mod bevel_group_failures {
@@ -274,9 +264,9 @@ pub mod bevel_group_failures {
 pub struct BevelRebuildResults {
     group_results: Vec<BevelGroupResult>,
     group_failures: Vec<BevelGroupResult>,
-    operation_failures: Vec<String>,
-    operation_advisories: Vec<String>,
-    construction_advisories: Vec<String>,
+    operation_failures: Vec<BevelAdvisory>,
+    operation_advisories: Vec<BevelAdvisory>,
+    construction_advisories: Vec<BevelAdvisory>,
 }
 
 impl BevelRebuildResults {
@@ -285,17 +275,13 @@ impl BevelRebuildResults {
         Self::default()
     }
 
-    /// `whole_operation_advisory_codes` is what each of `whole_operation_advisories` was, code for
-    /// code, so that [`Self::construction_advisories`] can tell the ones about the SOURCE from the
-    /// ones about the bevel. The sentences are localized in the application and the codes are the
-    /// kernel's, so the two arrive as two lists built in one place from one list of advisories;
-    /// where they do not line up - a caller that knows only the sentences, which is every test that
-    /// writes results by hand - nothing is filtered rather than the wrong thing being filtered.
+    /// The report of `results` (each group's row), `whole_operation_failures` (what stopped the
+    /// cut as a whole) and `whole_operation_advisories` (what the operation had to put right or
+    /// say about it, which did not stop it).
     pub fn new(
         results: Option<&[BevelGroupResult]>,
-        whole_operation_failures: Option<&[String]>,
-        whole_operation_advisories: Option<&[String]>,
-        whole_operation_advisory_codes: Option<&[BevelAdvisoryCode]>,
+        whole_operation_failures: Option<&[BevelAdvisory]>,
+        whole_operation_advisories: Option<&[BevelAdvisory]>,
     ) -> Self {
         let group_results = results.map(<[_]>::to_vec).unwrap_or_default();
         let group_failures = group_results
@@ -306,19 +292,16 @@ impl BevelRebuildResults {
         let operation_failures = whole_operation_failures
             .map(<[_]>::to_vec)
             .unwrap_or_default();
-        let operation_advisories: Vec<String> = whole_operation_advisories
+        let operation_advisories: Vec<BevelAdvisory> = whole_operation_advisories
             .map(<[_]>::to_vec)
             .unwrap_or_default();
-
-        let construction_advisories = match whole_operation_advisory_codes {
-            Some(codes) if codes.len() == operation_advisories.len() => operation_advisories
-                .iter()
-                .zip(codes)
-                .filter(|(_, &code)| !bevel_advisory_codes::is_a_note_rather_than_a_complaint(code))
-                .map(|(sentence, _)| sentence.clone())
-                .collect(),
-            _ => operation_advisories.clone(),
-        };
+        let construction_advisories = operation_advisories
+            .iter()
+            .filter(|advisory| {
+                !bevel_advisory_codes::is_a_note_rather_than_a_complaint(advisory.code())
+            })
+            .cloned()
+            .collect();
 
         BevelRebuildResults {
             group_results,
@@ -340,7 +323,7 @@ impl BevelRebuildResults {
     }
 
     /// What went wrong with the cut as a whole.
-    pub fn operation_failures(&self) -> &[String] {
+    pub fn operation_failures(&self) -> &[BevelAdvisory] {
         &self.operation_failures
     }
 
@@ -348,19 +331,19 @@ impl BevelRebuildResults {
     /// the repairs `BevelWorkingMesh` makes to its copy of the source. Kept apart from
     /// [`Self::operation_failures`] because nothing failed: the part built, and the user is being
     /// told what their source needed rather than what went wrong.
-    pub fn operation_advisories(&self) -> &[String] {
+    pub fn operation_advisories(&self) -> &[BevelAdvisory] {
         &self.operation_advisories
     }
 
-    /// The advisories that are about the BEVEL - [`Self::operation_advisories`] less the ones that
-    /// only say what the working copy had to condition about the source before anything was built
-    /// ([`bevel_advisory_codes::is_source_conditioning`]).
+    /// The advisories that are about the BEVEL - [`Self::operation_advisories`] less the notes
+    /// about a bevel that built ([`bevel_advisory_codes::is_a_note_rather_than_a_complaint`]),
+    /// chiefly what the working copy had to condition about the source before anything was built.
     ///
     /// The list to read when the question is "did this build?". A source that needs conditioning
     /// says so on every rebuild, for ever, and it is not something the construction did - so
     /// counting it as a complaint would mark every case on such a part as failing while the part
     /// builds perfectly.
-    pub fn construction_advisories(&self) -> &[String] {
+    pub fn construction_advisories(&self) -> &[BevelAdvisory] {
         &self.construction_advisories
     }
 }

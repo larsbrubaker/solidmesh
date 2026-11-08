@@ -149,9 +149,12 @@ pub enum BevelAdvisoryCode {
     CornerSeamNotCarried,
     /// BevelWorkingMesh.CreateFrom: the source was reversed to bevel it. No args.
     SourceMeshWasInsideOut,
-    /// BevelSurfacePartBuilder: the group is one `Surface` would build,
-    /// and that construction is not written yet, so it is refused rather than quietly handed to the
-    /// boolean one - the plan's no-fallback rule. Goes with the mode, at the end of the plan. No args.
+    /// BevelSurfacePartBuilder and the sections route: the construction declined these edges with
+    /// no refusal of its own to give - a section that would not assemble or loft, a build that left
+    /// no tool, a loop whose edges a first pass's fillet took - so the group (or the loop) is refused
+    /// at the size asked rather than handed to anything else. A complaint. Args: none, or where it
+    /// gave up where the route knows - (int chainVertex) or (Vector3 at) - which the sentence does
+    /// not quote.
     SurfaceConstructionNotBuilt,
     /// BevelConstructionFallThrough: the construction THREW on this group rather than refusing in words, which to the user is the same thing - nothing was built at this size. A complaint, said on the group's own row. Args: (string construction).
     ConstructionCouldNotBuildThisGroup,
@@ -614,9 +617,34 @@ pub enum BevelAdvisoryCode {
     /// The Point groups: the size is too large for the point and no smaller size tried builds it.
     /// No args.
     PointTooLargeForAnySize,
-    /// The Point groups: the size is too large for the point, which has room for the size quoted.
-    /// Args: (double largestThatFits).
+    /// The Point groups and `point_bevel::build`: the size is too large for the point, which has
+    /// room for the size quoted - the room the build read, or the size the Point groups' search
+    /// built. Args: (double largestThatFits).
     PointTooLargeRoomFor,
+    /// `point_bevel::build`: a fillet asked at a point sharp (feature) edges meet, where no round can
+    /// meet the faces smoothly; filleting the edges is what rounds such a corner. No args.
+    PointHasSharpEdges,
+    /// `PointStar::try_shape`, fillet: the faces around the point hold no ball to round it with.
+    /// No args.
+    PointHoldsNoBall,
+    /// `PointStar::try_shape`, chamfer: the point's faces give no direction to cut the chamfer
+    /// square to. No args.
+    PointHasNoDirectionToCutSquareTo,
+    /// `PointStar::try_shape`, chamfer: the point is not convex, so no one plane cuts it off.
+    /// No args.
+    PointIsNotConvex,
+    /// `point_bevel::build`: the size asked is not positive (or not a number). No args.
+    PointSizeNotPositive,
+    /// `point_bevel::build`: the ring the cut follows could not be resolved on this mesh (the band
+    /// refinement did not settle). No args.
+    PointRingNotResolved,
+    /// `point_bevel::build`: the cut round the point is not one closed loop. Args: (int lineCount).
+    PointRingNotOneLoop,
+    /// `point_bevel::build`, chamfer: the ring the cut left does not close flat. No args.
+    PointChamferRingNotFlat,
+    /// `point_bevel::build`, fillet: the round over the ring would not close. Args: (string
+    /// failure), the hole fill's own name for why, for a bug report.
+    PointRoundDidNotClose,
     /// BevelSecondPassStage: the rounds cut on the part changed a concave crease and its fillet
     /// could not be rebuilt along the new one, so the first-pass fillet was kept. A NOTE on the
     /// row's warning, followed by the second pass's own reason. No args.

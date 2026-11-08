@@ -2,8 +2,8 @@
 //! a picked point (`point_bevel`) - a cone's tip and a cube's corner, filleted and chamfered across
 //! the room, each held to the requirement: closed, consistently oriented, one shell, no zero-area
 //! triangle, material removed; the fillet near the exact ball, the chamfer's cap flat, a size past
-//! the room refused - and a fillet at a point where sharp edges meet (a cube corner) refused by
-//! name. Parameter rows are loops over the same-named test.
+//! the room refused with the room it has - and a fillet at a point where sharp edges meet (a cube
+//! corner) refused by name. Parameter rows are loops over the same-named test.
 
 use std::collections::{HashMap, HashSet};
 
@@ -13,7 +13,7 @@ use geometry_processing::bevel::level_line::point_bevel::{
 use geometry_processing::bevel::level_line::point_candidates;
 use geometry_processing::bevel::level_line::point_star::PointStar;
 use geometry_processing::bevel::level_line::{LevelLineMesh, LevelLineTriangle};
-use vector_math::number_format::format_f64_max_decimals;
+use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use vector_math::{Matrix4X4, Vector3};
 
 const SIDES: i32 = 40;
@@ -138,10 +138,12 @@ fn a_cones_apex_refuses_past_its_room() {
                 .expect("no fault");
         assert!(!result.is_built());
         assert_eq!(result.failure, PointBevelRefusal::TooLarge);
-        let refusal = result.refusal.expect("refused");
-        assert!(
-            refusal.contains(&format_f64_max_decimals(room, 3)),
-            "{refusal}"
+        assert_eq!(
+            result.refusal,
+            Some(BevelAdvisory::new(
+                BevelAdvisoryCode::PointTooLargeRoomFor,
+                vec![BevelAdvisoryArg::Double(room)],
+            ))
         );
     }
 }
@@ -223,7 +225,13 @@ fn two_corners_whose_rings_would_meet_both_refuse_naming_the_room_beside_the_oth
     for point in &built.points {
         assert_eq!(point.failure, PointBevelRefusal::TooLarge);
         assert!((point.room - 0.8).abs() < 1e-12, "{}", point.room);
-        assert!(point.refusal.as_deref().unwrap_or("").contains("0.8"));
+        assert_eq!(
+            point.refusal,
+            Some(BevelAdvisory::new(
+                BevelAdvisoryCode::PointTooLargeRoomFor,
+                vec![BevelAdvisoryArg::Double(point.room)],
+            ))
+        );
     }
 }
 
@@ -242,11 +250,13 @@ fn a_cube_corner_refuses_a_fillet_naming_its_sharp_edges() {
     .expect("no fault");
     assert!(!result.is_built());
     assert_eq!(result.failure, PointBevelRefusal::PointHasSharpEdges);
-    assert!(result
-        .refusal
-        .as_deref()
-        .unwrap_or("")
-        .contains("fillet the edges instead"));
+    assert_eq!(
+        result.refusal,
+        Some(BevelAdvisory::new(
+            BevelAdvisoryCode::PointHasSharpEdges,
+            Vec::new()
+        ))
+    );
 }
 
 #[test]

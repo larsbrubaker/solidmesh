@@ -6,13 +6,13 @@
 //! toward the point) or [`flat_hole_fill`] (chamfer). The star each point is read from is
 //! [`PointStar`].
 //!
-//! Faults out of the cut (the work budget, a cancel, a mesh that refused an edit) leave as
-//! [`PointBevelFault`].
+//! A refusal is a [`BevelAdvisory`] (one of the `Point...` codes, with the values it quotes) for the
+//! caller to put into words. Faults out of the cut (the work budget, a cancel, a mesh that refused
+//! an edit) leave as [`PointBevelFault`].
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use vector_math::number_format::format_f64_max_decimals;
 use vector_math::Vector3;
 
 use super::band_cut::{self, BandCutError};
@@ -23,6 +23,7 @@ use super::{
     edge_root, flat_hole_fill, hole_fill, ChainDistanceField, HoleFillFailure, LevelLineMesh,
     LevelLineMeshError, PointField, ScalarField, VertexFieldReading, WorkError,
 };
+use crate::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 
 /// A point bevel's profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,8 +56,8 @@ pub struct PointBevelResult {
     pub failure: PointBevelRefusal,
     /// The bevelled part (removed triangles flagged, the fill appended), or `None` on a refusal.
     pub mesh: Option<Rc<RefCell<LevelLineMesh>>>,
-    /// `None` when built; otherwise why not, in words for the user.
-    pub refusal: Option<String>,
+    /// `None` when built; otherwise why not, as the refusal and the values it quotes.
+    pub refusal: Option<BevelAdvisory>,
     /// The largest size this point takes (see [`room`]).
     pub room: f64,
 }
@@ -71,11 +72,15 @@ impl PointBevelResult {
         }
     }
 
-    fn refused(failure: PointBevelRefusal, refusal: impl Into<String>, room: f64) -> Self {
+    fn refused(failure: PointBevelRefusal, code: BevelAdvisoryCode, room: f64) -> Self {
+        Self::refused_with(failure, BevelAdvisory::new(code, Vec::new()), room)
+    }
+
+    fn refused_with(failure: PointBevelRefusal, refusal: BevelAdvisory, room: f64) -> Self {
         PointBevelResult {
             failure,
             mesh: None,
-            refusal: Some(refusal.into()),
+            refusal: Some(refusal),
             room,
         }
     }
@@ -206,7 +211,7 @@ pub fn build(
         if kind == PointBevelKind::Fillet && star.has_sharp_edges() {
             results[i] = Some(PointBevelResult::refused(
                 PointBevelRefusal::PointHasSharpEdges,
-                "Sharp edges meet this point - fillet the edges instead.",
+                BevelAdvisoryCode::PointHasSharpEdges,
                 0.0,
             ));
             continue;
@@ -229,7 +234,7 @@ pub fn build(
         if !(size > 0.0) {
             results[i] = Some(PointBevelResult::refused(
                 PointBevelRefusal::NoShape,
-                "the size must be positive",
+                BevelAdvisoryCode::PointSizeNotPositive,
                 room,
             ));
             continue;
@@ -267,11 +272,11 @@ pub fn build(
         // exactly the room builds; the relative slack is round-off in reading the room back, not a
         // tolerance
         if shape.size > room * (1.0 + 1e-12) {
-            results[i] = Some(PointBevelResult::refused(
+            results[i] = Some(PointBevelResult::refused_with(
                 PointBevelRefusal::TooLarge,
-                format!(
-                    "too large: this point has room for {}",
-                    format_f64_max_decimals(room, 3)
+                BevelAdvisory::new(
+                    BevelAdvisoryCode::PointTooLargeRoomFor,
+                    vec![BevelAdvisoryArg::Double(room)],
                 ),
                 room,
             ));
@@ -305,7 +310,7 @@ pub fn build(
                 continue;
             };
             if let Some(refusal) = cut(&mesh, shape, kind, segments)? {
-                results[i] = Some(PointBevelResult::refused(
+                results[i] = Some(PointBevelResult::refused_with(
                     PointBevelRefusal::DidNotClose,
                     refusal,
                     shape.room,
@@ -339,9 +344,14 @@ pub fn build(
 }
 
 impl Default for PointBevelResult {
-    /// Never published: every asked point is given a result above before the build answers.
+    /// Never published: every asked point is given a result above before the build answers. A
+    /// refusal rather than a build, so a slot nothing wrote can never pass for a bevelled point.
     fn default() -> Self {
-        PointBevelResult::refused(PointBevelRefusal::NoShape, "", 0.0)
+        PointBevelResult::refused(
+            PointBevelRefusal::NoShape,
+            BevelAdvisoryCode::PointHoldsNoBall,
+            0.0,
+        )
     }
 }
 
@@ -350,14 +360,13 @@ fn snap(setback: f64) -> f64 {
     1e-9 * setback.max(1.0)
 }
 
-/// Cuts one point's ring into `mesh` and fills it; the refusal in words, or `None` when
-/// built.
+/// Cuts one point's ring into `mesh` and fills it; the refusal, or `None` when built.
 fn cut(
     mesh: &Rc<RefCell<LevelLineMesh>>,
     shape: &PointShape,
     kind: PointBevelKind,
     segments: i32,
-) -> Result<Option<String>, PointBevelFault> {
+) -> Result<Option<BevelAdvisory>, PointBevelFault> {
     let point = shape.point;
     let size = shape.size;
     let setback = size * shape.per_size;
@@ -400,17 +409,19 @@ fn cut(
         RefineOptions::default(),
     )?;
     if !settled {
-        return Ok(Some(
-            "the ring could not be resolved on this mesh".to_string(),
-        ));
+        return Ok(Some(BevelAdvisory::new(
+            BevelAdvisoryCode::PointRingNotResolved,
+            Vec::new(),
+        )));
     }
 
     let roots = edge_root::find(&mesh.borrow(), &reading)?;
     let cut = band_cut::cut(&reading, &roots)?;
     if cut.lines.len() != 1 || !cut.lines[0].closed {
-        return Ok(Some(format!(
-            "the ring is not one loop ({} lines)",
-            cut.lines.len()
+        // `as` saturates; a cut of more than i32::MAX lines is not a mesh this can hold.
+        return Ok(Some(BevelAdvisory::new(
+            BevelAdvisoryCode::PointRingNotOneLoop,
+            vec![BevelAdvisoryArg::Int(cut.lines.len() as i32)],
         )));
     }
 
@@ -423,7 +434,10 @@ fn cut(
     let loop_points: Vec<Vector3> = ring.iter().map(|&v| mesh.position(v)).collect();
     if kind == PointBevelKind::Chamfer {
         let Some((flat, _)) = flat_hole_fill::fill(&loop_points, snap, None) else {
-            return Ok(Some("the chamfer ring does not close flat".to_string()));
+            return Ok(Some(BevelAdvisory::new(
+                BevelAdvisoryCode::PointChamferRingNotFlat,
+                Vec::new(),
+            )));
         };
 
         for t in flat {
@@ -454,9 +468,9 @@ fn cut(
 
     let fill = hole_fill::fill(&loop_points, &cross_tangents, &edge_lengths)?;
     if fill.failure != HoleFillFailure::None {
-        return Ok(Some(format!(
-            "the round would not close ({:?})",
-            fill.failure
+        return Ok(Some(BevelAdvisory::new(
+            BevelAdvisoryCode::PointRoundDidNotClose,
+            vec![BevelAdvisoryArg::String(format!("{:?}", fill.failure))],
         )));
     }
 
