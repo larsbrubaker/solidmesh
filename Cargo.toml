@@ -35,7 +35,7 @@ members = [
 # Every member inherits these with `<key>.workspace = true`. `readme` is relative to this
 # directory, so a crate without a README of its own publishes the repository's.
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "BSD-2-Clause"
 authors = ["Lars Brubaker <larsbrubaker@matterhackers.com>"]
