@@ -635,5 +635,5 @@ fn angle_between_degrees(a: Vector3, b: Vector3) -> f64 {
     // A NaN dot stays NaN through `f64::clamp`, so a degenerate edge reads as NaN degrees.
     let dot = a.dot(b).clamp(-1.0, 1.0);
 
-    math_helper::radians_to_degrees(dot.acos())
+    math_helper::radians_to_degrees(libm::acos(dot))
 }

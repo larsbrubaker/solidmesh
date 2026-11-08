@@ -27,6 +27,10 @@ clipper-library = { package = "solidmesh-clipper", path = "../clipper-library", 
 vector-math = { package = "solidmesh-math", path = "../vector-math", version = "0.1.0" }
 polygon-mesh = { package = "solidmesh-mesh", path = "../polygon-mesh", version = "0.1.0" }
 indexmap = "2"
+# Pure-Rust trig for the 2D path bevel and the topology readings (`src/path`, `src/topology`):
+# std's `sin`/`cos`/`tan`/`acos`/`atan2` call each platform's own libm, whose last bits differ, so
+# a design's curves would differ by OS. `tests/platform_math_tests.rs` keeps std's out of both.
+libm = "0.2.16"
 web-time = "1"
 serde = { version = "1", features = ["derive"] }
 

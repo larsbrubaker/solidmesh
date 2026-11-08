@@ -491,10 +491,12 @@ fn try_match_anchor(
 
     let anchor_direction = group.anchor_direction.get_normal();
     let maximum_drift = candidates.feature_extent * tolerances.drift_fraction_of_feature_extent;
-    let minimum_direction_agreement =
-        math_helper::degrees_to_radians(tolerances.direction_tolerance_degrees).cos();
-    let minimum_normal_agreement =
-        math_helper::degrees_to_radians(tolerances.normal_tolerance_degrees).cos();
+    let minimum_direction_agreement = libm::cos(math_helper::degrees_to_radians(
+        tolerances.direction_tolerance_degrees,
+    ));
+    let minimum_normal_agreement = libm::cos(math_helper::degrees_to_radians(
+        tolerances.normal_tolerance_degrees,
+    ));
 
     // Each score term is divided by the most it can be at its own gate, so each runs 0 (perfect)
     // to 1 (only just allowed through) and the equal weights really are equal.

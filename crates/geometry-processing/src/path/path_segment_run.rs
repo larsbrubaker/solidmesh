@@ -409,7 +409,7 @@ fn signed_bend_degrees_at(points: &[Vector2], vertex_index: usize) -> f64 {
     // atan2 of the cross against the dot rather than acos, which is flat near 1
     let cross = incoming.cross(outgoing);
     let dot = incoming.dot(outgoing);
-    math_helper::radians_to_degrees(cross.atan2(dot))
+    math_helper::radians_to_degrees(libm::atan2(cross, dot))
 }
 
 /// The direction of the contour on one side of a vertex, from the nearest neighbour far enough

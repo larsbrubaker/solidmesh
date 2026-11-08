@@ -319,10 +319,14 @@ fn eat(run: &PathRun, reach: f64, eaten: &mut [bool]) {
 /// run ahead, going round the center the way the corner turns (not the short way round, which
 /// fails exactly at the half-circle limit).
 fn sample_arc(fillet: &Fillet, interior_sign: f64, segments: usize) -> Vec<Vector2> {
-    let start_angle =
-        (fillet.touch_on_prev.y - fillet.center.y).atan2(fillet.touch_on_prev.x - fillet.center.x);
-    let end_angle =
-        (fillet.touch_on_next.y - fillet.center.y).atan2(fillet.touch_on_next.x - fillet.center.x);
+    let start_angle = libm::atan2(
+        fillet.touch_on_prev.y - fillet.center.y,
+        fillet.touch_on_prev.x - fillet.center.x,
+    );
+    let end_angle = libm::atan2(
+        fillet.touch_on_next.y - fillet.center.y,
+        fillet.touch_on_next.x - fillet.center.x,
+    );
     let mut arc_sweep = end_angle - start_angle;
 
     // wrapped into the turn direction, leaving a zero sweep alone
@@ -341,8 +345,8 @@ fn sample_arc(fillet: &Fillet, interior_sign: f64, segments: usize) -> Vec<Vecto
     for i in 1..segments {
         let current_angle = start_angle + (arc_sweep * (i as f64 / segments as f64));
         arc_points.push(Vector2::new(
-            fillet.center.x + (fillet.radius * current_angle.cos()),
-            fillet.center.y + (fillet.radius * current_angle.sin()),
+            fillet.center.x + (fillet.radius * libm::cos(current_angle)),
+            fillet.center.y + (fillet.radius * libm::sin(current_angle)),
         ));
     }
 
@@ -644,12 +648,12 @@ fn cross(a: Vector2, b: Vector2) -> f64 {
 
 /// The turn from one unit vector to the other, in radians, between -PI and PI.
 fn signed_angle_between(from: Vector2, to: Vector2) -> f64 {
-    cross(from, to).atan2(from.dot(to))
+    libm::atan2(cross(from, to), from.dot(to))
 }
 
 fn rotate(vector: Vector2, angle: f64) -> Vector2 {
-    let cos = angle.cos();
-    let sin = angle.sin();
+    let cos = libm::cos(angle);
+    let sin = libm::sin(angle);
     Vector2::new(
         (vector.x * cos) - (vector.y * sin),
         (vector.x * sin) + (vector.y * cos),

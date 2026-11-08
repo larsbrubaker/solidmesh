@@ -165,7 +165,7 @@ pub fn bevel_contour(
     let corner_tan_half_angle: Vec<f64> = (0..vertex_count)
         .map(|i| {
             if is_candidate[i] {
-                (interior_angle(&working, i, closed) / 2.0).tan()
+                libm::tan(interior_angle(&working, i, closed) / 2.0)
             } else {
                 1.0
             }
@@ -464,7 +464,7 @@ pub(crate) fn interior_angle(working: &[Vector2], i: usize, closed: bool) -> f64
     let to_prev = normalize(working[prev_index(i, vertex_count, closed) as usize] - working[i]);
     let to_next = normalize(working[next_index(i, vertex_count, closed) as usize] - working[i]);
 
-    clamp_passing_nan(to_prev.dot(to_next), -1.0, 1.0).acos()
+    libm::acos(clamp_passing_nan(to_prev.dot(to_next), -1.0, 1.0))
 }
 
 /// Clamps `value` into `[min, max]`, passing a NaN through (where `f64::clamp` would panic on a

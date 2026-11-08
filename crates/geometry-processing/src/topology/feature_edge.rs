@@ -76,7 +76,7 @@ impl FeatureEdge {
     /// than a round half degree so that detection here selects exactly the edge set a hand-rolled
     /// coplanar-face scan at that dot product would. (A function because `acos` is not `const`.)
     pub fn default_flat_angle_degrees() -> f64 {
-        math_helper::radians_to_degrees(Self::COPLANAR_FACE_DOT.acos())
+        math_helper::radians_to_degrees(libm::acos(Self::COPLANAR_FACE_DOT))
     }
 
     /// The angle between the two faces measured through the material, in degrees. A box edge is
@@ -142,7 +142,7 @@ impl FeatureEdge {
         let sine_of_turn = normal0.cross(normal1).dot(direction);
         let cosine_of_turn = normal0.dot(normal1);
         let turn_angle_degrees =
-            math_helper::radians_to_degrees(sine_of_turn.atan2(cosine_of_turn));
+            math_helper::radians_to_degrees(libm::atan2(sine_of_turn, cosine_of_turn));
 
         let mut convexity = EdgeConvexity::Flat;
         if turn_angle_degrees > flat_angle_degrees {

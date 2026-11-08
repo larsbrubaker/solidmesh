@@ -274,6 +274,15 @@ Source: https://github.com/indexmap-rs/indexmap — a crates.io dependency (not 
 `crates/geometry-processing`, which iterates maps and sets in insertion order with it where that
 order reaches a result (CLAUDE.md, "Exactness").
 
+## libm (MIT)
+
+Carried by: solidmesh (`crates/geometry-processing`)
+
+Source: https://github.com/rust-lang/compiler-builtins (its `libm` crate) — a crates.io dependency
+(not copied) of `crates/geometry-processing`, whose 2D path bevel and topology readings take
+`sin`, `cos`, `tan`, `acos` and `atan2` from it in pure Rust, so a design gives the same curves on
+every platform. Its license text is in that repository.
+
 ## libc, windows-sys, sha2 and zip (test-only)
 
 Carried by: solidmesh (`crates/geometry-processing`), as dev-dependencies only

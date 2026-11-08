@@ -122,7 +122,7 @@ pub fn resolve_with(
     let to_previous = group.anchor_to_previous.get_normal();
     let to_next = group.anchor_to_next.get_normal();
     let maximum_drift = corners.extent * drift_fraction_of_extent;
-    let minimum_agreement = math_helper::degrees_to_radians(direction_tolerance_degrees).cos();
+    let minimum_agreement = libm::cos(math_helper::degrees_to_radians(direction_tolerance_degrees));
 
     // each term divided by the most it can be at its own gate, so the equal weights are equal
     let worst_direction_term = 1.0 - minimum_agreement;

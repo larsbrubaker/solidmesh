@@ -32,9 +32,11 @@ impl PathCorner {
     /// How far the path turns at this corner, in degrees: 0 running straight on, 180 at a cusp.
     pub fn bend_degrees(&self) -> f64 {
         180.0
-            - math_helper::radians_to_degrees(
-                clamp_passing_nan(self.to_previous.dot(self.to_next), -1.0, 1.0).acos(),
-            )
+            - math_helper::radians_to_degrees(libm::acos(clamp_passing_nan(
+                self.to_previous.dot(self.to_next),
+                -1.0,
+                1.0,
+            )))
     }
 }
 

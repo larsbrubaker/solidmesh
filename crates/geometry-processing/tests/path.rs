@@ -5,6 +5,8 @@
 mod flattened_curve_path;
 #[path = "path/path_bevel_curved_run_tests.rs"]
 mod path_bevel_curved_run_tests;
+#[path = "path/path_bevel_platform_bits_tests.rs"]
+mod path_bevel_platform_bits_tests;
 #[path = "path/path_bevel_test_geometry.rs"]
 mod path_bevel_test_geometry;
 #[path = "path/path_bevel_tests.rs"]
