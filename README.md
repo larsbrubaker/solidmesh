@@ -12,6 +12,8 @@ library so that others can use it and build on it. It works on the meshes real p
 (STL and 3MF downloads, scans, triangle soup) as well as on clean modeled parts, builds for
 `wasm32-unknown-unknown`, contains no C or C++, and gives the same answer on every platform.
 
+> Part of the [rust-apps](https://github.com/larsbrubaker/rust-apps) suite — a collection of Rust graphics and geometry libraries by Lars Brubaker.
+
 ## Status
 
 **The kernel lives here; it is not on crates.io yet.** The four crates moved in from the
