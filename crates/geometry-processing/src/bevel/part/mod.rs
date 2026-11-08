@@ -38,7 +38,7 @@ pub mod surface_part_builder;
 pub mod touching_loops;
 
 pub use entry_point::bevel_part;
-pub use error::{BevelBuildCause, BevelBuildFailure, BevelBuildFailureKind, BevelPartError};
+pub use error::{BevelBuildDetail, BevelBuildFailure, BevelBuildFailureKind, BevelPartError};
 pub use outcome::BevelPartOutcome;
 pub use pick_memo::BevelPickMemo;
 pub use progress::{BevelProgress, BevelProgressPhase, BevelProgressReport, BevelSizeSearchRung};

@@ -6,7 +6,7 @@
 //! The failure is opaque on purpose. What went wrong inside is one of the kernel's own detail
 //! types (a level-line work budget that ran out, a surface construction that could not start, a
 //! Point group's fault), which change as the constructions do, so the documented error carries
-//! only a kind and the words; [`BevelBuildFailure::cause`] (hidden from the docs) hands the
+//! only a kind and the words; [`BevelBuildFailure::detail`] (hidden from the docs) hands the
 //! detail to MatterCAD and the kernel's tests.
 
 use super::surface_part_builder::SurfacePartBuildError;
@@ -28,7 +28,7 @@ pub enum BevelPartError {
 /// ([`Display`](std::fmt::Display)) for a log.
 #[derive(Debug)]
 pub struct BevelBuildFailure {
-    cause: BevelBuildCause,
+    detail: BevelBuildDetail,
 }
 
 /// What kind of failure stopped a build.
@@ -46,7 +46,7 @@ pub enum BevelBuildFailureKind {
 /// part of the documented API; it changes with the constructions.
 #[doc(hidden)]
 #[derive(Debug)]
-pub enum BevelBuildCause {
+pub enum BevelBuildDetail {
     /// A level-line walk ran out of its budget.
     Work(WorkError),
     /// The surface construction could not run.
@@ -58,11 +58,13 @@ pub enum BevelBuildCause {
 impl BevelBuildFailure {
     /// What kind of failure this is.
     pub fn kind(&self) -> BevelBuildFailureKind {
-        match &self.cause {
-            BevelBuildCause::Work(_)
-            | BevelBuildCause::Surface(SurfacePartBuildError::BudgetExceeded)
-            | BevelBuildCause::Point(PointBevelFault::Work(_)) => BevelBuildFailureKind::WorkBudget,
-            BevelBuildCause::Surface(_) | BevelBuildCause::Point(_) => {
+        match &self.detail {
+            BevelBuildDetail::Work(_)
+            | BevelBuildDetail::Surface(SurfacePartBuildError::BudgetExceeded)
+            | BevelBuildDetail::Point(PointBevelFault::Work(_)) => {
+                BevelBuildFailureKind::WorkBudget
+            }
+            BevelBuildDetail::Surface(_) | BevelBuildDetail::Point(_) => {
                 BevelBuildFailureKind::Construction
             }
         }
@@ -70,17 +72,17 @@ impl BevelBuildFailure {
 
     /// The kernel's detail of the failure, for MatterCAD and the kernel's tests.
     #[doc(hidden)]
-    pub fn cause(&self) -> &BevelBuildCause {
-        &self.cause
+    pub fn detail(&self) -> &BevelBuildDetail {
+        &self.detail
     }
 }
 
 impl std::fmt::Display for BevelBuildFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.cause {
-            BevelBuildCause::Work(error) => write!(f, "{error}"),
-            BevelBuildCause::Surface(error) => write!(f, "{error:?}"),
-            BevelBuildCause::Point(error) => write!(f, "{error}"),
+        match &self.detail {
+            BevelBuildDetail::Work(error) => write!(f, "{error}"),
+            BevelBuildDetail::Surface(error) => write!(f, "{error:?}"),
+            BevelBuildDetail::Point(error) => write!(f, "{error}"),
         }
     }
 }
@@ -106,8 +108,8 @@ impl std::error::Error for BevelPartError {
 }
 
 impl BevelPartError {
-    fn failed(cause: BevelBuildCause) -> Self {
-        BevelPartError::Failed(BevelBuildFailure { cause })
+    fn failed(detail: BevelBuildDetail) -> Self {
+        BevelPartError::Failed(BevelBuildFailure { detail })
     }
 }
 
@@ -115,7 +117,7 @@ impl From<PointBevelFault> for BevelPartError {
     fn from(error: PointBevelFault) -> Self {
         match error {
             PointBevelFault::Work(WorkError::Cancelled) => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildCause::Point(other)),
+            other => BevelPartError::failed(BevelBuildDetail::Point(other)),
         }
     }
 }
@@ -124,7 +126,7 @@ impl From<SurfacePartBuildError> for BevelPartError {
     fn from(error: SurfacePartBuildError) -> Self {
         match error {
             SurfacePartBuildError::Cancelled => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildCause::Surface(other)),
+            other => BevelPartError::failed(BevelBuildDetail::Surface(other)),
         }
     }
 }
@@ -133,7 +135,7 @@ impl From<WorkError> for BevelPartError {
     fn from(error: WorkError) -> Self {
         match error {
             WorkError::Cancelled => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildCause::Work(other)),
+            other => BevelPartError::failed(BevelBuildDetail::Work(other)),
         }
     }
 }
