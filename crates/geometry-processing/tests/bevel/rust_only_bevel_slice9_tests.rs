@@ -1,6 +1,6 @@
 //! Rust-only tests for bevel slice 9: what one end of a run can afford
-//! (`bevel_chain_end_budget`), the rebuild's per-group rows and whole-rebuild results
-//! (`BevelGroupResult`, `BevelRebuildResults`, `bevel_group_failures`) and the run-off readings
+//! (`bevel_chain_end_budget`), the rebuild's per-group rows (`BevelGroupResult`,
+//! `bevel_group_failures`) and the run-off readings
 //! (`surface_band_runs_off_the_face_beyond`). MatterCAD exercises these only through the sweep,
 //! the room measure and the operation (`BevelVoidWedgeSectionTests`, `SurfaceRoomTests`,
 //! `BevelGroupResolutionAdvisoryTests`, ...), which land with the cyclic core and the app; these
@@ -15,7 +15,7 @@ use geometry_processing::bevel::surface::surface_band_runs_off_the_face_beyond::
 };
 use geometry_processing::bevel::{
     bevel_group_failures, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelEndCap,
-    BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
+    BevelGroupResult, BevelLoopFailure, BevelResultGroup,
 };
 use geometry_processing::topology::{
     bevel_edge_group_resolver, BevelEdgeGroup, BevelSelectionKind, ChainEdge, FaceGroup,
@@ -131,30 +131,6 @@ fn rust_only_a_row_says_whether_it_failed_partly_refused_or_warned() {
 /// A refusal that quotes nothing.
 fn refusal() -> BevelAdvisory {
     BevelAdvisory::new(BevelAdvisoryCode::SizeRemovesNothing, vec![])
-}
-
-#[test]
-fn rust_only_rebuild_results_leave_the_source_conditioning_out_of_the_construction_advisories() {
-    let group = BevelResultGroup::Edge(BevelEdgeGroup::default());
-    let rows = [
-        BevelGroupResult::new(0, group.clone(), 4, None, Vec::new()),
-        BevelGroupResult::new(1, group, 0, Some(refusal()), Vec::new()),
-    ];
-    let source = BevelAdvisory::new(BevelAdvisoryCode::SourceMeshHadSplitChords, vec![]);
-    let advisories = [source, refusal()];
-    let failures = [BevelAdvisory::new(
-        BevelAdvisoryCode::CutRemovedTheWholePart,
-        vec![],
-    )];
-
-    let results = BevelRebuildResults::new(Some(&rows), Some(&failures), Some(&advisories));
-    assert_eq!(results.group_results().len(), 2);
-    assert_eq!(results.group_failures().len(), 1);
-    assert_eq!(results.group_failures()[0].group_index, 1);
-    assert_eq!(results.operation_failures(), failures);
-    assert_eq!(results.operation_advisories(), advisories);
-    assert_eq!(results.construction_advisories(), [refusal()]);
-    assert!(BevelRebuildResults::empty().group_results().is_empty());
 }
 
 #[test]

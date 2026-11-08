@@ -41,7 +41,7 @@ The [live demo](https://larsbrubaker.github.io/solidmesh/) runs the library itse
 compiled to WebAssembly: booleans (including inside-out and self-intersecting operands), outlines
 extruded with bevels or revolved, smooth implicit blends meshed by marching cubes or dual
 contouring, Minkowski sums and convex hulls, mesh repair, and a part to measure and download as
-STL. Fillets and chamfers join it when their public entry point lands. Each page shows the
+STL. Fillets and chamfers, whose one entry point is `bevel::part::bevel_part`, join it next. Each page shows the
 operation's time and the result's triangle count, volume and area.
 
 It lives in `demo/`: `demo/wasm` is the bindings crate (a workspace member, never published), the

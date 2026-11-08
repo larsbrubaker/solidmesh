@@ -1,7 +1,7 @@
 //! What one group did on the rebuild that has just run ([`BevelGroupResult`], with the rim loops it
-//! refused while building the rest, [`BevelLoopFailure`]); the second readings of a group failure
-//! where the refusal the geometry produced is not what went wrong ([`bevel_group_failures`]); and
-//! everything one rebuild had to report, as one immutable thing ([`BevelRebuildResults`]).
+//! refused while building the rest, [`BevelLoopFailure`]) and the second readings of a group
+//! failure where the refusal the geometry produced is not what went wrong ([`bevel_group_failures`]).
+//! A whole part's rows travel in `part::BevelPartOutcome`.
 //!
 //! Codes and numbers only. Every refusal and note is a [`BevelAdvisory`] - which thing happened and
 //! the values it quotes - and the caller puts it into words (MatterCAD's `BevelAdvisoryText`), so
@@ -13,7 +13,6 @@
 //! against one particular mesh, and a file that has just been loaded has not run that rebuild
 //! yet: a stored "this group failed" would be a claim about geometry nobody has looked at.
 
-use super::bevel_advisory_codes;
 use super::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use crate::topology::{BevelCornerGroup, BevelEdgeGroup};
 
@@ -249,101 +248,5 @@ pub mod bevel_group_failures {
 
         !is_a_junction_at_the_coarsest_rung(features, chain.start().vertex)
             && !is_a_junction_at_the_coarsest_rung(features, chain.end().vertex)
-    }
-}
-
-/// Everything one rebuild had to report, as one immutable thing: what each group did, which of
-/// those failed, and what went wrong with the cut as a whole.
-///
-/// One object rather than three lists on the operation, for the reason `BevelEdgePickModel.PickData`
-/// is one object: it is composed on the rebuild's worker and read by the property panel, and three
-/// separate writes have no ordering anybody can rely on. Published as one value, a reader sees the
-/// whole of one rebuild or the whole of the one before it, never a mix. The lists are copied in, so
-/// the builder may keep composing into its own lists afterwards.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct BevelRebuildResults {
-    group_results: Vec<BevelGroupResult>,
-    group_failures: Vec<BevelGroupResult>,
-    operation_failures: Vec<BevelAdvisory>,
-    operation_advisories: Vec<BevelAdvisory>,
-    construction_advisories: Vec<BevelAdvisory>,
-}
-
-impl BevelRebuildResults {
-    /// Nothing reported.
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// The report of `results` (each group's row), `whole_operation_failures` (what stopped the
-    /// cut as a whole) and `whole_operation_advisories` (what the operation had to put right or
-    /// say about it, which did not stop it).
-    pub fn new(
-        results: Option<&[BevelGroupResult]>,
-        whole_operation_failures: Option<&[BevelAdvisory]>,
-        whole_operation_advisories: Option<&[BevelAdvisory]>,
-    ) -> Self {
-        let group_results = results.map(<[_]>::to_vec).unwrap_or_default();
-        let group_failures = group_results
-            .iter()
-            .filter(|result| result.failed())
-            .cloned()
-            .collect();
-        let operation_failures = whole_operation_failures
-            .map(<[_]>::to_vec)
-            .unwrap_or_default();
-        let operation_advisories: Vec<BevelAdvisory> = whole_operation_advisories
-            .map(<[_]>::to_vec)
-            .unwrap_or_default();
-        let construction_advisories = operation_advisories
-            .iter()
-            .filter(|advisory| {
-                !bevel_advisory_codes::is_a_note_rather_than_a_complaint(advisory.code())
-            })
-            .cloned()
-            .collect();
-
-        BevelRebuildResults {
-            group_results,
-            group_failures,
-            operation_failures,
-            operation_advisories,
-            construction_advisories,
-        }
-    }
-
-    /// What each group did, in the order the groups were resolved.
-    pub fn group_results(&self) -> &[BevelGroupResult] {
-        &self.group_results
-    }
-
-    /// The rows of [`Self::group_results`] that failed.
-    pub fn group_failures(&self) -> &[BevelGroupResult] {
-        &self.group_failures
-    }
-
-    /// What went wrong with the cut as a whole.
-    pub fn operation_failures(&self) -> &[BevelAdvisory] {
-        &self.operation_failures
-    }
-
-    /// What the operation had to put right before it could work, which did not stop it working -
-    /// the repairs `BevelWorkingMesh` makes to its copy of the source. Kept apart from
-    /// [`Self::operation_failures`] because nothing failed: the part built, and the user is being
-    /// told what their source needed rather than what went wrong.
-    pub fn operation_advisories(&self) -> &[BevelAdvisory] {
-        &self.operation_advisories
-    }
-
-    /// The advisories that are about the BEVEL - [`Self::operation_advisories`] less the notes
-    /// about a bevel that built ([`bevel_advisory_codes::is_a_note_rather_than_a_complaint`]),
-    /// chiefly what the working copy had to condition about the source before anything was built.
-    ///
-    /// The list to read when the question is "did this build?". A source that needs conditioning
-    /// says so on every rebuild, for ever, and it is not something the construction did - so
-    /// counting it as a complaint would mark every case on such a part as failing while the part
-    /// builds perfectly.
-    pub fn construction_advisories(&self) -> &[BevelAdvisory] {
-        &self.construction_advisories
     }
 }

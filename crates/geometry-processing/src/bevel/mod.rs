@@ -3,7 +3,7 @@
 //! - **Reporting.** The advisories the kernel reports refusals and warnings with
 //!   ([`BevelAdvisory`], [`BevelAdvisoryCode`], [`bevel_advisory_codes`]), what a rebuild has to
 //!   say about itself ([`BevelRebuildAdvisories`]) and what each group did on it
-//!   ([`BevelGroupResult`], [`BevelRebuildResults`], [`bevel_group_failures`]), and the rebuild's
+//!   ([`BevelGroupResult`], [`bevel_group_failures`]), and the rebuild's
 //!   boolean budget ([`bevel_rebuild_step_budget`]).
 //! - **Tools and sweeps.** The profile and
 //!   frame an edge's tool is drawn in ([`bevel_edge_tool_builder`]), arc chording
@@ -45,9 +45,12 @@
 //!   straight surface walk ([`BevelSurfaceWalk`]) and the float grid step ([`float_grid`]).
 //! - **Constructions.** The level-line build ([`level_line`]), the vertex-centric sections
 //!   ([`sections`]) and the surface construction ([`surface`]).
-//! - **The part.** What a whole part's bevel is orchestrated with: its progress bar and phases,
-//!   the pick memo, the settled pick, the touching loops left alone, refusal blame by place and
-//!   the self-intersection gate ([`part`]).
+//! - **The part.** A whole part's fillet or chamfer through one entry point,
+//!   [`part::bevel_part`] (a request of mesh, picks and settings in; the mesh, a coded row per
+//!   group and the advisories out), with its prologue, the surface construction that builds the
+//!   part in one pass, Point mode's corners, and what they are orchestrated with: the progress bar
+//!   and phases, the pick memo, the settled pick, the touching loops left alone, refusal blame by
+//!   place and the self-intersection gate ([`part`]).
 //!
 //! Stateless helpers are modules of free functions.
 
@@ -156,7 +159,7 @@ pub use bevel_end_cap::BevelEndCap;
 pub use bevel_face_fit::{BevelFaceFit, BevelFaceFitEndCaps};
 pub use bevel_face_run_out::{BevelFaceRunOut, BevelRunOutBound, BevelRunOutMeasure};
 pub use bevel_group_result::{
-    bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelRebuildResults, BevelResultGroup,
+    bevel_group_failures, BevelGroupResult, BevelLoopFailure, BevelResultGroup,
 };
 pub use bevel_mixed_blend::{BevelMixedBlend, BevelMixedBlendSet};
 pub use bevel_mixed_corner_ends::BevelMixedCornerEnds;

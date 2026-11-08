@@ -1,25 +1,46 @@
-//! The pieces a whole PART's bevel is orchestrated with, above the constructions: what a rebuild
-//! reports as it goes ([`BevelProgress`], `progress`) through its one forward-only bar
-//! ([`BevelProgressBar`], `progress_bar`); what an operation remembers about its picks across
-//! rebuilds ([`BevelPickMemo`], `pick_memo`) and the settled many-loop pick it keeps
-//! ([`SettledPick`], `settled_pick`); which touching closed loops of a many-loop pick to leave
-//! alone (`touching_loops`); which picked edge a refusal's place blames (`refusal_place`); and
-//! the gate every level-line answer passes, whether it crosses itself where its source did not
-//! (`self_intersection_check`, over the answer as a mesh, `answer_mesh`).
+//! A whole PART's bevel, above the constructions, and its one entry point: [`bevel_part`]
+//! (`entry_point`), asked a [`BevelPartRequest`] (one part's mesh, where it sits, its picks and the
+//! operation's settings, `request`) and answering a [`BevelPartOutcome`] (the mesh or none, a row
+//! per group, the part-level failures and advisories, as codes, `outcome`) or a
+//! [`BevelPartError`] (a cancel, or a build that could not run).
+//!
+//! Behind it: the part's prologue (`prologue`: the welded working copy carried into the
+//! operation's space and the groups resolved on it), the surface construction that builds every
+//! fitting chain in one pass (`surface_part_builder`) and Point mode's corner picks
+//! (`point_groups`). The pieces they are orchestrated with: what a rebuild reports as it goes
+//! ([`BevelProgress`], `progress`) through its one forward-only bar ([`BevelProgressBar`],
+//! `progress_bar`); what an operation remembers about its picks across rebuilds ([`BevelPickMemo`],
+//! `pick_memo`) and the settled many-loop pick it keeps ([`SettledPick`], `settled_pick`); which
+//! touching closed loops of a many-loop pick to leave alone (`touching_loops`); which picked edge
+//! a refusal's place blames (`refusal_place`); the size a refused row offers, as a row shows it
+//! ([`the_shown_size`], `shown_size`); and the gate every level-line answer passes, whether it
+//! crosses itself where its source did not (`self_intersection_check`, over the answer as a mesh,
+//! `answer_mesh`).
 
 pub mod answer_mesh;
+mod entry_point;
+mod outcome;
 pub mod pick_memo;
+pub mod point_groups;
 mod progress;
 pub mod progress_bar;
+pub mod prologue;
 pub mod refusal_place;
+mod request;
 pub mod self_intersection_check;
 mod settled_pick;
+mod shown_size;
+pub mod surface_part_builder;
 pub mod touching_loops;
 
+pub use entry_point::bevel_part;
+pub use outcome::BevelPartOutcome;
 pub use pick_memo::BevelPickMemo;
 pub use progress::{BevelProgress, BevelProgressPhase, BevelProgressReport, BevelSizeSearchRung};
 pub use progress_bar::BevelProgressBar;
+pub use request::{BevelPartError, BevelPartRequest};
 pub use settled_pick::SettledPick;
+pub use shown_size::the_shown_size;
 
 /// Below this many loops a pick is the owner's corner pick, not a many-loop rim, and keeps the
 /// route it has: it is neither settled in one reading nor has touching loops left alone.
