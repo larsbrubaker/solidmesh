@@ -1,13 +1,17 @@
 //! The one entry point for a part's fillet or chamfer (`bevel::part::bevel_part`), asked as a
 //! library user asks it: one cube edge built and carried out to the operation, a point pick
 //! judged by the Point groups, the bar told its phases on one forward-only bar, a cancelled
-//! build answered as a cancel, and the rows a build that could not run is shown with.
+//! build answered as a cancel, a build that could not run answered as an opaque failure with its
+//! kind, and the rows it is shown with.
 
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use solidmesh::bevel::level_line::work_budget::WorkBudget;
+use solidmesh::bevel::level_line::WorkError;
 use solidmesh::bevel::part::{
-    bevel_part, BevelPartError, BevelPartOutcome, BevelPartRequest, BevelProgress,
-    BevelProgressReport,
+    bevel_part, BevelBuildFailureKind, BevelPartError, BevelPartOutcome, BevelPartRequest,
+    BevelProgress, BevelProgressReport,
 };
 use solidmesh::bevel::BevelAdvisoryCode;
 use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
@@ -146,4 +150,30 @@ fn a_build_that_could_not_run_refuses_every_group() {
             row.failure.as_ref().map(|failure| failure.code())
         );
     }
+}
+
+/// A build that could not run reaches the caller as an opaque failure with a kind and the
+/// kernel's words, and a cancel deep inside a construction is still the caller's cancel.
+#[test]
+fn a_budget_that_ran_out_is_a_work_budget_failure_and_a_deep_cancel_stays_a_cancel() {
+    let budget = Rc::new(WorkBudget::new(1).expect("a positive limit"));
+    let ran_out = budget
+        .charge(2)
+        .expect_err("two units overrun a budget of one");
+
+    let error = BevelPartError::from(ran_out);
+
+    let BevelPartError::Failed(failure) = &error else {
+        panic!("a budget that ran out is a failure, not a cancel: {error:?}");
+    };
+    assert_eq!(BevelBuildFailureKind::WorkBudget, failure.kind());
+    assert!(
+        error.to_string().contains("work budget of 1 units ran out"),
+        "{error}"
+    );
+    assert!(std::error::Error::source(&error).is_some());
+    assert!(matches!(
+        BevelPartError::from(WorkError::Cancelled),
+        BevelPartError::Cancelled
+    ));
 }

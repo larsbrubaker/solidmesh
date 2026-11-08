@@ -3,7 +3,8 @@
 //! operation's settings, `request`, with the constructions it may take, [`BevelRouting`],
 //! `routing`) and answering a [`BevelPartOutcome`] (the mesh or none, a row
 //! per group, the part-level failures and advisories, as codes, `outcome`) or a
-//! [`BevelPartError`] (a cancel, or a build that could not run).
+//! [`BevelPartError`] (a cancel, or a build that could not run: an opaque [`BevelBuildFailure`],
+//! `error`).
 //!
 //! Behind it: the part's prologue (`prologue`: the welded working copy carried into the
 //! operation's space and the groups resolved on it), the surface construction that builds every
@@ -20,6 +21,7 @@
 
 pub mod answer_mesh;
 mod entry_point;
+mod error;
 mod outcome;
 pub mod pick_memo;
 pub mod point_groups;
@@ -36,11 +38,12 @@ pub mod surface_part_builder;
 pub mod touching_loops;
 
 pub use entry_point::bevel_part;
+pub use error::{BevelBuildCause, BevelBuildFailure, BevelBuildFailureKind, BevelPartError};
 pub use outcome::BevelPartOutcome;
 pub use pick_memo::BevelPickMemo;
 pub use progress::{BevelProgress, BevelProgressPhase, BevelProgressReport, BevelSizeSearchRung};
 pub use progress_bar::BevelProgressBar;
-pub use request::{BevelPartError, BevelPartRequest};
+pub use request::BevelPartRequest;
 pub use routing::BevelRouting;
 pub use settled_pick::SettledPick;
 pub use shown_size::the_shown_size;

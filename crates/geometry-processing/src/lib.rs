@@ -21,7 +21,8 @@
 //! ([`BevelAdvisoryCode`] with its [`BevelAdvisoryArg`]s) for the caller to word in its own
 //! language. A pick that does not fit is refused, never an error, and where a smaller size builds
 //! the refusal carries the largest size that does ([`the_shown_size`] is how to show it). Only a
-//! cancel or a build that could not run at all is a [`BevelPartError`].
+//! cancel or a build that could not run at all is a [`BevelPartError`] (an opaque
+//! [`BevelBuildFailure`] with a kind and a message).
 //!
 //! A pick is a [`BevelEdgeGroup`]: a geometric signature of what was picked (an anchor edge's
 //! midpoint, direction and face planes, or a corner's point, by [`BevelSelectionKind`]) rather
@@ -97,8 +98,9 @@ pub mod pick;
 pub mod topology;
 
 pub use bevel::part::{
-    bevel_part, the_shown_size, BevelPartError, BevelPartOutcome, BevelPartRequest, BevelPickMemo,
-    BevelProgress, BevelProgressPhase, BevelProgressReport, BevelRouting, BevelSizeSearchRung,
+    bevel_part, the_shown_size, BevelBuildFailure, BevelBuildFailureKind, BevelPartError,
+    BevelPartOutcome, BevelPartRequest, BevelPickMemo, BevelProgress, BevelProgressPhase,
+    BevelProgressReport, BevelRouting, BevelSizeSearchRung,
 };
 pub use bevel::{
     BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode, BevelGroupResult, BevelPickData,

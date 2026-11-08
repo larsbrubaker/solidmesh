@@ -12,6 +12,11 @@ use solidmesh_mesh::Mesh;
 use super::settled_pick::SettledPick;
 use crate::bevel::level_line::RoomSource;
 
+/// What one bevel operation remembers about its picks across rebuilds. A caller makes one per
+/// operation ([`BevelPickMemo::new`]) and hands the same `Arc` to every rebuild in
+/// [`BevelPartRequest::pick_memo`](super::BevelPartRequest::pick_memo), which lets a drag of the
+/// size measure a pick's room once; everything else on it is the kernel's own.
+///
 /// The room of a pick is a statement about the PART and the PICK: how much space the sides of each
 /// chain have to give. The size the user is dragging does not enter it. Reading it is the longest
 /// single thing on the level-line route - most of a minute on a rim of forty-five chains - and a
@@ -112,16 +117,19 @@ impl BevelPickMemo {
     }
 
     /// How many room readings were actually PAID for against this memo - the drag's own count.
+    #[doc(hidden)]
     pub fn rooms_read(&self) -> i32 {
         self.lock().rooms_read
     }
 
     /// How many settlings were actually paid for against this memo.
+    #[doc(hidden)]
     pub fn settlings_run(&self) -> i32 {
         self.lock().settlings_run
     }
 
     /// How many keys are held, which is what a long drag must not grow without bound.
+    #[doc(hidden)]
     pub fn entries(&self) -> i32 {
         let state = self.lock();
         (state.rooms.len() + state.settlings.len() + state.floors.len() + state.built.len()) as i32
@@ -135,6 +143,7 @@ impl BevelPickMemo {
     /// operation would be handed the room read BEFORE the edit for the rest of its life. A 64-bit
     /// hash can in principle collide; every byte of the geometry enters it, so a collision needs
     /// an adversary rather than an edit.
+    #[doc(hidden)]
     pub fn the_stamp_of(mesh: &Mesh) -> u64 {
         let mut hash: u64 = 14695981039346656037;
 
@@ -189,6 +198,7 @@ impl BevelPickMemo {
     /// build has proved. `None` where nothing is remembered; `Some(None)` is a remembered "no size
     /// statement". `size` is the size the room is asked for, or `None` to take the floor at every
     /// size.
+    #[doc(hidden)]
     pub fn try_the_room(&self, key: &str, size: Option<f64>) -> Option<Option<f64>> {
         let state = self.lock();
         let room = *state.rooms.get(key)?;
@@ -200,6 +210,7 @@ impl BevelPickMemo {
     /// laid under the floor only when it is read back ([`Self::try_the_room`]), so a reading
     /// cannot raise a room a build has already refused at. Every caller names the reading that set
     /// it (`set_by`).
+    #[doc(hidden)]
     pub fn remember_the_room(&self, stamp: u64, key: &str, room: Option<f64>, set_by: RoomSource) {
         let mut state = self.lock();
         state.only_this_mesh(stamp);
@@ -217,6 +228,7 @@ impl BevelPickMemo {
     /// at all. `pinched_chain` is -1 where the pinch named none;
     /// `refused_at_size` is the size the refusal was at, or `None` where it is not known and the
     /// floor holds every size.
+    #[doc(hidden)]
     pub fn remember_a_smaller_room(
         &self,
         stamp: u64,
@@ -267,6 +279,7 @@ impl BevelPickMemo {
     }
 
     /// Remember that this pick built at this size, and lift a floor standing under it.
+    #[doc(hidden)]
     pub fn remember_a_size_that_built(&self, stamp: u64, key: &str, size: f64) {
         // `is_finite` also refuses NaN, so a NaN size is never remembered.
         if size <= 0.0 || !size.is_finite() {
@@ -302,6 +315,7 @@ impl BevelPickMemo {
 
     /// Which reading named the pick's OWN remembered room, never a floor's source - what the
     /// pick's room is about, whatever a later refusal lowered it to.
+    #[doc(hidden)]
     pub fn the_readings_own_source(&self, key: &str) -> RoomSource {
         self.lock()
             .room_sources
@@ -312,6 +326,7 @@ impl BevelPickMemo {
 
     /// This room, or the floor a build has proved for the pick where that is lower. `size` is the
     /// size the room is asked for, or `None` to take the floor at every size.
+    #[doc(hidden)]
     pub fn the_room_under_its_floor(
         &self,
         key: &str,
@@ -324,6 +339,7 @@ impl BevelPickMemo {
     /// Which reading named the room this memo answers for the key - the floor's where the floor
     /// is what holds the room down, the remembered room's otherwise. The zero source where
     /// neither is known ([`zero_room_source`]).
+    #[doc(hidden)]
     pub fn the_room_source(&self, key: &str, size: Option<f64>) -> RoomSource {
         let state = self.lock();
         let room = state.rooms.get(key).copied().flatten();
@@ -338,6 +354,7 @@ impl BevelPickMemo {
 
     /// Which reading named this room once the pick's floor is laid under it - the pair to
     /// [`Self::the_room_under_its_floor`].
+    #[doc(hidden)]
     pub fn the_source_under_its_floor(
         &self,
         key: &str,
@@ -355,6 +372,7 @@ impl BevelPickMemo {
     /// its own to name; the chain the pinch itself named is remembered beside the floor, and a warm
     /// refusal names the loop the cold one did. Only where the floor holds at the size asked:
     /// below the size the pinch refused at, a refusal is the build's own.
+    #[doc(hidden)]
     pub fn the_pinched_chain_under_the_floor(
         &self,
         key: &str,
@@ -378,6 +396,7 @@ impl BevelPickMemo {
     /// its room is at or above the new size: the kernel condemns a chain on `candidate < size`, so
     /// nobody can be condemned. Both rules are read against the settling's room taken UNDER any
     /// floor a build has since proved.
+    #[doc(hidden)]
     pub fn the_settling_to_reuse(&self, key: &str, size: f64) -> Option<Arc<SettledPick>> {
         let state = self.lock();
         let known = state.settlings.get(key)?;
@@ -408,6 +427,7 @@ impl BevelPickMemo {
     }
 
     /// Remember a settling just paid for, with the size it was asked at and the survivors' room.
+    #[doc(hidden)]
     pub fn remember_the_settling(
         &self,
         stamp: u64,
@@ -433,6 +453,7 @@ impl BevelPickMemo {
     /// Remember, under ANOTHER key, a settling already known to hold for it - the survivors of a
     /// verdict, whose room the settling's last reading is a reading of. Counted as no work,
     /// because none was done.
+    #[doc(hidden)]
     pub fn carry_the_settling_to(
         &self,
         stamp: u64,
