@@ -1,5 +1,10 @@
 # solidmesh
 
+[![crates.io](https://img.shields.io/crates/v/solidmesh.svg)](https://crates.io/crates/solidmesh)
+[![docs.rs](https://docs.rs/solidmesh/badge.svg)](https://docs.rs/solidmesh)
+[![License: BSD-2-Clause](https://img.shields.io/crates/l/solidmesh.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://larsbrubaker.github.io/solidmesh/)
+
 **Solid modeling on triangle meshes, in pure Rust: booleans, fillets and chamfers, repair, and
 implicit (SDF) operations that keep closed solids closed.**
 
@@ -16,8 +21,7 @@ library so that others can use it and build on it. It works on the meshes real p
 
 ## Status
 
-**Ready for its first crates.io release (0.1.0), not yet published.** The four crates moved in
-from the [mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace with their
+**0.1.0 is on crates.io.** The four crates moved in from the MatterCAD workspace with their
 history, and MatterCAD depends on them by path, from a solidmesh checkout beside its own. Fillets
 and chamfers are one call, `solidmesh::bevel_part`, whose request carries the constructions it
 may take (`BevelRouting`; the default is MatterCAD's) and whose outcome reports refusals as codes
@@ -27,12 +31,12 @@ on), which may change in any release.
 
 ## Crates
 
-| Crate | Import as | Folder | What it holds |
-|---|---|---|---|
-| `solidmesh` | `solidmesh` | `crates/geometry-processing` | Fillets and chamfers on mesh edges, corners and outlines, and picking what to round; re-exports the other three as `solidmesh::math`, `solidmesh::clipper` and `solidmesh::mesh` |
-| `solidmesh-mesh` | `solidmesh_mesh` | `crates/polygon-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; slicing; ray tracing; STL |
-| `solidmesh-clipper` | `solidmesh_clipper` | `crates/clipper-library` | A Clipper 6.4.2 port (integer polygon booleans, offsets, simplification) and the polygon helpers on clipper2-rust's types that the kernel slices, extrudes and revolves with |
-| `solidmesh-math` | `solidmesh_math` | `crates/vector-math` | Vectors, matrices, quaternions, planes, rays and bounds in `f64` and `f32`; a BVH; colours, rectangles and the progress reporter the kernel shares with its callers |
+| Crate | Links | Import as | Folder | What it holds |
+|---|---|---|---|---|
+| [`solidmesh`](https://crates.io/crates/solidmesh) | [docs](https://docs.rs/solidmesh) | `solidmesh` | `crates/geometry-processing` | Fillets and chamfers on mesh edges, corners and outlines, and picking what to round; re-exports the other three as `solidmesh::math`, `solidmesh::clipper` and `solidmesh::mesh` |
+| [`solidmesh-mesh`](https://crates.io/crates/solidmesh-mesh) | [docs](https://docs.rs/solidmesh-mesh) | `solidmesh_mesh` | `crates/polygon-mesh` | The triangle mesh; welding, winding, measures; booleans on [manifold-rust](https://github.com/larsbrubaker/manifold-rust); repair; SDF and implicit meshing; convex hull and Minkowski sums; extrusion and revolution of 2D outlines; slicing; ray tracing; STL |
+| [`solidmesh-clipper`](https://crates.io/crates/solidmesh-clipper) | [docs](https://docs.rs/solidmesh-clipper) | `solidmesh_clipper` | `crates/clipper-library` | A Clipper 6.4.2 port (integer polygon booleans, offsets, simplification) and the polygon helpers on clipper2-rust's types that the kernel slices, extrudes and revolves with |
+| [`solidmesh-math`](https://crates.io/crates/solidmesh-math) | [docs](https://docs.rs/solidmesh-math) | `solidmesh_math` | `crates/vector-math` | Vectors, matrices, quaternions, planes, rays and bounds in `f64` and `f32`; a BVH; colours, rectangles and the progress reporter the kernel shares with its callers |
 
 The folders keep the names MatterCAD has always used, so the history follows the files.
 
