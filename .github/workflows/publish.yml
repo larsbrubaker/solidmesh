@@ -67,9 +67,18 @@ jobs:
       - name: Install pinned Rust toolchain
         run: rustup toolchain install
 
-      # A tree whose tests fail never reaches crates.io.
+      # A tree whose tests fail never reaches crates.io. The tests run exactly as CI runs them:
+      # cargo-nextest with .config/nextest.toml's `ci` profile (every test in its own process, as
+      # the tests that read process-wide counters expect), then the doctests, which nextest does
+      # not run.
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
       - name: Run tests
-        run: cargo test --workspace --release
+        run: cargo nextest run --workspace --profile ci
+      - name: Run doctests
+        run: cargo test --workspace --doc
 
       # cargo publish verifies each packaged tarball by building it on its own, against the
       # crates.io siblings, before uploading.
