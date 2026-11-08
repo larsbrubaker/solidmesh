@@ -1,6 +1,7 @@
 // Ray Tracing page: a solid made by the library, path traced in WebAssembly by the library's
-// PathTracer and drawn on a 2D canvas (demo/wasm/src/ray_trace.rs). Dragging orbits, the wheel
-// zooms; the Material and Light menus are the library's presets.
+// PathTracer and drawn on a 2D canvas (demo/wasm/src/ray_trace.rs). Dragging orbits, pinching or
+// the wheel zooms (src/orbit-gesture.ts is the rule); the Material and Light menus are the
+// library's presets.
 //
 // The page has its own worker (`SideWorker`), so the BVH of a million triangles builds off the
 // UI thread and terminating the worker on leaving the page gives that memory back. One wasm call
@@ -11,11 +12,20 @@
 // it renders full resolution in time-boxed passes, accumulating samples up to SAMPLE_CAP. A
 // material or light change refines from scratch, on the part and tree the worker already holds.
 //
+// Once still, the page stays at one steady refinement (src/ray-trace-refine.ts). Each result
+// carries the request it answers, and a still page draws only a result for the request it is
+// refining, so a preview in flight when the finger lifted never replaces it. The canvas is
+// positioned out of the layout (`.image-canvas`, styles/main.css): its pixel size must not feed
+// the height of the area that decides its pixel size. A resize changes the image only once it
+// settles, and only if the size in pixels really changed.
+//
 // The thumbnail capture (src/capture.ts) reads the canvas registered with `setCaptureCanvas`, and
 // the page holds it off (`holdBusy`) until the first full-resolution image has CAPTURE_SAMPLES.
 
 import { demoFrameMarkup } from '../demo-shell.ts';
 import { Coalescer, SideWorker, holdBusy } from '../mesh-runner.ts';
+import { OrbitGesture, applyDelta } from '../orbit-gesture.ts';
+import { type ImageSize, mayDraw, sizeChanged } from '../ray-trace-refine.ts';
 import { setCaptureCanvas } from '../capture.ts';
 import { createColor, createDropdown, createSlider } from '../controls.ts';
 import { loadSetting, saveSetting } from '../settings.ts';
@@ -28,6 +38,8 @@ const SAMPLE_CAP = 128;
 const PASS_BUDGET_MS = 45;
 /** How long the camera must be still before refinement starts (ms). */
 const STILL_MS = 140;
+/** How long the viewer's size must be steady before the image takes the new size (ms). */
+const SIZE_SETTLE_MS = 140;
 /** The time the preview resolution adapts toward (ms). */
 const PREVIEW_TARGET_MS = 40;
 /** Largest full-resolution image, so a large display never makes a sample take too long. */
@@ -57,6 +69,12 @@ interface Prepared {
 
 type Result = Pass | string;
 
+/** A worker's answer with the request that produced it. */
+interface Answered {
+  result: Result;
+  args: unknown[];
+}
+
 /** A color control's `#rrggbb` as its three 0..=255 channels. */
 function colorBytes(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -79,7 +97,7 @@ export function init(container: HTMLElement): () => void {
     `A part made by the library, lit the way light really behaves: this is a path tracer, following
     light as it bounces off the part and the floor, running in WebAssembly in your browser with no
     graphics card. Pick a material and see plastic catch a soft highlight, metal mirror the sky and
-    glass bend the floor behind it. Drag to orbit, scroll to zoom. Moving shows a small, fast image;
+    glass bend the floor behind it. Drag to orbit, pinch or scroll to zoom. Moving shows a small, fast image;
     when you stop it sharpens, sample by sample. Normals and Depth show the raw hit data, so you can
     see these are real intersections with the mesh.`,
   );
@@ -88,6 +106,7 @@ export function init(container: HTMLElement): () => void {
   const busy = container.querySelector('.busy-badge') as HTMLElement;
 
   const canvas = document.createElement('canvas');
+  canvas.className = 'image-canvas';
   canvas.style.touchAction = 'none';
   canvas.style.cursor = 'grab';
   area.insertBefore(canvas, busy);
@@ -111,6 +130,11 @@ export function init(container: HTMLElement): () => void {
   // The image the worker is asked for next: preview while moving, full resolution once still.
   let moving = true;
   let stillTimer: ReturnType<typeof setTimeout> | null = null;
+  let sizeTimer: ReturnType<typeof setTimeout> | null = null;
+  // The full-resolution size the page is using, changed only when a resize has settled.
+  let imageSize: ImageSize | null = null;
+  // The arguments of the last pass asked for: the one result a still page wants to draw.
+  let currentArgs: unknown[] | null = null;
   let previewScale = 0.22;
   let prepared: Prepared | null = null;
   let preparingKey = '';
@@ -155,17 +179,19 @@ export function init(container: HTMLElement): () => void {
       coalescer.request('ray_trace_prepare', [Number(s.part), Number(s.detail)]);
       return;
     }
-    const full = fullSize();
+    imageSize ??= fullSize();
+    const full = imageSize;
     const size = moving
       ? { w: Math.max(32, Math.round(full.w * previewScale)), h: Math.max(32, Math.round(full.h * previewScale)) }
       : full;
     const color = colorBytes(s.color);
-    coalescer.request('ray_trace_pass', [
+    currentArgs = [
       camera.yaw, camera.pitch, camera.zoom, Number(s.mode), Number(s.material),
       color[0], color[1], color[2], s.roughness, s.metallic, s.transmission,
       Number(s.light), s.sun, SEED, size.w, size.h, moving,
       moving ? 0 : PASS_BUDGET_MS,
-    ]);
+    ];
+    coalescer.request('ray_trace_pass', currentArgs);
   };
 
   const finishMoving = () => {
@@ -228,7 +254,9 @@ export function init(container: HTMLElement): () => void {
     kick();
   };
 
-  const onPass = (pass: Pass) => {
+  const onPass = (pass: Pass, args: unknown[]) => {
+    // A pass the page no longer wants: its replacement is already queued, so nothing is lost.
+    if (!mayDraw(args, currentArgs, moving)) return;
     draw(pass);
     lastPass = pass;
     raysTotal += pass.rays;
@@ -246,11 +274,11 @@ export function init(container: HTMLElement): () => void {
     if (!moving && pass.samples < SAMPLE_CAP) kick();
   };
 
-  const coalescer = new Coalescer<Result>(
-    r => {
+  const coalescer = new Coalescer<Answered>(
+    ({ result, args }) => {
       error.textContent = '';
-      if (typeof r === 'string') onPrepared(JSON.parse(r) as Prepared);
-      else onPass(r);
+      if (typeof result === 'string') onPrepared(JSON.parse(result) as Prepared);
+      else onPass(result, args);
     },
     e => {
       error.textContent = e.message;
@@ -260,7 +288,7 @@ export function init(container: HTMLElement): () => void {
       releaseCapture = null;
     },
     () => {},
-    (fn, args) => worker.call<Result>(fn, args),
+    (fn, args) => worker.call<Result>(fn, args).then(result => ({ result, args })),
   );
 
   const rerender = () => {
@@ -333,44 +361,71 @@ export function init(container: HTMLElement): () => void {
   controls.appendChild(error);
   updateStats();
 
-  // Camera input: drag to orbit, wheel to zoom.
-  let dragging = false;
-  let lastX = 0;
-  let lastY = 0;
+  // Camera input: drag to orbit, two fingers to orbit or pinch, wheel to zoom. Pointer reports are
+  // collected and applied once per animation frame, so a two-finger gesture is one step.
+  const gesture = new OrbitGesture();
+  let gestureFrame: number | null = null;
+  const applyGesture = () => {
+    gestureFrame = null;
+    const delta = gesture.take();
+    if (delta.dx === 0 && delta.dy === 0 && delta.zoom === 1) return;
+    Object.assign(camera, applyDelta(camera, delta));
+    nudge();
+  };
+  const scheduleGesture = () => {
+    if (gestureFrame === null) gestureFrame = requestAnimationFrame(applyGesture);
+  };
+  const showGrab = () => {
+    canvas.style.cursor = gesture.fingers > 0 ? 'grabbing' : 'grab';
+  };
   canvas.addEventListener('pointerdown', e => {
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    canvas.setPointerCapture(e.pointerId);
-    canvas.style.cursor = 'grabbing';
+    gesture.down(e.pointerId, e.clientX, e.clientY);
+    // a pointer the browser no longer tracks cannot be captured, which must not end the gesture
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* not an active pointer */ }
+    scheduleGesture();
+    showGrab();
   });
   canvas.addEventListener('pointermove', e => {
-    if (!dragging) return;
-    camera.yaw -= (e.clientX - lastX) * 0.008;
-    camera.pitch = Math.max(0.06, Math.min(1.5, camera.pitch + (e.clientY - lastY) * 0.008));
-    lastX = e.clientX;
-    lastY = e.clientY;
-    nudge();
+    if (!gesture.has(e.pointerId)) return;
+    gesture.move(e.pointerId, e.clientX, e.clientY);
+    scheduleGesture();
   });
-  const stopDrag = () => {
-    dragging = false;
-    canvas.style.cursor = 'grab';
+  const endPointer = (e: PointerEvent) => {
+    gesture.up(e.pointerId);
+    scheduleGesture();
+    showGrab();
   };
-  canvas.addEventListener('pointerup', stopDrag);
-  canvas.addEventListener('pointercancel', stopDrag);
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  // Lifted outside the canvas with capture lost: the pointer must not stay "down" forever.
+  canvas.addEventListener('lostpointercapture', endPointer);
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     camera.zoom = Math.max(0.4, Math.min(8, camera.zoom * Math.exp(-e.deltaY * 0.0012)));
     nudge();
   }, { passive: false });
 
-  const resize = new ResizeObserver(() => { if (prepared) nudge(); });
+  const settleSize = () => {
+    sizeTimer = null;
+    const measured = fullSize();
+    if (!sizeChanged(imageSize, measured)) return;
+    imageSize = measured;
+    if (!prepared) return;
+    resetRates();
+    kick();
+  };
+  const resize = new ResizeObserver(() => {
+    if (sizeTimer) clearTimeout(sizeTimer);
+    sizeTimer = setTimeout(settleSize, SIZE_SETTLE_MS);
+  });
   resize.observe(area);
 
   kick();
   return () => {
     disposed = true;
     if (stillTimer) clearTimeout(stillTimer);
+    if (sizeTimer) clearTimeout(sizeTimer);
+    if (gestureFrame !== null) cancelAnimationFrame(gestureFrame);
     resize.disconnect();
     coalescer.dispose();
     worker.dispose();

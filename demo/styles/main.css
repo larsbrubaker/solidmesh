@@ -382,6 +382,13 @@ html, body {
   height: 100% !important;
 }
 
+/* The Ray Tracing page's 2D canvas: taken out of the layout so its changing pixel size cannot
+   change the height of the area that decides that size (src/demos/ray-trace.ts). */
+.demo-canvas-area canvas.image-canvas {
+  position: absolute;
+  inset: 0;
+}
+
 .demo-controls {
   display: flex;
   flex-direction: column;
