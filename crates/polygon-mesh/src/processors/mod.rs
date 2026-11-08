@@ -4,7 +4,8 @@
 //! on or outside it that transformed bounds are measured over (`hull_bounds_points`),
 //! `planar_region_simplifier` (on manifold-rust's ear clipper), `mesh_helper`'s plane, and
 //! turning 2D outlines into meshes (`outline_to_mesh`), whose solids are built on the loops
-//! `ring_loops` prepares, placed and capped by `ring_vertices` over `cap_fill`.
+//! `ring_loops` prepares, placed and capped by `ring_vertices` over `cap_fill`; and splitting a
+//! mesh into its separate volumes (`split_volumes`).
 
 pub mod cap_fill;
 pub mod face_bsp_tree;
@@ -17,6 +18,7 @@ pub mod outline_to_mesh;
 pub mod planar_region_simplifier;
 pub mod ring_loops;
 pub mod ring_vertices;
+pub mod split_volumes;
 pub mod stl_processing;
 pub mod stl_writer;
 

@@ -47,9 +47,13 @@ mod rust_only_stl_tests;
 mod sdf_and_rounded_box_tests;
 #[path = "polygon_mesh/solid_checks.rs"]
 mod solid_checks;
+#[path = "polygon_mesh/split_volumes_tests.rs"]
+mod split_volumes_tests;
 #[path = "polygon_mesh/stl_parse_yield_tests.rs"]
 mod stl_parse_yield_tests;
 #[path = "polygon_mesh/test_picture.rs"]
 mod test_picture;
 #[path = "polygon_mesh/transformed_bounds_exact_tests.rs"]
 mod transformed_bounds_exact_tests;
+#[path = "polygon_mesh/uniform_face_color_tests.rs"]
+mod uniform_face_color_tests;

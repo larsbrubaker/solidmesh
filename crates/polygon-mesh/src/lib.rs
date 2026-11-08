@@ -5,8 +5,8 @@
 //! winding, hashing, transforms, bounds), its face/edge queries ([`MeshEdgeGraph`], also built in
 //! steps by [`MeshEdgeGraphSteps`],
 //! [`MeshEdge`], [`VertexFaceList`]), volume and area (`mesh_measure`), the vertex sorters,
-//! the Platonic solids and STL read/write (`processors`). The booleans (`csg`) run on
-//! manifold-rust.
+//! the Platonic solids, STL read/write and the split into separate volumes (`processors`). The
+//! booleans (`csg`) run on manifold-rust.
 //!
 //! Mesh editing: vertex merging over a vertex BVH (`mesh_editing`), cutting faces and
 //! meshes by planes (`face_split`, `mesh_editing`), T-junction repair (`t_junctions`) and the
@@ -56,9 +56,11 @@ pub mod transformed_aabb_cache;
 pub mod vector3_list;
 pub mod vertex_sorters;
 
-pub use cancel::CancelToken;
+pub use cancel::{CancelToken, Cancelled};
 pub use face::{Face, FaceList};
-pub use face_data::{CentroidColor, CornerTexture, FaceTextureData, FaceTextures};
+pub use face_data::{
+    take_uniform_face_color, CentroidColor, CornerTexture, FaceTextureData, FaceTextures,
+};
 pub use face_split::{clip_edge_at_plane, SplitData};
 pub use g3::advanced_repair::{AdvancedRepairOptions, RemoveModes};
 pub use g3::mesh_auto_repair::MeshAutoRepairError;

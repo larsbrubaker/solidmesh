@@ -1,8 +1,8 @@
 //! Per-face colors and textures on a [`Mesh`]: [`FaceTextureData`], remapping face data when the
 //! face list is rebuilt, interpolating a texture onto split faces, the uncolored and unknown face
-//! colors, saving face colors by centroid and restoring them by nearest centroid, saving face
-//! textures with their corner positions and restoring them onto faces with the same corners, and
-//! placing and
+//! colors, taking a color every face wears off the mesh ([`take_uniform_face_color`]), saving
+//! face colors by centroid and restoring them by nearest centroid, saving face textures with
+//! their corner positions and restoring them onto faces with the same corners, and placing and
 //! removing textures with an explicit mapping, plus the projection picking that stretches an image
 //! over a face's plane.
 //!
@@ -464,4 +464,24 @@ fn interpolate_face_texture(
     };
 
     FaceTextureData::new(source.image.clone(), uv_at(p[0]), uv_at(p[1]), uv_at(p[2]))
+}
+
+/// Takes a mesh's per-face colors off it when every face carries the same one, returning that
+/// color for whatever holds the mesh to wear itself; `None` (leaving the mesh alone) when the
+/// faces are painted more than one color, none at all, or are unpainted. A boolean result paints
+/// every face from its operands; one color worn by the whole result is better said once, as the
+/// object's color, which is also the color that survives a format that keeps no face colors.
+pub fn take_uniform_face_color(mesh: &mut Mesh) -> Option<Color> {
+    let face_colors = mesh.face_colors.as_ref()?;
+    let uniform = *face_colors.first()?;
+    // An unpainted face is transparent, and there is no object color that means "unpainted" -
+    // assigning it would hide the solid. Leave those meshes exactly as they are.
+    if uniform.alpha == 0 {
+        return None;
+    }
+    if face_colors.iter().skip(1).any(|color| *color != uniform) {
+        return None;
+    }
+    mesh.face_colors = None;
+    Some(uniform)
 }

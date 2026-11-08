@@ -45,6 +45,9 @@
 //!   straight surface walk ([`BevelSurfaceWalk`]) and the float grid step ([`float_grid`]).
 //! - **Constructions.** The level-line build ([`level_line`]), the vertex-centric sections
 //!   ([`sections`]) and the surface construction ([`surface`]).
+//! - **The part.** What a whole part's bevel is orchestrated with: its progress bar and phases,
+//!   the pick memo, the settled pick, the touching loops left alone, refusal blame by place and
+//!   the self-intersection gate ([`part`]).
 //!
 //! Stateless helpers are modules of free functions.
 
@@ -136,6 +139,7 @@ pub mod bevel_valley_fold_mitre;
 pub mod bevel_working_mesh;
 pub mod float_grid;
 pub mod level_line;
+pub mod part;
 pub mod sections;
 pub mod surface;
 
