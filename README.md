@@ -38,11 +38,13 @@ one the crate will publish under.
 ## Demo
 
 The [live demo](https://larsbrubaker.github.io/solidmesh/) runs the library itself in the browser,
-compiled to WebAssembly: booleans (including inside-out and self-intersecting operands), outlines
+compiled to WebAssembly: fillets and chamfers through their one entry point,
+`bevel::part::bevel_part` (pick edge chains, single edges, face rims or corners on a part, give
+each pick its own radius, and see the part rounded; a pick that does not fit is refused with the
+size that would), booleans (including inside-out and self-intersecting operands), outlines
 extruded with bevels or revolved, smooth implicit blends meshed by marching cubes or dual
 contouring, Minkowski sums and convex hulls, mesh repair, and a part to measure and download as
-STL. Fillets and chamfers, whose one entry point is `bevel::part::bevel_part`, join it next. Each page shows the
-operation's time and the result's triangle count, volume and area.
+STL. Each page shows the operation's time and the result's triangle count, volume and area.
 
 It lives in `demo/`: `demo/wasm` is the bindings crate (a workspace member, never published), the
 pages are TypeScript built with [Bun](https://bun.sh), and `.github/workflows/deploy-demo.yml`
