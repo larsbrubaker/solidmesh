@@ -4,8 +4,9 @@
 // documentation of code:
 //
 //   - `README.md`, `CLAUDE.md`, `THIRD_PARTY_NOTICES.md` and `CHANGELOG.md` at the repository root;
-//   - a crate's own `README.md` and `CHANGELOG.md` (`crates/<crate>/README.md`), which crates.io
-//     shows and a release updates;
+//   - a crate's own `README.md`, `CHANGELOG.md` and `THIRD_PARTY_NOTICES.md`
+//     (`crates/<crate>/README.md`), which crates.io shows, a release updates and a published
+//     crate's licenses require (`notices.rs` keeps each crate's notices the root's section);
 //   - license files (`LICENSE*`, `COPYING*`, `NOTICE*`, any case) at the root or a crate's root;
 //   - anything under `.claude/` (agent instructions and skills);
 //   - `docs/later/<idea>.md`, an idea for later; nothing deeper under `docs/later/`, and nothing
@@ -53,10 +54,15 @@ fn is_license_name(name: &str) -> bool {
         .any(|prefix| upper.starts_with(prefix))
 }
 
-/// True for a file a crate's own folder may hold at its root: its README, its CHANGELOG or a
+/// True for a file a crate's own folder may hold at its root: its README, its CHANGELOG, its
+/// third-party notices (the `notices` gate keeps them the root's section for the crate) or a
 /// license file. `rest` is the path below `crates/<crate>/`.
 fn is_crate_root_doc(rest: &str) -> bool {
-    !rest.contains('/') && (matches!(rest, "README.md" | "CHANGELOG.md") || is_license_name(rest))
+    !rest.contains('/')
+        && (matches!(
+            rest,
+            "README.md" | "CHANGELOG.md" | "THIRD_PARTY_NOTICES.md"
+        ) || is_license_name(rest))
 }
 
 /// True for a path inside a `fixtures` folder of a crate's tests: `rest` is the path below
@@ -157,6 +163,7 @@ fn markdown_placement_allows_the_listed_places() {
         "LICENSE-APACHE.md",
         "crates/polygon-mesh/README.md",
         "crates/polygon-mesh/CHANGELOG.md",
+        "crates/polygon-mesh/THIRD_PARTY_NOTICES.md",
         "crates/polygon-mesh/LICENSE.md",
         "crates/geometry-processing/tests/bevel/fixtures/notes.md",
         "crates/polygon-mesh/tests/fixtures/sample.md",

@@ -1,6 +1,6 @@
 # workspace-gates: repo-wide gates that are tests only (file_compliance, markdown_placement,
-# workspace_members, web_clock, scope_reads, dependencies). The library is empty; the gates live in
-# tests/ and read the whole workspace from its root, so a crate that joins the workspace is
+# workspace_members, web_clock, scope_reads, dependencies, notices). The library is empty; the
+# gates live in tests/ and read the whole workspace from its root, so a crate that joins the workspace is
 # covered without naming it here. serde_json reads `cargo metadata` for the dependencies and
 # workspace_members gates. Never published: `publish = false` keeps `cargo publish --workspace`
 # (.github/workflows/publish.yml) from packaging it.

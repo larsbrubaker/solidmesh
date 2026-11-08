@@ -6,6 +6,11 @@ redistributions; a dependency used as a crate (not copied) is listed for provena
 names the crate that carries it, at the folder the crate has here. Add a section in the same
 change that ports or adapts anything from a new upstream (CLAUDE.md, "Never").
 
+Each crate also ships its own section, in `crates/<folder>/THIRD_PARTY_NOTICES.md`, with a copy of
+`LICENSE` beside it, because a published crate carries only its own folder. This file is the one
+to edit; copy the changed section into the crate's file in the same change (the workspace-gates
+`notices` test refuses a crate file that differs from its section here).
+
 # solidmesh-math (`crates/vector-math`)
 
 ## The Open Toolkit library (MIT/X11)
