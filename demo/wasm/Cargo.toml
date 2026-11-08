@@ -1,0 +1,45 @@
+# demo/wasm, package solidmesh-demo-wasm: the WebAssembly bindings behind the demo site
+# (demo/, deployed to GitHub Pages by .github/workflows/deploy-demo.yml). wasm-pack builds it into
+# demo/public/pkg, which the TypeScript pages load in a web worker (demo/src/mesh-worker.ts).
+#
+# A workspace member, as manifold-rust's demo/wasm is: it builds with the pinned toolchain and the
+# shared Cargo.lock, takes the workspace lints and inherited keys (the workspace-gates test
+# `workspace_members` checks both), and clippy, fmt and the dependency gate cover it like any
+# crate. It is not under crates/ because it is not a library anyone depends on, and it is never
+# published (`publish = false`; publish.yml's `cargo publish --workspace` skips it). CI's wasm32 job
+# builds it with the library crates, which is what it exists for.
+#
+# It calls only the kernel crates' public API; it adds no geometry of its own beyond the demo
+# scenes (which shapes, where) and the smooth blend of the implicit page.
+[package]
+name = "solidmesh-demo-wasm"
+description = "WebAssembly bindings for the solidmesh demo site"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "solidmesh_wasm"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vector-math = { package = "solidmesh-math", path = "../../crates/vector-math", version = "0.1.0" }
+clipper-library = { package = "solidmesh-clipper", path = "../../crates/clipper-library", version = "0.1.0" }
+polygon-mesh = { package = "solidmesh-mesh", path = "../../crates/polygon-mesh", version = "0.1.0" }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+# Routes Rust panic messages (with location) to console.error: without it a panic surfaces only as
+# an opaque "RuntimeError: unreachable".
+console_error_panic_hook = "0.1"
+
+# wasm-opt's default (-O) leaves size and speed on the table for a module this compute-heavy; -O3
+# is what manifold-rust's demo ships with too.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O3']
+
+# The workspace lints: `todo!()` and `unimplemented!()` are refused everywhere (root Cargo.toml).
+[lints]
+workspace = true

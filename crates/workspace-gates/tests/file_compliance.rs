@@ -198,6 +198,10 @@ fn compliance_rules_classify_examples() {
     assert!(is_skipped_dir(".claude/target", false));
     assert!(is_skipped_dir(".claude/x/target", false));
     assert!(!is_skipped_dir(".claude/agents", false));
+    assert!(is_skipped_dir("demo/dist", false));
+    assert!(is_skipped_dir("demo/public/pkg", false));
+    assert!(!is_skipped_dir("demo/public", false));
+    assert!(!is_skipped_dir("demo/src", false));
     assert!(!is_skipped_dir("crates/polygon-mesh/src", true));
 }
 

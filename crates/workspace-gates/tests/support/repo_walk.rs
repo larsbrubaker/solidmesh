@@ -5,9 +5,12 @@
 // agent has just written counts before it is committed. Skipped trees are build output and VCS
 // data: every Cargo target directory (any directory holding the `CACHEDIR.TAG` Cargo writes into
 // each one, wherever CARGO_TARGET_DIR pointed), target/ next to a Cargo.toml or anywhere under
-// .claude/, .git/, node_modules/ and .claude/worktrees/. A `target` directory elsewhere is source
-// and is walked, as are real sources under .claude/. Symbolic links are neither followed nor
-// listed (a worktree's `target` is one).
+// .claude/, .git/, node_modules/, .claude/worktrees/, and the demo site's two generated trees,
+// demo/dist (`bun run build`'s bundle) and demo/public/pkg (wasm-pack's bindings), whose minified
+// and generated JavaScript has no header and is rebuilt from the headed sources under demo/ on
+// every deploy (both are git-ignored). A `target` directory elsewhere is source and is walked, as
+// are real sources under .claude/. Symbolic links are neither followed nor listed (a worktree's
+// `target` is one).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,11 +29,15 @@ pub fn workspace_root() -> PathBuf {
 /// anywhere under `.claude/` (agent tooling, where a stray `CARGO_TARGET_DIR` build lands and
 /// no source is called `target`), a `target` directory is Cargo's build output rather than a
 /// source directory that happens to be called `target`.
+/// The demo site's generated trees are named in full, so only those two are skipped.
 pub fn is_skipped_dir(relative: &str, beside_cargo_toml: bool) -> bool {
     let name = relative.rsplit('/').next().unwrap_or(relative);
     (name == "target" && (beside_cargo_toml || relative.starts_with(".claude/")))
         || matches!(name, ".git" | "node_modules")
-        || relative == ".claude/worktrees"
+        || matches!(
+            relative,
+            ".claude/worktrees" | "demo/dist" | "demo/public/pkg"
+        )
 }
 
 /// True for a Cargo target directory, whatever it is called and wherever it sits: Cargo writes
