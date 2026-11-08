@@ -271,3 +271,45 @@ fn boolean_with_empty_mesh_does_not_throw() {
     // Union with empty mesh should return the non-empty mesh
     assert!(!run(&cube, &empty_mesh, CsgModes::Union).vertices.is_empty());
 }
+
+/// Nothing minus a solid is nothing, and a solid minus nothing is the solid: subtracting from an
+/// empty mesh must not hand back the cutter.
+#[test]
+fn subtracting_from_an_empty_mesh_leaves_nothing() {
+    let cube = create_cube(10.0, 10.0, 10.0);
+
+    let from_nothing = csg_operations::subtract(&Mesh::new(), &cube, &none()).expect("runs");
+    let nothing_taken = csg_operations::subtract(&cube, &Mesh::new(), &none()).expect("runs");
+
+    assert!(
+        from_nothing.faces.is_empty(),
+        "{} faces",
+        from_nothing.faces.len()
+    );
+    assert_eq!(cube.faces.len(), nothing_taken.faces.len());
+    assert!(are_equal(nothing_taken.get_volume(), 1000.0));
+}
+
+/// What a solid shares with nothing is nothing, whichever side the empty mesh is on.
+#[test]
+fn intersecting_with_an_empty_mesh_leaves_nothing() {
+    let cube = create_cube(10.0, 10.0, 10.0);
+
+    let left = csg_operations::intersect(&Mesh::new(), &cube, &none()).expect("runs");
+    let right = csg_operations::intersect(&cube, &Mesh::new(), &none()).expect("runs");
+
+    assert!(left.faces.is_empty(), "{} faces", left.faces.len());
+    assert!(right.faces.is_empty(), "{} faces", right.faces.len());
+}
+
+/// A union with an empty mesh is the other mesh, whichever side the empty mesh is on.
+#[test]
+fn a_union_with_an_empty_mesh_is_the_other_mesh() {
+    let cube = create_cube(10.0, 10.0, 10.0);
+
+    let left = csg_operations::union(&Mesh::new(), &cube, &none()).expect("runs");
+    let right = csg_operations::union(&cube, &Mesh::new(), &none()).expect("runs");
+
+    assert_eq!(cube.faces.len(), left.faces.len());
+    assert_eq!(cube.faces.len(), right.faces.len());
+}

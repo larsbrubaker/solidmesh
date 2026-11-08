@@ -1,9 +1,10 @@
 //! Two-mesh boolean conveniences: union, subtract, intersect, and both halves of a cut. Each call
 //! is one [`super::boolean_processing::do_boolean`] with identity transforms and default options.
 //!
-//! Union/subtract/intersect hand back the other operand when one has no faces (so an intersect with
-//! an empty mesh returns the non-empty one here, unlike `do_boolean`). They take no progress
-//! reporter: each is a single quick boolean.
+//! An operand with no faces is answered without the kernel, as `do_boolean` answers it: a union
+//! is the other operand, a subtract from nothing or an intersect with nothing is an empty mesh, and
+//! a subtract of nothing is the first operand. They take no progress reporter: each is a single
+//! quick boolean.
 
 use solidmesh_math::Matrix4X4;
 
@@ -39,10 +40,11 @@ pub fn union(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<Mesh, BooleanEr
     run(a, b, CsgModes::Union, cancel)
 }
 
-/// `b` removed from `a`.
+/// `b` removed from `a`. Nothing minus anything is nothing (an empty mesh), and `a` minus nothing
+/// is `a`.
 pub fn subtract(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<Mesh, BooleanError> {
     if a.faces.is_empty() {
-        return Ok(b.clone());
+        return Ok(Mesh::new());
     }
     if b.faces.is_empty() {
         return Ok(a.clone());
@@ -50,13 +52,10 @@ pub fn subtract(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<Mesh, Boolea
     run(a, b, CsgModes::Subtract, cancel)
 }
 
-/// The volume `a` and `b` share.
+/// The volume `a` and `b` share: nothing (an empty mesh) when either has no faces.
 pub fn intersect(a: &Mesh, b: &Mesh, cancel: &CancelToken) -> Result<Mesh, BooleanError> {
-    if a.faces.is_empty() {
-        return Ok(b.clone());
-    }
-    if b.faces.is_empty() {
-        return Ok(a.clone());
+    if a.faces.is_empty() || b.faces.is_empty() {
+        return Ok(Mesh::new());
     }
     run(a, b, CsgModes::Intersect, cancel)
 }
