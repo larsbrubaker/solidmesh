@@ -5,9 +5,11 @@
 //!
 //! The failure is opaque on purpose. What went wrong inside is one of the kernel's own detail
 //! types (a level-line work budget that ran out, a surface construction that could not start, a
-//! Point group's fault), which change as the constructions do, so the documented error carries
-//! only a kind and the words; [`BevelBuildFailure::detail`] (hidden from the docs) hands the
-//! detail to MatterCAD and the kernel's tests.
+//! Point group's fault), which change as the constructions do and are not `Send` (a work budget
+//! is shared by `Rc`). So the failure is read off the detail where it is made, at the `From`
+//! conversions below, into owned data: its kind, its words, and the detail's `Debug` text for a
+//! log. Both error types are therefore `Send + Sync + 'static`, so a caller can move them across
+//! threads or box them as `Box<dyn Error + Send + Sync>`.
 
 use super::surface_part_builder::SurfacePartBuildError;
 use crate::bevel::level_line::point_bevel::PointBevelFault;
@@ -16,7 +18,9 @@ use crate::bevel::level_line::WorkError;
 /// What stops a part's build outright. Only [`BevelPartError::Cancelled`] is the caller's to pass
 /// on; for a [`BevelPartError::Failed`] the rows to show are
 /// [`BevelPartOutcome::every_group_refused`](super::BevelPartOutcome::every_group_refused).
-#[derive(Debug)]
+/// Later releases may add variants, so a `match` needs a catch-all arm.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum BevelPartError {
     /// The cancellation token was cancelled.
     Cancelled,
@@ -25,10 +29,12 @@ pub enum BevelPartError {
 }
 
 /// Why a part's build could not run: a [`kind`](Self::kind) to act on and a message
-/// ([`Display`](std::fmt::Display)) for a log.
-#[derive(Debug)]
+/// ([`Display`](std::fmt::Display)) for a log. Its `Debug` also shows the kernel's own detail.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BevelBuildFailure {
-    detail: BevelBuildDetail,
+    kind: BevelBuildFailureKind,
+    message: String,
+    detail: String,
 }
 
 /// What kind of failure stopped a build.
@@ -42,48 +48,29 @@ pub enum BevelBuildFailureKind {
     Construction,
 }
 
-/// The kernel's own detail of a [`BevelBuildFailure`]: which construction failed and how. Not
-/// part of the documented API; it changes with the constructions.
-#[doc(hidden)]
-#[derive(Debug)]
-pub enum BevelBuildDetail {
-    /// A level-line walk ran out of its budget.
-    Work(WorkError),
-    /// The surface construction could not run.
-    Surface(SurfacePartBuildError),
-    /// A Point group's bevel left by a fault.
-    Point(PointBevelFault),
-}
-
 impl BevelBuildFailure {
     /// What kind of failure this is.
     pub fn kind(&self) -> BevelBuildFailureKind {
-        match &self.detail {
-            BevelBuildDetail::Work(_)
-            | BevelBuildDetail::Surface(SurfacePartBuildError::BudgetExceeded)
-            | BevelBuildDetail::Point(PointBevelFault::Work(_)) => {
-                BevelBuildFailureKind::WorkBudget
-            }
-            BevelBuildDetail::Surface(_) | BevelBuildDetail::Point(_) => {
-                BevelBuildFailureKind::Construction
-            }
-        }
+        self.kind
     }
 
-    /// The kernel's detail of the failure, for MatterCAD and the kernel's tests.
-    #[doc(hidden)]
-    pub fn detail(&self) -> &BevelBuildDetail {
-        &self.detail
+    /// A failure of `kind` worded `message`, with the kernel's detail as its `Debug` text.
+    fn read_off(
+        kind: BevelBuildFailureKind,
+        message: String,
+        detail: &dyn std::fmt::Debug,
+    ) -> Self {
+        BevelBuildFailure {
+            kind,
+            message,
+            detail: format!("{detail:?}"),
+        }
     }
 }
 
 impl std::fmt::Display for BevelBuildFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.detail {
-            BevelBuildDetail::Work(error) => write!(f, "{error}"),
-            BevelBuildDetail::Surface(error) => write!(f, "{error:?}"),
-            BevelBuildDetail::Point(error) => write!(f, "{error}"),
-        }
+        f.write_str(&self.message)
     }
 }
 
@@ -107,27 +94,31 @@ impl std::error::Error for BevelPartError {
     }
 }
 
-impl BevelPartError {
-    fn failed(detail: BevelBuildDetail) -> Self {
-        BevelPartError::Failed(BevelBuildFailure { detail })
-    }
-}
-
 impl From<PointBevelFault> for BevelPartError {
     fn from(error: PointBevelFault) -> Self {
-        match error {
-            PointBevelFault::Work(WorkError::Cancelled) => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildDetail::Point(other)),
-        }
+        let kind = match &error {
+            PointBevelFault::Work(WorkError::Cancelled) => return BevelPartError::Cancelled,
+            PointBevelFault::Work(_) => BevelBuildFailureKind::WorkBudget,
+            PointBevelFault::Defect(_) => BevelBuildFailureKind::Construction,
+        };
+        BevelPartError::Failed(BevelBuildFailure::read_off(kind, error.to_string(), &error))
     }
 }
 
 impl From<SurfacePartBuildError> for BevelPartError {
     fn from(error: SurfacePartBuildError) -> Self {
-        match error {
-            SurfacePartBuildError::Cancelled => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildDetail::Surface(other)),
-        }
+        let kind = match &error {
+            SurfacePartBuildError::Cancelled => return BevelPartError::Cancelled,
+            SurfacePartBuildError::BudgetExceeded => BevelBuildFailureKind::WorkBudget,
+            SurfacePartBuildError::LevelLine(_) | SurfacePartBuildError::NotANumber => {
+                BevelBuildFailureKind::Construction
+            }
+        };
+        BevelPartError::Failed(BevelBuildFailure::read_off(
+            kind,
+            format!("{error:?}"),
+            &error,
+        ))
     }
 }
 
@@ -135,7 +126,11 @@ impl From<WorkError> for BevelPartError {
     fn from(error: WorkError) -> Self {
         match error {
             WorkError::Cancelled => BevelPartError::Cancelled,
-            other => BevelPartError::failed(BevelBuildDetail::Work(other)),
+            other => BevelPartError::Failed(BevelBuildFailure::read_off(
+                BevelBuildFailureKind::WorkBudget,
+                other.to_string(),
+                &other,
+            )),
         }
     }
 }

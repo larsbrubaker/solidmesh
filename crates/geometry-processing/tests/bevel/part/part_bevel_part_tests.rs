@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 use solidmesh::bevel::level_line::work_budget::WorkBudget;
 use solidmesh::bevel::level_line::WorkError;
 use solidmesh::bevel::part::{
-    bevel_part, BevelBuildFailureKind, BevelPartError, BevelPartOutcome, BevelPartRequest,
-    BevelProgress, BevelProgressReport,
+    bevel_part, BevelBuildFailure, BevelBuildFailureKind, BevelPartError, BevelPartOutcome,
+    BevelPartRequest, BevelProgress, BevelProgressReport,
 };
 use solidmesh::bevel::BevelAdvisoryCode;
 use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
@@ -176,4 +176,18 @@ fn a_budget_that_ran_out_is_a_work_budget_failure_and_a_deep_cancel_stays_a_canc
         BevelPartError::from(WorkError::Cancelled),
         BevelPartError::Cancelled
     ));
+}
+
+/// Compiles only for a type a caller can move across threads and box as
+/// `Box<dyn Error + Send + Sync>`.
+fn assert_send_sync<T: Send + Sync + 'static>() {}
+
+/// Both error types can leave the thread that built the part, as a library user's worker pool or
+/// error wrapper needs.
+#[test]
+fn the_part_errors_are_send_and_sync() {
+    assert_send_sync::<BevelPartError>();
+    assert_send_sync::<BevelBuildFailure>();
+    let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(BevelPartError::Cancelled);
+    assert_eq!("The operation was canceled.", boxed.to_string());
 }
