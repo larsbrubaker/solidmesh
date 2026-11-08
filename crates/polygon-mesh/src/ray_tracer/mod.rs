@@ -34,7 +34,9 @@
 //! hit, with its surface in world space.
 //!
 //! [`ScatteringSurface`] (in `scattering`) is the physically based surface model a path tracer
-//! shades with: BRDFs and glass, independent of the trace path.
+//! shades with: BRDFs and glass, independent of the trace path. `path_tracer` renders with it:
+//! [`PathTracer`] over a [`RenderScene`], accumulated in a [`RenderSurface`] in passes the caller
+//! drives.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
@@ -46,6 +48,7 @@ mod difference;
 mod intersect_info_subtract;
 mod material;
 mod minimal_triangle;
+mod path_tracer;
 mod placed_part;
 mod plane_shape;
 mod ray_bundle;
@@ -78,6 +81,11 @@ pub use material::{
     Primitive, SolidMaterial,
 };
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
+pub use path_tracer::{
+    display_byte, linear_to_srgb, pixel_jitter, tone_map, AccumulatedPixel, Environment,
+    LightSetup, LightStrategy, PathTraceSettings, PathTracer, PixelRandom, RenderCamera,
+    RenderScene, RenderSurface, RenderTile, RenderWork, Sun, TileRect, BOUNCE_HISTOGRAM_BINS,
+};
 pub use placed_part::{PartHit, PlacedPart, PlacedParts};
 pub use plane_shape::PlaneShape;
 #[doc(hidden)]

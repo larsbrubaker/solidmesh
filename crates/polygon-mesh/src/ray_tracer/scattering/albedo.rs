@@ -11,7 +11,7 @@ use solidmesh_math::Vector3;
 
 use super::albedo_table::{ALBEDO, MEAN_ALBEDO};
 use super::microfacet::{
-    reflect, sample_visible_normal, smith_masking, smith_masking_shadowing, MIN_ALPHA,
+    fifth_power, reflect, sample_visible_normal, smith_masking, smith_masking_shadowing, MIN_ALPHA,
 };
 
 /// How many samples the albedo table has along each of its two axes.
@@ -96,7 +96,7 @@ pub fn directional_albedo_by_quadrature(cos: f64, alpha: f64, subdivisions: usiz
                 continue;
             }
             let weight = smith_masking_shadowing(cos, wi.z, alpha) / g1;
-            let grazing = (1.0 - wo.dot(h).clamp(0.0, 1.0)).powi(5);
+            let grazing = fifth_power(1.0 - wo.dot(h).clamp(0.0, 1.0));
             a += weight * (1.0 - grazing);
             b += weight * grazing;
         }

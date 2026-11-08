@@ -47,9 +47,12 @@
 //! transmission is reciprocal only as `f(wo, wi) / eta_wo^2 == f(wi, wo) / eta_wi^2`.
 //!
 //! `wo` and `wi` are normalized on the way in. A direction that is zero length, not finite, or
-//! within `MIN_COS` of the horizon scatters nothing. An opaque surface is one sided: with `wo`
-//! below it, there is nothing to return (a tracer flips the shading normal toward the ray first);
-//! glass works from both sides.
+//! within `MIN_COS` of the horizon scatters nothing. A purely opaque surface is one sided: with
+//! `wo` below it, there is nothing to return (a tracer flips the shading normal toward the ray
+//! first). A surface with any glass share is handed its true outside as +z, since that is how the
+//! glass tells entering from leaving, so `wo` can come from below; its opaque shares then shade
+//! on the side `wo` is on, mirrored in z, which `evaluate`, `sample`, `pdf` and the lobe choice
+//! all do alike. So moving `transmission` off 0 never blackens a back face.
 //!
 //! `roughness` is perceptual, as a slider is: the GGX width is `roughness^2`, clamped to at least
 //! `MIN_ALPHA` so nothing divides by zero. A surface whose unclamped width is below that minimum

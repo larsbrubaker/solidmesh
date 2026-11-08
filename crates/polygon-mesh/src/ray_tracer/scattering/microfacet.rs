@@ -116,7 +116,15 @@ pub(super) fn refract(w: Vector3, h: Vector3, eta_ratio: f64) -> Option<Vector3>
 /// Schlick's reflectance at incidence cosine `cos_theta`, from `f0` at normal incidence to `f90`
 /// at grazing.
 pub(super) fn schlick(f0: f64, f90: f64, cos_theta: f64) -> f64 {
-    f0 + (f90 - f0) * (1.0 - cos_theta.clamp(0.0, 1.0)).powi(5)
+    f0 + (f90 - f0) * fifth_power(1.0 - cos_theta.clamp(0.0, 1.0))
+}
+
+/// `value` to the fifth by plain multiplication in a fixed order: a library `powi` makes no
+/// promise about its last bit across platforms or versions, and an albedo table cell depends on
+/// every bit of this value.
+pub(super) fn fifth_power(value: f64) -> f64 {
+    let square = value * value;
+    value * (square * square)
 }
 
 /// The grazing reflectance a Schlick `f0` goes to: 1 for anything with a real index step, falling

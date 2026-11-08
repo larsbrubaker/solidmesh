@@ -7,6 +7,18 @@ mod boolean_tests;
 mod minimal_triangle_tests;
 #[path = "ray_tracer/parallel_sequential_equivalence_tests.rs"]
 mod parallel_sequential_equivalence_tests;
+#[path = "ray_tracer/path_tracer_measure_tests.rs"]
+mod path_tracer_measure_tests;
+#[path = "ray_tracer/path_tracer_partial_glass_tests.rs"]
+mod path_tracer_partial_glass_tests;
+#[path = "ray_tracer/path_tracer_render_tests.rs"]
+mod path_tracer_render_tests;
+#[path = "ray_tracer/path_tracer_scene_tests.rs"]
+mod path_tracer_scene_tests;
+#[path = "ray_tracer/path_tracer_support.rs"]
+mod path_tracer_support;
+#[path = "ray_tracer/path_tracer_transport_tests.rs"]
+mod path_tracer_transport_tests;
 #[path = "ray_tracer/polygon_trace_tests.rs"]
 mod polygon_trace_tests;
 #[path = "ray_tracer/ray_bundle_contract_tests.rs"]

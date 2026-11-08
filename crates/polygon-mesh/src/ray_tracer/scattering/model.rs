@@ -70,6 +70,34 @@ enum Lobe {
     Glass,
 }
 
+/// The side the opaque shares of a surface work on. A surface with a glass share is handed its
+/// true outside as +z, so `wo` can arrive from below; its plastic and metal shares then shade on
+/// the side the ray is on, in this mirrored view. With no glass share the surface is one sided
+/// and nothing is mirrored (see `scattering`'s header).
+struct OpaqueSide {
+    flipped: bool,
+    wo: Vector3,
+}
+
+impl OpaqueSide {
+    fn of(mix: &Mix, wo: Vector3) -> Self {
+        let flipped = mix.glass > 0.0 && wo.z < 0.0;
+        OpaqueSide {
+            flipped,
+            wo: if flipped { mirror_z(wo) } else { wo },
+        }
+    }
+
+    /// `direction` between this view and the surface's own frame; a mirror is its own inverse.
+    fn across(&self, direction: Vector3) -> Vector3 {
+        if self.flipped {
+            mirror_z(direction)
+        } else {
+            direction
+        }
+    }
+}
+
 /// Which way up glass is being worked with: mirrored in z so that `wo` is always above, with the
 /// index of refraction on each side.
 struct GlassSide {
@@ -151,8 +179,9 @@ fn multiple_scatter_fresnel(f0: f64, f90: f64, mean_white: f64) -> f64 {
 
 impl ScatteringSurface {
     /// The BSDF toward the unit directions `wo` (camera side) and `wi` (light side), per channel.
-    /// Zero for directions on or within `MIN_COS` of the horizon, for an opaque surface with
-    /// either below it, and for delta lobes. See `scattering`'s header for the conventions.
+    /// Zero for directions on or within `MIN_COS` of the horizon, for a purely opaque surface
+    /// with either below it, and for delta lobes. The opaque shares of a surface with a glass
+    /// share work on the side `wo` is on. See `scattering`'s header for the conventions.
     pub fn evaluate(&self, wo: Vector3, wi: Vector3) -> [f64; 3] {
         let (Some(wo), Some(wi)) = (unit_direction(wo), unit_direction(wi)) else {
             return [0.0; 3];
@@ -160,14 +189,16 @@ impl ScatteringSurface {
         let mix = self.mix();
         let alpha = self.alpha();
         let mut value = [0.0; 3];
-        if wo.z >= MIN_COS && wi.z >= MIN_COS {
+        let opaque = OpaqueSide::of(&mix, wo);
+        let (opaque_wo, opaque_wi) = (opaque.wo, opaque.across(wi));
+        if opaque_wo.z >= MIN_COS && opaque_wi.z >= MIN_COS {
             let energy = self.reflective_energy(&mix, alpha);
-            let at_o = self.directional_energy(&energy, wo.z, alpha);
-            let at_i = self.directional_energy(&energy, wi.z, alpha);
+            let at_o = self.directional_energy(&energy, opaque_wo.z, alpha);
+            let at_i = self.directional_energy(&energy, opaque_wi.z, alpha);
             if !self.is_smooth() {
                 for (channel, single) in value
                     .iter_mut()
-                    .zip(self.single_scatter(&mix, wo, wi, alpha))
+                    .zip(self.single_scatter(&mix, opaque_wo, opaque_wi, alpha))
                 {
                     *channel += single;
                 }
@@ -225,16 +256,18 @@ impl ScatteringSurface {
         };
         let mix = self.mix();
         let alpha = self.alpha();
-        let choice = self.lobe_choice(&mix, wo.z);
+        let opaque = OpaqueSide::of(&mix, wo);
+        let (opaque_wo, opaque_wi) = (opaque.wo, opaque.across(wi));
+        let choice = self.lobe_choice(&mix, opaque_wo.z);
         let mut density = 0.0;
-        if wo.z >= MIN_COS && wi.z >= MIN_COS {
+        if opaque_wo.z >= MIN_COS && opaque_wi.z >= MIN_COS {
             if choice.specular > 0.0 && !self.is_smooth() {
-                if let Some(h) = unit_direction(wo + wi) {
-                    density +=
-                        choice.specular * visible_normal_density(wo, h, alpha) / (4.0 * wo.dot(h));
+                if let Some(h) = unit_direction(opaque_wo + opaque_wi) {
+                    density += choice.specular * visible_normal_density(opaque_wo, h, alpha)
+                        / (4.0 * opaque_wo.dot(h));
                 }
             }
-            density += choice.cosine * wi.z / PI;
+            density += choice.cosine * opaque_wi.z / PI;
         }
         if choice.glass > 0.0
             && self.is_rough_glass(&mix)
@@ -264,7 +297,7 @@ impl ScatteringSurface {
         }
         let [pick, u1, u2] = u.map(random);
         let mix = self.mix();
-        let choice = self.lobe_choice(&mix, wo.z);
+        let choice = self.lobe_choice(&mix, OpaqueSide::of(&mix, wo).wo.z);
         let lobe = if pick < choice.specular && choice.specular > 0.0 {
             Lobe::Specular
         } else if pick < choice.specular + choice.cosine && choice.cosine > 0.0 {
@@ -280,7 +313,7 @@ impl ScatteringSurface {
         };
         match lobe {
             Lobe::Specular => self.sample_specular(&mix, wo, choice.specular, u1, u2),
-            Lobe::Cosine => self.sample_cosine(wo, u1, u2),
+            Lobe::Cosine => self.sample_cosine(&mix, wo, u1, u2),
             Lobe::Glass => {
                 let remapped = (pick - choice.specular - choice.cosine) / choice.glass;
                 self.sample_glass(&mix, wo, choice.glass, random(remapped), u1, u2)
@@ -462,19 +495,22 @@ impl ScatteringSurface {
         u1: f64,
         u2: f64,
     ) -> Option<ScatteringSample> {
+        let opaque = OpaqueSide::of(mix, wo);
         if self.is_smooth() {
-            let fresnel = self.specular_reflectance(mix, wo.z);
-            return delta_event(mirror_about_z(wo), probability, fresnel, probability);
+            let fresnel = self.specular_reflectance(mix, opaque.wo.z);
+            let direction = opaque.across(mirror_about_z(opaque.wo));
+            return delta_event(direction, probability, fresnel, probability);
         }
-        let h = sample_visible_normal(wo, self.alpha(), u1, u2)?;
-        let wi = unit_direction(reflect(wo, h))?;
+        let h = sample_visible_normal(opaque.wo, self.alpha(), u1, u2)?;
+        let wi = unit_direction(reflect(opaque.wo, h))?;
         if wi.z < MIN_COS {
             return None;
         }
-        self.finish_sample(wo, wi)
+        self.finish_sample(wo, opaque.across(wi))
     }
 
-    fn sample_cosine(&self, wo: Vector3, u1: f64, u2: f64) -> Option<ScatteringSample> {
+    fn sample_cosine(&self, mix: &Mix, wo: Vector3, u1: f64, u2: f64) -> Option<ScatteringSample> {
+        let opaque = OpaqueSide::of(mix, wo);
         let radius = u1.sqrt();
         let phi = 2.0 * PI * u2;
         let wi = Vector3::new(
@@ -485,7 +521,7 @@ impl ScatteringSurface {
         if wi.z < MIN_COS {
             return None;
         }
-        self.finish_sample(wo, wi)
+        self.finish_sample(wo, opaque.across(wi))
     }
 
     /// `pick` chooses between reflection and refraction, whose lobe share is already taken care

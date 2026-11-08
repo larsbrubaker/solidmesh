@@ -1,0 +1,323 @@
+//! The path loop: one camera ray followed through the scene, gathering sun and environment light
+//! at each surface and multiplying a running throughput by what each surface passes on. The
+//! header of `path_tracer` says what the estimator is; this file is how a bounce is carried out.
+//!
+//! **Which way is up at a surface.** The scattering model wants the shading normal as +z of its
+//! frame. An opaque surface is one sided, so its frame uses the normals turned toward the ray
+//! (`facing_normals`), which is also what keeps a bent interpolated normal from leaving the ray
+//! below the surface. A surface that can transmit needs the true outside as +z, since that is how
+//! the model tells a ray entering the solid (index of refraction 1 to `ior`) from one leaving it
+//! (`ior` to 1): the facing normals get flipped back for a ray that hit the inside of the solid.
+//!
+//! **Light leaks at bent normals.** A direction can be fine against the smooth shading normal and
+//! wrong against the actual triangle: a reflection dipping below a face, or a refraction that
+//! comes out on the side it came in from. Such a direction is thrown away, both for the sun
+//! (no contribution) and for a sampled bounce (the path ends): the shadow ray and continuing ray
+//! would otherwise start on the wrong side of the wall from where the surface said they should.
+//! The energy lost scales with how far smooth normals stray from their faces: below 0.2% on a
+//! 160 by 80 sphere, but in a white furnace with smooth normals a 12 by 6 sphere loses 0.59%
+//! (Lambert), 4.36% (metal at roughness 0.1) and 3.22% (glass), and an 8 by 4 sphere 1.35%, 9.11%
+//! and 6.10%. A coarse mesh with smooth normals is visibly darker than a fine one.
+
+use solidmesh_math::{IntersectionType, Ray, Vector3};
+
+use super::pixel_random::PixelRandom;
+use super::render_scene::RenderScene;
+use super::render_work::RenderWork;
+use crate::ray_tracer::{LocalFrame, RayTracerError, ScatteringSurface, SurfacePoint};
+
+/// Which of the ways of reaching the sun a render uses. [`LightStrategy::Combined`] is the one to
+/// render with; the other two exist so the three can be checked against each other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LightStrategy {
+    /// Next-event estimation and surface sampling, each weighted by the other's density.
+    #[default]
+    Combined,
+    /// Only next-event estimation reaches the sun (a delta lobe still reaches it by sampling, the
+    /// only way it can).
+    NextEventOnly,
+    /// Only surface sampling reaches the sun.
+    SurfaceSamplingOnly,
+}
+
+/// The integrator's settings.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PathTraceSettings {
+    /// The seed every random number derives from.
+    pub seed: u64,
+    /// The most scattering events a path may have; any energy still carried then is lost.
+    pub max_bounces: u32,
+    /// After this many bounces a path may be ended at random in proportion to how little it still
+    /// carries, unbiased by reweighting the survivors; `None` turns this off.
+    pub russian_roulette_after: Option<u32>,
+    /// How paths reach the sun.
+    pub strategy: LightStrategy,
+}
+
+impl Default for PathTraceSettings {
+    fn default() -> Self {
+        PathTraceSettings {
+            seed: 0,
+            max_bounces: 32,
+            russian_roulette_after: Some(3),
+            strategy: LightStrategy::Combined,
+        }
+    }
+}
+
+/// The highest chance a path survives roulette, so that even a fully white path is eventually
+/// ended rather than running to the bounce limit.
+const MAX_SURVIVAL: f64 = 0.95;
+
+/// How the path got to the current ray.
+#[derive(Clone, Copy)]
+enum Arrival {
+    /// A camera ray, or a delta lobe's: nothing else could have found this direction, so a light
+    /// here counts in full.
+    Unweighted,
+    /// A surface sample with density `pdf`, weighted against the sun's density.
+    Sampled { pdf: f64 },
+}
+
+/// The power heuristic of `pdf` against `other`: `pdf^2 / (pdf^2 + other^2)`, from their ratio
+/// so that large densities can't overflow the squares into an infinite division. In [0, 1] for
+/// any input the scattering model and a `Sun` can produce; zero against zero weighs nothing.
+fn power_heuristic(pdf: f64, other: f64) -> f64 {
+    if pdf > 0.0 {
+        let ratio = other / pdf;
+        1.0 / (1.0 + ratio * ratio)
+    } else {
+        0.0
+    }
+}
+
+fn multiply(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] * b[0], a[1] * b[1], a[2] * b[2]]
+}
+
+fn scaled(a: [f64; 3], s: f64) -> [f64; 3] {
+    [a[0] * s, a[1] * s, a[2] * s]
+}
+
+fn add_to(sum: &mut [f64; 3], add: [f64; 3]) {
+    sum[0] += add[0];
+    sum[1] += add[1];
+    sum[2] += add[2];
+}
+
+fn largest_channel(c: [f64; 3]) -> f64 {
+    c[0].max(c[1]).max(c[2])
+}
+
+/// The radiance a ray that left the scene brings back along `direction`.
+fn escaped_radiance(
+    scene: &RenderScene,
+    settings: &PathTraceSettings,
+    direction: Vector3,
+    arrival: Arrival,
+) -> [f64; 3] {
+    let lights = scene.lights();
+    let mut radiance = lights.environment.radiance(direction);
+    if let Some(sun) = &lights.sun {
+        if sun.contains(direction) {
+            let weight = match (settings.strategy, arrival) {
+                (_, Arrival::Unweighted) | (LightStrategy::SurfaceSamplingOnly, _) => 1.0,
+                (LightStrategy::NextEventOnly, Arrival::Sampled { .. }) => 0.0,
+                (LightStrategy::Combined, Arrival::Sampled { pdf }) => {
+                    power_heuristic(pdf, sun.pdf())
+                }
+            };
+            add_to(&mut radiance, scaled(sun.radiance(), weight));
+        }
+    }
+    radiance
+}
+
+/// True when the shading frame and the triangle agree on which side `wi_world` leaves from
+/// relative to `wo_world`: the local frame's z values say what the frame thinks, the geometric
+/// normal says what the triangle does.
+fn sides_agree(
+    point: &SurfacePoint,
+    wo_world: Vector3,
+    wi_world: Vector3,
+    local_wo_z: f64,
+    local_wi_z: f64,
+) -> bool {
+    let local_same_side = local_wo_z * local_wi_z > 0.0;
+    let geometric_same_side =
+        wo_world.dot(point.geometric_normal) * wi_world.dot(point.geometric_normal) > 0.0;
+    local_same_side == geometric_same_side
+}
+
+/// What one vertex needs to shade the sun: its surface and frame, and the direction back along
+/// the path.
+struct Vertex<'a> {
+    point: &'a SurfacePoint,
+    surface: &'a ScatteringSurface,
+    frame: &'a LocalFrame,
+    toward_camera: Vector3,
+    wo: Vector3,
+    is_first_hit: bool,
+}
+
+/// Traces a shadow ray toward the sun and returns what it brings, when the strategy uses
+/// next-event estimation. The surface is evaluated first so a direction it passes nothing along
+/// costs no ray.
+fn sample_sun(
+    scene: &RenderScene,
+    settings: &PathTraceSettings,
+    vertex: &Vertex<'_>,
+    random: &mut PixelRandom,
+    work: &mut RenderWork,
+) -> Option<[f64; 3]> {
+    let sun = scene.lights().sun.as_ref()?;
+    if settings.strategy == LightStrategy::SurfaceSamplingOnly {
+        return None;
+    }
+    let wi_world = sun.sample([random.next_unit(), random.next_unit()]);
+    let wi = vertex.frame.to_local(wi_world);
+    if !sides_agree(
+        vertex.point,
+        vertex.toward_camera,
+        wi_world,
+        vertex.wo.z,
+        wi.z,
+    ) {
+        return None;
+    }
+    let bsdf = vertex.surface.evaluate(vertex.wo, wi);
+    if largest_channel(bsdf) <= 0.0 {
+        return None;
+    }
+    let mut shadow_ray = Ray::with_limits(
+        vertex.point.next_ray_origin(wi_world),
+        wi_world,
+        0.0,
+        f64::INFINITY,
+        IntersectionType::Both,
+    );
+    shadow_ray.is_shadow_ray = true;
+    if vertex.is_first_hit {
+        work.first_hit_shadow_rays += 1;
+    } else {
+        work.later_shadow_rays += 1;
+    }
+    if scene.parts().trace(&mut shadow_ray).is_some() {
+        return None;
+    }
+    let pdf_light = sun.pdf();
+    let weight = if settings.strategy == LightStrategy::Combined {
+        power_heuristic(pdf_light, vertex.surface.pdf(vertex.wo, wi))
+    } else {
+        1.0
+    };
+    Some(scaled(
+        multiply(bsdf, sun.radiance()),
+        wi.z.abs() / pdf_light * weight,
+    ))
+}
+
+/// The radiance brought back along `ray` (a camera ray), by one path. Random numbers come only
+/// from `random`, in the order the path uses them.
+pub(super) fn trace_path(
+    scene: &RenderScene,
+    settings: &PathTraceSettings,
+    mut ray: Ray,
+    random: &mut PixelRandom,
+    work: &mut RenderWork,
+) -> Result<[f64; 3], RayTracerError> {
+    let mut radiance = [0.0; 3];
+    let mut throughput = [1.0; 3];
+    // The radiance scaling of refraction, kept apart so roulette can read how much energy the
+    // path really carries: an ordinary path inside glass has its throughput divided by `ior^2`
+    // only until it leaves, and roulette must not kill it for that.
+    let mut eta_scale = 1.0;
+    let mut arrival = Arrival::Unweighted;
+    let mut scatters = 0_u32;
+
+    work.camera_rays += 1;
+    loop {
+        let Some(hit) = scene.parts().trace(&mut ray) else {
+            let escaped = escaped_radiance(scene, settings, ray.direction_normal, arrival);
+            add_to(&mut radiance, multiply(throughput, escaped));
+            break;
+        };
+        if scatters >= settings.max_bounces {
+            break;
+        }
+
+        let point = hit.surface_point()?;
+        let Some(surface) = scene.surface_at(hit.part.index(), point.base_color) else {
+            break;
+        };
+        let toward_camera = -ray.direction_normal;
+        let facing = point.facing(ray.direction_normal);
+        // See the header on why a transmissive surface has its true outside as +z.
+        let frame_normal =
+            if surface.transmission() > 0.0 && surface.metallic() < 1.0 && facing.back_face {
+                -facing.shading
+            } else {
+                facing.shading
+            };
+        let Some(frame) = LocalFrame::from_normal(frame_normal) else {
+            break;
+        };
+        let wo = frame.to_local(toward_camera);
+
+        let vertex = Vertex {
+            point: &point,
+            surface: &surface,
+            frame: &frame,
+            toward_camera,
+            wo,
+            is_first_hit: scatters == 0,
+        };
+        if let Some(direct) = sample_sun(scene, settings, &vertex, random, work) {
+            add_to(&mut radiance, multiply(throughput, direct));
+        }
+
+        let Some(sample) = surface.sample(wo, random.next_unit3()) else {
+            break;
+        };
+        let wi_world = frame.to_world(sample.direction).get_normal();
+        if !sides_agree(&point, toward_camera, wi_world, wo.z, sample.direction.z) {
+            break;
+        }
+        throughput = multiply(throughput, sample.weight);
+        if wo.z * sample.direction.z < 0.0 {
+            let ior_squared = surface.ior() * surface.ior();
+            if wo.z > 0.0 {
+                eta_scale *= ior_squared;
+            } else {
+                eta_scale /= ior_squared;
+            }
+        }
+        scatters += 1;
+        arrival = if sample.is_specular {
+            Arrival::Unweighted
+        } else {
+            Arrival::Sampled { pdf: sample.pdf }
+        };
+
+        if let Some(after) = settings.russian_roulette_after {
+            if scatters >= after {
+                let survival = (largest_channel(throughput) * eta_scale).min(MAX_SURVIVAL);
+                if survival <= 0.0 || random.next_unit() >= survival {
+                    break;
+                }
+                throughput = scaled(throughput, 1.0 / survival);
+            }
+        }
+
+        ray = Ray::with_limits(
+            point.next_ray_origin(wi_world),
+            wi_world,
+            0.0,
+            f64::INFINITY,
+            IntersectionType::Both,
+        );
+        work.bounce_rays += 1;
+    }
+    work.record_path(scatters);
+    Ok(radiance)
+}
