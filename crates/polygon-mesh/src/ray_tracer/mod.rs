@@ -32,6 +32,9 @@
 //! answers a face and hit position with a [`SurfacePoint`], which also gives the origin of a
 //! continuing ray. [`PlacedParts`] traces many [`PlacedPart`]s sharing a tree and says which was
 //! hit, with its surface in world space.
+//!
+//! [`ScatteringSurface`] (in `scattering`) is the physically based surface model a path tracer
+//! shades with: BRDFs and glass, independent of the trace path.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
@@ -47,6 +50,7 @@ mod placed_part;
 mod plane_shape;
 mod ray_bundle;
 mod ray_tracer_engine;
+mod scattering;
 mod scene;
 mod sphere_shape;
 mod surface_point;
@@ -80,6 +84,13 @@ pub use plane_shape::PlaneShape;
 pub use ray_bundle::PacketBounds;
 pub use ray_bundle::{RayBundle, RayBundleStats};
 pub use ray_tracer_engine::{AntiAliasing, RayTracer};
+#[doc(hidden)]
+pub use scattering::{
+    albedo_column_cos, albedo_row_alpha, directional_albedo, directional_albedo_by_quadrature,
+    mean_albedo_of_row, stored_albedo_cell, stored_mean_albedo, AlbedoTable, ALBEDO_TABLE_SIZE,
+    GENERATION_SUBDIVISIONS,
+};
+pub use scattering::{LocalFrame, ScatteringSample, ScatteringSurface};
 pub use scene::{Background, Scene};
 pub use sphere_shape::SphereShape;
 pub use surface_point::{facing_normals, FacingNormals, SurfacePoint};

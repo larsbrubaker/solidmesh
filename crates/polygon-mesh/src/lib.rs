@@ -71,7 +71,8 @@
 //! the shapes MatterCAD picks with, materials, solid box/sphere shapes and view-space CSG, and
 //! what shading a hit needs: `MeshSurface` and the `SurfacePoint` it answers with (smooth
 //! normals, color, a safe origin for a continuing ray), and `PlacedParts` for many placed parts
-//! sharing a tree.
+//! sharing a tree; and the scattering model a path tracer shades with
+//! (`ray_tracer::ScatteringSurface`).
 //!
 //! The implicit surfaces (`sdf`): marching cubes over a sampled field and `MeshSdfGrid`, the
 //! offset preview, on the pieces derived from geometry3Sharp (`g3`); the signed distance

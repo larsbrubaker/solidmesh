@@ -21,6 +21,12 @@ mod rust_only_ray_tracer_tests;
 mod rust_only_shape_tests;
 #[path = "ray_tracer/rust_only_triangle_edge_tests.rs"]
 mod rust_only_triangle_edge_tests;
+#[path = "ray_tracer/scattering_energy_tests.rs"]
+mod scattering_energy_tests;
+#[path = "ray_tracer/scattering_support.rs"]
+mod scattering_support;
+#[path = "ray_tracer/scattering_tests.rs"]
+mod scattering_tests;
 #[path = "ray_tracer/surface_hit_continuation_tests.rs"]
 mod surface_hit_continuation_tests;
 #[path = "ray_tracer/surface_hit_placed_tests.rs"]
