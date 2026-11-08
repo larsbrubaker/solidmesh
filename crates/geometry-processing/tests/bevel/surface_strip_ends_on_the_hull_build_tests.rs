@@ -12,8 +12,8 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_chain_join, surface_mesh_closure, surface_room_measure,
-    surface_strip_ends, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceBuildOptions,
-    SurfaceLine, SurfaceStrip, SurfaceStripEndsOnTheHull, SurfaceVertexPool,
+    surface_strip_ends, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan, SurfaceLine,
+    SurfaceStrip, SurfaceStripEndsOnTheHull, SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -356,7 +356,7 @@ fn the_slab(size: f64, mirrored: bool) -> TheSlab {
         std::slice::from_ref(&plan),
         SEGMENTS,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("and it has to build: {reason:?}"))
     .mesh;

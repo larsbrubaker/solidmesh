@@ -16,7 +16,7 @@
 use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions, SurfaceLine,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceLine,
 };
 use geometry_processing::bevel::{bevel_arc_chording, bevel_chain_linker};
 use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -280,7 +280,7 @@ pub fn build(size: f64, round_profile: bool, segments_per_quarter: i32) -> Mesh 
         &[plan],
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the rim: {reason:?}"))
     .mesh

@@ -10,9 +10,9 @@ use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::surface_mitre_joint_step::SideSeams;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_end_cap_around_a_feature, surface_mesh_closure,
-    surface_standing_feature_faces, SurfaceBevelPlan, SurfaceBuildFailure, SurfaceBuildOptions,
-    SurfaceEdgePlan, SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace,
-    SurfaceStrip, SurfaceStripNotchedByAFeature, SurfaceVertexPool,
+    surface_standing_feature_faces, SurfaceBevelPlan, SurfaceBuildFailure, SurfaceEdgePlan,
+    SurfaceStandingFeatureWithheld, SurfaceStandingFeatureWithheldFace, SurfaceStrip,
+    SurfaceStripNotchedByAFeature, SurfaceVertexPool,
 };
 use geometry_processing::bevel::{BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::FeatureEdge;
@@ -140,7 +140,7 @@ fn a_notch_at_an_end_with_a_face_beyond_it_is_refused_by_name() {
             )],
             16,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .map(|built| built.mesh),
     )
@@ -168,7 +168,7 @@ fn a_notch_at_an_end_with_a_face_beyond_it_is_refused_by_name() {
             &gathered,
             16,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .is_err(),
         "and all three together publish nothing either - which is what a corner patch capping \
@@ -212,7 +212,7 @@ fn a_notch_running_out_on_the_seam_rail_at_both_ends_is_refused_by_name() {
                 &[plan],
                 16,
                 &CancelToken::new(),
-                SurfaceBuildOptions::default(),
+                crate::surface_test_build::build_options(),
             )
             .map(|built| built.mesh),
         )

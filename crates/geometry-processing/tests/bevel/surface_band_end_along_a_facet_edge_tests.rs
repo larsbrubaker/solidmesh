@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
@@ -42,7 +42,7 @@ fn the_whole_rim_of_a_nineteen_chord_half_disc_builds() {
             &[plan],
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| {
             panic!(
@@ -99,7 +99,7 @@ fn no_size_up_to_the_one_the_chord_runs_out_at_is_refused_for_it() {
             &[plan],
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         ) {
             Ok(built) => built.mesh,
             Err(reason) => {
@@ -146,7 +146,7 @@ fn an_odd_chord_count_puts_a_fan_edge_in_the_bands_end_plane() {
             &[plan],
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| {
             panic!(

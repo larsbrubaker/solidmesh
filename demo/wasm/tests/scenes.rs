@@ -178,7 +178,6 @@ mod fillet {
     }
 
     fn build(index: u32, picks: Vec<Pick>, size: f64) -> FilletBuild {
-        geometry_processing::bevel::level_line::level_line_routing::turn_on_for_the_running_app();
         let source = part(index).expect("the part builds");
         let groups: Vec<_> = picks.into_iter().map(|pick| pick.group).collect();
         fillet_part(&source, &groups, size, true, 6, &CancelToken::new()).expect("the build runs")

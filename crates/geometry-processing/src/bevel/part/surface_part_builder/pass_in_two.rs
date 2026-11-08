@@ -1,17 +1,18 @@
-// The half of the surface construction that says WHO
-// builds a pass - the planning the whole pass shares, and, with `section_routing::use_sections`
-// on, which of its loops the sections will take. The kernel's router answers for a WHOLE pass, so
-// one plan it declines ("a chain is not closed" - a wall face's rim whose top edge belongs to
-// another row) would send every loop of that pass to the legacy construction, which cannot close
-// a raked hole mouth and drops it. Read per plan here (`section_routing::partition`) so the pass
-// can be built IN TWO: the accepted loops through the sections, the rest by the legacy
-// construction on their output, by a second builder over that mesh. The one pass that calls this
-// is `build`; one attempt (`try_together`) shares the planning.
+// The half of the surface construction that says WHO builds a pass - the planning the whole pass
+// shares, and, with the sections in the builder's routing (`BevelRouting::sections`), which of its
+// loops the sections will take. The kernel's router answers for a WHOLE pass, so one plan it
+// declines ("a chain is not closed" - a wall face's rim whose top edge belongs to another row)
+// would send every loop of that pass to the legacy construction, which cannot close a raked hole
+// mouth and drops it. Read per plan here (`section_routing::partition`) so the pass can be built
+// IN TWO: the accepted loops through the sections, the rest by the legacy construction on their
+// output, by a second builder over that mesh with the sections out of its routing. The one pass
+// that calls this is `build`; one attempt (`try_together`) shares the planning.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::bevel::part::BevelRouting;
 use crate::bevel::sections::section_routing;
 use crate::bevel::surface::{
     surface_chain_join, surface_chain_opens_at_the_junction, surface_interrupted_crease,
@@ -260,23 +261,20 @@ impl BevelSurfacePartBuilder {
         second.offers_no_size = true;
         // The same operation's search, so the same clock.
         second.size_search_budget_ms = self.size_search_budget_ms;
+        // The same routes, without the sections: these are the plans the router already declined
+        // on the source mesh, and asking it again would route them back here anyway.
+        second.routing = BevelRouting {
+            sections: false,
+            ..self.routing
+        };
 
         let mut results_b: Vec<Option<BevelGroupResult>> = vec![None; self.resolutions.len()];
         let building_b: Vec<i32> = (0..offered_b.len() as i32)
             .filter(|&index| offered_b[index as usize])
             .collect();
 
-        // By name, because these are the plans the router already declined on the source mesh:
-        // asking it again would route them back here anyway.
-        // Scoped to this build on this thread (and the compute it hands on), so a bevel building
-        // beside it keeps its own setting and the switch comes back even if the build panics.
-        let mesh_b = {
-            let _without_sections = section_routing::SectionRoutingContext::current()
-                .with_use_sections(false)
-                .enter();
-            second.build_the_groups_together(&building_b, &mut results_b, cancellation_token)
-        };
-        let mesh_b = mesh_b?;
+        let mesh_b =
+            second.build_the_groups_together(&building_b, &mut results_b, cancellation_token)?;
         drop(second);
 
         Self::write_what_the_loops_came_to(results, refused_loops);
@@ -542,15 +540,15 @@ impl BevelSurfacePartBuilder {
 
     /// The contributing loops whose plans the sections DECLINE,
     /// read one plan at a time on the working mesh. A loop is declined where ANY plan standing on
-    /// one of its edges is declined. Empty with the flag off, and empty where nothing can be
-    /// planned at all - in both cases the pass is built exactly as it is today.
+    /// one of its edges is declined. Empty with the sections out of the routing, and empty where
+    /// nothing can be planned at all - in both cases the pass is built exactly as it is today.
     pub fn the_loops_the_sections_decline(
         &mut self,
         contributing: &[Rc<RimLoop>],
     ) -> Vec<Rc<RimLoop>> {
         let mut declined_loops = Vec::new();
 
-        if !section_routing::use_sections() {
+        if !self.routing.sections {
             return declined_loops;
         }
 

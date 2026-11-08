@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_chain_join, surface_mesh_closure, SurfaceBevelPlan,
-    SurfaceBuildOptions,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{
@@ -219,7 +218,7 @@ fn built(part: &Mesh, radius: f64, chorded: bool) -> Mesh {
         &[plan],
         15,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|refused| {
         panic!(

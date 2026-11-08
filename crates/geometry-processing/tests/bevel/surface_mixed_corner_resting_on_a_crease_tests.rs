@@ -471,6 +471,7 @@ fn the_rim_built(read: &Rim, radius: f64) -> Mesh {
             lay_the_oblique_rows_anyway: false,
             planless_loops: &[],
             features: None,
+            use_sections: crate::surface_test_build::use_sections(),
         },
     )
     .map(|built| built.mesh)

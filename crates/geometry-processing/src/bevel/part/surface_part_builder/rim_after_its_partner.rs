@@ -140,6 +140,7 @@ impl BevelSurfacePartBuilder {
         // Its sizes stand on the first half's mesh at the size asked: it offers no number.
         second_builder.offers_no_size = true;
         second_builder.size_search_budget_ms = self.size_search_budget_ms;
+        second_builder.routing = self.routing;
 
         let mut results_b: Vec<Option<BevelGroupResult>> = vec![None; self.resolutions.len()];
         let building_b: Vec<i32> = (0..offered_b.len() as i32)

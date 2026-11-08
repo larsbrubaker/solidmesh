@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
 use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge};
@@ -314,7 +314,7 @@ fn what_the_build_says_about(
         &plans,
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map_err(|reason| format!("the build refused: {reason:?}"))?
     .mesh;

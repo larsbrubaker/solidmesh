@@ -11,9 +11,7 @@
 
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, SurfaceBevelPlan, SurfaceBuildOptions,
-};
+use geometry_processing::bevel::surface::{surface_bevel_builder, SurfaceBevelPlan};
 use geometry_processing::bevel::{bevel_chain_linker, BevelSweptChain};
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::solids::platonic_solids::create_cube;
@@ -192,7 +190,7 @@ fn a_mixed_ring_joined_from_four_chains_reads_its_wrap_corner() {
         &[plan],
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the ring: {reason:?}"))
     .mesh;
@@ -322,7 +320,7 @@ fn built_from(
         &plans,
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused: {reason:?}"))
     .mesh

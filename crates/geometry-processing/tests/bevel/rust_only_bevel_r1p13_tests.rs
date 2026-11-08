@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use geometry_processing::bevel::level_line::{
     band_gap, band_gap_rounds_first, band_room, band_room_pair_room, corner_cap,
     corner_cap_flat_ends, corner_cap_hole_fill, corner_cap_hole_fill_switch, end_face_crease_plane,
-    end_face_sense, end_plane_trim, fillet_arc, gap_fill, level_line_routing, triangle_edges,
-    BandProfile, CornerCapLastRow, HoleFillFailure, HoleFillResult, HoleFillTriangle,
-    LevelLineTriangle, RoomSource,
+    end_face_sense, end_plane_trim, fillet_arc, gap_fill, triangle_edges, BandProfile,
+    CornerCapLastRow, HoleFillFailure, HoleFillResult, HoleFillTriangle, LevelLineTriangle,
+    RoomSource,
 };
 use vector_math::Vector3;
 
@@ -254,18 +254,6 @@ fn rust_only_arc_point_is_the_quarter_circle_and_backwards_reverses() {
 }
 
 #[test]
-fn rust_only_settings_read_as_off_only_when_they_say_so() {
-    assert!(level_line_routing::reads_as_off(Some("0")));
-    assert!(level_line_routing::reads_as_off(Some("FALSE")));
-    assert!(!level_line_routing::reads_as_off(Some("no")));
-    assert!(!level_line_routing::reads_as_off(None));
-    assert!(level_line_routing::the_running_app_wants_it_on(None));
-    assert!(!level_line_routing::the_running_app_wants_it_on(Some(
-        "false"
-    )));
-}
-
-#[test]
 fn rust_only_the_corner_cap_switches_take_a_per_thread_override() {
     corner_cap_flat_ends::set_use_flat_ends_override(Some(false));
     assert!(!corner_cap_flat_ends::use_flat_ends());
@@ -275,6 +263,21 @@ fn rust_only_the_corner_cap_switches_take_a_per_thread_override() {
     assert_eq!(corner_cap_flat_ends::use_flat_ends_override(), None);
     corner_cap_hole_fill_switch::set_use_hole_fill_override(Some(false));
     assert!(!corner_cap_hole_fill_switch::use_hole_fill());
+    corner_cap_hole_fill_switch::set_use_hole_fill_override(None);
+    assert!(corner_cap_hole_fill_switch::use_hole_fill());
+}
+
+#[test]
+fn rust_only_a_build_holds_the_corner_cap_switches_only_while_it_runs() {
+    corner_cap_flat_ends::set_use_flat_ends_override(None);
+    corner_cap_hole_fill_switch::set_use_hole_fill_override(Some(true));
+    {
+        let _held = corner_cap_hole_fill_switch::hold_corner_cap_switches(false, false);
+        assert!(!corner_cap_flat_ends::use_flat_ends());
+        assert!(!corner_cap_hole_fill_switch::use_hole_fill());
+    }
+    assert_eq!(corner_cap_flat_ends::use_flat_ends_override(), None);
+    assert!(corner_cap_hole_fill_switch::use_hole_fill());
     corner_cap_hole_fill_switch::set_use_hole_fill_override(None);
 }
 

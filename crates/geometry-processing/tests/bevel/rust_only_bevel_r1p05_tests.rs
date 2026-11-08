@@ -530,7 +530,6 @@ fn rust_only_the_smooth_joint_scope_names_joints_until_it_drops() {
 
 #[test]
 fn rust_only_the_last_small_pieces_read_their_pinned_text() {
-    use geometry_processing::bevel::level_line::level_line_routing::reads_as_on;
     use geometry_processing::bevel::level_line::open_gap_fill::{
         backwards, hole_between, meeting_point_of, with_minted,
     };
@@ -539,9 +538,6 @@ fn rust_only_the_last_small_pieces_read_their_pinned_text() {
     use geometry_processing::bevel::level_line::{
         GapFillRefusal, GapFillResult, GapLoop, OpenGapFillOpenRail,
     };
-
-    assert!(reads_as_on("1") && reads_as_on("TRUE") && reads_as_on("true"));
-    assert!(!reads_as_on("yes") && !reads_as_on("0"));
 
     let one = GapLoop::new(1, false, vec![1, 2, 3], vec![0.0; 3], 0, false, None);
     let other = GapLoop::new(2, false, vec![3, 4, 5, 1], vec![0.0; 4], 0, false, None);

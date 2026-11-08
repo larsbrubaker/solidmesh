@@ -17,10 +17,10 @@
 // The kernel tests that build through here land a class at a time.
 #![allow(dead_code)]
 
+use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use geometry_processing::bevel::sections::section_routing;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_interrupted_crease, surface_mesh_closure, surface_room,
     surface_shared_edge_network, SurfaceBandRunsOffOverAStretch, SurfaceBevelPlan,
@@ -34,11 +34,33 @@ use polygon_mesh::{CancelToken, Mesh};
 use crate::mesh_measurements::shell_count;
 use crate::surface_test_chains::join_and_open;
 
-/// Pins `section_routing::use_sections` for as long as the handle lives, then puts back the value
-/// it found, even when the test fails part way.
+thread_local! {
+    // Whether this thread's builds through here ask for the sections; off, as a request's
+    // default routing has them.
+    static USE_SECTIONS: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Whether the builds this thread makes through here route the sections
+/// (`SurfaceBuildOptions::use_sections`): what a pin in force says, else off. The classes that
+/// call the surface builder themselves hand it the same answer.
+pub fn use_sections() -> bool {
+    USE_SECTIONS.with(Cell::get)
+}
+
+/// The surface builder's default options with the sections as [`use_sections`] has them, for the
+/// classes that call `surface_bevel_builder::try_build` themselves.
+pub fn build_options() -> SurfaceBuildOptions<'static> {
+    SurfaceBuildOptions {
+        use_sections: use_sections(),
+        ..SurfaceBuildOptions::default()
+    }
+}
+
+/// Pins [`use_sections`] for as long as the handle lives, then puts back the value it found, even
+/// when the test fails part way.
 ///
-/// The flag is set for this thread only, so a test pinning it may run beside one that sets it the
-/// other way.
+/// The pin is this thread's only, so a test pinning it may run beside one that pins it the other
+/// way.
 pub struct UseSectionsPin {
     found_use_sections: bool,
 }
@@ -46,28 +68,27 @@ pub struct UseSectionsPin {
 /// The pin's name in the classes that read the legacy construction.
 pub type LegacyConstructionPin = UseSectionsPin;
 
-/// The flag OFF, for the classes that read the LEGACY
-/// construction - their passes are cases the sections would route if the flag were on, so what
+/// The sections OFF, for the classes that read the LEGACY
+/// construction - their passes are cases the sections would route if they were on, so what
 /// they assert is only true of the legacy path and they must not route.
 pub fn pinned_to_the_legacy_construction() -> LegacyConstructionPin {
     pinned_use_sections(false)
 }
 
-/// The flag ON, as the section classes set it in their `try` blocks.
+/// The sections ON, as the section classes set them in their `try` blocks.
 pub fn pinned_to_the_sections() -> UseSectionsPin {
     pinned_use_sections(true)
 }
 
 fn pinned_use_sections(on: bool) -> UseSectionsPin {
-    let found_use_sections = section_routing::use_sections();
-    section_routing::set_use_sections(on);
+    let found_use_sections = USE_SECTIONS.with(|flag| flag.replace(on));
 
     UseSectionsPin { found_use_sections }
 }
 
 impl Drop for UseSectionsPin {
     fn drop(&mut self) {
-        section_routing::set_use_sections(self.found_use_sections);
+        USE_SECTIONS.with(|flag| flag.set(self.found_use_sections));
     }
 }
 
@@ -284,7 +305,7 @@ fn build(
                 // and the sections can still walk - see SurfaceBevelPlanlessLoop. It is carried to
                 // the builder as the bare ring the loop entry takes; with the flag off nothing is
                 // carried and the refusal stands exactly where it always did.
-                if section_routing::use_sections()
+                if use_sections()
                     && reason.code() == BevelAdvisoryCode::SurfaceLandsOnTwoCurvedFaces
                     && chain.is_closed
                     && chain.edges.len() >= 3
@@ -344,6 +365,7 @@ fn build(
             } else {
                 None
             },
+            use_sections: use_sections(),
         },
     )
 }

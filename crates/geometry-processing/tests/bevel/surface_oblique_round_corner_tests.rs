@@ -15,7 +15,7 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
 };
 use geometry_processing::bevel::{bevel_arc_chording, bevel_chain_linker};
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -356,7 +356,7 @@ fn rounded(ridge_length: f64, segments_per_quarter: i32) -> Mesh {
         &plans,
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the corner: {reason:?}"))
     .mesh

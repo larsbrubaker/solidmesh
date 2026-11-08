@@ -1,6 +1,7 @@
 //! A whole PART's bevel, above the constructions, and its one entry point: [`bevel_part`]
 //! (`entry_point`), asked a [`BevelPartRequest`] (one part's mesh, where it sits, its picks and the
-//! operation's settings, `request`) and answering a [`BevelPartOutcome`] (the mesh or none, a row
+//! operation's settings, `request`, with the constructions it may take, [`BevelRouting`],
+//! `routing`) and answering a [`BevelPartOutcome`] (the mesh or none, a row
 //! per group, the part-level failures and advisories, as codes, `outcome`) or a
 //! [`BevelPartError`] (a cancel, or a build that could not run).
 //!
@@ -27,6 +28,7 @@ pub mod progress_bar;
 pub mod prologue;
 pub mod refusal_place;
 mod request;
+mod routing;
 pub mod self_intersection_check;
 mod settled_pick;
 mod shown_size;
@@ -39,6 +41,7 @@ pub use pick_memo::BevelPickMemo;
 pub use progress::{BevelProgress, BevelProgressPhase, BevelProgressReport, BevelSizeSearchRung};
 pub use progress_bar::BevelProgressBar;
 pub use request::{BevelPartError, BevelPartRequest};
+pub use routing::BevelRouting;
 pub use settled_pick::SettledPick;
 pub use shown_size::the_shown_size;
 

@@ -3,9 +3,10 @@
 // rim, its room read once, and handed to the one build (`level_line_build`, the second half).
 // Only a pass whose picked edges LINK into runs - closed loops, such as a
 // face rim, and open runs - reaches the kernel; anything else, and anything the kernel refuses for
-// a reason that is not the size, falls through to the existing path unchanged, so the flag can
-// never make a pick worse than it is today. A SIZE refusal does not fall through: the room the
-// kernel names is the honest answer, said with the existing size advisory.
+// a reason that is not the size, falls through to the existing path unchanged, so routing the
+// level line (`BevelRouting::level_line`) can never make a pick worse than it is today. A SIZE
+// refusal does not fall through: the room the kernel names is the honest answer, said with the
+// existing size advisory.
 //
 // The pass's loops are handed to the kernel as ONE PICK - one room, one `BandGap.Build`, one
 // `GapFill.Fill` - so a face rim with a hole in it is cut against a field that knows about both
@@ -179,7 +180,7 @@ impl BevelSurfacePartBuilder {
         self.the_chain_the_refusal_names = -1;
         self.forget_the_last_refusals_reading();
 
-        if !level_line_routing::use_level_line() {
+        if !self.routing.level_line {
             self.the_level_line_passes_it_on("existing: the flag is off".to_string());
             return Ok(answer);
         }

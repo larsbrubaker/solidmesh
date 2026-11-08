@@ -1,43 +1,30 @@
-//! Which route the app's bevel build takes, and the watch it can leave behind: the watched pick
-//! ([`LevelLineChainWatch`]), the per-thread switch ([`use_level_line`],
-//! [`reset_to_the_default`], [`turn_on_for_the_running_app`]), its route diagnostics
-//! ([`last_route`], [`first_route`]) and the switch's readings of a setting ([`reads_as_on`],
-//! [`reads_as_off`], [`the_running_app_wants_it_on`]) and its test seams ([`watch`],
-//! [`watch_room`], [`watch_budget`], [`fail_the_crest_attempt`], [`fail_the_second_half`]).
+//! The level line's route diagnostics and test seams - nothing here chooses a route: which
+//! constructions a build may take is the request's routing (`BevelRouting`, handed down the surface
+//! part builder). What is here is what a test reads or plants: the route a build took
+//! ([`last_route`], [`first_route`], written by the builder as it goes), the watched pick
+//! ([`LevelLineChainWatch`] through [`watch`]), the known room ([`watch_room`]), the work
+//! allowances ([`watch_budget`]) and two failure injections ([`fail_the_crest_attempt`],
+//! [`fail_the_second_half`]). Nothing in a product sets any of them, and each costs a build one
+//! check where it is unset.
 //!
-//! The switch's default is process-wide and read once from the developer variable, but a write
-//! ([`set_use_level_line`]) holds only for the thread that made it: tests run on threads of one
-//! process, and a test that pins the older construction for its own build must not change the
-//! construction another test's build takes beside it. Work handed to another thread carries the
-//! writing thread's choice along ([`LevelLineChoice::current`] on the submitting thread,
-//! [`LevelLineChoice::enter`] on the worker; the model's compute pool does this for every job), so
-//! a build sees the switch its own test set wherever its compute runs. The route strings and the
-//! chain and room watches are a record each thread starts with its own of, and the same choice
-//! carries it along, so the route a build took and the picks it was about to build reach the test
-//! that asked for that build and no other; it sits behind a mutex because a carried record is
-//! written on the worker and read on the asking thread. The budget watch is per thread and not
-//! carried, because the allowances it is handed are single-threaded (`Rc`).
+//! They are per-thread rather than on the request because they are a test's own instruments,
+//! reaching the build through whatever drives it (a document's rebuild, the app's panel) without
+//! every layer in between carrying them. The route strings, the failure injections and the chain
+//! and room watches are a record each thread starts with its own of: tests run on threads of one
+//! process, so the route a build took and the picks it was about to build reach the test that
+//! asked for that build and no other. Work handed to another thread carries the record along
+//! ([`LevelLineRouteRecord::current`] on the submitting thread, [`LevelLineRouteRecord::enter`] on
+//! the worker; the model's compute pool does this for every job); it sits behind a mutex because
+//! a carried record is written on the worker and read on the asking thread. The budget watch is
+//! per thread and not carried, because the allowances it is handed are single-threaded (`Rc`).
 
-use std::cell::{Cell, RefCell};
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
+use std::cell::RefCell;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use vector_math::Vector3;
 
-/// The environment variable naming the opt-out.
-pub const USE_LEVEL_LINE_VARIABLE: &str = "MATTERCAD_BEVEL_LEVELLINE";
-
 /// The route string a pass the level line built writes.
 pub const LEVEL_LINE_ROUTE: &str = "level-line";
-
-/// The developer variable's value, or `None` where it is unset (always, in the browser).
-fn use_level_line_setting() -> Option<String> {
-    std::env::var(USE_LEVEL_LINE_VARIABLE).ok()
-}
-
-/// Whether the app route takes the level line, read from the developer variable once, on first
-/// use: what every thread sees until it sets the switch itself.
-static DEFAULT_USE_LEVEL_LINE: LazyLock<bool> =
-    LazyLock::new(|| the_running_app_wants_it_on(use_level_line_setting().as_deref()));
 
 /// One thread's route diagnostics and test watches, shared with the work it hands on.
 #[derive(Default)]
@@ -60,9 +47,6 @@ struct RouteRecord {
 type SharedRouteRecord = Arc<Mutex<RouteRecord>>;
 
 thread_local! {
-    // This thread's own setting of the switch; `None` follows the default.
-    static USE_LEVEL_LINE: Cell<Option<bool>> = const { Cell::new(None) };
-
     // The record this thread's routes and watches live in: its own, or one carried in.
     static ROUTES: RefCell<SharedRouteRecord> = RefCell::new(SharedRouteRecord::default());
 }
@@ -79,85 +63,58 @@ fn locked(record: &Mutex<RouteRecord>) -> MutexGuard<'_, RouteRecord> {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// Whether a pass whose picked edges link into runs of mesh
-/// edges - closed loops or open runs alike - goes through the level line. On from the start, in
-/// tests exactly as in the running app, because the level line is what Surface mode does; a
-/// developer comparing constructions turns it off with `MATTERCAD_BEVEL_LEVELLINE=0` (or "false").
-/// Read on this thread: its own [`set_use_level_line`], or the one carried in by a
-/// [`LevelLineChoice`], or else the default.
-pub fn use_level_line() -> bool {
-    USE_LEVEL_LINE
-        .with(Cell::get)
-        .unwrap_or(*DEFAULT_USE_LEVEL_LINE)
-}
-
-/// Sets [`use_level_line`] for this thread and the work it hands the compute pool: tests that pin
-/// the older frozen construction set it false and restore it around one build, without touching
-/// the switch other threads' builds read.
-pub fn set_use_level_line(on: bool) {
-    USE_LEVEL_LINE.with(|choice| choice.set(Some(on)));
-}
-
-/// The switch as one thread has it set and the record its routes and watches live in, captured
-/// so work run on another thread builds, and reports, the way the thread that asked for it would.
+/// The record one thread's routes and watches live in, captured so work run on another thread
+/// reports, and is watched, the way the thread that asked for it would be. A test seam, like the
+/// record itself.
 #[derive(Clone)]
-pub struct LevelLineChoice {
-    use_level_line: Option<bool>,
+pub struct LevelLineRouteRecord {
     routes: SharedRouteRecord,
 }
 
-impl std::fmt::Debug for LevelLineChoice {
+impl std::fmt::Debug for LevelLineRouteRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LevelLineChoice")
-            .field("use_level_line", &self.use_level_line)
+        f.debug_struct("LevelLineRouteRecord")
             .finish_non_exhaustive()
     }
 }
 
-impl LevelLineChoice {
-    /// This thread's setting (the default's when it has set none) and its record, right now.
+impl LevelLineRouteRecord {
+    /// This thread's record, right now.
     pub fn current() -> Self {
-        Self {
-            use_level_line: USE_LEVEL_LINE.with(Cell::get),
-            routes: record(),
-        }
+        Self { routes: record() }
     }
 
-    /// Reads the captured setting, and writes routes and asks watches through the captured
-    /// record, on this thread until the returned guard drops.
-    pub fn enter(&self) -> LevelLineChoiceScope {
-        let outer = USE_LEVEL_LINE.with(|choice| choice.replace(self.use_level_line));
+    /// Writes routes and asks watches through the captured record, on this thread until the
+    /// returned guard drops.
+    pub fn enter(&self) -> LevelLineRouteRecordScope {
         let outer_routes =
             ROUTES.with(|routes| std::mem::replace(&mut *routes.borrow_mut(), self.routes.clone()));
-        LevelLineChoiceScope {
-            outer,
+        LevelLineRouteRecordScope {
             outer_routes: Some(outer_routes),
             _not_send: std::marker::PhantomData,
         }
     }
 }
 
-/// While alive, this thread builds by what a [`LevelLineChoice`] carried in; dropping it puts
-/// back what the thread had before. It belongs to the thread that made it.
-#[must_use = "the carried setting ends as soon as the scope is dropped"]
-pub struct LevelLineChoiceScope {
-    outer: Option<bool>,
+/// While alive, this thread reports to and is watched through what a [`LevelLineRouteRecord`]
+/// carried in; dropping it puts back what the thread had before. It belongs to the thread that
+/// made it.
+#[must_use = "the carried record ends as soon as the scope is dropped"]
+pub struct LevelLineRouteRecordScope {
     outer_routes: Option<SharedRouteRecord>,
-    // A scope moved to another thread would restore that thread's setting wrongly.
+    // A scope moved to another thread would restore that thread's record wrongly.
     _not_send: std::marker::PhantomData<*const ()>,
 }
 
-impl std::fmt::Debug for LevelLineChoiceScope {
+impl std::fmt::Debug for LevelLineRouteRecordScope {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LevelLineChoiceScope")
-            .field("outer", &self.outer)
+        f.debug_struct("LevelLineRouteRecordScope")
             .finish_non_exhaustive()
     }
 }
 
-impl Drop for LevelLineChoiceScope {
+impl Drop for LevelLineRouteRecordScope {
     fn drop(&mut self) {
-        USE_LEVEL_LINE.with(|choice| choice.set(self.outer));
         if let Some(outer) = self.outer_routes.take() {
             ROUTES.with(|routes| *routes.borrow_mut() = outer);
         }
@@ -217,18 +174,6 @@ pub fn the_second_half_fails() -> bool {
 /// Whether [`fail_the_crest_attempt`] is set on this thread's record.
 pub fn the_crest_attempt_fails() -> bool {
     locked(&record()).crest_attempt_fails
-}
-
-/// The default the running app wants - the level line on, unless the developer variable says off.
-/// Called once at startup, on the thread that builds the app.
-pub fn turn_on_for_the_running_app() {
-    reset_to_the_default();
-}
-
-/// Puts this thread's switch back to the default it starts at - the same one the running app
-/// wants - so a test that turned the level line off cannot hand that to the work after it.
-pub fn reset_to_the_default() {
-    USE_LEVEL_LINE.with(|choice| choice.set(None));
 }
 
 /// What [`watch`] is handed: every pick the app route is about to give the kernel.
@@ -296,25 +241,6 @@ pub struct LevelLineChainWatch {
     pub seam_epsilon: f64,
     /// The sharp-turn angle the route passed, in degrees (usually positive infinity).
     pub sharp_turn_degrees: f64,
-}
-
-/// Whether a setting's text reads as ON: "1", or "true" in any case.
-pub fn reads_as_on(value: &str) -> bool {
-    value == "1" || value.eq_ignore_ascii_case("true")
-}
-
-/// Whether a setting's value asks for a switch to be OFF: "0" or
-/// "false" in any casing. An unset variable (`None`) asks for nothing.
-pub fn reads_as_off(value: Option<&str>) -> bool {
-    matches!(value, Some(v) if v == "0" || v.eq_ignore_ascii_case("false"))
-}
-
-/// Whether the running app takes the level line,
-/// given what the developer variable says - on unless it plainly says off, because the level line
-/// is what Surface mode does. A plain function of the value rather than a read of the
-/// environment, so a test can assert both directions without writing a process-wide variable.
-pub fn the_running_app_wants_it_on(value: Option<&str>) -> bool {
-    !reads_as_off(value)
 }
 
 thread_local! {

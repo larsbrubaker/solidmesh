@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
-    SurfaceBuildOptions,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -149,7 +148,7 @@ fn try_chamfer(ridge_length: f64) -> Result<Mesh, SurfaceBuildFailure> {
         &plans,
         1,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map(|built| built.mesh)
 }

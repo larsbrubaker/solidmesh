@@ -1,6 +1,6 @@
 //! The Fillet & Chamfer page's build: a part's picks, all at one radius (or chamfer setback),
-//! applied with one call to the library's entry point, `bevel::part::bevel_part`, and every
-//! pick's row worded for the list.
+//! applied with one call to the library's entry point, `bevel::part::bevel_part`, with its default
+//! routes (the constructions MatterCAD builds by), and every pick's row worded for the list.
 //!
 //! One size for every pick is how `bevel_part` takes a request and how MatterCAD's Fillet works
 //! (one size per operation): every pick is rounded at once, on the part as it was picked, so no

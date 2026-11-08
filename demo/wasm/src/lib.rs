@@ -65,10 +65,6 @@ impl Scene {
 #[wasm_bindgen(start)]
 pub fn wasm_start() {
     console_error_panic_hook::set_once();
-    // Until `BevelPartRequest` carries its routing as options, the bevel takes the routes the
-    // running app takes only once its thread has asked for them; every `bevel_part` call of the
-    // demo runs on the worker thread this module starts on.
-    geometry_processing::bevel::level_line::level_line_routing::turn_on_for_the_running_app();
 }
 
 /// The vertex positions of `mesh`, flattened xyz.

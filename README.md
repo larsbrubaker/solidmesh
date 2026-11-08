@@ -16,9 +16,10 @@ library so that others can use it and build on it. It works on the meshes real p
 
 **The kernel lives here; it is not on crates.io yet.** The four crates moved in from the
 [mattercad-rust](https://github.com/MatterHackers/mattercad-rust) workspace with their history,
-and MatterCAD now depends on them by path, from a solidmesh checkout beside its own. The work
-still open happens here: results as codes only (the application words them), the fillet
-orchestration moving in from the app behind one entry point, the public API (everything else
+and MatterCAD now depends on them by path, from a solidmesh checkout beside its own. Fillets and
+chamfers are one call, `bevel::part::bevel_part`, whose request carries the constructions it may
+take (`BevelRouting`; the default is MatterCAD's) and whose outcome reports refusals as codes for
+the caller to word. The work still open happens here: the public API (everything else
 crate-private), and then publishing to crates.io. Until then the crates are `publish = false`
 and their API changes with MatterCAD's needs.
 

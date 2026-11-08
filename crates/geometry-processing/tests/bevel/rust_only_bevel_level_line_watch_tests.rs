@@ -1,7 +1,7 @@
 //! Rust-only pins of `LevelLineRouting.Watch` and `WatchRoom` (`level_line_routing::watch`,
 //! `watch_room`): the two test seams the app route hands its pick and its known room to. A watch
 //! set on one thread sees the passes that thread's work runs on another, carried there by a
-//! `LevelLineChoice`, and no other thread's.
+//! `LevelLineRouteRecord`, and no other thread's.
 
 use std::sync::{Arc, Mutex};
 
@@ -55,7 +55,7 @@ fn rust_only_the_chain_and_room_watches_are_handed_what_the_route_gives_across_t
     );
 
     // The route runs on a worker thread; the watch was set on this one and carried there.
-    let choice = level_line_routing::LevelLineChoice::current();
+    let choice = level_line_routing::LevelLineRouteRecord::current();
     std::thread::spawn(move || {
         let _carried = choice.enter();
         if let Some(watch) = level_line_routing::watch() {

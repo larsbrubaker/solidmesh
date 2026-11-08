@@ -6,9 +6,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, SurfaceBuildOptions, SurfaceMixedJunction,
-};
+use geometry_processing::bevel::surface::{surface_bevel_builder, SurfaceMixedJunction};
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::Vector3;
@@ -350,7 +348,7 @@ fn the_build(the_upper_crease_chorded_at: Option<Vector3>) -> Mesh {
         &plans,
         16,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|refused| panic!("the pass refused: {refused:?}"))
     .mesh

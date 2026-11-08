@@ -15,7 +15,7 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_chain_join, surface_mesh_closure, SurfaceBevelPlan,
-    SurfaceBuildOptions, SurfaceMixedJunction, SurfaceVertexPool,
+    SurfaceMixedJunction, SurfaceVertexPool,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -107,7 +107,7 @@ fn the_rim_and_its_seam_build() {
         &plans,
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the opened rim: {reason:?}"))
     .mesh;
@@ -160,7 +160,7 @@ fn two_junctions_on_one_rim_are_both_read() {
         &plans,
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map(|_| ())
     .expect_err("this is the rung after the reading - if it builds now, assert the solid instead");

@@ -18,7 +18,7 @@ use crate::path_solids::extrude;
 use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
-    SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomCut, SurfaceRoomFootprint,
+    SurfaceBevelPlan, SurfaceRoomCut, SurfaceRoomFootprint,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode};
 use geometry_processing::topology::{FaceGroup, FaceRegionCache};
@@ -126,7 +126,7 @@ fn a_wedge_leaning_past_a_band_is_not_a_collision_with_it() {
         &plans,
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("and the build says the same - {reason:?}"))
     .mesh;
@@ -193,7 +193,7 @@ fn the_size_the_refusal_names_is_a_size_the_fit_then_accepts() {
             &at_the_named_size,
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| panic!("and build - {reason:?}"))
         .mesh;

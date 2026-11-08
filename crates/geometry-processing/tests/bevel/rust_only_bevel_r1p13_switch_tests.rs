@@ -134,8 +134,7 @@ fn rust_only_no_square_crease_clip_where_the_end_creases_are_convex_or_rayed() {
 }
 
 #[test]
-fn rust_only_the_level_line_routing_statics() {
-    assert!(level_line_routing::the_running_app_wants_it_on(None));
+fn rust_only_the_level_line_route_record() {
     level_line_routing::set_first_route(None);
     level_line_routing::set_last_route(Some("level-line".to_string()));
     level_line_routing::set_last_route(Some("existing: open".to_string()));
@@ -146,18 +145,6 @@ fn rust_only_the_level_line_routing_statics() {
     assert_eq!(
         level_line_routing::first_route().as_deref(),
         Some("level-line")
-    );
-    // The reset puts back the default this thread started from.
-    level_line_routing::set_use_level_line(false);
-    assert!(!level_line_routing::use_level_line());
-    level_line_routing::reset_to_the_default();
-    assert_eq!(
-        level_line_routing::use_level_line(),
-        level_line_routing::the_running_app_wants_it_on(
-            std::env::var(level_line_routing::USE_LEVEL_LINE_VARIABLE)
-                .ok()
-                .as_deref()
-        )
     );
 }
 

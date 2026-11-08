@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
-    SurfaceBuildOptions, SurfaceBuilt, SurfaceVertexPool,
+    SurfaceBuilt, SurfaceVertexPool,
 };
 use geometry_processing::bevel::{bevel_chain_linker, bevel_sliver_collapse, BevelAdvisoryCode};
 use geometry_processing::topology::{EdgeConvexity, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -603,7 +603,7 @@ fn try_bevel(
         &plans,
         sampled_at,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     );
 
     TryBevelOutcome {

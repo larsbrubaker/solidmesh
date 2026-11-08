@@ -164,7 +164,7 @@ fn the_ridge_and_the_knife_edge_build_together_at_the_size_the_fit_allows() {
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .unwrap_or_else(|reason| panic!("and so the two build together - {reason:?}"))

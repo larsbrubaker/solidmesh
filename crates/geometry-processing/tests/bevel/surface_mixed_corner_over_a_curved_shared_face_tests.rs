@@ -15,8 +15,8 @@ use std::rc::Rc;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_mixed_corner_hands_over_at_the_mitre,
     surface_mixed_corner_ring_schedule, surface_mixed_corner_sector, SurfaceBandEnd,
-    SurfaceBevelPlan, SurfaceBuildOptions, SurfaceEdgeRoles, SurfaceLine, SurfaceMixedCorner,
-    SurfaceMixedCornerFaces, SurfaceStrip, SurfaceVertexPool,
+    SurfaceBevelPlan, SurfaceEdgeRoles, SurfaceLine, SurfaceMixedCorner, SurfaceMixedCornerFaces,
+    SurfaceStrip, SurfaceVertexPool,
 };
 use polygon_mesh::{CancelToken, Mesh};
 use vector_math::math_helper::{degrees_to_radians, radians_to_degrees};
@@ -880,7 +880,7 @@ fn the_rim_built(read: &Rim, segments: i32) -> Mesh {
         &[plan],
         segments,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map(|built| built.mesh)
     .unwrap_or_else(|reason| panic!("the rim has to build: {reason:?}"))

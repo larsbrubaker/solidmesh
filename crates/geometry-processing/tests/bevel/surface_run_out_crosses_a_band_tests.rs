@@ -507,7 +507,7 @@ pub fn build_with(
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .map(|built| built.mesh)

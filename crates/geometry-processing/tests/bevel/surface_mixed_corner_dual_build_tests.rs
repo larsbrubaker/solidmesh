@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
-    SurfaceEdgePlan, SurfaceMixedCornerDualCanal, SurfaceMixedCornerDualGrid, SurfaceStrip,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceEdgePlan,
+    SurfaceMixedCornerDualCanal, SurfaceMixedCornerDualGrid, SurfaceStrip,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
@@ -161,7 +161,7 @@ fn the_build(radius: f64) -> Result<Mesh, String> {
         &plans,
         SEGMENTS,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map(|built| built.mesh)
     .map_err(|reason| format!("{reason:?}"))

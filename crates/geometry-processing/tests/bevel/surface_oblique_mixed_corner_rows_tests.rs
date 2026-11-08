@@ -181,6 +181,7 @@ fn the_oblique_corner_closes_on_the_dual_and_cannot_on_the_cap_riding_rows() {
         lay_the_oblique_rows_anyway,
         planless_loops: &[],
         features: None,
+        use_sections: crate::surface_test_build::use_sections(),
     };
 
     let on_the_dual = surface_bevel_builder::try_build(

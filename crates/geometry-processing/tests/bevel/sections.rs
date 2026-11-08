@@ -72,8 +72,6 @@ pub(crate) mod section_room_tests;
 pub(crate) mod section_routed_accuracy_reading_tests;
 #[path = "section_routed_pass_tests.rs"]
 pub(crate) mod section_routed_pass_tests;
-#[path = "section_routing_opt_in_tests.rs"]
-pub(crate) mod section_routing_opt_in_tests;
 #[path = "section_routing_partition_tests.rs"]
 pub(crate) mod section_routing_partition_tests;
 #[path = "section_routing_per_thread_tests.rs"]

@@ -17,7 +17,7 @@ use crate::path_solids::extrude;
 use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_face_walkback, surface_room, surface_room_measure,
-    SurfaceBevelPlan, SurfaceBuildOptions, SurfaceEdgePlan, SurfaceLine, SurfaceStrip,
+    SurfaceBevelPlan, SurfaceEdgePlan, SurfaceLine, SurfaceStrip,
 };
 use geometry_processing::bevel::{
     bevel_chain_linker, bevel_edge_tool_builder, BevelAdvisory, BevelAdvisoryArg, BevelAdvisoryCode,
@@ -290,7 +290,7 @@ fn the_strip_meets_the_walkback_and_the_ends_are_cut_too() {
         &[plan],
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     );
 
     // The closure and the volume of what it now builds are held by

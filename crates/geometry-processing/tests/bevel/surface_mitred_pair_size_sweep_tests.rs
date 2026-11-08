@@ -205,7 +205,7 @@ fn build(size: f64) -> (String, Vector3) {
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     ) {
         Ok(built) => built.mesh,

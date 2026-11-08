@@ -195,7 +195,7 @@ fn the_whole_corner_closes_on_the_spine() {
             &CancelToken::new(),
             SurfaceBuildOptions {
                 lay_the_oblique_rows_anyway: true,
-                ..SurfaceBuildOptions::default()
+                ..crate::surface_test_build::build_options()
             },
         )
         .unwrap_or_else(|why| {
@@ -394,7 +394,7 @@ fn the_build_at(
         &CancelToken::new(),
         SurfaceBuildOptions {
             lay_the_oblique_rows_anyway: true,
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .unwrap_or_else(|why| panic!("the build refused the corner at {size}: {why:?}"))

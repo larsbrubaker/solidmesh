@@ -139,6 +139,10 @@ pub struct SurfaceBuildOptions<'a> {
     /// reads the part's own creases - see `section_routing::is_simple`. `None` leaves the routed
     /// pass with no reading.
     pub features: Option<&'a FeatureEdgeSet>,
+    /// Whether a pass the sections can build is built by them (the caller's
+    /// `BevelRouting::sections`); off, every pass is built by the construction below, as it is by
+    /// default.
+    pub use_sections: bool,
 }
 
 /// Whether every plan of the pass was made at the same size and the same profile, which is what the
@@ -230,12 +234,12 @@ pub fn try_build(
 
     // The sections construction takes WHOLE passes it can build - all the plans or none of them,
     // see SectionRouting's remarks - and everything else falls through to the construction below
-    // untouched. Off by default until stage 12 of the sections plan.
+    // untouched. Off unless the caller routes the sections (`options.use_sections`).
     section_routing::set_last_route(Some("legacy: the flag is off".to_string()));
 
     let mut routed_refusal = None;
 
-    if section_routing::use_sections() {
+    if options.use_sections {
         match section_routing::is_simple_with_planless(
             plans,
             planless_loops,

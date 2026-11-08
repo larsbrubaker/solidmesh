@@ -13,8 +13,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_face_walkback, SurfaceBevelPlan, SurfaceBuildOptions,
-    SurfaceWalkbackResult,
+    surface_bevel_builder, surface_face_walkback, SurfaceBevelPlan, SurfaceWalkbackResult,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::CancelToken;
@@ -208,7 +207,7 @@ fn the_build_lays_the_patch_and_publishes_one_closed_shell() {
         &plans,
         16,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|refused| {
         panic!("the two-crease junction has a patch of its own now - instead {refused:?}")

@@ -313,7 +313,7 @@ fn the_mitred_pair_is_sewn_and_closes() {
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .unwrap_or_else(|reason| panic!("and the pair is sewn at the mitre - {reason:?}"))

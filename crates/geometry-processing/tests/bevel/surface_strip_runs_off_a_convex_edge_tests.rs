@@ -283,7 +283,7 @@ fn the_whole_top_edge_rounds_at_fifteen() {
             &CancelToken::new(),
             SurfaceBuildOptions {
                 crossings: Some(&fit.crossings),
-                ..SurfaceBuildOptions::default()
+                ..crate::surface_test_build::build_options()
             },
         )
         .unwrap_or_else(|reason| panic!("and so it builds - {reason:?}"))

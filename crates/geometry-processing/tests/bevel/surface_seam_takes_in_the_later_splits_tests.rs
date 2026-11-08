@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
 };
 use geometry_processing::topology::FaceRegionCache;
 use polygon_mesh::csg::{boolean_processing, BooleanOperandVerdict};
@@ -117,7 +117,7 @@ fn the_barrel_and_the_side_rim() -> Mesh {
         &plans,
         SEGMENTS,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the two rims: {reason:?}"))
     .mesh

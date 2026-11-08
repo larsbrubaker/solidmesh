@@ -164,6 +164,8 @@ mod level_line_mesh_edits;
 pub mod level_line_mesh_input_strips;
 mod level_line_mesh_insert_polyline;
 pub mod level_line_mesh_needles;
+/// Route diagnostics and test seams only; a build's routes are its request's `BevelRouting`.
+#[doc(hidden)]
 pub mod level_line_routing;
 pub mod line_walk;
 pub mod narrow_face_flow;

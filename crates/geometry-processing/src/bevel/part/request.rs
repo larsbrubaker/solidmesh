@@ -9,7 +9,7 @@ use polygon_mesh::Mesh;
 use vector_math::{Color, Matrix4X4};
 
 use super::surface_part_builder::{BevelSurfacePartBuilder, SurfacePartBuildError};
-use super::BevelPickMemo;
+use super::{BevelPickMemo, BevelRouting};
 use crate::bevel::level_line::point_bevel::PointBevelFault;
 use crate::bevel::level_line::WorkError;
 use crate::topology::BevelEdgeGroup;
@@ -46,6 +46,9 @@ pub struct BevelPartRequest {
     /// How long one search for the size that fits may take, in milliseconds
     /// ([`BevelPartRequest::DEFAULT_SIZE_SEARCH_BUDGET_MS`] unless the caller says otherwise).
     pub size_search_budget_ms: i32,
+    /// Which constructions the build may take ([`BevelRouting::default`], MatterCAD's routes,
+    /// unless the caller says otherwise).
+    pub routing: BevelRouting,
 }
 
 impl std::fmt::Debug for BevelPartRequest {
@@ -61,6 +64,7 @@ impl std::fmt::Debug for BevelPartRequest {
             .field("bend_threshold_degrees", &self.bend_threshold_degrees)
             .field("pick_memo", &self.pick_memo.is_some())
             .field("size_search_budget_ms", &self.size_search_budget_ms)
+            .field("routing", &self.routing)
             .finish()
     }
 }
@@ -71,7 +75,7 @@ impl BevelPartRequest {
         BevelSurfacePartBuilder::DEFAULT_SIZE_SEARCH_BUDGET_MS;
 
     /// A request for `groups` on `mesh`, whose own space is the operation's, with no color, no
-    /// pick memo and the default size search budget.
+    /// pick memo, the default size search budget and the default routes (MatterCAD's).
     pub fn new(
         mesh: Option<Arc<Mesh>>,
         groups: Vec<BevelEdgeGroup>,
@@ -91,6 +95,7 @@ impl BevelPartRequest {
             bend_threshold_degrees,
             pick_memo: None,
             size_search_budget_ms: Self::DEFAULT_SIZE_SEARCH_BUDGET_MS,
+            routing: BevelRouting::default(),
         }
     }
 }

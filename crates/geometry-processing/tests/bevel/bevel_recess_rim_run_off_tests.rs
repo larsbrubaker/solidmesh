@@ -383,7 +383,7 @@ fn the_crease(mirror_z: bool, where_the_rebuild_has_the_part: bool) -> Mesh {
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
             ran_off_over_a_stretch: Some(&stretches),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .unwrap_or_else(|reason| panic!("and it has to build: {reason:?}"))

@@ -14,7 +14,7 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, SurfaceBevelPlan,
-    SurfaceBuildFailure, SurfaceBuildOptions,
+    SurfaceBuildFailure,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdgeSet};
 use polygon_mesh::CancelToken;
@@ -81,7 +81,7 @@ fn assert_closed_or_named(size: f64) {
         &plans,
         SEGMENTS,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     ) {
         Ok(built) => built.mesh,
         Err(reason) => {

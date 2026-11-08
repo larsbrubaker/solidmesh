@@ -16,7 +16,7 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_seam_ring;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_corner_mitre, surface_corner_patch_rows, surface_mesh_closure,
-    SurfaceBevelPlan, SurfaceBuildFailure, SurfaceBuildOptions, SurfaceVertexPool,
+    SurfaceBevelPlan, SurfaceBuildFailure, SurfaceVertexPool,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryCode, BevelSweptChain};
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -477,7 +477,7 @@ fn plans_of_two_different_sizes_in_one_pass_are_refused() {
         &plans,
         1,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     );
 
     let Err(SurfaceBuildFailure::Refused(reason)) = built else {
@@ -593,7 +593,7 @@ fn build(
         &plans,
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the corner: {reason:?}"))
     .mesh

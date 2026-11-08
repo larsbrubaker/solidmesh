@@ -1,5 +1,5 @@
-//! What the ACCURACY readings that move when
-//! `section_routing::use_sections` is on actually read, measured on the routed build. Two are pins
+//! What the ACCURACY readings that move when the sections are routed (`BevelRouting::sections`)
+//! actually read, measured on the routed build. Two are pins
 //! of the routed triangulation (the raked mouth's vertex counts); the others were one fault read
 //! several ways - the routed blend standing proud of the rolling ball's canal, a station's profile
 //! swung as a circle about a lerped centre where the canal is the ellipse two crossing cylinders

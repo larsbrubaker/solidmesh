@@ -14,7 +14,6 @@
 
 use std::rc::Rc;
 
-use crate::bevel::level_line::level_line_routing;
 use crate::bevel::part::BevelSizeSearchRung;
 use crate::bevel::BevelGroupResult;
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
@@ -105,15 +104,17 @@ impl BevelSurfacePartBuilder {
     /// 0.5. Up to 0.494 mm fits here" - two sizes on one line. Where the ladder built nothing the
     /// room is taken OUT of the advisory - a missing third
     /// argument - and the sentence is the one that names no size. A number on a row is a
-    /// promise that typing it builds. `quoted` is `TryTheMostThatFits`'s answer.
+    /// promise that typing it builds. `quoted` is `TryTheMostThatFits`'s answer; `level_line` is
+    /// the builder's routing ([`BevelRouting::level_line`](crate::bevel::part::BevelRouting)).
     pub fn the_refusal_offering(
+        level_line: bool,
         refused: &BevelAdvisory,
         quoted: Option<f64>,
         largest: Option<f64>,
     ) -> BevelAdvisory {
-        // Gated on the level-line FLAG, which is what the other constructions' owner-file tests
-        // turn off to read the sentences they pin.
-        if !level_line_routing::use_level_line() || quoted.is_none() {
+        // Gated on the level line being routed, which is what the other constructions'
+        // owner-file tests turn off to read the sentences they pin.
+        if !level_line || quoted.is_none() {
             return refused.clone();
         }
 
@@ -209,7 +210,7 @@ impl BevelSurfacePartBuilder {
             return Ok(None);
         }
 
-        if self.offers_no_size && level_line_routing::use_level_line() {
+        if self.offers_no_size && self.routing.level_line {
             return Ok(None);
         }
 
@@ -229,10 +230,10 @@ impl BevelSurfacePartBuilder {
         let spent = Instant::now();
         self.the_search_clock = Some(spent);
 
-        // LEVEL LINE ONLY. The legacy and sections constructions are FROZEN: with the flag off
-        // they answer exactly what they answered before the level line existed. A floor of zero
-        // is the ladder they run.
-        let floor = if level_line_routing::use_level_line() {
+        // LEVEL LINE ONLY. The legacy and sections constructions are FROZEN: with the level line
+        // out of the routing they answer exactly what they answered before the level line existed.
+        // A floor of zero is the ladder they run.
+        let floor = if self.routing.level_line {
             self.size * Self::SMALLEST_FRACTION_WORTH_TRYING
         } else {
             0.0
@@ -259,7 +260,7 @@ impl BevelSurfacePartBuilder {
 
             high = quoted;
 
-            if level_line_routing::use_level_line() {
+            if self.routing.level_line {
                 if let Some(offered) = Self::the_size_to_offer(quoted)
                     .filter(|&offered| offered < quoted && !self.out_of_search_time(spent))
                 {
@@ -333,7 +334,7 @@ impl BevelSurfacePartBuilder {
         settled: Option<f64>,
         cancellation_token: &CancelToken,
     ) -> Result<Option<f64>, SurfacePartBuildError> {
-        if !level_line_routing::use_level_line() {
+        if !self.routing.level_line {
             return Ok(settled);
         }
 
@@ -418,7 +419,7 @@ impl BevelSurfacePartBuilder {
         cancellation_token: &CancelToken,
         candidate_was_built: bool,
     ) -> Result<Option<f64>, SurfacePartBuildError> {
-        if !level_line_routing::use_level_line() {
+        if !self.routing.level_line {
             return Ok(Some(candidate));
         }
 

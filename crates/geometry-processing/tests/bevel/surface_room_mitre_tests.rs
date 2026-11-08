@@ -143,6 +143,7 @@ fn the_size_the_fit_accepts_is_the_size_that_closes(size: f64, fits: bool) {
             lay_the_oblique_rows_anyway: false,
             planless_loops: &[],
             features: None,
+            use_sections: crate::surface_test_build::use_sections(),
         },
     );
 

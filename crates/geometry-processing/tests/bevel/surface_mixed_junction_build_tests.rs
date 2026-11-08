@@ -366,6 +366,7 @@ fn the_junction_built(segments: i32) -> (Mesh, SurfaceMixedJunction, SurfaceStri
             lay_the_oblique_rows_anyway: false,
             planless_loops: &[],
             features: None,
+            use_sections: crate::surface_test_build::use_sections(),
         },
     )
     .unwrap_or_else(|reason| {

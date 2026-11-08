@@ -14,11 +14,14 @@
 // run, so every budget made under it - the room readings, the pick-wide build, the chains in
 // turn, the size search - and every memo key (`level_line_memo`, which appends `|stopped`) see the
 // same setting. The scope is synchronous (nothing in `build` waits), so it never spans another
-// task's work on the executor.
+// task's work on the executor. The builder's routing (`BevelRouting`) is read where each choice is
+// made, and its two corner cap switches are held for a pass the same way
+// (`build_the_groups_together`, `hold_corner_cap_switches`).
 
 use std::rc::Rc;
 
 use crate::bevel::bevel_advisory_codes;
+use crate::bevel::level_line::corner_cap_hole_fill_switch::hold_corner_cap_switches;
 use crate::bevel::level_line::{turn_stopped_ends_on, WorkError};
 use crate::bevel::part::{BevelProgress, BevelProgressPhase};
 use crate::bevel::{
@@ -186,6 +189,10 @@ impl BevelSurfacePartBuilder {
         if building.is_empty() {
             return Ok(None);
         }
+        // Held to the end of the pass: every corner and end the level line closes under it reads
+        // this builder's routing.
+        let _corner_cap =
+            hold_corner_cap_switches(self.routing.flat_ends, self.routing.corner_hole_fill);
 
         let mut contributing = self.the_rim_loops_of(building);
         let mut refused_loops: IndexMap<i32, Vec<BevelLoopFailure>> = IndexMap::new();
@@ -429,8 +436,12 @@ impl BevelSurfacePartBuilder {
                         )?
                     };
 
-                    let said_for_the_loop =
-                        Self::the_refusal_offering(&refused, quoted, for_the_loop);
+                    let said_for_the_loop = Self::the_refusal_offering(
+                        self.routing.level_line,
+                        &refused,
+                        quoted,
+                        for_the_loop,
+                    );
 
                     refused_loops
                         .entry(index)
@@ -466,7 +477,8 @@ impl BevelSurfacePartBuilder {
                 )?
             };
 
-            let refused = Self::the_refusal_offering(&refused, quoted, largest);
+            let refused =
+                Self::the_refusal_offering(self.routing.level_line, &refused, quoted, largest);
             let mut row = BevelGroupResult::new(
                 index,
                 BevelResultGroup::Edge(self.groups[index as usize].clone()),

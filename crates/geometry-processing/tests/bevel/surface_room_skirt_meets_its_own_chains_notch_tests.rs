@@ -14,8 +14,7 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_room_measure,
-    SurfaceBevelPlan, SurfaceBuildOptions, SurfaceRoomCrossing, SurfaceRoomCut,
-    SurfaceRoomFootprint,
+    SurfaceBevelPlan, SurfaceRoomCrossing, SurfaceRoomCut, SurfaceRoomFootprint,
 };
 use geometry_processing::topology::{FaceGroup, FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
@@ -178,7 +177,7 @@ fn under_the_crossing_the_chain_closes_and_over_it_the_shell_would_be_open() {
             &plans,
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| {
             panic!("asked WITHOUT the crossing the build has nothing to refuse either way - {reason:?}")

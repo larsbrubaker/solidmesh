@@ -493,7 +493,7 @@ fn a_crossing_that_only_reaches_the_run_outs_death_is_refused_by_name() {
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     ) else {
         panic!("the build refuses the crossing too");

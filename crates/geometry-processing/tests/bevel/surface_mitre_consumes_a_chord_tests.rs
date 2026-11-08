@@ -17,7 +17,7 @@ use crate::path_solids::extrude;
 use crate::path_solids::Outline;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildFailure,
-    SurfaceBuildOptions, SurfaceBuilt,
+    SurfaceBuilt,
 };
 use geometry_processing::bevel::{bevel_chain_linker, BevelAdvisoryArg, BevelAdvisoryCode};
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -216,7 +216,7 @@ pub fn build(size: f64) -> (Mesh, Result<SurfaceBuilt, SurfaceBuildFailure>) {
         &[plan],
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     );
 
     (mesh, result)

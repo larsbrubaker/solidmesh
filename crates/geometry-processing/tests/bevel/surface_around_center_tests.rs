@@ -16,7 +16,6 @@ use std::sync::Arc;
 use geometry_processing::bevel::bevel_chain_linker;
 use geometry_processing::bevel::surface::{
     surface_bevel_builder, surface_chain_join, surface_mesh_closure, SurfaceBevelPlan,
-    SurfaceBuildOptions,
 };
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
 use polygon_mesh::{CancelToken, Mesh};
@@ -259,7 +258,7 @@ fn built(part: &Mesh, radius: f64) -> Mesh {
         &plans,
         SEGMENTS,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the four creases have to build at {radius}: {reason:?}"))
     .mesh

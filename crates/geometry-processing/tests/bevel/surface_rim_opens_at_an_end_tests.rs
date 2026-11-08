@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use geometry_processing::bevel::bevel_chain_linker::{self, BevelSweptChain};
 use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan, SurfaceBuildOptions,
+    surface_bevel_builder, surface_mesh_closure, SurfaceBevelPlan,
 };
 use geometry_processing::bevel::BevelAdvisoryCode;
 use geometry_processing::topology::{FaceRegionCache, FeatureEdge, FeatureEdgeSet};
@@ -212,7 +212,7 @@ fn two_rings_meeting_at_one_vertex_are_refused_by_name() {
         &plans,
         1,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .map(|_| ())
     .expect_err(
@@ -381,7 +381,7 @@ fn build(picks: &[Pick], round_profile: bool, segments_per_quarter: i32) -> Mesh
         &plans,
         segments_per_quarter,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("the build refused the corner: {reason:?}"))
     .mesh

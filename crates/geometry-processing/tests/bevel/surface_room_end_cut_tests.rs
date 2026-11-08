@@ -260,7 +260,7 @@ fn the_crossing_on_the_wall_is_sewn_and_the_shell_closes() {
         &CancelToken::new(),
         SurfaceBuildOptions {
             crossings: Some(&fit.crossings),
-            ..SurfaceBuildOptions::default()
+            ..crate::surface_test_build::build_options()
         },
     )
     .unwrap_or_else(|reason| panic!("the pair is sewn rather than refused - {reason:?}"))
@@ -306,7 +306,7 @@ fn under_the_crossing_the_pair_closes_and_over_it_the_shell_would_be_open() {
             &plans,
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| {
             panic!("asked WITHOUT the crossing the build has nothing to refuse either way - {reason:?}")

@@ -9,7 +9,6 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::bevel::level_line::level_line_routing;
 use crate::bevel::surface::{
     surface_bevel_builder, surface_mesh_closure, surface_room, surface_run_stops_short,
     SurfaceBandRunsOffOverAStretch, SurfaceBuildFailure, SurfaceBuildOptions,
@@ -57,7 +56,7 @@ impl BevelSurfacePartBuilder {
         // the room it measured - which, where the pick's own room was read off a feature edge
         // beyond its face, the existing construction is asked to build past - or says nothing at
         // all and the pass goes on below exactly as it does today.
-        if level_line_routing::use_level_line() && !self.the_level_line_is_set_aside {
+        if self.routing.level_line && !self.the_level_line_is_set_aside {
             let answer = self.try_the_level_line(contributing, trial_size, cancellation_token)?;
             attempt.condemned = answer.condemned;
 
@@ -163,6 +162,7 @@ impl BevelSurfacePartBuilder {
             SurfaceBuildOptions {
                 crossings: Some(&fit.crossings),
                 ran_off_over_a_stretch: Some(&stretches),
+                use_sections: self.routing.sections,
                 ..SurfaceBuildOptions::default()
             },
         );

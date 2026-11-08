@@ -9,9 +9,7 @@
 //! line. A split on a mesh edge is a function of the EDGE and not of which plane asked for it
 //! (`surface_walkback_rewrite::try_find_crossings`). The parameter rows are a loop.
 
-use geometry_processing::bevel::surface::{
-    surface_bevel_builder, surface_mesh_closure, SurfaceBuildOptions,
-};
+use geometry_processing::bevel::surface::{surface_bevel_builder, surface_mesh_closure};
 use polygon_mesh::CancelToken;
 use vector_math::Vector3;
 
@@ -38,7 +36,7 @@ fn the_mitre_point_on_a_fan_edge_is_one_vertex() {
             &[plan],
             8,
             &CancelToken::new(),
-            SurfaceBuildOptions::default(),
+            crate::surface_test_build::build_options(),
         )
         .unwrap_or_else(|reason| {
             panic!(
@@ -76,7 +74,7 @@ fn the_two_bands_cross_the_fan_edge_at_one_vertex() {
         &[plan],
         8,
         &CancelToken::new(),
-        SurfaceBuildOptions::default(),
+        crate::surface_test_build::build_options(),
     )
     .unwrap_or_else(|reason| panic!("{reason:?}"))
     .mesh;

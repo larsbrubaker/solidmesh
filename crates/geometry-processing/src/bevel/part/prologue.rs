@@ -224,5 +224,6 @@ pub fn build_edges(
         request.pick_memo.clone(),
     );
     surface.set_size_search_budget_ms(request.size_search_budget_ms);
+    surface.set_routing(request.routing);
     Ok(surface.build(cancel)?)
 }

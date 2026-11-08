@@ -1,41 +1,63 @@
-//! The hole-fill switch of the corner cap: the corner holes closed by the one hole filler instead
-//! of the fans and rings, on by default (the hole fill's geometry readings are in
-//! `corner_cap_hole_fill.rs`, the flat-ends switch in `corner_cap_flat_ends.rs`).
+//! The corner cap's two switches as one build holds them: the hole fill ([`use_hole_fill`], the
+//! corner holes closed by the one hole filler instead of the fans and rings; its geometry readings
+//! are in `corner_cap_hole_fill.rs`) and flat ends (`corner_cap_flat_ends::use_flat_ends`), both on
+//! unless the build says otherwise.
+//!
+//! The choice is the request's (`BevelRouting::corner_hole_fill` and `BevelRouting::flat_ends`):
+//! the surface part builder holds them for its build ([`hold_corner_cap_switches`]), so every
+//! corner and end the level line closes under that build reads them without each layer between
+//! the builder and the corner cap carrying two more arguments - the same way the build's work
+//! budget reaches them (`LevelLineWork`). Per thread, because a build runs on one, and so a test
+//! that turns a switch off never changes what a parallel test builds. A test that calls the level
+//! line directly, with no builder, sets them itself through the same per-thread values
+//! ([`set_use_hole_fill_override`], `corner_cap_flat_ends::set_use_flat_ends_override`).
 
 use std::cell::Cell;
-use std::sync::OnceLock;
 
-use super::level_line_routing::reads_as_off;
-
-/// The environment variable that turns [`use_hole_fill`] off
-/// ("0" or "false"); unset or anything else leaves it on.
-pub const USE_HOLE_FILL_VARIABLE: &str = "MATTERCAD_BEVEL_HOLEFILL";
-
-/// Read once, when first asked - the developer opt-out.
-/// On by default since stage 3's setbacks leave every corner row flat at radius r, so the
-/// filler's patch is small at every size. The browser has no process environment, so there it is
-/// always on.
-fn hole_fill_from_the_environment() -> bool {
-    static FROM_THE_ENVIRONMENT: OnceLock<bool> = OnceLock::new();
-    *FROM_THE_ENVIRONMENT
-        .get_or_init(|| !reads_as_off(std::env::var(USE_HOLE_FILL_VARIABLE).ok().as_deref()))
-}
+use super::corner_cap_flat_ends::{set_use_flat_ends_override, use_flat_ends_override};
 
 thread_local! {
-    /// A per-thread override of the
-    /// environment's answer - `None` leaves it to the variable. Per thread so a test that turns
-    /// the filler on never changes what a parallel test builds.
+    /// This thread's hole-fill setting - `None` leaves it on.
     static USE_HOLE_FILL_OVERRIDE: Cell<Option<bool>> = const { Cell::new(None) };
 }
 
-/// Sets (or, with `None`, clears) this thread's override of [`use_hole_fill`].
+/// Sets (or, with `None`, clears back to on) this thread's [`use_hole_fill`].
 pub fn set_use_hole_fill_override(value: Option<bool>) {
     USE_HOLE_FILL_OVERRIDE.with(|o| o.set(value));
 }
 
 /// Whether the corner cap hands each corner hole to the hole filler.
 pub fn use_hole_fill() -> bool {
-    USE_HOLE_FILL_OVERRIDE
-        .with(|o| o.get())
-        .unwrap_or_else(hole_fill_from_the_environment)
+    USE_HOLE_FILL_OVERRIDE.with(|o| o.get()).unwrap_or(true)
+}
+
+/// Sets both corner cap switches on this thread until the returned scope drops, which puts back
+/// what was there before.
+pub fn hold_corner_cap_switches(flat_ends: bool, hole_fill: bool) -> CornerCapSwitchesScope {
+    let scope = CornerCapSwitchesScope {
+        flat_ends_was: use_flat_ends_override(),
+        hole_fill_was: USE_HOLE_FILL_OVERRIDE.with(|o| o.get()),
+        _not_send: std::marker::PhantomData,
+    };
+    set_use_flat_ends_override(Some(flat_ends));
+    set_use_hole_fill_override(Some(hole_fill));
+    scope
+}
+
+/// Holds one build's corner cap switches ([`hold_corner_cap_switches`]); dropping it puts back the
+/// thread's own. It belongs to the thread that made it.
+#[derive(Debug)]
+#[must_use = "the switches are held only while the scope is alive"]
+pub struct CornerCapSwitchesScope {
+    flat_ends_was: Option<bool>,
+    hole_fill_was: Option<bool>,
+    // A scope moved to another thread would restore that thread's switches wrongly.
+    _not_send: std::marker::PhantomData<*const ()>,
+}
+
+impl Drop for CornerCapSwitchesScope {
+    fn drop(&mut self) {
+        set_use_flat_ends_override(self.flat_ends_was);
+        set_use_hole_fill_override(self.hole_fill_was);
+    }
 }

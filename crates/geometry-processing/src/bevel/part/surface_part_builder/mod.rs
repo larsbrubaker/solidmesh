@@ -38,7 +38,7 @@ use std::sync::Arc;
 
 use crate::bevel::level_line::RoomReadingKind;
 use crate::bevel::part::refusal_place::the_edge_nearest_the_place_among;
-use crate::bevel::part::{BevelPickMemo, BevelProgressBar, BevelProgressReport};
+use crate::bevel::part::{BevelPickMemo, BevelProgressBar, BevelProgressReport, BevelRouting};
 use crate::bevel::BevelRebuildAdvisories;
 use crate::bevel::{BevelAdvisory, BevelGroupResult, BevelLoopFailure};
 use crate::topology::{BevelEdgeGroup, BevelEdgeGroupResolution, FaceRegionCache, FeatureEdge};
@@ -104,6 +104,10 @@ pub struct BevelSurfacePartBuilder {
 
     /// How long one size search may take (`size_that_fits`), the operation's own.
     size_search_budget_ms: i32,
+
+    /// Which constructions this builder may take: the request's own ([`Self::set_routing`]),
+    /// MatterCAD's routes unless it says otherwise.
+    routing: BevelRouting,
 
     /// The faces of `working_mesh` no region flood may enter, or `None` where there are none: the
     /// blend an EARLIER pass laid on this same mesh (`pass_in_two`).
@@ -248,6 +252,7 @@ impl BevelSurfacePartBuilder {
             rim_loops: HashMap::new(),
             size_search_ms_spent: 0,
             size_search_budget_ms: Self::DEFAULT_SIZE_SEARCH_BUDGET_MS,
+            routing: BevelRouting::default(),
             blend_faces_of_the_last_build: Vec::new(),
             the_settling_is_off: false,
             rungs_tried: 0,
@@ -270,6 +275,17 @@ impl BevelSurfacePartBuilder {
             left_alone_for_touching: IndexMap::new(),
             put_back_once: HashSet::new(),
         }
+    }
+
+    /// Which constructions this builder may take.
+    pub fn routing(&self) -> BevelRouting {
+        self.routing
+    }
+
+    /// Sets [`Self::routing`] for this builder (and the second builders it makes for a pass built
+    /// in two).
+    pub fn set_routing(&mut self, routing: BevelRouting) {
+        self.routing = routing;
     }
 
     /// The memo this builder reads and writes - the operation's own, or the builder's private one.
