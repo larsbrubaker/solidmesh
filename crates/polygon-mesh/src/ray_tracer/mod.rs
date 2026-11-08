@@ -26,6 +26,12 @@
 //! [`RayTracer`] traces a primary ray into a [`Scene`]'s shapes, or a [`RayBundle`] of them
 //! together. A bundle's rays each get the same result, bit for bit, as tracing them alone:
 //! `ray_bundle`, `bvh_bundle_traversal` and [`Traceable::trace_ray_bundle`] say how.
+//!
+//! What a shading tracer reads at a hit lives beside the hit record, which is left as it is:
+//! [`MeshSurface`] is a mesh's per-corner smooth normals, colors and texture coordinates, and
+//! answers a face and hit position with a [`SurfacePoint`], which also gives the origin of a
+//! continuing ray. [`PlacedParts`] traces many [`PlacedPart`]s sharing a tree and says which was
+//! hit, with its surface in world space.
 
 mod base_shape;
 mod bounding_volume_hierarchy;
@@ -37,11 +43,14 @@ mod difference;
 mod intersect_info_subtract;
 mod material;
 mod minimal_triangle;
+mod placed_part;
 mod plane_shape;
 mod ray_bundle;
 mod ray_tracer_engine;
 mod scene;
 mod sphere_shape;
+mod surface_point;
+mod surface_table;
 mod transform;
 mod triangle_hit;
 mod triangle_shape;
@@ -65,6 +74,7 @@ pub use material::{
     Primitive, SolidMaterial,
 };
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
+pub use placed_part::{PartHit, PlacedPart, PlacedParts};
 pub use plane_shape::PlaneShape;
 #[doc(hidden)]
 pub use ray_bundle::PacketBounds;
@@ -72,6 +82,8 @@ pub use ray_bundle::{RayBundle, RayBundleStats};
 pub use ray_tracer_engine::{AntiAliasing, RayTracer};
 pub use scene::{Background, Scene};
 pub use sphere_shape::SphereShape;
+pub use surface_point::{facing_normals, FacingNormals, SurfacePoint};
+pub use surface_table::MeshSurface;
 pub use transform::Transform;
 pub use triangle_shape::TriangleShape;
 pub use triangle_shape_uv::TriangleShapeUv;
