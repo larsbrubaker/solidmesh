@@ -103,7 +103,7 @@ pub use scattering::{LocalFrame, ScatteringSample, ScatteringSurface};
 pub use scene::{Background, Scene};
 pub use sphere_shape::SphereShape;
 pub use surface_point::{facing_normals, FacingNormals, SurfacePoint};
-pub use surface_table::MeshSurface;
+pub use surface_table::{MeshSurface, MeshSurfaceBuilder};
 pub use transform::Transform;
 pub use triangle_shape::TriangleShape;
 pub use triangle_shape_uv::TriangleShapeUv;

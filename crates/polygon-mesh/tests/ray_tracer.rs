@@ -45,6 +45,8 @@ mod scattering_energy_tests;
 mod scattering_support;
 #[path = "ray_tracer/scattering_tests.rs"]
 mod scattering_tests;
+#[path = "ray_tracer/surface_builder_tests.rs"]
+mod surface_builder_tests;
 #[path = "ray_tracer/surface_hit_continuation_tests.rs"]
 mod surface_hit_continuation_tests;
 #[path = "ray_tracer/surface_hit_placed_tests.rs"]

@@ -17,12 +17,19 @@
 //! `+Z`, so every normal the table holds is finite and unit length. Faces are compared by the
 //! vertex indices they share, in a fixed order, so the same mesh always gives the same table to
 //! the bit.
+//!
+//! The table is built in `builder`, one bounded slice at a time; [`MeshSurface::new`] runs that
+//! to the end in one call.
 
 use solidmesh_math::{AxisAlignedBoundingBox, Color, Vector2, Vector2Float, Vector3, Vector3Float};
 
 use super::surface_point::{barycentric_at, surface_offset, SurfacePoint};
 use super::RayTracerError;
 use crate::Mesh;
+
+mod builder;
+
+pub use builder::MeshSurfaceBuilder;
 
 /// How many neighbouring faces a face is compared with across one edge. Two is a clean edge, a
 /// few is a non-manifold one, and a boolean can leave a couple of dozen; every pair is compared
@@ -49,14 +56,6 @@ enum CornerBounds {
     Known(AxisAlignedBoundingBox),
 }
 
-/// A face's corner as the building walk sees it.
-#[derive(Clone, Copy)]
-struct IncidentCorner {
-    vertex: i32,
-    face: u32,
-    corner: u8,
-}
-
 /// A mesh's surface data for shading.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeshSurface {
@@ -75,26 +74,12 @@ impl MeshSurface {
     ///
     /// A crease angle outside `[0, PI]` is a [`RayTracerError::InvalidArgument`].
     pub fn new(mesh: &Mesh, crease_radians: f64) -> Result<Self, RayTracerError> {
-        if !(0.0..=core::f64::consts::PI).contains(&crease_radians) {
-            return Err(RayTracerError::InvalidArgument(
-                "the crease angle must be between 0 and PI radians",
-            ));
+        let mut builder = MeshSurfaceBuilder::new(mesh, crease_radians)?;
+        loop {
+            if let Some(surface) = builder.step(usize::MAX) {
+                return Ok(surface);
+            }
         }
-
-        let faces: Vec<[i32; 3]> = mesh.faces.iter().map(|f| [f.v0, f.v1, f.v2]).collect();
-        let mut surface = MeshSurface {
-            vertices: mesh.vertices.clone(),
-            geometric_normals: vec![FALLBACK_NORMAL; faces.len()],
-            corner_normals: vec![[FALLBACK_NORMAL; 3]; faces.len()],
-            face_colors: mesh.face_colors.clone(),
-            texture_corners: texture_corners(mesh, faces.len()),
-            corner_bounds: CornerBounds::NoFaces,
-            faces,
-        };
-        surface.corner_bounds = surface.compute_corner_bounds();
-        let cross_lengths = surface.compute_geometric_normals();
-        surface.compute_corner_normals(&cross_lengths, libm::cos(crease_radians));
-        Ok(surface)
     }
 
     /// How many faces the table describes.
@@ -123,28 +108,6 @@ impl MeshSurface {
             (table.min_xyz[axis] - tree.min_xyz[axis]).abs() <= tolerance
                 && (table.max_xyz[axis] - tree.max_xyz[axis]).abs() <= tolerance
         })
-    }
-
-    /// The extent of every face's corners. A vertex no face uses is not in a tree, so it does not
-    /// count here either.
-    fn compute_corner_bounds(&self) -> CornerBounds {
-        let mut bounds: Option<(Vector3, Vector3)> = None;
-        for face in 0..self.faces.len() {
-            let Some(corners) = self.corners(face) else {
-                return CornerBounds::Unknown;
-            };
-            for corner in corners {
-                let (low, high) = bounds.unwrap_or((corner, corner));
-                bounds = Some((
-                    Vector3::component_min(low, corner),
-                    Vector3::component_max(high, corner),
-                ));
-            }
-        }
-        match bounds {
-            Some((low, high)) => CornerBounds::Known(AxisAlignedBoundingBox::new(low, high)),
-            None => CornerBounds::NoFaces,
-        }
     }
 
     /// The point on face `face_index` nearest `hit_position`, or
@@ -234,115 +197,6 @@ impl MeshSurface {
         )
     }
 
-    /// Fills `geometric_normals` from the corners, and returns each face's cross-product length
-    /// (twice its area), 0 for a face with no usable normal.
-    fn compute_geometric_normals(&mut self) -> Vec<f64> {
-        let mut cross_lengths = vec![0.0; self.faces.len()];
-        for (face, slot) in cross_lengths.iter_mut().enumerate() {
-            let Some([c0, c1, c2]) = self.corners(face) else {
-                continue;
-            };
-            let cross = (c1 - c0).cross(c2 - c0);
-            let length = cross.length();
-            if length > 0.0 && length.is_finite() {
-                self.geometric_normals[face] = cross / length;
-                *slot = length;
-            }
-        }
-        cross_lengths
-    }
-
-    /// Fills `corner_normals`, one vertex at a time.
-    fn compute_corner_normals(&mut self, cross_lengths: &[f64], cosine_of_crease: f64) {
-        let mut incident: Vec<IncidentCorner> = Vec::with_capacity(self.faces.len() * 3);
-        for (face, corners) in self.faces.iter().enumerate() {
-            if cross_lengths[face] == 0.0 {
-                continue;
-            }
-            for (corner, &vertex) in corners.iter().enumerate() {
-                incident.push(IncidentCorner {
-                    vertex,
-                    face: face as u32,
-                    corner: corner as u8,
-                });
-            }
-        }
-        incident.sort_unstable_by_key(|c| (c.vertex, c.face, c.corner));
-
-        for face in 0..self.faces.len() {
-            self.corner_normals[face] = [self.geometric_normals[face]; 3];
-        }
-
-        let mut groups = Groups::default();
-        let mut start = 0;
-        while start < incident.len() {
-            let vertex = incident[start].vertex;
-            let end = start
-                + incident[start..]
-                    .iter()
-                    .take_while(|c| c.vertex == vertex)
-                    .count();
-            self.smooth_vertex(&incident[start..end], cosine_of_crease, &mut groups);
-            start = end;
-        }
-    }
-
-    /// The corner normals of the faces around one vertex.
-    fn smooth_vertex(
-        &mut self,
-        corners: &[IncidentCorner],
-        cosine_of_crease: f64,
-        groups: &mut Groups,
-    ) {
-        groups.reset(corners.len());
-        for (index, corner) in corners.iter().enumerate() {
-            let face = self.faces[corner.face as usize];
-            let (a, b) = other_vertices(face, usize::from(corner.corner));
-            groups.neighbours.push((a, index));
-            groups.neighbours.push((b, index));
-        }
-        groups.neighbours.sort_unstable();
-
-        let mut start = 0;
-        while start < groups.neighbours.len() {
-            let other = groups.neighbours[start].0;
-            let end = start
-                + groups.neighbours[start..]
-                    .iter()
-                    .take_while(|&&(vertex, _)| vertex == other)
-                    .count();
-            for i in start..end {
-                let last = (i + 1 + MAX_FACES_COMPARED_PER_EDGE).min(end);
-                for j in (i + 1)..last {
-                    let first = groups.neighbours[i].1;
-                    let second = groups.neighbours[j].1;
-                    let normal_a = self.geometric_normals[corners[first].face as usize];
-                    let normal_b = self.geometric_normals[corners[second].face as usize];
-                    // Strictly less than the crease: an edge bent exactly the crease angle
-                    // stays sharp.
-                    if normal_a.dot(normal_b) > cosine_of_crease {
-                        groups.join(first, second);
-                    }
-                }
-            }
-            start = end;
-        }
-
-        for (index, corner) in corners.iter().enumerate() {
-            let face = corner.face as usize;
-            let root = groups.find(index);
-            let angle = self.corner_angle(face, usize::from(corner.corner));
-            groups.sums[root] += self.geometric_normals[face] * angle;
-        }
-
-        for (index, corner) in corners.iter().enumerate() {
-            let face = corner.face as usize;
-            let root = groups.find(index);
-            self.corner_normals[face][usize::from(corner.corner)] =
-                unit_or(groups.sums[root], self.geometric_normals[face]);
-        }
-    }
-
     /// The angle of `face` at `corner`, 0 when the face's corners are unusable.
     fn corner_angle(&self, face: usize, corner: usize) -> f64 {
         let Some(corners) = self.corners(face) else {
@@ -370,58 +224,5 @@ pub(super) fn unit_or(vector: Vector3, fallback: Vector3) -> Vector3 {
         vector / length
     } else {
         fallback
-    }
-}
-
-/// Each face's corner texture coordinates, or an empty list when no face has a texture.
-fn texture_corners(mesh: &Mesh, face_count: usize) -> Vec<Option<[Vector2Float; 3]>> {
-    if mesh.face_textures.is_empty() {
-        return Vec::new();
-    }
-    let mut corners = vec![None; face_count];
-    for (&face, texture) in &mesh.face_textures {
-        if let Some(slot) = usize::try_from(face)
-            .ok()
-            .and_then(|face| corners.get_mut(face))
-        {
-            *slot = Some([texture.uv0, texture.uv1, texture.uv2]);
-        }
-    }
-    corners
-}
-
-/// The smoothing groups of the faces around one vertex: a disjoint-set forest over the vertex's
-/// corners, kept to reuse its allocations from one vertex to the next. Roots are the lowest
-/// member, so a group's normal sums its faces in face order, the same every time.
-#[derive(Default)]
-struct Groups {
-    parents: Vec<usize>,
-    sums: Vec<Vector3>,
-    neighbours: Vec<(i32, usize)>,
-}
-
-impl Groups {
-    fn reset(&mut self, count: usize) {
-        self.parents.clear();
-        self.parents.extend(0..count);
-        self.sums.clear();
-        self.sums.resize(count, Vector3::ZERO);
-        self.neighbours.clear();
-    }
-
-    fn find(&mut self, mut node: usize) -> usize {
-        while self.parents[node] != node {
-            let grandparent = self.parents[self.parents[node]];
-            self.parents[node] = grandparent;
-            node = grandparent;
-        }
-        node
-    }
-
-    fn join(&mut self, a: usize, b: usize) {
-        let (a, b) = (self.find(a), self.find(b));
-        if a != b {
-            self.parents[a.max(b)] = a.min(b);
-        }
     }
 }
