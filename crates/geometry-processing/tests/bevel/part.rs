@@ -27,6 +27,8 @@ pub(crate) mod part_progress_bar_tests;
 pub(crate) mod part_prologue_tests;
 #[path = "part_refusal_place_tests.rs"]
 pub(crate) mod part_refusal_place_tests;
+#[path = "part/part_replay_tests.rs"]
+pub(crate) mod part_replay_tests;
 #[path = "part_self_intersection_check_tests.rs"]
 pub(crate) mod part_self_intersection_check_tests;
 #[path = "part/part_surface_part_builder_s3_tests.rs"]

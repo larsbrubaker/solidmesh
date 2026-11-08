@@ -57,7 +57,7 @@ fn filleted(size: f64, segments: i32, motion: Matrix4X4) -> Mesh {
 
 /// FNV-1a over the bits of every vertex coordinate, then every face's corners and normal: any
 /// change in any last bit, or in the triangles, moves it.
-fn digest(mesh: &Mesh) -> String {
+pub(crate) fn digest(mesh: &Mesh) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     let mut mix = |bytes: [u8; 4]| {
         for byte in bytes {

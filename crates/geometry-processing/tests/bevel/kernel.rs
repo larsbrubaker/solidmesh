@@ -31,6 +31,8 @@ pub(crate) mod bevel_sweep_back_depth_tests;
 pub(crate) mod bevel_t_vertex_sliver_repair_tests;
 #[path = "bevel_thin_sliver_conditioning_tests.rs"]
 pub(crate) mod bevel_thin_sliver_conditioning_tests;
+#[path = "bevel_tool_plane_accuracy_tests.rs"]
+pub(crate) mod bevel_tool_plane_accuracy_tests;
 #[path = "bevel_volume_probes.rs"]
 pub(crate) mod bevel_volume_probes;
 #[path = "knife_edge_rim_measures.rs"]

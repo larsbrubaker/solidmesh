@@ -1,0 +1,10 @@
+{"design":"Simple Internal Fillet",
+"vertices":[-15.5,-32,0,-11.5,-32,0,-15.5,-32,20,-11.5,-32,20,-15.5,-16,0,-15.5,-12,0,-12.3,-16,0,-12.166667,-15.333333,0,-11.5,-16,0,-15.5,-12,20,-12.166667,-15.333333,20,-11.5,-16,20,-11.5,-15.2,20,4.5,-16,0,4.5,-12,0,4.5,-16,20,4.5,-12,20],
+"faces":[0,1,3,0,6,1,0,3,2,2,9,0,1,11,3,2,3,10,0,4,6,1,6,8,4,0,9,1,8,11,6,4,7,9,5,4,2,10,9,3,11,10,11,12,10,5,7,4,6,7,8,5,14,7,14,8,7,5,9,14,13,11,8,9,10,12,15,12,11,16,9,12,13,8,14,13,14,15,13,15,11,14,9,16,15,16,12,15,14,16],
+"source_to_operation":[1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,20.0,20.0,0.0,1.0],
+"groups":[{"SelectionKind":"Edge","AnchorMidpoint":{"X":-11.5,"Y":-16.0,"Z":10.0},"AnchorDirection":{"X":0.0,"Y":0.0,"Z":1.0},"AnchorNormal0":{"X":1.0,"Y":0.0,"Z":0.0},"AnchorPlaneDistance0":-11.5,"AnchorNormal1":{"X":0.0,"Y":-1.0,"Z":0.0},"AnchorPlaneDistance1":16.0,"CurveToleranceDegrees":30.0,"FlatAngleDegrees":0.5124707395061022}],
+"size":8.0,"segments":8,"profile_is_round":true,"bend_threshold_degrees":10.0,
+"routing":[true,false,true,true],
+"expected_mesh":{"vertices":44,"faces":84,"digest":"bd05d71412881576"},
+"expected_rows":[{"failure":null,"warnings":[],"loop_failures":0}],
+"expected_advisories":[]}

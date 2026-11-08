@@ -1,0 +1,10 @@
+{"design":"Parallel Edges Too Close",
+"vertices":[-10,-3,10,10,-3,10,10,3,10,-10,3,10,-10,-3,-10,10,-3,-10,10,3,-10,-10,3,-10],
+"faces":[0,1,2,0,2,3,4,0,3,4,3,7,1,5,6,1,6,2,4,7,6,4,6,5,3,2,6,3,6,7,4,5,1,4,1,0],
+"source_to_operation":[1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0],
+"groups":[{"SelectionKind":"Edge","AnchorMidpoint":{"X":0.0,"Y":-3.0,"Z":10.0},"AnchorDirection":{"X":1.0,"Y":0.0,"Z":0.0},"AnchorNormal0":{"X":0.0,"Y":0.0,"Z":1.0},"AnchorPlaneDistance0":10.0,"AnchorNormal1":{"X":0.0,"Y":-1.0,"Z":0.0},"AnchorPlaneDistance1":3.0,"CurveToleranceDegrees":30.0,"FlatAngleDegrees":0.5124707395061022},{"SelectionKind":"Edge","AnchorMidpoint":{"X":0.0,"Y":3.0,"Z":10.0},"AnchorDirection":{"X":-1.0,"Y":0.0,"Z":0.0},"AnchorNormal0":{"X":0.0,"Y":0.0,"Z":1.0},"AnchorPlaneDistance0":10.0,"AnchorNormal1":{"X":-0.0,"Y":1.0,"Z":0.0},"AnchorPlaneDistance1":3.0,"CurveToleranceDegrees":30.0,"FlatAngleDegrees":0.5124707395061022}],
+"size":4.0,"segments":1,"profile_is_round":false,"bend_threshold_degrees":10.0,
+"routing":[true,false,true,true],
+"expected_mesh":null,
+"expected_rows":[{"failure":"SizeCollidesAcrossFace","warnings":[],"loop_failures":0},{"failure":"SizeCollidesAcrossFace","warnings":[],"loop_failures":0}],
+"expected_advisories":[]}
