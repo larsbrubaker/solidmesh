@@ -1,8 +1,9 @@
 # Stores a crates.io API token as the CARGO_REGISTRY_TOKEN secret of larsbrubaker/solidmesh, which
 # the publish workflow (.github/workflows/publish.yml) hands to `cargo publish`.
 #
-# The token is read with hidden input and passed to `gh secret set` on standard input, so it never
-# appears on screen, in the command line, in shell history or in a file. Needs the GitHub CLI
+# The token is read with hidden input and handed straight to `gh secret set --body`, so it never
+# appears on screen, in shell history or in a file (it is on gh's command line only while gh
+# runs, visible to this machine's own process list). Needs the GitHub CLI
 # signed in to an account that can administer the repository (`gh auth status`).
 #
 # Usage (PowerShell, from anywhere):
@@ -23,7 +24,9 @@ try {
     if ([string]::IsNullOrWhiteSpace($token)) {
         throw 'No token entered; nothing was changed.'
     }
-    $token.Trim() | gh secret set CARGO_REGISTRY_TOKEN --repo $repo
+    # Passed with --body, not piped: PowerShell adds a line ending to whatever it pipes to a
+    # native program, and a CR/LF inside the token makes cargo refuse it as a header character.
+    gh secret set CARGO_REGISTRY_TOKEN --repo $repo --body $token.Trim()
     if ($LASTEXITCODE -ne 0) {
         throw "gh secret set failed (exit $LASTEXITCODE); the secret was not changed."
     }
