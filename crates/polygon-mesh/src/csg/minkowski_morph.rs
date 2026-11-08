@@ -29,25 +29,20 @@ use crate::{CancelToken, Mesh};
 pub enum ErosionPath {
     /// The halfspace-intersection closed form: two convex hulls, whatever the triangle count.
     ClosedForm,
-    /// The per-triangle sweep, or the erosion tree that reduces the same hulls (the same cost
-    /// regime).
+    /// The per-triangle sweep, which a non-convex tool takes.
     Sweep,
+    /// The kernel's parallel union tree, which a non-convex solid and a convex tool take. It
+    /// reduces the same hulls as the sweep, so it costs per triangle too.
+    Tree,
 }
 
 static DILATION_TREE_RUNS: AtomicI64 = AtomicI64::new(0);
-static EROSION_TREE_RUNS: AtomicI64 = AtomicI64::new(0);
 
 /// How many dilations in this process took the kernel's parallel union tree rather than the sweep.
 /// A path signal for tests.
 #[doc(hidden)]
 pub fn dilation_tree_runs() -> i64 {
     DILATION_TREE_RUNS.load(Ordering::SeqCst)
-}
-
-/// The erosion counterpart of [`dilation_tree_runs`].
-#[doc(hidden)]
-pub fn erosion_tree_runs() -> i64 {
-    EROSION_TREE_RUNS.load(Ordering::SeqCst)
 }
 
 /// Dilation, every point of `solid` swept by `tool`.
@@ -245,7 +240,7 @@ fn morph(
         .then(|| solid.try_erode_by_convex(tool, token, tree_ref))
         .flatten()
     {
-        EROSION_TREE_RUNS.fetch_add(1, Ordering::SeqCst);
+        erosion_path = ErosionPath::Tree;
         tree_difference
     } else if inset {
         solid.minkowski_difference_with_progress(tool, token, progress_ref)

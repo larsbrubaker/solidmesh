@@ -7,6 +7,10 @@
 //! `mattercad-model` tests, whose header says how to refresh them). A change that moves one on
 //! purpose refreshes the file and says why in its commit. A refused row's offered size is left
 //! out: its search runs against a clock.
+//!
+//! Lars Brubaker made the designs these requests came from and dedicates the files in
+//! `tests/bevel/part_requests` to the public domain under CC0 1.0
+//! (<https://creativecommons.org/publicdomain/zero/1.0/>).
 
 use std::fs;
 use std::path::Path;
