@@ -2,7 +2,7 @@
 //! (`entry_point`), asked a [`BevelPartRequest`] (one part's mesh, where it sits, its picks and the
 //! operation's settings, `request`, with the constructions it may take, [`BevelRouting`],
 //! `routing`) and answering a [`BevelPartOutcome`] (the mesh or none, a row
-//! per group, the part-level failures and advisories, as codes, `outcome`) or a
+//! per group and the advisories, as codes, `outcome`) or a
 //! [`BevelPartError`] (a cancel, or a build that could not run: an opaque [`BevelBuildFailure`],
 //! `error`).
 //!

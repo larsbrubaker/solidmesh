@@ -66,7 +66,6 @@ fn a_part_with_no_mesh_refuses_every_group_by_code() {
         };
 
         assert!(outcome.mesh.is_none());
-        assert!(outcome.failures.is_none());
         assert!(outcome.advisories.is_none());
         assert_eq!(
             vec![Some(BevelAdvisoryCode::PartHasNoMeshToBevel); 2],

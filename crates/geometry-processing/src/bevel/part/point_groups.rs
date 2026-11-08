@@ -115,7 +115,6 @@ pub fn build_part(
     let edge_color = edge_result
         .as_ref()
         .map_or(Color::default(), |edge| edge.color);
-    let edge_failures = edge_result.as_ref().and_then(|edge| edge.failures.clone());
     let edge_advisories = edge_result
         .as_ref()
         .and_then(|edge| edge.advisories.clone());
@@ -137,7 +136,6 @@ pub fn build_part(
             edge_mesh,
             edge_color,
             results,
-            edge_failures,
             edge_advisories,
         ));
     };
@@ -200,13 +198,7 @@ pub fn build_part(
     } else {
         Some(source_advisories)
     };
-    Ok(BevelPartOutcome::new(
-        mesh,
-        color,
-        results,
-        edge_failures,
-        advisories,
-    ))
+    Ok(BevelPartOutcome::new(mesh, color, results, advisories))
 }
 
 /// Bevels the Point groups at `indices` of `groups` (in the space of `mesh`) onto

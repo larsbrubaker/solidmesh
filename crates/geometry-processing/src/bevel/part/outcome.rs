@@ -1,8 +1,9 @@
 //! What one part's bevel came to ([`BevelPartOutcome`]): the mesh to show, or none, and everything
 //! the build has to say about it, as codes. The surface construction (`surface_part_builder`), the
 //! Point groups (`point_groups`) and the part's prologue (`prologue`) all answer in it, and
-//! [`bevel_part`](super::bevel_part) hands it to the caller, who words the rows, the part-level
-//! failures and the advisories in its own language.
+//! [`bevel_part`](super::bevel_part) hands it to the caller, who words the rows and the
+//! advisories in its own language. Every failure belongs to a group's row, or is a
+//! [`BevelPartError`](super::BevelPartError) when the build could not run at all.
 
 use solidmesh_math::Color;
 use solidmesh_mesh::Mesh;
@@ -27,10 +28,6 @@ pub struct BevelPartOutcome {
     /// where nothing wrote it; every reader skips those.
     pub group_results: Vec<Option<BevelGroupResult>>,
 
-    /// What went wrong with this part as a whole rather than with one group; `None` when there
-    /// is nothing to say.
-    pub failures: Option<Vec<BevelAdvisory>>,
-
     /// What had to be put right to build it, or was built with a caveat; `None` when there is
     /// nothing to say.
     pub advisories: Option<Vec<BevelAdvisory>>,
@@ -42,14 +39,12 @@ impl BevelPartOutcome {
         mesh: Option<Mesh>,
         color: Color,
         group_results: Vec<Option<BevelGroupResult>>,
-        failures: Option<Vec<BevelAdvisory>>,
         advisories: Option<Vec<BevelAdvisory>>,
     ) -> Self {
         BevelPartOutcome {
             mesh,
             color,
             group_results,
-            failures,
             advisories,
         }
     }
@@ -77,6 +72,6 @@ impl BevelPartOutcome {
             })
             .collect();
 
-        BevelPartOutcome::new(None, Color::default(), refusals, None, None)
+        BevelPartOutcome::new(None, Color::default(), refusals, None)
     }
 }

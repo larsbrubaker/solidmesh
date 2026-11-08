@@ -95,7 +95,6 @@ pub fn prepare(request: &BevelPartRequest) -> PreparedPart {
             Color::default(),
             refusals,
             None,
-            None,
         )));
     };
 

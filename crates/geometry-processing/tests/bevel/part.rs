@@ -15,6 +15,8 @@ pub(crate) mod part_cove_round_next_flip_tests;
 pub(crate) mod part_level_line_known_room_tests;
 #[path = "part/part_level_line_settle_tests.rs"]
 pub(crate) mod part_level_line_settle_tests;
+#[path = "part/part_no_group_without_a_row_tests.rs"]
+pub(crate) mod part_no_group_without_a_row_tests;
 #[path = "part/part_partial_round_tests.rs"]
 pub(crate) mod part_partial_round_tests;
 #[path = "part_pick_memo_tests.rs"]

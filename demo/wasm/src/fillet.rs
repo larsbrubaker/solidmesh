@@ -82,10 +82,6 @@ pub fn fillet_part(
         "{built} of {} picks built, in one bevel_part call.",
         picks.len()
     );
-    if let Some(failures) = outcome.failures.as_deref().and_then(join_advisories) {
-        note.push(' ');
-        note.push_str(&failures);
-    }
     // how the kernel conditioned the source before building is not the user's to act on
     let said: Vec<_> = outcome
         .advisories

@@ -17,6 +17,8 @@ pub mod level_line_kernel_handoff;
 pub mod level_line_memo;
 pub(crate) mod level_line_rows;
 pub(crate) mod narrow_the_refusal;
+#[doc(hidden)]
+pub mod no_group_without_a_row;
 pub(crate) mod pass_in_two;
 pub(crate) mod past_the_level_lines_room;
 pub mod rim_after_its_partner;

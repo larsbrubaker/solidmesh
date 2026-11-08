@@ -52,7 +52,6 @@ fn a_cube_edge_is_filleted_and_carried_out_to_the_operation() {
     let bounds = mesh.get_axis_aligned_bounding_box();
     assert!((bounds.min_xyz.x - 120.0).abs() < 1e-4, "{bounds:?}");
     assert!((bounds.max_xyz.x - 130.0).abs() < 1e-4, "{bounds:?}");
-    assert!(outcome.failures.is_none());
 }
 
 /// A pick in Point mode is judged by the Point groups and gets its own row: a cube's corner, whose

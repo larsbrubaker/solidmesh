@@ -20,6 +20,7 @@
 
 use std::rc::Rc;
 
+use super::no_group_without_a_row::refuse_the_groups_with_no_row;
 use crate::bevel::bevel_advisory_codes;
 use crate::bevel::level_line::corner_cap_hole_fill_switch::hold_corner_cap_switches;
 use crate::bevel::level_line::{turn_stopped_ends_on, WorkError};
@@ -131,6 +132,8 @@ impl BevelSurfacePartBuilder {
         }
 
         let built = self.build_the_groups_together(&building, &mut results, cancellation_token)?;
+        let edge_count_of = |index: usize| self.resolutions[index].edges.len() as i32;
+        refuse_the_groups_with_no_row(&building, &mut results, &self.groups, edge_count_of);
 
         // The rebuild's work is done, built or refused: the bar ends at its end rather than
         // wherever the last window left it.
@@ -145,7 +148,6 @@ impl BevelSurfacePartBuilder {
                 None,
                 Color::default(),
                 results,
-                None,
                 advisories,
             ));
         };
@@ -169,7 +171,6 @@ impl BevelSurfacePartBuilder {
             Some(built),
             color,
             results,
-            None,
             advisories,
         ))
     }
