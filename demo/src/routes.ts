@@ -4,4 +4,5 @@
 
 export const DEMO_ROUTES = [
   'fillet', 'booleans', 'outline', 'implicit', 'minkowski-hull', 'repair', 'measure-export',
+  'ray-trace',
 ];

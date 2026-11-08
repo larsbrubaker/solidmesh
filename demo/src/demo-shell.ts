@@ -39,18 +39,23 @@ function fmt(n: number, digits = 1): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-export function createDemoPage(container: HTMLElement, spec: PageSpec): DemoPage {
-  container.innerHTML = `
+/** The page frame: title, description, canvas area and control column; every page shares it. */
+export function demoFrameMarkup(title: string, description: string): string {
+  return `
     <div class="demo-page">
       <div class="demo-header">
-        <h2>${spec.title}</h2>
-        <p>${spec.description}</p>
+        <h2>${title}</h2>
+        <p>${description}</p>
       </div>
       <div class="demo-layout">
         <div class="demo-canvas-area" id="viewer-container"><div class="busy-badge">Computing&hellip;</div></div>
         <div class="demo-controls" id="controls"></div>
       </div>
     </div>`;
+}
+
+export function createDemoPage(container: HTMLElement, spec: PageSpec): DemoPage {
+  container.innerHTML = demoFrameMarkup(spec.title, spec.description);
   const viewerEl = container.querySelector('#viewer-container') as HTMLElement;
   const controls = container.querySelector('#controls') as HTMLElement;
   const busy = container.querySelector('.busy-badge') as HTMLElement;

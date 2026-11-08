@@ -145,6 +145,322 @@ fn the_showcase_part_is_one_closed_solid() {
     );
 }
 
+// The Ray Tracing page: the production scene, camera and shader the wasm calls, run natively on
+// known solids (a part, a cube, a sphere), reading back real pixels and hits.
+mod ray_trace {
+    use solidmesh::math::Vector3;
+    use solidmesh::mesh::Mesh;
+    use solidmesh_wasm::ray_trace::{Accumulation, TraceRequest};
+    use solidmesh_wasm::ray_trace_scene::{Camera, Part, Surface, TraceScene};
+    use solidmesh_wasm::ray_trace_shade::{depth_range, depth_value, sun_direction, Mode};
+    use solidmesh_wasm::shapes::Shape;
+
+    const WIDTH: u32 = 120;
+    const HEIGHT: u32 = 90;
+
+    fn scene_of(mesh: &Mesh) -> TraceScene {
+        TraceScene::new(mesh, "test".to_string()).expect("the scene builds")
+    }
+
+    fn request(mode: Mode, seed: u32) -> TraceRequest {
+        TraceRequest {
+            yaw: 0.9,
+            pitch: 0.5,
+            zoom: 1.0,
+            mode,
+            reflectivity: 0.0,
+            seed,
+            width: WIDTH,
+            height: HEIGHT,
+        }
+    }
+
+    /// `samples` whole samples of `request`, the same way a preview frame is rendered.
+    fn render(scene: &TraceScene, request: TraceRequest, samples: u32) -> Accumulation {
+        let mut image = Accumulation::new();
+        for _ in 0..samples {
+            image
+                .pass(scene, request, 0.0, &mut || 0.0)
+                .expect("the pass runs");
+        }
+        image
+    }
+
+    fn pixel(image: &Accumulation, x: u32, y: u32) -> [u8; 3] {
+        let at = ((y * WIDTH + x) * 4) as usize;
+        let px = image.pixels();
+        [px[at], px[at + 1], px[at + 2]]
+    }
+
+    fn brightness(color: [u8; 3]) -> u32 {
+        color.iter().map(|&c| u32::from(c)).sum()
+    }
+
+    fn camera_of(scene: &TraceScene, r: &TraceRequest) -> Camera {
+        Camera::new(scene, r.yaw, r.pitch, r.zoom, r.width, r.height)
+    }
+
+    fn torus_scene() -> TraceScene {
+        scene_of(&Shape::Torus.build(60.0, 64).expect("the torus builds"))
+    }
+
+    /// The camera orbits the part's centre and looks at it, so a ray at the centre of the image
+    /// must hit the ring (a torus' hole sits under the centre; a sphere has no hole) rather than
+    /// run off into the background, and the shaded pixel must not be the sky behind it.
+    #[test]
+    fn a_ray_at_the_part_hits_it_and_the_centre_pixel_is_not_background() {
+        let sphere = Shape::Sphere.build(40.0, 64).expect("the sphere builds");
+        let scene = scene_of(&sphere);
+        let req = request(Mode::Shaded, 1);
+        let camera = camera_of(&scene, &req);
+        let centre = (f64::from(WIDTH) / 2.0, f64::from(HEIGHT) / 2.0);
+
+        let (surface, distance) = scene.surface_at(&camera, centre.0, centre.1);
+
+        assert_eq!(surface, Surface::Part);
+        assert!(distance.is_finite() && distance > 0.0);
+        let image = render(&scene, req, 1);
+        // The part's color is teal; the blue-white sky and the neutral ground are not.
+        let [r, g, _] = pixel(&image, WIDTH / 2, HEIGHT / 2);
+        assert!(
+            f64::from(g) > f64::from(r) * 1.4,
+            "the centre pixel shows the part: red {r}, green {g}"
+        );
+    }
+
+    /// Far from the part, a corner of the image sees the ground or the sky, and never the part.
+    #[test]
+    fn a_corner_past_the_part_sees_the_ground_or_the_sky() {
+        let scene = scene_of(&Shape::Sphere.build(10.0, 48).expect("the sphere builds"));
+        let mut req = request(Mode::Shaded, 1);
+        req.zoom = 0.4;
+        let camera = camera_of(&scene, &req);
+        for (px, py) in [
+            (1.0, 1.0),
+            (f64::from(WIDTH) - 1.0, 1.0),
+            (1.0, 89.0),
+            (119.0, 89.0),
+        ] {
+            let (surface, _) = scene.surface_at(&camera, px, py);
+            assert_ne!(surface, Surface::Part, "corner ({px}, {py})");
+        }
+    }
+
+    /// A point on the ground under the part, away from the sun, is in the part's shadow and
+    /// comes out darker than an open patch of ground on the sunny side.
+    #[test]
+    fn the_ground_in_the_parts_shadow_is_darker_than_in_the_open() {
+        let scene = torus_scene();
+        let req = request(Mode::Shaded, 1);
+        let camera = camera_of(&scene, &req);
+        let sun = sun_direction();
+        let drop = (scene.center.z - scene.ground_z) / sun.z;
+        let shadow_spot = Vector3::new(
+            scene.center.x - sun.x * drop + scene.radius * 0.71,
+            scene.center.y - sun.y * drop,
+            scene.ground_z,
+        );
+        let open_spot =
+            shadow_spot + Vector3::new(sun.x, sun.y, 0.0).get_normal() * scene.radius * 2.0;
+        let (sx, sy) = camera.project(shadow_spot).expect("the shadow is in view");
+        let (ox, oy) = camera
+            .project(open_spot)
+            .expect("the open ground is in view");
+        for (px, py) in [(sx, sy), (ox, oy)] {
+            assert_eq!(scene.surface_at(&camera, px, py).0, Surface::Ground);
+        }
+
+        let image = render(&scene, req, 24);
+
+        let shadowed = brightness(pixel(&image, sx as u32, sy as u32));
+        let open = brightness(pixel(&image, ox as u32, oy as u32));
+        assert!(shadowed < open, "shadow {shadowed} vs open {open}");
+    }
+
+    /// A seed and a sample index always give the same image, bit for bit, whatever the time
+    /// budget does: a different seed does not, and slicing a sample across many passes changes
+    /// nothing.
+    #[test]
+    fn the_same_seed_gives_identical_buffers_however_the_passes_are_sliced() {
+        let scene = torus_scene();
+        let mut req = request(Mode::Shaded, 7);
+        req.reflectivity = 0.4;
+
+        let whole = render(&scene, req, 3);
+        assert_eq!(whole.sums(), render(&scene, req, 3).sums());
+
+        let mut sliced = Accumulation::new();
+        let mut now = 0.0;
+        let mut clock = || {
+            now += 1000.0;
+            now
+        };
+        while sliced.samples() < 3 {
+            sliced
+                .pass(&scene, req, 1.0, &mut clock)
+                .expect("the pass runs");
+        }
+        assert_eq!(whole.sums(), sliced.sums(), "sliced differently");
+        assert_eq!(whole.pixels(), sliced.pixels(), "sliced differently");
+
+        let mut other = req;
+        other.seed = 8;
+        assert_ne!(whole.pixels(), render(&scene, other, 3).pixels());
+    }
+
+    /// Normals mode shows the actual face normal: straight up on a cube's top is (0, 0, 1).
+    #[test]
+    fn normals_mode_shows_a_cubes_top_as_straight_up() {
+        let scene = scene_of(&Shape::Cube.build(40.0, 8).expect("the cube builds"));
+        let mut req = request(Mode::Normals, 1);
+        req.pitch = 1.1;
+        let camera = camera_of(&scene, &req);
+        let top = Vector3::new(scene.center.x, scene.center.y, scene.center.z + 20.0);
+        let (px, py) = camera.project(top).expect("the top is in view");
+        assert_eq!(scene.surface_at(&camera, px, py).0, Surface::Part);
+
+        let image = render(&scene, req, 1);
+
+        // (n + 1) / 2 for (0, 0, 1), rounded to bytes.
+        assert_eq!(pixel(&image, px as u32, py as u32), [128, 128, 255]);
+    }
+
+    /// The page's starting view of `scene` at `width` x `height`.
+    fn starting_camera(scene: &TraceScene, width: u32, height: u32) -> Camera {
+        Camera::new(scene, 0.85, 0.42, 1.0, width, height)
+    }
+
+    /// The angle in degrees between the rays through two pixel positions.
+    fn degrees_between(camera: &Camera, a: (f64, f64), b: (f64, f64)) -> f64 {
+        let (a, b) = (
+            camera.ray_direction(a.0, a.1),
+            camera.ray_direction(b.0, b.1),
+        );
+        a.dot(b).clamp(-1.0, 1.0).acos().to_degrees()
+    }
+
+    /// A phone holds the canvas taller than wide: the whole part still has to fit, so no pixel
+    /// on the image's border may land on it, while the middle of the image does.
+    #[test]
+    fn a_portrait_image_keeps_the_whole_part_inside_the_frame() {
+        let mesh = Part::Boolean.build(64).expect("the part builds");
+        let scene = scene_of(&mesh);
+        let (width, height) = (300u32, 600u32);
+        let camera = starting_camera(&scene, width, height);
+        let at = |x: u32, y: u32| {
+            scene
+                .surface_at(&camera, f64::from(x) + 0.5, f64::from(y) + 0.5)
+                .0
+        };
+
+        for x in 0..width {
+            assert_ne!(at(x, 0), Surface::Part, "top edge, x {x}");
+            assert_ne!(at(x, height - 1), Surface::Part, "bottom edge, x {x}");
+        }
+        for y in 0..height {
+            assert_ne!(at(0, y), Surface::Part, "left edge, y {y}");
+            assert_ne!(at(width - 1, y), Surface::Part, "right edge, y {y}");
+        }
+        assert_eq!(
+            at(width / 2, height / 2),
+            Surface::Part,
+            "the part is in view"
+        );
+    }
+
+    /// The 38 degree field of view spans the shorter side: half of it from the centre to the
+    /// top in a landscape image, and to the side in a portrait one.
+    #[test]
+    fn the_field_of_view_spans_the_images_shorter_side() {
+        let scene = torus_scene();
+        let half_view = 19.0;
+
+        let landscape = starting_camera(&scene, 400, 200);
+        let up = degrees_between(&landscape, (200.0, 100.0), (200.0, 0.0));
+        assert!((up - half_view).abs() < 1e-9, "landscape top at {up}");
+
+        let portrait = starting_camera(&scene, 200, 400);
+        let side = degrees_between(&portrait, (100.0, 200.0), (0.0, 200.0));
+        assert!((side - half_view).abs() < 1e-9, "portrait side at {side}");
+    }
+
+    /// Landscape framing depends only on the height: widening an image shows more at the sides
+    /// and moves nothing, down to the last bit of each ray.
+    #[test]
+    fn widening_a_landscape_image_leaves_its_rays_exactly_where_they_were() {
+        let scene = torus_scene();
+        let square = starting_camera(&scene, 300, 300);
+        let wide = starting_camera(&scene, 1200, 300);
+
+        // Straight up the middle, where the width cannot enter.
+        for py in [0.0, 37.5, 150.0, 299.0] {
+            assert_eq!(
+                square.ray_direction(150.0, py),
+                wide.ray_direction(600.0, py),
+                "column through the middle, y {py}"
+            );
+        }
+        // A quarter of the way out in the 4:1 image is the square image's right edge.
+        assert_eq!(
+            square.ray_direction(300.0, 150.0),
+            wide.ray_direction(750.0, 150.0),
+            "the same angle to the right"
+        );
+    }
+
+    /// Generating a ray and projecting a point are inverses at any shape of image, which is what
+    /// makes a projected point land on the pixel whose ray reaches it.
+    #[test]
+    fn projecting_a_point_on_a_pixels_ray_returns_that_pixel() {
+        let scene = torus_scene();
+        for (width, height) in [(120u32, 90u32), (300, 600), (256, 256)] {
+            let camera = starting_camera(&scene, width, height);
+            for (px, py) in [(0.5, 0.5), (17.25, 80.5), (100.75, 3.5), (60.0, 45.0)] {
+                let point = camera.eye + camera.ray_direction(px, py) * 87.5;
+                let (x, y) = camera.project(point).expect("in front of the camera");
+                assert!(
+                    (x - px).abs() < 1e-9 && (y - py).abs() < 1e-9,
+                    "{width} x {height}: ({px}, {py}) came back as ({x}, {y})"
+                );
+            }
+        }
+    }
+
+    /// Depth mode reports the actual hit distance: the centre of a sphere's face is
+    /// the eye's distance to the centre, less the radius.
+    #[test]
+    fn depth_mode_reads_the_hit_distance_on_a_sphere() {
+        let radius = 20.0;
+        let scene = scene_of(
+            &Shape::Sphere
+                .build(radius * 2.0, 96)
+                .expect("the sphere builds"),
+        );
+        let req = request(Mode::Depth, 1);
+        let camera = camera_of(&scene, &req);
+        let centre = (f64::from(WIDTH) / 2.0, f64::from(HEIGHT) / 2.0);
+        let eye_distance = (scene.center - camera.eye).length();
+
+        let (surface, hit) = scene.surface_at(&camera, centre.0, centre.1);
+        assert_eq!(surface, Surface::Part);
+        assert!(
+            (hit - (eye_distance - radius)).abs() < radius * 0.02,
+            "hit at {hit}, expected about {}",
+            eye_distance - radius
+        );
+
+        let image = render(&scene, req, 1);
+
+        let (near, far) = depth_range(eye_distance, scene.radius);
+        let expected = (depth_value(hit, near, far) * 255.0).round() as i32;
+        let shown = i32::from(pixel(&image, WIDTH / 2, HEIGHT / 2)[0]);
+        assert!(
+            (shown - expected).abs() <= 2,
+            "shown {shown}, expected {expected}"
+        );
+    }
+}
+
 // The Fillet & Chamfer page: a pick made the way the page makes it (a ray at the part, through
 // `PickSession::pick`) and built the way the page builds it (`fillet_part`, every pick at one
 // radius in one `bevel_part` call).

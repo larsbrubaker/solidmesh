@@ -211,19 +211,20 @@ export function whenIdleWithin(ms: number): Promise<boolean> {
 
 /**
  * One page's request queue: at most one call in flight and one waiting; a newer request
- * replaces the waiting one. Results of a disposed page are dropped.
+ * replaces the waiting one. Results of a disposed page are dropped. `R` is what `run` answers: a
+ * `RunResult` for a mesh build, or (the Ray Tracing page) whatever its side worker returns.
  */
-export class Coalescer {
+export class Coalescer<R = RunResult> {
   private running = false;
   private next: { fn: string; args: unknown[] } | null = null;
   private disposed = false;
 
   constructor(
-    private onResult: (r: RunResult) => void,
+    private onResult: (r: R) => void,
     private onError: (e: Error) => void,
     private onBusy: (busy: boolean) => void,
     // The call that computes a request; the worker unless a test supplies its own.
-    private run: (fn: string, args: unknown[]) => Promise<RunResult> = runMesh,
+    private run: (fn: string, args: unknown[]) => Promise<R> = runMesh as unknown as (fn: string, args: unknown[]) => Promise<R>,
   ) {}
 
   request(fn: string, args: unknown[]) {

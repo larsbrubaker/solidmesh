@@ -15,13 +15,17 @@
 //!   contouring, and the implicit boolean of meshes;
 //! - `morph`: Minkowski sum and difference, convex hull;
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
+//! - `ray_trace_scene`, `ray_trace_shade`, `ray_trace`: the Ray Tracing page - a part on a ground
+//!   plane traced through the library's BVH, its shading, and the per-pixel accumulation the
+//!   worker refines in short passes (this page draws on a 2D canvas, so it answers an image rather
+//!   than a [`MeshData`]);
 //! - `showcase`: the part of the Measure & Export page;
 //! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
 //!   them in wasm, and the picks applied at one radius in one `solidmesh::bevel_part` call;
 //!   `fillet_words*` word the kernel's refusal codes in English and `fillet_json` writes the
 //!   picks and rows the page reads.
 
-use js_sys::{Float32Array, Uint32Array, Uint8Array};
+use js_sys::{Float32Array, Object, Reflect, Uint32Array, Uint8Array};
 use solidmesh::mesh::processors::stl_writer;
 use solidmesh::mesh::processors::MeshOutputSettings;
 use solidmesh::mesh::{CancelToken, Mesh};
@@ -38,6 +42,9 @@ pub mod fillet_words_parts;
 pub mod implicit;
 pub mod morph;
 pub mod outline;
+pub mod ray_trace;
+pub mod ray_trace_scene;
+pub mod ray_trace_shade;
 pub mod repair;
 pub mod shapes;
 pub mod showcase;
@@ -331,6 +338,92 @@ thread_local! {
     /// The part the pick worker last prepared, by index, ready to pick on.
     static PICKING: std::cell::RefCell<Option<(u32, fillet_pick::PickSession)>> =
         const { std::cell::RefCell::new(None) };
+}
+
+thread_local! {
+    /// The part the Ray Tracing page last prepared and its image so far.
+    static RAY_TRACE: std::cell::RefCell<Option<ray_trace::Session>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Ray Tracing page: builds part `part` at detail `detail` and the BVH over it on this worker,
+/// and answers its triangle count and how long each took as JSON. A BVH over a million triangles
+/// takes seconds, which is why it is built here and not on the page.
+#[wasm_bindgen]
+pub fn ray_trace_prepare(part: u32, detail: u32) -> Result<String, JsError> {
+    // The old part goes first, so its tree and the new one are never in memory at once.
+    RAY_TRACE.with(|session| *session.borrow_mut() = None);
+    let start = js_sys::Date::now();
+    let (mesh, note) = ray_trace_scene::part_mesh(part, detail).map_err(|e| JsError::new(&e))?;
+    let meshed = js_sys::Date::now();
+    let scene = ray_trace_scene::TraceScene::new(&mesh, note).map_err(|e| JsError::new(&e))?;
+    let finished = js_sys::Date::now();
+    let json = format!(
+        "{{\"part\":{part},\"detail\":{detail},\"triangles\":{},\"mesh_ms\":{},\"bvh_ms\":{},\"note\":{:?}}}",
+        scene.triangles,
+        meshed - start,
+        finished - meshed,
+        scene.note,
+    );
+    RAY_TRACE.with(|session| *session.borrow_mut() = Some(ray_trace::Session::new(scene)));
+    Ok(json)
+}
+
+/// Ray Tracing page: one short pass on the prepared part (see `ray_trace`), answering the image
+/// so far and what the pass did as a plain object the worker can hand to the page. `budget_ms` 0
+/// finishes the sample under way instead of watching the clock.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn ray_trace_pass(
+    yaw: f64,
+    pitch: f64,
+    zoom: f64,
+    mode: u32,
+    reflectivity: f64,
+    seed: u32,
+    width: u32,
+    height: u32,
+    budget_ms: f64,
+) -> Result<Object, JsError> {
+    let mode = ray_trace_shade::Mode::from_index(mode).map_err(|e| JsError::new(&e))?;
+    RAY_TRACE.with(|session| {
+        let mut session = session.borrow_mut();
+        let session = session
+            .as_mut()
+            .ok_or_else(|| JsError::new("That part is not ready to trace yet."))?;
+        let request = ray_trace::TraceRequest {
+            yaw,
+            pitch,
+            zoom,
+            mode,
+            reflectivity,
+            seed,
+            width,
+            height,
+        };
+        let start = js_sys::Date::now();
+        let report = session
+            .accumulation
+            .pass(&session.scene, request, budget_ms, &mut js_sys::Date::now)
+            .map_err(|e| JsError::new(&e))?;
+        let ms = js_sys::Date::now() - start;
+        let result = Object::new();
+        let pixels = Uint8Array::from(session.accumulation.pixels());
+        let fields: [(&str, JsValue); 6] = [
+            ("pixels", pixels.into()),
+            ("width", session.accumulation.width().into()),
+            ("height", session.accumulation.height().into()),
+            ("samples", report.samples.into()),
+            // A double holds any count of rays one pass could fire exactly.
+            ("rays", (report.rays as f64).into()),
+            ("ms", ms.into()),
+        ];
+        for (name, value) in fields {
+            Reflect::set(&result, &name.into(), &value)
+                .map_err(|_| JsError::new("The traced image could not be handed to the page."))?;
+        }
+        Ok(result)
+    })
 }
 
 /// Fillet & Chamfer page: reads an STL as the upload part (`fillet_parts::UPLOAD`) on this

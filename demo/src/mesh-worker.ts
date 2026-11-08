@@ -9,8 +9,8 @@
 //   { type: 'run', id, fn, args }            call wasm export `fn(...args)`; keep the result
 //   { type: 'stl', id }                      the last result as a binary STL
 //   { type: 'call', id, fn, args }           call wasm export `fn(...args)` for a plain value (a
-//                                            JSON string, a count): the Fillet page's picking
-//                                            and upload, which keep state in this worker's wasm
+//                                            JSON string, a count, the Ray Tracing page's traced
+//                                            image), for calls that keep state in this worker's wasm
 // Messages out (one per run / stl / call, with its id):
 //   { type: 'result', id, ok: true, ms, mesh } where mesh holds typed arrays and the measures
 //   { type: 'call', id, ok: true, value, ms }
@@ -92,7 +92,9 @@ self.onmessage = async (ev: MessageEvent) => {
       const start = performance.now();
       const value = fn(...msg.args);
       const ms = performance.now() - start;
-      (self as any).postMessage({ type: 'call', id: msg.id, ok: true, value, ms });
+      // A traced image is handed over rather than copied (wasm-bindgen's array is its own copy).
+      const transfer: Transferable[] = value?.pixels?.buffer ? [value.pixels.buffer] : [];
+      (self as any).postMessage({ type: 'call', id: msg.id, ok: true, value, ms }, transfer);
     } catch (e) {
       const fatal = e instanceof WebAssembly.RuntimeError;
       (self as any).postMessage({ type: 'call', id: msg.id, ok: false, fatal, error: errorText(e) });

@@ -2,7 +2,8 @@
 // capture-thumbs.ts at the demo root).
 //
 // Visit every demo route, wait until the mesh worker is idle (the page's result computed and
-// shown), draw the viewer once more right then, scale its canvas to 320 x 240 and POST it as
+// shown), draw the viewer once more right then (or, for a page that draws on its own canvas and
+// registers it with `setCaptureCanvas`, take that canvas), scale it to 320 x 240 and POST it as
 // JPEG to the dev server, which writes demo/public/thumbs/<route>.jpg.
 //
 // Nothing here waits on animation frames: a browser stops or slows requestAnimationFrame for a
@@ -34,12 +35,19 @@ async function post(path: string, body: unknown): Promise<string> {
   return json.ok ? `${json.size} bytes` : `failed: ${json.error}`;
 }
 
-/** The current viewer's canvas, drawn now and cover-cropped into a 320 x 240 JPEG data URL. */
+let pageCanvas: HTMLCanvasElement | null = null;
+
+/** A page drawing on its own canvas instead of the 3D viewer registers it here for the capture. */
+export function setCaptureCanvas(canvas: HTMLCanvasElement | null) {
+  pageCanvas = canvas;
+}
+
+/** The page's canvas, or the viewer's drawn now, cover-cropped into a 320 x 240 JPEG data URL. */
 function thumbnail(): string | null {
   const viewer = activeViewer();
-  if (!viewer) return null;
-  viewer.renderNow();
-  const canvas = viewer.canvas;
+  if (!pageCanvas && !viewer) return null;
+  if (viewer && !pageCanvas) viewer.renderNow();
+  const canvas = pageCanvas ?? viewer!.canvas;
   const tmp = document.createElement('canvas');
   tmp.width = 320;
   tmp.height = 240;

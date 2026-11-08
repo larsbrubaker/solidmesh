@@ -19,6 +19,7 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
   'minkowski-hull': () => import('./demos/minkowski-hull.ts' as any),
   'repair': () => import('./demos/repair.ts' as any),
   'measure-export': () => import('./demos/measure-export.ts' as any),
+  'ray-trace': () => import('./demos/ray-trace.ts' as any),
 };
 
 const CARDS: Record<string, { title: string; text: string }> = {
@@ -49,6 +50,10 @@ const CARDS: Record<string, { title: string; text: string }> = {
   'measure-export': {
     title: 'Measure & Export',
     text: 'A part built from most of the library: volume, area, mass, and its STL to download.',
+  },
+  'ray-trace': {
+    title: 'Ray Tracing',
+    text: 'A solid traced in WebAssembly through the BVH of the library: shadows, ambient occlusion and reflections, up to a million triangles.',
   },
 };
 

@@ -63,7 +63,7 @@ pub struct Pick {
 }
 
 /// The ray tracing tree over every face of `mesh`, each leaf naming its face.
-fn build_bvh(mesh: &Mesh) -> Option<TraceableRef> {
+pub fn build_bvh(mesh: &Mesh) -> Option<TraceableRef> {
     let corners: Arc<Vec<[Vector3Float; 3]>> = Arc::new(
         mesh.faces
             .iter()
