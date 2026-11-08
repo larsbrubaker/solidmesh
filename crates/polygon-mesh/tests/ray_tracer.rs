@@ -3,6 +3,8 @@
 
 #[path = "ray_tracer/boolean_tests.rs"]
 mod boolean_tests;
+#[path = "ray_tracer/bvh_flat_mesh_depth_tests.rs"]
+mod bvh_flat_mesh_depth_tests;
 #[path = "ray_tracer/minimal_triangle_tests.rs"]
 mod minimal_triangle_tests;
 #[path = "ray_tracer/parallel_sequential_equivalence_tests.rs"]

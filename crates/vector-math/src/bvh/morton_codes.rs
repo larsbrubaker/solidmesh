@@ -5,6 +5,26 @@ use crate::Vector3;
 /// The number of cells per axis, 2^21.
 pub const SIZE: i64 = 1 << 21;
 
+/// The extent the box centers of joint bounds `size` are scaled by to fill the code grid: the
+/// bounds or a unit box, whichever is the longer vector, with a little room so the far edge
+/// stays inside the grid.
+///
+/// An axis with no extent keeps a scale of 1. Dividing the grid by a zero extent is infinite, and
+/// the scale matrix built from it holds NaN in every cell, so every center of a flat mesh would
+/// get the code 0 and no tree could tell them apart. Every other axis keeps exactly the scale it
+/// had, so trees over input with extent on each axis do not change.
+pub fn center_scale(size: Vector3) -> Vector3 {
+    let scale = Vector3::max(size, Vector3::ONE) * 1.001;
+    let usable = |extent: f64| {
+        if (SIZE as f64 / extent).is_finite() {
+            extent
+        } else {
+            1.0
+        }
+    };
+    Vector3::new(usable(scale.x), usable(scale.y), usable(scale.z))
+}
+
 // method to seperate the bits from a position
 fn split_by_3(position: u32) -> i64 {
     let mut x: i64 = i64::from(position & 0x1fffff); // we only look at the first 21 bits

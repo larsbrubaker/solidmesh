@@ -3,6 +3,10 @@
 //! re-sorted by Morton code, cut into up to 32 bins, each bin built by the surface-area
 //! heuristic and the bins joined the same way.
 //!
+//! A range whose items all share a code cannot be split by it, so a large one is cut in half
+//! instead: splitting one item off at a time would recurse once per item, and the resulting
+//! chain would overflow the stack of anything that builds, walks or drops it.
+//!
 //! The build is sequential: the Morton coding, subtree builds and bin builds are independent
 //! tasks that each write their own slot, so running them in parallel would give the same tree.
 //! The leaves are sorted with [`introspective_sort`], an unstable sort with a fixed tie order,
@@ -59,7 +63,7 @@ impl BvhBuilderLocallyOrderedClustering {
 /// Each node with the Morton code of its center over the nodes' joint bounds.
 fn morton_coded(source_nodes: &[TraceableRef]) -> Vec<MortonNode> {
     let bounds = calculate_bounds(source_nodes);
-    let scale = Vector3::max(bounds.size(), Vector3::ONE) * 1.001;
+    let scale = morton_codes::center_scale(bounds.size());
     let centers_to_morton_space = calculate_morton_transform(&bounds, scale);
     source_nodes
         .iter()
@@ -106,7 +110,12 @@ fn build_tree_parallel(nodes: &[MortonNode], start: usize, end: usize) -> Tracea
         return build_tree_recursive(nodes, start, end);
     }
 
-    let split = find_best_split(nodes, start, end);
+    // The range is sorted, so equal ends mean every code in it is the same.
+    let split = if nodes[start].1 == nodes[end].1 {
+        start + (end - start) / 2
+    } else {
+        find_best_split(nodes, start, end)
+    };
     // The two halves are independent builds.
     let left = build_tree_parallel(nodes, start, split);
     let right = build_tree_parallel(nodes, split + 1, end);

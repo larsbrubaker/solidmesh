@@ -3,6 +3,8 @@
 
 #[path = "vector_math/bvh_build_quality_tests.rs"]
 mod bvh_build_quality_tests;
+#[path = "vector_math/bvh_flat_input_tests.rs"]
+mod bvh_flat_input_tests;
 #[path = "vector_math/easing_tests.rs"]
 mod easing_tests;
 #[path = "vector_math/math_helper_constant_tests.rs"]

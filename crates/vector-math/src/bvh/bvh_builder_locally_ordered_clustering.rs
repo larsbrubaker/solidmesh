@@ -2,6 +2,9 @@
 //! over their joint bounds, sorted by Morton code, and split recursively where the codes'
 //! common prefix changes.
 //!
+//! Boxes whose centers share a code cannot be split by it, so a long run of them is cut in half
+//! instead: splitting one off at a time would recurse once per box and overflow the stack.
+//!
 //! Each subtree writes its own disjoint index range, so building large subtrees in parallel
 //! would give the same result as the recursive build that runs here (see [`crate::parallel`]).
 //! The caller's boxes are read only, never changed, since a tree build that edits its input is
@@ -31,6 +34,10 @@ struct NodeInfo {
     original_index: i32,
 }
 
+/// The shortest run of tied codes that is cut in half; shorter runs keep the shape they always
+/// had, since a chain that short costs nothing.
+const MIN_TIED_RUN_TO_HALVE: usize = 64;
+
 /// The builder.
 pub struct BvhBuilderLocallyOrderedClustering;
 
@@ -46,7 +53,7 @@ impl BvhBuilderLocallyOrderedClustering {
         }
 
         let bounds = calculate_bounds(aabbs);
-        let scale = Vector3::max(bounds.size(), Vector3::ONE) * 1.001;
+        let scale = morton_codes::center_scale(bounds.size());
         let centers_to_morton_space = calculate_morton_transform(&bounds, scale);
 
         let mut node_infos: Vec<NodeInfo> = (0..aabbs.len())
@@ -83,7 +90,12 @@ fn build_tree_recursive(
         return node_index;
     }
 
-    let split = find_best_split(node_infos, start, end);
+    let tied = node_infos[start].morton_code == node_infos[end].morton_code;
+    let split = if tied && end - start >= MIN_TIED_RUN_TO_HALVE {
+        start + (end - start) / 2
+    } else {
+        find_best_split(node_infos, start, end)
+    };
 
     let left_child = build_tree_recursive(node_infos, start, split, nodes, node_index + 1);
     let right_child = build_tree_recursive(
