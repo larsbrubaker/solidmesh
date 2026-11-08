@@ -86,11 +86,15 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
           CRATE: ${{ github.event.inputs.crate }}
-        # A token pasted or piped into the secret can carry a trailing CR/LF (Windows shells add
-        # one), which cargo refuses as a header character; strip line endings and spaces first.
+        # A token piped into the secret from a Windows shell can arrive with a line ending, a
+        # byte-order mark or UTF-16 null bytes around it, which cargo refuses as header
+        # characters. crates.io tokens are ASCII letters and digits ("cio" + 32), so keep only
+        # those; the log shows the cleaned length and prefix check, never the token.
         run: |
-          CARGO_REGISTRY_TOKEN="$(printf '%s' "$CARGO_REGISTRY_TOKEN" | tr -d '\r\n\t ')"
+          CARGO_REGISTRY_TOKEN="$(printf '%s' "$CARGO_REGISTRY_TOKEN" | LC_ALL=C tr -cd 'A-Za-z0-9')"
           export CARGO_REGISTRY_TOKEN
+          case "$CARGO_REGISTRY_TOKEN" in cio*) prefix=yes ;; *) prefix=no ;; esac
+          echo "token: ${#CARGO_REGISTRY_TOKEN} characters after cleaning; starts with cio: $prefix"
           if [ "$CRATE" = "all" ]; then
             cargo publish --workspace
           else
