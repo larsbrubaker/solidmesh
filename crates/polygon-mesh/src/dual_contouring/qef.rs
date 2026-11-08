@@ -237,10 +237,6 @@ impl QefData {
         self.mass_point += rhs.mass_point;
         self.num_points += rhs.num_points;
     }
-
-    pub fn num_points(&self) -> i32 {
-        self.num_points
-    }
 }
 
 /// Accumulates planes and finds the point that best fits them.

@@ -10,7 +10,7 @@
 pub mod density;
 pub mod octree;
 mod octree_contour;
-pub mod qef;
+pub(crate) mod qef;
 
 pub use density::{Box, Cylinder, Intersection, Sdf, Sphere, Subtraction, Transform, Union};
 pub use octree::{build_octree, OctreeNode};

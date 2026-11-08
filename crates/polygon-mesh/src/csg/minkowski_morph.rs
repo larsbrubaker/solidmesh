@@ -39,11 +39,13 @@ static EROSION_TREE_RUNS: AtomicI64 = AtomicI64::new(0);
 
 /// How many dilations in this process took the kernel's parallel union tree rather than the sweep.
 /// A path signal for tests.
+#[doc(hidden)]
 pub fn dilation_tree_runs() -> i64 {
     DILATION_TREE_RUNS.load(Ordering::SeqCst)
 }
 
 /// The erosion counterpart of [`dilation_tree_runs`].
+#[doc(hidden)]
 pub fn erosion_tree_runs() -> i64 {
     EROSION_TREE_RUNS.load(Ordering::SeqCst)
 }

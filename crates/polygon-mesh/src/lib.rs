@@ -108,6 +108,7 @@ pub mod solids;
 mod t_junctions;
 mod transformed_aabb_cache;
 pub(crate) mod vector3_list;
+#[doc(hidden)]
 pub mod vertex_sorters;
 
 pub use cancel::{CancelToken, Cancelled};

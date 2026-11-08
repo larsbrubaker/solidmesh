@@ -25,16 +25,21 @@ pub mod consistent_winding;
 pub mod csg_operations;
 mod implicit_boolean;
 mod manifold_cancellable_boolean;
+#[doc(hidden)]
 pub mod manifold_import;
 mod manifold_kernel;
+#[doc(hidden)]
 pub mod manifold_kernel_call_counts;
 mod manifold_operand_batch;
 mod manifold_pairwise_fold;
+#[doc(hidden)]
 pub mod manifold_result_reader;
 pub mod mesh_repair_rust;
 pub mod minkowski_morph;
 pub mod minkowski_processing;
+#[doc(hidden)]
 pub mod minkowski_progress_model;
+#[doc(hidden)]
 pub mod minkowski_shell_orientation;
 pub mod path_stitcher;
 pub mod slice_layer;

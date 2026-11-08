@@ -128,7 +128,7 @@ impl RingVertices {
     /// Every surface on the far side of the ring from the cap walks its edges one way: a cap that
     /// walks them in loop order (`walk_forward`) closes the solid lying on the side the loops'
     /// +z normal points away from. The fill joins only the ring's own vertices (see
-    /// [`cap_faces_by_corner`]).
+    /// `cap_faces_by_corner`).
     pub fn cap_faces(&self, loops: &Paths64, which: &[usize], walk_forward: bool) -> Vec<[i32; 3]> {
         let paths: Vec<&Path64> = which.iter().map(|&i| &loops[i]).collect();
         let indices: Vec<&[i32]> = which.iter().map(|&i| self.indices[i].as_slice()).collect();

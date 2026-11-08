@@ -7,7 +7,7 @@
 //! `ring_loops` prepares, placed and capped by `ring_vertices` over `cap_fill`; and splitting a
 //! mesh into its separate volumes (`split_volumes`).
 
-pub mod cap_fill;
+pub(crate) mod cap_fill;
 pub mod face_bsp_tree;
 pub(crate) mod hull_bounds_points;
 pub mod mesh_convex_hull;
