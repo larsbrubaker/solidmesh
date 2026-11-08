@@ -15,7 +15,11 @@
 //!   contouring, and the implicit boolean of meshes;
 //! - `morph`: Minkowski sum and difference, convex hull;
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
-//! - `showcase`: the part of the Measure & Export page.
+//! - `showcase`: the part of the Measure & Export page;
+//! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
+//!   them in wasm, and the picks applied with `bevel::part::bevel_part`, one call per radius;
+//!   `fillet_words*` word the kernel's refusal codes in English and `fillet_json` writes the
+//!   picks and rows the page reads.
 
 use js_sys::{Float32Array, Uint32Array, Uint8Array};
 use polygon_mesh::processors::stl_writer;
@@ -24,6 +28,13 @@ use polygon_mesh::{CancelToken, Mesh};
 use wasm_bindgen::prelude::*;
 
 pub mod booleans;
+pub mod fillet;
+pub mod fillet_json;
+pub mod fillet_parts;
+pub mod fillet_pick;
+pub mod fillet_words;
+pub mod fillet_words_blend;
+pub mod fillet_words_parts;
 pub mod implicit;
 pub mod morph;
 pub mod outline;
@@ -54,6 +65,10 @@ impl Scene {
 #[wasm_bindgen(start)]
 pub fn wasm_start() {
     console_error_panic_hook::set_once();
+    // Until `BevelPartRequest` carries its routing as options, the bevel takes the routes the
+    // running app takes only once its thread has asked for them; every `bevel_part` call of the
+    // demo runs on the worker thread this module starts on.
+    geometry_processing::bevel::level_line::level_line_routing::turn_on_for_the_running_app();
 }
 
 /// The vertex positions of `mesh`, flattened xyz.
@@ -74,6 +89,8 @@ fn indices_of(mesh: &Mesh) -> Vec<u32> {
 #[wasm_bindgen]
 pub struct MeshData {
     scene: Scene,
+    /// A page's own answer beside the mesh, as JSON (the fillet page's rows); empty elsewhere.
+    data: String,
 }
 
 #[wasm_bindgen]
@@ -150,6 +167,11 @@ impl MeshData {
     }
 
     #[wasm_bindgen(getter)]
+    pub fn data(&self) -> String {
+        self.data.clone()
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn note(&self) -> String {
         self.scene.note.clone()
     }
@@ -171,7 +193,10 @@ impl MeshData {
 /// A builder's result for JavaScript: the scene, or its error as a thrown `Error`.
 fn to_js(result: Result<Scene, String>) -> Result<MeshData, JsError> {
     result
-        .map(|scene| MeshData { scene })
+        .map(|scene| MeshData {
+            scene,
+            data: String::new(),
+        })
         .map_err(|e| JsError::new(&e))
 }
 
@@ -304,4 +329,119 @@ pub fn showcase_scene(
     detail: u32,
 ) -> Result<MeshData, JsError> {
     to_js(showcase::showcase_part(holes, flange, blend, detail))
+}
+
+thread_local! {
+    /// The part the pick worker last prepared, by index, ready to pick on.
+    static PICKING: std::cell::RefCell<Option<(u32, fillet_pick::PickSession)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Fillet & Chamfer page: reads an STL as the upload part (`fillet_parts::UPLOAD`) on this
+/// worker; answers its triangle count.
+#[wasm_bindgen]
+pub fn fillet_upload(bytes: &[u8]) -> Result<u32, JsError> {
+    PICKING.with(|picking| {
+        if picking
+            .borrow()
+            .as_ref()
+            .is_some_and(|(at, _)| *at == fillet_parts::UPLOAD)
+        {
+            *picking.borrow_mut() = None;
+        }
+    });
+    fillet_parts::set_upload(bytes)
+        .map(|count| count as u32)
+        .map_err(|e| JsError::new(&e))
+}
+
+/// Fillet & Chamfer page: prepares part `part` for picking on this worker and answers its feature
+/// edges and corners as JSON (`fillet_json::prepared`).
+#[wasm_bindgen]
+pub fn fillet_prepare(part: u32) -> Result<String, JsError> {
+    let mesh = fillet_parts::part(part).map_err(|e| JsError::new(&e))?;
+    let session = fillet_pick::PickSession::new(&mesh);
+    let json = fillet_json::prepared(&session);
+    PICKING.with(|picking| *picking.borrow_mut() = Some((part, session)));
+    Ok(json)
+}
+
+/// Fillet & Chamfer page: what a click along the ray (origin and direction in the part's space)
+/// would pick on the prepared part in `mode` (0 chain, 1 edge, 2 face rim, 3 point), as JSON
+/// (`fillet_json::pick`). `pixel_size` is the mm one pixel spans at 1 mm from the eye.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn fillet_pick(
+    part: u32,
+    ox: f64,
+    oy: f64,
+    oz: f64,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+    mode: u32,
+    pixel_size: f64,
+    round: bool,
+) -> Result<String, JsError> {
+    let mode = fillet_pick::PickMode::from_index(mode).map_err(|e| JsError::new(&e))?;
+    PICKING.with(|picking| {
+        let picking = picking.borrow();
+        let Some((_, session)) = picking.as_ref().filter(|(at, _)| *at == part) else {
+            return Err(JsError::new("That part is not prepared for picking yet."));
+        };
+        let pick = session
+            .pick(
+                vector_math::Vector3::new(ox, oy, oz),
+                vector_math::Vector3::new(dx, dy, dz),
+                mode,
+                pixel_size,
+                round,
+            )
+            .map_err(|e| JsError::new(&e))?;
+        Ok(fillet_json::pick(pick.as_ref()))
+    })
+}
+
+/// Fillet & Chamfer page: part `part` with every pick applied (`fillet::fillet_part`). `picks` is
+/// each pick's group as `fillet_pick::GROUP_NUMBERS` numbers followed by its size; rounds when
+/// `round`, chamfers otherwise. The rows come back as JSON in `data` (`fillet_json::rows`).
+///
+/// The `CancelToken` is never cancelled: the worker runs one wasm call to its end before it reads
+/// its next message, so nothing could reach the token while the build runs (that would need
+/// shared memory, which GitHub Pages does not allow). A superseded drag is instead dropped before
+/// it starts, by the page's request coalescing.
+#[wasm_bindgen]
+pub fn fillet_scene(
+    part: u32,
+    picks: &[f64],
+    round: bool,
+    segments: u32,
+) -> Result<MeshData, JsError> {
+    let source = fillet_parts::part(part).map_err(|e| JsError::new(&e))?;
+    let stride = fillet_pick::GROUP_NUMBERS + 1;
+    if !picks.len().is_multiple_of(stride) {
+        return Err(JsError::new("The picks are not whole."));
+    }
+    let picks = picks
+        .chunks(stride)
+        .map(|n| {
+            Ok(fillet::FilletPick {
+                group: fillet_pick::group_from_numbers(&n[..stride - 1])?,
+                size: n[stride - 1],
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()
+        .map_err(|e| JsError::new(&e))?;
+    let build = fillet::fillet_part(
+        &source,
+        &picks,
+        round,
+        segments.clamp(1, 32) as i32,
+        &CancelToken::new(),
+    )
+    .map_err(|e| JsError::new(&e))?;
+    Ok(MeshData {
+        data: fillet_json::rows(&build.rows, build.passes),
+        scene: build.scene,
+    })
 }
