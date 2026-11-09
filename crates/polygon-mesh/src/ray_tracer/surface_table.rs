@@ -166,6 +166,22 @@ impl MeshSurface {
         })
     }
 
+    /// The corner positions of `face` in the mesh's space, `None` when an index or a coordinate
+    /// is bad (`flat_tree`'s GPU packing reads the same corners the CPU traces).
+    pub(super) fn face_corners(&self, face: usize) -> Option<[Vector3; 3]> {
+        self.corners(face)
+    }
+
+    /// The geometric and three corner normals of `face`, in the mesh's space.
+    pub(super) fn face_normals(&self, face: usize) -> (Vector3, [Vector3; 3]) {
+        (self.geometric_normals[face], self.corner_normals[face])
+    }
+
+    /// The color of `face`, as [`SurfacePoint::base_color`] gives it.
+    pub(super) fn face_color(&self, face: usize) -> Color {
+        self.base_color(face)
+    }
+
     /// The corner positions of `face` in `f64`, `None` when an index or a coordinate is bad.
     fn corners(&self, face: usize) -> Option<[Vector3; 3]> {
         let [v0, v1, v2] = self.faces[face];

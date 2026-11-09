@@ -25,7 +25,7 @@ use solidmesh_math::{Color, Vector2, Vector3};
 /// rays hitting their own face and 2 steps leave none (`surface_hit_continuation_tests` prints the
 /// sweep); the extra is margin, kept small so the offset stays far below any corner a part really
 /// has.
-const SURFACE_OFFSET_F32_STEPS: f64 = 8.0;
+pub(super) const SURFACE_OFFSET_F32_STEPS: f64 = 8.0;
 
 /// The same in `f64` steps of the world position, for parts placed so far from the origin that
 /// moving a ray into the part's space rounds at about the offset's size.

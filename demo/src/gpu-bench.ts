@@ -2,7 +2,10 @@
 // the adapter's real limits, uploading a scene the worker built (demo/wasm/src/gpu_bench.rs), and
 // dispatching the library's compute shader (crates/polygon-mesh/src/ray_tracer/flat_tree/
 // trace.wgsl) in slices sized by src/gpu-bench-rules.ts. `runScatterCheck` runs the library's
-// scattering model over the worker's fixed batch once (demo/wasm/src/gpu_bench_scatter.rs).
+// scattering model over the worker's fixed batch once (demo/wasm/src/gpu_bench_scatter.rs), and
+// `runRenderCheck` renders one scene of the render check with the library's path loop
+// (PATH_WGSL, demo/wasm/src/gpu_bench_render.rs), one pass at a time, reading its accumulation back
+// after each pass so the worker can compare against the CPU.
 //
 // Rays per second is rays traced divided by GPU time. GPU time comes from timestamp queries around
 // each compute pass when the adapter has them, and otherwise from the wall time between
@@ -19,6 +22,10 @@ const RAY_BYTES = 48;
 const HIT_BYTES = 28;
 /** Bytes per scattering result: `SCATTER_RESULT_STRIDE` in the library's flat_tree/scatter_shader.rs. */
 const SCATTER_RESULT_BYTES = 48;
+/** Bytes per accumulated pixel: `ACCUMULATION_STRIDE` in the library's flat_tree/gpu_scene.rs. */
+const ACCUMULATION_BYTES = 16;
+/** Bytes of the coverage-channel record: `CHANNEL_STRIDE` in the library's flat_tree/gpu_scene.rs. */
+const CHANNEL_BYTES = 32;
 
 /** GPUBufferUsage and GPUMapMode, numeric so this file needs no WebGPU type declarations. */
 const MAP_READ = 0x0001;
@@ -353,6 +360,119 @@ export async function runScatterCheck(context: GpuContext, prepared: ScatterPrep
     const copy = new Uint8Array(staging.getMappedRange().slice(0));
     staging.unmap();
     return copy;
+  } finally {
+    for (const buffer of created) buffer.destroy();
+  }
+}
+
+/** What gpu_bench_render_prepare answers. */
+export interface RenderPrepared {
+  shader: string;
+  entryPoint: string;
+  nodes: Uint8Array;
+  triangles: Uint8Array;
+  faces: Uint8Array;
+  parts: Uint8Array;
+  scene: Uint8Array;
+  albedo: Uint8Array;
+  width: number;
+  height: number;
+  samples: number;
+  name: string;
+  zThreshold: number;
+  pooledZThreshold: number;
+  sceneCount: number;
+}
+
+/**
+ * Renders one scene of the render check: `samples` passes, one sample per pixel each, and the
+ * accumulation copied out after every pass, for the worker to compare against the CPU. The time is
+ * the passes themselves, read from the wall clock around each submission so that the reading back
+ * of the accumulation is not counted. Throws an Error with text for the page.
+ */
+export async function runRenderCheck(
+  context: GpuContext, prepared: RenderPrepared, shouldStop: () => boolean,
+): Promise<{ snapshots: Uint8Array; gpuMs: number }> {
+  const device = context.device;
+  const module = device.createShaderModule({ code: prepared.shader });
+  const info = await module.getCompilationInfo();
+  const errors = info.messages.filter((m: any) => m.type === 'error');
+  if (errors.length > 0) {
+    throw new Error(`The GPU driver refused the path tracing shader: ${errors.map((m: any) => m.message).join('; ')}. This is a bug in the page; please report it with the results text.`);
+  }
+  const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: prepared.entryPoint } });
+
+  const pixels = prepared.width * prepared.height;
+  const snapshotBytes = pixels * ACCUMULATION_BYTES;
+  const created: any[] = [];
+  const upload = (bytes: Uint8Array, usage: number) => {
+    const buffer = uploadBuffer(device, bytes, usage);
+    created.push(buffer);
+    return buffer;
+  };
+  try {
+    const nodes = upload(prepared.nodes, STORAGE);
+    const triangles = upload(prepared.triangles, STORAGE);
+    const albedo = upload(prepared.albedo, STORAGE);
+    const faces = upload(prepared.faces, STORAGE);
+    const parts = upload(prepared.parts, STORAGE);
+    const sceneUniform = upload(prepared.scene, UNIFORM);
+    const srgbUniform = upload(prepared.srgb, UNIFORM);
+    // A plain view never reads the channels, but the pipeline binds the buffer; one record does.
+    const channels = device.createBuffer({ size: CHANNEL_BYTES, usage: STORAGE });
+    created.push(channels);
+    const accumulation = device.createBuffer({ size: snapshotBytes, usage: STORAGE | COPY_SRC });
+    const staging = device.createBuffer({ size: snapshotBytes, usage: MAP_READ | COPY_DST });
+    const sliceUniform = device.createBuffer({ size: 16, usage: UNIFORM | COPY_DST });
+    created.push(accumulation, staging, sliceUniform);
+
+    const group0 = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: nodes } },
+        { binding: 1, resource: { buffer: triangles } },
+      ],
+    });
+    const group1 = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(1),
+      entries: [{ binding: 0, resource: { buffer: albedo } }],
+    });
+    const group2 = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(2),
+      entries: [
+        { binding: 0, resource: { buffer: faces } },
+        { binding: 1, resource: { buffer: parts } },
+        { binding: 2, resource: { buffer: accumulation } },
+        { binding: 3, resource: { buffer: sceneUniform } },
+        { binding: 4, resource: { buffer: sliceUniform } },
+        { binding: 5, resource: { buffer: channels } },
+        { binding: 6, resource: { buffer: srgbUniform } },
+      ],
+    });
+
+    const snapshots = new Uint8Array(snapshotBytes * prepared.samples);
+    let gpuMs = 0;
+    for (let pass = 0; pass < prepared.samples; pass++) {
+      if (shouldStop()) throw new Error('stopped');
+      device.queue.writeBuffer(sliceUniform, 0, new Uint32Array([0, pixels, pass, 0]));
+      const encoder = device.createCommandEncoder();
+      const computePass = encoder.beginComputePass();
+      computePass.setPipeline(pipeline);
+      computePass.setBindGroup(0, group0);
+      computePass.setBindGroup(1, group1);
+      computePass.setBindGroup(2, group2);
+      computePass.dispatchWorkgroups(Math.ceil(pixels / WORKGROUP_RAYS));
+      computePass.end();
+      encoder.copyBufferToBuffer(accumulation, 0, staging, 0, snapshotBytes);
+      const before = performance.now();
+      device.queue.submit([encoder.finish()]);
+      await device.queue.onSubmittedWorkDone();
+      gpuMs += performance.now() - before;
+      await staging.mapAsync(MAP_MODE_READ);
+      snapshots.set(new Uint8Array(staging.getMappedRange()), pass * snapshotBytes);
+      staging.unmap();
+    }
+    return { snapshots, gpuMs };
   } finally {
     for (const buffer of created) buffer.destroy();
   }

@@ -8,7 +8,12 @@
 //! WGSL. `layout` holds the two records and their bytes, and `shader` the WGSL traversal itself
 //! ([`TRACE_WGSL`], from `trace.wgsl`) with the ray and hit records it adds. `scatter_shader` is
 //! the WGSL port of the scattering model ([`SCATTER_WGSL`]) and the entry point that checks it
-//! against the CPU model, reading [`SurfaceRecord`] and [`albedo_table_bytes`].
+//! against the CPU model, reading [`SurfaceRecord`] and [`albedo_table_bytes`]. `gpu_scene` and
+//! `gpu_pack` pack a whole render scene ([`GpuRenderScene`], [`GpuSceneBuilder`]) and `gpu_view` the
+//! camera, lights, settings and floor ([`GpuView`]) for the path loop [`PATH_WGSL`] (`path_shader`,
+//! `path.wgsl`, `catcher.wgsl`), which renders one sample per pixel of a slice into accumulation
+//! buffers on the GPU: the same estimator as the CPU's `path_tracer`, and the shadow-catcher floor
+//! and coverage channels a compositing caller needs.
 //!
 //! This module is the one place geometry narrows from `f64` to `f32`, because WGSL has no `f64`
 //! and a GPU read of `f32` is the point of the buffers. Everything upstream stays `f64` in a
@@ -94,7 +99,11 @@
 //! traversal does not re-check them.
 
 mod build;
+mod gpu_pack;
+mod gpu_scene;
+mod gpu_view;
 mod layout;
+mod path_shader;
 mod scatter_shader;
 mod shader;
 mod traverse;
@@ -105,7 +114,20 @@ pub use super::scattering::{
     albedo_table_bytes, SurfaceRecord, ALBEDO_ENTRY_COUNT, ALBEDO_ENTRY_STRIDE, SURFACE_HAS_GLASS,
     SURFACE_INDEX_MATCHED, SURFACE_RECORD_STRIDE, SURFACE_SMOOTH,
 };
+pub use gpu_pack::{gpu_channel_bytes, GpuSceneBuilder, GPU_SCENE_BUILDER_UNITS_PER_FACE};
+pub use gpu_scene::{
+    gpu_scene_size_bound, pixel_slice_bytes, FaceRecord, GpuRenderScene, GpuSceneLimits,
+    GpuSceneSizes, PartRecord, ACCUMULATION_STRIDE, CHANNEL_STRIDE, FACE_STRIDE, PART_STRIDE,
+    PIXEL_SLICE_BYTES,
+};
+pub use gpu_view::{
+    GpuCompositing, GpuFloor, GpuView, ViewRecord, GPU_SKY_SEED_SALT, GPU_SUN_SEED_SALT,
+    MIN_GPU_SUN_ANGULAR_RADIUS, ROULETTE_OFF, SCENE_FLAG_COMPOSITE, SCENE_FLAG_FLOOR,
+    SCENE_FLAG_GRADIENT, SCENE_FLAG_ORTHOGRAPHIC, SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN,
+    SRGB_TABLE_BYTES, VIEW_RECORD_BYTES,
+};
 pub use layout::{child_code, FlatNode, FlatTriangle, NODE_STRIDE, TRIANGLE_STRIDE};
+pub use path_shader::{PATH_ENTRY_POINT, PATH_WGSL, PATH_WORKGROUP_PIXELS};
 pub use scatter_shader::{
     ScatterCheckCase, ScatterCheckResult, SAMPLE_FOUND, SAMPLE_SPECULAR, SCATTER_CASE_STRIDE,
     SCATTER_CHECK_WGSL, SCATTER_RESULT_STRIDE, SCATTER_WGSL,
@@ -172,6 +194,27 @@ pub enum FlatTreeError {
     TreeTooDeep { depth: u32, limit: u32 },
     /// The BVH handed back a leaf that is not one of the triangles built for it.
     UnexpectedBvhLeaf,
+    /// A buffer of a packed render scene ([`GpuRenderScene`]) would exceed the binding limit.
+    PackedBufferTooLarge {
+        buffer: &'static str,
+        needed_bytes: u64,
+        limit_bytes: u64,
+        /// What the limit would count: `"triangles"`, `"parts"` or `"pixels"`.
+        what: &'static str,
+        largest_that_fits: u64,
+    },
+    /// The scene spreads too far for its corners to be held in `f32` as finely as the caller asked.
+    SceneTooLarge {
+        /// How far the farthest corner is from the scene's center on one axis.
+        reach: f64,
+        /// The `f32` step a coordinate that far out has.
+        step: f64,
+        required_step: f64,
+        /// How far the corners may reach and still meet `required_step`.
+        largest_reach: f64,
+    },
+    /// A value of the scene can't be carried in the GPU's 32-bit arithmetic; the reason says what.
+    NotRepresentable { reason: &'static str },
 }
 
 impl fmt::Display for FlatTreeError {
@@ -216,6 +259,31 @@ impl fmt::Display for FlatTreeError {
                 "the BVH builder returned a leaf that is not a triangle, which is a bug in the \
                  ray tracer: please report it"
             ),
+            FlatTreeError::PackedBufferTooLarge {
+                buffer,
+                needed_bytes,
+                limit_bytes,
+                what,
+                largest_that_fits,
+            } => write!(
+                f,
+                "the {buffer} buffer would need {needed_bytes} bytes but this GPU allows \
+                 {limit_bytes} bytes in one storage binding: reduce this scene to at most \
+                 {largest_that_fits} {what}, or request a larger maxStorageBufferBindingSize"
+            ),
+            FlatTreeError::SceneTooLarge {
+                reach,
+                step,
+                required_step,
+                largest_reach,
+            } => write!(
+                f,
+                "this scene reaches {reach} units from its center, where the GPU's 32-bit \
+                 coordinates step by {step}, and this render needs steps of {required_step} or \
+                 finer: keep every part within {largest_reach} units of the scene's center, or \
+                 render it on the CPU"
+            ),
+            FlatTreeError::NotRepresentable { reason } => write!(f, "{reason}"),
         }
     }
 }

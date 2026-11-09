@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-  FIRST_SLICE_RAYS, OVER_MS, SliceSizer, TARGET_MS, WORKGROUP_RAYS, formatRate, formatRatio, formatScatter, reportText, SCATTER_CONDITIONING_NOTE,
+  FIRST_SLICE_RAYS, OVER_MS, SliceSizer, TARGET_MS, WORKGROUP_RAYS, formatRate, formatRatio, formatRender, formatSamples, formatScatter, reportText, SCATTER_CONDITIONING_NOTE,
 } from './gpu-bench-rules.ts';
 
 describe('the scattering check', () => {
@@ -32,6 +32,64 @@ describe('the scattering check', () => {
 
   test('a run without a scattering check reports none', () => {
     expect(reportText(inputs)).not.toContain('Scattering model');
+  });
+});
+
+describe('the render check', () => {
+  const row = {
+    name: 'Glossy metal sphere', passed: false, regions: 64, exceeded: 2, maxZ: 5.5, worst: 'region 10 channel 2: GPU 9.2, CPU 9.5',
+    lineGroups: 96, linesExceeded: 1, linesMaxZ: 6.2, linesWorst: 'column 17 channel 0: GPU 1.03, CPU 1.0',
+    pooledGroups: 9, pooledExceeded: 0, pooledMaxZ: 1.3, pooledWorst: 'whole image channel 0',
+    uniformExceeded: 0, uniformMaxZ: 0.6, uniformWorst: 'channel 2: estimated uniform bias 0.02%',
+    gpuDropped: 0, cpuDropped: 0, closedFormExceeded: 0, cpuClosedFormExceeded: 0, meanRelativeDifference: 0.018,
+    detectableUniform: 0.0037, detectableWhole: 0.014, detectableRegionMedian: 0.031, samplesPerSecond: 1.9e6, timing: 'wall time',
+  };
+  const inputs = {
+    adapter: 'test', timing: 'test', triangles: 1, nodeBytes: 1, triangleBytes: 1, maxBinding: 1, depth: 1, rows: [],
+  };
+
+  test('one line says how many regions exceeded and the stated threshold', () => {
+    const text = formatRender(row, 5, 4.5);
+    expect(text).toContain('FAILED');
+    expect(text).toContain('2 of 64 regions');
+    expect(text).toContain('1 of 96 pixel lines');
+    expect(text).toContain('0 of 9 pooled groups');
+    expect(text).toContain('z = 5');
+    expect(text).toContain('z = 4.5');
+    expect(text).toContain('6.20');
+  });
+
+  test('a passing scene is not marked failed', () => {
+    expect(formatRender({ ...row, passed: true, exceeded: 0, linesExceeded: 0 }, 5, 4.5)).not.toContain('FAILED');
+  });
+
+  test('a sample the GPU dropped that the CPU kept is named in the report and fails the row', () => {
+    const dropped = reportText({ ...inputs, render: [{ ...row, passed: false, exceeded: 0, linesExceeded: 0, gpuDropped: 3, cpuDropped: 0 }], renderThreshold: 5, renderPooledThreshold: 4.5 });
+    expect(dropped).toContain('FAILED');
+    expect(dropped).toContain('the GPU dropped 3 samples the CPU kept');
+  });
+
+  test('samples per second reads in the largest fitting unit', () => {
+    expect(formatSamples(2_500_000)).toBe('2.50 M samples/s');
+    expect(formatSamples(900)).toBe('900 samples/s');
+  });
+
+  test('the report names the scene, the worst region of a disagreement and the sample rate', () => {
+    const text = reportText({ ...inputs, render: [row], renderThreshold: 5, renderPooledThreshold: 4.5 });
+    expect(text).toContain('Whole renders by the GPU path loop');
+    expect(text).toContain('Glossy metal sphere');
+    expect(text).toContain('worst: region 10 channel 2');
+    expect(text).toContain('worst line: column 17 channel 0');
+    expect(text).toContain('0.37% uniform');
+    expect(text).toContain('1.90 M samples/s');
+    expect(text).toContain('thresholds z = 5, pooled z = 4.5');
+  });
+
+  test('a clean scene does not list a worst region, and no render check means no section', () => {
+    const clean = reportText({ ...inputs, render: [{ ...row, passed: true, exceeded: 0, linesExceeded: 0 }], renderThreshold: 5, renderPooledThreshold: 4.5 });
+    expect(clean).not.toContain('worst:');
+    expect(clean).not.toContain('worst line:');
+    expect(reportText(inputs)).not.toContain('Whole renders');
   });
 });
 

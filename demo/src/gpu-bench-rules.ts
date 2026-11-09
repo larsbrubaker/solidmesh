@@ -68,6 +68,40 @@ export interface ScatterRow {
   examples: string;
 }
 
+/** One scene of the render check (`gpu_bench_render_check`). */
+export interface RenderRow {
+  name: string;
+  /** Every tier is clean and the GPU dropped no more samples than the CPU did. */
+  passed: boolean;
+  regions: number;
+  exceeded: number;
+  maxZ: number;
+  worst: string;
+  lineGroups: number;
+  linesExceeded: number;
+  linesMaxZ: number;
+  linesWorst: string;
+  pooledGroups: number;
+  pooledExceeded: number;
+  pooledMaxZ: number;
+  pooledWorst: string;
+  uniformExceeded: number;
+  uniformMaxZ: number;
+  uniformWorst: string;
+  gpuDropped: number;
+  cpuDropped: number;
+  closedFormExceeded: number;
+  cpuClosedFormExceeded: number;
+  meanRelativeDifference: number;
+  detectableUniform: number;
+  detectableWhole: number;
+  detectableRegionMedian: number;
+  /** Samples per pixel over pixels rendered per second, the passes' GPU wall time. */
+  samplesPerSecond: number;
+  /** What the per-pass time counts: 'GPU timestamp queries' or 'submission wall time'. */
+  timing: string;
+}
+
 export interface ReportInputs {
   adapter: string;
   timing: string;
@@ -78,6 +112,9 @@ export interface ReportInputs {
   depth: number;
   rows: KindRow[];
   scatter?: ScatterRow;
+  render?: RenderRow[];
+  renderThreshold?: number;
+  renderPooledThreshold?: number;
 }
 
 /** Beside the scattering check in the report, so a reader of a zero there knows its reach. */
@@ -86,6 +123,19 @@ export const SCATTER_CONDITIONING_NOTE = '  Note: at view cosines at or below ab
 /** The scattering check in one line, for the page and the report. */
 export function formatScatter(row: ScatterRow): string {
   return `${row.compared} scattering cases: ${row.exact} agree within f32, ${row.ties} ties, ${row.disagreed} disagreements`;
+}
+
+/** A render check scene in one line: how many groups exceeded, at each stated z. */
+export function formatRender(row: RenderRow, threshold: number, pooledThreshold: number): string {
+  const verdict = row.passed ? '' : 'FAILED: ';
+  return `${verdict}${row.exceeded} of ${row.regions} regions and ${row.linesExceeded} of ${row.lineGroups} pixel lines over z = ${threshold} (largest ${Math.max(row.maxZ, row.linesMaxZ).toFixed(2)}); ${row.pooledExceeded} of ${row.pooledGroups} pooled groups and ${row.uniformExceeded} of 3 channels of the uniform-bias fit over z = ${pooledThreshold} (largest ${Math.max(row.pooledMaxZ, row.uniformMaxZ).toFixed(2)})`;
+}
+
+/** Samples per second, in the largest fitting unit. */
+export function formatSamples(samplesPerSecond: number): string {
+  if (samplesPerSecond >= 1e6) return `${(samplesPerSecond / 1e6).toFixed(2)} M samples/s`;
+  if (samplesPerSecond >= 1e3) return `${(samplesPerSecond / 1e3).toFixed(1)} k samples/s`;
+  return `${samplesPerSecond.toFixed(0)} samples/s`;
 }
 
 /** A rate as text in the largest fitting unit, with its unit. */
@@ -120,6 +170,22 @@ export function reportText(inputs: ReportInputs): string {
     lines.push(`Scattering model, GPU against the CPU reference: ${formatScatter(inputs.scatter)}`);
     if (inputs.scatter.examples) lines.push(`  ${inputs.scatter.examples.split('\n').join('\n  ')}`);
     lines.push(SCATTER_CONDITIONING_NOTE);
+  }
+  if (inputs.render && inputs.render.length > 0) {
+    const threshold = inputs.renderThreshold ?? 0;
+    const pooled = inputs.renderPooledThreshold ?? 0;
+    lines.push('', `Whole renders by the GPU path loop against the CPU path tracer, compared at four scales (fixed seed, thresholds z = ${threshold}, pooled z = ${pooled}):`);
+    for (const row of inputs.render) {
+      lines.push(`  ${row.name}: ${formatRender(row, threshold, pooled)}; GPU ${formatSamples(row.samplesPerSecond)} (${row.timing}); dropped samples: GPU ${row.gpuDropped}, CPU ${row.cpuDropped}; mean relative difference ${(row.meanRelativeDifference * 100).toFixed(3)}%`);
+      lines.push(`    can detect a bias of: ${(row.detectableUniform * 100).toFixed(2)}% uniform, ${(row.detectableWhole * 100).toFixed(2)}% whole image, ${(row.detectableRegionMedian * 100).toFixed(2)}% in a median region`);
+      if (row.closedFormExceeded > 0) lines.push(`    ${row.closedFormExceeded} channel-groups of the GPU differ from the closed-form answer`);
+      if (row.cpuClosedFormExceeded > 0) lines.push(`    ${row.cpuClosedFormExceeded} channel-groups of the CPU reference differ from the closed-form answer`);
+      if (row.gpuDropped > row.cpuDropped) lines.push(`    the GPU dropped ${row.gpuDropped} samples the CPU kept (${row.cpuDropped})`);
+      if (row.exceeded > 0) lines.push(`    worst: ${row.worst}`);
+      if (row.linesExceeded > 0) lines.push(`    worst line: ${row.linesWorst}`);
+      if (row.pooledExceeded > 0) lines.push(`    worst pooled: ${row.pooledWorst}`);
+      if (row.uniformExceeded > 0) lines.push(`    uniform bias: ${row.uniformWorst}`);
+    }
   }
   lines.push('', 'For scale, not like for like: the library\'s CPU path tracer measured about 4.2 M rays/s on 8 threads at 100k triangles, on a different scene and ray mix.');
   return lines.join('\n');

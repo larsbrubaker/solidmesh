@@ -30,6 +30,18 @@ pub struct RenderCamera {
     projection: Projection,
 }
 
+/// A camera's frame and the one number of its projection, for a shader to reproduce
+/// [`RenderCamera::ray_through`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct CameraBasis {
+    pub(crate) eye: Vector3,
+    pub(crate) forward: Vector3,
+    pub(crate) right: Vector3,
+    pub(crate) up: Vector3,
+    /// `tan(fov / 2)` for a perspective camera, the half extent for an orthographic one.
+    pub(crate) projection_scale: f64,
+}
+
 impl RenderCamera {
     /// A perspective camera at `eye` looking at `target`, with `up` as near to the image's up as
     /// it can be, and `fov_degrees` across the shorter image side, in (0, 180).
@@ -94,6 +106,25 @@ impl RenderCamera {
             up: right.cross(forward),
             projection,
         })
+    }
+
+    /// Whether rays are parallel.
+    pub(crate) fn is_orthographic(&self) -> bool {
+        matches!(self.projection, Projection::Orthographic { .. })
+    }
+
+    /// The frame and projection number a shader needs.
+    pub(crate) fn basis(&self) -> CameraBasis {
+        CameraBasis {
+            eye: self.eye,
+            forward: self.forward,
+            right: self.right,
+            up: self.up,
+            projection_scale: match self.projection {
+                Projection::Perspective { half_tangent } => half_tangent,
+                Projection::Orthographic { half_extent } => half_extent,
+            },
+        }
     }
 
     /// The ray through screen position (`x`, `y`) of a `width` by `height` image, in pixel units

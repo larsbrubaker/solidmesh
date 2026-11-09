@@ -13,7 +13,7 @@
 #   crates/polygon-mesh        -> package solidmesh-mesh     (lib solidmesh_mesh)
 #   crates/geometry-processing -> package solidmesh          (lib solidmesh)
 # Between themselves they name each other by package (`solidmesh-math = { path =
-# "../vector-math", version = "0.2.3" }`). MatterCAD keeps its own dependency keys
+# "../vector-math", version = "0.2.4" }`). MatterCAD keeps its own dependency keys
 # (`vector-math = { package = "solidmesh-math", ... }`), so its code reads `use vector_math::...`.
 # `solidmesh` re-exports the other three (`solidmesh::math`, `::clipper`, `::mesh`).
 # They reach the sibling checkouts beside this repository (manifold-rust, clipper2-rust,
@@ -35,7 +35,7 @@ members = [
 # Every member inherits these with `<key>.workspace = true`. `readme` is relative to this
 # directory, so a crate without a README of its own publishes the repository's.
 [workspace.package]
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "BSD-2-Clause"
 authors = ["Lars Brubaker <larsbrubaker@matterhackers.com>"]

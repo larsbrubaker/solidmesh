@@ -109,7 +109,7 @@ impl RenderScene {
     }
 
     /// Whether any part is less than fully present.
-    pub(super) fn has_see_through_parts(&self) -> bool {
+    pub(crate) fn has_see_through_parts(&self) -> bool {
         !self.opacities.is_empty()
     }
 
@@ -136,6 +136,16 @@ impl RenderScene {
             }
             ray = continued_ray(&hit.surface_point()?, direction);
         }
+    }
+
+    /// Part `part_index`'s own surface, before any face color.
+    pub(crate) fn surface(&self, part_index: usize) -> Option<&ScatteringSurface> {
+        self.surfaces.get(part_index)
+    }
+
+    /// Every 8-bit channel value, decoded to linear, the table a colored face reads.
+    pub(crate) fn srgb_table(&self) -> &[f64; 256] {
+        &self.srgb_to_linear
     }
 
     /// The lights.

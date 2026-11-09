@@ -13,12 +13,18 @@ mod flat_tree_shader_tests;
 mod flat_tree_support;
 #[path = "ray_tracer/flat_tree_tests.rs"]
 mod flat_tree_tests;
+#[path = "ray_tracer/gpu_view_tests.rs"]
+mod gpu_view_tests;
 #[path = "ray_tracer/minimal_triangle_tests.rs"]
 mod minimal_triangle_tests;
 #[path = "ray_tracer/parallel_sequential_equivalence_tests.rs"]
 mod parallel_sequential_equivalence_tests;
 #[path = "ray_tracer/part_opacity_tests.rs"]
 mod part_opacity_tests;
+#[path = "ray_tracer/path_camera_ray_tests.rs"]
+mod path_camera_ray_tests;
+#[path = "ray_tracer/path_shader_tests.rs"]
+mod path_shader_tests;
 #[path = "ray_tracer/path_tracer_golden_tests.rs"]
 mod path_tracer_golden_tests;
 #[path = "ray_tracer/path_tracer_measure_tests.rs"]

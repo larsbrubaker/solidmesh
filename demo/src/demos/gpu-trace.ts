@@ -1,7 +1,9 @@
 // GPU Ray Tracing page: measures how fast a WebGPU compute shader traces rays through the
 // library's flat tree. The part-on-a-floor scene is built by the worker (demo/wasm/src/
 // gpu_bench.rs), the WebGPU calls are src/gpu-bench.ts, and what is measured is the three ray
-// sets of gpu_bench.rs, each traced by the GPU and by the same traversal in wasm on one thread.
+// sets of gpu_bench.rs, each traced by the GPU and by the same traversal in wasm on one thread, and
+// after them the render check: fifteen small scenes rendered by the GPU path loop and the CPU path
+// tracer and compared region by region (demo/wasm/src/gpu_bench_render.rs).
 //
 // The run is on a button, not on arrival: it holds the GPU for seconds, and that should be asked
 // for. The picture canvas has a fixed pixel size and `.image-canvas` keeps it out of the layout
@@ -13,10 +15,13 @@ import { demoFrameMarkup } from '../demo-shell.ts';
 import { createButton, createDropdown } from '../controls.ts';
 import { SideWorker } from '../mesh-runner.ts';
 import { loadSetting, saveSetting } from '../settings.ts';
-import { type GpuContext, type PreparedScene, type ScatterPrepared, TraceRun, hasWebGpu, openGpu, runScatterCheck } from '../gpu-bench.ts';
-import { type KindRow, type ScatterRow, formatRate, formatRatio, formatScatter, reportText } from '../gpu-bench-rules.ts';
+import { type GpuContext, type PreparedScene, type RenderPrepared, type ScatterPrepared, TraceRun, hasWebGpu, openGpu, runRenderCheck, runScatterCheck } from '../gpu-bench.ts';
+import { type KindRow, type RenderRow, type ScatterRow, formatRate, formatRatio, formatRender, formatSamples, formatScatter, reportText } from '../gpu-bench-rules.ts';
 
 const ROUTE = 'gpu-trace';
+
+/** How big the render check's two pictures are drawn, per image pixel (they are 48 by 48). */
+const RENDER_IMAGE_SCALE = 3;
 
 /** GPU time spent measuring each ray set (ms). */
 const MEASURE_MS = 1500;
@@ -32,6 +37,49 @@ const KIND_NAMES = [
   'Shadow rays to a light (any hit)',
   'Random bounce rays (incoherent, closest hit)',
 ];
+
+interface RenderCheckAnswer {
+  name: string;
+  passed: boolean;
+  regions: number;
+  exceeded: number;
+  maxZ: number;
+  worst: string;
+  lineGroups: number;
+  linesExceeded: number;
+  linesMaxZ: number;
+  linesWorst: string;
+  pooledGroups: number;
+  pooledExceeded: number;
+  pooledMaxZ: number;
+  pooledWorst: string;
+  uniformExceeded: number;
+  uniformMaxZ: number;
+  uniformWorst: string;
+  gpuDropped: number;
+  cpuDropped: number;
+  closedFormExceeded: number;
+  cpuClosedFormExceeded: number;
+  meanRelativeDifference: number;
+  detectableUniform: number;
+  detectableWhole: number;
+  detectableRegionMedian: number;
+  gpuImage: Uint8Array;
+  cpuImage: Uint8Array;
+}
+
+/** A canvas showing `rgba` (top row first) at its integer scale, not stretched by the layout. */
+function imageCanvas(rgba: Uint8Array, width: number, height: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = `${width * RENDER_IMAGE_SCALE}px`;
+  canvas.style.height = `${height * RENDER_IMAGE_SCALE}px`;
+  canvas.style.imageRendering = 'pixelated';
+  const context2d = canvas.getContext('2d')!;
+  context2d.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer as ArrayBuffer), width, height), 0, 0);
+  return canvas;
+}
 
 interface PreparedAnswer {
   shader: string;
@@ -54,7 +102,8 @@ export function init(container: HTMLElement): () => void {
     'GPU Ray Tracing',
     `How fast can your graphics card trace rays? This page builds a part on a floor, packs it into the
     library's flat tree and traces the same rays with a WebGPU compute shader and in WebAssembly on one
-    CPU thread, then checks that they agree. Press Run; it uses your GPU for several seconds.`,
+    CPU thread, then checks that they agree. It then renders a few small scenes with the same GPU shader and with
+    the production CPU path tracer and compares them region by region. Press Run; it uses your GPU for several seconds.`,
   );
   const area = container.querySelector('#viewer-container') as HTMLElement;
   const controls = container.querySelector('#controls') as HTMLElement;
@@ -93,6 +142,8 @@ export function init(container: HTMLElement): () => void {
   error.className = 'error-line';
   const results = document.createElement('div');
   results.className = 'info-readout';
+  const renderRows = document.createElement('div');
+  renderRows.className = 'render-check-rows';
   const report = document.createElement('textarea');
   report.readOnly = true;
   report.rows = 9;
@@ -196,6 +247,67 @@ export function init(container: HTMLElement): () => void {
       const scatter = await worker.call<ScatterRow>('gpu_bench_scatter_compare', [scatterResults.slice(0)]);
       if (stopped()) return;
 
+      // The render check: every scene, the whole estimator on the GPU against the CPU path tracer.
+      renderRows.replaceChildren();
+      const renderResults: RenderRow[] = [];
+      let renderThreshold = 0;
+      let renderPooledThreshold = 0;
+      const first = await worker.call<RenderPrepared>('gpu_bench_render_prepare', [0, context.maxBinding]);
+      if (stopped()) return;
+      const sceneCount = first.sceneCount;
+      renderThreshold = first.zThreshold;
+      renderPooledThreshold = first.pooledZThreshold;
+      for (let index = 0; index < sceneCount; index++) {
+        const prepared = index === 0 ? first : await worker.call<RenderPrepared>('gpu_bench_render_prepare', [index, context.maxBinding]);
+        if (stopped()) return;
+        status.textContent = `Rendering ${index + 1} of ${sceneCount} on the GPU: ${prepared.name}...`;
+        const { snapshots, gpuMs } = await runRenderCheck(context, prepared, stopped);
+        if (stopped()) return;
+        status.textContent = `Rendering ${index + 1} of ${sceneCount} on the CPU to compare: ${prepared.name}...`;
+        const answer = await worker.call<RenderCheckAnswer>('gpu_bench_render_check', [index, snapshots]);
+        if (stopped()) return;
+        const row: RenderRow = {
+          name: answer.name,
+          passed: answer.passed,
+          regions: answer.regions,
+          exceeded: answer.exceeded,
+          maxZ: answer.maxZ,
+          worst: answer.worst,
+          lineGroups: answer.lineGroups,
+          linesExceeded: answer.linesExceeded,
+          linesMaxZ: answer.linesMaxZ,
+          linesWorst: answer.linesWorst,
+          pooledGroups: answer.pooledGroups,
+          pooledExceeded: answer.pooledExceeded,
+          pooledMaxZ: answer.pooledMaxZ,
+          pooledWorst: answer.pooledWorst,
+          uniformExceeded: answer.uniformExceeded,
+          uniformMaxZ: answer.uniformMaxZ,
+          uniformWorst: answer.uniformWorst,
+          gpuDropped: answer.gpuDropped,
+          cpuDropped: answer.cpuDropped,
+          closedFormExceeded: answer.closedFormExceeded,
+          cpuClosedFormExceeded: answer.cpuClosedFormExceeded,
+          meanRelativeDifference: answer.meanRelativeDifference,
+          detectableUniform: answer.detectableUniform,
+          detectableWhole: answer.detectableWhole,
+          detectableRegionMedian: answer.detectableRegionMedian,
+          samplesPerSecond: gpuMs > 0 ? (prepared.width * prepared.height * prepared.samples) / (gpuMs / 1000) : 0,
+          timing: 'submission wall time, readback not counted',
+        };
+        renderResults.push(row);
+        const caption = document.createElement('div');
+        caption.className = `note-line ${row.passed ? 'good' : 'bad'}`;
+        caption.textContent = `${row.name}: ${formatRender(row, renderThreshold, renderPooledThreshold)}, GPU ${formatSamples(row.samplesPerSecond)}. Left: GPU, right: CPU.`;
+        const pictures = document.createElement('div');
+        pictures.style.display = 'flex';
+        pictures.style.gap = '8px';
+        pictures.appendChild(imageCanvas(answer.gpuImage, prepared.width, prepared.height));
+        pictures.appendChild(imageCanvas(answer.cpuImage, prepared.width, prepared.height));
+        renderRows.appendChild(caption);
+        renderRows.appendChild(pictures);
+      }
+
       status.textContent = 'Drawing the picture from the GPU\'s hits...';
       const picture = await worker.call<{ pixels: Uint8Array }>('gpu_bench_picture', [hits[0], hits[1]]);
       if (stopped()) return;
@@ -212,6 +324,9 @@ export function init(container: HTMLElement): () => void {
         depth: answer.depth,
         rows,
         scatter,
+        render: renderResults,
+        renderThreshold,
+        renderPooledThreshold,
       };
       const mib = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
       results.innerHTML = `<div class="stats-grid">
@@ -233,10 +348,13 @@ export function init(container: HTMLElement): () => void {
       const disagreements = rows.reduce((sum, row) => sum + row.disagreed, 0);
       if (disagreements > 0) {
         status.textContent = `Done, but the GPU and the reference disagree on ${disagreements.toLocaleString()} rays: copy the results and report this, because it is a bug.`;
+      } else if (renderResults.some(row => !row.passed)) {
+        const count = renderResults.filter(row => !row.passed).length;
+        status.textContent = `Done, but ${count} of the ${renderResults.length} renders failed the comparison with the CPU (more difference than noise allows, a closed form missed, or samples the GPU dropped): copy the results and report this, because it is a bug.`;
       } else if (scatter.disagreed > 0) {
         status.textContent = `Done, but the scattering model disagrees on ${scatter.disagreed.toLocaleString()} cases: copy the results and report this, because it is a bug.`;
       } else {
-        status.textContent = 'Done. The GPU agrees with the reference on every ray and scattering case checked. Copy the results to share them.';
+        status.textContent = 'Done. The GPU agrees with the reference on every ray, scattering case and render region checked. Copy the results to share them.';
       }
     } catch (e) {
       if (disposed) return;
@@ -269,6 +387,7 @@ export function init(container: HTMLElement): () => void {
   controls.appendChild(status);
   controls.appendChild(error);
   controls.appendChild(results);
+  controls.appendChild(renderRows);
   controls.appendChild(copyButton);
   controls.appendChild(report);
 

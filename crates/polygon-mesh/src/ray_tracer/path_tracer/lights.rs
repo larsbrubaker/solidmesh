@@ -89,6 +89,19 @@ impl Environment {
         })
     }
 
+    /// `(zenith, horizon, ground, is_gradient)`: a constant environment repeats its one radiance,
+    /// for a shader that reads them all the same way.
+    pub(crate) fn as_gradient(&self) -> ([f64; 3], [f64; 3], [f64; 3], bool) {
+        match self.kind {
+            EnvironmentKind::Constant(radiance) => (radiance, radiance, radiance, false),
+            EnvironmentKind::Gradient {
+                zenith,
+                horizon,
+                ground,
+            } => (zenith, horizon, ground, true),
+        }
+    }
+
     /// The radiance arriving along the unit `direction` (pointing away from the scene).
     pub fn radiance(&self, direction: Vector3) -> [f64; 3] {
         match self.kind {
@@ -184,6 +197,16 @@ impl Sun {
     /// The solid angle of the disc, steradians.
     pub fn solid_angle(&self) -> f64 {
         self.solid_angle
+    }
+
+    /// The frame [`Sun::sample`] draws in.
+    pub(crate) fn local_frame(&self) -> &LocalFrame {
+        &self.frame
+    }
+
+    /// `1 - cos(angular_radius)`.
+    pub(crate) fn versine(&self) -> f64 {
+        self.versine
     }
 
     /// The density of [`Sun::sample`], per steradian.
