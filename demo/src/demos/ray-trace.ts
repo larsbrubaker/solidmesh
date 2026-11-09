@@ -1,7 +1,9 @@
-// Ray Tracing page: a solid made by the library, path traced in WebAssembly by the library's
-// PathTracer and drawn on a 2D canvas (demo/wasm/src/ray_trace.rs). Dragging orbits, pinching or
-// the wheel zooms (src/orbit-gesture.ts is the rule); the Material and Light menus are the
-// library's presets.
+// Ray Tracing page: a solid made by the library and path traced, either in WebAssembly by the
+// library's PathTracer (demo/wasm/src/ray_trace.rs) or on the GPU by its WGSL path loop
+// (demo/wasm/src/ray_trace_gpu.rs and src/ray-trace-gpu.ts), and drawn on a 2D canvas either way.
+// The Renderer menu picks which (src/ray-trace-rules.ts has the rule and the words the page says
+// about it). Dragging orbits, pinching or the wheel zooms (src/orbit-gesture.ts is the rule); the
+// Material and Light menus are the library's presets.
 //
 // The page has its own worker (`SideWorker`), so the BVH of a million triangles builds off the
 // UI thread and terminating the worker on leaving the page gives that memory back. One wasm call
@@ -19,13 +21,34 @@
 // the height of the area that decides its pixel size. A resize changes the image only once it
 // settles, and only if the size in pixels really changed.
 //
+// The GPU route (`runGpu`) runs on this thread because that is where the WebGPU device is, and it
+// asks the worker for the three things the worker holds: the pack once per part, the view and part
+// records when the camera or look changes, and the decode of what the GPU accumulated, through the
+// library's display code, so the picture is the CPU route's. One run at a time; a newer request
+// replaces what it is working towards, between slices. A preview frame finishes before the camera
+// moves on, so a slow GPU still shows a whole frame. A still first runs a small pilot of itself,
+// not shown, so the size of its first full-size slices is measured rather than guessed
+// (`SliceCosts` in src/ray-trace-rules.ts). A failure sends the picture to the CPU with a
+// sentence saying what happened and holds until the person picks a renderer again, so a lost device
+// is never retried in a loop; the Normals and Depth views read hit data on the CPU either way.
+//
+// A wasm trap (out of memory packing a large part, say) kills the worker and everything it held,
+// so the page forgets its prepared part and builds it again on the fresh worker, once
+// (`TrapRecovery`), before going on with the CPU route.
+//
 // The thumbnail capture (src/capture.ts) reads the canvas registered with `setCaptureCanvas`, and
 // the page holds it off (`holdBusy`) until the first full-resolution image has CAPTURE_SAMPLES.
 
 import { demoFrameMarkup } from '../demo-shell.ts';
-import { Coalescer, SideWorker, holdBusy } from '../mesh-runner.ts';
+import { Coalescer, SideWorker, WorkerTrapped, holdBusy } from '../mesh-runner.ts';
 import { OrbitGesture, applyDelta } from '../orbit-gesture.ts';
-import { type ImageSize, mayDraw, sizeChanged } from '../ray-trace-refine.ts';
+import { type ImageSize, mayDraw, sameArgs, sizeChanged } from '../ray-trace-refine.ts';
+import {
+  GPU_COMPILING_BADGE, GPU_PACKING_BADGE, type GpuFailure, GpuStageBadge, type RendererChoice, TrapRecovery,
+  WORKER_TRAPPED_MESSAGE, chooseRoute, displayDue, passCountText, pilotSize,
+} from '../ray-trace-rules.ts';
+import { GpuPathRenderer, type GpuPack } from '../ray-trace-gpu.ts';
+import { type GpuContext, NoGraphicsAdapter, ShaderRefused, hasWebGpu, openGpu } from '../gpu-bench.ts';
 import { setCaptureCanvas } from '../capture.ts';
 import { createColor, createDropdown, createSlider } from '../controls.ts';
 import { loadSetting, saveSetting } from '../settings.ts';
@@ -95,8 +118,8 @@ export function init(container: HTMLElement): () => void {
   container.innerHTML = demoFrameMarkup(
     'Ray Tracing',
     `A part made by the library, lit the way light really behaves: this is a path tracer, following
-    light as it bounces off the part and the floor, running in WebAssembly in your browser with no
-    graphics card. Pick a material and see plastic catch a soft highlight, metal mirror the sky and
+    light as it bounces off the part and the floor, running in your browser on your graphics card
+    where it can and in WebAssembly where it can't. Pick a material and see plastic catch a soft highlight, metal mirror the sky and
     glass bend the floor behind it. Drag to orbit, pinch or scroll to zoom. Moving shows a small, fast image;
     when you stop it sharpens, sample by sample. Normals and Depth show the raw hit data, so you can
     see these are real intersections with the mesh.`,
@@ -116,6 +139,7 @@ export function init(container: HTMLElement): () => void {
   const s = {
     part: loadSetting(ROUTE, 'part', '0'),
     detail: loadSetting(ROUTE, 'detail', '2'),
+    renderer: loadSetting(ROUTE, 'renderer', 'auto'),
     mode: loadSetting(ROUTE, 'mode', '0'),
     material: loadSetting(ROUTE, 'material', '0'),
     color: loadSetting(ROUTE, 'color', '#5bc2b4'),
@@ -145,12 +169,38 @@ export function init(container: HTMLElement): () => void {
   let disposed = false;
   let releaseCapture: (() => void) | null = holdBusy();
 
+  // The GPU route. `gpuGeneration` changes when a run must stop; a run that wakes to find it
+  // changed does nothing more, whatever it was waiting on.
+  let gpu: GpuContext | null = null;
+  let gpuRenderer: GpuPathRenderer | null = null;
+  let gpuFailure: GpuFailure | null = null;
+  let gpuPackedKey = '';
+  let gpuWanted: unknown[] | null = null;
+  let gpuRendering: unknown[] | null = null;
+  let gpuGeneration = 0;
+  let gpuRunning = false;
+  let lastGpuDisplay = 0;
+  let lastGpuDisplayCost = 0;
+  const gpuStage = new GpuStageBadge({
+    show: text => {
+      busy.textContent = text;
+      busy.classList.add('visible');
+    },
+    hide: () => busy.classList.remove('visible'),
+  });
+  const trapRecovery = new TrapRecovery();
+
   const stats = document.createElement('div');
   stats.className = 'info-readout';
   const note = document.createElement('div');
   note.className = 'note-line';
   const error = document.createElement('div');
   error.className = 'error-line';
+  const routeNote = document.createElement('div');
+  routeNote.className = 'note-line';
+  const pill = document.createElement('div');
+  pill.className = 'pass-pill';
+  area.appendChild(pill);
 
   const worker = new SideWorker();
 
@@ -172,13 +222,16 @@ export function init(container: HTMLElement): () => void {
   const kick = () => {
     if (disposed) return;
     if (!prepared || `${prepared.part}|${prepared.detail}` !== preparedKey()) {
-      if (preparingKey === preparedKey()) return;
+      // The part's own badge goes up next, or is already up.
+      gpuStage.refresh(false);
+      if (preparingKey === preparedKey() || trapRecovery.stopped) return;
       preparingKey = preparedKey();
       busy.textContent = 'Building the part and its ray tracing tree…';
       busy.classList.add('visible');
       coalescer.request('ray_trace_prepare', [Number(s.part), Number(s.detail)]);
       return;
     }
+    gpuStage.refresh(usingGpu());
     imageSize ??= fullSize();
     const full = imageSize;
     const size = moving
@@ -191,8 +244,19 @@ export function init(container: HTMLElement): () => void {
       Number(s.light), s.sun, SEED, size.w, size.h, moving,
       moving ? 0 : PASS_BUDGET_MS,
     ];
+    if (usingGpu()) {
+      gpuWanted = currentArgs;
+      startGpu();
+      return;
+    }
+    // A CPU pass makes whatever the GPU route was rendering stale.
+    gpuRendering = null;
     coalescer.request('ray_trace_pass', currentArgs);
   };
+
+  const route = () => chooseRoute(s.renderer as RendererChoice, hasWebGpu(), gpuFailure);
+  /** The GPU route draws only the path traced view: Normals and Depth read hits on the CPU. */
+  const usingGpu = () => s.mode === '0' && route().route === 'gpu';
 
   const finishMoving = () => {
     stillTimer = null;
@@ -221,16 +285,23 @@ export function init(container: HTMLElement): () => void {
     const samplesPerSecond = pass && msTotal > 0
       ? (pixelSamplesTotal / (pass.width * pass.height) / msTotal) * 1000
       : 0;
+    const onGpu = usingGpu();
+    // The shader's paths are not counted, so the GPU route shows no rays per second.
+    const raysRow = onGpu ? '' : `<span class="k">Rays/s</span><span class="v">${raysPerSecond ? fmtRays(raysPerSecond) : '…'}</span>`;
     stats.innerHTML = `<div class="stats-grid">
       <span class="k">Triangles</span><span class="v">${prepared ? prepared.triangles.toLocaleString() : '…'}</span>
       <span class="k">Build mesh</span><span class="v">${prepared ? `${fmt(prepared.mesh_ms, 0)} ms` : '…'}</span>
       <span class="k">Build tree</span><span class="v">${prepared ? `${fmt(prepared.bvh_ms, 0)} ms` : '…'}</span>
+      <span class="k">Renderer</span><span class="v">${onGpu ? 'GPU' : 'CPU'}</span>
       <span class="k">Samples</span><span class="v">${pass ? `${pass.samples} / ${SAMPLE_CAP}` : '…'}</span>
       <span class="k">Samples/s</span><span class="v">${samplesPerSecond ? fmt(samplesPerSecond, 2) : '…'}</span>
-      <span class="k">Rays/s</span><span class="v">${raysPerSecond ? fmtRays(raysPerSecond) : '…'}</span>
+      ${raysRow}
       <span class="k">Image</span><span class="v">${pass ? `${pass.width} x ${pass.height}` : '…'}</span>
     </div>`;
     note.textContent = prepared ? prepared.note : '';
+    routeNote.textContent = route().message;
+    pill.textContent = passCountText(moving || !pass ? 0 : pass.samples, SAMPLE_CAP);
+    pill.classList.toggle('visible', pill.textContent !== '');
   };
 
   const draw = (pass: Pass) => {
@@ -245,6 +316,7 @@ export function init(container: HTMLElement): () => void {
   const onPrepared = (result: Prepared) => {
     prepared = result;
     preparingKey = '';
+    stopGpu();
     resetRates();
     busy.classList.remove('visible');
     moving = true;
@@ -257,6 +329,7 @@ export function init(container: HTMLElement): () => void {
   const onPass = (pass: Pass, args: unknown[]) => {
     // A pass the page no longer wants: its replacement is already queued, so nothing is lost.
     if (!mayDraw(args, currentArgs, moving)) return;
+    trapRecovery.succeeded();
     draw(pass);
     lastPass = pass;
     raysTotal += pass.rays;
@@ -281,6 +354,10 @@ export function init(container: HTMLElement): () => void {
       else onPass(result, args);
     },
     e => {
+      if (e instanceof WorkerTrapped) {
+        workerTrapped(e, false);
+        return;
+      }
       error.textContent = e.message;
       busy.classList.remove('visible');
       preparingKey = '';
@@ -291,9 +368,213 @@ export function init(container: HTMLElement): () => void {
     (fn, args) => worker.call<Result>(fn, args).then(result => ({ result, args })),
   );
 
+  const dropRenderer = () => {
+    gpuRenderer?.destroy();
+    gpuRenderer = null;
+    gpuPackedKey = '';
+    gpuRendering = null;
+  };
+
+  /** Ends the run in progress and drops its renderer, so the next kick starts afresh. */
+  const stopGpu = () => {
+    gpuGeneration += 1;
+    gpuRunning = false;
+    gpuStage.set(null, false);
+    dropRenderer();
+  };
+
+  const closeDevice = () => {
+    const context = gpu;
+    gpu = null;
+    context?.device.destroy();
+  };
+
+  /** Hands the picture to the CPU and says what happened; the failure holds until `choose`. */
+  const failGpu = (failure: GpuFailure) => {
+    gpuFailure = failure;
+    stopGpu();
+    if (failure.kind !== 'too-large') closeDevice();
+    updateStats();
+    kick();
+  };
+
+  /**
+   * The worker crashed and took the part with it: forget the part, so the next request builds it
+   * on the fresh worker, and go on on the CPU if that was the GPU route's doing.
+   */
+  const workerTrapped = (e: WorkerTrapped, onGpu: boolean) => {
+    if (onGpu) gpuFailure = { kind: 'trapped', detail: e.message };
+    const next = trapRecovery.trapped(e.instance);
+    stopGpu();
+    if (next === 'seen') {
+      updateStats();
+      return;
+    }
+    prepared = null;
+    preparingKey = '';
+    if (next === 'stop') {
+      busy.classList.remove('visible');
+      error.textContent = WORKER_TRAPPED_MESSAGE;
+      releaseCapture?.();
+      releaseCapture = null;
+      updateStats();
+      return;
+    }
+    error.textContent = '';
+    updateStats();
+    kick();
+  };
+
+  const openDevice = async () => {
+    const context: GpuContext = await openGpu(message => {
+      if (gpu === context) failGpu({ kind: 'lost', detail: message });
+    });
+    return context;
+  };
+
+  /** What the request `args` is for the worker: 17 numbers, the preview flag as 0 or 1. */
+  const traceNumbers = (args: unknown[]) => Float64Array.from(args.slice(0, 17).map(Number));
+
+  const runGpu = async (generation: number) => {
+    const live = () => !disposed && generation === gpuGeneration && usingGpu();
+    if (!gpu) {
+      const context = await openDevice();
+      if (!live()) {
+        context.device.destroy();
+        return;
+      }
+      gpu = context;
+      // A validation error drops the dispatch and leaves the picture black, with no other sign.
+      context.device.addEventListener('uncapturederror', (e: any) => {
+        if (gpu === context) failGpu({ kind: 'error', detail: String(e.error?.message ?? 'the GPU reported an error') });
+      });
+    }
+    // Moving: one slice at a time, a whole frame then the next camera. Refining: slices until
+    // the cap, drawn at the cadence `displayDue` sets.
+    let frameMs = 0;
+    let framePixels = 0;
+    for (;;) {
+      if (!live() || !prepared || `${prepared.part}|${prepared.detail}` !== preparedKey()) return;
+      const want = gpuWanted;
+      if (!want) return;
+      if (!gpuRenderer || gpuPackedKey !== preparedKey()) {
+        dropRenderer();
+        gpuStage.set(GPU_PACKING_BADGE, usingGpu());
+        const pack = await worker.call<GpuPack | { fits: false; reason: string }>(
+          'ray_trace_gpu_prepare', [gpu.maxBinding, traceNumbers(want)]);
+        if (!live()) return;
+        if (!pack.fits) {
+          failGpu({ kind: 'too-large', detail: pack.reason });
+          return;
+        }
+        gpuStage.set(GPU_COMPILING_BADGE, usingGpu());
+        const renderer = await GpuPathRenderer.create(gpu, pack);
+        if (!live()) {
+          renderer.destroy();
+          return;
+        }
+        gpuRenderer = renderer;
+        gpuPackedKey = preparedKey();
+        gpuStage.set(null, usingGpu());
+      }
+      const renderer = gpuRenderer;
+      const finishingPreview = gpuRendering !== null && gpuRendering[16] === true && renderer.midSample;
+      if (!finishingPreview && (gpuRendering === null || !sameArgs(want, gpuRendering))) {
+        type ViewAnswer = { fits: true; view: Uint8Array; parts: Uint8Array } | { fits: false; reason: string };
+        if (want[16] !== true) {
+          // A still first measures a small copy of itself, so no full-size slice is a guess.
+          const pilot = pilotSize(want[14] as number, want[15] as number);
+          const pilotArgs = [...want];
+          pilotArgs[14] = pilot.w;
+          pilotArgs[15] = pilot.h;
+          const pilotView = await worker.call<ViewAnswer>('ray_trace_gpu_view', [traceNumbers(pilotArgs)]);
+          if (!live()) return;
+          if (!pilotView.fits) {
+            failGpu({ kind: 'too-large', detail: pilotView.reason });
+            return;
+          }
+          if (gpuWanted !== want) continue;
+          // The pilot overwrites the accumulation, so nothing rendered before it is current.
+          gpuRendering = null;
+          await renderer.pilot(pilotView.view, pilotView.parts, pilot.w, pilot.h);
+          if (!live()) return;
+        }
+        const answer = await worker.call<ViewAnswer>(
+          'ray_trace_gpu_view', [traceNumbers(want)]);
+        if (!live()) return;
+        if (!answer.fits) {
+          failGpu({ kind: 'too-large', detail: answer.reason });
+          return;
+        }
+        // The camera moved on while the view was computed; start from the newest request.
+        if (gpuWanted !== want) continue;
+        const preview = want[16] === true;
+        renderer.setImage(answer.view, answer.parts, want[14] as number, want[15] as number,
+          preview ? 1 : SAMPLE_CAP, preview ? 'preview' : 'still');
+        gpuRendering = want;
+        frameMs = 0;
+        framePixels = 0;
+      }
+      if (renderer.done) return;
+      // What is being rendered: a preview that is finishing is not yet the newest request.
+      const rendering = gpuRendering as unknown[];
+      const width = rendering[14] as number;
+      const height = rendering[15] as number;
+      const slice = await renderer.step();
+      if (!live()) return;
+      if (!slice) return;
+      frameMs += slice.ms;
+      framePixels += slice.count;
+      if (!displayDue(performance.now(), lastGpuDisplay, lastGpuDisplayCost, renderer.done, rendering[16] === true, slice.finishedSample)) continue;
+      const started = performance.now();
+      const bytes = await renderer.read();
+      if (!live()) return;
+      const decoded = await worker.call<{ pixels: Uint8Array }>('ray_trace_gpu_decode', [bytes, width, height], [bytes.buffer as ArrayBuffer]);
+      if (!live()) return;
+      lastGpuDisplay = performance.now();
+      lastGpuDisplayCost = lastGpuDisplay - started;
+      onPass({ pixels: decoded.pixels, width, height, samples: renderer.samples, rays: 0, pixelSamples: framePixels, ms: frameMs }, rendering);
+      frameMs = 0;
+      framePixels = 0;
+    }
+  };
+
+  /** Starts a GPU run unless one is going, which sees the newer `gpuWanted` between slices. */
+  const startGpu = () => {
+    if (gpuRunning || disposed) return;
+    gpuRunning = true;
+    const generation = gpuGeneration;
+    runGpu(generation)
+      .catch((e: Error) => {
+        // The worker is gone whichever run was waiting on it.
+        if (e instanceof WorkerTrapped) {
+          workerTrapped(e, true);
+          return;
+        }
+        // Stopped on purpose, or already handled as a lost device.
+        if (generation !== gpuGeneration) return;
+        if (e instanceof NoGraphicsAdapter) failGpu({ kind: 'no-adapter', detail: e.message });
+        else if (e instanceof ShaderRefused) failGpu({ kind: 'shader', detail: e.driverText });
+        else failGpu({ kind: 'error', detail: e.message });
+      })
+      .finally(() => {
+        // Every way out of a run clears its badge; a stopped run's was cleared when it stopped.
+        if (generation !== gpuGeneration) return;
+        gpuRunning = false;
+        gpuStage.set(null, false);
+      });
+  };
+
   const rerender = () => {
     resetRates();
     nudge();
+  };
+
+  /** A scene too large for the GPU is about the scene, so a different one gets a fresh try. */
+  const newScene = () => {
+    if (gpuFailure?.kind === 'too-large' || gpuFailure?.kind === 'trapped') gpuFailure = null;
+    trapRecovery.reset();
+    rerender();
   };
 
   controls.appendChild(createDropdown('Part', [
@@ -301,19 +582,30 @@ export function init(container: HTMLElement): () => void {
     { value: '1', text: 'Torus' },
     { value: '2', text: 'Rounded box' },
     { value: '3', text: 'Implicit blend' },
-  ], s.part, v => { s.part = v; saveSetting(ROUTE, 'part', v); rerender(); }));
+  ], s.part, v => { s.part = v; saveSetting(ROUTE, 'part', v); newScene(); }));
   controls.appendChild(createDropdown('Detail', [
     { value: '0', text: 'About 10,000 triangles' },
     { value: '1', text: 'About 30,000 triangles' },
     { value: '2', text: 'About 100,000 triangles' },
     { value: '3', text: 'About 300,000 triangles' },
     { value: '4', text: 'About 1,000,000 triangles' },
-  ], s.detail, v => { s.detail = v; saveSetting(ROUTE, 'detail', v); rerender(); }));
+  ], s.detail, v => { s.detail = v; saveSetting(ROUTE, 'detail', v); newScene(); }));
   controls.appendChild(createDropdown('View', [
     { value: '0', text: 'Path traced' },
     { value: '1', text: 'Normals (smooth hit data)' },
     { value: '2', text: 'Depth (hit data)' },
   ], s.mode, v => { s.mode = v; saveSetting(ROUTE, 'mode', v); showLookControls(); rerender(); }));
+  controls.appendChild(createDropdown('Renderer', [
+    { value: 'auto', text: 'Auto' },
+    { value: 'cpu', text: 'CPU' },
+    { value: 'gpu', text: 'GPU' },
+  ], s.renderer, v => {
+    s.renderer = v;
+    saveSetting(ROUTE, 'renderer', v);
+    // A person picking the renderer is the one thing that re-arms a GPU that failed.
+    gpuFailure = null;
+    rerender();
+  }));
 
   // The look controls show only for the path traced view; Custom's sliders and the Sun size
   // only when they mean something.
@@ -358,6 +650,7 @@ export function init(container: HTMLElement): () => void {
   controls.appendChild(lookControls);
   controls.appendChild(stats);
   controls.appendChild(note);
+  controls.appendChild(routeNote);
   controls.appendChild(error);
   updateStats();
 
@@ -423,6 +716,8 @@ export function init(container: HTMLElement): () => void {
   kick();
   return () => {
     disposed = true;
+    stopGpu();
+    closeDevice();
     if (stillTimer) clearTimeout(stillTimer);
     if (sizeTimer) clearTimeout(sizeTimer);
     if (gestureFrame !== null) cancelAnimationFrame(gestureFrame);

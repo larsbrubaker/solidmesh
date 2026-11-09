@@ -4,11 +4,13 @@
 //
 // `whenIdle()` resolves once nothing is computing or queued (`whenIdleWithin` gives up after a
 // timeout); the thumbnail capture (src/capture.ts) waits on it instead of guessing how long a page
-// takes. src/mesh-runner.test.ts tests the coalescing and the idle tracking.
+// takes. src/mesh-runner.test.ts tests the coalescing, the idle tracking and a side worker's trap.
 //
 // `callMesh` asks the same worker for a plain value; `SideWorker` is a second worker with its own
 // wasm instance, for calls that must not queue behind a build (the Fillet page's hover picking),
-// and `holdBusy` keeps the capture waiting while a page prepares its first request there.
+// and `holdBusy` keeps the capture waiting while a page prepares its first request there. A side
+// worker whose instance traps rejects its calls with `WorkerTrapped`, so a page knows what it kept
+// there is gone, and starts a fresh instance on the next call.
 
 export interface MeshResult {
   positions: Float32Array;
@@ -126,6 +128,16 @@ export function callMesh<T>(fn: string, args: unknown[]): Promise<T> {
 }
 
 /**
+ * A `SideWorker` call that ended because its wasm instance crashed. What the instance held is
+ * gone, and the next call starts a fresh one with nothing in it; `instance` says which crashed.
+ */
+export class WorkerTrapped extends Error {
+  constructor(message: string, readonly instance: number) {
+    super(message);
+  }
+}
+
+/**
  * A worker of its own with its own wasm instance, for calls that must not wait behind a build:
  * the Fillet page picks in one while the site's worker rounds the part. Not counted by
  * `whenIdle()`; `dispose()` ends it.
@@ -134,42 +146,53 @@ export class SideWorker {
   private worker: Worker | null = null;
   private nextId = 1;
   private pending = new Map<number, Pending>();
+  private instance = 0;
+
+  // The worker to start; a test supplies its own.
+  constructor(private readonly spawn: () => Worker = spawnWorker) {}
 
   private ensure(): Worker {
     if (this.worker) return this.worker;
-    const w = spawnWorker();
+    const w = this.spawn();
+    this.instance += 1;
     w.onmessage = (ev: MessageEvent) => {
       const msg = ev.data;
       const p = this.pending.get(msg.id);
       if (!p) return;
       this.pending.delete(msg.id);
       if (msg.ok) p.resolve(msg.value);
-      else {
-        if (msg.fatal) this.dispose();
-        p.reject(new Error(msg.error));
-      }
+      else if (msg.fatal) {
+        const trapped = new WorkerTrapped(msg.error, this.instance);
+        this.abandon(trapped);
+        p.reject(trapped);
+      } else p.reject(new Error(msg.error));
     };
     this.worker = w;
     return w;
   }
 
-  /** Runs wasm export `fn(...args)` for a plain value. */
-  call<T>(fn: string, args: unknown[]): Promise<T> {
+  /** Runs wasm export `fn(...args)` for a plain value; `transfer` lists buffers to hand over. */
+  call<T>(fn: string, args: unknown[], transfer: Transferable[] = []): Promise<T> {
     const w = this.ensure();
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      w.postMessage({ type: 'call', id, fn, args });
+      w.postMessage({ type: 'call', id, fn, args }, transfer);
     });
   }
 
-  dispose() {
+  /** Ends the worker and rejects every call still waiting on it with `error`. */
+  private abandon(error: Error) {
     this.worker?.terminate();
     this.worker = null;
     for (const [id, p] of this.pending) {
-      p.reject(new Error('the side worker was stopped'));
+      p.reject(error);
       this.pending.delete(id);
     }
+  }
+
+  dispose() {
+    this.abandon(new Error('the side worker was stopped'));
   }
 }
 

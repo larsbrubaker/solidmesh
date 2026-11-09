@@ -31,6 +31,7 @@ use solidmesh::mesh::ray_tracer::{
 };
 use solidmesh::mesh::CancelToken;
 
+use crate::ray_trace_gpu::GpuSession;
 use crate::ray_trace_scene::{Camera, TraceScene};
 use crate::ray_trace_shade::{data_color, Look, Mode};
 
@@ -42,7 +43,7 @@ const PIXELS_PER_CLOCK_CHECK: usize = 48;
 const MAX_PIXELS: u64 = 12_000_000;
 
 /// The exposure of the displayed image. The lights are set for this.
-const EXPOSURE: f64 = 1.0;
+pub(crate) const EXPOSURE: f64 = 1.0;
 
 /// The most scattering events a path may have when refining, enough for light to find its way
 /// through a glass part and to the floor.
@@ -71,6 +72,28 @@ pub struct TraceRequest {
     pub height: u32,
     /// The camera is moving: shorter paths (the image is small too).
     pub preview: bool,
+}
+
+/// `old` (RGBA8, `old_w` x `old_h`) stretched to `w` x `h`, or opaque black when there is no old
+/// image yet, for a new image to show through until its samples replace it.
+pub(crate) fn stretched_display(old: &[u8], old_w: u32, old_h: u32, w: usize, h: usize) -> Vec<u8> {
+    let mut stretched = vec![0u8; w * h * 4];
+    let (old_w, old_h) = (old_w as usize, old_h as usize);
+    if old_w > 0 && old_h > 0 {
+        for y in 0..h {
+            let source_y = y * old_h / h;
+            for x in 0..w {
+                let source = (source_y * old_w + x * old_w / w) * 4;
+                stretched[(y * w + x) * 4..(y * w + x + 1) * 4]
+                    .copy_from_slice(&old[source..source + 4]);
+            }
+        }
+    } else {
+        for pixel in stretched.as_chunks_mut::<4>().0 {
+            pixel[3] = 255;
+        }
+    }
+    stretched
 }
 
 /// What a pass did.
@@ -144,23 +167,7 @@ impl Accumulation {
     fn begin(&mut self, request: TraceRequest) -> Result<(), String> {
         let (w, h) = (request.width as usize, request.height as usize);
         if (request.width, request.height) != (self.width, self.height) {
-            let mut stretched = vec![0u8; w * h * 4];
-            let (old_w, old_h) = (self.width as usize, self.height as usize);
-            if old_w > 0 && old_h > 0 {
-                for y in 0..h {
-                    let source_y = y * old_h / h;
-                    for x in 0..w {
-                        let source = (source_y * old_w + x * old_w / w) * 4;
-                        stretched[(y * w + x) * 4..(y * w + x + 1) * 4]
-                            .copy_from_slice(&self.display[source..source + 4]);
-                    }
-                }
-            } else {
-                for pixel in stretched.as_chunks_mut::<4>().0 {
-                    pixel[3] = 255;
-                }
-            }
-            self.display = stretched;
+            self.display = stretched_display(&self.display, self.width, self.height, w, h);
         }
         self.surface = if request.mode == Mode::PathTraced {
             Some(RenderSurface::new(request.width, request.height).map_err(|e| e.to_string())?)
@@ -333,7 +340,7 @@ impl Accumulation {
 
 /// The path tracer's settings for this request. Refining follows paths far; a preview cuts them
 /// short, so a moving image costs a few rays per pixel.
-fn settings_of(request: &TraceRequest) -> PathTraceSettings {
+pub(crate) fn settings_of(request: &TraceRequest) -> PathTraceSettings {
     let (max_bounces, after) = if request.preview {
         (PREVIEW_BOUNCES, None)
     } else {
@@ -348,9 +355,11 @@ fn settings_of(request: &TraceRequest) -> PathTraceSettings {
 }
 
 /// A prepared part and the image being refined from it, as the worker keeps them between calls.
+/// `gpu` is the GPU route's pack of the same part (`ray_trace_gpu`), `None` until the page asks.
 pub struct Session {
     pub scene: TraceScene,
     pub accumulation: Accumulation,
+    pub gpu: Option<GpuSession>,
 }
 
 impl Session {
@@ -358,6 +367,7 @@ impl Session {
         Session {
             scene,
             accumulation: Accumulation::new(),
+            gpu: None,
         }
     }
 }

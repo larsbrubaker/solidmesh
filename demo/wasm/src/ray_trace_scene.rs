@@ -340,10 +340,15 @@ impl TraceScene {
 
     /// A render of this part and floor in `look`, sharing the trees and tables already built.
     pub fn render_scene(&self, look: &Look) -> Result<RenderScene, String> {
-        let surfaces = vec![look.surface(), ScatteringSurface::matte_plastic([1.0; 3])];
+        let surfaces = self.surfaces(look);
         let lights = look.lights().map_err(|e| e.to_string())?;
         let parts = PlacedParts::new(vec![self.solid.placed()?, self.floor.placed()?]);
         RenderScene::new(parts, surfaces, lights).map_err(|e| e.to_string())
+    }
+
+    /// The surfaces of the placed parts, in part order: what a look gives the part and the floor.
+    pub fn surfaces(&self, look: &Look) -> Vec<ScatteringSurface> {
+        vec![look.surface(), ScatteringSurface::matte_plastic([1.0; 3])]
     }
 
     /// The nearest hit of `ray`, for the data views.

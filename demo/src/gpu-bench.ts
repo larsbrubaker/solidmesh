@@ -5,7 +5,8 @@
 // scattering model over the worker's fixed batch once (demo/wasm/src/gpu_bench_scatter.rs), and
 // `runRenderCheck` renders one scene of the render check with the library's path loop
 // (PATH_WGSL, demo/wasm/src/gpu_bench_render.rs), one pass at a time, reading its accumulation back
-// after each pass so the worker can compare against the CPU.
+// after each pass so the worker can compare against the CPU. The path loop's pipeline, bind groups
+// and dispatch are exported for the Ray Tracing page's GPU route (src/ray-trace-gpu.ts).
 //
 // Rays per second is rays traced divided by GPU time. GPU time comes from timestamp queries around
 // each compute pass when the adapter has them, and otherwise from the wall time between
@@ -23,18 +24,18 @@ const HIT_BYTES = 28;
 /** Bytes per scattering result: `SCATTER_RESULT_STRIDE` in the library's flat_tree/scatter_shader.rs. */
 const SCATTER_RESULT_BYTES = 48;
 /** Bytes per accumulated pixel: `ACCUMULATION_STRIDE` in the library's flat_tree/gpu_scene.rs. */
-const ACCUMULATION_BYTES = 16;
+export const ACCUMULATION_BYTES = 16;
 /** Bytes of the coverage-channel record: `CHANNEL_STRIDE` in the library's flat_tree/gpu_scene.rs. */
-const CHANNEL_BYTES = 32;
+export const CHANNEL_BYTES = 32;
 
 /** GPUBufferUsage and GPUMapMode, numeric so this file needs no WebGPU type declarations. */
-const MAP_READ = 0x0001;
-const COPY_SRC = 0x0004;
-const COPY_DST = 0x0008;
-const UNIFORM = 0x0040;
-const STORAGE = 0x0080;
+export const MAP_READ = 0x0001;
+export const COPY_SRC = 0x0004;
+export const COPY_DST = 0x0008;
+export const UNIFORM = 0x0040;
+export const STORAGE = 0x0080;
 const QUERY_RESOLVE = 0x0200;
-const MAP_MODE_READ = 0x0001;
+export const MAP_MODE_READ = 0x0001;
 const COMPUTE_STAGE = 0x0004;
 
 export function hasWebGpu(): boolean {
@@ -67,12 +68,22 @@ export interface Measured {
   wallTimedSubmissions: number;
 }
 
+/** The browser has WebGPU and no adapter it can use; the message is for the page. */
+export class NoGraphicsAdapter extends Error {}
+
+/** The driver would not compile the shader; `driverText` is what it said. */
+export class ShaderRefused extends Error {
+  constructor(message: string, readonly driverText: string) {
+    super(message);
+  }
+}
+
 /** The device, with the adapter's real limits; throws an Error whose message is for the page. */
 export async function openGpu(onLost: (message: string) => void): Promise<GpuContext> {
   const gpu = (navigator as any).gpu;
   const adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) {
-    throw new Error('This browser has WebGPU but found no usable graphics adapter. Update your graphics driver, or try current Chrome or Edge.');
+    throw new NoGraphicsAdapter('This browser has WebGPU but found no usable graphics adapter. Update your graphics driver, or try current Chrome or Edge.');
   }
   const timestamps = adapter.features.has('timestamp-query');
   const device = await adapter.requestDevice({
@@ -96,7 +107,7 @@ export async function openGpu(onLost: (message: string) => void): Promise<GpuCon
   };
 }
 
-function uploadBuffer(device: any, bytes: Uint8Array, usage: number): any {
+export function uploadBuffer(device: any, bytes: Uint8Array, usage: number): any {
   // WebGPU refuses an empty storage binding: a set with no rays still gets one record's space.
   const buffer = device.createBuffer({
     size: Math.max(bytes.byteLength, RAY_BYTES),
@@ -365,6 +376,57 @@ export async function runScatterCheck(context: GpuContext, prepared: ScatterPrep
   }
 }
 
+/** The path loop's compute pipeline; throws a ShaderRefused with text for the page. */
+export async function createPathPipeline(device: any, shader: string, entryPoint: string, what: string): Promise<any> {
+  const refused = (text: string) => new ShaderRefused(
+    `The GPU driver refused the ${what}: ${text}. This is a bug in the page; please report it with the results text.`, text);
+  const module = device.createShaderModule({ code: shader });
+  const info = await module.getCompilationInfo();
+  const errors = info.messages.filter((m: any) => m.type === 'error');
+  if (errors.length > 0) throw refused(errors.map((m: any) => m.message).join('; '));
+  try {
+    return await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint } });
+  } catch (e) {
+    throw refused((e as Error).message);
+  }
+}
+
+/** The path loop's buffers, in the bindings the header of `path.wgsl` lists. */
+export interface PathBuffers {
+  nodes: any;
+  triangles: any;
+  albedo: any;
+  faces: any;
+  parts: any;
+  accumulation: any;
+  view: any;
+  slice: any;
+  channels: any;
+  srgb: any;
+}
+
+/** The three bind groups of the path loop. */
+export function pathBindGroups(device: any, pipeline: any, buffers: PathBuffers): any[] {
+  const entries = (list: any[]) => list.map((buffer, binding) => ({ binding, resource: { buffer } }));
+  return [
+    device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: entries([buffers.nodes, buffers.triangles]) }),
+    device.createBindGroup({ layout: pipeline.getBindGroupLayout(1), entries: entries([buffers.albedo]) }),
+    device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(2),
+      entries: entries([buffers.faces, buffers.parts, buffers.accumulation, buffers.view, buffers.slice, buffers.channels, buffers.srgb]),
+    }),
+  ];
+}
+
+/** Records one dispatch of the path loop over `count` pixels. */
+export function dispatchPath(encoder: any, pipeline: any, groups: any[], count: number): void {
+  const pass = encoder.beginComputePass();
+  pass.setPipeline(pipeline);
+  groups.forEach((group, index) => pass.setBindGroup(index, group));
+  pass.dispatchWorkgroups(Math.ceil(count / WORKGROUP_RAYS));
+  pass.end();
+}
+
 /** What gpu_bench_render_prepare answers. */
 export interface RenderPrepared {
   shader: string;
@@ -374,6 +436,7 @@ export interface RenderPrepared {
   faces: Uint8Array;
   parts: Uint8Array;
   scene: Uint8Array;
+  srgb: Uint8Array;
   albedo: Uint8Array;
   width: number;
   height: number;
@@ -394,13 +457,7 @@ export async function runRenderCheck(
   context: GpuContext, prepared: RenderPrepared, shouldStop: () => boolean,
 ): Promise<{ snapshots: Uint8Array; gpuMs: number }> {
   const device = context.device;
-  const module = device.createShaderModule({ code: prepared.shader });
-  const info = await module.getCompilationInfo();
-  const errors = info.messages.filter((m: any) => m.type === 'error');
-  if (errors.length > 0) {
-    throw new Error(`The GPU driver refused the path tracing shader: ${errors.map((m: any) => m.message).join('; ')}. This is a bug in the page; please report it with the results text.`);
-  }
-  const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: prepared.entryPoint } });
+  const pipeline = await createPathPipeline(device, prepared.shader, prepared.entryPoint, 'path tracing shader');
 
   const pixels = prepared.width * prepared.height;
   const snapshotBytes = pixels * ACCUMULATION_BYTES;
@@ -426,28 +483,8 @@ export async function runRenderCheck(
     const sliceUniform = device.createBuffer({ size: 16, usage: UNIFORM | COPY_DST });
     created.push(accumulation, staging, sliceUniform);
 
-    const group0 = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: nodes } },
-        { binding: 1, resource: { buffer: triangles } },
-      ],
-    });
-    const group1 = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(1),
-      entries: [{ binding: 0, resource: { buffer: albedo } }],
-    });
-    const group2 = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(2),
-      entries: [
-        { binding: 0, resource: { buffer: faces } },
-        { binding: 1, resource: { buffer: parts } },
-        { binding: 2, resource: { buffer: accumulation } },
-        { binding: 3, resource: { buffer: sceneUniform } },
-        { binding: 4, resource: { buffer: sliceUniform } },
-        { binding: 5, resource: { buffer: channels } },
-        { binding: 6, resource: { buffer: srgbUniform } },
-      ],
+    const groups = pathBindGroups(device, pipeline, {
+      nodes, triangles, albedo, faces, parts, accumulation, view: sceneUniform, slice: sliceUniform, channels, srgb: srgbUniform,
     });
 
     const snapshots = new Uint8Array(snapshotBytes * prepared.samples);
@@ -456,13 +493,7 @@ export async function runRenderCheck(
       if (shouldStop()) throw new Error('stopped');
       device.queue.writeBuffer(sliceUniform, 0, new Uint32Array([0, pixels, pass, 0]));
       const encoder = device.createCommandEncoder();
-      const computePass = encoder.beginComputePass();
-      computePass.setPipeline(pipeline);
-      computePass.setBindGroup(0, group0);
-      computePass.setBindGroup(1, group1);
-      computePass.setBindGroup(2, group2);
-      computePass.dispatchWorkgroups(Math.ceil(pixels / WORKGROUP_RAYS));
-      computePass.end();
+      dispatchPath(encoder, pipeline, groups, pixels);
       encoder.copyBufferToBuffer(accumulation, 0, staging, 0, snapshotBytes);
       const before = performance.now();
       device.queue.submit([encoder.finish()]);

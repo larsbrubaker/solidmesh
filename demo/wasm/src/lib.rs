@@ -15,10 +15,10 @@
 //!   contouring, and the implicit boolean of meshes;
 //! - `morph`: Minkowski sum and difference, convex hull;
 //! - `repair`: a mesh broken on purpose, then auto or advanced repair;
-//! - `ray_trace_scene`, `ray_trace_shade`, `ray_trace`: the Ray Tracing page - a part on a floor,
-//!   its material and light presets over the library's path tracer, and the per-pixel
-//!   accumulation the worker refines in short passes (this page draws on a 2D canvas, so it
-//!   answers an image rather than a [`MeshData`]);
+//! - `ray_trace_scene`, `ray_trace_shade`, `ray_trace`, `ray_trace_gpu`: the Ray Tracing page - a
+//!   part on a floor, its material and light presets over the library's path tracer, the per-pixel
+//!   accumulation the worker refines in short passes, and the GPU route's pack and picture decode
+//!   (this page draws on a 2D canvas, so it answers an image rather than a [`MeshData`]);
 //! - `gpu_bench`, `gpu_bench_compare`, `gpu_bench_scatter`, `gpu_bench_render*`: the GPU Ray Tracing
 //!   page - its scene as a flat tree, the ray sets a WebGPU compute shader and the reference
 //!   traversal both trace, the check of the GPU's hits against the reference, the scattering model
@@ -53,6 +53,7 @@ pub mod implicit;
 pub mod morph;
 pub mod outline;
 pub mod ray_trace;
+pub mod ray_trace_gpu;
 pub mod ray_trace_scene;
 pub mod ray_trace_shade;
 pub mod repair;
@@ -458,6 +459,116 @@ pub fn ray_trace_pass(
                 .map_err(|_| JsError::new("The traced image could not be handed to the page."))?;
         }
         Ok(result)
+    })
+}
+
+/// Runs `action` on the prepared session of the Ray Tracing page, or says it isn't ready.
+fn with_trace_session<R>(
+    action: impl FnOnce(&mut ray_trace::Session) -> Result<R, JsError>,
+) -> Result<R, JsError> {
+    RAY_TRACE.with(|session| {
+        let mut session = session.borrow_mut();
+        let session = session
+            .as_mut()
+            .ok_or_else(|| JsError::new("That part is not ready to trace yet."))?;
+        action(session)
+    })
+}
+
+/// A refusal the page answers by rendering on the CPU, as a plain object.
+fn gpu_refused(reason: String) -> Result<Object, JsError> {
+    gpu_bench::fields(&[("fits", false.into()), ("reason", reason.into())])
+}
+
+/// Ray Tracing page, GPU route: packs the prepared part and floor for the GPU in `args`' look
+/// (see `ray_trace_gpu`), and answers the shader and the buffers the page uploads once, or
+/// `{ fits: false, reason }` when this scene does not fit this device.
+#[wasm_bindgen]
+pub fn ray_trace_gpu_prepare(max_binding: f64, args: &[f64]) -> Result<Object, JsError> {
+    use solidmesh::mesh::ray_tracer::flat_tree::{albedo_table_bytes, PATH_ENTRY_POINT, PATH_WGSL};
+    let request = ray_trace_gpu::request_from_args(args).map_err(|e| JsError::new(&e))?;
+    // Bounded to the JS number's own integer range; a device's limit is far below it.
+    let binding = max_binding as u64;
+    with_trace_session(|session| {
+        session.gpu = None;
+        let pack = ray_trace_gpu::GpuSession::pack(&session.scene, request, binding)
+            .map_err(|e| JsError::new(&e))?;
+        let gpu = match pack {
+            ray_trace_gpu::GpuOutcome::Fits(gpu) => gpu,
+            ray_trace_gpu::GpuOutcome::Refused(reason) => return gpu_refused(reason),
+        };
+        let packed = gpu.packed();
+        let result = gpu_bench::fields(&[
+            ("fits", true.into()),
+            ("shader", PATH_WGSL.into()),
+            ("entryPoint", PATH_ENTRY_POINT.into()),
+            (
+                "nodes",
+                Uint8Array::from(packed.tree().node_bytes().as_slice()).into(),
+            ),
+            (
+                "triangles",
+                Uint8Array::from(packed.tree().triangle_bytes().as_slice()).into(),
+            ),
+            (
+                "faces",
+                Uint8Array::from(packed.face_bytes().as_slice()).into(),
+            ),
+            (
+                "srgb",
+                Uint8Array::from(packed.srgb_table_bytes().as_slice()).into(),
+            ),
+            (
+                "albedo",
+                Uint8Array::from(albedo_table_bytes().as_slice()).into(),
+            ),
+        ])?;
+        session.gpu = Some(gpu);
+        Ok(result)
+    })
+}
+
+/// Ray Tracing page, GPU route: the view uniform and part records of `args`, the only buffers a
+/// change of camera, material or light writes; `{ fits: false, reason }` if it can't be carried.
+#[wasm_bindgen]
+pub fn ray_trace_gpu_view(args: &[f64]) -> Result<Object, JsError> {
+    let request = ray_trace_gpu::request_from_args(args).map_err(|e| JsError::new(&e))?;
+    with_trace_session(|session| {
+        let gpu = session
+            .gpu
+            .as_mut()
+            .ok_or_else(|| JsError::new("The part is not packed for the GPU yet."))?;
+        let bytes = gpu
+            .view(&session.scene, request)
+            .map_err(|e| JsError::new(&e))?;
+        match bytes {
+            ray_trace_gpu::GpuOutcome::Fits(bytes) => gpu_bench::fields(&[
+                ("fits", true.into()),
+                ("view", Uint8Array::from(bytes.view.as_slice()).into()),
+                ("parts", Uint8Array::from(bytes.parts.as_slice()).into()),
+            ]),
+            ray_trace_gpu::GpuOutcome::Refused(reason) => gpu_refused(reason),
+        }
+    })
+}
+
+/// Ray Tracing page, GPU route: decodes an accumulation read back from the GPU into RGBA8 with
+/// the library's display code, keeping the previous image under pixels with no samples yet.
+#[wasm_bindgen]
+pub fn ray_trace_gpu_decode(
+    accumulation: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<Object, JsError> {
+    with_trace_session(|session| {
+        let gpu = session
+            .gpu
+            .as_mut()
+            .ok_or_else(|| JsError::new("The part is not packed for the GPU yet."))?;
+        let display = gpu
+            .show(accumulation, width, height)
+            .map_err(|e| JsError::new(&e))?;
+        gpu_bench::fields(&[("pixels", Uint8Array::from(display).into())])
     })
 }
 

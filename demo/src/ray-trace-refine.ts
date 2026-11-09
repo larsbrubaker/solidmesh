@@ -26,6 +26,10 @@ export function sizeChanged(current: ImageSize | null, measured: ImageSize): boo
 export function mayDraw(passArgs: readonly unknown[], currentArgs: readonly unknown[] | null,
   moving: boolean): boolean {
   if (moving) return true;
-  return currentArgs !== null && passArgs.length === currentArgs.length
-    && passArgs.every((value, i) => value === currentArgs[i]);
+  return currentArgs !== null && sameArgs(passArgs, currentArgs);
+}
+
+/** Whether two requests ask for the same image. */
+export function sameArgs(a: readonly unknown[], b: readonly unknown[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }

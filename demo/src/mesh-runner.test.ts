@@ -4,7 +4,7 @@
 // Run with `bun test` from demo/; the runner is injected, so no worker or wasm is involved.
 
 import { describe, expect, test } from 'bun:test';
-import { Coalescer, whenIdleWithin, type RunResult } from './mesh-runner.ts';
+import { Coalescer, SideWorker, WorkerTrapped, whenIdleWithin, type RunResult } from './mesh-runner.ts';
 
 /** A runner whose calls finish only when the test says so. */
 function manualRunner() {
@@ -65,5 +65,61 @@ describe('Coalescer and idle tracking', () => {
     c.dispose();
     calls[0].finish(true);
     expect(await whenIdleWithin(1000)).toBe(true);
+  });
+});
+
+describe('SideWorker after a trap', () => {
+  /** A worker that answers only when told to. */
+  function fakeWorkers() {
+    const made: { sent: any[]; onmessage: ((ev: any) => void) | null; terminated: boolean; postMessage: (m: any) => void; terminate: () => void }[] = [];
+    const spawn = () => {
+      const w = {
+        sent: [] as any[],
+        onmessage: null as ((ev: any) => void) | null,
+        terminated: false,
+        postMessage(m: any) { this.sent.push(m); },
+        terminate() { this.terminated = true; },
+      };
+      made.push(w);
+      return w as unknown as Worker;
+    };
+    return { made, spawn };
+  }
+
+  test('a fatal answer rejects as WorkerTrapped, naming the instance, and the next call has a new worker', async () => {
+    const { made, spawn } = fakeWorkers();
+    const side = new SideWorker(spawn);
+    const call = side.call('pack', []);
+    made[0].onmessage!({ data: { id: made[0].sent[0].id, ok: false, fatal: true, error: 'unreachable' } });
+    const error = await call.catch(e => e);
+    expect(error).toBeInstanceOf(WorkerTrapped);
+    const first = (error as WorkerTrapped).instance;
+    expect(made[0].terminated).toBe(true);
+
+    const next = side.call('prepare', []);
+    expect(made.length).toBe(2);
+    made[1].onmessage!({ data: { id: made[1].sent[0].id, ok: false, fatal: true, error: 'unreachable' } });
+    expect(((await next.catch(e => e)) as WorkerTrapped).instance).not.toBe(first);
+  });
+
+  test('other calls waiting on the trapped worker are told it trapped too', async () => {
+    const { made, spawn } = fakeWorkers();
+    const side = new SideWorker(spawn);
+    const trapped = side.call('pack', []);
+    const waiting = side.call('decode', []);
+    made[0].onmessage!({ data: { id: made[0].sent[0].id, ok: false, fatal: true, error: 'unreachable' } });
+    await trapped.catch(() => {});
+    expect(await waiting.catch(e => e)).toBeInstanceOf(WorkerTrapped);
+  });
+
+  test('an ordinary refusal is not a trap', async () => {
+    const { made, spawn } = fakeWorkers();
+    const side = new SideWorker(spawn);
+    const call = side.call('pack', []);
+    made[0].onmessage!({ data: { id: made[0].sent[0].id, ok: false, fatal: false, error: 'no' } });
+    const error = await call.catch(e => e);
+    expect(error).not.toBeInstanceOf(WorkerTrapped);
+    expect((error as Error).message).toBe('no');
+    expect(made[0].terminated).toBe(false);
   });
 });
