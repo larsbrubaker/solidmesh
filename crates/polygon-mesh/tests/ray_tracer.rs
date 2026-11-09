@@ -47,6 +47,8 @@ mod rust_only_ray_tracer_tests;
 mod rust_only_shape_tests;
 #[path = "ray_tracer/rust_only_triangle_edge_tests.rs"]
 mod rust_only_triangle_edge_tests;
+#[path = "ray_tracer/scatter_shader_tests.rs"]
+mod scatter_shader_tests;
 #[path = "ray_tracer/scattering_energy_tests.rs"]
 mod scattering_energy_tests;
 #[path = "ray_tracer/scattering_support.rs"]

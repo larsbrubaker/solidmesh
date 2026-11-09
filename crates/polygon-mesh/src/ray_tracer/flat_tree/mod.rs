@@ -6,7 +6,9 @@
 //! these buffers (`build`), and [`FlatTree::trace_closest`] and [`FlatTree::trace_any`] are the
 //! reference traversal over exactly those buffers (`traverse`), written to port line for line to
 //! WGSL. `layout` holds the two records and their bytes, and `shader` the WGSL traversal itself
-//! ([`TRACE_WGSL`], from `trace.wgsl`) with the ray and hit records it adds.
+//! ([`TRACE_WGSL`], from `trace.wgsl`) with the ray and hit records it adds. `scatter_shader` is
+//! the WGSL port of the scattering model ([`SCATTER_WGSL`]) and the entry point that checks it
+//! against the CPU model, reading [`SurfaceRecord`] and [`albedo_table_bytes`].
 //!
 //! This module is the one place geometry narrows from `f64` to `f32`, because WGSL has no `f64`
 //! and a GPU read of `f32` is the point of the buffers. Everything upstream stays `f64` in a
@@ -93,12 +95,21 @@
 
 mod build;
 mod layout;
+mod scatter_shader;
 mod shader;
 mod traverse;
 
 use std::fmt;
 
+pub use super::scattering::{
+    albedo_table_bytes, SurfaceRecord, ALBEDO_ENTRY_COUNT, ALBEDO_ENTRY_STRIDE, SURFACE_HAS_GLASS,
+    SURFACE_INDEX_MATCHED, SURFACE_RECORD_STRIDE, SURFACE_SMOOTH,
+};
 pub use layout::{child_code, FlatNode, FlatTriangle, NODE_STRIDE, TRIANGLE_STRIDE};
+pub use scatter_shader::{
+    ScatterCheckCase, ScatterCheckResult, SAMPLE_FOUND, SAMPLE_SPECULAR, SCATTER_CASE_STRIDE,
+    SCATTER_CHECK_WGSL, SCATTER_RESULT_STRIDE, SCATTER_WGSL,
+};
 pub use shader::{hit_from_le_bytes, hit_to_le_bytes, HIT_STRIDE, NO_HIT, RAY_STRIDE, TRACE_WGSL};
 pub use traverse::{FlatHit, FlatRay, FACE_BACK, FACE_BOTH, FACE_FRONT};
 

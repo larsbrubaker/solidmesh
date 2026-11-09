@@ -6,7 +6,8 @@
 //! transmission and index of refraction, with named presets. `model` gives it the three
 //! operations a tracer needs: [`ScatteringSurface::evaluate`], [`ScatteringSurface::sample`] and
 //! [`ScatteringSurface::pdf`]. `microfacet` holds the formulas they share; `albedo` and its
-//! generated `albedo_table` hold the precomputed energy of the reflective lobe.
+//! generated `albedo_table` hold the precomputed energy of the reflective lobe. `gpu_record` is
+//! a surface and that table as plain buffers for the WGSL port in `flat_tree/scatter.wgsl`.
 //!
 //! # The model
 //!
@@ -70,6 +71,7 @@
 mod albedo;
 mod albedo_table;
 mod frame;
+mod gpu_record;
 mod microfacet;
 mod model;
 mod surface;
@@ -80,5 +82,9 @@ pub use albedo::{
     GENERATION_SUBDIVISIONS,
 };
 pub use frame::LocalFrame;
+pub use gpu_record::{
+    albedo_table_bytes, SurfaceRecord, ALBEDO_ENTRY_COUNT, ALBEDO_ENTRY_STRIDE, SURFACE_HAS_GLASS,
+    SURFACE_INDEX_MATCHED, SURFACE_RECORD_STRIDE, SURFACE_SMOOTH,
+};
 pub use model::ScatteringSample;
 pub use surface::ScatteringSurface;

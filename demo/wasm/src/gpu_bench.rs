@@ -350,7 +350,7 @@ fn with_bench<R>(f: impl FnOnce(&Bench) -> Result<R, JsError>) -> Result<R, JsEr
     })
 }
 
-fn fields(pairs: &[(&str, JsValue)]) -> Result<Object, JsError> {
+pub(crate) fn fields(pairs: &[(&str, JsValue)]) -> Result<Object, JsError> {
     let object = Object::new();
     for (name, value) in pairs {
         Reflect::set(&object, &(*name).into(), value)

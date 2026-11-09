@@ -59,6 +59,15 @@ export interface KindRow {
   examples: string;
 }
 
+/** The result of the scattering check (`gpu_bench_scatter_compare`). */
+export interface ScatterRow {
+  compared: number;
+  exact: number;
+  ties: number;
+  disagreed: number;
+  examples: string;
+}
+
 export interface ReportInputs {
   adapter: string;
   timing: string;
@@ -68,6 +77,15 @@ export interface ReportInputs {
   maxBinding: number;
   depth: number;
   rows: KindRow[];
+  scatter?: ScatterRow;
+}
+
+/** Beside the scattering check in the report, so a reader of a zero there knows its reach. */
+export const SCATTER_CONDITIONING_NOTE = '  Note: at view cosines at or below about 1e-3 on narrow lobes the evaluate and pdf outputs depend so sharply on their inputs that f32 can only match them loosely, so a zero above does not vouch for them there.';
+
+/** The scattering check in one line, for the page and the report. */
+export function formatScatter(row: ScatterRow): string {
+  return `${row.compared} scattering cases: ${row.exact} agree within f32, ${row.ties} ties, ${row.disagreed} disagreements`;
 }
 
 /** A rate as text in the largest fitting unit, with its unit. */
@@ -97,6 +115,11 @@ export function reportText(inputs: ReportInputs): string {
     lines.push(`  GPU ${formatRate(row.gpuRaysPerSecond)}; wasm reference (1 thread) ${formatRate(row.wasmRaysPerSecond)}; ratio ${formatRatio(row.gpuRaysPerSecond, row.wasmRaysPerSecond)}`);
     lines.push(`  agreement with the reference on ${row.compared} rays: ${row.exact} exact, ${row.ties} ties, ${row.disagreed} disagreements`);
     if (row.examples) lines.push(`  ${row.examples.split('\n').join('\n  ')}`);
+  }
+  if (inputs.scatter) {
+    lines.push(`Scattering model, GPU against the CPU reference: ${formatScatter(inputs.scatter)}`);
+    if (inputs.scatter.examples) lines.push(`  ${inputs.scatter.examples.split('\n').join('\n  ')}`);
+    lines.push(SCATTER_CONDITIONING_NOTE);
   }
   lines.push('', 'For scale, not like for like: the library\'s CPU path tracer measured about 4.2 M rays/s on 8 threads at 100k triangles, on a different scene and ray mix.');
   return lines.join('\n');

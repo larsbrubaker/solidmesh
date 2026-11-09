@@ -1,7 +1,8 @@
 // The WebGPU calls of the GPU Ray Tracing page (src/demos/gpu-trace.ts): opening the device with
 // the adapter's real limits, uploading a scene the worker built (demo/wasm/src/gpu_bench.rs), and
 // dispatching the library's compute shader (crates/polygon-mesh/src/ray_tracer/flat_tree/
-// trace.wgsl) in slices sized by src/gpu-bench-rules.ts.
+// trace.wgsl) in slices sized by src/gpu-bench-rules.ts. `runScatterCheck` runs the library's
+// scattering model over the worker's fixed batch once (demo/wasm/src/gpu_bench_scatter.rs).
 //
 // Rays per second is rays traced divided by GPU time. GPU time comes from timestamp queries around
 // each compute pass when the adapter has them, and otherwise from the wall time between
@@ -16,6 +17,8 @@ import { SliceSizer, WORKGROUP_RAYS } from './gpu-bench-rules.ts';
 /** Bytes per ray and per hit: `RAY_STRIDE` and `HIT_STRIDE` in the library's flat_tree/shader.rs. */
 const RAY_BYTES = 48;
 const HIT_BYTES = 28;
+/** Bytes per scattering result: `SCATTER_RESULT_STRIDE` in the library's flat_tree/scatter_shader.rs. */
+const SCATTER_RESULT_BYTES = 48;
 
 /** GPUBufferUsage and GPUMapMode, numeric so this file needs no WebGPU type declarations. */
 const MAP_READ = 0x0001;
@@ -279,5 +282,78 @@ export class TraceRun {
     this.buffers = [];
     this.querySet?.destroy();
     this.querySet = null;
+  }
+}
+
+/** What gpu_bench_scatter_prepare answers. */
+export interface ScatterPrepared {
+  shader: string;
+  surfaces: Uint8Array;
+  cases: Uint8Array;
+  albedo: Uint8Array;
+  caseCount: number;
+}
+
+/**
+ * Runs the scattering check once: one dispatch over the fixed batch (about 6,000 small cases, far
+ * under a slice's worth of work), and its result records in case order for the worker to compare.
+ * Throws an Error with text for the page.
+ */
+export async function runScatterCheck(context: GpuContext, prepared: ScatterPrepared, shouldStop: () => boolean): Promise<Uint8Array> {
+  const device = context.device;
+  const module = device.createShaderModule({ code: prepared.shader });
+  const info = await module.getCompilationInfo();
+  const errors = info.messages.filter((m: any) => m.type === 'error');
+  if (errors.length > 0) {
+    throw new Error(`The GPU driver refused the scattering shader: ${errors.map((m: any) => m.message).join('; ')}. This is a bug in the page; please report it with the results text.`);
+  }
+  const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint: 'scatter_check_main' } });
+
+  const resultBytes = prepared.caseCount * SCATTER_RESULT_BYTES;
+  const created: any[] = [];
+  const upload = (bytes: Uint8Array, usage: number) => {
+    const buffer = uploadBuffer(device, bytes, usage);
+    created.push(buffer);
+    return buffer;
+  };
+  try {
+    const surfaces = upload(prepared.surfaces, STORAGE);
+    const cases = upload(prepared.cases, STORAGE);
+    const albedo = upload(prepared.albedo, STORAGE);
+    const uniform = upload(new Uint8Array(new Uint32Array([0, prepared.caseCount, 0, 0]).buffer), UNIFORM);
+    const results = device.createBuffer({ size: resultBytes, usage: STORAGE | COPY_SRC });
+    const staging = device.createBuffer({ size: resultBytes, usage: MAP_READ | COPY_DST });
+    created.push(results, staging);
+
+    const group0 = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: surfaces } },
+        { binding: 1, resource: { buffer: cases } },
+        { binding: 2, resource: { buffer: results } },
+        { binding: 3, resource: { buffer: uniform } },
+      ],
+    });
+    const group1 = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(1),
+      entries: [{ binding: 0, resource: { buffer: albedo } }],
+    });
+
+    if (shouldStop()) throw new Error('stopped');
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, group0);
+    pass.setBindGroup(1, group1);
+    pass.dispatchWorkgroups(Math.ceil(prepared.caseCount / WORKGROUP_RAYS));
+    pass.end();
+    encoder.copyBufferToBuffer(results, 0, staging, 0, resultBytes);
+    device.queue.submit([encoder.finish()]);
+    await staging.mapAsync(MAP_MODE_READ);
+    const copy = new Uint8Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    return copy;
+  } finally {
+    for (const buffer of created) buffer.destroy();
   }
 }

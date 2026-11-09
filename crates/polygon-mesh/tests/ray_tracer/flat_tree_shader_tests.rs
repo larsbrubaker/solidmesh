@@ -25,7 +25,7 @@ fn struct_members<'m>(module: &'m Module, name: &str) -> (&'m Vec<StructMember>,
     }
 }
 
-fn assert_layout(module: &Module, name: &str, fields: &[(&str, u32)], stride: u32) {
+pub(super) fn assert_layout(module: &Module, name: &str, fields: &[(&str, u32)], stride: u32) {
     let (members, span) = struct_members(module, name);
     let found: Vec<(&str, u32)> = members
         .iter()
@@ -126,7 +126,7 @@ fn the_shader_binds_tightly_packed_buffers() {
 }
 
 /// The value of a named `const` of a scalar type.
-fn literal(module: &Module, name: &str) -> Literal {
+pub(super) fn literal(module: &Module, name: &str) -> Literal {
     let (_, constant) = module
         .constants
         .iter()

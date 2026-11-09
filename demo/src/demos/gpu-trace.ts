@@ -13,8 +13,8 @@ import { demoFrameMarkup } from '../demo-shell.ts';
 import { createButton, createDropdown } from '../controls.ts';
 import { SideWorker } from '../mesh-runner.ts';
 import { loadSetting, saveSetting } from '../settings.ts';
-import { type GpuContext, type PreparedScene, TraceRun, hasWebGpu, openGpu } from '../gpu-bench.ts';
-import { type KindRow, formatRate, formatRatio, reportText } from '../gpu-bench-rules.ts';
+import { type GpuContext, type PreparedScene, type ScatterPrepared, TraceRun, hasWebGpu, openGpu, runScatterCheck } from '../gpu-bench.ts';
+import { type KindRow, type ScatterRow, formatRate, formatRatio, formatScatter, reportText } from '../gpu-bench-rules.ts';
 
 const ROUTE = 'gpu-trace';
 
@@ -188,6 +188,14 @@ export function init(container: HTMLElement): () => void {
         });
       }
 
+      status.textContent = 'Checking the scattering model on the GPU against the CPU...';
+      const scatterPrepared = await worker.call<ScatterPrepared>('gpu_bench_scatter_prepare', []);
+      if (stopped()) return;
+      const scatterResults = await runScatterCheck(context, scatterPrepared, stopped);
+      if (stopped()) return;
+      const scatter = await worker.call<ScatterRow>('gpu_bench_scatter_compare', [scatterResults.slice(0)]);
+      if (stopped()) return;
+
       status.textContent = 'Drawing the picture from the GPU\'s hits...';
       const picture = await worker.call<{ pixels: Uint8Array }>('gpu_bench_picture', [hits[0], hits[1]]);
       if (stopped()) return;
@@ -203,6 +211,7 @@ export function init(container: HTMLElement): () => void {
         maxBinding: context.maxBinding,
         depth: answer.depth,
         rows,
+        scatter,
       };
       const mib = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
       results.innerHTML = `<div class="stats-grid">
@@ -215,14 +224,20 @@ export function init(container: HTMLElement): () => void {
         <span class="k">${row.name}</span><span class="v">${formatRate(row.gpuRaysPerSecond)}</span>
         <span class="k">wasm, 1 thread</span><span class="v">${formatRate(row.wasmRaysPerSecond)} (GPU ${formatRatio(row.gpuRaysPerSecond, row.wasmRaysPerSecond)})</span>
         <span class="k">Agreement</span><span class="v ${row.disagreed === 0 ? 'good' : 'bad'}">${row.exact.toLocaleString()} exact, ${row.ties.toLocaleString()} ties, ${row.disagreed.toLocaleString()} wrong of ${row.compared.toLocaleString()}</span>
-      </div>`).join('');
+      </div>`).join('') + `<div class="stats-grid" style="margin-top:8px">
+        <span class="k">Scattering model</span><span class="v ${scatter.disagreed === 0 ? 'good' : 'bad'}">${formatScatter(scatter)}</span>
+      </div>`;
       report.value = reportText(inputs);
       report.style.display = 'block';
       copyButton.style.display = 'block';
       const disagreements = rows.reduce((sum, row) => sum + row.disagreed, 0);
-      status.textContent = disagreements === 0
-        ? 'Done. The GPU agrees with the reference on every ray checked. Copy the results to share them.'
-        : `Done, but the GPU and the reference disagree on ${disagreements.toLocaleString()} rays: copy the results and report this, because it is a bug.`;
+      if (disagreements > 0) {
+        status.textContent = `Done, but the GPU and the reference disagree on ${disagreements.toLocaleString()} rays: copy the results and report this, because it is a bug.`;
+      } else if (scatter.disagreed > 0) {
+        status.textContent = `Done, but the scattering model disagrees on ${scatter.disagreed.toLocaleString()} cases: copy the results and report this, because it is a bug.`;
+      } else {
+        status.textContent = 'Done. The GPU agrees with the reference on every ray and scattering case checked. Copy the results to share them.';
+      }
     } catch (e) {
       if (disposed) return;
       if (!lost) {

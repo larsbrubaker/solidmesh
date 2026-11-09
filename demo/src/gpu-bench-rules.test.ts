@@ -3,8 +3,37 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-  FIRST_SLICE_RAYS, OVER_MS, SliceSizer, TARGET_MS, WORKGROUP_RAYS, formatRate, formatRatio, reportText,
+  FIRST_SLICE_RAYS, OVER_MS, SliceSizer, TARGET_MS, WORKGROUP_RAYS, formatRate, formatRatio, formatScatter, reportText, SCATTER_CONDITIONING_NOTE,
 } from './gpu-bench-rules.ts';
+
+describe('the scattering check', () => {
+  const clean = { compared: 6765, exact: 6765, ties: 0, disagreed: 0, examples: '' };
+  const inputs = {
+    adapter: 'test', timing: 'test', triangles: 1, nodeBytes: 1, triangleBytes: 1, maxBinding: 1, depth: 1, rows: [],
+  };
+
+  test('says how many cases agree and how many ties there are', () => {
+    const text = formatScatter({ compared: 100, exact: 97, ties: 1, disagreed: 2, examples: 'x' });
+    expect(text).toContain('100 scattering cases');
+    expect(text).toContain('97 agree');
+    expect(text).toContain('1 ties');
+    expect(text).toContain('2 disagreements');
+  });
+
+  test('the report carries the check and its examples when there is one', () => {
+    const report = reportText({
+      ...inputs,
+      scatter: { ...clean, disagreed: 1, examples: 'case 42: pdf: CPU 1, GPU 2' },
+    });
+    expect(report).toContain('Scattering model, GPU against the CPU reference');
+    expect(report).toContain('case 42: pdf: CPU 1, GPU 2');
+    expect(report).toContain(SCATTER_CONDITIONING_NOTE);
+  });
+
+  test('a run without a scattering check reports none', () => {
+    expect(reportText(inputs)).not.toContain('Scattering model');
+  });
+});
 
 describe('SliceSizer', () => {
   test('starts small and in whole workgroups', () => {
