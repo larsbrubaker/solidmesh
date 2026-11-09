@@ -2,17 +2,16 @@
 //! `csg::minkowski_morph` - the kernel's union tree (`Manifold::try_erode_by_convex`), which a
 //! non-convex solid takes, and the sweep, which a non-convex tool still takes.
 //!
-//! Each test asserts which path ran through `erosion_tree_runs`, because `ErosionPath` reads
-//! Sweep for both. That counter is process-wide: the gate's nextest runs every test in its own
-//! process, and under `cargo test` the tests of this file take one lock so none of them erodes
-//! beside another. The difference with progress is
+//! Each test asserts which path ran from the `ErosionPath` the erosion answers with. A cancelled
+//! erosion answers only `Cancelled`, so the cancel tests first finish the same erosion and read
+//! the path from that: the route depends on the operands alone. The difference with progress is
 //! `minkowski_difference_with_path_and_progress`.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use solidmesh_mesh::csg::minkowski_morph::{
-    erosion_tree_runs, minkowski_difference_with_path_and_progress,
+    minkowski_difference_with_path, minkowski_difference_with_path_and_progress, ErosionPath,
 };
 use solidmesh_mesh::csg::minkowski_processing::{sphere_mesh, MinkowskiError};
 use solidmesh_mesh::csg::minkowski_progress_model::tree_units;
@@ -21,22 +20,18 @@ use solidmesh_mesh::{CancelToken, Mesh};
 
 use super::minkowski_tests::dented;
 
-/// Keeps this file's tests from eroding side by side, so the process-wide counter counts one.
-static NOT_IN_PARALLEL: Mutex<()> = Mutex::new(());
-
 #[test]
 fn a_cancelled_sweep_erosion_stops_within_a_hull_or_two_of_being_asked() {
-    let _alone = NOT_IN_PARALLEL.lock().unwrap_or_else(|e| e.into_inner());
     let solid = dented(sphere_mesh(5.0, 16).unwrap());
 
-    let tree_runs_before = erosion_tree_runs();
-    let reports = cancel_on_second_report(&solid, &non_convex_tool());
+    let tool = non_convex_tool();
 
     assert_eq!(
-        erosion_tree_runs(),
-        tree_runs_before,
-        "the tree declines a non-convex tool, so this has to have been the sweep"
+        path_when_finished(&solid, &tool),
+        ErosionPath::Sweep,
+        "the tree declines a non-convex tool, so this has to be the sweep"
     );
+    let reports = cancel_on_second_report(&solid, &tool);
 
     // 128 x 32 face-pair hulls + 128 faces + the closing merge is 4225 units, reported every
     // 42 - about 100 reports. Loose because the parallel hull map cannot recall iterations
@@ -49,16 +44,16 @@ fn a_cancelled_sweep_erosion_stops_within_a_hull_or_two_of_being_asked() {
 
 #[test]
 fn a_cancelled_tree_erosion_stops_within_a_hull_or_two_of_being_asked() {
-    let _alone = NOT_IN_PARALLEL.lock().unwrap_or_else(|e| e.into_inner());
     let solid = dented(sphere_mesh(5.0, 16).unwrap());
 
-    let tree_runs_before = erosion_tree_runs();
-    let reports = cancel_on_second_report(&solid, &ball_tool());
+    let tool = ball_tool();
 
-    assert!(
-        erosion_tree_runs() > tree_runs_before,
+    assert_eq!(
+        path_when_finished(&solid, &tool),
+        ErosionPath::Tree,
         "a non-convex solid and a convex ball are what the tree takes"
     );
+    let reports = cancel_on_second_report(&solid, &tool);
 
     // 128 hulls + 8 leaves + 7 nodes + the subtraction + the closing pass is 145 units.
     assert!(
@@ -69,7 +64,6 @@ fn a_cancelled_tree_erosion_stops_within_a_hull_or_two_of_being_asked() {
 
 #[test]
 fn a_throttled_sweep_erosion_still_fills_the_bar() {
-    let _alone = NOT_IN_PARALLEL.lock().unwrap_or_else(|e| e.into_inner());
     let solid = dented(sphere_mesh(5.0, 8).unwrap());
     let tool = non_convex_tool();
 
@@ -79,12 +73,11 @@ fn a_throttled_sweep_erosion_still_fills_the_bar() {
         "1024 face-pair hulls + 32 solid faces + the closing merge is 1057 units, so the throttle's step is 10"
     );
 
-    let tree_runs_before = erosion_tree_runs();
-    let ratios = erode_recording_the_bar(&solid, &tool);
+    let (ratios, path) = erode_recording_the_bar(&solid, &tool);
 
     assert_eq!(
-        erosion_tree_runs(),
-        tree_runs_before,
+        path,
+        ErosionPath::Sweep,
         "the tree declines a non-convex tool, so this has to have been the sweep"
     );
     assert_throttled_and_full(&ratios, 1057);
@@ -92,7 +85,6 @@ fn a_throttled_sweep_erosion_still_fills_the_bar() {
 
 #[test]
 fn a_throttled_tree_erosion_still_fills_the_bar() {
-    let _alone = NOT_IN_PARALLEL.lock().unwrap_or_else(|e| e.into_inner());
     let solid = dented(sphere_mesh(5.0, 24).unwrap());
 
     assert_eq!(
@@ -101,14 +93,20 @@ fn a_throttled_tree_erosion_still_fills_the_bar() {
         "288 hulls, 18 leaves, 17 nodes, the subtraction and the closing pass: the throttle's step is 3"
     );
 
-    let tree_runs_before = erosion_tree_runs();
-    let ratios = erode_recording_the_bar(&solid, &ball_tool());
+    let (ratios, path) = erode_recording_the_bar(&solid, &ball_tool());
 
-    assert!(
-        erosion_tree_runs() > tree_runs_before,
+    assert_eq!(
+        path,
+        ErosionPath::Tree,
         "a non-convex solid and a convex ball are what the tree takes"
     );
     assert_throttled_and_full(&ratios, 325);
+}
+
+fn path_when_finished(solid: &Mesh, tool: &Mesh) -> ErosionPath {
+    minkowski_difference_with_path(solid, tool)
+        .expect("the erosion finishes")
+        .1
 }
 
 fn cancel_on_second_report(solid: &Mesh, tool: &Mesh) -> usize {
@@ -136,14 +134,14 @@ fn cancel_on_second_report(solid: &Mesh, tool: &Mesh) -> usize {
     reports.load(Ordering::SeqCst)
 }
 
-fn erode_recording_the_bar(solid: &Mesh, tool: &Mesh) -> Vec<f64> {
+fn erode_recording_the_bar(solid: &Mesh, tool: &Mesh) -> (Vec<f64>, ErosionPath) {
     let ratios: Arc<Mutex<Vec<f64>>> = Arc::new(Mutex::new(Vec::new()));
     let sink = Arc::clone(&ratios);
     let reporter: BooleanReporter = Arc::new(move |ratio: f64, _message: &str| {
         sink.lock().unwrap().push(ratio);
     });
 
-    let (eroded, _) = minkowski_difference_with_path_and_progress(
+    let (eroded, path) = minkowski_difference_with_path_and_progress(
         solid,
         tool,
         Some(reporter),
@@ -153,7 +151,7 @@ fn erode_recording_the_bar(solid: &Mesh, tool: &Mesh) -> Vec<f64> {
     assert!(!eroded.faces.is_empty());
 
     let ratios = ratios.lock().unwrap().clone();
-    ratios
+    (ratios, path)
 }
 
 fn assert_throttled_and_full(ratios: &[f64], units: usize) {

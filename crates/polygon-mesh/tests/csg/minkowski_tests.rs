@@ -16,7 +16,7 @@ use solidmesh_mesh::csg::boolean_processing::do_boolean;
 use solidmesh_mesh::csg::consistent_winding;
 use solidmesh_mesh::csg::mesh_repair_rust::rewind_backward_patches;
 use solidmesh_mesh::csg::minkowski_morph::{
-    erosion_tree_runs, minkowski_difference, minkowski_difference_with_path,
+    minkowski_difference, minkowski_difference_with_path,
     minkowski_difference_with_path_and_progress, minkowski_sum, minkowski_sum_with_progress,
     ErosionPath,
 };
@@ -192,17 +192,12 @@ fn a_non_convex_erosion_takes_the_tree_and_matches_the_sweeps_volume() {
         .unwrap(),
     );
 
-    let tree_runs_before = erosion_tree_runs();
     let (eroded, path) = minkowski_difference_with_path(&l_shape, &ball).unwrap();
     let eroded = cleaned(eroded);
 
     assert_eq!(
         path,
-        ErosionPath::Sweep,
-        "the closed form declines a non-convex solid, and the tree reports the sweep's cost regime"
-    );
-    assert!(
-        erosion_tree_runs() > tree_runs_before,
+        ErosionPath::Tree,
         "a non-convex solid and a convex ball are exactly what the erosion tree takes"
     );
 

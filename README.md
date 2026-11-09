@@ -21,7 +21,7 @@ library so that others can use it and build on it. It works on the meshes real p
 
 ## Status
 
-**0.1.0 is on crates.io.** The four crates moved in from the MatterCAD workspace with their
+**0.2.0 is on crates.io.** The four crates moved in from the MatterCAD workspace with their
 history, and MatterCAD depends on them by path, from a solidmesh checkout beside its own. Fillets
 and chamfers are one call, `solidmesh::bevel_part`, whose request carries the constructions it
 may take (`BevelRouting`; the default is MatterCAD's) and whose outcome reports refusals as codes
@@ -46,7 +46,7 @@ The folders keep the names MatterCAD has always used, so the history follows the
 
 ```toml
 [dependencies]
-solidmesh = "0.1"
+solidmesh = "0.2"
 ```
 
 ```rust

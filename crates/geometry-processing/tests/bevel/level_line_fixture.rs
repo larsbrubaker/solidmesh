@@ -1,5 +1,8 @@
 //! A captured level-line case - positions, triangles, the picked chains, the feature edges and the
 //! band's size - read from the fixture files in `tests/bevel/level_line_fixtures/`.
+//!
+//! Lars Brubaker made the designs these meshes came from and dedicates the fixture files to the
+//! public domain under CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>).
 
 #![allow(dead_code)]
 

@@ -30,7 +30,7 @@ path = "src/lib.rs"
 libm = "0.2.16"
 # The fixed-order introsort Clipper 6's intersection list is ordered with, and `RectangleDouble`
 # (the polygons' bounds in path units).
-solidmesh-math = { path = "../vector-math", version = "0.1.1" }
+solidmesh-math = { path = "../vector-math", version = "0.2.1" }
 # The integer polygon types the helpers speak: Clipper2's `Point64`/`Path64`/`Paths64` and enums,
 # from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust). The
 # clipping itself is the Clipper 6 port in src/clipper6.
