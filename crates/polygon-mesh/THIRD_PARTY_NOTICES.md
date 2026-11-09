@@ -133,3 +133,11 @@ Source: https://github.com/larsbrubaker/tess2-rust — the pure-Rust port of lib
 License B 2.0, an MIT-style license), used as a dependency (not copied) by `crates/polygon-mesh`
 for `CachedTesselator` (`data_converters_2d`). Its license text is in that repository.
 
+## naga (MIT OR Apache-2.0, test-only)
+
+Carried by: solidmesh-mesh (`crates/polygon-mesh`), as a dev-dependency only
+
+Source: https://github.com/gfx-rs/wgpu (its `naga` crate), used as a crate (not copied) by the
+tests alone, which parse and validate the flat tree's WGSL traversal: it does not reach the
+library. Its license text is in that repository.
+

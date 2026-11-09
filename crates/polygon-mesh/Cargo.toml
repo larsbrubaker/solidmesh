@@ -49,6 +49,12 @@ tess2-rust = { path = "../../../tess2-rust", version = "1.2.1" }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 manifold-rust = { path = "../../../manifold-rust", version = "0.19.2", features = ["parallel"] }
 
+[dev-dependencies]
+# Parses and validates the flat tree's WGSL compute traversal (`ray_tracer::flat_tree`) in a test,
+# so a shader that would not compile fails here and not only in a browser. Only the WGSL front end
+# and the validator: no GPU, no native code.
+naga = { version = "29", default-features = false, features = ["wgsl-in"] }
+
 # The workspace lints: `todo!()` and `unimplemented!()` are refused everywhere (root Cargo.toml).
 [lints]
 workspace = true

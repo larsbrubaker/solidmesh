@@ -275,6 +275,32 @@ fn square_is_light(x: f64, y: f64, radius: f64) -> bool {
     (cell(x) + cell(y)).rem_euclid(2) == 0
 }
 
+/// The floor under a part and the numbers its camera orbits with: shared by this page's scene and
+/// the GPU Ray Tracing page's, which traces the same part and floor on a flat tree instead.
+pub struct PlacedOnFloor {
+    pub floor: Mesh,
+    pub center: Vector3,
+    /// The part's bounding radius.
+    pub radius: f64,
+    pub ground_z: f64,
+}
+
+impl PlacedOnFloor {
+    /// The floor under `mesh`, a whisker below it.
+    pub fn around(mesh: &Mesh) -> PlacedOnFloor {
+        let bounds = mesh.get_axis_aligned_bounding_box();
+        let radius = bounds.size().length() * 0.5;
+        let ground_z = bounds.min_xyz.z - radius * GROUND_GAP;
+        let center = bounds.center();
+        PlacedOnFloor {
+            floor: floor_mesh(center, ground_z, radius),
+            center,
+            radius,
+            ground_z,
+        }
+    }
+}
+
 /// A part on its floor, ready to trace in any look.
 pub struct TraceScene {
     solid: Solid,
@@ -296,15 +322,9 @@ impl TraceScene {
     pub fn new(mesh: &Mesh, note: String) -> Result<TraceScene, String> {
         let crease = CREASE_DEGREES.to_radians();
         let solid = Solid::new(mesh, crease, "That part has no faces to trace.")?;
-        let bounds = mesh.get_axis_aligned_bounding_box();
-        let radius = bounds.size().length() * 0.5;
-        let ground_z = bounds.min_xyz.z - radius * GROUND_GAP;
-        let center = bounds.center();
-        let floor = Solid::new(
-            &floor_mesh(center, ground_z, radius),
-            crease,
-            "The floor has no faces to trace.",
-        )?;
+        let placed = PlacedOnFloor::around(mesh);
+        let (center, radius, ground_z) = (placed.center, placed.radius, placed.ground_z);
+        let floor = Solid::new(&placed.floor, crease, "The floor has no faces to trace.")?;
         let data = PlacedParts::new(vec![solid.placed()?, floor.placed()?]);
         Ok(TraceScene {
             solid,
@@ -390,21 +410,34 @@ impl Camera {
         width: u32,
         height: u32,
     ) -> Result<Camera, String> {
+        Camera::around(scene.center, scene.radius, yaw, pitch, zoom, width, height)
+    }
+
+    /// The orbit camera around `center` for a part of bounding `radius`, without needing a
+    /// [`TraceScene`] built for it.
+    pub fn around(
+        center: Vector3,
+        radius: f64,
+        yaw: f64,
+        pitch: f64,
+        zoom: f64,
+        width: u32,
+        height: u32,
+    ) -> Result<Camera, String> {
         let pitch = pitch.clamp(
             MIN_PITCH_DEGREES.to_radians(),
             MAX_PITCH_DEGREES.to_radians(),
         );
-        let distance = scene.radius * ORBIT_RADII / zoom.clamp(0.4, 8.0);
+        let distance = radius * ORBIT_RADII / zoom.clamp(0.4, 8.0);
         let offset = Vector3::new(
             pitch.cos() * yaw.cos(),
             pitch.cos() * yaw.sin(),
             pitch.sin(),
         );
-        let eye = scene.center + offset * distance;
-        let render =
-            RenderCamera::perspective(eye, scene.center, Vector3::UNIT_Z, FIELD_OF_VIEW_DEGREES)
-                .map_err(|e| e.to_string())?;
-        let forward = (scene.center - eye).get_normal();
+        let eye = center + offset * distance;
+        let render = RenderCamera::perspective(eye, center, Vector3::UNIT_Z, FIELD_OF_VIEW_DEGREES)
+            .map_err(|e| e.to_string())?;
+        let forward = (center - eye).get_normal();
         let right = forward.cross(Vector3::UNIT_Z).get_normal();
         Ok(Camera {
             eye,

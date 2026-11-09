@@ -92,8 +92,14 @@ self.onmessage = async (ev: MessageEvent) => {
       const start = performance.now();
       const value = fn(...msg.args);
       const ms = performance.now() - start;
-      // A traced image is handed over rather than copied (wasm-bindgen's array is its own copy).
-      const transfer: Transferable[] = value?.pixels?.buffer ? [value.pixels.buffer] : [];
+      // A traced image or a GPU page's buffers are handed over rather than copied (wasm-bindgen's
+      // arrays are their own copies, never views of wasm memory).
+      const transfer: Transferable[] = [];
+      if (value && typeof value === 'object') {
+        for (const part of Object.values(value)) {
+          if (ArrayBuffer.isView(part)) transfer.push((part as ArrayBufferView).buffer as ArrayBuffer);
+        }
+      }
       (self as any).postMessage({ type: 'call', id: msg.id, ok: true, value, ms }, transfer);
     } catch (e) {
       const fatal = e instanceof WebAssembly.RuntimeError;

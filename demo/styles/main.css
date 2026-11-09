@@ -697,6 +697,12 @@ input[type="number"] {
   .demo-controls {
     max-height: 300px;
   }
+
+  /* The GPU Ray Tracing page's results are the point of the page: on a phone they run on down
+     the page instead of scrolling inside a box too small to read them in. */
+  .demo-controls.gpu-bench-column {
+    max-height: none;
+  }
 }
 
 /* ===================== Scrollbar ===================== */

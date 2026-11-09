@@ -33,6 +33,9 @@
 //! continuing ray. [`PlacedParts`] traces many [`PlacedPart`]s sharing a tree and says which was
 //! hit, with its surface in world space.
 //!
+//! `flat_tree` holds the tree in plain buffers a WebGPU compute shader reads, collapsed from the
+//! BVH: the one GPU-facing module, and the one place geometry narrows to `f32`.
+//!
 //! [`ScatteringSurface`] (in `scattering`) is the physically based surface model a path tracer
 //! shades with: BRDFs and glass, independent of the trace path. `path_tracer` renders with it:
 //! [`PathTracer`] over a [`RenderScene`], accumulated in a [`RenderSurface`] in passes the caller
@@ -45,6 +48,7 @@ mod bvh_builder_locally_ordered_clustering;
 mod bvh_bundle_traversal;
 mod bvh_iterator;
 mod difference;
+pub mod flat_tree;
 mod intersect_info_subtract;
 mod material;
 mod minimal_triangle;

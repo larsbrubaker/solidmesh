@@ -19,6 +19,9 @@
 //!   its material and light presets over the library's path tracer, and the per-pixel
 //!   accumulation the worker refines in short passes (this page draws on a 2D canvas, so it
 //!   answers an image rather than a [`MeshData`]);
+//! - `gpu_bench`, `gpu_bench_compare`: the GPU Ray Tracing page - its scene as a flat tree, the
+//!   ray sets a WebGPU compute shader and the reference traversal both trace, and the check of
+//!   the GPU's hits against the reference;
 //! - `showcase`: the part of the Measure & Export page;
 //! - `fillet_parts`, `fillet_pick`, `fillet`: the Fillet & Chamfer page - its parts, picking on
 //!   them in wasm, and the picks applied at one radius in one `solidmesh::bevel_part` call;
@@ -39,6 +42,8 @@ pub mod fillet_pick;
 pub mod fillet_words;
 pub mod fillet_words_blend;
 pub mod fillet_words_parts;
+pub mod gpu_bench;
+pub mod gpu_bench_compare;
 pub mod implicit;
 pub mod morph;
 pub mod outline;

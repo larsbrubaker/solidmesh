@@ -20,6 +20,7 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
   'repair': () => import('./demos/repair.ts' as any),
   'measure-export': () => import('./demos/measure-export.ts' as any),
   'ray-trace': () => import('./demos/ray-trace.ts' as any),
+  'gpu-trace': () => import('./demos/gpu-trace.ts' as any),
 };
 
 const CARDS: Record<string, { title: string; text: string }> = {

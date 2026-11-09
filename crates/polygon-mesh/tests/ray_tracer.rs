@@ -5,6 +5,14 @@
 mod boolean_tests;
 #[path = "ray_tracer/bvh_flat_mesh_depth_tests.rs"]
 mod bvh_flat_mesh_depth_tests;
+#[path = "ray_tracer/flat_tree_precision_tests.rs"]
+mod flat_tree_precision_tests;
+#[path = "ray_tracer/flat_tree_shader_tests.rs"]
+mod flat_tree_shader_tests;
+#[path = "ray_tracer/flat_tree_support.rs"]
+mod flat_tree_support;
+#[path = "ray_tracer/flat_tree_tests.rs"]
+mod flat_tree_tests;
 #[path = "ray_tracer/minimal_triangle_tests.rs"]
 mod minimal_triangle_tests;
 #[path = "ray_tracer/parallel_sequential_equivalence_tests.rs"]
