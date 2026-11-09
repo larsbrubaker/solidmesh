@@ -16,6 +16,8 @@
 //! - **Implicit surfaces**: [`sdf`] (marching cubes over a sampled field) and [`dual_contouring`];
 //! - **Minkowski sums and hulls**: [`csg::minkowski_morph`], [`processors::mesh_convex_hull`];
 //! - **Repair**: [`csg::mesh_repair_rust`], and [`AdvancedRepairOptions`] for the full repair;
+//! - **Remeshing for analysis**: [`remesh_for_analysis`] rebuilds a closed solid's surface with
+//!   well-shaped triangles at a size given per position, keeping its sharp creases;
 //! - **Files**: [`processors::stl_processing`] reads STL and [`processors::stl_writer`] writes it.
 //!
 //! Long operations take a [`CancelToken`]; matrices are `solidmesh-math`'s row-major
@@ -89,6 +91,7 @@
 //! `i32` (the sizes saved files and the model use), and matrices are row-major with row
 //! vectors (`p * M`). Long operations take a [`CancelToken`].
 
+pub mod analysis_remesh;
 pub mod cancel;
 pub mod csg;
 pub mod data_converters_2d;
@@ -115,6 +118,10 @@ pub(crate) mod vector3_list;
 #[doc(hidden)]
 pub mod vertex_sorters;
 
+pub use analysis_remesh::{
+    remesh_for_analysis, AnalysisRemesh, AnalysisRemeshError, AnalysisRemeshOptions,
+    AnalysisRemeshReport, AnalysisSurface,
+};
 pub use cancel::{CancelToken, Cancelled};
 pub use face::{Face, FaceList};
 pub use face_data::{

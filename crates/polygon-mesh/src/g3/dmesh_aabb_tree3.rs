@@ -70,7 +70,7 @@ struct BoxesSet {
 /// g3 `DMeshAABBTree3`, built with `TopDownMidpoint`. The fields are visible to `fast_winding`,
 /// which walks the same layout.
 pub(crate) struct DMeshAABBTree3<'a> {
-    pub(super) mesh: &'a DMesh3,
+    pub(crate) mesh: &'a DMesh3,
     pub(super) box_to_index: Vec<i32>,
     pub(super) box_centers: Vec<[f32; 3]>,
     pub(super) box_extents: Vec<[f32; 3]>,
@@ -190,6 +190,76 @@ impl<'a> DMeshAABBTree3<'a> {
                     self.find_nearest_tri(first, p, nearest_sqr, tid);
                     if second_dist < *nearest_sqr {
                         self.find_nearest_tri(second, p, nearest_sqr, tid);
+                    }
+                }
+            }
+        }
+    }
+
+    /// The nearest triangle `filter` accepts strictly within `max_dist` (`f64::MAX` for no
+    /// limit), or -1. A caller that must stay on one sheet of a thin wall filters out the facing
+    /// sheet here rather than taking whatever is nearest.
+    pub(crate) fn find_nearest_triangle_where(
+        &self,
+        p: [f64; 3],
+        max_dist: f64,
+        filter: &dyn Fn(i32) -> bool,
+    ) -> i32 {
+        let mut nearest_sqr = if max_dist < f64::MAX {
+            max_dist * max_dist
+        } else {
+            f64::MAX
+        };
+        let mut tid = -1;
+        self.find_nearest_tri_where(self.root_index, p, &mut nearest_sqr, &mut tid, filter);
+        tid
+    }
+
+    fn find_nearest_tri_where(
+        &self,
+        i_box: i32,
+        p: [f64; 3],
+        nearest_sqr: &mut f64,
+        tid: &mut i32,
+        filter: &dyn Fn(i32) -> bool,
+    ) {
+        let idx = self.box_to_index[i_box as usize];
+        if idx < self.triangles_end {
+            let idx = idx as usize;
+            let num_tris = self.index_list[idx] as usize;
+            for i in 1..=num_tris {
+                let ti = self.index_list[idx + i];
+                if !filter(ti) {
+                    continue;
+                }
+                let dist_sqr = tri_distance_sqr(&self.mesh.get_tri_vertices(ti as usize), p);
+                if dist_sqr < *nearest_sqr {
+                    *nearest_sqr = dist_sqr;
+                    *tid = ti;
+                }
+            }
+        } else {
+            let idx = idx as usize;
+            let child1 = self.index_list[idx];
+            if child1 < 0 {
+                let child1 = -child1 - 1;
+                if self.box_distance_sqr(child1, p) <= *nearest_sqr {
+                    self.find_nearest_tri_where(child1, p, nearest_sqr, tid, filter);
+                }
+            } else {
+                let child1 = child1 - 1;
+                let child2 = self.index_list[idx + 1] - 1;
+                let dist1 = self.box_distance_sqr(child1, p);
+                let dist2 = self.box_distance_sqr(child2, p);
+                let (first, first_dist, second, second_dist) = if dist1 < dist2 {
+                    (child1, dist1, child2, dist2)
+                } else {
+                    (child2, dist2, child1, dist1)
+                };
+                if first_dist < *nearest_sqr {
+                    self.find_nearest_tri_where(first, p, nearest_sqr, tid, filter);
+                    if second_dist < *nearest_sqr {
+                        self.find_nearest_tri_where(second, p, nearest_sqr, tid, filter);
                     }
                 }
             }
