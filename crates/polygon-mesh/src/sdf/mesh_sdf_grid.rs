@@ -8,18 +8,26 @@
 //! axis counts triangle crossings (orientation free), and a voxel is inside when at least two of
 //! its three parities say so, so one axis grazing an edge or a small hole cannot flip it.
 //!
-//! A grid given a `DistanceGridBuilder` (`distance_grid_builder.rs`; MatterCAD's GPU fill) lays
-//! the grid out as the flood would and takes the unsigned distances from it instead
-//! (`build_with_injected_distances`); the CPU flood is the reference that fill is tested against.
-//! The builder blocks, so `build` serves both kinds of grid. The crossing counts and votes do
-//! not depend on order, so the count runs on one thread.
+//! A grid can take its unsigned distances from a fill instead of the CPU flood, which is the
+//! reference a fill is tested against. Every fill goes through the same two halves:
+//! `prepare_request` orients the part, lays the grid out as the flood would and gathers the
+//! triangles, and `finish_with_distances` stores the fill's answer and runs the sign vote. The
+//! blocking `DistanceGridBuilder` (`distance_grid_builder.rs`) runs between them inside `build`,
+//! which serves every kind of grid; `build_async` and `extract_async` await an
+//! `AsyncDistanceGridBuilder` there instead, for a host whose fill can only be awaited. Each half
+//! is a separate synchronous job and `MeshSdfGrid` is `Sync`, so a caller can run them on its
+//! own worker threads and await the fill in between; what the first half returns belongs to its
+//! grid, and any other grid refuses it. The crossing counts and votes do not depend
+//! on order, so the count runs on one thread.
 
 use std::sync::atomic::{AtomicI32, AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use solidmesh_math::Vector3;
 
-use super::distance_grid_builder::{DistanceBuildError, DistanceGridBuilder, DistanceGridRequest};
+use super::distance_grid_builder::{
+    AsyncDistanceGridBuilder, DistanceBuildError, DistanceGridBuilder, OwnedDistanceGridRequest,
+};
 use super::grid_marching_cubes::{extract, DenseGrid3f};
 use crate::csg::minkowski_processing::{orient_shells_as_solid, MinkowskiError};
 use crate::csg::minkowski_shell_orientation::mesh_may_need_repair;
@@ -39,8 +47,11 @@ pub enum SdfGridError {
     /// Orienting the part's shells failed other than by the kernel refusing the part (which the
     /// grid absorbs by using the part as it is).
     Orientation(MinkowskiError),
-    /// The injected `DistanceGridBuilder` failed, with its message.
+    /// The injected fill failed or gave too few distances, with its message.
     DistanceFill(String),
+    /// `finish_with_distances` was given a `PreparedDistanceGrid` this grid did not make; nothing
+    /// was stored.
+    PreparedForAnotherGrid,
 }
 
 impl std::fmt::Display for SdfGridError {
@@ -50,6 +61,10 @@ impl std::fmt::Display for SdfGridError {
             SdfGridError::Cancelled => write!(f, "The operation was canceled."),
             SdfGridError::Orientation(error) => write!(f, "{error}"),
             SdfGridError::DistanceFill(message) => write!(f, "{message}"),
+            SdfGridError::PreparedForAnotherGrid => write!(
+                f,
+                "These distances were prepared by a different distance grid, so they were not used. Call prepare_request on the grid you finish them on."
+            ),
         }
     }
 }
@@ -63,9 +78,24 @@ struct Built {
     origin: Vector3,
 }
 
+/// What [`MeshSdfGrid::prepare_request`] keeps for [`MeshSdfGrid::finish_with_distances`]: the
+/// oriented part the sign vote counts crossings on and the grid's layout. It belongs to the grid
+/// that made it; any other grid refuses it.
+pub struct PreparedDistanceGrid {
+    owner: Arc<()>,
+    dmesh: DMesh3,
+    origin: Vector3,
+    ni: i32,
+    nj: i32,
+    nk: i32,
+}
+
 /// A solid's signed distance field on a grid, built once and extracted at any offset up to
 /// `max_radius`.
 pub struct MeshSdfGrid {
+    /// Which `PreparedDistanceGrid`s are this grid's. An identity rather than a comparison of the
+    /// layout, because two different parts with equal bounds have equal layouts.
+    identity: Arc<()>,
     source: Mesh,
     max_radius: f64,
     resolution: i32,
@@ -104,6 +134,7 @@ impl MeshSdfGrid {
             ));
         }
         Ok(MeshSdfGrid {
+            identity: Arc::new(()),
             source: solid,
             max_radius,
             resolution: resolution.min(Self::MAX_RESOLUTION),
@@ -123,6 +154,8 @@ impl MeshSdfGrid {
     /// ran [`orient_shells_as_solid`] on the mesh.
     pub fn with_orient_shells(mut self, orient_shells: bool) -> Self {
         self.orient_shells = orient_shells;
+        // Orientation can change the part's bounds, so a build prepared before this is stale.
+        self.identity = Arc::new(());
         self
     }
 
@@ -193,14 +226,162 @@ impl MeshSdfGrid {
         if self.built.get().is_some() {
             return Ok(());
         }
+        if let Some(builder) = &self.distance_builder {
+            let (prepared, request) = self.prepare_request(cancel)?;
+            let distances = builder
+                .compute_distances(&request.as_request())
+                .map_err(fill_error)?;
+            return self.finish_holding_build_lock(prepared, &distances, cancel);
+        }
         let dmesh = self.prepare(cancel)?;
-        let (mut field, origin) = match &self.distance_builder {
-            Some(builder) => {
-                self.build_with_injected_distances(&dmesh, builder.as_ref(), cancel)?
+        let (field, origin) = self.build_cpu_distances(&dmesh, cancel)?;
+        self.sign_and_store(&dmesh, field, origin, cancel)
+    }
+
+    /// [`MeshSdfGrid::build`] with the distances awaited from `builder`, which replaces any
+    /// `DistanceGridBuilder` the grid was given; a grid already built returns at once without
+    /// asking it. A failed fill comes back as its error, never as a CPU flood. Other callers are
+    /// not held off while the fill runs (a lock held across the await would stop the only thread a
+    /// browser has), so builds racing on one grid each fill, and the first to finish is the one
+    /// stored.
+    pub async fn build_async(
+        &self,
+        builder: &dyn AsyncDistanceGridBuilder,
+        cancel: &CancelToken,
+    ) -> Result<(), SdfGridError> {
+        if self.built.get().is_some() {
+            return Ok(());
+        }
+        let (prepared, request) = self.prepare_request(cancel)?;
+        let distances = builder
+            .compute_distances_async(request)
+            .await
+            .map_err(fill_error)?;
+        self.finish_with_distances(prepared, &distances, cancel)
+    }
+
+    /// The first half of a build with a fill: orients the part, lays the grid out and gathers the
+    /// triangles. Returns the state for [`MeshSdfGrid::finish_with_distances`] and the request to
+    /// fill. Stores nothing, so an abandoned request leaves the grid as it was.
+    ///
+    /// The layout is exactly g3's `Compute` with `PadWidth` set (f32 origin, f32 cell size, the
+    /// same truncating counts), so a fill's distances land on exactly the samples the CPU flood
+    /// would have written.
+    pub fn prepare_request(
+        &self,
+        cancel: &CancelToken,
+    ) -> Result<(PreparedDistanceGrid, OwnedDistanceGridRequest), SdfGridError> {
+        let dmesh = self.prepare(cancel)?;
+        let cell_size = self.cell_size();
+        let bounds = dmesh.cached_bounds();
+        let dx = cell_size as f32;
+        let pad = (self.max_radius + (2.0 * cell_size)) as f32;
+        let origin: [f32; 3] = std::array::from_fn(|a| bounds.min[a] as f32 - pad);
+        let max: [f32; 3] = std::array::from_fn(|a| bounds.max[a] as f32 + pad);
+        let ni = ((max[0] - origin[0]) / dx) as i32 + 1;
+        let nj = ((max[1] - origin[1]) / dx) as i32 + 1;
+        let nk = ((max[2] - origin[2]) / dx) as i32 + 1;
+        let grid_origin = Vector3::new(origin[0] as f64, origin[1] as f64, origin[2] as f64);
+
+        let mut triangles = Vec::with_capacity(dmesh.triangle_count() * 9);
+        for tid in dmesh.triangle_indices() {
+            for p in dmesh.get_tri_vertices(tid as usize) {
+                triangles.push((p[0] - grid_origin.x) as f32);
+                triangles.push((p[1] - grid_origin.y) as f32);
+                triangles.push((p[2] - grid_origin.z) as f32);
             }
-            None => self.build_cpu_distances(&dmesh, cancel)?,
+        }
+
+        if cancel.is_cancelled() {
+            return Err(SdfGridError::Cancelled);
+        }
+
+        // g3's upper bound for samples the band never reached.
+        let cap = (ni + nj + nk) as f32 * dx;
+        let request = OwnedDistanceGridRequest {
+            triangles,
+            ni,
+            nj,
+            nk,
+            cell_size: dx,
+            band: (self.max_radius + (2.0 * cell_size)) as f32,
+            cap,
+            stage_done: None,
         };
-        apply_crossing_signs(&dmesh, &mut field, origin, self.cell_size(), cancel)?;
+        let prepared = PreparedDistanceGrid {
+            owner: Arc::clone(&self.identity),
+            dmesh,
+            origin: grid_origin,
+            ni,
+            nj,
+            nk,
+        };
+        Ok((prepared, request))
+    }
+
+    /// The second half of a build with a fill: stores `distances` (the answer to the request from
+    /// [`MeshSdfGrid::prepare_request`]) and runs the sign vote. A `prepared` this grid did not
+    /// make is refused with [`SdfGridError::PreparedForAnotherGrid`], since its layout and part do
+    /// not go with this grid's spacing. Too few distances are an error and leave the grid unbuilt;
+    /// extra ones are ignored. A grid already built keeps its field, so the slower of two racing
+    /// fills changes nothing.
+    pub fn finish_with_distances(
+        &self,
+        prepared: PreparedDistanceGrid,
+        distances: &[f32],
+        cancel: &CancelToken,
+    ) -> Result<(), SdfGridError> {
+        if !Arc::ptr_eq(&prepared.owner, &self.identity) {
+            return Err(SdfGridError::PreparedForAnotherGrid);
+        }
+        if self.built.get().is_some() {
+            return Ok(());
+        }
+        let _guard = self
+            .build_lock
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        self.finish_holding_build_lock(prepared, distances, cancel)
+    }
+
+    /// [`MeshSdfGrid::finish_with_distances`] for a caller that holds `build_lock`.
+    fn finish_holding_build_lock(
+        &self,
+        prepared: PreparedDistanceGrid,
+        distances: &[f32],
+        cancel: &CancelToken,
+    ) -> Result<(), SdfGridError> {
+        if self.built.get().is_some() {
+            return Ok(());
+        }
+        let mut field = DenseGrid3f::new(
+            prepared.ni.max(0) as usize,
+            prepared.nj.max(0) as usize,
+            prepared.nk.max(0) as usize,
+            0.0,
+        );
+        let size = field.size();
+        // A short answer cannot fill the grid; extra distances are ignored.
+        if distances.len() < size {
+            return Err(SdfGridError::DistanceFill(format!(
+                "The distance fill returned {} distances for a grid of {size} samples.",
+                distances.len()
+            )));
+        }
+        field.buffer.copy_from_slice(&distances[..size]);
+        self.sign_and_store(&prepared.dmesh, field, prepared.origin, cancel)
+    }
+
+    /// Votes the field's signs and stores it; the tail of every build, whichever gave the
+    /// distances.
+    fn sign_and_store(
+        &self,
+        dmesh: &DMesh3,
+        mut field: DenseGrid3f,
+        origin: Vector3,
+        cancel: &CancelToken,
+    ) -> Result<(), SdfGridError> {
+        apply_crossing_signs(dmesh, &mut field, origin, self.cell_size(), cancel)?;
         let _ = self.built.set(Built { field, origin });
         self.grid_builds.fetch_add(1, Ordering::SeqCst);
         Ok(())
@@ -272,87 +453,50 @@ impl MeshSdfGrid {
         ))
     }
 
-    /// The grid laid out exactly as g3's `Compute` does with `PadWidth` set (f32 origin, f32 cell
-    /// size, the same truncating counts), so the injected distances land on exactly the samples the
-    /// CPU flood would have written.
-    fn build_with_injected_distances(
-        &self,
-        dmesh: &DMesh3,
-        builder: &dyn DistanceGridBuilder,
-        cancel: &CancelToken,
-    ) -> Result<(DenseGrid3f, Vector3), SdfGridError> {
-        let cell_size = self.cell_size();
-        let bounds = dmesh.cached_bounds();
-        let dx = cell_size as f32;
-        let pad = (self.max_radius + (2.0 * cell_size)) as f32;
-        let origin: [f32; 3] = std::array::from_fn(|a| bounds.min[a] as f32 - pad);
-        let max: [f32; 3] = std::array::from_fn(|a| bounds.max[a] as f32 + pad);
-        let ni = ((max[0] - origin[0]) / dx) as i32 + 1;
-        let nj = ((max[1] - origin[1]) / dx) as i32 + 1;
-        let nk = ((max[2] - origin[2]) / dx) as i32 + 1;
-        let grid_origin = Vector3::new(origin[0] as f64, origin[1] as f64, origin[2] as f64);
-
-        let mut triangles = Vec::with_capacity(dmesh.triangle_count() * 9);
-        for tid in dmesh.triangle_indices() {
-            for p in dmesh.get_tri_vertices(tid as usize) {
-                triangles.push((p[0] - grid_origin.x) as f32);
-                triangles.push((p[1] - grid_origin.y) as f32);
-                triangles.push((p[2] - grid_origin.z) as f32);
-            }
-        }
-
-        if cancel.is_cancelled() {
-            return Err(SdfGridError::Cancelled);
-        }
-
-        // g3's upper bound for samples the band never reached.
-        let cap = (ni + nj + nk) as f32 * dx;
-        let distances = builder
-            .compute_distances(&DistanceGridRequest {
-                triangles: &triangles,
-                ni,
-                nj,
-                nk,
-                cell_size: dx,
-                band: (self.max_radius + (2.0 * cell_size)) as f32,
-                cap,
-                stage_done: None,
-            })
-            .map_err(|error| match error {
-                DistanceBuildError::Cancelled => SdfGridError::Cancelled,
-                DistanceBuildError::Failed(message) => SdfGridError::DistanceFill(message),
-            })?;
-        let mut field = DenseGrid3f::new(
-            ni.max(0) as usize,
-            nj.max(0) as usize,
-            nk.max(0) as usize,
-            0.0,
-        );
-        let size = field.size();
-        // A short answer cannot fill the grid; extra distances are ignored.
-        if distances.len() < size {
-            return Err(SdfGridError::DistanceFill(format!(
-                "The distance fill returned {} distances for a grid of {size} samples.",
-                distances.len()
-            )));
-        }
-        field.buffer.copy_from_slice(&distances[..size]);
-        Ok((field, grid_origin))
-    }
-
     /// The surface at signed distance `iso` from the part (positive grows it, negative shrinks it),
     /// building the field first if needed.
     pub fn extract(&self, iso: f64, cancel: &CancelToken) -> Result<Mesh, SdfGridError> {
+        self.check_in_range(iso)?;
+        self.build(cancel)?;
+        self.extract_built(iso, cancel)
+    }
+
+    /// [`MeshSdfGrid::extract`] with the field, when it still has to be built, built by
+    /// [`MeshSdfGrid::build_async`] from `builder`.
+    pub async fn extract_async(
+        &self,
+        iso: f64,
+        builder: &dyn AsyncDistanceGridBuilder,
+        cancel: &CancelToken,
+    ) -> Result<Mesh, SdfGridError> {
+        self.check_in_range(iso)?;
+        self.build_async(builder, cancel).await?;
+        self.extract_built(iso, cancel)
+    }
+
+    fn check_in_range(&self, iso: f64) -> Result<(), SdfGridError> {
         if iso.abs() > self.max_radius {
             return Err(SdfGridError::OutOfRange(format!(
                 "This field holds offsets up to {} either way; build it with maxRadius at least |iso| (the largest Dilate radius or Erode / Hollow depth of the drag).",
                 self.max_radius
             )));
         }
-        self.build(cancel)?;
+        Ok(())
+    }
+
+    /// Marching cubes over the built field; a grid that is not built reads as cancelled.
+    fn extract_built(&self, iso: f64, cancel: &CancelToken) -> Result<Mesh, SdfGridError> {
         let built = self.built.get().ok_or(SdfGridError::Cancelled)?;
         extract(&built.field, built.origin, self.cell_size(), iso, cancel)
             .ok_or(SdfGridError::Cancelled)
+    }
+}
+
+/// A fill's failure as the grid reports it.
+fn fill_error(error: DistanceBuildError) -> SdfGridError {
+    match error {
+        DistanceBuildError::Cancelled => SdfGridError::Cancelled,
+        DistanceBuildError::Failed(message) => SdfGridError::DistanceFill(message),
     }
 }
 

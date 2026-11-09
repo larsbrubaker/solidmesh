@@ -29,7 +29,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # The library, alone: it re-exports solidmesh-math, solidmesh-clipper and solidmesh-mesh as
 # `solidmesh::math`, `solidmesh::clipper` and `solidmesh::mesh`, as a library user would use it.
-solidmesh = { path = "../../crates/geometry-processing", version = "0.2.2" }
+solidmesh = { path = "../../crates/geometry-processing", version = "0.2.3" }
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 # Routes Rust panic messages (with location) to console.error: without it a panic surfaces only as
