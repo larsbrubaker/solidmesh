@@ -163,6 +163,7 @@ impl<'a> Engine<'a> {
         tree: &'a DMeshAABBTree3<'a>,
         crease: CreaseNet,
         opts: &'a AnalysisRemeshOptions<'a>,
+        absorbed: Vec<bool>,
     ) -> Self {
         let input_positions = (0..mesh.max_vertex_id().max(0))
             .map(|v| {
@@ -175,7 +176,7 @@ impl<'a> Engine<'a> {
             .collect();
         Self {
             mesh,
-            sheets: Sheets::new(tree),
+            sheets: Sheets::new(tree).with_absorbed(absorbed),
             crease,
             opts,
             cos_floor: libm::cos(opts.min_angle_floor_degrees.to_radians()),

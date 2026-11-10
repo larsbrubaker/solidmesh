@@ -12,6 +12,8 @@ mod hardening_tests;
 mod parts;
 #[path = "analysis_remesh/remesh_tests.rs"]
 mod remesh_tests;
+#[path = "analysis_remesh/strip_tests.rs"]
+mod strip_tests;
 #[path = "analysis_remesh/surface_checks.rs"]
 mod surface_checks;
 #[path = "analysis_remesh/sweep_tests.rs"]

@@ -6,7 +6,7 @@
 use crate::g3::dmesh3::DMesh3;
 use crate::g3::dmesh3::INVALID_ID;
 use crate::g3::dmesh_aabb_tree3::DMeshAABBTree3;
-use crate::g3::vector3d::{cross, dot, length, sub};
+use crate::g3::vector3d::{cross, distance, dot, length, sub};
 
 use super::crease::polyline_deviation;
 use super::engine::{sample_grid, worst_cos, Engine, P};
@@ -116,6 +116,7 @@ fn directed_deviation(
     from: &DMesh3,
     to: &Sheets<'_>,
     grid: usize,
+    absorbed: &dyn Fn(i32) -> bool,
 ) -> Result<f64, AnalysisRemeshError> {
     let mut worst = 0.0_f64;
     for (count, t) in from.triangle_indices().enumerate() {
@@ -126,8 +127,15 @@ fn directed_deviation(
         let Some(normal) = reliable_normal(a, b, c) else {
             continue;
         };
+        let any_facing = absorbed(t);
         for p in sample_grid(a, b, c, grid).into_iter().chain([a, b, c]) {
-            worst = worst.max(to.distance(p, normal, f64::MAX));
+            let gap = if any_facing {
+                to.nearest_any(p, f64::MAX)
+                    .map_or(f64::INFINITY, |(q, _)| distance(p, q))
+            } else {
+                to.distance(p, normal, f64::MAX)
+            };
+            worst = worst.max(gap);
         }
     }
     Ok(worst)
@@ -164,10 +172,15 @@ pub(super) fn measure(
     }
     let (forced, unforced, min_unforced) = classify_small_angles(engine);
 
-    let out_to_in = directed_deviation(engine, engine.mesh(), engine.sheets(), VERIFY_GRID)?;
+    let out_to_in =
+        directed_deviation(engine, engine.mesh(), engine.sheets(), VERIFY_GRID, &|_| {
+            false
+        })?;
     let output_tree = DMeshAABBTree3::new(engine.mesh());
     let output_sheets = Sheets::new(&output_tree);
-    let in_to_out = directed_deviation(engine, source, &output_sheets, INPUT_SAMPLE_GRID)?;
+    let in_to_out = directed_deviation(engine, source, &output_sheets, INPUT_SAMPLE_GRID, &|t| {
+        engine.sheets().is_absorbed(t)
+    })?;
 
     let (kept, lost) = crease_survival(engine)?;
     let (volume_in, volume_out) = (mesh_volume(source), mesh_volume(engine.mesh()));

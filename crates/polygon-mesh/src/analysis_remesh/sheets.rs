@@ -5,6 +5,11 @@
 //! read that far sheet as "on the surface" for the next check. The filter is the half-space
 //! `dot > 0` rather than something tighter because a coarse triangle over a curved input can
 //! legitimately tilt away from the local input normal; anything sharper would refuse good edits.
+//!
+//! The one query without the filter is [`Sheets::nearest_any`], for the input faces `clean`
+//! removed as strips ([`Sheets::is_absorbed`]): merged into one sharp edge, such a face has no
+//! output surface facing its way, and the deviation measures compare it with the nearest surface
+//! of any facing. It is used only for input-to-output measures; output to input stays filtered.
 
 use crate::g3::dmesh3::DMesh3;
 use crate::g3::dmesh_aabb_tree3::DMeshAABBTree3;
@@ -40,6 +45,8 @@ pub(super) fn reliable_normal(a: P, b: P, c: P) -> Option<P> {
 pub(super) struct Sheets<'a> {
     tree: &'a DMeshAABBTree3<'a>,
     normals: Vec<Option<P>>,
+    /// The input faces `clean` merges away as strips, by triangle id: see [`Self::is_absorbed`].
+    absorbed: Vec<bool>,
 }
 
 impl<'a> Sheets<'a> {
@@ -50,7 +57,25 @@ impl<'a> Sheets<'a> {
             let [a, b, c] = mesh.get_triangle(t).map(|v| mesh.vertex(v));
             normals[t as usize] = reliable_normal(a, b, c);
         }
-        Self { tree, normals }
+        Self {
+            tree,
+            normals,
+            absorbed: Vec::new(),
+        }
+    }
+
+    /// These sheets with `absorbed` marking the input faces that `clean` merges away as strips.
+    pub(super) fn with_absorbed(mut self, absorbed: Vec<bool>) -> Self {
+        self.absorbed = absorbed;
+        self
+    }
+
+    /// Whether input face `t` is a strip `clean` merges away. Such a face is narrower than the
+    /// clean-up's share of the bound and is represented by the sharp edge it was merged into,
+    /// which can face any way (a step riser merged into the corner between two flats faces
+    /// neither of them), so it is measured against the nearest surface, not the same-facing one.
+    pub(super) fn is_absorbed(&self, t: i32) -> bool {
+        self.absorbed.get(t as usize).copied().unwrap_or(false)
     }
 
     /// The surface being queried.
@@ -69,6 +94,17 @@ impl<'a> Sheets<'a> {
                 .is_some_and(|n| dot(n, normal) > 0.0)
         };
         let t = self.tree.find_nearest_triangle_where(p, reach, &accept);
+        if t < 0 {
+            return None;
+        }
+        let triangle = self.tree.mesh.get_tri_vertices(t as usize);
+        Some((distance_sqr_closest(&triangle, p).1, t))
+    }
+
+    /// The distance from `p` to the nearest triangle of any facing, or infinity if none is
+    /// within `reach`, and that triangle.
+    pub(super) fn nearest_any(&self, p: P, reach: f64) -> Option<(P, i32)> {
+        let t = self.tree.find_nearest_triangle_where(p, reach, &|_| true);
         if t < 0 {
             return None;
         }

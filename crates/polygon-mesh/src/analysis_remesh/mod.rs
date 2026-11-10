@@ -7,9 +7,12 @@
 //! `Ok` is a promise about the exact `f64` coordinates returned ([`AnalysisSurface`]): closed and
 //! wound, no triangles touching or crossing, no free edge folded back on itself, within the angle
 //! floor, creases kept, and within `max_deviation` both ways on the same-facing sheet of the
-//! input. `verify` checks all of this on
-//! the result, and anything that cannot be met comes back as a named error carrying the measured
-//! value and what to change, never as a surface that looks successful. A triangle left under the
+//! input, with one exception: an input face `clean` removed as a strip (a facet between two
+//! creases narrower than a quarter of the bound) is measured to the nearest output surface of
+//! any facing, because once merged into one sharp edge nothing faces its way. Output to input
+//! stays same-facing throughout. `verify` checks all of this on the result, and anything that
+//! cannot be met comes back as a named error carrying the measured value and what to change,
+//! never as a surface that looks successful. A triangle left under the
 //! floor is such an error, [`AnalysisRemeshError::AngleFloorNotMet`], unless the input's own
 //! geometry forces it: a crease sector that measures under the floor in the input, or a whole
 //! vertex fan too narrow to give three corners at the floor (`sliver` defines this exactly).
@@ -42,8 +45,9 @@
 //! input surface; `sliver` works the remaining triangles below the floor; `crease` keeps each
 //! crease edge's original polyline so a coarsened chain stays on the crease; `report` measures
 //! the returned mesh. Before any of that, `clean` removes the input faces too thin to have a
-//! normal, so `crease` and the passes only ever see faces with one. The existing remesher and its
-//! callers are untouched.
+//! normal, so `crease` and the passes only ever see faces with one, and merges into one sharp edge
+//! any crease-bordered strip narrower than a quarter of the bound, whose two creases no remesh
+//! could keep apart. The existing remesher and its callers are untouched.
 
 mod clean;
 mod crease;
@@ -327,10 +331,11 @@ pub fn remesh_for_analysis(
     let source = checked_input(mesh)?;
     let tree = DMeshAABBTree3::new(&source);
     let mut working = source.clone();
-    clean::remove_thin_faces(&mut working, options)?;
+    let removed_strips = clean::remove_thin_faces(&mut working, options)?;
     let crease = CreaseNet::from_mesh(&working, options.sharp_edge_degrees, options.aim_degrees());
 
-    let mut engine = Engine::new(working, &tree, crease, options);
+    let absorbed = clean::absorbed_faces(&source, &removed_strips);
+    let mut engine = Engine::new(working, &tree, crease, options, absorbed);
     let passes_run = engine.run()?;
 
     let surface = report::output_surface(engine.mesh());

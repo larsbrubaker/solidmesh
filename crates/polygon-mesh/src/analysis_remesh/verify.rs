@@ -1,6 +1,8 @@
 //! The contract `Ok` makes: after the passes, [`Engine::establish_bound`] refines any triangle
 //! still past the deviation bound (measured both ways, on the same-facing sheet, more densely
-//! than the edit guards), and [`check`] then holds the exact coordinates being returned to every
+//! than the edit guards; an input face `clean` removed as a strip is measured to the nearest
+//! output surface of any facing instead, since nothing faces its way once it is merged into one
+//! sharp edge, while output to input stays same-facing), and [`check`] then holds the exact coordinates being returned to every
 //! promise: closed and consistently wound, no crossing triangle pairs, no free edge folded back
 //! on itself, the deviation bound, the angle floor and the creases. Whatever cannot be met is returned as a named error carrying the
 //! measured value and what to change, never as a surface a later consumer would trust.
@@ -101,8 +103,15 @@ impl Engine<'_> {
                 continue;
             };
             let samples = sample_grid(a, b, c, INPUT_SAMPLE_GRID);
+            let any_facing = self.sheets().is_absorbed(t);
             for p in samples.into_iter().chain([a, b, c]) {
-                if output_sheets.distance(p, normal, threshold) > threshold {
+                if any_facing {
+                    if let Some((q, nearest)) = output_sheets.nearest_any(p, f64::MAX) {
+                        if crate::g3::vector3d::distance(p, q) > threshold {
+                            past.push(nearest);
+                        }
+                    }
+                } else if output_sheets.distance(p, normal, threshold) > threshold {
                     if let Some((_, nearest)) = output_sheets.nearest(p, normal, f64::MAX) {
                         past.push(nearest);
                     }
